@@ -277,6 +277,7 @@ void DwarfCompileUnit::addRange(RangeSpan Range) {
       (&CURanges.back().getEnd()->getSection() !=
        &Range.getEnd()->getSection())) {
     CURanges.push_back(Range);
+    DD->addSectionLabel(Range.getStart());
     return;
   }
 

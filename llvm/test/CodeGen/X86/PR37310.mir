@@ -79,7 +79,7 @@ registers:
   - { id: 4, class: gr64, preferred-register: '' }
   - { id: 5, class: gr32, preferred-register: '' }
 liveins:         
-  - { reg: '$edi', virtual-reg: '%0' }
+  - { reg: '$edi' }
 frameInfo:       
   isFrameAddressTaken: false
   isReturnAddressTaken: false

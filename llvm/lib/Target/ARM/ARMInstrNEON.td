@@ -5521,17 +5521,17 @@ defm VMAXu    : N3VInt_QHS<1, 0, 0b0110, 0, N3RegFrm,
                            "vmax", "u", umax, 1>;
 def  VMAXfd   : N3VDInt<0, 0, 0b00, 0b1111, 0, N3RegFrm, IIC_VBIND,
                         "vmax", "f32",
-                        v2f32, v2f32, fmaxnan, 1>;
+                        v2f32, v2f32, fmaximum, 1>;
 def  VMAXfq   : N3VQInt<0, 0, 0b00, 0b1111, 0, N3RegFrm, IIC_VBINQ,
                         "vmax", "f32",
-                        v4f32, v4f32, fmaxnan, 1>;
+                        v4f32, v4f32, fmaximum, 1>;
 def  VMAXhd   : N3VDInt<0, 0, 0b01, 0b1111, 0, N3RegFrm, IIC_VBIND,
                         "vmax", "f16",
-                        v4f16, v4f16, fmaxnan, 1>,
+                        v4f16, v4f16, fmaximum, 1>,
                 Requires<[HasNEON, HasFullFP16]>;
 def  VMAXhq   : N3VQInt<0, 0, 0b01, 0b1111, 0, N3RegFrm, IIC_VBINQ,
                         "vmax", "f16",
-                        v8f16, v8f16, fmaxnan, 1>,
+                        v8f16, v8f16, fmaximum, 1>,
                 Requires<[HasNEON, HasFullFP16]>;
 
 // VMAXNM
@@ -5563,17 +5563,17 @@ defm VMINu    : N3VInt_QHS<1, 0, 0b0110, 1, N3RegFrm,
                            "vmin", "u", umin, 1>;
 def  VMINfd   : N3VDInt<0, 0, 0b10, 0b1111, 0, N3RegFrm, IIC_VBIND,
                         "vmin", "f32",
-                        v2f32, v2f32, fminnan, 1>;
+                        v2f32, v2f32, fminimum, 1>;
 def  VMINfq   : N3VQInt<0, 0, 0b10, 0b1111, 0, N3RegFrm, IIC_VBINQ,
                         "vmin", "f32",
-                        v4f32, v4f32, fminnan, 1>;
+                        v4f32, v4f32, fminimum, 1>;
 def  VMINhd   : N3VDInt<0, 0, 0b11, 0b1111, 0, N3RegFrm, IIC_VBIND,
                         "vmin", "f16",
-                        v4f16, v4f16, fminnan, 1>,
+                        v4f16, v4f16, fminimum, 1>,
                 Requires<[HasNEON, HasFullFP16]>;
 def  VMINhq   : N3VQInt<0, 0, 0b11, 0b1111, 0, N3RegFrm, IIC_VBINQ,
                         "vmin", "f16",
-                        v8f16, v8f16, fminnan, 1>,
+                        v8f16, v8f16, fminimum, 1>,
                 Requires<[HasNEON, HasFullFP16]>;
 
 // VMINNM
@@ -7093,10 +7093,10 @@ def : N3VSMulOpPat<fmul, fsub, VFMSfd>,
       Requires<[HasVFP4, UseNEONForFP, UseFusedMAC]>;
 def : N2VSPat<fabs, VABSfd>;
 def : N2VSPat<fneg, VNEGfd>;
-def : N3VSPatFP16<fmaxnan, VMAXhd>, Requires<[HasFullFP16]>;
-def : N3VSPatFP16<fminnan, VMINhd>, Requires<[HasFullFP16]>;
-def : N3VSPat<fmaxnan, VMAXfd>, Requires<[HasNEON]>;
-def : N3VSPat<fminnan, VMINfd>, Requires<[HasNEON]>;
+def : N3VSPatFP16<fmaximum, VMAXhd>, Requires<[HasFullFP16]>;
+def : N3VSPatFP16<fminimum, VMINhd>, Requires<[HasFullFP16]>;
+def : N3VSPat<fmaximum, VMAXfd>, Requires<[HasNEON]>;
+def : N3VSPat<fminimum, VMINfd>, Requires<[HasNEON]>;
 def : NVCVTFIPat<fp_to_sint, VCVTf2sd>;
 def : NVCVTFIPat<fp_to_uint, VCVTf2ud>;
 def : NVCVTIFPat<sint_to_fp, VCVTs2fd>;

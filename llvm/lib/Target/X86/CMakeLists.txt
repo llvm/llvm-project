@@ -13,6 +13,7 @@ tablegen(LLVM X86GenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM X86GenRegisterBank.inc -gen-register-bank)
 tablegen(LLVM X86GenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM X86GenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM X86GenExegesis.inc -gen-exegesis)
 
 if (X86_GEN_FOLD_TABLES)
   tablegen(LLVM X86GenFoldTables.inc -gen-x86-fold-tables)

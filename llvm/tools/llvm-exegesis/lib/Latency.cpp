@@ -12,6 +12,8 @@
 #include "Assembler.h"
 #include "BenchmarkRunner.h"
 #include "MCInstrDescView.h"
+#include "PerfHelper.h"
+#include "Target.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -165,12 +167,7 @@ LatencySnippetGenerator::generateCodeTemplates(const Instruction &Instr) const {
 }
 
 const char *LatencyBenchmarkRunner::getCounterName() const {
-  if (!State.getSubtargetInfo().getSchedModel().hasExtraProcessorInfo())
-    llvm::report_fatal_error("sched model is missing extra processor info!");
-  const char *CounterName = State.getSubtargetInfo()
-                                .getSchedModel()
-                                .getExtraProcessorInfo()
-                                .PfmCounters.CycleCounter;
+  const char *CounterName = State.getPfmCounters().CycleCounter;
   if (!CounterName)
     llvm::report_fatal_error("sched model does not define a cycle counter");
   return CounterName;

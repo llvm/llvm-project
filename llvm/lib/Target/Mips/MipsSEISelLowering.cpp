@@ -158,8 +158,8 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::FTRUNC, MVT::f16, Promote);
     setOperationAction(ISD::FMINNUM, MVT::f16, Promote);
     setOperationAction(ISD::FMAXNUM, MVT::f16, Promote);
-    setOperationAction(ISD::FMINNAN, MVT::f16, Promote);
-    setOperationAction(ISD::FMAXNAN, MVT::f16, Promote);
+    setOperationAction(ISD::FMINIMUM, MVT::f16, Promote);
+    setOperationAction(ISD::FMAXIMUM, MVT::f16, Promote);
 
     setTargetDAGCombine(ISD::AND);
     setTargetDAGCombine(ISD::OR);

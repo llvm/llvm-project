@@ -28,8 +28,10 @@
 #include <utility>
 #include <vector>
 
-using namespace llvm;
-using namespace llvm::objcopy;
+namespace llvm {
+namespace objcopy {
+namespace elf {
+
 using namespace object;
 using namespace ELF;
 
@@ -1165,7 +1167,9 @@ template <class ELFT> void ELFWriter<ELFT>::writeEhdr() {
   Ehdr.e_machine = Obj.Machine;
   Ehdr.e_version = Obj.Version;
   Ehdr.e_entry = Obj.Entry;
-  Ehdr.e_phnum = size(Obj.segments());
+  // We have to use the fully-qualified name llvm::size
+  // since some compilers complain on ambiguous resolution.
+  Ehdr.e_phnum = llvm::size(Obj.segments());
   Ehdr.e_phoff = (Ehdr.e_phnum != 0) ? Obj.ProgramHdrSegment.Offset : 0;
   Ehdr.e_phentsize = (Ehdr.e_phnum != 0) ? sizeof(Elf_Phdr) : 0;
   Ehdr.e_flags = Obj.Flags;
@@ -1597,9 +1601,6 @@ void BinaryWriter::finalize() {
   SecWriter = llvm::make_unique<BinarySectionWriter>(Buf);
 }
 
-namespace llvm {
-namespace objcopy {
-
 template class BinaryELFBuilder<ELF64LE>;
 template class BinaryELFBuilder<ELF64BE>;
 template class BinaryELFBuilder<ELF32LE>;
@@ -1614,5 +1615,7 @@ template class ELFWriter<ELF64LE>;
 template class ELFWriter<ELF64BE>;
 template class ELFWriter<ELF32LE>;
 template class ELFWriter<ELF32BE>;
+
+} // end namespace elf
 } // end namespace objcopy
 } // end namespace llvm

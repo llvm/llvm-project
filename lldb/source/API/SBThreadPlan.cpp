@@ -207,3 +207,13 @@ SBThreadPlan::QueueThreadPlanForRunToAddress(SBAddress sb_address) {
     return SBThreadPlan();
   }
 }
+
+SBThreadPlan
+SBThreadPlan::QueueThreadPlanForStepScripted(const char *script_class_name) {
+  if (m_opaque_sp) {
+    return SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepScripted(
+        false, script_class_name, false));
+  } else {
+    return SBThreadPlan();
+  }
+}

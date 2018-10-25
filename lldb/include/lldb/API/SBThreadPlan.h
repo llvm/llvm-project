@@ -88,6 +88,8 @@ public:
 
   SBThreadPlan QueueThreadPlanForRunToAddress(SBAddress address);
 
+  SBThreadPlan QueueThreadPlanForStepScripted(const char *script_class_name);
+
 #ifndef SWIG
   lldb_private::ThreadPlan *get();
 #endif
