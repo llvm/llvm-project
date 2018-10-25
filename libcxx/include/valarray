@@ -1054,6 +1054,7 @@ private:
     const _Up*
     end(const valarray<_Up>& __v);
 
+    _LIBCPP_INLINE_VISIBILITY
     void __clear(size_t __capacity);
     valarray& __assign_range(const value_type* __f, const value_type* __l);
 };
@@ -3728,7 +3729,7 @@ valarray<_Tp>::apply(value_type __f(const value_type&)) const
 }
 
 template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
+inline
 void valarray<_Tp>::__clear(size_t __capacity)
 {
   if (__begin_ != nullptr)
