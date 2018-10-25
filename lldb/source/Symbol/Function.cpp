@@ -180,8 +180,7 @@ Function *CallEdge::GetCallee(ModuleList &images) {
 lldb::addr_t CallEdge::GetReturnPCAddress(Function &caller,
                                           Target &target) const {
   const Address &base = caller.GetAddressRange().GetBaseAddress();
-  Address return_pc_addr{base.GetSection(), return_pc};
-  return return_pc_addr.GetLoadAddress(&target);
+  return base.GetLoadAddress(&target) + return_pc;
 }
 
 //----------------------------------------------------------------------
