@@ -303,7 +303,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (Server)
     return Reply(make_error<LSPError>("server already initialized",
                                       ErrorCode::InvalidRequest));
-  Optional<Path> CompileCommandsDir;
   if (Params.initializationOptions)
     CompileCommandsDir = Params.initializationOptions->compilationDatabasePath;
   CDB.emplace(UseInMemoryCDB
@@ -696,7 +695,9 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
     : Transp(Transp), MsgHandler(new MessageHandler(*this)), CCOpts(CCOpts),
       SupportedSymbolKinds(defaultSymbolKinds()),
       SupportedCompletionItemKinds(defaultCompletionItemKinds()),
-      UseInMemoryCDB(ShouldUseInMemoryCDB), ClangdServerOpts(Opts) {
+      UseInMemoryCDB(ShouldUseInMemoryCDB),
+      CompileCommandsDir(std::move(CompileCommandsDir)),
+      ClangdServerOpts(Opts) {
   // clang-format off
   MsgHandler->bind("initialize", &ClangdLSPServer::onInitialize);
   MsgHandler->bind("shutdown", &ClangdLSPServer::onShutdown);
