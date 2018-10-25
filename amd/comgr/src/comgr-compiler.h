@@ -46,6 +46,7 @@
 namespace COMGR {
 
 class InProcessDriver {
+  llvm::raw_ostream &DiagOS;
   llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> DiagOpts;
   clang::TextDiagnosticPrinter *DiagClient;
   llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagID;
@@ -61,8 +62,8 @@ public:
 
 /// Manages executing Compiler-related actions.
 ///
-/// @warning No more than one public method should be called on a constructed
-/// object before it is destructed.
+/// @warning No more than one public method, other than @p AddLogs, should be
+/// called on a constructed object before it is destructed.
 class AMDGPUCompiler {
   DataAction *ActionInfo;
   DataSet *InSet;
@@ -83,6 +84,8 @@ class AMDGPUCompiler {
   llvm::SmallString<128> InputDir;
   llvm::SmallString<128> OutputDir;
   llvm::SmallString<128> IncludeDir;
+  std::string Log;
+  llvm::raw_string_ostream LogS;
 
   amd_comgr_status_t CreateTmpDirs();
   amd_comgr_status_t RemoveTmpDirs();
@@ -107,6 +110,8 @@ public:
   amd_comgr_status_t AssembleToRelocatable();
   amd_comgr_status_t LinkToRelocatable();
   amd_comgr_status_t LinkToExecutable();
+
+  amd_comgr_status_t AddLogs();
 };
 }
 

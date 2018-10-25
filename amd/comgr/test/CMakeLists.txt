@@ -85,6 +85,11 @@ add_executable(compile_minimal_test compile_minimal_test.c)
 target_link_libraries(compile_minimal_test amd_comgr)
 add_test(NAME compile_minimal_test COMMAND compile_minimal_test)
 
+# Test : Compile Output
+add_executable(compile_log_test compile_log_test.c)
+target_link_libraries(compile_log_test amd_comgr)
+add_test(NAME compile_log_test COMMAND compile_log_test)
+
 if (AMDDeviceLibs_FOUND)
   # Test : Compile Device Libs
   add_executable(compile_device_libs_test compile_minimal_test.c)
@@ -128,6 +133,7 @@ if (NOT(UNIX))
     #symbols_iterate_test
     compile_test
     compile_minimal_test
+    compile_log_test
     ${COMPILE_DEVICE_LIBS_TEST}
     assemble_test
     link_test

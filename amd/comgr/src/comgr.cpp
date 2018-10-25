@@ -224,26 +224,39 @@ dispatch_compiler_action(amd_comgr_action_kind_t action_kind,
                          DataAction *action_info, DataSet *input_set,
                          DataSet *result_set) {
   AMDGPUCompiler Compiler(action_info, input_set, result_set);
+  amd_comgr_status_t CompilerStatus;
   switch (action_kind) {
   case AMD_COMGR_ACTION_SOURCE_TO_PREPROCESSOR:
-    return Compiler.PreprocessToSource();
+    CompilerStatus = Compiler.PreprocessToSource();
+    break;
   case AMD_COMGR_ACTION_COMPILE_SOURCE_TO_BC:
-    return Compiler.CompileToBitcode();
+    CompilerStatus = Compiler.CompileToBitcode();
+    break;
   case AMD_COMGR_ACTION_LINK_BC_TO_BC:
-    return Compiler.LinkBitcodeToBitcode();
+    CompilerStatus = Compiler.LinkBitcodeToBitcode();
+    break;
   case AMD_COMGR_ACTION_CODEGEN_BC_TO_RELOCATABLE:
-    return Compiler.CodeGenBitcodeToRelocatable();
+    CompilerStatus = Compiler.CodeGenBitcodeToRelocatable();
+    break;
   case AMD_COMGR_ACTION_CODEGEN_BC_TO_ASSEMBLY:
-    return Compiler.CodeGenBitcodeToAssembly();
+    CompilerStatus = Compiler.CodeGenBitcodeToAssembly();
+    break;
   case AMD_COMGR_ACTION_ASSEMBLE_SOURCE_TO_RELOCATABLE:
-    return Compiler.AssembleToRelocatable();
+    CompilerStatus = Compiler.AssembleToRelocatable();
+    break;
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_RELOCATABLE:
-    return Compiler.LinkToRelocatable();
+    CompilerStatus = Compiler.LinkToRelocatable();
+    break;
   case AMD_COMGR_ACTION_LINK_RELOCATABLE_TO_EXECUTABLE:
-    return Compiler.LinkToExecutable();
+    CompilerStatus = Compiler.LinkToExecutable();
+    break;
   default:
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
   }
+
+  amd_comgr_status_t LogsStatus = Compiler.AddLogs();
+
+  return CompilerStatus ? CompilerStatus : LogsStatus;
 }
 
 static amd_comgr_status_t
@@ -783,21 +796,19 @@ amd_comgr_action_data_get_data(
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
   n = 0;
-  for (SmallSetVector<DataObject *, 8>::iterator
-         I = setp->data_objects.begin(),
-         E = setp->data_objects.end();
+  for (SmallSetVector<DataObject *, 8>::iterator I = setp->data_objects.begin(),
+                                                 E = setp->data_objects.end();
        I != E; ++I) {
-    if (n++ == index) {
-      if ((*I)->data_kind == data_kind) {
+    if ((*I)->data_kind == data_kind) {
+      if (n++ == index) {
         (*I)->refcount++;
         *data = DataObject::Convert(*I);
-        break;
+        return AMD_COMGR_STATUS_SUCCESS;
       }
-      return AMD_COMGR_STATUS_ERROR;
     }
   }
 
-  return AMD_COMGR_STATUS_SUCCESS;
+  return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 }
 
 amd_comgr_status_t AMD_API

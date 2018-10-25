@@ -323,7 +323,8 @@ getOutputStream(AssemblerInvocation &Opts, DiagnosticsEngine &Diags,
 }
 
 static bool ExecuteAssembler(AssemblerInvocation &Opts,
-                             DiagnosticsEngine &Diags) {
+                             DiagnosticsEngine &Diags,
+                             raw_ostream &DiagOS) {
   // Get the target specific parser.
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(Opts.Triple, Error);
@@ -339,6 +340,11 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
   }
 
   SourceMgr SrcMgr;
+  SrcMgr.setDiagHandler(
+      [](const SMDiagnostic &SMDiag, void *DiagOS) {
+        SMDiag.print("", *(raw_ostream *)DiagOS, /* ShowColors */ false);
+      },
+      &DiagOS);
 
   // Tell SrcMgr about this buffer, which is what the parser will pick up.
   SrcMgr.AddNewSourceBuffer(std::move(*Buffer), SMLoc());
@@ -549,7 +555,8 @@ static amd_comgr_status_t ParseLLVMOptions(const std::vector<std::string>& Optio
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-static amd_comgr_status_t LLDLink(llvm::ArrayRef<const char *> Args) {
+static amd_comgr_status_t LLDLink(llvm::ArrayRef<const char *> Args,
+    llvm::raw_ostream &LogS) {
   ArgStringList LLDArgs(
       llvm::iterator_range<ArrayRef<const char *>::iterator>(Args.begin(),
                                                              Args.end()));
@@ -557,7 +564,7 @@ static amd_comgr_status_t LLDLink(llvm::ArrayRef<const char *> Args) {
   ArrayRef<const char *> ArgRefs = llvm::makeArrayRef(LLDArgs);
   static std::mutex m_screen;
   m_screen.lock();
-  bool lldRet = lld::elf::link(ArgRefs, false, outs());
+  bool lldRet = lld::elf::link(ArgRefs, false, LogS);
   m_screen.unlock();
   if (!lldRet)
     return AMD_COMGR_STATUS_ERROR;
@@ -565,7 +572,7 @@ static amd_comgr_status_t LLDLink(llvm::ArrayRef<const char *> Args) {
 }
 
 InProcessDriver::InProcessDriver(raw_ostream &DiagOS)
-    : DiagOpts(new DiagnosticOptions()),
+    : DiagOS(DiagOS), DiagOpts(new DiagnosticOptions()),
       DiagClient(new TextDiagnosticPrinter(DiagOS, &*DiagOpts)),
       Diags(DiagID, DiagOpts, DiagClient),
       TheDriver(new Driver("", "", Diags)) {
@@ -594,7 +601,7 @@ amd_comgr_status_t InProcessDriver::Execute(ArrayRef<const char *> Args) {
 
     if (Argv[1] == StringRef("-cc1")) {
       std::unique_ptr<CompilerInstance> Clang(new CompilerInstance());
-      Clang->createDiagnostics();
+      Clang->createDiagnostics(DiagClient, /* ShouldOwnClient */ false);
       if (!Clang->hasDiagnostics())
         return AMD_COMGR_STATUS_ERROR;
       if (!CompilerInvocation::CreateFromArgs(
@@ -610,10 +617,10 @@ amd_comgr_status_t InProcessDriver::Execute(ArrayRef<const char *> Args) {
         return AMD_COMGR_STATUS_ERROR;
       if (auto Status = ParseLLVMOptions(Asm.LLVMArgs))
         return Status;
-      if (ExecuteAssembler(Asm, Diags))
+      if (ExecuteAssembler(Asm, Diags, DiagOS))
         return AMD_COMGR_STATUS_ERROR;
     } else if (Job.getCreator().getName() == LinkerJobName) {
-      if (auto Status = LLDLink(Arguments))
+      if (auto Status = LLDLink(Arguments, DiagOS))
         return Status;
     } else {
       return AMD_COMGR_STATUS_ERROR;
@@ -668,7 +675,7 @@ amd_comgr_status_t AMDGPUCompiler::ProcessFile(const char *InputFilePath,
   Argv.push_back("-o");
   Argv.push_back(OutputFilePath);
 
-  InProcessDriver TheDriver(outs());
+  InProcessDriver TheDriver(LogS);
 
   return TheDriver.Execute(Argv);
 }
@@ -777,6 +784,19 @@ amd_comgr_status_t AMDGPUCompiler::AddTargetIdentifierFlags(llvm::StringRef Iden
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
+amd_comgr_status_t AMDGPUCompiler::AddLogs() {
+  if (!ActionInfo->logging)
+    return AMD_COMGR_STATUS_SUCCESS;
+  amd_comgr_data_t LogT;
+  if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_LOG, &LogT))
+    return Status;
+  ScopedDataObjectReleaser SDOR(LogT);
+  DataObject *LogP = DataObject::Convert(LogT);
+  LogP->SetName("comgr.log");
+  LogP->SetData(LogS.str());
+  return amd_comgr_data_set_add(OutSetT, LogT);
+}
+
 amd_comgr_status_t AMDGPUCompiler::PreprocessToSource() {
   if (auto Status = CreateTmpDirs())
     return Status;
@@ -845,17 +865,22 @@ amd_comgr_status_t AMDGPUCompiler::LinkBitcodeToBitcode() {
   unsigned ApplicableFlags = Linker::Flags::None;
 
   for (auto Input : InSet->data_objects) {
+    if (Input->data_kind != AMD_COMGR_DATA_KIND_BC)
+      continue;
+
     SMDiagnostic SMDiag;
     auto Mod = parseIR(MemoryBufferRef(StringRef(Input->data, Input->size),
                                        Input->name), SMDiag, Context);
-    if (!Mod)
+    if (!Mod) {
+      SMDiag.print(Input->name, LogS, /* ShowColors */ false);
       return AMD_COMGR_STATUS_ERROR;
-    if (verifyModule(*Mod, &errs()))
+    }
+    if (verifyModule(*Mod, &LogS))
       return AMD_COMGR_STATUS_ERROR;
     if (L.linkInModule(std::move(Mod), ApplicableFlags))
       return AMD_COMGR_STATUS_ERROR;
   }
-  if (verifyModule(*Composite, &errs()))
+  if (verifyModule(*Composite, &LogS))
     return AMD_COMGR_STATUS_ERROR;
 
   SmallString<0> OutBuf;
@@ -865,8 +890,8 @@ amd_comgr_status_t AMDGPUCompiler::LinkBitcodeToBitcode() {
   Writer.writeStrtab();
 
   amd_comgr_data_t OutputT;
-    if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BC, &OutputT))
-      return Status;
+  if (auto Status = amd_comgr_create_data(AMD_COMGR_DATA_KIND_BC, &OutputT))
+    return Status;
   ScopedDataObjectReleaser SDOR(OutputT);
 
   DataObject *Output = DataObject::Convert(OutputT);
@@ -927,6 +952,9 @@ amd_comgr_status_t AMDGPUCompiler::LinkToRelocatable() {
 
   SmallVector<SmallString<128>, 128> Inputs;
   for (auto Input : InSet->data_objects) {
+    if (Input->data_kind != AMD_COMGR_DATA_KIND_RELOCATABLE)
+      continue;
+
     Inputs.push_back(GetFilePath(Input, InputDir));
     if (auto Status = OutputToFile(Input, Inputs.back()))
       return Status;
@@ -947,16 +975,13 @@ amd_comgr_status_t AMDGPUCompiler::LinkToRelocatable() {
 
   Args.push_back("-r");
 
-  if (auto Status = LLDLink(Args))
+  if (auto Status = LLDLink(Args, LogS))
     return Status;
 
   if (auto Status = InputFromFile(Output, OutputFilePath))
     return Status;
 
-  if (auto Status = amd_comgr_data_set_add(OutSetT, OutputT))
-    return Status;
-
-  return AMD_COMGR_STATUS_SUCCESS;
+  return amd_comgr_data_set_add(OutSetT, OutputT);
 }
 
 amd_comgr_status_t AMDGPUCompiler::LinkToExecutable() {
@@ -972,6 +997,9 @@ amd_comgr_status_t AMDGPUCompiler::LinkToExecutable() {
 
   SmallVector<SmallString<128>, 128> Inputs;
   for (auto Input : InSet->data_objects) {
+    if (Input->data_kind != AMD_COMGR_DATA_KIND_RELOCATABLE)
+      continue;
+
     Inputs.push_back(GetFilePath(Input, InputDir));
     if (auto Status = OutputToFile(Input, Inputs.back()))
       return Status;
@@ -990,7 +1018,7 @@ amd_comgr_status_t AMDGPUCompiler::LinkToExecutable() {
   Args.push_back("-o");
   Args.push_back(OutputFilePath.c_str());
 
-  InProcessDriver TheDriver(outs());
+  InProcessDriver TheDriver(LogS);
 
   if (auto Status = TheDriver.Execute(Args))
     return Status;
@@ -998,15 +1026,13 @@ amd_comgr_status_t AMDGPUCompiler::LinkToExecutable() {
   if (auto Status = InputFromFile(Output, OutputFilePath))
     return Status;
 
-  if (auto Status = amd_comgr_data_set_add(OutSetT, OutputT))
-    return Status;
-
-  return AMD_COMGR_STATUS_SUCCESS;
+  return amd_comgr_data_set_add(OutSetT, OutputT);
 }
 
 AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
                                DataSet *OutSet)
-    : ActionInfo(ActionInfo), InSet(InSet), OutSetT(DataSet::Convert(OutSet)) {
+    : ActionInfo(ActionInfo), InSet(InSet), OutSetT(DataSet::Convert(OutSet)),
+      LogS(Log) {
   InitializeCommandLineArgs(Args);
   ParseOptions();
 }
