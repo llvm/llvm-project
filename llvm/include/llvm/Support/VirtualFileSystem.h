@@ -490,7 +490,6 @@ class YAMLVFSWriter {
   Optional<bool> IsCaseSensitive;
   Optional<bool> IsOverlayRelative;
   Optional<bool> UseExternalNames;
-  Optional<bool> IgnoreNonExistentContents;
   std::string OverlayDir;
 
 public:
@@ -503,10 +502,6 @@ public:
   }
 
   void setUseExternalNames(bool UseExtNames) { UseExternalNames = UseExtNames; }
-
-  void setIgnoreNonExistentContents(bool IgnoreContents) {
-    IgnoreNonExistentContents = IgnoreContents;
-  }
 
   void setOverlayDir(StringRef OverlayDirectory) {
     IsOverlayRelative = true;

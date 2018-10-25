@@ -156,10 +156,6 @@ void ModuleDependencyCollector::writeFileMap() {
   // allows crash reproducer scripts to work across machines.
   VFSWriter.setOverlayDir(VFSDir);
 
-  // Do not ignore non existent contents otherwise we might skip something
-  // that should have been collected here.
-  VFSWriter.setIgnoreNonExistentContents(false);
-
   // Explicitly set case sensitivity for the YAML writer. For that, find out
   // the sensitivity at the path where the headers all collected to.
   VFSWriter.setCaseSensitivity(isCaseSensitivePath(VFSDir));

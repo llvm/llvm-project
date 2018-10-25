@@ -805,6 +805,8 @@ def fcomplete_member_pointers : Flag<["-"], "fcomplete-member-pointers">, Group<
 def fno_complete_member_pointers : Flag<["-"], "fno-complete-member-pointers">, Group<f_clang_Group>,
    Flags<[CoreOption]>,
    HelpText<"Do not require member pointer base types to be complete if they would be significant under the Microsoft ABI">;
+def fcf_runtime_abi_EQ : Joined<["-"], "fcf-runtime-abi=">, Group<f_Group>,
+    Flags<[CC1Option]>;
 def fconstant_cfstrings : Flag<["-"], "fconstant-cfstrings">, Group<f_Group>;
 def fconstant_string_class_EQ : Joined<["-"], "fconstant-string-class=">, Group<f_Group>;
 def fconstexpr_depth_EQ : Joined<["-"], "fconstexpr-depth=">, Group<f_Group>;

@@ -105,9 +105,9 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto Op :
          {ISD::FCEIL, ISD::FFLOOR, ISD::FTRUNC, ISD::FNEARBYINT, ISD::FRINT})
       setOperationAction(Op, T, Legal);
-    // Support minnan and maxnan, which otherwise default to expand.
-    setOperationAction(ISD::FMINNAN, T, Legal);
-    setOperationAction(ISD::FMAXNAN, T, Legal);
+    // Support minimum and maximum, which otherwise default to expand.
+    setOperationAction(ISD::FMINIMUM, T, Legal);
+    setOperationAction(ISD::FMAXIMUM, T, Legal);
     // WebAssembly currently has no builtin f16 support.
     setOperationAction(ISD::FP16_TO_FP, T, Expand);
     setOperationAction(ISD::FP_TO_FP16, T, Expand);
@@ -174,11 +174,24 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   //  - Floating-point extending loads.
   //  - Floating-point truncating stores.
   //  - i1 extending loads.
+  //  - extending/truncating SIMD loads/stores
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   for (auto T : MVT::integer_valuetypes())
     for (auto Ext : {ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD})
       setLoadExtAction(Ext, T, MVT::i1, Promote);
+  if (Subtarget->hasSIMD128()) {
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64, MVT::v4f32,
+                   MVT::v2f64}) {
+      for (auto MemT : MVT::vector_valuetypes()) {
+        if (MVT(T) != MemT) {
+          setTruncStoreAction(T, MemT, Expand);
+          for (auto Ext : {ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD})
+            setLoadExtAction(Ext, T, MemT, Expand);
+        }
+      }
+    }
+  }
 
   // Trap lowers to wasm unreachable
   setOperationAction(ISD::TRAP, MVT::Other, Legal);
@@ -1010,7 +1023,7 @@ WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     }
   }
 
-  return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, MVT::v16i8, Ops);
+  return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
 }
 
 SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,

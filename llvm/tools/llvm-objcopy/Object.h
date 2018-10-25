@@ -30,6 +30,7 @@
 namespace llvm {
 enum class DebugCompressionType;
 namespace objcopy {
+namespace elf {
 
 class SectionBase;
 class Section;
@@ -765,6 +766,8 @@ public:
     return *Segments.back();
   }
 };
+
+} // end namespace elf
 } // end namespace objcopy
 } // end namespace llvm
 

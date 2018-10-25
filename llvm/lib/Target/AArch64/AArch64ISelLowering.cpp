@@ -187,7 +187,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT_CC, MVT::f16, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f32, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::f64, Custom);
-  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+  setOperationAction(ISD::BR_JT, MVT::Other, Custom);
   setOperationAction(ISD::JumpTable, MVT::i64, Custom);
 
   setOperationAction(ISD::SHL_PARTS, MVT::i64, Custom);
@@ -385,8 +385,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FTRUNC,      MVT::f16,  Promote);
     setOperationAction(ISD::FMINNUM,     MVT::f16,  Promote);
     setOperationAction(ISD::FMAXNUM,     MVT::f16,  Promote);
-    setOperationAction(ISD::FMINNAN,     MVT::f16,  Promote);
-    setOperationAction(ISD::FMAXNAN,     MVT::f16,  Promote);
+    setOperationAction(ISD::FMINIMUM,    MVT::f16,  Promote);
+    setOperationAction(ISD::FMAXIMUM,    MVT::f16,  Promote);
 
     // promote v4f16 to v4f32 when that is known to be safe.
     setOperationAction(ISD::FADD,        MVT::v4f16, Promote);
@@ -450,8 +450,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FROUND, Ty, Legal);
     setOperationAction(ISD::FMINNUM, Ty, Legal);
     setOperationAction(ISD::FMAXNUM, Ty, Legal);
-    setOperationAction(ISD::FMINNAN, Ty, Legal);
-    setOperationAction(ISD::FMAXNAN, Ty, Legal);
+    setOperationAction(ISD::FMINIMUM, Ty, Legal);
+    setOperationAction(ISD::FMAXIMUM, Ty, Legal);
   }
 
   if (Subtarget->hasFullFP16()) {
@@ -463,8 +463,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FROUND,  MVT::f16, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f16, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f16, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::f16, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::f16, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::f16, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::f16, Legal);
   }
 
   setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
@@ -816,8 +816,8 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT, MVT PromotedBitwiseVT) {
   // F[MIN|MAX][NUM|NAN] are available for all FP NEON types.
   if (VT.isFloatingPoint() &&
       (VT.getVectorElementType() != MVT::f16 || Subtarget->hasFullFP16()))
-    for (unsigned Opcode : {ISD::FMINNAN, ISD::FMAXNAN,
-                            ISD::FMINNUM, ISD::FMAXNUM})
+    for (unsigned Opcode :
+         {ISD::FMINIMUM, ISD::FMAXIMUM, ISD::FMINNUM, ISD::FMAXNUM})
       setOperationAction(Opcode, VT, Legal);
 
   if (Subtarget->isLittleEndian()) {
@@ -2825,6 +2825,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerSELECT_CC(Op, DAG);
   case ISD::JumpTable:
     return LowerJumpTable(Op, DAG);
+  case ISD::BR_JT:
+    return LowerBR_JT(Op, DAG);
   case ISD::ConstantPool:
     return LowerConstantPool(Op, DAG);
   case ISD::BlockAddress:
@@ -4900,6 +4902,22 @@ SDValue AArch64TargetLowering::LowerJumpTable(SDValue Op,
     return getAddrTiny(JT, DAG);
   }
   return getAddr(JT, DAG);
+}
+
+SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
+                                          SelectionDAG &DAG) const {
+  // Jump table entries as PC relative offsets. No additional tweaking
+  // is necessary here. Just get the address of the jump table.
+  SDLoc DL(Op);
+  SDValue JT = Op.getOperand(1);
+  SDValue Entry = Op.getOperand(2);
+  int JTI = cast<JumpTableSDNode>(JT.getNode())->getIndex();
+
+  SDNode *Dest =
+      DAG.getMachineNode(AArch64::JumpTableDest32, DL, MVT::i64, MVT::i64, JT,
+                         Entry, DAG.getTargetJumpTable(JTI, MVT::i32));
+  return DAG.getNode(ISD::BRIND, DL, MVT::Other, Op.getOperand(0),
+                     SDValue(Dest, 0));
 }
 
 SDValue AArch64TargetLowering::LowerConstantPool(SDValue Op,
@@ -9849,10 +9867,10 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_neon_umaxv:
     return combineAcrossLanesIntrinsic(AArch64ISD::UMAXV, N, DAG);
   case Intrinsic::aarch64_neon_fmax:
-    return DAG.getNode(ISD::FMAXNAN, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(ISD::FMAXIMUM, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_neon_fmin:
-    return DAG.getNode(ISD::FMINNAN, SDLoc(N), N->getValueType(0),
+    return DAG.getNode(ISD::FMINIMUM, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
   case Intrinsic::aarch64_neon_fmaxnm:
     return DAG.getNode(ISD::FMAXNUM, SDLoc(N), N->getValueType(0),

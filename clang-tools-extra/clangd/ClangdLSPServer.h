@@ -93,7 +93,7 @@ private:
   /// may be very expensive.  This method is normally called when the
   /// compilation database is changed.
   void reparseOpenedFiles();
-  void applyConfiguration(const ClangdConfigurationParamsChange &Settings);
+  void applyConfiguration(const ConfigurationSettings &Settings);
 
   /// Used to indicate that the 'shutdown' request was received from the
   /// Language Server client.
@@ -112,8 +112,6 @@ private:
     static CompilationDB makeInMemory();
     static CompilationDB
     makeDirectoryBased(llvm::Optional<Path> CompileCommandsDir);
-
-    void invalidate(PathRef File);
 
     /// Sets the compilation command for a particular file.
     /// Only valid for in-memory CDB, no-op and error log on DirectoryBasedCDB.
@@ -171,6 +169,7 @@ private:
 
   // The CDB is created by the "initialize" LSP method.
   bool UseInMemoryCDB; // FIXME: make this a capability.
+  llvm::Optional<Path> CompileCommandsDir; // FIXME: merge with capability?
   llvm::Optional<CompilationDB> CDB;
   // The ClangdServer is created by the "initialize" LSP method.
   // It is destroyed before run() returns, to ensure worker threads exit.

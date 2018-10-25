@@ -44,6 +44,12 @@ def int_aarch64_dmb : GCCBuiltin<"__builtin_arm_dmb">, MSBuiltin<"__dmb">, Intri
 def int_aarch64_dsb : GCCBuiltin<"__builtin_arm_dsb">, MSBuiltin<"__dsb">, Intrinsic<[], [llvm_i32_ty]>;
 def int_aarch64_isb : GCCBuiltin<"__builtin_arm_isb">, MSBuiltin<"__isb">, Intrinsic<[], [llvm_i32_ty]>;
 
+// A space-consuming intrinsic primarily for testing block and jump table
+// placements. The first argument is the number of bytes this "instruction"
+// takes up, the second and return value are essentially chains, used to force
+// ordering during ISel.
+def int_aarch64_space : Intrinsic<[llvm_i64_ty], [llvm_i32_ty, llvm_i64_ty], []>;
+
 }
 
 //===----------------------------------------------------------------------===//

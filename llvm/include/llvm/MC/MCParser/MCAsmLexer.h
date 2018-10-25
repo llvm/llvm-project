@@ -50,6 +50,7 @@ protected: // Can only create subclasses.
   bool SkipSpace = true;
   bool AllowAtInIdentifier;
   bool IsAtStartOfStatement = true;
+  bool LexMasmIntegers = false;
   AsmCommentConsumer *CommentConsumer = nullptr;
 
   MCAsmLexer();
@@ -146,6 +147,10 @@ public:
   void setCommentConsumer(AsmCommentConsumer *CommentConsumer) {
     this->CommentConsumer = CommentConsumer;
   }
+
+  /// Set whether to lex masm-style binary and hex literals. They look like
+  /// 0b1101 and 0ABCh respectively.
+  void setLexMasmIntegers(bool V) { LexMasmIntegers = V; }
 };
 
 } // end namespace llvm

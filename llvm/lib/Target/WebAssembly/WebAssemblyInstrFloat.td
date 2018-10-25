@@ -58,8 +58,8 @@ defm NEG : UnaryFP<fneg, "neg ", 0x8c, 0x9a>;
 defm COPYSIGN : BinaryFP<fcopysign, "copysign", 0x98, 0xa6>;
 
 let isCommutable = 1 in {
-defm MIN : BinaryFP<fminnan, "min ", 0x96, 0xa4>;
-defm MAX : BinaryFP<fmaxnan, "max ", 0x97, 0xa5>;
+defm MIN : BinaryFP<fminimum, "min ", 0x96, 0xa4>;
+defm MAX : BinaryFP<fmaximum, "max ", 0x97, 0xa5>;
 } // isCommutable = 1
 
 defm CEIL : UnaryFP<fceil, "ceil", 0x8d, 0x9b>;
