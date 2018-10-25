@@ -636,9 +636,19 @@ public:
     InitializeMethodSummaries();
   }
 
-  bool canEval(const CallExpr *CE,
-               const FunctionDecl *FD,
-               bool &hasTrustedImplementationAnnotation);
+  enum class BehaviorSummary {
+    // Function does not return.
+    NoOp,
+
+    // Function returns the first argument.
+    Identity,
+
+    // Function either returns zero, or the input parameter.
+    IdentityOrZero
+  };
+
+  Optional<BehaviorSummary> canEval(const CallExpr *CE, const FunctionDecl *FD,
+                                    bool &hasTrustedImplementationAnnotation);
 
   bool isTrustedReferenceCountImplementation(const FunctionDecl *FD);
 
