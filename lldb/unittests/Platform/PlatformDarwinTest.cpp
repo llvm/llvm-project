@@ -18,6 +18,13 @@
 using namespace lldb;
 using namespace lldb_private;
 
+struct PlatformDarwinTester : public PlatformDarwin {
+  static bool SDKSupportsModules(SDKType desired_type,
+                                 const lldb_private::FileSpec &sdk_path) {
+    return PlatformDarwin::SDKSupportsModules(desired_type, sdk_path);
+  }
+};
+
 TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
   llvm::VersionTuple V;
   llvm::StringRef D;
@@ -44,4 +51,23 @@ TEST(PlatformDarwinTest, TestParseVersionBuildDir) {
 
   std::tie(V, D) = PlatformDarwin::ParseVersionBuildDir("3.4.5");
   EXPECT_EQ(llvm::VersionTuple(3, 4, 5), V);
+
+  std::string base = "/Applications/Xcode.app/Contents/Developer/Platforms/";
+  EXPECT_TRUE(PlatformDarwinTester::SDKSupportsModules(
+      PlatformDarwin::SDKType::iPhoneSimulator,
+      FileSpec(base +
+          "iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator12.0.sdk",
+          false)));
+  EXPECT_FALSE(PlatformDarwinTester::SDKSupportsModules(
+      PlatformDarwin::SDKType::iPhoneSimulator,
+      FileSpec(base +
+          "iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator7.2.sdk",
+          false)));
+  EXPECT_TRUE(PlatformDarwinTester::SDKSupportsModules(
+      PlatformDarwin::SDKType::MacOSX,
+      FileSpec(base + "MacOSX.platform/Developer/SDKs/MacOSX10.10.sdk",
+               false)));
+  EXPECT_FALSE(PlatformDarwinTester::SDKSupportsModules(
+      PlatformDarwin::SDKType::MacOSX,
+      FileSpec(base + "MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk", false)));
 }
