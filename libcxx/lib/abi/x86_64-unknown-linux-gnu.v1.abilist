@@ -1098,13 +1098,11 @@
 {'name': '_ZNSt3__119__shared_weak_countD0Ev', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__119__shared_weak_countD1Ev', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__119__shared_weak_countD2Ev', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__119__start_std_streamsE', 'is_defined': True, 'type': 'OBJECT', 'size': 1}
 {'name': '_ZNSt3__119__thread_local_dataEv', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__119declare_no_pointersEPcm', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__119piecewise_constructE', 'is_defined': True, 'type': 'OBJECT', 'size': 1}
 {'name': '_ZNSt3__120__get_collation_nameEPKc', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__120__throw_system_errorEiPKc', 'is_defined': True, 'type': 'FUNC'}
-{'name': '_ZNSt3__121__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__121__throw_runtime_errorEPKc', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__121__undeclare_reachableEPv', 'is_defined': True, 'type': 'FUNC'}
 {'name': '_ZNSt3__121recursive_timed_mutex4lockEv', 'is_defined': True, 'type': 'FUNC'}

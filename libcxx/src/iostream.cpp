@@ -77,7 +77,7 @@ __asm__("?wclog@" _LIBCPP_NAMESPACE_STR "@std@@3V?$basic_ostream@_WU?$char_trait
 #endif
 ;
 
-ios_base::Init __start_std_streams;
+_LIBCPP_HIDDEN ios_base::Init __start_std_streams;
 
 ios_base::Init::Init()
 {
