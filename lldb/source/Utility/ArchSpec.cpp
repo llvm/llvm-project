@@ -1029,6 +1029,11 @@ static bool isCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
       rhs == llvm::Triple::UnknownEnvironment)
     return true;
 
+  // If any of the environment is unknown then they are compatible
+  if (lhs == llvm::Triple::UnknownEnvironment ||
+      rhs == llvm::Triple::UnknownEnvironment)
+    return true;
+
   // If one of the environment is Android and the other one is EABI then they
   // are considered to be compatible. This is required as a workaround for
   // shared libraries compiled for Android without the NOTE section indicating
