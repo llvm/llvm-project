@@ -113,7 +113,7 @@ SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
   SBSymbolContext sb_sym_ctx;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
+  SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
   StackFrame *frame = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
   Process *process = exe_ctx.GetProcessPtr();
@@ -122,7 +122,7 @@ SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
     if (stop_locker.TryLock(&process->GetRunLock())) {
       frame = exe_ctx.GetFramePtr();
       if (frame) {
-        sb_sym_ctx.SetSymbolContext(&frame->GetSymbolContext(resolve_scope));
+        sb_sym_ctx.SetSymbolContext(&frame->GetSymbolContext(scope));
       } else {
         if (log)
           log->Printf("SBFrame::GetVariables () => error: could not "

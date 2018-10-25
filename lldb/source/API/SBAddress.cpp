@@ -198,8 +198,9 @@ SBModule SBAddress::GetModule() {
 
 SBSymbolContext SBAddress::GetSymbolContext(uint32_t resolve_scope) {
   SBSymbolContext sb_sc;
+  SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
   if (m_opaque_ap->IsValid())
-    m_opaque_ap->CalculateSymbolContext(&sb_sc.ref(), resolve_scope);
+    m_opaque_ap->CalculateSymbolContext(&sb_sc.ref(), scope);
   return sb_sc;
 }
 

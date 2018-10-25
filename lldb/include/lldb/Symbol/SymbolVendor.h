@@ -71,12 +71,12 @@ public:
   virtual Type *ResolveTypeUID(lldb::user_id_t type_uid);
 
   virtual uint32_t ResolveSymbolContext(const Address &so_addr,
-                                        uint32_t resolve_scope,
+                                        lldb::SymbolContextItem resolve_scope,
                                         SymbolContext &sc);
 
   virtual uint32_t ResolveSymbolContext(const FileSpec &file_spec,
                                         uint32_t line, bool check_inlines,
-                                        uint32_t resolve_scope,
+                                        lldb::SymbolContextItem resolve_scope,
                                         SymbolContextList &sc_list);
 
   virtual size_t FindGlobalVariables(const ConstString &name,
@@ -90,8 +90,9 @@ public:
 
   virtual size_t FindFunctions(const ConstString &name,
                                const CompilerDeclContext *parent_decl_ctx,
-                               uint32_t name_type_mask, bool include_inlines,
-                               bool append, SymbolContextList &sc_list);
+                               lldb::FunctionNameType name_type_mask,
+                               bool include_inlines, bool append,
+                               SymbolContextList &sc_list);
 
   virtual size_t FindFunctions(const RegularExpression &regex,
                                bool include_inlines, bool append,
@@ -122,8 +123,8 @@ public:
 
   const TypeList &GetTypeList() const { return m_type_list; }
 
-  virtual size_t GetTypes(SymbolContextScope *sc_scope, uint32_t type_mask,
-                          TypeList &type_list);
+  virtual size_t GetTypes(SymbolContextScope *sc_scope,
+                          lldb::TypeClass type_mask, TypeList &type_list);
 
   SymbolFile *GetSymbolFile() { return m_sym_file_ap.get(); }
 

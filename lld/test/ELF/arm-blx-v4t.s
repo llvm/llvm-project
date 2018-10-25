@@ -6,7 +6,7 @@
 // a thunk. At present we don't support v4t so we give a warning for unsupported
 // features.
 
-// CHECK: warning: lld uses blx instruction, no object with architecture supporting feature detected.
+// CHECK: warning: lld uses blx instruction, no object with architecture supporting feature detected
 
  .text
  .syntax unified

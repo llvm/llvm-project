@@ -80,16 +80,16 @@ protected:
       lldb_private::ClangASTContext::TemplateParameterInfos
           &template_param_infos);
 
-  bool
-  ParseChildMembers(const lldb_private::SymbolContext &sc, const DWARFDIE &die,
-                    lldb_private::CompilerType &class_compiler_type,
-                    const lldb::LanguageType class_language,
-                    std::vector<clang::CXXBaseSpecifier *> &base_classes,
-                    std::vector<int> &member_accessibilities,
-                    DWARFDIECollection &member_function_dies,
-                    DelayedPropertyList &delayed_properties,
-                    lldb::AccessType &default_accessibility, bool &is_a_class,
-                    lldb_private::ClangASTImporter::LayoutInfo &layout_info);
+  bool ParseChildMembers(
+      const lldb_private::SymbolContext &sc, const DWARFDIE &die,
+      lldb_private::CompilerType &class_compiler_type,
+      const lldb::LanguageType class_language,
+      std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
+      std::vector<int> &member_accessibilities,
+      DWARFDIECollection &member_function_dies,
+      DelayedPropertyList &delayed_properties,
+      lldb::AccessType &default_accessibility, bool &is_a_class,
+      lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   size_t
   ParseChildParameters(const lldb_private::SymbolContext &sc,
