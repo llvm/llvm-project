@@ -135,10 +135,5 @@ bool InMemoryCompilationDb::setCompilationCommandForFile(
   return false;
 }
 
-void InMemoryCompilationDb::invalidate(PathRef File) {
-  std::unique_lock<std::mutex> Lock(Mutex);
-  Commands.erase(File);
-}
-
 } // namespace clangd
 } // namespace clang

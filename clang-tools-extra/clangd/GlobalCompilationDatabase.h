@@ -100,10 +100,6 @@ public:
   bool setCompilationCommandForFile(PathRef File,
                                     tooling::CompileCommand CompilationCommand);
 
-  /// Removes the compilation command for \p File if it's present in the
-  /// mapping.
-  void invalidate(PathRef File);
-
 private:
   mutable std::mutex Mutex;
   llvm::StringMap<tooling::CompileCommand> Commands; /* GUARDED_BY(Mut) */
