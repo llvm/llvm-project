@@ -114,7 +114,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_i386(
   if (!m_cursors.empty()) {
     lldb::addr_t first_frame_pc = m_cursors.front().pc;
     if (first_frame_pc != LLDB_INVALID_ADDRESS) {
-      const uint32_t resolve_scope =
+      const SymbolContextItem resolve_scope =
           eSymbolContextModule | eSymbolContextCompUnit |
           eSymbolContextFunction | eSymbolContextSymbol;
 
@@ -205,7 +205,7 @@ size_t UnwindMacOSXFrameBackchain::GetStackFrameData_x86_64(
   if (!m_cursors.empty()) {
     lldb::addr_t first_frame_pc = m_cursors.front().pc;
     if (first_frame_pc != LLDB_INVALID_ADDRESS) {
-      const uint32_t resolve_scope =
+      const SymbolContextItem resolve_scope =
           eSymbolContextModule | eSymbolContextCompUnit |
           eSymbolContextFunction | eSymbolContextSymbol;
 

@@ -59,12 +59,12 @@ lldb::opaque_compiler_type_t UdtRecordCompleter::AddBaseClassForTypeIndex(
   CVType udt_cvt = m_symbol_file.m_index->tpi().getType(ti);
 
   lldb::opaque_compiler_type_t base_qt = base_ct.GetOpaqueQualType();
-  clang::CXXBaseSpecifier *base_spec =
+  std::unique_ptr<clang::CXXBaseSpecifier> base_spec =
       m_symbol_file.GetASTContext().CreateBaseClassSpecifier(
           base_qt, TranslateMemberAccess(access), false,
           udt_cvt.kind() == LF_CLASS);
-
-  m_bases.push_back(base_spec);
+  lldbassert(base_spec);
+  m_bases.push_back(std::move(base_spec));
   return base_qt;
 }
 
@@ -172,9 +172,8 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
 void UdtRecordCompleter::complete() {
   ClangASTContext &clang = m_symbol_file.GetASTContext();
-  clang.SetBaseClassesForClassType(m_derived_ct.GetOpaqueQualType(),
-                                   m_bases.data(), m_bases.size());
-  ClangASTContext::DeleteBaseClassSpecifiers(m_bases.data(), m_bases.size());
+  clang.TransferBaseClasses(m_derived_ct.GetOpaqueQualType(),
+                            std::move(m_bases));
 
   clang.AddMethodOverridesForCXXRecordType(m_derived_ct.GetOpaqueQualType());
   ClangASTContext::BuildIndirectFields(m_derived_ct);

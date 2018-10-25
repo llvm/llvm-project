@@ -46,7 +46,7 @@ SymbolFile *SymbolFileSymtab::CreateInstance(ObjectFile *obj_file) {
 }
 
 size_t SymbolFileSymtab::GetTypes(SymbolContextScope *sc_scope,
-                                  uint32_t type_mask,
+                                  TypeClass type_mask,
                                   lldb_private::TypeList &type_list) {
   return 0;
 }
@@ -244,7 +244,7 @@ bool SymbolFileSymtab::CompleteType(lldb_private::CompilerType &compiler_type) {
 }
 
 uint32_t SymbolFileSymtab::ResolveSymbolContext(const Address &so_addr,
-                                                uint32_t resolve_scope,
+                                                SymbolContextItem resolve_scope,
                                                 SymbolContext &sc) {
   if (m_obj_file->GetSymtab() == NULL)
     return 0;
