@@ -181,6 +181,7 @@ class VirtRegRewriter : public MachineFunctionPass {
   SlotIndexes *Indexes;
   LiveIntervals *LIS;
   VirtRegMap *VRM;
+  bool ClearVirtRegs;
 
   void rewrite();
   void addMBBLiveIns();
@@ -192,16 +193,21 @@ class VirtRegRewriter : public MachineFunctionPass {
 
 public:
   static char ID;
-
-  VirtRegRewriter() : MachineFunctionPass(ID) {}
+  VirtRegRewriter(bool ClearVirtRegs_ = true) :
+    MachineFunctionPass(ID),
+    ClearVirtRegs(ClearVirtRegs_) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   bool runOnMachineFunction(MachineFunction&) override;
 
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
+    if (ClearVirtRegs) {
+      return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::NoVRegs);
+    }
+
+    return MachineFunctionProperties();
   }
 };
 
@@ -257,10 +263,13 @@ bool VirtRegRewriter::runOnMachineFunction(MachineFunction &fn) {
   // Write out new DBG_VALUE instructions.
   getAnalysis<LiveDebugVariables>().emitDebugValues(VRM);
 
-  // All machine operands and other references to virtual registers have been
-  // replaced. Remove the virtual registers and release all the transient data.
-  VRM->clearAllVirt();
-  MRI->clearVirtRegs();
+  if (ClearVirtRegs) {
+    // All machine operands and other references to virtual registers have been
+    // replaced. Remove the virtual registers and release all the transient data.
+    VRM->clearAllVirt();
+    MRI->clearVirtRegs();
+  }
+
   return true;
 }
 
@@ -590,4 +599,8 @@ void VirtRegRewriter::rewrite() {
       handleIdentityCopy(*MI);
     }
   }
+}
+
+FunctionPass *llvm::createVirtRegRewriter(bool ClearVirtRegs) {
+  return new VirtRegRewriter(ClearVirtRegs);
 }
