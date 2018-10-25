@@ -33,7 +33,6 @@ void g() { double x = DBL_MAX; }
 // CHECKYAML: 'case-sensitive':
 // CHECKYAML-NEXT: 'use-external-names': 'false',
 // CHECKYAML-NEXT: 'overlay-relative': 'true',
-// CHECKYAML-NEXT: 'ignore-non-existent-contents': 'false'
 // CHECKYAML: 'type': 'directory'
 // CHECKYAML: 'name': "/[[PATH:.*]]/out",
 // CHECKYAML-NEXT: 'contents': [

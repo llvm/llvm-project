@@ -15,6 +15,8 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/Debug.h"
@@ -40,11 +42,18 @@ PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
   const DataLayout &DL = L.getHeader()->getModule()->getDataLayout();
   const SimplifyQuery SQ = getBestSimplifyQuery(AR, DL);
 
-  bool Changed = LoopRotation(&L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE, SQ,
-                              false, Threshold, false);
+  Optional<MemorySSAUpdater> MSSAU;
+  if (AR.MSSA)
+    MSSAU = MemorySSAUpdater(AR.MSSA);
+  bool Changed = LoopRotation(&L, &AR.LI, &AR.TTI, &AR.AC, &AR.DT, &AR.SE,
+                              MSSAU.hasValue() ? MSSAU.getPointer() : nullptr,
+                              SQ, false, Threshold, false);
 
   if (!Changed)
     return PreservedAnalyses::all();
+
+  if (AR.MSSA && VerifyMemorySSA)
+    AR.MSSA->verifyMemorySSA();
 
   return getLoopPassPreservedAnalyses();
 }
@@ -68,6 +77,10 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
+    if (EnableMSSALoopDependency) {
+      AU.addRequired<MemorySSAWrapperPass>();
+      AU.addPreserved<MemorySSAWrapperPass>();
+    }
     getLoopAnalysisUsage(AU);
   }
 
@@ -84,8 +97,14 @@ public:
     auto *SEWP = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
     auto *SE = SEWP ? &SEWP->getSE() : nullptr;
     const SimplifyQuery SQ = getBestSimplifyQuery(*this, F);
-    return LoopRotation(L, LI, TTI, AC, DT, SE, SQ, false, MaxHeaderSize,
-                        false);
+    Optional<MemorySSAUpdater> MSSAU;
+    if (EnableMSSALoopDependency) {
+      MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+      MSSAU = MemorySSAUpdater(MSSA);
+    }
+    return LoopRotation(L, LI, TTI, AC, DT, SE,
+                        MSSAU.hasValue() ? MSSAU.getPointer() : nullptr, SQ,
+                        false, MaxHeaderSize, false);
   }
 };
 }
@@ -96,6 +115,7 @@ INITIALIZE_PASS_BEGIN(LoopRotateLegacyPass, "loop-rotate", "Rotate Loops",
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(LoopRotateLegacyPass, "loop-rotate", "Rotate Loops", false,
                     false)
 

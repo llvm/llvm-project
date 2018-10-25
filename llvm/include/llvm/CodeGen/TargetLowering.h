@@ -2099,8 +2099,8 @@ public:
     case ISD::ADDE:
     case ISD::FMINNUM:
     case ISD::FMAXNUM:
-    case ISD::FMINNAN:
-    case ISD::FMAXNAN:
+    case ISD::FMINIMUM:
+    case ISD::FMAXIMUM:
       return true;
     default: return false;
     }

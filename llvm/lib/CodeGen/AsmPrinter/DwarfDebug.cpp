@@ -2171,6 +2171,7 @@ static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
       // the lowest address/range in this object.
       Base = P.second.front()->getStart();
       if (DwarfVersion >= 5) {
+        Base = DD.getSectionLabel(&Base->getSection());
         Asm->OutStreamer->AddComment("DW_RLE_base_addressx");
         Asm->OutStreamer->EmitIntValue(dwarf::DW_RLE_base_addressx, 1);
         Asm->OutStreamer->AddComment("  base address index");
@@ -2622,4 +2623,12 @@ void DwarfDebug::addAccelType(const DICompileUnit &CU, StringRef Name,
 
 uint16_t DwarfDebug::getDwarfVersion() const {
   return Asm->OutStreamer->getContext().getDwarfVersion();
+}
+
+void DwarfDebug::addSectionLabel(const MCSymbol *Sym) {
+  SectionLabels.insert(std::make_pair(&Sym->getSection(), Sym));
+}
+
+const MCSymbol *DwarfDebug::getSectionLabel(const MCSection *S) {
+  return SectionLabels.find(S)->second;
 }

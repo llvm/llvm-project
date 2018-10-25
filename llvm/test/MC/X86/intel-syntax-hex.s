@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple x86_64-unknown-unknown -x86-asm-syntax=intel %s | FileCheck %s
+// RUN: llvm-mc -masm-integers -triple x86_64-unknown-unknown -x86-asm-syntax=intel %s | FileCheck %s
 // rdar://12470373
 
 // Checks to make sure we parse the hexadecimal suffix properly.

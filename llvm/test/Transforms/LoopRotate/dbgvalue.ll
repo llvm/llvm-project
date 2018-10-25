@@ -1,4 +1,5 @@
 ; RUN: opt -S -loop-rotate < %s | FileCheck %s
+; RUN: opt -S -loop-rotate -enable-mssa-loop-dependency=true -verify-memoryssa < %s | FileCheck %s
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone

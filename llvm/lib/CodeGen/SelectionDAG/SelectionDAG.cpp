@@ -3730,12 +3730,11 @@ bool SelectionDAG::isKnownNeverNaN(SDValue Op, bool SNaN, unsigned Depth) const 
            (isKnownNeverNaN(Op.getOperand(1), false, Depth + 1) &&
             isKnownNeverSNaN(Op.getOperand(0), Depth + 1));
   }
-  case ISD::FMINNAN:
-  case ISD::FMAXNAN: {
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM: {
     // TODO: Does this quiet or return the origina NaN as-is?
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1) &&
            isKnownNeverNaN(Op.getOperand(1), SNaN, Depth + 1);
-
   }
   case ISD::EXTRACT_VECTOR_ELT: {
     return isKnownNeverNaN(Op.getOperand(0), SNaN, Depth + 1);

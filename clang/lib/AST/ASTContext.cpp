@@ -5763,28 +5763,66 @@ TypedefDecl *ASTContext::getCFConstantStringDecl() const {
   CFConstantStringTagDecl = buildImplicitRecord("__NSConstantString_tag");
   CFConstantStringTagDecl->startDefinition();
 
-  QualType FieldTypes[4];
-  const char *FieldNames[4];
+  struct {
+    QualType Type;
+    const char *Name;
+  } Fields[5];
+  unsigned Count = 0;
 
-  // const int *isa;
-  FieldTypes[0] = getPointerType(IntTy.withConst());
-  FieldNames[0] = "isa";
-  // int flags;
-  FieldTypes[1] = IntTy;
-  FieldNames[1] = "flags";
-  // const char *str;
-  FieldTypes[2] = getPointerType(CharTy.withConst());
-  FieldNames[2] = "str";
-  // long length;
-  FieldTypes[3] = LongTy;
-  FieldNames[3] = "length";
+  /// Objective-C ABI
+  ///
+  ///    typedef struct __NSConstantString_tag {
+  ///      const char *isa;
+  ///      int flags;
+  ///      const char *str;
+  ///      long length;
+  ///    } __NSConstantString;
+  ///
+  /// Swift ABI (4.1, 4.2)
+  ///
+  ///    typedef struct __NSConstantString_tag {
+  ///      uintptr_t _cfisa;
+  ///      uintptr_t _swift_rc;
+  ///      _Atomic(uint64_t) _cfinfoa;
+  ///      const char *_ptr;
+  ///      uint32_t _length;
+  ///    } __NSConstantString;
+  ///
+  /// Swift ABI (5.0)
+  ///
+  ///    typedef struct __NSConstantString_tag {
+  ///      uintptr_t _cfisa;
+  ///      uintptr_t _swift_rc;
+  ///      _Atomic(uint64_t) _cfinfoa;
+  ///      const char *_ptr;
+  ///      uintptr_t _length;
+  ///    } __NSConstantString;
+
+  const auto CFRuntime = getLangOpts().CFRuntime;
+  if (static_cast<unsigned>(CFRuntime) <
+      static_cast<unsigned>(LangOptions::CoreFoundationABI::Swift)) {
+    Fields[Count++] = { getPointerType(IntTy.withConst()), "isa" };
+    Fields[Count++] = { IntTy, "flags" };
+    Fields[Count++] = { getPointerType(CharTy.withConst()), "str" };
+    Fields[Count++] = { LongTy, "length" };
+  } else {
+    Fields[Count++] = { getUIntPtrType(), "_cfisa" };
+    Fields[Count++] = { getUIntPtrType(), "_swift_rc" };
+    Fields[Count++] = { getFromTargetType(Target->getUInt64Type()), "_swift_rc" };
+    Fields[Count++] = { getPointerType(CharTy.withConst()), "_ptr" };
+    if (CFRuntime == LangOptions::CoreFoundationABI::Swift4_1 ||
+        CFRuntime == LangOptions::CoreFoundationABI::Swift4_2)
+      Fields[Count++] = { IntTy, "_ptr" };
+    else
+      Fields[Count++] = { getUIntPtrType(), "_ptr" };
+  }
 
   // Create fields
-  for (unsigned i = 0; i < 4; ++i) {
+  for (unsigned i = 0; i < Count; ++i) {
     FieldDecl *Field =
         FieldDecl::Create(*this, CFConstantStringTagDecl, SourceLocation(),
-                          SourceLocation(), &Idents.get(FieldNames[i]),
-                          FieldTypes[i], /*TInfo=*/nullptr,
+                          SourceLocation(), &Idents.get(Fields[i].Name),
+                          Fields[i].Type, /*TInfo=*/nullptr,
                           /*BitWidth=*/nullptr, /*Mutable=*/false, ICIS_NoInit);
     Field->setAccess(AS_public);
     CFConstantStringTagDecl->addDecl(Field);

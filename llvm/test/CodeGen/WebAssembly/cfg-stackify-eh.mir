@@ -180,7 +180,7 @@ body: |
     RETHROW_TO_CALLER implicit-def $arguments
   ; CHECK-LABEL: bb.7:
     ; CHECK-NEXT: END_TRY
-    ; CHECK: RETHROW 3
+    ; CHECK: RETHROW 0
 
   bb.8:
   ; predecessors: %bb.2, %bb.4

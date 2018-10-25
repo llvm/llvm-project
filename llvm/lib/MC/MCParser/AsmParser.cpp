@@ -229,7 +229,9 @@ public:
 
   void setParsingInlineAsm(bool V) override {
     ParsingInlineAsm = V;
-    Lexer.setParsingMSInlineAsm(V);
+    // When parsing MS inline asm, we must lex 0b1101 and 0ABCH as binary and
+    // hex integer literals.
+    Lexer.setLexMasmIntegers(V);
   }
   bool isParsingInlineAsm() override { return ParsingInlineAsm; }
 

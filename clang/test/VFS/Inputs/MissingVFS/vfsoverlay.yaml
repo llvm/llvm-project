@@ -1,6 +1,5 @@
 {
   'version': 0,
-  'ignore-non-existent-contents': false,
   'roots': [
     { 'name': 'INPUT_DIR', 'type': 'directory',
       'contents': [

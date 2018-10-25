@@ -1273,24 +1273,32 @@ Function *CodeExtractor::extractCodeRegion() {
   // Look at all successors of the codeReplacer block.  If any of these blocks
   // had PHI nodes in them, we need to update the "from" block to be the code
   // replacer, not the original block in the extracted region.
-  std::vector<BasicBlock *> Succs(succ_begin(codeReplacer),
-                                  succ_end(codeReplacer));
-  for (unsigned i = 0, e = Succs.size(); i != e; ++i)
-    for (BasicBlock::iterator I = Succs[i]->begin(); isa<PHINode>(I); ++I) {
-      PHINode *PN = cast<PHINode>(I);
-      std::set<BasicBlock*> ProcessedPreds;
-      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-        if (Blocks.count(PN->getIncomingBlock(i))) {
-          if (ProcessedPreds.insert(PN->getIncomingBlock(i)).second)
-            PN->setIncomingBlock(i, codeReplacer);
-          else {
-            // There were multiple entries in the PHI for this block, now there
-            // is only one, so remove the duplicated entries.
-            PN->removeIncomingValue(i, false);
-            --i; --e;
-          }
+  for (BasicBlock *SuccBB : successors(codeReplacer)) {
+    for (PHINode &PN : SuccBB->phis()) {
+      Value *IncomingCodeReplacerVal = nullptr;
+      SmallVector<unsigned, 2> IncomingValsToRemove;
+      for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
+        BasicBlock *IncomingBB = PN.getIncomingBlock(I);
+
+        // Ignore incoming values from outside of the extracted region.
+        if (!Blocks.count(IncomingBB))
+          continue;
+
+        // Ensure that there is only one incoming value from codeReplacer.
+        if (!IncomingCodeReplacerVal) {
+          PN.setIncomingBlock(I, codeReplacer);
+          IncomingCodeReplacerVal = PN.getIncomingValue(I);
+        } else {
+          assert(IncomingCodeReplacerVal == PN.getIncomingValue(I) &&
+                 "PHI has two incompatbile incoming values from codeRepl");
+          IncomingValsToRemove.push_back(I);
         }
+      }
+
+      for (unsigned I : reverse(IncomingValsToRemove))
+        PN.removeIncomingValue(I, /*DeletePHIIfEmpty=*/false);
     }
+  }
 
   // Erase debug info intrinsics. Variable updates within the new function are
   // invisible to debuggers. This could be improved by defining a DISubprogram

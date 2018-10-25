@@ -7488,12 +7488,28 @@ namespace {
               .addExternalSymbol("_GLOBAL_OFFSET_TABLE_")
               .addReg(0);
         } else if (TM->getCodeModel() == CodeModel::Large) {
-          // Loading the GOT in the large code model requires math with labels,
-          // so we use a pseudo instruction and expand it during MC emission.
-          unsigned Scratch = RegInfo.createVirtualRegister(&X86::GR64RegClass);
-          BuildMI(FirstMBB, MBBI, DL, TII->get(X86::MOVGOT64r), PC)
-              .addReg(Scratch, RegState::Undef | RegState::Define)
-              .addExternalSymbol("_GLOBAL_OFFSET_TABLE_");
+          // In the large code model, we are aiming for this code, though the
+          // register allocation may vary:
+          //   leaq .LN$pb(%rip), %rax
+          //   movq $_GLOBAL_OFFSET_TABLE_ - .LN$pb, %rcx
+          //   addq %rcx, %rax
+          // RAX now holds address of _GLOBAL_OFFSET_TABLE_.
+          unsigned PBReg = RegInfo.createVirtualRegister(&X86::GR64RegClass);
+          unsigned GOTReg =
+              RegInfo.createVirtualRegister(&X86::GR64RegClass);
+          BuildMI(FirstMBB, MBBI, DL, TII->get(X86::LEA64r), PBReg)
+              .addReg(X86::RIP)
+              .addImm(0)
+              .addReg(0)
+              .addSym(MF.getPICBaseSymbol())
+              .addReg(0);
+          std::prev(MBBI)->setPreInstrSymbol(MF, MF.getPICBaseSymbol());
+          BuildMI(FirstMBB, MBBI, DL, TII->get(X86::MOV64ri), GOTReg)
+              .addExternalSymbol("_GLOBAL_OFFSET_TABLE_",
+                                 X86II::MO_PIC_BASE_OFFSET);
+          BuildMI(FirstMBB, MBBI, DL, TII->get(X86::ADD64rr), PC)
+              .addReg(PBReg, RegState::Kill)
+              .addReg(GOTReg, RegState::Kill);
         } else {
           llvm_unreachable("unexpected code model");
         }

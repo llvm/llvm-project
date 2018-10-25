@@ -39,13 +39,14 @@ bool Pipeline::hasWorkToProcess() {
 Error Pipeline::run() {
   assert(!Stages.empty() && "Unexpected empty pipeline found!");
 
-  while (hasWorkToProcess()) {
+  do {
     notifyCycleBegin();
     if (Error Err = runCycle())
       return Err;
     notifyCycleEnd();
     ++Cycles;
-  }
+  } while (hasWorkToProcess());
+
   return ErrorSuccess();
 }
 

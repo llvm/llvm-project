@@ -767,7 +767,7 @@ void WebAssemblyCFGStackify::rewriteDepthImmediates(MachineFunction &MF) {
       case WebAssembly::RETHROW_TO_CALLER: {
         MachineInstr *Rethrow =
             BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(WebAssembly::RETHROW))
-                .addImm(Stack.size());
+                .addImm(EHPadStack.size());
         MI.eraseFromParent();
         I = MachineBasicBlock::reverse_iterator(Rethrow);
         break;
