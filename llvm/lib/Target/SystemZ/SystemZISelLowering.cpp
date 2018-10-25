@@ -452,29 +452,29 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::f64, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::f64, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::v2f64, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::v2f64, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::v2f64, Legal);
     setOperationAction(ISD::FMINNUM, MVT::v2f64, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::v2f64, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::v2f64, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::f32, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::f32, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::v4f32, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::v4f32, Legal);
     setOperationAction(ISD::FMINNUM, MVT::v4f32, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::v4f32, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::f128, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::f128, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::f128, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f128, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::f128, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::f128, Legal);
   }
 
   // We have fused multiply-addition for f32 and f64 but not f128.

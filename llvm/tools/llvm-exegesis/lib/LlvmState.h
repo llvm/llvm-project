@@ -30,12 +30,14 @@ namespace llvm {
 namespace exegesis {
 
 class ExegesisTarget;
+struct PfmCountersInfo;
 
 // An object to initialize LLVM and prepare objects needed to run the
 // measurements.
 class LLVMState {
 public:
-  LLVMState();
+  // Uses the host triple. If CpuName is empty, uses the host CPU.
+  LLVMState(const std::string &CpuName);
 
   LLVMState(const std::string &Triple,
             const std::string &CpuName); // For tests.
@@ -57,14 +59,18 @@ public:
   const llvm::MCSubtargetInfo &getSubtargetInfo() const {
     return *TargetMachine->getMCSubtargetInfo();
   }
+
   const RegisterAliasingTrackerCache &getRATC() const { return *RATC; }
   const InstructionsCache &getIC() const { return *IC; }
+
+  const PfmCountersInfo &getPfmCounters() const { return *PfmCounters; }
 
 private:
   const ExegesisTarget *TheExegesisTarget;
   std::unique_ptr<const llvm::TargetMachine> TargetMachine;
   std::unique_ptr<const RegisterAliasingTrackerCache> RATC;
   std::unique_ptr<const InstructionsCache> IC;
+  const PfmCountersInfo *PfmCounters;
 };
 
 } // namespace exegesis

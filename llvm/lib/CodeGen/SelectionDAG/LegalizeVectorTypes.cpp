@@ -115,8 +115,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
-  case ISD::FMINNAN:
-  case ISD::FMAXNAN:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:
@@ -786,8 +786,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMUL:
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
-  case ISD::FMINNAN:
-  case ISD::FMAXNAN:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::SDIV:
   case ISD::UDIV:
   case ISD::FDIV:
@@ -1804,10 +1804,10 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECREDUCE(SDNode *N, unsigned OpNo) {
   case ISD::VECREDUCE_UMAX: CombineOpc = ISD::UMAX; break;
   case ISD::VECREDUCE_UMIN: CombineOpc = ISD::UMIN; break;
   case ISD::VECREDUCE_FMAX:
-    CombineOpc = NoNaN ? ISD::FMAXNUM : ISD::FMAXNAN;
+    CombineOpc = NoNaN ? ISD::FMAXNUM : ISD::FMAXIMUM;
     break;
   case ISD::VECREDUCE_FMIN:
-    CombineOpc = NoNaN ? ISD::FMINNUM : ISD::FMINNAN;
+    CombineOpc = NoNaN ? ISD::FMINNUM : ISD::FMINIMUM;
     break;
   default:
     llvm_unreachable("Unexpected reduce ISD node");
@@ -2356,8 +2356,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::XOR:
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
-  case ISD::FMINNAN:
-  case ISD::FMAXNAN:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::SMIN:
   case ISD::SMAX:
   case ISD::UMIN:

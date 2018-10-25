@@ -1,9 +1,10 @@
 ; RUN: opt -hotcoldsplit -S < %s | FileCheck %s
 ; RUN: opt -passes=hotcoldsplit -S < %s | FileCheck %s
 
-; Check that the function is not split. Outlined function is called from a
+; Check that these functions are not split. Outlined functions are called from a
 ; basic block named codeRepl.
 
+; The cold region is too small to split.
 ; CHECK-LABEL: @foo
 ; CHECK-NOT: codeRepl
 define void @foo() {
@@ -26,11 +27,9 @@ return:                                           ; preds = %cleanup40
   ret void
 }
 
-; Check that the function is not split. We used to outline the full function.
-
+; Make sure we don't try to outline the entire function.
 ; CHECK-LABEL: @fun
 ; CHECK-NOT: codeRepl
-
 define void @fun() {
 entry:
   br i1 undef, label %if.then, label %if.end
@@ -41,3 +40,17 @@ if.then:                                          ; preds = %entry
 if.end:                                           ; preds = %entry
   ret void
 }
+
+; Don't outline infinite loops.
+; CHECK-LABEL: @infinite_loop
+; CHECK-NOT: codeRepl
+define void @infinite_loop() {
+entry:
+  br label %loop
+
+loop:
+  call void @sink()
+  br label %loop
+}
+
+declare void @sink() cold

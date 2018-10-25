@@ -149,7 +149,7 @@ TEST_F(MatchSelectPatternTest, FMinConstantZeroNsz) {
   expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, true});
 }
 
-TEST_F(MatchSelectPatternTest, VectorFMinNaN) {
+TEST_F(MatchSelectPatternTest, VectorFMinimum) {
   parseAssembly(
       "define <4 x float> @test(<4 x float> %a) {\n"
       "  %1 = fcmp ule <4 x float> %a, \n"
@@ -177,7 +177,7 @@ TEST_F(MatchSelectPatternTest, VectorFMinOtherOrdered) {
   expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, true});
 }
 
-TEST_F(MatchSelectPatternTest, VectorNotFMinNaN) {
+TEST_F(MatchSelectPatternTest, VectorNotFMinimum) {
   parseAssembly(
       "define <4 x float> @test(<4 x float> %a) {\n"
       "  %1 = fcmp ule <4 x float> %a, \n"

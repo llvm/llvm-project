@@ -3050,18 +3050,18 @@ let SchedRW = [WriteFDiv] in {
 defm FDIV   : TwoOperandFPData<0b0001, "fdiv", fdiv>;
 }
 defm FMAXNM : TwoOperandFPData<0b0110, "fmaxnm", fmaxnum>;
-defm FMAX   : TwoOperandFPData<0b0100, "fmax", fmaxnan>;
+defm FMAX   : TwoOperandFPData<0b0100, "fmax", fmaximum>;
 defm FMINNM : TwoOperandFPData<0b0111, "fminnm", fminnum>;
-defm FMIN   : TwoOperandFPData<0b0101, "fmin", fminnan>;
+defm FMIN   : TwoOperandFPData<0b0101, "fmin", fminimum>;
 let SchedRW = [WriteFMul] in {
 defm FMUL   : TwoOperandFPData<0b0000, "fmul", fmul>;
 defm FNMUL  : TwoOperandFPDataNeg<0b1000, "fnmul", fmul>;
 }
 defm FSUB   : TwoOperandFPData<0b0011, "fsub", fsub>;
 
-def : Pat<(v1f64 (fmaxnan (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
+def : Pat<(v1f64 (fmaximum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMAXDrr FPR64:$Rn, FPR64:$Rm)>;
-def : Pat<(v1f64 (fminnan (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
+def : Pat<(v1f64 (fminimum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMINDrr FPR64:$Rn, FPR64:$Rm)>;
 def : Pat<(v1f64 (fmaxnum (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rm))),
           (FMAXNMDrr FPR64:$Rn, FPR64:$Rm)>;
@@ -3387,11 +3387,11 @@ defm FDIV    : SIMDThreeSameVectorFP<1,0,0b111,"fdiv", fdiv>;
 defm FMAXNMP : SIMDThreeSameVectorFP<1,0,0b000,"fmaxnmp", int_aarch64_neon_fmaxnmp>;
 defm FMAXNM  : SIMDThreeSameVectorFP<0,0,0b000,"fmaxnm", fmaxnum>;
 defm FMAXP   : SIMDThreeSameVectorFP<1,0,0b110,"fmaxp", int_aarch64_neon_fmaxp>;
-defm FMAX    : SIMDThreeSameVectorFP<0,0,0b110,"fmax", fmaxnan>;
+defm FMAX    : SIMDThreeSameVectorFP<0,0,0b110,"fmax", fmaximum>;
 defm FMINNMP : SIMDThreeSameVectorFP<1,1,0b000,"fminnmp", int_aarch64_neon_fminnmp>;
 defm FMINNM  : SIMDThreeSameVectorFP<0,1,0b000,"fminnm", fminnum>;
 defm FMINP   : SIMDThreeSameVectorFP<1,1,0b110,"fminp", int_aarch64_neon_fminp>;
-defm FMIN    : SIMDThreeSameVectorFP<0,1,0b110,"fmin", fminnan>;
+defm FMIN    : SIMDThreeSameVectorFP<0,1,0b110,"fmin", fminimum>;
 
 // NOTE: The operands of the PatFrag are reordered on FMLA/FMLS because the
 // instruction expects the addend first, while the fma intrinsic puts it last.

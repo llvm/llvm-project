@@ -327,6 +327,8 @@ class DwarfDebug : public DebugHandlerBase {
   /// used to keep track of which types we have emitted type units for.
   DenseMap<const MDNode *, uint64_t> TypeSignatures;
 
+  DenseMap<const MCSection *, const MCSymbol *> SectionLabels;
+
   SmallVector<
       std::pair<std::unique_ptr<DwarfTypeUnit>, const DICompositeType *>, 1>
       TypeUnitsUnderConstruction;
@@ -721,6 +723,9 @@ public:
   bool tuneForLLDB() const { return DebuggerTuning == DebuggerKind::LLDB; }
   bool tuneForSCE() const { return DebuggerTuning == DebuggerKind::SCE; }
   /// @}
+
+  void addSectionLabel(const MCSymbol *Sym);
+  const MCSymbol *getSectionLabel(const MCSection *S);
 };
 
 } // end namespace llvm

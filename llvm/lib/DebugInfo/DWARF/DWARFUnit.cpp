@@ -197,6 +197,16 @@ DWARFDataExtractor DWARFUnit::getDebugInfoExtractor() const {
 
 Optional<SectionedAddress>
 DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
+  if (isDWO) {
+    auto R = Context.info_section_units();
+    auto I = R.begin();
+    // Surprising if a DWO file has more than one skeleton unit in it - this
+    // probably shouldn't be valid, but if a use case is found, here's where to
+    // support it (probably have to linearly search for the matching skeleton CU
+    // here)
+    if (I != R.end() && std::next(I) == R.end())
+      return (*I)->getAddrOffsetSectionItem(Index);
+  }
   uint32_t Offset = AddrOffsetSectionBase + Index * getAddressByteSize();
   if (AddrOffsetSection->Data.size() < Offset + getAddressByteSize())
     return None;

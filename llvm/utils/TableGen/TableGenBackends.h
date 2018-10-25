@@ -89,6 +89,7 @@ void EmitGlobalISel(RecordKeeper &RK, raw_ostream &OS);
 void EmitX86EVEX2VEXTables(RecordKeeper &RK, raw_ostream &OS);
 void EmitX86FoldTables(RecordKeeper &RK, raw_ostream &OS);
 void EmitRegisterBank(RecordKeeper &RK, raw_ostream &OS);
+void EmitExegesis(RecordKeeper &RK, raw_ostream &OS);
 
 } // End llvm namespace
 
