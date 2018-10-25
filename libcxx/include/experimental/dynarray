@@ -146,7 +146,7 @@ private:
 
     static inline _LIBCPP_INLINE_VISIBILITY
     void __deallocate_value(value_type* __ptr ) noexcept {
-        _VSTD::__libcpp_deallocate(static_cast<void *>(__ptr), __alignof(value_type));
+        _VSTD::__libcpp_deallocate_unsized(static_cast<void *>(__ptr), __alignof(value_type));
     }
 
 public:
