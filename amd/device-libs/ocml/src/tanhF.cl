@@ -21,7 +21,7 @@ MATH_MANGLE(tanh)(float x)
     float2 t = fdiv(fsub(e, ei), fadd(e, ei));
     float z = t.hi;
 
-    z = y > 8.6875f ? 1.0 : z;
+    z = y > 8.6875f ? 1.0f : z;
     z = y < 0x1.0p-12f ? y : z;
 
     return BUILTIN_COPYSIGN_F32(z, x);

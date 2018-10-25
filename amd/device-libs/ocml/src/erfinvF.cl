@@ -15,8 +15,8 @@ MATH_MANGLE(erfinv)(float x)
 
     if (ax < 0.375f) {
         float t = ax*ax;
-        p = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, 
-            MATH_MAD(t, MATH_MAD(t, 
+        p = MATH_MAD(t, MATH_MAD(t, MATH_MAD(t, MATH_MAD(t,
+            MATH_MAD(t, MATH_MAD(t,
                 0x1.48b6cap-3f, -0x1.a2930ap-6f), 0x1.65b0b4p-4f), 0x1.5581aep-4f),
                 0x1.05aa56p-3f), 0x1.db2748p-3f), 0x1.c5bf8ap-1f);
     } else {
@@ -48,8 +48,8 @@ MATH_MANGLE(erfinv)(float x)
     float ret = p*ax;
 
     if (!FINITE_ONLY_OPT()) {
-        ret = ax > 1.0 ? AS_FLOAT(QNANBITPATT_SP32) : ret;
-        ret = ax == 1.0 ? AS_FLOAT(PINFBITPATT_SP32) : ret;
+        ret = ax > 1.0f ? AS_FLOAT(QNANBITPATT_SP32) : ret;
+        ret = ax == 1.0f ? AS_FLOAT(PINFBITPATT_SP32) : ret;
     }
 
     return BUILTIN_COPYSIGN_F32(ret, x);

@@ -172,7 +172,7 @@ MATH_MANGLE(lgamma_r_impl)(float x)
     if (ax < 0x1.0p-6f) {
         ret = MATH_MAD(ax, MATH_MAD(ax, MATH_MAD(ax, MATH_MAD(ax, z4, z3), z2), z1),
                        -MATH_MANGLE(log)(ax));
-    } else if (ax < 2.0) {
+    } else if (ax < 2.0f) {
         int i;
         bool c;
         float y, t;
