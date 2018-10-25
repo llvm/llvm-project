@@ -558,9 +558,6 @@ kmp_set_disp_num_buffers                    890
     omp_thread_mem_alloc                   DATA
 %endif # OMP_50
 
-%ifdef OMP_50
-    omp_control_tool                        891
-%endif # OMP_50
 %ifndef stub
     # Ordinals between 900 and 999 are reserved
 
