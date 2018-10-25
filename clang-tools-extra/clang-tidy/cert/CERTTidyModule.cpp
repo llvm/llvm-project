@@ -16,7 +16,6 @@
 #include "../misc/StaticAssertCheck.h"
 #include "../misc/ThrowByValueCatchByReferenceCheck.h"
 #include "../performance/MoveConstructorInitCheck.h"
-#include "../readability/UppercaseLiteralSuffixCheck.h"
 #include "CommandProcessorCheck.h"
 #include "DontModifyStdNamespaceCheck.h"
 #include "FloatLoopCounter.h"
@@ -66,8 +65,6 @@ public:
     // C checkers
     // DCL
     CheckFactories.registerCheck<misc::StaticAssertCheck>("cert-dcl03-c");
-    CheckFactories.registerCheck<readability::UppercaseLiteralSuffixCheck>(
-        "cert-dcl16-c");
     // ENV
     CheckFactories.registerCheck<CommandProcessorCheck>("cert-env33-c");
     // FLP
@@ -80,13 +77,6 @@ public:
     CheckFactories.registerCheck<LimitedRandomnessCheck>("cert-msc30-c");
     CheckFactories.registerCheck<ProperlySeededRandomGeneratorCheck>(
         "cert-msc32-c");
-  }
-
-  ClangTidyOptions getModuleOptions() override {
-    ClangTidyOptions Options;
-    ClangTidyOptions::OptionMap &Opts = Options.CheckOptions;
-    Opts["cert-dcl16-c.NewSuffixes"] = "L;LL;LU;LLU";
-    return Options;
   }
 };
 
