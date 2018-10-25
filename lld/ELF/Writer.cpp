@@ -1559,6 +1559,7 @@ static void removeUnusedSyntheticSections() {
 // with the same name defined in other ELF executable or DSO.
 static bool computeIsPreemptible(const Symbol &B) {
   assert(!B.isLocal());
+
   // Only symbols that appear in dynsym can be preempted.
   if (!B.includeInDynsym())
     return false;
@@ -1624,7 +1625,8 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   finalizeSynthetic(In.EhFrame);
 
   for (Symbol *S : Symtab->getSymbols())
-    S->IsPreemptible |= computeIsPreemptible(*S);
+    if (!S->IsPreemptible)
+      S->IsPreemptible = computeIsPreemptible(*S);
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
