@@ -1,7 +1,6 @@
 {
   'version': 0,
   'case-sensitive': 'false',
-  'ignore-non-existent-contents': 'true',
   'roots': [
     {
       'type': 'directory',
