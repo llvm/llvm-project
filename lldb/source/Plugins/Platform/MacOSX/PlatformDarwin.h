@@ -88,7 +88,7 @@ public:
   static std::tuple<llvm::VersionTuple, llvm::StringRef>
   ParseVersionBuildDir(llvm::StringRef str);
 
-  enum class SDKType {
+  enum SDKType : unsigned {
     MacOSX = 0,
     iPhoneSimulator,
     iPhoneOS,
