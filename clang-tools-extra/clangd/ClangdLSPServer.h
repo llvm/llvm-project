@@ -169,6 +169,7 @@ private:
 
   // The CDB is created by the "initialize" LSP method.
   bool UseInMemoryCDB; // FIXME: make this a capability.
+  llvm::Optional<Path> CompileCommandsDir; // FIXME: merge with capability?
   llvm::Optional<CompilationDB> CDB;
   // The ClangdServer is created by the "initialize" LSP method.
   // It is destroyed before run() returns, to ensure worker threads exit.
