@@ -478,8 +478,12 @@ RetainSummaryManager::getSummary(const CallEvent &Call,
     Summ = getFunctionSummary(cast<CXXMemberCall>(Call).getDecl());
     break;
   case CE_CXXMemberOperator:
-  case CE_Block:
+    Summ = getFunctionSummary(cast<CXXMemberOperatorCall>(Call).getDecl());
+    break;
   case CE_CXXConstructor:
+    Summ = getFunctionSummary(cast<CXXConstructorCall>(Call).getDecl());
+    break;
+  case CE_Block:
   case CE_CXXDestructor:
   case CE_CXXAllocator:
     // FIXME: These calls are currently unsupported.
