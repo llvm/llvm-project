@@ -69,10 +69,6 @@ static bool isOSObjectDynamicCast(StringRef S) {
   return S == "safeMetaCast";
 }
 
-static bool isOSIteratorSubclass(const Decl *D) {
-  return isSubclass(D, "OSIterator");
-}
-
 static bool hasRCAnnotation(const Decl *D, StringRef rcAnnotation) {
   for (const auto *Ann : D->specific_attrs<AnnotateAttr>()) {
     if (Ann->getAnnotation() == rcAnnotation)
@@ -240,10 +236,6 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
 
         // All objects returned with functions starting with "get" are getters.
         if (II->getName().startswith("get")) {
-
-          // ...except for iterators.
-          if (isOSIteratorSubclass(PD))
-            return getOSSummaryCreateRule(FD);
           return getOSSummaryGetRule(FD);
         } else {
           return getOSSummaryCreateRule(FD);
