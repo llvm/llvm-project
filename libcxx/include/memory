@@ -1799,8 +1799,8 @@ public:
                                  " 'n' exceeds maximum supported size");
         return static_cast<pointer>(_VSTD::__libcpp_allocate(__n * sizeof(_Tp), __alignof(_Tp)));
         }
-    _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type __n) _NOEXCEPT
-        {_VSTD::__libcpp_deallocate((void*)__p, __n * sizeof(_Tp), __alignof(_Tp));}
+    _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
+        {_VSTD::__libcpp_deallocate((void*)__p, __alignof(_Tp));}
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT
         {return size_type(~0) / sizeof(_Tp);}
 #if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
@@ -1900,8 +1900,8 @@ public:
                                  " 'n' exceeds maximum supported size");
         return static_cast<pointer>(_VSTD::__libcpp_allocate(__n * sizeof(_Tp), __alignof(_Tp)));
     }
-    _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type __n) _NOEXCEPT
-        {_VSTD::__libcpp_deallocate((void*) const_cast<_Tp *>(__p), __n * sizeof(_Tp), __alignof(_Tp));}
+    _LIBCPP_INLINE_VISIBILITY void deallocate(pointer __p, size_type) _NOEXCEPT
+        {_VSTD::__libcpp_deallocate((void*) const_cast<_Tp *>(__p), __alignof(_Tp));}
     _LIBCPP_INLINE_VISIBILITY size_type max_size() const _NOEXCEPT
         {return size_type(~0) / sizeof(_Tp);}
 #if !defined(_LIBCPP_HAS_NO_RVALUE_REFERENCES) && !defined(_LIBCPP_HAS_NO_VARIADICS)
@@ -2052,7 +2052,7 @@ template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 void return_temporary_buffer(_Tp* __p) _NOEXCEPT
 {
-  _VSTD::__libcpp_deallocate_unsized((void*)__p, __alignof(_Tp));
+  _VSTD::__libcpp_deallocate((void*)__p, __alignof(_Tp));
 }
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)

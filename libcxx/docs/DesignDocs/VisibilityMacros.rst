@@ -22,11 +22,11 @@ Visibility Macros
   Mark a symbol as being exported by the libc++ library. This attribute must
   be applied to the declaration of all functions exported by the libc++ dylib.
 
-**_LIBCPP_EXTERN_VIS**
+**_LIBCPP_EXPORTED_FROM_ABI**
   Mark a symbol as being exported by the libc++ library. This attribute may
-  only be applied to objects defined in the libc++ library. On Windows this
-  macro applies `dllimport`/`dllexport` to the symbol. On all other platforms
-  this macro has no effect.
+  only be applied to objects defined in the libc++ runtime library. On Windows,
+  this macro applies `dllimport`/`dllexport` to the symbol, and on other
+  platforms it gives the symbol default visibility.
 
 **_LIBCPP_OVERRIDABLE_FUNC_VIS**
   Mark a symbol as being exported by the libc++ library, but allow it to be

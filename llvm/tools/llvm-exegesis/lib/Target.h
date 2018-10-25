@@ -31,8 +31,42 @@
 namespace llvm {
 namespace exegesis {
 
+struct PfmCountersInfo {
+  // An optional name of a performance counter that can be used to measure
+  // cycles.
+  const char *CycleCounter;
+
+  // An optional name of a performance counter that can be used to measure
+  // uops.
+  const char *UopsCounter;
+
+  // An IssueCounter specifies how to measure uops issued to specific proc
+  // resources.
+  struct IssueCounter {
+    const char *Counter;
+    // The name of the ProcResource that this counter measures.
+    const char *ProcResName;
+  };
+  // An optional list of IssueCounters.
+  const IssueCounter *IssueCounters;
+  unsigned NumIssueCounters;
+
+  static const PfmCountersInfo Default;
+};
+
+struct CpuAndPfmCounters {
+  const char *CpuName;
+  const PfmCountersInfo *PCI;
+  bool operator<(llvm::StringRef S) const {
+    return llvm::StringRef(CpuName) < S;
+  }
+};
+
 class ExegesisTarget {
 public:
+  explicit ExegesisTarget(llvm::ArrayRef<CpuAndPfmCounters> CpuPfmCounters)
+      : CpuPfmCounters(CpuPfmCounters) {}
+
   // Targets can use this to add target-specific passes in assembleToStream();
   virtual void addTargetSpecificPasses(llvm::PassManagerBase &PM) const {}
 
@@ -83,6 +117,10 @@ public:
 
   virtual ~ExegesisTarget();
 
+  // Returns the Pfm counters for the given CPU (or the default if no pfm
+  // counters are defined for this CPU).
+  const PfmCountersInfo &getPfmCounters(llvm::StringRef CpuName) const;
+
 private:
   virtual bool matchesArch(llvm::Triple::ArchType Arch) const = 0;
 
@@ -98,6 +136,7 @@ private:
       const LLVMState &State) const;
 
   const ExegesisTarget *Next = nullptr;
+  const llvm::ArrayRef<CpuAndPfmCounters> CpuPfmCounters;
 };
 
 } // namespace exegesis

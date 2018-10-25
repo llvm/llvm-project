@@ -385,6 +385,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
                          });
   }
 
+  getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
+      .unsupportedIf([=](const LegalityQuery &Query) {
+        const LLT &EltTy = Query.Types[1].getElementType();
+        return Query.Types[0] != EltTy;
+      })
+      .minScalar(2, s64)
+      .legalIf([=](const LegalityQuery &Query) {
+        const LLT &VecTy = Query.Types[1];
+        return VecTy == v4s32 || VecTy == v2s64;
+      });
+
   computeTables();
   verify(*ST.getInstrInfo());
 }

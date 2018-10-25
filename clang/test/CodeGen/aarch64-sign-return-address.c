@@ -1,14 +1,27 @@
-// RUN: %clang -target aarch64-arm-none-eabi -S -emit-llvm -o - -msign-return-address=none  %s | FileCheck %s --check-prefix=CHECK-NONE
-// RUN: %clang -target aarch64-arm-none-eabi -S -emit-llvm -o - -msign-return-address=non-leaf %s | FileCheck %s --check-prefix=CHECK-PARTIAL
-// RUN: %clang -target aarch64-arm-none-eabi -S -emit-llvm -o - -msign-return-address=all %s | FileCheck %s --check-prefix=CHECK-ALL
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.3-a -S -emit-llvm -o - -msign-return-address=none  %s | FileCheck %s --check-prefix=CHECK --check-prefix=NONE
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.2-a -S -emit-llvm -o - -msign-return-address=all  %s | FileCheck %s --check-prefix=CHECK --check-prefix=ALL --check-prefix=A-KEY
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.3-a -S -emit-llvm -o - -msign-return-address=all %s   | FileCheck %s --check-prefix=CHECK --check-prefix=ALL --check-prefix=A-KEY
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.3-a -S -emit-llvm -o - -msign-return-address=non-leaf %s | FileCheck %s --check-prefix=CHECK --check-prefix=PARTIAL --check-prefix=A-KEY
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.3-a -S -emit-llvm -o - -msign-return-address=all %s | FileCheck %s --check-prefix=CHECK --check-prefix=ALL --check-prefix=A-KEY
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.4-a -S -emit-llvm -o - -msign-return-address=all %s | FileCheck %s --check-prefix=CHECK --check-prefix=ALL --check-prefix=A-KEY
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.3-a -S -emit-llvm -o - -mbranch-protection=pac-ret+b-key %s   | FileCheck %s --check-prefix=CHECK --check-prefix=PARTIAL --check-prefix=B-KEY
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.3-a -S -emit-llvm -o - -mbranch-protection=pac-ret+b-key+leaf %s   | FileCheck %s --check-prefix=CHECK --check-prefix=ALL --check-prefix=B-KEY
+// RUN: %clang -target aarch64-arm-none-eabi -march=armv8.3-a -S -emit-llvm -o - -mbranch-protection=bti %s | FileCheck %s --check-prefix=CHECK --check-prefix=BTE
 
-// CHECK-NONE: @foo() #[[ATTR:[0-9]*]]
-// CHECK-NONE-NOT: attributes #[[ATTR]] = { {{.*}} "sign-return-address"={{.*}} }}
+// REQUIRES: aarch64-registered-target
 
-// CHECK-PARTIAL: @foo() #[[ATTR:[0-9]*]]
-// CHECK-PARTIAL: attributes #[[ATTR]] = { {{.*}} "sign-return-address"="non-leaf" {{.*}}}
+// CHECK: @foo() #[[ATTR:[0-9]*]]
+//
+// NONE-NOT: "sign-return-address"={{.*}}
 
-// CHECK-ALL: @foo() #[[ATTR:[0-9]*]]
-// CHECK-ALL: attributes #[[ATTR]] = { {{.*}} "sign-return-address"="all" {{.*}} }
+// PARTIAL: "sign-return-address"="non-leaf"
+
+// ALL: "sign-return-address"="all"
+
+// BTE: "branch-target-enforcement"
+
+// A-KEY: "sign-return-address-key"="a_key"
+
+// B-KEY: "sign-return-address-key"="b_key"
 
 void foo() {}

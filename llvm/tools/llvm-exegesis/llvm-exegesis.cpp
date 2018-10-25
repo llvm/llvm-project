@@ -94,6 +94,13 @@ static cl::opt<std::string>
     AnalysisInconsistenciesOutputFile("analysis-inconsistencies-output-file",
                                       cl::desc(""), cl::init("-"));
 
+static cl::opt<std::string>
+    CpuName("mcpu",
+            cl::desc(
+                "cpu name to use for pfm counters, leave empty to autodetect"),
+            cl::init(""));
+
+
 static ExitOnError ExitOnErr;
 
 #ifdef LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET
@@ -321,7 +328,7 @@ void benchmarkMain() {
   LLVM_EXEGESIS_INITIALIZE_NATIVE_TARGET();
 #endif
 
-  const LLVMState State;
+  const LLVMState State(CpuName);
   const auto Opcodes = getOpcodesOrDie(State.getInstrInfo());
 
   std::vector<BenchmarkCode> Configurations;
@@ -399,7 +406,7 @@ static void analysisMain() {
   llvm::InitializeNativeTargetAsmPrinter();
   llvm::InitializeNativeTargetDisassembler();
   // Read benchmarks.
-  const LLVMState State;
+  const LLVMState State("");
   const std::vector<InstructionBenchmark> Points =
       ExitOnErr(InstructionBenchmark::readYamls(State, BenchmarkFile));
   llvm::outs() << "Parsed " << Points.size() << " benchmark points\n";

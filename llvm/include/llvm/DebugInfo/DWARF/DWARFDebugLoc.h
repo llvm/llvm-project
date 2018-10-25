@@ -100,15 +100,15 @@ private:
   bool IsLittleEndian;
 
 public:
-  void parse(DataExtractor data);
+  void parse(DataExtractor data, unsigned Version);
   void dump(raw_ostream &OS, uint64_t BaseAddr, const MCRegisterInfo *RegInfo,
             Optional<uint64_t> Offset) const;
 
   /// Return the location list at the given offset or nullptr.
   LocationList const *getLocationListAtOffset(uint64_t Offset) const;
 
-  static Optional<LocationList> parseOneLocationList(DataExtractor Data,
-                                                     uint32_t *Offset);
+  static Optional<LocationList>
+  parseOneLocationList(DataExtractor Data, unsigned *Offset, unsigned Version);
 };
 
 } // end namespace llvm

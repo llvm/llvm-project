@@ -400,10 +400,29 @@ int ARMTTIImpl::getAddressComputationCost(Type *Ty, ScalarEvolution *SE,
 
 int ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                                Type *SubTp) {
-  // We only handle costs of reverse and select shuffles for now.
-  if (Kind != TTI::SK_Reverse && Kind != TTI::SK_Select)
-    return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+  if (Kind == TTI::SK_Broadcast) {
+    static const CostTblEntry NEONDupTbl[] = {
+        // VDUP handles these cases.
+        {ISD::VECTOR_SHUFFLE, MVT::v2i32, 1},
+        {ISD::VECTOR_SHUFFLE, MVT::v2f32, 1},
+        {ISD::VECTOR_SHUFFLE, MVT::v2i64, 1},
+        {ISD::VECTOR_SHUFFLE, MVT::v2f64, 1},
+        {ISD::VECTOR_SHUFFLE, MVT::v4i16, 1},
+        {ISD::VECTOR_SHUFFLE, MVT::v8i8,  1},
 
+        {ISD::VECTOR_SHUFFLE, MVT::v4i32, 1},
+        {ISD::VECTOR_SHUFFLE, MVT::v4f32, 1},
+        {ISD::VECTOR_SHUFFLE, MVT::v8i16, 1},
+        {ISD::VECTOR_SHUFFLE, MVT::v16i8, 1}};
+
+    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, Tp);
+
+    if (const auto *Entry = CostTableLookup(NEONDupTbl, ISD::VECTOR_SHUFFLE,
+                                            LT.second))
+      return LT.first * Entry->Cost;
+
+    return BaseT::getShuffleCost(Kind, Tp, Index, SubTp);
+  }
   if (Kind == TTI::SK_Reverse) {
     static const CostTblEntry NEONShuffleTbl[] = {
         // Reverse shuffle cost one instruction if we are shuffling within a

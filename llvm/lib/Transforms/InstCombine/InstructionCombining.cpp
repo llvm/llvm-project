@@ -120,6 +120,10 @@ DEBUG_COUNTER(VisitCounter, "instcombine-visit",
               "Controls which instructions are visited");
 
 static cl::opt<bool>
+EnableCodeSinking("instcombine-code-sinking", cl::desc("Enable code sinking"),
+                                              cl::init(true));
+
+static cl::opt<bool>
 EnableExpensiveCombines("expensive-combines",
                         cl::desc("Enable expensive instruction combines"));
 
@@ -3103,7 +3107,7 @@ bool InstCombiner::run() {
     }
 
     // See if we can trivially sink this instruction to a successor basic block.
-    if (I->hasOneUse()) {
+    if (EnableCodeSinking && I->hasOneUse()) {
       BasicBlock *BB = I->getParent();
       Instruction *UserInst = cast<Instruction>(*I->user_begin());
       BasicBlock *UserParent;

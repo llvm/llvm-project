@@ -76,9 +76,9 @@ struct _LIBCPP_TYPE_VIS adopt_lock_t {};
 
 #if defined(_LIBCPP_CXX03_LANG) || defined(_LIBCPP_BUILDING_LIBRARY)
 
-extern const defer_lock_t  defer_lock;
-extern const try_to_lock_t try_to_lock;
-extern const adopt_lock_t  adopt_lock;
+extern _LIBCPP_EXPORTED_FROM_ABI const defer_lock_t  defer_lock;
+extern _LIBCPP_EXPORTED_FROM_ABI const try_to_lock_t try_to_lock;
+extern _LIBCPP_EXPORTED_FROM_ABI const adopt_lock_t  adopt_lock;
 
 #else
 

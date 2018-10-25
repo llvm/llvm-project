@@ -114,6 +114,8 @@ public:
     All      // Sign the return address of all functions
   };
 
+  enum SignReturnAddressKeyValue { AKey, BKey };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 

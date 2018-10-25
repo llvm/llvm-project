@@ -4137,6 +4137,48 @@ bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
   return true;
 }
 
+bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
+                                      SelectionDAG &DAG) const {
+  SDValue Src = Node->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT DstVT = Node->getValueType(0);
+
+  if (SrcVT.getScalarType() != MVT::i64 || DstVT.getScalarType() != MVT::f64)
+    return false;
+
+  // Only expand vector types if we have the appropriate vector bit operations.
+  if (SrcVT.isVector() && (!isOperationLegalOrCustom(ISD::SRL, SrcVT) ||
+                           !isOperationLegalOrCustom(ISD::FADD, DstVT) ||
+                           !isOperationLegalOrCustom(ISD::FSUB, DstVT) ||
+                           !isOperationLegalOrCustomOrPromote(ISD::OR, SrcVT) ||
+                           !isOperationLegalOrCustomOrPromote(ISD::AND, SrcVT)))
+    return false;
+
+  SDLoc dl(SDValue(Node, 0));
+  EVT ShiftVT = getShiftAmountTy(SrcVT, DAG.getDataLayout());
+
+  // Implementation of unsigned i64 to f64 following the algorithm in
+  // __floatundidf in compiler_rt. This implementation has the advantage
+  // of performing rounding correctly, both in the default rounding mode
+  // and in all alternate rounding modes.
+  SDValue TwoP52 = DAG.getConstant(UINT64_C(0x4330000000000000), dl, SrcVT);
+  SDValue TwoP84PlusTwoP52 =
+      DAG.getConstantFP(BitsToDouble(UINT64_C(0x4530000000100000)), dl, DstVT);
+  SDValue TwoP84 = DAG.getConstant(UINT64_C(0x4530000000000000), dl, SrcVT);
+  SDValue LoMask = DAG.getConstant(UINT64_C(0x00000000FFFFFFFF), dl, SrcVT);
+  SDValue HiShift = DAG.getConstant(32, dl, ShiftVT);
+
+  SDValue Lo = DAG.getNode(ISD::AND, dl, SrcVT, Src, LoMask);
+  SDValue Hi = DAG.getNode(ISD::SRL, dl, SrcVT, Src, HiShift);
+  SDValue LoOr = DAG.getNode(ISD::OR, dl, SrcVT, Lo, TwoP52);
+  SDValue HiOr = DAG.getNode(ISD::OR, dl, SrcVT, Hi, TwoP84);
+  SDValue LoFlt = DAG.getBitcast(DstVT, LoOr);
+  SDValue HiFlt = DAG.getBitcast(DstVT, HiOr);
+  SDValue HiSub = DAG.getNode(ISD::FSUB, dl, DstVT, HiFlt, TwoP84PlusTwoP52);
+  Result = DAG.getNode(ISD::FADD, dl, DstVT, LoFlt, HiSub);
+  return true;
+}
+
 SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
                                               SelectionDAG &DAG) const {
   SDLoc dl(Node);

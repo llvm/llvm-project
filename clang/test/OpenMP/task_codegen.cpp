@@ -107,6 +107,7 @@ int main() {
 // CHECK: call i32 @__kmpc_omp_task([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i8* [[ORIG_TASK_PTR]])
 #pragma omp task untied
   {
+#pragma omp critical
     a = 1;
   }
 // CHECK: [[ORIG_TASK_PTR:%.+]] = call i8* @__kmpc_omp_task_alloc([[IDENT_T]]* @{{.+}}, i32 [[GTID]], i32 0, i64 40, i64 1,
