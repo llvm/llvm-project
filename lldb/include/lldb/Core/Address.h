@@ -508,9 +508,9 @@ public:
   ///
   /// @see SymbolContextScope::CalculateSymbolContext(SymbolContext*)
   //------------------------------------------------------------------
-  uint32_t CalculateSymbolContext(
-      SymbolContext *sc,
-      uint32_t resolve_scope = lldb::eSymbolContextEverything) const;
+  uint32_t CalculateSymbolContext(SymbolContext *sc,
+                                  lldb::SymbolContextItem resolve_scope =
+                                      lldb::eSymbolContextEverything) const;
 
   lldb::ModuleSP CalculateSymbolContextModule() const;
 

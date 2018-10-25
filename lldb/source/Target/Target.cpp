@@ -415,12 +415,11 @@ Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
                           false);
 }
 
-BreakpointSP
-Target::CreateBreakpoint(const FileSpecList *containingModules,
-                         const FileSpecList *containingSourceFiles,
-                         const char *func_name, uint32_t func_name_type_mask,
-                         LanguageType language, lldb::addr_t offset,
-                         LazyBool skip_prologue, bool internal, bool hardware) {
+BreakpointSP Target::CreateBreakpoint(
+    const FileSpecList *containingModules,
+    const FileSpecList *containingSourceFiles, const char *func_name,
+    FunctionNameType func_name_type_mask, LanguageType language,
+    lldb::addr_t offset, LazyBool skip_prologue, bool internal, bool hardware) {
   BreakpointSP bp_sp;
   if (func_name) {
     SearchFilterSP filter_sp(GetSearchFilterForModuleAndCUList(
@@ -443,9 +442,9 @@ lldb::BreakpointSP
 Target::CreateBreakpoint(const FileSpecList *containingModules,
                          const FileSpecList *containingSourceFiles,
                          const std::vector<std::string> &func_names,
-                         uint32_t func_name_type_mask, LanguageType language,
-                         lldb::addr_t offset, LazyBool skip_prologue,
-                         bool internal, bool hardware) {
+                         FunctionNameType func_name_type_mask,
+                         LanguageType language, lldb::addr_t offset,
+                         LazyBool skip_prologue, bool internal, bool hardware) {
   BreakpointSP bp_sp;
   size_t num_names = func_names.size();
   if (num_names > 0) {
@@ -465,11 +464,13 @@ Target::CreateBreakpoint(const FileSpecList *containingModules,
   return bp_sp;
 }
 
-BreakpointSP Target::CreateBreakpoint(
-    const FileSpecList *containingModules,
-    const FileSpecList *containingSourceFiles, const char *func_names[],
-    size_t num_names, uint32_t func_name_type_mask, LanguageType language,
-    lldb::addr_t offset, LazyBool skip_prologue, bool internal, bool hardware) {
+BreakpointSP
+Target::CreateBreakpoint(const FileSpecList *containingModules,
+                         const FileSpecList *containingSourceFiles,
+                         const char *func_names[], size_t num_names,
+                         FunctionNameType func_name_type_mask,
+                         LanguageType language, lldb::addr_t offset,
+                         LazyBool skip_prologue, bool internal, bool hardware) {
   BreakpointSP bp_sp;
   if (num_names > 0) {
     SearchFilterSP filter_sp(GetSearchFilterForModuleAndCUList(

@@ -380,7 +380,7 @@ public:
   //------------------------------------------------------------------
   size_t FindFunctions(const ConstString &name,
                        const CompilerDeclContext *parent_decl_ctx,
-                       uint32_t name_type_mask, bool symbols_ok,
+                       lldb::FunctionNameType name_type_mask, bool symbols_ok,
                        bool inlines_ok, bool append,
                        SymbolContextList &sc_list);
 
@@ -816,10 +816,9 @@ public:
   ///
   /// @see SymbolContext::Scope
   //------------------------------------------------------------------
-  uint32_t
-  ResolveSymbolContextForAddress(const Address &so_addr, uint32_t resolve_scope,
-                                 SymbolContext &sc,
-                                 bool resolve_tail_call_address = false);
+  uint32_t ResolveSymbolContextForAddress(
+      const Address &so_addr, lldb::SymbolContextItem resolve_scope,
+      SymbolContext &sc, bool resolve_tail_call_address = false);
 
   //------------------------------------------------------------------
   /// Resolve items in the symbol context for a given file and line.
@@ -862,10 +861,9 @@ public:
   ///
   /// @see SymbolContext::Scope
   //------------------------------------------------------------------
-  uint32_t ResolveSymbolContextForFilePath(const char *file_path, uint32_t line,
-                                           bool check_inlines,
-                                           uint32_t resolve_scope,
-                                           SymbolContextList &sc_list);
+  uint32_t ResolveSymbolContextForFilePath(
+      const char *file_path, uint32_t line, bool check_inlines,
+      lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list);
 
   //------------------------------------------------------------------
   /// Resolve items in the symbol context for a given file and line.
@@ -909,10 +907,9 @@ public:
   ///
   /// @see SymbolContext::Scope
   //------------------------------------------------------------------
-  uint32_t ResolveSymbolContextsForFileSpec(const FileSpec &file_spec,
-                                            uint32_t line, bool check_inlines,
-                                            uint32_t resolve_scope,
-                                            SymbolContextList &sc_list);
+  uint32_t ResolveSymbolContextsForFileSpec(
+      const FileSpec &file_spec, uint32_t line, bool check_inlines,
+      lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list);
 
   void SetFileSpecAndObjectName(const FileSpec &file,
                                 const ConstString &object_name);
@@ -1031,9 +1028,10 @@ public:
   public:
     LookupInfo()
         : m_name(), m_lookup_name(), m_language(lldb::eLanguageTypeUnknown),
-          m_name_type_mask(0), m_match_name_after_lookup(false) {}
+          m_name_type_mask(lldb::eFunctionNameTypeNone),
+          m_match_name_after_lookup(false) {}
 
-    LookupInfo(const ConstString &name, uint32_t name_type_mask,
+    LookupInfo(const ConstString &name, lldb::FunctionNameType name_type_mask,
                lldb::LanguageType language);
 
     const ConstString &GetName() const { return m_name; }
@@ -1044,24 +1042,31 @@ public:
 
     void SetLookupName(const ConstString &name) { m_lookup_name = name; }
 
-    uint32_t GetNameTypeMask() const { return m_name_type_mask; }
+    lldb::FunctionNameType GetNameTypeMask() const { return m_name_type_mask; }
 
-    void SetNameTypeMask(uint32_t mask) { m_name_type_mask = mask; }
+    void SetNameTypeMask(lldb::FunctionNameType mask) {
+      m_name_type_mask = mask;
+    }
 
     void Prune(SymbolContextList &sc_list, size_t start_idx) const;
 
   protected:
-    ConstString m_name;        ///< What the user originally typed
-    ConstString m_lookup_name; ///< The actual name will lookup when calling in
-                               ///the object or symbol file
-    lldb::LanguageType
-        m_language;            ///< Limit matches to only be for this language
-    uint32_t m_name_type_mask; ///< One or more bits from lldb::FunctionNameType
-                               ///that indicate what kind of names we are
-                               ///looking for
-    bool m_match_name_after_lookup; ///< If \b true, then demangled names that
-                                    ///match will need to contain "m_name" in
-                                    ///order to be considered a match
+    /// What the user originally typed
+    ConstString m_name;
+
+    /// The actual name will lookup when calling in the object or symbol file
+    ConstString m_lookup_name;
+
+    /// Limit matches to only be for this language
+    lldb::LanguageType m_language;
+
+    /// One or more bits from lldb::FunctionNameType that indicate what kind of
+    /// names we are looking for
+    lldb::FunctionNameType m_name_type_mask;
+
+    ///< If \b true, then demangled names that match will need to contain
+    ///< "m_name" in order to be considered a match
+    bool m_match_name_after_lookup;
   };
 
 protected:
@@ -1155,7 +1160,7 @@ protected:
   //------------------------------------------------------------------
   uint32_t ResolveSymbolContextForAddress(lldb::addr_t vm_addr,
                                           bool vm_addr_is_file_addr,
-                                          uint32_t resolve_scope,
+                                          lldb::SymbolContextItem resolve_scope,
                                           Address &so_addr, SymbolContext &sc);
 
   void SymbolIndicesToSymbolContextList(Symtab *symtab,

@@ -779,8 +779,9 @@ bool Address::SectionWasDeletedPrivate() const {
          m_section_wp.owner_before(empty_section_wp);
 }
 
-uint32_t Address::CalculateSymbolContext(SymbolContext *sc,
-                                         uint32_t resolve_scope) const {
+uint32_t
+Address::CalculateSymbolContext(SymbolContext *sc,
+                                SymbolContextItem resolve_scope) const {
   sc->Clear(false);
   // Absolute addresses don't have enough information to reconstruct even their
   // target.

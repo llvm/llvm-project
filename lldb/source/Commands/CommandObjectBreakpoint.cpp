@@ -636,7 +636,7 @@ public:
     uint32_t m_column;
     std::vector<std::string> m_func_names;
     std::vector<std::string> m_breakpoint_names;
-    uint32_t m_func_name_type_mask;
+    lldb::FunctionNameType m_func_name_type_mask;
     std::string m_func_regexp;
     std::string m_source_text_regexp;
     FileSpecList m_modules;
@@ -765,7 +765,7 @@ protected:
     }
     case eSetTypeFunctionName: // Breakpoint by function name
     {
-      uint32_t name_type_mask = m_options.m_func_name_type_mask;
+      FunctionNameType name_type_mask = m_options.m_func_name_type_mask;
 
       if (name_type_mask == 0)
         name_type_mask = eFunctionNameTypeAuto;
