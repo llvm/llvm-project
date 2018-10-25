@@ -303,15 +303,14 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (Server)
     return Reply(make_error<LSPError>("server already initialized",
                                       ErrorCode::InvalidRequest));
-  if (Params.initializationOptions)
-    CompileCommandsDir = Params.initializationOptions->compilationDatabasePath;
+  if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
+    CompileCommandsDir = Dir;
   CDB.emplace(UseInMemoryCDB
                   ? CompilationDB::makeInMemory()
                   : CompilationDB::makeDirectoryBased(CompileCommandsDir));
   Server.emplace(CDB->getCDB(), FSProvider,
                  static_cast<DiagnosticsConsumer &>(*this), ClangdServerOpts);
-  if (Params.initializationOptions)
-    applyConfiguration(Params.initializationOptions->ParamsChange);
+  applyConfiguration(Params.initializationOptions.ConfigSettings);
 
   CCOpts.EnableSnippets = Params.capabilities.CompletionSnippets;
   DiagOpts.EmbedFixesInDiagnostics = Params.capabilities.DiagnosticFixes;
@@ -654,25 +653,22 @@ void ClangdLSPServer::onHover(const TextDocumentPositionParams &Params,
 }
 
 void ClangdLSPServer::applyConfiguration(
-    const ClangdConfigurationParamsChange &Params) {
+    const ConfigurationSettings &Settings) {
   // Per-file update to the compilation database.
-  if (Params.compilationDatabaseChanges) {
-    const auto &CompileCommandUpdates = *Params.compilationDatabaseChanges;
-    bool ShouldReparseOpenFiles = false;
-    for (auto &Entry : CompileCommandUpdates) {
-      /// The opened files need to be reparsed only when some existing
-      /// entries are changed.
-      PathRef File = Entry.first;
-      if (!CDB->setCompilationCommandForFile(
-              File, tooling::CompileCommand(
-                        std::move(Entry.second.workingDirectory), File,
-                        std::move(Entry.second.compilationCommand),
-                        /*Output=*/"")))
-        ShouldReparseOpenFiles = true;
-    }
-    if (ShouldReparseOpenFiles)
-      reparseOpenedFiles();
+  bool ShouldReparseOpenFiles = false;
+  for (auto &Entry : Settings.compilationDatabaseChanges) {
+    /// The opened files need to be reparsed only when some existing
+    /// entries are changed.
+    PathRef File = Entry.first;
+    if (!CDB->setCompilationCommandForFile(
+            File, tooling::CompileCommand(
+                      std::move(Entry.second.workingDirectory), File,
+                      std::move(Entry.second.compilationCommand),
+                      /*Output=*/"")))
+      ShouldReparseOpenFiles = true;
   }
+  if (ShouldReparseOpenFiles)
+    reparseOpenedFiles();
 }
 
 // FIXME: This function needs to be properly tested.
