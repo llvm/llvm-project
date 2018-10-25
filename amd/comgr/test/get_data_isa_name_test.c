@@ -65,6 +65,8 @@ void zero_e_machine(amd_comgr_data_t data) {
 
   status = amd_comgr_set_data(data, size, bytes);
   checkError(status, "amd_comgr_get_data");
+
+  free(bytes);
 }
 
 void test_isa_name(amd_comgr_data_t data, const char *expected_isa_name) {
@@ -98,6 +100,8 @@ void test_isa_name(amd_comgr_data_t data, const char *expected_isa_name) {
         isa_name, expected_isa_name);
     exit(1);
   }
+
+  free(isa_name);
 }
 
 void compile_and_test_isa_name(const char *expected_isa_name) {
@@ -178,6 +182,8 @@ void compile_and_test_isa_name(const char *expected_isa_name) {
   checkError(status, "amd_comgr_release_data");
   status = amd_comgr_release_data(dataReloc);
   checkError(status, "amd_comgr_release_data");
+  status = amd_comgr_release_data(dataExec);
+  checkError(status, "amd_comgr_release_data");
   status = amd_comgr_destroy_data_set(dataSetIn);
   checkError(status, "amd_comgr_destroy_data_set");
   status = amd_comgr_destroy_data_set(dataSetBC);
@@ -188,6 +194,8 @@ void compile_and_test_isa_name(const char *expected_isa_name) {
   checkError(status, "amd_comgr_destroy_data_set");
   status = amd_comgr_destroy_data_set(dataSetExec);
   checkError(status, "amd_comgr_destroy_data_set");
+  status = amd_comgr_destroy_action_info(dataAction);
+  checkError(status, "amd_comgr_destroy_action_info");
   free(bufSource);
 }
 
