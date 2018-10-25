@@ -94,6 +94,8 @@ const char *CudaArchToString(CudaArch A) {
     return "gfx904";
   case CudaArch::GFX906: // TBA
     return "gfx906";
+  case CudaArch::GFX909: // TBA
+    return "gfx909";
   }
   llvm_unreachable("invalid enum");
 }
@@ -130,6 +132,7 @@ CudaArch StringToCudaArch(llvm::StringRef S) {
       .Case("gfx902", CudaArch::GFX902)
       .Case("gfx904", CudaArch::GFX904)
       .Case("gfx906", CudaArch::GFX906)
+      .Case("gfx909", CudaArch::GFX909)
       .Default(CudaArch::UNKNOWN);
 }
 
@@ -241,6 +244,7 @@ CudaVirtualArch VirtualArchForCudaArch(CudaArch A) {
   case CudaArch::GFX902:
   case CudaArch::GFX904:
   case CudaArch::GFX906:
+  case CudaArch::GFX909:
     return CudaVirtualArch::COMPUTE_AMDGCN;
   }
   llvm_unreachable("invalid enum");
@@ -287,6 +291,7 @@ CudaVersion MinVersionForCudaArch(CudaArch A) {
   case CudaArch::GFX902:
   case CudaArch::GFX904:
   case CudaArch::GFX906:
+  case CudaArch::GFX909:
     return CudaVersion::CUDA_70;
   }
   llvm_unreachable("invalid enum");

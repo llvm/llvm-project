@@ -2295,8 +2295,19 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   if (Args.hasArg(OPT_print_ivar_layout))
     Opts.ObjCGCBitmapPrint = 1;
+
   if (Args.hasArg(OPT_fno_constant_cfstrings))
     Opts.NoConstantCFStrings = 1;
+  if (const auto *A = Args.getLastArg(OPT_fcf_runtime_abi_EQ))
+    Opts.CFRuntime =
+        llvm::StringSwitch<LangOptions::CoreFoundationABI>(A->getValue())
+            .Cases("unspecified", "standalone", "objc",
+                   LangOptions::CoreFoundationABI::ObjectiveC)
+            .Cases("swift", "swift-5.0",
+                   LangOptions::CoreFoundationABI::Swift5_0)
+            .Case("swift-4.2", LangOptions::CoreFoundationABI::Swift4_2)
+            .Case("swift-4.1", LangOptions::CoreFoundationABI::Swift4_1)
+            .Default(LangOptions::CoreFoundationABI::ObjectiveC);
 
   if (Args.hasArg(OPT_fzvector))
     Opts.ZVector = 1;

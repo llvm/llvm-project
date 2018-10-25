@@ -190,6 +190,9 @@ def err_drv_mg_requires_m_or_mm : Error<
   "option '-MG' requires '-M' or '-MM'">;
 def err_drv_unknown_objc_runtime : Error<
   "unknown or ill-formed Objective-C runtime '%0'">;
+def err_drv_invalid_cf_runtime_abi
+  : Error<"invalid CoreFoundation Runtime ABI '%0'; must be one of "
+          "'objc', 'standalone', 'swift', 'swift-5.0', 'swift-4.2', 'swift-4.1'">;
 def err_drv_gnustep_objc_runtime_incompatible_binary : Error<
   "GNUstep Objective-C runtime version %0 incompatible with target binary format">;
 def err_drv_emit_llvm_link : Error<

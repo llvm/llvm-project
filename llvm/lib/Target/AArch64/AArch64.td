@@ -180,6 +180,10 @@ def FeatureDisableLatencySchedHeuristic : SubtargetFeature<
     "disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
     "Disable latency scheduling heuristic">;
 
+def FeatureForce32BitJumpTables
+   : SubtargetFeature<"force-32bit-jump-tables", "Force32BitJumpTables", "true",
+                      "Force jump table entries to be 32-bits wide except at MinSize">;
+
 def FeatureRCPC : SubtargetFeature<"rcpc", "HasRCPC", "true",
                                    "Enable support for RCPC extension">;
 
@@ -411,7 +415,8 @@ def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
                                      FeaturePostRAScheduler,
                                      FeatureSlowMisaligned128Store,
                                      FeatureUseRSqrt,
-                                     FeatureZCZeroingFP]>;
+                                     FeatureZCZeroingFP,
+                                     FeatureForce32BitJumpTables]>;
 
 def ProcExynosM2 : SubtargetFeature<"exynosm2", "ARMProcFamily", "ExynosM1",
                                     "Samsung Exynos-M2 processors",
@@ -425,7 +430,8 @@ def ProcExynosM2 : SubtargetFeature<"exynosm2", "ARMProcFamily", "ExynosM1",
                                      FeaturePerfMon,
                                      FeaturePostRAScheduler,
                                      FeatureSlowMisaligned128Store,
-                                     FeatureZCZeroingFP]>;
+                                     FeatureZCZeroingFP,
+                                     FeatureForce32BitJumpTables]>;
 
 def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                     "Samsung Exynos-M3 processors",
@@ -442,7 +448,8 @@ def ProcExynosM3 : SubtargetFeature<"exynosm3", "ARMProcFamily", "ExynosM3",
                                      FeaturePerfMon,
                                      FeaturePostRAScheduler,
                                      FeaturePredictableSelectIsExpensive,
-                                     FeatureZCZeroingFP]>;
+                                     FeatureZCZeroingFP,
+                                     FeatureForce32BitJumpTables]>;
 
 def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    "Qualcomm Kryo processors", [

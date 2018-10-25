@@ -17,17 +17,12 @@
 
 namespace mca {
 
-bool FetchStage::hasWorkToComplete() const {
-  return CurrentInstruction.get() || SM.hasNext();
-}
+bool FetchStage::hasWorkToComplete() const { return CurrentInstruction; }
 
 bool FetchStage::isAvailable(const InstRef & /* unused */) const {
-  if (!CurrentInstruction)
-    return false;
-  assert(SM.hasNext() && "Unexpected internal state!");
-  const SourceRef SR = SM.peekNext();
-  InstRef IR(SR.first, CurrentInstruction.get());
-  return checkNextStage(IR);
+  if (CurrentInstruction)
+    return checkNextStage(CurrentInstruction);
+  return false;
 }
 
 llvm::Error FetchStage::getNextInstruction() {
@@ -39,23 +34,20 @@ llvm::Error FetchStage::getNextInstruction() {
       IB.createInstruction(SR.second);
   if (!InstOrErr)
     return InstOrErr.takeError();
-  CurrentInstruction = std::move(InstOrErr.get());
+  std::unique_ptr<Instruction> Inst = std::move(InstOrErr.get());
+  CurrentInstruction = InstRef(SR.first, Inst.get());
+  Instructions[SR.first] = std::move(Inst);
+  SM.updateNext();
   return llvm::ErrorSuccess();
 }
 
 llvm::Error FetchStage::execute(InstRef & /*unused */) {
   assert(CurrentInstruction && "There is no instruction to process!");
-  const SourceRef SR = SM.peekNext();
-  InstRef IR(SR.first, CurrentInstruction.get());
-  assert(checkNextStage(IR) && "Invalid fetch!");
-
-  Instructions[IR.getSourceIndex()] = std::move(CurrentInstruction);
-  if (llvm::Error Val = moveToTheNextStage(IR))
+  if (llvm::Error Val = moveToTheNextStage(CurrentInstruction))
     return Val;
 
-  SM.updateNext();
-
   // Move the program counter.
+  CurrentInstruction.invalidate();
   return getNextInstruction();
 }
 

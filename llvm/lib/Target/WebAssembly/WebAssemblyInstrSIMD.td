@@ -350,7 +350,7 @@ def : Pat<(v2f64 (build_vector (f64 F64:$x0), (f64 F64:$x1))),
             (v2f64 (SPLAT_v2f64 (f64 F64:$x0))), 1, F64:$x1))>;
 
 // Shuffle lanes: shuffle
-defm SHUFFLE_v16i8 :
+defm SHUFFLE :
   SIMD_I<(outs V128:$dst),
          (ins V128:$x, V128:$y,
            vec_i8imm_op:$m0, vec_i8imm_op:$m1,
@@ -384,7 +384,7 @@ defm SHUFFLE_v16i8 :
 def wasm_shuffle_t : SDTypeProfile<1, 18, []>;
 def wasm_shuffle : SDNode<"WebAssemblyISD::SHUFFLE", wasm_shuffle_t>;
 foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in {
-def : Pat<(v16i8 (wasm_shuffle (vec_t V128:$x), (vec_t V128:$y),
+def : Pat<(vec_t (wasm_shuffle (vec_t V128:$x), (vec_t V128:$y),
             (i32 LaneIdx32:$m0), (i32 LaneIdx32:$m1),
             (i32 LaneIdx32:$m2), (i32 LaneIdx32:$m3),
             (i32 LaneIdx32:$m4), (i32 LaneIdx32:$m5),
@@ -393,7 +393,7 @@ def : Pat<(v16i8 (wasm_shuffle (vec_t V128:$x), (vec_t V128:$y),
             (i32 LaneIdx32:$mA), (i32 LaneIdx32:$mB),
             (i32 LaneIdx32:$mC), (i32 LaneIdx32:$mD),
             (i32 LaneIdx32:$mE), (i32 LaneIdx32:$mF))),
-          (v16i8 (SHUFFLE_v16i8 (vec_t V128:$x), (vec_t V128:$y),
+          (vec_t (SHUFFLE (vec_t V128:$x), (vec_t V128:$y),
             (i32 LaneIdx32:$m0), (i32 LaneIdx32:$m1),
             (i32 LaneIdx32:$m2), (i32 LaneIdx32:$m3),
             (i32 LaneIdx32:$m4), (i32 LaneIdx32:$m5),
@@ -757,10 +757,10 @@ multiclass SIMDBinaryFP<SDNode node, string name, bits<32> baseInst> {
 }
 
 // NaN-propagating minimum: min
-defm MIN : SIMDBinaryFP<fminnan, "min", 129>;
+defm MIN : SIMDBinaryFP<fminimum, "min", 129>;
 
 // NaN-propagating maximum: max
-defm MAX : SIMDBinaryFP<fmaxnan, "max", 131>;
+defm MAX : SIMDBinaryFP<fmaximum, "max", 131>;
 
 //===----------------------------------------------------------------------===//
 // Floating-point arithmetic

@@ -199,7 +199,13 @@ main.cpp:2:3: error: something terrible happened)");
   // Transform dianostics and check the results.
   std::vector<std::pair<clangd::Diagnostic, std::vector<clangd::Fix>>> LSPDiags;
   toLSPDiags(
-      D, URIForFile("/path/to/foo/bar/main.cpp"), ClangdDiagnosticOptions(),
+      D,
+#ifdef _WIN32
+      URIForFile("c:\\path\\to\\foo\\bar\\main.cpp"),
+#else
+      URIForFile("/path/to/foo/bar/main.cpp"),
+#endif
+      ClangdDiagnosticOptions(),
       [&](clangd::Diagnostic LSPDiag, ArrayRef<clangd::Fix> Fixes) {
         LSPDiags.push_back(
             {std::move(LSPDiag),

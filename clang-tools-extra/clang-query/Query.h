@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_QUERY_QUERY_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_QUERY_QUERY_H
 
+#include "QuerySession.h"
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
@@ -18,7 +19,7 @@
 namespace clang {
 namespace query {
 
-enum OutputKind { OK_Diag, OK_Print, OK_Dump };
+enum OutputKind { OK_Diag, OK_Print, OK_DetailedAST };
 
 enum QueryKind {
   QK_Invalid,
@@ -131,6 +132,23 @@ template <typename T> struct SetQuery : Query {
 
   T QuerySession::*Var;
   T Value;
+};
+
+// Implements the exclusive 'set output dump|diag|print' options.
+struct SetExclusiveOutputQuery : Query {
+  SetExclusiveOutputQuery(bool QuerySession::*Var)
+      : Query(QK_SetOutputKind), Var(Var) {}
+  bool run(llvm::raw_ostream &OS, QuerySession &QS) const override {
+    QS.DiagOutput = false;
+    QS.DetailedASTOutput = false;
+    QS.PrintOutput = false;
+    QS.*Var = true;
+    return true;
+  }
+
+  static bool classof(const Query *Q) { return Q->Kind == QK_SetOutputKind; }
+
+  bool QuerySession::*Var;
 };
 
 } // namespace query

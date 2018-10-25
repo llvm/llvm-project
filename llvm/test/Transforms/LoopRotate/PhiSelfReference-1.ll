@@ -1,4 +1,5 @@
 ; RUN: opt < %s -loop-rotate -verify-dom-info -verify-loop-info -disable-output
+; RUN: opt < %s -loop-rotate -verify-dom-info -verify-loop-info -enable-mssa-loop-dependency=true -verify-memoryssa -disable-output
 ; ModuleID = 'PhiSelfReference-1.bc'
 
 define void @snrm2(i32 %incx) {

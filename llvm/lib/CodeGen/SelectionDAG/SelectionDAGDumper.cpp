@@ -178,9 +178,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::FMAXNUM:                    return "fmaxnum";
   case ISD::FMINNUM_IEEE:               return "fminnum_ieee";
   case ISD::FMAXNUM_IEEE:               return "fmaxnum_ieee";
-
-  case ISD::FMINNAN:                    return "fminnan";
-  case ISD::FMAXNAN:                    return "fmaxnan";
+  case ISD::FMINIMUM:                   return "fminimum";
+  case ISD::FMAXIMUM:                   return "fmaximum";
   case ISD::FNEG:                       return "fneg";
   case ISD::FSQRT:                      return "fsqrt";
   case ISD::STRICT_FSQRT:               return "strict_fsqrt";

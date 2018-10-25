@@ -551,8 +551,9 @@ Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr, Stmt *InitStmt,
         false);
 
   Expr *CondExpr = Cond.get().second;
-  if (!Diags.isIgnored(diag::warn_comma_operator,
-                       CondExpr->getExprLoc()))
+  // Only call the CommaVisitor when not C89 due to differences in scope flags.
+  if ((getLangOpts().C99 || getLangOpts().CPlusPlus) &&
+      !Diags.isIgnored(diag::warn_comma_operator, CondExpr->getExprLoc()))
     CommaVisitor(*this).Visit(CondExpr);
 
   if (!elseStmt)
@@ -1327,6 +1328,11 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
   if (CondResult.isInvalid())
     return StmtError();
   Cond = CondResult.get();
+
+  // Only call the CommaVisitor for C89 due to differences in scope flags.
+  if (Cond && !getLangOpts().C99 && !getLangOpts().CPlusPlus &&
+      !Diags.isIgnored(diag::warn_comma_operator, Cond->getExprLoc()))
+    CommaVisitor(*this).Visit(Cond);
 
   DiagnoseUnusedExprResult(Body);
 

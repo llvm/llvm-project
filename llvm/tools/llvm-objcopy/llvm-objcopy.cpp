@@ -53,13 +53,6 @@
 #include <system_error>
 #include <utility>
 
-using namespace llvm;
-using namespace llvm::objcopy;
-using namespace object;
-using namespace ELF;
-
-using SectionPred = std::function<bool(const SectionBase &Sec)>;
-
 namespace llvm {
 namespace objcopy {
 
@@ -91,6 +84,16 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
 
 } // end namespace objcopy
 } // end namespace llvm
+
+// TODO: move everything enclosed in the namespace llvm::objcopy::elf
+// into separate header+cpp files.
+namespace llvm {
+namespace objcopy {
+namespace elf {
+
+using namespace object;
+using namespace ELF;
+using SectionPred = std::function<bool(const SectionBase &Sec)>;
 
 static bool isDebugSection(const SectionBase &Sec) {
   return StringRef(Sec.Name).startswith(".debug") ||
@@ -513,17 +516,38 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
     Obj.addSection<GnuDebugLinkSection>(Config.AddGnuDebugLink);
 }
 
-static void executeElfObjcopyOnBinary(const CopyConfig &Config, Reader &Reader,
-                                      Buffer &Out, ElfType OutputElfType) {
+void executeObjcopyOnRawBinary(const CopyConfig &Config, MemoryBuffer &In,
+                               Buffer &Out) {
+  BinaryReader Reader(Config.BinaryArch, &In);
   std::unique_ptr<Object> Obj = Reader.create();
 
+  const ElfType OutputElfType = getOutputElfType(Config.BinaryArch);
   handleArgs(Config, *Obj, Reader, OutputElfType);
-
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
   Writer->finalize();
   Writer->write();
 }
+
+void executeObjcopyOnBinary(const CopyConfig &Config,
+                            object::ELFObjectFileBase &In, Buffer &Out) {
+  ELFReader Reader(&In);
+  std::unique_ptr<Object> Obj = Reader.create();
+  const ElfType OutputElfType = getOutputElfType(In);
+  handleArgs(Config, *Obj, Reader, OutputElfType);
+  std::unique_ptr<Writer> Writer =
+      createWriter(Config, *Obj, Out, OutputElfType);
+  Writer->finalize();
+  Writer->write();
+}
+
+} // end namespace elf
+} // end namespace objcopy
+} // end namespace llvm
+
+using namespace llvm;
+using namespace llvm::object;
+using namespace llvm::objcopy;
 
 // For regular archives this function simply calls llvm::writeArchive,
 // For thin archives it writes the archive file itself as well as its members.
@@ -554,8 +578,29 @@ static Error deepWriteArchive(StringRef ArcName,
   return Error::success();
 }
 
-static void executeElfObjcopyOnArchive(const CopyConfig &Config,
-                                       const Archive &Ar) {
+/// The function executeObjcopyOnRawBinary does the dispatch based on the format
+/// of the output specified by the command line options.
+static void executeObjcopyOnRawBinary(const CopyConfig &Config,
+                                      MemoryBuffer &In, Buffer &Out) {
+  // TODO: llvm-objcopy should parse CopyConfig.OutputFormat to recognize
+  // formats other than ELF / "binary" and invoke
+  // elf::executeObjcopyOnRawBinary, macho::executeObjcopyOnRawBinary or
+  // coff::executeObjcopyOnRawBinary accordingly.
+  return elf::executeObjcopyOnRawBinary(Config, In, Out);
+}
+
+/// The function executeObjcopyOnBinary does the dispatch based on the format
+/// of the input binary (ELF, MachO or COFF).
+static void executeObjcopyOnBinary(const CopyConfig &Config, object::Binary &In,
+                                   Buffer &Out) {
+  if (auto *ELFBinary = dyn_cast<object::ELFObjectFileBase>(&In))
+    return elf::executeObjcopyOnBinary(Config, *ELFBinary, Out);
+  else
+    error("Unsupported object file format");
+}
+
+static void executeObjcopyOnArchive(const CopyConfig &Config,
+                                    const Archive &Ar) {
   std::vector<NewArchiveMember> NewArchiveMembers;
   Error Err = Error::success();
   for (const Archive::Child &Child : Ar.children(Err)) {
@@ -569,8 +614,7 @@ static void executeElfObjcopyOnArchive(const CopyConfig &Config,
       reportError(Ar.getFileName(), ChildNameOrErr.takeError());
 
     MemBuffer MB(ChildNameOrErr.get());
-    ELFReader Reader(Bin);
-    executeElfObjcopyOnBinary(Config, Reader, MB, getOutputElfType(*Bin));
+    executeObjcopyOnBinary(Config, *Bin, MB);
 
     Expected<NewArchiveMember> Member =
         NewArchiveMember::getOldMember(Child, true);
@@ -605,7 +649,10 @@ static void restoreDateOnFile(StringRef Filename,
     reportError(Filename, EC);
 }
 
-static void executeElfObjcopy(const CopyConfig &Config) {
+/// The function executeObjcopy does the higher level dispatch based on the type
+/// of input (raw binary, archive or single object file) and takes care of the
+/// format-agnostic modifications, i.e. preserving dates.
+static void executeObjcopy(const CopyConfig &Config) {
   sys::fs::file_status Stat;
   if (Config.PreserveDates)
     if (auto EC = sys::fs::status(Config.InputFilename, Stat))
@@ -615,11 +662,8 @@ static void executeElfObjcopy(const CopyConfig &Config) {
     auto BufOrErr = MemoryBuffer::getFile(Config.InputFilename);
     if (!BufOrErr)
       reportError(Config.InputFilename, BufOrErr.getError());
-
     FileBuffer FB(Config.OutputFilename);
-    BinaryReader Reader(Config.BinaryArch, BufOrErr->get());
-    executeElfObjcopyOnBinary(Config, Reader, FB,
-                              getOutputElfType(Config.BinaryArch));
+    executeObjcopyOnRawBinary(Config, *BufOrErr->get(), FB);
   } else {
     Expected<OwningBinary<llvm::object::Binary>> BinaryOrErr =
         createBinary(Config.InputFilename);
@@ -627,12 +671,10 @@ static void executeElfObjcopy(const CopyConfig &Config) {
       reportError(Config.InputFilename, BinaryOrErr.takeError());
 
     if (Archive *Ar = dyn_cast<Archive>(BinaryOrErr.get().getBinary())) {
-      executeElfObjcopyOnArchive(Config, *Ar);
+      executeObjcopyOnArchive(Config, *Ar);
     } else {
       FileBuffer FB(Config.OutputFilename);
-      Binary *Bin = BinaryOrErr.get().getBinary();
-      ELFReader Reader(Bin);
-      executeElfObjcopyOnBinary(Config, Reader, FB, getOutputElfType(*Bin));
+      executeObjcopyOnBinary(Config, *BinaryOrErr.get().getBinary(), FB);
     }
   }
 
@@ -652,5 +694,5 @@ int main(int argc, char **argv) {
   else
     DriverConfig = parseObjcopyOptions(makeArrayRef(argv + 1, argc));
   for (const CopyConfig &CopyConfig : DriverConfig.CopyConfigs)
-    executeElfObjcopy(CopyConfig);
+    executeObjcopy(CopyConfig);
 }
