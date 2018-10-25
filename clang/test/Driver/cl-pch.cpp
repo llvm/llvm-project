@@ -345,3 +345,24 @@
 // CHECK-NoSourceTP: pchfile.pch
 // CHECK-NoSourceTP: -x
 // CHECK-NoSourceTP: "c++"
+
+// If only preprocessing, PCH options are ignored.
+// RUN: %clang_cl /P /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YC-P %s
+// CHECK-YC-P-NOT: -emit-pch
+// CHECK-YC-P-NOT: -include-pch
+
+// RUN: %clang_cl /E /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YC-E %s
+// CHECK-YC-E-NOT: -emit-pch
+// CHECK-YC-E-NOT: -include-pch
+
+// RUN: %clang_cl /P /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YU-P %s
+// CHECK-YU-P-NOT: -emit-pch
+// CHECK-YU-P-NOT: -include-pch
+
+// RUN: %clang_cl /E /Ycpchfile.h /FIpchfile.h /c -### -- %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-YU-E %s
+// CHECK-YU-E-NOT: -emit-pch
+// CHECK-YU-E-NOT: -include-pch
