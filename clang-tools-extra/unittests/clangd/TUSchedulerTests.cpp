@@ -532,6 +532,18 @@ TEST_F(TUSchedulerTests, NoChangeDiags) {
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
 }
 
+TEST_F(TUSchedulerTests, Run) {
+  TUScheduler S(/*AsyncThreadsCount=*/getDefaultAsyncThreadsCount(),
+                /*StorePreambleInMemory=*/true, /*ASTCallbacks=*/nullptr,
+                /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+                ASTRetentionPolicy());
+  std::atomic<int> Counter(0);
+  S.run("add 1", [&] { ++Counter; });
+  S.run("add 2", [&] { Counter += 2; });
+  ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
+  EXPECT_EQ(Counter.load(), 3);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
