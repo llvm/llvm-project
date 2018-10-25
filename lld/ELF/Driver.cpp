@@ -279,13 +279,13 @@ static void checkOptions(opt::InputArgList &Args) {
   // The MIPS ABI as of 2016 does not support the GNU-style symbol lookup
   // table which is a relatively new feature.
   if (Config->EMachine == EM_MIPS && Config->GnuHash)
-    error("the .gnu.hash section is not compatible with the MIPS target.");
+    error("the .gnu.hash section is not compatible with the MIPS target");
 
   if (Config->FixCortexA53Errata843419 && Config->EMachine != EM_AARCH64)
-    error("--fix-cortex-a53-843419 is only supported on AArch64 targets.");
+    error("--fix-cortex-a53-843419 is only supported on AArch64 targets");
 
   if (Config->TocOptimize && Config->EMachine != EM_PPC64)
-      error("--toc-optimize is only supported on the PowerPC64 target.");
+    error("--toc-optimize is only supported on the PowerPC64 target");
 
   if (Config->Pie && Config->Shared)
     error("-shared and -pie may not be used together");
@@ -1617,7 +1617,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     // supports them.
     if (Config->ARMHasBlx == false)
       warn("lld uses blx instruction, no object with architecture supporting "
-           "feature detected.");
+           "feature detected");
   }
 
   // This adds a .comment section containing a version string. We have to add it
