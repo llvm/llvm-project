@@ -113,8 +113,6 @@ private:
     static CompilationDB
     makeDirectoryBased(llvm::Optional<Path> CompileCommandsDir);
 
-    void invalidate(PathRef File);
-
     /// Sets the compilation command for a particular file.
     /// Only valid for in-memory CDB, no-op and error log on DirectoryBasedCDB.
     ///

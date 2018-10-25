@@ -393,7 +393,6 @@ void ClangdLSPServer::onDocumentDidChange(
     // fail rather than giving wrong results.
     DraftMgr.removeDraft(File);
     Server->removeDocument(File);
-    CDB->invalidate(File);
     elog("Failed to update {0}: {1}", File, Contents.takeError());
     return;
   }
@@ -489,7 +488,6 @@ void ClangdLSPServer::onDocumentDidClose(
   PathRef File = Params.textDocument.uri.file();
   DraftMgr.removeDraft(File);
   Server->removeDocument(File);
-  CDB->invalidate(File);
 }
 
 void ClangdLSPServer::onDocumentOnTypeFormatting(
@@ -802,11 +800,6 @@ ClangdLSPServer::CompilationDB::makeDirectoryBased(
       std::move(CompileCommandsDir));
   return CompilationDB(std::move(CDB),
                        /*IsDirectoryBased=*/true);
-}
-
-void ClangdLSPServer::CompilationDB::invalidate(PathRef File) {
-  if (!IsDirectoryBased)
-    static_cast<InMemoryCompilationDb *>(CDB.get())->invalidate(File);
 }
 
 bool ClangdLSPServer::CompilationDB::setCompilationCommandForFile(
