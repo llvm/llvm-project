@@ -20,29 +20,11 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;
 
 define void @uitofp_2i64_2f64() #0 {
-; SSE-LABEL: @uitofp_2i64_2f64(
-; SSE-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
-; SSE-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
-; SSE-NEXT:    [[CVT0:%.*]] = uitofp i64 [[LD0]] to double
-; SSE-NEXT:    [[CVT1:%.*]] = uitofp i64 [[LD1]] to double
-; SSE-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
-; SSE-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
-; SSE-NEXT:    ret void
-;
-; AVX256-LABEL: @uitofp_2i64_2f64(
-; AVX256-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
-; AVX256-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
-; AVX256-NEXT:    [[CVT0:%.*]] = uitofp i64 [[LD0]] to double
-; AVX256-NEXT:    [[CVT1:%.*]] = uitofp i64 [[LD1]] to double
-; AVX256-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
-; AVX256-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
-; AVX256-NEXT:    ret void
-;
-; AVX512-LABEL: @uitofp_2i64_2f64(
-; AVX512-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @src64 to <2 x i64>*), align 64
-; AVX512-NEXT:    [[TMP2:%.*]] = uitofp <2 x i64> [[TMP1]] to <2 x double>
-; AVX512-NEXT:    store <2 x double> [[TMP2]], <2 x double>* bitcast ([8 x double]* @dst64 to <2 x double>*), align 64
-; AVX512-NEXT:    ret void
+; CHECK-LABEL: @uitofp_2i64_2f64(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @src64 to <2 x i64>*), align 64
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <2 x i64> [[TMP1]] to <2 x double>
+; CHECK-NEXT:    store <2 x double> [[TMP2]], <2 x double>* bitcast ([8 x double]* @dst64 to <2 x double>*), align 64
+; CHECK-NEXT:    ret void
 ;
   %ld0 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
   %ld1 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
@@ -55,40 +37,19 @@ define void @uitofp_2i64_2f64() #0 {
 
 define void @uitofp_4i64_4f64() #0 {
 ; SSE-LABEL: @uitofp_4i64_4f64(
-; SSE-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
-; SSE-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
-; SSE-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 2), align 16
-; SSE-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 3), align 8
-; SSE-NEXT:    [[CVT0:%.*]] = uitofp i64 [[LD0]] to double
-; SSE-NEXT:    [[CVT1:%.*]] = uitofp i64 [[LD1]] to double
-; SSE-NEXT:    [[CVT2:%.*]] = uitofp i64 [[LD2]] to double
-; SSE-NEXT:    [[CVT3:%.*]] = uitofp i64 [[LD3]] to double
-; SSE-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
-; SSE-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
-; SSE-NEXT:    store double [[CVT2]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2), align 16
-; SSE-NEXT:    store double [[CVT3]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 3), align 8
+; SSE-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @src64 to <2 x i64>*), align 64
+; SSE-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 2) to <2 x i64>*), align 16
+; SSE-NEXT:    [[TMP3:%.*]] = uitofp <2 x i64> [[TMP1]] to <2 x double>
+; SSE-NEXT:    [[TMP4:%.*]] = uitofp <2 x i64> [[TMP2]] to <2 x double>
+; SSE-NEXT:    store <2 x double> [[TMP3]], <2 x double>* bitcast ([8 x double]* @dst64 to <2 x double>*), align 64
+; SSE-NEXT:    store <2 x double> [[TMP4]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2) to <2 x double>*), align 16
 ; SSE-NEXT:    ret void
 ;
-; AVX256-LABEL: @uitofp_4i64_4f64(
-; AVX256-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
-; AVX256-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
-; AVX256-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 2), align 16
-; AVX256-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 3), align 8
-; AVX256-NEXT:    [[CVT0:%.*]] = uitofp i64 [[LD0]] to double
-; AVX256-NEXT:    [[CVT1:%.*]] = uitofp i64 [[LD1]] to double
-; AVX256-NEXT:    [[CVT2:%.*]] = uitofp i64 [[LD2]] to double
-; AVX256-NEXT:    [[CVT3:%.*]] = uitofp i64 [[LD3]] to double
-; AVX256-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
-; AVX256-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
-; AVX256-NEXT:    store double [[CVT2]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2), align 16
-; AVX256-NEXT:    store double [[CVT3]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 3), align 8
-; AVX256-NEXT:    ret void
-;
-; AVX512-LABEL: @uitofp_4i64_4f64(
-; AVX512-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([8 x i64]* @src64 to <4 x i64>*), align 64
-; AVX512-NEXT:    [[TMP2:%.*]] = uitofp <4 x i64> [[TMP1]] to <4 x double>
-; AVX512-NEXT:    store <4 x double> [[TMP2]], <4 x double>* bitcast ([8 x double]* @dst64 to <4 x double>*), align 64
-; AVX512-NEXT:    ret void
+; AVX-LABEL: @uitofp_4i64_4f64(
+; AVX-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([8 x i64]* @src64 to <4 x i64>*), align 64
+; AVX-NEXT:    [[TMP2:%.*]] = uitofp <4 x i64> [[TMP1]] to <4 x double>
+; AVX-NEXT:    store <4 x double> [[TMP2]], <4 x double>* bitcast ([8 x double]* @dst64 to <4 x double>*), align 64
+; AVX-NEXT:    ret void
 ;
   %ld0 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
   %ld1 = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
@@ -107,57 +68,27 @@ define void @uitofp_4i64_4f64() #0 {
 
 define void @uitofp_8i64_8f64() #0 {
 ; SSE-LABEL: @uitofp_8i64_8f64(
-; SSE-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
-; SSE-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
-; SSE-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 2), align 16
-; SSE-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 3), align 8
-; SSE-NEXT:    [[LD4:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 4), align 32
-; SSE-NEXT:    [[LD5:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 5), align 8
-; SSE-NEXT:    [[LD6:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 6), align 16
-; SSE-NEXT:    [[LD7:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 7), align 8
-; SSE-NEXT:    [[CVT0:%.*]] = uitofp i64 [[LD0]] to double
-; SSE-NEXT:    [[CVT1:%.*]] = uitofp i64 [[LD1]] to double
-; SSE-NEXT:    [[CVT2:%.*]] = uitofp i64 [[LD2]] to double
-; SSE-NEXT:    [[CVT3:%.*]] = uitofp i64 [[LD3]] to double
-; SSE-NEXT:    [[CVT4:%.*]] = uitofp i64 [[LD4]] to double
-; SSE-NEXT:    [[CVT5:%.*]] = uitofp i64 [[LD5]] to double
-; SSE-NEXT:    [[CVT6:%.*]] = uitofp i64 [[LD6]] to double
-; SSE-NEXT:    [[CVT7:%.*]] = uitofp i64 [[LD7]] to double
-; SSE-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
-; SSE-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
-; SSE-NEXT:    store double [[CVT2]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2), align 16
-; SSE-NEXT:    store double [[CVT3]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 3), align 8
-; SSE-NEXT:    store double [[CVT4]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 4), align 32
-; SSE-NEXT:    store double [[CVT5]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 5), align 8
-; SSE-NEXT:    store double [[CVT6]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 6), align 16
-; SSE-NEXT:    store double [[CVT7]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 7), align 8
+; SSE-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* bitcast ([8 x i64]* @src64 to <2 x i64>*), align 64
+; SSE-NEXT:    [[TMP2:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 2) to <2 x i64>*), align 16
+; SSE-NEXT:    [[TMP3:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 4) to <2 x i64>*), align 32
+; SSE-NEXT:    [[TMP4:%.*]] = load <2 x i64>, <2 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 6) to <2 x i64>*), align 16
+; SSE-NEXT:    [[TMP5:%.*]] = uitofp <2 x i64> [[TMP1]] to <2 x double>
+; SSE-NEXT:    [[TMP6:%.*]] = uitofp <2 x i64> [[TMP2]] to <2 x double>
+; SSE-NEXT:    [[TMP7:%.*]] = uitofp <2 x i64> [[TMP3]] to <2 x double>
+; SSE-NEXT:    [[TMP8:%.*]] = uitofp <2 x i64> [[TMP4]] to <2 x double>
+; SSE-NEXT:    store <2 x double> [[TMP5]], <2 x double>* bitcast ([8 x double]* @dst64 to <2 x double>*), align 64
+; SSE-NEXT:    store <2 x double> [[TMP6]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2) to <2 x double>*), align 16
+; SSE-NEXT:    store <2 x double> [[TMP7]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 4) to <2 x double>*), align 32
+; SSE-NEXT:    store <2 x double> [[TMP8]], <2 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 6) to <2 x double>*), align 16
 ; SSE-NEXT:    ret void
 ;
 ; AVX256-LABEL: @uitofp_8i64_8f64(
-; AVX256-NEXT:    [[LD0:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 0), align 64
-; AVX256-NEXT:    [[LD1:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 1), align 8
-; AVX256-NEXT:    [[LD2:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 2), align 16
-; AVX256-NEXT:    [[LD3:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 3), align 8
-; AVX256-NEXT:    [[LD4:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 4), align 32
-; AVX256-NEXT:    [[LD5:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 5), align 8
-; AVX256-NEXT:    [[LD6:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 6), align 16
-; AVX256-NEXT:    [[LD7:%.*]] = load i64, i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 7), align 8
-; AVX256-NEXT:    [[CVT0:%.*]] = uitofp i64 [[LD0]] to double
-; AVX256-NEXT:    [[CVT1:%.*]] = uitofp i64 [[LD1]] to double
-; AVX256-NEXT:    [[CVT2:%.*]] = uitofp i64 [[LD2]] to double
-; AVX256-NEXT:    [[CVT3:%.*]] = uitofp i64 [[LD3]] to double
-; AVX256-NEXT:    [[CVT4:%.*]] = uitofp i64 [[LD4]] to double
-; AVX256-NEXT:    [[CVT5:%.*]] = uitofp i64 [[LD5]] to double
-; AVX256-NEXT:    [[CVT6:%.*]] = uitofp i64 [[LD6]] to double
-; AVX256-NEXT:    [[CVT7:%.*]] = uitofp i64 [[LD7]] to double
-; AVX256-NEXT:    store double [[CVT0]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 0), align 64
-; AVX256-NEXT:    store double [[CVT1]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 1), align 8
-; AVX256-NEXT:    store double [[CVT2]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 2), align 16
-; AVX256-NEXT:    store double [[CVT3]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 3), align 8
-; AVX256-NEXT:    store double [[CVT4]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 4), align 32
-; AVX256-NEXT:    store double [[CVT5]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 5), align 8
-; AVX256-NEXT:    store double [[CVT6]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 6), align 16
-; AVX256-NEXT:    store double [[CVT7]], double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 7), align 8
+; AVX256-NEXT:    [[TMP1:%.*]] = load <4 x i64>, <4 x i64>* bitcast ([8 x i64]* @src64 to <4 x i64>*), align 64
+; AVX256-NEXT:    [[TMP2:%.*]] = load <4 x i64>, <4 x i64>* bitcast (i64* getelementptr inbounds ([8 x i64], [8 x i64]* @src64, i32 0, i64 4) to <4 x i64>*), align 32
+; AVX256-NEXT:    [[TMP3:%.*]] = uitofp <4 x i64> [[TMP1]] to <4 x double>
+; AVX256-NEXT:    [[TMP4:%.*]] = uitofp <4 x i64> [[TMP2]] to <4 x double>
+; AVX256-NEXT:    store <4 x double> [[TMP3]], <4 x double>* bitcast ([8 x double]* @dst64 to <4 x double>*), align 64
+; AVX256-NEXT:    store <4 x double> [[TMP4]], <4 x double>* bitcast (double* getelementptr inbounds ([8 x double], [8 x double]* @dst64, i32 0, i64 4) to <4 x double>*), align 32
 ; AVX256-NEXT:    ret void
 ;
 ; AVX512-LABEL: @uitofp_8i64_8f64(

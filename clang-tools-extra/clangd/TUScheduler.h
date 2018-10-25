@@ -108,6 +108,9 @@ public:
   /// resources.
   void remove(PathRef File);
 
+  /// Schedule an async task with no dependencies.
+  void run(llvm::StringRef Name, llvm::unique_function<void()> Action);
+
   /// Schedule an async read of the AST. \p Action will be called when AST is
   /// ready. The AST passed to \p Action refers to the version of \p File
   /// tracked at the time of the call, even if new updates are received before

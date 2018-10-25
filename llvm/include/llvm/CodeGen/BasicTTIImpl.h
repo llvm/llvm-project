@@ -80,6 +80,23 @@ private:
   using BaseT = TargetTransformInfoImplCRTPBase<T>;
   using TTI = TargetTransformInfo;
 
+  /// Estimate a cost of Broadcast as an extract and sequence of insert
+  /// operations.
+  unsigned getBroadcastShuffleOverhead(Type *Ty) {
+    assert(Ty->isVectorTy() && "Can only shuffle vectors");
+    unsigned Cost = 0;
+    // Broadcast cost is equal to the cost of extracting the zero'th element
+    // plus the cost of inserting it into every element of the result vector.
+    Cost += static_cast<T *>(this)->getVectorInstrCost(
+        Instruction::ExtractElement, Ty, 0);
+
+    for (int i = 0, e = Ty->getVectorNumElements(); i < e; ++i) {
+      Cost += static_cast<T *>(this)->getVectorInstrCost(
+          Instruction::InsertElement, Ty, i);
+    }
+    return Cost;
+  }
+
   /// Estimate a cost of shuffle as a sequence of extract and insert
   /// operations.
   unsigned getPermuteShuffleOverhead(Type *Ty) {
@@ -554,6 +571,8 @@ public:
   unsigned getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                           Type *SubTp) {
     switch (Kind) {
+    case TTI::SK_Broadcast:
+      return getBroadcastShuffleOverhead(Tp);
     case TTI::SK_Select:
     case TTI::SK_Reverse:
     case TTI::SK_Transpose:

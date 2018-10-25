@@ -1809,7 +1809,8 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
                                     /*EnteringContext=*/false,
                                     /*AllowDestructorName=*/true,
                                     /*AllowConstructorName=*/
-                                      getLangOpts().MicrosoftExt,
+                                    getLangOpts().MicrosoftExt &&
+                                        SS.isNotEmpty(),
                                     /*AllowDeductionGuide=*/false,
                                     ObjectType, &TemplateKWLoc, Name)) {
         (void)Actions.CorrectDelayedTyposInExpr(LHS);

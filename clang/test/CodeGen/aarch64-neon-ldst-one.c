@@ -6800,4 +6800,4 @@ void test_vst4_lane_p64(poly64_t  *a, poly64x1x4_t b) {
 
 // CHECK: attributes #0 ={{.*}}"min-legal-vector-width"="128"
 // CHECK: attributes #1 ={{.*}}"min-legal-vector-width"="64"
-// CHECK-NOT: attributes #2 ={{.*}}"min-legal-vector-width"
+// CHECK: attributes #2 ={{.*}}"min-legal-vector-width"="0"

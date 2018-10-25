@@ -1401,7 +1401,7 @@ entry:
 
 define <4 x i16> @concat_vector_v4i16_const() {
 ; CHECK-LABEL: concat_vector_v4i16_const:
-; CHECK: movi {{d[0-9]+}}, #0
+; CHECK: movi {{v[0-9]+}}.2d, #0
  %r = shufflevector <1 x i16> zeroinitializer, <1 x i16> undef, <4 x i32> zeroinitializer
  ret <4 x i16> %r
 }
@@ -1422,7 +1422,7 @@ define <4 x i32> @concat_vector_v4i32_const() {
 
 define <8 x i8> @concat_vector_v8i8_const() {
 ; CHECK-LABEL: concat_vector_v8i8_const:
-; CHECK: movi {{d[0-9]+}}, #0
+; CHECK: movi {{v[0-9]+}}.2d, #0
  %r = shufflevector <1 x i8> zeroinitializer, <1 x i8> undef, <8 x i32> zeroinitializer
  ret <8 x i8> %r
 }

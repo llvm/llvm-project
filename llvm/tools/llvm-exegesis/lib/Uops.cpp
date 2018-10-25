@@ -223,24 +223,22 @@ UopsSnippetGenerator::generateCodeTemplates(const Instruction &Instr) const {
 
 llvm::Expected<std::vector<BenchmarkMeasure>>
 UopsBenchmarkRunner::runMeasurements(const FunctionExecutor &Executor) const {
-  const auto &SchedModel = State.getSubtargetInfo().getSchedModel();
-
   std::vector<BenchmarkMeasure> Result;
-  const auto &PfmCounters = SchedModel.getExtraProcessorInfo().PfmCounters;
+  const PfmCountersInfo &PCI = State.getPfmCounters();
   // Uops per port.
-  for (unsigned ProcResIdx = 1;
-       ProcResIdx < SchedModel.getNumProcResourceKinds(); ++ProcResIdx) {
-    const char *const Counters = PfmCounters.IssueCounters[ProcResIdx];
-    if (!Counters)
+  for (const auto *IssueCounter = PCI.IssueCounters,
+                  *IssueCounterEnd = PCI.IssueCounters + PCI.NumIssueCounters;
+       IssueCounter != IssueCounterEnd; ++IssueCounter) {
+    if (!IssueCounter->Counter)
       continue;
-    auto ExpectedCounterValue = Executor.runAndMeasure(Counters);
+    auto ExpectedCounterValue = Executor.runAndMeasure(IssueCounter->Counter);
     if (!ExpectedCounterValue)
       return ExpectedCounterValue.takeError();
-    Result.push_back(BenchmarkMeasure::Create(
-        SchedModel.getProcResource(ProcResIdx)->Name, *ExpectedCounterValue));
+    Result.push_back(BenchmarkMeasure::Create(IssueCounter->ProcResName,
+                                              *ExpectedCounterValue));
   }
   // NumMicroOps.
-  if (const char *const UopsCounter = PfmCounters.UopsCounter) {
+  if (const char *const UopsCounter = PCI.UopsCounter) {
     auto ExpectedCounterValue = Executor.runAndMeasure(UopsCounter);
     if (!ExpectedCounterValue)
       return ExpectedCounterValue.takeError();

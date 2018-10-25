@@ -151,7 +151,7 @@ class __thread_specific_ptr
     __thread_specific_ptr(const __thread_specific_ptr&);
     __thread_specific_ptr& operator=(const __thread_specific_ptr&);
 
-    static void _LIBCPP_TLS_DESTRUCTOR_CC __at_thread_exit(void*);
+    _LIBCPP_HIDDEN static void _LIBCPP_TLS_DESTRUCTOR_CC __at_thread_exit(void*);
 
 public:
     typedef _Tp* pointer;

@@ -878,6 +878,12 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     MIRBuilder.recordInsertion(&MI);
     return Legalized;
   }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+    if (TypeIdx != 2)
+      return UnableToLegalize;
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
+    MIRBuilder.recordInsertion(&MI);
+    return Legalized;
   }
 }
 

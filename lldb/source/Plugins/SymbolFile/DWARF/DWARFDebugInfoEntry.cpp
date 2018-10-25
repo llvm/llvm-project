@@ -456,20 +456,15 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
           break;
 
         case DW_AT_ranges: {
-          const DWARFDebugRanges *debug_ranges = dwarf2Data->DebugRanges();
-          if (debug_ranges) {
-            debug_ranges->FindRanges(cu->GetRangesBase(), form_value.Unsigned(), ranges);
-            // All DW_AT_ranges are relative to the base address of the compile
-            // unit. We add the compile unit base address to make sure all the
-            // addresses are properly fixed up.
-            ranges.Slide(cu->GetBaseAddress());
-          } else {
+          const DWARFDebugRangesBase *debug_ranges = dwarf2Data->DebugRanges();
+          if (debug_ranges)
+            debug_ranges->FindRanges(cu, form_value.Unsigned(), ranges);
+          else
             cu->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
                 "{0x%8.8x}: DIE has DW_AT_ranges(0x%" PRIx64
                 ") attribute yet DWARF has no .debug_ranges, please file a bug "
                 "and attach the file at the start of this error message",
                 m_offset, form_value.Unsigned());
-          }
         } break;
 
         case DW_AT_name:
@@ -1065,10 +1060,8 @@ size_t DWARFDebugInfoEntry::GetAttributeAddressRanges(
       dwarf2Data, cu, DW_AT_ranges, DW_INVALID_OFFSET,
       check_specification_or_abstract_origin);
   if (debug_ranges_offset != DW_INVALID_OFFSET) {
-    if (DWARFDebugRanges *debug_ranges = dwarf2Data->DebugRanges())
-      debug_ranges->FindRanges(cu->GetRangesBase(), debug_ranges_offset,
-                               ranges);
-    ranges.Slide(cu->GetBaseAddress());
+    if (DWARFDebugRangesBase *debug_ranges = dwarf2Data->DebugRanges())
+      debug_ranges->FindRanges(cu, debug_ranges_offset, ranges);
   } else if (check_hi_lo_pc) {
     dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
     dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
@@ -1723,12 +1716,9 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
             dwarf2Data, cu, DW_AT_ranges, DW_INVALID_OFFSET);
         if (debug_ranges_offset != DW_INVALID_OFFSET) {
           DWARFRangeList ranges;
-          DWARFDebugRanges *debug_ranges = dwarf2Data->DebugRanges();
-          debug_ranges->FindRanges(cu->GetRangesBase(), debug_ranges_offset, ranges);
-          // All DW_AT_ranges are relative to the base address of the compile
-          // unit. We add the compile unit base address to make sure all the
-          // addresses are properly fixed up.
-          ranges.Slide(cu->GetBaseAddress());
+          DWARFDebugRangesBase *debug_ranges = dwarf2Data->DebugRanges();
+          debug_ranges->FindRanges(cu, debug_ranges_offset, ranges);
+
           if (ranges.FindEntryThatContains(address)) {
             found_address = true;
             //  puts("***MATCH***");

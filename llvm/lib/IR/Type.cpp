@@ -342,18 +342,25 @@ bool FunctionType::isValidArgumentType(Type *ArgTy) {
 StructType *StructType::get(LLVMContext &Context, ArrayRef<Type*> ETypes,
                             bool isPacked) {
   LLVMContextImpl *pImpl = Context.pImpl;
-  AnonStructTypeKeyInfo::KeyTy Key(ETypes, isPacked);
-  auto I = pImpl->AnonStructTypes.find_as(Key);
-  StructType *ST;
+  const AnonStructTypeKeyInfo::KeyTy Key(ETypes, isPacked);
 
-  if (I == pImpl->AnonStructTypes.end()) {
-    // Value not found.  Create a new type!
+  StructType *ST;
+  // Since we only want to allocate a fresh struct type in case none is found
+  // and we don't want to perform two lookups (one for checking if existent and
+  // one for inserting the newly allocated one), here we instead lookup based on
+  // Key and update the reference to the struct type in-place to a newly
+  // allocated one if not found.
+  auto Insertion = pImpl->AnonStructTypes.insert_as(nullptr, Key);
+  if (Insertion.second) {
+    // The struct type was not found. Allocate one and update AnonStructTypes
+    // in-place.
     ST = new (Context.pImpl->TypeAllocator) StructType(Context);
     ST->setSubclassData(SCDB_IsLiteral);  // Literal struct.
     ST->setBody(ETypes, isPacked);
-    Context.pImpl->AnonStructTypes.insert(ST);
+    *Insertion.first = ST;
   } else {
-    ST = *I;
+    // The struct type was found. Just return it.
+    ST = *Insertion.first;
   }
 
   return ST;

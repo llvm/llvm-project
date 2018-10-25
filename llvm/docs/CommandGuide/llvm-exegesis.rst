@@ -224,6 +224,10 @@ OPTIONS
 
  If set, ignore instructions that do not have a sched class (class idx = 0).
 
+ .. option:: -mcpu=<cpu name>
+
+  If set, measure the cpu characteristics using the counters for this CPU. This
+  is useful when creating new sched models (the host CPU is unknown to LLVM).
 
 EXIT STATUS
 -----------

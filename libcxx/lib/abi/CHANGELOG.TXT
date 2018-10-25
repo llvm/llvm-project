@@ -16,6 +16,34 @@ New entries should be added directly below the "Version" header.
 Version 7.0
 -----------
 
+* rXXXXX - Making libc++ build under -fvisibility=hidden
+
+  The change marks __thread_specific_ptr<__thread_struct>::__at_thread_exit(void*)
+  with hidden visibility. This removes a symbol from the shared libraries,
+  however this is not an ABI break because it's impossible for programs linking
+  against libc++.dylib to actually depend on that symbol. The reason is that
+  the symbol is exported from the shared library through an implicit
+  instantiation present in the dylib itself only. Furthermore, if a user's
+  dylib was implicitly instantiating __thread_specific_ptr<T>::__at_thread_exit
+  (because it's defined in the headers), marking that symbol as hidden would
+  not be an ABI break for them because none of their users could actually be
+  using the symbol in their dylib (because it's an implicit instantiation).
+
+  This change also marks __start_std_streams as hidden -- this variable is
+  only required to initialize the streams, and nobody should depend on it
+  from outside the dylib.
+
+  x86_64-linux-gnu
+  ----------------
+  Symbol removed: _ZNSt3__121__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv
+  Symbol removed: _ZNSt3__119__start_std_streamsE
+
+  x86_64-apple-darwin16.0
+  -----------------------
+  Symbol removed: __ZNSt3__221__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv
+  Symbol removed: __ZNSt3__119__start_std_streamsE
+
+
 * r338479 - Elementary string conversions for integral types
 
   The change emits __u64toa and __u32toa under std::__1::__itoa.

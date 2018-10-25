@@ -720,6 +720,12 @@ void TUScheduler::remove(PathRef File) {
          File);
 }
 
+void TUScheduler::run(StringRef Name, unique_function<void()> Action) {
+  if (!PreambleTasks)
+    return Action();
+  PreambleTasks->runAsync(Name, std::move(Action));
+}
+
 void TUScheduler::runWithAST(
     StringRef Name, PathRef File,
     unique_function<void(Expected<InputsAndAST>)> Action) {

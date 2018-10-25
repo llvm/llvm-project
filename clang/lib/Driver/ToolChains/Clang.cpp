@@ -1430,6 +1430,56 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
   }
 }
 
+// Parse -mbranch-protection=<protection>[+<protection>]* where
+//   <protection> ::= standard | none | [bti,pac-ret[+b-key,+leaf]*]
+// Returns a triple of (return address signing Scope, signing key, require
+// landing pads)
+static std::tuple<StringRef, StringRef, bool>
+ParseAArch64BranchProtection(const Driver &D, const ArgList &Args,
+                             const Arg *A) {
+  StringRef Scope = "none";
+  StringRef Key = "a_key";
+  bool IndirectBranches = false;
+
+  StringRef Value = A->getValue();
+  // This maps onto -mbranch-protection=<scope>+<key>
+
+  if (Value.equals("standard")) {
+    Scope = "non-leaf";
+    Key = "a_key";
+    IndirectBranches = true;
+
+  } else if (!Value.equals("none")) {
+    SmallVector<StringRef, 4> BranchProtection;
+    StringRef(A->getValue()).split(BranchProtection, '+');
+
+    auto Protection = BranchProtection.begin();
+    while (Protection != BranchProtection.end()) {
+      if (Protection->equals("bti"))
+        IndirectBranches = true;
+      else if (Protection->equals("pac-ret")) {
+        Scope = "non-leaf";
+        while (++Protection != BranchProtection.end()) {
+          // Inner loop as "leaf" and "b-key" options must only appear attached
+          // to pac-ret.
+          if (Protection->equals("leaf"))
+            Scope = "all";
+          else if (Protection->equals("b-key"))
+            Key = "b_key";
+          else
+            break;
+        }
+        Protection--;
+      } else
+        D.Diag(diag::err_invalid_branch_protection)
+            << *Protection << A->getAsString(Args);
+      Protection++;
+    }
+  }
+
+  return std::make_tuple(Scope, Key, IndirectBranches);
+}
+
 namespace {
 void RenderAArch64ABI(const llvm::Triple &Triple, const ArgList &Args,
                       ArgStringList &CmdArgs) {
@@ -1484,9 +1534,33 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
       CmdArgs.push_back("-aarch64-enable-global-merge=true");
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_msign_return_address)) {
+  // Enable/disable return address signing and indirect branch targets.
+  if (Arg *A = Args.getLastArg(options::OPT_msign_return_address_EQ,
+                               options::OPT_mbranch_protection_EQ)) {
+
+    const Driver &D = getToolChain().getDriver();
+
+    StringRef Scope, Key;
+    bool IndirectBranches;
+
+    if (A->getOption().matches(options::OPT_msign_return_address_EQ)) {
+      Scope = A->getValue();
+      if (!Scope.equals("none") && !Scope.equals("non-leaf") &&
+          !Scope.equals("all"))
+        D.Diag(diag::err_invalid_branch_protection)
+            << Scope << A->getAsString(Args);
+      Key = "a_key";
+      IndirectBranches = false;
+    } else
+      std::tie(Scope, Key, IndirectBranches) =
+          ParseAArch64BranchProtection(D, Args, A);
+
     CmdArgs.push_back(
-        Args.MakeArgString(Twine("-msign-return-address=") + A->getValue()));
+        Args.MakeArgString(Twine("-msign-return-address=") + Scope));
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine("-msign-return-address-key=") + Key));
+    if (IndirectBranches)
+      CmdArgs.push_back("-mbranch-target-enforce");
   }
 }
 

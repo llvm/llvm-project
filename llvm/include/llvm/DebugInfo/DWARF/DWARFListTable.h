@@ -99,6 +99,7 @@ public:
   uint32_t getHeaderOffset() const { return HeaderOffset; }
   uint8_t getAddrSize() const { return HeaderData.AddrSize; }
   uint32_t getLength() const { return HeaderData.Length; }
+  uint16_t getVersion() const { return HeaderData.Version; }
   StringRef getSectionName() const { return SectionName; }
   StringRef getListTypeString() const { return ListTypeString; }
   dwarf::DwarfFormat getFormat() const { return Format; }

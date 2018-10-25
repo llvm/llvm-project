@@ -53,6 +53,10 @@ static llvm::MCInst loadImmediate(unsigned Reg, unsigned RegBitWidth,
 } // namespace
 
 class ExegesisAArch64Target : public ExegesisTarget {
+public:
+  ExegesisAArch64Target() : ExegesisTarget({}) {}
+
+private:
   std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
                                      unsigned Reg,
                                      const llvm::APInt &Value) const override {
