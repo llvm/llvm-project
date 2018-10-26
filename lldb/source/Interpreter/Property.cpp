@@ -233,7 +233,10 @@ void Property::Dump(const ExecutionContext *exe_ctx, Stream &strm,
                     uint32_t dump_mask) const {
   if (m_value_sp) {
     const bool dump_desc = dump_mask & OptionValue::eDumpOptionDescription;
+    const bool dump_cmd = dump_mask & OptionValue::eDumpOptionCommand;
     const bool transparent = m_value_sp->ValueIsTransparent();
+    if (dump_cmd && !transparent)
+      strm << "settings set -f ";
     if (dump_desc || !transparent) {
       if ((dump_mask & OptionValue::eDumpOptionName) && m_name) {
         DumpQualifiedName(strm);

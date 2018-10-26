@@ -770,6 +770,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->EhFrameHdr =
       Args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
   Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
+  Config->CallGraphProfileSort = Args.hasFlag(
+      OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
   Config->EnableNewDtags =
       Args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
   Config->Entry = Args.getLastArgValue(OPT_entry);
@@ -1621,10 +1623,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   }
 
   // Read the callgraph now that we know what was gced or icfed
-  if (auto *Arg = Args.getLastArg(OPT_call_graph_ordering_file))
-    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-      readCallGraph(*Buffer);
-  readCallGraphsFromObjectFiles<ELFT>();
+  if (Config->CallGraphProfileSort) {
+    if (auto *Arg = Args.getLastArg(OPT_call_graph_ordering_file))
+      if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
+        readCallGraph(*Buffer);
+    readCallGraphsFromObjectFiles<ELFT>();
+  }
 
   // Write the result to the file.
   writeResult<ELFT>();

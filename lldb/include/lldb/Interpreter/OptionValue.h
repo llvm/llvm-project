@@ -58,9 +58,11 @@ public:
     eDumpOptionValue = (1u << 2),
     eDumpOptionDescription = (1u << 3),
     eDumpOptionRaw = (1u << 4),
+    eDumpOptionCommand = (1u << 5),
     eDumpGroupValue = (eDumpOptionName | eDumpOptionType | eDumpOptionValue),
     eDumpGroupHelp =
-        (eDumpOptionName | eDumpOptionType | eDumpOptionDescription)
+        (eDumpOptionName | eDumpOptionType | eDumpOptionDescription),
+    eDumpGroupExport = (eDumpOptionCommand | eDumpOptionName | eDumpOptionValue)
   };
 
   OptionValue()

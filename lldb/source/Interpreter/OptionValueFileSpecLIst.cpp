@@ -25,16 +25,24 @@ void OptionValueFileSpecList::DumpValue(const ExecutionContext *exe_ctx,
   if (dump_mask & eDumpOptionType)
     strm.Printf("(%s)", GetTypeAsCString());
   if (dump_mask & eDumpOptionValue) {
-    if (dump_mask & eDumpOptionType)
-      strm.Printf(" =%s", m_current_value.GetSize() > 0 ? "\n" : "");
-    strm.IndentMore();
+    const bool one_line = dump_mask & eDumpOptionCommand;
     const uint32_t size = m_current_value.GetSize();
+    if (dump_mask & eDumpOptionType)
+      strm.Printf(" =%s",
+                  (m_current_value.GetSize() > 0 && !one_line) ? "\n" : "");
+    if (!one_line)
+      strm.IndentMore();
     for (uint32_t i = 0; i < size; ++i) {
-      strm.Indent();
-      strm.Printf("[%u]: ", i);
+      if (!one_line) {
+        strm.Indent();
+        strm.Printf("[%u]: ", i);
+      }
       m_current_value.GetFileSpecAtIndex(i).Dump(&strm);
+      if (one_line)
+        strm << ' ';
     }
-    strm.IndentLess();
+    if (!one_line)
+      strm.IndentLess();
   }
 }
 
