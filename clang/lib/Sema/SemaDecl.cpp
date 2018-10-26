@@ -3249,20 +3249,15 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     //   Redeclarations or specializations of a function or function template
     //   with a declared return type that uses a placeholder type shall also
     //   use that placeholder, not a deduced type.
-    QualType OldDeclaredReturnType =
-        (Old->getTypeSourceInfo()
-             ? Old->getTypeSourceInfo()->getType()->castAs<FunctionType>()
-             : OldType)->getReturnType();
-    QualType NewDeclaredReturnType =
-        (New->getTypeSourceInfo()
-             ? New->getTypeSourceInfo()->getType()->castAs<FunctionType>()
-             : NewType)->getReturnType();
+    QualType OldDeclaredReturnType = Old->getDeclaredReturnType();
+    QualType NewDeclaredReturnType = New->getDeclaredReturnType();
     if (!Context.hasSameType(OldDeclaredReturnType, NewDeclaredReturnType) &&
         canFullyTypeCheckRedeclaration(New, Old, NewDeclaredReturnType,
                                        OldDeclaredReturnType)) {
       QualType ResQT;
       if (NewDeclaredReturnType->isObjCObjectPointerType() &&
           OldDeclaredReturnType->isObjCObjectPointerType())
+        // FIXME: This does the wrong thing for a deduced return type.
         ResQT = Context.mergeObjCGCQualifiers(NewQType, OldQType);
       if (ResQT.isNull()) {
         if (New->isCXXClassMember() && New->isOutOfLine())

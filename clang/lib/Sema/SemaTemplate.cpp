@@ -8304,6 +8304,8 @@ Sema::CheckMemberSpecialization(NamedDecl *Member, LookupResult &Previous) {
         QualType Adjusted = Function->getType();
         if (!hasExplicitCallingConv(Adjusted))
           Adjusted = adjustCCAndNoReturn(Adjusted, Method->getType());
+        // This doesn't handle deduced return types, but both function
+        // declarations should be undeduced at this point.
         if (Context.hasSameType(Adjusted, Method->getType())) {
           FoundInstantiation = *I;
           Instantiation = Method;
