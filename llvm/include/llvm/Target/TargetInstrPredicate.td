@@ -7,29 +7,39 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines MCInstPredicate classes and its subclasses.
+// This file defines class MCInstPredicate and its subclasses.
 //
-// MCInstPredicate is used to describe constraints on the opcode/operand(s) of
-// an instruction. Each MCInstPredicate class has a well-known semantic, and it
-// is used by a PredicateExpander to generate code for MachineInstr and/or
-// MCInst.
+// MCInstPredicate definitions are used by target scheduling models to describe
+// constraints on instructions.
 //
-// MCInstPredicate definitions can be used to construct MCSchedPredicate
-// definitions. An MCSchedPredicate can be used in place of a SchedPredicate
-// when defining SchedReadVariant and SchedWriteVariant used by a processor
-// scheduling model.
-//
-// Here is an example of MCInstPredicate definition:
+// Here is an example of an MCInstPredicate definition in tablegen:
 //
 // def MCInstPredicateExample : CheckAll<[
 //    CheckOpcode<[BLR]>,
 //    CheckIsRegOperand<0>,
 //    CheckNot<CheckRegOperand<0, LR>>]>;
 //
-// Predicate `MCInstPredicateExample` checks that the machine instruction in
-// input is a BLR, and that operand at index 0 is register `LR`.
+// The syntax for MCInstPredicate is declarative, and predicate definitions can
+// be composed together in order to generate more complex constraints.
 //
-// That predicate could be used to rewrite the following definition (from
+// The `CheckAll` from the example defines a composition of three different
+// predicates.  Definition `MCInstPredicateExample` identifies instructions
+// whose opcode is BLR, and whose first operand is a register different from
+// register `LR`.
+//
+// Every MCInstPredicate class has a well-known semantic in tablegen. For
+// example, `CheckOpcode` is a special type of predicate used to describe a
+// constraint on the value of an instruction opcode.
+//
+// MCInstPredicate definitions are typically used by scheduling models to
+// construct MCSchedPredicate definitions (see the definition of class
+// MCSchedPredicate in llvm/Target/TargetSchedule.td).
+// In particular, an MCSchedPredicate can be used instead of a SchedPredicate
+// when defining the set of SchedReadVariant and SchedWriteVariant of a
+// processor scheduling model.
+//
+// The `MCInstPredicateExample` definition above is equivalent (and therefore
+// could replace) the following definition from the ExynosM3 model (see
 // AArch64SchedExynosM3.td):
 //
 // def M3BranchLinkFastPred  : SchedPredicate<[{
@@ -37,22 +47,13 @@
 //    MI->getOperand(0).isReg() &&
 //    MI->getOperand(0).getReg() != AArch64::LR}]>;
 //
-// MCInstPredicate definitions are used to construct MCSchedPredicate (see the
-// definition of class MCSchedPredicate in llvm/Target/TargetSchedule.td).  An
-// MCSchedPredicate can be used by a `SchedVar` to associate a predicate with a
-// list of SchedReadWrites. Note that `SchedVar` are used to create SchedVariant
-// definitions.
-//
-// Each MCInstPredicate class has a well known semantic. For example,
-// `CheckOpcode` is only used to check the instruction opcode value.
-//
-// MCInstPredicate classes allow the definition of predicates in a declarative
-// way.  These predicates don't require a custom block of C++, and can be used
-// to define conditions on instructions without being bound to a particular
+// The main advantage of using MCInstPredicate instead of SchedPredicate is
+// portability: users don't need to specify predicates in C++. As a consequence
+// of this, MCInstPredicate definitions are not bound to a particular
 // representation (i.e. MachineInstr vs MCInst).
 //
-// It also means that tablegen backends must know how to parse and expand them
-// into code that works on MCInst (or MachineInst).
+// Tablegen backends know how to expand MCInstPredicate definitions into actual
+// C++ code that works on MachineInstr (and/or MCInst).
 //
 // Instances of class PredicateExpander (see utils/Tablegen/PredicateExpander.h)
 // know how to expand a predicate. For each MCInstPredicate class, there must be

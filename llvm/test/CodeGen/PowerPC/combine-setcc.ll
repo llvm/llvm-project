@@ -7,8 +7,7 @@
 define zeroext i1 @eq1(i1 zeroext %x, i1 zeroext %y) {
 ; CHECK-LABEL: eq1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -21,8 +20,7 @@ define zeroext i1 @eq1(i1 zeroext %x, i1 zeroext %y) {
 define zeroext i8 @eq2(i8 zeroext %x, i8 zeroext %y) {
 ; CHECK-LABEL: eq2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -37,8 +35,7 @@ define zeroext i8 @eq2(i8 zeroext %x, i8 zeroext %y) {
 define signext i16 @eq3(i16 signext %x, i16 signext %y) {
 ; CHECK-LABEL: eq3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -53,8 +50,7 @@ define signext i16 @eq3(i16 signext %x, i16 signext %y) {
 define zeroext i16 @eq4(i16 zeroext %x, i16 zeroext %y) {
 ; CHECK-LABEL: eq4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -69,8 +65,7 @@ define zeroext i16 @eq4(i16 zeroext %x, i16 zeroext %y) {
 define signext i32 @eq5(i32 signext %x, i32 signext %y) {
 ; CHECK-LABEL: eq5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -83,8 +78,7 @@ define signext i32 @eq5(i32 signext %x, i32 signext %y) {
 define zeroext i32 @eq6(i32 zeroext %x, i32 zeroext %y) {
 ; CHECK-LABEL: eq6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -97,8 +91,7 @@ define zeroext i32 @eq6(i32 zeroext %x, i32 zeroext %y) {
 define i64 @eq7(i64 %x, i64 %y) {
 ; CHECK-LABEL: eq7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzd r3, r3
 ; CHECK-NEXT:    rldicl r3, r3, 58, 63
 ; CHECK-NEXT:    blr
@@ -111,8 +104,7 @@ define i64 @eq7(i64 %x, i64 %y) {
 define zeroext i1 @eq8(i1 zeroext %x, i1 zeroext %y) {
 ; CHECK-LABEL: eq8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r4, r3
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -125,8 +117,7 @@ define zeroext i1 @eq8(i1 zeroext %x, i1 zeroext %y) {
 define zeroext i8 @eq9(i8 zeroext %x, i8 zeroext %y) {
 ; CHECK-LABEL: eq9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r4, r4
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -141,8 +132,7 @@ define zeroext i8 @eq9(i8 zeroext %x, i8 zeroext %y) {
 define signext i16 @eq10(i16 signext %x, i16 signext %y) {
 ; CHECK-LABEL: eq10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r4, r4
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -157,8 +147,7 @@ define signext i16 @eq10(i16 signext %x, i16 signext %y) {
 define zeroext i16 @eq11(i16 zeroext %x, i16 zeroext %y) {
 ; CHECK-LABEL: eq11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r4, r4
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -173,8 +162,7 @@ define zeroext i16 @eq11(i16 zeroext %x, i16 zeroext %y) {
 define signext i32 @eq12(i32 signext %x, i32 signext %y) {
 ; CHECK-LABEL: eq12:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r4, r4
-; CHECK-NEXT:    xor r3, r4, r3
+; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -187,8 +175,7 @@ define signext i32 @eq12(i32 signext %x, i32 signext %y) {
 define zeroext i32 @eq13(i32 zeroext %x, i32 zeroext %y) {
 ; CHECK-LABEL: eq13:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r4, r4
-; CHECK-NEXT:    xor r3, r4, r3
+; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    blr
@@ -201,8 +188,7 @@ define zeroext i32 @eq13(i32 zeroext %x, i32 zeroext %y) {
 define i64 @eq14(i64 %x, i64 %y) {
 ; CHECK-LABEL: eq14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r4, r4
-; CHECK-NEXT:    xor r3, r4, r3
+; CHECK-NEXT:    add r3, r3, r4
 ; CHECK-NEXT:    cntlzd r3, r3
 ; CHECK-NEXT:    rldicl r3, r3, 58, 63
 ; CHECK-NEXT:    blr
@@ -215,8 +201,7 @@ define i64 @eq14(i64 %x, i64 %y) {
 define zeroext i1 @neq1(i1 zeroext %x, i1 zeroext %y) {
 ; CHECK-LABEL: neq1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -230,8 +215,7 @@ define zeroext i1 @neq1(i1 zeroext %x, i1 zeroext %y) {
 define zeroext i8 @neq2(i8 zeroext %x, i8 zeroext %y) {
 ; CHECK-LABEL: neq2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -247,8 +231,7 @@ define zeroext i8 @neq2(i8 zeroext %x, i8 zeroext %y) {
 define signext i16 @neq3(i16 signext %x, i16 signext %y) {
 ; CHECK-LABEL: neq3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -264,8 +247,7 @@ define signext i16 @neq3(i16 signext %x, i16 signext %y) {
 define zeroext i16 @neq4(i16 zeroext %x, i16 zeroext %y) {
 ; CHECK-LABEL: neq4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -281,8 +263,7 @@ define zeroext i16 @neq4(i16 zeroext %x, i16 zeroext %y) {
 define signext i32 @neq5(i32 signext %x, i32 signext %y) {
 ; CHECK-LABEL: neq5:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -296,8 +277,7 @@ define signext i32 @neq5(i32 signext %x, i32 signext %y) {
 define zeroext i32 @neq6(i32 zeroext %x, i32 zeroext %y) {
 ; CHECK-LABEL: neq6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -311,8 +291,7 @@ define zeroext i32 @neq6(i32 zeroext %x, i32 zeroext %y) {
 define i64 @neq7(i64 %x, i64 %y) {
 ; CHECK-LABEL: neq7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    addic r4, r3, -1
 ; CHECK-NEXT:    subfe r3, r4, r3
 ; CHECK-NEXT:    blr
@@ -325,8 +304,7 @@ define i64 @neq7(i64 %x, i64 %y) {
 define zeroext i1 @neq8(i1 zeroext %x, i1 zeroext %y) {
 ; CHECK-LABEL: neq8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r4, r3
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -340,8 +318,7 @@ define zeroext i1 @neq8(i1 zeroext %x, i1 zeroext %y) {
 define zeroext i8 @neq9(i8 zeroext %x, i8 zeroext %y) {
 ; CHECK-LABEL: neq9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r4, r3
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -357,8 +334,7 @@ define zeroext i8 @neq9(i8 zeroext %x, i8 zeroext %y) {
 define signext i16 @neq10(i16 signext %x, i16 signext %y) {
 ; CHECK-LABEL: neq10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r4, r3
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -374,8 +350,7 @@ define signext i16 @neq10(i16 signext %x, i16 signext %y) {
 define zeroext i16 @neq11(i16 zeroext %x, i16 zeroext %y) {
 ; CHECK-LABEL: neq11:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r4, r3
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -392,8 +367,7 @@ entry:
 define signext i32 @neq12(i32 signext %x, i32 signext %y) {
 ; CHECK-LABEL: neq12:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -408,8 +382,7 @@ entry:
 define zeroext i32 @neq13(i32 zeroext %x, i32 zeroext %y) {
 ; CHECK-LABEL: neq13:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r3, r4
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    cntlzw r3, r3
 ; CHECK-NEXT:    srwi r3, r3, 5
 ; CHECK-NEXT:    xori r3, r3, 1
@@ -424,8 +397,7 @@ entry:
 define i64 @neq14(i64 %x, i64 %y) {
 ; CHECK-LABEL: neq14:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg r3, r3
-; CHECK-NEXT:    xor r3, r4, r3
+; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    addic r4, r3, -1
 ; CHECK-NEXT:    subfe r3, r4, r3
 ; CHECK-NEXT:    blr

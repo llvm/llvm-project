@@ -260,6 +260,10 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   DwarfLocSection =
       Ctx->getMachOSection("__DWARF", "__debug_loc", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata(), "section_debug_loc");
+  DwarfLoclistsSection =
+      Ctx->getMachOSection("__DWARF", "__debug_loclists", MachO::S_ATTR_DEBUG,
+                           SectionKind::getMetadata(), "section_debug_loc");
+
   DwarfARangesSection =
       Ctx->getMachOSection("__DWARF", "__debug_aranges", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata());
@@ -435,6 +439,7 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
       Ctx->getELFSection(".debug_str_offsets", DebugSecType, 0);
   DwarfAddrSection = Ctx->getELFSection(".debug_addr", DebugSecType, 0);
   DwarfRnglistsSection = Ctx->getELFSection(".debug_rnglists", DebugSecType, 0);
+  DwarfLoclistsSection = Ctx->getELFSection(".debug_loclists", DebugSecType, 0);
 
   // Fission Sections
   DwarfInfoDWOSection =

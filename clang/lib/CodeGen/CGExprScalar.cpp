@@ -1029,7 +1029,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
       // We do not need to check the padding bit on unsigned types if unsigned
       // padding is enabled because overflow into this bit is undefined
       // behavior.
-      return Builder.CreateIsNotNull(Src);
+      return Builder.CreateIsNotNull(Src, "tobool");
     }
 
     llvm_unreachable(
@@ -1247,79 +1247,62 @@ Value *ScalarExprEmitter::EmitFixedPointConversion(Value *Src, QualType SrcTy,
   unsigned DstWidth = DstFPSema.getWidth();
   unsigned SrcScale = SrcFPSema.getScale();
   unsigned DstScale = DstFPSema.getScale();
-  bool IsSigned = SrcFPSema.isSigned();
+  bool SrcIsSigned = SrcFPSema.isSigned();
+  bool DstIsSigned = DstFPSema.isSigned();
+
+  llvm::Type *DstIntTy = Builder.getIntNTy(DstWidth);
 
   Value *Result = Src;
   unsigned ResultWidth = SrcWidth;
 
   if (!DstFPSema.isSaturated()) {
-    // Downscale
-    if (DstScale < SrcScale) {
-      if (IsSigned)
-        Result = Builder.CreateAShr(Result, SrcScale - DstScale);
-      else
-        Result = Builder.CreateLShr(Result, SrcScale - DstScale);
-    }
+    // Downscale.
+    if (DstScale < SrcScale)
+      Result = SrcIsSigned ?
+          Builder.CreateAShr(Result, SrcScale - DstScale, "downscale") :
+          Builder.CreateLShr(Result, SrcScale - DstScale, "downscale");
 
-    // Resize
-    llvm::Type *DstIntTy = Builder.getIntNTy(DstWidth);
-    if (IsSigned)
-      Result = Builder.CreateSExtOrTrunc(Result, DstIntTy);
-    else
-      Result = Builder.CreateZExtOrTrunc(Result, DstIntTy);
+    // Resize.
+    Result = Builder.CreateIntCast(Result, DstIntTy, SrcIsSigned, "resize");
 
-    // Upscale
+    // Upscale.
     if (DstScale > SrcScale)
-      Result = Builder.CreateShl(Result, DstScale - SrcScale);
+      Result = Builder.CreateShl(Result, DstScale - SrcScale, "upscale");
   } else {
+    // Adjust the number of fractional bits.
     if (DstScale > SrcScale) {
-      // Need to extend first before scaling up
       ResultWidth = SrcWidth + DstScale - SrcScale;
       llvm::Type *UpscaledTy = Builder.getIntNTy(ResultWidth);
-
-      if (IsSigned)
-        Result = Builder.CreateSExt(Result, UpscaledTy);
-      else
-        Result = Builder.CreateZExt(Result, UpscaledTy);
-
-      Result = Builder.CreateShl(Result, DstScale - SrcScale);
+      Result = Builder.CreateIntCast(Result, UpscaledTy, SrcIsSigned, "resize");
+      Result = Builder.CreateShl(Result, DstScale - SrcScale, "upscale");
     } else if (DstScale < SrcScale) {
-      if (IsSigned)
-        Result = Builder.CreateAShr(Result, SrcScale - DstScale);
-      else
-        Result = Builder.CreateLShr(Result, SrcScale - DstScale);
+      Result = SrcIsSigned ?
+          Builder.CreateAShr(Result, SrcScale - DstScale, "downscale") :
+          Builder.CreateLShr(Result, SrcScale - DstScale, "downscale");
     }
 
-    if (DstFPSema.getIntegralBits() < SrcFPSema.getIntegralBits()) {
-      auto Max = ConstantInt::get(
+    // Handle saturation.
+    bool LessIntBits = DstFPSema.getIntegralBits() < SrcFPSema.getIntegralBits();
+    if (LessIntBits) {
+      Value *Max = ConstantInt::get(
           CGF.getLLVMContext(),
           APFixedPoint::getMax(DstFPSema).getValue().extOrTrunc(ResultWidth));
-      Value *TooHigh = IsSigned ? Builder.CreateICmpSGT(Result, Max)
-                                : Builder.CreateICmpUGT(Result, Max);
-      Result = Builder.CreateSelect(TooHigh, Max, Result);
-
-      if (IsSigned) {
-        // Cannot overflow min to dest type is src is unsigned since all fixed
-        // point types can cover the unsigned min of 0.
-        auto Min = ConstantInt::get(
-            CGF.getLLVMContext(),
-            APFixedPoint::getMin(DstFPSema).getValue().extOrTrunc(ResultWidth));
-        Value *TooLow = Builder.CreateICmpSLT(Result, Min);
-        Result = Builder.CreateSelect(TooLow, Min, Result);
-      }
-    } else if (IsSigned && !DstFPSema.isSigned()) {
-      llvm::Type *ResultTy = Builder.getIntNTy(ResultWidth);
-      Value *Zero = ConstantInt::getNullValue(ResultTy);
-      Value *LTZero = Builder.CreateICmpSLT(Result, Zero);
-      Result = Builder.CreateSelect(LTZero, Zero, Result);
+      Value *TooHigh = SrcIsSigned ? Builder.CreateICmpSGT(Result, Max)
+                                   : Builder.CreateICmpUGT(Result, Max);
+      Result = Builder.CreateSelect(TooHigh, Max, Result, "satmax");
+    }
+    // Cannot overflow min to dest type if src is unsigned since all fixed
+    // point types can cover the unsigned min of 0.
+    if (SrcIsSigned && (LessIntBits || !DstIsSigned)) {
+      Value *Min = ConstantInt::get(
+          CGF.getLLVMContext(),
+          APFixedPoint::getMin(DstFPSema).getValue().extOrTrunc(ResultWidth));
+      Value *TooLow = Builder.CreateICmpSLT(Result, Min);
+      Result = Builder.CreateSelect(TooLow, Min, Result, "satmin");
     }
 
-    // Final resizing to dst width
-    llvm::Type *DstIntTy = Builder.getIntNTy(DstWidth);
-    if (IsSigned)
-      Result = Builder.CreateSExtOrTrunc(Result, DstIntTy);
-    else
-      Result = Builder.CreateZExtOrTrunc(Result, DstIntTy);
+    // Resize the integer part to get the final destination size.
+    Result = Builder.CreateIntCast(Result, DstIntTy, SrcIsSigned, "resize");
   }
   return Result;
 }

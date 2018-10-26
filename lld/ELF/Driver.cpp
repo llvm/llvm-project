@@ -650,48 +650,55 @@ static std::pair<bool, bool> getPackDynRelocs(opt::InputArgList &Args) {
 
 static void readCallGraph(MemoryBufferRef MB) {
   // Build a map from symbol name to section
-  DenseMap<StringRef, const Symbol *> SymbolNameToSymbol;
+  DenseMap<StringRef, Symbol *> Map;
   for (InputFile *File : ObjectFiles)
     for (Symbol *Sym : File->getSymbols())
-      SymbolNameToSymbol[Sym->getName()] = Sym;
+      Map[Sym->getName()] = Sym;
 
-  auto FindSection = [&](StringRef SymName) -> InputSectionBase * {
-    const Symbol *Sym = SymbolNameToSymbol.lookup(SymName);
-    if (Sym)
-      warnUnorderableSymbol(Sym);
-    else if (Config->WarnSymbolOrdering)
-      warn(MB.getBufferIdentifier() + ": no such symbol: " + SymName);
+  auto FindSection = [&](StringRef Name) -> InputSectionBase * {
+    Symbol *Sym = Map.lookup(Name);
+    if (!Sym) {
+      if (Config->WarnSymbolOrdering)
+        warn(MB.getBufferIdentifier() + ": no such symbol: " + Name);
+      return nullptr;
+    }
+    maybeWarnUnorderableSymbol(Sym);
 
-    if (const Defined *DR = dyn_cast_or_null<Defined>(Sym))
+    if (Defined *DR = dyn_cast_or_null<Defined>(Sym))
       return dyn_cast_or_null<InputSectionBase>(DR->Section);
     return nullptr;
   };
 
-  for (StringRef L : args::getLines(MB)) {
+  for (StringRef Line : args::getLines(MB)) {
     SmallVector<StringRef, 3> Fields;
-    L.split(Fields, ' ');
+    Line.split(Fields, ' ');
     uint64_t Count;
-    if (Fields.size() != 3 || !to_integer(Fields[2], Count))
-      fatal(MB.getBufferIdentifier() + ": parse error");
 
-    if (const InputSectionBase *FromSB = FindSection(Fields[0]))
-      if (const InputSectionBase *ToSB = FindSection(Fields[1]))
-        Config->CallGraphProfile[std::make_pair(FromSB, ToSB)] += Count;
+    if (Fields.size() != 3 || !to_integer(Fields[2], Count)) {
+      error(MB.getBufferIdentifier() + ": parse error");
+      return;
+    }
+
+    if (InputSectionBase *From = FindSection(Fields[0]))
+      if (InputSectionBase *To = FindSection(Fields[1]))
+        Config->CallGraphProfile[std::make_pair(From, To)] += Count;
   }
 }
 
 template <class ELFT> static void readCallGraphsFromObjectFiles() {
   for (auto File : ObjectFiles) {
     auto *Obj = cast<ObjFile<ELFT>>(File);
+
     for (const Elf_CGProfile_Impl<ELFT> &CGPE : Obj->CGProfile) {
       auto *FromSym = dyn_cast<Defined>(&Obj->getSymbol(CGPE.cgp_from));
       auto *ToSym = dyn_cast<Defined>(&Obj->getSymbol(CGPE.cgp_to));
       if (!FromSym || !ToSym)
         continue;
-      auto *FromSec = dyn_cast_or_null<InputSectionBase>(FromSym->Section);
-      auto *ToSec = dyn_cast_or_null<InputSectionBase>(ToSym->Section);
-      if (FromSec && ToSec)
-        Config->CallGraphProfile[{FromSec, ToSec}] += CGPE.cgp_weight;
+
+      auto *From = dyn_cast_or_null<InputSectionBase>(FromSym->Section);
+      auto *To = dyn_cast_or_null<InputSectionBase>(ToSym->Section);
+      if (From && To)
+        Config->CallGraphProfile[{From, To}] += CGPE.cgp_weight;
     }
   }
 }

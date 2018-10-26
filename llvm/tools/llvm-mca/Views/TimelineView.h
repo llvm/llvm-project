@@ -100,8 +100,9 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_TIMELINEVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_TIMELINEVIEW_H
 
-#include "SourceMgr.h"
 #include "Views/View.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/FormattedStream.h"
@@ -119,7 +120,7 @@ namespace mca {
 class TimelineView : public View {
   const llvm::MCSubtargetInfo &STI;
   llvm::MCInstPrinter &MCIP;
-  const SourceMgr &AsmSequence;
+  llvm::ArrayRef<llvm::MCInst> Source;
 
   unsigned CurrentCycle;
   unsigned MaxCycle;
@@ -152,8 +153,6 @@ class TimelineView : public View {
                           const WaitTimeEntry &E, unsigned Index,
                           unsigned Executions) const;
 
-  const unsigned DEFAULT_ITERATIONS = 10;
-
   // Display characters for the TimelineView report output.
   struct DisplayChar {
     static const char Dispatched = 'D';
@@ -166,7 +165,7 @@ class TimelineView : public View {
 
 public:
   TimelineView(const llvm::MCSubtargetInfo &sti, llvm::MCInstPrinter &Printer,
-               const SourceMgr &Sequence, unsigned MaxIterations,
+               llvm::ArrayRef<llvm::MCInst> S, unsigned Iterations,
                unsigned Cycles);
 
   // Event handlers.

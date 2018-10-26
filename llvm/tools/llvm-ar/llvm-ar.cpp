@@ -96,6 +96,7 @@ MODIFIERS:
   [D] - use zero for timestamps and uids/gids (default)
   [i] - put [files] before [relpos] (same as [b])
   [l] - ignored for compatibility
+  [L] - add archive's contents
   [o] - preserve original dates
   [s] - create an archive index (cf. ranlib)
   [S] - do not build a symbol table
@@ -176,6 +177,7 @@ static bool Verbose = false;       ///< 'v' modifier
 static bool Symtab = true;         ///< 's' modifier
 static bool Deterministic = true;  ///< 'D' and 'U' modifiers
 static bool Thin = false;          ///< 'T' modifier
+static bool AddLibrary = false;    ///< 'L' modifier
 
 // Relative Positional Argument (for insert/move). This variable holds
 // the name of the archive member to which the 'a', 'b' or 'i' modifier
@@ -212,6 +214,21 @@ static void getArchive() {
 static void getMembers() {
   for (auto &Arg : PositionalArgs)
     Members.push_back(Arg);
+}
+
+std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
+std::vector<std::unique_ptr<object::Archive>> Archives;
+
+static object::Archive &readLibrary(const Twine &Library) {
+  auto BufOrErr = MemoryBuffer::getFile(Library, -1, false);
+  failIfError(BufOrErr.getError(), "Could not open library");
+  ArchiveBuffers.push_back(std::move(*BufOrErr));
+  auto LibOrErr =
+      object::Archive::create(ArchiveBuffers.back()->getMemBufferRef());
+  failIfError(errorToErrorCode(LibOrErr.takeError()),
+              "Could not parse library");
+  Archives.push_back(std::move(*LibOrErr));
+  return *Archives.back();
 }
 
 static void runMRIScript();
@@ -284,6 +301,9 @@ static ArchiveOperation parseCommandLine() {
     case 'T':
       Thin = true;
       break;
+    case 'L':
+      AddLibrary = true;
+      break;
     default:
       fail(std::string("unknown option ") + Options[i]);
     }
@@ -320,6 +340,8 @@ static ArchiveOperation parseCommandLine() {
     fail("The 'o' modifier is only applicable to the 'x' operation");
   if (OnlyUpdate && Operation != ReplaceOrInsert)
     fail("The 'u' modifier is only applicable to the 'r' operation");
+  if (AddLibrary && Operation != QuickAppend)
+    fail("The 'L' modifier is only applicable to the 'q' operation");
 
   // Return the parsed operation to the caller
   return Operation;
@@ -512,6 +534,26 @@ static void addMember(std::vector<NewArchiveMember> &Members,
     Members[Pos] = std::move(*NMOrErr);
 }
 
+static void addLibMember(std::vector<NewArchiveMember> &Members,
+                         StringRef FileName) {
+  Expected<NewArchiveMember> NMOrErr =
+      NewArchiveMember::getFile(FileName, Deterministic);
+  failIfError(NMOrErr.takeError(), FileName);
+  if (identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
+    object::Archive &Lib = readLibrary(FileName);
+    Error Err = Error::success();
+
+    for (auto &Child : Lib.children(Err))
+      addMember(Members, Child);
+
+    failIfError(std::move(Err));
+  } else {
+    // Use the basename of the object path for the member name.
+    NMOrErr->MemberName = sys::path::filename(NMOrErr->MemberName);
+    Members.push_back(std::move(*NMOrErr));
+  }
+}
+
 enum InsertAction {
   IA_AddOldMember,
   IA_AddNewMember,
@@ -632,6 +674,13 @@ computeNewArchiveMembers(ArchiveOperation Operation,
   for (auto &M : Moved) {
     Ret.insert(Ret.begin() + Pos, std::move(M));
     ++Pos;
+  }
+
+  if (AddLibrary) {
+    assert(Operation == QuickAppend);
+    for (auto &Member : Members)
+      addLibMember(Ret, Member);
+    return Ret;
   }
 
   for (unsigned I = 0; I != Members.size(); ++I)
@@ -791,8 +840,6 @@ static void runMRIScript() {
   const MemoryBuffer &Ref = *Buf.get();
   bool Saved = false;
   std::vector<NewArchiveMember> NewMembers;
-  std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
-  std::vector<std::unique_ptr<object::Archive>> Archives;
 
   for (line_iterator I(Ref, /*SkipBlanks*/ false), E; I != E; ++I) {
     StringRef Line = *I;
@@ -817,15 +864,7 @@ static void runMRIScript() {
 
     switch (Command) {
     case MRICommand::AddLib: {
-      auto BufOrErr = MemoryBuffer::getFile(Rest, -1, false);
-      failIfError(BufOrErr.getError(), "Could not open library");
-      ArchiveBuffers.push_back(std::move(*BufOrErr));
-      auto LibOrErr =
-          object::Archive::create(ArchiveBuffers.back()->getMemBufferRef());
-      failIfError(errorToErrorCode(LibOrErr.takeError()),
-                  "Could not parse library");
-      Archives.push_back(std::move(*LibOrErr));
-      object::Archive &Lib = *Archives.back();
+      object::Archive &Lib = readLibrary(Rest);
       {
         Error Err = Error::success();
         for (auto &Member : Lib.children(Err))

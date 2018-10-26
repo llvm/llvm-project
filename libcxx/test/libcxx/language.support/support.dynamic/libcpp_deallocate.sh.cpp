@@ -23,6 +23,9 @@
 
 // XFAIL: sanitizer-new-delete, ubsan
 
+// GCC doesn't support the aligned-allocation flags.
+// XFAIL: gcc
+
 // RUN: %build -faligned-allocation -fsized-deallocation
 // RUN: %run
 // RUN: %build -faligned-allocation -fno-sized-deallocation -DNO_SIZE

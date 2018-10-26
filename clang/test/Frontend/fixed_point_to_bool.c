@@ -27,26 +27,26 @@ void func() {
   b = (_Bool)0.5ur;
   b = (_Bool)0.0ur;
 
-  // CHECK-NEXT: [[ACCUM:%[0-9]+]] = load i32, i32* %a, align 4
-  // CHECK-NEXT: [[NOTZERO:%[0-9]+]] = icmp ne i32 [[ACCUM]], 0
-  // CHECK-NEXT: %frombool = zext i1 [[NOTZERO]] to i8
-  // CHECK-NEXT: store i8 %frombool, i8* %b, align 1
+  // CHECK-NEXT: [[ACCUM:%[0-9a-z]+]] = load i32, i32* %a, align 4
+  // CHECK-NEXT: [[NOTZERO:%[0-9a-z]+]] = icmp ne i32 [[ACCUM]], 0
+  // CHECK-NEXT: [[FROMBOOL:%[0-9a-z]+]] = zext i1 [[NOTZERO]] to i8
+  // CHECK-NEXT: store i8 [[FROMBOOL]], i8* %b, align 1
   b = a;
 
-  // CHECK-NEXT: [[ACCUM:%[0-9]+]] = load i32, i32* %ua, align 4
-  // CHECK-NEXT: [[NOTZERO:%[0-9]+]] = icmp ne i32 [[ACCUM]], 0
-  // CHECK-NEXT: %frombool1 = zext i1 [[NOTZERO]] to i8
-  // CHECK-NEXT: store i8 %frombool1, i8* %b, align 1
+  // CHECK-NEXT: [[ACCUM:%[0-9a-z]+]] = load i32, i32* %ua, align 4
+  // CHECK-NEXT: [[NOTZERO:%[0-9a-z]+]] = icmp ne i32 [[ACCUM]], 0
+  // CHECK-NEXT: [[FROMBOOL:%[0-9a-z]+]] = zext i1 [[NOTZERO]] to i8
+  // CHECK-NEXT: store i8 [[FROMBOOL]], i8* %b, align 1
   b = ua;
 
-  // CHECK-NEXT: [[ACCUM:%[0-9]+]] = load i32, i32* %a, align 4
-  // CHECK-NEXT: [[NOTZERO:%[0-9]+]] = icmp ne i32 [[ACCUM]], 0
+  // CHECK-NEXT: [[ACCUM:%[0-9a-z]+]] = load i32, i32* %a, align 4
+  // CHECK-NEXT: [[NOTZERO:%[0-9a-z]+]] = icmp ne i32 [[ACCUM]], 0
   // CHECK-NEXT: br i1 [[NOTZERO]], label %if.then, label %if.end
   if (a) {
   }
 
-  // CHECK:      [[ACCUM:%[0-9]+]] = load i32, i32* %ua, align 4
-  // CHECK-NEXT: [[NOTZERO:%[0-9]+]] = icmp ne i32 [[ACCUM]], 0
+  // CHECK:      [[ACCUM:%[0-9a-z]+]] = load i32, i32* %ua, align 4
+  // CHECK-NEXT: [[NOTZERO:%[0-9a-z]+]] = icmp ne i32 [[ACCUM]], 0
   // CHECK-NEXT: br i1 [[NOTZERO]], label %if.then{{[0-9]+}}, label %if.end{{[0-9]+}}
   if (ua) {
   }

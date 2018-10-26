@@ -19,9 +19,17 @@
 namespace lldb_private {
 namespace formatters {
 
-bool LibcxxStringSummaryProvider(
+bool LibcxxStringSummaryProviderASCII(
     ValueObject &valobj, Stream &stream,
-    const TypeSummaryOptions &options); // libc++ std::string
+    const TypeSummaryOptions &summary_options); // libc++ std::string
+
+bool LibcxxStringSummaryProviderUTF16(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options); // libc++ std::u16string
+
+bool LibcxxStringSummaryProviderUTF32(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options); // libc++ std::u32string
 
 bool LibcxxWStringSummaryProvider(
     ValueObject &valobj, Stream &stream,

@@ -35,6 +35,7 @@
 #include "../readability/BracesAroundStatementsCheck.h"
 #include "../readability/FunctionSizeCheck.h"
 #include "../readability/IdentifierNamingCheck.h"
+#include "../readability/UppercaseLiteralSuffixCheck.h"
 #include "ExceptionBaseclassCheck.h"
 #include "MultiwayPathsCoveredCheck.h"
 #include "NoAssemblerCheck.h"
@@ -100,6 +101,8 @@ public:
         "hicpp-use-nullptr");
     CheckFactories.registerCheck<modernize::UseOverrideCheck>(
         "hicpp-use-override");
+    CheckFactories.registerCheck<readability::UppercaseLiteralSuffixCheck>(
+        "hicpp-uppercase-literal-suffix");
     CheckFactories.registerCheck<cppcoreguidelines::ProTypeVarargCheck>(
         "hicpp-vararg");
   }

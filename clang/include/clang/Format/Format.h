@@ -533,20 +533,17 @@ struct FormatStyle {
     /// \code
     ///   try {
     ///     foo();
-    ///   } catch () {
+    ///   }
+    ///   catch () {
     ///   }
     ///   void foo() { bar(); }
-    ///   class foo
-    ///   {
+    ///   class foo {
     ///   };
     ///   if (foo()) {
-    ///   } else {
     ///   }
-    ///   enum X : int
-    ///   {
-    ///     A,
-    ///     B
-    ///   };
+    ///   else {
+    ///   }
+    ///   enum X : int { A, B };
     /// \endcode
     BS_Stroustrup,
     /// Always break before braces.
