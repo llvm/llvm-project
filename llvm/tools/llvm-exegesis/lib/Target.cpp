@@ -85,10 +85,37 @@ ExegesisTarget::createUopsBenchmarkRunner(const LLVMState &State) const {
   return llvm::make_unique<UopsBenchmarkRunner>(State);
 }
 
+static_assert(std::is_pod<PfmCountersInfo>::value,
+              "We shouldn't have dynamic initialization here");
+const PfmCountersInfo PfmCountersInfo::Default = {nullptr, nullptr, nullptr, 0u};
+
+const PfmCountersInfo &
+ExegesisTarget::getPfmCounters(llvm::StringRef CpuName) const {
+  assert(std::is_sorted(
+             CpuPfmCounters.begin(), CpuPfmCounters.end(),
+             [](const CpuAndPfmCounters &LHS, const CpuAndPfmCounters &RHS) {
+               return strcmp(LHS.CpuName, RHS.CpuName) < 0;
+             }) &&
+         "CpuPfmCounters table is not sorted");
+
+  // Find entry
+  auto Found =
+      std::lower_bound(CpuPfmCounters.begin(), CpuPfmCounters.end(), CpuName);
+  if (Found == CpuPfmCounters.end() ||
+      llvm::StringRef(Found->CpuName) != CpuName) {
+    return PfmCountersInfo::Default;
+  }
+  assert(Found->PCI && "Missing counters");
+  return *Found->PCI;
+}
+
 namespace {
 
 // Default implementation.
 class ExegesisDefaultTarget : public ExegesisTarget {
+public:
+  ExegesisDefaultTarget() : ExegesisTarget({}) {}
+
 private:
   std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
                                      unsigned Reg,

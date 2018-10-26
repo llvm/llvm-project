@@ -560,8 +560,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   }
   setOperationAction(ISD::FMINNUM, MVT::f16, Promote);
   setOperationAction(ISD::FMAXNUM, MVT::f16, Promote);
-  setOperationAction(ISD::FMINNAN, MVT::f16, Promote);
-  setOperationAction(ISD::FMAXNAN, MVT::f16, Promote);
+  setOperationAction(ISD::FMINIMUM, MVT::f16, Promote);
+  setOperationAction(ISD::FMAXIMUM, MVT::f16, Promote);
 
   // No FEXP2, FLOG2.  The PTX ex2 and log2 functions are always approximate.
   // No FPOW or FREM in PTX.

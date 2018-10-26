@@ -62,20 +62,8 @@ class InstrBuilder {
                               const llvm::MCInst &MCI) const;
 
 public:
-  InstrBuilder(const llvm::MCSubtargetInfo &sti, const llvm::MCInstrInfo &mcii,
-               const llvm::MCRegisterInfo &mri,
-               const llvm::MCInstrAnalysis &mcia)
-      : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia) {
-    computeProcResourceMasks(STI.getSchedModel(), ProcResourceMasks);
-  }
-
-  // Returns an array of processor resource masks.
-  // Masks are computed by function mca::computeProcResourceMasks. see
-  // Support.h for a description of how masks are computed and how masks can be
-  // used to solve set membership problems.
-  llvm::ArrayRef<uint64_t> getProcResourceMasks() const {
-    return ProcResourceMasks;
-  }
+  InstrBuilder(const llvm::MCSubtargetInfo &STI, const llvm::MCInstrInfo &MCII,
+               const llvm::MCRegisterInfo &RI, const llvm::MCInstrAnalysis &IA);
 
   void clear() { VariantDescriptors.shrink_and_clear(); }
 

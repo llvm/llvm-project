@@ -1138,8 +1138,9 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.Addrsig = Args.hasArg(OPT_faddrsig);
 
-  if (Arg *A = Args.getLastArg(OPT_msign_return_address)) {
+  if (Arg *A = Args.getLastArg(OPT_msign_return_address_EQ)) {
     StringRef SignScope = A->getValue();
+
     if (SignScope.equals_lower("none"))
       Opts.setSignReturnAddress(CodeGenOptions::SignReturnAddressScope::None);
     else if (SignScope.equals_lower("all"))
@@ -1149,8 +1150,25 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
           CodeGenOptions::SignReturnAddressScope::NonLeaf);
     else
       Diags.Report(diag::err_drv_invalid_value)
-          << A->getAsString(Args) << A->getValue();
+          << A->getAsString(Args) << SignScope;
+
+    if (Arg *A = Args.getLastArg(OPT_msign_return_address_key_EQ)) {
+      StringRef SignKey = A->getValue();
+      if (!SignScope.empty() && !SignKey.empty()) {
+        if (SignKey.equals_lower("a_key"))
+          Opts.setSignReturnAddressKey(
+              CodeGenOptions::SignReturnAddressKeyValue::AKey);
+        else if (SignKey.equals_lower("b_key"))
+          Opts.setSignReturnAddressKey(
+              CodeGenOptions::SignReturnAddressKeyValue::BKey);
+        else
+          Diags.Report(diag::err_drv_invalid_value)
+              << A->getAsString(Args) << SignKey;
+      }
+    }
   }
+
+  Opts.BranchTargetEnforcement = Args.hasArg(OPT_mbranch_target_enforce);
 
   Opts.KeepStaticConsts = Args.hasArg(OPT_fkeep_static_consts);
 
@@ -2295,8 +2313,19 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   if (Args.hasArg(OPT_print_ivar_layout))
     Opts.ObjCGCBitmapPrint = 1;
+
   if (Args.hasArg(OPT_fno_constant_cfstrings))
     Opts.NoConstantCFStrings = 1;
+  if (const auto *A = Args.getLastArg(OPT_fcf_runtime_abi_EQ))
+    Opts.CFRuntime =
+        llvm::StringSwitch<LangOptions::CoreFoundationABI>(A->getValue())
+            .Cases("unspecified", "standalone", "objc",
+                   LangOptions::CoreFoundationABI::ObjectiveC)
+            .Cases("swift", "swift-5.0",
+                   LangOptions::CoreFoundationABI::Swift5_0)
+            .Case("swift-4.2", LangOptions::CoreFoundationABI::Swift4_2)
+            .Case("swift-4.1", LangOptions::CoreFoundationABI::Swift4_1)
+            .Default(LangOptions::CoreFoundationABI::ObjectiveC);
 
   if (Args.hasArg(OPT_fzvector))
     Opts.ZVector = 1;

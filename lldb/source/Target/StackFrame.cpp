@@ -35,6 +35,8 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegisterValue.h"
 
+#include "lldb/lldb-enumerations.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -262,7 +264,8 @@ Block *StackFrame::GetFrameBlock() {
 // StackFrame object, everyone will have as much information as possible and no
 // one will ever have to look things up manually.
 //----------------------------------------------------------------------
-const SymbolContext &StackFrame::GetSymbolContext(uint32_t resolve_scope) {
+const SymbolContext &
+StackFrame::GetSymbolContext(SymbolContextItem resolve_scope) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // Copy our internal symbol context into "sc".
   if ((m_flags.Get() & resolve_scope) != resolve_scope) {
@@ -314,7 +317,7 @@ const SymbolContext &StackFrame::GetSymbolContext(uint32_t resolve_scope) {
       // haven't already tried to lookup one of those things. If we haven't
       // then we will do the query.
 
-      uint32_t actual_resolve_scope = 0;
+      SymbolContextItem actual_resolve_scope = SymbolContextItem(0);
 
       if (resolve_scope & eSymbolContextCompUnit) {
         if (m_flags.IsClear(eSymbolContextCompUnit)) {

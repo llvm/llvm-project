@@ -356,8 +356,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FMAXNUM:
   case ISD::FMINNUM_IEEE:
   case ISD::FMAXNUM_IEEE:
-  case ISD::FMINNAN:
-  case ISD::FMAXNAN:
+  case ISD::FMINIMUM:
+  case ISD::FMAXIMUM:
   case ISD::FCOPYSIGN:
   case ISD::FSQRT:
   case ISD::FSIN:
@@ -1021,6 +1021,11 @@ SDValue VectorLegalizer::ExpandVSELECT(SDValue Op) {
 SDValue VectorLegalizer::ExpandUINT_TO_FLOAT(SDValue Op) {
   EVT VT = Op.getOperand(0).getValueType();
   SDLoc DL(Op);
+
+  // Attempt to expand using TargetLowering.
+  SDValue Result;
+  if (TLI.expandUINT_TO_FP(Op.getNode(), Result, DAG))
+    return Result;
 
   // Make sure that the SINT_TO_FP and SRL instructions are available.
   if (TLI.getOperationAction(ISD::SINT_TO_FP, VT) == TargetLowering::Expand ||

@@ -350,7 +350,7 @@ processSTIPredicate(STIPredicateFunction &Fn,
         unsigned OpcodeIdx = Opcode2Index[Opcode];
         if (OpcodeMasks[OpcodeIdx].first[ProcIndex]) {
           std::string Message =
-              "Opcode " + Opcode->getName().str() + 
+              "Opcode " + Opcode->getName().str() +
               " used by multiple InstructionEquivalenceClass definitions.";
           PrintFatalError(EC->getLoc(), Message);
         }
@@ -486,9 +486,6 @@ void CodeGenSchedModels::collectOptionalProcessorInfo() {
 
   // Collect processor RetireControlUnit descriptors if available.
   collectRetireControlUnits();
-
-  // Find pfm counter definitions for each processor.
-  collectPfmCounters();
 
   checkCompleteness();
 }
@@ -1786,32 +1783,6 @@ void CodeGenSchedModels::collectRegisterFiles() {
 
       CGRF.Costs.emplace_back(RegisterClasses[I], Cost, AllowMoveElim);
     }
-  }
-}
-
-// Collect all the RegisterFile definitions available in this target.
-void CodeGenSchedModels::collectPfmCounters() {
-  for (Record *Def : Records.getAllDerivedDefinitions("PfmIssueCounter")) {
-    CodeGenProcModel &PM = getProcModel(Def->getValueAsDef("SchedModel"));
-    PM.PfmIssueCounterDefs.emplace_back(Def);
-  }
-  for (Record *Def : Records.getAllDerivedDefinitions("PfmCycleCounter")) {
-    CodeGenProcModel &PM = getProcModel(Def->getValueAsDef("SchedModel"));
-    if (PM.PfmCycleCounterDef) {
-      PrintFatalError(Def->getLoc(),
-                      "multiple cycle counters for " +
-                          Def->getValueAsDef("SchedModel")->getName());
-    }
-    PM.PfmCycleCounterDef = Def;
-  }
-  for (Record *Def : Records.getAllDerivedDefinitions("PfmUopsCounter")) {
-    CodeGenProcModel &PM = getProcModel(Def->getValueAsDef("SchedModel"));
-    if (PM.PfmUopsCounterDef) {
-      PrintFatalError(Def->getLoc(),
-                      "multiple uops counters for " +
-                          Def->getValueAsDef("SchedModel")->getName());
-    }
-    PM.PfmUopsCounterDef = Def;
   }
 }
 

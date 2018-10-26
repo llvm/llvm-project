@@ -2369,89 +2369,30 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
   assert(!isSigned && "Legalize cannot Expand SINT_TO_FP for i64 yet");
   // Code below here assumes !isSigned without checking again.
 
-  // Implementation of unsigned i64 to f64 following the algorithm in
-  // __floatundidf in compiler_rt. This implementation has the advantage
-  // of performing rounding correctly, both in the default rounding mode
-  // and in all alternate rounding modes.
-  // TODO: Generalize this for use with other types.
-  if (SrcVT == MVT::i64 && DestVT == MVT::f64) {
-    LLVM_DEBUG(dbgs() << "Converting unsigned i64 to f64\n");
-    SDValue TwoP52 = DAG.getConstant(UINT64_C(0x4330000000000000), dl, SrcVT);
-    SDValue TwoP84PlusTwoP52 = DAG.getConstantFP(
-        BitsToDouble(UINT64_C(0x4530000000100000)), dl, DestVT);
-    SDValue TwoP84 = DAG.getConstant(UINT64_C(0x4530000000000000), dl, SrcVT);
-    SDValue LoMask = DAG.getConstant(UINT64_C(0x00000000FFFFFFFF), dl, SrcVT);
-    SDValue HiShift = DAG.getConstant(32, dl, ShiftVT);
-
-    SDValue Lo = DAG.getNode(ISD::AND, dl, SrcVT, Op0, LoMask);
-    SDValue Hi = DAG.getNode(ISD::SRL, dl, SrcVT, Op0, HiShift);
-    SDValue LoOr = DAG.getNode(ISD::OR, dl, SrcVT, Lo, TwoP52);
-    SDValue HiOr = DAG.getNode(ISD::OR, dl, SrcVT, Hi, TwoP84);
-    SDValue LoFlt = DAG.getNode(ISD::BITCAST, dl, DestVT, LoOr);
-    SDValue HiFlt = DAG.getNode(ISD::BITCAST, dl, DestVT, HiOr);
-    SDValue HiSub = DAG.getNode(ISD::FSUB, dl, DestVT, HiFlt, TwoP84PlusTwoP52);
-    return DAG.getNode(ISD::FADD, dl, DestVT, LoFlt, HiSub);
-  }
-
   // TODO: Generalize this for use with other types.
   if (SrcVT == MVT::i64 && DestVT == MVT::f32) {
     LLVM_DEBUG(dbgs() << "Converting unsigned i64 to f32\n");
     // For unsigned conversions, convert them to signed conversions using the
     // algorithm from the x86_64 __floatundidf in compiler_rt.
-    if (!isSigned) {
-      SDValue Fast = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Op0);
+    SDValue Fast = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Op0);
 
-      SDValue ShiftConst = DAG.getConstant(1, dl, ShiftVT);
-      SDValue Shr = DAG.getNode(ISD::SRL, dl, SrcVT, Op0, ShiftConst);
-      SDValue AndConst = DAG.getConstant(1, dl, SrcVT);
-      SDValue And = DAG.getNode(ISD::AND, dl, SrcVT, Op0, AndConst);
-      SDValue Or = DAG.getNode(ISD::OR, dl, SrcVT, And, Shr);
+    SDValue ShiftConst = DAG.getConstant(1, dl, ShiftVT);
+    SDValue Shr = DAG.getNode(ISD::SRL, dl, SrcVT, Op0, ShiftConst);
+    SDValue AndConst = DAG.getConstant(1, dl, SrcVT);
+    SDValue And = DAG.getNode(ISD::AND, dl, SrcVT, Op0, AndConst);
+    SDValue Or = DAG.getNode(ISD::OR, dl, SrcVT, And, Shr);
 
-      SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Or);
-      SDValue Slow = DAG.getNode(ISD::FADD, dl, DestVT, SignCvt, SignCvt);
+    SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Or);
+    SDValue Slow = DAG.getNode(ISD::FADD, dl, DestVT, SignCvt, SignCvt);
 
-      // TODO: This really should be implemented using a branch rather than a
-      // select.  We happen to get lucky and machinesink does the right
-      // thing most of the time.  This would be a good candidate for a
-      // pseudo-op, or, even better, for whole-function isel.
-      SDValue SignBitTest =
-          DAG.getSetCC(dl, getSetCCResultType(SrcVT), Op0,
-                       DAG.getConstant(0, dl, SrcVT), ISD::SETLT);
-      return DAG.getSelect(dl, DestVT, SignBitTest, Slow, Fast);
-    }
-
-    // Otherwise, implement the fully general conversion.
-
-    SDValue And = DAG.getNode(ISD::AND, dl, MVT::i64, Op0,
-         DAG.getConstant(UINT64_C(0xfffffffffffff800), dl, MVT::i64));
-    SDValue Or = DAG.getNode(ISD::OR, dl, MVT::i64, And,
-         DAG.getConstant(UINT64_C(0x800), dl, MVT::i64));
-    SDValue And2 = DAG.getNode(ISD::AND, dl, MVT::i64, Op0,
-         DAG.getConstant(UINT64_C(0x7ff), dl, MVT::i64));
-    SDValue Ne = DAG.getSetCC(dl, getSetCCResultType(MVT::i64), And2,
-                              DAG.getConstant(UINT64_C(0), dl, MVT::i64),
-                              ISD::SETNE);
-    SDValue Sel = DAG.getSelect(dl, MVT::i64, Ne, Or, Op0);
-    SDValue Ge = DAG.getSetCC(dl, getSetCCResultType(MVT::i64), Op0,
-                              DAG.getConstant(UINT64_C(0x0020000000000000), dl,
-                                              MVT::i64),
-                              ISD::SETUGE);
-    SDValue Sel2 = DAG.getSelect(dl, MVT::i64, Ge, Sel, Op0);
-    EVT SHVT = TLI.getShiftAmountTy(Sel2.getValueType(), DAG.getDataLayout());
-
-    SDValue Sh = DAG.getNode(ISD::SRL, dl, MVT::i64, Sel2,
-                             DAG.getConstant(32, dl, SHVT));
-    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Sh);
-    SDValue Fcvt = DAG.getNode(ISD::UINT_TO_FP, dl, MVT::f64, Trunc);
-    SDValue TwoP32 =
-      DAG.getConstantFP(BitsToDouble(UINT64_C(0x41f0000000000000)), dl,
-                        MVT::f64);
-    SDValue Fmul = DAG.getNode(ISD::FMUL, dl, MVT::f64, TwoP32, Fcvt);
-    SDValue Lo = DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, Sel2);
-    SDValue Fcvt2 = DAG.getNode(ISD::UINT_TO_FP, dl, MVT::f64, Lo);
-    SDValue Fadd = DAG.getNode(ISD::FADD, dl, MVT::f64, Fmul, Fcvt2);
-    return DAG.getNode(ISD::FP_ROUND, dl, MVT::f32, Fadd,
-                       DAG.getIntPtrConstant(0, dl));
+    // TODO: This really should be implemented using a branch rather than a
+    // select.  We happen to get lucky and machinesink does the right
+    // thing most of the time.  This would be a good candidate for a
+    // pseudo-op, or, even better, for whole-function isel.
+    SDValue SignBitTest =
+        DAG.getSetCC(dl, getSetCCResultType(SrcVT), Op0,
+                     DAG.getConstant(0, dl, SrcVT), ISD::SETLT);
+    return DAG.getSelect(dl, DestVT, SignBitTest, Slow, Fast);
   }
 
   SDValue Tmp1 = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Op0);
@@ -2921,8 +2862,13 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
-  case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
+    if (TLI.expandUINT_TO_FP(Node, Tmp1, DAG)) {
+      Results.push_back(Tmp1);
+      break;
+    }
+    LLVM_FALLTHROUGH;
+  case ISD::SINT_TO_FP:
     Tmp1 = ExpandLegalINT_TO_FP(Node->getOpcode() == ISD::SINT_TO_FP,
                                 Node->getOperand(0), Node->getValueType(0), dl);
     Results.push_back(Tmp1);

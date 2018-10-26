@@ -2099,8 +2099,8 @@ public:
     case ISD::ADDE:
     case ISD::FMINNUM:
     case ISD::FMAXNUM:
-    case ISD::FMINNAN:
-    case ISD::FMAXNAN:
+    case ISD::FMINIMUM:
+    case ISD::FMAXIMUM:
       return true;
     default: return false;
     }
@@ -3662,6 +3662,12 @@ public:
   /// \param Result output after conversion
   /// \returns True, if the expansion was successful, false otherwise
   bool expandFP_TO_SINT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+
+  /// Expand UINT(i64) to double(f64) conversion
+  /// \param N Node to expand
+  /// \param Result output after conversion
+  /// \returns True, if the expansion was successful, false otherwise
+  bool expandUINT_TO_FP(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
 
   /// Expand fminnum/fmaxnum into fminnum_ieee/fmaxnum_ieee with quieted inputs.
   SDValue expandFMINNUM_FMAXNUM(SDNode *N, SelectionDAG &DAG) const;

@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
-// Test ensures that this properly differentiates between types in different 
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS
+// Test ensures that this properly differentiates between types in different
 // namespaces.
 int __attribute__((target("sse4.2"))) foo(int) { return 0; }
 int __attribute__((target("arch=sandybridge"))) foo(int);
@@ -17,38 +18,71 @@ int bar() {
   return foo(1) + ns::foo(2);
 }
 
-// CHECK: @_Z3fooi.ifunc = ifunc i32 (i32), i32 (i32)* ()* @_Z3fooi.resolver
-// CHECK: @_ZN2ns3fooEi.ifunc = ifunc i32 (i32), i32 (i32)* ()* @_ZN2ns3fooEi.resolver
+// LINUX: @_Z3fooi.ifunc = ifunc i32 (i32), i32 (i32)* ()* @_Z3fooi.resolver
+// LINUX: @_ZN2ns3fooEi.ifunc = ifunc i32 (i32), i32 (i32)* ()* @_ZN2ns3fooEi.resolver
 
-// CHECK: define i32 @_Z3fooi.sse4.2(i32)
-// CHECK: ret i32 0
-// CHECK: define i32 @_Z3fooi.arch_ivybridge(i32)
-// CHECK: ret i32 1
-// CHECK: define i32 @_Z3fooi(i32)
-// CHECK: ret i32 2
+// LINUX: define i32 @_Z3fooi.sse4.2(i32)
+// LINUX: ret i32 0
+// LINUX: define i32 @_Z3fooi.arch_ivybridge(i32)
+// LINUX: ret i32 1
+// LINUX: define i32 @_Z3fooi(i32)
+// LINUX: ret i32 2
 
-// CHECK: define i32 @_ZN2ns3fooEi.sse4.2(i32)
-// CHECK: ret i32 0
-// CHECK: define i32 @_ZN2ns3fooEi.arch_ivybridge(i32)
-// CHECK: ret i32 1
-// CHECK: define i32 @_ZN2ns3fooEi(i32)
-// CHECK: ret i32 2
+// WINDOWS: define dso_local i32 @"?foo@@YAHH@Z.sse4.2"(i32)
+// WINDOWS: ret i32 0
+// WINDOWS: define dso_local i32 @"?foo@@YAHH@Z.arch_ivybridge"(i32)
+// WINDOWS: ret i32 1
+// WINDOWS: define dso_local i32 @"?foo@@YAHH@Z"(i32)
+// WINDOWS: ret i32 2
 
-// CHECK: define i32 @_Z3barv()
-// CHECK: call i32 @_Z3fooi.ifunc(i32 1)
-// CHECK: call i32 @_ZN2ns3fooEi.ifunc(i32 2)
+// LINUX: define i32 @_ZN2ns3fooEi.sse4.2(i32)
+// LINUX: ret i32 0
+// LINUX: define i32 @_ZN2ns3fooEi.arch_ivybridge(i32)
+// LINUX: ret i32 1
+// LINUX: define i32 @_ZN2ns3fooEi(i32)
+// LINUX: ret i32 2
 
-// CHECK: define i32 (i32)* @_Z3fooi.resolver() comdat
-// CHECK: ret i32 (i32)* @_Z3fooi.arch_sandybridge
-// CHECK: ret i32 (i32)* @_Z3fooi.arch_ivybridge
-// CHECK: ret i32 (i32)* @_Z3fooi.sse4.2
-// CHECK: ret i32 (i32)* @_Z3fooi
-//
-// CHECK: define i32 (i32)* @_ZN2ns3fooEi.resolver() comdat
-// CHECK: ret i32 (i32)* @_ZN2ns3fooEi.arch_sandybridge
-// CHECK: ret i32 (i32)* @_ZN2ns3fooEi.arch_ivybridge
-// CHECK: ret i32 (i32)* @_ZN2ns3fooEi.sse4.2
-// CHECK: ret i32 (i32)* @_ZN2ns3fooEi
+// WINDOWS: define dso_local i32 @"?foo@ns@@YAHH@Z.sse4.2"(i32)
+// WINDOWS: ret i32 0
+// WINDOWS: define dso_local i32 @"?foo@ns@@YAHH@Z.arch_ivybridge"(i32)
+// WINDOWS: ret i32 1
+// WINDOWS: define dso_local i32 @"?foo@ns@@YAHH@Z"(i32)
+// WINDOWS: ret i32 2
 
-// CHECK: declare i32 @_Z3fooi.arch_sandybridge(i32)
-// CHECK: declare i32 @_ZN2ns3fooEi.arch_sandybridge(i32)
+// LINUX: define i32 @_Z3barv()
+// LINUX: call i32 @_Z3fooi.ifunc(i32 1)
+// LINUX: call i32 @_ZN2ns3fooEi.ifunc(i32 2)
+
+// WINDOWS: define dso_local i32 @"?bar@@YAHXZ"()
+// WINDOWS: call i32 @"?foo@@YAHH@Z.resolver"(i32 1)
+// WINDOWS: call i32 @"?foo@ns@@YAHH@Z.resolver"(i32 2)
+
+// LINUX: define i32 (i32)* @_Z3fooi.resolver() comdat
+// LINUX: ret i32 (i32)* @_Z3fooi.arch_sandybridge
+// LINUX: ret i32 (i32)* @_Z3fooi.arch_ivybridge
+// LINUX: ret i32 (i32)* @_Z3fooi.sse4.2
+// LINUX: ret i32 (i32)* @_Z3fooi
+
+// WINDOWS: define dso_local i32 @"?foo@@YAHH@Z.resolver"(i32) comdat
+// WINDOWS: call i32 @"?foo@@YAHH@Z.arch_sandybridge"(i32 %0)
+// WINDOWS: call i32 @"?foo@@YAHH@Z.arch_ivybridge"(i32 %0)
+// WINDOWS: call i32 @"?foo@@YAHH@Z.sse4.2"(i32 %0)
+// WINDOWS: call i32 @"?foo@@YAHH@Z"(i32 %0)
+
+// LINUX: define i32 (i32)* @_ZN2ns3fooEi.resolver() comdat
+// LINUX: ret i32 (i32)* @_ZN2ns3fooEi.arch_sandybridge
+// LINUX: ret i32 (i32)* @_ZN2ns3fooEi.arch_ivybridge
+// LINUX: ret i32 (i32)* @_ZN2ns3fooEi.sse4.2
+// LINUX: ret i32 (i32)* @_ZN2ns3fooEi
+
+// WINDOWS: define dso_local i32 @"?foo@ns@@YAHH@Z.resolver"(i32) comdat
+// WINDOWS: call i32 @"?foo@ns@@YAHH@Z.arch_sandybridge"(i32 %0)
+// WINDOWS: call i32 @"?foo@ns@@YAHH@Z.arch_ivybridge"(i32 %0)
+// WINDOWS: call i32 @"?foo@ns@@YAHH@Z.sse4.2"(i32 %0)
+// WINDOWS: call i32 @"?foo@ns@@YAHH@Z"(i32 %0)
+
+// LINUX: declare i32 @_Z3fooi.arch_sandybridge(i32)
+// LINUX: declare i32 @_ZN2ns3fooEi.arch_sandybridge(i32)
+
+// WINDOWS: declare dso_local i32 @"?foo@@YAHH@Z.arch_sandybridge"(i32)
+// WINDOWS: declare dso_local i32 @"?foo@ns@@YAHH@Z.arch_sandybridge"(i32)

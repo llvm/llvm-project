@@ -2375,24 +2375,10 @@ static bool FoldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
 
   // Move all 'aggressive' instructions, which are defined in the
   // conditional parts of the if's up to the dominating block.
-  if (IfBlock1) {
-    for (auto &I : *IfBlock1) {
-      I.dropUnknownNonDebugMetadata();
-      dropDebugUsers(I);
-    }
-    DomBlock->getInstList().splice(InsertPt->getIterator(),
-                                   IfBlock1->getInstList(), IfBlock1->begin(),
-                                   IfBlock1->getTerminator()->getIterator());
-  }
-  if (IfBlock2) {
-    for (auto &I : *IfBlock2) {
-      I.dropUnknownNonDebugMetadata();
-      dropDebugUsers(I);
-    }
-    DomBlock->getInstList().splice(InsertPt->getIterator(),
-                                   IfBlock2->getInstList(), IfBlock2->begin(),
-                                   IfBlock2->getTerminator()->getIterator());
-  }
+  if (IfBlock1)
+    hoistAllInstructionsInto(DomBlock, InsertPt, IfBlock1);
+  if (IfBlock2)
+    hoistAllInstructionsInto(DomBlock, InsertPt, IfBlock2);
 
   while (PHINode *PN = dyn_cast<PHINode>(BB->begin())) {
     // Change the PHI node into a select instruction.

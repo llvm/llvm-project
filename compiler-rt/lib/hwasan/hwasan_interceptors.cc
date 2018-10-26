@@ -186,7 +186,7 @@ struct __sanitizer_struct_mallinfo __sanitizer_mallinfo() {
 }
 
 int __sanitizer_mallopt(int cmd, int value) {
-  return -1;
+  return 0;
 }
 
 void __sanitizer_malloc_stats(void) {

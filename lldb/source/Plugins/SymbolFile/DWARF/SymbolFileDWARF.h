@@ -53,8 +53,7 @@ class DWARFDebugAranges;
 class DWARFDebugInfo;
 class DWARFDebugInfoEntry;
 class DWARFDebugLine;
-class DWARFDebugRanges;
-class DWARFDebugRngLists;
+class DWARFDebugRangesBase;
 class DWARFDeclContext;
 class DWARFDIECollection;
 class DWARFFormValue;
@@ -169,12 +168,13 @@ public:
   ParseDeclsForContext(lldb_private::CompilerDeclContext decl_ctx) override;
 
   uint32_t ResolveSymbolContext(const lldb_private::Address &so_addr,
-                                uint32_t resolve_scope,
+                                lldb::SymbolContextItem resolve_scope,
                                 lldb_private::SymbolContext &sc) override;
 
   uint32_t
   ResolveSymbolContext(const lldb_private::FileSpec &file_spec, uint32_t line,
-                       bool check_inlines, uint32_t resolve_scope,
+                       bool check_inlines,
+                       lldb::SymbolContextItem resolve_scope,
                        lldb_private::SymbolContextList &sc_list) override;
 
   uint32_t
@@ -190,8 +190,8 @@ public:
   uint32_t
   FindFunctions(const lldb_private::ConstString &name,
                 const lldb_private::CompilerDeclContext *parent_decl_ctx,
-                uint32_t name_type_mask, bool include_inlines, bool append,
-                lldb_private::SymbolContextList &sc_list) override;
+                lldb::FunctionNameType name_type_mask, bool include_inlines,
+                bool append, lldb_private::SymbolContextList &sc_list) override;
 
   uint32_t FindFunctions(const lldb_private::RegularExpression &regex,
                          bool include_inlines, bool append,
@@ -215,7 +215,7 @@ public:
   lldb_private::TypeList *GetTypeList() override;
 
   size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
-                  uint32_t type_mask,
+                  lldb::TypeClass type_mask,
                   lldb_private::TypeList &type_list) override;
 
   lldb_private::TypeSystem *
@@ -266,9 +266,9 @@ public:
 
   const DWARFDebugInfo *DebugInfo() const;
 
-  DWARFDebugRanges *DebugRanges();
+  DWARFDebugRangesBase *DebugRanges();
 
-  const DWARFDebugRanges *DebugRanges() const;
+  const DWARFDebugRangesBase *DebugRanges() const;
 
   const lldb_private::DWARFDataExtractor &DebugLocData();
 
@@ -512,7 +512,7 @@ protected:
   typedef std::shared_ptr<std::set<DIERef>> DIERefSetSP;
   typedef std::unordered_map<std::string, DIERefSetSP> NameToOffsetMap;
   NameToOffsetMap m_function_scope_qualified_name_map;
-  std::unique_ptr<DWARFDebugRanges> m_ranges;
+  std::unique_ptr<DWARFDebugRangesBase> m_ranges;
   UniqueDWARFASTTypeMap m_unique_ast_type_map;
   DIEToTypePtr m_die_to_type;
   DIEToVariableSP m_die_to_variable_sp;

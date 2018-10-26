@@ -2233,6 +2233,10 @@ public:
   /// part of the cpu_specific/cpu_dispatch functionality.
   bool isCPUSpecificMultiVersion() const;
 
+  /// True if this function is a multiversioned dispatch function as a part of
+  /// the target functionality.
+  bool isTargetMultiVersion() const;
+
   void setPreviousDeclaration(FunctionDecl * PrevDecl);
 
   FunctionDecl *getCanonicalDecl() override;

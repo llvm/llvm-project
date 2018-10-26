@@ -66,7 +66,6 @@ public:
               unsigned Width);
 
   void onCycleEnd() override { ++TotalCycles; }
-
   void onEvent(const HWInstructionEvent &Event) override;
 
   void printView(llvm::raw_ostream &OS) const override;

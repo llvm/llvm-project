@@ -663,20 +663,22 @@ bool fromJSON(const json::Value &Params, ClangdCompileCommand &CDbUpdate) {
          O.map("compilationCommand", CDbUpdate.compilationCommand);
 }
 
-bool fromJSON(const json::Value &Params,
-              ClangdConfigurationParamsChange &CCPC) {
+bool fromJSON(const json::Value &Params, ConfigurationSettings &S) {
   json::ObjectMapper O(Params);
-  return O &&
-         O.map("compilationDatabaseChanges", CCPC.compilationDatabaseChanges);
+  if (!O)
+    return true; // 'any' type in LSP.
+  O.map("compilationDatabaseChanges", S.compilationDatabaseChanges);
+  return true;
 }
 
-bool fromJSON(const json::Value &Params, ClangdInitializationOptions &Opts) {
-  if (!fromJSON(Params, Opts.ParamsChange)) {
-    return false;
-  }
-
+bool fromJSON(const json::Value &Params, InitializationOptions &Opts) {
   json::ObjectMapper O(Params);
-  return O && O.map("compilationDatabasePath", Opts.compilationDatabasePath);
+  if (!O)
+    return true; // 'any' type in LSP.
+
+  fromJSON(Params, Opts.ConfigSettings);
+  O.map("compilationDatabasePath", Opts.compilationDatabasePath);
+  return true;
 }
 
 bool fromJSON(const json::Value &Params, ReferenceParams &R) {

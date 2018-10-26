@@ -31881,7 +31881,8 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     KnownBits KnownOp;
     SDValue LHS = Op.getOperand(0);
     SDValue RHS = Op.getOperand(1);
-    APInt DemandedMask = OriginalDemandedBits & APInt::getLowBitsSet(64, 32);
+    // FIXME: Can we bound this better?
+    APInt DemandedMask = APInt::getLowBitsSet(64, 32);
     if (SimplifyDemandedBits(LHS, DemandedMask, KnownOp, TLO, Depth + 1))
       return true;
     if (SimplifyDemandedBits(RHS, DemandedMask, KnownOp, TLO, Depth + 1))
@@ -34360,7 +34361,7 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget.hasSSE2())
     return SDValue();
 
-  if (Subtarget.getProcFamily() == X86Subtarget::IntelKNL)
+  if (Subtarget.isPMADDWDSlow())
     return SDValue();
 
   EVT VT = N->getValueType(0);

@@ -62,9 +62,6 @@ public:
   /// Uses the default fallback command, adding any extra flags.
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
-  /// Set the compile commands directory to \p P.
-  void setCompileCommandsDir(Path P);
-
   /// Sets the extra flags that should be added to a file.
   void setExtraFlagsForFile(PathRef File, std::vector<std::string> ExtraFlags);
 
@@ -99,10 +96,6 @@ public:
   /// \returns True if the File had no compilation command before.
   bool setCompilationCommandForFile(PathRef File,
                                     tooling::CompileCommand CompilationCommand);
-
-  /// Removes the compilation command for \p File if it's present in the
-  /// mapping.
-  void invalidate(PathRef File);
 
 private:
   mutable std::mutex Mutex;

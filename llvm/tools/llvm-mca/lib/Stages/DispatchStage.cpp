@@ -37,9 +37,8 @@ void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
 
 bool DispatchStage::checkPRF(const InstRef &IR) const {
   SmallVector<unsigned, 4> RegDefs;
-  for (const std::unique_ptr<WriteState> &RegDef :
-       IR.getInstruction()->getDefs())
-    RegDefs.emplace_back(RegDef->getRegisterID());
+  for (const WriteState &RegDef : IR.getInstruction()->getDefs())
+    RegDefs.emplace_back(RegDef.getRegisterID());
 
   const unsigned RegisterMask = PRF.isAvailable(RegDefs);
   // A mask with all zeroes means: register files are available.
@@ -105,7 +104,7 @@ Error DispatchStage::dispatch(InstRef IR) {
   if (IS.isOptimizableMove()) {
     assert(IS.getDefs().size() == 1 && "Expected a single input!");
     assert(IS.getUses().size() == 1 && "Expected a single output!");
-    IsEliminated = PRF.tryEliminateMove(*IS.getDefs()[0], *IS.getUses()[0]);
+    IsEliminated = PRF.tryEliminateMove(IS.getDefs()[0], IS.getUses()[0]);
   }
 
   // A dependency-breaking instruction doesn't have to wait on the register
@@ -118,9 +117,9 @@ Error DispatchStage::dispatch(InstRef IR) {
   // We also don't update data dependencies for instructions that have been
   // eliminated at register renaming stage.
   if (!IsEliminated) {
-    for (std::unique_ptr<ReadState> &RS : IS.getUses()) {
-      if (!RS->isIndependentFromDef())
-        updateRAWDependencies(*RS, STI);
+    for (ReadState &RS : IS.getUses()) {
+      if (!RS.isIndependentFromDef())
+        updateRAWDependencies(RS, STI);
     }
   }
 
@@ -128,8 +127,8 @@ Error DispatchStage::dispatch(InstRef IR) {
   // at register renaming stage. That means, no physical register is allocated
   // to the instruction.
   SmallVector<unsigned, 4> RegisterFiles(PRF.getNumRegisterFiles());
-  for (std::unique_ptr<WriteState> &WS : IS.getDefs())
-    PRF.addRegisterWrite(WriteRef(IR.getSourceIndex(), WS.get()),
+  for (WriteState &WS : IS.getDefs())
+    PRF.addRegisterWrite(WriteRef(IR.getSourceIndex(), &WS),
                          RegisterFiles);
 
   // Reserve slots in the RCU, and notify the instruction that it has been

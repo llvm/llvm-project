@@ -1143,14 +1143,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   if (Subtarget->hasNEON()) {
     // vmin and vmax aren't available in a scalar form, so we use
     // a NEON instruction with an undef lane instead.
-    setOperationAction(ISD::FMINNAN, MVT::f16, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::f16, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::f32, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::f32, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::v2f32, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::v2f32, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::v4f32, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::f16, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::f16, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::f32, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::v2f32, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::v2f32, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::v4f32, Legal);
 
     if (Subtarget->hasFullFP16()) {
       setOperationAction(ISD::FMINNUM, MVT::v4f16, Legal);
@@ -1158,10 +1158,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::FMINNUM, MVT::v8f16, Legal);
       setOperationAction(ISD::FMAXNUM, MVT::v8f16, Legal);
 
-      setOperationAction(ISD::FMINNAN, MVT::v4f16, Legal);
-      setOperationAction(ISD::FMAXNAN, MVT::v4f16, Legal);
-      setOperationAction(ISD::FMINNAN, MVT::v8f16, Legal);
-      setOperationAction(ISD::FMAXNAN, MVT::v8f16, Legal);
+      setOperationAction(ISD::FMINIMUM, MVT::v4f16, Legal);
+      setOperationAction(ISD::FMAXIMUM, MVT::v4f16, Legal);
+      setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
+      setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
     }
   }
 
@@ -3408,7 +3408,7 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
                          Op.getOperand(1), Op.getOperand(2));
     }
     unsigned NewOpc = (IntNo == Intrinsic::arm_neon_vmins)
-      ? ISD::FMINNAN : ISD::FMAXNAN;
+      ? ISD::FMINIMUM : ISD::FMAXIMUM;
     return DAG.getNode(NewOpc, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2));
   }

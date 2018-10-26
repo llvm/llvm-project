@@ -429,9 +429,9 @@ bool Disassembler::PrintInstructions(Disassembler *disasm_ptr,
       const Address &addr = inst->GetAddress();
       ModuleSP module_sp(addr.GetModule());
       if (module_sp) {
-        const uint32_t resolve_mask = eSymbolContextFunction |
-                                      eSymbolContextSymbol |
-                                      eSymbolContextLineEntry;
+        const SymbolContextItem resolve_mask = eSymbolContextFunction |
+                                               eSymbolContextSymbol |
+                                               eSymbolContextLineEntry;
         uint32_t resolved_mask =
             module_sp->ResolveSymbolContextForAddress(addr, resolve_mask, sc);
         if (resolved_mask) {

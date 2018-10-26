@@ -4,7 +4,7 @@
 
 define <4 x i16> @foo1(<2 x i32> %a) {
 ; CHECK-LABEL: foo1:
-; CHECK:       movi	d0, #0000000000000000
+; CHECK:       movi	v0.2d, #0000000000000000
 ; CHECK-NEXT:  ret
 
   %1 = shufflevector <2 x i32> <i32 58712, i32 undef>, <2 x i32> %a, <2 x i32> <i32 0, i32 2>
@@ -16,7 +16,7 @@ define <4 x i16> @foo1(<2 x i32> %a) {
 
 define <4 x i16> @foo2(<2 x i32> %a) {
 ; CHECK-LABEL: foo2:
-; CHECK:       movi	d0, #0000000000000000
+; CHECK:       movi	v0.2d, #0000000000000000
 ; CHECK-NEXT:  ret
 
   %1 = shufflevector <2 x i32> <i32 712, i32 undef>, <2 x i32> %a, <2 x i32> <i32 0, i32 2>

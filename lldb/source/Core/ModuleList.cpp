@@ -338,8 +338,9 @@ ModuleSP ModuleList::GetModuleAtIndexUnlocked(size_t idx) const {
 }
 
 size_t ModuleList::FindFunctions(const ConstString &name,
-                                 uint32_t name_type_mask, bool include_symbols,
-                                 bool include_inlines, bool append,
+                                 FunctionNameType name_type_mask,
+                                 bool include_symbols, bool include_inlines,
+                                 bool append,
                                  SymbolContextList &sc_list) const {
   if (!append)
     sc_list.Clear();
@@ -373,7 +374,7 @@ size_t ModuleList::FindFunctions(const ConstString &name,
 }
 
 size_t ModuleList::FindFunctionSymbols(const ConstString &name,
-                                       uint32_t name_type_mask,
+                                       lldb::FunctionNameType name_type_mask,
                                        SymbolContextList &sc_list) {
   const size_t old_size = sc_list.GetSize();
 
@@ -662,9 +663,10 @@ bool ModuleList::ResolveFileAddress(lldb::addr_t vm_addr,
   return false;
 }
 
-uint32_t ModuleList::ResolveSymbolContextForAddress(const Address &so_addr,
-                                                    uint32_t resolve_scope,
-                                                    SymbolContext &sc) const {
+uint32_t
+ModuleList::ResolveSymbolContextForAddress(const Address &so_addr,
+                                           SymbolContextItem resolve_scope,
+                                           SymbolContext &sc) const {
   // The address is already section offset so it has a module
   uint32_t resolved_flags = 0;
   ModuleSP module_sp(so_addr.GetModule());
@@ -687,7 +689,7 @@ uint32_t ModuleList::ResolveSymbolContextForAddress(const Address &so_addr,
 
 uint32_t ModuleList::ResolveSymbolContextForFilePath(
     const char *file_path, uint32_t line, bool check_inlines,
-    uint32_t resolve_scope, SymbolContextList &sc_list) const {
+    SymbolContextItem resolve_scope, SymbolContextList &sc_list) const {
   FileSpec file_spec(file_path, false);
   return ResolveSymbolContextsForFileSpec(file_spec, line, check_inlines,
                                           resolve_scope, sc_list);
@@ -695,7 +697,7 @@ uint32_t ModuleList::ResolveSymbolContextForFilePath(
 
 uint32_t ModuleList::ResolveSymbolContextsForFileSpec(
     const FileSpec &file_spec, uint32_t line, bool check_inlines,
-    uint32_t resolve_scope, SymbolContextList &sc_list) const {
+    SymbolContextItem resolve_scope, SymbolContextList &sc_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   collection::const_iterator pos, end = m_modules.end();
   for (pos = m_modules.begin(); pos != end; ++pos) {

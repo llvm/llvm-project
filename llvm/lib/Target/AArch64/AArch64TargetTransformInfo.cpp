@@ -946,9 +946,20 @@ int AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, Type *ValTy,
 
 int AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
                                    Type *SubTp) {
-  if (Kind == TTI::SK_Transpose || Kind == TTI::SK_Select ||
-      Kind == TTI::SK_PermuteSingleSrc) {
+  if (Kind == TTI::SK_Broadcast || Kind == TTI::SK_Transpose ||
+      Kind == TTI::SK_Select || Kind == TTI::SK_PermuteSingleSrc) {
     static const CostTblEntry ShuffleTbl[] = {
+      // Broadcast shuffle kinds can be performed with 'dup'.
+      { TTI::SK_Broadcast, MVT::v8i8,  1 },
+      { TTI::SK_Broadcast, MVT::v16i8, 1 },
+      { TTI::SK_Broadcast, MVT::v4i16, 1 },
+      { TTI::SK_Broadcast, MVT::v8i16, 1 },
+      { TTI::SK_Broadcast, MVT::v2i32, 1 },
+      { TTI::SK_Broadcast, MVT::v4i32, 1 },
+      { TTI::SK_Broadcast, MVT::v2i64, 1 },
+      { TTI::SK_Broadcast, MVT::v2f32, 1 },
+      { TTI::SK_Broadcast, MVT::v4f32, 1 },
+      { TTI::SK_Broadcast, MVT::v2f64, 1 },
       // Transpose shuffle kinds can be performed with 'trn1/trn2' and
       // 'zip1/zip2' instructions.
       { TTI::SK_Transpose, MVT::v8i8,  1 },

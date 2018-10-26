@@ -102,14 +102,6 @@ def int_wasm_atomic_notify:
 // SIMD intrinsics
 //===----------------------------------------------------------------------===//
 
-def int_wasm_add_saturate_signed :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMMatchType<0>, LLVMMatchType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
-def int_wasm_add_saturate_unsigned :
-  Intrinsic<[llvm_anyvector_ty],
-            [LLVMMatchType<0>, LLVMMatchType<0>],
-            [IntrNoMem, IntrSpeculatable]>;
 def int_wasm_sub_saturate_signed :
   Intrinsic<[llvm_anyvector_ty],
             [LLVMMatchType<0>, LLVMMatchType<0>],

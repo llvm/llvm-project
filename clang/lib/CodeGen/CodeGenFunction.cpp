@@ -448,9 +448,7 @@ void CodeGenFunction::FinishFunction(SourceLocation EndLoc) {
   // 4. Width of vector arguments and return types for this function.
   // 5. Width of vector aguments and return types for functions called by this
   //    function.
-  if (LargestVectorWidth != 0)
-    CurFn->addFnAttr("min-legal-vector-width",
-                     llvm::utostr(LargestVectorWidth));
+  CurFn->addFnAttr("min-legal-vector-width", llvm::utostr(LargestVectorWidth));
 }
 
 /// ShouldInstrumentFunction - Return true if the current function should be
@@ -2394,6 +2392,29 @@ CodeGenFunction::FormResolverCondition(const MultiVersionResolverOption &RO) {
   return Condition;
 }
 
+static void CreateMultiVersionResolverReturn(CodeGenModule &CGM,
+                                             llvm::Function *Resolver,
+                                             CGBuilderTy &Builder,
+                                             llvm::Function *FuncToReturn,
+                                             bool SupportsIFunc) {
+  if (SupportsIFunc) {
+    Builder.CreateRet(FuncToReturn);
+    return;
+  }
+
+  llvm::SmallVector<llvm::Value *, 10> Args;
+  llvm::for_each(Resolver->args(),
+                 [&](llvm::Argument &Arg) { Args.push_back(&Arg); });
+
+  llvm::CallInst *Result = Builder.CreateCall(FuncToReturn, Args);
+  Result->setTailCallKind(llvm::CallInst::TCK_MustTail);
+
+  if (Resolver->getReturnType()->isVoidTy())
+    Builder.CreateRetVoid();
+  else
+    Builder.CreateRet(Result);
+}
+
 void CodeGenFunction::EmitMultiVersionResolver(
     llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
   assert((getContext().getTargetInfo().getTriple().getArch() ==
@@ -2401,6 +2422,9 @@ void CodeGenFunction::EmitMultiVersionResolver(
           getContext().getTargetInfo().getTriple().getArch() ==
               llvm::Triple::x86_64) &&
          "Only implemented for x86 targets");
+
+  bool SupportsIFunc = getContext().getTargetInfo().supportsIFunc();
+
   // Main function's basic block.
   llvm::BasicBlock *CurBlock = createBasicBlock("resolver_entry", Resolver);
   Builder.SetInsertPoint(CurBlock);
@@ -2414,13 +2438,15 @@ void CodeGenFunction::EmitMultiVersionResolver(
     if (!Condition) {
       assert(&RO == Options.end() - 1 &&
              "Default or Generic case must be last");
-      Builder.CreateRet(RO.Function);
+      CreateMultiVersionResolverReturn(CGM, Resolver, Builder, RO.Function,
+                                       SupportsIFunc);
       return;
     }
 
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
-    llvm::IRBuilder<> RetBuilder(RetBlock);
-    RetBuilder.CreateRet(RO.Function);
+    CGBuilderTy RetBuilder(*this, RetBlock);
+    CreateMultiVersionResolverReturn(CGM, Resolver, RetBuilder, RO.Function,
+                                     SupportsIFunc);
     CurBlock = createBasicBlock("resolver_else", Resolver);
     Builder.CreateCondBr(Condition, RetBlock, CurBlock);
   }

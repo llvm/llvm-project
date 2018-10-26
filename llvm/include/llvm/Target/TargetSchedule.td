@@ -557,31 +557,3 @@ class RetireControlUnit<int bufferSize, int retirePerCycle> {
   int MaxRetirePerCycle = retirePerCycle;
   SchedMachineModel SchedModel = ?;
 }
-
-// Allow the definition of hardware counters.
-class PfmCounter {
-  SchedMachineModel SchedModel = ?;
-}
-
-// Each processor can define how to measure cycles by defining a
-// PfmCycleCounter.
-class PfmCycleCounter<string counter> : PfmCounter {
-  string Counter = counter;
-}
-
-// Each ProcResourceUnits can define how to measure issued uops by defining
-// a PfmIssueCounter.
-class PfmIssueCounter<ProcResourceUnits resource, list<string> counters>
-    : PfmCounter{
-  // The resource units on which uops are issued.
-  ProcResourceUnits Resource = resource;
-  // The list of counters that measure issue events.
-  list<string> Counters = counters;
-}
-
-// Each processor can define how to measure NumMicroOps by defining a
-// PfmUopsCounter.
-class PfmUopsCounter<string counter> : PfmCounter {
-  string Counter = counter;
-}
-

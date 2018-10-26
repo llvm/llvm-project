@@ -452,29 +452,29 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::f64, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::f64, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::f64, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::v2f64, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::v2f64, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::v2f64, Legal);
     setOperationAction(ISD::FMINNUM, MVT::v2f64, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::v2f64, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::v2f64, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::f32, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::f32, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::f32, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::f32, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::v4f32, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::v4f32, Legal);
     setOperationAction(ISD::FMINNUM, MVT::v4f32, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::v4f32, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::v4f32, Legal);
 
     setOperationAction(ISD::FMAXNUM, MVT::f128, Legal);
-    setOperationAction(ISD::FMAXNAN, MVT::f128, Legal);
+    setOperationAction(ISD::FMAXIMUM, MVT::f128, Legal);
     setOperationAction(ISD::FMINNUM, MVT::f128, Legal);
-    setOperationAction(ISD::FMINNAN, MVT::f128, Legal);
+    setOperationAction(ISD::FMINIMUM, MVT::f128, Legal);
   }
 
   // We have fused multiply-addition for f32 and f64 but not f128.
@@ -527,6 +527,10 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
   setTargetDAGCombine(ISD::FP_ROUND);
   setTargetDAGCombine(ISD::BSWAP);
+  setTargetDAGCombine(ISD::SDIV);
+  setTargetDAGCombine(ISD::UDIV);
+  setTargetDAGCombine(ISD::SREM);
+  setTargetDAGCombine(ISD::UREM);
 
   // Handle intrinsics.
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
@@ -5664,6 +5668,23 @@ SDValue SystemZTargetLowering::combineGET_CCMASK(
   return Select->getOperand(4);
 }
 
+SDValue SystemZTargetLowering::combineIntDIVREM(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  // In the case where the divisor is a vector of constants a cheaper
+  // sequence of instructions can replace the divide. BuildSDIV is called to
+  // do this during DAG combining, but it only succeeds when it can build a
+  // multiplication node. The only option for SystemZ is ISD::SMUL_LOHI, and
+  // since it is not Legal but Custom it can only happen before
+  // legalization. Therefore we must scalarize this early before Combine
+  // 1. For widened vectors, this is already the result of type legalization.
+  if (VT.isVector() && isTypeLegal(VT) &&
+      DAG.isConstantIntBuildVectorOrConstantInt(N->getOperand(1)))
+    return DAG.UnrollVectorOp(N);
+  return SDValue();
+}
+
 SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
                                                  DAGCombinerInfo &DCI) const {
   switch(N->getOpcode()) {
@@ -5681,6 +5702,10 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
   case SystemZISD::SELECT_CCMASK: return combineSELECT_CCMASK(N, DCI);
   case SystemZISD::GET_CCMASK:  return combineGET_CCMASK(N, DCI);
+  case ISD::SDIV:
+  case ISD::UDIV:
+  case ISD::SREM:
+  case ISD::UREM:               return combineIntDIVREM(N, DCI);
   }
 
   return SDValue();

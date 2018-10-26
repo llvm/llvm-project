@@ -4978,13 +4978,21 @@ public:
     llvm::Function *Fn = cast<llvm::Function>(GV);
 
     auto Kind = CGM.getCodeGenOpts().getSignReturnAddress();
-    if (Kind == CodeGenOptions::SignReturnAddressScope::None)
-      return;
+    if (Kind != CodeGenOptions::SignReturnAddressScope::None) {
+      Fn->addFnAttr("sign-return-address",
+                    Kind == CodeGenOptions::SignReturnAddressScope::All
+                        ? "all"
+                        : "non-leaf");
 
-    Fn->addFnAttr("sign-return-address",
-                  Kind == CodeGenOptions::SignReturnAddressScope::All
-                      ? "all"
-                      : "non-leaf");
+      auto Key = CGM.getCodeGenOpts().getSignReturnAddressKey();
+      Fn->addFnAttr("sign-return-address-key",
+                    Key == CodeGenOptions::SignReturnAddressKeyValue::AKey
+                        ? "a_key"
+                        : "b_key");
+    }
+
+    if (CGM.getCodeGenOpts().BranchTargetEnforcement)
+      Fn->addFnAttr("branch-target-enforcement");
   }
 };
 

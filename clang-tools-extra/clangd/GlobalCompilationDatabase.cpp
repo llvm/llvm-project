@@ -59,12 +59,6 @@ DirectoryBasedGlobalCompilationDatabase::getFallbackCommand(
   return C;
 }
 
-void DirectoryBasedGlobalCompilationDatabase::setCompileCommandsDir(Path P) {
-  std::lock_guard<std::mutex> Lock(Mutex);
-  CompileCommandsDir = P;
-  CompilationDatabases.clear();
-}
-
 void DirectoryBasedGlobalCompilationDatabase::setExtraFlagsForFile(
     PathRef File, std::vector<std::string> ExtraFlags) {
   std::lock_guard<std::mutex> Lock(Mutex);
@@ -133,11 +127,6 @@ bool InMemoryCompilationDb::setCompilationCommandForFile(
     return true;
   ItInserted.first->setValue(std::move(CompilationCommand));
   return false;
-}
-
-void InMemoryCompilationDb::invalidate(PathRef File) {
-  std::unique_lock<std::mutex> Lock(Mutex);
-  Commands.erase(File);
 }
 
 } // namespace clangd

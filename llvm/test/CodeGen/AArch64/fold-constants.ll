@@ -2,7 +2,7 @@
 
 define i64 @dotests_616() {
 ; CHECK-LABEL: dotests_616
-; CHECK:       movi d0, #0000000000000000
+; CHECK:       movi v0.2d, #0000000000000000
 ; CHECK-NEXT:  fmov x0, d0
 ; CHECK-NEXT:  ret
 entry:

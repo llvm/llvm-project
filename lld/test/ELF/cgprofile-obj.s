@@ -1,8 +1,10 @@
 # REQUIRES: x86
 
-# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: ld.lld -e A %t -o %t2
-# RUN: llvm-readobj -symbols %t2 | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
+# RUN: ld.lld -e A %t.o -o %t
+# RUN: llvm-nm --no-sort %t | FileCheck %s
+# RUN: ld.lld --no-call-graph-profile-sort -e A %t.o -o %t
+# RUN: llvm-nm --no-sort %t | FileCheck %s --check-prefix=NO-CG
 
     .section    .text.D,"ax",@progbits
 D:
@@ -31,11 +33,12 @@ Aa:
     .cg_profile B, C, 30
     .cg_profile C, D, 90
 
-# CHECK:          Name: D
-# CHECK-NEXT:     Value: 0x201003
-# CHECK:          Name: A
-# CHECK-NEXT:     Value: 0x201000
-# CHECK:          Name: B
-# CHECK-NEXT:     Value: 0x201001
-# CHECK:          Name: C
-# CHECK-NEXT:     Value: 0x201002
+# CHECK: 0000000000201003 t D
+# CHECK: 0000000000201000 T A
+# CHECK: 0000000000201001 T B
+# CHECK: 0000000000201002 T C
+
+# NO-CG: 0000000000201000 t D
+# NO-CG: 0000000000201003 T A
+# NO-CG: 0000000000201002 T B
+# NO-CG: 0000000000201001 T C

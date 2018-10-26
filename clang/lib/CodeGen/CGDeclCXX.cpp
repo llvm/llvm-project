@@ -360,11 +360,21 @@ llvm::Function *CodeGenModule::CreateGlobalInitOrDestructFunction(
     Fn->addFnAttr(llvm::Attribute::ShadowCallStack);
 
   auto RASignKind = getCodeGenOpts().getSignReturnAddress();
-  if (RASignKind != CodeGenOptions::SignReturnAddressScope::None)
+  if (RASignKind != CodeGenOptions::SignReturnAddressScope::None) {
     Fn->addFnAttr("sign-return-address",
                   RASignKind == CodeGenOptions::SignReturnAddressScope::All
                       ? "all"
                       : "non-leaf");
+    auto RASignKey = getCodeGenOpts().getSignReturnAddressKey();
+    Fn->addFnAttr("sign-return-address-key",
+                  RASignKey == CodeGenOptions::SignReturnAddressKeyValue::AKey
+                      ? "a_key"
+                      : "b_key");
+  }
+
+  if (getCodeGenOpts().BranchTargetEnforcement)
+    Fn->addFnAttr("branch-target-enforcement");
+
   return Fn;
 }
 

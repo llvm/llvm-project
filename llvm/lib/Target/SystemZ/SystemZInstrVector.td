@@ -1031,7 +1031,7 @@ let Predicates = [FeatureVector] in {
   // Maximum.
   multiclass VectorMax<Instruction insn, TypedReg tr> {
     def : FPMinMax<insn, fmaxnum, tr, 4>;
-    def : FPMinMax<insn, fmaxnan, tr, 1>;
+    def : FPMinMax<insn, fmaximum, tr, 1>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     def VFMAX   : TernaryVRRcFloatGeneric<"vfmax", 0xE7EF>;
@@ -1055,7 +1055,7 @@ let Predicates = [FeatureVector] in {
   // Minimum.
   multiclass VectorMin<Instruction insn, TypedReg tr> {
     def : FPMinMax<insn, fminnum, tr, 4>;
-    def : FPMinMax<insn, fminnan, tr, 1>;
+    def : FPMinMax<insn, fminimum, tr, 1>;
   }
   let Predicates = [FeatureVectorEnhancements1] in {
     def VFMIN   : TernaryVRRcFloatGeneric<"vfmin", 0xE7EE>;

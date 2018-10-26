@@ -66,7 +66,6 @@ Clang-Tidy Checks
    bugprone-use-after-move
    bugprone-virtual-near-miss
    cert-dcl03-c (redirects to misc-static-assert) <cert-dcl03-c>
-   cert-dcl16-c (redirects to readability-uppercase-literal-suffix) <cert-dcl16-c>
    cert-dcl21-cpp
    cert-dcl50-cpp
    cert-dcl54-cpp (redirects to misc-new-delete-overloads) <cert-dcl54-cpp>
@@ -159,7 +158,6 @@ Clang-Tidy Checks
    hicpp-use-nullptr (redirects to modernize-use-nullptr) <hicpp-use-nullptr>
    hicpp-use-override (redirects to modernize-use-override) <hicpp-use-override>
    hicpp-vararg (redirects to cppcoreguidelines-pro-type-vararg) <hicpp-vararg>
-   hicpp-uppercase-literal-suffix (redirects to readability-uppercase-literal-suffix) <hicpp-uppercase-literal-suffix>
    llvm-header-guard
    llvm-include-order
    llvm-namespace-comment
@@ -251,5 +249,4 @@ Clang-Tidy Checks
    readability-static-definition-in-anonymous-namespace
    readability-string-compare
    readability-uniqueptr-delete-release
-   readability-uppercase-literal-suffix
    zircon-temporary-objects

@@ -1164,8 +1164,8 @@ def PATCHABLE_TYPED_EVENT_CALL : StandardPseudoInstruction {
   let hasSideEffects = 1;
 }
 def FENTRY_CALL : StandardPseudoInstruction {
-  let OutOperandList = (outs unknown:$dst);
-  let InOperandList = (ins variable_ops);
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
   let AsmString = "# FEntry call";
   let usesCustomInserter = 1;
   let mayLoad = 1;
@@ -1555,3 +1555,8 @@ include "llvm/Target/GlobalISel/Target.td"
 // Pull in the common support for the Global ISel DAG-based selector generation.
 //
 include "llvm/Target/GlobalISel/SelectionDAGCompat.td"
+
+//===----------------------------------------------------------------------===//
+// Pull in the common support for Pfm Counters generation.
+//
+include "llvm/Target/TargetPfmCounters.td"

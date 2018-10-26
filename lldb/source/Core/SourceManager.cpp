@@ -397,7 +397,8 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
         size_t num_matches =
             target->GetImages().ResolveSymbolContextForFilePath(
                 file_spec.GetFilename().AsCString(), 0, check_inlines,
-                lldb::eSymbolContextModule | lldb::eSymbolContextCompUnit,
+                SymbolContextItem(eSymbolContextModule |
+                                  eSymbolContextCompUnit),
                 sc_list);
         bool got_multiple = false;
         if (num_matches != 0) {

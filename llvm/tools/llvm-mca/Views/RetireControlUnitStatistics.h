@@ -48,9 +48,7 @@ public:
   RetireControlUnitStatistics() : NumRetired(0), NumCycles(0) {}
 
   void onEvent(const HWInstructionEvent &Event) override;
-
   void onCycleBegin() override { NumCycles++; }
-
   void onCycleEnd() override { updateHistograms(); }
 
   void printView(llvm::raw_ostream &OS) const override;

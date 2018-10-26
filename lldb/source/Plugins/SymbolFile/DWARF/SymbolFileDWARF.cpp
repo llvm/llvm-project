@@ -341,7 +341,7 @@ void SymbolFileDWARF::GetTypes(const DWARFDIE &die, dw_offset_t min_die_offset,
 }
 
 size_t SymbolFileDWARF::GetTypes(SymbolContextScope *sc_scope,
-                                 uint32_t type_mask, TypeList &type_list)
+                                 TypeClass type_mask, TypeList &type_list)
 
 {
   ASSERT_MODULE_LOCK(this);
@@ -769,7 +769,7 @@ SymbolFileDWARF::GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) {
   return NULL;
 }
 
-DWARFDebugRanges *SymbolFileDWARF::DebugRanges() {
+DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() {
   if (m_ranges.get() == NULL) {
     static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
     Timer scoped_timer(func_cat, "%s this = %p", LLVM_PRETTY_FUNCTION,
@@ -786,7 +786,7 @@ DWARFDebugRanges *SymbolFileDWARF::DebugRanges() {
   return m_ranges.get();
 }
 
-const DWARFDebugRanges *SymbolFileDWARF::DebugRanges() const {
+const DWARFDebugRangesBase *SymbolFileDWARF::DebugRanges() const {
   return m_ranges.get();
 }
 
@@ -1777,7 +1777,7 @@ SymbolFileDWARF::GlobalVariableMap &SymbolFileDWARF::GetGlobalAranges() {
 }
 
 uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
-                                               uint32_t resolve_scope,
+                                               SymbolContextItem resolve_scope,
                                                SymbolContext &sc) {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat,
@@ -1911,7 +1911,7 @@ uint32_t SymbolFileDWARF::ResolveSymbolContext(const Address &so_addr,
 uint32_t SymbolFileDWARF::ResolveSymbolContext(const FileSpec &file_spec,
                                                uint32_t line,
                                                bool check_inlines,
-                                               uint32_t resolve_scope,
+                                               SymbolContextItem resolve_scope,
                                                SymbolContextList &sc_list) {
   const uint32_t prev_size = sc_list.GetSize();
   if (resolve_scope & eSymbolContextCompUnit) {
@@ -2288,11 +2288,10 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext *decl_ctx,
   return false;
 }
 
-uint32_t
-SymbolFileDWARF::FindFunctions(const ConstString &name,
-                               const CompilerDeclContext *parent_decl_ctx,
-                               uint32_t name_type_mask, bool include_inlines,
-                               bool append, SymbolContextList &sc_list) {
+uint32_t SymbolFileDWARF::FindFunctions(
+    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    FunctionNameType name_type_mask, bool include_inlines, bool append,
+    SymbolContextList &sc_list) {
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "SymbolFileDWARF::FindFunctions (name = '%s')",
                      name.AsCString());
@@ -3379,15 +3378,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
           case DW_AT_start_scope: {
             if (form_value.Form() == DW_FORM_sec_offset) {
               DWARFRangeList dwarf_scope_ranges;
-              const DWARFDebugRanges *debug_ranges = DebugRanges();
-              debug_ranges->FindRanges(die.GetCU()->GetRangesBase(),
+              const DWARFDebugRangesBase *debug_ranges = DebugRanges();
+              debug_ranges->FindRanges(die.GetCU(),
                                        form_value.Unsigned(),
                                        dwarf_scope_ranges);
-
-              // All DW_AT_start_scope are relative to the base address of the
-              // compile unit. We add the compile unit base address to make
-              // sure all the addresses are properly fixed up.
-              dwarf_scope_ranges.Slide(die.GetCU()->GetBaseAddress());
             } else {
               // TODO: Handle the case when DW_AT_start_scope have form
               // constant. The

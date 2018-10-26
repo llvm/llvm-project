@@ -167,7 +167,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .unsupportedIfMemSizeNotPow2()
       // Lower any any-extending loads left into G_ANYEXT and G_LOAD
       .lowerIf([=](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].Size * 8;
+        return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
       })
       .clampNumElements(0, v2s32, v2s32);
 
@@ -185,7 +185,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .unsupportedIfMemSizeNotPow2()
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isScalar() &&
-               Query.Types[0].getSizeInBits() != Query.MMODescrs[0].Size * 8;
+               Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
       })
       .clampNumElements(0, v2s32, v2s32);
 
@@ -384,6 +384,17 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
                                1, Query.Types[1].getElementType());
                          });
   }
+
+  getActionDefinitionsBuilder(G_EXTRACT_VECTOR_ELT)
+      .unsupportedIf([=](const LegalityQuery &Query) {
+        const LLT &EltTy = Query.Types[1].getElementType();
+        return Query.Types[0] != EltTy;
+      })
+      .minScalar(2, s64)
+      .legalIf([=](const LegalityQuery &Query) {
+        const LLT &VecTy = Query.Types[1];
+        return VecTy == v4s32 || VecTy == v2s64;
+      });
 
   computeTables();
   verify(*ST.getInstrInfo());

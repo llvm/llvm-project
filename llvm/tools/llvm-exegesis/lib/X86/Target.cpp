@@ -329,7 +329,13 @@ private:
   std::vector<llvm::MCInst> Instructions;
 };
 
+#include "X86GenExegesis.inc"
+
 class ExegesisX86Target : public ExegesisTarget {
+public:
+  ExegesisX86Target() : ExegesisTarget(X86CpuPfmCounters) {}
+
+private:
   void addTargetSpecificPasses(llvm::PassManagerBase &PM) const override {
     // Lowers FP pseudo-instructions, e.g. ABS_Fp32 -> ABS_F.
     PM.add(llvm::createX86FloatingPointStackifierPass());
