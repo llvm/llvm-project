@@ -175,11 +175,6 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to('settings set thread-f', 'settings set thread-format')
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
-    def test_settings_s_dash(self):
-        """Test that 'settings set -' completes to 'settings set -g'."""
-        self.complete_from_to('settings set -', 'settings set -g')
-
-    @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_settings_clear_th(self):
         """Test that 'settings clear thread-f' completes to 'settings clear thread-format'."""
         self.complete_from_to(
