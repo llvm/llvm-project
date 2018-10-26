@@ -1014,13 +1014,6 @@ public:
 };
 
 
-static constexpr OptionDefinition g_type_formatter_list_options[] = {
-  // clang-format off
-  {LLDB_OPT_SET_1, false, "category-regex", 'w', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeName,     "Only show categories matching this filter."},
-  {LLDB_OPT_SET_2, false, "language",       'l', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeLanguage, "Only show the category for a specific language."}
-  // clang-format on
-};
-
 template <typename FormatterType>
 class CommandObjectTypeFormatterList : public CommandObjectParsed {
   typedef typename FormatterType::SharedPointer FormatterSharedPointer;

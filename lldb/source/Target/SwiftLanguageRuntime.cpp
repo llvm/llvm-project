@@ -179,7 +179,7 @@ void SwiftLanguageRuntime::SetupExclusivity() {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   if (log)
-    log->Printf("SwiftLanguageRuntime: _swift_disableExclusivityChecking = %llu",
+    log->Printf("SwiftLanguageRuntime: _swift_disableExclusivityChecking = %lu",
                 m_dynamic_exclusivity_flag_addr ?
                 *m_dynamic_exclusivity_flag_addr : 0);
 }
@@ -1478,16 +1478,6 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
   return llvm::None;
 }
 
-static size_t BaseClassDepth(ValueObject &in_value) {
-  ValueObject *ptr = &in_value;
-  size_t depth = 0;
-  while (ptr->IsBaseClass()) {
-    depth++;
-    ptr = ptr->GetParent();
-  }
-  return depth;
-}
-
 /// Determine whether the scratch SwiftASTContext has been locked.
 static bool IsScratchContextLocked(Target &target) {
   if (target.GetSwiftScratchContextLock().try_lock()) {
@@ -1526,7 +1516,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
   auto metadata_address = remote_ast.getHeapMetadataForObject(instance_address);
   if (!metadata_address) {
     if (log) {
-      log->Printf("could not read heap metadata for object at %llu: %s\n",
+      log->Printf("could not read heap metadata for object at %lu: %s\n",
                   class_metadata_ptr,
                   metadata_address.getFailure().render().c_str());
     }
@@ -1539,8 +1529,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
                                               /*skipArtificial=*/true);
   if (!instance_type) {
     if (log) {
-      log->Printf("could not get type metadata from address %llu: %s\n",
-                  metadata_address.getValue(),
+      log->Printf("could not get type metadata from address %" PRIu64 " : %s\n",
+                  metadata_address.getValue().getAddressData(),
                   instance_type.getFailure().render().c_str());
     }
     return false;
@@ -2002,8 +1992,6 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
   } break;
   case swift::MetadataKind::Existential: {
     CompilerType protocol_type(promise_sp->FulfillTypePromise());
-    SwiftASTContext *swift_ast_ctx =
-        llvm::dyn_cast_or_null<SwiftASTContext>(protocol_type.GetTypeSystem());
     lldb::addr_t existential_address = in_value.GetPointerValue();
     if (!existential_address || existential_address == LLDB_INVALID_ADDRESS)
       return false;
@@ -2114,7 +2102,7 @@ bool SwiftLanguageRuntime::GetAbstractTypeName(StreamString &name,
   swift::TypeBase *base = swift_type.getPointer();
   while (dependent_member) {
     base = dependent_member->getBase().getPointer();
-    assoc.Printf(".%s", dependent_member->getName());
+    assoc.Printf(".%s", dependent_member->getName().get());
     dependent_member = llvm::dyn_cast<swift::DependentMemberType>(base);
   }
 
@@ -2123,7 +2111,7 @@ bool SwiftLanguageRuntime::GetAbstractTypeName(StreamString &name,
     return false;
 
   name.Printf(u8"\u03C4_%d_%d%s", generic_type_param->getDepth(),
-              generic_type_param->getIndex(), assoc.GetString());
+              generic_type_param->getIndex(), assoc.GetString().data());
   return true;
 }
 
@@ -3838,7 +3826,6 @@ void SwiftLanguageRuntime::DidFinishExecutingUserExpression() {
 llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
     lldb::StackFrameSP frame_sp)
 {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
   llvm::Optional<Value> error_val;
 
   llvm::StringRef error_reg_name;
@@ -3890,7 +3877,6 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationAfterReturn(
 
 llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationBeforeReturn(
     lldb::StackFrameSP frame_sp, bool &need_to_check_after_return) {
-  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
   llvm::Optional<Value> error_val;
   
   if (!frame_sp)
@@ -3914,8 +3900,6 @@ llvm::Optional<Value> SwiftLanguageRuntime::GetErrorReturnLocationBeforeReturn(
     if (error_loc_val_sp && error_loc_val_sp->GetError().Success())
       error_val = error_loc_val_sp->GetValue();
 
-//    if (log)
-//      log->Printf("Found return address: 0x%" PRIu64 " from error variable.", return_addr);
     return error_val;
   }
   
@@ -4115,8 +4099,6 @@ private:
     case ReferenceCountType::eReferenceWeak:
       Kind = "Weak";
       break;
-    default:
-      llvm_unreachable("Unhandled refcount type in switch!");
     }
 
     EvaluateExpressionOptions eval_options;

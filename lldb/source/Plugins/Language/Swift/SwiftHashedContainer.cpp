@@ -521,7 +521,7 @@ bool NativeHashedStorageHandler::IsValid() {
 
 uint64_t
 NativeHashedStorageHandler::GetMetadataWord(int index, Status &error) {
-  if (index >= GetWordCount()) {
+  if (static_cast<size_t>(index) >= GetWordCount()) {
     error.SetErrorToGenericError();
     return 0;
   }
