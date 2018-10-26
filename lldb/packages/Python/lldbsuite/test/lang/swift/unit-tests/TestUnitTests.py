@@ -15,7 +15,7 @@ Test that XCTest-based unit tests work
 import commands
 import lldb
 from lldbsuite.test.lldbtest import *
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
 import os.path
@@ -31,9 +31,10 @@ class TestUnitTests(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipUnlessDarwin
-    @decorators.swiftTest
-    @decorators.skipIf(
+    @expectedFailureAll(bugnumber="rdar://45579668")
+    @skipUnlessDarwin
+    @swiftTest
+    @skipIf(
         debug_info=decorators.no_match("dsym"),
         bugnumber="This test only builds one way")
     def test_cross_module_extension(self):
