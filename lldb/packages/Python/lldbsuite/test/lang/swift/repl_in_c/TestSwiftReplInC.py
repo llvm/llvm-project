@@ -1,4 +1,4 @@
-# TestSwiftPrivateVarReplInC.py
+# TestSwiftReplInC.py
 #
 # This source file is part of the Swift.org open source project
 #
@@ -13,12 +13,14 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
-class TestSwiftPrivateVarReplInC(TestBase):
+class TestSwiftReplInC(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_swift_provate_var_repl_in_c(self):
+    @swiftTest
+    @add_test_categories(["swiftpr"])
+    def test_repl_in_c(self):
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")
         self.expect("repl", error=True, substrs=["Swift standard library"])
