@@ -295,7 +295,7 @@
 # DEBUG:      .. type index coverage check SKIPPED: no rules defined
 #
 # DEBUG-NEXT: G_EXTRACT_VECTOR_ELT (opcode {{[0-9]+}}): 3 type indices
-# DEBUG:      .. type index coverage check SKIPPED: no rules defined
+# DEBUG:      .. type index coverage check SKIPPED: user-defined predicate detected
 #
 # DEBUG-NEXT: G_SHUFFLE_VECTOR (opcode {{[0-9]+}}): 3 type indices
 # DEBUG:      .. type index coverage check SKIPPED: no rules defined

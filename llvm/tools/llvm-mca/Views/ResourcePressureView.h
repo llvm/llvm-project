@@ -82,26 +82,17 @@ class ResourcePressureView : public View {
   std::vector<ResourceCycles> ResourceUsage;
   unsigned NumResourceUnits;
 
-  const llvm::MCInst &GetMCInstFromIndex(unsigned Index) const;
-  void printResourcePressurePerIteration(llvm::raw_ostream &OS,
-                                         unsigned Executions) const;
-  void printResourcePressurePerInstruction(llvm::raw_ostream &OS,
-                                           unsigned Executions) const;
-  void initialize();
+  void printResourcePressurePerIter(llvm::raw_ostream &OS) const;
+  void printResourcePressurePerInst(llvm::raw_ostream &OS) const;
 
 public:
   ResourcePressureView(const llvm::MCSubtargetInfo &sti,
-                       llvm::MCInstPrinter &Printer, const SourceMgr &SM)
-      : STI(sti), MCIP(Printer), Source(SM) {
-    initialize();
-  }
+                       llvm::MCInstPrinter &Printer, const SourceMgr &SM);
 
   void onEvent(const HWInstructionEvent &Event) override;
-
   void printView(llvm::raw_ostream &OS) const override {
-    unsigned Executions = Source.getNumIterations();
-    printResourcePressurePerIteration(OS, Executions);
-    printResourcePressurePerInstruction(OS, Executions);
+    printResourcePressurePerIter(OS);
+    printResourcePressurePerInst(OS);
   }
 };
 } // namespace mca

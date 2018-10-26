@@ -16,11 +16,9 @@ target triple = "wasm32-unknown-unknown"
 ; SIMD128-NEXT: .result v128{{$}}
 ; SIMD128-NEXT: i8x16.add_saturate_s $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <16 x i8> @llvm.wasm.add.saturate.signed.v16i8(<16 x i8>, <16 x i8>)
+declare <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8>, <16 x i8>)
 define <16 x i8> @add_sat_s_v16i8(<16 x i8> %x, <16 x i8> %y) {
-  %a = call <16 x i8> @llvm.wasm.add.saturate.signed.v16i8(
-    <16 x i8> %x, <16 x i8> %y
-  )
+  %a = call <16 x i8> @llvm.sadd.sat.v16i8(<16 x i8> %x, <16 x i8> %y)
   ret <16 x i8> %a
 }
 
@@ -29,11 +27,9 @@ define <16 x i8> @add_sat_s_v16i8(<16 x i8> %x, <16 x i8> %y) {
 ; SIMD128-NEXT: .result v128{{$}}
 ; SIMD128-NEXT: i8x16.add_saturate_u $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <16 x i8> @llvm.wasm.add.saturate.unsigned.v16i8(<16 x i8>, <16 x i8>)
+declare <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8>, <16 x i8>)
 define <16 x i8> @add_sat_u_v16i8(<16 x i8> %x, <16 x i8> %y) {
-  %a = call <16 x i8> @llvm.wasm.add.saturate.unsigned.v16i8(
-    <16 x i8> %x, <16 x i8> %y
-  )
+  %a = call <16 x i8> @llvm.uadd.sat.v16i8(<16 x i8> %x, <16 x i8> %y)
   ret <16 x i8> %a
 }
 
@@ -106,11 +102,9 @@ define <16 x i8> @bitselect_v16i8(<16 x i8> %c, <16 x i8> %v1, <16 x i8> %v2) {
 ; SIMD128-NEXT: .result v128{{$}}
 ; SIMD128-NEXT: i16x8.add_saturate_s $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.add.saturate.signed.v8i16(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16>, <8 x i16>)
 define <8 x i16> @add_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
-  %a = call <8 x i16> @llvm.wasm.add.saturate.signed.v8i16(
-    <8 x i16> %x, <8 x i16> %y
-  )
+  %a = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> %x, <8 x i16> %y)
   ret <8 x i16> %a
 }
 
@@ -119,11 +113,9 @@ define <8 x i16> @add_sat_s_v8i16(<8 x i16> %x, <8 x i16> %y) {
 ; SIMD128-NEXT: .result v128{{$}}
 ; SIMD128-NEXT: i16x8.add_saturate_u $push[[R:[0-9]+]]=, $0, $1{{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
-declare <8 x i16> @llvm.wasm.add.saturate.unsigned.v8i16(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16>, <8 x i16>)
 define <8 x i16> @add_sat_u_v8i16(<8 x i16> %x, <8 x i16> %y) {
-  %a = call <8 x i16> @llvm.wasm.add.saturate.unsigned.v8i16(
-    <8 x i16> %x, <8 x i16> %y
-  )
+  %a = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> %x, <8 x i16> %y)
   ret <8 x i16> %a
 }
 

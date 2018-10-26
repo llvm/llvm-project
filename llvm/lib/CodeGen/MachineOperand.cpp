@@ -461,7 +461,8 @@ static void printIRValueReference(raw_ostream &OS, const Value &V,
     printLLVMNameWithoutPrefix(OS, V.getName());
     return;
   }
-  MachineOperand::printIRSlotNumber(OS, MST.getLocalSlot(&V));
+  int Slot = MST.getCurrentFunction() ? MST.getLocalSlot(&V) : -1;
+  MachineOperand::printIRSlotNumber(OS, Slot);
 }
 
 static void printSyncScope(raw_ostream &OS, const LLVMContext &Context,

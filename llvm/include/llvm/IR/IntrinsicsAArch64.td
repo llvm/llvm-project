@@ -160,6 +160,11 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
     : Intrinsic<[llvm_anyvector_ty],
                 [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<1>],
                 [IntrNoMem]>;
+
+  class AdvSIMD_FP16FML_Intrinsic
+    : Intrinsic<[llvm_anyvector_ty],
+                [LLVMMatchType<0>, llvm_anyvector_ty, LLVMMatchType<1>],
+                [IntrNoMem]>;
 }
 
 // Arithmetic ops
@@ -430,6 +435,12 @@ let TargetPrefix = "aarch64", IntrProperties = [IntrNoMem] in {
   // v8.2-A Dot Product
   def int_aarch64_neon_udot : AdvSIMD_Dot_Intrinsic;
   def int_aarch64_neon_sdot : AdvSIMD_Dot_Intrinsic;
+
+  // v8.2-A FP16 Fused Multiply-Add Long
+  def int_aarch64_neon_fmlal : AdvSIMD_FP16FML_Intrinsic;
+  def int_aarch64_neon_fmlsl : AdvSIMD_FP16FML_Intrinsic;
+  def int_aarch64_neon_fmlal2 : AdvSIMD_FP16FML_Intrinsic;
+  def int_aarch64_neon_fmlsl2 : AdvSIMD_FP16FML_Intrinsic;
 }
 
 let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".

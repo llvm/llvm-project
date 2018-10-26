@@ -1043,7 +1043,7 @@ def : ProcessorModel<"cortex-a57",  CortexA57Model,     [ARMv8a, ProcA57,
                                                          FeatureAvoidPartialCPSR,
                                                          FeatureCheapPredicableCPSR]>;
 
-def : ProcNoItin<"cortex-a72",                          [ARMv8a, ProcA72,
+def : ProcessorModel<"cortex-a72",  CortexA57Model,     [ARMv8a, ProcA72,
                                                          FeatureHWDivThumb,
                                                          FeatureHWDivARM,
                                                          FeatureCrypto,

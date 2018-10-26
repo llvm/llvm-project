@@ -42,8 +42,8 @@ define half @fneg_fptrunc(float %a) {
 
 define <2 x half> @fneg_fptrunc_vec_undef(<2 x float> %a) {
 ; CHECK-LABEL: @fneg_fptrunc_vec_undef(
-; CHECK-NEXT:    [[B:%.*]] = fsub <2 x float> <float -0.000000e+00, float undef>, [[A:%.*]]
-; CHECK-NEXT:    [[C:%.*]] = fptrunc <2 x float> [[B]] to <2 x half>
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc <2 x float> [[A:%.*]] to <2 x half>
+; CHECK-NEXT:    [[C:%.*]] = fsub <2 x half> <half 0xH8000, half 0xH8000>, [[TMP1]]
 ; CHECK-NEXT:    ret <2 x half> [[C]]
 ;
   %b = fsub <2 x float> <float -0.0, float undef>, %a

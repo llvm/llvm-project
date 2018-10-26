@@ -1792,10 +1792,10 @@ void visitDomSubTree(DominatorTree &DT, BasicBlock *BB, CallableT Callable) {
   } while (!DomWorklist.empty());
 }
 
-static bool unswitchNontrivialInvariants(
+static void unswitchNontrivialInvariants(
     Loop &L, Instruction &TI, ArrayRef<Value *> Invariants,
-    DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
-    function_ref<void(bool, ArrayRef<Loop *>)> UnswitchCB,
+    SmallVectorImpl<BasicBlock *> &ExitBlocks, DominatorTree &DT, LoopInfo &LI,
+    AssumptionCache &AC, function_ref<void(bool, ArrayRef<Loop *>)> UnswitchCB,
     ScalarEvolution *SE) {
   auto *ParentBB = TI.getParent();
   BranchInst *BI = dyn_cast<BranchInst>(&TI);
@@ -1850,17 +1850,6 @@ static bool unswitchNontrivialInvariants(
   // routine should filter out any candidates that remain (but were skipped for
   // whatever reason).
   assert(LI.getLoopFor(ParentBB) == &L && "Branch in an inner loop!");
-
-  SmallVector<BasicBlock *, 4> ExitBlocks;
-  L.getUniqueExitBlocks(ExitBlocks);
-
-  // We cannot unswitch if exit blocks contain a cleanuppad instruction as we
-  // don't know how to split those exit blocks.
-  // FIXME: We should teach SplitBlock to handle this and remove this
-  // restriction.
-  for (auto *ExitBB : ExitBlocks)
-    if (isa<CleanupPadInst>(ExitBB->getFirstNonPHI()))
-      return false;
 
   // Compute the parent loop now before we start hacking on things.
   Loop *ParentL = L.getParentLoop();
@@ -2145,7 +2134,6 @@ static bool unswitchNontrivialInvariants(
   UnswitchCB(IsStillLoop, SibLoops);
 
   ++NumBranches;
-  return true;
 }
 
 /// Recursively compute the cost of a dominator subtree based on the per-block
@@ -2240,6 +2228,19 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
   RPOT.perform(&LI);
   if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
     return false;
+
+  SmallVector<BasicBlock *, 4> ExitBlocks;
+  L.getUniqueExitBlocks(ExitBlocks);
+
+  // We cannot unswitch if exit blocks contain a cleanuppad instruction as we
+  // don't know how to split those exit blocks.
+  // FIXME: We should teach SplitBlock to handle this and remove this
+  // restriction.
+  for (auto *ExitBB : ExitBlocks)
+    if (isa<CleanupPadInst>(ExitBB->getFirstNonPHI())) {
+      dbgs() << "Cannot unswitch because of cleanuppad in exit block\n";
+      return false;
+    }
 
   LLVM_DEBUG(
       dbgs() << "Considering " << UnswitchCandidates.size()
@@ -2374,11 +2375,12 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "  Trying to unswitch non-trivial (cost = "
+  LLVM_DEBUG(dbgs() << "  Unswitching non-trivial (cost = "
                     << BestUnswitchCost << ") terminator: " << *BestUnswitchTI
                     << "\n");
-  return unswitchNontrivialInvariants(
-      L, *BestUnswitchTI, BestUnswitchInvariants, DT, LI, AC, UnswitchCB, SE);
+  unswitchNontrivialInvariants(L, *BestUnswitchTI, BestUnswitchInvariants,
+                               ExitBlocks, DT, LI, AC, UnswitchCB, SE);
+  return true;
 }
 
 /// Unswitch control flow predicated on loop invariant conditions.

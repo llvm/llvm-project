@@ -35,7 +35,7 @@ using namespace llvm;
 WebAssemblyInstPrinter::WebAssemblyInstPrinter(const MCAsmInfo &MAI,
                                                const MCInstrInfo &MII,
                                                const MCRegisterInfo &MRI)
-    : MCInstPrinter(MAI, MII, MRI), ControlFlowCounter(0) {}
+    : MCInstPrinter(MAI, MII, MRI) {}
 
 void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
                                           unsigned RegNo) const {
@@ -70,31 +70,64 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
   if (CommentStream) {
     // Observe any effects on the control flow stack, for use in annotating
     // control flow label references.
-    switch (MI->getOpcode()) {
+    unsigned Opc = MI->getOpcode();
+    switch (Opc) {
     default:
       break;
+
     case WebAssembly::LOOP:
-    case WebAssembly::LOOP_S: {
+    case WebAssembly::LOOP_S:
       printAnnotation(OS, "label" + utostr(ControlFlowCounter) + ':');
       ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, true));
       break;
-    }
+
     case WebAssembly::BLOCK:
     case WebAssembly::BLOCK_S:
       ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, false));
       break;
+
+    case WebAssembly::TRY:
+    case WebAssembly::TRY_S:
+      ControlFlowStack.push_back(std::make_pair(ControlFlowCounter++, false));
+      EHPadStack.push_back(EHPadStackCounter++);
+      LastSeenEHInst = TRY;
+      break;
+
     case WebAssembly::END_LOOP:
     case WebAssembly::END_LOOP_S:
-      // Have to guard against an empty stack, in case of mismatched pairs
-      // in assembly parsing.
-      if (!ControlFlowStack.empty())
-        ControlFlowStack.pop_back();
+      assert(!ControlFlowStack.empty() && "End marker mismatch!");
+      ControlFlowStack.pop_back();
       break;
+
     case WebAssembly::END_BLOCK:
     case WebAssembly::END_BLOCK_S:
-      if (!ControlFlowStack.empty())
-        printAnnotation(
-            OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
+      assert(!ControlFlowStack.empty() && "End marker mismatch!");
+      printAnnotation(
+          OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
+      break;
+
+    case WebAssembly::END_TRY:
+    case WebAssembly::END_TRY_S:
+      assert(!ControlFlowStack.empty() && "End marker mismatch!");
+      printAnnotation(
+          OS, "label" + utostr(ControlFlowStack.pop_back_val().first) + ':');
+      LastSeenEHInst = END_TRY;
+      break;
+
+    case WebAssembly::CATCH_I32:
+    case WebAssembly::CATCH_I32_S:
+    case WebAssembly::CATCH_I64:
+    case WebAssembly::CATCH_I64_S:
+    case WebAssembly::CATCH_ALL:
+    case WebAssembly::CATCH_ALL_S:
+      assert(LastSeenEHInst != END_TRY);
+      // There can be multiple catch instructions for one try instruction, so we
+      // only print 'catch' label when the last seen EH instruction was 'try'.
+      if (LastSeenEHInst == TRY) {
+        assert(!EHPadStack.empty() && "try-catch mismatch!");
+        printAnnotation(OS, "catch" + utostr(EHPadStack.pop_back_val()) + ':');
+      }
+      LastSeenEHInst = CATCH;
       break;
     }
 
@@ -110,9 +143,26 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
       uint64_t Depth = MI->getOperand(i).getImm();
       if (!Printed.insert(Depth).second)
         continue;
-      const auto &Pair = ControlFlowStack.rbegin()[Depth];
-      printAnnotation(OS, utostr(Depth) + ": " + (Pair.second ? "up" : "down") +
-                              " to label" + utostr(Pair.first));
+
+      if (Opc == WebAssembly::RETHROW || Opc == WebAssembly::RETHROW_S) {
+        assert(Depth <= EHPadStack.size() && "Invalid depth argument!");
+        if (Depth == EHPadStack.size()) {
+          // This can happen when rethrow instruction breaks out of all nests
+          // and throws up to the current function's caller.
+          printAnnotation(OS, utostr(Depth) + ": " + "to caller");
+        } else {
+          uint64_t CatchNo = EHPadStack.rbegin()[Depth];
+          printAnnotation(OS, utostr(Depth) + ": " + "down to catch" +
+                                  utostr(CatchNo));
+        }
+
+      } else {
+        assert(Depth < ControlFlowStack.size() && "Invalid depth argument!");
+        const auto &Pair = ControlFlowStack.rbegin()[Depth];
+        printAnnotation(OS, utostr(Depth) + ": " +
+                                (Pair.second ? "up" : "down") + " to label" +
+                                utostr(Pair.first));
+      }
     }
   }
 }
