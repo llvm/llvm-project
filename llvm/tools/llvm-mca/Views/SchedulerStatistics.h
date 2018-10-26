@@ -70,9 +70,7 @@ public:
         Usage(STI.getSchedModel().NumProcResourceKinds, {0, 0, 0}) {}
 
   void onEvent(const HWInstructionEvent &Event) override;
-
   void onCycleBegin() override { NumCycles++; }
-
   void onCycleEnd() override { updateHistograms(); }
 
   // Increases the number of used scheduler queue slots of every buffered

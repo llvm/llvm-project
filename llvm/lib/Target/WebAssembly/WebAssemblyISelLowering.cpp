@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -114,6 +115,12 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     setLoadExtAction(ISD::EXTLOAD, T, MVT::f16, Expand);
     setTruncStoreAction(T, MVT::f16, Expand);
   }
+
+  // Support saturating add for i8x16 and i16x8
+  if (Subtarget->hasSIMD128())
+    for (auto T : {MVT::v16i8, MVT::v8i16})
+      for (auto Op : {ISD::SADDSAT, ISD::UADDSAT})
+        setOperationAction(Op, T, Legal);
 
   for (auto T : {MVT::i32, MVT::i64}) {
     // Expand unavailable integer operations.
@@ -992,9 +999,17 @@ WebAssemblyTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   default:
     return {}; // Don't custom lower most intrinsics.
 
-  case Intrinsic::wasm_lsda:
-    // TODO For now, just return 0 not to crash
-    return DAG.getConstant(0, DL, Op.getValueType());
+  case Intrinsic::wasm_lsda: {
+    MachineFunction &MF = DAG.getMachineFunction();
+    EVT VT = Op.getValueType();
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout());
+    auto &Context = MF.getMMI().getContext();
+    MCSymbol *S = Context.getOrCreateSymbol(Twine("GCC_except_table") +
+                                            Twine(MF.getFunctionNumber()));
+    return DAG.getNode(WebAssemblyISD::Wrapper, DL, VT,
+                       DAG.getMCSymbol(S, PtrVT));
+  }
   }
 }
 

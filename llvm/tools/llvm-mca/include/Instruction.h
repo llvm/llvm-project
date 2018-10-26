@@ -16,7 +16,9 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_INSTRUCTION_H
 #define LLVM_TOOLS_LLVM_MCA_INSTRUCTION_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/MathExtras.h"
 
 #ifndef NDEBUG
@@ -134,8 +136,6 @@ public:
       : WD(Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID),
         ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
         IsEliminated(false), DependentWrite(nullptr), NumWriteUsers(0U) {}
-  WriteState(const WriteState &Other) = delete;
-  WriteState &operator=(const WriteState &Other) = delete;
 
   int getCyclesLeft() const { return CyclesLeft; }
   unsigned getWriteResourceID() const { return WD.SClassOrWriteResourceID; }
@@ -205,8 +205,6 @@ public:
       : RD(Desc), RegisterID(RegID), DependentWrites(0),
         CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), IsReady(true),
         IndependentFromDef(false) {}
-  ReadState(const ReadState &Other) = delete;
-  ReadState &operator=(const ReadState &Other) = delete;
 
   const ReadDescriptor &getDescriptor() const { return RD; }
   unsigned getSchedClass() const { return RD.SchedClassID; }
@@ -313,13 +311,59 @@ struct InstrDesc {
   InstrDesc &operator=(const InstrDesc &Other) = delete;
 };
 
+/// Base class for instructions consumed by the simulation pipeline.
+///
+/// This class tracks data dependencies as well as generic properties
+/// of the instruction.
+class InstructionBase {
+  const InstrDesc &Desc;
+
+  // This field is set for instructions that are candidates for move
+  // elimination. For more information about move elimination, see the
+  // definition of RegisterMappingTracker in RegisterFile.h
+  bool IsOptimizableMove;
+
+  // Output dependencies.
+  // One entry per each implicit and explicit register definition.
+  llvm::SmallVector<WriteState, 4> Defs;
+
+  // Input dependencies.
+  // One entry per each implicit and explicit register use.
+  llvm::SmallVector<ReadState, 4> Uses;
+
+public:
+  InstructionBase(const InstrDesc &D) : Desc(D), IsOptimizableMove(false) {}
+
+  llvm::SmallVectorImpl<WriteState> &getDefs() { return Defs; }
+  const llvm::ArrayRef<WriteState> getDefs() const { return Defs; }
+  llvm::SmallVectorImpl<ReadState> &getUses() { return Uses; }
+  const llvm::ArrayRef<ReadState> getUses() const { return Uses; }
+  const InstrDesc &getDesc() const { return Desc; }
+
+  unsigned getLatency() const { return Desc.MaxLatency; }
+
+  bool hasDependentUsers() const {
+    return llvm::any_of(
+        Defs, [](const WriteState &Def) { return Def.getNumUsers() > 0; });
+  }
+
+  unsigned getNumUsers() const {
+    unsigned NumUsers = 0;
+    for (const WriteState &Def : Defs)
+      NumUsers += Def.getNumUsers();
+    return NumUsers;
+  }
+
+  // Returns true if this instruction is a candidate for move elimination.
+  bool isOptimizableMove() const { return IsOptimizableMove; }
+  void setOptimizableMove() { IsOptimizableMove = true; }
+};
+
 /// An instruction propagated through the simulated instruction pipeline.
 ///
 /// This class is used to monitor changes to the internal state of instructions
 /// that are sent to the various components of the simulated hardware pipeline.
-class Instruction {
-  const InstrDesc &Desc;
-
+class Instruction : public InstructionBase {
   enum InstrStage {
     IS_INVALID,   // Instruction in an invalid state.
     IS_AVAILABLE, // Instruction dispatched but operands are not ready.
@@ -339,50 +383,15 @@ class Instruction {
   // Retire Unit token ID for this instruction.
   unsigned RCUTokenID;
 
-  // This field is set for instructions that are candidates for move
-  // elimination. For more information about move elimination, see the
-  // definition of RegisterMappingTracker in RegisterFile.h
-  bool IsOptimizableMove;
-
-  using UniqueDef = std::unique_ptr<WriteState>;
-  using UniqueUse = std::unique_ptr<ReadState>;
-  using VecDefs = std::vector<UniqueDef>;
-  using VecUses = std::vector<UniqueUse>;
-
-  // Output dependencies.
-  // One entry per each implicit and explicit register definition.
-  VecDefs Defs;
-
-  // Input dependencies.
-  // One entry per each implicit and explicit register use.
-  VecUses Uses;
-
 public:
   Instruction(const InstrDesc &D)
-      : Desc(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES), RCUTokenID(0),
-        IsOptimizableMove(false) {}
+      : InstructionBase(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES),
+        RCUTokenID(0) {}
   Instruction(const Instruction &Other) = delete;
   Instruction &operator=(const Instruction &Other) = delete;
 
-  VecDefs &getDefs() { return Defs; }
-  const VecDefs &getDefs() const { return Defs; }
-  VecUses &getUses() { return Uses; }
-  const VecUses &getUses() const { return Uses; }
-  const InstrDesc &getDesc() const { return Desc; }
   unsigned getRCUTokenID() const { return RCUTokenID; }
   int getCyclesLeft() const { return CyclesLeft; }
-
-  bool hasDependentUsers() const {
-    return llvm::any_of(
-        Defs, [](const UniqueDef &Def) { return Def->getNumUsers() > 0; });
-  }
-
-  unsigned getNumUsers() const {
-    unsigned NumUsers = 0;
-    for (const UniqueDef &Def : Defs)
-      NumUsers += Def->getNumUsers();
-    return NumUsers;
-  }
 
   // Transition to the dispatch stage, and assign a RCUToken to this
   // instruction. The RCUToken is used to track the completion of every
@@ -407,13 +416,10 @@ public:
   bool isExecuted() const { return Stage == IS_EXECUTED; }
   bool isRetired() const { return Stage == IS_RETIRED; }
 
-  // Returns true if this instruction is a candidate for move elimination.
-  bool isOptimizableMove() const { return IsOptimizableMove; }
-  void setOptimizableMove() { IsOptimizableMove = true; }
   bool isEliminated() const {
-    return isReady() && Defs.size() &&
-           llvm::all_of(Defs,
-                        [](const UniqueDef &D) { return D->isEliminated(); });
+    return isReady() && getDefs().size() &&
+           llvm::all_of(getDefs(),
+                        [](const WriteState &W) { return W.isEliminated(); });
   }
 
   // Forces a transition from state IS_AVAILABLE to state IS_EXECUTED.

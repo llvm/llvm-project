@@ -467,12 +467,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       unsigned DstReg = MRI.createGenericVirtualRegister(NarrowTy);
       unsigned SrcReg = 0;
       unsigned Adjustment = i * NarrowSize / 8;
+      unsigned Alignment = MinAlign(MMO.getAlignment(), Adjustment);
 
       MachineMemOperand *SplitMMO = MIRBuilder.getMF().getMachineMemOperand(
           MMO.getPointerInfo().getWithOffset(Adjustment), MMO.getFlags(),
-          NarrowSize / 8, i == 0 ? MMO.getAlignment() : NarrowSize / 8,
-          MMO.getAAInfo(), MMO.getRanges(), MMO.getSyncScopeID(),
-          MMO.getOrdering(), MMO.getFailureOrdering());
+          NarrowSize / 8, Alignment, MMO.getAAInfo(), MMO.getRanges(),
+          MMO.getSyncScopeID(), MMO.getOrdering(), MMO.getFailureOrdering());
 
       MIRBuilder.materializeGEP(SrcReg, MI.getOperand(1).getReg(), OffsetTy,
                                 Adjustment);
@@ -509,12 +509,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     for (int i = 0; i < NumParts; ++i) {
       unsigned DstReg = 0;
       unsigned Adjustment = i * NarrowSize / 8;
+      unsigned Alignment = MinAlign(MMO.getAlignment(), Adjustment);
 
       MachineMemOperand *SplitMMO = MIRBuilder.getMF().getMachineMemOperand(
           MMO.getPointerInfo().getWithOffset(Adjustment), MMO.getFlags(),
-          NarrowSize / 8, i == 0 ? MMO.getAlignment() : NarrowSize / 8,
-          MMO.getAAInfo(), MMO.getRanges(), MMO.getSyncScopeID(),
-          MMO.getOrdering(), MMO.getFailureOrdering());
+          NarrowSize / 8, Alignment, MMO.getAAInfo(), MMO.getRanges(),
+          MMO.getSyncScopeID(), MMO.getOrdering(), MMO.getFailureOrdering());
 
       MIRBuilder.materializeGEP(DstReg, MI.getOperand(1).getReg(), OffsetTy,
                                 Adjustment);
@@ -878,6 +878,12 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     MIRBuilder.recordInsertion(&MI);
     return Legalized;
   }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+    if (TypeIdx != 2)
+      return UnableToLegalize;
+    widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_SEXT);
+    MIRBuilder.recordInsertion(&MI);
+    return Legalized;
   }
 }
 

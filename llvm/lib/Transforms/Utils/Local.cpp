@@ -2529,6 +2529,47 @@ void llvm::dropDebugUsers(Instruction &I) {
     DII->eraseFromParent();
 }
 
+void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
+                                    BasicBlock *BB) {
+  // Since we are moving the instructions out of its basic block, we do not
+  // retain their original debug locations (DILocations) and debug intrinsic
+  // instructions (dbg.values).
+  //
+  // Doing so would degrade the debugging experience and adversely affect the
+  // accuracy of profiling information.
+  //
+  // Currently, when hoisting the instructions, we take the following actions:
+  // - Remove their dbg.values.
+  // - Set their debug locations to the values from the insertion point.
+  //
+  // As per PR39141 (comment #8), the more fundamental reason why the dbg.values
+  // need to be deleted, is because there will not be any instructions with a
+  // DILocation in either branch left after performing the transformation. We
+  // can only insert a dbg.value after the two branches are joined again.
+  //
+  // See PR38762, PR39243 for more details.
+  //
+  // TODO: Extend llvm.dbg.value to take more than one SSA Value (PR39141) to
+  // encode predicated DIExpressions that yield different results on different
+  // code paths.
+  for (BasicBlock::iterator II = BB->begin(), IE = BB->end(); II != IE;) {
+    Instruction *I = &*II;
+    I->dropUnknownNonDebugMetadata();
+    if (I->isUsedByMetadata())
+      dropDebugUsers(*I);
+    if (isa<DbgVariableIntrinsic>(I)) {
+      // Remove DbgInfo Intrinsics.
+      II = I->eraseFromParent();
+      continue;
+    }
+    I->setDebugLoc(InsertPt->getDebugLoc());
+    ++II;
+  }
+  DomBlock->getInstList().splice(InsertPt->getIterator(), BB->getInstList(),
+                                 BB->begin(),
+                                 BB->getTerminator()->getIterator());
+}
+
 namespace {
 
 /// A potential constituent of a bitreverse or bswap expression. See

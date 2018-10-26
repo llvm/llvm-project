@@ -32,7 +32,6 @@ namespace npdb {
 // the beginning so that the types are all layout-compatible with each
 // other, which is necessary in order to be able to safely access the tag
 // member through any union member.
-
 struct PdbCompilandId {
   uint64_t tag : 8;   // PDB_SymType::Compiland
   uint64_t modi : 16; // 0-based index of module in PDB
@@ -41,11 +40,14 @@ struct PdbCompilandId {
 struct PdbCuSymId {
   uint64_t tag : 8; // PDB_SymType::Data, Function, Block, etc.
   uint64_t
-      offset : 32;    // Offset of symbol's record in module stream.  This is
-                      // offset by 4 from the CVSymbolArray's notion of offset
-                      // due to the debug magic at the beginning of the stream.
-  uint64_t modi : 16; // 0-based index of module in PDB
+      offset : 30;     // Offset of symbol's record in module stream.  This is
+                       // offset by 4 from the CVSymbolArray's notion of offset
+                       // due to the debug magic at the beginning of the stream.
+  uint64_t global : 1; // True if this is from the globals stream.
+  uint64_t unused : 1;
+  uint64_t modi : 16; // For non-global, this is the 0-based index of module.
 };
+
 struct PdbTypeSymId {
   uint64_t tag : 8;    // PDB_SymType::FunctionSig, Enum, PointerType, etc.
   uint64_t is_ipi : 8; // 1 if this value is from the IPI stream, 0 for TPI.
@@ -125,7 +127,18 @@ public:
     PdbSymUid uid;
     uid.m_uid.cu_sym.modi = modi;
     uid.m_uid.cu_sym.offset = offset;
+    uid.m_uid.cu_sym.global = false;
     uid.m_uid.cu_sym.tag = static_cast<uint8_t>(type);
+    return uid;
+  }
+
+  static PdbSymUid makeGlobalVariableUid(uint32_t offset) {
+    PdbSymUid uid = {};
+    uid.m_uid.cu_sym.modi = 0;
+    uid.m_uid.cu_sym.offset = offset;
+    uid.m_uid.cu_sym.global = 1;
+    uid.m_uid.cu_sym.unused = 0;
+    uid.m_uid.cu_sym.tag = static_cast<uint8_t>(llvm::pdb::PDB_SymType::Data);
     return uid;
   }
 
@@ -171,6 +184,11 @@ public:
   }
   bool isCompiland() const {
     return tag() == llvm::pdb::PDB_SymType::Compiland;
+  }
+  bool isGlobalVariable() const {
+    if (tag() != llvm::pdb::PDB_SymType::Data)
+      return false;
+    return static_cast<bool>(asCuSym().global);
   }
 
   llvm::pdb::PDB_SymType tag() const {

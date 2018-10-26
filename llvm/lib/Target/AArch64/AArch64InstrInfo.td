@@ -3463,22 +3463,16 @@ defm SQRDMLSH : SIMDThreeSameVectorSQRDMLxHTiedHS<1,0b10001,"sqrdmlsh",
                                                     int_aarch64_neon_sqsub>;
 
 // FP16FML
-def FMLAL_2S   : BaseSIMDThreeSameMult<0, 0, 1, 0b001, "fmlal", ".2s", ".2h">;
-def FMLSL_2S   : BaseSIMDThreeSameMult<0, 0, 1, 0b101, "fmlsl", ".2s", ".2h">;
-def FMLAL_4S   : BaseSIMDThreeSameMult<1, 0, 1, 0b001, "fmlal", ".4s", ".4h">;
-def FMLSL_4S   : BaseSIMDThreeSameMult<1, 0, 1, 0b101, "fmlsl", ".4s", ".4h">;
-def FMLAL2_2S  : BaseSIMDThreeSameMult<0, 1, 0, 0b001, "fmlal2", ".2s", ".2h">;
-def FMLSL2_2S  : BaseSIMDThreeSameMult<0, 1, 0, 0b101, "fmlsl2", ".2s", ".2h">;
-def FMLAL2_4S  : BaseSIMDThreeSameMult<1, 1, 0, 0b001, "fmlal2", ".4s", ".4h">;
-def FMLSL2_4S  : BaseSIMDThreeSameMult<1, 1, 0, 0b101, "fmlsl2", ".4s", ".4h">;
-def FMLALI_2s  : BaseSIMDThreeSameMultIndex<0, 0, 0b0000, "fmlal", ".2s", ".2h", ".h">;
-def FMLSLI_2s  : BaseSIMDThreeSameMultIndex<0, 0, 0b0100, "fmlsl", ".2s", ".2h", ".h">;
-def FMLALI_4s  : BaseSIMDThreeSameMultIndex<1, 0, 0b0000, "fmlal", ".4s", ".4h", ".h">;
-def FMLSLI_4s  : BaseSIMDThreeSameMultIndex<1, 0, 0b0100, "fmlsl", ".4s", ".4h", ".h">;
-def FMLALI2_2s : BaseSIMDThreeSameMultIndex<0, 1, 0b1000, "fmlal2", ".2s", ".2h", ".h">;
-def FMLSLI2_2s : BaseSIMDThreeSameMultIndex<0, 1, 0b1100, "fmlsl2", ".2s", ".2h", ".h">;
-def FMLALI2_4s : BaseSIMDThreeSameMultIndex<1, 1, 0b1000, "fmlal2", ".4s", ".4h", ".h">;
-def FMLSLI2_4s : BaseSIMDThreeSameMultIndex<1, 1, 0b1100, "fmlsl2", ".4s", ".4h", ".h">;
+let Predicates = [HasNEON, HasFP16FML] in {
+defm FMLAL      : SIMDThreeSameMult<0, 1, 0b001, "fmlal", int_aarch64_neon_fmlal>;
+defm FMLSL      : SIMDThreeSameMult<0, 1, 0b101, "fmlsl", int_aarch64_neon_fmlsl>;
+defm FMLAL2     : SIMDThreeSameMult<1, 0, 0b001, "fmlal2", int_aarch64_neon_fmlal2>;
+defm FMLSL2     : SIMDThreeSameMult<1, 0, 0b101, "fmlsl2", int_aarch64_neon_fmlsl2>;
+defm FMLALlane  : SIMDThreeSameMultIndex<0, 0b0000, "fmlal", int_aarch64_neon_fmlal>;
+defm FMLSLlane  : SIMDThreeSameMultIndex<0, 0b0100, "fmlsl", int_aarch64_neon_fmlsl>;
+defm FMLAL2lane : SIMDThreeSameMultIndex<1, 0b1000, "fmlal2", int_aarch64_neon_fmlal2>;
+defm FMLSL2lane : SIMDThreeSameMultIndex<1, 0b1100, "fmlsl2", int_aarch64_neon_fmlsl2>;
+}
 
 defm AND : SIMDLogicalThreeVector<0, 0b00, "and", and>;
 defm BIC : SIMDLogicalThreeVector<0, 0b01, "bic",
@@ -4185,44 +4179,43 @@ def : Pat<(concat_vectors (v2i32 V64:$Rd),
 
 defm EXT : SIMDBitwiseExtract<"ext">;
 
-def : Pat<(v4i16 (AArch64ext V64:$Rn, V64:$Rm, (i32 imm:$imm))),
-          (EXTv8i8 V64:$Rn, V64:$Rm, imm:$imm)>;
-def : Pat<(v8i16 (AArch64ext V128:$Rn, V128:$Rm, (i32 imm:$imm))),
-          (EXTv16i8 V128:$Rn, V128:$Rm, imm:$imm)>;
-def : Pat<(v2i32 (AArch64ext V64:$Rn, V64:$Rm, (i32 imm:$imm))),
-          (EXTv8i8 V64:$Rn, V64:$Rm, imm:$imm)>;
-def : Pat<(v2f32 (AArch64ext V64:$Rn, V64:$Rm, (i32 imm:$imm))),
-          (EXTv8i8 V64:$Rn, V64:$Rm, imm:$imm)>;
-def : Pat<(v4i32 (AArch64ext V128:$Rn, V128:$Rm, (i32 imm:$imm))),
-          (EXTv16i8 V128:$Rn, V128:$Rm, imm:$imm)>;
-def : Pat<(v4f32 (AArch64ext V128:$Rn, V128:$Rm, (i32 imm:$imm))),
-          (EXTv16i8 V128:$Rn, V128:$Rm, imm:$imm)>;
-def : Pat<(v2i64 (AArch64ext V128:$Rn, V128:$Rm, (i32 imm:$imm))),
-          (EXTv16i8 V128:$Rn, V128:$Rm, imm:$imm)>;
-def : Pat<(v2f64 (AArch64ext V128:$Rn, V128:$Rm, (i32 imm:$imm))),
-          (EXTv16i8 V128:$Rn, V128:$Rm, imm:$imm)>;
-def : Pat<(v4f16 (AArch64ext V64:$Rn, V64:$Rm, (i32 imm:$imm))),
-          (EXTv8i8 V64:$Rn, V64:$Rm, imm:$imm)>;
-def : Pat<(v8f16 (AArch64ext V128:$Rn, V128:$Rm, (i32 imm:$imm))),
-          (EXTv16i8 V128:$Rn, V128:$Rm, imm:$imm)>;
+def AdjustExtImm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(8 + N->getZExtValue(), SDLoc(N), MVT::i32);
+}]>;
+multiclass ExtPat<ValueType VT64, ValueType VT128, int N> {
+  def : Pat<(VT64 (AArch64ext V64:$Rn, V64:$Rm, (i32 imm:$imm))),
+            (EXTv8i8 V64:$Rn, V64:$Rm, imm:$imm)>;
+  def : Pat<(VT128 (AArch64ext V128:$Rn, V128:$Rm, (i32 imm:$imm))),
+            (EXTv16i8 V128:$Rn, V128:$Rm, imm:$imm)>;
+  // We use EXT to handle extract_subvector to copy the upper 64-bits of a
+  // 128-bit vector.
+  def : Pat<(VT64 (extract_subvector V128:$Rn, (i64 N))),
+            (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, 8), dsub)>;
+  // A 64-bit EXT of two halves of the same 128-bit register can be done as a
+  // single 128-bit EXT.
+  def : Pat<(VT64 (AArch64ext (extract_subvector V128:$Rn, (i64 0)),
+                              (extract_subvector V128:$Rn, (i64 N)),
+                              (i32 imm:$imm))),
+            (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, imm:$imm), dsub)>;
+  // A 64-bit EXT of the high half of a 128-bit register can be done using a
+  // 128-bit EXT of the whole register with an adjustment to the immediate. The
+  // top half of the other operand will be unset, but that doesn't matter as it
+  // will not be used.
+  def : Pat<(VT64 (AArch64ext (extract_subvector V128:$Rn, (i64 N)),
+                              V64:$Rm,
+                              (i32 imm:$imm))),
+            (EXTRACT_SUBREG (EXTv16i8 V128:$Rn,
+                                      (SUBREG_TO_REG (i32 0), V64:$Rm, dsub),
+                                      (AdjustExtImm imm:$imm)), dsub)>;
+}
 
-// We use EXT to handle extract_subvector to copy the upper 64-bits of a
-// 128-bit vector.
-def : Pat<(v8i8  (extract_subvector V128:$Rn, (i64 8))),
-          (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, 8), dsub)>;
-def : Pat<(v4i16 (extract_subvector V128:$Rn, (i64 4))),
-          (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, 8), dsub)>;
-def : Pat<(v2i32 (extract_subvector V128:$Rn, (i64 2))),
-          (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, 8), dsub)>;
-def : Pat<(v1i64 (extract_subvector V128:$Rn, (i64 1))),
-          (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, 8), dsub)>;
-def : Pat<(v4f16 (extract_subvector V128:$Rn, (i64 4))),
-          (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, 8), dsub)>;
-def : Pat<(v2f32 (extract_subvector V128:$Rn, (i64 2))),
-          (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, 8), dsub)>;
-def : Pat<(v1f64 (extract_subvector V128:$Rn, (i64 1))),
-          (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, 8), dsub)>;
-
+defm : ExtPat<v8i8, v16i8, 8>;
+defm : ExtPat<v4i16, v8i16, 4>;
+defm : ExtPat<v4f16, v8f16, 4>;
+defm : ExtPat<v2i32, v4i32, 2>;
+defm : ExtPat<v2f32, v4f32, 2>;
+defm : ExtPat<v1i64, v2i64, 1>;
+defm : ExtPat<v1f64, v2f64, 1>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD zip vector
@@ -4920,16 +4913,6 @@ def MOVID      : SIMDModifiedImmScalarNoShift<0, 1, 0b1110, "movi",
 def : Pat<(f64 (AArch64movi_edit imm0_255:$shift)),
           (MOVID imm0_255:$shift)>;
 
-def : Pat<(v1i64 immAllZerosV), (MOVID (i32 0))>;
-def : Pat<(v2i32 immAllZerosV), (MOVID (i32 0))>;
-def : Pat<(v4i16 immAllZerosV), (MOVID (i32 0))>;
-def : Pat<(v8i8  immAllZerosV), (MOVID (i32 0))>;
-
-def : Pat<(v1i64 immAllOnesV), (MOVID (i32 255))>;
-def : Pat<(v2i32 immAllOnesV), (MOVID (i32 255))>;
-def : Pat<(v4i16 immAllOnesV), (MOVID (i32 255))>;
-def : Pat<(v8i8  immAllOnesV), (MOVID (i32 255))>;
-
 // EDIT byte mask: 2d
 
 // The movi_edit node has the immediate value already encoded, so we use
@@ -4949,6 +4932,18 @@ def : Pat<(v2i64 immAllOnesV), (MOVIv2d_ns (i32 255))>;
 def : Pat<(v4i32 immAllOnesV), (MOVIv2d_ns (i32 255))>;
 def : Pat<(v8i16 immAllOnesV), (MOVIv2d_ns (i32 255))>;
 def : Pat<(v16i8 immAllOnesV), (MOVIv2d_ns (i32 255))>;
+
+// Set 64-bit vectors to all 0/1 by extracting from a 128-bit register as the
+// extract is free and this gives better MachineCSE results.
+def : Pat<(v1i64 immAllZerosV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub)>;
+def : Pat<(v2i32 immAllZerosV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub)>;
+def : Pat<(v4i16 immAllZerosV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub)>;
+def : Pat<(v8i8  immAllZerosV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub)>;
+
+def : Pat<(v1i64 immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
+def : Pat<(v2i32 immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
+def : Pat<(v4i16 immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
+def : Pat<(v8i8  immAllOnesV), (EXTRACT_SUBREG (MOVIv2d_ns (i32 255)), dsub)>;
 
 // EDIT per word & halfword: 2s, 4h, 4s, & 8h
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
