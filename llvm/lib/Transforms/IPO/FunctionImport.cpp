@@ -258,8 +258,7 @@ static void computeImportForReferencedGlobals(
 
     for (auto &RefSummary : VI.getSummaryList())
       if (RefSummary->getSummaryKind() == GlobalValueSummary::GlobalVarKind &&
-          // Don't try to import regular LTO summaries added to dummy module.
-          !RefSummary->modulePath().empty() &&
+          !RefSummary->notEligibleToImport() &&
           !GlobalValue::isInterposableLinkage(RefSummary->linkage()) &&
           RefSummary->refs().empty()) {
         ImportList[RefSummary->modulePath()].insert(VI.getGUID());
