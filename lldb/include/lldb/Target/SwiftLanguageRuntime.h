@@ -34,8 +34,8 @@ class MemoryReader;
 class RemoteAddress;
 }
 
-template <typename T> class External;
-template <unsigned PointerSize> class RuntimeTarget;
+template <typename T> struct External;
+template <unsigned PointerSize> struct RuntimeTarget;
 
 namespace reflection {
 template <typename T> class ReflectionContext;

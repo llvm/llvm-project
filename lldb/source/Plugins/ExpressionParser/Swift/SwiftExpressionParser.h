@@ -69,7 +69,7 @@ public:
   /// Currently unimplemented for Swift.
   //------------------------------------------------------------------
   bool Complete(CompletionRequest &request, unsigned line, unsigned pos,
-                unsigned typed_pos);
+                unsigned typed_pos) override;
 
   //------------------------------------------------------------------
   /// Parse a single expression and convert it to IR using Swift.  Don't

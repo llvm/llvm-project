@@ -631,9 +631,8 @@ lldb::ExpressionVariableSP SwiftUserExpression::GetResultAfterDematerialization(
 }
 
 SwiftUserExpression::ResultDelegate::ResultDelegate(
-    lldb::TargetSP target, SwiftUserExpression &user_expression, bool is_error)
-    : m_target_sp(target), m_user_expression(user_expression),
-      m_is_error(is_error) {}
+    lldb::TargetSP target, SwiftUserExpression &, bool is_error)
+    : m_target_sp(target), m_is_error(is_error) {}
 
 ConstString SwiftUserExpression::ResultDelegate::GetName() {
   auto prefix = m_persistent_state->GetPersistentVariablePrefix(m_is_error);
@@ -656,8 +655,7 @@ lldb::ExpressionVariableSP &SwiftUserExpression::ResultDelegate::GetVariable() {
 }
 
 SwiftUserExpression::PersistentVariableDelegate::PersistentVariableDelegate(
-    SwiftUserExpression &user_expression)
-    : m_user_expression(user_expression) {}
+    SwiftUserExpression &) {}
 
 ConstString SwiftUserExpression::PersistentVariableDelegate::GetName() {
   return ConstString();

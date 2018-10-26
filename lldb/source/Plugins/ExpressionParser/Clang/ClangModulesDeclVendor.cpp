@@ -145,11 +145,6 @@ void StoringDiagnosticConsumer::DumpDiagnostics(Stream &error_stream) {
   }
 }
 
-static FileSpec GetResourceDir() {
-  static FileSpec g_cached_resource_dir = GetClangResourceDir();
-  return g_cached_resource_dir;
-}
-
 ClangModulesDeclVendor::ClangModulesDeclVendor() {}
 
 ClangModulesDeclVendor::~ClangModulesDeclVendor() {}

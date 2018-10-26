@@ -134,7 +134,6 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
   s.PutCString("kind = ");
 
   switch (file_unit->getKind()) {
-  default: { s.PutCString("<unknown>"); }
   case swift::FileUnitKind::Source: {
     s.PutCString("Source, ");
     if (swift::SourceFile *source_file =
@@ -144,12 +143,19 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
       switch (source_file->Kind) {
       case swift::SourceFileKind::Library:
         s.PutCString("Library");
+        break;
       case swift::SourceFileKind::Main:
         s.PutCString("Main");
+        break;
       case swift::SourceFileKind::REPL:
         s.PutCString("REPL");
+        break;
       case swift::SourceFileKind::SIL:
         s.PutCString("SIL");
+        break;
+      case swift::SourceFileKind::Interface:
+        s.PutCString("Interface");
+        break;
       }
     }
   } break;
@@ -1007,7 +1013,9 @@ static void CountLocals(
             swift_type->dump(ss);
             ss.flush();
             log->Printf("Adding injected self: type (%p) context(%p) is: %s",
-                        swift_type, ast_context.GetASTContext(), s.c_str());
+                        static_cast<void *>(swift_type),
+                        static_cast<void *>(ast_context.GetASTContext()),
+                        s.c_str());
           }
         }
       }
@@ -1649,12 +1657,10 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   // builds, but helps catching bug when assertions are turned on.
   swift::verify(*source_file);
 
-  ParsedExpression result = {std::move(code_manipulator),
-                             *ast_context,
-                             module,
-                             *external_lookup,
-                             *source_file,
-                             std::move(main_filename)};
+  ParsedExpression result = {
+    std::move(code_manipulator), *ast_context, module, *external_lookup,
+    *source_file, std::move(main_filename), /*buffer_id*/0,
+  };
   return std::move(result);
 }
 
