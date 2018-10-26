@@ -31,7 +31,6 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Execution.h"
-#include "clang/Tooling/StandaloneExecution.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/CommandLine.h"
@@ -169,6 +168,7 @@ int main(int argc, const char **argv) {
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   std::error_code OK;
 
+  ExecutorName.setInitialValue("all-TUs");
   auto Exec = clang::tooling::createExecutorFromCommandLineArgs(
       argc, argv, ClangDocCategory);
 

@@ -2,7 +2,7 @@
 // RUN: mkdir %t
 // RUN: echo "" > %t/compile_flags.txt
 // RUN: cp "%s" "%t/test.cpp"
-// RUN: clang-doc --doxygen --public -p %t %t/test.cpp -output=%t/docs
+// RUN: clang-doc --doxygen --public --executor=standalone -p %t %t/test.cpp -output=%t/docs
 // RUN: cat %t/docs/Record.yaml | FileCheck %s --check-prefix=CHECK
 // RUN: rm -rf %t
 
