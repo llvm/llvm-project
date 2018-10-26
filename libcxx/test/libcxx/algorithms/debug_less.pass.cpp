@@ -161,7 +161,58 @@ void test_failing() {
     }
 }
 
+template <int>
+struct Tag {
+  explicit Tag(int v) : value(v) {}
+  int value;
+};
+
+template <class = void>
+struct FooImp {
+  explicit FooImp(int x) : x_(x) {}
+  int x_;
+};
+
+template <class T>
+inline bool operator<(FooImp<T> const& x, Tag<0> y) {
+    return x.x_ < y.value;
+}
+
+template <class T>
+inline bool operator<(Tag<0>, FooImp<T> const&) {
+    static_assert(sizeof(FooImp<T>) != sizeof(FooImp<T>), "should not be instantiated");
+}
+
+template <class T>
+inline bool operator<(Tag<1> x, FooImp<T> const& y) {
+    return x.value < y.x_;
+}
+
+template <class T>
+inline bool operator<(FooImp<T> const&, Tag<1>) {
+    static_assert(sizeof(FooImp<T>) != sizeof(FooImp<T>), "should not be instantiated");
+}
+
+typedef FooImp<> Foo;
+
+// Test that we don't attempt to call the comparator with the arguments reversed
+// for upper_bound and lower_bound since the comparator or type is not required
+// to support it, nor does it require the range to have a strict weak ordering.
+// See llvm.org/PR39458
+void test_upper_and_lower_bound() {
+    Foo table[] = {Foo(1), Foo(2), Foo(3), Foo(4), Foo(5)};
+    {
+        Foo* iter = std::lower_bound(std::begin(table), std::end(table), Tag<0>(3));
+        assert(iter == (table + 2));
+    }
+    {
+        Foo* iter = std::upper_bound(std::begin(table), std::end(table), Tag<1>(3));
+        assert(iter == (table + 3));
+    }
+}
+
 int main() {
     test_passing();
     test_failing();
+    test_upper_and_lower_bound();
 }
