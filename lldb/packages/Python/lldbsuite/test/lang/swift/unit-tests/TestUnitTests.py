@@ -22,68 +22,32 @@ import os.path
 import unittest2
 
 
-def execute_command(command):
-    (exit_status, output) = commands.getstatusoutput(command)
-    return exit_status
-
-
 class TestUnitTests(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @expectedFailureAll(bugnumber="rdar://45579668")
     @skipUnlessDarwin
     @swiftTest
-    @skipIf(
-        debug_info=decorators.no_match("dsym"),
-        bugnumber="This test only builds one way")
+    # The creation of the .xctest framework messes with the AST search path.
+    @skipIf(debug_info=decorators.no_match("dsym"))
     def test_cross_module_extension(self):
         """Test that XCTest-based unit tests work"""
         self.build()
         self.do_test()
 
-    def setUp(self):
-        TestBase.setUp(self)
-        self.xctest_source = "xctest.c"
-        self.xctest_source_spec = lldb.SBFileSpec(self.xctest_source)
-
     def do_test(self):
         """Test that XCTest-based unit tests work"""
-        exe_name = "xctest"
-        exe = self.getBuildArtifact(exe_name)
-
-        def cleanup():
-            execute_command("make cleanup")
-        self.addTearDownHook(cleanup)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.xctest_source_spec)
-        self.assertTrue(breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        process = target.LaunchSimple(None, None, os.getcwd())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
+        lldbutil.run_to_source_breakpoint(self,
+                                          "Set breakpoint here",
+                                          lldb.SBFileSpec('xctest.c'),
+                                          exe_name = "xctest")
 
         options = lldb.SBExpressionOptions()
         options.SetLanguage(lldb.eLanguageTypeSwift)
-
-        self.frame.EvaluateExpression("import test", options)
-
-        ret = self.frame.EvaluateExpression("doTest()", options)
-
-        self.assertTrue(ret.GetValueAsUnsigned() == 3)
+        self.expect("log enable lldb host -f ~/Desktop/t1.log")
+        self.expect("expr -l Swift -- import test")
+        self.expect("expr -l Swift -- doTest()",
+                    substrs=['Int','$R0','=','3'])
 
 if __name__ == '__main__':
     import atexit
