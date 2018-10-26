@@ -270,7 +270,8 @@ TEST_F(SymbolFilePDBTests, TestLineTablesMatchAll) {
   EXPECT_EQ(2u, cus);
 
   SymbolContextList sc_list;
-  uint32_t scope = lldb::eSymbolContextCompUnit | lldb::eSymbolContextLineEntry;
+  lldb::SymbolContextItem scope =
+      lldb::eSymbolContextCompUnit | lldb::eSymbolContextLineEntry;
 
   uint32_t count =
       symfile->ResolveSymbolContext(source_file, 0, true, scope, sc_list);
@@ -319,7 +320,8 @@ TEST_F(SymbolFilePDBTests, TestLineTablesMatchSpecific) {
   EXPECT_EQ(2u, cus);
 
   SymbolContextList sc_list;
-  uint32_t scope = lldb::eSymbolContextCompUnit | lldb::eSymbolContextLineEntry;
+  lldb::SymbolContextItem scope =
+      lldb::eSymbolContextCompUnit | lldb::eSymbolContextLineEntry;
 
   // First test with line 7, and verify that only line 7 entries are added.
   uint32_t count =
