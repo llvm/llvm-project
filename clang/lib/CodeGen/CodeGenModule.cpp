@@ -4050,14 +4050,14 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
     case LangOptions::CoreFoundationABI::Swift: LLVM_FALLTHROUGH;
     case LangOptions::CoreFoundationABI::Swift5_0:
       CFConstantStringClassName =
-          Triple.isOSDarwin() ? "$S15SwiftFoundation19_NSCFConstantStringCN"
-                              : "$S10Foundation19_NSCFConstantStringCN";
+          Triple.isOSDarwin() ? "$s15SwiftFoundation19_NSCFConstantStringCN"
+                              : "$s10Foundation19_NSCFConstantStringCN";
       Ty = IntPtrTy;
       break;
     case LangOptions::CoreFoundationABI::Swift4_2:
       CFConstantStringClassName =
-          Triple.isOSDarwin() ? "$s15SwiftFoundation19_NSCFConstantStringCN"
-                              : "$s10Foundation19_NSCFConstantStringCN";
+          Triple.isOSDarwin() ? "$S15SwiftFoundation19_NSCFConstantStringCN"
+                              : "$S10Foundation19_NSCFConstantStringCN";
       Ty = IntPtrTy;
       break;
     case LangOptions::CoreFoundationABI::Swift4_1:
