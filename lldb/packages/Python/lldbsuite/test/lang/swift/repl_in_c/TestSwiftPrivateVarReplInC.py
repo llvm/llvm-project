@@ -2,14 +2,25 @@
 #
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2014 - 2016 Apple Inc. and the Swift project authors
+# Copyright (c) 2014 - 2018 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See https://swift.org/LICENSE.txt for license information
 # See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 #
 # ------------------------------------------------------------------------------
-import lldbsuite.test.lldbinline as lldbinline
+from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
+import lldbsuite.test.lldbutil as lldbutil
 
-lldbinline.MakeInlineTest(__file__, globals(), decorators=[swiftTest])
+class TestSwiftPrivateVarReplInC(TestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
+    NO_DEBUG_INFO_TESTCASE = True
+
+    def test_swift_provate_var_repl_in_c(self):
+        self.build()
+        lldbutil.run_to_name_breakpoint(self, "main")
+        self.expect("repl", error=True, substrs=["Swift standard library"])
+        self.runCmd("kill")
+        self.expect("repl", error=True, substrs=["running process"])
