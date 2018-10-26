@@ -9,7 +9,6 @@
 
 #include "IdentifierNamingCheck.h"
 
-#include "../utils/ASTUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -682,7 +681,25 @@ static void addUsage(IdentifierNamingCheck::NamingCheckFailureMap &Failures,
   if (!Failure.ShouldFix)
     return;
 
-  Failure.ShouldFix = utils::rangeCanBeFixed(Range, SourceMgr);
+  // Check if the range is entirely contained within a macro argument.
+  SourceLocation MacroArgExpansionStartForRangeBegin;
+  SourceLocation MacroArgExpansionStartForRangeEnd;
+  bool RangeIsEntirelyWithinMacroArgument =
+      SourceMgr &&
+      SourceMgr->isMacroArgExpansion(Range.getBegin(),
+                                     &MacroArgExpansionStartForRangeBegin) &&
+      SourceMgr->isMacroArgExpansion(Range.getEnd(),
+                                     &MacroArgExpansionStartForRangeEnd) &&
+      MacroArgExpansionStartForRangeBegin == MacroArgExpansionStartForRangeEnd;
+
+  // Check if the range contains any locations from a macro expansion.
+  bool RangeContainsMacroExpansion = RangeIsEntirelyWithinMacroArgument ||
+                                     Range.getBegin().isMacroID() ||
+                                     Range.getEnd().isMacroID();
+
+  bool RangeCanBeFixed =
+      RangeIsEntirelyWithinMacroArgument || !RangeContainsMacroExpansion;
+  Failure.ShouldFix = RangeCanBeFixed;
 }
 
 /// Convenience method when the usage to be added is a NamedDecl

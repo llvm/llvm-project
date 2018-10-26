@@ -96,7 +96,8 @@ lldb::addr_t ArchitectureMips::GetBreakableLoadAddress(lldb::addr_t addr,
   ModuleSP temp_addr_module_sp(resolved_addr.GetModule());
   if (temp_addr_module_sp) {
     SymbolContext sc;
-    uint32_t resolve_scope = eSymbolContextFunction | eSymbolContextSymbol;
+    SymbolContextItem resolve_scope =
+        eSymbolContextFunction | eSymbolContextSymbol;
     temp_addr_module_sp->ResolveSymbolContextForAddress(resolved_addr,
       resolve_scope, sc);
     Address sym_addr;

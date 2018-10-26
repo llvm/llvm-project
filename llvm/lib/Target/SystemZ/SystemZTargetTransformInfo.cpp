@@ -362,50 +362,58 @@ int SystemZTTIImpl::getArithmeticInstrCost(
 
   unsigned ScalarBits = Ty->getScalarSizeInBits();
 
-  // Div with a constant which is a power of 2 will be converted by
-  // DAGCombiner to use shifts. With vector shift-element instructions, a
-  // vector sdiv costs about as much as a scalar one.
-  const unsigned SDivCostEstimate = 4;
-  bool SDivPow2 = false;
-  bool UDivPow2 = false;
-  if ((Opcode == Instruction::SDiv || Opcode == Instruction::UDiv) &&
-      Args.size() == 2) {
-    const ConstantInt *CI = nullptr;
+  // There are thre cases of division and remainder: Dividing with a register
+  // needs a divide instruction. A divisor which is a power of two constant
+  // can be implemented with a sequence of shifts. Any other constant needs a
+  // multiply and shifts.
+  const unsigned DivInstrCost = 20;
+  const unsigned DivMulSeqCost = 10;
+  const unsigned SDivPow2Cost = 4;
+
+  bool SignedDivRem =
+      Opcode == Instruction::SDiv || Opcode == Instruction::SRem;
+  bool UnsignedDivRem =
+      Opcode == Instruction::UDiv || Opcode == Instruction::URem;
+
+  // Check for a constant divisor.
+  bool DivRemConst = false;
+  bool DivRemConstPow2 = false;
+  if ((SignedDivRem || UnsignedDivRem) && Args.size() == 2) {
     if (const Constant *C = dyn_cast<Constant>(Args[1])) {
-      if (C->getType()->isVectorTy())
-        CI = dyn_cast_or_null<const ConstantInt>(C->getSplatValue());
+      const ConstantInt *CVal =
+          (C->getType()->isVectorTy()
+               ? dyn_cast_or_null<const ConstantInt>(C->getSplatValue())
+               : dyn_cast<const ConstantInt>(C));
+      if (CVal != nullptr &&
+          (CVal->getValue().isPowerOf2() || (-CVal->getValue()).isPowerOf2()))
+        DivRemConstPow2 = true;
       else
-        CI = dyn_cast<const ConstantInt>(C);
-    }
-    if (CI != nullptr &&
-        (CI->getValue().isPowerOf2() || (-CI->getValue()).isPowerOf2())) {
-      if (Opcode == Instruction::SDiv)
-        SDivPow2 = true;
-      else
-        UDivPow2 = true;
+        DivRemConst = true;
     }
   }
 
   if (Ty->isVectorTy()) {
-    assert (ST->hasVector() && "getArithmeticInstrCost() called with vector type.");
+    assert(ST->hasVector() &&
+           "getArithmeticInstrCost() called with vector type.");
     unsigned VF = Ty->getVectorNumElements();
     unsigned NumVectors = getNumVectorRegs(Ty);
 
     // These vector operations are custom handled, but are still supported
     // with one instruction per vector, regardless of element size.
     if (Opcode == Instruction::Shl || Opcode == Instruction::LShr ||
-        Opcode == Instruction::AShr || UDivPow2) {
+        Opcode == Instruction::AShr) {
       return NumVectors;
     }
 
-    if (SDivPow2)
-      return (NumVectors * SDivCostEstimate);
-
-    // Temporary hack: disable high vectorization factors with integer
-    // division/remainder, which will get scalarized and handled with GR128
-    // registers. The mischeduler is not clever enough to avoid spilling yet.
-    if ((Opcode == Instruction::UDiv || Opcode == Instruction::SDiv ||
-         Opcode == Instruction::URem || Opcode == Instruction::SRem) && VF > 4)
+    if (DivRemConstPow2)
+      return (NumVectors * (SignedDivRem ? SDivPow2Cost : 1));
+    if (DivRemConst)
+      return VF * DivMulSeqCost + getScalarizationOverhead(Ty, Args);
+    if ((SignedDivRem || UnsignedDivRem) && VF > 4)
+      // Temporary hack: disable high vectorization factors with integer
+      // division/remainder, which will get scalarized and handled with
+      // GR128 registers. The mischeduler is not clever enough to avoid
+      // spilling yet.
       return 1000;
 
     // These FP operations are supported with a single vector instruction for
@@ -421,7 +429,8 @@ int SystemZTTIImpl::getArithmeticInstrCost(
           return NumVectors;
         // Return the cost of multiple scalar invocation plus the cost of
         // inserting and extracting the values.
-        unsigned ScalarCost = getArithmeticInstrCost(Opcode, Ty->getScalarType());
+        unsigned ScalarCost =
+            getArithmeticInstrCost(Opcode, Ty->getScalarType());
         unsigned Cost = (VF * ScalarCost) + getScalarizationOverhead(Ty, Args);
         // FIXME: VF 2 for these FP operations are currently just as
         // expensive as for VF 4.
@@ -471,19 +480,16 @@ int SystemZTTIImpl::getArithmeticInstrCost(
       return 7; // 2 * ipm sequences ; xor ; shift ; compare
     }
 
-    if (UDivPow2)
-      return 1;
-    if (SDivPow2)
-      return SDivCostEstimate;
-
-    // An extra extension for narrow types is needed.
-    if ((Opcode == Instruction::SDiv || Opcode == Instruction::SRem))
+    if (DivRemConstPow2)
+      return (SignedDivRem ? SDivPow2Cost : 1);
+    if (DivRemConst)
+      return DivMulSeqCost;
+    if (SignedDivRem)
       // sext of op(s) for narrow types
-      return (ScalarBits < 32 ? 4 : (ScalarBits == 32 ? 2 : 1));
-
-    if (Opcode == Instruction::UDiv || Opcode == Instruction::URem)
+      return DivInstrCost + (ScalarBits < 32 ? 3 : (ScalarBits == 32 ? 1 : 0));
+    if (UnsignedDivRem)
       // Clearing of low 64 bit reg + sext of op(s) for narrow types + dl[g]r
-      return (ScalarBits < 32 ? 4 : 2);
+      return DivInstrCost + (ScalarBits < 32 ? 3 : 1);
   }
 
   // Fallback to the default implementation.
@@ -755,8 +761,8 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   return BaseT::getCastInstrCost(Opcode, Dst, Src, I);
 }
 
-int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy,
-                                       const Instruction *I) {
+int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
+                                       Type *CondTy, const Instruction *I) {
   if (ValTy->isVectorTy()) {
     assert (ST->hasVector() && "getCmpSelInstrCost() called with vector type.");
     unsigned VF = ValTy->getVectorNumElements();
@@ -817,7 +823,7 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondT
     }
     case Instruction::Select:
       if (ValTy->isFloatingPointTy())
-        return 4; // No load on condition for FP, so this costs a conditional jump.
+        return 4; // No load on condition for FP - costs a conditional jump.
       return 1; // Load On Condition.
     }
   }
@@ -845,54 +851,102 @@ getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
   return BaseT::getVectorInstrCost(Opcode, Val, Index);
 }
 
+// Check if a load may be folded as a memory operand in its user.
+bool SystemZTTIImpl::
+isFoldableLoad(const LoadInst *Ld, const Instruction *&FoldedValue) {
+  if (!Ld->hasOneUse())
+    return false;
+  FoldedValue = Ld;
+  const Instruction *UserI = cast<Instruction>(*Ld->user_begin());
+  unsigned LoadedBits = getScalarSizeInBits(Ld->getType());
+  unsigned TruncBits = 0;
+  unsigned SExtBits = 0;
+  unsigned ZExtBits = 0;
+  if (UserI->hasOneUse()) {
+    unsigned UserBits = UserI->getType()->getScalarSizeInBits();
+    if (isa<TruncInst>(UserI))
+      TruncBits = UserBits;
+    else if (isa<SExtInst>(UserI))
+      SExtBits = UserBits;
+    else if (isa<ZExtInst>(UserI))
+      ZExtBits = UserBits;
+  }
+  if (TruncBits || SExtBits || ZExtBits) {
+    FoldedValue = UserI;
+    UserI = cast<Instruction>(*UserI->user_begin());
+    // Load (single use) -> trunc/extend (single use) -> UserI
+  }
+  switch (UserI->getOpcode()) {
+  case Instruction::Add: // SE: 16->32, 16/32->64, z14:16->64. ZE: 32->64
+  case Instruction::Sub:
+    if (LoadedBits == 32 && ZExtBits == 64)
+      return true;
+    LLVM_FALLTHROUGH;
+  case Instruction::Mul: // SE: 16->32, 32->64, z14:16->64
+    if (LoadedBits == 16 &&
+        (SExtBits == 32 ||
+         (SExtBits == 64 && ST->hasMiscellaneousExtensions2())))
+      return true;
+    LLVM_FALLTHROUGH;
+  case Instruction::SDiv:// SE: 32->64
+    if (LoadedBits == 32 && SExtBits == 64)
+      return true;
+    LLVM_FALLTHROUGH;
+  case Instruction::UDiv:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::ICmp:
+    // This also makes sense for float operations, but disabled for now due
+    // to regressions.
+    // case Instruction::FCmp:
+    // case Instruction::FAdd:
+    // case Instruction::FSub:
+    // case Instruction::FMul:
+    // case Instruction::FDiv:
+
+    // All possible extensions of memory checked above.
+    if (SExtBits || ZExtBits)
+      return false;
+
+    unsigned LoadOrTruncBits = (TruncBits ? TruncBits : LoadedBits);
+    return (LoadOrTruncBits == 32 || LoadOrTruncBits == 64);
+    break;
+  }
+  return false;
+}
+
 int SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
                                     unsigned Alignment, unsigned AddressSpace,
                                     const Instruction *I) {
   assert(!Src->isVoidTy() && "Invalid type");
 
-  if (!Src->isVectorTy() && Opcode == Instruction::Load &&
-      I != nullptr && I->hasOneUse()) {
-      const Instruction *UserI = cast<Instruction>(*I->user_begin());
-      unsigned Bits = getScalarSizeInBits(Src);
-      bool FoldsLoad = false;
-      switch (UserI->getOpcode()) {
-      case Instruction::ICmp:
-      case Instruction::Add:
-      case Instruction::Sub:
-      case Instruction::Mul:
-      case Instruction::SDiv:
-      case Instruction::UDiv:
-      case Instruction::And:
-      case Instruction::Or:
-      case Instruction::Xor:
-      // This also makes sense for float operations, but disabled for now due
-      // to regressions.
-      // case Instruction::FCmp:
-      // case Instruction::FAdd:
-      // case Instruction::FSub:
-      // case Instruction::FMul:
-      // case Instruction::FDiv:
-        FoldsLoad = (Bits == 32 || Bits == 64);
-        break;
-      }
+  if (!Src->isVectorTy() && Opcode == Instruction::Load && I != nullptr) {
+    // Store the load or its truncated or extended value in FoldedValue.
+    const Instruction *FoldedValue = nullptr;
+    if (isFoldableLoad(cast<LoadInst>(I), FoldedValue)) {
+      const Instruction *UserI = cast<Instruction>(*FoldedValue->user_begin());
+      assert (UserI->getNumOperands() == 2 && "Expected a binop.");
 
-      if (FoldsLoad) {
-        assert (UserI->getNumOperands() == 2 &&
-                "Expected to only handle binops.");
+      // UserI can't fold two loads, so in that case return 0 cost only
+      // half of the time.
+      for (unsigned i = 0; i < 2; ++i) {
+        if (UserI->getOperand(i) == FoldedValue)
+          continue;
 
-        // UserI can't fold two loads, so in that case return 0 cost only
-        // half of the time.
-        for (unsigned i = 0; i < 2; ++i) {
-          if (UserI->getOperand(i) == I)
-            continue;
-          if (LoadInst *LI = dyn_cast<LoadInst>(UserI->getOperand(i))) {
-            if (LI->hasOneUse())
-              return i == 0;
-          }
+        if (Instruction *OtherOp = dyn_cast<Instruction>(UserI->getOperand(i))){
+          LoadInst *OtherLoad = dyn_cast<LoadInst>(OtherOp);
+          if (!OtherLoad &&
+              (isa<TruncInst>(OtherOp) || isa<SExtInst>(OtherOp) ||
+               isa<ZExtInst>(OtherOp)))
+            OtherLoad = dyn_cast<LoadInst>(OtherOp->getOperand(0));
+          if (OtherLoad && isFoldableLoad(OtherLoad, FoldedValue/*dummy*/))
+            return i == 0; // Both operands foldable.
         }
-
-        return 0;
       }
+
+      return 0; // Only I is foldable in user.
+    }
   }
 
   unsigned NumOps =

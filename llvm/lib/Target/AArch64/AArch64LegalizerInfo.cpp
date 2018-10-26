@@ -167,7 +167,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .unsupportedIfMemSizeNotPow2()
       // Lower any any-extending loads left into G_ANYEXT and G_LOAD
       .lowerIf([=](const LegalityQuery &Query) {
-        return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].Size * 8;
+        return Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
       })
       .clampNumElements(0, v2s32, v2s32);
 
@@ -185,7 +185,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .unsupportedIfMemSizeNotPow2()
       .lowerIf([=](const LegalityQuery &Query) {
         return Query.Types[0].isScalar() &&
-               Query.Types[0].getSizeInBits() != Query.MMODescrs[0].Size * 8;
+               Query.Types[0].getSizeInBits() != Query.MMODescrs[0].SizeInBits;
       })
       .clampNumElements(0, v2s32, v2s32);
 

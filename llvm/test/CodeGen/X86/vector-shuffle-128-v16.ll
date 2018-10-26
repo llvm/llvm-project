@@ -579,6 +579,98 @@ define <16 x i8> @shuffle_v16i8_16_17_18_19_04_05_06_07_24_25_10_11_28_13_30_15(
   ret <16 x i8> %shuffle
 }
 
+; PR27780 - https://bugs.llvm.org/show_bug.cgi?id=27780
+
+define <16 x i8> @load_fold_pblendvb(<16 x i8>* %px, <16 x i8> %y) {
+; SSE2-LABEL: load_fold_pblendvb:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
+; SSE2-NEXT:    andps %xmm1, %xmm0
+; SSE2-NEXT:    andnps (%rdi), %xmm1
+; SSE2-NEXT:    orps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: load_fold_pblendvb:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movdqa (%rdi), %xmm1
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,xmm0[3],zero,zero,zero,xmm0[7,8,9],zero,xmm0[11],zero,zero,zero,xmm0[15]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = zero,zero,xmm1[2],zero,xmm1[4,5,6],zero,zero,zero,xmm1[10],zero,xmm1[12,13,14],zero
+; SSSE3-NEXT:    por %xmm1, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: load_fold_pblendvb:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    movdqa (%rdi), %xmm2
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
+; SSE41-NEXT:    pblendvb %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1OR2-LABEL: load_fold_pblendvb:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vmovdqa (%rdi), %xmm1
+; AVX1OR2-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
+; AVX1OR2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: load_fold_pblendvb:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    movw $29812, %ax # imm = 0x7474
+; AVX512VL-NEXT:    kmovd %eax, %k1
+; AVX512VL-NEXT:    vmovdqu8 (%rdi), %xmm0 {%k1}
+; AVX512VL-NEXT:    retq
+  %x = load <16 x i8>, <16 x i8>* %px, align 16
+  %select = shufflevector <16 x i8> %x, <16 x i8> %y, <16 x i32> <i32 16, i32 17, i32 2, i32 19, i32 4, i32 5, i32 6, i32 23, i32 24, i32 25, i32 10, i32 27, i32 12, i32 13, i32 14, i32 31>
+  ret <16 x i8> %select
+}
+
+define <16 x i8> @load_fold_pblendvb_commute(<16 x i8>* %px, <16 x i8> %y) {
+; SSE2-LABEL: load_fold_pblendvb_commute:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
+; SSE2-NEXT:    movaps %xmm1, %xmm2
+; SSE2-NEXT:    andnps %xmm0, %xmm2
+; SSE2-NEXT:    andps (%rdi), %xmm1
+; SSE2-NEXT:    orps %xmm2, %xmm1
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: load_fold_pblendvb_commute:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movdqa (%rdi), %xmm1
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = zero,zero,xmm0[2],zero,xmm0[4,5,6],zero,zero,zero,xmm0[10],zero,xmm0[12,13,14],zero
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1],zero,xmm1[3],zero,zero,zero,xmm1[7,8,9],zero,xmm1[11],zero,zero,zero,xmm1[15]
+; SSSE3-NEXT:    por %xmm1, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: load_fold_pblendvb_commute:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
+; SSE41-NEXT:    pblendvb %xmm0, (%rdi), %xmm1
+; SSE41-NEXT:    movdqa %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1OR2-LABEL: load_fold_pblendvb_commute:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
+; AVX1OR2-NEXT:    vpblendvb %xmm1, (%rdi), %xmm0, %xmm0
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VL-LABEL: load_fold_pblendvb_commute:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm1
+; AVX512VL-NEXT:    movw $29812, %ax # imm = 0x7474
+; AVX512VL-NEXT:    kmovd %eax, %k1
+; AVX512VL-NEXT:    vmovdqu8 %xmm0, %xmm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX512VL-NEXT:    retq
+  %x = load <16 x i8>, <16 x i8>* %px, align 16
+  %select = shufflevector <16 x i8> %y, <16 x i8> %x, <16 x i32> <i32 16, i32 17, i32 2, i32 19, i32 4, i32 5, i32 6, i32 23, i32 24, i32 25, i32 10, i32 27, i32 12, i32 13, i32 14, i32 31>
+  ret <16 x i8> %select
+}
+
 define <16 x i8> @trunc_v4i32_shuffle(<16 x i8> %a) {
 ; SSE2-LABEL: trunc_v4i32_shuffle:
 ; SSE2:       # %bb.0:

@@ -176,8 +176,8 @@ class CommandLineCompletionTestCase(TestBase):
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_settings_s_dash(self):
-        """Test that 'settings set -' completes to 'settings set -g'."""
-        self.complete_from_to('settings set -', 'settings set -g')
+        """Test that 'settings set --g' completes to 'settings set --global'."""
+        self.complete_from_to('settings set --g', 'settings set --global')
 
     @skipIfFreeBSD  # timing out on the FreeBSD buildbot
     def test_settings_clear_th(self):

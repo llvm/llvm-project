@@ -173,7 +173,7 @@ public:
   ///   A SymbolContext reference which includes the types of information
   ///   requested by resolve_scope, if they are available.
   //------------------------------------------------------------------
-  const SymbolContext &GetSymbolContext(uint32_t resolve_scope);
+  const SymbolContext &GetSymbolContext(lldb::SymbolContextItem resolve_scope);
 
   //------------------------------------------------------------------
   /// Return the Canonical Frame Address (DWARF term) for this frame.

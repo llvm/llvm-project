@@ -61,10 +61,10 @@ void OptionValueFormatEntity::DumpValue(const ExecutionContext *exe_ctx,
     strm.Printf("(%s)", GetTypeAsCString());
   if (dump_mask & eDumpOptionValue) {
     if (dump_mask & eDumpOptionType)
-      strm.PutCString(" = \"");
+      strm.PutCString(" = ");
     std::string escaped;
     EscapeBackticks(m_current_format, escaped);
-    strm << escaped << '"';
+    strm << '"' << escaped << '"';
   }
 }
 

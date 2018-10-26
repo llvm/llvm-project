@@ -1,0 +1,94 @@
+# RUN: llc -mtriple=wasm32-unknown-unknown -start-after xray-instrumentation -wasm-keep-registers %s -o - | FileCheck %s
+
+---
+# Tests if block/loop/try/catch/end instructions are correctly printed with
+# their annotations.
+
+# CHECK: test0:
+# CHECK:   block
+# CHECK:   try
+# CHECK:   br        0               # 0: down to label1
+# CHECK:   catch_all                 # catch0:
+# CHECK:   block
+# CHECK:   br_if     0, 1            # 0: down to label2
+# CHECK:   loop                      # label3:
+# CHECK:   br_if     0, 1            # 0: up to label3
+# CHECK:   end_loop
+# CHECK:   end_block                 # label2:
+# CHECK:   try
+# CHECK:   rethrow   0               # 0: down to catch1
+# CHECK:   catch_all                 # catch1:
+# CHECK:   block
+# CHECK:   try
+# CHECK:   br        0               # 0: down to label6
+# CHECK:   catch_all                 # catch2:
+# CHECK:   unreachable
+# CHECK:   end_try                   # label6:
+# CHECK:   end_block                 # label5:
+# CHECK:   rethrow   0               # 0: to caller
+# CHECK:   end_try                   # label4:
+# CHECK:   end_try                   # label1:
+# CHECK:   end_block                 # label0:
+
+name: test0
+liveins:
+  - { reg: '$arguments', reg: '$value_stack' }
+body: |
+  bb.0:
+    successors: %bb.7, %bb.1
+    BLOCK 64, implicit-def $value_stack, implicit $value_stack
+    TRY 64, implicit-def $value_stack, implicit $value_stack
+    BR 0, implicit-def $arguments
+
+  bb.1 (landing-pad):
+  ; predecessors: %bb.0
+    successors: %bb.2, %bb.3
+
+    CATCH_ALL implicit-def $arguments
+    BLOCK 64, implicit-def $value_stack, implicit $value_stack
+    BR_IF 0, 1, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
+
+  bb.2:
+  ; predecessors: %bb.1, %bb.2
+    successors: %bb.2, %bb.3
+
+    LOOP 64, implicit-def $value_stack, implicit $value_stack
+    BR_IF 0, 1, implicit-def $arguments
+
+  bb.3:
+  ; predecessors: %bb.1, %bb.2
+    successors: %bb.4
+
+    END_LOOP implicit-def $value_stack, implicit $value_stack
+    END_BLOCK implicit-def $value_stack, implicit $value_stack
+    TRY 64, implicit-def $value_stack, implicit $value_stack
+    RETHROW 0, implicit-def $arguments
+
+  bb.4 (landing-pad):
+  ; predecessors: %bb.3
+    successors: %bb.6, %bb.5
+
+    CATCH_ALL implicit-def $arguments
+    BLOCK 64, implicit-def $value_stack, implicit $value_stack
+    TRY 64, implicit-def $value_stack, implicit $value_stack
+    BR 0, implicit-def $arguments
+
+  bb.5 (landing-pad):
+  ; predecessors: %bb.4
+    CATCH_ALL implicit-def $arguments
+    UNREACHABLE implicit-def dead $arguments
+
+  bb.6:
+  ; predecessors: %bb.4
+    END_TRY implicit-def $value_stack, implicit $value_stack
+    END_BLOCK implicit-def $value_stack, implicit $value_stack
+    RETHROW 0, implicit-def $arguments
+
+  bb.7:
+  ; predecessors: %bb.0
+    END_TRY implicit-def $value_stack, implicit $value_stack
+    END_TRY implicit-def $value_stack, implicit $value_stack
+    END_BLOCK implicit-def $value_stack, implicit $value_stack
+    FALLTHROUGH_RETURN_VOID implicit-def dead $arguments
+    END_FUNCTION implicit-def $value_stack, implicit $value_stack
+...

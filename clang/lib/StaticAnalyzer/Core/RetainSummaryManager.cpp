@@ -65,8 +65,8 @@ static bool isOSObjectSubclass(const Decl *D) {
   return isSubclass(D, "OSObject");
 }
 
-static bool isOSIteratorSubclass(const Decl *D) {
-  return isSubclass(D, "OSIterator");
+static bool isOSObjectDynamicCast(StringRef S) {
+  return S == "safeMetaCast";
 }
 
 static bool hasRCAnnotation(const Decl *D, StringRef rcAnnotation) {
@@ -231,12 +231,11 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
     if (TrackOSObjects && PD && isOSObjectSubclass(PD)) {
       if (const IdentifierInfo *II = FD->getIdentifier()) {
 
+        if (isOSObjectDynamicCast(II->getName()))
+          return getDefaultSummary();
+
         // All objects returned with functions starting with "get" are getters.
         if (II->getName().startswith("get")) {
-
-          // ...except for iterators.
-          if (isOSIteratorSubclass(PD))
-            return getOSSummaryCreateRule(FD);
           return getOSSummaryGetRule(FD);
         } else {
           return getOSSummaryCreateRule(FD);
@@ -479,8 +478,12 @@ RetainSummaryManager::getSummary(const CallEvent &Call,
     Summ = getFunctionSummary(cast<CXXMemberCall>(Call).getDecl());
     break;
   case CE_CXXMemberOperator:
-  case CE_Block:
+    Summ = getFunctionSummary(cast<CXXMemberOperatorCall>(Call).getDecl());
+    break;
   case CE_CXXConstructor:
+    Summ = getFunctionSummary(cast<CXXConstructorCall>(Call).getDecl());
+    break;
+  case CE_Block:
   case CE_CXXDestructor:
   case CE_CXXAllocator:
     // FIXME: These calls are currently unsupported.
@@ -515,20 +518,21 @@ bool RetainSummaryManager::isTrustedReferenceCountImplementation(
   return hasRCAnnotation(FD, "rc_ownership_trusted_implementation");
 }
 
-bool RetainSummaryManager::canEval(const CallExpr *CE,
-                                   const FunctionDecl *FD,
-                                   bool &hasTrustedImplementationAnnotation) {
+Optional<RetainSummaryManager::BehaviorSummary>
+RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
+                              bool &hasTrustedImplementationAnnotation) {
 
   IdentifierInfo *II = FD->getIdentifier();
   if (!II)
-    return false;
+    return None;
 
   StringRef FName = II->getName();
   FName = FName.substr(FName.find_first_not_of('_'));
 
   QualType ResultTy = CE->getCallReturnType(Ctx);
   if (ResultTy->isObjCIdType()) {
-    return II->isStr("NSMakeCollectable");
+    if (II->isStr("NSMakeCollectable"))
+      return BehaviorSummary::Identity;
   } else if (ResultTy->isPointerType()) {
     // Handle: (CF|CG|CV)Retain
     //         CFAutorelease
@@ -536,31 +540,34 @@ bool RetainSummaryManager::canEval(const CallExpr *CE,
     if (cocoa::isRefType(ResultTy, "CF", FName) ||
         cocoa::isRefType(ResultTy, "CG", FName) ||
         cocoa::isRefType(ResultTy, "CV", FName))
-      return isRetain(FD, FName) || isAutorelease(FD, FName) ||
-             isMakeCollectable(FName);
+      if (isRetain(FD, FName) || isAutorelease(FD, FName) ||
+          isMakeCollectable(FName))
+        return BehaviorSummary::Identity;
 
-    // Process OSDynamicCast: should just return the first argument.
-    // For now, treating the cast as a no-op, and disregarding the case where
-    // the output becomes null due to the type mismatch.
-    if (TrackOSObjects && FName == "safeMetaCast") {
-      return true;
+    // safeMetaCast is called by OSDynamicCast.
+    // We assume that OSDynamicCast is either an identity (cast is OK,
+    // the input was non-zero),
+    // or that it returns zero (when the cast failed, or the input
+    // was zero).
+    if (TrackOSObjects && isOSObjectDynamicCast(FName)) {
+      return BehaviorSummary::IdentityOrZero;
     }
 
     const FunctionDecl* FDD = FD->getDefinition();
     if (FDD && isTrustedReferenceCountImplementation(FDD)) {
       hasTrustedImplementationAnnotation = true;
-      return true;
+      return BehaviorSummary::Identity;
     }
   }
 
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
     const CXXRecordDecl *Parent = MD->getParent();
     if (TrackOSObjects && Parent && isOSObjectSubclass(Parent))
-      return FName == "release" || FName == "retain";
+      if (FName == "release" || FName == "retain")
+        return BehaviorSummary::NoOp;
   }
 
-  return false;
-
+  return None;
 }
 
 const RetainSummary *

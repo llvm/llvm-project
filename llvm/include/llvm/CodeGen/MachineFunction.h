@@ -316,6 +316,9 @@ class MachineFunction {
   /// Map a landing pad's EH symbol to the call site indexes.
   DenseMap<MCSymbol*, SmallVector<unsigned, 4>> LPadToCallSiteMap;
 
+  /// Map a landing pad to its index.
+  DenseMap<const MachineBasicBlock *, unsigned> WasmLPadToIndexMap;
+
   /// Map of invoke call site index values to associated begin EH_LABEL.
   DenseMap<MCSymbol*, unsigned> CallSiteMap;
 
@@ -810,7 +813,8 @@ public:
   LandingPadInfo &getOrCreateLandingPadInfo(MachineBasicBlock *LandingPad);
 
   /// Remap landing pad labels and remove any deleted landing pads.
-  void tidyLandingPads(DenseMap<MCSymbol*, uintptr_t> *LPMap = nullptr);
+  void tidyLandingPads(DenseMap<MCSymbol *, uintptr_t> *LPMap = nullptr,
+                       bool TidyIfNoBeginLabels = true);
 
   /// Return a reference to the landing pad info for the current function.
   const std::vector<LandingPadInfo> &getLandingPads() const {
@@ -852,6 +856,22 @@ public:
 
   /// Map the landing pad's EH symbol to the call site indexes.
   void setCallSiteLandingPad(MCSymbol *Sym, ArrayRef<unsigned> Sites);
+
+  /// Map the landing pad to its index. Used for Wasm exception handling.
+  void setWasmLandingPadIndex(const MachineBasicBlock *LPad, unsigned Index) {
+    WasmLPadToIndexMap[LPad] = Index;
+  }
+
+  /// Returns true if the landing pad has an associate index in wasm EH.
+  bool hasWasmLandingPadIndex(const MachineBasicBlock *LPad) const {
+    return WasmLPadToIndexMap.count(LPad);
+  }
+
+  /// Get the index in wasm EH for a given landing pad.
+  unsigned getWasmLandingPadIndex(const MachineBasicBlock *LPad) const {
+    assert(hasWasmLandingPadIndex(LPad));
+    return WasmLPadToIndexMap.lookup(LPad);
+  }
 
   /// Get the call site indexes for a landing pad EH symbol.
   SmallVectorImpl<unsigned> &getCallSiteLandingPad(MCSymbol *Sym) {

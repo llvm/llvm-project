@@ -265,7 +265,7 @@ INTERCEPTOR(void, mallinfo, __sanitizer_struct_mallinfo *sret) {
 
 #if !SANITIZER_FREEBSD && !SANITIZER_NETBSD
 INTERCEPTOR(int, mallopt, int cmd, int value) {
-  return -1;
+  return 0;
 }
 #define MSAN_MAYBE_INTERCEPT_MALLOPT INTERCEPT_FUNCTION(mallopt)
 #else

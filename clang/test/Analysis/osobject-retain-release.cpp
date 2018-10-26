@@ -17,6 +17,8 @@ struct OSObject {
   virtual void release() {};
   virtual ~OSObject(){}
 
+  unsigned int foo() { return 42; }
+
   static OSObject *generateObject(int);
 
   static const OSMetaClass * const metaClass;
@@ -41,6 +43,7 @@ struct OSArray : public OSObject {
 
 struct OtherStruct {
   static void doNothingToArray(OSArray *array);
+  OtherStruct(OSArray *arr);
 };
 
 struct OSMetaClassBase {
@@ -52,6 +55,12 @@ void check_no_invalidation() {
   OtherStruct::doNothingToArray(arr);
 } // expected-warning{{Potential leak of an object stored into 'arr'}}
   // expected-note@-1{{Object leaked}}
+
+void check_no_invalidation_other_struct() {
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to function 'withCapacity' returns an OSObject of type struct OSArray * with a +1 retain count}}
+  OtherStruct other(arr); // expected-warning{{Potential leak}}
+                          // expected-note@-1{{Object leaked}}
+}
 
 void check_rc_consumed() {
   OSArray *arr = OSArray::withCapacity(10);
@@ -78,8 +87,31 @@ void check_dynamic_cast() {
   arr->release();
 }
 
+unsigned int check_dynamic_cast_no_null_on_orig(OSObject *obj) {
+  OSArray *arr = OSDynamicCast(OSArray, obj);
+  if (arr) {
+    return arr->getCount();
+  } else {
+
+    // The fact that dynamic cast has failed should not imply that
+    // the input object was null.
+    return obj->foo(); // no-warning
+  }
+}
+
+void check_dynamic_cast_null_branch(OSObject *obj) {
+  OSArray *arr1 = OSArray::withCapacity(10); // expected-note{{Call to function 'withCapacity' returns an OSObject}}
+  OSArray *arr = OSDynamicCast(OSArray, obj);
+  if (!arr) // expected-note{{Taking true branch}}
+    return; // expected-warning{{Potential leak}}
+            // expected-note@-1{{Object leaked}}
+  arr1->release();
+}
+
 void check_dynamic_cast_null_check() {
-  OSArray *arr = OSDynamicCast(OSArray, OSObject::generateObject(1));
+  OSArray *arr = OSDynamicCast(OSArray, OSObject::generateObject(1)); // expected-note{{Call to function 'generateObject' returns an OSObject}}
+    // expected-warning@-1{{Potential leak of an object}}
+    // expected-note@-2{{Object leaked}}
   if (!arr)
     return;
   arr->release();

@@ -121,7 +121,7 @@ struct LegalityQuery {
   ArrayRef<LLT> Types;
 
   struct MemDesc {
-    uint64_t Size;
+    uint64_t SizeInBits;
     AtomicOrdering Ordering;
   };
 

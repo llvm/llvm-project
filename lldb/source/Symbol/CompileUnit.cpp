@@ -278,7 +278,8 @@ uint32_t CompileUnit::FindLineEntry(uint32_t start_idx, uint32_t line,
 
 uint32_t CompileUnit::ResolveSymbolContext(const FileSpec &file_spec,
                                            uint32_t line, bool check_inlines,
-                                           bool exact, uint32_t resolve_scope,
+                                           bool exact,
+                                           SymbolContextItem resolve_scope,
                                            SymbolContextList &sc_list) {
   // First find all of the file indexes that match our "file_spec". If
   // "file_spec" has an empty directory, then only compare the basenames when

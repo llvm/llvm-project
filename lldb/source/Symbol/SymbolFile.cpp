@@ -97,7 +97,7 @@ TypeSystem *SymbolFile::GetTypeSystemForLanguage(lldb::LanguageType language) {
 
 uint32_t SymbolFile::ResolveSymbolContext(const FileSpec &file_spec,
                                           uint32_t line, bool check_inlines,
-                                          uint32_t resolve_scope,
+                                          lldb::SymbolContextItem resolve_scope,
                                           SymbolContextList &sc_list) {
   return 0;
 }
@@ -117,7 +117,7 @@ uint32_t SymbolFile::FindGlobalVariables(const RegularExpression &regex,
 
 uint32_t SymbolFile::FindFunctions(const ConstString &name,
                                    const CompilerDeclContext *parent_decl_ctx,
-                                   uint32_t name_type_mask,
+                                   lldb::FunctionNameType name_type_mask,
                                    bool include_inlines, bool append,
                                    SymbolContextList &sc_list) {
   if (!append)

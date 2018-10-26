@@ -139,7 +139,7 @@ public:
     OwnedWhenTrackedReceiver,
     // Treat this function as returning a non-tracked symbol even if
     // the function has been inlined. This is used where the call
-    // site summary is more presise than the summary indirectly produced
+    // site summary is more precise than the summary indirectly produced
     // by inlining the function
     NoRetHard
   };
@@ -636,9 +636,19 @@ public:
     InitializeMethodSummaries();
   }
 
-  bool canEval(const CallExpr *CE,
-               const FunctionDecl *FD,
-               bool &hasTrustedImplementationAnnotation);
+  enum class BehaviorSummary {
+    // Function does not return.
+    NoOp,
+
+    // Function returns the first argument.
+    Identity,
+
+    // Function either returns zero, or the input parameter.
+    IdentityOrZero
+  };
+
+  Optional<BehaviorSummary> canEval(const CallExpr *CE, const FunctionDecl *FD,
+                                    bool &hasTrustedImplementationAnnotation);
 
   bool isTrustedReferenceCountImplementation(const FunctionDecl *FD);
 

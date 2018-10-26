@@ -1,4 +1,3 @@
-// RUN: %clang_cc1 -triple x86_64-windows-pc  -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple arm-none-eabi  -fsyntax-only -verify %s
 
 int __attribute__((target("sse4.2"))) redecl1(void) { return 1; }

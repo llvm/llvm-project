@@ -183,12 +183,14 @@ DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, unsigned *Offset,
       return None;
     }
 
-    unsigned Bytes = Data.getU16(Offset);
-    // A single location description describing the location of the object...
-    StringRef str = Data.getData().substr(*Offset, Bytes);
-    *Offset += Bytes;
-    E.Loc.resize(str.size());
-    std::copy(str.begin(), str.end(), E.Loc.begin());
+    if (Kind != dwarf::DW_LLE_base_address) {
+      unsigned Bytes = Data.getU16(Offset);
+      // A single location description describing the location of the object...
+      StringRef str = Data.getData().substr(*Offset, Bytes);
+      *Offset += Bytes;
+      E.Loc.resize(str.size());
+      std::copy(str.begin(), str.end(), E.Loc.begin());
+    }
 
     LL.Entries.push_back(std::move(E));
   }

@@ -927,6 +927,9 @@ namespace llvm {
     SDValue LowerINT_TO_FPDirectMove(SDValue Op, SelectionDAG &DAG,
                                      const SDLoc &dl) const;
 
+    SDValue LowerINT_TO_FPVector(SDValue Op, SelectionDAG &DAG,
+                                 const SDLoc &dl) const;
+
     SDValue getFramePointerFrameIndex(SelectionDAG & DAG) const;
     SDValue getReturnAddrFrameIndex(SelectionDAG & DAG) const;
 
