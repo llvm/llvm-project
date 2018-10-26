@@ -292,7 +292,8 @@ int64_t ExplodedNode::getID(ExplodedGraph *G) const {
 
 bool ExplodedNode::isTrivial() const {
   return pred_size() == 1 && succ_size() == 1 &&
-         (*pred_begin())->getState()->getID() == getState()->getID();
+         getFirstPred()->getState()->getID() == getState()->getID() &&
+         getFirstPred()->succ_size() == 1;
 }
 
 ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,

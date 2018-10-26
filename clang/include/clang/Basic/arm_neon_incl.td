@@ -96,6 +96,11 @@ def bitcast;
 // example: (dup $p1) -> "(uint32x2_t) {__p1, __p1}" (assuming the base type
 //          is uint32x2_t).
 def dup;
+// dup_typed - Take a vector and a scalar argument, and create a new vector of
+//             the same type by duplicating the scalar value into all lanes.
+// example: (dup_typed $p1, $p2) -> "(float16x4_t) {__p2, __p2, __p2, __p2}"
+//          (assuming __p1 is float16x4_t, and __p2 is a compatible scalar).
+def dup_typed;
 // splat - Take a vector and a lane index, and return a vector of the same type
 //         containing repeated instances of the source vector at the lane index.
 // example: (splat $p0, $p1) ->
@@ -229,6 +234,8 @@ def OP_UNAVAILABLE : Operation {
 // f: float (int args)
 // F: double (int args)
 // H: half (int args)
+// 0: half (int args), ignore 'Q' size modifier.
+// 1: half (int args), force 'Q' size modifier.
 // d: default
 // g: default, ignore 'Q' size modifier.
 // j: default, force 'Q' size modifier.

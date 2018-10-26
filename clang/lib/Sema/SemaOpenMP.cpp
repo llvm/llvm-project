@@ -2251,8 +2251,31 @@ public:
   }
   void VisitStmt(Stmt *S) {
     for (Stmt *C : S->children()) {
-      if (C && !isa<OMPExecutableDirective>(C))
-        Visit(C);
+      if (C) {
+        if (auto *OED = dyn_cast<OMPExecutableDirective>(C)) {
+          // Check implicitly captured vriables in the task-based directives to
+          // check if they must be firstprivatized.
+          if (!OED->hasAssociatedStmt())
+            continue;
+          const Stmt *AS = OED->getAssociatedStmt();
+          if (!AS)
+            continue;
+          for (const CapturedStmt::Capture &Cap :
+               cast<CapturedStmt>(AS)->captures()) {
+            if (Cap.capturesVariable()) {
+              DeclRefExpr *DRE = buildDeclRefExpr(
+                  SemaRef, Cap.getCapturedVar(),
+                  Cap.getCapturedVar()->getType().getNonLValueExprType(
+                      SemaRef.Context),
+                  Cap.getLocation(),
+                  /*RefersToCapture=*/true);
+              Visit(DRE);
+            }
+          }
+        } else {
+          Visit(C);
+        }
+      }
     }
   }
 

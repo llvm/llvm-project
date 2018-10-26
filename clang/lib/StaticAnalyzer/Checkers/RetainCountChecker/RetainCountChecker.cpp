@@ -774,14 +774,17 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
 
   const LocationContext *LCtx = C.getLocationContext();
 
+  using BehaviorSummary = RetainSummaryManager::BehaviorSummary;
+  Optional<BehaviorSummary> BSmr =
+      SmrMgr.canEval(CE, FD, hasTrustedImplementationAnnotation);
+
   // See if it's one of the specific functions we know how to eval.
-  if (!SmrMgr.canEval(CE, FD, hasTrustedImplementationAnnotation))
+  if (!BSmr)
     return false;
 
   // Bind the return value.
-  // For now, all the functions which we can evaluate and which take
-  // at least one argument are identities.
-  if (CE->getNumArgs() >= 1) {
+  if (BSmr == BehaviorSummary::Identity ||
+      BSmr == BehaviorSummary::IdentityOrZero) {
     SVal RetVal = state->getSVal(CE->getArg(0), LCtx);
 
     // If the receiver is unknown or the function has
@@ -793,7 +796,24 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
       RetVal =
           SVB.conjureSymbolVal(nullptr, CE, LCtx, ResultTy, C.blockCount());
     }
-    state = state->BindExpr(CE, LCtx, RetVal, false);
+    state = state->BindExpr(CE, LCtx, RetVal, /*Invalidate=*/false);
+
+    if (BSmr == BehaviorSummary::IdentityOrZero) {
+      // Add a branch where the output is zero.
+      ProgramStateRef NullOutputState = C.getState();
+
+      // Assume that output is zero on the other branch.
+      NullOutputState = NullOutputState->BindExpr(
+          CE, LCtx, C.getSValBuilder().makeNull(), /*Invalidate=*/false);
+
+      C.addTransition(NullOutputState);
+
+      // And on the original branch assume that both input and
+      // output are non-zero.
+      if (auto L = RetVal.getAs<DefinedOrUnknownSVal>())
+        state = state->assume(*L, /*Assumption=*/true);
+
+    }
   }
 
   C.addTransition(state);

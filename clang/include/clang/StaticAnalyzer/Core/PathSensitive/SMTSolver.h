@@ -285,6 +285,9 @@ public:
   /// Reset the solver and remove all constraints.
   virtual void reset() = 0;
 
+  /// Checks if the solver supports floating-points.
+  virtual bool isFPSupported() = 0;
+
   virtual void print(raw_ostream &OS) const = 0;
 };
 
