@@ -733,9 +733,11 @@ public:
 
   llvm::APSInt getBitvector(const SMTExprRef &Exp, unsigned BitWidth,
                             bool isUnsigned) override {
-    return llvm::APSInt(llvm::APInt(
-        BitWidth, Z3_get_numeral_string(Context.Context, toZ3Expr(*Exp).AST),
-        10));
+    return llvm::APSInt(
+        llvm::APInt(BitWidth,
+                    Z3_get_numeral_string(Context.Context, toZ3Expr(*Exp).AST),
+                    10),
+        isUnsigned);
   }
 
   bool getBoolean(const SMTExprRef &Exp) override {
@@ -858,6 +860,8 @@ public:
     return Z3Model(Context, Z3_solver_get_model(Context.Context, Solver));
   }
 
+  bool isFPSupported() override { return true; }
+
   /// Reset the solver and remove all constraints.
   void reset() override { Z3_solver_reset(Context.Context, Solver); }
 
@@ -872,49 +876,6 @@ class Z3ConstraintManager : public SMTConstraintManager<ConstraintZ3, Z3Expr> {
 public:
   Z3ConstraintManager(SubEngine *SE, SValBuilder &SB)
       : SMTConstraintManager(SE, SB, Solver) {}
-
-  bool canReasonAbout(SVal X) const override {
-    const TargetInfo &TI = getBasicVals().getContext().getTargetInfo();
-
-    Optional<nonloc::SymbolVal> SymVal = X.getAs<nonloc::SymbolVal>();
-    if (!SymVal)
-      return true;
-
-    const SymExpr *Sym = SymVal->getSymbol();
-    QualType Ty = Sym->getType();
-
-    // Complex types are not modeled
-    if (Ty->isComplexType() || Ty->isComplexIntegerType())
-      return false;
-
-    // Non-IEEE 754 floating-point types are not modeled
-    if ((Ty->isSpecificBuiltinType(BuiltinType::LongDouble) &&
-         (&TI.getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended() ||
-          &TI.getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())))
-      return false;
-
-    if (isa<SymbolData>(Sym))
-      return true;
-
-    SValBuilder &SVB = getSValBuilder();
-
-    if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
-      return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
-
-    if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
-      if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE))
-        return canReasonAbout(SVB.makeSymbolVal(SIE->getLHS()));
-
-      if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE))
-        return canReasonAbout(SVB.makeSymbolVal(ISE->getRHS()));
-
-      if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(BSE))
-        return canReasonAbout(SVB.makeSymbolVal(SSE->getLHS())) &&
-               canReasonAbout(SVB.makeSymbolVal(SSE->getRHS()));
-    }
-
-    llvm_unreachable("Unsupported expression to reason about!");
-  }
 }; // end class Z3ConstraintManager
 
 } // end anonymous namespace

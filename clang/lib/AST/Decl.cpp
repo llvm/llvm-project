@@ -2947,6 +2947,10 @@ bool FunctionDecl::isCPUSpecificMultiVersion() const {
   return isMultiVersion() && hasAttr<CPUSpecificAttr>();
 }
 
+bool FunctionDecl::isTargetMultiVersion() const {
+  return isMultiVersion() && hasAttr<TargetAttr>();
+}
+
 void
 FunctionDecl::setPreviousDeclaration(FunctionDecl *PrevDecl) {
   redeclarable_base::setPreviousDecl(PrevDecl);

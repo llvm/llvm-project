@@ -1748,6 +1748,10 @@ const MCExpr *TargetLoweringObjectFileWasm::lowerRelativeReference(
 void TargetLoweringObjectFileWasm::InitializeWasm() {
   StaticCtorSection =
       getContext().getWasmSection(".init_array", SectionKind::getData());
+
+  // We don't use PersonalityEncoding and LSDAEncoding because we don't emit
+  // .cfi directives. We use TTypeEncoding to encode typeinfo global variables.
+  TTypeEncoding = dwarf::DW_EH_PE_absptr;
 }
 
 MCSection *TargetLoweringObjectFileWasm::getStaticCtorSection(

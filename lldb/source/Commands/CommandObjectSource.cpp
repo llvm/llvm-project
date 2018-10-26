@@ -1210,7 +1210,9 @@ protected:
             target->GetImages().FindModules(module_spec, matching_modules);
             num_matches += matching_modules.ResolveSymbolContextForFilePath(
                 filename, 0, check_inlines,
-                eSymbolContextModule | eSymbolContextCompUnit, sc_list);
+                SymbolContextItem(eSymbolContextModule |
+                                  eSymbolContextCompUnit),
+                sc_list);
           }
         }
       } else {

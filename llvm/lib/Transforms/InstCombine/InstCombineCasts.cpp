@@ -1612,8 +1612,9 @@ Instruction *InstCombiner::visitFPTrunc(FPTruncInst &FPT) {
     }
 
     // (fptrunc (fneg x)) -> (fneg (fptrunc x))
-    if (BinaryOperator::isFNeg(OpI)) {
-      Value *InnerTrunc = Builder.CreateFPTrunc(OpI->getOperand(1), Ty);
+    Value *X;
+    if (match(OpI, m_FNeg(m_Value(X)))) {
+      Value *InnerTrunc = Builder.CreateFPTrunc(X, Ty);
       return BinaryOperator::CreateFNegFMF(InnerTrunc, OpI);
     }
   }

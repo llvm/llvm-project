@@ -150,7 +150,8 @@ void RegisterContextLLDB::InitializeZerothFrame() {
 
   // We require either a symbol or function in the symbols context to be
   // successfully filled in or this context is of no use to us.
-  const uint32_t resolve_scope = eSymbolContextFunction | eSymbolContextSymbol;
+  const SymbolContextItem resolve_scope =
+      eSymbolContextFunction | eSymbolContextSymbol;
   if (pc_module_sp.get() && (pc_module_sp->ResolveSymbolContextForAddress(
                                  m_current_pc, resolve_scope, m_sym_ctx) &
                              resolve_scope)) {
@@ -436,7 +437,8 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
   // then we might not find the correct unwind information later. Instead, let
   // ResolveSymbolContextForAddress fail, and handle the case via
   // decr_pc_and_recompute_addr_range below.
-  const uint32_t resolve_scope = eSymbolContextFunction | eSymbolContextSymbol;
+  const SymbolContextItem resolve_scope =
+      eSymbolContextFunction | eSymbolContextSymbol;
   uint32_t resolved_scope = pc_module_sp->ResolveSymbolContextForAddress(
       m_current_pc, resolve_scope, m_sym_ctx, resolve_tail_call_address);
 
@@ -494,7 +496,8 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
     temporary_pc.SetLoadAddress(pc - 1, &process->GetTarget());
     m_sym_ctx.Clear(false);
     m_sym_ctx_valid = false;
-    uint32_t resolve_scope = eSymbolContextFunction | eSymbolContextSymbol;
+    SymbolContextItem resolve_scope =
+        eSymbolContextFunction | eSymbolContextSymbol;
 
     ModuleSP temporary_module_sp = temporary_pc.GetModule();
     if (temporary_module_sp &&

@@ -6630,6 +6630,10 @@ let CategoryName = "Lambda Issue" in {
   def ext_star_this_lambda_capture_cxx17 : ExtWarn<
     "capture of '*this' by copy is a C++17 extension">, InGroup<CXX17>;
 
+  // C++17 parameter shadows capture
+  def err_parameter_shadow_capture : Error<
+    "a lambda parameter cannot shadow an explicitly captured entity">;
+
   // C++2a [=, this] captures.
   def warn_cxx17_compat_equals_this_lambda_capture : Warning<
     "explicit capture of 'this' with a capture default of '=' is incompatible "

@@ -92,6 +92,10 @@ struct PdbTpiStream {
   std::vector<CodeViewYAML::LeafRecord> Records;
 };
 
+struct PdbPublicsStream {
+  std::vector<CodeViewYAML::SymbolRecord> PubSyms;
+};
+
 struct PdbObject {
   explicit PdbObject(BumpPtrAllocator &Allocator) : Allocator(Allocator) {}
 
@@ -102,6 +106,7 @@ struct PdbObject {
   Optional<PdbDbiStream> DbiStream;
   Optional<PdbTpiStream> TpiStream;
   Optional<PdbTpiStream> IpiStream;
+  Optional<PdbPublicsStream> PublicsStream;
 
   Optional<std::vector<StringRef>> StringTable;
 
@@ -118,6 +123,7 @@ LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::StreamBlockList)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbInfoStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbDbiStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbTpiStream)
+LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbPublicsStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::NamedStreamMapping)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbModiStream)
 LLVM_YAML_DECLARE_MAPPING_TRAITS(pdb::yaml::PdbDbiModuleInfo)

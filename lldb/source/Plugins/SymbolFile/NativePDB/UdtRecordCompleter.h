@@ -40,7 +40,7 @@ class UdtRecordCompleter : public llvm::codeview::TypeVisitorCallbacks {
   CompilerType &m_derived_ct;
   clang::TagDecl &m_tag_decl;
   SymbolFileNativePDB &m_symbol_file;
-  std::vector<clang::CXXBaseSpecifier *> m_bases;
+  std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> m_bases;
   ClangASTImporter::LayoutInfo m_layout;
 
 public:

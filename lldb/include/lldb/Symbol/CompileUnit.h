@@ -391,7 +391,7 @@ public:
   //------------------------------------------------------------------
   uint32_t ResolveSymbolContext(const FileSpec &file_spec, uint32_t line,
                                 bool check_inlines, bool exact,
-                                uint32_t resolve_scope,
+                                lldb::SymbolContextItem resolve_scope,
                                 SymbolContextList &sc_list);
 
   //------------------------------------------------------------------

@@ -19,5 +19,5 @@
 type = Library
 name = SystemZAsmParser
 parent = SystemZ
-required_libraries = MC MCParser Support SystemZDesc SystemZInfo
+required_libraries = MC MCParser Support SystemZDesc SystemZInfo SystemZAsmPrinter
 add_to_library_groups = SystemZ

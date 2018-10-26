@@ -34361,7 +34361,7 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget.hasSSE2())
     return SDValue();
 
-  if (Subtarget.getProcFamily() == X86Subtarget::IntelKNL)
+  if (Subtarget.isPMADDWDSlow())
     return SDValue();
 
   EVT VT = N->getValueType(0);

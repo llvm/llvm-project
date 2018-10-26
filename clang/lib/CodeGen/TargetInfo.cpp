@@ -5001,6 +5001,9 @@ public:
   WindowsAArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIInfo::ABIKind K)
       : AArch64TargetCodeGenInfo(CGT, K) {}
 
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &CGM) const override;
+
   void getDependentLibraryOption(llvm::StringRef Lib,
                                  llvm::SmallString<24> &Opt) const override {
     Opt = "/DEFAULTLIB:" + qualifyWindowsLibrary(Lib);
@@ -5011,6 +5014,14 @@ public:
     Opt = "/FAILIFMISMATCH:\"" + Name.str() + "=" + Value.str() + "\"";
   }
 };
+
+void WindowsAArch64TargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM) const {
+  AArch64TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
+  if (GV->isDeclaration())
+    return;
+  addStackProbeTargetAttributes(D, GV, CGM);
+}
 }
 
 ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty) const {

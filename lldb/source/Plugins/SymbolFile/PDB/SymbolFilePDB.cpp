@@ -684,7 +684,7 @@ void SymbolFilePDB::ParseDeclsForContext(
 
 uint32_t
 SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
-                                    uint32_t resolve_scope,
+                                    SymbolContextItem resolve_scope,
                                     lldb_private::SymbolContext &sc) {
   uint32_t resolved_flags = 0;
   if (resolve_scope & eSymbolContextCompUnit ||
@@ -744,7 +744,7 @@ SymbolFilePDB::ResolveSymbolContext(const lldb_private::Address &so_addr,
 
 uint32_t SymbolFilePDB::ResolveSymbolContext(
     const lldb_private::FileSpec &file_spec, uint32_t line, bool check_inlines,
-    uint32_t resolve_scope, lldb_private::SymbolContextList &sc_list) {
+    SymbolContextItem resolve_scope, lldb_private::SymbolContextList &sc_list) {
   const size_t old_size = sc_list.GetSize();
   if (resolve_scope & lldb::eSymbolContextCompUnit) {
     // Locate all compilation units with line numbers referencing the specified
@@ -1252,7 +1252,7 @@ void SymbolFilePDB::CacheFunctionNames() {
 uint32_t SymbolFilePDB::FindFunctions(
     const lldb_private::ConstString &name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx,
-    uint32_t name_type_mask, bool include_inlines, bool append,
+    FunctionNameType name_type_mask, bool include_inlines, bool append,
     lldb_private::SymbolContextList &sc_list) {
   if (!append)
     sc_list.Clear();
@@ -1524,7 +1524,7 @@ void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
 }
 
 size_t SymbolFilePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
-                               uint32_t type_mask,
+                               TypeClass type_mask,
                                lldb_private::TypeList &type_list) {
   TypeCollection type_collection;
   uint32_t old_size = type_list.GetSize();

@@ -1082,9 +1082,15 @@ public:
     return false;
   }
 
-  /// Identify whether this taret supports multiversioning of functions,
+  /// Identify whether this target supports multiversioning of functions,
   /// which requires support for cpu_supports and cpu_is functionality.
-  virtual bool supportsMultiVersioning() const { return false; }
+  bool supportsMultiVersioning() const {
+    return getTriple().getArch() == llvm::Triple::x86 ||
+           getTriple().getArch() == llvm::Triple::x86_64;
+  }
+
+  /// Identify whether this target supports IFuncs.
+  bool supportsIFunc() const { return getTriple().isOSBinFormatELF(); }
 
   // Validate the contents of the __builtin_cpu_supports(const char*)
   // argument.

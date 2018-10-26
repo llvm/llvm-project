@@ -209,7 +209,7 @@ INTERCEPTOR(struct fake_mallinfo, mallinfo, void) {
 }
 
 INTERCEPTOR(int, mallopt, int cmd, int value) {
-  return -1;
+  return 0;
 }
 #endif // SANITIZER_INTERCEPT_MALLOPT_AND_MALLINFO
 

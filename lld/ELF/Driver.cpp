@@ -279,13 +279,13 @@ static void checkOptions(opt::InputArgList &Args) {
   // The MIPS ABI as of 2016 does not support the GNU-style symbol lookup
   // table which is a relatively new feature.
   if (Config->EMachine == EM_MIPS && Config->GnuHash)
-    error("the .gnu.hash section is not compatible with the MIPS target.");
+    error("the .gnu.hash section is not compatible with the MIPS target");
 
   if (Config->FixCortexA53Errata843419 && Config->EMachine != EM_AARCH64)
-    error("--fix-cortex-a53-843419 is only supported on AArch64 targets.");
+    error("--fix-cortex-a53-843419 is only supported on AArch64 targets");
 
   if (Config->TocOptimize && Config->EMachine != EM_PPC64)
-      error("--toc-optimize is only supported on the PowerPC64 target.");
+    error("--toc-optimize is only supported on the PowerPC64 target");
 
   if (Config->Pie && Config->Shared)
     error("-shared and -pie may not be used together");
@@ -690,22 +690,6 @@ template <class ELFT> static void readCallGraphsFromObjectFiles() {
         continue;
       auto *FromSec = dyn_cast_or_null<InputSectionBase>(FromSym->Section);
       auto *ToSec = dyn_cast_or_null<InputSectionBase>(ToSym->Section);
-
-      // The profile from .llvm.call-graph-profile is conceptually affiliated to
-      // FromSec. Don't warn unorderable symbol if FromSym is not absolute
-      // (FromSec isn't null) and the section is discarded
-      // (!FromSec->Repl->Live).
-      //
-      // We also don't want to warn when ToSym is undefined or is in a shared
-      // object (as symbols in shared objects are fixed and unorderable).
-      //
-      // The check used here is more relaxed (no warning if either FromSym or
-      // ToSym is not Defined) for simplicity and there is no compelling reason
-      // to warn on more cases.
-      if (!FromSec || FromSec->Repl->Live) {
-        warnUnorderableSymbol(FromSym);
-        warnUnorderableSymbol(ToSym);
-      }
       if (FromSec && ToSec)
         Config->CallGraphProfile[{FromSec, ToSec}] += CGPE.cgp_weight;
     }
@@ -786,6 +770,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->EhFrameHdr =
       Args.hasFlag(OPT_eh_frame_hdr, OPT_no_eh_frame_hdr, false);
   Config->EmitRelocs = Args.hasArg(OPT_emit_relocs);
+  Config->CallGraphProfileSort = Args.hasFlag(
+      OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
   Config->EnableNewDtags =
       Args.hasFlag(OPT_enable_new_dtags, OPT_disable_new_dtags, true);
   Config->Entry = Args.getLastArgValue(OPT_entry);
@@ -1617,7 +1603,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     // supports them.
     if (Config->ARMHasBlx == false)
       warn("lld uses blx instruction, no object with architecture supporting "
-           "feature detected.");
+           "feature detected");
   }
 
   // This adds a .comment section containing a version string. We have to add it
@@ -1637,10 +1623,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   }
 
   // Read the callgraph now that we know what was gced or icfed
-  if (auto *Arg = Args.getLastArg(OPT_call_graph_ordering_file))
-    if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
-      readCallGraph(*Buffer);
-  readCallGraphsFromObjectFiles<ELFT>();
+  if (Config->CallGraphProfileSort) {
+    if (auto *Arg = Args.getLastArg(OPT_call_graph_ordering_file))
+      if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
+        readCallGraph(*Buffer);
+    readCallGraphsFromObjectFiles<ELFT>();
+  }
 
   // Write the result to the file.
   writeResult<ELFT>();

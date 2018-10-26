@@ -192,6 +192,7 @@ extern llvm::cl::opt<bool> PdbStream;
 extern llvm::cl::opt<bool> DbiStream;
 extern llvm::cl::opt<bool> TpiStream;
 extern llvm::cl::opt<bool> IpiStream;
+extern llvm::cl::opt<bool> PublicsStream;
 extern llvm::cl::list<std::string> InputFilename;
 extern llvm::cl::opt<bool> DumpModules;
 extern llvm::cl::opt<bool> DumpModuleFiles;

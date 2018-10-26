@@ -28,7 +28,8 @@ void OptionValueLanguage::DumpValue(const ExecutionContext *exe_ctx,
   if (dump_mask & eDumpOptionValue) {
     if (dump_mask & eDumpOptionType)
       strm.PutCString(" = ");
-    strm.PutCString(Language::GetNameForLanguageType(m_current_value));
+    if (m_current_value != eLanguageTypeUnknown)
+      strm.PutCString(Language::GetNameForLanguageType(m_current_value));
   }
 }
 

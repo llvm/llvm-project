@@ -858,7 +858,7 @@ def Constructor : InheritableAttr {
 }
 
 def CPUSpecific : InheritableAttr {
-  let Spellings = [Clang<"cpu_specific">];
+  let Spellings = [Clang<"cpu_specific">, Declspec<"cpu_specific">];
   let Args = [VariadicIdentifierArgument<"Cpus">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [CPUSpecificCPUDispatchDocs];
@@ -872,7 +872,7 @@ def CPUSpecific : InheritableAttr {
 }
 
 def CPUDispatch : InheritableAttr {
-  let Spellings = [Clang<"cpu_dispatch">];
+  let Spellings = [Clang<"cpu_dispatch">, Declspec<"cpu_dispatch">];
   let Args = [VariadicIdentifierArgument<"Cpus">];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [CPUSpecificCPUDispatchDocs];

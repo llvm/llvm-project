@@ -8239,39 +8239,37 @@ void ClangASTContext::AddMethodOverridesForCXXRecordType(
 
 #pragma mark C++ Base Classes
 
-clang::CXXBaseSpecifier *
+std::unique_ptr<clang::CXXBaseSpecifier>
 ClangASTContext::CreateBaseClassSpecifier(lldb::opaque_compiler_type_t type,
                                           AccessType access, bool is_virtual,
                                           bool base_of_class) {
-  if (type)
-    return new clang::CXXBaseSpecifier(
-        clang::SourceRange(), is_virtual, base_of_class,
-        ClangASTContext::ConvertAccessTypeToAccessSpecifier(access),
-        getASTContext()->getTrivialTypeSourceInfo(GetQualType(type)),
-        clang::SourceLocation());
-  return nullptr;
+  if (!type)
+    return nullptr;
+
+  return llvm::make_unique<clang::CXXBaseSpecifier>(
+      clang::SourceRange(), is_virtual, base_of_class,
+      ClangASTContext::ConvertAccessTypeToAccessSpecifier(access),
+      getASTContext()->getTrivialTypeSourceInfo(GetQualType(type)),
+      clang::SourceLocation());
 }
 
-void ClangASTContext::DeleteBaseClassSpecifiers(
-    clang::CXXBaseSpecifier **base_classes, unsigned num_base_classes) {
-  for (unsigned i = 0; i < num_base_classes; ++i) {
-    delete base_classes[i];
-    base_classes[i] = nullptr;
-  }
-}
-
-bool ClangASTContext::SetBaseClassesForClassType(
+bool ClangASTContext::TransferBaseClasses(
     lldb::opaque_compiler_type_t type,
-    clang::CXXBaseSpecifier const *const *base_classes,
-    unsigned num_base_classes) {
-  if (type) {
-    clang::CXXRecordDecl *cxx_record_decl = GetAsCXXRecordDecl(type);
-    if (cxx_record_decl) {
-      cxx_record_decl->setBases(base_classes, num_base_classes);
-      return true;
-    }
-  }
-  return false;
+    std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases) {
+  if (!type)
+    return false;
+  clang::CXXRecordDecl *cxx_record_decl = GetAsCXXRecordDecl(type);
+  if (!cxx_record_decl)
+    return false;
+  std::vector<clang::CXXBaseSpecifier *> raw_bases;
+  raw_bases.reserve(bases.size());
+
+  // Clang will make a copy of them, so it's ok that we pass pointers that we're
+  // about to destroy.
+  for (auto &b : bases)
+    raw_bases.push_back(b.get());
+  cxx_record_decl->setBases(raw_bases.data(), raw_bases.size());
+  return true;
 }
 
 bool ClangASTContext::SetObjCSuperClass(

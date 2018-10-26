@@ -502,3 +502,7 @@ D: Advanced SIMD (NEON) support in the ARM backend.
 N: QingShan Zhang
 E: qshanz@cn.ibm.com
 D: PowerPC Backend Developer
+
+N: Li Jia He
+E: hljhehlj@cn.ibm.com
+D: PowerPC Backend Developer

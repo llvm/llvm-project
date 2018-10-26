@@ -51,7 +51,7 @@ raw_ostream &LegalityQuery::print(raw_ostream &OS) const {
 
   OS << Opcode << ", MMOs={";
   for (const auto &MMODescr : MMODescrs) {
-    OS << MMODescr.Size << ", ";
+    OS << MMODescr.SizeInBits << ", ";
   }
   OS << "}";
 

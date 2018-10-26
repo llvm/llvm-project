@@ -1962,10 +1962,13 @@ void DwarfDebug::emitDebugLocDWO() {
   for (const auto &List : DebugLocs.getLists()) {
     Asm->OutStreamer->EmitLabel(List.Label);
     for (const auto &Entry : DebugLocs.getEntries(List)) {
-      // Just always use start_length for now - at least that's one address
-      // rather than two. We could get fancier and try to, say, reuse an
-      // address we know we've emitted elsewhere (the start of the function?
-      // The start of the CU or CU subrange that encloses this range?)
+      // GDB only supports startx_length in pre-standard split-DWARF.
+      // (in v5 standard loclists, it currently* /only/ supports base_address +
+      // offset_pair, so the implementations can't really share much since they
+      // need to use different representations)
+      // * as of October 2018, at least
+      // Ideally/in v5, this could use SectionLabels to reuse existing addresses
+      // in the address pool to minimize object size/relocations.
       Asm->emitInt8(dwarf::DW_LLE_startx_length);
       unsigned idx = AddrPool.getIndex(Entry.BeginSym);
       Asm->EmitULEB128(idx);

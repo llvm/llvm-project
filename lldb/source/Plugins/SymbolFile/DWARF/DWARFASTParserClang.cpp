@@ -2184,14 +2184,14 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
         }
 
         SymbolContext sc(die.GetLLDBCompileUnit());
-        std::vector<clang::CXXBaseSpecifier *> base_classes;
+        std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases;
         std::vector<int> member_accessibilities;
         bool is_a_class = false;
         // Parse members and base classes first
         DWARFDIECollection member_function_dies;
 
         DelayedPropertyList delayed_properties;
-        ParseChildMembers(sc, die, clang_type, class_language, base_classes,
+        ParseChildMembers(sc, die, clang_type, class_language, bases,
                           member_accessibilities, member_function_dies,
                           delayed_properties, default_accessibility, is_a_class,
                           layout_info);
@@ -2255,11 +2255,11 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
               &member_accessibilities.front(), member_accessibilities.size());
         }
 
-        if (!base_classes.empty()) {
+        if (!bases.empty()) {
           // Make sure all base classes refer to complete types and not forward
           // declarations. If we don't do this, clang will crash with an
-          // assertion in the call to clang_type.SetBaseClassesForClassType()
-          for (auto &base_class : base_classes) {
+          // assertion in the call to clang_type.TransferBaseClasses()
+          for (const auto &base_class : bases) {
             clang::TypeSourceInfo *type_source_info =
                 base_class->getTypeSourceInfo();
             if (type_source_info) {
@@ -2278,7 +2278,7 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
                 // We have no choice other than to pretend that the base class
                 // is complete. If we don't do this, clang will crash when we
                 // call setBases() inside of
-                // "clang_type.SetBaseClassesForClassType()" below. Since we
+                // "clang_type.TransferBaseClasses()" below. Since we
                 // provide layout assistance, all ivars in this class and other
                 // classes will be fine, this is the best we can do short of
                 // crashing.
@@ -2290,14 +2290,9 @@ bool DWARFASTParserClang::CompleteTypeFromDWARF(const DWARFDIE &die,
               }
             }
           }
-          m_ast.SetBaseClassesForClassType(clang_type.GetOpaqueQualType(),
-                                           &base_classes.front(),
-                                           base_classes.size());
 
-          // Clang will copy each CXXBaseSpecifier in "base_classes" so we have
-          // to free them all.
-          ClangASTContext::DeleteBaseClassSpecifiers(&base_classes.front(),
-                                                     base_classes.size());
+          m_ast.TransferBaseClasses(clang_type.GetOpaqueQualType(),
+                                    std::move(bases));
         }
       }
     }
@@ -2675,7 +2670,7 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(const SymbolContext &sc,
 bool DWARFASTParserClang::ParseChildMembers(
     const SymbolContext &sc, const DWARFDIE &parent_die,
     CompilerType &class_clang_type, const LanguageType class_language,
-    std::vector<clang::CXXBaseSpecifier *> &base_classes,
+    std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     std::vector<int> &member_accessibilities,
     DWARFDIECollection &member_function_dies,
     DelayedPropertyList &delayed_properties, AccessType &default_accessibility,
@@ -3271,9 +3266,14 @@ bool DWARFASTParserClang::ParseChildMembers(
         if (class_language == eLanguageTypeObjC) {
           ast->SetObjCSuperClass(class_clang_type, base_class_clang_type);
         } else {
-          base_classes.push_back(ast->CreateBaseClassSpecifier(
-              base_class_clang_type.GetOpaqueQualType(), accessibility,
-              is_virtual, is_base_of_class));
+          std::unique_ptr<clang::CXXBaseSpecifier> result =
+              ast->CreateBaseClassSpecifier(
+                  base_class_clang_type.GetOpaqueQualType(), accessibility,
+                  is_virtual, is_base_of_class);
+          if (!result)
+            break;
+
+          base_classes.push_back(std::move(result));
 
           if (is_virtual) {
             // Do not specify any offset for virtual inheritance. The DWARF

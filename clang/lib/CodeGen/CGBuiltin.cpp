@@ -4368,6 +4368,14 @@ static const NeonIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP0(vextq_v),
   NEONMAP0(vfma_v),
   NEONMAP0(vfmaq_v),
+  NEONMAP1(vfmlal_high_v, aarch64_neon_fmlal2, 0),
+  NEONMAP1(vfmlal_low_v, aarch64_neon_fmlal, 0),
+  NEONMAP1(vfmlalq_high_v, aarch64_neon_fmlal2, 0),
+  NEONMAP1(vfmlalq_low_v, aarch64_neon_fmlal, 0),
+  NEONMAP1(vfmlsl_high_v, aarch64_neon_fmlsl2, 0),
+  NEONMAP1(vfmlsl_low_v, aarch64_neon_fmlsl, 0),
+  NEONMAP1(vfmlslq_high_v, aarch64_neon_fmlsl2, 0),
+  NEONMAP1(vfmlslq_low_v, aarch64_neon_fmlsl, 0),
   NEONMAP2(vhadd_v, aarch64_neon_uhadd, aarch64_neon_shadd, Add1ArgType | UnsignedAlts),
   NEONMAP2(vhaddq_v, aarch64_neon_uhadd, aarch64_neon_shadd, Add1ArgType | UnsignedAlts),
   NEONMAP2(vhsub_v, aarch64_neon_uhsub, aarch64_neon_shsub, Add1ArgType | UnsignedAlts),
@@ -5340,6 +5348,34 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     llvm::Type *Tys[2] = { Ty, InputTy };
     Int = Usgn ? LLVMIntrinsic : AltLLVMIntrinsic;
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vdot");
+  }
+  case NEON::BI__builtin_neon_vfmlal_low_v:
+  case NEON::BI__builtin_neon_vfmlalq_low_v: {
+    llvm::Type *InputTy =
+        llvm::VectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vfmlal_low");
+  }
+  case NEON::BI__builtin_neon_vfmlsl_low_v:
+  case NEON::BI__builtin_neon_vfmlslq_low_v: {
+    llvm::Type *InputTy =
+        llvm::VectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vfmlsl_low");
+  }
+  case NEON::BI__builtin_neon_vfmlal_high_v:
+  case NEON::BI__builtin_neon_vfmlalq_high_v: {
+    llvm::Type *InputTy =
+           llvm::VectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vfmlal_high");
+  }
+  case NEON::BI__builtin_neon_vfmlsl_high_v:
+  case NEON::BI__builtin_neon_vfmlslq_high_v: {
+    llvm::Type *InputTy =
+           llvm::VectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vfmlsl_high");
   }
   }
 
@@ -12544,6 +12580,26 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
                                      {ResT, Src->getType()});
     return Builder.CreateCall(Callee, {Src});
   }
+  case WebAssembly::BI__builtin_wasm_min_f32:
+  case WebAssembly::BI__builtin_wasm_min_f64:
+  case WebAssembly::BI__builtin_wasm_min_f32x4:
+  case WebAssembly::BI__builtin_wasm_min_f64x2: {
+    Value *LHS = EmitScalarExpr(E->getArg(0));
+    Value *RHS = EmitScalarExpr(E->getArg(1));
+    Value *Callee = CGM.getIntrinsic(Intrinsic::minimum,
+                                     ConvertType(E->getType()));
+    return Builder.CreateCall(Callee, {LHS, RHS});
+  }
+  case WebAssembly::BI__builtin_wasm_max_f32:
+  case WebAssembly::BI__builtin_wasm_max_f64:
+  case WebAssembly::BI__builtin_wasm_max_f32x4:
+  case WebAssembly::BI__builtin_wasm_max_f64x2: {
+    Value *LHS = EmitScalarExpr(E->getArg(0));
+    Value *RHS = EmitScalarExpr(E->getArg(1));
+    Value *Callee = CGM.getIntrinsic(Intrinsic::maximum,
+                                     ConvertType(E->getType()));
+    return Builder.CreateCall(Callee, {LHS, RHS});
+  }
   case WebAssembly::BI__builtin_wasm_extract_lane_s_i8x16:
   case WebAssembly::BI__builtin_wasm_extract_lane_u_i8x16:
   case WebAssembly::BI__builtin_wasm_extract_lane_s_i16x8:
@@ -12614,11 +12670,11 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     switch (BuiltinID) {
     case WebAssembly::BI__builtin_wasm_add_saturate_s_i8x16:
     case WebAssembly::BI__builtin_wasm_add_saturate_s_i16x8:
-      IntNo = Intrinsic::wasm_add_saturate_signed;
+      IntNo = Intrinsic::sadd_sat;
       break;
     case WebAssembly::BI__builtin_wasm_add_saturate_u_i8x16:
     case WebAssembly::BI__builtin_wasm_add_saturate_u_i16x8:
-      IntNo = Intrinsic::wasm_add_saturate_unsigned;
+      IntNo = Intrinsic::uadd_sat;
       break;
     case WebAssembly::BI__builtin_wasm_sub_saturate_s_i8x16:
     case WebAssembly::BI__builtin_wasm_sub_saturate_s_i16x8:
@@ -12635,6 +12691,14 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Value *RHS = EmitScalarExpr(E->getArg(1));
     Value *Callee = CGM.getIntrinsic(IntNo, ConvertType(E->getType()));
     return Builder.CreateCall(Callee, {LHS, RHS});
+  }
+  case WebAssembly::BI__builtin_wasm_bitselect: {
+    Value *V1 = EmitScalarExpr(E->getArg(0));
+    Value *V2 = EmitScalarExpr(E->getArg(1));
+    Value *C = EmitScalarExpr(E->getArg(2));
+    Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_bitselect,
+                                     ConvertType(E->getType()));
+    return Builder.CreateCall(Callee, {V1, V2, C});
   }
   case WebAssembly::BI__builtin_wasm_any_true_i8x16:
   case WebAssembly::BI__builtin_wasm_any_true_i16x8:
