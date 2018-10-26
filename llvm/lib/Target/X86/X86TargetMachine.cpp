@@ -295,13 +295,14 @@ X86TargetMachine::getSubtargetImpl(const Function &F) const {
     }
   }
 
-  // Extract required-vector-width attribute.
+  // Extract min-legal-vector-width attribute.
   unsigned RequiredVectorWidth = UINT32_MAX;
-  if (F.hasFnAttribute("required-vector-width")) {
-    StringRef Val = F.getFnAttribute("required-vector-width").getValueAsString();
+  if (F.hasFnAttribute("min-legal-vector-width")) {
+    StringRef Val =
+        F.getFnAttribute("min-legal-vector-width").getValueAsString();
     unsigned Width;
     if (!Val.getAsInteger(0, Width)) {
-      Key += ",required-vector-width=";
+      Key += ",min-legal-vector-width=";
       Key += Val;
       RequiredVectorWidth = Width;
     }

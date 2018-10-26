@@ -10,6 +10,36 @@
 #ifndef LLDB_lldb_enumerations_h_
 #define LLDB_lldb_enumerations_h_
 
+#include <type_traits>
+
+// Macro to enable bitmask operations on an enum.  Without this, Enum | Enum
+// gets promoted to an int, so you have to say Enum a = Enum(eFoo | eBar).  If
+// you mark Enum with LLDB_MARK_AS_BITMASK_ENUM(Enum), however, you can simply
+// write Enum a = eFoo | eBar.
+#define LLDB_MARK_AS_BITMASK_ENUM(Enum)                                        \
+  inline Enum operator|(Enum a, Enum b) {                                      \
+    return static_cast<Enum>(                                                  \
+        static_cast<std::underlying_type<Enum>::type>(a) |                     \
+        static_cast<std::underlying_type<Enum>::type>(b));                     \
+  }                                                                            \
+  inline Enum operator&(Enum a, Enum b) {                                      \
+    return static_cast<Enum>(                                                  \
+        static_cast<std::underlying_type<Enum>::type>(a) &                     \
+        static_cast<std::underlying_type<Enum>::type>(b));                     \
+  }                                                                            \
+  inline Enum operator~(Enum a) {                                              \
+    return static_cast<Enum>(                                                  \
+        ~static_cast<std::underlying_type<Enum>::type>(a));                    \
+  }                                                                            \
+  inline Enum &operator|=(Enum &a, Enum b) {                                   \
+    a = a | b;                                                                 \
+    return a;                                                                  \
+  }                                                                            \
+  inline Enum &operator&=(Enum &a, Enum b) {                                   \
+    a = a & b;                                                                 \
+    return a;                                                                  \
+  }
+
 #ifndef SWIG
 // With MSVC, the default type of an enum is always signed, even if one of the
 // enumerator values is too large to fit into a signed integer but would
@@ -327,39 +357,40 @@ enum InputReaderGranularity {
 //------------------------------------------------------------------
 FLAGS_ENUM(SymbolContextItem){
     eSymbolContextTarget = (1u << 0), ///< Set when \a target is requested from
-                                      ///a query, or was located in query
-                                      ///results
+                                      /// a query, or was located in query
+                                      /// results
     eSymbolContextModule = (1u << 1), ///< Set when \a module is requested from
-                                      ///a query, or was located in query
-                                      ///results
+                                      /// a query, or was located in query
+                                      /// results
     eSymbolContextCompUnit = (1u << 2), ///< Set when \a comp_unit is requested
-                                        ///from a query, or was located in query
-                                        ///results
+                                        /// from a query, or was located in
+                                        /// query results
     eSymbolContextFunction = (1u << 3), ///< Set when \a function is requested
-                                        ///from a query, or was located in query
-                                        ///results
+                                        /// from a query, or was located in
+                                        /// query results
     eSymbolContextBlock = (1u << 4),    ///< Set when the deepest \a block is
-                                     ///requested from a query, or was located
-                                     ///in query results
+                                     /// requested from a query, or was located
+                                     /// in query results
     eSymbolContextLineEntry = (1u << 5), ///< Set when \a line_entry is
-                                         ///requested from a query, or was
-                                         ///located in query results
+                                         /// requested from a query, or was
+                                         /// located in query results
     eSymbolContextSymbol = (1u << 6), ///< Set when \a symbol is requested from
-                                      ///a query, or was located in query
-                                      ///results
+                                      /// a query, or was located in query
+                                      /// results
     eSymbolContextEverything = ((eSymbolContextSymbol << 1) -
                                 1u), ///< Indicates to try and lookup everything
-                                     ///up during a routine symbol context
-                                     ///query.
-    eSymbolContextVariable = (1u << 7) ///< Set when \a global or static
-                                       ///variable is requested from a query, or
-                                       ///was located in query results.
+                                     /// up during a routine symbol context
+                                     /// query.
+    eSymbolContextVariable = (1u << 7), ///< Set when \a global or static
+                                        /// variable is requested from a query,
+                                        /// or was located in query results.
     ///< eSymbolContextVariable is potentially expensive to lookup so it isn't
-    ///included in
+    /// included in
     ///< eSymbolContextEverything which stops it from being used during frame PC
-    ///lookups and
+    /// lookups and
     ///< many other potential address to symbol context lookups.
 };
+LLDB_MARK_AS_BITMASK_ENUM(SymbolContextItem)
 
 FLAGS_ENUM(Permissions){ePermissionsWritable = (1u << 0),
                         ePermissionsReadable = (1u << 1),
@@ -704,6 +735,7 @@ FLAGS_ENUM(FunctionNameType){
     eFunctionNameTypeAny =
         eFunctionNameTypeAuto // DEPRECATED: use eFunctionNameTypeAuto
 };
+LLDB_MARK_AS_BITMASK_ENUM(FunctionNameType)
 
 //----------------------------------------------------------------------
 // Basic types enumeration for the public API SBType::GetBasicType()
@@ -778,6 +810,7 @@ FLAGS_ENUM(TypeClass){
     eTypeClassOther = (1u << 31),
     // Define a mask that can be used for any type when finding types
     eTypeClassAny = (0xffffffffu)};
+LLDB_MARK_AS_BITMASK_ENUM(TypeClass)
 
 enum TemplateArgumentKind {
   eTemplateArgumentKindNull = 0,
@@ -1086,7 +1119,6 @@ enum TypeSummaryCapping {
   eTypeSummaryCapped = true,
   eTypeSummaryUncapped = false
 };
-
 } // namespace lldb
 
 #endif // LLDB_lldb_enumerations_h_

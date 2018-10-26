@@ -661,8 +661,11 @@ MCSymbol *MachineFunction::addLandingPad(MachineBasicBlock *LandingPad) {
       }
     }
 
-  } else if (isa<CatchPadInst>(FirstI)) {
-    // TODO
+  } else if (const auto *CPI = dyn_cast<CatchPadInst>(FirstI)) {
+    for (unsigned I = CPI->getNumArgOperands(); I != 0; --I) {
+      Value *TypeInfo = CPI->getArgOperand(I - 1)->stripPointerCasts();
+      addCatchTypeInfo(LandingPad, dyn_cast<GlobalValue>(TypeInfo));
+    }
 
   } else {
     assert(isa<CleanupPadInst>(FirstI) && "Invalid landingpad!");
@@ -687,7 +690,8 @@ void MachineFunction::addFilterTypeInfo(MachineBasicBlock *LandingPad,
   LP.TypeIds.push_back(getFilterIDFor(IdsInFilter));
 }
 
-void MachineFunction::tidyLandingPads(DenseMap<MCSymbol*, uintptr_t> *LPMap) {
+void MachineFunction::tidyLandingPads(DenseMap<MCSymbol *, uintptr_t> *LPMap,
+                                      bool TidyIfNoBeginLabels) {
   for (unsigned i = 0; i != LandingPads.size(); ) {
     LandingPadInfo &LandingPad = LandingPads[i];
     if (LandingPad.LandingPadLabel &&
@@ -702,24 +706,25 @@ void MachineFunction::tidyLandingPads(DenseMap<MCSymbol*, uintptr_t> *LPMap) {
       continue;
     }
 
-    for (unsigned j = 0, e = LandingPads[i].BeginLabels.size(); j != e; ++j) {
-      MCSymbol *BeginLabel = LandingPad.BeginLabels[j];
-      MCSymbol *EndLabel = LandingPad.EndLabels[j];
-      if ((BeginLabel->isDefined() ||
-           (LPMap && (*LPMap)[BeginLabel] != 0)) &&
-          (EndLabel->isDefined() ||
-           (LPMap && (*LPMap)[EndLabel] != 0))) continue;
+    if (TidyIfNoBeginLabels) {
+      for (unsigned j = 0, e = LandingPads[i].BeginLabels.size(); j != e; ++j) {
+        MCSymbol *BeginLabel = LandingPad.BeginLabels[j];
+        MCSymbol *EndLabel = LandingPad.EndLabels[j];
+        if ((BeginLabel->isDefined() || (LPMap && (*LPMap)[BeginLabel] != 0)) &&
+            (EndLabel->isDefined() || (LPMap && (*LPMap)[EndLabel] != 0)))
+          continue;
 
-      LandingPad.BeginLabels.erase(LandingPad.BeginLabels.begin() + j);
-      LandingPad.EndLabels.erase(LandingPad.EndLabels.begin() + j);
-      --j;
-      --e;
-    }
+        LandingPad.BeginLabels.erase(LandingPad.BeginLabels.begin() + j);
+        LandingPad.EndLabels.erase(LandingPad.EndLabels.begin() + j);
+        --j;
+        --e;
+      }
 
-    // Remove landing pads with no try-ranges.
-    if (LandingPads[i].BeginLabels.empty()) {
-      LandingPads.erase(LandingPads.begin() + i);
-      continue;
+      // Remove landing pads with no try-ranges.
+      if (LandingPads[i].BeginLabels.empty()) {
+        LandingPads.erase(LandingPads.begin() + i);
+        continue;
+      }
     }
 
     // If there is no landing pad, ensure that the list of typeids is empty.

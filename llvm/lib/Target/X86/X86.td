@@ -98,6 +98,9 @@ def FeatureSlowSHLD : SubtargetFeature<"slow-shld", "IsSHLDSlow", "true",
                                        "SHLD instruction is slow">;
 def FeatureSlowPMULLD : SubtargetFeature<"slow-pmulld", "IsPMULLDSlow", "true",
                                         "PMULLD instruction is slow">;
+def FeatureSlowPMADDWD : SubtargetFeature<"slow-pmaddwd", "IsPMADDWDSlow",
+                                          "true",
+                                          "PMADDWD is slower than PMULLD">;
 // FIXME: This should not apply to CPUs that do not have SSE.
 def FeatureSlowUAMem16 : SubtargetFeature<"slow-unaligned-mem-16",
                                 "IsUAMem16Slow", "true",
@@ -460,8 +463,6 @@ def ProcIntelGLP  : SubtargetFeature<"glp", "X86ProcFamily", "IntelGLP",
                     "Intel Goldmont Plus processors">;
 def ProcIntelTRM  : SubtargetFeature<"tremont", "X86ProcFamily", "IntelTRM",
                     "Intel Tremont processors">;
-def ProcIntelKNL  : SubtargetFeature<"knl", "X86ProcFamily",
-                    "IntelKNL", "Intel Knights Landing processors">;
 
 class Proc<string Name, list<SubtargetFeature> Features>
  : ProcessorModel<Name, GenericModel, Features>;
@@ -823,11 +824,7 @@ def KNLFeatures : ProcessorFeatures<[], [
   FeatureXSAVEOPT,
   FeatureLAHFSAHF,
   FeatureSlow3OpsLEA,
-  FeatureFastScalarFSQRT,
-  FeatureFastSHLDRotate,
   FeatureSlowIncDec,
-  FeatureMergeToThreeWayBranch,
-  FeatureMacroFusion,
   FeatureRDRAND,
   FeatureF16C,
   FeatureFSGSBase,
@@ -849,19 +846,19 @@ def KNLFeatures : ProcessorFeatures<[], [
 // FIXME: define KNL model
 class KnightsLandingProc<string Name> : ProcModel<Name, HaswellModel,
                                                   KNLFeatures.Value, [
-  ProcIntelKNL,
   FeatureSlowTwoMemOps,
   FeatureFastPartialYMMorZMMWrite,
-  FeatureHasFastGather
+  FeatureHasFastGather,
+  FeatureSlowPMADDWD
 ]>;
 def : KnightsLandingProc<"knl">;
 
 class KnightsMillProc<string Name> : ProcModel<Name, HaswellModel,
                                                KNLFeatures.Value, [
-  ProcIntelKNL,
   FeatureSlowTwoMemOps,
   FeatureFastPartialYMMorZMMWrite,
   FeatureHasFastGather,
+  FeatureSlowPMADDWD,
   FeatureVPOPCNTDQ
 ]>;
 def : KnightsMillProc<"knm">; // TODO Add AVX5124FMAPS/AVX5124VNNIW features

@@ -46,6 +46,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <cfloat>
 TEST_MACROS();
+#include <charconv>
+TEST_MACROS();
 #include <chrono>
 TEST_MACROS();
 #include <cinttypes>

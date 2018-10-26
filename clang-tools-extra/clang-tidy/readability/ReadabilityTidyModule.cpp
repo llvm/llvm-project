@@ -38,7 +38,6 @@
 #include "StaticDefinitionInAnonymousNamespaceCheck.h"
 #include "StringCompareCheck.h"
 #include "UniqueptrDeleteReleaseCheck.h"
-#include "UppercaseLiteralSuffixCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -103,8 +102,6 @@ public:
         "readability-simplify-boolean-expr");
     CheckFactories.registerCheck<UniqueptrDeleteReleaseCheck>(
         "readability-uniqueptr-delete-release");
-    CheckFactories.registerCheck<UppercaseLiteralSuffixCheck>(
-        "readability-uppercase-literal-suffix");
   }
 };
 

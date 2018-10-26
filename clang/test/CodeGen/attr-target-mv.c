@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 -triple x86_64-windows-pc -emit-llvm %s -o - | FileCheck %s --check-prefix=WINDOWS
+
 int __attribute__((target("sse4.2"))) foo(void) { return 0; }
 int __attribute__((target("arch=sandybridge"))) foo(void);
 int __attribute__((target("arch=ivybridge"))) foo(void) {return 1;}
@@ -25,82 +27,155 @@ void bar3() {
 inline __attribute__((target("default"))) void foo_decls(void) {}
 inline __attribute__((target("sse4.2"))) void foo_decls(void) {}
 
-inline __attribute__((target("default"))) void foo_multi(void) {}
-inline __attribute__((target("avx,sse4.2"))) void foo_multi(void) {}
-inline __attribute__((target("sse4.2,fma4"))) void foo_multi(void) {}
-inline __attribute__((target("arch=ivybridge,fma4,sse4.2"))) void foo_multi(void) {}
+inline __attribute__((target("default"))) void foo_multi(int i, double d) {}
+inline __attribute__((target("avx,sse4.2"))) void foo_multi(int i, double d) {}
+inline __attribute__((target("sse4.2,fma4"))) void foo_multi(int i, double d) {}
+inline __attribute__((target("arch=ivybridge,fma4,sse4.2"))) void foo_multi(int i, double d) {}
 void bar4() {
-  foo_multi();
+  foo_multi(1, 5.0);
 }
 
-// CHECK: @foo.ifunc = ifunc i32 (), i32 ()* ()* @foo.resolver
-// CHECK: @foo_inline.ifunc = ifunc i32 (), i32 ()* ()* @foo_inline.resolver
-// CHECK: @foo_decls.ifunc = ifunc void (), void ()* ()* @foo_decls.resolver
+// LINUX: @foo.ifunc = ifunc i32 (), i32 ()* ()* @foo.resolver
+// LINUX: @foo_inline.ifunc = ifunc i32 (), i32 ()* ()* @foo_inline.resolver
+// LINUX: @foo_decls.ifunc = ifunc void (), void ()* ()* @foo_decls.resolver
+// LINUX: @foo_multi.ifunc = ifunc void (i32, double), void (i32, double)* ()* @foo_multi.resolver
 
-// CHECK: define i32 @foo.sse4.2()
-// CHECK: ret i32 0
-// CHECK: define i32 @foo.arch_ivybridge()
-// CHECK: ret i32 1
-// CHECK: define i32 @foo()
-// CHECK: ret i32 2
-// CHECK: define i32 @bar()
-// CHECK: call i32 @foo.ifunc()
+// LINUX: define i32 @foo.sse4.2()
+// LINUX: ret i32 0
+// LINUX: define i32 @foo.arch_ivybridge()
+// LINUX: ret i32 1
+// LINUX: define i32 @foo()
+// LINUX: ret i32 2
+// LINUX: define i32 @bar()
+// LINUX: call i32 @foo.ifunc()
 
-// CHECK: define i32 ()* @foo.resolver() comdat
-// CHECK: call void @__cpu_indicator_init()
-// CHECK: ret i32 ()* @foo.arch_sandybridge
-// CHECK: ret i32 ()* @foo.arch_ivybridge
-// CHECK: ret i32 ()* @foo.sse4.2
-// CHECK: ret i32 ()* @foo
+// WINDOWS: define dso_local i32 @foo.sse4.2()
+// WINDOWS: ret i32 0
+// WINDOWS: define dso_local i32 @foo.arch_ivybridge()
+// WINDOWS: ret i32 1
+// WINDOWS: define dso_local i32 @foo()
+// WINDOWS: ret i32 2
+// WINDOWS: define dso_local i32 @bar()
+// WINDOWS: call i32 @foo.resolver()
 
-// CHECK: define i32 @bar2()
-// CHECK: call i32 @foo_inline.ifunc()
+// LINUX: define i32 ()* @foo.resolver() comdat
+// LINUX: call void @__cpu_indicator_init()
+// LINUX: ret i32 ()* @foo.arch_sandybridge
+// LINUX: ret i32 ()* @foo.arch_ivybridge
+// LINUX: ret i32 ()* @foo.sse4.2
+// LINUX: ret i32 ()* @foo
 
-// CHECK: define i32 ()* @foo_inline.resolver() comdat
-// CHECK: call void @__cpu_indicator_init()
-// CHECK: ret i32 ()* @foo_inline.arch_sandybridge
-// CHECK: ret i32 ()* @foo_inline.arch_ivybridge
-// CHECK: ret i32 ()* @foo_inline.sse4.2
-// CHECK: ret i32 ()* @foo_inline
+// WINDOWS: define dso_local i32 @foo.resolver() comdat
+// WINDOWS: call void @__cpu_indicator_init()
+// WINDOWS: call i32 @foo.arch_sandybridge
+// WINDOWS: call i32 @foo.arch_ivybridge
+// WINDOWS: call i32 @foo.sse4.2
+// WINDOWS: call i32 @foo
 
-// CHECK: define void @bar3()
-// CHECK: call void @foo_decls.ifunc()
+// LINUX: define i32 @bar2()
+// LINUX: call i32 @foo_inline.ifunc()
 
-// CHECK: define void ()* @foo_decls.resolver() comdat
-// CHECK: ret void ()* @foo_decls.sse4.2
-// CHECK: ret void ()* @foo_decls
+// WINDOWS: define dso_local i32 @bar2()
+// WINDOWS: call i32 @foo_inline.resolver()
 
-// CHECK: define void @bar4()
-// CHECK: call void @foo_multi.ifunc()
+// LINUX: define i32 ()* @foo_inline.resolver() comdat
+// LINUX: call void @__cpu_indicator_init()
+// LINUX: ret i32 ()* @foo_inline.arch_sandybridge
+// LINUX: ret i32 ()* @foo_inline.arch_ivybridge
+// LINUX: ret i32 ()* @foo_inline.sse4.2
+// LINUX: ret i32 ()* @foo_inline
 
-// CHECK: define void ()* @foo_multi.resolver() comdat
-// CHECK: and i32 %{{.*}}, 4352
-// CHECK: icmp eq i32 %{{.*}}, 4352
-// CHECK: ret void ()* @foo_multi.fma4_sse4.2
-// CHECK: icmp eq i32 %{{.*}}, 12
-// CHECK: and i32 %{{.*}}, 4352
-// CHECK: icmp eq i32 %{{.*}}, 4352
-// CHECK: ret void ()* @foo_multi.arch_ivybridge_fma4_sse4.2
-// CHECK: and i32 %{{.*}}, 768
-// CHECK: icmp eq i32 %{{.*}}, 768
-// CHECK: ret void ()* @foo_multi.avx_sse4.2
-// CHECK: ret void ()* @foo_multi
+// WINDOWS: define dso_local i32 @foo_inline.resolver() comdat
+// WINDOWS: call void @__cpu_indicator_init()
+// WINDOWS: call i32 @foo_inline.arch_sandybridge
+// WINDOWS: call i32 @foo_inline.arch_ivybridge
+// WINDOWS: call i32 @foo_inline.sse4.2
+// WINDOWS: call i32 @foo_inline
 
-// CHECK: declare i32 @foo.arch_sandybridge()
+// LINUX: define void @bar3()
+// LINUX: call void @foo_decls.ifunc()
 
-// CHECK: define linkonce i32 @foo_inline.sse4.2()
-// CHECK: ret i32 0
+// WINDOWS: define dso_local void @bar3()
+// WINDOWS: call void @foo_decls.resolver()
 
-// CHECK: declare i32 @foo_inline.arch_sandybridge()
-//
-// CHECK: define linkonce i32 @foo_inline.arch_ivybridge()
-// CHECK: ret i32 1
-// CHECK: define linkonce i32 @foo_inline()
-// CHECK: ret i32 2
+// LINUX: define void ()* @foo_decls.resolver() comdat
+// LINUX: ret void ()* @foo_decls.sse4.2
+// LINUX: ret void ()* @foo_decls
 
-// CHECK: define linkonce void @foo_decls()
-// CHECK: define linkonce void @foo_decls.sse4.2()
+// WINDOWS: define dso_local void @foo_decls.resolver() comdat
+// WINDOWS: call void @foo_decls.sse4.2
+// Windows: call void @foo_decls
 
-// CHECK: define linkonce void @foo_multi.avx_sse4.2()
-// CHECK: define linkonce void @foo_multi.fma4_sse4.2()
-// CHECK: define linkonce void @foo_multi.arch_ivybridge_fma4_sse4.2()
+// LINUX: define void @bar4()
+// LINUX: call void @foo_multi.ifunc(i32 1, double 5.{{[0+e]*}})
+
+// WINDOWS: define dso_local void @bar4()
+// WINDOWS: call void @foo_multi.resolver(i32 1, double 5.{{[0+e]*}})
+
+// LINUX: define void (i32, double)* @foo_multi.resolver() comdat
+// LINUX: and i32 %{{.*}}, 4352
+// LINUX: icmp eq i32 %{{.*}}, 4352
+// LINUX: ret void (i32, double)* @foo_multi.fma4_sse4.2
+// LINUX: icmp eq i32 %{{.*}}, 12
+// LINUX: and i32 %{{.*}}, 4352
+// LINUX: icmp eq i32 %{{.*}}, 4352
+// LINUX: ret void (i32, double)* @foo_multi.arch_ivybridge_fma4_sse4.2
+// LINUX: and i32 %{{.*}}, 768
+// LINUX: icmp eq i32 %{{.*}}, 768
+// LINUX: ret void (i32, double)* @foo_multi.avx_sse4.2
+// LINUX: ret void (i32, double)* @foo_multi
+
+// WINDOWS: define dso_local void @foo_multi.resolver(i32, double) comdat
+// WINDOWS: and i32 %{{.*}}, 4352
+// WINDOWS: icmp eq i32 %{{.*}}, 4352
+// WINDOWS: call void @foo_multi.fma4_sse4.2(i32 %0, double %1)
+// WINDOWS-NEXT: ret void
+// WINDOWS: icmp eq i32 %{{.*}}, 12
+// WINDOWS: and i32 %{{.*}}, 4352
+// WINDOWS: icmp eq i32 %{{.*}}, 4352
+// WINDOWS: call void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 %0, double %1)
+// WINDOWS-NEXT: ret void
+// WINDOWS: and i32 %{{.*}}, 768
+// WINDOWS: icmp eq i32 %{{.*}}, 768
+// WINDOWS: call void @foo_multi.avx_sse4.2(i32 %0, double %1)
+// WINDOWS-NEXT: ret void
+// WINDOWS: call void @foo_multi(i32 %0, double %1)
+// WINDOWS-NEXT: ret void
+
+// LINUX: declare i32 @foo.arch_sandybridge()
+
+// WINDOWS: declare dso_local i32 @foo.arch_sandybridge()
+
+// LINUX: define linkonce i32 @foo_inline.sse4.2()
+// LINUX: ret i32 0
+
+// WINDOWS: define linkonce_odr dso_local i32 @foo_inline.sse4.2()
+// WINDOWS: ret i32 0
+
+// LINUX: declare i32 @foo_inline.arch_sandybridge()
+
+// WINDOWS: declare dso_local i32 @foo_inline.arch_sandybridge()
+
+// LINUX: define linkonce i32 @foo_inline.arch_ivybridge()
+// LINUX: ret i32 1
+// LINUX: define linkonce i32 @foo_inline()
+// LINUX: ret i32 2
+
+// WINDOWS: define linkonce_odr dso_local i32 @foo_inline.arch_ivybridge()
+// WINDOWS: ret i32 1
+// WINDOWS: define linkonce_odr dso_local i32 @foo_inline()
+// WINDOWS: ret i32 2
+
+// LINUX: define linkonce void @foo_decls()
+// LINUX: define linkonce void @foo_decls.sse4.2()
+
+// WINDOWS: define linkonce_odr dso_local void @foo_decls()
+// WINDOWS: define linkonce_odr dso_local void @foo_decls.sse4.2()
+
+// LINUX: define linkonce void @foo_multi.avx_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// LINUX: define linkonce void @foo_multi.fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// LINUX: define linkonce void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+
+// WINDOWS: define linkonce_odr dso_local void @foo_multi.avx_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// WINDOWS: define linkonce_odr dso_local void @foo_multi.fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})
+// WINDOWS: define linkonce_odr dso_local void @foo_multi.arch_ivybridge_fma4_sse4.2(i32 %{{[^,]+}}, double %{{[^\)]+}})

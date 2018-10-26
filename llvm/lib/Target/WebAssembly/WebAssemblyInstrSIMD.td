@@ -469,9 +469,9 @@ multiclass SIMDBinarySat<SDNode node, string name, bits<32> baseInst> {
 // Saturating integer addition: add_saturate_s / add_saturate_u
 let isCommutable = 1 in {
 defm ADD_SAT_S :
-  SIMDBinarySat<int_wasm_add_saturate_signed, "add_saturate_s", 40>;
+  SIMDBinarySat<saddsat, "add_saturate_s", 40>;
 defm ADD_SAT_U :
-  SIMDBinarySat<int_wasm_add_saturate_unsigned, "add_saturate_u", 41>;
+  SIMDBinarySat<uaddsat, "add_saturate_u", 41>;
 } // isCommutable = 1
 
 // Saturating integer subtraction: sub_saturate_s / sub_saturate_u

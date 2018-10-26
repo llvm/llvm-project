@@ -482,14 +482,15 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
 
     // Okay, this is a register operand. Create a ReadState for it.
     assert(RegID > 0 && "Invalid register ID found!");
-    auto RS = llvm::make_unique<ReadState>(RD, RegID);
+    NewIS->getUses().emplace_back(RD, RegID);
+    ReadState &RS = NewIS->getUses().back();
 
     if (IsDepBreaking) {
       // A mask of all zeroes means: explicit input operands are not
       // independent.
       if (Mask.isNullValue()) {
         if (!RD.isImplicitRead())
-          RS->setIndependentFromDef();
+          RS.setIndependentFromDef();
       } else {
         // Check if this register operand is independent according to `Mask`.
         // Note that Mask may not have enough bits to describe all explicit and
@@ -499,11 +500,10 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
         if (Mask.getBitWidth() > RD.UseIndex) {
           // Okay. This map describe register use `RD.UseIndex`.
           if (Mask[RD.UseIndex])
-            RS->setIndependentFromDef();
+            RS.setIndependentFromDef();
         }
       }
     }
-    NewIS->getUses().emplace_back(std::move(RS));
   }
 
   // Early exit if there are no writes.
@@ -530,9 +530,9 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
     }
 
     assert(RegID && "Expected a valid register ID!");
-    NewIS->getDefs().emplace_back(llvm::make_unique<WriteState>(
+    NewIS->getDefs().emplace_back(
         WD, RegID, /* ClearsSuperRegs */ WriteMask[WriteIndex],
-        /* WritesZero */ IsZeroIdiom));
+        /* WritesZero */ IsZeroIdiom);
     ++WriteIndex;
   }
 

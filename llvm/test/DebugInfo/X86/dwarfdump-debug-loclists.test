@@ -9,7 +9,7 @@
 # CHECK-NEXT:    [0x0000000000000700, 0x0000000000000710): DW_OP_breg5 RDI+0
 
 # CHECK:      .debug_loclists contents:
-# CHECK-NEXT: 0x00000000: locations list header: length = 0x00000031, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+# CHECK-NEXT: 0x00000000: locations list header: length = 0x0000002f, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 # CHECK-NEXT: 0x00000000:
 # CHECK-NEXT:   [0x0000000000000000, 0x0000000000000010): DW_OP_breg5 RDI+0
 # CHECK-NEXT:   [0x0000000000000530, 0x0000000000000540): DW_OP_breg6 RBP-8, DW_OP_deref
@@ -43,7 +43,6 @@
   
   .byte  6                       # DW_LLE_base_address
   .quad  0x500                   # Some address
-  .short  0                      # Loc expr size = 0.
   
   .byte  4                       # DW_LLE_offset_pair
   .uleb128 0x30                  #   starting offset

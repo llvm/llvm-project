@@ -218,6 +218,52 @@ public:
     OS << nl;
   }
 
+  bool canReasonAbout(SVal X) const override {
+    const TargetInfo &TI = getBasicVals().getContext().getTargetInfo();
+
+    Optional<nonloc::SymbolVal> SymVal = X.getAs<nonloc::SymbolVal>();
+    if (!SymVal)
+      return true;
+
+    const SymExpr *Sym = SymVal->getSymbol();
+    QualType Ty = Sym->getType();
+
+    // Complex types are not modeled
+    if (Ty->isComplexType() || Ty->isComplexIntegerType())
+      return false;
+
+    // Non-IEEE 754 floating-point types are not modeled
+    if ((Ty->isSpecificBuiltinType(BuiltinType::LongDouble) &&
+         (&TI.getLongDoubleFormat() == &llvm::APFloat::x87DoubleExtended() ||
+          &TI.getLongDoubleFormat() == &llvm::APFloat::PPCDoubleDouble())))
+      return false;
+
+    if (Ty->isRealFloatingType())
+      return Solver->isFPSupported();
+
+    if (isa<SymbolData>(Sym))
+      return true;
+
+    SValBuilder &SVB = getSValBuilder();
+
+    if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
+      return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
+
+    if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
+      if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE))
+        return canReasonAbout(SVB.makeSymbolVal(SIE->getLHS()));
+
+      if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE))
+        return canReasonAbout(SVB.makeSymbolVal(ISE->getRHS()));
+
+      if (const SymSymExpr *SSE = dyn_cast<SymSymExpr>(BSE))
+        return canReasonAbout(SVB.makeSymbolVal(SSE->getLHS())) &&
+               canReasonAbout(SVB.makeSymbolVal(SSE->getRHS()));
+    }
+
+    llvm_unreachable("Unsupported expression to reason about!");
+  }
+
   /// Dumps SMT formula
   LLVM_DUMP_METHOD void dump() const { Solver->dump(); }
 

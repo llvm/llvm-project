@@ -1643,6 +1643,63 @@ define <32 x i8> @shuffle_v32i8_32_01_34_03_36_05_38_07_40_09_42_11_44_13_46_15_
   ret <32 x i8> %shuffle
 }
 
+; PR27780 - https://bugs.llvm.org/show_bug.cgi?id=27780
+
+define <32 x i8> @load_fold_pblendvb(<32 x i8>* %px, <32 x i8> %y) {
+; AVX1-LABEL: load_fold_pblendvb:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303]
+; AVX1-NEXT:    vandnps (%rdi), %ymm1, %ymm2
+; AVX1-NEXT:    vandps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load_fold_pblendvb:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqa (%rdi), %ymm1
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
+; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: load_fold_pblendvb:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    movl $1953789044, %eax # imm = 0x74747474
+; AVX512VL-NEXT:    kmovd %eax, %k1
+; AVX512VL-NEXT:    vmovdqu8 (%rdi), %ymm0 {%k1}
+; AVX512VL-NEXT:    retq
+  %x = load <32 x i8>, <32 x i8>* %px, align 32
+  %select = shufflevector <32 x i8> %x, <32 x i8> %y, <32 x i32> <i32 32, i32 33, i32 2, i32 35, i32 4, i32 5, i32 6, i32 39, i32 40, i32 41, i32 10, i32 43, i32 12, i32 13, i32 14, i32 47, i32 48, i32 49, i32 18, i32 51, i32 20, i32 21, i32 22, i32 55, i32 56, i32 57, i32 26, i32 59, i32 28, i32 29, i32 30, i32 63>
+  ret <32 x i8> %select
+}
+
+define <32 x i8> @load_fold_pblendvb_commute(<32 x i8>* %px, <32 x i8> %y) {
+; AVX1-LABEL: load_fold_pblendvb_commute:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303,-5.4861292804117373E+303]
+; AVX1-NEXT:    vandnps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    vandps (%rdi), %ymm1, %ymm1
+; AVX1-NEXT:    vorps %ymm0, %ymm1, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: load_fold_pblendvb_commute:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
+; AVX2-NEXT:    vpblendvb %ymm1, (%rdi), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: load_fold_pblendvb_commute:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovdqa (%rdi), %ymm1
+; AVX512VL-NEXT:    movl $1953789044, %eax # imm = 0x74747474
+; AVX512VL-NEXT:    kmovd %eax, %k1
+; AVX512VL-NEXT:    vmovdqu8 %ymm0, %ymm1 {%k1}
+; AVX512VL-NEXT:    vmovdqa %ymm1, %ymm0
+; AVX512VL-NEXT:    retq
+  %x = load <32 x i8>, <32 x i8>* %px, align 32
+  %select = shufflevector <32 x i8> %y, <32 x i8> %x, <32 x i32> <i32 32, i32 33, i32 2, i32 35, i32 4, i32 5, i32 6, i32 39, i32 40, i32 41, i32 10, i32 43, i32 12, i32 13, i32 14, i32 47, i32 48, i32 49, i32 18, i32 51, i32 20, i32 21, i32 22, i32 55, i32 56, i32 57, i32 26, i32 59, i32 28, i32 29, i32 30, i32 63>
+  ret <32 x i8> %select
+}
+
 define <32 x i8> @shuffle_v32i8_zz_01_zz_03_zz_05_zz_07_zz_09_zz_11_zz_13_zz_15_zz_17_zz_19_zz_21_zz_23_zz_25_zz_27_zz_29_zz_31(<32 x i8> %a) {
 ; AVX1OR2-LABEL: shuffle_v32i8_zz_01_zz_03_zz_05_zz_07_zz_09_zz_11_zz_13_zz_15_zz_17_zz_19_zz_21_zz_23_zz_25_zz_27_zz_29_zz_31:
 ; AVX1OR2:       # %bb.0:

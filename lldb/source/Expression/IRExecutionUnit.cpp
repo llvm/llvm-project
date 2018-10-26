@@ -709,9 +709,10 @@ FindBestAlternateMangledName(const ConstString &demangled,
 
 struct IRExecutionUnit::SearchSpec {
   ConstString name;
-  uint32_t mask;
+  lldb::FunctionNameType mask;
 
-  SearchSpec(ConstString n, uint32_t m = lldb::eFunctionNameTypeFull)
+  SearchSpec(ConstString n,
+             lldb::FunctionNameType m = lldb::eFunctionNameTypeFull)
       : name(n), mask(m) {}
 };
 

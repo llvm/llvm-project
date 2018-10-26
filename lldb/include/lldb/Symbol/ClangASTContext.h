@@ -858,18 +858,14 @@ public:
   void AddMethodOverridesForCXXRecordType(lldb::opaque_compiler_type_t type);
 
   // C++ Base Classes
-  clang::CXXBaseSpecifier *
+  std::unique_ptr<clang::CXXBaseSpecifier>
   CreateBaseClassSpecifier(lldb::opaque_compiler_type_t type,
                            lldb::AccessType access, bool is_virtual,
                            bool base_of_class);
 
-  static void DeleteBaseClassSpecifiers(clang::CXXBaseSpecifier **base_classes,
-                                        unsigned num_base_classes);
-
-  bool
-  SetBaseClassesForClassType(lldb::opaque_compiler_type_t type,
-                             clang::CXXBaseSpecifier const *const *base_classes,
-                             unsigned num_base_classes);
+  bool TransferBaseClasses(
+      lldb::opaque_compiler_type_t type,
+      std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> bases);
 
   static bool SetObjCSuperClass(const CompilerType &type,
                                 const CompilerType &superclass_compiler_type);

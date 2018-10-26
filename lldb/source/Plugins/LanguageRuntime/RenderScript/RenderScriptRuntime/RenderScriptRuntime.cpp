@@ -3718,7 +3718,8 @@ bool RenderScriptRuntime::GetKernelCoordinate(RSCoordinate &coord,
       continue;
 
     // Find the function name
-    const SymbolContext sym_ctx = frame_sp->GetSymbolContext(false);
+    const SymbolContext sym_ctx =
+        frame_sp->GetSymbolContext(eSymbolContextFunction);
     const ConstString func_name = sym_ctx.GetFunctionName();
     if (!func_name)
       continue;

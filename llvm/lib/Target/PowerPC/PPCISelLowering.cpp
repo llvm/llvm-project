@@ -792,6 +792,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FP_TO_SINT, MVT::v2i64, Legal);
       setOperationAction(ISD::FP_TO_UINT, MVT::v2i64, Legal);
 
+      setOperationAction(ISD::UINT_TO_FP, MVT::v2i16, Custom);
+      setOperationAction(ISD::SINT_TO_FP, MVT::v2i16, Custom);
+
       setOperationAction(ISD::FNEG, MVT::v4f32, Legal);
       setOperationAction(ISD::FNEG, MVT::v2f64, Legal);
       setOperationAction(ISD::FABS, MVT::v4f32, Legal);
@@ -7265,9 +7268,74 @@ SDValue PPCTargetLowering::LowerINT_TO_FPDirectMove(SDValue Op,
   return FP;
 }
 
+static SDValue widenVec(SelectionDAG &DAG, SDValue Vec, const SDLoc &dl) {
+
+  EVT VecVT = Vec.getValueType();
+  assert(VecVT.isVector() && "Expected a vector type.");
+  assert(VecVT.getSizeInBits() < 128 && "Vector is already full width.");
+
+  EVT EltVT = VecVT.getVectorElementType();
+  unsigned WideNumElts = 128 / EltVT.getSizeInBits();
+  EVT WideVT = EVT::getVectorVT(*DAG.getContext(), EltVT, WideNumElts);
+
+  unsigned NumConcat = WideNumElts / VecVT.getVectorNumElements();
+  SmallVector<SDValue, 16> Ops(NumConcat);
+  Ops[0] = Vec;
+  SDValue UndefVec = DAG.getUNDEF(VecVT);
+  for (unsigned i = 1; i < NumConcat; ++i)
+    Ops[i] = UndefVec;
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, dl, WideVT, Ops);
+}
+
+SDValue PPCTargetLowering::LowerINT_TO_FPVector(SDValue Op,
+                                                SelectionDAG &DAG,
+                                                const SDLoc &dl) const {
+
+  unsigned Opc = Op.getOpcode();
+  assert((Opc == ISD::UINT_TO_FP || Opc == ISD::SINT_TO_FP) &&
+         "Unexpected conversion type");
+  assert(Op.getValueType() == MVT::v2f64 && "Supports v2f64 only.");
+
+  // CPU's prior to P9 don't have a way to sign-extend in vectors.
+  bool SignedConv = Opc == ISD::SINT_TO_FP;
+  if (SignedConv && !Subtarget.hasP9Altivec())
+    return SDValue();
+
+  SDValue Wide = widenVec(DAG, Op.getOperand(0), dl);
+  EVT WideVT = Wide.getValueType();
+  unsigned WideNumElts = WideVT.getVectorNumElements();
+
+  SmallVector<int, 16> ShuffV;
+  for (unsigned i = 0; i < WideNumElts; ++i)
+    ShuffV.push_back(i + WideNumElts);
+
+  if (Subtarget.isLittleEndian()) {
+    ShuffV[0] = 0;
+    ShuffV[WideNumElts / 2] = 1;
+  }
+  else {
+    ShuffV[WideNumElts / 2 - 1] = 0;
+    ShuffV[WideNumElts - 1] = 1;
+  }
+
+  SDValue ShuffleSrc2 = SignedConv ? DAG.getUNDEF(WideVT) :
+                                     DAG.getConstant(0, dl, WideVT);
+  SDValue Arrange = DAG.getVectorShuffle(WideVT, dl, Wide, ShuffleSrc2, ShuffV);
+  unsigned ExtendOp = SignedConv ? (unsigned) PPCISD::SExtVElems :
+                                   (unsigned) ISD::BITCAST;
+  SDValue Extend = DAG.getNode(ExtendOp, dl, MVT::v2i64, Arrange);
+
+  return DAG.getNode(Opc, dl, Op.getValueType(), Extend);
+}
+
 SDValue PPCTargetLowering::LowerINT_TO_FP(SDValue Op,
                                           SelectionDAG &DAG) const {
   SDLoc dl(Op);
+
+  if (Op.getValueType() == MVT::v2f64 &&
+      Op.getOperand(0).getValueType() == MVT::v2i16)
+    return LowerINT_TO_FPVector(Op, DAG, dl);
 
   // Conversions to f128 are legal.
   if (EnableQuadPrecision && (Op.getValueType() == MVT::f128))

@@ -660,11 +660,12 @@ SBSymbolContext
 SBTarget::ResolveSymbolContextForAddress(const SBAddress &addr,
                                          uint32_t resolve_scope) {
   SBSymbolContext sc;
+  SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
   if (addr.IsValid()) {
     TargetSP target_sp(GetSP());
     if (target_sp)
-      target_sp->GetImages().ResolveSymbolContextForAddress(
-          addr.ref(), resolve_scope, sc.ref());
+      target_sp->GetImages().ResolveSymbolContextForAddress(addr.ref(), scope,
+                                                            sc.ref());
   }
   return sc;
 }
@@ -789,7 +790,7 @@ lldb::SBBreakpoint
 SBTarget::BreakpointCreateByName(const char *symbol_name,
                                  const SBFileSpecList &module_list,
                                  const SBFileSpecList &comp_unit_list) {
-  uint32_t name_type_mask = eFunctionNameTypeAuto;
+  lldb::FunctionNameType name_type_mask = eFunctionNameTypeAuto;
   return BreakpointCreateByName(symbol_name, name_type_mask,
                                 eLanguageTypeUnknown, module_list,
                                 comp_unit_list);
@@ -816,9 +817,10 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByName(
     const bool hardware = false;
     const LazyBool skip_prologue = eLazyBoolCalculate;
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    sb_bp = target_sp->CreateBreakpoint(
-        module_list.get(), comp_unit_list.get(), symbol_name, name_type_mask,
-        symbol_language, 0, skip_prologue, internal, hardware);
+    FunctionNameType mask = static_cast<FunctionNameType>(name_type_mask);
+    sb_bp = target_sp->CreateBreakpoint(module_list.get(), comp_unit_list.get(),
+                                        symbol_name, mask, symbol_language, 0,
+                                        skip_prologue, internal, hardware);
   }
 
   if (log)
@@ -859,11 +861,11 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByNames(
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     const bool internal = false;
     const bool hardware = false;
+    FunctionNameType mask = static_cast<FunctionNameType>(name_type_mask);
     const LazyBool skip_prologue = eLazyBoolCalculate;
     sb_bp = target_sp->CreateBreakpoint(
-        module_list.get(), comp_unit_list.get(), symbol_names, num_names,
-        name_type_mask, symbol_language, offset, skip_prologue, internal,
-        hardware);
+        module_list.get(), comp_unit_list.get(), symbol_names, num_names, mask,
+        symbol_language, offset, skip_prologue, internal, hardware);
   }
 
   if (log) {
@@ -1734,17 +1736,19 @@ bool SBTarget::GetDescription(SBStream &description,
 lldb::SBSymbolContextList SBTarget::FindFunctions(const char *name,
                                                   uint32_t name_type_mask) {
   lldb::SBSymbolContextList sb_sc_list;
-  if (name && name[0]) {
-    TargetSP target_sp(GetSP());
-    if (target_sp) {
-      const bool symbols_ok = true;
-      const bool inlines_ok = true;
-      const bool append = true;
-      target_sp->GetImages().FindFunctions(ConstString(name), name_type_mask,
-                                           symbols_ok, inlines_ok, append,
-                                           *sb_sc_list);
-    }
-  }
+  if (!name | !name[0])
+    return sb_sc_list;
+
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return sb_sc_list;
+
+  const bool symbols_ok = true;
+  const bool inlines_ok = true;
+  const bool append = true;
+  FunctionNameType mask = static_cast<FunctionNameType>(name_type_mask);
+  target_sp->GetImages().FindFunctions(ConstString(name), mask, symbols_ok,
+                                       inlines_ok, append, *sb_sc_list);
   return sb_sc_list;
 }
 

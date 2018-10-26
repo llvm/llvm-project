@@ -31,13 +31,17 @@ void OptionValueArray::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
       strm.Printf("(%s)", GetTypeAsCString());
   }
   if (dump_mask & eDumpOptionValue) {
-    if (dump_mask & eDumpOptionType)
-      strm.Printf(" =%s", (m_values.size() > 0) ? "\n" : "");
-    strm.IndentMore();
+    const bool one_line = dump_mask & eDumpOptionCommand;
     const uint32_t size = m_values.size();
+    if (dump_mask & eDumpOptionType)
+      strm.Printf(" =%s", (m_values.size() > 0 && !one_line) ? "\n" : "");
+    if (!one_line)
+      strm.IndentMore();
     for (uint32_t i = 0; i < size; ++i) {
-      strm.Indent();
-      strm.Printf("[%u]: ", i);
+      if (!one_line) {
+        strm.Indent();
+        strm.Printf("[%u]: ", i);
+      }
       const uint32_t extra_dump_options = m_raw_value_dump ? eDumpOptionRaw : 0;
       switch (array_element_type) {
       default:
@@ -63,10 +67,16 @@ void OptionValueArray::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                                                   extra_dump_options);
         break;
       }
-      if (i < (size - 1))
-        strm.EOL();
+
+      if (!one_line) {
+        if (i < (size - 1))
+          strm.EOL();
+      } else {
+        strm << ' ';
+      }
     }
-    strm.IndentLess();
+    if (!one_line)
+      strm.IndentLess();
   }
 }
 

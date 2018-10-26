@@ -300,7 +300,7 @@ void WasmEHPrepare::prepareEHPad(BasicBlock *BB, unsigned Index) {
   // This is to create a map of <landingpad EH label, landingpad index> in
   // SelectionDAGISel, which is to be used in EHStreamer to emit LSDA tables.
   // Pseudocode: wasm.landingpad.index(Index);
-  IRB.CreateCall(LPadIndexF, IRB.getInt32(Index));
+  IRB.CreateCall(LPadIndexF, {FPI, IRB.getInt32(Index)});
 
   // Pseudocode: __wasm_lpad_context.lpad_index = index;
   IRB.CreateStore(IRB.getInt32(Index), LPadIndexField);
