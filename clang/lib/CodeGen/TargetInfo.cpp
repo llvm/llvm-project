@@ -4978,13 +4978,21 @@ public:
     llvm::Function *Fn = cast<llvm::Function>(GV);
 
     auto Kind = CGM.getCodeGenOpts().getSignReturnAddress();
-    if (Kind == CodeGenOptions::SignReturnAddressScope::None)
-      return;
+    if (Kind != CodeGenOptions::SignReturnAddressScope::None) {
+      Fn->addFnAttr("sign-return-address",
+                    Kind == CodeGenOptions::SignReturnAddressScope::All
+                        ? "all"
+                        : "non-leaf");
 
-    Fn->addFnAttr("sign-return-address",
-                  Kind == CodeGenOptions::SignReturnAddressScope::All
-                      ? "all"
-                      : "non-leaf");
+      auto Key = CGM.getCodeGenOpts().getSignReturnAddressKey();
+      Fn->addFnAttr("sign-return-address-key",
+                    Key == CodeGenOptions::SignReturnAddressKeyValue::AKey
+                        ? "a_key"
+                        : "b_key");
+    }
+
+    if (CGM.getCodeGenOpts().BranchTargetEnforcement)
+      Fn->addFnAttr("branch-target-enforcement");
   }
 };
 
@@ -4992,6 +5000,9 @@ class WindowsAArch64TargetCodeGenInfo : public AArch64TargetCodeGenInfo {
 public:
   WindowsAArch64TargetCodeGenInfo(CodeGenTypes &CGT, AArch64ABIInfo::ABIKind K)
       : AArch64TargetCodeGenInfo(CGT, K) {}
+
+  void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
+                           CodeGen::CodeGenModule &CGM) const override;
 
   void getDependentLibraryOption(llvm::StringRef Lib,
                                  llvm::SmallString<24> &Opt) const override {
@@ -5003,6 +5014,14 @@ public:
     Opt = "/FAILIFMISMATCH:\"" + Name.str() + "=" + Value.str() + "\"";
   }
 };
+
+void WindowsAArch64TargetCodeGenInfo::setTargetAttributes(
+    const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &CGM) const {
+  AArch64TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
+  if (GV->isDeclaration())
+    return;
+  addStackProbeTargetAttributes(D, GV, CGM);
+}
 }
 
 ABIArgInfo AArch64ABIInfo::classifyArgumentType(QualType Ty) const {

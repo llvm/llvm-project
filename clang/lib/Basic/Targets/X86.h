@@ -290,9 +290,6 @@ public:
     return checkCPUKind(CPU = getCPUKind(Name));
   }
 
-  bool supportsMultiVersioning() const override {
-    return getTriple().isOSBinFormatELF();
-  }
   unsigned multiVersionSortPriority(StringRef Name) const override;
 
   bool setFPMath(StringRef Name) override;

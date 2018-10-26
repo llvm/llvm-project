@@ -1138,8 +1138,9 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.Addrsig = Args.hasArg(OPT_faddrsig);
 
-  if (Arg *A = Args.getLastArg(OPT_msign_return_address)) {
+  if (Arg *A = Args.getLastArg(OPT_msign_return_address_EQ)) {
     StringRef SignScope = A->getValue();
+
     if (SignScope.equals_lower("none"))
       Opts.setSignReturnAddress(CodeGenOptions::SignReturnAddressScope::None);
     else if (SignScope.equals_lower("all"))
@@ -1149,8 +1150,25 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
           CodeGenOptions::SignReturnAddressScope::NonLeaf);
     else
       Diags.Report(diag::err_drv_invalid_value)
-          << A->getAsString(Args) << A->getValue();
+          << A->getAsString(Args) << SignScope;
+
+    if (Arg *A = Args.getLastArg(OPT_msign_return_address_key_EQ)) {
+      StringRef SignKey = A->getValue();
+      if (!SignScope.empty() && !SignKey.empty()) {
+        if (SignKey.equals_lower("a_key"))
+          Opts.setSignReturnAddressKey(
+              CodeGenOptions::SignReturnAddressKeyValue::AKey);
+        else if (SignKey.equals_lower("b_key"))
+          Opts.setSignReturnAddressKey(
+              CodeGenOptions::SignReturnAddressKeyValue::BKey);
+        else
+          Diags.Report(diag::err_drv_invalid_value)
+              << A->getAsString(Args) << SignKey;
+      }
+    }
   }
+
+  Opts.BranchTargetEnforcement = Args.hasArg(OPT_mbranch_target_enforce);
 
   Opts.KeepStaticConsts = Args.hasArg(OPT_fkeep_static_consts);
 

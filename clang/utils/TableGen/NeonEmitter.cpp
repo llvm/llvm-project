@@ -494,6 +494,7 @@ private:
     std::pair<Type, std::string> emitDagSaveTemp(DagInit *DI);
     std::pair<Type, std::string> emitDagSplat(DagInit *DI);
     std::pair<Type, std::string> emitDagDup(DagInit *DI);
+    std::pair<Type, std::string> emitDagDupTyped(DagInit *DI);
     std::pair<Type, std::string> emitDagShuffle(DagInit *DI);
     std::pair<Type, std::string> emitDagCast(DagInit *DI, bool IsBitCast);
     std::pair<Type, std::string> emitDagCall(DagInit *DI);
@@ -895,6 +896,18 @@ void Type::applyModifier(char Mod) {
     break;
   case 'H':
     Float = true;
+    ElementBitwidth = 16;
+    break;
+  case '0':
+    Float = true;
+    if (AppliedQuad)
+      Bitwidth /= 2;
+    ElementBitwidth = 16;
+    break;
+  case '1':
+    Float = true;
+    if (!AppliedQuad)
+      Bitwidth *= 2;
     ElementBitwidth = 16;
     break;
   case 'g':
@@ -1507,6 +1520,8 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDag(DagInit *DI) {
     return emitDagShuffle(DI);
   if (Op == "dup")
     return emitDagDup(DI);
+  if (Op == "dup_typed")
+    return emitDagDupTyped(DI);
   if (Op == "splat")
     return emitDagSplat(DI);
   if (Op == "save_temp")
@@ -1765,6 +1780,28 @@ std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagDup(DagInit *DI) {
     if (I != 0)
       S += ", ";
     S += A.second;
+  }
+  S += "}";
+
+  return std::make_pair(T, S);
+}
+
+std::pair<Type, std::string> Intrinsic::DagEmitter::emitDagDupTyped(DagInit *DI) {
+  assert_with_loc(DI->getNumArgs() == 2, "dup_typed() expects two arguments");
+  std::pair<Type, std::string> A = emitDagArg(DI->getArg(0),
+                                              DI->getArgNameStr(0));
+  std::pair<Type, std::string> B = emitDagArg(DI->getArg(1),
+                                              DI->getArgNameStr(1));
+  assert_with_loc(B.first.isScalar(),
+                  "dup_typed() requires a scalar as the second argument");
+
+  Type T = A.first;
+  assert_with_loc(T.isVector(), "dup_typed() used but target type is scalar!");
+  std::string S = "(" + T.str() + ") {";
+  for (unsigned I = 0; I < T.getNumElements(); ++I) {
+    if (I != 0)
+      S += ", ";
+    S += B.second;
   }
   S += "}";
 
