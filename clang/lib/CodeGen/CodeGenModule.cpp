@@ -4030,39 +4030,81 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   llvm::Constant *Zero = llvm::Constant::getNullValue(Int32Ty);
   llvm::Constant *Zeros[] = { Zero, Zero };
 
+  const ASTContext &Context = getContext();
+  const llvm::Triple &Triple = getTriple();
+
+  const auto CFRuntime = getLangOpts().CFRuntime;
+  const bool IsSwiftABI =
+      static_cast<unsigned>(CFRuntime) >=
+      static_cast<unsigned>(LangOptions::CoreFoundationABI::Swift);
+  const bool IsSwift4_1 = CFRuntime == LangOptions::CoreFoundationABI::Swift4_1;
+
   // If we don't already have it, get __CFConstantStringClassReference.
   if (!CFConstantStringClassRef) {
+    const char *CFConstantStringClassName = "__CFConstantStringClassReference";
     llvm::Type *Ty = getTypes().ConvertType(getContext().IntTy);
     Ty = llvm::ArrayType::get(Ty, 0);
-    llvm::GlobalValue *GV = cast<llvm::GlobalValue>(
-        CreateRuntimeVariable(Ty, "__CFConstantStringClassReference"));
 
-    if (getTriple().isOSBinFormatCOFF()) {
-      IdentifierInfo &II = getContext().Idents.get(GV->getName());
-      TranslationUnitDecl *TUDecl = getContext().getTranslationUnitDecl();
-      DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
+    switch (CFRuntime) {
+    default: break;
+    case LangOptions::CoreFoundationABI::Swift: LLVM_FALLTHROUGH;
+    case LangOptions::CoreFoundationABI::Swift5_0:
+      CFConstantStringClassName =
+          Triple.isOSDarwin() ? "$s15SwiftFoundation19_NSCFConstantStringCN"
+                              : "$s10Foundation19_NSCFConstantStringCN";
+      Ty = IntPtrTy;
+      break;
+    case LangOptions::CoreFoundationABI::Swift4_2:
+      CFConstantStringClassName =
+          Triple.isOSDarwin() ? "$S15SwiftFoundation19_NSCFConstantStringCN"
+                              : "$S10Foundation19_NSCFConstantStringCN";
+      Ty = IntPtrTy;
+      break;
+    case LangOptions::CoreFoundationABI::Swift4_1:
+      CFConstantStringClassName =
+          Triple.isOSDarwin() ? "__T015SwiftFoundation19_NSCFConstantStringCN"
+                              : "__T010Foundation19_NSCFConstantStringCN";
+      Ty = IntPtrTy;
+      break;
+    }
 
-      const VarDecl *VD = nullptr;
-      for (const auto &Result : DC->lookup(&II))
-        if ((VD = dyn_cast<VarDecl>(Result)))
-          break;
+    llvm::Constant *C = CreateRuntimeVariable(Ty, CFConstantStringClassName);
 
-      if (!VD || !VD->hasAttr<DLLExportAttr>()) {
-        GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
-        GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
-      } else {
-        GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
-        GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+    if (Triple.isOSBinFormatELF() || Triple.isOSBinFormatCOFF()) {
+      llvm::GlobalValue *GV = nullptr;
+      
+      if ((GV = dyn_cast<llvm::GlobalValue>(C))) {
+        IdentifierInfo &II = Context.Idents.get(GV->getName());
+        TranslationUnitDecl *TUDecl = Context.getTranslationUnitDecl();
+        DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
+
+        const VarDecl *VD = nullptr;
+        for (const auto &Result : DC->lookup(&II))
+          if ((VD = dyn_cast<VarDecl>(Result)))
+            break;
+
+        if (Triple.isOSBinFormatELF()) {
+          if (!VD)
+            GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+        } else {
+          GV->setLinkage(llvm::GlobalValue::ExternalLinkage);
+          if (!VD || !VD->hasAttr<DLLExportAttr>())
+            GV->setDLLStorageClass(llvm::GlobalValue::DLLImportStorageClass);
+          else
+            GV->setDLLStorageClass(llvm::GlobalValue::DLLExportStorageClass);
+        }
+        
+        setDSOLocal(GV);
       }
     }
-    setDSOLocal(GV);
-
+  
     // Decay array -> ptr
     CFConstantStringClassRef =
-        llvm::ConstantExpr::getGetElementPtr(Ty, GV, Zeros);
+        IsSwiftABI ? llvm::ConstantExpr::getPtrToInt(C, Ty)
+                   : llvm::ConstantExpr::getGetElementPtr(Ty, C, Zeros);
   }
 
-  QualType CFTy = getContext().getCFConstantStringType();
+  QualType CFTy = Context.getCFConstantStringType();
 
   auto *STy = cast<llvm::StructType>(getTypes().ConvertType(CFTy));
 
@@ -4073,7 +4115,12 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   Fields.add(cast<llvm::ConstantExpr>(CFConstantStringClassRef));
 
   // Flags.
-  Fields.addInt(IntTy, isUTF16 ? 0x07d0 : 0x07C8);
+  if (IsSwiftABI) {
+    Fields.addInt(IntPtrTy, IsSwift4_1 ? 0x05 : 0x01);
+    Fields.addInt(Int64Ty, isUTF16 ? 0x07d0 : 0x07c8);
+  } else {
+    Fields.addInt(IntTy, isUTF16 ? 0x07d0 : 0x07C8);
+  }
 
   // String pointer.
   llvm::Constant *C = nullptr;
@@ -4094,18 +4141,21 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   GV->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   // Don't enforce the target's minimum global alignment, since the only use
   // of the string is via this class initializer.
-  CharUnits Align = isUTF16
-                        ? getContext().getTypeAlignInChars(getContext().ShortTy)
-                        : getContext().getTypeAlignInChars(getContext().CharTy);
+  CharUnits Align = isUTF16 ? Context.getTypeAlignInChars(Context.ShortTy)
+                            : Context.getTypeAlignInChars(Context.CharTy);
   GV->setAlignment(Align.getQuantity());
 
   // FIXME: We set the section explicitly to avoid a bug in ld64 224.1.
   // Without it LLVM can merge the string with a non unnamed_addr one during
   // LTO.  Doing that changes the section it ends in, which surprises ld64.
-  if (getTriple().isOSBinFormatMachO())
+  if (Triple.isOSBinFormatMachO())
     GV->setSection(isUTF16 ? "__TEXT,__ustring"
                            : "__TEXT,__cstring,cstring_literals");
-
+  // Make sure the literal ends up in .rodata to allow for safe ICF and for
+  // the static linker to adjust permissions to read-only later on.
+  else if (Triple.isOSBinFormatELF())
+    GV->setSection(".rodata");
+  
   // String.
   llvm::Constant *Str =
       llvm::ConstantExpr::getGetElementPtr(GV->getValueType(), GV, Zeros);
@@ -4116,8 +4166,17 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   Fields.add(Str);
 
   // String length.
-  auto Ty = getTypes().ConvertType(getContext().LongTy);
-  Fields.addInt(cast<llvm::IntegerType>(Ty), StringLength);
+  llvm::IntegerType *LengthTy =
+      llvm::IntegerType::get(getModule().getContext(),
+                             Context.getTargetInfo().getLongWidth());
+  if (IsSwiftABI) {
+    if (CFRuntime == LangOptions::CoreFoundationABI::Swift4_1 ||
+        CFRuntime == LangOptions::CoreFoundationABI::Swift4_2)
+      LengthTy = Int32Ty;
+    else
+      LengthTy = IntPtrTy;
+  }
+  Fields.addInt(LengthTy, StringLength);
 
   CharUnits Alignment = getPointerAlign();
 
@@ -4125,7 +4184,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   GV = Fields.finishAndCreateGlobal("_unnamed_cfstring_", Alignment,
                                     /*isConstant=*/false,
                                     llvm::GlobalVariable::PrivateLinkage);
-  switch (getTriple().getObjectFormat()) {
+  switch (Triple.getObjectFormat()) {
   case llvm::Triple::UnknownObjectFormat:
     llvm_unreachable("unknown file format");
   case llvm::Triple::COFF:
