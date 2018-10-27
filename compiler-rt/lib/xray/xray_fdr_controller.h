@@ -42,7 +42,7 @@ template <size_t Version = 3> class FDRController {
   bool finalized() const { return BQ == nullptr || BQ->finalizing(); }
 
   bool hasSpace(size_t S) {
-    return B.Data != nullptr &&
+    return B.Data != nullptr && B.Generation == BQ->generation() &&
            W.getNextRecord() + S <= reinterpret_cast<char *>(B.Data) + B.Size;
   }
 
@@ -51,8 +51,6 @@ template <size_t Version = 3> class FDRController {
   }
 
   bool getNewBuffer() {
-    if (!returnBuffer())
-      return false;
     if (BQ->getBuffer(B) != BufferQueue::ErrorCode::Ok)
       return false;
 
@@ -60,6 +58,9 @@ template <size_t Version = 3> class FDRController {
     DCHECK_EQ(W.getNextRecord(), B.Data);
     LatestTSC = 0;
     LatestCPU = 0;
+    First = true;
+    UndoableFunctionEnters = 0;
+    UndoableTailExits = 0;
     atomic_store(&B.Extents, 0, memory_order_release);
     return true;
   }
@@ -108,6 +109,8 @@ template <size_t Version = 3> class FDRController {
       return returnBuffer();
 
     if (UNLIKELY(!hasSpace(S))) {
+      if (!returnBuffer())
+        return false;
       if (!getNewBuffer())
         return false;
       if (!setupNewBuffer())
@@ -128,24 +131,26 @@ template <size_t Version = 3> class FDRController {
     if (BQ == nullptr)
       return false;
 
+    First = true;
     if (finalized()) {
       BQ->releaseBuffer(B); // ignore result.
       return false;
     }
 
-    First = true;
-    if (BQ->releaseBuffer(B) != BufferQueue::ErrorCode::Ok)
-      return false;
-    return true;
+    return BQ->releaseBuffer(B) == BufferQueue::ErrorCode::Ok;
   }
 
-  enum class PreambleResult { NoChange, WroteMetadata };
+  enum class PreambleResult { NoChange, WroteMetadata, InvalidBuffer };
   PreambleResult functionPreamble(uint64_t TSC, uint16_t CPU) {
     if (UNLIKELY(LatestCPU != CPU || LatestTSC == 0)) {
       // We update our internal tracking state for the Latest TSC and CPU we've
       // seen, then write out the appropriate metadata and function records.
       LatestTSC = TSC;
       LatestCPU = CPU;
+
+      if (B.Generation != BQ->generation())
+        return PreambleResult::InvalidBuffer;
+
       W.writeMetadata<MetadataRecord::RecordKinds::NewCPUId>(CPU, TSC);
       return PreambleResult::WroteMetadata;
     }
@@ -153,6 +158,10 @@ template <size_t Version = 3> class FDRController {
     if (UNLIKELY(LatestCPU == LatestCPU && LatestTSC > TSC)) {
       // The TSC has wrapped around, from the last TSC we've seen.
       LatestTSC = TSC;
+
+      if (B.Generation != BQ->generation())
+        return PreambleResult::InvalidBuffer;
+
       W.writeMetadata<MetadataRecord::RecordKinds::TSCWrap>(TSC);
       return PreambleResult::WroteMetadata;
     }
@@ -160,7 +169,7 @@ template <size_t Version = 3> class FDRController {
     return PreambleResult::NoChange;
   }
 
-  void rewindRecords(int32_t FuncId, uint64_t TSC, uint16_t CPU) {
+  bool rewindRecords(int32_t FuncId, uint64_t TSC, uint16_t CPU) {
     // Undo one enter record, because at this point we are either at the state
     // of:
     // - We are exiting a function that we recently entered.
@@ -169,6 +178,8 @@ template <size_t Version = 3> class FDRController {
     //
     FunctionRecord F;
     W.undoWrites(sizeof(FunctionRecord));
+    if (B.Generation != BQ->generation())
+      return false;
     internal_memcpy(&F, W.getNextRecord(), sizeof(FunctionRecord));
 
     DCHECK(F.RecordKind ==
@@ -179,30 +190,35 @@ template <size_t Version = 3> class FDRController {
     LatestTSC -= F.TSCDelta;
     if (--UndoableFunctionEnters != 0) {
       LastFunctionEntryTSC -= F.TSCDelta;
-      return;
+      return true;
     }
 
     LastFunctionEntryTSC = 0;
     auto RewindingTSC = LatestTSC;
     auto RewindingRecordPtr = W.getNextRecord() - sizeof(FunctionRecord);
     while (UndoableTailExits) {
+      if (B.Generation != BQ->generation())
+        return false;
       internal_memcpy(&F, RewindingRecordPtr, sizeof(FunctionRecord));
       DCHECK_EQ(F.RecordKind,
                 uint8_t(FunctionRecord::RecordKinds::FunctionTailExit));
       RewindingTSC -= F.TSCDelta;
       RewindingRecordPtr -= sizeof(FunctionRecord);
+      if (B.Generation != BQ->generation())
+        return false;
       internal_memcpy(&F, RewindingRecordPtr, sizeof(FunctionRecord));
 
       // This tail call exceeded the threshold duration. It will not be erased.
       if ((TSC - RewindingTSC) >= CycleThreshold) {
         UndoableTailExits = 0;
-        return;
+        return true;
       }
 
       --UndoableTailExits;
       W.undoWrites(sizeof(FunctionRecord) * 2);
       LatestTSC = RewindingTSC;
     }
+    return true;
   }
 
 public:
@@ -212,18 +228,17 @@ public:
       : BQ(BQ), B(B), W(W), WallClockReader(R), CycleThreshold(C) {}
 
   bool functionEnter(int32_t FuncId, uint64_t TSC, uint16_t CPU) {
-    if (finalized())
+    if (finalized() ||
+        !prepareBuffer(sizeof(MetadataRecord) + sizeof(FunctionRecord)))
       return returnBuffer();
 
-    if (!prepareBuffer(sizeof(MetadataRecord) + sizeof(FunctionRecord)))
+    auto PreambleStatus = functionPreamble(TSC, CPU);
+    if (PreambleStatus == PreambleResult::InvalidBuffer)
       return returnBuffer();
 
-    if (functionPreamble(TSC, CPU) == PreambleResult::WroteMetadata) {
-      UndoableFunctionEnters = 1;
-    } else {
-      ++UndoableFunctionEnters;
-    }
-
+    UndoableFunctionEnters = (PreambleStatus == PreambleResult::WroteMetadata)
+                                 ? 1
+                                 : UndoableFunctionEnters + 1;
     LastFunctionEntryTSC = TSC;
     LatestTSC = TSC;
     return W.writeFunction(FDRLogWriter::FunctionRecordKind::Enter,
@@ -237,12 +252,14 @@ public:
     if (!prepareBuffer(sizeof(MetadataRecord) + sizeof(FunctionRecord)))
       return returnBuffer();
 
-    if (functionPreamble(TSC, CPU) == PreambleResult::NoChange &&
+    auto PreambleStatus = functionPreamble(TSC, CPU);
+    if (PreambleStatus == PreambleResult::InvalidBuffer)
+      return returnBuffer();
+
+    if (PreambleStatus == PreambleResult::NoChange &&
         UndoableFunctionEnters != 0 &&
-        TSC - LastFunctionEntryTSC < CycleThreshold) {
-      rewindRecords(FuncId, TSC, CPU);
-      return true;
-    }
+        TSC - LastFunctionEntryTSC < CycleThreshold)
+      return rewindRecords(FuncId, TSC, CPU);
 
     UndoableTailExits = UndoableFunctionEnters ? UndoableTailExits + 1 : 0;
     UndoableFunctionEnters = 0;
@@ -253,14 +270,10 @@ public:
 
   bool functionEnterArg(int32_t FuncId, uint64_t TSC, uint16_t CPU,
                         uint64_t Arg) {
-    if (finalized())
+    if (finalized() ||
+        !prepareBuffer((2 * sizeof(MetadataRecord)) + sizeof(FunctionRecord)) ||
+        functionPreamble(TSC, CPU) == PreambleResult::InvalidBuffer)
       return returnBuffer();
-
-    if (!prepareBuffer((2 * sizeof(MetadataRecord)) + sizeof(FunctionRecord)))
-      return returnBuffer();
-
-    // Ignore the result of writing out the preamble.
-    functionPreamble(TSC, CPU);
 
     LatestTSC = TSC;
     LastFunctionEntryTSC = 0;
@@ -273,15 +286,18 @@ public:
   }
 
   bool functionExit(int32_t FuncId, uint64_t TSC, uint16_t CPU) {
-    if (finalized())
+    if (finalized() ||
+        !prepareBuffer(sizeof(MetadataRecord) + sizeof(FunctionRecord)))
       return returnBuffer();
 
-    if (functionPreamble(TSC, CPU) == PreambleResult::NoChange &&
+    auto PreambleStatus = functionPreamble(TSC, CPU);
+    if (PreambleStatus == PreambleResult::InvalidBuffer)
+      return returnBuffer();
+
+    if (PreambleStatus == PreambleResult::NoChange &&
         UndoableFunctionEnters != 0 &&
-        TSC - LastFunctionEntryTSC < CycleThreshold) {
-      rewindRecords(FuncId, TSC, CPU);
-      return true;
-    }
+        TSC - LastFunctionEntryTSC < CycleThreshold)
+      return rewindRecords(FuncId, TSC, CPU);
 
     LatestTSC = TSC;
     UndoableFunctionEnters = 0;
