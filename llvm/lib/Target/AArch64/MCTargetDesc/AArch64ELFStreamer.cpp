@@ -60,16 +60,6 @@ void AArch64TargetAsmStreamer::emitInst(uint32_t Inst) {
   OS << "\t.inst\t0x" << Twine::utohexstr(Inst) << "\n";
 }
 
-class AArch64TargetELFStreamer : public AArch64TargetStreamer {
-private:
-  AArch64ELFStreamer &getStreamer();
-
-  void emitInst(uint32_t Inst) override;
-
-public:
-  AArch64TargetELFStreamer(MCStreamer &S) : AArch64TargetStreamer(S) {}
-};
-
 /// Extend the generic ELFStreamer class so that it can emit mapping symbols at
 /// the appropriate points in the object files. These symbols are defined in the
 /// AArch64 ELF ABI:
@@ -197,6 +187,8 @@ private:
 
 } // end anonymous namespace
 
+namespace llvm {
+
 AArch64ELFStreamer &AArch64TargetELFStreamer::getStreamer() {
   return static_cast<AArch64ELFStreamer &>(Streamer);
 }
@@ -204,8 +196,6 @@ AArch64ELFStreamer &AArch64TargetELFStreamer::getStreamer() {
 void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {
   getStreamer().emitInst(Inst);
 }
-
-namespace llvm {
 
 MCTargetStreamer *createAArch64AsmTargetStreamer(MCStreamer &S,
                                                  formatted_raw_ostream &OS,
@@ -224,16 +214,6 @@ MCELFStreamer *createAArch64ELFStreamer(MCContext &Context,
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);
   return S;
-}
-
-MCTargetStreamer *
-createAArch64ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
-  const Triple &TT = STI.getTargetTriple();
-  if (TT.isOSBinFormatELF())
-    return new AArch64TargetELFStreamer(S);
-  if (TT.isOSBinFormatCOFF())
-    return new AArch64TargetWinCOFFStreamer(S);
-  return nullptr;
 }
 
 } // end namespace llvm

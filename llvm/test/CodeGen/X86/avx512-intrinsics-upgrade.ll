@@ -1658,7 +1658,7 @@ define void @test_storent_ps_512(<16 x float> %data, i8* %ptr) {
 define <16 x i32> @test_xor_epi32(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: test_xor_epi32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpxorq %zmm1, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0xfd,0x48,0xef,0xc1]
+; CHECK-NEXT:    vpxord %zmm1, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7d,0x48,0xef,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %res = call <16 x i32> @llvm.x86.avx512.mask.pxor.d.512(<16 x i32> %a,<16 x i32> %b, <16 x i32>zeroinitializer, i16 -1)
   ret < 16 x i32> %res
@@ -1687,7 +1687,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.pxor.d.512(<16 x i32>, <16 x i32>, <16 
 define <16 x i32> @test_or_epi32(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: test_or_epi32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vporq %zmm1, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0xfd,0x48,0xeb,0xc1]
+; CHECK-NEXT:    vpord %zmm1, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7d,0x48,0xeb,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %res = call <16 x i32> @llvm.x86.avx512.mask.por.d.512(<16 x i32> %a,<16 x i32> %b, <16 x i32>zeroinitializer, i16 -1)
   ret < 16 x i32> %res
@@ -1716,7 +1716,7 @@ declare <16 x i32> @llvm.x86.avx512.mask.por.d.512(<16 x i32>, <16 x i32>, <16 x
 define <16 x i32> @test_and_epi32(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-LABEL: test_and_epi32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vpandq %zmm1, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0xfd,0x48,0xdb,0xc1]
+; CHECK-NEXT:    vpandd %zmm1, %zmm0, %zmm0 ## encoding: [0x62,0xf1,0x7d,0x48,0xdb,0xc1]
 ; CHECK-NEXT:    ret{{[l|q]}} ## encoding: [0xc3]
   %res = call <16 x i32> @llvm.x86.avx512.mask.pand.d.512(<16 x i32> %a,<16 x i32> %b, <16 x i32>zeroinitializer, i16 -1)
   ret < 16 x i32> %res

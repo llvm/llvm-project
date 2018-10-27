@@ -3138,6 +3138,28 @@ def F128CSEL : Pseudo<(outs FPR128:$Rd),
   let hasNoSchedulingInfo = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// Instructions used for emitting unwind opcodes on ARM64 Windows.
+//===----------------------------------------------------------------------===//
+let isPseudo = 1 in {
+  def SEH_StackAlloc : Pseudo<(outs), (ins i32imm:$size), []>, Sched<[]>;
+  def SEH_SaveFPLR : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveFPLR_X : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveReg : Pseudo<(outs), (ins i32imm:$reg, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveReg_X : Pseudo<(outs), (ins i32imm:$reg, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveRegP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveRegP_X : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveFReg : Pseudo<(outs), (ins i32imm:$reg, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveFReg_X :  Pseudo<(outs), (ins i32imm:$reg, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveFRegP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveFRegP_X : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SetFP : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_AddFP : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
+  def SEH_Nop : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_PrologEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_EpilogStart : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_EpilogEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
+}
 
 //===----------------------------------------------------------------------===//
 // Floating point immediate move.

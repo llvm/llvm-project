@@ -153,11 +153,10 @@ define i32 @test_tst_assessment(i32 %a, i32 %b) {
 ; THUMB-NEXT:    movs r2, r0
 ; THUMB-NEXT:    movs r0, #1
 ; THUMB-NEXT:    ands r0, r2
-; THUMB-NEXT:    subs r2, r0, #1
 ; THUMB-NEXT:    lsls r1, r1, #31
 ; THUMB-NEXT:    beq .LBB2_2
 ; THUMB-NEXT:  @ %bb.1:
-; THUMB-NEXT:    movs r0, r2
+; THUMB-NEXT:    subs r0, r0, #1
 ; THUMB-NEXT:  .LBB2_2:
 ; THUMB-NEXT:    bx lr
 ;

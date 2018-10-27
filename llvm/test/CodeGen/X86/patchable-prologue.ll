@@ -1,5 +1,5 @@
-; RUN: llc -filetype=obj -o - -mtriple=x86_64-apple-macosx < %s | llvm-objdump -triple x86_64-apple-macosx -disassemble - | FileCheck %s
-; RUN: llc -mtriple=x86_64-apple-macosx < %s | FileCheck %s --check-prefix=CHECK-ALIGN
+; RUN: llc -verify-machineinstrs -filetype=obj -o - -mtriple=x86_64-apple-macosx < %s | llvm-objdump -triple x86_64-apple-macosx -disassemble - | FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-apple-macosx < %s | FileCheck %s --check-prefix=CHECK-ALIGN
 
 declare void @callee(i64*)
 

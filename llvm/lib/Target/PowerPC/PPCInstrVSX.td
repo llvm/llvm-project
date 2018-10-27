@@ -3873,10 +3873,11 @@ let AddedComplexity = 400 in {
                         (COPY_TO_REGCLASS (MTVSRD $A), VSRC),
                         (COPY_TO_REGCLASS (MTVSRD $B), VSRC), 0))>;
     def : Pat<(v4i32 (build_vector i32:$A, i32:$B, i32:$C, i32:$D)),
-              (VMRGOW (XXPERMDI (COPY_TO_REGCLASS (MTVSRWZ $A), VSRC),
-                                   (COPY_TO_REGCLASS (MTVSRWZ $C), VSRC), 0),
-                      (XXPERMDI (COPY_TO_REGCLASS (MTVSRWZ $B), VSRC),
-                                   (COPY_TO_REGCLASS (MTVSRWZ $D), VSRC), 0))>;
+              (XXPERMDI
+                (COPY_TO_REGCLASS
+                  (MTVSRD (RLDIMI AnyExts.B, AnyExts.A, 32, 0)), VSRC),
+                (COPY_TO_REGCLASS
+                  (MTVSRD (RLDIMI AnyExts.D, AnyExts.C, 32, 0)), VSRC), 0)>;
     def : Pat<(v4i32 (build_vector i32:$A, i32:$A, i32:$A, i32:$A)),
               (XXSPLTW (COPY_TO_REGCLASS (MTVSRWZ $A), VSRC), 1)>;
   }
@@ -3888,10 +3889,11 @@ let AddedComplexity = 400 in {
                         (COPY_TO_REGCLASS (MTVSRD $B), VSRC),
                         (COPY_TO_REGCLASS (MTVSRD $A), VSRC), 0))>;
     def : Pat<(v4i32 (build_vector i32:$A, i32:$B, i32:$C, i32:$D)),
-              (VMRGOW (XXPERMDI (COPY_TO_REGCLASS (MTVSRWZ $D), VSRC),
-                                   (COPY_TO_REGCLASS (MTVSRWZ $B), VSRC), 0),
-                      (XXPERMDI (COPY_TO_REGCLASS (MTVSRWZ $C), VSRC),
-                                   (COPY_TO_REGCLASS (MTVSRWZ $A), VSRC), 0))>;
+              (XXPERMDI
+                (COPY_TO_REGCLASS
+                  (MTVSRD (RLDIMI AnyExts.C, AnyExts.D, 32, 0)), VSRC),
+                (COPY_TO_REGCLASS
+                  (MTVSRD (RLDIMI AnyExts.A, AnyExts.B, 32, 0)), VSRC), 0)>;
     def : Pat<(v4i32 (build_vector i32:$A, i32:$A, i32:$A, i32:$A)),
               (XXSPLTW (COPY_TO_REGCLASS (MTVSRWZ $A), VSRC), 1)>;
   }
@@ -3944,10 +3946,9 @@ let AddedComplexity = 400 in {
     def : Pat<(v2i64 (build_vector i64:$rB, i64:$rA)),
               (v2i64 (MTVSRDD $rB, $rA))>;
     def : Pat<(v4i32 (build_vector i32:$A, i32:$B, i32:$C, i32:$D)),
-              (VMRGOW
-                (v4i32 (COPY_TO_REGCLASS (MTVSRDD AnyExts.A, AnyExts.C), VSRC)),
-                (v4i32
-                  (COPY_TO_REGCLASS (MTVSRDD AnyExts.B, AnyExts.D), VSRC)))>;
+              (MTVSRDD
+                (RLDIMI AnyExts.B, AnyExts.A, 32, 0),
+                (RLDIMI AnyExts.D, AnyExts.C, 32, 0))>;
   }
 
   let Predicates = [IsISA3_0, HasDirectMove, IsLittleEndian] in {
@@ -3957,10 +3958,9 @@ let AddedComplexity = 400 in {
     def : Pat<(v2i64 (build_vector i64:$rA, i64:$rB)),
               (v2i64 (MTVSRDD $rB, $rA))>;
     def : Pat<(v4i32 (build_vector i32:$A, i32:$B, i32:$C, i32:$D)),
-              (VMRGOW
-                (v4i32 (COPY_TO_REGCLASS (MTVSRDD AnyExts.D, AnyExts.B), VSRC)),
-                (v4i32
-                  (COPY_TO_REGCLASS (MTVSRDD AnyExts.C, AnyExts.A), VSRC)))>;
+              (MTVSRDD
+                (RLDIMI AnyExts.C, AnyExts.D, 32, 0),
+                (RLDIMI AnyExts.A, AnyExts.B, 32, 0))>;
   }
   // P9 Altivec instructions that can be used to build vectors.
   // Adding them to PPCInstrVSX.td rather than PPCAltivecVSX.td to compete

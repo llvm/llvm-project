@@ -5027,6 +5027,14 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
   case ISD::SETCC: {
+    assert(VT.isInteger() && "SETCC result type must be an integer!");
+    assert(N1.getValueType() == N2.getValueType() &&
+           "SETCC operands must have the same type!");
+    assert(VT.isVector() == N1.getValueType().isVector() &&
+           "SETCC type should be vector iff the operand type is vector!");
+    assert((!VT.isVector() ||
+            VT.getVectorNumElements() == N1.getValueType().getVectorNumElements()) &&
+           "SETCC vector element counts must match!");
     // Use FoldSetCC to simplify SETCC's.
     if (SDValue V = FoldSetCC(VT, N1, N2, cast<CondCodeSDNode>(N3)->get(), DL))
       return V;

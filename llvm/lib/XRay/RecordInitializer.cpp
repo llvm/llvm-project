@@ -20,7 +20,7 @@ Error RecordInitializer::visit(BufferExtents &R) {
   auto PreReadOffset = OffsetPtr;
   R.Size = E.getU64(&OffsetPtr);
   if (PreReadOffset == OffsetPtr)
-    return createStringError(std::make_error_code(std::errc::bad_message),
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Cannot read buffer extent at offset %d.",
                              OffsetPtr);
 
@@ -39,14 +39,14 @@ Error RecordInitializer::visit(WallclockRecord &R) {
   R.Seconds = E.getU64(&OffsetPtr);
   if (OffsetPtr == PreReadOffset)
     return createStringError(
-        std::make_error_code(std::errc::bad_message),
+        std::make_error_code(std::errc::invalid_argument),
         "Cannot read wall clock 'seconds' field at offset %d.", OffsetPtr);
 
   PreReadOffset = OffsetPtr;
   R.Nanos = E.getU32(&OffsetPtr);
   if (OffsetPtr == PreReadOffset)
     return createStringError(
-        std::make_error_code(std::errc::bad_message),
+        std::make_error_code(std::errc::invalid_argument),
         "Cannot read wall clock 'nanos' field at offset %d.", OffsetPtr);
 
   // Align to metadata record size boundary.
@@ -65,13 +65,13 @@ Error RecordInitializer::visit(NewCPUIDRecord &R) {
   auto PreReadOffset = OffsetPtr;
   R.CPUId = E.getU16(&OffsetPtr);
   if (OffsetPtr == PreReadOffset)
-    return createStringError(std::make_error_code(std::errc::bad_message),
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Cannot read CPU id at offset %d.", OffsetPtr);
 
   PreReadOffset = OffsetPtr;
   R.TSC = E.getU64(&OffsetPtr);
   if (OffsetPtr == PreReadOffset)
-    return createStringError(std::make_error_code(std::errc::bad_message),
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Cannot read CPU TSC at offset %d.", OffsetPtr);
 
   OffsetPtr += MetadataRecord::kMetadataBodySize - (OffsetPtr - BeginOffset);
@@ -88,7 +88,7 @@ Error RecordInitializer::visit(TSCWrapRecord &R) {
   auto PreReadOffset = OffsetPtr;
   R.BaseTSC = E.getU64(&OffsetPtr);
   if (PreReadOffset == OffsetPtr)
-    return createStringError(std::make_error_code(std::errc::bad_message),
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Cannot read TSC wrap record at offset %d.",
                              OffsetPtr);
 
@@ -108,14 +108,14 @@ Error RecordInitializer::visit(CustomEventRecord &R) {
   R.Size = E.getSigned(&OffsetPtr, sizeof(int32_t));
   if (PreReadOffset == OffsetPtr)
     return createStringError(
-        std::make_error_code(std::errc::bad_message),
+        std::make_error_code(std::errc::invalid_argument),
         "Cannot read a custom event record size field offset %d.", OffsetPtr);
 
   PreReadOffset = OffsetPtr;
   R.TSC = E.getU64(&OffsetPtr);
   if (PreReadOffset == OffsetPtr)
     return createStringError(
-        std::make_error_code(std::errc::bad_message),
+        std::make_error_code(std::errc::invalid_argument),
         "Cannot read a custom event TSC field at offset %d.", OffsetPtr);
 
   OffsetPtr += MetadataRecord::kMetadataBodySize - (OffsetPtr - BeginOffset);
@@ -131,7 +131,7 @@ Error RecordInitializer::visit(CustomEventRecord &R) {
   Buffer.resize(R.Size);
   if (E.getU8(&OffsetPtr, Buffer.data(), R.Size) != Buffer.data())
     return createStringError(
-        std::make_error_code(std::errc::bad_message),
+        std::make_error_code(std::errc::invalid_argument),
         "Failed reading data into buffer of size %d at offset %d.", R.Size,
         OffsetPtr);
   R.Data.assign(Buffer.begin(), Buffer.end());
@@ -148,7 +148,7 @@ Error RecordInitializer::visit(CallArgRecord &R) {
   auto PreReadOffset = OffsetPtr;
   R.Arg = E.getU64(&OffsetPtr);
   if (PreReadOffset == OffsetPtr)
-    return createStringError(std::make_error_code(std::errc::bad_message),
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Cannot read a call arg record at offset %d.",
                              OffsetPtr);
 
@@ -166,7 +166,7 @@ Error RecordInitializer::visit(PIDRecord &R) {
   auto PreReadOffset = OffsetPtr;
   R.PID = E.getSigned(&OffsetPtr, 4);
   if (PreReadOffset == OffsetPtr)
-    return createStringError(std::make_error_code(std::errc::bad_message),
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Cannot read a process ID record at offset %d.",
                              OffsetPtr);
 
@@ -184,7 +184,7 @@ Error RecordInitializer::visit(NewBufferRecord &R) {
   auto PreReadOffset = OffsetPtr;
   R.TID = E.getSigned(&OffsetPtr, sizeof(int32_t));
   if (PreReadOffset == OffsetPtr)
-    return createStringError(std::make_error_code(std::errc::bad_message),
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Cannot read a new buffer record at offset %d.",
                              OffsetPtr);
 
@@ -234,7 +234,7 @@ Error RecordInitializer::visit(FunctionRecord &R) {
     R.Kind = static_cast<RecordTypes>(FunctionType);
     break;
   default:
-    return createStringError(std::make_error_code(std::errc::bad_message),
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown function record type '%d' at offset %d.",
                              FunctionType, BeginOffset);
   }
@@ -243,7 +243,7 @@ Error RecordInitializer::visit(FunctionRecord &R) {
   PreReadOffset = OffsetPtr;
   R.Delta = E.getU32(&OffsetPtr);
   if (OffsetPtr == PreReadOffset)
-    return createStringError(std::make_error_code(std::errc::bad_message),
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Failed reading TSC delta from offset %d.",
                              OffsetPtr);
   assert(FunctionRecord::kFunctionRecordSize == (OffsetPtr - BeginOffset));

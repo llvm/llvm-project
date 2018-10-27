@@ -849,9 +849,6 @@ private:
   /// MaskVT to ToMaskVT if needed with vector extension or truncation.
   SDValue convertMask(SDValue InMask, EVT MaskVT, EVT ToMaskVT);
 
-  /// Get the target mask VT, and widen if needed.
-  EVT getSETCCWidenedResultTy(SDValue SetCC);
-
   //===--------------------------------------------------------------------===//
   // Generic Splitting: LegalizeTypesGeneric.cpp
   //===--------------------------------------------------------------------===//

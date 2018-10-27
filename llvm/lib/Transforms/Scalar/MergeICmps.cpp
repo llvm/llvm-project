@@ -283,8 +283,9 @@ BCECmpBlock visitICmp(const ICmpInst *const CmpI,
     if (!Lhs.Base()) return {};
     auto Rhs = visitICmpLoadOperand(CmpI->getOperand(1));
     if (!Rhs.Base()) return {};
+    const auto &DL = CmpI->getModule()->getDataLayout();
     return BCECmpBlock(std::move(Lhs), std::move(Rhs),
-                       CmpI->getOperand(0)->getType()->getScalarSizeInBits());
+                       DL.getTypeSizeInBits(CmpI->getOperand(0)->getType()));
   }
   return {};
 }

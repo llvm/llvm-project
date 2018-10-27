@@ -708,7 +708,6 @@ define i64 @v16i8_widened_with_ones(<16 x i8> %a, <16 x i8> %b) {
 ; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vinserti128 $1, {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpsllw $7, %ymm0, %ymm0
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
 ; AVX2-NEXT:    movabsq $-4294967296, %rax # imm = 0xFFFFFFFF00000000
 ; AVX2-NEXT:    orq %rcx, %rax

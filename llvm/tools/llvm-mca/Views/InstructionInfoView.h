@@ -35,8 +35,9 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_INSTRUCTIONINFOVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_INSTRUCTIONINFOVIEW_H
 
-#include "SourceMgr.h"
 #include "Views/View.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -50,13 +51,13 @@ namespace mca {
 class InstructionInfoView : public View {
   const llvm::MCSubtargetInfo &STI;
   const llvm::MCInstrInfo &MCII;
-  const SourceMgr &Source;
+  llvm::ArrayRef<llvm::MCInst> Source;
   llvm::MCInstPrinter &MCIP;
 
 public:
   InstructionInfoView(const llvm::MCSubtargetInfo &sti,
-                      const llvm::MCInstrInfo &mcii, const SourceMgr &S,
-                      llvm::MCInstPrinter &IP)
+                      const llvm::MCInstrInfo &mcii,
+                      llvm::ArrayRef<llvm::MCInst> S, llvm::MCInstPrinter &IP)
       : STI(sti), MCII(mcii), Source(S), MCIP(IP) {}
 
   void printView(llvm::raw_ostream &OS) const override;

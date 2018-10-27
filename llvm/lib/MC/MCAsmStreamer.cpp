@@ -289,6 +289,7 @@ public:
 
   void EmitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
   void EmitWinCFIEndProc(SMLoc Loc) override;
+  void EmitWinCFIFuncletOrFuncEnd(SMLoc Loc) override;
   void EmitWinCFIStartChained(SMLoc Loc) override;
   void EmitWinCFIEndChained(SMLoc Loc) override;
   void EmitWinCFIPushReg(unsigned Register, SMLoc Loc) override;
@@ -1587,6 +1588,10 @@ void MCAsmStreamer::EmitWinCFIEndProc(SMLoc Loc) {
 
   OS << "\t.seh_endproc";
   EmitEOL();
+}
+
+// TODO: Implement
+void MCAsmStreamer::EmitWinCFIFuncletOrFuncEnd(SMLoc Loc) {
 }
 
 void MCAsmStreamer::EmitWinCFIStartChained(SMLoc Loc) {

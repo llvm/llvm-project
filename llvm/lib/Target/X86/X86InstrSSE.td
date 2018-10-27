@@ -2417,6 +2417,34 @@ let Predicates = [HasAVX2, NoVLX] in {
             (VPANDNYrr VR256:$src1, VR256:$src2)>;
   def : Pat<(v8i32 (X86andnp VR256:$src1, VR256:$src2)),
             (VPANDNYrr VR256:$src1, VR256:$src2)>;
+
+  def : Pat<(and VR256:$src1, (loadv32i8 addr:$src2)),
+            (VPANDYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(and VR256:$src1, (loadv16i16 addr:$src2)),
+            (VPANDYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(and VR256:$src1, (loadv8i32 addr:$src2)),
+            (VPANDYrm VR256:$src1, addr:$src2)>;
+
+  def : Pat<(or VR256:$src1, (loadv32i8 addr:$src2)),
+            (VPORYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(or VR256:$src1, (loadv16i16 addr:$src2)),
+            (VPORYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(or VR256:$src1, (loadv8i32 addr:$src2)),
+            (VPORYrm VR256:$src1, addr:$src2)>;
+
+  def : Pat<(xor VR256:$src1, (loadv32i8 addr:$src2)),
+            (VPXORYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(xor VR256:$src1, (loadv16i16 addr:$src2)),
+            (VPXORYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(xor VR256:$src1, (loadv8i32 addr:$src2)),
+            (VPXORYrm VR256:$src1, addr:$src2)>;
+
+  def : Pat<(X86andnp VR256:$src1, (loadv32i8 addr:$src2)),
+            (VPANDNYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(X86andnp VR256:$src1, (loadv16i16 addr:$src2)),
+            (VPANDNYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(X86andnp VR256:$src1, (loadv8i32 addr:$src2)),
+            (VPANDNYrm VR256:$src1, addr:$src2)>;
 }
 
 // If only AVX1 is supported, we need to handle integer operations with
@@ -2458,12 +2486,39 @@ let Predicates = [HasAVX1Only] in {
   def : Pat<(v4i64 (X86andnp VR256:$src1, VR256:$src2)),
             (VANDNPSYrr VR256:$src1, VR256:$src2)>;
 
+  def : Pat<(and VR256:$src1, (loadv32i8 addr:$src2)),
+            (VANDPSYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(and VR256:$src1, (loadv16i16 addr:$src2)),
+            (VANDPSYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(and VR256:$src1, (loadv8i32 addr:$src2)),
+            (VANDPSYrm VR256:$src1, addr:$src2)>;
   def : Pat<(and VR256:$src1, (loadv4i64 addr:$src2)),
             (VANDPSYrm VR256:$src1, addr:$src2)>;
+
+  def : Pat<(or VR256:$src1, (loadv32i8 addr:$src2)),
+            (VORPSYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(or VR256:$src1, (loadv16i16 addr:$src2)),
+            (VORPSYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(or VR256:$src1, (loadv8i32 addr:$src2)),
+            (VORPSYrm VR256:$src1, addr:$src2)>;
   def : Pat<(or VR256:$src1, (loadv4i64 addr:$src2)),
             (VORPSYrm VR256:$src1, addr:$src2)>;
+
+  def : Pat<(xor VR256:$src1, (loadv32i8 addr:$src2)),
+            (VXORPSYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(xor VR256:$src1, (loadv16i16 addr:$src2)),
+            (VXORPSYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(xor VR256:$src1, (loadv8i32 addr:$src2)),
+            (VXORPSYrm VR256:$src1, addr:$src2)>;
   def : Pat<(xor VR256:$src1, (loadv4i64 addr:$src2)),
             (VXORPSYrm VR256:$src1, addr:$src2)>;
+
+  def : Pat<(X86andnp VR256:$src1, (loadv32i8 addr:$src2)),
+            (VANDNPSYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(X86andnp VR256:$src1, (loadv16i16 addr:$src2)),
+            (VANDNPSYrm VR256:$src1, addr:$src2)>;
+  def : Pat<(X86andnp VR256:$src1, (loadv8i32 addr:$src2)),
+            (VANDNPSYrm VR256:$src1, addr:$src2)>;
   def : Pat<(X86andnp VR256:$src1, (loadv4i64 addr:$src2)),
             (VANDNPSYrm VR256:$src1, addr:$src2)>;
 }
@@ -2589,6 +2644,34 @@ let Predicates = [HasAVX, NoVLX] in {
             (VPANDNrr VR128:$src1, VR128:$src2)>;
   def : Pat<(v4i32 (X86andnp VR128:$src1, VR128:$src2)),
             (VPANDNrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(and VR128:$src1, (loadv16i8 addr:$src2)),
+            (VPANDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(and VR128:$src1, (loadv8i16 addr:$src2)),
+            (VPANDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(and VR128:$src1, (loadv4i32 addr:$src2)),
+            (VPANDrm VR128:$src1, addr:$src2)>;
+
+  def : Pat<(or VR128:$src1, (loadv16i8 addr:$src2)),
+            (VPORrm VR128:$src1, addr:$src2)>;
+  def : Pat<(or VR128:$src1, (loadv8i16 addr:$src2)),
+            (VPORrm VR128:$src1, addr:$src2)>;
+  def : Pat<(or VR128:$src1, (loadv4i32 addr:$src2)),
+            (VPORrm VR128:$src1, addr:$src2)>;
+
+  def : Pat<(xor VR128:$src1, (loadv16i8 addr:$src2)),
+            (VPXORrm VR128:$src1, addr:$src2)>;
+  def : Pat<(xor VR128:$src1, (loadv8i16 addr:$src2)),
+            (VPXORrm VR128:$src1, addr:$src2)>;
+  def : Pat<(xor VR128:$src1, (loadv4i32 addr:$src2)),
+            (VPXORrm VR128:$src1, addr:$src2)>;
+
+  def : Pat<(X86andnp VR128:$src1, (loadv16i8 addr:$src2)),
+            (VPANDNrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86andnp VR128:$src1, (loadv8i16 addr:$src2)),
+            (VPANDNrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86andnp VR128:$src1, (loadv4i32 addr:$src2)),
+            (VPANDNrm VR128:$src1, addr:$src2)>;
 }
 
 let Predicates = [UseSSE2] in {
@@ -2619,6 +2702,34 @@ let Predicates = [UseSSE2] in {
             (PANDNrr VR128:$src1, VR128:$src2)>;
   def : Pat<(v4i32 (X86andnp VR128:$src1, VR128:$src2)),
             (PANDNrr VR128:$src1, VR128:$src2)>;
+
+  def : Pat<(and VR128:$src1, (memopv16i8 addr:$src2)),
+            (PANDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(and VR128:$src1, (memopv8i16 addr:$src2)),
+            (PANDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(and VR128:$src1, (memopv4i32 addr:$src2)),
+            (PANDrm VR128:$src1, addr:$src2)>;
+
+  def : Pat<(or VR128:$src1, (memopv16i8 addr:$src2)),
+            (PORrm VR128:$src1, addr:$src2)>;
+  def : Pat<(or VR128:$src1, (memopv8i16 addr:$src2)),
+            (PORrm VR128:$src1, addr:$src2)>;
+  def : Pat<(or VR128:$src1, (memopv4i32 addr:$src2)),
+            (PORrm VR128:$src1, addr:$src2)>;
+
+  def : Pat<(xor VR128:$src1, (memopv16i8 addr:$src2)),
+            (PXORrm VR128:$src1, addr:$src2)>;
+  def : Pat<(xor VR128:$src1, (memopv8i16 addr:$src2)),
+            (PXORrm VR128:$src1, addr:$src2)>;
+  def : Pat<(xor VR128:$src1, (memopv4i32 addr:$src2)),
+            (PXORrm VR128:$src1, addr:$src2)>;
+
+  def : Pat<(X86andnp VR128:$src1, (memopv16i8 addr:$src2)),
+            (PANDNrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86andnp VR128:$src1, (memopv8i16 addr:$src2)),
+            (PANDNrm VR128:$src1, addr:$src2)>;
+  def : Pat<(X86andnp VR128:$src1, (memopv4i32 addr:$src2)),
+            (PANDNrm VR128:$src1, addr:$src2)>;
 }
 
 // Patterns for packed operations when we don't have integer type available.

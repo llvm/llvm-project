@@ -2963,6 +2963,8 @@ bool ARMBaseInstrInfo::optimizeCompareInstr(
   for (unsigned i = 0, e = OperandsToUpdate.size(); i < e; i++)
     OperandsToUpdate[i].first->setImm(OperandsToUpdate[i].second);
 
+  MI->clearRegisterDeads(ARM::CPSR);
+
   return true;
 }
 
