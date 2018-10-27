@@ -38,14 +38,14 @@ define <8 x float> @stack_fold_broadcastss_ymm(<4 x float> %a0) {
   ret <8 x float> %3
 }
 
-define <4 x i32> @stack_fold_extracti128(<8 x i32> %a0, <8 x i32> %a1) {
+define <4 x i32> @stack_fold_extracti128(<8 x i16> %a0, <8 x i32> %a1) {
   ;CHECK-LABEL: stack_fold_extracti128
   ;CHECK:       vextracti128 $1, {{%ymm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 16-byte Folded Spill
-  ; add forces execution domain
-  %1 = add <8 x i32> %a0, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %2 = shufflevector <8 x i32> %1, <8 x i32> %a1, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %3 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  ret <4 x i32> %2
+  ; zext forces execution domain
+  %t1 = zext <8 x i16> %a0 to <8 x i32>
+  %t2 = shufflevector <8 x i32> %t1, <8 x i32> %a1, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %t3 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
+  ret <4 x i32> %t2
 }
 
 define <8 x i32> @stack_fold_inserti128(<4 x i32> %a0, <4 x i32> %a1) {

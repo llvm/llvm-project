@@ -16681,30 +16681,14 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
   // some of these bailouts with other transforms.
 
   // The extract index must be a constant, so we can map it to a concat operand.
-  auto *ExtractIndex = dyn_cast<ConstantSDNode>(Extract->getOperand(1));
-  if (!ExtractIndex)
-    return SDValue();
-
-  // Only handle the case where we are doubling and then halving. A larger ratio
-  // may require more than two narrow binops to replace the wide binop.
-  EVT VT = Extract->getValueType(0);
-  unsigned NumElems = VT.getVectorNumElements();
-  assert((ExtractIndex->getZExtValue() % NumElems) == 0 &&
-         "Extract index is not a multiple of the vector length.");
-  if (Extract->getOperand(0).getValueSizeInBits() != VT.getSizeInBits() * 2)
+  auto *ExtractIndexC = dyn_cast<ConstantSDNode>(Extract->getOperand(1));
+  if (!ExtractIndexC)
     return SDValue();
 
   // We are looking for an optionally bitcasted wide vector binary operator
   // feeding an extract subvector.
   SDValue BinOp = peekThroughBitcasts(Extract->getOperand(0));
-
-  // TODO: The motivating case for this transform is an x86 AVX1 target. That
-  // target has temptingly almost legal versions of bitwise logic ops in 256-bit
-  // flavors, but no other 256-bit integer support. This could be extended to
-  // handle any binop, but that may require fixing/adding other folds to avoid
-  // codegen regressions.
-  unsigned BOpcode = BinOp.getOpcode();
-  if (BOpcode != ISD::AND && BOpcode != ISD::OR && BOpcode != ISD::XOR)
+  if (!ISD::isBinaryOp(BinOp.getNode()))
     return SDValue();
 
   // The binop must be a vector type, so we can chop it in half.
@@ -16713,18 +16697,36 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
     return SDValue();
 
   // Bail out if the target does not support a narrower version of the binop.
+  unsigned BOpcode = BinOp.getOpcode();
   EVT NarrowBVT = EVT::getVectorVT(*DAG.getContext(), WideBVT.getScalarType(),
                                    WideBVT.getVectorNumElements() / 2);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!TLI.isOperationLegalOrCustomOrPromote(BOpcode, NarrowBVT))
     return SDValue();
 
-  SDValue LHS = peekThroughBitcasts(BinOp.getOperand(0));
-  SDValue RHS = peekThroughBitcasts(BinOp.getOperand(1));
+  // Only handle the case where we are doubling and then halving. A larger ratio
+  // may require more than two narrow binops to replace the wide binop.
+  EVT VT = Extract->getValueType(0);
+  unsigned NumElems = VT.getVectorNumElements();
+  unsigned ExtractIndex = ExtractIndexC->getZExtValue();
+  assert(ExtractIndex % NumElems == 0 &&
+         "Extract index is not a multiple of the vector length.");
+  if (Extract->getOperand(0).getValueSizeInBits() != VT.getSizeInBits() * 2)
+    return SDValue();
+
+  // TODO: The motivating case for this transform is an x86 AVX1 target. That
+  // target has temptingly almost legal versions of bitwise logic ops in 256-bit
+  // flavors, but no other 256-bit integer support. This could be extended to
+  // handle any binop, but that may require fixing/adding other folds to avoid
+  // codegen regressions.
+  if (BOpcode != ISD::AND && BOpcode != ISD::OR && BOpcode != ISD::XOR)
+    return SDValue();
 
   // We need at least one concatenation operation of a binop operand to make
   // this transform worthwhile. The concat must double the input vector sizes.
   // TODO: Should we also handle INSERT_SUBVECTOR patterns?
+  SDValue LHS = peekThroughBitcasts(BinOp.getOperand(0));
+  SDValue RHS = peekThroughBitcasts(BinOp.getOperand(1));
   bool ConcatL =
       LHS.getOpcode() == ISD::CONCAT_VECTORS && LHS.getNumOperands() == 2;
   bool ConcatR =
@@ -16735,7 +16737,7 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
   // If one of the binop operands was not the result of a concat, we must
   // extract a half-sized operand for our new narrow binop. We can't just reuse
   // the original extract index operand because we may have bitcasted.
-  unsigned ConcatOpNum = ExtractIndex->getZExtValue() / NumElems;
+  unsigned ConcatOpNum = ExtractIndex / NumElems;
   unsigned ExtBOIdx = ConcatOpNum * NarrowBVT.getVectorNumElements();
   EVT ExtBOIdxVT = Extract->getOperand(1).getValueType();
   SDLoc DL(Extract);

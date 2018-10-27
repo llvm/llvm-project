@@ -309,13 +309,13 @@ define i32 @test_v16i32(<16 x i32> %a0) {
 ; AVX512-LABEL: test_v16i32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -372,15 +372,15 @@ define i32 @test_v32i32(<32 x i32> %a0) {
 ;
 ; AVX512-LABEL: test_v32i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

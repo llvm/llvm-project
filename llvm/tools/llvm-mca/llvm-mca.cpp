@@ -497,6 +497,7 @@ int main(int argc, char **argv) {
 
   // Number each region in the sequence.
   unsigned RegionIdx = 0;
+
   for (const std::unique_ptr<mca::CodeRegion> &Region : Regions) {
     // Skip empty code regions.
     if (Region->empty())
@@ -512,6 +513,7 @@ int main(int argc, char **argv) {
       TOF->os() << "\n\n";
     }
 
+    ArrayRef<MCInst> Insts = Region->getInstructions();
     mca::SourceMgr S(Region->getInstructions(),
                      PrintInstructionTables ? 1 : Iterations);
 
@@ -524,11 +526,11 @@ int main(int argc, char **argv) {
 
       // Create the views for this pipeline, execute, and emit a report.
       if (PrintInstructionInfoView) {
-        Printer.addView(
-            llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, S, *IP));
+        Printer.addView(llvm::make_unique<mca::InstructionInfoView>(
+            *STI, *MCII, Insts, *IP));
       }
       Printer.addView(
-          llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, S));
+          llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
 
       if (!runPipeline(*P, *IP, *STI))
         return 1;
@@ -542,11 +544,11 @@ int main(int argc, char **argv) {
     mca::PipelinePrinter Printer(*P);
 
     if (PrintSummaryView)
-      Printer.addView(llvm::make_unique<mca::SummaryView>(SM, S, Width));
+      Printer.addView(llvm::make_unique<mca::SummaryView>(SM, Insts, Width));
 
     if (PrintInstructionInfoView)
       Printer.addView(
-          llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, S, *IP));
+          llvm::make_unique<mca::InstructionInfoView>(*STI, *MCII, Insts, *IP));
 
     if (PrintDispatchStats)
       Printer.addView(llvm::make_unique<mca::DispatchStatistics>());
@@ -562,11 +564,14 @@ int main(int argc, char **argv) {
 
     if (PrintResourcePressureView)
       Printer.addView(
-          llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, S));
+          llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
 
     if (PrintTimelineView) {
+      unsigned TimelineIterations =
+          TimelineMaxIterations ? TimelineMaxIterations : 10;
       Printer.addView(llvm::make_unique<mca::TimelineView>(
-          *STI, *IP, S, TimelineMaxIterations, TimelineMaxCycles));
+          *STI, *IP, Insts, std::min(TimelineIterations, S.getNumIterations()),
+          TimelineMaxCycles));
     }
 
     if (!runPipeline(*P, *IP, *STI))

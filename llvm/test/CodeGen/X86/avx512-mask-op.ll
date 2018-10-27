@@ -3177,7 +3177,7 @@ define void @ktest_signed(<16 x i32> %x, <16 x i32> %y) {
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    pushq %rax
 ; KNL-NEXT:    .cfi_def_cfa_offset 16
-; KNL-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; KNL-NEXT:    vpord %zmm1, %zmm0, %zmm0
 ; KNL-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    testw %ax, %ax
@@ -3196,7 +3196,7 @@ define void @ktest_signed(<16 x i32> %x, <16 x i32> %y) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    pushq %rax
 ; SKX-NEXT:    .cfi_def_cfa_offset 16
-; SKX-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; SKX-NEXT:    vpord %zmm1, %zmm0, %zmm0
 ; SKX-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    testw %ax, %ax
@@ -3215,7 +3215,7 @@ define void @ktest_signed(<16 x i32> %x, <16 x i32> %y) {
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    pushq %rax
 ; AVX512BW-NEXT:    .cfi_def_cfa_offset 16
-; AVX512BW-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; AVX512BW-NEXT:    vpord %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    testw %ax, %ax
@@ -3234,7 +3234,7 @@ define void @ktest_signed(<16 x i32> %x, <16 x i32> %y) {
 ; AVX512DQ:       ## %bb.0:
 ; AVX512DQ-NEXT:    pushq %rax
 ; AVX512DQ-NEXT:    .cfi_def_cfa_offset 16
-; AVX512DQ-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; AVX512DQ-NEXT:    vpord %zmm1, %zmm0, %zmm0
 ; AVX512DQ-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, %eax
 ; AVX512DQ-NEXT:    testw %ax, %ax
@@ -3253,7 +3253,7 @@ define void @ktest_signed(<16 x i32> %x, <16 x i32> %y) {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; X86-NEXT:    vpord %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; X86-NEXT:    kmovd %k0, %eax
 ; X86-NEXT:    testw %ax, %ax
@@ -3287,7 +3287,7 @@ define void @ktest_allones(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpord %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; CHECK-NEXT:    kortestw %k0, %k0
 ; CHECK-NEXT:    jb LBB65_2
@@ -3303,7 +3303,7 @@ define void @ktest_allones(<16 x i32> %x, <16 x i32> %y) {
 ; X86:       ## %bb.0:
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; X86-NEXT:    vpord %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    vptestnmd %zmm0, %zmm0, %k0
 ; X86-NEXT:    kortestw %k0, %k0
 ; X86-NEXT:    jb LBB65_2

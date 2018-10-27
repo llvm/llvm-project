@@ -48,9 +48,8 @@ public:
   using const_iterator = llvm::ArrayRef<llvm::MCInst>::const_iterator;
   const_iterator begin() const { return Sequence.begin(); }
   const_iterator end() const { return Sequence.end(); }
-
-  bool isEmpty() const { return size() == 0; }
 };
+
 } // namespace mca
 
 #endif

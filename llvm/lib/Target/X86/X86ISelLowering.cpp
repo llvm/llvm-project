@@ -6530,8 +6530,8 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     MVT SrcVT = Src.getSimpleValueType();
     if (NumSizeInBits != SrcVT.getSizeInBits())
       break;
-    DecodeZeroExtendMask(SrcVT.getScalarSizeInBits(), VT.getScalarSizeInBits(),
-                         VT.getVectorNumElements(), Mask);
+    DecodeZeroExtendMask(SrcVT.getScalarSizeInBits(), NumBitsPerElt, NumElts,
+                         Mask);
     Ops.push_back(Src);
     return true;
   }
@@ -9886,11 +9886,7 @@ static SDValue lowerVectorShuffleAsBitBlend(const SDLoc &DL, MVT VT, SDValue V1,
 
   SDValue V1Mask = DAG.getBuildVector(VT, DL, MaskOps);
   V1 = DAG.getNode(ISD::AND, DL, VT, V1, V1Mask);
-  // We have to cast V2 around.
-  MVT MaskVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-  V2 = DAG.getBitcast(VT, DAG.getNode(X86ISD::ANDNP, DL, MaskVT,
-                                      DAG.getBitcast(MaskVT, V1Mask),
-                                      DAG.getBitcast(MaskVT, V2)));
+  V2 = DAG.getNode(X86ISD::ANDNP, DL, VT, V1Mask, V2);
   return DAG.getNode(ISD::OR, DL, VT, V1, V2);
 }
 
@@ -10067,6 +10063,15 @@ static SDValue lowerVectorShuffleAsBlend(const SDLoc &DL, MVT VT, SDValue V1,
     // This form of blend is always done on bytes. Compute the byte vector
     // type.
     MVT BlendVT = MVT::getVectorVT(MVT::i8, VT.getSizeInBits() / 8);
+
+    // x86 allows load folding with blendvb from the 2nd source operand. But
+    // we are still using LLVM select here (see comment below), so that's V1.
+    // If V2 can be load-folded and V1 cannot be load-folded, then commute to
+    // allow that load-folding possibility.
+    if (!ISD::isNormalLoad(V1.getNode()) && ISD::isNormalLoad(V2.getNode())) {
+      ShuffleVectorSDNode::commuteMask(Mask);
+      std::swap(V1, V2);
+    }
 
     // Compute the VSELECT mask. Note that VSELECT is really confusing in the
     // mix of LLVM's code generator and the x86 backend. We tell the code
@@ -35050,13 +35055,13 @@ static SDValue combineCompareEqual(SDNode *N, SelectionDAG &DAG,
 static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == ISD::AND);
 
-  EVT VT = N->getValueType(0);
-  if (VT != MVT::v2i64 && VT != MVT::v4i64 && VT != MVT::v8i64)
+  MVT VT = N->getSimpleValueType(0);
+  if (!VT.is128BitVector() && !VT.is256BitVector() && !VT.is512BitVector())
     return SDValue();
 
   SDValue X, Y;
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
+  SDValue N0 = peekThroughBitcasts(N->getOperand(0));
+  SDValue N1 = peekThroughBitcasts(N->getOperand(1));
   if (N0.getOpcode() == ISD::XOR &&
       ISD::isBuildVectorAllOnes(N0.getOperand(1).getNode())) {
     X = N0.getOperand(0);
@@ -35068,6 +35073,8 @@ static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
   } else
     return SDValue();
 
+  X = DAG.getBitcast(VT, X);
+  Y = DAG.getBitcast(VT, Y);
   return DAG.getNode(X86ISD::ANDNP, SDLoc(N), VT, X, Y);
 }
 
@@ -35397,27 +35404,6 @@ static SDValue combineParity(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ZERO_EXTEND, DL, N->getValueType(0), Setnp);
 }
 
-// This promotes vectors and/or/xor to a vXi64 type. We used to do this during
-// op legalization, but DAG combine yields better results.
-// TODO: This is largely just to reduce the number of isel patterns. Maybe we
-// can just add all the patterns or do C++ based selection in X86ISelDAGToDAG?
-static SDValue promoteVecLogicOp(SDNode *N, SelectionDAG &DAG) {
-  MVT VT = N->getSimpleValueType(0);
-
-  if (!VT.is128BitVector() && !VT.is256BitVector() && !VT.is512BitVector())
-    return SDValue();
-
-  // Already correct type.
-  if (VT.getVectorElementType() == MVT::i64)
-    return SDValue();
-
-  MVT NewVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-  SDValue Op0 = DAG.getBitcast(NewVT, N->getOperand(0));
-  SDValue Op1 = DAG.getBitcast(NewVT, N->getOperand(1));
-  return DAG.getBitcast(VT, DAG.getNode(N->getOpcode(), SDLoc(N), NewVT,
-                                        Op0, Op1));
-}
-
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -35451,9 +35437,6 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
-
-  if (SDValue V = promoteVecLogicOp(N, DAG))
-    return V;
 
   if (SDValue R = combineCompareEqual(N, DAG, DCI, Subtarget))
     return R;
@@ -35642,7 +35625,7 @@ static SDValue combineLogicBlendIntoPBLENDV(SDNode *N, SelectionDAG &DAG,
   if (!Subtarget.hasSSE41())
     return SDValue();
 
-  MVT BlendVT = (VT == MVT::v4i64) ? MVT::v32i8 : MVT::v16i8;
+  MVT BlendVT = VT.is256BitVector() ? MVT::v32i8 : MVT::v16i8;
 
   X = DAG.getBitcast(BlendVT, X);
   Y = DAG.getBitcast(BlendVT, Y);
@@ -35776,9 +35759,6 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
-
-  if (SDValue V = promoteVecLogicOp(N, DAG))
-    return V;
 
   if (SDValue R = combineCompareEqual(N, DAG, DCI, Subtarget))
     return R;
@@ -37755,7 +37735,9 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
   if ((VT.isVector() || VT == MVT::f128) && Subtarget.hasSSE2()) {
     SDLoc dl(N);
 
-    MVT IntVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
+    unsigned IntBits = std::min(VT.getScalarSizeInBits(), 64U);
+    MVT IntSVT = MVT::getIntegerVT(IntBits);
+    MVT IntVT = MVT::getVectorVT(IntSVT, VT.getSizeInBits() / IntBits);
 
     SDValue Op0 = DAG.getBitcast(IntVT, N->getOperand(0));
     SDValue Op1 = DAG.getBitcast(IntVT, N->getOperand(1));
@@ -37807,9 +37789,6 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
 
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
-
-  if (SDValue V = promoteVecLogicOp(N, DAG))
-    return V;
 
   if (SDValue SetCC = foldXor1SetCC(N, DAG))
     return SetCC;
@@ -38038,15 +38017,22 @@ static SDValue combineFMinNumFMaxNum(SDNode *N, SelectionDAG &DAG,
 static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
+  MVT VT = N->getSimpleValueType(0);
+
   // ANDNP(0, x) -> x
   if (ISD::isBuildVectorAllZeros(N->getOperand(0).getNode()))
     return N->getOperand(1);
 
   // ANDNP(x, 0) -> 0
   if (ISD::isBuildVectorAllZeros(N->getOperand(1).getNode()))
-    return getZeroVector(N->getSimpleValueType(0), Subtarget, DAG, SDLoc(N));
+    return getZeroVector(VT, Subtarget, DAG, SDLoc(N));
 
-  EVT VT = N->getValueType(0);
+  // Turn ANDNP back to AND if input is inverted.
+  if (VT.isVector() && N->getOperand(0).getOpcode() == ISD::XOR &&
+      ISD::isBuildVectorAllOnes(N->getOperand(0).getOperand(1).getNode())) {
+    return DAG.getNode(ISD::AND, SDLoc(N), VT,
+                       N->getOperand(0).getOperand(0), N->getOperand(1));
+  }
 
   // Attempt to recursively combine a bitmask ANDNP with shuffles.
   if (VT.isVector() && (VT.getScalarSizeInBits() % 8) == 0) {

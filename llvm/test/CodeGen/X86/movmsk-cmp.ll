@@ -2338,8 +2338,7 @@ define i1 @allones_v4i32_and1(<4 x i32> %arg) {
 ;
 ; SKX-LABEL: allones_v4i32_and1:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
-; SKX-NEXT:    vptestmd %xmm1, %xmm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to4}, %xmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andb $15, %al
 ; SKX-NEXT:    cmpb $15, %al
@@ -2382,8 +2381,7 @@ define i1 @allzeros_v4i32_and1(<4 x i32> %arg) {
 ;
 ; SKX-LABEL: allzeros_v4i32_and1:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
-; SKX-NEXT:    vptestmd %xmm1, %xmm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to4}, %xmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    testb $15, %al
 ; SKX-NEXT:    sete %al
@@ -2444,8 +2442,7 @@ define i1 @allones_v8i32_and1(<8 x i32> %arg) {
 ;
 ; SKX-LABEL: allones_v8i32_and1:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
-; SKX-NEXT:    vptestmd %ymm1, %ymm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to8}, %ymm0, %k0
 ; SKX-NEXT:    kortestb %k0, %k0
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
@@ -2506,8 +2503,7 @@ define i1 @allzeros_v8i32_and1(<8 x i32> %arg) {
 ;
 ; SKX-LABEL: allzeros_v8i32_and1:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
-; SKX-NEXT:    vptestmd %ymm1, %ymm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to8}, %ymm0, %k0
 ; SKX-NEXT:    kortestb %k0, %k0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    vzeroupper
@@ -2584,8 +2580,7 @@ define i1 @allones_v16i32_and1(<16 x i32> %arg) {
 ;
 ; KNL-LABEL: allones_v16i32_and1:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kortestw %k0, %k0
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    vzeroupper
@@ -2593,8 +2588,7 @@ define i1 @allones_v16i32_and1(<16 x i32> %arg) {
 ;
 ; SKX-LABEL: allones_v16i32_and1:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; SKX-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; SKX-NEXT:    kortestw %k0, %k0
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
@@ -2671,8 +2665,7 @@ define i1 @allzeros_v16i32_and1(<16 x i32> %arg) {
 ;
 ; KNL-LABEL: allzeros_v16i32_and1:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kortestw %k0, %k0
 ; KNL-NEXT:    sete %al
 ; KNL-NEXT:    vzeroupper
@@ -2680,8 +2673,7 @@ define i1 @allzeros_v16i32_and1(<16 x i32> %arg) {
 ;
 ; SKX-LABEL: allzeros_v16i32_and1:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; SKX-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; SKX-NEXT:    kortestw %k0, %k0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    vzeroupper
@@ -4010,8 +4002,7 @@ define i1 @allones_v4i32_and4(<4 x i32> %arg) {
 ;
 ; SKX-LABEL: allones_v4i32_and4:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4,4,4,4]
-; SKX-NEXT:    vptestmd %xmm1, %xmm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to4}, %xmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    andb $15, %al
 ; SKX-NEXT:    cmpb $15, %al
@@ -4054,8 +4045,7 @@ define i1 @allzeros_v4i32_and4(<4 x i32> %arg) {
 ;
 ; SKX-LABEL: allzeros_v4i32_and4:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4,4,4,4]
-; SKX-NEXT:    vptestmd %xmm1, %xmm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to4}, %xmm0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    testb $15, %al
 ; SKX-NEXT:    sete %al
@@ -4116,8 +4106,7 @@ define i1 @allones_v8i32_and4(<8 x i32> %arg) {
 ;
 ; SKX-LABEL: allones_v8i32_and4:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [4,4,4,4,4,4,4,4]
-; SKX-NEXT:    vptestmd %ymm1, %ymm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to8}, %ymm0, %k0
 ; SKX-NEXT:    kortestb %k0, %k0
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
@@ -4178,8 +4167,7 @@ define i1 @allzeros_v8i32_and4(<8 x i32> %arg) {
 ;
 ; SKX-LABEL: allzeros_v8i32_and4:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [4,4,4,4,4,4,4,4]
-; SKX-NEXT:    vptestmd %ymm1, %ymm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to8}, %ymm0, %k0
 ; SKX-NEXT:    kortestb %k0, %k0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    vzeroupper
@@ -4256,8 +4244,7 @@ define i1 @allones_v16i32_and4(<16 x i32> %arg) {
 ;
 ; KNL-LABEL: allones_v16i32_and4:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kortestw %k0, %k0
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    vzeroupper
@@ -4265,8 +4252,7 @@ define i1 @allones_v16i32_and4(<16 x i32> %arg) {
 ;
 ; SKX-LABEL: allones_v16i32_and4:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
-; SKX-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; SKX-NEXT:    kortestw %k0, %k0
 ; SKX-NEXT:    setb %al
 ; SKX-NEXT:    vzeroupper
@@ -4343,8 +4329,7 @@ define i1 @allzeros_v16i32_and4(<16 x i32> %arg) {
 ;
 ; KNL-LABEL: allzeros_v16i32_and4:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
-; KNL-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; KNL-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; KNL-NEXT:    kortestw %k0, %k0
 ; KNL-NEXT:    sete %al
 ; KNL-NEXT:    vzeroupper
@@ -4352,8 +4337,7 @@ define i1 @allzeros_v16i32_and4(<16 x i32> %arg) {
 ;
 ; SKX-LABEL: allzeros_v16i32_and4:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
-; SKX-NEXT:    vptestmd %zmm1, %zmm0, %k0
+; SKX-NEXT:    vptestmd {{.*}}(%rip){1to16}, %zmm0, %k0
 ; SKX-NEXT:    kortestw %k0, %k0
 ; SKX-NEXT:    sete %al
 ; SKX-NEXT:    vzeroupper

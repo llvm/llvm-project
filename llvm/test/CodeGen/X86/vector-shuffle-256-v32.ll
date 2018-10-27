@@ -1656,9 +1656,8 @@ define <32 x i8> @load_fold_pblendvb(<32 x i8>* %px, <32 x i8> %y) {
 ;
 ; AVX2-LABEL: load_fold_pblendvb:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovdqa (%rdi), %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
-; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,0,255,0,255,255,255,0,0,0,255,0,255,255,255,0,0,0,255,0,255,255,255,0,0,0,255,0,255,255,255,0]
+; AVX2-NEXT:    vpblendvb %ymm1, (%rdi), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: load_fold_pblendvb:

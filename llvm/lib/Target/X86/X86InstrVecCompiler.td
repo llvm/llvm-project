@@ -16,19 +16,39 @@
 //  Non-instruction patterns
 //===----------------------------------------------------------------------===//
 
-// A vector extract of the first f32/f64 position is a subregister copy
-def : Pat<(f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
-          (COPY_TO_REGCLASS (v4f32 VR128:$src), FR32)>;
-def : Pat<(f64 (extractelt (v2f64 VR128:$src), (iPTR 0))),
-          (COPY_TO_REGCLASS (v2f64 VR128:$src), FR64)>;
+let Predicates = [NoAVX512] in {
+  // A vector extract of the first f32/f64 position is a subregister copy
+  def : Pat<(f32 (extractelt (v4f32 VR128:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v4f32 VR128:$src), FR32)>;
+  def : Pat<(f64 (extractelt (v2f64 VR128:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v2f64 VR128:$src), FR64)>;
+}
 
-// Implicitly promote a 32-bit scalar to a vector.
-def : Pat<(v4f32 (scalar_to_vector FR32:$src)),
-          (COPY_TO_REGCLASS FR32:$src, VR128)>;
-// Implicitly promote a 64-bit scalar to a vector.
-def : Pat<(v2f64 (scalar_to_vector FR64:$src)),
-          (COPY_TO_REGCLASS FR64:$src, VR128)>;
+let Predicates = [HasAVX512] in {
+  // A vector extract of the first f32/f64 position is a subregister copy
+  def : Pat<(f32 (extractelt (v4f32 VR128X:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v4f32 VR128X:$src), FR32X)>;
+  def : Pat<(f64 (extractelt (v2f64 VR128X:$src), (iPTR 0))),
+            (COPY_TO_REGCLASS (v2f64 VR128X:$src), FR64X)>;
+}
 
+let Predicates = [NoVLX] in {
+  // Implicitly promote a 32-bit scalar to a vector.
+  def : Pat<(v4f32 (scalar_to_vector FR32:$src)),
+            (COPY_TO_REGCLASS FR32:$src, VR128)>;
+  // Implicitly promote a 64-bit scalar to a vector.
+  def : Pat<(v2f64 (scalar_to_vector FR64:$src)),
+            (COPY_TO_REGCLASS FR64:$src, VR128)>;
+}
+
+let Predicates = [HasVLX] in {
+  // Implicitly promote a 32-bit scalar to a vector.
+  def : Pat<(v4f32 (scalar_to_vector FR32X:$src)),
+            (COPY_TO_REGCLASS FR32X:$src, VR128X)>;
+  // Implicitly promote a 64-bit scalar to a vector.
+  def : Pat<(v2f64 (scalar_to_vector FR64X:$src)),
+            (COPY_TO_REGCLASS FR64X:$src, VR128X)>;
+}
 
 //===----------------------------------------------------------------------===//
 // Subvector tricks

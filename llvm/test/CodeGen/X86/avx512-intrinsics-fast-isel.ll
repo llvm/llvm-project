@@ -3614,8 +3614,8 @@ define <16 x float> @test_mm512_fnmsub_round_ps(<16 x float> %__A, <16 x float> 
 ; CHECK-LABEL: test_mm512_fnmsub_round_ps:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0]
-; CHECK-NEXT:    vpxorq %zmm3, %zmm0, %zmm4
-; CHECK-NEXT:    vpxorq %zmm3, %zmm2, %zmm0
+; CHECK-NEXT:    vpxord %zmm3, %zmm0, %zmm4
+; CHECK-NEXT:    vpxord %zmm3, %zmm2, %zmm0
 ; CHECK-NEXT:    vfmadd231ps {rn-sae}, %zmm4, %zmm1, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
@@ -3837,8 +3837,8 @@ define <16 x float> @test_mm512_fnmsub_ps(<16 x float> %__A, <16 x float> %__B, 
 ; CHECK-LABEL: test_mm512_fnmsub_ps:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0]
-; CHECK-NEXT:    vpxorq %zmm3, %zmm0, %zmm4
-; CHECK-NEXT:    vpxorq %zmm3, %zmm2, %zmm0
+; CHECK-NEXT:    vpxord %zmm3, %zmm0, %zmm4
+; CHECK-NEXT:    vpxord %zmm3, %zmm2, %zmm0
 ; CHECK-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm1 * zmm4) + zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
