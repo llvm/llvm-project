@@ -1235,6 +1235,9 @@ void StmtPrinter::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node){
     else
       OS << "__alignof";
     break;
+  case UETT_PreferredAlignOf:
+    OS << "__alignof";
+    break;
   case UETT_VecStep:
     OS << "vec_step";
     break;

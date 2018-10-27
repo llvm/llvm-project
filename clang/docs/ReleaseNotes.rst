@@ -77,6 +77,11 @@ future versions of Clang.
 Modified Compiler Flags
 -----------------------
 
+- As of clang 8, `alignof` and `_Alignof` return the ABI alignment of a type,
+  as opposed to the preferred alignment. `__alignof` still returns the
+  preferred alignment. `-fclang-abi-compat=7` (and previous) will make
+  `alignof` and `_Alignof` return preferred alignment again.
+
 
 New Pragmas in Clang
 --------------------
@@ -131,6 +136,21 @@ OpenCL C Language Changes in Clang
 ----------------------------------
 
 ...
+
+ABI Changes in Clang
+--------------------
+
+- `_Alignof` and `alignof` now return the ABI alignment of a type, as opposed
+  to the preferred alignment.
+  - This is more in keeping with the language of the standards, as well as
+    being compatible with gcc
+  - `__alignof` and `__alignof__` still return the preferred alignment of
+    a type
+  - This shouldn't break any ABI except for things that explicitly ask for
+    `alignas(alignof(T))`.
+  - If you have interfaces that break with this change, you may wish to switch
+    to `alignas(__alignof(T))`, instead of using the `-fclang-abi-compat`
+    switch.
 
 OpenMP Support in Clang
 ----------------------------------

@@ -5548,20 +5548,24 @@ def err_atomic_specifier_bad_type : Error<
   "%1 %select{||||||which is not trivially copyable}0">;
 
 // Expressions.
+def select_unary_expr_or_type_trait_kind : TextSubstitution<
+  "%select{sizeof|alignof|vec_step|__builtin_omp_required_simd_align|"
+  "__alignof}0">;
 def ext_sizeof_alignof_function_type : Extension<
-  "invalid application of '%select{sizeof|alignof|vec_step}0' to a "
-  "function type">, InGroup<PointerArith>;
+  "invalid application of '%sub{select_unary_expr_or_type_trait_kind}0' "
+  "to a function type">, InGroup<PointerArith>;
 def ext_sizeof_alignof_void_type : Extension<
-  "invalid application of '%select{sizeof|alignof|vec_step}0' to a void "
-  "type">, InGroup<PointerArith>;
+  "invalid application of '%sub{select_unary_expr_or_type_trait_kind}0' "
+  "to a void type">, InGroup<PointerArith>;
 def err_opencl_sizeof_alignof_type : Error<
-  "invalid application of '%select{sizeof|alignof|vec_step|__builtin_omp_required_simd_align}0' to a void type">;
+  "invalid application of '%sub{select_unary_expr_or_type_trait_kind}0' "
+  "to a void type">;
 def err_sizeof_alignof_incomplete_type : Error<
-  "invalid application of '%select{sizeof|alignof|vec_step|__builtin_omp_required_simd_align}0' to an "
-  "incomplete type %1">;
+  "invalid application of '%sub{select_unary_expr_or_type_trait_kind}0' "
+  "to an incomplete type %1">;
 def err_sizeof_alignof_function_type : Error<
-  "invalid application of '%select{sizeof|alignof|vec_step|__builtin_omp_required_simd_align}0' to a "
-  "function type">;
+  "invalid application of '%sub{select_unary_expr_or_type_trait_kind}0' "
+  "to a function type">;
 def err_openmp_default_simd_align_expr : Error<
   "invalid application of '__builtin_omp_required_simd_align' to an expression, only type is allowed">;
 def err_sizeof_alignof_typeof_bitfield : Error<

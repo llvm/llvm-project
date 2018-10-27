@@ -5747,7 +5747,8 @@ bool Sema::SemaBuiltinAllocaWithAlign(CallExpr *TheCall) {
   if (!Arg->isTypeDependent() && !Arg->isValueDependent()) {
     if (const auto *UE =
             dyn_cast<UnaryExprOrTypeTraitExpr>(Arg->IgnoreParenImpCasts()))
-      if (UE->getKind() == UETT_AlignOf)
+      if (UE->getKind() == UETT_AlignOf ||
+          UE->getKind() == UETT_PreferredAlignOf)
         Diag(TheCall->getBeginLoc(), diag::warn_alloca_align_alignof)
             << Arg->getSourceRange();
 
@@ -10365,7 +10366,7 @@ static void AnalyzeAssignment(Sema &S, BinaryOperator *E) {
   }
 
   AnalyzeImplicitConversions(S, E->getRHS(), E->getOperatorLoc());
-  
+
   // Diagnose implicitly sequentially-consistent atomic assignment.
   if (E->getLHS()->getType()->isAtomicType())
     S.Diag(E->getRHS()->getBeginLoc(), diag::warn_atomic_implicit_seq_cst);

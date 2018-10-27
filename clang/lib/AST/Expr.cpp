@@ -1446,7 +1446,7 @@ UnaryExprOrTypeTraitExpr::UnaryExprOrTypeTraitExpr(
 
   // Check to see if we are in the situation where alignof(decl) should be
   // dependent because decl's alignment is dependent.
-  if (ExprKind == UETT_AlignOf) {
+  if (ExprKind == UETT_AlignOf || ExprKind == UETT_PreferredAlignOf) {
     if (!isValueDependent() || !isInstantiationDependent()) {
       E = E->IgnoreParens();
 

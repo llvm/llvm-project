@@ -2861,6 +2861,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver4);
       else if (Major <= 6)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver6);
+      else if (Major <= 7)
+        Opts.setClangABICompat(LangOptions::ClangABI::Ver7);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();
@@ -3355,25 +3357,27 @@ IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
   if (CI.getHeaderSearchOpts().VFSOverlayFiles.empty())
     return BaseFS;
 
-  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> Overlay(
-      new llvm::vfs::OverlayFileSystem(BaseFS));
+  IntrusiveRefCntPtr<llvm::vfs::FileSystem> Result = BaseFS;
   // earlier vfs files are on the bottom
   for (const auto &File : CI.getHeaderSearchOpts().VFSOverlayFiles) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-        BaseFS->getBufferForFile(File);
+        Result->getBufferForFile(File);
     if (!Buffer) {
       Diags.Report(diag::err_missing_vfs_overlay_file) << File;
       continue;
     }
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = llvm::vfs::getVFSFromYAML(
-        std::move(Buffer.get()), /*DiagHandler*/ nullptr, File);
-    if (FS)
-      Overlay->pushOverlay(FS);
-    else
+        std::move(Buffer.get()), /*DiagHandler*/ nullptr, File,
+        /*DiagContext*/ nullptr, Result);
+    if (!FS) {
       Diags.Report(diag::err_invalid_vfs_overlay) << File;
+      continue;
+    }
+
+    Result = FS;
   }
-  return Overlay;
+  return Result;
 }
 
 } // namespace clang
