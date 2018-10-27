@@ -183,7 +183,7 @@ protected:
 public:
   void SetUp() override {
     bool Success;
-    BQ = llvm::make_unique<BufferQueue>(sizeof(MetadataRecord) * 4 +
+    BQ = llvm::make_unique<BufferQueue>(sizeof(MetadataRecord) * 5 +
                                             sizeof(FunctionRecord) * 2,
                                         kBuffers, Success);
     ASSERT_TRUE(Success);
@@ -198,12 +198,12 @@ constexpr size_t BufferManagementTest::kBuffers;
 TEST_F(BufferManagementTest, HandlesOverflow) {
   uint64_t TSC = 1;
   uint16_t CPU = 1;
-  for (size_t I = 0; I < kBuffers; ++I) {
+  for (size_t I = 0; I < kBuffers + 1; ++I) {
     ASSERT_TRUE(C->functionEnter(1, TSC++, CPU));
     ASSERT_TRUE(C->functionExit(1, TSC++, CPU));
   }
-  C->flush();
-  ASSERT_EQ(BQ->finalize(), BufferQueue::ErrorCode::Ok);
+  ASSERT_TRUE(C->flush());
+  ASSERT_THAT(BQ->finalize(), Eq(BufferQueue::ErrorCode::Ok));
 
   std::string Serialized = serialize(*BQ, 3);
   llvm::DataExtractor DE(Serialized, true, 8);
@@ -236,6 +236,29 @@ TEST_F(BufferManagementTest, HandlesFinalizedBufferQueue) {
   EXPECT_THAT_EXPECTED(
       TraceOrErr, HasValue(ElementsAre(AllOf(
                       FuncId(1), RecordType(llvm::xray::RecordTypes::ENTER)))));
+}
+
+TEST_F(BufferManagementTest, HandlesGenerationalBufferQueue) {
+  uint64_t TSC = 1;
+  uint16_t CPU = 1;
+
+  ASSERT_TRUE(C->functionEnter(1, TSC++, CPU));
+  ASSERT_THAT(BQ->finalize(), Eq(BufferQueue::ErrorCode::Ok));
+  ASSERT_THAT(BQ->init(sizeof(MetadataRecord) * 4 + sizeof(FunctionRecord) * 2,
+                       kBuffers),
+              Eq(BufferQueue::ErrorCode::Ok));
+  EXPECT_TRUE(C->functionExit(1, TSC++, CPU));
+  ASSERT_TRUE(C->flush());
+
+  // We expect that we will only be able to find the function exit event, but
+  // not the function enter event, since we only have information about the new
+  // generation of the buffers.
+  std::string Serialized = serialize(*BQ, 3);
+  llvm::DataExtractor DE(Serialized, true, 8);
+  auto TraceOrErr = llvm::xray::loadTrace(DE);
+  EXPECT_THAT_EXPECTED(
+      TraceOrErr, HasValue(ElementsAre(AllOf(
+                      FuncId(1), RecordType(llvm::xray::RecordTypes::EXIT)))));
 }
 
 } // namespace
