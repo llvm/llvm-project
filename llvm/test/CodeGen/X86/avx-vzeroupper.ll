@@ -2,6 +2,7 @@
 ; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefix=ALL --check-prefix=VZ --check-prefix=AVX
 ; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s --check-prefix=ALL --check-prefix=VZ --check-prefix=AVX512
 ; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-unknown-unknown -mattr=+avx,+fast-partial-ymm-or-zmm-write | FileCheck %s --check-prefix=ALL --check-prefix=NO-VZ --check-prefix=FAST-ymm-zmm
+; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-unknown-unknown -mcpu=bdver2 | FileCheck %s --check-prefix=ALL --check-prefix=NO-VZ --check-prefix=BDVER2
 ; RUN: llc < %s -x86-use-vzeroupper -mtriple=x86_64-unknown-unknown -mcpu=btver2 | FileCheck %s --check-prefix=ALL --check-prefix=NO-VZ --check-prefix=BTVER2
 
 declare i32 @foo()
@@ -56,6 +57,20 @@ define <8 x float> @test01(<4 x float> %a, <4 x float> %b, <8 x float> %c) nounw
 ; FAST-ymm-zmm-NEXT:    addq $56, %rsp
 ; FAST-ymm-zmm-NEXT:    retq
 ;
+; BDVER2-LABEL: test01:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    subq $56, %rsp
+; BDVER2-NEXT:    vmovaps {{.*}}(%rip), %xmm0
+; BDVER2-NEXT:    vmovups %ymm2, (%rsp) # 32-byte Spill
+; BDVER2-NEXT:    vzeroupper
+; BDVER2-NEXT:    callq do_sse
+; BDVER2-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; BDVER2-NEXT:    callq do_sse
+; BDVER2-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
+; BDVER2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; BDVER2-NEXT:    addq $56, %rsp
+; BDVER2-NEXT:    retq
+;
 ; BTVER2-LABEL: test01:
 ; BTVER2:       # %bb.0:
 ; BTVER2-NEXT:    subq $56, %rsp
@@ -86,11 +101,24 @@ define <4 x float> @test02(<8 x float> %a, <8 x float> %b) nounwind {
 ; VZ-NEXT:    vzeroupper
 ; VZ-NEXT:    jmp do_sse # TAILCALL
 ;
-; NO-VZ-LABEL: test02:
-; NO-VZ:       # %bb.0:
-; NO-VZ-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; NO-VZ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; NO-VZ-NEXT:    jmp do_sse # TAILCALL
+; FAST-ymm-zmm-LABEL: test02:
+; FAST-ymm-zmm:       # %bb.0:
+; FAST-ymm-zmm-NEXT:    vaddps %ymm1, %ymm0, %ymm0
+; FAST-ymm-zmm-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; FAST-ymm-zmm-NEXT:    jmp do_sse # TAILCALL
+;
+; BDVER2-LABEL: test02:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
+; BDVER2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; BDVER2-NEXT:    vzeroupper
+; BDVER2-NEXT:    jmp do_sse # TAILCALL
+;
+; BTVER2-LABEL: test02:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
+; BTVER2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; BTVER2-NEXT:    jmp do_sse # TAILCALL
   %add.i = fadd <8 x float> %a, %b
   %add.low = call <4 x float> @llvm.x86.avx.vextractf128.ps.256(<8 x float> %add.i, i8 0)
   %call3 = tail call <4 x float> @do_sse(<4 x float> %add.low) nounwind
@@ -162,6 +190,37 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; FAST-ymm-zmm-NEXT:    popq %rbx
 ; FAST-ymm-zmm-NEXT:    retq
 ;
+; BDVER2-LABEL: test03:
+; BDVER2:       # %bb.0: # %entry
+; BDVER2-NEXT:    pushq %rbx
+; BDVER2-NEXT:    subq $16, %rsp
+; BDVER2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; BDVER2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; BDVER2-NEXT:    .p2align 4, 0x90
+; BDVER2-NEXT:  .LBB3_1: # %while.cond
+; BDVER2-NEXT:    # =>This Inner Loop Header: Depth=1
+; BDVER2-NEXT:    callq foo
+; BDVER2-NEXT:    testl %eax, %eax
+; BDVER2-NEXT:    jne .LBB3_1
+; BDVER2-NEXT:  # %bb.2: # %for.body.preheader
+; BDVER2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; BDVER2-NEXT:    movl $4, %ebx
+; BDVER2-NEXT:    .p2align 4, 0x90
+; BDVER2-NEXT:  .LBB3_3: # %for.body
+; BDVER2-NEXT:    # =>This Inner Loop Header: Depth=1
+; BDVER2-NEXT:    callq do_sse
+; BDVER2-NEXT:    callq do_sse
+; BDVER2-NEXT:    vmovaps {{.*}}(%rip), %ymm0
+; BDVER2-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; BDVER2-NEXT:    vzeroupper
+; BDVER2-NEXT:    callq do_sse
+; BDVER2-NEXT:    decl %ebx
+; BDVER2-NEXT:    jne .LBB3_3
+; BDVER2-NEXT:  # %bb.4: # %for.end
+; BDVER2-NEXT:    addq $16, %rsp
+; BDVER2-NEXT:    popq %rbx
+; BDVER2-NEXT:    retq
+;
 ; BTVER2-LABEL: test03:
 ; BTVER2:       # %bb.0: # %entry
 ; BTVER2-NEXT:    pushq %rbx
@@ -230,15 +289,36 @@ define <4 x float> @test04(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-NEXT:    vzeroupper
 ; VZ-NEXT:    retq
 ;
-; NO-VZ-LABEL: test04:
-; NO-VZ:       # %bb.0:
-; NO-VZ-NEXT:    pushq %rax
-; NO-VZ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; NO-VZ-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; NO-VZ-NEXT:    callq do_avx
-; NO-VZ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
-; NO-VZ-NEXT:    popq %rax
-; NO-VZ-NEXT:    retq
+; FAST-ymm-zmm-LABEL: test04:
+; FAST-ymm-zmm:       # %bb.0:
+; FAST-ymm-zmm-NEXT:    pushq %rax
+; FAST-ymm-zmm-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; FAST-ymm-zmm-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; FAST-ymm-zmm-NEXT:    callq do_avx
+; FAST-ymm-zmm-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; FAST-ymm-zmm-NEXT:    popq %rax
+; FAST-ymm-zmm-NEXT:    retq
+;
+; BDVER2-LABEL: test04:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    pushq %rax
+; BDVER2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; BDVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; BDVER2-NEXT:    callq do_avx
+; BDVER2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; BDVER2-NEXT:    popq %rax
+; BDVER2-NEXT:    vzeroupper
+; BDVER2-NEXT:    retq
+;
+; BTVER2-LABEL: test04:
+; BTVER2:       # %bb.0:
+; BTVER2-NEXT:    pushq %rax
+; BTVER2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; BTVER2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; BTVER2-NEXT:    callq do_avx
+; BTVER2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; BTVER2-NEXT:    popq %rax
+; BTVER2-NEXT:    retq
   %shuf = shufflevector <4 x float> %a, <4 x float> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %call = call <8 x float> @do_avx(<8 x float> %shuf) nounwind
   %shuf2 = shufflevector <8 x float> %call, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

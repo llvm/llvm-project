@@ -2179,17 +2179,17 @@ computeDomSubtreeCost(DomTreeNode &N,
 /// Turns a llvm.experimental.guard intrinsic into implicit control flow branch,
 /// making the following replacement:
 ///
-///   <code before guard>
+///   --code before guard--
 ///   call void (i1, ...) @llvm.experimental.guard(i1 %cond) [ "deopt"() ]
-///   <code after guard>
+///   --code after guard--
 ///
 /// into
 ///
-///   <code before guard>
+///   --code before guard--
 ///   br i1 %cond, label %guarded, label %deopt
 ///
 /// guarded:
-///   <code after guard>
+///   --code after guard--
 ///
 /// deopt:
 ///   call void (i1, ...) @llvm.experimental.guard(i1 false) [ "deopt"() ]

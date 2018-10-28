@@ -299,17 +299,9 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
         return false;
     }
 
-    bool IsASelect = isa<SelectInst>(Cur);
-
-    // A conditional reduction operation must only have 2 or less uses in
-    // VisitedInsts.
-    if (IsASelect && (Kind == RK_FloatAdd || Kind == RK_FloatMult) &&
-        hasMultipleUsesOf(Cur, VisitedInsts, 2))
-      return false;
-
     // A reduction operation must only have one use of the reduction value.
-    if (!IsAPhi && !IsASelect && Kind != RK_IntegerMinMax &&
-        Kind != RK_FloatMinMax && hasMultipleUsesOf(Cur, VisitedInsts, 1))
+    if (!IsAPhi && Kind != RK_IntegerMinMax && Kind != RK_FloatMinMax &&
+        hasMultipleUsesOf(Cur, VisitedInsts))
       return false;
 
     // All inputs to a PHI node must be a reduction value.
@@ -370,8 +362,7 @@ bool RecurrenceDescriptor::AddReductionVar(PHINode *Phi, RecurrenceKind Kind,
       } else if (!isa<PHINode>(UI) &&
                  ((!isa<FCmpInst>(UI) && !isa<ICmpInst>(UI) &&
                    !isa<SelectInst>(UI)) ||
-                  (!isConditionalRdxPattern(Kind, UI).isRecurrence() &&
-                   !isMinMaxSelectCmpPattern(UI, IgnoredVal).isRecurrence())))
+                  !isMinMaxSelectCmpPattern(UI, IgnoredVal).isRecurrence()))
         return false;
 
       // Remember that we completed the cycle.
@@ -500,52 +491,6 @@ RecurrenceDescriptor::isMinMaxSelectCmpPattern(Instruction *I, InstDesc &Prev) {
   return InstDesc(false, I);
 }
 
-/// Returns true if the select instruction has users in the compare-and-add
-/// reduction pattern below. The select instruction argument is the last one
-/// in the sequence.
-///
-/// %sum.1 = phi ...
-/// ...
-/// %cmp = fcmp pred %0, %CFP
-/// %add = fadd %0, %sum.1
-/// %sum.2 = select %cmp, %add, %sum.1
-RecurrenceDescriptor::InstDesc
-RecurrenceDescriptor::isConditionalRdxPattern(
-    RecurrenceKind Kind, Instruction *I) {
-  SelectInst *SI = dyn_cast<SelectInst>(I);
-  if (!SI)
-    return InstDesc(false, I);
-
-  CmpInst *CI = dyn_cast<CmpInst>(SI->getCondition());
-  // Only handle single use cases for now.
-  if (!CI || !CI->hasOneUse())
-    return InstDesc(false, I);
-
-  Value *TrueVal = SI->getTrueValue();
-  Value *FalseVal = SI->getFalseValue();
-  // Handle only when either of operands of select instruction is a PHI
-  // node for now.
-  if ((isa<PHINode>(*TrueVal) && isa<PHINode>(*FalseVal)) ||
-      (!isa<PHINode>(*TrueVal) && !isa<PHINode>(*FalseVal)))
-    return InstDesc(false, I);
-
-  Instruction *I1 =
-      isa<PHINode>(*TrueVal) ? dyn_cast<Instruction>(FalseVal)
-                             : dyn_cast<Instruction>(TrueVal);
-  if (!I1 || !I1->isBinaryOp())
-    return InstDesc(false, I);
-
-  Value *Op1, *Op2;
-  if (m_FAdd(m_Value(Op1), m_Value(Op2)).match(I1) ||
-      m_FSub(m_Value(Op1), m_Value(Op2)).match(I1))
-    return InstDesc(Kind == RK_FloatAdd, SI);
-
-  if (m_FMul(m_Value(Op1), m_Value(Op2)).match(I1))
-    return InstDesc(Kind == RK_FloatMult, SI);
-
-  return InstDesc(false, I);
-}
-
 RecurrenceDescriptor::InstDesc
 RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurrenceKind Kind,
                                         InstDesc &Prev, bool HasFunNoNaNAttr) {
@@ -575,12 +520,9 @@ RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurrenceKind Kind,
   case Instruction::FSub:
   case Instruction::FAdd:
     return InstDesc(Kind == RK_FloatAdd, I, UAI);
-  case Instruction::Select:
-    if (Kind == RK_FloatAdd || Kind == RK_FloatMult)
-      return isConditionalRdxPattern(Kind, I);
-    LLVM_FALLTHROUGH;
   case Instruction::FCmp:
   case Instruction::ICmp:
+  case Instruction::Select:
     if (Kind != RK_IntegerMinMax &&
         (!HasFunNoNaNAttr || Kind != RK_FloatMinMax))
       return InstDesc(false, I);
@@ -589,14 +531,13 @@ RecurrenceDescriptor::isRecurrenceInstr(Instruction *I, RecurrenceKind Kind,
 }
 
 bool RecurrenceDescriptor::hasMultipleUsesOf(
-    Instruction *I, SmallPtrSetImpl<Instruction *> &Insts,
-    unsigned MaxNumUses) {
+    Instruction *I, SmallPtrSetImpl<Instruction *> &Insts) {
   unsigned NumUses = 0;
   for (User::op_iterator Use = I->op_begin(), E = I->op_end(); Use != E;
        ++Use) {
     if (Insts.count(dyn_cast<Instruction>(*Use)))
       ++NumUses;
-    if (NumUses > MaxNumUses)
+    if (NumUses > 1)
       return true;
   }
 
