@@ -14,6 +14,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skylake -mattr=+aes,-avx2 | FileCheck %s --check-prefixes=CHECK,SKYLAKE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skx -mattr=+aes,-avx  | FileCheck %s --check-prefixes=CHECK,SKX-SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skx -mattr=+aes,-avx2 | FileCheck %s --check-prefixes=CHECK,SKX
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=bdver2 -mattr=+aes,-avx  | FileCheck %s --check-prefixes=CHECK,BDVER2-SSE
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=bdver2 -mattr=+aes,-avx2 | FileCheck %s --check-prefixes=CHECK,BDVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2 -mattr=+aes,-avx  | FileCheck %s --check-prefixes=CHECK,BTVER2-SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2 -mattr=+aes,-avx2 | FileCheck %s --check-prefixes=CHECK,BTVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=znver1 -mattr=+aes,-avx  | FileCheck %s --check-prefixes=CHECK,ZNVER1-SSE
@@ -91,6 +93,18 @@ define <2 x i64> @test_aesdec(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; SKX-NEXT:    vaesdec %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
 ; SKX-NEXT:    vaesdec (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
+;
+; BDVER2-SSE-LABEL: test_aesdec:
+; BDVER2-SSE:       # %bb.0:
+; BDVER2-SSE-NEXT:    aesdec %xmm1, %xmm0 # sched: [9:1.00]
+; BDVER2-SSE-NEXT:    aesdec (%rdi), %xmm0 # sched: [14:1.00]
+; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
+;
+; BDVER2-LABEL: test_aesdec:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    vaesdec %xmm1, %xmm0, %xmm0 # sched: [9:1.00]
+; BDVER2-NEXT:    vaesdec (%rdi), %xmm0, %xmm0 # sched: [14:1.00]
+; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_aesdec:
 ; BTVER2-SSE:       # %bb.0:
@@ -195,6 +209,18 @@ define <2 x i64> @test_aesdeclast(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) 
 ; SKX-NEXT:    vaesdeclast (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
+; BDVER2-SSE-LABEL: test_aesdeclast:
+; BDVER2-SSE:       # %bb.0:
+; BDVER2-SSE-NEXT:    aesdeclast %xmm1, %xmm0 # sched: [9:1.00]
+; BDVER2-SSE-NEXT:    aesdeclast (%rdi), %xmm0 # sched: [14:1.00]
+; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
+;
+; BDVER2-LABEL: test_aesdeclast:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    vaesdeclast %xmm1, %xmm0, %xmm0 # sched: [9:1.00]
+; BDVER2-NEXT:    vaesdeclast (%rdi), %xmm0, %xmm0 # sched: [14:1.00]
+; BDVER2-NEXT:    retq # sched: [5:1.00]
+;
 ; BTVER2-SSE-LABEL: test_aesdeclast:
 ; BTVER2-SSE:       # %bb.0:
 ; BTVER2-SSE-NEXT:    aesdeclast %xmm1, %xmm0 # sched: [3:1.00]
@@ -298,6 +324,18 @@ define <2 x i64> @test_aesenc(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ; SKX-NEXT:    vaesenc (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
+; BDVER2-SSE-LABEL: test_aesenc:
+; BDVER2-SSE:       # %bb.0:
+; BDVER2-SSE-NEXT:    aesenc %xmm1, %xmm0 # sched: [9:1.00]
+; BDVER2-SSE-NEXT:    aesenc (%rdi), %xmm0 # sched: [14:1.00]
+; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
+;
+; BDVER2-LABEL: test_aesenc:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    vaesenc %xmm1, %xmm0, %xmm0 # sched: [9:1.00]
+; BDVER2-NEXT:    vaesenc (%rdi), %xmm0, %xmm0 # sched: [14:1.00]
+; BDVER2-NEXT:    retq # sched: [5:1.00]
+;
 ; BTVER2-SSE-LABEL: test_aesenc:
 ; BTVER2-SSE:       # %bb.0:
 ; BTVER2-SSE-NEXT:    aesenc %xmm1, %xmm0 # sched: [3:1.00]
@@ -400,6 +438,18 @@ define <2 x i64> @test_aesenclast(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) 
 ; SKX-NEXT:    vaesenclast %xmm1, %xmm0, %xmm0 # sched: [4:1.00]
 ; SKX-NEXT:    vaesenclast (%rdi), %xmm0, %xmm0 # sched: [10:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
+;
+; BDVER2-SSE-LABEL: test_aesenclast:
+; BDVER2-SSE:       # %bb.0:
+; BDVER2-SSE-NEXT:    aesenclast %xmm1, %xmm0 # sched: [9:1.00]
+; BDVER2-SSE-NEXT:    aesenclast (%rdi), %xmm0 # sched: [14:1.00]
+; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
+;
+; BDVER2-LABEL: test_aesenclast:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    vaesenclast %xmm1, %xmm0, %xmm0 # sched: [9:1.00]
+; BDVER2-NEXT:    vaesenclast (%rdi), %xmm0, %xmm0 # sched: [14:1.00]
+; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_aesenclast:
 ; BTVER2-SSE:       # %bb.0:
@@ -516,6 +566,20 @@ define <2 x i64> @test_aesimc(<2 x i64> %a0, <2 x i64> *%a1) {
 ; SKX-NEXT:    vaesimc (%rdi), %xmm1 # sched: [14:2.00]
 ; SKX-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
+;
+; BDVER2-SSE-LABEL: test_aesimc:
+; BDVER2-SSE:       # %bb.0:
+; BDVER2-SSE-NEXT:    aesimc %xmm0, %xmm1 # sched: [5:1.00]
+; BDVER2-SSE-NEXT:    aesimc (%rdi), %xmm0 # sched: [10:1.00]
+; BDVER2-SSE-NEXT:    por %xmm1, %xmm0 # sched: [2:0.50]
+; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
+;
+; BDVER2-LABEL: test_aesimc:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    vaesimc (%rdi), %xmm1 # sched: [10:1.00]
+; BDVER2-NEXT:    vaesimc %xmm0, %xmm0 # sched: [5:1.00]
+; BDVER2-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [2:0.50]
+; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_aesimc:
 ; BTVER2-SSE:       # %bb.0:
@@ -636,6 +700,20 @@ define <2 x i64> @test_aeskeygenassist(<2 x i64> %a0, <2 x i64> *%a1) {
 ; SKX-NEXT:    vaeskeygenassist $7, (%rdi), %xmm1 # sched: [25:6.00]
 ; SKX-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [1:0.33]
 ; SKX-NEXT:    retq # sched: [7:1.00]
+;
+; BDVER2-SSE-LABEL: test_aeskeygenassist:
+; BDVER2-SSE:       # %bb.0:
+; BDVER2-SSE-NEXT:    aeskeygenassist $7, %xmm0, %xmm1 # sched: [5:1.00]
+; BDVER2-SSE-NEXT:    aeskeygenassist $7, (%rdi), %xmm0 # sched: [10:1.00]
+; BDVER2-SSE-NEXT:    por %xmm1, %xmm0 # sched: [2:0.50]
+; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
+;
+; BDVER2-LABEL: test_aeskeygenassist:
+; BDVER2:       # %bb.0:
+; BDVER2-NEXT:    vaeskeygenassist $7, (%rdi), %xmm1 # sched: [10:1.00]
+; BDVER2-NEXT:    vaeskeygenassist $7, %xmm0, %xmm0 # sched: [5:1.00]
+; BDVER2-NEXT:    vpor %xmm1, %xmm0, %xmm0 # sched: [2:0.50]
+; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_aeskeygenassist:
 ; BTVER2-SSE:       # %bb.0:

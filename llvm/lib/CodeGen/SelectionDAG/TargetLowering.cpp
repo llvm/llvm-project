@@ -4137,6 +4137,37 @@ bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
   return true;
 }
 
+bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
+                                      SelectionDAG &DAG) const {
+  SDLoc dl(SDValue(Node, 0));
+  SDValue Src = Node->getOperand(0);
+
+  EVT SrcVT = Src.getValueType();
+  EVT DstVT = Node->getValueType(0);
+  EVT SetCCVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+
+  // Expand based on maximum range of FP_TO_SINT:
+  // True = fp_to_sint(Src)
+  // False = 0x8000000000000000 + fp_to_sint(Src - 0x8000000000000000)
+  // Result = select (Src < 0x8000000000000000), True, False
+  APFloat apf(DAG.EVTToAPFloatSemantics(SrcVT),
+              APInt::getNullValue(SrcVT.getScalarSizeInBits()));
+  APInt x = APInt::getSignMask(DstVT.getScalarSizeInBits());
+  (void)apf.convertFromAPInt(x, false, APFloat::rmNearestTiesToEven);
+
+  SDValue Tmp1 = DAG.getConstantFP(apf, dl, SrcVT);
+  SDValue Tmp2 = DAG.getSetCC(dl, SetCCVT, Src, Tmp1, ISD::SETLT);
+  SDValue True = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Src);
+  // TODO: Should any fast-math-flags be set for the FSUB?
+  SDValue False = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT,
+                              DAG.getNode(ISD::FSUB, dl, SrcVT, Src, Tmp1));
+  False =
+      DAG.getNode(ISD::XOR, dl, DstVT, False, DAG.getConstant(x, dl, DstVT));
+  Result = DAG.getSelect(dl, DstVT, Tmp2, True, False);
+  return true;
+}
+
 bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
                                       SelectionDAG &DAG) const {
   SDValue Src = Node->getOperand(0);

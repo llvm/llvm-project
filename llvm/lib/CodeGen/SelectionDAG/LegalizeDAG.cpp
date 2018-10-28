@@ -2877,29 +2877,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (TLI.expandFP_TO_SINT(Node, Tmp1, DAG))
       Results.push_back(Tmp1);
     break;
-  case ISD::FP_TO_UINT: {
-    SDValue True, False;
-    EVT VT =  Node->getOperand(0).getValueType();
-    EVT NVT = Node->getValueType(0);
-    APFloat apf(DAG.EVTToAPFloatSemantics(VT),
-                APInt::getNullValue(VT.getSizeInBits()));
-    APInt x = APInt::getSignMask(NVT.getSizeInBits());
-    (void)apf.convertFromAPInt(x, false, APFloat::rmNearestTiesToEven);
-    Tmp1 = DAG.getConstantFP(apf, dl, VT);
-    Tmp2 = DAG.getSetCC(dl, getSetCCResultType(VT),
-                        Node->getOperand(0),
-                        Tmp1, ISD::SETLT);
-    True = DAG.getNode(ISD::FP_TO_SINT, dl, NVT, Node->getOperand(0));
-    // TODO: Should any fast-math-flags be set for the FSUB?
-    False = DAG.getNode(ISD::FP_TO_SINT, dl, NVT,
-                        DAG.getNode(ISD::FSUB, dl, VT,
-                                    Node->getOperand(0), Tmp1));
-    False = DAG.getNode(ISD::XOR, dl, NVT, False,
-                        DAG.getConstant(x, dl, NVT));
-    Tmp1 = DAG.getSelect(dl, NVT, Tmp2, True, False);
-    Results.push_back(Tmp1);
+  case ISD::FP_TO_UINT:
+    if (TLI.expandFP_TO_UINT(Node, Tmp1, DAG))
+      Results.push_back(Tmp1);
     break;
-  }
   case ISD::VAARG:
     Results.push_back(DAG.expandVAArg(Node));
     Results.push_back(Results[0].getValue(1));

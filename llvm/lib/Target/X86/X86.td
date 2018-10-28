@@ -449,6 +449,7 @@ include "X86SchedHaswell.td"
 include "X86SchedBroadwell.td"
 include "X86ScheduleSLM.td"
 include "X86ScheduleZnver1.td"
+include "X86ScheduleBdVer2.td"
 include "X86ScheduleBtVer2.td"
 include "X86SchedSkylakeClient.td"
 include "X86SchedSkylakeServer.td"
@@ -1010,7 +1011,7 @@ def : ProcessorModel<"btver2", BtVer2Model, [
 ]>;
 
 // Bulldozer
-def : Proc<"bdver1", [
+def : ProcessorModel<"bdver1", BdVer2Model, [
   FeatureX87,
   FeatureCMOV,
   FeatureXOP,
@@ -1035,7 +1036,7 @@ def : Proc<"bdver1", [
   FeatureMacroFusion
 ]>;
 // Piledriver
-def : Proc<"bdver2", [
+def : ProcessorModel<"bdver2", BdVer2Model, [
   FeatureX87,
   FeatureCMOV,
   FeatureXOP,

@@ -171,66 +171,58 @@ define <8 x float> @test_broadcastss_ymm(<4 x float> %a0) {
   ret <8 x float> %2
 }
 
-define <4 x i32> @test_extracti128(<8 x i32> %a0, <8 x i32> %a1, <4 x i32> *%a2) {
+define <4 x i32> @test_extracti128(<8 x i16> %a0, <4 x i32> *%a1) {
 ; GENERIC-LABEL: test_extracti128:
 ; GENERIC:       # %bb.0:
-; GENERIC-NEXT:    vpaddd %ymm1, %ymm0, %ymm2 # sched: [1:0.50]
-; GENERIC-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; GENERIC-NEXT:    vextracti128 $1, %ymm0, %xmm0 # sched: [1:1.00]
-; GENERIC-NEXT:    vextracti128 $1, %ymm2, (%rdi) # sched: [1:1.00]
+; GENERIC-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero sched: [1:1.00]
+; GENERIC-NEXT:    vextracti128 $1, %ymm1, %xmm0 # sched: [1:1.00]
+; GENERIC-NEXT:    vextracti128 $1, %ymm1, (%rdi) # sched: [1:1.00]
 ; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_extracti128:
 ; HASWELL:       # %bb.0:
-; HASWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm2 # sched: [1:0.50]
-; HASWELL-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; HASWELL-NEXT:    vextracti128 $1, %ymm0, %xmm0 # sched: [3:1.00]
-; HASWELL-NEXT:    vextracti128 $1, %ymm2, (%rdi) # sched: [1:1.00]
+; HASWELL-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero sched: [3:1.00]
+; HASWELL-NEXT:    vextracti128 $1, %ymm1, %xmm0 # sched: [3:1.00]
+; HASWELL-NEXT:    vextracti128 $1, %ymm1, (%rdi) # sched: [1:1.00]
 ; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_extracti128:
 ; BROADWELL:       # %bb.0:
-; BROADWELL-NEXT:    vpaddd %ymm1, %ymm0, %ymm2 # sched: [1:0.50]
-; BROADWELL-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.50]
-; BROADWELL-NEXT:    vextracti128 $1, %ymm0, %xmm0 # sched: [3:1.00]
-; BROADWELL-NEXT:    vextracti128 $1, %ymm2, (%rdi) # sched: [1:1.00]
+; BROADWELL-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero sched: [3:1.00]
+; BROADWELL-NEXT:    vextracti128 $1, %ymm1, %xmm0 # sched: [3:1.00]
+; BROADWELL-NEXT:    vextracti128 $1, %ymm1, (%rdi) # sched: [1:1.00]
 ; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_extracti128:
 ; SKYLAKE:       # %bb.0:
-; SKYLAKE-NEXT:    vpaddd %ymm1, %ymm0, %ymm2 # sched: [1:0.33]
-; SKYLAKE-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; SKYLAKE-NEXT:    vextracti128 $1, %ymm0, %xmm0 # sched: [3:1.00]
-; SKYLAKE-NEXT:    vextracti128 $1, %ymm2, (%rdi) # sched: [1:1.00]
+; SKYLAKE-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero sched: [3:1.00]
+; SKYLAKE-NEXT:    vextracti128 $1, %ymm1, %xmm0 # sched: [3:1.00]
+; SKYLAKE-NEXT:    vextracti128 $1, %ymm1, (%rdi) # sched: [1:1.00]
 ; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKX-LABEL: test_extracti128:
 ; SKX:       # %bb.0:
-; SKX-NEXT:    vpaddd %ymm1, %ymm0, %ymm2 # sched: [1:0.33]
-; SKX-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.33]
-; SKX-NEXT:    vextracti128 $1, %ymm0, %xmm0 # sched: [3:1.00]
-; SKX-NEXT:    vextracti128 $1, %ymm2, (%rdi) # sched: [1:1.00]
+; SKX-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero sched: [3:1.00]
+; SKX-NEXT:    vextracti128 $1, %ymm1, %xmm0 # sched: [3:1.00]
+; SKX-NEXT:    vextracti128 $1, %ymm1, (%rdi) # sched: [1:1.00]
 ; SKX-NEXT:    vzeroupper # sched: [4:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_extracti128:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    vpaddd %ymm1, %ymm0, %ymm2 # sched: [1:0.25]
-; ZNVER1-NEXT:    vpsubd %ymm1, %ymm0, %ymm0 # sched: [1:0.25]
-; ZNVER1-NEXT:    vextracti128 $1, %ymm0, %xmm0 # sched: [2:0.25]
-; ZNVER1-NEXT:    vextracti128 $1, %ymm2, (%rdi) # sched: [1:0.50]
+; ZNVER1-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero sched: [1:0.50]
+; ZNVER1-NEXT:    vextracti128 $1, %ymm1, %xmm0 # sched: [2:0.25]
+; ZNVER1-NEXT:    vextracti128 $1, %ymm1, (%rdi) # sched: [1:0.50]
 ; ZNVER1-NEXT:    vzeroupper # sched: [100:0.25]
 ; ZNVER1-NEXT:    retq # sched: [1:0.50]
-  %1 = add <8 x i32> %a0, %a1
-  %2 = sub <8 x i32> %a0, %a1
-  %3 = shufflevector <8 x i32> %1, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %4 = shufflevector <8 x i32> %2, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  store <4 x i32> %3, <4 x i32> *%a2
-  ret <4 x i32> %4
+  %z = zext <8 x i16> %a0 to <8 x i32>
+  %ext = shufflevector <8 x i32> %z, <8 x i32> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  store <4 x i32> %ext, <4 x i32> *%a1
+  ret <4 x i32> %ext
 }
 
 define <2 x double> @test_gatherdpd(<2 x double> %a0, i8* %a1, <4 x i32> %a2, <2 x double> %a3) {

@@ -97,9 +97,6 @@ private:
   /// lies between to valid DIEs.
   std::map<uint64_t, std::set<uint32_t>> ReferenceToDIEOffsets;
   uint32_t NumDebugLineErrors = 0;
-  // Used to relax some checks that do not currently work portably
-  bool IsObjectFile;
-  bool IsMachOObject;
 
   raw_ostream &error() const;
   raw_ostream &warn() const;
@@ -289,8 +286,8 @@ private:
 
 public:
   DWARFVerifier(raw_ostream &S, DWARFContext &D,
-                DIDumpOptions DumpOpts = DIDumpOptions::getForSingleDIE());
-
+                DIDumpOptions DumpOpts = DIDumpOptions::getForSingleDIE())
+      : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)) {}
   /// Verify the information in any of the following sections, if available:
   /// .debug_abbrev, debug_abbrev.dwo
   ///
