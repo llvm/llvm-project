@@ -73,7 +73,7 @@ void ASTStmtWriter::VisitStmt(Stmt *S) {
 void ASTStmtWriter::VisitNullStmt(NullStmt *S) {
   VisitStmt(S);
   Record.AddSourceLocation(S->getSemiLoc());
-  Record.push_back(S->HasLeadingEmptyMacro);
+  Record.push_back(S->NullStmtBits.HasLeadingEmptyMacro);
   Code = serialization::STMT_NULL;
 }
 
@@ -128,14 +128,29 @@ void ASTStmtWriter::VisitAttributedStmt(AttributedStmt *S) {
 
 void ASTStmtWriter::VisitIfStmt(IfStmt *S) {
   VisitStmt(S);
+
+  bool HasElse = S->getElse() != nullptr;
+  bool HasVar = S->getConditionVariableDeclStmt() != nullptr;
+  bool HasInit = S->getInit() != nullptr;
+
   Record.push_back(S->isConstexpr());
-  Record.AddStmt(S->getInit());
-  Record.AddDeclRef(S->getConditionVariable());
+  Record.push_back(HasElse);
+  Record.push_back(HasVar);
+  Record.push_back(HasInit);
+
   Record.AddStmt(S->getCond());
   Record.AddStmt(S->getThen());
-  Record.AddStmt(S->getElse());
+  if (HasElse)
+    Record.AddStmt(S->getElse());
+  if (HasVar)
+    Record.AddDeclRef(S->getConditionVariable());
+  if (HasInit)
+    Record.AddStmt(S->getInit());
+
   Record.AddSourceLocation(S->getIfLoc());
-  Record.AddSourceLocation(S->getElseLoc());
+  if (HasElse)
+    Record.AddSourceLocation(S->getElseLoc());
+
   Code = serialization::STMT_IF;
 }
 
@@ -388,9 +403,13 @@ void ASTStmtWriter::VisitExpr(Expr *E) {
 
 void ASTStmtWriter::VisitPredefinedExpr(PredefinedExpr *E) {
   VisitExpr(E);
+
+  bool HasFunctionName = E->getFunctionName() != nullptr;
+  Record.push_back(HasFunctionName);
+  Record.push_back(E->getIdentKind()); // FIXME: stable encoding
   Record.AddSourceLocation(E->getLocation());
-  Record.push_back(E->getIdentType()); // FIXME: stable encoding
-  Record.AddStmt(E->getFunctionName());
+  if (HasFunctionName)
+    Record.AddStmt(E->getFunctionName());
   Code = serialization::EXPR_PREDEFINED;
 }
 

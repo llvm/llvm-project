@@ -138,7 +138,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_pie))
     CmdArgs.push_back("-pie");
-  if (Args.hasArg(options::OPT_nopie))
+  if (Args.hasArg(options::OPT_nopie) || Args.hasArg(options::OPT_pg))
     CmdArgs.push_back("-nopie");
 
   if (Output.isFilename()) {

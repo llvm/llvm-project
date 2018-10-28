@@ -5772,10 +5772,9 @@ ExpectedStmt ASTNodeImporter::VisitIfStmt(IfStmt *S) {
       ToIfLoc, ToInit, ToConditionVariable, ToCond, ToThen, ToElseLoc, ToElse) =
           *Imp;
 
-  return new (Importer.getToContext()) IfStmt(
-      Importer.getToContext(),
-      ToIfLoc, S->isConstexpr(), ToInit, ToConditionVariable, ToCond,
-      ToThen, ToElseLoc, ToElse);
+  return IfStmt::Create(Importer.getToContext(), ToIfLoc, S->isConstexpr(),
+                        ToInit, ToConditionVariable, ToCond, ToThen, ToElseLoc,
+                        ToElse);
 }
 
 ExpectedStmt ASTNodeImporter::VisitSwitchStmt(SwitchStmt *S) {
@@ -6148,8 +6147,8 @@ ExpectedStmt ASTNodeImporter::VisitPredefinedExpr(PredefinedExpr *E) {
   StringLiteral *ToFunctionName;
   std::tie(ToBeginLoc, ToType, ToFunctionName) = *Imp;
 
-  return new (Importer.getToContext()) PredefinedExpr(
-      ToBeginLoc, ToType, E->getIdentType(), ToFunctionName);
+  return PredefinedExpr::Create(Importer.getToContext(), ToBeginLoc, ToType,
+                                E->getIdentKind(), ToFunctionName);
 }
 
 ExpectedStmt ASTNodeImporter::VisitDeclRefExpr(DeclRefExpr *E) {
