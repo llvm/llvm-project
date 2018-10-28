@@ -25,9 +25,9 @@
 namespace __xray {
 
 /// BufferQueue implements a circular queue of fixed sized buffers (much like a
-/// freelist) but is concerned mostly with making it really quick to initialise,
-/// finalise, and get/return buffers to the queue. This is one key component of
-/// the "flight data recorder" (FDR) mode to support ongoing XRay function call
+/// freelist) but is concerned with making it quick to initialise, finalise, and
+/// get from or return buffers to the queue. This is one key component of the
+/// "flight data recorder" (FDR) mode to support ongoing XRay function call
 /// trace collection.
 class BufferQueue {
 public:
@@ -36,6 +36,11 @@ public:
     uint64_t Generation{0};
     void *Data = nullptr;
     size_t Size = 0;
+
+  private:
+    friend class BufferQueue;
+    unsigned char *BackingStore = nullptr;
+    size_t Count = 0;
   };
 
   struct BufferRep {
@@ -134,6 +139,9 @@ private:
   // We use a generation number to identify buffers and which generation they're
   // associated with.
   atomic_uint64_t Generation;
+
+  /// Releases references to the buffers backed by the current buffer queue.
+  void cleanupBuffers();
 
 public:
   enum class ErrorCode : unsigned {
