@@ -3036,7 +3036,7 @@ static void ConvertUTF8ToWideString(unsigned CharByteWidth, StringRef Source,
 }
 
 ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
-                                     PredefinedExpr::IdentType IT) {
+                                     PredefinedExpr::IdentKind IK) {
   // Pick the current block, lambda, captured statement or function.
   Decl *currentDecl = nullptr;
   if (const BlockScopeInfo *BSI = getCurBlock())
@@ -3060,11 +3060,11 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
   else {
     // Pre-defined identifiers are of type char[x], where x is the length of
     // the string.
-    auto Str = PredefinedExpr::ComputeName(IT, currentDecl);
+    auto Str = PredefinedExpr::ComputeName(IK, currentDecl);
     unsigned Length = Str.length();
 
     llvm::APInt LengthI(32, Length + 1);
-    if (IT == PredefinedExpr::LFunction || IT == PredefinedExpr::LFuncSig) {
+    if (IK == PredefinedExpr::LFunction || IK == PredefinedExpr::LFuncSig) {
       ResTy =
           Context.adjustStringLiteralBaseType(Context.WideCharTy.withConst());
       SmallString<32> RawChars;
@@ -3083,24 +3083,24 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
     }
   }
 
-  return new (Context) PredefinedExpr(Loc, ResTy, IT, SL);
+  return PredefinedExpr::Create(Context, Loc, ResTy, IK, SL);
 }
 
 ExprResult Sema::ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind) {
-  PredefinedExpr::IdentType IT;
+  PredefinedExpr::IdentKind IK;
 
   switch (Kind) {
   default: llvm_unreachable("Unknown simple primary expr!");
-  case tok::kw___func__: IT = PredefinedExpr::Func; break; // [C99 6.4.2.2]
-  case tok::kw___FUNCTION__: IT = PredefinedExpr::Function; break;
-  case tok::kw___FUNCDNAME__: IT = PredefinedExpr::FuncDName; break; // [MS]
-  case tok::kw___FUNCSIG__: IT = PredefinedExpr::FuncSig; break; // [MS]
-  case tok::kw_L__FUNCTION__: IT = PredefinedExpr::LFunction; break; // [MS]
-  case tok::kw_L__FUNCSIG__: IT = PredefinedExpr::LFuncSig; break; // [MS]
-  case tok::kw___PRETTY_FUNCTION__: IT = PredefinedExpr::PrettyFunction; break;
+  case tok::kw___func__: IK = PredefinedExpr::Func; break; // [C99 6.4.2.2]
+  case tok::kw___FUNCTION__: IK = PredefinedExpr::Function; break;
+  case tok::kw___FUNCDNAME__: IK = PredefinedExpr::FuncDName; break; // [MS]
+  case tok::kw___FUNCSIG__: IK = PredefinedExpr::FuncSig; break; // [MS]
+  case tok::kw_L__FUNCTION__: IK = PredefinedExpr::LFunction; break; // [MS]
+  case tok::kw_L__FUNCSIG__: IK = PredefinedExpr::LFuncSig; break; // [MS]
+  case tok::kw___PRETTY_FUNCTION__: IK = PredefinedExpr::PrettyFunction; break;
   }
 
-  return BuildPredefinedExpr(Loc, IT);
+  return BuildPredefinedExpr(Loc, IK);
 }
 
 ExprResult Sema::ActOnCharacterConstant(const Token &Tok, Scope *UDLScope) {

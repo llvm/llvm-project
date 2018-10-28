@@ -579,9 +579,8 @@ StmtResult Sema::BuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
   DiagnoseUnusedExprResult(thenStmt);
   DiagnoseUnusedExprResult(elseStmt);
 
-  return new (Context)
-      IfStmt(Context, IfLoc, IsConstexpr, InitStmt, Cond.get().first,
-             Cond.get().second, thenStmt, ElseLoc, elseStmt);
+  return IfStmt::Create(Context, IfLoc, IsConstexpr, InitStmt, Cond.get().first,
+                        Cond.get().second, thenStmt, ElseLoc, elseStmt);
 }
 
 namespace {

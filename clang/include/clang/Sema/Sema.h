@@ -4273,7 +4273,7 @@ public:
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr);
 
   ExprResult BuildPredefinedExpr(SourceLocation Loc,
-                                 PredefinedExpr::IdentType IT);
+                                 PredefinedExpr::IdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
 
