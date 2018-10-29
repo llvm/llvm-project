@@ -254,7 +254,7 @@ def err_atimport : Error<
 def warn_atimport_in_framework_header : Warning<
   "use of '@import' in framework header is discouraged, "
   "including this header requires -fmodules">,
-  InGroup<FrameworkHdrAtImport>;
+  InGroup<FrameworkHdrAtImport>, DefaultIgnore;
 
 def err_invalid_reference_qualifier_application : Error<
   "'%0' qualifier may not be applied to a reference">;
