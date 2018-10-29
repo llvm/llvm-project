@@ -394,20 +394,42 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   // Build RI for this DIE and check that ranges within this DIE do not
   // overlap.
   DieRangeInfo RI(Die);
-  for (auto Range : Ranges) {
-    if (!Range.valid()) {
-      ++NumErrors;
-      error() << "Invalid address range " << Range << "\n";
-      continue;
-    }
 
-    // Verify that ranges don't intersect.
-    const auto IntersectingRange = RI.insert(Range);
-    if (IntersectingRange != RI.Ranges.end()) {
-      ++NumErrors;
-      error() << "DIE has overlapping address ranges: " << Range << " and "
-              << *IntersectingRange << "\n";
-      break;
+  // TODO support object files better
+  //
+  // Some object file formats (i.e. non-MachO) support COMDAT.  ELF in
+  // particular does so by placing each function into a section.  The DWARF data
+  // for the function at that point uses a section relative DW_FORM_addrp for
+  // the DW_AT_low_pc and a DW_FORM_data4 for the offset as the DW_AT_high_pc.
+  // In such a case, when the Die is the CU, the ranges will overlap, and we
+  // will flag valid conflicting ranges as invalid.
+  //
+  // For such targets, we should read the ranges from the CU and partition them
+  // by the section id.  The ranges within a particular section should be
+  // disjoint, although the ranges across sections may overlap.  We would map
+  // the child die to the entity that it references and the section with which
+  // it is associated.  The child would then be checked against the range
+  // information for the associated section.
+  //
+  // For now, simply elide the range verification for the CU DIEs if we are
+  // processing an object file.
+
+  if (!IsObjectFile || IsMachOObject || Die.getTag() == DW_TAG_subprogram) {
+    for (auto Range : Ranges) {
+      if (!Range.valid()) {
+        ++NumErrors;
+        error() << "Invalid address range " << Range << "\n";
+        continue;
+      }
+
+      // Verify that ranges don't intersect.
+      const auto IntersectingRange = RI.insert(Range);
+      if (IntersectingRange != RI.Ranges.end()) {
+        ++NumErrors;
+        error() << "DIE has overlapping address ranges: " << Range << " and "
+                << *IntersectingRange << "\n";
+        break;
+      }
     }
   }
 
@@ -742,6 +764,16 @@ void DWARFVerifier::verifyDebugLineRows() {
         PrevAddress = Row.Address;
       ++RowIndex;
     }
+  }
+}
+
+DWARFVerifier::DWARFVerifier(raw_ostream &S, DWARFContext &D,
+                             DIDumpOptions DumpOpts)
+    : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)), IsObjectFile(false),
+      IsMachOObject(false) {
+  if (const auto *F = DCtx.getDWARFObj().getFile()) {
+    IsObjectFile = F->isRelocatableObject();
+    IsMachOObject = F->isMachO();
   }
 }
 

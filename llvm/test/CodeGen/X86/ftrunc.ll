@@ -63,25 +63,19 @@ define double @trunc_unsigned_f64(double %x) #0 {
 define <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_v4f32:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movaps {{.*#+}} xmm2 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; SSE2-NEXT:    movaps %xmm0, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,1],xmm0[2,3]
-; SSE2-NEXT:    cvttss2si %xmm1, %rax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm0[1]
-; SSE2-NEXT:    cvttss2si %xmm2, %rax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE2-NEXT:    cvttss2si %xmm0, %rax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; SSE2-NEXT:    cvttss2si %xmm0, %rax
-; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [65535,65535,65535,65535]
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    por {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    cmpltps %xmm2, %xmm1
+; SSE2-NEXT:    cvttps2dq %xmm0, %xmm3
+; SSE2-NEXT:    subps %xmm2, %xmm0
+; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE2-NEXT:    xorps {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    andps %xmm1, %xmm3
+; SSE2-NEXT:    andnps %xmm0, %xmm1
+; SSE2-NEXT:    orps %xmm3, %xmm1
+; SSE2-NEXT:    movaps {{.*#+}} xmm0 = [65535,65535,65535,65535]
+; SSE2-NEXT:    andps %xmm1, %xmm0
+; SSE2-NEXT:    orps {{.*}}(%rip), %xmm0
 ; SSE2-NEXT:    psrld $16, %xmm1
 ; SSE2-NEXT:    por {{.*}}(%rip), %xmm1
 ; SSE2-NEXT:    addps {{.*}}(%rip), %xmm1

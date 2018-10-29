@@ -15,7 +15,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skx -mattr=-sse3 | FileCheck %s --check-prefixes=CHECK,SKX-SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skx -mattr=-avx2 | FileCheck %s --check-prefixes=CHECK,SKX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=bdver2 -mattr=-sse3 | FileCheck %s --check-prefixes=CHECK,BDVER2-SSE
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=bdver2 -mattr=-avx2 | FileCheck %s --check-prefixes=CHECK,BDVER2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=bdver2 -mattr=-avx2,-xop | FileCheck %s --check-prefixes=CHECK,BDVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2 -mattr=-sse3 | FileCheck %s --check-prefixes=CHECK,BTVER2-SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2 -mattr=-avx2 | FileCheck %s --check-prefixes=CHECK,BTVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=znver1 -mattr=-sse3 | FileCheck %s --check-prefixes=CHECK,ZNVER1-SSE
@@ -9115,8 +9115,8 @@ define <16 x i8> @test_pcmpeqb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; BDVER2-LABEL: test_pcmpeqb:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vpcomeqb %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
-; BDVER2-NEXT:    vpcomeqb (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; BDVER2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
+; BDVER2-NEXT:    vpcmpeqb (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; BDVER2-NEXT:    vpor %xmm0, %xmm1, %xmm0 # sched: [2:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -9258,8 +9258,8 @@ define <4 x i32> @test_pcmpeqd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; BDVER2-LABEL: test_pcmpeqd:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vpcomeqd %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
-; BDVER2-NEXT:    vpcomeqd (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; BDVER2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
+; BDVER2-NEXT:    vpcmpeqd (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; BDVER2-NEXT:    vpor %xmm0, %xmm1, %xmm0 # sched: [2:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -9401,8 +9401,8 @@ define <8 x i16> @test_pcmpeqw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; BDVER2-LABEL: test_pcmpeqw:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vpcomeqw %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
-; BDVER2-NEXT:    vpcomeqw (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; BDVER2-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
+; BDVER2-NEXT:    vpcmpeqw (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; BDVER2-NEXT:    vpor %xmm0, %xmm1, %xmm0 # sched: [2:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -9551,8 +9551,8 @@ define <16 x i8> @test_pcmpgtb(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> *%a2) {
 ;
 ; BDVER2-LABEL: test_pcmpgtb:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vpcomgtb %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
-; BDVER2-NEXT:    vpcomgtb (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; BDVER2-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
+; BDVER2-NEXT:    vpcmpgtb (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; BDVER2-NEXT:    vpor %xmm0, %xmm1, %xmm0 # sched: [2:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -9703,8 +9703,8 @@ define <4 x i32> @test_pcmpgtd(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> *%a2) {
 ;
 ; BDVER2-LABEL: test_pcmpgtd:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vpcomgtd %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
-; BDVER2-NEXT:    vpcomeqd (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; BDVER2-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
+; BDVER2-NEXT:    vpcmpeqd (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; BDVER2-NEXT:    vpor %xmm0, %xmm1, %xmm0 # sched: [2:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -9855,8 +9855,8 @@ define <8 x i16> @test_pcmpgtw(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> *%a2) {
 ;
 ; BDVER2-LABEL: test_pcmpgtw:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vpcomgtw %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
-; BDVER2-NEXT:    vpcomgtw (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; BDVER2-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm1 # sched: [2:0.50]
+; BDVER2-NEXT:    vpcmpgtw (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; BDVER2-NEXT:    vpor %xmm0, %xmm1, %xmm0 # sched: [2:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;

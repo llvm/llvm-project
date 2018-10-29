@@ -680,7 +680,7 @@ define <2 x double> @uitofp_4i32_to_2f64(<4 x i32> %a) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvtdq2pd %xmm1, %ymm1
-; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [65536,65536,65536,65536]
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
 ; AVX2-NEXT:    vmulpd %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
@@ -954,7 +954,7 @@ define <4 x double> @uitofp_4i32_to_4f64(<4 x i32> %a) {
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrld $16, %xmm1
 ; SSE2-NEXT:    cvtdq2pd %xmm1, %xmm1
-; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [65536,65536]
+; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [6.5536E+4,6.5536E+4]
 ; SSE2-NEXT:    mulpd %xmm2, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
@@ -974,7 +974,7 @@ define <4 x double> @uitofp_4i32_to_4f64(<4 x i32> %a) {
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    psrld $16, %xmm1
 ; SSE41-NEXT:    cvtdq2pd %xmm1, %xmm1
-; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [65536,65536]
+; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [6.5536E+4,6.5536E+4]
 ; SSE41-NEXT:    mulpd %xmm2, %xmm1
 ; SSE41-NEXT:    pxor %xmm3, %xmm3
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
@@ -1004,7 +1004,7 @@ define <4 x double> @uitofp_4i32_to_4f64(<4 x i32> %a) {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvtdq2pd %xmm1, %ymm1
-; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [65536,65536,65536,65536]
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
 ; AVX2-NEXT:    vmulpd %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]
@@ -3777,7 +3777,7 @@ define <4 x double> @uitofp_load_4i32_to_4f64(<4 x i32> *%a) {
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    psrld $16, %xmm1
 ; SSE2-NEXT:    cvtdq2pd %xmm1, %xmm1
-; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [65536,65536]
+; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [6.5536E+4,6.5536E+4]
 ; SSE2-NEXT:    mulpd %xmm2, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
@@ -3798,7 +3798,7 @@ define <4 x double> @uitofp_load_4i32_to_4f64(<4 x i32> *%a) {
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
 ; SSE41-NEXT:    psrld $16, %xmm1
 ; SSE41-NEXT:    cvtdq2pd %xmm1, %xmm1
-; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [65536,65536]
+; SSE41-NEXT:    movapd {{.*#+}} xmm2 = [6.5536E+4,6.5536E+4]
 ; SSE41-NEXT:    mulpd %xmm2, %xmm1
 ; SSE41-NEXT:    pxor %xmm3, %xmm3
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,0,1]
@@ -3830,7 +3830,7 @@ define <4 x double> @uitofp_load_4i32_to_4f64(<4 x i32> *%a) {
 ; AVX2-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX2-NEXT:    vcvtdq2pd %xmm1, %ymm1
-; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [65536,65536,65536,65536]
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [6.5536E+4,6.5536E+4,6.5536E+4,6.5536E+4]
 ; AVX2-NEXT:    vmulpd %ymm2, %ymm1, %ymm1
 ; AVX2-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1],xmm0[2],xmm2[3],xmm0[4],xmm2[5],xmm0[6],xmm2[7]

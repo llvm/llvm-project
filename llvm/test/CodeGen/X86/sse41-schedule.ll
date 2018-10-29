@@ -14,7 +14,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skx -mattr=-sse4.2 | FileCheck %s --check-prefixes=CHECK,SKX-SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=skx -mattr=-avx2   | FileCheck %s --check-prefixes=CHECK,SKX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=bdver2 -mattr=-sse4.2 | FileCheck %s --check-prefixes=CHECK,BDVER2-SSE
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=bdver2 -mattr=-avx2   | FileCheck %s --check-prefixes=CHECK,BDVER2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=bdver2 -mattr=-avx2,-xop   | FileCheck %s --check-prefixes=CHECK,BDVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2 -mattr=-sse4.2 | FileCheck %s --check-prefixes=CHECK,BTVER2-SSE
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=btver2 -mattr=-avx2   | FileCheck %s --check-prefixes=CHECK,BTVER2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -print-schedule -mcpu=znver1 -mattr=-sse4.2 | FileCheck %s --check-prefixes=CHECK,ZNVER1-SSE
@@ -1723,8 +1723,8 @@ define <2 x i64> @test_pcmpeqq(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> *%a2) {
 ;
 ; BDVER2-LABEL: test_pcmpeqq:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vpcomeqq %xmm1, %xmm0, %xmm0 # sched: [2:0.50]
-; BDVER2-NEXT:    vpcomeqq (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
+; BDVER2-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0 # sched: [2:0.50]
+; BDVER2-NEXT:    vpcmpeqq (%rdi), %xmm0, %xmm0 # sched: [7:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_pcmpeqq:

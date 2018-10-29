@@ -61,13 +61,14 @@ private:
     // (e.g. P23 on SandyBridge).
     int64_t CounterValue = 0;
     llvm::SmallVector<llvm::StringRef, 2> CounterNames;
-    llvm::StringRef(Counters).split(CounterNames, ',');
+    llvm::StringRef(Counters).split(CounterNames, '+');
     char *const ScratchPtr = Scratch->ptr();
-    for (const auto &CounterName : CounterNames) {
+    for (auto &CounterName : CounterNames) {
+      CounterName = CounterName.trim();
       pfm::PerfEvent PerfEvent(CounterName);
       if (!PerfEvent.valid())
         llvm::report_fatal_error(
-            llvm::Twine("invalid perf event ").concat(Counters));
+            llvm::Twine("invalid perf event '").concat(CounterName).concat("'"));
       pfm::Counter Counter(PerfEvent);
       Scratch->clear();
       {

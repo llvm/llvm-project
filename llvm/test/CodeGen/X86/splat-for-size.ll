@@ -9,7 +9,7 @@
 define <2 x double> @splat_v2f64(<2 x double> %x) #0 {
 ; CHECK-LABEL: splat_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = [1,1]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm1 = [1.0E+0,1.0E+0]
 ; CHECK-NEXT:    # xmm1 = mem[0,0]
 ; CHECK-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
@@ -20,7 +20,7 @@ define <2 x double> @splat_v2f64(<2 x double> %x) #0 {
 define <4 x double> @splat_v4f64(<4 x double> %x) #1 {
 ; CHECK-LABEL: splat_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %add = fadd <4 x double> %x, <double 1.0, double 1.0, double 1.0, double 1.0>
@@ -30,7 +30,7 @@ define <4 x double> @splat_v4f64(<4 x double> %x) #1 {
 define <4 x float> @splat_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: splat_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %add = fadd <4 x float> %x, <float 1.0, float 1.0, float 1.0, float 1.0>
@@ -40,7 +40,7 @@ define <4 x float> @splat_v4f32(<4 x float> %x) #0 {
 define <8 x float> @splat_v8f32(<8 x float> %x) #1 {
 ; CHECK-LABEL: splat_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1,1,1,1,1,1,1,1]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; CHECK-NEXT:    vaddps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %add = fadd <8 x float> %x, <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>

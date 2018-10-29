@@ -4392,10 +4392,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     SDValue V2 = BV2->getOperand(I);
 
     if (SVT.isInteger()) {
-        if (V1->getValueType(0).bitsGT(SVT))
-          V1 = getNode(ISD::TRUNCATE, DL, SVT, V1);
-        if (V2->getValueType(0).bitsGT(SVT))
-          V2 = getNode(ISD::TRUNCATE, DL, SVT, V2);
+      if (V1->getValueType(0).bitsGT(SVT))
+        V1 = getNode(ISD::TRUNCATE, DL, SVT, V1);
+      if (V2->getValueType(0).bitsGT(SVT))
+        V2 = getNode(ISD::TRUNCATE, DL, SVT, V2);
     }
 
     if (V1->getValueType(0) != SVT || V2->getValueType(0) != SVT)

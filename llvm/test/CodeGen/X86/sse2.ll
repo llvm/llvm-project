@@ -395,7 +395,7 @@ define void @test12() nounwind {
 ; SSE-LABEL: test12:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movapd 0, %xmm0
-; SSE-NEXT:    movapd {{.*#+}} xmm1 = [1,1,1,1]
+; SSE-NEXT:    movapd {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE-NEXT:    xorps %xmm2, %xmm2
 ; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm0[1],xmm2[1]
@@ -416,7 +416,7 @@ define void @test12() nounwind {
 ; AVX512-LABEL: test12:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovaps 0, %xmm0
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1,1,1,1]
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX512-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3]
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm2[1]
