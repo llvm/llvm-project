@@ -415,6 +415,40 @@ static bool areBytesInSameUnit(CharUnits first, CharUnits second,
       == getOffsetAtStartOfUnit(second, chunkSize);
 }
 
+static bool isMergeableEntryType(llvm::Type *type) {
+  // Opaquely-typed memory is always mergeable.
+  if (type == nullptr) return true;
+
+  // Pointers and integers are always mergeable.  In theory we should not
+  // merge pointers, but (1) it doesn't currently matter in practice because
+  // the chunk size is never greater than the size of a pointer and (2)
+  // Swift IRGen uses integer types for a lot of things that are "really"
+  // just storing pointers (like Optional<SomePointer>).  If we ever have a
+  // target that would otherwise combine pointers, we should put some effort
+  // into fixing those cases in Swift IRGen and then call out pointer types
+  // here.
+
+  // Floating-point and vector types should never be merged.
+  // Most such types are too large and highly-aligned to ever trigger merging
+  // in practice, but it's important for the rule to cover at least 'half'
+  // and 'float', as well as things like small vectors of 'i1' or 'i8'.
+  return (!type->isFloatingPointTy() && !type->isVectorTy());
+}
+
+bool SwiftAggLowering::shouldMergeEntries(const StorageEntry &first,
+                                          const StorageEntry &second,
+                                          CharUnits chunkSize) {
+  // Only merge entries that overlap the same chunk.  We test this first
+  // despite being a bit more expensive because this is the condition that
+  // tends to prevent merging.
+  if (!areBytesInSameUnit(first.End - CharUnits::One(), second.Begin,
+                          chunkSize))
+    return false;
+
+  return (isMergeableEntryType(first.Type) &&
+          isMergeableEntryType(second.Type));
+}
+
 void SwiftAggLowering::finish() {
   if (Entries.empty()) {
     Finished = true;
@@ -425,12 +459,12 @@ void SwiftAggLowering::finish() {
   // which is generally the size of a pointer.
   const CharUnits chunkSize = getMaximumVoluntaryIntegerSize(CGM);
 
-  // First pass: if two entries share a chunk, make them both opaque
+  // First pass: if two entries should be merged, make them both opaque
   // and stretch one to meet the next.
+  // Also, remember if there are any opaque entries.
   bool hasOpaqueEntries = (Entries[0].Type == nullptr);
   for (size_t i = 1, e = Entries.size(); i != e; ++i) {
-    if (areBytesInSameUnit(Entries[i - 1].End - CharUnits::One(),
-                           Entries[i].Begin, chunkSize)) {
+    if (shouldMergeEntries(Entries[i - 1], Entries[i], chunkSize)) {
       Entries[i - 1].Type = nullptr;
       Entries[i].Type = nullptr;
       Entries[i - 1].End = Entries[i].Begin;
