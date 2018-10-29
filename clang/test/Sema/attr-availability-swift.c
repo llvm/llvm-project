@@ -16,11 +16,11 @@
 extern int noSwiftGlobal1 __attribute__((availability(swift, unavailable)));
 // CHECK: AvailabilityAttr {{.*}}swift 0 0 0 Unavailable "" ""
 extern int noSwiftGlobal1 __attribute__((availability(macosx, introduced=10.1))); // okay
-// CHECK: AvailabilityAttr {{.*}}macos 10.1 0 0 "" ""
 // CHECK: AvailabilityAttr {{.*}}Inherited swift 0 0 0 Unavailable "" ""
+// CHECK: AvailabilityAttr {{.*}}macos 10.1 0 0 "" ""
 extern int noSwiftGlobal1 __attribute__((availability(swift, unavailable, message="and this one has a message"))); // okay
-// CHECK: AvailabilityAttr {{.*}}swift 0 0 0 Unavailable "and this one has a message" ""
 // CHECK: AvailabilityAttr {{.*}}Inherited macos 10.1 0 0 "" ""
+// CHECK: AvailabilityAttr {{.*}}swift 0 0 0 Unavailable "and this one has a message" ""
 extern int noSwiftGlobal2 __attribute__((availability(swift, introduced=5))); // expected-warning{{only 'unavailable' and 'deprecated' are supported for Swift availability}}
 // CHECK: VarDecl
 // CHECK-NOT: AvailabilityAttr
