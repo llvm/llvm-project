@@ -14,12 +14,12 @@
 // definitions, which does not yet provide aligned allocation
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
-// XFAIL: with_system_cxx_lib=macosx10.12
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
-// XFAIL: with_system_cxx_lib=macosx10.7
-// XFAIL: with_system_cxx_lib=macosx10.8
+// XFAIL: with_system_cxx_lib=macosx10.12 || availability=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11 || availability=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10 || availability=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9 || availability=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.8 || availability=macosx10.8
+// XFAIL: with_system_cxx_lib=macosx10.7 || availability=macosx10.7
 
 // XFAIL: sanitizer-new-delete, ubsan
 
