@@ -787,6 +787,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  define _LIBCPP_INTERNAL_LINKAGE _LIBCPP_ALWAYS_INLINE
 #endif
 
+#if __has_attribute(exclude_from_explicit_instantiation)
+#  define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION __attribute__ ((__exclude_from_explicit_instantiation__))
+#else
+   // Try to approximate the effect of exclude_from_explicit_instantiation
+   // (which is that entities are not assumed to be provided by explicit
+   // template instantitations in the dylib) by always inlining those entities.
+#  define _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION _LIBCPP_ALWAYS_INLINE
+#endif
+
 #ifndef _LIBCPP_HIDE_FROM_ABI_PER_TU
 #  ifndef _LIBCPP_HIDE_FROM_ABI_PER_TU_BY_DEFAULT
 #    define _LIBCPP_HIDE_FROM_ABI_PER_TU 0
@@ -799,7 +808,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #  if _LIBCPP_HIDE_FROM_ABI_PER_TU
 #    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_INTERNAL_LINKAGE
 #  else
-#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_ALWAYS_INLINE
+#    define _LIBCPP_HIDE_FROM_ABI _LIBCPP_HIDDEN _LIBCPP_EXCLUDE_FROM_EXPLICIT_INSTANTIATION
 #  endif
 #endif
 
