@@ -177,10 +177,13 @@ void ASTStmtReader::VisitSwitchCase(SwitchCase *S) {
 
 void ASTStmtReader::VisitCaseStmt(CaseStmt *S) {
   VisitSwitchCase(S);
+  bool CaseStmtIsGNURange = Record.readInt();
   S->setLHS(Record.readSubExpr());
-  S->setRHS(Record.readSubExpr());
   S->setSubStmt(Record.readSubStmt());
-  S->setEllipsisLoc(ReadSourceLocation());
+  if (CaseStmtIsGNURange) {
+    S->setRHS(Record.readSubExpr());
+    S->setEllipsisLoc(ReadSourceLocation());
+  }
 }
 
 void ASTStmtReader::VisitDefaultStmt(DefaultStmt *S) {
@@ -2277,7 +2280,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_CASE:
-      S = new (Context) CaseStmt(Empty);
+      S = CaseStmt::CreateEmpty(
+          Context,
+          /*CaseStmtIsGNURange*/ Record[ASTStmtReader::NumStmtFields + 3]);
       break;
 
     case STMT_DEFAULT:
