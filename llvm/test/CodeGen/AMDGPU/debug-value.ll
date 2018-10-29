@@ -71,7 +71,10 @@ bb28:                                             ; preds = %bb25, %bb21
   %tmp56 = fmul float %tmp55, %tmp50
   %tmp57 = fmul float %tmp54, %tmp56
   %tmp58 = fdiv float %tmp57, 0.000000e+00
+  ; Make sure this isn't double emitted
+  ; CHECK-NOT: ;DEBUG_VALUE:
   ; CHECK: ;DEBUG_VALUE: foo:var <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef]
+  ; CHECK-NOT: ;DEBUG_VALUE:
   call void @llvm.dbg.value(metadata <4 x float> %tmp29, metadata !3, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !5
   %tmp59 = bitcast i64 %tmp35 to <2 x float>
   %tmp60 = insertelement <2 x float> undef, float %tmp58, i32 0
