@@ -31,6 +31,26 @@ namespace __xray {
 /// trace collection.
 class BufferQueue {
 public:
+  /// ControlBlock represents the memory layout of how we interpret the backing
+  /// store for all buffers managed by a BufferQueue instance. The ControlBlock
+  /// has the reference count as the first member, sized according to
+  /// platform-specific cache-line size. We never use the Buffer member of the
+  /// union, which is only there for compiler-supported alignment and sizing.
+  ///
+  /// This ensures that the `Data` member will be placed at least kCacheLineSize
+  /// bytes from the beginning of the structure.
+  struct ControlBlock {
+    union {
+      atomic_uint64_t RefCount;
+      char Buffer[kCacheLineSize];
+    };
+
+    /// We need to make this size 1, to conform to the C++ rules for array data
+    /// members. Typically, we want to subtract this 1 byte for sizing
+    /// information.
+    char Data[1];
+  };
+
   struct Buffer {
     atomic_uint64_t Extents{0};
     uint64_t Generation{0};
@@ -39,7 +59,7 @@ public:
 
   private:
     friend class BufferQueue;
-    unsigned char *BackingStore = nullptr;
+    ControlBlock *BackingStore = nullptr;
     size_t Count = 0;
   };
 
@@ -119,9 +139,8 @@ private:
   SpinMutex Mutex;
   atomic_uint8_t Finalizing;
 
-  // A pointer to a contiguous block of memory to serve as the backing store for
-  // all the individual buffers handed out.
-  uint8_t *BackingStore;
+  // The collocated ControlBlock and buffer storage.
+  ControlBlock *BackingStore;
 
   // A dynamically allocated array of BufferRep instances.
   BufferRep *Buffers;

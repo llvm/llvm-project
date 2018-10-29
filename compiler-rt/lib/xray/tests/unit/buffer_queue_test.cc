@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "xray_buffer_queue.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 #include <atomic>
@@ -19,8 +20,11 @@
 #include <unistd.h>
 
 namespace __xray {
+namespace {
 
 static constexpr size_t kSize = 4096;
+
+using ::testing::Eq;
 
 TEST(BufferQueueTest, API) {
   bool Success = false;
@@ -58,8 +62,12 @@ TEST(BufferQueueTest, ReleaseUnknown) {
   Buf.Data = reinterpret_cast<void *>(0xdeadbeef);
   Buf.Size = kSize;
   Buf.Generation = Buffers.generation();
-  EXPECT_EQ(BufferQueue::ErrorCode::UnrecognizedBuffer,
-            Buffers.releaseBuffer(Buf));
+
+  BufferQueue::Buffer Known;
+  EXPECT_THAT(Buffers.getBuffer(Known), Eq(BufferQueue::ErrorCode::Ok));
+  EXPECT_THAT(Buffers.releaseBuffer(Buf),
+              Eq(BufferQueue::ErrorCode::UnrecognizedBuffer));
+  EXPECT_THAT(Buffers.releaseBuffer(Known), Eq(BufferQueue::ErrorCode::Ok));
 }
 
 TEST(BufferQueueTest, ErrorsWhenFinalising) {
@@ -223,4 +231,5 @@ TEST(BufferQueueTest, GenerationalSupportAcrossThreads) {
   ASSERT_EQ(Counter.load(std::memory_order_acquire), 0);
 }
 
+} // namespace
 } // namespace __xray
