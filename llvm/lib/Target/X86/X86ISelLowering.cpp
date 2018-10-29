@@ -15698,7 +15698,9 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   // If this VSELECT has a vector if i1 as a mask, it will be directly matched
   // with patterns on the mask registers on AVX-512.
-  if (Cond.getScalarValueSizeInBits() == 1)
+  MVT CondVT = Cond.getSimpleValueType();
+  unsigned CondEltSize = Cond.getScalarValueSizeInBits();
+  if (CondEltSize == 1)
     return Op;
 
   // Variable blends are only legal from SSE4.1 onward.
@@ -15707,22 +15709,32 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   SDLoc dl(Op);
   MVT VT = Op.getSimpleValueType();
+  unsigned EltSize = VT.getScalarSizeInBits();
+  unsigned NumElts = VT.getVectorNumElements();
 
   // If the VSELECT is on a 512-bit type, we have to convert a non-i1 condition
   // into an i1 condition so that we can use the mask-based 512-bit blend
   // instructions.
   if (VT.getSizeInBits() == 512) {
-    // The vNi1 condition case should be handled above as it can be trivially
-    // lowered.
-    assert(Cond.getScalarValueSizeInBits() == VT.getScalarSizeInBits() &&
-           "Should have a size-matched integer condition!");
     // Build a mask by testing the condition against zero.
-    MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+    MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
     SDValue Mask = DAG.getSetCC(dl, MaskVT, Cond,
-                                getZeroVector(VT, Subtarget, DAG, dl),
+                                getZeroVector(CondVT, Subtarget, DAG, dl),
                                 ISD::SETNE);
     // Now return a new VSELECT using the mask.
     return DAG.getSelect(dl, VT, Mask, LHS, RHS);
+  }
+
+  // SEXT/TRUNC cases where the mask doesn't match the destination size.
+  if (CondEltSize != EltSize) {
+    // If we don't have a sign splat, rely on the expansion.
+    if (CondEltSize != DAG.ComputeNumSignBits(Cond))
+      return SDValue();
+
+    MVT NewCondSVT = MVT::getIntegerVT(EltSize);
+    MVT NewCondVT = MVT::getVectorVT(NewCondSVT, NumElts);
+    Cond = DAG.getSExtOrTrunc(Cond, dl, NewCondVT);
+    return DAG.getNode(ISD::VSELECT, dl, VT, Cond, LHS, RHS);
   }
 
   // Only some types will be legal on some subtargets. If we can emit a legal
@@ -15743,7 +15755,7 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   case MVT::v8i16:
   case MVT::v16i16: {
     // Bitcast everything to the vXi8 type and use a vXi8 vselect.
-    MVT CastVT = MVT::getVectorVT(MVT::i8, VT.getVectorNumElements() * 2);
+    MVT CastVT = MVT::getVectorVT(MVT::i8, NumElts * 2);
     Cond = DAG.getBitcast(CastVT, Cond);
     LHS = DAG.getBitcast(CastVT, LHS);
     RHS = DAG.getBitcast(CastVT, RHS);
@@ -18048,7 +18060,7 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
   // TODO: If we had general constant folding for FP logic ops, this check
   // wouldn't be necessary.
   SDValue MagBits;
-  if (ConstantFPSDNode *Op0CN = dyn_cast<ConstantFPSDNode>(Mag)) {
+  if (ConstantFPSDNode *Op0CN = isConstOrConstSplatFP(Mag)) {
     APFloat APF = Op0CN->getValueAPF();
     APF.clearSign();
     MagBits = DAG.getConstantFP(APF, dl, LogicVT);

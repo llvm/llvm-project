@@ -72,7 +72,7 @@ define void @full_test() {
 ; X32-NEXT:    cvtdq2ps %xmm0, %xmm1
 ; X32-NEXT:    xorps %xmm0, %xmm0
 ; X32-NEXT:    cmpltps %xmm2, %xmm0
-; X32-NEXT:    movaps {{.*#+}} xmm3 = <1,1,u,u>
+; X32-NEXT:    movaps {{.*#+}} xmm3 = <1.0E+0,1.0E+0,u,u>
 ; X32-NEXT:    addps %xmm1, %xmm3
 ; X32-NEXT:    movaps %xmm1, %xmm4
 ; X32-NEXT:    blendvps %xmm0, %xmm3, %xmm4
@@ -92,7 +92,7 @@ define void @full_test() {
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm1
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    cmpltps %xmm2, %xmm0
-; X64-NEXT:    movaps {{.*#+}} xmm3 = <1,1,u,u>
+; X64-NEXT:    movaps {{.*#+}} xmm3 = <1.0E+0,1.0E+0,u,u>
 ; X64-NEXT:    addps %xmm1, %xmm3
 ; X64-NEXT:    movaps %xmm1, %xmm4
 ; X64-NEXT:    blendvps %xmm0, %xmm3, %xmm4

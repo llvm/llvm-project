@@ -2314,7 +2314,6 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
                                                    EVT DestVT,
                                                    const SDLoc &dl) {
   EVT SrcVT = Op0.getValueType();
-  EVT ShiftVT = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
 
   // TODO: Should any fast-math-flags be set for the created nodes?
   LLVM_DEBUG(dbgs() << "Legalizing INT_TO_FP\n");
@@ -2368,32 +2367,6 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
   }
   assert(!isSigned && "Legalize cannot Expand SINT_TO_FP for i64 yet");
   // Code below here assumes !isSigned without checking again.
-
-  // TODO: Generalize this for use with other types.
-  if (SrcVT == MVT::i64 && DestVT == MVT::f32) {
-    LLVM_DEBUG(dbgs() << "Converting unsigned i64 to f32\n");
-    // For unsigned conversions, convert them to signed conversions using the
-    // algorithm from the x86_64 __floatundidf in compiler_rt.
-    SDValue Fast = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Op0);
-
-    SDValue ShiftConst = DAG.getConstant(1, dl, ShiftVT);
-    SDValue Shr = DAG.getNode(ISD::SRL, dl, SrcVT, Op0, ShiftConst);
-    SDValue AndConst = DAG.getConstant(1, dl, SrcVT);
-    SDValue And = DAG.getNode(ISD::AND, dl, SrcVT, Op0, AndConst);
-    SDValue Or = DAG.getNode(ISD::OR, dl, SrcVT, And, Shr);
-
-    SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Or);
-    SDValue Slow = DAG.getNode(ISD::FADD, dl, DestVT, SignCvt, SignCvt);
-
-    // TODO: This really should be implemented using a branch rather than a
-    // select.  We happen to get lucky and machinesink does the right
-    // thing most of the time.  This would be a good candidate for a
-    // pseudo-op, or, even better, for whole-function isel.
-    SDValue SignBitTest =
-        DAG.getSetCC(dl, getSetCCResultType(SrcVT), Op0,
-                     DAG.getConstant(0, dl, SrcVT), ISD::SETLT);
-    return DAG.getSelect(dl, DestVT, SignBitTest, Slow, Fast);
-  }
 
   SDValue Tmp1 = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Op0);
 

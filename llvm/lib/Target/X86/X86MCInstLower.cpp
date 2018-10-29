@@ -1499,7 +1499,8 @@ static void printConstant(const APInt &Val, raw_ostream &CS) {
 
 static void printConstant(const APFloat &Flt, raw_ostream &CS) {
   SmallString<32> Str;
-  Flt.toString(Str);
+  // Force scientific notation to distinquish from integers.
+  Flt.toString(Str, 0, 0);
   CS << Str;
 }
 

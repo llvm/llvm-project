@@ -4147,6 +4147,11 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
   EVT SetCCVT =
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
 
+  // Only expand vector types if we have the appropriate vector bit operations.
+  if (DstVT.isVector() && (!isOperationLegalOrCustom(ISD::FP_TO_SINT, DstVT) ||
+                           !isOperationLegalOrCustomOrPromote(ISD::XOR, SrcVT)))
+    return false;
+
   // Expand based on maximum range of FP_TO_SINT:
   // True = fp_to_sint(Src)
   // False = 0x8000000000000000 + fp_to_sint(Src - 0x8000000000000000)
@@ -4174,40 +4179,83 @@ bool TargetLowering::expandUINT_TO_FP(SDNode *Node, SDValue &Result,
   EVT SrcVT = Src.getValueType();
   EVT DstVT = Node->getValueType(0);
 
-  if (SrcVT.getScalarType() != MVT::i64 || DstVT.getScalarType() != MVT::f64)
-    return false;
-
-  // Only expand vector types if we have the appropriate vector bit operations.
-  if (SrcVT.isVector() && (!isOperationLegalOrCustom(ISD::SRL, SrcVT) ||
-                           !isOperationLegalOrCustom(ISD::FADD, DstVT) ||
-                           !isOperationLegalOrCustom(ISD::FSUB, DstVT) ||
-                           !isOperationLegalOrCustomOrPromote(ISD::OR, SrcVT) ||
-                           !isOperationLegalOrCustomOrPromote(ISD::AND, SrcVT)))
+  if (SrcVT.getScalarType() != MVT::i64)
     return false;
 
   SDLoc dl(SDValue(Node, 0));
   EVT ShiftVT = getShiftAmountTy(SrcVT, DAG.getDataLayout());
 
-  // Implementation of unsigned i64 to f64 following the algorithm in
-  // __floatundidf in compiler_rt. This implementation has the advantage
-  // of performing rounding correctly, both in the default rounding mode
-  // and in all alternate rounding modes.
-  SDValue TwoP52 = DAG.getConstant(UINT64_C(0x4330000000000000), dl, SrcVT);
-  SDValue TwoP84PlusTwoP52 =
-      DAG.getConstantFP(BitsToDouble(UINT64_C(0x4530000000100000)), dl, DstVT);
-  SDValue TwoP84 = DAG.getConstant(UINT64_C(0x4530000000000000), dl, SrcVT);
-  SDValue LoMask = DAG.getConstant(UINT64_C(0x00000000FFFFFFFF), dl, SrcVT);
-  SDValue HiShift = DAG.getConstant(32, dl, ShiftVT);
+  if (DstVT.getScalarType() == MVT::f32) {
+    // Only expand vector types if we have the appropriate vector bit
+    // operations.
+    if (SrcVT.isVector() &&
+        (!isOperationLegalOrCustom(ISD::SRL, SrcVT) ||
+         !isOperationLegalOrCustom(ISD::FADD, DstVT) ||
+         !isOperationLegalOrCustom(ISD::SINT_TO_FP, SrcVT) ||
+         !isOperationLegalOrCustomOrPromote(ISD::OR, SrcVT) ||
+         !isOperationLegalOrCustomOrPromote(ISD::AND, SrcVT)))
+      return false;
 
-  SDValue Lo = DAG.getNode(ISD::AND, dl, SrcVT, Src, LoMask);
-  SDValue Hi = DAG.getNode(ISD::SRL, dl, SrcVT, Src, HiShift);
-  SDValue LoOr = DAG.getNode(ISD::OR, dl, SrcVT, Lo, TwoP52);
-  SDValue HiOr = DAG.getNode(ISD::OR, dl, SrcVT, Hi, TwoP84);
-  SDValue LoFlt = DAG.getBitcast(DstVT, LoOr);
-  SDValue HiFlt = DAG.getBitcast(DstVT, HiOr);
-  SDValue HiSub = DAG.getNode(ISD::FSUB, dl, DstVT, HiFlt, TwoP84PlusTwoP52);
-  Result = DAG.getNode(ISD::FADD, dl, DstVT, LoFlt, HiSub);
-  return true;
+    // For unsigned conversions, convert them to signed conversions using the
+    // algorithm from the x86_64 __floatundidf in compiler_rt.
+    SDValue Fast = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Src);
+
+    SDValue ShiftConst = DAG.getConstant(1, dl, ShiftVT);
+    SDValue Shr = DAG.getNode(ISD::SRL, dl, SrcVT, Src, ShiftConst);
+    SDValue AndConst = DAG.getConstant(1, dl, SrcVT);
+    SDValue And = DAG.getNode(ISD::AND, dl, SrcVT, Src, AndConst);
+    SDValue Or = DAG.getNode(ISD::OR, dl, SrcVT, And, Shr);
+
+    SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DstVT, Or);
+    SDValue Slow = DAG.getNode(ISD::FADD, dl, DstVT, SignCvt, SignCvt);
+
+    // TODO: This really should be implemented using a branch rather than a
+    // select.  We happen to get lucky and machinesink does the right
+    // thing most of the time.  This would be a good candidate for a
+    // pseudo-op, or, even better, for whole-function isel.
+    EVT SetCCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+
+    SDValue SignBitTest = DAG.getSetCC(
+        dl, SetCCVT, Src, DAG.getConstant(0, dl, SrcVT), ISD::SETLT);
+    Result = DAG.getSelect(dl, DstVT, SignBitTest, Slow, Fast);
+    return true;
+  }
+
+  if (DstVT.getScalarType() == MVT::f64) {
+    // Only expand vector types if we have the appropriate vector bit
+    // operations.
+    if (SrcVT.isVector() &&
+        (!isOperationLegalOrCustom(ISD::SRL, SrcVT) ||
+         !isOperationLegalOrCustom(ISD::FADD, DstVT) ||
+         !isOperationLegalOrCustom(ISD::FSUB, DstVT) ||
+         !isOperationLegalOrCustomOrPromote(ISD::OR, SrcVT) ||
+         !isOperationLegalOrCustomOrPromote(ISD::AND, SrcVT)))
+      return false;
+
+    // Implementation of unsigned i64 to f64 following the algorithm in
+    // __floatundidf in compiler_rt. This implementation has the advantage
+    // of performing rounding correctly, both in the default rounding mode
+    // and in all alternate rounding modes.
+    SDValue TwoP52 = DAG.getConstant(UINT64_C(0x4330000000000000), dl, SrcVT);
+    SDValue TwoP84PlusTwoP52 = DAG.getConstantFP(
+        BitsToDouble(UINT64_C(0x4530000000100000)), dl, DstVT);
+    SDValue TwoP84 = DAG.getConstant(UINT64_C(0x4530000000000000), dl, SrcVT);
+    SDValue LoMask = DAG.getConstant(UINT64_C(0x00000000FFFFFFFF), dl, SrcVT);
+    SDValue HiShift = DAG.getConstant(32, dl, ShiftVT);
+
+    SDValue Lo = DAG.getNode(ISD::AND, dl, SrcVT, Src, LoMask);
+    SDValue Hi = DAG.getNode(ISD::SRL, dl, SrcVT, Src, HiShift);
+    SDValue LoOr = DAG.getNode(ISD::OR, dl, SrcVT, Lo, TwoP52);
+    SDValue HiOr = DAG.getNode(ISD::OR, dl, SrcVT, Hi, TwoP84);
+    SDValue LoFlt = DAG.getBitcast(DstVT, LoOr);
+    SDValue HiFlt = DAG.getBitcast(DstVT, HiOr);
+    SDValue HiSub = DAG.getNode(ISD::FSUB, dl, DstVT, HiFlt, TwoP84PlusTwoP52);
+    Result = DAG.getNode(ISD::FADD, dl, DstVT, LoFlt, HiSub);
+    return true;
+  }
+
+  return false;
 }
 
 SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,

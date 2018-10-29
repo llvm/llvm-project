@@ -68,5 +68,23 @@ define <4 x float> @v4f32_neg(<4 x float> %a, <4 x float> %b) nounwind {
   ret <4 x float> %tmp
 }
 
+define <4 x float> @v4f32_const_mag(<4 x float> %a, <4 x float> %b) nounwind {
+; X86-LABEL: v4f32_const_mag:
+; X86:       # %bb.0:
+; X86-NEXT:    movaps %xmm1, %xmm0
+; X86-NEXT:    andps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    orps {{\.LCPI.*}}, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: v4f32_const_mag:
+; X64:       # %bb.0:
+; X64-NEXT:    movaps %xmm1, %xmm0
+; X64-NEXT:    andps {{.*}}(%rip), %xmm0
+; X64-NEXT:    orps {{.*}}(%rip), %xmm0
+; X64-NEXT:    retq
+  %tmp = tail call <4 x float> @llvm.copysign.v4f32(<4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, <4 x float> %b )
+  ret <4 x float> %tmp
+}
+
 declare float @llvm.copysign.f32(float, float)
 declare <4 x float> @llvm.copysign.v4f32(<4 x float>, <4 x float>)

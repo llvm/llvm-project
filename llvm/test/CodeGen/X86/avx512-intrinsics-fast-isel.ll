@@ -3156,7 +3156,7 @@ entry:
 define <8 x double> @test_mm512_fnmsub_round_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; CHECK-LABEL: test_mm512_fnmsub_round_pd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0,-0,-0,-0,-0,-0,-0,-0]
+; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    vpxorq %zmm3, %zmm0, %zmm4
 ; CHECK-NEXT:    vpxorq %zmm3, %zmm2, %zmm0
 ; CHECK-NEXT:    vfmadd231pd {rn-sae}, %zmm4, %zmm1, %zmm0
@@ -3387,7 +3387,7 @@ entry:
 define <8 x double> @test_mm512_fnmsub_pd(<8 x double> %__A, <8 x double> %__B, <8 x double> %__C) {
 ; CHECK-LABEL: test_mm512_fnmsub_pd:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0,-0,-0,-0,-0,-0,-0,-0]
+; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    vpxorq %zmm3, %zmm0, %zmm4
 ; CHECK-NEXT:    vpxorq %zmm3, %zmm2, %zmm0
 ; CHECK-NEXT:    vfmadd231pd {{.*#+}} zmm0 = (zmm1 * zmm4) + zmm0
@@ -3613,7 +3613,7 @@ entry:
 define <16 x float> @test_mm512_fnmsub_round_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; CHECK-LABEL: test_mm512_fnmsub_round_ps:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0]
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    vpxord %zmm3, %zmm0, %zmm4
 ; CHECK-NEXT:    vpxord %zmm3, %zmm2, %zmm0
 ; CHECK-NEXT:    vfmadd231ps {rn-sae}, %zmm4, %zmm1, %zmm0
@@ -3836,7 +3836,7 @@ entry:
 define <16 x float> @test_mm512_fnmsub_ps(<16 x float> %__A, <16 x float> %__B, <16 x float> %__C) {
 ; CHECK-LABEL: test_mm512_fnmsub_ps:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0,-0]
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    vpxord %zmm3, %zmm0, %zmm4
 ; CHECK-NEXT:    vpxord %zmm3, %zmm2, %zmm0
 ; CHECK-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm1 * zmm4) + zmm0
@@ -7459,7 +7459,7 @@ define double @test_mm512_mask_reduce_mul_pd(i8 zeroext %__M, <8 x double> %__W)
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movb 8(%ebp), %al
 ; X86-NEXT:    kmovw %eax, %k1
-; X86-NEXT:    vbroadcastsd {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1]
+; X86-NEXT:    vbroadcastsd {{.*#+}} zmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X86-NEXT:    vmovapd %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vextractf64x4 $1, %zmm1, %ymm0
 ; X86-NEXT:    vmulpd %ymm0, %ymm1, %ymm0
@@ -7478,7 +7478,7 @@ define double @test_mm512_mask_reduce_mul_pd(i8 zeroext %__M, <8 x double> %__W)
 ; X64-LABEL: test_mm512_mask_reduce_mul_pd:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vbroadcastsd {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1]
+; X64-NEXT:    vbroadcastsd {{.*#+}} zmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-NEXT:    vmovapd %zmm0, %zmm1 {%k1}
 ; X64-NEXT:    vextractf64x4 $1, %zmm1, %ymm0
 ; X64-NEXT:    vmulpd %ymm0, %ymm1, %ymm0
@@ -7565,7 +7565,7 @@ define float @test_mm512_mask_reduce_mul_ps(i16 zeroext %__M, <16 x float> %__W)
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vbroadcastss {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; X86-NEXT:    vbroadcastss {{.*#+}} zmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X86-NEXT:    vmovaps %zmm0, %zmm1 {%k1}
 ; X86-NEXT:    vextractf64x4 $1, %zmm1, %ymm0
 ; X86-NEXT:    vmulps %ymm0, %ymm1, %ymm0
@@ -7585,7 +7585,7 @@ define float @test_mm512_mask_reduce_mul_ps(i16 zeroext %__M, <16 x float> %__W)
 ; X64-LABEL: test_mm512_mask_reduce_mul_ps:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vbroadcastss {{.*#+}} zmm1 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; X64-NEXT:    vbroadcastss {{.*#+}} zmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; X64-NEXT:    vmovaps %zmm0, %zmm1 {%k1}
 ; X64-NEXT:    vextractf64x4 $1, %zmm1, %ymm0
 ; X64-NEXT:    vmulps %ymm0, %ymm1, %ymm0
