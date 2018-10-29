@@ -728,7 +728,7 @@ def warn_quoted_include_in_framework_header : Warning<
   >, InGroup<FrameworkHdrQuotedInclude>, DefaultIgnore;
 def warn_framework_include_private_from_public : Warning<
   "public framework header includes private framework header '%0'"
-  >, InGroup<FrameworkIncludePrivateFromPublic>;
+  >, InGroup<FrameworkIncludePrivateFromPublic>, DefaultIgnore;
 
 def warn_auto_module_import : Warning<
   "treating #%select{include|import|include_next|__include_macros}0 as an "
