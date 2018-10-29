@@ -5707,8 +5707,8 @@ ExpectedStmt ASTNodeImporter::VisitCaseStmt(CaseStmt *S) {
   std::tie(ToLHS, ToRHS, ToSubStmt, ToCaseLoc, ToEllipsisLoc, ToColonLoc) =
       *Imp;
 
-  auto *ToStmt = new (Importer.getToContext()) CaseStmt(
-      ToLHS, ToRHS, ToCaseLoc, ToEllipsisLoc, ToColonLoc);
+  auto *ToStmt = CaseStmt::Create(Importer.getToContext(), ToLHS, ToRHS,
+                                  ToCaseLoc, ToEllipsisLoc, ToColonLoc);
   ToStmt->setSubStmt(ToSubStmt);
 
   return ToStmt;

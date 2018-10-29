@@ -7,10 +7,8 @@
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: CaseStmt
 // CHECK-NEXT: IntegerLiteral
-// CHECK-NEXT: <<NULL>>
 // CHECK-NEXT: CaseStmt
 // CHECK-NEXT: IntegerLiteral
-// CHECK-NEXT: <<NULL>>
 // CHECK-NEXT: BreakStmt
 
 // CHECK: SwitchStmt
@@ -22,11 +20,9 @@
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: CaseStmt
 // CHECK-NEXT: IntegerLiteral
-// CHECK-NEXT: <<NULL>>
 // CHECK-NEXT: BreakStmt
 // CHECK-NEXT: CaseStmt
 // CHECK-NEXT: IntegerLiteral
-// CHECK-NEXT: <<NULL>>
 // CHECK-NEXT: BreakStmt
 
 // CHECK: SwitchStmt

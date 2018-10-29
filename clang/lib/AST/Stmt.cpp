@@ -942,12 +942,6 @@ void SwitchStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
                                    VarRange.getEnd());
 }
 
-Stmt *SwitchCase::getSubStmt() {
-  if (isa<CaseStmt>(this))
-    return cast<CaseStmt>(this)->getSubStmt();
-  return cast<DefaultStmt>(this)->getSubStmt();
-}
-
 WhileStmt::WhileStmt(const ASTContext &C, VarDecl *Var, Expr *cond, Stmt *body,
                      SourceLocation WL)
   : Stmt(WhileStmtClass) {
@@ -989,6 +983,27 @@ const Expr* ReturnStmt::getRetValue() const {
 }
 Expr* ReturnStmt::getRetValue() {
   return cast_or_null<Expr>(RetExpr);
+}
+
+// CaseStmt
+CaseStmt *CaseStmt::Create(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
+                           SourceLocation caseLoc, SourceLocation ellipsisLoc,
+                           SourceLocation colonLoc) {
+  bool CaseStmtIsGNURange = rhs != nullptr;
+  void *Mem = Ctx.Allocate(
+      totalSizeToAlloc<Stmt *, SourceLocation>(
+          NumMandatoryStmtPtr + CaseStmtIsGNURange, CaseStmtIsGNURange),
+      alignof(CaseStmt));
+  return new (Mem) CaseStmt(lhs, rhs, caseLoc, ellipsisLoc, colonLoc);
+}
+
+CaseStmt *CaseStmt::CreateEmpty(const ASTContext &Ctx,
+                                bool CaseStmtIsGNURange) {
+  void *Mem = Ctx.Allocate(
+      totalSizeToAlloc<Stmt *, SourceLocation>(
+          NumMandatoryStmtPtr + CaseStmtIsGNURange, CaseStmtIsGNURange),
+      alignof(CaseStmt));
+  return new (Mem) CaseStmt(EmptyShell(), CaseStmtIsGNURange);
 }
 
 SEHTryStmt::SEHTryStmt(bool IsCXXTry, SourceLocation TryLoc, Stmt *TryBlock,

@@ -515,6 +515,7 @@ namespace  {
     void VisitLabelStmt(const LabelStmt *Node);
     void VisitGotoStmt(const GotoStmt *Node);
     void VisitCXXCatchStmt(const CXXCatchStmt *Node);
+    void VisitCaseStmt(const CaseStmt *Node);
     void VisitCapturedStmt(const CapturedStmt *Node);
 
     // OpenMP
@@ -2047,6 +2048,12 @@ void ASTDumper::VisitGotoStmt(const GotoStmt *Node) {
 void ASTDumper::VisitCXXCatchStmt(const CXXCatchStmt *Node) {
   VisitStmt(Node);
   dumpDecl(Node->getExceptionDecl());
+}
+
+void ASTDumper::VisitCaseStmt(const CaseStmt *Node) {
+  VisitStmt(Node);
+  if (Node->caseStmtIsGNURange())
+    OS << " gnu_range";
 }
 
 void ASTDumper::VisitCapturedStmt(const CapturedStmt *Node) {

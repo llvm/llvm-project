@@ -96,10 +96,13 @@ void ASTStmtWriter::VisitSwitchCase(SwitchCase *S) {
 
 void ASTStmtWriter::VisitCaseStmt(CaseStmt *S) {
   VisitSwitchCase(S);
+  Record.push_back(S->caseStmtIsGNURange());
   Record.AddStmt(S->getLHS());
-  Record.AddStmt(S->getRHS());
   Record.AddStmt(S->getSubStmt());
-  Record.AddSourceLocation(S->getEllipsisLoc());
+  if (S->caseStmtIsGNURange()) {
+    Record.AddStmt(S->getRHS());
+    Record.AddSourceLocation(S->getEllipsisLoc());
+  }
   Code = serialization::STMT_CASE;
 }
 

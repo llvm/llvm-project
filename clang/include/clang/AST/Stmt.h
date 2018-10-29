@@ -245,6 +245,20 @@ protected:
     SourceLocation RetLoc;
   };
 
+  class SwitchCaseBitfields {
+    friend class SwitchCase;
+    friend class CaseStmt;
+
+    unsigned : NumStmtBits;
+
+    /// Used by CaseStmt to store whether it is a case statement
+    /// of the form case LHS ... RHS (a GNU extension).
+    unsigned CaseStmtIsGNURange : 1;
+
+    /// The location of the "case" or "default" keyword.
+    SourceLocation KeywordLoc;
+  };
+
   //===--- Expression bitfields classes ---===//
 
   class ExprBitfields {
@@ -461,6 +475,7 @@ protected:
     ContinueStmtBitfields ContinueStmtBits;
     BreakStmtBitfields BreakStmtBits;
     ReturnStmtBitfields ReturnStmtBits;
+    SwitchCaseBitfields SwitchCaseBits;
 
     // Expressions
     ExprBitfields ExprBits;
@@ -877,36 +892,40 @@ public:
 // SwitchCase is the base class for CaseStmt and DefaultStmt,
 class SwitchCase : public Stmt {
 protected:
-  // A pointer to the following CaseStmt or DefaultStmt class,
-  // used by SwitchStmt.
-  SwitchCase *NextSwitchCase = nullptr;
-  SourceLocation KeywordLoc;
+  /// The location of the ":".
   SourceLocation ColonLoc;
 
+  // The location of the "case" or "default" keyword. Stored in SwitchCaseBits.
+  // SourceLocation KeywordLoc;
+
+  /// A pointer to the following CaseStmt or DefaultStmt class,
+  /// used by SwitchStmt.
+  SwitchCase *NextSwitchCase = nullptr;
+
   SwitchCase(StmtClass SC, SourceLocation KWLoc, SourceLocation ColonLoc)
-      : Stmt(SC), KeywordLoc(KWLoc), ColonLoc(ColonLoc) {}
+      : Stmt(SC), ColonLoc(ColonLoc) {
+    setKeywordLoc(KWLoc);
+  }
 
   SwitchCase(StmtClass SC, EmptyShell) : Stmt(SC) {}
 
 public:
   const SwitchCase *getNextSwitchCase() const { return NextSwitchCase; }
-
   SwitchCase *getNextSwitchCase() { return NextSwitchCase; }
-
   void setNextSwitchCase(SwitchCase *SC) { NextSwitchCase = SC; }
 
-  SourceLocation getKeywordLoc() const { return KeywordLoc; }
-  void setKeywordLoc(SourceLocation L) { KeywordLoc = L; }
+  SourceLocation getKeywordLoc() const { return SwitchCaseBits.KeywordLoc; }
+  void setKeywordLoc(SourceLocation L) { SwitchCaseBits.KeywordLoc = L; }
   SourceLocation getColonLoc() const { return ColonLoc; }
   void setColonLoc(SourceLocation L) { ColonLoc = L; }
 
-  Stmt *getSubStmt();
+  inline Stmt *getSubStmt();
   const Stmt *getSubStmt() const {
-    return const_cast<SwitchCase*>(this)->getSubStmt();
+    return const_cast<SwitchCase *>(this)->getSubStmt();
   }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY { return KeywordLoc; }
-  SourceLocation getEndLoc() const LLVM_READONLY;
+  SourceLocation getBeginLoc() const { return getKeywordLoc(); }
+  inline SourceLocation getEndLoc() const LLVM_READONLY;
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CaseStmtClass ||
@@ -914,52 +933,137 @@ public:
   }
 };
 
-class CaseStmt : public SwitchCase {
-  SourceLocation EllipsisLoc;
-  enum { LHS, RHS, SUBSTMT, END_EXPR };
-  Stmt* SubExprs[END_EXPR];  // The expression for the RHS is Non-null for
-                             // GNU "case 1 ... 4" extension
+/// CaseStmt - Represent a case statement. It can optionally be a GNU case
+/// statement of the form LHS ... RHS representing a range of cases.
+class CaseStmt final
+    : public SwitchCase,
+      private llvm::TrailingObjects<CaseStmt, Stmt *, SourceLocation> {
+  friend TrailingObjects;
 
-public:
+  // CaseStmt is followed by several trailing objects, some of which optional.
+  // Note that it would be more convenient to put the optional trailing objects
+  // at the end but this would impact children().
+  // The trailing objects are in order:
+  //
+  // * A "Stmt *" for the LHS of the case statement. Always present.
+  //
+  // * A "Stmt *" for the RHS of the case statement. This is a GNU extension
+  //   which allow ranges in cases statement of the form LHS ... RHS.
+  //   Present if and only if caseStmtIsGNURange() is true.
+  //
+  // * A "Stmt *" for the substatement of the case statement. Always present.
+  //
+  // * A SourceLocation for the location of the ... if this is a case statement
+  //   with a range. Present if and only if caseStmtIsGNURange() is true.
+  enum { LhsOffset = 0, SubStmtOffsetFromRhs = 1 };
+  enum { NumMandatoryStmtPtr = 2 };
+
+  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+    return NumMandatoryStmtPtr + caseStmtIsGNURange();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<SourceLocation>) const {
+    return caseStmtIsGNURange();
+  }
+
+  unsigned lhsOffset() const { return LhsOffset; }
+  unsigned rhsOffset() const { return LhsOffset + caseStmtIsGNURange(); }
+  unsigned subStmtOffset() const { return rhsOffset() + SubStmtOffsetFromRhs; }
+
+  /// Build a case statement assuming that the storage for the
+  /// trailing objects has been properly allocated.
   CaseStmt(Expr *lhs, Expr *rhs, SourceLocation caseLoc,
            SourceLocation ellipsisLoc, SourceLocation colonLoc)
-    : SwitchCase(CaseStmtClass, caseLoc, colonLoc) {
-    SubExprs[SUBSTMT] = nullptr;
-    SubExprs[LHS] = reinterpret_cast<Stmt*>(lhs);
-    SubExprs[RHS] = reinterpret_cast<Stmt*>(rhs);
-    EllipsisLoc = ellipsisLoc;
+      : SwitchCase(CaseStmtClass, caseLoc, colonLoc) {
+    // Handle GNU case statements of the form LHS ... RHS.
+    bool IsGNURange = rhs != nullptr;
+    SwitchCaseBits.CaseStmtIsGNURange = IsGNURange;
+    setLHS(lhs);
+    setSubStmt(nullptr);
+    if (IsGNURange) {
+      setRHS(rhs);
+      setEllipsisLoc(ellipsisLoc);
+    }
   }
 
   /// Build an empty switch case statement.
-  explicit CaseStmt(EmptyShell Empty) : SwitchCase(CaseStmtClass, Empty) {}
+  explicit CaseStmt(EmptyShell Empty, bool CaseStmtIsGNURange)
+      : SwitchCase(CaseStmtClass, Empty) {
+    SwitchCaseBits.CaseStmtIsGNURange = CaseStmtIsGNURange;
+  }
 
-  SourceLocation getCaseLoc() const { return KeywordLoc; }
-  void setCaseLoc(SourceLocation L) { KeywordLoc = L; }
-  SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
-  void setEllipsisLoc(SourceLocation L) { EllipsisLoc = L; }
-  SourceLocation getColonLoc() const { return ColonLoc; }
-  void setColonLoc(SourceLocation L) { ColonLoc = L; }
+public:
+  /// Build a case statement.
+  static CaseStmt *Create(const ASTContext &Ctx, Expr *lhs, Expr *rhs,
+                          SourceLocation caseLoc, SourceLocation ellipsisLoc,
+                          SourceLocation colonLoc);
 
-  Expr *getLHS() { return reinterpret_cast<Expr*>(SubExprs[LHS]); }
-  Expr *getRHS() { return reinterpret_cast<Expr*>(SubExprs[RHS]); }
-  Stmt *getSubStmt() { return SubExprs[SUBSTMT]; }
+  /// Build an empty case statement.
+  static CaseStmt *CreateEmpty(const ASTContext &Ctx, bool CaseStmtIsGNURange);
+
+  /// True if this case statement is of the form case LHS ... RHS, which
+  /// is a GNU extension. In this case the RHS can be obtained with getRHS()
+  /// and the location of the ellipsis can be obtained with getEllipsisLoc().
+  bool caseStmtIsGNURange() const { return SwitchCaseBits.CaseStmtIsGNURange; }
+
+  SourceLocation getCaseLoc() const { return getKeywordLoc(); }
+  void setCaseLoc(SourceLocation L) { setKeywordLoc(L); }
+
+  /// Get the location of the ... in a case statement of the form LHS ... RHS.
+  SourceLocation getEllipsisLoc() const {
+    return caseStmtIsGNURange() ? *getTrailingObjects<SourceLocation>()
+                                : SourceLocation();
+  }
+
+  /// Set the location of the ... in a case statement of the form LHS ... RHS.
+  /// Assert that this case statement is of this form.
+  void setEllipsisLoc(SourceLocation L) {
+    assert(
+        caseStmtIsGNURange() &&
+        "setEllipsisLoc but this is not a case stmt of the form LHS ... RHS!");
+    *getTrailingObjects<SourceLocation>() = L;
+  }
+
+  Expr *getLHS() {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[lhsOffset()]);
+  }
 
   const Expr *getLHS() const {
-    return reinterpret_cast<const Expr*>(SubExprs[LHS]);
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[lhsOffset()]);
+  }
+
+  void setLHS(Expr *Val) {
+    getTrailingObjects<Stmt *>()[lhsOffset()] = reinterpret_cast<Stmt *>(Val);
+  }
+
+  Expr *getRHS() {
+    return caseStmtIsGNURange() ? reinterpret_cast<Expr *>(
+                                      getTrailingObjects<Stmt *>()[rhsOffset()])
+                                : nullptr;
   }
 
   const Expr *getRHS() const {
-    return reinterpret_cast<const Expr*>(SubExprs[RHS]);
+    return caseStmtIsGNURange() ? reinterpret_cast<Expr *>(
+                                      getTrailingObjects<Stmt *>()[rhsOffset()])
+                                : nullptr;
   }
 
-  const Stmt *getSubStmt() const { return SubExprs[SUBSTMT]; }
+  void setRHS(Expr *Val) {
+    assert(caseStmtIsGNURange() &&
+           "setRHS but this is not a case stmt of the form LHS ... RHS!");
+    getTrailingObjects<Stmt *>()[rhsOffset()] = reinterpret_cast<Stmt *>(Val);
+  }
 
-  void setSubStmt(Stmt *S) { SubExprs[SUBSTMT] = S; }
-  void setLHS(Expr *Val) { SubExprs[LHS] = reinterpret_cast<Stmt*>(Val); }
-  void setRHS(Expr *Val) { SubExprs[RHS] = reinterpret_cast<Stmt*>(Val); }
+  Stmt *getSubStmt() { return getTrailingObjects<Stmt *>()[subStmtOffset()]; }
+  const Stmt *getSubStmt() const {
+    return getTrailingObjects<Stmt *>()[subStmtOffset()];
+  }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY { return KeywordLoc; }
+  void setSubStmt(Stmt *S) {
+    getTrailingObjects<Stmt *>()[subStmtOffset()] = S;
+  }
 
+  SourceLocation getBeginLoc() const { return getKeywordLoc(); }
   SourceLocation getEndLoc() const LLVM_READONLY {
     // Handle deeply nested case statements with iteration instead of recursion.
     const CaseStmt *CS = this;
@@ -975,16 +1079,18 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[END_EXPR]);
+    return child_range(getTrailingObjects<Stmt *>(),
+                       getTrailingObjects<Stmt *>() +
+                           numTrailingObjects(OverloadToken<Stmt *>()));
   }
 };
 
 class DefaultStmt : public SwitchCase {
-  Stmt* SubStmt;
+  Stmt *SubStmt;
 
 public:
-  DefaultStmt(SourceLocation DL, SourceLocation CL, Stmt *substmt) :
-    SwitchCase(DefaultStmtClass, DL, CL), SubStmt(substmt) {}
+  DefaultStmt(SourceLocation DL, SourceLocation CL, Stmt *substmt)
+      : SwitchCase(DefaultStmtClass, DL, CL), SubStmt(substmt) {}
 
   /// Build an empty default statement.
   explicit DefaultStmt(EmptyShell Empty)
@@ -994,12 +1100,10 @@ public:
   const Stmt *getSubStmt() const { return SubStmt; }
   void setSubStmt(Stmt *S) { SubStmt = S; }
 
-  SourceLocation getDefaultLoc() const { return KeywordLoc; }
-  void setDefaultLoc(SourceLocation L) { KeywordLoc = L; }
-  SourceLocation getColonLoc() const { return ColonLoc; }
-  void setColonLoc(SourceLocation L) { ColonLoc = L; }
+  SourceLocation getDefaultLoc() const { return getKeywordLoc(); }
+  void setDefaultLoc(SourceLocation L) { setKeywordLoc(L); }
 
-  SourceLocation getBeginLoc() const LLVM_READONLY { return KeywordLoc; }
+  SourceLocation getBeginLoc() const { return getKeywordLoc(); }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return SubStmt->getEndLoc();
   }
@@ -1009,13 +1113,23 @@ public:
   }
 
   // Iterators
-  child_range children() { return child_range(&SubStmt, &SubStmt+1); }
+  child_range children() { return child_range(&SubStmt, &SubStmt + 1); }
 };
 
-inline SourceLocation SwitchCase::getEndLoc() const {
+SourceLocation SwitchCase::getEndLoc() const {
   if (const auto *CS = dyn_cast<CaseStmt>(this))
     return CS->getEndLoc();
-  return cast<DefaultStmt>(this)->getEndLoc();
+  else if (const auto *DS = dyn_cast<DefaultStmt>(this))
+    return DS->getEndLoc();
+  llvm_unreachable("SwitchCase is neither a CaseStmt nor a DefaultStmt!");
+}
+
+Stmt *SwitchCase::getSubStmt() {
+  if (auto *CS = dyn_cast<CaseStmt>(this))
+    return CS->getSubStmt();
+  else if (auto *DS = dyn_cast<DefaultStmt>(this))
+    return DS->getSubStmt();
+  llvm_unreachable("SwitchCase is neither a CaseStmt nor a DefaultStmt!");
 }
 
 /// LabelStmt - Represents a label, which has a substatement.  For example:
