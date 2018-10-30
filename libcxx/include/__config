@@ -463,12 +463,6 @@ typedef __char32_t char32_t;
 #define _LIBCPP_IS_LITERAL(T) __is_literal(T)
 #endif
 
-// Inline namespaces are available in Clang regardless of C++ dialect.
-#define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { inline namespace _LIBCPP_NAMESPACE {
-#define _LIBCPP_END_NAMESPACE_STD  } }
-#define _VSTD std::_LIBCPP_NAMESPACE
-_LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
-
 #if !defined(_LIBCPP_HAS_NO_ASAN) && !__has_feature(address_sanitizer)
 #define _LIBCPP_HAS_NO_ASAN
 #endif
@@ -563,11 +557,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 #endif  // __GXX_EXPERIMENTAL_CXX0X__
 
-#define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { inline namespace _LIBCPP_NAMESPACE {
-#define _LIBCPP_END_NAMESPACE_STD  } }
-#define _VSTD std::_LIBCPP_NAMESPACE
-_LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
-
 #if !defined(_LIBCPP_HAS_NO_ASAN) && !defined(__SANITIZE_ADDRESS__)
 #define _LIBCPP_HAS_NO_ASAN
 #endif
@@ -603,11 +592,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #define _ALIGNAS_TYPE(x) alignas(x)
 #define _LIBCPP_HAS_NO_VARIADICS
 
-#define _LIBCPP_BEGIN_NAMESPACE_STD namespace std {
-#define _LIBCPP_END_NAMESPACE_STD  }
-#define _VSTD std
-_LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
-
 #define _LIBCPP_WEAK
 
 #define _LIBCPP_HAS_NO_ASAN
@@ -635,11 +619,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #define __MULTILOCALE_API
 #endif
 
-#define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { inline namespace _LIBCPP_NAMESPACE {
-#define _LIBCPP_END_NAMESPACE_STD  } }
-#define _VSTD std::_LIBCPP_NAMESPACE
-_LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
-
 #define _LIBCPP_HAS_NO_ASAN
 
 #define _LIBCPP_ALWAYS_INLINE __attribute__ ((__always_inline__))
@@ -647,20 +626,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #define _LIBCPP_HAS_NO_VECTOR_EXTENSION
 
 #endif // _LIBCPP_COMPILER_[CLANG|GCC|MSVC|IBM]
-
-#if _LIBCPP_STD_VER >= 17
-#define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
-  _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
-#else
-#define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
-  _LIBCPP_BEGIN_NAMESPACE_STD namespace __fs { namespace filesystem {
-#endif
-
-#define _LIBCPP_END_NAMESPACE_FILESYSTEM \
-  _LIBCPP_END_NAMESPACE_STD } }
-
-#define _VSTD_FS _VSTD::__fs::filesystem
-
 
 #if defined(_LIBCPP_OBJECT_FORMAT_COFF)
 
@@ -824,6 +789,25 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 
 // Just so we can migrate to the new macros gradually.
 #define _LIBCPP_INLINE_VISIBILITY _LIBCPP_HIDE_FROM_ABI
+
+// Inline namespaces are available in Clang/GCC/MSVC regardless of C++ dialect.
+#define _LIBCPP_BEGIN_NAMESPACE_STD namespace std { inline namespace _LIBCPP_NAMESPACE {
+#define _LIBCPP_END_NAMESPACE_STD  } }
+#define _VSTD std::_LIBCPP_NAMESPACE
+_LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER >= 17
+#define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
+  _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
+#else
+#define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM \
+  _LIBCPP_BEGIN_NAMESPACE_STD namespace __fs { namespace filesystem {
+#endif
+
+#define _LIBCPP_END_NAMESPACE_FILESYSTEM \
+  _LIBCPP_END_NAMESPACE_STD } }
+
+#define _VSTD_FS _VSTD::__fs::filesystem
 
 #ifndef _LIBCPP_PREFERRED_OVERLOAD
 #  if __has_attribute(__enable_if__)
