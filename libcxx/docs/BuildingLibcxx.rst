@@ -360,6 +360,18 @@ The following options allow building libc++ for a different ABI version.
   Build the "unstable" ABI version of libc++. Includes all ABI changing features
   on top of the current stable version.
 
+.. option:: LIBCXX_ABI_NAMESPACE:STRING
+
+  **Default**: ``__n`` where ``n`` is the current ABI version.
+
+  This option defines the name of the inline ABI versioning namespace. It can be used for building
+  custom versions of libc++ with unique symbol names in order to prevent conflicts or ODR issues
+  with other libc++ versions.
+
+  .. warning::
+    When providing a custom namespace, it's the users responsibility to ensure the name won't cause
+    conflicts with other names defined by libc++, both now and in the future.
+
 .. option:: LIBCXX_ABI_DEFINES:STRING
 
   **Default**: ``""``
