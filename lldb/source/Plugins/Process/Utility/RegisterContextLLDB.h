@@ -192,9 +192,9 @@ private:
 
   bool ReadGPRValue(const RegisterNumber &reg_num, lldb::addr_t &value);
 
-  // Get the CFA register for a given frame.
-  bool ReadCFAValueForRow(lldb::RegisterKind register_kind,
-                          const UnwindPlan::RowSP &row, lldb::addr_t &value);
+  // Get the Frame Address register for a given frame.
+  bool ReadFrameAddress(lldb::RegisterKind register_kind,
+                          UnwindPlan::Row::FAValue &fa, lldb::addr_t &address);
 
   lldb::UnwindPlanSP GetFastUnwindPlanForFrame();
 
@@ -225,6 +225,7 @@ private:
   int m_frame_type;               // enum FrameType
 
   lldb::addr_t m_cfa;
+  lldb::addr_t m_afa;
   lldb_private::Address m_start_pc;
   lldb_private::Address m_current_pc;
 

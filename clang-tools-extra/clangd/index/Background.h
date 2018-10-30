@@ -16,6 +16,7 @@
 #include "index/Index.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/Threading.h"
 #include <condition_variable>
 #include <deque>
 #include <string>
@@ -34,7 +35,8 @@ public:
   // FIXME: resource-dir injection should be hoisted somewhere common.
   BackgroundIndex(Context BackgroundContext, StringRef ResourceDir,
                   const FileSystemProvider &,
-                  ArrayRef<std::string> URISchemes = {});
+                  ArrayRef<std::string> URISchemes = {},
+                  size_t ThreadPoolSize = llvm::hardware_concurrency());
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
   // Enqueue a translation unit for indexing.
@@ -66,7 +68,7 @@ private:
   llvm::StringMap<Hash> FileHash; // Digest of indexed file.
 
   // queue management
-  using Task = std::function<void()>; // FIXME: use multiple worker threads.
+  using Task = std::function<void()>;
   void run(); // Main loop executed by Thread. Runs tasks from Queue.
   void enqueueLocked(tooling::CompileCommand Cmd);
   std::mutex QueueMu;
@@ -74,7 +76,7 @@ private:
   std::condition_variable QueueCV;
   bool ShouldStop = false;
   std::deque<Task> Queue;
-  std::thread Thread; // Must be last, spawned thread reads instance vars.
+  std::vector<std::thread> ThreadPool; // FIXME: Abstract this away.
 };
 
 } // namespace clangd
