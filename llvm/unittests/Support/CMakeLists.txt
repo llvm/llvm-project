@@ -66,7 +66,6 @@ add_llvm_unittest(SupportTests
   TrigramIndexTest.cpp
   UnicodeTest.cpp
   VersionTupleTest.cpp
-  VirtualFileSystemTest.cpp
   YAMLIOTest.cpp
   YAMLParserTest.cpp
   formatted_raw_ostream_test.cpp
