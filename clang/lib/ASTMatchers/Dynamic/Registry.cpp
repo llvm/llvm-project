@@ -378,6 +378,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isPure);
   REGISTER_MATCHER(isScoped);
   REGISTER_MATCHER(isSignedInteger);
+  REGISTER_MATCHER(isStaticLocal);
   REGISTER_MATCHER(isStaticStorageClass);
   REGISTER_MATCHER(isStruct);
   REGISTER_MATCHER(isTemplateInstantiation);

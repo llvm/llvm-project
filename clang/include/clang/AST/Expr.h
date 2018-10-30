@@ -32,6 +32,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/TrailingObjects.h"
 
 namespace clang {
   class APValue;
@@ -1204,64 +1205,6 @@ public:
   friend class ASTStmtWriter;
 };
 
-/// [C99 6.4.2.2] - A predefined identifier such as __func__.
-class PredefinedExpr : public Expr {
-public:
-  enum IdentType {
-    Func,
-    Function,
-    LFunction, // Same as Function, but as wide string.
-    FuncDName,
-    FuncSig,
-    LFuncSig, // Same as FuncSig, but as as wide string
-    PrettyFunction,
-    /// The same as PrettyFunction, except that the
-    /// 'virtual' keyword is omitted for virtual member functions.
-    PrettyFunctionNoVirtual
-  };
-
-private:
-  SourceLocation Loc;
-  IdentType Type;
-  Stmt *FnName;
-
-public:
-  PredefinedExpr(SourceLocation L, QualType FNTy, IdentType IT,
-                 StringLiteral *SL);
-
-  /// Construct an empty predefined expression.
-  explicit PredefinedExpr(EmptyShell Empty)
-      : Expr(PredefinedExprClass, Empty), Loc(), Type(Func), FnName(nullptr) {}
-
-  IdentType getIdentType() const { return Type; }
-
-  SourceLocation getLocation() const { return Loc; }
-  void setLocation(SourceLocation L) { Loc = L; }
-
-  StringLiteral *getFunctionName();
-  const StringLiteral *getFunctionName() const {
-    return const_cast<PredefinedExpr *>(this)->getFunctionName();
-  }
-
-  static StringRef getIdentTypeName(IdentType IT);
-  static std::string ComputeName(IdentType IT, const Decl *CurrentDecl);
-
-  SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
-  SourceLocation getEndLoc() const LLVM_READONLY { return Loc; }
-
-  static bool classof(const Stmt *T) {
-    return T->getStmtClass() == PredefinedExprClass;
-  }
-
-  // Iterators
-  child_range children() { return child_range(&FnName, &FnName + 1); }
-  const_child_range children() const {
-    return const_child_range(&FnName, &FnName + 1);
-  }
-
-  friend class ASTStmtReader;
-};
-
 /// Used by IntegerLiteral/FloatingLiteral to store the numeric without
 /// leaking memory.
 ///
@@ -1729,6 +1672,91 @@ public:
   }
   const_child_range children() const {
     return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+/// [C99 6.4.2.2] - A predefined identifier such as __func__.
+class PredefinedExpr final
+    : public Expr,
+      private llvm::TrailingObjects<PredefinedExpr, Stmt *> {
+  friend class ASTStmtReader;
+  friend TrailingObjects;
+
+  // PredefinedExpr is optionally followed by a single trailing
+  // "Stmt *" for the predefined identifier. It is present if and only if
+  // hasFunctionName() is true and is always a "StringLiteral *".
+
+public:
+  enum IdentKind {
+    Func,
+    Function,
+    LFunction, // Same as Function, but as wide string.
+    FuncDName,
+    FuncSig,
+    LFuncSig, // Same as FuncSig, but as as wide string
+    PrettyFunction,
+    /// The same as PrettyFunction, except that the
+    /// 'virtual' keyword is omitted for virtual member functions.
+    PrettyFunctionNoVirtual
+  };
+
+private:
+  PredefinedExpr(SourceLocation L, QualType FNTy, IdentKind IK,
+                 StringLiteral *SL);
+
+  explicit PredefinedExpr(EmptyShell Empty, bool HasFunctionName);
+
+  /// True if this PredefinedExpr has storage for a function name.
+  bool hasFunctionName() const { return PredefinedExprBits.HasFunctionName; }
+
+  void setFunctionName(StringLiteral *SL) {
+    assert(hasFunctionName() &&
+           "This PredefinedExpr has no storage for a function name!");
+    *getTrailingObjects<Stmt *>() = SL;
+  }
+
+public:
+  /// Create a PredefinedExpr.
+  static PredefinedExpr *Create(const ASTContext &Ctx, SourceLocation L,
+                                QualType FNTy, IdentKind IK, StringLiteral *SL);
+
+  /// Create an empty PredefinedExpr.
+  static PredefinedExpr *CreateEmpty(const ASTContext &Ctx,
+                                     bool HasFunctionName);
+
+  IdentKind getIdentKind() const {
+    return static_cast<IdentKind>(PredefinedExprBits.Kind);
+  }
+
+  SourceLocation getLocation() const { return PredefinedExprBits.Loc; }
+  void setLocation(SourceLocation L) { PredefinedExprBits.Loc = L; }
+
+  StringLiteral *getFunctionName() {
+    return hasFunctionName()
+               ? static_cast<StringLiteral *>(*getTrailingObjects<Stmt *>())
+               : nullptr;
+  }
+
+  const StringLiteral *getFunctionName() const {
+    return hasFunctionName()
+               ? static_cast<StringLiteral *>(*getTrailingObjects<Stmt *>())
+               : nullptr;
+  }
+
+  static StringRef getIdentKindName(IdentKind IK);
+  static std::string ComputeName(IdentKind IK, const Decl *CurrentDecl);
+
+  SourceLocation getBeginLoc() const { return getLocation(); }
+  SourceLocation getEndLoc() const { return getLocation(); }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == PredefinedExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(getTrailingObjects<Stmt *>(),
+                       getTrailingObjects<Stmt *>() + hasFunctionName());
   }
 };
 

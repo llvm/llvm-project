@@ -93,7 +93,7 @@ void ReadState::cycleEvent() {
 
 #ifndef NDEBUG
 void WriteState::dump() const {
-  dbgs() << "{ OpIdx=" << WD.OpIndex << ", Lat=" << getLatency() << ", RegID "
+  dbgs() << "{ OpIdx=" << WD->OpIndex << ", Lat=" << getLatency() << ", RegID "
          << getRegisterID() << ", Cycles Left=" << getCyclesLeft() << " }";
 }
 

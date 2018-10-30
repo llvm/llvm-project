@@ -2144,6 +2144,8 @@ private:
   // 'for-init-statement' part of a 'for' statement.
   /// Returns true for declaration, false for expression.
   bool isForInitDeclaration() {
+    if (getLangOpts().OpenMP)
+      Actions.startOpenMPLoop();
     if (getLangOpts().CPlusPlus)
       return isCXXSimpleDeclaration(/*AllowForRangeDecl=*/true);
     return isDeclarationSpecifier(true);

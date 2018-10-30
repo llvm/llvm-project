@@ -405,19 +405,27 @@ int main() {
     for (int i = 0; i < n; ++i) {
       a[i] = b[i] + c[i];
       // LAMBDA: define{{.+}} void [[OMP_OUTLINED_3]](
-      // LAMBDA-DAG: [[OMP_IV:%.omp.iv]] = alloca
-      // LAMBDA-DAG: [[OMP_LB:%.omp.comb.lb]] = alloca
-      // LAMBDA-DAG: [[OMP_UB:%.omp.comb.ub]] = alloca
-      // LAMBDA-DAG: [[OMP_ST:%.omp.stride]] = alloca
+      // LAMBDA: alloca
+      // LAMBDA: alloca
+      // LAMBDA: alloca
+      // LAMBDA: alloca
+      // LAMBDA: alloca
+      // LAMBDA: alloca
+      // LAMBDA: alloca
+      // LAMBDA: [[OMP_IV:%.+]] = alloca
+      // LAMBDA: alloca
+      // LAMBDA: alloca
+      // LAMBDA: alloca
+      // LAMBDA: alloca
+      // LAMBDA: [[OMP_LB:%.+]] = alloca
+      // LAMBDA: [[OMP_UB:%.+]] = alloca
+      // LAMBDA: [[OMP_ST:%.+]] = alloca
 
-      // unlike the previous tests, in this one we have a outer and inner loop for 'distribute'
       // LAMBDA: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, i32 91,
-      // LAMBDA: br label %[[DIST_OUTER_LOOP_HEADER:.+]]
 
-      // LAMBDA: [[DIST_OUTER_LOOP_HEADER]]:
       // check EUB for distribute
       // LAMBDA-DAG: [[OMP_UB_VAL_1:%.+]] = load{{.+}} [[OMP_UB]],
-      // LAMBDA: [[NUM_IT_1:%.+]] = load{{.+}},
+      // LAMBDA: [[NUM_IT_1:%.+]] = load{{.+}}
       // LAMBDA-DAG: [[CMP_UB_NUM_IT:%.+]] = icmp sgt {{.+}}  [[OMP_UB_VAL_1]], [[NUM_IT_1]]
       // LAMBDA: br {{.+}} [[CMP_UB_NUM_IT]], label %[[EUB_TRUE:.+]], label %[[EUB_FALSE:.+]]
       // LAMBDA-DAG: [[EUB_TRUE]]:
@@ -436,18 +444,10 @@ int main() {
 
       // check exit condition
       // LAMBDA-DAG: [[OMP_IV_VAL_1:%.+]] = load {{.+}} [[OMP_IV]],
-      // LAMBDA-DAG: [[OMP_UB_VAL_3:%.+]] = load {{.+}} [[OMP_UB]],
-      // LAMBDA: [[CMP_IV_UB:%.+]] = icmp sle {{.+}} [[OMP_IV_VAL_1]], [[OMP_UB_VAL_3]]
-      // LAMBDA: br {{.+}} [[CMP_IV_UB]], label %[[DIST_OUTER_LOOP_BODY:.+]], label %[[DIST_OUTER_LOOP_END:.+]]
-
-      // LAMBDA: [[DIST_OUTER_LOOP_BODY]]:
-      // LAMBDA: br label %[[DIST_INNER_LOOP_HEADER:.+]]
-
-      // LAMBDA: [[DIST_INNER_LOOP_HEADER]]:
-      // LAMBDA-DAG: [[OMP_IV_VAL_2:%.+]] = load {{.+}} [[OMP_IV]],
-      // LAMBDA-DAG: [[OMP_UB_VAL_4:%.+]] = load {{.+}} [[OMP_UB]],
-      // LAMBDA: [[CMP_IV_UB_2:%.+]] = icmp sle {{.+}} [[OMP_IV_VAL_2]], [[OMP_UB_VAL_4]]
-      // LAMBDA: br{{.+}} [[CMP_IV_UB_2]], label %[[DIST_INNER_LOOP_BODY:.+]], label %[[DIST_INNER_LOOP_END:.+]]
+      // LAMBDA-DAG: [[OMP_UB_VAL_3:%.+]] = load {{.+}}
+      // LAMBDA-DAG: [[OMP_UB_VAL_3_PLUS_ONE:%.+]] = add {{.+}} [[OMP_UB_VAL_3]], 1
+      // LAMBDA: [[CMP_IV_UB:%.+]] = icmp slt {{.+}} [[OMP_IV_VAL_1]], [[OMP_UB_VAL_3_PLUS_ONE]]
+      // LAMBDA: br {{.+}} [[CMP_IV_UB]], label %[[DIST_INNER_LOOP_BODY:.+]], label %[[DIST_INNER_LOOP_END:.+]]
 
       // check that PrevLB and PrevUB are passed to the 'for'
       // LAMBDA: [[DIST_INNER_LOOP_BODY]]:
@@ -466,13 +466,6 @@ int main() {
       // LAMBDA-DAG: [[OMP_ST_VAL_1:%.+]] = load {{.+}}, {{.+}}* [[OMP_ST]],
       // LAMBDA: [[OMP_IV_INC:%.+]] = add{{.+}} [[OMP_IV_VAL_3]], [[OMP_ST_VAL_1]]
       // LAMBDA: store{{.+}} [[OMP_IV_INC]], {{.+}}* [[OMP_IV]],
-      // LAMBDA: br label %[[DIST_INNER_LOOP_HEADER]]
-
-      // LAMBDA: [[DIST_INNER_LOOP_END]]:
-      // LAMBDA: br label %[[DIST_OUTER_LOOP_INC:.+]]
-
-      // LAMBDA: [[DIST_OUTER_LOOP_INC]]:
-      // check NextLB and NextUB
       // LAMBDA-DAG: [[OMP_LB_VAL_2:%.+]] = load{{.+}}, {{.+}} [[OMP_LB]],
       // LAMBDA-DAG: [[OMP_ST_VAL_2:%.+]] = load{{.+}}, {{.+}} [[OMP_ST]],
       // LAMBDA-DAG: [[OMP_LB_NEXT:%.+]] = add{{.+}} [[OMP_LB_VAL_2]], [[OMP_ST_VAL_2]]
@@ -481,10 +474,31 @@ int main() {
       // LAMBDA-DAG: [[OMP_ST_VAL_3:%.+]] = load{{.+}}, {{.+}} [[OMP_ST]],
       // LAMBDA-DAG: [[OMP_UB_NEXT:%.+]] = add{{.+}} [[OMP_UB_VAL_5]], [[OMP_ST_VAL_3]]
       // LAMBDA: store{{.+}} [[OMP_UB_NEXT]], {{.+}}* [[OMP_UB]],
-      // LAMBDA: br label %[[DIST_OUTER_LOOP_HEADER]]
 
-      // outer loop exit
-      // LAMBDA: [[DIST_OUTER_LOOP_END]]:
+      // Update UB
+      // LAMBDA-DAG: [[OMP_UB_VAL_6:%.+]] = load{{.+}}, {{.+}} [[OMP_UB]],
+      // LAMBDA: [[OMP_EXPR_VAL:%.+]] = load{{.+}}, {{.+}}
+      // LAMBDA-DAG: [[CMP_UB_NUM_IT_1:%.+]] = icmp sgt {{.+}}[[OMP_UB_VAL_6]], [[OMP_EXPR_VAL]]
+      // LAMBDA: br {{.+}} [[CMP_UB_NUM_IT_1]], label %[[EUB_TRUE_1:.+]], label %[[EUB_FALSE_1:.+]]
+      // LAMBDA-DAG: [[EUB_TRUE_1]]:
+      // LAMBDA: [[NUM_IT_3:%.+]] = load{{.+}}
+      // LAMBDA: br label %[[EUB_END_1:.+]]
+      // LAMBDA-DAG: [[EUB_FALSE_1]]:
+      // LAMBDA: [[OMP_UB_VAL3:%.+]] = load{{.+}} [[OMP_UB]],
+      // LAMBDA: br label %[[EUB_END_1]]
+      // LAMBDA-DAG: [[EUB_END_1]]:
+      // LAMBDA-DAG: [[EUB_RES_1:%.+]] = phi{{.+}} [ [[NUM_IT_3]], %[[EUB_TRUE_1]] ], [ [[OMP_UB_VAL3]], %[[EUB_FALSE_1]] ]
+      // LAMBDA: store{{.+}} [[EUB_RES_1]], {{.+}}* [[OMP_UB]],
+
+      // Store LB in IV
+      // LAMBDA-DAG: [[OMP_LB_VAL_3:%.+]] = load{{.+}}, {{.+}} [[OMP_LB]],
+      // LAMBDA: store{{.+}} [[OMP_LB_VAL_3]], {{.+}}* [[OMP_IV]],
+
+      // LAMBDA: [[DIST_INNER_LOOP_END]]:
+      // LAMBDA: br label %[[LOOP_EXIT:.+]]
+
+      // loop exit
+      // LAMBDA: [[LOOP_EXIT]]:
       // LAMBDA-DAG: call void @__kmpc_for_static_fini(
       // LAMBDA: ret
 
@@ -1153,19 +1167,28 @@ int main() {
   for (int i = 0; i < n; ++i) {
     a[i] = b[i] + c[i];
     // CHECK: define{{.+}} void [[OMP_OUTLINED_3]](
-    // CHECK-DAG: [[OMP_IV:%.omp.iv]] = alloca
-    // CHECK-DAG: [[OMP_LB:%.omp.comb.lb]] = alloca
-    // CHECK-DAG: [[OMP_UB:%.omp.comb.ub]] = alloca
-    // CHECK-DAG: [[OMP_ST:%.omp.stride]] = alloca
+    // CHECK: alloca
+    // CHECK: alloca
+    // CHECK: alloca
+    // CHECK: alloca
+    // CHECK: alloca
+    // CHECK: alloca
+    // CHECK: alloca
+    // CHECK: [[OMP_IV:%.+]] = alloca
+    // CHECK: alloca
+    // CHECK: alloca
+    // CHECK: alloca
+    // CHECK: alloca
+    // CHECK: [[OMP_LB:%.+]] = alloca
+    // CHECK: [[OMP_UB:%.+]] = alloca
+    // CHECK: [[OMP_ST:%.+]] = alloca
 
     // unlike the previous tests, in this one we have a outer and inner loop for 'distribute'
     // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, i32 91,
-    // CHECK: br label %[[DIST_OUTER_LOOP_HEADER:.+]]
 
-    // CHECK: [[DIST_OUTER_LOOP_HEADER]]:
     // check EUB for distribute
     // CHECK-DAG: [[OMP_UB_VAL_1:%.+]] = load{{.+}} [[OMP_UB]],
-    // CHECK: [[NUM_IT_1:%.+]] = load{{.+}},
+    // CHECK: [[NUM_IT_1:%.+]] = load{{.+}}
     // CHECK-DAG: [[CMP_UB_NUM_IT:%.+]] = icmp sgt {{.+}}  [[OMP_UB_VAL_1]], [[NUM_IT_1]]
     // CHECK: br {{.+}} [[CMP_UB_NUM_IT]], label %[[EUB_TRUE:.+]], label %[[EUB_FALSE:.+]]
     // CHECK-DAG: [[EUB_TRUE]]:
@@ -1184,18 +1207,10 @@ int main() {
 
     // check exit condition
     // CHECK-DAG: [[OMP_IV_VAL_1:%.+]] = load {{.+}} [[OMP_IV]],
-    // CHECK-DAG: [[OMP_UB_VAL_3:%.+]] = load {{.+}} [[OMP_UB]],
-    // CHECK: [[CMP_IV_UB:%.+]] = icmp sle {{.+}} [[OMP_IV_VAL_1]], [[OMP_UB_VAL_3]]
-    // CHECK: br {{.+}} [[CMP_IV_UB]], label %[[DIST_OUTER_LOOP_BODY:.+]], label %[[DIST_OUTER_LOOP_END:.+]]
-
-    // CHECK: [[DIST_OUTER_LOOP_BODY]]:
-    // CHECK: br label %[[DIST_INNER_LOOP_HEADER:.+]]
-
-    // CHECK: [[DIST_INNER_LOOP_HEADER]]:
-    // CHECK-DAG: [[OMP_IV_VAL_2:%.+]] = load {{.+}} [[OMP_IV]],
-    // CHECK-DAG: [[OMP_UB_VAL_4:%.+]] = load {{.+}} [[OMP_UB]],
-    // CHECK: [[CMP_IV_UB_2:%.+]] = icmp sle {{.+}} [[OMP_IV_VAL_2]], [[OMP_UB_VAL_4]]
-    // CHECK: br{{.+}} [[CMP_IV_UB_2]], label %[[DIST_INNER_LOOP_BODY:.+]], label %[[DIST_INNER_LOOP_END:.+]]
+    // CHECK-DAG: [[OMP_UB_VAL_3:%.+]] = load {{.+}}
+    // CHECK-DAG: [[OMP_UB_VAL_3_PLUS_ONE:%.+]] = add {{.+}} [[OMP_UB_VAL_3]], 1
+    // CHECK: [[CMP_IV_UB:%.+]] = icmp slt {{.+}} [[OMP_IV_VAL_1]], [[OMP_UB_VAL_3_PLUS_ONE]]
+    // CHECK: br {{.+}} [[CMP_IV_UB]], label %[[DIST_INNER_LOOP_BODY:.+]], label %[[DIST_INNER_LOOP_END:.+]]
 
     // check that PrevLB and PrevUB are passed to the 'for'
     // CHECK: [[DIST_INNER_LOOP_BODY]]:
@@ -1214,13 +1229,6 @@ int main() {
     // CHECK-DAG: [[OMP_ST_VAL_1:%.+]] = load {{.+}}, {{.+}}* [[OMP_ST]],
     // CHECK: [[OMP_IV_INC:%.+]] = add{{.+}} [[OMP_IV_VAL_3]], [[OMP_ST_VAL_1]]
     // CHECK: store{{.+}} [[OMP_IV_INC]], {{.+}}* [[OMP_IV]],
-    // CHECK: br label %[[DIST_INNER_LOOP_HEADER]]
-
-    // CHECK: [[DIST_INNER_LOOP_END]]:
-    // CHECK: br label %[[DIST_OUTER_LOOP_INC:.+]]
-
-    // CHECK: [[DIST_OUTER_LOOP_INC]]:
-    // check NextLB and NextUB
     // CHECK-DAG: [[OMP_LB_VAL_2:%.+]] = load{{.+}}, {{.+}} [[OMP_LB]],
     // CHECK-DAG: [[OMP_ST_VAL_2:%.+]] = load{{.+}}, {{.+}} [[OMP_ST]],
     // CHECK-DAG: [[OMP_LB_NEXT:%.+]] = add{{.+}} [[OMP_LB_VAL_2]], [[OMP_ST_VAL_2]]
@@ -1229,10 +1237,31 @@ int main() {
     // CHECK-DAG: [[OMP_ST_VAL_3:%.+]] = load{{.+}}, {{.+}} [[OMP_ST]],
     // CHECK-DAG: [[OMP_UB_NEXT:%.+]] = add{{.+}} [[OMP_UB_VAL_5]], [[OMP_ST_VAL_3]]
     // CHECK: store{{.+}} [[OMP_UB_NEXT]], {{.+}}* [[OMP_UB]],
-    // CHECK: br label %[[DIST_OUTER_LOOP_HEADER]]
 
-    // outer loop exit
-    // CHECK: [[DIST_OUTER_LOOP_END]]:
+    // Update UB
+    // CHECK-DAG: [[OMP_UB_VAL_6:%.+]] = load{{.+}}, {{.+}} [[OMP_UB]],
+    // CHECK: [[OMP_EXPR_VAL:%.+]] = load{{.+}}, {{.+}}
+    // CHECK-DAG: [[CMP_UB_NUM_IT_1:%.+]] = icmp sgt {{.+}}[[OMP_UB_VAL_6]], [[OMP_EXPR_VAL]]
+    // CHECK: br {{.+}} [[CMP_UB_NUM_IT_1]], label %[[EUB_TRUE_1:.+]], label %[[EUB_FALSE_1:.+]]
+    // CHECK-DAG: [[EUB_TRUE_1]]:
+    // CHECK: [[NUM_IT_3:%.+]] = load{{.+}}
+    // CHECK: br label %[[EUB_END_1:.+]]
+    // CHECK-DAG: [[EUB_FALSE_1]]:
+    // CHECK: [[OMP_UB_VAL3:%.+]] = load{{.+}} [[OMP_UB]],
+    // CHECK: br label %[[EUB_END_1]]
+    // CHECK-DAG: [[EUB_END_1]]:
+    // CHECK-DAG: [[EUB_RES_1:%.+]] = phi{{.+}} [ [[NUM_IT_3]], %[[EUB_TRUE_1]] ], [ [[OMP_UB_VAL3]], %[[EUB_FALSE_1]] ]
+    // CHECK: store{{.+}} [[EUB_RES_1]], {{.+}}* [[OMP_UB]],
+
+    // Store LB in IV
+    // CHECK-DAG: [[OMP_LB_VAL_3:%.+]] = load{{.+}}, {{.+}} [[OMP_LB]],
+    // CHECK: store{{.+}} [[OMP_LB_VAL_3]], {{.+}}* [[OMP_IV]],
+
+    // CHECK: [[DIST_INNER_LOOP_END]]:
+    // CHECK: br label %[[LOOP_EXIT:.+]]
+
+    // loop exit
+    // CHECK: [[LOOP_EXIT]]:
     // CHECK-DAG: call void @__kmpc_for_static_fini(
     // CHECK: ret
 
@@ -1866,19 +1895,28 @@ int main() {
 // CHECK: call {{.*}}void {{.+}} @__kmpc_fork_teams({{.+}}, i32 5, {{.+}}* [[OMP_OUTLINED_3:@.+]] to {{.+}})
 
 // CHECK: define{{.+}} void [[OMP_OUTLINED_3]](
-// CHECK-DAG: [[OMP_IV:%.omp.iv]] = alloca
-// CHECK-DAG: [[OMP_LB:%.omp.comb.lb]] = alloca
-// CHECK-DAG: [[OMP_UB:%.omp.comb.ub]] = alloca
-// CHECK-DAG: [[OMP_ST:%.omp.stride]] = alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: [[OMP_IV:%.+]] = alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: [[OMP_LB:%.+]] = alloca
+// CHECK: [[OMP_UB:%.+]] = alloca
+// CHECK: [[OMP_ST:%.+]] = alloca
 
 // unlike the previous tests, in this one we have a outer and inner loop for 'distribute'
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, i32 91,
-// CHECK: br label %[[DIST_OUTER_LOOP_HEADER:.+]]
 
-// CHECK: [[DIST_OUTER_LOOP_HEADER]]:
 // check EUB for distribute
 // CHECK-DAG: [[OMP_UB_VAL_1:%.+]] = load{{.+}} [[OMP_UB]],
-// CHECK: [[NUM_IT_1:%.+]] = load{{.+}},
+// CHECK: [[NUM_IT_1:%.+]] = load{{.+}}
 // CHECK-DAG: [[CMP_UB_NUM_IT:%.+]] = icmp sgt {{.+}}  [[OMP_UB_VAL_1]], [[NUM_IT_1]]
 // CHECK: br {{.+}} [[CMP_UB_NUM_IT]], label %[[EUB_TRUE:.+]], label %[[EUB_FALSE:.+]]
 // CHECK-DAG: [[EUB_TRUE]]:
@@ -1897,18 +1935,10 @@ int main() {
 
 // check exit condition
 // CHECK-DAG: [[OMP_IV_VAL_1:%.+]] = load {{.+}} [[OMP_IV]],
-// CHECK-DAG: [[OMP_UB_VAL_3:%.+]] = load {{.+}} [[OMP_UB]],
-// CHECK: [[CMP_IV_UB:%.+]] = icmp sle {{.+}} [[OMP_IV_VAL_1]], [[OMP_UB_VAL_3]]
-// CHECK: br {{.+}} [[CMP_IV_UB]], label %[[DIST_OUTER_LOOP_BODY:.+]], label %[[DIST_OUTER_LOOP_END:.+]]
-
-// CHECK: [[DIST_OUTER_LOOP_BODY]]:
-// CHECK: br label %[[DIST_INNER_LOOP_HEADER:.+]]
-
-// CHECK: [[DIST_INNER_LOOP_HEADER]]:
-// CHECK-DAG: [[OMP_IV_VAL_2:%.+]] = load {{.+}} [[OMP_IV]],
-// CHECK-DAG: [[OMP_UB_VAL_4:%.+]] = load {{.+}} [[OMP_UB]],
-// CHECK: [[CMP_IV_UB_2:%.+]] = icmp sle {{.+}} [[OMP_IV_VAL_2]], [[OMP_UB_VAL_4]]
-// CHECK: br{{.+}} [[CMP_IV_UB_2]], label %[[DIST_INNER_LOOP_BODY:.+]], label %[[DIST_INNER_LOOP_END:.+]]
+// CHECK-DAG: [[OMP_UB_VAL_3:%.+]] = load {{.+}}
+// CHECK-DAG: [[OMP_UB_VAL_3_PLUS_ONE:%.+]] = add {{.+}} [[OMP_UB_VAL_3]], 1
+// CHECK: [[CMP_IV_UB:%.+]] = icmp slt {{.+}} [[OMP_IV_VAL_1]], [[OMP_UB_VAL_3_PLUS_ONE]]
+// CHECK: br {{.+}} [[CMP_IV_UB]], label %[[DIST_INNER_LOOP_BODY:.+]], label %[[DIST_INNER_LOOP_END:.+]]
 
 // check that PrevLB and PrevUB are passed to the 'for'
 // CHECK: [[DIST_INNER_LOOP_BODY]]:
@@ -1927,13 +1957,6 @@ int main() {
 // CHECK-DAG: [[OMP_ST_VAL_1:%.+]] = load {{.+}}, {{.+}}* [[OMP_ST]],
 // CHECK: [[OMP_IV_INC:%.+]] = add{{.+}} [[OMP_IV_VAL_3]], [[OMP_ST_VAL_1]]
 // CHECK: store{{.+}} [[OMP_IV_INC]], {{.+}}* [[OMP_IV]],
-// CHECK: br label %[[DIST_INNER_LOOP_HEADER]]
-
-// CHECK: [[DIST_INNER_LOOP_END]]:
-// CHECK: br label %[[DIST_OUTER_LOOP_INC:.+]]
-
-// CHECK: [[DIST_OUTER_LOOP_INC]]:
-// check NextLB and NextUB
 // CHECK-DAG: [[OMP_LB_VAL_2:%.+]] = load{{.+}}, {{.+}} [[OMP_LB]],
 // CHECK-DAG: [[OMP_ST_VAL_2:%.+]] = load{{.+}}, {{.+}} [[OMP_ST]],
 // CHECK-DAG: [[OMP_LB_NEXT:%.+]] = add{{.+}} [[OMP_LB_VAL_2]], [[OMP_ST_VAL_2]]
@@ -1942,10 +1965,31 @@ int main() {
 // CHECK-DAG: [[OMP_ST_VAL_3:%.+]] = load{{.+}}, {{.+}} [[OMP_ST]],
 // CHECK-DAG: [[OMP_UB_NEXT:%.+]] = add{{.+}} [[OMP_UB_VAL_5]], [[OMP_ST_VAL_3]]
 // CHECK: store{{.+}} [[OMP_UB_NEXT]], {{.+}}* [[OMP_UB]],
-// CHECK: br label %[[DIST_OUTER_LOOP_HEADER]]
 
-// outer loop exit
-// CHECK: [[DIST_OUTER_LOOP_END]]:
+// Update UB
+// CHECK-DAG: [[OMP_UB_VAL_6:%.+]] = load{{.+}}, {{.+}} [[OMP_UB]],
+// CHECK: [[OMP_EXPR_VAL:%.+]] = load{{.+}}, {{.+}}
+// CHECK-DAG: [[CMP_UB_NUM_IT_1:%.+]] = icmp sgt {{.+}}[[OMP_UB_VAL_6]], [[OMP_EXPR_VAL]]
+// CHECK: br {{.+}} [[CMP_UB_NUM_IT_1]], label %[[EUB_TRUE_1:.+]], label %[[EUB_FALSE_1:.+]]
+// CHECK-DAG: [[EUB_TRUE_1]]:
+// CHECK: [[NUM_IT_3:%.+]] = load{{.+}}
+// CHECK: br label %[[EUB_END_1:.+]]
+// CHECK-DAG: [[EUB_FALSE_1]]:
+// CHECK: [[OMP_UB_VAL3:%.+]] = load{{.+}} [[OMP_UB]],
+// CHECK: br label %[[EUB_END_1]]
+// CHECK-DAG: [[EUB_END_1]]:
+// CHECK-DAG: [[EUB_RES_1:%.+]] = phi{{.+}} [ [[NUM_IT_3]], %[[EUB_TRUE_1]] ], [ [[OMP_UB_VAL3]], %[[EUB_FALSE_1]] ]
+// CHECK: store{{.+}} [[EUB_RES_1]], {{.+}}* [[OMP_UB]],
+
+// Store LB in IV
+// CHECK-DAG: [[OMP_LB_VAL_3:%.+]] = load{{.+}}, {{.+}} [[OMP_LB]],
+// CHECK: store{{.+}} [[OMP_LB_VAL_3]], {{.+}}* [[OMP_IV]],
+
+// CHECK: [[DIST_INNER_LOOP_END]]:
+// CHECK: br label %[[LOOP_EXIT:.+]]
+
+// loop exit
+// CHECK: [[LOOP_EXIT]]:
 // CHECK-DAG: call void @__kmpc_for_static_fini(
 // CHECK: ret
 

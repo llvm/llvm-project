@@ -90,7 +90,7 @@ define <2 x float> @cvt_v2u32_v2f32(<2 x i32> %src) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm1 = [4503599627370496,4503599627370496]
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
 ; CHECK-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvtpd2ps %xmm0, %xmm0
@@ -99,7 +99,7 @@ define <2 x float> @cvt_v2u32_v2f32(<2 x i32> %src) {
 ; CHECK-WIDE-LABEL: cvt_v2u32_v2f32:
 ; CHECK-WIDE:       ## %bb.0:
 ; CHECK-WIDE-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; CHECK-WIDE-NEXT:    vmovdqa {{.*#+}} xmm1 = [4503599627370496,4503599627370496]
+; CHECK-WIDE-NEXT:    vmovdqa {{.*#+}} xmm1 = [4.503599627370496E+15,4.503599627370496E+15]
 ; CHECK-WIDE-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; CHECK-WIDE-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; CHECK-WIDE-NEXT:    vcvtpd2ps %xmm0, %xmm0
@@ -317,25 +317,13 @@ define <2 x i32> @cvt_v2f32_v2u32(<2 x float> %src) {
 ;
 ; CHECK-WIDE-LABEL: cvt_v2f32_v2u32:
 ; CHECK-WIDE:       ## %bb.0:
-; CHECK-WIDE-NEXT:    subl $68, %esp
-; CHECK-WIDE-NEXT:    .cfi_def_cfa_offset 72
-; CHECK-WIDE-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
-; CHECK-WIDE-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
-; CHECK-WIDE-NEXT:    vextractps $2, %xmm0, {{[0-9]+}}(%esp)
-; CHECK-WIDE-NEXT:    vextractps $3, %xmm0, {{[0-9]+}}(%esp)
-; CHECK-WIDE-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-WIDE-NEXT:    fisttpll {{[0-9]+}}(%esp)
-; CHECK-WIDE-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-WIDE-NEXT:    fisttpll {{[0-9]+}}(%esp)
-; CHECK-WIDE-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-WIDE-NEXT:    fisttpll {{[0-9]+}}(%esp)
-; CHECK-WIDE-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-WIDE-NEXT:    fisttpll (%esp)
-; CHECK-WIDE-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-WIDE-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; CHECK-WIDE-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; CHECK-WIDE-NEXT:    vpinsrd $3, (%esp), %xmm0, %xmm0
-; CHECK-WIDE-NEXT:    addl $68, %esp
+; CHECK-WIDE-NEXT:    vmovaps {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; CHECK-WIDE-NEXT:    vcmpltps %xmm1, %xmm0, %xmm2
+; CHECK-WIDE-NEXT:    vsubps %xmm1, %xmm0, %xmm1
+; CHECK-WIDE-NEXT:    vcvttps2dq %xmm1, %xmm1
+; CHECK-WIDE-NEXT:    vxorps LCPI11_1, %xmm1, %xmm1
+; CHECK-WIDE-NEXT:    vcvttps2dq %xmm0, %xmm0
+; CHECK-WIDE-NEXT:    vblendvps %xmm2, %xmm0, %xmm1, %xmm0
 ; CHECK-WIDE-NEXT:    retl
   %res = fptoui <2 x float> %src to <2 x i32>
   ret <2 x i32> %res

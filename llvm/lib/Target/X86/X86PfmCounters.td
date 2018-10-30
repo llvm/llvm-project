@@ -91,6 +91,18 @@ def SkylakeServerPfmCounters : ProcPfmCounters {
 }
 def : PfmCountersBinding<"skylake-avx512", SkylakeServerPfmCounters>;
 
+def BdVer2PfmCounters : ProcPfmCounters {
+  let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
+  let UopsCounter = PfmCounter<"retired_uops">;
+  let IssueCounters = [
+    PfmIssueCounter<"PdFPU0", "dispatched_fpu_ops:ops_pipe0 + dispatched_fpu_ops:ops_dual_pipe0">,
+    PfmIssueCounter<"PdFPU1", "dispatched_fpu_ops:ops_pipe1 + dispatched_fpu_ops:ops_dual_pipe1">,
+    PfmIssueCounter<"PdFPU2", "dispatched_fpu_ops:ops_pipe2 + dispatched_fpu_ops:ops_dual_pipe2">,
+    PfmIssueCounter<"PdFPU3", "dispatched_fpu_ops:ops_pipe3 + dispatched_fpu_ops:ops_dual_pipe3">
+  ];
+}
+def : PfmCountersBinding<"bdver2", BdVer2PfmCounters>;
+
 def BtVer2PfmCounters : ProcPfmCounters {
   let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
   let UopsCounter = PfmCounter<"retired_uops">;

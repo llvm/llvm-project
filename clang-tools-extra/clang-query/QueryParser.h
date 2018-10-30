@@ -44,7 +44,7 @@ private:
   template <typename T> struct LexOrCompleteWord;
 
   QueryRef parseSetBool(bool QuerySession::*Var);
-  QueryRef parseSetOutputKind();
+  template <typename QueryType> QueryRef parseSetOutputKind();
   QueryRef completeMatcherExpression();
 
   QueryRef endQuery(QueryRef Q);

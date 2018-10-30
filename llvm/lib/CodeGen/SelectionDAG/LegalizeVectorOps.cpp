@@ -86,9 +86,10 @@ class VectorLegalizer {
   /// operations to legalize them.
   SDValue Expand(SDValue Op);
 
-  /// Implements expansion for FNEG; falls back to UnrollVectorOp if
-  /// FSUB isn't legal.
-  ///
+  /// Implements expansion for FP_TO_UINT; falls back to UnrollVectorOp if
+  /// FP_TO_SINT isn't legal.
+  SDValue ExpandFP_TO_UINT(SDValue Op);
+
   /// Implements expansion for UINT_TO_FLOAT; falls back to UnrollVectorOp if
   /// SINT_TO_FLOAT and SHR on vectors isn't legal.
   SDValue ExpandUINT_TO_FLOAT(SDValue Op);
@@ -391,6 +392,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FCANONICALIZE:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
+  case ISD::SSUBSAT:
+  case ISD::USUBSAT:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::FP_ROUND_INREG:
@@ -709,6 +712,8 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
     return ExpandVSELECT(Op);
   case ISD::SELECT:
     return ExpandSELECT(Op);
+  case ISD::FP_TO_UINT:
+    return ExpandFP_TO_UINT(Op);
   case ISD::UINT_TO_FP:
     return ExpandUINT_TO_FLOAT(Op);
   case ISD::FNEG:
@@ -1016,6 +1021,16 @@ SDValue VectorLegalizer::ExpandVSELECT(SDValue Op) {
   Op2 = DAG.getNode(ISD::AND, DL, VT, Op2, NotMask);
   SDValue Val = DAG.getNode(ISD::OR, DL, VT, Op1, Op2);
   return DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Val);
+}
+
+SDValue VectorLegalizer::ExpandFP_TO_UINT(SDValue Op) {
+  // Attempt to expand using TargetLowering.
+  SDValue Result;
+  if (TLI.expandFP_TO_UINT(Op.getNode(), Result, DAG))
+    return Result;
+
+  // Otherwise go ahead and unroll.
+  return DAG.UnrollVectorOp(Op.getNode());
 }
 
 SDValue VectorLegalizer::ExpandUINT_TO_FLOAT(SDValue Op) {

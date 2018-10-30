@@ -26,13 +26,13 @@ entry:
 define <2 x double> @constrained_vector_fdiv_v2f64() {
 ; NO-FMA-LABEL: constrained_vector_fdiv_v2f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1,2]
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1.0E+0,2.0E+0]
 ; NO-FMA-NEXT:    divpd {{.*}}(%rip), %xmm0
 ; NO-FMA-NEXT:    retq
 ;
 ; HAS-FMA-LABEL: constrained_vector_fdiv_v2f64:
 ; HAS-FMA:       # %bb.0: # %entry
-; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm0 = [1,2]
+; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm0 = [1.0E+0,2.0E+0]
 ; HAS-FMA-NEXT:    vdivpd {{.*}}(%rip), %xmm0, %xmm0
 ; HAS-FMA-NEXT:    retq
 entry:
@@ -82,7 +82,7 @@ entry:
 define <3 x double> @constrained_vector_fdiv_v3f64() {
 ; NO-FMA-LABEL: constrained_vector_fdiv_v3f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1,2]
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1.0E+0,2.0E+0]
 ; NO-FMA-NEXT:    divpd {{.*}}(%rip), %xmm0
 ; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; NO-FMA-NEXT:    divsd {{.*}}(%rip), %xmm1
@@ -96,7 +96,7 @@ define <3 x double> @constrained_vector_fdiv_v3f64() {
 ; HAS-FMA:       # %bb.0: # %entry
 ; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; HAS-FMA-NEXT:    vdivsd {{.*}}(%rip), %xmm0, %xmm0
-; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm1 = [1,2]
+; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm1 = [1.0E+0,2.0E+0]
 ; HAS-FMA-NEXT:    vdivpd {{.*}}(%rip), %xmm1, %xmm1
 ; HAS-FMA-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; HAS-FMA-NEXT:    retq
@@ -112,16 +112,16 @@ entry:
 define <4 x double> @constrained_vector_fdiv_v4f64() {
 ; NO-FMA-LABEL: constrained_vector_fdiv_v4f64:
 ; NO-FMA:       # %bb.0: # %entry
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm2 = [10,10]
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1,2]
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm2 = [1.0E+1,1.0E+1]
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1.0E+0,2.0E+0]
 ; NO-FMA-NEXT:    divpd %xmm2, %xmm0
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm1 = [3,4]
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm1 = [3.0E+0,4.0E+0]
 ; NO-FMA-NEXT:    divpd %xmm2, %xmm1
 ; NO-FMA-NEXT:    retq
 ;
 ; HAS-FMA-LABEL: constrained_vector_fdiv_v4f64:
 ; HAS-FMA:       # %bb.0: # %entry
-; HAS-FMA-NEXT:    vmovapd {{.*#+}} ymm0 = [1,2,3,4]
+; HAS-FMA-NEXT:    vmovapd {{.*#+}} ymm0 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
 ; HAS-FMA-NEXT:    vdivpd {{.*}}(%rip), %ymm0, %ymm0
 ; HAS-FMA-NEXT:    retq
 entry:
@@ -499,7 +499,7 @@ define <4 x double> @constrained_vector_fmul_v4f64() {
 ; NO-FMA-LABEL: constrained_vector_fmul_v4f64:
 ; NO-FMA:       # %bb.0: # %entry
 ; NO-FMA-NEXT:    movapd {{.*#+}} xmm1 = [1.7976931348623157E+308,1.7976931348623157E+308]
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [2,3]
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [2.0E+0,3.0E+0]
 ; NO-FMA-NEXT:    mulpd %xmm1, %xmm0
 ; NO-FMA-NEXT:    mulpd {{.*}}(%rip), %xmm1
 ; NO-FMA-NEXT:    retq
@@ -630,7 +630,7 @@ define <4 x double> @constrained_vector_fadd_v4f64() {
 ; NO-FMA-LABEL: constrained_vector_fadd_v4f64:
 ; NO-FMA:       # %bb.0: # %entry
 ; NO-FMA-NEXT:    movapd {{.*#+}} xmm1 = [1.7976931348623157E+308,1.7976931348623157E+308]
-; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1,0.10000000000000001]
+; NO-FMA-NEXT:    movapd {{.*#+}} xmm0 = [1.0E+0,1.0000000000000001E-1]
 ; NO-FMA-NEXT:    addpd %xmm1, %xmm0
 ; NO-FMA-NEXT:    addpd {{.*}}(%rip), %xmm1
 ; NO-FMA-NEXT:    retq
@@ -836,8 +836,8 @@ define <2 x double> @constrained_vector_fma_v2f64() {
 ;
 ; HAS-FMA-LABEL: constrained_vector_fma_v2f64:
 ; HAS-FMA:       # %bb.0: # %entry
-; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm1 = [1.5,0.5]
-; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm0 = [3.5,2.5]
+; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm1 = [1.5E+0,5.0E-1]
+; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm0 = [3.5E+0,2.5E+0]
 ; HAS-FMA-NEXT:    vfmadd213pd {{.*#+}} xmm0 = (xmm1 * xmm0) + mem
 ; HAS-FMA-NEXT:    retq
 entry:
@@ -936,8 +936,8 @@ define <3 x double> @constrained_vector_fma_v3f64() {
 ; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
 ; HAS-FMA-NEXT:    vfmadd213sd {{.*#+}} xmm1 = (xmm0 * xmm1) + mem
-; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm0 = [2.5,1.5]
-; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm2 = [5.5,4.5]
+; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm0 = [2.5E+0,1.5E+0]
+; HAS-FMA-NEXT:    vmovapd {{.*#+}} xmm2 = [5.5E+0,4.5E+0]
 ; HAS-FMA-NEXT:    vfmadd213pd {{.*#+}} xmm2 = (xmm0 * xmm2) + mem
 ; HAS-FMA-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm0
 ; HAS-FMA-NEXT:    retq
@@ -987,8 +987,8 @@ define <4 x double> @constrained_vector_fma_v4f64() {
 ;
 ; HAS-FMA-LABEL: constrained_vector_fma_v4f64:
 ; HAS-FMA:       # %bb.0: # %entry
-; HAS-FMA-NEXT:    vmovapd {{.*#+}} ymm1 = [3.5,2.5,1.5,0.5]
-; HAS-FMA-NEXT:    vmovapd {{.*#+}} ymm0 = [7.5,6.5,5.5,4.5]
+; HAS-FMA-NEXT:    vmovapd {{.*#+}} ymm1 = [3.5E+0,2.5E+0,1.5E+0,5.0E-1]
+; HAS-FMA-NEXT:    vmovapd {{.*#+}} ymm0 = [7.5E+0,6.5E+0,5.5E+0,4.5E+0]
 ; HAS-FMA-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem
 ; HAS-FMA-NEXT:    retq
 entry:
@@ -1037,8 +1037,8 @@ define <4 x float> @constrained_vector_fma_v4f32() {
 ;
 ; HAS-FMA-LABEL: constrained_vector_fma_v4f32:
 ; HAS-FMA:       # %bb.0: # %entry
-; HAS-FMA-NEXT:    vmovaps {{.*#+}} xmm1 = [3.5,2.5,1.5,0.5]
-; HAS-FMA-NEXT:    vmovaps {{.*#+}} xmm0 = [7.5,6.5,5.5,4.5]
+; HAS-FMA-NEXT:    vmovaps {{.*#+}} xmm1 = [3.5E+0,2.5E+0,1.5E+0,5.0E-1]
+; HAS-FMA-NEXT:    vmovaps {{.*#+}} xmm0 = [7.5E+0,6.5E+0,5.5E+0,4.5E+0]
 ; HAS-FMA-NEXT:    vfmadd213ps {{.*#+}} xmm0 = (xmm1 * xmm0) + mem
 ; HAS-FMA-NEXT:    retq
 entry:
@@ -1115,8 +1115,8 @@ define <8 x float> @constrained_vector_fma_v8f32() {
 ;
 ; HAS-FMA-LABEL: constrained_vector_fma_v8f32:
 ; HAS-FMA:       # %bb.0: # %entry
-; HAS-FMA-NEXT:    vmovaps {{.*#+}} ymm1 = [3.5,2.5,1.5,0.5,7.5,6.5,5.5,4.5]
-; HAS-FMA-NEXT:    vmovaps {{.*#+}} ymm0 = [7.5,6.5,5.5,4.5,11.5,10.5,9.5,8.5]
+; HAS-FMA-NEXT:    vmovaps {{.*#+}} ymm1 = [3.5E+0,2.5E+0,1.5E+0,5.0E-1,7.5E+0,6.5E+0,5.5E+0,4.5E+0]
+; HAS-FMA-NEXT:    vmovaps {{.*#+}} ymm0 = [7.5E+0,6.5E+0,5.5E+0,4.5E+0,1.15E+1,1.05E+1,9.5E+0,8.5E+0]
 ; HAS-FMA-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem
 ; HAS-FMA-NEXT:    retq
 entry:

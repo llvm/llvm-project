@@ -264,6 +264,14 @@ namespace ISD {
     /// resulting value is this minimum value.
     SADDSAT, UADDSAT,
 
+    /// RESULT = [US]SUBSAT(LHS, RHS) - Perform saturation subtraction on 2
+    /// integers with the same bit width (W). If the true value of LHS - RHS
+    /// exceeds the largest value that can be represented by W bits, the
+    /// resulting value is this maximum value. Otherwise, if this value is less
+    /// than the smallest value that can be represented by W bits, the
+    /// resulting value is this minimum value.
+    SSUBSAT, USUBSAT,
+
     /// Simple binary floating point operators.
     FADD, FSUB, FMUL, FDIV, FREM,
 

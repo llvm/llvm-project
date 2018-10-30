@@ -2569,18 +2569,20 @@ void MicrosoftCXXNameMangler::mangleType(const VectorType *T, Qualifiers Quals,
   // Pattern match exactly the typedefs in our intrinsic headers.  Anything that
   // doesn't match the Intel types uses a custom mangling below.
   size_t OutSizeBefore = Out.tell();
-  llvm::Triple::ArchType AT =
-      getASTContext().getTargetInfo().getTriple().getArch();
-  if (AT == llvm::Triple::x86 || AT == llvm::Triple::x86_64) {
-    if (Width == 64 && ET->getKind() == BuiltinType::LongLong) {
-      mangleArtificalTagType(TTK_Union, "__m64");
-    } else if (Width >= 128) {
-      if (ET->getKind() == BuiltinType::Float)
-        mangleArtificalTagType(TTK_Union, "__m" + llvm::utostr(Width));
-      else if (ET->getKind() == BuiltinType::LongLong)
-        mangleArtificalTagType(TTK_Union, "__m" + llvm::utostr(Width) + 'i');
-      else if (ET->getKind() == BuiltinType::Double)
-        mangleArtificalTagType(TTK_Struct, "__m" + llvm::utostr(Width) + 'd');
+  if (!isa<ExtVectorType>(T)) {
+    llvm::Triple::ArchType AT =
+        getASTContext().getTargetInfo().getTriple().getArch();
+    if (AT == llvm::Triple::x86 || AT == llvm::Triple::x86_64) {
+      if (Width == 64 && ET->getKind() == BuiltinType::LongLong) {
+        mangleArtificalTagType(TTK_Union, "__m64");
+      } else if (Width >= 128) {
+        if (ET->getKind() == BuiltinType::Float)
+          mangleArtificalTagType(TTK_Union, "__m" + llvm::utostr(Width));
+        else if (ET->getKind() == BuiltinType::LongLong)
+          mangleArtificalTagType(TTK_Union, "__m" + llvm::utostr(Width) + 'i');
+        else if (ET->getKind() == BuiltinType::Double)
+          mangleArtificalTagType(TTK_Struct, "__m" + llvm::utostr(Width) + 'd');
+      }
     }
   }
 

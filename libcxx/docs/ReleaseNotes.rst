@@ -41,3 +41,10 @@ New Features
 API Changes
 -----------
 - Building libc++ for Mac OSX 10.6 is not supported anymore.
+- Starting with LLVM 8.0.0, users that wish to link together translation units
+  built with different versions of libc++'s headers into the same final linked
+  image MUST define the _LIBCPP_HIDE_FROM_ABI_PER_TU macro to 1 when building
+  those translation units. Not defining _LIBCPP_HIDE_FROM_ABI_PER_TU to 1 and
+  linking translation units built with different versions of libc++'s headers
+  together may lead to ODR violations and ABI issues. On the flipside, code
+  size improvements should be expected for everyone not defining the macro.

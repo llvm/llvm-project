@@ -890,6 +890,20 @@ public:
   virtual bool isStaticNonchunked(OpenMPDistScheduleClauseKind ScheduleKind,
                                   bool Chunked) const;
 
+  /// Check if the specified \a ScheduleKind is static chunked.
+  /// \param ScheduleKind Schedule kind specified in the 'schedule' clause.
+  /// \param Chunked True if chunk is specified in the clause.
+  ///
+  virtual bool isStaticChunked(OpenMPScheduleClauseKind ScheduleKind,
+                               bool Chunked) const;
+
+  /// Check if the specified \a ScheduleKind is static non-chunked.
+  /// \param ScheduleKind Schedule kind specified in the 'dist_schedule' clause.
+  /// \param Chunked True if chunk is specified in the clause.
+  ///
+  virtual bool isStaticChunked(OpenMPDistScheduleClauseKind ScheduleKind,
+                               bool Chunked) const;
+
   /// Check if the specified \a ScheduleKind is dynamic.
   /// This kind of worksharing directive is emitted without outer loop.
   /// \param ScheduleKind Schedule Kind specified in the 'schedule' clause.
@@ -1506,7 +1520,7 @@ public:
   /// schedule clause.
   virtual void getDefaultScheduleAndChunk(CodeGenFunction &CGF,
       const OMPLoopDirective &S, OpenMPScheduleClauseKind &ScheduleKind,
-      llvm::Value *&Chunk) const {}
+      const Expr *&ChunkExpr) const {}
 
   /// Emits call of the outlined function with the provided arguments,
   /// translating these arguments to correct target-specific arguments.

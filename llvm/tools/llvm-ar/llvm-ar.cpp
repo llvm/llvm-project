@@ -157,14 +157,14 @@ static std::string Options;
 // This enumeration delineates the kinds of operations on an archive
 // that are permitted.
 enum ArchiveOperation {
-  Print,            ///< Print the contents of the archive
-  Delete,           ///< Delete the specified members
-  Move,             ///< Move members to end or as given by {a,b,i} modifiers
-  QuickAppend,      ///< Quickly append to end of archive
-  ReplaceOrInsert,  ///< Replace or Insert members
-  DisplayTable,     ///< Display the table of contents
-  Extract,          ///< Extract files back to file system
-  CreateSymTab      ///< Create a symbol table in an existing archive
+  Print,           ///< Print the contents of the archive
+  Delete,          ///< Delete the specified members
+  Move,            ///< Move members to end or as given by {a,b,i} modifiers
+  QuickAppend,     ///< Quickly append to end of archive
+  ReplaceOrInsert, ///< Replace or Insert members
+  DisplayTable,    ///< Display the table of contents
+  Extract,         ///< Extract files back to file system
+  CreateSymTab     ///< Create a symbol table in an existing archive
 };
 
 // Modifiers to follow operation to vary behavior
@@ -256,18 +256,44 @@ static ArchiveOperation parseCommandLine() {
 
   bool MaybeJustCreateSymTab = false;
 
-  for(unsigned i=0; i<Options.size(); ++i) {
-    switch(Options[i]) {
-    case 'd': ++NumOperations; Operation = Delete; break;
-    case 'm': ++NumOperations; Operation = Move ; break;
-    case 'p': ++NumOperations; Operation = Print; break;
-    case 'q': ++NumOperations; Operation = QuickAppend; break;
-    case 'r': ++NumOperations; Operation = ReplaceOrInsert; break;
-    case 't': ++NumOperations; Operation = DisplayTable; break;
-    case 'x': ++NumOperations; Operation = Extract; break;
-    case 'c': Create = true; break;
-    case 'l': /* accepted but unused */ break;
-    case 'o': OriginalDates = true; break;
+  for (unsigned i = 0; i < Options.size(); ++i) {
+    switch (Options[i]) {
+    case 'd':
+      ++NumOperations;
+      Operation = Delete;
+      break;
+    case 'm':
+      ++NumOperations;
+      Operation = Move;
+      break;
+    case 'p':
+      ++NumOperations;
+      Operation = Print;
+      break;
+    case 'q':
+      ++NumOperations;
+      Operation = QuickAppend;
+      break;
+    case 'r':
+      ++NumOperations;
+      Operation = ReplaceOrInsert;
+      break;
+    case 't':
+      ++NumOperations;
+      Operation = DisplayTable;
+      break;
+    case 'x':
+      ++NumOperations;
+      Operation = Extract;
+      break;
+    case 'c':
+      Create = true;
+      break;
+    case 'l': /* accepted but unused */
+      break;
+    case 'o':
+      OriginalDates = true;
+      break;
     case 's':
       Symtab = true;
       MaybeJustCreateSymTab = true;
@@ -275,8 +301,12 @@ static ArchiveOperation parseCommandLine() {
     case 'S':
       Symtab = false;
       break;
-    case 'u': OnlyUpdate = true; break;
-    case 'v': Verbose = true; break;
+    case 'u':
+      OnlyUpdate = true;
+      break;
+    case 'v':
+      Verbose = true;
+      break;
     case 'a':
       getRelPos();
       AddAfter = true;
@@ -316,7 +346,7 @@ static ArchiveOperation parseCommandLine() {
   // Everything on the command line at this point is a member.
   getMembers();
 
- if (NumOperations == 0 && MaybeJustCreateSymTab) {
+  if (NumOperations == 0 && MaybeJustCreateSymTab) {
     NumOperations = 1;
     Operation = CreateSymTab;
     if (!Members.empty())
@@ -714,11 +744,10 @@ static object::Archive::Kind getKindFromMember(const NewArchiveMember &Member) {
   return getDefaultForHost();
 }
 
-static void
-performWriteOperation(ArchiveOperation Operation,
-                      object::Archive *OldArchive,
-                      std::unique_ptr<MemoryBuffer> OldArchiveBuf,
-                      std::vector<NewArchiveMember> *NewMembersP) {
+static void performWriteOperation(ArchiveOperation Operation,
+                                  object::Archive *OldArchive,
+                                  std::unique_ptr<MemoryBuffer> OldArchiveBuf,
+                                  std::vector<NewArchiveMember> *NewMembersP) {
   std::vector<NewArchiveMember> NewMembers;
   if (!NewMembersP)
     NewMembers = computeNewArchiveMembers(Operation, OldArchive);
@@ -923,7 +952,7 @@ static int ar_main(int argc, char **argv) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
   cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv);
-  for(size_t i = 1; i < Argv.size(); ++i) {
+  for (size_t i = 1; i < Argv.size(); ++i) {
     StringRef Arg = Argv[i];
     const char *match;
     auto MatchFlagWithArg = [&](const char *expected) {
@@ -934,8 +963,7 @@ static int ar_main(int argc, char **argv) {
         match = Argv[i];
         return true;
       }
-      if (Arg.startswith(expected) && Arg.size() > len &&
-                 Arg[len] == '=') {
+      if (Arg.startswith(expected) && Arg.size() > len && Arg[len] == '=') {
         match = Arg.data() + len + 1;
         return true;
       }
@@ -944,7 +972,7 @@ static int ar_main(int argc, char **argv) {
     if (handleGenericOption(Argv[i]))
       return 0;
     if (Arg == "--") {
-      for(; i < Argv.size(); ++i)
+      for (; i < Argv.size(); ++i)
         PositionalArgs.push_back(Argv[i]);
       break;
     }
@@ -957,11 +985,11 @@ static int ar_main(int argc, char **argv) {
         MRI = true;
       } else if (MatchFlagWithArg("format")) {
         FormatType = StringSwitch<Format>(match)
-            .Case("default", Default)
-            .Case("gnu", GNU)
-            .Case("darwin", DARWIN)
-            .Case("bsd", BSD)
-            .Default(Unknown);
+                         .Case("default", Default)
+                         .Case("gnu", GNU)
+                         .Case("darwin", DARWIN)
+                         .Case("bsd", BSD)
+                         .Default(Unknown);
         if (FormatType == Unknown)
           fail(std::string("Invalid format ") + match);
       } else if (MatchFlagWithArg("plugin")) {
@@ -981,7 +1009,7 @@ static int ar_main(int argc, char **argv) {
 
 static int ranlib_main(int argc, char **argv) {
   bool ArchiveSpecified = false;
-  for(int i = 1; i < argc; ++i) {
+  for (int i = 1; i < argc; ++i) {
     if (handleGenericOption(argv[i])) {
       return 0;
     } else {

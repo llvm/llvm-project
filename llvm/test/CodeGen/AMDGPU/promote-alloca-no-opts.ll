@@ -1,5 +1,5 @@
-; RUN: llc -O0 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -mattr=+promote-alloca < %s | FileCheck -check-prefix=NOOPTS -check-prefix=ALL %s
-; RUN: llc -O1 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -mattr=+promote-alloca < %s | FileCheck -check-prefix=OPTS -check-prefix=ALL %s
+; RUN: llc -O0 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -mattr=-code-object-v3,+promote-alloca < %s | FileCheck -check-prefix=NOOPTS -check-prefix=ALL %s
+; RUN: llc -O1 -march=amdgcn -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -mattr=-code-object-v3,+promote-alloca < %s | FileCheck -check-prefix=OPTS -check-prefix=ALL %s
 
 ; ALL-LABEL: {{^}}promote_alloca_i32_array_array:
 ; NOOPTS: workgroup_group_segment_byte_size = 0{{$}}

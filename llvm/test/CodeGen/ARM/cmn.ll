@@ -15,16 +15,15 @@ define i32 @compare_i_gt(i32 %a) {
 ;
 ; T1-LABEL: compare_i_gt:
 ; T1:       @ %bb.0: @ %entry
-; T1-NEXT:    mov r1, r0
-; T1-NEXT:    movs r0, #77
-; T1-NEXT:    mvns r3, r0
-; T1-NEXT:    movs r0, #42
-; T1-NEXT:    movs r2, #24
-; T1-NEXT:    cmp r1, r3
+; T1-NEXT:    movs r1, #77
+; T1-NEXT:    mvns r1, r1
+; T1-NEXT:    cmp r0, r1
 ; T1-NEXT:    bgt .LBB0_2
 ; T1-NEXT:  @ %bb.1: @ %entry
-; T1-NEXT:    mov r0, r2
-; T1-NEXT:  .LBB0_2: @ %entry
+; T1-NEXT:    movs r0, #24
+; T1-NEXT:    bx lr
+; T1-NEXT:  .LBB0_2:
+; T1-NEXT:    movs r0, #42
 ; T1-NEXT:    bx lr
 entry:
   %cmp = icmp sgt i32 %a, -78
@@ -44,14 +43,13 @@ define i32 @compare_r_eq(i32 %a, i32 %b) {
 ;
 ; T1-LABEL: compare_r_eq:
 ; T1:       @ %bb.0: @ %entry
-; T1-NEXT:    mov r2, r0
-; T1-NEXT:    movs r0, #42
-; T1-NEXT:    movs r3, #24
-; T1-NEXT:    cmn r2, r1
+; T1-NEXT:    cmn r0, r1
 ; T1-NEXT:    beq .LBB1_2
 ; T1-NEXT:  @ %bb.1: @ %entry
-; T1-NEXT:    mov r0, r3
-; T1-NEXT:  .LBB1_2: @ %entry
+; T1-NEXT:    movs r0, #24
+; T1-NEXT:    bx lr
+; T1-NEXT:  .LBB1_2:
+; T1-NEXT:    movs r0, #42
 ; T1-NEXT:    bx lr
 entry:
   %sub = sub nsw i32 0, %b

@@ -5772,7 +5772,7 @@ TypedefDecl *ASTContext::getCFConstantStringDecl() const {
   /// Objective-C ABI
   ///
   ///    typedef struct __NSConstantString_tag {
-  ///      const char *isa;
+  ///      const int *isa;
   ///      int flags;
   ///      const char *str;
   ///      long length;

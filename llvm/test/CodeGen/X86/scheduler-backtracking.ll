@@ -3,7 +3,8 @@
 ; RUN: llc -mtriple=x86_64-- < %s -pre-RA-sched=list-hybrid | FileCheck %s --check-prefix=HYBRID
 ; RUN: llc -mtriple=x86_64-- < %s -pre-RA-sched=list-burr   | FileCheck %s --check-prefix=BURR
 ; RUN: llc -mtriple=x86_64-- < %s -pre-RA-sched=source      | FileCheck %s --check-prefix=SRC
-; RUN: llc -mtriple=x86_64-- < %s -pre-RA-sched=linearize   | FileCheck %s --check-prefix=LIN
+; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39452.
+; RUN: llc -mtriple=x86_64-- < %s -pre-RA-sched=linearize -verify-machineinstrs=0 | FileCheck %s --check-prefix=LIN
 
 ; PR22304 https://llvm.org/bugs/show_bug.cgi?id=22304
 ; Tests checking backtracking in source scheduler. llc used to crash on them.

@@ -959,7 +959,7 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   }
 
   // Finally mark unused registers as dead.
-  if (!UsedRegs.empty() || II.getImplicitDefs())
+  if (!UsedRegs.empty() || II.getImplicitDefs() || II.hasOptionalDef())
     MIB->setPhysRegsDeadExcept(UsedRegs, *TRI);
 
   // Run post-isel target hook to adjust this instruction if needed.

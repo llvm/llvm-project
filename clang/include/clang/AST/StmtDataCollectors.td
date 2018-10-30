@@ -27,7 +27,7 @@ class ExpressionTraitExpr {
 }
 class PredefinedExpr {
   code Code = [{
-    addData(S->getIdentType());
+    addData(S->getIdentKind());
   }];
 }
 class TypeTraitExpr {

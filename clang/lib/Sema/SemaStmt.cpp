@@ -462,8 +462,8 @@ Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
     return StmtError();
   }
 
-  CaseStmt *CS = new (Context)
-      CaseStmt(LHSVal.get(), RHSVal.get(), CaseLoc, DotDotDotLoc, ColonLoc);
+  auto *CS = CaseStmt::Create(Context, LHSVal.get(), RHSVal.get(),
+                              CaseLoc, DotDotDotLoc, ColonLoc);
   getCurFunction()->SwitchStack.back().getPointer()->addSwitchCase(CS);
   return CS;
 }
@@ -472,7 +472,7 @@ Sema::ActOnCaseStmt(SourceLocation CaseLoc, ExprResult LHSVal,
 void Sema::ActOnCaseStmtBody(Stmt *caseStmt, Stmt *SubStmt) {
   DiagnoseUnusedExprResult(SubStmt);
 
-  CaseStmt *CS = static_cast<CaseStmt*>(caseStmt);
+  auto *CS = static_cast<CaseStmt *>(caseStmt);
   CS->setSubStmt(SubStmt);
 }
 
@@ -577,9 +577,8 @@ StmtResult Sema::BuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
   DiagnoseUnusedExprResult(thenStmt);
   DiagnoseUnusedExprResult(elseStmt);
 
-  return new (Context)
-      IfStmt(Context, IfLoc, IsConstexpr, InitStmt, Cond.get().first,
-             Cond.get().second, thenStmt, ElseLoc, elseStmt);
+  return IfStmt::Create(Context, IfLoc, IsConstexpr, InitStmt, Cond.get().first,
+                        Cond.get().second, thenStmt, ElseLoc, elseStmt);
 }
 
 namespace {
@@ -728,8 +727,7 @@ StmtResult Sema::ActOnStartOfSwitchStmt(SourceLocation SwitchLoc,
 
   setFunctionHasBranchIntoScope();
 
-  SwitchStmt *SS = new (Context)
-      SwitchStmt(Context, InitStmt, Cond.get().first, CondExpr);
+  auto *SS = SwitchStmt::Create(Context, InitStmt, Cond.get().first, CondExpr);
   getCurFunction()->SwitchStack.push_back(
       FunctionScopeInfo::SwitchInfo(SS, false));
   return SS;

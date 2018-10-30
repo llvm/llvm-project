@@ -165,8 +165,15 @@ bool CMICmdCmdBreakInsert::Execute() {
 
   if (sbTarget == rSessionInfo.GetDebugger().GetDummyTarget())
     m_bBrkPtIsPending = true;
-  else
+  else {
     m_bBrkPtIsPending = pArgPendingBrkPt->GetFound();
+    if (!m_bBrkPtIsPending) {
+      CMIUtilString pending;
+      if (m_rLLDBDebugSessionInfo.SharedDataRetrieve("breakpoint.pending", pending)) {
+        m_bBrkPtIsPending = pending == "on";
+      }
+    }
+  }
 
   if (pArgLocation->GetFound())
     m_brkName = pArgLocation->GetValue();

@@ -16,7 +16,6 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_FETCH_STAGE_H
 #define LLVM_TOOLS_LLVM_MCA_FETCH_STAGE_H
 
-#include "InstrBuilder.h"
 #include "SourceMgr.h"
 #include "Stages/Stage.h"
 #include <map>
@@ -27,18 +26,16 @@ class FetchStage final : public Stage {
   InstRef CurrentInstruction;
   using InstMap = std::map<unsigned, std::unique_ptr<Instruction>>;
   InstMap Instructions;
-  InstrBuilder &IB;
   SourceMgr &SM;
 
   // Updates the program counter, and sets 'CurrentInstruction'.
-  llvm::Error getNextInstruction();
+  void getNextInstruction();
 
   FetchStage(const FetchStage &Other) = delete;
   FetchStage &operator=(const FetchStage &Other) = delete;
 
 public:
-  FetchStage(InstrBuilder &IB, SourceMgr &SM)
-      : CurrentInstruction(), IB(IB), SM(SM) {}
+  FetchStage(SourceMgr &SM) : CurrentInstruction(), SM(SM) {}
 
   bool isAvailable(const InstRef &IR) const override;
   bool hasWorkToComplete() const override;

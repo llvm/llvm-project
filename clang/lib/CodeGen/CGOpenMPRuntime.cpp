@@ -3292,6 +3292,18 @@ bool CGOpenMPRuntime::isStaticNonchunked(
   return Schedule == OMP_dist_sch_static;
 }
 
+bool CGOpenMPRuntime::isStaticChunked(OpenMPScheduleClauseKind ScheduleKind,
+                                      bool Chunked) const {
+  OpenMPSchedType Schedule =
+      getRuntimeSchedule(ScheduleKind, Chunked, /*Ordered=*/false);
+  return Schedule == OMP_sch_static_chunked;
+}
+
+bool CGOpenMPRuntime::isStaticChunked(
+    OpenMPDistScheduleClauseKind ScheduleKind, bool Chunked) const {
+  OpenMPSchedType Schedule = getRuntimeSchedule(ScheduleKind, Chunked);
+  return Schedule == OMP_dist_sch_static_chunked;
+}
 
 bool CGOpenMPRuntime::isDynamic(OpenMPScheduleClauseKind ScheduleKind) const {
   OpenMPSchedType Schedule =

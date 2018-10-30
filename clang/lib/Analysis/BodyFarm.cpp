@@ -464,13 +464,13 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
       Deref, M.makeIntegralCast(M.makeIntegerLiteral(1, C.IntTy), DerefType),
       DerefType);
 
-  IfStmt *Out = new (C)
-      IfStmt(C, SourceLocation(),
-             /* IsConstexpr=*/ false,
-             /* init=*/ nullptr,
-             /* var=*/ nullptr,
-             /* cond=*/ FlagCheck,
-             /* then=*/ M.makeCompound({CallbackCall, FlagAssignment}));
+  auto *Out =
+      IfStmt::Create(C, SourceLocation(),
+                     /* IsConstexpr=*/false,
+                     /* init=*/nullptr,
+                     /* var=*/nullptr,
+                     /* cond=*/FlagCheck,
+                     /* then=*/M.makeCompound({CallbackCall, FlagAssignment}));
 
   return Out;
 }
@@ -549,12 +549,12 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
 
   Expr *GuardCondition = M.makeComparison(LValToRval, DoneValue, BO_NE);
   // (5) Create the 'if' statement.
-  IfStmt *If = new (C) IfStmt(C, SourceLocation(),
-                              /* IsConstexpr=*/ false,
-                              /* init=*/ nullptr,
-                              /* var=*/ nullptr,
-                              /* cond=*/ GuardCondition,
-                              /* then=*/ CS);
+  auto *If = IfStmt::Create(C, SourceLocation(),
+                            /* IsConstexpr=*/false,
+                            /* init=*/nullptr,
+                            /* var=*/nullptr,
+                            /* cond=*/GuardCondition,
+                            /* then=*/CS);
   return If;
 }
 
@@ -657,8 +657,11 @@ static Stmt *create_OSAtomicCompareAndSwap(ASTContext &C, const FunctionDecl *D)
   Stmt *Else = M.makeReturn(RetVal);
 
   /// Construct the If.
-  Stmt *If = new (C) IfStmt(C, SourceLocation(), false, nullptr, nullptr,
-                            Comparison, Body, SourceLocation(), Else);
+  auto *If = IfStmt::Create(C, SourceLocation(),
+                            /* IsConstexpr=*/false,
+                            /* init=*/nullptr,
+                            /* var=*/nullptr, Comparison, Body,
+                            SourceLocation(), Else);
 
   return If;
 }

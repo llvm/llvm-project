@@ -2651,17 +2651,19 @@ Specifying an attribute for multiple declarations (#pragma clang attribute)
 
 The ``#pragma clang attribute`` directive can be used to apply an attribute to
 multiple declarations. The ``#pragma clang attribute push`` variation of the
-directive pushes a new attribute to the attribute stack. The declarations that
-follow the pragma receive the attributes that are on the attribute stack, until
-the stack is cleared using a ``#pragma clang attribute pop`` directive. Multiple
-push directives can be nested inside each other.
+directive pushes a new "scope" of ``#pragma clang attribute`` that attributes
+can be added to. The ``#pragma clang attribute (...)`` variation adds an
+attribute to that scope, and the ``#pragma clang attribute pop`` variation pops
+the scope. You can also use ``#pragma clang attribute push (...)``, which is a
+shorthand for when you want to add one attribute to a new scope. Multiple push
+directives can be nested inside each other.
 
 The attributes that are used in the ``#pragma clang attribute`` directives
 can be written using the GNU-style syntax:
 
 .. code-block:: c++
 
-  #pragma clang attribute push(__attribute__((annotate("custom"))), apply_to = function)
+  #pragma clang attribute push (__attribute__((annotate("custom"))), apply_to = function)
 
   void function(); // The function now has the annotate("custom") attribute
 
@@ -2671,7 +2673,7 @@ The attributes can also be written using the C++11 style syntax:
 
 .. code-block:: c++
 
-  #pragma clang attribute push([[noreturn]], apply_to = function)
+  #pragma clang attribute push ([[noreturn]], apply_to = function)
 
   void function(); // The function now has the [[noreturn]] attribute
 
@@ -2681,7 +2683,7 @@ The ``__declspec`` style syntax is also supported:
 
 .. code-block:: c++
 
-  #pragma clang attribute push(__declspec(dllexport), apply_to = function)
+  #pragma clang attribute push (__declspec(dllexport), apply_to = function)
 
   void function(); // The function now has the __declspec(dllexport) attribute
 

@@ -1133,7 +1133,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
 
 namespace {
 struct PragmaAttributeInfo {
-  enum ActionType { Push, Pop };
+  enum ActionType { Push, Pop, Attribute };
   ParsedAttributes &Attributes;
   ActionType Action;
   ArrayRef<Token> Tokens;
@@ -1394,8 +1394,16 @@ void Parser::HandlePragmaAttribute() {
     return;
   }
   // Parse the actual attribute with its arguments.
-  assert(Info->Action == PragmaAttributeInfo::Push &&
+  assert((Info->Action == PragmaAttributeInfo::Push ||
+          Info->Action == PragmaAttributeInfo::Attribute) &&
          "Unexpected #pragma attribute command");
+
+  if (Info->Action == PragmaAttributeInfo::Push && Info->Tokens.empty()) {
+    ConsumeAnnotationToken();
+    Actions.ActOnPragmaAttributeEmptyPush(PragmaLoc);
+    return;
+  }
+
   PP.EnterTokenStream(Info->Tokens, /*DisableMacroExpansion=*/false);
   ConsumeAnnotationToken();
 
@@ -1542,8 +1550,12 @@ void Parser::HandlePragmaAttribute() {
   // Consume the eof terminator token.
   ConsumeToken();
 
-  Actions.ActOnPragmaAttributePush(Attribute, PragmaLoc,
-                                   std::move(SubjectMatchRules));
+  // Handle a mixed push/attribute by desurging to a push, then an attribute.
+  if (Info->Action == PragmaAttributeInfo::Push)
+    Actions.ActOnPragmaAttributeEmptyPush(PragmaLoc);
+
+  Actions.ActOnPragmaAttributeAttribute(Attribute, PragmaLoc,
+                                        std::move(SubjectMatchRules));
 }
 
 // #pragma GCC visibility comes in two variants:
@@ -3104,6 +3116,8 @@ void PragmaForceCUDAHostDeviceHandler::HandlePragma(
 /// The syntax is:
 /// \code
 ///  #pragma clang attribute push(attribute, subject-set)
+///  #pragma clang attribute push
+///  #pragma clang attribute (attribute, subject-set)
 ///  #pragma clang attribute pop
 /// \endcode
 ///
@@ -3122,25 +3136,33 @@ void PragmaAttributeHandler::HandlePragma(Preprocessor &PP,
   auto *Info = new (PP.getPreprocessorAllocator())
       PragmaAttributeInfo(AttributesForPragmaAttribute);
 
-  // Parse the 'push' or 'pop'.
-  if (Tok.isNot(tok::identifier)) {
-    PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_expected_push_pop);
+  if (!Tok.isOneOf(tok::identifier, tok::l_paren)) {
+    PP.Diag(Tok.getLocation(),
+            diag::err_pragma_attribute_expected_push_pop_paren);
     return;
   }
-  const auto *II = Tok.getIdentifierInfo();
-  if (II->isStr("push"))
-    Info->Action = PragmaAttributeInfo::Push;
-  else if (II->isStr("pop"))
-    Info->Action = PragmaAttributeInfo::Pop;
+
+  // Determine what action this pragma clang attribute represents.
+  if (Tok.is(tok::l_paren))
+    Info->Action = PragmaAttributeInfo::Attribute;
   else {
-    PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_invalid_argument)
-        << PP.getSpelling(Tok);
-    return;
+    const IdentifierInfo *II = Tok.getIdentifierInfo();
+    if (II->isStr("push"))
+      Info->Action = PragmaAttributeInfo::Push;
+    else if (II->isStr("pop"))
+      Info->Action = PragmaAttributeInfo::Pop;
+    else {
+      PP.Diag(Tok.getLocation(), diag::err_pragma_attribute_invalid_argument)
+          << PP.getSpelling(Tok);
+      return;
+    }
+
+    PP.Lex(Tok);
   }
-  PP.Lex(Tok);
 
   // Parse the actual attribute.
-  if (Info->Action == PragmaAttributeInfo::Push) {
+  if ((Info->Action == PragmaAttributeInfo::Push && Tok.isNot(tok::eod)) ||
+      Info->Action == PragmaAttributeInfo::Attribute) {
     if (Tok.isNot(tok::l_paren)) {
       PP.Diag(Tok.getLocation(), diag::err_expected) << tok::l_paren;
       return;

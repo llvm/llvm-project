@@ -1043,7 +1043,7 @@ entry:
 
 ; CHECK-SPILL-RELOAD-LABEL: fn1:
 ; CHECK-SPILL-RELOAD:       vstr.16 s0, [sp, #{{.}}]  @ 2-byte Spill
-; CHECK-SPILL-RELOAD-NEXT:  bl  fn2
+; CHECK-SPILL-RELOAD:  bl  fn2
 ; CHECK-SPILL-RELOAD-NEXT:  vldr.16 s0, [sp, #{{.}}]  @ 2-byte Reload
 }
 

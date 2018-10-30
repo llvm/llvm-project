@@ -106,7 +106,7 @@ QueryRef QueryParser::parseSetBool(bool QuerySession::*Var) {
   return new SetQuery<bool>(Var, Value);
 }
 
-QueryRef QueryParser::parseSetOutputKind() {
+template <typename QueryType> QueryRef QueryParser::parseSetOutputKind() {
   StringRef ValStr;
   unsigned OutKind = LexOrCompleteWord<unsigned>(this, ValStr)
                          .Case("diag", OK_Diag)
@@ -122,11 +122,11 @@ QueryRef QueryParser::parseSetOutputKind() {
 
   switch (OutKind) {
   case OK_DetailedAST:
-    return new SetExclusiveOutputQuery(&QuerySession::DetailedASTOutput);
+    return new QueryType(&QuerySession::DetailedASTOutput);
   case OK_Diag:
-    return new SetExclusiveOutputQuery(&QuerySession::DiagOutput);
+    return new QueryType(&QuerySession::DiagOutput);
   case OK_Print:
-    return new SetExclusiveOutputQuery(&QuerySession::PrintOutput);
+    return new QueryType(&QuerySession::PrintOutput);
   }
 
   llvm_unreachable("Invalid output kind");
@@ -151,7 +151,9 @@ enum ParsedQueryKind {
   PQK_Match,
   PQK_Set,
   PQK_Unlet,
-  PQK_Quit
+  PQK_Quit,
+  PQK_Enable,
+  PQK_Disable
 };
 
 enum ParsedQueryVariable {
@@ -193,6 +195,8 @@ QueryRef QueryParser::doParse() {
                               .Case("q", PQK_Quit,  /*IsCompletion=*/false)
                               .Case("quit", PQK_Quit)
                               .Case("set", PQK_Set)
+                              .Case("enable", PQK_Enable)
+                              .Case("disable", PQK_Disable)
                               .Case("unlet", PQK_Unlet)
                               .Default(PQK_Invalid);
 
@@ -256,7 +260,7 @@ QueryRef QueryParser::doParse() {
     QueryRef Q;
     switch (Var) {
     case PQV_Output:
-      Q = parseSetOutputKind();
+      Q = parseSetOutputKind<SetExclusiveOutputQuery>();
       break;
     case PQV_BindRoot:
       Q = parseSetBool(&QuerySession::BindRoot);
@@ -268,6 +272,28 @@ QueryRef QueryParser::doParse() {
       llvm_unreachable("Invalid query kind");
     }
 
+    return endQuery(Q);
+  }
+  case PQK_Enable:
+  case PQK_Disable: {
+    StringRef VarStr;
+    ParsedQueryVariable Var =
+        LexOrCompleteWord<ParsedQueryVariable>(this, VarStr)
+            .Case("output", PQV_Output)
+            .Default(PQV_Invalid);
+    if (VarStr.empty())
+      return new InvalidQuery("expected variable name");
+    if (Var == PQV_Invalid)
+      return new InvalidQuery("unknown variable: '" + VarStr + "'");
+
+    QueryRef Q;
+
+    if (QKind == PQK_Enable)
+      Q = parseSetOutputKind<EnableOutputQuery>();
+    else if (QKind == PQK_Disable)
+      Q = parseSetOutputKind<DisableOutputQuery>();
+    else
+      llvm_unreachable("Invalid query kind");
     return endQuery(Q);
   }
 

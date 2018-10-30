@@ -73,7 +73,7 @@ void ASTStmtWriter::VisitStmt(Stmt *S) {
 void ASTStmtWriter::VisitNullStmt(NullStmt *S) {
   VisitStmt(S);
   Record.AddSourceLocation(S->getSemiLoc());
-  Record.push_back(S->HasLeadingEmptyMacro);
+  Record.push_back(S->NullStmtBits.HasLeadingEmptyMacro);
   Code = serialization::STMT_NULL;
 }
 
@@ -96,10 +96,13 @@ void ASTStmtWriter::VisitSwitchCase(SwitchCase *S) {
 
 void ASTStmtWriter::VisitCaseStmt(CaseStmt *S) {
   VisitSwitchCase(S);
+  Record.push_back(S->caseStmtIsGNURange());
   Record.AddStmt(S->getLHS());
-  Record.AddStmt(S->getRHS());
   Record.AddStmt(S->getSubStmt());
-  Record.AddSourceLocation(S->getEllipsisLoc());
+  if (S->caseStmtIsGNURange()) {
+    Record.AddStmt(S->getRHS());
+    Record.AddSourceLocation(S->getEllipsisLoc());
+  }
   Code = serialization::STMT_CASE;
 }
 
@@ -128,25 +131,50 @@ void ASTStmtWriter::VisitAttributedStmt(AttributedStmt *S) {
 
 void ASTStmtWriter::VisitIfStmt(IfStmt *S) {
   VisitStmt(S);
+
+  bool HasElse = S->getElse() != nullptr;
+  bool HasVar = S->getConditionVariableDeclStmt() != nullptr;
+  bool HasInit = S->getInit() != nullptr;
+
   Record.push_back(S->isConstexpr());
-  Record.AddStmt(S->getInit());
-  Record.AddDeclRef(S->getConditionVariable());
+  Record.push_back(HasElse);
+  Record.push_back(HasVar);
+  Record.push_back(HasInit);
+
   Record.AddStmt(S->getCond());
   Record.AddStmt(S->getThen());
-  Record.AddStmt(S->getElse());
+  if (HasElse)
+    Record.AddStmt(S->getElse());
+  if (HasVar)
+    Record.AddDeclRef(S->getConditionVariable());
+  if (HasInit)
+    Record.AddStmt(S->getInit());
+
   Record.AddSourceLocation(S->getIfLoc());
-  Record.AddSourceLocation(S->getElseLoc());
+  if (HasElse)
+    Record.AddSourceLocation(S->getElseLoc());
+
   Code = serialization::STMT_IF;
 }
 
 void ASTStmtWriter::VisitSwitchStmt(SwitchStmt *S) {
   VisitStmt(S);
-  Record.AddStmt(S->getInit());
-  Record.AddDeclRef(S->getConditionVariable());
+
+  bool HasInit = S->getInit() != nullptr;
+  bool HasVar = S->getConditionVariableDeclStmt() != nullptr;
+  Record.push_back(HasInit);
+  Record.push_back(HasVar);
+  Record.push_back(S->isAllEnumCasesCovered());
+
   Record.AddStmt(S->getCond());
   Record.AddStmt(S->getBody());
+  if (HasInit)
+    Record.AddStmt(S->getInit());
+  if (HasVar)
+    Record.AddDeclRef(S->getConditionVariable());
+
   Record.AddSourceLocation(S->getSwitchLoc());
-  Record.push_back(S->isAllEnumCasesCovered());
+
   for (SwitchCase *SC = S->getSwitchCaseList(); SC;
        SC = SC->getNextSwitchCase())
     Record.push_back(Writer.RecordSwitchCaseID(SC));
@@ -388,9 +416,13 @@ void ASTStmtWriter::VisitExpr(Expr *E) {
 
 void ASTStmtWriter::VisitPredefinedExpr(PredefinedExpr *E) {
   VisitExpr(E);
+
+  bool HasFunctionName = E->getFunctionName() != nullptr;
+  Record.push_back(HasFunctionName);
+  Record.push_back(E->getIdentKind()); // FIXME: stable encoding
   Record.AddSourceLocation(E->getLocation());
-  Record.push_back(E->getIdentType()); // FIXME: stable encoding
-  Record.AddStmt(E->getFunctionName());
+  if (HasFunctionName)
+    Record.AddStmt(E->getFunctionName());
   Code = serialization::EXPR_PREDEFINED;
 }
 
@@ -1854,6 +1886,8 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
     Record.AddStmt(D->getCombinedCond());
     Record.AddStmt(D->getCombinedNextLowerBound());
     Record.AddStmt(D->getCombinedNextUpperBound());
+    Record.AddStmt(D->getCombinedDistCond());
+    Record.AddStmt(D->getCombinedParForInDistCond());
   }
   for (auto I : D->counters()) {
     Record.AddStmt(I);

@@ -125,7 +125,7 @@ template <class Tp, bool Move = false>
 void test_assign_throws() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
     auto try_throw =
-    [](any& lhs, auto&& rhs) {
+    [](any& lhs, Tp& rhs) {
         try {
             Move ? lhs = std::move(rhs)
                  : lhs = rhs;
