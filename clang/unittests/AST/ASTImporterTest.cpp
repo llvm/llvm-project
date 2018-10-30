@@ -37,10 +37,10 @@ createVirtualFileIfNeeded(ASTUnit *ToAST, StringRef FileName,
                           std::unique_ptr<llvm::MemoryBuffer> &&Buffer) {
   assert(ToAST);
   ASTContext &ToCtx = ToAST->getASTContext();
-  auto *OFS = static_cast<vfs::OverlayFileSystem *>(
+  auto *OFS = static_cast<llvm::vfs::OverlayFileSystem *>(
       ToCtx.getSourceManager().getFileManager().getVirtualFileSystem().get());
-  auto *MFS =
-      static_cast<vfs::InMemoryFileSystem *>(OFS->overlays_begin()->get());
+  auto *MFS = static_cast<llvm::vfs::InMemoryFileSystem *>(
+      OFS->overlays_begin()->get());
   MFS->addFile(FileName, 0, std::move(Buffer));
 }
 
@@ -2476,7 +2476,7 @@ TEST_P(ASTImporterTestBase, ImportOfEquivalentRecord) {
 
     ToR2 = Import(FromR, Lang_CXX);
   }
-  
+
   EXPECT_EQ(ToR1, ToR2);
 }
 

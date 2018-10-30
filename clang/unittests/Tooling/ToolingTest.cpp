@@ -149,10 +149,10 @@ TEST(newFrontendActionFactory, CreatesFrontendActionFactoryFromFactoryType) {
 }
 
 TEST(ToolInvocation, TestMapVirtualFile) {
-  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> OverlayFileSystem(
-      new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new vfs::InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), OverlayFileSystem));
@@ -175,10 +175,10 @@ TEST(ToolInvocation, TestVirtualModulesCompilation) {
   // mapped module.map is found on the include path. In the future, expand this
   // test to run a full modules enabled compilation, so we make sure we can
   // rerun modules compilations with a virtual file system.
-  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> OverlayFileSystem(
-      new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new vfs::InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
   llvm::IntrusiveRefCntPtr<FileManager> Files(
       new FileManager(FileSystemOptions(), OverlayFileSystem));
@@ -403,10 +403,10 @@ TEST(ClangToolTest, ArgumentAdjusters) {
 
 TEST(ClangToolTest, BaseVirtualFileSystemUsage) {
   FixedCompilationDatabase Compilations("/", std::vector<std::string>());
-  llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> OverlayFileSystem(
-      new vfs::OverlayFileSystem(vfs::getRealFileSystem()));
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new vfs::InMemoryFileSystem);
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFileSystem(
+      new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new llvm::vfs::InMemoryFileSystem);
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
 
   InMemoryFileSystem->addFile(

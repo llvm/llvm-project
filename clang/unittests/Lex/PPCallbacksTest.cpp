@@ -95,7 +95,7 @@ public:
 class PPCallbacksTest : public ::testing::Test {
 protected:
   PPCallbacksTest()
-      : InMemoryFileSystem(new vfs::InMemoryFileSystem),
+      : InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
         FileMgr(FileSystemOptions(), InMemoryFileSystem),
         DiagID(new DiagnosticIDs()), DiagOpts(new DiagnosticOptions()),
         Diags(DiagID, DiagOpts.get(), new IgnoringDiagConsumer()),
@@ -104,7 +104,7 @@ protected:
     Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
   }
 
-  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem;
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
   FileManager FileMgr;
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
@@ -116,17 +116,17 @@ protected:
 
   // Register a header path as a known file and add its location
   // to search path.
-  void AddFakeHeader(HeaderSearch& HeaderInfo, const char* HeaderPath, 
-    bool IsSystemHeader) {
-      // Tell FileMgr about header.
-      InMemoryFileSystem->addFile(HeaderPath, 0,
-                                  llvm::MemoryBuffer::getMemBuffer("\n"));
+  void AddFakeHeader(HeaderSearch &HeaderInfo, const char *HeaderPath,
+                     bool IsSystemHeader) {
+    // Tell FileMgr about header.
+    InMemoryFileSystem->addFile(HeaderPath, 0,
+                                llvm::MemoryBuffer::getMemBuffer("\n"));
 
-      // Add header's parent path to search path.
-      StringRef SearchPath = llvm::sys::path::parent_path(HeaderPath);
-      const DirectoryEntry *DE = FileMgr.getDirectory(SearchPath);
-      DirectoryLookup DL(DE, SrcMgr::C_User, false);
-      HeaderInfo.AddSearchPath(DL, IsSystemHeader);
+    // Add header's parent path to search path.
+    StringRef SearchPath = llvm::sys::path::parent_path(HeaderPath);
+    const DirectoryEntry *DE = FileMgr.getDirectory(SearchPath);
+    DirectoryLookup DL(DE, SrcMgr::C_User, false);
+    HeaderInfo.AddSearchPath(DL, IsSystemHeader);
   }
 
   // Get the raw source string of the range.
@@ -139,8 +139,9 @@ protected:
 
   // Run lexer over SourceText and collect FilenameRange from
   // the InclusionDirective callback.
-  CharSourceRange InclusionDirectiveFilenameRange(const char* SourceText, 
-      const char* HeaderPath, bool SystemHeader) {
+  CharSourceRange InclusionDirectiveFilenameRange(const char *SourceText,
+                                                  const char *HeaderPath,
+                                                  bool SystemHeader) {
     std::unique_ptr<llvm::MemoryBuffer> Buf =
         llvm::MemoryBuffer::getMemBuffer(SourceText);
     SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
@@ -198,8 +199,8 @@ protected:
     return Callbacks;
   }
 
-  PragmaOpenCLExtensionCallbacks::CallbackParameters 
-  PragmaOpenCLExtensionCall(const char* SourceText) {
+  PragmaOpenCLExtensionCallbacks::CallbackParameters
+  PragmaOpenCLExtensionCall(const char *SourceText) {
     LangOptions OpenCLLangOpts;
     OpenCLLangOpts.OpenCL = 1;
 
@@ -221,9 +222,8 @@ protected:
     // parser actually sets correct pragma handlers for preprocessor
     // according to LangOptions, so we init Parser to register opencl
     // pragma handlers
-    ASTContext Context(OpenCLLangOpts, SourceMgr,
-                       PP.getIdentifierTable(), PP.getSelectorTable(), 
-                       PP.getBuiltinInfo());
+    ASTContext Context(OpenCLLangOpts, SourceMgr, PP.getIdentifierTable(),
+                       PP.getSelectorTable(), PP.getBuiltinInfo());
     Context.InitBuiltinTypes(*Target);
 
     ASTConsumer Consumer;
@@ -245,7 +245,7 @@ protected:
       Callbacks->Name,
       Callbacks->State
     };
-    return RetVal;    
+    return RetVal;
   }
 };
 

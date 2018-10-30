@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Tooling/Refactoring.h"
 #include "ReplacementTest.h"
 #include "RewriterTestContext.h"
 #include "clang/AST/ASTConsumer.h"
@@ -19,7 +20,6 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Format/Format.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -32,6 +32,7 @@
 #include "clang/Tooling/Refactoring/AtomicChange.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -1035,8 +1036,8 @@ TEST_F(MergeReplacementsTest, OverlappingRanges) {
 
 TEST(DeduplicateByFileTest, PathsWithDots) {
   std::map<std::string, Replacements> FileToReplaces;
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
-      new vfs::InMemoryFileSystem());
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS(
+      new llvm::vfs::InMemoryFileSystem());
   FileManager FileMgr(FileSystemOptions(), VFS);
 #if !defined(_WIN32)
   StringRef Path1 = "a/b/.././c.h";
@@ -1056,8 +1057,8 @@ TEST(DeduplicateByFileTest, PathsWithDots) {
 
 TEST(DeduplicateByFileTest, PathWithDotSlash) {
   std::map<std::string, Replacements> FileToReplaces;
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
-      new vfs::InMemoryFileSystem());
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS(
+      new llvm::vfs::InMemoryFileSystem());
   FileManager FileMgr(FileSystemOptions(), VFS);
 #if !defined(_WIN32)
   StringRef Path1 = "./a/b/c.h";
@@ -1077,8 +1078,8 @@ TEST(DeduplicateByFileTest, PathWithDotSlash) {
 
 TEST(DeduplicateByFileTest, NonExistingFilePath) {
   std::map<std::string, Replacements> FileToReplaces;
-  llvm::IntrusiveRefCntPtr<vfs::InMemoryFileSystem> VFS(
-      new vfs::InMemoryFileSystem());
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS(
+      new llvm::vfs::InMemoryFileSystem());
   FileManager FileMgr(FileSystemOptions(), VFS);
 #if !defined(_WIN32)
   StringRef Path1 = "./a/b/c.h";

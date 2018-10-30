@@ -715,8 +715,8 @@ public:
               FL.getBase()) {}
 
   LookupResult getStat(StringRef Path, FileData &Data, bool isFile,
-                       std::unique_ptr<vfs::File> *F,
-                       vfs::FileSystem &FS) override {
+                       std::unique_ptr<llvm::vfs::File> *F,
+                       llvm::vfs::FileSystem &FS) override {
     // Do the lookup for the file's data in the PTH file.
     CacheTy::iterator I = Cache.find(Path);
 
