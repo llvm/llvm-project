@@ -52,6 +52,7 @@
 ; CHECK-O2-NEXT: FunctionPass Manager
 ; CHECK-O2-NOT: Manager
 ; CHECK-O2: Loop Pass Manager
+; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NOT: Manager
 ; FIXME: We shouldn't be pulling out to simplify-cfg and instcombine and
 ; causing new loop pass managers.
@@ -64,6 +65,9 @@
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NOT: Manager
 ; CHECK-O2: Induction Variable Simplification
+; CHECK-O2: Loop Pass Manager
+; CHECK-O2: Tapir Task Information
+; CHECK-O2: Loop Pass Manager
 ; CHECK-O2: Loop Pass Manager
 ; CHECK-O2-NOT: Manager
 ; FIXME: It isn't clear that we need yet another loop pass pipeline
