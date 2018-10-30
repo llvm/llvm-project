@@ -395,6 +395,10 @@ std::pair<ELFKind, uint16_t> ScriptParser::readBfdName() {
     return {ELF32LEKind, EM_X86_64};
   if (S == "elf64-littleaarch64")
     return {ELF64LEKind, EM_AARCH64};
+  if (S == "elf64-powerpc")
+    return {ELF64BEKind, EM_PPC64};
+  if (S == "elf64-powerpcle")
+    return {ELF64LEKind, EM_PPC64};
   if (S == "elf64-x86-64")
     return {ELF64LEKind, EM_X86_64};
 
