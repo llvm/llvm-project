@@ -313,12 +313,12 @@ void Preprocessor::diagnoseMissingHeaderInUmbrellaDir(const Module &Mod) {
 
     // Check whether this entry has an extension typically associated with
     // headers.
-    if (!StringSwitch<bool>(llvm::sys::path::extension(Entry->path()))
+    if (!StringSwitch<bool>(llvm::sys::path::extension(Entry->getName()))
              .Cases(".h", ".H", ".hh", ".hpp", true)
              .Default(false))
       continue;
 
-    if (const FileEntry *Header = getFileManager().getFile(Entry->path()))
+    if (const FileEntry *Header = getFileManager().getFile(Entry->getName()))
       if (!getSourceManager().hasFileInfo(Header)) {
         if (!ModMap.isHeaderInUnavailableModule(Header)) {
           // Find the relative path that would access this header.
