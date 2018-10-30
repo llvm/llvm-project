@@ -18,6 +18,8 @@ class TestSwiftReplInC(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessDarwin
+    @skipIfDarwin
     @swiftTest
     @expectedFailureAll(bugnumber="rdar://45579668")
     @add_test_categories(["swiftpr"])

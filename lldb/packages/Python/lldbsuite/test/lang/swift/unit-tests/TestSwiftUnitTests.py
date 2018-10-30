@@ -19,6 +19,7 @@ class TestSwiftUnitTests(TestBase):
 
     @expectedFailureAll(bugnumber="rdar://45579668")
     @skipUnlessDarwin
+    @skipIfDarwin
     @swiftTest
     # The creation of the .xctest framework messes with the AST search path.
     @skipIf(debug_info=no_match("dsym"))
