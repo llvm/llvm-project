@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Distro.h"
-#include "clang/Basic/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -18,7 +17,7 @@
 using namespace clang::driver;
 using namespace clang;
 
-static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
+static Distro::DistroType DetectDistro(vfs::FileSystem &VFS) {
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> File =
       VFS.getBufferForFile("/etc/lsb-release");
   if (File) {
@@ -140,4 +139,4 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
   return Distro::UnknownDistro;
 }
 
-Distro::Distro(llvm::vfs::FileSystem &VFS) : DistroVal(DetectDistro(VFS)) {}
+Distro::Distro(vfs::FileSystem &VFS) : DistroVal(DetectDistro(VFS)) {}

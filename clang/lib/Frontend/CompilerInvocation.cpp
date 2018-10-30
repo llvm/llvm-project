@@ -23,6 +23,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/Version.h"
+#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Basic/Visibility.h"
 #include "clang/Basic/XRayInstr.h"
 #include "clang/Config/config.h"
@@ -75,7 +76,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/VersionTuple.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
 #include <algorithm>
@@ -3282,21 +3282,21 @@ void BuryPointer(const void *Ptr) {
   GraveYard[Idx] = Ptr;
 }
 
-IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+IntrusiveRefCntPtr<vfs::FileSystem>
 createVFSFromCompilerInvocation(const CompilerInvocation &CI,
                                 DiagnosticsEngine &Diags) {
-  return createVFSFromCompilerInvocation(CI, Diags,
-                                         llvm::vfs::getRealFileSystem());
+  return createVFSFromCompilerInvocation(CI, Diags, vfs::getRealFileSystem());
 }
 
-IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
-    const CompilerInvocation &CI, DiagnosticsEngine &Diags,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
+IntrusiveRefCntPtr<vfs::FileSystem>
+createVFSFromCompilerInvocation(const CompilerInvocation &CI,
+                                DiagnosticsEngine &Diags,
+                                IntrusiveRefCntPtr<vfs::FileSystem> BaseFS) {
   if (CI.getHeaderSearchOpts().VFSOverlayFiles.empty())
     return BaseFS;
 
-  IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> Overlay(
-      new llvm::vfs::OverlayFileSystem(BaseFS));
+  IntrusiveRefCntPtr<vfs::OverlayFileSystem> Overlay(
+      new vfs::OverlayFileSystem(BaseFS));
   // earlier vfs files are on the bottom
   for (const auto &File : CI.getHeaderSearchOpts().VFSOverlayFiles) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
@@ -3306,7 +3306,7 @@ IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
       continue;
     }
 
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = llvm::vfs::getVFSFromYAML(
+    IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getVFSFromYAML(
         std::move(Buffer.get()), /*DiagHandler*/ nullptr, File);
     if (FS)
       Overlay->pushOverlay(FS);

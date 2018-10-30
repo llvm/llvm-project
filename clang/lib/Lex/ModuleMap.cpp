@@ -22,6 +22,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/LexDiagnostic.h"
@@ -42,7 +43,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -1006,10 +1006,9 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
     = StringRef(FrameworkDir->getName());
   llvm::sys::path::append(SubframeworksDirName, "Frameworks");
   llvm::sys::path::native(SubframeworksDirName);
-  llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
-  for (llvm::vfs::directory_iterator
-           Dir = FS.dir_begin(SubframeworksDirName, EC),
-           DirEnd;
+  vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  for (vfs::directory_iterator Dir = FS.dir_begin(SubframeworksDirName, EC),
+                               DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
     if (!StringRef(Dir->getName()).endswith(".framework"))
       continue;
@@ -2384,9 +2383,8 @@ void ModuleMapParser::parseUmbrellaDirDecl(SourceLocation UmbrellaLoc) {
     // uncommonly used Tcl module on Darwin platforms.
     std::error_code EC;
     SmallVector<Module::Header, 6> Headers;
-    llvm::vfs::FileSystem &FS =
-        *SourceMgr.getFileManager().getVirtualFileSystem();
-    for (llvm::vfs::recursive_directory_iterator I(FS, Dir->getName(), EC), E;
+    vfs::FileSystem &FS = *SourceMgr.getFileManager().getVirtualFileSystem();
+    for (vfs::recursive_directory_iterator I(FS, Dir->getName(), EC), E;
          I != E && !EC; I.increment(EC)) {
       if (const FileEntry *FE =
               SourceMgr.getFileManager().getFile(I->getName())) {

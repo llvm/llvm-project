@@ -179,9 +179,9 @@ static void collectIncludePCH(CompilerInstance &CI,
   std::error_code EC;
   SmallString<128> DirNative;
   llvm::sys::path::native(PCHDir->getName(), DirNative);
-  llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
+  vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
   SimpleASTReaderListener Validator(CI.getPreprocessor());
-  for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
+  for (vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
     // Check whether this is an AST file. ASTReader::isAcceptableASTFile is not
     // used here since we're not interested in validating the PCH at this time,
@@ -200,14 +200,14 @@ static void collectVFSEntries(CompilerInstance &CI,
     return;
 
   // Collect all VFS found.
-  SmallVector<llvm::vfs::YAMLVFSEntry, 16> VFSEntries;
+  SmallVector<vfs::YAMLVFSEntry, 16> VFSEntries;
   for (const std::string &VFSFile : CI.getHeaderSearchOpts().VFSOverlayFiles) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
         llvm::MemoryBuffer::getFile(VFSFile);
     if (!Buffer)
       return;
-    llvm::vfs::collectVFSFromYAML(std::move(Buffer.get()),
-                                  /*DiagHandler*/ nullptr, VFSFile, VFSEntries);
+    vfs::collectVFSFromYAML(std::move(Buffer.get()), /*DiagHandler*/ nullptr,
+                            VFSFile, VFSEntries);
   }
 
   for (auto &E : VFSEntries)
@@ -305,7 +305,7 @@ CompilerInstance::createDiagnostics(DiagnosticOptions *Opts,
 
 FileManager *CompilerInstance::createFileManager() {
   if (!hasVirtualFileSystem()) {
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+    IntrusiveRefCntPtr<vfs::FileSystem> VFS =
         createVFSFromCompilerInvocation(getInvocation(), getDiagnostics());
     setVirtualFileSystem(VFS);
   }

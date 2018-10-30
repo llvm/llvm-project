@@ -32,7 +32,7 @@ using namespace llvm::opt;
 /// argument vector.
 std::unique_ptr<CompilerInvocation> clang::createInvocationFromCommandLine(
     ArrayRef<const char *> ArgList, IntrusiveRefCntPtr<DiagnosticsEngine> Diags,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS) {
+    IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   if (!Diags.get()) {
     // No diagnostics engine was provided, so create our own diagnostics object
     // with the default options.

@@ -22,17 +22,15 @@
 #include "llvm/Support/Regex.h"
 #include <system_error>
 
-namespace llvm {
-namespace vfs {
-class FileSystem;
-}
-} // namespace llvm
-
 namespace clang {
 
 class Lexer;
 class SourceManager;
 class DiagnosticConsumer;
+
+namespace vfs {
+class FileSystem;
+}
 
 namespace format {
 
@@ -2001,7 +1999,7 @@ extern const char *DefaultFallbackStyle;
 llvm::Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
                                      StringRef FallbackStyle,
                                      StringRef Code = "",
-                                     llvm::vfs::FileSystem *FS = nullptr);
+                                     vfs::FileSystem *FS = nullptr);
 
 // Guesses the language from the ``FileName`` and ``Code`` to be formatted.
 // Defaults to FormatStyle::LK_Cpp.

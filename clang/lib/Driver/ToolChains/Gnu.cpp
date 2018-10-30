@@ -16,6 +16,7 @@
 #include "Arch/SystemZ.h"
 #include "CommonArgs.h"
 #include "Linux.h"
+#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Config/config.h" // for GCC_INSTALL_PREFIX
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
@@ -26,7 +27,6 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetParser.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include <system_error>
 
 using namespace clang::driver;
@@ -798,10 +798,10 @@ namespace {
 // Filter to remove Multilibs that don't exist as a suffix to Path
 class FilterNonExistent {
   StringRef Base, File;
-  llvm::vfs::FileSystem &VFS;
+  vfs::FileSystem &VFS;
 
 public:
-  FilterNonExistent(StringRef Base, StringRef File, llvm::vfs::FileSystem &VFS)
+  FilterNonExistent(StringRef Base, StringRef File, vfs::FileSystem &VFS)
       : Base(Base), File(File), VFS(VFS) {}
   bool operator()(const Multilib &M) {
     return !VFS.exists(Base + M.gccSuffix() + File);
@@ -947,7 +947,7 @@ static bool findMipsCsMultilibs(const Multilib::flags_list &Flags,
   return false;
 }
 
-static bool findMipsAndroidMultilibs(llvm::vfs::FileSystem &VFS, StringRef Path,
+static bool findMipsAndroidMultilibs(vfs::FileSystem &VFS, StringRef Path,
                                      const Multilib::flags_list &Flags,
                                      FilterNonExistent &NonExistent,
                                      DetectedMultilibs &Result) {
@@ -1769,8 +1769,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
 
     std::string PrefixDir = SysRoot.str() + "/usr/gcc";
     std::error_code EC;
-    for (llvm::vfs::directory_iterator LI = D.getVFS().dir_begin(PrefixDir, EC),
-                                       LE;
+    for (vfs::directory_iterator LI = D.getVFS().dir_begin(PrefixDir, EC), LE;
          !EC && LI != LE; LI = LI.increment(EC)) {
       StringRef VersionText = llvm::sys::path::filename(LI->getName());
       GCCVersion CandidateVersion = GCCVersion::Parse(VersionText);
@@ -2213,7 +2212,7 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
 
     StringRef LibSuffix = Suffix.LibSuffix;
     std::error_code EC;
-    for (llvm::vfs::directory_iterator
+    for (vfs::directory_iterator
              LI = D.getVFS().dir_begin(LibDir + "/" + LibSuffix, EC),
              LE;
          !EC && LI != LE; LI = LI.increment(EC)) {

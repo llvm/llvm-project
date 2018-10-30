@@ -36,16 +36,17 @@ class ArgList;
 class DerivedArgList;
 
 } // namespace opt
-namespace vfs {
-
-class FileSystem;
-
-} // namespace vfs
 } // namespace llvm
 
 namespace clang {
 
 class ObjCRuntime;
+
+namespace vfs {
+
+class FileSystem;
+
+} // namespace vfs
 
 namespace driver {
 
@@ -178,7 +179,7 @@ public:
   // Accessors
 
   const Driver &getDriver() const { return D; }
-  llvm::vfs::FileSystem &getVFS() const;
+  vfs::FileSystem &getVFS() const;
   const llvm::Triple &getTriple() const { return Triple; }
 
   /// Get the toolchain's aux triple, if it has one.
