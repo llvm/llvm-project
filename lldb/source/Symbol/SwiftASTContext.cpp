@@ -767,7 +767,7 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
       m_clang_importer(NULL), m_swift_module_cache(),
       m_mangled_name_to_type_map(), m_type_to_mangled_name_map(),
       m_pointer_byte_size(0), m_pointer_bit_align(0), m_void_function_type(),
-      m_target_wp(), m_process(NULL), m_platform_sdk_path(), m_resource_dir(),
+      m_target_wp(), m_process(NULL), m_platform_sdk_path(),
       m_ast_file_data_map(), m_initialized_language_options(false),
       m_initialized_search_path_options(false),
       m_initialized_clang_importer_options(false),
@@ -801,7 +801,7 @@ SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
       m_clang_importer(NULL), m_swift_module_cache(),
       m_mangled_name_to_type_map(), m_type_to_mangled_name_map(),
       m_pointer_byte_size(0), m_pointer_bit_align(0), m_void_function_type(),
-      m_target_wp(), m_process(NULL), m_platform_sdk_path(), m_resource_dir(),
+      m_target_wp(), m_process(NULL), m_platform_sdk_path(),
       m_ast_file_data_map(), m_initialized_language_options(false),
       m_initialized_search_path_options(false),
       m_initialized_clang_importer_options(false),
@@ -827,7 +827,6 @@ SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
     m_target_wp = target_sp;
 
   m_platform_sdk_path = rhs.m_platform_sdk_path;
-  m_resource_dir = rhs.m_resource_dir;
 
   swift::ASTContext *lhs_ast = GetASTContext();
   swift::ASTContext *rhs_ast =
@@ -862,11 +861,293 @@ ConstString SwiftASTContext::GetPluginName() {
 
 uint32_t SwiftASTContext::GetPluginVersion() { return 1; }
 
-static std::string &GetDefaultResourceDir() {
-  static std::string s_resource_dir;
-  return s_resource_dir;
+static std::string GetXcodeContentsPath() {
+  const char substr[] = ".app/Contents/";
+
+  // First, try based on the current shlib's location
+
+  {
+    if (FileSpec fspec = HostInfo::GetShlibDir()) {
+      std::string path_to_shlib = fspec.GetPath();
+      size_t pos = path_to_shlib.rfind(substr);
+      if (pos != std::string::npos) {
+        path_to_shlib.erase(pos + strlen(substr));
+        return path_to_shlib;
+      }
+    }
+  }
+
+  // Fall back to using xcrun
+
+  {
+    int status = 0;
+    int signo = 0;
+    std::string output;
+    const char *command = "xcrun -sdk macosx --show-sdk-path";
+    lldb_private::Status error = Host::RunShellCommand(
+        command, // shell command to run
+        NULL,    // current working directory
+        &status, // Put the exit status of the process in here
+        &signo,  // Put the signal that caused the process to exit in here
+        &output, // Get the output from the command and place it in this string
+        std::chrono::seconds(3));      // Timeout in seconds to wait for shell program to finish
+    if (status == 0 && !output.empty()) {
+      size_t first_non_newline = output.find_last_not_of("\r\n");
+      if (first_non_newline != std::string::npos) {
+        output.erase(first_non_newline + 1);
+      }
+
+      size_t pos = output.rfind(substr);
+      if (pos != std::string::npos) {
+        output.erase(pos + strlen(substr));
+        return output;
+      }
+    }
+  }
+
+  return std::string();
 }
 
+static std::string GetCurrentToolchainPath() {
+  const char substr[] = ".xctoolchain/";
+
+  {
+    if (FileSpec fspec = HostInfo::GetShlibDir()) {
+      std::string path_to_shlib = fspec.GetPath();
+      size_t pos = path_to_shlib.rfind(substr);
+      if (pos != std::string::npos) {
+        path_to_shlib.erase(pos + strlen(substr));
+        return path_to_shlib;
+      }
+    }
+  }
+
+  return std::string();
+}
+
+static std::string GetCurrentCLToolsPath() {
+  const char substr[] = "/CommandLineTools/";
+
+  {
+    if (FileSpec fspec = HostInfo::GetShlibDir()) {
+      std::string path_to_shlib = fspec.GetPath();
+      size_t pos = path_to_shlib.rfind(substr);
+      if (pos != std::string::npos) {
+        path_to_shlib.erase(pos + strlen(substr));
+        return path_to_shlib;
+      }
+    }
+  }
+
+  return std::string();
+}
+
+static StringRef GetResourceDir() {
+  const char *fn = __FUNCTION__;
+  static std::string g_cached_resource_dir;
+  static std::once_flag g_once_flag;
+  std::call_once(g_once_flag, [&fn]() {
+    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+
+    // First, check if there's something in our bundle
+    {
+      FileSpec swift_dir_spec;
+      if (FileSpec swift_dir_spec = HostInfo::GetSwiftDir()) {
+        if (log)
+          log->Printf("%s: trying ePathTypeSwiftDir: %s", fn,
+                      swift_dir_spec.GetCString());
+        // We can't just check for the Swift directory, because that
+        // always exists.  We have to look for "clang" inside that.
+        FileSpec swift_clang_dir_spec = swift_dir_spec;
+        swift_clang_dir_spec.AppendPathComponent("clang");
+
+        if (IsDirectory(swift_clang_dir_spec)) {
+          g_cached_resource_dir = swift_dir_spec.GetPath();
+          if (log)
+            log->Printf("%s: found Swift resource dir via "
+                        "ePathTypeSwiftDir': %s",
+                        fn, g_cached_resource_dir.c_str());
+          return;
+        }
+      }
+    }
+
+    // Nothing in our bundle. Are we in a toolchain that has its own Swift
+    // compiler resource dir?
+
+    {
+      std::string xcode_toolchain_path = GetCurrentToolchainPath();
+      if (log)
+        log->Printf("%s: trying toolchain path: %s", fn,
+                    xcode_toolchain_path.c_str());
+
+      if (!xcode_toolchain_path.empty()) {
+        xcode_toolchain_path.append("usr/lib/swift");
+        if (log)
+          log->Printf("%s: trying toolchain-based lib path: %s", fn,
+                      xcode_toolchain_path.c_str());
+
+        if (IsDirectory(FileSpec(xcode_toolchain_path, false))) {
+          g_cached_resource_dir = xcode_toolchain_path;
+          if (log)
+            log->Printf("%s: found Swift resource dir via "
+                        "toolchain path + 'usr/lib/swift': %s",
+                        fn, g_cached_resource_dir.c_str());
+          return;
+        }
+      }
+    }
+
+    // We're not in a toolchain that has one. Use the Xcode default toolchain.
+
+    {
+      std::string xcode_contents_path = GetXcodeContentsPath();
+      if (log)
+        log->Printf("%s: trying Xcode path: %s", fn,
+                    xcode_contents_path.c_str());
+
+      if (!xcode_contents_path.empty()) {
+        xcode_contents_path.append("Developer/Toolchains/"
+                                   "XcodeDefault.xctoolchain"
+                                   "/usr/lib/swift");
+        if (log)
+          log->Printf("%s: trying Xcode-based lib path: %s", fn,
+                      xcode_contents_path.c_str());
+
+        if (IsDirectory(FileSpec(xcode_contents_path, false))) {
+          g_cached_resource_dir = xcode_contents_path;
+          if (log)
+            log->Printf("%s: found Swift resource dir via "
+                        "Xcode contents path + default toolchain "
+                        "relative dir: %s",
+                        fn, g_cached_resource_dir.c_str());
+          return;
+        }
+      }
+    }
+
+    // We're not in Xcode. We might be in the command-line tools.
+
+    {
+      std::string cl_tools_path = GetCurrentCLToolsPath();
+      if (log)
+        log->Printf("%s: trying command-line tools path: %s", fn,
+                    cl_tools_path.c_str());
+
+      if (!cl_tools_path.empty()) {
+        cl_tools_path.append("usr/lib/swift");
+        if (log)
+          log->Printf("%s: trying command-line tools-based lib "
+                      "path: %s",
+                      fn, cl_tools_path.c_str());
+
+        if (IsDirectory(FileSpec(cl_tools_path, false))) {
+          g_cached_resource_dir = cl_tools_path;
+          if (log)
+            log->Printf("%s: found Swift resource dir via "
+                        "command-line tools path + "
+                        "usr/lib/swift: %s",
+                        fn, g_cached_resource_dir.c_str());
+          return;
+        }
+      }
+    }
+
+    // We might be in the build-dir configuration for a build-script-driven
+    // LLDB build, which has the Swift build dir as a sibling directory
+    // to the lldb build dir.  This looks much different than the install-
+    // dir layout that the previous checks would try.
+    {
+      if (FileSpec faux_swift_dir_spec = HostInfo::GetSwiftDir()) {
+// We can't use a C++11 stdlib regex feature here because it
+// doesn't work on Ubuntu 14.04 x86_64.  Once we don't care
+// about supporting that anymore, let's pull the code below
+// back in since it is a simpler implementation using
+// std::regex.
+#if 0
+                // Let's try to regex this.
+                // We're looking for /some/path/lldb-{os}-{arch}, and want to
+                // build the following:
+                //    /some/path/swift-{os}-{arch}/lib/swift/{os}/{arch}
+                // In a match, these are the following assignments for
+                // backrefs:
+                //   $1 - first part of path before swift build dir
+                //   $2 - the host OS path separator character
+                //   $3 - all the stuff that should come after changing
+                //        lldb to swift for the lib dir.
+                auto match_regex =
+                    std::regex("^(.+([/\\\\]))lldb-(.+)$");
+                const std::string replace_format = "$1swift-$3";
+                const std::string faux_swift_dir =
+                    faux_swift_dir_spec.GetCString();
+                const std::string build_tree_resource_dir =
+                    std::regex_replace(faux_swift_dir, match_regex,
+                                       replace_format);
+#else
+                std::string build_tree_resource_dir;
+                const std::string faux_swift_dir =
+                    faux_swift_dir_spec.GetCString();
+
+                // Find something that matches lldb- (particularly,
+                // the last one).
+                const std::string lldb_dash("lldb-");
+                auto lldb_pos = faux_swift_dir.rfind(lldb_dash);
+                if ((lldb_pos != std::string::npos) &&
+                    (lldb_pos > 0) &&
+                    ((faux_swift_dir[lldb_pos - 1] == '\\') ||
+                     (faux_swift_dir[lldb_pos - 1] == '/')))
+                {
+                    // We found something that matches ^.+[/\\]lldb-.+$
+                    std::ostringstream stream;
+                    // Take everything before lldb- (the path leading up to
+                    // the lldb dir).
+                    stream << faux_swift_dir.substr(0, lldb_pos);
+
+                    // replace lldb- with swift-.
+                    stream << "swift-";
+
+                    // and now tack on the same components from after
+                    // the lldb- part.
+                    stream << faux_swift_dir.substr(lldb_pos +
+                                                    lldb_dash.length());
+                    const std::string build_tree_resource_dir = stream.str();
+                    if (log)
+                        log->Printf("%s: trying ePathTypeSwiftDir regex-based "
+                                    "build dir: %s",
+                                    fn,
+                                    build_tree_resource_dir.c_str());
+                    FileSpec swift_resource_dir_spec(
+                        build_tree_resource_dir.c_str(), false);
+                    if (IsDirectory(swift_resource_dir_spec)) {
+                      g_cached_resource_dir = swift_resource_dir_spec.GetPath();
+                      if (log)
+                        log->Printf("%s: found Swift resource dir via "
+                                    "ePathTypeSwiftDir + inferred "
+                                    "build-tree dir: %s",
+                                    fn,
+                                    g_cached_resource_dir.c_str());
+                      return;
+                    }
+                }
+#endif
+      }
+    }
+
+    // We failed to find a reasonable Swift resource dir.
+    if (log)
+      log->Printf("%s: failed to find a Swift resource dir", fn);
+  });
+
+  return g_cached_resource_dir;
+}
+
+/// This code comes from CompilerInvocation.cpp (setRuntimeResourcePath).
+static void ConfigureResourceDirs(swift::CompilerInvocation &invocation,
+                                  FileSpec resource_dir, llvm::Triple triple) {
+  // Make sure the triple is right:
+  invocation.setTargetTriple(triple.str());
+  invocation.setRuntimeResourcePath(resource_dir.GetPath().c_str());
+}
 
 /// Initialize the compiler invocation with it the search paths from a
 /// serialized AST.
@@ -1115,12 +1396,14 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   }
 
   swift_ast_sp->SetTriple(triple.getTriple().c_str(), &module);
+  FileSpec resource_dir(GetResourceDir(), false);
+  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
+                        triple);
 
   bool set_triple = false;
 
   SymbolVendor *sym_vendor = module.GetSymbolVendor();
 
-  std::string resource_dir;
   std::string target_triple;
 
   if (sym_vendor) {
@@ -1181,16 +1464,6 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
           set_triple = true;
         }
       }
-    }
-
-    if (sym_vendor->GetCompileOption("-resource-dir", resource_dir)) {
-      swift_ast_sp->SetResourceDir(resource_dir.c_str());
-    } else if (!GetDefaultResourceDir().empty()) {
-      // Use the first resource dir we found when setting up a target.
-      swift_ast_sp->SetResourceDir(GetDefaultResourceDir().c_str());
-    } else {
-      if (log)
-        log->Printf("No resource dir available for module's SwiftASTContext.");
     }
 
     if (!got_serialized_options) {
@@ -1312,11 +1585,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
 
   bool handled_sdk_path = false;
-  bool handled_resource_dir = false;
   const size_t num_images = target.GetImages().GetSize();
-  // Set the SDK path and resource dir prior to doing search paths.
-  // Otherwise when we create search path options we put in the wrong SDK
-  // path.
+  // Set the SDK path prior to doing search paths.  Otherwise when we
+  // create search path options we put in the wrong SDK path.
 
   FileSpec &target_sdk_spec = target.GetSDKPath();
   if (target_sdk_spec && target_sdk_spec.Exists()) {
@@ -1389,21 +1660,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       }
     }
 
-    if (!handled_resource_dir) {
-      const char *resource_dir = module_swift_ast->GetResourceDir();
-      if (resource_dir) {
-        handled_resource_dir = true;
-        swift_ast_sp->SetResourceDir(resource_dir);
-        if (GetDefaultResourceDir().empty()) {
-          // Tuck this away as a reasonable default resource dir
-          // for contexts that don't have one. The Swift parser
-          // will assert without one.
-          GetDefaultResourceDir() = resource_dir;
-        }
-      }
-    }
-
-    if (handled_sdk_path && handled_resource_dir)
+    if (handled_sdk_path)
       break;
   }
 
@@ -1470,6 +1727,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       }
     }
   }
+
+  FileSpec resource_dir(GetResourceDir(), false);
+  ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(), resource_dir,
+                        llvm::Triple(swift_ast_sp->GetTriple()));
 
   const bool use_all_compiler_flags =
       !got_serialized_options || target.GetUseAllCompilerFlags();
@@ -1819,87 +2080,6 @@ bool SwiftASTContext::SetTriple(const char *triple_cstr, Module *module) {
   return false;
 }
 
-static std::string GetXcodeContentsPath() {
-  const char substr[] = ".app/Contents/";
-
-  // First, try based on the current shlib's location
-
-  {
-    if (FileSpec fspec = HostInfo::GetShlibDir()) {
-      std::string path_to_shlib = fspec.GetPath();
-      size_t pos = path_to_shlib.rfind(substr);
-      if (pos != std::string::npos) {
-        path_to_shlib.erase(pos + strlen(substr));
-        return path_to_shlib;
-      }
-    }
-  }
-
-  // Fall back to using xcrun
-
-  {
-    int status = 0;
-    int signo = 0;
-    std::string output;
-    const char *command = "xcrun -sdk macosx --show-sdk-path";
-    lldb_private::Status error = Host::RunShellCommand(
-        command, // shell command to run
-        NULL,    // current working directory
-        &status, // Put the exit status of the process in here
-        &signo,  // Put the signal that caused the process to exit in here
-        &output, // Get the output from the command and place it in this string
-        std::chrono::seconds(3));      // Timeout in seconds to wait for shell program to finish
-    if (status == 0 && !output.empty()) {
-      size_t first_non_newline = output.find_last_not_of("\r\n");
-      if (first_non_newline != std::string::npos) {
-        output.erase(first_non_newline + 1);
-      }
-
-      size_t pos = output.rfind(substr);
-      if (pos != std::string::npos) {
-        output.erase(pos + strlen(substr));
-        return output;
-      }
-    }
-  }
-
-  return std::string();
-}
-
-static std::string GetCurrentToolchainPath() {
-  const char substr[] = ".xctoolchain/";
-
-  {
-    if (FileSpec fspec = HostInfo::GetShlibDir()) {
-      std::string path_to_shlib = fspec.GetPath();
-      size_t pos = path_to_shlib.rfind(substr);
-      if (pos != std::string::npos) {
-        path_to_shlib.erase(pos + strlen(substr));
-        return path_to_shlib;
-      }
-    }
-  }
-
-  return std::string();
-}
-
-static std::string GetCurrentCLToolsPath() {
-  const char substr[] = "/CommandLineTools/";
-
-  {
-    if (FileSpec fspec = HostInfo::GetShlibDir()) {
-      std::string path_to_shlib = fspec.GetPath();
-      size_t pos = path_to_shlib.rfind(substr);
-      if (pos != std::string::npos) {
-        path_to_shlib.erase(pos + strlen(substr));
-        return path_to_shlib;
-      }
-    }
-  }
-
-  return std::string();
-}
-
 namespace {
 
 enum class SDKType {
@@ -1926,6 +2106,8 @@ struct SDKEnumeratorInfo {
   uint32_t least_minor;
 };
 
+} // anonymous namespace
+  
 static bool SDKSupportsSwift(const FileSpec &sdk_path, SDKType desired_type) {
   ConstString last_path_component = sdk_path.GetLastPathComponent();
 
@@ -2178,207 +2360,6 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
   return ConstString();
 }
 
-static ConstString GetResourceDir() {
-  static ConstString g_cached_resource_dir;
-  static std::once_flag g_once_flag;
-  std::call_once(g_once_flag, []() {
-    Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
-
-    // First, check if there's something in our bundle
-    {
-      FileSpec swift_dir_spec;
-      if (FileSpec swift_dir_spec = HostInfo::GetSwiftDir()) {
-        if (log)
-          log->Printf("%s: trying ePathTypeSwiftDir: %s", __FUNCTION__,
-                      swift_dir_spec.GetCString());
-        // We can't just check for the Swift directory, because that
-        // always exists.  We have to look for "clang" inside that.
-        FileSpec swift_clang_dir_spec = swift_dir_spec;
-        swift_clang_dir_spec.AppendPathComponent("clang");
-
-        if (IsDirectory(swift_clang_dir_spec)) {
-          g_cached_resource_dir = ConstString(swift_dir_spec.GetPath());
-          if (log)
-            log->Printf("%s: found Swift resource dir via "
-                        "ePathTypeSwiftDir': %s",
-                        __FUNCTION__, g_cached_resource_dir.AsCString());
-          return;
-        }
-      }
-    }
-
-    // Nothing in our bundle. Are we in a toolchain that has its own Swift
-    // compiler resource dir?
-
-    {
-      std::string xcode_toolchain_path = GetCurrentToolchainPath();
-      if (log)
-        log->Printf("%s: trying toolchain path: %s", __FUNCTION__,
-                    xcode_toolchain_path.c_str());
-
-      if (!xcode_toolchain_path.empty()) {
-        xcode_toolchain_path.append("usr/lib/swift");
-        if (log)
-          log->Printf("%s: trying toolchain-based lib path: %s", __FUNCTION__,
-                      xcode_toolchain_path.c_str());
-
-        if (IsDirectory(FileSpec(xcode_toolchain_path, false))) {
-          g_cached_resource_dir = ConstString(xcode_toolchain_path);
-          if (log)
-            log->Printf("%s: found Swift resource dir via "
-                        "toolchain path + 'usr/lib/swift': %s",
-                        __FUNCTION__, g_cached_resource_dir.AsCString());
-          return;
-        }
-      }
-    }
-
-    // We're not in a toolchain that has one. Use the Xcode default toolchain.
-
-    {
-      std::string xcode_contents_path = GetXcodeContentsPath();
-      if (log)
-        log->Printf("%s: trying Xcode path: %s", __FUNCTION__,
-                    xcode_contents_path.c_str());
-
-      if (!xcode_contents_path.empty()) {
-        xcode_contents_path.append("Developer/Toolchains/"
-                                   "XcodeDefault.xctoolchain"
-                                   "/usr/lib/swift");
-        if (log)
-          log->Printf("%s: trying Xcode-based lib path: %s", __FUNCTION__,
-                      xcode_contents_path.c_str());
-
-        if (IsDirectory(FileSpec(xcode_contents_path, false))) {
-          g_cached_resource_dir = ConstString(xcode_contents_path);
-          if (log)
-            log->Printf("%s: found Swift resource dir via "
-                        "Xcode contents path + default toolchain "
-                        "relative dir: %s",
-                        __FUNCTION__, g_cached_resource_dir.AsCString());
-          return;
-        }
-      }
-    }
-
-    // We're not in Xcode. We might be in the command-line tools.
-
-    {
-      std::string cl_tools_path = GetCurrentCLToolsPath();
-      if (log)
-        log->Printf("%s: trying command-line tools path: %s", __FUNCTION__,
-                    cl_tools_path.c_str());
-
-      if (!cl_tools_path.empty()) {
-        cl_tools_path.append("usr/lib/swift");
-        if (log)
-          log->Printf("%s: trying command-line tools-based lib "
-                      "path: %s",
-                      __FUNCTION__, cl_tools_path.c_str());
-
-        if (IsDirectory(FileSpec(cl_tools_path, false))) {
-          g_cached_resource_dir = ConstString(cl_tools_path);
-          if (log)
-            log->Printf("%s: found Swift resource dir via "
-                        "command-line tools path + "
-                        "usr/lib/swift: %s",
-                        __FUNCTION__, g_cached_resource_dir.AsCString());
-          return;
-        }
-      }
-    }
-
-    // We might be in the build-dir configuration for a build-script-driven
-    // LLDB build, which has the Swift build dir as a sibling directory
-    // to the lldb build dir.  This looks much different than the install-
-    // dir layout that the previous checks would try.
-    {
-      if (FileSpec faux_swift_dir_spec = HostInfo::GetSwiftDir()) {
-// We can't use a C++11 stdlib regex feature here because it
-// doesn't work on Ubuntu 14.04 x86_64.  Once we don't care
-// about supporting that anymore, let's pull the code below
-// back in since it is a simpler implementation using
-// std::regex.
-#if 0
-                // Let's try to regex this.
-                // We're looking for /some/path/lldb-{os}-{arch}, and want to
-                // build the following:
-                //    /some/path/swift-{os}-{arch}/lib/swift/{os}/{arch}
-                // In a match, these are the following assignments for
-                // backrefs:
-                //   $1 - first part of path before swift build dir
-                //   $2 - the host OS path separator character
-                //   $3 - all the stuff that should come after changing
-                //        lldb to swift for the lib dir.
-                auto match_regex =
-                    std::regex("^(.+([/\\\\]))lldb-(.+)$");
-                const std::string replace_format = "$1swift-$3";
-                const std::string faux_swift_dir =
-                    faux_swift_dir_spec.GetCString();
-                const std::string build_tree_resource_dir =
-                    std::regex_replace(faux_swift_dir, match_regex,
-                                       replace_format);
-#else
-                std::string build_tree_resource_dir;
-                const std::string faux_swift_dir =
-                    faux_swift_dir_spec.GetCString();
-
-                // Find something that matches lldb- (particularly,
-                // the last one).
-                const std::string lldb_dash("lldb-");
-                auto lldb_pos = faux_swift_dir.rfind(lldb_dash);
-                if ((lldb_pos != std::string::npos) &&
-                    (lldb_pos > 0) &&
-                    ((faux_swift_dir[lldb_pos - 1] == '\\') ||
-                     (faux_swift_dir[lldb_pos - 1] == '/')))
-                {
-                    // We found something that matches ^.+[/\\]lldb-.+$
-                    std::ostringstream stream;
-                    // Take everything before lldb- (the path leading up to
-                    // the lldb dir).
-                    stream << faux_swift_dir.substr(0, lldb_pos);
-
-                    // replace lldb- with swift-.
-                    stream << "swift-";
-
-                    // and now tack on the same components from after
-                    // the lldb- part.
-                    stream << faux_swift_dir.substr(lldb_pos +
-                                                    lldb_dash.length());
-                    const std::string build_tree_resource_dir = stream.str();
-                    if (log)
-                        log->Printf("%s: trying ePathTypeSwiftDir regex-based "
-                                    "build dir: %s",
-                                    __FUNCTION__,
-                                    build_tree_resource_dir.c_str());
-                    FileSpec swift_resource_dir_spec(
-                        build_tree_resource_dir.c_str(), false);
-                    if (IsDirectory(swift_resource_dir_spec))
-                    {
-                        g_cached_resource_dir =
-                            ConstString(swift_resource_dir_spec.GetPath());
-                        if (log)
-                            log->Printf("%s: found Swift resource dir via "
-                                        "ePathTypeSwiftDir + inferred "
-                                        "build-tree dir: %s", __FUNCTION__,
-                                        g_cached_resource_dir.AsCString());
-                        return;
-                    }
-                }
-#endif
-      }
-    }
-
-    // We failed to find a reasonable Swift resource dir.
-    if (log)
-      log->Printf("%s: failed to find a Swift resource dir", __FUNCTION__);
-  });
-
-  return g_cached_resource_dir;
-}
-
-} // anonymous namespace
-
 swift::CompilerInvocation &SwiftASTContext::GetCompilerInvocation() {
   return *m_compiler_invocation_ap;
 }
@@ -2398,15 +2379,6 @@ swift::DiagnosticEngine &SwiftASTContext::GetDiagnosticEngine() {
     m_diagnostic_engine_ap.reset(
         new swift::DiagnosticEngine(GetSourceManager()));
   return *m_diagnostic_engine_ap;
-}
-
-// This code comes from CompilerInvocation.cpp (setRuntimeResourcePath)
-
-static void ConfigureResourceDirs(swift::CompilerInvocation &invocation,
-                                  FileSpec resource_dir, llvm::Triple triple) {
-  // Make sure the triple is right:
-  invocation.setTargetTriple(triple.str());
-  invocation.setRuntimeResourcePath(resource_dir.GetPath().c_str());
 }
 
 swift::SILOptions &SwiftASTContext::GetSILOptions() {
@@ -2456,8 +2428,6 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
     m_initialized_search_path_options = true;
 
     bool set_sdk = false;
-    bool set_resource_dir = false;
-
     if (!search_path_opts.SDKPath.empty()) {
       FileSpec provided_sdk_path(search_path_opts.SDKPath, false);
       if (provided_sdk_path.Exists()) {
@@ -2478,15 +2448,8 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
     }
 
     llvm::Triple triple(GetTriple());
-
-    if (!m_resource_dir.empty()) {
-      FileSpec resource_dir(m_resource_dir.c_str(), false);
-
-      if (resource_dir.Exists()) {
-        ConfigureResourceDirs(GetCompilerInvocation(), resource_dir, triple);
-        set_resource_dir = true;
-      }
-    }
+    FileSpec resource_dir(GetResourceDir(), false);
+    ConfigureResourceDirs(GetCompilerInvocation(), resource_dir, triple);
 
     auto is_simulator = [&]() -> bool {
       return triple.getEnvironment() == llvm::Triple::Simulator ||
@@ -2522,12 +2485,6 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
         // Explicitly leave the SDKPath blank on other platforms.
         break;
       }
-    }
-
-    if (!set_resource_dir) {
-      FileSpec resource_dir(::GetResourceDir().AsCString(""), false);
-      if (resource_dir.Exists())
-        ConfigureResourceDirs(GetCompilerInvocation(), resource_dir, triple);
     }
   }
 
