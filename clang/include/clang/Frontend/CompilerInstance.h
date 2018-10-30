@@ -83,7 +83,7 @@ class CompilerInstance : public ModuleLoader {
   IntrusiveRefCntPtr<TargetInfo> AuxTarget;
 
   /// The virtual file system.
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> VirtualFileSystem;
+  IntrusiveRefCntPtr<vfs::FileSystem> VirtualFileSystem;
 
   /// The file manager.
   IntrusiveRefCntPtr<FileManager> FileMgr;
@@ -397,7 +397,7 @@ public:
 
   bool hasVirtualFileSystem() const { return VirtualFileSystem != nullptr; }
 
-  llvm::vfs::FileSystem &getVirtualFileSystem() const {
+  vfs::FileSystem &getVirtualFileSystem() const {
     assert(hasVirtualFileSystem() &&
            "Compiler instance has no virtual file system");
     return *VirtualFileSystem;
@@ -407,7 +407,7 @@ public:
   ///
   /// \note Most clients should use setFileManager, which will implicitly reset
   /// the virtual file system to the one contained in the file manager.
-  void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
+  void setVirtualFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS) {
     VirtualFileSystem = std::move(FS);
   }
 

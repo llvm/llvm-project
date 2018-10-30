@@ -36,12 +36,6 @@ class ArgList;
 
 } // namespace opt
 
-namespace vfs {
-
-class FileSystem;
-
-} // namespace vfs
-
 } // namespace llvm
 
 namespace clang {
@@ -230,13 +224,20 @@ public:
   /// @}
 };
 
-IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+namespace vfs {
+
+class FileSystem;
+
+} // namespace vfs
+
+IntrusiveRefCntPtr<vfs::FileSystem>
 createVFSFromCompilerInvocation(const CompilerInvocation &CI,
                                 DiagnosticsEngine &Diags);
 
-IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
-    const CompilerInvocation &CI, DiagnosticsEngine &Diags,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
+IntrusiveRefCntPtr<vfs::FileSystem>
+createVFSFromCompilerInvocation(const CompilerInvocation &CI,
+                                DiagnosticsEngine &Diags,
+                                IntrusiveRefCntPtr<vfs::FileSystem> BaseFS);
 
 } // namespace clang
 

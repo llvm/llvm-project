@@ -8,8 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Hexagon.h"
-#include "CommonArgs.h"
 #include "InputInfo.h"
+#include "CommonArgs.h"
+#include "clang/Basic/VirtualFileSystem.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -18,7 +19,6 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;

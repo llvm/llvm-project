@@ -2263,8 +2263,8 @@ SourceManagerForFile::SourceManagerForFile(StringRef FileName,
                                            StringRef Content) {
   // This is referenced by `FileMgr` and will be released by `FileMgr` when it
   // is deleted.
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
+      new vfs::InMemoryFileSystem);
   InMemoryFileSystem->addFile(
       FileName, 0,
       llvm::MemoryBuffer::getMemBuffer(Content, FileName,

@@ -10,7 +10,7 @@
 #ifndef LLVM_CLANG_DRIVER_DISTRO_H
 #define LLVM_CLANG_DRIVER_DISTRO_H
 
-#include "llvm/Support/VirtualFileSystem.h"
+#include "clang/Basic/VirtualFileSystem.h"
 
 namespace clang {
 namespace driver {
@@ -80,7 +80,7 @@ public:
   Distro(DistroType D) : DistroVal(D) {}
 
   /// Detects the distribution using specified VFS.
-  explicit Distro(llvm::vfs::FileSystem &VFS);
+  explicit Distro(clang::vfs::FileSystem& VFS);
 
   bool operator==(const Distro &Other) const {
     return DistroVal == Other.DistroVal;

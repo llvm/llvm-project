@@ -36,10 +36,12 @@ class SimpleFormatContext {
 public:
   SimpleFormatContext(LangOptions Options)
       : DiagOpts(new DiagnosticOptions()),
-        Diagnostics(new DiagnosticsEngine(new DiagnosticIDs, DiagOpts.get())),
-        InMemoryFileSystem(new llvm::vfs::InMemoryFileSystem),
+        Diagnostics(new DiagnosticsEngine(new DiagnosticIDs,
+                                          DiagOpts.get())),
+        InMemoryFileSystem(new vfs::InMemoryFileSystem),
         Files(FileSystemOptions(), InMemoryFileSystem),
-        Sources(*Diagnostics, Files), Rewrite(Sources, Options) {
+        Sources(*Diagnostics, Files),
+        Rewrite(Sources, Options) {
     Diagnostics->setClient(new IgnoringDiagConsumer, true);
   }
 
@@ -61,7 +63,7 @@ public:
 
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics;
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem;
+  IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem;
   FileManager Files;
   SourceManager Sources;
   Rewriter Rewrite;
