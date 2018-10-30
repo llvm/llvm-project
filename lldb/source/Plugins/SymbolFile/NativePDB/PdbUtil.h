@@ -59,6 +59,8 @@ bool IsForwardRefUdt(llvm::codeview::CVType cvt);
 
 lldb::AccessType TranslateMemberAccess(llvm::codeview::MemberAccess access);
 llvm::codeview::TypeIndex GetFieldListIndex(llvm::codeview::CVType cvt);
+llvm::codeview::TypeIndex
+LookThroughModifierRecord(llvm::codeview::CVType modifier);
 
 llvm::StringRef DropNameScope(llvm::StringRef name);
 

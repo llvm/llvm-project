@@ -170,6 +170,8 @@ private:
                              const llvm::codeview::EnumRecord &er);
   lldb::TypeSP CreateTagType(PdbSymUid type_uid,
                              const llvm::codeview::UnionRecord &ur);
+  lldb::TypeSP CreateArrayType(PdbSymUid type_uid,
+                               const llvm::codeview::ArrayRecord &ar);
   lldb::TypeSP
   CreateClassStructUnion(PdbSymUid type_uid, llvm::StringRef name, size_t size,
                          clang::TagTypeKind ttk,

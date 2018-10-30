@@ -849,7 +849,8 @@ bool PPC64::adjustPrologueForCrossSplitStack(uint8_t *Loc, uint8_t *End,
   int32_t StackFrameSize = (HiImm * 65536) + LoImm;
   // Check that the adjusted size doesn't overflow what we can represent with 2
   // instructions.
-  if (StackFrameSize < -2147483648 + Config->SplitStackAdjustSize) {
+  if (StackFrameSize <
+      std::numeric_limits<int32_t>::min() + Config->SplitStackAdjustSize) {
     error(getErrorLocation(Loc) + "split-stack prologue adjustment overflows");
     return false;
   }
