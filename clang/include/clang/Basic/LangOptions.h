@@ -298,7 +298,7 @@ public:
 /// Floating point control options
 class FPOptions {
 public:
-  FPOptions() : fp_contract(LangOptions::FPC_Off), 
+  FPOptions() : fp_contract(LangOptions::FPC_Off),
                 fenv_access(LangOptions::FEA_Off) {}
 
   // Used for serializing.
@@ -344,7 +344,7 @@ public:
   unsigned getInt() const { return fp_contract | (fenv_access << 2); }
 
 private:
-  /// Adjust BinaryOperator::FPFeatures to match the total bit-field size 
+  /// Adjust BinaryOperator::FPFeatures to match the total bit-field size
   /// of these two.
   unsigned fp_contract : 2;
   unsigned fenv_access : 1;

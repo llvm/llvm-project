@@ -913,33 +913,69 @@ void ForStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
                                        VarRange.getEnd());
 }
 
-SwitchStmt::SwitchStmt(const ASTContext &C, Stmt *init, VarDecl *Var,
-                       Expr *cond)
-    : Stmt(SwitchStmtClass), FirstCase(nullptr, false) {
-  setConditionVariable(C, Var);
-  SubExprs[INIT] = init;
-  SubExprs[COND] = cond;
-  SubExprs[BODY] = nullptr;
-  SwitchStmtBits.SwitchLoc = SourceLocation{};
+SwitchStmt::SwitchStmt(const ASTContext &Ctx, Stmt *Init, VarDecl *Var,
+                       Expr *Cond)
+    : Stmt(SwitchStmtClass), FirstCase(nullptr) {
+  bool HasInit = Init != nullptr;
+  bool HasVar = Var != nullptr;
+  SwitchStmtBits.HasInit = HasInit;
+  SwitchStmtBits.HasVar = HasVar;
+  SwitchStmtBits.AllEnumCasesCovered = false;
+
+  setCond(Cond);
+  setBody(nullptr);
+  if (HasInit)
+    setInit(Init);
+  if (HasVar)
+    setConditionVariable(Ctx, Var);
+
+  setSwitchLoc(SourceLocation{});
 }
 
-VarDecl *SwitchStmt::getConditionVariable() const {
-  if (!SubExprs[VAR])
-    return nullptr;
+SwitchStmt::SwitchStmt(EmptyShell Empty, bool HasInit, bool HasVar)
+    : Stmt(SwitchStmtClass, Empty) {
+  SwitchStmtBits.HasInit = HasInit;
+  SwitchStmtBits.HasVar = HasVar;
+  SwitchStmtBits.AllEnumCasesCovered = false;
+}
 
-  auto *DS = cast<DeclStmt>(SubExprs[VAR]);
+SwitchStmt *SwitchStmt::Create(const ASTContext &Ctx, Stmt *Init, VarDecl *Var,
+                               Expr *Cond) {
+  bool HasInit = Init != nullptr;
+  bool HasVar = Var != nullptr;
+  void *Mem = Ctx.Allocate(
+      totalSizeToAlloc<Stmt *>(NumMandatoryStmtPtr + HasInit + HasVar),
+      alignof(SwitchStmt));
+  return new (Mem) SwitchStmt(Ctx, Init, Var, Cond);
+}
+
+SwitchStmt *SwitchStmt::CreateEmpty(const ASTContext &Ctx, bool HasInit,
+                                    bool HasVar) {
+  void *Mem = Ctx.Allocate(
+      totalSizeToAlloc<Stmt *>(NumMandatoryStmtPtr + HasInit + HasVar),
+      alignof(SwitchStmt));
+  return new (Mem) SwitchStmt(EmptyShell(), HasInit, HasVar);
+}
+
+VarDecl *SwitchStmt::getConditionVariable() {
+  auto *DS = getConditionVariableDeclStmt();
+  if (!DS)
+    return nullptr;
   return cast<VarDecl>(DS->getSingleDecl());
 }
 
-void SwitchStmt::setConditionVariable(const ASTContext &C, VarDecl *V) {
+void SwitchStmt::setConditionVariable(const ASTContext &Ctx, VarDecl *V) {
+  assert(hasVarStorage() &&
+         "This switch statement has no storage for a condition variable!");
+
   if (!V) {
-    SubExprs[VAR] = nullptr;
+    getTrailingObjects<Stmt *>()[varOffset()] = nullptr;
     return;
   }
 
   SourceRange VarRange = V->getSourceRange();
-  SubExprs[VAR] = new (C) DeclStmt(DeclGroupRef(V), VarRange.getBegin(),
-                                   VarRange.getEnd());
+  getTrailingObjects<Stmt *>()[varOffset()] = new (Ctx)
+      DeclStmt(DeclGroupRef(V), VarRange.getBegin(), VarRange.getEnd());
 }
 
 WhileStmt::WhileStmt(const ASTContext &C, VarDecl *Var, Expr *cond, Stmt *body,

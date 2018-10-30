@@ -1658,13 +1658,53 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
     auto ToDCOrErr = Importer.ImportContext(FromDC);
     return ToDCOrErr.takeError();
   }
-  llvm::SmallVector<Decl *, 8> ImportedDecls;
+
+  const auto *FromRD = dyn_cast<RecordDecl>(FromDC);
   for (auto *From : FromDC->decls()) {
     ExpectedDecl ImportedOrErr = import(From);
-    if (!ImportedOrErr)
+    if (!ImportedOrErr) {
+      // For RecordDecls, failed import of a field will break the layout of the
+      // structure. Handle it as an error.
+      if (FromRD)
+        return ImportedOrErr.takeError();
       // Ignore the error, continue with next Decl.
       // FIXME: Handle this case somehow better.
-      consumeError(ImportedOrErr.takeError());
+      else
+        consumeError(ImportedOrErr.takeError());
+    }
+  }
+
+  // Reorder declarations in RecordDecls because they may have another
+  // order. Keeping field order is vitable because it determines structure
+  // layout.
+  // FIXME: This is an ugly fix. Unfortunately, I cannot come with better
+  // solution for this issue. We cannot defer expression import here because
+  // type import can depend on them.
+  if (!FromRD)
+    return Error::success();
+
+  auto ImportedDC = import(cast<Decl>(FromDC));
+  assert(ImportedDC);
+  auto *ToRD = cast<RecordDecl>(*ImportedDC);
+
+  for (auto *D : FromRD->decls()) {
+    if (isa<FieldDecl>(D) || isa<FriendDecl>(D)) {
+      Decl *ToD = Importer.GetAlreadyImportedOrNull(D);
+      assert(ToRD == ToD->getDeclContext() && ToRD->containsDecl(ToD));
+      ToRD->removeDecl(ToD);
+    }
+  }
+
+  assert(ToRD->field_empty());
+
+  for (auto *D : FromRD->decls()) {
+    if (isa<FieldDecl>(D) || isa<FriendDecl>(D)) {
+      Decl *ToD = Importer.GetAlreadyImportedOrNull(D);
+      assert(ToRD == ToD->getDeclContext());
+      assert(ToRD == ToD->getLexicalDeclContext());
+      assert(!ToRD->containsDecl(ToD));
+      ToRD->addDeclInternal(ToD);
+    }
   }
 
   return Error::success();
@@ -3258,15 +3298,15 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     DC->makeDeclVisibleInContext(ToFunction);
   }
 
+  if (auto *FromCXXMethod = dyn_cast<CXXMethodDecl>(D))
+    ImportOverrides(cast<CXXMethodDecl>(ToFunction), FromCXXMethod);
+
   // Import the rest of the chain. I.e. import all subsequent declarations.
   for (++RedeclIt; RedeclIt != Redecls.end(); ++RedeclIt) {
     ExpectedDecl ToRedeclOrErr = import(*RedeclIt);
     if (!ToRedeclOrErr)
       return ToRedeclOrErr.takeError();
   }
-
-  if (auto *FromCXXMethod = dyn_cast<CXXMethodDecl>(D))
-    ImportOverrides(cast<CXXMethodDecl>(ToFunction), FromCXXMethod);
 
   return ToFunction;
 }
@@ -5790,8 +5830,8 @@ ExpectedStmt ASTNodeImporter::VisitSwitchStmt(SwitchStmt *S) {
   SourceLocation ToSwitchLoc;
   std::tie(ToInit, ToConditionVariable, ToCond, ToBody, ToSwitchLoc) = *Imp;
 
-  auto *ToStmt = new (Importer.getToContext()) SwitchStmt(
-      Importer.getToContext(), ToInit, ToConditionVariable, ToCond);
+  auto *ToStmt = SwitchStmt::Create(Importer.getToContext(), ToInit,
+                                    ToConditionVariable, ToCond);
   ToStmt->setBody(ToBody);
   ToStmt->setSwitchLoc(ToSwitchLoc);
 

@@ -623,8 +623,11 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   if (E->getType().getObjCLifetime() == Qualifiers::OCL_Weak)
     Cleanup.setExprNeedsCleanups(true);
 
-  ExprResult Res = ImplicitCastExpr::Create(Context, T, CK_LValueToRValue, E,
-                                            nullptr, VK_RValue);
+  // C++ [conv.lval]p3:
+  //   If T is cv std::nullptr_t, the result is a null pointer constant.
+  CastKind CK = T->isNullPtrType() ? CK_NullToPointer : CK_LValueToRValue;
+  ExprResult Res =
+      ImplicitCastExpr::Create(Context, T, CK, E, nullptr, VK_RValue);
 
   // C11 6.3.2.1p2:
   //   ... if the lvalue has atomic type, the value has the non-atomic version

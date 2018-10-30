@@ -177,6 +177,17 @@ protected:
 
     unsigned : NumStmtBits;
 
+    /// True if the SwitchStmt has storage for an init statement.
+    unsigned HasInit : 1;
+
+    /// True if the SwitchStmt has storage for a condition variable.
+    unsigned HasVar : 1;
+
+    /// If the SwitchStmt is a switch on an enum value, records whether all
+    /// the enum values were covered by CaseStmts.  The coverage information
+    /// value is meant to be a hint for possible clients.
+    unsigned AllEnumCasesCovered : 1;
+
     /// The location of the "switch".
     SourceLocation SwitchLoc;
   };
@@ -1427,21 +1438,102 @@ public:
 };
 
 /// SwitchStmt - This represents a 'switch' stmt.
-class SwitchStmt : public Stmt {
-  enum { INIT, VAR, COND, BODY, END_EXPR };
-  Stmt* SubExprs[END_EXPR];
+class SwitchStmt final : public Stmt,
+                         private llvm::TrailingObjects<SwitchStmt, Stmt *> {
+  friend TrailingObjects;
 
-  // This points to a linked list of case and default statements and, if the
-  // SwitchStmt is a switch on an enum value, records whether all the enum
-  // values were covered by CaseStmts.  The coverage information value is meant
-  // to be a hint for possible clients.
-  llvm::PointerIntPair<SwitchCase *, 1, bool> FirstCase;
+  /// Points to a linked list of case and default statements.
+  SwitchCase *FirstCase;
 
-public:
-  SwitchStmt(const ASTContext &C, Stmt *Init, VarDecl *Var, Expr *cond);
+  // SwitchStmt is followed by several trailing objects,
+  // some of which optional. Note that it would be more convenient to
+  // put the optional trailing objects at the end but this would change
+  // the order in children().
+  // The trailing objects are in order:
+  //
+  // * A "Stmt *" for the init statement.
+  //    Present if and only if hasInitStorage().
+  //
+  // * A "Stmt *" for the condition variable.
+  //    Present if and only if hasVarStorage(). This is in fact a "DeclStmt *".
+  //
+  // * A "Stmt *" for the condition.
+  //    Always present. This is in fact an "Expr *".
+  //
+  // * A "Stmt *" for the body.
+  //    Always present.
+  enum { InitOffset = 0, BodyOffsetFromCond = 1 };
+  enum { NumMandatoryStmtPtr = 2 };
+
+  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+    return NumMandatoryStmtPtr + hasInitStorage() + hasVarStorage();
+  }
+
+  unsigned initOffset() const { return InitOffset; }
+  unsigned varOffset() const { return InitOffset + hasInitStorage(); }
+  unsigned condOffset() const {
+    return InitOffset + hasInitStorage() + hasVarStorage();
+  }
+  unsigned bodyOffset() const { return condOffset() + BodyOffsetFromCond; }
+
+  /// Build a switch statement.
+  SwitchStmt(const ASTContext &Ctx, Stmt *Init, VarDecl *Var, Expr *Cond);
 
   /// Build a empty switch statement.
-  explicit SwitchStmt(EmptyShell Empty) : Stmt(SwitchStmtClass, Empty) {}
+  explicit SwitchStmt(EmptyShell Empty, bool HasInit, bool HasVar);
+
+public:
+  /// Create a switch statement.
+  static SwitchStmt *Create(const ASTContext &Ctx, Stmt *Init, VarDecl *Var,
+                            Expr *Cond);
+
+  /// Create an empty switch statement optionally with storage for
+  /// an init expression and a condition variable.
+  static SwitchStmt *CreateEmpty(const ASTContext &Ctx, bool HasInit,
+                                 bool HasVar);
+
+  /// True if this SwitchStmt has storage for an init statement.
+  bool hasInitStorage() const { return SwitchStmtBits.HasInit; }
+
+  /// True if this SwitchStmt has storage for a condition variable.
+  bool hasVarStorage() const { return SwitchStmtBits.HasVar; }
+
+  Expr *getCond() {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  const Expr *getCond() const {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  void setCond(Expr *Cond) {
+    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+  }
+
+  Stmt *getBody() { return getTrailingObjects<Stmt *>()[bodyOffset()]; }
+  const Stmt *getBody() const {
+    return getTrailingObjects<Stmt *>()[bodyOffset()];
+  }
+
+  void setBody(Stmt *Body) {
+    getTrailingObjects<Stmt *>()[bodyOffset()] = Body;
+  }
+
+  Stmt *getInit() {
+    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
+                            : nullptr;
+  }
+
+  const Stmt *getInit() const {
+    return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
+                            : nullptr;
+  }
+
+  void setInit(Stmt *Init) {
+    assert(hasInitStorage() &&
+           "This switch statement has no storage for an init statement!");
+    getTrailingObjects<Stmt *>()[initOffset()] = Init;
+  }
 
   /// Retrieve the variable declared in this "switch" statement, if any.
   ///
@@ -1452,64 +1544,69 @@ public:
   ///   // ...
   /// }
   /// \endcode
-  VarDecl *getConditionVariable() const;
-  void setConditionVariable(const ASTContext &C, VarDecl *V);
+  VarDecl *getConditionVariable();
+  const VarDecl *getConditionVariable() const {
+    return const_cast<SwitchStmt *>(this)->getConditionVariable();
+  }
+
+  /// Set the condition variable in this switch statement.
+  /// The switch statement must have storage for it.
+  void setConditionVariable(const ASTContext &Ctx, VarDecl *VD);
 
   /// If this SwitchStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
-  const DeclStmt *getConditionVariableDeclStmt() const {
-    return reinterpret_cast<DeclStmt*>(SubExprs[VAR]);
+  DeclStmt *getConditionVariableDeclStmt() {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
   }
 
-  Stmt *getInit() { return SubExprs[INIT]; }
-  const Stmt *getInit() const { return SubExprs[INIT]; }
-  void setInit(Stmt *S) { SubExprs[INIT] = S; }
-  const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
-  const Stmt *getBody() const { return SubExprs[BODY]; }
-  const SwitchCase *getSwitchCaseList() const { return FirstCase.getPointer(); }
+  const DeclStmt *getConditionVariableDeclStmt() const {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
+  }
 
-  Expr *getCond() { return reinterpret_cast<Expr*>(SubExprs[COND]);}
-  void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt *>(E); }
-  Stmt *getBody() { return SubExprs[BODY]; }
-  void setBody(Stmt *S) { SubExprs[BODY] = S; }
-  SwitchCase *getSwitchCaseList() { return FirstCase.getPointer(); }
-
-  /// Set the case list for this switch statement.
-  void setSwitchCaseList(SwitchCase *SC) { FirstCase.setPointer(SC); }
+  SwitchCase *getSwitchCaseList() { return FirstCase; }
+  const SwitchCase *getSwitchCaseList() const { return FirstCase; }
+  void setSwitchCaseList(SwitchCase *SC) { FirstCase = SC; }
 
   SourceLocation getSwitchLoc() const { return SwitchStmtBits.SwitchLoc; }
   void setSwitchLoc(SourceLocation L) { SwitchStmtBits.SwitchLoc = L; }
 
   void setBody(Stmt *S, SourceLocation SL) {
-    SubExprs[BODY] = S;
-    SwitchStmtBits.SwitchLoc = SL;
+    setBody(S);
+    setSwitchLoc(SL);
   }
 
   void addSwitchCase(SwitchCase *SC) {
-    assert(!SC->getNextSwitchCase()
-           && "case/default already added to a switch");
-    SC->setNextSwitchCase(FirstCase.getPointer());
-    FirstCase.setPointer(SC);
+    assert(!SC->getNextSwitchCase() &&
+           "case/default already added to a switch");
+    SC->setNextSwitchCase(FirstCase);
+    FirstCase = SC;
   }
 
   /// Set a flag in the SwitchStmt indicating that if the 'switch (X)' is a
   /// switch over an enum value then all cases have been explicitly covered.
-  void setAllEnumCasesCovered() { FirstCase.setInt(true); }
+  void setAllEnumCasesCovered() { SwitchStmtBits.AllEnumCasesCovered = true; }
 
   /// Returns true if the SwitchStmt is a switch of an enum value and all cases
   /// have been explicitly covered.
-  bool isAllEnumCasesCovered() const { return FirstCase.getInt(); }
+  bool isAllEnumCasesCovered() const {
+    return SwitchStmtBits.AllEnumCasesCovered;
+  }
 
   SourceLocation getBeginLoc() const { return getSwitchLoc(); }
-
-  SourceLocation getEndLoc() const {
-    return SubExprs[BODY] ? SubExprs[BODY]->getEndLoc()
-                          : SubExprs[COND]->getEndLoc();
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getBody() ? getBody()->getEndLoc()
+                     : reinterpret_cast<const Stmt *>(getCond())->getEndLoc();
   }
 
   // Iterators
   child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
+    return child_range(getTrailingObjects<Stmt *>(),
+                       getTrailingObjects<Stmt *>() +
+                           numTrailingObjects(OverloadToken<Stmt *>()));
   }
 
   static bool classof(const Stmt *T) {

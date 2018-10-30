@@ -512,6 +512,7 @@ namespace  {
     void VisitDeclStmt(const DeclStmt *Node);
     void VisitAttributedStmt(const AttributedStmt *Node);
     void VisitIfStmt(const IfStmt *Node);
+    void VisitSwitchStmt(const SwitchStmt *Node);
     void VisitLabelStmt(const LabelStmt *Node);
     void VisitGotoStmt(const GotoStmt *Node);
     void VisitCXXCatchStmt(const CXXCatchStmt *Node);
@@ -2032,6 +2033,14 @@ void ASTDumper::VisitIfStmt(const IfStmt *Node) {
     OS << " has_var";
   if (Node->hasElseStorage())
     OS << " has_else";
+}
+
+void ASTDumper::VisitSwitchStmt(const SwitchStmt *Node) {
+  VisitStmt(Node);
+  if (Node->hasInitStorage())
+    OS << " has_init";
+  if (Node->hasVarStorage())
+    OS << " has_var";
 }
 
 void ASTDumper::VisitLabelStmt(const LabelStmt *Node) {

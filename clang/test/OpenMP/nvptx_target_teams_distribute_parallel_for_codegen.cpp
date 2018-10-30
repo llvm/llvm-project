@@ -112,13 +112,89 @@ int bar(int n){
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
+// Distribute with collapse(2)
 // CHECK: define {{.*}}void {{@__omp_offloading_.+}}({{.+}}, i{{32|64}} [[F_IN:%.+]])
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: [[OMP_IV:%.+]] = alloca
+// CHECK: alloca
+// CHECK: alloca
+// CHECK: [[OMP_LB:%.+]] = alloca
+// CHECK: [[OMP_UB:%.+]] = alloca
+// CHECK: [[OMP_ST:%.+]] = alloca
 // CHECK: store {{.+}} [[F_IN]], {{.+}}* {{.+}},
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 0)
 // CHECK: store {{.+}} 99, {{.+}}* [[COMB_UB:%.+]], align
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91, {{.+}}, {{.+}}, {{.+}}* [[COMB_UB]],
-// CHECK: {{call|invoke}} void [[OUTL4:@.+]](
+
+// check EUB for distribute
+// CHECK-DAG: [[OMP_UB_VAL_1:%.+]] = load{{.+}} [[OMP_UB]],
+// CHECK-DAG: [[CMP_UB_NUM_IT:%.+]] = icmp sgt {{.+}}  [[OMP_UB_VAL_1]], 99
+// CHECK: br {{.+}} [[CMP_UB_NUM_IT]], label %[[EUB_TRUE:.+]], label %[[EUB_FALSE:.+]]
+// CHECK-DAG: [[EUB_TRUE]]:
+// CHECK: br label %[[EUB_END:.+]]
+// CHECK-DAG: [[EUB_FALSE]]:
+// CHECK: [[OMP_UB_VAL2:%.+]] = load{{.+}} [[OMP_UB]],
+// CHECK: br label %[[EUB_END]]
+// CHECK-DAG: [[EUB_END]]:
+// CHECK-DAG: [[EUB_RES:%.+]] = phi{{.+}} [ 99, %[[EUB_TRUE]] ], [ [[OMP_UB_VAL2]], %[[EUB_FALSE]] ]
+// CHECK: store{{.+}} [[EUB_RES]], {{.+}}* [[OMP_UB]],
+
+// initialize omp.iv
+// CHECK: [[OMP_LB_VAL_1:%.+]] = load{{.+}}, {{.+}}* [[OMP_LB]],
+// CHECK: store {{.+}} [[OMP_LB_VAL_1]], {{.+}}* [[OMP_IV]],
+
+// check exit condition
+// CHECK-DAG: [[OMP_IV_VAL_1:%.+]] = load {{.+}} [[OMP_IV]],
+// CHECK: [[CMP_IV_UB:%.+]] = icmp slt {{.+}} [[OMP_IV_VAL_1]], 100
+// CHECK: br {{.+}} [[CMP_IV_UB]], label %[[DIST_INNER_LOOP_BODY:.+]], label %[[DIST_INNER_LOOP_END:.+]]
+
+// check that PrevLB and PrevUB are passed to the 'for'
+// CHECK: [[DIST_INNER_LOOP_BODY]]:
+// CHECK-DAG: [[OMP_PREV_LB:%.+]] = load {{.+}}, {{.+}} [[OMP_LB]],
+// CHECK-64-DAG: [[OMP_PREV_LB_EXT:%.+]] = zext {{.+}} [[OMP_PREV_LB]] to {{.+}}
+// CHECK-DAG: [[OMP_PREV_UB:%.+]] = load {{.+}}, {{.+}} [[OMP_UB]],
+// CHECK-64-DAG: [[OMP_PREV_UB_EXT:%.+]] = zext {{.+}} [[OMP_PREV_UB]] to {{.+}}
+
+// check that distlb and distub are properly passed to the outlined function
+// CHECK-32: {{call|invoke}} void [[OUTL4:@.+]]({{.*}} i32 [[OMP_PREV_LB]], i32 [[OMP_PREV_UB]]
+// CHECK-64: {{call|invoke}} void [[OUTL4:@.+]]({{.*}} i64 [[OMP_PREV_LB_EXT]], i64 [[OMP_PREV_UB_EXT]]
+
+// check DistInc
+// CHECK-DAG: [[OMP_IV_VAL_3:%.+]] = load {{.+}}, {{.+}}* [[OMP_IV]],
+// CHECK-DAG: [[OMP_ST_VAL_1:%.+]] = load {{.+}}, {{.+}}* [[OMP_ST]],
+// CHECK: [[OMP_IV_INC:%.+]] = add{{.+}} [[OMP_IV_VAL_3]], [[OMP_ST_VAL_1]]
+// CHECK: store{{.+}} [[OMP_IV_INC]], {{.+}}* [[OMP_IV]],
+// CHECK-DAG: [[OMP_LB_VAL_2:%.+]] = load{{.+}}, {{.+}} [[OMP_LB]],
+// CHECK-DAG: [[OMP_ST_VAL_2:%.+]] = load{{.+}}, {{.+}} [[OMP_ST]],
+// CHECK-DAG: [[OMP_LB_NEXT:%.+]] = add{{.+}} [[OMP_LB_VAL_2]], [[OMP_ST_VAL_2]]
+// CHECK: store{{.+}} [[OMP_LB_NEXT]], {{.+}}* [[OMP_LB]],
+// CHECK-DAG: [[OMP_UB_VAL_5:%.+]] = load{{.+}}, {{.+}} [[OMP_UB]],
+// CHECK-DAG: [[OMP_ST_VAL_3:%.+]] = load{{.+}}, {{.+}} [[OMP_ST]],
+// CHECK-DAG: [[OMP_UB_NEXT:%.+]] = add{{.+}} [[OMP_UB_VAL_5]], [[OMP_ST_VAL_3]]
+// CHECK: store{{.+}} [[OMP_UB_NEXT]], {{.+}}* [[OMP_UB]],
+
+// Update UB
+// CHECK-DAG: [[OMP_UB_VAL_6:%.+]] = load{{.+}}, {{.+}} [[OMP_UB]],
+// CHECK-DAG: [[CMP_UB_NUM_IT_1:%.+]] = icmp sgt {{.+}}[[OMP_UB_VAL_6]], 99
+// CHECK: br {{.+}} [[CMP_UB_NUM_IT_1]], label %[[EUB_TRUE_1:.+]], label %[[EUB_FALSE_1:.+]]
+// CHECK-DAG: [[EUB_TRUE_1]]:
+// CHECK: br label %[[EUB_END_1:.+]]
+// CHECK-DAG: [[EUB_FALSE_1]]:
+// CHECK: [[OMP_UB_VAL3:%.+]] = load{{.+}} [[OMP_UB]],
+// CHECK: br label %[[EUB_END_1]]
+// CHECK-DAG: [[EUB_END_1]]:
+// CHECK-DAG: [[EUB_RES_1:%.+]] = phi{{.+}} [ 99, %[[EUB_TRUE_1]] ], [ [[OMP_UB_VAL3]], %[[EUB_FALSE_1]] ]
+// CHECK: store{{.+}} [[EUB_RES_1]], {{.+}}* [[OMP_UB]],
+
+// Store LB in IV
+// CHECK-DAG: [[OMP_LB_VAL_3:%.+]] = load{{.+}}, {{.+}} [[OMP_LB]],
+// CHECK: store{{.+}} [[OMP_LB_VAL_3]], {{.+}}* [[OMP_IV]],
+
+// CHECK: [[DIST_INNER_LOOP_END]]:
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: call void @__kmpc_spmd_kernel_deinit()
 // CHECK: ret void

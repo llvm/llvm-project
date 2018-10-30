@@ -159,12 +159,22 @@ void ASTStmtWriter::VisitIfStmt(IfStmt *S) {
 
 void ASTStmtWriter::VisitSwitchStmt(SwitchStmt *S) {
   VisitStmt(S);
-  Record.AddStmt(S->getInit());
-  Record.AddDeclRef(S->getConditionVariable());
+
+  bool HasInit = S->getInit() != nullptr;
+  bool HasVar = S->getConditionVariableDeclStmt() != nullptr;
+  Record.push_back(HasInit);
+  Record.push_back(HasVar);
+  Record.push_back(S->isAllEnumCasesCovered());
+
   Record.AddStmt(S->getCond());
   Record.AddStmt(S->getBody());
+  if (HasInit)
+    Record.AddStmt(S->getInit());
+  if (HasVar)
+    Record.AddDeclRef(S->getConditionVariable());
+
   Record.AddSourceLocation(S->getSwitchLoc());
-  Record.push_back(S->isAllEnumCasesCovered());
+
   for (SwitchCase *SC = S->getSwitchCaseList(); SC;
        SC = SC->getNextSwitchCase())
     Record.push_back(Writer.RecordSwitchCaseID(SC));
@@ -1876,6 +1886,8 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
     Record.AddStmt(D->getCombinedCond());
     Record.AddStmt(D->getCombinedNextLowerBound());
     Record.AddStmt(D->getCombinedNextUpperBound());
+    Record.AddStmt(D->getCombinedDistCond());
+    Record.AddStmt(D->getCombinedParForInDistCond());
   }
   for (auto I : D->counters()) {
     Record.AddStmt(I);

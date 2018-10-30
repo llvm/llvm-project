@@ -86,8 +86,8 @@ Modified Compiler Flags
 New Pragmas in Clang
 --------------------
 
-Clang now supports the ...
-
+- Clang now supports adding multiple `#pragma clang attribute` attributes into
+  a scope of pushed attributes.
 
 Attribute Changes in Clang
 --------------------------

@@ -3300,6 +3300,20 @@ AST_MATCHER_P(
           InnerMatcher.matches(*Initializer, Finder, Builder));
 }
 
+/// \brief Matches a static variable with local scope.
+///
+/// Example matches y (matcher = varDecl(isStaticLocal()))
+/// \code
+/// void f() {
+///   int x;
+///   static int y;
+/// }
+/// static int z;
+/// \endcode
+AST_MATCHER(VarDecl, isStaticLocal) {
+  return Node.isStaticLocal();
+}
+
 /// Matches a variable declaration that has function scope and is a
 /// non-static local variable.
 ///

@@ -851,6 +851,9 @@ def err_pragma_attribute_no_pop_eof : Error<"unterminated "
   "'#pragma clang attribute push' at end of file">;
 def note_pragma_attribute_applied_decl_here : Note<
   "when applied to this declaration">;
+def err_pragma_attr_attr_no_push : Error<
+  "'#pragma clang attribute' attribute with no matching "
+  "'#pragma clang attribute push'">;
 
 /// Objective-C parser diagnostics
 def err_duplicate_class_def : Error<
