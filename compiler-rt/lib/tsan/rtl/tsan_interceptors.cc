@@ -53,6 +53,8 @@ using namespace __tsan;  // NOLINT
 #define stdout ((char*)&__sF + (__sF_size * 1))
 #define stderr ((char*)&__sF + (__sF_size * 2))
 
+#define nanosleep __nanosleep50
+#define vfork __vfork14
 #endif
 
 #if SANITIZER_ANDROID

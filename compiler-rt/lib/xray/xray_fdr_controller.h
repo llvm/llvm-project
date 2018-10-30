@@ -39,18 +39,20 @@ template <size_t Version = 3> class FDRController {
   uint32_t UndoableFunctionEnters = 0;
   uint32_t UndoableTailExits = 0;
 
-  bool finalized() const { return BQ == nullptr || BQ->finalizing(); }
+  bool finalized() const XRAY_NEVER_INSTRUMENT {
+    return BQ == nullptr || BQ->finalizing();
+  }
 
-  bool hasSpace(size_t S) {
+  bool hasSpace(size_t S) XRAY_NEVER_INSTRUMENT {
     return B.Data != nullptr && B.Generation == BQ->generation() &&
            W.getNextRecord() + S <= reinterpret_cast<char *>(B.Data) + B.Size;
   }
 
-  constexpr int32_t mask(int32_t FuncId) const {
+  constexpr int32_t mask(int32_t FuncId) const XRAY_NEVER_INSTRUMENT {
     return FuncId & ((1 << 29) - 1);
   }
 
-  bool getNewBuffer() {
+  bool getNewBuffer() XRAY_NEVER_INSTRUMENT {
     if (BQ->getBuffer(B) != BufferQueue::ErrorCode::Ok)
       return false;
 
@@ -65,7 +67,7 @@ template <size_t Version = 3> class FDRController {
     return true;
   }
 
-  bool setupNewBuffer() {
+  bool setupNewBuffer() XRAY_NEVER_INSTRUMENT {
     if (finalized())
       return false;
 
@@ -104,7 +106,7 @@ template <size_t Version = 3> class FDRController {
     return W.writeMetadataRecords(Metadata);
   }
 
-  bool prepareBuffer(size_t S) {
+  bool prepareBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
     if (finalized())
       return returnBuffer();
 
@@ -127,7 +129,7 @@ template <size_t Version = 3> class FDRController {
     return true;
   }
 
-  bool returnBuffer() {
+  bool returnBuffer() XRAY_NEVER_INSTRUMENT {
     if (BQ == nullptr)
       return false;
 
@@ -141,7 +143,8 @@ template <size_t Version = 3> class FDRController {
   }
 
   enum class PreambleResult { NoChange, WroteMetadata, InvalidBuffer };
-  PreambleResult functionPreamble(uint64_t TSC, uint16_t CPU) {
+  PreambleResult functionPreamble(uint64_t TSC,
+                                  uint16_t CPU) XRAY_NEVER_INSTRUMENT {
     if (UNLIKELY(LatestCPU != CPU || LatestTSC == 0)) {
       // We update our internal tracking state for the Latest TSC and CPU we've
       // seen, then write out the appropriate metadata and function records.
@@ -169,7 +172,8 @@ template <size_t Version = 3> class FDRController {
     return PreambleResult::NoChange;
   }
 
-  bool rewindRecords(int32_t FuncId, uint64_t TSC, uint16_t CPU) {
+  bool rewindRecords(int32_t FuncId, uint64_t TSC,
+                     uint16_t CPU) XRAY_NEVER_INSTRUMENT {
     // Undo one enter record, because at this point we are either at the state
     // of:
     // - We are exiting a function that we recently entered.
@@ -224,10 +228,15 @@ template <size_t Version = 3> class FDRController {
 public:
   template <class WallClockFunc>
   FDRController(BufferQueue *BQ, BufferQueue::Buffer &B, FDRLogWriter &W,
-                WallClockFunc R, uint64_t C)
-      : BQ(BQ), B(B), W(W), WallClockReader(R), CycleThreshold(C) {}
+                WallClockFunc R, uint64_t C) XRAY_NEVER_INSTRUMENT
+      : BQ(BQ),
+        B(B),
+        W(W),
+        WallClockReader(R),
+        CycleThreshold(C) {}
 
-  bool functionEnter(int32_t FuncId, uint64_t TSC, uint16_t CPU) {
+  bool functionEnter(int32_t FuncId, uint64_t TSC,
+                     uint16_t CPU) XRAY_NEVER_INSTRUMENT {
     if (finalized() ||
         !prepareBuffer(sizeof(MetadataRecord) + sizeof(FunctionRecord)))
       return returnBuffer();
@@ -245,7 +254,8 @@ public:
                            mask(FuncId), TSC - LatestTSC);
   }
 
-  bool functionTailExit(int32_t FuncId, uint64_t TSC, uint16_t CPU) {
+  bool functionTailExit(int32_t FuncId, uint64_t TSC,
+                        uint16_t CPU) XRAY_NEVER_INSTRUMENT {
     if (finalized())
       return returnBuffer();
 
@@ -269,7 +279,7 @@ public:
   }
 
   bool functionEnterArg(int32_t FuncId, uint64_t TSC, uint16_t CPU,
-                        uint64_t Arg) {
+                        uint64_t Arg) XRAY_NEVER_INSTRUMENT {
     if (finalized() ||
         !prepareBuffer((2 * sizeof(MetadataRecord)) + sizeof(FunctionRecord)) ||
         functionPreamble(TSC, CPU) == PreambleResult::InvalidBuffer)
@@ -285,7 +295,8 @@ public:
     return W.writeMetadata<MetadataRecord::RecordKinds::CallArgument>(Arg);
   }
 
-  bool functionExit(int32_t FuncId, uint64_t TSC, uint16_t CPU) {
+  bool functionExit(int32_t FuncId, uint64_t TSC,
+                    uint16_t CPU) XRAY_NEVER_INSTRUMENT {
     if (finalized() ||
         !prepareBuffer(sizeof(MetadataRecord) + sizeof(FunctionRecord)))
       return returnBuffer();
@@ -306,7 +317,33 @@ public:
                            TSC - LatestTSC);
   }
 
-  bool flush() {
+  bool customEvent(uint64_t TSC, uint16_t CPU, const void *Event,
+                   int32_t EventSize) XRAY_NEVER_INSTRUMENT {
+    if (finalized() ||
+        !prepareBuffer((2 * sizeof(MetadataRecord)) + EventSize) ||
+        functionPreamble(TSC, CPU) == PreambleResult::InvalidBuffer)
+      return returnBuffer();
+
+    LatestTSC = 0;
+    UndoableFunctionEnters = 0;
+    UndoableTailExits = 0;
+    return W.writeCustomEvent(TSC, Event, EventSize);
+  }
+
+  bool typedEvent(uint64_t TSC, uint16_t CPU, uint16_t EventType,
+                  const void *Event, int32_t EventSize) XRAY_NEVER_INSTRUMENT {
+    if (finalized() ||
+        !prepareBuffer((2 * sizeof(MetadataRecord)) + EventSize) ||
+        functionPreamble(TSC, CPU) == PreambleResult::InvalidBuffer)
+      return returnBuffer();
+
+    LatestTSC = 0;
+    UndoableFunctionEnters = 0;
+    UndoableTailExits = 0;
+    return W.writeTypedEvent(TSC, EventType, Event, EventSize);
+  }
+
+  bool flush() XRAY_NEVER_INSTRUMENT {
     if (finalized()) {
       returnBuffer(); // ignore result.
       return true;

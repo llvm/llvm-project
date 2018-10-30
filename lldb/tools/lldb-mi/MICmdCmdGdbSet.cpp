@@ -28,7 +28,8 @@ const CMICmdCmdGdbSet::MapGdbOptionNameToFnGdbOptionPtr_t
         {"output-radix", &CMICmdCmdGdbSet::OptionFnOutputRadix},
         {"solib-search-path", &CMICmdCmdGdbSet::OptionFnSolibSearchPath},
         {"disassembly-flavor", &CMICmdCmdGdbSet::OptionFnDisassemblyFlavor},
-        {"fallback", &CMICmdCmdGdbSet::OptionFnFallback}};
+        {"fallback", &CMICmdCmdGdbSet::OptionFnFallback},
+        {"breakpoint", &CMICmdCmdGdbSet::OptionFnBreakpoint}};
 
 //++
 //------------------------------------------------------------------------------------
@@ -425,6 +426,56 @@ bool CMICmdCmdGdbSet::OptionFnDisassemblyFlavor(
       rDbgr.GetInstanceName());
   if (error.Fail()) {
     m_strGdbOptionFnError = error.GetCString();
+    return MIstatus::failure;
+  }
+
+  return MIstatus::success;
+}
+
+//++
+//------------------------------------------------------------------------------------
+// Details: Carry out work to complete the GDB set option 'breakpoint' to
+// prepare
+//          and send back information asked for.
+// Type:    Method.
+// Args:    vrWords - (R) List of additional parameters used by this option.
+// Return:  MIstatus::success - Function succeeded.
+//          MIstatus::failure - Function failed.
+// Throws:  None.
+//--
+bool CMICmdCmdGdbSet::OptionFnBreakpoint(
+    const CMIUtilString::VecString_t &vrWords) {
+  bool bPending = false;
+  bool bOk = true;
+
+  if (vrWords.size() != 2)
+    // Wrong number of arguments.
+    bOk = false;
+  else if (CMIUtilString::Compare(vrWords[0], "pending") &&
+           (CMIUtilString::Compare(vrWords[1], "on") ||
+            CMIUtilString::Compare(vrWords[1], "1")))
+    bPending = true;
+  else if (CMIUtilString::Compare(vrWords[0], "pending") &&
+           (CMIUtilString::Compare(vrWords[1], "off") ||
+            CMIUtilString::Compare(vrWords[1], "0")))
+    bPending = false;
+  else
+    // Unrecognized argument(s).
+    bOk = false;
+
+  if (!bOk) {
+    // Report error.
+    m_bGbbOptionFnHasError = false;
+    SetError(MIRSRC(IDS_CMD_ERR_GDBSET_OPT_BREAKPOINT));
+    return MIstatus::failure;
+  }
+
+  CMIUtilString sPendingVal = bPending ? "on" : "off";
+  CMIUtilString sKey = "breakpoint.pending";
+  if (!m_rLLDBDebugSessionInfo.SharedDataAdd(sKey, sPendingVal)) {
+    m_bGbbOptionFnHasError = false;
+    SetError(CMIUtilString::Format(MIRSRC(IDS_DBGSESSION_ERR_SHARED_DATA_ADD),
+                                   m_cmdData.strMiCmd.c_str(), sKey.c_str()));
     return MIstatus::failure;
   }
 
