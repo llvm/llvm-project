@@ -77,6 +77,11 @@ STATISTIC(NumNonNullReturn, "Number of function returns marked nonnull");
 STATISTIC(NumNoRecurse, "Number of functions marked as norecurse");
 STATISTIC(NumNoUnwind, "Number of functions marked as nounwind");
 STATISTIC(NumNoFree, "Number of functions marked as nofree");
+STATISTIC(NumArgMem, "Number of functions marked as argmemonly");
+STATISTIC(NumInaccessibleMem,
+          "Number of functions marked as inaccessiblememonly");
+STATISTIC(NumInaccessibleMemOrArgMem,
+          "Number of functions marked as inaccessiblemem_or_argmemonly");
 
 // FIXME: This is disabled by default to avoid exposing security vulnerabilities
 // in C/C++ code compiled by clang:
@@ -313,6 +318,234 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
       ++NumReadOnly;
     else
       ++NumReadNone;
+  }
+
+  return MadeChange;
+}
+
+/// The four kinds of function accesses relevant to 'argmemonly' and
+/// 'inaccessiblemem_or_argmemonly' attributes.
+enum FunctionAccessKind {
+  FAK_None = 0,
+  FAK_ArgMem = 1,
+  FAK_NonArgMem = 2,
+  FAK_InaccessibleMem = 4,
+  FAK_AnyMem = FAK_NonArgMem | FAK_InaccessibleMem,
+};
+
+/// Returns the function access attribute for function F using AAR for AA
+/// results, where SCCNodes is the current SCC.
+///
+/// If ThisBody is true, this function may examine the function body and will
+/// return a result pertaining to this copy of the function. If it is false, the
+/// result will be based only on AA results for the function declaration; it
+/// will be assumed that some other (perhaps less optimized) version of the
+/// function may be selected at link time.
+static FunctionAccessKind checkFunctionAccess(Function &F, bool ThisBody,
+                                              AAResults &AAR,
+                                              const SCCNodeSet &SCCNodes) {
+  FunctionModRefBehavior MRB = AAR.getModRefBehavior(&F);
+  if (FMRB_DoesNotAccessMemory == MRB)
+    // Already perfect!
+    return FAK_None;
+
+  if (!ThisBody) {
+    if (!AliasAnalysis::onlyAccessesInaccessibleOrArgMem(MRB))
+      // The function could access anything.
+      return FAK_AnyMem;
+
+    FunctionAccessKind AccessKind = FAK_None;
+    if (AliasAnalysis::doesAccessInaccessibleMem(MRB))
+      // The function accesses inaccessible memory.
+      AccessKind = FunctionAccessKind(AccessKind | FAK_InaccessibleMem);
+
+    if (AliasAnalysis::doesAccessArgPointees(MRB))
+      // The function accesses argument memory.
+      AccessKind = FunctionAccessKind(AccessKind | FAK_ArgMem);
+
+    return AccessKind;
+  }
+
+  // Scan the function body for instructions that may read or write memory.
+  FunctionAccessKind AccessKind = FAK_None;
+  for (inst_iterator II = inst_begin(F), E = inst_end(F); II != E; ++II) {
+    Instruction *I = &*II;
+
+    if (!I->mayReadFromMemory() && !I->mayWriteToMemory())
+      continue;
+
+    // Some instructions can be ignored even if they read or write memory.
+    // Detect these now, skipping to the next instruction if one is found.
+    CallSite CS(cast<Value>(I));
+    if (CS) {
+      FunctionModRefBehavior MRB = AAR.getModRefBehavior(CS);
+      ModRefInfo MRI = createModRefInfo(MRB);
+
+      // If the call doesn't access memory, we're done.
+      if (isNoModRef(MRI))
+        continue;
+
+      if (!AliasAnalysis::onlyAccessesInaccessibleOrArgMem(MRB))
+        if (!CS.getCalledFunction() || !SCCNodes.count(CS.getCalledFunction()))
+          // This call could access any memory.
+          return FAK_AnyMem;
+
+      if (AliasAnalysis::doesAccessInaccessibleMem(MRB) &&
+          CS.getCalledFunction() && !SCCNodes.count(CS.getCalledFunction()))
+        // Record the fact that this call can access inaccessible memory.
+        AccessKind = FunctionAccessKind(AccessKind | FAK_InaccessibleMem);
+
+      // Don't bother checking the callsite arguments if we know this function
+      // can access non-argument memory.
+      if (FAK_NonArgMem & AccessKind)
+        continue;
+
+      // Check whether all pointer arguments point to local memory, and
+      // ignore calls that only access local memory.
+      for (CallSite::arg_iterator CI = CS.arg_begin(), CE = CS.arg_end();
+           CI != CE; ++CI) {
+        Value *Arg = *CI;
+        if (!Arg->getType()->isPtrOrPtrVectorTy())
+          continue;
+
+        AAMDNodes AAInfo;
+        I->getAAMetadata(AAInfo);
+        MemoryLocation Loc(Arg, MemoryLocation::UnknownSize, AAInfo);
+
+        // Skip accesses to local or constant memory as they don't impact the
+        // externally visible mod/ref behavior.
+        if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
+          continue;
+
+        SmallVector<Value *, 8> Objects;
+        const DataLayout DL = F.getParent()->getDataLayout();
+        GetUnderlyingObjects(const_cast<Value *>(Loc.Ptr), Objects, DL,
+                             nullptr, 0);
+        for (Value *Obj : Objects) {
+          if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Obj))
+            if (!GV->isConstant())
+              AccessKind = FunctionAccessKind(AccessKind | FAK_NonArgMem);
+
+          if (isa<Argument>(Obj))
+            AccessKind = FunctionAccessKind(AccessKind | FAK_ArgMem);
+
+          // Early exit the function once we discover this function can access
+          // non-argument memory and inaccessible memory.
+          if (FAK_AnyMem == (FAK_AnyMem & AccessKind))
+            return AccessKind;
+
+          // Early exit the loop once we discover this function can access
+          // non-argument memory.
+          if (FAK_NonArgMem & AccessKind)
+            break;
+        }
+      }
+      continue;
+    } else if (isa<SyncInst>(I) || isa<DetachInst>(I) || isa<ReattachInst>(I)) {
+      // Tapir instructions only access memory accessed by other instructions in
+      // the function.  Hence we let the other instructions determine the
+      // attribute of this function.
+      continue;
+    } else {
+      Optional<MemoryLocation> Loc = MemoryLocation::getOrNone(I);
+      if (None == Loc)
+        continue;
+      if (AAR.pointsToConstantMemory(*Loc, /*OrLocal=*/true))
+        continue;
+
+      // Don't bother checking the arguments if we know this function can access
+      // non-argument memory.
+      if (FAK_NonArgMem & AccessKind)
+        continue;
+
+      SmallVector<Value *, 8> Objects;
+      const DataLayout DL = F.getParent()->getDataLayout();
+      GetUnderlyingObjects(const_cast<Value *>(Loc->Ptr), Objects, DL,
+                           nullptr, 0);
+      for (Value *Obj : Objects) {
+        if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Obj))
+          if (!GV->isConstant())
+            AccessKind = FunctionAccessKind(AccessKind | FAK_NonArgMem);
+
+        if (isa<Argument>(Obj))
+          AccessKind = FunctionAccessKind(AccessKind | FAK_ArgMem);
+
+        // Early exit the function once we discover this function can access
+        // non-argument memory and inaccessible memory.
+        if (FAK_AnyMem == (FAK_AnyMem & AccessKind))
+          return AccessKind;
+
+        // Early exit the loop once we discover this function can access
+        // non-argument memory.
+        if (FAK_NonArgMem & AccessKind)
+          break;
+      }
+    }
+  }
+
+  return AccessKind;
+}
+
+/// Deduce argmem and related attributes for the SCC.
+template <typename AARGetterT>
+static bool addFunctionAccessAttrs(const SCCNodeSet &SCCNodes,
+                                   AARGetterT &&AARGetter) {
+  // Check if any of the functions in the SCC read or write memory.  If they
+  // write memory then they can't be marked readnone or readonly.
+  SmallPtrSet<Function *, 8> ArgMemFunctions;
+  FunctionAccessKind SCCAccessKind = FAK_None;
+  for (Function *F : SCCNodes) {
+    // Call the callable parameter to look up AA results for this function.
+    AAResults &AAR = AARGetter(*F);
+
+    // Non-exact function definitions may not be selected at link time, and an
+    // alternative version that writes to memory may be selected.  See the
+    // comment on GlobalValue::isDefinitionExact for more details.
+    FunctionAccessKind AccessKind =
+      checkFunctionAccess(*F, F->hasExactDefinition(), AAR, SCCNodes);
+    if (FAK_NonArgMem & AccessKind)
+      // If this function can access non-argument memory, give up.
+      return false;
+
+    if (FAK_InaccessibleMem & AccessKind)
+      // If this function can access inaccessible memory, so can other functions
+      // in the SCC.
+      SCCAccessKind = FunctionAccessKind(SCCAccessKind | FAK_InaccessibleMem);
+
+    if (FAK_ArgMem & AccessKind)
+      ArgMemFunctions.insert(F);
+  }
+
+  // Success!  Functions in this only access argument memory or inaccessible
+  // memory.  Give them the appropriate attribute.
+  bool MadeChange = false;
+  for (Function *F : SCCNodes) {
+    if (F->doesNotAccessMemory())
+      // Already perfect!
+      continue;
+
+    MadeChange = true;
+
+    // Clear out any existing attributes.
+    F->removeFnAttr(Attribute::ArgMemOnly);
+    F->removeFnAttr(Attribute::InaccessibleMemOnly);
+    F->removeFnAttr(Attribute::InaccessibleMemOrArgMemOnly);
+
+    // Add in the new attribute.
+    if (FAK_InaccessibleMem & SCCAccessKind) {
+      if (ArgMemFunctions.count(F)) {
+        F->setOnlyAccessesInaccessibleMemOrArgMem();
+        ++NumInaccessibleMemOrArgMem;
+      } else {
+        F->setOnlyAccessesInaccessibleMemory();
+        ++NumInaccessibleMem;
+      }
+    } else {
+      if (ArgMemFunctions.count(F)) {
+        F->setOnlyAccessesArgMemory();
+        ++NumArgMem;
+      }
+    }
   }
 
   return MadeChange;
@@ -1389,6 +1622,7 @@ static bool deriveAttrsInPostOrder(SCCNodeSet &SCCNodes,
 
   Changed |= addArgumentReturnedAttrs(SCCNodes);
   Changed |= addReadAttrs(SCCNodes, AARGetter);
+  Changed |= addFunctionAccessAttrs(SCCNodes, AARGetter);
   Changed |= addArgumentAttrs(SCCNodes);
 
   // If we have no external nodes participating in the SCC, we can deduce some
