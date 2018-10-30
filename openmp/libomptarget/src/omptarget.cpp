@@ -542,6 +542,13 @@ int target_data_update(DeviceTy &Device, int32_t arg_num,
   return OFFLOAD_SUCCESS;
 }
 
+static const unsigned LambdaMapping = OMP_TGT_MAPTYPE_PTR_AND_OBJ |
+                                      OMP_TGT_MAPTYPE_PRIVATE |
+                                      OMP_TGT_MAPTYPE_IMPLICIT;
+static bool isLambdaMapping(int64_t Mapping) {
+  return (Mapping & LambdaMapping) == LambdaMapping;
+}
+
 /// performs the same actions as data_begin in case arg_num is
 /// non-zero and initiates run of the offloaded region on the target platform;
 /// if arg_num is non-zero after the region execution is done it also
@@ -617,10 +624,44 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
 
   // List of (first-)private arrays allocated for this target region
   std::vector<void *> fpArrays;
+  std::vector<int> tgtArgsPositions(arg_num, -1);
 
   for (int32_t i = 0; i < arg_num; ++i) {
     if (!(arg_types[i] & OMP_TGT_MAPTYPE_TARGET_PARAM)) {
       // This is not a target parameter, do not push it into tgt_args.
+      // Check for lambda mapping.
+      if (isLambdaMapping(arg_types[i])) {
+        assert((arg_types[i] & OMP_TGT_MAPTYPE_MEMBER_OF) &&
+               "PTR_AND_OBJ must be also MEMBER_OF.");
+        unsigned idx = member_of(arg_types[i]);
+        int tgtIdx = tgtArgsPositions[idx];
+        assert(tgtIdx != -1 && "Base address must be translated already.");
+        // The parent lambda must be processed already and it must be the last
+        // in tgt_args and tgt_offsets arrays.
+        void *HstPtrBegin = args[i];
+        void *HstPtrBase = args_base[i];
+        bool IsLast; // unused.
+        void *TgtPtrBase =
+            (void *)((intptr_t)tgt_args[tgtIdx] + tgt_offsets[tgtIdx]);
+        DP("Parent lambda base " DPxMOD "\n", DPxPTR(TgtPtrBase));
+        uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
+        void *TgtPtrBegin = (void *)((uintptr_t)TgtPtrBase + Delta);
+        void *Pointer_TgtPtrBegin = Device.getTgtPtrBegin(
+            *(void **)HstPtrBegin, arg_sizes[i], IsLast, false);
+        if (!Pointer_TgtPtrBegin) {
+          DP("No lambda captured variable mapped (" DPxMOD ") - ignored\n",
+             DPxPTR(*(void **)HstPtrBegin));
+          continue;
+        }
+        DP("Update lambda reference (" DPxMOD ") -> [" DPxMOD "]\n",
+           DPxPTR(Pointer_TgtPtrBegin), DPxPTR(TgtPtrBegin));
+        int rt = Device.data_submit(TgtPtrBegin, &Pointer_TgtPtrBegin,
+                                    sizeof(void *));
+        if (rt != OFFLOAD_SUCCESS) {
+          DP("Copying data to device failed.\n");
+          return OFFLOAD_FAIL;
+        }
+      }
       continue;
     }
     void *HstPtrBegin = args[i];
@@ -679,6 +720,7 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
           DPxPTR(TgtPtrBase), DPxPTR(HstPtrBegin));
 #endif
     }
+    tgtArgsPositions[i] = tgt_args.size();
     tgt_args.push_back(TgtPtrBegin);
     tgt_offsets.push_back(TgtBaseOffset);
   }

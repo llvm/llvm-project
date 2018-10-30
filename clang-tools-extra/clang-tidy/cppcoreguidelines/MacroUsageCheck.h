@@ -28,17 +28,20 @@ public:
   MacroUsageCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
         AllowedRegexp(Options.get("AllowedRegexp", "^DEBUG_*")),
-        CheckCapsOnly(Options.get("CheckCapsOnly", 0)) {}
+        CheckCapsOnly(Options.get("CheckCapsOnly", 0)),
+        IgnoreCommandLineMacros(Options.get("IgnoreCommandLineMacros", 1)) {}
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerPPCallbacks(CompilerInstance &Compiler) override;
-  void warnMacro(const MacroDirective *MD);
-  void warnNaming(const MacroDirective *MD);
+  void warnMacro(const MacroDirective *MD, StringRef MacroName);
+  void warnNaming(const MacroDirective *MD, StringRef MacroName);
 
 private:
   /// A regular expression that defines how allowed macros must look like.
   std::string AllowedRegexp;
   /// Control if only the check shall only test on CAPS_ONLY macros.
   bool CheckCapsOnly;
+  /// Should the macros without a valid location be diagnosed?
+  bool IgnoreCommandLineMacros;
 };
 
 } // namespace cppcoreguidelines
