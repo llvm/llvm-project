@@ -3,7 +3,7 @@
 ; FIXME: This should be able to compile, but requires inserting an
 ; extra block to restore the scavenged register.
 
-; FAIL: LLVM ERROR: Error while trying to spill VCC from class SReg_64: Cannot scavenge register without an emergency spill slot!
+; FAIL: LLVM ERROR: Error while trying to spill SGPR0_SGPR1 from class SReg_64: Cannot scavenge register without an emergency spill slot!
 
 define amdgpu_kernel void @spill(i32 addrspace(1)* %arg, i32 %cnd) #0 {
 entry:

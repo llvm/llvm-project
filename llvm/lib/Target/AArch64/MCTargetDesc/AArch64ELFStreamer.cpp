@@ -75,8 +75,6 @@ void AArch64TargetAsmStreamer::emitInst(uint32_t Inst) {
 /// by MachO. Beware!
 class AArch64ELFStreamer : public MCELFStreamer {
 public:
-  friend class AArch64TargetELFStreamer;
-
   AArch64ELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                      std::unique_ptr<MCObjectWriter> OW,
                      std::unique_ptr<MCCodeEmitter> Emitter)

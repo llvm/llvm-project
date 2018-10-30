@@ -514,12 +514,24 @@ def TSB   : CRmSystemI<barrier_op, 0b010, "tsb", []> {
 }
 }
 
-// ARMv8.2 Dot Product
+// ARMv8.2-A Dot Product
 let Predicates = [HasDotProd] in {
 defm SDOT : SIMDThreeSameVectorDot<0, "sdot", int_aarch64_neon_sdot>;
 defm UDOT : SIMDThreeSameVectorDot<1, "udot", int_aarch64_neon_udot>;
 defm SDOTlane : SIMDThreeSameVectorDotIndex<0, "sdot", int_aarch64_neon_sdot>;
 defm UDOTlane : SIMDThreeSameVectorDotIndex<1, "udot", int_aarch64_neon_udot>;
+}
+
+// ARMv8.2-A FP16 Fused Multiply-Add Long
+let Predicates = [HasNEON, HasFP16FML] in {
+defm FMLAL      : SIMDThreeSameVectorFML<0, 1, 0b001, "fmlal", int_aarch64_neon_fmlal>;
+defm FMLSL      : SIMDThreeSameVectorFML<0, 1, 0b101, "fmlsl", int_aarch64_neon_fmlsl>;
+defm FMLAL2     : SIMDThreeSameVectorFML<1, 0, 0b001, "fmlal2", int_aarch64_neon_fmlal2>;
+defm FMLSL2     : SIMDThreeSameVectorFML<1, 0, 0b101, "fmlsl2", int_aarch64_neon_fmlsl2>;
+defm FMLALlane  : SIMDThreeSameVectorFMLIndex<0, 0b0000, "fmlal", int_aarch64_neon_fmlal>;
+defm FMLSLlane  : SIMDThreeSameVectorFMLIndex<0, 0b0100, "fmlsl", int_aarch64_neon_fmlsl>;
+defm FMLAL2lane : SIMDThreeSameVectorFMLIndex<1, 0b1000, "fmlal2", int_aarch64_neon_fmlal2>;
+defm FMLSL2lane : SIMDThreeSameVectorFMLIndex<1, 0b1100, "fmlsl2", int_aarch64_neon_fmlsl2>;
 }
 
 // Armv8.2-A Crypto extensions
@@ -3483,18 +3495,6 @@ defm SQRDMLAH : SIMDThreeSameVectorSQRDMLxHTiedHS<1,0b10000,"sqrdmlah",
                                                   int_aarch64_neon_sqadd>;
 defm SQRDMLSH : SIMDThreeSameVectorSQRDMLxHTiedHS<1,0b10001,"sqrdmlsh",
                                                     int_aarch64_neon_sqsub>;
-
-// FP16FML
-let Predicates = [HasNEON, HasFP16FML] in {
-defm FMLAL      : SIMDThreeSameMult<0, 1, 0b001, "fmlal", int_aarch64_neon_fmlal>;
-defm FMLSL      : SIMDThreeSameMult<0, 1, 0b101, "fmlsl", int_aarch64_neon_fmlsl>;
-defm FMLAL2     : SIMDThreeSameMult<1, 0, 0b001, "fmlal2", int_aarch64_neon_fmlal2>;
-defm FMLSL2     : SIMDThreeSameMult<1, 0, 0b101, "fmlsl2", int_aarch64_neon_fmlsl2>;
-defm FMLALlane  : SIMDThreeSameMultIndex<0, 0b0000, "fmlal", int_aarch64_neon_fmlal>;
-defm FMLSLlane  : SIMDThreeSameMultIndex<0, 0b0100, "fmlsl", int_aarch64_neon_fmlsl>;
-defm FMLAL2lane : SIMDThreeSameMultIndex<1, 0b1000, "fmlal2", int_aarch64_neon_fmlal2>;
-defm FMLSL2lane : SIMDThreeSameMultIndex<1, 0b1100, "fmlsl2", int_aarch64_neon_fmlsl2>;
-}
 
 defm AND : SIMDLogicalThreeVector<0, 0b00, "and", and>;
 defm BIC : SIMDLogicalThreeVector<0, 0b01, "bic",

@@ -231,16 +231,16 @@ public:
   /// Get a DIE given an exact offset.
   DWARFDie getDIEForOffset(uint32_t Offset);
 
-  unsigned getMaxVersion() {
+  unsigned getMaxVersion(uint16_t DefaultVersion = 0) {
     // Ensure info units have been parsed to discover MaxVersion
     info_section_units();
-    return MaxVersion;
+    return MaxVersion ? MaxVersion : DefaultVersion;
   }
 
-  unsigned getMaxDWOVersion() {
+  unsigned getMaxDWOVersion(uint16_t DefaultVersion = 0) {
     // Ensure DWO info units have been parsed to discover MaxVersion
     dwo_info_section_units();
-    return MaxVersion;
+    return MaxVersion ? MaxVersion : DefaultVersion;
   }
 
   void setMaxVersionIfGreater(unsigned Version) {

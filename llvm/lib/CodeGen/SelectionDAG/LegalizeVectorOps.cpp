@@ -392,6 +392,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FCANONICALIZE:
   case ISD::SADDSAT:
   case ISD::UADDSAT:
+  case ISD::SSUBSAT:
+  case ISD::USUBSAT:
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   case ISD::FP_ROUND_INREG:
