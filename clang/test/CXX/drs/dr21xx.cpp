@@ -19,6 +19,16 @@ namespace dr2120 { // dr2120: 7
   static_assert(!__is_standard_layout(E), "");
 }
 
+namespace dr2140 { // dr2140: 8
+#if __cplusplus >= 201103L
+  union U { int a; decltype(nullptr) b; };
+  constexpr int *test(U u) {
+    return u.b;
+  }
+  static_assert(!test({123}), "u.b should be valid even when b is inactive");
+#endif
+}
+
 namespace dr2180 { // dr2180: yes
   class A {
     A &operator=(const A &); // expected-note 0-2{{here}}

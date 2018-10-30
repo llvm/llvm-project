@@ -1895,14 +1895,14 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
   case CK_NullToPointer:
     if (MustVisitNullValue(E))
-      (void) Visit(E);
+      CGF.EmitIgnoredExpr(E);
 
     return CGF.CGM.getNullPointer(cast<llvm::PointerType>(ConvertType(DestTy)),
                               DestTy);
 
   case CK_NullToMemberPointer: {
     if (MustVisitNullValue(E))
-      (void) Visit(E);
+      CGF.EmitIgnoredExpr(E);
 
     const MemberPointerType *MPT = CE->getType()->getAs<MemberPointerType>();
     return CGF.CGM.getCXXABI().EmitNullMemberPointer(MPT);

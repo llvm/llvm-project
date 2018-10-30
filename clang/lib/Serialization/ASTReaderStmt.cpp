@@ -240,13 +240,21 @@ void ASTStmtReader::VisitIfStmt(IfStmt *S) {
 
 void ASTStmtReader::VisitSwitchStmt(SwitchStmt *S) {
   VisitStmt(S);
-  S->setInit(Record.readSubStmt());
-  S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+
+  bool HasInit = Record.readInt();
+  bool HasVar = Record.readInt();
+  bool AllEnumCasesCovered = Record.readInt();
+  if (AllEnumCasesCovered)
+    S->setAllEnumCasesCovered();
+
   S->setCond(Record.readSubExpr());
   S->setBody(Record.readSubStmt());
+  if (HasInit)
+    S->setInit(Record.readSubStmt());
+  if (HasVar)
+    S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+
   S->setSwitchLoc(ReadSourceLocation());
-  if (Record.readInt())
-    S->setAllEnumCasesCovered();
 
   SwitchCase *PrevSC = nullptr;
   for (auto E = Record.size(); Record.getIdx() != E; ) {
@@ -1875,6 +1883,8 @@ void ASTStmtReader::VisitOMPLoopDirective(OMPLoopDirective *D) {
     D->setCombinedCond(Record.readSubExpr());
     D->setCombinedNextLowerBound(Record.readSubExpr());
     D->setCombinedNextUpperBound(Record.readSubExpr());
+    D->setCombinedDistCond(Record.readSubExpr());
+    D->setCombinedParForInDistCond(Record.readSubExpr());
   }
   SmallVector<Expr *, 4> Sub;
   unsigned CollapsedNum = D->getCollapsedNumber();
@@ -2308,7 +2318,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_SWITCH:
-      S = new (Context) SwitchStmt(Empty);
+      S = SwitchStmt::CreateEmpty(
+          Context,
+          /* HasInit=*/Record[ASTStmtReader::NumStmtFields + 0],
+          /* HasVar=*/Record[ASTStmtReader::NumStmtFields + 1]);
       break;
 
     case STMT_WHILE:

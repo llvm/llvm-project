@@ -348,7 +348,7 @@ public:
   /// Choose a default value for the schedule clause.
   void getDefaultScheduleAndChunk(CodeGenFunction &CGF,
       const OMPLoopDirective &S, OpenMPScheduleClauseKind &ScheduleKind,
-      llvm::Value *&Chunk) const override;
+      const Expr *&ChunkExpr) const override;
 
 private:
   /// Track the execution mode when codegening directives within a target

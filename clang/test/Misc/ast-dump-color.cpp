@@ -46,7 +46,6 @@ struct Invalid {
 //CHECK: {{^}}[[Blue]]|-[[RESET]][[GREEN]]FunctionDecl[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:9:1[[RESET]], [[Yellow]]line:16:1[[RESET]]> [[Yellow]]line:9:6[[RESET]][[CYAN]] TestAttributedStmt[[RESET]] [[Green]]'void ()'[[RESET]]{{$}}
 //CHECK: {{^}}[[Blue]]| |-[[RESET]][[MAGENTA:.\[0;1;35m]]CompoundStmt[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]col:27[[RESET]], [[Yellow]]line:16:1[[RESET]]>{{$}}
 //CHECK: {{^}}[[Blue]]| | `-[[RESET]][[MAGENTA]]SwitchStmt[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:10:3[[RESET]], [[Yellow]]line:15:3[[RESET]]>{{$}}
-//CHECK: {{^}}[[Blue]]| |   |-[[RESET]][[Blue:.\[0;34m]]<<<NULL>>>[[RESET]]{{$}}
 //CHECK: {{^}}[[Blue]]| |   |-[[RESET]][[MAGENTA]]IntegerLiteral[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:10:11[[RESET]]> [[Green]]'int'[[RESET]][[Cyan:.\[0;36m]][[RESET]][[Cyan]][[RESET]][[CYAN]] 1[[RESET]]{{$}}
 //CHECK: {{^}}[[Blue]]| |   `-[[RESET]][[MAGENTA]]CompoundStmt[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]col:14[[RESET]], [[Yellow]]line:15:3[[RESET]]>{{$}}
 //CHECK: {{^}}[[Blue]]| |     |-[[RESET]][[MAGENTA]]CaseStmt[[RESET]][[Yellow]] 0x{{[0-9a-fA-F]*}}[[RESET]] <[[Yellow]]line:11:3[[RESET]], [[Yellow]]line:12:27[[RESET]]>{{$}}

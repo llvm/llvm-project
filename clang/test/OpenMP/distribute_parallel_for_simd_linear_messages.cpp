@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target
 
 namespace X {
   int x;
@@ -294,7 +294,7 @@ int main(int argc, char **argv) {
 
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd linear (a, b) // expected-error {{linear variable with incomplete type 'S1'}} expected-error {{const-qualified variable cannot be linear}}
+#pragma omp distribute parallel for simd linear (a, b) // expected-error {{linear variable with incomplete type 'S1'}} expected-error {{const-qualified variable cannot be linear}} expected-error {{incomplete type 'S1' where a complete type is required}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target

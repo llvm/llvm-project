@@ -57,7 +57,10 @@ int bar(int n){
 // CHECK: store i32 0, {{.*}} [[OMP_LB:%.+]],
 // CHECK: store i32 9, {{.*}} [[OMP_UB:%.+]],
 // CHECK: store i32 1, {{.*}} [[OMP_ST:%.+]],
-// CHECK: call void @__kmpc_for_static_init_4({{.*}} i32 34, {{.*}} [[OMP_LB]], {{.*}} [[OMP_UB]], {{.*}} [[OMP_ST]], i32 1, i32 1)
+// CHECK: call void @__kmpc_for_static_init_4({{.*}} i32 33, {{.*}} [[OMP_LB]], {{.*}} [[OMP_UB]], {{.*}} [[OMP_ST]], i32 1, i32 1)
+// CHECK: br label %[[OMP_DISPATCH_COND:.+]]
+
+// CHECK: [[OMP_DISPATCH_COND]]
 // CHECK: [[OMP_UB_1:%.+]] = load {{.*}} [[OMP_UB]]
 // CHECK: [[COMP_1:%.+]] = icmp sgt {{.*}} [[OMP_UB_1]]
 // CHECK: br i1 [[COMP_1]], label %[[COND_TRUE:.+]], label %[[COND_FALSE:.+]]
@@ -74,6 +77,12 @@ int bar(int n){
 // CHECK: store i32 [[COND_RES]], i32* [[OMP_UB]]
 // CHECK: [[OMP_LB_1:%.+]] = load i32, i32* [[OMP_LB]]
 // CHECK: store i32 [[OMP_LB_1]], i32* [[OMP_IV]]
+// CHECK: [[OMP_IV_1:%.+]] = load i32, i32* [[OMP_IV]]
+// CHECK: [[OMP_UB_3:%.+]] = load i32, i32* [[OMP_UB]]
+// CHECK: [[COMP_2:%.+]] = icmp sle i32 [[OMP_IV_1]], [[OMP_UB_3]]
+// CHECK: br i1 [[COMP_2]], label %[[DISPATCH_BODY:.+]], label %[[DISPATCH_END:.+]]
+
+// CHECK: [[DISPATCH_BODY]]
 // CHECK: br label %[[OMP_INNER_FOR_COND:.+]]
 
 // CHECK: [[OMP_INNER_FOR_COND]]
@@ -94,7 +103,20 @@ int bar(int n){
 // CHECK: store i32 [[ADD_1]], i32* [[OMP_IV]]
 // CHECK: br label %[[OMP_INNER_FOR_COND]]
 
-// CHECK: [[OMP_INNER_FOR_END]]
+// CHECK: [[OMP_INNER_FOR_COND]]
+// CHECK: br label %[[OMP_DISPATCH_INC:.+]]
+
+// CHECK: [[OMP_DISPATCH_INC]]
+// CHECK: [[OMP_LB_2:%.+]] = load i32, i32* [[OMP_LB]]
+// CHECK: [[OMP_ST_1:%.+]] = load i32, i32* [[OMP_ST]]
+// CHECK: [[ADD_2:%.+]] = add nsw i32 [[OMP_LB_2]], [[OMP_ST_1]]
+// CHECK: store i32 [[ADD_2]], i32* [[OMP_LB]]
+// CHECK: [[OMP_UB_5:%.+]] = load i32, i32* [[OMP_UB]]
+// CHECK: [[OMP_ST_2:%.+]] = load i32, i32* [[OMP_ST]]
+// CHECK: [[ADD_3:%.+]] = add nsw i32 [[OMP_UB_5]], [[OMP_ST_2]]
+// CHECK: store i32 [[ADD_3]], i32* [[OMP_UB]]
+
+// CHECK: [[DISPATCH_END]]
 // CHECK: call void @__kmpc_for_static_fini(
 // CHECK: ret void
 
