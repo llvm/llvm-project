@@ -267,10 +267,14 @@ def _align_matching_blocks(all_blocks, farthest_indexes):
         continue
 
       changed = False
-      while(index < farthest_indexes[block]):
-        blocks.insert(index, '')
-        index += 1
-        changed = True
+      # If the block has not already been subject to alignment (i.e. if the
+      # previous block is not empty) then insert empty blocks until the index
+      # matches the farthest index identified for that block.
+      if (index > 0) and blocks[index - 1]:
+        while(index < farthest_indexes[block]):
+          blocks.insert(index, '')
+          index += 1
+          changed = True
 
       if changed:
         # Bail out.  We'll need to re-do the farthest block analysis now that

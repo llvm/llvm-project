@@ -3473,6 +3473,35 @@ LLVMValueRef LLVMBuildNot(LLVMBuilderRef, LLVMValueRef V, const char *Name);
 LLVMValueRef LLVMBuildMalloc(LLVMBuilderRef, LLVMTypeRef Ty, const char *Name);
 LLVMValueRef LLVMBuildArrayMalloc(LLVMBuilderRef, LLVMTypeRef Ty,
                                   LLVMValueRef Val, const char *Name);
+
+/**
+ * Creates and inserts a memset to the specified pointer and the 
+ * specified value.
+ *
+ * @see llvm::IRRBuilder::CreateMemSet()
+ */
+LLVMValueRef LLVMBuildMemSet(LLVMBuilderRef B, LLVMValueRef Ptr,
+                             LLVMValueRef Val, LLVMValueRef Len,
+                             unsigned Align);
+/**
+ * Creates and inserts a memcpy between the specified pointers.
+ *
+ * @see llvm::IRRBuilder::CreateMemCpy()
+ */
+LLVMValueRef LLVMBuildMemCpy(LLVMBuilderRef B, 
+                             LLVMValueRef Dst, unsigned DstAlign,
+                             LLVMValueRef Src, unsigned SrcAlign,
+                             LLVMValueRef Size);
+/**
+ * Creates and inserts a memmove between the specified pointers.
+ *
+ * @see llvm::IRRBuilder::CreateMemMove()
+ */
+LLVMValueRef LLVMBuildMemMove(LLVMBuilderRef B, 
+                              LLVMValueRef Dst, unsigned DstAlign,
+                              LLVMValueRef Src, unsigned SrcAlign,
+                              LLVMValueRef Size);
+
 LLVMValueRef LLVMBuildAlloca(LLVMBuilderRef, LLVMTypeRef Ty, const char *Name);
 LLVMValueRef LLVMBuildArrayAlloca(LLVMBuilderRef, LLVMTypeRef Ty,
                                   LLVMValueRef Val, const char *Name);

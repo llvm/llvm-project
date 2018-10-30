@@ -41,7 +41,7 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
   auto HWS = llvm::make_unique<Scheduler>(SM, LSU.get());
 
   // Create the pipeline stages.
-  auto Fetch = llvm::make_unique<FetchStage>(IB, SrcMgr);
+  auto Fetch = llvm::make_unique<FetchStage>(SrcMgr);
   auto Dispatch = llvm::make_unique<DispatchStage>(STI, MRI, Opts.DispatchWidth,
                                                    *RCU, *PRF);
   auto Execute = llvm::make_unique<ExecuteStage>(*HWS);

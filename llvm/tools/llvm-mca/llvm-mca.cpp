@@ -328,26 +328,12 @@ static void processViewOptions() {
 }
 
 // Returns true on success.
-static bool runPipeline(mca::Pipeline &P, MCInstPrinter &MCIP,
-                        const MCSubtargetInfo &STI) {
+static bool runPipeline(mca::Pipeline &P) {
   // Handle pipeline errors here.
   if (auto Err = P.run()) {
-    if (auto NewE = handleErrors(
-            std::move(Err),
-            [&MCIP, &STI](const mca::InstructionError<MCInst> &IE) {
-              std::string InstructionStr;
-              raw_string_ostream SS(InstructionStr);
-              WithColor::error() << IE.Message << '\n';
-              MCIP.printInst(&IE.Inst, SS, "", STI);
-              SS.flush();
-              WithColor::note() << "instruction: " << InstructionStr << '\n';
-            })) {
-      // Default case.
-      WithColor::error() << toString(std::move(NewE));
-    }
+    WithColor::error() << toString(std::move(Err));
     return false;
   }
-
   return true;
 }
 
@@ -513,14 +499,37 @@ int main(int argc, char **argv) {
       TOF->os() << "\n\n";
     }
 
+    // Lower the MCInst sequence into an mca::Instruction sequence.
     ArrayRef<MCInst> Insts = Region->getInstructions();
-    mca::SourceMgr S(Region->getInstructions(),
+    std::vector<std::unique_ptr<mca::Instruction>> LoweredSequence;
+    for (const MCInst &MCI : Insts) {
+      llvm::Expected<std::unique_ptr<mca::Instruction>> Inst = IB.createInstruction(MCI);
+      if (!Inst) {
+        if (auto NewE = handleErrors(Inst.takeError(),
+            [&IP, &STI](const mca::InstructionError<MCInst> &IE) {
+              std::string InstructionStr;
+              raw_string_ostream SS(InstructionStr);
+              WithColor::error() << IE.Message << '\n';
+              IP->printInst(&IE.Inst, SS, "", *STI);
+              SS.flush();
+              WithColor::note() << "instruction: " << InstructionStr << '\n';
+            })) {
+          // Default case.
+          WithColor::error() << toString(std::move(NewE));
+        }
+        return 1;
+      }
+
+      LoweredSequence.emplace_back(std::move(Inst.get()));
+    }
+
+    mca::SourceMgr S(LoweredSequence,
                      PrintInstructionTables ? 1 : Iterations);
 
     if (PrintInstructionTables) {
       //  Create a pipeline, stages, and a printer.
       auto P = llvm::make_unique<mca::Pipeline>();
-      P->appendStage(llvm::make_unique<mca::FetchStage>(IB, S));
+      P->appendStage(llvm::make_unique<mca::FetchStage>(S));
       P->appendStage(llvm::make_unique<mca::InstructionTables>(SM));
       mca::PipelinePrinter Printer(*P);
 
@@ -532,7 +541,7 @@ int main(int argc, char **argv) {
       Printer.addView(
           llvm::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
 
-      if (!runPipeline(*P, *IP, *STI))
+      if (!runPipeline(*P))
         return 1;
 
       Printer.printReport(TOF->os());
@@ -574,7 +583,7 @@ int main(int argc, char **argv) {
           TimelineMaxCycles));
     }
 
-    if (!runPipeline(*P, *IP, *STI))
+    if (!runPipeline(*P))
       return 1;
 
     Printer.printReport(TOF->os());

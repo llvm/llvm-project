@@ -6379,13 +6379,12 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
       Mask.push_back(i);
     for (int i = 0; i != (int)NumSubElts; ++i) {
       int M = SubMask[i];
-      if (M < 0) {
-        Mask[i + InsertIdx] = M;
-      } else {
+      if (0 <= M) {
         int InputIdx = M / NumSubElts;
         int ExtractIdx = SubInputs[InputIdx].getConstantOperandVal(1);
-        Mask[i + InsertIdx] = (NumElts * (1 + InputIdx)) + ExtractIdx + M;
+        M = (NumElts * (1 + InputIdx)) + ExtractIdx + (M % NumSubElts);
       }
+      Mask[i + InsertIdx] = M;
     }
     // TODO - Add support for more than 1 subinput.
     return Ops.size() <= 2;
@@ -17957,43 +17956,36 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();
 
   bool IsF128 = (VT == MVT::f128);
+  assert((VT == MVT::f64 || VT == MVT::f32 || VT == MVT::f128 ||
+          VT == MVT::v2f64 || VT == MVT::v4f64 || VT == MVT::v4f32 ||
+          VT == MVT::v8f32 || VT == MVT::v8f64 || VT == MVT::v16f32) &&
+         "Unexpected type in LowerFABSorFNEG");
 
   // FIXME: Use function attribute "OptimizeForSize" and/or CodeGenOpt::Level to
   // decide if we should generate a 16-byte constant mask when we only need 4 or
   // 8 bytes for the scalar case.
 
-  MVT LogicVT;
-  MVT EltVT;
-
-  if (VT.isVector()) {
-    LogicVT = VT;
-    EltVT = VT.getVectorElementType();
-  } else if (IsF128) {
-    // SSE instructions are used for optimized f128 logical operations.
-    LogicVT = MVT::f128;
-    EltVT = VT;
-  } else {
-    // There are no scalar bitwise logical SSE/AVX instructions, so we
-    // generate a 16-byte vector constant and logic op even for the scalar case.
-    // Using a 16-byte mask allows folding the load of the mask with
-    // the logic op, so it can save (~4 bytes) on code size.
+  // There are no scalar bitwise logical SSE/AVX instructions, so we
+  // generate a 16-byte vector constant and logic op even for the scalar case.
+  // Using a 16-byte mask allows folding the load of the mask with
+  // the logic op, so it can save (~4 bytes) on code size.
+  bool IsFakeVector = !VT.isVector() && !IsF128;
+  MVT LogicVT = VT;
+  if (IsFakeVector)
     LogicVT = (VT == MVT::f64) ? MVT::v2f64 : MVT::v4f32;
-    EltVT = VT;
-  }
 
-  unsigned EltBits = EltVT.getSizeInBits();
+  unsigned EltBits = VT.getScalarSizeInBits();
   // For FABS, mask is 0x7f...; for FNEG, mask is 0x80...
-  APInt MaskElt =
-    IsFABS ? APInt::getSignedMaxValue(EltBits) : APInt::getSignMask(EltBits);
-  const fltSemantics &Sem =
-      EltVT == MVT::f64 ? APFloat::IEEEdouble() :
-          (IsF128 ? APFloat::IEEEquad() : APFloat::IEEEsingle());
+  APInt MaskElt = IsFABS ? APInt::getSignedMaxValue(EltBits) :
+                           APInt::getSignMask(EltBits);
+  const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(VT);
   SDValue Mask = DAG.getConstantFP(APFloat(Sem, MaskElt), dl, LogicVT);
 
   SDValue Op0 = Op.getOperand(0);
   bool IsFNABS = !IsFABS && (Op0.getOpcode() == ISD::FABS);
-  unsigned LogicOp =
-    IsFABS ? X86ISD::FAND : IsFNABS ? X86ISD::FOR : X86ISD::FXOR;
+  unsigned LogicOp = IsFABS  ? X86ISD::FAND :
+                     IsFNABS ? X86ISD::FOR  :
+                               X86ISD::FXOR;
   SDValue Operand = IsFNABS ? Op0.getOperand(0) : Op0;
 
   if (VT.isVector() || IsF128)
@@ -18029,10 +18021,7 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
           VT == MVT::v8f32 || VT == MVT::v8f64 || VT == MVT::v16f32) &&
          "Unexpected type in LowerFCOPYSIGN");
 
-  MVT EltVT = VT.getScalarType();
-  const fltSemantics &Sem =
-      EltVT == MVT::f64 ? APFloat::IEEEdouble()
-                        : (IsF128 ? APFloat::IEEEquad() : APFloat::IEEEsingle());
+  const fltSemantics &Sem = SelectionDAG::EVTToAPFloatSemantics(VT);
 
   // Perform all scalar logic operations as 16-byte vectors because there are no
   // scalar FP logic instructions in SSE.
@@ -18049,7 +18038,7 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
   SDValue SignMask = DAG.getConstantFP(
       APFloat(Sem, APInt::getSignMask(EltSizeInBits)), dl, LogicVT);
   SDValue MagMask = DAG.getConstantFP(
-      APFloat(Sem, ~APInt::getSignMask(EltSizeInBits)), dl, LogicVT);
+      APFloat(Sem, APInt::getSignedMaxValue(EltSizeInBits)), dl, LogicVT);
 
   // First, clear all bits but the sign bit from the second operand (sign).
   if (IsFakeVector)
@@ -26349,7 +26338,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    if ((SrcVT != MVT::f64 && SrcVT != MVT::v2f32) ||
+    if (SrcVT != MVT::f64 ||
         (DstVT != MVT::v2i32 && DstVT != MVT::v4i16 && DstVT != MVT::v8i8) ||
         getTypeAction(*DAG.getContext(), DstVT) == TypeWidenVector)
       return;
@@ -26358,13 +26347,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT SVT = DstVT.getVectorElementType();
     EVT WiderVT = EVT::getVectorVT(*DAG.getContext(), SVT, NumElts * 2);
     SDValue Res;
-    if (SrcVT == MVT::f64)
-      Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl,
-                             MVT::v2f64, N->getOperand(0));
-    else
-      Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, N->getOperand(0),
-                        DAG.getUNDEF(MVT::v2f32));
-
+    Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2f64, N->getOperand(0));
     Res = DAG.getBitcast(WiderVT, Res);
     Res = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, DstVT, Res,
                       DAG.getIntPtrConstant(0, dl));
@@ -37746,27 +37729,27 @@ static SDValue lowerX86FPLogicOp(SDNode *N, SelectionDAG &DAG,
                                  const X86Subtarget &Subtarget) {
   MVT VT = N->getSimpleValueType(0);
   // If we have integer vector types available, use the integer opcodes.
-  if ((VT.isVector() || VT == MVT::f128) && Subtarget.hasSSE2()) {
-    SDLoc dl(N);
+  if (!VT.isVector() || !Subtarget.hasSSE2())
+    return SDValue();
 
-    unsigned IntBits = std::min(VT.getScalarSizeInBits(), 64U);
-    MVT IntSVT = MVT::getIntegerVT(IntBits);
-    MVT IntVT = MVT::getVectorVT(IntSVT, VT.getSizeInBits() / IntBits);
+  SDLoc dl(N);
 
-    SDValue Op0 = DAG.getBitcast(IntVT, N->getOperand(0));
-    SDValue Op1 = DAG.getBitcast(IntVT, N->getOperand(1));
-    unsigned IntOpcode;
-    switch (N->getOpcode()) {
-    default: llvm_unreachable("Unexpected FP logic op");
-    case X86ISD::FOR: IntOpcode = ISD::OR; break;
-    case X86ISD::FXOR: IntOpcode = ISD::XOR; break;
-    case X86ISD::FAND: IntOpcode = ISD::AND; break;
-    case X86ISD::FANDN: IntOpcode = X86ISD::ANDNP; break;
-    }
-    SDValue IntOp = DAG.getNode(IntOpcode, dl, IntVT, Op0, Op1);
-    return DAG.getBitcast(VT, IntOp);
+  unsigned IntBits = VT.getScalarSizeInBits();
+  MVT IntSVT = MVT::getIntegerVT(IntBits);
+  MVT IntVT = MVT::getVectorVT(IntSVT, VT.getSizeInBits() / IntBits);
+
+  SDValue Op0 = DAG.getBitcast(IntVT, N->getOperand(0));
+  SDValue Op1 = DAG.getBitcast(IntVT, N->getOperand(1));
+  unsigned IntOpcode;
+  switch (N->getOpcode()) {
+  default: llvm_unreachable("Unexpected FP logic op");
+  case X86ISD::FOR:   IntOpcode = ISD::OR; break;
+  case X86ISD::FXOR:  IntOpcode = ISD::XOR; break;
+  case X86ISD::FAND:  IntOpcode = ISD::AND; break;
+  case X86ISD::FANDN: IntOpcode = X86ISD::ANDNP; break;
   }
-  return SDValue();
+  SDValue IntOp = DAG.getNode(IntOpcode, dl, IntVT, Op0, Op1);
+  return DAG.getBitcast(VT, IntOp);
 }
 
 

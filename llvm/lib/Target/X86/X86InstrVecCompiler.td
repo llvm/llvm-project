@@ -466,8 +466,6 @@ def : Pat<(loadf128 addr:$src),
           (VMOVUPSZ128rm addr:$src)>;
 }
 
-// With SSE2 the DAG combiner converts fp logic ops to integer logic ops to
-// reduce patterns.
 let Predicates = [UseSSE1] in {
 // andps is shorter than andpd or pand. andps is SSE and andpd/pand are in SSE2
 def : Pat<(f128 (X86fand VR128:$src1, (memopf128 addr:$src2))),
@@ -489,4 +487,23 @@ def : Pat<(f128 (X86fxor VR128:$src1, VR128:$src2)),
           (XORPSrr VR128:$src1, VR128:$src2)>;
 }
 
+let Predicates = [HasAVX] in {
+// andps is shorter than andpd or pand. andps is SSE and andpd/pand are in SSE2
+def : Pat<(f128 (X86fand VR128:$src1, (loadf128 addr:$src2))),
+          (VANDPSrm VR128:$src1, f128mem:$src2)>;
 
+def : Pat<(f128 (X86fand VR128:$src1, VR128:$src2)),
+          (VANDPSrr VR128:$src1, VR128:$src2)>;
+
+def : Pat<(f128 (X86for VR128:$src1, (loadf128 addr:$src2))),
+          (VORPSrm VR128:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86for VR128:$src1, VR128:$src2)),
+          (VORPSrr VR128:$src1, VR128:$src2)>;
+
+def : Pat<(f128 (X86fxor VR128:$src1, (loadf128 addr:$src2))),
+          (VXORPSrm VR128:$src1, f128mem:$src2)>;
+
+def : Pat<(f128 (X86fxor VR128:$src1, VR128:$src2)),
+          (VXORPSrr VR128:$src1, VR128:$src2)>;
+}

@@ -4983,11 +4983,27 @@ SDValue TargetLowering::lowerCmpEqZeroToCtlzSrl(SDValue Op,
   return SDValue();
 }
 
-SDValue TargetLowering::getExpandedSaturationAddition(SDNode *Node,
-                                                      SelectionDAG &DAG) const {
+SDValue TargetLowering::getExpandedSaturationAdditionSubtraction(
+    SDNode *Node, SelectionDAG &DAG) const {
   unsigned Opcode = Node->getOpcode();
-  assert((Opcode == ISD::SADDSAT || Opcode == ISD::UADDSAT) &&
-         "Expected method to receive SADDSAT or UADDSAT node.");
+  unsigned OverflowOp;
+  switch (Opcode) {
+  case ISD::SADDSAT:
+    OverflowOp = ISD::SADDO;
+    break;
+  case ISD::UADDSAT:
+    OverflowOp = ISD::UADDO;
+    break;
+  case ISD::SSUBSAT:
+    OverflowOp = ISD::SSUBO;
+    break;
+  case ISD::USUBSAT:
+    OverflowOp = ISD::USUBO;
+    break;
+  default:
+    llvm_unreachable("Expected method to receive signed or unsigned saturation "
+                     "addition or subtraction node.");
+  }
   assert(Node->getNumOperands() == 2 && "Expected node to have 2 operands.");
 
   SDLoc dl(Node);
@@ -5002,31 +5018,35 @@ SDValue TargetLowering::getExpandedSaturationAddition(SDNode *Node,
   assert(LHS.getValueType() == RHS.getValueType() &&
          "Expected both operands to be the same type");
 
-  unsigned OverflowOp = Opcode == ISD::SADDSAT ? ISD::SADDO : ISD::UADDO;
   unsigned BitWidth = LHS.getValueSizeInBits();
   EVT ResultType = LHS.getValueType();
   EVT BoolVT =
       getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ResultType);
   SDValue Result =
       DAG.getNode(OverflowOp, dl, DAG.getVTList(ResultType, BoolVT), LHS, RHS);
-  SDValue Sum = Result.getValue(0);
+  SDValue SumDiff = Result.getValue(0);
   SDValue Overflow = Result.getValue(1);
   SDValue Zero = DAG.getConstant(0, dl, ResultType);
 
-  if (Opcode == ISD::SADDSAT) {
-    // SatMax -> Overflow && Sum < 0
-    // SatMin -> Overflow && Sum > 0
+  if (Opcode == ISD::UADDSAT) {
+    // Just need to check overflow for SatMax.
+    APInt MaxVal = APInt::getMaxValue(BitWidth);
+    SDValue SatMax = DAG.getConstant(MaxVal, dl, ResultType);
+    return DAG.getSelect(dl, ResultType, Overflow, SatMax, SumDiff);
+  } else if (Opcode == ISD::USUBSAT) {
+    // Just need to check overflow for SatMin.
+    APInt MinVal = APInt::getMinValue(BitWidth);
+    SDValue SatMin = DAG.getConstant(MinVal, dl, ResultType);
+    return DAG.getSelect(dl, ResultType, Overflow, SatMin, SumDiff);
+  } else {
+    // SatMax -> Overflow && SumDiff < 0
+    // SatMin -> Overflow && SumDiff >= 0
     APInt MinVal = APInt::getSignedMinValue(BitWidth);
     APInt MaxVal = APInt::getSignedMaxValue(BitWidth);
     SDValue SatMin = DAG.getConstant(MinVal, dl, ResultType);
     SDValue SatMax = DAG.getConstant(MaxVal, dl, ResultType);
-    SDValue SumNeg = DAG.getSetCC(dl, BoolVT, Sum, Zero, ISD::SETLT);
+    SDValue SumNeg = DAG.getSetCC(dl, BoolVT, SumDiff, Zero, ISD::SETLT);
     Result = DAG.getSelect(dl, ResultType, SumNeg, SatMax, SatMin);
-    return DAG.getSelect(dl, ResultType, Overflow, Result, Sum);
-  } else {
-    // Just need to check overflow for SatMax.
-    APInt MaxVal = APInt::getMaxValue(BitWidth);
-    SDValue SatMax = DAG.getConstant(MaxVal, dl, ResultType);
-    return DAG.getSelect(dl, ResultType, Overflow, SatMax, Sum);
+    return DAG.getSelect(dl, ResultType, Overflow, Result, SumDiff);
   }
 }

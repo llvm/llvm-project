@@ -1555,8 +1555,9 @@ unsigned SIInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   //   buzz;
 
   RS->enterBasicBlockEnd(MBB);
-  unsigned Scav = RS->scavengeRegister(&AMDGPU::SReg_64RegClass,
-                                       MachineBasicBlock::iterator(GetPC), 0);
+  unsigned Scav = RS->scavengeRegisterBackwards(
+    AMDGPU::SReg_64RegClass,
+    MachineBasicBlock::iterator(GetPC), false, 0);
   MRI.replaceRegWith(PCReg, Scav);
   MRI.clearVirtRegs();
   RS->setRegUsed(Scav);

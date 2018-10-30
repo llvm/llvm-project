@@ -16,7 +16,7 @@
 define void @sret1(i8* sret %x) nounwind {
 entry:
 ; WIN32-LABEL:      _sret1:
-; WIN32:      movb $42, (%eax)
+; WIN32:      movb $42, ({{%e[abcd]x}})
 ; WIN32-NOT:  popl %eax
 ; WIN32:    {{retl$}}
 
@@ -36,7 +36,7 @@ entry:
 define void @sret2(i8* sret %x, i8 %y) nounwind {
 entry:
 ; WIN32-LABEL:      _sret2:
-; WIN32:      movb {{.*}}, (%eax)
+; WIN32:      movb {{.*}}, ({{%e[abcd]x}})
 ; WIN32-NOT:  popl %eax
 ; WIN32:    {{retl$}}
 
@@ -56,8 +56,8 @@ entry:
 define void @sret3(i8* sret %x, i8* %y) nounwind {
 entry:
 ; WIN32-LABEL:      _sret3:
-; WIN32:      movb $42, (%eax)
-; WIN32-NOT:  movb $13, (%eax)
+; WIN32:      movb $42, ([[REG1:%e[abcd]x]])
+; WIN32-NOT:  movb $13, ([[REG1]])
 ; WIN32-NOT:  popl %eax
 ; WIN32:    {{retl$}}
 
@@ -81,7 +81,7 @@ entry:
 define void @sret4(%struct.S4* noalias sret %agg.result) {
 entry:
 ; WIN32-LABEL:     _sret4:
-; WIN32:     movl $42, (%eax)
+; WIN32:     movl $42, ({{%e[abcd]x}})
 ; WIN32-NOT: popl %eax
 ; WIN32:   {{retl$}}
 
@@ -118,8 +118,8 @@ entry:
 ; The address of the return structure is passed as an implicit parameter.
 ; In the -O0 build, %eax is spilled at the beginning of the function, hence we
 ; should match both 4(%esp) and 8(%esp).
-; WIN32:     {{[48]}}(%esp), %eax
-; WIN32:     movl $42, (%eax)
+; WIN32:     {{[48]}}(%esp), [[REG:%e[abcd]x]]
+; WIN32:     movl $42, ([[REG]])
 ; WIN32:     retl $4
 }
 
@@ -230,8 +230,8 @@ define void @test8_f(i64 inreg %a, i64* sret %out) {
 
 ; WIN32-LABEL: _test8_f:
 ; WIN32: movl {{[0-9]+}}(%esp), %[[out:[a-z]+]]
-; WIN32-DAG: movl %edx, 4(%[[out]])
-; WIN32-DAG: movl %eax, (%[[out]])
+; WIN32-DAG: movl {{%e[abcd]x}}, 4(%[[out]])
+; WIN32-DAG: movl {{%e[abcd]x}}, (%[[out]])
 ; WIN32: calll _clobber_eax
 ; WIN32: movl {{.*}}, %eax
 ; WIN32: retl

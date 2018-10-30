@@ -716,6 +716,12 @@ def int_sadd_sat : Intrinsic<[llvm_anyint_ty],
 def int_uadd_sat : Intrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
                              [IntrNoMem, IntrSpeculatable, Commutative]>;
+def int_ssub_sat : Intrinsic<[llvm_anyint_ty],
+                             [LLVMMatchType<0>, LLVMMatchType<0>],
+                             [IntrNoMem, IntrSpeculatable]>;
+def int_usub_sat : Intrinsic<[llvm_anyint_ty],
+                             [LLVMMatchType<0>, LLVMMatchType<0>],
+                             [IntrNoMem, IntrSpeculatable]>;
 
 //===------------------------- Memory Use Markers -------------------------===//
 //

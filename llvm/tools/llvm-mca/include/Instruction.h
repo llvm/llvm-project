@@ -88,7 +88,7 @@ class ReadState;
 /// register write. It also tracks how many cycles are left before the write
 /// back stage.
 class WriteState {
-  const WriteDescriptor &WD;
+  const WriteDescriptor *WD;
   // On instruction issue, this field is set equal to the write latency.
   // Before instruction issue, this field defaults to -512, a special
   // value that represents an "unknown" number of cycles.
@@ -133,14 +133,17 @@ class WriteState {
 public:
   WriteState(const WriteDescriptor &Desc, unsigned RegID,
              bool clearsSuperRegs = false, bool writesZero = false)
-      : WD(Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID),
+      : WD(&Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID),
         ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
         IsEliminated(false), DependentWrite(nullptr), NumWriteUsers(0U) {}
 
+  WriteState(const WriteState &Other) = default;
+  WriteState &operator=(const WriteState &Other) = default;
+
   int getCyclesLeft() const { return CyclesLeft; }
-  unsigned getWriteResourceID() const { return WD.SClassOrWriteResourceID; }
+  unsigned getWriteResourceID() const { return WD->SClassOrWriteResourceID; }
   unsigned getRegisterID() const { return RegisterID; }
-  unsigned getLatency() const { return WD.Latency; }
+  unsigned getLatency() const { return WD->Latency; }
 
   void addUser(ReadState *Use, int ReadAdvance);
 
@@ -178,7 +181,7 @@ public:
 /// A read may be dependent on more than one write. This occurs when some
 /// writes only partially update the register associated to this read.
 class ReadState {
-  const ReadDescriptor &RD;
+  const ReadDescriptor *RD;
   // Physical register identified associated to this read.
   unsigned RegisterID;
   // Number of writes that contribute to the definition of RegisterID.
@@ -202,16 +205,16 @@ class ReadState {
 
 public:
   ReadState(const ReadDescriptor &Desc, unsigned RegID)
-      : RD(Desc), RegisterID(RegID), DependentWrites(0),
+      : RD(&Desc), RegisterID(RegID), DependentWrites(0),
         CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), IsReady(true),
         IndependentFromDef(false) {}
 
-  const ReadDescriptor &getDescriptor() const { return RD; }
-  unsigned getSchedClass() const { return RD.SchedClassID; }
+  const ReadDescriptor &getDescriptor() const { return *RD; }
+  unsigned getSchedClass() const { return RD->SchedClassID; }
   unsigned getRegisterID() const { return RegisterID; }
 
   bool isReady() const { return IsReady; }
-  bool isImplicitRead() const { return RD.isImplicitRead(); }
+  bool isImplicitRead() const { return RD->isImplicitRead(); }
 
   bool isIndependentFromDef() const { return IndependentFromDef; }
   void setIndependentFromDef() { IndependentFromDef = true; }
@@ -387,8 +390,6 @@ public:
   Instruction(const InstrDesc &D)
       : InstructionBase(D), Stage(IS_INVALID), CyclesLeft(UNKNOWN_CYCLES),
         RCUTokenID(0) {}
-  Instruction(const Instruction &Other) = delete;
-  Instruction &operator=(const Instruction &Other) = delete;
 
   unsigned getRCUTokenID() const { return RCUTokenID; }
   int getCyclesLeft() const { return CyclesLeft; }

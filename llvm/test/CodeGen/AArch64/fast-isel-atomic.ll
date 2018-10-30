@@ -91,8 +91,8 @@ define void @atomic_store_release_8(i8* %p, i8 %val) #0 {
 
 ; CHECK-LABEL: atomic_store_release_8_off:
 ; CHECK-NEXT: // %bb.0:
-; CHECK-NEXT:  add x0, x0, #1
-; CHECK-NEXT:  stlrb w1, [x0]
+; CHECK-NEXT:  add [[REG0:x[0-9]+]], x0, #1
+; CHECK-NEXT:  stlrb w1, {{\[}}[[REG0]]]
 ; CHECK-NEXT:  ret
 define void @atomic_store_release_8_off(i8* %p, i8 %val) #0 {
   %tmp0 = getelementptr i8, i8* %p, i32 1
@@ -111,8 +111,8 @@ define void @atomic_store_release_16(i16* %p, i16 %val) #0 {
 
 ; CHECK-LABEL: atomic_store_release_16_off:
 ; CHECK-NEXT: // %bb.0:
-; CHECK-NEXT:  add x0, x0, #2
-; CHECK-NEXT:  stlrh w1, [x0]
+; CHECK-NEXT:  add [[REG0:x[0-9]+]], x0, #2
+; CHECK-NEXT:  stlrh w1, {{\[}}[[REG0]]]
 ; CHECK-NEXT:  ret
 define void @atomic_store_release_16_off(i16* %p, i16 %val) #0 {
   %tmp0 = getelementptr i16, i16* %p, i32 1
@@ -131,8 +131,8 @@ define void @atomic_store_release_32(i32* %p, i32 %val) #0 {
 
 ; CHECK-LABEL: atomic_store_release_32_off:
 ; CHECK-NEXT: // %bb.0:
-; CHECK-NEXT:  add x0, x0, #4
-; CHECK-NEXT:  stlr w1, [x0]
+; CHECK-NEXT:  add [[REG0:x[0-9]+]], x0, #4
+; CHECK-NEXT:  stlr w1, {{\[}}[[REG0]]]
 ; CHECK-NEXT:  ret
 define void @atomic_store_release_32_off(i32* %p, i32 %val) #0 {
   %tmp0 = getelementptr i32, i32* %p, i32 1
@@ -151,8 +151,8 @@ define void @atomic_store_release_64(i64* %p, i64 %val) #0 {
 
 ; CHECK-LABEL: atomic_store_release_64_off:
 ; CHECK-NEXT: // %bb.0:
-; CHECK-NEXT:  add x0, x0, #8
-; CHECK-NEXT:  stlr x1, [x0]
+; CHECK-NEXT:  add [[REG0:x[0-9]+]], x0, #8
+; CHECK-NEXT:  stlr x1, {{\[}}[[REG0]]]
 ; CHECK-NEXT:  ret
 define void @atomic_store_release_64_off(i64* %p, i64 %val) #0 {
   %tmp0 = getelementptr i64, i64* %p, i32 1
@@ -172,8 +172,8 @@ define void @atomic_store_seq_cst_8(i8* %p, i8 %val) #0 {
 
 ; CHECK-LABEL: atomic_store_seq_cst_8_off:
 ; CHECK-NEXT: // %bb.0:
-; CHECK-NEXT:  add x0, x0, #1
-; CHECK-NEXT:  stlrb w1, [x0]
+; CHECK-NEXT:  add [[REG0:x[0-9]+]], x0, #1
+; CHECK-NEXT:  stlrb w1, {{\[}}[[REG0]]]
 ; CHECK-NEXT:  ret
 define void @atomic_store_seq_cst_8_off(i8* %p, i8 %val) #0 {
   %tmp0 = getelementptr i8, i8* %p, i32 1
@@ -192,8 +192,8 @@ define void @atomic_store_seq_cst_16(i16* %p, i16 %val) #0 {
 
 ; CHECK-LABEL: atomic_store_seq_cst_16_off:
 ; CHECK-NEXT: // %bb.0:
-; CHECK-NEXT:  add x0, x0, #2
-; CHECK-NEXT:  stlrh w1, [x0]
+; CHECK-NEXT:  add [[REG0:x[0-9]+]], x0, #2
+; CHECK-NEXT:  stlrh w1, {{\[}}[[REG0]]]
 ; CHECK-NEXT:  ret
 define void @atomic_store_seq_cst_16_off(i16* %p, i16 %val) #0 {
   %tmp0 = getelementptr i16, i16* %p, i32 1
@@ -212,8 +212,8 @@ define void @atomic_store_seq_cst_32(i32* %p, i32 %val) #0 {
 
 ; CHECK-LABEL: atomic_store_seq_cst_32_off:
 ; CHECK-NEXT: // %bb.0:
-; CHECK-NEXT:  add x0, x0, #4
-; CHECK-NEXT:  stlr w1, [x0]
+; CHECK-NEXT:  add [[REG0:x[0-9]+]], x0, #4
+; CHECK-NEXT:  stlr w1, {{\[}}[[REG0]]]
 ; CHECK-NEXT:  ret
 define void @atomic_store_seq_cst_32_off(i32* %p, i32 %val) #0 {
   %tmp0 = getelementptr i32, i32* %p, i32 1
@@ -232,8 +232,8 @@ define void @atomic_store_seq_cst_64(i64* %p, i64 %val) #0 {
 
 ; CHECK-LABEL: atomic_store_seq_cst_64_off:
 ; CHECK-NEXT: // %bb.0:
-; CHECK-NEXT:  add x0, x0, #8
-; CHECK-NEXT:  stlr x1, [x0]
+; CHECK-NEXT:  add [[REG0:x[0-9]+]], x0, #8
+; CHECK-NEXT:  stlr x1, {{\[}}[[REG0]]]
 ; CHECK-NEXT:  ret
 define void @atomic_store_seq_cst_64_off(i64* %p, i64 %val) #0 {
   %tmp0 = getelementptr i64, i64* %p, i32 1

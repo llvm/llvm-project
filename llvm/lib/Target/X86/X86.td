@@ -826,6 +826,7 @@ def KNLFeatures : ProcessorFeatures<[], [
   FeatureLAHFSAHF,
   FeatureSlow3OpsLEA,
   FeatureSlowIncDec,
+  FeatureAES,
   FeatureRDRAND,
   FeatureF16C,
   FeatureFSGSBase,

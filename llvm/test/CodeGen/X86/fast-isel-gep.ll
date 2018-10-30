@@ -24,7 +24,7 @@ define i32 @test2(i64 %t3, i32* %t1) nounwind {
        %t15 = load i32, i32* %t9            ; <i32> [#uses=1]
        ret i32 %t15
 ; X32-LABEL: test2:
-; X32:  	movl	(%edx,%ecx,4), %e
+; X32:  	movl	({{%e[a-z]+}},{{%e[a-z]+}},4), %e
 ; X32:  	ret
 
 ; X64-LABEL: test2:
@@ -81,8 +81,8 @@ define i64 @test5(i8* %A, i32 %I, i64 %B) nounwind {
   %v11 = add i64 %B, %v10
   ret i64 %v11
 ; X64-LABEL: test5:
-; X64: movslq	%e[[A1]], %rax
-; X64-NEXT: (%r[[A0]],%rax),
+; X64: movslq	%e[[A1]], [[R0:%r[a-z]+]]
+; X64-NEXT: (%r[[A0]],[[R0]]),
 ; X64: ret
 }
 

@@ -1,6 +1,6 @@
 ; RUN: llc < %s -march=amdgcn -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap -enable-var-scope --check-prefixes=SI,GCN,MESA-GCN,FUNC %s
 ; RUN: llc < %s -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=VI,GCN,MESA-VI,MESA-GCN,FUNC %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=VI,GCN,HSA-VI,FUNC %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=fiji -mattr=-code-object-v3 -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=VI,GCN,HSA-VI,FUNC %s
 ; RUN: llc < %s -march=r600 -mcpu=redwood -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=EG,EGCM,FUNC %s
 ; RUN: llc < %s -march=r600 -mcpu=cayman -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap -enable-var-scope --check-prefixes=CM,EGCM,FUNC %s
 

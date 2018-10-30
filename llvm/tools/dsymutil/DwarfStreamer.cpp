@@ -269,28 +269,27 @@ void DwarfStreamer::emitSwiftAST(StringRef Buffer) {
 void DwarfStreamer::emitRangesEntries(
     int64_t UnitPcOffset, uint64_t OrigLowPc,
     const FunctionIntervals::const_iterator &FuncRange,
-    const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
-    unsigned AddressSize) {
+    const DWARFDebugRnglist &RangeList, unsigned AddressSize) {
   MS->SwitchSection(MC->getObjectFileInfo()->getDwarfRangesSection());
 
   // Offset each range by the right amount.
-  int64_t PcOffset = Entries.empty() ? 0 : FuncRange.value() + UnitPcOffset;
-  for (const auto &Range : Entries) {
-    if (Range.isBaseAddressSelectionEntry(AddressSize)) {
+  int64_t PcOffset = RangeList.empty() ? 0 : FuncRange.value() + UnitPcOffset;
+  for (const auto &Range : RangeList.getEntries()) {
+    if (Range.isBaseAddressSelectionEntry()) {
       warn("unsupported base address selection operation",
            "emitting debug_ranges");
       break;
     }
     // Do not emit empty ranges.
-    if (Range.StartAddress == Range.EndAddress)
+    if (Range.isEndOfList() || Range.getStartAddress() == Range.getEndAddress())
       continue;
 
     // All range entries should lie in the function range.
-    if (!(Range.StartAddress + OrigLowPc >= FuncRange.start() &&
-          Range.EndAddress + OrigLowPc <= FuncRange.stop()))
+    if (!(Range.getStartAddress() + OrigLowPc >= FuncRange.start() &&
+          Range.getEndAddress() + OrigLowPc <= FuncRange.stop()))
       warn("inconsistent range data.", "emitting debug_ranges");
-    MS->EmitIntValue(Range.StartAddress + PcOffset, AddressSize);
-    MS->EmitIntValue(Range.EndAddress + PcOffset, AddressSize);
+    MS->EmitIntValue(Range.getStartAddress() + PcOffset, AddressSize);
+    MS->EmitIntValue(Range.getEndAddress() + PcOffset, AddressSize);
     RangesSectionSize += 2 * AddressSize;
   }
 

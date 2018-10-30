@@ -22,8 +22,6 @@ class AArch64WinCOFFStreamer : public MCWinCOFFStreamer {
   Win64EH::ARM64UnwindEmitter EHStreamer;
 
 public:
-  friend class AArch64TargetWinCOFFStreamer;
-
   AArch64WinCOFFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> AB,
                          std::unique_ptr<MCCodeEmitter> CE,
                          std::unique_ptr<MCObjectWriter> OW)

@@ -516,6 +516,10 @@ public:
     return FMA;
   }
 
+  bool hasSwap() const {
+    return GFX9Insts;
+  }
+
   TrapHandlerAbi getTrapHandlerAbi() const {
     return isAmdHsaOS() ? TrapHandlerAbiHsa : TrapHandlerAbiNone;
   }

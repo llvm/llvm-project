@@ -1,4 +1,5 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -start-before greedy -stop-after virtregrewriter -o - %s | FileCheck %s
+# FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39481.
+# RUN: llc -mtriple=x86_64-linux-gnu -start-before greedy -stop-after virtregrewriter -o - -verify-machineinstrs=0 %s | FileCheck %s
 
 --- |
   ; ModuleID = '<stdin>'

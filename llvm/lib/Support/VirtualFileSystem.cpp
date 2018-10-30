@@ -2118,7 +2118,7 @@ std::error_code VFSFromYamlDirIterImpl::incrementExternal() {
 }
 
 std::error_code VFSFromYamlDirIterImpl::incrementContent(bool IsFirstTime) {
-  assert(IsFirstTime || Current != End && "cannot iterate past end");
+  assert((IsFirstTime || Current != End) && "cannot iterate past end");
   if (!IsFirstTime)
     ++Current;
   while (Current != End) {
