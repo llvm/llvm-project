@@ -1350,15 +1350,14 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
 
-  if (main_compile_unit_sp && !main_compile_unit_sp->Exists()) {
-    if (log) {
-      StreamString ss;
-      module.GetDescription(&ss);
-
+  if (log) {
+    StreamString ss;
+    module.GetDescription(&ss);
+    log->Printf("SwiftASTContext::CreateInstance(Module=%s)", ss.GetData());
+    if (main_compile_unit_sp && !main_compile_unit_sp->Exists())
       log->Printf("Corresponding source not found for %s, loading module "
-                  "%s is unlikely to succeed",
-                  main_compile_unit_sp->GetCString(), ss.GetData());
-    }
+                  "is unlikely to succeed",
+                  main_compile_unit_sp->GetCString());
   }
 
   std::shared_ptr<SwiftASTContext> swift_ast_sp(
