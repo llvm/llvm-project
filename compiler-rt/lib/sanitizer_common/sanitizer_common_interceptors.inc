@@ -2149,6 +2149,8 @@ INTERCEPTOR(int, clock_gettime, u32 clk_id, void *tp) {
 namespace __sanitizer {
 extern "C" {
 int real_clock_gettime(u32 clk_id, void *tp) {
+  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
+    return internal_clock_gettime(clk_id, tp);
   return REAL(clock_gettime)(clk_id, tp);
 }
 }  // extern "C"
