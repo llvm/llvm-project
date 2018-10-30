@@ -1581,17 +1581,17 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
         for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                            DirEnd;
              Dir != DirEnd && !EC; Dir.increment(EC)) {
-          if (llvm::sys::path::extension(Dir->getName()) != ".framework")
+          if (llvm::sys::path::extension(Dir->path()) != ".framework")
             continue;
 
           const DirectoryEntry *FrameworkDir =
-              FileMgr.getDirectory(Dir->getName());
+              FileMgr.getDirectory(Dir->path());
           if (!FrameworkDir)
             continue;
 
           // Load this framework module.
-          loadFrameworkModule(llvm::sys::path::stem(Dir->getName()),
-                              FrameworkDir, IsSystem);
+          loadFrameworkModule(llvm::sys::path::stem(Dir->path()), FrameworkDir,
+                              IsSystem);
         }
         continue;
       }
@@ -1649,10 +1649,9 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
   llvm::vfs::FileSystem &FS = *FileMgr.getVirtualFileSystem();
   for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
-    bool IsFramework =
-        llvm::sys::path::extension(Dir->getName()) == ".framework";
+    bool IsFramework = llvm::sys::path::extension(Dir->path()) == ".framework";
     if (IsFramework == SearchDir.isFramework())
-      loadModuleMapFile(Dir->getName(), SearchDir.isSystemHeaderDirectory(),
+      loadModuleMapFile(Dir->path(), SearchDir.isSystemHeaderDirectory(),
                         SearchDir.isFramework());
   }
 
