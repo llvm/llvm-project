@@ -192,16 +192,9 @@ public:
   }
 
 private:
-  // Calls setDiagnosticsEngine() and storeError().
+  // Sets DiagEngine and Errors.
   friend class ClangTidyDiagnosticConsumer;
   friend class ClangTidyPluginAction;
-
-  /// \brief Sets the \c DiagnosticsEngine so that Diagnostics can be generated
-  /// correctly.
-  void setDiagnosticsEngine(DiagnosticsEngine *Engine);
-
-  /// \brief Store an \p Error.
-  void storeError(const ClangTidyError &Error);
 
   std::vector<ClangTidyError> Errors;
   DiagnosticsEngine *DiagEngine;
