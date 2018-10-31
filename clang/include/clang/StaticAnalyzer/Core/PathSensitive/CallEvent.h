@@ -921,15 +921,28 @@ public:
     return getOriginExpr()->getOperatorNew();
   }
 
+  // Size and maybe implicit alignment in C++17. Instead of size, the AST
+  // contains the construct-expression. Alignment is always hidden.
+  // We pretend that argument 0 is size and argument 1 is alignment (if passed
+  // implicitly) and the rest are placement args. This makes sure that the
+  // number of arguments is always the same as the number of parameters.
+  unsigned getNumImplicitArgs() const {
+    return getOriginExpr()->passAlignment() ? 2 : 1;
+  }
+
   unsigned getNumArgs() const override {
-    return getOriginExpr()->getNumPlacementArgs() + 1;
+    return getOriginExpr()->getNumPlacementArgs() + getNumImplicitArgs();
   }
 
   const Expr *getArgExpr(unsigned Index) const override {
     // The first argument of an allocator call is the size of the allocation.
-    if (Index == 0)
+    if (Index < getNumImplicitArgs())
       return nullptr;
-    return getOriginExpr()->getPlacementArg(Index - 1);
+    return getOriginExpr()->getPlacementArg(Index - getNumImplicitArgs());
+  }
+
+  const Expr *getPlacementArgExpr(unsigned Index) const {
+    return getOriginExpr()->getPlacementArg(Index);
   }
 
   Kind getKind() const override { return CE_CXXAllocator; }
