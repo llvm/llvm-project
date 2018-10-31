@@ -102,9 +102,6 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
     return getPersistentStopSummary();
   }
 
-  // [PR 3337] Use 'getAs<FunctionType>' to strip away any typedefs on the
-  // function's type.
-  const FunctionType *FT = FD->getType()->getAs<FunctionType>();
   const IdentifierInfo *II = FD->getIdentifier();
   if (!II)
     return getDefaultSummary();
@@ -115,7 +112,8 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
   // down below.
   FName = FName.substr(FName.find_first_not_of('_'));
 
-  // Inspect the result type.
+  // Inspect the result type. Strip away any typedefs.
+  const auto *FT = FD->getType()->getAs<FunctionType>();
   QualType RetTy = FT->getReturnType();
   std::string RetTyName = RetTy.getAsString();
 
@@ -506,12 +504,6 @@ bool RetainSummaryManager::isTrustedReferenceCountImplementation(
 bool RetainSummaryManager::canEval(const CallExpr *CE,
                                    const FunctionDecl *FD,
                                    bool &hasTrustedImplementationAnnotation) {
-  // For now, we're only handling the functions that return aliases of their
-  // arguments: CFRetain (and its families).
-  // Eventually we should add other functions we can model entirely,
-  // such as CFRelease, which don't invalidate their arguments or globals.
-  if (CE->getNumArgs() != 1)
-    return false;
 
   IdentifierInfo *II = FD->getIdentifier();
   if (!II)
@@ -533,11 +525,24 @@ bool RetainSummaryManager::canEval(const CallExpr *CE,
       return isRetain(FD, FName) || isAutorelease(FD, FName) ||
              isMakeCollectable(FName);
 
+    // Process OSDynamicCast: should just return the first argument.
+    // For now, treating the cast as a no-op, and disregarding the case where
+    // the output becomes null due to the type mismatch.
+    if (TrackOSObjects && FName == "safeMetaCast") {
+      return true;
+    }
+
     const FunctionDecl* FDD = FD->getDefinition();
     if (FDD && isTrustedReferenceCountImplementation(FDD)) {
       hasTrustedImplementationAnnotation = true;
       return true;
     }
+  }
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    const CXXRecordDecl *Parent = MD->getParent();
+    if (TrackOSObjects && Parent && isOSObjectSubclass(Parent))
+      return FName == "release" || FName == "retain";
   }
 
   return false;
