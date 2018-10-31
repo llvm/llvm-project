@@ -1,11 +1,10 @@
 #include "Threading.h"
 #include "Trace.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Config/config.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
 #include <thread>
-#ifdef HAVE_PTHREAD_H
+#ifdef __USE_POSIX
 #include <pthread.h>
 #endif
 
@@ -102,7 +101,7 @@ void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,
 }
 
 void setThreadPriority(std::thread &T, ThreadPriority Priority) {
-#if defined(HAVE_PTHREAD_H) && defined(__linux__)
+#ifdef __linux__
   sched_param priority;
   priority.sched_priority = 0;
   pthread_setschedparam(
