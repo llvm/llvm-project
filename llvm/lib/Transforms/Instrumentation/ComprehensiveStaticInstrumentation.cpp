@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Instrumentation/ComprehensiveStaticInstrumentation.h"
 #include "llvm/Transforms/CSI.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -78,13 +79,13 @@ static CSIOptions OverrideFromCL(CSIOptions Options) {
 
 /// The Comprehensive Static Instrumentation pass.
 /// Inserts calls to user-defined hooks at predefined points in the IR.
-struct ComprehensiveStaticInstrumentation : public ModulePass {
+struct ComprehensiveStaticInstrumentationLegacyPass : public ModulePass {
   static char ID; // Pass identification, replacement for typeid.
 
-  ComprehensiveStaticInstrumentation(
+  ComprehensiveStaticInstrumentationLegacyPass(
       const CSIOptions &Options = CSIOptions())
       : ModulePass(ID), Options(OverrideFromCL(Options)) {
-    initializeComprehensiveStaticInstrumentationPass(
+    initializeComprehensiveStaticInstrumentationLegacyPassPass(
         *PassRegistry::getPassRegistry());
   }
   StringRef getPassName() const override {
@@ -98,21 +99,21 @@ private:
 }; // struct ComprehensiveStaticInstrumentation
 } // anonymous namespace
 
-char ComprehensiveStaticInstrumentation::ID = 0;
+char ComprehensiveStaticInstrumentationLegacyPass::ID = 0;
 
-INITIALIZE_PASS_BEGIN(ComprehensiveStaticInstrumentation, "csi",
+INITIALIZE_PASS_BEGIN(ComprehensiveStaticInstrumentationLegacyPass, "csi",
                       "ComprehensiveStaticInstrumentation pass",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(ComprehensiveStaticInstrumentation, "csi",
+INITIALIZE_PASS_END(ComprehensiveStaticInstrumentationLegacyPass, "csi",
                     "ComprehensiveStaticInstrumentation pass",
                     false, false)
 
-ModulePass *llvm::createComprehensiveStaticInstrumentationPass(
+ModulePass *llvm::createComprehensiveStaticInstrumentationLegacyPass(
     const CSIOptions &Options) {
-  return new ComprehensiveStaticInstrumentation(Options);
+  return new ComprehensiveStaticInstrumentationLegacyPass(Options);
 }
 
 /// Return the first DILocation in the given basic block, or nullptr
@@ -772,6 +773,7 @@ void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
   }
 }
 
+// TODO: Replace this using TaskInfo.
 static void getTaskExits(
     DetachInst *DI, SmallVectorImpl<BasicBlock *> &TaskReturns,
     SmallVectorImpl<BasicBlock *> &TaskResumes,
@@ -1549,13 +1551,13 @@ void CSIImpl::instrumentFunction(Function &F) {
   updateInstrumentedFnAttrs(F);
 }
 
-void ComprehensiveStaticInstrumentation::getAnalysisUsage(
+void ComprehensiveStaticInstrumentationLegacyPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   AU.addRequired<CallGraphWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
 }
 
-bool ComprehensiveStaticInstrumentation::runOnModule(Module &M) {
+bool ComprehensiveStaticInstrumentationLegacyPass::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
@@ -1565,4 +1567,23 @@ bool ComprehensiveStaticInstrumentation::runOnModule(Module &M) {
   };
 
   return CSIImpl(M, CG, GetDomTree, Options).run();
+}
+
+ComprehensiveStaticInstrumentationPass::ComprehensiveStaticInstrumentationPass(
+    const CSIOptions &Options)
+    : Options(OverrideFromCL(Options)) { }
+
+PreservedAnalyses ComprehensiveStaticInstrumentationPass::run(
+    Module &M, ModuleAnalysisManager &AM) {
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  auto &CG = AM.getResult<CallGraphAnalysis>(M);
+  auto GetDT = [&FAM](Function &F) -> DominatorTree & {
+    return FAM.getResult<DominatorTreeAnalysis>(F);
+  };
+
+  if (!CSIImpl(M, &CG, GetDT, Options).run())
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::none();
 }
