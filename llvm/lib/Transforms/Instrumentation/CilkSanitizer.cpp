@@ -60,6 +60,8 @@ STATISTIC(NumOmittedReadsBeforeWrite,
 STATISTIC(NumOmittedReadsFromConstants,
           "Number of reads from constant data");
 STATISTIC(NumOmittedNonCaptured, "Number of accesses ignored due to capturing");
+STATISTIC(NumOmittedStaticNoRace,
+          "Number of accesses proven statically to not race");
 STATISTIC(NumInstrumentedDetaches, "Number of instrumented detaches");
 STATISTIC(NumInstrumentedDetachExits, "Number of instrumented detach exits");
 STATISTIC(NumInstrumentedSyncs, "Number of instrumented syncs");
@@ -228,6 +230,55 @@ private:
 };
 
 namespace {
+using MPTaskListTy = DenseMap<const Spindle *, SmallPtrSet<const Task *, 2>>;
+
+// Simple enum to track different types of races.  Each race type is a 2-bit
+// value, where a 1 bit indicates a write access.
+enum RaceType {
+  None = 0,
+  RW = 1,
+  WR = 2,
+  WW = 3,
+};
+
+static RaceType getRaceType(bool Acc1IsWrite, bool Acc2IsWrite) {
+  return RaceType((static_cast<unsigned>(Acc1IsWrite) << 1) |
+                  static_cast<unsigned>(Acc2IsWrite));
+}
+
+// Simple enum to track the kinds of accesses an operation might perform that
+// can result in a determinacy race.
+enum AccessType {
+  Read  = 1,
+  Write = 2,
+  ReadWrite = Read | Write,
+};
+
+static AccessType getAccessType(const RaceType RT, unsigned Arg) {
+  assert(Arg < 2 && "Invalid arg for RaceType");
+  return static_cast<AccessType>(
+      static_cast<bool>(static_cast<int>(RT) & ((!Arg) << 1)) + 1);
+}
+
+static bool isReadSet(const AccessType AT) {
+  return static_cast<int>(AT) & static_cast<int>(AccessType::Read);
+}
+
+static bool isWriteSet(const AccessType AT) {
+  return static_cast<int>(AT) & static_cast<int>(AccessType::Write);
+}
+
+static AccessType setRead(const AccessType AT) {
+  return AccessType(static_cast<int>(AT) | static_cast<int>(AccessType::Read));
+}
+
+static AccessType setWrite(const AccessType AT) {
+  return AccessType(static_cast<int>(AT) | static_cast<int>(AccessType::Write));
+}
+
+static AccessType unionAccessType(const AccessType AT1, const AccessType AT2) {
+  return AccessType(static_cast<int>(AT1) | static_cast<int>(AT2));
+}
 
 struct CilkSanitizerImpl : public CSIImpl {
   CilkSanitizerImpl(Module &M, CallGraph *CG,
@@ -491,6 +542,15 @@ private:
 
   SmallVector<Constant *, 4> UnitObjTables;
 
+  SmallVector<Instruction *, 8> AllocationFnCalls;
+  SmallVector<Instruction *, 8> FreeCalls;
+  SmallVector<Instruction *, 8> Allocas;
+  SmallPtrSet<Instruction *, 8> ToInstrument;
+
+  DenseMap<MemTransferInst *, AccessType> MemTransferAccTypes;
+  SmallVector<Instruction *, 8> NoRaceCallsites;
+  SmallPtrSet<Function *, 8> MayRaceFunctions;
+  DenseMap<DetachInst *, SmallVector<SyncInst *, 2>> DetachToSync;
 };
 
 /// CilkSanitizer: instrument the code in module to find races.
@@ -660,9 +720,32 @@ bool CilkSanitizerImpl::run() {
   initializeCsanObjectTables();
   initializeCsanHooks();
 
+  // Examine all functions in the module to find IR objects within each function
+  // that require instrumentation.
+  for (Function &F : M) {
+    DEBUG(dbgs() << "Preparing to instrument " << F.getName() << "\n");
+    prepareToInstrumentFunction(F);
+  }
+
+  // Based on information of which functions might expose a race, determine
+  // which callsites in the function need to be instrumented.
+  determineCallSitesToInstrument();
+
+  // Determine which callsites can have instrumentation suppressed.
+  DenseMap<Function *, SmallPtrSet<Instruction *, 32>> ToInstrumentByFunction;
+  DenseMap<Function *, SmallPtrSet<Instruction *, 8>> NoRaceCallsitesByFunction;
+  for (Instruction *I : ToInstrument)
+    ToInstrumentByFunction[I->getParent()->getParent()].insert(I);
+  for (Instruction *I : NoRaceCallsites)
+    if (!ToInstrument.count(I))
+      NoRaceCallsitesByFunction[I->getParent()->getParent()].insert(I);
+
+  // Insert the necessary instrumentation throughout each function in the
+  // module.
   for (Function &F : M) {
     DEBUG(dbgs() << "Instrumenting " << F.getName() << "\n");
-    instrumentFunction(F);
+    instrumentFunction(F, ToInstrumentByFunction[&F],
+                       NoRaceCallsitesByFunction[&F]);
   }
 
   CSIImpl::collectUnitFEDTables();
@@ -958,23 +1041,565 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
   return true;
 }
 
-// Examine the uses of a given AllocaInst to determine if some use is detached.
-static bool MightHaveDetachedUse(const AllocaInst *AI) {
-  const BasicBlock *AllocaCtx = GetDetachedCtx(AI->getParent());
+// Structure to record the set of child tasks that might be in parallel with
+// this spindle.
+struct MaybeParallelTasks {
+  MPTaskListTy TaskList;
+
+  // This method is called once per spindle during an initial DFS traversal of
+  // the spindle graph.
+  bool markDefiningSpindle(const Spindle *S) {
+    DEBUG(dbgs() << "markDefiningSpindle @ " << *S << "\n");
+    switch (S->getType()) {
+      // Emplace empty task lists for Entry, Detach, and Sync spindles.
+    case Spindle::SPType::Entry:
+    case Spindle::SPType::Detach:
+      TaskList.try_emplace(S);
+      return true;
+    case Spindle::SPType::Sync:
+      return false;
+    case Spindle::SPType::Phi:
+      {
+        // At task-continuation Phi's, initialize the task list with the
+        // detached task that reattaches to this continuation.
+        if (S->isTaskContinuation()) {
+          DEBUG(dbgs() << "TaskCont spindle " << *S << "\n");
+          bool Complete = true;
+          for (const Spindle *Pred : predecessors(S)) {
+            DEBUG(dbgs() << "pred spindle " << *Pred << "\n");
+            if (S->predInDifferentTask(Pred))
+              TaskList[S].insert(Pred->getParentTask());
+            // If we have a Phi predecessor of this spindle, we'll want to
+            // re-evaluate it.
+            if (Pred->isPhi())
+              Complete = false;
+          }
+          DEBUG({
+              for (const Task *MPT : TaskList[S])
+                dbgs() << "Added MPT " << MPT->getEntry()->getName() << "\n";
+            });
+          return Complete;
+        }
+        return false;
+      }
+    }
+    return false;
+  }
+
+  // This method is called once per unevaluated spindle in an inverse-post-order
+  // walk of the spindle graph.
+  bool evaluate(const Spindle *S, unsigned EvalNum) {
+    DEBUG(dbgs() << "evaluate @ " << *S << "\n");
+    if (!TaskList.count(S))
+      TaskList.try_emplace(S);
+
+    bool Complete = true;
+    for (const Spindle::SpindleEdge &PredEdge : S->in_edges()) {
+      const Spindle *Pred = PredEdge.first;
+      const BasicBlock *Inc = PredEdge.second;
+
+      // If the incoming edge is a sync edge, get the associated sync region.
+      const Value *SyncRegSynced = nullptr;
+      if (const SyncInst *SI = dyn_cast<SyncInst>(Inc->getTerminator()))
+        SyncRegSynced = SI->getSyncRegion();
+
+      // Iterate through the tasks in the task list for Pred.
+      for (const Task *MP : TaskList[Pred]) {
+        // Filter out any tasks that are synced by the sync region.
+        if (const DetachInst *DI = MP->getDetach())
+          if (SyncRegSynced == DI->getSyncRegion())
+            continue;
+        // Insert the task into this spindle's task list.  If this task is a new
+        // addition, then we haven't yet reached the fixed point of this
+        // analysis.
+        if (TaskList[S].insert(MP).second)
+          Complete = false;
+      }
+    }
+    DEBUG({
+        dbgs() << "New MPT list for " << *S << "(Complete? " << Complete << ")\n";
+        for (const Task *MP : TaskList[S])
+          dbgs() << "\t" << MP->getEntry()->getName() << "\n";
+      });
+    return Complete;
+  }
+};
+
+// Get the general memory accesses for the instruction \p I, and stores those
+// accesses into \p AccI.  Returns true if general memory accesses could be
+// derived for I, false otherwise.
+static bool GetGeneralAccesses(
+    Instruction *I, SmallVectorImpl<GeneralAccess> &AccI, AliasAnalysis *AA,
+    const TargetLibraryInfo *TLI) {
+  GeneralAccess GA;
+  GA.I = I;
+
+  // Handle memory intrinsics.
+  if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
+    GA.Type = GeneralAccess::WRITE;
+    GA.Loc = MemoryLocation::getForDest(MI);
+    AccI.push_back(GA);
+    if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(I)) {
+      GA.Type = GeneralAccess::READ;
+      GA.Loc = MemoryLocation::getForSource(MTI);
+      AccI.push_back(GA);
+    }
+    return true;
+  }
+
+  // Handle more standard memory operations.
+  if (GA.Loc = MemoryLocation::getOrNone(I)) {
+    GA.Type = isa<LoadInst>(I) ? GeneralAccess::READ : GeneralAccess::WRITE;
+    AccI.push_back(GA);
+    return true;
+  }
+
+  // Handle arbitrary call sites by examining pointee arguments.
+  ImmutableCallSite CS(I);
+  if (CS) {
+    for (auto AI = CS.arg_begin(), AE = CS.arg_end(); AI != AE; ++AI) {
+      const Value *Arg = *AI;
+      if (!Arg->getType()->isPtrOrPtrVectorTy())
+        continue;
+
+      unsigned ArgIdx = std::distance(CS.arg_begin(), AI);
+      MemoryLocation Loc = MemoryLocation::getForArgument(CS, ArgIdx, *TLI);
+      if (AA->pointsToConstantMemory(Loc))
+        continue;
+
+      GA.Loc = Loc;
+      auto MRI = AA->getArgModRefInfo(CS, ArgIdx);
+      if (isModSet(MRI))
+        GA.Type = GeneralAccess::WRITE;
+      else if (isRefSet(MRI))
+        GA.Type = GeneralAccess::READ;
+
+      AccI.push_back(GA);
+    }
+    return true;
+  }
+  return false;
+}
+
+static Spindle *GetRepSpindleInTask(Spindle *S, const Task *T,
+                                    const TaskInfo &TI) {
+  Spindle *CurrS = S;
+  Task *CurrT = S->getParentTask();
+  while (T != CurrT) {
+    DetachInst *DI = CurrT->getDetach();
+    if (!DI)
+      return nullptr;
+    CurrS = TI.getSpindleFor(DI->getContinue());
+    CurrT = CurrS->getParentTask();
+  }
+  return CurrS;
+}
+
+// Structure to record the set of child tasks that might be in parallel with
+// this spindle, ignoring back edges of loops..
+struct MaybeParallelTasksInLoopBody : public MaybeParallelTasks {
+  MPTaskListTy TaskList;
+  LoopInfo &LI;
+
+  MaybeParallelTasksInLoopBody(LoopInfo &LI) : LI(LI) {}
+
+  // This method is called once per unevaluated spindle in an inverse-post-order
+  // walk of the spindle graph.
+  bool evaluate(const Spindle *S, unsigned EvalNum) {
+    DEBUG(dbgs() << "evaluate @ " << *S << "\n");
+    if (!TaskList.count(S))
+      TaskList.try_emplace(S);
+
+    bool Complete = true;
+    for (const Spindle::SpindleEdge &PredEdge : S->in_edges()) {
+      const Spindle *Pred = PredEdge.first;
+      const BasicBlock *Inc = PredEdge.second;
+
+      // If the incoming edge is a sync edge, get the associated sync region.
+      const Value *SyncRegSynced = nullptr;
+      if (const SyncInst *SI = dyn_cast<SyncInst>(Inc->getTerminator()))
+        SyncRegSynced = SI->getSyncRegion();
+
+      // Skip back edges for this task list.
+      if (Loop *L = LI.getLoopFor(S->getEntry()))
+        if ((L->getHeader() == S->getEntry()) && L->contains(Inc))
+          continue;
+
+      // Iterate through the tasks in the task list for Pred.
+      for (const Task *MP : TaskList[Pred]) {
+        // Filter out any tasks that are synced by the sync region.
+        if (const DetachInst *DI = MP->getDetach())
+          if (SyncRegSynced == DI->getSyncRegion())
+            continue;
+        // Insert the task into this spindle's task list.  If this task is a new
+        // addition, then we haven't yet reached the fixed point of this
+        // analysis.
+        if (TaskList[S].insert(MP).second)
+          Complete = false;
+      }
+    }
+    DEBUG({
+        dbgs() << "New MPT list for " << *S << "(Complete? " << Complete << ")\n";
+        for (const Task *MP : TaskList[S])
+          dbgs() << "\t" << MP->getEntry()->getName() << "\n";
+      });
+    return Complete;
+  }
+};
+
+static bool DependenceMightRace(
+    std::unique_ptr<Dependence> D, Instruction *Src, Instruction *Dst,
+    Value *SrcAddr, Value *DstAddr,
+    MPTaskListTy &MPTasks, MPTaskListTy &MPTasksInLoop, const DominatorTree &DT,
+    const TaskInfo &TI, LoopInfo &LI, const DataLayout &DL) {
+  if (!D)
+    // No dependence means no race.
+    return false;
+
+  DEBUG({
+      D->dump(dbgs());
+      StringRef DepType =
+        D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
+      dbgs() << "Found " << DepType
+             << " dependency between Src and Dst\n";
+      unsigned Levels = D->getLevels();
+      for (unsigned II = 1; II <= Levels; ++II) {
+        const SCEV *Distance = D->getDistance(II);
+        if (Distance)
+          dbgs() << "Level " << II << " distance " << *Distance << "\n";
+      }
+    });
+
+  // Only dependencies that cross tasks can produce determinacy races.
+  // Dependencies that cross loop iterations within the same task don't matter.
+  // To search the relevant loops, start at the spindle entry that most closely
+  // dominates both instructions, and check outwards, up to the topmost root for
+  // which Dst is in a maybe-parallel task.  Dominating blocks within the
+  // spindle are all guaranteed to execute in series with each other, so
+  // dependencies between those instructions matter.
+
+  // Use the base objects for the addresses to try to further refine the checks.
+  SmallVector<Value *, 1> BaseObjs;
+  GetUnderlyingObjects(SrcAddr, BaseObjs, DL, &LI, 0);
+  GetUnderlyingObjects(DstAddr, BaseObjs, DL, &LI, 0);
+  unsigned MinObjDepth = unsigned(-1);
+  for (Value *Obj : BaseObjs) {
+    if (Constant *C = dyn_cast<Constant>(Obj)) {
+      if (C->isNullValue())
+        continue;
+    }
+    if (!isa<Instruction>(Obj)) {
+      MinObjDepth = 0;
+      break;
+    }
+    unsigned ObjDepth = LI.getLoopDepth(cast<Instruction>(Obj)->getParent());
+    if (ObjDepth < MinObjDepth)
+      MinObjDepth = ObjDepth;
+  }
+  DEBUG(dbgs() << "Min loop depth " << MinObjDepth <<
+        " for underlying object.\n");
+
+  // Find the spindle that dominates both instructions.
+  Spindle *DomSpindle = TI.getSpindleFor(
+      DT.findNearestCommonDominator(Src->getParent(), Dst->getParent()));
+  // Find the loop depth of that spindle.
+  unsigned MaxLoopDepthToCheck = LI.getLoopDepth(DomSpindle->getEntry());
+  assert(MinObjDepth <= MaxLoopDepthToCheck &&
+         "Minimum loop depth of underlying object cannot be greater "
+         "than maximum loop depth of dependence.");
+
+  if (MaxLoopDepthToCheck == MinObjDepth) {
+    // Dependence does not depend on looping.
+    if (!MaxLoopDepthToCheck)
+      // If there's no loop to worry about, then the existence of the dependence
+      // implies the potential for a race.
+      return true;
+
+    if (TI.getTaskFor(Src->getParent()) == TI.getTaskFor(Dst->getParent()))
+      return false;
+
+    if (!(D->getDirection(MaxLoopDepthToCheck) & Dependence::DVEntry::EQ))
+      // Apparent dependence does not occur within the same iteration.
+      return false;
+
+    Spindle *SrcSpindle =
+      GetRepSpindleInTask(TI.getSpindleFor(Src->getParent()),
+                          TI.getTaskFor(DomSpindle), TI);
+    Spindle *DstSpindle =
+      GetRepSpindleInTask(TI.getSpindleFor(Dst->getParent()),
+                          TI.getTaskFor(DomSpindle), TI);
+    for (const Task *MPT : MPTasksInLoop[SrcSpindle])
+      if (TI.encloses(MPT, Dst))
+        return true;
+    for (const Task *MPT : MPTasksInLoop[DstSpindle])
+      if (TI.encloses(MPT, Src))
+        return true;
+
+    return false;
+  }
+
+  // Get the loop stack up from the loop containing DomSpindle.
+  SmallVector<Loop *, 4> LoopsToCheck;
+  Loop *CurrLoop = LI.getLoopFor(DomSpindle->getEntry());
+  while (CurrLoop) {
+    LoopsToCheck.push_back(CurrLoop);
+    CurrLoop = CurrLoop->getParentLoop();
+  }
+
+  // Check the loop stack from the top down until a loop is found
+  unsigned MinLoopDepthToCheck = 1;
+  while (!LoopsToCheck.empty()) {
+    Loop *CurrLoop = LoopsToCheck.pop_back_val();
+    // Check the maybe-parallel tasks for the spindle containing the loop
+    // header.
+    Spindle *CurrSpindle = TI.getSpindleFor(CurrLoop->getHeader());
+    bool MPTEnclosesDst = false;
+    for (const Task *MPT : MPTasks[CurrSpindle]) {
+      if (TI.encloses(MPT, Dst->getParent())) {
+        MPTEnclosesDst = true;
+        break;
+      }
+    }
+    // If Dst is found in a maybe-parallel task, then the minimum loop depth has
+    // been found.
+    if (MPTEnclosesDst)
+      break;
+    // Otherwise go deeper.
+    MinLoopDepthToCheck++;
+  }
+
+  // Scan the loop nests in common from inside out.
+  for (unsigned II = MaxLoopDepthToCheck; II >= MinLoopDepthToCheck; --II) {
+    DEBUG(dbgs() << "Checking loop level " << II << "\n");
+    if (D->isScalar(II))
+      return true;
+    if (D->getDirection(II) & unsigned(~Dependence::DVEntry::EQ))
+      return true;
+  }
+
+  DEBUG(dbgs() << "Dependence does not cross parallel tasks.\n");
+  return false;
+}
+
+static RaceType InstrsMightRace(Instruction *I, Instruction *MPI,
+                                MPTaskListTy &MPTasks,
+                                MPTaskListTy &MPTasksInLoop, DependenceInfo &DI,
+                                const DominatorTree &DT, const TaskInfo &TI,
+                                LoopInfo &LI, const TargetLibraryInfo *TLI,
+                                const DataLayout &DL,
+                                bool SkipRead = false, bool SkipWrite = false) {
+  // Handle the simple case of a pair of load/store instructions.
+  if ((isa<LoadInst>(I) || isa<StoreInst>(I)) &&
+      (isa<LoadInst>(MPI) || isa<StoreInst>(MPI))) {
+    // Two parallel loads cannot race.
+    if (isa<LoadInst>(I) && isa<LoadInst>(MPI))
+      return RaceType::None;
+    if (DependenceMightRace(
+            DI.depends(I, MPI, true), I, MPI,
+            const_cast<Value *>(MemoryLocation::get(I).Ptr),
+            const_cast<Value *>(MemoryLocation::get(MPI).Ptr),
+            MPTasks, MPTasksInLoop, DT, TI, LI, DL))
+      return getRaceType(!isa<LoadInst>(I), !isa<LoadInst>(MPI));
+    return RaceType::None;
+  }
+
+  // Handle more general memory accesses.
+  SmallVector<GeneralAccess, 2> AccI, AccMPI;
+  bool Recognized = true;
+  Recognized &= GetGeneralAccesses(I, AccI, DI.getAA(), TLI);
+  Recognized &= GetGeneralAccesses(MPI, AccMPI, DI.getAA(), TLI);
+  if (!Recognized)
+    // If we couldn't figure out the generalized memory accesses for I and MPI,
+    // assume a write-write race.
+    return RaceType::WW;
+
+  for (GeneralAccess GA1 : AccI) {
+    // If processing a memory transfer intrinsic, check if we should skip
+    // checking the read or write access.
+    if (SkipRead && isa<MemTransferInst>(I) &&
+        (GeneralAccess::READ == GA1.Type))
+      continue;
+    if (SkipWrite && isa<MemTransferInst>(I) &&
+        (GeneralAccess::WRITE == GA1.Type))
+      continue;
+
+    for (GeneralAccess GA2 : AccMPI) {
+      // Two parallel loads cannot race.
+      if (GeneralAccess::READ == GA1.Type && GeneralAccess::READ == GA2.Type)
+        continue;
+      DEBUG(dbgs() << "Checking addresses " << *GA1.Loc->Ptr << " vs " <<
+            *GA2.Loc->Ptr << "\n");
+      if (DependenceMightRace(
+              DI.depends(&GA1, &GA2, true), GA1.I, GA2.I,
+              const_cast<Value *>(GA1.Loc->Ptr),
+              const_cast<Value *>(GA2.Loc->Ptr), MPTasks, MPTasksInLoop,
+              DT, TI, LI, DL))
+        return getRaceType((GeneralAccess::WRITE == GA1.Type),
+                           (GeneralAccess::WRITE == GA2.Type));
+    }
+  }
+  return RaceType::None;
+}
+
+/// Returns true if Instruction I might race with some memory-access instruction
+/// in a logically parallel task within its function.
+static bool InstrMightRaceWithTask(
+    Instruction *I, MPTaskListTy &MPTasks, MPTaskListTy &MPTasksInLoop,
+    DenseMap<const Task *, SmallVector<Instruction *, 8>> &TaskToMemAcc,
+    SmallPtrSetImpl<Instruction *> &ToInstrument,
+    DenseMap<MemTransferInst *, AccessType> &MemTransferAccTypes,
+    const DominatorTree &DT, const TaskInfo &TI, LoopInfo &LI,
+    DependenceInfo &DI, const TargetLibraryInfo *TLI, const DataLayout &DL,
+    bool SkipRead = false, bool SkipWrite = false) {
+  if (!EnableStaticRaceDetection) {
+    // Ensure that the potentially-racing instructions are marked for
+    // instrumentation.
+    ToInstrument.insert(I);
+    if (MemTransferInst *M = dyn_cast<MemTransferInst>(I))
+      MemTransferAccTypes[M] = AccessType::ReadWrite;
+    return true;
+  }
+
+  DEBUG(dbgs() << "Checking for races with " << *I << ", in "
+        << I->getParent()->getName() << "\n");
+
+  // Collect all logically parallel tasks.
+  SmallPtrSet<const Task *, 2> AllMPTasks;
+  Spindle *CurrSpindle = TI.getSpindleFor(I->getParent());
+  while (CurrSpindle) {
+    for (const Task *MPT : MPTasks[CurrSpindle])
+      AllMPTasks.insert(MPT);
+    const Task *ParentTask = CurrSpindle->getParentTask();
+    if (ParentTask->isRootTask())
+      CurrSpindle = nullptr;
+    else
+      CurrSpindle = TI.getSpindleFor(ParentTask->getDetach()->getParent());
+  }
+
+  // Check the instructions in each logically parallel task for potential races.
+  for (const Task *MPT : AllMPTasks) {
+    DEBUG(dbgs() << "MaybeParallel Task @ " << MPT->getEntry()->getName()
+          << "\n");
+    for (Instruction *MPI : TaskToMemAcc[MPT]) {
+      DEBUG(dbgs() << "Checking instructions " << *I << " vs. " << *MPI
+            << "\n");
+      RaceType RT =
+        InstrsMightRace(I, MPI, MPTasks, MPTasksInLoop,
+                        DI, DT, TI, LI, TLI, DL, SkipRead, SkipWrite);
+      if (RaceType::None == RT)
+        continue;
+
+      DEBUG(dbgs() << "Treating instructions as possibly racing\n");
+
+      // Ensure that the potentially-racing instructions are marked for
+      // instrumentation.
+      ToInstrument.insert(I);
+      ToInstrument.insert(MPI);
+
+      // For memory transfer intrinsics, we want to remember whether the read
+      // access or the write access caused the race.
+      if (MemTransferInst *M = dyn_cast<MemTransferInst>(I)) {
+        if (!MemTransferAccTypes.count(M))
+          MemTransferAccTypes[M] = getAccessType(RT, 0);
+        else
+          MemTransferAccTypes[M] = unionAccessType(MemTransferAccTypes[M],
+                                                   getAccessType(RT, 0));
+      }
+      if (MemTransferInst *M = dyn_cast<MemTransferInst>(MPI)) {
+        if (!MemTransferAccTypes.count(M))
+          MemTransferAccTypes[M] = getAccessType(RT, 1);
+        else
+          MemTransferAccTypes[M] = unionAccessType(MemTransferAccTypes[M],
+                                                   getAccessType(RT, 1));
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Returns true if Addr can only refer to a locally allocated base object, that
+/// is, an object created via an AllocaInst or an AllocationFn.
+static bool LocalBaseObj(Value *Addr, const DataLayout &DL, LoopInfo *LI,
+                         const TargetLibraryInfo *TLI) {
+  // If we don't have an address, give up.
+  if (!Addr)
+    return false;
+
+  // Get the base objects that this address might refer to.
+  SmallVector<Value *, 1> BaseObjs;
+  GetUnderlyingObjects(Addr, BaseObjs, DL, LI, 0);
+
+  // If we could not determine the base objects, conservatively return false.
+  if (BaseObjs.empty())
+    return false;
+
+  // If any base object is not an alloca or allocation function, then it's not
+  // local.
+  for (const Value *BaseObj : BaseObjs)
+    if (!isa<AllocaInst>(BaseObj) && !isAllocationFn(BaseObj, TLI)) {
+      DEBUG(dbgs() << "Non-local base object " << *BaseObj << "\n");
+      return false;
+    }
+
+  return true;
+}
+
+/// Returns true if Addr can only refer to a locally allocated base object, that
+/// is, an object created via an AllocaInst or an AllocationFn.
+static bool LocalBaseObj(ImmutableCallSite &CS, const DataLayout &DL,
+                         LoopInfo *LI, const TargetLibraryInfo *TLI) {
+  // Check whether all pointer arguments point to local memory, and
+  // ignore calls that only access local memory.
+  for (auto CI = CS.arg_begin(), CE = CS.arg_end(); CI != CE; ++CI) {
+    Value *Arg = *CI;
+    if (!Arg->getType()->isPtrOrPtrVectorTy())
+      continue;
+
+    if (!LocalBaseObj(Arg, DL, LI, TLI))
+      return false;
+  }
+  return true;
+}
+
+// Examine the uses of a Instruction AI to determine if it is used in a subtask.
+// This method assumes that AI is an allocation instruction, i.e., either an
+// AllocaInst or an AllocationFn.
+static bool MightHaveDetachedUse(const Instruction *AI, const TaskInfo &TI) {
+  // Get the task for this allocation.
+  const Task *AllocTask = TI.getTaskFor(AI->getParent());
+  assert(AllocTask && "Null task for instruction.");
+
+  if (AllocTask->isSerial())
+    // Alloc AI cannot be used in a subtask if its enclosing task is serial.
+    return false;
+
   SmallVector<const Use *, 20> Worklist;
   SmallSet<const Use *, 20> Visited;
 
+  // Add all uses of AI to the worklist.
   for (const Use &U : AI->uses()) {
     Visited.insert(&U);
     Worklist.push_back(&U);
   }
 
+  // Evaluate each use of AI.
   while (!Worklist.empty()) {
     const Use *U = Worklist.pop_back_val();
-    Instruction *I = cast<Instruction>(U->getUser());
-    if (AllocaCtx != GetDetachedCtx(I->getParent()))
-      return true;
 
+    // Check if this use of AI is in a different task from the allocation.
+    Instruction *I = cast<Instruction>(U->getUser());
+    DEBUG(dbgs() << "\tExamining use: " << *I << "\n");
+    if (AllocTask != TI.getTaskFor(I->getParent())) {
+      assert(TI.getTaskFor(I->getParent()) != AllocTask->getParentTask() &&
+             "Use of alloca appears in a parent task of that alloca");
+      // Because the use of AI cannot appear in a parent task of AI, it must be
+      // in a subtask.  In particular, the use cannot be in a shared-EH spindle.
+      return true;
+    }
+
+    // If the pointer to AI is transformed using one of the following
+    // operations, add uses of the transformed pointer to the worklist.
     switch (I->getOpcode()) {
     case Instruction::BitCast:
     case Instruction::GetElementPtr:
@@ -990,6 +1615,330 @@ static bool MightHaveDetachedUse(const AllocaInst *AI) {
     }
   }
   return false;
+}
+
+/// Returns true if accesses on Addr could race due to pointer capture.
+static bool PossibleRaceByCapture(Value *Addr, const DataLayout &DL,
+                                  const TaskInfo &TI, LoopInfo *LI) {
+  if (isa<GlobalValue>(Addr))
+    // For this analysis, we consider all global values to be captured.
+    return true;
+
+  if (PointerMayBeCaptured(Addr, false, false))
+    return true;
+
+  // Check for detached uses of the underlying base objects.
+  SmallVector<Value *, 1> BaseObjs;
+  GetUnderlyingObjects(Addr, BaseObjs, DL, LI, 0);
+
+  // If we could not determine the base objects, conservatively return true.
+  if (BaseObjs.empty())
+    return true;
+
+  for (const Value *BaseObj : BaseObjs) {
+    // Skip any null objects
+    if (const Constant *C = dyn_cast<Constant>(BaseObj))
+      if (C->isNullValue())
+        continue;
+
+    // If the base object is not an instruction, conservatively return true.
+    if (!isa<Instruction>(BaseObj))
+      return true;
+
+    // If the base object might have a detached use, return true.
+    if (MightHaveDetachedUse(cast<Instruction>(BaseObj), TI))
+      return true;
+  }
+
+  return false;
+}
+
+/// Returns true if any address referenced by the callsite could race due to
+/// pointer capture.
+static bool PossibleRaceByCapture(ImmutableCallSite &CS, const DataLayout &DL,
+                                  const TaskInfo &TI, LoopInfo *LI) {
+  // Check whether all pointer arguments point to local memory, and
+  // ignore calls that only access local memory.
+  for (auto CI = CS.arg_begin(), CE = CS.arg_end(); CI != CE; ++CI) {
+    Value *Arg = *CI;
+    if (!Arg->getType()->isPtrOrPtrVectorTy())
+      continue;
+
+    if (PossibleRaceByCapture(Arg, DL, TI, LI))
+      return true;
+  }
+  return false;
+}
+
+/// Examine the given vectors of loads, stores, memory-intrinsic calls, and
+/// function calls to determine which ones might race.
+bool CilkSanitizerImpl::GetMaybeRacingAccesses(
+    SmallPtrSetImpl<Instruction *> &ToInstrument,
+    DenseMap<MemTransferInst *, AccessType> &MemTransferAccTypes,
+    SmallVectorImpl<Instruction *> &NoRaceCallsites,
+    SmallVectorImpl<Instruction *> &LoadsAndStores,
+    SmallVectorImpl<Instruction *> &Atomics,
+    SmallVectorImpl<Instruction *> &MemIntrinCalls,
+    SmallVectorImpl<Instruction *> &Callsites,
+    DenseMap<const Task *, SmallVector<Instruction *, 8>> &TaskToMemAcc,
+    MPTaskListTy &MPTasks, const DominatorTree &DT, const TaskInfo &TI,
+    LoopInfo &LI, DependenceInfo &DI) {
+  SmallVector<Instruction *, 8> MaybeNoRaceCallsites;
+  MaybeParallelTasksInLoopBody MPTasksInLoop(LI);
+  TI.evaluateParallelState<MaybeParallelTasksInLoopBody>(MPTasksInLoop);
+  AliasAnalysis *AA =  DI.getAA();
+  bool MayRaceInternally = false;
+
+  // Look for accesses that might race against the loads and stores.
+  for (Instruction *I : LoadsAndStores) {
+    if (ToInstrument.count(I))
+      continue;
+
+    DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
+    MemoryLocation Loc = MemoryLocation::get(I);
+    if (AA->pointsToConstantMemory(Loc)) {
+      NumOmittedReadsFromConstants++;
+      continue;
+    }
+    Value *Addr = const_cast<Value *>(Loc.Ptr);
+
+    if (!PossibleRaceByCapture(Addr, DL, TI, &LI)) {
+      // The variable is addressable but not captured, so it cannot be
+      // referenced from a different strand and participate in a race (see
+      // llvm/Analysis/CaptureTracking.h for details).
+      NumOmittedNonCaptured++;
+      continue;
+    }
+
+    // If the underlying object is not locally allocated, then it can race with
+    // accesses in other functions.
+    if (!LocalBaseObj(Addr, DL, &LI, TLI)) {
+      DEBUG(dbgs() << "Non-local base object of load/store\n");
+      ToInstrument.insert(I);
+      // continue;
+    }
+
+    if (InstrMightRaceWithTask(
+            I, MPTasks, MPTasksInLoop.TaskList, TaskToMemAcc,
+            ToInstrument, MemTransferAccTypes, DT, TI, LI, DI, TLI, DL)) {
+      DEBUG(dbgs() << "Possible internal race with load/store\n");
+      MayRaceInternally = true;
+    } else
+      NumOmittedStaticNoRace++;
+  }
+
+  // Look for accesses that might race against the loads and stores.
+  for (Instruction *I : Atomics) {
+    if (ToInstrument.count(I))
+      continue;
+
+    DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
+
+    MemoryLocation Loc = MemoryLocation::get(I);
+    if (AA->pointsToConstantMemory(Loc)) {
+      NumOmittedReadsFromConstants++;
+      continue;
+    }
+    Value *Addr = const_cast<Value *>(Loc.Ptr);
+
+    if (!PossibleRaceByCapture(Addr, DL, TI, &LI)) {
+      // The variable is addressable but not captured, so it cannot be
+      // referenced from a different strand and participate in a race (see
+      // llvm/Analysis/CaptureTracking.h for details).
+      NumOmittedNonCaptured++;
+      continue;
+    }
+
+    // If the underlying object is not locally allocated, then it can race with
+    // accesses in other functions.
+    if (!LocalBaseObj(Addr, DL, &LI, TLI)) {
+      ToInstrument.insert(I);
+      // continue;
+    }
+
+    if (InstrMightRaceWithTask(
+            I, MPTasks, MPTasksInLoop.TaskList, TaskToMemAcc,
+            ToInstrument, MemTransferAccTypes, DT, TI, LI, DI, TLI, DL))
+      MayRaceInternally = true;
+    else
+      NumOmittedStaticNoRace++;
+  }
+
+  // Look for accesses that might race against the memory intrinsic calls.
+  for (Instruction *I : MemIntrinCalls) {
+    if (ToInstrument.count(I))
+      continue;
+
+    DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
+    if (MemSetInst *M = dyn_cast<MemSetInst>(I)) {
+      Value *Addr = M->getArgOperand(0);
+
+      if (!PossibleRaceByCapture(Addr, DL, TI, &LI)) {
+        // The variable is addressable but not captured, so it cannot be
+        // referenced from a different strand and participate in a race (see
+        // llvm/Analysis/CaptureTracking.h for details).
+        NumOmittedNonCaptured++;
+        continue;
+      }
+
+      // If the underlying object is not locally allocated, then it can race
+      // with accesses in other functions.
+      if (!LocalBaseObj(Addr, DL, &LI, TLI)) {
+        DEBUG(dbgs() << "MemSetInst base object is not local\n");
+        ToInstrument.insert(I);
+        // continue;
+      }
+
+      if (InstrMightRaceWithTask(
+              I, MPTasks, MPTasksInLoop.TaskList, TaskToMemAcc,
+              ToInstrument, MemTransferAccTypes, DT, TI, LI, DI, TLI, DL))
+        MayRaceInternally = true;
+      else
+        NumOmittedStaticNoRace++;
+
+    } else if (MemTransferInst *M = dyn_cast<MemTransferInst>(I)) {
+      bool SkipRead = false, SkipWrite = false;
+      MemoryLocation ReadLoc = MemoryLocation::getForSource(M);
+      MemoryLocation WriteLoc = MemoryLocation::getForDest(M);
+      // Try to quickly determine if instrumentation is needed for the read
+      // access.
+      if (AA->pointsToConstantMemory(ReadLoc)) {
+        NumOmittedReadsFromConstants++;
+        SkipRead = true;
+      } else if (!PossibleRaceByCapture(const_cast<Value *>(ReadLoc.Ptr),
+                                        DL, TI, &LI)) {
+        // The variable is addressable but not captured, so it cannot be
+        // referenced from a different strand and participate in a race (see
+        // llvm/Analysis/CaptureTracking.h for details).
+        NumOmittedNonCaptured++;
+        SkipRead = true;
+      } else if (!LocalBaseObj(const_cast<Value *>(ReadLoc.Ptr), DL, &LI, TLI)) {
+        DEBUG(dbgs() << "MemTransferInst load base object is not local\n");
+        ToInstrument.insert(I);
+        if (!MemTransferAccTypes.count(M))
+          MemTransferAccTypes[M] = AccessType::Read;
+        else
+          MemTransferAccTypes[M] = setRead(MemTransferAccTypes[M]);
+        // SkipRead = true;
+      }
+      // Try to quickly determine if instrumentation is needed for the write
+      // access.  Nothing can write to constant memory, so just check the local
+      // base object.
+      if (!PossibleRaceByCapture(const_cast<Value *>(WriteLoc.Ptr),
+                                        DL, TI, &LI)) {
+          // The variable is addressable but not captured, so it cannot be
+          // referenced from a different strand and participate in a race (see
+          // llvm/Analysis/CaptureTracking.h for details).
+          NumOmittedNonCaptured++;
+          SkipWrite = true;
+      } else if (!LocalBaseObj(const_cast<Value *>(WriteLoc.Ptr), DL, &LI, TLI)) {
+        DEBUG(dbgs() << "MemTransferInst store base object is not local\n");
+        ToInstrument.insert(I);
+        if (!MemTransferAccTypes.count(M))
+          MemTransferAccTypes[M] = AccessType::Write;
+        else
+          MemTransferAccTypes[M] = setWrite(MemTransferAccTypes[M]);
+        // SkipWrite = true;
+      }
+
+      // If necessary, check for potential races against this memcpy, skipping
+      // appropriate component accesses.
+      if (!SkipRead || !SkipWrite) {
+        if (InstrMightRaceWithTask(
+                I, MPTasks, MPTasksInLoop.TaskList, TaskToMemAcc,
+                ToInstrument, MemTransferAccTypes,
+                DT, TI, LI, DI, TLI, DL, SkipRead, SkipWrite))
+          MayRaceInternally = true;
+        else
+          NumOmittedStaticNoRace++;
+      }
+    }
+  }
+
+  // Look for accesses that might race against general function calls.
+  for (Instruction *I : Callsites) {
+    if (ToInstrument.count(I))
+      continue;
+
+    DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
+    ImmutableCallSite CS(I);
+    if (AA->doesNotAccessMemory(CS)) {
+      // The callsite I might invoke a function that contains an internal race,
+      // so we can't exclude it just yet.
+      MaybeNoRaceCallsites.push_back(I);
+      continue;
+    }
+
+    auto CSB = AA->getModRefBehavior(CS);
+    if (!ToInstrument.count(I) && AliasAnalysis::onlyAccessesArgPointees(CSB) &&
+        !PossibleRaceByCapture(CS, DL, TI, &LI)) {
+      // The variable is addressable but not captured, so it cannot be
+      // referenced from a different strand and participate in a race (see
+      // llvm/Analysis/CaptureTracking.h for details).
+      MaybeNoRaceCallsites.push_back(I);
+      continue;
+    }
+
+    // If we don't have insight into the called function, then we must
+    // instrument this call incase the called function itself contains a race.
+    const Function *Called = CS.getCalledFunction();
+    if (!Called) {
+      DEBUG(dbgs() << "Missing called function for call.\n");
+      ToInstrument.insert(I);
+      continue;
+    }
+
+    if (AssumeRaceFreeLibraryFunctions) {
+      LibFunc LF;
+      if (!TLI->getLibFunc(*Called, LF))
+        ToInstrument.insert(I);
+      else
+        DEBUG(dbgs() << "Assuming race-free library function " <<
+              Called->getName() << ".\n");
+      // } else {
+      //   DEBUG(dbgs() << "Missing exact definition of called function.\n");
+      //   ToInstrument.insert(I);
+      // }
+      // // continue;
+    }
+
+    // If the function accesses more than just its function arguments, then
+    // analyzing local accesses can't prove that this function call does not
+    // participate in a race.
+    if (!IgnoreInaccessibleMemory &&
+        AliasAnalysis::doesAccessInaccessibleMem(CSB)) {
+      DEBUG(dbgs() << "Call access inaccessible memory\n");
+      ToInstrument.insert(I);
+      // continue;
+    } else if (!((!IgnoreInaccessibleMemory &&
+                  AliasAnalysis::onlyAccessesArgPointees(CSB)) ||
+                 (IgnoreInaccessibleMemory &&
+                  AliasAnalysis::onlyAccessesInaccessibleOrArgMem(CSB)))) {
+      DEBUG(dbgs() << "Call access memory other than pointees\n");
+      ToInstrument.insert(I);
+      // continue;
+    } else if (!LocalBaseObj(CS, DL, &LI, TLI)) {
+      // If the callsite accesses an underlying object that is not locally
+      // allocated, then it can race with accesses in other functions.
+      DEBUG(dbgs() << "CS accesses non-local object.\n");
+      ToInstrument.insert(I);
+      // continue;
+    }
+
+    if (InstrMightRaceWithTask(
+            I, MPTasks, MPTasksInLoop.TaskList, TaskToMemAcc,
+            ToInstrument, MemTransferAccTypes, DT, TI, LI, DI, TLI, DL))
+      MayRaceInternally = true;
+    else if (!ToInstrument.count(I))
+      MaybeNoRaceCallsites.push_back(I);
+  }
+
+  // Determine callsites that are guaranteed not to participate in a race.
+  for (Instruction *I : MaybeNoRaceCallsites)
+    if (!ToInstrument.count(I))
+      NoRaceCallsites.push_back(I);
+
+  return MayRaceInternally;
 }
 
 void CilkSanitizerImpl::chooseInstructionsToInstrument(
@@ -1022,22 +1971,27 @@ void CilkSanitizerImpl::chooseInstructionsToInstrument(
     Value *Addr = isa<StoreInst>(*I)
         ? cast<StoreInst>(I)->getPointerOperand()
         : cast<LoadInst>(I)->getPointerOperand();
-    Value *Obj = GetUnderlyingObject(Addr, DL);
-    if (isa<AllocaInst>(Obj) &&
-        !PointerMayBeCaptured(Addr, true, true) &&
-        !MightHaveDetachedUse(cast<AllocaInst>(Obj))) {
+    if (LocalBaseObj(Addr, DL, &LI, TLI) &&
+        !PossibleRaceByCapture(Addr, DL, TI, &LI)) {
       // The variable is addressable but not captured, so it cannot be
       // referenced from a different thread and participate in a data race
       // (see llvm/Analysis/CaptureTracking.h for details).
       NumOmittedNonCaptured++;
       continue;
     }
+    DEBUG(dbgs() << "Pushing " << *I << "\n");
     All.push_back(I);
   }
   Local.clear();
 }
 
-bool CilkSanitizerImpl::instrumentFunction(Function &F) {
+// Helper function do determine if the call or invoke instruction Inst should be
+// skipped when examining calls that affect race detection.
+bool CilkSanitizerImpl::simpleCallCannotRace(const Instruction &I) {
+  return callsPlaceholderFunction(I);
+}
+
+bool CilkSanitizerImpl::prepareToInstrumentFunction(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F))
     return false;
 
@@ -1104,27 +2058,229 @@ bool CilkSanitizerImpl::instrumentFunction(Function &F) {
     }
   }
 
+  // Record which memory-accessing instructions that might race are associated
+  // with each task.
+  DenseMap<const Task *, SmallVector<Instruction *, 8>> TaskToMemAcc;
+  for (Instruction *I : AllLoadsAndStores)
+    TaskToMemAcc[TI.getTaskFor(I->getParent())].push_back(I);
+  for (Instruction *I : AtomicAccesses)
+    TaskToMemAcc[TI.getTaskFor(I->getParent())].push_back(I);
+  for (Instruction *I : MemIntrinCalls)
+    TaskToMemAcc[TI.getTaskFor(I->getParent())].push_back(I);
+  for (Instruction *I : Callsites)
+    TaskToMemAcc[TI.getTaskFor(I->getParent())].push_back(I);
+  for (Instruction *I : FreeCalls)
+    TaskToMemAcc[TI.getTaskFor(I->getParent())].push_back(I);
+
+  // Perform static race detection among the memory-accessing instructions to
+  // determine which require instrumentation.
+  bool MayRaceInternally =
+    GetMaybeRacingAccesses(ToInstrument, MemTransferAccTypes,
+                           NoRaceCallsites, AllLoadsAndStores,
+                           AtomicAccesses, MemIntrinCalls, Callsites,
+                           TaskToMemAcc, MPTasks.TaskList, *DT, TI, LI, DI);
+
+  // Record this function if instrumentation is needed on a detach or a callsite
+  // it contains.
+  if (!EnableStaticRaceDetection)
+    MayRaceFunctions.insert(&F);
+  else if (MayRaceInternally)
+    MayRaceFunctions.insert(&F);
+
+  // While the maybe-parallel-task information is handy, use it to map each
+  // detach instruction with the sync instructions that could sync it.
+  for (SyncInst *Sync : Syncs)
+    for (const Task *MPT :
+           MPTasks.TaskList[TI.getSpindleFor(Sync->getParent())])
+      DetachToSync[MPT->getDetach()].push_back(Sync);
+
+  return true;
+}
+
+void CilkSanitizerImpl::determineCallSitesToInstrument() {
+  // The NoRaceCallsites set identifies callsites that cannot race, based on
+  // function-local analysis.  If those called functions might themselves
+  // contain races, however, then they must be instrumented.  Hence we use
+  // information about which functions were instrumented for race detection to
+  // determine which of these callsites must be instrumented and which can be
+  // suppressed.
+
+  // Organize the call sites that might not race by called function.
+  DenseMap<const Function *, SmallVector<Instruction *, 8>> FunctionToCallSite;
+  for (Instruction *I : NoRaceCallsites) {
+    if (ToInstrument.count(I))
+      continue;
+    ImmutableCallSite CS(I);
+    if (const Function *F = CS.getCalledFunction())
+      FunctionToCallSite[F].push_back(I);
+  }
+
+  // Evaluate the SCC's in the callgraph in post order to determine callsites
+  // that reach instrumented functions and therefore need to be instrumented.
+  for (scc_iterator<CallGraph *> I = scc_begin(CG); !I.isAtEnd(); ++I) {
+    const std::vector<CallGraphNode *> &SCC = *I;
+    assert(!SCC.empty() && "SCC with no functions!");
+    for (auto *CGN : SCC) {
+      if (Function *F = CGN->getFunction()) {
+        if (MayRaceFunctions.count(F)) {
+          for (Instruction *Call : FunctionToCallSite[F]) {
+            ToInstrument.insert(Call);
+            MayRaceFunctions.insert(Call->getParent()->getParent());
+          }
+        }
+      }
+    }
+  }
+}
+
+bool CilkSanitizerImpl::instrumentFunction(
+    Function &F, SmallPtrSetImpl<Instruction *> &ToInstrument,
+    SmallPtrSetImpl<Instruction *> &NoRaceCallsites) {
+  if (F.empty() || shouldNotInstrumentFunction(F))
+    return false;
+  bool Res = false;
+
+  // Get analyses
+  DominatorTree *DT = &GetDomTree(F);
+  TaskInfo &TI = GetTaskInfo(F);
+  LoopInfo &LI = GetLoopInfo(F);
+  DependenceInfo &DI = GetDepInfo(F);
+
+  // Function-local sets of instructions to instrument.
+  SmallPtrSet<Instruction *, 8> MayRaceLoadsAndStores;
+  SmallPtrSet<Instruction *, 8> MayRaceAtomics;
+  SmallPtrSet<Instruction *, 8> MayRaceMemIntrinCalls;
+  SmallPtrSet<Instruction *, 8> MayRaceCallsites;
+  SmallPtrSet<DetachInst *, 8> MayRaceDetaches;
+  SmallPtrSet<Instruction *, 8> MayRaceAllocas;
+  SmallPtrSet<Instruction *, 8> MayRaceAllocFns;
+  SmallPtrSet<Instruction *, 8> MayRaceFreeCalls;
+  SmallPtrSet<SyncInst *, 8> MayRaceSyncs;
+
+  // Partition the set of memory-accessing instructions that might race by type:
+  // load or store, memory intrinsic, callsite, etc.
+  SmallPtrSet<const Value *, 8> LocalAllocToInstrument;
+  for (Instruction *I : ToInstrument) {
+    if (isa<LoadInst>(I) || isa<StoreInst>(I))
+      MayRaceLoadsAndStores.insert(I);
+    else if (isa<AtomicRMWInst>(I) || isa<AtomicCmpXchgInst>(I))
+      MayRaceAtomics.insert(I);
+    else if (isa<MemIntrinsic>(I))
+      MayRaceMemIntrinCalls.insert(I);
+    else if (isa<CallInst>(I) || isa<InvokeInst>(I))
+      MayRaceCallsites.insert(I);
+
+    // Record detaches associated with instruction I as necessary to instrument.
+    Task *T = TI.getTaskFor(I->getParent());
+    while (DetachInst *DI = T->getDetach()) {
+      MayRaceDetaches.insert(DI);
+      for (SyncInst *Sync : DetachToSync[DI])
+        MayRaceSyncs.insert(Sync);
+      if (!T->getParentTask())
+        break;
+      T = T->getParentTask();
+    }
+
+    // Determine local allocations to instrument.
+    SmallVector<Value *, 1> BaseObjs;
+    if (MemTransferInst *M = dyn_cast<MemTransferInst>(I)) {
+      if (isReadSet(MemTransferAccTypes[M]))
+        // Get the base object read by this memcpy.
+        GetUnderlyingObjects(M->getArgOperand(1), BaseObjs, DL, &LI, 0);
+      if (isWriteSet(MemTransferAccTypes[M]))
+        // Get the base object written by this memcpy.
+        GetUnderlyingObjects(M->getArgOperand(0), BaseObjs, DL, &LI, 0);
+    } else {
+      SmallVector<GeneralAccess, 2> AccI;
+      GetGeneralAccesses(I, AccI, DI.getAA(), TLI);
+      for (GeneralAccess GA : AccI)
+        // Get the base objects that this address might refer to.
+        GetUnderlyingObjects(const_cast<Value *>(GA.Loc->Ptr), BaseObjs,
+                             DL, &LI, 0);
+    }
+    // Record any local allocations among the base objects.
+    for (const Value *BaseObj : BaseObjs)
+      if (isa<AllocaInst>(BaseObj) || isAllocationFn(BaseObj, TLI))
+        LocalAllocToInstrument.insert(BaseObj);
+  }
+
+  // Partition the local allocations to instrument into allocas and
+  // allocation-function calls.
+  for (Instruction *I : Allocas)
+    if (LocalAllocToInstrument.count(I))
+      MayRaceAllocas.insert(I);
+  for (Instruction *I : AllocationFnCalls)
+    if (LocalAllocToInstrument.count(I))
+      MayRaceAllocFns.insert(I);
+
+  // If the function does not access memory and we can statically prove it
+  // contains no races, don't instrument it.
+  if (F.doesNotAccessMemory() && MayRaceLoadsAndStores.empty() &&
+      MayRaceMemIntrinCalls.empty() && MayRaceCallsites.empty() &&
+      MayRaceAtomics.empty())
+    return false;
+
+  // Instrument free calls for instrumented local allocations as well as free
+  // calls that might participate in a race.
+  for (Instruction *FreeCall : FreeCalls) {
+    // If the free call possibly participates in a race, instrument it.
+    if (ToInstrument.count(FreeCall)) {
+      MayRaceFreeCalls.insert(FreeCall);
+      continue;
+    }
+
+    // Check the pointer argument of the free call to see if it corresponds to a
+    // local allocation.
+    ImmutableCallSite FreeCS(FreeCall);
+    const Value *Arg = FreeCS.getArgument(0);
+    if (const Instruction *AI = dyn_cast<Instruction>(Arg))
+      if (MayRaceAllocFns.count(AI))
+        MayRaceFreeCalls.insert(FreeCall);
+  }
+
+  // Instrument all instructions that might race and the associated memory
+  // allocation and parallel control flow.
+  bool MaySpawn = !TI.isSerial();
+
   uint64_t LocalId = getLocalFunctionID(F);
 
-  for (auto Inst : AllLoadsAndStores)
-    Res |= instrumentLoadOrStore(Inst, DL);
+  for (auto Inst : MayRaceLoadsAndStores)
+    Res |= instrumentLoadOrStore(Inst);
 
-  for (auto Inst : AtomicAccesses)
-    Res |= instrumentAtomic(Inst, DL);
+  for (auto Inst : MayRaceAtomics)
+    Res |= instrumentAtomic(Inst);
 
-  for (auto Inst : MemIntrinCalls)
-    Res |= instrumentMemIntrinsic(Inst, DL);
+  for (auto Inst : MayRaceMemIntrinCalls)
+    Res |= instrumentMemIntrinsic(Inst, MemTransferAccTypes);
 
-  for (auto Inst : Callsites)
-    Res |= instrumentCallsite(Inst, DT);
+  for (auto Inst : MayRaceAllocFns)
+    Res |= instrumentAllocationFn(Inst, DT);
 
-  for (auto Inst : Detaches)
-    Res |= instrumentDetach(Inst, DT);
+  for (auto Inst : MayRaceFreeCalls)
+    Res |= instrumentFree(Inst);
 
-  for (auto Inst : Syncs)
+  for (auto Inst : MayRaceCallsites)
+    Res |= instrumentCallsite(Inst);
+
+  // The remaining callsites that were thought not to race can now be
+  // suppressed.
+  for (auto Inst : NoRaceCallsites) {
+    if (!ToInstrument.count(Inst)) {
+      suppressCallsite(Inst);
+      NumOmittedStaticNoRace++;
+    }
+  }
+
+  for (auto Inst : MayRaceDetaches)
+    Res |= instrumentDetach(Inst, DT, TI);
+
+  for (auto Inst : MayRaceSyncs)
     Res |= instrumentSync(Inst);
 
-  if ((Res || HasCalls)) {
+  for (auto Inst : MayRaceAllocas)
+    Res |= instrumentAlloca(Inst);
+
+  if (Res) {
     IRBuilder<> IRB(&*F.getEntryBlock().getFirstInsertionPt());
     CsiFuncProperty FuncEntryProp;
     FuncEntryProp.setMaySpawn(MaySpawn);
@@ -1156,8 +2312,7 @@ bool CilkSanitizerImpl::instrumentFunction(Function &F) {
   return Res;
 }
 
-bool CilkSanitizerImpl::instrumentLoadOrStore(Instruction *I,
-                                              const DataLayout &DL) {
+bool CilkSanitizerImpl::instrumentLoadOrStore(Instruction *I) {
   IRBuilder<> IRB(I);
   bool IsWrite = isa<StoreInst>(*I);
   Value *Addr = IsWrite
@@ -1214,7 +2369,7 @@ bool CilkSanitizerImpl::instrumentLoadOrStore(Instruction *I,
   return true;
 }
 
-bool CilkSanitizerImpl::instrumentAtomic(Instruction *I, const DataLayout &DL) {
+bool CilkSanitizerImpl::instrumentAtomic(Instruction *I) {
   IRBuilder<> IRB(I);
   CsiLoadStoreProperty Prop;
   Value *Addr;
@@ -1223,17 +2378,6 @@ bool CilkSanitizerImpl::instrumentAtomic(Instruction *I, const DataLayout &DL) {
   } else if (AtomicCmpXchgInst *CASI = dyn_cast<AtomicCmpXchgInst>(I)) {
     Addr = CASI->getPointerOperand();
   } else {
-    return false;
-  }
-
-  Value *Obj = GetUnderlyingObject(Addr, DL);
-  if (isa<AllocaInst>(Obj) &&
-      !PointerMayBeCaptured(Addr, true, true) &&
-      !MightHaveDetachedUse(cast<AllocaInst>(Obj))) {
-    // The variable is addressable but not captured, so it cannot be
-    // referenced from a different thread and participate in a data race
-    // (see llvm/Analysis/CaptureTracking.h for details).
-    NumOmittedNonCaptured++;
     return false;
   }
 
@@ -1259,23 +2403,13 @@ bool CilkSanitizerImpl::instrumentAtomic(Instruction *I, const DataLayout &DL) {
   return true;
 }
 
-bool CilkSanitizerImpl::instrumentMemIntrinsic(Instruction *I,
-                                               const DataLayout &DL) {
+bool CilkSanitizerImpl::instrumentMemIntrinsic(
+    Instruction *I,
+    DenseMap<MemTransferInst *, AccessType> &MemTransferAccTypes) {
   CsiLoadStoreProperty Prop;
   IRBuilder<> IRB(I);
   if (MemSetInst *M = dyn_cast<MemSetInst>(I)) {
-    // Check if we need to instrument the memset.
     Value *Addr = M->getArgOperand(0);
-    Value *Obj = GetUnderlyingObject(Addr, DL);
-    if (isa<AllocaInst>(Obj) &&
-        !PointerMayBeCaptured(Addr, true, true) &&
-        !MightHaveDetachedUse(cast<AllocaInst>(Obj))) {
-      // The variable is addressable but not captured, so it cannot be
-      // referenced from a different thread and participate in a data race
-      // (see llvm/Analysis/CaptureTracking.h for details).
-      NumOmittedNonCaptured++;
-      return false;
-    }
 
     if (ConstantInt *CI = dyn_cast<ConstantInt>(M->getArgOperand(3)))
       Prop.setAlignment(CI->getZExtValue());
@@ -1293,22 +2427,15 @@ bool CilkSanitizerImpl::instrumentMemIntrinsic(Instruction *I,
     return true;
 
   } else if (MemTransferInst *M = dyn_cast<MemTransferInst>(I)) {
+    // Only instrument the large load and the large store components as
+    // necessary.
     if (ConstantInt *CI = dyn_cast<ConstantInt>(M->getArgOperand(3)))
       Prop.setAlignment(CI->getZExtValue());
     Value *StoreAddr = M->getArgOperand(0);
     Value *LoadAddr = M->getArgOperand(1);
     bool Instrumented = false;
 
-    // First check if we need to instrument the store.
-    Value *SObj = GetUnderlyingObject(StoreAddr, DL);
-    if (isa<AllocaInst>(SObj) &&
-        !PointerMayBeCaptured(StoreAddr, true, true) &&
-        !MightHaveDetachedUse(cast<AllocaInst>(SObj))) {
-      // The variable is addressable but not captured, so it cannot be
-      // referenced from a different thread and participate in a data race
-      // (see llvm/Analysis/CaptureTracking.h for details).
-      NumOmittedNonCaptured++;
-    } else {
+    if (isWriteSet(MemTransferAccTypes[M])) {
       // Instrument the store
       uint64_t StoreId = StoreFED.add(*I);
       uint64_t StoreObjId =
@@ -1324,15 +2451,8 @@ bool CilkSanitizerImpl::instrumentMemIntrinsic(Instruction *I,
       IRB.SetInstDebugLocation(WriteCall);
       Instrumented = true;
     }
-    Value *LObj = GetUnderlyingObject(LoadAddr, DL);
-    if (isa<AllocaInst>(LObj) &&
-        !PointerMayBeCaptured(LoadAddr, true, true) &&
-        !MightHaveDetachedUse(cast<AllocaInst>(LObj))) {
-      // The variable is addressable but not captured, so it cannot be
-      // referenced from a different thread and participate in a data race
-      // (see llvm/Analysis/CaptureTracking.h for details).
-      NumOmittedNonCaptured++;
-    } else {
+
+    if (isReadSet(MemTransferAccTypes[M])) {
       // Instrument the load
       uint64_t LoadId = LoadFED.add(*I);
       uint64_t LoadObjId = LoadObj.add(*I, GetUnderlyingObject(LoadAddr, DL));
@@ -1352,7 +2472,7 @@ bool CilkSanitizerImpl::instrumentMemIntrinsic(Instruction *I,
   return false;
 }
 
-bool CilkSanitizerImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
+bool CilkSanitizerImpl::instrumentCallsite(Instruction *I) {
   if (callsPlaceholderFunction(*I))
     return false;
 
@@ -1414,34 +2534,24 @@ bool CilkSanitizerImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
   return true;
 }
 
-    // TODO: If a destination of an invoke has multiple predecessors, then we
-    // must split that destination.
-    InvokeInst *II = dyn_cast<InvokeInst>(I);
-    BasicBlock *NormalBB = II->getNormalDest();
-    unsigned SuccNum = GetSuccessorNumber(II->getParent(), NormalBB);
-    if (isCriticalEdge(II, SuccNum))
-      NormalBB = SplitCriticalEdge(II, SuccNum,
-                                   CriticalEdgeSplittingOptions(DT));
-    IRB.SetInsertPoint(&*NormalBB->getFirstInsertionPt());
-    CallsiteId = CallsiteFED.localToGlobalId(LocalId, IRB);
-    if (FuncIdGV != NULL) FuncId = IRB.CreateLoad(FuncIdGV);
-    PropVal = Prop.getValue(IRB);
-    insertConditionalHookCall(&*IRB.GetInsertPoint(), CsiAfterCallsite,
-                              {CallsiteId, FuncId, PropVal});
+bool CilkSanitizerImpl::suppressCallsite(Instruction *I) {
+  if (callsPlaceholderFunction(*I))
+    return false;
 
-    BasicBlock *UnwindBB = II->getUnwindDest();
-    // If this unwind destination is shared among multiple invokes, split the
-    // destination to provide a unique destination for this invoke.
-    if (!UnwindBB->getSinglePredecessor())
-      UnwindBB =
-        SplitBlockPredecessors(UnwindBB, { II->getParent() }, ".csi-split", DT);
+  bool IsInvoke = isa<InvokeInst>(I);
 
-    IRB.SetInsertPoint(&*UnwindBB->getFirstInsertionPt());
-    CallsiteId = CallsiteFED.localToGlobalId(LocalId, IRB);
-    if (FuncIdGV != NULL) FuncId = IRB.CreateLoad(FuncIdGV);
-    PropVal = Prop.getValue(IRB);
-    insertConditionalHookCall(&*IRB.GetInsertPoint(), CsiAfterCallsite,
-                              {CallsiteId, FuncId, PropVal});
+  IRBuilder<> IRB(I);
+  insertHookCall(I, CsanDisableChecking, {});
+
+  BasicBlock::iterator Iter(I);
+  if (IsInvoke) {
+    // There are two "after" positions for invokes: the normal block and the
+    // exception block.
+    InvokeInst *II = cast<InvokeInst>(I);
+    insertHookCallInSuccessorBB(
+        II->getNormalDest(), II->getParent(), CsanEnableChecking, {}, {});
+    insertHookCallInSuccessorBB(
+        II->getUnwindDest(), II->getParent(), CsanEnableChecking, {}, {});
   } else {
     // Simple call instruction; there is only one "after" position.
     Iter++;
