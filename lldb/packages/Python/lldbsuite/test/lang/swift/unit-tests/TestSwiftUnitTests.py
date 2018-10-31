@@ -18,7 +18,6 @@ class TestSwiftUnitTests(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
-    @skipIfDarwin
     @swiftTest
     # The creation of the .xctest framework messes with the AST search path.
     @skipIf(debug_info=no_match("dsym"))
