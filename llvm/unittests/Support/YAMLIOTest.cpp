@@ -2662,8 +2662,6 @@ struct Poly {
   NodeKind getKind() const { return Kind; }
 };
 
-using PolyPtr = std::unique_ptr<Poly>;
-
 struct Scalar : Poly {
   enum ScalarKind {
     SK_Unknown,
@@ -2685,13 +2683,13 @@ struct Scalar : Poly {
   static bool classof(const Poly *N) { return N->getKind() == NK_Scalar; }
 };
 
-struct Seq : public Poly, public std::vector<PolyPtr> {
+struct Seq : Poly, std::vector<std::unique_ptr<Poly>> {
   Seq() : Poly(NK_Seq) {}
 
   static bool classof(const Poly *N) { return N->getKind() == NK_Seq; }
 };
 
-struct Map : public Poly, public llvm::StringMap<PolyPtr> {
+struct Map : Poly, llvm::StringMap<std::unique_ptr<Poly>> {
   Map() : Poly(NK_Map) {}
 
   static bool classof(const Poly *N) { return N->getKind() == NK_Map; }
@@ -2700,32 +2698,32 @@ struct Map : public Poly, public llvm::StringMap<PolyPtr> {
 namespace llvm {
 namespace yaml {
 
-template <> struct PolymorphicTraits<PolyPtr> {
-  static NodeKind getKind(const PolyPtr &N) {
+template <> struct PolymorphicTraits<std::unique_ptr<Poly>> {
+  static NodeKind getKind(const std::unique_ptr<Poly> &N) {
     if (isa<Scalar>(*N))
       return NodeKind::Scalar;
-    else if (isa<Seq>(*N))
+    if (isa<Seq>(*N))
       return NodeKind::Sequence;
-    else if (isa<Map>(*N))
+    if (isa<Map>(*N))
       return NodeKind::Map;
     llvm_unreachable("unsupported node type");
   }
 
-  static Scalar &getAsScalar(PolyPtr &N) {
+  static Scalar &getAsScalar(std::unique_ptr<Poly> &N) {
     if (!N || !isa<Scalar>(*N))
-      N.reset(new Scalar());
+      N = llvm::make_unique<Scalar>();
     return *cast<Scalar>(N.get());
   }
 
-  static Seq &getAsSequence(PolyPtr &N) {
+  static Seq &getAsSequence(std::unique_ptr<Poly> &N) {
     if (!N || !isa<Seq>(*N))
-      N.reset(new Seq());
+      N = llvm::make_unique<Seq>();
     return *cast<Seq>(N.get());
   }
 
-  static Map &getAsMap(PolyPtr &N) {
+  static Map &getAsMap(std::unique_ptr<Poly> &N) {
     if (!N || !isa<Map>(*N))
-      N.reset(new Map());
+      N = llvm::make_unique<Map>();
     return *cast<Map>(N.get());
   }
 };
@@ -2792,7 +2790,7 @@ template <> struct CustomMappingTraits<Map> {
 template <> struct SequenceTraits<Seq> {
   static size_t size(IO &IO, Seq &A) { return A.size(); }
 
-  static PolyPtr &element(IO &IO, Seq &A, size_t Index) {
+  static std::unique_ptr<Poly> &element(IO &IO, Seq &A, size_t Index) {
     if (Index >= A.size())
       A.resize(Index + 1);
     return A[Index];
@@ -2804,7 +2802,7 @@ template <> struct SequenceTraits<Seq> {
 
 TEST(YAMLIO, TestReadWritePolymorphicScalar) {
   std::string intermediate;
-  PolyPtr node = PolyPtr(new Scalar(true));
+  std::unique_ptr<Poly> node = llvm::make_unique<Scalar>(true);
 
   llvm::raw_string_ostream ostr(intermediate);
   Output yout(ostr);
@@ -2818,10 +2816,10 @@ TEST(YAMLIO, TestReadWritePolymorphicScalar) {
 TEST(YAMLIO, TestReadWritePolymorphicSeq) {
   std::string intermediate;
   {
-    auto seq = new Seq();
-    seq->push_back(PolyPtr(new Scalar(true)));
-    seq->push_back(PolyPtr(new Scalar(1.0)));
-    PolyPtr node = PolyPtr(seq);
+    auto seq = llvm::make_unique<Seq>();
+    seq->push_back(llvm::make_unique<Scalar>(true));
+    seq->push_back(llvm::make_unique<Scalar>(1.0));
+    auto node = llvm::unique_dyn_cast<Poly>(seq);
 
     llvm::raw_string_ostream ostr(intermediate);
     Output yout(ostr);
@@ -2829,7 +2827,7 @@ TEST(YAMLIO, TestReadWritePolymorphicSeq) {
   }
   {
     Input yin(intermediate);
-    PolyPtr node;
+    std::unique_ptr<Poly> node;
     yin >> node;
 
     EXPECT_FALSE(yin.error());
@@ -2850,10 +2848,10 @@ TEST(YAMLIO, TestReadWritePolymorphicSeq) {
 TEST(YAMLIO, TestReadWritePolymorphicMap) {
   std::string intermediate;
   {
-    auto map = new Map();
-    (*map)["foo"] = PolyPtr(new Scalar(false));
-    (*map)["bar"] = PolyPtr(new Scalar(2.0));
-    PolyPtr node = PolyPtr(map);
+    auto map = llvm::make_unique<Map>();
+    (*map)["foo"] = llvm::make_unique<Scalar>(false);
+    (*map)["bar"] = llvm::make_unique<Scalar>(2.0);
+    std::unique_ptr<Poly> node = llvm::unique_dyn_cast<Poly>(map);
 
     llvm::raw_string_ostream ostr(intermediate);
     Output yout(ostr);
@@ -2861,7 +2859,7 @@ TEST(YAMLIO, TestReadWritePolymorphicMap) {
   }
   {
     Input yin(intermediate);
-    PolyPtr node;
+    std::unique_ptr<Poly> node;
     yin >> node;
 
     EXPECT_FALSE(yin.error());

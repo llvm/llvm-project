@@ -169,7 +169,7 @@ struct ScalarTraits {
 ///      static void output(const MyType &Value, void*, llvm::raw_ostream &Out)
 ///      {
 ///        // stream out custom formatting
-///        Out << Val;
+///        Out << Value;
 ///      }
 ///      static StringRef input(StringRef Scalar, void*, MyType &Value) {
 ///        // parse scalar and set `value`
@@ -202,7 +202,7 @@ struct BlockScalarTraits {
 ///      &ScalarOut, llvm::raw_ostream &TagOut)
 ///      {
 ///        // stream out custom formatting including optional Tag
-///        Out << Val;
+///        Out << Value;
 ///      }
 ///      static StringRef input(StringRef Scalar, StringRef Tag, void*, MyType
 ///      &Value) {
@@ -211,8 +211,8 @@ struct BlockScalarTraits {
 ///        return StringRef();
 ///      }
 ///      static QuotingType mustQuote(const MyType &Value, StringRef) {
-//         return QuotingType::Single;
-//       }
+///        return QuotingType::Single;
+///      }
 ///    };
 template <typename T> struct TaggedScalarTraits {
   // Must provide:
@@ -393,7 +393,6 @@ template <class T> struct has_TaggedScalarTraits {
 
   template <typename U> static double test(...);
 
-public:
   static bool const value =
       (sizeof(test<TaggedScalarTraits<T>>(nullptr, nullptr, nullptr)) == 1);
 };
@@ -537,7 +536,6 @@ template <class T> struct has_PolymorphicTraits {
 
   template <typename U> static double test(...);
 
-public:
   static bool const value = (sizeof(test<PolymorphicTraits<T>>(nullptr)) == 1);
 };
 
@@ -1574,6 +1572,11 @@ private:
     inFlowMapFirstKey,
     inFlowMapOtherKey
   };
+
+  static bool inSeqAnyElement(InState State);
+  static bool inFlowSeqAnyElement(InState State);
+  static bool inMapAnyKey(InState State);
+  static bool inFlowMapAnyKey(InState State);
 
   raw_ostream &Out;
   int WrapColumn;

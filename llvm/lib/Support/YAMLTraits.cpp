@@ -450,12 +450,11 @@ bool Output::mapTag(StringRef Tag, bool Use) {
     // If this tag is being written inside a sequence we should write the start
     // of the sequence before writing the tag, otherwise the tag won't be
     // attached to the element in the sequence, but rather the sequence itself.
-    bool SequenceElement =
-        StateStack.size() > 1 &&
-        (StateStack[StateStack.size() - 2] == inSeqFirstElement ||
-         StateStack[StateStack.size() - 2] == inSeqOtherElement ||
-         StateStack[StateStack.size() - 2] == inFlowSeqFirstElement ||
-         StateStack[StateStack.size() - 2] == inFlowSeqOtherElement);
+    bool SequenceElement = false;
+    if (StateStack.size() > 1) {
+      auto &E = StateStack[StateStack.size() - 2];
+      SequenceElement = inSeqAnyElement(E) || inFlowSeqAnyElement(E);
+    }
     if (SequenceElement && StateStack.back() == inMapFirstKey) {
       newLineCheck();
     } else {
@@ -713,9 +712,9 @@ void Output::blockScalarString(StringRef &S) {
 void Output::scalarTag(std::string &Tag) {
   if (Tag.empty())
     return;
-  this->newLineCheck();
-  this->output(Tag);
-  this->output(" ");
+  newLineCheck();
+  output(Tag);
+  output(" ");
 }
 
 void Output::setError(const Twine &message) {
@@ -731,8 +730,7 @@ bool Output::canElideEmptySequence() {
     return true;
   if (StateStack.back() != inMapFirstKey)
     return true;
-  return !(StateStack[StateStack.size() - 2] == inSeqFirstElement ||
-           StateStack[StateStack.size() - 2] == inSeqOtherElement);
+  return !inSeqAnyElement(StateStack[StateStack.size() - 2]);
 }
 
 void Output::output(StringRef s) {
@@ -742,10 +740,8 @@ void Output::output(StringRef s) {
 
 void Output::outputUpToEndOfLine(StringRef s) {
   output(s);
-  if (StateStack.empty() || (StateStack.back() != inFlowSeqFirstElement &&
-                             StateStack.back() != inFlowSeqOtherElement &&
-                             StateStack.back() != inFlowMapFirstKey &&
-                             StateStack.back() != inFlowMapOtherKey))
+  if (StateStack.empty() || (!inFlowSeqAnyElement(StateStack.back()) &&
+                             !inFlowMapAnyKey(StateStack.back())))
     NeedsNewLine = true;
 }
 
@@ -776,11 +772,9 @@ void Output::newLineCheck() {
     OutputDash = true;
   } else if ((StateStack.size() > 1) &&
              ((StateStack.back() == inMapFirstKey) ||
-              (StateStack.back() == inFlowSeqFirstElement) ||
-              (StateStack.back() == inFlowSeqOtherElement) ||
+              inFlowSeqAnyElement(StateStack.back()) ||
               (StateStack.back() == inFlowMapFirstKey)) &&
-             (StateStack[StateStack.size() - 2] == inSeqFirstElement ||
-              StateStack[StateStack.size() - 2] == inSeqOtherElement)) {
+             inSeqAnyElement(StateStack[StateStack.size() - 2])) {
     --Indent;
     OutputDash = true;
   }
@@ -819,6 +813,22 @@ void Output::flowKey(StringRef Key) {
 }
 
 NodeKind Output::getNodeKind() { report_fatal_error("invalid call"); }
+
+bool Output::inSeqAnyElement(InState State) {
+  return State == inSeqFirstElement || State == inSeqOtherElement;
+}
+
+bool Output::inFlowSeqAnyElement(InState State) {
+  return State == inFlowSeqFirstElement || State == inFlowSeqOtherElement;
+}
+
+bool Output::inMapAnyKey(InState State) {
+  return State == inMapFirstKey || State == inMapOtherKey;
+}
+
+bool Output::inFlowMapAnyKey(InState State) {
+  return State == inFlowMapFirstKey || State == inFlowMapOtherKey;
+}
 
 //===----------------------------------------------------------------------===//
 //  traits for built-in types
