@@ -55,7 +55,7 @@ UndefinedArraySubscriptChecker::checkPreStmt(const ArraySubscriptExpr *A,
   // Generate a report for this bug.
   auto R = llvm::make_unique<BugReport>(*BT, BT->getName(), N);
   R->addRange(A->getIdx()->getSourceRange());
-  bugreporter::trackNullOrUndefValue(N, A->getIdx(), *R);
+  bugreporter::trackExpressionValue(N, A->getIdx(), *R);
   C.emitReport(std::move(R));
 }
 

@@ -87,7 +87,7 @@ static void emitBug(CheckerContext &C, BuiltinBug &BT, const Expr *RetE,
   auto Report = llvm::make_unique<BugReport>(BT, BT.getDescription(), N);
 
   Report->addRange(RetE->getSourceRange());
-  bugreporter::trackNullOrUndefValue(N, TrackingE ? TrackingE : RetE, *Report);
+  bugreporter::trackExpressionValue(N, TrackingE ? TrackingE : RetE, *Report);
 
   C.emitReport(std::move(Report));
 }
