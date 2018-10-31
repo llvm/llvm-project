@@ -2963,6 +2963,14 @@ DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
     CI[K].PosPart = getPositivePart(CI[K].Coeff);
     CI[K].NegPart = getNegativePart(CI[K].Coeff);
     CI[K].Iterations = collectUpperBound(L, Subscript->getType());
+    if (const SCEVCastExpr *Cast =
+        dyn_cast<SCEVSignExtendExpr>(CI[K].PosPart)) {
+      auto *ReplSCEV = SE->getZeroExtendExpr(Cast->getOperand(),
+                                             Subscript->getType());
+      if (CI[K].Coeff == CI[K].PosPart)
+        CI[K].Coeff = ReplSCEV;
+      CI[K].PosPart = ReplSCEV;
+    }
     Subscript = AddRec->getStart();
   }
   Constant = Subscript;
