@@ -375,6 +375,9 @@ public:
   //------------------------------------------------------------------
   bool IsAbsolute() const;
 
+  /// Temporary helper for FileSystem change.
+  void SetPath(llvm::StringRef p) { SetFile(p, false); }
+
   //------------------------------------------------------------------
   /// Extract the full path to the file.
   ///

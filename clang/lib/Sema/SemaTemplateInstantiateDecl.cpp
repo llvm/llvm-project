@@ -728,9 +728,6 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
                           D->getLocation(), D->getIdentifier(), DI->getType(),
                           DI, D->getStorageClass());
 
-  if (Var->isStaticLocal())
-    SemaRef.CheckStaticLocalForDllExport(Var);
-
   // In ARC, infer 'retaining' for variables of retainable type.
   if (SemaRef.getLangOpts().ObjCAutoRefCount &&
       SemaRef.inferObjCARCLifetime(Var))
@@ -750,6 +747,9 @@ Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D,
   }
 
   Var->setImplicit(D->isImplicit());
+
+  if (Var->isStaticLocal())
+    SemaRef.CheckStaticLocalForDllExport(Var);
 
   return Var;
 }

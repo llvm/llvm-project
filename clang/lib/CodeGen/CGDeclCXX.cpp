@@ -124,22 +124,26 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
 /// constant from this point onwards.
 static void EmitDeclInvariant(CodeGenFunction &CGF, const VarDecl &D,
                               llvm::Constant *Addr) {
+  return CGF.EmitInvariantStart(
+      Addr, CGF.getContext().getTypeSizeInChars(D.getType()));
+}
+
+void CodeGenFunction::EmitInvariantStart(llvm::Constant *Addr, CharUnits Size) {
   // Do not emit the intrinsic if we're not optimizing.
-  if (!CGF.CGM.getCodeGenOpts().OptimizationLevel)
+  if (!CGM.getCodeGenOpts().OptimizationLevel)
     return;
 
   // Grab the llvm.invariant.start intrinsic.
   llvm::Intrinsic::ID InvStartID = llvm::Intrinsic::invariant_start;
   // Overloaded address space type.
-  llvm::Type *ObjectPtr[1] = {CGF.Int8PtrTy};
-  llvm::Constant *InvariantStart = CGF.CGM.getIntrinsic(InvStartID, ObjectPtr);
+  llvm::Type *ObjectPtr[1] = {Int8PtrTy};
+  llvm::Constant *InvariantStart = CGM.getIntrinsic(InvStartID, ObjectPtr);
 
   // Emit a call with the size in bytes of the object.
-  CharUnits WidthChars = CGF.getContext().getTypeSizeInChars(D.getType());
-  uint64_t Width = WidthChars.getQuantity();
-  llvm::Value *Args[2] = { llvm::ConstantInt::getSigned(CGF.Int64Ty, Width),
-                           llvm::ConstantExpr::getBitCast(Addr, CGF.Int8PtrTy)};
-  CGF.Builder.CreateCall(InvariantStart, Args);
+  uint64_t Width = Size.getQuantity();
+  llvm::Value *Args[2] = { llvm::ConstantInt::getSigned(Int64Ty, Width),
+                           llvm::ConstantExpr::getBitCast(Addr, Int8PtrTy)};
+  Builder.CreateCall(InvariantStart, Args);
 }
 
 void CodeGenFunction::EmitCXXGlobalVarDeclInit(const VarDecl &D,
@@ -607,7 +611,7 @@ void CodeGenFunction::GenerateCXXGlobalVarDeclInitFunc(llvm::Function *Fn,
 void
 CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
                                            ArrayRef<llvm::Function *> Decls,
-                                           Address Guard) {
+                                           ConstantAddress Guard) {
   {
     auto NL = ApplyDebugLocation::CreateEmpty(*this);
     StartFunction(GlobalDecl(), getContext().VoidTy, Fn,
@@ -631,6 +635,12 @@ CodeGenFunction::GenerateCXXGlobalInitFunc(llvm::Function *Fn,
       // initializers use previously-initialized thread_local vars, that's
       // probably supposed to be OK, but the standard doesn't say.
       Builder.CreateStore(llvm::ConstantInt::get(GuardVal->getType(),1), Guard);
+
+      // The guard variable can't ever change again.
+      EmitInvariantStart(
+          Guard.getPointer(),
+          CharUnits::fromQuantity(
+              CGM.getDataLayout().getTypeAllocSize(GuardVal->getType())));
     }
 
     RunCleanupsScope Scope(*this);

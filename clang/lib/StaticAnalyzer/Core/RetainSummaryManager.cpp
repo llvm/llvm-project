@@ -69,6 +69,10 @@ static bool isOSObjectDynamicCast(StringRef S) {
   return S == "safeMetaCast";
 }
 
+static bool isOSIteratorSubclass(const Decl *D) {
+  return isSubclass(D, "OSIterator");
+}
+
 static bool hasRCAnnotation(const Decl *D, StringRef rcAnnotation) {
   for (const auto *Ann : D->specific_attrs<AnnotateAttr>()) {
     if (Ann->getAnnotation() == rcAnnotation)
@@ -101,10 +105,11 @@ static bool isOSObjectRelated(const CXXMethodDecl *MD) {
     return true;
 
   for (ParmVarDecl *Param : MD->parameters()) {
-    QualType PT = Param->getType();
-    if (CXXRecordDecl *RD = PT->getPointeeType()->getAsCXXRecordDecl())
-      if (isOSObjectSubclass(RD))
-        return true;
+    QualType PT = Param->getType()->getPointeeType();
+    if (!PT.isNull())
+      if (CXXRecordDecl *RD = PT->getAsCXXRecordDecl())
+        if (isOSObjectSubclass(RD))
+          return true;
   }
 
   return false;
@@ -234,11 +239,12 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
         if (isOSObjectDynamicCast(II->getName()))
           return getDefaultSummary();
 
-        // All objects returned with functions starting with "get" are getters.
-        if (II->getName().startswith("get")) {
-          return getOSSummaryGetRule(FD);
-        } else {
+        // All objects returned with functions *not* starting with
+        // get, or iterators, are returned at +1.
+        if (!II->getName().startswith("get") || isOSIteratorSubclass(PD)) {
           return getOSSummaryCreateRule(FD);
+        } else {
+          return getOSSummaryGetRule(FD);
         }
       }
     }

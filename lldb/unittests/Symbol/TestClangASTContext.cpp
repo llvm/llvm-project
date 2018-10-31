@@ -13,6 +13,7 @@
 
 #include "clang/AST/DeclCXX.h"
 
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangUtil.h"
@@ -25,9 +26,15 @@ using namespace lldb_private;
 
 class TestClangASTContext : public testing::Test {
 public:
-  static void SetUpTestCase() { HostInfo::Initialize(); }
+  static void SetUpTestCase() {
+    FileSystem::Initialize();
+    HostInfo::Initialize();
+  }
 
-  static void TearDownTestCase() { HostInfo::Terminate(); }
+  static void TearDownTestCase() {
+    HostInfo::Terminate();
+    FileSystem::Terminate();
+  }
 
   virtual void SetUp() override {
     std::string triple = HostInfo::GetTargetTriple();
@@ -357,7 +364,7 @@ TEST_F(TestClangASTContext, TestRecordHasFields) {
   RecordDecl *empty_derived_non_empty_base_decl =
       ClangASTContext::GetAsRecordDecl(empty_derived);
   EXPECT_EQ(1u, ClangASTContext::GetNumBaseClasses(
-                   empty_derived_non_empty_base_cxx_decl, false));
+                    empty_derived_non_empty_base_cxx_decl, false));
   EXPECT_TRUE(
       ClangASTContext::RecordHasFields(empty_derived_non_empty_base_decl));
 
@@ -380,7 +387,7 @@ TEST_F(TestClangASTContext, TestRecordHasFields) {
   RecordDecl *empty_derived_non_empty_vbase_decl =
       ClangASTContext::GetAsRecordDecl(empty_derived2);
   EXPECT_EQ(1u, ClangASTContext::GetNumBaseClasses(
-                   empty_derived_non_empty_vbase_cxx_decl, false));
+                    empty_derived_non_empty_vbase_cxx_decl, false));
   EXPECT_TRUE(
       ClangASTContext::RecordHasFields(empty_derived_non_empty_vbase_decl));
 }
@@ -420,7 +427,7 @@ TEST_F(TestClangASTContext, TemplateArguments) {
                              clang::AutoTypeKeyword::Auto, false));
 
   CompilerType int_type(m_ast->getASTContext(), m_ast->getASTContext()->IntTy);
-  for(CompilerType t: { type, typedef_type, auto_type }) {
+  for (CompilerType t : {type, typedef_type, auto_type}) {
     SCOPED_TRACE(t.GetTypeName().AsCString());
 
     EXPECT_EQ(m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 0),

@@ -3892,6 +3892,8 @@ public:
   AddInitializerToStaticVarDecl(const VarDecl &D,
                                 llvm::GlobalVariable *GV);
 
+  // Emit an @llvm.invariant.start call for the given memory region.
+  void EmitInvariantStart(llvm::Constant *Addr, CharUnits Size);
 
   /// EmitCXXGlobalVarDeclInit - Create the initializer for a C++
   /// variable with global storage.
@@ -3927,9 +3929,10 @@ public:
 
   /// GenerateCXXGlobalInitFunc - Generates code for initializing global
   /// variables.
-  void GenerateCXXGlobalInitFunc(llvm::Function *Fn,
-                                 ArrayRef<llvm::Function *> CXXThreadLocals,
-                                 Address Guard = Address::invalid());
+  void
+  GenerateCXXGlobalInitFunc(llvm::Function *Fn,
+                            ArrayRef<llvm::Function *> CXXThreadLocals,
+                            ConstantAddress Guard = ConstantAddress::invalid());
 
   /// GenerateCXXGlobalDtorsFunc - Generates code for destroying global
   /// variables.

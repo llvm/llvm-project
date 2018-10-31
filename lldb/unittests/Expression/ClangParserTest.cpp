@@ -9,6 +9,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
@@ -18,8 +19,14 @@ using namespace lldb_private;
 
 namespace {
 struct ClangHostTest : public testing::Test {
-  static void SetUpTestCase() { HostInfo::Initialize(); }
-  static void TearDownTestCase() { HostInfo::Terminate(); }
+  static void SetUpTestCase() {
+    FileSystem::Initialize();
+    HostInfo::Initialize();
+  }
+  static void TearDownTestCase() {
+    HostInfo::Terminate();
+    FileSystem::Terminate();
+  }
 };
 } // namespace
 

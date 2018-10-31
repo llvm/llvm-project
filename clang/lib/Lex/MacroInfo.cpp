@@ -200,7 +200,8 @@ MacroDirective::DefInfo MacroDirective::getDefinition() {
 }
 
 const MacroDirective::DefInfo
-MacroDirective::findDirectiveAtLoc(SourceLocation L, SourceManager &SM) const {
+MacroDirective::findDirectiveAtLoc(SourceLocation L,
+                                   const SourceManager &SM) const {
   assert(L.isValid() && "SourceLocation is invalid.");
   for (DefInfo Def = getDefinition(); Def; Def = Def.getPreviousDefinition()) {
     if (Def.getLocation().isInvalid() ||  // For macros defined on the command line.

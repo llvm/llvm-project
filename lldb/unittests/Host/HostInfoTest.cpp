@@ -8,20 +8,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/HostInfo.h"
-#include "lldb/lldb-defines.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/lldb-defines.h"
 #include "gtest/gtest.h"
 
 using namespace lldb_private;
 using namespace llvm;
 
 namespace {
-class HostInfoTest: public ::testing::Test {
-  public:
-    void SetUp() override { HostInfo::Initialize(); }
-    void TearDown() override { HostInfo::Terminate(); }
+class HostInfoTest : public ::testing::Test {
+public:
+  void SetUp() override {
+    FileSystem::Initialize();
+    HostInfo::Initialize();
+  }
+  void TearDown() override {
+    HostInfo::Terminate();
+    FileSystem::Terminate();
+  }
 };
-}
+} // namespace
 
 TEST_F(HostInfoTest, GetAugmentedArchSpec) {
   // Fully specified triple should not be changed.
