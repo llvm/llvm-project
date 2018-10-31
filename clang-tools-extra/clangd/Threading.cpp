@@ -102,7 +102,7 @@ void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,
 }
 
 void setThreadPriority(std::thread &T, ThreadPriority Priority) {
-#ifdef HAVE_PTHREAD_H
+#if defined(HAVE_PTHREAD_H) && defined(__linux__)
   sched_param priority;
   priority.sched_priority = 0;
   pthread_setschedparam(
