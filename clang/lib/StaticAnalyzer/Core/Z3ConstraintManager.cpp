@@ -889,7 +889,7 @@ public:
   }
 
   /// Reset the solver and remove all constraints.
-  void reset() const override { Z3_solver_reset(Context.Context, Solver); }
+  void reset() override { Z3_solver_reset(Context.Context, Solver); }
 
   void print(raw_ostream &OS) const override {
     OS << Z3_solver_to_string(Context.Context, Solver);
