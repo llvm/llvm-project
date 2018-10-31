@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file defines summaries implementation for retain counting, which
-//  implements a reference count checker for Core Foundation and Cocoa
-//  on (Mac OS X).
+//  implements a reference count checker for Core Foundation, Cocoa
+//  and OSObject (on Mac OS X).
 //
 //===----------------------------------------------------------------------===//
 
@@ -92,6 +92,22 @@ static bool isAutorelease(const FunctionDecl *FD, StringRef FName) {
 
 static bool isMakeCollectable(StringRef FName) {
   return FName.contains_lower("MakeCollectable");
+}
+
+/// A function is OSObject related if it is declared on a subclass
+/// of OSObject, or any of the parameters is a subclass of an OSObject.
+static bool isOSObjectRelated(const CXXMethodDecl *MD) {
+  if (isOSObjectSubclass(MD->getParent()))
+    return true;
+
+  for (ParmVarDecl *Param : MD->parameters()) {
+    QualType PT = Param->getType();
+    if (CXXRecordDecl *RD = PT->getPointeeType()->getAsCXXRecordDecl())
+      if (isOSObjectSubclass(RD))
+        return true;
+  }
+
+  return false;
 }
 
 const RetainSummary *
@@ -322,12 +338,10 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
     }
   }
 
-  if (isa<CXXMethodDecl>(FD)) {
-
-    // Stop tracking arguments passed to C++ methods, as those might be
-    // wrapping smart pointers.
-    return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, StopTracking,
-                                DoNothing);
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    if (!(TrackOSObjects && isOSObjectRelated(MD)))
+      return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, StopTracking,
+                                  DoNothing);
   }
 
   return getDefaultSummary();
@@ -642,6 +656,8 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
 
   if (D->hasAttr<CFReturnsNotRetainedAttr>())
     return RetEffect::MakeNotOwned(RetEffect::CF);
+  else if (hasRCAnnotation(D, "rc_ownership_returns_not_retained"))
+    return RetEffect::MakeNotOwned(RetEffect::Generalized);
 
   return None;
 }
