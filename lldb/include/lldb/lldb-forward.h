@@ -184,7 +184,6 @@ class ProcessInstanceInfoMatch;
 class ProcessLaunchInfo;
 class Property;
 struct PropertyDefinition;
-class RecognizedStackFrame;
 class RegisterCheckpoint;
 class RegisterContext;
 class RegisterLocation;
@@ -212,8 +211,6 @@ class SourceManagerImpl;
 class StackFrame;
 class StackFrameImpl;
 class StackFrameList;
-class StackFrameRecognizer;
-class StackFrameRecognizerManager;
 class StackID;
 class StopInfo;
 class Stoppoint;
@@ -420,8 +417,6 @@ typedef std::shared_ptr<lldb_private::Queue> QueueSP;
 typedef std::weak_ptr<lldb_private::Queue> QueueWP;
 typedef std::shared_ptr<lldb_private::QueueItem> QueueItemSP;
 typedef std::shared_ptr<lldb_private::REPL> REPLSP;
-typedef std::shared_ptr<lldb_private::RecognizedStackFrame>
-    RecognizedStackFrameSP;
 typedef std::shared_ptr<lldb_private::ScriptSummaryFormat>
     ScriptSummaryFormatSP;
 typedef std::shared_ptr<lldb_private::ScriptInterpreter> ScriptInterpreterSP;
@@ -438,8 +433,6 @@ typedef std::shared_ptr<lldb_private::StackFrame> StackFrameSP;
 typedef std::unique_ptr<lldb_private::StackFrame> StackFrameUP;
 typedef std::weak_ptr<lldb_private::StackFrame> StackFrameWP;
 typedef std::shared_ptr<lldb_private::StackFrameList> StackFrameListSP;
-typedef std::shared_ptr<lldb_private::StackFrameRecognizer>
-    StackFrameRecognizerSP;
 typedef std::shared_ptr<lldb_private::StopInfo> StopInfoSP;
 typedef std::shared_ptr<lldb_private::StoppointLocation> StoppointLocationSP;
 typedef std::shared_ptr<lldb_private::Stream> StreamSP;

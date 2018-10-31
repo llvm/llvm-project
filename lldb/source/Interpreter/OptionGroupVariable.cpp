@@ -28,9 +28,6 @@ static constexpr OptionDefinition g_variable_options[] = {
     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "no-args", 'a',
      OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Omit function arguments."},
-    {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "no-recognized-args", 't',
-     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
-     "Omit recognized function arguments."},
     {LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "no-locals", 'l',
      OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
      "Omit local variables."},
@@ -104,9 +101,6 @@ OptionGroupVariable::SetOptionValue(uint32_t option_idx,
   case 's':
     show_scope = true;
     break;
-  case 't':
-    show_recognized_args = false;
-    break;
   case 'y':
     error = summary.SetCurrentValue(option_arg);
     break;
@@ -125,7 +119,6 @@ OptionGroupVariable::SetOptionValue(uint32_t option_idx,
 void OptionGroupVariable::OptionParsingStarting(
     ExecutionContext *execution_context) {
   show_args = true;     // Frame option only
-  show_recognized_args = true; // Frame option only
   show_locals = true;   // Frame option only
   show_globals = false; // Frame option only
   show_decl = false;
