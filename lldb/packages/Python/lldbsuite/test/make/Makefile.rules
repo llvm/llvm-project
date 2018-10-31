@@ -633,6 +633,9 @@ $(EXE): $(MODULENAME).swiftmodule $(SWIFT_OBJECTS)
 	$(SWIFTC) $(LD_EXTRAS) \
 	  $(patsubst $<,-Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$<,$^) \
 	  $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$(EXE)"
+endif
 else # OS = Linux
 $(EXE): $(MODULENAME).swiftmodule.o $(SWIFT_OBJECTS)
 	@echo "### Linking" $(EXE)
