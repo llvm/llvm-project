@@ -19,6 +19,7 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/EHPersonalities.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -520,8 +521,91 @@ void CSIImpl::initializeTapirHooks() {
       M.getOrInsertFunction("__csi_detach_continue", RetType,
                             /* detach_continue_id */ IDType,
                             /* detach_id */ IDType));
-  CsiSync = checkCsiInterfaceFunction(
-      M.getOrInsertFunction("__csi_sync", RetType, IDType));
+  CsiBeforeSync = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_before_sync", RetType, IDType));
+  CsiAfterSync = checkCsiInterfaceFunction(
+      M.getOrInsertFunction("__csi_after_sync", RetType, IDType));
+}
+
+// Prepare any calls in the CFG for instrumentation, e.g., by making sure any
+// call that can throw is modeled with an invoke.
+void CSIImpl::setupCalls(Function &F) {
+  // We use the EscapeEnumerator's built-in functionality to promote calls to
+  // invokes.
+  EscapeEnumerator EE(F, "csi.cleanup", true);
+  while (EE.Next());
+
+  // TODO: Split each basic block immediately after each call, to ensure that
+  // calls act like terminators?
+}
+
+// Setup each block such that all of its predecessors belong to the same CSI ID
+// space.
+static void setupBlock(BasicBlock *BB, DominatorTree *DT) {
+  if (BB->getUniquePredecessor())
+    return;
+
+  SmallVector<BasicBlock *, 4> DetachPreds;
+  SmallVector<BasicBlock *, 4> DetRethrowPreds;
+  SmallVector<BasicBlock *, 4> SyncPreds;
+  SmallVector<BasicBlock *, 4> InvokePreds;
+  bool HasOtherPredTypes = false;
+  unsigned NumPredTypes = 0;
+
+  // Partition the predecessors of the landing pad.
+  for (BasicBlock *Pred : predecessors(BB)) {
+    if (isa<DetachInst>(Pred->getTerminator()))
+      DetachPreds.push_back(Pred);
+    else if (isDetachedRethrow(Pred->getTerminator()))
+      DetRethrowPreds.push_back(Pred);
+    else if (isa<SyncInst>(Pred->getTerminator()))
+      SyncPreds.push_back(Pred);
+    else if (isa<InvokeInst>(Pred->getTerminator()))
+      InvokePreds.push_back(Pred);
+    else
+      HasOtherPredTypes = true;
+  }
+
+  NumPredTypes = static_cast<unsigned>(!DetachPreds.empty()) +
+    static_cast<unsigned>(!DetRethrowPreds.empty()) +
+    static_cast<unsigned>(!SyncPreds.empty()) +
+    static_cast<unsigned>(!InvokePreds.empty()) +
+    static_cast<unsigned>(HasOtherPredTypes);
+
+  // Split off the predecessors of each type.
+  if (!DetachPreds.empty() && NumPredTypes > 1) {
+    SplitBlockPredecessors(BB, DetachPreds, ".csi-split", DT);
+    NumPredTypes--;
+  }
+  if (!DetRethrowPreds.empty() && NumPredTypes > 1) {
+    SplitBlockPredecessors(BB, DetRethrowPreds, ".csi-split", DT);
+    NumPredTypes--;
+  }
+  if (!SyncPreds.empty() && NumPredTypes > 1) {
+    SplitBlockPredecessors(BB, SyncPreds, ".csi-split", DT);
+    NumPredTypes--;
+  }
+  if (!InvokePreds.empty() && NumPredTypes > 1) {
+    SplitBlockPredecessors(BB, InvokePreds, ".csi-split", DT);
+    NumPredTypes--;
+  }
+}
+
+// Setup all basic blocks such that each block's predecessors belong entirely to
+// one CSI ID space.
+void CSIImpl::setupBlocks(Function &F, DominatorTree *DT) {
+  SmallPtrSet<BasicBlock *, 8> BlocksToSetup;
+  for (BasicBlock &BB : F) {
+    if (InvokeInst *II = dyn_cast<InvokeInst>(BB.getTerminator()))
+      BlocksToSetup.insert(II->getNormalDest());
+    else if (SyncInst *SI = dyn_cast<SyncInst>(BB.getTerminator()))
+      BlocksToSetup.insert(SI->getSuccessor(0));
+    else if (BB.isLandingPad())
+      BlocksToSetup.insert(&BB);
+  }
+
+  for (BasicBlock *BB : BlocksToSetup)
+    setupBlock(BB, DT);
 }
 
 int CSIImpl::getNumBytesAccessed(Value *Addr, const DataLayout &DL) {
@@ -539,15 +623,15 @@ void CSIImpl::addLoadStoreInstrumentation(
     Type *AddrType, Value *Addr, int NumBytes, CsiLoadStoreProperty &Prop) {
   IRBuilder<> IRB(I);
   Value *PropVal = Prop.getValue(IRB);
-  insertConditionalHookCall(I, BeforeFn,
-                            {CsiId, IRB.CreatePointerCast(Addr, AddrType),
-                                IRB.getInt32(NumBytes), PropVal});
+  insertHookCall(I, BeforeFn,
+                 {CsiId, IRB.CreatePointerCast(Addr, AddrType),
+                  IRB.getInt32(NumBytes), PropVal});
 
   BasicBlock::iterator Iter = ++I->getIterator();
   IRB.SetInsertPoint(&*Iter);
-  insertConditionalHookCall(&*Iter, AfterFn,
-                            {CsiId, IRB.CreatePointerCast(Addr, AddrType),
-                                IRB.getInt32(NumBytes), PropVal});
+  insertHookCall(&*Iter, AfterFn,
+                 {CsiId, IRB.CreatePointerCast(Addr, AddrType),
+                  IRB.getInt32(NumBytes), PropVal});
 }
 
 void CSIImpl::instrumentLoadOrStore(Instruction *I, CsiLoadStoreProperty &Prop,
@@ -580,7 +664,7 @@ void CSIImpl::instrumentAtomic(Instruction *I, const DataLayout &DL) {
   dbgs() << "WARNING: Uninstrumented atomic operations in program-under-test!\n";
 }
 
-// If a memset intrinsic gets inlined by the code gen, we will miss races on it.
+// If a memset intrinsic gets inlined by the code gen, we will miss it.
 // So, we either need to ensure the intrinsic is not inlined, or instrument it.
 // We do not instrument memset/memmove/memcpy intrinsics (too complicated),
 // instead we simply replace them with regular function calls, which are then
@@ -624,26 +708,24 @@ void CSIImpl::instrumentBasicBlock(BasicBlock &BB) {
   Prop.setIsEHPad(BB.isEHPad());
   TerminatorInst *TI = BB.getTerminator();
   Value *PropVal = Prop.getValue(IRB);
-  insertConditionalHookCall(&*IRB.GetInsertPoint(), CsiBBEntry,
-                            {CsiId, PropVal});
-  insertConditionalHookCall(TI, CsiBBExit,
-                            {CsiId, PropVal});
+  insertHookCall(&*IRB.GetInsertPoint(), CsiBBEntry, {CsiId, PropVal});
+  IRB.SetInsertPoint(TI);
+  insertHookCall(TI, CsiBBExit, {CsiId, PropVal});
 }
 
 void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
   if (callsPlaceholderFunction(*I))
     return;
 
-  bool IsInvoke = false;
+  bool IsInvoke = isa<InvokeInst>(I);
   Function *Called = nullptr;
-  if (CallInst *CI = dyn_cast<CallInst>(I)) {
+  if (CallInst *CI = dyn_cast<CallInst>(I))
     Called = CI->getCalledFunction();
-  } else if (InvokeInst *II = dyn_cast<InvokeInst>(I)) {
+  else if (InvokeInst *II = dyn_cast<InvokeInst>(I))
     Called = II->getCalledFunction();
-    IsInvoke = true;
-  }
 
   IRBuilder<> IRB(I);
+  Value *DefaultID = getDefaultID(IRB);
   uint64_t LocalId = CallsiteFED.add(*I);
   Value *CallsiteId = CallsiteFED.localToGlobalId(LocalId, IRB);
   Value *FuncId = nullptr;
@@ -652,8 +734,8 @@ void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
     Module *M = I->getParent()->getParent()->getParent();
     std::string GVName =
       CsiFuncIdVariablePrefix + Called->getName().str();
-    FuncIdGV = dyn_cast<GlobalVariable>(M->getOrInsertGlobal(GVName,
-                                                             IRB.getInt64Ty()));
+    FuncIdGV =
+      dyn_cast<GlobalVariable>(M->getOrInsertGlobal(GVName, IRB.getInt64Ty()));
     assert(FuncIdGV);
     FuncIdGV->setConstant(false);
     FuncIdGV->setLinkage(GlobalValue::WeakAnyLinkage);
@@ -665,49 +747,28 @@ void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
   }
   assert(FuncId != NULL);
   CsiCallProperty Prop;
+  Value *DefaultPropVal = Prop.getValue(IRB);
   Prop.setIsIndirect(!Called);
   Value *PropVal = Prop.getValue(IRB);
-  insertConditionalHookCall(I, CsiBeforeCallsite,
-                            {CallsiteId, FuncId, PropVal});
+  insertHookCall(I, CsiBeforeCallsite, {CallsiteId, FuncId, PropVal});
 
   BasicBlock::iterator Iter(I);
   if (IsInvoke) {
     // There are two "after" positions for invokes: the normal block and the
-    // exception block. This also means we have to recompute the callsite and
-    // function IDs in each basic block so that we can use it for the after
-    // hook.
-
-    // The "after" hook for this callsite is inserted before the BB entry hook
-    // by running instrumentCallsite after instrumentBasicBlock.
-    InvokeInst *II = dyn_cast<InvokeInst>(I);
-    BasicBlock *NormalBB = II->getNormalDest();
-    IRB.SetInsertPoint(&*NormalBB->getFirstInsertionPt());
-    CallsiteId = CallsiteFED.localToGlobalId(LocalId, IRB);
-    if (FuncIdGV != NULL) FuncId = IRB.CreateLoad(FuncIdGV);
-    PropVal = Prop.getValue(IRB);
-    insertConditionalHookCall(&*IRB.GetInsertPoint(), CsiAfterCallsite,
-                              {CallsiteId, FuncId, PropVal});
-
-    BasicBlock *UnwindBB = II->getUnwindDest();
-    // If this unwind destination is shared among multiple invokes, split the
-    // destination to provide a unique destination for this invoke.
-    if (!UnwindBB->getSinglePredecessor())
-      UnwindBB =
-        SplitBlockPredecessors(UnwindBB, { II->getParent() }, ".csi-split", DT);
-
-    IRB.SetInsertPoint(&*UnwindBB->getFirstInsertionPt());
-    CallsiteId = CallsiteFED.localToGlobalId(LocalId, IRB);
-    if (FuncIdGV != NULL) FuncId = IRB.CreateLoad(FuncIdGV);
-    PropVal = Prop.getValue(IRB);
-    insertConditionalHookCall(&*IRB.GetInsertPoint(), CsiAfterCallsite,
-                              {CallsiteId, FuncId, PropVal});
+    // exception block.
+    InvokeInst *II = cast<InvokeInst>(I);
+    insertHookCallInSuccessorBB(
+        II->getNormalDest(), II->getParent(), CsiAfterCallsite,
+        {CallsiteId, FuncId, PropVal}, {DefaultID, DefaultID, DefaultPropVal});
+    insertHookCallInSuccessorBB(
+        II->getUnwindDest(), II->getParent(), CsiAfterCallsite,
+        {CallsiteId, FuncId, PropVal}, {DefaultID, DefaultID, DefaultPropVal});
   } else {
     // Simple call instruction; there is only one "after" position.
     Iter++;
     IRB.SetInsertPoint(&*Iter);
     PropVal = Prop.getValue(IRB);
-    insertConditionalHookCall(&*Iter, CsiAfterCallsite,
-                              {CallsiteId, FuncId, PropVal});
+    insertHookCall(&*Iter, CsiAfterCallsite, {CallsiteId, FuncId, PropVal});
   }
 }
 
@@ -768,9 +829,6 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
   // Find the detached block, continuation, and associated reattaches.
   BasicBlock *DetachedBlock = DI->getDetached();
   BasicBlock *ContinueBlock = DI->getContinue();
-  BasicBlock *UnwindBlock = nullptr;
-  if (DI->hasUnwindDest())
-    UnwindBlock = DI->getUnwindDest();
   SmallVector<BasicBlock *, 8> TaskExits, TaskResumes;
   getTaskExits(DI, TaskExits, TaskResumes, DT);
 
@@ -820,72 +878,185 @@ void CSIImpl::instrumentDetach(DetachInst *DI, DominatorTree *DT) {
   }
   // Instrument the unwind of the detach, if it exists.
   if (DI->hasUnwindDest()) {
-    // if (isCriticalContinueEdge(DI, 2))
-    //   UnwindBlock = SplitCriticalEdge(
-    //       DI, 2,
-    //       CriticalEdgeSplittingOptions(DT).setSplitDetachContinue());
-
-    IRBuilder<> IRB(&*UnwindBlock->getFirstInsertionPt());
+    BasicBlock *UnwindBlock = DI->getUnwindDest();
+    IRBuilder<> IRB(DI);
+    Value *DefaultID = getDefaultID(IRB);
     uint64_t LocalID = DetachContinueFED.add(*UnwindBlock);
     Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IRB);
-    Instruction *Call = IRB.CreateCall(CsiDetachContinue,
-                                       {ContinueID, DetachID});
-    setInstrumentationDebugLoc(*UnwindBlock, Call);
+    insertHookCallInSuccessorBB(UnwindBlock, DI->getParent(), CsiDetachContinue,
+                                {ContinueID, DetachID}, {DefaultID, DefaultID});
   }
 }
 
 void CSIImpl::instrumentAlloca(Instruction *I) {
   IRBuilder<> IRB(I);
-  LLVMContext &C = IRB.getContext();
-  const DataLayout &D = I->getFunction()->getParent()->getDataLayout();
   AllocaInst* AI = cast<AllocaInst>(I);
 
   uint64_t LocalId = AllocaFED.add(*I);
   Value *CsiId = AllocaFED.localToGlobalId(LocalId, IRB);
 
-  Value* IsStaticAlloca = ConstantInt::get(Type::getInt64Ty(C),AI->isStaticAlloca());
+  CsiAllocaProperty Prop;
+  Prop.setIsStatic(AI->isStaticAlloca());
+  Value *PropVal = Prop.getValue(IRB);
 
-  //Retrieve element size for target layout
-  Value* ElementSize = ConstantInt::get(Type::getInt64Ty(C),D.getTypeAllocSize(AI->getAllocatedType())); 
-  //Retrieve number of elements, defaults to 1 for non-arrays
-  Value* NumElements = IRB.CreateIntCast(AI->getArraySize(), Type::getInt64Ty(C), false);
-  //Multiply for total size
-  Value *TotalSize = IRB.CreateMul(NumElements,ElementSize);
+  // Get size of allocation.
+  uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
+  Value *SizeVal = IRB.getInt64(Size);
+  if (AI->isArrayAllocation())
+    SizeVal = IRB.CreateMul(SizeVal, AI->getArraySize());
 
-  insertConditionalHookCall(I, CsiBeforeAlloca, {CsiId,IsStaticAlloca});
+  insertHookCall(I, CsiBeforeAlloca, {CsiId, SizeVal, PropVal});
   BasicBlock::iterator Iter(I);
   Iter++;
   IRB.SetInsertPoint(&*Iter);
 
   Type *AddrType = IRB.getInt8PtrTy();
   Value *Addr = IRB.CreatePointerCast(I, AddrType);
-
-  insertConditionalHookCall(&*Iter, CsiAfterAlloca, {CsiId,Addr, TotalSize, IsStaticAlloca});
+  insertHookCall(&*Iter, CsiAfterAlloca, {CsiId, Addr, SizeVal, PropVal});
 }
 
 void CSIImpl::instrumentSync(SyncInst *SI) {
   IRBuilder<> IRB(SI);
+  Value *DefaultID = getDefaultID(IRB);
   // Get the ID of this sync.
   uint64_t LocalID = SyncFED.add(*SI);
   Value *SyncID = SyncFED.localToGlobalId(LocalID, IRB);
   // Insert instrumentation before the sync.
-  Instruction *Call = IRB.CreateCall(CsiSync, {SyncID});
-  setInstrumentationDebugLoc(SI, Call);
-  // TODO: Insert after-sync instrumentation.
+  insertHookCall(SI, CsiBeforeSync, {SyncID});
+  insertHookCallInSuccessorBB(SI->getSuccessor(0), SI->getParent(),
+                              CsiAfterSync, {SyncID}, {DefaultID});
 }
 
-void CSIImpl::insertConditionalHookCall(Instruction *I, Function *HookFunction,
-                                        ArrayRef<Value *> HookArgs) {
+void CSIImpl::insertHookCall(Instruction *I, Function *HookFunction,
+                             ArrayRef<Value *> HookArgs) {
   IRBuilder<> IRB(I);
-  // Value *Cond = IRB.CreateICmpEQ(IRB.CreateLoad(DisableInstrGV), IRB.getInt1(false));
-  // TerminatorInst *TI = SplitBlockAndInsertIfThen(Cond, I, false);
-  // IRB.SetInsertPoint(TI);
-  // IRB.CreateStore(IRB.getInt1(true), DisableInstrGV);
   Instruction *Call = IRB.CreateCall(HookFunction, HookArgs);
   setInstrumentationDebugLoc(I, Call);
-  // IRB.CreateStore(IRB.getInt1(false), DisableInstrGV);
 }
 
+bool CSIImpl::updateArgPHIs(
+    BasicBlock *Succ, BasicBlock *BB, ArrayRef<Value *> HookArgs,
+    ArrayRef<Value *> DefaultArgs) {
+  // If we've already created a PHI node in this block for the hook arguments,
+  // just add the incoming arguments to the PHIs.
+  if (ArgPHIs.count(Succ)) {
+    unsigned HookArgNum = 0;
+    for (PHINode *ArgPHI : ArgPHIs[Succ]) {
+      ArgPHI->setIncomingValue(
+          ArgPHI->getBasicBlockIndex(BB), HookArgs[HookArgNum]);
+      ++HookArgNum;
+    }
+    return true;
+  }
+
+  // Create PHI nodes in this block for each hook argument.
+  IRBuilder<> IRB(&Succ->front());
+  unsigned HookArgNum = 0;
+  for (Value *Arg : HookArgs) {
+    PHINode *ArgPHI = IRB.CreatePHI(Arg->getType(), 2);
+    for (BasicBlock *Pred : predecessors(Succ)) {
+      if (Pred == BB)
+        ArgPHI->addIncoming(Arg, BB);
+      else
+        ArgPHI->addIncoming(DefaultArgs[HookArgNum], Pred);
+    }
+    ArgPHIs[Succ].push_back(ArgPHI);
+    ++HookArgNum;
+  }
+  return false;
+}
+
+void CSIImpl::insertHookCallInSuccessorBB(
+    BasicBlock *Succ, BasicBlock *BB, Function *HookFunction,
+    ArrayRef<Value *> HookArgs, ArrayRef<Value *> DefaultArgs) {
+  assert(HookFunction && "No hook function given.");
+  // If this successor block has a unique predecessor, just insert the hook call
+  // as normal.
+  if (Succ->getUniquePredecessor()) {
+    assert(Succ->getUniquePredecessor() == BB &&
+           "BB is not unique predecessor of successor block");
+    insertHookCall(&*Succ->getFirstInsertionPt(), HookFunction, HookArgs);
+    return;
+  }
+
+  if (updateArgPHIs(Succ, BB, HookArgs, DefaultArgs))
+    return;
+
+  SmallVector<Value *, 2> SuccessorHookArgs;
+  for (PHINode *ArgPHI : ArgPHIs[Succ])
+    SuccessorHookArgs.push_back(ArgPHI);
+
+  IRBuilder<> IRB(&*Succ->getFirstInsertionPt());
+  // Insert the hook call, using the PHI as the CSI ID.
+  Instruction *Call = IRB.CreateCall(HookFunction, SuccessorHookArgs);
+  setInstrumentationDebugLoc(*Succ, Call);
+}
+
+void CSIImpl::insertHookCallAtSharedEHSpindleExits(
+    Spindle *SharedEHSpindle, Task *T, Function *HookFunction,
+    FrontEndDataTable &FED,
+    ArrayRef<Value *> HookArgs, ArrayRef<Value *> DefaultArgs) {
+  // Get the set of shared EH spindles to examine.  Store them in post order, so
+  // they can be evaluated in reverse post order.
+  SmallVector<Spindle *, 2> WorkList;
+  for (Spindle *S : post_order<InTask<Spindle *>>(SharedEHSpindle)) {
+    // dbgs() << "SharedEH spindle " << S->getEntry()->getName() << "\n";
+    WorkList.push_back(S);
+  }
+
+  // Traverse the shared-EH spindles in reverse post order, updating the
+  // hook-argument PHI's along the way.
+  SmallPtrSet<Spindle *, 2> Visited;
+  for (Spindle *S : llvm::reverse(WorkList)) {
+    bool NewPHINode = false;
+    // If this spindle is the first shared-EH spindle in the traversal, use the
+    // given hook arguments to update the PHI node.
+    if (S == SharedEHSpindle) {
+      for (Spindle::SpindleEdge &InEdge : S->in_edges()) {
+        Spindle *SPred = InEdge.first;
+        BasicBlock *Pred = InEdge.second;
+        if (T->contains(SPred))
+          NewPHINode |=
+            updateArgPHIs(S->getEntry(), Pred, HookArgs, DefaultArgs);
+      }
+    } else {
+      // Otherwise update the PHI node based on the predecessor shared-eh
+      // spindles in this RPO traversal.
+      for (Spindle::SpindleEdge &InEdge : S->in_edges()) {
+        Spindle *SPred = InEdge.first;
+        BasicBlock *Pred = InEdge.second;
+        if (Visited.count(SPred)) {
+          SmallVector<Value *, 4> NewHookArgs(
+              ArgPHIs[SPred->getEntry()].begin(),
+              ArgPHIs[SPred->getEntry()].end());
+          NewPHINode |= updateArgPHIs(
+              S->getEntry(), Pred, NewHookArgs, DefaultArgs);
+        }
+      }
+    }
+    Visited.insert(S);
+
+    if (!NewPHINode)
+      continue;
+
+    // Detached-rethrow exits can appear in strange places within a task-exiting
+    // spindle.  Hence we loop over all blocks in the spindle to find detached
+    // rethrows.
+    for (BasicBlock *B : S->blocks()) {
+      if (isDetachedRethrow(B->getTerminator())) {
+        IRBuilder<> IRB(B->getTerminator());
+        uint64_t LocalID = FED.add(*B->getTerminator());
+        Value *HookID = FED.localToGlobalId(LocalID, IRB);
+        SmallVector<Value *, 4> Args({HookID});
+        Args.append(ArgPHIs[S->getEntry()].begin(),
+                    ArgPHIs[S->getEntry()].end());
+        Instruction *Call =
+          IRB.CreateCall(HookFunction, Args);
+        setInstrumentationDebugLoc(*B, Call);
+      }
+    }
+  }
+}
 
 void CSIImpl::initializeFEDTables() {
   FunctionFED = FrontEndDataTable(M, CsiFunctionBaseIdName);
@@ -1250,53 +1421,6 @@ void CSIImpl::computeLoadAndStoreProperties(
   BBLoadsAndStores.clear();
 }
 
-Constant *CSIImpl::getDefaultPersonalityFn(Module *M) {
-  LLVMContext &C = M->getContext();
-  Triple T(M->getTargetTriple());
-  EHPersonality Pers = getDefaultEHPersonality(T);
-  return M->getOrInsertFunction(getEHPersonalityName(Pers),
-                                FunctionType::get(Type::getInt32Ty(C), true));
-}
-
-// Convert all call instructions that might throw into invokes.
-void CSIImpl::changeCallsToInvokes(Function &F) {
-  // Find all 'call' instructions that may throw.
-  SmallVector<Instruction *, 16> Calls;
-  for (BasicBlock &BB : F)
-    for (Instruction &II : BB)
-      if (CallInst *CI = dyn_cast<CallInst>(&II))
-        if (!CI->doesNotThrow())
-          Calls.push_back(CI);
-
-  if (Calls.empty())
-    return;
-
-  // Create a cleanup block.
-  LLVMContext &C = F.getContext();
-  BasicBlock *CleanupBB = BasicBlock::Create(C, "csi.cleanup", &F);
-  Type *ExnTy = StructType::get(Type::getInt8PtrTy(C), Type::getInt32Ty(C));
-  if (!F.hasPersonalityFn()) {
-    Constant *PersFn = getDefaultPersonalityFn(F.getParent());
-    F.setPersonalityFn(PersFn);
-  }
-
-  if (isFuncletEHPersonality(classifyEHPersonality(F.getPersonalityFn()))) {
-    report_fatal_error("Funclet EH not supported");
-  }
-
-  LandingPadInst *LPad =
-      LandingPadInst::Create(ExnTy, 1, "csi.cleanup.lpad", CleanupBB);
-  LPad->setCleanup(true);
-  ResumeInst *RI = ResumeInst::Create(LPad, CleanupBB);
-
-  // Transform the 'call' instructions into 'invoke's branching to the
-  // cleanup block. Go in reverse order to make prettier BB names.
-  for (unsigned I = Calls.size(); I != 0;) {
-    CallInst *CI = cast<CallInst>(Calls[--I]);
-    changeToInvokeAndSplitBasicBlock(CI, CleanupBB);
-  }
-}
-
 // Update the attributes on the instrumented function that might be invalidated
 // by the inserted instrumentation.
 static void updateInstrumentedFnAttrs(Function &F) {
@@ -1311,6 +1435,9 @@ void CSIImpl::instrumentFunction(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F))
     return;
 
+  setupCalls(F);
+  setupBlocks(F);
+
   SmallVector<std::pair<Instruction *, CsiLoadStoreProperty>, 8>
     LoadAndStoreProperties;
   SmallVector<Instruction *, 8> MemIntrinsics;
@@ -1321,8 +1448,6 @@ void CSIImpl::instrumentFunction(Function &F) {
   SmallVector<SyncInst *, 8> Syncs;
   SmallVector<Instruction *, 8> Allocas;
   bool MaySpawn = false;
-
-  changeCallsToInvokes(F);
 
   DominatorTree *DT = &GetDomTree(F);
 
@@ -1404,8 +1529,8 @@ void CSIImpl::instrumentFunction(Function &F) {
     FuncEntryProp.setMaySpawn(MaySpawn);
     Value *FuncId = FunctionFED.localToGlobalId(LocalId, IRB);
     Value *PropVal = FuncEntryProp.getValue(IRB);
-    insertConditionalHookCall(&*IRB.GetInsertPoint(), CsiFuncEntry,
-                              {FuncId, PropVal});
+    insertHookCall(&*IRB.GetInsertPoint(), CsiFuncEntry,
+                   {FuncId, PropVal});
 
     EscapeEnumerator EE(F, "csi.cleanup", false);
     while (IRBuilder<> *AtExit = EE.Next()) {
@@ -1416,8 +1541,8 @@ void CSIImpl::instrumentFunction(Function &F) {
       FuncExitProp.setMaySpawn(MaySpawn);
       FuncExitProp.setEHReturn(isa<ResumeInst>(AtExit->GetInsertPoint()));
       Value *PropVal = FuncExitProp.getValue(*AtExit);
-      insertConditionalHookCall(&*AtExit->GetInsertPoint(), CsiFuncExit,
-                                { ExitCsiId, FuncId, PropVal });
+      insertHookCall(&*AtExit->GetInsertPoint(), CsiFuncExit,
+                     { ExitCsiId, FuncId, PropVal });
     }
   }
 

@@ -26,6 +26,9 @@
 
 namespace llvm {
 
+class Spindle;
+class Task;
+
 static const char *const CsiRtUnitInitName = "__csirt_unit_init";
 static const char *const CsiRtUnitCtorName = "csirt.unit_ctor";
 static const char *const CsiFunctionBaseIdName = "__csi_unit_func_base_id";
@@ -632,8 +635,8 @@ public:
   static bool isAtomic(Instruction *I);
 
   /// Helper functions to deal with calls to functions that can throw.
-  static Constant *getDefaultPersonalityFn(Module *M);
-  static void changeCallsToInvokes(Function &F);
+  static void setupCalls(Function &F);
+  static void setupBlocks(Function &F, DominatorTree *DT = nullptr);
 
   /// Helper function that identifies calls or invokes of placeholder functions,
   /// such as debug-info intrinsics or lifetime intrinsics.
@@ -712,11 +715,19 @@ protected:
   void instrumentFunction(Function &F);
   /// @}
 
-  /// Insert a conditional call to the given hook function before the
-  /// given instruction. The condition is based on the value of
-  /// __csi_disable_instrumentation.
-  void insertConditionalHookCall(Instruction *I, Function *HookFunction,
-                                 ArrayRef<Value *> HookArgs);
+  /// Insert a call to the given hook function before the given instruction.
+  void insertHookCall(Instruction *I, Function *HookFunction,
+                      ArrayRef<Value *> HookArgs);
+  bool updateArgPHIs(
+      BasicBlock *Succ, BasicBlock *BB, ArrayRef<Value *> HookArgs,
+      ArrayRef<Value *> DefaultHookArgs);
+  void insertHookCallInSuccessorBB(
+      BasicBlock *Succ, BasicBlock *BB, Function *HookFunction,
+      ArrayRef<Value *> HookArgs, ArrayRef<Value *> DefaultHookArgs);
+  void insertHookCallAtSharedEHSpindleExits(
+      Spindle *SharedEHSpindle, Task *T, Function *HookFunction,
+      FrontEndDataTable &FED,
+      ArrayRef<Value *> HookArgs, ArrayRef<Value *> DefaultArgs);
 
   /// Return true if the given function should not be instrumented.
   bool shouldNotInstrumentFunction(Function &F);
@@ -758,6 +769,8 @@ protected:
 
   Type *IntptrTy;
   DenseMap<StringRef, uint64_t> FuncOffsetMap;
+
+  DenseMap<BasicBlock *, SmallVector<PHINode *, 4>> ArgPHIs;
 };
 
 } // end namespace llvm
