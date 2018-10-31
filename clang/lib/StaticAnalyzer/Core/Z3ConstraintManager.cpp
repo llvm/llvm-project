@@ -733,9 +733,11 @@ public:
 
   llvm::APSInt getBitvector(const SMTExprRef &Exp, unsigned BitWidth,
                             bool isUnsigned) override {
-    return llvm::APSInt(llvm::APInt(
-        BitWidth, Z3_get_numeral_string(Context.Context, toZ3Expr(*Exp).AST),
-        10));
+    return llvm::APSInt(
+        llvm::APInt(BitWidth,
+                    Z3_get_numeral_string(Context.Context, toZ3Expr(*Exp).AST),
+                    10),
+        isUnsigned);
   }
 
   bool getBoolean(const SMTExprRef &Exp) override {
