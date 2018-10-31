@@ -928,11 +928,64 @@ if target:
                             <font color=green># We do have a symbol, print some info for the symbol</font>
                             print symbol
 </tt></pre></code>
-        				</div>
-        				<div class="postfooter"></div>
+            </div>
+            <div class="postfooter"></div>
+        </div>
 
-              	</div>
-	</div>
+        <div class="post">
+            <h1 class ="postheader">Writing LLDB frame recognizers in Python</h1>
+            <div class="postcontent">
+
+                <p>Frame recognizers allow for retrieving information about special frames based on
+                ABI, arguments or other special properties of that frame, even without source
+                code or debug info. Currently, one use case is to extract function arguments
+                that would otherwise be unaccesible, or augment existing arguments.</p>
+
+                <p>Adding a custom frame recognizer is done by implementing a Python class
+                and using the '<b>frame recognizer add</b>' command. The Python class should have a
+                '<b>get_recognized_arguments</b>' method and it will receive an argument of type
+                <b>lldb.SBFrame</b> representing the current frame that we are trying to recognize.
+                The method should return a (possibly empty) list of <b>lldb.SBValue</b> objects that
+                represent the recognized arguments.</p>
+
+                <p>An example of a recognizer that retrieves the file descriptor values from libc
+                functions '<b>read</b>', '<b>write</b>' and '<b>close</b>' follows:</p>
+
+<code><pre><tt>  class LibcFdRecognizer(object):
+    def get_recognized_arguments(self, frame):
+      if frame.name in ["read", "write", "close"]:
+        fd = frame.EvaluateExpression("$arg1").unsigned
+        value = lldb.target.CreateValueFromExpression("fd", "(int)%d" % fd)
+        return [value]
+      return []
+</tt></pre></code>
+
+                <p>The file containing this implementation can be imported via '<b>command script
+                import</b>' and then we can register this recognizer with '<b>frame recognizer add</b>'.
+                It's important to restrict the recognizer to the libc library (which is
+                libsystem_kernel.dylib on macOS) to avoid matching functions with the same name in other modules:</p>
+
+<code><pre><tt>(lldb) <b>command script import .../fd_recognizer.py</b>
+(lldb) <b>frame recognizer add -l fd_recognizer.LibcFdRecognizer -n read -s libsystem_kernel.dylib</b>
+</tt></pre></code>
+
+                <p>When the program is stopped at the beginning of the '<b>read</b>' function in libc, we
+                can view the recognizer arguments in '<b>frame variable</b>':</p>
+
+<code><pre><tt>(lldb) <b>b read</b>
+(lldb) <b>r</b>
+Process 1234 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.3
+    frame #0: 0x00007fff06013ca0 libsystem_kernel.dylib`read
+(lldb) <b>frame variable</b>
+(int) fd = 3
+</tt></pre></code>
+
+            </div>
+            <div class="postfooter"></div>
+        </div>
+
+    </div>
 </div>
 </body>
 </html>
