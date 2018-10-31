@@ -464,6 +464,13 @@ bool AnalyzerOptions::shouldDisplayNotesAsEvents() {
   return DisplayNotesAsEvents.getValue();
 }
 
+bool AnalyzerOptions::shouldDisplayMacroExpansions() {
+  if (!DisplayMacroExpansions.hasValue())
+    DisplayMacroExpansions =
+        getBooleanOption("expand-macros", /*Default=*/false);
+  return DisplayMacroExpansions.getValue();
+}
+
 bool AnalyzerOptions::shouldAggressivelySimplifyBinaryOperation() {
   if (!AggressiveBinaryOperationSimplification.hasValue())
     AggressiveBinaryOperationSimplification =
