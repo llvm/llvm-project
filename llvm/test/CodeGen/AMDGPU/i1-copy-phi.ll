@@ -2,12 +2,16 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 
 ; SI-LABEL: {{^}}br_i1_phi:
-; SI: v_mov_b32_e32 [[REG:v[0-9]+]], 0{{$}}
-; SI: s_and_saveexec_b64
-; SI: v_mov_b32_e32 [[REG]], -1{{$}}
-; SI: v_cmp_ne_u32_e32 vcc, 0, [[REG]]
-; SI: s_and_saveexec_b64
-; SI: s_endpgm
+
+; SI: ; %bb
+; SI:    s_mov_b64           [[TMP:s\[[0-9]+:[0-9]+\]]], 0
+
+; SI: ; %bb2
+; SI:    s_mov_b64           [[TMP]], exec
+
+; SI: ; %bb3
+; SI:    s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, [[TMP]]
+
 define amdgpu_kernel void @br_i1_phi(i32 %arg) {
 bb:
   %tidig = call i32 @llvm.amdgcn.workitem.id.x()

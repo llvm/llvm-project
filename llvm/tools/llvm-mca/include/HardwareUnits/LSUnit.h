@@ -129,11 +129,7 @@ public:
   void dump() const;
 #endif
 
-  enum Status {
-    LSU_AVAILABLE = 0,
-    LSU_LQUEUE_FULL,
-    LSU_SQUEUE_FULL
-  };
+  enum Status { LSU_AVAILABLE = 0, LSU_LQUEUE_FULL, LSU_SQUEUE_FULL };
 
   // Returns LSU_AVAILABLE if there are enough load/store queue entries to serve
   // IR. It also returns LSU_AVAILABLE if IR is not a memory operation.

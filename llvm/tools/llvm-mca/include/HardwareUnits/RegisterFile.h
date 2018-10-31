@@ -34,7 +34,7 @@ class WriteRef;
 /// Manages hardware register files, and tracks register definitions for
 /// register renaming purposes.
 class RegisterFile : public HardwareUnit {
-  const llvm::MCRegisterInfo &MRI;
+  const MCRegisterInfo &MRI;
 
   // class RegisterMappingTracker is a  physical register file (PRF) descriptor.
   // There is one RegisterMappingTracker for every PRF definition in the
@@ -85,7 +85,7 @@ class RegisterFile : public HardwareUnit {
   //
   // Users can limit the number of physical registers that are available in
   // regsiter file #0 specifying command line flag `-register-file-size=<uint>`.
-  llvm::SmallVector<RegisterMappingTracker, 4> RegisterFiles;
+  SmallVector<RegisterMappingTracker, 4> RegisterFiles;
 
   // This type is used to propagate information about the owner of a register,
   // and the cost of allocating it in the PRF. Register cost is defined as the
@@ -101,7 +101,7 @@ class RegisterFile : public HardwareUnit {
   //
   // There is a RegisterRenamingInfo object for every logical register defined
   // by the target. RegisteRenamingInfo objects are stored into vector
-  // `RegisterMappings`, and llvm::MCPhysReg IDs can be used to reference
+  // `RegisterMappings`, and MCPhysReg IDs can be used to reference
   // elements in that vector.
   //
   // Each RegisterRenamingInfo is owned by a PRF, and field `IndexPlusCost`
@@ -117,8 +117,8 @@ class RegisterFile : public HardwareUnit {
   // register definition.
   struct RegisterRenamingInfo {
     IndexPlusCostPairTy IndexPlusCost;
-    llvm::MCPhysReg RenameAs;
-    llvm::MCPhysReg AliasRegID;
+    MCPhysReg RenameAs;
+    MCPhysReg AliasRegID;
     bool AllowMoveElimination;
     RegisterRenamingInfo()
         : IndexPlusCost(std::make_pair(0U, 1U)), RenameAs(0U), AliasRegID(0U),
@@ -144,7 +144,7 @@ class RegisterFile : public HardwareUnit {
 
   // Used to track zero registers. There is one bit for each register defined by
   // the target. Bits are set for registers that are known to be zero.
-  llvm::APInt ZeroRegisters;
+  APInt ZeroRegisters;
 
   // This method creates a new register file descriptor.
   // The new register file owns all of the registers declared by register
@@ -160,41 +160,40 @@ class RegisterFile : public HardwareUnit {
   // Here FPRegisterFile contains all the registers defined by register class
   // VR128RegClass and VR256RegClass. FPRegisterFile implements 60
   // registers which can be used for register renaming purpose.
-  void addRegisterFile(const llvm::MCRegisterFileDesc &RF,
-                       llvm::ArrayRef<llvm::MCRegisterCostEntry> Entries);
+  void addRegisterFile(const MCRegisterFileDesc &RF,
+                       ArrayRef<MCRegisterCostEntry> Entries);
 
   // Consumes physical registers in each register file specified by the
   // `IndexPlusCostPairTy`. This method is called from `addRegisterMapping()`.
   void allocatePhysRegs(const RegisterRenamingInfo &Entry,
-                        llvm::MutableArrayRef<unsigned> UsedPhysRegs);
+                        MutableArrayRef<unsigned> UsedPhysRegs);
 
   // Releases previously allocated physical registers from the register file(s).
   // This method is called from `invalidateRegisterMapping()`.
   void freePhysRegs(const RegisterRenamingInfo &Entry,
-                    llvm::MutableArrayRef<unsigned> FreedPhysRegs);
+                    MutableArrayRef<unsigned> FreedPhysRegs);
 
   // Create an instance of RegisterMappingTracker for every register file
   // specified by the processor model.
   // If no register file is specified, then this method creates a default
   // register file with an unbounded number of physical registers.
-  void initialize(const llvm::MCSchedModel &SM, unsigned NumRegs);
+  void initialize(const MCSchedModel &SM, unsigned NumRegs);
 
 public:
-  RegisterFile(const llvm::MCSchedModel &SM, const llvm::MCRegisterInfo &mri,
+  RegisterFile(const MCSchedModel &SM, const MCRegisterInfo &mri,
                unsigned NumRegs = 0);
 
   // This method updates the register mappings inserting a new register
   // definition. This method is also responsible for updating the number of
   // allocated physical registers in each register file modified by the write.
   // No physical regiser is allocated if this write is from a zero-idiom.
-  void addRegisterWrite(WriteRef Write,
-                        llvm::MutableArrayRef<unsigned> UsedPhysRegs);
+  void addRegisterWrite(WriteRef Write, MutableArrayRef<unsigned> UsedPhysRegs);
 
   // Removes write \param WS from the register mappings.
   // Physical registers may be released to reflect this update.
   // No registers are released if this write is from a zero-idiom.
   void removeRegisterWrite(const WriteState &WS,
-                           llvm::MutableArrayRef<unsigned> FreedPhysRegs);
+                           MutableArrayRef<unsigned> FreedPhysRegs);
 
   // Returns true if a move from RS to WS can be eliminated.
   // On success, it updates WriteState by setting flag `WS.isEliminated`.
@@ -212,9 +211,8 @@ public:
   //
   // Current implementation can simulate up to 32 register files (including the
   // special register file at index #0).
-  unsigned isAvailable(llvm::ArrayRef<unsigned> Regs) const;
-  void collectWrites(llvm::SmallVectorImpl<WriteRef> &Writes,
-                     unsigned RegID) const;
+  unsigned isAvailable(ArrayRef<unsigned> Regs) const;
+  void collectWrites(SmallVectorImpl<WriteRef> &Writes, unsigned RegID) const;
   unsigned getNumRegisterFiles() const { return RegisterFiles.size(); }
 
   // Notify each PRF that a new cycle just started.

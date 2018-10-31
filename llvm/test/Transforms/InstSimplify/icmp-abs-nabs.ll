@@ -5,11 +5,7 @@
 
 define i1 @abs_nsw_is_positive(i32 %x) {
 ; CHECK-LABEL: @abs_nsw_is_positive(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[NEGX]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[ABS]], -1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp slt i32 %x, 0
   %negx = sub nsw i32 0, %x
@@ -35,11 +31,7 @@ define i1 @abs_nsw_is_positive_sge(i32 %x) {
 
 define i1 @abs_nsw_is_positive_reduced_range(i32 %x) {
 ; CHECK-LABEL: @abs_nsw_is_positive_reduced_range(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[NEGX]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[ABS]], -42
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp slt i32 %x, 0
   %negx = sub nsw i32 0, %x
@@ -99,11 +91,7 @@ define i1 @abs_nsw_is_not_negative(i32 %x) {
 
 define i1 @abs_nsw_is_not_negative_sle(i32 %x) {
 ; CHECK-LABEL: @abs_nsw_is_not_negative_sle(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[NEGX]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sle i32 [[ABS]], -1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp slt i32 %x, 1
   %negx = sub nsw i32 0, %x
@@ -116,11 +104,7 @@ define i1 @abs_nsw_is_not_negative_sle(i32 %x) {
 
 define i1 @abs_nsw_is_not_negative_reduced_range(i32 %x) {
 ; CHECK-LABEL: @abs_nsw_is_not_negative_reduced_range(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw i32 0, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[NEGX]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[ABS]], -24
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp slt i32 %x, 0
   %negx = sub nsw i32 0, %x
@@ -167,11 +151,7 @@ define i1 @abs_nsw_is_not_negative_wrong_range(i32 %x) {
 
 define i1 @nabs_is_negative_or_0(i32 %x) {
 ; CHECK-LABEL: @nabs_is_negative_or_0(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[NEGX]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[NABS]], 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp slt i32 %x, 0
   %negx = sub i32 0, %x
@@ -184,11 +164,7 @@ define i1 @nabs_is_negative_or_0(i32 %x) {
 
 define i1 @nabs_is_negative_or_0_sle(i32 %x) {
 ; CHECK-LABEL: @nabs_is_negative_or_0_sle(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[NEGX]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sle i32 [[NABS]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp slt i32 %x, 1
   %negx = sub i32 0, %x
@@ -201,11 +177,7 @@ define i1 @nabs_is_negative_or_0_sle(i32 %x) {
 
 define i1 @nabs_is_negative_or_0_reduced_range(i32 %x) {
 ; CHECK-LABEL: @nabs_is_negative_or_0_reduced_range(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[NEGX]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt i32 [[NABS]], 421
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp slt i32 %x, 1
   %negx = sub i32 0, %x
@@ -235,11 +207,7 @@ define i1 @nabs_is_negative_or_0_wrong_range(i32 %x) {
 
 define i1 @nabs_is_not_over_0(i32 %x) {
 ; CHECK-LABEL: @nabs_is_not_over_0(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[NEGX]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[NABS]], 0
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp slt i32 %x, 0
   %negx = sub i32 0, %x
@@ -252,11 +220,7 @@ define i1 @nabs_is_not_over_0(i32 %x) {
 
 define i1 @nabs_is_not_over_0_sle(i32 %x) {
 ; CHECK-LABEL: @nabs_is_not_over_0_sle(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[NEGX]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sge i32 [[NABS]], 1
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp slt i32 %x, 1
   %negx = sub i32 0, %x
@@ -269,11 +233,7 @@ define i1 @nabs_is_not_over_0_sle(i32 %x) {
 
 define i1 @nabs_is_not_over_0_reduced_range(i32 %x) {
 ; CHECK-LABEL: @nabs_is_not_over_0_reduced_range(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[X]], i32 [[NEGX]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[NABS]], 4223
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp slt i32 %x, 1
   %negx = sub i32 0, %x
@@ -318,11 +278,7 @@ define i1 @abs_nsw_is_positive_eq(i32 %x) {
 
 define i1 @abs_nsw_is_positive_ult(i8 %x) {
 ; CHECK-LABEL: @abs_nsw_is_positive_ult(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw i8 0, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i8 [[NEGX]], i8 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[ABS]], -117
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp slt i8 %x, 0
   %negx = sub nsw i8 0, %x
@@ -335,11 +291,7 @@ define i1 @abs_nsw_is_positive_ult(i8 %x) {
 
 define i1 @abs_nsw_is_not_negative_ugt(i8 %x) {
 ; CHECK-LABEL: @abs_nsw_is_not_negative_ugt(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw i8 0, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i8 [[NEGX]], i8 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[ABS]], 127
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 false
 ;
   %cmp = icmp slt i8 %x, 0
   %negx = sub nsw i8 0, %x
@@ -352,11 +304,7 @@ define i1 @abs_nsw_is_not_negative_ugt(i8 %x) {
 
 define <2 x i1> @abs_nsw_is_not_negative_vec_splat(<2 x i32> %x) {
 ; CHECK-LABEL: @abs_nsw_is_not_negative_vec_splat(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <2 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[NEGX:%.*]] = sub nsw <2 x i32> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[ABS:%.*]] = select <2 x i1> [[CMP]], <2 x i32> [[NEGX]], <2 x i32> [[X]]
-; CHECK-NEXT:    [[R:%.*]] = icmp slt <2 x i32> [[ABS]], <i32 -8, i32 -8>
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %cmp = icmp slt <2 x i32> %x, zeroinitializer
   %negx = sub nsw <2 x i32> zeroinitializer, %x
@@ -369,11 +317,7 @@ define <2 x i1> @abs_nsw_is_not_negative_vec_splat(<2 x i32> %x) {
 
 define i1 @nabs_is_negative_or_0_ne(i8 %x) {
 ; CHECK-LABEL: @nabs_is_negative_or_0_ne(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
-; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X]]
-; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i8 [[X]], i8 [[NEGX]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[NABS]], 12
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp slt i8 %x, 0
   %negx = sub i8 0, %x
@@ -386,11 +330,7 @@ define i1 @nabs_is_negative_or_0_ne(i8 %x) {
 
 define <3 x i1> @nabs_is_not_over_0_sle_vec_splat(<3 x i33> %x) {
 ; CHECK-LABEL: @nabs_is_not_over_0_sle_vec_splat(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt <3 x i33> [[X:%.*]], <i33 1, i33 1, i33 1>
-; CHECK-NEXT:    [[NEGX:%.*]] = sub <3 x i33> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[NABS:%.*]] = select <3 x i1> [[CMP]], <3 x i33> [[X]], <3 x i33> [[NEGX]]
-; CHECK-NEXT:    [[R:%.*]] = icmp sge <3 x i33> [[NABS]], <i33 1, i33 1, i33 1>
-; CHECK-NEXT:    ret <3 x i1> [[R]]
+; CHECK-NEXT:    ret <3 x i1> zeroinitializer
 ;
   %cmp = icmp slt <3 x i33> %x, <i33 1, i33 1, i33 1>
   %negx = sub <3 x i33> zeroinitializer, %x

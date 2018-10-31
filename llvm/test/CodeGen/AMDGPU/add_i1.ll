@@ -21,8 +21,8 @@ define amdgpu_kernel void @add_var_imm_i1(i1 addrspace(1)* %out, i1 addrspace(1)
 }
 
 ; GCN-LABEL: {{^}}add_i1_cf:
-; GCN: v_cmp_ne_u32_e32 vcc, 0, {{v[0-9]+}}
-; GCN-NEXT: s_not_b64 s{{\[[0-9]+:[0-9]+\]}}, vcc
+; GCN: ; %endif
+; GCN: s_not_b64
 define amdgpu_kernel void @add_i1_cf(i1 addrspace(1)* %out, i1 addrspace(1)* %a, i1 addrspace(1)* %b) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
