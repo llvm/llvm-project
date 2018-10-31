@@ -58,8 +58,6 @@ elseif(UNIX)
       set(RUNTIMES_${target}-linux-gnu_LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
       set(RUNTIMES_${target}-linux-gnu_LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
       set(RUNTIMES_${target}-linux-gnu_LIBCXX_ABI_VERSION 2 CACHE STRING "")
-      # TODO: this is a workaround for PR39053 which was uncovered by D50652.
-      set(RUNTIMES_${target}-linux-gnu_LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT ON CACHE BOOL "")
       set(RUNTIMES_${target}-linux-gnu_SANITIZER_CXX_ABI "libc++" CACHE STRING "")
       set(RUNTIMES_${target}-linux-gnu_SANITIZER_CXX_ABI_INTREE ON CACHE BOOL "")
       set(RUNTIMES_${target}-linux-gnu_COMPILER_RT_USE_BUILTINS_LIBRARY ON CACHE BOOL "")
@@ -113,8 +111,6 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}-fuchsia_LIBCXX_ENABLE_STATIC_ABI_LIBRARY ON CACHE BOOL "")
     set(RUNTIMES_${target}-fuchsia_LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY OFF CACHE BOOL "")
     set(RUNTIMES_${target}-fuchsia_LIBCXX_ABI_VERSION 2 CACHE STRING "")
-    # TODO: this is a workaround for PR39053 which was uncovered by D50652.
-    set(RUNTIMES_${target}-fuchsia_LIBCXX_HIDE_FROM_ABI_PER_TU_BY_DEFAULT ON CACHE BOOL "")
   endforeach()
 
   set(LLVM_RUNTIME_SANITIZERS "Address" CACHE STRING "")

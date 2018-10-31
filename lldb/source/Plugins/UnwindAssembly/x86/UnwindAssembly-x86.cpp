@@ -92,7 +92,7 @@ bool UnwindAssembly_x86::AugmentUnwindPlanFromCallSite(
   // assembly parsing instead.
 
   if (first_row->GetCFAValue().GetValueType() !=
-          UnwindPlan::Row::CFAValue::isRegisterPlusOffset ||
+          UnwindPlan::Row::FAValue::isRegisterPlusOffset ||
       RegisterNumber(thread, unwind_plan.GetRegisterKind(),
                      first_row->GetCFAValue().GetRegisterNumber()) !=
           sp_regnum ||

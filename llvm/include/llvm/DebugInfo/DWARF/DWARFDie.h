@@ -404,6 +404,10 @@ public:
       Die = Die.getPreviousSibling();
   }
 
+  llvm::DWARFDie::iterator base() const {
+    return llvm::DWARFDie::iterator(AtEnd ? Die : Die.getSibling());
+  }
+
   reverse_iterator<llvm::DWARFDie::iterator> &operator++() {
     assert(!AtEnd && "Incrementing rend");
     llvm::DWARFDie D = Die.getPreviousSibling();

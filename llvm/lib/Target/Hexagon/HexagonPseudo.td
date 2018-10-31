@@ -208,6 +208,7 @@ class Call_nr<bits<5> nbits, bit isPred, bit isFalse, dag iops,
     let isPredicable = 0;  // !if(isPred, 0, 1);
     let isPredicated = 0;  // isPred;
     let isPredicatedFalse = isFalse;
+    let Itinerary = itin;
 }
 
 def PS_call_nr : Call_nr<24, 0, 0, (ins s32_0Imm:$Ii), J2_call.Itinerary>;

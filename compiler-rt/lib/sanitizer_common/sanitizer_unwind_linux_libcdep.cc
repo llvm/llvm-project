@@ -97,7 +97,7 @@ uptr Unwind_GetIP(struct _Unwind_Context *ctx) {
   // Clear the Thumb bit.
   return val & ~(uptr)1;
 #else
-  return _Unwind_GetIP(ctx);
+  return (uptr)_Unwind_GetIP(ctx);
 #endif
 }
 

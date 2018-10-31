@@ -35,7 +35,7 @@ entry:
 define signext i16 @ret_i16(i16 signext %a) nounwind {
 entry:
 ; CHECK: @ret_i16
-; CHECK: sxth	w0, w0
+; CHECK: sxth	w0, {{w[0-9]+}}
   %a.addr = alloca i16, align 1
   store i16 %a, i16* %a.addr, align 1
   %0 = load i16, i16* %a.addr, align 1
@@ -45,7 +45,7 @@ entry:
 define signext i8 @ret_i8(i8 signext %a) nounwind {
 entry:
 ; CHECK: @ret_i8
-; CHECK: sxtb	w0, w0
+; CHECK: sxtb	w0, {{w[0-9]+}}
   %a.addr = alloca i8, align 1
   store i8 %a, i8* %a.addr, align 1
   %0 = load i8, i8* %a.addr, align 1
@@ -55,7 +55,8 @@ entry:
 define signext i1 @ret_i1(i1 signext %a) nounwind {
 entry:
 ; CHECK: @ret_i1
-; CHECK: and w0, w0, #0x1
+; CHECK: and [[REG:w[0-9]+]], {{w[0-9]+}}, #0x1
+; CHECK: sbfx w0, [[REG]], #0, #1
   %a.addr = alloca i1, align 1
   store i1 %a, i1* %a.addr, align 1
   %0 = load i1, i1* %a.addr, align 1

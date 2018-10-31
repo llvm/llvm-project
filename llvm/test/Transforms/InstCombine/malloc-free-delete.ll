@@ -257,3 +257,32 @@ define void @test11() {
   call void @_ZdlPv(i8* %call)
   ret void
 }
+
+;; Check that the optimization that moves a call to free in its predecessor
+;; block (see test6) also happens when noop casts are involved.
+; CHECK-LABEL: @test12(
+define void @test12(i32* %foo) minsize {
+; CHECK:  %tobool = icmp eq i32* %foo, null
+;; Everything before the call to free should have been moved as well.
+; CHECK-NEXT:   %bitcast = bitcast i32* %foo to i8*
+;; Call to free moved
+; CHECK-NEXT: tail call void @free(i8* %bitcast)
+; CHECK-NEXT: br i1 %tobool, label %if.end, label %if.then
+; CHECK: if.then:
+;; Block is now empty and may be simplified by simplifycfg
+; CHECK-NEXT:   br label %if.end
+; CHECK: if.end:
+; CHECK-NEXT:  ret void
+entry:
+  %tobool = icmp eq i32* %foo, null
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:                                          ; preds = %entry
+  %bitcast = bitcast i32* %foo to i8*
+  tail call void @free(i8* %bitcast)
+  br label %if.end
+
+if.end:                                           ; preds = %entry, %if.then
+  ret void
+}
+

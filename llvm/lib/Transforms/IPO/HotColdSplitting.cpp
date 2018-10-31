@@ -31,6 +31,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -65,6 +66,10 @@ using namespace llvm;
 static cl::opt<bool> EnableStaticAnalyis("hot-cold-static-analysis",
                               cl::init(true), cl::Hidden);
 
+static cl::opt<unsigned> MinOutliningInstCount(
+    "min-outlining-inst-count", cl::init(3), cl::Hidden,
+    cl::desc("Minimum number of instructions needed for a single-block region "
+             "to be an outlining candidate"));
 
 namespace {
 
@@ -128,6 +133,19 @@ static bool unlikelyExecuted(const BasicBlock &BB) {
 /// Check whether it's safe to outline \p BB.
 static bool mayExtractBlock(const BasicBlock &BB) {
   return !BB.hasAddressTaken();
+}
+
+/// Check whether \p BB has at least \p Min non-debug, non-terminator
+/// instructions.
+static bool hasMinimumInstCount(const BasicBlock &BB, unsigned Min) {
+  unsigned Count = 0;
+  for (const Instruction &I : BB) {
+    if (isa<DbgInfoIntrinsic>(&I) || &I == BB.getTerminator())
+      continue;
+    if (++Count >= Min)
+      return true;
+  }
+  return false;
 }
 
 /// Identify the maximal region of cold blocks which includes \p SinkBB.
@@ -223,9 +241,8 @@ findMaximalColdRegion(BasicBlock &SinkBB, DominatorTree &DT, PostDomTree &PDT) {
     ++SuccIt;
   }
 
-  // TODO: Consider outlining regions with just 1 block, but more than some
-  // threshold of instructions.
-  if (ColdRegion.size() == 1)
+  if (ColdRegion.size() == 1 &&
+      !hasMinimumInstCount(*ColdRegion[0], MinOutliningInstCount))
     return {};
 
   return ColdRegion;

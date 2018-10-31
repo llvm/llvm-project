@@ -88,7 +88,7 @@ iterator_range<CtorDtorIterator> getDestructors(const Module &M) {
 }
 
 void CtorDtorRunner::add(iterator_range<CtorDtorIterator> CtorDtors) {
-  if (CtorDtors.begin() == CtorDtors.end())
+  if (empty(CtorDtors))
     return;
 
   MangleAndInterner Mangle(

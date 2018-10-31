@@ -23,6 +23,8 @@
 // RUN: %clangxx_asan -O3 -DSHARED_LIB %s -fPIC -shared -o %t-so.so
 // RUN: %clangxx_asan -O3 %s %libdl -o %t && %run %t 2>&1 | FileCheck %s
 
+// XFAIL: i386-netbsd
+
 #if !defined(SHARED_LIB)
 #include <assert.h>
 #include <dlfcn.h>

@@ -89,6 +89,10 @@ class DwarfFile {
   /// The table is shared by all units.
   MCSymbol *RnglistsTableBaseSym = nullptr;
 
+  /// DWARF v5: The symbol that designates the base of the locations list table.
+  /// The table is shared by all units.
+  MCSymbol *LoclistsTableBaseSym = nullptr;
+
   /// The variables of a lexical scope.
   struct ScopeVars {
     /// We need to sort Args by ArgNo and check for duplicates. This could also
@@ -161,12 +165,13 @@ public:
   DwarfStringPool &getStringPool() { return StrPool; }
 
   MCSymbol *getStringOffsetsStartSym() const { return StringOffsetsStartSym; }
-
   void setStringOffsetsStartSym(MCSymbol *Sym) { StringOffsetsStartSym = Sym; }
 
   MCSymbol *getRnglistsTableBaseSym() const { return RnglistsTableBaseSym; }
-
   void setRnglistsTableBaseSym(MCSymbol *Sym) { RnglistsTableBaseSym = Sym; }
+
+  MCSymbol *getLoclistsTableBaseSym() const { return LoclistsTableBaseSym; }
+  void setLoclistsTableBaseSym(MCSymbol *Sym) { LoclistsTableBaseSym = Sym; }
 
   /// \returns false if the variable was merged with a previous one.
   bool addScopeVariable(LexicalScope *LS, DbgVariable *Var);

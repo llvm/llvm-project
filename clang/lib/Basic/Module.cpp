@@ -119,7 +119,7 @@ static bool hasFeature(StringRef Feature, const LangOptions &LangOpts,
                         .Case("c17", LangOpts.C17)
                         .Case("freestanding", LangOpts.Freestanding)
                         .Case("gnuinlineasm", LangOpts.GNUAsm)
-                        .Case("objc", LangOpts.ObjC1)
+                        .Case("objc", LangOpts.ObjC)
                         .Case("objc_arc", LangOpts.ObjCAutoRefCount)
                         .Case("opencl", LangOpts.OpenCL)
                         .Case("tls", Target.isTLSSupported())

@@ -130,7 +130,7 @@ static bool checkForMigration(StringRef resourcesPath,
     return true;
   }
 
-  if (!CI.getLangOpts()->ObjC1)
+  if (!CI.getLangOpts()->ObjC)
     return false;
 
   arcmt::checkForManualIssues(CI, CI.getFrontendOpts().Inputs[0],
@@ -170,7 +170,7 @@ static bool performTransformations(StringRef resourcesPath,
     return true;
   }
 
-  if (!origCI.getLangOpts()->ObjC1)
+  if (!origCI.getLangOpts()->ObjC)
     return false;
 
   MigrationProcess migration(origCI, std::make_shared<PCHContainerOperations>(),

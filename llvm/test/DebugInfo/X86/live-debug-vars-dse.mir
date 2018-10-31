@@ -134,7 +134,7 @@ body:             |
     $rcx = COPY %1, debug-location !15
     CALL64pcrel32 @escape, csr_win64, implicit $rsp, implicit $ssp, implicit $rcx, implicit-def $rsp, implicit-def $ssp, debug-location !15
     ADJCALLSTACKUP64 32, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !15
-    DBG_VALUE 1, debug-use _, !13, !DIExpression(), debug-location !16
+    DBG_VALUE 1, _, !13, !DIExpression(), debug-location !16
     MOV32mi $rip, 1, _, @global, _, 1, debug-location !17 :: (store 4 into @global)
     DBG_VALUE %stack.0.x.addr, 0, !13, !DIExpression(), debug-location !18
     MOV32mi %stack.0.x.addr, 1, _, 0, _, 2, debug-location !18 :: (store 4 into %ir.x.addr)

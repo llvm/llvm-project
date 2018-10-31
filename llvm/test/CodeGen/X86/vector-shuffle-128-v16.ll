@@ -601,17 +601,15 @@ define <16 x i8> @load_fold_pblendvb(<16 x i8>* %px, <16 x i8> %y) {
 ; SSE41-LABEL: load_fold_pblendvb:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movdqa %xmm0, %xmm1
-; SSE41-NEXT:    movdqa (%rdi), %xmm2
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
-; SSE41-NEXT:    pblendvb %xmm0, %xmm1, %xmm2
-; SSE41-NEXT:    movdqa %xmm2, %xmm0
+; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [0,0,255,0,255,255,255,0,0,0,255,0,255,255,255,0]
+; SSE41-NEXT:    pblendvb %xmm0, (%rdi), %xmm1
+; SSE41-NEXT:    movdqa %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: load_fold_pblendvb:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovdqa (%rdi), %xmm1
-; AVX1OR2-NEXT:    vmovdqa {{.*#+}} xmm2 = [255,255,0,255,0,0,0,255,255,255,0,255,0,0,0,255]
-; AVX1OR2-NEXT:    vpblendvb %xmm2, %xmm0, %xmm1, %xmm0
+; AVX1OR2-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,0,255,0,255,255,255,0,0,0,255,0,255,255,255,0]
+; AVX1OR2-NEXT:    vpblendvb %xmm1, (%rdi), %xmm0, %xmm0
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: load_fold_pblendvb:

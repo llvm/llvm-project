@@ -4,6 +4,10 @@
 # RUN: llvm-readobj -file-headers %t2ppc64 | FileCheck --check-prefix=PPC64 %s
 # RUN: ld.lld %tppc64 -o %t3ppc64
 # RUN: llvm-readobj -file-headers %t3ppc64 | FileCheck --check-prefix=PPC64 %s
+# RUN: echo 'OUTPUT_FORMAT(elf64-powerpc)' > %tppc64.script
+# RUN: ld.lld %tppc64.script  %tppc64 -o %t4ppc64
+# RUN: llvm-readobj -file-headers %t4ppc64 | FileCheck --check-prefix=PPC64 %s
+
 # PPC64:      ElfHeader {
 # PPC64-NEXT:   Ident {
 # PPC64-NEXT:     Magic: (7F 45 4C 46)
@@ -36,6 +40,10 @@
 # RUN: llvm-readobj -file-headers %t2ppc64le | FileCheck --check-prefix=PPC64LE %s
 # RUN: ld.lld %tppc64le -o %t3ppc64le
 # RUN: llvm-readobj -file-headers %t3ppc64le | FileCheck --check-prefix=PPC64LE %s
+# RUN: echo 'OUTPUT_FORMAT(elf64-powerpcle)' > %tppc64le.script
+# RUN: ld.lld %tppc64le.script  %tppc64le -o %t4ppc64le
+# RUN: llvm-readobj -file-headers %t4ppc64le | FileCheck --check-prefix=PPC64LE %s
+
 # PPC64LE:      ElfHeader {
 # PPC64LE-NEXT:   Ident {
 # PPC64LE-NEXT:     Magic: (7F 45 4C 46)

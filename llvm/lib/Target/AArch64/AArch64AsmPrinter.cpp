@@ -21,6 +21,7 @@
 #include "InstPrinter/AArch64InstPrinter.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
+#include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -665,6 +666,8 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     OutStreamer->EmitLabel(LOHLabel);
   }
 
+  AArch64TargetStreamer *TS =
+    static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
   // Do any manual lowerings.
   switch (MI->getOpcode()) {
   default:
@@ -816,6 +819,100 @@ void AArch64AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   case TargetOpcode::PATCHABLE_TAIL_CALL:
     LowerPATCHABLE_TAIL_CALL(*MI);
+    return;
+
+  case AArch64::SEH_StackAlloc:
+    TS->EmitARM64WinCFIAllocStack(MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_SaveFPLR:
+    TS->EmitARM64WinCFISaveFPLR(MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_SaveFPLR_X:
+    assert(MI->getOperand(0).getImm() < 0 &&
+           "Pre increment SEH opcode must have a negative offset");
+    TS->EmitARM64WinCFISaveFPLRX(-MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_SaveReg:
+    TS->EmitARM64WinCFISaveReg(MI->getOperand(0).getImm(),
+                               MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveReg_X:
+    assert(MI->getOperand(1).getImm() < 0 &&
+           "Pre increment SEH opcode must have a negative offset");
+    TS->EmitARM64WinCFISaveRegX(MI->getOperand(0).getImm(),
+		                -MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveRegP:
+    assert((MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1) &&
+            "Non-consecutive registers not allowed for save_regp");
+    TS->EmitARM64WinCFISaveRegP(MI->getOperand(0).getImm(),
+                                MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SaveRegP_X:
+    assert((MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1) &&
+            "Non-consecutive registers not allowed for save_regp_x");
+    assert(MI->getOperand(2).getImm() < 0 &&
+           "Pre increment SEH opcode must have a negative offset");
+    TS->EmitARM64WinCFISaveRegPX(MI->getOperand(0).getImm(),
+                                 -MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SaveFReg:
+    TS->EmitARM64WinCFISaveFReg(MI->getOperand(0).getImm(),
+                                MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveFReg_X:
+    assert(MI->getOperand(1).getImm() < 0 &&
+           "Pre increment SEH opcode must have a negative offset");
+    TS->EmitARM64WinCFISaveFRegX(MI->getOperand(0).getImm(),
+                                 -MI->getOperand(1).getImm());
+    return;
+
+  case AArch64::SEH_SaveFRegP:
+    assert((MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1) &&
+            "Non-consecutive registers not allowed for save_regp");
+    TS->EmitARM64WinCFISaveFRegP(MI->getOperand(0).getImm(),
+                                 MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SaveFRegP_X:
+    assert((MI->getOperand(1).getImm() - MI->getOperand(0).getImm() == 1) &&
+            "Non-consecutive registers not allowed for save_regp_x");
+    assert(MI->getOperand(2).getImm() < 0 &&
+           "Pre increment SEH opcode must have a negative offset");
+    TS->EmitARM64WinCFISaveFRegPX(MI->getOperand(0).getImm(),
+                                  -MI->getOperand(2).getImm());
+    return;
+
+  case AArch64::SEH_SetFP:
+    TS->EmitARM64WinCFISetFP();
+    return;
+
+  case AArch64::SEH_AddFP:
+    TS->EmitARM64WinCFIAddFP(MI->getOperand(0).getImm());
+    return;
+
+  case AArch64::SEH_Nop:
+    TS->EmitARM64WinCFINop();
+    return;
+
+  case AArch64::SEH_PrologEnd:
+    TS->EmitARM64WinCFIPrologEnd();
+    return;
+
+  case AArch64::SEH_EpilogStart:
+    TS->EmitARM64WinCFIEpilogStart();
+    return;
+
+  case AArch64::SEH_EpilogEnd:
+    TS->EmitARM64WinCFIEpilogEnd();
     return;
   }
 

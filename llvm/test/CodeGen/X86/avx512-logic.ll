@@ -7,7 +7,7 @@ define <16 x i32> @vpandd(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnon
 ; ALL-LABEL: vpandd:
 ; ALL:       ## %bb.0: ## %entry
 ; ALL-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0
-; ALL-NEXT:    vpandq %zmm1, %zmm0, %zmm0
+; ALL-NEXT:    vpandd %zmm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -21,7 +21,7 @@ define <16 x i32> @vpandnd(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readno
 ; ALL-LABEL: vpandnd:
 ; ALL:       ## %bb.0: ## %entry
 ; ALL-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0
-; ALL-NEXT:    vpandnq %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    vpandnd %zmm0, %zmm1, %zmm0
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -37,7 +37,7 @@ define <16 x i32> @vpord(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnone
 ; ALL-LABEL: vpord:
 ; ALL:       ## %bb.0: ## %entry
 ; ALL-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0
-; ALL-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; ALL-NEXT:    vpord %zmm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -51,7 +51,7 @@ define <16 x i32> @vpxord(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnon
 ; ALL-LABEL: vpxord:
 ; ALL:       ## %bb.0: ## %entry
 ; ALL-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0
-; ALL-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; ALL-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
 entry:
   ; Force the execution domain with an add.
@@ -132,7 +132,7 @@ define <8 x i64> @orq_broadcast(<8 x i64> %a) nounwind {
 define <16 x i32> @andd512fold(<16 x i32> %y, <16 x i32>* %x) {
 ; KNL-LABEL: andd512fold:
 ; KNL:       ## %bb.0: ## %entry
-; KNL-NEXT:    vpandq (%rdi), %zmm0, %zmm0
+; KNL-NEXT:    vpandd (%rdi), %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: andd512fold:

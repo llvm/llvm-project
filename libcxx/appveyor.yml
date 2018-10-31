@@ -19,14 +19,6 @@ environment:
       MAKE_PROGRAM: ninja
       APPVEYOR_SAVE_CACHE_ON_ERROR: true
     - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
-      CMAKE_OPTIONS: -DCMAKE_C_COMPILER=clang-cl.exe -DCMAKE_CXX_COMPILER=clang-cl.exe
-      CLANG_VERSION: 4
-      MSVC_SETUP_PATH: C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat
-      MSVC_SETUP_ARG: x86_amd64
-      GENERATOR: Ninja
-      MAKE_PROGRAM: ninja
-      APPVEYOR_SAVE_CACHE_ON_ERROR: true
-    - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2015
       MINGW_PATH: C:\mingw-w64\i686-6.3.0-posix-dwarf-rt_v5-rev1\mingw32\bin
       GENERATOR: MinGW Makefiles
       MAKE_PROGRAM: mingw32-make

@@ -94,5 +94,9 @@ typedef __attribute__((ext_vector_type(4))) int vi4b;
 void foovi4b(vi4b) {}
 // CHECK: define dso_local void @"?foovi4b@@YAXT?$__vector@H$03@__clang@@@Z"
 
+typedef float __attribute__((__ext_vector_type__(3))) vf3;
+void foovf3(vf3) {}
+// CHECK: define dso_local void @"?foovf3@@YAXT?$__vector@M$02@__clang@@@Z"
+
 // Clang does not support vectors of complex types, so we can't test the
 // mangling of them.

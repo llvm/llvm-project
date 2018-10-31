@@ -11,7 +11,7 @@ define <16 x i32> @select00(i32 %a, <16 x i32> %b) nounwind {
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    vmovdqa64 %zmm0, %zmm1
 ; X86-NEXT:  .LBB0_2:
-; X86-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; X86-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select00:
@@ -22,7 +22,7 @@ define <16 x i32> @select00(i32 %a, <16 x i32> %b) nounwind {
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    vmovdqa64 %zmm0, %zmm1
 ; X64-NEXT:  .LBB0_2:
-; X64-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
+; X64-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; X64-NEXT:    retq
   %cmpres = icmp eq i32 %a, 255
   %selres = select i1 %cmpres, <16 x i32> zeroinitializer, <16 x i32> %b

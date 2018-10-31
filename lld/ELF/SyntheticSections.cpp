@@ -1491,11 +1491,15 @@ void RelocationBaseSection::addReloc(const DynamicReloc &Reloc) {
 }
 
 void RelocationBaseSection::finalizeContents() {
-  // If all relocations are R_*_RELATIVE they don't refer to any
-  // dynamic symbol and we don't need a dynamic symbol table. If that
-  // is the case, just use the index of the regular symbol table section.
-  getParent()->Link = In.DynSymTab ? In.DynSymTab->getParent()->SectionIndex
-                                   : In.SymTab->getParent()->SectionIndex;
+  // If all relocations are R_*_{,I}RELATIVE they don't refer to any dynamic
+  // symbol and we don't need a dynamic symbol table. If that is the case, use
+  // the index of the regular symbol table section (if exists) or 0.
+  if (In.DynSymTab)
+    getParent()->Link = In.DynSymTab->getParent()->SectionIndex;
+  else if (In.SymTab)
+    getParent()->Link = In.SymTab->getParent()->SectionIndex;
+  else
+    getParent()->Link = 0;
 
   if (In.RelaIplt == this || In.RelaPlt == this)
     getParent()->Info = In.GotPlt->getParent()->SectionIndex;

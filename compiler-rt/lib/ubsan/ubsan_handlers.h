@@ -128,6 +128,8 @@ enum ImplicitConversionCheckKind : unsigned char {
   ICCK_IntegerTruncation = 0, // Legacy, was only used by clang 7.
   ICCK_UnsignedIntegerTruncation = 1,
   ICCK_SignedIntegerTruncation = 2,
+  ICCK_IntegerSignChange = 3,
+  ICCK_SignedIntegerTruncationOrSignChange = 4,
 };
 
 struct ImplicitConversionData {

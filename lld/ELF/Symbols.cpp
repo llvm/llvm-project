@@ -260,7 +260,7 @@ void elf::printTraceSymbol(Symbol *Sym) {
   message(toString(Sym->File) + S + Sym->getName());
 }
 
-void elf::warnUnorderableSymbol(const Symbol *Sym) {
+void elf::maybeWarnUnorderableSymbol(const Symbol *Sym) {
   if (!Config->WarnSymbolOrdering)
     return;
 

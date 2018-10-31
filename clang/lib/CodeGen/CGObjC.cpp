@@ -883,9 +883,10 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
   // If there's a non-trivial 'get' expression, we just have to emit that.
   if (!hasTrivialGetExpr(propImpl)) {
     if (!AtomicHelperFn) {
-      ReturnStmt ret(SourceLocation(), propImpl->getGetterCXXConstructor(),
-                     /*nrvo*/ nullptr);
-      EmitReturnStmt(ret);
+      auto *ret = ReturnStmt::Create(getContext(), SourceLocation(),
+                                     propImpl->getGetterCXXConstructor(),
+                                     /* NRVOCandidate=*/nullptr);
+      EmitReturnStmt(*ret);
     }
     else {
       ObjCIvarDecl *ivar = propImpl->getPropertyIvarDecl();

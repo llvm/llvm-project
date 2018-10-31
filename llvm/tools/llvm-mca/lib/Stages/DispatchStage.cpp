@@ -21,10 +21,9 @@
 #include "HardwareUnits/Scheduler.h"
 #include "llvm/Support/Debug.h"
 
-using namespace llvm;
-
 #define DEBUG_TYPE "llvm-mca"
 
+namespace llvm {
 namespace mca {
 
 void DispatchStage::notifyInstructionDispatched(const InstRef &IR,
@@ -185,3 +184,4 @@ void DispatchStage::dump() const {
 }
 #endif
 } // namespace mca
+} // namespace llvm

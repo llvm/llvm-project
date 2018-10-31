@@ -110,6 +110,25 @@ public:
     return true;
   }
 
+  bool writeCustomEvent(uint64_t TSC, const void *Event, int32_t EventSize) {
+    writeMetadata<MetadataRecord::RecordKinds::CustomEventMarker>(EventSize,
+                                                                  TSC);
+    internal_memcpy(NextRecord, Event, EventSize);
+    NextRecord += EventSize;
+    atomic_fetch_add(&Buffer.Extents, EventSize, memory_order_acq_rel);
+    return true;
+  }
+
+  bool writeTypedEvent(uint64_t TSC, uint16_t EventType, const void *Event,
+                       int32_t EventSize) {
+    writeMetadata<MetadataRecord::RecordKinds::TypedEventMarker>(EventSize, TSC,
+                                                                 EventType);
+    internal_memcpy(NextRecord, Event, EventSize);
+    NextRecord += EventSize;
+    atomic_fetch_add(&Buffer.Extents, EventSize, memory_order_acq_rel);
+    return true;
+  }
+
   char *getNextRecord() const { return NextRecord; }
 
   void resetRecord() {
@@ -118,7 +137,7 @@ public:
   }
 
   void undoWrites(size_t B) {
-    DCHECK_GE(NextRecord - B, reinterpret_cast<char*>(Buffer.Data));
+    DCHECK_GE(NextRecord - B, reinterpret_cast<char *>(Buffer.Data));
     NextRecord -= B;
     atomic_fetch_sub(&Buffer.Extents, B, memory_order_acq_rel);
   }

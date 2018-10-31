@@ -18,6 +18,8 @@
 # "Global5 Global6": Global, because it appears in %t-globals2.txt, but we only
 #     trim leading and trailing whitespace. We don't just take the first chunk
 #     that looks like a symbol.
+# Global7: Global, because even though it doesn't appear as any -G flags, does
+#     not get demoted since it's undefined.
 
 # RUN: echo Global2 > %t-globals1.txt
 # RUN: echo "  Global3  " > %t-globals2.txt
@@ -77,8 +79,9 @@ Symbols:
       Section:     .text
     - Name:        "Global5 Global6"
       Section:     .text
+    - Name:        Global7
 
-# CHECK:      Symbol table '.symtab' contains 13 entries:
+# CHECK:      Symbol table '.symtab' contains 14 entries:
 # CHECK-NEXT:    Num: Value Size Type Bind Vis Ndx Name
 # CHECK-NEXT:      0: {{.*}}  LOCAL  {{.*}}
 # CHECK-NEXT:      1: {{.*}}  LOCAL  {{.*}} Local1
@@ -91,5 +94,6 @@ Symbols:
 # CHECK-NEXT:      8: {{.*}}  GLOBAL {{.*}} Global3
 # CHECK-NEXT:      9: {{.*}}  GLOBAL {{.*}} Global4
 # CHECK-NEXT:     10: {{.*}}  GLOBAL {{.*}} Global5 Global6
-# CHECK-NEXT:     11: {{.*}}  WEAK   {{.*}} Weak1
-# CHECK-NEXT:     12: {{.*}}  GLOBAL {{.*}} Weak2
+# CHECK-NEXT:     11: {{.*}}  GLOBAL {{.*}} UND Global7
+# CHECK-NEXT:     12: {{.*}}  WEAK   {{.*}} Weak1
+# CHECK-NEXT:     13: {{.*}}  GLOBAL {{.*}} Weak2

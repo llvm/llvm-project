@@ -514,27 +514,35 @@ MacosVersion GetMacosVersionInternal() {
   CHECK_NE(internal_sysctl(mib, 2, 0, &len, 0, 0), -1);
   CHECK_LT(len, maxlen);
   CHECK_NE(internal_sysctl(mib, 2, version, &len, 0, 0), -1);
-  switch (version[0]) {
-    case '9': return MACOS_VERSION_LEOPARD;
-    case '1': {
-      switch (version[1]) {
-        case '0': return MACOS_VERSION_SNOW_LEOPARD;
-        case '1': return MACOS_VERSION_LION;
-        case '2': return MACOS_VERSION_MOUNTAIN_LION;
-        case '3': return MACOS_VERSION_MAVERICKS;
-        case '4': return MACOS_VERSION_YOSEMITE;
-        case '5': return MACOS_VERSION_EL_CAPITAN;
-        case '6': return MACOS_VERSION_SIERRA;
-        case '7': return MACOS_VERSION_HIGH_SIERRA;
-        case '8': return MACOS_VERSION_MOJAVE;
-        default:
-          if (IsDigit(version[1]))
-            return MACOS_VERSION_UNKNOWN_NEWER;
-          else
-            return MACOS_VERSION_UNKNOWN;
-      }
-    }
-    default: return MACOS_VERSION_UNKNOWN;
+
+  // Expect <major>.<minor>(.<patch>)
+  CHECK_GE(len, 3);
+  const char *p = version;
+  int major = internal_simple_strtoll(p, &p, /*base=*/10);
+  if (*p != '.') return MACOS_VERSION_UNKNOWN;
+  p += 1;
+  int minor = internal_simple_strtoll(p, &p, /*base=*/10);
+  if (*p != '.') return MACOS_VERSION_UNKNOWN;
+
+  switch (major) {
+    case 9: return MACOS_VERSION_LEOPARD;
+    case 10: return MACOS_VERSION_SNOW_LEOPARD;
+    case 11: return MACOS_VERSION_LION;
+    case 12: return MACOS_VERSION_MOUNTAIN_LION;
+    case 13: return MACOS_VERSION_MAVERICKS;
+    case 14: return MACOS_VERSION_YOSEMITE;
+    case 15: return MACOS_VERSION_EL_CAPITAN;
+    case 16: return MACOS_VERSION_SIERRA;
+    case 17:
+      // Not a typo, 17.5 Darwin Kernel Version maps to High Sierra 10.13.4.
+      if (minor >= 5)
+        return MACOS_VERSION_HIGH_SIERRA_DOT_RELEASE_4;
+      return MACOS_VERSION_HIGH_SIERRA;
+    case 18:
+      return MACOS_VERSION_MOJAVE;
+    default:
+      if (major < 9) return MACOS_VERSION_UNKNOWN;
+      return MACOS_VERSION_UNKNOWN_NEWER;
   }
 }
 

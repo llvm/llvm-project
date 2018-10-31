@@ -468,10 +468,10 @@ define <2 x double> @sel_constants_fmul_constant_vec(i1 %cond) {
 ; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB37_1
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [118.83,34.539999999999999]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.1883E+2,3.4539999999999999E+1]
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB37_1:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [-20.399999999999999,37.68]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [-2.0399999999999999E+1,3.768E+1]
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, <2 x double> <double -4.0, double 12.0>, <2 x double> <double 23.3, double 11.0>
   %bo = fmul <2 x double> %sel, <double 5.1, double 3.14>

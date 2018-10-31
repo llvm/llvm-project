@@ -4,8 +4,8 @@
 define void @PR13378() nounwind {
 ; This was orriginally a crasher trying to schedule the instructions.
 ; CHECK-LABEL:      PR13378:
-; CHECK:        vld1.32
-; CHECK-NEXT:   vmov.i32
+; CHECK:        vmov.i32
+; CHECK-NEXT:   vld1.32
 ; CHECK-NEXT:   vst1.32
 ; CHECK-NEXT:   vst1.32
 ; CHECK-NEXT:   vmov.f32

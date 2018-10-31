@@ -1196,6 +1196,7 @@ static const char *getElfSegmentType(unsigned Arch, unsigned Type) {
     switch (Type) {
     LLVM_READOBJ_ENUM_CASE(ELF, PT_ARM_EXIDX);
     }
+    break;
   case ELF::EM_MIPS:
   case ELF::EM_MIPS_RS3_LE:
     switch (Type) {
@@ -1204,6 +1205,7 @@ static const char *getElfSegmentType(unsigned Arch, unsigned Type) {
     LLVM_READOBJ_ENUM_CASE(ELF, PT_MIPS_OPTIONS);
     LLVM_READOBJ_ENUM_CASE(ELF, PT_MIPS_ABIFLAGS);
     }
+    break;
   }
 
   switch (Type) {
@@ -1250,7 +1252,7 @@ static std::string getElfPtType(unsigned Arch, unsigned Type) {
     case ELF::EM_ARM:
       if (Type == ELF::PT_ARM_EXIDX)
         return "EXIDX";
-      return "";
+      break;
     case ELF::EM_MIPS:
     case ELF::EM_MIPS_RS3_LE:
       switch (Type) {
@@ -1263,7 +1265,7 @@ static std::string getElfPtType(unsigned Arch, unsigned Type) {
       case PT_MIPS_ABIFLAGS:
         return "ABIFLAGS";
       }
-      return "";
+      break;
     }
   }
   return std::string("<unknown>: ") + to_string(format_hex(Type, 1));
@@ -1640,29 +1642,32 @@ static const char *getTypeString(unsigned Arch, uint64_t Type) {
   case EM_HEXAGON:
     switch (Type) {
 #define HEXAGON_DYNAMIC_TAG(name, value)                                       \
-  case DT_##name:                                                              \
-    return #name;
+    case DT_##name:                                                            \
+      return #name;
 #include "llvm/BinaryFormat/DynamicTags.def"
 #undef HEXAGON_DYNAMIC_TAG
     }
+    break;
 
   case EM_MIPS:
     switch (Type) {
 #define MIPS_DYNAMIC_TAG(name, value)                                          \
-  case DT_##name:                                                              \
-    return #name;
+    case DT_##name:                                                            \
+      return #name;
 #include "llvm/BinaryFormat/DynamicTags.def"
 #undef MIPS_DYNAMIC_TAG
     }
+    break;
 
-    case EM_PPC64:
-      switch(Type) {
+  case EM_PPC64:
+    switch(Type) {
 #define PPC64_DYNAMIC_TAG(name, value)                                         \
     case DT_##name:                                                            \
       return #name;
 #include "llvm/BinaryFormat/DynamicTags.def"
 #undef PPC64_DYNAMIC_TAG
     }
+    break;
   }
 #undef DYNAMIC_TAG
   switch (Type) {
@@ -2831,11 +2836,13 @@ std::string getSectionTypeString(unsigned Arch, unsigned Type) {
     case SHT_ARM_OVERLAYSECTION:
       return "ARM_OVERLAYSECTION";
     }
+    break;
   case EM_X86_64:
     switch (Type) {
     case SHT_X86_64_UNWIND:
       return "X86_64_UNWIND";
     }
+    break;
   case EM_MIPS:
   case EM_MIPS_RS3_LE:
     switch (Type) {
@@ -2848,6 +2855,7 @@ std::string getSectionTypeString(unsigned Arch, unsigned Type) {
     case SHT_MIPS_DWARF:
       return "SHT_MIPS_DWARF";
     }
+    break;
   }
   switch (Type) {
   case SHT_NULL:

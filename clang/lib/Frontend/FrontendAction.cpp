@@ -276,7 +276,7 @@ static void addHeaderInclude(StringRef HeaderName,
                              bool IsExternC) {
   if (IsExternC && LangOpts.CPlusPlus)
     Includes += "extern \"C\" {\n";
-  if (LangOpts.ObjC1)
+  if (LangOpts.ObjC)
     Includes += "#import \"";
   else
     Includes += "#include \"";

@@ -5,6 +5,7 @@
 
 // UNSUPPORTED: i386-darwin
 // XFAIL: android
+// XFAIL: netbsd && msan
 
 // Tests __sanitizer_get_module_and_offset_for_pc.
 

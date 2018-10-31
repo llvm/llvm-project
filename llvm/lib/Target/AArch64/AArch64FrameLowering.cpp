@@ -597,6 +597,17 @@ static void adaptForLdStOpt(MachineBasicBlock &MBB,
   //
 }
 
+static bool ShouldSignWithAKey(MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+  if (!F.hasFnAttribute("sign-return-address-key"))
+    return true;
+
+  const StringRef Key =
+      F.getFnAttribute("sign-return-address-key").getValueAsString();
+  assert(Key.equals_lower("a_key") || Key.equals_lower("b_key"));
+  return Key.equals_lower("a_key");
+}
+
 void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -620,7 +631,9 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL;
 
   if (ShouldSignReturnAddress(MF)) {
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACIASP))
+    BuildMI(
+        MBB, MBBI, DL,
+        TII->get(ShouldSignWithAKey(MF) ? AArch64::PACIASP : AArch64::PACIBSP))
         .setMIFlag(MachineInstr::FrameSetup);
   }
 
@@ -907,10 +920,14 @@ static void InsertReturnAddressAuth(MachineFunction &MF,
   // instructions, namely RETA{A,B}, that can be used instead.
   if (Subtarget.hasV8_3aOps() && MBBI != MBB.end() &&
       MBBI->getOpcode() == AArch64::RET_ReallyLR) {
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::RETAA)).copyImplicitOps(*MBBI);
+    BuildMI(MBB, MBBI, DL,
+            TII->get(ShouldSignWithAKey(MF) ? AArch64::RETAA : AArch64::RETAB))
+        .copyImplicitOps(*MBBI);
     MBB.erase(MBBI);
   } else {
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::AUTIASP))
+    BuildMI(
+        MBB, MBBI, DL,
+        TII->get(ShouldSignWithAKey(MF) ? AArch64::AUTIASP : AArch64::AUTIBSP))
         .setMIFlag(MachineInstr::FrameDestroy);
   }
 }

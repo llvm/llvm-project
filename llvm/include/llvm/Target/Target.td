@@ -1104,7 +1104,7 @@ def FAULTING_OP : StandardPseudoInstruction {
   let isBranch = 1;
 }
 def PATCHABLE_OP : StandardPseudoInstruction {
-  let OutOperandList = (outs unknown:$dst);
+  let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
   let usesCustomInserter = 1;
   let mayLoad = 1;

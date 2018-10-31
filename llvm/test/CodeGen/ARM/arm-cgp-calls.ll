@@ -2,8 +2,8 @@
 ; RUN: llc -mtriple=armv8 -arm-disable-cgp=false %s -o - | FileCheck %s
 
 ; Check that the pass doesn't try to promote the immediate parameters.
-; CHECK-COMMON-LABEL: call_with_imms
-; CHECK-COMMON-NOT:   uxt
+; CHECK-LABEL: call_with_imms
+; CHECK-NOT:   uxt
 define i8 @call_with_imms(i8* %arg) {
   %call = tail call arm_aapcs_vfpcc zeroext i8 @dummy2(i8* nonnull %arg, i8 zeroext 0, i8 zeroext 0)
   %cmp = icmp eq i8 %call, 0
@@ -12,23 +12,23 @@ define i8 @call_with_imms(i8* %arg) {
 }
 
 ; Test that the call result is still extended.
-; CHECK-COMMON-LABEL: test_call:
-; CHECK-COMMON: bl
-; CHECK-COMMONNEXT: sxtb r1, r0
+; CHECK-LABEL: test_call:
+; CHECK: bl
+; CHECK-NEXT: sxtb r1, r0
 define i16 @test_call(i8 zeroext %arg) {
   %call = call i8 @dummy_i8(i8 %arg)
   %cmp = icmp ult i8 %call, 128
   %conv = zext i1 %cmp to i16
-  ret i16 %conv 
+  ret i16 %conv
 }
 
 ; Test that the transformation bails when it finds that i16 is larger than i8.
 ; TODO: We should be able to remove the uxtb in these cases.
 ; CHECK-LABEL: promote_i8_sink_i16_1
-; CHECK-COMMON: bl dummy_i8
-; CHECK-COMMON: adds r0, #1
-; CHECK-COMMON: uxtb r0, r0
-; CHECK-COMMON: cmp r0
+; CHECK: bl dummy_i8
+; CHECK: add{{.*}} r0, #1
+; CHECK: uxtb r0, r0
+; CHECK: cmp r0
 define i16 @promote_i8_sink_i16_1(i8 zeroext %arg0, i16 zeroext %arg1, i16 zeroext %arg2) {
   %call = tail call zeroext i8 @dummy_i8(i8 %arg0)
   %add = add nuw i8 %call, 1
@@ -39,11 +39,11 @@ define i16 @promote_i8_sink_i16_1(i8 zeroext %arg0, i16 zeroext %arg1, i16 zeroe
   ret i16 %res
 }
 
-; CHECK-COMMON-LABEL: promote_i8_sink_i16_2
-; CHECK-COMMON: bl dummy_i8
-; CHECK-COMMON: adds r0, #1
-; CHECK-COMMON-NOT: uxt
-; CHECK-COMMON: cmp r0
+; CHECK-LABEL: promote_i8_sink_i16_2
+; CHECK: bl dummy_i8
+; CHECK: add{{.*}} r0, #1
+; CHECK-NOT: uxt
+; CHECK: cmp r0
 define i16 @promote_i8_sink_i16_2(i8 zeroext %arg0, i8 zeroext %arg1, i16 zeroext %arg2) {
   %call = tail call zeroext i8 @dummy_i8(i8 %arg0)
   %add = add nuw i8 %call, 1
@@ -57,9 +57,9 @@ define i16 @promote_i8_sink_i16_2(i8 zeroext %arg0, i8 zeroext %arg1, i16 zeroex
 @uc = global i8 42, align 1
 @LL = global i64 0, align 8
 
-; CHECK-COMMON-LABEL: zext_i64
-; CHECK-COMMON: ldrb
-; CHECK-COMMON: strd
+; CHECK-LABEL: zext_i64
+; CHECK: ldrb
+; CHECK: strd
 define void @zext_i64() {
 entry:
   %0 = load i8, i8* @uc, align 1
@@ -74,8 +74,8 @@ entry:
 @a = global i16* null, align 4
 @b = global i32 0, align 4
 
-; CHECK-COMMON-LABEL: constexpr
-; CHECK-COMMON: uxth
+; CHECK-LABEL: constexpr
+; CHECK: uxth
 define i32 @constexpr() {
 entry:
   store i32 ptrtoint (i32* @b to i32), i32* @b, align 4
@@ -89,12 +89,11 @@ entry:
   ret i32 undef
 }
 
-; The call to safe_lshift_func takes two parameters, but they're the same value just one is zext.
-; The transform won't happen because of the zext.
-; CHECK-COMMON-LABEL: call_zext_i8_i32
-; CHECK-COMMON-NOT: uxt
-; CHECK-COMMON: cmp
-; CHECK-COMMON: uxtb
+; The call to safe_lshift_func takes two parameters, but they're the same value
+; just one is zext. We do support zext now, so the transformation should
+; trigger and we don't want see uxtb here.
+; CHECK-LABEL: call_zext_i8_i32
+; CHECK-NOT: uxt
 define fastcc i32 @call_zext_i8_i32(i32 %p_45, i8 zeroext %p_46) {
 for.cond8.preheader:
   %call217 = call fastcc zeroext i8 @safe_mul_func_uint8_t_u_u(i8 zeroext undef)
@@ -119,9 +118,9 @@ for.end411:                                       ; preds = %for.cond8.preheader
 @g_82 = hidden local_unnamed_addr global i32 0, align 4
 
 ; Test that the transform bails on finding %conv4, a trunc
-; CHECK-COMMON-LABEL: call_return_pointer
-; CHECK-COMMON: sxth
-; CHECK-COMMON-NOT: uxt
+; CHECK-LABEL: call_return_pointer
+; CHECK: sxth
+; CHECK: uxt
 define hidden i32 @call_return_pointer(i8 zeroext %p_13) local_unnamed_addr #0 {
 entry:
   %conv1 = zext i8 %p_13 to i16
@@ -147,9 +146,8 @@ if.then:                                          ; preds = %for.cond
 
 ; Transform will bail because of the zext
 ; Check that d.sroa.0.0.be is promoted passed directly into the tail call.
-; CHECK-COMMON-LABEL: check_zext_phi_call_arg
-; CHECK-COMMON: uxt
-; CHECK-COMMON: uxt
+; CHECK-LABEL: check_zext_phi_call_arg
+; CHECK: uxt
 define i32 @check_zext_phi_call_arg() {
 entry:
   br label %for.cond

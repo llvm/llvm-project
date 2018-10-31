@@ -3864,6 +3864,7 @@ recurse:
     case UETT_SizeOf:
       Out << 's';
       break;
+    case UETT_PreferredAlignOf:
     case UETT_AlignOf:
       Out << 'a';
       break;

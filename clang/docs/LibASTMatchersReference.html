@@ -4123,6 +4123,18 @@ varDecl(isExternC())
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isStaticLocal0')"><a name="isStaticLocal0Anchor">isStaticLocal</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isStaticLocal0"><pre>Matches a static variable with local scope.
+
+Example matches y (matcher = varDecl(isStaticLocal()))
+void f() {
+  int x;
+  static int y;
+}
+static int z;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isStaticStorageClass1')"><a name="isStaticStorageClass1Anchor">isStaticStorageClass</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isStaticStorageClass1"><pre>Matches variablefunction declarations that have "static" storage
 class specifier ("static" keyword) written in the source.

@@ -29,6 +29,8 @@ enum QueryKind {
   QK_Match,
   QK_SetBool,
   QK_SetOutputKind,
+  QK_EnableOutputKind,
+  QK_DisableOutputKind,
   QK_Quit
 };
 
@@ -149,6 +151,36 @@ struct SetExclusiveOutputQuery : Query {
   static bool classof(const Query *Q) { return Q->Kind == QK_SetOutputKind; }
 
   bool QuerySession::*Var;
+};
+
+// Implements the non-exclusive 'set output dump|diag|print' options.
+struct SetNonExclusiveOutputQuery : Query {
+  SetNonExclusiveOutputQuery(QueryKind Kind, bool QuerySession::*Var,
+                             bool Value)
+      : Query(Kind), Var(Var), Value(Value) {}
+  bool run(llvm::raw_ostream &OS, QuerySession &QS) const override {
+    QS.*Var = Value;
+    return true;
+  }
+
+  bool QuerySession::*Var;
+  bool Value;
+};
+
+struct EnableOutputQuery : SetNonExclusiveOutputQuery {
+  EnableOutputQuery(bool QuerySession::*Var)
+      : SetNonExclusiveOutputQuery(QK_EnableOutputKind, Var, true) {}
+
+  static bool classof(const Query *Q) { return Q->Kind == QK_EnableOutputKind; }
+};
+
+struct DisableOutputQuery : SetNonExclusiveOutputQuery {
+  DisableOutputQuery(bool QuerySession::*Var)
+      : SetNonExclusiveOutputQuery(QK_DisableOutputKind, Var, false) {}
+
+  static bool classof(const Query *Q) {
+    return Q->Kind == QK_DisableOutputKind;
+  }
 };
 
 } // namespace query

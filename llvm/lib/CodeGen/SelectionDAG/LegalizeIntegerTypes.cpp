@@ -142,7 +142,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SUBCARRY:    Res = PromoteIntRes_ADDSUBCARRY(N, ResNo); break;
 
   case ISD::SADDSAT:
-  case ISD::UADDSAT:     Res = PromoteIntRes_ADDSAT(N); break;
+  case ISD::UADDSAT:
+  case ISD::SSUBSAT:
+  case ISD::USUBSAT:     Res = PromoteIntRes_ADDSUBSAT(N); break;
 
   case ISD::ATOMIC_LOAD:
     Res = PromoteIntRes_Atomic0(cast<AtomicSDNode>(N)); break;
@@ -308,6 +310,26 @@ SDValue DAGTypeLegalizer::PromoteIntRes_BITCAST(SDNode *N) {
     // make us bitcast between two vectors which are legalized in different ways.
     if (NOutVT.bitsEq(NInVT) && !NOutVT.isVector())
       return DAG.getNode(ISD::BITCAST, dl, NOutVT, GetWidenedVector(InOp));
+    // If the output type is also a vector and widening it to the same size
+    // as the widened input type would be a legal type, we can widen the bitcast
+    // and handle the promotion after.
+    if (NOutVT.isVector()) {
+      unsigned WidenInSize = NInVT.getSizeInBits();
+      unsigned OutSize = OutVT.getSizeInBits();
+      if (WidenInSize % OutSize == 0) {
+        unsigned Scale = WidenInSize / OutSize;
+        EVT WideOutVT = EVT::getVectorVT(*DAG.getContext(),
+                                         OutVT.getVectorElementType(),
+                                         OutVT.getVectorNumElements() * Scale);
+        if (isTypeLegal(WideOutVT)) {
+          InOp = DAG.getBitcast(WideOutVT, GetWidenedVector(InOp));
+          MVT IdxTy = TLI.getVectorIdxTy(DAG.getDataLayout());
+          InOp = DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, OutVT, InOp,
+                             DAG.getConstant(0, dl, IdxTy));
+          return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT, InOp);
+        }
+      }
+    }
   }
 
   return DAG.getNode(ISD::ANY_EXTEND, dl, NOutVT,
@@ -549,11 +571,11 @@ SDValue DAGTypeLegalizer::PromoteIntRes_Overflow(SDNode *N) {
   return SDValue(Res.getNode(), 1);
 }
 
-SDValue DAGTypeLegalizer::PromoteIntRes_ADDSAT(SDNode *N) {
+SDValue DAGTypeLegalizer::PromoteIntRes_ADDSUBSAT(SDNode *N) {
   // For promoting iN -> iM, this can be expanded by
   // 1. ANY_EXTEND iN to iM
   // 2. SHL by M-N
-  // 3. U/SADDSAT
+  // 3. [US][ADD|SUB]SAT
   // 4. L/ASHR by M-N
   SDLoc dl(N);
   SDValue Op1 = N->getOperand(0);
@@ -561,9 +583,20 @@ SDValue DAGTypeLegalizer::PromoteIntRes_ADDSAT(SDNode *N) {
   unsigned OldBits = Op1.getValueSizeInBits();
 
   unsigned Opcode = N->getOpcode();
-  assert((Opcode == ISD::SADDSAT || Opcode == ISD::UADDSAT) &&
-         "Expected opcode to be SADDSAT or UADDSAT");
-  unsigned ShiftOp = Opcode == ISD::SADDSAT ? ISD::SRA : ISD::SRL;
+  unsigned ShiftOp;
+  switch (Opcode) {
+  case ISD::SADDSAT:
+  case ISD::SSUBSAT:
+    ShiftOp = ISD::SRA;
+    break;
+  case ISD::UADDSAT:
+  case ISD::USUBSAT:
+    ShiftOp = ISD::SRL;
+    break;
+  default:
+    llvm_unreachable("Expected opcode to be signed or unsigned saturation "
+                     "addition or subtraction");
+  }
 
   SDValue Op1Promoted = GetPromotedInteger(Op1);
   SDValue Op2Promoted = GetPromotedInteger(Op2);
@@ -1505,7 +1538,9 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::SMULO: ExpandIntRes_XMULO(N, Lo, Hi); break;
 
   case ISD::SADDSAT:
-  case ISD::UADDSAT: ExpandIntRes_ADDSAT(N, Lo, Hi); break;
+  case ISD::UADDSAT:
+  case ISD::SSUBSAT:
+  case ISD::USUBSAT: ExpandIntRes_ADDSUBSAT(N, Lo, Hi); break;
   }
 
   // If Lo/Hi is null, the sub-method took care of registering results etc.
@@ -2468,9 +2503,9 @@ void DAGTypeLegalizer::ExpandIntRes_READCYCLECOUNTER(SDNode *N, SDValue &Lo,
   ReplaceValueWith(SDValue(N, 1), R.getValue(2));
 }
 
-void DAGTypeLegalizer::ExpandIntRes_ADDSAT(SDNode *N, SDValue &Lo,
-                                           SDValue &Hi) {
-  SDValue Result = TLI.getExpandedSaturationAddition(N, DAG);
+void DAGTypeLegalizer::ExpandIntRes_ADDSUBSAT(SDNode *N, SDValue &Lo,
+                                              SDValue &Hi) {
+  SDValue Result = TLI.getExpandedSaturationAdditionSubtraction(N, DAG);
   SplitInteger(Result, Lo, Hi);
 }
 

@@ -60,8 +60,8 @@ entry:
 ; CHECK-REG: blr
 
 ; CHECK-FISL: @foo2
-; CHECK-FISL: xsadddp f1, f1, f1
-; CHECK-FISL: stxsdx f1, r1, r3
+; CHECK-FISL: xsadddp [[REG0:f[0-9]+]], f1, f1
+; CHECK-FISL: stxsdx [[REG0]], r1, r3
 ; CHECK-FISL: lxsdx f1, r1, r3
 ; CHECK-FISL: blr
 
@@ -71,8 +71,8 @@ entry:
 ; CHECK-P9-REG: blr
 
 ; CHECK-P9-FISL: @foo2
-; CHECK-P9-FISL: xsadddp f1, f1, f1
-; CHECK-P9-FISL: stfd f1, -152(r1)
+; CHECK-P9-FISL: xsadddp [[REG0:f[0-9]+]], f1, f1
+; CHECK-P9-FISL: stfd [[REG0]], -152(r1)
 ; CHECK-P9-FISL: lfd f1, -152(r1)
 ; CHECK-P9-FISL: blr
 

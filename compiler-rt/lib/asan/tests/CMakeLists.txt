@@ -68,11 +68,6 @@ if(APPLE)
   list(APPEND ASAN_UNITTEST_COMMON_LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS})
 endif()
 
-if(MSVC)
-  # Disable exceptions on Windows until they work reliably.
-  list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -fno-exceptions -DGTEST_HAS_SEH=0)
-endif()
-
 set(ASAN_BLACKLIST_FILE "${CMAKE_CURRENT_SOURCE_DIR}/asan_test.ignore")
 set(ASAN_UNITTEST_INSTRUMENTED_CFLAGS
   ${ASAN_UNITTEST_COMMON_CFLAGS}

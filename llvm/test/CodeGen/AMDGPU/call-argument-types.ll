@@ -61,11 +61,11 @@ declare void @external_void_func_v16i8(<16 x i8>) #0
 
 ; MESA-DAG: s_mov_b64 s[0:1], s[36:37]
 
+; GCN: v_mov_b32_e32 v0, 1{{$}}
+; MESA-DAG: s_mov_b64 s[2:3], s[38:39]
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i1@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i1@rel32@hi+4
-; GCN-DAG: v_mov_b32_e32 v0, 1{{$}}
-; MESA-DAG: s_mov_b64 s[2:3], s[38:39]
 
 ; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
 ; GCN-NEXT: s_endpgm
@@ -123,12 +123,12 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; GCN-LABEL: {{^}}test_call_external_void_func_i8_imm:
 ; MESA-DAG: s_mov_b32 s33, s3{{$}}
 
+; GCN: v_mov_b32_e32 v0, 0x7b
+; HSA-DAG: s_mov_b32 s4, s33{{$}}
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i8@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8@rel32@hi+4
-; GCN-NEXT: v_mov_b32_e32 v0, 0x7b
 
-; HSA-DAG: s_mov_b32 s4, s33{{$}}
 ; GCN-DAG: s_mov_b32 s32, s33{{$}}
 
 ; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
@@ -144,11 +144,11 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
 ; MESA-DAG: s_mov_b32 s33, s3{{$}}
 
 ; GCN-DAG: buffer_load_sbyte v0
+; GCN: s_mov_b32 s4, s33
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i8_signext@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_signext@rel32@hi+4
 
-; GCN-DAG: s_mov_b32 s4, s33
 ; GCN-DAG: s_mov_b32 s32, s3
 
 ; GCN: s_waitcnt vmcnt(0)
@@ -165,11 +165,11 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
 ; HSA-DAG: s_mov_b32 s33, s9{{$}}
 
 ; GCN-DAG: buffer_load_ubyte v0
+; GCN: s_mov_b32 s4, s33
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i8_zeroext@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i8_zeroext@rel32@hi+4
 
-; GCN-DAG: s_mov_b32 s4, s33
 ; GCN-DAG: s_mov_b32 s32, s33
 
 ; GCN: s_waitcnt vmcnt(0)
@@ -197,11 +197,11 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
 ; MESA-DAG: s_mov_b32 s33, s3{{$}}
 
 ; GCN-DAG: buffer_load_sshort v0
+; GCN: s_mov_b32 s4, s33
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i16_signext@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i16_signext@rel32@hi+4
 
-; GCN-DAG: s_mov_b32 s4, s33
 ; GCN-DAG: s_mov_b32 s32, s33
 
 ; GCN: s_waitcnt vmcnt(0)
@@ -218,11 +218,11 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
 
 
 ; GCN-DAG: buffer_load_ushort v0
+; GCN: s_mov_b32 s4, s33
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i16_zeroext@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i16_zeroext@rel32@hi+4
 
-; GCN-DAG: s_mov_b32 s4, s33
 ; GCN-DAG: s_mov_b32 s32, s33
 
 ; GCN: s_waitcnt vmcnt(0)
@@ -237,11 +237,11 @@ define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
 ; GCN-LABEL: {{^}}test_call_external_void_func_i32_imm:
 ; MESA-DAG: s_mov_b32 s33, s3{{$}}
 
+; GCN: v_mov_b32_e32 v0, 42
+; GCN: s_mov_b32 s4, s33
 ; GCN: s_getpc_b64 s{{\[}}[[PC_LO:[0-9]+]]:[[PC_HI:[0-9]+]]{{\]}}
 ; GCN-NEXT: s_add_u32 s[[PC_LO]], s[[PC_LO]], external_void_func_i32@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s[[PC_HI]], s[[PC_HI]], external_void_func_i32@rel32@hi+4
-; GCN: v_mov_b32_e32 v0, 42
-; GCN-DAG: s_mov_b32 s4, s33
 ; GCN-DAG: s_mov_b32 s32, s33
 
 ; GCN: s_swappc_b64 s[30:31], s{{\[}}[[PC_LO]]:[[PC_HI]]{{\]}}
@@ -481,10 +481,10 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32_imm() #0 {
 ; HSA-DAG: s_mov_b32 s33, s9
 ; MESA-DAG: s_mov_b32 s33, s3{{$}}
 
+; GCN-NOT: v3
 ; GCN-DAG: v_mov_b32_e32 v0, 3
 ; GCN-DAG: v_mov_b32_e32 v1, 4
 ; GCN-DAG: v_mov_b32_e32 v2, 5
-; GCN-NOT: v3
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @test_call_external_void_func_v3i32_imm(i32) #0 {

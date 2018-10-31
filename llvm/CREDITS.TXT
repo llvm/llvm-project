@@ -492,8 +492,8 @@ D: Thread Local Storage implementation
 N: Bill Wendling
 I: wendling
 E: isanbard@gmail.com
-D: Release manager, IR Linker, LTO
-D: Bunches of stuff
+D: Release manager, IR Linker, LTO.
+D: Bunches of stuff.
 
 N: Bob Wilson
 E: bob.wilson@acm.org

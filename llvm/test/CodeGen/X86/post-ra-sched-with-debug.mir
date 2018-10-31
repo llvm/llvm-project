@@ -251,8 +251,8 @@ body:             |
     liveins: $esi, $rdi, $r14, $rbx, $rbp
 
     ; CHECK:      [[REGISTER:\$r[a-z0-9]+]] = LEA64r {{\$r[a-z0-9]+}}, 1, $noreg, -20, $noreg
-    ; CHECK-NEXT: DBG_VALUE debug-use [[REGISTER]], debug-use $noreg, ![[J_VAR]], !DIExpression(), debug-location ![[J_LOC]]
-    ; CHECK-NEXT: DBG_VALUE debug-use [[REGISTER]], debug-use $noreg, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
+    ; CHECK-NEXT: DBG_VALUE [[REGISTER]], $noreg, ![[J_VAR]], !DIExpression(), debug-location ![[J_LOC]]
+    ; CHECK-NEXT: DBG_VALUE [[REGISTER]], $noreg, ![[I_VAR]], !DIExpression(), debug-location ![[I_LOC]]
 
     frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
@@ -268,8 +268,8 @@ body:             |
     $rbx = MOV64rr $rdi
     CALL64pcrel32 @_ZN1lC2Ei, csr_64, implicit $rsp, implicit $rdi, implicit $esi, implicit-def $rsp
     $rdi = LEA64r $rbx, 1, $noreg, 8, $noreg
-    DBG_VALUE debug-use $rdi, debug-use $noreg, !20, !17, debug-location !27
-    DBG_VALUE debug-use $rdi, debug-use $noreg, !10, !17, debug-location !18
+    DBG_VALUE $rdi, $noreg, !20, !17, debug-location !27
+    DBG_VALUE $rdi, $noreg, !10, !17, debug-location !18
     $rax = MOV64rm $rbx, 1, $noreg, 16, $noreg :: (load 8)
     MOV64mr $rbx, 1, $noreg, 8, $noreg, killed $rax :: (store 8)
     MOV64mr $rbx, 1, $noreg, 24, $noreg, $rdi :: (store 8)
@@ -286,9 +286,9 @@ body:             |
     $rsi = CMOVNE64rr killed $rsi, $rdx, implicit killed $eflags
     $rsi = OR64rr killed $rsi, killed $rcx, implicit-def $eflags
     $rcx = LEA64r $rbp, 1, $noreg, -20, $noreg
-    DBG_VALUE debug-use $rcx, debug-use $noreg, !46, !17, debug-location !48
-    DBG_VALUE debug-use $rcx, debug-use $noreg, !39, !17, debug-location !44
-    DBG_VALUE debug-use $rbp, -20, !29, !17, debug-location !36
+    DBG_VALUE $rcx, $noreg, !46, !17, debug-location !48
+    DBG_VALUE $rcx, $noreg, !39, !17, debug-location !44
+    DBG_VALUE $rbp, -20, !29, !17, debug-location !36
     $rcx = CMOVNE64rr killed $rcx, killed $rdx, implicit killed $eflags
     $rcx = OR64rr killed $rcx, killed $rsi, implicit-def dead $eflags
     $rdx = MOVSX64rm32 $rbx, 1, $noreg, 0, $noreg :: (load 4, align 8)

@@ -140,7 +140,7 @@ bool RegBankSelect::repairReg(
     return false;
   assert(ValMapping.NumBreakDowns == 1 && "Not yet implemented");
   // An empty range of new register means no repairing.
-  assert(NewVRegs.begin() != NewVRegs.end() && "We should not have to repair");
+  assert(!empty(NewVRegs) && "We should not have to repair");
 
   // Assume we are repairing a use and thus, the original reg will be
   // the source of the repairing.

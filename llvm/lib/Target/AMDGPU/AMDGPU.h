@@ -77,6 +77,10 @@ ModulePass *createAMDGPULowerIntrinsicsPass();
 void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
 extern char &AMDGPULowerIntrinsicsID;
 
+ModulePass *createAMDGPUFixFunctionBitcastsPass();
+void initializeAMDGPUFixFunctionBitcastsPass(PassRegistry &);
+extern char &AMDGPUFixFunctionBitcastsID;
+
 FunctionPass *createAMDGPULowerKernelArgumentsPass();
 void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);
 extern char &AMDGPULowerKernelArgumentsID;

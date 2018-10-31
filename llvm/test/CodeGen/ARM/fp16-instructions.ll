@@ -935,9 +935,9 @@ entry:
 ; CHECK-SOFTFP-FP16-T32:       vmov	[[S6:s[0-9]]], r0
 ; CHECK-SOFTFP-FP16-T32:       vldr	s0, .LCP{{.*}}
 ; CHECK-SOFTFP-FP16-T32:       vcvtb.f32.f16	[[S6]], [[S6]]
-; CHECK-SOFTFP-FP16-T32:       vmov.f32	[[S2:s[0-9]]], #-2.000000e+00
-; CHECK-SOFTFP-FP16-T32:       vcmp.f32	[[S6]], s0
 ; CHECK-SOFTFP-FP16-T32:       vldr	[[S4:s[0-9]]], .LCPI{{.*}}
+; CHECK-SOFTFP-FP16-T32:       vcmp.f32	[[S6]], s0
+; CHECK-SOFTFP-FP16-T32:       vmov.f32	[[S2:s[0-9]]], #-2.000000e+00
 ; CHECK-SOFTFP-FP16-T32:       vmrs	APSR_nzcv, fpscr
 ; CHECK-SOFTFP-FP16-T32:       it eq
 ; CHECK-SOFTFP-FP16-T32:       vmoveq.f32	[[S4]], [[S2]]
@@ -1043,7 +1043,7 @@ entry:
 
 ; CHECK-SPILL-RELOAD-LABEL: fn1:
 ; CHECK-SPILL-RELOAD:       vstr.16 s0, [sp, #{{.}}]  @ 2-byte Spill
-; CHECK-SPILL-RELOAD-NEXT:  bl  fn2
+; CHECK-SPILL-RELOAD:  bl  fn2
 ; CHECK-SPILL-RELOAD-NEXT:  vldr.16 s0, [sp, #{{.}}]  @ 2-byte Reload
 }
 

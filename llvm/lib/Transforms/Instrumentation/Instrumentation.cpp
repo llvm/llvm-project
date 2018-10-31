@@ -88,8 +88,8 @@ Comdat *llvm::GetOrCreateFunctionComdat(Function &F,
 /// initializeInstrumentation - Initialize all passes in the TransformUtils
 /// library.
 void llvm::initializeInstrumentation(PassRegistry &Registry) {
-  initializeAddressSanitizerLegacyPassPass(Registry);
-  initializeAddressSanitizerModuleLegacyPassPass(Registry);
+  initializeAddressSanitizerPass(Registry);
+  initializeAddressSanitizerModulePass(Registry);
   initializeBoundsCheckingLegacyPassPass(Registry);
   initializeControlHeightReductionLegacyPassPass(Registry);
   initializeGCOVProfilerLegacyPassPass(Registry);

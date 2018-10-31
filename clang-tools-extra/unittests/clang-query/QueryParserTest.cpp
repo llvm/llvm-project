@@ -90,6 +90,18 @@ TEST_F(QueryParserTest, Set) {
   ASSERT_TRUE(isa<SetExclusiveOutputQuery>(Q));
   EXPECT_EQ(&QuerySession::DetailedASTOutput, cast<SetExclusiveOutputQuery>(Q)->Var);
 
+  Q = parse("enable output detailed-ast");
+  ASSERT_TRUE(isa<EnableOutputQuery>(Q));
+  EXPECT_EQ(&QuerySession::DetailedASTOutput, cast<EnableOutputQuery>(Q)->Var);
+
+  Q = parse("enable");
+  ASSERT_TRUE(isa<InvalidQuery>(Q));
+  EXPECT_EQ("expected variable name", cast<InvalidQuery>(Q)->ErrStr);
+
+  Q = parse("disable output detailed-ast");
+  ASSERT_TRUE(isa<DisableOutputQuery>(Q));
+  EXPECT_EQ(&QuerySession::DetailedASTOutput, cast<DisableOutputQuery>(Q)->Var);
+
   Q = parse("set bind-root foo");
   ASSERT_TRUE(isa<InvalidQuery>(Q));
   EXPECT_EQ("expected 'true' or 'false', got 'foo'",
@@ -163,7 +175,7 @@ TEST_F(QueryParserTest, Comment) {
 TEST_F(QueryParserTest, Complete) {
   std::vector<llvm::LineEditor::Completion> Comps =
       QueryParser::complete("", 0, QS);
-  ASSERT_EQ(6u, Comps.size());
+  ASSERT_EQ(8u, Comps.size());
   EXPECT_EQ("help ", Comps[0].TypedText);
   EXPECT_EQ("help", Comps[0].DisplayText);
   EXPECT_EQ("let ", Comps[1].TypedText);
@@ -174,13 +186,34 @@ TEST_F(QueryParserTest, Complete) {
   EXPECT_EQ("quit", Comps[3].DisplayText);
   EXPECT_EQ("set ", Comps[4].TypedText);
   EXPECT_EQ("set", Comps[4].DisplayText);
-  EXPECT_EQ("unlet ", Comps[5].TypedText);
-  EXPECT_EQ("unlet", Comps[5].DisplayText);
+  EXPECT_EQ("enable ", Comps[5].TypedText);
+  EXPECT_EQ("enable", Comps[5].DisplayText);
+  EXPECT_EQ("disable ", Comps[6].TypedText);
+  EXPECT_EQ("disable", Comps[6].DisplayText);
+  EXPECT_EQ("unlet ", Comps[7].TypedText);
+  EXPECT_EQ("unlet", Comps[7].DisplayText);
 
   Comps = QueryParser::complete("set o", 5, QS);
   ASSERT_EQ(1u, Comps.size());
   EXPECT_EQ("utput ", Comps[0].TypedText);
   EXPECT_EQ("output", Comps[0].DisplayText);
+
+  Comps = QueryParser::complete("enable ", 7, QS);
+  ASSERT_EQ(1u, Comps.size());
+  EXPECT_EQ("output ", Comps[0].TypedText);
+  EXPECT_EQ("output", Comps[0].DisplayText);
+
+  Comps = QueryParser::complete("enable output ", 14, QS);
+  ASSERT_EQ(4u, Comps.size());
+
+  EXPECT_EQ("diag ", Comps[0].TypedText);
+  EXPECT_EQ("diag", Comps[0].DisplayText);
+  EXPECT_EQ("print ", Comps[1].TypedText);
+  EXPECT_EQ("print", Comps[1].DisplayText);
+  EXPECT_EQ("detailed-ast ", Comps[2].TypedText);
+  EXPECT_EQ("detailed-ast", Comps[2].DisplayText);
+  EXPECT_EQ("dump ", Comps[3].TypedText);
+  EXPECT_EQ("dump", Comps[3].DisplayText);
 
   Comps = QueryParser::complete("match while", 11, QS);
   ASSERT_EQ(1u, Comps.size());

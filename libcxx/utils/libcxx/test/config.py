@@ -585,7 +585,7 @@ class Configuration(object):
             self.cxx.flags += ['-arch', arch]
             self.cxx.flags += ['-m' + name + '-version-min=' + version]
 
-        # Disable availability unless explicitely requested
+        # Disable availability unless explicitly requested
         if not self.with_availability:
             self.cxx.flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
         # FIXME(EricWF): variant_size.pass.cpp requires a slightly larger
