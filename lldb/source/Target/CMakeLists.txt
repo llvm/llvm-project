@@ -30,6 +30,7 @@ add_lldb_library(lldbTarget
   SectionLoadList.cpp
   StackFrame.cpp
   StackFrameList.cpp
+  StackFrameRecognizer.cpp
   StackID.cpp
   StopInfo.cpp
   StructuredDataPlugin.cpp

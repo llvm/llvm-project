@@ -544,6 +544,8 @@ public:
 
   void CalculateExecutionContext(ExecutionContext &exe_ctx) override;
 
+  lldb::RecognizedStackFrameSP GetRecognizedFrame();
+
 protected:
   friend class StackFrameList;
 
@@ -578,6 +580,7 @@ private:
   ValueObjectList m_variable_list_value_objects; // Value objects for each
                                                  // variable in
                                                  // m_variable_list_sp
+  lldb::RecognizedStackFrameSP m_recognized_frame_sp;
   StreamString m_disassembly;
   std::recursive_mutex m_mutex;
 
