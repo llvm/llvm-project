@@ -9,7 +9,7 @@
 # RUN: ld.lld %t.o %t.so -o %t -version-script %t.script
 # RUN: llvm-readelf -r --symbols %t | FileCheck %s
 
-# CHECK:      Relocation section '.rela.plt' at offset 0x290 contains 1 entries:
+# CHECK:      Relocation section '.rela.plt' at offset {{.*}} contains 1 entries:
 # CHECK:        R_X86_64_JUMP_SLOT 0000000000201020 foo + 0
 
 # CHECK:      Symbol table '.dynsym' contains 2 entries:
@@ -17,5 +17,6 @@
 # CHECK-NEXT:     0: 0000000000000000     0 NOTYPE  LOCAL  DEFAULT  UND @
 # CHECK-NEXT:     1: 0000000000201020     0 FUNC    GLOBAL DEFAULT  UND foo@
 
+.globl _start
 _start:
   movl $foo - ., %eax
