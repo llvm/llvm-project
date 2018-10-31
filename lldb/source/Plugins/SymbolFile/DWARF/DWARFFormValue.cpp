@@ -233,18 +233,23 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
       m_value.value.uval =
           data.GetMaxU64(offset_ptr, DWARFUnit::IsDWARF64(m_cu) ? 8 : 4);
       break;
+    case DW_FORM_addrx:
     case DW_FORM_strx:
       m_value.value.uval = data.GetULEB128(offset_ptr);
       break;
+    case DW_FORM_addrx1:
     case DW_FORM_strx1:
       m_value.value.uval = data.GetU8(offset_ptr);
       break;
+    case DW_FORM_addrx2:
     case DW_FORM_strx2:
       m_value.value.uval = data.GetU16(offset_ptr);
       break;
+    case DW_FORM_addrx3:
     case DW_FORM_strx3:
       m_value.value.uval = data.GetMaxU64(offset_ptr, 3);
       break;
+    case DW_FORM_addrx4:
     case DW_FORM_strx4:
       m_value.value.uval = data.GetU32(offset_ptr);
       break;
@@ -376,6 +381,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
     return true;
 
     // 1 byte values
+    case DW_FORM_addrx1:
     case DW_FORM_data1:
     case DW_FORM_flag:
     case DW_FORM_ref1:
@@ -384,6 +390,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
       return true;
 
     // 2 byte values
+    case DW_FORM_addrx2:
     case DW_FORM_data2:
     case DW_FORM_ref2:
     case DW_FORM_strx2:
@@ -391,6 +398,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
       return true;
 
     // 3 byte values
+    case DW_FORM_addrx3:
     case DW_FORM_strx3:
       *offset_ptr += 3;
       return true;
@@ -403,6 +411,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
       return true;
 
     // 4 byte values
+    case DW_FORM_addrx4:
     case DW_FORM_data4:
     case DW_FORM_ref4:
     case DW_FORM_strx4:
@@ -417,6 +426,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
       return true;
 
     // signed or unsigned LEB 128 values
+    case DW_FORM_addrx:
     case DW_FORM_sdata:
     case DW_FORM_udata:
     case DW_FORM_ref_udata:
@@ -625,7 +635,9 @@ dw_addr_t DWARFFormValue::Address() const {
     return Unsigned();
 
   assert(m_cu);
-  assert(m_form == DW_FORM_GNU_addr_index);
+  assert(m_form == DW_FORM_GNU_addr_index || m_form == DW_FORM_addrx ||
+         m_form == DW_FORM_addrx1 || m_form == DW_FORM_addrx2 ||
+         m_form == DW_FORM_addrx3 || m_form == DW_FORM_addrx4);
 
   if (!symbol_file)
     return 0;
@@ -798,6 +810,7 @@ int DWARFFormValue::Compare(const DWARFFormValue &a_value,
 bool DWARFFormValue::FormIsSupported(dw_form_t form) {
   switch (form) {
     case DW_FORM_addr:
+    case DW_FORM_addrx:
     case DW_FORM_block2:
     case DW_FORM_block4:
     case DW_FORM_data2:
