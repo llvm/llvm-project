@@ -73,6 +73,11 @@ findTaskInputsOutputs(Task *T, ValueSet &Inputs, ValueSet &Outputs,
   for (Spindle *S : depth_first<InTask<Spindle *>>(T->getEntrySpindle())) {
     DEBUG(dbgs() << "Examining spindle for inputs/outputs: " << *S << "\n");
     for (BasicBlock *BB : S->blocks()) {
+      // Skip basic blocks that are successors of detached rethrows.  They're
+      // dead anyway.
+      if (isSuccessorOfDetachedRethrow(BB))
+        continue;
+
       // If a used value is defined outside the region, it's an input.  If an
       // instruction is used outside the region, it's an output.
       for (Instruction &II : *BB) {
