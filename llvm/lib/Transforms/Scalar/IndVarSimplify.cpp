@@ -595,41 +595,20 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
             !isSafeToExpand(ExitValue, *SE))
           continue;
 
-        // Computing the value outside of the loop brings no benefit if :
-        //  - it is definitely used inside the loop in a way which can not be
-        //    optimized away.
-        //  - no use outside of the loop can take advantage of hoisting the
-        //    computation out of the loop
+        // Computing the value outside of the loop brings no benefit if it is
+        // definitely used inside the loop in a way which can not be optimized
+        // away.
         if (ExitValue->getSCEVType()>=scMulExpr) {
           bool HasHardInternalUses = false;
-          bool HasSoftExternalUses = false;
           for (auto *IB : Inst->users()) {
             Instruction *UseInstr = cast<Instruction>(IB);
             unsigned Opc = UseInstr->getOpcode();
-            if (L->contains(UseInstr)) {
-              if (Opc == Instruction::Call)
-                HasHardInternalUses = true;
-            } else {
-              if (Opc == Instruction::PHI) {
-                // Do not count the Phi as a use. LCSSA may have inserted
-                // plenty of trivial ones.
-                for (auto *PB : UseInstr->users()) {
-                  unsigned PhiOpc = cast<Instruction>(PB)->getOpcode();
-                  if (PhiOpc != Instruction::Call &&
-                      PhiOpc != Instruction::Ret) {
-                    HasSoftExternalUses = true;
-                    break;
-                  }
-                }
-                continue;
-              }
-              if (Opc != Instruction::Call && Opc != Instruction::Ret) {
-                HasSoftExternalUses = true;
-                break;
-              }
+            if (L->contains(UseInstr) && Opc == Instruction::Call) {
+              HasHardInternalUses = true;
+              break;
             }
           }
-          if (HasHardInternalUses && !HasSoftExternalUses)
+          if (HasHardInternalUses)
             continue;
         }
 

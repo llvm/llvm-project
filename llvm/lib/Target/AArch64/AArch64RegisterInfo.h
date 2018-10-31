@@ -30,6 +30,11 @@ class AArch64RegisterInfo final : public AArch64GenRegisterInfo {
 public:
   AArch64RegisterInfo(const Triple &TT);
 
+  // FIXME: This should be tablegen'd like getDwarfRegNum is
+  int getSEHRegNum(unsigned i) const {
+    return getEncodingValue(i);
+  }
+
   bool isReservedReg(const MachineFunction &MF, unsigned Reg) const;
   bool isAnyArgRegReserved(const MachineFunction &MF) const;
   void emitReservedArgRegCallError(const MachineFunction &MF) const;

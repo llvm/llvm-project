@@ -20,23 +20,43 @@ void PredicateExpander::expandTrue(raw_ostream &OS) { OS << "true"; }
 void PredicateExpander::expandFalse(raw_ostream &OS) { OS << "false"; }
 
 void PredicateExpander::expandCheckImmOperand(raw_ostream &OS, int OpIndex,
-                                              int ImmVal) {
+                                              int ImmVal,
+                                              StringRef FunctionMapper) {
+  if (!FunctionMapper.empty())
+    OS << FunctionMapper << "(";
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
-     << ").getImm() " << (shouldNegate() ? "!= " : "== ") << ImmVal;
+     << ").getImm()";
+  OS << (FunctionMapper.empty() ? " " : ") ");
+  OS << (shouldNegate() ? "!= " : "== ") << ImmVal;
 }
 
 void PredicateExpander::expandCheckImmOperand(raw_ostream &OS, int OpIndex,
-                                              StringRef ImmVal) {
+                                              StringRef ImmVal,
+                                              StringRef FunctionMapper) {
+  if (!FunctionMapper.empty())
+    OS << FunctionMapper << "(";
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
-     << ").getImm() " << (shouldNegate() ? "!= " : "== ") << ImmVal;
+     << ").getImm()";
+
+  OS << (FunctionMapper.empty() ? "" : ")");
+  if (ImmVal.empty())
+    return;
+  OS << (shouldNegate() ? " != " : " == ") << ImmVal;
 }
 
 void PredicateExpander::expandCheckRegOperand(raw_ostream &OS, int OpIndex,
-                                              const Record *Reg) {
+                                              const Record *Reg,
+                                              StringRef FunctionMapper) {
   assert(Reg->isSubClassOf("Register") && "Expected a register Record!");
 
+  if (!FunctionMapper.empty())
+    OS << FunctionMapper << "(";
   OS << "MI" << (isByRef() ? "." : "->") << "getOperand(" << OpIndex
-     << ").getReg() " << (shouldNegate() ? "!= " : "== ");
+     << ").getReg()";
+  OS << (FunctionMapper.empty() ? "" : ")");
+  if (!Reg)
+    return;
+  OS << (shouldNegate() ? " != " : " == ");
   const StringRef Str = Reg->getValueAsString("Namespace");
   if (!Str.empty())
     OS << Str << "::";
@@ -137,7 +157,7 @@ void PredicateExpander::expandPredicateSequence(raw_ostream &OS,
 void PredicateExpander::expandTIIFunctionCall(raw_ostream &OS,
                                               StringRef MethodName) {
   OS << (shouldNegate() ? "!" : "");
-  OS << TargetName << (shouldExpandForMC() ? "_MC::" : "GenInstrInfo::");
+  OS << TargetName << (shouldExpandForMC() ? "_MC::" : "InstrInfo::");
   OS << MethodName << (isByRef() ? "(MI)" : "(*MI)");
 }
 
@@ -266,18 +286,30 @@ void PredicateExpander::expandPredicate(raw_ostream &OS, const Record *Rec) {
 
   if (Rec->isSubClassOf("CheckRegOperand"))
     return expandCheckRegOperand(OS, Rec->getValueAsInt("OpIndex"),
-                                 Rec->getValueAsDef("Reg"));
+                                 Rec->getValueAsDef("Reg"),
+                                 Rec->getValueAsString("FunctionMapper"));
+
+  if (Rec->isSubClassOf("CheckRegOperandSimple"))
+    return expandCheckRegOperand(OS, Rec->getValueAsInt("OpIndex"),
+                                 nullptr,
+                                 Rec->getValueAsString("FunctionMapper"));
 
   if (Rec->isSubClassOf("CheckInvalidRegOperand"))
     return expandCheckInvalidRegOperand(OS, Rec->getValueAsInt("OpIndex"));
 
   if (Rec->isSubClassOf("CheckImmOperand"))
     return expandCheckImmOperand(OS, Rec->getValueAsInt("OpIndex"),
-                                 Rec->getValueAsInt("ImmVal"));
+                                 Rec->getValueAsInt("ImmVal"),
+                                 Rec->getValueAsString("FunctionMapper"));
 
   if (Rec->isSubClassOf("CheckImmOperand_s"))
     return expandCheckImmOperand(OS, Rec->getValueAsInt("OpIndex"),
-                                 Rec->getValueAsString("ImmVal"));
+                                 Rec->getValueAsString("ImmVal"),
+                                 Rec->getValueAsString("FunctionMapper"));
+
+  if (Rec->isSubClassOf("CheckImmOperandSimple"))
+    return expandCheckImmOperand(OS, Rec->getValueAsInt("OpIndex"), "", 
+                                 Rec->getValueAsString("FunctionMapper"));
 
   if (Rec->isSubClassOf("CheckSameRegOperand"))
     return expandCheckSameRegOperand(OS, Rec->getValueAsInt("FirstIndex"),

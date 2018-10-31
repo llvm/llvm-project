@@ -106,27 +106,49 @@ class CheckSameRegOperand<int First, int Second> : MCInstPredicate {
   int SecondIndex = Second;
 }
 
+// Base class for checks on register/immediate operands.
+// It allows users to define checks like:
+//    MyFunction(MI->getOperand(Index).getImm()) == Val;
+//
+// In the example above, `MyFunction` is a function that takes as input an
+// immediate operand value, and returns another value. Field `FunctionMapper` is
+// the name of the function to call on the operand value.
+class CheckOperandBase<int Index, string Fn = ""> : MCOperandPredicate<Index> {
+  string FunctionMapper = Fn;
+}
+
 // Check that the machine register operand at position `Index` references
 // register R. This predicate assumes that we already checked that the machine
 // operand at position `Index` is a register operand.
-class CheckRegOperand<int Index, Register R> : MCOperandPredicate<Index> {
+class CheckRegOperand<int Index, Register R> : CheckOperandBase<Index> {
   Register Reg = R;
 }
 
 // Check if register operand at index `Index` is the invalid register.
-class CheckInvalidRegOperand<int Index> : MCOperandPredicate<Index>;
+class CheckInvalidRegOperand<int Index> : CheckOperandBase<Index>;
 
 // Check that the operand at position `Index` is immediate `Imm`.
-class CheckImmOperand<int Index, int Imm> : MCOperandPredicate<Index> {
+// If field `FunctionMapper` is a non-empty string, then function
+// `FunctionMapper` is applied to the operand value, and the return value is then
+// compared against `Imm`.
+class CheckImmOperand<int Index, int Imm> : CheckOperandBase<Index> {
   int ImmVal = Imm;
 }
 
 // Similar to CheckImmOperand, however the immediate is not a literal number.
 // This is useful when we want to compare the value of an operand against an
 // enum value, and we know the actual integer value of that enum.
-class CheckImmOperand_s<int Index, string Value> : MCOperandPredicate<Index> {
+class CheckImmOperand_s<int Index, string Value> : CheckOperandBase<Index> {
   string ImmVal = Value;
 }
+
+// Expands to a call to `FunctionMapper` if field `FunctionMapper` is set.
+// Otherwise, it expands to a CheckNot<CheckInvalidRegOperand<Index>>.
+class CheckRegOperandSimple<int Index> : CheckOperandBase<Index>;
+
+// Expands to a call to `FunctionMapper` if field `FunctionMapper` is set.
+// Otherwise, it simply evaluates to TruePred.
+class CheckImmOperandSimple<int Index> : CheckOperandBase<Index>;
 
 // Check that the operand at position `Index` is immediate value zero.
 class CheckZeroOperand<int Index> : CheckImmOperand<Index, 0>;
@@ -206,13 +228,13 @@ class FunctionPredicateBase<string name, MCStatement body> {
   MCStatement Body = body;
 }
 
-// Check that a call to method `Name` in class "XXXGenInstrInfo" (where XXX is
+// Check that a call to method `Name` in class "XXXInstrInfo" (where XXX is
 // the name of a target) returns true.
 //
 // TIIPredicate definitions are used to model calls to the target-specific
 // InstrInfo. A TIIPredicate is treated specially by the InstrInfoEmitter
 // tablegen backend, which will use it to automatically generate a definition in
-// the target specific `GenInstrInfo` class.
+// the target specific `InstrInfo` class.
 //
 // There cannot be multiple TIIPredicate definitions with the same name for the
 // same target.
