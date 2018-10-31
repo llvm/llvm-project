@@ -45,6 +45,7 @@
 
 #define DEBUG_TYPE "llvm-mca"
 
+namespace llvm {
 namespace mca {
 
 /// A view that prints out generic instruction information.
@@ -63,5 +64,6 @@ public:
   void printView(llvm::raw_ostream &OS) const override;
 };
 } // namespace mca
+} // namespace llvm
 
 #endif

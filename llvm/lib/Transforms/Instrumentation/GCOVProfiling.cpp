@@ -572,9 +572,8 @@ void GCOVProfiler::emitProfileNotes() {
 
       // Add the function line number to the lines of the entry block
       // to have a counter for the function definition.
-      Func.getBlock(&EntryBlock)
-          .getFile(SP->getFilename())
-          .addLine(SP->getLine());
+      uint32_t Line = SP->getLine();
+      Func.getBlock(&EntryBlock).getFile(SP->getFilename()).addLine(Line);
 
       for (auto &BB : F) {
         GCOVBlock &Block = Func.getBlock(&BB);
@@ -587,7 +586,6 @@ void GCOVProfiler::emitProfileNotes() {
           Block.addEdge(Func.getReturnBlock());
         }
 
-        uint32_t Line = 0;
         for (auto &I : BB) {
           // Debug intrinsic locations correspond to the location of the
           // declaration, not necessarily any statements or expressions.
@@ -609,6 +607,7 @@ void GCOVProfiler::emitProfileNotes() {
           GCOVLines &Lines = Block.getFile(SP->getFilename());
           Lines.addLine(Loc.getLine());
         }
+        Line = 0;
       }
       EdgeDestinations += Func.getEdgeDestinations();
     }

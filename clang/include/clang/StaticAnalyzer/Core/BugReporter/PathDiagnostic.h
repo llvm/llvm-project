@@ -118,7 +118,7 @@ public:
     /// Only runs visitors, no output generated.
     None,
 
-    /// Used for HTML and text output.
+    /// Used for HTML, SARIF, and text output.
     Minimal,
 
     /// Used for plist output, used for "arrows" generation.

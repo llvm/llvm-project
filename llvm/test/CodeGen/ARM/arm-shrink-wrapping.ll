@@ -104,10 +104,10 @@ declare i32 @doSomething(i32, i32*)
 ; Next BB.
 ; CHECK: [[LOOP:LBB[0-9_]+]]: @ %for.body
 ; CHECK: mov{{(\.w)?}} [[TMP:r[0-9]+]], #1
-; ARM: subs [[IV]], [[IV]], #1
-; THUMB: subs [[IV]], #1
-; ARM-NEXT: add [[SUM]], [[TMP]], [[SUM]]
-; THUMB-NEXT: add [[SUM]], [[TMP]]
+; ARM: add [[SUM]], [[TMP]], [[SUM]]
+; THUMB: add [[SUM]], [[TMP]]
+; ARM-NEXT: subs [[IV]], [[IV]], #1
+; THUMB-NEXT: subs [[IV]], #1
 ; CHECK-NEXT: bne [[LOOP]]
 ;
 ; Next BB.
@@ -169,10 +169,10 @@ declare i32 @something(...)
 ; Next BB.
 ; CHECK: [[LOOP_LABEL:LBB[0-9_]+]]: @ %for.body
 ; CHECK: mov{{(\.w)?}} [[TMP:r[0-9]+]], #1
-; ARM: subs [[IV]], [[IV]], #1
-; THUMB: subs [[IV]], #1
 ; ARM: add [[SUM]], [[TMP]], [[SUM]]
 ; THUMB: add [[SUM]], [[TMP]]
+; ARM: subs [[IV]], [[IV]], #1
+; THUMB: subs [[IV]], #1
 ; CHECK-NEXT: bne [[LOOP_LABEL]]
 ; Next BB.
 ; CHECK: @ %for.exit
@@ -228,10 +228,10 @@ for.end:                                          ; preds = %for.body
 ; Next BB.
 ; CHECK: [[LOOP:LBB[0-9_]+]]: @ %for.body
 ; CHECK: mov{{(\.w)?}} [[TMP:r[0-9]+]], #1
-; ARM: subs [[IV]], [[IV]], #1
-; THUMB: subs [[IV]], #1
-; ARM-NEXT: add [[SUM]], [[TMP]], [[SUM]]
-; THUMB-NEXT: add [[SUM]], [[TMP]]
+; ARM: add [[SUM]], [[TMP]], [[SUM]]
+; THUMB: add [[SUM]], [[TMP]]
+; ARM-NEXT: subs [[IV]], [[IV]], #1
+; THUMB-NEXT: subs [[IV]], #1
 ; CHECK-NEXT: bne [[LOOP]]
 ;
 ; Next BB.
@@ -307,10 +307,10 @@ declare void @somethingElse(...)
 ; Next BB.
 ; CHECK: [[LOOP:LBB[0-9_]+]]: @ %for.body
 ; CHECK: mov{{(\.w)?}} [[TMP:r[0-9]+]], #1
-; ARM: subs [[IV]], [[IV]], #1
-; THUMB: subs [[IV]], #1
-; ARM-NEXT: add [[SUM]], [[TMP]], [[SUM]]
-; THUMB-NEXT: add [[SUM]], [[TMP]]
+; ARM: add [[SUM]], [[TMP]], [[SUM]]
+; THUMB: add [[SUM]], [[TMP]]
+; ARM-NEXT: subs [[IV]], [[IV]], #1
+; THUMB-NEXT: subs [[IV]], #1
 ; CHECK-NEXT: bne [[LOOP]]
 ;
 ; Next BB.

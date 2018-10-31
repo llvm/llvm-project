@@ -234,8 +234,6 @@ define <8 x i32> @test10(<8 x i32>* %a) {
 ; SSE-LABEL: test10:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
-; SSE-NEXT:    movdqa 16(%rdi), %xmm1
-; SSE-NEXT:    psrad %xmm0, %xmm1
 ; SSE-NEXT:    psrad $1, %xmm0
 ; SSE-NEXT:    retq
 ;

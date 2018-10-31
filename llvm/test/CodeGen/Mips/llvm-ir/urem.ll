@@ -35,64 +35,32 @@
 define signext i1 @urem_i1(i1 signext %a, i1 signext %b) {
 ; GP32-LABEL: urem_i1:
 ; GP32:       # %bb.0: # %entry
-; GP32-NEXT:    andi $1, $5, 1
-; GP32-NEXT:    andi $2, $4, 1
-; GP32-NEXT:    divu $zero, $2, $1
-; GP32-NEXT:    teq $1, $zero, 7
-; GP32-NEXT:    mfhi $1
-; GP32-NEXT:    andi $1, $1, 1
 ; GP32-NEXT:    jr $ra
-; GP32-NEXT:    negu $2, $1
+; GP32-NEXT:    addiu $2, $zero, 0
 ;
 ; GP32R6-LABEL: urem_i1:
 ; GP32R6:       # %bb.0: # %entry
-; GP32R6-NEXT:    andi $1, $5, 1
-; GP32R6-NEXT:    andi $2, $4, 1
-; GP32R6-NEXT:    modu $2, $2, $1
-; GP32R6-NEXT:    teq $1, $zero, 7
 ; GP32R6-NEXT:    jr $ra
-; GP32R6-NEXT:    negu $2, $2
+; GP32R6-NEXT:    addiu $2, $zero, 0
 ;
 ; GP64-LABEL: urem_i1:
 ; GP64:       # %bb.0: # %entry
-; GP64-NEXT:    andi $1, $5, 1
-; GP64-NEXT:    andi $2, $4, 1
-; GP64-NEXT:    divu $zero, $2, $1
-; GP64-NEXT:    teq $1, $zero, 7
-; GP64-NEXT:    mfhi $1
-; GP64-NEXT:    andi $1, $1, 1
 ; GP64-NEXT:    jr $ra
-; GP64-NEXT:    negu $2, $1
+; GP64-NEXT:    addiu $2, $zero, 0
 ;
 ; GP64R6-LABEL: urem_i1:
 ; GP64R6:       # %bb.0: # %entry
-; GP64R6-NEXT:    andi $1, $5, 1
-; GP64R6-NEXT:    andi $2, $4, 1
-; GP64R6-NEXT:    modu $2, $2, $1
-; GP64R6-NEXT:    teq $1, $zero, 7
 ; GP64R6-NEXT:    jr $ra
-; GP64R6-NEXT:    negu $2, $2
+; GP64R6-NEXT:    addiu $2, $zero, 0
 ;
 ; MMR3-LABEL: urem_i1:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    andi16 $2, $5, 1
-; MMR3-NEXT:    andi16 $3, $4, 1
-; MMR3-NEXT:    divu $zero, $3, $2
-; MMR3-NEXT:    teq $2, $zero, 7
-; MMR3-NEXT:    mfhi16 $2
-; MMR3-NEXT:    andi16 $2, $2, 1
-; MMR3-NEXT:    li16 $3, 0
-; MMR3-NEXT:    subu16 $2, $3, $2
+; MMR3-NEXT:    li16 $2, 0
 ; MMR3-NEXT:    jrc $ra
 ;
 ; MMR6-LABEL: urem_i1:
 ; MMR6:       # %bb.0: # %entry
-; MMR6-NEXT:    andi16 $2, $5, 1
-; MMR6-NEXT:    andi16 $3, $4, 1
-; MMR6-NEXT:    modu $3, $3, $2
-; MMR6-NEXT:    teq $2, $zero, 7
 ; MMR6-NEXT:    li16 $2, 0
-; MMR6-NEXT:    subu16 $2, $2, $3
 ; MMR6-NEXT:    jrc $ra
 entry:
   %r = urem i1 %a, %b

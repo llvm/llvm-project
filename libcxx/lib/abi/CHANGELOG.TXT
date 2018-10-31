@@ -13,7 +13,7 @@ Afterwards the ABI list should be updated to include the new changes.
 New entries should be added directly below the "Version" header.
 
 -----------
-Version 7.0
+Version 8.0
 -----------
 
 * r345260 - Making libc++ build under -fvisibility=hidden
@@ -43,6 +43,9 @@ Version 7.0
   Symbol removed: __ZNSt3__221__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv
   Symbol removed: __ZNSt3__119__start_std_streamsE
 
+-----------
+Version 7.0
+-----------
 
 * r338479 - Elementary string conversions for integral types
 

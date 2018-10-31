@@ -391,9 +391,7 @@ static PDB_SymType GetPdbSymType(TpiStream &tpi, TypeIndex ti) {
   // If this is an LF_MODIFIER, look through it to get the kind that it
   // modifies.  Note that it's not possible to have an LF_MODIFIER that
   // modifies another LF_MODIFIER, although this would handle that anyway.
-  ModifierRecord mr;
-  llvm::cantFail(TypeDeserializer::deserializeAs<ModifierRecord>(cvt, mr));
-  return GetPdbSymType(tpi, mr.ModifiedType);
+  return GetPdbSymType(tpi, LookThroughModifierRecord(cvt));
 }
 
 static clang::TagTypeKind TranslateUdtKind(const TagRecord &cr) {
@@ -775,6 +773,25 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbSymUid type_uid,
       lldb_private::Type::eResolveStateForward);
 }
 
+TypeSP SymbolFileNativePDB::CreateArrayType(PdbSymUid type_uid,
+                                            const ArrayRecord &ar) {
+  TypeSP element_type = GetOrCreateType(ar.ElementType);
+  uint64_t element_count = ar.Size / element_type->GetByteSize();
+
+  CompilerType element_ct = element_type->GetFullCompilerType();
+
+  CompilerType array_ct =
+      m_clang->CreateArrayType(element_ct, element_count, false);
+
+  Declaration decl;
+  TypeSP array_sp = std::make_shared<lldb_private::Type>(
+      type_uid.toOpaqueId(), m_clang->GetSymbolFile(), ConstString(), ar.Size,
+      nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
+      array_ct, lldb_private::Type::eResolveStateFull);
+  array_sp->SetEncodingType(element_type.get());
+  return array_sp;
+}
+
 TypeSP SymbolFileNativePDB::CreateType(PdbSymUid type_uid) {
   const PdbTypeSymId &tsid = type_uid.asTypeSym();
   TypeIndex index(tsid.index);
@@ -815,6 +832,12 @@ TypeSP SymbolFileNativePDB::CreateType(PdbSymUid type_uid) {
     UnionRecord ur;
     llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, ur));
     return CreateTagType(type_uid, ur);
+  }
+
+  if (cvt.kind() == LF_ARRAY) {
+    ArrayRecord ar;
+    llvm::cantFail(TypeDeserializer::deserializeAs<ArrayRecord>(cvt, ar));
+    return CreateArrayType(type_uid, ar);
   }
 
   return nullptr;
@@ -1442,6 +1465,25 @@ bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
   auto types_iter = m_types.find(uid.toOpaqueId());
   lldbassert(types_iter != m_types.end());
 
+  if (cvt.kind() == LF_MODIFIER) {
+    TypeIndex unmodified_type = LookThroughModifierRecord(cvt);
+    cvt = m_index->tpi().getType(unmodified_type);
+    // LF_MODIFIERS usually point to forward decls, so this is the one case
+    // where we won't have been able to resolve a forward decl to a full decl
+    // earlier on.  So we need to do that now.
+    if (IsForwardRefUdt(cvt)) {
+      llvm::Expected<TypeIndex> expected_full_ti =
+          m_index->tpi().findFullDeclForForwardRef(unmodified_type);
+      if (!expected_full_ti) {
+        llvm::consumeError(expected_full_ti.takeError());
+        return false;
+      }
+      cvt = m_index->tpi().getType(*expected_full_ti);
+      lldbassert(!IsForwardRefUdt(cvt));
+      unmodified_type = *expected_full_ti;
+    }
+    uid = PdbSymUid::makeTypeSymId(uid.tag(), unmodified_type, false);
+  }
   TypeIndex field_list_ti = GetFieldListIndex(cvt);
   CVType field_list_cvt = m_index->tpi().getType(field_list_ti);
   if (field_list_cvt.kind() != LF_FIELDLIST)

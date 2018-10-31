@@ -3,7 +3,7 @@
 ; CHECK: After WebAssembly Register Stackify:
 ; CHECK: bb.2.for.body:
 ; CHECK: [[REG:%[0-9]+]]:i32 = TEE_I32 {{.*}} fib2.c:6:7
-; CHECK-NEXT: DBG_VALUE debug-use [[REG]]:i32, debug-use $noreg, !"a", {{.*}} fib2.c:2:13
+; CHECK-NEXT: DBG_VALUE [[REG]]:i32, $noreg, !"a", {{.*}} fib2.c:2:13
 ; CHECK: After WebAssembly Register Coloring:
 
 ; ModuleID = 'fib2.bc'

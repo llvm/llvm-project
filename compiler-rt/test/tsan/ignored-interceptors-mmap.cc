@@ -1,7 +1,7 @@
 // RUN: %clangxx_tsan -O0 %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NORMAL
 // RUN: %env_tsan_opts=ignore_interceptors_accesses=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-IGNORE
-// XFAIL: freebsd
+// XFAIL: freebsd,netbsd
 
 #include <errno.h>
 #include <sys/mman.h>

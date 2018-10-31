@@ -209,7 +209,7 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
     // send) or send to 'super', parse this as a message send
     // expression.  We handle C++ and C separately, since C++ requires
     // much more complicated parsing.
-    if  (getLangOpts().ObjC1 && getLangOpts().CPlusPlus) {
+    if  (getLangOpts().ObjC && getLangOpts().CPlusPlus) {
       // Send to 'super'.
       if (Tok.is(tok::identifier) && Tok.getIdentifierInfo() == Ident_super &&
           NextToken().isNot(tok::period) &&
@@ -242,7 +242,7 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
       // adopt the expression for further analysis below.
       // FIXME: potentially-potentially evaluated expression above?
       Idx = ExprResult(static_cast<Expr*>(TypeOrExpr));
-    } else if (getLangOpts().ObjC1 && Tok.is(tok::identifier)) {
+    } else if (getLangOpts().ObjC && Tok.is(tok::identifier)) {
       IdentifierInfo *II = Tok.getIdentifierInfo();
       SourceLocation IILoc = Tok.getLocation();
       ParsedType ReceiverType;
@@ -312,7 +312,7 @@ ExprResult Parser::ParseInitializerWithPotentialDesignator() {
     // tokens are '...' or ']' or an objc message send.  If this is an objc
     // message send, handle it now.  An objc-message send is the start of
     // an assignment-expression production.
-    if (getLangOpts().ObjC1 && Tok.isNot(tok::ellipsis) &&
+    if (getLangOpts().ObjC && Tok.isNot(tok::ellipsis) &&
         Tok.isNot(tok::r_square)) {
       CheckArrayDesignatorSyntax(*this, Tok.getLocation(), Desig);
       return ParseAssignmentExprWithObjCMessageExprStart(

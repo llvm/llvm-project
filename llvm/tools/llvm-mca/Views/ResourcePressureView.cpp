@@ -16,9 +16,8 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
 namespace mca {
-
-using namespace llvm;
 
 ResourcePressureView::ResourcePressureView(const llvm::MCSubtargetInfo &sti,
                                            MCInstPrinter &Printer,
@@ -183,3 +182,4 @@ void ResourcePressureView::printResourcePressurePerInst(raw_ostream &OS) const {
   }
 }
 } // namespace mca
+} // namespace llvm

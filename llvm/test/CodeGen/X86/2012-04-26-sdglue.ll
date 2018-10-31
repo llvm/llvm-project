@@ -7,23 +7,19 @@
 define void @func(<4 x float> %a, <16 x i8> %b, <16 x i8> %c, <8 x float> %d, <8 x float> %e, <8 x float>* %f) nounwind ssp {
 ; CHECK-LABEL: func:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vmovdqu 0, %xmm3
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm3, %ymm0
-; CHECK-NEXT:    vpalignr {{.*#+}} xmm1 = xmm3[4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3]
-; CHECK-NEXT:    vmovdqu 32, %xmm3
-; CHECK-NEXT:    vpalignr {{.*#+}} xmm2 = xmm2[4,5,6,7,8,9,10,11,12,13,14,15],xmm3[0,1,2,3]
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; CHECK-NEXT:    vmulps %ymm0, %ymm0, %ymm0
-; CHECK-NEXT:    vmulps %ymm1, %ymm1, %ymm1
-; CHECK-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vaddps %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vmovdqu 0, %xmm0
+; CHECK-NEXT:    vpalignr {{.*#+}} xmm1 = xmm0[4,5,6,7,8,9,10,11,12,13,14,15],xmm1[0,1,2,3]
+; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; CHECK-NEXT:    vmulps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmulps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vaddps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmulps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vperm2f128 {{.*#+}} ymm0 = zero,zero,ymm0[0,1]
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vaddps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vhaddps %ymm4, %ymm0, %ymm0
 ; CHECK-NEXT:    vsubps %ymm0, %ymm0, %ymm0
-; CHECK-NEXT:    vhaddps %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vhaddps %ymm0, %ymm2, %ymm0
 ; CHECK-NEXT:    vmovaps %ymm0, (%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

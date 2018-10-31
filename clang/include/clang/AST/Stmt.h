@@ -193,9 +193,13 @@ protected:
   };
 
   class WhileStmtBitfields {
+    friend class ASTStmtReader;
     friend class WhileStmt;
 
     unsigned : NumStmtBits;
+
+    /// True if the WhileStmt has storage for a condition variable.
+    unsigned HasVar : 1;
 
     /// The location of the "while".
     SourceLocation WhileLoc;
@@ -251,6 +255,9 @@ protected:
     friend class ReturnStmt;
 
     unsigned : NumStmtBits;
+
+    /// True if this ReturnStmt has storage for an NRVO candidate.
+    unsigned HasNRVOCandidate : 1;
 
     /// The location of the "return".
     SourceLocation RetLoc;
@@ -1615,16 +1622,75 @@ public:
 };
 
 /// WhileStmt - This represents a 'while' stmt.
-class WhileStmt : public Stmt {
-  enum { VAR, COND, BODY, END_EXPR };
-  Stmt* SubExprs[END_EXPR];
+class WhileStmt final : public Stmt,
+                        private llvm::TrailingObjects<WhileStmt, Stmt *> {
+  friend TrailingObjects;
 
-public:
-  WhileStmt(const ASTContext &C, VarDecl *Var, Expr *cond, Stmt *body,
+  // WhileStmt is followed by several trailing objects,
+  // some of which optional. Note that it would be more
+  // convenient to put the optional trailing object at the end
+  // but this would affect children().
+  // The trailing objects are in order:
+  //
+  // * A "Stmt *" for the condition variable.
+  //    Present if and only if hasVarStorage(). This is in fact a "DeclStmt *".
+  //
+  // * A "Stmt *" for the condition.
+  //    Always present. This is in fact an "Expr *".
+  //
+  // * A "Stmt *" for the body.
+  //    Always present.
+  //
+  enum { VarOffset = 0, BodyOffsetFromCond = 1 };
+  enum { NumMandatoryStmtPtr = 2 };
+
+  unsigned varOffset() const { return VarOffset; }
+  unsigned condOffset() const { return VarOffset + hasVarStorage(); }
+  unsigned bodyOffset() const { return condOffset() + BodyOffsetFromCond; }
+
+  unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
+    return NumMandatoryStmtPtr + hasVarStorage();
+  }
+
+  /// Build a while statement.
+  WhileStmt(const ASTContext &Ctx, VarDecl *Var, Expr *Cond, Stmt *Body,
             SourceLocation WL);
 
   /// Build an empty while statement.
-  explicit WhileStmt(EmptyShell Empty) : Stmt(WhileStmtClass, Empty) {}
+  explicit WhileStmt(EmptyShell Empty, bool HasVar);
+
+public:
+  /// Create a while statement.
+  static WhileStmt *Create(const ASTContext &Ctx, VarDecl *Var, Expr *Cond,
+                           Stmt *Body, SourceLocation WL);
+
+  /// Create an empty while statement optionally with storage for
+  /// a condition variable.
+  static WhileStmt *CreateEmpty(const ASTContext &Ctx, bool HasVar);
+
+  /// True if this WhileStmt has storage for a condition variable.
+  bool hasVarStorage() const { return WhileStmtBits.HasVar; }
+
+  Expr *getCond() {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  const Expr *getCond() const {
+    return reinterpret_cast<Expr *>(getTrailingObjects<Stmt *>()[condOffset()]);
+  }
+
+  void setCond(Expr *Cond) {
+    getTrailingObjects<Stmt *>()[condOffset()] = reinterpret_cast<Stmt *>(Cond);
+  }
+
+  Stmt *getBody() { return getTrailingObjects<Stmt *>()[bodyOffset()]; }
+  const Stmt *getBody() const {
+    return getTrailingObjects<Stmt *>()[bodyOffset()];
+  }
+
+  void setBody(Stmt *Body) {
+    getTrailingObjects<Stmt *>()[bodyOffset()] = Body;
+  }
 
   /// Retrieve the variable declared in this "while" statement, if any.
   ///
@@ -1634,28 +1700,36 @@ public:
   ///   // ...
   /// }
   /// \endcode
-  VarDecl *getConditionVariable() const;
-  void setConditionVariable(const ASTContext &C, VarDecl *V);
+  VarDecl *getConditionVariable();
+  const VarDecl *getConditionVariable() const {
+    return const_cast<WhileStmt *>(this)->getConditionVariable();
+  }
+
+  /// Set the condition variable of this while statement.
+  /// The while statement must have storage for it.
+  void setConditionVariable(const ASTContext &Ctx, VarDecl *V);
 
   /// If this WhileStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
-  const DeclStmt *getConditionVariableDeclStmt() const {
-    return reinterpret_cast<DeclStmt*>(SubExprs[VAR]);
+  DeclStmt *getConditionVariableDeclStmt() {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
   }
 
-  Expr *getCond() { return reinterpret_cast<Expr*>(SubExprs[COND]); }
-  const Expr *getCond() const { return reinterpret_cast<Expr*>(SubExprs[COND]);}
-  void setCond(Expr *E) { SubExprs[COND] = reinterpret_cast<Stmt*>(E); }
-  Stmt *getBody() { return SubExprs[BODY]; }
-  const Stmt *getBody() const { return SubExprs[BODY]; }
-  void setBody(Stmt *S) { SubExprs[BODY] = S; }
+  const DeclStmt *getConditionVariableDeclStmt() const {
+    return hasVarStorage() ? static_cast<DeclStmt *>(
+                                 getTrailingObjects<Stmt *>()[varOffset()])
+                           : nullptr;
+  }
 
   SourceLocation getWhileLoc() const { return WhileStmtBits.WhileLoc; }
   void setWhileLoc(SourceLocation L) { WhileStmtBits.WhileLoc = L; }
 
   SourceLocation getBeginLoc() const { return getWhileLoc(); }
-
-  SourceLocation getEndLoc() const { return getBody()->getEndLoc(); }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return getBody()->getEndLoc();
+  }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == WhileStmtClass;
@@ -1663,7 +1737,9 @@ public:
 
   // Iterators
   child_range children() {
-    return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
+    return child_range(getTrailingObjects<Stmt *>(),
+                       getTrailingObjects<Stmt *>() +
+                           numTrailingObjects(OverloadToken<Stmt *>()));
   }
 };
 
@@ -1926,40 +2002,67 @@ public:
 /// return a value, and it allows returning a value in functions declared to
 /// return void.  We explicitly model this in the AST, which means you can't
 /// depend on the return type of the function and the presence of an argument.
-class ReturnStmt : public Stmt {
+class ReturnStmt final
+    : public Stmt,
+      private llvm::TrailingObjects<ReturnStmt, const VarDecl *> {
+  friend TrailingObjects;
+
+  /// The return expression.
   Stmt *RetExpr;
-  const VarDecl *NRVOCandidate;
 
-public:
-  explicit ReturnStmt(SourceLocation RL) : ReturnStmt(RL, nullptr, nullptr) {}
+  // ReturnStmt is followed optionally by a trailing "const VarDecl *"
+  // for the NRVO candidate. Present if and only if hasNRVOCandidate().
 
-  ReturnStmt(SourceLocation RL, Expr *E, const VarDecl *NRVOCandidate)
-      : Stmt(ReturnStmtClass), RetExpr((Stmt *)E),
-        NRVOCandidate(NRVOCandidate) {
-    ReturnStmtBits.RetLoc = RL;
+  /// True if this ReturnStmt has storage for an NRVO candidate.
+  bool hasNRVOCandidate() const { return ReturnStmtBits.HasNRVOCandidate; }
+
+  unsigned numTrailingObjects(OverloadToken<const VarDecl *>) const {
+    return hasNRVOCandidate();
   }
 
-  /// Build an empty return expression.
-  explicit ReturnStmt(EmptyShell Empty) : Stmt(ReturnStmtClass, Empty) {}
+  /// Build a return statement.
+  ReturnStmt(SourceLocation RL, Expr *E, const VarDecl *NRVOCandidate);
 
-  const Expr *getRetValue() const;
-  Expr *getRetValue();
-  void setRetValue(Expr *E) { RetExpr = reinterpret_cast<Stmt*>(E); }
+  /// Build an empty return statement.
+  explicit ReturnStmt(EmptyShell Empty, bool HasNRVOCandidate);
 
-  SourceLocation getReturnLoc() const { return ReturnStmtBits.RetLoc; }
-  void setReturnLoc(SourceLocation L) { ReturnStmtBits.RetLoc = L; }
+public:
+  /// Create a return statement.
+  static ReturnStmt *Create(const ASTContext &Ctx, SourceLocation RL, Expr *E,
+                            const VarDecl *NRVOCandidate);
+
+  /// Create an empty return statement, optionally with
+  /// storage for an NRVO candidate.
+  static ReturnStmt *CreateEmpty(const ASTContext &Ctx, bool HasNRVOCandidate);
+
+  Expr *getRetValue() { return reinterpret_cast<Expr *>(RetExpr); }
+  const Expr *getRetValue() const { return reinterpret_cast<Expr *>(RetExpr); }
+  void setRetValue(Expr *E) { RetExpr = reinterpret_cast<Stmt *>(E); }
 
   /// Retrieve the variable that might be used for the named return
   /// value optimization.
   ///
   /// The optimization itself can only be performed if the variable is
   /// also marked as an NRVO object.
-  const VarDecl *getNRVOCandidate() const { return NRVOCandidate; }
-  void setNRVOCandidate(const VarDecl *Var) { NRVOCandidate = Var; }
+  const VarDecl *getNRVOCandidate() const {
+    return hasNRVOCandidate() ? *getTrailingObjects<const VarDecl *>()
+                              : nullptr;
+  }
+
+  /// Set the variable that might be used for the named return value
+  /// optimization. The return statement must have storage for it,
+  /// which is the case if and only if hasNRVOCandidate() is true.
+  void setNRVOCandidate(const VarDecl *Var) {
+    assert(hasNRVOCandidate() &&
+           "This return statement has no storage for an NRVO candidate!");
+    *getTrailingObjects<const VarDecl *>() = Var;
+  }
+
+  SourceLocation getReturnLoc() const { return ReturnStmtBits.RetLoc; }
+  void setReturnLoc(SourceLocation L) { ReturnStmtBits.RetLoc = L; }
 
   SourceLocation getBeginLoc() const { return getReturnLoc(); }
-
-  SourceLocation getEndLoc() const {
+  SourceLocation getEndLoc() const LLVM_READONLY {
     return RetExpr ? RetExpr->getEndLoc() : getReturnLoc();
   }
 
@@ -1969,7 +2072,8 @@ public:
 
   // Iterators
   child_range children() {
-    if (RetExpr) return child_range(&RetExpr, &RetExpr+1);
+    if (RetExpr)
+      return child_range(&RetExpr, &RetExpr + 1);
     return child_range(child_iterator(), child_iterator());
   }
 };

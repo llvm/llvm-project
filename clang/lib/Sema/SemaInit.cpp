@@ -5381,7 +5381,7 @@ void InitializationSequence::InitializeFrom(Sema &S,
   Expr *Initializer = nullptr;
   if (Args.size() == 1) {
     Initializer = Args[0];
-    if (S.getLangOpts().ObjC1) {
+    if (S.getLangOpts().ObjC) {
       if (S.CheckObjCBridgeRelatedConversions(Initializer->getBeginLoc(),
                                               DestType, Initializer->getType(),
                                               Initializer) ||

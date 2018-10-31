@@ -14485,6 +14485,80 @@ mode is determined by the runtime floating-point environment.  The rounding
 mode argument is only intended as information to the compiler.
 
 
+'``llvm.experimental.constrained.maxnum``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.maxnum(<type> <op1>, <type> <op2>
+                                            metadata <rounding mode>,
+                                            metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.maxnum``' intrinsic returns the maximum 
+of the two arguments.
+
+Arguments:
+""""""""""
+
+The first two arguments and the return value are floating-point numbers 
+of the same type.
+
+The third and forth arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function follows the IEEE-754 semantics for maxNum. The rounding mode is
+described, not determined, by the rounding mode argument. The actual rounding
+mode is determined by the runtime floating-point environment. The rounding
+mode argument is only intended as information to the compiler.
+
+
+'``llvm.experimental.constrained.minnum``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare <type>
+      @llvm.experimental.constrained.minnum(<type> <op1>, <type> <op2>
+                                            metadata <rounding mode>,
+                                            metadata <exception behavior>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.constrained.minnum``' intrinsic returns the minimum
+of the two arguments.
+
+Arguments:
+""""""""""
+
+The first two arguments and the return value are floating-point numbers
+of the same type.
+
+The third and forth arguments specify the rounding mode and exception
+behavior as described above.
+
+Semantics:
+""""""""""
+
+This function follows the IEEE-754 semantics for minNum. The rounding mode is
+described, not determined, by the rounding mode argument. The actual rounding
+mode is determined by the runtime floating-point environment. The rounding
+mode argument is only intended as information to the compiler.
+
+
 General Intrinsics
 ------------------
 

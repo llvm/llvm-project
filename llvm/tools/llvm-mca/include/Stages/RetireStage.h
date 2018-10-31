@@ -21,6 +21,7 @@
 #include "HardwareUnits/RetireControlUnit.h"
 #include "Stages/Stage.h"
 
+namespace llvm {
 namespace mca {
 
 class RetireStage final : public Stage {
@@ -42,5 +43,6 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_MCA_RETIRE_STAGE_H

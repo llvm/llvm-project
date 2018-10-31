@@ -270,10 +270,14 @@ void ASTStmtReader::VisitSwitchStmt(SwitchStmt *S) {
 
 void ASTStmtReader::VisitWhileStmt(WhileStmt *S) {
   VisitStmt(S);
-  S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+
+  bool HasVar = Record.readInt();
 
   S->setCond(Record.readSubExpr());
   S->setBody(Record.readSubStmt());
+  if (HasVar)
+    S->setConditionVariable(Record.getContext(), ReadDeclAs<VarDecl>());
+
   S->setWhileLoc(ReadSourceLocation());
 }
 
@@ -324,9 +328,14 @@ void ASTStmtReader::VisitBreakStmt(BreakStmt *S) {
 
 void ASTStmtReader::VisitReturnStmt(ReturnStmt *S) {
   VisitStmt(S);
+
+  bool HasNRVOCandidate = Record.readInt();
+
   S->setRetValue(Record.readSubExpr());
+  if (HasNRVOCandidate)
+    S->setNRVOCandidate(ReadDeclAs<VarDecl>());
+
   S->setReturnLoc(ReadSourceLocation());
-  S->setNRVOCandidate(ReadDeclAs<VarDecl>());
 }
 
 void ASTStmtReader::VisitDeclStmt(DeclStmt *S) {
@@ -2325,7 +2334,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_WHILE:
-      S = new (Context) WhileStmt(Empty);
+      S = WhileStmt::CreateEmpty(
+          Context,
+          /* HasVar=*/Record[ASTStmtReader::NumStmtFields + 0]);
       break;
 
     case STMT_DO:
@@ -2353,7 +2364,8 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case STMT_RETURN:
-      S = new (Context) ReturnStmt(Empty);
+      S = ReturnStmt::CreateEmpty(
+          Context, /* HasNRVOCandidate=*/Record[ASTStmtReader::NumStmtFields]);
       break;
 
     case STMT_DECL:

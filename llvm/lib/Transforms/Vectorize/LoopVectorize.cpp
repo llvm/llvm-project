@@ -2982,6 +2982,10 @@ static unsigned getScalarizationOverhead(Instruction *I, unsigned VF,
        !TTI.supportsEfficientVectorElementLoadStore()))
     Cost += TTI.getScalarizationOverhead(RetTy, true, false);
 
+  // Some targets keep addresses scalar.
+  if (isa<LoadInst>(I) && !TTI.prefersVectorizedAddressing())
+    return Cost;
+
   if (CallInst *CI = dyn_cast<CallInst>(I)) {
     SmallVector<const Value *, 4> Operands(CI->arg_operands());
     Cost += TTI.getOperandsScalarizationOverhead(Operands, VF);
@@ -5372,6 +5376,7 @@ static bool isStrideMul(Instruction *I, LoopVectorizationLegality *Legal) {
 
 unsigned LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
                                                                  unsigned VF) {
+  assert(VF > 1 && "Scalarization cost of instruction implies vectorization.");
   Type *ValTy = getMemInstValueType(I);
   auto SE = PSE.getSE();
 
@@ -5387,9 +5392,11 @@ unsigned LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   // Get the cost of the scalar memory instruction and address computation.
   unsigned Cost = VF * TTI.getAddressComputationCost(PtrTy, SE, PtrSCEV);
 
+  // Don't pass *I here, since it is scalar but will actually be part of a
+  // vectorized loop where the user of it is a vectorized instruction.
   Cost += VF *
           TTI.getMemoryOpCost(I->getOpcode(), ValTy->getScalarType(), Alignment,
-                              AS, I);
+                              AS);
 
   // Get the overhead of the extractelement and insertelement instructions
   // we might create due to scalarization.
@@ -5747,7 +5754,7 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // First-order recurrences are replaced by vector shuffles inside the loop.
     if (VF > 1 && Legal->isFirstOrderRecurrence(Phi))
       return TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                VectorTy, VF - 1, VectorTy);
+                                VectorTy, VF - 1, ToVectorTy(RetTy, 1));
 
     // Phi nodes in non-header blocks (not inductions, reductions, etc.) are
     // converted into select instructions. We require N - 1 selects per phi

@@ -386,9 +386,9 @@ bb2:
 ; GCN-DAG: v_mov_b32 [[INS0:v[0-9]+]], 62
 
 ; GCN-DAG: v_mov_b32_e32 v[[VEC_ELT3:[0-9]+]], s[[S_ELT3]]
-; GCN: v_mov_b32_e32 v[[VEC_ELT2:[0-9]+]], s{{[0-9]+}}
-; GCN: v_mov_b32_e32 v[[VEC_ELT1:[0-9]+]], s{{[0-9]+}}
-; GCN: v_mov_b32_e32 v[[VEC_ELT0:[0-9]+]], s[[S_ELT0]]
+; GCN-DAG: v_mov_b32_e32 v[[VEC_ELT2:[0-9]+]], s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v[[VEC_ELT1:3]], s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 v[[VEC_ELT0:[0-9]+]], s[[S_ELT0]]
 
 ; GCN: [[LOOP0:BB[0-9]+_[0-9]+]]:
 ; GCN-NEXT: s_waitcnt vmcnt(0)

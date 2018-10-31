@@ -39,8 +39,8 @@ define <4 x i32> @vcombine32(<2 x i32>* %A, <2 x i32>* %B) nounwind {
 ; CHECK-DAG: vldr [[LD0:d[0-9]+]], [r0]
 ; CHECK-DAG: vldr [[LD1:d[0-9]+]], [r1]
 
-; CHECK-LE: vmov r0, r1, [[LD0]]
 ; CHECK-LE: vmov r2, r3, [[LD1]]
+; CHECK-LE: vmov r0, r1, [[LD0]]
 
 ; CHECK-BE: vmov r1, r0, d16
 ; CHECK-BE: vmov r3, r2, d17
@@ -56,8 +56,8 @@ define <4 x float> @vcombinefloat(<2 x float>* %A, <2 x float>* %B) nounwind {
 ; CHECK-DAG: vldr [[LD0:d[0-9]+]], [r0]
 ; CHECK-DAG: vldr [[LD1:d[0-9]+]], [r1]
 
-; CHECK-LE: vmov r0, r1, [[LD0]]
 ; CHECK-LE: vmov r2, r3, [[LD1]]
+; CHECK-LE: vmov r0, r1, [[LD0]]
 
 ; CHECK-BE: vmov r1, r0, d16
 ; CHECK-BE: vmov r3, r2, d17
@@ -72,11 +72,11 @@ define <2 x i64> @vcombine64(<1 x i64>* %A, <1 x i64>* %B) nounwind {
 ; CHECK-DAG: vldr [[LD0:d[0-9]+]], [r0]
 ; CHECK-DAG: vldr [[LD1:d[0-9]+]], [r1]
 
-; CHECK-LE: vmov r0, r1, [[LD0]]
 ; CHECK-LE: vmov r2, r3, [[LD1]]
+; CHECK-LE: vmov r0, r1, [[LD0]]
 
-; CHECK-BE: vmov r1, r0, [[LD0]]
 ; CHECK-BE: vmov r3, r2, [[LD1]]
+; CHECK-BE: vmov r1, r0, [[LD0]]
 	%tmp1 = load <1 x i64>, <1 x i64>* %A
 	%tmp2 = load <1 x i64>, <1 x i64>* %B
 	%tmp3 = shufflevector <1 x i64> %tmp1, <1 x i64> %tmp2, <2 x i32> <i32 0, i32 1>

@@ -744,10 +744,10 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << "undef ";
     if (isEarlyClobber())
       OS << "early-clobber ";
-    if (isDebug())
-      OS << "debug-use ";
     if (TargetRegisterInfo::isPhysicalRegister(getReg()) && isRenamable())
       OS << "renamable ";
+    // isDebug() is exactly true for register operands of a DBG_VALUE. So we
+    // simply infer it when parsing and do not need to print it.
 
     const MachineRegisterInfo *MRI = nullptr;
     if (TargetRegisterInfo::isVirtualRegister(Reg)) {

@@ -1457,7 +1457,7 @@ TEST_P(ASTImporterTestBase, CXXRecordDeclFieldsShouldBeInCorrectOrder) {
 }
 
 TEST_P(ASTImporterTestBase,
-       CXXRecordDeclFieldOrderShouldNotDependOnImportOrder) {
+       DISABLED_CXXRecordDeclFieldOrderShouldNotDependOnImportOrder) {
   Decl *From, *To;
   std::tie(From, To) = getImportedDecl(
       // The original recursive algorithm of ASTImporter first imports 'c' then
@@ -3766,17 +3766,6 @@ INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportImplicitMethods,
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportVariables,
                         DefaultTestValuesForRunOptions, );
-
-TEST_P(ImportDecl, ImportFieldOrder) {
-  MatchVerifier<Decl> Verifier;
-  testImport("struct declToImport {"
-             "  int b = a + 2;"
-             "  int a = 5;"
-             "};",
-             Lang_CXX11, "", Lang_CXX11, Verifier,
-             recordDecl(hasFieldOrder({"b", "a"})));
-}
-
 
 } // end namespace ast_matchers
 } // end namespace clang

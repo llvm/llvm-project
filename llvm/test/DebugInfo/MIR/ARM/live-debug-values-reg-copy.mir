@@ -5,9 +5,9 @@
 # to another. The altered instructions are labeled below.
 #
 # CHECK: ![[ARG1:.*]] = !DILocalVariable(name: "arg1"
-# CHECK: DBG_VALUE debug-use $r4, debug-use $noreg, ![[ARG1]], !DIExpression(), debug-location
+# CHECK: DBG_VALUE $r4, $noreg, ![[ARG1]], !DIExpression(), debug-location
 # CHECK: $r5 = MOVr killed $r4, 14, $noreg, $noreg, debug-location
-# CHECK-NEXT: DBG_VALUE debug-use $r5, debug-use $noreg, ![[ARG1]], !DIExpression(), debug-location
+# CHECK-NEXT: DBG_VALUE $r5, $noreg, ![[ARG1]], !DIExpression(), debug-location
 --- |
   ; ModuleID = 'live-debug-values-reg-copy.ll'
   source_filename = "live-debug-values-reg-copy.c"
@@ -119,8 +119,8 @@ body:             |
     frame-setup CFI_INSTRUCTION offset $r11, -8
     frame-setup CFI_INSTRUCTION offset $r5, -12
     frame-setup CFI_INSTRUCTION offset $r4, -16
-    DBG_VALUE debug-use $r0, debug-use $noreg, !13, !DIExpression(), debug-location !16
-    DBG_VALUE debug-use $r0, debug-use $noreg, !13, !DIExpression(), debug-location !16
+    DBG_VALUE $r0, $noreg, !13, !DIExpression(), debug-location !16
+    DBG_VALUE $r0, $noreg, !13, !DIExpression(), debug-location !16
     CMPri renamable $r0, 10, 14, $noreg, implicit-def $cpsr, debug-location !16
     Bcc %bb.2, 13, killed $cpsr, debug-location !16
   
@@ -132,7 +132,7 @@ body:             |
   
   bb.2.if.else:
     renamable $r4 = ADDri killed renamable $r0, 10, 14, $noreg, $noreg, debug-location !16
-    DBG_VALUE debug-use $r4, debug-use $noreg, !13, !DIExpression(), debug-location !16
+    DBG_VALUE $r4, $noreg, !13, !DIExpression(), debug-location !16
     $r0 = MOVr $r4, 14, $noreg, $noreg, debug-location !16
     BL @externFunc2, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit killed $r0, implicit-def $sp, implicit-def $r0, debug-location !16
     $r5 = MOVr killed $r0, 14, $noreg, $noreg, debug-location !16

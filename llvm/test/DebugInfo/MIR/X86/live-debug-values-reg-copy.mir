@@ -5,9 +5,9 @@
 # to another. The altered instructions are labeled below.
 #
 # CHECK: ![[ARG1:.*]] = !DILocalVariable(name: "arg1"
-# CHECK: DBG_VALUE debug-use $ebx, debug-use $noreg, ![[ARG1]], !DIExpression(), debug-location
+# CHECK: DBG_VALUE $ebx, $noreg, ![[ARG1]], !DIExpression(), debug-location
 # CHECK: $r12d = MOV32rr killed $ebx, implicit-def $r12
-# CHECK-NEXT: DBG_VALUE debug-use $r12d, debug-use $noreg, ![[ARG1]], !DIExpression(), debug-location
+# CHECK-NEXT: DBG_VALUE $r12d, $noreg, ![[ARG1]], !DIExpression(), debug-location
 --- |
   ; ModuleID = 'live-debug-values-reg-copy.ll'
   source_filename = "live-debug-values-reg-copy.c"
@@ -148,9 +148,9 @@ body:             |
     CFI_INSTRUCTION def_cfa_offset 32
     CFI_INSTRUCTION offset $rbx, -24
     CFI_INSTRUCTION offset $rbp, -16
-    DBG_VALUE debug-use $edi, debug-use $noreg, !12, !DIExpression(), debug-location !15
+    DBG_VALUE $edi, $noreg, !12, !DIExpression(), debug-location !15
     $ebx = MOV32rr $edi, implicit-def $rbx
-    DBG_VALUE debug-use $ebx, debug-use $noreg, !12, !DIExpression(), debug-location !15
+    DBG_VALUE $ebx, $noreg, !12, !DIExpression(), debug-location !15
     renamable $rdi = LEA64r $rsp, 1, $noreg, 4, $noreg
     CALL64pcrel32 @init, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, debug-location !15
     renamable $edi = MOV32rm $rsp, 1, $noreg, 4, $noreg :: (dereferenceable load 4 from %ir.local1, !tbaa !20)

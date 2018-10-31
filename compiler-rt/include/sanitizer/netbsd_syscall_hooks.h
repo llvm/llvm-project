@@ -21,8 +21,8 @@
 // DO NOT EDIT! THIS FILE HAS BEEN GENERATED!
 //
 // Generated with: generate_netbsd_syscalls.awk
-// Generated date: 2018-03-03
-// Generated from: syscalls.master,v 1.291 2018/01/06 16:41:23 kamil Exp
+// Generated date: 2018-10-30
+// Generated from: syscalls.master,v 1.293 2018/07/31 13:00:13 rjs Exp
 //
 //===----------------------------------------------------------------------===//
 #ifndef SANITIZER_NETBSD_SYSCALL_HOOKS_H
@@ -986,7 +986,15 @@
 #define __sanitizer_syscall_post_fpathconf(res, fd, name)                      \
   __sanitizer_syscall_post_impl_fpathconf(res, (long long)(fd),                \
                                           (long long)(name))
-/* syscall 193 has been skipped */
+#define __sanitizer_syscall_pre_getsockopt2(s, level, name, val, avalsize)     \
+  __sanitizer_syscall_pre_impl_getsockopt2(                                    \
+      (long long)(s), (long long)(level), (long long)(name), (long long)(val), \
+      (long long)(avalsize))
+#define __sanitizer_syscall_post_getsockopt2(res, s, level, name, val,         \
+                                             avalsize)                         \
+  __sanitizer_syscall_post_impl_getsockopt2(                                   \
+      res, (long long)(s), (long long)(level), (long long)(name),              \
+      (long long)(val), (long long)(avalsize))
 #define __sanitizer_syscall_pre_getrlimit(which, rlp)                          \
   __sanitizer_syscall_pre_impl_getrlimit((long long)(which), (long long)(rlp))
 #define __sanitizer_syscall_post_getrlimit(res, which, rlp)                    \
@@ -1752,18 +1760,8 @@
   __sanitizer_syscall_post_impl___sigaction_sigtramp(                          \
       res, (long long)(signum), (long long)(nsa), (long long)(osa),            \
       (long long)(tramp), (long long)(vers))
-#define __sanitizer_syscall_pre_pmc_get_info(ctr, op, args)                    \
-  __sanitizer_syscall_pre_impl_pmc_get_info((long long)(ctr), (long long)(op), \
-                                            (long long)(args))
-#define __sanitizer_syscall_post_pmc_get_info(res, ctr, op, args)              \
-  __sanitizer_syscall_post_impl_pmc_get_info(                                  \
-      res, (long long)(ctr), (long long)(op), (long long)(args))
-#define __sanitizer_syscall_pre_pmc_control(ctr, op, args)                     \
-  __sanitizer_syscall_pre_impl_pmc_control((long long)(ctr), (long long)(op),  \
-                                           (long long)(args))
-#define __sanitizer_syscall_post_pmc_control(res, ctr, op, args)               \
-  __sanitizer_syscall_post_impl_pmc_control(                                   \
-      res, (long long)(ctr), (long long)(op), (long long)(args))
+/* syscall 341 has been skipped */
+/* syscall 342 has been skipped */
 #define __sanitizer_syscall_pre_rasctl(addr, len, op)                          \
   __sanitizer_syscall_pre_impl_rasctl((long long)(addr), (long long)(len),     \
                                       (long long)(op))
@@ -3444,7 +3442,13 @@ void __sanitizer_syscall_post_impl_pathconf(long long res, long long path,
 void __sanitizer_syscall_pre_impl_fpathconf(long long fd, long long name);
 void __sanitizer_syscall_post_impl_fpathconf(long long res, long long fd,
                                              long long name);
-/* syscall 193 has been skipped */
+void __sanitizer_syscall_pre_impl_getsockopt2(long long s, long long level,
+                                              long long name, long long val,
+                                              long long avalsize);
+void __sanitizer_syscall_post_impl_getsockopt2(long long res, long long s,
+                                               long long level, long long name,
+                                               long long val,
+                                               long long avalsize);
 void __sanitizer_syscall_pre_impl_getrlimit(long long which, long long rlp);
 void __sanitizer_syscall_post_impl_getrlimit(long long res, long long which,
                                              long long rlp);
@@ -4001,14 +4005,8 @@ void __sanitizer_syscall_pre_impl___sigaction_sigtramp(long long signum,
 void __sanitizer_syscall_post_impl___sigaction_sigtramp(
     long long res, long long signum, long long nsa, long long osa,
     long long tramp, long long vers);
-void __sanitizer_syscall_pre_impl_pmc_get_info(long long ctr, long long op,
-                                               long long args);
-void __sanitizer_syscall_post_impl_pmc_get_info(long long res, long long ctr,
-                                                long long op, long long args);
-void __sanitizer_syscall_pre_impl_pmc_control(long long ctr, long long op,
-                                              long long args);
-void __sanitizer_syscall_post_impl_pmc_control(long long res, long long ctr,
-                                               long long op, long long args);
+/* syscall 341 has been skipped */
+/* syscall 342 has been skipped */
 void __sanitizer_syscall_pre_impl_rasctl(long long addr, long long len,
                                          long long op);
 void __sanitizer_syscall_post_impl_rasctl(long long res, long long addr,

@@ -24,9 +24,8 @@
 #include "Stages/FetchStage.h"
 #include "Stages/RetireStage.h"
 
+namespace llvm {
 namespace mca {
-
-using namespace llvm;
 
 std::unique_ptr<Pipeline>
 Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
@@ -63,3 +62,4 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
 }
 
 } // namespace mca
+} // namespace llvm

@@ -343,6 +343,13 @@ TypeIndex lldb_private::npdb::GetFieldListIndex(CVType cvt) {
   }
 }
 
+TypeIndex lldb_private::npdb::LookThroughModifierRecord(CVType modifier) {
+  lldbassert(modifier.kind() == LF_MODIFIER);
+  ModifierRecord mr;
+  llvm::cantFail(TypeDeserializer::deserializeAs<ModifierRecord>(modifier, mr));
+  return mr.ModifiedType;
+}
+
 llvm::StringRef lldb_private::npdb::DropNameScope(llvm::StringRef name) {
   // Not all PDB names can be parsed with CPlusPlusNameParser.
   // E.g. it fails on names containing `anonymous namespace'.

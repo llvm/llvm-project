@@ -197,7 +197,7 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
   std::string descName;
 
   // If an equivalent block descriptor global variable exists, return it.
-  if (C.getLangOpts().ObjC1 &&
+  if (C.getLangOpts().ObjC &&
       CGM.getLangOpts().getGC() == LangOptions::NonGC) {
     descName = getBlockDescriptorName(blockInfo, CGM);
     if (llvm::GlobalValue *desc = CGM.getModule().getNamedValue(descName))
@@ -243,7 +243,7 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
     CGM.GetAddrOfConstantCString(typeAtEncoding).getPointer(), i8p));
 
   // GC layout.
-  if (C.getLangOpts().ObjC1) {
+  if (C.getLangOpts().ObjC) {
     if (CGM.getLangOpts().getGC() != LangOptions::NonGC)
       elements.add(CGM.getObjCRuntime().BuildGCBlockLayout(CGM, blockInfo));
     else
@@ -533,7 +533,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     info.CanBeGlobal = true;
     return;
   }
-  else if (C.getLangOpts().ObjC1 &&
+  else if (C.getLangOpts().ObjC &&
            CGM.getLangOpts().getGC() == LangOptions::NonGC)
     info.HasCapturedVariableLayout = true;
 

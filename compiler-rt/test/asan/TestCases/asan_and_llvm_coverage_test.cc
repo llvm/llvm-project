@@ -3,6 +3,9 @@
 
 // We don't really support running tests using profile runtime on Windows.
 // UNSUPPORTED: windows-msvc
+
+// profile is disabled by default
+// UNSUPPORTED: netbsd
 #include <stdio.h>
 int foo() { return 1; }
 int XXX = foo();

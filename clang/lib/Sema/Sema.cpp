@@ -152,7 +152,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   for (unsigned I = 0; I != NSAPI::NumNSNumberLiteralMethods; ++I)
     NSNumberLiteralMethods[I] = nullptr;
 
-  if (getLangOpts().ObjC1)
+  if (getLangOpts().ObjC)
     NSAPIObj.reset(new NSAPI(Context));
 
   if (getLangOpts().CPlusPlus)
@@ -214,7 +214,7 @@ void Sema::Initialize() {
 
 
   // Initialize predefined Objective-C types:
-  if (getLangOpts().ObjC1) {
+  if (getLangOpts().ObjC) {
     // If 'SEL' does not yet refer to any declarations, make it refer to the
     // predefined 'SEL'.
     DeclarationName SEL = &Context.Idents.get("SEL");

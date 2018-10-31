@@ -20,6 +20,7 @@
 
 #define DEBUG_TYPE "llvm-mca"
 
+namespace llvm {
 namespace mca {
 
 llvm::Error RetireStage::cycleStart() {
@@ -58,3 +59,4 @@ void RetireStage::notifyInstructionRetired(const InstRef &IR) const {
 }
 
 } // namespace mca
+} // namespace llvm

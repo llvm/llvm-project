@@ -164,6 +164,9 @@ private:
   OpenMPClauseKind ClauseKindMode = OMPC_unknown;
   Sema &SemaRef;
   bool ForceCapturing = false;
+  /// true if all the vaiables in the target executable directives must be
+  /// captured by reference.
+  bool ForceCaptureByReferenceInTargetExecutable = false;
   CriticalsWithHintsTy Criticals;
 
   using iterator = StackTy::const_reverse_iterator;
@@ -194,6 +197,13 @@ public:
 
   bool isForceVarCapturing() const { return ForceCapturing; }
   void setForceVarCapturing(bool V) { ForceCapturing = V; }
+
+  void setForceCaptureByReferenceInTargetExecutable(bool V) {
+    ForceCaptureByReferenceInTargetExecutable = V;
+  }
+  bool isForceCaptureByReferenceInTargetExecutable() const {
+    return ForceCaptureByReferenceInTargetExecutable;
+  }
 
   void push(OpenMPDirectiveKind DKind, const DeclarationNameInfo &DirName,
             Scope *CurScope, SourceLocation Loc) {
@@ -1435,6 +1445,8 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
       // By default, all the data that has a scalar type is mapped by copy
       // (except for reduction variables).
       IsByRef =
+          (DSAStack->isForceCaptureByReferenceInTargetExecutable() &&
+           !Ty->isAnyPointerType()) ||
           !Ty->isScalarType() ||
           DSAStack->getDefaultDMAAtLevel(Level) == DMA_tofrom_scalar ||
           DSAStack->hasExplicitDSA(
@@ -1444,10 +1456,12 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
 
   if (IsByRef && Ty.getNonReferenceType()->isScalarType()) {
     IsByRef =
-        !DSAStack->hasExplicitDSA(
-            D,
-            [](OpenMPClauseKind K) -> bool { return K == OMPC_firstprivate; },
-            Level, /*NotLastprivate=*/true) &&
+        ((DSAStack->isForceCaptureByReferenceInTargetExecutable() &&
+          !Ty->isAnyPointerType()) ||
+         !DSAStack->hasExplicitDSA(
+             D,
+             [](OpenMPClauseKind K) -> bool { return K == OMPC_firstprivate; },
+             Level, /*NotLastprivate=*/true)) &&
         // If the variable is artificial and must be captured by value - try to
         // capture by value.
         !(isa<OMPCapturedExprDecl>(D) && !D->hasAttr<OMPCaptureNoInitAttr>() &&
@@ -1507,6 +1521,42 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) {
       if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
         return nullptr;
       return VD;
+    }
+  }
+  // Capture variables captured by reference in lambdas for target-based
+  // directives.
+  if (VD && !DSAStack->isClauseParsingMode()) {
+    if (const auto *RD = VD->getType()
+                             .getCanonicalType()
+                             .getNonReferenceType()
+                             ->getAsCXXRecordDecl()) {
+      bool SavedForceCaptureByReferenceInTargetExecutable =
+          DSAStack->isForceCaptureByReferenceInTargetExecutable();
+      DSAStack->setForceCaptureByReferenceInTargetExecutable(/*V=*/true);
+      if (RD->isLambda())
+        for (const LambdaCapture &LC : RD->captures()) {
+          if (LC.getCaptureKind() == LCK_ByRef) {
+            VarDecl *VD = LC.getCapturedVar();
+            DeclContext *VDC = VD->getDeclContext();
+            if (!VDC->Encloses(CurContext))
+              continue;
+            DSAStackTy::DSAVarData DVarPrivate =
+                DSAStack->getTopDSA(VD, /*FromParent=*/false);
+            // Do not capture already captured variables.
+            if (!OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD) &&
+                DVarPrivate.CKind == OMPC_unknown &&
+                !DSAStack->checkMappableExprComponentListsForDecl(
+                    D, /*CurrentRegionOnly=*/true,
+                    [](OMPClauseMappableExprCommon::
+                           MappableExprComponentListRef,
+                       OpenMPClauseKind) { return true; }))
+              MarkVariableReferenced(LC.getLocation(), LC.getCapturedVar());
+          } else if (LC.getCaptureKind() == LCK_This) {
+            CheckCXXThisCapture(LC.getLocation());
+          }
+        }
+      DSAStack->setForceCaptureByReferenceInTargetExecutable(
+          SavedForceCaptureByReferenceInTargetExecutable);
     }
   }
 

@@ -65,12 +65,12 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 ; CHECK-NEXT: [[REG5:%[0-9]+]]:gr32_nosp = PHI
 ; CHECK-NEXT: [[REG6:%[0-9]+]]:gr32 = PHI
 ; CHECK-NEXT: [[REG7:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: DBG_VALUE debug-use [[REG2]], debug-use $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE debug-use [[REG3]], debug-use $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT: DBG_VALUE debug-use [[REG4]], debug-use $noreg, !18, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE debug-use [[REG5]], debug-use $noreg, !18, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT: DBG_VALUE debug-use [[REG6]], debug-use $noreg, !17, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE debug-use [[REG7]], debug-use $noreg, !17, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; CHECK-NEXT: DBG_VALUE [[REG2]], $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; CHECK-NEXT: DBG_VALUE [[REG3]], $noreg, !19, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; CHECK-NEXT: DBG_VALUE [[REG4]], $noreg, !18, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; CHECK-NEXT: DBG_VALUE [[REG5]], $noreg, !18, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; CHECK-NEXT: DBG_VALUE [[REG6]], $noreg, !17, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; CHECK-NEXT: DBG_VALUE [[REG7]], $noreg, !17, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
   %u.023 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %y.022 = phi i64 [ 13, %for.body.lr.ph ], [ %mul, %for.body ]
   %x.021 = phi i64 [ 9, %for.body.lr.ph ], [ %add, %for.body ]

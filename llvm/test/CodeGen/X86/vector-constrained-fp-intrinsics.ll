@@ -3668,6 +3668,515 @@ entry:
   ret <4 x double> %nearby
 }
 
+define <1 x float> @constrained_vector_maxnum_v1f32() {
+; NO-FMA-LABEL: constrained_vector_maxnum_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fmaxf
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_maxnum_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fmaxf
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %max = call <1 x float> @llvm.experimental.constrained.maxnum.v1f32(
+                               <1 x float> <float 42.0>, <1 x float> <float 41.0>,
+                               metadata !"round.dynamic",
+                               metadata !"fpexcept.strict")
+  ret <1 x float> %max
+}
+
+define <2 x double> @constrained_vector_maxnum_v2f64() {
+; NO-FMA-LABEL: constrained_vector_maxnum_v2f64:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    subq $24, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmax
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmax
+; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_maxnum_v2f64:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    subq $24, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 32
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmax
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmax
+; HAS-FMA-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    addq $24, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %max = call <2 x double> @llvm.experimental.constrained.maxnum.v2f64(
+                                <2 x double> <double 43.0, double 42.0>,
+                                <2 x double> <double 41.0, double 40.0>,
+                                metadata !"round.dynamic",
+                                metadata !"fpexcept.strict")
+  ret <2 x double> %max
+}
+
+define <3 x float> @constrained_vector_maxnum_v3f32() {
+; NO-FMA-LABEL: constrained_vector_maxnum_v3f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    subq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 48
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fmaxf
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fmaxf
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fmaxf
+; NO-FMA-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm1 = xmm1[0],mem[0]
+; NO-FMA-NEXT:    movaps %xmm1, %xmm0
+; NO-FMA-NEXT:    addq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_maxnum_v3f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    subq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 48
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fmaxf
+; HAS-FMA-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fmaxf
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fmaxf
+; HAS-FMA-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; HAS-FMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; HAS-FMA-NEXT:    vinsertps $32, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; HAS-FMA-NEXT:    addq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %max = call <3 x float> @llvm.experimental.constrained.maxnum.v3f32(
+                              <3 x float> <float 43.0, float 44.0, float 45.0>,
+                              <3 x float> <float 41.0, float 42.0, float 43.0>,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict")
+  ret <3 x float> %max
+}
+
+define <3 x double> @constrained_vector_max_v3f64() {
+; NO-FMA-LABEL: constrained_vector_max_v3f64:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    subq $24, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmax
+; NO-FMA-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmax
+; NO-FMA-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmax
+; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
+; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
+; NO-FMA-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
+; NO-FMA-NEXT:    # xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
+; NO-FMA-NEXT:    # xmm1 = mem[0],zero
+; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_max_v3f64:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    subq $56, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 64
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmax
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmax
+; HAS-FMA-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    vzeroupper
+; HAS-FMA-NEXT:    callq fmax
+; HAS-FMA-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
+; HAS-FMA-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; HAS-FMA-NEXT:    addq $56, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %max = call <3 x double> @llvm.experimental.constrained.maxnum.v3f64(
+                          <3 x double> <double 43.0, double 44.0, double 45.0>,
+                          <3 x double> <double 40.0, double 41.0, double 42.0>,
+                          metadata !"round.dynamic",
+                          metadata !"fpexcept.strict")
+  ret <3 x double> %max
+}
+
+define <4 x double> @constrained_vector_maxnum_v4f64() {
+; NO-FMA-LABEL: constrained_vector_maxnum_v4f64:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    subq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 48
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmax
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmax
+; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmax
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmax
+; NO-FMA-NEXT:    movaps %xmm0, %xmm1
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm1 = xmm1[0],mem[0]
+; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    addq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_maxnum_v4f64:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    subq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 48
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmax
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmax
+; HAS-FMA-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmax
+; HAS-FMA-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmax
+; HAS-FMA-NEXT:    vunpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    addq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %max = call <4 x double> @llvm.experimental.constrained.maxnum.v4f64(
+                                <4 x double> <double 44.0, double 45.0,
+                                              double 46.0, double 47.0>,
+                                <4 x double> <double 40.0, double 41.0,
+                                              double 42.0, double 43.0>,
+                                metadata !"round.dynamic",
+                                metadata !"fpexcept.strict")
+  ret <4 x double> %max
+}
+
+define <1 x float> @constrained_vector_minnum_v1f32() {
+; NO-FMA-LABEL: constrained_vector_minnum_v1f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    pushq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 16
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fminf
+; NO-FMA-NEXT:    popq %rax
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_minnum_v1f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    pushq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 16
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fminf
+; HAS-FMA-NEXT:    popq %rax
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %min = call <1 x float> @llvm.experimental.constrained.minnum.v1f32(
+                               <1 x float> <float 42.0>, <1 x float> <float 41.0>,
+                               metadata !"round.dynamic",
+                               metadata !"fpexcept.strict")
+  ret <1 x float> %min
+}
+
+define <2 x double> @constrained_vector_minnum_v2f64() {
+; NO-FMA-LABEL: constrained_vector_minnum_v2f64:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    subq $24, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmin
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmin
+; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_minnum_v2f64:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    subq $24, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 32
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmin
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmin
+; HAS-FMA-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    addq $24, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %min = call <2 x double> @llvm.experimental.constrained.minnum.v2f64(
+                                <2 x double> <double 43.0, double 42.0>,
+                                <2 x double> <double 41.0, double 40.0>,
+                                metadata !"round.dynamic",
+                                metadata !"fpexcept.strict")
+  ret <2 x double> %min
+}
+
+define <3 x float> @constrained_vector_minnum_v3f32() {
+; NO-FMA-LABEL: constrained_vector_minnum_v3f32:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    subq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 48
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fminf
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fminf
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; NO-FMA-NEXT:    callq fminf
+; NO-FMA-NEXT:    movaps (%rsp), %xmm1 # 16-byte Reload
+; NO-FMA-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm1 = xmm1[0],mem[0]
+; NO-FMA-NEXT:    movaps %xmm1, %xmm0
+; NO-FMA-NEXT:    addq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_minnum_v3f32:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    subq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 48
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fminf
+; HAS-FMA-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fminf
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; HAS-FMA-NEXT:    callq fminf
+; HAS-FMA-NEXT:    vmovaps (%rsp), %xmm1 # 16-byte Reload
+; HAS-FMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[2,3]
+; HAS-FMA-NEXT:    vinsertps $32, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0,1],mem[0],xmm0[3]
+; HAS-FMA-NEXT:    addq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %min = call <3 x float> @llvm.experimental.constrained.minnum.v3f32(
+                              <3 x float> <float 43.0, float 44.0, float 45.0>,
+                              <3 x float> <float 41.0, float 42.0, float 43.0>,
+                              metadata !"round.dynamic",
+                              metadata !"fpexcept.strict")
+  ret <3 x float> %min
+}
+
+define <3 x double> @constrained_vector_min_v3f64() {entry:
+; NO-FMA-LABEL: constrained_vector_min_v3f64:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    subq $24, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 32
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmin
+; NO-FMA-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmin
+; NO-FMA-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmin
+; NO-FMA-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
+; NO-FMA-NEXT:    fldl {{[0-9]+}}(%rsp)
+; NO-FMA-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
+; NO-FMA-NEXT:    # xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
+; NO-FMA-NEXT:    # xmm1 = mem[0],zero
+; NO-FMA-NEXT:    addq $24, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_min_v3f64:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    subq $56, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 64
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmin
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmin
+; HAS-FMA-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    vzeroupper
+; HAS-FMA-NEXT:    callq fmin
+; HAS-FMA-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
+; HAS-FMA-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; HAS-FMA-NEXT:    addq $56, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+  %min = call <3 x double> @llvm.experimental.constrained.minnum.v3f64(
+                          <3 x double> <double 43.0, double 44.0, double 45.0>,
+                          <3 x double> <double 40.0, double 41.0, double 42.0>,
+                          metadata !"round.dynamic",
+                          metadata !"fpexcept.strict")
+  ret <3 x double> %min
+}
+
+define <4 x double> @constrained_vector_minnum_v4f64() {
+; NO-FMA-LABEL: constrained_vector_minnum_v4f64:
+; NO-FMA:       # %bb.0: # %entry
+; NO-FMA-NEXT:    subq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 48
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmin
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmin
+; NO-FMA-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; NO-FMA-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmin
+; NO-FMA-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; NO-FMA-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; NO-FMA-NEXT:    callq fmin
+; NO-FMA-NEXT:    movaps %xmm0, %xmm1
+; NO-FMA-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; NO-FMA-NEXT:    # xmm1 = xmm1[0],mem[0]
+; NO-FMA-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; NO-FMA-NEXT:    addq $40, %rsp
+; NO-FMA-NEXT:    .cfi_def_cfa_offset 8
+; NO-FMA-NEXT:    retq
+;
+; HAS-FMA-LABEL: constrained_vector_minnum_v4f64:
+; HAS-FMA:       # %bb.0: # %entry
+; HAS-FMA-NEXT:    subq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 48
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmin
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmin
+; HAS-FMA-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmin
+; HAS-FMA-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; HAS-FMA-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; HAS-FMA-NEXT:    callq fmin
+; HAS-FMA-NEXT:    vunpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    # xmm0 = xmm0[0],mem[0]
+; HAS-FMA-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; HAS-FMA-NEXT:    addq $40, %rsp
+; HAS-FMA-NEXT:    .cfi_def_cfa_offset 8
+; HAS-FMA-NEXT:    retq
+entry:
+  %min = call <4 x double> @llvm.experimental.constrained.minnum.v4f64(
+                                <4 x double> <double 44.0, double 45.0,
+                                              double 46.0, double 47.0>,
+                                <4 x double> <double 40.0, double 41.0,
+                                              double 42.0, double 43.0>,
+                                metadata !"round.dynamic",
+                                metadata !"fpexcept.strict")
+  ret <4 x double> %min
+}
+
 ; Single width declarations
 declare <2 x double> @llvm.experimental.constrained.fadd.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.fsub.v2f64(<2 x double>, <2 x double>, metadata, metadata)
@@ -3688,6 +4197,8 @@ declare <2 x double> @llvm.experimental.constrained.log10.v2f64(<2 x double>, me
 declare <2 x double> @llvm.experimental.constrained.log2.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.rint.v2f64(<2 x double>, metadata, metadata)
 declare <2 x double> @llvm.experimental.constrained.nearbyint.v2f64(<2 x double>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.maxnum.v2f64(<2 x double>, <2 x double>, metadata, metadata)
+declare <2 x double> @llvm.experimental.constrained.minnum.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 
 ; Scalar width declarations
 declare <1 x float> @llvm.experimental.constrained.fadd.v1f32(<1 x float>, <1 x float>, metadata, metadata)
@@ -3708,6 +4219,8 @@ declare <1 x float> @llvm.experimental.constrained.log10.v1f32(<1 x float>, meta
 declare <1 x float> @llvm.experimental.constrained.log2.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.rint.v1f32(<1 x float>, metadata, metadata)
 declare <1 x float> @llvm.experimental.constrained.nearbyint.v1f32(<1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.maxnum.v1f32(<1 x float>, <1 x float>, metadata, metadata)
+declare <1 x float> @llvm.experimental.constrained.minnum.v1f32(<1 x float>, <1 x float>, metadata, metadata)
 
 ; Illegal width declarations
 declare <3 x float> @llvm.experimental.constrained.fadd.v3f32(<3 x float>, <3 x float>, metadata, metadata)
@@ -3746,6 +4259,10 @@ declare <3 x float> @llvm.experimental.constrained.rint.v3f32(<3 x float>, metad
 declare <3 x double> @llvm.experimental.constrained.rint.v3f64(<3 x double>, metadata, metadata)
 declare <3 x float> @llvm.experimental.constrained.nearbyint.v3f32(<3 x float>, metadata, metadata)
 declare <3 x double> @llvm.experimental.constrained.nearbyint.v3f64(<3 x double>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.maxnum.v3f32(<3 x float>, <3 x float>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.maxnum.v3f64(<3 x double>, <3 x double>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.minnum.v3f32(<3 x float>, <3 x float>, metadata, metadata)
+declare <3 x double> @llvm.experimental.constrained.minnum.v3f64(<3 x double>, <3 x double>, metadata, metadata)
 
 ; Double width declarations
 declare <4 x double> @llvm.experimental.constrained.fadd.v4f64(<4 x double>, <4 x double>, metadata, metadata)
@@ -3767,3 +4284,5 @@ declare <4 x double> @llvm.experimental.constrained.log10.v4f64(<4 x double>, me
 declare <4 x double> @llvm.experimental.constrained.log2.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.rint.v4f64(<4 x double>, metadata, metadata)
 declare <4 x double> @llvm.experimental.constrained.nearbyint.v4f64(<4 x double>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.maxnum.v4f64(<4 x double>, <4 x double>, metadata, metadata)
+declare <4 x double> @llvm.experimental.constrained.minnum.v4f64(<4 x double>, <4 x double>, metadata, metadata)

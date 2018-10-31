@@ -80,8 +80,8 @@ define double @f7(double %a, double %b) {
 ; block generated, odds are good that we have close to the ideal code for this:
 ;
 ; CHECK-NEON-LABEL: f8:
-; CHECK-NEON:      movw    [[R3:r[0-9]+]], #1123
 ; CHECK-NEON:      adr     [[R2:r[0-9]+]], LCPI7_0
+; CHECK-NEON:      movw    [[R3:r[0-9]+]], #1123
 ; CHECK-NEON-NEXT: cmp     r0, [[R3]]
 ; CHECK-NEON-NEXT: it      eq
 ; CHECK-NEON-NEXT: addeq{{.*}} [[R2]], #4

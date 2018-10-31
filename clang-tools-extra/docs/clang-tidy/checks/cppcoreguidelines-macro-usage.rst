@@ -26,3 +26,8 @@ Options
     Boolean flag to warn on all macros except those with CAPS_ONLY names.
     This option is intended to ease introduction of this check into older
     code bases. Default value is `0`/`false`.
+
+.. option:: IgnoreCommandLineMacros
+
+    Boolean flag to toggle ignoring command-line-defined macros.
+    Default value is `1`/`true`.

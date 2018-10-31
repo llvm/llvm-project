@@ -443,7 +443,7 @@ void Parser::Initialize() {
 
   // Initialization for Objective-C context sensitive keywords recognition.
   // Referenced in Parser::ParseObjCTypeQualifierList.
-  if (getLangOpts().ObjC1) {
+  if (getLangOpts().ObjC) {
     ObjCTypeQuals[objc_in] = &PP.getIdentifierTable().get("in");
     ObjCTypeQuals[objc_out] = &PP.getIdentifierTable().get("out");
     ObjCTypeQuals[objc_inout] = &PP.getIdentifierTable().get("inout");
@@ -747,7 +747,7 @@ Parser::ParseExternalDeclaration(ParsedAttributesWithRange &attrs,
     return ParseObjCAtDirectives(attrs);
   case tok::minus:
   case tok::plus:
-    if (!getLangOpts().ObjC1) {
+    if (!getLangOpts().ObjC) {
       Diag(Tok, diag::err_expected_external_declaration);
       ConsumeToken();
       return nullptr;
@@ -978,7 +978,7 @@ Parser::ParseDeclOrFunctionDefInternal(ParsedAttributesWithRange &attrs,
   // ObjC2 allows prefix attributes on class interfaces and protocols.
   // FIXME: This still needs better diagnostics. We should only accept
   // attributes here, no types, etc.
-  if (getLangOpts().ObjC2 && Tok.is(tok::at)) {
+  if (getLangOpts().ObjC && Tok.is(tok::at)) {
     SourceLocation AtLoc = ConsumeToken(); // the "@"
     if (!Tok.isObjCAtKeyword(tok::objc_interface) &&
         !Tok.isObjCAtKeyword(tok::objc_protocol)) {
@@ -1554,7 +1554,7 @@ Parser::TryAnnotateName(bool IsAddressOfOperand,
     /// An Objective-C object type followed by '<' is a specialization of
     /// a parameterized class type or a protocol-qualified type.
     ParsedType Ty = Classification.getType();
-    if (getLangOpts().ObjC1 && NextToken().is(tok::less) &&
+    if (getLangOpts().ObjC && NextToken().is(tok::less) &&
         (Ty.get()->isObjCObjectType() ||
          Ty.get()->isObjCObjectPointerType())) {
       // Consume the name.
@@ -1781,7 +1781,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(CXXScopeSpec &SS,
 
       /// An Objective-C object type followed by '<' is a specialization of
       /// a parameterized class type or a protocol-qualified type.
-      if (getLangOpts().ObjC1 && NextToken().is(tok::less) &&
+      if (getLangOpts().ObjC && NextToken().is(tok::less) &&
           (Ty.get()->isObjCObjectType() ||
            Ty.get()->isObjCObjectPointerType())) {
         // Consume the name.

@@ -65,6 +65,7 @@
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
+namespace llvm {
 namespace mca {
 
 /// This class collects resource pressure statistics and it is able to print
@@ -98,5 +99,6 @@ public:
   }
 };
 } // namespace mca
+} // namespace llvm
 
 #endif

@@ -1915,7 +1915,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   if (IK.getLanguage() == InputKind::Asm) {
     Opts.AsmPreprocessor = 1;
   } else if (IK.isObjectiveC()) {
-    Opts.ObjC1 = Opts.ObjC2 = 1;
+    Opts.ObjC = 1;
   }
 
   if (LangStd == LangStandard::lang_unspecified) {
@@ -2246,7 +2246,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   Opts.GPURelocatableDeviceCode = Args.hasArg(OPT_fgpu_rdc);
 
-  if (Opts.ObjC1) {
+  if (Opts.ObjC) {
     if (Arg *arg = Args.getLastArg(OPT_fobjc_runtime_EQ)) {
       StringRef value = arg->getValue();
       if (Opts.ObjCRuntime.tryParse(value))

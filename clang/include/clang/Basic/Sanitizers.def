@@ -142,11 +142,25 @@ SANITIZER_GROUP("implicit-integer-truncation", ImplicitIntegerTruncation,
                 ImplicitUnsignedIntegerTruncation |
                     ImplicitSignedIntegerTruncation)
 
+SANITIZER("implicit-integer-sign-change", ImplicitIntegerSignChange)
+
+SANITIZER_GROUP("implicit-integer-arithmetic-value-change",
+                ImplicitIntegerArithmeticValueChange,
+                ImplicitIntegerSignChange | ImplicitSignedIntegerTruncation)
+
+// FIXME:
+//SANITIZER_GROUP("implicit-integer-conversion", ImplicitIntegerConversion,
+//                ImplicitIntegerArithmeticValueChange |
+//                    ImplicitUnsignedIntegerTruncation)
+//SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
+//                ImplicitIntegerConversion)
+
 SANITIZER_GROUP("implicit-conversion", ImplicitConversion,
-                ImplicitIntegerTruncation)
+                ImplicitIntegerArithmeticValueChange |
+                    ImplicitUnsignedIntegerTruncation)
 
 SANITIZER_GROUP("integer", Integer,
-                ImplicitIntegerTruncation | IntegerDivideByZero | Shift |
+                ImplicitConversion | IntegerDivideByZero | Shift |
                     SignedIntegerOverflow | UnsignedIntegerOverflow)
 
 SANITIZER("local-bounds", LocalBounds)

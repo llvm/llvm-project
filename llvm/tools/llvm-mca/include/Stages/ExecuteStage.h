@@ -23,6 +23,7 @@
 #include "Stages/Stage.h"
 #include "llvm/ADT/ArrayRef.h"
 
+namespace llvm {
 namespace mca {
 
 class ExecuteStage final : public Stage {
@@ -74,5 +75,6 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_MCA_EXECUTE_STAGE_H

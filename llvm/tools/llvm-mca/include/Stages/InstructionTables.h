@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 
+namespace llvm {
 namespace mca {
 
 class InstructionTables final : public Stage {
@@ -39,5 +40,6 @@ public:
   llvm::Error execute(InstRef &IR) override;
 };
 } // namespace mca
+} // namespace llvm
 
 #endif

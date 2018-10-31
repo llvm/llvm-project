@@ -414,7 +414,7 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
   // For now, simply elide the range verification for the CU DIEs if we are
   // processing an object file.
 
-  if (!IsObjectFile || IsMachOObject || Die.getTag() == DW_TAG_subprogram) {
+  if (!IsObjectFile || IsMachOObject || Die.getTag() != DW_TAG_compile_unit) {
     for (auto Range : Ranges) {
       if (!Range.valid()) {
         ++NumErrors;

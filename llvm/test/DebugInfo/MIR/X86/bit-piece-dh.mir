@@ -88,7 +88,7 @@ body:             |
     CFI_INSTRUCTION offset $rbp, -16
     $rbp = frame-setup MOV64rr $rsp
     CFI_INSTRUCTION def_cfa_register $rbp
-    DBG_VALUE debug-use $dh, debug-use _, !14, !15, debug-location !16
+    DBG_VALUE $dh, _, !14, !15, debug-location !16
     $edi = SHR32ri killed $edi, 8, implicit-def dead $eflags, debug-location !17
     $eax = MOVSX32rr8 $dil, implicit killed $edi, debug-location !20
     $rbp = POP64r implicit-def $rsp, implicit $rsp, debug-location !20

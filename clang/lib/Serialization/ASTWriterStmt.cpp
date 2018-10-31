@@ -183,9 +183,15 @@ void ASTStmtWriter::VisitSwitchStmt(SwitchStmt *S) {
 
 void ASTStmtWriter::VisitWhileStmt(WhileStmt *S) {
   VisitStmt(S);
-  Record.AddDeclRef(S->getConditionVariable());
+
+  bool HasVar = S->getConditionVariableDeclStmt() != nullptr;
+  Record.push_back(HasVar);
+
   Record.AddStmt(S->getCond());
   Record.AddStmt(S->getBody());
+  if (HasVar)
+    Record.AddDeclRef(S->getConditionVariable());
+
   Record.AddSourceLocation(S->getWhileLoc());
   Code = serialization::STMT_WHILE;
 }
@@ -243,9 +249,15 @@ void ASTStmtWriter::VisitBreakStmt(BreakStmt *S) {
 
 void ASTStmtWriter::VisitReturnStmt(ReturnStmt *S) {
   VisitStmt(S);
+
+  bool HasNRVOCandidate = S->getNRVOCandidate() != nullptr;
+  Record.push_back(HasNRVOCandidate);
+
   Record.AddStmt(S->getRetValue());
+  if (HasNRVOCandidate)
+    Record.AddDeclRef(S->getNRVOCandidate());
+
   Record.AddSourceLocation(S->getReturnLoc());
-  Record.AddDeclRef(S->getNRVOCandidate());
   Code = serialization::STMT_RETURN;
 }
 
