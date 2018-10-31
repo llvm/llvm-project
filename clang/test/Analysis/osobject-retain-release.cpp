@@ -43,6 +43,7 @@ struct OSArray : public OSObject {
 
 struct OtherStruct {
   static void doNothingToArray(OSArray *array);
+  OtherStruct(OSArray *arr);
 };
 
 struct OSMetaClassBase {
@@ -54,6 +55,12 @@ void check_no_invalidation() {
   OtherStruct::doNothingToArray(arr);
 } // expected-warning{{Potential leak of an object stored into 'arr'}}
   // expected-note@-1{{Object leaked}}
+
+void check_no_invalidation_other_struct() {
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to function 'withCapacity' returns an OSObject of type struct OSArray * with a +1 retain count}}
+  OtherStruct other(arr); // expected-warning{{Potential leak}}
+                          // expected-note@-1{{Object leaked}}
+}
 
 void check_rc_consumed() {
   OSArray *arr = OSArray::withCapacity(10);
