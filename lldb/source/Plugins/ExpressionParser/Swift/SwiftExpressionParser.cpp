@@ -1569,7 +1569,10 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   if (repl || !playground) {
     code_manipulator =
         llvm::make_unique<SwiftASTManipulator>(*source_file, repl);
-    code_manipulator->RewriteResult();
+
+    if (!playground) {
+      code_manipulator->RewriteResult();
+    }
   }
 
   Status auto_import_error;

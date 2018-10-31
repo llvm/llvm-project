@@ -500,8 +500,22 @@ bool ExpressionSourceCode::GetText(
           }
         }
       }
+      const bool playground = options.GetPlaygroundTransformEnabled();
+      SwiftPersistentExpressionState *persistent_state =
+        llvm::cast<SwiftPersistentExpressionState>(target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeSwift));
+      std::vector<swift::ValueDecl *> persistent_results;
+      // Check if we have already declared the playground stub debug functions
+      persistent_state->GetSwiftPersistentDecls(ConstString("__builtin_log_with_id"), {},
+                                                persistent_results);
+
+      size_t num_persistent_results = persistent_results.size();
+      bool need_to_declare_log_functions = num_persistent_results == 0;
+      EvaluateExpressionOptions localOptions(options);
+
+      localOptions.SetPreparePlaygroundStubFunctions(need_to_declare_log_functions);
+
       SwiftASTManipulator::WrapExpression(wrap_stream, m_body.c_str(),
-                                          language_flags, options, generic_info,
+                                          language_flags, localOptions, generic_info,
                                           os_vers.str(),
                                           first_body_line);
     }
