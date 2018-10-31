@@ -200,6 +200,11 @@ void RangedConstraintManager::computeAdjustment(SymbolRef &Sym,
   }
 }
 
+void *ProgramStateTrait<ConstraintRange>::GDMIndex() {
+  static int Index;
+  return &Index;
+}
+
 } // end of namespace ento
 
 } // end of namespace clang
