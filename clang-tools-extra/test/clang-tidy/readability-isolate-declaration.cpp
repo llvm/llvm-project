@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-isolate-declaration %t -- -fexceptions
+// RUN: %check_clang_tidy %s readability-isolate-declaration %t -- -- -fexceptions
 
 void f() {
   int i;
