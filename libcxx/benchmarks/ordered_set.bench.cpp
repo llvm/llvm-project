@@ -83,12 +83,12 @@ struct Create : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-    std::vector<size_t> Keys(TableSize);
-    std::iota(Keys.begin(), Keys.end(), size_t{0});
+    std::vector<uint64_t> Keys(TableSize);
+    std::iota(Keys.begin(), Keys.end(), uint64_t{0});
     sortKeysBy(Keys, Access());
 
     while (State.KeepRunningBatch(TableSize * NumTables)) {
-      std::vector<std::set<size_t>> Sets(NumTables);
+      std::vector<std::set<uint64_t>> Sets(NumTables);
       for (auto K : Keys) {
         for (auto& Set : Sets) {
           benchmark::DoNotOptimize(Set.insert(K));

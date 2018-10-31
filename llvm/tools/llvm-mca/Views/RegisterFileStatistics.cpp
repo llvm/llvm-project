@@ -15,8 +15,7 @@
 #include "Views/RegisterFileStatistics.h"
 #include "llvm/Support/Format.h"
 
-using namespace llvm;
-
+namespace llvm {
 namespace mca {
 
 RegisterFileStatistics::RegisterFileStatistics(const MCSubtargetInfo &sti)
@@ -106,3 +105,4 @@ void RegisterFileStatistics::printView(raw_ostream &OS) const {
 }
 
 } // namespace mca
+} // namespace llvm

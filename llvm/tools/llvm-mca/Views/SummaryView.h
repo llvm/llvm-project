@@ -29,19 +29,20 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_SUMMARYVIEW_H
 #define LLVM_TOOLS_LLVM_MCA_SUMMARYVIEW_H
 
-#include "SourceMgr.h"
 #include "Views/View.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
 namespace mca {
 
 /// A view that collects and prints a few performance numbers.
 class SummaryView : public View {
   const llvm::MCSchedModel &SM;
-  const SourceMgr &Source;
+  llvm::ArrayRef<llvm::MCInst> Source;
   const unsigned DispatchWidth;
+  unsigned LastInstructionIdx;
   unsigned TotalCycles;
   // The total number of micro opcodes contributed by a block of instructions.
   unsigned NumMicroOps;
@@ -62,7 +63,7 @@ class SummaryView : public View {
   double getBlockRThroughput() const;
 
 public:
-  SummaryView(const llvm::MCSchedModel &Model, const SourceMgr &S,
+  SummaryView(const llvm::MCSchedModel &Model, llvm::ArrayRef<llvm::MCInst> S,
               unsigned Width);
 
   void onCycleEnd() override { ++TotalCycles; }
@@ -71,5 +72,6 @@ public:
   void printView(llvm::raw_ostream &OS) const override;
 };
 } // namespace mca
+} // namespace llvm
 
 #endif

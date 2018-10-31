@@ -52,6 +52,7 @@ ASM_FUNCTION_MIPS_RE = re.compile(
 
 ASM_FUNCTION_PPC_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@(?P=func)\n'
+    r'.*?'
     r'\.Lfunc_begin[0-9]+:\n'
     r'(?:[ \t]+.cfi_startproc\n)?'
     r'(?:\.Lfunc_[gl]ep[0-9]+:\n(?:[ \t]+.*?\n)*)*'

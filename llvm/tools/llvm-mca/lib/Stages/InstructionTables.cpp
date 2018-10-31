@@ -17,9 +17,8 @@
 
 #include "Stages/InstructionTables.h"
 
+namespace llvm {
 namespace mca {
-
-using namespace llvm;
 
 Error InstructionTables::execute(InstRef &IR) {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
@@ -67,3 +66,4 @@ Error InstructionTables::execute(InstRef &IR) {
 }
 
 } // namespace mca
+} // namespace llvm

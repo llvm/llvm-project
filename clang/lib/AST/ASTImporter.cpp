@@ -3258,15 +3258,15 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
     DC->makeDeclVisibleInContext(ToFunction);
   }
 
+  if (auto *FromCXXMethod = dyn_cast<CXXMethodDecl>(D))
+    ImportOverrides(cast<CXXMethodDecl>(ToFunction), FromCXXMethod);
+
   // Import the rest of the chain. I.e. import all subsequent declarations.
   for (++RedeclIt; RedeclIt != Redecls.end(); ++RedeclIt) {
     ExpectedDecl ToRedeclOrErr = import(*RedeclIt);
     if (!ToRedeclOrErr)
       return ToRedeclOrErr.takeError();
   }
-
-  if (auto *FromCXXMethod = dyn_cast<CXXMethodDecl>(D))
-    ImportOverrides(cast<CXXMethodDecl>(ToFunction), FromCXXMethod);
 
   return ToFunction;
 }
@@ -5707,8 +5707,8 @@ ExpectedStmt ASTNodeImporter::VisitCaseStmt(CaseStmt *S) {
   std::tie(ToLHS, ToRHS, ToSubStmt, ToCaseLoc, ToEllipsisLoc, ToColonLoc) =
       *Imp;
 
-  auto *ToStmt = new (Importer.getToContext()) CaseStmt(
-      ToLHS, ToRHS, ToCaseLoc, ToEllipsisLoc, ToColonLoc);
+  auto *ToStmt = CaseStmt::Create(Importer.getToContext(), ToLHS, ToRHS,
+                                  ToCaseLoc, ToEllipsisLoc, ToColonLoc);
   ToStmt->setSubStmt(ToSubStmt);
 
   return ToStmt;
@@ -5772,10 +5772,9 @@ ExpectedStmt ASTNodeImporter::VisitIfStmt(IfStmt *S) {
       ToIfLoc, ToInit, ToConditionVariable, ToCond, ToThen, ToElseLoc, ToElse) =
           *Imp;
 
-  return new (Importer.getToContext()) IfStmt(
-      Importer.getToContext(),
-      ToIfLoc, S->isConstexpr(), ToInit, ToConditionVariable, ToCond,
-      ToThen, ToElseLoc, ToElse);
+  return IfStmt::Create(Importer.getToContext(), ToIfLoc, S->isConstexpr(),
+                        ToInit, ToConditionVariable, ToCond, ToThen, ToElseLoc,
+                        ToElse);
 }
 
 ExpectedStmt ASTNodeImporter::VisitSwitchStmt(SwitchStmt *S) {
@@ -5791,8 +5790,8 @@ ExpectedStmt ASTNodeImporter::VisitSwitchStmt(SwitchStmt *S) {
   SourceLocation ToSwitchLoc;
   std::tie(ToInit, ToConditionVariable, ToCond, ToBody, ToSwitchLoc) = *Imp;
 
-  auto *ToStmt = new (Importer.getToContext()) SwitchStmt(
-      Importer.getToContext(), ToInit, ToConditionVariable, ToCond);
+  auto *ToStmt = SwitchStmt::Create(Importer.getToContext(), ToInit,
+                                    ToConditionVariable, ToCond);
   ToStmt->setBody(ToBody);
   ToStmt->setSwitchLoc(ToSwitchLoc);
 
@@ -5825,9 +5824,8 @@ ExpectedStmt ASTNodeImporter::VisitWhileStmt(WhileStmt *S) {
   SourceLocation ToWhileLoc;
   std::tie(ToConditionVariable, ToCond, ToBody, ToWhileLoc) = *Imp;
 
-  return new (Importer.getToContext()) WhileStmt(
-      Importer.getToContext(),
-      ToConditionVariable, ToCond, ToBody, ToWhileLoc);
+  return WhileStmt::Create(Importer.getToContext(), ToConditionVariable, ToCond,
+                           ToBody, ToWhileLoc);
 }
 
 ExpectedStmt ASTNodeImporter::VisitDoStmt(DoStmt *S) {
@@ -5919,8 +5917,8 @@ ExpectedStmt ASTNodeImporter::VisitReturnStmt(ReturnStmt *S) {
   const VarDecl *ToNRVOCandidate;
   std::tie(ToReturnLoc, ToRetValue, ToNRVOCandidate) = *Imp;
 
-  return new (Importer.getToContext()) ReturnStmt(
-      ToReturnLoc, ToRetValue, ToNRVOCandidate);
+  return ReturnStmt::Create(Importer.getToContext(), ToReturnLoc, ToRetValue,
+                            ToNRVOCandidate);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXCatchStmt(CXXCatchStmt *S) {
@@ -6148,8 +6146,8 @@ ExpectedStmt ASTNodeImporter::VisitPredefinedExpr(PredefinedExpr *E) {
   StringLiteral *ToFunctionName;
   std::tie(ToBeginLoc, ToType, ToFunctionName) = *Imp;
 
-  return new (Importer.getToContext()) PredefinedExpr(
-      ToBeginLoc, ToType, E->getIdentType(), ToFunctionName);
+  return PredefinedExpr::Create(Importer.getToContext(), ToBeginLoc, ToType,
+                                E->getIdentKind(), ToFunctionName);
 }
 
 ExpectedStmt ASTNodeImporter::VisitDeclRefExpr(DeclRefExpr *E) {

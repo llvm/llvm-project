@@ -531,18 +531,16 @@ define <8 x i16> @test13(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; SSE41-NEXT:    pcmpeqd %xmm4, %xmm0
 ; SSE41-NEXT:    pcmpeqd %xmm5, %xmm5
 ; SSE41-NEXT:    pxor %xmm5, %xmm0
-; SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; SSE41-NEXT:    pshufb %xmm6, %xmm0
-; SSE41-NEXT:    movdqa %xmm3, %xmm7
-; SSE41-NEXT:    pmaxud %xmm2, %xmm7
-; SSE41-NEXT:    pcmpeqd %xmm3, %xmm7
-; SSE41-NEXT:    pxor %xmm5, %xmm7
-; SSE41-NEXT:    pshufb %xmm6, %xmm7
-; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm7[0]
+; SSE41-NEXT:    movdqa %xmm3, %xmm6
+; SSE41-NEXT:    pmaxud %xmm2, %xmm6
+; SSE41-NEXT:    pcmpeqd %xmm3, %xmm6
+; SSE41-NEXT:    pxor %xmm5, %xmm6
+; SSE41-NEXT:    packssdw %xmm6, %xmm0
 ; SSE41-NEXT:    psubd %xmm2, %xmm3
 ; SSE41-NEXT:    psubd %xmm1, %xmm4
-; SSE41-NEXT:    pshufb %xmm6, %xmm4
-; SSE41-NEXT:    pshufb %xmm6, %xmm3
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; SSE41-NEXT:    pshufb %xmm1, %xmm4
+; SSE41-NEXT:    pshufb %xmm1, %xmm3
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm3[0]
 ; SSE41-NEXT:    pandn %xmm4, %xmm0
 ; SSE41-NEXT:    retq
@@ -916,18 +914,16 @@ define <8 x i16> @test15(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; SSE41-NEXT:    pcmpeqd %xmm0, %xmm4
 ; SSE41-NEXT:    pcmpeqd %xmm5, %xmm5
 ; SSE41-NEXT:    pxor %xmm5, %xmm4
-; SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; SSE41-NEXT:    pshufb %xmm6, %xmm4
-; SSE41-NEXT:    movdqa %xmm3, %xmm7
-; SSE41-NEXT:    pminud %xmm2, %xmm7
-; SSE41-NEXT:    pcmpeqd %xmm3, %xmm7
-; SSE41-NEXT:    pxor %xmm5, %xmm7
-; SSE41-NEXT:    pshufb %xmm6, %xmm7
-; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm7[0]
+; SSE41-NEXT:    movdqa %xmm3, %xmm6
+; SSE41-NEXT:    pminud %xmm2, %xmm6
+; SSE41-NEXT:    pcmpeqd %xmm3, %xmm6
+; SSE41-NEXT:    pxor %xmm5, %xmm6
+; SSE41-NEXT:    packssdw %xmm6, %xmm4
 ; SSE41-NEXT:    psubd %xmm2, %xmm3
 ; SSE41-NEXT:    psubd %xmm1, %xmm0
-; SSE41-NEXT:    pshufb %xmm6, %xmm0
-; SSE41-NEXT:    pshufb %xmm6, %xmm3
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; SSE41-NEXT:    pshufb %xmm1, %xmm0
+; SSE41-NEXT:    pshufb %xmm1, %xmm3
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    retq
@@ -1052,18 +1048,16 @@ define <8 x i16> @test16(<8 x i16> %x, <8 x i32> %y) nounwind {
 ; SSE41-NEXT:    pcmpeqd %xmm1, %xmm4
 ; SSE41-NEXT:    pcmpeqd %xmm5, %xmm5
 ; SSE41-NEXT:    pxor %xmm5, %xmm4
-; SSE41-NEXT:    movdqa {{.*#+}} xmm6 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; SSE41-NEXT:    pshufb %xmm6, %xmm4
-; SSE41-NEXT:    movdqa %xmm2, %xmm7
-; SSE41-NEXT:    pmaxud %xmm3, %xmm7
-; SSE41-NEXT:    pcmpeqd %xmm2, %xmm7
-; SSE41-NEXT:    pxor %xmm5, %xmm7
-; SSE41-NEXT:    pshufb %xmm6, %xmm7
-; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm7[0]
+; SSE41-NEXT:    movdqa %xmm2, %xmm6
+; SSE41-NEXT:    pmaxud %xmm3, %xmm6
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm6
+; SSE41-NEXT:    pxor %xmm5, %xmm6
+; SSE41-NEXT:    packssdw %xmm6, %xmm4
 ; SSE41-NEXT:    psubd %xmm2, %xmm3
 ; SSE41-NEXT:    psubd %xmm1, %xmm0
-; SSE41-NEXT:    pshufb %xmm6, %xmm0
-; SSE41-NEXT:    pshufb %xmm6, %xmm3
+; SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
+; SSE41-NEXT:    pshufb %xmm1, %xmm0
+; SSE41-NEXT:    pshufb %xmm1, %xmm3
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; SSE41-NEXT:    pand %xmm4, %xmm0
 ; SSE41-NEXT:    retq

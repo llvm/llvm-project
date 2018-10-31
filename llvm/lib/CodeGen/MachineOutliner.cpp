@@ -1202,6 +1202,14 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   F->addFnAttr(Attribute::OptimizeForSize);
   F->addFnAttr(Attribute::MinSize);
 
+  // Include target features from an arbitrary candidate for the outlined
+  // function. This makes sure the outlined function knows what kinds of
+  // instructions are going into it. This is fine, since all parent functions
+  // must necessarily support the instructions that are in the outlined region.
+  const Function &ParentFn = OF.Candidates.front()->getMF()->getFunction();
+  if (ParentFn.hasFnAttribute("target-features"))
+    F->addFnAttr(ParentFn.getFnAttribute("target-features"));
+
   BasicBlock *EntryBB = BasicBlock::Create(C, "entry", F);
   IRBuilder<> Builder(EntryBB);
   Builder.CreateRetVoid();

@@ -11,12 +11,12 @@ target triple = "powerpc64-unknown-linux-gnu"
 define i32 @localexec() nounwind {
 entry:
 ;OPT0:          addis [[REG1:[0-9]+]], 13, a@tprel@ha
-;OPT0-NEXT:     addi [[REG1]], [[REG1]], a@tprel@l
-;OPT0-NEXT:     li [[REG2:[0-9]+]], 42
-;OPT0:          stw [[REG2]], 0([[REG1]])
+;OPT0-NEXT:     addi [[REG2:[0-9]+]], [[REG1]], a@tprel@l
+;OPT0-NEXT:     li [[REG3:[0-9]+]], 42
+;OPT0:          stw [[REG3]], 0([[REG2]])
 ;OPT1:          addis [[REG1:[0-9]+]], 13, a@tprel@ha
-;OPT1-NEXT:     li [[REG2:[0-9]+]], 42
-;OPT1:     stw [[REG2]], a@tprel@l([[REG1]])
+;OPT1-NEXT:     li [[REG3:[0-9]+]], 42
+;OPT1:     stw [[REG3]], a@tprel@l([[REG1]])
   store i32 42, i32* @a, align 4
   ret i32 0
 }

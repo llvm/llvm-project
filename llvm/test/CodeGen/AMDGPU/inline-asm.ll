@@ -186,8 +186,8 @@ entry:
 
 ; FIXME: Should not have intermediate sgprs
 ; CHECK-LABEL: {{^}}i64_imm_input_phys_vgpr:
-; CHECK: s_mov_b32 s1, 0
-; CHECK: s_mov_b32 s0, 0x1e240
+; CHECK-DAG: s_mov_b32 s1, 0
+; CHECK-DAG: s_mov_b32 s0, 0x1e240
 ; CHECK: v_mov_b32_e32 v0, s0
 ; CHECK: v_mov_b32_e32 v1, s1
 ; CHECK: use v[0:1]

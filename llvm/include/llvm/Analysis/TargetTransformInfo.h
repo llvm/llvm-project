@@ -770,7 +770,9 @@ public:
 
   /// \return The cost of a shuffle instruction of kind Kind and of type Tp.
   /// The index and subtype parameters are used by the subvector insertion and
-  /// extraction shuffle kinds.
+  /// extraction shuffle kinds to show the insert/extract point and the type of
+  /// the subvector being inserted/extracted. 
+  /// NOTE: For subvector extractions Tp represents the source type.
   int getShuffleCost(ShuffleKind Kind, Type *Tp, int Index = 0,
                      Type *SubTp = nullptr) const;
 

@@ -35,55 +35,32 @@
 define signext i1 @sdiv_i1(i1 signext %a, i1 signext %b) {
 ; GP32-LABEL: sdiv_i1:
 ; GP32:       # %bb.0: # %entry
-; GP32-NEXT:    div $zero, $4, $5
-; GP32-NEXT:    teq $5, $zero, 7
-; GP32-NEXT:    mflo $1
-; GP32-NEXT:    andi $1, $1, 1
 ; GP32-NEXT:    jr $ra
-; GP32-NEXT:    negu $2, $1
+; GP32-NEXT:    move $2, $4
 ;
 ; GP32R6-LABEL: sdiv_i1:
 ; GP32R6:       # %bb.0: # %entry
-; GP32R6-NEXT:    div $1, $4, $5
-; GP32R6-NEXT:    teq $5, $zero, 7
-; GP32R6-NEXT:    andi $1, $1, 1
 ; GP32R6-NEXT:    jr $ra
-; GP32R6-NEXT:    negu $2, $1
+; GP32R6-NEXT:    move $2, $4
 ;
 ; GP64-LABEL: sdiv_i1:
 ; GP64:       # %bb.0: # %entry
-; GP64-NEXT:    div $zero, $4, $5
-; GP64-NEXT:    teq $5, $zero, 7
-; GP64-NEXT:    mflo $1
-; GP64-NEXT:    andi $1, $1, 1
 ; GP64-NEXT:    jr $ra
-; GP64-NEXT:    negu $2, $1
+; GP64-NEXT:    move $2, $4
 ;
 ; GP64R6-LABEL: sdiv_i1:
 ; GP64R6:       # %bb.0: # %entry
-; GP64R6-NEXT:    div $1, $4, $5
-; GP64R6-NEXT:    teq $5, $zero, 7
-; GP64R6-NEXT:    andi $1, $1, 1
 ; GP64R6-NEXT:    jr $ra
-; GP64R6-NEXT:    negu $2, $1
+; GP64R6-NEXT:    move $2, $4
 ;
 ; MMR3-LABEL: sdiv_i1:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    div $zero, $4, $5
-; MMR3-NEXT:    teq $5, $zero, 7
-; MMR3-NEXT:    mflo16 $2
-; MMR3-NEXT:    andi16 $2, $2, 1
-; MMR3-NEXT:    li16 $3, 0
-; MMR3-NEXT:    subu16 $2, $3, $2
+; MMR3-NEXT:    move $2, $4
 ; MMR3-NEXT:    jrc $ra
 ;
 ; MMR6-LABEL: sdiv_i1:
 ; MMR6:       # %bb.0: # %entry
-; MMR6-NEXT:    div $2, $4, $5
-; MMR6-NEXT:    teq $5, $zero, 7
-; MMR6-NEXT:    andi16 $2, $2, 1
-; MMR6-NEXT:    li16 $3, 0
-; MMR6-NEXT:    subu16 $2, $3, $2
+; MMR6-NEXT:    move $2, $4
 ; MMR6-NEXT:    jrc $ra
 entry:
   %r = sdiv i1 %a, %b

@@ -84,3 +84,26 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "sign-return-address"="all" {
   tail call fastcc i64 @bar(i64 %x)
   ret void
 }
+
+; CHECK-LABEL: @leaf_sign_all_a_key
+; CHECK: paciasp
+; CHECK: autiasp
+define i32 @leaf_sign_all_a_key(i32 %x) "sign-return-address"="all" "sign-return-address-key"="a_key" {
+  ret i32 %x
+}
+
+; CHECK-LABEL: @leaf_sign_all_b_key
+; CHECK: pacibsp
+; CHECK: autibsp
+define i32 @leaf_sign_all_b_key(i32 %x) "sign-return-address"="all" "sign-return-address-key"="b_key" {
+  ret i32 %x
+}
+
+; CHECK-LABEL: @leaf_sign_all_v83_b_key
+; CHECK: pacibsp
+; CHECK-NOT: ret
+; CHECK: retab
+; CHECK-NOT: ret
+define i32 @leaf_sign_all_v83_b_key(i32 %x) "sign-return-address"="all" "target-features"="+v8.3a" "sign-return-address-key"="b_key" {
+  ret i32 %x
+}

@@ -459,7 +459,7 @@ static void ParseLangArgs(LangOptions &Opts, InputKind IK, const char *triple) {
   if (IK.getLanguage() == InputKind::Asm) {
     Opts.AsmPreprocessor = 1;
   } else if (IK.isObjectiveC()) {
-    Opts.ObjC1 = Opts.ObjC2 = 1;
+    Opts.ObjC = 1;
   }
 
   LangStandard::Kind LangStd = LangStandard::lang_unspecified;

@@ -22,7 +22,6 @@ define void @t() nounwind  {
 ; X86-NEXT:    calll _foo
 ; X86-NEXT:    addl $44, %esp
 ; X86-NEXT:    retl
-; X86-NEXT:    ## -- End function
 ;
 ; XMM-LABEL: t:
 ; XMM:       ## %bb.0: ## %entry
@@ -35,7 +34,6 @@ define void @t() nounwind  {
 ; XMM-NEXT:    calll _foo
 ; XMM-NEXT:    addl $60, %esp
 ; XMM-NEXT:    retl
-; XMM-NEXT:    ## -- End function
 ;
 ; YMM-LABEL: t:
 ; YMM:       ## %bb.0: ## %entry
@@ -43,16 +41,15 @@ define void @t() nounwind  {
 ; YMM-NEXT:    movl %esp, %ebp
 ; YMM-NEXT:    andl $-32, %esp
 ; YMM-NEXT:    subl $96, %esp
+; YMM-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; YMM-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; YMM-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
-; YMM-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; YMM-NEXT:    movl %eax, (%esp)
 ; YMM-NEXT:    vzeroupper
 ; YMM-NEXT:    calll _foo
 ; YMM-NEXT:    movl %ebp, %esp
 ; YMM-NEXT:    popl %ebp
 ; YMM-NEXT:    retl
-; YMM-NEXT:    ## -- End function
 entry:
 	%up_mvd = alloca [8 x %struct.x]		; <[8 x %struct.x]*> [#uses=2]
 	%up_mvd116 = getelementptr [8 x %struct.x], [8 x %struct.x]* %up_mvd, i32 0, i32 0		; <%struct.x*> [#uses=1]

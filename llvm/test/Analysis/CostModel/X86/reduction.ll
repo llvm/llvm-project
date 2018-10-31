@@ -614,7 +614,7 @@ define fastcc i16 @no_pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bin.rdx = add <8 x i16> %bin.rdx4, %rdx.shuf
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %rdx.shuf7 = shufflevector <8 x i16> %bin.rdx, <8 x i16> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bin.rdx8 = add <8 x i16> %bin.rdx, %rdx.shuf7
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 14 for instruction: %r = extractelement <8 x i16> %bin.rdx8, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %r = extractelement <8 x i16> %bin.rdx8, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %r
 ;
 ; SSSE3-LABEL: 'no_pairwise_reduction8i16'
@@ -1113,7 +1113,7 @@ define fastcc i16 @pairwise_reduction8i16(<8 x i16> %rdx, i16 %f1) {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %rdx.shuf.2.0 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 0, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %rdx.shuf.2.1 = shufflevector <8 x i16> %bin.rdx8, <8 x i16> undef, <8 x i32> <i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %bin.rdx9 = add <8 x i16> %rdx.shuf.2.0, %rdx.shuf.2.1
-; SSE2-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %r = extractelement <8 x i16> %bin.rdx9, i32 0
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 41 for instruction: %r = extractelement <8 x i16> %bin.rdx9, i32 0
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i16 %r
 ;
 ; SSSE3-LABEL: 'pairwise_reduction8i16'

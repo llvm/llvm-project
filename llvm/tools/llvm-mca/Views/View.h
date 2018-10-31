@@ -19,6 +19,7 @@
 #include "HWEventListener.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
 namespace mca {
 
 class View : public HWEventListener {
@@ -28,5 +29,6 @@ public:
   void anchor() override;
 };
 } // namespace mca
+} // namespace llvm
 
 #endif

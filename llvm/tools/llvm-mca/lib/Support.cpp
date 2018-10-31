@@ -16,9 +16,8 @@
 #include "Support.h"
 #include "llvm/MC/MCSchedule.h"
 
+namespace llvm {
 namespace mca {
-
-using namespace llvm;
 
 void computeProcResourceMasks(const MCSchedModel &SM,
                               SmallVectorImpl<uint64_t> &Masks) {
@@ -77,3 +76,4 @@ double computeBlockRThroughput(const MCSchedModel &SM, unsigned DispatchWidth,
 }
 
 } // namespace mca
+} // namespace llvm

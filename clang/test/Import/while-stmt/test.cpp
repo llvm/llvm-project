@@ -1,12 +1,10 @@
 // RUN: clang-import-test -dump-ast -import %S/Inputs/F.cpp -expression %s | FileCheck %s
 
 // CHECK: WhileStmt
-// CHECK-NEXT: <<NULL>>
 // CHECK-NEXT: CXXBoolLiteralExpr
 // CHECK-NEXT: NullStmt
 
 // CHECK: WhileStmt
-// CHECK-NEXT: <<NULL>>
 // CHECK-NEXT: CXXBoolLiteralExpr
 // CHECK-NEXT: CompoundStmt
 

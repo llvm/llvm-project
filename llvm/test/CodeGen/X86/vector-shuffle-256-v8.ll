@@ -2848,3 +2848,32 @@ entry:
   %add = add <8 x i32> %shuffle, %shuffle1
   ret <8 x i32> %add
 }
+
+; This test used to crash due to bad handling of concat_vectors after a bitcast
+; in lowerVectorShuffleAsBroadcast.
+define <8 x float> @broadcast_concat_crash(<4 x float> %x, <4 x float> %y, float %z) {
+; AVX1-LABEL: broadcast_concat_crash:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm1[3,3,1,1]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2OR512VL-LABEL: broadcast_concat_crash:
+; AVX2OR512VL:       # %bb.0: # %entry
+; AVX2OR512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2OR512VL-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,1,2,3]
+; AVX2OR512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX2OR512VL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX2OR512VL-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX2OR512VL-NEXT:    retq
+entry:
+  %tmp = shufflevector <4 x float> %x, <4 x float> %y, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %bc = bitcast <8 x float> %tmp to <4 x i64>
+  %tmp1 = extractelement <4 x i64> %bc, i32 3
+  %tmp2 = bitcast i64 %tmp1 to <2 x float>
+  %tmp4 = extractelement <2 x float> %tmp2, i32 1
+  %tmp5 = insertelement <8 x float> undef, float %tmp4, i32 4
+  %tmp6 = insertelement <8 x float> %tmp5, float %z, i32 5
+  ret <8 x float> %tmp6
+}

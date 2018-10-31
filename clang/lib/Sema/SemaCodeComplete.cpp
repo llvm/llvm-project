@@ -1090,7 +1090,7 @@ bool ResultBuilder::IsOrdinaryName(const NamedDecl *ND) const {
   unsigned IDNS = Decl::IDNS_Ordinary | Decl::IDNS_LocalExtern;
   if (SemaRef.getLangOpts().CPlusPlus)
     IDNS |= Decl::IDNS_Tag | Decl::IDNS_Namespace | Decl::IDNS_Member;
-  else if (SemaRef.getLangOpts().ObjC1) {
+  else if (SemaRef.getLangOpts().ObjC) {
     if (isa<ObjCIvarDecl>(ND))
       return true;
   }
@@ -1115,7 +1115,7 @@ bool ResultBuilder::IsOrdinaryNonTypeName(const NamedDecl *ND) const {
   unsigned IDNS = Decl::IDNS_Ordinary | Decl::IDNS_LocalExtern;
   if (SemaRef.getLangOpts().CPlusPlus)
     IDNS |= Decl::IDNS_Tag | Decl::IDNS_Namespace | Decl::IDNS_Member;
-  else if (SemaRef.getLangOpts().ObjC1) {
+  else if (SemaRef.getLangOpts().ObjC) {
     if (isa<ObjCIvarDecl>(ND))
       return true;
   }
@@ -1367,7 +1367,7 @@ static void AddTypeSpecifierResults(const LangOptions &LangOpts,
   if (LangOpts.CPlusPlus) {
     // C++-specific
     Results.AddResult(Result("bool", CCP_Type +
-                             (LangOpts.ObjC1? CCD_bool_in_ObjC : 0)));
+                             (LangOpts.ObjC ? CCD_bool_in_ObjC : 0)));
     Results.AddResult(Result("class", CCP_Type));
     Results.AddResult(Result("wchar_t", CCP_Type));
 
@@ -1528,7 +1528,7 @@ static bool WantTypesInContext(Sema::ParserCompletionContext CCC,
     return false;
 
   case Sema::PCC_ForInit:
-    return LangOpts.CPlusPlus || LangOpts.ObjC1 || LangOpts.C99;
+    return LangOpts.CPlusPlus || LangOpts.ObjC || LangOpts.C99;
   }
 
   llvm_unreachable("Invalid ParserCompletionContext!");
@@ -1741,7 +1741,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
       }
     }
 
-    if (SemaRef.getLangOpts().ObjC1)
+    if (SemaRef.getLangOpts().ObjC)
       AddObjCTopLevelResults(Results, true);
 
     AddTypedefResult(Results);
@@ -1857,7 +1857,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
       Builder.AddChunk(CodeCompletionString::CK_RightBrace);
       Results.AddResult(Result(Builder.TakeString()));
     }
-    if (SemaRef.getLangOpts().ObjC1)
+    if (SemaRef.getLangOpts().ObjC)
       AddObjCStatementResults(Results, true);
 
     if (Results.includeCodePatterns()) {
@@ -2185,7 +2185,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC,
       }
     }
 
-    if (SemaRef.getLangOpts().ObjC1) {
+    if (SemaRef.getLangOpts().ObjC) {
       // Add "super", if we're in an Objective-C class with a superclass.
       if (ObjCMethodDecl *Method = SemaRef.getCurMethodDecl()) {
         // The interface can be NULL.
@@ -2295,7 +2295,7 @@ static void MaybeAddSentinel(Preprocessor &PP,
                              CodeCompletionBuilder &Result) {
   if (SentinelAttr *Sentinel = FunctionOrMethod->getAttr<SentinelAttr>())
     if (Sentinel->getSentinel() == 0) {
-      if (PP.getLangOpts().ObjC1 && PP.isMacroDefined("nil"))
+      if (PP.getLangOpts().ObjC && PP.isMacroDefined("nil"))
         Result.AddTextChunk(", nil");
       else if (PP.isMacroDefined("NULL"))
         Result.AddTextChunk(", NULL");
@@ -3337,7 +3337,7 @@ unsigned clang::getMacroUsagePriority(StringRef MacroName,
     Priority = CCP_Constant;
   // Treat "bool" as a type.
   else if (MacroName.equals("bool"))
-    Priority = CCP_Type + (LangOpts.ObjC1? CCD_bool_in_ObjC : 0);
+    Priority = CCP_Type + (LangOpts.ObjC ? CCD_bool_in_ObjC : 0);
 
 
   return Priority;
@@ -3501,7 +3501,7 @@ static enum CodeCompletionContext::Kind mapCodeCompletionContext(Sema &S,
 
   case Sema::PCC_ForInit:
     if (S.getLangOpts().CPlusPlus || S.getLangOpts().C99 ||
-        S.getLangOpts().ObjC1)
+        S.getLangOpts().ObjC)
       return CodeCompletionContext::CCC_ParenthesizedExpression;
     else
       return CodeCompletionContext::CCC_Expression;
@@ -3890,7 +3890,7 @@ void Sema::CodeCompleteExpression(Scope *S, QualType PreferredType) {
 void Sema::CodeCompletePostfixExpression(Scope *S, ExprResult E) {
   if (E.isInvalid())
     CodeCompleteOrdinaryName(S, PCC_RecoveryInFunction);
-  else if (getLangOpts().ObjC1)
+  else if (getLangOpts().ObjC)
     CodeCompleteObjCInstanceMessage(S, E.get(), None, false);
 }
 
@@ -5224,7 +5224,7 @@ static void AddObjCImplementationResults(const LangOptions &LangOpts,
 
   CodeCompletionBuilder Builder(Results.getAllocator(),
                                 Results.getCodeCompletionTUInfo());
-  if (LangOpts.ObjC2) {
+  if (LangOpts.ObjC) {
     // @dynamic
     Builder.AddTypedTextChunk(OBJC_AT_KEYWORD_NAME(NeedAt,"dynamic"));
     Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
@@ -5247,7 +5247,7 @@ static void AddObjCInterfaceResults(const LangOptions &LangOpts,
   // Since we have an interface or protocol, we can end it.
   Results.AddResult(Result(OBJC_AT_KEYWORD_NAME(NeedAt,"end")));
 
-  if (LangOpts.ObjC2) {
+  if (LangOpts.ObjC) {
     // @property
     Results.AddResult(Result(OBJC_AT_KEYWORD_NAME(NeedAt,"property")));
 
@@ -5443,7 +5443,7 @@ static void AddObjCVisibilityResults(const LangOptions &LangOpts,
   Results.AddResult(Result(OBJC_AT_KEYWORD_NAME(NeedAt,"private")));
   Results.AddResult(Result(OBJC_AT_KEYWORD_NAME(NeedAt,"protected")));
   Results.AddResult(Result(OBJC_AT_KEYWORD_NAME(NeedAt,"public")));
-  if (LangOpts.ObjC2)
+  if (LangOpts.ObjC)
     Results.AddResult(Result(OBJC_AT_KEYWORD_NAME(NeedAt,"package")));
 }
 
@@ -7782,7 +7782,7 @@ void Sema::CodeCompleteObjCMethodDecl(Scope *S, Optional<bool> IsInstanceMethod,
 
   // Add Key-Value-Coding and Key-Value-Observing accessor methods for all of
   // the properties in this class and its categories.
-  if (Context.getLangOpts().ObjC2) {
+  if (Context.getLangOpts().ObjC) {
     SmallVector<ObjCContainerDecl *, 4> Containers;
     Containers.push_back(SearchDecl);
 
@@ -8011,7 +8011,7 @@ void Sema::CodeCompletePreprocessorDirective(bool InConditional) {
   Builder.AddPlaceholderChunk("arguments");
   Results.AddResult(Builder.TakeString());
 
-  if (getLangOpts().ObjC1) {
+  if (getLangOpts().ObjC) {
     // #import "header"
     Builder.AddTypedTextChunk("import");
     Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);

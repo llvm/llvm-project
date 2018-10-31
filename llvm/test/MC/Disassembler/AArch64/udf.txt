@@ -1,0 +1,16 @@
+# RUN: llvm-mc -arch aarch64 -disassemble -o - %s | FileCheck %s
+# RUN: llvm-mc -arch aarch64 -disassemble -o - %s | \
+# RUN: llvm-mc -assemble -filetype=obj -arch aarch64 -o - | \
+# RUN: llvm-objdump -r -d --triple=arm64- - | \
+# RUN: FileCheck %s -check-prefix=OBJ
+[0x00,0x00,0x00,0x00]
+[0x01,0x02,0x00,0x00]
+[0xff,0xff,0x00,0x00]
+
+# CHECK: udf #0
+# CHECK-NEXT: udf #513
+# CHECK-NEXT: udf #65535
+
+#OBJ:             0:	00 00 00 00 	udf	#0
+#OBJ-NEXT:        4:	01 02 00 00 	udf	#513
+#OBJ-NEXT:        8:	ff ff 00 00 	udf	#65535

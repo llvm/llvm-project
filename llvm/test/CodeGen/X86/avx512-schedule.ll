@@ -5029,13 +5029,13 @@ define <16 x i32> @vpandd(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnon
 ; GENERIC-LABEL: vpandd:
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; GENERIC-NEXT:    vpandq %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vpandd %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vpandd:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; SKX-NEXT:    vpandq %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
+; SKX-NEXT:    vpandd %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 entry:
   ; Force the execution domain with an add.
@@ -5049,13 +5049,13 @@ define <16 x i32> @vpandnd(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readno
 ; GENERIC-LABEL: vpandnd:
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; GENERIC-NEXT:    vpandnq %zmm0, %zmm1, %zmm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vpandnd %zmm0, %zmm1, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vpandnd:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; SKX-NEXT:    vpandnq %zmm0, %zmm1, %zmm0 # sched: [1:0.50]
+; SKX-NEXT:    vpandnd %zmm0, %zmm1, %zmm0 # sched: [1:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 entry:
   ; Force the execution domain with an add.
@@ -5071,13 +5071,13 @@ define <16 x i32> @vpord(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnone
 ; GENERIC-LABEL: vpord:
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; GENERIC-NEXT:    vporq %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vpord %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vpord:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; SKX-NEXT:    vporq %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
+; SKX-NEXT:    vpord %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 entry:
   ; Force the execution domain with an add.
@@ -5091,13 +5091,13 @@ define <16 x i32> @vpxord(<16 x i32> %a, <16 x i32> %b) nounwind uwtable readnon
 ; GENERIC-LABEL: vpxord:
 ; GENERIC:       # %bb.0: # %entry
 ; GENERIC-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; GENERIC-NEXT:    vpxorq %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
+; GENERIC-NEXT:    vpxord %zmm1, %zmm0, %zmm0 # sched: [1:0.33]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: vpxord:
 ; SKX:       # %bb.0: # %entry
 ; SKX-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0 # sched: [8:0.50]
-; SKX-NEXT:    vpxorq %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
+; SKX-NEXT:    vpxord %zmm1, %zmm0, %zmm0 # sched: [1:0.50]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 entry:
   ; Force the execution domain with an add.

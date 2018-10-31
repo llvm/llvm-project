@@ -85,14 +85,15 @@ entry:
   %cond = select i1 %cmp, i32 0, i32 4
   ret i32 %cond
 ; CHECK-LABEL: test4a:
-; CHECK-NOT: b{{(ne)|(eq)}}
-; CHECK:       mov     r2, r0
+; CHECK: bb.0:
+; CHECK-NEXT:  cmp     r0, r1
+; CHECK-NEXT:  bne     .LBB6_2
+; CHECK-NEXT: bb.1:
+; CHECK-NEXT:  movs    r0, #4
+; CHECK-NEXT:  bx      lr
+; CHECK-NEXT: .LBB6_2:
 ; CHECK-NEXT:  movs    r0, #0
-; CHECK-NEXT:  movs    r3, #4
-; CHECK-NEXT:  cmp     r2, r1
-; CHECK-NEXT:  bne     .[[BRANCH:[A-Z0-9_]+]]
-; CHECK:       mov     r0, r3
-; CHECK:       .[[BRANCH]]:
+; CHECK-NEXT:  bx      lr
 }
 
 define i32 @test4b(i32 %a, i32 %b) {

@@ -189,6 +189,10 @@ public:
                     unsigned FalseReg) const override;
   void getNoop(MCInst &NopInst) const override;
 
+  bool isSchedulingBoundary(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const override;
+
   /// analyzeCompare - For a comparison instruction, return the source registers
   /// in SrcReg and SrcReg2, and the value it compares against in CmpValue.
   /// Return true if the comparison instruction can be analyzed.
@@ -262,6 +266,9 @@ public:
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
   bool isFalkorShiftExtFast(const MachineInstr &MI) const;
+  /// Return true if the instructions is a SEH instruciton used for unwinding
+  /// on Windows.
+  static bool isSEHInstruction(const MachineInstr &MI);
 
 private:
   /// Sets the offsets on outlined instructions in \p MBB which use SP

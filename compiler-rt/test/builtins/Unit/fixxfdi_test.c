@@ -26,7 +26,7 @@
 // gggg gggg gggg gggg gggg gggg gggg gggg | gggg gggg gggg gggg seee eeee eeee eeee |
 // 1mmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm
 
-COMPILER_RT_ABI di_int __sfixxfdi(long double a);
+COMPILER_RT_ABI di_int __fixxfdi(long double a);
 
 int test__fixxfdi(long double a, di_int expected)
 {

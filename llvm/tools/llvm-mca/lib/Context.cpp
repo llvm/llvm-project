@@ -24,9 +24,8 @@
 #include "Stages/FetchStage.h"
 #include "Stages/RetireStage.h"
 
+namespace llvm {
 namespace mca {
-
-using namespace llvm;
 
 std::unique_ptr<Pipeline>
 Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
@@ -41,7 +40,7 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
   auto HWS = llvm::make_unique<Scheduler>(SM, LSU.get());
 
   // Create the pipeline stages.
-  auto Fetch = llvm::make_unique<FetchStage>(IB, SrcMgr);
+  auto Fetch = llvm::make_unique<FetchStage>(SrcMgr);
   auto Dispatch = llvm::make_unique<DispatchStage>(STI, MRI, Opts.DispatchWidth,
                                                    *RCU, *PRF);
   auto Execute = llvm::make_unique<ExecuteStage>(*HWS);
@@ -63,3 +62,4 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
 }
 
 } // namespace mca
+} // namespace llvm

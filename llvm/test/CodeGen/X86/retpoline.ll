@@ -1,8 +1,8 @@
-; RUN: llc -mtriple=x86_64-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64
-; RUN: llc -mtriple=x86_64-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64FAST
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64
+; RUN: llc -verify-machineinstrs -mtriple=x86_64-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X64FAST
 
-; RUN: llc -mtriple=i686-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86
-; RUN: llc -mtriple=i686-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86FAST
+; RUN: llc -verify-machineinstrs -mtriple=i686-unknown < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86
+; RUN: llc -verify-machineinstrs -mtriple=i686-unknown -O0 < %s | FileCheck %s --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" --check-prefix=X86FAST
 
 declare void @bar(i32)
 
@@ -428,8 +428,9 @@ latch:
 ; X64-NEXT:          lfence
 ; X64-NEXT:          jmp     [[CAPTURE_SPEC]]
 ; X64-NEXT:          .p2align        4, 0x90
-; X64-NEXT:  [[CALL_TARGET]]:                        # Block address taken
+; X64-NEXT:  {{.*}}                                  # Block address taken
 ; X64-NEXT:                                          # %entry
+; X64-NEXT:  [[CALL_TARGET]]:
 ; X64-NEXT:          movq    %r11, (%rsp)
 ; X64-NEXT:          retq
 ;
@@ -446,8 +447,9 @@ latch:
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
 ; X86-NEXT:          .p2align        4, 0x90
-; X86-NEXT:  [[CALL_TARGET]]:                        # Block address taken
+; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
+; X86-NEXT:  [[CALL_TARGET]]:
 ; X86-NEXT:          movl    %eax, (%esp)
 ; X86-NEXT:          retl
 ;
@@ -464,8 +466,9 @@ latch:
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
 ; X86-NEXT:          .p2align        4, 0x90
-; X86-NEXT:  [[CALL_TARGET]]:                        # Block address taken
+; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
+; X86-NEXT:  [[CALL_TARGET]]:
 ; X86-NEXT:          movl    %ecx, (%esp)
 ; X86-NEXT:          retl
 ;
@@ -482,8 +485,9 @@ latch:
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
 ; X86-NEXT:          .p2align        4, 0x90
-; X86-NEXT:  [[CALL_TARGET]]:                        # Block address taken
+; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
+; X86-NEXT:  [[CALL_TARGET]]:
 ; X86-NEXT:          movl    %edx, (%esp)
 ; X86-NEXT:          retl
 ;
@@ -500,8 +504,9 @@ latch:
 ; X86-NEXT:          lfence
 ; X86-NEXT:          jmp     [[CAPTURE_SPEC]]
 ; X86-NEXT:          .p2align        4, 0x90
-; X86-NEXT:  [[CALL_TARGET]]:                        # Block address taken
+; X86-NEXT:  {{.*}}                                  # Block address taken
 ; X86-NEXT:                                          # %entry
+; X86-NEXT:  [[CALL_TARGET]]:
 ; X86-NEXT:          movl    %edi, (%esp)
 ; X86-NEXT:          retl
 

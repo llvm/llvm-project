@@ -15,9 +15,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
 namespace mca {
-
-using namespace llvm;
 
 #define DEBUG_TYPE "llvm-mca"
 
@@ -243,3 +242,4 @@ bool Scheduler::isReady(const InstRef &IR) const {
 }
 
 } // namespace mca
+} // namespace llvm

@@ -73,10 +73,10 @@ define double @f7(double %a, double %b) {
     ret double %tmp1
 }
 ; CHECK-LABEL: f7:
-; CHECK: blt
+; CHECK: {{blt|bge}}
 ; CHECK: {{blt|bge}}
 ; CHECK: __ltdf2
 ; CHECK-EABI-LABEL: f7:
 ; CHECK-EABI: __aeabi_dcmplt
-; CHECK-EABI: bne
+; CHECK-EABI: {{bne|beq}}
 ; CHECK-EABI: {{bne|beq}}

@@ -727,11 +727,16 @@ void DwarfDebug::beginModule() {
     (useSplitDwarf() ? SkeletonHolder : InfoHolder)
         .setStringOffsetsStartSym(Asm->createTempSymbol("str_offsets_base"));
 
-  // Create the symbol that designates the start of the DWARF v5 range list
-  // table. It is located past the header and before the offsets table.
+
+  // Create the symbols that designates the start of the DWARF v5 range list
+  // and locations list tables. They are located past the table headers.
   if (getDwarfVersion() >= 5) {
-    (useSplitDwarf() ? SkeletonHolder : InfoHolder)
-        .setRnglistsTableBaseSym(Asm->createTempSymbol("rnglists_table_base"));
+    DwarfFile &Holder = useSplitDwarf() ? SkeletonHolder : InfoHolder;
+    Holder.setRnglistsTableBaseSym(
+        Asm->createTempSymbol("rnglists_table_base"));
+    Holder.setLoclistsTableBaseSym(
+        Asm->createTempSymbol("loclists_table_base"));
+
     if (useSplitDwarf())
       InfoHolder.setRnglistsTableBaseSym(
           Asm->createTempSymbol("rnglists_dwo_table_base"));
@@ -889,8 +894,13 @@ void DwarfDebug::finalizeModuleInfo() {
       U.attachRangesOrLowHighPC(U.getUnitDie(), TheCU.takeRanges());
     }
 
-    if (getDwarfVersion() >= 5 && U.hasRangeLists())
-      U.addRnglistsBase();
+    if (getDwarfVersion() >= 5) {
+      if (U.hasRangeLists())
+        U.addRnglistsBase();
+
+      if (!DebugLocs.getLists().empty() && !useSplitDwarf())
+        U.addLoclistsBase();
+    }
 
     auto *CUNode = cast<DICompileUnit>(P.first);
     // If compile Unit has macros, emit "DW_AT_macro_info" attribute.
@@ -1925,25 +1935,119 @@ void DwarfDebug::emitDebugLocEntryLocation(const DebugLocStream::Entry &Entry) {
   emitDebugLocEntry(Streamer, Entry);
 }
 
-// Emit locations into the debug loc section.
+// Emit the common part of the DWARF 5 range/locations list tables header.
+static void emitListsTableHeaderStart(AsmPrinter *Asm, const DwarfFile &Holder,
+                                      MCSymbol *TableStart,
+                                      MCSymbol *TableEnd) {
+  // Build the table header, which starts with the length field.
+  Asm->OutStreamer->AddComment("Length");
+  Asm->EmitLabelDifference(TableEnd, TableStart, 4);
+  Asm->OutStreamer->EmitLabel(TableStart);
+  // Version number (DWARF v5 and later).
+  Asm->OutStreamer->AddComment("Version");
+  Asm->emitInt16(Asm->OutStreamer->getContext().getDwarfVersion());
+  // Address size.
+  Asm->OutStreamer->AddComment("Address size");
+  Asm->emitInt8(Asm->MAI->getCodePointerSize());
+  // Segment selector size.
+  Asm->OutStreamer->AddComment("Segment selector size");
+  Asm->emitInt8(0);
+}
+
+// Emit the header of a DWARF 5 range list table list table. Returns the symbol
+// that designates the end of the table for the caller to emit when the table is
+// complete.
+static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm,
+                                         const DwarfFile &Holder) {
+  MCSymbol *TableStart = Asm->createTempSymbol("debug_rnglist_table_start");
+  MCSymbol *TableEnd = Asm->createTempSymbol("debug_rnglist_table_end");
+  emitListsTableHeaderStart(Asm, Holder, TableStart, TableEnd);
+
+  Asm->OutStreamer->AddComment("Offset entry count");
+  Asm->emitInt32(Holder.getRangeLists().size());
+  Asm->OutStreamer->EmitLabel(Holder.getRnglistsTableBaseSym());
+
+  for (const RangeSpanList &List : Holder.getRangeLists())
+    Asm->EmitLabelDifference(List.getSym(), Holder.getRnglistsTableBaseSym(),
+                             4);
+
+  return TableEnd;
+}
+
+// Emit the header of a DWARF 5 locations list table. Returns the symbol that
+// designates the end of the table for the caller to emit when the table is
+// complete.
+static MCSymbol *emitLoclistsTableHeader(AsmPrinter *Asm,
+                                         const DwarfFile &Holder) {
+  MCSymbol *TableStart = Asm->createTempSymbol("debug_loclist_table_start");
+  MCSymbol *TableEnd = Asm->createTempSymbol("debug_loclist_table_end");
+  emitListsTableHeaderStart(Asm, Holder, TableStart, TableEnd);
+
+  // FIXME: Generate the offsets table and use DW_FORM_loclistx with the
+  // DW_AT_loclists_base attribute. Until then set the number of offsets to 0.
+  Asm->OutStreamer->AddComment("Offset entry count");
+  Asm->emitInt32(0);
+  Asm->OutStreamer->EmitLabel(Holder.getLoclistsTableBaseSym());
+
+  return TableEnd;
+}
+
+// Emit locations into the .debug_loc/.debug_rnglists section.
 void DwarfDebug::emitDebugLoc() {
   if (DebugLocs.getLists().empty())
     return;
 
-  // Start the dwarf loc section.
-  Asm->OutStreamer->SwitchSection(
-      Asm->getObjFileLowering().getDwarfLocSection());
+  bool IsLocLists = getDwarfVersion() >= 5;
+  MCSymbol *TableEnd = nullptr;
+  if (IsLocLists) {
+    Asm->OutStreamer->SwitchSection(
+        Asm->getObjFileLowering().getDwarfLoclistsSection());
+    TableEnd = emitLoclistsTableHeader(Asm, useSplitDwarf() ? SkeletonHolder
+                                                            : InfoHolder);
+  } else {
+    Asm->OutStreamer->SwitchSection(
+        Asm->getObjFileLowering().getDwarfLocSection());
+  }
+
   unsigned char Size = Asm->MAI->getCodePointerSize();
   for (const auto &List : DebugLocs.getLists()) {
     Asm->OutStreamer->EmitLabel(List.Label);
+
     const DwarfCompileUnit *CU = List.CU;
+    const MCSymbol *Base = CU->getBaseAddress();
     for (const auto &Entry : DebugLocs.getEntries(List)) {
-      // Set up the range. This range is relative to the entry point of the
-      // compile unit. This is a hard coded 0 for low_pc when we're emitting
-      // ranges, or the DW_AT_low_pc on the compile unit otherwise.
-      if (auto *Base = CU->getBaseAddress()) {
-        Asm->EmitLabelDifference(Entry.BeginSym, Base, Size);
-        Asm->EmitLabelDifference(Entry.EndSym, Base, Size);
+      if (Base) {
+        // Set up the range. This range is relative to the entry point of the
+        // compile unit. This is a hard coded 0 for low_pc when we're emitting
+        // ranges, or the DW_AT_low_pc on the compile unit otherwise.
+        if (IsLocLists) {
+          Asm->OutStreamer->AddComment("DW_LLE_offset_pair");
+          Asm->OutStreamer->EmitIntValue(dwarf::DW_LLE_offset_pair, 1);
+          Asm->OutStreamer->AddComment("  starting offset");
+          Asm->EmitLabelDifferenceAsULEB128(Entry.BeginSym, Base);
+          Asm->OutStreamer->AddComment("  ending offset");
+          Asm->EmitLabelDifferenceAsULEB128(Entry.EndSym, Base);
+        } else {
+          Asm->EmitLabelDifference(Entry.BeginSym, Base, Size);
+          Asm->EmitLabelDifference(Entry.EndSym, Base, Size);
+        }
+
+        emitDebugLocEntryLocation(Entry);
+        continue;
+      }
+
+      // We have no base address.
+      if (IsLocLists) {
+        // TODO: Use DW_LLE_base_addressx + DW_LLE_offset_pair, or
+        // DW_LLE_startx_length in case if there is only a single range.
+        // That should reduce the size of the debug data emited.
+        // For now just use the DW_LLE_startx_length for all cases.
+        Asm->OutStreamer->AddComment("DW_LLE_startx_length");
+        Asm->emitInt8(dwarf::DW_LLE_startx_length);
+        Asm->OutStreamer->AddComment("  start idx");
+        Asm->EmitULEB128(AddrPool.getIndex(Entry.BeginSym));
+        Asm->OutStreamer->AddComment("  length");
+        Asm->EmitLabelDifferenceAsULEB128(Entry.EndSym, Entry.BeginSym);
       } else {
         Asm->OutStreamer->EmitSymbolValue(Entry.BeginSym, Size);
         Asm->OutStreamer->EmitSymbolValue(Entry.EndSym, Size);
@@ -1951,9 +2055,20 @@ void DwarfDebug::emitDebugLoc() {
 
       emitDebugLocEntryLocation(Entry);
     }
-    Asm->OutStreamer->EmitIntValue(0, Size);
-    Asm->OutStreamer->EmitIntValue(0, Size);
+
+    if (IsLocLists) {
+      // .debug_loclists section ends with DW_LLE_end_of_list.
+      Asm->OutStreamer->AddComment("DW_LLE_end_of_list");
+      Asm->OutStreamer->EmitIntValue(dwarf::DW_LLE_end_of_list, 1);
+    } else {
+      // Terminate the .debug_loc list with two 0 values.
+      Asm->OutStreamer->EmitIntValue(0, Size);
+      Asm->OutStreamer->EmitIntValue(0, Size);
+    }
   }
+
+  if (TableEnd)
+    Asm->OutStreamer->EmitLabel(TableEnd);
 }
 
 void DwarfDebug::emitDebugLocDWO() {
@@ -2230,39 +2345,6 @@ static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
     Asm->OutStreamer->EmitIntValue(0, Size);
     Asm->OutStreamer->EmitIntValue(0, Size);
   }
-}
-
-// Emit the header of a DWARF 5 range list table. Returns the symbol that
-// designates the end of the table for the caller to emit when the table is
-// complete.
-static MCSymbol *emitRnglistsTableHeader(AsmPrinter *Asm,
-                                         const DwarfFile &Holder) {
-  // The length is described by a starting label right after the length field
-  // and an end label.
-  MCSymbol *TableStart = Asm->createTempSymbol("debug_rnglist_table_start");
-  MCSymbol *TableEnd = Asm->createTempSymbol("debug_rnglist_table_end");
-  // Build the range table header, which starts with the length field.
-  Asm->OutStreamer->AddComment("Length");
-  Asm->EmitLabelDifference(TableEnd, TableStart, 4);
-  Asm->OutStreamer->EmitLabel(TableStart);
-  // Version number (DWARF v5 and later).
-  Asm->OutStreamer->AddComment("Version");
-  Asm->emitInt16(Asm->OutStreamer->getContext().getDwarfVersion());
-  Asm->OutStreamer->AddComment("Address size");
-  Asm->emitInt8(Asm->MAI->getCodePointerSize());
-  Asm->OutStreamer->AddComment("Segment selector size");
-  Asm->emitInt8(0);
-
-  MCSymbol *RnglistsTableBaseSym = Holder.getRnglistsTableBaseSym();
-
-  // FIXME: Generate the offsets table and use DW_FORM_rnglistx with the
-  // DW_AT_ranges attribute. Until then set the number of offsets to 0.
-  Asm->OutStreamer->AddComment("Offset entry count");
-  Asm->emitInt32(Holder.getRangeLists().size());
-  Asm->OutStreamer->EmitLabel(RnglistsTableBaseSym);
-  for (const RangeSpanList &List : Holder.getRangeLists())
-    Asm->EmitLabelDifference(List.getSym(), RnglistsTableBaseSym, 4);
-  return TableEnd;
 }
 
 void emitDebugRangesImpl(DwarfDebug &DD, AsmPrinter *Asm,

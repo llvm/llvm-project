@@ -578,10 +578,6 @@ SBError Driver::ParseArgs(int argc, const char *argv[], FILE *out_fh,
 
   ResetOptionValues();
 
-  // No arguments or just program name, nothing to parse.
-  if (argc <= 1)
-    return SBError();
-
   SBError error;
   std::vector<option> long_options_vector;
   BuildGetOptTable(long_options_vector);

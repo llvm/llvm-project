@@ -1115,7 +1115,9 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
                                             Node->getValueType(0));
     break;
   case ISD::SADDSAT:
-  case ISD::UADDSAT: {
+  case ISD::UADDSAT:
+  case ISD::SSUBSAT:
+  case ISD::USUBSAT: {
     Action = TLI.getOperationAction(Node->getOpcode(), Node->getValueType(0));
     break;
   }
@@ -2314,7 +2316,6 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
                                                    EVT DestVT,
                                                    const SDLoc &dl) {
   EVT SrcVT = Op0.getValueType();
-  EVT ShiftVT = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
 
   // TODO: Should any fast-math-flags be set for the created nodes?
   LLVM_DEBUG(dbgs() << "Legalizing INT_TO_FP\n");
@@ -2368,32 +2369,6 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
   }
   assert(!isSigned && "Legalize cannot Expand SINT_TO_FP for i64 yet");
   // Code below here assumes !isSigned without checking again.
-
-  // TODO: Generalize this for use with other types.
-  if (SrcVT == MVT::i64 && DestVT == MVT::f32) {
-    LLVM_DEBUG(dbgs() << "Converting unsigned i64 to f32\n");
-    // For unsigned conversions, convert them to signed conversions using the
-    // algorithm from the x86_64 __floatundidf in compiler_rt.
-    SDValue Fast = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Op0);
-
-    SDValue ShiftConst = DAG.getConstant(1, dl, ShiftVT);
-    SDValue Shr = DAG.getNode(ISD::SRL, dl, SrcVT, Op0, ShiftConst);
-    SDValue AndConst = DAG.getConstant(1, dl, SrcVT);
-    SDValue And = DAG.getNode(ISD::AND, dl, SrcVT, Op0, AndConst);
-    SDValue Or = DAG.getNode(ISD::OR, dl, SrcVT, And, Shr);
-
-    SDValue SignCvt = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Or);
-    SDValue Slow = DAG.getNode(ISD::FADD, dl, DestVT, SignCvt, SignCvt);
-
-    // TODO: This really should be implemented using a branch rather than a
-    // select.  We happen to get lucky and machinesink does the right
-    // thing most of the time.  This would be a good candidate for a
-    // pseudo-op, or, even better, for whole-function isel.
-    SDValue SignBitTest =
-        DAG.getSetCC(dl, getSetCCResultType(SrcVT), Op0,
-                     DAG.getConstant(0, dl, SrcVT), ISD::SETLT);
-    return DAG.getSelect(dl, DestVT, SignBitTest, Slow, Fast);
-  }
 
   SDValue Tmp1 = DAG.getNode(ISD::SINT_TO_FP, dl, DestVT, Op0);
 
@@ -2877,29 +2852,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (TLI.expandFP_TO_SINT(Node, Tmp1, DAG))
       Results.push_back(Tmp1);
     break;
-  case ISD::FP_TO_UINT: {
-    SDValue True, False;
-    EVT VT =  Node->getOperand(0).getValueType();
-    EVT NVT = Node->getValueType(0);
-    APFloat apf(DAG.EVTToAPFloatSemantics(VT),
-                APInt::getNullValue(VT.getSizeInBits()));
-    APInt x = APInt::getSignMask(NVT.getSizeInBits());
-    (void)apf.convertFromAPInt(x, false, APFloat::rmNearestTiesToEven);
-    Tmp1 = DAG.getConstantFP(apf, dl, VT);
-    Tmp2 = DAG.getSetCC(dl, getSetCCResultType(VT),
-                        Node->getOperand(0),
-                        Tmp1, ISD::SETLT);
-    True = DAG.getNode(ISD::FP_TO_SINT, dl, NVT, Node->getOperand(0));
-    // TODO: Should any fast-math-flags be set for the FSUB?
-    False = DAG.getNode(ISD::FP_TO_SINT, dl, NVT,
-                        DAG.getNode(ISD::FSUB, dl, VT,
-                                    Node->getOperand(0), Tmp1));
-    False = DAG.getNode(ISD::XOR, dl, NVT, False,
-                        DAG.getConstant(x, dl, NVT));
-    Tmp1 = DAG.getSelect(dl, NVT, Tmp2, True, False);
-    Results.push_back(Tmp1);
+  case ISD::FP_TO_UINT:
+    if (TLI.expandFP_TO_UINT(Node, Tmp1, DAG))
+      Results.push_back(Tmp1);
     break;
-  }
   case ISD::VAARG:
     Results.push_back(DAG.expandVAArg(Node));
     Results.push_back(Results[0].getValue(1));
@@ -3300,8 +3256,10 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     break;
   }
   case ISD::SADDSAT:
-  case ISD::UADDSAT: {
-    Results.push_back(TLI.getExpandedSaturationAddition(Node, DAG));
+  case ISD::UADDSAT:
+  case ISD::SSUBSAT:
+  case ISD::USUBSAT: {
+    Results.push_back(TLI.getExpandedSaturationAdditionSubtraction(Node, DAG));
     break;
   }
   case ISD::SADDO:

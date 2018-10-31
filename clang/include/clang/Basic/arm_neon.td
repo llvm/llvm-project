@@ -206,6 +206,15 @@ def OP_DOT_LNQ
     : Op<(call "vdot", $p0, $p1,
           (bitcast $p1, (splat(bitcast "uint32x4_t", $p2), $p3)))>;
 
+def OP_FMLAL_LN     : Op<(call "vfmlal_low", $p0, $p1,
+                           (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
+def OP_FMLSL_LN     : Op<(call "vfmlsl_low", $p0, $p1,
+                           (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
+def OP_FMLAL_LN_Hi  : Op<(call "vfmlal_high", $p0, $p1,
+                           (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
+def OP_FMLSL_LN_Hi  : Op<(call "vfmlsl_high", $p0, $p1,
+                           (dup_typed $p1, (call "vget_lane", $p2, $p3)))>;
+
 //===----------------------------------------------------------------------===//
 // Instructions
 //===----------------------------------------------------------------------===//
@@ -1639,4 +1648,22 @@ let ArchGuard = "defined(__ARM_FEATURE_DOTPROD)" in {
 let ArchGuard = "defined(__ARM_FEATURE_DOTPROD) && defined(__aarch64__)" in {
   // Variants indexing into a 128-bit vector are A64 only.
   def UDOT_LANEQ : SOpInst<"vdot_laneq", "dd89i", "iUiQiQUi", OP_DOT_LNQ>;
+}
+
+// v8.2-A FP16 fused multiply-add long instructions.
+let ArchGuard = "defined(__ARM_FEATURE_FP16FML) && defined(__aarch64__)" in {
+  def VFMLAL_LOW  : SInst<"vfmlal_low", "ffHH", "UiQUi">;
+  def VFMLSL_LOW  : SInst<"vfmlsl_low", "ffHH", "UiQUi">;
+  def VFMLAL_HIGH : SInst<"vfmlal_high", "ffHH", "UiQUi">;
+  def VFMLSL_HIGH : SInst<"vfmlsl_high", "ffHH", "UiQUi">;
+
+  def VFMLAL_LANE_LOW  : SOpInst<"vfmlal_lane_low", "ffH0i", "UiQUi", OP_FMLAL_LN>;
+  def VFMLSL_LANE_LOW  : SOpInst<"vfmlsl_lane_low", "ffH0i", "UiQUi", OP_FMLSL_LN>;
+  def VFMLAL_LANE_HIGH : SOpInst<"vfmlal_lane_high", "ffH0i", "UiQUi", OP_FMLAL_LN_Hi>;
+  def VFMLSL_LANE_HIGH : SOpInst<"vfmlsl_lane_high", "ffH0i", "UiQUi", OP_FMLSL_LN_Hi>;
+
+  def VFMLAL_LANEQ_LOW  : SOpInst<"vfmlal_laneq_low", "ffH1i", "UiQUi", OP_FMLAL_LN>;
+  def VFMLSL_LANEQ_LOW  : SOpInst<"vfmlsl_laneq_low", "ffH1i", "UiQUi", OP_FMLSL_LN>;
+  def VFMLAL_LANEQ_HIGH : SOpInst<"vfmlal_laneq_high", "ffH1i", "UiQUi", OP_FMLAL_LN_Hi>;
+  def VFMLSL_LANEQ_HIGH : SOpInst<"vfmlsl_laneq_high", "ffH1i", "UiQUi", OP_FMLSL_LN_Hi>;
 }

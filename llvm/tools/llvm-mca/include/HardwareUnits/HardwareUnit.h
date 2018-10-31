@@ -16,6 +16,7 @@
 #ifndef LLVM_TOOLS_LLVM_MCA_HARDWAREUNIT_H
 #define LLVM_TOOLS_LLVM_MCA_HARDWAREUNIT_H
 
+namespace llvm {
 namespace mca {
 
 class HardwareUnit {
@@ -28,4 +29,5 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 #endif // LLVM_TOOLS_LLVM_MCA_HARDWAREUNIT_H

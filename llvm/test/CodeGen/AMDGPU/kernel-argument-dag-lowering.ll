@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -amdgpu-ir-lower-kernel-arguments=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI,GCN,HSA-VI,FUNC %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx900 -mattr=-code-object-v3 -amdgpu-ir-lower-kernel-arguments=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=VI,GCN,HSA-VI,FUNC %s
 
 ; Repeat of some problematic tests in kernel-args.ll, with the IR
 ; argument lowering pass disabled. Struct padding needs to be

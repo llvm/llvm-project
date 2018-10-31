@@ -1464,6 +1464,8 @@ function syscall_body(syscall, mode)
       pcmd("  }")
       pcmd("}")
     }
+  } else if (syscall == "getsockopt2") {
+    pcmd("/* TODO */")
   } else if (syscall == "fpathconf") {
     pcmd("/* Nothing to do */")
   } else if (syscall == "getrlimit") {
@@ -1982,10 +1984,6 @@ function syscall_body(syscall, mode)
     pcmd("if (nsa_) {")
     pcmd("  PRE_READ(nsa_, sizeof(__sanitizer_sigaction));")
     pcmd("}")
-  } else if (syscall == "pmc_get_info") {
-    pcmd("/* TODO */")
-  } else if (syscall == "pmc_control") {
-    pcmd("/* TODO */")
   } else if (syscall == "rasctl") {
     pcmd("/* Nothing to do */")
   } else if (syscall == "kqueue") {
@@ -2935,16 +2933,14 @@ function syscall_body(syscall, mode)
   } else if (syscall == "sendmmsg") {
     if (mode == "pre") {
       pcmd("struct __sanitizer_mmsghdr *mmsg = (struct __sanitizer_mmsghdr *)mmsg_;")
-      pcmd("unsigned int vlen = (vlen_ > 1024 ? 1024 : vlen_);")
       pcmd("if (mmsg) {")
-      pcmd("  PRE_READ(mmsg, sizeof(struct __sanitizer_mmsghdr) * vlen);")
+      pcmd("  PRE_READ(mmsg, sizeof(struct __sanitizer_mmsghdr) * (vlen_ > 1024 ? 1024 : vlen_));")
       pcmd("}")
     } else {
       pcmd("struct __sanitizer_mmsghdr *mmsg = (struct __sanitizer_mmsghdr *)mmsg_;")
-      pcmd("unsigned int vlen = (vlen_ > 1024 ? 1024 : vlen_);")
       pcmd("if (res >= 0) {")
       pcmd("  if (mmsg) {")
-      pcmd("    POST_READ(mmsg, sizeof(struct __sanitizer_mmsghdr) * vlen);")
+      pcmd("    POST_READ(mmsg, sizeof(struct __sanitizer_mmsghdr) * (vlen_ > 1024 ? 1024 : vlen_));")
       pcmd("  }")
       pcmd("}")
     }

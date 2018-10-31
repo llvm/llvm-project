@@ -39,13 +39,6 @@ public:
   LiveDebugVariables();
   ~LiveDebugVariables() override;
 
-  /// renameRegister - Move any user variables in OldReg to NewReg:SubIdx.
-  /// @param OldReg Old virtual register that is going away.
-  /// @param NewReg New register holding the user variables.
-  /// @param SubIdx If NewReg is a virtual register, SubIdx may indicate a sub-
-  ///               register.
-  void renameRegister(unsigned OldReg, unsigned NewReg, unsigned SubIdx);
-
   /// splitRegister - Move any user variables in OldReg to the live ranges in
   /// NewRegs where they are live. Mark the values as unavailable where no new
   /// register is live.

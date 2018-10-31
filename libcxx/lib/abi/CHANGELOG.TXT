@@ -16,7 +16,7 @@ New entries should be added directly below the "Version" header.
 Version 7.0
 -----------
 
-* rXXXXX - Making libc++ build under -fvisibility=hidden
+* r345260 - Making libc++ build under -fvisibility=hidden
 
   The change marks __thread_specific_ptr<__thread_struct>::__at_thread_exit(void*)
   with hidden visibility. This removes a symbol from the shared libraries,

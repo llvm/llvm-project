@@ -133,21 +133,21 @@ define <4 x i64> @stack_fold_vpconflictq_ymm(<4 x i64> %a0) {
 }
 declare <4 x i64> @llvm.x86.avx512.mask.conflict.q.256(<4 x i64>, <4 x i64>, i8) nounwind readnone
 
-define <4 x i32> @stack_fold_extracti32x4(<8 x i32> %a0, <8 x i32> %a1) {
+define <4 x i32> @stack_fold_extracti32x4(<8 x i16> %a0, <8 x i32> %a1) {
   ;CHECK-LABEL: stack_fold_extracti32x4
   ;CHECK:       vextracti128 $1, {{%ymm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 16-byte Folded Spill
-  ; add forces execution domain
-  %1 = add <8 x i32> %a0, <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+  ; zext forces execution domain
+  %1 = zext <8 x i16> %a0 to <8 x i32>
   %2 = shufflevector <8 x i32> %1, <8 x i32> %a1, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %3 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   ret <4 x i32> %2
 }
 
-define <2 x i64> @stack_fold_extracti64x2(<4 x i64> %a0, <4 x i64> %a1) {
+define <2 x i64> @stack_fold_extracti64x2(<4 x i32> %a0, <4 x i64> %a1) {
   ;CHECK-LABEL: stack_fold_extracti64x2
   ;CHECK:       vextracti128 $1, {{%ymm[0-9][0-9]*}}, {{-?[0-9]*}}(%rsp) {{.*#+}} 16-byte Folded Spill
-  ; add forces execution domain
-  %1 = add <4 x i64> %a0, <i64 1, i64 1, i64 1, i64 1>
+  ; zext forces execution domain
+  %1 = zext <4 x i32> %a0 to <4 x i64>
   %2 = shufflevector <4 x i64> %1, <4 x i64> %a1, <2 x i32> <i32 2, i32 3>
   %3 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
   ret <2 x i64> %2

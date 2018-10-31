@@ -19,7 +19,7 @@ define amdgpu_kernel void @dpp_test(i32 addrspace(1)* %out, i32 %in1, i32 %in2) 
 ; VI-NOOPT: v_mov_b32_e32 v{{[0-9]+}}, 0
 ; VI-NEXT: s_nop 0
 ; VI-NEXT: s_nop 0
-; VI-NEXT: v_mov_b32_dpp v2, [[REG]] quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
+; VI-NEXT: v_mov_b32_dpp {{v[0-9]+}}, [[REG]] quad_perm:[1,0,3,2] row_mask:0xf bank_mask:0xf
 @0 = internal unnamed_addr addrspace(3) global [448 x i32] undef, align 4
 define weak_odr amdgpu_kernel void @dpp_test1(i32* %arg) local_unnamed_addr {
 bb:

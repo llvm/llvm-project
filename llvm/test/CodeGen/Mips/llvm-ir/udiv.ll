@@ -35,41 +35,32 @@
 define zeroext i1 @udiv_i1(i1 zeroext %a, i1 zeroext %b) {
 ; GP32-LABEL: udiv_i1:
 ; GP32:       # %bb.0: # %entry
-; GP32-NEXT:    divu $zero, $4, $5
-; GP32-NEXT:    teq $5, $zero, 7
 ; GP32-NEXT:    jr $ra
-; GP32-NEXT:    mflo $2
+; GP32-NEXT:    move $2, $4
 ;
 ; GP32R6-LABEL: udiv_i1:
 ; GP32R6:       # %bb.0: # %entry
-; GP32R6-NEXT:    divu $2, $4, $5
-; GP32R6-NEXT:    teq $5, $zero, 7
-; GP32R6-NEXT:    jrc $ra
+; GP32R6-NEXT:    jr $ra
+; GP32R6-NEXT:    move $2, $4
 ;
 ; GP64-LABEL: udiv_i1:
 ; GP64:       # %bb.0: # %entry
-; GP64-NEXT:    divu $zero, $4, $5
-; GP64-NEXT:    teq $5, $zero, 7
 ; GP64-NEXT:    jr $ra
-; GP64-NEXT:    mflo $2
+; GP64-NEXT:    move $2, $4
 ;
 ; GP64R6-LABEL: udiv_i1:
 ; GP64R6:       # %bb.0: # %entry
-; GP64R6-NEXT:    divu $2, $4, $5
-; GP64R6-NEXT:    teq $5, $zero, 7
-; GP64R6-NEXT:    jrc $ra
+; GP64R6-NEXT:    jr $ra
+; GP64R6-NEXT:    move $2, $4
 ;
 ; MMR3-LABEL: udiv_i1:
 ; MMR3:       # %bb.0: # %entry
-; MMR3-NEXT:    divu $zero, $4, $5
-; MMR3-NEXT:    teq $5, $zero, 7
-; MMR3-NEXT:    mflo16 $2
+; MMR3-NEXT:    move $2, $4
 ; MMR3-NEXT:    jrc $ra
 ;
 ; MMR6-LABEL: udiv_i1:
 ; MMR6:       # %bb.0: # %entry
-; MMR6-NEXT:    divu $2, $4, $5
-; MMR6-NEXT:    teq $5, $zero, 7
+; MMR6-NEXT:    move $2, $4
 ; MMR6-NEXT:    jrc $ra
 entry:
   %r = udiv i1 %a, %b

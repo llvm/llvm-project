@@ -116,7 +116,11 @@ DynamicRelocationsd("R", cl::desc("Alias for --dynamic-reloc"),
              cl::aliasopt(DynamicRelocations));
 
 cl::opt<bool>
-llvm::SectionContents("s", cl::desc("Display the content of each section"));
+    llvm::SectionContents("full-contents",
+                          cl::desc("Display the content of each section"));
+static cl::alias SectionContentsShort("s",
+                                      cl::desc("Alias for --full-contents"),
+                                      cl::aliasopt(SectionContents));
 
 cl::opt<bool>
 llvm::SymbolTable("t", cl::desc("Display the symbol table"));
@@ -2305,8 +2309,8 @@ static void DumpObject(ObjectFile *o, const Archive *a = nullptr,
     outs() << ":\tfile format " << o->getFileFormatName() << "\n\n";
   }
 
-  if (ArchiveHeaders && !MachOOpt)
-    printArchiveChild(a->getFileName(), *c);
+  if (ArchiveHeaders && !MachOOpt && c)
+    printArchiveChild(ArchiveName, *c);
   if (Disassemble)
     DisassembleObject(o, Relocations);
   if (Relocations && !Disassemble)
@@ -2359,8 +2363,8 @@ static void DumpObject(const COFFImportFile *I, const Archive *A,
            << ":\tfile format COFF-import-file"
            << "\n\n";
 
-  if (ArchiveHeaders && !MachOOpt)
-    printArchiveChild(A->getFileName(), *C);
+  if (ArchiveHeaders && !MachOOpt && C)
+    printArchiveChild(ArchiveName, *C);
   if (SymbolTable)
     printCOFFSymbolTable(I);
 }

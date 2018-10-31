@@ -4368,6 +4368,14 @@ static const NeonIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP0(vextq_v),
   NEONMAP0(vfma_v),
   NEONMAP0(vfmaq_v),
+  NEONMAP1(vfmlal_high_v, aarch64_neon_fmlal2, 0),
+  NEONMAP1(vfmlal_low_v, aarch64_neon_fmlal, 0),
+  NEONMAP1(vfmlalq_high_v, aarch64_neon_fmlal2, 0),
+  NEONMAP1(vfmlalq_low_v, aarch64_neon_fmlal, 0),
+  NEONMAP1(vfmlsl_high_v, aarch64_neon_fmlsl2, 0),
+  NEONMAP1(vfmlsl_low_v, aarch64_neon_fmlsl, 0),
+  NEONMAP1(vfmlslq_high_v, aarch64_neon_fmlsl2, 0),
+  NEONMAP1(vfmlslq_low_v, aarch64_neon_fmlsl, 0),
   NEONMAP2(vhadd_v, aarch64_neon_uhadd, aarch64_neon_shadd, Add1ArgType | UnsignedAlts),
   NEONMAP2(vhaddq_v, aarch64_neon_uhadd, aarch64_neon_shadd, Add1ArgType | UnsignedAlts),
   NEONMAP2(vhsub_v, aarch64_neon_uhsub, aarch64_neon_shsub, Add1ArgType | UnsignedAlts),
@@ -5340,6 +5348,34 @@ Value *CodeGenFunction::EmitCommonNeonBuiltinExpr(
     llvm::Type *Tys[2] = { Ty, InputTy };
     Int = Usgn ? LLVMIntrinsic : AltLLVMIntrinsic;
     return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vdot");
+  }
+  case NEON::BI__builtin_neon_vfmlal_low_v:
+  case NEON::BI__builtin_neon_vfmlalq_low_v: {
+    llvm::Type *InputTy =
+        llvm::VectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vfmlal_low");
+  }
+  case NEON::BI__builtin_neon_vfmlsl_low_v:
+  case NEON::BI__builtin_neon_vfmlslq_low_v: {
+    llvm::Type *InputTy =
+        llvm::VectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vfmlsl_low");
+  }
+  case NEON::BI__builtin_neon_vfmlal_high_v:
+  case NEON::BI__builtin_neon_vfmlalq_high_v: {
+    llvm::Type *InputTy =
+           llvm::VectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vfmlal_high");
+  }
+  case NEON::BI__builtin_neon_vfmlsl_high_v:
+  case NEON::BI__builtin_neon_vfmlslq_high_v: {
+    llvm::Type *InputTy =
+           llvm::VectorType::get(HalfTy, Ty->getPrimitiveSizeInBits() / 16);
+    llvm::Type *Tys[2] = { Ty, InputTy };
+    return EmitNeonCall(CGM.getIntrinsic(Int, Tys), Ops, "vfmlsl_high");
   }
   }
 

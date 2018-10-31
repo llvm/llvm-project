@@ -1,9 +1,13 @@
 #include "Threading.h"
 #include "Trace.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Config/config.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
 #include <thread>
+#ifdef HAVE_PTHREAD_H
+#include <pthread.h>
+#endif
 
 using namespace llvm;
 namespace clang {
@@ -95,6 +99,16 @@ void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,
   if (D == Deadline::infinity())
     return CV.wait(Lock);
   CV.wait_until(Lock, D.time());
+}
+
+void setThreadPriority(std::thread &T, ThreadPriority Priority) {
+#ifdef HAVE_PTHREAD_H
+  sched_param priority;
+  priority.sched_priority = 0;
+  pthread_setschedparam(
+      T.native_handle(),
+      Priority == ThreadPriority::Low ? SCHED_IDLE : SCHED_OTHER, &priority);
+#endif
 }
 
 } // namespace clangd

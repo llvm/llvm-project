@@ -1,3 +1,5 @@
+; REQUIRES: asserts
+
 ; RUN: llc -march=hexagon -mcpu=hexagonv65 -O3 -debug-only=pipeliner \
 ; RUN: < %s 2>&1 | FileCheck %s
 

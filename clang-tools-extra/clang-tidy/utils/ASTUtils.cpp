@@ -67,6 +67,32 @@ bool exprHasBitFlagWithSpelling(const Expr *Flags, const SourceManager &SM,
   return true;
 }
 
+bool rangeIsEntirelyWithinMacroArgument(SourceRange Range,
+                                        const SourceManager *SM) {
+  // Check if the range is entirely contained within a macro argument.
+  SourceLocation MacroArgExpansionStartForRangeBegin;
+  SourceLocation MacroArgExpansionStartForRangeEnd;
+  bool RangeIsEntirelyWithinMacroArgument =
+      SM &&
+      SM->isMacroArgExpansion(Range.getBegin(),
+                              &MacroArgExpansionStartForRangeBegin) &&
+      SM->isMacroArgExpansion(Range.getEnd(),
+                              &MacroArgExpansionStartForRangeEnd) &&
+      MacroArgExpansionStartForRangeBegin == MacroArgExpansionStartForRangeEnd;
+
+  return RangeIsEntirelyWithinMacroArgument;
+}
+
+bool rangeContainsMacroExpansion(SourceRange Range, const SourceManager *SM) {
+  return rangeIsEntirelyWithinMacroArgument(Range, SM) ||
+         Range.getBegin().isMacroID() || Range.getEnd().isMacroID();
+}
+
+bool rangeCanBeFixed(SourceRange Range, const SourceManager *SM) {
+  return utils::rangeIsEntirelyWithinMacroArgument(Range, SM) ||
+         !utils::rangeContainsMacroExpansion(Range, SM);
+}
+
 } // namespace utils
 } // namespace tidy
 } // namespace clang

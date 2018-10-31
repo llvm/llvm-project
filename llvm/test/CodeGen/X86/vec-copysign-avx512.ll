@@ -43,7 +43,7 @@ define <16 x float> @v16f32(<16 x float> %a, <16 x float> %b) nounwind {
 ; AVX512VL:       ## %bb.0:
 ; AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm1, %zmm1
 ; AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to16}, %zmm0, %zmm0
-; AVX512VL-NEXT:    vporq %zmm1, %zmm0, %zmm0
+; AVX512VL-NEXT:    vpord %zmm1, %zmm0, %zmm0
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512VLDQ-LABEL: v16f32:

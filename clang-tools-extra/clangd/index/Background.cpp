@@ -11,6 +11,7 @@
 #include "ClangdUnit.h"
 #include "Compiler.h"
 #include "Logger.h"
+#include "Threading.h"
 #include "Trace.h"
 #include "index/IndexAction.h"
 #include "index/MemIndex.h"
@@ -25,14 +26,26 @@ namespace clangd {
 BackgroundIndex::BackgroundIndex(Context BackgroundContext,
                                  StringRef ResourceDir,
                                  const FileSystemProvider &FSProvider,
-                                 ArrayRef<std::string> URISchemes)
+                                 ArrayRef<std::string> URISchemes,
+                                 size_t ThreadPoolSize)
     : SwapIndex(make_unique<MemIndex>()), ResourceDir(ResourceDir),
       FSProvider(FSProvider), BackgroundContext(std::move(BackgroundContext)),
-      URISchemes(URISchemes), Thread([this] { run(); }) {}
+      URISchemes(URISchemes) {
+  assert(ThreadPoolSize > 0 && "Thread pool size can't be zero.");
+  while (ThreadPoolSize--) {
+    ThreadPool.emplace_back([this] { run(); });
+    // Set priority to low, since background indexing is a long running task we
+    // do not want to eat up cpu when there are any other high priority threads.
+    // FIXME: In the future we might want a more general way of handling this to
+    // support a tasks with various priorities.
+    setThreadPriority(ThreadPool.back(), ThreadPriority::Low);
+  }
+}
 
 BackgroundIndex::~BackgroundIndex() {
   stop();
-  Thread.join();
+  for (auto &Thread : ThreadPool)
+    Thread.join();
 }
 
 void BackgroundIndex::stop() {
@@ -44,7 +57,7 @@ void BackgroundIndex::stop() {
 }
 
 void BackgroundIndex::run() {
-  WithContext Background(std::move(BackgroundContext));
+  WithContext Background(BackgroundContext.clone());
   while (true) {
     Optional<Task> Task;
     {

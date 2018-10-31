@@ -117,6 +117,8 @@ protected:
   MCSection *DwarfAddrSection;
   /// The DWARF v5 range list section.
   MCSection *DwarfRnglistsSection;
+  /// The DWARF v5 locations list section.
+  MCSection *DwarfLoclistsSection;
 
   /// The DWARF v5 range list section for fission.
   MCSection *DwarfRnglistsDWOSection;
@@ -258,6 +260,7 @@ public:
   MCSection *getDwarfARangesSection() const { return DwarfARangesSection; }
   MCSection *getDwarfRangesSection() const { return DwarfRangesSection; }
   MCSection *getDwarfRnglistsSection() const { return DwarfRnglistsSection; }
+  MCSection *getDwarfLoclistsSection() const { return DwarfLoclistsSection; }
   MCSection *getDwarfMacinfoSection() const { return DwarfMacinfoSection; }
 
   MCSection *getDwarfDebugNamesSection() const {

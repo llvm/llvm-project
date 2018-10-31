@@ -627,6 +627,17 @@ void MCStreamer::EmitWinCFIEndProc(SMLoc Loc) {
   CurFrame->End = Label;
 }
 
+void MCStreamer::EmitWinCFIFuncletOrFuncEnd(SMLoc Loc) {
+  WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
+  if (!CurFrame)
+    return;
+  if (CurFrame->ChainedParent)
+    getContext().reportError(Loc, "Not all chained regions terminated!");
+
+  MCSymbol *Label = EmitCFILabel();
+  CurFrame->FuncletOrFuncEnd = Label;
+}
+
 void MCStreamer::EmitWinCFIStartChained(SMLoc Loc) {
   WinEH::FrameInfo *CurFrame = EnsureValidWinFrameInfo(Loc);
   if (!CurFrame)

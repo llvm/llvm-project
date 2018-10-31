@@ -23,7 +23,6 @@ target triple = "thumbv6m-none-unknown-musleabi"
 
 ; LLC-LABEL: avalon
 ; LLC-DAG: movs r{{[0-9]+}}, #0
-; LLC-DAG: movs r{{[0-9]+}}, #0
 ; LLC-DAG: movs r{{[0-9]+}}, #1
 ; LLC-NOT: add
 

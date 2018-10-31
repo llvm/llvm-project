@@ -55,9 +55,9 @@ FixItHint generateFixItHint(const VarDecl *Decl, bool IsConst) {
 
 void GlobalVariableDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   // The relevant Style Guide rule only applies to Objective-C.
-  if (!getLangOpts().ObjC1 && !getLangOpts().ObjC2) {
+  if (!getLangOpts().ObjC)
     return;
-  }
+
   // need to add two matchers since we need to bind different ids to distinguish
   // constants and variables. Since bind() can only be called on node matchers,
   // we cannot make it in one matcher.

@@ -272,6 +272,9 @@ public:
   /// Add the DW_AT_rnglists_base attribute to the unit DIE.
   void addRnglistsBase();
 
+  /// Add the DW_AT_loclists_base attribute to the unit DIE.
+  void addLoclistsBase();
+
   /// Add the DW_AT_addr_base attribute to the unit DIE.
   void addAddrTableBase();
 

@@ -381,8 +381,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     m_compiler->getLangOpts().CPlusPlus = true;
     break;
   case lldb::eLanguageTypeObjC:
-    m_compiler->getLangOpts().ObjC1 = true;
-    m_compiler->getLangOpts().ObjC2 = true;
+    m_compiler->getLangOpts().ObjC = true;
     // FIXME: the following language option is a temporary workaround,
     // to "ask for ObjC, get ObjC++" (see comment above).
     m_compiler->getLangOpts().CPlusPlus = true;
@@ -406,13 +405,12 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     // FIXME: the following language option is a temporary workaround,
     // to "ask for C++, get ObjC++".  Apple hopes to remove this requirement on
     // non-Apple platforms, but for now it is needed.
-    m_compiler->getLangOpts().ObjC1 = true;
+    m_compiler->getLangOpts().ObjC = true;
     break;
   case lldb::eLanguageTypeObjC_plus_plus:
   case lldb::eLanguageTypeUnknown:
   default:
-    m_compiler->getLangOpts().ObjC1 = true;
-    m_compiler->getLangOpts().ObjC2 = true;
+    m_compiler->getLangOpts().ObjC = true;
     m_compiler->getLangOpts().CPlusPlus = true;
     m_compiler->getLangOpts().CPlusPlus11 = true;
     m_compiler->getHeaderSearchOpts().UseLibcxx = true;
@@ -436,7 +434,7 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
   // long time parsing and importing debug information.
   m_compiler->getLangOpts().SpellChecking = false;
 
-  if (process_sp && m_compiler->getLangOpts().ObjC1) {
+  if (process_sp && m_compiler->getLangOpts().ObjC) {
     if (process_sp->GetObjCLanguageRuntime()) {
       if (process_sp->GetObjCLanguageRuntime()->GetRuntimeVersion() ==
           ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2)

@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include <memory>
 
+namespace llvm {
 namespace mca {
 
 /// This is a convenience struct to hold the parameters necessary for creating
@@ -64,4 +65,5 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 #endif // LLVM_TOOLS_LLVM_MCA_CONTEXT_H

@@ -2642,14 +2642,14 @@ define void @combine_scalar_load_with_blend_with_zero(double* %a0, <4 x float>* 
 define <4 x float> @combine_constant_insertion_v4f32(float %f) {
 ; SSE2-LABEL: combine_constant_insertion_v4f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps {{.*#+}} xmm1 = <u,4,5,3>
+; SSE2-NEXT:    movaps {{.*#+}} xmm1 = <u,4.0E+0,5.0E+0,3.0E+0>
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: combine_constant_insertion_v4f32:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movaps {{.*#+}} xmm1 = <u,4,5,3>
+; SSSE3-NEXT:    movaps {{.*#+}} xmm1 = <u,4.0E+0,5.0E+0,3.0E+0>
 ; SSSE3-NEXT:    movss {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; SSSE3-NEXT:    movaps %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
@@ -2809,14 +2809,14 @@ define <4 x float> @PR30264(<4 x float> %x) {
 ;
 ; SSE41-LABEL: PR30264:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movaps {{.*#+}} xmm1 = <u,u,4,1>
+; SSE41-NEXT:    movaps {{.*#+}} xmm1 = <u,u,4.0E+0,1.0E+0>
 ; SSE41-NEXT:    insertps {{.*#+}} xmm1 = xmm0[0],zero,xmm1[2,3]
 ; SSE41-NEXT:    movaps %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: PR30264:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = <u,u,4,1>
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = <u,u,4.0E+0,1.0E+0>
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,xmm1[2,3]
 ; AVX-NEXT:    retq
   %shuf1 = shufflevector <4 x float> %x, <4 x float> <float undef, float 0.0, float undef, float undef>, <4 x i32> <i32 0, i32 5, i32 undef, i32 undef>

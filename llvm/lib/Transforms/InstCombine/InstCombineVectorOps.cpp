@@ -1531,6 +1531,71 @@ static Instruction *foldIdentityExtractShuffle(ShuffleVectorInst &Shuf) {
   return new ShuffleVectorInst(X, Y, ConstantVector::get(NewMask));
 }
 
+/// Try to replace a shuffle with an insertelement.
+static Instruction *foldShuffleWithInsert(ShuffleVectorInst &Shuf) {
+  Value *V0 = Shuf.getOperand(0), *V1 = Shuf.getOperand(1);
+  SmallVector<int, 16> Mask = Shuf.getShuffleMask();
+
+  // The shuffle must not change vector sizes.
+  // TODO: This restriction could be removed if the insert has only one use
+  //       (because the transform would require a new length-changing shuffle).
+  int NumElts = Mask.size();
+  if (NumElts != (int)(V0->getType()->getVectorNumElements()))
+    return nullptr;
+
+  // shuffle (insert ?, Scalar, IndexC), V1, Mask --> insert V1, Scalar, IndexC'
+  auto isShufflingScalarIntoOp1 = [&](Value *&Scalar, ConstantInt *&IndexC) {
+    // We need an insertelement with a constant index.
+    if (!match(V0, m_InsertElement(m_Value(), m_Value(Scalar),
+                                   m_ConstantInt(IndexC))))
+      return false;
+
+    // Test the shuffle mask to see if it splices the inserted scalar into the
+    // operand 1 vector of the shuffle.
+    int NewInsIndex = -1;
+    for (int i = 0; i != NumElts; ++i) {
+      // Ignore undef mask elements.
+      if (Mask[i] == -1)
+        continue;
+
+      // The shuffle takes elements of operand 1 without lane changes.
+      if (Mask[i] == NumElts + i)
+        continue;
+
+      // The shuffle must choose the inserted scalar exactly once.
+      if (NewInsIndex != -1 || Mask[i] != IndexC->getSExtValue())
+        return false;
+
+      // The shuffle is placing the inserted scalar into element i.
+      NewInsIndex = i;
+    }
+
+    assert(NewInsIndex != -1 && "Did not fold shuffle with unused operand?");
+
+    // Index is updated to the potentially translated insertion lane.
+    IndexC = ConstantInt::get(IndexC->getType(), NewInsIndex);
+    return true;
+  };
+
+  // If the shuffle is unnecessary, insert the scalar operand directly into
+  // operand 1 of the shuffle. Example:
+  // shuffle (insert ?, S, 1), V1, <1, 5, 6, 7> --> insert V1, S, 0
+  Value *Scalar;
+  ConstantInt *IndexC;
+  if (isShufflingScalarIntoOp1(Scalar, IndexC))
+    return InsertElementInst::Create(V1, Scalar, IndexC);
+
+  // Try again after commuting shuffle. Example:
+  // shuffle V0, (insert ?, S, 0), <0, 1, 2, 4> -->
+  // shuffle (insert ?, S, 0), V0, <4, 5, 6, 0> --> insert V0, S, 3
+  std::swap(V0, V1);
+  ShuffleVectorInst::commuteShuffleMask(Mask, NumElts);
+  if (isShufflingScalarIntoOp1(Scalar, IndexC))
+    return InsertElementInst::Create(V1, Scalar, IndexC);
+
+  return nullptr;
+}
+
 Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   Value *LHS = SVI.getOperand(0);
   Value *RHS = SVI.getOperand(1);
@@ -1554,6 +1619,11 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   }
 
   if (Instruction *I = foldIdentityExtractShuffle(SVI))
+    return I;
+
+  // This transform has the potential to lose undef knowledge, so it is
+  // intentionally placed after SimplifyDemandedVectorElts().
+  if (Instruction *I = foldShuffleWithInsert(SVI))
     return I;
 
   SmallVector<int, 16> Mask = SVI.getShuffleMask();

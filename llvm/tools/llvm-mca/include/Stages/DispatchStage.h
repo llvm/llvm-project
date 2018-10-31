@@ -27,6 +27,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
+namespace llvm {
 namespace mca {
 
 // Implements the hardware dispatch logic.
@@ -92,5 +93,6 @@ public:
 #endif
 };
 } // namespace mca
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_MCA_DISPATCH_STAGE_H

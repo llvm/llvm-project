@@ -111,6 +111,19 @@ TEST_F(QueryEngineTest, Basic) {
 
   Str.clear();
 
+  EXPECT_TRUE(EnableOutputQuery(&QuerySession::DiagOutput).run(OS, S));
+  EXPECT_TRUE(EnableOutputQuery(&QuerySession::DetailedASTOutput).run(OS, S));
+  EXPECT_TRUE(MatchQuery(FooMatcherString, FooMatcher).run(OS, S));
+
+  {
+    auto Output = OS.str();
+    EXPECT_TRUE(Output.find("FunctionDecl") != std::string::npos);
+    EXPECT_TRUE(Output.find("foo.cc:1:1: note: \"root\" binds here") !=
+                std::string::npos);
+  }
+
+  Str.clear();
+
   EXPECT_TRUE(SetQuery<bool>(&QuerySession::BindRoot, false).run(OS, S));
   EXPECT_TRUE(MatchQuery(FooMatcherString, FooMatcher).run(OS, S));
 

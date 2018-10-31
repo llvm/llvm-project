@@ -1240,8 +1240,15 @@ void MicrosoftCXXNameMangler::mangleOperatorName(OverloadedOperatorKind OO,
   case OO_Array_Delete: Out << "?_V"; break;
   // <operator-name> ::= ?__L # co_await
   case OO_Coawait: Out << "?__L"; break;
-  // <operator-name> ::= ?__M # <=>
-  case OO_Spaceship: Out << "?__M"; break;
+
+  case OO_Spaceship: {
+    // FIXME: Once MS picks a mangling, use it.
+    DiagnosticsEngine &Diags = Context.getDiags();
+    unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+      "cannot mangle this three-way comparison operator yet");
+    Diags.Report(Loc, DiagID);
+    break;
+  }
 
   case OO_Conditional: {
     DiagnosticsEngine &Diags = Context.getDiags();
@@ -2562,18 +2569,20 @@ void MicrosoftCXXNameMangler::mangleType(const VectorType *T, Qualifiers Quals,
   // Pattern match exactly the typedefs in our intrinsic headers.  Anything that
   // doesn't match the Intel types uses a custom mangling below.
   size_t OutSizeBefore = Out.tell();
-  llvm::Triple::ArchType AT =
-      getASTContext().getTargetInfo().getTriple().getArch();
-  if (AT == llvm::Triple::x86 || AT == llvm::Triple::x86_64) {
-    if (Width == 64 && ET->getKind() == BuiltinType::LongLong) {
-      mangleArtificalTagType(TTK_Union, "__m64");
-    } else if (Width >= 128) {
-      if (ET->getKind() == BuiltinType::Float)
-        mangleArtificalTagType(TTK_Union, "__m" + llvm::utostr(Width));
-      else if (ET->getKind() == BuiltinType::LongLong)
-        mangleArtificalTagType(TTK_Union, "__m" + llvm::utostr(Width) + 'i');
-      else if (ET->getKind() == BuiltinType::Double)
-        mangleArtificalTagType(TTK_Struct, "__m" + llvm::utostr(Width) + 'd');
+  if (!isa<ExtVectorType>(T)) {
+    llvm::Triple::ArchType AT =
+        getASTContext().getTargetInfo().getTriple().getArch();
+    if (AT == llvm::Triple::x86 || AT == llvm::Triple::x86_64) {
+      if (Width == 64 && ET->getKind() == BuiltinType::LongLong) {
+        mangleArtificalTagType(TTK_Union, "__m64");
+      } else if (Width >= 128) {
+        if (ET->getKind() == BuiltinType::Float)
+          mangleArtificalTagType(TTK_Union, "__m" + llvm::utostr(Width));
+        else if (ET->getKind() == BuiltinType::LongLong)
+          mangleArtificalTagType(TTK_Union, "__m" + llvm::utostr(Width) + 'i');
+        else if (ET->getKind() == BuiltinType::Double)
+          mangleArtificalTagType(TTK_Struct, "__m" + llvm::utostr(Width) + 'd');
+      }
     }
   }
 

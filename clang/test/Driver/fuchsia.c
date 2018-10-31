@@ -66,22 +66,28 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-ASAN-X86
+// CHECK-ASAN-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-ASAN-X86: "-fsanitize=address"
 // CHECK-ASAN-X86: "-fsanitize-address-globals-dead-stripping"
 // CHECK-ASAN-X86: "-dynamic-linker" "asan/ld.so.1"
-// CHECK-ASAN-X86: "{{.*[/\\]}}libclang_rt.asan.so"
-// CHECK-ASAN-X86: "{{.*[/\\]}}libclang_rt.asan-preinit.a"
+// CHECK-ASAN-X86: "-L[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}asan"
+// CHECK-ASAN-X86: "-L[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib"
+// CHECK-ASAN-X86: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.asan.so"
+// CHECK-ASAN-X86: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.asan-preinit.a"
 
 // RUN: %clang %s -### --target=aarch64-fuchsia \
 // RUN:     -fsanitize=address 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-ASAN-AARCH64
+// CHECK-ASAN-AARCH64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-ASAN-AARCH64: "-fsanitize=address"
 // CHECK-ASAN-AARCH64: "-fsanitize-address-globals-dead-stripping"
 // CHECK-ASAN-AARCH64: "-dynamic-linker" "asan/ld.so.1"
-// CHECK-ASAN-AARCH64: "{{.*[/\\]}}libclang_rt.asan.so"
-// CHECK-ASAN-AARCH64: "{{.*[/\\]}}libclang_rt.asan-preinit.a"
+// CHECK-ASAN-AARCH64: "-L[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib{{/|\\\\}}asan"
+// CHECK-ASAN-AARCH64: "-L[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib"
+// CHECK-ASAN-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.asan.so"
+// CHECK-ASAN-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.asan-preinit.a"
 
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=address -fPIC -shared 2>&1 \

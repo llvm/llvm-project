@@ -1,4 +1,5 @@
-; RUN: llc -stop-before=expand-isel-pseudos -pre-RA-sched=linearize < %s | FileCheck %s
+; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39452.
+; RUN: llc -stop-before=expand-isel-pseudos -pre-RA-sched=linearize -verify-machineinstrs=0 < %s | FileCheck %s
 source_filename = "linear-dbg-value.ll"
 
 ; Function Attrs: nounwind readonly uwtable

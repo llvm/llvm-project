@@ -350,6 +350,7 @@ multiclass xop4op_int<bits<8> opc, string OpcodeStr, RegisterClass RC,
             [(set RC:$dst, (VT (or (and RC:$src3, RC:$src1),
                                    (X86andnp RC:$src3, RC:$src2))))]>, XOP_4V,
             Sched<[sched]>;
+  // FIXME: This pattern can't match.
   def rrm : IXOPi8Reg<opc, MRMSrcMemOp4, (outs RC:$dst),
             (ins RC:$src1, RC:$src2, x86memop:$src3),
             !strconcat(OpcodeStr,
@@ -383,6 +384,48 @@ let ExeDomain = SSEPackedInt in {
                            SchedWriteShuffle.XMM>;
   defm VPCMOVY : xop4op_int<0xA2, "vpcmov", VR256, i256mem, v4i64,
                             SchedWriteShuffle.YMM>, VEX_L;
+}
+
+let Predicates = [HasXOP] in {
+  def : Pat<(v16i8 (or (and VR128:$src3, VR128:$src1),
+                   (X86andnp VR128:$src3, VR128:$src2))),
+            (VPCMOVrrr VR128:$src1, VR128:$src2, VR128:$src3)>;
+  def : Pat<(v8i16 (or (and VR128:$src3, VR128:$src1),
+                   (X86andnp VR128:$src3, VR128:$src2))),
+            (VPCMOVrrr VR128:$src1, VR128:$src2, VR128:$src3)>;
+  def : Pat<(v4i32 (or (and VR128:$src3, VR128:$src1),
+                   (X86andnp VR128:$src3, VR128:$src2))),
+            (VPCMOVrrr VR128:$src1, VR128:$src2, VR128:$src3)>;
+
+  def : Pat<(or (and VR128:$src3, VR128:$src1),
+                (X86andnp VR128:$src3, (bc_v16i8 (loadv2i64 addr:$src2)))),
+            (VPCMOVrmr VR128:$src1, addr:$src2, VR128:$src3)>;
+  def : Pat<(or (and VR128:$src3, VR128:$src1),
+                (X86andnp VR128:$src3, (bc_v8i16 (loadv2i64 addr:$src2)))),
+            (VPCMOVrmr VR128:$src1, addr:$src2, VR128:$src3)>;
+  def : Pat<(or (and VR128:$src3, VR128:$src1),
+                (X86andnp VR128:$src3, (bc_v4i32 (loadv2i64 addr:$src2)))),
+            (VPCMOVrmr VR128:$src1, addr:$src2, VR128:$src3)>;
+
+  def : Pat<(v32i8 (or (and VR256:$src3, VR256:$src1),
+                   (X86andnp VR256:$src3, VR256:$src2))),
+            (VPCMOVYrrr VR256:$src1, VR256:$src2, VR256:$src3)>;
+  def : Pat<(v16i16 (or (and VR256:$src3, VR256:$src1),
+                    (X86andnp VR256:$src3, VR256:$src2))),
+            (VPCMOVYrrr VR256:$src1, VR256:$src2, VR256:$src3)>;
+  def : Pat<(v8i32 (or (and VR256:$src3, VR256:$src1),
+                   (X86andnp VR256:$src3, VR256:$src2))),
+            (VPCMOVYrrr VR256:$src1, VR256:$src2, VR256:$src3)>;
+
+  def : Pat<(or (and VR256:$src3, VR256:$src1),
+                (X86andnp VR256:$src3, (bc_v32i8 (loadv4i64 addr:$src2)))),
+            (VPCMOVYrmr VR256:$src1, addr:$src2, VR256:$src3)>;
+  def : Pat<(or (and VR256:$src3, VR256:$src1),
+                (X86andnp VR256:$src3, (bc_v16i16 (loadv4i64 addr:$src2)))),
+            (VPCMOVYrmr VR256:$src1, addr:$src2, VR256:$src3)>;
+  def : Pat<(or (and VR256:$src3, VR256:$src1),
+                (X86andnp VR256:$src3, (bc_v8i32 (loadv4i64 addr:$src2)))),
+            (VPCMOVYrmr VR256:$src1, addr:$src2, VR256:$src3)>;
 }
 
 multiclass xop_vpermil2<bits<8> Opc, string OpcodeStr, RegisterClass RC,
