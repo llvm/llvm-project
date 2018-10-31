@@ -1953,7 +1953,7 @@ static lldb::TypeSystemSP CreateTypeSystemInstance(lldb::LanguageType language,
     assert(!module);
     return SwiftASTContext::CreateInstance(language, *target, extra_options);
   }
-  llvm_unreachable();
+  llvm_unreachable("Neither type nor module given to CreateTypeSystemInstance");
 }
 
 void SwiftASTContext::Initialize() {
