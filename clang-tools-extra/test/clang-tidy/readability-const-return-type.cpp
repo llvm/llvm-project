@@ -1,9 +1,16 @@
-// RUN: %check_clang_tidy %s readability-const-return-type %t -- -- -isystem
+// RUN: %check_clang_tidy %s readability-const-return-type %t
 
 //  p# = positive test
 //  n# = negative test
 
-#include <type_traits>
+namespace std {
+template< class T >
+struct add_cv { typedef const volatile T type; };
+
+template< class T> struct add_const { typedef const T type; };
+
+template< class T> struct add_volatile { typedef volatile T type; };
+}
 
 const int p1() {
 // CHECK-MESSAGES: [[@LINE-1]]:1: warning: return type 'const int' is 'const'-qualified at the top level, which may reduce code readability without improving const correctness
