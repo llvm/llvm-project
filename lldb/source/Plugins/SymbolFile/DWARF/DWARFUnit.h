@@ -111,8 +111,9 @@ public:
   dw_addr_t GetBaseAddress() const { return m_base_addr; }
   dw_addr_t GetAddrBase() const { return m_addr_base; }
   dw_addr_t GetRangesBase() const { return m_ranges_base; }
-  void SetAddrBase(dw_addr_t addr_base, dw_addr_t ranges_base,
-                   dw_offset_t base_obj_offset);
+  void SetAddrBase(dw_addr_t addr_base);
+  void SetRangesBase(dw_addr_t ranges_base);
+  void SetBaseObjOffset(dw_offset_t base_obj_offset);
   void BuildAddressRangeTable(SymbolFileDWARF *dwarf,
                               DWARFDebugAranges *debug_aranges);
 
