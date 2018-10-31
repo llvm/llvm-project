@@ -281,9 +281,21 @@ def compareResults(A, B, opts):
 
     return res
 
+def computePercentile(l, percentile):
+    """
+    Return computed percentile.
+    """
+    return sorted(l)[int(round(percentile * len(l) + 0.5)) - 1]
+
 def deriveStats(results):
     # Assume all keys are the same in each statistics bucket.
     combined_data = defaultdict(list)
+
+    # Collect data on paths length.
+    for report in results.reports:
+        for diagnostic in report.diagnostics:
+            combined_data['PathsLength'].append(diagnostic.getPathLength())
+
     for stat in results.stats:
         for key, value in stat.iteritems():
             combined_data[key].append(value)
@@ -293,6 +305,8 @@ def deriveStats(results):
             "max": max(values),
             "min": min(values),
             "mean": sum(values) / len(values),
+            "90th %tile": computePercentile(values, 0.9),
+            "95th %tile": computePercentile(values, 0.95),
             "median": sorted(values)[len(values) / 2],
             "total": sum(values)
         }

@@ -2539,8 +2539,7 @@ void MallocChecker::checkPostStmt(const BlockExpr *BE,
   }
 
   state =
-    state->scanReachableSymbols<StopTrackingCallback>(Regions.data(),
-                                    Regions.data() + Regions.size()).getState();
+    state->scanReachableSymbols<StopTrackingCallback>(Regions).getState();
   C.addTransition(state);
 }
 

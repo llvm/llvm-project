@@ -56,7 +56,7 @@ enum ArgEffect {
 
   /// The argument has its reference count decreased by 1.  This is as
   /// if a -release message has been sent to the argument.  This differs
-  /// in behavior from DecRef when GC is enabled.
+  /// in behavior from DecRef when ARC is enabled.
   DecRefMsg,
 
   /// The argument has its reference count decreased by 1 to model
@@ -65,7 +65,7 @@ enum ArgEffect {
 
   /// The argument has its reference count increased by 1.  This is as
   /// if a -retain message has been sent to the argument.  This differs
-  /// in behavior from IncRef when GC is enabled.
+  /// in behavior from IncRef when ARC is enabled.
   IncRefMsg,
 
   /// The argument has its reference count increased by 1.  This is as
@@ -139,7 +139,7 @@ public:
     OwnedWhenTrackedReceiver,
     // Treat this function as returning a non-tracked symbol even if
     // the function has been inlined. This is used where the call
-    // site summary is more presise than the summary indirectly produced
+    // site summary is more precise than the summary indirectly produced
     // by inlining the function
     NoRetHard
   };
@@ -636,9 +636,19 @@ public:
     InitializeMethodSummaries();
   }
 
-  bool canEval(const CallExpr *CE,
-               const FunctionDecl *FD,
-               bool &hasTrustedImplementationAnnotation);
+  enum class BehaviorSummary {
+    // Function does not return.
+    NoOp,
+
+    // Function returns the first argument.
+    Identity,
+
+    // Function either returns zero, or the input parameter.
+    IdentityOrZero
+  };
+
+  Optional<BehaviorSummary> canEval(const CallExpr *CE, const FunctionDecl *FD,
+                                    bool &hasTrustedImplementationAnnotation);
 
   bool isTrustedReferenceCountImplementation(const FunctionDecl *FD);
 

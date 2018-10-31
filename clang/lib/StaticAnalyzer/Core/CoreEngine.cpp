@@ -53,7 +53,8 @@ STATISTIC(NumPathsExplored,
 // Core analysis engine.
 //===----------------------------------------------------------------------===//
 
-static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts) {
+static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts,
+                                                  SubEngine &subengine) {
   switch (Opts.getExplorationStrategy()) {
     case AnalyzerOptions::ExplorationStrategyKind::DFS:
       return WorkList::makeDFS();
@@ -65,14 +66,14 @@ static std::unique_ptr<WorkList> generateWorkList(AnalyzerOptions &Opts) {
       return WorkList::makeUnexploredFirst();
     case AnalyzerOptions::ExplorationStrategyKind::UnexploredFirstQueue:
       return WorkList::makeUnexploredFirstPriorityQueue();
-    default:
-      llvm_unreachable("Unexpected case");
+    case AnalyzerOptions::ExplorationStrategyKind::UnexploredFirstLocationQueue:
+      return WorkList::makeUnexploredFirstPriorityLocationQueue();
   }
 }
 
 CoreEngine::CoreEngine(SubEngine &subengine, FunctionSummariesTy *FS,
                        AnalyzerOptions &Opts)
-    : SubEng(subengine), WList(generateWorkList(Opts)),
+    : SubEng(subengine), WList(generateWorkList(Opts, subengine)),
       BCounterFactory(G.getAllocator()), FunctionSummaries(FS) {}
 
 /// ExecuteWorkList - Run the worklist algorithm for a maximum number of steps.

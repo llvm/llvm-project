@@ -45,7 +45,7 @@ ProgramStateRef removeRefBinding(ProgramStateRef State, SymbolRef Sym) {
 
 void RefVal::print(raw_ostream &Out) const {
   if (!T.isNull())
-    Out << "Tracked " << T.getAsString() << '/';
+    Out << "Tracked " << T.getAsString() << " | ";
 
   switch (getKind()) {
     default: llvm_unreachable("Invalid RefVal kind");
@@ -175,9 +175,7 @@ void RetainCountChecker::checkPostStmt(const BlockExpr *BE,
     Regions.push_back(VR);
   }
 
-  state =
-    state->scanReachableSymbols<StopTrackingCallback>(Regions.data(),
-                                    Regions.data() + Regions.size()).getState();
+  state = state->scanReachableSymbols<StopTrackingCallback>(Regions).getState();
   C.addTransition(state);
 }
 
@@ -774,40 +772,48 @@ bool RetainCountChecker::evalCall(const CallExpr *CE, CheckerContext &C) const {
   // annotate attribute. If it does, we will not inline it.
   bool hasTrustedImplementationAnnotation = false;
 
+  const LocationContext *LCtx = C.getLocationContext();
+
+  using BehaviorSummary = RetainSummaryManager::BehaviorSummary;
+  Optional<BehaviorSummary> BSmr =
+      SmrMgr.canEval(CE, FD, hasTrustedImplementationAnnotation);
+
   // See if it's one of the specific functions we know how to eval.
-  if (!SmrMgr.canEval(CE, FD, hasTrustedImplementationAnnotation))
+  if (!BSmr)
     return false;
 
   // Bind the return value.
-  const LocationContext *LCtx = C.getLocationContext();
-  SVal RetVal = state->getSVal(CE->getArg(0), LCtx);
-  if (RetVal.isUnknown() ||
-      (hasTrustedImplementationAnnotation && !ResultTy.isNull())) {
+  if (BSmr == BehaviorSummary::Identity ||
+      BSmr == BehaviorSummary::IdentityOrZero) {
+    SVal RetVal = state->getSVal(CE->getArg(0), LCtx);
+
     // If the receiver is unknown or the function has
     // 'rc_ownership_trusted_implementation' annotate attribute, conjure a
     // return value.
-    SValBuilder &SVB = C.getSValBuilder();
-    RetVal = SVB.conjureSymbolVal(nullptr, CE, LCtx, ResultTy, C.blockCount());
-  }
-  state = state->BindExpr(CE, LCtx, RetVal, false);
+    if (RetVal.isUnknown() ||
+        (hasTrustedImplementationAnnotation && !ResultTy.isNull())) {
+      SValBuilder &SVB = C.getSValBuilder();
+      RetVal =
+          SVB.conjureSymbolVal(nullptr, CE, LCtx, ResultTy, C.blockCount());
+    }
+    state = state->BindExpr(CE, LCtx, RetVal, /*Invalidate=*/false);
 
-  // FIXME: This should not be necessary, but otherwise the argument seems to be
-  // considered alive during the next statement.
-  if (const MemRegion *ArgRegion = RetVal.getAsRegion()) {
-    // Save the refcount status of the argument.
-    SymbolRef Sym = RetVal.getAsLocSymbol();
-    const RefVal *Binding = nullptr;
-    if (Sym)
-      Binding = getRefBinding(state, Sym);
+    if (BSmr == BehaviorSummary::IdentityOrZero) {
+      // Add a branch where the output is zero.
+      ProgramStateRef NullOutputState = C.getState();
 
-    // Invalidate the argument region.
-    state = state->invalidateRegions(
-        ArgRegion, CE, C.blockCount(), LCtx,
-        /*CausesPointerEscape*/ hasTrustedImplementationAnnotation);
+      // Assume that output is zero on the other branch.
+      NullOutputState = NullOutputState->BindExpr(
+          CE, LCtx, C.getSValBuilder().makeNull(), /*Invalidate=*/false);
 
-    // Restore the refcount status of the argument.
-    if (Binding)
-      state = setRefBinding(state, Sym, *Binding);
+      C.addTransition(NullOutputState);
+
+      // And on the original branch assume that both input and
+      // output are non-zero.
+      if (auto L = RetVal.getAs<DefinedOrUnknownSVal>())
+        state = state->assume(*L, /*Assumption=*/true);
+
+    }
   }
 
   C.addTransition(state);
@@ -1322,19 +1328,6 @@ void RetainCountChecker::checkEndFunction(const ReturnStmt *RS,
   processLeaks(state, Leaked, Ctx, Pred);
 }
 
-const ProgramPointTag *
-RetainCountChecker::getDeadSymbolTag(SymbolRef sym) const {
-  const CheckerProgramPointTag *&tag = DeadSymbolTags[sym];
-  if (!tag) {
-    SmallString<64> buf;
-    llvm::raw_svector_ostream out(buf);
-    out << "Dead Symbol : ";
-    sym->dumpToStream(out);
-    tag = new CheckerProgramPointTag(this, out.str());
-  }
-  return tag;
-}
-
 void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
                                           CheckerContext &C) const {
   ExplodedNode *Pred = C.getPredecessor();
@@ -1350,8 +1343,8 @@ void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
     if (const RefVal *T = B.lookup(Sym)){
       // Use the symbol as the tag.
       // FIXME: This might not be as unique as we would like.
-      const ProgramPointTag *Tag = getDeadSymbolTag(Sym);
-      state = handleAutoreleaseCounts(state, Pred, Tag, C, Sym, *T);
+      static CheckerProgramPointTag Tag(this, "DeadSymbolAutorelease");
+      state = handleAutoreleaseCounts(state, Pred, &Tag, C, Sym, *T);
       if (!state)
         return;
 

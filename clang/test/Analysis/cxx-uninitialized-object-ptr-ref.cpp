@@ -257,8 +257,10 @@ void fCharPointerTest() {
 }
 
 struct CyclicPointerTest1 {
-  int *ptr;
-  CyclicPointerTest1() : ptr(reinterpret_cast<int *>(&ptr)) {}
+  int *ptr; // expected-note{{object references itself 'this->ptr'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  CyclicPointerTest1() : ptr(reinterpret_cast<int *>(&ptr)) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fCyclicPointerTest1() {
@@ -266,8 +268,10 @@ void fCyclicPointerTest1() {
 }
 
 struct CyclicPointerTest2 {
-  int **pptr; // no-crash
-  CyclicPointerTest2() : pptr(reinterpret_cast<int **>(&pptr)) {}
+  int **pptr; // expected-note{{object references itself 'this->pptr'}}
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  CyclicPointerTest2() : pptr(reinterpret_cast<int **>(&pptr)) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fCyclicPointerTest2() {
@@ -353,9 +357,10 @@ void fVoidPointerLRefTest() {
 }
 
 struct CyclicVoidPointerTest {
-  void *vptr; // no-crash
+  void *vptr; // expected-note{{object references itself 'this->vptr'}}
+  int dontGetFilteredByNonPedanticMode = 0;
 
-  CyclicVoidPointerTest() : vptr(&vptr) {}
+  CyclicVoidPointerTest() : vptr(&vptr) {} // expected-warning{{1 uninitialized field}}
 };
 
 void fCyclicVoidPointerTest() {

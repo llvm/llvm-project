@@ -295,7 +295,10 @@ public:
   virtual void pop(unsigned NumStates = 1) = 0;
 
   /// Reset the solver and remove all constraints.
-  virtual void reset() const = 0;
+  virtual void reset() = 0;
+
+  /// Checks if the solver supports floating-points.
+  virtual bool isFPSupported() = 0;
 
   virtual void print(raw_ostream &OS) const = 0;
 };

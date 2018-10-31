@@ -832,7 +832,7 @@ struct ReplayWithoutInlining{};
 template <>
 struct ProgramStateTrait<ReplayWithoutInlining> :
   public ProgramStatePartialTrait<const void*> {
-  static void *GDMIndex() { static int index = 0; return &index; }
+  static void *GDMIndex();
 };
 
 } // namespace ento

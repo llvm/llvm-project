@@ -75,6 +75,20 @@ public:
     if (shouldSkipDecl(RD))
       return;
 
+    // TODO: Figure out why we are going through declarations and not only
+    // definitions.
+    if (!(RD = RD->getDefinition()))
+      return;
+
+    // This is the simplest correct case: a class with no fields and one base
+    // class. Other cases are more complicated because of how the base classes
+    // & fields might interact, so we don't bother dealing with them.
+    // TODO: Support other combinations of base classes and fields.
+    if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+      if (CXXRD->field_empty() && CXXRD->getNumBases() == 1)
+        return visitRecord(CXXRD->bases().begin()->getType()->getAsRecordDecl(),
+                           PadMultiplier);
+
     auto &ASTContext = RD->getASTContext();
     const ASTRecordLayout &RL = ASTContext.getASTRecordLayout(RD);
     assert(llvm::isPowerOf2_64(RL.getAlignment().getQuantity()));
@@ -112,12 +126,15 @@ public:
     if (RT == nullptr)
       return;
 
-    // TODO: Recurse into the fields and base classes to see if any
-    // of those have excess padding.
+    // TODO: Recurse into the fields to see if they have excess padding.
     visitRecord(RT->getDecl(), Elts);
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {
+    // TODO: Figure out why we are going through declarations and not only
+    // definitions.
+    if (!(RD = RD->getDefinition()))
+      return true;
     auto Location = RD->getLocation();
     // If the construct doesn't have a source file, then it's not something
     // we want to diagnose.
@@ -132,13 +149,14 @@ public:
     // Not going to attempt to optimize unions.
     if (RD->isUnion())
       return true;
-    // How do you reorder fields if you haven't got any?
-    if (RD->field_empty())
-      return true;
     if (auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
       // Tail padding with base classes ends up being very complicated.
-      // We will skip objects with base classes for now.
-      if (CXXRD->getNumBases() != 0)
+      // We will skip objects with base classes for now, unless they do not
+      // have fields.
+      // TODO: Handle more base class scenarios.
+      if (!CXXRD->field_empty() && CXXRD->getNumBases() != 0)
+        return true;
+      if (CXXRD->field_empty() && CXXRD->getNumBases() != 1)
         return true;
       // Virtual bases are complicated, skipping those for now.
       if (CXXRD->getNumVBases() != 0)
@@ -150,6 +168,10 @@ public:
       if (CXXRD->getTypeForDecl()->isInstantiationDependentType())
         return true;
     }
+    // How do you reorder fields if you haven't got any?
+    else if (RD->field_empty())
+      return true;
+
     auto IsTrickyField = [](const FieldDecl *FD) -> bool {
       // Bitfield layout is hard.
       if (FD->isBitField())
@@ -323,7 +345,7 @@ public:
     BR->emitReport(std::move(Report));
   }
 };
-}
+} // namespace
 
 void ento::registerPaddingChecker(CheckerManager &Mgr) {
   Mgr.registerChecker<PaddingChecker>();

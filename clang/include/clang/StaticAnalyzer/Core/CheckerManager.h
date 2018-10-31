@@ -532,19 +532,19 @@ public:
 
   template <typename EVENT>
   void _registerListenerForEvent(CheckEventFunc checkfn) {
-    EventInfo &info = Events[getTag<EVENT>()];
+    EventInfo &info = Events[&EVENT::Tag];
     info.Checkers.push_back(checkfn);
   }
 
   template <typename EVENT>
   void _registerDispatcherForEvent() {
-    EventInfo &info = Events[getTag<EVENT>()];
+    EventInfo &info = Events[&EVENT::Tag];
     info.HasDispatcher = true;
   }
 
   template <typename EVENT>
   void _dispatchEvent(const EVENT &event) const {
-    EventsTy::const_iterator I = Events.find(getTag<EVENT>());
+    EventsTy::const_iterator I = Events.find(&EVENT::Tag);
     if (I == Events.end())
       return;
     const EventInfo &info = I->second;
