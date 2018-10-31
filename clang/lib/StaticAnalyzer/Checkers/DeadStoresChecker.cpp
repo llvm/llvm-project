@@ -329,9 +329,8 @@ public:
             return;
 
           if (const Expr *E = V->getInit()) {
-            while (const ExprWithCleanups *exprClean =
-                    dyn_cast<ExprWithCleanups>(E))
-              E = exprClean->getSubExpr();
+            while (const FullExpr *FE = dyn_cast<FullExpr>(E))
+              E = FE->getSubExpr();
 
             // Look through transitive assignments, e.g.:
             // int x = y = 0;

@@ -201,10 +201,9 @@ ObjCIvarRefExpr *ASTMaker::makeObjCIvarRef(const Expr *Base,
                                  /*arrow=*/true, /*free=*/false);
 }
 
-
 ReturnStmt *ASTMaker::makeReturn(const Expr *RetVal) {
-  return new (C) ReturnStmt(SourceLocation(), const_cast<Expr*>(RetVal),
-                            nullptr);
+  return ReturnStmt::Create(C, SourceLocation(), const_cast<Expr *>(RetVal),
+                            /* NRVOCandidate=*/nullptr);
 }
 
 IntegerLiteral *ASTMaker::makeIntegerLiteral(uint64_t Value, QualType Ty) {

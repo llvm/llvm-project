@@ -1543,6 +1543,12 @@ public:
 
   /// Emit deferred declare target variables marked for deferred emission.
   void emitDeferredTargetDecls() const;
+
+  /// Adjust some parameters for the target-based directives, like addresses of
+  /// the variables captured by reference in lambdas.
+  virtual void
+  adjustTargetSpecificDataForLambdas(CodeGenFunction &CGF,
+                                     const OMPExecutableDirective &D) const;
 };
 
 /// Class supports emissionof SIMD-only code.

@@ -3031,7 +3031,7 @@ public:
 /// potentially-evaluated block literal.  The lifetime of a block
 /// literal is the extent of the enclosing scope.
 class ExprWithCleanups final
-    : public Expr,
+    : public FullExpr,
       private llvm::TrailingObjects<ExprWithCleanups, BlockDecl *> {
 public:
   /// The type of objects that are kept in the cleanup.
@@ -3043,8 +3043,6 @@ public:
 private:
   friend class ASTStmtReader;
   friend TrailingObjects;
-
-  Stmt *SubExpr;
 
   ExprWithCleanups(EmptyShell, unsigned NumObjects);
   ExprWithCleanups(Expr *SubExpr, bool CleanupsHaveSideEffects,
@@ -3070,16 +3068,9 @@ public:
     return getObjects()[i];
   }
 
-  Expr *getSubExpr() { return cast<Expr>(SubExpr); }
-  const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
-
   bool cleanupsHaveSideEffects() const {
     return ExprWithCleanupsBits.CleanupsHaveSideEffects;
   }
-
-  /// As with any mutator of the AST, be very careful
-  /// when modifying an existing AST to preserve its invariants.
-  void setSubExpr(Expr *E) { SubExpr = E; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return SubExpr->getBeginLoc();

@@ -3943,7 +3943,6 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     // Otherwise, coerce it to a small integer.
     return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Width));
   }
-
   // Bool type is always extended to the ABI, other builtin types are not
   // extended.
   const BuiltinType *BT = Ty->getAs<BuiltinType>();
