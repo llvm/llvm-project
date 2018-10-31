@@ -254,6 +254,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(getToolChain(), Args, CmdArgs);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
+  bool NeedsCilkSanitizerDeps = needsCilkSanitizerDeps(getToolChain(), Args);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   const SanitizerArgs &SanArgs = ToolChain.getSanitizerArgs();
@@ -301,6 +302,8 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       linkSanitizerRuntimeDeps(getToolChain(), CmdArgs);
     if (NeedsXRayDeps)
       linkXRayRuntimeDeps(ToolChain, CmdArgs);
+    if (NeedsCilkSanitizerDeps)
+      linkCilkSanitizerRuntimeDeps(getToolChain(), CmdArgs);
     if (Args.hasArg(options::OPT_pthread))
       CmdArgs.push_back("-lpthread");
     CmdArgs.push_back("-lc");

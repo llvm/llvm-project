@@ -166,6 +166,7 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(TC, Args, CmdArgs);
+  bool NeedsCilkSanitizerDeps = needsCilkSanitizerDeps(TC, Args);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
 
   addCSIRuntime(TC, Args, CmdArgs);
@@ -175,6 +176,8 @@ void tools::Myriad::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (UseDefaultLibs) {
     if (NeedsSanitizerDeps)
       linkSanitizerRuntimeDeps(TC, CmdArgs);
+    if (NeedsCilkSanitizerDeps)
+      linkCilkSanitizerRuntimeDeps(TC, CmdArgs);
     if (C.getDriver().CCCIsCXX()) {
       if (TC.GetCXXStdlibType(Args) == ToolChain::CST_Libcxx) {
         CmdArgs.push_back("-lc++");
