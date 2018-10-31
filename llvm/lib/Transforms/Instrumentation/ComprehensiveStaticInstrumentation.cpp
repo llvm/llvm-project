@@ -440,18 +440,20 @@ void CSIImpl::initializeCallsiteHooks() {
                                            PropertyTy);
 }
 
+// Alloca (local variable) hook initialization
 void CSIImpl::initializeAllocaHooks() {
   LLVMContext &C = M.getContext();
   IRBuilder<> IRB(C);
-  //Only for before alloca
+  Type *IDType = IRB.getInt64Ty();
   Type *AddrType = IRB.getInt8PtrTy();
+  Type *PropType = IRB.getInt64Ty();
 
   CsiBeforeAlloca = checkCsiInterfaceFunction(
-      M.getOrInsertFunction("__csi_before_alloca", IRB.getVoidTy(), IRB.getInt64Ty(),
-                            IRB.getInt64Ty()));
+      M.getOrInsertFunction("__csi_before_alloca", IRB.getVoidTy(),
+                            IDType, IntptrTy, PropType));
   CsiAfterAlloca = checkCsiInterfaceFunction(
-      M.getOrInsertFunction("__csi_after_alloca", IRB.getVoidTy(), IRB.getInt64Ty(), AddrType, IntptrTy,
-                            IRB.getInt64Ty()));
+      M.getOrInsertFunction("__csi_after_alloca", IRB.getVoidTy(),
+                            IDType, AddrType, IntptrTy, PropType));
 }
 
 // Load and store hook initialization
@@ -892,7 +894,7 @@ void CSIImpl::initializeFEDTables() {
   CallsiteFED = FrontEndDataTable(M, CsiCallsiteBaseIdName);
   LoadFED = FrontEndDataTable(M, CsiLoadBaseIdName);
   StoreFED = FrontEndDataTable(M, CsiStoreBaseIdName);
-  AllocaFED = FrontEndDataTable(M, CsiAllocaIdName);
+  AllocaFED = FrontEndDataTable(M, CsiAllocaBaseIdName);
   DetachFED = FrontEndDataTable(M, CsiDetachBaseIdName);
   TaskFED = FrontEndDataTable(M, CsiTaskBaseIdName);
   TaskExitFED = FrontEndDataTable(M, CsiTaskExitBaseIdName);

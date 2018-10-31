@@ -34,7 +34,7 @@ static const char *const CsiBasicBlockBaseIdName = "__csi_unit_bb_base_id";
 static const char *const CsiCallsiteBaseIdName = "__csi_unit_callsite_base_id";
 static const char *const CsiLoadBaseIdName = "__csi_unit_load_base_id";
 static const char *const CsiStoreBaseIdName = "__csi_unit_store_base_id";
-static const char *const CsiAllocaIdName = "__csi_unit_alloca_base_id";
+static const char *const CsiAllocaBaseIdName = "__csi_unit_alloca_base_id";
 static const char *const CsiDetachBaseIdName = "__csi_unit_detach_base_id";
 static const char *const CsiTaskBaseIdName = "__csi_unit_task_base_id";
 static const char *const CsiTaskExitBaseIdName =
@@ -562,6 +562,54 @@ private:
 
   /// The number of bits representing each property.
   static constexpr PropertyBits PropBits = { 8, 1, 1, 1, 1, 1, (64-8-1-1-1-1-1) };
+};
+
+class CsiAllocaProperty : public CsiProperty {
+public:
+  CsiAllocaProperty() {
+    PropValue.Bits = 0;
+  }
+
+  /// Return the Type of a property.
+  static Type *getType(LLVMContext &C) {
+    // Must match the definition of property type in csi.h
+    return CsiProperty::getCoercedType(
+        C, StructType::get(IntegerType::get(C, PropBits.IsStatic),
+                           IntegerType::get(C, PropBits.Padding)));
+  }
+  /// Return a constant value holding this property.
+  Constant *getValueImpl(LLVMContext &C) const override {
+    // Must match the definition of property type in csi.h
+    // TODO: This solution works for x86, but should be generalized to support
+    // other architectures in the future.
+    return ConstantInt::get(getType(C), PropValue.Bits);
+  }
+
+  /// Set the value of the IsIndirect property.
+  void setIsStatic(bool v) {
+    PropValue.Fields.IsStatic = v;
+  }
+
+private:
+  typedef union {
+    // Must match the definition of property type in csi.h
+    struct {
+      unsigned IsStatic : 1;
+      uint64_t Padding : 63;
+    } Fields;
+    uint64_t Bits;
+  } Property;
+
+  /// The underlying values of the properties.
+  Property PropValue;
+
+  typedef struct {
+    int IsStatic;
+    int Padding;
+  } PropertyBits;
+
+  /// The number of bits representing each property.
+  static constexpr PropertyBits PropBits = { 1, (64-1) };
 };
 
 struct CSIImpl {
