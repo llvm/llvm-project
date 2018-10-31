@@ -2562,6 +2562,8 @@ TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_wrlock, void *m)
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_trywrlock, void *m)
 TSAN_INTERCEPTOR_NETBSD_ALIAS(int, rwlock_unlock, void *m)
 TSAN_INTERCEPTOR_NETBSD_ALIAS_THR(int, once, void *o, void (*f)())
+TSAN_INTERCEPTOR_NETBSD_ALIAS_THR2(int, sigsetmask, sigmask, int a, void *b,
+  void *c)
 
 namespace __tsan {
 
@@ -2771,6 +2773,7 @@ void InitializeInterceptors() {
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_trywrlock);
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS(rwlock_unlock);
   TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(once);
+  TSAN_MAYBE_INTERCEPT_NETBSD_ALIAS_THR(sigsetmask);
 
   FdInit();
 }

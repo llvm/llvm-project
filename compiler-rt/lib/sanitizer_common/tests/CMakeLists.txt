@@ -58,11 +58,6 @@ set(SANITIZER_TEST_CFLAGS_COMMON
   -Wno-non-virtual-dtor
   -Wno-gnu-zero-variadic-macro-arguments)
 
-if(MSVC)
-  # Disable exceptions on Windows until they work reliably.
-  list(APPEND SANITIZER_TEST_CFLAGS_COMMON -fno-exceptions -DGTEST_HAS_SEH=0)
-endif()
-
 # -gline-tables-only must be enough for these tests, so use it if possible.
 if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
   list(APPEND SANITIZER_TEST_CFLAGS_COMMON -gline-tables-only)

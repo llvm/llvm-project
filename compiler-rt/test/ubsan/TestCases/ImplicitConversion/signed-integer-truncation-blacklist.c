@@ -48,9 +48,11 @@
 // RUN: %clang -fsanitize=implicit-integer-truncation -fno-sanitize-recover=implicit-integer-truncation -fsanitize-blacklist=%tmp -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clang -fsanitize=implicit-integer-truncation -fno-sanitize-recover=implicit-integer-truncation -fsanitize-blacklist=%tmp -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-unsigned char implicitUnsignedTruncation(signed int argc) {
+#include <stdint.h>
+
+uint8_t implicitUnsignedTruncation(int32_t argc) {
   return argc; // BOOM
-// CHECK: {{.*}}signed-integer-truncation-blacklist.c:[[@LINE-1]]:10: runtime error: implicit conversion from type 'int' of value -1 (32-bit, signed) to type 'unsigned char' changed the value to 255 (8-bit, unsigned)
+// CHECK: {{.*}}signed-integer-truncation-blacklist.c:[[@LINE-1]]:10: runtime error: implicit conversion from type 'int32_t' (aka 'int') of value -1 (32-bit, signed) to type 'uint8_t' (aka 'unsigned char') changed the value to 255 (8-bit, unsigned)
 }
 
 int main(int argc, char **argv) {

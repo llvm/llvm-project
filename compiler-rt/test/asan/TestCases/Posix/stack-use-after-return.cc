@@ -17,7 +17,7 @@
 // This test runs out of stack on AArch64.
 // UNSUPPORTED: aarch64
 // stack size log lower than expected
-// XFAIL: freebsd
+// XFAIL: freebsd,netbsd
 
 // FIXME: Fix this test for dynamic runtime on arm linux.
 // UNSUPPORTED: (arm-linux || armhf-linux) && asan-dynamic-runtime
