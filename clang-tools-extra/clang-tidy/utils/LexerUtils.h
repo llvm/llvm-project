@@ -82,6 +82,14 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts);
 
+/// Assuming that ``Range`` spans a const-qualified type, returns the ``const``
+/// token in ``Range`` that is responsible for const qualification. ``Range``
+/// must be valid with respect to ``SM``.  Returns ``None`` if no ``const``
+/// tokens are found.
+llvm::Optional<Token> getConstQualifyingToken(CharSourceRange Range,
+                                              const ASTContext &Context,
+                                              const SourceManager &SM);
+
 } // namespace lexer
 } // namespace utils
 } // namespace tidy
