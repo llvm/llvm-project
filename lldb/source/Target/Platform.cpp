@@ -603,7 +603,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
 
     FileSpec src_resolved;
 
-    rc_baton->error = FileSystem::Readlink(src, src_resolved);
+    rc_baton->error = FileSystem::Instance().Readlink(src, src_resolved);
 
     if (rc_baton->error.Fail())
       return FileSpec::eEnumerateDirectoryResultQuit; // got an error, bail out
@@ -733,7 +733,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
     case fs::file_type::symlink_file: {
       llvm::sys::fs::remove(fixed_dst.GetPath());
       FileSpec src_resolved;
-      error = FileSystem::Readlink(src, src_resolved);
+      error = FileSystem::Instance().Readlink(src, src_resolved);
       if (error.Success())
         error = CreateSymlink(dst, src_resolved);
     } break;
