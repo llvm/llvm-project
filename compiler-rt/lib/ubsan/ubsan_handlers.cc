@@ -481,6 +481,12 @@ static void handleImplicitConversion(ImplicitConversionData *Data,
   case ICCK_SignedIntegerTruncation:
     ET = ErrorType::ImplicitSignedIntegerTruncation;
     break;
+  case ICCK_IntegerSignChange:
+    ET = ErrorType::ImplicitIntegerSignChange;
+    break;
+  case ICCK_SignedIntegerTruncationOrSignChange:
+    ET = ErrorType::ImplicitSignedIntegerTruncationOrSignChange;
+    break;
   }
 
   if (ignoreReport(Loc, Opts, ET))

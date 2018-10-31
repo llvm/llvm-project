@@ -43,8 +43,8 @@
 // DO NOT EDIT! THIS FILE HAS BEEN GENERATED!
 //
 // Generated with: generate_netbsd_syscalls.awk
-// Generated date: 2018-03-03
-// Generated from: syscalls.master,v 1.291 2018/01/06 16:41:23 kamil Exp
+// Generated date: 2018-10-30
+// Generated from: syscalls.master,v 1.293 2018/07/31 13:00:13 rjs Exp
 //
 //===----------------------------------------------------------------------===//
 
@@ -1454,7 +1454,15 @@ PRE_SYSCALL(fpathconf)(long long fd_, long long name_) { /* Nothing to do */ }
 POST_SYSCALL(fpathconf)(long long res, long long fd_, long long name_) {
   /* Nothing to do */
 }
-/* syscall 193 has been skipped */
+PRE_SYSCALL(getsockopt2)
+(long long s_, long long level_, long long name_, void *val_, void *avalsize_) {
+  /* TODO */
+}
+POST_SYSCALL(getsockopt2)
+(long long res, long long s_, long long level_, long long name_, void *val_,
+  void *avalsize_) {
+  /* TODO */
+}
 PRE_SYSCALL(getrlimit)(long long which_, void *rlp_) {
   PRE_WRITE(rlp_, struct_rlimit_sz);
 }
@@ -2341,20 +2349,8 @@ POST_SYSCALL(__sigaction_sigtramp)
     PRE_READ(nsa_, sizeof(__sanitizer_sigaction));
   }
 }
-PRE_SYSCALL(pmc_get_info)(long long ctr_, long long op_, void *args_) {
-  /* TODO */
-}
-POST_SYSCALL(pmc_get_info)
-(long long res, long long ctr_, long long op_, void *args_) {
-  /* TODO */
-}
-PRE_SYSCALL(pmc_control)(long long ctr_, long long op_, void *args_) {
-  /* TODO */
-}
-POST_SYSCALL(pmc_control)
-(long long res, long long ctr_, long long op_, void *args_) {
-  /* TODO */
-}
+/* syscall 341 has been skipped */
+/* syscall 342 has been skipped */
 PRE_SYSCALL(rasctl)(void *addr_, long long len_, long long op_) {
   /* Nothing to do */
 }
@@ -3695,18 +3691,18 @@ POST_SYSCALL(recvmmsg)
 PRE_SYSCALL(sendmmsg)
 (long long s_, void *mmsg_, long long vlen_, long long flags_) {
   struct __sanitizer_mmsghdr *mmsg = (struct __sanitizer_mmsghdr *)mmsg_;
-  unsigned int vlen = (vlen_ > 1024 ? 1024 : vlen_);
   if (mmsg) {
-    PRE_READ(mmsg, sizeof(struct __sanitizer_mmsghdr) * vlen);
+    PRE_READ(mmsg, sizeof(struct __sanitizer_mmsghdr) *
+                       (vlen_ > 1024 ? 1024 : vlen_));
   }
 }
 POST_SYSCALL(sendmmsg)
 (long long res, long long s_, void *mmsg_, long long vlen_, long long flags_) {
   struct __sanitizer_mmsghdr *mmsg = (struct __sanitizer_mmsghdr *)mmsg_;
-  unsigned int vlen = (vlen_ > 1024 ? 1024 : vlen_);
   if (res >= 0) {
     if (mmsg) {
-      POST_READ(mmsg, sizeof(struct __sanitizer_mmsghdr) * vlen);
+      POST_READ(mmsg, sizeof(struct __sanitizer_mmsghdr) *
+                          (vlen_ > 1024 ? 1024 : vlen_));
     }
   }
 }
