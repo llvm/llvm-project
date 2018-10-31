@@ -1008,4 +1008,14 @@ template <typename> struct T { int foo() { static int x; return x++; } };
 extern template struct __declspec(dllimport) T<int>;
 int bar() { T<int> t; return t.foo(); }
 // MO1-DAG: @"?x@?{{1|2}}??foo@?$T@H@pr39496@@Q{{[A-Z]*}}HXZ@4HA" = available_externally dllimport global i32 0, align 4
+
+template <typename T> struct __declspec(dllimport) U {
+  void foo() {
+    // Don't inherit dllimport to src before attaching the initializer.
+    static constexpr char src[] = {"hello"};
+    T arr[sizeof(src)];
+  }
+};
+void baz() { U<int> u; u.foo(); } // No diagnostic.
+
 }

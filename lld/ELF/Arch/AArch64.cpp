@@ -72,9 +72,6 @@ AArch64::AArch64() {
   // FreeBSD automatically promotes 2 MiB-aligned allocations.
   DefaultImageBase = 0x200000;
 
-  // It doesn't seem to be documented anywhere, but tls on aarch64 uses variant
-  // 1 of the tls structures and the tcb size is 16.
-  TcbSize = 16;
   NeedsThunks = true;
 }
 

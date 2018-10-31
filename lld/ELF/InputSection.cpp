@@ -566,6 +566,31 @@ Relocation *lld::elf::getRISCVPCRelHi20(const Symbol *Sym, uint64_t Addend) {
   return nullptr;
 }
 
+// A TLS symbol's virtual address is relative to the TLS segment. Add a
+// target-specific adjustment to produce a thread-pointer-relative offset.
+static int64_t getTlsTpOffset() {
+  switch (Config->EMachine) {
+  case EM_ARM:
+  case EM_AARCH64:
+    // Variant 1. The thread pointer points to a TCB with a fixed 2-word size,
+    // followed by a variable amount of alignment padding, followed by the TLS
+    // segment.
+    return alignTo(Config->Wordsize * 2, Out::TlsPhdr->p_align);
+  case EM_386:
+  case EM_X86_64:
+    // Variant 2. The TLS segment is located just before the thread pointer.
+    return -Out::TlsPhdr->p_memsz;
+  case EM_PPC64:
+    // The thread pointer points to a fixed offset from the start of the
+    // executable's TLS segment. An offset of 0x7000 allows a signed 16-bit
+    // offset to reach 0x1000 of TCB/thread-library data and 0xf000 of the
+    // program's TLS segment.
+    return -0x7000;
+  default:
+    llvm_unreachable("unhandled Config->EMachine");
+  }
+}
+
 static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
                                  uint64_t P, const Symbol &Sym, RelExpr Expr) {
   switch (Expr) {
@@ -711,24 +736,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     // statically to zero.
     if (Sym.isTls() && Sym.isUndefWeak())
       return 0;
-
-    // For TLS variant 1 the TCB is a fixed size, whereas for TLS variant 2 the
-    // TCB is on unspecified size and content. Targets that implement variant 1
-    // should set TcbSize.
-    if (Target->TcbSize) {
-      // PPC64 V2 ABI has the thread pointer offset into the middle of the TLS
-      // storage area by TlsTpOffset for efficient addressing TCB and up to
-      // 4KB – 8 B of other thread library information (placed before the TCB).
-      // Subtracting this offset will get the address of the first TLS block.
-      if (Target->TlsTpOffset)
-        return Sym.getVA(A) - Target->TlsTpOffset;
-
-      // If thread pointer is not offset into the middle, the first thing in the
-      // TLS storage area is the TCB. Add the TcbSize to get the address of the
-      // first TLS block.
-      return Sym.getVA(A) + alignTo(Target->TcbSize, Out::TlsPhdr->p_align);
-    }
-    return Sym.getVA(A) - Out::TlsPhdr->p_memsz;
+    return Sym.getVA(A) + getTlsTpOffset();
   case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_NEG_TLS:
     return Out::TlsPhdr->p_memsz - Sym.getVA(A);

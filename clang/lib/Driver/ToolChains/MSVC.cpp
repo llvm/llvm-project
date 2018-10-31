@@ -722,15 +722,15 @@ bool MSVCToolChain::IsIntegratedAssemblerDefault() const {
 }
 
 bool MSVCToolChain::IsUnwindTablesDefault(const ArgList &Args) const {
-  // Emit unwind tables by default on Win64. All non-x86_32 Windows platforms
-  // such as ARM and PPC actually require unwind tables, but LLVM doesn't know
-  // how to generate them yet.
-
   // Don't emit unwind tables by default for MachO targets.
   if (getTriple().isOSBinFormatMachO())
     return false;
 
-  return getArch() == llvm::Triple::x86_64;
+  // All non-x86_32 Windows targets require unwind tables. However, LLVM
+  // doesn't know how to generate them for all targets, so only enable
+  // the ones that are actually implemented.
+  return getArch() == llvm::Triple::x86_64 ||
+         getArch() == llvm::Triple::aarch64;
 }
 
 bool MSVCToolChain::isPICDefault() const {

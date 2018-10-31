@@ -207,8 +207,6 @@ PPC64::PPC64() {
   GotPltHeaderEntriesNum = 2;
   PltHeaderSize = 60;
   NeedsThunks = true;
-  TcbSize = 8;
-  TlsTpOffset = 0x7000;
 
   TlsModuleIndexRel = R_PPC64_DTPMOD64;
   TlsOffsetRel = R_PPC64_DTPREL64;
