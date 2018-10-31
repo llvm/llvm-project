@@ -92,6 +92,34 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
 
   return false;
 }
+
+llvm::Optional<Token> getConstQualifyingToken(CharSourceRange Range,
+                                              const ASTContext &Context,
+                                              const SourceManager &SM) {
+  std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Range.getBegin());
+  StringRef File = SM.getBufferData(LocInfo.first);
+  Lexer RawLexer(SM.getLocForStartOfFile(LocInfo.first), Context.getLangOpts(),
+                 File.begin(), File.data() + LocInfo.second, File.end());
+  llvm::Optional<Token> FirstConstTok;
+  Token LastTokInRange;
+  Token Tok;
+  while (!RawLexer.LexFromRawLexer(Tok) &&
+         Range.getEnd() != Tok.getLocation() &&
+         !SM.isBeforeInTranslationUnit(Range.getEnd(), Tok.getLocation())) {
+    if (Tok.is(tok::raw_identifier)) {
+      IdentifierInfo &Info = Context.Idents.get(
+          StringRef(SM.getCharacterData(Tok.getLocation()), Tok.getLength()));
+      Tok.setIdentifierInfo(&Info);
+      Tok.setKind(Info.getTokenID());
+    }
+    if (Tok.is(tok::kw_const) && !FirstConstTok)
+      FirstConstTok = Tok;
+    LastTokInRange = Tok;
+  }
+  // If the last token in the range is a `const`, then it const qualifies the
+  // type.  Otherwise, the first `const` token, if any, is the qualifier.
+  return LastTokInRange.is(tok::kw_const) ? LastTokInRange : FirstConstTok;
+}
 } // namespace lexer
 } // namespace utils
 } // namespace tidy
