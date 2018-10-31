@@ -63,9 +63,121 @@ STATISTIC(NumOmittedNonCaptured, "Number of accesses ignored due to capturing");
 STATISTIC(NumInstrumentedDetaches, "Number of instrumented detaches");
 STATISTIC(NumInstrumentedDetachExits, "Number of instrumented detach exits");
 STATISTIC(NumInstrumentedSyncs, "Number of instrumented syncs");
+STATISTIC(NumInstrumentedAllocas, "Number of instrumented allocas");
+STATISTIC(NumInstrumentedAllocFns,
+          "Number of instrumented allocation functions");
+STATISTIC(NumInstrumentedFrees, "Number of instrumented free calls");
+
+static cl::opt<bool>
+    EnableStaticRaceDetection(
+        "enable-static-race-detection", cl::init(true), cl::Hidden,
+        cl::desc("Enable static detection of determinacy races."));
+
+static cl::opt<bool>
+    AssumeRaceFreeLibraryFunctions(
+        "assume-race-free-lib", cl::init(false), cl::Hidden,
+        cl::desc("Assume library functions are race free."));
+
+static cl::opt<bool>
+    IgnoreInaccessibleMemory(
+        "ignore-inaccessible-memory", cl::init(false), cl::Hidden,
+        cl::desc("Ignore inaccessible memory when checking for races."));
+
+static const char *const CsiAllocFnBaseIdName = "__csi_unit_allocfn_base_id";
+static const char *const CsiFreeBaseIdName = "__csi_unit_free_base_id";
 
 static const char *const CsiUnitObjTableName = "__csi_unit_obj_table";
 static const char *const CsiUnitObjTableArrayName = "__csi_unit_obj_tables";
+
+class CsanAllocFnProperty : public CsiProperty {
+public:
+  CsanAllocFnProperty() {
+    PropValue.Bits = 0;
+  }
+  /// Return the Type of a property.
+  static Type *getType(LLVMContext &C) {
+    // Must match the definition of property type in csi.h
+    return CsiProperty::getCoercedType(
+        C, StructType::get(IntegerType::get(C, PropBits.AllocFnTy),
+                           IntegerType::get(C, PropBits.Padding)));
+  }
+  /// Return a constant value holding this property.
+  Constant *getValueImpl(LLVMContext &C) const override {
+    // Must match the definition of property type in csan.h
+    return ConstantInt::get(getType(C), PropValue.Bits);
+  }
+
+  /// Set the value of the allocation function type (e.g., malloc, calloc, new).
+  void setAllocFnTy(unsigned v) {
+    PropValue.Fields.AllocFnTy = v;
+  }
+
+private:
+  typedef union {
+    // Must match the definition of property type in csi.h
+    struct {
+      unsigned AllocFnTy : 8;
+      uint64_t Padding : 56;
+    } Fields;
+    uint64_t Bits;
+  } Property;
+
+  /// The underlying values of the properties.
+  Property PropValue;
+
+  typedef struct {
+    int AllocFnTy;
+    int Padding;
+  } PropertyBits;
+
+  /// The number of bits representing each property.
+  static constexpr PropertyBits PropBits = { 8, (64-8) };
+};
+
+class CsanFreeProperty : public CsiProperty {
+public:
+  CsanFreeProperty() {
+    PropValue.Bits = 0;
+  }
+  /// Return the Type of a property.
+  static Type *getType(LLVMContext &C) {
+    // Must match the definition of property type in csi.h
+    return CsiProperty::getCoercedType(
+        C, StructType::get(IntegerType::get(C, PropBits.FreeTy),
+                           IntegerType::get(C, PropBits.Padding)));
+  }
+  /// Return a constant value holding this property.
+  Constant *getValueImpl(LLVMContext &C) const override {
+    // Must match the definition of property type in csan.h
+    return ConstantInt::get(getType(C), PropValue.Bits);
+  }
+
+  /// Set the value of the allocation function type (e.g., malloc, calloc, new).
+  void setFreeTy(unsigned v) {
+    PropValue.Fields.FreeTy = v;
+  }
+
+private:
+  typedef union {
+    // Must match the definition of property type in csi.h
+    struct {
+      unsigned FreeTy : 8;
+      uint64_t Padding : 56;
+    } Fields;
+    uint64_t Bits;
+  } Property;
+
+  /// The underlying values of the properties.
+  Property PropValue;
+
+  typedef struct {
+    int FreeTy;
+    int Padding;
+  } PropertyBits;
+
+  /// The number of bits representing each property.
+  static constexpr PropertyBits PropBits = { 8, (64-8) };
+};
 
 /// Maintains a mapping from CSI ID of a load or store to the source information
 /// of the object accessed by that load or store.
@@ -80,7 +192,7 @@ public:
 
   /// Add the given instruction to this table.
   /// \returns The local ID of the Instruction.
-  uint64_t add(Instruction &I, Value *Addr, const DataLayout &DL);
+  uint64_t add(Instruction &I, Value *Obj);
 
   /// Get the Type for a pointer to a table entry.
   ///
@@ -145,10 +257,27 @@ struct CilkSanitizerImpl : public CSIImpl {
   static Constant *objTableToUnitObjTable(Module &M,
                                           StructType *UnitObjTableType,
                                           ObjectTable &ObjTable);
+  static bool simpleCallCannotRace(const Instruction &I);
+  static void getAllocFnArgs(
+      const Instruction *I, SmallVectorImpl<Value*> &AllocFnArgs,
+      Type *SizeTy, Type *AddrTy, const TargetLibraryInfo &TLI);
+
+  void setupBlocks(Function &F, DominatorTree *DT = nullptr);
 
   // Methods for handling FED tables
-  void initializeCsanFEDTables();
-  // void collectUnitFEDTables();
+  void initializeFEDTables() {
+    AllocFnFED = FrontEndDataTable(M, CsiAllocFnBaseIdName);
+    FreeFED = FrontEndDataTable(M, CsiFreeBaseIdName);
+  }
+  void collectUnitFEDTables() {
+    LLVMContext &C = M.getContext();
+    StructType *UnitFedTableType =
+      getUnitFedTableType(C, FrontEndDataTable::getPointerType(C));
+    UnitFedTables.push_back(
+        fedTableToUnitFedTable(M, UnitFedTableType, AllocFnFED));
+    UnitFedTables.push_back(
+        fedTableToUnitFedTable(M, UnitFedTableType, FreeFED));
+  }
 
   // Methods for handling object tables
   void initializeCsanObjectTables();
@@ -161,20 +290,175 @@ struct CilkSanitizerImpl : public CSIImpl {
   // Initialize custom hooks for CilkSanitizer
   void initializeCsanHooks();
 
-  // Insert hooks at relevant program points
-  bool instrumentLoadOrStore(Instruction *I, const DataLayout &DL);
-  bool instrumentAtomic(Instruction *I, const DataLayout &DL);
-  bool instrumentMemIntrinsic(Instruction *I, const DataLayout &DL);
-  bool instrumentCallsite(Instruction *I, DominatorTree *DT);
-  bool instrumentDetach(DetachInst *DI, DominatorTree *DT);
-  bool instrumentSync(SyncInst *SI);
-  bool instrumentFunction(Function &F);
+  // Analyze the instructions in F to determine which instructions need to be
+  // isntrumented for race detection.
+  bool prepareToInstrumentFunction(Function &F);
+  // Helper function for prepareToInstrumentFunction that chooses loads and
+  // stores in a basic block to instrument.
   void chooseInstructionsToInstrument(
       SmallVectorImpl<Instruction *> &Local,
       SmallVectorImpl<Instruction *> &All,
-      const DataLayout &DL);
+      const TaskInfo &TI, LoopInfo &LI);
+  // Determine which instructions among the set of loads, stores, atomics,
+  // memory intrinsics, and callsites could race with each other.
+  bool GetMaybeRacingAccesses(
+      SmallPtrSetImpl<Instruction *> &ToInstrument,
+      DenseMap<MemTransferInst *, AccessType> &MemTransferAccTypes,
+      SmallVectorImpl<Instruction *> &NoRaceCallsites,
+      SmallVectorImpl<Instruction *> &LoadsAndStores,
+      SmallVectorImpl<Instruction *> &Atomics,
+      SmallVectorImpl<Instruction *> &MemIntrinCalls,
+      SmallVectorImpl<Instruction *> &Callsites,
+      DenseMap<const Task *, SmallVector<Instruction *, 8>> &TaskToMemAcc,
+      MPTaskListTy &MPTasks, const DominatorTree &DT, const TaskInfo &TI,
+      LoopInfo &LI, DependenceInfo &DI);
+
+  // Determine which call sites need instrumentation, based on what's known
+  // about which functions can access memory in a racing fashion.
+  void determineCallSitesToInstrument();
+
+  // Insert hooks at relevant program points
+  bool instrumentFunction(Function &F,
+                          SmallPtrSetImpl<Instruction *> &ToInstrument,
+                          SmallPtrSetImpl<Instruction *> &NoRaceCallsites);
+  // Helper methods for instrumenting different IR objects.
+  bool instrumentLoadOrStore(Instruction *I);
+  bool instrumentAtomic(Instruction *I);
+  bool instrumentMemIntrinsic(
+      Instruction *I,
+      DenseMap<MemTransferInst *, AccessType> &MemTransferAccTypes);
+  bool instrumentCallsite(Instruction *I);
+  bool suppressCallsite(Instruction *I);
+  bool instrumentAllocationFn(Instruction *I, DominatorTree *DT);
+  bool instrumentFree(Instruction *I);
+  bool instrumentDetach(DetachInst *DI, DominatorTree *DT, TaskInfo &TI);
+  bool instrumentSync(SyncInst *SI);
+  bool instrumentAlloca(Instruction *I);
 
 private:
+  // List of all allocation function types.  This list needs to remain
+  // consistent with TargetLibraryInfo and with csan.h.
+  enum class AllocFnTy
+    {
+     malloc = 0,
+     valloc,
+     calloc,
+     realloc,
+     reallocf,
+     Znwj,
+     ZnwjRKSt9nothrow_t,
+     Znwm,
+     ZnwmRKSt9nothrow_t,
+     Znaj,
+     ZnajRKSt9nothrow_t,
+     Znam,
+     ZnamRKSt9nothrow_t,
+     msvc_new_int,
+     msvc_new_int_nothrow,
+     msvc_new_longlong,
+     msvc_new_longlong_nothrow,
+     msvc_new_array_int,
+     msvc_new_array_int_nothrow,
+     msvc_new_array_longlong,
+     msvc_new_array_longlong_nothrow,
+     LAST_ALLOCFNTY
+    };
+
+  static AllocFnTy getAllocFnTy(const LibFunc &F) {
+    switch (F) {
+    default: return AllocFnTy::LAST_ALLOCFNTY;
+    case LibFunc_malloc: return AllocFnTy::malloc;
+    case LibFunc_valloc: return AllocFnTy::valloc;
+    case LibFunc_calloc: return AllocFnTy::calloc;
+    case LibFunc_realloc: return AllocFnTy::realloc;
+    case LibFunc_reallocf: return AllocFnTy::reallocf;
+    case LibFunc_Znwj: return AllocFnTy::Znwj;
+    case LibFunc_ZnwjRKSt9nothrow_t: return AllocFnTy::ZnwjRKSt9nothrow_t;
+    case LibFunc_Znwm: return AllocFnTy::Znwm;
+    case LibFunc_ZnwmRKSt9nothrow_t: return AllocFnTy::ZnwmRKSt9nothrow_t;
+    case LibFunc_Znaj: return AllocFnTy::Znaj;
+    case LibFunc_ZnajRKSt9nothrow_t: return AllocFnTy::ZnajRKSt9nothrow_t;
+    case LibFunc_Znam: return AllocFnTy::Znam;
+    case LibFunc_ZnamRKSt9nothrow_t: return AllocFnTy::ZnamRKSt9nothrow_t;
+    case LibFunc_msvc_new_int: return AllocFnTy::msvc_new_int;
+    case LibFunc_msvc_new_int_nothrow: return AllocFnTy::msvc_new_int_nothrow;
+    case LibFunc_msvc_new_longlong: return AllocFnTy::msvc_new_longlong;
+    case LibFunc_msvc_new_longlong_nothrow:
+      return AllocFnTy::msvc_new_longlong_nothrow;
+    case LibFunc_msvc_new_array_int: return AllocFnTy::msvc_new_array_int;
+    case LibFunc_msvc_new_array_int_nothrow:
+      return AllocFnTy::msvc_new_array_int_nothrow;
+    case LibFunc_msvc_new_array_longlong:
+      return AllocFnTy::msvc_new_array_longlong;
+    case LibFunc_msvc_new_array_longlong_nothrow:
+      return AllocFnTy::msvc_new_array_longlong_nothrow;
+    }
+  }
+
+  // List of all free function types.  This list needs to remain consistent with
+  // TargetLibraryInfo and with csan.h.
+  enum class FreeTy
+    {
+     free = 0,
+     ZdlPv,
+     ZdlPvRKSt9nothrow_t,
+     ZdlPvj,
+     ZdlPvm,
+     ZdaPv,
+     ZdaPvRKSt9nothrow_t,
+     ZdaPvj,
+     ZdaPvm,
+     msvc_delete_ptr32,
+     msvc_delete_ptr32_nothrow,
+     msvc_delete_ptr32_int,
+     msvc_delete_ptr64,
+     msvc_delete_ptr64_nothrow,
+     msvc_delete_ptr64_longlong,
+     msvc_delete_array_ptr32,
+     msvc_delete_array_ptr32_nothrow,
+     msvc_delete_array_ptr32_int,
+     msvc_delete_array_ptr64,
+     msvc_delete_array_ptr64_nothrow,
+     msvc_delete_array_ptr64_longlong,
+     LAST_FREETY
+    };
+
+  static FreeTy getFreeTy(const LibFunc &F) {
+    switch (F) {
+    default: return FreeTy::LAST_FREETY;
+    case LibFunc_free: return FreeTy::free;
+    case LibFunc_ZdlPv: return FreeTy::ZdlPv;
+    case LibFunc_ZdlPvRKSt9nothrow_t: return FreeTy::ZdlPvRKSt9nothrow_t;
+    case LibFunc_ZdlPvj: return FreeTy::ZdlPvj;
+    case LibFunc_ZdlPvm: return FreeTy::ZdlPvm;
+    case LibFunc_ZdaPv: return FreeTy::ZdaPv;
+    case LibFunc_ZdaPvRKSt9nothrow_t: return FreeTy::ZdaPvRKSt9nothrow_t;
+    case LibFunc_ZdaPvj: return FreeTy::ZdaPvj;
+    case LibFunc_ZdaPvm: return FreeTy::ZdaPvm;
+    case LibFunc_msvc_delete_ptr32: return FreeTy::msvc_delete_ptr32;
+    case LibFunc_msvc_delete_ptr32_nothrow:
+      return FreeTy::msvc_delete_ptr32_nothrow;
+    case LibFunc_msvc_delete_ptr32_int: return FreeTy::msvc_delete_ptr32_int;
+    case LibFunc_msvc_delete_ptr64: return FreeTy::msvc_delete_ptr64;
+    case LibFunc_msvc_delete_ptr64_nothrow:
+      return FreeTy::msvc_delete_ptr64_nothrow;
+    case LibFunc_msvc_delete_ptr64_longlong:
+      return FreeTy::msvc_delete_ptr64_longlong;
+    case LibFunc_msvc_delete_array_ptr32:
+      return FreeTy::msvc_delete_array_ptr32;
+    case LibFunc_msvc_delete_array_ptr32_nothrow:
+      return FreeTy::msvc_delete_array_ptr32_nothrow;
+    case LibFunc_msvc_delete_array_ptr32_int:
+      return FreeTy::msvc_delete_array_ptr32_int;
+    case LibFunc_msvc_delete_array_ptr64:
+      return FreeTy::msvc_delete_array_ptr64;
+    case LibFunc_msvc_delete_array_ptr64_nothrow:
+      return FreeTy::msvc_delete_array_ptr64_nothrow;
+    case LibFunc_msvc_delete_array_ptr64_longlong:
+      return FreeTy::msvc_delete_array_ptr64_longlong;
+    }
+  }
+
   // Analysis results
   function_ref<TaskInfo &(Function &)> GetTaskInfo;
   function_ref<LoopInfo &(Function &)> GetLoopInfo;
@@ -202,9 +486,10 @@ private:
   Function *CsanEnableChecking = nullptr;
 
   // CilkSanitizer custom forensic tables
-  ObjectTable LoadObj, StoreObj;
+  FrontEndDataTable AllocFnFED, FreeFED;
+  ObjectTable LoadObj, StoreObj, AllocaObj, AllocFnObj;
 
-  SmallVector<Constant *, 2> UnitObjTables;
+  SmallVector<Constant *, 4> UnitObjTables;
 
 };
 
@@ -257,12 +542,8 @@ ModulePass *llvm::createCilkSanitizerLegacyPass() {
   return new CilkSanitizerLegacyPass();
 }
 
-uint64_t ObjectTable::add(Instruction &I,
-                          Value *Addr,
-                          const DataLayout &DL) {
+uint64_t ObjectTable::add(Instruction &I, Value *Obj) {
   uint64_t ID = getId(&I);
-  Value *Obj = GetUnderlyingObject(Addr, DL);
-
   // First, if the underlying object is a global variable, get that variable's
   // debug information.
   if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Obj)) {
@@ -286,11 +567,9 @@ uint64_t ObjectTable::add(Instruction &I,
     TinyPtrVector<DbgInfoIntrinsic *> DbgDeclares = FindDbgAddrUses(AI);
     if (!DbgDeclares.empty()) {
       auto *LV = DbgDeclares.front()->getVariable();
-      if (LV->getName() != "") {
-        add(ID, LV->getLine(), LV->getFilename(), LV->getDirectory(),
-            LV->getName());
-        return ID;
-      }
+      add(ID, LV->getLine(), LV->getFilename(), LV->getDirectory(),
+          LV->getName());
+      return ID;
     }
   }
 
@@ -330,6 +609,14 @@ void ObjectTable::add(uint64_t ID, int32_t Line,
   LocalIdToSourceLocationMap[ID] = {Name, Line, Filename, Directory};
 }
 
+// The order of arguments to ConstantStruct::get() must match the
+// obj_source_loc_t type in csan.h.
+static void addObjTableEntries(SmallVectorImpl<Constant *> &TableEntries,
+                               StructType *TableType, Constant *Name,
+                               Constant *Line, Constant *File) {
+  TableEntries.push_back(ConstantStruct::get(TableType, Name, Line, File));
+}
+
 Constant *ObjectTable::insertIntoModule(Module &M) const {
   LLVMContext &C = M.getContext();
   StructType *TableType = getSourceLocStructType(C);
@@ -338,54 +625,24 @@ Constant *ObjectTable::insertIntoModule(Module &M) const {
   Value *GepArgs[] = {Zero, Zero};
   SmallVector<Constant *, 6> TableEntries;
 
+  // Get the object-table entries for each ID.
   for (uint64_t LocalID = 0; LocalID < IdCounter; ++LocalID) {
     const SourceLocation &E = LocalIdToSourceLocationMap.find(LocalID)->second;
+    // Source line
     Constant *Line = ConstantInt::get(Int32Ty, E.Line);
+    // Source file
     Constant *File;
     {
       std::string Filename = E.Filename.str();
       if (!E.Directory.empty())
         Filename = E.Directory.str() + "/" + Filename;
-      Constant *FileStrConstant = ConstantDataArray::getString(C, Filename);
-      GlobalVariable *GV =
-        M.getGlobalVariable("__csi_unit_filename_" + Filename, true);
-      if (GV == NULL) {
-        GV = new GlobalVariable(M, FileStrConstant->getType(),
-                                true, GlobalValue::PrivateLinkage,
-                                FileStrConstant,
-                                "__csi_unit_filename_" + Filename,
-                                nullptr,
-                                GlobalVariable::NotThreadLocal, 0);
-        GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-      }
-      assert(GV);
-      File =
-        ConstantExpr::getGetElementPtr(GV->getValueType(), GV, GepArgs);
+      File = getObjectStrGV(M, Filename, "__csi_unit_filename_");
     }
-    Constant *Name;
-    if (E.Name.empty())
-      Name = ConstantPointerNull::get(PointerType::get(
-                                          IntegerType::get(C, 8), 0));
-    else {
-      Constant *NameStrConstant = ConstantDataArray::getString(C, E.Name);
-      GlobalVariable *GV =
-        M.getGlobalVariable(("__csi_unit_object_name_" + E.Name).str(), true);
-      if (GV == NULL) {
-        GV = new GlobalVariable(M, NameStrConstant->getType(),
-                                true, GlobalValue::PrivateLinkage,
-                                NameStrConstant,
-                                "__csi_unit_object_name_" + E.Name,
-                                nullptr,
-                                GlobalVariable::NotThreadLocal, 0);
-        GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-      }
-      assert(GV);
-      Name =
-        ConstantExpr::getGetElementPtr(GV->getValueType(), GV, GepArgs);
-    }
-    // The order of arguments to ConstantStruct::get() must match the
-    // source_loc_t type in csi.h.
-    TableEntries.push_back(ConstantStruct::get(TableType, Name, Line, File));
+    // Variable name
+    Constant *Name = getObjectStrGV(M, E.Name, "__csi_unit_object_name_");
+
+    // Add entry to the table
+    addObjTableEntries(TableEntries, TableType, Name, Line, File);
   }
 
   ArrayType *TableArrayType = ArrayType::get(TableType, TableEntries.size());
@@ -399,7 +656,7 @@ Constant *ObjectTable::insertIntoModule(Module &M) const {
 bool CilkSanitizerImpl::run() {
   // Initialize components of the CSI and Cilksan system.
   initializeCsi();
-  // initializeCsanFEDTables();
+  initializeFEDTables();
   initializeCsanObjectTables();
   initializeCsanHooks();
 
@@ -408,6 +665,7 @@ bool CilkSanitizerImpl::run() {
     instrumentFunction(F);
   }
 
+  CSIImpl::collectUnitFEDTables();
   collectUnitFEDTables();
   collectUnitObjectTables();
   finalizeCsi();
@@ -417,6 +675,8 @@ bool CilkSanitizerImpl::run() {
 void CilkSanitizerImpl::initializeCsanObjectTables() {
   LoadObj = ObjectTable(M, CsiLoadBaseIdName);
   StoreObj = ObjectTable(M, CsiStoreBaseIdName);
+  AllocaObj = ObjectTable(M, CsiAllocaBaseIdName);
+  AllocFnObj = ObjectTable(M, CsiAllocFnBaseIdName);
 }
 
 // Create a struct type to match the unit_obj_entry_t type in csanrt.c.
@@ -446,6 +706,10 @@ void CilkSanitizerImpl::collectUnitObjectTables() {
       objTableToUnitObjTable(M, UnitObjTableType, LoadObj));
   UnitObjTables.push_back(
       objTableToUnitObjTable(M, UnitObjTableType, StoreObj));
+  UnitObjTables.push_back(
+      objTableToUnitObjTable(M, UnitObjTableType, AllocaObj));
+  UnitObjTables.push_back(
+      objTableToUnitObjTable(M, UnitObjTableType, AllocFnObj));
 }
 
 CallInst *CilkSanitizerImpl::createRTUnitInitCall(IRBuilder<> &IRB) {
@@ -500,6 +764,8 @@ void CilkSanitizerImpl::initializeCsanHooks() {
   Type *FuncExitPropertyTy = CsiFuncExitProperty::getType(C);
   Type *LoadPropertyTy = CsiLoadStoreProperty::getType(C);
   Type *StorePropertyTy = CsiLoadStoreProperty::getType(C);
+  Type *AllocFnPropertyTy = CsanAllocFnProperty::getType(C);
+  Type *FreePropertyTy = CsanFreeProperty::getType(C);
   Type *RetType = IRB.getVoidTy();
   Type *AddrType = IRB.getInt8PtrTy();
   Type *NumBytesType = IRB.getInt32Ty();
@@ -543,6 +809,120 @@ void CilkSanitizerImpl::initializeCsanHooks() {
                                              /* detach_continue_id */ IDType,
                                              /* detach_id */ IDType);
   CsanSync = M.getOrInsertFunction("__csan_sync", RetType, IDType);
+  // CsanBeforeAllocFn = M.getOrInsertFunction("__csan_before_allocfn", RetType,
+  //                                           IDType, LargeNumBytesType,
+  //                                           LargeNumBytesType,
+  //                                           LargeNumBytesType, AddrType);
+  CsanAfterAllocFn = M.getOrInsertFunction("__csan_after_allocfn", RetType,
+                                           IDType,
+                                           /* new ptr */ AddrType,
+                                           /* size */ LargeNumBytesType,
+                                           /* num elements */ LargeNumBytesType,
+                                           /* alignment */ LargeNumBytesType,
+                                           /* old ptr */ AddrType,
+                                           /* property */ AllocFnPropertyTy);
+  // CsanBeforeFree = M.getOrInsertFunction("__csan_before_free", RetType, IDType,
+  //                                        AddrType);
+  CsanAfterFree = M.getOrInsertFunction("__csan_after_free", RetType, IDType,
+                                        AddrType,
+                                        /* property */ FreePropertyTy);
+
+  CsanDisableChecking = M.getOrInsertFunction("__cilksan_disable_checking",
+                                              RetType);
+  CsanEnableChecking = M.getOrInsertFunction("__cilksan_enable_checking",
+                                             RetType);
+}
+
+static BasicBlock *SplitOffPreds(
+    BasicBlock *BB, SmallVectorImpl<BasicBlock *> &Preds, DominatorTree *DT) {
+  if (BB->isLandingPad()) {
+    SmallVector<BasicBlock *, 2> NewBBs;
+    SplitLandingPadPredecessors(BB, Preds, ".csi-split-lp", ".csi-split",
+                                NewBBs, DT);
+    return NewBBs[1];
+  }
+
+  SplitBlockPredecessors(BB, Preds, ".csi-split", DT);
+  return BB;
+}
+
+// Setup each block such that all of its predecessors belong to the same CSI ID
+// space.
+static void setupBlock(BasicBlock *BB, DominatorTree *DT,
+                       const TargetLibraryInfo *TLI) {
+  if (BB->getUniquePredecessor())
+    return;
+
+  SmallVector<BasicBlock *, 4> DetachPreds;
+  SmallVector<BasicBlock *, 4> DetRethrowPreds;
+  SmallVector<BasicBlock *, 4> SyncPreds;
+  SmallVector<BasicBlock *, 4> AllocFnPreds;
+  SmallVector<BasicBlock *, 4> InvokePreds;
+  bool HasOtherPredTypes = false;
+  unsigned NumPredTypes = 0;
+
+  // Partition the predecessors of the landing pad.
+  for (BasicBlock *Pred : predecessors(BB)) {
+    if (isa<DetachInst>(Pred->getTerminator()))
+      DetachPreds.push_back(Pred);
+    else if (isDetachedRethrow(Pred->getTerminator()))
+      DetRethrowPreds.push_back(Pred);
+    else if (isa<SyncInst>(Pred->getTerminator()))
+      SyncPreds.push_back(Pred);
+    else if (isAllocationFn(Pred->getTerminator(), TLI))
+      AllocFnPreds.push_back(Pred);
+    else if (isa<InvokeInst>(Pred->getTerminator()))
+      InvokePreds.push_back(Pred);
+    else
+      HasOtherPredTypes = true;
+  }
+
+  NumPredTypes = static_cast<unsigned>(!DetachPreds.empty()) +
+    static_cast<unsigned>(!DetRethrowPreds.empty()) +
+    static_cast<unsigned>(!SyncPreds.empty()) +
+    static_cast<unsigned>(!AllocFnPreds.empty()) +
+    static_cast<unsigned>(!InvokePreds.empty()) +
+    static_cast<unsigned>(HasOtherPredTypes);
+
+  BasicBlock *BBToSplit = BB;
+  // Split off the predecessors of each type.
+  if (!DetachPreds.empty() && NumPredTypes > 1) {
+    BBToSplit = SplitOffPreds(BBToSplit, DetachPreds, DT);
+    NumPredTypes--;
+  }
+  if (!DetRethrowPreds.empty() && NumPredTypes > 1) {
+    BBToSplit = SplitOffPreds(BBToSplit, DetRethrowPreds, DT);
+    NumPredTypes--;
+  }
+  if (!SyncPreds.empty() && NumPredTypes > 1) {
+    BBToSplit = SplitOffPreds(BBToSplit, SyncPreds, DT);
+    NumPredTypes--;
+  }
+  if (!AllocFnPreds.empty() && NumPredTypes > 1) {
+    BBToSplit = SplitOffPreds(BBToSplit, AllocFnPreds, DT);
+    NumPredTypes--;
+  }
+  if (!InvokePreds.empty() && NumPredTypes > 1) {
+    BBToSplit = SplitOffPreds(BBToSplit, InvokePreds, DT);
+    NumPredTypes--;
+  }
+}
+
+// Setup all basic blocks such that each block's predecessors belong entirely to
+// one CSI ID space.
+void CilkSanitizerImpl::setupBlocks(Function &F, DominatorTree *DT) {
+  SmallPtrSet<BasicBlock *, 8> BlocksToSetup;
+  for (BasicBlock &BB : F) {
+    if (BB.isLandingPad())
+      BlocksToSetup.insert(&BB);
+    if (InvokeInst *II = dyn_cast<InvokeInst>(BB.getTerminator()))
+      BlocksToSetup.insert(II->getNormalDest());
+    else if (SyncInst *SI = dyn_cast<SyncInst>(BB.getTerminator()))
+      BlocksToSetup.insert(SI->getSuccessor(0));
+  }
+
+  for (BasicBlock *BB : BlocksToSetup)
+    setupBlock(BB, DT, TLI);
 }
 
 // Do not instrument known races/"benign races" that come from compiler
@@ -614,7 +994,7 @@ static bool MightHaveDetachedUse(const AllocaInst *AI) {
 
 void CilkSanitizerImpl::chooseInstructionsToInstrument(
     SmallVectorImpl<Instruction *> &Local, SmallVectorImpl<Instruction *> &All,
-    const DataLayout &DL) {
+    const TaskInfo &TI, LoopInfo &LI) {
   SmallSet<Value*, 8> WriteTargets;
   // Iterate from the end.
   for (Instruction *I : reverse(Local)) {
@@ -661,54 +1041,67 @@ bool CilkSanitizerImpl::instrumentFunction(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F))
     return false;
 
-  SmallVector<Instruction*, 8> AllLoadsAndStores;
-  SmallVector<Instruction*, 8> LocalLoadsAndStores;
-  SmallVector<Instruction*, 8> AtomicAccesses;
-  SmallVector<Instruction*, 8> MemIntrinCalls;
-  SmallVector<Instruction *, 8> Callsites;
-  SmallVector<DetachInst*, 8> Detaches;
-  SmallVector<SyncInst*, 8> Syncs;
-  bool Res = false;
-  bool HasCalls = false;
-  bool MaySpawn = false;
+  setupCalls(F);
+  setupBlocks(F);
 
-  changeCallsToInvokes(F);
+  SmallVector<Instruction *, 8> AllLoadsAndStores;
+  SmallVector<Instruction *, 8> LocalLoadsAndStores;
+  SmallVector<Instruction *, 8> AtomicAccesses;
+  SmallVector<Instruction *, 8> MemIntrinCalls;
+  SmallVector<Instruction *, 8> Callsites;
+  SmallVector<SyncInst *, 8> Syncs;
 
   DominatorTree *DT = &GetDomTree(F);
-  // DetachSSA &DSSA = GetDSSA(F);
-  // MemorySSA &MSSA = GetMSSA(F);
+  TaskInfo &TI = GetTaskInfo(F);
+  LoopInfo &LI = GetLoopInfo(F);
+  DependenceInfo &DI = GetDepInfo(F);
 
-  // TODO: Consider modifying this to choose instrumentation to insert based on
-  // fibrils, not basic blocks.
-  for (BasicBlock &BB : F) {
-    // Record the Tapir instructions found
-    if (DetachInst *DI = dyn_cast<DetachInst>(BB.getTerminator())) {
-      MaySpawn = true;
-      Detaches.push_back(DI);
-    } else if (SyncInst *SI = dyn_cast<SyncInst>(BB.getTerminator()))
-      Syncs.push_back(SI);
+  // Evaluate the tasks that might be in parallel with each spindle.
+  MaybeParallelTasks MPTasks;
+  TI.evaluateParallelState<MaybeParallelTasks>(MPTasks);
 
-    // Record the memory accesses in the basic block
-    for (Instruction &Inst : BB) {
-      if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
-        LocalLoadsAndStores.push_back(&Inst);
-      else if (isa<AtomicRMWInst>(Inst) || isa<AtomicCmpXchgInst>(Inst))
-        AtomicAccesses.push_back(&Inst);
-      else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
-        if (CallInst *CI = dyn_cast<CallInst>(&Inst))
-          maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
-        if (isa<MemIntrinsic>(Inst))
-          MemIntrinCalls.push_back(&Inst);
-        if (!isa<DbgInfoIntrinsic>(Inst)) {
-          if (!isa<MemIntrinsic>(Inst))
+  for (Spindle *S : depth_first(TI.getRootTask()->getEntrySpindle())) {
+    for (BasicBlock *BB : S->blocks()) {
+      // Record the Tapir sync instructions found
+      if (SyncInst *SI = dyn_cast<SyncInst>(BB->getTerminator()))
+        Syncs.push_back(SI);
+
+      // Record the memory accesses in the basic block
+      for (Instruction &Inst : *BB) {
+        // TODO: Handle VAArgInst
+        if (isa<LoadInst>(Inst) || isa<StoreInst>(Inst))
+          LocalLoadsAndStores.push_back(&Inst);
+        else if (isa<AtomicRMWInst>(Inst) || isa<AtomicCmpXchgInst>(Inst))
+          AtomicAccesses.push_back(&Inst);
+        else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
+          if (CallInst *CI = dyn_cast<CallInst>(&Inst))
+            maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
+
+          // Record this function call as either an allocation function, a call
+          // to free (or delete), a memory intrinsic, or an ordinary real
+          // function call.
+          if (isAllocationFn(&Inst, TLI))
+            AllocationFnCalls.push_back(&Inst);
+          else if (isFreeCall(&Inst, TLI))
+            FreeCalls.push_back(&Inst);
+          else if (isa<MemIntrinsic>(Inst))
+            MemIntrinCalls.push_back(&Inst);
+          else if (!simpleCallCannotRace(Inst))
             Callsites.push_back(&Inst);
-          HasCalls = true;
-          chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores,
-                                         DL);
+
+          // Add the current set of local loads and stores to be considered for
+          // instrumentation.
+          if (!simpleCallCannotRace(Inst)) {
+            chooseInstructionsToInstrument(LocalLoadsAndStores,
+                                           AllLoadsAndStores, TI, LI);
+          }
+        } else if (isa<AllocaInst>(Inst)) {
+          Allocas.push_back(&Inst);
         }
       }
+      chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores, TI,
+                                     LI);
     }
-    chooseInstructionsToInstrument(LocalLoadsAndStores, AllLoadsAndStores, DL);
   }
 
   uint64_t LocalId = getLocalFunctionID(F);
@@ -790,8 +1183,9 @@ bool CilkSanitizerImpl::instrumentLoadOrStore(Instruction *I,
   CsiLoadStoreProperty Prop;
   Prop.setAlignment(Alignment);
   if (IsWrite) {
+    // Instrument store
     uint64_t LocalId = StoreFED.add(*I);
-    uint64_t StoreObjId = StoreObj.add(*I, Addr, DL);
+    uint64_t StoreObjId = StoreObj.add(*I, GetUnderlyingObject(Addr, DL));
     assert(LocalId == StoreObjId &&
            "Store received different ID's in FED and object tables.");
     Value *CsiId = StoreFED.localToGlobalId(LocalId, IRB);
@@ -803,8 +1197,9 @@ bool CilkSanitizerImpl::instrumentLoadOrStore(Instruction *I,
     IRB.SetInstDebugLocation(Call);
     NumInstrumentedWrites++;
   } else {
+    // Instrument load
     uint64_t LocalId = LoadFED.add(*I);
-    uint64_t LoadObjId = LoadObj.add(*I, Addr, DL);
+    uint64_t LoadObjId = LoadObj.add(*I, GetUnderlyingObject(Addr, DL));
     assert(LocalId == LoadObjId &&
            "Load received different ID's in FED and object tables.");
     Value *CsiId = LoadFED.localToGlobalId(LocalId, IRB);
@@ -850,7 +1245,7 @@ bool CilkSanitizerImpl::instrumentAtomic(Instruction *I, const DataLayout &DL) {
   }
 
   uint64_t LocalId = StoreFED.add(*I);
-  uint64_t StoreObjId = StoreObj.add(*I, Addr, DL);
+  uint64_t StoreObjId = StoreObj.add(*I, GetUnderlyingObject(Addr, DL));
   assert(LocalId == StoreObjId &&
          "Store received different ID's in FED and object tables.");
   Value *CsiId = StoreFED.localToGlobalId(LocalId, IRB);
@@ -885,7 +1280,7 @@ bool CilkSanitizerImpl::instrumentMemIntrinsic(Instruction *I,
     if (ConstantInt *CI = dyn_cast<ConstantInt>(M->getArgOperand(3)))
       Prop.setAlignment(CI->getZExtValue());
     uint64_t LocalId = StoreFED.add(*I);
-    uint64_t StoreObjId = StoreObj.add(*I, Addr, DL);
+    uint64_t StoreObjId = StoreObj.add(*I, GetUnderlyingObject(Addr, DL));
     assert(LocalId == StoreObjId &&
            "Store received different ID's in FED and object tables.");
     Value *CsiId = StoreFED.localToGlobalId(LocalId, IRB);
@@ -916,14 +1311,15 @@ bool CilkSanitizerImpl::instrumentMemIntrinsic(Instruction *I,
     } else {
       // Instrument the store
       uint64_t StoreId = StoreFED.add(*I);
-      uint64_t StoreObjId = StoreObj.add(*I, StoreAddr, DL);
+      uint64_t StoreObjId =
+        StoreObj.add(*I, GetUnderlyingObject(StoreAddr, DL));
       assert(StoreId == StoreObjId &&
              "Store received different ID's in FED and object tables.");
       Value *StoreCsiId = StoreFED.localToGlobalId(StoreId, IRB);
-      Value *StoreArgs[] = {StoreCsiId,
-                            IRB.CreatePointerCast(StoreAddr, IRB.getInt8PtrTy()),
-                            IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false),
-                            Prop.getValue(IRB)};
+      Value *StoreArgs[] =
+        {StoreCsiId, IRB.CreatePointerCast(StoreAddr, IRB.getInt8PtrTy()),
+         IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false),
+         Prop.getValue(IRB)};
       Instruction *WriteCall = IRB.CreateCall(CsanLargeWrite, StoreArgs);
       IRB.SetInstDebugLocation(WriteCall);
       Instrumented = true;
@@ -939,14 +1335,14 @@ bool CilkSanitizerImpl::instrumentMemIntrinsic(Instruction *I,
     } else {
       // Instrument the load
       uint64_t LoadId = LoadFED.add(*I);
-      uint64_t LoadObjId = LoadObj.add(*I, LoadAddr, DL);
+      uint64_t LoadObjId = LoadObj.add(*I, GetUnderlyingObject(LoadAddr, DL));
       assert(LoadId == LoadObjId &&
              "Load received different ID's in FED and object tables.");
       Value *LoadCsiId = StoreFED.localToGlobalId(LoadId, IRB);
-      Value *LoadArgs[] = {LoadCsiId,
-                           IRB.CreatePointerCast(LoadAddr, IRB.getInt8PtrTy()),
-                           IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false),
-                           Prop.getValue(IRB)};
+      Value *LoadArgs[] =
+        {LoadCsiId, IRB.CreatePointerCast(LoadAddr, IRB.getInt8PtrTy()),
+         IRB.CreateIntCast(M->getArgOperand(2), IntptrTy, false),
+         Prop.getValue(IRB)};
       Instruction *ReadCall = IRB.CreateCall(CsanLargeRead, LoadArgs);
       IRB.SetInstDebugLocation(ReadCall);
       Instrumented = true;
@@ -1202,7 +1598,263 @@ bool CilkSanitizerImpl::instrumentSync(SyncInst *SI) {
   return true;
 }
 
-bool CilkSanitizer::runOnModule(Module &M) {
+bool CilkSanitizerImpl::instrumentAlloca(Instruction *I) {
+  IRBuilder<> IRB(I);
+  AllocaInst* AI = cast<AllocaInst>(I);
+
+  uint64_t LocalId = AllocaFED.add(*I);
+  Value *CsiId = AllocaFED.localToGlobalId(LocalId, IRB);
+  uint64_t AllocaObjId = AllocaObj.add(*I, I);
+  assert(LocalId == AllocaObjId &&
+         "Alloca received different ID's in FED and object tables.");
+
+  CsiAllocaProperty Prop;
+  Prop.setIsStatic(AI->isStaticAlloca());
+  Value *PropVal = Prop.getValue(IRB);
+
+  // Get size of allocation.
+  uint64_t Size = DL.getTypeAllocSize(AI->getAllocatedType());
+  Value *SizeVal = IRB.getInt64(Size);
+  if (AI->isArrayAllocation())
+    SizeVal = IRB.CreateMul(SizeVal, AI->getArraySize());
+
+  BasicBlock::iterator Iter(I);
+  Iter++;
+  IRB.SetInsertPoint(&*Iter);
+
+  Type *AddrType = IRB.getInt8PtrTy();
+  Value *Addr = IRB.CreatePointerCast(I, AddrType);
+  insertHookCall(&*Iter, CsiAfterAlloca, {CsiId, Addr, SizeVal, PropVal});
+
+  NumInstrumentedAllocas++;
+  return true;
+}
+
+static Value *getHeapObject(Instruction *I) {
+  Value *Object = nullptr;
+  unsigned NumOfBitCastUses = 0;
+
+  // Determine if CallInst has a bitcast use.
+  for (Value::user_iterator UI = I->user_begin(), E = I->user_end();
+       UI != E;)
+    if (BitCastInst *BCI = dyn_cast<BitCastInst>(*UI++)) {
+      // Look for a dbg.value intrinsic for this bitcast.
+      SmallVector<DbgValueInst *, 1> DbgValues;
+      findDbgValues(DbgValues, BCI);
+      if (!DbgValues.empty()) {
+        Object = BCI;
+        NumOfBitCastUses++;
+      }
+    }
+
+  // Heap-allocation call has 1 debug-bitcast use, so use that bitcast as the
+  // object.
+  if (NumOfBitCastUses == 1)
+    return Object;
+
+  // Otherwise just use the heap-allocation call directly.
+  return I;
+}
+
+void CilkSanitizerImpl::getAllocFnArgs(
+    const Instruction *I, SmallVectorImpl<Value*> &AllocFnArgs,
+    Type *SizeTy, Type *AddrTy, const TargetLibraryInfo &TLI) {
+  const Function *Called = nullptr;
+  if (const CallInst *CI = dyn_cast<CallInst>(I))
+    Called = CI->getCalledFunction();
+  else if (const InvokeInst *II = dyn_cast<InvokeInst>(I))
+    Called = II->getCalledFunction();
+
+  LibFunc F;
+  bool FoundLibFunc = TLI.getLibFunc(*Called, F);
+  if (!FoundLibFunc)
+    return;
+
+  switch(F) {
+  default: return;
+    // TODO: Add aligned new's to this list after they're added to TLI.
+  case LibFunc_malloc:
+  case LibFunc_valloc:
+  case LibFunc_Znwj:
+  case LibFunc_ZnwjRKSt9nothrow_t:
+  case LibFunc_Znwm:
+  case LibFunc_ZnwmRKSt9nothrow_t:
+  case LibFunc_Znaj:
+  case LibFunc_ZnajRKSt9nothrow_t:
+  case LibFunc_Znam:
+  case LibFunc_ZnamRKSt9nothrow_t:
+  case LibFunc_msvc_new_int:
+  case LibFunc_msvc_new_int_nothrow:
+  case LibFunc_msvc_new_longlong:
+  case LibFunc_msvc_new_longlong_nothrow:
+  case LibFunc_msvc_new_array_int:
+  case LibFunc_msvc_new_array_int_nothrow:
+  case LibFunc_msvc_new_array_longlong:
+  case LibFunc_msvc_new_array_longlong_nothrow:
+    {
+      // Allocated size
+      if (isa<CallInst>(I))
+        AllocFnArgs.push_back(cast<CallInst>(I)->getArgOperand(0));
+      else
+        AllocFnArgs.push_back(cast<InvokeInst>(I)->getArgOperand(0));
+      // Number of elements = 1
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 1));
+      // Alignment = 0
+      // TODO: Fix this for aligned new's, once they're added to TLI.
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 0));
+      // Old pointer = NULL
+      AllocFnArgs.push_back(Constant::getNullValue(AddrTy));
+      return;
+    }
+  case LibFunc_calloc:
+    {
+      const CallInst *CI = cast<CallInst>(I);
+      // Allocated size
+      AllocFnArgs.push_back(CI->getArgOperand(1));
+      // Number of elements
+      AllocFnArgs.push_back(CI->getArgOperand(0));
+      // Alignment = 0
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 0));
+      // Old pointer = NULL
+      AllocFnArgs.push_back(Constant::getNullValue(AddrTy));
+      return;
+    }
+  case LibFunc_realloc:
+  case LibFunc_reallocf:
+    {
+      const CallInst *CI = cast<CallInst>(I);
+      // Allocated size
+      AllocFnArgs.push_back(CI->getArgOperand(1));
+      // Number of elements = 1
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 1));
+      // Alignment = 0
+      AllocFnArgs.push_back(ConstantInt::get(SizeTy, 0));
+      // Old pointer
+      AllocFnArgs.push_back(CI->getArgOperand(0));
+      return;
+    }
+  }
+}
+
+bool CilkSanitizerImpl::instrumentAllocationFn(Instruction *I,
+                                               DominatorTree *DT) {
+  bool IsInvoke = isa<InvokeInst>(I);
+  Function *Called = nullptr;
+  if (CallInst *CI = dyn_cast<CallInst>(I))
+    Called = CI->getCalledFunction();
+  else if (InvokeInst *II = dyn_cast<InvokeInst>(I))
+    Called = II->getCalledFunction();
+
+  assert(Called && "Could not get called function for allocation fn.");
+
+  IRBuilder<> IRB(I);
+  Value *DefaultID = getDefaultID(IRB);
+  uint64_t LocalId = AllocFnFED.add(*I);
+  Value *AllocFnId = AllocFnFED.localToGlobalId(LocalId, IRB);
+  uint64_t AllocFnObjId = AllocFnObj.add(*I, getHeapObject(I));
+  assert(LocalId == AllocFnObjId &&
+         "Allocation fn received different ID's in FED and object tables.");
+
+  SmallVector<Value *, 4> AllocFnArgs;
+  getAllocFnArgs(I, AllocFnArgs, IntptrTy, IRB.getInt8PtrTy(), *TLI);
+  SmallVector<Value *, 4> DefaultAllocFnArgs(
+      {/* Allocated size */ Constant::getNullValue(IntptrTy),
+       /* Number of elements */ Constant::getNullValue(IntptrTy),
+       /* Alignment */ Constant::getNullValue(IntptrTy),
+       /* Old pointer */ Constant::getNullValue(IRB.getInt8PtrTy()),});
+
+  CsanAllocFnProperty Prop;
+  Value *DefaultPropVal = Prop.getValue(IRB);
+  LibFunc AllocLibF;
+  TLI->getLibFunc(*Called, AllocLibF);
+  Prop.setAllocFnTy(static_cast<unsigned>(getAllocFnTy(AllocLibF)));
+  AllocFnArgs.push_back(Prop.getValue(IRB));
+  DefaultAllocFnArgs.push_back(DefaultPropVal);
+
+  BasicBlock::iterator Iter(I);
+  if (IsInvoke) {
+    // There are two "after" positions for invokes: the normal block and the
+    // exception block.
+    InvokeInst *II = cast<InvokeInst>(I);
+
+    BasicBlock *NormalBB = II->getNormalDest();
+    unsigned SuccNum = GetSuccessorNumber(II->getParent(), NormalBB);
+    if (isCriticalEdge(II, SuccNum))
+      NormalBB = SplitCriticalEdge(II, SuccNum,
+                                   CriticalEdgeSplittingOptions(DT));
+    // Insert hook into normal destination.
+    {
+      IRB.SetInsertPoint(&*NormalBB->getFirstInsertionPt());
+      SmallVector<Value *, 4> AfterAllocFnArgs;
+      AfterAllocFnArgs.push_back(AllocFnId);
+      AfterAllocFnArgs.push_back(IRB.CreatePointerCast(I, IRB.getInt8PtrTy()));
+      AfterAllocFnArgs.append(AllocFnArgs.begin(), AllocFnArgs.end());
+      insertHookCall(&*IRB.GetInsertPoint(), CsanAfterAllocFn,
+                     AfterAllocFnArgs);
+    }
+    // Insert hook into unwind destination.
+    {
+      // The return value of the allocation function is not valid in the unwind
+      // destination.
+      SmallVector<Value *, 4> AfterAllocFnArgs, DefaultAfterAllocFnArgs;
+      AfterAllocFnArgs.push_back(AllocFnId);
+      AfterAllocFnArgs.push_back(Constant::getNullValue(IRB.getInt8PtrTy()));
+      AfterAllocFnArgs.append(AllocFnArgs.begin(), AllocFnArgs.end());
+      DefaultAfterAllocFnArgs.push_back(DefaultID);
+      DefaultAfterAllocFnArgs.push_back(
+          Constant::getNullValue(IRB.getInt8PtrTy()));
+      DefaultAfterAllocFnArgs.append(DefaultAllocFnArgs.begin(),
+                                     DefaultAllocFnArgs.end());
+      insertHookCallInSuccessorBB(
+          II->getUnwindDest(), II->getParent(), CsanAfterAllocFn,
+          AfterAllocFnArgs, DefaultAfterAllocFnArgs);
+    }
+  } else {
+    // Simple call instruction; there is only one "after" position.
+    Iter++;
+    IRB.SetInsertPoint(&*Iter);
+    SmallVector<Value *, 4> AfterAllocFnArgs;
+    AfterAllocFnArgs.push_back(AllocFnId);
+    AfterAllocFnArgs.push_back(IRB.CreatePointerCast(I, IRB.getInt8PtrTy()));
+    AfterAllocFnArgs.append(AllocFnArgs.begin(), AllocFnArgs.end());
+    insertHookCall(&*Iter, CsanAfterAllocFn, AfterAllocFnArgs);
+  }
+
+  NumInstrumentedAllocFns++;
+  return true;
+}
+
+bool CilkSanitizerImpl::instrumentFree(Instruction *I) {
+  // It appears that frees (and deletes) never throw.
+  assert(isa<CallInst>(I) && "Free call is not a call instruction");
+
+  CallInst *FC = cast<CallInst>(I);
+  Function *Called = FC->getCalledFunction();
+  assert(Called && "Could not get called function for free.");
+
+  IRBuilder<> IRB(I);
+  uint64_t LocalId = FreeFED.add(*I);
+  Value *FreeId = FreeFED.localToGlobalId(LocalId, IRB);
+  // uint64_t FreeObjId = FreeObj.add(*I, getHeapObject(I));
+  // assert(LocalId == FreeObjId &&
+  //        "Allocation fn received different ID's in FED and object tables.");
+
+  Value *Addr = FC->getArgOperand(0);
+  CsanFreeProperty Prop;
+  LibFunc FreeLibF;
+  TLI->getLibFunc(*Called, FreeLibF);
+  Prop.setFreeTy(static_cast<unsigned>(getFreeTy(FreeLibF)));
+
+  BasicBlock::iterator Iter(I);
+  Iter++;
+  IRB.SetInsertPoint(&*Iter);
+  insertHookCall(&*Iter, CsanAfterFree, {FreeId, Addr, Prop.getValue(IRB)});
+
+  NumInstrumentedFrees++;
+  return true;
+}
+
+bool CilkSanitizerLegacyPass::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
