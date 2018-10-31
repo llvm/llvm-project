@@ -99,30 +99,29 @@ IdentifierTable::IdentifierTable(const LangOptions &LangOpts,
 namespace {
 
   enum {
-    KEYC99 = 0x1,
-    KEYCXX = 0x2,
-    KEYCXX11 = 0x4,
-    KEYGNU = 0x8,
-    KEYMS = 0x10,
-    BOOLSUPPORT = 0x20,
-    KEYALTIVEC = 0x40,
-    KEYNOCXX = 0x80,
-    KEYBORLAND = 0x100,
-    KEYOPENCLC = 0x200,
-    KEYC11 = 0x400,
-    KEYARC = 0x800,
-    KEYNOMS18 = 0x01000,
-    KEYNOOPENCL = 0x02000,
-    WCHARSUPPORT = 0x04000,
-    HALFSUPPORT = 0x08000,
-    CHAR8SUPPORT = 0x10000,
-    KEYCONCEPTS = 0x20000,
-    KEYOBJC2    = 0x40000,
-    KEYZVECTOR  = 0x80000,
-    KEYCOROUTINES = 0x100000,
-    KEYMODULES = 0x200000,
-    KEYCXX2A = 0x400000,
-    KEYOPENCLCXX = 0x800000,
+    KEYC99        = 0x1,
+    KEYCXX        = 0x2,
+    KEYCXX11      = 0x4,
+    KEYGNU        = 0x8,
+    KEYMS         = 0x10,
+    BOOLSUPPORT   = 0x20,
+    KEYALTIVEC    = 0x40,
+    KEYNOCXX      = 0x80,
+    KEYBORLAND    = 0x100,
+    KEYOPENCLC    = 0x200,
+    KEYC11        = 0x400,
+    KEYNOMS18     = 0x800,
+    KEYNOOPENCL   = 0x1000,
+    WCHARSUPPORT  = 0x2000,
+    HALFSUPPORT   = 0x4000,
+    CHAR8SUPPORT  = 0x8000,
+    KEYCONCEPTS   = 0x10000,
+    KEYOBJC       = 0x20000,
+    KEYZVECTOR    = 0x40000,
+    KEYCOROUTINES = 0x80000,
+    KEYMODULES    = 0x100000,
+    KEYCXX2A      = 0x200000,
+    KEYOPENCLCXX  = 0x400000,
     KEYALLCXX = KEYCXX | KEYCXX11 | KEYCXX2A,
     KEYALL = (0xffffff & ~KEYNOMS18 &
               ~KEYNOOPENCL) // KEYNOMS18 and KEYNOOPENCL are used to exclude.
@@ -163,8 +162,7 @@ static KeywordStatus getKeywordStatus(const LangOptions &LangOpts,
   if (LangOpts.C11 && (Flags & KEYC11)) return KS_Enabled;
   // We treat bridge casts as objective-C keywords so we can warn on them
   // in non-arc mode.
-  if (LangOpts.ObjC2 && (Flags & KEYARC)) return KS_Enabled;
-  if (LangOpts.ObjC2 && (Flags & KEYOBJC2)) return KS_Enabled;
+  if (LangOpts.ObjC && (Flags & KEYOBJC)) return KS_Enabled;
   if (LangOpts.ConceptsTS && (Flags & KEYCONCEPTS)) return KS_Enabled;
   if (LangOpts.CoroutinesTS && (Flags & KEYCOROUTINES)) return KS_Enabled;
   if (LangOpts.ModulesTS && (Flags & KEYMODULES)) return KS_Enabled;
@@ -228,11 +226,8 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
 #define CXX_KEYWORD_OPERATOR(NAME, ALIAS) \
   if (LangOpts.CXXOperatorNames)          \
     AddCXXOperatorKeyword(StringRef(#NAME), tok::ALIAS, *this);
-#define OBJC1_AT_KEYWORD(NAME) \
-  if (LangOpts.ObjC1)          \
-    AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
-#define OBJC2_AT_KEYWORD(NAME) \
-  if (LangOpts.ObjC2)          \
+#define OBJC_AT_KEYWORD(NAME)  \
+  if (LangOpts.ObjC)           \
     AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
 #define TESTING_KEYWORD(NAME, FLAGS)
 #include "clang/Basic/TokenKinds.def"

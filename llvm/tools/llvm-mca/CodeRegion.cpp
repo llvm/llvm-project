@@ -14,6 +14,7 @@
 
 #include "CodeRegion.h"
 
+namespace llvm {
 namespace mca {
 
 bool CodeRegion::isLocInRange(llvm::SMLoc Loc) const {
@@ -63,3 +64,4 @@ void CodeRegions::addInstruction(const llvm::MCInst &Instruction) {
 }
 
 } // namespace mca
+} // namespace llvm

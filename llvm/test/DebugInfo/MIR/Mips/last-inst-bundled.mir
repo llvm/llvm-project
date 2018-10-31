@@ -21,7 +21,7 @@
 #
 # Check that last bundled instruction of block gets recognized as end of basic block.
 # CHECK: bb.2.if.end
-# CHECK-NEXT: DBG_VALUE debug-use $s0, debug-use $noreg, !12, !DIExpression(), debug-location !17
+# CHECK-NEXT: DBG_VALUE $s0, $noreg, !12, !DIExpression(), debug-location !17
 
 --- |
   ; ModuleID = '<stdin>'
@@ -161,15 +161,15 @@ body:             |
     SW killed $s0, $sp, 24 :: (store 4 into %stack.2)
     CFI_INSTRUCTION offset $ra_64, -4
     CFI_INSTRUCTION offset $s0_64, -8
-    DBG_VALUE debug-use $a0, debug-use $noreg, !12, !DIExpression(), debug-location !17
+    DBG_VALUE $a0, $noreg, !12, !DIExpression(), debug-location !17
     $s0 = OR $a0, $zero
-    DBG_VALUE debug-use $s0, debug-use $noreg, !12, !DIExpression(), debug-location !17
-    DBG_VALUE debug-use $sp, 0, !13, !DIExpression(DW_OP_plus_uconst, 20), debug-location !19
+    DBG_VALUE $s0, $noreg, !12, !DIExpression(), debug-location !17
+    DBG_VALUE $sp, 0, !13, !DIExpression(DW_OP_plus_uconst, 20), debug-location !19
     JAL @set_cond, csr_o32, implicit-def dead $ra, implicit $a0, implicit $a1, implicit-def $sp, debug-location !20 {
       renamable $a1 = LEA_ADDiu $sp, 20
     }
     renamable $at = LW $sp, 20, debug-location !21 :: (dereferenceable load 4 from %ir.condition, !tbaa !23)
-    DBG_VALUE debug-use $at, debug-use $noreg, !13, !DIExpression(), debug-location !19
+    DBG_VALUE $at, $noreg, !13, !DIExpression(), debug-location !19
     BEQ killed renamable $at, $zero, %bb.2, implicit-def $at, debug-location !27 {
       NOP debug-location !27
     }

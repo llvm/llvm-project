@@ -44,14 +44,14 @@ define <4 x float> @test3(<4 x float> %a, <4 x float> %b, <4 x float> %c)  {
 ; X32-LABEL: test3:
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2
-; X32-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0,-0,-0,-0]
+; X32-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X32-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test3:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vfnmadd213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) + xmm2
-; X64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0,-0,-0,-0]
+; X64-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X64-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    retq
 entry:

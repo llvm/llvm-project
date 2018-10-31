@@ -20,6 +20,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include <vector>
 
+namespace llvm {
 namespace mca {
 
 /// This class tracks which instructions are in-flight (i.e., dispatched but not
@@ -98,5 +99,6 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_MCA_RETIRE_CONTROL_UNIT_H

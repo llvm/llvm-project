@@ -806,15 +806,17 @@ void TargetPassConfig::addMachinePasses() {
   AddingMachinePasses = true;
 
   // Insert a machine instr printer pass after the specified pass.
-  if (!StringRef(PrintMachineInstrs.getValue()).equals("") &&
-      !StringRef(PrintMachineInstrs.getValue()).equals("option-unspecified")) {
-    const PassRegistry *PR = PassRegistry::getPassRegistry();
-    const PassInfo *TPI = PR->getPassInfo(PrintMachineInstrs.getValue());
-    const PassInfo *IPI = PR->getPassInfo(StringRef("machineinstr-printer"));
-    assert (TPI && IPI && "Pass ID not registered!");
-    const char *TID = (const char *)(TPI->getTypeInfo());
-    const char *IID = (const char *)(IPI->getTypeInfo());
-    insertPass(TID, IID);
+  StringRef PrintMachineInstrsPassName = PrintMachineInstrs.getValue();
+  if (!PrintMachineInstrsPassName.equals("") &&
+      !PrintMachineInstrsPassName.equals("option-unspecified")) {
+    if (const PassInfo *TPI = getPassInfo(PrintMachineInstrsPassName)) {
+      const PassRegistry *PR = PassRegistry::getPassRegistry();
+      const PassInfo *IPI = PR->getPassInfo(StringRef("machineinstr-printer"));
+      assert(IPI && "failed to get \"machineinstr-printer\" PassInfo!");
+      const char *TID = (const char *)(TPI->getTypeInfo());
+      const char *IID = (const char *)(IPI->getTypeInfo());
+      insertPass(TID, IID);
+    }
   }
 
   // Print the instruction selected machine code...

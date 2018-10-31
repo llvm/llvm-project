@@ -8,6 +8,8 @@
 
 // REQUIRES: stable-runtime
 
+// XFAIL: netbsd && !asan
+
 volatile int *null = 0;
 
 namespace Xyz {

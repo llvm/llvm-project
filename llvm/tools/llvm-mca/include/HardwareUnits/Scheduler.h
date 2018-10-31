@@ -22,6 +22,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 
+namespace llvm {
 namespace mca {
 
 class SchedulerStrategy {
@@ -209,5 +210,6 @@ public:
 #endif // !NDEBUG
 };
 } // namespace mca
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_MCA_SCHEDULER_H

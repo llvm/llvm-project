@@ -15,8 +15,7 @@
 #include "Views/RetireControlUnitStatistics.h"
 #include "llvm/Support/Format.h"
 
-using namespace llvm;
-
+namespace llvm {
 namespace mca {
 
 void RetireControlUnitStatistics::onEvent(const HWInstructionEvent &Event) {
@@ -47,3 +46,4 @@ void RetireControlUnitStatistics::printView(raw_ostream &OS) const {
 }
 
 } // namespace mca
+} // namespace llvm

@@ -39,6 +39,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include <map>
 
+namespace llvm {
 namespace mca {
 
 class DispatchStatistics : public View {
@@ -80,5 +81,6 @@ public:
   }
 };
 } // namespace mca
+} // namespace llvm
 
 #endif

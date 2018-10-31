@@ -16,8 +16,7 @@
 #include "Views/DispatchStatistics.h"
 #include "llvm/Support/Format.h"
 
-using namespace llvm;
-
+namespace llvm {
 namespace mca {
 
 void DispatchStatistics::onEvent(const HWStallEvent &Event) {
@@ -84,3 +83,4 @@ void DispatchStatistics::printDispatchStalls(raw_ostream &OS) const {
 }
 
 } // namespace mca
+} // namespace llvm

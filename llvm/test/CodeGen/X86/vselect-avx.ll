@@ -46,7 +46,7 @@ define void @test2(double** %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    movq (%rdi,%rsi,8), %rax
-; AVX1-NEXT:    vmovapd {{.*#+}} ymm1 = [0.5,0.5,0.5,0.5]
+; AVX1-NEXT:    vmovapd {{.*#+}} ymm1 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
 ; AVX1-NEXT:    vblendvpd %ymm0, {{.*}}(%rip), %ymm1, %ymm0
 ; AVX1-NEXT:    vmovupd %ymm0, (%rax)
 ; AVX1-NEXT:    vzeroupper
@@ -57,8 +57,8 @@ define void @test2(double** %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX2-NEXT:    vpslld $31, %xmm0, %xmm0
 ; AVX2-NEXT:    vpmovsxdq %xmm0, %ymm0
 ; AVX2-NEXT:    movq (%rdi,%rsi,8), %rax
-; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-0.5,-0.5,-0.5,-0.5]
-; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [0.5,0.5,0.5,0.5]
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
 ; AVX2-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
 ; AVX2-NEXT:    vmovupd %ymm0, (%rax)
 ; AVX2-NEXT:    vzeroupper

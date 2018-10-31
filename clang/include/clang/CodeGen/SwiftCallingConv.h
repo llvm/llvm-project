@@ -114,6 +114,9 @@ private:
   void addLegalTypedData(llvm::Type *type, CharUnits begin, CharUnits end);
   void addEntry(llvm::Type *type, CharUnits begin, CharUnits end);
   void splitVectorEntry(unsigned index);
+  static bool shouldMergeEntries(const StorageEntry &first,
+                                 const StorageEntry &second,
+                                 CharUnits chunkSize);
 };
 
 /// Should an aggregate which expands to the given type sequence

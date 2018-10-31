@@ -36,6 +36,12 @@ UBSAN_CHECK(ImplicitUnsignedIntegerTruncation,
 UBSAN_CHECK(ImplicitSignedIntegerTruncation,
             "implicit-signed-integer-truncation",
             "implicit-signed-integer-truncation")
+UBSAN_CHECK(ImplicitIntegerSignChange,
+            "implicit-integer-sign-change",
+            "implicit-integer-sign-change")
+UBSAN_CHECK(ImplicitSignedIntegerTruncationOrSignChange,
+            "implicit-signed-integer-truncation-or-sign-change",
+            "implicit-signed-integer-truncation,implicit-integer-sign-change")
 UBSAN_CHECK(InvalidShiftBase, "invalid-shift-base", "shift-base")
 UBSAN_CHECK(InvalidShiftExponent, "invalid-shift-exponent", "shift-exponent")
 UBSAN_CHECK(OutOfBoundsIndex, "out-of-bounds-index", "bounds")

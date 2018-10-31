@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Error.h"
 
+namespace llvm {
 namespace mca {
 
 /// A builder class that knows how to construct Instruction objects.
@@ -71,5 +72,6 @@ public:
   createInstruction(const llvm::MCInst &MCI);
 };
 } // namespace mca
+} // namespace llvm
 
 #endif

@@ -405,7 +405,7 @@ void replaceSymbol(Symbol *S, ArgT &&... Arg) {
     printTraceSymbol(S);
 }
 
-void warnUnorderableSymbol(const Symbol *Sym);
+void maybeWarnUnorderableSymbol(const Symbol *Sym);
 } // namespace elf
 } // namespace lld
 

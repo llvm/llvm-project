@@ -12,28 +12,28 @@ entry:
 ; CHECK-LABEL: bb.0.entry:
   %var = add i32 %x, 1, !dbg !12
   call void @llvm.dbg.value(metadata i32 %var, metadata !9, metadata !DIExpression()), !dbg !12
-; CHECK: DBG_VALUE debug-use renamable $w0, debug-use $noreg, !9, !DIExpression(), debug-location !12
+; CHECK: DBG_VALUE renamable $w0, $noreg, !9, !DIExpression(), debug-location !12
 ; CHECK-NEXT: STRWui killed $w0, $sp, 3 :: (store 4 into %stack.0)
-; CHECK-NEXT: DBG_VALUE debug-use $sp, 0, !9, !DIExpression(DW_OP_plus_uconst, 12)
+; CHECK-NEXT: DBG_VALUE $sp, 0, !9, !DIExpression(DW_OP_plus_uconst, 12)
 
   br label %artificial-bb-1, !dbg !13
 
 artificial-bb-1:                                  ; preds = %entry
 ; CHECK-LABEL: bb.1.artificial-bb-1:
-; CHECK: DBG_VALUE debug-use $sp, 0, !9, !DIExpression(DW_OP_plus_uconst, 12)
+; CHECK: DBG_VALUE $sp, 0, !9, !DIExpression(DW_OP_plus_uconst, 12)
 
   br label %artificial-bb-2
 
 artificial-bb-2:                                  ; preds = %artificial-bb-1
 ; CHECK-LABEL: bb.2.artificial-bb-2:
-; CHECK: DBG_VALUE debug-use $sp, 0, !9, !DIExpression(DW_OP_plus_uconst, 12)
+; CHECK: DBG_VALUE $sp, 0, !9, !DIExpression(DW_OP_plus_uconst, 12)
 
   %invisible = add i32 %var, 1
   br label %return, !dbg !14
 
 return:                                           ; preds = %artificial-bb-2
 ; CHECK-LABEL: bb.3.return:
-; CHECK: DBG_VALUE debug-use $sp, 0, !9, !DIExpression(DW_OP_plus_uconst, 12)
+; CHECK: DBG_VALUE $sp, 0, !9, !DIExpression(DW_OP_plus_uconst, 12)
 
   call void @use(i32 %var)
   ret void, !dbg !15

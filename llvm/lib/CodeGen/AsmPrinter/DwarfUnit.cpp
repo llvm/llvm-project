@@ -1656,6 +1656,15 @@ void DwarfUnit::addRnglistsBase() {
                   TLOF.getDwarfRnglistsSection()->getBeginSymbol());
 }
 
+void DwarfUnit::addLoclistsBase() {
+  assert(DD->getDwarfVersion() >= 5 &&
+         "DW_AT_loclists_base requires DWARF version 5 or later");
+  const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
+  addSectionLabel(getUnitDie(), dwarf::DW_AT_loclists_base,
+                  DU->getLoclistsTableBaseSym(),
+                  TLOF.getDwarfLoclistsSection()->getBeginSymbol());
+}
+
 void DwarfUnit::addAddrTableBase() {
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   MCSymbol *Label = DD->getAddressPool().getLabel();

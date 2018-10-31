@@ -24,8 +24,7 @@ LangOptions createLangOpts() {
   LangOpts.LineComment = 1;
   LangOpts.CXXOperatorNames = 1;
   LangOpts.Bool = 1;
-  LangOpts.ObjC1 = 1;
-  LangOpts.ObjC2 = 1;
+  LangOpts.ObjC = 1;
   LangOpts.MicrosoftExt = 1;    // To get kw___try, kw___finally.
   LangOpts.DeclSpecKeyword = 1; // To get __declspec.
   LangOpts.WChar = 1;           // To get wchar_t

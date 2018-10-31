@@ -1032,8 +1032,8 @@ def err_pragma_optimize_invalid_argument : Error<
 def err_pragma_optimize_extra_argument : Error<
   "unexpected extra argument '%0' to '#pragma clang optimize'">;
 // - #pragma clang attribute
-def err_pragma_attribute_expected_push_pop : Error<
-  "expected 'push' or 'pop' after '#pragma clang attribute'">;
+def err_pragma_attribute_expected_push_pop_paren : Error<
+  "expected 'push', 'pop', or '(' after '#pragma clang attribute'">;
 def err_pragma_attribute_invalid_argument : Error<
   "unexpected argument '%0' to '#pragma clang attribute'; "
   "expected 'push' or 'pop'">;

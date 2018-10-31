@@ -1010,7 +1010,7 @@ void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
 
 void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {
   VisitExpr(S);
-  ID.AddInteger(S->getIdentType());
+  ID.AddInteger(S->getIdentKind());
 }
 
 void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {

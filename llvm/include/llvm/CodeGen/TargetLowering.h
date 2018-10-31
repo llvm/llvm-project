@@ -819,6 +819,8 @@ public:
       case ISD::STRICT_FLOG2: EqOpc = ISD::FLOG2; break;
       case ISD::STRICT_FRINT: EqOpc = ISD::FRINT; break;
       case ISD::STRICT_FNEARBYINT: EqOpc = ISD::FNEARBYINT; break;
+      case ISD::STRICT_FMAXNUM: EqOpc = ISD::FMAXNUM; break;
+      case ISD::STRICT_FMINNUM: EqOpc = ISD::FMINNUM; break;
     }
 
     auto Action = getOperationAction(EqOpc, VT);
@@ -3663,6 +3665,12 @@ public:
   /// \returns True, if the expansion was successful, false otherwise
   bool expandFP_TO_SINT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
 
+  /// Expand float to UINT conversion
+  /// \param N Node to expand
+  /// \param Result output after conversion
+  /// \returns True, if the expansion was successful, false otherwise
+  bool expandFP_TO_UINT(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+
   /// Expand UINT(i64) to double(f64) conversion
   /// \param N Node to expand
   /// \param Result output after conversion
@@ -3730,9 +3738,10 @@ public:
   SDValue getVectorElementPointer(SelectionDAG &DAG, SDValue VecPtr, EVT VecVT,
                                   SDValue Index) const;
 
-  /// Method for building the DAG expansion of ISD::[US]ADDSAT. This method
-  /// accepts integers or vectors of integers as its arguments.
-  SDValue getExpandedSaturationAddition(SDNode *Node, SelectionDAG &DAG) const;
+  /// Method for building the DAG expansion of ISD::[US][ADD|SUB]SAT. This
+  /// method accepts integers or vectors of integers as its arguments.
+  SDValue getExpandedSaturationAdditionSubtraction(SDNode *Node,
+                                                   SelectionDAG &DAG) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

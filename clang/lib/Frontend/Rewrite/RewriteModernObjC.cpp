@@ -541,7 +541,7 @@ namespace {
 
     // FIXME: This predicate seems like it would be useful to add to ASTContext.
     bool isObjCType(QualType T) {
-      if (!LangOpts.ObjC1 && !LangOpts.ObjC2)
+      if (!LangOpts.ObjC)
         return false;
 
       QualType OCT = Context->getCanonicalType(T).getUnqualifiedType();

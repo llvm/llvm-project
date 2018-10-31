@@ -136,7 +136,7 @@ CXType cxtype::MakeCXType(QualType T, CXTranslationUnit TU) {
     }
 
     ASTContext &Ctx = cxtu::getASTUnit(TU)->getASTContext();
-    if (Ctx.getLangOpts().ObjC1) {
+    if (Ctx.getLangOpts().ObjC) {
       QualType UnqualT = T.getUnqualifiedType();
       if (Ctx.isObjCIdType(UnqualT))
         TK = CXType_ObjCId;

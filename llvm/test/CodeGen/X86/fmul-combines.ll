@@ -61,7 +61,7 @@ define <4 x float> @fmul2_v4f32_undef(<4 x float> %x) {
 define <4 x float> @constant_fold_fmul_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: constant_fold_fmul_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [8,8,8,8]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [8.0E+0,8.0E+0,8.0E+0,8.0E+0]
 ; CHECK-NEXT:    retq
   %y = fmul <4 x float> <float 4.0, float 4.0, float 4.0, float 4.0>, <float 2.0, float 2.0, float 2.0, float 2.0>
   ret <4 x float> %y
@@ -70,7 +70,7 @@ define <4 x float> @constant_fold_fmul_v4f32(<4 x float> %x) {
 define <4 x float> @constant_fold_fmul_v4f32_undef(<4 x float> %x) {
 ; CHECK-LABEL: constant_fold_fmul_v4f32_undef:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [8,NaN,8,NaN]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [8.0E+0,NaN,8.0E+0,NaN]
 ; CHECK-NEXT:    retq
   %y = fmul <4 x float> <float 4.0, float undef, float 4.0, float 4.0>, <float 2.0, float 2.0, float 2.0, float undef>
   ret <4 x float> %y

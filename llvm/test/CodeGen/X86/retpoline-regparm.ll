@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=i686-linux < %s | FileCheck --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" %s
+; RUN: llc -verify-machineinstrs -mtriple=i686-linux < %s | FileCheck --implicit-check-not="jmp.*\*" --implicit-check-not="call.*\*" %s
 
 ; Test 32-bit retpoline when -mregparm=3 is used. This case is interesting
 ; because there are no available scratch registers.  The Linux kernel builds

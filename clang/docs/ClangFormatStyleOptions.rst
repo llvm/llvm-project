@@ -908,20 +908,17 @@ the configuration (without a prefix: ``Auto``).
 
       try {
         foo();
-      } catch () {
+      }
+      catch () {
       }
       void foo() { bar(); }
-      class foo
-      {
+      class foo {
       };
       if (foo()) {
-      } else {
       }
-      enum X : int
-      {
-        A,
-        B
-      };
+      else {
+      }
+      enum X : int { A, B };
 
   * ``BS_Allman`` (in configuration: ``Allman``)
     Always break before braces.

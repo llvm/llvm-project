@@ -15,6 +15,7 @@
 
 #include "Stages/Stage.h"
 
+namespace llvm {
 namespace mca {
 
 // Pin the vtable here in the implementation file.
@@ -25,3 +26,4 @@ void Stage::addListener(HWEventListener *Listener) {
 }
 
 } // namespace mca
+} // namespace llvm

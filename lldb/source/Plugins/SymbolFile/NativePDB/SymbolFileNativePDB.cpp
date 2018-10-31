@@ -16,6 +16,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/StreamBuffer.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
@@ -24,6 +25,8 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolVendor.h"
+#include "lldb/Symbol/Variable.h"
+#include "lldb/Symbol/VariableList.h"
 
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
@@ -388,9 +391,7 @@ static PDB_SymType GetPdbSymType(TpiStream &tpi, TypeIndex ti) {
   // If this is an LF_MODIFIER, look through it to get the kind that it
   // modifies.  Note that it's not possible to have an LF_MODIFIER that
   // modifies another LF_MODIFIER, although this would handle that anyway.
-  ModifierRecord mr;
-  llvm::cantFail(TypeDeserializer::deserializeAs<ModifierRecord>(cvt, mr));
-  return GetPdbSymType(tpi, mr.ModifiedType);
+  return GetPdbSymType(tpi, LookThroughModifierRecord(cvt));
 }
 
 static clang::TagTypeKind TranslateUdtKind(const TagRecord &cr) {
@@ -772,6 +773,25 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbSymUid type_uid,
       lldb_private::Type::eResolveStateForward);
 }
 
+TypeSP SymbolFileNativePDB::CreateArrayType(PdbSymUid type_uid,
+                                            const ArrayRecord &ar) {
+  TypeSP element_type = GetOrCreateType(ar.ElementType);
+  uint64_t element_count = ar.Size / element_type->GetByteSize();
+
+  CompilerType element_ct = element_type->GetFullCompilerType();
+
+  CompilerType array_ct =
+      m_clang->CreateArrayType(element_ct, element_count, false);
+
+  Declaration decl;
+  TypeSP array_sp = std::make_shared<lldb_private::Type>(
+      type_uid.toOpaqueId(), m_clang->GetSymbolFile(), ConstString(), ar.Size,
+      nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
+      array_ct, lldb_private::Type::eResolveStateFull);
+  array_sp->SetEncodingType(element_type.get());
+  return array_sp;
+}
+
 TypeSP SymbolFileNativePDB::CreateType(PdbSymUid type_uid) {
   const PdbTypeSymId &tsid = type_uid.asTypeSym();
   TypeIndex index(tsid.index);
@@ -812,6 +832,12 @@ TypeSP SymbolFileNativePDB::CreateType(PdbSymUid type_uid) {
     UnionRecord ur;
     llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, ur));
     return CreateTagType(type_uid, ur);
+  }
+
+  if (cvt.kind() == LF_ARRAY) {
+    ArrayRecord ar;
+    llvm::cantFail(TypeDeserializer::deserializeAs<ArrayRecord>(cvt, ar));
+    return CreateArrayType(type_uid, ar);
   }
 
   return nullptr;
@@ -885,6 +911,131 @@ TypeSP SymbolFileNativePDB::GetOrCreateType(PdbSymUid type_uid) {
     return iter->second;
 
   return CreateAndCacheType(type_uid);
+}
+
+static DWARFExpression MakeGlobalLocationExpression(uint16_t section,
+                                                    uint32_t offset,
+                                                    ModuleSP module) {
+  assert(section > 0);
+  assert(module);
+
+  const ArchSpec &architecture = module->GetArchitecture();
+  ByteOrder byte_order = architecture.GetByteOrder();
+  uint32_t address_size = architecture.GetAddressByteSize();
+  uint32_t byte_size = architecture.GetDataByteSize();
+  assert(byte_order != eByteOrderInvalid && address_size != 0);
+
+  RegisterKind register_kind = eRegisterKindDWARF;
+  StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
+  stream.PutHex8(DW_OP_addr);
+
+  SectionList *section_list = module->GetSectionList();
+  assert(section_list);
+
+  // Section indices in PDB are 1-based, but in DWARF they are 0-based, so we
+  // need to subtract 1.
+  uint32_t section_idx = section - 1;
+  if (section_idx >= section_list->GetSize())
+    return DWARFExpression(nullptr);
+
+  auto section_ptr = section_list->GetSectionAtIndex(section_idx);
+  if (!section_ptr)
+    return DWARFExpression(nullptr);
+
+  stream.PutMaxHex64(section_ptr->GetFileAddress() + offset, address_size,
+                     byte_order);
+  DataBufferSP buffer =
+      std::make_shared<DataBufferHeap>(stream.GetData(), stream.GetSize());
+  DataExtractor extractor(buffer, byte_order, address_size, byte_size);
+  DWARFExpression result(module, extractor, nullptr, 0, buffer->GetByteSize());
+  result.SetRegisterKind(register_kind);
+  return result;
+}
+
+VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbSymUid var_uid) {
+  const PdbCuSymId &cu_sym = var_uid.asCuSym();
+  lldbassert(cu_sym.global);
+  CVSymbol sym = m_index->symrecords().readRecord(cu_sym.offset);
+  lldb::ValueType scope = eValueTypeInvalid;
+  TypeIndex ti;
+  llvm::StringRef name;
+  lldb::addr_t addr = 0;
+  uint16_t section = 0;
+  uint32_t offset = 0;
+  bool is_external = false;
+  switch (sym.kind()) {
+  case S_GDATA32:
+    is_external = true;
+    LLVM_FALLTHROUGH;
+  case S_LDATA32: {
+    DataSym ds(sym.kind());
+    llvm::cantFail(SymbolDeserializer::deserializeAs<DataSym>(sym, ds));
+    ti = ds.Type;
+    scope = (sym.kind() == S_GDATA32) ? eValueTypeVariableGlobal
+                                      : eValueTypeVariableStatic;
+    name = ds.Name;
+    section = ds.Segment;
+    offset = ds.DataOffset;
+    addr = m_index->MakeVirtualAddress(ds.Segment, ds.DataOffset);
+    break;
+  }
+  case S_GTHREAD32:
+    is_external = true;
+    LLVM_FALLTHROUGH;
+  case S_LTHREAD32: {
+    ThreadLocalDataSym tlds(sym.kind());
+    llvm::cantFail(
+        SymbolDeserializer::deserializeAs<ThreadLocalDataSym>(sym, tlds));
+    ti = tlds.Type;
+    name = tlds.Name;
+    section = tlds.Segment;
+    offset = tlds.DataOffset;
+    addr = m_index->MakeVirtualAddress(tlds.Segment, tlds.DataOffset);
+    scope = eValueTypeVariableThreadLocal;
+    break;
+  }
+  default:
+    llvm_unreachable("unreachable!");
+  }
+
+  CompUnitSP comp_unit;
+  llvm::Optional<uint16_t> modi = m_index->GetModuleIndexForVa(addr);
+  if (modi) {
+    PdbSymUid cuid = PdbSymUid::makeCompilandId(*modi);
+    CompilandIndexItem &cci = m_index->compilands().GetOrCreateCompiland(cuid);
+    comp_unit = GetOrCreateCompileUnit(cci);
+  }
+
+  Declaration decl;
+  PDB_SymType pdbst = GetPdbSymType(m_index->tpi(), ti);
+  PdbSymUid tuid = PdbSymUid::makeTypeSymId(pdbst, ti, false);
+  SymbolFileTypeSP type_sp =
+      std::make_shared<SymbolFileType>(*this, tuid.toOpaqueId());
+  Variable::RangeList ranges;
+
+  DWARFExpression location = MakeGlobalLocationExpression(
+      section, offset, GetObjectFile()->GetModule());
+
+  std::string global_name("::");
+  global_name += name;
+  VariableSP var_sp = std::make_shared<Variable>(
+      var_uid.toOpaqueId(), name.str().c_str(), global_name.c_str(), type_sp,
+      scope, comp_unit.get(), ranges, &decl, location, is_external, false,
+      false);
+  var_sp->SetLocationIsConstantValueData(false);
+
+  return var_sp;
+}
+
+VariableSP SymbolFileNativePDB::GetOrCreateGlobalVariable(PdbSymUid var_uid) {
+  lldbassert(var_uid.isGlobalVariable());
+
+  auto emplace_result =
+      m_global_vars.try_emplace(var_uid.toOpaqueId(), nullptr);
+  if (emplace_result.second)
+    emplace_result.first->second = CreateGlobalVariable(var_uid);
+
+  return emplace_result.first->second;
 }
 
 lldb::TypeSP
@@ -1146,6 +1297,32 @@ size_t SymbolFileNativePDB::ParseFunctionBlocks(const SymbolContext &sc) {
   return 0;
 }
 
+uint32_t SymbolFileNativePDB::FindGlobalVariables(
+    const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
+    uint32_t max_matches, VariableList &variables) {
+  using SymbolAndOffset = std::pair<uint32_t, llvm::codeview::CVSymbol>;
+
+  std::vector<SymbolAndOffset> results = m_index->globals().findRecordsByName(
+      name.GetStringRef(), m_index->symrecords());
+  for (const SymbolAndOffset &result : results) {
+    VariableSP var;
+    switch (result.second.kind()) {
+    case SymbolKind::S_GDATA32:
+    case SymbolKind::S_LDATA32:
+    case SymbolKind::S_GTHREAD32:
+    case SymbolKind::S_LTHREAD32: {
+      PdbSymUid uid = PdbSymUid::makeGlobalVariableUid(result.first);
+      var = GetOrCreateGlobalVariable(uid);
+      variables.AddVariable(var);
+      break;
+    }
+    default:
+      continue;
+    }
+  }
+  return variables.GetSize();
+}
+
 uint32_t SymbolFileNativePDB::FindFunctions(
     const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
     FunctionNameType name_type_mask, bool include_inlines, bool append,
@@ -1239,19 +1416,21 @@ Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
   auto iter = m_types.find(type_uid);
   // lldb should not be passing us non-sensical type uids.  the only way it
   // could have a type uid in the first place is if we handed it out, in which
-  // case we should know about the type.  So this is not a get-or-create type
-  // operation, it is strictly a get, and the type is guaranteed to exist.
-  //
-  // However, since the implementation is not yet complete, we don't currently
-  // support all possible use cases.  For example, we currently create all
-  // functions with indices of 0 for the signature type simply because this is
-  // not yet implemented.  At the time the function object is created we should
-  // be creating an lldb::TypeSP for this, adding it to the m_types, and
-  // returning a valid Type object for it and putting it in this map.  Once all
-  // cases like this are handled, we can promote this to an assert.
-  if (iter == m_types.end())
+  // case we should know about the type.  However, that doesn't mean we've
+  // instantiated it yet.  We can vend out a UID for a future type.  So if the
+  // type doesn't exist, let's instantiate it now.
+  if (iter != m_types.end())
+    return &*iter->second;
+
+  PdbSymUid uid = PdbSymUid::fromOpaqueId(type_uid);
+  lldbassert(uid.isTypeSym(uid.tag()));
+  const PdbTypeSymId &type_id = uid.asTypeSym();
+  TypeIndex ti(type_id.index);
+  if (ti.isNoneType())
     return nullptr;
-  return &*iter->second;
+
+  TypeSP type_sp = CreateAndCacheType(uid);
+  return &*type_sp;
 }
 
 bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
@@ -1286,6 +1465,25 @@ bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
   auto types_iter = m_types.find(uid.toOpaqueId());
   lldbassert(types_iter != m_types.end());
 
+  if (cvt.kind() == LF_MODIFIER) {
+    TypeIndex unmodified_type = LookThroughModifierRecord(cvt);
+    cvt = m_index->tpi().getType(unmodified_type);
+    // LF_MODIFIERS usually point to forward decls, so this is the one case
+    // where we won't have been able to resolve a forward decl to a full decl
+    // earlier on.  So we need to do that now.
+    if (IsForwardRefUdt(cvt)) {
+      llvm::Expected<TypeIndex> expected_full_ti =
+          m_index->tpi().findFullDeclForForwardRef(unmodified_type);
+      if (!expected_full_ti) {
+        llvm::consumeError(expected_full_ti.takeError());
+        return false;
+      }
+      cvt = m_index->tpi().getType(*expected_full_ti);
+      lldbassert(!IsForwardRefUdt(cvt));
+      unmodified_type = *expected_full_ti;
+    }
+    uid = PdbSymUid::makeTypeSymId(uid.tag(), unmodified_type, false);
+  }
   TypeIndex field_list_ti = GetFieldListIndex(cvt);
   CVType field_list_cvt = m_index->tpi().getType(field_list_ti);
   if (field_list_cvt.kind() != LF_FIELDLIST)

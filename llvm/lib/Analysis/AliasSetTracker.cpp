@@ -383,7 +383,7 @@ AliasSet &AliasSetTracker::getAliasSetFor(const MemoryLocation &MemLoc) {
 
 void AliasSetTracker::add(Value *Ptr, LocationSize Size,
                           const AAMDNodes &AAInfo) {
-  addPointer(Ptr, Size, AAInfo, AliasSet::NoAccess);
+  addPointer(MemoryLocation(Ptr, Size, AAInfo), AliasSet::NoAccess);
 }
 
 void AliasSetTracker::add(LoadInst *LI) {
@@ -518,8 +518,9 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
 
     // Loop over all of the pointers in this alias set.
     for (AliasSet::iterator ASI = AS.begin(), E = AS.end(); ASI != E; ++ASI)
-      addPointer(ASI.getPointer(), ASI.getSize(), ASI.getAAInfo(),
-                 (AliasSet::AccessLattice)AS.Access);
+      addPointer(
+          MemoryLocation(ASI.getPointer(), ASI.getSize(), ASI.getAAInfo()),
+          (AliasSet::AccessLattice)AS.Access);
   }
 }
 
@@ -612,10 +613,9 @@ AliasSet &AliasSetTracker::mergeAllAliasSets() {
   return *AliasAnyAS;
 }
 
-AliasSet &AliasSetTracker::addPointer(Value *P, LocationSize Size,
-                                      const AAMDNodes &AAInfo,
+AliasSet &AliasSetTracker::addPointer(MemoryLocation Loc,
                                       AliasSet::AccessLattice E) {
-  AliasSet &AS = getAliasSetFor(MemoryLocation(P, Size, AAInfo));
+  AliasSet &AS = getAliasSetFor(Loc);
   AS.Access |= E;
 
   if (!AliasAnyAS && (TotalMayAliasSetSize > SaturationThreshold)) {

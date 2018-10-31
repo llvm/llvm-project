@@ -53,35 +53,35 @@
 #
 # GENERATE:      bb.1.if.end:
 # GENERATE:      MOV32mr $rbp, 1, $noreg, -48, $noreg, killed $edx :: (store 4 into %stack.5)
-# GENERATE-NEXT: DBG_VALUE debug-use $rbp, 0, ![[INT0]], !DIExpression(DW_OP_constu, 48, DW_OP_minus)
+# GENERATE-NEXT: DBG_VALUE $rbp, 0, ![[INT0]], !DIExpression(DW_OP_constu, 48, DW_OP_minus)
 # GENERATE:      MOV32mr $rbp, 1, $noreg, -52, $noreg, killed $r8d :: (store 4 into %stack.4)
-# GENERATE-NEXT: DBG_VALUE debug-use $rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
+# GENERATE-NEXT: DBG_VALUE $rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
 # GENERATE:      MOV32mr $rbp, 1, $noreg, -56, $noreg, killed $esi :: (store 4 into %stack.3)
-# GENERATE-NEXT: DBG_VALUE debug-use $rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
+# GENERATE-NEXT: DBG_VALUE $rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
 #
 # Check that the spill locations that are valid at the end of bb.1.if.end are
 # propagated to subsequent BBs.
 #
 # GENERATE:      bb.2.if.then4:
 # GENERATE-NOT:  bb.3:
-# GENERATE-DAG:  DBG_VALUE debug-use $rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
-# GENERATE-DAG:  DBG_VALUE debug-use $rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
+# GENERATE-DAG:  DBG_VALUE $rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
+# GENERATE-DAG:  DBG_VALUE $rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
 #
 # GENERATE:      bb.3:
 # GENERATE-NOT:  bb.4.if.end13:
-# GENERATE-DAG:  DBG_VALUE debug-use $rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
-# GENERATE-DAG:  DBG_VALUE debug-use $rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
+# GENERATE-DAG:  DBG_VALUE $rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
+# GENERATE-DAG:  DBG_VALUE $rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
 #
 # GENERATE:      bb.4.if.end13:
 # GENERATE-NOT:  bb.5.cleanup:
-# GENERATE-DAG:  DBG_VALUE debug-use $rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
-# GENERATE-DAG:  DBG_VALUE debug-use $rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
+# GENERATE-DAG:  DBG_VALUE $rbp, 0, ![[INTD]], !DIExpression(DW_OP_constu, 56, DW_OP_minus)
+# GENERATE-DAG:  DBG_VALUE $rbp, 0, ![[INTB]], !DIExpression(DW_OP_constu, 52, DW_OP_minus)
 # 
 # Check that the spill location rbp-48 (the variable int0) is not propagated 
 # because int0 is redefined within the same basic block.
 #
 # TERMINATE:     bb.2.if.then4:
-# TERMINATE-NOT: DBG_VALUE debug-use $rbp, -48,
+# TERMINATE-NOT: DBG_VALUE $rbp, -48,
 --- |
   ; ModuleID = '<stdin>'
   source_filename = "spill1.c"
@@ -369,31 +369,31 @@ body:             |
     CFI_INSTRUCTION offset $r13, -40
     CFI_INSTRUCTION offset $r14, -32
     CFI_INSTRUCTION offset $r15, -24
-    DBG_VALUE debug-use $edi, debug-use _, !24, !38, debug-location !39
-    DBG_VALUE debug-use $esi, debug-use _, !25, !38, debug-location !40
-    DBG_VALUE debug-use $edx, debug-use _, !26, !38, debug-location !41
-    DBG_VALUE debug-use $ecx, debug-use _, !27, !38, debug-location !42
-    DBG_VALUE debug-use $r8d, debug-use _, !28, !38, debug-location !43
-    DBG_VALUE debug-use $r9d, debug-use _, !29, !38, debug-location !44
+    DBG_VALUE $edi, _, !24, !38, debug-location !39
+    DBG_VALUE $esi, _, !25, !38, debug-location !40
+    DBG_VALUE $edx, _, !26, !38, debug-location !41
+    DBG_VALUE $ecx, _, !27, !38, debug-location !42
+    DBG_VALUE $r8d, _, !28, !38, debug-location !43
+    DBG_VALUE $r9d, _, !29, !38, debug-location !44
     $r14d = MOV32rr $r8d
-    DBG_VALUE debug-use $r14d, debug-use _, !28, !38, debug-location !43
+    DBG_VALUE $r14d, _, !28, !38, debug-location !43
     $r12d = MOV32rr $esi
-    DBG_VALUE debug-use $r12d, debug-use _, !25, !38, debug-location !40
+    DBG_VALUE $r12d, _, !25, !38, debug-location !40
     $eax = MOV32rr $edi
-    DBG_VALUE debug-use $eax, debug-use _, !24, !38, debug-location !39
+    DBG_VALUE $eax, _, !24, !38, debug-location !39
     $r13d = MOV32rm $rip, 1, _, @glob0, _, debug-location !46 :: (dereferenceable load 4 from @glob0, !tbaa !47)
-    DBG_VALUE debug-use $r13d, debug-use _, !31, !38, debug-location !51
+    DBG_VALUE $r13d, _, !31, !38, debug-location !51
     $r8d = MOV32rm $rip, 1, _, @glob1, _, debug-location !52 :: (dereferenceable load 4 from @glob1, !tbaa !47)
-    DBG_VALUE debug-use $r8d, debug-use _, !32, !38, debug-location !53
+    DBG_VALUE $r8d, _, !32, !38, debug-location !53
     $r15d = MOV32rm $rip, 1, _, @glob2, _, debug-location !54 :: (dereferenceable load 4 from @glob2, !tbaa !47)
-    DBG_VALUE debug-use $r15d, debug-use _, !33, !38, debug-location !55
+    DBG_VALUE $r15d, _, !33, !38, debug-location !55
     $esi = MOV32rm $rip, 1, _, @glob3, _, debug-location !56 :: (dereferenceable load 4 from @glob3, !tbaa !47)
-    DBG_VALUE debug-use $esi, debug-use _, !34, !38, debug-location !57
+    DBG_VALUE $esi, _, !34, !38, debug-location !57
     $ebx = MOV32rm $rip, 1, _, @glob4, _, debug-location !59 :: (dereferenceable load 4 from @glob4, !tbaa !47)
-    DBG_VALUE debug-use $ebx, debug-use _, !35, !38, debug-location !60
+    DBG_VALUE $ebx, _, !35, !38, debug-location !60
     MOV32mr $rbp, 1, _, -44, _, $ebx, debug-location !60 :: (store 4 into %ir.inte, !tbaa !47)
     $edi = MOV32rm $rip, 1, _, @glob5, _, debug-location !62 :: (dereferenceable load 4 from @glob5, !tbaa !47)
-    DBG_VALUE debug-use $edi, debug-use _, !36, !38, debug-location !63
+    DBG_VALUE $edi, _, !36, !38, debug-location !63
     MOV32mr $rbp, 1, _, -60, _, $edi, debug-location !63 :: (store 4 into %ir.intf, !tbaa !47)
     TEST32rr killed $eax, $eax, implicit-def $eflags, debug-location !67
     JNE_1 %bb.5.cleanup, implicit $eflags
@@ -405,11 +405,11 @@ body:             |
     MOV32mr $rbp, 1, _, -48, _, killed $edx :: (store 4 into %stack.5)
     MOV32mr $rbp, 1, _, -52, _, killed $r8d :: (store 4 into %stack.4)
     MOV32mr $rbp, 1, _, -56, _, killed $esi :: (store 4 into %stack.3)
-    DBG_VALUE debug-use _, debug-use _, !30, !38, debug-location !45
+    DBG_VALUE _, _, !30, !38, debug-location !45
     $r14d = ADD32rr killed $r14d, killed $ecx, implicit-def dead $eflags, debug-location !68
     $r14d = ADD32rr killed $r14d, killed $r9d, implicit-def dead $eflags, debug-location !69
     $r14d = IMUL32rm killed $r14d, $rbp, 1, _, 16, _, implicit-def dead $eflags, debug-location !70 :: (load 4 from %fixed-stack.6, align 16)
-    DBG_VALUE debug-use $r14d, debug-use _, !26, !38, debug-location !41
+    DBG_VALUE $r14d, _, !26, !38, debug-location !41
     CALL64pcrel32 @use, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, debug-location !72
     $edi = MOV32rr killed $ebx, debug-location !73
     CALL64pcrel32 @use, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, debug-location !73
@@ -421,21 +421,21 @@ body:             |
     liveins: $r14d, $r15d, $rbp
   
     $rdi = LEA64r $rbp, 1, _, -44, _
-    DBG_VALUE debug-use $rbp, -44, !35, !38, debug-location !60
+    DBG_VALUE $rbp, -44, !35, !38, debug-location !60
     $rsi = LEA64r $rbp, 1, _, -60, _
-    DBG_VALUE debug-use $rbp, -60, !36, !38, debug-location !63
+    DBG_VALUE $rbp, -60, !36, !38, debug-location !63
     $rdx = LEA64r $rbp, 1, _, -64, _
-    DBG_VALUE debug-use $rbp, -64, !37, !38, debug-location !78
+    DBG_VALUE $rbp, -64, !37, !38, debug-location !78
     CALL64pcrel32 @set, csr_64, implicit $rsp, implicit $rdi, implicit $rsi, implicit $rdx, implicit-def $rsp, debug-location !79
     $eax = MOV32rm $rbp, 1, _, -44, _, debug-location !81 :: (dereferenceable load 4 from %ir.inte, !tbaa !47)
-    DBG_VALUE debug-use $eax, debug-use _, !35, !38, debug-location !60
+    DBG_VALUE $eax, _, !35, !38, debug-location !60
     $r15d = ADD32rm killed $r15d, $rbp, 1, _, -52, _, implicit-def dead $eflags, debug-location !82 :: (load 4 from %stack.4)
     $r15d = IMUL32rr killed $r15d, $eax, implicit-def dead $eflags, debug-location !82
     $r15d = ADD32rm killed $r15d, $rbp, 1, _, -56, _, implicit-def dead $eflags, debug-location !83 :: (load 4 from %stack.3)
     $r15d = IMUL32rr killed $r15d, killed $eax, implicit-def dead $eflags, debug-location !84
-    DBG_VALUE debug-use $r15d, debug-use _, !31, !38, debug-location !51
+    DBG_VALUE $r15d, _, !31, !38, debug-location !51
     $r13d = MOV32rr killed $r15d
-    DBG_VALUE debug-use $r13d, debug-use _, !31, !38, debug-location !51
+    DBG_VALUE $r13d, _, !31, !38, debug-location !51
     JMP_1 %bb.4.if.end13
   
   bb.2:
@@ -443,17 +443,17 @@ body:             |
     liveins: $r13d, $r14d, $rbp
   
     $r14d = ADD32rm killed $r14d, $rbp, 1, _, -48, _, implicit-def dead $eflags, debug-location !71 :: (load 4 from %stack.5)
-    DBG_VALUE debug-use $r14d, debug-use _, !26, !38, debug-location !41
+    DBG_VALUE $r14d, _, !26, !38, debug-location !41
   
   bb.4.if.end13:
     successors: %bb.5.cleanup(0x80000000)
     liveins: $r13d, $r14d, $rbp
   
-    DBG_VALUE debug-use $r14d, debug-use _, !26, !38, debug-location !41
-    DBG_VALUE debug-use $r13d, debug-use _, !31, !38, debug-location !51
+    DBG_VALUE $r14d, _, !26, !38, debug-location !41
+    DBG_VALUE $r13d, _, !31, !38, debug-location !51
     $r13d = IMUL32rm killed $r13d, $rbp, 1, _, 16, _, implicit-def dead $eflags, debug-location !86 :: (load 4 from %fixed-stack.6, align 16)
     $r13d = ADD32rr killed $r13d, killed $r14d, implicit-def dead $eflags, debug-location !87
-    DBG_VALUE debug-use $r13d, debug-use _, !26, !38, debug-location !41
+    DBG_VALUE $r13d, _, !26, !38, debug-location !41
     $edi = MOV32rr killed $r13d, debug-location !88
     CALL64pcrel32 @use, csr_64, implicit $rsp, implicit $edi, implicit-def $rsp, debug-location !88
   

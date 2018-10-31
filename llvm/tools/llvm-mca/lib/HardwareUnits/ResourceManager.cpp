@@ -18,9 +18,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
 namespace mca {
-
-using namespace llvm;
 
 #define DEBUG_TYPE "llvm-mca"
 ResourceStrategy::~ResourceStrategy() = default;
@@ -305,3 +304,4 @@ void ResourceManager::releaseResource(uint64_t ResourceID) {
 }
 
 } // namespace mca
+} // namespace llvm

@@ -1783,7 +1783,7 @@ ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *E) {
     return cast<ConstantAddress>(Res.getAddress());
   }
 
-  auto kind = E->getIdentType();
+  auto kind = E->getIdentKind();
   if (kind == PredefinedExpr::PrettyFunction) {
     return CGM.GetAddrOfConstantCString("top level", ".tmp");
   }

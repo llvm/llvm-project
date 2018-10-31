@@ -168,8 +168,7 @@ bool DWARFDebugRngLists::ExtractRangeList(
 
     default:
       // Next encodings are not yet supported:
-      // DW_RLE_base_addressx, DW_RLE_startx_endx, DW_RLE_startx_length,
-      // DW_RLE_offset_pair, DW_RLE_base_address.
+      // DW_RLE_base_addressx, DW_RLE_startx_endx, DW_RLE_startx_length.
       lldbassert(0 && "unknown range list entry encoding");
       error = true;
     }

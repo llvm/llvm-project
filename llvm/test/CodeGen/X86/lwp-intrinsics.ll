@@ -40,14 +40,41 @@ define i8* @test_slwpcb(i8 *%a0) nounwind {
 }
 
 define i8 @test_lwpins32_rri(i32 %a0, i32 %a1) nounwind {
-; X86-LABEL: test_lwpins32_rri:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl %ecx, %ecx
-; X86-NEXT:    lwpins $-1985229329, %ecx, %eax # imm = 0x89ABCDEF
-; X86-NEXT:    setb %al
-; X86-NEXT:    retl
+; X86_BDVER1-LABEL: test_lwpins32_rri:
+; X86_BDVER1:       # %bb.0:
+; X86_BDVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86_BDVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86_BDVER1-NEXT:    addl %ecx, %ecx
+; X86_BDVER1-NEXT:    lwpins $-1985229329, %ecx, %eax # imm = 0x89ABCDEF
+; X86_BDVER1-NEXT:    setb %al
+; X86_BDVER1-NEXT:    retl
+;
+; X86_BDVER2-LABEL: test_lwpins32_rri:
+; X86_BDVER2:       # %bb.0:
+; X86_BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86_BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86_BDVER2-NEXT:    addl %ecx, %ecx
+; X86_BDVER2-NEXT:    lwpins $-1985229329, %ecx, %eax # imm = 0x89ABCDEF
+; X86_BDVER2-NEXT:    setb %al
+; X86_BDVER2-NEXT:    retl
+;
+; X86_BDVER3-LABEL: test_lwpins32_rri:
+; X86_BDVER3:       # %bb.0:
+; X86_BDVER3-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86_BDVER3-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86_BDVER3-NEXT:    addl %ecx, %ecx
+; X86_BDVER3-NEXT:    lwpins $-1985229329, %ecx, %eax # imm = 0x89ABCDEF
+; X86_BDVER3-NEXT:    setb %al
+; X86_BDVER3-NEXT:    retl
+;
+; X86_BDVER4-LABEL: test_lwpins32_rri:
+; X86_BDVER4:       # %bb.0:
+; X86_BDVER4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86_BDVER4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86_BDVER4-NEXT:    addl %ecx, %ecx
+; X86_BDVER4-NEXT:    lwpins $-1985229329, %ecx, %eax # imm = 0x89ABCDEF
+; X86_BDVER4-NEXT:    setb %al
+; X86_BDVER4-NEXT:    retl
 ;
 ; X64-LABEL: test_lwpins32_rri:
 ; X64:       # %bb.0:
@@ -80,13 +107,37 @@ define i8 @test_lwpins32_rmi(i32 %a0, i32 *%p1) nounwind {
 }
 
 define void @test_lwpval32_rri(i32 %a0, i32 %a1) nounwind {
-; X86-LABEL: test_lwpval32_rri:
-; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    addl %ecx, %ecx
-; X86-NEXT:    lwpval $-19088744, %ecx, %eax # imm = 0xFEDCBA98
-; X86-NEXT:    retl
+; X86_BDVER1-LABEL: test_lwpval32_rri:
+; X86_BDVER1:       # %bb.0:
+; X86_BDVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86_BDVER1-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86_BDVER1-NEXT:    addl %ecx, %ecx
+; X86_BDVER1-NEXT:    lwpval $-19088744, %ecx, %eax # imm = 0xFEDCBA98
+; X86_BDVER1-NEXT:    retl
+;
+; X86_BDVER2-LABEL: test_lwpval32_rri:
+; X86_BDVER2:       # %bb.0:
+; X86_BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86_BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86_BDVER2-NEXT:    addl %ecx, %ecx
+; X86_BDVER2-NEXT:    lwpval $-19088744, %ecx, %eax # imm = 0xFEDCBA98
+; X86_BDVER2-NEXT:    retl
+;
+; X86_BDVER3-LABEL: test_lwpval32_rri:
+; X86_BDVER3:       # %bb.0:
+; X86_BDVER3-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86_BDVER3-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86_BDVER3-NEXT:    addl %ecx, %ecx
+; X86_BDVER3-NEXT:    lwpval $-19088744, %ecx, %eax # imm = 0xFEDCBA98
+; X86_BDVER3-NEXT:    retl
+;
+; X86_BDVER4-LABEL: test_lwpval32_rri:
+; X86_BDVER4:       # %bb.0:
+; X86_BDVER4-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86_BDVER4-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86_BDVER4-NEXT:    addl %ecx, %ecx
+; X86_BDVER4-NEXT:    lwpval $-19088744, %ecx, %eax # imm = 0xFEDCBA98
+; X86_BDVER4-NEXT:    retl
 ;
 ; X64-LABEL: test_lwpval32_rri:
 ; X64:       # %bb.0:

@@ -18,6 +18,9 @@
 //   matched against 2 libraries: '/libignore_lib1.so' and '/libignore_lib1.so'
 // This was caused by non-atomicity of reading of /proc/self/maps.
 
+// ReadProcMaps() on NetBSD does not handle >=1MB of memory layout information
+// UNSUPPORTED: netbsd
+
 #ifndef LIB
 
 #include <dlfcn.h>
@@ -78,4 +81,3 @@ int main(int argc, char **argv) {
 
 // CHECK-WITHSUPP-NOT: WARNING: ThreadSanitizer: data race
 // CHECK-WITHSUPP: OK
-

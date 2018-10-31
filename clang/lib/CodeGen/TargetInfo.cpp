@@ -3944,18 +3944,39 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
     return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), Width));
   }
 
-  // Bool type is always extended to the ABI, other builtin types are not
-  // extended.
-  const BuiltinType *BT = Ty->getAs<BuiltinType>();
-  if (BT && BT->getKind() == BuiltinType::Bool)
-    return ABIArgInfo::getExtend(Ty);
+  if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
+    switch (BT->getKind()) {
+    case BuiltinType::Bool:
+      // Bool type is always extended to the ABI, other builtin types are not
+      // extended.
+      return ABIArgInfo::getExtend(Ty);
 
-  // Mingw64 GCC uses the old 80 bit extended precision floating point unit. It
-  // passes them indirectly through memory.
-  if (IsMingw64 && BT && BT->getKind() == BuiltinType::LongDouble) {
-    const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
-    if (LDF == &llvm::APFloat::x87DoubleExtended())
-      return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+    case BuiltinType::LongDouble:
+      // Mingw64 GCC uses the old 80 bit extended precision floating point
+      // unit. It passes them indirectly through memory.
+      if (IsMingw64) {
+        const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
+        if (LDF == &llvm::APFloat::x87DoubleExtended())
+          return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+        break;
+      }
+
+    case BuiltinType::Int128:
+    case BuiltinType::UInt128:
+      // If it's a parameter type, the normal ABI rule is that arguments larger
+      // than 8 bytes are passed indirectly. GCC follows it. We follow it too,
+      // even though it isn't particularly efficient.
+      if (!IsReturnType)
+        return ABIArgInfo::getIndirect(Align, /*ByVal=*/false);
+
+      // Mingw64 GCC returns i128 in XMM0. Coerce to v2i64 to handle that.
+      // Clang matches them for compatibility.
+      return ABIArgInfo::getDirect(
+          llvm::VectorType::get(llvm::Type::getInt64Ty(getVMContext()), 2));
+
+    default:
+      break;
+    }
   }
 
   return ABIArgInfo::getDirect();

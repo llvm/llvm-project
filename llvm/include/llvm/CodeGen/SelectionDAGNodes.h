@@ -672,6 +672,8 @@ public:
       case ISD::STRICT_FLOG2:
       case ISD::STRICT_FRINT:
       case ISD::STRICT_FNEARBYINT:
+      case ISD::STRICT_FMAXNUM:
+      case ISD::STRICT_FMINNUM:
         return true;
     }
   }

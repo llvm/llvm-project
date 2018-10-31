@@ -686,7 +686,6 @@ void SystemZOperand::print(raw_ostream &OS) const {
     }
     break;
   }
-  default:
   case KindInvalid:
     break;
   }

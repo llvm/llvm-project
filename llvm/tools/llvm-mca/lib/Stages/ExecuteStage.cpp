@@ -21,9 +21,8 @@
 
 #define DEBUG_TYPE "llvm-mca"
 
+namespace llvm {
 namespace mca {
-
-using namespace llvm;
 
 HWStallEvent::GenericEventType toHWStallEventType(Scheduler::Status Status) {
   switch (Status) {
@@ -217,3 +216,4 @@ void ExecuteStage::notifyReservedOrReleasedBuffers(const InstRef &IR,
 }
 
 } // namespace mca
+} // namespace llvm

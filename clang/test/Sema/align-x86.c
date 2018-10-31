@@ -1,34 +1,33 @@
-// RUN: %clang_cc1 -triple i386-apple-darwin9 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c11 -triple i386-apple-darwin9 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
+#define STATIC_ASSERT(cond) _Static_assert(cond, #cond)
+
 // PR3433
-double g1;
-short chk1[__alignof__(g1) == 8 ? 1 : -1]; 
-short chk2[__alignof__(double) == 8 ? 1 : -1];
+#define CHECK_ALIGNMENT(type, name, abi, pref) \
+  type name; \
+  STATIC_ASSERT(__alignof__(name) == pref); \
+  STATIC_ASSERT(__alignof__(type) == pref); \
+  STATIC_ASSERT(_Alignof(type) == abi)
 
-long long g2;
-short chk1[__alignof__(g2) == 8 ? 1 : -1]; 
-short chk2[__alignof__(long long) == 8 ? 1 : -1];
-
-unsigned long long g5;
-short chk1[__alignof__(g5) == 8 ? 1 : -1]; 
-short chk2[__alignof__(unsigned long long) == 8 ? 1 : -1];
-
-_Complex double g3;
-short chk1[__alignof__(g3) == 8 ? 1 : -1]; 
-short chk2[__alignof__(_Complex double) == 8 ? 1 : -1];
+CHECK_ALIGNMENT(double, g_double, 4, 8);
+CHECK_ALIGNMENT(long long, g_longlong, 4, 8);
+CHECK_ALIGNMENT(unsigned long long, g_ulonglong, 4, 8);
+CHECK_ALIGNMENT(_Complex double, g_complexdouble, 4, 8);
 
 // PR6362
-struct __attribute__((packed)) {unsigned int a;} g4;
-short chk1[__alignof__(g4) == 1 ? 1 : -1];
-short chk2[__alignof__(g4.a) == 1 ? 1 : -1];
+struct __attribute__((packed))
+packed_struct {
+  unsigned int a;
+};
+CHECK_ALIGNMENT(struct packed_struct, g_packedstruct, 1, 1);
+STATIC_ASSERT(__alignof__(g_packedstruct.a) == 1);
 
-double g6[3];
-short chk1[__alignof__(g6) == 8 ? 1 : -1];
-short chk2[__alignof__(double[3]) == 8 ? 1 : -1];
+typedef double arr3double[3];
+CHECK_ALIGNMENT(arr3double, g_arr3double, 4, 8);
 
-enum { x = 18446744073709551615ULL } g7;
-short chk1[__alignof__(g7) == 8 ? 1 : -1];
+enum big_enum { x = 18446744073709551615ULL };
+CHECK_ALIGNMENT(enum big_enum, g_bigenum, 4, 8);
 
 // PR5637
 
@@ -36,20 +35,20 @@ short chk1[__alignof__(g7) == 8 ? 1 : -1];
 
 typedef ALIGNED(2) struct {
   char a[3];
-} T;
+} aligned_before_struct;
 
-short chk1[sizeof(T)       == 3 ? 1 : -1];
-short chk2[sizeof(T[1])    == 4 ? 1 : -1];
-short chk3[sizeof(T[2])    == 6 ? 1 : -1];
-short chk4[sizeof(T[2][1]) == 8 ? 1 : -1];
-short chk5[sizeof(T[1][2]) == 6 ? 1 : -1];
+STATIC_ASSERT(sizeof(aligned_before_struct)       == 3);
+STATIC_ASSERT(sizeof(aligned_before_struct[1])    == 4);
+STATIC_ASSERT(sizeof(aligned_before_struct[2])    == 6);
+STATIC_ASSERT(sizeof(aligned_before_struct[2][1]) == 8);
+STATIC_ASSERT(sizeof(aligned_before_struct[1][2]) == 6);
 
 typedef struct ALIGNED(2) {
   char a[3];
-} T2;
+} aligned_after_struct;
 
-short chk1[sizeof(T2)       == 4 ? 1 : -1];
-short chk2[sizeof(T2[1])    == 4 ? 1 : -1];
-short chk3[sizeof(T2[2])    == 8 ? 1 : -1];
-short chk4[sizeof(T2[2][1]) == 8 ? 1 : -1];
-short chk5[sizeof(T2[1][2]) == 8 ? 1 : -1];
+STATIC_ASSERT(sizeof(aligned_after_struct)       == 4);
+STATIC_ASSERT(sizeof(aligned_after_struct[1])    == 4);
+STATIC_ASSERT(sizeof(aligned_after_struct[2])    == 8);
+STATIC_ASSERT(sizeof(aligned_after_struct[2][1]) == 8);
+STATIC_ASSERT(sizeof(aligned_after_struct[1][2]) == 8);

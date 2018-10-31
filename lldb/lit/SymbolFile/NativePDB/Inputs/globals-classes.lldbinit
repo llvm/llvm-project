@@ -1,0 +1,14 @@
+settings set auto-one-line-summaries false
+
+target variable -T ClassWithPaddingInstance
+target variable -T ClassNoPaddingInstance
+target variable -T DC
+target variable -T EBOC
+target variable -T PBC
+
+target variable -T UnnamedClassInstance
+
+target variable -T PointersInstance
+target variable -T ReferencesInstance
+
+quit

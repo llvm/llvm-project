@@ -41,6 +41,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include <vector>
 
+namespace llvm {
 namespace mca {
 
 /// A region of assembly code.
@@ -123,5 +124,6 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 
 #endif

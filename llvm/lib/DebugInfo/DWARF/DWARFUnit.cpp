@@ -175,7 +175,7 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
     : Context(DC), InfoSection(Section), Header(Header), Abbrev(DA),
       RangeSection(RS), LocSection(LocSection), LineSection(LS),
       StringSection(SS), StringOffsetSection(SOS), AddrOffsetSection(AOS),
-      isLittleEndian(LE), isDWO(IsDWO), UnitVector(UnitVector) {
+      isLittleEndian(LE), IsDWO(IsDWO), UnitVector(UnitVector) {
   clear();
   // For split DWARF we only need to keep track of the location list section's
   // data (no relocations), and if we are reading a package file, we need to
@@ -197,7 +197,7 @@ DWARFDataExtractor DWARFUnit::getDebugInfoExtractor() const {
 
 Optional<SectionedAddress>
 DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
-  if (isDWO) {
+  if (IsDWO) {
     auto R = Context.info_section_units();
     auto I = R.begin();
     // Surprising if a DWO file has more than one skeleton unit in it - this
@@ -296,13 +296,16 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   return true;
 }
 
-// Parse the rangelist table header, including the optional array of offsets
+// Parse a list table header, including the optional array of offsets
 // following it (DWARF v5 and later).
-static Expected<DWARFDebugRnglistTable>
-parseRngListTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
+template <typename DWARFListTable>
+static Expected<DWARFListTable>
+parseListTableHeader(DWARFDataExtractor DA, DWARFContext *C,
+                     StringRef SectionName, uint32_t Offset, bool isDWO) {
   // TODO: Support DWARF64
   // We are expected to be called with Offset 0 or pointing just past the table
   // header, which is 12 bytes long for DWARF32.
+  DWARFListTable Table(C, SectionName, isDWO);
   if (Offset > 0) {
     if (Offset < 12U)
       return createStringError(errc::invalid_argument, "Did not detect a valid"
@@ -310,20 +313,46 @@ parseRngListTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
                                Offset);
     Offset -= 12U;
   }
-  llvm::DWARFDebugRnglistTable Table;
   if (Error E = Table.extractHeaderAndOffsets(DA, &Offset))
     return std::move(E);
   return Table;
 }
 
-Error DWARFUnit::extractRangeList(uint32_t RangeListOffset,
-                                  DWARFDebugRangeList &RangeList) const {
-  // Require that compile unit is extracted.
-  assert(!DieArray.empty());
-  DWARFDataExtractor RangesData(Context.getDWARFObj(), *RangeSection,
-                                isLittleEndian, getAddressByteSize());
-  uint32_t ActualRangeListOffset = RangeSectionBase + RangeListOffset;
-  return RangeList.extract(RangesData, &ActualRangeListOffset);
+// Parse a DWARF v5 list table (e.g. either a rangelist table or a location
+// list table). For DWARF units with version 4 or earlier, we instead create
+// the table artifically by giving it a size that equals the section size.
+template <typename DWARFListTable>
+static Optional<DWARFListTable>
+setupListTable(DWARFUnit *U, const DWARFSection *Section, StringRef SectionName,
+               uint32_t &Base, bool isDWO, bool isLittleEndian) {
+  if (!Section->Data.size())
+    return None;
+  DWARFContext &Ctx = U->getContext();
+  DWARFListTable Table(&Ctx, SectionName, isDWO);
+  // Parse the list table header. Individual lists are extracted lazily.
+  DWARFDataExtractor DA(Ctx.getDWARFObj(), *Section, isLittleEndian,
+                        U->getAddressByteSize());
+  if (U->getVersion() < 5) {
+    Base = 0;
+    Table.setHeaderData(Section->Data.size(), U->getVersion(),
+                        DA.getAddressSize());
+    return Table;
+  }
+  if (auto TableOrError = parseListTableHeader<DWARFListTable>(
+          DA, &Ctx, SectionName, Base, isDWO))
+    Table = TableOrError.get();
+  else {
+    WithColor::error() << "parsing a " << Table.getListTypeString().data()
+                       << " list table: " << toString(TableOrError.takeError())
+                       << '\n';
+    return None;
+  }
+  // In a split dwarf unit, there are no attributes like DW_AT_rnglists_base or
+  // DW_AT_loclists_base that describe the table base. Adjust Base to point past
+  // the table header which is expected to start at offset 0.
+  if (isDWO)
+    Base = Table.getHeaderSize();
+  return Table;
 }
 
 void DWARFUnit::clear() {
@@ -409,7 +438,7 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     DWARFDie UnitDie = getUnitDIE();
     if (Optional<uint64_t> DWOId = toUnsigned(UnitDie.find(DW_AT_GNU_dwo_id)))
       Header.setDWOId(*DWOId);
-    if (!isDWO) {
+    if (!IsDWO) {
       assert(AddrOffsetSectionBase == 0);
       assert(RangeSectionBase == 0);
       AddrOffsetSectionBase = toSectionOffset(UnitDie.find(DW_AT_addr_base), 0);
@@ -426,50 +455,31 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
     // offsets table starting at offset 0 of the debug_str_offsets.dwo section.
     // In both cases we need to determine the format of the contribution,
     // which may differ from the unit's format.
-    uint64_t StringOffsetsContributionBase =
-        isDWO ? 0 : toSectionOffset(UnitDie.find(DW_AT_str_offsets_base), 0);
-    auto IndexEntry = Header.getIndexEntry();
-    if (IndexEntry)
-      if (const auto *C = IndexEntry->getOffset(DW_SECT_STR_OFFSETS))
-        StringOffsetsContributionBase += C->Offset;
-
     DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
                           isLittleEndian, 0);
-    if (isDWO)
+    if (IsDWO)
       StringOffsetsTableContribution =
-          determineStringOffsetsTableContributionDWO(
-              DA, StringOffsetsContributionBase);
+          determineStringOffsetsTableContributionDWO(DA);
     else if (getVersion() >= 5)
-      StringOffsetsTableContribution = determineStringOffsetsTableContribution(
-          DA, StringOffsetsContributionBase);
+      StringOffsetsTableContribution =
+          determineStringOffsetsTableContribution(DA);
 
     // DWARF v5 uses the .debug_rnglists and .debug_rnglists.dwo sections to
     // describe address ranges.
+    StringRef RangeSectionName = ".debug_ranges";
     if (getVersion() >= 5) {
-      if (isDWO)
+      if (IsDWO) {
+        RangeSectionName = ".debug_rnglists.dwo";
         setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
-      else
+      } else {
+        RangeSectionName = ".debug_rnglists";
         setRangesSection(&Context.getDWARFObj().getRnglistsSection(),
                          toSectionOffset(UnitDie.find(DW_AT_rnglists_base), 0));
-      if (RangeSection->Data.size()) {
-        // Parse the range list table header. Individual range lists are
-        // extracted lazily.
-        DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
-                                    isLittleEndian, 0);
-        if (auto TableOrError =
-                parseRngListTableHeader(RangesDA, RangeSectionBase))
-          RngListTable = TableOrError.get();
-        else
-          WithColor::error() << "parsing a range list table: "
-                             << toString(TableOrError.takeError())
-                             << '\n';
-
-        // In a split dwarf unit, there is no DW_AT_rnglists_base attribute.
-        // Adjust RangeSectionBase to point past the table header.
-        if (isDWO && RngListTable)
-          RangeSectionBase = RngListTable->getHeaderSize();
       }
     }
+    RngListTable = setupListTable<DWARFDebugRnglistTable>(
+        this, RangeSection, RangeSectionName, RangeSectionBase, IsDWO,
+        isLittleEndian);
 
     // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
     // skeleton CU DIE, so that DWARF users not aware of it are not broken.
@@ -479,7 +489,7 @@ size_t DWARFUnit::extractDIEsIfNeeded(bool CUDieOnly) {
 }
 
 bool DWARFUnit::parseDWO() {
-  if (isDWO)
+  if (IsDWO)
     return false;
   if (DWO.get())
     return false;
@@ -511,16 +521,9 @@ bool DWARFUnit::parseDWO() {
   DWO->setAddrOffsetSection(AddrOffsetSection, AddrOffsetSectionBase);
   if (getVersion() >= 5) {
     DWO->setRangesSection(&Context.getDWARFObj().getRnglistsDWOSection(), 0);
-    DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
-                                isLittleEndian, 0);
-    if (auto TableOrError = parseRngListTableHeader(RangesDA, RangeSectionBase))
-      DWO->RngListTable = TableOrError.get();
-    else
-      WithColor::error() << "parsing a range list table: "
-                         << toString(TableOrError.takeError())
-                         << '\n';
-    if (DWO->RngListTable)
-      DWO->RangeSectionBase = DWO->RngListTable->getHeaderSize();
+    DWO->RngListTable = setupListTable<DWARFDebugRnglistTable>(
+        DWOCU, DWO->RangeSection, ".debug_rnglists.dwo", DWO->RangeSectionBase,
+        /* isDWO =*/true, isLittleEndian);
   } else {
     auto DWORangesBase = UnitDie.getRangesBaseAttribute();
     DWO->setRangesSection(RangeSection, DWORangesBase ? *DWORangesBase : 0);
@@ -538,12 +541,6 @@ void DWARFUnit::clearDIEs(bool KeepCUDie) {
 
 Expected<DWARFAddressRangesVector>
 DWARFUnit::findRnglistFromOffset(uint32_t Offset) {
-  if (getVersion() <= 4) {
-    DWARFDebugRangeList RangeList;
-    if (Error E = extractRangeList(Offset, RangeList))
-      return std::move(E);
-    return RangeList.getAbsoluteRanges(getBaseAddress());
-  }
   if (RngListTable) {
     DWARFDataExtractor RangesData(Context.getDWARFObj(), *RangeSection,
                                   isLittleEndian, RngListTable->getAddrSize());
@@ -794,7 +791,7 @@ StrOffsetsContributionDescriptor::validateContributionSize(
   if (ValidationSize >= Size)
     if (DA.isValidOffsetForDataOfSize((uint32_t)Base, ValidationSize))
       return *this;
-  return Optional<StrOffsetsContributionDescriptor>();
+  return None;
 }
 
 // Look for a DWARF64-formatted contribution to the string offsets table
@@ -802,18 +799,17 @@ StrOffsetsContributionDescriptor::validateContributionSize(
 static Optional<StrOffsetsContributionDescriptor>
 parseDWARF64StringOffsetsTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
   if (!DA.isValidOffsetForDataOfSize(Offset, 16))
-    return Optional<StrOffsetsContributionDescriptor>();
+    return None;
 
   if (DA.getU32(&Offset) != 0xffffffff)
-    return Optional<StrOffsetsContributionDescriptor>();
+    return None;
 
   uint64_t Size = DA.getU64(&Offset);
   uint8_t Version = DA.getU16(&Offset);
   (void)DA.getU16(&Offset); // padding
   // The encoded length includes the 2-byte version field and the 2-byte
   // padding, so we need to subtract them out when we populate the descriptor.
-  return StrOffsetsContributionDescriptor(Offset, Size - 4, Version, DWARF64);
-  //return Optional<StrOffsetsContributionDescriptor>(Descriptor);
+  return {{Offset, Size - 4, Version, DWARF64}};
 }
 
 // Look for a DWARF32-formatted contribution to the string offsets table
@@ -821,22 +817,20 @@ parseDWARF64StringOffsetsTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
 static Optional<StrOffsetsContributionDescriptor>
 parseDWARF32StringOffsetsTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
   if (!DA.isValidOffsetForDataOfSize(Offset, 8))
-    return Optional<StrOffsetsContributionDescriptor>();
+    return None;
   uint32_t ContributionSize = DA.getU32(&Offset);
   if (ContributionSize >= 0xfffffff0)
-    return Optional<StrOffsetsContributionDescriptor>();
+    return None;
   uint8_t Version = DA.getU16(&Offset);
   (void)DA.getU16(&Offset); // padding
   // The encoded length includes the 2-byte version field and the 2-byte
   // padding, so we need to subtract them out when we populate the descriptor.
-  return StrOffsetsContributionDescriptor(Offset, ContributionSize - 4, Version,
-                                          DWARF32);
-  //return Optional<StrOffsetsContributionDescriptor>(Descriptor);
+  return {{Offset, ContributionSize - 4, Version, DWARF32}};
 }
 
 Optional<StrOffsetsContributionDescriptor>
-DWARFUnit::determineStringOffsetsTableContribution(DWARFDataExtractor &DA,
-                                                   uint64_t Offset) {
+DWARFUnit::determineStringOffsetsTableContribution(DWARFDataExtractor &DA) {
+  auto Offset = toSectionOffset(getUnitDIE().find(DW_AT_str_offsets_base), 0);
   Optional<StrOffsetsContributionDescriptor> Descriptor;
   // Attempt to find a DWARF64 contribution 16 bytes before the base.
   if (Offset >= 16)
@@ -849,8 +843,13 @@ DWARFUnit::determineStringOffsetsTableContribution(DWARFDataExtractor &DA,
 }
 
 Optional<StrOffsetsContributionDescriptor>
-DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA,
-                                                      uint64_t Offset) {
+DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor & DA) {
+  uint64_t Offset = 0;
+  auto IndexEntry = Header.getIndexEntry();
+  const auto *C =
+      IndexEntry ? IndexEntry->getOffset(DW_SECT_STR_OFFSETS) : nullptr;
+  if (C)
+    Offset = C->Offset;
   if (getVersion() >= 5) {
     // Look for a valid contribution at the given offset.
     auto Descriptor =
@@ -862,15 +861,9 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA,
   // Prior to DWARF v5, we derive the contribution size from the
   // index table (in a package file). In a .dwo file it is simply
   // the length of the string offsets section.
-  uint64_t Size = 0;
-  auto IndexEntry = Header.getIndexEntry();
   if (!IndexEntry)
-    Size = StringOffsetSection.Data.size();
-  else if (const auto *C = IndexEntry->getOffset(DW_SECT_STR_OFFSETS))
-    Size = C->Length;
-  // Return a descriptor with the given offset as base, version 4 and
-  // DWARF32 format.
-  //return Optional<StrOffsetsContributionDescriptor>(
-      //StrOffsetsContributionDescriptor(Offset, Size, 4, DWARF32));
-  return StrOffsetsContributionDescriptor(Offset, Size, 4, DWARF32);
+    return {{0, StringOffsetSection.Data.size(), 4, DWARF32}};
+  if (C)
+    return {{C->Offset, C->Length, 4, DWARF32}};
+  return None;
 }

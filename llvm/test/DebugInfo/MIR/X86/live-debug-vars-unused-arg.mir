@@ -128,12 +128,12 @@ stack:
 constants:
 body:             |
   bb.0.entry:
-    DBG_VALUE debug-use $edi, debug-use _, !21, !DIExpression(), debug-location !25
-    DBG_VALUE debug-use $rsi, debug-use _, !22, !DIExpression(), debug-location !26
+    DBG_VALUE $edi, _, !21, !DIExpression(), debug-location !25
+    DBG_VALUE $rsi, _, !22, !DIExpression(), debug-location !26
     %2 = MOV32rm $rip, 1, _, @bar, _, debug-location !27 :: (dereferenceable load 4 from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 0)`, !tbaa !28)
-    DBG_VALUE debug-use %2, debug-use _, !23, !DIExpression(), debug-location !32
+    DBG_VALUE %2, _, !23, !DIExpression(), debug-location !32
     %3 = MOV32rm $rip, 1, _, @bar + 4, _, debug-location !33 :: (dereferenceable load 4 from `i32* getelementptr inbounds ([2 x i32], [2 x i32]* @bar, i64 0, i64 1)`, !tbaa !28)
-    DBG_VALUE debug-use %3, debug-use _, !24, !DIExpression(), debug-location !34
+    DBG_VALUE %3, _, !24, !DIExpression(), debug-location !34
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !35
     $edi = COPY %2, debug-location !35
     $esi = COPY %3, debug-location !35
@@ -150,9 +150,9 @@ body:             |
 # CHECKMIR: ![[ARGV:[0-9]+]] = !DILocalVariable(name: "argv", arg: 2
 # CHECKMIR: name:            main
 # CHECKMIR: body:
-# CHECKMIR: DBG_VALUE debug-use $edi, debug-use $noreg, ![[ARGC]]
-# CHECKMIR-NOT: DBG_VALUE debug-use %{{.*}}, debug-use $noreg, ![[ARGC]]
-# CHECKMIR: DBG_VALUE debug-use $rsi, debug-use $noreg, ![[ARGV]]
-# CHECKMIR-NOT: DBG_VALUE debug-use %{{.*}}, debug-use $noreg, ![[ARGC]]
-# CHECKMIR-NOT: DBG_VALUE debug-use %{{.*}}, debug-use $noreg, ![[ARGV]]
+# CHECKMIR: DBG_VALUE $edi, $noreg, ![[ARGC]]
+# CHECKMIR-NOT: DBG_VALUE %{{.*}}, $noreg, ![[ARGC]]
+# CHECKMIR: DBG_VALUE $rsi, $noreg, ![[ARGV]]
+# CHECKMIR-NOT: DBG_VALUE %{{.*}}, $noreg, ![[ARGC]]
+# CHECKMIR-NOT: DBG_VALUE %{{.*}}, $noreg, ![[ARGV]]
 

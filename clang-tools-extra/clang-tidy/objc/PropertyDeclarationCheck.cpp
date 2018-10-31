@@ -201,9 +201,9 @@ PropertyDeclarationCheck::PropertyDeclarationCheck(StringRef Name,
 
 void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   // this check should only be applied to ObjC sources.
-  if (!getLangOpts().ObjC1 && !getLangOpts().ObjC2) {
+  if (!getLangOpts().ObjC)
     return;
-  }
+
   if (IncludeDefaultAcronyms) {
     EscapedAcronyms.reserve(llvm::array_lengthof(DefaultSpecialAcronyms) +
                             SpecialAcronyms.size());

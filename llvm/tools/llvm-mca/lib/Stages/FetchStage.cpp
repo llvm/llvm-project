@@ -14,7 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Stages/FetchStage.h"
+#include "Instruction.h"
 
+namespace llvm {
 namespace mca {
 
 bool FetchStage::hasWorkToComplete() const { return CurrentInstruction; }
@@ -25,20 +27,15 @@ bool FetchStage::isAvailable(const InstRef & /* unused */) const {
   return false;
 }
 
-llvm::Error FetchStage::getNextInstruction() {
+void FetchStage::getNextInstruction() {
   assert(!CurrentInstruction && "There is already an instruction to process!");
   if (!SM.hasNext())
-    return llvm::ErrorSuccess();
-  const SourceRef SR = SM.peekNext();
-  llvm::Expected<std::unique_ptr<Instruction>> InstOrErr =
-      IB.createInstruction(SR.second);
-  if (!InstOrErr)
-    return InstOrErr.takeError();
-  std::unique_ptr<Instruction> Inst = std::move(InstOrErr.get());
+    return;
+  SourceRef SR = SM.peekNext();
+  std::unique_ptr<Instruction> Inst = llvm::make_unique<Instruction>(SR.second);
   CurrentInstruction = InstRef(SR.first, Inst.get());
   Instructions[SR.first] = std::move(Inst);
   SM.updateNext();
-  return llvm::ErrorSuccess();
 }
 
 llvm::Error FetchStage::execute(InstRef & /*unused */) {
@@ -48,12 +45,13 @@ llvm::Error FetchStage::execute(InstRef & /*unused */) {
 
   // Move the program counter.
   CurrentInstruction.invalidate();
-  return getNextInstruction();
+  getNextInstruction();
+  return llvm::ErrorSuccess();
 }
 
 llvm::Error FetchStage::cycleStart() {
   if (!CurrentInstruction)
-    return getNextInstruction();
+    getNextInstruction();
   return llvm::ErrorSuccess();
 }
 
@@ -72,3 +70,4 @@ llvm::Error FetchStage::cycleEnd() {
 }
 
 } // namespace mca
+} // namespace llvm
