@@ -79,7 +79,7 @@ function(add_lldb_library name)
         # framework, so it must rely on the framework being fully built first.
         if (LLDB_BUILD_FRAMEWORK AND ${name} STREQUAL "liblldb")
           add_dependencies(install-${name} lldb-framework)
-          add_dependencies(install-lldb-framework-stripped lldb-framework)
+          add_dependencies(install-${name}-stripped lldb-framework)
         endif()
       endif()
     endif()
