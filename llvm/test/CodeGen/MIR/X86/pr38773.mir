@@ -97,8 +97,8 @@ body:             |
     IDIV32r killed renamable $ecx, implicit-def $eax, implicit-def dead $edx, implicit-def dead $eflags, implicit $eax, implicit killed $edx
     renamable $ecx = COPY $eax
     ; CHECK:        IDIV32r killed renamable $ecx
-    ; CHECK-NEXT:   DBG_VALUE debug-use $eax, debug-use $noreg, !12, !DIExpression(), debug-location !13
-    DBG_VALUE debug-use $ecx, debug-use $noreg, !12, !DIExpression(), debug-location !13
+    ; CHECK-NEXT:   DBG_VALUE $eax, $noreg, !12, !DIExpression(), debug-location !13
+    DBG_VALUE $ecx, $noreg, !12, !DIExpression(), debug-location !13
     $eax = COPY killed renamable $ecx
     RET 0, $eax
 

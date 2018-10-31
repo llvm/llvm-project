@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCSchedule.h"
 
+namespace llvm {
 namespace mca {
 
 /// Used to notify the internal state of a processor resource.
@@ -357,5 +358,6 @@ public:
 #endif
 };
 } // namespace mca
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_MCA_RESOURCE_MANAGER_H

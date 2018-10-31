@@ -19,6 +19,7 @@
 #include "Support.h"
 #include "llvm/ADT/ArrayRef.h"
 
+namespace llvm {
 namespace mca {
 
 // An HWInstructionEvent represents state changes of instructions that
@@ -151,5 +152,6 @@ private:
   virtual void anchor();
 };
 } // namespace mca
+} // namespace llvm
 
 #endif

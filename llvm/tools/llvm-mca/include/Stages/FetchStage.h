@@ -20,6 +20,7 @@
 #include "Stages/Stage.h"
 #include <map>
 
+namespace llvm {
 namespace mca {
 
 class FetchStage final : public Stage {
@@ -45,5 +46,6 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_MCA_FETCH_STAGE_H

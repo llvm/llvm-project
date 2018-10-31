@@ -90,6 +90,24 @@
 /// value. It implements the store part as a simple atomic store by storing a
 /// clean shadow.
 ///
+///                      Instrumenting inline assembly.
+///
+/// For inline assembly code LLVM has little idea about which memory locations
+/// become initialized depending on the arguments. It can be possible to figure
+/// out which arguments are meant to point to inputs and outputs, but the
+/// actual semantics can be only visible at runtime. In the Linux kernel it's
+/// also possible that the arguments only indicate the offset for a base taken
+/// from a segment register, so it's dangerous to treat any asm() arguments as
+/// pointers. We take a conservative approach generating calls to
+///   __msan_instrument_asm_load(ptr, size) and
+///   __msan_instrument_asm_store(ptr, size)
+/// , which defer the memory checking/unpoisoning to the runtime library.
+/// The latter can perform more complex address checks to figure out whether
+/// it's safe to touch the shadow memory.
+/// Like with atomic operations, we call __msan_instrument_asm_store() before
+/// the assembly call, so that changes to the shadow memory will be seen by
+/// other threads together with main memory initialization.
+///
 ///                  KernelMemorySanitizer (KMSAN) implementation.
 ///
 /// The major differences between KMSAN and MSan instrumentation are:
@@ -549,6 +567,7 @@ private:
   Value *MsanMetadataPtrForLoadN, *MsanMetadataPtrForStoreN;
   Value *MsanMetadataPtrForLoad_1_8[4];
   Value *MsanMetadataPtrForStore_1_8[4];
+  Value *MsanInstrumentAsmStoreFn, *MsanInstrumentAsmLoadFn;
 
   /// Helper to choose between different MsanMetadataPtrXxx().
   Value *getKmsanShadowOriginAccessFn(bool isStore, int size);
@@ -756,6 +775,13 @@ void MemorySanitizer::initializeCallbacks(Module &M) {
   EmptyAsm = InlineAsm::get(FunctionType::get(IRB.getVoidTy(), false),
                             StringRef(""), StringRef(""),
                             /*hasSideEffects=*/true);
+
+  MsanInstrumentAsmLoadFn =
+      M.getOrInsertFunction("__msan_instrument_asm_load", IRB.getVoidTy(),
+                            PointerType::get(IRB.getInt8Ty(), 0), IntptrTy);
+  MsanInstrumentAsmStoreFn =
+      M.getOrInsertFunction("__msan_instrument_asm_store", IRB.getVoidTy(),
+                            PointerType::get(IRB.getInt8Ty(), 0), IntptrTy);
 
   if (CompileKernel) {
     createKernelApi(M);
@@ -3444,37 +3470,97 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Nothing to do here.
   }
 
+  void instrumentAsmArgument(Value *Operand, Instruction &I, IRBuilder<> &IRB,
+                             const DataLayout &DL, bool isOutput) {
+    // For each assembly argument, we check its value for being initialized.
+    // If the argument is a pointer, we assume it points to a single element
+    // of the corresponding type (or to a 8-byte word, if the type is unsized).
+    // Each such pointer is instrumented with a call to the runtime library.
+    Type *OpType = Operand->getType();
+    // Check the operand value itself.
+    insertShadowCheck(Operand, &I);
+    if (!OpType->isPointerTy()) {
+      assert(!isOutput);
+      return;
+    }
+    Value *Hook =
+        isOutput ? MS.MsanInstrumentAsmStoreFn : MS.MsanInstrumentAsmLoadFn;
+    Type *ElType = OpType->getPointerElementType();
+    if (!ElType->isSized())
+      return;
+    int Size = DL.getTypeStoreSize(ElType);
+    Value *Ptr = IRB.CreatePointerCast(Operand, IRB.getInt8PtrTy());
+    Value *SizeVal = ConstantInt::get(MS.IntptrTy, Size);
+    IRB.CreateCall(Hook, {Ptr, SizeVal});
+  }
+
+  /// Get the number of output arguments returned by pointers.
+  int getNumOutputArgs(InlineAsm *IA, CallInst *CI) {
+    int NumRetOutputs = 0;
+    int NumOutputs = 0;
+    Type *RetTy = dyn_cast<Value>(CI)->getType();
+    if (!RetTy->isVoidTy()) {
+      // Register outputs are returned via the CallInst return value.
+      StructType *ST = dyn_cast_or_null<StructType>(RetTy);
+      if (ST)
+        NumRetOutputs = ST->getNumElements();
+      else
+        NumRetOutputs = 1;
+    }
+    InlineAsm::ConstraintInfoVector Constraints = IA->ParseConstraints();
+    for (size_t i = 0, n = Constraints.size(); i < n; i++) {
+      InlineAsm::ConstraintInfo Info = Constraints[i];
+      switch (Info.Type) {
+      case InlineAsm::isOutput:
+        NumOutputs++;
+        break;
+      default:
+        break;
+      }
+    }
+    return NumOutputs - NumRetOutputs;
+  }
+
   void visitAsmInstruction(Instruction &I) {
     // Conservative inline assembly handling: check for poisoned shadow of
     // asm() arguments, then unpoison the result and all the memory locations
     // pointed to by those arguments.
+    // An inline asm() statement in C++ contains lists of input and output
+    // arguments used by the assembly code. These are mapped to operands of the
+    // CallInst as follows:
+    //  - nR register outputs ("=r) are returned by value in a single structure
+    //  (SSA value of the CallInst);
+    //  - nO other outputs ("=m" and others) are returned by pointer as first
+    // nO operands of the CallInst;
+    //  - nI inputs ("r", "m" and others) are passed to CallInst as the
+    // remaining nI operands.
+    // The total number of asm() arguments in the source is nR+nO+nI, and the
+    // corresponding CallInst has nO+nI+1 operands (the last operand is the
+    // function to be called).
+    const DataLayout &DL = F.getParent()->getDataLayout();
     CallInst *CI = dyn_cast<CallInst>(&I);
+    IRBuilder<> IRB(&I);
+    InlineAsm *IA = cast<InlineAsm>(CI->getCalledValue());
+    int OutputArgs = getNumOutputArgs(IA, CI);
+    // The last operand of a CallInst is the function itself.
+    int NumOperands = CI->getNumOperands() - 1;
 
-    for (size_t i = 0, n = CI->getNumOperands(); i < n; i++) {
+    // Check input arguments. Doing so before unpoisoning output arguments, so
+    // that we won't overwrite uninit values before checking them.
+    for (int i = OutputArgs; i < NumOperands; i++) {
       Value *Operand = CI->getOperand(i);
-      if (Operand->getType()->isSized())
-        insertShadowCheck(Operand, &I);
+      instrumentAsmArgument(Operand, I, IRB, DL, /*isOutput*/ false);
     }
+    // Unpoison output arguments. This must happen before the actual InlineAsm
+    // call, so that the shadow for memory published in the asm() statement
+    // remains valid.
+    for (int i = 0; i < OutputArgs; i++) {
+      Value *Operand = CI->getOperand(i);
+      instrumentAsmArgument(Operand, I, IRB, DL, /*isOutput*/ true);
+    }
+
     setShadow(&I, getCleanShadow(&I));
     setOrigin(&I, getCleanOrigin());
-    IRBuilder<> IRB(&I);
-    IRB.SetInsertPoint(I.getNextNode());
-    for (size_t i = 0, n = CI->getNumOperands(); i < n; i++) {
-      Value *Operand = CI->getOperand(i);
-      Type *OpType = Operand->getType();
-      if (!OpType->isPointerTy())
-        continue;
-      Type *ElType = OpType->getPointerElementType();
-      if (!ElType->isSized())
-        continue;
-      Value *ShadowPtr, *OriginPtr;
-      std::tie(ShadowPtr, OriginPtr) = getShadowOriginPtr(
-          Operand, IRB, ElType, /*Alignment*/ 1, /*isStore*/ true);
-      Value *CShadow = getCleanShadow(ElType);
-      IRB.CreateStore(
-          CShadow,
-          IRB.CreatePointerCast(ShadowPtr, CShadow->getType()->getPointerTo()));
-    }
   }
 
   void visitInstruction(Instruction &I) {

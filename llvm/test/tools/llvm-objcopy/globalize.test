@@ -1,5 +1,8 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objcopy --globalize-symbol Global --globalize-symbol Local --globalize-symbol Weak %t %t2
+# RUN: llvm-objcopy --globalize-symbol Global \
+# RUN:   --globalize-symbol Local \
+# RUN:   --globalize-symbol Weak \
+# RUN:   --globalize-symbol WeakUndef %t %t2
 # RUN: llvm-readobj -symbols %t2 | FileCheck %s
 
 !ELF
@@ -28,6 +31,7 @@ Symbols:
       Size:     8
       Section:  .text
       Value:    0x1008
+    - Name:     WeakUndef
   Global:
     - Name:     Global
       Type:     STT_FUNC
@@ -71,5 +75,14 @@ Symbols:
 #CHECK-NEXT:    Type: Function
 #CHECK-NEXT:    Other: 0
 #CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: WeakUndef
+#CHECK-NEXT:    Value: 0x0
+#CHECK-NEXT:    Size: 0
+#CHECK-NEXT:    Binding: Weak
+#CHECK-NEXT:    Type: None
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Undefined
 #CHECK-NEXT:  }
 #CHECK-NEXT:]

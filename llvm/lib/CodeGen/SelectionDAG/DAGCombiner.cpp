@@ -12854,19 +12854,23 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
   BaseIndexOffset BasePtrLD = BaseIndexOffset::match(LD, DAG);
   BaseIndexOffset BasePtrST = BaseIndexOffset::match(ST, DAG);
   int64_t Offset;
-
-  bool STCoversLD =
-      BasePtrST.equalBaseIndex(BasePtrLD, DAG, Offset) && (Offset >= 0) &&
-      (Offset * 8 <= LDMemType.getSizeInBits()) &&
-      (Offset * 8 + LDMemType.getSizeInBits() <= STMemType.getSizeInBits());
-
-  if (!STCoversLD)
+  if (!BasePtrST.equalBaseIndex(BasePtrLD, DAG, Offset))
     return SDValue();
 
-  // Normalize for Endianness.
+  // Normalize for Endianness. After this Offset=0 will denote that the least
+  // significant bit in the loaded value maps to the least significant bit in
+  // the stored value). With Offset=n (for n > 0) the loaded value starts at the
+  // n:th least significant byte of the stored value.
   if (DAG.getDataLayout().isBigEndian())
-    Offset =
-        (STMemType.getSizeInBits() - LDMemType.getSizeInBits()) / 8 - Offset;
+    Offset = (STMemType.getStoreSizeInBits() -
+              LDMemType.getStoreSizeInBits()) / 8 - Offset;
+
+  // Check that the stored value cover all bits that are loaded.
+  bool STCoversLD =
+      (Offset >= 0) &&
+      (Offset * 8 + LDMemType.getSizeInBits() <= STMemType.getSizeInBits());
+  if (!STCoversLD)
+    return SDValue();
 
   // Memory as copy space (potentially masked).
   if (Offset == 0 && LDType == STType && STMemType == LDMemType) {
@@ -12899,7 +12903,7 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
       continue;
     if (STMemType != LDMemType) {
       // TODO: Support vectors? This requires extract_subvector/bitcast.
-      if (!STMemType.isVector() && !LDMemType.isVector() && 
+      if (!STMemType.isVector() && !LDMemType.isVector() &&
           STMemType.isInteger() && LDMemType.isInteger())
         Val = DAG.getNode(ISD::TRUNCATE, SDLoc(LD), LDMemType, Val);
       else
@@ -16673,10 +16677,8 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   return SDValue();
 }
 
-/// If we are extracting a subvector produced by a wide binary operator with at
-/// at least one operand that was the result of a vector concatenation, then try
-/// to use the narrow vector operands directly to avoid the concatenation and
-/// extraction.
+/// If we are extracting a subvector produced by a wide binary operator try
+/// to use a narrow binary operator and/or avoid concatenation and extraction.
 static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
   // TODO: Refactor with the caller (visitEXTRACT_SUBVECTOR), so we can share
   // some of these bailouts with other transforms.
@@ -16697,22 +16699,43 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
   if (!WideBVT.isVector())
     return SDValue();
 
-  // Bail out if the target does not support a narrower version of the binop.
-  unsigned BOpcode = BinOp.getOpcode();
-  EVT NarrowBVT = EVT::getVectorVT(*DAG.getContext(), WideBVT.getScalarType(),
-                                   WideBVT.getVectorNumElements() / 2);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isOperationLegalOrCustomOrPromote(BOpcode, NarrowBVT))
-    return SDValue();
-
-  // Only handle the case where we are doubling and then halving. A larger ratio
-  // may require more than two narrow binops to replace the wide binop.
   EVT VT = Extract->getValueType(0);
   unsigned NumElems = VT.getVectorNumElements();
   unsigned ExtractIndex = ExtractIndexC->getZExtValue();
   assert(ExtractIndex % NumElems == 0 &&
          "Extract index is not a multiple of the vector length.");
-  if (Extract->getOperand(0).getValueSizeInBits() != VT.getSizeInBits() * 2)
+  EVT SrcVT = Extract->getOperand(0).getValueType();
+  unsigned NumSrcElems = SrcVT.getVectorNumElements();
+  unsigned NarrowingRatio = NumSrcElems / NumElems;
+
+  // Bail out if the target does not support a narrower version of the binop.
+  unsigned BOpcode = BinOp.getOpcode();
+  unsigned WideNumElts = WideBVT.getVectorNumElements();
+  EVT NarrowBVT = EVT::getVectorVT(*DAG.getContext(), WideBVT.getScalarType(),
+                                   WideNumElts / NarrowingRatio);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (!TLI.isOperationLegalOrCustomOrPromote(BOpcode, NarrowBVT))
+    return SDValue();
+
+  // If extraction is cheap, we don't need to look at the binop operands
+  // for concat ops. The narrow binop alone makes this transform profitable.
+  // TODO: We're not dealing with the bitcasted pattern here. That limitation
+  // should be lifted.
+  if (Extract->getOperand(0) == BinOp && BinOp.hasOneUse() &&
+      TLI.isExtractSubvectorCheap(NarrowBVT, WideBVT, ExtractIndex)) {
+    // extract (binop B0, B1), N --> binop (extract B0, N), (extract B1, N)
+    SDLoc DL(Extract);
+    SDValue X = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowBVT,
+                            BinOp.getOperand(0), Extract->getOperand(1));
+    SDValue Y = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowBVT,
+                            BinOp.getOperand(1), Extract->getOperand(1));
+    return DAG.getNode(BOpcode, DL, NarrowBVT, X, Y,
+                       BinOp.getNode()->getFlags());
+  }
+
+  // Only handle the case where we are doubling and then halving. A larger ratio
+  // may require more than two narrow binops to replace the wide binop.
+  if (NarrowingRatio != 2)
     return SDValue();
 
   // TODO: The motivating case for this transform is an x86 AVX1 target. That

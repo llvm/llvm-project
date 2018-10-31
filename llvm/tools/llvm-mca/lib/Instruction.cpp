@@ -16,9 +16,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
 namespace mca {
-
-using namespace llvm;
 
 void ReadState::writeStartEvent(unsigned Cycles) {
   assert(DependentWrites);
@@ -181,3 +180,4 @@ void Instruction::cycleEvent() {
 const unsigned WriteRef::INVALID_IID = std::numeric_limits<unsigned>::max();
 
 } // namespace mca
+} // namespace llvm

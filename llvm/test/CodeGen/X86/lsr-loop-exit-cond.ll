@@ -97,8 +97,8 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; ATOM-NEXT:    pushq %r14
 ; ATOM-NEXT:    pushq %rbx
 ; ATOM-NEXT:    ## kill: def $ecx killed $ecx def $rcx
-; ATOM-NEXT:    movl 4(%rdx), %eax
 ; ATOM-NEXT:    movl (%rdx), %r15d
+; ATOM-NEXT:    movl 4(%rdx), %eax
 ; ATOM-NEXT:    leaq 20(%rdx), %r14
 ; ATOM-NEXT:    movq _Te0@{{.*}}(%rip), %r9
 ; ATOM-NEXT:    movq _Te1@{{.*}}(%rip), %r8
@@ -116,8 +116,8 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; ATOM-NEXT:    movzbl %bl, %eax
 ; ATOM-NEXT:    movl (%r10,%rax,4), %eax
 ; ATOM-NEXT:    xorl (%r8,%rbp,4), %r15d
-; ATOM-NEXT:    xorl -4(%r14), %r15d
 ; ATOM-NEXT:    xorl (%r9,%rdi,4), %eax
+; ATOM-NEXT:    xorl -4(%r14), %r15d
 ; ATOM-NEXT:    xorl (%r14), %eax
 ; ATOM-NEXT:    addq $16, %r14
 ; ATOM-NEXT:  LBB0_1: ## %bb
@@ -130,14 +130,14 @@ define void @t(i8* nocapture %in, i8* nocapture %out, i32* nocapture %rk, i32 %r
 ; ATOM-NEXT:    movzbl %dil, %edi
 ; ATOM-NEXT:    movl (%r8,%rdi,4), %ebx
 ; ATOM-NEXT:    movzbl %r15b, %edi
-; ATOM-NEXT:    movl (%r10,%rdi,4), %edi
 ; ATOM-NEXT:    xorl (%r9,%rbp,4), %ebx
+; ATOM-NEXT:    movl (%r10,%rdi,4), %edi
 ; ATOM-NEXT:    xorl -12(%r14), %ebx
 ; ATOM-NEXT:    xorl (%r9,%rax,4), %edi
 ; ATOM-NEXT:    movl %ebx, %eax
+; ATOM-NEXT:    xorl -8(%r14), %edi
 ; ATOM-NEXT:    shrl $24, %eax
 ; ATOM-NEXT:    movl (%r9,%rax,4), %r15d
-; ATOM-NEXT:    xorl -8(%r14), %edi
 ; ATOM-NEXT:    testq %r11, %r11
 ; ATOM-NEXT:    movl %edi, %eax
 ; ATOM-NEXT:    jne LBB0_2

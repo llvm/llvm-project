@@ -88,15 +88,15 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; THUMBV7-NEXT:    orrs r3, r2
 ; THUMBV7-NEXT:    ldr r2, [sp, #80]
 ; THUMBV7-NEXT:    orr.w r1, r1, r4
+; THUMBV7-NEXT:    orr.w r1, r1, r10
 ; THUMBV7-NEXT:    it ne
 ; THUMBV7-NEXT:    movne r3, #1
-; THUMBV7-NEXT:    orr.w r1, r1, r10
 ; THUMBV7-NEXT:    orrs.w r7, r2, r11
 ; THUMBV7-NEXT:    orr.w r1, r1, r9
 ; THUMBV7-NEXT:    it ne
 ; THUMBV7-NEXT:    movne r7, #1
-; THUMBV7-NEXT:    orr.w r0, r0, r12
 ; THUMBV7-NEXT:    ands r3, r7
+; THUMBV7-NEXT:    orr.w r0, r0, r12
 ; THUMBV7-NEXT:    orrs r1, r3
 ; THUMBV7-NEXT:    orrs r0, r1
 ; THUMBV7-NEXT:    orr.w r0, r0, r8

@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
 
+namespace llvm {
 namespace mca {
 
 class HWEventListener;
@@ -70,5 +71,6 @@ public:
   void addEventListener(HWEventListener *Listener);
 };
 } // namespace mca
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_MCA_PIPELINE_H

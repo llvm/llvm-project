@@ -240,21 +240,13 @@ define <4 x double> @signbits_sext_shuffle_sitofp(<4 x i32> %a0, <4 x i64> %a1) 
 define <2 x double> @signbits_ashr_concat_ashr_extract_sitofp(<2 x i64> %a0, <4 x i64> %a1) nounwind {
 ; X32-LABEL: signbits_ashr_concat_ashr_extract_sitofp:
 ; X32:       # %bb.0:
-; X32-NEXT:    vpsrad $16, %xmm0, %xmm1
-; X32-NEXT:    vpsrlq $16, %xmm0, %xmm0
-; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; X32-NEXT:    vpsrlq $16, %xmm0, %xmm0
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,3,2,3]
 ; X32-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: signbits_ashr_concat_ashr_extract_sitofp:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsrad $16, %xmm0, %xmm1
-; X64-NEXT:    vpsrlq $16, %xmm0, %xmm0
-; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
-; X64-NEXT:    vpsrlq $16, %xmm0, %xmm0
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,3,2,3]
 ; X64-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X64-NEXT:    retq
   %1 = ashr <2 x i64> %a0, <i64 16, i64 16>

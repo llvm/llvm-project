@@ -1085,6 +1085,32 @@ bool AArch64InstrInfo::isFalkorShiftExtFast(const MachineInstr &MI) const {
   }
 }
 
+bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  switch (Opc) {
+    default:
+      return false;
+    case AArch64::SEH_StackAlloc:
+    case AArch64::SEH_SaveFPLR:
+    case AArch64::SEH_SaveFPLR_X:
+    case AArch64::SEH_SaveReg:
+    case AArch64::SEH_SaveReg_X:
+    case AArch64::SEH_SaveRegP:
+    case AArch64::SEH_SaveRegP_X:
+    case AArch64::SEH_SaveFReg:
+    case AArch64::SEH_SaveFReg_X:
+    case AArch64::SEH_SaveFRegP:
+    case AArch64::SEH_SaveFRegP_X:
+    case AArch64::SEH_SetFP:
+    case AArch64::SEH_AddFP:
+    case AArch64::SEH_Nop:
+    case AArch64::SEH_PrologEnd:
+    case AArch64::SEH_EpilogStart:
+    case AArch64::SEH_EpilogEnd:
+      return true;
+  }
+}
+
 bool AArch64InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
                                              unsigned &SrcReg, unsigned &DstReg,
                                              unsigned &SubIdx) const {
@@ -1135,6 +1161,14 @@ bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
     }
   }
   return false;
+}
+
+bool AArch64InstrInfo::isSchedulingBoundary(const MachineInstr &MI,
+                                            const MachineBasicBlock *MBB,
+                                            const MachineFunction &MF) const {
+  if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
+    return true;
+  return isSEHInstruction(MI);
 }
 
 /// analyzeCompare - For a comparison instruction, return the source registers
@@ -3026,7 +3060,8 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                            unsigned DestReg, unsigned SrcReg, int Offset,
                            const TargetInstrInfo *TII,
-                           MachineInstr::MIFlag Flag, bool SetNZCV) {
+                           MachineInstr::MIFlag Flag, bool SetNZCV,
+                           bool NeedsWinCFI) {
   if (DestReg == SrcReg && Offset == 0)
     return;
 
@@ -3071,6 +3106,11 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
         .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, ShiftSize))
         .setMIFlag(Flag);
 
+   if (NeedsWinCFI && SrcReg == AArch64::SP && DestReg == AArch64::SP)
+     BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc))
+         .addImm(ThisVal)
+         .setMIFlag(Flag);
+
     SrcReg = DestReg;
     Offset -= ThisVal;
     if (Offset == 0)
@@ -3081,6 +3121,21 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
       .addImm(Offset)
       .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0))
       .setMIFlag(Flag);
+
+  if (NeedsWinCFI) {
+    if ((DestReg == AArch64::FP && SrcReg == AArch64::SP) ||
+        (SrcReg == AArch64::FP && DestReg == AArch64::SP)) {
+      if (Offset == 0)
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_SetFP)).
+                setMIFlag(Flag);
+      else
+        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_AddFP)).
+                addImm(Offset).setMIFlag(Flag);
+    } else if (DestReg == AArch64::SP) {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc)).
+              addImm(Offset).setMIFlag(Flag);
+    }
+  }
 }
 
 MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(

@@ -127,14 +127,6 @@ def SDT_ZIPM                : SDTypeProfile<1, 1,
 def SDT_ZPrefetch           : SDTypeProfile<0, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>]>;
-def SDT_ZLoadBSwap          : SDTypeProfile<1, 2,
-                                            [SDTCisInt<0>,
-                                             SDTCisPtrTy<1>,
-                                             SDTCisVT<2, OtherVT>]>;
-def SDT_ZStoreBSwap         : SDTypeProfile<0, 3,
-                                            [SDTCisInt<0>,
-                                             SDTCisPtrTy<1>,
-                                             SDTCisVT<2, OtherVT>]>;
 def SDT_ZTBegin             : SDTypeProfile<1, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>,
@@ -283,9 +275,9 @@ def z_subcarry_1        : SDNode<"SystemZISD::SUBCARRY", SDT_ZBinaryWithCarry>;
 def z_membarrier        : SDNode<"SystemZISD::MEMBARRIER", SDTNone,
                                  [SDNPHasChain, SDNPSideEffect]>;
 
-def z_loadbswap        : SDNode<"SystemZISD::LRV", SDT_ZLoadBSwap,
+def z_loadbswap        : SDNode<"SystemZISD::LRV", SDTLoad,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def z_storebswap       : SDNode<"SystemZISD::STRV", SDT_ZStoreBSwap,
+def z_storebswap       : SDNode<"SystemZISD::STRV", SDTStore,
                                  [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def z_tdc               : SDNode<"SystemZISD::TDC", SDT_ZTest>;
@@ -429,16 +421,28 @@ def z_vsrl              : SDNode<"ISD::SRL", SDT_ZVecBinary>;
 // Pattern fragments
 //===----------------------------------------------------------------------===//
 
-def z_lrvh  : PatFrag<(ops node:$addr), (z_loadbswap node:$addr, i16)>;
-def z_lrv   : PatFrag<(ops node:$addr), (z_loadbswap node:$addr, i32)>;
-def z_lrvg  : PatFrag<(ops node:$addr), (z_loadbswap node:$addr, i64)>;
+def z_loadbswap16 : PatFrag<(ops node:$addr), (z_loadbswap node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+def z_loadbswap32 : PatFrag<(ops node:$addr), (z_loadbswap node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+def z_loadbswap64 : PatFrag<(ops node:$addr), (z_loadbswap node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
+}]>;
 
-def z_strvh : PatFrag<(ops node:$src, node:$addr),
-                      (z_storebswap node:$src, node:$addr, i16)>;
-def z_strv  : PatFrag<(ops node:$src, node:$addr),
-                      (z_storebswap node:$src, node:$addr, i32)>;
-def z_strvg : PatFrag<(ops node:$src, node:$addr),
-                      (z_storebswap node:$src, node:$addr, i64)>;
+def z_storebswap16 : PatFrag<(ops node:$src, node:$addr),
+                             (z_storebswap node:$src, node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
+}]>;
+def z_storebswap32 : PatFrag<(ops node:$src, node:$addr),
+                             (z_storebswap node:$src, node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
+}]>;
+def z_storebswap64 : PatFrag<(ops node:$src, node:$addr),
+                             (z_storebswap node:$src, node:$addr), [{
+  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
+}]>;
 
 // Fragments including CC as an implicit source.
 def z_br_ccmask

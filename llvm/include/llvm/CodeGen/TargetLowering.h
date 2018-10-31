@@ -819,6 +819,8 @@ public:
       case ISD::STRICT_FLOG2: EqOpc = ISD::FLOG2; break;
       case ISD::STRICT_FRINT: EqOpc = ISD::FRINT; break;
       case ISD::STRICT_FNEARBYINT: EqOpc = ISD::FNEARBYINT; break;
+      case ISD::STRICT_FMAXNUM: EqOpc = ISD::FMAXNUM; break;
+      case ISD::STRICT_FMINNUM: EqOpc = ISD::FMINNUM; break;
     }
 
     auto Action = getOperationAction(EqOpc, VT);

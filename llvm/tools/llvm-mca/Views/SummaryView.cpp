@@ -18,11 +18,10 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Format.h"
 
+namespace llvm {
 namespace mca {
 
 #define DEBUG_TYPE "llvm-mca"
-
-using namespace llvm;
 
 SummaryView::SummaryView(const MCSchedModel &Model, ArrayRef<MCInst> S,
                          unsigned Width)
@@ -88,3 +87,4 @@ void SummaryView::printView(raw_ostream &OS) const {
   OS << Buffer;
 }
 } // namespace mca.
+} // namespace llvm

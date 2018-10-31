@@ -1751,7 +1751,7 @@ NewGVN::performSymbolicPHIEvaluation(ArrayRef<ValPair> PHIOps,
     return true;
   });
   // If we are left with no operands, it's dead.
-  if (Filtered.begin() == Filtered.end()) {
+  if (empty(Filtered)) {
     // If it has undef at this point, it means there are no-non-undef arguments,
     // and thus, the value of the phi node must be undef.
     if (HasUndef) {

@@ -296,7 +296,7 @@ EmitRegUnitPressure(raw_ostream &OS, const CodeGenRegBank &RegBank,
            PSetE = PSetIDs.end(); PSetI != PSetE; ++PSetI) {
       PSets[i].push_back(RegBank.getRegPressureSet(*PSetI).Order);
     }
-    llvm::sort(PSets[i].begin(), PSets[i].end());
+    llvm::sort(PSets[i]);
     PSetsSeqs.add(PSets[i]);
   }
 

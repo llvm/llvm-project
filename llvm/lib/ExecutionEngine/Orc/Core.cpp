@@ -170,7 +170,8 @@ raw_ostream &operator<<(raw_ostream &OS, const JITSymbolFlags &Flags) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const JITEvaluatedSymbol &Sym) {
-  return OS << format("0x%016x", Sym.getAddress()) << " " << Sym.getFlags();
+  return OS << format("0x%016" PRIx64, Sym.getAddress()) << " "
+            << Sym.getFlags();
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const SymbolFlagsMap::value_type &KV) {
@@ -1392,9 +1393,8 @@ JITDylib::lookupImpl(std::shared_ptr<AsynchronousSymbolQuery> &Q,
 
 void JITDylib::dump(raw_ostream &OS) {
   ES.runSessionLocked([&, this]() {
-    OS << "JITDylib \"" << JITDylibName
-       << "\" (ES: " << format("0x%016x", reinterpret_cast<uintptr_t>(&ES))
-       << "):\n"
+    OS << "JITDylib \"" << JITDylibName << "\" (ES: "
+       << format("0x%016" PRIx64, reinterpret_cast<uintptr_t>(&ES)) << "):\n"
        << "Search order: [";
     for (auto &KV : SearchOrder)
       OS << " (\"" << KV.first->getName() << "\", "
@@ -1405,7 +1405,7 @@ void JITDylib::dump(raw_ostream &OS) {
     for (auto &KV : Symbols) {
       OS << "    \"" << *KV.first << "\": ";
       if (auto Addr = KV.second.getAddress())
-        OS << format("0x%016x", Addr) << ", " << KV.second.getFlags();
+        OS << format("0x%016" PRIx64, Addr) << ", " << KV.second.getFlags();
       else
         OS << "<not resolved>";
       if (KV.second.getFlags().isLazy() ||

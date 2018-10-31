@@ -29,6 +29,7 @@
 #include <set>
 #include <vector>
 
+namespace llvm {
 namespace mca {
 
 constexpr int UNKNOWN_CYCLES = -512;
@@ -508,5 +509,6 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 
 #endif

@@ -876,6 +876,11 @@ isFoldableLoad(const LoadInst *Ld, const Instruction *&FoldedValue) {
     UserI = cast<Instruction>(*UserI->user_begin());
     // Load (single use) -> trunc/extend (single use) -> UserI
   }
+  if ((UserI->getOpcode() == Instruction::Sub ||
+       UserI->getOpcode() == Instruction::SDiv ||
+       UserI->getOpcode() == Instruction::UDiv) &&
+      UserI->getOperand(1) != FoldedValue)
+    return false; // Not commutative, only RHS foldable.
   switch (UserI->getOpcode()) {
   case Instruction::Add: // SE: 16->32, 16/32->64, z14:16->64. ZE: 32->64
   case Instruction::Sub:

@@ -2322,14 +2322,14 @@ Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
 /// The move is performed only if the block containing the call to free
 /// will be removed, i.e.:
 /// 1. it has only one predecessor P, and P has two successors
-/// 2. it contains the call and an unconditional branch
+/// 2. it contains the call, noops, and an unconditional branch
 /// 3. its successor is the same as its predecessor's successor
 ///
 /// The profitability is out-of concern here and this function should
 /// be called only if the caller knows this transformation would be
 /// profitable (e.g., for code size).
-static Instruction *
-tryToMoveFreeBeforeNullTest(CallInst &FI) {
+static Instruction *tryToMoveFreeBeforeNullTest(CallInst &FI,
+                                                const DataLayout &DL) {
   Value *Op = FI.getArgOperand(0);
   BasicBlock *FreeInstrBB = FI.getParent();
   BasicBlock *PredBB = FreeInstrBB->getSinglePredecessor();
@@ -2342,20 +2342,34 @@ tryToMoveFreeBeforeNullTest(CallInst &FI) {
     return nullptr;
 
   // Validate constraint #2: Does this block contains only the call to
-  //                         free and an unconditional branch?
-  // FIXME: We could check if we can speculate everything in the
-  //        predecessor block
-  if (FreeInstrBB->size() != 2)
-    return nullptr;
+  //                         free, noops, and an unconditional branch?
   BasicBlock *SuccBB;
-  if (!match(FreeInstrBB->getTerminator(), m_UnconditionalBr(SuccBB)))
+  Instruction *FreeInstrBBTerminator = FreeInstrBB->getTerminator();
+  if (!match(FreeInstrBBTerminator, m_UnconditionalBr(SuccBB)))
     return nullptr;
 
+  // If there are only 2 instructions in the block, at this point,
+  // this is the call to free and unconditional.
+  // If there are more than 2 instructions, check that they are noops
+  // i.e., they won't hurt the performance of the generated code.
+  if (FreeInstrBB->size() != 2) {
+    for (const Instruction &Inst : *FreeInstrBB) {
+      if (&Inst == &FI || &Inst == FreeInstrBBTerminator)
+        continue;
+      auto *Cast = dyn_cast<CastInst>(&Inst);
+      if (!Cast || !Cast->isNoopCast(DL))
+        return nullptr;
+    }
+  }
   // Validate the rest of constraint #1 by matching on the pred branch.
   Instruction *TI = PredBB->getTerminator();
   BasicBlock *TrueBB, *FalseBB;
   ICmpInst::Predicate Pred;
-  if (!match(TI, m_Br(m_ICmp(Pred, m_Specific(Op), m_Zero()), TrueBB, FalseBB)))
+  if (!match(TI, m_Br(m_ICmp(Pred,
+                             m_CombineOr(m_Specific(Op),
+                                         m_Specific(Op->stripPointerCasts())),
+                             m_Zero()),
+                      TrueBB, FalseBB)))
     return nullptr;
   if (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE)
     return nullptr;
@@ -2366,7 +2380,17 @@ tryToMoveFreeBeforeNullTest(CallInst &FI) {
   assert(FreeInstrBB == (Pred == ICmpInst::ICMP_EQ ? FalseBB : TrueBB) &&
          "Broken CFG: missing edge from predecessor to successor");
 
-  FI.moveBefore(TI);
+  // At this point, we know that everything in FreeInstrBB can be moved
+  // before TI.
+  for (BasicBlock::iterator It = FreeInstrBB->begin(), End = FreeInstrBB->end();
+       It != End;) {
+    Instruction &Instr = *It++;
+    if (&Instr == FreeInstrBBTerminator)
+      break;
+    Instr.moveBefore(TI);
+  }
+  assert(FreeInstrBB->size() == 1 &&
+         "Only the branch instruction should remain");
   return &FI;
 }
 
@@ -2393,7 +2417,7 @@ Instruction *InstCombiner::visitFree(CallInst &FI) {
   // into
   // free(foo);
   if (MinimizeSize)
-    if (Instruction *I = tryToMoveFreeBeforeNullTest(FI))
+    if (Instruction *I = tryToMoveFreeBeforeNullTest(FI, DL))
       return I;
 
   return nullptr;

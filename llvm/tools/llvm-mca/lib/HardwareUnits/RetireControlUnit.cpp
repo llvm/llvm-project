@@ -15,10 +15,9 @@
 #include "HardwareUnits/RetireControlUnit.h"
 #include "llvm/Support/Debug.h"
 
-using namespace llvm;
-
 #define DEBUG_TYPE "llvm-mca"
 
+namespace llvm {
 namespace mca {
 
 RetireControlUnit::RetireControlUnit(const MCSchedModel &SM)
@@ -85,3 +84,4 @@ void RetireControlUnit::dump() const {
 #endif
 
 } // namespace mca
+} // namespace llvm

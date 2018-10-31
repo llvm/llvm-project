@@ -42,6 +42,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include <map>
 
+namespace llvm {
 namespace mca {
 
 class SchedulerStatistics final : public View {
@@ -86,5 +87,6 @@ public:
   void printView(llvm::raw_ostream &OS) const override;
 };
 } // namespace mca
+} // namespace llvm
 
 #endif

@@ -20,11 +20,11 @@ define { i64, i8 } @mulodi_test(i64 %l, i64 %r) unnamed_addr #0 {
 ; THUMBV7-NEXT:    it ne
 ; THUMBV7-NEXT:    movne r1, #1
 ; THUMBV7-NEXT:    cmp r5, #0
+; THUMBV7-NEXT:    and.w r1, r1, r3
 ; THUMBV7-NEXT:    it ne
 ; THUMBV7-NEXT:    movne r5, #1
-; THUMBV7-NEXT:    ands r1, r3
+; THUMBV7-NEXT:    orrs r1, r5
 ; THUMBV7-NEXT:    cmp.w lr, #0
-; THUMBV7-NEXT:    orr.w r1, r1, r5
 ; THUMBV7-NEXT:    it ne
 ; THUMBV7-NEXT:    movne.w lr, #1
 ; THUMBV7-NEXT:    orr.w r1, r1, lr

@@ -690,8 +690,8 @@ define <16 x i16> @splatvar_rotate_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind
 ; AVX2-NEXT:    vpbroadcastw %xmm1, %ymm2
 ; AVX2-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; AVX2-NEXT:    vpsllw %xmm1, %ymm0, %ymm1
-; AVX2-NEXT:    vmovdqa {{.*#+}} ymm3 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; AVX2-NEXT:    vpsubw %ymm2, %ymm3, %ymm2
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
+; AVX2-NEXT:    vpsubw %xmm2, %xmm3, %xmm2
 ; AVX2-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero
 ; AVX2-NEXT:    vpsrlw %xmm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
@@ -702,8 +702,8 @@ define <16 x i16> @splatvar_rotate_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind
 ; AVX512F-NEXT:    vpbroadcastw %xmm1, %ymm2
 ; AVX512F-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; AVX512F-NEXT:    vpsllw %xmm1, %ymm0, %ymm1
-; AVX512F-NEXT:    vmovdqa {{.*#+}} ymm3 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; AVX512F-NEXT:    vpsubw %ymm2, %ymm3, %ymm2
+; AVX512F-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
+; AVX512F-NEXT:    vpsubw %xmm2, %xmm3, %xmm2
 ; AVX512F-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero
 ; AVX512F-NEXT:    vpsrlw %xmm2, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpor %ymm0, %ymm1, %ymm0
@@ -714,8 +714,8 @@ define <16 x i16> @splatvar_rotate_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind
 ; AVX512VL-NEXT:    vpbroadcastw %xmm1, %ymm2
 ; AVX512VL-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
 ; AVX512VL-NEXT:    vpsllw %xmm1, %ymm0, %ymm1
-; AVX512VL-NEXT:    vmovdqa {{.*#+}} ymm3 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; AVX512VL-NEXT:    vpsubw %ymm2, %ymm3, %ymm2
+; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
+; AVX512VL-NEXT:    vpsubw %xmm2, %xmm3, %xmm2
 ; AVX512VL-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero
 ; AVX512VL-NEXT:    vpsrlw %xmm2, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpor %ymm0, %ymm1, %ymm0

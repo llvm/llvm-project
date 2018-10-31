@@ -5,7 +5,9 @@
 ; RUN: opt -thinlto-bc -o %t.o %s
 
 ; Legacy PM
+; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
 ; RUN: llvm-lto2 run %t.o -save-temps -pass-remarks=. \
+; RUN:   -verify-machineinstrs=0 \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t.o,test,px \
 ; RUN:   -r=%t.o,_ZN1A1nEi,p \
@@ -22,7 +24,9 @@
 ; RUN: llvm-dis %t3.1.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ; New PM
+; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
 ; RUN: llvm-lto2 run %t.o -save-temps -use-new-pm -pass-remarks=. \
+; RUN:   -verify-machineinstrs=0 \
 ; RUN:   -o %t3 \
 ; RUN:   -r=%t.o,test,px \
 ; RUN:   -r=%t.o,_ZN1A1nEi,p \

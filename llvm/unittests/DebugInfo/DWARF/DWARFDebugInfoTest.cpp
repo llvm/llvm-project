@@ -1227,6 +1227,10 @@ TEST(DWARFDebugInfo, TestRelations) {
   EXPECT_THAT(std::vector<DWARFDie>(A.rbegin(), A.rend()),
               testing::ElementsAre(D, C, B));
 
+  // Make sure conversion from reverse iterator works as expected.
+  EXPECT_EQ(A.rbegin().base(), A.end());
+  EXPECT_EQ(A.rend().base(), A.begin());
+
   // Make sure iterator is bidirectional.
   {
     auto Begin = A.begin();

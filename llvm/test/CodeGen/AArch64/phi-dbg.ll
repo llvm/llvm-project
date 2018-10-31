@@ -35,11 +35,11 @@ bb2:
 bb3:
 ; CHECK: bb.3.bb3:
 ; CHECK:   [[PHIDEST:%[0-9]+]]:gpr32 = COPY [[PHIREG]]
-; CHECK-NEXT:   DBG_VALUE debug-use [[PHIDEST]]
+; CHECK-NEXT:   DBG_VALUE [[PHIDEST]]
   %.0 = phi i32 [ 12, %bb2 ], [ 1, %entry ]
   call void @llvm.dbg.value(metadata i32 %.0, i64 0, metadata !15, metadata !13), !dbg !16
 ; CHECK: [[ADD:%[0-9]+]]:gpr32 = nsw ADDWrr [[PHIDEST]]
-; CHECK-NEXT: DBG_VALUE debug-use [[ADD]]
+; CHECK-NEXT: DBG_VALUE [[ADD]]
   %v5 = add nsw i32 %.0, %a0, !dbg !22
   call void @llvm.dbg.value(metadata i32 %v5, i64 0, metadata !15, metadata !13), !dbg !16
   ret i32 %v5, !dbg !23

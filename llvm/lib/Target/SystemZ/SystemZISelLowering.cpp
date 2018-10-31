@@ -5398,8 +5398,7 @@ SDValue SystemZTargetLowering::combineSTORE(
         BSwapOp = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), MVT::i32, BSwapOp);
 
       SDValue Ops[] = {
-        N->getOperand(0), BSwapOp, N->getOperand(2),
-        DAG.getValueType(Op1.getValueType())
+        N->getOperand(0), BSwapOp, N->getOperand(2)
       };
 
       return
@@ -5496,13 +5495,14 @@ SDValue SystemZTargetLowering::combineBSWAP(
       // Create the byte-swapping load.
       SDValue Ops[] = {
         LD->getChain(),    // Chain
-        LD->getBasePtr(),  // Ptr
-        DAG.getValueType(N->getValueType(0)) // VT
+        LD->getBasePtr()   // Ptr
       };
+      EVT LoadVT = N->getValueType(0);
+      if (LoadVT == MVT::i16)
+        LoadVT = MVT::i32;
       SDValue BSLoad =
         DAG.getMemIntrinsicNode(SystemZISD::LRV, SDLoc(N),
-                                DAG.getVTList(N->getValueType(0) == MVT::i64 ?
-                                              MVT::i64 : MVT::i32, MVT::Other),
+                                DAG.getVTList(LoadVT, MVT::Other),
                                 Ops, LD->getMemoryVT(), LD->getMemOperand());
 
       // If this is an i16 load, insert the truncate.

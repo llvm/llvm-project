@@ -16,6 +16,7 @@
 #include "Stages/FetchStage.h"
 #include "Instruction.h"
 
+namespace llvm {
 namespace mca {
 
 bool FetchStage::hasWorkToComplete() const { return CurrentInstruction; }
@@ -69,3 +70,4 @@ llvm::Error FetchStage::cycleEnd() {
 }
 
 } // namespace mca
+} // namespace llvm

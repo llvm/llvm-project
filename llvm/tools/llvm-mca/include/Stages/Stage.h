@@ -20,6 +20,7 @@
 #include "llvm/Support/Error.h"
 #include <set>
 
+namespace llvm {
 namespace mca {
 
 class InstRef;
@@ -83,4 +84,5 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 #endif // LLVM_TOOLS_LLVM_MCA_STAGE_H
