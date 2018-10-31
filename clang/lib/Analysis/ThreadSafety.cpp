@@ -1398,8 +1398,8 @@ const CallExpr* ThreadSafetyAnalyzer::getTrylockCallExpr(const Stmt *Cond,
     return getTrylockCallExpr(PE->getSubExpr(), C, Negate);
   else if (const auto *CE = dyn_cast<ImplicitCastExpr>(Cond))
     return getTrylockCallExpr(CE->getSubExpr(), C, Negate);
-  else if (const auto *EWC = dyn_cast<ExprWithCleanups>(Cond))
-    return getTrylockCallExpr(EWC->getSubExpr(), C, Negate);
+  else if (const auto *FE = dyn_cast<FullExpr>(Cond))
+    return getTrylockCallExpr(FE->getSubExpr(), C, Negate);
   else if (const auto *DRE = dyn_cast<DeclRefExpr>(Cond)) {
     const Expr *E = LocalVarMap.lookupExpr(DRE->getDecl(), C);
     return getTrylockCallExpr(E, C, Negate);

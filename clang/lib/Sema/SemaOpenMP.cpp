@@ -669,8 +669,8 @@ bool isParallelOrTaskRegion(OpenMPDirectiveKind DKind) {
 } // namespace
 
 static const Expr *getExprAsWritten(const Expr *E) {
-  if (const auto *ExprTemp = dyn_cast<ExprWithCleanups>(E))
-    E = ExprTemp->getSubExpr();
+  if (const auto *FE = dyn_cast<FullExpr>(E))
+    E = FE->getSubExpr();
 
   if (const auto *MTE = dyn_cast<MaterializeTemporaryExpr>(E))
     E = MTE->GetTemporaryExpr();

@@ -524,6 +524,11 @@ void ASTStmtReader::VisitExpr(Expr *E) {
          "Incorrect expression field count");
 }
 
+void ASTStmtReader::VisitConstantExpr(ConstantExpr *E) {
+  VisitExpr(E);
+  E->setSubExpr(Record.readSubExpr());
+}
+
 void ASTStmtReader::VisitPredefinedExpr(PredefinedExpr *E) {
   VisitExpr(E);
   bool HasFunctionName = Record.readInt();
@@ -2383,6 +2388,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     case STMT_CAPTURED:
       S = CapturedStmt::CreateDeserialized(
           Context, Record[ASTStmtReader::NumStmtFields]);
+      break;
+
+    case EXPR_CONSTANT:
+      S = new (Context) ConstantExpr(Empty);
       break;
 
     case EXPR_PREDEFINED:

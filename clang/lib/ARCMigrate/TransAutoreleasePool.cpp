@@ -403,8 +403,8 @@ private:
     return cast<Expr>(getEssential((Stmt*)E));
   }
   static Stmt *getEssential(Stmt *S) {
-    if (ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(S))
-      S = EWC->getSubExpr();
+    if (FullExpr *FE = dyn_cast<FullExpr>(S))
+      S = FE->getSubExpr();
     if (Expr *E = dyn_cast<Expr>(S))
       S = E->IgnoreParenCasts();
     return S;

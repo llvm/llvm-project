@@ -92,7 +92,7 @@ JITTargetAddress JITCompileCallbackManager::executeCompileCallback(
       {
         raw_string_ostream ErrMsgStream(ErrMsg);
         ErrMsgStream << "No compile callback for trampoline at "
-                     << format("0x%016x", TrampolineAddr);
+                     << format("0x%016" PRIx64, TrampolineAddr);
       }
       ES.reportError(
           make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode()));

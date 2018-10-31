@@ -754,9 +754,9 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
 
   // If we're emitting a value with lifetime, we have to do the
   // initialization *before* we leave the cleanup scopes.
-  if (const ExprWithCleanups *ewc = dyn_cast<ExprWithCleanups>(init)) {
-    enterFullExpression(ewc);
-    init = ewc->getSubExpr();
+  if (const FullExpr *fe = dyn_cast<FullExpr>(init)) {
+    enterFullExpression(fe);
+    init = fe->getSubExpr();
   }
   CodeGenFunction::RunCleanupsScope Scope(*this);
 

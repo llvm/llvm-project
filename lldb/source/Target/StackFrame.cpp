@@ -31,6 +31,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -58,7 +59,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_id(pc, cfa, nullptr), m_frame_code_addr(pc), m_sc(), m_flags(),
       m_frame_base(), m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
       m_stack_frame_kind(kind), m_variable_list_sp(),
-      m_variable_list_value_objects(), m_disassembly(), m_mutex() {
+      m_variable_list_value_objects(), m_recognized_frame_sp(), m_disassembly(),
+      m_mutex() {
   // If we don't have a CFA value, use the frame index for our StackID so that
   // recursive functions properly aren't confused with one another on a history
   // stack.
@@ -82,7 +84,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular), m_variable_list_sp(),
-      m_variable_list_value_objects(), m_disassembly(), m_mutex() {
+      m_variable_list_value_objects(), m_recognized_frame_sp(), m_disassembly(),
+      m_mutex() {
   if (sc_ptr != nullptr) {
     m_sc = *sc_ptr;
     m_flags.Set(m_sc.GetResolvedMask());
@@ -107,7 +110,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_frame_code_addr(pc_addr), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular), m_variable_list_sp(),
-      m_variable_list_value_objects(), m_disassembly(), m_mutex() {
+      m_variable_list_value_objects(), m_recognized_frame_sp(), m_disassembly(),
+      m_mutex() {
   if (sc_ptr != nullptr) {
     m_sc = *sc_ptr;
     m_flags.Set(m_sc.GetResolvedMask());
@@ -1951,4 +1955,12 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
     }
   }
   return true;
+}
+
+RecognizedStackFrameSP StackFrame::GetRecognizedFrame() {
+  if (!m_recognized_frame_sp) {
+    m_recognized_frame_sp =
+        StackFrameRecognizerManager::RecognizeFrame(CalculateStackFrame());
+  }
+  return m_recognized_frame_sp;
 }

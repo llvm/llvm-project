@@ -875,6 +875,7 @@
 		2689004C13353E0400698AC0 /* SourceManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E8F10F1B85900F91463 /* SourceManager.cpp */; };
 		268900F313353E6F00698AC0 /* StackFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F3810F1B90C00F91463 /* StackFrame.cpp */; };
 		268900F413353E6F00698AC0 /* StackFrameList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F3910F1B90C00F91463 /* StackFrameList.cpp */; };
+		8CF46A6220522A9800423DDF /* StackFrameRecognizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8CF46A6120522A9000423DDF /* StackFrameRecognizer.cpp */; };
 		268900F513353E6F00698AC0 /* StackID.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F3A10F1B90C00F91463 /* StackID.cpp */; };
 		2689004D13353E0400698AC0 /* State.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E9010F1B85900F91463 /* State.cpp */; };
 		9A3D43ED1F3237F900EB767C /* StateTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A3D43E21F3237D500EB767C /* StateTest.cpp */; };
@@ -2935,6 +2936,8 @@
 		26BC7DF510F1B81A00F91463 /* StackFrame.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StackFrame.h; path = include/lldb/Target/StackFrame.h; sourceTree = "<group>"; };
 		26BC7F3910F1B90C00F91463 /* StackFrameList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StackFrameList.cpp; path = source/Target/StackFrameList.cpp; sourceTree = "<group>"; };
 		26BC7DF610F1B81A00F91463 /* StackFrameList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StackFrameList.h; path = include/lldb/Target/StackFrameList.h; sourceTree = "<group>"; };
+		8CF46A6120522A9000423DDF /* StackFrameRecognizer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = StackFrameRecognizer.cpp; path = source/Target/StackFrameRecognizer.cpp; sourceTree = "<group>"; };
+		8CFDB67920467B390052B399 /* StackFrameRecognizer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = StackFrameRecognizer.h; path = include/lldb/Target/StackFrameRecognizer.h; sourceTree = "<group>"; };
 		26BC7F3A10F1B90C00F91463 /* StackID.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = StackID.cpp; path = source/Target/StackID.cpp; sourceTree = "<group>"; };
 		26BC7DF710F1B81A00F91463 /* StackID.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = StackID.h; path = include/lldb/Target/StackID.h; sourceTree = "<group>"; };
 		26BC7E9010F1B85900F91463 /* State.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = State.cpp; path = source/Utility/State.cpp; sourceTree = "<group>"; };
@@ -5687,6 +5690,8 @@
 				26BC7F3810F1B90C00F91463 /* StackFrame.cpp */,
 				26BC7DF610F1B81A00F91463 /* StackFrameList.h */,
 				26BC7F3910F1B90C00F91463 /* StackFrameList.cpp */,
+				8CFDB67920467B390052B399 /* StackFrameRecognizer.h */,
+				8CF46A6120522A9000423DDF /* StackFrameRecognizer.cpp */,
 				26BC7DF710F1B81A00F91463 /* StackID.h */,
 				26BC7F3A10F1B90C00F91463 /* StackID.cpp */,
 				2615DB841208A9C90021781D /* StopInfo.h */,
@@ -8241,6 +8246,7 @@
 				268900F213353E6F00698AC0 /* SectionLoadList.cpp in Sources */,
 				268900F313353E6F00698AC0 /* StackFrame.cpp in Sources */,
 				268900F413353E6F00698AC0 /* StackFrameList.cpp in Sources */,
+				8CF46A6220522A9800423DDF /* StackFrameRecognizer.cpp in Sources */,
 				268900F513353E6F00698AC0 /* StackID.cpp in Sources */,
 				228B1B672113340200E61C70 /* ClangHighlighter.cpp in Sources */,
 				268900F613353E6F00698AC0 /* StopInfo.cpp in Sources */,
