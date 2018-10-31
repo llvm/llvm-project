@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file is a part of CilkSan, a determinacy race detector for Cilk
+// This file is a part of CilkSan, a determinacy-race detector for Cilk
 // programs.
 //
 // This instrumentation pass inserts calls to the runtime library before
@@ -15,14 +15,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Instrumentation/CilkSanitizer.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CaptureTracking.h"
-#include "llvm/Analysis/DetachSSA.h"
-#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/DependenceAnalysis.h"
+#include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -111,23 +118,22 @@ private:
 namespace {
 
 struct CilkSanitizerImpl : public CSIImpl {
-  // CilkSanitizerImpl(Module &M, CallGraph *CG,
-  //                   function_ref<DetachSSA &(Function &)> GetDSSA,
-  //                   function_ref<MemorySSA &(Function &)> GetMSSA)
-  //     : CSIImpl(M, CG), GetDSSA(GetDSSA), GetMSSA(GetMSSA) {
   CilkSanitizerImpl(Module &M, CallGraph *CG,
                     function_ref<DominatorTree &(Function &)> GetDomTree,
+                    function_ref<TaskInfo &(Function &)> GetTaskInfo,
+                    function_ref<LoopInfo &(Function &)> GetLoopInfo,
+                    function_ref<DependenceInfo &(Function &)> GetDepInfo,
                     const TargetLibraryInfo *TLI)
-      : CSIImpl(M, CG, GetDomTree), TLI(TLI),
-        CsanFuncEntry(nullptr), CsanFuncExit(nullptr), CsanRead(nullptr),
-        CsanWrite(nullptr), CsanDetach(nullptr), CsanDetachContinue(nullptr),
-        CsanTaskEntry(nullptr), CsanTaskExit(nullptr), CsanSync(nullptr) {
+      : CSIImpl(M, CG, GetDomTree), GetTaskInfo(GetTaskInfo),
+        GetLoopInfo(GetLoopInfo), GetDepInfo(GetDepInfo), TLI(TLI) {
     // Even though we're doing our own instrumentation, we want the CSI setup
     // for the instrumentation of function entry/exit, memory accesses (i.e.,
     // loads and stores), atomics, memory intrinsics.  We also want call sites,
     // for extracting debug information.
     Options.InstrumentBasicBlocks = false;
-    // Options.InstrumentCalls = false;
+    // Cilksan defines its own hooks for instrumenting memory accesses, memory
+    // intrinsics, and Tapir instructions, so we disable the default CSI
+    // instrumentation hooks for these IR objects.
     Options.InstrumentMemoryAccesses = false;
     Options.InstrumentMemIntrinsics = false;
     Options.InstrumentTapir = false;
@@ -148,6 +154,8 @@ struct CilkSanitizerImpl : public CSIImpl {
   void initializeCsanObjectTables();
   void collectUnitObjectTables();
 
+  // Create a call to the runtime unit initialization routine in a global
+  // constructor.
   CallInst *createRTUnitInitCall(IRBuilder<> &IRB) override;
 
   // Initialize custom hooks for CilkSanitizer
@@ -168,17 +176,30 @@ struct CilkSanitizerImpl : public CSIImpl {
 
 private:
   // Analysis results
-  // function_ref<DetachSSA &(Function &)> GetDSSA;
-  // function_ref<MemorySSA &(Function &)> GetMSSA;
+  function_ref<TaskInfo &(Function &)> GetTaskInfo;
+  function_ref<LoopInfo &(Function &)> GetLoopInfo;
+  function_ref<DependenceInfo &(Function &)> GetDepInfo;
   const TargetLibraryInfo *TLI;
 
   // Instrumentation hooks
-  Function *CsanFuncEntry, *CsanFuncExit; 
-  Function *CsanRead, *CsanWrite;
-  Function *CsanLargeRead, *CsanLargeWrite;
-  Function *CsanDetach, *CsanDetachContinue;
-  Function *CsanTaskEntry, *CsanTaskExit;
-  Function *CsanSync;
+  Function *CsanFuncEntry = nullptr;
+  Function *CsanFuncExit = nullptr;
+  Function *CsanRead = nullptr;
+  Function *CsanWrite = nullptr;
+  Function *CsanLargeRead = nullptr;
+  Function *CsanLargeWrite = nullptr;
+  Function *CsanDetach = nullptr;
+  Function *CsanDetachContinue = nullptr;
+  Function *CsanTaskEntry = nullptr;
+  Function *CsanTaskExit = nullptr;
+  Function *CsanSync = nullptr;
+  Function *CsanAfterAllocFn = nullptr;
+  Function *CsanAfterFree = nullptr;
+
+  // Hooks for suppressing instrumentation, e.g., around callsites that cannot
+  // expose a race.
+  Function *CsanDisableChecking = nullptr;
+  Function *CsanEnableChecking = nullptr;
 
   // CilkSanitizer custom forensic tables
   ObjectTable LoadObj, StoreObj;
@@ -188,10 +209,10 @@ private:
 };
 
 /// CilkSanitizer: instrument the code in module to find races.
-struct CilkSanitizer : public ModulePass {
+struct CilkSanitizerLegacyPass : public ModulePass {
   static char ID;  // Pass identification, replacement for typeid.
-  CilkSanitizer() : ModulePass(ID) {
-    initializeCilkSanitizerPass(*PassRegistry::getPassRegistry());
+  CilkSanitizerLegacyPass() : ModulePass(ID) {
+    initializeCilkSanitizerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
   StringRef getPassName() const override {
     return "CilkSanitizer";
@@ -201,32 +222,39 @@ struct CilkSanitizer : public ModulePass {
 };
 } // namespace
 
-char CilkSanitizer::ID = 0;
+char CilkSanitizerLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(
-    CilkSanitizer, "csan",
+    CilkSanitizerLegacyPass, "csan",
     "CilkSanitizer: detects determinacy races in Cilk programs.",
     false, false)
+INITIALIZE_PASS_DEPENDENCY(BasicAAWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(DependenceAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TaskInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-// INITIALIZE_PASS_DEPENDENCY(DetachSSAWrapperPass)
-// INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(
-    CilkSanitizer, "csan",
+    CilkSanitizerLegacyPass, "csan",
     "CilkSanitizer: detects determinacy races in Cilk programs.",
     false, false)
 
-void CilkSanitizer::getAnalysisUsage(AnalysisUsage &AU) const {
+void CilkSanitizerLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<CallGraphWrapperPass>();
+  AU.addRequired<DependenceAnalysisWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addRequired<LoopInfoWrapperPass>();
+  AU.addRequired<TaskInfoWrapperPass>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
-  // AU.addRequired<DetachSSAWrapperPass>();
-  // AU.addRequired<MemorySSAWrapperPass>();
+  AU.addRequired<AAResultsWrapperPass>();
+  AU.addPreserved<BasicAAWrapperPass>();
 }
 
-ModulePass *llvm::createCilkSanitizerPass() {
-  return new CilkSanitizer();
+ModulePass *llvm::createCilkSanitizerLegacyPass() {
+  return new CilkSanitizerLegacyPass();
 }
 
 uint64_t ObjectTable::add(Instruction &I,
@@ -369,6 +397,7 @@ Constant *ObjectTable::insertIntoModule(Module &M) const {
 }
 
 bool CilkSanitizerImpl::run() {
+  // Initialize components of the CSI and Cilksan system.
   initializeCsi();
   // initializeCsanFEDTables();
   initializeCsanObjectTables();
@@ -385,44 +414,15 @@ bool CilkSanitizerImpl::run() {
   return true;
 }
 
-// void CilkSanitizerImpl::initializeCsanFEDTables() {
-//   DetachFED = FrontEndDataTable(M, CsanDetachBaseIdName);
-//   TaskFED = FrontEndDataTable(M, CsanTaskBaseIdName);
-//   TaskExitFED = FrontEndDataTable(M, CsanTaskExitBaseIdName);
-//   DetachContinueFED = FrontEndDataTable(M, CsanDetachContinueBaseIdName);
-//   SyncFED = FrontEndDataTable(M, CsanSyncBaseIdName);
-// }
-
 void CilkSanitizerImpl::initializeCsanObjectTables() {
   LoadObj = ObjectTable(M, CsiLoadBaseIdName);
   StoreObj = ObjectTable(M, CsiStoreBaseIdName);
 }
 
-// void CilkSanitizerImpl::collectUnitFEDTables() {
-//   CSIImpl::collectUnitFEDTables();
-//   LLVMContext &C = M.getContext();
-//   StructType *UnitFedTableType =
-//       getUnitFedTableType(C, FrontEndDataTable::getPointerType(C));
-
-//   // The order of the FED tables here must match the enum in csanrt.c and the
-//   // csan_instrumentation_counts_t in csan.h.
-//   UnitFedTables.push_back(
-//       fedTableToUnitFedTable(M, UnitFedTableType, DetachFED));
-//   UnitFedTables.push_back(
-//       fedTableToUnitFedTable(M, UnitFedTableType, TaskFED));
-//   UnitFedTables.push_back(
-//       fedTableToUnitFedTable(M, UnitFedTableType, TaskExitFED));
-//   UnitFedTables.push_back(
-//       fedTableToUnitFedTable(M, UnitFedTableType, DetachContinueFED));
-//   UnitFedTables.push_back(
-//       fedTableToUnitFedTable(M, UnitFedTableType, SyncFED));
-// }
-
 // Create a struct type to match the unit_obj_entry_t type in csanrt.c.
-StructType *CilkSanitizerImpl::getUnitObjTableType(LLVMContext &C,
-                                                   PointerType *EntryPointerType) {
-  return StructType::get(IntegerType::get(C, 64),
-                         EntryPointerType);
+StructType *CilkSanitizerImpl::getUnitObjTableType(
+    LLVMContext &C, PointerType *EntryPointerType) {
+  return StructType::get(IntegerType::get(C, 64), EntryPointerType);
 }
 
 Constant *CilkSanitizerImpl::objTableToUnitObjTable(
@@ -492,6 +492,7 @@ CallInst *CilkSanitizerImpl::createRTUnitInitCall(IRBuilder<> &IRB) {
           InitCallsiteToFunction});
 }
 
+// Initialize all instrumentation hooks that are specific to CilkSanitizer.
 void CilkSanitizerImpl::initializeCsanHooks() {
   LLVMContext &C = M.getContext();
   IRBuilder<> IRB(C);
@@ -545,7 +546,7 @@ void CilkSanitizerImpl::initializeCsanHooks() {
 }
 
 // Do not instrument known races/"benign races" that come from compiler
-// instrumentatin. The user has no way of suppressing them.
+// instrumentation. The user has no way of suppressing them.
 static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
   // Peel off GEPs and BitCasts.
   Addr = Addr->stripInBoundsOffsets();
@@ -737,13 +738,15 @@ bool CilkSanitizerImpl::instrumentFunction(Function &F) {
     Value *FuncId = FunctionFED.localToGlobalId(LocalId, IRB);
     // TODO: Determine if we actually want the frame pointer, not the stack
     // pointer.
-    // Value *StackSave = IRB.CreateCall(
-    //     Intrinsic::getDeclaration(&M, Intrinsic::stacksave));
-    // IRB.CreateCall(CsanFuncEntry, {FuncId, StackSave, FuncEntryProp.getValue(IRB)});
-    Value *FrameAddr = IRB.CreateCall(
-        Intrinsic::getDeclaration(&M, Intrinsic::frameaddress),
-        {IRB.getInt32(0)});
-    IRB.CreateCall(CsanFuncEntry, {FuncId, FrameAddr, FuncEntryProp.getValue(IRB)});
+    Value *StackSave = IRB.CreateCall(
+        Intrinsic::getDeclaration(&M, Intrinsic::stacksave));
+    IRB.CreateCall(CsanFuncEntry,
+                   {FuncId, StackSave, FuncEntryProp.getValue(IRB)});
+    // Value *FrameAddr = IRB.CreateCall(
+    //     Intrinsic::getDeclaration(&M, Intrinsic::frameaddress),
+    //     {IRB.getInt32(0)});
+    // IRB.CreateCall(CsanFuncEntry,
+    //                {FuncId, FrameAddr, FuncEntryProp.getValue(IRB)});
 
     EscapeEnumerator EE(F, "csan_cleanup", false);
     while (IRBuilder<> *AtExit = EE.Next()) {
@@ -967,6 +970,7 @@ bool CilkSanitizerImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
 
   IRBuilder<> IRB(I);
   uint64_t LocalId = CallsiteFED.add(*I);
+  Value *DefaultID = getDefaultID(IRB);
   Value *CallsiteId = CallsiteFED.localToGlobalId(LocalId, IRB);
   Value *FuncId = NULL;
   GlobalVariable *FuncIdGV = NULL;
@@ -987,20 +991,32 @@ bool CilkSanitizerImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
   }
   assert(FuncId != NULL);
   CsiCallProperty Prop;
+  Value *DefaultPropVal = Prop.getValue(IRB);
   Prop.setIsIndirect(!Called);
   Value *PropVal = Prop.getValue(IRB);
-  insertConditionalHookCall(I, CsiBeforeCallsite,
-                            {CallsiteId, FuncId, PropVal});
+  insertHookCall(I, CsiBeforeCallsite, {CallsiteId, FuncId, PropVal});
 
   BasicBlock::iterator Iter(I);
   if (IsInvoke) {
     // There are two "after" positions for invokes: the normal block and the
-    // exception block. This also means we have to recompute the callsite and
-    // function IDs in each basic block so that we can use it for the after
-    // hook.
+    // exception block.
+    InvokeInst *II = cast<InvokeInst>(I);
+    insertHookCallInSuccessorBB(
+        II->getNormalDest(), II->getParent(), CsiAfterCallsite,
+        {CallsiteId, FuncId, PropVal}, {DefaultID, DefaultID, DefaultPropVal});
+    insertHookCallInSuccessorBB(
+        II->getUnwindDest(), II->getParent(), CsiAfterCallsite,
+        {CallsiteId, FuncId, PropVal}, {DefaultID, DefaultID, DefaultPropVal});
+  } else {
+    // Simple call instruction; there is only one "after" position.
+    Iter++;
+    IRB.SetInsertPoint(&*Iter);
+    PropVal = Prop.getValue(IRB);
+    insertHookCall(&*Iter, CsiAfterCallsite, {CallsiteId, FuncId, PropVal});
+  }
 
-    // The "after" hook for this callsite is inserted before the BB entry hook
-    // by running instrumentCallsite after instrumentBasicBlock.
+  return true;
+}
 
     // TODO: If a destination of an invoke has multiple predecessors, then we
     // must split that destination.
@@ -1034,16 +1050,53 @@ bool CilkSanitizerImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
     // Simple call instruction; there is only one "after" position.
     Iter++;
     IRB.SetInsertPoint(&*Iter);
-    PropVal = Prop.getValue(IRB);
-    insertConditionalHookCall(&*Iter, CsiAfterCallsite,
-                              {CallsiteId, FuncId, PropVal});
+    insertHookCall(&*Iter, CsanEnableChecking, {});
   }
 
   return true;
 }
 
+static void getTaskExits(
+    DetachInst *DI, SmallVectorImpl<BasicBlock *> &TaskReturns,
+    SmallVectorImpl<BasicBlock *> &TaskResumes,
+    SmallVectorImpl<Spindle *> &SharedEHExits,
+    TaskInfo &TI) {
+  BasicBlock *DetachedBlock = DI->getDetached();
+  Task *T = TI.getTaskFor(DetachedBlock);
+  BasicBlock *ContinueBlock = DI->getContinue();
+
+  // Examine the predecessors of the continue block and save any predecessors in
+  // the task as a task return.
+  for (BasicBlock *Pred : predecessors(ContinueBlock)) {
+    if (T->simplyEncloses(Pred)) {
+      assert(isa<ReattachInst>(Pred->getTerminator()));
+      TaskReturns.push_back(Pred);
+    }
+  }
+
+  // If the detach cannot throw, we're done.
+  if (!DI->hasUnwindDest())
+    return;
+
+  // Detached-rethrow exits can appear in strange places within a task-exiting
+  // spindle.  Hence we loop over all blocks in the spindle to find
+  // detached rethrows.
+  for (Spindle *S : depth_first<InTask<Spindle *>>(T->getEntrySpindle())) {
+    if (S->isSharedEH()) {
+      if (llvm::any_of(predecessors(S),
+                       [](const Spindle *Pred){ return !Pred->isSharedEH(); }))
+        SharedEHExits.push_back(S);
+      continue;
+    }
+
+    for (BasicBlock *B : S->blocks())
+      if (isDetachedRethrow(B->getTerminator()))
+        TaskResumes.push_back(B);
+  }
+}
+
 bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI,
-                                         DominatorTree *DT) {
+                                         DominatorTree *DT, TaskInfo &TI) {
   // Instrument the detach instruction itself
   Value *DetachID;
   {
@@ -1058,11 +1111,9 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI,
   // Find the detached block, continuation, and associated reattaches.
   BasicBlock *DetachedBlock = DI->getDetached();
   BasicBlock *ContinueBlock = DI->getContinue();
-  SmallVector<BasicBlock *, 8> TaskExits;
-  // TODO: Extend this loop to find EH exits of the detached task.
-  for (BasicBlock *Pred : predecessors(ContinueBlock))
-    if (isa<ReattachInst>(Pred->getTerminator()))
-      TaskExits.push_back(Pred);
+  SmallVector<BasicBlock *, 8> TaskExits, TaskResumes;
+  SmallVector<Spindle *, 2> SharedEHExits;
+  getTaskExits(DI, TaskExits, TaskResumes, SharedEHExits, TI);
 
   // Instrument the entry and exit points of the detached task.
   {
@@ -1072,15 +1123,15 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI,
     Value *TaskID = TaskFED.localToGlobalId(LocalID, IRB);
     // TODO: Determine if we actually want the frame pointer, not the stack
     // pointer.
-    // Value *StackSave = IRB.CreateCall(
-    //     Intrinsic::getDeclaration(&M, Intrinsic::stacksave));
-    // Instruction *Call = IRB.CreateCall(CsanTaskEntry,
-    //                                    {TaskID, DetachID, StackSave});
-    Value *FrameAddr = IRB.CreateCall(
-        Intrinsic::getDeclaration(&M, Intrinsic::frameaddress),
-        {IRB.getInt32(0)});
+    Value *StackSave = IRB.CreateCall(
+        Intrinsic::getDeclaration(&M, Intrinsic::stacksave));
     Instruction *Call = IRB.CreateCall(CsanTaskEntry,
-                                       {TaskID, DetachID, FrameAddr});
+                                       {TaskID, DetachID, StackSave});
+    // Value *FrameAddr = IRB.CreateCall(
+    //     Intrinsic::getDeclaration(&M, Intrinsic::frameaddress),
+    //     {IRB.getInt32(0)});
+    // Instruction *Call = IRB.CreateCall(CsanTaskEntry,
+    //                                    {TaskID, DetachID, FrameAddr});
     IRB.SetInstDebugLocation(Call);
 
     // Instrument the exit points of the detached tasks.
@@ -1093,6 +1144,23 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI,
       IRB.SetInstDebugLocation(Call);
       NumInstrumentedDetachExits++;
     }
+    // Instrument the EH exits of the detached task.
+    for (BasicBlock *TaskExit : TaskResumes) {
+      IRBuilder<> IRB(TaskExit->getTerminator());
+      uint64_t LocalID = TaskExitFED.add(*TaskExit->getTerminator());
+      Value *TaskExitID = TaskExitFED.localToGlobalId(LocalID, IRB);
+      Instruction *Call = IRB.CreateCall(CsanTaskExit,
+                                         {TaskExitID, TaskID, DetachID});
+      IRB.SetInstDebugLocation(Call);
+      NumInstrumentedDetachExits++;
+    }
+
+    Task *T = TI.getTaskFor(DetachedBlock);
+    Value *DefaultID = getDefaultID(IRB);
+    for (Spindle *SharedEH : SharedEHExits)
+      insertHookCallAtSharedEHSpindleExits(
+          SharedEH, T, CsanTaskExit, TaskExitFED, {TaskID, DetachID},
+          {DefaultID, DefaultID});
   }
 
   // Instrument the continuation of the detach.
@@ -1109,6 +1177,17 @@ bool CilkSanitizerImpl::instrumentDetach(DetachInst *DI,
                                        {ContinueID, DetachID});
     IRB.SetInstDebugLocation(Call);
   }
+  // Instrument the unwind of the detach, if it exists.
+  if (DI->hasUnwindDest()) {
+    BasicBlock *UnwindBlock = DI->getUnwindDest();
+    IRBuilder<> IRB(DI);
+    Value *DefaultID = getDefaultID(IRB);
+    uint64_t LocalID = DetachContinueFED.add(*UnwindBlock);
+    Value *ContinueID = DetachContinueFED.localToGlobalId(LocalID, IRB);
+    insertHookCallInSuccessorBB(UnwindBlock, DI->getParent(),
+                                CsanDetachContinue, {ContinueID, DetachID},
+                                {DefaultID, DefaultID});
+  }
   return true;
 }
 
@@ -1118,8 +1197,7 @@ bool CilkSanitizerImpl::instrumentSync(SyncInst *SI) {
   uint64_t LocalID = SyncFED.add(*SI);
   Value *SyncID = SyncFED.localToGlobalId(LocalID, IRB);
   // Insert instrumentation before the sync.
-  Instruction *Call = IRB.CreateCall(CsanSync, {SyncID});
-  IRB.SetInstDebugLocation(Call);
+  insertHookCall(SI, CsanSync, {SyncID});
   NumInstrumentedSyncs++;
   return true;
 }
@@ -1128,20 +1206,50 @@ bool CilkSanitizer::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
-  // auto GetDSSA = [this](Function &F) -> DetachSSA & {
-  //   return this->getAnalysis<DetachSSAWrapperPass>(F).getDSSA();
-  // };
-  // auto GetMSSA = [this](Function &F) -> MemorySSA & {
-  //   return this->getAnalysis<MemorySSAWrapperPass>(F).getMSSA();
-  // };
-
   CallGraph *CG = &getAnalysis<CallGraphWrapperPass>().getCallGraph();
   const TargetLibraryInfo *TLI =
       &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
   auto GetDomTree = [this](Function &F) -> DominatorTree & {
     return this->getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
   };
+  auto GetTaskInfo = [this](Function &F) -> TaskInfo & {
+    return this->getAnalysis<TaskInfoWrapperPass>(F).getTaskInfo();
+  };
+  auto GetLoopInfo = [this](Function &F) -> LoopInfo & {
+    return this->getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+  };
+  auto GetDepInfo = [this](Function &F) -> DependenceInfo & {
+    return this->getAnalysis<DependenceAnalysisWrapperPass>(F).getDI();
+  };
 
-  // return CilkSanitizerImpl(M, CG, GetDSSA, GetMSSA).run();
-  return CilkSanitizerImpl(M, CG, GetDomTree, TLI).run();
+  return CilkSanitizerImpl(M, CG, GetDomTree, GetTaskInfo, GetLoopInfo,
+                           GetDepInfo, TLI).run();
+}
+
+PreservedAnalyses CilkSanitizerPass::run(Module &M, ModuleAnalysisManager &AM) {
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  auto &CG = AM.getResult<CallGraphAnalysis>(M);
+  auto GetDT =
+    [&FAM](Function &F) -> DominatorTree & {
+      return FAM.getResult<DominatorTreeAnalysis>(F);
+    };
+  auto GetTI =
+    [&FAM](Function &F) -> TaskInfo & {
+      return FAM.getResult<TaskAnalysis>(F);
+    };
+  auto GetLI =
+    [&FAM](Function &F) -> LoopInfo & {
+      return FAM.getResult<LoopAnalysis>(F);
+    };
+  auto GetDI =
+    [&FAM](Function &F) -> DependenceInfo & {
+      return FAM.getResult<DependenceAnalysis>(F);
+    };
+  auto *TLI = &AM.getResult<TargetLibraryAnalysis>(M);
+
+  if (!CilkSanitizerImpl(M, &CG, GetDT, GetTI, GetLI, GetDI, TLI)
+      .run())
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::none();
 }
