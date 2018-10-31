@@ -138,8 +138,6 @@ static void scalarizeMaskedLoad(CallInst *CI) {
   IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
   BasicBlock *IfBlock = CI->getParent();
-  BasicBlock *CondBlock = nullptr;
-  BasicBlock *PrevIfBlock = CI->getParent();
 
   Builder.SetInsertPoint(InsertPt);
   Builder.SetCurrentDebugLocation(CI->getDebugLoc());
@@ -195,7 +193,8 @@ static void scalarizeMaskedLoad(CallInst *CI) {
     //  %Elt = load i32* %EltAddr
     //  VResult = insertelement <16 x i32> VResult, i32 %Elt, i32 Idx
     //
-    CondBlock = IfBlock->splitBasicBlock(InsertPt->getIterator(), "cond.load");
+    BasicBlock *CondBlock = IfBlock->splitBasicBlock(InsertPt->getIterator(),
+                                                     "cond.load");
     Builder.SetInsertPoint(InsertPt);
 
     Value *Gep =
@@ -211,7 +210,7 @@ static void scalarizeMaskedLoad(CallInst *CI) {
     Instruction *OldBr = IfBlock->getTerminator();
     BranchInst::Create(CondBlock, NewIfBlock, Predicate, OldBr);
     OldBr->eraseFromParent();
-    PrevIfBlock = IfBlock;
+    BasicBlock *PrevIfBlock = IfBlock;
     IfBlock = NewIfBlock;
 
     // Create the phi to join the new and previous value.
@@ -372,8 +371,6 @@ static void scalarizeMaskedGather(CallInst *CI) {
   IRBuilder<> Builder(CI->getContext());
   Instruction *InsertPt = CI;
   BasicBlock *IfBlock = CI->getParent();
-  BasicBlock *CondBlock = nullptr;
-  BasicBlock *PrevIfBlock = CI->getParent();
   Builder.SetInsertPoint(InsertPt);
   unsigned AlignVal = cast<ConstantInt>(Alignment)->getZExtValue();
 
@@ -416,7 +413,7 @@ static void scalarizeMaskedGather(CallInst *CI) {
     //  %Elt = load i32* %EltAddr
     //  VResult = insertelement <16 x i32> VResult, i32 %Elt, i32 Idx
     //
-    CondBlock = IfBlock->splitBasicBlock(InsertPt, "cond.load");
+    BasicBlock *CondBlock = IfBlock->splitBasicBlock(InsertPt, "cond.load");
     Builder.SetInsertPoint(InsertPt);
 
     Value *Ptr = Builder.CreateExtractElement(Ptrs, Builder.getInt32(Idx),
@@ -433,7 +430,7 @@ static void scalarizeMaskedGather(CallInst *CI) {
     Instruction *OldBr = IfBlock->getTerminator();
     BranchInst::Create(CondBlock, NewIfBlock, Predicate, OldBr);
     OldBr->eraseFromParent();
-    PrevIfBlock = IfBlock;
+    BasicBlock *PrevIfBlock = IfBlock;
     IfBlock = NewIfBlock;
 
     PHINode *Phi = Builder.CreatePHI(VecType, 2, "res.phi.else");

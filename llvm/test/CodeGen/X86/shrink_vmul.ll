@@ -2475,7 +2475,7 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) {
 ; X86-AVX2-NEXT:    vpmulld %ymm2, %ymm1, %ymm1
 ; X86-AVX2-NEXT:    movl $8199, %eax # imm = 0x2007
 ; X86-AVX2-NEXT:    vmovd %eax, %xmm2
-; X86-AVX2-NEXT:    vpmulld %ymm2, %ymm0, %ymm0
+; X86-AVX2-NEXT:    vpmulld %xmm2, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vmovd %xmm0, (%eax)
 ; X86-AVX2-NEXT:    vmovdqa %ymm1, (%eax)
 ; X86-AVX2-NEXT:    popl %esi
@@ -2723,7 +2723,7 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) {
 ; X64-AVX2-NEXT:    vpmulld %ymm2, %ymm1, %ymm1
 ; X64-AVX2-NEXT:    movl $8199, %eax # imm = 0x2007
 ; X64-AVX2-NEXT:    vmovd %eax, %xmm2
-; X64-AVX2-NEXT:    vpmulld %ymm2, %ymm0, %ymm0
+; X64-AVX2-NEXT:    vpmulld %xmm2, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vmovd %xmm0, (%rax)
 ; X64-AVX2-NEXT:    vmovdqa %ymm1, (%rax)
 ; X64-AVX2-NEXT:    vzeroupper

@@ -37,7 +37,7 @@ body:             |
     %0:gr16_abcd = MOV16ri 1
 
   bb.1:
-    DBG_VALUE debug-use %0.sub_8bit_hi, debug-use $noreg, !7, !DIExpression(), debug-location !9
+    DBG_VALUE %0.sub_8bit_hi, $noreg, !7, !DIExpression(), debug-location !9
     %1:gr16 = COPY %0
     %2:gr16 = COPY %0
 

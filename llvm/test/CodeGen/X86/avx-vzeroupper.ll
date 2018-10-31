@@ -96,28 +96,24 @@ define <8 x float> @test01(<4 x float> %a, <4 x float> %b, <8 x float> %c) nounw
 define <4 x float> @test02(<8 x float> %a, <8 x float> %b) nounwind {
 ; VZ-LABEL: test02:
 ; VZ:       # %bb.0:
-; VZ-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; VZ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; VZ-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; VZ-NEXT:    vzeroupper
 ; VZ-NEXT:    jmp do_sse # TAILCALL
 ;
 ; FAST-ymm-zmm-LABEL: test02:
 ; FAST-ymm-zmm:       # %bb.0:
-; FAST-ymm-zmm-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; FAST-ymm-zmm-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; FAST-ymm-zmm-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; FAST-ymm-zmm-NEXT:    jmp do_sse # TAILCALL
 ;
 ; BDVER2-LABEL: test02:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; BDVER2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; BDVER2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; BDVER2-NEXT:    vzeroupper
 ; BDVER2-NEXT:    jmp do_sse # TAILCALL
 ;
 ; BTVER2-LABEL: test02:
 ; BTVER2:       # %bb.0:
-; BTVER2-NEXT:    vaddps %ymm1, %ymm0, %ymm0
-; BTVER2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; BTVER2-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; BTVER2-NEXT:    jmp do_sse # TAILCALL
   %add.i = fadd <8 x float> %a, %b
   %add.low = call <4 x float> @llvm.x86.avx.vextractf128.ps.256(<8 x float> %add.i, i8 0)

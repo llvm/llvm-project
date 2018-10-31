@@ -162,8 +162,8 @@ define i32 @test_tst_assessment(i32 %a, i32 %b) {
 ;
 ; T2-LABEL: test_tst_assessment:
 ; T2:       @ %bb.0:
-; T2-NEXT:    lsls r1, r1, #31
 ; T2-NEXT:    and r0, r0, #1
+; T2-NEXT:    lsls r1, r1, #31
 ; T2-NEXT:    it ne
 ; T2-NEXT:    subne r0, #1
 ; T2-NEXT:    bx lr

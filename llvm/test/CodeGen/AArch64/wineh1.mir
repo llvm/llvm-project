@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog -filetype=obj -disable-post-ra \
+# RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog -filetype=obj  \
 # RUN:   | llvm-readobj -unwind | FileCheck %s
 # This test case checks the basic validity of the .xdata section.  It's
 # documented at:

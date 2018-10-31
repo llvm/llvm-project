@@ -752,6 +752,8 @@ bool MIParser::parse(MachineInstr *&MI) {
     Optional<unsigned> TiedDefIdx;
     if (parseMachineOperandAndTargetFlags(MO, TiedDefIdx))
       return true;
+    if (OpCode == TargetOpcode::DBG_VALUE && MO.isReg())
+      MO.setIsDebug();
     Operands.push_back(
         ParsedMachineOperand(MO, Loc, Token.location(), TiedDefIdx));
     if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||

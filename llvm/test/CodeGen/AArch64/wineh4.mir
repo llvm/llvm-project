@@ -1,5 +1,5 @@
 # RUN: llc -o - %s -mtriple=aarch64-windows -start-after=prologepilog \
-# RUN:   -disable-branch-fold -disable-post-ra -filetype=obj \
+# RUN:   -disable-branch-fold  -filetype=obj \
 # RUN: | llvm-readobj -unwind | FileCheck %s
 # Check that multiple epilgoues are correctly placed in .xdata.
 

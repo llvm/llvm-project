@@ -40,11 +40,11 @@ registers:
 body:             |
   bb.0.entry:
     %0 = MOV32r0 implicit-def dead $eflags, debug-location !19
-    DBG_VALUE debug-use %0, debug-use _, !18, !DIExpression(), debug-location !20
+    DBG_VALUE %0, _, !18, !DIExpression(), debug-location !20
     $eax = COPY killed %0, debug-location !21
     RET 0, killed $eax, debug-location !21
 
 ...
 
 # CHECK: $eax = MOV32r0
-# CHECK-NEXT: DBG_VALUE debug-use $eax
+# CHECK-NEXT: DBG_VALUE $eax

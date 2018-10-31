@@ -1334,12 +1334,13 @@ public:
         LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
     while (NumVecElts > MVTLen) {
       NumVecElts /= 2;
+      Type *SubTy = VectorType::get(ScalarTy, NumVecElts);
       // Assume the pairwise shuffles add a cost.
       ShuffleCost += (IsPairwise + 1) *
                      ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,
-                                                 NumVecElts, Ty);
+                                                 NumVecElts, SubTy);
       ArithCost += ConcreteTTI->getArithmeticInstrCost(Opcode, Ty);
-      Ty = VectorType::get(ScalarTy, NumVecElts);
+      Ty = SubTy;
       ++LongVectorCount;
     }
     // The minimal length of the vector is limited by the real length of vector
@@ -1347,8 +1348,8 @@ public:
     // reduction operations are performed on the vectors with the same
     // architecture-dependent length.
     ShuffleCost += (NumReduxLevels - LongVectorCount) * (IsPairwise + 1) *
-                   ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,
-                                               NumVecElts, Ty);
+                   ConcreteTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
+                                               0, Ty);
     ArithCost += (NumReduxLevels - LongVectorCount) *
                  ConcreteTTI->getArithmeticInstrCost(Opcode, Ty);
     return ShuffleCost + ArithCost + getScalarizationOverhead(Ty, false, true);
@@ -1381,15 +1382,16 @@ public:
         LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
     while (NumVecElts > MVTLen) {
       NumVecElts /= 2;
+      Type *SubTy = VectorType::get(ScalarTy, NumVecElts);
       // Assume the pairwise shuffles add a cost.
       ShuffleCost += (IsPairwise + 1) *
                      ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,
-                                                 NumVecElts, Ty);
+                                                 NumVecElts, SubTy);
       MinMaxCost +=
           ConcreteTTI->getCmpSelInstrCost(CmpOpcode, Ty, CondTy, nullptr) +
           ConcreteTTI->getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
                                           nullptr);
-      Ty = VectorType::get(ScalarTy, NumVecElts);
+      Ty = SubTy;
       CondTy = VectorType::get(ScalarCondTy, NumVecElts);
       ++LongVectorCount;
     }
@@ -1398,8 +1400,8 @@ public:
     // reduction opertions are perfomed on the vectors with the same
     // architecture-dependent length.
     ShuffleCost += (NumReduxLevels - LongVectorCount) * (IsPairwise + 1) *
-                   ConcreteTTI->getShuffleCost(TTI::SK_ExtractSubvector, Ty,
-                                               NumVecElts, Ty);
+                   ConcreteTTI->getShuffleCost(TTI::SK_PermuteSingleSrc, Ty,
+                                               0, Ty);
     MinMaxCost +=
         (NumReduxLevels - LongVectorCount) *
         (ConcreteTTI->getCmpSelInstrCost(CmpOpcode, Ty, CondTy, nullptr) +

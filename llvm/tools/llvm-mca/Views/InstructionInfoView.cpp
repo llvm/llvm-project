@@ -14,9 +14,8 @@
 
 #include "Views/InstructionInfoView.h"
 
+namespace llvm {
 namespace mca {
-
-using namespace llvm;
 
 void InstructionInfoView::printView(raw_ostream &OS) const {
   std::string Buffer;
@@ -87,3 +86,4 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   OS << Buffer;
 }
 } // namespace mca.
+} // namespace llvm

@@ -135,16 +135,16 @@ define i64 @lshift_cl_optsize(i64 %a, i64 %b, i64 %c) nounwind readnone optsize 
 ;
 ; BDVER12-LABEL: lshift_cl_optsize:
 ; BDVER12:       # %bb.0: # %entry
-; BDVER12-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BDVER12-NEXT:    movq %rdi, %rax # sched: [1:0.50]
+; BDVER12-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BDVER12-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BDVER12-NEXT:    shldq %cl, %rsi, %rax # sched: [4:4.00]
 ; BDVER12-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: lshift_cl_optsize:
 ; BTVER2:       # %bb.0: # %entry
-; BTVER2-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BTVER2-NEXT:    movq %rdi, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BTVER2-NEXT:    shldq %cl, %rsi, %rax # sched: [4:4.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]
@@ -211,16 +211,16 @@ define i64 @rshift_cl_optsize(i64 %a, i64 %b, i64 %c) nounwind readnone optsize 
 ;
 ; BDVER12-LABEL: rshift_cl_optsize:
 ; BDVER12:       # %bb.0: # %entry
-; BDVER12-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BDVER12-NEXT:    movq %rdi, %rax # sched: [1:0.50]
+; BDVER12-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BDVER12-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BDVER12-NEXT:    shrdq %cl, %rsi, %rax # sched: [4:4.00]
 ; BDVER12-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: rshift_cl_optsize:
 ; BTVER2:       # %bb.0: # %entry
-; BTVER2-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BTVER2-NEXT:    movq %rdi, %rax # sched: [1:0.50]
+; BTVER2-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BTVER2-NEXT:    shrdq %cl, %rsi, %rax # sched: [4:4.00]
 ; BTVER2-NEXT:    retq # sched: [4:1.00]

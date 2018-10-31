@@ -263,6 +263,14 @@ class SImmOperand<int width> : AsmOperandClass {
   let PredicateMethod = "isSImm<" # width # ">";
 }
 
+
+class AsmImmRange<int Low, int High> : AsmOperandClass {
+  let Name = "Imm" # Low # "_" # High;
+  let DiagnosticType = "InvalidImm" # Low # "_" # High;
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isImmInRange<" # Low # "," # High # ">";
+}
+
 // Authenticated loads for v8.3 can have scaled 10-bit immediate offsets.
 def SImm10s8Operand : SImmScaledMemoryIndexed<10, 8>;
 def simm10Scaled : Operand<i64> {
@@ -285,6 +293,10 @@ def UImm6Operand : AsmOperandClass {
 
 def uimm6 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 64; }]> {
   let ParserMatchClass = UImm6Operand;
+}
+
+def uimm16 : Operand<i16>, ImmLeaf<i16, [{return Imm >= 0 && Imm < 65536;}]>{
+  let ParserMatchClass = AsmImmRange<0, 65535>;
 }
 
 def SImm9Operand : SImmOperand<9>;
@@ -445,13 +457,6 @@ def simm4s16 : Operand<i64>, ImmLeaf<i64,
   let PrintMethod = "printImmScale<16>";
   let ParserMatchClass = SImm4s16Operand;
   let DecoderMethod = "DecodeSImm<4>";
-}
-
-class AsmImmRange<int Low, int High> : AsmOperandClass {
-  let Name = "Imm" # Low # "_" # High;
-  let DiagnosticType = "InvalidImm" # Low # "_" # High;
-  let RenderMethod = "addImmOperands";
-  let PredicateMethod = "isImmInRange<" # Low # "," # High # ">";
 }
 
 def Imm1_8Operand : AsmImmRange<1, 8>;
@@ -708,11 +713,10 @@ def logical_imm64_not : Operand<i64> {
 }
 
 // imm0_65535 predicate - True if the immediate is in the range [0,65535].
-def Imm0_65535Operand : AsmImmRange<0, 65535>;
 def imm0_65535 : Operand<i32>, ImmLeaf<i32, [{
   return ((uint32_t)Imm) < 65536;
 }]> {
-  let ParserMatchClass = Imm0_65535Operand;
+  let ParserMatchClass = AsmImmRange<0, 65535>;
   let PrintMethod = "printImmHex";
 }
 
@@ -1937,7 +1941,7 @@ class ADRI<bit page, string asm, Operand adr, list<dag> pattern>
 //---
 
 def movimm32_imm : Operand<i32> {
-  let ParserMatchClass = Imm0_65535Operand;
+  let ParserMatchClass = AsmImmRange<0, 65535>;
   let EncoderMethod = "getMoveWideImmOpValue";
   let PrintMethod = "printImm";
 }
@@ -4082,6 +4086,19 @@ class ExceptionGeneration<bits<3> op1, bits<2> ll, string asm>
   let Inst{1-0}   = ll;
 }
 
+//---
+// UDF : Permanently UNDEFINED instructions.  Format: Opc = 0x0000, 16 bit imm.
+//--
+let hasSideEffects = 1, isTrap = 1, mayLoad = 0, mayStore = 0 in {
+class UDFType<bits<16> opc, string asm>
+  : I<(outs), (ins uimm16:$imm),
+       asm, "\t$imm", "", []>,
+    Sched<[]> {
+  bits<16> imm;
+  let Inst{31-16} = opc;
+  let Inst{15-0} = imm;
+}
+}
 let Predicates = [HasFPARMv8] in {
 
 //---

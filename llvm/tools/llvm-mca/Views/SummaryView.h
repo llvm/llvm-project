@@ -34,6 +34,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
 namespace mca {
 
 /// A view that collects and prints a few performance numbers.
@@ -71,5 +72,6 @@ public:
   void printView(llvm::raw_ostream &OS) const override;
 };
 } // namespace mca
+} // namespace llvm
 
 #endif

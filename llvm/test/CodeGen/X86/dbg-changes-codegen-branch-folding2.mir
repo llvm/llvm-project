@@ -207,7 +207,7 @@ body:             |
     liveins: $rdi
   
     dead renamable $al = MOV8rm $rsp, 1, $noreg, -121, $noreg 
-    DBG_VALUE debug-use $al, debug-use $noreg, !16, !DIExpression(), debug-location !19
+    DBG_VALUE $al, $noreg, !16, !DIExpression(), debug-location !19
     renamable $ecx = XOR32rr undef $ecx, undef $ecx, implicit-def dead $eflags
     JMP_1 %bb.1
 ...

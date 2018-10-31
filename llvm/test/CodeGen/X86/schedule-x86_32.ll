@@ -495,8 +495,8 @@ define void @test_arpl(i16 %a0, i16 *%a1) optsize {
 ;
 ; ZNVER1-LABEL: test_arpl:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    arpl %ax, (%ecx) # sched: [100:0.25]
 ; ZNVER1-NEXT:    #NO_APP
@@ -681,10 +681,10 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ; ZNVER1-NEXT:    pushl %esi # sched: [1:0.50]
 ; ZNVER1-NEXT:    .cfi_def_cfa_offset 8
 ; ZNVER1-NEXT:    .cfi_offset %esi, -8
+; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [8:0.50]
 ; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %esi # sched: [8:0.50]
-; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    bound %ax, (%esi) # sched: [100:0.25]
 ; ZNVER1-NEXT:    bound %ecx, (%edx) # sched: [100:0.25]
@@ -985,8 +985,8 @@ define void @test_dec16(i16 %a0, i16* %a1) optsize {
 ;
 ; ZNVER1-LABEL: test_dec16:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    decw %ax # sched: [1:0.25]
 ; ZNVER1-NEXT:    decw (%ecx) # sched: [5:0.50]
@@ -1212,8 +1212,8 @@ define void @test_inc16(i16 %a0, i16* %a1) optsize {
 ;
 ; ZNVER1-LABEL: test_inc16:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    incw %ax # sched: [1:0.25]
 ; ZNVER1-NEXT:    incw (%ecx) # sched: [5:0.50]
@@ -1949,8 +1949,8 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ;
 ; ZNVER1-LABEL: test_pop_push_16:
 ; ZNVER1:       # %bb.0:
-; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [8:0.50]
+; ZNVER1-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [8:0.50]
 ; ZNVER1-NEXT:    #APP
 ; ZNVER1-NEXT:    popw %ax # sched: [8:0.50]
 ; ZNVER1-NEXT:    popw (%ecx) # sched: [5:0.50]

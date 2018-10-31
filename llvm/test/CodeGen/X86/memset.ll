@@ -41,8 +41,8 @@ define void @t() nounwind  {
 ; YMM-NEXT:    movl %esp, %ebp
 ; YMM-NEXT:    andl $-32, %esp
 ; YMM-NEXT:    subl $96, %esp
-; YMM-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; YMM-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; YMM-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; YMM-NEXT:    vmovaps %ymm0, {{[0-9]+}}(%esp)
 ; YMM-NEXT:    movl %eax, (%esp)
 ; YMM-NEXT:    vzeroupper

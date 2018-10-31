@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -mattr=-code-object-v3 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=GCN,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-code-object-v3 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=GCN,CIVI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -allow-deprecated-dag-overlap -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 ; GCN-LABEL: {{^}}use_dispatch_ptr:
 ; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], s6
@@ -558,7 +558,8 @@ define void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 
 ; GCN-LABEL: {{^}}func_use_every_sgpr_input_call_use_workgroup_id_xyz_spill:
 ; GCN: s_mov_b32 s5, s32
-; GCN: s_add_u32 s32, s32, 0x400
+
+; GCN-DAG: s_add_u32 s32, s32, 0x400
 
 ; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-57-9][0-9]*]], s14
 ; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-68-9][0-9]*]], s15

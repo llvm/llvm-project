@@ -22,9 +22,8 @@
 
 #define DEBUG_TYPE "llvm-mca"
 
+namespace llvm {
 namespace mca {
-
-using namespace llvm;
 
 InstrBuilder::InstrBuilder(const llvm::MCSubtargetInfo &sti,
                            const llvm::MCInstrInfo &mcii,
@@ -539,3 +538,4 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
   return std::move(NewIS);
 }
 } // namespace mca
+} // namespace llvm

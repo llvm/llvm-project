@@ -164,6 +164,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FLOG2:
   case ISD::STRICT_FRINT:
   case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINNUM:
     R = ScalarizeVecRes_StrictFPOp(N);
     break;
   }
@@ -834,6 +836,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FLOG2:
   case ISD::STRICT_FRINT:
   case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINNUM:
     SplitVecRes_StrictFPOp(N, Lo, Hi);
     break;
   }
@@ -2400,6 +2404,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FLOG2:
   case ISD::STRICT_FRINT:
   case ISD::STRICT_FNEARBYINT:
+  case ISD::STRICT_FMAXNUM:
+  case ISD::STRICT_FMINNUM:
     Res = WidenVecRes_StrictFP(N);
     break;
 

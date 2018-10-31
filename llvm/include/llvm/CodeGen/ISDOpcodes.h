@@ -288,7 +288,7 @@ namespace ISD {
     /// They are used to limit optimizations while the DAG is being optimized.
     STRICT_FSQRT, STRICT_FPOW, STRICT_FPOWI, STRICT_FSIN, STRICT_FCOS,
     STRICT_FEXP, STRICT_FEXP2, STRICT_FLOG, STRICT_FLOG10, STRICT_FLOG2,
-    STRICT_FRINT, STRICT_FNEARBYINT,
+    STRICT_FRINT, STRICT_FNEARBYINT, STRICT_FMAXNUM, STRICT_FMINNUM,
 
     /// FMA - Perform a * b + c with no intermediate rounding step.
     FMA,

@@ -24,6 +24,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Error.h"
 
+namespace llvm {
 namespace mca {
 
 class ReadState;
@@ -225,5 +226,6 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 
 #endif // LLVM_TOOLS_LLVM_MCA_REGISTER_FILE_H

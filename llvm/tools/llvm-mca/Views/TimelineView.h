@@ -108,6 +108,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
 namespace mca {
 
 /// This class listens to instruction state transition events
@@ -183,5 +184,6 @@ public:
   }
 };
 } // namespace mca
+} // namespace llvm
 
 #endif

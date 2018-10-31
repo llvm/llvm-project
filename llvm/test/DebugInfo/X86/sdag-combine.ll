@@ -15,7 +15,7 @@ define swiftcc void @g() #0 !dbg !5 {
 entry:
   %0 = alloca %TSb, align 1
   %1 = call swiftcc i1 @f(), !dbg !7
-  ; CHECK: DBG_VALUE debug-use $rcx, debug-use $noreg, !8, !DIExpression(), debug-location !7
+  ; CHECK: DBG_VALUE $rcx, $noreg, !8, !DIExpression(), debug-location !7
   call void @llvm.dbg.value(metadata i1 %1, metadata !8, metadata !DIExpression()), !dbg !7
   %2 = getelementptr inbounds %TSb, %TSb* %0, i32 0, i32 0, !dbg !7
   store i1 %1, i1* %2, align 1, !dbg !7

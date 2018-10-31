@@ -230,11 +230,13 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
       // --keep-global-symbol. Because of that, make sure to check
       // --globalize-symbol second.
       if (!Config.SymbolsToKeepGlobal.empty() &&
-          !is_contained(Config.SymbolsToKeepGlobal, Sym.Name))
+          !is_contained(Config.SymbolsToKeepGlobal, Sym.Name) &&
+          Sym.getShndx() != SHN_UNDEF)
         Sym.Binding = STB_LOCAL;
 
       if (!Config.SymbolsToGlobalize.empty() &&
-          is_contained(Config.SymbolsToGlobalize, Sym.Name))
+          is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
+          Sym.getShndx() != SHN_UNDEF)
         Sym.Binding = STB_GLOBAL;
 
       if (!Config.SymbolsToWeaken.empty() &&

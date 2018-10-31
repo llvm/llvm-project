@@ -5627,6 +5627,8 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::experimental_constrained_log2:
   case Intrinsic::experimental_constrained_rint:
   case Intrinsic::experimental_constrained_nearbyint:
+  case Intrinsic::experimental_constrained_maxnum:
+  case Intrinsic::experimental_constrained_minnum:
     visitConstrainedFPIntrinsic(cast<ConstrainedFPIntrinsic>(I));
     return nullptr;
   case Intrinsic::fmuladd: {
@@ -6373,6 +6375,12 @@ void SelectionDAGBuilder::visitConstrainedFPIntrinsic(
     break;
   case Intrinsic::experimental_constrained_nearbyint:
     Opcode = ISD::STRICT_FNEARBYINT;
+    break;
+  case Intrinsic::experimental_constrained_maxnum:
+    Opcode = ISD::STRICT_FMAXNUM;
+    break;
+  case Intrinsic::experimental_constrained_minnum:
+    Opcode = ISD::STRICT_FMINNUM;
     break;
   }
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();

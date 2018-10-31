@@ -19,6 +19,7 @@
 #include "HardwareUnits/HardwareUnit.h"
 #include <set>
 
+namespace llvm {
 namespace mca {
 
 class InstRef;
@@ -156,5 +157,6 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 
 #endif

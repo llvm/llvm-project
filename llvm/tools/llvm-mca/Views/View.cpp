@@ -14,7 +14,9 @@
 
 #include "Views/View.h"
 
+namespace llvm {
 namespace mca {
 
 void View::anchor() {}
 } // namespace mca
+} // namespace llvm

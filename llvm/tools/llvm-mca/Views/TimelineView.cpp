@@ -14,8 +14,7 @@
 
 #include "Views/TimelineView.h"
 
-using namespace llvm;
-
+namespace llvm {
 namespace mca {
 
 TimelineView::TimelineView(const MCSubtargetInfo &sti, MCInstPrinter &Printer,
@@ -292,3 +291,4 @@ void TimelineView::printTimeline(raw_ostream &OS) const {
   }
 }
 } // namespace mca
+} // namespace llvm

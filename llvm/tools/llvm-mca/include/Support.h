@@ -20,6 +20,7 @@
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Error.h"
 
+namespace llvm {
 namespace mca {
 
 template <typename T>
@@ -114,5 +115,6 @@ double computeBlockRThroughput(const llvm::MCSchedModel &SM,
                                unsigned DispatchWidth, unsigned NumMicroOps,
                                llvm::ArrayRef<unsigned> ProcResourceUsage);
 } // namespace mca
+} // namespace llvm
 
 #endif

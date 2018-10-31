@@ -17,11 +17,10 @@
 #include "HWEventListener.h"
 #include "llvm/Support/Debug.h"
 
+namespace llvm {
 namespace mca {
 
 #define DEBUG_TYPE "llvm-mca"
-
-using namespace llvm;
 
 void Pipeline::addEventListener(HWEventListener *Listener) {
   if (Listener)
@@ -95,3 +94,4 @@ void Pipeline::notifyCycleEnd() {
     Listener->onCycleEnd();
 }
 } // namespace mca.
+} // namespace llvm

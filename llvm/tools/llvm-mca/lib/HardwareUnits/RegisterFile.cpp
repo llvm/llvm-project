@@ -18,10 +18,9 @@
 #include "Instruction.h"
 #include "llvm/Support/Debug.h"
 
-using namespace llvm;
-
 #define DEBUG_TYPE "llvm-mca"
 
+namespace llvm {
 namespace mca {
 
 RegisterFile::RegisterFile(const MCSchedModel &SM, const MCRegisterInfo &mri,
@@ -469,3 +468,4 @@ void RegisterFile::dump() const {
 #endif
 
 } // namespace mca
+} // namespace llvm

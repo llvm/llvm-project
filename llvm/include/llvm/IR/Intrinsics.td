@@ -565,6 +565,16 @@ let IntrProperties = [IntrInaccessibleMemOnly] in {
                                                          [ LLVMMatchType<0>,
                                                            llvm_metadata_ty,
                                                            llvm_metadata_ty ]>;
+  def int_experimental_constrained_maxnum : Intrinsic<[ llvm_anyfloat_ty ],
+                                                      [ LLVMMatchType<0>,
+                                                        LLVMMatchType<0>,
+                                                        llvm_metadata_ty,
+                                                        llvm_metadata_ty ]>;
+  def int_experimental_constrained_minnum : Intrinsic<[ llvm_anyfloat_ty ],
+                                                      [ LLVMMatchType<0>,
+                                                        LLVMMatchType<0>,
+                                                        llvm_metadata_ty,
+                                                        llvm_metadata_ty ]>;
 }
 // FIXME: Add intrinsics for fcmp, fptrunc, fpext, fptoui and fptosi.
 // FIXME: Add intrinsics for fabs, copysign, floor, ceil, trunc and round?

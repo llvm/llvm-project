@@ -15,9 +15,11 @@
 
 #include "HardwareUnits/HardwareUnit.h"
 
+namespace llvm {
 namespace mca {
 
 // Pin the vtable with this method.
 HardwareUnit::~HardwareUnit() = default;
 
 } // namespace mca
+} // namespace llvm

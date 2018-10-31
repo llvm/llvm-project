@@ -15,6 +15,7 @@
 #include "PipelinePrinter.h"
 #include "Views/View.h"
 
+namespace llvm {
 namespace mca {
 
 void PipelinePrinter::printReport(llvm::raw_ostream &OS) const {
@@ -22,3 +23,4 @@ void PipelinePrinter::printReport(llvm::raw_ostream &OS) const {
     V->printView(OS);
 }
 } // namespace mca.
+} // namespace llvm

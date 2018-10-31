@@ -4104,6 +4104,8 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   case Intrinsic::experimental_constrained_log2:
   case Intrinsic::experimental_constrained_rint:
   case Intrinsic::experimental_constrained_nearbyint:
+  case Intrinsic::experimental_constrained_maxnum:
+  case Intrinsic::experimental_constrained_minnum:
     visitConstrainedFPIntrinsic(
         cast<ConstrainedFPIntrinsic>(*CS.getInstruction()));
     break;

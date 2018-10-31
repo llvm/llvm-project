@@ -2749,11 +2749,45 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
     return true;
   };
 
+  // Match potentially-truncated (bitwidth - y)
+  auto matchShiftAmt = [checkOneUse, Size, &NBits](SDValue ShiftAmt) {
+    // Skip over a truncate of the shift amount.
+    if (ShiftAmt.getOpcode() == ISD::TRUNCATE) {
+      ShiftAmt = ShiftAmt.getOperand(0);
+      // The trunc should have been the only user of the real shift amount.
+      if (!checkOneUse(ShiftAmt))
+        return false;
+    }
+    // Match the shift amount as: (bitwidth - y). It should go away, too.
+    if (ShiftAmt.getOpcode() != ISD::SUB)
+      return false;
+    auto V0 = dyn_cast<ConstantSDNode>(ShiftAmt.getOperand(0));
+    if (!V0 || V0->getZExtValue() != Size)
+      return false;
+    NBits = ShiftAmt.getOperand(1);
+    return true;
+  };
+
+  // c) x &  (-1 >> (32 - y))
+  auto matchPatternC = [&checkOneUse, matchShiftAmt](SDValue Mask) -> bool {
+    // Match `l>>`. Must only have one use!
+    if (Mask.getOpcode() != ISD::SRL || !checkOneUse(Mask))
+      return false;
+    // We should be shifting all-ones constant.
+    if (!isAllOnesConstant(Mask.getOperand(0)))
+      return false;
+    SDValue M1 = Mask.getOperand(1);
+    // The shift amount should not be used externally.
+    if (!checkOneUse(M1))
+      return false;
+    return matchShiftAmt(M1);
+  };
+
   SDValue X;
 
   // d) x << (32 - y) >> (32 - y)
-  auto matchPatternD = [&checkOneUse, &checkTwoUse, Size, &X,
-                        &NBits](SDNode *Node) -> bool {
+  auto matchPatternD = [&checkOneUse, &checkTwoUse, matchShiftAmt,
+                        &X](SDNode *Node) -> bool {
     if (Node->getOpcode() != ISD::SRL)
       return false;
     SDValue N0 = Node->getOperand(0);
@@ -2765,28 +2799,16 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
     // There should not be any uses of the shift amount outside of the pattern.
     if (N1 != N01 || !checkTwoUse(N1))
       return false;
-    // Skip over a truncate of the shift amount.
-    if (N1->getOpcode() == ISD::TRUNCATE) {
-      N1 = N1->getOperand(0);
-      // The trunc should have been the only user of the real shift amount.
-      if (!checkOneUse(N1))
-        return false;
-    }
-    // Match the shift amount as: (bitwidth - y). It should go away, too.
-    if (N1.getOpcode() != ISD::SUB)
-      return false;
-    auto N10 = dyn_cast<ConstantSDNode>(N1.getOperand(0));
-    if (!N10 || N10->getZExtValue() != Size)
+    if (!matchShiftAmt(N1))
       return false;
     X = N0->getOperand(0);
-    NBits = N1.getOperand(1);
     return true;
   };
 
-  auto matchLowBitMask = [&matchPatternA,
-                          &matchPatternB](SDValue Mask) -> bool {
+  auto matchLowBitMask = [&matchPatternA, &matchPatternB,
+                          &matchPatternC](SDValue Mask) -> bool {
     // FIXME: pattern c.
-    return matchPatternA(Mask) || matchPatternB(Mask);
+    return matchPatternA(Mask) || matchPatternB(Mask) || matchPatternC(Mask);
   };
 
   if (Node->getOpcode() == ISD::AND) {

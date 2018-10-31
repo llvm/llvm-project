@@ -11238,7 +11238,8 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
       continue;
     }
     case ISD::CONCAT_VECTORS: {
-      int OperandSize = Mask.size() / V.getNumOperands();
+      int OperandSize =
+          V.getOperand(0).getSimpleValueType().getVectorNumElements();
       V = V.getOperand(BroadcastIdx / OperandSize);
       BroadcastIdx %= OperandSize;
       continue;

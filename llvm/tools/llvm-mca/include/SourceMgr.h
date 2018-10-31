@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 
+namespace llvm {
 namespace mca {
 
 class Instruction;
@@ -51,5 +52,6 @@ public:
 };
 
 } // namespace mca
+} // namespace llvm
 
 #endif
