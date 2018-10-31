@@ -2,10 +2,9 @@
 
 struct OSMetaClass;
 
-#define TRUSTED __attribute__((annotate("rc_ownership_trusted_implementation")))
-#define OS_CONSUME TRUSTED __attribute__((annotate("rc_ownership_consumed")))
-#define OS_RETURNS_RETAINED TRUSTED __attribute__((annotate("rc_ownership_returns_retained")))
-#define OS_RETURNS_NOT_RETAINED TRUSTED __attribute__((annotate("rc_ownership_returns_not_retained")))
+#define OS_CONSUME __attribute__((annotate("rc_ownership_consumed")))
+#define OS_RETURNS_RETAINED __attribute__((annotate("rc_ownership_returns_retained")))
+#define OS_RETURNS_NOT_RETAINED __attribute__((annotate("rc_ownership_returns_not_retained")))
 
 #define OSTypeID(type)   (type::metaClass)
 
@@ -60,6 +59,37 @@ void check_no_invalidation_other_struct() {
   OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to function 'withCapacity' returns an OSObject of type struct OSArray * with a +1 retain count}}
   OtherStruct other(arr); // expected-warning{{Potential leak}}
                           // expected-note@-1{{Object leaked}}
+}
+
+struct ArrayOwner : public OSObject {
+  OSArray *arr;
+  ArrayOwner(OSArray *arr) : arr(arr) {}
+
+  static ArrayOwner* create(OSArray *arr) {
+    return new ArrayOwner(arr);
+  }
+
+  OSArray *getArray() {
+    return arr;
+  }
+
+  OSArray *createArray() {
+    return OSArray::withCapacity(10);
+  }
+
+  OSArray *createArraySourceUnknown();
+
+  OSArray *getArraySourceUnknown();
+};
+
+void check_confusing_getters() {
+  OSArray *arr = OSArray::withCapacity(10);
+
+  ArrayOwner *AO = ArrayOwner::create(arr);
+  AO->getArray();
+
+  AO->release();
+  arr->release();
 }
 
 void check_rc_consumed() {
@@ -140,31 +170,17 @@ void proper_cleanup() {
   arr->release(); // 0
 }
 
-struct ArrayOwner {
-  OSArray *arr;
-
-  OSArray *getArray() {
-    return arr;
-  }
-
-  OSArray *createArray() {
-    return OSArray::withCapacity(10);
-  }
-
-  OSArray *createArraySourceUnknown();
-
-  OSArray *getArraySourceUnknown();
-};
-
 unsigned int no_warning_on_getter(ArrayOwner *owner) {
   OSArray *arr = owner->getArray();
   return arr->getCount();
 }
 
 unsigned int warn_on_overrelease(ArrayOwner *owner) {
-  OSArray *arr = owner->getArray(); // expected-note{{function call returns an OSObject of type struct OSArray * with a +0 retain count}}
-  arr->release(); // expected-warning{{Incorrect decrement of the reference count of an object that is not owned at this point by the caller}}
-                  // expected-note@-1{{Incorrect decrement of the reference count of an object that is not owned at this point by the caller}}
+  // FIXME: summaries are not applied in case the source of the getter/setter
+  // is known.
+  // rdar://45681203
+  OSArray *arr = owner->getArray();
+  arr->release();
   return arr->getCount();
 }
 
