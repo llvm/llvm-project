@@ -66,6 +66,7 @@ ifneq "$(TRIPLE)" ""
 	TRIPLE_SWIFTFLAGS :=-target $(TRIPLE)
 	ifeq "$(TRIPLE_VENDOR)" "apple"
 		ifeq "$(TRIPLE_OS)" "ios"
+		    CODESIGN := codesign
 		    ifeq "$(SDKROOT)" ""
 				# Set SDKROOT if it wasn't set
 				ifneq (,$(findstring arm,$(ARCH)))
@@ -87,7 +88,8 @@ ifneq "$(TRIPLE)" ""
 			endif
 		endif
 		ifeq "$(TRIPLE_OS)" "watchos"
-		    ifeq "$(SDKROOT)" ""
+			CODESIGN := codesign
+			ifeq "$(SDKROOT)" ""
 				# Set SDKROOT if it wasn't set
 				ifneq (,$(findstring arm,$(ARCH)))
 					SDKROOT = $(shell xcrun --sdk watchos --show-sdk-path)
@@ -193,7 +195,6 @@ ifeq "$(OS)" "Darwin"
 	DSYM = $(EXE).dSYM
 	AR := $(CROSS_COMPILE)libtool
 	ARFLAGS := -static -o
-	CODESIGN = codesign
 else
 	AR := $(CROSS_COMPILE)ar
 	# On non-Apple platforms, -arch becomes -m
@@ -628,6 +629,9 @@ $(EXE): $(MODULENAME).swiftmodule $(SWIFT_OBJECTS)
 	$(SWIFTC) $(LD_EXTRAS) \
 	  $(patsubst $<,-Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$<,$^) \
 	  $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$(EXE)"
+endif
 else # OS = Linux
 $(EXE): $(MODULENAME).swiftmodule.o $(SWIFT_OBJECTS)
 	@echo "### Linking" $(EXE)
