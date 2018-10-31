@@ -193,6 +193,32 @@ bool CSIImpl::run() {
   return true; // We always insert the unit constructor.
 }
 
+Constant *ForensicTable::getObjectStrGV(Module &M, StringRef Str,
+                                        const Twine GVName) {
+  LLVMContext &C = M.getContext();
+  IntegerType *Int32Ty = IntegerType::get(C, 32);
+  Constant *Zero = ConstantInt::get(Int32Ty, 0);
+  Value *GepArgs[] = {Zero, Zero};
+  if (Str.empty())
+    return ConstantPointerNull::get(PointerType::get(
+                                        IntegerType::get(C, 8), 0));
+
+  Constant *NameStrConstant = ConstantDataArray::getString(C, Str);
+  GlobalVariable *GV =
+    M.getGlobalVariable((GVName + Str).str(), true);
+  if (GV == NULL) {
+    GV = new GlobalVariable(M, NameStrConstant->getType(),
+                            true, GlobalValue::PrivateLinkage,
+                            NameStrConstant,
+                            GVName + Str,
+                            nullptr,
+                            GlobalVariable::NotThreadLocal, 0);
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  }
+  assert(GV);
+  return ConstantExpr::getGetElementPtr(GV->getValueType(), GV, GepArgs);
+}
+
 ForensicTable::ForensicTable(Module &M, StringRef BaseIdName) {
   LLVMContext &C = M.getContext();
   IntegerType *Int64Ty = IntegerType::get(C, 64);
@@ -335,6 +361,15 @@ void FrontEndDataTable::add(uint64_t ID, int32_t Line, int32_t Column,
   LocalIdToSourceLocationMap[ID] = {Name, Line, Column, Filename, Directory};
 }
 
+// The order of arguments to ConstantStruct::get() must match the source_loc_t
+// type in csi.h.
+static void addFEDTableEntries(SmallVectorImpl<Constant *> &FEDEntries,
+                               StructType *FedType, Constant *Name,
+                               Constant *Line, Constant *Column,
+                               Constant *File) {
+  FEDEntries.push_back(ConstantStruct::get(FedType, Name, Line, Column, File));
+}
+
 Constant *FrontEndDataTable::insertIntoModule(Module &M) const {
   LLVMContext &C = M.getContext();
   StructType *FedType = getSourceLocStructType(C);
@@ -352,47 +387,10 @@ Constant *FrontEndDataTable::insertIntoModule(Module &M) const {
       std::string Filename = E.Filename.str();
       if (!E.Directory.empty())
         Filename = E.Directory.str() + "/" + Filename;
-      Constant *FileStrConstant = ConstantDataArray::getString(C, Filename);
-      GlobalVariable *GV =
-        M.getGlobalVariable("__csi_unit_filename_" + Filename, true);
-      if (GV == NULL) {
-        GV = new GlobalVariable(M, FileStrConstant->getType(),
-                                true, GlobalValue::PrivateLinkage,
-                                FileStrConstant,
-                                "__csi_unit_filename_" + Filename,
-                                nullptr,
-                                GlobalVariable::NotThreadLocal, 0);
-        GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-      }
-      assert(GV);
-      File =
-        ConstantExpr::getGetElementPtr(GV->getValueType(), GV, GepArgs);
+      File = getObjectStrGV(M, Filename, "__csi_unit_filename_");
     }
-    Constant *Name;
-    if (E.Name.empty())
-      Name = ConstantPointerNull::get(PointerType::get(
-                                          IntegerType::get(C, 8), 0));
-    else {
-      Constant *NameStrConstant = ConstantDataArray::getString(C, E.Name);
-      GlobalVariable *GV =
-        M.getGlobalVariable(("__csi_unit_function_name_" + E.Name).str(), true);
-      if (GV == NULL) {
-        GV = new GlobalVariable(M, NameStrConstant->getType(),
-                                true, GlobalValue::PrivateLinkage,
-                                NameStrConstant,
-                                "__csi_unit_function_name_" + E.Name,
-                                nullptr,
-                                GlobalVariable::NotThreadLocal, 0);
-        GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-      }
-      assert(GV);
-      Name =
-        ConstantExpr::getGetElementPtr(GV->getValueType(), GV, GepArgs);
-    }
-    // The order of arguments to ConstantStruct::get() must match the
-    // source_loc_t type in csi.h.
-    FEDEntries.push_back(ConstantStruct::get(FedType, Name, Line, Column,
-                                             File));
+    Constant *Name = getObjectStrGV(M, E.Name, "__csi_unit_function_name_");
+    addFEDTableEntries(FEDEntries, FedType, Name, Line, Column, File);
   }
 
   ArrayType *FedArrayType = ArrayType::get(FedType, FEDEntries.size());
@@ -1316,9 +1314,9 @@ void CSIImpl::instrumentFunction(Function &F) {
   SmallVector<Instruction *, 8> MemIntrinsics;
   SmallVector<Instruction *, 8> Callsites;
   SmallVector<BasicBlock *, 8> BasicBlocks;
-  SmallVector<Instruction*, 8> AtomicAccesses;
-  SmallVector<DetachInst*, 8> Detaches;
-  SmallVector<SyncInst*, 8> Syncs;
+  SmallVector<Instruction *, 8> AtomicAccesses;
+  SmallVector<DetachInst *, 8> Detaches;
+  SmallVector<SyncInst *, 8> Syncs;
   SmallVector<Instruction *, 8> Allocas;
   bool MaySpawn = false;
 

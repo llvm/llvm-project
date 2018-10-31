@@ -1,8 +1,10 @@
-//===-- CSI.h ------------------------instrumentation hooks --*- C++ -*----===//
+//===-- CSI.h -- CSI implementation structures and hooks -----*- C++ -*----===//
 //
 //                     The LLVM Compiler Infrastructure
 //
-// TODO: License
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
 //===----------------------------------------------------------------------===//
 //
 // This file is part of CSI, a framework that provides comprehensive static
@@ -50,7 +52,9 @@ static const char *const CsiInitCallsiteToFunctionName =
 static const char *const CsiDisableInstrumentationName =
     "__csi_disable_instrumentation";
 
-static const int64_t CsiCallsiteUnknownTargetId = -1;
+using csi_id_t = int64_t;
+static const csi_id_t CsiUnknownId = -1;
+static const csi_id_t CsiCallsiteUnknownTargetId = CsiUnknownId;
 // See llvm/tools/clang/lib/CodeGen/CodeGenModule.h:
 static const int CsiUnitCtorPriority = 65535;
 
@@ -77,6 +81,9 @@ public:
   /// \returns A Value holding the global ID corresponding to the
   /// given local ID.
   Value *localToGlobalId(uint64_t LocalId, IRBuilder<> &IRB) const;
+
+  /// Helper function to get or create a string for a forensic-table entry.
+  static Constant *getObjectStrGV(Module &M, StringRef Str, const Twine GVName);
 
 protected:
   /// The GlobalVariable holding the base ID for this FED table.
@@ -315,6 +322,7 @@ public:
   void setMaySpawn(bool v) {
     PropValue.Fields.MaySpawn = v;
   }
+
   /// Set the value of the EHReturn property.
   void setEHReturn(bool v) {
     PropValue.Fields.EHReturn = v;
@@ -562,14 +570,7 @@ public:
           function_ref<DominatorTree &(Function &)> GetDomTree,
           const CSIOptions &Options = CSIOptions())
       : M(M), DL(M.getDataLayout()), CG(CG), GetDomTree(GetDomTree),
-        Options(Options),
-        CsiFuncEntry(nullptr), CsiFuncExit(nullptr), CsiBBEntry(nullptr),
-        CsiBBExit(nullptr), CsiBeforeCallsite(nullptr),
-        CsiAfterCallsite(nullptr), CsiBeforeRead(nullptr),
-        CsiAfterRead(nullptr), CsiBeforeWrite(nullptr), CsiAfterWrite(nullptr),
-	CsiBeforeAlloca(nullptr), CsiAfterAlloca(nullptr),
-        MemmoveFn(nullptr), MemcpyFn(nullptr), MemsetFn(nullptr),
-        InitCallsiteToFunction(nullptr), RTUnitInit(nullptr)
+        Options(Options)
   {}
 
   bool run();
@@ -589,6 +590,10 @@ public:
   /// Helper function that identifies calls or invokes of placeholder functions,
   /// such as debug-info intrinsics or lifetime intrinsics.
   static bool callsPlaceholderFunction(const Instruction &I);
+
+  static Constant *getDefaultID(IRBuilder<> &IRB) {
+    return IRB.getInt64(CsiUnknownId);
+  }
 
 protected:
   /// Initialize the CSI pass.
@@ -686,22 +691,22 @@ protected:
   SmallVector<Constant *, 1> UnitSizeTables;
 
   // Instrumentation hooks
-  Function *CsiFuncEntry, *CsiFuncExit;
-  Function *CsiBBEntry, *CsiBBExit;
-  Function *CsiBeforeCallsite, *CsiAfterCallsite;
-  Function *CsiBeforeRead, *CsiAfterRead;
-  Function *CsiBeforeWrite, *CsiAfterWrite;
-  Function *CsiBeforeAlloca, *CsiAfterAlloca;
-  Function *CsiDetach, *CsiDetachContinue;
-  Function *CsiTaskEntry, *CsiTaskExit;
-  Function *CsiSync;
+  Function *CsiFuncEntry = nullptr, *CsiFuncExit = nullptr;
+  Function *CsiBBEntry = nullptr, *CsiBBExit = nullptr;
+  Function *CsiBeforeCallsite = nullptr, *CsiAfterCallsite = nullptr;
+  Function *CsiBeforeRead = nullptr, *CsiAfterRead = nullptr;
+  Function *CsiBeforeWrite = nullptr, *CsiAfterWrite = nullptr;
+  Function *CsiBeforeAlloca = nullptr, *CsiAfterAlloca = nullptr;
+  Function *CsiDetach = nullptr, *CsiDetachContinue = nullptr;
+  Function *CsiTaskEntry = nullptr, *CsiTaskExit = nullptr;
+  Function *CsiBeforeSync = nullptr, *CsiAfterSync = nullptr;
 
-  Function *MemmoveFn, *MemcpyFn, *MemsetFn;
-  Function *InitCallsiteToFunction;
+  Function *MemmoveFn = nullptr, *MemcpyFn = nullptr, *MemsetFn = nullptr;
+  Function *InitCallsiteToFunction = nullptr;
   // GlobalVariable *DisableInstrGV;
 
   // Runtime unit initialization
-  Function *RTUnitInit;
+  Function *RTUnitInit = nullptr;
 
   Type *IntptrTy;
   DenseMap<StringRef, uint64_t> FuncOffsetMap;
