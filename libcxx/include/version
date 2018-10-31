@@ -110,6 +110,7 @@ __cpp_lib_void_t                            201411L <type_traits>
 # define __cpp_lib_filesystem                           201703L
 # define __cpp_lib_invoke                               201411L
 # define __cpp_lib_void_t                               201411L
+# define __cpp_lib_node_extract                         201606L
 #endif
 
 #if _LIBCPP_STD_VER > 17

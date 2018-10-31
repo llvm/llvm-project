@@ -127,6 +127,15 @@ public:
     iterator erase(const_iterator first, const_iterator last);
     void clear() noexcept;
 
+    template<class H2, class P2>
+      void merge(unordered_set<Key, H2, P2, Allocator>& source);         // C++17
+    template<class H2, class P2>
+      void merge(unordered_set<Key, H2, P2, Allocator>&& source);        // C++17
+    template<class H2, class P2>
+      void merge(unordered_multiset<Key, H2, P2, Allocator>& source);    // C++17
+    template<class H2, class P2>
+      void merge(unordered_multiset<Key, H2, P2, Allocator>&& source);   // C++17
+
     void swap(unordered_set&)
        noexcept(allocator_traits<Allocator>::is_always_equal::value &&
                  noexcept(swap(declval<hasher&>(), declval<hasher&>())) &&
@@ -282,6 +291,15 @@ public:
     iterator erase(const_iterator first, const_iterator last);
     void clear() noexcept;
 
+    template<class H2, class P2>
+      void merge(unordered_multiset<Key, H2, P2, Allocator>& source);    // C++17
+    template<class H2, class P2>
+      void merge(unordered_multiset<Key, H2, P2, Allocator>&& source);   // C++17
+    template<class H2, class P2>
+      void merge(unordered_set<Key, H2, P2, Allocator>& source);         // C++17
+    template<class H2, class P2>
+      void merge(unordered_set<Key, H2, P2, Allocator>&& source);        // C++17
+
     void swap(unordered_multiset&)
        noexcept(allocator_traits<Allocator>::is_always_equal::value &&
                  noexcept(swap(declval<hasher&>(), declval<hasher&>())) &&
@@ -348,6 +366,9 @@ template <class Value, class Hash, class Pred, class Alloc>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <class _Value, class _Hash, class _Pred, class _Alloc>
+class unordered_multiset;
+
 template <class _Value, class _Hash = hash<_Value>, class _Pred = equal_to<_Value>,
           class _Alloc = allocator<_Value> >
 class _LIBCPP_TEMPLATE_VIS unordered_set
@@ -384,6 +405,11 @@ public:
     typedef __set_node_handle<typename __table::__node, allocator_type> node_type;
     typedef __insert_return_type<iterator, node_type> insert_return_type;
 #endif
+
+    template <class _Value2, class _Hash2, class _Pred2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS unordered_set;
+    template <class _Value2, class _Hash2, class _Pred2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS unordered_multiset;
 
     _LIBCPP_INLINE_VISIBILITY
     unordered_set()
@@ -589,6 +615,39 @@ public:
     node_type extract(const_iterator __it)
     {
         return __table_.template __node_handle_extract<node_type>(__it);
+    }
+
+    template<class _H2, class _P2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(unordered_set<key_type, _H2, _P2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __table_.__node_handle_merge_unique(__source.__table_);
+    }
+    template<class _H2, class _P2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(unordered_set<key_type, _H2, _P2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __table_.__node_handle_merge_unique(__source.__table_);
+    }
+    template<class _H2, class _P2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(unordered_multiset<key_type, _H2, _P2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __table_.__node_handle_merge_unique(__source.__table_);
+    }
+    template<class _H2, class _P2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(unordered_multiset<key_type, _H2, _P2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __table_.__node_handle_merge_unique(__source.__table_);
     }
 #endif
 
@@ -938,6 +997,11 @@ public:
     typedef __set_node_handle<typename __table::__node, allocator_type> node_type;
 #endif
 
+    template <class _Value2, class _Hash2, class _Pred2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS unordered_set;
+    template <class _Value2, class _Hash2, class _Pred2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS unordered_multiset;
+
     _LIBCPP_INLINE_VISIBILITY
     unordered_multiset()
         _NOEXCEPT_(is_nothrow_default_constructible<__table>::value)
@@ -1101,6 +1165,39 @@ public:
     node_type extract(key_type const& __key)
     {
         return __table_.template __node_handle_extract<node_type>(__key);
+    }
+
+    template <class _H2, class _P2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(unordered_multiset<key_type, _H2, _P2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        return __table_.__node_handle_merge_multi(__source.__table_);
+    }
+    template <class _H2, class _P2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(unordered_multiset<key_type, _H2, _P2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        return __table_.__node_handle_merge_multi(__source.__table_);
+    }
+    template <class _H2, class _P2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(unordered_set<key_type, _H2, _P2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        return __table_.__node_handle_merge_multi(__source.__table_);
+    }
+    template <class _H2, class _P2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(unordered_set<key_type, _H2, _P2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        return __table_.__node_handle_merge_multi(__source.__table_);
     }
 #endif
 
