@@ -238,6 +238,8 @@ public:
 
   void PreloadSymbols() override;
 
+  std::recursive_mutex &GetModuleMutex() const override;
+
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------
