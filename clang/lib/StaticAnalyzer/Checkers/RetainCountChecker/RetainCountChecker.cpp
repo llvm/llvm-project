@@ -175,9 +175,7 @@ void RetainCountChecker::checkPostStmt(const BlockExpr *BE,
     Regions.push_back(VR);
   }
 
-  state =
-    state->scanReachableSymbols<StopTrackingCallback>(Regions.data(),
-                                    Regions.data() + Regions.size()).getState();
+  state = state->scanReachableSymbols<StopTrackingCallback>(Regions).getState();
   C.addTransition(state);
 }
 
