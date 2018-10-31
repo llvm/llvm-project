@@ -212,7 +212,7 @@ static FileSpec resolveCompDir(const char *path_from_dwarf) {
     return local_spec;
 
   FileSpec resolved_symlink;
-  const auto error = FileSystem::Readlink(local_spec, resolved_symlink);
+  const auto error = FileSystem::Instance().Readlink(local_spec, resolved_symlink);
   if (error.Success())
     return resolved_symlink;
 

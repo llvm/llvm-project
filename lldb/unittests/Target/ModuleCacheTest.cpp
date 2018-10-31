@@ -5,12 +5,13 @@
 #include "llvm/Support/Path.h"
 
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ModuleCache.h"
-#include "TestingSupport/TestUtilities.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -65,6 +66,7 @@ static FileSpec GetSysrootView(FileSpec spec, const char *hostname) {
 }
 
 void ModuleCacheTest::SetUpTestCase() {
+  FileSystem::Initialize();
   HostInfo::Initialize();
   ObjectFileELF::Initialize();
 
@@ -75,6 +77,7 @@ void ModuleCacheTest::SetUpTestCase() {
 void ModuleCacheTest::TearDownTestCase() {
   ObjectFileELF::Terminate();
   HostInfo::Terminate();
+  FileSystem::Terminate();
 }
 
 static void VerifyDiskState(const FileSpec &cache_dir, const char *hostname) {

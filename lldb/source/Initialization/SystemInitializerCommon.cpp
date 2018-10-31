@@ -19,6 +19,7 @@
 #include "Plugins/ObjectContainer/BSD-Archive/ObjectContainerBSDArchive.h"
 #include "Plugins/ObjectContainer/Universal-Mach-O/ObjectContainerUniversalMachO.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -69,6 +70,7 @@ void SystemInitializerCommon::Initialize() {
   }
 #endif
 
+  FileSystem::Initialize();
   Log::Initialize();
   HostInfo::Initialize();
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
@@ -125,4 +127,5 @@ void SystemInitializerCommon::Terminate() {
 
   HostInfo::Terminate();
   Log::DisableAllLogChannels();
+  FileSystem::Terminate();
 }

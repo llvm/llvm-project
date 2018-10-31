@@ -8,20 +8,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "gtest/gtest.h"
+
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
+#include "TestingSupport/TestUtilities.h"
+
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Utility/StreamString.h"
-#include "TestingSupport/TestUtilities.h"
+
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
-#include "gtest/gtest.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -29,6 +33,7 @@ using namespace lldb;
 class DWARFCallFrameInfoTest : public testing::Test {
 public:
   void SetUp() override {
+    FileSystem::Initialize();
     HostInfo::Initialize();
     ObjectFileELF::Initialize();
   }
@@ -36,6 +41,7 @@ public:
   void TearDown() override {
     ObjectFileELF::Terminate();
     HostInfo::Terminate();
+    FileSystem::Terminate();
   }
 
 protected:

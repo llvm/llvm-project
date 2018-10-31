@@ -934,7 +934,7 @@ bool Instruction::TestEmulation(Stream *out_stream, const char *file_name) {
     out_stream->Printf("Instruction::TestEmulation:  Missing file_name.");
     return false;
   }
-  FILE *test_file = FileSystem::Fopen(file_name, "r");
+  FILE *test_file = FileSystem::Instance().Fopen(file_name, "r");
   if (!test_file) {
     out_stream->Printf(
         "Instruction::TestEmulation: Attempt to open test file failed.");

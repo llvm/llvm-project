@@ -484,7 +484,7 @@ Status AdbClient::SyncService::internalPushFile(const FileSpec &local_file,
       return Status("Failed to send file chunk: %s", error.AsCString());
   }
   error = SendSyncRequest(
-      kDONE, llvm::sys::toTimeT(FileSystem::GetModificationTime(local_file)),
+      kDONE, llvm::sys::toTimeT(FileSystem::Instance().GetModificationTime(local_file)),
       nullptr);
   if (error.Fail())
     return error;

@@ -405,14 +405,14 @@ void SourceManager::FindLinesMatchingRegex(FileSpec &file_spec,
 SourceManager::File::File(const FileSpec &file_spec,
                           lldb::DebuggerSP debugger_sp)
     : m_file_spec_orig(file_spec), m_file_spec(file_spec),
-      m_mod_time(FileSystem::GetModificationTime(file_spec)),
+      m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
       m_debugger_wp(debugger_sp) {
   CommonInitializer(file_spec, nullptr);
 }
 
 SourceManager::File::File(const FileSpec &file_spec, Target *target)
     : m_file_spec_orig(file_spec), m_file_spec(file_spec),
-      m_mod_time(FileSystem::GetModificationTime(file_spec)),
+      m_mod_time(FileSystem::Instance().GetModificationTime(file_spec)),
       m_debugger_wp(target ? target->GetDebugger().shared_from_this()
                            : DebuggerSP()) {
   CommonInitializer(file_spec, target);
@@ -457,7 +457,7 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
             SymbolContext sc;
             sc_list.GetContextAtIndex(0, sc);
             m_file_spec = sc.comp_unit;
-            m_mod_time = FileSystem::GetModificationTime(m_file_spec);
+            m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
           }
         }
       }
@@ -470,7 +470,7 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
         if (target->GetSourcePathMap().FindFile(m_file_spec, new_file_spec) ||
             target->GetImages().FindSourceFile(m_file_spec, new_file_spec)) {
           m_file_spec = new_file_spec;
-          m_mod_time = FileSystem::GetModificationTime(m_file_spec);
+          m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
         }
       }
     }
@@ -550,7 +550,7 @@ void SourceManager::File::UpdateIfNeeded() {
   // TODO: use host API to sign up for file modifications to anything in our
   // source cache and only update when we determine a file has been updated.
   // For now we check each time we want to display info for the file.
-  auto curr_mod_time = FileSystem::GetModificationTime(m_file_spec);
+  auto curr_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
 
   if (curr_mod_time != llvm::sys::TimePoint<>() &&
       m_mod_time != curr_mod_time) {
