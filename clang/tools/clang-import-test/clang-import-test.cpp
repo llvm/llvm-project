@@ -182,8 +182,7 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
       Inv->getHeaderSearchOpts().UseLibcxx = true;
     }
     if (isObjC(Id)) {
-      Inv->getLangOpts()->ObjC1 = 1;
-      Inv->getLangOpts()->ObjC2 = 1;
+      Inv->getLangOpts()->ObjC = 1;
     }
   }
   Inv->getLangOpts()->Bool = true;

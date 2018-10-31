@@ -996,3 +996,16 @@ template struct __declspec(dllexport) ExplicitInstantiationDeclTemplateBase2<int
 USEMEMFUNC(ExplicitInstantiationDeclTemplateBase2<int>, func)
 // M32-DAG: declare dllimport x86_thiscallcc void @"?func@?$ExplicitInstantiationDeclTemplateBase2@H@@QAEXXZ"
 // G32-DAG: define weak_odr dso_local x86_thiscallcc void @_ZN38ExplicitInstantiationDeclTemplateBase2IiE4funcEv
+
+namespace pr39496 {
+// Make sure dll attribute are inherited by static locals also in template
+// specializations.
+template <typename> struct __declspec(dllimport) S { int foo() { static int x; return x++; } };
+int foo() { S<int> s; return s.foo(); }
+// MO1-DAG: @"?x@?{{1|2}}??foo@?$S@H@pr39496@@Q{{[A-Z]*}}HXZ@4HA" = available_externally dllimport global i32 0, align 4
+
+template <typename> struct T { int foo() { static int x; return x++; } };
+extern template struct __declspec(dllimport) T<int>;
+int bar() { T<int> t; return t.foo(); }
+// MO1-DAG: @"?x@?{{1|2}}??foo@?$T@H@pr39496@@Q{{[A-Z]*}}HXZ@4HA" = available_externally dllimport global i32 0, align 4
+}

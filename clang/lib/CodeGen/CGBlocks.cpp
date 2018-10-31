@@ -197,7 +197,7 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
   std::string descName;
 
   // If an equivalent block descriptor global variable exists, return it.
-  if (C.getLangOpts().ObjC1 &&
+  if (C.getLangOpts().ObjC &&
       CGM.getLangOpts().getGC() == LangOptions::NonGC) {
     descName = getBlockDescriptorName(blockInfo, CGM);
     if (llvm::GlobalValue *desc = CGM.getModule().getNamedValue(descName))
@@ -243,7 +243,7 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
     CGM.GetAddrOfConstantCString(typeAtEncoding).getPointer(), i8p));
 
   // GC layout.
-  if (C.getLangOpts().ObjC1) {
+  if (C.getLangOpts().ObjC) {
     if (CGM.getLangOpts().getGC() != LangOptions::NonGC)
       elements.add(CGM.getObjCRuntime().BuildGCBlockLayout(CGM, blockInfo));
     else
@@ -533,7 +533,7 @@ static void computeBlockInfo(CodeGenModule &CGM, CodeGenFunction *CGF,
     info.CanBeGlobal = true;
     return;
   }
-  else if (C.getLangOpts().ObjC1 &&
+  else if (C.getLangOpts().ObjC &&
            CGM.getLangOpts().getGC() == LangOptions::NonGC)
     info.HasCapturedVariableLayout = true;
 
@@ -859,10 +859,12 @@ static void enterBlockScope(CodeGenFunction &CGF, BlockDecl *block) {
 /// Enter a full-expression with a non-trivial number of objects to
 /// clean up.  This is in this file because, at the moment, the only
 /// kind of cleanup object is a BlockDecl*.
-void CodeGenFunction::enterNonTrivialFullExpression(const ExprWithCleanups *E) {
-  assert(E->getNumObjects() != 0);
-  for (const ExprWithCleanups::CleanupObject &C : E->getObjects())
-    enterBlockScope(*this, C);
+void CodeGenFunction::enterNonTrivialFullExpression(const FullExpr *E) {
+  if (const auto EWC = dyn_cast<ExprWithCleanups>(E)) {
+    assert(EWC->getNumObjects() != 0);
+    for (const ExprWithCleanups::CleanupObject &C : EWC->getObjects())
+      enterBlockScope(*this, C);
+  }
 }
 
 /// Find the layout for the given block in a linked list and remove it.

@@ -2648,9 +2648,9 @@ InputKind ASTUnit::getInputKind() const {
   else if (LangOpts.RenderScript)
     Lang = InputKind::RenderScript;
   else if (LangOpts.CPlusPlus)
-    Lang = LangOpts.ObjC1 ? InputKind::ObjCXX : InputKind::CXX;
+    Lang = LangOpts.ObjC ? InputKind::ObjCXX : InputKind::CXX;
   else
-    Lang = LangOpts.ObjC1 ? InputKind::ObjC : InputKind::C;
+    Lang = LangOpts.ObjC ? InputKind::ObjC : InputKind::C;
 
   InputKind::Format Fmt = InputKind::Source;
   if (LangOpts.getCompilingModule() == LangOptions::CMK_ModuleMap)

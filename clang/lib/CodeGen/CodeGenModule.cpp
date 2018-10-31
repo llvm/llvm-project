@@ -126,7 +126,7 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
 
   RuntimeCC = getTargetCodeGenInfo().getABIInfo().getRuntimeCC();
 
-  if (LangOpts.ObjC1)
+  if (LangOpts.ObjC)
     createObjCRuntime();
   if (LangOpts.OpenCL)
     createOpenCLRuntime();
@@ -149,7 +149,7 @@ CodeGenModule::CodeGenModule(ASTContext &C, const HeaderSearchOptions &HSO,
 
   Block.GlobalUniqueCount = 0;
 
-  if (C.getLangOpts().ObjC1)
+  if (C.getLangOpts().ObjC)
     ObjCData.reset(new ObjCEntrypoints());
 
   if (CodeGenOpts.hasProfileClangUse()) {

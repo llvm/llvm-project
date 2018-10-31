@@ -1044,12 +1044,7 @@ bool LambdaExpr::isMutable() const {
 ExprWithCleanups::ExprWithCleanups(Expr *subexpr,
                                    bool CleanupsHaveSideEffects,
                                    ArrayRef<CleanupObject> objects)
-    : Expr(ExprWithCleanupsClass, subexpr->getType(),
-           subexpr->getValueKind(), subexpr->getObjectKind(),
-           subexpr->isTypeDependent(), subexpr->isValueDependent(),
-           subexpr->isInstantiationDependent(),
-           subexpr->containsUnexpandedParameterPack()),
-      SubExpr(subexpr) {
+    : FullExpr(ExprWithCleanupsClass, subexpr) {
   ExprWithCleanupsBits.CleanupsHaveSideEffects = CleanupsHaveSideEffects;
   ExprWithCleanupsBits.NumObjects = objects.size();
   for (unsigned i = 0, e = objects.size(); i != e; ++i)
@@ -1066,7 +1061,7 @@ ExprWithCleanups *ExprWithCleanups::Create(const ASTContext &C, Expr *subexpr,
 }
 
 ExprWithCleanups::ExprWithCleanups(EmptyShell empty, unsigned numObjects)
-    : Expr(ExprWithCleanupsClass, empty) {
+    : FullExpr(ExprWithCleanupsClass, empty) {
   ExprWithCleanupsBits.NumObjects = numObjects;
 }
 

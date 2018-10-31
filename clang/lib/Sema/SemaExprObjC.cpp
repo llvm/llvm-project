@@ -3888,7 +3888,7 @@ static bool CheckObjCBridgeCFCast(Sema &S, QualType castType, Expr *castExpr,
 }
 
 void Sema::CheckTollFreeBridgeCast(QualType castType, Expr *castExpr) {
-  if (!getLangOpts().ObjC1)
+  if (!getLangOpts().ObjC)
     return;
   // warn in presence of __bridge casting to or from a toll free bridge cast.
   ARCConversionTypeClass exprACTC = classifyTypeForARCConversion(castExpr->getType());
@@ -3960,7 +3960,7 @@ void Sema::CheckObjCBridgeRelatedCast(QualType castType, Expr *castExpr) {
 
 bool Sema::CheckTollFreeBridgeStaticCast(QualType castType, Expr *castExpr,
                                          CastKind &Kind) {
-  if (!getLangOpts().ObjC1)
+  if (!getLangOpts().ObjC)
     return false;
   ARCConversionTypeClass exprACTC =
     classifyTypeForARCConversion(castExpr->getType());

@@ -1267,6 +1267,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::ObjCPropertyRefExprClass:
       llvm_unreachable("These are handled by PseudoObjectExpr");
 
+    case Expr::ConstantExprClass:
+      return Visit(cast<ConstantExpr>(S)->getSubExpr(), Pred, DstTop);
+
     case Stmt::GNUNullExprClass: {
       // GNU __null is a pointer-width integer, not an actual pointer.
       ProgramStateRef state = Pred->getState();

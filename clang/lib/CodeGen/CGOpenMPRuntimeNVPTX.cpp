@@ -4255,3 +4255,56 @@ void CGOpenMPRuntimeNVPTX::getDefaultScheduleAndChunk(
       CGF.getContext().getIntTypeForBitwidth(32, /*Signed=*/0),
       SourceLocation());
 }
+
+void CGOpenMPRuntimeNVPTX::adjustTargetSpecificDataForLambdas(
+    CodeGenFunction &CGF, const OMPExecutableDirective &D) const {
+  assert(isOpenMPTargetExecutionDirective(D.getDirectiveKind()) &&
+         " Expected target-based directive.");
+  const CapturedStmt *CS = D.getCapturedStmt(OMPD_target);
+  for (const CapturedStmt::Capture &C : CS->captures()) {
+    // Capture variables captured by reference in lambdas for target-based
+    // directives.
+    if (!C.capturesVariable())
+      continue;
+    const VarDecl *VD = C.getCapturedVar();
+    const auto *RD = VD->getType()
+                         .getCanonicalType()
+                         .getNonReferenceType()
+                         ->getAsCXXRecordDecl();
+    if (!RD || !RD->isLambda())
+      continue;
+    Address VDAddr = CGF.GetAddrOfLocalVar(VD);
+    LValue VDLVal;
+    if (VD->getType().getCanonicalType()->isReferenceType())
+      VDLVal = CGF.EmitLoadOfReferenceLValue(VDAddr, VD->getType());
+    else
+      VDLVal = CGF.MakeAddrLValue(
+          VDAddr, VD->getType().getCanonicalType().getNonReferenceType());
+    llvm::DenseMap<const VarDecl *, FieldDecl *> Captures;
+    FieldDecl *ThisCapture = nullptr;
+    RD->getCaptureFields(Captures, ThisCapture);
+    if (ThisCapture && CGF.CapturedStmtInfo->isCXXThisExprCaptured()) {
+      LValue ThisLVal =
+          CGF.EmitLValueForFieldInitialization(VDLVal, ThisCapture);
+      llvm::Value *CXXThis = CGF.LoadCXXThis();
+      CGF.EmitStoreOfScalar(CXXThis, ThisLVal);
+    }
+    for (const LambdaCapture &LC : RD->captures()) {
+      if (LC.getCaptureKind() != LCK_ByRef)
+        continue;
+      const VarDecl *VD = LC.getCapturedVar();
+      if (!CS->capturesVariable(VD))
+        continue;
+      auto It = Captures.find(VD);
+      assert(It != Captures.end() && "Found lambda capture without field.");
+      LValue VarLVal = CGF.EmitLValueForFieldInitialization(VDLVal, It->second);
+      Address VDAddr = CGF.GetAddrOfLocalVar(VD);
+      if (VD->getType().getCanonicalType()->isReferenceType())
+        VDAddr = CGF.EmitLoadOfReferenceLValue(VDAddr,
+                                               VD->getType().getCanonicalType())
+                     .getAddress();
+      CGF.EmitStoreOfScalar(VDAddr.getPointer(), VarLVal);
+    }
+  }
+}
+

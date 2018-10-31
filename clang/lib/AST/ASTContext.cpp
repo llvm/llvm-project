@@ -5087,7 +5087,7 @@ bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2) {
     return true;
   }
 
-  if (getLangOpts().ObjC1) {
+  if (getLangOpts().ObjC) {
     const auto *T1OPType = T1->getAs<ObjCObjectPointerType>();
     const auto *T2OPType = T2->getAs<ObjCObjectPointerType>();
     if (T1OPType && T2OPType) {
@@ -6024,7 +6024,7 @@ bool ASTContext::BlockRequiresCopying(QualType Ty,
 bool ASTContext::getByrefLifetime(QualType Ty,
                               Qualifiers::ObjCLifetime &LifeTime,
                               bool &HasByrefExtendedLayout) const {
-  if (!getLangOpts().ObjC1 ||
+  if (!getLangOpts().ObjC ||
       getLangOpts().getGC() != LangOptions::NonGC)
     return false;
 
@@ -7702,7 +7702,7 @@ Qualifiers::GC ASTContext::getObjCGCAttrKind(QualType Ty) const {
   if (getLangOpts().getGC() == LangOptions::NonGC)
     return Qualifiers::GCNone;
 
-  assert(getLangOpts().ObjC1);
+  assert(getLangOpts().ObjC);
   Qualifiers::GC GCAttrs = Ty.getObjCGCAttr();
 
   // Default behaviour under objective-C's gc is for ObjC pointers

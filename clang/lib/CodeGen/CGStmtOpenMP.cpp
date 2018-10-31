@@ -1738,6 +1738,8 @@ static void emitOMPSimdRegion(CodeGenFunction &CGF, const OMPLoopDirective &S,
     CGF.EmitOMPReductionClauseInit(S, LoopScope);
     bool HasLastprivateClause = CGF.EmitOMPLastprivateClauseInit(S, LoopScope);
     (void)LoopScope.Privatize();
+    if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
+      CGF.CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
     CGF.EmitOMPInnerLoop(S, LoopScope.requiresCleanups(), S.getCond(),
                          S.getInc(),
                          [&S](CodeGenFunction &CGF) {
@@ -2296,6 +2298,8 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
       EmitOMPPrivateLoopCounters(S, LoopScope);
       EmitOMPLinearClause(S, LoopScope);
       (void)LoopScope.Privatize();
+      if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
+        CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(*this, S);
 
       // Detect the loop schedule kind and chunk.
       const Expr *ChunkExpr = nullptr;
@@ -2589,6 +2593,8 @@ void CodeGenFunction::EmitSections(const OMPExecutableDirective &S) {
     HasLastprivates = CGF.EmitOMPLastprivateClauseInit(S, LoopScope);
     CGF.EmitOMPReductionClauseInit(S, LoopScope);
     (void)LoopScope.Privatize();
+    if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
+      CGF.CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
 
     // Emit static non-chunked loop.
     OpenMPScheduleTy ScheduleKind;
@@ -3342,6 +3348,8 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
       HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
       EmitOMPPrivateLoopCounters(S, LoopScope);
       (void)LoopScope.Privatize();
+      if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
+        CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(*this, S);
 
       // Detect the distribute schedule kind and chunk.
       llvm::Value *Chunk = nullptr;
@@ -3978,13 +3986,13 @@ void CodeGenFunction::EmitOMPAtomicDirective(const OMPAtomicDirective &S) {
   }
 
   const Stmt *CS = S.getInnermostCapturedStmt()->IgnoreContainers();
-  if (const auto *EWC = dyn_cast<ExprWithCleanups>(CS))
-    enterFullExpression(EWC);
+  if (const auto *FE = dyn_cast<FullExpr>(CS))
+    enterFullExpression(FE);
   // Processing for statements under 'atomic capture'.
   if (const auto *Compound = dyn_cast<CompoundStmt>(CS)) {
     for (const Stmt *C : Compound->body()) {
-      if (const auto *EWC = dyn_cast<ExprWithCleanups>(C))
-        enterFullExpression(EWC);
+      if (const auto *FE = dyn_cast<FullExpr>(C))
+        enterFullExpression(FE);
     }
   }
 
@@ -4071,6 +4079,8 @@ static void emitTargetRegion(CodeGenFunction &CGF, const OMPTargetDirective &S,
   (void)CGF.EmitOMPFirstprivateClause(S, PrivateScope);
   CGF.EmitOMPPrivateClause(S, PrivateScope);
   (void)PrivateScope.Privatize();
+  if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
+    CGF.CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
 
   CGF.EmitStmt(S.getCapturedStmt(OMPD_target)->getCapturedStmt());
 }
@@ -4151,6 +4161,8 @@ static void emitTargetTeamsRegion(CodeGenFunction &CGF, PrePostActionTy &Action,
     CGF.EmitOMPPrivateClause(S, PrivateScope);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
+    if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
+      CGF.CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
     CGF.EmitStmt(CS->getCapturedStmt());
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_teams);
   };
@@ -4709,6 +4721,8 @@ static void emitTargetParallelRegion(CodeGenFunction &CGF,
     CGF.EmitOMPPrivateClause(S, PrivateScope);
     CGF.EmitOMPReductionClauseInit(S, PrivateScope);
     (void)PrivateScope.Privatize();
+    if (isOpenMPTargetExecutionDirective(S.getDirectiveKind()))
+      CGF.CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
     // TODO: Add support for clauses.
     CGF.EmitStmt(CS->getCapturedStmt());
     CGF.EmitOMPReductionClauseFinal(S, /*ReductionKind=*/OMPD_parallel);

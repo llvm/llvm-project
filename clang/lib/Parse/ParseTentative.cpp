@@ -223,7 +223,7 @@ Parser::TPResult Parser::TryConsumeDeclarationSpecifier() {
   default:
     ConsumeAnyToken();
 
-    if (getLangOpts().ObjC1 && Tok.is(tok::less))
+    if (getLangOpts().ObjC && Tok.is(tok::less))
       return TryParseProtocolQualifiers();
     break;
   }
@@ -649,7 +649,7 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
     return CAK_NotAttributeSpecifier;
 
   // No tentative parsing if we don't need to look for ']]' or a lambda.
-  if (!Disambiguate && !getLangOpts().ObjC1)
+  if (!Disambiguate && !getLangOpts().ObjC)
     return CAK_AttributeSpecifier;
 
   RevertingTentativeParsingAction PA(*this);
@@ -658,7 +658,7 @@ Parser::isCXX11AttributeSpecifier(bool Disambiguate,
   ConsumeBracket();
 
   // Outside Obj-C++11, treat anything with a matching ']]' as an attribute.
-  if (!getLangOpts().ObjC1) {
+  if (!getLangOpts().ObjC) {
     ConsumeBracket();
 
     bool IsAttribute = SkipUntil(tok::r_square);
@@ -1286,7 +1286,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
 
     const Token &Next = NextToken();
     // In 'foo bar', 'foo' is always a type name outside of Objective-C.
-    if (!getLangOpts().ObjC1 && Next.is(tok::identifier))
+    if (!getLangOpts().ObjC && Next.is(tok::identifier))
       return TPResult::True;
 
     if (Next.isNot(tok::coloncolon) && Next.isNot(tok::less)) {
@@ -1559,7 +1559,7 @@ Parser::isCXXDeclarationSpecifier(Parser::TPResult BracedCastResult,
   case tok::annot_typename:
   case_typename:
     // In Objective-C, we might have a protocol-qualified type.
-    if (getLangOpts().ObjC1 && NextToken().is(tok::less)) {
+    if (getLangOpts().ObjC && NextToken().is(tok::less)) {
       // Tentatively parse the protocol qualifiers.
       RevertingTentativeParsingAction PA(*this);
       ConsumeAnyToken(); // The type token

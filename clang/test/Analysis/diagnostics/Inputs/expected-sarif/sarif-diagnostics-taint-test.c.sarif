@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json.schemastore.org/sarif-2.0.0",
+  "runs": [
+    {
+      "files": {
+        "file:sarif-diagnostics-taint-test.c": {
+          "fileLocation": {
+            "uri": "file:sarif-diagnostics-taint-test.c"
+          },
+          "length": 500,
+          "mimeType": "text/plain",
+          "roles": [
+            "resultFile"
+          ]
+        }
+      },
+      "results": [
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Calling 'f'"
+                        },
+                        "physicalLocation": {
+                          "fileLocation": {
+                            "uri": "file:sarif-diagnostics-taint-test.c"
+                          },
+                          "region": {
+                            "endColumn": 5,
+                            "endLine": 13,
+                            "startColumn": 3,
+                            "startLine": 13
+                          }
+                        }
+                      },
+                      "step": 1
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "tainted"
+                        },
+                        "physicalLocation": {
+                          "fileLocation": {
+                            "uri": "file:sarif-diagnostics-taint-test.c"
+                          },
+                          "region": {
+                            "endColumn": 17,
+                            "endLine": 9,
+                            "startColumn": 11,
+                            "startLine": 9
+                          }
+                        }
+                      },
+                      "step": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "locations": [
+            {
+              "physicalLocation": {
+                "fileLocation": {
+                  "uri": "file:sarif-diagnostics-taint-test.c"
+                },
+                "region": {
+                  "endColumn": 17,
+                  "endLine": 9,
+                  "startColumn": 11,
+                  "startLine": 9
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "tainted"
+          },
+          "ruleId": "debug.TaintTest"
+        }
+      ],
+      "tool": {
+        "fullName": "clang static analyzer",
+        "language": "en-US",
+        "name": "clang",
+        "version": "clang version 8.0.0 (https://github.com/llvm-project/clang.git a5ccb257a7a70928ede717a7c282f5fc8cbed310) (https://github.com/llvm-mirror/llvm.git 73cebd79c512f7129eca16b0f3a7abd21d2881e8)"
+      }
+    }
+  ],
+  "version": "2.0.0-beta.2018-09-26"
+}

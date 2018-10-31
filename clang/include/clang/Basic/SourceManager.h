@@ -1428,6 +1428,18 @@ public:
     return getFileID(Loc) == getMainFileID();
   }
 
+  /// Returns whether \p Loc is located in a <built-in> file.
+  bool isWrittenInBuiltinFile(SourceLocation Loc) const {
+    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    return Filename.equals("<built-in>");
+  }
+
+  /// Returns whether \p Loc is located in a <command line> file.
+  bool isWrittenInCommandLineFile(SourceLocation Loc) const {
+    StringRef Filename(getPresumedLoc(Loc).getFilename());
+    return Filename.equals("<command line>");
+  }
+
   /// Returns if a SourceLocation is in a system header.
   bool isInSystemHeader(SourceLocation Loc) const {
     return isSystem(getFileCharacteristic(Loc));

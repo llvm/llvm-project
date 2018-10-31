@@ -3507,6 +3507,10 @@ recurse:
   case Expr::CXXInheritedCtorInitExprClass:
     llvm_unreachable("unexpected statement kind");
 
+  case Expr::ConstantExprClass:
+    E = cast<ConstantExpr>(E)->getSubExpr();
+    goto recurse;
+
   // FIXME: invent manglings for all these.
   case Expr::BlockExprClass:
   case Expr::ChooseExprClass:

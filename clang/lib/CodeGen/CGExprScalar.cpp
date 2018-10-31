@@ -306,6 +306,8 @@ public:
     ICCK_IntegerTruncation = 0, // Legacy, was only used by clang 7.
     ICCK_UnsignedIntegerTruncation = 1,
     ICCK_SignedIntegerTruncation = 2,
+    ICCK_IntegerSignChange = 3,
+    ICCK_SignedIntegerTruncationOrSignChange = 4,
   };
 
   /// Emit a check that an [implicit] truncation of an integer  does not
@@ -313,15 +315,23 @@ public:
   void EmitIntegerTruncationCheck(Value *Src, QualType SrcType, Value *Dst,
                                   QualType DstType, SourceLocation Loc);
 
+  /// Emit a check that an [implicit] conversion of an integer does not change
+  /// the sign of the value. It is not UB, so we use the value after conversion.
+  /// NOTE: Src and Dst may be the exact same value! (point to the same thing)
+  void EmitIntegerSignChangeCheck(Value *Src, QualType SrcType, Value *Dst,
+                                  QualType DstType, SourceLocation Loc);
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are LLVM scalar types.
   struct ScalarConversionOpts {
     bool TreatBooleanAsSigned;
     bool EmitImplicitIntegerTruncationChecks;
+    bool EmitImplicitIntegerSignChangeChecks;
 
     ScalarConversionOpts()
         : TreatBooleanAsSigned(false),
-          EmitImplicitIntegerTruncationChecks(false) {}
+          EmitImplicitIntegerTruncationChecks(false),
+          EmitImplicitIntegerSignChangeChecks(false) {}
   };
   Value *
   EmitScalarConversion(Value *Src, QualType SrcTy, QualType DstTy,
@@ -947,10 +957,158 @@ void ScalarExprEmitter::EmitFloatConversionCheck(
                 SanitizerHandler::FloatCastOverflow, StaticArgs, OrigSrc);
 }
 
+// Should be called within CodeGenFunction::SanitizerScope RAII scope.
+// Returns 'i1 false' when the truncation Src -> Dst was lossy.
+static std::pair<ScalarExprEmitter::ImplicitConversionCheckKind,
+                 std::pair<llvm::Value *, SanitizerMask>>
+EmitIntegerTruncationCheckHelper(Value *Src, QualType SrcType, Value *Dst,
+                                 QualType DstType, CGBuilderTy &Builder) {
+  llvm::Type *SrcTy = Src->getType();
+  llvm::Type *DstTy = Dst->getType();
+  (void)DstTy; // Only used in assert()
+
+  // This should be truncation of integral types.
+  assert(Src != Dst);
+  assert(SrcTy->getScalarSizeInBits() > Dst->getType()->getScalarSizeInBits());
+  assert(isa<llvm::IntegerType>(SrcTy) && isa<llvm::IntegerType>(DstTy) &&
+         "non-integer llvm type");
+
+  bool SrcSigned = SrcType->isSignedIntegerOrEnumerationType();
+  bool DstSigned = DstType->isSignedIntegerOrEnumerationType();
+
+  // If both (src and dst) types are unsigned, then it's an unsigned truncation.
+  // Else, it is a signed truncation.
+  ScalarExprEmitter::ImplicitConversionCheckKind Kind;
+  SanitizerMask Mask;
+  if (!SrcSigned && !DstSigned) {
+    Kind = ScalarExprEmitter::ICCK_UnsignedIntegerTruncation;
+    Mask = SanitizerKind::ImplicitUnsignedIntegerTruncation;
+  } else {
+    Kind = ScalarExprEmitter::ICCK_SignedIntegerTruncation;
+    Mask = SanitizerKind::ImplicitSignedIntegerTruncation;
+  }
+
+  llvm::Value *Check = nullptr;
+  // 1. Extend the truncated value back to the same width as the Src.
+  Check = Builder.CreateIntCast(Dst, SrcTy, DstSigned, "anyext");
+  // 2. Equality-compare with the original source value
+  Check = Builder.CreateICmpEQ(Check, Src, "truncheck");
+  // If the comparison result is 'i1 false', then the truncation was lossy.
+  return std::make_pair(Kind, std::make_pair(Check, Mask));
+}
+
 void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
                                                    Value *Dst, QualType DstType,
                                                    SourceLocation Loc) {
   if (!CGF.SanOpts.hasOneOf(SanitizerKind::ImplicitIntegerTruncation))
+    return;
+
+  // We only care about int->int conversions here.
+  // We ignore conversions to/from pointer and/or bool.
+  if (!(SrcType->isIntegerType() && DstType->isIntegerType()))
+    return;
+
+  unsigned SrcBits = Src->getType()->getScalarSizeInBits();
+  unsigned DstBits = Dst->getType()->getScalarSizeInBits();
+  // This must be truncation. Else we do not care.
+  if (SrcBits <= DstBits)
+    return;
+
+  assert(!DstType->isBooleanType() && "we should not get here with booleans.");
+
+  // If the integer sign change sanitizer is enabled,
+  // and we are truncating from larger unsigned type to smaller signed type,
+  // let that next sanitizer deal with it.
+  bool SrcSigned = SrcType->isSignedIntegerOrEnumerationType();
+  bool DstSigned = DstType->isSignedIntegerOrEnumerationType();
+  if (CGF.SanOpts.has(SanitizerKind::ImplicitIntegerSignChange) &&
+      (!SrcSigned && DstSigned))
+    return;
+
+  CodeGenFunction::SanitizerScope SanScope(&CGF);
+
+  std::pair<ScalarExprEmitter::ImplicitConversionCheckKind,
+            std::pair<llvm::Value *, SanitizerMask>>
+      Check =
+          EmitIntegerTruncationCheckHelper(Src, SrcType, Dst, DstType, Builder);
+  // If the comparison result is 'i1 false', then the truncation was lossy.
+
+  // Do we care about this type of truncation?
+  if (!CGF.SanOpts.has(Check.second.second))
+    return;
+
+  llvm::Constant *StaticArgs[] = {
+      CGF.EmitCheckSourceLocation(Loc), CGF.EmitCheckTypeDescriptor(SrcType),
+      CGF.EmitCheckTypeDescriptor(DstType),
+      llvm::ConstantInt::get(Builder.getInt8Ty(), Check.first)};
+  CGF.EmitCheck(Check.second, SanitizerHandler::ImplicitConversion, StaticArgs,
+                {Src, Dst});
+}
+
+// Should be called within CodeGenFunction::SanitizerScope RAII scope.
+// Returns 'i1 false' when the conversion Src -> Dst changed the sign.
+static std::pair<ScalarExprEmitter::ImplicitConversionCheckKind,
+                 std::pair<llvm::Value *, SanitizerMask>>
+EmitIntegerSignChangeCheckHelper(Value *Src, QualType SrcType, Value *Dst,
+                                 QualType DstType, CGBuilderTy &Builder) {
+  llvm::Type *SrcTy = Src->getType();
+  llvm::Type *DstTy = Dst->getType();
+
+  assert(isa<llvm::IntegerType>(SrcTy) && isa<llvm::IntegerType>(DstTy) &&
+         "non-integer llvm type");
+
+  bool SrcSigned = SrcType->isSignedIntegerOrEnumerationType();
+  bool DstSigned = DstType->isSignedIntegerOrEnumerationType();
+  (void)SrcSigned; // Only used in assert()
+  (void)DstSigned; // Only used in assert()
+  unsigned SrcBits = SrcTy->getScalarSizeInBits();
+  unsigned DstBits = DstTy->getScalarSizeInBits();
+  (void)SrcBits; // Only used in assert()
+  (void)DstBits; // Only used in assert()
+
+  assert(((SrcBits != DstBits) || (SrcSigned != DstSigned)) &&
+         "either the widths should be different, or the signednesses.");
+
+  // NOTE: zero value is considered to be non-negative.
+  auto EmitIsNegativeTest = [&Builder](Value *V, QualType VType,
+                                       const char *Name) -> Value * {
+    // Is this value a signed type?
+    bool VSigned = VType->isSignedIntegerOrEnumerationType();
+    llvm::Type *VTy = V->getType();
+    if (!VSigned) {
+      // If the value is unsigned, then it is never negative.
+      // FIXME: can we encounter non-scalar VTy here?
+      return llvm::ConstantInt::getFalse(VTy->getContext());
+    }
+    // Get the zero of the same type with which we will be comparing.
+    llvm::Constant *Zero = llvm::ConstantInt::get(VTy, 0);
+    // %V.isnegative = icmp slt %V, 0
+    // I.e is %V *strictly* less than zero, does it have negative value?
+    return Builder.CreateICmp(llvm::ICmpInst::ICMP_SLT, V, Zero,
+                              llvm::Twine(Name) + "." + V->getName() +
+                                  ".negativitycheck");
+  };
+
+  // 1. Was the old Value negative?
+  llvm::Value *SrcIsNegative = EmitIsNegativeTest(Src, SrcType, "src");
+  // 2. Is the new Value negative?
+  llvm::Value *DstIsNegative = EmitIsNegativeTest(Dst, DstType, "dst");
+  // 3. Now, was the 'negativity status' preserved during the conversion?
+  //    NOTE: conversion from negative to zero is considered to change the sign.
+  //    (We want to get 'false' when the conversion changed the sign)
+  //    So we should just equality-compare the negativity statuses.
+  llvm::Value *Check = nullptr;
+  Check = Builder.CreateICmpEQ(SrcIsNegative, DstIsNegative, "signchangecheck");
+  // If the comparison result is 'false', then the conversion changed the sign.
+  return std::make_pair(
+      ScalarExprEmitter::ICCK_IntegerSignChange,
+      std::make_pair(Check, SanitizerKind::ImplicitIntegerSignChange));
+}
+
+void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
+                                                   Value *Dst, QualType DstType,
+                                                   SourceLocation Loc) {
+  if (!CGF.SanOpts.has(SanitizerKind::ImplicitIntegerSignChange))
     return;
 
   llvm::Type *SrcTy = Src->getType();
@@ -961,52 +1119,72 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
   if (!(SrcType->isIntegerType() && DstType->isIntegerType()))
     return;
 
-  assert(isa<llvm::IntegerType>(SrcTy) && isa<llvm::IntegerType>(DstTy) &&
-         "clang integer type lowered to non-integer llvm type");
-
-  unsigned SrcBits = SrcTy->getScalarSizeInBits();
-  unsigned DstBits = DstTy->getScalarSizeInBits();
-  // This must be truncation. Else we do not care.
-  if (SrcBits <= DstBits)
-    return;
-
-  assert(!DstType->isBooleanType() && "we should not get here with booleans.");
-
   bool SrcSigned = SrcType->isSignedIntegerOrEnumerationType();
   bool DstSigned = DstType->isSignedIntegerOrEnumerationType();
+  unsigned SrcBits = SrcTy->getScalarSizeInBits();
+  unsigned DstBits = DstTy->getScalarSizeInBits();
 
-  // If both (src and dst) types are unsigned, then it's an unsigned truncation.
-  // Else, it is a signed truncation.
-  ImplicitConversionCheckKind Kind;
-  SanitizerMask Mask;
-  if (!SrcSigned && !DstSigned) {
-    Kind = ICCK_UnsignedIntegerTruncation;
-    Mask = SanitizerKind::ImplicitUnsignedIntegerTruncation;
-  } else {
-    Kind = ICCK_SignedIntegerTruncation;
-    Mask = SanitizerKind::ImplicitSignedIntegerTruncation;
-  }
-
-  // Do we care about this type of truncation?
-  if (!CGF.SanOpts.has(Mask))
+  // Now, we do not need to emit the check in *all* of the cases.
+  // We can avoid emitting it in some obvious cases where it would have been
+  // dropped by the opt passes (instcombine) always anyways.
+  // If it's a cast between the same type, just differently-sugared. no check.
+  QualType CanonSrcType = CGF.getContext().getCanonicalType(SrcType);
+  QualType CanonDstType = CGF.getContext().getCanonicalType(DstType);
+  if (CanonSrcType == CanonDstType)
     return;
+  // At least one of the values needs to have signed type.
+  // If both are unsigned, then obviously, neither of them can be negative.
+  if (!SrcSigned && !DstSigned)
+    return;
+  // If the conversion is to *larger* *signed* type, then no check is needed.
+  // Because either sign-extension happens (so the sign will remain),
+  // or zero-extension will happen (the sign bit will be zero.)
+  if ((DstBits > SrcBits) && DstSigned)
+    return;
+  if (CGF.SanOpts.has(SanitizerKind::ImplicitSignedIntegerTruncation) &&
+      (SrcBits > DstBits) && SrcSigned) {
+    // If the signed integer truncation sanitizer is enabled,
+    // and this is a truncation from signed type, then no check is needed.
+    // Because here sign change check is interchangeable with truncation check.
+    return;
+  }
+  // That's it. We can't rule out any more cases with the data we have.
 
   CodeGenFunction::SanitizerScope SanScope(&CGF);
 
-  llvm::Value *Check = nullptr;
+  std::pair<ScalarExprEmitter::ImplicitConversionCheckKind,
+            std::pair<llvm::Value *, SanitizerMask>>
+      Check;
 
-  // 1. Extend the truncated value back to the same width as the Src.
-  Check = Builder.CreateIntCast(Dst, SrcTy, DstSigned, "anyext");
-  // 2. Equality-compare with the original source value
-  Check = Builder.CreateICmpEQ(Check, Src, "truncheck");
-  // If the comparison result is 'i1 false', then the truncation was lossy.
+  // Each of these checks needs to return 'false' when an issue was detected.
+  ImplicitConversionCheckKind CheckKind;
+  llvm::SmallVector<std::pair<llvm::Value *, SanitizerMask>, 2> Checks;
+  // So we can 'and' all the checks together, and still get 'false',
+  // if at least one of the checks detected an issue.
+
+  Check = EmitIntegerSignChangeCheckHelper(Src, SrcType, Dst, DstType, Builder);
+  CheckKind = Check.first;
+  Checks.emplace_back(Check.second);
+
+  if (CGF.SanOpts.has(SanitizerKind::ImplicitSignedIntegerTruncation) &&
+      (SrcBits > DstBits) && !SrcSigned && DstSigned) {
+    // If the signed integer truncation sanitizer was enabled,
+    // and we are truncating from larger unsigned type to smaller signed type,
+    // let's handle the case we skipped in that check.
+    Check =
+        EmitIntegerTruncationCheckHelper(Src, SrcType, Dst, DstType, Builder);
+    CheckKind = ICCK_SignedIntegerTruncationOrSignChange;
+    Checks.emplace_back(Check.second);
+    // If the comparison result is 'i1 false', then the truncation was lossy.
+  }
 
   llvm::Constant *StaticArgs[] = {
       CGF.EmitCheckSourceLocation(Loc), CGF.EmitCheckTypeDescriptor(SrcType),
       CGF.EmitCheckTypeDescriptor(DstType),
-      llvm::ConstantInt::get(Builder.getInt8Ty(), Kind)};
-  CGF.EmitCheck(std::make_pair(Check, Mask),
-                SanitizerHandler::ImplicitConversion, StaticArgs, {Src, Dst});
+      llvm::ConstantInt::get(Builder.getInt8Ty(), CheckKind)};
+  // EmitCheck() will 'and' all the checks together.
+  CGF.EmitCheck(Checks, SanitizerHandler::ImplicitConversion, StaticArgs,
+                {Src, Dst});
 }
 
 /// Emit a conversion from the specified type to the specified destination type,
@@ -1081,8 +1259,13 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   }
 
   // Ignore conversions like int -> uint.
-  if (SrcTy == DstTy)
+  if (SrcTy == DstTy) {
+    if (Opts.EmitImplicitIntegerSignChangeChecks)
+      EmitIntegerSignChangeCheck(Src, NoncanonicalSrcType, Src,
+                                 NoncanonicalDstType, Loc);
+
     return Src;
+  }
 
   // Handle pointer conversions next: pointers can only be converted to/from
   // other pointers and integers. Check for pointer types in terms of LLVM, as
@@ -1224,6 +1407,10 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
 
   if (Opts.EmitImplicitIntegerTruncationChecks)
     EmitIntegerTruncationCheck(Src, NoncanonicalSrcType, Res,
+                               NoncanonicalDstType, Loc);
+
+  if (Opts.EmitImplicitIntegerSignChangeChecks)
+    EmitIntegerSignChangeCheck(Src, NoncanonicalSrcType, Res,
                                NoncanonicalDstType, Loc);
 
   return Res;
@@ -2010,9 +2197,14 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
   case CK_IntegralCast: {
     ScalarConversionOpts Opts;
-    if (CGF.SanOpts.hasOneOf(SanitizerKind::ImplicitIntegerTruncation)) {
-      if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE))
-        Opts.EmitImplicitIntegerTruncationChecks = !ICE->isPartOfExplicitCast();
+    if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE)) {
+      if (CGF.SanOpts.hasOneOf(SanitizerKind::ImplicitConversion) &&
+          !ICE->isPartOfExplicitCast()) {
+        Opts.EmitImplicitIntegerTruncationChecks =
+            CGF.SanOpts.hasOneOf(SanitizerKind::ImplicitIntegerTruncation);
+        Opts.EmitImplicitIntegerSignChangeChecks =
+            CGF.SanOpts.has(SanitizerKind::ImplicitIntegerSignChange);
+      }
     }
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc(), Opts);

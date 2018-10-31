@@ -350,6 +350,11 @@ public:
       const OMPLoopDirective &S, OpenMPScheduleClauseKind &ScheduleKind,
       const Expr *&ChunkExpr) const override;
 
+  /// Adjust some parameters for the target-based directives, like addresses of
+  /// the variables captured by reference in lambdas.
+  void adjustTargetSpecificDataForLambdas(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D) const override;
+
 private:
   /// Track the execution mode when codegening directives within a target
   /// region. The appropriate mode (SPMD/NON-SPMD) is set on entry to the

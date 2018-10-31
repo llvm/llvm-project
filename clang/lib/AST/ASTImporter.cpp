@@ -1658,53 +1658,13 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
     auto ToDCOrErr = Importer.ImportContext(FromDC);
     return ToDCOrErr.takeError();
   }
-
-  const auto *FromRD = dyn_cast<RecordDecl>(FromDC);
+  llvm::SmallVector<Decl *, 8> ImportedDecls;
   for (auto *From : FromDC->decls()) {
     ExpectedDecl ImportedOrErr = import(From);
-    if (!ImportedOrErr) {
-      // For RecordDecls, failed import of a field will break the layout of the
-      // structure. Handle it as an error.
-      if (FromRD)
-        return ImportedOrErr.takeError();
+    if (!ImportedOrErr)
       // Ignore the error, continue with next Decl.
       // FIXME: Handle this case somehow better.
-      else
-        consumeError(ImportedOrErr.takeError());
-    }
-  }
-
-  // Reorder declarations in RecordDecls because they may have another
-  // order. Keeping field order is vitable because it determines structure
-  // layout.
-  // FIXME: This is an ugly fix. Unfortunately, I cannot come with better
-  // solution for this issue. We cannot defer expression import here because
-  // type import can depend on them.
-  if (!FromRD)
-    return Error::success();
-
-  auto ImportedDC = import(cast<Decl>(FromDC));
-  assert(ImportedDC);
-  auto *ToRD = cast<RecordDecl>(*ImportedDC);
-
-  for (auto *D : FromRD->decls()) {
-    if (isa<FieldDecl>(D) || isa<FriendDecl>(D)) {
-      Decl *ToD = Importer.GetAlreadyImportedOrNull(D);
-      assert(ToRD == ToD->getDeclContext() && ToRD->containsDecl(ToD));
-      ToRD->removeDecl(ToD);
-    }
-  }
-
-  assert(ToRD->field_empty());
-
-  for (auto *D : FromRD->decls()) {
-    if (isa<FieldDecl>(D) || isa<FriendDecl>(D)) {
-      Decl *ToD = Importer.GetAlreadyImportedOrNull(D);
-      assert(ToRD == ToD->getDeclContext());
-      assert(ToRD == ToD->getLexicalDeclContext());
-      assert(!ToRD->containsDecl(ToD));
-      ToRD->addDeclInternal(ToD);
-    }
+      consumeError(ImportedOrErr.takeError());
   }
 
   return Error::success();
@@ -5864,9 +5824,8 @@ ExpectedStmt ASTNodeImporter::VisitWhileStmt(WhileStmt *S) {
   SourceLocation ToWhileLoc;
   std::tie(ToConditionVariable, ToCond, ToBody, ToWhileLoc) = *Imp;
 
-  return new (Importer.getToContext()) WhileStmt(
-      Importer.getToContext(),
-      ToConditionVariable, ToCond, ToBody, ToWhileLoc);
+  return WhileStmt::Create(Importer.getToContext(), ToConditionVariable, ToCond,
+                           ToBody, ToWhileLoc);
 }
 
 ExpectedStmt ASTNodeImporter::VisitDoStmt(DoStmt *S) {
@@ -5958,8 +5917,8 @@ ExpectedStmt ASTNodeImporter::VisitReturnStmt(ReturnStmt *S) {
   const VarDecl *ToNRVOCandidate;
   std::tie(ToReturnLoc, ToRetValue, ToNRVOCandidate) = *Imp;
 
-  return new (Importer.getToContext()) ReturnStmt(
-      ToReturnLoc, ToRetValue, ToNRVOCandidate);
+  return ReturnStmt::Create(Importer.getToContext(), ToReturnLoc, ToRetValue,
+                            ToNRVOCandidate);
 }
 
 ExpectedStmt ASTNodeImporter::VisitCXXCatchStmt(CXXCatchStmt *S) {
