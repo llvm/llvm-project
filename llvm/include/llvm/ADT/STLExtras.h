@@ -195,6 +195,12 @@ void adl_swap(T &&lhs, T &&rhs) noexcept(
   adl_detail::adl_swap(std::forward<T>(lhs), std::forward<T>(rhs));
 }
 
+/// Test whether \p RangeOrContainer is empty. Similar to C++17 std::empty.
+template <typename T>
+constexpr bool empty(const T &RangeOrContainer) {
+  return adl_begin(RangeOrContainer) == adl_end(RangeOrContainer);
+}
+
 // mapped_iterator - This is a simple iterator adapter that causes a function to
 // be applied whenever operator* is invoked on the iterator.
 

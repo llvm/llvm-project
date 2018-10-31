@@ -136,8 +136,8 @@ const Expr *bugreporter::getDerefExpr(const Stmt *S) {
       E = AE->getBase();
     } else if (const auto *PE = dyn_cast<ParenExpr>(E)) {
       E = PE->getSubExpr();
-    } else if (const auto *EWC = dyn_cast<ExprWithCleanups>(E)) {
-      E = EWC->getSubExpr();
+    } else if (const auto *FE = dyn_cast<FullExpr>(E)) {
+      E = FE->getSubExpr();
     } else {
       // Other arbitrary stuff.
       break;
@@ -1494,8 +1494,8 @@ static const MemRegion *getLocationRegionIfReference(const Expr *E,
 static const Expr *peelOffOuterExpr(const Expr *Ex,
                                     const ExplodedNode *N) {
   Ex = Ex->IgnoreParenCasts();
-  if (const auto *EWC = dyn_cast<ExprWithCleanups>(Ex))
-    return peelOffOuterExpr(EWC->getSubExpr(), N);
+  if (const auto *FE = dyn_cast<FullExpr>(Ex))
+    return peelOffOuterExpr(FE->getSubExpr(), N);
   if (const auto *OVE = dyn_cast<OpaqueValueExpr>(Ex))
     return peelOffOuterExpr(OVE->getSourceExpr(), N);
   if (const auto *POE = dyn_cast<PseudoObjectExpr>(Ex)) {

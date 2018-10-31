@@ -94,6 +94,12 @@ public:
                                             const char *session_dictionary_name,
                                             const lldb::ProcessSP &process_sp);
 
+  typedef void *(*SWIGPythonCreateFrameRecognizer)(
+      const char *python_class_name, const char *session_dictionary_name);
+
+  typedef void *(*SWIGPythonGetRecognizedArguments)(
+      void *implementor, const lldb::StackFrameSP &frame_sp);
+
   typedef size_t (*SWIGPythonCalculateNumChildren)(void *implementor,
                                                    uint32_t max);
 
@@ -230,6 +236,13 @@ public:
   lldb::SearchDepth
   ScriptedBreakpointResolverSearchDepth(StructuredData::GenericSP
                                             implementor_sp) override;
+
+  StructuredData::GenericSP
+  CreateFrameRecognizer(const char *class_name) override;
+
+  lldb::ValueObjectListSP
+  GetRecognizedArguments(const StructuredData::ObjectSP &implementor,
+                         lldb::StackFrameSP frame_sp) override;
 
   StructuredData::GenericSP
   OSPlugin_CreatePluginObject(const char *class_name,
@@ -426,6 +439,8 @@ public:
       SWIGPythonCallCommandObject swig_call_command_object,
       SWIGPythonCallModuleInit swig_call_module_init,
       SWIGPythonCreateOSPlugin swig_create_os_plugin,
+      SWIGPythonCreateFrameRecognizer swig_create_frame_recognizer,
+      SWIGPythonGetRecognizedArguments swig_get_recognized_arguments,
       SWIGPythonScriptKeyword_Process swig_run_script_keyword_process,
       SWIGPythonScriptKeyword_Thread swig_run_script_keyword_thread,
       SWIGPythonScriptKeyword_Target swig_run_script_keyword_target,

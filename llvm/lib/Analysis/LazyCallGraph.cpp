@@ -619,7 +619,7 @@ LazyCallGraph::RefSCC::switchInternalEdgeToCall(
 
   // If the merge range is empty, then adding the edge didn't actually form any
   // new cycles. We're done.
-  if (MergeRange.begin() == MergeRange.end()) {
+  if (empty(MergeRange)) {
     // Now that the SCC structure is finalized, flip the kind to call.
     SourceN->setEdgeKind(TargetN, Edge::Call);
     return false; // No new cycle.

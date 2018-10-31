@@ -343,6 +343,10 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_CharacterLiteral;
     break;
 
+  case Stmt::ConstantExprClass:
+    return MakeCXCursor(cast<ConstantExpr>(S)->getSubExpr(),
+                        Parent, TU, RegionOfInterest);
+
   case Stmt::ParenExprClass:
     K = CXCursor_ParenExpr;
     break;

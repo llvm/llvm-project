@@ -2199,6 +2199,8 @@ DEF_TRAVERSE_STMT(ReturnStmt, {})
 DEF_TRAVERSE_STMT(SwitchStmt, {})
 DEF_TRAVERSE_STMT(WhileStmt, {})
 
+DEF_TRAVERSE_STMT(ConstantExpr, {})
+
 DEF_TRAVERSE_STMT(CXXDependentScopeMemberExpr, {
   TRY_TO(TraverseNestedNameSpecifierLoc(S->getQualifierLoc()));
   TRY_TO(TraverseDeclarationNameInfo(S->getMemberNameInfo()));

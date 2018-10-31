@@ -426,6 +426,12 @@ void ASTStmtWriter::VisitExpr(Expr *E) {
   Record.push_back(E->getObjectKind());
 }
 
+void ASTStmtWriter::VisitConstantExpr(ConstantExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getSubExpr());
+  Code = serialization::EXPR_CONSTANT;
+}
+
 void ASTStmtWriter::VisitPredefinedExpr(PredefinedExpr *E) {
   VisitExpr(E);
 

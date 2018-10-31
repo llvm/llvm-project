@@ -571,7 +571,6 @@ public:
   void setFlagWord(ELF::Elf32_Word W) { FlagWord = W; }
   void addMember(SectionBase *Sec) { GroupMembers.push_back(Sec); }
 
-  void initialize(SectionTableRef SecTable) override{};
   void accept(SectionVisitor &) const override;
   void finalize() override;
   void removeSymbols(function_ref<bool(const Symbol &)> ToRemove) override;

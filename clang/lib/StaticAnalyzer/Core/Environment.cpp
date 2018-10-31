@@ -44,6 +44,9 @@ static const Expr *ignoreTransparentExprs(const Expr *E) {
   case Stmt::ExprWithCleanupsClass:
     E = cast<ExprWithCleanups>(E)->getSubExpr();
     break;
+  case Stmt::ConstantExprClass:
+    E = cast<ConstantExpr>(E)->getSubExpr();
+    break;
   case Stmt::CXXBindTemporaryExprClass:
     E = cast<CXXBindTemporaryExpr>(E)->getSubExpr();
     break;

@@ -24,6 +24,7 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFormat.h"
@@ -40,6 +41,7 @@
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
+#include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -715,6 +717,23 @@ protected:
       result.SetStatus(eReturnStatusSuccessFinishResult);
     }
 
+    if (m_option_variable.show_recognized_args) {
+      auto recognized_frame = frame->GetRecognizedFrame();
+      if (recognized_frame) {
+        ValueObjectListSP recognized_arg_list =
+            recognized_frame->GetRecognizedArguments();
+        if (recognized_arg_list) {
+          for (auto &rec_value_sp : recognized_arg_list->GetObjects()) {
+            options.SetFormat(m_option_format.GetFormat());
+            options.SetVariableFormatDisplayLanguage(
+                rec_value_sp->GetPreferredDisplayLanguage());
+            options.SetRootValueObjectName(rec_value_sp->GetName().AsCString());
+            rec_value_sp->Dump(result.GetOutputStream(), options);
+          }
+        }
+      }
+    }
+
     if (m_interpreter.TruncationWarningNecessary()) {
       result.GetOutputStream().Printf(m_interpreter.TruncationWarningText(),
                                       m_cmd_name.c_str());
@@ -738,6 +757,370 @@ protected:
   OptionGroupValueObjectDisplay m_varobj_options;
 };
 
+#pragma mark CommandObjectFrameRecognizer
+
+static OptionDefinition g_frame_recognizer_add_options[] = {
+    // clang-format off
+  { LLDB_OPT_SET_ALL, false, "shlib",         's', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eModuleCompletion, eArgTypeShlibName,   "Name of the module or shared library that this recognizer applies to." },
+  { LLDB_OPT_SET_ALL, false, "function",      'n', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eSymbolCompletion, eArgTypeName,        "Name of the function that this recognizer applies to." },
+  { LLDB_OPT_SET_2,   false, "python-class",  'l', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypePythonClass, "Give the name of a Python class to use for this frame recognizer." },
+  { LLDB_OPT_SET_ALL, false, "regex",         'x', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,        "Function name and module name are actually regular expressions." }
+    // clang-format on
+};
+
+class CommandObjectFrameRecognizerAdd : public CommandObjectParsed {
+private:
+  class CommandOptions : public Options {
+  public:
+    CommandOptions() : Options() {}
+    ~CommandOptions() override = default;
+
+    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                          ExecutionContext *execution_context) override {
+      Status error;
+      const int short_option = m_getopt_table[option_idx].val;
+
+      switch (short_option) {
+      case 'l':
+        m_class_name = std::string(option_arg);
+        break;
+      case 's':
+        m_module = std::string(option_arg);
+        break;
+      case 'n':
+        m_function = std::string(option_arg);
+        break;
+      case 'x':
+        m_regex = true;
+        break;
+      default:
+        error.SetErrorStringWithFormat("unrecognized option '%c'",
+                                       short_option);
+        break;
+      }
+
+      return error;
+    }
+
+    void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_module = "";
+      m_function = "";
+      m_class_name = "";
+      m_regex = false;
+    }
+
+    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+      return llvm::makeArrayRef(g_frame_recognizer_add_options);
+    }
+
+    // Instance variables to hold the values for command options.
+    std::string m_class_name;
+    std::string m_module;
+    std::string m_function;
+    bool m_regex;
+  };
+
+  CommandOptions m_options;
+
+  Options *GetOptions() override { return &m_options; }
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override;
+
+public:
+  CommandObjectFrameRecognizerAdd(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "frame recognizer add",
+                            "Add a new frame recognizer.", nullptr),
+        m_options() {
+    SetHelpLong(R"(
+Frame recognizers allow for retrieving information about special frames based on
+ABI, arguments or other special properties of that frame, even without source
+code or debug info. Currently, one use case is to extract function arguments
+that would otherwise be unaccesible, or augment existing arguments.
+
+Adding a custom frame recognizer is possible by implementing a Python class
+and using the 'frame recognizer add' command. The Python class should have a
+'get_recognized_arguments' method and it will receive an argument of type
+lldb.SBFrame representing the current frame that we are trying to recognize.
+The method should return a (possibly empty) list of lldb.SBValue objects that
+represent the recognized arguments.
+
+An example of a recognizer that retrieves the file descriptor values from libc
+functions 'read', 'write' and 'close' follows:
+
+  class LibcFdRecognizer(object):
+    def get_recognized_arguments(self, frame):
+      if frame.name in ["read", "write", "close"]:
+        fd = frame.EvaluateExpression("$arg1").unsigned
+        value = lldb.target.CreateValueFromExpression("fd", "(int)%d" % fd)
+        return [value]
+      return []
+
+The file containing this implementation can be imported via 'command script
+import' and then we can register this recognizer with 'frame recognizer add'.
+It's important to restrict the recognizer to the libc library (which is
+libsystem_kernel.dylib on macOS) to avoid matching functions with the same name
+in other modules:
+
+(lldb) command script import .../fd_recognizer.py
+(lldb) frame recognizer add -l fd_recognizer.LibcFdRecognizer -n read -s libsystem_kernel.dylib
+
+When the program is stopped at the beginning of the 'read' function in libc, we
+can view the recognizer arguments in 'frame variable':
+
+(lldb) b read
+(lldb) r
+Process 1234 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.3
+    frame #0: 0x00007fff06013ca0 libsystem_kernel.dylib`read
+(lldb) frame variable
+(int) fd = 3
+
+    )");
+  }
+  ~CommandObjectFrameRecognizerAdd() override = default;
+};
+
+bool CommandObjectFrameRecognizerAdd::DoExecute(Args &command,
+                                                CommandReturnObject &result) {
+#ifndef LLDB_DISABLE_PYTHON
+  if (m_options.m_class_name.empty()) {
+    result.AppendErrorWithFormat(
+        "%s needs a Python class name (-l argument).\n", m_cmd_name.c_str());
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+
+  if (m_options.m_module.empty()) {
+    result.AppendErrorWithFormat("%s needs a module name (-s argument).\n",
+                                 m_cmd_name.c_str());
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+
+  if (m_options.m_function.empty()) {
+    result.AppendErrorWithFormat("%s needs a function name (-n argument).\n",
+                                 m_cmd_name.c_str());
+    result.SetStatus(eReturnStatusFailed);
+    return false;
+  }
+
+  ScriptInterpreter *interpreter = m_interpreter.GetScriptInterpreter();
+
+  if (interpreter &&
+      !interpreter->CheckObjectExists(m_options.m_class_name.c_str())) {
+    result.AppendWarning(
+        "The provided class does not exist - please define it "
+        "before attempting to use this frame recognizer");
+  }
+
+  StackFrameRecognizerSP recognizer_sp =
+      StackFrameRecognizerSP(new ScriptedStackFrameRecognizer(
+          interpreter, m_options.m_class_name.c_str()));
+  if (m_options.m_regex) {
+    auto module =
+        RegularExpressionSP(new RegularExpression(m_options.m_module));
+    auto func =
+        RegularExpressionSP(new RegularExpression(m_options.m_function));
+    StackFrameRecognizerManager::AddRecognizer(recognizer_sp, module, func);
+  } else {
+    auto module = ConstString(m_options.m_module);
+    auto func = ConstString(m_options.m_function);
+    StackFrameRecognizerManager::AddRecognizer(recognizer_sp, module, func);
+  }
+#endif
+
+  result.SetStatus(eReturnStatusSuccessFinishNoResult);
+  return result.Succeeded();
+}
+
+class CommandObjectFrameRecognizerClear : public CommandObjectParsed {
+public:
+  CommandObjectFrameRecognizerClear(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "frame recognizer clear",
+                           "Delete all frame recognizers.", nullptr) {}
+
+  ~CommandObjectFrameRecognizerClear() override = default;
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    StackFrameRecognizerManager::RemoveAllRecognizers();
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    return result.Succeeded();
+  }
+};
+
+class CommandObjectFrameRecognizerDelete : public CommandObjectParsed {
+ public:
+  CommandObjectFrameRecognizerDelete(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "frame recognizer delete",
+                            "Delete an existing frame recognizer.", nullptr) {}
+
+  ~CommandObjectFrameRecognizerDelete() override = default;
+
+ protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() == 0) {
+      if (!m_interpreter.Confirm(
+              "About to delete all frame recognizers, do you want to do that?",
+              true)) {
+        result.AppendMessage("Operation cancelled...");
+        result.SetStatus(eReturnStatusFailed);
+        return false;
+      }
+
+      StackFrameRecognizerManager::RemoveAllRecognizers();
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return result.Succeeded();
+    }
+
+    if (command.GetArgumentCount() != 1) {
+      result.AppendErrorWithFormat("'%s' takes zero or one arguments.\n",
+                                   m_cmd_name.c_str());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    uint32_t recognizer_id =
+        StringConvert::ToUInt32(command.GetArgumentAtIndex(0), 0, 0);
+
+    StackFrameRecognizerManager::RemoveRecognizerWithID(recognizer_id);
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    return result.Succeeded();
+  }
+};
+
+class CommandObjectFrameRecognizerList : public CommandObjectParsed {
+ public:
+  CommandObjectFrameRecognizerList(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "frame recognizer list",
+                            "Show a list of active frame recognizers.",
+                            nullptr) {}
+
+  ~CommandObjectFrameRecognizerList() override = default;
+
+ protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    bool any_printed = false;
+    StackFrameRecognizerManager::ForEach(
+        [&result, &any_printed](uint32_t recognizer_id, std::string name,
+                                std::string function, std::string symbol,
+                                bool regexp) {
+          if (name == "") name = "(internal)";
+          result.GetOutputStream().Printf(
+              "%d: %s, module %s, function %s%s\n", recognizer_id, name.c_str(),
+              function.c_str(), symbol.c_str(), regexp ? " (regexp)" : "");
+          any_printed = true;
+        });
+
+    if (any_printed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+    else {
+      result.GetOutputStream().PutCString("no matching results found.\n");
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    }
+    return result.Succeeded();
+  }
+};
+
+class CommandObjectFrameRecognizerInfo : public CommandObjectParsed {
+ public:
+  CommandObjectFrameRecognizerInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "frame recognizer info",
+            "Show which frame recognizer is applied a stack frame (if any).",
+            nullptr) {
+    CommandArgumentEntry arg;
+    CommandArgumentData index_arg;
+
+    // Define the first (and only) variant of this arg.
+    index_arg.arg_type = eArgTypeFrameIndex;
+    index_arg.arg_repetition = eArgRepeatPlain;
+
+    // There is only one variant this argument could be; put it into the
+    // argument entry.
+    arg.push_back(index_arg);
+
+    // Push the data for the first argument into the m_arguments vector.
+    m_arguments.push_back(arg);
+  }
+
+  ~CommandObjectFrameRecognizerInfo() override = default;
+
+ protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    Process *process = m_exe_ctx.GetProcessPtr();
+    if (process == nullptr) {
+      result.AppendError("no process");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+    Thread *thread = m_exe_ctx.GetThreadPtr();
+    if (thread == nullptr) {
+      result.AppendError("no thread");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+    if (command.GetArgumentCount() != 1) {
+      result.AppendErrorWithFormat(
+          "'%s' takes exactly one frame index argument.\n", m_cmd_name.c_str());
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    uint32_t frame_index =
+        StringConvert::ToUInt32(command.GetArgumentAtIndex(0), 0, 0);
+    StackFrameSP frame_sp = thread->GetStackFrameAtIndex(frame_index);
+    if (!frame_sp) {
+      result.AppendErrorWithFormat("no frame with index %u", frame_index);
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    auto recognizer =
+        StackFrameRecognizerManager::GetRecognizerForFrame(frame_sp);
+
+    Stream &output_stream = result.GetOutputStream();
+    output_stream.Printf("frame %d ", frame_index);
+    if (recognizer) {
+      output_stream << "is recognized by ";
+      output_stream << recognizer->GetName();
+    } else {
+      output_stream << "not recognized by any recognizer";
+    }
+    output_stream.EOL();
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    return result.Succeeded();
+  }
+};
+
+class CommandObjectFrameRecognizer : public CommandObjectMultiword {
+ public:
+  CommandObjectFrameRecognizer(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "frame recognizer",
+            "Commands for editing and viewing frame recognizers.",
+            "frame recognizer [<sub-command-options>] ") {
+    LoadSubCommand(
+        "add",
+        CommandObjectSP(new CommandObjectFrameRecognizerAdd(interpreter)));
+    LoadSubCommand(
+        "clear",
+        CommandObjectSP(new CommandObjectFrameRecognizerClear(interpreter)));
+    LoadSubCommand(
+        "delete",
+        CommandObjectSP(new CommandObjectFrameRecognizerDelete(interpreter)));
+    LoadSubCommand(
+        "list",
+        CommandObjectSP(new CommandObjectFrameRecognizerList(interpreter)));
+    LoadSubCommand(
+        "info",
+        CommandObjectSP(new CommandObjectFrameRecognizerInfo(interpreter)));
+  }
+
+  ~CommandObjectFrameRecognizer() override = default;
+};
+
 #pragma mark CommandObjectMultiwordFrame
 
 //-------------------------------------------------------------------------
@@ -758,6 +1141,11 @@ CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(
                  CommandObjectSP(new CommandObjectFrameSelect(interpreter)));
   LoadSubCommand("variable",
                  CommandObjectSP(new CommandObjectFrameVariable(interpreter)));
+#ifndef LLDB_DISABLE_PYTHON
+  LoadSubCommand(
+      "recognizer",
+      CommandObjectSP(new CommandObjectFrameRecognizer(interpreter)));
+#endif
 }
 
 CommandObjectMultiwordFrame::~CommandObjectMultiwordFrame() = default;
