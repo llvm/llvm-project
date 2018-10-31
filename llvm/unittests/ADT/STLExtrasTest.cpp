@@ -366,19 +366,19 @@ TEST(STLExtrasTest, ADLTest) {
 
 TEST(STLExtrasTest, EmptyTest) {
   std::vector<void*> V;
-  EXPECT_TRUE(empty(V));
+  EXPECT_TRUE(llvm::empty(V));
   V.push_back(nullptr);
-  EXPECT_FALSE(empty(V));
+  EXPECT_FALSE(llvm::empty(V));
 
   std::initializer_list<int> E = {};
   std::initializer_list<int> NotE = {7, 13, 42};
-  EXPECT_TRUE(empty(E));
-  EXPECT_FALSE(empty(NotE));
+  EXPECT_TRUE(llvm::empty(E));
+  EXPECT_FALSE(llvm::empty(NotE));
 
   auto R0 = make_range(V.begin(), V.begin());
-  EXPECT_TRUE(empty(R0));
+  EXPECT_TRUE(llvm::empty(R0));
   auto R1 = make_range(V.begin(), V.end());
-  EXPECT_FALSE(empty(R1));
+  EXPECT_FALSE(llvm::empty(R1));
 }
 
 TEST(STLExtrasTest, EarlyIncrementTest) {

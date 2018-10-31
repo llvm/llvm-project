@@ -3126,6 +3126,11 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     // These never have a side-effect.
     return false;
 
+  case ConstantExprClass:
+    // FIXME: Move this into the "return false;" block above.
+    return cast<ConstantExpr>(this)->getSubExpr()->HasSideEffects(
+        Ctx, IncludePossibleEffects);
+
   case CallExprClass:
   case CXXOperatorCallExprClass:
   case CXXMemberCallExprClass:

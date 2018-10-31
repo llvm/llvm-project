@@ -17,7 +17,7 @@
 #include "llvm/CodeGen/AccelTable.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
-#include "llvm/DebugInfo/DWARF/DWARFDebugRnglists.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -83,7 +83,7 @@ public:
   void emitRangesEntries(
       int64_t UnitPcOffset, uint64_t OrigLowPc,
       const FunctionIntervals::const_iterator &FuncRange,
-      const DWARFDebugRnglist &RangeList,
+      const std::vector<DWARFDebugRangeList::RangeListEntry> &Entries,
       unsigned AddressSize);
 
   /// Emit debug_aranges entries for \p Unit and if \p DoRangesSection is true,

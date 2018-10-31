@@ -118,8 +118,8 @@ Stmt *Stmt::IgnoreImplicit() {
   while (s != lasts) {
     lasts = s;
 
-    if (auto *ewc = dyn_cast<ExprWithCleanups>(s))
-      s = ewc->getSubExpr();
+    if (auto *fe = dyn_cast<FullExpr>(s))
+      s = fe->getSubExpr();
 
     if (auto *mte = dyn_cast<MaterializeTemporaryExpr>(s))
       s = mte->GetTemporaryExpr();
