@@ -174,6 +174,17 @@ public:
   }
 
   virtual StructuredData::GenericSP
+  CreateFrameRecognizer(const char *class_name) {
+    return StructuredData::GenericSP();
+  }
+
+  virtual lldb::ValueObjectListSP GetRecognizedArguments(
+      const StructuredData::ObjectSP &implementor,
+      lldb::StackFrameSP frame_sp) {
+    return lldb::ValueObjectListSP();
+  }
+
+  virtual StructuredData::GenericSP
   OSPlugin_CreatePluginObject(const char *class_name,
                               lldb::ProcessSP process_sp) {
     return StructuredData::GenericSP();
