@@ -20,6 +20,7 @@
 #include "IdentifierNamingCheck.h"
 #include "ImplicitBoolConversionCheck.h"
 #include "InconsistentDeclarationParameterNameCheck.h"
+#include "IsolateDeclarationCheck.h"
 #include "MagicNumbersCheck.h"
 #include "MisleadingIndentationCheck.h"
 #include "MisplacedArrayIndexCheck.h"
@@ -67,6 +68,8 @@ public:
         "readability-implicit-bool-conversion");
     CheckFactories.registerCheck<InconsistentDeclarationParameterNameCheck>(
         "readability-inconsistent-declaration-parameter-name");
+    CheckFactories.registerCheck<IsolateDeclarationCheck>(
+        "readability-isolate-declaration");
     CheckFactories.registerCheck<MagicNumbersCheck>(
         "readability-magic-numbers");
     CheckFactories.registerCheck<MisleadingIndentationCheck>(

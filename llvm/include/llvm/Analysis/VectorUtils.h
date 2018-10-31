@@ -24,6 +24,7 @@ namespace llvm {
 template <typename T> class ArrayRef;
 class DemandedBits;
 class GetElementPtrInst;
+class InterleaveGroup; 
 class Loop;
 class ScalarEvolution;
 class TargetTransformInfo;
@@ -124,6 +125,20 @@ computeMinimumValueSizes(ArrayRef<BasicBlock*> Blocks,
 ///
 /// This function always sets a (possibly null) value for each K in Kinds.
 Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
+
+/// Create a mask that filters the members of an interleave group where there
+/// are gaps.
+///
+/// For example, the mask for \p Group with interleave-factor 3
+/// and \p VF 4, that has only its first member present is:
+///
+///   <1,0,0,1,0,0,1,0,0,1,0,0>
+///
+/// Note: The result is a mask of 0's and 1's, as opposed to the other
+/// create[*]Mask() utilities which create a shuffle mask (mask that
+/// consists of indices).
+Constant *createBitMaskForGaps(IRBuilder<> &Builder, unsigned VF,
+                               const InterleaveGroup &Group);
 
 /// Create a mask with replicated elements.
 ///
@@ -406,8 +421,8 @@ public:
   bool requiresScalarEpilogue() const { return RequiresScalarEpilogue; }
 
   /// Invalidate groups that require a scalar epilogue (due to gaps). This can
-  /// happen when we optimize for size and don't allow creating a scalar
-  /// epilogue.
+  /// happen when optimizing for size forbids a scalar epilogue, and the gap
+  /// cannot be filtered by masking the load/store.
   void invalidateGroupsRequiringScalarEpilogue();
 
 private:

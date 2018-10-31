@@ -72,6 +72,7 @@ class PlistPrinter {
   const FIDMap& FM;
   AnalyzerOptions &AnOpts;
   const Preprocessor &PP;
+  llvm::SmallVector<const PathDiagnosticMacroPiece *, 0> MacroPieces;
 
 public:
   PlistPrinter(const FIDMap& FM, AnalyzerOptions &AnOpts,
@@ -85,6 +86,14 @@ public:
     // Don't emit a warning about an unused private field.
     (void)AnOpts;
   }
+
+  /// Print the expansions of the collected macro pieces.
+  ///
+  /// Each time ReportDiag is called on a PathDiagnosticMacroPiece (or, if one
+  /// is found through a call piece, etc), it's subpieces are reported, and the
+  /// piece itself is collected. Call this function after the entire bugpath
+  /// was reported.
+  void ReportMacroExpansions(raw_ostream &o, unsigned indent);
 
 private:
   void ReportPiece(raw_ostream &o, const PathDiagnosticPiece &P,
@@ -104,7 +113,8 @@ private:
                     isKeyEvent);
         break;
       case PathDiagnosticPiece::Macro:
-        ReportMacro(o, cast<PathDiagnosticMacroPiece>(P), indent, depth);
+        ReportMacroSubPieces(o, cast<PathDiagnosticMacroPiece>(P), indent,
+                             depth);
         break;
       case PathDiagnosticPiece::Note:
         ReportNote(o, cast<PathDiagnosticNotePiece>(P), indent);
@@ -123,10 +133,21 @@ private:
                    unsigned indent, unsigned depth, bool isKeyEvent = false);
   void ReportCall(raw_ostream &o, const PathDiagnosticCallPiece &P,
                   unsigned indent, unsigned depth);
-  void ReportMacro(raw_ostream &o, const PathDiagnosticMacroPiece& P,
-                   unsigned indent, unsigned depth);
+  void ReportMacroSubPieces(raw_ostream &o, const PathDiagnosticMacroPiece& P,
+                            unsigned indent, unsigned depth);
   void ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
                   unsigned indent);
+};
+
+} // end of anonymous namespace
+
+namespace {
+
+struct ExpansionInfo {
+  std::string MacroName;
+  std::string Expansion;
+  ExpansionInfo(std::string N, std::string E)
+    : MacroName(std::move(N)), Expansion(std::move(E)) {}
 };
 
 } // end of anonymous namespace
@@ -143,6 +164,10 @@ static void printCoverage(const PathDiagnostic *D,
                           SmallVectorImpl<FileID> &Fids,
                           FIDMap &FM,
                           llvm::raw_fd_ostream &o);
+
+static ExpansionInfo getExpandedMacro(SourceLocation MacroLoc,
+                                      const Preprocessor &PP);
+
 //===----------------------------------------------------------------------===//
 // Methods of PlistPrinter.
 //===----------------------------------------------------------------------===//
@@ -299,13 +324,49 @@ void PlistPrinter::ReportCall(raw_ostream &o, const PathDiagnosticCallPiece &P,
     ReportPiece(o, *callExit, indent, depth, /*includeControlFlow*/ true);
 }
 
-void PlistPrinter::ReportMacro(raw_ostream &o,
-                               const PathDiagnosticMacroPiece& P,
-                               unsigned indent, unsigned depth) {
+void PlistPrinter::ReportMacroSubPieces(raw_ostream &o,
+                                        const PathDiagnosticMacroPiece& P,
+                                        unsigned indent, unsigned depth) {
+  MacroPieces.push_back(&P);
 
-  for (PathPieces::const_iterator I = P.subPieces.begin(), E=P.subPieces.end();
-       I!=E; ++I) {
+  for (PathPieces::const_iterator I = P.subPieces.begin(),
+                                  E = P.subPieces.end();
+       I != E; ++I) {
     ReportPiece(o, **I, indent, depth, /*includeControlFlow*/ false);
+  }
+}
+
+void PlistPrinter::ReportMacroExpansions(raw_ostream &o, unsigned indent) {
+
+  for (const PathDiagnosticMacroPiece *P : MacroPieces) {
+    const SourceManager &SM = PP.getSourceManager();
+    ExpansionInfo EI = getExpandedMacro(P->getLocation().asLocation(), PP);
+
+    Indent(o, indent) << "<dict>\n";
+    ++indent;
+
+    // Output the location.
+    FullSourceLoc L = P->getLocation().asLocation();
+
+    Indent(o, indent) << "<key>location</key>\n";
+    EmitLocation(o, SM, L, FM, indent);
+
+    // Output the ranges (if any).
+    ArrayRef<SourceRange> Ranges = P->getRanges();
+    EmitRanges(o, Ranges, indent);
+
+    // Output the macro name.
+    Indent(o, indent) << "<key>name</key>";
+    EmitString(o, EI.MacroName) << '\n';
+
+    // Output what it expands into.
+    Indent(o, indent) << "<key>expansion</key>";
+    EmitString(o, EI.Expansion) << '\n';
+
+    // Finish up.
+    --indent;
+    Indent(o, indent);
+    o << "</dict>\n";
   }
 }
 
@@ -338,6 +399,12 @@ void PlistPrinter::ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
 //===----------------------------------------------------------------------===//
 // Static function definitions.
 //===----------------------------------------------------------------------===//
+
+static ExpansionInfo getExpandedMacro(SourceLocation MacroLoc,
+                                      const Preprocessor &PP) {
+  // TODO: Implement macro expansion.
+  return { "", "" };
+}
 
 /// Print coverage information to output stream {@code o}.
 /// May modify the used list of files {@code Fids} by inserting new ones.
@@ -407,6 +474,14 @@ static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
   for (PathPieces::const_iterator E = Path.end(); I != E; ++I)
     Printer.ReportDiag(o, **I);
 
+  o << "   </array>\n";
+
+  if (!AnOpts.shouldDisplayMacroExpansions())
+    return;
+
+  o << "   <key>macro_expansions</key>\n"
+       "   <array>\n";
+  Printer.ReportMacroExpansions(o, /* indent */ 4);
   o << "   </array>\n";
 }
 

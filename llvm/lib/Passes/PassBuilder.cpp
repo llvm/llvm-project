@@ -830,7 +830,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     OptimizePM.addPass(
         createFunctionToLoopPassAdaptor(LoopUnrollAndJamPass(Level)));
   }
-  OptimizePM.addPass(LoopUnrollPass(Level));
+  OptimizePM.addPass(LoopUnrollPass(LoopUnrollOptions(Level)));
   OptimizePM.addPass(InstCombinePass());
   OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(LICMPass(), DebugLogging));

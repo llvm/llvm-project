@@ -40,9 +40,9 @@ public:
 
   bool isAvailable(const InstRef &IR) const override;
   bool hasWorkToComplete() const override;
-  llvm::Error execute(InstRef &IR) override;
-  llvm::Error cycleStart() override;
-  llvm::Error cycleEnd() override;
+  Error execute(InstRef &IR) override;
+  Error cycleStart() override;
+  Error cycleEnd() override;
 };
 
 } // namespace mca

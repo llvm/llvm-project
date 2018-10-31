@@ -7844,3 +7844,6 @@ X86InstrInfo::insertOutlinedCall(Module &M, MachineBasicBlock &MBB,
 
   return It;
 }
+
+#define GET_TII_HELPERS
+#include "X86GenInstrInfo.inc"

@@ -118,6 +118,7 @@
 #include <dev/ic/icp_ioctl.h>
 #include <dev/ic/isp_ioctl.h>
 #include <dev/ic/mlxio.h>
+#include <dev/ic/qemufwcfgio.h>
 #include <dev/ic/nvmeio.h>
 #include <dev/ir/irdaio.h>
 #include <dev/isa/isvio.h>
@@ -132,7 +133,6 @@
 #include <dev/pci/tweio.h>
 #include <dev/pcmcia/if_cnwioctl.h>
 #include <net/bpf.h>
-#include <net/if_atm.h>
 #include <net/if_gre.h>
 #include <net/ppp_defs.h>
 #include <net/if_ppp.h>
@@ -151,7 +151,6 @@
 #include <netinet/ip_proxy.h>
 #include <netinet6/in6_var.h>
 #include <netinet6/nd6.h>
-#include <netnatm/natm.h>
 #include <netsmb/smb_dev.h>
 #include <dev/biovar.h>
 #include <dev/bluetooth/btdev.h>
@@ -182,6 +181,7 @@
 #include <dev/vndvar.h>
 #include <dev/wscons/wsconsio.h>
 #include <dev/wscons/wsdisplay_usl_io.h>
+#include <fs/autofs/autofs_ioctl.h>
 #include <dirent.h>
 #include <glob.h>
 #include <grp.h>
@@ -193,6 +193,7 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/ip_mroute.h>
+#include <netinet/sctp_uio.h>
 #include <poll.h>
 #include <pthread.h>
 #include <pwd.h>
@@ -353,6 +354,14 @@ unsigned path_max = PATH_MAX;
 
 int struct_ttyent_sz = sizeof(struct ttyent);
 
+struct __sanitizer_nvlist_ref_t {
+  void *buf;
+  uptr len;
+  int flags;
+};
+
+typedef __sanitizer_nvlist_ref_t nvlist_ref_t;
+
 // ioctl arguments
 unsigned struct_altqreq_sz = sizeof(altqreq);
 unsigned struct_amr_user_ioctl_sz = sizeof(amr_user_ioctl);
@@ -364,7 +373,6 @@ unsigned struct_atabusiodetach_args_sz = sizeof(atabusiodetach_args);
 unsigned struct_atabusioscan_args_sz = sizeof(atabusioscan_args);
 unsigned struct_ath_diag_sz = sizeof(ath_diag);
 unsigned struct_atm_flowmap_sz = sizeof(atm_flowmap);
-unsigned struct_atm_pseudoioctl_sz = sizeof(atm_pseudoioctl);
 unsigned struct_audio_buf_info_sz = sizeof(audio_buf_info);
 unsigned struct_audio_device_sz = sizeof(audio_device);
 unsigned struct_audio_encoding_sz = sizeof(audio_encoding);
@@ -610,7 +618,6 @@ unsigned struct_priq_delete_filter_sz = sizeof(priq_delete_filter);
 unsigned struct_priq_interface_sz = sizeof(priq_interface);
 unsigned struct_priq_modify_class_sz = sizeof(priq_modify_class);
 unsigned struct_ptmget_sz = sizeof(ptmget);
-unsigned struct_pvctxreq_sz = sizeof(pvctxreq);
 unsigned struct_radio_info_sz = sizeof(radio_info);
 unsigned struct_red_conf_sz = sizeof(red_conf);
 unsigned struct_red_interface_sz = sizeof(red_interface);
@@ -670,6 +677,9 @@ unsigned struct_usb_config_desc_sz = sizeof(usb_config_desc);
 unsigned struct_usb_ctl_report_desc_sz = sizeof(usb_ctl_report_desc);
 unsigned struct_usb_ctl_report_sz = sizeof(usb_ctl_report);
 unsigned struct_usb_ctl_request_sz = sizeof(usb_ctl_request);
+unsigned struct_autofs_daemon_request_sz = sizeof(autofs_daemon_request);
+unsigned struct_autofs_daemon_done_sz = sizeof(autofs_daemon_done);
+unsigned struct_sctp_connectx_addrs_sz = sizeof(sctp_connectx_addrs);
 unsigned struct_usb_device_info_old_sz = sizeof(usb_device_info_old);
 unsigned struct_usb_device_info_sz = sizeof(usb_device_info);
 unsigned struct_usb_device_stats_sz = sizeof(usb_device_stats);
@@ -811,6 +821,7 @@ unsigned struct_RF_SparetWait_sz = sizeof(RF_SparetWait_t);
 unsigned struct_RF_ComponentLabel_sz = sizeof(RF_ComponentLabel_t);
 unsigned struct_RF_SingleComponent_sz = sizeof(RF_SingleComponent_t);
 unsigned struct_RF_ProgressInfo_sz = sizeof(RF_ProgressInfo_t);
+unsigned struct_nvlist_ref_sz = sizeof(struct __sanitizer_nvlist_ref_t);
 
 const unsigned IOCTL_NOT_PRESENT = 0;
 
@@ -1075,6 +1086,7 @@ unsigned IOCTL_MLX_REBUILDSTAT = MLX_REBUILDSTAT;
 unsigned IOCTL_MLX_GET_SYSDRIVE = MLX_GET_SYSDRIVE;
 unsigned IOCTL_MLX_GET_CINFO = MLX_GET_CINFO;
 unsigned IOCTL_NVME_PASSTHROUGH_CMD = NVME_PASSTHROUGH_CMD;
+unsigned IOCTL_FWCFGIO_SET_INDEX = FWCFGIO_SET_INDEX;
 unsigned IOCTL_IRDA_RESET_PARAMS = IRDA_RESET_PARAMS;
 unsigned IOCTL_IRDA_SET_PARAMS = IRDA_SET_PARAMS;
 unsigned IOCTL_IRDA_GET_SPEEDMASK = IRDA_GET_SPEEDMASK;
@@ -1404,6 +1416,8 @@ unsigned IOCTL_SPKRTONE = SPKRTONE;
 unsigned IOCTL_SPKRTUNE = SPKRTUNE;
 unsigned IOCTL_SPKRGETVOL = SPKRGETVOL;
 unsigned IOCTL_SPKRSETVOL = SPKRSETVOL;
+unsigned IOCTL_AUTOFSREQUEST = AUTOFSREQUEST;
+unsigned IOCTL_AUTOFSDONE = AUTOFSDONE;
 unsigned IOCTL_BIOCGBLEN = BIOCGBLEN;
 unsigned IOCTL_BIOCSBLEN = BIOCSBLEN;
 unsigned IOCTL_BIOCSETF = BIOCSETF;
@@ -1422,19 +1436,12 @@ unsigned IOCTL_BIOCGHDRCMPLT = BIOCGHDRCMPLT;
 unsigned IOCTL_BIOCSHDRCMPLT = BIOCSHDRCMPLT;
 unsigned IOCTL_BIOCSDLT = BIOCSDLT;
 unsigned IOCTL_BIOCGDLTLIST = BIOCGDLTLIST;
-unsigned IOCTL_BIOCGSEESENT = BIOCGSEESENT;
-unsigned IOCTL_BIOCSSEESENT = BIOCSSEESENT;
+unsigned IOCTL_BIOCGDIRECTION = BIOCGDIRECTION;
+unsigned IOCTL_BIOCSDIRECTION = BIOCSDIRECTION;
 unsigned IOCTL_BIOCSRTIMEOUT = BIOCSRTIMEOUT;
 unsigned IOCTL_BIOCGRTIMEOUT = BIOCGRTIMEOUT;
 unsigned IOCTL_BIOCGFEEDBACK = BIOCGFEEDBACK;
 unsigned IOCTL_BIOCSFEEDBACK = BIOCSFEEDBACK;
-unsigned IOCTL_SIOCRAWATM = SIOCRAWATM;
-unsigned IOCTL_SIOCATMENA = SIOCATMENA;
-unsigned IOCTL_SIOCATMDIS = SIOCATMDIS;
-unsigned IOCTL_SIOCSPVCTX = SIOCSPVCTX;
-unsigned IOCTL_SIOCGPVCTX = SIOCGPVCTX;
-unsigned IOCTL_SIOCSPVCSIF = SIOCSPVCSIF;
-unsigned IOCTL_SIOCGPVCSIF = SIOCGPVCSIF;
 unsigned IOCTL_GRESADDRS = GRESADDRS;
 unsigned IOCTL_GRESADDRD = GRESADDRD;
 unsigned IOCTL_GREGADDRS = GREGADDRS;
@@ -1589,6 +1596,8 @@ unsigned IOCTL_SIOCRMNAT = SIOCRMNAT;
 unsigned IOCTL_SIOCGNATS = SIOCGNATS;
 unsigned IOCTL_SIOCGNATL = SIOCGNATL;
 unsigned IOCTL_SIOCPURGENAT = SIOCPURGENAT;
+unsigned IOCTL_SIOCCONNECTX = SIOCCONNECTX;
+unsigned IOCTL_SIOCCONNECTXDEL = SIOCCONNECTXDEL;
 unsigned IOCTL_SIOCSIFINFO_FLAGS = SIOCSIFINFO_FLAGS;
 unsigned IOCTL_SIOCAADDRCTL_POLICY = SIOCAADDRCTL_POLICY;
 unsigned IOCTL_SIOCDADDRCTL_POLICY = SIOCDADDRCTL_POLICY;
@@ -1733,6 +1742,8 @@ unsigned IOCTL_FDIOCGETFORMAT = FDIOCGETFORMAT;
 unsigned IOCTL_FDIOCFORMAT_TRACK = FDIOCFORMAT_TRACK;
 unsigned IOCTL_FIOCLEX = FIOCLEX;
 unsigned IOCTL_FIONCLEX = FIONCLEX;
+unsigned IOCTL_FIOSEEKDATA = FIOSEEKDATA;
+unsigned IOCTL_FIOSEEKHOLE = FIOSEEKHOLE;
 unsigned IOCTL_FIONREAD = FIONREAD;
 unsigned IOCTL_FIONBIO = FIONBIO;
 unsigned IOCTL_FIOASYNC = FIOASYNC;
@@ -1818,8 +1829,6 @@ unsigned IOCTL_MTIOCSLOCATE = MTIOCSLOCATE;
 unsigned IOCTL_MTIOCHLOCATE = MTIOCHLOCATE;
 unsigned IOCTL_POWER_EVENT_RECVDICT = POWER_EVENT_RECVDICT;
 unsigned IOCTL_POWER_IOC_GET_TYPE = POWER_IOC_GET_TYPE;
-unsigned IOCTL_POWER_IOC_GET_TYPE_WITH_LOSSAGE =
-    POWER_IOC_GET_TYPE_WITH_LOSSAGE;
 unsigned IOCTL_RIOCGINFO = RIOCGINFO;
 unsigned IOCTL_RIOCSINFO = RIOCSINFO;
 unsigned IOCTL_RIOCSSRCH = RIOCSSRCH;
@@ -1854,6 +1863,7 @@ unsigned IOCTL_SIOCGLOWAT = SIOCGLOWAT;
 unsigned IOCTL_SIOCATMARK = SIOCATMARK;
 unsigned IOCTL_SIOCSPGRP = SIOCSPGRP;
 unsigned IOCTL_SIOCGPGRP = SIOCGPGRP;
+unsigned IOCTL_SIOCPEELOFF = SIOCPEELOFF;
 unsigned IOCTL_SIOCADDRT = SIOCADDRT;
 unsigned IOCTL_SIOCDELRT = SIOCDELRT;
 unsigned IOCTL_SIOCSIFADDR = SIOCSIFADDR;
@@ -1911,6 +1921,9 @@ unsigned IOCTL_SIOCGLINKSTR = SIOCGLINKSTR;
 unsigned IOCTL_SIOCSLINKSTR = SIOCSLINKSTR;
 unsigned IOCTL_SIOCGETHERCAP = SIOCGETHERCAP;
 unsigned IOCTL_SIOCGIFINDEX = SIOCGIFINDEX;
+unsigned IOCTL_SIOCGUMBINFO = SIOCGUMBINFO;
+unsigned IOCTL_SIOCSUMBPARAM = SIOCSUMBPARAM;
+unsigned IOCTL_SIOCGUMBPARAM = SIOCGUMBPARAM;
 unsigned IOCTL_SIOCSETPFSYNC = SIOCSETPFSYNC;
 unsigned IOCTL_SIOCGETPFSYNC = SIOCGETPFSYNC;
 unsigned IOCTL_PPS_IOC_CREATE = PPS_IOC_CREATE;

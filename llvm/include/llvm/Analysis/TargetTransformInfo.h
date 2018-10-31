@@ -588,7 +588,8 @@ public:
   bool enableInterleavedAccessVectorization() const;
 
   /// Enable matching of interleaved access groups that contain predicated 
-  /// accesses and are vectorized using masked vector loads/stores.
+  /// accesses or gaps and therefore vectorized using masked
+  /// vector loads/stores.
   bool enableMaskedInterleavedAccessVectorization() const;
 
   /// Indicate that it is potentially unsafe to automatically vectorize
@@ -827,11 +828,13 @@ public:
   ///    load allows gaps)
   /// \p Alignment is the alignment of the memory operation
   /// \p AddressSpace is address space of the pointer.
-  /// \p IsMasked indicates if the memory access is predicated.
+  /// \p UseMaskForCond indicates if the memory access is predicated.
+  /// \p UseMaskForGaps indicates if gaps should be masked.
   int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
                                  ArrayRef<unsigned> Indices, unsigned Alignment,
-                                 unsigned AddressSpace, 
-                                 bool IsMasked = false) const;
+                                 unsigned AddressSpace,
+                                 bool UseMaskForCond = false,
+                                 bool UseMaskForGaps = false) const;
 
   /// Calculate the cost of performing a vector reduction.
   ///
@@ -1142,7 +1145,8 @@ public:
                                          ArrayRef<unsigned> Indices,
                                          unsigned Alignment,
                                          unsigned AddressSpace,
-                                         bool IsMasked = false) = 0;
+                                         bool UseMaskForCond = false,
+                                         bool UseMaskForGaps = false) = 0;
   virtual int getArithmeticReductionCost(unsigned Opcode, Type *Ty,
                                          bool IsPairwiseForm) = 0;
   virtual int getMinMaxReductionCost(Type *Ty, Type *CondTy,
@@ -1484,9 +1488,11 @@ public:
   }
   int getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy, unsigned Factor,
                                  ArrayRef<unsigned> Indices, unsigned Alignment,
-                                 unsigned AddressSpace, bool IsMasked) override {
+                                 unsigned AddressSpace, bool UseMaskForCond,
+                                 bool UseMaskForGaps) override {
     return Impl.getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                           Alignment, AddressSpace, IsMasked);
+                                           Alignment, AddressSpace,
+                                           UseMaskForCond, UseMaskForGaps);
   }
   int getArithmeticReductionCost(unsigned Opcode, Type *Ty,
                                  bool IsPairwiseForm) override {

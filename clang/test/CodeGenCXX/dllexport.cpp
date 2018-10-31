@@ -1012,6 +1012,18 @@ struct __declspec(dllexport) LayerTreeImpl {
 // M32-DAG: define weak_odr dso_local dllexport x86_thiscallcc %"struct.LayerTreeImpl::ElementLayers"* @"??0ElementLayers@LayerTreeImpl@@QAE@XZ"
 // M64-DAG: define weak_odr dso_local dllexport %"struct.LayerTreeImpl::ElementLayers"* @"??0ElementLayers@LayerTreeImpl@@QEAA@XZ"
 
+namespace pr39496 {
+// Make sure dll attribute are inherited by static locals also in template
+// specializations.
+template <typename> struct __declspec(dllexport) S { int foo() { static int x; return x++; } };
+int foo() { S<int> s; return s.foo(); }
+// MSC-DAG: @"?x@?{{1|2}}??foo@?$S@H@pr39496@@Q{{[A-Z]*}}HXZ@4HA" = weak_odr dso_local dllexport global i32 0, comdat, align 4
+
+template <typename> struct T { int foo() { static int x; return x++; } };
+template struct __declspec(dllexport) T<int>;
+// MSC-DAG: @"?x@?{{1|2}}??foo@?$T@H@pr39496@@Q{{[A-Z]*}}HXZ@4HA" = weak_odr dso_local dllexport global i32 0, comdat, align 4
+}
+
 class __declspec(dllexport) ACE_Shared_Object {
 public:
   virtual ~ACE_Shared_Object();

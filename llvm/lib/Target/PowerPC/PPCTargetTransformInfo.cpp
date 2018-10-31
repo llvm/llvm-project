@@ -474,10 +474,12 @@ int PPCTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                            ArrayRef<unsigned> Indices,
                                            unsigned Alignment,
                                            unsigned AddressSpace,
-                                           bool IsMasked) {
-  if (IsMasked)
+                                           bool UseMaskForCond,
+                                           bool UseMaskForGaps) {
+  if (UseMaskForCond || UseMaskForGaps)
     return BaseT::getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
-                                             Alignment, AddressSpace, IsMasked);
+                                             Alignment, AddressSpace,
+                                             UseMaskForCond, UseMaskForGaps);
 
   assert(isa<VectorType>(VecTy) &&
          "Expect a vector type for interleaved memory op");

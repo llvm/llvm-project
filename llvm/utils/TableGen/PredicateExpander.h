@@ -56,9 +56,16 @@ public:
   using RecVec = std::vector<Record *>;
   void expandTrue(raw_ostream &OS);
   void expandFalse(raw_ostream &OS);
-  void expandCheckImmOperand(raw_ostream &OS, int OpIndex, int ImmVal);
-  void expandCheckImmOperand(raw_ostream &OS, int OpIndex, StringRef ImmVal);
-  void expandCheckRegOperand(raw_ostream &OS, int OpIndex, const Record *Reg);
+  void expandCheckImmOperand(raw_ostream &OS, int OpIndex, int ImmVal,
+                             StringRef FunctionMapper);
+  void expandCheckImmOperand(raw_ostream &OS, int OpIndex, StringRef ImmVal,
+                             StringRef FunctionMapperer);
+  void expandCheckImmOperandSimple(raw_ostream &OS, int OpIndex,
+                                   StringRef FunctionMapper);
+  void expandCheckRegOperand(raw_ostream &OS, int OpIndex, const Record *Reg,
+                             StringRef FunctionMapper);
+  void expandCheckRegOperandSimple(raw_ostream &OS, int OpIndex,
+                                   StringRef FunctionMapper);
   void expandCheckSameRegOperand(raw_ostream &OS, int First, int Second);
   void expandCheckNumOperands(raw_ostream &OS, int NumOps);
   void expandCheckOpcode(raw_ostream &OS, const Record *Inst);

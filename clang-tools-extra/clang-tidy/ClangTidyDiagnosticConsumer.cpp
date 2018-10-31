@@ -199,10 +199,6 @@ DiagnosticBuilder ClangTidyContext::diag(
   return DiagEngine->Report(Loc, ID);
 }
 
-void ClangTidyContext::setDiagnosticsEngine(DiagnosticsEngine *Engine) {
-  DiagEngine = Engine;
-}
-
 void ClangTidyContext::setSourceManager(SourceManager *SourceMgr) {
   DiagEngine->setSourceManager(SourceMgr);
 }
@@ -259,11 +255,6 @@ bool ClangTidyContext::treatAsError(StringRef CheckName) const {
   return WarningAsErrorFilter->contains(CheckName);
 }
 
-/// \brief Store a \c ClangTidyError.
-void ClangTidyContext::storeError(const ClangTidyError &Error) {
-  Errors.push_back(Error);
-}
-
 StringRef ClangTidyContext::getCheckName(unsigned DiagnosticID) const {
   llvm::DenseMap<unsigned, std::string>::const_iterator I =
       CheckNamesByDiagnosticID.find(DiagnosticID);
@@ -281,7 +272,7 @@ ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
   Diags = llvm::make_unique<DiagnosticsEngine>(
       IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts, this,
       /*ShouldOwnClient=*/false);
-  Context.setDiagnosticsEngine(Diags.get());
+  Context.DiagEngine = Diags.get();
 }
 
 void ClangTidyDiagnosticConsumer::finalizeLastError() {
@@ -684,7 +675,6 @@ void ClangTidyDiagnosticConsumer::finish() {
   if (RemoveIncompatibleErrors)
     removeIncompatibleErrors(Errors);
 
-  for (const ClangTidyError &Error : Errors)
-    Context.storeError(Error);
+  std::move(Errors.begin(), Errors.end(), std::back_inserter(Context.Errors));
   Errors.clear();
 }

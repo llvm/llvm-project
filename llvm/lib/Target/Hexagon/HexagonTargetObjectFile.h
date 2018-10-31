@@ -29,7 +29,7 @@ namespace llvm {
     bool isGlobalInSmallSection(const GlobalObject *GO,
                                 const TargetMachine &TM) const;
 
-    bool isSmallDataEnabled() const;
+    bool isSmallDataEnabled(const TargetMachine &TM) const;
 
     unsigned getSmallDataSize() const;
 
