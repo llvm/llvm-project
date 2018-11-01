@@ -29,14 +29,14 @@ namespace mca {
 class ExecuteStage final : public Stage {
   Scheduler &HWS;
 
-  llvm::Error issueInstruction(InstRef &IR);
+  Error issueInstruction(InstRef &IR);
 
   // Called at the beginning of each cycle to issue already dispatched
   // instructions to the underlying pipelines.
-  llvm::Error issueReadyInstructions();
+  Error issueReadyInstructions();
 
   // Used to notify instructions eliminated at register renaming stage.
-  llvm::Error handleInstructionEliminated(InstRef &IR);
+  Error handleInstructionEliminated(InstRef &IR);
 
   ExecuteStage(const ExecuteStage &Other) = delete;
   ExecuteStage &operator=(const ExecuteStage &Other) = delete;
@@ -60,12 +60,12 @@ public:
   // state changes, and processor resources freed by the scheduler.
   // Instructions that transitioned to the 'Executed' state are automatically
   // moved to the next stage (i.e. RetireStage).
-  llvm::Error cycleStart() override;
-  llvm::Error execute(InstRef &IR) override;
+  Error cycleStart() override;
+  Error execute(InstRef &IR) override;
 
   void notifyInstructionIssued(
       const InstRef &IR,
-      llvm::ArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const;
+      ArrayRef<std::pair<ResourceRef, ResourceCycles>> Used) const;
   void notifyInstructionExecuted(const InstRef &IR) const;
   void notifyInstructionReady(const InstRef &IR) const;
   void notifyResourceAvailable(const ResourceRef &RR) const;

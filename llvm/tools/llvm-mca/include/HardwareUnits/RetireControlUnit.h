@@ -63,7 +63,7 @@ private:
   std::vector<RUToken> Queue;
 
 public:
-  RetireControlUnit(const llvm::MCSchedModel &SM);
+  RetireControlUnit(const MCSchedModel &SM);
 
   bool isEmpty() const { return AvailableSlots == Queue.size(); }
   bool isAvailable(unsigned Quantity = 1) const {

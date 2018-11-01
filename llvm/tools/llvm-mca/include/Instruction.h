@@ -329,26 +329,26 @@ class InstructionBase {
 
   // Output dependencies.
   // One entry per each implicit and explicit register definition.
-  llvm::SmallVector<WriteState, 4> Defs;
+  SmallVector<WriteState, 4> Defs;
 
   // Input dependencies.
   // One entry per each implicit and explicit register use.
-  llvm::SmallVector<ReadState, 4> Uses;
+  SmallVector<ReadState, 4> Uses;
 
 public:
   InstructionBase(const InstrDesc &D) : Desc(D), IsOptimizableMove(false) {}
 
-  llvm::SmallVectorImpl<WriteState> &getDefs() { return Defs; }
-  const llvm::ArrayRef<WriteState> getDefs() const { return Defs; }
-  llvm::SmallVectorImpl<ReadState> &getUses() { return Uses; }
-  const llvm::ArrayRef<ReadState> getUses() const { return Uses; }
+  SmallVectorImpl<WriteState> &getDefs() { return Defs; }
+  const ArrayRef<WriteState> getDefs() const { return Defs; }
+  SmallVectorImpl<ReadState> &getUses() { return Uses; }
+  const ArrayRef<ReadState> getUses() const { return Uses; }
   const InstrDesc &getDesc() const { return Desc; }
 
   unsigned getLatency() const { return Desc.MaxLatency; }
 
   bool hasDependentUsers() const {
-    return llvm::any_of(
-        Defs, [](const WriteState &Def) { return Def.getNumUsers() > 0; });
+    return any_of(Defs,
+                  [](const WriteState &Def) { return Def.getNumUsers() > 0; });
   }
 
   unsigned getNumUsers() const {
@@ -420,8 +420,8 @@ public:
 
   bool isEliminated() const {
     return isReady() && getDefs().size() &&
-           llvm::all_of(getDefs(),
-                        [](const WriteState &W) { return W.isEliminated(); });
+           all_of(getDefs(),
+                  [](const WriteState &W) { return W.isEliminated(); });
   }
 
   // Forces a transition from state IS_AVAILABLE to state IS_EXECUTED.
@@ -458,12 +458,12 @@ public:
   void invalidate() { Data.second = nullptr; }
 
 #ifndef NDEBUG
-  void print(llvm::raw_ostream &OS) const { OS << getSourceIndex(); }
+  void print(raw_ostream &OS) const { OS << getSourceIndex(); }
 #endif
 };
 
 #ifndef NDEBUG
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const InstRef &IR) {
+inline raw_ostream &operator<<(raw_ostream &OS, const InstRef &IR) {
   IR.print(OS);
   return OS;
 }

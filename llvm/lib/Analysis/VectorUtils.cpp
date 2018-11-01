@@ -504,6 +504,25 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   return Inst;
 }
 
+Constant *llvm::createBitMaskForGaps(IRBuilder<> &Builder, unsigned VF,
+                                           const InterleaveGroup &Group) {
+  // All 1's means mask is not needed.
+  if (Group.getNumMembers() == Group.getFactor())
+    return nullptr;
+
+  // TODO: support reversed access.
+  assert(!Group.isReverse() && "Reversed group not supported.");
+
+  SmallVector<Constant *, 16> Mask;
+  for (unsigned i = 0; i < VF; i++)
+    for (unsigned j = 0; j < Group.getFactor(); ++j) {
+      unsigned HasMember = Group.getMember(j) ? 1 : 0;
+      Mask.push_back(Builder.getInt1(HasMember));
+    }
+
+  return ConstantVector::get(Mask);
+}
+
 Constant *llvm::createReplicatedMask(IRBuilder<> &Builder, 
                                      unsigned ReplicationFactor, unsigned VF) {
   SmallVector<Constant *, 16> MaskVec;
@@ -935,9 +954,10 @@ void InterleavedAccessInfo::invalidateGroupsRequiringScalarEpilogue() {
   }
   for (auto *Ptr : DelSet) {
     LLVM_DEBUG(
-        dbgs() 
+        dbgs()
         << "LV: Invalidate candidate interleaved group due to gaps that "
-           "require a scalar epilogue.\n");
+           "require a scalar epilogue (not allowed under optsize) and cannot "
+           "be masked (not enabled). \n");
     releaseGroup(Ptr);
   }
 

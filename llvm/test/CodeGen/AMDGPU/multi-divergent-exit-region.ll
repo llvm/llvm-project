@@ -59,31 +59,48 @@
 
 
 ; GCN-LABEL: {{^}}multi_divergent_region_exit_ret_ret:
-; GCN: v_cmp_lt_i32_e32 vcc, 1
-; GCN: s_and_saveexec_b64
-; GCN: s_xor_b64
 
+; GCN:      s_mov_b64           [[EXIT1:s\[[0-9]+:[0-9]+\]]], 0
+; GCN:      v_cmp_lt_i32_e32    vcc, 1,
+; GCN:      s_mov_b64           [[EXIT0:s\[[0-9]+:[0-9]+\]]], 0
+; GCN:      s_and_saveexec_b64
+; GCN:      s_xor_b64
+
+; GCN: ; %LeafBlock1
+; GCN-NEXT: s_mov_b64           [[EXIT0]], exec
+; GCN-NEXT: v_cmp_ne_u32_e32    vcc, 2,
+; GCN-NEXT: s_and_b64           [[EXIT1]], vcc, exec
+
+; GCN: ; %Flow
+; GCN-NEXT: s_or_saveexec_b64
+; GCN-NEXT: s_xor_b64
 
 ; FIXME: Why is this compare essentially repeated?
-; GCN: v_cmp_eq_u32_e32 vcc, 1, [[REG:v[0-9]+]]
-; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, -1, vcc
-; GCN: v_cmp_ne_u32_e32 vcc, 1, [[REG]]
-; GCN: v_cndmask_b32_e64 v{{[0-9]+}}, 0, -1, vcc
+; GCN: ; %LeafBlock
+; GCN-DAG:  v_cmp_eq_u32_e32    vcc, 1,
+; GCN-DAG:  v_cmp_ne_u32_e64    [[TMP1:s\[[0-9]+:[0-9]+\]]], 1,
+; GCN-DAG:  s_andn2_b64         [[EXIT0]], [[EXIT0]], exec
+; GCN-DAG:  s_andn2_b64         [[EXIT1]], [[EXIT1]], exec
+; GCN-DAG:  s_and_b64           [[TMP0:s\[[0-9]+:[0-9]+\]]], vcc, exec
+; GCN-DAG:  s_and_b64           [[TMP1]], [[TMP1]], exec
+; GCN-DAG:  s_or_b64            [[EXIT0]], [[EXIT0]], [[TMP0]]
+; GCN-DAG:  s_or_b64            [[EXIT1]], [[EXIT1]], [[TMP1]]
 
 ; GCN: ; %Flow4
-; GCN-NEXT: s_or_b64 exec, exec
-; GCN: v_cmp_ne_u32_e32 vcc, 0
+; GCN-NEXT: s_or_b64            exec, exec,
+; GCN-NEXT: s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, [[EXIT1]]
+; GCN-NEXT: s_xor_b64
 
 ; GCN: ; %exit1
-; GCN: ds_write_b32
+; GCN:      ds_write_b32
+; GCN:      s_andn2_b64         [[EXIT0]], [[EXIT0]], exec
 
-; GCN: %Flow5
-; GCN-NEXT: s_or_b64 exec, exec
-; GCN: v_cmp_ne_u32_e32 vcc, 0
-; GCN-NEXT: s_and_saveexec_b64
+; GCN: ; %Flow5
+; GCN-NEXT: s_or_b64            exec, exec,
+; GCN-NEXT; s_and_saveexec_b64  {{s\[[0-9]+:[0-9]+\]}}, [[EXIT0]]
 
 ; GCN: ; %exit0
-; GCN: buffer_store_dword
+; GCN:      buffer_store_dword
 
 ; GCN: ; %UnifiedReturnBlock
 ; GCN-NEXT: s_endpgm

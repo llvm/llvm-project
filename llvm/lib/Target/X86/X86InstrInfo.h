@@ -558,6 +558,9 @@ public:
                      MachineBasicBlock::iterator &It, MachineFunction &MF,
                      const outliner::Candidate &C) const override;
 
+#define GET_TII_HELPER_DECLS
+#include "X86GenInstrInfo.inc"
+
 protected:
   /// Commutes the operands in the given instruction by changing the operands
   /// order and/or changing the instruction's opcode and/or the immediate value

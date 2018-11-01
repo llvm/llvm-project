@@ -804,7 +804,8 @@ public:
                                       unsigned Factor,
                                       ArrayRef<unsigned> Indices,
                                       unsigned Alignment, unsigned AddressSpace,
-                                      bool IsMasked = false) {
+                                      bool UseMaskForCond = false,
+                                      bool UseMaskForGaps = false) {
     VectorType *VT = dyn_cast<VectorType>(VecTy);
     assert(VT && "Expect a vector type for interleaved memory op");
 
@@ -816,7 +817,7 @@ public:
 
     // Firstly, the cost of load/store operation.
     unsigned Cost;
-    if (IsMasked)
+    if (UseMaskForCond || UseMaskForGaps)
       Cost = static_cast<T *>(this)->getMaskedMemoryOpCost(
           Opcode, VecTy, Alignment, AddressSpace);
     else
@@ -917,7 +918,7 @@ public:
                     ->getVectorInstrCost(Instruction::InsertElement, VT, i);
     }
 
-    if (!IsMasked)
+    if (!UseMaskForCond)
       return Cost;
 
     Type *I8Type = Type::getInt8Ty(VT->getContext());
@@ -941,6 +942,15 @@ public:
     for (unsigned i = 0; i < NumElts; i++)
       Cost += static_cast<T *>(this)->getVectorInstrCost(
           Instruction::InsertElement, MaskVT, i);
+
+    // The Gaps mask is invariant and created outside the loop, therefore the
+    // cost of creating it is not accounted for here. However if we have both
+    // a MaskForGaps and some other mask that guards the execution of the
+    // memory access, we need to account for the cost of And-ing the two masks
+    // inside the loop.
+    if (UseMaskForGaps)
+      Cost += static_cast<T *>(this)->getArithmeticInstrCost(
+          BinaryOperator::And, MaskVT); 
 
     return Cost;
   }

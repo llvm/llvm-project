@@ -3591,10 +3591,7 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
           SDValue(CurDAG->getMachineNode(SExtOpcode, dl, MVT::Glue, InFlag),0);
       } else {
         // Zero out the high part, effectively zero extending the input.
-        unsigned ClrOpc = NVT.SimpleTy == MVT::i64 ? X86::MOV64r0
-                                                   : X86::MOV32r0;
-        MVT ClrVT = NVT.SimpleTy == MVT::i64 ? MVT::i64 : MVT::i32;
-        SDValue ClrNode = SDValue(CurDAG->getMachineNode(ClrOpc, dl, ClrVT), 0);
+        SDValue ClrNode = SDValue(CurDAG->getMachineNode(X86::MOV32r0, dl, NVT), 0);
         switch (NVT.SimpleTy) {
         case MVT::i16:
           ClrNode =
@@ -3605,7 +3602,15 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
                       0);
           break;
         case MVT::i32:
+          break;
         case MVT::i64:
+          ClrNode =
+              SDValue(CurDAG->getMachineNode(
+                          TargetOpcode::SUBREG_TO_REG, dl, MVT::i64,
+                          CurDAG->getTargetConstant(0, dl, MVT::i64), ClrNode,
+                          CurDAG->getTargetConstant(X86::sub_32bit, dl,
+                                                    MVT::i32)),
+                      0);
           break;
         default:
           llvm_unreachable("Unexpected division source");

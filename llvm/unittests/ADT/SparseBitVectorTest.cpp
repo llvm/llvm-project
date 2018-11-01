@@ -31,6 +31,11 @@ TEST(SparseBitVectorTest, TrivialOperation) {
   EXPECT_TRUE(Vec.test(17));
   Vec.clear();
   EXPECT_FALSE(Vec.test(17));
+
+  Vec.set(5);
+  const SparseBitVector<> ConstVec = Vec;
+  EXPECT_TRUE(ConstVec.test(5));
+  EXPECT_FALSE(ConstVec.test(17));
 }
 
 TEST(SparseBitVectorTest, IntersectWith) {

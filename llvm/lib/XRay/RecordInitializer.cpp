@@ -118,6 +118,19 @@ Error RecordInitializer::visit(CustomEventRecord &R) {
         std::make_error_code(std::errc::invalid_argument),
         "Cannot read a custom event TSC field at offset %d.", OffsetPtr);
 
+  // For version 4 onwards, of the FDR log, we want to also capture the CPU ID
+  // of the custom event.
+  if (Version >= 4) {
+    PreReadOffset = OffsetPtr;
+    R.CPU = E.getU16(&OffsetPtr);
+    if (PreReadOffset == OffsetPtr)
+      return createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "Missing CPU field at offset %d", OffsetPtr);
+  }
+
+  assert(OffsetPtr > BeginOffset &&
+         OffsetPtr - BeginOffset <= MetadataRecord::kMetadataBodySize);
   OffsetPtr += MetadataRecord::kMetadataBodySize - (OffsetPtr - BeginOffset);
 
   // Next we read in a fixed chunk of data from the given offset.

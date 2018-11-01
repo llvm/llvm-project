@@ -85,9 +85,7 @@ private:
 
   void emitIf(MachineInstr &MI);
   void emitElse(MachineInstr &MI);
-  void emitBreak(MachineInstr &MI);
   void emitIfBreak(MachineInstr &MI);
-  void emitElseBreak(MachineInstr &MI);
   void emitLoop(MachineInstr &MI);
   void emitEndCf(MachineInstr &MI);
 
@@ -329,20 +327,6 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   LIS->removeRegUnit(*MCRegUnitIterator(AMDGPU::EXEC, TRI));
 }
 
-void SILowerControlFlow::emitBreak(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  const DebugLoc &DL = MI.getDebugLoc();
-  unsigned Dst = MI.getOperand(0).getReg();
-
-  MachineInstr *Or = BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
-                         .addReg(AMDGPU::EXEC)
-                         .add(MI.getOperand(1));
-
-  if (LIS)
-    LIS->ReplaceMachineInstrInMaps(MI, *Or);
-  MI.eraseFromParent();
-}
-
 void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -382,11 +366,6 @@ void SILowerControlFlow::emitIfBreak(MachineInstr &MI) {
   }
 
   MI.eraseFromParent();
-}
-
-void SILowerControlFlow::emitElseBreak(MachineInstr &MI) {
-  // Lowered in the same way as emitIfBreak above.
-  emitIfBreak(MI);
 }
 
 void SILowerControlFlow::emitLoop(MachineInstr &MI) {
@@ -515,16 +494,8 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
         emitElse(MI);
         break;
 
-      case AMDGPU::SI_BREAK:
-        emitBreak(MI);
-        break;
-
       case AMDGPU::SI_IF_BREAK:
         emitIfBreak(MI);
-        break;
-
-      case AMDGPU::SI_ELSE_BREAK:
-        emitElseBreak(MI);
         break;
 
       case AMDGPU::SI_LOOP:

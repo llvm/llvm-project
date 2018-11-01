@@ -2157,28 +2157,33 @@ vfs::recursive_directory_iterator::recursive_directory_iterator(
     : FS(&FS_) {
   directory_iterator I = FS->dir_begin(Path, EC);
   if (I != directory_iterator()) {
-    State = std::make_shared<IterState>();
-    State->push(I);
+    State = std::make_shared<detail::RecDirIterState>();
+    State->Stack.push(I);
   }
 }
 
 vfs::recursive_directory_iterator &
 recursive_directory_iterator::increment(std::error_code &EC) {
-  assert(FS && State && !State->empty() && "incrementing past end");
-  assert(!State->top()->path().empty() && "non-canonical end iterator");
+  assert(FS && State && !State->Stack.empty() && "incrementing past end");
+  assert(!State->Stack.top()->path().empty() && "non-canonical end iterator");
   vfs::directory_iterator End;
-  if (State->top()->type() == sys::fs::file_type::directory_file) {
-    vfs::directory_iterator I = FS->dir_begin(State->top()->path(), EC);
-    if (I != End) {
-      State->push(I);
-      return *this;
+
+  if (State->HasNoPushRequest)
+    State->HasNoPushRequest = false;
+  else {
+    if (State->Stack.top()->type() == sys::fs::file_type::directory_file) {
+      vfs::directory_iterator I = FS->dir_begin(State->Stack.top()->path(), EC);
+      if (I != End) {
+        State->Stack.push(I);
+        return *this;
+      }
     }
   }
 
-  while (!State->empty() && State->top().increment(EC) == End)
-    State->pop();
+  while (!State->Stack.empty() && State->Stack.top().increment(EC) == End)
+    State->Stack.pop();
 
-  if (State->empty())
+  if (State->Stack.empty())
     State.reset(); // end iterator
 
   return *this;

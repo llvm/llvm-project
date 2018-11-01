@@ -104,6 +104,36 @@ IRTranslator::IRTranslator() : MachineFunctionPass(ID) {
   initializeIRTranslatorPass(*PassRegistry::getPassRegistry());
 }
 
+#ifndef NDEBUG
+/// Verify that every instruction created has the same DILocation as the
+/// instruction being translated.
+class DILocationVerifier : MachineFunction::Delegate {
+  MachineFunction &MF;
+  const Instruction *CurrInst = nullptr;
+
+public:
+  DILocationVerifier(MachineFunction &MF) : MF(MF) { MF.setDelegate(this); }
+  ~DILocationVerifier() { MF.resetDelegate(this); }
+
+  const Instruction *getCurrentInst() const { return CurrInst; }
+  void setCurrentInst(const Instruction *Inst) { CurrInst = Inst; }
+
+  void MF_HandleInsertion(const MachineInstr &MI) override {
+    assert(getCurrentInst() && "Inserted instruction without a current MI");
+
+    // Only print the check message if we're actually checking it.
+#ifndef NDEBUG
+    LLVM_DEBUG(dbgs() << "Checking DILocation from " << *CurrInst
+                      << " was copied to " << MI);
+#endif
+    assert(CurrInst->getDebugLoc() == MI.getDebugLoc() &&
+           "Line info was not transferred to all instructions");
+  }
+  void MF_HandleRemoval(const MachineInstr &MI) override {}
+};
+#endif // ifndef NDEBUG
+
+
 void IRTranslator::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<StackProtector>();
   AU.addRequired<TargetPassConfig>();
@@ -1468,9 +1498,16 @@ bool IRTranslator::translateAtomicRMW(const User &U,
 }
 
 void IRTranslator::finishPendingPhis() {
+#ifndef NDEBUG
+  DILocationVerifier Verifier(*MF);
+#endif // ifndef NDEBUG
   for (auto &Phi : PendingPHIs) {
     const PHINode *PI = Phi.first;
     ArrayRef<MachineInstr *> ComponentPHIs = Phi.second;
+    EntryBuilder.setDebugLoc(PI->getDebugLoc());
+#ifndef NDEBUG
+    Verifier.setCurrentInst(PI);
+#endif // ifndef NDEBUG
 
     // All MachineBasicBlocks exist, add them to the PHI. We assume IRTranslator
     // won't create extra control flow here, otherwise we need to find the
@@ -1509,6 +1546,7 @@ bool IRTranslator::valueIsSplit(const Value &V,
 
 bool IRTranslator::translate(const Instruction &Inst) {
   CurBuilder.setDebugLoc(Inst.getDebugLoc());
+  EntryBuilder.setDebugLoc(Inst.getDebugLoc());
   switch(Inst.getOpcode()) {
 #define HANDLE_INST(NUM, OPCODE, CLASS) \
     case Instruction::OPCODE: return translate##OPCODE(Inst, CurBuilder);
@@ -1684,31 +1722,39 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   }
 
   // Need to visit defs before uses when translating instructions.
-  ReversePostOrderTraversal<const Function *> RPOT(&F);
-  for (const BasicBlock *BB : RPOT) {
-    MachineBasicBlock &MBB = getMBB(*BB);
-    // Set the insertion point of all the following translations to
-    // the end of this basic block.
-    CurBuilder.setMBB(MBB);
+  {
+    ReversePostOrderTraversal<const Function *> RPOT(&F);
+#ifndef NDEBUG
+    DILocationVerifier Verifier(*MF);
+#endif // ifndef NDEBUG
+    for (const BasicBlock *BB : RPOT) {
+      MachineBasicBlock &MBB = getMBB(*BB);
+      // Set the insertion point of all the following translations to
+      // the end of this basic block.
+      CurBuilder.setMBB(MBB);
 
-    for (const Instruction &Inst : *BB) {
-      if (translate(Inst))
-        continue;
+      for (const Instruction &Inst : *BB) {
+#ifndef NDEBUG
+        Verifier.setCurrentInst(&Inst);
+#endif // ifndef NDEBUG
+        if (translate(Inst))
+          continue;
 
-      OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                                 Inst.getDebugLoc(), BB);
-      R << "unable to translate instruction: " << ore::NV("Opcode", &Inst);
+        OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                                   Inst.getDebugLoc(), BB);
+        R << "unable to translate instruction: " << ore::NV("Opcode", &Inst);
 
-      if (ORE->allowExtraAnalysis("gisel-irtranslator")) {
-        std::string InstStrStorage;
-        raw_string_ostream InstStr(InstStrStorage);
-        InstStr << Inst;
+        if (ORE->allowExtraAnalysis("gisel-irtranslator")) {
+          std::string InstStrStorage;
+          raw_string_ostream InstStr(InstStrStorage);
+          InstStr << Inst;
 
-        R << ": '" << InstStr.str() << "'";
+          R << ": '" << InstStr.str() << "'";
+        }
+
+        reportTranslationError(*MF, *TPC, *ORE, R);
+        return false;
       }
-
-      reportTranslationError(*MF, *TPC, *ORE, R);
-      return false;
     }
   }
 

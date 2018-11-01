@@ -1156,6 +1156,7 @@ static void mapWasmLandingPadIndex(MachineBasicBlock *MBB,
       }
     }
     assert(IntrFound && "wasm.landingpad.index intrinsic not found!");
+    (void)IntrFound;
   }
 }
 
