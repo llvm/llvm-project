@@ -420,13 +420,6 @@ void RetainCountChecker::processSummaryOfInlined(const RetainSummary &Summ,
   RetEffect RE = Summ.getRetEffect();
 
   if (SymbolRef Sym = CallOrMsg.getReturnValue().getAsSymbol()) {
-    if (const auto *MCall = dyn_cast<CXXMemberCall>(&CallOrMsg)) {
-      if (Optional<RefVal> updatedRefVal =
-              refValFromRetEffect(RE, MCall->getResultType())) {
-        state = setRefBinding(state, Sym, *updatedRefVal);
-      }
-    }
-
     if (RE.getKind() == RetEffect::NoRetHard)
       state = removeRefBinding(state, Sym);
   }
@@ -1103,9 +1096,8 @@ RetainCountChecker::checkRegionChanges(ProgramStateRef state,
       WhitelistedSymbols.insert(SR->getSymbol());
   }
 
-  for (InvalidatedSymbols::const_iterator I=invalidated->begin(),
-       E = invalidated->end(); I!=E; ++I) {
-    SymbolRef sym = *I;
+  for (SymbolRef sym :
+       llvm::make_range(invalidated->begin(), invalidated->end())) {
     if (WhitelistedSymbols.count(sym))
       continue;
     // Remove any existing reference-count binding.

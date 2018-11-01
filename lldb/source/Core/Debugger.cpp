@@ -21,6 +21,7 @@
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Host/File.h" // for File, File::kInv...
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
@@ -604,16 +605,16 @@ bool Debugger::LoadPlugin(const FileSpec &spec, Status &error) {
   return false;
 }
 
-static FileSpec::EnumerateDirectoryResult
+static FileSystem::EnumerateDirectoryResult
 LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
-                   const FileSpec &file_spec) {
+                   llvm::StringRef path) {
   Status error;
 
   static ConstString g_dylibext(".dylib");
   static ConstString g_solibext(".so");
 
   if (!baton)
-    return FileSpec::eEnumerateDirectoryResultQuit;
+    return FileSystem::eEnumerateDirectoryResultQuit;
 
   Debugger *debugger = (Debugger *)baton;
 
@@ -624,18 +625,18 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
   // file type information.
   if (ft == fs::file_type::regular_file || ft == fs::file_type::symlink_file ||
       ft == fs::file_type::type_unknown) {
-    FileSpec plugin_file_spec(file_spec);
+    FileSpec plugin_file_spec(path, false);
     plugin_file_spec.ResolvePath();
 
     if (plugin_file_spec.GetFileNameExtension() != g_dylibext &&
         plugin_file_spec.GetFileNameExtension() != g_solibext) {
-      return FileSpec::eEnumerateDirectoryResultNext;
+      return FileSystem::eEnumerateDirectoryResultNext;
     }
 
     Status plugin_load_error;
     debugger->LoadPlugin(plugin_file_spec, plugin_load_error);
 
-    return FileSpec::eEnumerateDirectoryResultNext;
+    return FileSystem::eEnumerateDirectoryResultNext;
   } else if (ft == fs::file_type::directory_file ||
              ft == fs::file_type::symlink_file ||
              ft == fs::file_type::type_unknown) {
@@ -643,10 +644,10 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
     // also do this for unknown as sometimes the directory enumeration might be
     // enumerating a file system that doesn't have correct file type
     // information.
-    return FileSpec::eEnumerateDirectoryResultEnter;
+    return FileSystem::eEnumerateDirectoryResultEnter;
   }
 
-  return FileSpec::eEnumerateDirectoryResultNext;
+  return FileSystem::eEnumerateDirectoryResultNext;
 }
 
 void Debugger::InstanceInitialize() {
@@ -656,15 +657,17 @@ void Debugger::InstanceInitialize() {
   char dir_path[PATH_MAX];
   if (FileSpec dir_spec = HostInfo::GetSystemPluginDir()) {
     if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path))) {
-      FileSpec::EnumerateDirectory(dir_path, find_directories, find_files,
-                                   find_other, LoadPluginCallback, this);
+      FileSystem::Instance().EnumerateDirectory(dir_path, find_directories,
+                                                find_files, find_other,
+                                                LoadPluginCallback, this);
     }
   }
 
   if (FileSpec dir_spec = HostInfo::GetUserPluginDir()) {
     if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path))) {
-      FileSpec::EnumerateDirectory(dir_path, find_directories, find_files,
-                                   find_other, LoadPluginCallback, this);
+      FileSystem::Instance().EnumerateDirectory(dir_path, find_directories,
+                                                find_files, find_other,
+                                                LoadPluginCallback, this);
     }
   }
 

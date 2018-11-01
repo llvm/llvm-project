@@ -46,7 +46,6 @@ const int IndirectCallThreshold = 100;
 const int CallPenalty = 25;
 const int LastCallToStaticBonus = 15000;
 const int ColdccPenalty = 2000;
-const int NoreturnPenalty = 10000;
 /// Do not inline functions which allocate this many bytes on the stack
 /// when the caller is recursive.
 const unsigned TotalAllocaSizeRecursiveCaller = 1024;

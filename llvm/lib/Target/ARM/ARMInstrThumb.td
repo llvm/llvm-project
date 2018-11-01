@@ -1343,6 +1343,12 @@ let hasPostISelHook = 1, Defs = [CPSR] in {
                                                            tGPR:$Rm))]>,
                 Requires<[IsThumb1Only]>,
                 Sched<[WriteALU]>;
+
+  def tRSBS   : tPseudoInst<(outs tGPR:$Rd), (ins tGPR:$Rn),
+                            2, IIC_iALUr,
+                            [(set tGPR:$Rd, CPSR, (ARMsubc 0, tGPR:$Rn))]>,
+                Requires<[IsThumb1Only]>,
+                Sched<[WriteALU]>;
 }
 
 // Sign-extend byte

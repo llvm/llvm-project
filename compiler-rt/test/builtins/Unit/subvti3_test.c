@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: int128
 //===-- subvti3_test.c - Test __subvti3 -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

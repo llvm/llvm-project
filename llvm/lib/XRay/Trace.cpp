@@ -310,12 +310,11 @@ Error loadFDRLog(StringRef Data, bool IsLittleEndian,
   {
     for (auto &PTB : Index) {
       auto &Blocks = PTB.second;
-      llvm::sort(
-          Blocks,
-          [](const BlockIndexer::Block &L, const BlockIndexer::Block &R) {
-            return (L.WallclockTime->seconds() < R.WallclockTime->seconds() &&
-                    L.WallclockTime->nanos() < R.WallclockTime->nanos());
-          });
+      llvm::sort(Blocks, [](const BlockIndexer::Block &L,
+                            const BlockIndexer::Block &R) {
+        return (L.WallclockTime->seconds() < R.WallclockTime->seconds() &&
+                L.WallclockTime->nanos() < R.WallclockTime->nanos());
+      });
       auto Adder = [&](const XRayRecord &R) { Records.push_back(R); };
       TraceExpander Expander(Adder, FileHeader.Version);
       for (auto &B : Blocks) {
@@ -435,7 +434,7 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
     }
     break;
   case FLIGHT_DATA_RECORDER_FORMAT:
-    if (Version == 1 || Version == 2 || Version == 3) {
+    if (Version >= 1 && Version <= 4) {
       if (auto E = loadFDRLog(DE.getData(), DE.isLittleEndian(), T.FileHeader,
                               T.Records))
         return std::move(E);

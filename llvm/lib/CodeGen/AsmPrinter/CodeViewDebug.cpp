@@ -117,6 +117,7 @@ CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
   if (!MMI->getModule()->getNamedMetadata("llvm.dbg.cu") ||
       !AP->getObjFileLowering().getCOFFDebugSymbolsSection()) {
     Asm = nullptr;
+    MMI->setDebugInfoAvailability(false);
     return;
   }
   // Tell MMI that we have debug info.

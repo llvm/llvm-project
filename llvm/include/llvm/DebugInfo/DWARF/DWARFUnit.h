@@ -304,7 +304,7 @@ public:
   }
 
   Optional<SectionedAddress> getAddrOffsetSectionItem(uint32_t Index) const;
-  bool getStringOffsetSectionItem(uint32_t Index, uint64_t &Result) const;
+  Optional<uint64_t> getStringOffsetSectionItem(uint32_t Index) const;
 
   DWARFDataExtractor getDebugInfoExtractor() const;
 

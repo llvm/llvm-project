@@ -667,6 +667,18 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(SDNode *N,
   EVT OldVT = N->getValueType(0);
   unsigned OldSize = OldVT.getStoreSizeInBits();
 
+  MemSDNode *MN = cast<MemSDNode>(N);
+  unsigned AS = MN->getAddressSpace();
+  // Do not shrink an aligned scalar load to sub-dword.
+  // Scalar engine cannot do sub-dword loads.
+  if (OldSize >= 32 && NewSize < 32 && MN->getAlignment() >= 4 &&
+      (AS == AMDGPUAS::CONSTANT_ADDRESS ||
+       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
+       (isa<LoadSDNode>(N) &&
+        AS == AMDGPUAS::GLOBAL_ADDRESS && MN->isInvariant())) &&
+      AMDGPUInstrInfo::isUniformMMO(MN->getMemOperand()))
+    return false;
+
   // Don't produce extloads from sub 32-bit types. SI doesn't have scalar
   // extloads, so doing one requires using a buffer_load. In cases where we
   // still couldn't use a scalar load, using the wider load shouldn't really

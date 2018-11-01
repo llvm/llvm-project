@@ -201,6 +201,7 @@ public:
       case 's': // VSX vector register to hold scalar float data
       case 'a': // Any VSX register
       case 'c': // An individual CR bit
+      case 'i': // FP or VSX register to hold 64-bit integers data
         break;
       default:
         return false;

@@ -599,6 +599,8 @@ public:
   /// Notifies the \c Role that a comma was found.
   virtual void CommaFound(const FormatToken *Token) {}
 
+  virtual const FormatToken *lastComma() { return nullptr; }
+
 protected:
   const FormatStyle &Style;
 };
@@ -619,6 +621,12 @@ public:
   /// Adds \p Token as the next comma to the \c CommaSeparated list.
   void CommaFound(const FormatToken *Token) override {
     Commas.push_back(Token);
+  }
+
+  const FormatToken *lastComma() override {
+    if (Commas.empty())
+      return nullptr;
+    return Commas.back();
   }
 
 private:

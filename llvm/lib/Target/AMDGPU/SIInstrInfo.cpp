@@ -908,16 +908,6 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     return;
   }
 
-  if (!ST.isVGPRSpillingEnabled(MF->getFunction())) {
-    LLVMContext &Ctx = MF->getFunction().getContext();
-    Ctx.emitError("SIInstrInfo::storeRegToStackSlot - Do not know how to"
-                  " spill register");
-    BuildMI(MBB, MI, DL, get(AMDGPU::KILL))
-      .addReg(SrcReg);
-
-    return;
-  }
-
   assert(RI.hasVGPRs(RC) && "Only VGPR spilling expected");
 
   unsigned Opcode = getVGPRSpillSaveOpcode(SpillSize);
@@ -1006,15 +996,6 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       // m0 is used for offset to scalar stores if used to spill.
       Spill.addReg(AMDGPU::M0, RegState::ImplicitDefine | RegState::Dead);
     }
-
-    return;
-  }
-
-  if (!ST.isVGPRSpillingEnabled(MF->getFunction())) {
-    LLVMContext &Ctx = MF->getFunction().getContext();
-    Ctx.emitError("SIInstrInfo::loadRegFromStackSlot - Do not know how to"
-                  " restore register");
-    BuildMI(MBB, MI, DL, get(AMDGPU::IMPLICIT_DEF), DestReg);
 
     return;
   }

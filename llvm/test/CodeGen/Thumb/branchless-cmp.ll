@@ -20,8 +20,7 @@ entry:
 ; CHECK-LABEL: test1b:
 ; CHECK-NOT: b{{(ne)|(eq)}}
 ; CHECK:       subs    r1, r0, r1
-; CHECK-NEXT:  movs    r0, #0
-; CHECK-NEXT:  subs    r0, r0, r1
+; CHECK-NEXT:  rsbs    r0, r1, #0
 ; CHECK-NEXT:  adcs    r0, r1
 }
 
@@ -33,8 +32,7 @@ entry:
 ; CHECK-LABEL: test2a:
 ; CHECK-NOT: b{{(ne)|(eq)}}
 ; CHECK:       subs    r1, r0, r1
-; CHECK-NEXT:  movs    r0, #0
-; CHECK-NEXT:  subs    r0, r0, r1
+; CHECK-NEXT:  rsbs    r0, r1, #0
 ; CHECK-NEXT:  adcs    r0, r1
 }
 
@@ -71,8 +69,7 @@ entry:
 ; CHECK-LABEL: test3b:
 ; CHECK-NOT: b{{(ne)|(eq)}}
 ; CHECK:      subs	r0, r0, r1
-; CHECK-NEXT: movs	r1, #0
-; CHECK-NEXT: subs	r1, r1, r0
+; CHECK-NEXT: rsbs	r1, r0, #0
 ; CHECK-NEXT: adcs	r1, r0
 ; CHECK-NEXT: lsls	r0, r1, #2
 }

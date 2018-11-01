@@ -542,10 +542,12 @@ Optional<const char *> DWARFFormValue::getAsCString() const {
   if (Form == DW_FORM_GNU_str_index || Form == DW_FORM_strx ||
       Form == DW_FORM_strx1 || Form == DW_FORM_strx2 || Form == DW_FORM_strx3 ||
       Form == DW_FORM_strx4) {
-    uint64_t StrOffset;
-    if (!U || !U->getStringOffsetSectionItem(Offset, StrOffset))
+    if (!U)
       return None;
-    Offset = StrOffset;
+    Optional<uint64_t> StrOffset = U->getStringOffsetSectionItem(Offset);
+    if (!StrOffset)
+      return None;
+    Offset = *StrOffset;
   }
   // Prefer the Unit's string extractor, because for .dwo it will point to
   // .debug_str.dwo, while the Context's extractor always uses .debug_str.

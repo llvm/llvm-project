@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: int128
 //===-- negvti2_test.c - Test __negvti2 -----------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
