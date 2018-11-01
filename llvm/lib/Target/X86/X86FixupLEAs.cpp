@@ -58,10 +58,9 @@ class FixupLEAPass : public MachineFunctionPass {
                           MachineFunction::iterator MFI);
 
   /// Given a LEA instruction which is unprofitable
-  /// on Silvermont try to replace it with an equivalent ADD instruction
-  void processInstructionForSLM(MachineBasicBlock::iterator &I,
-                                MachineFunction::iterator MFI);
-
+  /// on SlowLEA targets try to replace it with an equivalent ADD instruction.
+  void processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
+                                    MachineFunction::iterator MFI);
 
   /// Given a LEA instruction which is unprofitable
   /// on SNB+ try to replace it with other instructions.
@@ -411,8 +410,8 @@ void FixupLEAPass::seekLEAFixup(MachineOperand &p,
   }
 }
 
-void FixupLEAPass::processInstructionForSLM(MachineBasicBlock::iterator &I,
-                                            MachineFunction::iterator MFI) {
+void FixupLEAPass::processInstructionForSlowLEA(MachineBasicBlock::iterator &I,
+                                                MachineFunction::iterator MFI) {
   MachineInstr &MI = *I;
   const int Opcode = MI.getOpcode();
   if (!isLEA(Opcode))
@@ -576,7 +575,7 @@ bool FixupLEAPass::processBasicBlock(MachineFunction &MF,
 
     if (OptLEA) {
       if (MF.getSubtarget<X86Subtarget>().slowLEA())
-        processInstructionForSLM(I, MFI);
+        processInstructionForSlowLEA(I, MFI);
 
       else {
         if (MF.getSubtarget<X86Subtarget>().slow3OpsLEA()) {

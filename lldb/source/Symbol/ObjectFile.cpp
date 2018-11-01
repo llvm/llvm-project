@@ -91,7 +91,7 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
         const bool must_exist = true;
         if (ObjectFile::SplitArchivePathWithObject(
                 path_with_object, archive_file, archive_object, must_exist)) {
-          file_size = archive_file.GetByteSize();
+          file_size = FileSystem::Instance().GetByteSize(archive_file);
           if (file_size > 0) {
             file = &archive_file;
             module_sp->SetFileSpecAndObjectName(archive_file, archive_object);
@@ -212,7 +212,8 @@ size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
   DataBufferSP data_sp = DataBufferLLVM::CreateSliceFromPath(file.GetPath(), 512, file_offset);
   if (data_sp) {
     if (file_size == 0) {
-      const lldb::offset_t actual_file_size = file.GetByteSize();
+      const lldb::offset_t actual_file_size =
+          FileSystem::Instance().GetByteSize(file);
       if (actual_file_size > file_offset)
         file_size = actual_file_size - file_offset;
     }

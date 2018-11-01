@@ -1648,7 +1648,8 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   lldb::offset_t dwo_file_data_offset = 0;
   ObjectFileSP dwo_obj_file = ObjectFile::FindPlugin(
       GetObjectFile()->GetModule(), &dwo_file, file_offset,
-      dwo_file.GetByteSize(), dwo_file_data_sp, dwo_file_data_offset);
+      FileSystem::Instance().GetByteSize(dwo_file), dwo_file_data_sp,
+      dwo_file_data_offset);
   if (dwo_obj_file == nullptr)
     return nullptr;
 

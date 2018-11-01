@@ -110,11 +110,26 @@ namespace {
 class IRPromoter {
   SmallPtrSet<Value*, 8> NewInsts;
   SmallVector<Instruction*, 4> InstsToRemove;
+  DenseMap<Value*, Type*> TruncTysMap;
+  SmallPtrSet<Value*, 8> Promoted;
   Module *M = nullptr;
   LLVMContext &Ctx;
+  Type *ExtTy = nullptr;
+  Type *OrigTy = nullptr;
+
+  void PrepareConstants(SmallPtrSetImpl<Value*> &Visited,
+                         SmallPtrSetImpl<Instruction*> &SafeToPromote);
+  void ExtendSources(SmallPtrSetImpl<Value*> &Sources);
+  void PromoteTree(SmallPtrSetImpl<Value*> &Visited,
+                   SmallPtrSetImpl<Value*> &Sources,
+                   SmallPtrSetImpl<Instruction*> &Sinks,
+                   SmallPtrSetImpl<Instruction*> &SafeToPromote);
+  void TruncateSinks(SmallPtrSetImpl<Value*> &Sources,
+                     SmallPtrSetImpl<Instruction*> &Sinks);
 
 public:
-  IRPromoter(Module *M) : M(M), Ctx(M->getContext()) { }
+  IRPromoter(Module *M) : M(M), Ctx(M->getContext()),
+                          ExtTy(Type::getInt32Ty(Ctx)) { }
 
   void Cleanup() {
     for (auto *I : InstsToRemove) {
@@ -129,14 +144,17 @@ public:
   void Mutate(Type *OrigTy,
               SmallPtrSetImpl<Value*> &Visited,
               SmallPtrSetImpl<Value*> &Sources,
-              SmallPtrSetImpl<Instruction*> &Sinks);
+              SmallPtrSetImpl<Instruction*> &Sinks,
+              SmallPtrSetImpl<Instruction*> &SafeToPromote);
 };
 
 class ARMCodeGenPrepare : public FunctionPass {
   const ARMSubtarget *ST = nullptr;
   IRPromoter *Promoter = nullptr;
   std::set<Value*> AllVisited;
+  SmallPtrSet<Instruction*, 8> SafeToPromote;
 
+  bool isSafeOverflow(Instruction *I);
   bool isSupportedValue(Value *V);
   bool isLegalToPromote(Value *V);
   bool TryToPromote(Value *V);
@@ -241,8 +259,8 @@ static bool isSink(Value *V) {
 }
 
 /// Return whether the instruction can be promoted within any modifications to
-/// it's operands or result.
-static bool isSafeOverflow(Instruction *I) {
+/// its operands or result.
+bool ARMCodeGenPrepare::isSafeOverflow(Instruction *I) {
   // FIXME Do we need NSW too?
   if (isa<OverflowingBinaryOperator>(I) && I->hasNoUnsignedWrap())
     return true;
@@ -386,11 +404,13 @@ static bool isPromotedResultSafe(Value *V) {
   // If I is only being used by something that will require its value to be
   // truncated, then we don't care about the promoted result.
   auto *I = cast<Instruction>(V);
-  if (I->hasOneUse() && isSink(*I->use_begin()))
+  if (I->hasOneUse() && isSink(*I->use_begin())) {
+    LLVM_DEBUG(dbgs() << "ARM CGP: Only use is a sink: " << *V << "\n");
     return true;
+  }
 
   if (isa<OverflowingBinaryOperator>(I))
-    return isSafeOverflow(I);
+    return false;
   return true;
 }
 
@@ -414,56 +434,84 @@ static Intrinsic::ID getNarrowIntrinsic(Instruction *I) {
   llvm_unreachable("unhandled opcode for narrow intrinsic");
 }
 
-void IRPromoter::Mutate(Type *OrigTy,
-                        SmallPtrSetImpl<Value*> &Visited,
-                        SmallPtrSetImpl<Value*> &Sources,
-                        SmallPtrSetImpl<Instruction*> &Sinks) {
+static void ReplaceAllUsersOfWith(Value *From, Value *To) {
+  SmallVector<Instruction*, 4> Users;
+  Instruction *InstTo = dyn_cast<Instruction>(To);
+  for (Use &U : From->uses()) {
+    auto *User = cast<Instruction>(U.getUser());
+    if (InstTo && User->isIdenticalTo(InstTo))
+      continue;
+    Users.push_back(User);
+  }
+
+  for (auto *U : Users)
+    U->replaceUsesOfWith(From, To);
+}
+
+void
+IRPromoter::PrepareConstants(SmallPtrSetImpl<Value*> &Visited,
+                             SmallPtrSetImpl<Instruction*> &SafeToPromote) {
   IRBuilder<> Builder{Ctx};
-  Type *ExtTy = Type::getInt32Ty(M->getContext());
-  SmallPtrSet<Value*, 8> Promoted;
-  LLVM_DEBUG(dbgs() << "ARM CGP: Promoting use-def chains to from "
-             << ARMCodeGenPrepare::TypeSize << " to 32-bits\n");
+  // First step is to prepare the instructions for mutation. Most constants
+  // just need to be zero extended into their new type, but complications arise
+  // because:
+  // - For nuw binary operators, negative immediates would need sign extending;
+  //   however, instead we'll change them to positive and zext them. We can do
+  //   this because:
+  //   > The operators that can wrap are: add, sub, mul and shl.
+  //   > shl interprets its second operand as unsigned and if the first operand
+  //     is an immediate, it will need zext to be nuw.
+  //   > I'm assuming mul cannot be nuw while using a negative immediate...
+  //   > Which leaves the nuw add and sub to be handled; as with shl, if an
+  //     immediate is used as operand 0, it will need zext to be nuw.
+  // - We also allow add and sub to safely overflow in certain circumstances
+  //   and only when the value (operand 0) is being decreased.
+  //
+  // For adds and subs, that are either nuw or safely wrap and use a negative
+  // immediate as operand 1, we create an equivalent instruction using a
+  // positive immediate. That positive immediate can then be zext along with
+  // all the other immediates later.
+  for (auto *V : Visited) {
+    if (!isa<Instruction>(V))
+      continue;
 
-  // Cache original types.
-  DenseMap<Value*, Type*> TruncTysMap;
-  for (auto *V : Visited)
-    TruncTysMap[V] = V->getType();
+    auto *I = cast<Instruction>(V);
+    if (SafeToPromote.count(I)) {
 
-  auto ReplaceAllUsersOfWith = [&](Value *From, Value *To) {
-    SmallVector<Instruction*, 4> Users;
-    Instruction *InstTo = dyn_cast<Instruction>(To);
-    for (Use &U : From->uses()) {
-      auto *User = cast<Instruction>(U.getUser());
-      if (InstTo && User->isIdenticalTo(InstTo))
+      if (!isa<OverflowingBinaryOperator>(I))
         continue;
-      Users.push_back(User);
+
+      if (auto *Const = dyn_cast<ConstantInt>(I->getOperand(1))) {
+        if (!Const->isNegative())
+          break;
+
+        unsigned Opc = I->getOpcode();
+        assert((Opc == Instruction::Add || Opc == Instruction::Sub) &&
+               "expected only an add or sub to use a negative imm");
+
+        LLVM_DEBUG(dbgs() << "ARM CGP: Adjusting " << *I << "\n");
+        auto *NewConst = ConstantInt::get(Ctx, Const->getValue().abs());
+        Builder.SetInsertPoint(I);
+        Value *NewVal = Opc == Instruction::Sub ?
+          Builder.CreateAdd(I->getOperand(0), NewConst) :
+          Builder.CreateSub(I->getOperand(0), NewConst);
+        LLVM_DEBUG(dbgs() << "ARM CGP: New equivalent: " << *NewVal << "\n");
+
+        if (auto *NewInst = dyn_cast<Instruction>(NewVal)) {
+          NewInst->copyIRFlags(I);
+          NewInsts.insert(NewInst);
+        }
+        InstsToRemove.push_back(I);
+        I->replaceAllUsesWith(NewVal);
+      }
     }
+  }
+  for (auto *I : NewInsts)
+    Visited.insert(I);
+}
 
-    for (auto *U : Users)
-      U->replaceUsesOfWith(From, To);
-  };
-
-  auto FixConst = [&](ConstantInt *Const, Instruction *I) {
-    Constant *NewConst = isSafeOverflow(I) && Const->isNegative() ?
-      ConstantExpr::getSExt(Const, ExtTy) :
-      ConstantExpr::getZExt(Const, ExtTy);
-    I->replaceUsesOfWith(Const, NewConst);
-  };
-
-  auto InsertDSPIntrinsic = [&](Instruction *I) {
-    LLVM_DEBUG(dbgs() << "ARM CGP: Inserting DSP intrinsic for "
-               << *I << "\n");
-    Function *DSPInst =
-      Intrinsic::getDeclaration(M, getNarrowIntrinsic(I));
-    Builder.SetInsertPoint(I);
-    Builder.SetCurrentDebugLocation(I->getDebugLoc());
-    Value *Args[] = { I->getOperand(0), I->getOperand(1) };
-    CallInst *Call = Builder.CreateCall(DSPInst, Args);
-    ReplaceAllUsersOfWith(I, Call);
-    InstsToRemove.push_back(I);
-    NewInsts.insert(Call);
-    TruncTysMap[Call] = OrigTy;
-  };
+void IRPromoter::ExtendSources(SmallPtrSetImpl<Value*> &Sources) {
+  IRBuilder<> Builder{Ctx};
 
   auto InsertZExt = [&](Value *V, Instruction *InsertPt) {
     LLVM_DEBUG(dbgs() << "ARM CGP: Inserting ZExt for " << *V << "\n");
@@ -480,7 +528,8 @@ void IRPromoter::Mutate(Type *OrigTy,
     TruncTysMap[ZExt] = TruncTysMap[V];
   };
 
-  // First, insert extending instructions between the sources and their users.
+
+  // Now, insert extending instructions between the sources and their users.
   LLVM_DEBUG(dbgs() << "ARM CGP: Promoting sources:\n");
   for (auto V : Sources) {
     LLVM_DEBUG(dbgs() << " - " << *V << "\n");
@@ -494,9 +543,17 @@ void IRPromoter::Mutate(Type *OrigTy,
     }
     Promoted.insert(V);
   }
+}
 
+void IRPromoter::PromoteTree(SmallPtrSetImpl<Value*> &Visited,
+                             SmallPtrSetImpl<Value*> &Sources,
+                             SmallPtrSetImpl<Instruction*> &Sinks,
+                             SmallPtrSetImpl<Instruction*> &SafeToPromote) {
   LLVM_DEBUG(dbgs() << "ARM CGP: Mutating the tree..\n");
-  // Then mutate the types of the instructions within the tree. Here we handle
+
+  IRBuilder<> Builder{Ctx};
+
+  // Mutate the types of the instructions within the tree. Here we handle
   // constant operands.
   for (auto *V : Visited) {
     if (Sources.count(V))
@@ -511,9 +568,10 @@ void IRPromoter::Mutate(Type *OrigTy,
       if ((Op->getType() == ExtTy) || !isa<IntegerType>(Op->getType()))
         continue;
 
-      if (auto *Const = dyn_cast<ConstantInt>(Op))
-        FixConst(Const, I);
-      else if (isa<UndefValue>(Op))
+      if (auto *Const = dyn_cast<ConstantInt>(Op)) {
+        Constant *NewConst = ConstantExpr::getZExt(Const, ExtTy);
+        I->setOperand(i, NewConst);
+      } else if (isa<UndefValue>(Op))
         I->setOperand(i, UndefValue::get(ExtTy));
     }
 
@@ -523,20 +581,42 @@ void IRPromoter::Mutate(Type *OrigTy,
     }
   }
 
-  // Now we need to remove any zexts that have become unnecessary, as well
-  // as insert any intrinsics.
+  // Finally, any instructions that should be promoted but haven't yet been,
+  // need to be handled using intrinsics.
   for (auto *V : Visited) {
-    if (Sources.count(V))
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
       continue;
 
-    if (!shouldPromote(V) || isPromotedResultSafe(V))
+    if (Sources.count(I) || Sinks.count(I))
       continue;
 
+    if (!shouldPromote(I) || SafeToPromote.count(I) || NewInsts.count(I))
+      continue;
+  
     assert(EnableDSP && "DSP intrinisc insertion not enabled!");
 
     // Replace unsafe instructions with appropriate intrinsic calls.
-    InsertDSPIntrinsic(cast<Instruction>(V));
+    LLVM_DEBUG(dbgs() << "ARM CGP: Inserting DSP intrinsic for "
+               << *I << "\n");
+    Function *DSPInst =
+      Intrinsic::getDeclaration(M, getNarrowIntrinsic(I));
+    Builder.SetInsertPoint(I);
+    Builder.SetCurrentDebugLocation(I->getDebugLoc());
+    Value *Args[] = { I->getOperand(0), I->getOperand(1) };
+    CallInst *Call = Builder.CreateCall(DSPInst, Args);
+    ReplaceAllUsersOfWith(I, Call);
+    InstsToRemove.push_back(I);
+    NewInsts.insert(Call);
+    TruncTysMap[Call] = OrigTy;
   }
+}
+
+void IRPromoter::TruncateSinks(SmallPtrSetImpl<Value*> &Sources,
+                               SmallPtrSetImpl<Instruction*> &Sinks) {
+  LLVM_DEBUG(dbgs() << "ARM CGP: Fixing up the sinks:\n");
+
+  IRBuilder<> Builder{Ctx};
 
   auto InsertTrunc = [&](Value *V) -> Instruction* {
     if (!isa<Instruction>(V) || !isa<IntegerType>(V->getType()))
@@ -558,7 +638,6 @@ void IRPromoter::Mutate(Type *OrigTy,
     return Trunc;
   };
 
-  LLVM_DEBUG(dbgs() << "ARM CGP: Fixing up the sinks:\n");
   // Fix up any stores or returns that use the results of the promoted
   // chain.
   for (auto I : Sinks) {
@@ -584,6 +663,36 @@ void IRPromoter::Mutate(Type *OrigTy,
       }
     }
   }
+}
+
+void IRPromoter::Mutate(Type *OrigTy,
+                        SmallPtrSetImpl<Value*> &Visited,
+                        SmallPtrSetImpl<Value*> &Sources,
+                        SmallPtrSetImpl<Instruction*> &Sinks,
+                        SmallPtrSetImpl<Instruction*> &SafeToPromote) {
+  LLVM_DEBUG(dbgs() << "ARM CGP: Promoting use-def chains to from "
+             << ARMCodeGenPrepare::TypeSize << " to 32-bits\n");
+  this->OrigTy = OrigTy;
+
+  // Cache original types.
+  for (auto *V : Visited)
+    TruncTysMap[V] = V->getType();
+
+  // Convert adds and subs using negative immediates to equivalent instructions
+  // that use positive constants.
+  PrepareConstants(Visited, SafeToPromote);
+
+  // Insert zext instructions between sources and their users.
+  ExtendSources(Sources);
+
+  // Promote visited instructions, mutating their types in place. Also insert
+  // DSP intrinsics, if enabled, for adds and subs which would be unsafe to
+  // promote.
+  PromoteTree(Visited, Sources, Sinks, SafeToPromote);
+
+  // Finally, insert trunc instructions for use by calls, stores etc...
+  TruncateSinks(Sources, Sinks);
+
   LLVM_DEBUG(dbgs() << "ARM CGP: Mutation complete:\n");
   LLVM_DEBUG(dbgs();
              for (auto *V : Sources)
@@ -651,11 +760,20 @@ bool ARMCodeGenPrepare::isSupportedValue(Value *V) {
 /// smaller than the targeted promoted type. Check that we're not trying to
 /// promote something larger than our base 'TypeSize' type.
 bool ARMCodeGenPrepare::isLegalToPromote(Value *V) {
-  if (isPromotedResultSafe(V))
-    return true;
 
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
+    return true;
+
+  if (SafeToPromote.count(I))
+   return true;
+
+  if (isPromotedResultSafe(V) || isSafeOverflow(I)) {
+    SafeToPromote.insert(I);
+    return true;
+  }
+
+  if (I->getOpcode() != Instruction::Add && I->getOpcode() != Instruction::Sub)
     return false;
 
   // If promotion is not safe, can we use a DSP instruction to natively
@@ -664,9 +782,6 @@ bool ARMCodeGenPrepare::isLegalToPromote(Value *V) {
     return false;
 
   if (ST->isThumb() && !ST->hasThumb2())
-    return false;
-
-  if (I->getOpcode() != Instruction::Add && I->getOpcode() != Instruction::Sub)
     return false;
 
   // TODO
@@ -680,6 +795,7 @@ bool ARMCodeGenPrepare::isLegalToPromote(Value *V) {
         return false;
     }
   }
+  LLVM_DEBUG(dbgs() << "ARM CGP: Will use an intrinsic for: " << *I << "\n");
   return true;
 }
 
@@ -688,6 +804,8 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
   TypeSize = OrigTy->getPrimitiveSizeInBits();
   if (TypeSize > 16 || TypeSize < 8)
     return false;
+
+  SafeToPromote.clear();
 
   if (!isSupportedValue(V) || !shouldPromote(V) || !isLegalToPromote(V))
     return false;
@@ -698,9 +816,8 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
   SetVector<Value*> WorkList;
   SmallPtrSet<Value*, 8> Sources;
   SmallPtrSet<Instruction*, 4> Sinks;
-  WorkList.insert(V);
   SmallPtrSet<Value*, 16> CurrentVisited;
-  CurrentVisited.clear();
+  WorkList.insert(V);
 
   // Return true if V was added to the worklist as a supported instruction,
   // if it was already visited, or if we don't need to explore it (e.g.
@@ -783,7 +900,7 @@ bool ARMCodeGenPrepare::TryToPromote(Value *V) {
   if (ToPromote < 2)
     return false;
 
-  Promoter->Mutate(OrigTy, CurrentVisited, Sources, Sinks);
+  Promoter->Mutate(OrigTy, CurrentVisited, Sources, Sinks, SafeToPromote);
   return true;
 }
 

@@ -2996,6 +2996,44 @@ static Value *simplifyICmpWithBinOp(CmpInst::Predicate Pred, Value *LHS,
   return nullptr;
 }
 
+static Value *simplifyICmpWithAbsNabs(CmpInst::Predicate Pred, Value *Op0,
+                                      Value *Op1) {
+  // We need a comparison with a constant.
+  const APInt *C;
+  if (!match(Op1, m_APInt(C)))
+    return nullptr;
+
+  // matchSelectPattern returns the negation part of an abs pattern in SP1.
+  // If the negate has an NSW flag, abs(INT_MIN) is undefined. Without that
+  // constraint, we can't make a contiguous range for the result of abs.
+  ICmpInst::Predicate AbsPred = ICmpInst::BAD_ICMP_PREDICATE;
+  Value *SP0, *SP1;
+  SelectPatternFlavor SPF = matchSelectPattern(Op0, SP0, SP1).Flavor;
+  if (SPF == SelectPatternFlavor::SPF_ABS &&
+      cast<Instruction>(SP1)->hasNoSignedWrap())
+    // The result of abs(X) is >= 0 (with nsw).
+    AbsPred = ICmpInst::ICMP_SGE;
+  if (SPF == SelectPatternFlavor::SPF_NABS)
+    // The result of -abs(X) is <= 0.
+    AbsPred = ICmpInst::ICMP_SLE;
+
+  if (AbsPred == ICmpInst::BAD_ICMP_PREDICATE)
+    return nullptr;
+
+  // If there is no intersection between abs/nabs and the range of this icmp,
+  // the icmp must be false. If the abs/nabs range is a subset of the icmp
+  // range, the icmp must be true.
+  APInt Zero = APInt::getNullValue(C->getBitWidth());
+  ConstantRange AbsRange = ConstantRange::makeExactICmpRegion(AbsPred, Zero);
+  ConstantRange CmpRange = ConstantRange::makeExactICmpRegion(Pred, *C);
+  if (AbsRange.intersectWith(CmpRange).isEmptySet())
+    return getFalse(GetCompareTy(Op0));
+  if (CmpRange.contains(AbsRange))
+    return getTrue(GetCompareTy(Op0));
+
+  return nullptr;
+}
+
 /// Simplify integer comparisons where at least one operand of the compare
 /// matches an integer min/max idiom.
 static Value *simplifyICmpWithMinMax(CmpInst::Predicate Pred, Value *LHS,
@@ -3425,6 +3463,9 @@ static Value *SimplifyICmpInst(unsigned Predicate, Value *LHS, Value *RHS,
     return V;
 
   if (Value *V = simplifyICmpWithMinMax(Pred, LHS, RHS, Q, MaxRecurse))
+    return V;
+
+  if (Value *V = simplifyICmpWithAbsNabs(Pred, LHS, RHS))
     return V;
 
   // Simplify comparisons of related pointers using a powerful, recursive

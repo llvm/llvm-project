@@ -205,6 +205,24 @@ int HasParamsAndReturn(int i, double d);
 // WINDOWS-NEXT: ret i32 %[[RET]]
 // WINDOWS-NOT: call void @llvm.trap
 
+ATTR(cpu_dispatch(atom, generic, pentium))
+int GenericAndPentium(int i, double d);
+// LINUX: define i32 (i32, double)* @GenericAndPentium.resolver()
+// LINUX: call void @__cpu_indicator_init
+// LINUX: ret i32 (i32, double)* @GenericAndPentium.O
+// LINUX: ret i32 (i32, double)* @GenericAndPentium.B
+// LINUX-NOT: ret i32 (i32, double)* @GenericAndPentium.A
+// LINUX-NOT: call void @llvm.trap
+
+// WINDOWS: define dso_local i32 @GenericAndPentium(i32, double)
+// WINDOWS: call void @__cpu_indicator_init
+// WINDOWS: %[[RET:.+]] = musttail call i32 @GenericAndPentium.O(i32 %0, double %1)
+// WINDOWS-NEXT: ret i32 %[[RET]]
+// WINDOWS: %[[RET:.+]] = musttail call i32 @GenericAndPentium.B(i32 %0, double %1)
+// WINDOWS-NEXT: ret i32 %[[RET]]
+// WINDOWS-NOT: call i32 @GenericAndPentium.A
+// WINDOWS-NOT: call void @llvm.trap
+
 // CHECK: attributes #[[S]] = {{.*}}"target-features"="+avx,+cmov,+f16c,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 // CHECK: attributes #[[K]] = {{.*}}"target-features"="+adx,+avx,+avx2,+avx512cd,+avx512er,+avx512f,+avx512pf,+bmi,+cmov,+f16c,+fma,+lzcnt,+mmx,+movbe,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 // CHECK: attributes #[[O]] = {{.*}}"target-features"="+cmov,+mmx,+movbe,+sse,+sse2,+sse3,+ssse3,+x87"

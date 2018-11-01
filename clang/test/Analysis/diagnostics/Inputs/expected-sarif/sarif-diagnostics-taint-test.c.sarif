@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json.schemastore.org/sarif-2.0.0",
+  "$schema": "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-10-10",
   "runs": [
     {
       "files": {
@@ -7,7 +7,7 @@
           "fileLocation": {
             "uri": "file:sarif-diagnostics-taint-test.c"
           },
-          "length": 497,
+          "length": 510,
           "mimeType": "text/plain",
           "roles": [
             "resultFile"
@@ -38,8 +38,7 @@
                             "startLine": 13
                           }
                         }
-                      },
-                      "step": 1
+                      }
                     },
                     {
                       "importance": "essential",
@@ -58,8 +57,7 @@
                             "startLine": 9
                           }
                         }
-                      },
-                      "step": 2
+                      }
                     }
                   ]
                 }
@@ -95,5 +93,5 @@
       }
     }
   ],
-  "version": "2.0.0-beta.2018-09-26"
+  "version": "2.0.0-csd.2.beta.2018-10-10"
 }
