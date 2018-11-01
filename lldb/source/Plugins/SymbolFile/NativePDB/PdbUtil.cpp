@@ -92,6 +92,8 @@ PDB_SymType lldb_private::npdb::CVTypeToPDBType(TypeLeafKind kind) {
     return PDB_SymType::PointerType;
   case LF_ENUM:
     return PDB_SymType::Enum;
+  case LF_PROCEDURE:
+    return PDB_SymType::FunctionSig;
   default:
     lldbassert(false && "Invalid type record kind!");
   }

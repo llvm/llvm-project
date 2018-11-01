@@ -709,7 +709,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
     switch (fs::get_file_type(src.GetPath(), false)) {
     case fs::file_type::directory_file: {
       llvm::sys::fs::remove(fixed_dst.GetPath());
-      uint32_t permissions = src.GetPermissions();
+      uint32_t permissions = FileSystem::Instance().GetPermissions(src);
       if (permissions == 0)
         permissions = eFilePermissionsDirectoryDefault;
       error = MakeDirectory(fixed_dst, permissions);

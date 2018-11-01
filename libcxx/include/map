@@ -1323,33 +1323,33 @@ public:
     {
         return __tree_.template __node_handle_extract<node_type>(__it.__i_);
     }
-    template <class _C2>
+    template <class _Compare2>
     _LIBCPP_INLINE_VISIBILITY
-    void merge(map<key_type, mapped_type, _C2, allocator_type>& __source)
+    void merge(map<key_type, mapped_type, _Compare2, allocator_type>& __source)
     {
         _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         __tree_.__node_handle_merge_unique(__source.__tree_);
     }
-    template <class _C2>
+    template <class _Compare2>
     _LIBCPP_INLINE_VISIBILITY
-    void merge(map<key_type, mapped_type, _C2, allocator_type>&& __source)
+    void merge(map<key_type, mapped_type, _Compare2, allocator_type>&& __source)
     {
         _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         __tree_.__node_handle_merge_unique(__source.__tree_);
     }
-    template <class _C2>
+    template <class _Compare2>
     _LIBCPP_INLINE_VISIBILITY
-    void merge(multimap<key_type, mapped_type, _C2, allocator_type>& __source)
+    void merge(multimap<key_type, mapped_type, _Compare2, allocator_type>& __source)
     {
         _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         __tree_.__node_handle_merge_unique(__source.__tree_);
     }
-    template <class _C2>
+    template <class _Compare2>
     _LIBCPP_INLINE_VISIBILITY
-    void merge(multimap<key_type, mapped_type, _C2, allocator_type>&& __source)
+    void merge(multimap<key_type, mapped_type, _Compare2, allocator_type>&& __source)
     {
         _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
@@ -1942,33 +1942,33 @@ public:
         return __tree_.template __node_handle_extract<node_type>(
             __it.__i_);
     }
-    template <class _C2>
+    template <class _Compare2>
     _LIBCPP_INLINE_VISIBILITY
-    void merge(multimap<key_type, mapped_type, _C2, allocator_type>& __source)
+    void merge(multimap<key_type, mapped_type, _Compare2, allocator_type>& __source)
     {
         _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         return __tree_.__node_handle_merge_multi(__source.__tree_);
     }
-    template <class _C2>
+    template <class _Compare2>
     _LIBCPP_INLINE_VISIBILITY
-    void merge(multimap<key_type, mapped_type, _C2, allocator_type>&& __source)
+    void merge(multimap<key_type, mapped_type, _Compare2, allocator_type>&& __source)
     {
         _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         return __tree_.__node_handle_merge_multi(__source.__tree_);
     }
-    template <class _C2>
+    template <class _Compare2>
     _LIBCPP_INLINE_VISIBILITY
-    void merge(map<key_type, mapped_type, _C2, allocator_type>& __source)
+    void merge(map<key_type, mapped_type, _Compare2, allocator_type>& __source)
     {
         _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");
         return __tree_.__node_handle_merge_multi(__source.__tree_);
     }
-    template <class _C2>
+    template <class _Compare2>
     _LIBCPP_INLINE_VISIBILITY
-    void merge(map<key_type, mapped_type, _C2, allocator_type>&& __source)
+    void merge(map<key_type, mapped_type, _Compare2, allocator_type>&& __source)
     {
         _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
                        "merging container with incompatible allocator");

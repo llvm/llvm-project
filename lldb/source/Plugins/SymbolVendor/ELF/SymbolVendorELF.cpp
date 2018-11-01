@@ -108,9 +108,10 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
     if (dsym_fspec) {
       DataBufferSP dsym_file_data_sp;
       lldb::offset_t dsym_file_data_offset = 0;
-      ObjectFileSP dsym_objfile_sp = ObjectFile::FindPlugin(
-          module_sp, &dsym_fspec, 0, dsym_fspec.GetByteSize(),
-          dsym_file_data_sp, dsym_file_data_offset);
+      ObjectFileSP dsym_objfile_sp =
+          ObjectFile::FindPlugin(module_sp, &dsym_fspec, 0,
+                                 FileSystem::Instance().GetByteSize(dsym_fspec),
+                                 dsym_file_data_sp, dsym_file_data_offset);
       if (dsym_objfile_sp) {
         // This objfile is for debugging purposes. Sadly, ObjectFileELF won't
         // be able to figure this out consistently as the symbol file may not

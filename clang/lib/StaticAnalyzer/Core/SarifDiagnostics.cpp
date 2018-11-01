@@ -154,10 +154,9 @@ static StringRef importanceToStr(Importance I) {
   llvm_unreachable("Fully covered switch is not so fully covered");
 }
 
-static json::Object createThreadFlowLocation(int Step, json::Object &&Location,
+static json::Object createThreadFlowLocation(json::Object &&Location,
                                              Importance I) {
-  return json::Object{{"step", Step},
-                      {"location", std::move(Location)},
+  return json::Object{{"location", std::move(Location)},
                       {"importance", importanceToStr(I)}};
 }
 
@@ -192,12 +191,10 @@ static Importance calculateImportance(const PathDiagnosticPiece &Piece) {
 static json::Object createThreadFlow(const PathPieces &Pieces,
                                      json::Object &Files) {
   const SourceManager &SMgr = Pieces.front()->getLocation().getManager();
-  int Step = 1;
   json::Array Locations;
   for (const auto &Piece : Pieces) {
     const PathDiagnosticLocation &P = Piece->getLocation();
     Locations.push_back(createThreadFlowLocation(
-        Step++,
         createLocation(createPhysicalLocation(P.asRange(),
                                               *P.asLocation().getFileEntry(),
                                               SMgr, Files),
@@ -261,8 +258,10 @@ void SarifDiagnostics::FlushDiagnosticsImpl(
     llvm::errs() << "warning: could not create file: " << EC.message() << '\n';
     return;
   }
-  json::Object Sarif{{"$schema", "http://json.schemastore.org/sarif-2.0.0"},
-                     {"version", "2.0.0-beta.2018-09-26"},
-                     {"runs", json::Array{createRun(Diags)}}};
+  json::Object Sarif{
+      {"$schema",
+       "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-10-10"},
+      {"version", "2.0.0-csd.2.beta.2018-10-10"},
+      {"runs", json::Array{createRun(Diags)}}};
   OS << llvm::formatv("{0:2}", json::Value(std::move(Sarif)));
 }

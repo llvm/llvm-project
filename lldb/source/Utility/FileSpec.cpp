@@ -458,10 +458,6 @@ void FileSpec::Dump(Stream *s) const {
 //------------------------------------------------------------------
 bool FileSpec::Exists() const { return llvm::sys::fs::exists(GetPath()); }
 
-bool FileSpec::Readable() const {
-  return GetPermissions() & llvm::sys::fs::perms::all_read;
-}
-
 bool FileSpec::ResolveExecutableLocation() {
   // CLEANUP: Use StringRef for string handling.
   if (!m_directory) {
@@ -507,23 +503,7 @@ bool FileSpec::ResolvePath() {
   return m_is_resolved;
 }
 
-uint64_t FileSpec::GetByteSize() const {
-  uint64_t Size = 0;
-  if (llvm::sys::fs::file_size(GetPath(), Size))
-    return 0;
-  return Size;
-}
-
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
-
-uint32_t FileSpec::GetPermissions() const {
-  namespace fs = llvm::sys::fs;
-  fs::file_status st;
-  if (fs::status(GetPath(), st, false))
-    return fs::perms::perms_not_known;
-
-  return st.permissions();
-}
 
 //------------------------------------------------------------------
 // Directory string get accessor.

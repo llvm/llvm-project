@@ -635,6 +635,25 @@ static Type *getCmpOpsType(const Instruction *I, unsigned VF = 1) {
   return nullptr;
 }
 
+// Get the cost of converting a boolean vector to a vector with same width
+// and element size as Dst, plus the cost of zero extending if needed.
+unsigned SystemZTTIImpl::
+getBoolVecToIntConversionCost(unsigned Opcode, Type *Dst,
+                              const Instruction *I) {
+  assert (Dst->isVectorTy());
+  unsigned VF = Dst->getVectorNumElements();
+  unsigned Cost = 0;
+  // If we know what the widths of the compared operands, get any cost of
+  // converting it to match Dst. Otherwise assume same widths.
+  Type *CmpOpTy = ((I != nullptr) ? getCmpOpsType(I, VF) : nullptr);
+  if (CmpOpTy != nullptr)
+    Cost = getVectorBitmaskConversionCost(CmpOpTy, Dst);
+  if (Opcode == Instruction::ZExt || Opcode == Instruction::UIToFP)
+    // One 'vn' per dst vector with an immediate mask.
+    Cost += getNumVectorRegs(Dst);
+  return Cost;
+}
+
 int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
                                      const Instruction *I) {
   unsigned DstScalarBits = Dst->getScalarSizeInBits();
@@ -666,19 +685,8 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
 
         return (NumUnpacks * NumDstVectors) + NumSrcVectorOps;
       }
-      else if (SrcScalarBits == 1) {
-        // This should be extension of a compare i1 result.
-        // If we know what the widths of the compared operands, get the
-        // cost of converting it to Dst. Otherwise assume same widths.
-        unsigned Cost = 0;
-        Type *CmpOpTy = ((I != nullptr) ? getCmpOpsType(I, VF) : nullptr);
-        if (CmpOpTy != nullptr)
-          Cost = getVectorBitmaskConversionCost(CmpOpTy, Dst);
-        if (Opcode == Instruction::ZExt)
-          // One 'vn' per dst vector with an immediate mask.
-          Cost += NumDstVectors;
-        return Cost;
-      }
+      else if (SrcScalarBits == 1)
+        return getBoolVecToIntConversionCost(Opcode, Dst, I);
     }
 
     if (Opcode == Instruction::SIToFP || Opcode == Instruction::UIToFP ||
@@ -687,8 +695,13 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       // (seems to miss on differentiating on scalar/vector types).
 
       // Only 64 bit vector conversions are natively supported.
-      if (SrcScalarBits == 64 && DstScalarBits == 64)
-        return NumDstVectors;
+      if (DstScalarBits == 64) {
+        if (SrcScalarBits == 64)
+          return NumDstVectors;
+
+        if (SrcScalarBits == 1)
+          return getBoolVecToIntConversionCost(Opcode, Dst, I) + NumDstVectors;
+      }
 
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values. Base implementation does not
@@ -736,7 +749,9 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
     assert (!Dst->isVectorTy());
 
     if (Opcode == Instruction::SIToFP || Opcode == Instruction::UIToFP)
-      return (SrcScalarBits >= 32 ? 1 : 2 /*i8/i16 extend*/);
+      return (SrcScalarBits >= 32
+                ? 1
+                : SrcScalarBits > 1 ? 2 /*i8/i16 extend*/ : 5 /*branch seq.*/);
 
     if ((Opcode == Instruction::ZExt || Opcode == Instruction::SExt) &&
         Src->isIntegerTy(1)) {

@@ -2536,7 +2536,7 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
     return false;
   }
 
-  if (!file.Readable()) {
+  if (!FileSystem::Instance().Readable(file)) {
     strm.Printf("Error: File %s does not have readable permissions", path);
     strm.EOL();
     return false;
