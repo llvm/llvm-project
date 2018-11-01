@@ -41,8 +41,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-simplifycfg"
 
-static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
-                            ScalarEvolution &SE, MemorySSAUpdater *MSSAU) {
+static bool mergeBlocksIntoPredecessors(Loop &L, DominatorTree &DT,
+                                        LoopInfo &LI, MemorySSAUpdater *MSSAU) {
   bool Changed = false;
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
   // Copy blocks into a temporary array to avoid iterator invalidation issues
@@ -63,10 +63,21 @@ static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
     // Merge Succ into Pred and delete it.
     MergeBlockIntoPredecessor(Succ, &DTU, &LI, MSSAU);
 
-    SE.forgetTopmostLoop(&L);
-
     Changed = true;
   }
+
+  return Changed;
+}
+
+static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
+                            ScalarEvolution &SE, MemorySSAUpdater *MSSAU) {
+  bool Changed = false;
+
+  // Eliminate unconditional branches by merging blocks into their predecessors.
+  Changed |= mergeBlocksIntoPredecessors(L, DT, LI, MSSAU);
+
+  if (Changed)
+    SE.forgetTopmostLoop(&L);
 
   return Changed;
 }

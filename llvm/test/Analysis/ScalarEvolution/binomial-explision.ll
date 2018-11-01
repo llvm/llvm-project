@@ -8,7 +8,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 define void @test(i32 %x, i64 %y, i1 %cond) {
 
 ; CHECK: %tmp19 = mul i32 %tmp17, %tmp18
-; CHECK: ((((
+; CHECK: ((((((
 ; CHECK-NOT: (((((
 ; CHECK: %tmp20 = add i32 %tmp19, %x
 
