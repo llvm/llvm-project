@@ -119,12 +119,6 @@ static cl::opt<bool> HardenIndirectCallsAndJumps(
              "mitigate Spectre v1.2 style attacks."),
     cl::init(true), cl::Hidden);
 
-namespace llvm {
-
-void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
-
-} // end namespace llvm
-
 namespace {
 
 class X86SpeculativeLoadHardeningPass : public MachineFunctionPass {
