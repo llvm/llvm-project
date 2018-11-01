@@ -40,8 +40,6 @@ INLINE unsigned nsmid() {
 INLINE unsigned smid() {
   unsigned id;
   asm("mov.u32 %0, %%smid;" : "=r"(id));
-  ASSERT0(LT_FUSSY, nsmid() <= MAX_SM,
-          "Expected number of SMs is less than reported.");
   return id;
 }
 
