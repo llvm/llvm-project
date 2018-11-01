@@ -1,7 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-/* #define _POSIX_C_SOURCE 200112L */
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
@@ -18,17 +16,13 @@
 #define SERIAL_TOOL 1
 #endif
 
-#if !SERIAL_TOOL
-#include <cilk/reducer.h>
-#include "context_stack_reducer.h"
-#endif
-
 #ifndef TRACE_CALLS
 #define TRACE_CALLS 0
 #endif
 
-#ifndef INSTCOUNT
-#define INSTCOUNT 1
+#if !SERIAL_TOOL
+#include <cilk/reducer.h>
+#include "context_stack_reducer.h"
 #endif
 
 /*************************************************************************/
@@ -49,26 +43,6 @@ CILK_C_DECLARE_REDUCER(context_stack_t) ctx_stack =
 bool TOOL_INITIALIZED = false;
 
 /*************************************************************************/
-/**
- * Data structures and helper methods for time of user strands.
- */
-
-static inline uint64_t elapsed_nsec(const struct timespec *stop,
-			     const struct timespec *start) {
-  return (uint64_t)(stop->tv_sec - start->tv_sec) * 1000000000ll
-    + (stop->tv_nsec - start->tv_nsec);
-}
-
-static inline void gettime(struct timespec *timer) {
-#if INSTCOUNT
-#else
-  // TB 2014-08-01: This is the "clock_gettime" variant I could get
-  // working with -std=c11.  I want to use TIME_MONOTONIC instead, but
-  // it does not appear to be supported on my system.
-  /* timespec_get(timer, TIME_UTC); */
-  clock_gettime(CLOCK_MONOTONIC, timer);
-#endif
-}
 
 #if SERIAL_TOOL
 // Ensure that this tool is run serially
@@ -87,7 +61,6 @@ static inline void ensure_serial_tool(void) {
 #endif
 
 void print_analysis(void) {
-
   assert(TOOL_INITIALIZED);
 #if SERIAL_TOOL
   assert(NULL != ctx_stack.bot);
@@ -102,17 +75,9 @@ void print_analysis(void) {
   uint64_t work = REDUCER_VIEW(ctx_stack).running_wrk;
 #endif
 
-#if INSTCOUNT
-  fprintf(stderr, "work %f MInstructions, span %f MInstructions, parallelism %f\n",
-	  work / (1000000.0),
-	  span / (1000000.0),
-	  work / (double)span);
-#else
-  fprintf(stderr, "work %fs, span %fs, parallelism %f\n",
-	  work / (1000000000.0),
-	  span / (1000000000.0),
-	  work / (double)span);
-#endif
+  fprintf(stderr, "work ");  printtime(work);
+  fprintf(stderr, ", span ");  printtime(span);
+  fprintf(stderr, ", parallelism %f\n", work / (double)span);
 }
 
 void cilkscale_destroy(void) {
@@ -185,7 +150,6 @@ void __csi_func_exit(const csi_id_t func_exit_id, const csi_id_t func_id,
 
 CILKTOOL_API
 void __csi_bb_entry(const csi_id_t bb_id, const bb_prop_t prop) {
-#if INSTCOUNT
   context_stack_t *stack;
 
 #if SERIAL_TOOL
@@ -193,11 +157,8 @@ void __csi_bb_entry(const csi_id_t bb_id, const bb_prop_t prop) {
 #else
   stack = &(REDUCER_VIEW(ctx_stack));
 #endif  // SERIAL_TOOL
-  uint64_t inst_count = __csi_get_bb_sizeinfo(bb_id)->non_empty_size;
-  stack->running_wrk += inst_count;
-  stack->bot->contin_spn += inst_count;
 
-#endif  // INSTCOUNT
+  get_bb_time(&(stack->running_wrk), &(stack->bot->contin_spn), bb_id);
   return;
 }
 
@@ -301,6 +262,10 @@ void __csi_task_exit(const csi_id_t task_exit_id,
   stack = &(REDUCER_VIEW(ctx_stack));
 #endif
   gettime(&(stack->stop));
+
+  uint64_t strand_time = elapsed_nsec(&(stack->stop), &(stack->start));
+  stack->running_wrk += strand_time;
+  stack->bot->contin_spn += strand_time;
 
   context_stack_frame_t *old_bottom;
 
