@@ -29,7 +29,7 @@ void HostInfoAndroid::ComputeHostArchitectureSupport(ArchSpec &arch_32,
 }
 
 FileSpec HostInfoAndroid::GetDefaultShell() {
-  return FileSpec("/system/bin/sh", false);
+  return FileSpec("/system/bin/sh");
 }
 
 FileSpec HostInfoAndroid::ResolveLibraryPath(const std::string &module_path,
@@ -66,7 +66,8 @@ FileSpec HostInfoAndroid::ResolveLibraryPath(const std::string &module_path,
     ld_paths.push_back(StringRef(*it));
 
   for (const StringRef &path : ld_paths) {
-    FileSpec file_candidate(path.str().c_str(), true);
+    FileSpec file_candidate(path.str().c_str());
+    FileSystem::Instance().Resolve(file_candidate);
     file_candidate.AppendPathComponent(module_path.c_str());
 
     if (FileSystem::Instance().Exists(file_candidate))
@@ -85,7 +86,7 @@ bool HostInfoAndroid::ComputeTempFileBaseDirectory(FileSpec &file_spec) {
   // invalid directory, we substitute the path with /data/local/tmp, which is
   // correct at least in some cases (i.e., when running as shell user).
   if (!success || !FileSystem::Instance().Exists(file_spec))
-    file_spec = FileSpec("/data/local/tmp", false);
+    file_spec = FileSpec("/data/local/tmp");
 
   return FileSystem::Instance().Exists(file_spec);
 }
