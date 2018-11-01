@@ -7,8 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
 #include "lldb/Host/linux/HostInfoLinux.h"
+#include "lldb/Host/Config.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Support/Threading.h"
@@ -179,7 +180,7 @@ FileSpec HostInfoLinux::GetProgramFileSpec() {
 
 bool HostInfoLinux::ComputeSupportExeDirectory(FileSpec &file_spec) {
   if (HostInfoPosix::ComputeSupportExeDirectory(file_spec) &&
-      file_spec.IsAbsolute() && file_spec.Exists())
+      file_spec.IsAbsolute() && FileSystem::Instance().Exists(file_spec))
     return true;
   file_spec.GetDirectory() = GetProgramFileSpec().GetDirectory();
   return !file_spec.GetDirectory().IsEmpty();
