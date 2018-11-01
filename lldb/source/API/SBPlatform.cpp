@@ -364,7 +364,7 @@ SBError SBPlatform::Get(SBFileSpec &src, SBFileSpec &dst) {
 SBError SBPlatform::Put(SBFileSpec &src, SBFileSpec &dst) {
   return ExecuteConnected([&](const lldb::PlatformSP &platform_sp) {
     if (src.Exists()) {
-      uint32_t permissions = src.ref().GetPermissions();
+      uint32_t permissions = FileSystem::Instance().GetPermissions(src.ref());
       if (permissions == 0) {
         if (llvm::sys::fs::is_directory(src.ref().GetPath()))
           permissions = eFilePermissionsDirectoryDefault;
