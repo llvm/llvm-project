@@ -15,6 +15,8 @@
 #include "cilksan_internal.h"
 #include "debug_util.h"
 
+// void print_race_report();
+
 // A map keeping track of races found, keyed by the larger instruction address
 // involved in the race.  Races that have same instructions that made the same
 // types of accesses are considered as the the same race (even for races where
@@ -23,10 +25,18 @@
 // addresses but different address for memory location is considered as a
 // duplicate.  The value of the map stores the number duplicates for the given
 // race.
-typedef std::unordered_multimap<uint64_t, RaceInfo_t> RaceMap_t;
-static RaceMap_t races_found;
-// The number of duplicated races found
-static uint32_t duplicated_races = 0;
+// class RaceMap_t : public std::unordered_multimap<uint64_t, RaceInfo_t> {
+// public:
+//   RaceMap_t() {}
+//   ~RaceMap_t() {
+//     print_race_report();
+//   }
+
+// };
+// typedef std::unordered_multimap<uint64_t, RaceInfo_t> RaceMap_t;
+// static RaceMap_t races_found;
+// // The number of duplicated races found
+// static uint32_t duplicated_races = 0;
 
 // Mappings from CSI ID to associated program counter.
 uintptr_t *call_pc = nullptr;
@@ -34,6 +44,7 @@ uintptr_t *spawn_pc = nullptr;
 uintptr_t *load_pc = nullptr;
 uintptr_t *store_pc = nullptr;
 uintptr_t *alloca_pc = nullptr;
+uintptr_t *allocfn_pc = nullptr;
 
 class ProcMapping_t {
 public:
@@ -102,7 +113,6 @@ void delete_proc_maps() {
 }
 
 static void get_info_on_inst_addr(uint64_t addr, int *line_no, std::string *file) {
-
   for (unsigned int i=0; i < proc_maps->size(); i++) {
     if ((*proc_maps)[i].low <= addr && addr < (*proc_maps)[i].high) {
       unsigned long off = addr - (*proc_maps)[i].low;
@@ -157,10 +167,94 @@ typedef enum {
   STORE_ACC,
 } ACC_TYPE;
 
+// Helper function to get string describing a variable location from a
+// obj_source_loc_t.
+static std::string
+get_obj_info_str(const obj_source_loc_t *obj_src_loc) {
+  if (!obj_src_loc)
+    return "<no information on variable>";
+
+  std::ostringstream convert;
+  // std::string type(obj_src_loc->type ?
+  //                  obj_src_loc->type :
+  //                  "<no variable type>");
+  std::string variable(obj_src_loc->name ?
+                       obj_src_loc->name :
+                       "<no variable name>");
+  std::string filename(obj_src_loc->filename ?
+                       obj_src_loc->filename :
+                       "<no filename>");
+  int32_t line_no = obj_src_loc->line_number;
+
+  // if (obj_src_loc->type)
+  //   convert << type << " ";
+
+  convert << variable
+          << " (declared at " << filename
+          << ":" << std::dec << line_no << ")";
+
+  return convert.str();
+}
+
+// Helper function to get string describing source location from a
+// csan_source_loc_t.
+static std::string
+get_src_info_str(const csan_source_loc_t *src_loc) {
+  if (!src_loc)
+    return "<no information on source location>";
+
+  std::ostringstream convert;
+  std::string file(src_loc->filename ?
+                   src_loc->filename :
+                   "<no filename>");
+  std::string funcname(src_loc->name ?
+                       src_loc->name :
+                       "<no function name>");
+  int32_t line_no = src_loc->line_number;
+  int32_t col_no = src_loc->column_number;
+
+  convert << " " << funcname;
+  convert << " " << file
+          << ":" << std::dec << line_no
+          << ":" << std::dec << col_no;
+  return convert.str();
+}
+
+static std::string get_info_on_alloca(const csi_id_t alloca_id) {
+  std::ostringstream convert;
+
+  // Get source and object information.
+  const csan_source_loc_t *src_loc = nullptr;
+  const obj_source_loc_t *obj_src_loc = nullptr;
+  // Even alloca_id's are stack allocations
+  if (alloca_id % 2) {
+    convert << " Heap object ";
+    src_loc = __csan_get_allocfn_source_loc(alloca_id / 2);
+    obj_src_loc = __csan_get_allocfn_obj_source_loc(alloca_id / 2);
+  } else {
+    convert << "Stack object ";
+    src_loc = __csan_get_alloca_source_loc(alloca_id / 2);
+    obj_src_loc = __csan_get_alloca_obj_source_loc(alloca_id / 2);
+  }
+
+  convert << get_obj_info_str(obj_src_loc);
+
+  convert << std::endl << "             from ";
+  // Get PC for this access.
+  if (alloca_id % 2)
+    convert << "0x" << std::hex << allocfn_pc[alloca_id / 2];
+  else
+    convert << "0x" << std::hex << alloca_pc[alloca_id / 2];
+
+  if (alloca_id % 2)
+    convert << get_src_info_str(src_loc);
+
+  return convert.str();
+}
+
 static std::string
 get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
   std::ostringstream convert;
-  // assert(UNKNOWN_CSI_ID != acc_id);
 
   switch (type) {
   case LOAD_ACC:
@@ -183,19 +277,8 @@ get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
       break;
     }
   }
-  if (obj_src_loc &&
-      obj_src_loc->filename &&
-      obj_src_loc->name) {
-    std::string variable(obj_src_loc->name);
-    std::string filename(obj_src_loc->filename);
-    int32_t line_no = obj_src_loc->line_number;
 
-    convert << variable
-            << " (declared at " << filename
-            << ":" << std::dec << line_no << ")";
-  } else {
-    convert << "<could not determine variable>";
-  }
+  convert << get_obj_info_str(obj_src_loc);
 
   convert << std::endl << "             from ";
 
@@ -217,11 +300,9 @@ get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
     switch (type) {
     case LOAD_ACC:
       src_loc = __csan_get_load_source_loc(acc_id);
-      // std::cerr << "Load src loc for " << acc_id;
       break;
     case STORE_ACC:
       src_loc = __csan_get_store_source_loc(acc_id);
-      // std::cerr << "Store src loc for " << acc_id;
       break;
     }
   }
@@ -234,34 +315,12 @@ get_info_on_mem_access(const csi_id_t acc_id, ACC_TYPE type) {
   // else
   //   std::cerr << " is valid\n";
 
-  if (src_loc &&
-      src_loc->filename &&
-      src_loc->name) {
-    std::string file(src_loc->filename);
-    std::string funcname(src_loc->name);
-    int32_t line_no = src_loc->line_number;
-    int32_t col_no = src_loc->column_number;
-
-    // switch (type) {
-    // case LOAD_ACC:
-    //   convert << "LOAD_ID " << std::dec << acc_id;
-    //   break;
-    // case STORE_ACC:
-    //   convert << "STORE_ID " << std::dec << acc_id;
-    //   break;
-    // }
-    convert << " " << funcname;
-    convert << " " << file
-            << ":" << std::dec << line_no
-            << ":" << std::dec << col_no;
-  } else
-    convert << " <could not determine source location>";
+  convert << get_src_info_str(src_loc);
 
   return convert.str();
 }
 
-static std::string
-get_info_on_call(const CallID_t &call) {
+static std::string get_info_on_call(const CallID_t &call) {
   std::ostringstream convert;
   switch (call.getType()) {
   case CALL:
@@ -273,7 +332,7 @@ get_info_on_call(const CallID_t &call) {
   }
 
   if (UNKNOWN_CSI_ID == call.getID()) {
-    convert << "<could not determine source location>";
+    convert << "<no information on source location>";
     return convert.str();
   }
 
@@ -297,20 +356,8 @@ get_info_on_call(const CallID_t &call) {
     src_loc = __csan_get_detach_source_loc(call.getID());
     break;
   }
-  if (src_loc &&
-      src_loc->filename &&
-      src_loc->name) {
-    std::string file(src_loc->filename);
-    std::string funcname(src_loc->name);
-    int32_t line_no = src_loc->line_number;
-    int32_t col_no = src_loc->column_number;
-    convert << " " << funcname;
-    convert << " " << file
-            << ":" << std::dec << line_no
-            << ":" << std::dec << col_no;
-  } else {
-    convert << " <could not determine source location>";
-  }
+
+  convert << get_src_info_str(src_loc);
 
   return convert.str();
 }
@@ -330,57 +377,59 @@ int get_call_stack_divergence_pt(
   return i;
 }
 
-extern void print_current_function_info();
+// extern void print_current_function_info();
 
-static std::unique_ptr<CallID_t[]> get_call_stack(const AccessLoc_t &instrAddr) {
-  int stack_size = instrAddr.call_stack.size();
+static std::unique_ptr<CallID_t[]>
+get_call_stack(const AccessLoc_t &instrAddr) {
+  int stack_size = instrAddr.getCallStackSize();
   std::unique_ptr<CallID_t[]> call_stack(new CallID_t[stack_size]);
   {
-    call_stack_node_t *call_stack_node = instrAddr.call_stack.tail;
+    const call_stack_node_t *call_stack_node = instrAddr.getCallStack();
     for (int i = stack_size - 1;
          i >= 0;
-         --i, call_stack_node = call_stack_node->prev) {
-      call_stack[i] = call_stack_node->id;
+         --i, call_stack_node = call_stack_node->getPrev()) {
+      call_stack[i] = call_stack_node->getCallID();
     }
   }
   return call_stack;
 }
 
-static void print_race_info(const RaceInfo_t& race) {
+// static void print_race_info(const RaceInfo_t& race) {
+void RaceInfo_t::print() const {
   std::cerr << "Race detected at address "
     // << (is_on_stack(race.addr) ? "stack address " : "address ")
-            << std::hex << "0x" << race.addr << std::dec << std::endl;
+            << std::hex << "0x" << addr << std::dec << std::endl;
 
   // std::string first_acc_info = get_info_on_mem_access(race.first_inst);
   // std::string second_acc_info = get_info_on_mem_access(race.second_inst);
 
   std::string first_acc_info, second_acc_info;
-  switch(race.type) {
+  switch(type) {
   case RW_RACE:
     first_acc_info =
-      get_info_on_mem_access(race.first_inst.getID(), LOAD_ACC);
+      get_info_on_mem_access(first_inst.getID(), LOAD_ACC);
     second_acc_info =
-      get_info_on_mem_access(race.second_inst.getID(), STORE_ACC);
+      get_info_on_mem_access(second_inst.getID(), STORE_ACC);
     break;
   case WW_RACE:
     first_acc_info =
-      get_info_on_mem_access(race.first_inst.getID(), STORE_ACC);
+      get_info_on_mem_access(first_inst.getID(), STORE_ACC);
     second_acc_info =
-      get_info_on_mem_access(race.second_inst.getID(), STORE_ACC);
+      get_info_on_mem_access(second_inst.getID(), STORE_ACC);
     break;
   case WR_RACE:
     first_acc_info =
-      get_info_on_mem_access(race.first_inst.getID(), STORE_ACC);
+      get_info_on_mem_access(first_inst.getID(), STORE_ACC);
     second_acc_info =
-      get_info_on_mem_access(race.second_inst.getID(), LOAD_ACC);
+      get_info_on_mem_access(second_inst.getID(), LOAD_ACC);
     break;
   }
 
   // Extract the two call stacks
-  int first_call_stack_size = race.first_inst.call_stack.size();
-  int second_call_stack_size = race.second_inst.call_stack.size();
-  auto first_call_stack = get_call_stack(race.first_inst);
-  auto second_call_stack = get_call_stack(race.second_inst);
+  int first_call_stack_size = first_inst.getCallStackSize();
+  int second_call_stack_size = second_inst.getCallStackSize();
+  auto first_call_stack = get_call_stack(first_inst);
+  auto second_call_stack = get_call_stack(second_inst);
 
   // Determine where the two call stacks diverge
   int divergence = get_call_stack_divergence_pt(
@@ -390,7 +439,7 @@ static void print_race_info(const RaceInfo_t& race) {
       second_call_stack_size);
 
   // Print the two accesses involved in the race
-  switch(race.type) {
+  switch(type) {
   case RW_RACE:
     std::cerr << first_acc_info << std::endl;
     for (int i = first_call_stack_size - 1;
@@ -438,18 +487,15 @@ static void print_race_info(const RaceInfo_t& race) {
                 << std::endl;
   }
 
-  if (race.alloc_inst.acc_loc != -1) {
+  if (alloc_inst.isValid()) {
     std::cerr << "  Allocation context" << std::endl;
-    // id 0 = non-stack allocation; otherwise, on stack and subtract 1 to true id
-    const csi_id_t alloca_id = race.alloc_inst.acc_loc;
-    if (alloca_id > 0)
-      std::cerr << "    " << get_info_on_mem_access(alloca_pc[alloca_id - 1]) << std::endl;
-    auto alloc_call_stack = get_call_stack(race.alloc_inst);
-    for (int i = race.alloc_inst.call_stack.size() - 1; i >= 0; --i)
-      std::cerr << "    " << get_info_on_call(alloc_call_stack[i])
+    const csi_id_t alloca_id = alloc_inst.getID();
+    std::cerr << "     " << get_info_on_alloca(alloca_id) << std::endl;
+
+    auto alloc_call_stack = get_call_stack(alloc_inst);
+    for (int i = alloc_inst.getCallStackSize() - 1; i >= 0; --i)
+      std::cerr << "     " << get_info_on_call(alloc_call_stack[i])
                 << std::endl;
-  } else {
-    std::cerr << "  No allocation context available :(\n";
   }
 
   std::cerr << std::endl;
@@ -458,14 +504,15 @@ static void print_race_info(const RaceInfo_t& race) {
 }
 
 // Log the race detected
-void report_race(const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
-                 const AccessLoc_t &alloc_inst,
-                 uint64_t addr, enum RaceType_t race_type) {
+void CilkSanImpl_t::report_race(
+    const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
+    const AccessLoc_t &alloc_inst, uint64_t addr,
+    enum RaceType_t race_type) {
   bool found = false;
-  uint64_t key =
-    first_inst < second_inst ?
-                 first_inst.getID() : second_inst.getID();
-  RaceInfo_t race(first_inst, std::move(second_inst), alloc_inst, addr, race_type);
+  uint64_t key = first_inst < second_inst ?
+                              first_inst.getID() : second_inst.getID();
+  RaceInfo_t race(first_inst, std::move(second_inst), alloc_inst, addr,
+                  race_type);
 
   std::pair<RaceMap_t::iterator, RaceMap_t::iterator> range;
   range = races_found.equal_range(key);
@@ -478,19 +525,19 @@ void report_race(const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
     range.first++;
   }
   if (found) { // increment the dup count
-    // std::cerr << "REDUNDANT ";
-    // print_race_info(race);
     duplicated_races++;
   } else {
     // have to get the info before user program exits
-    print_race_info(race);
+    race.print();
     races_found.insert(std::make_pair(key, race));
   }
 }
 
-void report_race(const AccessLoc_t &first_inst, AccessLoc_t &&second_inst,
-                 uint64_t addr, enum RaceType_t race_type) {
-  report_race(first_inst, std::move(second_inst), AccessLoc_t(), addr, race_type);
+void CilkSanImpl_t::report_race(
+    const AccessLoc_t &first_inst, AccessLoc_t &&second_inst, uint64_t addr,
+    enum RaceType_t race_type) {
+  report_race(first_inst, std::move(second_inst), AccessLoc_t(), addr,
+              race_type);
 }
 
 // Report viewread race
@@ -498,7 +545,6 @@ void report_viewread_race(uint64_t first_inst, uint64_t second_inst,
                           uint64_t addr) {
   // For now, just print the viewread race
   std::cerr << "Race detected at address "
-    // << (is_on_stack(race.addr) ? "stack address " : "address ")
             << std::hex << "0x" << addr << std::dec << std::endl;
   std::string first_acc_info = get_info_on_mem_access(first_inst);
   std::string second_acc_info = get_info_on_mem_access(second_inst);
@@ -507,18 +553,17 @@ void report_viewread_race(uint64_t first_inst, uint64_t second_inst,
   std::cerr << std::endl;
 }
 
-int get_num_races_found() {
+int CilkSanImpl_t::get_num_races_found() {
   return races_found.size();
 }
 
-void print_race_report() {
+void CilkSanImpl_t::print_race_report() {
   std::cerr << std::endl;
-  std::cerr << "Race detector detected total of " << races_found.size()
+  std::cerr << "Race detector detected total of " << get_num_races_found()
             << " races." << std::endl;
   std::cerr << "Race detector suppressed " << duplicated_races
             << " duplicate error messages " << std::endl;
   std::cerr << std::endl;
-
 }
 
 void print_addr(FILE *f, void *a) {

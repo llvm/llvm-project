@@ -16,12 +16,13 @@
 #include "mem_access.h"
 #include "stack.h"
 
-#define CALLERPC ((uintptr_t)__builtin_return_address(0))
-
 #define CILKSAN_API extern "C" __attribute__((visibility("default")))
+#define CALLERPC ((uintptr_t)__builtin_return_address(0))
 
 // global var: FILE io used to print error messages
 FILE *err_io;
+
+extern CilkSanImpl_t CilkSanImpl;
 
 // Defined in print_addr.cpp
 extern void read_proc_maps();
@@ -76,6 +77,16 @@ static inline void disable_checking() {
   DBG_TRACE(DEBUG_BASIC, "%d: Disable checking.\n", checking_disabled);
 }
 
+// RAII object to disable checking in tool routines.
+struct CheckingRAII {
+  CheckingRAII() {
+    disable_checking();
+  }
+  ~CheckingRAII() {
+    enable_checking();
+  }
+};
+
 // outside world (including runtime).
 // Non-inlined version for user code to use
 CILKSAN_API void __cilksan_enable_checking() {
@@ -97,18 +108,20 @@ CILKSAN_API bool __cilksan_is_checking_enabled() {
 }
 
 static inline bool should_check() {
-  return (instrumentation && checking_disabled == 0);
+  return (instrumentation && (checking_disabled == 0));
 }
 
 // called upon process exit
 static void csan_destroy(void) {
-  // fprintf(err_io, "csan_destroy called.\n");
   disable_instrumentation();
   disable_checking();
-  cilksan_deinit();
-  // std::cerr << "call_stack.size " << call_stack.size() << std::endl;
+  CilkSanImpl.deinit();
   fflush(stdout);
   delete_proc_maps();
+}
+
+CilkSanImpl_t::~CilkSanImpl_t() {
+  csan_destroy();
 }
 
 static void init_internal() {
@@ -142,9 +155,12 @@ static void init_internal() {
 
 CILKSAN_API void __csi_init() {
   // This method should only be called once.
-  if (TOOL_INITIALIZED) assert(0);
+  assert(!TOOL_INITIALIZED && "__csi_init() called multiple times.");
 
-  atexit(csan_destroy);
+  // We use the automatic deallocation of the CilkSanImpl top-level tool object
+  // to shutdown and cleanup the tool at program termination.
+  // atexit(csan_destroy);
+
   init_internal();
   // moved this later when we enter the first Cilk frame
   // cilksan_init();
@@ -153,6 +169,7 @@ CILKSAN_API void __csi_init() {
   // fprintf(err_io, "tsan_init called.\n");
 }
 
+// Helper function to grow a map from CSI ID to program counter (PC).
 static void grow_pc_table(uintptr_t *&table, csi_id_t &table_cap,
                           csi_id_t extra_cap) {
   csi_id_t new_cap = table_cap + extra_cap;
@@ -164,9 +181,8 @@ static void grow_pc_table(uintptr_t *&table, csi_id_t &table_cap,
 
 CILKSAN_API
 void __csan_unit_init(const char * const file_name,
-                      const csan_instrumentation_counts_t counts)
-{
-  disable_checking();
+                      const csan_instrumentation_counts_t counts) {
+  CheckingRAII nocheck;
   // Grow the tables mapping CSI ID's to PC values.
   if (counts.num_call)
     grow_pc_table(call_pc, total_call, counts.num_call);
@@ -185,6 +201,20 @@ void __csan_unit_init(const char * const file_name,
 CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
                                    void *sp,
                                    const func_prop_t prop) {
+  { // Handle tool initialization as a special case.
+    CheckingRAII nocheck_init;
+    static bool first_call = true;
+    if (first_call) {
+      CilkSanImpl.init();
+      enable_instrumentation();
+      first_call = false;
+    }
+  }
+
+  if (!should_check())
+    return;
+
+  CheckingRAII nocheck;
   const csan_source_loc_t *srcloc = __csan_get_func_source_loc(func_id);
   DBG_TRACE(DEBUG_CALLBACK, "__csan_func_entry(%d) at %s (%s:%d)\n",
             func_id,
@@ -195,48 +225,39 @@ CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
     // Ignore entry calls into non-Cilk functions.
     return;
 
-  disable_checking();
-  static bool first_call = true;
-  if (first_call) {
-    cilksan_init();
-    first_call = false;
-  }
-  // Record high location of the stack for this frame.
-  sp_stack.push();
-  *sp_stack.head() = (uintptr_t)sp;
-  // Record low location of the stack for this frame.  This value will be
-  // updated by reads and writes to the stack.
-  sp_stack.push();
-  *sp_stack.head() = (uintptr_t)sp;
+  CilkSanImpl.push_stack_frame((uintptr_t)sp);
+
+  // if (!prop.may_spawn)
+  //   // Ignore entry calls into non-Cilk functions.
+  //   return;
 
   // Update the tool for entering a Cilk function.
-  cilksan_do_enter_begin();
-  cilksan_do_enter_end((uintptr_t)sp);
+  CilkSanImpl.do_enter_begin();
+  CilkSanImpl.do_enter_end((uintptr_t)sp);
   enable_instrumentation();
-  enable_checking();
 }
 
 CILKSAN_API void __csan_func_exit(const csi_id_t func_exit_id,
                                   const csi_id_t func_id,
                                   const func_exit_prop_t prop) {
-  cilksan_assert(TOOL_INITIALIZED);
-  if (prop.may_spawn) {
-    disable_checking();
-    // Update the tool for leaving a Cilk function.
-    cilksan_do_leave_begin();
-    cilksan_do_leave_end();
+  if (!should_check())
+    return;
 
-    // Pop stack pointers.
-    uintptr_t low_stack = *sp_stack.head();
-    sp_stack.pop();
-    uintptr_t high_stack = *sp_stack.head();
-    sp_stack.pop();
-    assert(low_stack <= high_stack);
-    // Clear shadow memory of stack locations.
-    if (low_stack != high_stack)
-      cilksan_clear_shadow_memory(low_stack, high_stack - low_stack);
-    enable_checking();
-  }
+  CheckingRAII nocheck;
+  cilksan_assert(TOOL_INITIALIZED);
+  const csan_source_loc_t *srcloc = __csan_get_func_exit_source_loc(func_exit_id);
+  DBG_TRACE(DEBUG_CALLBACK, "__csan_func_exit(%ld, %ld) at %s (%s:%d)\n",
+            func_exit_id, func_id,
+            srcloc->name, srcloc->filename,
+            srcloc->line_number);
+
+  // if (prop.may_spawn) {
+    // Update the tool for leaving a Cilk function.
+    CilkSanImpl.do_leave_begin();
+    CilkSanImpl.do_leave_end();
+  // }
+  CilkSanImpl.pop_stack_frame();
+
   // XXX Let's focus on Cilk function for now; maybe put it back later
   // cilksan_do_function_exit();
 }
@@ -244,109 +265,115 @@ CILKSAN_API void __csan_func_exit(const csi_id_t func_exit_id,
 CILKSAN_API void __csi_before_call(const csi_id_t call_id,
                                    const csi_id_t func_id,
                                    const call_prop_t prop) {
+  if (!should_check())
+    return;
+
+  CheckingRAII nocheck;
   DBG_TRACE(DEBUG_CALLBACK, "__csi_before_call(%ld, %ld)\n",
             call_id, func_id);
 
-  disable_checking();
   // Record the address of this call site.
   if (!call_pc[call_id])
     call_pc[call_id] = CALLERPC;
+
   // Push the call onto the call stack.
-  call_stack.push(CallID_t(CALL, call_id));
-  enable_checking();
+  CilkSanImpl.record_call(call_id, CALL);
 }
 
 CILKSAN_API void __csi_after_call(const csi_id_t call_id,
                                   const csi_id_t func_id,
                                   const call_prop_t prop) {
+  if (!should_check())
+    return;
+
+  CheckingRAII nocheck;
   DBG_TRACE(DEBUG_CALLBACK, "__csi_after_call(%ld, %ld)\n",
             call_id, func_id);
+
   // Pop the call off of the call stack.
-  disable_checking();
-  assert(call_stack.tail->id == CallID_t(CALL, call_id) &&
-         "ERROR: after_call encountered without corresponding before_call");
-  call_stack.pop();
-  enable_checking();
+  CilkSanImpl.record_call_return(call_id, CALL);
 }
 
 CILKSAN_API void __csan_detach(const csi_id_t detach_id) {
+  if (!should_check())
+    return;
+
+  CheckingRAII nocheck;
   DBG_TRACE(DEBUG_CALLBACK, "__csan_detach(%ld)\n",
             detach_id);
-  disable_checking();
   cilksan_assert(last_event == NONE);
   WHEN_CILKSAN_DEBUG(last_event = SPAWN_PREPARE);
   WHEN_CILKSAN_DEBUG(last_event = NONE);
+
   // Record the address of this detach.
   if (!spawn_pc[detach_id])
     spawn_pc[detach_id] = CALLERPC;
+
   // Push the detach onto the call stack.
-  call_stack.push(CallID_t(SPAWN, detach_id));
-  enable_checking();
+  CilkSanImpl.record_call(detach_id, SPAWN);
 }
 
 CILKSAN_API void __csan_task(const csi_id_t task_id, const csi_id_t detach_id,
                             void *sp) {
+  if (!should_check())
+    return;
+
+  CheckingRAII nocheck;
+  DBG_TRACE(DEBUG_CALLBACK, "__csan_task(%ld, %ld)\n",
+            task_id, detach_id);
   WHEN_CILKSAN_DEBUG(last_event = NONE);
-  disable_checking();
-  // Record high location of the stack for this frame.
-  sp_stack.push();
-  *sp_stack.head() = (uintptr_t)sp;
-  // Record low location of the stack for this frame.  This value will be
-  // updated by reads and writes to the stack.
-  sp_stack.push();
-  *sp_stack.head() = (uintptr_t)sp;
+
+  CilkSanImpl.push_stack_frame((uintptr_t)sp);
 
   // Update tool for entering detach-helper function and performing detach.
-  cilksan_do_enter_helper_begin();
-  cilksan_do_enter_end((uintptr_t)sp);
-  cilksan_do_detach_begin();
-  cilksan_do_detach_end();
-  enable_checking();
+  CilkSanImpl.do_enter_helper_begin();
+  CilkSanImpl.do_enter_end((uintptr_t)sp);
+  CilkSanImpl.do_detach_begin();
+  CilkSanImpl.do_detach_end();
 }
 
 CILKSAN_API void __csan_task_exit(const csi_id_t task_exit_id,
                                   const csi_id_t task_id,
                                   const csi_id_t detach_id) {
-  disable_checking();
-  // Update tool for leaving a detach-helper function.
-  cilksan_do_leave_begin();
-  cilksan_do_leave_end();
+  if (!should_check())
+    return;
+  CheckingRAII nocheck;
+  DBG_TRACE(DEBUG_CALLBACK, "__csan_task_exit(%ld, %ld, %ld)\n",
+            task_exit_id, task_id, detach_id);
 
-  // Pop stack pointers.
-  uintptr_t low_stack = *sp_stack.head();
-  sp_stack.pop();
-  uintptr_t high_stack = *sp_stack.head();
-  sp_stack.pop();
-  assert(low_stack <= high_stack);
-  // Clear shadow memory of stack locations.
-  if (low_stack != high_stack)
-    cilksan_clear_shadow_memory(low_stack, high_stack - low_stack);
-  enable_checking();
+  // Update tool for leaving a detach-helper function.
+  CilkSanImpl.do_leave_begin();
+  CilkSanImpl.do_leave_end();
+
+  CilkSanImpl.pop_stack_frame();
 }
 
 CILKSAN_API void __csan_detach_continue(const csi_id_t detach_continue_id,
                                         const csi_id_t detach_id) {
+  if (!should_check())
+    return;
+  CheckingRAII nocheck;
   DBG_TRACE(DEBUG_CALLBACK, "__csan_detach_continue(%ld)\n",
             detach_id);
-  disable_checking();
-  assert(call_stack.tail->id == CallID_t(SPAWN, detach_id) &&
-         "ERROR: detach_continue encountered without corresponding detach");
-  call_stack.pop();
+
+  CilkSanImpl.record_call_return(detach_id, SPAWN);
 
   if (last_event == LEAVE_FRAME_OR_HELPER)
-    cilksan_do_leave_end();
+    CilkSanImpl.do_leave_end();
+
   WHEN_CILKSAN_DEBUG(last_event = NONE);
-  enable_checking();
 }
 
 CILKSAN_API void __csan_sync(csi_id_t sync_id) {
-  disable_checking();
+  if (!should_check())
+    return;
+  CheckingRAII nocheck;
   cilksan_assert(TOOL_INITIALIZED);
+
   // Because this is a serial tool, we can safely perform all operations related
   // to a sync.
-  cilksan_do_sync_begin();
-  cilksan_do_sync_end();
-  enable_checking();
+  CilkSanImpl.do_sync_begin();
+  CilkSanImpl.do_sync_end();
 }
 
 // Assuming __csan_load/store is inlined, the stack should look like this:
@@ -367,19 +394,19 @@ CILKSAN_API
 void __csan_load(csi_id_t load_id, void *addr, int32_t size, load_prop_t prop) {
   // TODO: Use alignment information.
   cilksan_assert(TOOL_INITIALIZED);
-  if (should_check()) {
-    disable_checking();
-    // Record the address of this load.
-    if (!load_pc[load_id])
-      load_pc[load_id] = CALLERPC;
-
-    DBG_TRACE(DEBUG_MEMORY, "%s read %p\n", __FUNCTION__, addr);
-    // Record this read.
-    cilksan_do_read(load_id, (uintptr_t)addr, size);
-    enable_checking();
-  } else {
+  if (!should_check()) {
     DBG_TRACE(DEBUG_MEMORY, "SKIP %s read %p\n", __FUNCTION__, addr);
+    return;
   }
+
+  CheckingRAII nocheck;
+  // Record the address of this load.
+  if (!load_pc[load_id])
+    load_pc[load_id] = CALLERPC;
+
+  DBG_TRACE(DEBUG_MEMORY, "%s read %p\n", __FUNCTION__, addr);
+  // Record this read.
+  CilkSanImpl.do_read(load_id, (uintptr_t)addr, size);
 }
 
 CILKSAN_API
@@ -387,38 +414,38 @@ void __csan_large_load(csi_id_t load_id, void *addr, size_t size,
                        load_prop_t prop) {
   // TODO: Use alignment information.
   cilksan_assert(TOOL_INITIALIZED);
-  if (should_check()) {
-    disable_checking();
-    // Record the address of this load.
-    if (!load_pc[load_id])
-      load_pc[load_id] = CALLERPC;
-
-    DBG_TRACE(DEBUG_MEMORY, "%s read %p\n", __FUNCTION__, addr);
-    // Record this read.
-    cilksan_do_read(load_id, (uintptr_t)addr, size);
-    enable_checking();
-  } else {
+  if (!should_check()) {
     DBG_TRACE(DEBUG_MEMORY, "SKIP %s read %p\n", __FUNCTION__, addr);
+    return;
   }
+
+  CheckingRAII nocheck;
+  // Record the address of this load.
+  if (!load_pc[load_id])
+    load_pc[load_id] = CALLERPC;
+
+  DBG_TRACE(DEBUG_MEMORY, "%s read %p\n", __FUNCTION__, addr);
+  // Record this read.
+  CilkSanImpl.do_read(load_id, (uintptr_t)addr, size);
 }
 
 CILKSAN_API
 void __csan_store(csi_id_t store_id, void *addr, int32_t size, store_prop_t prop) {
   // TODO: Use alignment information.
   cilksan_assert(TOOL_INITIALIZED);
-  if (should_check()) {
-    disable_checking();
-    // Record the address of this store.
-    if (!store_pc[store_id])
-      store_pc[store_id] = CALLERPC;
-
-    DBG_TRACE(DEBUG_MEMORY, "%s wrote %p\n", __FUNCTION__, addr);
-    // Record this write.
-    cilksan_do_write(store_id, (uintptr_t)addr, size);
-    enable_checking();
-  } else {
+  if (!should_check()) {
     DBG_TRACE(DEBUG_MEMORY, "SKIP %s wrote %p\n", __FUNCTION__, addr);
+    return;
   }
+
+  CheckingRAII nocheck;
+  // Record the address of this store.
+  if (!store_pc[store_id])
+    store_pc[store_id] = CALLERPC;
+
+  DBG_TRACE(DEBUG_MEMORY, "%s wrote %p\n", __FUNCTION__, addr);
+  // Record this write.
+  CilkSanImpl.do_write(store_id, (uintptr_t)addr, size);
 }
 
 CILKSAN_API
@@ -426,19 +453,19 @@ void __csan_large_store(csi_id_t store_id, void *addr, size_t size,
                         store_prop_t prop) {
   // TODO: Use alignment information.
   cilksan_assert(TOOL_INITIALIZED);
-  if (should_check()) {
-    disable_checking();
-    // Record the address of this store.
-    if (!store_pc[store_id])
-      store_pc[store_id] = CALLERPC;
-
-    DBG_TRACE(DEBUG_MEMORY, "%s wrote %p\n", __FUNCTION__, addr);
-    // Record this write.
-    cilksan_do_write(store_id, (uintptr_t)addr, size);
-    enable_checking();
-  } else {
+  if (!should_check()) {
     DBG_TRACE(DEBUG_MEMORY, "SKIP %s wrote %p\n", __FUNCTION__, addr);
+    return;
   }
+
+  CheckingRAII nocheck;
+  // Record the address of this store.
+  if (!store_pc[store_id])
+    store_pc[store_id] = CALLERPC;
+
+  DBG_TRACE(DEBUG_MEMORY, "%s wrote %p\n", __FUNCTION__, addr);
+  // Record this write.
+  CilkSanImpl.do_write(store_id, (uintptr_t)addr, size);
 }
 
 CILKSAN_API
@@ -549,112 +576,114 @@ static void initialize_memory_functions() {
   return;
 }
 
-CILKSAN_API void* malloc(size_t s) {
-  // Don't try to init, since that needs malloc.
-  if (__builtin_expect(real_malloc == NULL, 0)) {
-    if (-1 == mem_initialized)
-      return NULL;
-    initialize_memory_functions();
-  }
+// CILKSAN_API void* malloc(size_t s) {
+//   // Don't try to init, since that needs malloc.
+//   if (__builtin_expect(real_malloc == NULL, 0)) {
+//     if (-1 == mem_initialized)
+//       return NULL;
+//     initialize_memory_functions();
+//   }
 
-  disable_checking();
-  // align the allocation to simplify erasing from shadow mem
-  // uint64_t new_size = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(s);
-  size_t new_size = ALIGN_FOR_MALLOC(s);
-  assert(s == new_size);
-  // call the real malloc
-  void *r = real_malloc(new_size);
-  enable_checking();
+//   disable_checking();
+//   // align the allocation to simplify erasing from shadow mem
+//   // uint64_t new_size = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(s);
+//   size_t new_size = ALIGN_FOR_MALLOC(s);
+//   assert(s == new_size);
+//   // call the real malloc
+//   void *r = real_malloc(new_size);
+//   enable_checking();
 
-  if (TOOL_INITIALIZED && should_check()) {
-    disable_checking();
-    malloc_sizes.insert({(uintptr_t)r, new_size});
-    // cilksan_clear_shadow_memory((size_t)r, (size_t)r+malloc_usable_size(r)-1);
-    cilksan_record_alloc((size_t)r, new_size, 0);
-    cilksan_clear_shadow_memory((size_t)r, new_size);
-    enable_checking();
-  }
+//   if (TOOL_INITIALIZED && should_check()) {
+//     disable_checking();
+//     malloc_sizes.insert({(uintptr_t)r, new_size});
+//     // cilksan_clear_shadow_memory((size_t)r, (size_t)r+malloc_usable_size(r)-1);
+//     cilksan_record_alloc((size_t)r, new_size, 0);
+//     cilksan_clear_shadow_memory((size_t)r, new_size);
+//     enable_checking();
+//   }
 
-  return r;
-}
+//   return r;
+// }
 
-CILKSAN_API void* calloc(size_t num, size_t s) {
-  if (__builtin_expect(real_calloc == NULL, 0)) {
-    if (-1 == mem_initialized)
-      return NULL;
-    initialize_memory_functions();
-  }
+// CILKSAN_API void* calloc(size_t num, size_t s) {
+//   if (__builtin_expect(real_calloc == NULL, 0)) {
+//     if (-1 == mem_initialized)
+//       return NULL;
+//     initialize_memory_functions();
+//   }
 
-  disable_checking();
-  void *r = real_calloc(num, s);
-  enable_checking();
+//   disable_checking();
+//   void *r = real_calloc(num, s);
+//   enable_checking();
 
-  if (TOOL_INITIALIZED && should_check()) {
-    disable_checking();
-    malloc_sizes.insert({(uintptr_t)r, s});
-    // cilksan_clear_shadow_memory((size_t)r, (size_t)r+malloc_usable_size(r)-1);
-    cilksan_clear_shadow_memory((size_t)r, s);
-    enable_checking();
-  }
+//   if (TOOL_INITIALIZED && should_check()) {
+//     disable_checking();
+//     malloc_sizes.insert({(uintptr_t)r, s});
+//     // cilksan_clear_shadow_memory((size_t)r, (size_t)r+malloc_usable_size(r)-1);
+//     cilksan_record_alloc((size_t)r, num * s, 0);
+//     cilksan_clear_shadow_memory((size_t)r, num * s);
+//     enable_checking();
+//   }
 
-  return r;
-}
+//   return r;
+// }
 
-CILKSAN_API void free(void *ptr) {
-  if (__builtin_expect(real_free == NULL, 0)) {
-    if (-1 == mem_initialized)
-      return;
-    initialize_memory_functions();
-  }
+// CILKSAN_API void free(void *ptr) {
+//   if (__builtin_expect(real_free == NULL, 0)) {
+//     if (-1 == mem_initialized)
+//       return;
+//     initialize_memory_functions();
+//   }
 
-  disable_checking();
-  real_free(ptr);
-  enable_checking();
+//   disable_checking();
+//   real_free(ptr);
+//   enable_checking();
 
-  if (TOOL_INITIALIZED && should_check()) {
-    disable_checking();
-    auto iter = malloc_sizes.find((uintptr_t)ptr);
-    if (iter != malloc_sizes.end()) {
-      // cilksan_clear_shadow_memory((size_t)ptr, iter->second);
+//   if (TOOL_INITIALIZED && should_check()) {
+//     disable_checking();
+//     auto iter = malloc_sizes.find((uintptr_t)ptr);
+//     if (iter != malloc_sizes.end()) {
+//       // cilksan_clear_shadow_memory((size_t)ptr, iter->second);
 
-      // Treat a free as a write to all freed addresses.  This way, the tool
-      // will report a race if an operation tries to access a location that was
-      // freed in parallel.
-      cilksan_do_write(UNKNOWN_CSI_ID, (uintptr_t)ptr, iter->second);
-      malloc_sizes.erase(iter);
-    }
-    enable_checking();
-  }
-}
+//       // Treat a free as a write to all freed addresses.  This way, the tool
+//       // will report a race if an operation tries to access a location that was
+//       // freed in parallel.
+//       cilksan_do_write(UNKNOWN_CSI_ID, (uintptr_t)ptr, iter->second);
+//       malloc_sizes.erase(iter);
+//     }
+//     enable_checking();
+//   }
+// }
 
-CILKSAN_API void* realloc(void *ptr, size_t s) {
-  if (__builtin_expect(real_realloc == NULL, 0)) {
-    if (-1 == mem_initialized)
-      return NULL;
-    initialize_memory_functions();
-  }
+// CILKSAN_API void* realloc(void *ptr, size_t s) {
+//   if (__builtin_expect(real_realloc == NULL, 0)) {
+//     if (-1 == mem_initialized)
+//       return NULL;
+//     initialize_memory_functions();
+//   }
 
-  disable_checking();
-  void *r = real_realloc(ptr, s);
-  enable_checking();
+//   disable_checking();
+//   void *r = real_realloc(ptr, s);
+//   enable_checking();
 
-  if (TOOL_INITIALIZED && should_check()) {
-    disable_checking();
-    // Treat the old pointer ptr as freed and the new pointer r as freshly
-    // malloc'd.
-    auto iter = malloc_sizes.find((uintptr_t)ptr);
-    if (iter != malloc_sizes.end()) {
-      cilksan_do_write(UNKNOWN_CSI_ID, (uintptr_t)ptr, iter->second);
-      malloc_sizes.erase(iter);
-    }
-    malloc_sizes.insert({(uintptr_t)r, s});
-    // cilksan_clear_shadow_memory((size_t)r, (size_t)r+malloc_usable_size(r)-1);
-    cilksan_clear_shadow_memory((size_t)r, s);
-    enable_checking();
-  }
+//   if (TOOL_INITIALIZED && should_check()) {
+//     disable_checking();
+//     // Treat the old pointer ptr as freed and the new pointer r as freshly
+//     // malloc'd.
+//     auto iter = malloc_sizes.find((uintptr_t)ptr);
+//     if (iter != malloc_sizes.end()) {
+//       cilksan_do_write(UNKNOWN_CSI_ID, (uintptr_t)ptr, iter->second);
+//       malloc_sizes.erase(iter);
+//     }
+//     malloc_sizes.insert({(uintptr_t)r, s});
+//     // cilksan_clear_shadow_memory((size_t)r, (size_t)r+malloc_usable_size(r)-1);
+//     cilksan_record_alloc((size_t)r, s, 0);
+//     cilksan_clear_shadow_memory((size_t)r, s);
+//     enable_checking();
+//   }
 
-  return r;
-}
+//   return r;
+// }
 
 CILKSAN_API
 void *mmap(void *start, size_t len, int prot, int flags, int fd, off_t offset) {
@@ -669,13 +698,14 @@ void *mmap(void *start, size_t len, int prot, int flags, int fd, off_t offset) {
   enable_checking();
 
   if (TOOL_INITIALIZED && should_check()) {
-    disable_checking();
+    CheckingRAII nocheck;
+    CilkSanImpl.record_alloc((size_t)r, len, 0);
+    CilkSanImpl.clear_shadow_memory((size_t)r, len);
     pages_to_clear.insert({(uintptr_t)r, len});
     if (!(flags & MAP_ANONYMOUS))
       // This mmap is backed by a file.  Initialize the shadow memory with a
       // write to the page.
-      cilksan_do_write(UNKNOWN_CSI_ID, (uintptr_t)r, len);
-    enable_checking();
+      CilkSanImpl.do_write(UNKNOWN_CSI_ID, (uintptr_t)r, len);
   }
 
   return r;
@@ -694,13 +724,14 @@ void *mmap64(void *start, size_t len, int prot, int flags, int fd, off64_t offse
   enable_checking();
 
   if (TOOL_INITIALIZED && should_check()) {
-    disable_checking();
+    CheckingRAII nocheck;
+    CilkSanImpl.record_alloc((size_t)r, len, 0);
+    CilkSanImpl.clear_shadow_memory((size_t)r, len);
     pages_to_clear.insert({(uintptr_t)r, len});
     if (!(flags & MAP_ANONYMOUS))
       // This mmap is backed by a file.  Initialize the shadow memory with a
       // write to the page.
-      cilksan_do_write(UNKNOWN_CSI_ID, (uintptr_t)r, len);
-    enable_checking();
+      CilkSanImpl.do_write(UNKNOWN_CSI_ID, (uintptr_t)r, len);
   }
 
   return r;
@@ -719,7 +750,7 @@ int munmap(void *start, size_t len) {
   enable_checking();
 
   if (TOOL_INITIALIZED && should_check() && (0 == result)) {
-    disable_checking();
+    CheckingRAII nocheck;
     auto first_page = pages_to_clear.lower_bound((uintptr_t)start);
     auto last_page = pages_to_clear.upper_bound((uintptr_t)start + len);
     for (auto curr_page = first_page; curr_page != last_page; ++curr_page) {
@@ -728,11 +759,10 @@ int munmap(void *start, size_t len) {
       // shadow memory.  Otherwise, if the application mmap's more virtual
       // memory than physical memory, then the writes that model page unmapping
       // can blow out physical memory.
-      cilksan_clear_shadow_memory((size_t)curr_page->first, curr_page->second);
-      // cilksan_do_write(UNKNOWN_CSI_ID, curr_page->first, curr_page->second);
+      CilkSanImpl.clear_shadow_memory((size_t)curr_page->first, curr_page->second);
+      // CilkSanImpl.do_write(UNKNOWN_CSI_ID, curr_page->first, curr_page->second);
     }
     pages_to_clear.erase(first_page, last_page);
-    enable_checking();
   }
 
   return result;
@@ -756,7 +786,7 @@ void *mremap(void *start, size_t old_len, size_t len, int flags, ...) {
   enable_checking();
 
   if (TOOL_INITIALIZED && should_check()) {
-    disable_checking();
+    CheckingRAII nocheck;
     auto iter = pages_to_clear.find((uintptr_t)start);
     if (iter != pages_to_clear.end()) {
       // TODO: Treat unmap more like free and record a write operation on the
@@ -764,79 +794,17 @@ void *mremap(void *start, size_t old_len, size_t len, int flags, ...) {
       // shadow memory.  Otherwise, if the application mmap's more virtual
       // memory than physical memory, then the writes that model page unmapping
       // can blow out physical memory.
-      cilksan_clear_shadow_memory((size_t)iter->first, iter->second);
+      CilkSanImpl.clear_shadow_memory((size_t)iter->first, iter->second);
       // cilksan_do_write(UNKNOWN_CSI_ID, iter->first, iter->second);
       pages_to_clear.erase(iter);
     }
     // Record the new mapping.
+    CilkSanImpl.record_alloc((size_t)r, len, 0);
+    CilkSanImpl.clear_shadow_memory((size_t)r, len);
     pages_to_clear.insert({(uintptr_t)r, len});
-    enable_checking();
   }
 
   return r;
 }
 
-// typedef void(*__cilkrts_hyper_create_t)(__cilkrts_hyperobject_base *);
-// static __cilkrts_hyper_create_t real___cilkrts_hyper_create = NULL;
-// CILKSAN_API
-// void __cilkrts_hyper_create(__cilkrts_hyperobject_base *hb) {
-//   disable_checking();
-//   if (real___cilkrts_hyper_create == NULL) {
-//     real___cilkrts_hyper_create =
-//       (__cilkrts_hyper_create_t)dlsym(RTLD_NEXT, "__cilkrts_hyper_create");
-//     char *error = dlerror();
-//     if (error != NULL) {
-//       fputs(error, err_io);
-//       fflush(err_io);
-//       abort();
-//     }
-//   }
-//   fprintf(stderr, "my cilkrts_hyper_create\n");
-//   real___cilkrts_hyper_create(hb);
-//   enable_checking();
-// }
-
-// typedef void *(*__cilkrts_hyper_lookup_t)(__cilkrts_hyperobject_base);
-// static __cilkrts_hyper_lookup_t real___cilkrts_hyper_lookup = NULL;
-// CILKSAN_API
-// void *__cilkrts_hyper_lookup(__cilkrts_hyperobject_base *hb) {
-//   disable_checking();
-//   if (real___cilkrts_hyper_lookup == NULL) {
-//     real___cilkrts_hyper_lookup =
-//       (__cilkrts_hyper_lookup_t)dlsym(RTLD_NEXT, "__cilkrts_hyper_lookup");
-//     char *error = dlerror();
-//     if (error != NULL) {
-//       fputs(error, err_io);
-//       fflush(err_io);
-//       abort();
-//     }
-//   }
-//   void *r = __real___cilkrts_hyper_lookup(hb);
-//   enable_checking();
-//   return r;
-// }
-
-// typedef cilkred_map *(*merge_reducer_maps_t)(__cilkrts_worker **,
-//                                              cilkred_map *,
-//                                              cilkred_map *);
-// static merge_reducer_maps_t real_merge_reducer_maps = NULL;
-// CILKSAN_API
-// cilkred_map *merge_reducer_maps(__cilkrts_worker **w_ptr,
-//                                 cilkred_map *left_map,
-//                                 cilkred_map *right_map) {
-//   disable_checking();
-//   if (real_merge_reducer_maps == NULL) {
-//     real_merge_reducer_maps =
-//       (merge_reducer_maps_t)dlsym(RTLD_NEXT, "merge_reducer_maps");
-//     char *error = dlerror();
-//     if (error != NULL) {
-//       fputs(error, err_io);
-//       fflush(err_io);
-//       abort();
-//     }
-//   }
-//   std::cerr << "my merge_reducer_maps\n";
-//   cilkred_map *r = real_merge_reducer_maps(w_ptr, left_map, right_map);
-//   enable_checking();
-//   return r;
-// }
+#endif  // CILKSAN_DYNAMIC

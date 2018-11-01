@@ -14,17 +14,15 @@
 #include <execinfo.h>
 #include <inttypes.h>
 
-#include "cilksan_internal.h"
 #include "debug_util.h"
 #include "disjointset.h"
-#include "frame_data.h"
 #include "mem_access.h"
+#include "race_info.h"
 #include "spbag.h"
-#include "stack.h"
 
 class MemoryAccess_t {
 public:
-  DisjointSet_t<SPBagInterface *> *func;
+  DisjointSet_t<SPBagInterface *> *func = nullptr;
   AccessLoc_t loc;
 
   MemoryAccess_t()
@@ -57,7 +55,7 @@ public:
 
   bool isValid() const {
     if (nullptr == func)
-      assert(nullptr == loc.call_stack.tail);
+      assert(nullptr == loc.getCallStack());
     return (nullptr != func);
   }
 
@@ -147,7 +145,7 @@ public:
   }
 
   bool sameAccessLocPtr(const MemoryAccess_t &that) const {
-    return loc.call_stack.tail == that.loc.call_stack.tail;
+    return loc.getCallStack() == that.loc.getCallStack();
   }
 
   // TODO: Get rid of PC from these comparisons

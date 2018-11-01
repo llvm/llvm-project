@@ -69,40 +69,22 @@ SBag_t::FreeNode_t *SBag_t::free_list = nullptr;
 PBag_t::FreeNode_t *PBag_t::free_list = nullptr;
 
 // Code to handle references to the stack.
-// range of stack used by the process
+
+// Range of stack used by the process
 uint64_t stack_low_addr = 0;
 uint64_t stack_high_addr = 0;
 
-// small helper functions
+// Helper function to check if an address is in the stack.
 static inline bool is_on_stack(uintptr_t addr) {
   cilksan_assert(stack_high_addr != stack_low_addr);
   return (addr <= stack_high_addr && addr >= stack_low_addr);
 }
 
-// ANGE: Each function that causes a Disjoint set to be created has a
-// unique ID (i.e., Cilk function and spawned C function).
-// If a spawned function is also a Cilk function, a Disjoint Set is created
-// for code between the point where detach finishes and the point the Cilk
-// function calls enter_frame, which may be unnecessary in some case.
-// (But potentially necessary in the case where the base case is executed.)
-static uint64_t frame_id = 0;
-
-// Data associated with the stack of Cilk frames or spawned C frames.
-// head contains the SP bags for the function we are currently processing
-static Stack_t<FrameData_t> frame_stack;
-call_stack_t call_stack;
-Stack_t<uintptr_t> sp_stack;
-
 // Free list for call-stack nodes
 call_stack_node_t *call_stack_node_t::free_list = nullptr;
 
-// Shadow memory, or the unordered hashmap that maps a memory address to its
-// last reader and writer
-Shadow_Memory shadow_memory;
-
-// extern functions, defined in print_addr.cpp
-extern void print_race_report();
-extern int get_num_races_found();
+// Global object to manage Cilksan data structures.
+CilkSanImpl_t CilkSanImpl;
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -110,7 +92,8 @@ extern int get_num_races_found();
 ////////////////////////////////////////////////////////////////////////
 
 /// Helper function for merging returning child's bag into parent's
-static inline void merge_bag_from_returning_child(bool returning_from_detach) {
+inline void
+CilkSanImpl_t::merge_bag_from_returning_child(bool returning_from_detach) {
   FrameData_t *parent = frame_stack.ancestor(1);
   FrameData_t *child = frame_stack.head();
   cilksan_assert(parent->Sbag);
@@ -158,16 +141,13 @@ static inline void merge_bag_from_returning_child(bool returning_from_detach) {
   } else {
     // We are returning from a call.  Merge the child S-bag into the
     // parent S-bag, and merge the child P-bag into the parent P-bag.
-    DBG_TRACE(DEBUG_BAGS, "Merge S-bag from called child %ld to S-bag from parent %ld.\n",
+    DBG_TRACE(DEBUG_BAGS,
+              "Merge S-bag from called child %ld to S-bag from parent %ld.\n",
               child->Sbag->get_set_node()->get_func_id(),
               parent->Sbag->get_set_node()->get_func_id());
-    // fprintf(stderr, "parent->Sbag = %p, child->Sbag = %p\n",
-    // 	    parent->Sbag, child->Sbag);
     cilksan_assert(parent->Sbag->get_set_node()->is_SBag());
     parent->Sbag->combine(child->Sbag);
 
-    // fprintf(stderr, "parent->Pbag = %p, child->Pbag = %p\n",
-    // 	    parent->Pbag, child->Pbag);
     // Combine child P-bag into parent P-bag.
     if (child->Pbag) {
       // Get the parent P-bag.
@@ -182,10 +162,12 @@ static inline void merge_bag_from_returning_child(bool returning_from_detach) {
 	DBG_TRACE(DEBUG_BAGS, "%p\n", parent_pbag);
       }
 
-      DBG_TRACE(DEBUG_BAGS, "Merge P-bag from called child %ld to P-bag from parent %ld.\n",
+      DBG_TRACE(DEBUG_BAGS,
+                "Merge P-bag from called child %ld to P-bag from parent %ld.\n",
 		child->frame_data.frame_id,
 		parent->Sbag->get_set_node()->get_func_id());
       cilksan_assert(parent_pbag && parent_pbag->get_set_node()->is_PBag());
+
       // Combine child P-bag into parent P-bag.
       cilksan_assert(child->Pbag->get_set_node()->is_PBag());
       parent_pbag->combine(child->Pbag);
@@ -204,7 +186,7 @@ static inline void merge_bag_from_returning_child(bool returning_from_detach) {
 /// Helper function for handling the start of a new function.  This
 /// function can be a spawned or called Cilk function or a spawned C
 /// function.  A called C function is treated as inlined.
-static inline void start_new_function() {
+inline void CilkSanImpl_t::start_new_function() {
   frame_id++;
   frame_stack.push();
 
@@ -220,6 +202,7 @@ static inline void start_new_function() {
   cilksan_assert(child->Sbag == NULL);
   cilksan_assert(child->Pbag == NULL);
 
+  DBG_TRACE(DEBUG_BAGS, "Creating SBag for frame %ld\n", frame_id);
   child_sbag =
     new DisjointSet_t<SPBagInterface *>(new SBag_t(frame_id,
 						   parent_sbag->get_node()));
@@ -234,36 +217,32 @@ static inline void start_new_function() {
   DBG_TRACE(DEBUG_CALLBACK, "Enter function id %ld\n", frame_id);
 }
 
-/// Helper function for exiting a function; counterpart of
-/// start_new_function.
-static inline void exit_function() {
+/// Helper function for exiting a function; counterpart of start_new_function.
+inline void CilkSanImpl_t::exit_function() {
   // Popping doesn't actually destruct the object so we need to
   // manually dec the ref counts here.
   frame_stack.head()->reset();
   frame_stack.pop();
 }
 
-/// Action performed on entering a Cilk function (excluding spawn
-/// helper).
-static inline void enter_cilk_function() {
+/// Action performed on entering a Cilk function (excluding spawn helper).
+inline void CilkSanImpl_t::enter_cilk_function() {
   DBG_TRACE(DEBUG_CALLBACK, "entering a Cilk function, push frame_stack\n");
   start_new_function();
 }
 
-/// Action performed on leaving a Cilk function (excluding spawn
-/// helper).
-static inline void leave_cilk_function() {
+/// Action performed on leaving a Cilk function (excluding spawn helper).
+inline void CilkSanImpl_t::leave_cilk_function() {
   DBG_TRACE(DEBUG_CALLBACK,
             "leaving a Cilk function (spawner or helper), pop frame_stack\n");
 
-  /* param: not returning from a spawn */
+  // param: not returning from a spawn
   merge_bag_from_returning_child(0);
   exit_function();
 }
 
-/// Action performed on entering a spawned child.
-/// (That is, right after detach.)
-static inline void enter_detach_child() {
+/// Action performed on entering a spawned child, right after detach.
+inline void CilkSanImpl_t::enter_detach_child() {
   DBG_TRACE(DEBUG_CALLBACK, "done detach, push frame_stack\n");
   start_new_function();
   // Copy the rsp from the parent.
@@ -278,11 +257,10 @@ static inline void enter_detach_child() {
 
 /// Action performed when returning from a spawned child.
 /// (That is, returning from a spawn helper.)
-static inline void return_from_detach() {
-
+inline void CilkSanImpl_t::return_from_detach() {
   DBG_TRACE(DEBUG_CALLBACK, "return from detach, pop frame_stack\n");
   cilksan_assert(DETACHER == frame_stack.head()->frame_data.entry_type);
-  /* param: we are returning from a spawn */
+  // param: we are returning from a spawn
   merge_bag_from_returning_child(1);
   exit_function();
   // Detacher frames do not have separate leave calls from the helpers
@@ -291,7 +269,7 @@ static inline void return_from_detach() {
 }
 
 /// Action performed immediately after passing a sync.
-static void complete_sync() {
+inline void CilkSanImpl_t::complete_sync() {
   FrameData_t *f = frame_stack.head();
   DBG_TRACE(DEBUG_CALLBACK, "frame %d done sync\n",
             f->Sbag->get_node()->get_func_id());
@@ -312,21 +290,13 @@ static void complete_sync() {
 //---------------------------------------------------------------
 // Callback functions
 //---------------------------------------------------------------
-void cilksan_do_enter_begin() {
+void CilkSanImpl_t::do_enter_begin() {
   cilksan_assert(CILKSAN_INITIALIZED);
   cilksan_assert(last_event == NONE);
   WHEN_CILKSAN_DEBUG(last_event = ENTER_FRAME);
-  DBG_TRACE(DEBUG_CALLBACK, "frame %ld cilk_enter_frame_begin, stack depth %d\n",
+  DBG_TRACE(DEBUG_CALLBACK,
+            "frame %ld cilk_enter_frame_begin, stack depth %d\n",
             frame_id+1, frame_stack.size());
-
-/*
-  if (entry_stack.size() == 1) {
-    // we are entering the top-level Cilk function; everything we did
-    // before can be cleared, since we can't possibly be racing with
-    // anything old at this point
-    shadow_mem.clear();
-  }
-*/
   // entry_stack.push();
   // entry_stack.head()->entry_type = SPAWNER;
   // entry_stack.head()->frame_type = SHADOW_FRAME;
@@ -337,7 +307,7 @@ void cilksan_do_enter_begin() {
   frame_stack.head()->frame_data.frame_type = SHADOW_FRAME;
 }
 
-void cilksan_do_enter_helper_begin() {
+void CilkSanImpl_t::do_enter_helper_begin() {
   cilksan_assert(CILKSAN_INITIALIZED);
   DBG_TRACE(DEBUG_CALLBACK, "frame %ld cilk_enter_helper_begin\n", frame_id+1);
   cilksan_assert(last_event == NONE);
@@ -354,7 +324,7 @@ void cilksan_do_enter_helper_begin() {
   frame_stack.head()->frame_data.frame_type = SHADOW_FRAME;
 }
 
-void cilksan_do_enter_end(uintptr_t stack_ptr) {
+void CilkSanImpl_t::do_enter_end(uintptr_t stack_ptr) {
   cilksan_assert(CILKSAN_INITIALIZED);
   FrameData_t *cilk_func = frame_stack.head();
   cilk_func->Sbag->get_node()->set_rsp(stack_ptr);
@@ -363,17 +333,16 @@ void cilksan_do_enter_end(uintptr_t stack_ptr) {
   DBG_TRACE(DEBUG_CALLBACK, "cilk_enter_end, frame stack ptr: %p\n", stack_ptr);
 }
 
-void cilksan_do_detach_begin() {
+void CilkSanImpl_t::do_detach_begin() {
   cilksan_assert(CILKSAN_INITIALIZED);
   cilksan_assert(last_event == NONE);
   WHEN_CILKSAN_DEBUG(last_event = DETACH);
 }
 
-void cilksan_do_detach_end() {
+void CilkSanImpl_t::do_detach_end() {
   cilksan_assert(CILKSAN_INITIALIZED);
   DBG_TRACE(DEBUG_CALLBACK, "cilk_detach\n");
 
-  // cilksan_assert(frame_stack.head()->frame_data.entry_type == HELPER);
   cilksan_assert(last_event == DETACH);
   WHEN_CILKSAN_DEBUG(last_event = NONE);
 
@@ -395,7 +364,7 @@ void cilksan_do_detach_end() {
   enter_detach_child();
 }
 
-void cilksan_do_sync_begin() {
+void CilkSanImpl_t::do_sync_begin() {
   cilksan_assert(CILKSAN_INITIALIZED);
   DBG_TRACE(DEBUG_CALLBACK, "frame %ld cilk_sync_begin\n",
             frame_stack.head()->Sbag->get_node()->get_func_id());
@@ -403,7 +372,7 @@ void cilksan_do_sync_begin() {
   WHEN_CILKSAN_DEBUG(last_event = CILK_SYNC);
 }
 
-void cilksan_do_sync_end() {
+void CilkSanImpl_t::do_sync_end() {
   cilksan_assert(CILKSAN_INITIALIZED);
   DBG_TRACE(DEBUG_CALLBACK, "cilk_sync_end\n");
   cilksan_assert(last_event == CILK_SYNC);
@@ -411,7 +380,7 @@ void cilksan_do_sync_end() {
   complete_sync();
 }
 
-void cilksan_do_leave_begin() {
+void CilkSanImpl_t::do_leave_begin() {
   cilksan_assert(CILKSAN_INITIALIZED);
   cilksan_assert(last_event == NONE);
   WHEN_CILKSAN_DEBUG(last_event = LEAVE_FRAME_OR_HELPER);
@@ -437,23 +406,21 @@ void cilksan_do_leave_begin() {
     leave_cilk_function();
 }
 
-void cilksan_do_leave_end() {
+void CilkSanImpl_t::do_leave_end() {
   cilksan_assert(CILKSAN_INITIALIZED);
-  // DBG_TRACE(DEBUG_CALLBACK, "frame %ld cilk_leave_end\n",
-  //           frame_stack.head()->frame_data.frame_id);
   DBG_TRACE(DEBUG_CALLBACK, "cilk_leave_end\n");
   cilksan_assert(last_event == LEAVE_FRAME_OR_HELPER);
   WHEN_CILKSAN_DEBUG(last_event = NONE);
-  // cilksan_assert(frame_stack.size() > 1);
 }
 
 // called by record_memory_read/write, with the access broken down into 64-byte
 // aligned memory accesses
-static void record_mem_helper(bool is_read, const csi_id_t acc_id,
-                              uintptr_t addr,
-                              size_t mem_size, bool on_stack) {
+inline void
+CilkSanImpl_t::record_mem_helper(bool is_read, const csi_id_t acc_id,
+                                 uintptr_t addr, size_t mem_size,
+                                 bool on_stack) {
   FrameData_t *f = frame_stack.head();
-  bool write_in_shadow =shadow_memory.does_access_exists(false, addr, mem_size);
+  bool write_in_shadow = shadow_memory.does_access_exists(false, addr, mem_size);
   bool read_in_shadow = shadow_memory.does_access_exists(true, addr, mem_size);
 
   // guaranteed safe if:
@@ -493,8 +460,8 @@ static void record_mem_helper(bool is_read, const csi_id_t acc_id,
   }
 }
 
-void cilksan_do_read(const csi_id_t load_id,
-                     uintptr_t addr, size_t mem_size) {
+void CilkSanImpl_t::do_read(const csi_id_t load_id,
+                            uintptr_t addr, size_t mem_size) {
   cilksan_assert(CILKSAN_INITIALIZED);
   DBG_TRACE(DEBUG_MEMORY, "record read %lu: %lu bytes at addr %p and rip %p.\n",
             load_id, mem_size, addr, load_pc[load_id]);
@@ -529,8 +496,8 @@ void cilksan_do_read(const csi_id_t load_id,
   }
 }
 
-void cilksan_do_write(const csi_id_t store_id,
-                      uintptr_t addr, size_t mem_size) {
+void CilkSanImpl_t::do_write(const csi_id_t store_id,
+                             uintptr_t addr, size_t mem_size) {
   cilksan_assert(CILKSAN_INITIALIZED);
   DBG_TRACE(DEBUG_MEMORY, "record write %ld: %lu bytes at addr %p and rip %p.\n",
             store_id, mem_size, addr, store_pc[store_id]);
@@ -549,8 +516,7 @@ void cilksan_do_write(const csi_id_t store_id,
   } else {
     cilksan_assert(prefix_size <= mem_size);
     if (prefix_size) { // do the prefix first
-      record_mem_helper(false, store_id, addr, prefix_size,
-                        on_stack);
+      record_mem_helper(false, store_id, addr, prefix_size, on_stack);
       mem_size -= prefix_size;
     }
     addr = next_addr;
@@ -566,20 +532,22 @@ void cilksan_do_write(const csi_id_t store_id,
 }
 
 // clear the memory block at [start,start+size) (end is exclusive).
-void cilksan_clear_shadow_memory(size_t start, size_t size) {
+void CilkSanImpl_t::clear_shadow_memory(size_t start, size_t size) {
   DBG_TRACE(DEBUG_MEMORY, "cilksan_clear_shadow_memory(%p, %ld)\n",
             start, size);
-  shadow_memory.clear(start,size);
+  shadow_memory.clear(start, size);
 }
 
-void cilksan_record_alloc(size_t start, size_t size, csi_id_t alloca_id) {
+void CilkSanImpl_t::record_alloc(size_t start, size_t size,
+                                 csi_id_t alloca_id) {
   DBG_TRACE(DEBUG_MEMORY, "cilksan_record_alloc(%p, %ld)\n",
             start, size);
   FrameData_t *f = frame_stack.head();
   shadow_memory.record_alloc(start, size, f, call_stack, alloca_id);
 }
 
-static void print_cilksan_stat() {
+inline void CilkSanImpl_t::print_stats() {
+  // TODO: Add stats?
   // std::cout << "max sync block size seen: "
   //           << accounted_max_sync_block_size
   //           << "    (from user input: " << max_sync_block_size << ", average: "
@@ -589,17 +557,16 @@ static void print_cilksan_stat() {
   //           << accounted_max_cont_depth << std::endl;
 }
 
-void cilksan_deinit() {
+void CilkSanImpl_t::deinit() {
   static bool deinit = false;
   // XXX: kind of a hack, but somehow this gets called twice.
   if (!deinit) deinit = true;
-  else return; /* deinit-ed already */
+  else return; // deinit-ed already
 
   print_race_report();
-  print_cilksan_stat();
+  print_stats();
 
   cilksan_assert(frame_stack.size() == 1);
-  // cilksan_assert(entry_stack.size() == 1);
 
   shadow_memory.destruct();
 
@@ -637,9 +604,9 @@ void cilksan_deinit() {
   // if(first_error != 0) exit(first_error);
 }
 
-void cilksan_init() {
+void CilkSanImpl_t::init() {
   DBG_TRACE(DEBUG_CALLBACK, "cilksan_init()\n");
-  std::cout<< "cilksan_init() version 19\n";
+  std::cout << "cilksan_init() version 19\n";
 
   cilksan_assert(stack_high_addr != 0 && stack_low_addr != 0);
 
@@ -664,7 +631,7 @@ void cilksan_init() {
 }
 
 extern "C" int __cilksan_error_count() {
-  return get_num_races_found();
+  return CilkSanImpl.get_num_races_found();
 }
 
 // This funciton parse the input supplied to the user program and get the params
@@ -763,7 +730,7 @@ extern "C" int __cilksan_parse_input(int argc, char *argv[]) {
 }
 
 // XXX: Should really be in print_addr.cpp, but this will do for now
-void print_current_function_info() {
+inline void CilkSanImpl_t::print_current_function_info() {
   FrameData_t *f = frame_stack.head();
   // std::cout << "steal points: " << f->steal_points[0] << ", "
   //           << f->steal_points[1] << ", " << f->steal_points[2] << std::endl;

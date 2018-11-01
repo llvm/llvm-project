@@ -5,6 +5,8 @@
 size_t MemoryAccess_t::FreeNode_t::FreeNode_ObjSize = 0;
 MemoryAccess_t::FreeNode_t *MemoryAccess_t::free_list = nullptr;
 
+extern CilkSanImpl_t CilkSanImpl;
+
 CompressedDictShadowMem::CompressedDictShadowMem() {
     int dict_type = 2;
     // element_count = 0;
@@ -146,7 +148,7 @@ void CompressedDictShadowMem::check_race(bool prev_read, bool is_read,
     assert(shifted_addr + current_size <= addr + mem_size);
     if (access && access->isValid()) {
       auto func = access->getFunc();
-      bool has_race = false;
+      // bool has_race = false;
       cilksan_assert(func);
       // cilksan_assert(curr_vid != UNINIT_VIEW_ID);
 
@@ -154,28 +156,26 @@ void CompressedDictShadowMem::check_race(bool prev_read, bool is_read,
       // SPBagInterface *cur_node = func->get_node();
       if (lca->is_PBag()) {
         // If memory is allocated on stack, the accesses race with each other
-        // only if the mem location is allocated in shared ancestor's stack
-        // We don't need to check for this because we clear shadow memory;
+        // only if the mem location is allocated in shared ancestor's stack.  We
+        // don't need to check for this because we clear shadow memory;
         // non-shared stack can't race because earlier one would've been cleared
 
         auto alloc_find = my_alloc_dict->find(shifted_addr);
-        AccessLoc_t alloc_access = (alloc_find == nullptr) ? AccessLoc_t() : alloc_find->getLoc();
+        AccessLoc_t alloc_access =
+          (alloc_find == nullptr) ? AccessLoc_t() : alloc_find->getLoc();
         if (prev_read) // checking the current access with previous reads
-          report_race(access->getLoc(),
-                      AccessLoc_t(acc_id, call_stack),
-                      alloc_access,
-                      shifted_addr, RW_RACE);
+          CilkSanImpl.report_race(
+              access->getLoc(), AccessLoc_t(acc_id, call_stack), alloc_access,
+              shifted_addr, RW_RACE);
         else {  // check the current access with previous writes
           if (is_read) // the current access is a read
-            report_race(access->getLoc(),
-                        AccessLoc_t(acc_id, call_stack),
-                        alloc_access,
-                        shifted_addr, WR_RACE);
+            CilkSanImpl.report_race(
+                access->getLoc(), AccessLoc_t(acc_id, call_stack), alloc_access,
+                shifted_addr, WR_RACE);
           else
-            report_race(access->getLoc(),
-                        AccessLoc_t(acc_id, call_stack),
-                        alloc_access,
-                        shifted_addr, WW_RACE);
+            CilkSanImpl.report_race(
+                access->getLoc(), AccessLoc_t(acc_id, call_stack), alloc_access,
+                shifted_addr, WW_RACE);
         }
       }
     }
@@ -273,7 +273,7 @@ void CompressedDictShadowMem::check_and_update_write(
                                current_size, f, call_stack, access);
     else {
       auto func = access->getFunc();
-      bool has_race = false;
+      // bool has_race = false;
       cilksan_assert(func);
       // cilksan_assert(curr_vid != UNINIT_VIEW_ID);
       SPBagInterface *lca = func->get_set_node();
@@ -283,12 +283,12 @@ void CompressedDictShadowMem::check_and_update_write(
       // SPBagInterface *cur_node = func->get_node();
       if (lca->is_PBag()) {
         auto alloc_find = my_alloc_dict->find(shifted_addr);
-        AccessLoc_t alloc_access = (alloc_find == nullptr) ? AccessLoc_t() : alloc_find->getLoc();
+        AccessLoc_t alloc_access =
+          (alloc_find == nullptr) ? AccessLoc_t() : alloc_find->getLoc();
         // check the current access with previous writes
-        report_race(access->getLoc(),
-                    AccessLoc_t(acc_id, call_stack),
-                    alloc_access,
-                    shifted_addr, WW_RACE);
+        CilkSanImpl.report_race(
+            access->getLoc(), AccessLoc_t(acc_id, call_stack), alloc_access,
+            shifted_addr, WW_RACE);
       }
 
       // Update the table
