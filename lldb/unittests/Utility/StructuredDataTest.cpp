@@ -35,11 +35,11 @@ TEST(StructuredDataTest, StringDump) {
 TEST(StructuredDataTest, ParseJSONFromFile) {
   Status status;
   auto object_sp = StructuredData::ParseJSONFromFile(
-      FileSpec("non-existing-file.json", false), status);
+      FileSpec("non-existing-file.json"), status);
   EXPECT_EQ(nullptr, object_sp);
 
   std::string input = GetInputFilePath("StructuredData-basic.json");
-  object_sp = StructuredData::ParseJSONFromFile(FileSpec(input, false), status);
+  object_sp = StructuredData::ParseJSONFromFile(FileSpec(input), status);
   ASSERT_NE(nullptr, object_sp);
 
   StreamString S;

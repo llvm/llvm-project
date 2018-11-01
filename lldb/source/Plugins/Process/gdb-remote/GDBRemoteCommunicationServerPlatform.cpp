@@ -532,7 +532,7 @@ const FileSpec &GDBRemoteCommunicationServerPlatform::GetDomainSocketDir() {
     const char *domainsocket_dir_env =
         ::getenv("LLDB_DEBUGSERVER_DOMAINSOCKET_DIR");
     if (domainsocket_dir_env != nullptr)
-      g_domainsocket_dir = FileSpec(domainsocket_dir_env, false);
+      g_domainsocket_dir = FileSpec(domainsocket_dir_env);
     else
       g_domainsocket_dir = HostInfo::GetProcessTempDir();
   });
@@ -550,7 +550,7 @@ GDBRemoteCommunicationServerPlatform::GetDomainSocketPath(const char *prefix) {
   socket_path_spec.AppendPathComponent(socket_name.c_str());
 
   llvm::sys::fs::createUniqueFile(socket_path_spec.GetCString(), socket_path);
-  return FileSpec(socket_path.c_str(), false);
+  return FileSpec(socket_path.c_str());
 }
 
 void GDBRemoteCommunicationServerPlatform::SetPortOffset(uint16_t port_offset) {

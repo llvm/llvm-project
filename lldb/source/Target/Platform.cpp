@@ -94,7 +94,7 @@ PlatformProperties::PlatformProperties() {
   if (!llvm::sys::path::home_directory(user_home_dir))
     return;
 
-  module_cache_dir = FileSpec(user_home_dir.c_str(), false);
+  module_cache_dir = FileSpec(user_home_dir.c_str());
   module_cache_dir.AppendPathComponent(".lldb");
   module_cache_dir.AppendPathComponent("module_cache");
   SetModuleCacheDirectory(module_cache_dir);
@@ -536,9 +536,12 @@ FileSpec Platform::GetWorkingDirectory() {
   if (IsHost()) {
     llvm::SmallString<64> cwd;
     if (llvm::sys::fs::current_path(cwd))
-      return FileSpec{};
-    else
-      return FileSpec(cwd, true);
+      return {};
+    else {
+      FileSpec file_spec(cwd);
+      FileSystem::Instance().Resolve(file_spec);
+      return file_spec;
+    }
   } else {
     if (!m_working_dir)
       m_working_dir = GetRemoteWorkingDirectory();
@@ -556,7 +559,7 @@ static FileSystem::EnumerateDirectoryResult
 RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
                      llvm::StringRef path) {
   RecurseCopyBaton *rc_baton = (RecurseCopyBaton *)baton;
-  FileSpec src(path, false);
+  FileSpec src(path);
   namespace fs = llvm::sys::fs;
   switch (ft) {
   case fs::file_type::fifo_file:
@@ -931,7 +934,8 @@ Status Platform::ResolveSymbolFile(Target &target, const ModuleSpec &sym_spec,
 bool Platform::ResolveRemotePath(const FileSpec &platform_path,
                                  FileSpec &resolved_platform_path) {
   resolved_platform_path = platform_path;
-  return resolved_platform_path.ResolvePath();
+  FileSystem::Instance().Resolve(resolved_platform_path);
+  return true;
 }
 
 const ArchSpec &Platform::GetSystemArchitecture() {
@@ -1799,9 +1803,9 @@ uint32_t Platform::LoadImageUsingPaths(lldb_private::Process *process,
 {
   FileSpec file_to_use;
   if (remote_filename.IsAbsolute())
-    file_to_use = FileSpec(remote_filename.GetFilename().GetStringRef(), 
-                               false, 
-                               remote_filename.GetPathStyle());
+    file_to_use = FileSpec(remote_filename.GetFilename().GetStringRef(),
+
+                           remote_filename.GetPathStyle());
   else
     file_to_use = remote_filename;
     

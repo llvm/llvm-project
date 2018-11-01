@@ -32,11 +32,15 @@ SBFileSpec::SBFileSpec(const lldb_private::FileSpec &fspec)
     : m_opaque_ap(new lldb_private::FileSpec(fspec)) {}
 
 // Deprecated!!!
-SBFileSpec::SBFileSpec(const char *path)
-    : m_opaque_ap(new FileSpec(path, true)) {}
+SBFileSpec::SBFileSpec(const char *path) : m_opaque_ap(new FileSpec(path)) {
+  FileSystem::Instance().Resolve(*m_opaque_ap);
+}
 
 SBFileSpec::SBFileSpec(const char *path, bool resolve)
-    : m_opaque_ap(new FileSpec(path, resolve)) {}
+    : m_opaque_ap(new FileSpec(path)) {
+  if (resolve)
+    FileSystem::Instance().Resolve(*m_opaque_ap);
+}
 
 SBFileSpec::~SBFileSpec() {}
 
@@ -68,7 +72,7 @@ bool SBFileSpec::ResolveExecutableLocation() {
 int SBFileSpec::ResolvePath(const char *src_path, char *dst_path,
                             size_t dst_len) {
   llvm::SmallString<64> result(src_path);
-  lldb_private::FileSpec::Resolve(result);
+  FileSystem::Instance().Resolve(result);
   ::snprintf(dst_path, dst_len, "%s", result.c_str());
   return std::min(dst_len - 1, result.size());
 }

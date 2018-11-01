@@ -128,7 +128,7 @@ const char *SBLaunchInfo::GetWorkingDirectory() const {
 }
 
 void SBLaunchInfo::SetWorkingDirectory(const char *working_dir) {
-  m_opaque_sp->SetWorkingDirectory(FileSpec{working_dir, false});
+  m_opaque_sp->SetWorkingDirectory(FileSpec(working_dir));
 }
 
 uint32_t SBLaunchInfo::GetLaunchFlags() {
@@ -155,7 +155,7 @@ const char *SBLaunchInfo::GetShell() {
 }
 
 void SBLaunchInfo::SetShell(const char *path) {
-  m_opaque_sp->SetShell(FileSpec(path, false));
+  m_opaque_sp->SetShell(FileSpec(path));
 }
 
 bool SBLaunchInfo::GetShellExpandArguments() {
@@ -184,8 +184,7 @@ bool SBLaunchInfo::AddDuplicateFileAction(int fd, int dup_fd) {
 
 bool SBLaunchInfo::AddOpenFileAction(int fd, const char *path, bool read,
                                      bool write) {
-  return m_opaque_sp->AppendOpenFileAction(fd, FileSpec{path, false}, read,
-                                           write);
+  return m_opaque_sp->AppendOpenFileAction(fd, FileSpec(path), read, write);
 }
 
 bool SBLaunchInfo::AddSuppressFileAction(int fd, bool read, bool write) {

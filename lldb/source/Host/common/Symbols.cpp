@@ -264,20 +264,34 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
     FileSystem::Instance().ResolveSymbolicLink(module_file_spec, module_file_spec);
 
     const ConstString &file_dir = module_file_spec.GetDirectory();
-    debug_file_search_paths.AppendIfUnique(
-        FileSpec(file_dir.AsCString("."), true));
+    {
+      FileSpec file_spec(file_dir.AsCString("."));
+      FileSystem::Instance().Resolve(file_spec);
+      debug_file_search_paths.AppendIfUnique(file_spec);
+    }
 
     // Add current working directory.
-    debug_file_search_paths.AppendIfUnique(FileSpec(".", true));
+    {
+      FileSpec file_spec(".");
+      FileSystem::Instance().Resolve(file_spec);
+      debug_file_search_paths.AppendIfUnique(file_spec);
+    }
 
 #ifndef _WIN32
 #if defined(__NetBSD__)
     // Add /usr/libdata/debug directory.
-    debug_file_search_paths.AppendIfUnique(
-        FileSpec("/usr/libdata/debug", true));
+    {
+      FileSpec file_spec("/usr/libdata/debug");
+      FileSystem::Instance().Resolve(file_spec);
+      debug_file_search_paths.AppendIfUnique(file_spec);
+    }
 #else
     // Add /usr/lib/debug directory.
-    debug_file_search_paths.AppendIfUnique(FileSpec("/usr/lib/debug", true));
+    {
+      FileSpec file_spec("/usr/lib/debug");
+      FileSystem::Instance().Resolve(file_spec);
+      debug_file_search_paths.AppendIfUnique(file_spec);
+    }
 #endif
 #endif // _WIN32
 
@@ -296,7 +310,7 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
     size_t num_directories = debug_file_search_paths.GetSize();
     for (size_t idx = 0; idx < num_directories; ++idx) {
       FileSpec dirspec = debug_file_search_paths.GetFileSpecAtIndex(idx);
-      dirspec.ResolvePath();
+      FileSystem::Instance().Resolve(dirspec);
       if (!llvm::sys::fs::is_directory(dirspec.GetPath()))
         continue;
 
@@ -315,7 +329,8 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
       const uint32_t num_files = files.size();
       for (size_t idx_file = 0; idx_file < num_files; ++idx_file) {
         const std::string &filename = files[idx_file];
-        FileSpec file_spec(filename, true);
+        FileSpec file_spec(filename);
+        FileSystem::Instance().Resolve(file_spec);
 
         if (llvm::sys::fs::equivalent(file_spec.GetPath(),
                                       module_file_spec.GetPath()))

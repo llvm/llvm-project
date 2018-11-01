@@ -735,7 +735,7 @@ SBTarget SBDebugger::FindTargetWithFileAndArch(const char *filename,
         m_opaque_sp->GetPlatformList().GetSelectedPlatform().get(), arch_name);
     TargetSP target_sp(
         m_opaque_sp->GetTargetList().FindTargetWithExecutableAndArchitecture(
-            FileSpec(filename, false), arch_name ? &arch : nullptr));
+            FileSpec(filename), arch_name ? &arch : nullptr));
     sb_target.SetSP(target_sp);
   }
   return sb_target;

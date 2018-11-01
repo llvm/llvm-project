@@ -200,7 +200,7 @@ static bool GetDeclarationForSymbol(const PDBSymbol &symbol,
   if (!src_file_up)
     return false;
 
-  FileSpec spec(src_file_up->getFileName(), /*resolve_path*/ false);
+  FileSpec spec(src_file_up->getFileName());
   decl.SetFile(spec);
   decl.SetColumn(first_line_up->getColumnNumber());
   decl.SetLine(first_line_up->getLineNumber());

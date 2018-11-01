@@ -2749,7 +2749,8 @@ bool ScriptInterpreterPython::LoadScriptingModule(
   lldb::DebuggerSP debugger_sp = m_interpreter.GetDebugger().shared_from_this();
 
   {
-    FileSpec target_file(pathname, true);
+    FileSpec target_file(pathname);
+    FileSystem::Instance().Resolve(target_file);
     std::string basename(target_file.GetFilename().GetCString());
 
     StreamString command_stream;

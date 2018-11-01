@@ -105,7 +105,9 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                           "UUID %s -- looking for the dSYM",
                           path, uuid->GetAsString().c_str());
             }
-            FileSpec dsym_filespec(path, path[0] == '~');
+            FileSpec dsym_filespec(path);
+            if (path[0] == '~')
+              FileSystem::Instance().Resolve(dsym_filespec);
 
             if (llvm::sys::fs::is_directory(dsym_filespec.GetPath())) {
               dsym_filespec =
@@ -146,7 +148,9 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                             path, uuid->GetAsString().c_str());
               }
               ++items_found;
-              FileSpec exec_filespec(path, path[0] == '~');
+              FileSpec exec_filespec(path);
+              if (path[0] == '~')
+                FileSystem::Instance().Resolve(exec_filespec);
               if (FileSystem::Instance().Exists(exec_filespec)) {
                 success = true;
                 return_module_spec.GetFileSpec() = exec_filespec;
@@ -167,7 +171,8 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                               "bundle with name with name %s",
                               path);
                 }
-                FileSpec file_spec(path, true);
+                FileSpec file_spec(path);
+                FileSystem::Instance().Resolve(file_spec);
                 ModuleSpecList module_specs;
                 ModuleSpec matched_module_spec;
                 using namespace llvm::sys::fs;
@@ -182,7 +187,8 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                     if (::CFURLGetFileSystemRepresentation(bundle_exe_url.get(),
                                                            true, (UInt8 *)path,
                                                            sizeof(path) - 1)) {
-                      FileSpec bundle_exe_file_spec(path, true);
+                      FileSpec bundle_exe_file_spec(path);
+                      FileSystem::Instance().Resolve(bundle_exe_file_spec);
                       if (ObjectFile::GetModuleSpecifications(
                               bundle_exe_file_spec, 0, 0, module_specs) &&
                           module_specs.FindMatchingModuleSpec(
@@ -307,8 +313,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
         (CFDictionaryRef)uuid_dict, CFSTR("DBGSymbolRichExecutable"));
     if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
       if (CFCString::FileSystemRepresentation(cf_str, str)) {
-        module_spec.GetFileSpec().SetFile(str.c_str(), true,
-                                          FileSpec::Style::native);
+        module_spec.GetFileSpec().SetFile(str.c_str(), FileSpec::Style::native);
+        FileSystem::Instance().Resolve(module_spec.GetFileSpec());
         if (log) {
           log->Printf(
               "From dsymForUUID plist: Symbol rich executable is at '%s'",
@@ -321,8 +327,9 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
                                                CFSTR("DBGDSYMPath"));
     if (cf_str && CFGetTypeID(cf_str) == CFStringGetTypeID()) {
       if (CFCString::FileSystemRepresentation(cf_str, str)) {
-        module_spec.GetSymbolFileSpec().SetFile(str.c_str(), true,
+        module_spec.GetSymbolFileSpec().SetFile(str.c_str(),
                                                 FileSpec::Style::native);
+        FileSystem::Instance().Resolve(module_spec.GetFileSpec());
         success = true;
         if (log) {
           log->Printf("From dsymForUUID plist: dSYM is at '%s'", str.c_str());
@@ -401,7 +408,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
               DBGSourcePath = original_DBGSourcePath_value;
             }
             if (DBGSourcePath[0] == '~') {
-              FileSpec resolved_source_path(DBGSourcePath.c_str(), true);
+              FileSpec resolved_source_path(DBGSourcePath.c_str());
+              FileSystem::Instance().Resolve(resolved_source_path);
               DBGSourcePath = resolved_source_path.GetPath();
             }
             // With version 2 of DBGSourcePathRemapping, we can chop off the
@@ -412,8 +420,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
                 ConstString(DBGBuildSourcePath.c_str()),
                 ConstString(DBGSourcePath.c_str()), true);
             if (do_truncate_remapping_names) {
-              FileSpec build_path(DBGBuildSourcePath.c_str(), false);
-              FileSpec source_path(DBGSourcePath.c_str(), false);
+              FileSpec build_path(DBGBuildSourcePath.c_str());
+              FileSpec source_path(DBGSourcePath.c_str());
               build_path.RemoveLastPathComponent();
               build_path.RemoveLastPathComponent();
               source_path.RemoveLastPathComponent();
@@ -449,7 +457,8 @@ static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
 
     if (!DBGBuildSourcePath.empty() && !DBGSourcePath.empty()) {
       if (DBGSourcePath[0] == '~') {
-        FileSpec resolved_source_path(DBGSourcePath.c_str(), true);
+        FileSpec resolved_source_path(DBGSourcePath.c_str());
+        FileSystem::Instance().Resolve(resolved_source_path);
         DBGSourcePath = resolved_source_path.GetPath();
       }
       module_spec.GetSourceMappingList().Append(
@@ -505,14 +514,15 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
           getenv("LLDB_APPLE_DSYMFORUUID_EXECUTABLE");
       FileSpec dsym_for_uuid_exe_spec;
       if (dsym_for_uuid_exe_path_cstr) {
-        dsym_for_uuid_exe_spec.SetFile(dsym_for_uuid_exe_path_cstr, true,
+        dsym_for_uuid_exe_spec.SetFile(dsym_for_uuid_exe_path_cstr,
                                        FileSpec::Style::native);
+        FileSystem::Instance().Resolve(dsym_for_uuid_exe_spec);
         g_dsym_for_uuid_exe_exists =
             FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
       }
 
       if (!g_dsym_for_uuid_exe_exists) {
-        dsym_for_uuid_exe_spec.SetFile("/usr/local/bin/dsymForUUID", false,
+        dsym_for_uuid_exe_spec.SetFile("/usr/local/bin/dsymForUUID",
                                        FileSpec::Style::native);
         g_dsym_for_uuid_exe_exists =
             FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
@@ -528,7 +538,7 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                 tilde_rc && tilde_rc->pw_dir) {
               std::string dsymforuuid_path(tilde_rc->pw_dir);
               dsymforuuid_path += "/bin/dsymForUUID";
-              dsym_for_uuid_exe_spec.SetFile(dsymforuuid_path.c_str(), false,
+              dsym_for_uuid_exe_spec.SetFile(dsymforuuid_path.c_str(),
                                              FileSpec::Style::native);
               g_dsym_for_uuid_exe_exists =
                   FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
@@ -537,8 +547,9 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
         }
       }
       if (!g_dsym_for_uuid_exe_exists && g_dbgshell_command != NULL) {
-        dsym_for_uuid_exe_spec.SetFile(g_dbgshell_command, true,
+        dsym_for_uuid_exe_spec.SetFile(g_dbgshell_command,
                                        FileSpec::Style::native);
+        FileSystem::Instance().Resolve(dsym_for_uuid_exe_spec);
         g_dsym_for_uuid_exe_exists =
             FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
       }

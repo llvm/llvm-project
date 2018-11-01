@@ -141,7 +141,7 @@ std::error_code FileSystem::MakeAbsolute(FileSpec &file_spec) const {
   if (EC)
     return EC;
 
-  FileSpec new_file_spec(path, false, file_spec.GetPathStyle());
+  FileSpec new_file_spec(path, file_spec.GetPathStyle());
   file_spec = new_file_spec;
   return {};
 }
@@ -179,6 +179,7 @@ void FileSystem::Resolve(FileSpec &file_spec) {
 
   // Update the FileSpec with the resolved path.
   file_spec.SetPath(path);
+  file_spec.SetIsResolved(true);
 }
 
 bool FileSystem::ResolveExecutableLocation(FileSpec &file_spec) {
@@ -206,7 +207,7 @@ bool FileSystem::ResolveExecutableLocation(FileSpec &file_spec) {
     return false;
 
   // Make sure that the result exists.
-  FileSpec result(*error_or_path, false);
+  FileSpec result(*error_or_path);
   if (!Exists(result))
     return false;
 

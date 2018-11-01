@@ -194,8 +194,9 @@ Status PlatformWindows::ResolveExecutable(
     // variables
     if (!FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec())) {
       resolved_module_spec.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
-      resolved_module_spec.GetFileSpec().SetFile(exe_path, true,
+      resolved_module_spec.GetFileSpec().SetFile(exe_path,
                                                  FileSpec::Style::native);
+      FileSystem::Instance().Resolve(resolved_module_spec.GetFileSpec());
     }
 
     if (!FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))

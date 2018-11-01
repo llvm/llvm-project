@@ -100,7 +100,7 @@ static void display_usage(const char *progname, const char *subcommand) {
 
 static Status save_socket_id_to_file(const std::string &socket_id,
                                      const FileSpec &file_spec) {
-  FileSpec temp_file_spec(file_spec.GetDirectory().AsCString(), false);
+  FileSpec temp_file_spec(file_spec.GetDirectory().AsCString());
   Status error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
   if (error.Fail())
     return Status("Failed to create directory %s: %s",
@@ -193,7 +193,7 @@ int main_platform(int argc, char *argv[]) {
 
     case 'f': // Socket file
       if (optarg && optarg[0])
-        socket_file.SetFile(optarg, false, FileSpec::Style::native);
+        socket_file.SetFile(optarg, FileSpec::Style::native);
       break;
 
     case 'p': {

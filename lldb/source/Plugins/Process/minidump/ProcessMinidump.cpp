@@ -346,8 +346,8 @@ void ProcessMinidump::ReadModuleList() {
     }
 
     const auto uuid = m_minidump_parser.GetModuleUUID(module);
-    const auto file_spec =
-        FileSpec(name.getValue(), true, GetArchitecture().GetTriple());
+    auto file_spec = FileSpec(name.getValue(), GetArchitecture().GetTriple());
+    FileSystem::Instance().Resolve(file_spec);
     ModuleSpec module_spec(file_spec, uuid);
     Status error;
     lldb::ModuleSP module_sp = GetTarget().GetSharedModule(module_spec, &error);

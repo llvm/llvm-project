@@ -158,16 +158,16 @@ public:
 
 TEST(FileSystemTest, FileAndDirectoryComponents) {
   using namespace std::chrono;
-
-  const bool resolve = true;
-#ifdef _WIN32
-  FileSpec fs1("C:\\FILE\\THAT\\DOES\\NOT\\EXIST.TXT", !resolve);
-#else
-  FileSpec fs1("/file/that/does/not/exist.txt", !resolve);
-#endif
-  FileSpec fs2(TestMainArgv0, resolve);
-
   FileSystem fs;
+
+#ifdef _WIN32
+  FileSpec fs1("C:\\FILE\\THAT\\DOES\\NOT\\EXIST.TXT");
+#else
+  FileSpec fs1("/file/that/does/not/exist.txt");
+#endif
+  FileSpec fs2(TestMainArgv0);
+
+  fs.Resolve(fs2);
 
   EXPECT_EQ(system_clock::time_point(), fs.GetModificationTime(fs1));
   EXPECT_LT(system_clock::time_point() + hours(24 * 365 * 20),
@@ -188,17 +188,17 @@ TEST(FileSystemTest, Exists) {
   FileSystem fs(GetSimpleDummyFS());
 
   EXPECT_TRUE(fs.Exists("/foo"));
-  EXPECT_TRUE(fs.Exists(FileSpec("/foo", false, FileSpec::Style::posix)));
+  EXPECT_TRUE(fs.Exists(FileSpec("/foo", FileSpec::Style::posix)));
 }
 
 TEST(FileSystemTest, Readable) {
   FileSystem fs(GetSimpleDummyFS());
 
   EXPECT_TRUE(fs.Readable("/foo"));
-  EXPECT_TRUE(fs.Readable(FileSpec("/foo", false, FileSpec::Style::posix)));
+  EXPECT_TRUE(fs.Readable(FileSpec("/foo", FileSpec::Style::posix)));
 
   EXPECT_FALSE(fs.Readable("/qux"));
-  EXPECT_FALSE(fs.Readable(FileSpec("/qux", false, FileSpec::Style::posix)));
+  EXPECT_FALSE(fs.Readable(FileSpec("/qux", FileSpec::Style::posix)));
 }
 
 TEST(FileSystemTest, GetByteSize) {
@@ -206,7 +206,7 @@ TEST(FileSystemTest, GetByteSize) {
 
   EXPECT_EQ((uint64_t)1024, fs.GetByteSize("/foo"));
   EXPECT_EQ((uint64_t)1024,
-            fs.GetByteSize(FileSpec("/foo", false, FileSpec::Style::posix)));
+            fs.GetByteSize(FileSpec("/foo", FileSpec::Style::posix)));
 }
 
 TEST(FileSystemTest, GetPermissions) {
@@ -214,7 +214,7 @@ TEST(FileSystemTest, GetPermissions) {
 
   EXPECT_EQ(sys::fs::all_all, fs.GetPermissions("/foo"));
   EXPECT_EQ(sys::fs::all_all,
-            fs.GetPermissions(FileSpec("/foo", false, FileSpec::Style::posix)));
+            fs.GetPermissions(FileSpec("/foo", FileSpec::Style::posix)));
 }
 
 TEST(FileSystemTest, MakeAbsolute) {
@@ -229,7 +229,7 @@ TEST(FileSystemTest, MakeAbsolute) {
   }
 
   {
-    FileSpec file_spec("foo", false);
+    FileSpec file_spec("foo");
     auto EC = fs.MakeAbsolute(file_spec);
     EXPECT_FALSE(EC);
     EXPECT_EQ("/foo", file_spec.GetPath());
@@ -247,7 +247,7 @@ TEST(FileSystemTest, Resolve) {
   }
 
   {
-    FileSpec file_spec("foo", false);
+    FileSpec file_spec("foo");
     fs.Resolve(file_spec);
     EXPECT_EQ("/foo", file_spec.GetPath());
   }
@@ -260,7 +260,7 @@ TEST(FileSystemTest, Resolve) {
   }
 
   {
-    FileSpec file_spec("bogus", false);
+    FileSpec file_spec("bogus");
     fs.Resolve(file_spec);
     EXPECT_EQ("bogus", file_spec.GetPath());
   }
