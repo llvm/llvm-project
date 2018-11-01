@@ -1333,23 +1333,20 @@ PreservedAnalyses LoopUnrollPass::run(Function &F,
     Loop *ParentL = L.getParentLoop();
 #endif
 
-    // The API here is quite complex to call, but there are only two interesting
-    // states we support: partial and full (or "simple") unrolling. However, to
-    // enable these things we actually pass "None" in for the optional to avoid
-    // providing an explicit choice.
-    Optional<bool> AllowPartialParam, RuntimeParam, UpperBoundParam,
-        AllowPeeling;
     // Check if the profile summary indicates that the profiled application
     // has a huge working set size, in which case we disable peeling to avoid
     // bloating it further.
+    Optional<bool> LocalAllowPeeling = UnrollOpts.AllowPeeling;
     if (PSI && PSI->hasHugeWorkingSetSize())
-      AllowPeeling = false;
+      LocalAllowPeeling = false;
     std::string LoopName = L.getName();
-    LoopUnrollResult Result =
-        tryToUnrollLoop(&L, DT, &LI, SE, TTI, AC, ORE,
-                        /*PreserveLCSSA*/ true, OptLevel, /*Count*/ None,
-                        /*Threshold*/ None, AllowPartialParam, RuntimeParam,
-                        UpperBoundParam, AllowPeeling);
+    // The API here is quite complex to call and we allow to select some
+    // flavors of unrolling during construction time (by setting UnrollOpts).
+    LoopUnrollResult Result = tryToUnrollLoop(
+        &L, DT, &LI, SE, TTI, AC, ORE,
+        /*PreserveLCSSA*/ true, UnrollOpts.OptLevel, /*Count*/ None,
+        /*Threshold*/ None, UnrollOpts.AllowPartial, UnrollOpts.AllowRuntime,
+        UnrollOpts.AllowUpperBound, LocalAllowPeeling);
     Changed |= Result != LoopUnrollResult::Unmodified;
 
     // The parent must not be damaged by unrolling!

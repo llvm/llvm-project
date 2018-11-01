@@ -252,7 +252,7 @@ bool GlobalValue::canIncreaseAlignment() const {
   // Conservatively assume ELF if there's no parent pointer.
   bool isELF =
       (!Parent || Triple(Parent->getTargetTriple()).isOSBinFormatELF());
-  if (isELF && hasDefaultVisibility() && !hasLocalLinkage())
+  if (isELF && !isDSOLocal())
     return false;
 
   return true;

@@ -320,6 +320,7 @@ def int_gcwrite : Intrinsic<[],
 def int_returnaddress : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty], [IntrNoMem]>;
 def int_addressofreturnaddress : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 def int_frameaddress  : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty], [IntrNoMem]>;
+def int_sponentry  : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
 def int_read_register  : Intrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
                                    [IntrReadMem], "llvm.read_register">;
 def int_write_register : Intrinsic<[], [llvm_metadata_ty, llvm_anyint_ty],
@@ -565,6 +566,16 @@ let IntrProperties = [IntrInaccessibleMemOnly] in {
                                                          [ LLVMMatchType<0>,
                                                            llvm_metadata_ty,
                                                            llvm_metadata_ty ]>;
+  def int_experimental_constrained_maxnum : Intrinsic<[ llvm_anyfloat_ty ],
+                                                      [ LLVMMatchType<0>,
+                                                        LLVMMatchType<0>,
+                                                        llvm_metadata_ty,
+                                                        llvm_metadata_ty ]>;
+  def int_experimental_constrained_minnum : Intrinsic<[ llvm_anyfloat_ty ],
+                                                      [ LLVMMatchType<0>,
+                                                        LLVMMatchType<0>,
+                                                        llvm_metadata_ty,
+                                                        llvm_metadata_ty ]>;
 }
 // FIXME: Add intrinsics for fcmp, fptrunc, fpext, fptoui and fptosi.
 // FIXME: Add intrinsics for fabs, copysign, floor, ceil, trunc and round?

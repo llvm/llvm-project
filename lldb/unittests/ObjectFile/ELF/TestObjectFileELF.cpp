@@ -14,6 +14,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Compression.h"
@@ -29,6 +30,7 @@ using namespace lldb;
 class ObjectFileELFTest : public testing::Test {
 public:
   void SetUp() override {
+    FileSystem::Initialize();
     HostInfo::Initialize();
     ObjectFileELF::Initialize();
     SymbolVendorELF::Initialize();
@@ -38,6 +40,7 @@ public:
     SymbolVendorELF::Terminate();
     ObjectFileELF::Terminate();
     HostInfo::Terminate();
+    FileSystem::Terminate();
   }
 
 protected:

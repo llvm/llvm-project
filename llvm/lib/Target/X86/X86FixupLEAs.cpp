@@ -25,10 +25,6 @@
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-namespace llvm {
-void initializeFixupLEAPassPass(PassRegistry &);
-}
-
 #define FIXUPLEA_DESC "X86 LEA Fixup"
 #define FIXUPLEA_NAME "x86-fixup-LEAs"
 

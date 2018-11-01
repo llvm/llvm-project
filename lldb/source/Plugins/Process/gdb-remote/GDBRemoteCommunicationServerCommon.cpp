@@ -698,7 +698,7 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_symlink(
   packet.GetHexByteStringTerminatedBy(dst, ',');
   packet.GetChar(); // Skip ',' char
   packet.GetHexByteString(src);
-  Status error = FileSystem::Symlink(FileSpec{src, true}, FileSpec{dst, false});
+  Status error = FileSystem::Instance().Symlink(FileSpec{src, true}, FileSpec{dst, false});
   StreamString response;
   response.Printf("F%u,%u", error.GetError(), error.GetError());
   return SendPacketNoLock(response.GetString());

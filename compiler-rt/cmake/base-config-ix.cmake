@@ -122,8 +122,6 @@ macro(test_targets)
   # what version of MSVC to pretend to be so that the STL works.
   set(MSVC_VERSION_FLAG "")
   if (MSVC)
-    # Find and run MSVC (not clang-cl) and get its version. This will tell
-    # clang-cl what version of MSVC to pretend to be so that the STL works.
     execute_process(COMMAND "$ENV{VSINSTALLDIR}/VC/bin/cl.exe"
       OUTPUT_QUIET
       ERROR_VARIABLE MSVC_COMPAT_VERSION

@@ -115,7 +115,7 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
     // No UUID, we must rely upon the cached module modification time and the
     // modification time of the file on disk
     if (module_sp->GetModificationTime() !=
-        FileSystem::GetModificationTime(module_sp->GetFileSpec()))
+        FileSystem::Instance().GetModificationTime(module_sp->GetFileSpec()))
       module_sp.reset();
   }
 

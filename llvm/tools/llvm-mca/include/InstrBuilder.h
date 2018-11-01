@@ -37,39 +37,32 @@ namespace mca {
 /// Information from the machine scheduling model is used to identify processor
 /// resources that are consumed by an instruction.
 class InstrBuilder {
-  const llvm::MCSubtargetInfo &STI;
-  const llvm::MCInstrInfo &MCII;
-  const llvm::MCRegisterInfo &MRI;
-  const llvm::MCInstrAnalysis &MCIA;
-  llvm::SmallVector<uint64_t, 8> ProcResourceMasks;
+  const MCSubtargetInfo &STI;
+  const MCInstrInfo &MCII;
+  const MCRegisterInfo &MRI;
+  const MCInstrAnalysis &MCIA;
+  SmallVector<uint64_t, 8> ProcResourceMasks;
 
-  llvm::DenseMap<unsigned short, std::unique_ptr<const InstrDesc>> Descriptors;
-  llvm::DenseMap<const llvm::MCInst *, std::unique_ptr<const InstrDesc>>
-      VariantDescriptors;
+  DenseMap<unsigned short, std::unique_ptr<const InstrDesc>> Descriptors;
+  DenseMap<const MCInst *, std::unique_ptr<const InstrDesc>> VariantDescriptors;
 
-  llvm::Expected<const InstrDesc &>
-  createInstrDescImpl(const llvm::MCInst &MCI);
-  llvm::Expected<const InstrDesc &>
-  getOrCreateInstrDesc(const llvm::MCInst &MCI);
+  Expected<const InstrDesc &> createInstrDescImpl(const MCInst &MCI);
+  Expected<const InstrDesc &> getOrCreateInstrDesc(const MCInst &MCI);
 
   InstrBuilder(const InstrBuilder &) = delete;
   InstrBuilder &operator=(const InstrBuilder &) = delete;
 
-  llvm::Error populateWrites(InstrDesc &ID, const llvm::MCInst &MCI,
-                             unsigned SchedClassID);
-  llvm::Error populateReads(InstrDesc &ID, const llvm::MCInst &MCI,
-                            unsigned SchedClassID);
-  llvm::Error verifyInstrDesc(const InstrDesc &ID,
-                              const llvm::MCInst &MCI) const;
+  Error populateWrites(InstrDesc &ID, const MCInst &MCI, unsigned SchedClassID);
+  Error populateReads(InstrDesc &ID, const MCInst &MCI, unsigned SchedClassID);
+  Error verifyInstrDesc(const InstrDesc &ID, const MCInst &MCI) const;
 
 public:
-  InstrBuilder(const llvm::MCSubtargetInfo &STI, const llvm::MCInstrInfo &MCII,
-               const llvm::MCRegisterInfo &RI, const llvm::MCInstrAnalysis &IA);
+  InstrBuilder(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
+               const MCRegisterInfo &RI, const MCInstrAnalysis &IA);
 
   void clear() { VariantDescriptors.shrink_and_clear(); }
 
-  llvm::Expected<std::unique_ptr<Instruction>>
-  createInstruction(const llvm::MCInst &MCI);
+  Expected<std::unique_ptr<Instruction>> createInstruction(const MCInst &MCI);
 };
 } // namespace mca
 } // namespace llvm

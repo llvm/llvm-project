@@ -84,10 +84,10 @@ protected:
 
   const SDKDirectoryInfo *GetSDKDirectoryForCurrentOSVersion();
 
-  static lldb_private::FileSpec::EnumerateDirectoryResult
-  GetContainedFilesIntoVectorOfStringsCallback(
-      void *baton, llvm::sys::fs::file_type ft,
-      const lldb_private::FileSpec &file_spec);
+  static lldb_private::FileSystem::EnumerateDirectoryResult
+  GetContainedFilesIntoVectorOfStringsCallback(void *baton,
+                                               llvm::sys::fs::file_type ft,
+                                               llvm::StringRef path);
 
   uint32_t FindFileInAllSDKs(const char *platform_file_path,
                              lldb_private::FileSpecList &file_list);

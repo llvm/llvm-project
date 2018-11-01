@@ -996,6 +996,10 @@ void StmtProfiler::VisitExpr(const Expr *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitConstantExpr(const ConstantExpr *S) {
+  VisitExpr(S);
+}
+
 void StmtProfiler::VisitDeclRefExpr(const DeclRefExpr *S) {
   VisitExpr(S);
   if (!Canonical)

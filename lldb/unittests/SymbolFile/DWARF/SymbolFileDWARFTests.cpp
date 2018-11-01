@@ -22,6 +22,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -38,13 +39,14 @@ public:
 // Initialize and TearDown the plugin every time, so we get a brand new
 // AST every time so that modifications to the AST from each test don't
 // leak into the next test.
-    HostInfo::Initialize();
-    ObjectFilePECOFF::Initialize();
-    SymbolFileDWARF::Initialize();
-    ClangASTContext::Initialize();
-    SymbolFilePDB::Initialize();
+FileSystem::Initialize();
+HostInfo::Initialize();
+ObjectFilePECOFF::Initialize();
+SymbolFileDWARF::Initialize();
+ClangASTContext::Initialize();
+SymbolFilePDB::Initialize();
 
-    m_dwarf_test_exe = GetInputFilePath("test-dwarf.exe");
+m_dwarf_test_exe = GetInputFilePath("test-dwarf.exe");
   }
 
   void TearDown() override {
@@ -53,6 +55,7 @@ public:
     SymbolFileDWARF::Terminate();
     ObjectFilePECOFF::Terminate();
     HostInfo::Terminate();
+    FileSystem::Terminate();
   }
 
 protected:

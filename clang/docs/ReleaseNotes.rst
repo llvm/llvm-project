@@ -142,6 +142,7 @@ ABI Changes in Clang
 
 - `_Alignof` and `alignof` now return the ABI alignment of a type, as opposed
   to the preferred alignment.
+
   - This is more in keeping with the language of the standards, as well as
     being compatible with gcc
   - `__alignof` and `__alignof__` still return the preferred alignment of
@@ -198,6 +199,29 @@ Static Analyzer
 Undefined Behavior Sanitizer (UBSan)
 ------------------------------------
 
+* The Implicit Conversion Sanitizer (``-fsanitize=implicit-conversion``) group
+  was extended. One more type of issues is caught - implicit integer sign change.
+  (``-fsanitize=implicit-integer-sign-change``).
+  This makes the Implicit Conversion Sanitizer feature-complete,
+  with only missing piece being bitfield handling.
+  While there is a ``-Wsign-conversion`` diagnostic group that catches this kind
+  of issues, it is both noisy, and does not catch **all** the cases.
+
+  .. code-block:: c++
+
+      bool consume(unsigned int val);
+
+      void test(int val) {
+        (void)consume(val); // If the value was negative, it is now large positive.
+        (void)consume((unsigned int)val); // OK, the conversion is explicit.
+      }
+
+  Like some other ``-fsanitize=integer`` checks, these issues are **not**
+  undefined behaviour. But they are not *always* intentional, and are somewhat
+  hard to track down. This group is **not** enabled by ``-fsanitize=undefined``,
+  but the ``-fsanitize=implicit-integer-sign-change`` check
+  is enabled by ``-fsanitize=integer``.
+  (as is ``-fsanitize=implicit-integer-truncation`` check)
 
 Core Analysis Improvements
 ==========================

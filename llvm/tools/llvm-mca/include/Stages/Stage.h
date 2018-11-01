@@ -47,13 +47,13 @@ public:
 
   /// Called once at the start of each cycle.  This can be used as a setup
   /// phase to prepare for the executions during the cycle.
-  virtual llvm::Error cycleStart() { return llvm::ErrorSuccess(); }
+  virtual Error cycleStart() { return ErrorSuccess(); }
 
   /// Called once at the end of each cycle.
-  virtual llvm::Error cycleEnd() { return llvm::ErrorSuccess(); }
+  virtual Error cycleEnd() { return ErrorSuccess(); }
 
   /// The primary action that this stage performs on instruction IR.
-  virtual llvm::Error execute(InstRef &IR) = 0;
+  virtual Error execute(InstRef &IR) = 0;
 
   void setNextInSequence(Stage *NextStage) {
     assert(!NextInSequence && "This stage already has a NextInSequence!");
@@ -68,7 +68,7 @@ public:
   ///
   /// Stages are responsible for moving instructions to their immediate
   /// successor stages.
-  llvm::Error moveToTheNextStage(InstRef &IR) {
+  Error moveToTheNextStage(InstRef &IR) {
     assert(checkNextStage(IR) && "Next stage is not ready!");
     return NextInSequence->execute(IR);
   }

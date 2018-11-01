@@ -235,6 +235,13 @@ LLDBSWIGPythonCreateOSPlugin(const char *python_class_name,
                              const char *session_dictionary_name,
                              const lldb::ProcessSP &process_sp);
 
+extern "C" void *LLDBSWIGPython_CreateFrameRecognizer(
+    const char *python_class_name,
+    const char *session_dictionary_name);
+
+extern "C" void *LLDBSwigPython_GetRecognizedArguments(void *implementor,
+    const lldb::StackFrameSP& frame_sp);
+
 extern "C" bool LLDBSWIGPythonRunScriptKeywordProcess(
     const char *python_function_name, const char *session_dictionary_name,
     lldb::ProcessSP &process, std::string &output);
@@ -423,7 +430,9 @@ void SystemInitializerFull::InitializeSWIG() {
       LLDBSwigPython_MightHaveChildrenSynthProviderInstance,
       LLDBSwigPython_GetValueSynthProviderInstance, LLDBSwigPythonCallCommand,
       LLDBSwigPythonCallCommandObject, LLDBSwigPythonCallModuleInit,
-      LLDBSWIGPythonCreateOSPlugin, LLDBSWIGPythonRunScriptKeywordProcess,
+      LLDBSWIGPythonCreateOSPlugin, LLDBSWIGPython_CreateFrameRecognizer,
+      LLDBSwigPython_GetRecognizedArguments,
+      LLDBSWIGPythonRunScriptKeywordProcess,
       LLDBSWIGPythonRunScriptKeywordThread,
       LLDBSWIGPythonRunScriptKeywordTarget, LLDBSWIGPythonRunScriptKeywordFrame,
       LLDBSWIGPythonRunScriptKeywordValue, LLDBSWIGPython_GetDynamicSetting,

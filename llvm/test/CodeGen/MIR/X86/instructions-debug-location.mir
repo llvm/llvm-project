@@ -59,10 +59,14 @@ stack:
 body: |
   bb.0.entry:
     liveins: $edi
-    ; CHECK: DBG_VALUE debug-use $noreg, 0, !11, !DIExpression(), debug-location !12
+    ; CHECK: DBG_VALUE $noreg, 0, !11, !DIExpression(), debug-location !12
+    ; CHECK: DBG_VALUE $noreg, 0, !11, !DIExpression(), debug-location !12
     ; CHECK: $eax = COPY %0, debug-location !13
     ; CHECK: RETQ $eax, debug-location !13
     %0 = COPY $edi
+    DBG_VALUE _, 0, !12, !DIExpression(), debug-location !13
+    ; Test whether debug-use is still recognized for compatibility with old
+    ; files.
     DBG_VALUE debug-use _, 0, !12, !DIExpression(), debug-location !13
     MOV32mr %stack.0.x.addr, 1, _, 0, _, %0
     $eax = COPY %0, debug-location !14

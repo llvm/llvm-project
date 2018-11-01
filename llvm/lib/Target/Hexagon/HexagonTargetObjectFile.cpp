@@ -199,6 +199,11 @@ MCSection *HexagonTargetObjectFile::getExplicitSectionGlobal(
 /// section.
 bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
       const TargetMachine &TM) const {
+  if (!isSmallDataEnabled(TM)) {
+    LLVM_DEBUG(dbgs() << "Small data is not available.\n");
+    return false;
+  }
+
   // Only global variables, not functions.
   LLVM_DEBUG(dbgs() << "Checking if value is in small-data, -G"
                     << SmallDataThreshold << ": \"" << GO->getName() << "\": ");
@@ -263,8 +268,9 @@ bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
   return true;
 }
 
-bool HexagonTargetObjectFile::isSmallDataEnabled() const {
-  return SmallDataThreshold > 0;
+bool HexagonTargetObjectFile::isSmallDataEnabled(const TargetMachine &TM)
+    const {
+  return SmallDataThreshold > 0 && !TM.isPositionIndependent();
 }
 
 unsigned HexagonTargetObjectFile::getSmallDataSize() const {

@@ -118,6 +118,7 @@ bool DWARFDebugInfoEntry::FastExtract(
             break;
 
           // 1 byte values
+          case DW_FORM_addrx1:
           case DW_FORM_data1:
           case DW_FORM_flag:
           case DW_FORM_ref1:
@@ -126,17 +127,21 @@ bool DWARFDebugInfoEntry::FastExtract(
             break;
 
           // 2 byte values
+          case DW_FORM_addrx2:
           case DW_FORM_data2:
           case DW_FORM_ref2:
           case DW_FORM_strx2:
             form_size = 2;
             break;
 
+          // 3 byte values
+          case DW_FORM_addrx3:
           case DW_FORM_strx3:
             form_size = 3;
             break;
 
           // 4 byte values
+          case DW_FORM_addrx4:
           case DW_FORM_data4:
           case DW_FORM_ref4:
           case DW_FORM_strx4:
@@ -151,6 +156,7 @@ bool DWARFDebugInfoEntry::FastExtract(
             break;
 
           // signed or unsigned LEB 128 values
+          case DW_FORM_addrx:
           case DW_FORM_sdata:
           case DW_FORM_udata:
           case DW_FORM_ref_udata:

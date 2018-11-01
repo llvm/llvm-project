@@ -12,6 +12,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "AvoidConstParamsInDecls.h"
 #include "BracesAroundStatementsCheck.h"
+#include "ConstReturnTypeCheck.h"
 #include "ContainerSizeEmptyCheck.h"
 #include "DeleteNullPointerCheck.h"
 #include "DeletedDefaultCheck.h"
@@ -20,6 +21,7 @@
 #include "IdentifierNamingCheck.h"
 #include "ImplicitBoolConversionCheck.h"
 #include "InconsistentDeclarationParameterNameCheck.h"
+#include "IsolateDeclarationCheck.h"
 #include "MagicNumbersCheck.h"
 #include "MisleadingIndentationCheck.h"
 #include "MisplacedArrayIndexCheck.h"
@@ -51,6 +53,8 @@ public:
         "readability-avoid-const-params-in-decls");
     CheckFactories.registerCheck<BracesAroundStatementsCheck>(
         "readability-braces-around-statements");
+    CheckFactories.registerCheck<ConstReturnTypeCheck>(
+        "readability-const-return-type");
     CheckFactories.registerCheck<ContainerSizeEmptyCheck>(
         "readability-container-size-empty");
     CheckFactories.registerCheck<DeleteNullPointerCheck>(
@@ -67,6 +71,8 @@ public:
         "readability-implicit-bool-conversion");
     CheckFactories.registerCheck<InconsistentDeclarationParameterNameCheck>(
         "readability-inconsistent-declaration-parameter-name");
+    CheckFactories.registerCheck<IsolateDeclarationCheck>(
+        "readability-isolate-declaration");
     CheckFactories.registerCheck<MagicNumbersCheck>(
         "readability-magic-numbers");
     CheckFactories.registerCheck<MisleadingIndentationCheck>(

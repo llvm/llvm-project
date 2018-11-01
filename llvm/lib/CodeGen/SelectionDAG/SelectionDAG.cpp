@@ -7404,6 +7404,8 @@ SDNode* SelectionDAG::mutateStrictFPToFP(SDNode *Node) {
     NewOpc = ISD::FNEARBYINT;
     IsUnary = true;
     break;
+  case ISD::STRICT_FMAXNUM: NewOpc = ISD::FMAXNUM; break;
+  case ISD::STRICT_FMINNUM: NewOpc = ISD::FMINNUM; break;
   }
 
   // We're taking this node out of the chain, so we need to re-link things.

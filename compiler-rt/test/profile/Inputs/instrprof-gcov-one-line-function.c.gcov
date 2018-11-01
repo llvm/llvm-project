@@ -1,4 +1,4 @@
-// CHECK:        -:    0:Source:/home/calixte/dev/mozilla/llvm.cal/projects/compiler-rt/test/profile/Inputs/instrprof-gcov-one-line-function.c
+// CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-gcov-one-line-function.c
 // CHECK-NEXT:        -:    0:Graph:instrprof-gcov-one-line-function.gcno
 // CHECK-NEXT:        -:    0:Data:instrprof-gcov-one-line-function.gcda
 // CHECK-NEXT:        -:    0:Runs:1

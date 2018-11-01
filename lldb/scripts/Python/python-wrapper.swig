@@ -785,6 +785,52 @@ LLDBSWIGPythonCreateOSPlugin
 }
 
 SWIGEXPORT void*
+LLDBSWIGPython_CreateFrameRecognizer
+(
+    const char *python_class_name,
+    const char *session_dictionary_name
+)
+{
+    using namespace lldb_private;
+
+    if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
+        Py_RETURN_NONE;
+
+    PyErr_Cleaner py_err_cleaner(true);
+
+    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
+    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_class_name, dict);
+
+    if (!pfunc.IsAllocated())
+        Py_RETURN_NONE;
+
+    auto result = pfunc();
+
+    if (result.IsAllocated())
+        return result.release();
+
+    Py_RETURN_NONE;
+}
+
+SWIGEXPORT PyObject*
+LLDBSwigPython_GetRecognizedArguments
+(
+    PyObject *implementor,
+    const lldb::StackFrameSP& frame_sp
+)
+{
+    using namespace lldb_private;
+
+    static char callee_name[] = "get_recognized_arguments";
+
+    lldb::SBFrame frame_sb(frame_sp);
+    PyObject *arg = SBTypeToSWIGWrapper(frame_sb);
+
+    PyObject* result = PyObject_CallMethodObjArgs(implementor, PyString_FromString(callee_name), arg, NULL);
+    return result;
+}
+
+SWIGEXPORT void*
 LLDBSWIGPython_GetDynamicSetting (void* module, const char* setting, const lldb::TargetSP& target_sp)
 {
     using namespace lldb_private;

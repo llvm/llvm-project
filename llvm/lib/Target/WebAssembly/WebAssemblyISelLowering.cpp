@@ -151,6 +151,15 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     for (auto Op : {ISD::SHL, ISD::SRA, ISD::SRL})
       setOperationAction(Op, MVT::v2i64, Custom);
 
+  // There is no select instruction for vectors
+  if (Subtarget->hasSIMD128()) {
+    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32})
+      setOperationAction(ISD::VSELECT, T, Expand);
+    if (EnableUnimplementedWasmSIMDInstrs)
+      for (auto T : {MVT::v2i64, MVT::v2f64})
+        setOperationAction(ISD::VSELECT, T, Expand);
+  }
+
   // As a special case, these operators use the type to mean the type to
   // sign-extend from.
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);

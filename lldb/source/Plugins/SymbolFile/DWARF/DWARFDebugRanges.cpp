@@ -214,11 +214,8 @@ void DWARFDebugRngLists::Extract(SymbolFileDWARF *dwarf2Data) {
   lldb::offset_t offset = 0;
 
   uint64_t length = data.GetU32(&offset);
-  bool isDwarf64 = false;
-  if (length == 0xffffffff) {
+  if (length == 0xffffffff)
     length = data.GetU64(&offset);
-    isDwarf64 = true;
-  }
   lldb::offset_t end = offset + length;
 
   // Check version.

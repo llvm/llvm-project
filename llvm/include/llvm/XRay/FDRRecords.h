@@ -153,13 +153,14 @@ public:
 class CustomEventRecord : public MetadataRecord {
   int32_t Size = 0;
   uint64_t TSC = 0;
+  uint16_t CPU = 0;
   std::string Data{};
   friend class RecordInitializer;
 
 public:
   CustomEventRecord() = default;
-  explicit CustomEventRecord(uint64_t S, uint64_t T, std::string D)
-      : MetadataRecord(), Size(S), TSC(T), Data(std::move(D)) {}
+  explicit CustomEventRecord(uint64_t S, uint64_t T, uint16_t C, std::string D)
+      : MetadataRecord(), Size(S), TSC(T), CPU(C), Data(std::move(D)) {}
 
   MetadataType metadataType() const override {
     return MetadataType::CustomEvent;
@@ -167,6 +168,7 @@ public:
 
   int32_t size() const { return Size; }
   uint64_t tsc() const { return TSC; }
+  uint16_t cpu() const { return CPU; }
   StringRef data() const { return Data; }
 
   Error apply(RecordVisitor &V) override;
@@ -272,10 +274,16 @@ public:
 class RecordInitializer : public RecordVisitor {
   DataExtractor &E;
   uint32_t &OffsetPtr;
+  uint16_t Version;
 
 public:
+  static constexpr uint16_t DefaultVersion = 4u;
+
+  explicit RecordInitializer(DataExtractor &DE, uint32_t &OP, uint16_t V)
+      : RecordVisitor(), E(DE), OffsetPtr(OP), Version(V) {}
+
   explicit RecordInitializer(DataExtractor &DE, uint32_t &OP)
-      : RecordVisitor(), E(DE), OffsetPtr(OP) {}
+      : RecordInitializer(DE, OP, DefaultVersion) {}
 
   Error visit(BufferExtents &) override;
   Error visit(WallclockRecord &) override;

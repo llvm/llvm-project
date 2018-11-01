@@ -11,11 +11,11 @@
 ; CHECK:      [[REG1:%[0-9]+]]:gr32 = PHI
 ; CHECK-NEXT: [[REG2:%[0-9]+]]:gr32 = PHI
 ; CHECK-NEXT: [[REG3:%[0-9]+]]:gr32 = PHI
-; CHECK-NEXT: DBG_VALUE debug-use [[REG1]], debug-use $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
-; CHECK-NEXT: DBG_VALUE debug-use [[REG2]], debug-use $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
-; CHECK-NEXT: DBG_VALUE debug-use [[REG3]], debug-use $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 64, 16)
-; CHECK-NEXT: DBG_VALUE debug-use [[REG1]], debug-use $noreg, !12, !DIExpression(DW_OP_LLVM_fragment, 10, 32)
-; CHECK-NEXT: DBG_VALUE debug-use [[REG2]], debug-use $noreg, !12, !DIExpression(DW_OP_LLVM_fragment, 42, 13)
+; CHECK-NEXT: DBG_VALUE [[REG1]], $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+; CHECK-NEXT: DBG_VALUE [[REG2]], $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+; CHECK-NEXT: DBG_VALUE [[REG3]], $noreg, !13, !DIExpression(DW_OP_LLVM_fragment, 64, 16)
+; CHECK-NEXT: DBG_VALUE [[REG1]], $noreg, !12, !DIExpression(DW_OP_LLVM_fragment, 10, 32)
+; CHECK-NEXT: DBG_VALUE [[REG2]], $noreg, !12, !DIExpression(DW_OP_LLVM_fragment, 42, 13)
 ; CHECK-NOT:  DBG_VALUE
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"

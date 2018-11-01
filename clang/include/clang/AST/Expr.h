@@ -869,6 +869,65 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
+// Wrapper Expressions.
+//===----------------------------------------------------------------------===//
+
+/// FullExpr - Represents a "full-expression" node.
+class FullExpr : public Expr {
+protected:
+ Stmt *SubExpr;
+
+ FullExpr(StmtClass SC, Expr *subexpr)
+    : Expr(SC, subexpr->getType(),
+           subexpr->getValueKind(), subexpr->getObjectKind(),
+           subexpr->isTypeDependent(), subexpr->isValueDependent(),
+           subexpr->isInstantiationDependent(),
+           subexpr->containsUnexpandedParameterPack()), SubExpr(subexpr) {}
+  FullExpr(StmtClass SC, EmptyShell Empty)
+    : Expr(SC, Empty) {}
+public:
+  const Expr *getSubExpr() const { return cast<Expr>(SubExpr); }
+  Expr *getSubExpr() { return cast<Expr>(SubExpr); }
+
+  /// As with any mutator of the AST, be very careful when modifying an
+  /// existing AST to preserve its invariants.
+  void setSubExpr(Expr *E) { SubExpr = E; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() >= firstFullExprConstant &&
+           T->getStmtClass() <= lastFullExprConstant;
+  }
+};
+
+/// ConstantExpr - An expression that occurs in a constant context.
+class ConstantExpr : public FullExpr {
+public:
+  ConstantExpr(Expr *subexpr)
+    : FullExpr(ConstantExprClass, subexpr) {}
+
+  /// Build an empty constant expression wrapper.
+  explicit ConstantExpr(EmptyShell Empty)
+    : FullExpr(ConstantExprClass, Empty) {}
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return SubExpr->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY {
+    return SubExpr->getEndLoc();
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ConstantExprClass;
+  }
+
+  // Iterators
+  child_range children() { return child_range(&SubExpr, &SubExpr+1); }
+  const_child_range children() const {
+    return const_child_range(&SubExpr, &SubExpr + 1);
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // Primary Expressions.
 //===----------------------------------------------------------------------===//
 

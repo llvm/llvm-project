@@ -35,8 +35,9 @@ Error RecordPrinter::visit(TSCWrapRecord &R) {
 }
 
 Error RecordPrinter::visit(CustomEventRecord &R) {
-  OS << formatv("<Custom Event: tsc = {0}, size = {1}, data = '{2}'>", R.tsc(),
-                R.size(), R.data())
+  OS << formatv(
+            "<Custom Event: tsc = {0}, cpu = {1}, size = {2}, data = '{3}'>",
+            R.tsc(), R.cpu(), R.size(), R.data())
      << Delim;
   return Error::success();
 }

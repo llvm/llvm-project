@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: int128
 //===-- modti3_test.c - Test __modti3 -------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -63,17 +64,17 @@ int main()
     if (test__modti3(-5, -3, -2))
         return 1;
 
-    if (test__modti3(0x8000000000000000LL, 1, 0x0LL))
+    if (test__modti3(0x8000000000000000ULL, 1, 0x0LL))
         return 1;
-    if (test__modti3(0x8000000000000000LL, -1, 0x0LL))
+    if (test__modti3(0x8000000000000000ULL, -1, 0x0LL))
         return 1;
-    if (test__modti3(0x8000000000000000LL, 2, 0x0LL))
+    if (test__modti3(0x8000000000000000ULL, 2, 0x0LL))
         return 1;
-    if (test__modti3(0x8000000000000000LL, -2, 0x0LL))
+    if (test__modti3(0x8000000000000000ULL, -2, 0x0LL))
         return 1;
-    if (test__modti3(0x8000000000000000LL, 3, 2))
+    if (test__modti3(0x8000000000000000ULL, 3, 2))
         return 1;
-    if (test__modti3(0x8000000000000000LL, -3, 2))
+    if (test__modti3(0x8000000000000000ULL, -3, 2))
         return 1;
 
     if (test__modti3(make_ti(0x8000000000000000LL, 0), 1, 0x0LL))

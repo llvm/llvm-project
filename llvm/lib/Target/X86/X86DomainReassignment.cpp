@@ -31,10 +31,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeX86DomainReassignmentPass(PassRegistry &);
-}
-
 #define DEBUG_TYPE "x86-domain-reassignment"
 
 STATISTIC(NumClosuresConverted, "Number of closures converted by the pass");

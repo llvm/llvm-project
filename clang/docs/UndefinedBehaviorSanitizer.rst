@@ -100,6 +100,12 @@ Available checks are:
      conversions - when either one, or both of the types are signed.
      Issues caught by these sanitizers are not undefined behavior,
      but are often unintentional.
+  -  ``-fsanitize=implicit-integer-sign-change``: Implicit conversion between
+     integer types, if that changes the sign of the value. That is, if the the
+     original value was negative and the new value is positive (or zero),
+     or the original value was positive, and the new value is negative.
+     Issues caught by this sanitizer are not undefined behavior,
+     but are often unintentional.
   -  ``-fsanitize=integer-divide-by-zero``: Integer division by zero.
   -  ``-fsanitize=nonnull-attribute``: Passing null pointer as a function
      parameter which is declared to never be null.
@@ -161,17 +167,24 @@ You can also use the following check groups:
      ``nullability-*`` group of checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
      ``-fsanitize=undefined``.
+  -  ``-fsanitize=implicit-integer-truncation``: Catches lossy integral
+     conversions. Enables ``implicit-signed-integer-truncation`` and
+     ``implicit-unsigned-integer-truncation``.
+  -  ``-fsanitize=implicit-integer-arithmetic-value-change``: Catches implicit
+     conversions that change the arithmetic value of the integer. Enables
+     ``implicit-signed-integer-truncation`` and ``implicit-integer-sign-change``.
+  -  ``-fsanitize=implicit-conversion``: Checks for suspicious
+     behaviour of implicit conversions. Enables
+     ``implicit-unsigned-integer-truncation``,
+     ``implicit-signed-integer-truncation`` and
+     ``implicit-integer-sign-change``.
   -  ``-fsanitize=integer``: Checks for undefined or suspicious integer
      behavior (e.g. unsigned integer overflow).
      Enables ``signed-integer-overflow``, ``unsigned-integer-overflow``,
-     ``shift``, ``integer-divide-by-zero``, and ``implicit-integer-truncation``.
-  -  ``fsanitize=implicit-integer-truncation``: Checks for implicit integral
-     conversions that result in data loss.
-     Enables ``implicit-unsigned-integer-truncation`` and
-     ``implicit-signed-integer-truncation``.
-  -  ``-fsanitize=implicit-conversion``: Checks for suspicious behaviours of
-     implicit conversions.
-     Currently, only ``-fsanitize=implicit-integer-truncation`` is implemented.
+     ``shift``, ``integer-divide-by-zero``,
+     ``implicit-unsigned-integer-truncation``,
+     ``implicit-signed-integer-truncation`` and
+     ``implicit-integer-sign-change``.
   -  ``-fsanitize=nullability``: Enables ``nullability-arg``,
      ``nullability-assign``, and ``nullability-return``. While violating
      nullability does not have undefined behavior, it is often unintentional,

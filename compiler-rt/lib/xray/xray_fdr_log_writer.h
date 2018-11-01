@@ -110,9 +110,10 @@ public:
     return true;
   }
 
-  bool writeCustomEvent(uint64_t TSC, const void *Event, int32_t EventSize) {
+  bool writeCustomEvent(uint64_t TSC, uint16_t CPU, const void *Event,
+                        int32_t EventSize) {
     writeMetadata<MetadataRecord::RecordKinds::CustomEventMarker>(EventSize,
-                                                                  TSC);
+                                                                  TSC, CPU);
     internal_memcpy(NextRecord, Event, EventSize);
     NextRecord += EventSize;
     atomic_fetch_add(&Buffer.Extents, EventSize, memory_order_acq_rel);

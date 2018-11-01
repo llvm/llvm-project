@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
+// RUN: %clang_cc1 -std=c++11 -emit-llvm %s -O2 -disable-llvm-passes -o - -triple x86_64-linux-gnu | FileCheck --check-prefix=CHECK --check-prefix=LINUX --check-prefix=CHECK-OPT %s
 // RUN: %clang_cc1 -std=c++11 -femulated-tls -emit-llvm %s -o - \
 // RUN:     -triple x86_64-linux-gnu 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=LINUX %s
 // RUN: %clang_cc1 -std=c++11 -emit-llvm %s -o - -triple x86_64-apple-darwin12 | FileCheck --check-prefix=CHECK --check-prefix=DARWIN %s
@@ -307,6 +308,7 @@ void set_anon_i() {
 // CHECK: br i1 %[[NEED_TLS_INIT]],
 // init:
 // CHECK: store i8 1, i8* @__tls_guard
+// CHECK-OPT: call {}* @llvm.invariant.start.p0i8(i64 1, i8* @__tls_guard)
 // CHECK-NOT: call void @[[V_M_INIT]]()
 // CHECK: call void @[[A_INIT]]()
 // CHECK-NOT: call void @[[V_M_INIT]]()

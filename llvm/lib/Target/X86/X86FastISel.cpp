@@ -1916,8 +1916,8 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
     { &X86::GR64RegClass, X86::RAX, X86::RDX, {
         { X86::IDIV64r, X86::CQO,     Copy,            X86::RAX, S }, // SDiv
         { X86::IDIV64r, X86::CQO,     Copy,            X86::RDX, S }, // SRem
-        { X86::DIV64r,  X86::MOV64r0, Copy,            X86::RAX, U }, // UDiv
-        { X86::DIV64r,  X86::MOV64r0, Copy,            X86::RDX, U }, // URem
+        { X86::DIV64r,  X86::MOV32r0, Copy,            X86::RAX, U }, // UDiv
+        { X86::DIV64r,  X86::MOV32r0, Copy,            X86::RDX, U }, // URem
       }
     }, // i64
   };
@@ -1964,22 +1964,26 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
               TII.get(OpEntry.OpSignExtend));
     else {
-      unsigned ZeroReg = createResultReg(VT == MVT::i64 ? &X86::GR64RegClass
-                                                        : &X86::GR32RegClass);
+      unsigned Zero32 = createResultReg(&X86::GR32RegClass);
       BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
-              TII.get(OpEntry.OpSignExtend), ZeroReg);
+              TII.get(X86::MOV32r0), Zero32);
 
       // Copy the zero into the appropriate sub/super/identical physical
       // register. Unfortunately the operations needed are not uniform enough
       // to fit neatly into the table above.
-      if (VT == MVT::i16)
+      if (VT == MVT::i16) {
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                 TII.get(Copy), TypeEntry.HighInReg)
-          .addReg(ZeroReg, 0, X86::sub_16bit);
-      else
+          .addReg(Zero32, 0, X86::sub_16bit);
+      } else if (VT == MVT::i32) {
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                 TII.get(Copy), TypeEntry.HighInReg)
-            .addReg(ZeroReg);
+            .addReg(Zero32);
+      } else if (VT == MVT::i64) {
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+                TII.get(TargetOpcode::SUBREG_TO_REG), TypeEntry.HighInReg)
+            .addImm(0).addReg(Zero32).addImm(X86::sub_32bit);
+      }
     }
   }
   // Generate the DIV/IDIV instruction.
@@ -3704,9 +3708,6 @@ unsigned X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
 
   uint64_t Imm = CI->getZExtValue();
   if (Imm == 0) {
-    if (VT.SimpleTy == MVT::i64)
-      return fastEmitInst_(X86::MOV64r0, &X86::GR64RegClass);
-
     unsigned SrcReg = fastEmitInst_(X86::MOV32r0, &X86::GR32RegClass);
     switch (VT.SimpleTy) {
     default: llvm_unreachable("Unexpected value type");
@@ -3719,6 +3720,13 @@ unsigned X86FastISel::X86MaterializeInt(const ConstantInt *CI, MVT VT) {
                                         X86::sub_16bit);
     case MVT::i32:
       return SrcReg;
+    case MVT::i64: {
+      unsigned ResultReg = createResultReg(&X86::GR64RegClass);
+      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+              TII.get(TargetOpcode::SUBREG_TO_REG), ResultReg)
+        .addImm(0).addReg(SrcReg).addImm(X86::sub_32bit);
+      return ResultReg;
+    }
     }
   }
 

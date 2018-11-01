@@ -1618,6 +1618,9 @@ namespace serialization {
       /// A MS-style AsmStmt record.
       STMT_MSASM,
 
+      /// A constant expression context.
+      EXPR_CONSTANT,
+
       /// A PredefinedExpr record.
       EXPR_PREDEFINED,
 

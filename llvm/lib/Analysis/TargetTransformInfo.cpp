@@ -519,9 +519,12 @@ int TargetTransformInfo::getGatherScatterOpCost(unsigned Opcode, Type *DataTy,
 
 int TargetTransformInfo::getInterleavedMemoryOpCost(
     unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
-    unsigned Alignment, unsigned AddressSpace, bool IsMasked) const {
-  int Cost = TTIImpl->getInterleavedMemoryOpCost(
-      Opcode, VecTy, Factor, Indices, Alignment, AddressSpace, IsMasked);
+    unsigned Alignment, unsigned AddressSpace, bool UseMaskForCond,
+    bool UseMaskForGaps) const {
+  int Cost = TTIImpl->getInterleavedMemoryOpCost(Opcode, VecTy, Factor, Indices,
+                                                 Alignment, AddressSpace,
+                                                 UseMaskForCond,
+                                                 UseMaskForGaps);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

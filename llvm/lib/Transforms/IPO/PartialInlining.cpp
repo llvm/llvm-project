@@ -1251,7 +1251,7 @@ std::pair<bool, Function *> PartialInlinerImpl::unswitchFunction(Function *F) {
   if (PSI->isFunctionEntryCold(F))
     return {false, nullptr};
 
-  if (F->user_begin() == F->user_end())
+  if (empty(F->users()))
     return {false, nullptr};
 
   OptimizationRemarkEmitter ORE(F);
@@ -1357,7 +1357,7 @@ bool PartialInlinerImpl::tryPartialInline(FunctionCloner &Cloner) {
     return false;
   }
 
-  assert(Cloner.OrigFunc->user_begin() == Cloner.OrigFunc->user_end() &&
+  assert(empty(Cloner.OrigFunc->users()) &&
          "F's users should all be replaced!");
 
   std::vector<User *> Users(Cloner.ClonedFunc->user_begin(),

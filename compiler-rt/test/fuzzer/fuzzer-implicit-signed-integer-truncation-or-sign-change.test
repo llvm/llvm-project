@@ -1,0 +1,5 @@
+RUN: rm -f %t-ImplicitSignedIntegerTruncationOrSignChangeTest-Ubsan
+RUN: %cpp_compiler -fsanitize=implicit-signed-integer-truncation,implicit-integer-sign-change -fno-sanitize-recover=all %S/ImplicitSignedIntegerTruncationOrSignChangeTest.cpp -o %t-ImplicitSignedIntegerTruncationOrSignChangeTest-Ubsan
+RUN: not %run %t-ImplicitSignedIntegerTruncationOrSignChangeTest-Ubsan 2>&1 | FileCheck %s
+CHECK: ImplicitSignedIntegerTruncationOrSignChangeTest.cpp:22:16: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 4294967295 (32-bit, unsigned) to type 'int8_t' (aka 'signed char') changed the value to -1 (8-bit, signed)
+CHECK: Test unit written to ./crash-

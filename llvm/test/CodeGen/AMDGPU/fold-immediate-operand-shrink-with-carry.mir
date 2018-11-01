@@ -63,7 +63,7 @@ body:             |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0 = S_MOV_B32 12345
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN: [[V_ADD_I32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_I32_e32 [[S_MOV_B32_]], [[DEF]], implicit-def $vcc, implicit $exec
-    ; GCN: DBG_VALUE debug-use %5:sreg_64_xexec, debug-use $noreg
+    ; GCN: DBG_VALUE %5:sreg_64_xexec, $noreg
     ; GCN: S_ENDPGM implicit [[V_ADD_I32_e32_]]
     %0:sreg_32_xm0 = S_MOV_B32 12345
     %1:vgpr_32 = IMPLICIT_DEF
@@ -71,7 +71,7 @@ body:             |
     %3:vgpr_32 = IMPLICIT_DEF
 
     %4:vgpr_32, %5:sreg_64_xexec = V_ADD_I32_e64 %0, %1, implicit $exec
-    DBG_VALUE debug-use %5, debug-use $noreg
+    DBG_VALUE %5, $noreg
     S_ENDPGM implicit %4
 
 ...

@@ -3277,11 +3277,12 @@ TEST_F(FormatTest, LayoutNestedBlocks) {
                      "});");
   FormatStyle Style = getGoogleStyle();
   Style.ColumnLimit = 45;
-  verifyFormat("Debug(aaaaa,\n"
-               "      {\n"
-               "        if (aaaaaaaaaaaaaaaaaaaaaaaa) return;\n"
-               "      },\n"
-               "      a);",
+  verifyFormat("Debug(\n"
+               "    aaaaa,\n"
+               "    {\n"
+               "      if (aaaaaaaaaaaaaaaaaaaaaaaa) return;\n"
+               "    },\n"
+               "    a);",
                Style);
 
   verifyFormat("SomeFunction({MACRO({ return output; }), b});");
@@ -11739,6 +11740,18 @@ TEST_F(FormatTest, FormatsLambdas) {
                "        x.end(),   //\n"
                "        [&](int, int) { return 1; });\n"
                "}\n");
+  verifyFormat("void f() {\n"
+               "  other.other.other.other.other(\n"
+               "      x.begin(), x.end(),\n"
+               "      [something, rather](int, int, int, int, int, int, int) { return 1; });\n"
+               "}\n");
+  verifyFormat("void f() {\n"
+               "  other.other.other.other.other(\n"
+               "      x.begin(), x.end(),\n"
+               "      [something, rather](int, int, int, int, int, int, int) {\n"
+               "        //\n"
+               "      });\n"
+               "}\n");
   verifyFormat("SomeFunction([]() { // A cool function...\n"
                "  return 43;\n"
                "});");
@@ -11790,9 +11803,9 @@ TEST_F(FormatTest, FormatsLambdas) {
   verifyFormat("SomeFunction({[&] {\n"
                "  // comment\n"
                "}});");
-  verifyFormat("virtual aaaaaaaaaaaaaaaa(std::function<bool()> bbbbbbbbbbbb =\n"
-               "                             [&]() { return true; },\n"
-               "                         aaaaa aaaaaaaaa);");
+  verifyFormat("virtual aaaaaaaaaaaaaaaa(\n"
+               "    std::function<bool()> bbbbbbbbbbbb = [&]() { return true; },\n"
+               "    aaaaa aaaaaaaaa);");
 
   // Lambdas with return types.
   verifyFormat("int c = []() -> int { return 2; }();\n");
@@ -11819,16 +11832,75 @@ TEST_F(FormatTest, FormatsLambdas) {
                "  return 1; //\n"
                "};");
 
-  // Multiple lambdas in the same parentheses change indentation rules.
+  // Multiple lambdas in the same parentheses change indentation rules. These
+  // lambdas are forced to start on new lines.
   verifyFormat("SomeFunction(\n"
                "    []() {\n"
-               "      int i = 42;\n"
-               "      return i;\n"
+               "      //\n"
                "    },\n"
                "    []() {\n"
-               "      int j = 43;\n"
-               "      return j;\n"
+               "      //\n"
                "    });");
+
+  // A lambda passed as arg0 is always pushed to the next line.
+  verifyFormat("SomeFunction(\n"
+               "    [this] {\n"
+               "      //\n"
+               "    },\n"
+               "    1);\n");
+
+  // A multi-line lambda passed as arg1 forces arg0 to be pushed out, just like the arg0
+  // case above.
+  auto Style = getGoogleStyle();
+  Style.BinPackArguments = false;
+  verifyFormat("SomeFunction(\n"
+               "    a,\n"
+               "    [this] {\n"
+               "      //\n"
+               "    },\n"
+               "    b);\n",
+               Style);
+  verifyFormat("SomeFunction(\n"
+               "    a,\n"
+               "    [this] {\n"
+               "      //\n"
+               "    },\n"
+               "    b);\n");
+
+  // A lambda with a very long line forces arg0 to be pushed out irrespective of
+  // the BinPackArguments value (as long as the code is wide enough).
+  verifyFormat("something->SomeFunction(\n"
+               "    a,\n"
+               "    [this] {\n"
+               "      D0000000000000000000000000000000000000000000000000000000000001();\n"
+               "    },\n"
+               "    b);\n");
+
+  // A multi-line lambda is pulled up as long as the introducer fits on the previous
+  // line and there are no further args.
+  verifyFormat("function(1, [this, that] {\n"
+               "  //\n"
+               "});\n");
+  verifyFormat("function([this, that] {\n"
+               "  //\n"
+               "});\n");
+  // FIXME: this format is not ideal and we should consider forcing the first arg
+  // onto its own line.
+  verifyFormat("function(a, b, c, //\n"
+               "         d, [this, that] {\n"
+               "           //\n"
+               "         });\n");
+
+  // Multiple lambdas are treated correctly even when there is a short arg0.
+  verifyFormat("SomeFunction(\n"
+               "    1,\n"
+               "    [this] {\n"
+               "      //\n"
+               "    },\n"
+               "    [this] {\n"
+               "      //\n"
+               "    },\n"
+               "    1);\n");
 
   // More complex introducers.
   verifyFormat("return [i, args...] {};");
