@@ -224,7 +224,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 
 # Debian package specific variables
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE
-  "https://github.com/ROCmSoftwarePlatform/ROCm-CompilerSupport")
+  "https://github.com/RadeonOpenCompute/ROCm-CompilerSupport")
 
 # RPM package specific variables
 if(DEFINED CPACK_PACKAGING_INSTALL_PREFIX)
