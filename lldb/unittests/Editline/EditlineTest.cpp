@@ -20,6 +20,7 @@
 #include "gtest/gtest.h"
 
 #include "lldb/Host/Editline.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Utility/Status.h"
@@ -246,6 +247,8 @@ private:
 
 public:
   void SetUp() {
+    FileSystem::Initialize();
+
     // We need a TERM set properly for editline to work as expected.
     setenv("TERM", "vt100", 1);
 
@@ -263,6 +266,8 @@ public:
     _el_adapter.CloseInput();
     if (_sp_output_thread)
       _sp_output_thread->join();
+
+    FileSystem::Terminate();
   }
 
   EditlineAdapter &GetEditlineAdapter() { return _el_adapter; }

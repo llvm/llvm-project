@@ -435,8 +435,8 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
   if (header.filetype == llvm::MachO::MH_EXECUTE &&
       (header.flags & llvm::MachO::MH_DYLDLINK) == 0) {
     // Create a full module to get the UUID
-    ModuleSP memory_module_sp = process->ReadModuleFromMemory(
-        FileSpec("temp_mach_kernel", false), addr);
+    ModuleSP memory_module_sp =
+        process->ReadModuleFromMemory(FileSpec("temp_mach_kernel"), addr);
     if (!memory_module_sp.get())
       return UUID();
 
@@ -646,8 +646,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
   if (m_load_address == LLDB_INVALID_ADDRESS)
     return false;
 
-  FileSpec file_spec;
-  file_spec.SetFile(m_name.c_str(), false, FileSpec::Style::native);
+  FileSpec file_spec(m_name.c_str());
 
   llvm::MachO::mach_header mh;
   size_t size_to_read = 512;
@@ -807,7 +806,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
             PlatformDarwinKernel::GetPluginNameStatic());
         if (platform_name == g_platform_name) {
           ModuleSpec kext_bundle_module_spec(module_spec);
-          FileSpec kext_filespec(m_name.c_str(), false);
+          FileSpec kext_filespec(m_name.c_str());
           kext_bundle_module_spec.GetFileSpec() = kext_filespec;
           platform_sp->GetSharedModule(
               kext_bundle_module_spec, process, m_module_sp,

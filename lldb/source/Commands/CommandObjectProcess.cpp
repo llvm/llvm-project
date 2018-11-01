@@ -352,7 +352,7 @@ public:
         break;
 
       case 'n':
-        attach_info.GetExecutableFile().SetFile(option_arg, false,
+        attach_info.GetExecutableFile().SetFile(option_arg,
                                                 FileSpec::Style::native);
         break;
 
@@ -403,7 +403,7 @@ public:
           ProcessInstanceInfoMatch match_info;
           if (partial_name) {
             match_info.GetProcessInfo().GetExecutableFile().SetFile(
-                partial_name, false, FileSpec::Style::native);
+                partial_name, FileSpec::Style::native);
             match_info.SetNameMatchType(NameMatch::StartsWith);
           }
           platform_sp->FindProcesses(match_info, process_infos);
@@ -975,7 +975,7 @@ public:
       case 'i':
         do_install = true;
         if (!option_arg.empty())
-          install_path.SetFile(option_arg, false, FileSpec::Style::native);
+          install_path.SetFile(option_arg, FileSpec::Style::native);
         break;
       default:
         error.SetErrorStringWithFormat("invalid short option character '%c'",
@@ -1023,18 +1023,20 @@ protected:
       uint32_t image_token = LLDB_INVALID_IMAGE_TOKEN;
 
       if (!m_options.do_install) {
-        FileSpec image_spec(image_path, false);
+        FileSpec image_spec(image_path);
         platform->ResolveRemotePath(image_spec, image_spec);
         image_token =
             platform->LoadImage(process, FileSpec(), image_spec, error);
       } else if (m_options.install_path) {
-        FileSpec image_spec(image_path, true);
+        FileSpec image_spec(image_path);
+        FileSystem::Instance().Resolve(image_spec);
         platform->ResolveRemotePath(m_options.install_path,
                                     m_options.install_path);
         image_token = platform->LoadImage(process, image_spec,
                                           m_options.install_path, error);
       } else {
-        FileSpec image_spec(image_path, true);
+        FileSpec image_spec(image_path);
+        FileSystem::Instance().Resolve(image_spec);
         image_token =
             platform->LoadImage(process, image_spec, FileSpec(), error);
       }
@@ -1281,7 +1283,7 @@ protected:
     ProcessSP process_sp = m_exe_ctx.GetProcessSP();
     if (process_sp) {
       if (command.GetArgumentCount() == 1) {
-        FileSpec output_file(command.GetArgumentAtIndex(0), false);
+        FileSpec output_file(command.GetArgumentAtIndex(0));
         Status error = PluginManager::SaveCore(process_sp, output_file);
         if (error.Success()) {
           result.SetStatus(eReturnStatusSuccessFinishResult);

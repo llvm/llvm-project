@@ -70,23 +70,19 @@ public:
   ///
   /// Takes a path to a file which can be just a filename, or a full path. If
   /// \a path is not nullptr or empty, this function will call
-  /// FileSpec::SetFile (const char *path, bool resolve).
+  /// FileSpec::SetFile (const char *path).
   ///
   /// @param[in] path
   ///     The full or partial path to a file.
   ///
-  /// @param[in] resolve_path
-  ///     If \b true, then we resolve the path, removing stray ../.. and so
-  ///     forth,
-  ///     if \b false we trust the path is in canonical form already.
+  /// @param[in] style
+  ///     The style of the path
   ///
-  /// @see FileSpec::SetFile (const char *path, bool resolve)
+  /// @see FileSpec::SetFile (const char *path)
   //------------------------------------------------------------------
-  explicit FileSpec(llvm::StringRef path, bool resolve_path,
-                    Style style = Style::native);
+  explicit FileSpec(llvm::StringRef path, Style style = Style::native);
 
-  explicit FileSpec(llvm::StringRef path, bool resolve_path,
-                    const llvm::Triple &Triple);
+  explicit FileSpec(llvm::StringRef path, const llvm::Triple &Triple);
 
   //------------------------------------------------------------------
   /// Copy constructor
@@ -272,13 +268,6 @@ public:
   //------------------------------------------------------------------
   void Dump(Stream *s) const;
 
-  //------------------------------------------------------------------
-  /// Canonicalize this file path (basically running the static
-  /// FileSpec::Resolve method on it). Useful if you asked us not to resolve
-  /// the file path when you set the file.
-  //------------------------------------------------------------------
-  bool ResolvePath();
-
   Style GetPathStyle() const;
 
   //------------------------------------------------------------------
@@ -342,7 +331,7 @@ public:
   bool IsAbsolute() const;
 
   /// Temporary helper for FileSystem change.
-  void SetPath(llvm::StringRef p) { SetFile(p, false); }
+  void SetPath(llvm::StringRef p) { SetFile(p); }
 
   //------------------------------------------------------------------
   /// Extract the full path to the file.
@@ -446,10 +435,9 @@ public:
   ///     If \b true, then we will try to resolve links the path using
   ///     the static FileSpec::Resolve.
   //------------------------------------------------------------------
-  void SetFile(llvm::StringRef path, bool resolve_path, Style style);
+  void SetFile(llvm::StringRef path, Style style);
 
-  void SetFile(llvm::StringRef path, bool resolve_path,
-               const llvm::Triple &Triple);
+  void SetFile(llvm::StringRef path, const llvm::Triple &Triple);
 
   bool IsResolved() const { return m_is_resolved; }
 
@@ -467,16 +455,6 @@ public:
   ///     indicates if the paths in this object have been resolved.
   //------------------------------------------------------------------
   void SetIsResolved(bool is_resolved) { m_is_resolved = is_resolved; }
-
-  //------------------------------------------------------------------
-  /// Resolves user name and links in \a path, and overwrites the input
-  /// argument with the resolved path.
-  ///
-  /// @param[in] path
-  ///     Input path to be resolved, in the form of a llvm::SmallString or
-  ///     similar.
-  //------------------------------------------------------------------
-  static void Resolve(llvm::SmallVectorImpl<char> &path);
 
   FileSpec CopyByAppendingPathComponent(llvm::StringRef component) const;
   FileSpec CopyByRemovingLastPathComponent() const;
@@ -502,7 +480,7 @@ protected:
   //------------------------------------------------------------------
   // Convenience method for setting the file without changing the style.
   //------------------------------------------------------------------
-  void SetFile(llvm::StringRef path, bool resolve_path);
+  void SetFile(llvm::StringRef path);
 
   //------------------------------------------------------------------
   // Member variables

@@ -29,8 +29,8 @@ ProcessInfo::ProcessInfo()
 
 ProcessInfo::ProcessInfo(const char *name, const ArchSpec &arch,
                          lldb::pid_t pid)
-    : m_executable(name, false), m_arguments(), m_environment(),
-      m_uid(UINT32_MAX), m_gid(UINT32_MAX), m_arch(arch), m_pid(pid) {}
+    : m_executable(name), m_arguments(), m_environment(), m_uid(UINT32_MAX),
+      m_gid(UINT32_MAX), m_arch(arch), m_pid(pid) {}
 
 void ProcessInfo::Clear() {
   m_executable.Clear();
@@ -96,8 +96,7 @@ void ProcessInfo::SetArguments(char const **argv,
       // Yes the first argument is an executable, set it as the executable in
       // the launch options. Don't resolve the file path as the path could be a
       // remote platform path
-      const bool resolve = false;
-      m_executable.SetFile(first_arg, resolve, FileSpec::Style::native);
+      m_executable.SetFile(first_arg, FileSpec::Style::native);
     }
   }
 }
@@ -113,8 +112,7 @@ void ProcessInfo::SetArguments(const Args &args, bool first_arg_is_executable) {
       // Yes the first argument is an executable, set it as the executable in
       // the launch options. Don't resolve the file path as the path could be a
       // remote platform path
-      const bool resolve = false;
-      m_executable.SetFile(first_arg, resolve, FileSpec::Style::native);
+      m_executable.SetFile(first_arg, FileSpec::Style::native);
     }
   }
 }

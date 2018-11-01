@@ -106,7 +106,7 @@ bool Host::GetBundleDirectory(const FileSpec &file,
     if (file.GetPath(path, sizeof(path))) {
       CFCBundle bundle(path);
       if (bundle.GetPath(path, sizeof(path))) {
-        bundle_directory.SetFile(path, false, FileSpec::Style::native);
+        bundle_directory.SetFile(path, FileSpec::Style::native);
         return true;
       }
     }
@@ -126,7 +126,7 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) {
       if (url.get()) {
         if (::CFURLGetFileSystemRepresentation(url.get(), YES, (UInt8 *)path,
                                                sizeof(path))) {
-          file.SetFile(path, false, FileSpec::Style::native);
+          file.SetFile(path, FileSpec::Style::native);
           return true;
         }
       }
@@ -542,8 +542,7 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
            triple_arch == llvm::Triple::x86_64);
       const char *cstr = data.GetCStr(&offset);
       if (cstr) {
-        process_info.GetExecutableFile().SetFile(cstr, false,
-                                                 FileSpec::Style::native);
+        process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
 
         if (match_info_ptr == NULL ||
             NameMatches(
@@ -1279,7 +1278,7 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   llvm::sys::fs::file_status stats;
   status(exe_spec.GetPath(), stats);
   if (!exists(stats)) {
-    exe_spec.ResolvePath();
+    FileSystem::Instance().Resolve(exe_spec);
     status(exe_spec.GetPath(), stats);
   }
   if (!exists(stats)) {
@@ -1362,7 +1361,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
             "cwd does not exist; cannot launch with shell argument expansion");
         return error;
       } else {
-        FileSpec working_dir(wd, false);
+        FileSpec working_dir(wd);
         free(wd);
         launch_info.SetWorkingDirectory(working_dir);
       }

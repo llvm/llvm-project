@@ -62,7 +62,7 @@ Status HostProcessPosix::GetMainModule(FileSpec &file_spec) const {
     return error;
   }
 
-  error = FileSystem::Instance().Readlink(FileSpec{link_path, false}, file_spec);
+  error = FileSystem::Instance().Readlink(FileSpec(link_path), file_spec);
   if (!error.Success())
     return error;
 

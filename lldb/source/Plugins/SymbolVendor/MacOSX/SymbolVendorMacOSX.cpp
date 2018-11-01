@@ -173,7 +173,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                   resources[strlen("/Contents/Resources/")] = '\0';
                   snprintf(dsym_uuid_plist_path, sizeof(dsym_uuid_plist_path),
                            "%s%s.plist", dsym_path, uuid_str.c_str());
-                  FileSpec dsym_uuid_plist_spec(dsym_uuid_plist_path, false);
+                  FileSpec dsym_uuid_plist_spec(dsym_uuid_plist_path);
                   if (FileSystem::Instance().Exists(dsym_uuid_plist_spec)) {
                     ApplePropertyList plist(dsym_uuid_plist_path);
                     if (plist) {
@@ -244,7 +244,9 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                 }
                                 if (DBGSourcePath[0] == '~') {
                                   FileSpec resolved_source_path(
-                                      DBGSourcePath.c_str(), true);
+                                      DBGSourcePath.c_str());
+                                  FileSystem::Instance().Resolve(
+                                      resolved_source_path);
                                   DBGSourcePath =
                                       resolved_source_path.GetPath();
                                 }
@@ -257,8 +259,8 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                                 // Add this as another option in addition to
                                 // the full source path remap.
                                 if (do_truncate_remapping_names) {
-                                  FileSpec build_path(key.AsCString(), false);
-                                  FileSpec source_path(DBGSourcePath.c_str(), false);
+                                  FileSpec build_path(key.AsCString());
+                                  FileSpec source_path(DBGSourcePath.c_str());
                                   build_path.RemoveLastPathComponent();
                                   build_path.RemoveLastPathComponent();
                                   source_path.RemoveLastPathComponent();
@@ -281,8 +283,8 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                       if (!DBGBuildSourcePath.empty() &&
                           !DBGSourcePath.empty()) {
                         if (DBGSourcePath[0] == '~') {
-                          FileSpec resolved_source_path(DBGSourcePath.c_str(),
-                                                        true);
+                          FileSpec resolved_source_path(DBGSourcePath.c_str());
+                          FileSystem::Instance().Resolve(resolved_source_path);
                           DBGSourcePath = resolved_source_path.GetPath();
                         }
                         module_sp->GetSourceMappingList().Append(

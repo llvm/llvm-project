@@ -315,7 +315,7 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
       char jit_name[64];
       snprintf(jit_name, 64, "JIT(0x%" PRIx64 ")", symbolfile_addr);
       module_sp = m_process->ReadModuleFromMemory(
-          FileSpec(jit_name, false), symbolfile_addr, symbolfile_size);
+          FileSpec(jit_name), symbolfile_addr, symbolfile_size);
 
       if (module_sp && module_sp->GetObjectFile()) {
         // load the symbol table right away

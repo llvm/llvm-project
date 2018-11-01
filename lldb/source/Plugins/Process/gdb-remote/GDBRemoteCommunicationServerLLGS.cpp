@@ -1333,7 +1333,7 @@ GDBRemoteCommunicationServerLLGS::Handle_QSetWorkingDir(
   packet.SetFilePos(::strlen("QSetWorkingDir:"));
   std::string path;
   packet.GetHexByteString(path);
-  m_process_launch_info.SetWorkingDirectory(FileSpec{path, true});
+  m_process_launch_info.SetWorkingDirectory(FileSpec(path));
   return SendOKResponse();
 }
 

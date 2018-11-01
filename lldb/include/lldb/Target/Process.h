@@ -319,7 +319,7 @@ public:
                            NameMatch process_name_match_type)
       : m_match_info(), m_name_match_type(process_name_match_type),
         m_match_all_users(false) {
-    m_match_info.GetExecutableFile().SetFile(process_name, false,
+    m_match_info.GetExecutableFile().SetFile(process_name,
                                              FileSpec::Style::native);
   }
 

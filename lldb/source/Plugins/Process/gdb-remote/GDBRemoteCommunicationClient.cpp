@@ -1818,7 +1818,7 @@ bool GDBRemoteCommunicationClient::GetWorkingDir(FileSpec &working_dir) {
       return false;
     std::string cwd;
     response.GetHexByteString(cwd);
-    working_dir.SetFile(cwd, false, GetHostArchitecture().GetTriple());
+    working_dir.SetFile(cwd, GetHostArchitecture().GetTriple());
     return !cwd.empty();
   }
   return false;
@@ -1928,8 +1928,7 @@ bool GDBRemoteCommunicationClient::DecodeProcessInfoResponse(
         // characters in a process name
         std::string name;
         extractor.GetHexByteString(name);
-        process_info.GetExecutableFile().SetFile(name, false,
-                                                 FileSpec::Style::native);
+        process_info.GetExecutableFile().SetFile(name, FileSpec::Style::native);
       } else if (name.equals("cputype")) {
         value.getAsInteger(0, cpu);
       } else if (name.equals("cpusubtype")) {
@@ -3562,7 +3561,7 @@ bool GDBRemoteCommunicationClient::GetModuleInfo(
       StringExtractor extractor(value);
       std::string path;
       extractor.GetHexByteString(path);
-      module_spec.GetFileSpec() = FileSpec(path, false, arch_spec.GetTriple());
+      module_spec.GetFileSpec() = FileSpec(path, arch_spec.GetTriple());
     }
   }
 
@@ -3598,8 +3597,7 @@ ParseModuleSpec(StructuredData::Dictionary *dict) {
 
   if (!dict->GetValueForKeyAsString("file_path", string))
     return llvm::None;
-  result.GetFileSpec() =
-      FileSpec(string, false, result.GetArchitecture().GetTriple());
+  result.GetFileSpec() = FileSpec(string, result.GetArchitecture().GetTriple());
 
   return result;
 }

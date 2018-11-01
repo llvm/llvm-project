@@ -113,7 +113,7 @@ void DWARFCallFrameInfoTest::TestBasic(DWARFCallFrameInfo::Type type,
   ASSERT_NO_ERROR(llvm::sys::fs::file_size(obj, size));
   ASSERT_GT(size, 0u);
 
-  auto module_sp = std::make_shared<Module>(ModuleSpec(FileSpec(obj, false)));
+  auto module_sp = std::make_shared<Module>(ModuleSpec(FileSpec(obj)));
   SectionList *list = module_sp->GetSectionList();
   ASSERT_NE(nullptr, list);
 

@@ -308,7 +308,8 @@ protected:
       return false;
     }
 
-    FileSpec cmd_file(command[0].ref, true);
+    FileSpec cmd_file(command[0].ref);
+    FileSystem::Instance().Resolve(cmd_file);
     ExecutionContext *exe_ctx = nullptr; // Just use the default context.
 
     // If any options were set, then use them
