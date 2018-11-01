@@ -615,12 +615,12 @@ void GnuDebugLinkSection::init(StringRef File, StringRef Data) {
   // establish the order that sections should go in. By using the maximum
   // possible offset we cause this section to wind up at the end.
   OriginalOffset = std::numeric_limits<uint64_t>::max();
-  JamCRC crc;
-  crc.update(ArrayRef<char>(Data.data(), Data.size()));
+  JamCRC CRC;
+  CRC.update(ArrayRef<char>(Data.data(), Data.size()));
   // The CRC32 value needs to be complemented because the JamCRC dosn't
   // finalize the CRC32 value. It also dosn't negate the initial CRC32 value
   // but it starts by default at 0xFFFFFFFF which is the complement of zero.
-  CRC32 = ~crc.getCRC();
+  CRC32 = ~CRC.getCRC();
 }
 
 GnuDebugLinkSection::GnuDebugLinkSection(StringRef File) : FileName(File) {
@@ -748,7 +748,7 @@ void BinaryELFBuilder<ELFT>::addData(SymbolTableSection *SymTab) {
 
   std::string SanitizedFilename = MemBuf->getBufferIdentifier().str();
   std::replace_if(std::begin(SanitizedFilename), std::end(SanitizedFilename),
-                  [](char c) { return !isalnum(c); }, '_');
+                  [](char C) { return !isalnum(C); }, '_');
   Twine Prefix = Twine("_binary_") + SanitizedFilename;
 
   SymTab->addSymbol(Prefix + "_start", STB_GLOBAL, STT_NOTYPE, &DataSection,
@@ -1128,20 +1128,20 @@ std::unique_ptr<Object> BinaryReader::create() const {
 
 std::unique_ptr<Object> ELFReader::create() const {
   auto Obj = llvm::make_unique<Object>();
-  if (auto *o = dyn_cast<ELFObjectFile<ELF32LE>>(Bin)) {
-    ELFBuilder<ELF32LE> Builder(*o, *Obj);
+  if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(Bin)) {
+    ELFBuilder<ELF32LE> Builder(*O, *Obj);
     Builder.build();
     return Obj;
-  } else if (auto *o = dyn_cast<ELFObjectFile<ELF64LE>>(Bin)) {
-    ELFBuilder<ELF64LE> Builder(*o, *Obj);
+  } else if (auto *O = dyn_cast<ELFObjectFile<ELF64LE>>(Bin)) {
+    ELFBuilder<ELF64LE> Builder(*O, *Obj);
     Builder.build();
     return Obj;
-  } else if (auto *o = dyn_cast<ELFObjectFile<ELF32BE>>(Bin)) {
-    ELFBuilder<ELF32BE> Builder(*o, *Obj);
+  } else if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(Bin)) {
+    ELFBuilder<ELF32BE> Builder(*O, *Obj);
     Builder.build();
     return Obj;
-  } else if (auto *o = dyn_cast<ELFObjectFile<ELF64BE>>(Bin)) {
-    ELFBuilder<ELF64BE> Builder(*o, *Obj);
+  } else if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(Bin)) {
+    ELFBuilder<ELF64BE> Builder(*O, *Obj);
     Builder.build();
     return Obj;
   }
@@ -1308,7 +1308,7 @@ static uint64_t alignToAddr(uint64_t Offset, uint64_t Addr, uint64_t Align) {
 }
 
 // Orders segments such that if x = y->ParentSegment then y comes before x.
-static void OrderSegments(std::vector<Segment *> &Segments) {
+static void orderSegments(std::vector<Segment *> &Segments) {
   std::stable_sort(std::begin(Segments), std::end(Segments),
                    compareSegmentsByOffset);
 }
@@ -1350,7 +1350,7 @@ static uint64_t LayoutSegments(std::vector<Segment *> &Segments,
 // sections had a ParentSegment or an offset one past the last section if there
 // was a section that didn't have a ParentSegment.
 template <class Range>
-static uint64_t LayoutSections(Range Sections, uint64_t Offset) {
+static uint64_t layoutSections(Range Sections, uint64_t Offset) {
   // Now the offset of every segment has been set we can assign the offsets
   // of each section. For sections that are covered by a segment we should use
   // the segment's original offset and the section's original offset to compute
@@ -1394,13 +1394,13 @@ template <class ELFT> void ELFWriter<ELFT>::assignOffsets() {
     OrderedSegments.push_back(&Segment);
   OrderedSegments.push_back(&Obj.ElfHdrSegment);
   OrderedSegments.push_back(&Obj.ProgramHdrSegment);
-  OrderSegments(OrderedSegments);
+  orderSegments(OrderedSegments);
   // Offset is used as the start offset of the first segment to be laid out.
   // Since the ELF Header (ElfHdrSegment) must be at the start of the file,
   // we start at offset 0.
   uint64_t Offset = 0;
   Offset = LayoutSegments(OrderedSegments, Offset);
-  Offset = LayoutSections(Obj.sections(), Offset);
+  Offset = layoutSections(Obj.sections(), Offset);
   // If we need to write the section header table out then we need to align the
   // Offset so that SHOffset is valid.
   if (WriteSectionHeaders)
@@ -1585,7 +1585,7 @@ void BinaryWriter::finalize() {
       continue;
     AllocatedSections.push_back(&Section);
   }
-  LayoutSections(make_pointee_range(AllocatedSections), Offset);
+  layoutSections(make_pointee_range(AllocatedSections), Offset);
 
   // Now that every section has been laid out we just need to compute the total
   // file size. This might not be the same as the offset returned by

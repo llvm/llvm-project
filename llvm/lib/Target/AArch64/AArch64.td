@@ -487,7 +487,7 @@ def ProcSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    FeaturePredictableSelectIsExpensive,
                                    FeatureZCZeroing,
                                    FeatureLSLFast,
-                                   HasV8_3aOps]>;
+                                   HasV8_4aOps]>;
 
 def ProcThunderX2T99  : SubtargetFeature<"thunderx2t99", "ARMProcFamily",
                                          "ThunderX2T99",

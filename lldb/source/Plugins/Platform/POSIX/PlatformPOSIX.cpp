@@ -143,8 +143,8 @@ PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
     if (resolved_module_spec.GetFileSpec().Exists())
       error.Clear();
     else {
-      const uint32_t permissions =
-          resolved_module_spec.GetFileSpec().GetPermissions();
+      const uint32_t permissions = FileSystem::Instance().GetPermissions(
+          resolved_module_spec.GetFileSpec());
       if (permissions && (permissions & eFilePermissionsEveryoneR) == 0)
         error.SetErrorStringWithFormat(
             "executable '%s' is not readable",
@@ -237,7 +237,8 @@ PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
       }
 
       if (error.Fail() || !exe_module_sp) {
-        if (resolved_module_spec.GetFileSpec().Readable()) {
+        if (FileSystem::Instance().Readable(
+                resolved_module_spec.GetFileSpec())) {
           error.SetErrorStringWithFormat(
               "'%s' doesn't contain any '%s' platform architectures: %s",
               resolved_module_spec.GetFileSpec().GetPath().c_str(),

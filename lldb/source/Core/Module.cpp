@@ -1252,7 +1252,8 @@ ObjectFile *Module::GetObjectFile() {
                          GetFileSpec().GetFilename().AsCString(""));
       DataBufferSP data_sp;
       lldb::offset_t data_offset = 0;
-      const lldb::offset_t file_size = m_file.GetByteSize();
+      const lldb::offset_t file_size =
+          FileSystem::Instance().GetByteSize(m_file);
       if (file_size > m_object_offset) {
         m_did_load_objfile = true;
         m_objfile_sp = ObjectFile::FindPlugin(

@@ -227,7 +227,8 @@ Status ModuleCache::Get(const FileSpec &root_dir_spec, const char *hostname,
 
   if (!module_file_path.Exists())
     return Status("Module %s not found", module_file_path.GetPath().c_str());
-  if (module_file_path.GetByteSize() != module_spec.GetObjectSize())
+  if (FileSystem::Instance().GetByteSize(module_file_path) !=
+      module_spec.GetObjectSize())
     return Status("Module %s has invalid file size",
                   module_file_path.GetPath().c_str());
 

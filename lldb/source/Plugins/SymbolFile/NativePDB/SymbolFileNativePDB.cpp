@@ -49,6 +49,8 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#include "Plugins/Language/CPlusPlus/CPlusPlusNameParser.h"
+
 #include "PdbSymUid.h"
 #include "PdbUtil.h"
 #include "UdtRecordCompleter.h"
@@ -394,6 +396,12 @@ static PDB_SymType GetPdbSymType(TpiStream &tpi, TypeIndex ti) {
   return GetPdbSymType(tpi, LookThroughModifierRecord(cvt));
 }
 
+static bool IsCVarArgsFunction(llvm::ArrayRef<TypeIndex> args) {
+  if (args.empty())
+    return false;
+  return args.back() == TypeIndex::None();
+}
+
 static clang::TagTypeKind TranslateUdtKind(const TagRecord &cr) {
   switch (cr.Kind) {
   case TypeRecordKind::Class:
@@ -409,6 +417,32 @@ static clang::TagTypeKind TranslateUdtKind(const TagRecord &cr) {
   default:
     lldbassert(false && "Invalid tag record kind!");
     return clang::TTK_Struct;
+  }
+}
+
+static llvm::Optional<clang::CallingConv>
+TranslateCallingConvention(llvm::codeview::CallingConvention conv) {
+  using CC = llvm::codeview::CallingConvention;
+  switch (conv) {
+
+  case CC::NearC:
+  case CC::FarC:
+    return clang::CallingConv::CC_C;
+  case CC::NearPascal:
+  case CC::FarPascal:
+    return clang::CallingConv::CC_X86Pascal;
+  case CC::NearFast:
+  case CC::FarFast:
+    return clang::CallingConv::CC_X86FastCall;
+  case CC::NearStdCall:
+  case CC::FarStdCall:
+    return clang::CallingConv::CC_X86StdCall;
+  case CC::ThisCall:
+    return clang::CallingConv::CC_X86ThisCall;
+  case CC::NearVector:
+    return clang::CallingConv::CC_X86VectorCall;
+  default:
+    return llvm::None;
   }
 }
 
@@ -540,7 +574,6 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbSymUid func_uid,
   PdbSymUid sig_uid =
       PdbSymUid::makeTypeSymId(PDB_SymType::FunctionSig, TypeIndex{0}, false);
   Mangled mangled(getSymbolName(sym_record));
-
   FunctionSP func_sp = std::make_shared<Function>(
       sc.comp_unit, func_uid.toOpaqueId(), sig_uid.toOpaqueId(), mangled,
       func_type, func_range);
@@ -598,6 +631,8 @@ lldb::TypeSP SymbolFileNativePDB::CreateModifierType(PdbSymUid type_uid,
 lldb::TypeSP SymbolFileNativePDB::CreatePointerType(
     PdbSymUid type_uid, const llvm::codeview::PointerRecord &pr) {
   TypeSP pointee = GetOrCreateType(pr.ReferentType);
+  if (!pointee)
+    return nullptr;
   CompilerType pointee_ct = pointee->GetForwardCompilerType();
   lldbassert(pointee_ct);
   Declaration decl;
@@ -639,6 +674,17 @@ lldb::TypeSP SymbolFileNativePDB::CreatePointerType(
 }
 
 lldb::TypeSP SymbolFileNativePDB::CreateSimpleType(TypeIndex ti) {
+  if (ti == TypeIndex::NullptrT()) {
+    PdbSymUid uid =
+        PdbSymUid::makeTypeSymId(PDB_SymType::BuiltinType, ti, false);
+    CompilerType ct = m_clang->GetBasicType(eBasicTypeNullPtr);
+    Declaration decl;
+    return std::make_shared<Type>(uid.toOpaqueId(), this,
+                                  ConstString("std::nullptr_t"), 0, nullptr,
+                                  LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
+                                  ct, Type::eResolveStateFull);
+  }
+
   if (ti.getSimpleMode() != SimpleTypeMode::Direct) {
     PdbSymUid uid =
         PdbSymUid::makeTypeSymId(PDB_SymType::PointerType, ti, false);
@@ -670,7 +716,8 @@ lldb::TypeSP SymbolFileNativePDB::CreateSimpleType(TypeIndex ti) {
     return nullptr;
 
   lldb::BasicType bt = GetCompilerTypeForSimpleKind(ti.getSimpleKind());
-  lldbassert(bt != lldb::eBasicTypeInvalid);
+  if (bt == lldb::eBasicTypeInvalid)
+    return nullptr;
   CompilerType ct = m_clang->GetBasicType(bt);
   size_t size = GetTypeSizeForSimpleKind(ti.getSimpleKind());
 
@@ -686,10 +733,6 @@ lldb::TypeSP SymbolFileNativePDB::CreateSimpleType(TypeIndex ti) {
 lldb::TypeSP SymbolFileNativePDB::CreateClassStructUnion(
     PdbSymUid type_uid, llvm::StringRef name, size_t size,
     clang::TagTypeKind ttk, clang::MSInheritanceAttr::Spelling inheritance) {
-
-  // Some UDT with trival ctor has zero length. Just ignore.
-  if (size == 0)
-    return nullptr;
 
   // Ignore unnamed-tag UDTs.
   name = DropNameScope(name);
@@ -792,6 +835,49 @@ TypeSP SymbolFileNativePDB::CreateArrayType(PdbSymUid type_uid,
   return array_sp;
 }
 
+TypeSP SymbolFileNativePDB::CreateProcedureType(PdbSymUid type_uid,
+                                                const ProcedureRecord &pr) {
+  TpiStream &stream = m_index->tpi();
+  CVType args_cvt = stream.getType(pr.ArgumentList);
+  ArgListRecord args;
+  llvm::cantFail(
+      TypeDeserializer::deserializeAs<ArgListRecord>(args_cvt, args));
+
+  llvm::ArrayRef<TypeIndex> arg_indices = llvm::makeArrayRef(args.ArgIndices);
+  bool is_variadic = IsCVarArgsFunction(arg_indices);
+  if (is_variadic)
+    arg_indices = arg_indices.drop_back();
+
+  std::vector<CompilerType> arg_list;
+  arg_list.reserve(arg_list.size());
+
+  for (TypeIndex arg_index : arg_indices) {
+    TypeSP arg_sp = GetOrCreateType(arg_index);
+    if (!arg_sp)
+      return nullptr;
+    arg_list.push_back(arg_sp->GetFullCompilerType());
+  }
+
+  TypeSP return_type_sp = GetOrCreateType(pr.ReturnType);
+  if (!return_type_sp)
+    return nullptr;
+
+  llvm::Optional<clang::CallingConv> cc =
+      TranslateCallingConvention(pr.CallConv);
+  if (!cc)
+    return nullptr;
+
+  CompilerType return_ct = return_type_sp->GetFullCompilerType();
+  CompilerType func_sig_ast_type = m_clang->CreateFunctionType(
+      return_ct, arg_list.data(), arg_list.size(), is_variadic, 0, *cc);
+
+  Declaration decl;
+  return std::make_shared<lldb_private::Type>(
+      type_uid.toOpaqueId(), this, ConstString(), 0, nullptr, LLDB_INVALID_UID,
+      lldb_private::Type::eEncodingIsUID, decl, func_sig_ast_type,
+      lldb_private::Type::eResolveStateFull);
+}
+
 TypeSP SymbolFileNativePDB::CreateType(PdbSymUid type_uid) {
   const PdbTypeSymId &tsid = type_uid.asTypeSym();
   TypeIndex index(tsid.index);
@@ -840,6 +926,12 @@ TypeSP SymbolFileNativePDB::CreateType(PdbSymUid type_uid) {
     return CreateArrayType(type_uid, ar);
   }
 
+  if (cvt.kind() == LF_PROCEDURE) {
+    ProcedureRecord pr;
+    llvm::cantFail(TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr));
+    return CreateProcedureType(type_uid, pr);
+  }
+
   return nullptr;
 }
 
@@ -858,7 +950,7 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbSymUid type_uid) {
       auto expected_full_ti = m_index->tpi().findFullDeclForForwardRef(ti);
       if (!expected_full_ti)
         llvm::consumeError(expected_full_ti.takeError());
-      else {
+      else if (*expected_full_ti != ti) {
         full_decl_uid = PdbSymUid::makeTypeSymId(
             type_uid.tag(), *expected_full_ti, type_id.is_ipi);
 
@@ -880,6 +972,8 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbSymUid type_uid) {
 
   PdbSymUid best_uid = full_decl_uid ? *full_decl_uid : type_uid;
   TypeSP result = CreateType(best_uid);
+  if (!result)
+    return nullptr;
   m_types[best_uid.toOpaqueId()] = result;
   // If we had both a forward decl and a full decl, make both point to the new
   // type.

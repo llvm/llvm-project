@@ -1127,10 +1127,9 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
   // Now, we do not need to emit the check in *all* of the cases.
   // We can avoid emitting it in some obvious cases where it would have been
   // dropped by the opt passes (instcombine) always anyways.
-  // If it's a cast between the same type, just differently-sugared. no check.
-  QualType CanonSrcType = CGF.getContext().getCanonicalType(SrcType);
-  QualType CanonDstType = CGF.getContext().getCanonicalType(DstType);
-  if (CanonSrcType == CanonDstType)
+  // If it's a cast between effectively the same type, no check.
+  // NOTE: this is *not* equivalent to checking the canonical types.
+  if (SrcSigned == DstSigned && SrcBits == DstBits)
     return;
   // At least one of the values needs to have signed type.
   // If both are unsigned, then obviously, neither of them can be negative.

@@ -261,11 +261,11 @@ class SparseBitVector {
     BITWORD_SIZE = SparseBitVectorElement<ElementSize>::BITWORD_SIZE
   };
 
+  ElementList Elements;
   // Pointer to our current Element. This has no visible effect on the external
   // state of a SparseBitVector, it's just used to improve performance in the
   // common case of testing/modifying bits with similar indices.
   mutable ElementListIter CurrElementIter;
-  ElementList Elements;
 
   // This is like std::lower_bound, except we do linear searching from the
   // current position.
@@ -441,22 +441,12 @@ class SparseBitVector {
 public:
   using iterator = SparseBitVectorIterator;
 
-  SparseBitVector() {
-    CurrElementIter = Elements.begin();
-  }
+  SparseBitVector() : Elements(), CurrElementIter(Elements.begin()) {}
 
-  // SparseBitVector copy ctor.
-  SparseBitVector(const SparseBitVector &RHS) {
-    ElementListConstIter ElementIter = RHS.Elements.begin();
-    while (ElementIter != RHS.Elements.end()) {
-      Elements.push_back(SparseBitVectorElement<ElementSize>(*ElementIter));
-      ++ElementIter;
-    }
-
-    CurrElementIter = Elements.begin ();
-  }
-
-  ~SparseBitVector() = default;
+  SparseBitVector(const SparseBitVector &RHS)
+      : Elements(RHS.Elements), CurrElementIter(Elements.begin()) {}
+  SparseBitVector(SparseBitVector &&RHS)
+      : Elements(std::move(RHS.Elements)), CurrElementIter(Elements.begin()) {}
 
   // Clear.
   void clear() {
@@ -468,16 +458,13 @@ public:
     if (this == &RHS)
       return *this;
 
-    Elements.clear();
-
-    ElementListConstIter ElementIter = RHS.Elements.begin();
-    while (ElementIter != RHS.Elements.end()) {
-      Elements.push_back(SparseBitVectorElement<ElementSize>(*ElementIter));
-      ++ElementIter;
-    }
-
-    CurrElementIter = Elements.begin ();
-
+    Elements = RHS.Elements;
+    CurrElementIter = Elements.begin();
+    return *this;
+  }
+  SparseBitVector &operator=(SparseBitVector &&RHS) {
+    Elements = std::move(RHS.Elements);
+    CurrElementIter = Elements.begin();
     return *this;
   }
 

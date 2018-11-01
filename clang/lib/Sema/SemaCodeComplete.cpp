@@ -808,12 +808,20 @@ void ResultBuilder::AdjustResultPriorityForDecl(Result &R) {
   }
 }
 
+DeclContext::lookup_result getConstructors(ASTContext &Context,
+                                           const CXXRecordDecl *Record) {
+  QualType RecordTy = Context.getTypeDeclType(Record);
+  DeclarationName ConstructorName =
+      Context.DeclarationNames.getCXXConstructorName(
+          Context.getCanonicalType(RecordTy));
+  return Record->lookup(ConstructorName);
+}
+
 void ResultBuilder::MaybeAddConstructorResults(Result R) {
   if (!SemaRef.getLangOpts().CPlusPlus || !R.Declaration ||
       !CompletionContext.wantConstructorResults())
     return;
 
-  ASTContext &Context = SemaRef.Context;
   const NamedDecl *D = R.Declaration;
   const CXXRecordDecl *Record = nullptr;
   if (const ClassTemplateDecl *ClassTemplate = dyn_cast<ClassTemplateDecl>(D))
@@ -831,16 +839,8 @@ void ResultBuilder::MaybeAddConstructorResults(Result R) {
   if (!Record)
     return;
 
-
-  QualType RecordTy = Context.getTypeDeclType(Record);
-  DeclarationName ConstructorName
-    = Context.DeclarationNames.getCXXConstructorName(
-                                           Context.getCanonicalType(RecordTy));
-  DeclContext::lookup_result Ctors = Record->lookup(ConstructorName);
-  for (DeclContext::lookup_iterator I = Ctors.begin(),
-                                          E = Ctors.end();
-       I != E; ++I) {
-    R.Declaration = *I;
+  for(auto Ctor : getConstructors(SemaRef.Context, Record)) {
+    R.Declaration = Ctor;
     R.CursorKind = getCursorKindForDecl(R.Declaration);
     Results.push_back(R);
   }
@@ -5073,11 +5073,77 @@ void Sema::CodeCompleteConstructorInitializer(
   }
 
   // Add completions for base classes.
-  CodeCompletionBuilder Builder(Results.getAllocator(),
-                                Results.getCodeCompletionTUInfo());
   PrintingPolicy Policy = getCompletionPrintingPolicy(*this);
   bool SawLastInitializer = Initializers.empty();
   CXXRecordDecl *ClassDecl = Constructor->getParent();
+
+  auto GenerateCCS = [&](const NamedDecl *ND, const char *Name) {
+    CodeCompletionBuilder Builder(Results.getAllocator(),
+                                  Results.getCodeCompletionTUInfo());
+    Builder.AddTypedTextChunk(Name);
+    Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+    if (auto Function = dyn_cast<FunctionDecl>(ND))
+      AddFunctionParameterChunks(PP, Policy, Function, Builder);
+    else if (auto FunTemplDecl = dyn_cast<FunctionTemplateDecl>(ND))
+      AddFunctionParameterChunks(PP, Policy, FunTemplDecl->getTemplatedDecl(),
+                                 Builder);
+    Builder.AddChunk(CodeCompletionString::CK_RightParen);
+    return Builder.TakeString();
+  };
+  auto AddDefaultCtorInit = [&](const char *Name, const char *Type,
+                                const NamedDecl *ND) {
+    CodeCompletionBuilder Builder(Results.getAllocator(),
+                                  Results.getCodeCompletionTUInfo());
+    Builder.AddTypedTextChunk(Name);
+    Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+    Builder.AddPlaceholderChunk(Type);
+    Builder.AddChunk(CodeCompletionString::CK_RightParen);
+    if (ND) {
+      auto CCR = CodeCompletionResult(
+          Builder.TakeString(), ND,
+          SawLastInitializer ? CCP_NextInitializer : CCP_MemberDeclaration);
+      if (isa<FieldDecl>(ND))
+        CCR.CursorKind = CXCursor_MemberRef;
+      return Results.AddResult(CCR);
+    }
+    return Results.AddResult(CodeCompletionResult(
+        Builder.TakeString(),
+        SawLastInitializer ? CCP_NextInitializer : CCP_MemberDeclaration));
+  };
+  auto AddCtorsWithName = [&](const CXXRecordDecl *RD, unsigned int Priority,
+                              const char *Name, const FieldDecl *FD) {
+    if (!RD)
+      return AddDefaultCtorInit(Name,
+                                FD ? Results.getAllocator().CopyString(
+                                         FD->getType().getAsString(Policy))
+                                   : Name,
+                                FD);
+    auto Ctors = getConstructors(Context, RD);
+    if (Ctors.begin() == Ctors.end())
+      return AddDefaultCtorInit(Name, Name, RD);
+    for (const auto Ctor : Ctors) {
+      auto CCR = CodeCompletionResult(GenerateCCS(Ctor, Name), RD, Priority);
+      CCR.CursorKind = getCursorKindForDecl(Ctor);
+      Results.AddResult(CCR);
+    }
+  };
+  auto AddBase = [&](const CXXBaseSpecifier &Base) {
+    const char *BaseName =
+        Results.getAllocator().CopyString(Base.getType().getAsString(Policy));
+    const auto *RD = Base.getType()->getAsCXXRecordDecl();
+    AddCtorsWithName(
+        RD, SawLastInitializer ? CCP_NextInitializer : CCP_MemberDeclaration,
+        BaseName, nullptr);
+  };
+  auto AddField = [&](const FieldDecl *FD) {
+    const char *FieldName =
+        Results.getAllocator().CopyString(FD->getIdentifier()->getName());
+    const CXXRecordDecl *RD = FD->getType()->getAsCXXRecordDecl();
+    AddCtorsWithName(
+        RD, SawLastInitializer ? CCP_NextInitializer : CCP_MemberDeclaration,
+        FieldName, FD);
+  };
+
   for (const auto &Base : ClassDecl->bases()) {
     if (!InitializedBases.insert(Context.getCanonicalType(Base.getType()))
              .second) {
@@ -5089,15 +5155,7 @@ void Sema::CodeCompleteConstructorInitializer(
       continue;
     }
 
-    Builder.AddTypedTextChunk(
-               Results.getAllocator().CopyString(
-                          Base.getType().getAsString(Policy)));
-    Builder.AddChunk(CodeCompletionString::CK_LeftParen);
-    Builder.AddPlaceholderChunk("args");
-    Builder.AddChunk(CodeCompletionString::CK_RightParen);
-    Results.AddResult(CodeCompletionResult(Builder.TakeString(),
-                                   SawLastInitializer? CCP_NextInitializer
-                                                     : CCP_MemberDeclaration));
+    AddBase(Base);
     SawLastInitializer = false;
   }
 
@@ -5113,15 +5171,7 @@ void Sema::CodeCompleteConstructorInitializer(
       continue;
     }
 
-    Builder.AddTypedTextChunk(
-               Builder.getAllocator().CopyString(
-                          Base.getType().getAsString(Policy)));
-    Builder.AddChunk(CodeCompletionString::CK_LeftParen);
-    Builder.AddPlaceholderChunk("args");
-    Builder.AddChunk(CodeCompletionString::CK_RightParen);
-    Results.AddResult(CodeCompletionResult(Builder.TakeString(),
-                                   SawLastInitializer? CCP_NextInitializer
-                                                     : CCP_MemberDeclaration));
+    AddBase(Base);
     SawLastInitializer = false;
   }
 
@@ -5139,17 +5189,7 @@ void Sema::CodeCompleteConstructorInitializer(
     if (!Field->getDeclName())
       continue;
 
-    Builder.AddTypedTextChunk(Builder.getAllocator().CopyString(
-                                         Field->getIdentifier()->getName()));
-    Builder.AddChunk(CodeCompletionString::CK_LeftParen);
-    Builder.AddPlaceholderChunk("args");
-    Builder.AddChunk(CodeCompletionString::CK_RightParen);
-    Results.AddResult(CodeCompletionResult(Builder.TakeString(),
-                                   SawLastInitializer? CCP_NextInitializer
-                                                     : CCP_MemberDeclaration,
-                                           CXCursor_MemberRef,
-                                           CXAvailability_Available,
-                                           Field));
+    AddField(Field);
     SawLastInitializer = false;
   }
   Results.ExitScope();

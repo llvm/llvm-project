@@ -1,4 +1,4 @@
-# XFAIL: windows
+# UNSUPPORTED: windows
 
 # RUN: %cxx %p/Inputs/call-function.cpp -g -o %t
 

@@ -138,3 +138,15 @@ uint32_t unsigned_int_to_uint32(unsigned int src) {
 uint32_t uint32_to_uint32(uint32_t src) {
   return src;
 }
+
+// "Transparent" Enum.
+// ========================================================================== //
+
+enum a { b = ~2147483647 };
+enum a c();
+void d(int);
+void e();
+void e() {
+  enum a f = c();
+  d(f);
+}
