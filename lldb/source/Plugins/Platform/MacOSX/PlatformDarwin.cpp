@@ -1417,16 +1417,17 @@ bool PlatformDarwin::SDKSupportsModules(SDKType desired_type,
   return false;
 }
 
-FileSpec::EnumerateDirectoryResult PlatformDarwin::DirectoryEnumerator(
-    void *baton, llvm::sys::fs::file_type file_type, const FileSpec &spec) {
+FileSystem::EnumerateDirectoryResult PlatformDarwin::DirectoryEnumerator(
+    void *baton, llvm::sys::fs::file_type file_type, llvm::StringRef path) {
   SDKEnumeratorInfo *enumerator_info = static_cast<SDKEnumeratorInfo *>(baton);
 
+  FileSpec spec(path, false);
   if (SDKSupportsModules(enumerator_info->sdk_type, spec)) {
     enumerator_info->found_path = spec;
-    return FileSpec::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
+    return FileSystem::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
   }
 
-  return FileSpec::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
+  return FileSystem::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
 }
 
 FileSpec PlatformDarwin::FindSDKInXcodeForModules(SDKType sdk_type,
@@ -1445,9 +1446,9 @@ FileSpec PlatformDarwin::FindSDKInXcodeForModules(SDKType sdk_type,
 
   enumerator_info.sdk_type = sdk_type;
 
-  FileSpec::EnumerateDirectory(sdks_spec.GetPath(), find_directories,
-                               find_files, find_other, DirectoryEnumerator,
-                               &enumerator_info);
+  FileSystem::Instance().EnumerateDirectory(
+      sdks_spec.GetPath(), find_directories, find_files, find_other,
+      DirectoryEnumerator, &enumerator_info);
 
   if (llvm::sys::fs::is_directory(enumerator_info.found_path.GetPath()))
     return enumerator_info.found_path;

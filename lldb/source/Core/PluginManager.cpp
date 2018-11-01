@@ -10,6 +10,7 @@
 #include "lldb/Core/PluginManager.h"
 
 #include "lldb/Core/Debugger.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Utility/ConstString.h" // for ConstString
@@ -89,9 +90,9 @@ template <typename FPtrTy> static FPtrTy CastToFPtr(void *VPtr) {
   return reinterpret_cast<FPtrTy>(reinterpret_cast<intptr_t>(VPtr));
 }
 
-static FileSpec::EnumerateDirectoryResult
+static FileSystem::EnumerateDirectoryResult
 LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
-                   const FileSpec &file_spec) {
+                   llvm::StringRef path) {
   //    PluginManager *plugin_manager = (PluginManager *)baton;
   Status error;
 
@@ -102,11 +103,11 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
   // file type information.
   if (ft == fs::file_type::regular_file || ft == fs::file_type::symlink_file ||
       ft == fs::file_type::type_unknown) {
-    FileSpec plugin_file_spec(file_spec);
+    FileSpec plugin_file_spec(path, false);
     plugin_file_spec.ResolvePath();
 
     if (PluginIsLoaded(plugin_file_spec))
-      return FileSpec::eEnumerateDirectoryResultNext;
+      return FileSystem::eEnumerateDirectoryResultNext;
     else {
       PluginInfo plugin_info;
 
@@ -138,7 +139,7 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
         // plug-in info so we don't try to load it again and again.
         SetPluginInfo(plugin_file_spec, plugin_info);
 
-        return FileSpec::eEnumerateDirectoryResultNext;
+        return FileSystem::eEnumerateDirectoryResultNext;
       }
     }
   }
@@ -149,10 +150,10 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
     // also do this for unknown as sometimes the directory enumeration might be
     // enumerating a file system that doesn't have correct file type
     // information.
-    return FileSpec::eEnumerateDirectoryResultEnter;
+    return FileSystem::eEnumerateDirectoryResultEnter;
   }
 
-  return FileSpec::eEnumerateDirectoryResultNext;
+  return FileSystem::eEnumerateDirectoryResultNext;
 }
 
 void PluginManager::Initialize() {
@@ -163,15 +164,17 @@ void PluginManager::Initialize() {
   char dir_path[PATH_MAX];
   if (FileSpec dir_spec = HostInfo::GetSystemPluginDir()) {
     if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path))) {
-      FileSpec::EnumerateDirectory(dir_path, find_directories, find_files,
-                                   find_other, LoadPluginCallback, nullptr);
+      FileSystem::Instance().EnumerateDirectory(dir_path, find_directories,
+                                                find_files, find_other,
+                                                LoadPluginCallback, nullptr);
     }
   }
 
   if (FileSpec dir_spec = HostInfo::GetUserPluginDir()) {
     if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path))) {
-      FileSpec::EnumerateDirectory(dir_path, find_directories, find_files,
-                                   find_other, LoadPluginCallback, nullptr);
+      FileSystem::Instance().EnumerateDirectory(dir_path, find_directories,
+                                                find_files, find_other,
+                                                LoadPluginCallback, nullptr);
     }
   }
 #endif
