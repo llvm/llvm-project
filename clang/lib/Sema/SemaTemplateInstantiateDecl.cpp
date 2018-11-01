@@ -1259,6 +1259,9 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   if (QualifierLoc)
     RecordInst->setQualifierInfo(QualifierLoc);
 
+  SemaRef.InstantiateAttrsForDecl(TemplateArgs, Pattern, RecordInst, LateAttrs,
+                                                              StartingScope);
+
   ClassTemplateDecl *Inst
     = ClassTemplateDecl::Create(SemaRef.Context, DC, D->getLocation(),
                                 D->getIdentifier(), InstParams, RecordInst);
@@ -1492,6 +1495,9 @@ Decl *TemplateDeclInstantiator::VisitCXXRecordDecl(CXXRecordDecl *D) {
   // Substitute the nested name specifier, if any.
   if (SubstQualifier(D, Record))
     return nullptr;
+
+  SemaRef.InstantiateAttrsForDecl(TemplateArgs, D, Record, LateAttrs,
+                                                              StartingScope);
 
   Record->setImplicit(D->isImplicit());
   // FIXME: Check against AS_none is an ugly hack to work around the issue that
