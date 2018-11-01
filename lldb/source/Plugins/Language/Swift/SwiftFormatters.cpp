@@ -60,6 +60,13 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       StringPrinter::ReadStringAndDumpToStreamOptions());
 }
 
+bool lldb_private::formatters::swift::SwiftSharedString_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  return SwiftSharedString_SummaryProvider_2(
+      valobj, stream, options,
+      StringPrinter::ReadStringAndDumpToStreamOptions());
+}
+
 /// Get an Obj-C object's class name, if one is present.
 static Optional<StringRef> getObjC_ClassName(ValueObject &valobj,
                                              Process &process) {
@@ -79,20 +86,28 @@ static Optional<StringRef> getObjC_ClassName(ValueObject &valobj,
   return class_name_cs.GetStringRef();
 }
 
-/// If valobj is a _SwiftRawStringStorage instance, retrieve the payload address
-/// of the character data and determine whether the string is in UTF-16.
-static bool GetRawStringStoragePayload(Process &process, ValueObject &valobj,
-                                       uint64_t &payloadAddr, bool &isUTF16) {
-  CompilerType ty = valobj.GetCompilerType();
+static bool readStringFromAddress(
+    uint64_t startAddress, uint64_t length, ProcessSP process, Stream &stream,
+    const TypeSummaryOptions &summary_options,
+    StringPrinter::ReadStringAndDumpToStreamOptions read_options) {
+  if (length == 0) {
+    stream.Printf("\"\"");
+    return true;
+  }
 
-  auto objCName = getObjC_ClassName(valobj, process);
-  if (!objCName || !objCName->contains("_SwiftStringStorage"))
-    return false;
+  read_options.SetLocation(startAddress);
+  read_options.SetProcessSP(process);
+  read_options.SetStream(&stream);
+  read_options.SetSourceSize(length);
+  read_options.SetNeedsZeroTermination(false);
+  read_options.SetIgnoreMaxLength(summary_options.GetCapping() ==
+                                  lldb::eTypeSummaryUncapped);
+  read_options.SetBinaryZeroIsTerminator(false);
+  read_options.SetLanguage(lldb::eLanguageTypeSwift);
 
-  isUTF16 = !objCName->endswith("UInt8_");
-  payloadAddr = valobj.GetValueAsUnsigned(0) + 16;
-  return true;
-}
+  return StringPrinter::ReadStringAndDumpToStream<
+      StringPrinter::StringElementType::UTF8>(read_options);
+};
 
 bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     ValueObject &valobj, Stream &stream,
@@ -110,7 +125,8 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
   auto ptrSize = process->GetAddressByteSize();
 
   auto object_sp = valobj.GetChildMemberWithName(g__object, true);
-  if (!object_sp) return false;
+  if (!object_sp)
+    return false;
 
   // We retrieve String contents by first extracting the
   // platform-independent 128-bit raw value representation from
@@ -125,7 +141,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     static ConstString g__countAndFlags("_countAndFlags");
 
     auto countAndFlags =
-      object_sp->GetChildAtNamePath({g__countAndFlags, g__storage, g__value});
+        object_sp->GetChildAtNamePath({g__countAndFlags, g__storage, g__value});
     if (!countAndFlags)
       return false;
     raw0 = countAndFlags->GetValueAsUnsigned(0);
@@ -145,12 +161,14 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     static ConstString g__flags("_flags");
 
     auto count_sp = object_sp->GetChildAtNamePath({g__count, g__value});
-    if (!count_sp) return false;
+    if (!count_sp)
+      return false;
     uint64_t count = count_sp->GetValueAsUnsigned(0);
 
     auto discriminator_sp =
-      object_sp->GetChildMemberWithName(g__discriminator, true);
-    if (!discriminator_sp) return false;
+        object_sp->GetChildMemberWithName(g__discriminator, true);
+    if (!discriminator_sp)
+      return false;
     uint64_t discriminator = discriminator_sp->GetValueAsUnsigned(0);
     if (discriminator > 0x7F) {
       // The discriminator only has 7 bits on 32-bit platforms.
@@ -158,12 +176,15 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     }
 
     auto flags_sp = object_sp->GetChildAtNamePath({g__flags, g__value});
-    if (!flags_sp) return false;
+    if (!flags_sp)
+      return false;
     uint64_t flags = flags_sp->GetValueAsUnsigned(0);
-    if (flags > 0xFFFF) return false;
+    if (flags > 0xFFFF)
+      return false;
 
     auto variant_sp = object_sp->GetChildMemberWithName(g__variant, true);
-    if (!variant_sp) return false;
+    if (!variant_sp)
+      return false;
 
     llvm::StringRef variantCase = variant_sp->GetValueAsCString();
 
@@ -179,15 +200,19 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
     } else if (variantCase.startswith("bridged")) {
       static ConstString g_bridged("bridged");
       auto anyobject_sp = variant_sp->GetChildMemberWithName(g_bridged, true);
-      if (!anyobject_sp) return false;
+      if (!anyobject_sp)
+        return false;
       payload_sp = anyobject_sp->GetChildAtIndex(0, true); // "instance"
     } else {
-      return false; // Unknown variant
+      lldbassert("Uknown variant");
+      return false;
     }
-    if (!payload_sp) return false;
+    if (!payload_sp)
+      return false;
     uint64_t pointerBits = payload_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-  
-    if (pointerBits == LLDB_INVALID_ADDRESS) return false;
+
+    if (pointerBits == LLDB_INVALID_ADDRESS)
+      return false;
 
     if ((discriminator & 0xB0) == 0xA0) {
       raw0 = count | (pointerBits << 32);
@@ -197,65 +222,86 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
       raw1 = pointerBits | (discriminator << 56);
     }
   } else {
-    return false; // Unsupported arch?
+    lldbassert("Unsupported arch?");
+    return false;
   }
 
-  auto readStringFromAddress = [&](uint64_t startAddress, uint64_t length) {
-    if (length == 0) {
-      stream.Printf("\"\"");
-      return true;
-    }
+  // Copied from StringObject.swift
+  //
+  // TODO: Hyperlink to final set of documentation diagrams instead
+  //
+  /*
+  ┌─────────────────────╥─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+  │ Form                ║  7  │  6  │  5  │  4  │  3  │  2  │  1  │  0  │
+  ╞═════════════════════╬═════╪═════╪═════╪═════╪═════╧═════╧═════╧═════╡
+  │ Immortal, Small     ║  1  │ASCII│  1  │  0  │      small count      │
+  ├─────────────────────╫─────┼─────┼─────┼─────┼─────┬─────┬─────┬─────┤
+  │ Immortal, Large     ║  1  │  0  │  0  │  0  │  0  │ TBD │ TBD │ TBD │
+  ╞═════════════════════╬═════╪═════╪═════╪═════╪═════╪═════╪═════╪═════╡
+  │ Native              ║  0  │  0  │  0  │  0  │  0  │ TBD │ TBD │ TBD │
+  ├─────────────────────╫─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤
+  │ Shared              ║  x  │  0  │  0  │  0  │  1  │ TBD │ TBD │ TBD │
+  ├─────────────────────╫─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤
+  │ Shared, Bridged     ║  0  │  1  │  0  │  0  │  1  │ TBD │ TBD │ TBD │
+  ╞═════════════════════╬═════╪═════╪═════╪═════╪═════╪═════╪═════╪═════╡
+  │ Foreign             ║  x  │  0  │  0  │  1  │  1  │ TBD │ TBD │ TBD │
+  ├─────────────────────╫─────┼─────┼─────┼─────┼─────┼─────┼─────┼─────┤
+  │ Foreign, Bridged    ║  0  │  1  │  0  │  1  │  1  │ TBD │ TBD │ TBD │
+  └─────────────────────╨─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┘
 
-    read_options.SetLocation(startAddress);
-    read_options.SetProcessSP(process);
-    read_options.SetStream(&stream);
-    read_options.SetSourceSize(length);
-    read_options.SetNeedsZeroTermination(false);
-    read_options.SetIgnoreMaxLength(summary_options.GetCapping() ==
-                                    lldb::eTypeSummaryUncapped);
-    read_options.SetBinaryZeroIsTerminator(false);
-    read_options.SetLanguage(lldb::eLanguageTypeSwift);
-
-    return StringPrinter::ReadStringAndDumpToStream<
-      StringPrinter::StringElementType::UTF8>(read_options);
-  };
+  b7: isImmortal: Should the Swift runtime skip ARC
+    - Small strings are just values, always immortal
+    - Large strings can sometimes be immortal, e.g. literals
+  b6: (large) isBridged / (small) isASCII
+    - For large strings, this means lazily-bridged NSString: perform ObjC ARC
+    - Small strings repurpose this as a dedicated bit to remember ASCII-ness
+  b5: isSmall: Dedicated bit to denote small strings
+  b4: isForeign: aka isSlow, cannot provide access to contiguous UTF-8
+  b3: (large) not isTailAllocated: payload isn't a biased pointer
+    - Shared strings provide contiguous UTF-8 through extra level of indirection
+  */
 
   uint8_t discriminator = raw1 >> 56;
 
   if ((discriminator & 0xB0) == 0xA0) { // 1x10xxxx: Small string
     uint64_t count = (raw1 >> 56) & 0x0F;
     uint64_t maxCount = (ptrSize == 8 ? 15 : 10);
-    if (count > maxCount) return false;
+    if (count > maxCount)
+      return false;
 
     uint64_t buffer[2] = {raw0, raw1};
     DataExtractor data(buffer, count, process->GetByteOrder(), ptrSize);
 
     StringPrinter::ReadBufferAndDumpToStreamOptions options(read_options);
     options.SetData(data)
-      .SetStream(&stream)
-      .SetSourceSize(count)
-      .SetBinaryZeroIsTerminator(false)
-      .SetLanguage(lldb::eLanguageTypeSwift);
+        .SetStream(&stream)
+        .SetSourceSize(count)
+        .SetBinaryZeroIsTerminator(false)
+        .SetLanguage(lldb::eLanguageTypeSwift);
 
     return StringPrinter::ReadBufferAndDumpToStream<
-      StringPrinter::StringElementType::UTF8>(options);
+        StringPrinter::StringElementType::UTF8>(options);
 
   } else if ((discriminator & 0x78) == 0x00) { // x0000xxx: Biased address
     uint64_t bias = (ptrSize == 8 ? 32 : 20);
     lldb::addr_t address = (raw1 & 0x00FFFFFFFFFFFFFF) + bias;
     uint64_t count = raw0 & 0x0000FFFFFFFFFFFF;
-    return readStringFromAddress(address, count);
+    return readStringFromAddress(
+      address, count, process, stream, summary_options, read_options);
 
   } else if ((discriminator & 0xF8) == 0x08) { // 00001xxx: Shared
     lldb::addr_t address = (raw1 & 0x00FFFFFFFFFFFFFF);
     // FIXME: Verify that there is a _SharedStringStorage instance at `address`.
     uint64_t startOffset = (ptrSize == 8 ? 24 : 12);
 
-    lldb::addr_t start = process->ReadPointerFromMemory(address + startOffset, error);
-    if (error.Fail()) return false;
+    lldb::addr_t start =
+        process->ReadPointerFromMemory(address + startOffset, error);
+    if (error.Fail())
+      return false;
 
     uint64_t count = raw0 & 0x0000FFFFFFFFFFFF;
-    return readStringFromAddress(start, count);
+    return readStringFromAddress(
+      start, count, process, stream, summary_options, read_options);
 
   } else if ((discriminator & 0xE8) == 0x48) { // 010x1xxx: Bridged
     CompilerType id_type =
@@ -264,7 +310,7 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
 
     // We may have an NSString pointer inline, so try formatting it directly.
     lldb::addr_t address = (raw1 & 0x00FFFFFFFFFFFFFF);
-    DataExtractor DE(&address, ptrSize, process->GetByteOrder(), ptrSize);    
+    DataExtractor DE(&address, ptrSize, process->GetByteOrder(), ptrSize);
     auto nsstring = ValueObject::CreateValueObjectFromData(
         "nsstring", DE, valobj.GetExecutionContextRef(), id_type);
     if (!nsstring || nsstring->GetError().Fail())
@@ -272,12 +318,14 @@ bool lldb_private::formatters::swift::StringGuts_SummaryProvider(
 
     return NSStringSummaryProvider(*nsstring.get(), stream, summary_options);
 
-  } else if ((discriminator & 0xF8) == 0x18) { // 00011xxx: Exotic
+  } else if ((discriminator & 0xF8) == 0x18) { // 00011xxx: Foreign
     // Not currently generated
-    return false;
-  } else { // Invalid discriminator
+    lldbassert("Foreign non-bridged strings are not currently used in Swift");
     return false;
   }
+
+  lldbassert("Invalid discriminator");
+  return false;
 }
 
 bool lldb_private::formatters::swift::String_SummaryProvider(
@@ -359,54 +407,44 @@ bool lldb_private::formatters::swift::StaticString_SummaryProvider(
       StringPrinter::StringElementType::UTF8>(read_options);
 }
 
-bool lldb_private::formatters::swift::NSContiguousString_SummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  static ConstString g_guts("_guts");
-  ValueObjectSP guts_sp = valobj.GetChildMemberWithName(g_guts, true);
-  if (guts_sp)
-    return StringGuts_SummaryProvider(*guts_sp, stream, options);
-
-  static ConstString g_StringGutsType(MANGLING_PREFIX_STR "s11_StringGutsVD");
-  lldb::addr_t guts_location = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-  if (guts_location == LLDB_INVALID_ADDRESS)
+bool lldb_private::formatters::swift::SwiftSharedString_SummaryProvider_2(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &summary_options,
+    StringPrinter::ReadStringAndDumpToStreamOptions read_options) {
+  ProcessSP process(valobj.GetProcessSP());
+  if (!process)
     return false;
-  ProcessSP process_sp(valobj.GetProcessSP());
-  if (!process_sp)
+
+  auto ptr_size = process->GetAddressByteSize();
+
+  static ConstString g__value("_value");
+  static ConstString g__start("_start");
+  auto start = valobj.GetChildAtNamePath({g__start});
+  if (!start)
     return false;
-  size_t ptr_size = process_sp->GetAddressByteSize();
-  guts_location += 2 * ptr_size;
 
-  Status error;
-
-  unsigned num_words_in_guts = (ptr_size == 8) ? 2 : 3;
-  DataBufferSP buffer_sp(new DataBufferHeap(num_words_in_guts * ptr_size, 0));
-  uint8_t *buffer = buffer_sp->GetBytes();
-  for (unsigned I = 0; I < num_words_in_guts; ++I) {
-    InferiorSizedWord isw(process_sp->ReadPointerFromMemory(
-                              guts_location + (ptr_size * I), error),
-                          *process_sp);
-    buffer = isw.CopyToBuffer(buffer);
+  uint64_t startAddress = start->GetValueAsUnsigned(0);
+  uint64_t count;
+  if (ptr_size == 8) {
+    // Top 16 bits are flags, bottom 48 is length
+    static ConstString g__countAndFlags("_countAndFlags");
+    auto countAndFlags =
+      valobj.GetChildAtNamePath({g__countAndFlags, g__value});
+    if (!countAndFlags) {
+      return false;
+    }
+    count = countAndFlags->GetValueAsUnsigned(0) & 0x0000FFFFFFFFFFFF;
+  } else if (ptr_size == 4) {
+    static ConstString g__count("_count");
+    auto rawCount = valobj.GetChildAtNamePath({g__count, g__value});
+    count = rawCount->GetValueAsUnsigned(0);
+  } else {
+    lldbassert("Unsupported arch?");
+    return false;
   }
 
-  DataExtractor data(buffer_sp, process_sp->GetByteOrder(), ptr_size);
-
-  ExecutionContext exe_ctx(process_sp);
-  ExecutionContextScope *exe_scope = exe_ctx.GetBestExecutionContextScope();
-  auto reader =
-      process_sp->GetTarget().GetScratchSwiftASTContext(error, *exe_scope);
-  SwiftASTContext *lldb_swift_ast = reader.get();
-  if (!lldb_swift_ast)
-    return false;
-  CompilerType string_guts_type = lldb_swift_ast->GetTypeFromMangledTypename(
-      g_StringGutsType.GetCString(), error);
-  if (string_guts_type.IsValid() == false)
-    return false;
-
-  ValueObjectSP string_guts_sp = ValueObject::CreateValueObjectFromData(
-      "stringguts", data, valobj.GetExecutionContextRef(), string_guts_type);
-  if (string_guts_sp)
-    return StringGuts_SummaryProvider(*string_guts_sp, stream, options);
-  return false;
+  return readStringFromAddress(
+    startAddress, count, process, stream, summary_options, read_options);
 }
 
 bool lldb_private::formatters::swift::Bool_SummaryProvider(
