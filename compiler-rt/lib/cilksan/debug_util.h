@@ -18,15 +18,13 @@ enum debug_levels {
     DEBUG_CALLBACK   = 8,
     DEBUG_MEMORY     = 16,
     DEBUG_DEQUE      = 32,
-    DEBUG_REDUCER    = 64
+    DEBUG_REDUCER    = 64,
+    DEBUG_DISJOINTSET = 128
 };
 
 #if CILKSAN_DEBUG
-//static int debug_level = DEBUG_BAGS | DEBUG_CALLBACK | DEBUG_MEMORY | DEBUG_DEQUE | DEBUG_REDUCER;
-//static int debug_level = DEBUG_BAGS |  DEBUG_CALLBACK;
-static int debug_level = 0; // DEBUG_CALLBACK | DEBUG_MEMORY;
+static int debug_level = 0; // DEBUG_BASIC | DEBUG_BAGS | DEBUG_CALLBACK | DEBUG_DISJOINTSET | DEBUG_MEMORY;
 #else
-//static int debug_level = DEBUG_BAGS | DEBUG_CALLBACK | DEBUG_MEMORY | DEBUG_DEQUE | DEBUG_REDUCER;
 static int debug_level = 0;
 #endif
 

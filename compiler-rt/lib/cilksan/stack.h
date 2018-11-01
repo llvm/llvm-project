@@ -10,7 +10,6 @@
 
 #include "debug_util.h"
 
-
 // TB 20130123: I'm using my own custom stack type to let me
 // performance engineer this later.
 /*

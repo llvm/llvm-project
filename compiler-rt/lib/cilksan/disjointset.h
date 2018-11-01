@@ -22,7 +22,7 @@ private:
   DISJOINTSET_DATA_T const _node;
   // the oldest node representing the set that the _node belongs to
   DISJOINTSET_DATA_T _set_node;
-  DisjointSet_t *_set_parent;
+  DisjointSet_t *_set_parent = nullptr;
   uint64_t _rank; // roughly as the height of this node
 
   int64_t _ref_count;
@@ -68,6 +68,9 @@ private:
     assert(old_parent != NULL);
 
     old_parent->dec_ref_count();
+    DBG_TRACE(DEBUG_DISJOINTSET, "DS %ld points to DS %ld\n", _ID, that->_ID);
+    DBG_TRACE(DEBUG_DISJOINTSET, "DS %ld refcnt %ld\n",
+              that->_ID, that->_ref_count);
   }
 
   /*
@@ -139,14 +142,20 @@ private:
     return node;
   }
 
+  DisjointSet_t() = delete;
+  DisjointSet_t(const DisjointSet_t &) = delete;
+  DisjointSet_t(const DisjointSet_t &&) = delete;
+
 public:
   int64_t _ID;
 
-  DisjointSet_t(DISJOINTSET_DATA_T node) :
+  explicit DisjointSet_t(DISJOINTSET_DATA_T node) :
       _node(node), _set_node(node), _set_parent(NULL), _rank(0), _ref_count(0),
       _destructing(false), _ID(DS_ID++) {
     this->_set_parent = this;
     this->inc_ref_count();
+
+    DBG_TRACE(DEBUG_DISJOINTSET, "\nCreating DS %ld\n", _ID);
     WHEN_CILKSAN_DEBUG(debug_count++);
   }
 
@@ -164,6 +173,7 @@ public:
       // Otherwise, we run the risk of double freeing.
       _set_parent->dec_ref_count();
     }
+    DBG_TRACE(DEBUG_DISJOINTSET, "Deleting DS %ld\n", _ID);
 
 #if CILKSAN_DEBUG
     _destructing = false;
@@ -184,6 +194,7 @@ public:
       delete this;
       return 0;
     }
+    DBG_TRACE(DEBUG_DISJOINTSET, "DS %ld refcnt %ld\n", _ID, _ref_count);
     return _ref_count;
   }
 

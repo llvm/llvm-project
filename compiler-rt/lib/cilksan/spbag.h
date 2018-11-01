@@ -12,9 +12,8 @@
 #include <inttypes.h>
 
 #include "debug_util.h"
-#include "disjointset.h"
-#include "cilksan_internal.h"
 
+#define UNINIT_STACK_PTR ((uintptr_t)0LL)
 
 class SPBagInterface {
 public:
@@ -92,7 +91,7 @@ public:
 
   // The structure of a node in the SBag free list.
   struct FreeNode_t {
-    FreeNode_t *next;
+    FreeNode_t *next = nullptr;
   };
   static FreeNode_t *free_list;
 
@@ -128,7 +127,7 @@ static_assert(sizeof(SBag_t) >= sizeof(SBag_t::FreeNode_t),
 class PBag_t : public SPBagInterface {
 private:
   // the SBag that corresponds to the function instance that holds this PBag
-  SPBagInterface *_sib_sbag;
+  SPBagInterface *_sib_sbag = nullptr;
 
   PBag_t() {} // disable default constructor
 
@@ -142,6 +141,7 @@ public:
   static long debug_count;
   ~PBag_t() {
     debug_count--;
+    _sib_sbag = nullptr;
   }
 #endif
 
@@ -159,7 +159,7 @@ public:
   // Simple free-list allocator to conserve space and time in managing
   // PBag_t objects.
   struct FreeNode_t {
-    FreeNode_t *next;
+    FreeNode_t *next = nullptr;
   };
   static FreeNode_t *free_list;
 

@@ -1,6 +1,6 @@
 // -*- C++ -*-
-#ifndef __FRAME_DATA_T__
-#define __FRAME_DATA_T__
+#ifndef __FRAME_DATA_H__
+#define __FRAME_DATA_H__
 
 #include "csan.h"
 #include "disjointset.h"
@@ -24,8 +24,8 @@ typedef struct Entry_t {
 // Struct for keeping track of shadow frame
 typedef struct FrameData_t {
   Entry_t frame_data;
-  DisjointSet_t<SPBagInterface *> *Sbag;
-  DisjointSet_t<SPBagInterface *> *Pbag;
+  DisjointSet_t<SPBagInterface *> *Sbag = nullptr;
+  DisjointSet_t<SPBagInterface *> *Pbag = nullptr;
 
   void set_sbag(DisjointSet_t<SPBagInterface *> *that) {
     if (Sbag)
@@ -46,12 +46,11 @@ typedef struct FrameData_t {
   }
 
   void reset() {
-    set_sbag(NULL);
-    set_pbag(NULL);
+    set_sbag(nullptr);
+    set_pbag(nullptr);
   }
 
-  FrameData_t() :
-    Sbag(NULL), Pbag(NULL) { }
+  FrameData_t() { }
 
   ~FrameData_t() {
     // update ref counts
@@ -60,9 +59,7 @@ typedef struct FrameData_t {
 
   // Copy constructor and assignment operator ensure that reference
   // counts are properly maintained during resizing.
-  FrameData_t(const FrameData_t &copy) :
-    frame_data(copy.frame_data),
-    Sbag(NULL), Pbag(NULL) {
+  FrameData_t(const FrameData_t &copy) : frame_data(copy.frame_data) {
     set_sbag(copy.Sbag);
     set_pbag(copy.Pbag);
   }
@@ -81,4 +78,5 @@ typedef struct FrameData_t {
   }
 
 } FrameData_t;
-#endif // __FRAME_DATA_T__
+
+#endif // __FRAME_DATA_H__

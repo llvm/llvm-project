@@ -584,14 +584,14 @@ void CilkSanImpl_t::deinit() {
 
   WHEN_CILKSAN_DEBUG({
       if (DisjointSet_t<SPBagInterface *>::debug_count != 0)
-        fprintf(stderr, "DisjointSet_t<SPBagInterface *>::debug_count = %ld\n",
-                DisjointSet_t<SPBagInterface *>::debug_count);
+        std::cerr << "DisjointSet_t<SPBagInterface *>::debug_count = "
+                  << DisjointSet_t<SPBagInterface *>::debug_count << "\n";
       if (SBag_t::debug_count != 0)
-        fprintf(stderr, "SBag_t::debug_count = %ld\n",
-                SBag_t::debug_count);
+        std::cerr << "SBag_t::debug_count = "
+                  << SBag_t::debug_count << "\n";
       if (PBag_t::debug_count != 0)
-        fprintf(stderr, "PBag_t::debug_count = %ld\n",
-                PBag_t::debug_count);
+        std::cerr << "PBag_t::debug_count = "
+                  << PBag_t::debug_count << "\n";
       // cilksan_assert(DisjointSet_t<SPBagInterface *>::debug_count == 0);
       // cilksan_assert(SBag_t::debug_count == 0);
       // cilksan_assert(PBag_t::debug_count == 0);
@@ -628,6 +628,7 @@ void CilkSanImpl_t::init() {
 
   // for the main function before we enter the first Cilk context
   DisjointSet_t<SPBagInterface *> *sbag;
+  DBG_TRACE(DEBUG_BAGS, "Creating SBag for frame %ld\n", frame_id);
   sbag = new DisjointSet_t<SPBagInterface *>(new SBag_t(frame_id, NULL));
   cilksan_assert(sbag->get_set_node()->is_SBag());
   frame_stack.head()->set_sbag(sbag);

@@ -71,26 +71,21 @@ void LRU_List::access(Page_t *page) {
   // If not then decompress, add to LRU, if max size then compress and remove last element.
   assert(cache_size <= MAX_CACHE_SIZE);
   uint64_t page_id = page->page_id;
-  if (head && head->page->page_id == page_id) {
-    // std::cerr << " accessed head\n";
+  if (head && head->page->page_id == page_id)
     return;
-  }
+
   if (lru_page_ids.count(page_id) == 0) {
-    // std::cerr << " decompressing a page\n";
     // Decompress
     page->decompress();
     if (cache_size == MAX_CACHE_SIZE) {
-      // std::cerr << "  Must compress LRU page\n";
       uint64_t page_to_remove = tail->page->page_id;
       tail->page->compress();
-      //tail->page->fut = std::async(&Page_t::compress, tail->page);
       tail->page = NULL;
       tail = tail->previous;
       tail->next = NULL;
 
       LRU_Node *recycled = lru_page_ids[page_to_remove];
       lru_page_ids.erase(page_to_remove);
-      // int num_removed = lru_page_ids.erase(page_to_remove);
       lru_page_ids.insert({page_id, recycled});
 
       recycled->page = page;
@@ -100,37 +95,34 @@ void LRU_List::access(Page_t *page) {
       assert(head->next);
       head->next->previous = head;
     } else {
-      // std::cerr << "  Free space in LRU list\n";
       LRU_Node *new_node = &(free_list[cache_size]);
       lru_page_ids[page_id] = new_node;
       new_node->page = page;
       new_node->next = head;
       new_node->previous = NULL;
-      if (head == NULL) {
+      if (head == NULL)
         tail = new_node;
-      }
+
       head = new_node;
-      if (head->next) {
+      if (head->next)
         head->next->previous = head;
-      }
+
       cache_size++;
     }
   } else {
-    // std::cerr << " found the page in LRU\n";
     // Page found.
     LRU_Node *node = lru_page_ids[page_id];
-    if (node->previous != NULL) {
+    if (node->previous != NULL)
       node->previous->next = node->next;
-    } else {
+    else
       return;  // Already first element.
-    }
-    if (tail == node) {
-      tail = node->previous;
-    }
 
-    if (node->next != NULL) {
+    if (tail == node)
+      tail = node->previous;
+
+
+    if (node->next != NULL)
       node->next->previous = node->previous;
-    }
 
     node->next = head;
     node->previous = NULL;
@@ -305,67 +297,68 @@ const value_type00 &Static_Dictionary::operator[] (uint64_t key) {
   return *found;
 }
 
+/// Erase all entries from a region of this dictionary.  Not all entries in the
+/// region need to be populated.
 void Static_Dictionary::erase(uint64_t key, size_t size) {
   while (size > 0) {
+    // Get the effective size: the size of the region to erase within the same
+    // page.
     size_t eff_size = size;
     if (GET_PAGE_OFFSET(key) + size > PAGE_SIZE) {
       eff_size = (PAGE_SIZE - GET_PAGE_OFFSET(key));
     }
     assert(eff_size <= PAGE_SIZE);
+
+    // Find the page containing the first part of the region starting at key.
     uint64_t page_id = GET_PAGE_ID(key);
-    value_type00 *acc = nullptr;
+    Page_t *page = nullptr;
     if (__builtin_expect((lru_list.head &&
                           lru_list.head->page->page_id == page_id), 1)) {
-      acc = &(lru_list.head->page->buffer[GET_PAGE_OFFSET(key)]);
-    } else if (auto *page = lru_list.find_after_head(page_id)) {
-      acc = &(page->buffer[GET_PAGE_OFFSET(key)]);
+      page = lru_list.head->page;
+    } else if (page = lru_list.find_after_head(page_id)) {
     } else {
       auto found_page = page_table.find(page_id);
       if (found_page != page_table.end()) {
         // Decompress the page if need be.
         lru_list.access(found_page->second);
-        acc = &(found_page->second->buffer[GET_PAGE_OFFSET(key)]);
+        page = found_page->second;
       } else {
-        acc = nullptr;
       }
     }
+
+    // If there's no page, move on to the next one.
+    if (!page) {
+      size -= eff_size;
+      key += eff_size;
+      continue;
+    }
+
+    // Update the access
+    value_type00 *acc = &(page->buffer[GET_PAGE_OFFSET(key)]);
     if (acc) {
+      // Update this access in groups of identical entries in the shadow memory.
       size_t group_start = 0;
       size_t group_size = 1;
       while (group_start + group_size < eff_size) {
+        // Get a group of entries starting at acc that have identical
+        // information.
         while (group_start + group_size < eff_size &&
                (acc[group_start + group_size].getFunc() ==
                 acc[group_start].getFunc()) &&
                acc[group_start + group_size].sameAccessLocPtr(acc[group_start]))
           group_size++;
+        // Clear the whole group.
         if (acc[group_start].isValid()) {
           acc[group_start].dec_ref_counts(group_size);
           for (size_t i = 0; i < group_size; ++i)
             acc[group_start + i].clear();
         }
+        // Prepare to process the next group.
         group_start += group_size;
         group_size = 1;
       }
-      // for (size_t i = 0; i < eff_size; ++i)
-      //   if (acc[i].isValid())
-      //     acc[i].invalidate();
     }
-    //   for (int i = 0; i < eff_size; i++) {
-    //     // if (lru_list.head->page->buffer[GET_PAGE_OFFSET(key) + i].isValid()) {
-    //     //   lru_list.head->page->buffer[GET_PAGE_OFFSET(key) + i].invalidate();
-    //     // }
-    //   }
-    //   return;
-    // }
-    // auto found_page = page_table.find(page_id);
-    // if (found_page != page_table.end()) {
-    //   lru_list.access(found_page->second);
-    //   for (int i = 0; i < eff_size; i++) {
-    //     if (found_page->second->buffer[GET_PAGE_OFFSET(key) + i].isValid()) {
-    //       found_page->second->buffer[GET_PAGE_OFFSET(key) + i].invalidate();
-    //     }
-    //   }
-    // }
+    // Move on to the next page.
     size -= eff_size;
     key += eff_size;
   }
@@ -483,9 +476,9 @@ void Static_Dictionary::set(uint64_t key, size_t size, value_type00 &&f) {
   f.inc_ref_counts(size);
   while (size > 0) {
     size_t eff_size = size;
-    if (GET_PAGE_OFFSET(key) + size > PAGE_SIZE) {
+    if (GET_PAGE_OFFSET(key) + size > PAGE_SIZE)
       eff_size = PAGE_SIZE - GET_PAGE_OFFSET(key);
-    }
+
     uint64_t page_id = GET_PAGE_ID(key);
     value_type00 *acc = nullptr;
     if (__builtin_expect((lru_list.head &&
@@ -520,8 +513,6 @@ void Static_Dictionary::set(uint64_t key, size_t size, value_type00 &&f) {
         if (acc[group_start].isValid())
           acc[group_start].dec_ref_counts(group_size);
 
-        // for (size_t i = 0; i < group_size; ++i)
-        //   acc[group_start + i].overwrite(f);
         group_start += group_size;
         group_size = 1;
       }
@@ -529,22 +520,6 @@ void Static_Dictionary::set(uint64_t key, size_t size, value_type00 &&f) {
         acc[i].overwrite(f);
     }
 
-    //   for (int i = 0; i < eff_size; i++) {
-    //     // if (lru_list.head->page->buffer[GET_PAGE_OFFSET(key) + i].isValid()) {
-    //     //   lru_list.head->page->buffer[GET_PAGE_OFFSET(key) + i].invalidate();
-    //     // }
-    //   }
-    //   return;
-    // }
-    // auto found_page = page_table.find(page_id);
-    // if (found_page != page_table.end()) {
-    //   lru_list.access(found_page->second);
-    //   for (int i = 0; i < eff_size; i++) {
-    //     if (found_page->second->buffer[GET_PAGE_OFFSET(key) + i].isValid()) {
-    //       found_page->second->buffer[GET_PAGE_OFFSET(key) + i].invalidate();
-    //     }
-    //   }
-    // }
     size -= eff_size;
     key += eff_size;
   }
@@ -557,7 +532,6 @@ void Static_Dictionary::insert_into_found_group(uint64_t key, size_t size,
   uint64_t page_id = GET_PAGE_ID(key);
   assert(lru_list.head && lru_list.head->page->page_id == page_id);
   assert(dst == &lru_list.head->page->buffer[GET_PAGE_OFFSET(key)]);
-  // value_type00 *my_dst = &lru_list.head->page->buffer[GET_PAGE_OFFSET(key)];
   value_type00 *my_dst = dst;
   // Overwrite the table entries.
   for (int i = 0; i < size; i++) {
