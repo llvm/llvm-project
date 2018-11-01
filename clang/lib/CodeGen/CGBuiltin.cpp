@@ -12605,8 +12605,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i32_f64:
   case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i64_f32:
   case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i64_f64:
-  case WebAssembly::BI__builtin_wasm_trunc_saturate_s_v4i32_v4f32:
-  case WebAssembly::BI__builtin_wasm_trunc_saturate_s_v2i64_v2f64: {
+  case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i32x4_f32x4:
+  case WebAssembly::BI__builtin_wasm_trunc_saturate_s_i64x2_f64x2: {
     Value *Src = EmitScalarExpr(E->getArg(0));
     llvm::Type *ResT = ConvertType(E->getType());
     Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_trunc_saturate_signed,
@@ -12617,8 +12617,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i32_f64:
   case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i64_f32:
   case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i64_f64:
-  case WebAssembly::BI__builtin_wasm_trunc_saturate_u_v4i32_v4f32:
-  case WebAssembly::BI__builtin_wasm_trunc_saturate_u_v2i64_v2f64: {
+  case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i32x4_f32x4:
+  case WebAssembly::BI__builtin_wasm_trunc_saturate_u_i64x2_f64x2: {
     Value *Src = EmitScalarExpr(E->getArg(0));
     llvm::Type *ResT = ConvertType(E->getType());
     Value *Callee = CGM.getIntrinsic(Intrinsic::wasm_trunc_saturate_unsigned,

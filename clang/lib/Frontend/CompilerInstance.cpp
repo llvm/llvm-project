@@ -374,7 +374,7 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
 void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   const PreprocessorOptions &PPOpts = getPreprocessorOpts();
 
-  // The module manager holds a reference to the old prepreocssor (if any).
+  // The module manager holds a reference to the old preprocessor (if any).
   ModuleManager.reset();
 
   // Create a PTH manager if we are using some form of a token cache.
