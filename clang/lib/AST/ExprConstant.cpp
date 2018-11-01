@@ -33,6 +33,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Analysis/Analyses/OSLog.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
@@ -8101,6 +8102,12 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
 
     llvm_unreachable("unexpected EvalMode");
+  }
+
+  case Builtin::BI__builtin_os_log_format_buffer_size: {
+    analyze_os_log::OSLogBufferLayout Layout;
+    analyze_os_log::computeOSLogBufferLayout(Info.Ctx, E, Layout);
+    return Success(Layout.size().getQuantity(), E);
   }
 
   case Builtin::BI__builtin_bswap16:
