@@ -507,13 +507,6 @@ bool FileSpec::ResolvePath() {
   return m_is_resolved;
 }
 
-uint64_t FileSpec::GetByteSize() const {
-  uint64_t Size = 0;
-  if (llvm::sys::fs::file_size(GetPath(), Size))
-    return 0;
-  return Size;
-}
-
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
 uint32_t FileSpec::GetPermissions() const {
