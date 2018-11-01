@@ -11,3 +11,14 @@
 // CHECK-PRECOMPILE-SAME: header1.h
 // CHECK-PRECOMPILE-SAME: header2.h
 // CHECK-PRECOMPILE-SAME: header3.h
+//
+// RUN: %clang -fmodules-ts -fmodule-name=foobar -x c++-header -fsyntax-only %S/Inputs/header1.h %S/Inputs/header2.h %S/Inputs/header3.h -v 2>&1 | FileCheck %s --check-prefix=CHECK-SYNTAX-ONLY
+// CHECK-SYNTAX-ONLY: -cc1 {{.*}} -fsyntax-only
+// CHECK-SYNTAX-ONLY-SAME: -fmodules-ts
+// CHECK-SYNTAX-ONLY-SAME: -fno-implicit-modules
+// CHECK-SYNTAX-ONLY-SAME: -fmodule-name=foobar
+// CHECK-SYNTAX-ONLY-NOT: -o{{ }}
+// CHECK-SYNTAX-ONLY-SAME: -x c++
+// CHECK-SYNTAX-ONLY-SAME: header1.h
+// CHECK-SYNTAX-ONLY-SAME: header2.h
+// CHECK-SYNTAX-ONLY-SAME: header3.h

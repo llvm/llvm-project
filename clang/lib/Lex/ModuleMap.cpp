@@ -523,7 +523,7 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
 
   // At this point, only non-modular includes remain.
 
-  if (LangOpts.ModulesStrictDeclUse) {
+  if (RequestingModule && LangOpts.ModulesStrictDeclUse) {
     Diags.Report(FilenameLoc, diag::err_undeclared_use_of_module)
         << RequestingModule->getTopLevelModule()->Name << Filename;
   } else if (RequestingModule && RequestingModuleIsModuleInterface &&
