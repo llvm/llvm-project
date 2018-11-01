@@ -137,7 +137,7 @@ void *test_ReturnAddress() {
 // CHECK: = tail call i8* @llvm.returnaddress(i32 0)
 // CHECK: ret i8*
 
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(__i386__) || defined(__x86_64__) || defined (__aarch64__)
 void *test_AddressOfReturnAddress() {
   return _AddressOfReturnAddress();
 }
