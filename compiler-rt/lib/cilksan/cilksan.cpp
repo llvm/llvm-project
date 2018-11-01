@@ -477,7 +477,7 @@ void CilkSanImpl_t::do_read(const csi_id_t load_id,
 
   // handle the prefix
   uintptr_t next_addr = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(addr);
-  ptrdiff_t prefix_size = next_addr - addr;
+  std::ptrdiff_t prefix_size = next_addr - addr;
   cilksan_assert(prefix_size >= 0 && prefix_size < MAX_GRAIN_SIZE);
 
   if ((size_t)prefix_size >= mem_size) {
@@ -513,7 +513,7 @@ void CilkSanImpl_t::do_write(const csi_id_t store_id,
 
   // handle the prefix
   uintptr_t next_addr = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(addr);
-  ptrdiff_t prefix_size = next_addr - addr;
+  std::ptrdiff_t prefix_size = next_addr - addr;
   cilksan_assert(prefix_size >= 0 && prefix_size < MAX_GRAIN_SIZE);
 
   if ((size_t)prefix_size >= mem_size) { // access falls within a max grain sized block
