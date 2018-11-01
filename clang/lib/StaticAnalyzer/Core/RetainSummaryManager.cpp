@@ -101,10 +101,11 @@ static bool isOSObjectRelated(const CXXMethodDecl *MD) {
     return true;
 
   for (ParmVarDecl *Param : MD->parameters()) {
-    QualType PT = Param->getType();
-    if (CXXRecordDecl *RD = PT->getPointeeType()->getAsCXXRecordDecl())
-      if (isOSObjectSubclass(RD))
-        return true;
+    QualType PT = Param->getType()->getPointeeType();
+    if (!PT.isNull())
+      if (CXXRecordDecl *RD = PT->getAsCXXRecordDecl())
+        if (isOSObjectSubclass(RD))
+          return true;
   }
 
   return false;
