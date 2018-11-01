@@ -13362,7 +13362,8 @@ PPCTargetLowering::getConstraintType(StringRef Constraint) const {
   } else if (Constraint == "wc") { // individual CR bits.
     return C_RegisterClass;
   } else if (Constraint == "wa" || Constraint == "wd" ||
-             Constraint == "wf" || Constraint == "ws") {
+             Constraint == "wf" || Constraint == "ws" ||
+             Constraint == "wi") {
     return C_RegisterClass; // VSX registers.
   }
   return TargetLowering::getConstraintType(Constraint);
@@ -13392,6 +13393,8 @@ PPCTargetLowering::getSingleConstraintMatchWeight(
     return CW_Register;
   else if (StringRef(constraint) == "ws" && type->isDoubleTy())
     return CW_Register;
+  else if (StringRef(constraint) == "wi" && type->isIntegerTy(64))
+    return CW_Register; // just hold 64-bit integers data.
 
   switch (*constraint) {
   default:
@@ -13474,7 +13477,8 @@ PPCTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     // An individual CR bit.
     return std::make_pair(0U, &PPC::CRBITRCRegClass);
   } else if ((Constraint == "wa" || Constraint == "wd" ||
-             Constraint == "wf") && Subtarget.hasVSX()) {
+             Constraint == "wf" || Constraint == "wi") &&
+             Subtarget.hasVSX()) {
     return std::make_pair(0U, &PPC::VSRCRegClass);
   } else if (Constraint == "ws" && Subtarget.hasVSX()) {
     if (VT == MVT::f32 && Subtarget.hasP8Vector())

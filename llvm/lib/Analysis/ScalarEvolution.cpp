@@ -3060,7 +3060,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
       SmallVector<const SCEV*, 7> AddRecOps;
       for (int x = 0, xe = AddRec->getNumOperands() +
              OtherAddRec->getNumOperands() - 1; x != xe && !Overflow; ++x) {
-        const SCEV *Term = getZero(Ty);
+        SmallVector <const SCEV *, 7> SumOps;
         for (int y = x, ye = 2*x+1; y != ye && !Overflow; ++y) {
           uint64_t Coeff1 = Choose(x, 2*x - y, Overflow);
           for (int z = std::max(y-x, y-(int)AddRec->getNumOperands()+1),
@@ -3075,12 +3075,13 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<const SCEV *> &Ops,
             const SCEV *CoeffTerm = getConstant(Ty, Coeff);
             const SCEV *Term1 = AddRec->getOperand(y-z);
             const SCEV *Term2 = OtherAddRec->getOperand(z);
-            Term = getAddExpr(Term, getMulExpr(CoeffTerm, Term1, Term2,
-                                               SCEV::FlagAnyWrap, Depth + 1),
-                              SCEV::FlagAnyWrap, Depth + 1);
+            SumOps.push_back(getMulExpr(CoeffTerm, Term1, Term2,
+                                        SCEV::FlagAnyWrap, Depth + 1));
           }
         }
-        AddRecOps.push_back(Term);
+        if (SumOps.empty())
+          SumOps.push_back(getZero(Ty));
+        AddRecOps.push_back(getAddExpr(SumOps, SCEV::FlagAnyWrap, Depth + 1));
       }
       if (!Overflow) {
         const SCEV *NewAddRec = getAddRecExpr(AddRecOps, AddRec->getLoop(),
