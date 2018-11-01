@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype obj -o - %s | llvm-dwarfdump --verify -
+# RUN: llvm-mc -triple x86_64-unknown-linux-gnu -filetype obj -o - %s | llvm-dwarfdump --verify -
 
 	.text
 
