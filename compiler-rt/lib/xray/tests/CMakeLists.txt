@@ -93,6 +93,7 @@ macro(add_xray_unittest testname)
         # the build/test cycle.
         COMPILE_DEPS ${TEST_SOURCES} ${COMPILER_RT_GTEST_SOURCE}
         ${XRAY_HEADERS} ${XRAY_ALL_SOURCE_FILES_ABS_PATHS}
+        "test_helpers.h"
         RUNTIME "${XRAY_RUNTIME_LIBS}"
         DEPS gtest xray llvm-xray LLVMXRay LLVMTestingSupport
         CFLAGS ${XRAY_UNITTEST_CFLAGS}
