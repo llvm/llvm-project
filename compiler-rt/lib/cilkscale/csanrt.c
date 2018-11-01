@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <assert.h>
-//#include "csan.h"
 #include <csi/csi.h>
 
 #define CSIRT_API __attribute__((visibility("default")))
@@ -29,6 +28,7 @@ typedef enum {
   FED_TYPE_TASK_EXIT,
   FED_TYPE_DETACH_CONTINUE,
   FED_TYPE_SYNC,
+  FED_TYPE_ALLOCA,
   NUM_FED_TYPES // Must be last
 } fed_type_t;
 
@@ -40,7 +40,7 @@ typedef struct {
 
 // Types of sizeinfo tables that we maintain across all units.
 typedef enum {
-  SIZEINFO_TYPE_BASICBLOCK,
+  SIZEINFO_TYPE_BB,
   NUM_SIZEINFO_TYPES // Must be last
 } sizeinfo_type_t;
 
@@ -351,8 +351,13 @@ const source_loc_t *__csi_get_sync_source_loc(const csi_id_t sync_id) {
 }
 
 CSIRT_API
+const source_loc_t *__csi_get_alloca_source_loc(const csi_id_t alloca_id) {
+  return get_fed_entry(FED_TYPE_ALLOCA, alloca_id);
+}
+
+CSIRT_API
 const sizeinfo_t *__csi_get_bb_sizeinfo(const csi_id_t bb_id) {
-  return get_sizeinfo_entry(SIZEINFO_TYPE_BASICBLOCK, bb_id);
+  return get_sizeinfo_entry(SIZEINFO_TYPE_BB, bb_id);
 }
 
 EXTERN_C_END

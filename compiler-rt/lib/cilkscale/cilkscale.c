@@ -207,15 +207,13 @@ void __csi_bb_exit(const csi_id_t bb_id, const bb_prop_t prop) {
 }
 
 CILKTOOL_API
-void __csi_before_call(const csi_id_t call_id,
-                       const csi_id_t func_id,
+void __csi_before_call(const csi_id_t call_id, const csi_id_t func_id,
                        const call_prop_t prop) {
   return;
 }
 
 CILKTOOL_API
-void __csi_after_call(const csi_id_t call_id,
-                      const csi_id_t func_id,
+void __csi_after_call(const csi_id_t call_id, const csi_id_t func_id,
                       const call_prop_t prop) {
   return;
 }
@@ -240,112 +238,21 @@ void __csi_before_store(const csi_id_t store_id, const void *addr, int32_t size,
 
 CILKTOOL_API
 void __csi_after_store(const csi_id_t store_id, const void *addr, int32_t size,
-                        store_prop_t prop) {
+                       store_prop_t prop) {
   return;
 }
 
-/* void __csan_func_entry(const csi_id_t func_id, void *sp, */
-/*                        const func_prop_t prop) */
-/* { */
-/*   context_stack_t *stack; */
-/*   gettime(&(stack->stop)); */
+CILKTOOL_API
+void __csi_before_alloca(const csi_id_t alloca_id, uint64_t num_bytes,
+                         const alloca_prop_t prop) {
+  return;
+}
 
-/* #if TRACE_CALLS */
-/*   fprintf(stderr, "cilk_enter_begin(%p, %p, %p)\n", sf, this_fn, rip); */
-/* #endif */
-
-/* #if SERIAL_TOOL */
-/*   stack = &(ctx_stack); */
-/* #else */
-/*   stack = &(REDUCER_VIEW(ctx_stack)); */
-/* #endif */
-
-/*   assert(NULL != stack->bot); */
-
-/*   if (stack->bot->func_type != HELPER) { */
-/* #if TRACE_CALLS */
-/*     if (MAIN == stack->bot->func_type) { */
-/*       printf("parent is MAIN\n"); */
-/*     } else { */
-/*       printf("parent is SPAWN\n"); */
-/*     } */
-/* #endif */
-/*     // TB 2014-12-18: This assert won't necessarily pass, if shrink-wrapping has */
-/*     // taken place. */
-/*     /\* assert(stack->in_user_code); *\/ */
-      
-/*     uint64_t strand_time = elapsed_nsec(&(stack->stop), &(stack->start)); */
-/*     stack->running_wrk += strand_time; */
-/*     stack->bot->contin_spn += strand_time; */
-      
-/*     stack->in_user_code = false; */
-/*   } else { */
-/*     assert(!(stack->in_user_code)); */
-/*   } */
-
-/*   /\* Push new frame onto the stack *\/ */
-/*   context_stack_push(stack, SPAWN); */
-/*   stack->in_user_code = true; */
-/*   gettime(&(stack->start)); */
-/* } */
-
-/* void __csan_func_exit(const csi_id_t func_exit_id, */
-/*                       const csi_id_t func_id, */
-/*                       const func_exit_prop_t prop) { */
-/*   context_stack_t *stack; */
-/* #if SERIAL_TOOL */
-/*   stack = &(ctx_stack); */
-/* #else */
-/*   stack = &(REDUCER_VIEW(ctx_stack)); */
-/* #endif */
-
-/*   context_stack_frame_t *old_bottom; */
-  
-/*   gettime(&(stack->stop)); */
-
-/*   assert(stack->in_user_code); */
-/*   stack->in_user_code = false; */
-
-/*   if (SPAWN == stack->bot->func_type) { */
-/* #if TRACE_CALLS */
-/*     fprintf(stderr, "cilk_leave_begin(%p) from SPAWN\n", sf); */
-/* #endif */
-/*     uint64_t strand_time = elapsed_nsec(&(stack->stop), &(stack->start)); */
-/*     stack->running_wrk += strand_time; */
-/*     stack->bot->contin_spn += strand_time; */
-/*     assert(NULL != stack->bot->parent); */
-
-/*     assert(0 == stack->bot->lchild_spn); */
-/*     stack->bot->prefix_spn += stack->bot->contin_spn; */
-
-/*     /\* Pop the stack *\/ */
-/*     old_bottom = context_stack_pop(stack); */
-/*     stack->bot->contin_spn += old_bottom->prefix_spn; */
-    
-/*   } else { */
-/* #if TRACE_CALLS */
-/*     fprintf(stderr, "cilk_leave_begin(%p) from HELPER\n", sf); */
-/* #endif */
-
-/*     assert(HELPER != stack->bot->parent->func_type); */
-
-/*     assert(0 == stack->bot->lchild_spn); */
-/*     stack->bot->prefix_spn += stack->bot->contin_spn; */
-
-/*     /\* Pop the stack *\/ */
-/*     old_bottom = context_stack_pop(stack); */
-/*     if (stack->bot->contin_spn + old_bottom->prefix_spn > stack->bot->lchild_spn) { */
-/*       // fprintf(stderr, "updating longest child\n"); */
-/*       stack->bot->prefix_spn += stack->bot->contin_spn; */
-/*       stack->bot->lchild_spn = old_bottom->prefix_spn; */
-/*       stack->bot->contin_spn = 0; */
-/*     } */
-    
-/*   } */
-
-/*   free(old_bottom); */
-/*   gettime(&(stack->start)); */
-/* } */
+CILKTOOL_API
+void __csi_after_alloca(const csi_id_t alloca_id, const void *addr,
+                        uint64_t num_bytes, const alloca_prop_t prop) {
+  return;
+}
 
 CILKTOOL_API
 void __csi_detach(const csi_id_t detach_id) {
@@ -385,8 +292,8 @@ void __csi_task(const csi_id_t task_id, const csi_id_t detach_id, void *sp) {
 
 CILKTOOL_API
 void __csi_task_exit(const csi_id_t task_exit_id,
-                      const csi_id_t task_id,
-                      const csi_id_t detach_id) {
+                     const csi_id_t task_id,
+                     const csi_id_t detach_id) {
   context_stack_t *stack;
 #if SERIAL_TOOL
   stack = &(ctx_stack);
@@ -408,7 +315,6 @@ void __csi_task_exit(const csi_id_t task_exit_id,
   /* Pop the stack */
   old_bottom = context_stack_pop(stack);
   if (stack->bot->contin_spn + old_bottom->prefix_spn > stack->bot->lchild_spn) {
-    // fprintf(stderr, "updating longest child\n");
     stack->bot->prefix_spn += stack->bot->contin_spn;
     stack->bot->lchild_spn = old_bottom->prefix_spn;
     stack->bot->contin_spn = 0;
@@ -419,7 +325,7 @@ void __csi_task_exit(const csi_id_t task_exit_id,
 
 CILKTOOL_API
 void __csi_detach_continue(const csi_id_t detach_continue_id,
-                            const csi_id_t detach_id) {
+                           const csi_id_t detach_id) {
   // In the continuation
 #if TRACE_CALLS
   fprintf(stderr, "detach_continue(%ld, %ld)\n",
@@ -437,7 +343,7 @@ void __csi_detach_continue(const csi_id_t detach_continue_id,
 }
 
 CILKTOOL_API
-void __csi_sync(const csi_id_t sync_id) {
+void __csi_before_sync(const csi_id_t sync_id) {
   context_stack_t *stack;
 #if SERIAL_TOOL
   stack = &(ctx_stack);
@@ -457,6 +363,16 @@ void __csi_sync(const csi_id_t sync_id) {
   }
   stack->bot->lchild_spn = 0;
   stack->bot->contin_spn = 0;
+}
+
+CILKTOOL_API
+void __csi_after_sync(const csi_id_t sync_id) {
+  context_stack_t *stack;
+#if SERIAL_TOOL
+  stack = &(ctx_stack);
+#else
+  stack = &(REDUCER_VIEW(ctx_stack));
+#endif
 
   gettime(&(stack->start));
 }
