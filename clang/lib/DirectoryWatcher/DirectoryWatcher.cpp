@@ -94,6 +94,8 @@ struct DirectoryScan {
 
 #if __has_include(<CoreServices/CoreServices.h>)
 # include "DirectoryWatcher-mac.inc.h"
+#elif __has_include(<sys/inotify.h>)
+# include "DirectoryWatcher-linux.inc.h"
 #else
 
 struct DirectoryWatcher::Implementation {
