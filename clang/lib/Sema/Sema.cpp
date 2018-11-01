@@ -650,7 +650,8 @@ void Sema::getUndefinedButUsed(
         continue;
       if (FD->isExternallyVisible() &&
           !isExternalWithNoLinkageType(FD) &&
-          !FD->getMostRecentDecl()->isInlined())
+          !FD->getMostRecentDecl()->isInlined() &&
+          !FD->hasAttr<ExcludeFromExplicitInstantiationAttr>())
         continue;
       if (FD->getBuiltinID())
         continue;
@@ -660,7 +661,8 @@ void Sema::getUndefinedButUsed(
         continue;
       if (VD->isExternallyVisible() &&
           !isExternalWithNoLinkageType(VD) &&
-          !VD->getMostRecentDecl()->isInline())
+          !VD->getMostRecentDecl()->isInline() &&
+          !VD->hasAttr<ExcludeFromExplicitInstantiationAttr>())
         continue;
 
       // Skip VarDecls that lack formal definitions but which we know are in

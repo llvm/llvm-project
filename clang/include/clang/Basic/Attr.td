@@ -1857,7 +1857,7 @@ def SwiftImportAsNonGeneric : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
-def SwiftImportPropertyAsAccessors : InheritableAttr { 
+def SwiftImportPropertyAsAccessors : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly
   // from API notes.
   let Spellings = [];
@@ -3087,6 +3087,13 @@ def InternalLinkage : InheritableAttr {
   let Spellings = [Clang<"internal_linkage">];
   let Subjects = SubjectList<[Var, Function, CXXRecord]>;
   let Documentation = [InternalLinkageDocs];
+}
+
+def ExcludeFromExplicitInstantiation : InheritableAttr {
+  let Spellings = [Clang<"exclude_from_explicit_instantiation">];
+  let Subjects = SubjectList<[Var, Function, CXXRecord]>;
+  let Documentation = [ExcludeFromExplicitInstantiationDocs];
+  let MeaningfulToClassTemplateDefinition = 1;
 }
 
 def NoDestroy : InheritableAttr {
