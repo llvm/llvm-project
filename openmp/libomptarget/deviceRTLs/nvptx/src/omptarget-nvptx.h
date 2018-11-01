@@ -123,7 +123,7 @@ enum DATA_SHARING_SIZES {
 struct DataSharingStateTy {
   __kmpc_data_sharing_slot *SlotPtr[DS_Max_Warp_Number];
   void *StackPtr[DS_Max_Warp_Number];
-  void *FramePtr[DS_Max_Warp_Number];
+  void * volatile FramePtr[DS_Max_Warp_Number];
   int32_t ActiveThreads[DS_Max_Warp_Number];
 };
 // Additional worker slot type which is initialized with the default worker slot
