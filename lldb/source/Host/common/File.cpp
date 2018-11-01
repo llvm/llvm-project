@@ -249,19 +249,6 @@ Status File::Open(const char *path, uint32_t options, uint32_t permissions) {
   return error;
 }
 
-uint32_t File::GetPermissions(const FileSpec &file_spec, Status &error) {
-  if (file_spec) {
-    error.Clear();
-    auto Perms = llvm::sys::fs::getPermissions(file_spec.GetPath());
-    if (Perms)
-      return *Perms;
-    error = Status(Perms.getError());
-    return 0;
-  } else
-    error.SetErrorString("empty file spec");
-  return 0;
-}
-
 uint32_t File::GetPermissions(Status &error) const {
   int fd = GetDescriptor();
   if (fd != kInvalidDescriptor) {
