@@ -2017,7 +2017,7 @@ ScriptInterpreterPython::ScriptedBreakpointResolverSearchDepth(
 StructuredData::ObjectSP
 ScriptInterpreterPython::LoadPluginModule(const FileSpec &file_spec,
                                           lldb_private::Status &error) {
-  if (!file_spec.Exists()) {
+  if (!FileSystem::Instance().Exists(file_spec)) {
     error.SetErrorString("no such file");
     return StructuredData::ObjectSP();
   }

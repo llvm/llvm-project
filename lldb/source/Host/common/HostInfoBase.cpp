@@ -42,7 +42,7 @@ namespace {
 
 struct HostInfoBaseFields {
   ~HostInfoBaseFields() {
-    if (m_lldb_process_tmp_dir.Exists()) {
+    if (FileSystem::Instance().Exists(m_lldb_process_tmp_dir)) {
       // Remove the LLDB temporary directory if we have one. Set "recurse" to
       // true to all files that were created for the LLDB process can be
       // cleaned up.

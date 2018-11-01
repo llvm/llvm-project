@@ -179,7 +179,7 @@ ModuleSP DynamicLoaderHexagonDYLD::GetTargetExecutable() {
     return executable;
 
   // The target executable file does not exits
-  if (!executable->GetFileSpec().Exists())
+  if (!FileSystem::Instance().Exists(executable->GetFileSpec()))
     return executable;
 
   // Prep module for loading

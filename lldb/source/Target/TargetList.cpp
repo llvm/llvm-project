@@ -347,7 +347,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     arch = specified_arch;
 
   FileSpec file(user_exe_path, false);
-  if (!file.Exists() && user_exe_path.startswith("~")) {
+  if (!FileSystem::Instance().Exists(file) && user_exe_path.startswith("~")) {
     // we want to expand the tilde but we don't want to resolve any symbolic
     // links so we can't use the FileSpec constructor's resolve flag
     llvm::SmallString<64> unglobbed_path;
@@ -372,7 +372,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       if (! llvm::sys::fs::current_path(cwd)) {
         FileSpec cwd_file(cwd.c_str(), false);
         cwd_file.AppendPathComponent(file);
-        if (cwd_file.Exists())
+        if (FileSystem::Instance().Exists(cwd_file))
           file = cwd_file;
       }
     }

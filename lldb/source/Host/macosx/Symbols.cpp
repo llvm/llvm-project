@@ -147,7 +147,7 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
               }
               ++items_found;
               FileSpec exec_filespec(path, path[0] == '~');
-              if (exec_filespec.Exists()) {
+              if (FileSystem::Instance().Exists(exec_filespec)) {
                 success = true;
                 return_module_spec.GetFileSpec() = exec_filespec;
               }
@@ -494,7 +494,8 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
     return false;
   }
 
-  if (uuid_ptr || (file_spec_ptr && file_spec_ptr->Exists())) {
+  if (uuid_ptr ||
+      (file_spec_ptr && FileSystem::Instance().Exists(*file_spec_ptr))) {
     static bool g_located_dsym_for_uuid_exe = false;
     static bool g_dsym_for_uuid_exe_exists = false;
     static char g_dsym_for_uuid_exe_path[PATH_MAX];
@@ -506,13 +507,15 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
       if (dsym_for_uuid_exe_path_cstr) {
         dsym_for_uuid_exe_spec.SetFile(dsym_for_uuid_exe_path_cstr, true,
                                        FileSpec::Style::native);
-        g_dsym_for_uuid_exe_exists = dsym_for_uuid_exe_spec.Exists();
+        g_dsym_for_uuid_exe_exists =
+            FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
       }
 
       if (!g_dsym_for_uuid_exe_exists) {
         dsym_for_uuid_exe_spec.SetFile("/usr/local/bin/dsymForUUID", false,
                                        FileSpec::Style::native);
-        g_dsym_for_uuid_exe_exists = dsym_for_uuid_exe_spec.Exists();
+        g_dsym_for_uuid_exe_exists =
+            FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
         if (!g_dsym_for_uuid_exe_exists) {
           long bufsize;
           if ((bufsize = sysconf(_SC_GETPW_R_SIZE_MAX)) != -1) {
@@ -527,7 +530,8 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
               dsymforuuid_path += "/bin/dsymForUUID";
               dsym_for_uuid_exe_spec.SetFile(dsymforuuid_path.c_str(), false,
                                              FileSpec::Style::native);
-              g_dsym_for_uuid_exe_exists = dsym_for_uuid_exe_spec.Exists();
+              g_dsym_for_uuid_exe_exists =
+                  FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
             }
           }
         }
@@ -535,7 +539,8 @@ bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
       if (!g_dsym_for_uuid_exe_exists && g_dbgshell_command != NULL) {
         dsym_for_uuid_exe_spec.SetFile(g_dbgshell_command, true,
                                        FileSpec::Style::native);
-        g_dsym_for_uuid_exe_exists = dsym_for_uuid_exe_spec.Exists();
+        g_dsym_for_uuid_exe_exists =
+            FileSystem::Instance().Exists(dsym_for_uuid_exe_spec);
       }
 
       if (g_dsym_for_uuid_exe_exists)

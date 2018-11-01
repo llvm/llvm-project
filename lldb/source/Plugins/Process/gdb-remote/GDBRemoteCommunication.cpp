@@ -18,6 +18,7 @@
 // Other libraries and framework includes
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Pipe.h"
@@ -1005,13 +1006,14 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
                   __FUNCTION__, env_debugserver_path);
   } else
     debugserver_file_spec = g_debugserver_file_spec;
-  bool debugserver_exists = debugserver_file_spec.Exists();
+  bool debugserver_exists =
+      FileSystem::Instance().Exists(debugserver_file_spec);
   if (!debugserver_exists) {
     // The debugserver binary is in the LLDB.framework/Resources directory.
     debugserver_file_spec = HostInfo::GetSupportExeDir();
     if (debugserver_file_spec) {
       debugserver_file_spec.AppendPathComponent(DEBUGSERVER_BASENAME);
-      debugserver_exists = debugserver_file_spec.Exists();
+      debugserver_exists = FileSystem::Instance().Exists(debugserver_file_spec);
       if (debugserver_exists) {
         if (log)
           log->Printf(

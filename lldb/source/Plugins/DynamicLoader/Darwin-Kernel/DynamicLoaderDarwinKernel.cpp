@@ -784,7 +784,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // to do anything useful. This will force a clal to
       if (IsKernel()) {
         if (Symbols::DownloadObjectAndSymbolFile(module_spec, true)) {
-          if (module_spec.GetFileSpec().Exists()) {
+          if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
             m_module_sp.reset(new Module(module_spec.GetFileSpec(),
                                          target.GetArchitecture()));
             if (m_module_sp.get() &&

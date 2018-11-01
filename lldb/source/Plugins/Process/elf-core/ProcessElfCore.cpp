@@ -81,7 +81,7 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
 bool ProcessElfCore::CanDebug(lldb::TargetSP target_sp,
                               bool plugin_specified_by_name) {
   // For now we are just making sure the file exists for a given module
-  if (!m_core_module_sp && m_core_file.Exists()) {
+  if (!m_core_module_sp && FileSystem::Instance().Exists(m_core_file)) {
     ModuleSpec core_module_spec(m_core_file, target_sp->GetArchitecture());
     Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
                                              NULL, NULL, NULL));
