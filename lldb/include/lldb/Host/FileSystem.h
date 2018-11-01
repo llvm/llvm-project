@@ -66,6 +66,8 @@ public:
   /// @{
   uint32_t GetPermissions(const FileSpec &file_spec) const;
   uint32_t GetPermissions(const llvm::Twine &path) const;
+  uint32_t GetPermissions(const FileSpec &file_spec, std::error_code &ec) const;
+  uint32_t GetPermissions(const llvm::Twine &path, std::error_code &ec) const;
   /// @}
 
   /// Returns whether the given file exists.
