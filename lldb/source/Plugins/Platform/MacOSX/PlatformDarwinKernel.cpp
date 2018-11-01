@@ -424,25 +424,26 @@ void PlatformDarwinKernel::AddSDKSubdirsToSearchPaths(const std::string &dir) {
   const bool find_directories = true;
   const bool find_files = false;
   const bool find_other = false;
-  FileSpec::EnumerateDirectory(dir.c_str(), find_directories, find_files,
-                               find_other, FindKDKandSDKDirectoriesInDirectory,
-                               this);
+  FileSystem::Instance().EnumerateDirectory(
+      dir.c_str(), find_directories, find_files, find_other,
+      FindKDKandSDKDirectoriesInDirectory, this);
 }
 
 // Helper function to find *.sdk and *.kdk directories in a given directory.
-FileSpec::EnumerateDirectoryResult
+FileSystem::EnumerateDirectoryResult
 PlatformDarwinKernel::FindKDKandSDKDirectoriesInDirectory(
-    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
+    void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path) {
   static ConstString g_sdk_suffix = ConstString(".sdk");
   static ConstString g_kdk_suffix = ConstString(".kdk");
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
+  FileSpec file_spec(path, false);
   if (ft == llvm::sys::fs::file_type::directory_file &&
       (file_spec.GetFileNameExtension() == g_sdk_suffix ||
        file_spec.GetFileNameExtension() == g_kdk_suffix)) {
     AddRootSubdirsToSearchPaths(thisp, file_spec.GetPath());
   }
-  return FileSpec::eEnumerateDirectoryResultNext;
+  return FileSystem::eEnumerateDirectoryResultNext;
 }
 
 // Recursively search trough m_search_directories looking for kext and kernel
@@ -454,7 +455,7 @@ void PlatformDarwinKernel::SearchForKextsAndKernelsRecursively() {
     const bool find_directories = true;
     const bool find_files = true;
     const bool find_other = true; // I think eFileTypeSymbolicLink are "other"s.
-    FileSpec::EnumerateDirectory(
+    FileSystem::Instance().EnumerateDirectory(
         dir.GetPath().c_str(), find_directories, find_files, find_other,
         GetKernelsAndKextsInDirectoryWithRecursion, this);
   }
@@ -464,7 +465,7 @@ void PlatformDarwinKernel::SearchForKextsAndKernelsRecursively() {
     const bool find_directories = true;
     const bool find_files = true;
     const bool find_other = true; // I think eFileTypeSymbolicLink are "other"s.
-    FileSpec::EnumerateDirectory(
+    FileSystem::Instance().EnumerateDirectory(
         dir.GetPath().c_str(), find_directories, find_files, find_other,
         GetKernelsAndKextsInDirectoryNoRecursion, this);
   }
@@ -478,25 +479,27 @@ void PlatformDarwinKernel::SearchForKextsAndKernelsRecursively() {
 //
 // Recurse into any subdirectories found.
 
-FileSpec::EnumerateDirectoryResult
+FileSystem::EnumerateDirectoryResult
 PlatformDarwinKernel::GetKernelsAndKextsInDirectoryWithRecursion(
-    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
-  return GetKernelsAndKextsInDirectoryHelper(baton, ft, file_spec, true);
+    void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path) {
+  return GetKernelsAndKextsInDirectoryHelper(baton, ft, path, true);
 }
 
-FileSpec::EnumerateDirectoryResult
+FileSystem::EnumerateDirectoryResult
 PlatformDarwinKernel::GetKernelsAndKextsInDirectoryNoRecursion(
-    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
-  return GetKernelsAndKextsInDirectoryHelper(baton, ft, file_spec, false);
+    void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path) {
+  return GetKernelsAndKextsInDirectoryHelper(baton, ft, path, false);
 }
 
-FileSpec::EnumerateDirectoryResult
+FileSystem::EnumerateDirectoryResult
 PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
-    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec,
+    void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path,
     bool recurse) {
   static ConstString g_kext_suffix = ConstString(".kext");
   static ConstString g_dsym_suffix = ConstString(".dSYM");
   static ConstString g_bundle_suffix = ConstString("Bundle");
+
+  FileSpec file_spec(path, false);
   ConstString file_spec_extension = file_spec.GetFileNameExtension();
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
@@ -528,7 +531,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
         }
         thisp->m_kernel_binaries_without_dsyms.push_back(file_spec);
       }
-      return FileSpec::eEnumerateDirectoryResultNext;
+      return FileSystem::eEnumerateDirectoryResultNext;
     }
   } else if (ft == llvm::sys::fs::file_type::directory_file &&
              file_spec_extension == g_kext_suffix) {
@@ -549,13 +552,13 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
       const bool find_directories = true;
       const bool find_files = false;
       const bool find_other = false;
-      FileSpec::EnumerateDirectory(
+      FileSystem::Instance().EnumerateDirectory(
           search_here_too.c_str(), find_directories, find_files, find_other,
           recurse ? GetKernelsAndKextsInDirectoryWithRecursion
                   : GetKernelsAndKextsInDirectoryNoRecursion,
           baton);
     }
-    return FileSpec::eEnumerateDirectoryResultNext;
+    return FileSystem::eEnumerateDirectoryResultNext;
   }
   // Don't recurse into dSYM/kext/bundle directories
   if (recurse && file_spec_extension != g_dsym_suffix &&
@@ -563,9 +566,9 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
       file_spec_extension != g_bundle_suffix) {
     if (log_verbose)
         log_verbose->Printf ("PlatformDarwinKernel descending into directory '%s'", file_spec.GetPath().c_str());
-    return FileSpec::eEnumerateDirectoryResultEnter;
+    return FileSystem::eEnumerateDirectoryResultEnter;
   } else {
-    return FileSpec::eEnumerateDirectoryResultNext;
+    return FileSystem::eEnumerateDirectoryResultNext;
   }
 }
 

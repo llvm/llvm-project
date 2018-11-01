@@ -106,26 +106,25 @@ protected:
 
   void AddSDKSubdirsToSearchPaths(const std::string &dir);
 
-  static lldb_private::FileSpec::EnumerateDirectoryResult
+  static lldb_private::FileSystem::EnumerateDirectoryResult
   FindKDKandSDKDirectoriesInDirectory(void *baton, llvm::sys::fs::file_type ft,
-                                      const lldb_private::FileSpec &file_spec);
+                                      llvm::StringRef path);
 
   void SearchForKextsAndKernelsRecursively();
 
-  static lldb_private::FileSpec::EnumerateDirectoryResult
-  GetKernelsAndKextsInDirectoryWithRecursion(
-      void *baton, llvm::sys::fs::file_type ft,
-      const lldb_private::FileSpec &file_spec);
+  static lldb_private::FileSystem::EnumerateDirectoryResult
+  GetKernelsAndKextsInDirectoryWithRecursion(void *baton,
+                                             llvm::sys::fs::file_type ft,
+                                             llvm::StringRef path);
 
-  static lldb_private::FileSpec::EnumerateDirectoryResult
-  GetKernelsAndKextsInDirectoryNoRecursion(
-      void *baton, llvm::sys::fs::file_type ft,
-      const lldb_private::FileSpec &file_spec);
+  static lldb_private::FileSystem::EnumerateDirectoryResult
+  GetKernelsAndKextsInDirectoryNoRecursion(void *baton,
+                                           llvm::sys::fs::file_type ft,
+                                           llvm::StringRef path);
 
-  static lldb_private::FileSpec::EnumerateDirectoryResult
+  static lldb_private::FileSystem::EnumerateDirectoryResult
   GetKernelsAndKextsInDirectoryHelper(void *baton, llvm::sys::fs::file_type ft,
-                                      const lldb_private::FileSpec &file_spec,
-                                      bool recurse);
+                                      llvm::StringRef path, bool recurse);
 
   static std::vector<lldb_private::FileSpec>
   SearchForExecutablesRecursively(const std::string &dir);
@@ -148,7 +147,7 @@ protected:
                              const lldb_private::ArchSpec &arch,
                              lldb::ModuleSP &exe_module_sp);
 
-  // Most of the ivars are assembled under FileSpec::EnumerateDirectory calls
+  // Most of the ivars are assembled under FileSystem::EnumerateDirectory calls
   // where the
   // function being called for each file/directory must be static.  We'll pass a
   // this pointer

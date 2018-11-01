@@ -139,12 +139,13 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
   return error;
 }
 
-FileSpec::EnumerateDirectoryResult
+FileSystem::EnumerateDirectoryResult
 PlatformRemoteDarwinDevice::GetContainedFilesIntoVectorOfStringsCallback(
-    void *baton, llvm::sys::fs::file_type ft, const FileSpec &file_spec) {
+    void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path) {
   ((PlatformRemoteDarwinDevice::SDKDirectoryInfoCollection *)baton)
-      ->push_back(PlatformRemoteDarwinDevice::SDKDirectoryInfo(file_spec));
-  return FileSpec::eEnumerateDirectoryResultNext;
+      ->push_back(
+          PlatformRemoteDarwinDevice::SDKDirectoryInfo(FileSpec(path, false)));
+  return FileSystem::eEnumerateDirectoryResultNext;
 }
 
 bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
@@ -175,10 +176,10 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
       const bool find_other = false;
 
       SDKDirectoryInfoCollection builtin_sdk_directory_infos;
-      FileSpec::EnumerateDirectory(m_device_support_directory, find_directories,
-                                   find_files, find_other,
-                                   GetContainedFilesIntoVectorOfStringsCallback,
-                                   &builtin_sdk_directory_infos);
+      FileSystem::Instance().EnumerateDirectory(
+          m_device_support_directory, find_directories, find_files, find_other,
+          GetContainedFilesIntoVectorOfStringsCallback,
+          &builtin_sdk_directory_infos);
 
       // Only add SDK directories that have symbols in them, some SDKs only
       // contain developer disk images and no symbols, so they aren't useful to
@@ -214,13 +215,13 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
             }
             char path[PATH_MAX];
             if (local_sdk_cache.GetPath(path, sizeof(path))) {
-            FileSpec::EnumerateDirectory(
-                path, find_directories, find_files, find_other,
-                GetContainedFilesIntoVectorOfStringsCallback,
-                &m_sdk_directory_infos);
-            const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
-            // First try for an exact match of major, minor and update
-            for (uint32_t i = num_installed; i < num_sdk_infos; ++i) {
+              FileSystem::Instance().EnumerateDirectory(
+                  path, find_directories, find_files, find_other,
+                  GetContainedFilesIntoVectorOfStringsCallback,
+                  &m_sdk_directory_infos);
+              const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
+              // First try for an exact match of major, minor and update
+              for (uint32_t i = num_installed; i < num_sdk_infos; ++i) {
                 m_sdk_directory_infos[i].user_cached = true;
                 if (log) {
                 log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
@@ -235,10 +236,10 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
       const char *addtional_platform_dirs = getenv("PLATFORM_SDK_DIRECTORY");
       if (addtional_platform_dirs) {
         SDKDirectoryInfoCollection env_var_sdk_directory_infos;
-        FileSpec::EnumerateDirectory(addtional_platform_dirs, find_directories,
-                                     find_files, find_other,
-                                     GetContainedFilesIntoVectorOfStringsCallback,
-                                     &env_var_sdk_directory_infos);
+        FileSystem::Instance().EnumerateDirectory(
+            addtional_platform_dirs, find_directories, find_files, find_other,
+            GetContainedFilesIntoVectorOfStringsCallback,
+            &env_var_sdk_directory_infos);
         FileSpec sdk_symbols_symlink_fspec;
         for (const auto &sdk_directory_info : env_var_sdk_directory_infos) {
           sdk_symbols_symlink_fspec = sdk_directory_info.directory;

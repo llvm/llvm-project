@@ -265,3 +265,27 @@ TEST(FileSystemTest, Resolve) {
     EXPECT_EQ("bogus", file_spec.GetPath());
   }
 }
+
+FileSystem::EnumerateDirectoryResult
+VFSCallback(void *baton, llvm::sys::fs::file_type file_type,
+            llvm::StringRef path) {
+  auto visited = static_cast<std::vector<std::string> *>(baton);
+  visited->push_back(path.str());
+  return FileSystem::eEnumerateDirectoryResultNext;
+}
+
+TEST(FileSystemTest, EnumerateDirectory) {
+  FileSystem fs(GetSimpleDummyFS());
+
+  std::vector<std::string> visited;
+
+  constexpr bool find_directories = true;
+  constexpr bool find_files = true;
+  constexpr bool find_other = true;
+
+  fs.EnumerateDirectory("/", find_directories, find_files, find_other,
+                        VFSCallback, &visited);
+
+  EXPECT_THAT(visited,
+              testing::UnorderedElementsAre("/foo", "/bar", "/baz", "/qux"));
+}
