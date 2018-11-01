@@ -9,6 +9,7 @@
 
 #include "lldb/Host/FileSystem.h"
 
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 
 #include "llvm/Support/FileSystem.h"
@@ -25,17 +26,17 @@ using namespace llvm;
 FileSystem &FileSystem::Instance() { return *InstanceImpl(); }
 
 void FileSystem::Initialize() {
-  assert(!InstanceImpl());
+  lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace();
 }
 
 void FileSystem::Initialize(IntrusiveRefCntPtr<vfs::FileSystem> fs) {
-  assert(!InstanceImpl());
+  lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace(fs);
 }
 
 void FileSystem::Terminate() {
-  assert(InstanceImpl());
+  lldbassert(InstanceImpl() && "Already terminated.");
   InstanceImpl().reset();
 }
 
