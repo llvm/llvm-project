@@ -47,6 +47,11 @@ MATCHER_P(HasArg, A, "") {
                      [this](decltype(A) V) { return V == A; });
 }
 
+MATCHER_P(TSCIs, M, std::string("TSC is ") + ::testing::PrintToString(M)) {
+  return ::testing::Matcher<decltype(arg.TSC)>(M).MatchAndExplain(
+      arg.TSC, result_listener);
+}
+
 } // namespace testing
 } // namespace xray
 } // namespace llvm
