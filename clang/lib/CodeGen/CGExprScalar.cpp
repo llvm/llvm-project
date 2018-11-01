@@ -450,19 +450,10 @@ public:
     return CGF.getOrCreateOpaqueRValueMapping(E).getScalarVal();
   }
 
-  Value *emitConstant(const CodeGenFunction::ConstantEmission &Constant,
-                      Expr *E) {
-    assert(Constant && "not a constant");
-    if (Constant.isReference())
-      return EmitLoadOfLValue(Constant.getReferenceLValue(CGF, E),
-                              E->getExprLoc());
-    return Constant.getValue();
-  }
-
   // l-values.
   Value *VisitDeclRefExpr(DeclRefExpr *E) {
     if (CodeGenFunction::ConstantEmission Constant = CGF.tryEmitAsConstant(E))
-      return emitConstant(Constant, E);
+      return CGF.emitScalarConstant(Constant, E);
     return EmitLoadOfLValue(E);
   }
 
@@ -1405,7 +1396,7 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
 Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
   if (CodeGenFunction::ConstantEmission Constant = CGF.tryEmitAsConstant(E)) {
     CGF.EmitIgnoredExpr(E->getBase());
-    return emitConstant(Constant, E);
+    return CGF.emitScalarConstant(Constant, E);
   } else {
     llvm::APSInt Value;
     if (E->EvaluateAsInt(Value, CGF.getContext(), Expr::SE_AllowSideEffects)) {
