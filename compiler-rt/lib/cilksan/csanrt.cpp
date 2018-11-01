@@ -29,6 +29,8 @@ typedef enum {
   FED_TYPE_DETACH_CONTINUE,
   FED_TYPE_SYNC,
   FED_TYPE_ALLOCA,
+  FED_TYPE_ALLOCFN,
+  FED_TYPE_FREE,
   NUM_FED_TYPES // Must be last
 } fed_type_t;
 
@@ -43,8 +45,60 @@ typedef struct {
 typedef enum {
   OBJ_TYPE_LOAD,
   OBJ_TYPE_STORE,
+  OBJ_TYPE_ALLOCA,
+  OBJ_TYPE_ALLOCFN,
   NUM_OBJ_TYPES // Must be last
 } obj_type_t;
+
+const char *allocfn_str[] =
+  {
+   "void *malloc(size_t size)",
+   "void *valloc(size_t size)",
+   "void *calloc(size_t count, size_t size)",
+   "void *realloc(void *ptr, size_t size)",
+   "void *reallocf(void *ptr, size_t size)",
+   "void *operator new(unsigned int)",
+   "void *operator new(unsigned int, nothrow)",
+   "void *operator new(unsigned long)",
+   "void *operator new(unsigned long, nothrow)",
+   "void *operator new[](unsigned int)",
+   "void *operator new[](unsigned int, nothrow)",
+   "void *operator new[](unsigned long)",
+   "void *operator new[](unsigned long, nothrow)",
+   "void *operator new(unsigned int)",
+   "void *operator new(unsigned int, nothrow)",
+   "void *operator new(unsigned long long)",
+   "void *operator new(unsigned long long, nothrow)",
+   "void *operator new[](unsigned int)",
+   "void *operator new[](unsigned int, nothrow)",
+   "void *operator new[](unsigned long long)",
+   "void *operator new[](unsigned long long, nothrow)",
+  };
+
+const char *free_str[] =
+  {
+   "void free(void *ptr)",
+   "void operator delete(void*)",
+   "void operator delete(void*, nothrow)",
+   "void operator delete(void*, unsigned int)",
+   "void operator delete(void*, unsigned long)",
+   "void operator delete[](void*)",
+   "void operator delete[](void*, nothrow)",
+   "void operator delete[](void*, unsigned int)",
+   "void operator delete[](void*, unsigned long)",
+   "void operator delete(void*)",
+   "void operator delete(void*, nothrow)",
+   "void operator delete(void*, unsigned int)",
+   "void operator delete(void*)",
+   "void operator delete(void*, nothrow)",
+   "void operator delete(void*, unsigned long long)",
+   "void operator delete[](void*)",
+   "void operator delete[](void*, nothrow)",
+   "void operator delete[](void*, unsigned int)",
+   "void operator delete[](void*)",
+   "void operator delete[](void*, nothrow)",
+   "void operator delete[](void*, unsigned long long)"
+  };
 
 // ------------------------------------------------------------------------
 // Globals
@@ -353,6 +407,15 @@ const csan_source_loc_t *__csan_get_alloca_source_loc(const csi_id_t alloca_id) 
 }
 
 CSIRT_API
+const csan_source_loc_t *__csan_get_allocfn_source_loc(const csi_id_t allocfn_id) {
+  return get_fed_entry(FED_TYPE_ALLOCFN, allocfn_id);
+}
+CSIRT_API
+const csan_source_loc_t *__csan_get_free_source_loc(const csi_id_t free_id) {
+  return get_fed_entry(FED_TYPE_FREE, free_id);
+}
+
+CSIRT_API
 const obj_source_loc_t *__csan_get_load_obj_source_loc(const csi_id_t load_id) {
   return get_obj_entry(OBJ_TYPE_LOAD, load_id);
 }
@@ -360,6 +423,26 @@ const obj_source_loc_t *__csan_get_load_obj_source_loc(const csi_id_t load_id) {
 CSIRT_API
 const obj_source_loc_t *__csan_get_store_obj_source_loc(const csi_id_t store_id) {
   return get_obj_entry(OBJ_TYPE_STORE, store_id);
+}
+
+CSIRT_API
+const obj_source_loc_t *__csan_get_alloca_obj_source_loc(const csi_id_t alloca_id) {
+  return get_obj_entry(OBJ_TYPE_ALLOCA, alloca_id);
+}
+
+CSIRT_API
+const obj_source_loc_t *__csan_get_allocfn_obj_source_loc(const csi_id_t allocfn_id) {
+  return get_obj_entry(OBJ_TYPE_ALLOCFN, allocfn_id);
+}
+
+CSIRT_API
+const char *__csan_get_allocfn_str(const allocfn_prop_t prop) {
+  return allocfn_str[prop.allocfn_ty];
+}
+
+CSIRT_API
+const char *__csan_get_free_str(const free_prop_t prop) {
+  return free_str[prop.free_ty];
 }
 
 EXTERN_C_END

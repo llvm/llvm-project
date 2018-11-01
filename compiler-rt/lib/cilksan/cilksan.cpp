@@ -469,8 +469,8 @@ void CilkSanImpl_t::do_read(const csi_id_t load_id,
   // for now we assume the stack doesn't change
   bool on_stack = is_on_stack(addr);
   if (on_stack)
-    if (addr < *sp_stack.head())
-      *sp_stack.head() = addr;
+    advance_stack_frame(addr);
+
   // handle the prefix
   uintptr_t next_addr = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(addr);
   size_t prefix_size = next_addr - addr;
@@ -504,8 +504,8 @@ void CilkSanImpl_t::do_write(const csi_id_t store_id,
 
   bool on_stack = is_on_stack(addr);
   if (on_stack)
-    if (addr < *sp_stack.head())
-      *sp_stack.head() = addr;
+    advance_stack_frame(addr);
+
   // handle the prefix
   uintptr_t next_addr = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(addr);
   size_t prefix_size = next_addr - addr;
@@ -546,6 +546,12 @@ void CilkSanImpl_t::record_alloc(size_t start, size_t size,
   shadow_memory.record_alloc(start, size, f, call_stack, alloca_id);
 }
 
+void CilkSanImpl_t::clear_alloc(size_t start, size_t size) {
+  DBG_TRACE(DEBUG_MEMORY, "cilksan_clear_alloc(%p, %ld)\n",
+            start, size);
+  shadow_memory.clear_alloc(start, size);
+}
+
 inline void CilkSanImpl_t::print_stats() {
   // TODO: Add stats?
   // std::cout << "max sync block size seen: "
@@ -571,8 +577,10 @@ void CilkSanImpl_t::deinit() {
   shadow_memory.destruct();
 
   // Remove references to the disjoint set nodes so they can be freed.
+  assert(frame_stack.head()->Pbag == nullptr);
   frame_stack.head()->reset();
   frame_stack.pop();
+  assert(frame_stack.size() == 0);
 
   WHEN_CILKSAN_DEBUG({
       if (DisjointSet_t<SPBagInterface *>::debug_count != 0)

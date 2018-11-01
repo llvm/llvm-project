@@ -66,6 +66,7 @@ public:
                     FrameData_t *f,
                     const call_stack_t &call_stack,
                     csi_id_t alloca_id);
+  void clear_alloc(size_t start, size_t size);
   void check_race_with_prev_read(const csi_id_t acc_id,
                                  uintptr_t addr, size_t mem_size, bool on_stack,
                                  FrameData_t *f,

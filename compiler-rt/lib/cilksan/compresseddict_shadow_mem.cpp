@@ -129,6 +129,10 @@ void CompressedDictShadowMem::record_alloc(size_t start, size_t size,
   my_alloc_dict->set(start, size, MemoryAccess_t(f->Sbag, alloca_id, call_stack));
 }
 
+void CompressedDictShadowMem::clear_alloc(size_t start, size_t size) {
+  my_alloc_dict->erase(start, size);
+}
+
 // prev_read: are we checking with previous reads or writes?
 // is_read: is the current access read or write?
 void CompressedDictShadowMem::check_race(bool prev_read, bool is_read,

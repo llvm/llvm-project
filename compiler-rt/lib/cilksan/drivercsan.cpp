@@ -3,13 +3,16 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdarg>
-#include <dlfcn.h>
 #include <execinfo.h>
 // #include <internal/abi.h>
 #include <malloc.h>
 #include <unistd.h>
 #include <unordered_map>
 #include <sys/mman.h>
+
+#if CILKSAN_DYNAMIC
+#include <dlfcn.h>
+#endif  // CILKSAN_DYNAMIC
 
 #include "cilksan_internal.h"
 #include "debug_util.h"
@@ -33,20 +36,19 @@ extern void print_addr(FILE *f, void *a);
 extern enum EventType_t last_event;
 #endif
 
-// Defined in cilksan.cpp
-extern call_stack_t call_stack;
-extern Stack_t<uintptr_t> sp_stack;
 // Defined in print_addr.cpp
 extern uintptr_t *call_pc;
 extern uintptr_t *spawn_pc;
 extern uintptr_t *load_pc;
 extern uintptr_t *store_pc;
 extern uintptr_t *alloca_pc;
+extern uintptr_t *allocfn_pc;
 static csi_id_t total_call = 0;
 static csi_id_t total_spawn = 0;
 static csi_id_t total_load = 0;
 static csi_id_t total_store = 0;
 static csi_id_t total_alloca = 0;
+static csi_id_t total_allocfn = 0;
 
 static bool TOOL_INITIALIZED = false;
 
@@ -194,7 +196,8 @@ void __csan_unit_init(const char * const file_name,
     grow_pc_table(store_pc, total_store, counts.num_store);
   if (counts.num_alloca)
     grow_pc_table(alloca_pc, total_alloca, counts.num_alloca);
-  enable_checking();
+  if (counts.num_allocfn)
+    grow_pc_table(allocfn_pc, total_allocfn, counts.num_allocfn);
 }
 
 // invoked whenever a function enters; no need for this
@@ -221,9 +224,6 @@ CILKSAN_API void __csan_func_entry(const csi_id_t func_id,
             srcloc->name, srcloc->filename,
             srcloc->line_number);
   cilksan_assert(TOOL_INITIALIZED);
-  if (!prop.may_spawn)
-    // Ignore entry calls into non-Cilk functions.
-    return;
 
   CilkSanImpl.push_stack_frame((uintptr_t)sp);
 
@@ -469,18 +469,83 @@ void __csan_large_store(csi_id_t store_id, void *addr, size_t size,
 }
 
 CILKSAN_API
-void __csi_after_alloca(const csi_id_t alloca_id, const void *addr, uint64_t total_size, uint64_t isStaticAlloca) {
-  if (TOOL_INITIALIZED && should_check()) {
-    disable_checking();
-    if (!alloca_pc[alloca_id])
-      alloca_pc[alloca_id] = CALLERPC;
-    cilksan_record_alloc((size_t) addr, total_size, alloca_id + 1);
-    cilksan_clear_shadow_memory((size_t)addr, total_size);
-    enable_checking();
-  }
+void __csi_after_alloca(const csi_id_t alloca_id, const void *addr,
+                        size_t size, const alloca_prop_t prop) {
+  cilksan_assert(TOOL_INITIALIZED);
+  if (!should_check())
+    return;
+
+  CheckingRAII nocheck;
+  // Record the PC for this alloca
+  if (!alloca_pc[alloca_id])
+    alloca_pc[alloca_id] = CALLERPC;
+
+  // Record the alloca and clear the allocated portion of the shadow memory.
+  CilkSanImpl.record_alloc((size_t) addr, size, 2 * alloca_id);
+  CilkSanImpl.clear_shadow_memory((size_t)addr, size);
+  CilkSanImpl.advance_stack_frame((uintptr_t)addr);
 }
 
 static std::unordered_map<uintptr_t, size_t> malloc_sizes;
+
+CILKSAN_API
+void __csan_after_allocfn(const csi_id_t allocfn_id, const void *addr,
+                          size_t size, size_t num, size_t alignment,
+                          const void *oldaddr, const allocfn_prop_t prop) {
+  cilksan_assert(TOOL_INITIALIZED);
+  if (!should_check())
+    return;
+
+  CheckingRAII nocheck;
+
+  // std::cerr << "Called memory function " << __csan_get_allocfn_str(prop) << "\n";
+
+  // TODO: Use alignment information
+  // Record the PC for this allocation-function call
+  if (!allocfn_pc[allocfn_id])
+    allocfn_pc[allocfn_id] = CALLERPC;
+
+  // If this allocation function operated on an old address -- e.g., a realloc
+  // -- then update the memory at the old address as if it was freed.
+  if (oldaddr) {
+    auto iter = malloc_sizes.find((uintptr_t)oldaddr);
+    if (iter != malloc_sizes.end()) {
+      CilkSanImpl.do_write(UNKNOWN_CSI_ID, (uintptr_t)oldaddr, iter->second);
+      malloc_sizes.erase(iter);
+    }
+  }
+  // Record the new allocation.
+  malloc_sizes.insert({(uintptr_t)addr, size * num});
+  CilkSanImpl.record_alloc((size_t)addr, size * num, 2 * allocfn_id + 1);
+  CilkSanImpl.clear_shadow_memory((size_t)addr, size * num);
+}
+
+// __csan_after_free is called after any call to free or delete.
+CILKSAN_API
+void __csan_after_free(const csi_id_t free_id, const void *ptr,
+                       const free_prop_t prop) {
+  cilksan_assert(TOOL_INITIALIZED);
+  if (!should_check())
+    return;
+
+  CheckingRAII nocheck;
+
+  // std::cerr << "Called memory function " << __csan_get_free_str(prop) << "\n";
+
+  auto iter = malloc_sizes.find((uintptr_t)ptr);
+  if (iter != malloc_sizes.end()) {
+    // cilksan_clear_shadow_memory((size_t)ptr, iter->second);
+
+    // Treat a free as a write to all freed addresses.  This way the tool will
+    // report a race if an operation tries to access a location that was freed
+    // in parallel.
+    CilkSanImpl.do_write(UNKNOWN_CSI_ID, (uintptr_t)ptr, iter->second);
+    malloc_sizes.erase(iter);
+  }
+}
+
+#if CILKSAN_DYNAMIC
+
 static std::map<uintptr_t, size_t> pages_to_clear;
 
 // Flag to manage initialization of memory functions.  We need this flag because
