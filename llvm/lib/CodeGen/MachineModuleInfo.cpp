@@ -206,10 +206,11 @@ MachineModuleInfo::~MachineModuleInfo() = default;
 bool MachineModuleInfo::doInitialization(Module &M) {
   ObjFileMMI = nullptr;
   CurCallSite = 0;
-  DbgInfoAvailable = UsesVAFloatArgument = UsesMorestackAddr = false;
+  UsesVAFloatArgument = UsesMorestackAddr = false;
   HasSplitStack = HasNosplitStack = false;
   AddrLabelSymbols = nullptr;
   TheModule = &M;
+  DbgInfoAvailable = !empty(M.debug_compile_units());
   return false;
 }
 

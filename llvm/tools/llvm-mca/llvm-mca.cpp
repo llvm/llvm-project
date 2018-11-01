@@ -69,15 +69,13 @@ static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
                                            cl::value_desc("filename"));
 
 static cl::opt<std::string>
-    ArchName("march",
-             cl::desc("Target arch to assemble for, "
-                      "see -version for available targets"),
+    ArchName("march", cl::desc("Target architecture. "
+                               "See -version for available targets"),
              cl::cat(ToolOptions));
 
 static cl::opt<std::string>
     TripleName("mtriple",
-               cl::desc("Target triple to assemble for, "
-                        "see -version for available targets"),
+               cl::desc("Target triple. See -version for available targets"),
                cl::cat(ToolOptions));
 
 static cl::opt<std::string>
@@ -503,17 +501,20 @@ int main(int argc, char **argv) {
     ArrayRef<MCInst> Insts = Region->getInstructions();
     std::vector<std::unique_ptr<mca::Instruction>> LoweredSequence;
     for (const MCInst &MCI : Insts) {
-      llvm::Expected<std::unique_ptr<mca::Instruction>> Inst = IB.createInstruction(MCI);
+      llvm::Expected<std::unique_ptr<mca::Instruction>> Inst =
+          IB.createInstruction(MCI);
       if (!Inst) {
-        if (auto NewE = handleErrors(Inst.takeError(),
-            [&IP, &STI](const mca::InstructionError<MCInst> &IE) {
-              std::string InstructionStr;
-              raw_string_ostream SS(InstructionStr);
-              WithColor::error() << IE.Message << '\n';
-              IP->printInst(&IE.Inst, SS, "", *STI);
-              SS.flush();
-              WithColor::note() << "instruction: " << InstructionStr << '\n';
-            })) {
+        if (auto NewE = handleErrors(
+                Inst.takeError(),
+                [&IP, &STI](const mca::InstructionError<MCInst> &IE) {
+                  std::string InstructionStr;
+                  raw_string_ostream SS(InstructionStr);
+                  WithColor::error() << IE.Message << '\n';
+                  IP->printInst(&IE.Inst, SS, "", *STI);
+                  SS.flush();
+                  WithColor::note() << "instruction: " << InstructionStr
+                                    << '\n';
+                })) {
           // Default case.
           WithColor::error() << toString(std::move(NewE));
         }
@@ -523,8 +524,7 @@ int main(int argc, char **argv) {
       LoweredSequence.emplace_back(std::move(Inst.get()));
     }
 
-    mca::SourceMgr S(LoweredSequence,
-                     PrintInstructionTables ? 1 : Iterations);
+    mca::SourceMgr S(LoweredSequence, PrintInstructionTables ? 1 : Iterations);
 
     if (PrintInstructionTables) {
       //  Create a pipeline, stages, and a printer.

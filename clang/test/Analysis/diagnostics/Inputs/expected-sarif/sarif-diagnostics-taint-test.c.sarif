@@ -7,7 +7,7 @@
           "fileLocation": {
             "uri": "file:sarif-diagnostics-taint-test.c"
           },
-          "length": 500,
+          "length": 497,
           "mimeType": "text/plain",
           "roles": [
             "resultFile"

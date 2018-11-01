@@ -171,7 +171,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     DebuggerEmitPrologue(false),
 
     EnableHugePrivateBuffer(false),
-    EnableVGPRSpilling(false),
     EnableLoadStoreOpt(false),
     EnableUnsafeDSOffsetFolding(false),
     EnableSIScheduler(false),
@@ -478,10 +477,6 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   // Enabling ShouldTrackLaneMasks crashes the SI Machine Scheduler.
   if (!enableSIScheduler())
     Policy.ShouldTrackLaneMasks = true;
-}
-
-bool GCNSubtarget::isVGPRSpillingEnabled(const Function& F) const {
-  return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
 }
 
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {

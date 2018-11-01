@@ -649,6 +649,9 @@ def G_EXTRACT : GenericInstruction {
 // Extract multiple registers specified size, starting from blocks given by
 // indexes. This will almost certainly be mapped to sub-register COPYs after
 // register banks have been selected.
+// The output operands are always ordered from lowest bits to highest:
+//   %bits_0_7:(s8), %bits_8_15:(s8),
+//       %bits_16_23:(s8), %bits_24_31:(s8) = G_UNMERGE_VALUES %0:(s32)
 def G_UNMERGE_VALUES : GenericInstruction {
   let OutOperandList = (outs type0:$dst0, variable_ops);
   let InOperandList = (ins type1:$src);
@@ -662,7 +665,10 @@ def G_INSERT : GenericInstruction {
   let hasSideEffects = 0;
 }
 
-/// Concatenate multiple registers of the same size into a wider register.
+// Concatenate multiple registers of the same size into a wider register.
+// The input operands are always ordered from lowest bits to highest:
+//   %0:(s32) = G_MERGE_VALUES %bits_0_7:(s8), %bits_8_15:(s8),
+//                             %bits_16_23:(s8), %bits_24_31:(s8)
 def G_MERGE_VALUES : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type1:$src0, variable_ops);

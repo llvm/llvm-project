@@ -2032,6 +2032,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return II;
     }
 
+    Intrinsic::ID IID = II->getIntrinsicID();
     Value *X, *Y;
     if (match(Arg0, m_FNeg(m_Value(X))) && match(Arg1, m_FNeg(m_Value(Y))) &&
         (Arg0->hasOneUse() || Arg1->hasOneUse())) {
@@ -2039,7 +2040,7 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       // min(-X, -Y) --> -(max(X, Y))
       // max(-X, -Y) --> -(min(X, Y))
       Intrinsic::ID NewIID;
-      switch (II->getIntrinsicID()) {
+      switch (IID) {
       case Intrinsic::maxnum:
         NewIID = Intrinsic::minnum;
         break;
@@ -2060,6 +2061,39 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       FNeg->copyIRFlags(II);
       return FNeg;
     }
+
+    // m(m(X, C2), C1) -> m(X, C)
+    const APFloat *C1, *C2;
+    if (auto *M = dyn_cast<IntrinsicInst>(Arg0)) {
+      if (M->getIntrinsicID() == IID && match(Arg1, m_APFloat(C1)) &&
+          ((match(M->getArgOperand(0), m_Value(X)) &&
+            match(M->getArgOperand(1), m_APFloat(C2))) ||
+           (match(M->getArgOperand(1), m_Value(X)) &&
+            match(M->getArgOperand(0), m_APFloat(C2))))) {
+        APFloat Res(0.0);
+        switch (IID) {
+        case Intrinsic::maxnum:
+          Res = maxnum(*C1, *C2);
+          break;
+        case Intrinsic::minnum:
+          Res = minnum(*C1, *C2);
+          break;
+        case Intrinsic::maximum:
+          Res = maximum(*C1, *C2);
+          break;
+        case Intrinsic::minimum:
+          Res = minimum(*C1, *C2);
+          break;
+        default:
+          llvm_unreachable("unexpected intrinsic ID");
+        }
+        Instruction *NewCall = Builder.CreateBinaryIntrinsic(
+            IID, X, ConstantFP::get(Arg0->getType(), Res));
+        NewCall->copyIRFlags(II);
+        return replaceInstUsesWith(*II, NewCall);
+      }
+    }
+
     break;
   }
   case Intrinsic::fmuladd: {

@@ -217,18 +217,16 @@ DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
   return {{Address, Section}};
 }
 
-bool DWARFUnit::getStringOffsetSectionItem(uint32_t Index,
-                                           uint64_t &Result) const {
+Optional<uint64_t> DWARFUnit::getStringOffsetSectionItem(uint32_t Index) const {
   if (!StringOffsetsTableContribution)
-    return false;
+    return None;
   unsigned ItemSize = getDwarfStringOffsetsByteSize();
   uint32_t Offset = getStringOffsetsBase() + Index * ItemSize;
   if (StringOffsetSection.Data.size() < Offset + ItemSize)
-    return false;
+    return None;
   DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
                         isLittleEndian, 0);
-  Result = DA.getRelocatedValue(ItemSize, &Offset);
-  return true;
+  return DA.getRelocatedValue(ItemSize, &Offset);
 }
 
 bool DWARFUnitHeader::extract(DWARFContext &Context,

@@ -128,6 +128,15 @@ public:
     iterator  erase(const_iterator first, const_iterator last);
     void clear() noexcept;
 
+    template<class C2>
+      void merge(set<Key, C2, Allocator>& source);         // C++17
+    template<class C2>
+      void merge(set<Key, C2, Allocator>&& source);        // C++17
+    template<class C2>
+      void merge(multiset<Key, C2, Allocator>& source);    // C++17
+    template<class C2>
+      void merge(multiset<Key, C2, Allocator>&& source);   // C++17
+
     void swap(set& s)
         noexcept(
             __is_nothrow_swappable<key_compare>::value &&
@@ -316,6 +325,15 @@ public:
     iterator  erase(const_iterator first, const_iterator last);
     void clear() noexcept;
 
+    template<class C2>
+      void merge(multiset<Key, C2, Allocator>& source);    // C++17
+    template<class C2>
+      void merge(multiset<Key, C2, Allocator>&& source);   // C++17
+    template<class C2>
+      void merge(set<Key, C2, Allocator>& source);         // C++17
+    template<class C2>
+      void merge(set<Key, C2, Allocator>&& source);        // C++17
+
     void swap(multiset& s)
         noexcept(
             __is_nothrow_swappable<key_compare>::value &&
@@ -410,6 +428,9 @@ swap(multiset<Key, Compare, Allocator>& x, multiset<Key, Compare, Allocator>& y)
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+template <class _Key, class _Compare, class _Allocator>
+class multiset;
+
 template <class _Key, class _Compare = less<_Key>,
           class _Allocator = allocator<_Key> >
 class _LIBCPP_TEMPLATE_VIS set
@@ -448,6 +469,11 @@ public:
     typedef __set_node_handle<typename __base::__node, allocator_type> node_type;
     typedef __insert_return_type<iterator, node_type> insert_return_type;
 #endif
+
+    template <class _Key2, class _Compare2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS set;
+    template <class _Key2, class _Compare2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS multiset;
 
     _LIBCPP_INLINE_VISIBILITY
     set()
@@ -681,6 +707,38 @@ public:
     {
         return __tree_.template __node_handle_extract<node_type>(__it);
     }
+    template <class _C2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(set<key_type, _C2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_unique(__source.__tree_);
+    }
+    template <class _C2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(set<key_type, _C2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_unique(__source.__tree_);
+    }
+    template <class _C2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(multiset<key_type, _C2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_unique(__source.__tree_);
+    }
+    template <class _C2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(multiset<key_type, _C2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_unique(__source.__tree_);
+    }
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
@@ -890,6 +948,11 @@ public:
 #if _LIBCPP_STD_VER > 14
     typedef __set_node_handle<typename __base::__node, allocator_type> node_type;
 #endif
+
+    template <class _Key2, class _Compare2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS set;
+    template <class _Key2, class _Compare2, class _Alloc2>
+        friend class _LIBCPP_TEMPLATE_VIS multiset;
 
     // construct/copy/destroy:
     _LIBCPP_INLINE_VISIBILITY
@@ -1121,6 +1184,38 @@ public:
     node_type extract(const_iterator __it)
     {
         return __tree_.template __node_handle_extract<node_type>(__it);
+    }
+    template <class _C2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(multiset<key_type, _C2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_multi(__source.__tree_);
+    }
+    template <class _C2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(multiset<key_type, _C2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_multi(__source.__tree_);
+    }
+    template <class _C2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(set<key_type, _C2, allocator_type>& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_multi(__source.__tree_);
+    }
+    template <class _C2>
+    _LIBCPP_INLINE_VISIBILITY
+    void merge(set<key_type, _C2, allocator_type>&& __source)
+    {
+        _LIBCPP_ASSERT(__source.get_allocator() == get_allocator(),
+                       "merging container with incompatible allocator");
+        __tree_.__node_handle_merge_multi(__source.__tree_);
     }
 #endif
 

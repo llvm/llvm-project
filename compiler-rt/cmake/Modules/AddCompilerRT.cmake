@@ -568,9 +568,13 @@ macro(add_custom_libcxx name prefix)
     endif()
   endforeach()
 
-  string(REPLACE ";" " " FLAGS_STRING "${LIBCXX_CFLAGS}")
-  set(LIBCXX_C_FLAGS "${FLAGS_STRING}")
-  set(LIBCXX_CXX_FLAGS "${FLAGS_STRING}")
+  string(REPLACE ";" " " LIBCXX_C_FLAGS "${LIBCXX_CFLAGS}")
+  get_property(C_FLAGS CACHE CMAKE_C_FLAGS PROPERTY VALUE)
+  set(LIBCXX_C_FLAGS "${LIBCXX_C_FLAGS} ${C_FLAGS}")
+
+  string(REPLACE ";" " " LIBCXX_CXX_FLAGS "${LIBCXX_CFLAGS}")
+  get_property(CXX_FLAGS CACHE CMAKE_CXX_FLAGS PROPERTY VALUE)
+  set(LIBCXX_CXX_FLAGS "${LIBCXX_CXX_FLAGS} ${CXX_FLAGS}")
 
   ExternalProject_Add(${name}
     DEPENDS ${name}-clobber ${LIBCXX_DEPS}

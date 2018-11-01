@@ -136,6 +136,18 @@ Improvements to clang-tidy
   Detects usage of the deprecated member types of ``std::ios_base`` and replaces
   those that have a non-deprecated equivalent.
 
+- New :doc:`readability-isolate-decl
+  <clang-tidy/checks/readability-isolate-declaration>` check.
+
+  Detects local variable declarations declaring more than one variable and
+  tries to refactor the code to one statement per declaration.
+
+- New :doc:`readability-const-return-type
+  <clang-tidy/checks/readability-const-return-type>` check.
+
+  Checks for functions with a ``const``-qualified return type and recommends
+  removal of the ``const`` keyword.
+
 - New :doc:`readability-magic-numbers
   <clang-tidy/checks/readability-magic-numbers>` check.
 

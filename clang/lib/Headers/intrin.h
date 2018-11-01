@@ -329,54 +329,18 @@ __int64 _InterlockedAnd64(__int64 volatile *_Value, __int64 _Mask);
 |* Interlocked Exchange Add
 \*----------------------------------------------------------------------------*/
 #if defined(__arm__) || defined(__aarch64__)
-static __inline__ char __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd8_acq(char volatile *_Addend, char _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_ACQUIRE);
-}
-static __inline__ char __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd8_nf(char volatile *_Addend, char _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_RELAXED);
-}
-static __inline__ char __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd8_rel(char volatile *_Addend, char _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_RELAXED);
-}
-static __inline__ short __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd16_acq(short volatile *_Addend, short _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_ACQUIRE);
-}
-static __inline__ short __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd16_nf(short volatile *_Addend, short _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_RELAXED);
-}
-static __inline__ short __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd16_rel(short volatile *_Addend, short _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_RELEASE);
-}
-static __inline__ long __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd_acq(long volatile *_Addend, long _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_ACQUIRE);
-}
-static __inline__ long __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd_nf(long volatile *_Addend, long _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_RELAXED);
-}
-static __inline__ long __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd_rel(long volatile *_Addend, long _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_RELEASE);
-}
-static __inline__ __int64 __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd64_acq(__int64 volatile *_Addend, __int64 _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_ACQUIRE);
-}
-static __inline__ __int64 __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd64_nf(__int64 volatile *_Addend, __int64 _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_RELAXED);
-}
-static __inline__ __int64 __DEFAULT_FN_ATTRS
-_InterlockedExchangeAdd64_rel(__int64 volatile *_Addend, __int64 _Value) {
-  return __atomic_fetch_add(_Addend, _Value, __ATOMIC_RELEASE);
-}
+char _InterlockedExchangeAdd8_acq(char volatile *_Addend, char _Value);
+char _InterlockedExchangeAdd8_nf(char volatile *_Addend, char _Value);
+char _InterlockedExchangeAdd8_rel(char volatile *_Addend, char _Value);
+short _InterlockedExchangeAdd16_acq(short volatile *_Addend, short _Value);
+short _InterlockedExchangeAdd16_nf(short volatile *_Addend, short _Value);
+short _InterlockedExchangeAdd16_rel(short volatile *_Addend, short _Value);
+long _InterlockedExchangeAdd_acq(long volatile *_Addend, long _Value);
+long _InterlockedExchangeAdd_nf(long volatile *_Addend, long _Value);
+long _InterlockedExchangeAdd_rel(long volatile *_Addend, long _Value);
+__int64 _InterlockedExchangeAdd64_acq(__int64 volatile *_Addend, __int64 _Value);
+__int64 _InterlockedExchangeAdd64_nf(__int64 volatile *_Addend, __int64 _Value);
+__int64 _InterlockedExchangeAdd64_rel(__int64 volatile *_Addend, __int64 _Value);
 #endif
 /*----------------------------------------------------------------------------*\
 |* Interlocked Increment

@@ -117,6 +117,7 @@ CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
   if (!MMI->getModule()->getNamedMetadata("llvm.dbg.cu") ||
       !AP->getObjFileLowering().getCOFFDebugSymbolsSection()) {
     Asm = nullptr;
+    MMI->setDebugInfoAvailability(false);
     return;
   }
   // Tell MMI that we have debug info.
@@ -1515,6 +1516,8 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
   case dwarf::DW_TAG_union_type:
     return lowerTypeUnion(cast<DICompositeType>(Ty));
   case dwarf::DW_TAG_unspecified_type:
+    if (Ty->getName() == "decltype(nullptr)")
+      return TypeIndex::NullptrT();
     return TypeIndex::None();
   default:
     // Use the null type index.

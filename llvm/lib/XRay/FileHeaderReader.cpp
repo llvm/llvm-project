@@ -63,8 +63,7 @@ Expected<XRayFileHeader> readBinaryFormatHeader(DataExtractor &HeaderExtractor,
   // Manually advance the offset pointer 16 bytes, after getting a raw memcpy
   // from the underlying data.
   OffsetPtr += 16;
-  if (FileHeader.Version != 1 && FileHeader.Version != 2 &&
-      FileHeader.Version != 3)
+  if (FileHeader.Version < 1 || FileHeader.Version > 4)
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unsupported XRay file version: %d at offset %d",
                              FileHeader.Version, OffsetPtr);

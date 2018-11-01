@@ -22,6 +22,7 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -49,6 +50,7 @@ public:
     ::CoInitializeEx(nullptr, COINIT_MULTITHREADED);
 #endif
 
+    FileSystem::Initialize();
     HostInfo::Initialize();
     ObjectFilePECOFF::Initialize();
     SymbolFileDWARF::Initialize();
@@ -65,6 +67,7 @@ public:
     SymbolFileDWARF::Terminate();
     ObjectFilePECOFF::Terminate();
     HostInfo::Terminate();
+    FileSystem::Terminate();
 
 #if defined(_MSC_VER)
     ::CoUninitialize();

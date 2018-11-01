@@ -602,39 +602,6 @@ size_t FileSpec::MemorySize() const {
   return m_filename.MemorySize() + m_directory.MemorySize();
 }
 
-void FileSpec::EnumerateDirectory(llvm::StringRef dir_path,
-                                  bool find_directories, bool find_files,
-                                  bool find_other,
-                                  EnumerateDirectoryCallbackType callback,
-                                  void *callback_baton) {
-  namespace fs = llvm::sys::fs;
-  std::error_code EC;
-  fs::recursive_directory_iterator Iter(dir_path, EC);
-  fs::recursive_directory_iterator End;
-  for (; Iter != End && !EC; Iter.increment(EC)) {
-    const auto &Item = *Iter;
-    llvm::ErrorOr<fs::basic_file_status> Status = Item.status();
-    if (!Status)
-      break;
-    if (!find_files && fs::is_regular_file(*Status))
-      continue;
-    if (!find_directories && fs::is_directory(*Status))
-      continue;
-    if (!find_other && fs::is_other(*Status))
-      continue;
-
-    FileSpec Spec(Item.path(), false);
-    auto Result = callback(callback_baton, Status->type(), Spec);
-    if (Result == eEnumerateDirectoryResultQuit)
-      return;
-    if (Result == eEnumerateDirectoryResultNext) {
-      // Default behavior is to recurse.  Opt out if the callback doesn't want
-      // this behavior.
-      Iter.no_push();
-    }
-  }
-}
-
 FileSpec
 FileSpec::CopyByAppendingPathComponent(llvm::StringRef component) const {
   FileSpec ret = *this;

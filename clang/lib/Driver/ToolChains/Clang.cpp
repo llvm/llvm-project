@@ -3250,8 +3250,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsCuda = JA.isOffloading(Action::OFK_Cuda);
   bool IsHIP = JA.isOffloading(Action::OFK_HIP);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
-  bool IsModulePrecompile =
-      isa<PrecompileJobAction>(JA) && JA.getType() == types::TY_ModuleFile;
   bool IsHeaderModulePrecompile = isa<HeaderModulePrecompileJobAction>(JA);
 
   // A header module compilation doesn't have a main input file, so invent a
@@ -3272,7 +3270,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   for (const InputInfo &I : Inputs) {
     if (&I == &Input) {
       // This is the primary input.
-    } else if (IsModulePrecompile &&
+    } else if (IsHeaderModulePrecompile &&
                types::getPrecompiledType(I.getType()) == types::TY_PCH) {
       types::ID Expected =
           types::lookupHeaderTypeForSourceType(Inputs[0].getType());

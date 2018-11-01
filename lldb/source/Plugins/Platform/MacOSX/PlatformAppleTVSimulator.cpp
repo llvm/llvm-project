@@ -247,19 +247,20 @@ Status PlatformAppleTVSimulator::ResolveExecutable(
   return error;
 }
 
-static FileSpec::EnumerateDirectoryResult
+static FileSystem::EnumerateDirectoryResult
 EnumerateDirectoryCallback(void *baton, llvm::sys::fs::file_type ft,
-                           const FileSpec &file_spec) {
+                           llvm::StringRef path) {
   if (ft == llvm::sys::fs::file_type::directory_file) {
+    FileSpec file_spec(path, false);
     const char *filename = file_spec.GetFilename().GetCString();
     if (filename &&
         strncmp(filename, "AppleTVSimulator", strlen("AppleTVSimulator")) ==
             0) {
       ::snprintf((char *)baton, PATH_MAX, "%s", filename);
-      return FileSpec::eEnumerateDirectoryResultQuit;
+      return FileSystem::eEnumerateDirectoryResultQuit;
     }
   }
-  return FileSpec::eEnumerateDirectoryResultNext;
+  return FileSystem::eEnumerateDirectoryResultNext;
 }
 
 const char *PlatformAppleTVSimulator::GetSDKDirectoryAsCString() {
@@ -277,9 +278,9 @@ const char *PlatformAppleTVSimulator::GetSDKDirectoryAsCString() {
       bool find_directories = true;
       bool find_files = false;
       bool find_other = false;
-      FileSpec::EnumerateDirectory(sdks_directory, find_directories, find_files,
-                                   find_other, EnumerateDirectoryCallback,
-                                   sdk_dirname);
+      FileSystem::Instance().EnumerateDirectory(
+          sdks_directory, find_directories, find_files, find_other,
+          EnumerateDirectoryCallback, sdk_dirname);
 
       if (sdk_dirname[0]) {
         m_sdk_directory = sdks_directory;

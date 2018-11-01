@@ -261,7 +261,7 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
     // Add module directory.
     FileSpec module_file_spec = module_spec.GetFileSpec();
     // We keep the unresolved pathname if it fails.
-    FileSystem::ResolveSymbolicLink(module_file_spec, module_file_spec);
+    FileSystem::Instance().ResolveSymbolicLink(module_file_spec, module_file_spec);
 
     const ConstString &file_dir = module_file_spec.GetDirectory();
     debug_file_search_paths.AppendIfUnique(

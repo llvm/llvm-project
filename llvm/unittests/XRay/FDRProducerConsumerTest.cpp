@@ -54,7 +54,7 @@ template <> std::unique_ptr<Record> MakeRecord<WallclockRecord>() {
 }
 
 template <> std::unique_ptr<Record> MakeRecord<CustomEventRecord>() {
-  return make_unique<CustomEventRecord>(4, 1, "data");
+  return make_unique<CustomEventRecord>(4, 1, 2, "data");
 }
 
 template <> std::unique_ptr<Record> MakeRecord<CallArgRecord>() {
