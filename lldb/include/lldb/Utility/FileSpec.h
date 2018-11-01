@@ -281,15 +281,6 @@ public:
   bool Exists() const;
 
   //------------------------------------------------------------------
-  /// Check if a file is readable by the current user
-  ///
-  /// @return
-  ///     \b true if the file exists on disk and is readable, \b false
-  ///     otherwise.
-  //------------------------------------------------------------------
-  bool Readable() const;
-
-  //------------------------------------------------------------------
   /// Expanded existence test.
   ///
   /// Call into the Host to see if it can help find the file (e.g. by
@@ -449,19 +440,6 @@ public:
   ///     as a ConstString object.
   //------------------------------------------------------------------
   ConstString GetFileNameStrippingExtension() const;
-
-  //------------------------------------------------------------------
-  /// Return the current permissions of the path.
-  ///
-  /// Returns a bitmask for the current permissions of the file ( zero or more
-  /// of the permission bits defined in File::Permissions).
-  ///
-  /// @return
-  ///     Zero if the file doesn't exist or we are unable to get
-  ///     information for the file, otherwise one or more permission
-  ///     bits from the File::Permissions enumeration.
-  //------------------------------------------------------------------
-  uint32_t GetPermissions() const;
 
   //------------------------------------------------------------------
   /// Get the memory cost of this object.

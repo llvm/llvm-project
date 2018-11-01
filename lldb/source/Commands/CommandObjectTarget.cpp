@@ -280,7 +280,7 @@ protected:
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
-      if (!core_file.Readable()) {
+      if (!FileSystem::Instance().Readable(core_file)) {
         result.AppendErrorWithFormat("core file '%s' is not readable",
                                      core_file.GetPath().c_str());
         result.SetStatus(eReturnStatusFailed);
@@ -292,7 +292,7 @@ protected:
       FileSpec symfile(m_symbol_file.GetOptionValue().GetCurrentValue());
       if (symfile) {
         if (symfile.Exists()) {
-          if (!symfile.Readable()) {
+          if (!FileSystem::Instance().Readable(symfile)) {
             result.AppendErrorWithFormat("symbol file '%s' is not readable",
                                          symfile.GetPath().c_str());
             result.SetStatus(eReturnStatusFailed);
@@ -405,7 +405,7 @@ protected:
           char core_path[PATH_MAX];
           core_file.GetPath(core_path, sizeof(core_path));
           if (core_file.Exists()) {
-            if (!core_file.Readable()) {
+            if (!FileSystem::Instance().Readable(core_file)) {
               result.AppendMessageWithFormat(
                   "Core file '%s' is not readable.\n", core_path);
               result.SetStatus(eReturnStatusFailed);
