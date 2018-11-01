@@ -92,6 +92,9 @@ public:
   void Resolve(FileSpec &file_spec);
   /// @}
 
+  /// Call into the Host to see if it can help find the file.
+  bool ResolveExecutableLocation(FileSpec &file_spec);
+
   enum EnumerateDirectoryResult {
     /// Enumerate next entry in the current directory.
     eEnumerateDirectoryResultNext,

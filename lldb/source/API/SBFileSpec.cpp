@@ -12,6 +12,7 @@
 
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBStream.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Log.h"
@@ -50,7 +51,7 @@ bool SBFileSpec::IsValid() const { return m_opaque_ap->operator bool(); }
 bool SBFileSpec::Exists() const {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
 
-  bool result = m_opaque_ap->Exists();
+  bool result = FileSystem::Instance().Exists(*m_opaque_ap);
 
   if (log)
     log->Printf("SBFileSpec(%p)::Exists () => %s",
@@ -61,7 +62,7 @@ bool SBFileSpec::Exists() const {
 }
 
 bool SBFileSpec::ResolveExecutableLocation() {
-  return m_opaque_ap->ResolveExecutableLocation();
+  return FileSystem::Instance().ResolveExecutableLocation(*m_opaque_ap);
 }
 
 int SBFileSpec::ResolvePath(const char *src_path, char *dst_path,

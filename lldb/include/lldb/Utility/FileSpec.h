@@ -273,29 +273,6 @@ public:
   void Dump(Stream *s) const;
 
   //------------------------------------------------------------------
-  /// Existence test.
-  ///
-  /// @return
-  ///     \b true if the file exists on disk, \b false otherwise.
-  //------------------------------------------------------------------
-  bool Exists() const;
-
-  //------------------------------------------------------------------
-  /// Expanded existence test.
-  ///
-  /// Call into the Host to see if it can help find the file (e.g. by
-  /// searching paths set in the environment, etc.).
-  ///
-  /// If found, sets the value of m_directory to the directory where the file
-  /// was found.
-  ///
-  /// @return
-  ///     \b true if was able to find the file using expanded search
-  ///     methods, \b false otherwise.
-  //------------------------------------------------------------------
-  bool ResolveExecutableLocation();
-
-  //------------------------------------------------------------------
   /// Canonicalize this file path (basically running the static
   /// FileSpec::Resolve method on it). Useful if you asked us not to resolve
   /// the file path when you set the file.

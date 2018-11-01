@@ -33,11 +33,6 @@ static StructuredData::ObjectSP ParseJSONArray(JSONParser &json_parser);
 StructuredData::ObjectSP
 StructuredData::ParseJSONFromFile(const FileSpec &input_spec, Status &error) {
   StructuredData::ObjectSP return_sp;
-  if (!input_spec.Exists()) {
-    error.SetErrorStringWithFormatv("input file {0} does not exist.",
-                                    input_spec);
-    return return_sp;
-  }
 
   auto buffer_or_error = llvm::MemoryBuffer::getFile(input_spec.GetPath());
   if (!buffer_or_error) {

@@ -1818,7 +1818,7 @@ public:
     // TODO: move the bulk of this code over to the platform itself
     FileSpec src(args.GetArgumentAtIndex(0), true);
     FileSpec dst(args.GetArgumentAtIndex(1), false);
-    if (!src.Exists()) {
+    if (!FileSystem::Instance().Exists(src)) {
       result.AppendError("source location does not exist or is not accessible");
       result.SetStatus(eReturnStatusFailed);
       return false;

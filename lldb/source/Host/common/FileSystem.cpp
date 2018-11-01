@@ -13,6 +13,8 @@
 #include "lldb/Utility/TildeExpressionResolver.h"
 
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/Threading.h"
 
 #include <algorithm>
@@ -177,4 +179,37 @@ void FileSystem::Resolve(FileSpec &file_spec) {
 
   // Update the FileSpec with the resolved path.
   file_spec.SetPath(path);
+}
+
+bool FileSystem::ResolveExecutableLocation(FileSpec &file_spec) {
+  // If the directory is set there's nothing to do.
+  const ConstString &directory = file_spec.GetDirectory();
+  if (directory)
+    return false;
+
+  // We cannot look for a file if there's no file name.
+  const ConstString &filename = file_spec.GetFilename();
+  if (!filename)
+    return false;
+
+  // Search for the file on the host.
+  const std::string filename_str(filename.GetCString());
+  llvm::ErrorOr<std::string> error_or_path =
+      llvm::sys::findProgramByName(filename_str);
+  if (!error_or_path)
+    return false;
+
+  // findProgramByName returns "." if it can't find the file.
+  llvm::StringRef path = *error_or_path;
+  llvm::StringRef parent = llvm::sys::path::parent_path(path);
+  if (parent.empty() || parent == ".")
+    return false;
+
+  // Make sure that the result exists.
+  FileSpec result(*error_or_path, false);
+  if (!Exists(result))
+    return false;
+
+  file_spec = result;
+  return true;
 }

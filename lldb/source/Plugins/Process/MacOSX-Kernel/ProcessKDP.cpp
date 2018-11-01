@@ -300,7 +300,8 @@ Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
               if (module_spec.GetSymbolFileSpec()) {
                 ModuleSpec executable_module_spec =
                     Symbols::LocateExecutableObjectFile(module_spec);
-                if (executable_module_spec.GetFileSpec().Exists()) {
+                if (FileSystem::Instance().Exists(
+                        executable_module_spec.GetFileSpec())) {
                   module_spec.GetFileSpec() =
                       executable_module_spec.GetFileSpec();
                 }
@@ -309,7 +310,7 @@ Status ProcessKDP::DoConnectRemote(Stream *strm, llvm::StringRef remote_url) {
                   !module_spec.GetSymbolFileSpec())
                 Symbols::DownloadObjectAndSymbolFile(module_spec, true);
 
-              if (module_spec.GetFileSpec().Exists()) {
+              if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
                 ModuleSP module_sp(new Module(module_spec));
                 if (module_sp.get() && module_sp->GetObjectFile()) {
                   // Get the current target executable

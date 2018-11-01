@@ -90,7 +90,7 @@ static llvm::sys::DynamicLibrary LoadPlugin(const lldb::DebuggerSP &debugger_sp,
                            "lldb::PluginInitialize(lldb::SBDebugger)");
     }
   } else {
-    if (spec.Exists())
+    if (FileSystem::Instance().Exists(spec))
       error.SetErrorString("this file does not represent a loadable dylib");
     else
       error.SetErrorString("no such file");

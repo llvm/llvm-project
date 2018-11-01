@@ -190,7 +190,7 @@ Status PlatformAppleTVSimulator::ResolveExecutable(
   // ourselves
   Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
 
-  if (resolved_module_spec.GetFileSpec().Exists()) {
+  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec())) {
     if (resolved_module_spec.GetArchitecture().IsValid()) {
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
                                           NULL, NULL, NULL);
@@ -317,12 +317,12 @@ Status PlatformAppleTVSimulator::GetSymbolFile(const FileSpec &platform_file,
 
       // First try in the SDK and see if the file is in there
       local_file.SetFile(resolved_path, true, FileSpec::Style::native);
-      if (local_file.Exists())
+      if (FileSystem::Instance().Exists(local_file))
         return error;
 
       // Else fall back to the actual path itself
       local_file.SetFile(platform_file_path, true, FileSpec::Style::native);
-      if (local_file.Exists())
+      if (FileSystem::Instance().Exists(local_file))
         return error;
     }
     error.SetErrorStringWithFormat(

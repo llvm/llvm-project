@@ -151,7 +151,7 @@ const FileSpec &ProcessLaunchInfo::GetShell() const { return m_shell; }
 void ProcessLaunchInfo::SetShell(const FileSpec &shell) {
   m_shell = shell;
   if (m_shell) {
-    m_shell.ResolveExecutableLocation();
+    FileSystem::Instance().ResolveExecutableLocation(m_shell);
     m_flags.Set(lldb::eLaunchFlagLaunchInShell);
   } else
     m_flags.Clear(lldb::eLaunchFlagLaunchInShell);

@@ -81,7 +81,7 @@ ModuleSP DynamicLoader::GetTargetExecutable() {
   ModuleSP executable = target.GetExecutableModule();
 
   if (executable) {
-    if (executable->GetFileSpec().Exists()) {
+    if (FileSystem::Instance().Exists(executable->GetFileSpec())) {
       ModuleSpec module_spec(executable->GetFileSpec(),
                              executable->GetArchitecture());
       auto module_sp = std::make_shared<Module>(module_spec);

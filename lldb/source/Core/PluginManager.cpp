@@ -163,7 +163,8 @@ void PluginManager::Initialize() {
   const bool find_other = true;
   char dir_path[PATH_MAX];
   if (FileSpec dir_spec = HostInfo::GetSystemPluginDir()) {
-    if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path))) {
+    if (FileSystem::Instance().Exists(dir_spec) &&
+        dir_spec.GetPath(dir_path, sizeof(dir_path))) {
       FileSystem::Instance().EnumerateDirectory(dir_path, find_directories,
                                                 find_files, find_other,
                                                 LoadPluginCallback, nullptr);
@@ -171,7 +172,8 @@ void PluginManager::Initialize() {
   }
 
   if (FileSpec dir_spec = HostInfo::GetUserPluginDir()) {
-    if (dir_spec.Exists() && dir_spec.GetPath(dir_path, sizeof(dir_path))) {
+    if (FileSystem::Instance().Exists(dir_spec) &&
+        dir_spec.GetPath(dir_path, sizeof(dir_path))) {
       FileSystem::Instance().EnumerateDirectory(dir_path, find_directories,
                                                 find_files, find_other,
                                                 LoadPluginCallback, nullptr);

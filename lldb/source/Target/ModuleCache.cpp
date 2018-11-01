@@ -133,7 +133,7 @@ Status CreateHostSysRootModuleLink(const FileSpec &root_dir_spec,
   const auto sysroot_module_path_spec =
       JoinPath(JoinPath(root_dir_spec, hostname),
                platform_module_spec.GetPath().c_str());
-  if (sysroot_module_path_spec.Exists()) {
+  if (FileSystem::Instance().Exists(sysroot_module_path_spec)) {
     if (!delete_existing)
       return Status();
 
@@ -225,7 +225,7 @@ Status ModuleCache::Get(const FileSpec &root_dir_spec, const char *hostname,
   const auto module_file_path = JoinPath(
       module_spec_dir, module_spec.GetFileSpec().GetFilename().AsCString());
 
-  if (!module_file_path.Exists())
+  if (!FileSystem::Instance().Exists(module_file_path))
     return Status("Module %s not found", module_file_path.GetPath().c_str());
   if (FileSystem::Instance().GetByteSize(module_file_path) !=
       module_spec.GetObjectSize())
@@ -253,7 +253,7 @@ Status ModuleCache::Get(const FileSpec &root_dir_spec, const char *hostname,
     return error;
 
   FileSpec symfile_spec = GetSymbolFileSpec(cached_module_sp->GetFileSpec());
-  if (symfile_spec.Exists())
+  if (FileSystem::Instance().Exists(symfile_spec))
     cached_module_sp->SetSymbolFileFileSpec(symfile_spec);
 
   m_loaded_modules.insert(

@@ -174,7 +174,7 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
                   snprintf(dsym_uuid_plist_path, sizeof(dsym_uuid_plist_path),
                            "%s%s.plist", dsym_path, uuid_str.c_str());
                   FileSpec dsym_uuid_plist_spec(dsym_uuid_plist_path, false);
-                  if (dsym_uuid_plist_spec.Exists()) {
+                  if (FileSystem::Instance().Exists(dsym_uuid_plist_spec)) {
                     ApplePropertyList plist(dsym_uuid_plist_path);
                     if (plist) {
                       std::string DBGBuildSourcePath;

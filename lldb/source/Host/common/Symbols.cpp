@@ -85,17 +85,16 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
   dsym_directory.AppendPathComponent("Contents");
   dsym_directory.AppendPathComponent("Resources");
   dsym_directory.AppendPathComponent("DWARF");
-  
-  if (dsym_directory.Exists()) {
+
+  if (FileSystem::Instance().Exists(dsym_directory)) {
 
     // See if the binary name exists in the dSYM DWARF
     // subdir.
     dsym_fspec = dsym_directory;
     dsym_fspec.AppendPathComponent(filename.AsCString());
-    if (dsym_fspec.Exists()
-        && FileAtPathContainsArchAndUUID(dsym_fspec, 
-                         mod_spec.GetArchitecturePtr(),
-                         mod_spec.GetUUIDPtr())) {
+    if (FileSystem::Instance().Exists(dsym_fspec) &&
+        FileAtPathContainsArchAndUUID(dsym_fspec, mod_spec.GetArchitecturePtr(),
+                                      mod_spec.GetUUIDPtr())) {
       return true;
     }
 
@@ -109,15 +108,15 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
       binary_name.erase(last_dot);
       dsym_fspec = dsym_directory;
       dsym_fspec.AppendPathComponent(binary_name);
-      if (dsym_fspec.Exists()
-          && FileAtPathContainsArchAndUUID(dsym_fspec, 
-                           mod_spec.GetArchitecturePtr(),
-                           mod_spec.GetUUIDPtr())) {
+      if (FileSystem::Instance().Exists(dsym_fspec) &&
+          FileAtPathContainsArchAndUUID(dsym_fspec,
+                                        mod_spec.GetArchitecturePtr(),
+                                        mod_spec.GetUUIDPtr())) {
         return true;
       }
     }
-  } 
-  
+  }
+
   // See if we have a .dSYM.yaa next to this executable path.
   FileSpec dsym_yaa_fspec = exec_fspec;
   dsym_yaa_fspec.RemoveLastPathComponent();
@@ -125,10 +124,10 @@ static bool LookForDsymNextToExecutablePath(const ModuleSpec &mod_spec,
   dsym_yaa_filename += ".dSYM.yaa";
   dsym_yaa_fspec.AppendPathComponent(dsym_yaa_filename);
 
-  if (dsym_yaa_fspec.Exists()) {
+  if (FileSystem::Instance().Exists(dsym_yaa_fspec)) {
     ModuleSpec mutable_mod_spec = mod_spec;
-    if (Symbols::DownloadObjectAndSymbolFile (mutable_mod_spec, true)
-        && mutable_mod_spec.GetSymbolFileSpec().Exists()) {
+    if (Symbols::DownloadObjectAndSymbolFile(mutable_mod_spec, true) &&
+        FileSystem::Instance().Exists(mutable_mod_spec.GetSymbolFileSpec())) {
       dsym_fspec = mutable_mod_spec.GetSymbolFileSpec();
       return true;
     }
@@ -250,7 +249,8 @@ ModuleSpec Symbols::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
 
 FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
   FileSpec symbol_file_spec = module_spec.GetSymbolFileSpec();
-  if (symbol_file_spec.IsAbsolute() && symbol_file_spec.Exists())
+  if (symbol_file_spec.IsAbsolute() &&
+      FileSystem::Instance().Exists(symbol_file_spec))
     return symbol_file_spec;
 
   const char *symbol_filename = symbol_file_spec.GetFilename().AsCString();
@@ -321,7 +321,7 @@ FileSpec Symbols::LocateExecutableSymbolFile(const ModuleSpec &module_spec) {
                                       module_file_spec.GetPath()))
           continue;
 
-        if (file_spec.Exists()) {
+        if (FileSystem::Instance().Exists(file_spec)) {
           lldb_private::ModuleSpecList specs;
           const size_t num_specs =
               ObjectFile::GetModuleSpecifications(file_spec, 0, 0, specs);

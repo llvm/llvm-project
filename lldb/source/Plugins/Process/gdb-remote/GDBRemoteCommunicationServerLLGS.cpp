@@ -3220,7 +3220,7 @@ GDBRemoteCommunicationServerLLGS::FindModuleFile(const std::string &module_path,
     if (m_debugged_process_up
             ->GetLoadedModuleFileSpec(module_path.c_str(), file_spec)
             .Success()) {
-      if (file_spec.Exists())
+      if (FileSystem::Instance().Exists(file_spec))
         return file_spec;
     }
   }

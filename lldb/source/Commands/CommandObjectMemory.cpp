@@ -1210,7 +1210,7 @@ public:
       switch (short_option) {
       case 'i':
         m_infile.SetFile(option_value, true, FileSpec::Style::native);
-        if (!m_infile.Exists()) {
+        if (!FileSystem::Instance().Exists(m_infile)) {
           m_infile.Clear();
           error.SetErrorStringWithFormat("input file does not exist: '%s'",
                                          option_value.str().c_str());
