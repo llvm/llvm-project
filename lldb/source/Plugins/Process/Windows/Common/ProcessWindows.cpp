@@ -72,6 +72,20 @@ std::string GetProcessExecutableName(DWORD pid) {
   return file_name;
 }
 
+DWORD ConvertLldbToWinApiProtect(uint32_t protect) {
+  // We also can process a read / write permissions here, but if the debugger
+  // will make later a write into the allocated memory, it will fail. To get
+  // around it is possible inside DoWriteMemory to remember memory permissions,
+  // allow write, write and restore permissions, but for now we process only
+  // the executable permission.
+  //
+  // TODO: Process permissions other than executable
+  if (protect & ePermissionsExecutable)
+    return PAGE_EXECUTE_READWRITE;
+
+  return PAGE_READWRITE;
+}
+
 } // anonymous namespace
 
 namespace lldb_private {
@@ -693,6 +707,58 @@ size_t ProcessWindows::DoWriteMemory(lldb::addr_t vm_addr, const void *buf,
     LLDB_LOG(log, "writing failed with error: {0}", error);
   }
   return bytes_written;
+}
+
+lldb::addr_t ProcessWindows::DoAllocateMemory(size_t size, uint32_t permissions,
+                                              Status &error) {
+  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_MEMORY);
+  llvm::sys::ScopedLock lock(m_mutex);
+  LLDB_LOG(log, "attempting to allocate {0} bytes with permissions {1}", size,
+           permissions);
+
+  if (!m_session_data) {
+    LLDB_LOG(log, "cannot allocate, there is no active debugger connection.");
+    error.SetErrorString(
+        "cannot allocate, there is no active debugger connection");
+    return 0;
+  }
+
+  HostProcess process = m_session_data->m_debugger->GetProcess();
+  lldb::process_t handle = process.GetNativeProcess().GetSystemHandle();
+  auto protect = ConvertLldbToWinApiProtect(permissions);
+  auto result = VirtualAllocEx(handle, nullptr, size, MEM_COMMIT, protect);
+  if (!result) {
+    error.SetError(GetLastError(), eErrorTypeWin32);
+    LLDB_LOG(log, "allocating failed with error: {0}", error);
+    return 0;
+  }
+
+  return reinterpret_cast<addr_t>(result);
+}
+
+Status ProcessWindows::DoDeallocateMemory(lldb::addr_t ptr) {
+  Status result;
+
+  Log *log = ProcessWindowsLog::GetLogIfAny(WINDOWS_LOG_MEMORY);
+  llvm::sys::ScopedLock lock(m_mutex);
+  LLDB_LOG(log, "attempting to deallocate bytes at address {0}", ptr);
+
+  if (!m_session_data) {
+    LLDB_LOG(log, "cannot deallocate, there is no active debugger connection.");
+    result.SetErrorString(
+        "cannot deallocate, there is no active debugger connection");
+    return result;
+  }
+
+  HostProcess process = m_session_data->m_debugger->GetProcess();
+  lldb::process_t handle = process.GetNativeProcess().GetSystemHandle();
+  if (!VirtualFreeEx(handle, reinterpret_cast<LPVOID>(ptr), 0, MEM_RELEASE)) {
+    result.SetError(GetLastError(), eErrorTypeWin32);
+    LLDB_LOG(log, "deallocating failed with error: {0}", result);
+    return result;
+  }
+
+  return result;
 }
 
 Status ProcessWindows::GetMemoryRegionInfo(lldb::addr_t vm_addr,
