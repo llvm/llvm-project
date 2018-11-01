@@ -288,6 +288,7 @@ GetClassOrFunctionParent(const llvm::pdb::PDBSymbol &symbol) {
     auto class_parent_id = raw.getClassParentId();
     if (auto class_parent = session.getSymbolById(class_parent_id))
       return class_parent;
+    break;
   }
   default:
     break;
