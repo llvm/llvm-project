@@ -1,5 +1,4 @@
 set(LLVM_LINK_COMPONENTS
-  Analysis
   BinaryFormat
   Support
   )
@@ -73,6 +72,7 @@ add_clang_library(clangAST
   VTTBuilder.cpp
 
   LINK_LIBS
+  clangAnalysis
   clangBasic
   clangLex
   )
