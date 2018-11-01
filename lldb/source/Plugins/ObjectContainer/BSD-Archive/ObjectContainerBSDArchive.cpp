@@ -461,7 +461,7 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
     return 0;
 
   const size_t initial_count = specs.GetSize();
-  llvm::sys::TimePoint<> file_mod_time = FileSystem::GetModificationTime(file);
+  llvm::sys::TimePoint<> file_mod_time = FileSystem::Instance().GetModificationTime(file);
   Archive::shared_ptr archive_sp(
       Archive::FindCachedArchive(file, ArchSpec(), file_mod_time, file_offset));
   bool set_archive_arch = false;

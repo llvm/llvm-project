@@ -19,21 +19,6 @@ using namespace llvm;
 using namespace llvm::wasm;
 using namespace lld::wasm;
 
-static const char *valueTypeToString(ValType Type) {
-  switch (Type) {
-  case wasm::ValType::I32:
-    return "i32";
-  case wasm::ValType::I64:
-    return "i64";
-  case wasm::ValType::F32:
-    return "f32";
-  case wasm::ValType::F64:
-    return "f64";
-  default:
-    llvm_unreachable("invalid value type");
-  }
-}
-
 namespace lld {
 
 void wasm::debugWrite(uint64_t Offset, const Twine &Msg) {
@@ -75,7 +60,7 @@ void wasm::writeU32(raw_ostream &OS, uint32_t Number, const Twine &Msg) {
 
 void wasm::writeValueType(raw_ostream &OS, ValType Type, const Twine &Msg) {
   writeU8(OS, static_cast<uint8_t>(Type),
-          Msg + "[type: " + valueTypeToString(Type) + "]");
+          Msg + "[type: " + toString(Type) + "]");
 }
 
 void wasm::writeSig(raw_ostream &OS, const WasmSignature &Sig) {
@@ -178,15 +163,15 @@ void wasm::writeExport(raw_ostream &OS, const WasmExport &Export) {
 std::string lld::toString(ValType Type) {
   switch (Type) {
   case ValType::I32:
-    return "I32";
+    return "i32";
   case ValType::I64:
-    return "I64";
+    return "i64";
   case ValType::F32:
-    return "F32";
+    return "f32";
   case ValType::F64:
-    return "F64";
+    return "f64";
   case ValType::V128:
-    return "V128";
+    return "v128";
   case ValType::EXCEPT_REF:
     return "except_ref";
   }

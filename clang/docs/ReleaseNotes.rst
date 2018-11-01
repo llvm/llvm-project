@@ -142,6 +142,7 @@ ABI Changes in Clang
 
 - `_Alignof` and `alignof` now return the ABI alignment of a type, as opposed
   to the preferred alignment.
+
   - This is more in keeping with the language of the standards, as well as
     being compatible with gcc
   - `__alignof` and `__alignof__` still return the preferred alignment of

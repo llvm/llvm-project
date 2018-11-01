@@ -133,25 +133,24 @@ return:
 define i8* @bsd_memchr(i8* %s, i32 %a, i32 %c, i64 %n) nounwind ssp {
 ; CHECK-LABEL: bsd_memchr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testq %rcx, %rcx
-; CHECK-NEXT:    je .LBB3_5
+; CHECK-NEXT:    je .LBB3_4
 ; CHECK-NEXT:  # %bb.1: # %preheader
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movzbl %dl, %edx
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB3_2: # %do.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    cmpl %edx, %esi
-; CHECK-NEXT:    je .LBB3_3
-; CHECK-NEXT:  # %bb.4: # %do.cond
+; CHECK-NEXT:    je .LBB3_5
+; CHECK-NEXT:  # %bb.3: # %do.cond
 ; CHECK-NEXT:    # in Loop: Header=BB3_2 Depth=1
-; CHECK-NEXT:    incq %rdi
+; CHECK-NEXT:    incq %rax
 ; CHECK-NEXT:    decq %rcx
 ; CHECK-NEXT:    jne .LBB3_2
+; CHECK-NEXT:  .LBB3_4:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:  .LBB3_5: # %return
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB3_3:
-; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
   %cmp = icmp eq i64 %n, 0

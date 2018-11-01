@@ -327,7 +327,7 @@ public:
     LatestTSC = 0;
     UndoableFunctionEnters = 0;
     UndoableTailExits = 0;
-    return W.writeCustomEvent(TSC, Event, EventSize);
+    return W.writeCustomEvent(TSC, CPU, Event, EventSize);
   }
 
   bool typedEvent(uint64_t TSC, uint16_t CPU, uint16_t EventType,

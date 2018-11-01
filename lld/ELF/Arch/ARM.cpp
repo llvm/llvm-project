@@ -62,8 +62,6 @@ ARM::ARM() {
   PltEntrySize = 16;
   PltHeaderSize = 32;
   TrapInstr = 0xd4d4d4d4;
-  // ARM uses Variant 1 TLS
-  TcbSize = 8;
   NeedsThunks = true;
 }
 

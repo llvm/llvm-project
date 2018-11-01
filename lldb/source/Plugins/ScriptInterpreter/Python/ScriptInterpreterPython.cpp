@@ -1547,7 +1547,7 @@ lldb::ValueObjectListSP ScriptInterpreterPython::GetRecognizedArguments(
   if (py_return.get()) {
     PythonList result_list(PyRefType::Borrowed, py_return.get());
     ValueObjectListSP result = ValueObjectListSP(new ValueObjectList());
-    for (int i = 0; i < result_list.GetSize(); i++) {
+    for (size_t i = 0; i < result_list.GetSize(); i++) {
       PyObject *item = result_list.GetItemAtIndex(i).get();
       lldb::SBValue *sb_value_ptr =
           (lldb::SBValue *)g_swig_cast_to_sbvalue(item);

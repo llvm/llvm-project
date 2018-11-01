@@ -15,5 +15,5 @@ define void @_start() {
   ret void
 }
 
-; CHECK: >>> defined as (I32) -> void in {{.*}}signature-mismatch.ll.tmp1.o
+; CHECK: >>> defined as (i32) -> void in {{.*}}signature-mismatch.ll.tmp1.o
 ; CHECK: >>> defined as () -> void in lto.tmp

@@ -149,6 +149,8 @@ def: Flag<["-"], "E">, Alias<export_dynamic>, HelpText<"Alias for --export-dynam
 def: Flag<["-"], "i">, Alias<initial_memory>;
 def: Flag<["-"], "m">, Alias<max_memory>;
 def: Flag<["-"], "r">, Alias<relocatable>;
+def: Flag<["-"], "s">, Alias<strip_all>, HelpText<"Alias for --strip-all">;
+def: Flag<["-"], "S">, Alias<strip_debug>, HelpText<"Alias for --strip-debug">;
 def: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 
 // LTO-related options.

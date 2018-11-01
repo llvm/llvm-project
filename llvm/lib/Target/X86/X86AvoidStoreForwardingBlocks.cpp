@@ -52,10 +52,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-avoid-SFB"
 
-namespace llvm {
-void initializeX86AvoidSFBPassPass(PassRegistry &);
-} // end namespace llvm
-
 static cl::opt<bool> DisableX86AvoidStoreForwardBlocks(
     "x86-disable-avoid-SFB", cl::Hidden,
     cl::desc("X86: Disable Store Forwarding Blocks fixup."), cl::init(false));

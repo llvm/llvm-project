@@ -1,4 +1,5 @@
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// REQUIRES: int128
 //===-- fixunssfti_test.c - Test __fixunssfti -----------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
@@ -87,18 +88,18 @@ int main()
         return 1;
 #endif
 
-    if (test__fixunssfti(0x1.FFFFFEp+63F, 0xFFFFFF0000000000LL))
+    if (test__fixunssfti(0x1.FFFFFEp+63F, 0xFFFFFF0000000000ULL))
         return 1;
-    if (test__fixunssfti(0x1.000000p+63F, 0x8000000000000000LL))
+    if (test__fixunssfti(0x1.000000p+63F, 0x8000000000000000ULL))
         return 1;
     if (test__fixunssfti(0x1.FFFFFEp+62F, 0x7FFFFF8000000000LL))
         return 1;
     if (test__fixunssfti(0x1.FFFFFCp+62F, 0x7FFFFF0000000000LL))
         return 1;
 
-    if (test__fixunssfti(0x1.FFFFFEp+127F, make_ti(0xFFFFFF0000000000LL, 0)))
+    if (test__fixunssfti(0x1.FFFFFEp+127F, make_ti(0xFFFFFF0000000000ULL, 0)))
         return 1;
-    if (test__fixunssfti(0x1.000000p+127F, make_ti(0x8000000000000000LL, 0)))
+    if (test__fixunssfti(0x1.000000p+127F, make_ti(0x8000000000000000ULL, 0)))
         return 1;
     if (test__fixunssfti(0x1.FFFFFEp+126F, make_ti(0x7FFFFF8000000000LL, 0)))
         return 1;

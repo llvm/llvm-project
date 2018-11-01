@@ -712,10 +712,8 @@ bool MallocChecker::isCMemFunction(const FunctionDecl *FD,
   return false;
 }
 
-// Tells if the callee is one of the following:
-// 1) A global non-placement new/delete operator function.
-// 2) A global placement operator function with the single placement argument
-//    of type std::nothrow_t.
+// Tells if the callee is one of the builtin new/delete operators, including
+// placement operators and other standard overloads.
 bool MallocChecker::isStandardNewDelete(const FunctionDecl *FD,
                                         ASTContext &C) const {
   if (!FD)
@@ -726,23 +724,11 @@ bool MallocChecker::isStandardNewDelete(const FunctionDecl *FD,
       Kind != OO_Delete && Kind != OO_Array_Delete)
     return false;
 
-  // Skip all operator new/delete methods.
-  if (isa<CXXMethodDecl>(FD))
-    return false;
-
-  // Return true if tested operator is a standard placement nothrow operator.
-  if (FD->getNumParams() == 2) {
-    QualType T = FD->getParamDecl(1)->getType();
-    if (const IdentifierInfo *II = T.getBaseTypeIdentifier())
-      return II->getName().equals("nothrow_t");
-  }
-
-  // Skip placement operators.
-  if (FD->getNumParams() != 1 || FD->isVariadic())
-    return false;
-
-  // One of the standard new/new[]/delete/delete[] non-placement operators.
-  return true;
+  // This is standard if and only if it's not defined in a user file.
+  SourceLocation L = FD->getLocation();
+  // If the header for operator delete is not included, it's still defined
+  // in an invalid source location. Check to make sure we don't crash.
+  return !L.isValid() || C.getSourceManager().isInSystemHeader(L);
 }
 
 llvm::Optional<ProgramStateRef> MallocChecker::performKernelMalloc(
@@ -1087,12 +1073,6 @@ static bool treatUnusedNewEscaped(const CXXNewExpr *NE) {
 void MallocChecker::processNewAllocation(const CXXNewExpr *NE,
                                          CheckerContext &C,
                                          SVal Target) const {
-  if (NE->getNumPlacementArgs())
-    for (CXXNewExpr::const_arg_iterator I = NE->placement_arg_begin(),
-         E = NE->placement_arg_end(); I != E; ++I)
-      if (SymbolRef Sym = C.getSVal(*I).getAsSymbol())
-        checkUseAfterFree(Sym, C, *I);
-
   if (!isStandardNewDelete(NE->getOperatorNew(), C.getASTContext()))
     return;
 
@@ -2437,10 +2417,6 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
         (isCMemFunction(FD, Ctx, AF_Malloc, MemoryOperationKind::MOK_Free) ||
          isCMemFunction(FD, Ctx, AF_IfNameIndex,
                         MemoryOperationKind::MOK_Free)))
-      return;
-
-    if (ChecksEnabled[CK_NewDeleteChecker] &&
-        isStandardNewDelete(FD, Ctx))
       return;
   }
 

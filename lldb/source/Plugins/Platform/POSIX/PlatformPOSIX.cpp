@@ -455,7 +455,7 @@ lldb::user_id_t PlatformPOSIX::GetFileSize(const FileSpec &file_spec) {
 
 Status PlatformPOSIX::CreateSymlink(const FileSpec &src, const FileSpec &dst) {
   if (IsHost())
-    return FileSystem::Symlink(src, dst);
+    return FileSystem::Instance().Symlink(src, dst);
   else if (m_remote_platform_sp)
     return m_remote_platform_sp->CreateSymlink(src, dst);
   else

@@ -322,7 +322,6 @@ protected:
 
   // Used as options.
   bool EnableHugePrivateBuffer;
-  bool EnableVGPRSpilling;
   bool EnableLoadStoreOpt;
   bool EnableUnsafeDSOffsetFolding;
   bool EnableSIScheduler;
@@ -747,8 +746,6 @@ public:
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
-
-  bool isVGPRSpillingEnabled(const Function &F) const;
 
   unsigned getMaxNumUserSGPRs() const {
     return 16;

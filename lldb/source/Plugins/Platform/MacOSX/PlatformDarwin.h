@@ -16,6 +16,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
@@ -111,9 +112,9 @@ protected:
     SDKType sdk_type;
   };
 
-  static lldb_private::FileSpec::EnumerateDirectoryResult
+  static lldb_private::FileSystem::EnumerateDirectoryResult
   DirectoryEnumerator(void *baton, llvm::sys::fs::file_type file_type,
-                      const lldb_private::FileSpec &spec);
+                      llvm::StringRef path);
 
   static lldb_private::FileSpec
   FindSDKInXcodeForModules(SDKType sdk_type,

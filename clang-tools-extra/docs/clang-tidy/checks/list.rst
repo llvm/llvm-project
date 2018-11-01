@@ -225,6 +225,7 @@ Clang-Tidy Checks
    portability-simd-intrinsics
    readability-avoid-const-params-in-decls
    readability-braces-around-statements
+   readability-const-return-type
    readability-container-size-empty
    readability-delete-null-pointer
    readability-deleted-default
@@ -233,6 +234,7 @@ Clang-Tidy Checks
    readability-identifier-naming
    readability-implicit-bool-conversion
    readability-inconsistent-declaration-parameter-name
+   readability-isolate-declaration
    readability-magic-numbers
    readability-misleading-indentation
    readability-misplaced-array-index

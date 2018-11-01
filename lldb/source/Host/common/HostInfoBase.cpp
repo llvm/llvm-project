@@ -226,7 +226,7 @@ bool HostInfoBase::ComputeSharedLibraryDirectory(FileSpec &file_spec) {
 
   // This is necessary because when running the testsuite the shlib might be a
   // symbolic link inside the Python resource dir.
-  FileSystem::ResolveSymbolicLink(lldb_file_spec, lldb_file_spec);
+  FileSystem::Instance().ResolveSymbolicLink(lldb_file_spec, lldb_file_spec);
 
   // Remove the filename so that this FileSpec only represents the directory.
   file_spec.GetDirectory() = lldb_file_spec.GetDirectory();
