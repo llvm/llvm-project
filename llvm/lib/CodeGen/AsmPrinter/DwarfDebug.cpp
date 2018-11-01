@@ -701,15 +701,18 @@ sortGlobalExprs(SmallVectorImpl<DwarfCompileUnit::GlobalExpr> &GVEs) {
 void DwarfDebug::beginModule() {
   NamedRegionTimer T(DbgTimerName, DbgTimerDescription, DWARFGroupName,
                      DWARFGroupDescription, TimePassesIsEnabled);
-  if (DisableDebugInfoPrinting)
+  if (DisableDebugInfoPrinting) {
+    MMI->setDebugInfoAvailability(false);
     return;
+  }
 
   const Module *M = MMI->getModule();
 
   unsigned NumDebugCUs = std::distance(M->debug_compile_units_begin(),
                                        M->debug_compile_units_end());
   // Tell MMI whether we have debug info.
-  MMI->setDebugInfoAvailability(NumDebugCUs > 0);
+  assert(MMI->hasDebugInfo() == (NumDebugCUs > 0) &&
+         "DebugInfoAvailabilty initialized unexpectedly");
   SingleCU = NumDebugCUs == 1;
   DenseMap<DIGlobalVariable *, SmallVector<DwarfCompileUnit::GlobalExpr, 1>>
       GVMap;

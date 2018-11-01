@@ -89,6 +89,12 @@ bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::LOAD_I64:
       case WebAssembly::LOAD_F32:
       case WebAssembly::LOAD_F64:
+      case WebAssembly::LOAD_v16i8:
+      case WebAssembly::LOAD_v8i16:
+      case WebAssembly::LOAD_v4i32:
+      case WebAssembly::LOAD_v2i64:
+      case WebAssembly::LOAD_v4f32:
+      case WebAssembly::LOAD_v2f64:
       case WebAssembly::LOAD8_S_I32:
       case WebAssembly::LOAD8_U_I32:
       case WebAssembly::LOAD16_S_I32:
@@ -164,6 +170,12 @@ bool WebAssemblySetP2AlignOperands::runOnMachineFunction(MachineFunction &MF) {
       case WebAssembly::STORE_I64:
       case WebAssembly::STORE_F32:
       case WebAssembly::STORE_F64:
+      case WebAssembly::STORE_v16i8:
+      case WebAssembly::STORE_v8i16:
+      case WebAssembly::STORE_v4i32:
+      case WebAssembly::STORE_v2i64:
+      case WebAssembly::STORE_v4f32:
+      case WebAssembly::STORE_v2f64:
       case WebAssembly::STORE8_I32:
       case WebAssembly::STORE16_I32:
       case WebAssembly::STORE8_I64:

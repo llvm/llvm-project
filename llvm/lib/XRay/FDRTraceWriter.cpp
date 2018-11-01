@@ -94,9 +94,10 @@ Error FDRTraceWriter::visit(TSCWrapRecord &R) {
 }
 
 Error FDRTraceWriter::visit(CustomEventRecord &R) {
-  if (auto E = writeMetadata<5u>(OS, R.size(), R.tsc()))
+  if (auto E = writeMetadata<5u>(OS, R.size(), R.tsc(), R.cpu()))
     return E;
-  ArrayRef<char> Bytes(R.data().data(), R.data().size());
+  auto D = R.data();
+  ArrayRef<char> Bytes(D.data(), D.size());
   OS.write(Bytes);
   return Error::success();
 }
@@ -127,7 +128,7 @@ Error FDRTraceWriter::visit(FunctionRecord &R) {
   OS.write(TypeRecordFuncId);
   OS.write(R.delta());
   return Error::success();
-} // namespace xray
+}
 
 } // namespace xray
 } // namespace llvm

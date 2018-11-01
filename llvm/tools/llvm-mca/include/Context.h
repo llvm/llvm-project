@@ -43,13 +43,12 @@ struct PipelineOptions {
 };
 
 class Context {
-  llvm::SmallVector<std::unique_ptr<HardwareUnit>, 4> Hardware;
-  const llvm::MCRegisterInfo &MRI;
-  const llvm::MCSubtargetInfo &STI;
+  SmallVector<std::unique_ptr<HardwareUnit>, 4> Hardware;
+  const MCRegisterInfo &MRI;
+  const MCSubtargetInfo &STI;
 
 public:
-  Context(const llvm::MCRegisterInfo &R, const llvm::MCSubtargetInfo &S)
-      : MRI(R), STI(S) {}
+  Context(const MCRegisterInfo &R, const MCSubtargetInfo &S) : MRI(R), STI(S) {}
   Context(const Context &C) = delete;
   Context &operator=(const Context &C) = delete;
 

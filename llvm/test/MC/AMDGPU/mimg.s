@@ -158,6 +158,84 @@ image_load v[5:7], v[1:4], s[8:15] dmask:0xf tfe d16
 // GFX9:     image_load v[5:7], v[1:4], s[8:15] dmask:0xf tfe d16 ; encoding: [0x00,0x0f,0x01,0xf0,0x01,0x05,0x02,0x80]
 
 //===----------------------------------------------------------------------===//
+// Image Load/Store: a16
+//===----------------------------------------------------------------------===//
+
+image_load v5, v[1:2], s[8:15] unorm a16
+// GFX9:     image_load v5, v[1:2], s[8:15] unorm a16 ; encoding: [0x00,0x90,0x00,0xf0,0x01,0x05,0x02,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_load v[5:6], v[1:2], s[8:15] dmask:0x3 unorm a16
+// GFX9:     image_load v[5:6], v[1:2], s[8:15] dmask:0x3 unorm a16 ; encoding: [0x00,0x93,0x00,0xf0,0x01,0x05,0x02,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_load v[5:7], v[1:2], s[8:15] dmask:0x7 unorm a16
+// GFX9:     image_load v[5:7], v[1:2], s[8:15] dmask:0x7 unorm a16 ; encoding: [0x00,0x97,0x00,0xf0,0x01,0x05,0x02,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_load v[5:8], v[1:2], s[8:15] dmask:0xf unorm a16
+// GFX9:     image_load v[5:8], v[1:2], s[8:15] dmask:0xf unorm a16 ; encoding: [0x00,0x9f,0x00,0xf0,0x01,0x05,0x02,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_store v5, v[1:2], s[8:15] unorm a16
+// GFX9:     image_store v5, v[1:2], s[8:15] unorm a16 ; encoding: [0x00,0x90,0x20,0xf0,0x01,0x05,0x02,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_store v[5:6], v[1:2], s[8:15] dmask:0x3 unorm a16
+// GFX9:     image_store v[5:6], v[1:2], s[8:15] dmask:0x3 unorm a16 ; encoding: [0x00,0x93,0x20,0xf0,0x01,0x05,0x02,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_store v[5:7], v[1:2], s[8:15] dmask:0x7 unorm a16
+// GFX9:     image_store v[5:7], v[1:2], s[8:15] dmask:0x7 unorm a16 ; encoding: [0x00,0x97,0x20,0xf0,0x01,0x05,0x02,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_store v[5:8], v[1:2], s[8:15] dmask:0xf unorm a16
+// GFX9:     image_store v[5:8], v[1:2], s[8:15] dmask:0xf unorm a16 ; encoding: [0x00,0x9f,0x20,0xf0,0x01,0x05,0x02,0x00]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+/===----------------------------------------------------------------------===//
+// Image Load/Store: a16 & d16
+//===----------------------------------------------------------------------===//
+
+image_load v5, v[1:2], s[8:15] dmask:0x3 unorm a16 d16
+// GFX9:     image_load v5, v[1:2], s[8:15] dmask:0x3 unorm a16 d16 ; encoding: [0x00,0x93,0x00,0xf0,0x01,0x05,0x02,0x80]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_load v[5:6], v[1:2], s[8:15] dmask:0x7 unorm a16 d16
+// GFX9:     image_load v[5:6], v[1:2], s[8:15] dmask:0x7 unorm a16 d16 ; encoding: [0x00,0x97,0x00,0xf0,0x01,0x05,0x02,0x80]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_load v[5:6], v[1:2], s[8:15] dmask:0xf unorm a16 d16
+// GFX9:     image_load v[5:6], v[1:2], s[8:15] dmask:0xf unorm a16 d16 ; encoding: [0x00,0x9f,0x00,0xf0,0x01,0x05,0x02,0x80]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_store v5, v[1:2], s[8:15] dmask:0x3 unorm a16 d16
+// GFX9:     image_store v5, v[1:2], s[8:15] dmask:0x3 unorm a16 d16 ; encoding: [0x00,0x93,0x20,0xf0,0x01,0x05,0x02,0x80]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_store v[5:6], v[1:2], s[8:15] dmask:0x7 unorm a16 d16
+// GFX9:     image_store v[5:6], v[1:2], s[8:15] dmask:0x7 unorm a16 d16 ; encoding: [0x00,0x97,0x20,0xf0,0x01,0x05,0x02,0x80]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+image_store v[5:6], v[1:2], s[8:15] dmask:0xf unorm a16 d16
+// GFX9:     image_store v[5:6], v[1:2], s[8:15] dmask:0xf unorm a16 d16 ; encoding: [0x00,0x9f,0x20,0xf0,0x01,0x05,0x02,0x80]
+// NOSICI:   error: a16 modifier is not supported on this GPU
+// NOVI:     error: a16 modifier is not supported on this GPU
+
+//===----------------------------------------------------------------------===//
 // Image Load/Store: PCK variants
 //===----------------------------------------------------------------------===//
 
@@ -193,6 +271,11 @@ image_load_mip_pck v5, v[1:4], s[8:15] dmask:0x1 d16
 // NOVI:   error: invalid operand for instruction
 // NOGFX9: error: invalid operand for instruction
 
+image_load_mip_pck v5, v[1:2], s[8:15] dmask:0x1 a16
+// GFX9:   image_load_mip_pck v5, v[1:2], s[8:15] dmask:0x1 a16 ; encoding: [0x00,0x81,0x10,0xf0,0x01,0x05,0x02,0x00]
+// NOSICI: error: a16 modifier is not supported on this GPU
+// NOVI:   error: a16 modifier is not supported on this GPU
+
 image_store_mip_pck v252, v2, s[12:19] dmask:0x1 unorm
 // GCN: image_store_mip_pck v252, v2, s[12:19] dmask:0x1 unorm ; encoding: [0x00,0x11,0x2c,0xf0,0x02,0xfc,0x03,0x00]
 
@@ -215,6 +298,11 @@ image_store_mip_pck v252, v[2:5], s[12:19] dmask:0x1 d16
 // NOSICI: error: invalid operand for instruction
 // NOVI:   error: invalid operand for instruction
 // NOGFX9: error: invalid operand for instruction
+
+image_store_mip_pck v252, v[2:3], s[12:19] dmask:0x1 a16
+// GFX9:   image_store_mip_pck v252, v[2:3], s[12:19] dmask:0x1 a16 ; encoding: [0x00,0x81,0x2c,0xf0,0x02,0xfc,0x03,0x00]
+// NOSICI: error: a16 modifier is not supported on this GPU
+// NOVI:   error: a16 modifier is not supported on this GPU
 
 //===----------------------------------------------------------------------===//
 // Image Sample

@@ -55,11 +55,11 @@ template <> struct Helper<TSCWrapRecord> {
 
 template <> struct Helper<CustomEventRecord> {
   static std::unique_ptr<Record> construct() {
-    return make_unique<CustomEventRecord>(4, 1, "data");
+    return make_unique<CustomEventRecord>(4, 1, 2, "data");
   }
 
   static const char *expected() {
-    return "<Custom Event: tsc = 1, size = 4, data = 'data'>";
+    return "<Custom Event: tsc = 1, cpu = 2, size = 4, data = 'data'>";
   }
 };
 

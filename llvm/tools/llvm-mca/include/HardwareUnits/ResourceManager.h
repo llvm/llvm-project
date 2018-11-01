@@ -189,8 +189,7 @@ class ResourceState {
   }
 
 public:
-  ResourceState(const llvm::MCProcResourceDesc &Desc, unsigned Index,
-                uint64_t Mask);
+  ResourceState(const MCProcResourceDesc &Desc, unsigned Index, uint64_t Mask);
 
   unsigned getProcResourceID() const { return ProcResourceDescIndex; }
   uint64_t getResourceMask() const { return ResourceMask; }
@@ -211,9 +210,7 @@ public:
   /// `NumUnits` available units.
   bool isReady(unsigned NumUnits = 1) const;
 
-  bool isAResourceGroup() const {
-    return llvm::countPopulation(ResourceMask) > 1;
-  }
+  bool isAResourceGroup() const { return countPopulation(ResourceMask) > 1; }
 
   bool containsResource(uint64_t ID) const { return ResourceMask & ID; }
 
@@ -228,7 +225,7 @@ public:
   }
 
   unsigned getNumUnits() const {
-    return isAResourceGroup() ? 1U : llvm::countPopulation(ResourceSizeMask);
+    return isAResourceGroup() ? 1U : countPopulation(ResourceSizeMask);
   }
 
   /// Checks if there is an available slot in the resource buffer.
@@ -286,10 +283,10 @@ class ResourceManager {
 
   // Keeps track of which resources are busy, and how many cycles are left
   // before those become usable again.
-  llvm::SmallDenseMap<ResourceRef, unsigned> BusyResources;
+  SmallDenseMap<ResourceRef, unsigned> BusyResources;
 
   // A table to map processor resource IDs to processor resource masks.
-  llvm::SmallVector<uint64_t, 8> ProcResID2Mask;
+  SmallVector<uint64_t, 8> ProcResID2Mask;
 
   // Returns the actual resource unit that will be used.
   ResourceRef selectPipe(uint64_t ResourceID);
@@ -305,7 +302,7 @@ class ResourceManager {
                              uint64_t ResourceMask);
 
 public:
-  ResourceManager(const llvm::MCSchedModel &SM);
+  ResourceManager(const MCSchedModel &SM);
   virtual ~ResourceManager() = default;
 
   // Overrides the selection strategy for the resource at index ResourceID in
@@ -319,17 +316,17 @@ public:
 
   // Returns RS_BUFFER_AVAILABLE if buffered resources are not reserved, and if
   // there are enough available slots in the buffers.
-  ResourceStateEvent canBeDispatched(llvm::ArrayRef<uint64_t> Buffers) const;
+  ResourceStateEvent canBeDispatched(ArrayRef<uint64_t> Buffers) const;
 
   // Return the processor resource identifier associated to this Mask.
   unsigned resolveResourceMask(uint64_t Mask) const;
 
   // Consume a slot in every buffered resource from array 'Buffers'. Resource
   // units that are dispatch hazards (i.e. BufferSize=0) are marked as reserved.
-  void reserveBuffers(llvm::ArrayRef<uint64_t> Buffers);
+  void reserveBuffers(ArrayRef<uint64_t> Buffers);
 
   // Release buffer entries previously allocated by method reserveBuffers.
-  void releaseBuffers(llvm::ArrayRef<uint64_t> Buffers);
+  void releaseBuffers(ArrayRef<uint64_t> Buffers);
 
   // Reserve a processor resource. A reserved resource is not available for
   // instruction issue until it is released.
@@ -346,9 +343,9 @@ public:
 
   void issueInstruction(
       const InstrDesc &Desc,
-      llvm::SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &Pipes);
+      SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &Pipes);
 
-  void cycleEvent(llvm::SmallVectorImpl<ResourceRef> &ResourcesFreed);
+  void cycleEvent(SmallVectorImpl<ResourceRef> &ResourcesFreed);
 
 #ifndef NDEBUG
   void dump() const {

@@ -478,6 +478,85 @@ TEST(VirtualFileSystemTest, BasicRealFSRecursiveIteration) {
   EXPECT_EQ(1, Counts[3]); // d
 }
 
+TEST(VirtualFileSystemTest, BasicRealFSRecursiveIterationNoPush) {
+  ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+
+  ScopedDir _a(TestDirectory + "/a");
+  ScopedDir _ab(TestDirectory + "/a/b");
+  ScopedDir _c(TestDirectory + "/c");
+  ScopedDir _cd(TestDirectory + "/c/d");
+  ScopedDir _e(TestDirectory + "/e");
+  ScopedDir _ef(TestDirectory + "/e/f");
+  ScopedDir _g(TestDirectory + "/g");
+
+  IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getRealFileSystem();
+
+  // Test that calling no_push on entries without subdirectories has no effect.
+  {
+    std::error_code EC;
+    auto I = vfs::recursive_directory_iterator(*FS, Twine(TestDirectory), EC);
+    ASSERT_FALSE(EC);
+
+    std::vector<std::string> Contents;
+    for (auto E = vfs::recursive_directory_iterator(); !EC && I != E;
+         I.increment(EC)) {
+      Contents.push_back(I->path());
+      char last = I->path().back();
+      switch (last) {
+      case 'b':
+      case 'd':
+      case 'f':
+      case 'g':
+        I.no_push();
+        break;
+      default:
+        break;
+      }
+    }
+    EXPECT_EQ(7U, Contents.size());
+  }
+
+  // Test that calling no_push skips subdirectories.
+  {
+    std::error_code EC;
+    auto I = vfs::recursive_directory_iterator(*FS, Twine(TestDirectory), EC);
+    ASSERT_FALSE(EC);
+
+    std::vector<std::string> Contents;
+    for (auto E = vfs::recursive_directory_iterator(); !EC && I != E;
+         I.increment(EC)) {
+      Contents.push_back(I->path());
+      char last = I->path().back();
+      switch (last) {
+      case 'a':
+      case 'c':
+      case 'e':
+        I.no_push();
+        break;
+      default:
+        break;
+      }
+    }
+
+    // Check contents, which may be in any order
+    EXPECT_EQ(4U, Contents.size());
+    int Counts[7] = {0, 0, 0, 0, 0, 0, 0};
+    for (const std::string &Name : Contents) {
+      ASSERT_FALSE(Name.empty());
+      int Index = Name[Name.size() - 1] - 'a';
+      ASSERT_TRUE(Index >= 0 && Index < 7);
+      Counts[Index]++;
+    }
+    EXPECT_EQ(1, Counts[0]); // a
+    EXPECT_EQ(0, Counts[1]); // b
+    EXPECT_EQ(1, Counts[2]); // c
+    EXPECT_EQ(0, Counts[3]); // d
+    EXPECT_EQ(1, Counts[4]); // e
+    EXPECT_EQ(0, Counts[5]); // f
+    EXPECT_EQ(1, Counts[6]); // g
+  }
+}
+
 #ifdef LLVM_ON_UNIX
 TEST(VirtualFileSystemTest, BrokenSymlinkRealFSRecursiveIteration) {
   ScopedDir TestDirectory("virtual-file-system-test", /*Unique*/ true);

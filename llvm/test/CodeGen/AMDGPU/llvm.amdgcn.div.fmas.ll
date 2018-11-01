@@ -1,5 +1,5 @@
-; RUN: llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,SI %s
-; XUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,VI %s
+; RUN: llc -amdgpu-scalarize-global-loads=false  -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
+; XUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 
 ; FIXME: Enable for VI.
 
@@ -144,20 +144,24 @@ define amdgpu_kernel void @test_div_fmas_f32_logical_cond_to_vcc(float addrspace
 }
 
 ; GCN-LABEL: {{^}}test_div_fmas_f32_i1_phi_vcc:
-; SI: v_cmp_eq_u32_e32 vcc, 0, v{{[0-9]+}}
-; SI: s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], vcc
 
-; SI: buffer_load_dword [[LOAD:v[0-9]+]]
-; SI: v_cmp_ne_u32_e32 vcc, 0, [[LOAD]]
-; SI: v_cndmask_b32_e64 {{v[0-9]+}}, 0, -1, vcc
+; SI: ; %entry
+; SI:     v_cmp_eq_u32_e64   [[CMP:s\[[0-9]+:[0-9]+\]]], 0, {{v[0-9]+}}
+; SI:     s_mov_b64          vcc, 0
+; SI:     s_and_saveexec_b64 [[SAVE:s\[[0-9]+:[0-9]+\]]], [[CMP]]
 
+; SI: ; %bb
+; SI:     buffer_load_dword  [[LOAD:v[0-9]+]],
+; SI:     v_cmp_ne_u32_e32   vcc, 0, [[LOAD]]
+; SI:     s_and_b64          vcc, vcc, exec
 
-; SI: BB9_2:
-; SI: s_or_b64 exec, exec, [[SAVE]]
-; SI: v_cmp_ne_u32_e32 vcc, 0, v{{[0-9]+}}
-; SI: v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
-; SI: buffer_store_dword
-; SI: s_endpgm
+; SI: ; %exit
+; SI:     s_or_b64           exec, exec, [[SAVE]]
+; SI-NOT: vcc
+; SI:     v_div_fmas_f32 {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}, {{v[0-9]+}}
+; SI:     buffer_store_dword
+; SI:     s_endpgm
+
 define amdgpu_kernel void @test_div_fmas_f32_i1_phi_vcc(float addrspace(1)* %out, float addrspace(1)* %in, i32 addrspace(1)* %dummy) nounwind {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x() nounwind readnone

@@ -118,6 +118,11 @@ static void ConvertImplicitDefToConstZero(MachineInstr *MI,
     ConstantFP *Val = cast<ConstantFP>(Constant::getNullValue(
         Type::getDoubleTy(MF.getFunction().getContext())));
     MI->addOperand(MachineOperand::CreateFPImm(Val));
+  } else if (RegClass == &WebAssembly::V128RegClass) {
+    // TODO: make splat instead of constant
+    MI->setDesc(TII->get(WebAssembly::CONST_V128_v16i8));
+    for (int I = 0; I < 16; ++I)
+      MI->addOperand(MachineOperand::CreateImm(0));
   } else {
     llvm_unreachable("Unexpected reg class");
   }

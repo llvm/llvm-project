@@ -5288,6 +5288,46 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
   return NewFCI;
 }
 
+/// Optimize fabs(X) compared with zero.
+static Instruction *foldFabsWithFcmpZero(FCmpInst &I) {
+  Value *X;
+  if (!match(I.getOperand(0), m_Intrinsic<Intrinsic::fabs>(m_Value(X))) ||
+      !match(I.getOperand(1), m_PosZeroFP()))
+    return nullptr;
+
+  switch (I.getPredicate()) {
+  case FCmpInst::FCMP_UGE:
+  case FCmpInst::FCMP_OLT:
+    // fabs(X) >= 0.0 --> true
+    // fabs(X) <  0.0 --> false
+    llvm_unreachable("fcmp should have simplified");
+
+  case FCmpInst::FCMP_OGT:
+    // fabs(X) > 0.0 --> X != 0.0
+    return new FCmpInst(FCmpInst::FCMP_ONE, X, I.getOperand(1));
+
+  case FCmpInst::FCMP_OLE:
+    // fabs(X) <= 0.0 --> X == 0.0
+    return new FCmpInst(FCmpInst::FCMP_OEQ, X, I.getOperand(1));
+
+  case FCmpInst::FCMP_OGE:
+    // fabs(X) >= 0.0 --> !isnan(X)
+    assert(!I.hasNoNaNs() && "fcmp should have simplified");
+    return new FCmpInst(FCmpInst::FCMP_ORD, X, I.getOperand(1));
+
+  case FCmpInst::FCMP_OEQ:
+  case FCmpInst::FCMP_UEQ:
+  case FCmpInst::FCMP_ONE:
+  case FCmpInst::FCMP_UNE:
+    // fabs(X) == 0.0 --> X == 0.0
+    // fabs(X) != 0.0 --> X != 0.0
+    return new FCmpInst(I.getPredicate(), X, I.getOperand(1));
+
+  default:
+    return nullptr;
+  }
+}
+
 Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   bool Changed = false;
 
@@ -5418,41 +5458,11 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
             if (Instruction *Res = foldCmpLoadFromIndexedGlobal(GEP, GV, I))
               return Res;
       break;
-    case Instruction::Call: {
-      if (!RHSC->isNullValue())
-        break;
-
-      CallInst *CI = cast<CallInst>(LHSI);
-      Intrinsic::ID IID = getIntrinsicForCallSite(CI, &TLI);
-      if (IID != Intrinsic::fabs)
-        break;
-
-      // Various optimization for fabs compared with zero.
-      switch (Pred) {
-      default:
-        break;
-      // fabs(x) < 0 --> false
-      case FCmpInst::FCMP_OLT:
-        llvm_unreachable("handled by SimplifyFCmpInst");
-      // fabs(x) > 0 --> x != 0
-      case FCmpInst::FCMP_OGT:
-        return new FCmpInst(FCmpInst::FCMP_ONE, CI->getArgOperand(0), RHSC);
-      // fabs(x) <= 0 --> x == 0
-      case FCmpInst::FCMP_OLE:
-        return new FCmpInst(FCmpInst::FCMP_OEQ, CI->getArgOperand(0), RHSC);
-      // fabs(x) >= 0 --> !isnan(x)
-      case FCmpInst::FCMP_OGE:
-        return new FCmpInst(FCmpInst::FCMP_ORD, CI->getArgOperand(0), RHSC);
-      // fabs(x) == 0 --> x == 0
-      // fabs(x) != 0 --> x != 0
-      case FCmpInst::FCMP_OEQ:
-      case FCmpInst::FCMP_UEQ:
-      case FCmpInst::FCMP_ONE:
-      case FCmpInst::FCMP_UNE:
-        return new FCmpInst(Pred, CI->getArgOperand(0), RHSC);
-      }
-    }
-    }
+    case Instruction::Call:
+      if (Instruction *X = foldFabsWithFcmpZero(I))
+        return X;
+      break;
+  }
   }
 
   // fcmp pred (fneg x), (fneg y) -> fcmp swap(pred) x, y

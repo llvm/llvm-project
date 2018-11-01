@@ -28,8 +28,7 @@ define arm_aapcscc zeroext i1 @cmp_xor8_short_short(i16* nocapture readonly %a, 
 ; THUMB1-NEXT:    ldrb r0, [r0]
 ; THUMB1-NEXT:    ldrb r1, [r1]
 ; THUMB1-NEXT:    eors r1, r0
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r1
+; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
@@ -74,8 +73,7 @@ define arm_aapcscc zeroext i1 @cmp_xor8_short_int(i16* nocapture readonly %a, i3
 ; THUMB1-NEXT:    ldrb r0, [r0]
 ; THUMB1-NEXT:    ldrb r1, [r1]
 ; THUMB1-NEXT:    eors r1, r0
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r1
+; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
@@ -121,8 +119,7 @@ define arm_aapcscc zeroext i1 @cmp_xor8_int_int(i32* nocapture readonly %a, i32*
 ; THUMB1-NEXT:    ldrb r0, [r0]
 ; THUMB1-NEXT:    ldrb r1, [r1]
 ; THUMB1-NEXT:    eors r1, r0
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r1
+; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
@@ -167,8 +164,7 @@ define arm_aapcscc zeroext i1 @cmp_xor16(i32* nocapture readonly %a, i32* nocapt
 ; THUMB1-NEXT:    ldrh r0, [r0]
 ; THUMB1-NEXT:    ldrh r1, [r1]
 ; THUMB1-NEXT:    eors r1, r0
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r1
+; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
@@ -213,8 +209,7 @@ define arm_aapcscc zeroext i1 @cmp_or8_short_short(i16* nocapture readonly %a, i
 ; THUMB1-NEXT:    ldrb r0, [r0]
 ; THUMB1-NEXT:    ldrb r1, [r1]
 ; THUMB1-NEXT:    orrs r1, r0
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r1
+; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
@@ -259,8 +254,7 @@ define arm_aapcscc zeroext i1 @cmp_or8_short_int(i16* nocapture readonly %a, i32
 ; THUMB1-NEXT:    ldrb r0, [r0]
 ; THUMB1-NEXT:    ldrb r1, [r1]
 ; THUMB1-NEXT:    orrs r1, r0
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r1
+; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
@@ -306,8 +300,7 @@ define arm_aapcscc zeroext i1 @cmp_or8_int_int(i32* nocapture readonly %a, i32* 
 ; THUMB1-NEXT:    ldrb r0, [r0]
 ; THUMB1-NEXT:    ldrb r1, [r1]
 ; THUMB1-NEXT:    orrs r1, r0
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r1
+; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
@@ -352,8 +345,7 @@ define arm_aapcscc zeroext i1 @cmp_or16(i32* nocapture readonly %a, i32* nocaptu
 ; THUMB1-NEXT:    ldrh r0, [r0]
 ; THUMB1-NEXT:    ldrh r1, [r1]
 ; THUMB1-NEXT:    orrs r1, r0
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r1
+; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
@@ -398,8 +390,7 @@ define arm_aapcscc zeroext i1 @cmp_and8_short_short(i16* nocapture readonly %a, 
 ; THUMB1-NEXT:    ldrb r1, [r1]
 ; THUMB1-NEXT:    ldrb r2, [r0]
 ; THUMB1-NEXT:    ands r2, r1
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r2
+; THUMB1-NEXT:    rsbs r0, r2, #0
 ; THUMB1-NEXT:    adcs r0, r2
 ; THUMB1-NEXT:    bx lr
 ;
@@ -444,8 +435,7 @@ define arm_aapcscc zeroext i1 @cmp_and8_short_int(i16* nocapture readonly %a, i3
 ; THUMB1-NEXT:    ldrb r0, [r0]
 ; THUMB1-NEXT:    ldrb r1, [r1]
 ; THUMB1-NEXT:    ands r1, r0
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r1
+; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
@@ -491,8 +481,7 @@ define arm_aapcscc zeroext i1 @cmp_and8_int_int(i32* nocapture readonly %a, i32*
 ; THUMB1-NEXT:    ldrb r1, [r1]
 ; THUMB1-NEXT:    ldrb r2, [r0]
 ; THUMB1-NEXT:    ands r2, r1
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r2
+; THUMB1-NEXT:    rsbs r0, r2, #0
 ; THUMB1-NEXT:    adcs r0, r2
 ; THUMB1-NEXT:    bx lr
 ;
@@ -537,8 +526,7 @@ define arm_aapcscc zeroext i1 @cmp_and16(i32* nocapture readonly %a, i32* nocapt
 ; THUMB1-NEXT:    ldrh r1, [r1]
 ; THUMB1-NEXT:    ldrh r2, [r0]
 ; THUMB1-NEXT:    ands r2, r1
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r2
+; THUMB1-NEXT:    rsbs r0, r2, #0
 ; THUMB1-NEXT:    adcs r0, r2
 ; THUMB1-NEXT:    bx lr
 ;
@@ -881,8 +869,7 @@ define arm_aapcscc i1 @test6(i8* %x, i8 %y, i8 %z) {
 ; THUMB1-NEXT:    ands r0, r1
 ; THUMB1-NEXT:    uxtb r1, r2
 ; THUMB1-NEXT:    subs r1, r0, r1
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r1
+; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
@@ -929,8 +916,7 @@ define arm_aapcscc i1 @test7(i16* %x, i16 %y, i8 %z) {
 ; THUMB1-NEXT:    ands r0, r1
 ; THUMB1-NEXT:    uxtb r1, r2
 ; THUMB1-NEXT:    subs r1, r0, r1
-; THUMB1-NEXT:    movs r0, #0
-; THUMB1-NEXT:    subs r0, r0, r1
+; THUMB1-NEXT:    rsbs r0, r1, #0
 ; THUMB1-NEXT:    adcs r0, r1
 ; THUMB1-NEXT:    bx lr
 ;
