@@ -195,9 +195,8 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
     if (error.Success() && memory_info.GetMapped() &&
         memory_info.GetRange().GetRangeBase() == base_addr && 
         !(memory_info.GetName().IsEmpty())) {
-      ModuleSpec new_module_spec(
-          FileSpec(memory_info.GetName().AsCString(), false),
-          target.GetArchitecture());
+      ModuleSpec new_module_spec(FileSpec(memory_info.GetName().AsCString()),
+                                 target.GetArchitecture());
 
       if ((module_sp = modules.FindFirstModule(new_module_spec))) {
         UpdateLoadedSections(module_sp, link_map_addr, base_addr, false);

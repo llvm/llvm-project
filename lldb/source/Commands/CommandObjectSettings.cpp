@@ -403,7 +403,9 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    std::string path(FileSpec(m_options.m_filename, true).GetPath());
+    FileSpec file_spec(m_options.m_filename);
+    FileSystem::Instance().Resolve(file_spec);
+    std::string path(file_spec.GetPath());
     uint32_t options = File::OpenOptions::eOpenOptionWrite |
                        File::OpenOptions::eOpenOptionCanCreate;
     if (m_options.m_append)
@@ -506,7 +508,8 @@ public:
 
 protected:
   bool DoExecute(Args &command, CommandReturnObject &result) override {
-    FileSpec file(m_options.m_filename, true);
+    FileSpec file(m_options.m_filename);
+    FileSystem::Instance().Resolve(file);
     ExecutionContext clean_ctx;
     CommandInterpreterRunOptions options;
     options.SetAddToHistory(false);

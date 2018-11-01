@@ -256,7 +256,8 @@ bool HostInfoBase::ComputeProcessTempFileDirectory(FileSpec &file_spec) {
 bool HostInfoBase::ComputeTempFileBaseDirectory(FileSpec &file_spec) {
   llvm::SmallVector<char, 16> tmpdir;
   llvm::sys::path::system_temp_directory(/*ErasedOnReboot*/ true, tmpdir);
-  file_spec = FileSpec(std::string(tmpdir.data(), tmpdir.size()), true);
+  file_spec = FileSpec(std::string(tmpdir.data(), tmpdir.size()));
+  FileSystem::Instance().Resolve(file_spec);
   return true;
 }
 

@@ -171,7 +171,7 @@ FileSpec HostInfoLinux::GetProgramFileSpec() {
     ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
     if (len > 0) {
       exe_path[len] = 0;
-      g_program_filespec.SetFile(exe_path, false, FileSpec::Style::native);
+      g_program_filespec.SetFile(exe_path, FileSpec::Style::native);
     }
   }
 
@@ -187,7 +187,8 @@ bool HostInfoLinux::ComputeSupportExeDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoLinux::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("/usr/lib" LLDB_LIBDIR_SUFFIX "/lldb/plugins", true);
+  FileSpec temp_file("/usr/lib" LLDB_LIBDIR_SUFFIX "/lldb/plugins");
+  FileSystem::Instance().Resolve(temp_file);
   file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
   return true;
 }

@@ -197,7 +197,7 @@ static FileSpec resolveCompDir(const char *path_from_dwarf) {
   bool is_symlink = false;
   // Always normalize our compile unit directory to get rid of redundant
   // slashes and other path anomalies before we use it for path prepending
-  FileSpec local_spec(local_path, false);
+  FileSpec local_spec(local_path);
   const auto &file_specs = GetGlobalPluginProperties()->GetSymLinkPaths();
   for (size_t i = 0; i < file_specs.GetSize() && !is_symlink; ++i)
     is_symlink = FileSpec::Equal(file_specs.GetFileSpecAtIndex(i),
@@ -811,7 +811,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu,
         if (module_sp) {
           const DWARFDIE cu_die = dwarf_cu->DIE();
           if (cu_die) {
-            FileSpec cu_file_spec{cu_die.GetName(), false};
+            FileSpec cu_file_spec(cu_die.GetName());
             if (cu_file_spec) {
               // If we have a full path to the compile unit, we don't need to
               // resolve the file.  This can be expensive e.g. when the source
@@ -826,8 +826,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFUnit *dwarf_cu,
               std::string remapped_file;
               if (module_sp->RemapSourceFile(cu_file_spec.GetPath(),
                                              remapped_file))
-                cu_file_spec.SetFile(remapped_file, false,
-                                     FileSpec::Style::native);
+                cu_file_spec.SetFile(remapped_file, FileSpec::Style::native);
             }
 
             LanguageType cu_language = DWARFUnit::LanguageTypeFromDWARF(
@@ -1629,14 +1628,16 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
       return dwo_symfile;
   }
 
-  FileSpec dwo_file(dwo_name, true);
+  FileSpec dwo_file(dwo_name);
+  FileSystem::Instance().Resolve(dwo_file);
   if (dwo_file.IsRelative()) {
     const char *comp_dir = cu_die.GetAttributeValueAsString(
         this, &dwarf_cu, DW_AT_comp_dir, nullptr);
     if (!comp_dir)
       return nullptr;
 
-    dwo_file.SetFile(comp_dir, true, FileSpec::Style::native);
+    dwo_file.SetFile(comp_dir, FileSpec::Style::native);
+    FileSystem::Instance().Resolve(dwo_file);
     dwo_file.AppendPathComponent(dwo_name);
   }
 
@@ -1680,14 +1681,15 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
               die.GetAttributeValueAsString(DW_AT_GNU_dwo_name, nullptr);
           if (dwo_path) {
             ModuleSpec dwo_module_spec;
-            dwo_module_spec.GetFileSpec().SetFile(dwo_path, false,
+            dwo_module_spec.GetFileSpec().SetFile(dwo_path,
                                                   FileSpec::Style::native);
             if (dwo_module_spec.GetFileSpec().IsRelative()) {
               const char *comp_dir =
                   die.GetAttributeValueAsString(DW_AT_comp_dir, nullptr);
               if (comp_dir) {
-                dwo_module_spec.GetFileSpec().SetFile(comp_dir, true,
+                dwo_module_spec.GetFileSpec().SetFile(comp_dir,
                                                       FileSpec::Style::native);
+                FileSystem::Instance().Resolve(dwo_module_spec.GetFileSpec());
                 dwo_module_spec.GetFileSpec().AppendPathComponent(dwo_path);
               }
             }
@@ -3877,7 +3879,7 @@ SymbolFileDWARFDwp *SymbolFileDWARF::GetDwpSymbolFile() {
     ModuleSpec module_spec;
     module_spec.GetFileSpec() = m_obj_file->GetFileSpec();
     module_spec.GetSymbolFileSpec() =
-        FileSpec(m_obj_file->GetFileSpec().GetPath() + ".dwp", false);
+        FileSpec(m_obj_file->GetFileSpec().GetPath() + ".dwp");
     FileSpec dwp_filespec = Symbols::LocateExecutableSymbolFile(module_spec);
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       m_dwp_symfile = SymbolFileDWARFDwp::Create(GetObjectFile()->GetModule(),

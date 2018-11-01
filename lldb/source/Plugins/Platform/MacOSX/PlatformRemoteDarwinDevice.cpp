@@ -144,8 +144,7 @@ FileSystem::EnumerateDirectoryResult
 PlatformRemoteDarwinDevice::GetContainedFilesIntoVectorOfStringsCallback(
     void *baton, llvm::sys::fs::file_type ft, llvm::StringRef path) {
   ((PlatformRemoteDarwinDevice::SDKDirectoryInfoCollection *)baton)
-      ->push_back(
-          PlatformRemoteDarwinDevice::SDKDirectoryInfo(FileSpec(path, false)));
+      ->push_back(PlatformRemoteDarwinDevice::SDKDirectoryInfo(FileSpec(path)));
   return FileSystem::eEnumerateDirectoryResultNext;
 }
 
@@ -155,7 +154,8 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
   if (m_sdk_directory_infos.empty()) {
     // A --sysroot option was supplied - add it to our list of SDKs to check
     if (m_sdk_sysroot) {
-      FileSpec sdk_sysroot_fspec(m_sdk_sysroot.GetCString(), true);
+      FileSpec sdk_sysroot_fspec(m_sdk_sysroot.GetCString());
+      FileSystem::Instance().Resolve(sdk_sysroot_fspec);
       const SDKDirectoryInfo sdk_sysroot_directory_info(sdk_sysroot_fspec);
       m_sdk_directory_infos.push_back(sdk_sysroot_directory_info);
       if (log) {
@@ -207,7 +207,8 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
         const uint32_t num_installed = m_sdk_directory_infos.size();
         std::string local_sdk_cache_str = "~/Library/Developer/Xcode/";
         local_sdk_cache_str += dirname;
-        FileSpec local_sdk_cache(local_sdk_cache_str.c_str(), true);
+        FileSpec local_sdk_cache(local_sdk_cache_str.c_str());
+        FileSystem::Instance().Resolve(local_sdk_cache);
         if (FileSystem::Instance().Exists(local_sdk_cache)) {
           if (log) {
             log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
@@ -420,11 +421,11 @@ bool PlatformRemoteDarwinDevice::GetFileInSDK(const char *platform_file_path,
 
       const char *paths_to_try[] = {"Symbols", "", "Symbols.Internal", nullptr};
       for (size_t i = 0; paths_to_try[i] != nullptr; i++) {
-        local_file.SetFile(sdkroot_path, false, FileSpec::Style::native);
+        local_file.SetFile(sdkroot_path, FileSpec::Style::native);
         if (paths_to_try[i][0] != '\0')
           local_file.AppendPathComponent(paths_to_try[i]);
         local_file.AppendPathComponent(platform_file_path);
-        local_file.ResolvePath();
+        FileSystem::Instance().Resolve(local_file);
         if (FileSystem::Instance().Exists(local_file)) {
           if (log)
             log->Printf("Found a copy of %s in the SDK dir %s/%s",
@@ -453,7 +454,8 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       ::snprintf(resolved_path, sizeof(resolved_path), "%s/%s", os_version_dir,
                  platform_file_path);
 
-      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
+      local_file.SetFile(resolved_path, FileSpec::Style::native);
+      FileSystem::Instance().Resolve(local_file);
       if (FileSystem::Instance().Exists(local_file)) {
         if (log) {
           log->Printf("Found a copy of %s in the DeviceSupport dir %s",
@@ -465,7 +467,8 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       ::snprintf(resolved_path, sizeof(resolved_path), "%s/Symbols.Internal/%s",
                  os_version_dir, platform_file_path);
 
-      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
+      local_file.SetFile(resolved_path, FileSpec::Style::native);
+      FileSystem::Instance().Resolve(local_file);
       if (FileSystem::Instance().Exists(local_file)) {
         if (log) {
           log->Printf(
@@ -477,7 +480,8 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       ::snprintf(resolved_path, sizeof(resolved_path), "%s/Symbols/%s",
                  os_version_dir, platform_file_path);
 
-      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
+      local_file.SetFile(resolved_path, FileSpec::Style::native);
+      FileSystem::Instance().Resolve(local_file);
       if (FileSystem::Instance().Exists(local_file)) {
         if (log) {
           log->Printf("Found a copy of %s in the DeviceSupport dir %s/Symbols",

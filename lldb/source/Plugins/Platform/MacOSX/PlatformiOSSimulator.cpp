@@ -257,7 +257,7 @@ static FileSystem::EnumerateDirectoryResult
 EnumerateDirectoryCallback(void *baton, llvm::sys::fs::file_type ft,
                            llvm::StringRef path) {
   if (ft == llvm::sys::fs::file_type::directory_file) {
-    FileSpec file_spec(path, false);
+    FileSpec file_spec(path);
     const char *filename = file_spec.GetFilename().GetCString();
     if (filename &&
         strncmp(filename, "iPhoneSimulator", strlen("iPhoneSimulator")) == 0) {
@@ -321,12 +321,14 @@ Status PlatformiOSSimulator::GetSymbolFile(const FileSpec &platform_file,
                  platform_file_path);
 
       // First try in the SDK and see if the file is in there
-      local_file.SetFile(resolved_path, true, FileSpec::Style::native);
+      local_file.SetFile(resolved_path, FileSpec::Style::native);
+      FileSystem::Instance().Resolve(local_file);
       if (FileSystem::Instance().Exists(local_file))
         return error;
 
       // Else fall back to the actual path itself
-      local_file.SetFile(platform_file_path, true, FileSpec::Style::native);
+      local_file.SetFile(platform_file_path, FileSpec::Style::native);
+      FileSystem::Instance().Resolve(local_file);
       if (FileSystem::Instance().Exists(local_file))
         return error;
     }

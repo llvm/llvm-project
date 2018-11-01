@@ -569,7 +569,7 @@ uint32_t Module::ResolveSymbolContextForAddress(
 uint32_t Module::ResolveSymbolContextForFilePath(
     const char *file_path, uint32_t line, bool check_inlines,
     lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
-  FileSpec file_spec(file_path, false);
+  FileSpec file_spec(file_path);
   return ResolveSymbolContextsForFileSpec(file_spec, line, check_inlines,
                                           resolve_scope, sc_list);
 }

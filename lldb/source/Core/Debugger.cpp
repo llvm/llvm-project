@@ -625,8 +625,8 @@ LoadPluginCallback(void *baton, llvm::sys::fs::file_type ft,
   // file type information.
   if (ft == fs::file_type::regular_file || ft == fs::file_type::symlink_file ||
       ft == fs::file_type::type_unknown) {
-    FileSpec plugin_file_spec(path, false);
-    plugin_file_spec.ResolvePath();
+    FileSpec plugin_file_spec(path);
+    FileSystem::Instance().Resolve(plugin_file_spec);
 
     if (plugin_file_spec.GetFileNameExtension() != g_dylibext &&
         plugin_file_spec.GetFileNameExtension() != g_solibext) {

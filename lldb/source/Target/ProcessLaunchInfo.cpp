@@ -108,8 +108,7 @@ bool ProcessLaunchInfo::AppendOpenFileAction(int fd, const FileSpec &file_spec,
 bool ProcessLaunchInfo::AppendSuppressFileAction(int fd, bool read,
                                                  bool write) {
   FileAction file_action;
-  if (file_action.Open(fd, FileSpec{FileSystem::DEV_NULL, false}, read,
-                       write)) {
+  if (file_action.Open(fd, FileSpec(FileSystem::DEV_NULL), read, write)) {
     AppendFileAction(file_action);
     return true;
   }
@@ -306,8 +305,7 @@ void ProcessLaunchInfo::FinalizeFileActions(Target *target,
         open_flags |= O_CLOEXEC;
 #endif
         if (m_pty->OpenFirstAvailableMaster(open_flags, nullptr, 0)) {
-          const FileSpec slave_file_spec{m_pty->GetSlaveName(nullptr, 0),
-                                         false};
+          const FileSpec slave_file_spec(m_pty->GetSlaveName(nullptr, 0));
 
           // Only use the slave tty if we don't have anything specified for
           // input and don't have an action for stdin
@@ -359,7 +357,7 @@ bool ProcessLaunchInfo::ConvertArgumentsForLaunchingInShell(
         // Add a modified PATH environment variable in case argv[0] is a
         // relative path.
         const char *argv0 = argv[0];
-        FileSpec arg_spec(argv0, false);
+        FileSpec arg_spec(argv0);
         if (arg_spec.IsRelative()) {
           // We have a relative path to our executable which may not work if we
           // just try to run "a.out" (without it being converted to "./a.out")

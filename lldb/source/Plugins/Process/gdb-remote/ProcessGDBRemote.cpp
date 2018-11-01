@@ -442,7 +442,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   if (!FileSystem::Instance().Exists(target_definition_fspec)) {
     // If the filename doesn't exist, it may be a ~ not having been expanded -
     // try to resolve it.
-    target_definition_fspec.ResolvePath();
+    FileSystem::Instance().Resolve(target_definition_fspec);
   }
   if (target_definition_fspec) {
     // See if we can get register definitions from a python file
@@ -825,13 +825,13 @@ Status ProcessGDBRemote::DoLaunch(Module *exe_module,
       if (disable_stdio) {
         // set to /dev/null unless redirected to a file above
         if (!stdin_file_spec)
-          stdin_file_spec.SetFile(FileSystem::DEV_NULL, false,
+          stdin_file_spec.SetFile(FileSystem::DEV_NULL,
                                   FileSpec::Style::native);
         if (!stdout_file_spec)
-          stdout_file_spec.SetFile(FileSystem::DEV_NULL, false,
+          stdout_file_spec.SetFile(FileSystem::DEV_NULL,
                                    FileSpec::Style::native);
         if (!stderr_file_spec)
-          stderr_file_spec.SetFile(FileSystem::DEV_NULL, false,
+          stderr_file_spec.SetFile(FileSystem::DEV_NULL,
                                    FileSpec::Style::native);
       } else if (platform_sp && platform_sp->IsHost()) {
         // If the debugserver is local and we aren't disabling STDIO, lets use
@@ -840,7 +840,7 @@ Status ProcessGDBRemote::DoLaunch(Module *exe_module,
         // does a lot of output.
         if ((!stdin_file_spec || !stdout_file_spec || !stderr_file_spec) &&
             pty.OpenFirstAvailableMaster(O_RDWR | O_NOCTTY, NULL, 0)) {
-          FileSpec slave_name{pty.GetSlaveName(NULL, 0), false};
+          FileSpec slave_name{pty.GetSlaveName(NULL, 0)};
 
           if (!stdin_file_spec)
             stdin_file_spec = slave_name;
@@ -4768,7 +4768,8 @@ size_t ProcessGDBRemote::LoadModules(LoadedModuleInfoList &module_list) {
     if (!modInfo.get_link_map(link_map))
       link_map = LLDB_INVALID_ADDRESS;
 
-    FileSpec file(mod_name, true);
+    FileSpec file(mod_name);
+    FileSystem::Instance().Resolve(file);
     lldb::ModuleSP module_sp =
         LoadModuleAtAddress(file, link_map, mod_base, mod_base_is_offset);
 

@@ -2087,12 +2087,13 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
       LoadCWDlldbinitFile should_load =
           target->TargetProperties::GetLoadCWDlldbinitFile();
       if (should_load == eLoadCWDlldbinitWarn) {
-        FileSpec dot_lldb(".lldbinit", true);
+        FileSpec dot_lldb(".lldbinit");
+        FileSystem::Instance().Resolve(dot_lldb);
         llvm::SmallString<64> home_dir_path;
         llvm::sys::path::home_directory(home_dir_path);
-        FileSpec homedir_dot_lldb(home_dir_path.c_str(), false);
+        FileSpec homedir_dot_lldb(home_dir_path.c_str());
         homedir_dot_lldb.AppendPathComponent(".lldbinit");
-        homedir_dot_lldb.ResolvePath();
+        FileSystem::Instance().Resolve(homedir_dot_lldb);
         if (FileSystem::Instance().Exists(dot_lldb) &&
             dot_lldb.GetDirectory() != homedir_dot_lldb.GetDirectory()) {
           result.AppendErrorWithFormat(
@@ -2111,7 +2112,8 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
           return;
         }
       } else if (should_load == eLoadCWDlldbinitTrue) {
-        init_file.SetFile("./.lldbinit", true, FileSpec::Style::native);
+        init_file.SetFile("./.lldbinit", FileSpec::Style::native);
+        FileSystem::Instance().Resolve(init_file);
       }
     }
   } else {
@@ -2123,7 +2125,7 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
     // init files.
     llvm::SmallString<64> home_dir_path;
     llvm::sys::path::home_directory(home_dir_path);
-    FileSpec profilePath(home_dir_path.c_str(), false);
+    FileSpec profilePath(home_dir_path.c_str());
     profilePath.AppendPathComponent(".lldbinit");
     std::string init_file_path = profilePath.GetPath();
 
@@ -2135,15 +2137,15 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
         char program_init_file_name[PATH_MAX];
         ::snprintf(program_init_file_name, sizeof(program_init_file_name),
                    "%s-%s", init_file_path.c_str(), program_name);
-        init_file.SetFile(program_init_file_name, true,
-                          FileSpec::Style::native);
+        init_file.SetFile(program_init_file_name, FileSpec::Style::native);
+        FileSystem::Instance().Resolve(init_file);
         if (!FileSystem::Instance().Exists(init_file))
           init_file.Clear();
       }
     }
 
     if (!init_file && !m_skip_lldbinit_files)
-      init_file.SetFile(init_file_path, false, FileSpec::Style::native);
+      init_file.SetFile(init_file_path, FileSpec::Style::native);
   }
 
   // If the file exists, tell HandleCommand to 'source' it; this will do the

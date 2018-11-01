@@ -313,8 +313,10 @@ protected:
       Timer scoped_timer(func_cat, "(lldb) target create '%s'", file_path);
       FileSpec file_spec;
 
-      if (file_path)
-        file_spec.SetFile(file_path, true, FileSpec::Style::native);
+      if (file_path) {
+        file_spec.SetFile(file_path, FileSpec::Style::native);
+        FileSystem::Instance().Resolve(file_spec);
+      }
 
       bool must_set_platform_path = false;
 
@@ -1793,7 +1795,7 @@ static uint32_t LookupFileAndLineInModule(CommandInterpreter &interpreter,
 static size_t FindModulesByName(Target *target, const char *module_name,
                                 ModuleList &module_list,
                                 bool check_global_list) {
-  FileSpec module_file_spec(module_name, false);
+  FileSpec module_file_spec(module_name);
   ModuleSpec module_spec(module_file_spec);
 
   const size_t initial_size = module_list.GetSize();
@@ -2352,7 +2354,7 @@ protected:
       for (int arg_idx = 0;
            (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != nullptr;
            ++arg_idx) {
-        FileSpec file_spec(arg_cstr, false);
+        FileSpec file_spec(arg_cstr);
 
         const ModuleList &target_modules = target->GetImages();
         std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
@@ -2532,7 +2534,7 @@ protected:
           if (entry.ref.empty())
             continue;
 
-          FileSpec file_spec(entry.ref, true);
+          FileSpec file_spec(entry.ref);
           if (FileSystem::Instance().Exists(file_spec)) {
             ModuleSpec module_spec(file_spec);
             if (m_uuid_option_group.GetOptionValue().OptionWasSet())
@@ -3616,7 +3618,7 @@ public:
         break;
 
       case 'f':
-        m_file.SetFile(option_arg, false, FileSpec::Style::native);
+        m_file.SetFile(option_arg, FileSpec::Style::native);
         m_type = eLookupTypeFileLine;
         break;
 
@@ -4348,8 +4350,9 @@ protected:
 
         for (auto &entry : args.entries()) {
           if (!entry.ref.empty()) {
-            module_spec.GetSymbolFileSpec().SetFile(entry.ref, true,
-                                                    FileSpec::Style::native);
+            auto &symbol_file_spec = module_spec.GetSymbolFileSpec();
+            symbol_file_spec.SetFile(entry.ref, FileSpec::Style::native);
+            FileSystem::Instance().Resolve(symbol_file_spec);
             if (file_option_set) {
               module_spec.GetFileSpec() =
                   m_file_option.GetOptionValue().GetCurrentValue();

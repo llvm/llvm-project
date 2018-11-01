@@ -690,7 +690,7 @@ ModuleList::ResolveSymbolContextForAddress(const Address &so_addr,
 uint32_t ModuleList::ResolveSymbolContextForFilePath(
     const char *file_path, uint32_t line, bool check_inlines,
     SymbolContextItem resolve_scope, SymbolContextList &sc_list) const {
-  FileSpec file_spec(file_path, false);
+  FileSpec file_spec(file_path);
   return ResolveSymbolContextsForFileSpec(file_spec, line, check_inlines,
                                           resolve_scope, sc_list);
 }
@@ -857,8 +857,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
     const auto num_directories = module_search_paths_ptr->GetSize();
     for (size_t idx = 0; idx < num_directories; ++idx) {
       auto search_path_spec = module_search_paths_ptr->GetFileSpecAtIndex(idx);
-      if (!search_path_spec.ResolvePath())
-        continue;
+      FileSystem::Instance().Resolve(search_path_spec);
       namespace fs = llvm::sys::fs;
       if (!fs::is_directory(search_path_spec.GetPath()))
         continue;

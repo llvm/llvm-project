@@ -35,7 +35,7 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
   llvm::sys::fs::file_status stats;
   status(exe_spec.GetPath(), stats);
   if (!exists(stats)) {
-    exe_spec.ResolvePath();
+    FileSystem::Instance().Resolve(exe_spec);
     status(exe_spec.GetPath(), stats);
   }
   if (!exists(stats)) {

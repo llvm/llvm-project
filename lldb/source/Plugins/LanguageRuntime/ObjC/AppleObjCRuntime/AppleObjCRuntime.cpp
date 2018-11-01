@@ -455,7 +455,7 @@ lldb::SearchFilterSP AppleObjCRuntime::CreateExceptionSearchFilter() {
 
   if (target.GetArchitecture().GetTriple().getVendor() == llvm::Triple::Apple) {
     FileSpecList filter_modules;
-    filter_modules.Append(FileSpec("libobjc.A.dylib", false));
+    filter_modules.Append(FileSpec("libobjc.A.dylib"));
     return target.GetSearchFilterForModuleList(&filter_modules);
   } else {
     return LanguageRuntime::CreateExceptionSearchFilter();
