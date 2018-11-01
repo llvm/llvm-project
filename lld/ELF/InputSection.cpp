@@ -432,8 +432,8 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
         error("STT_SECTION symbol should be defined");
         continue;
       }
-      SectionBase *Section = D->Section;
-      if (Section == &InputSection::Discarded) {
+      SectionBase *Section = D->Section->Repl;
+      if (!Section->Live) {
         P->setSymbolAndType(0, 0, false);
         continue;
       }
@@ -460,7 +460,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       }
 
       if (RelTy::IsRela)
-        P->r_addend = Sym.getVA(Addend) - Section->Repl->getOutputSection()->Addr;
+        P->r_addend = Sym.getVA(Addend) - Section->getOutputSection()->Addr;
       else if (Config->Relocatable)
         Sec->Relocations.push_back({R_ABS, Type, Rel.r_offset, Addend, &Sym});
     }

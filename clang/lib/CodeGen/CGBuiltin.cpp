@@ -6770,6 +6770,11 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, { Metadata, ArgValue });
   }
 
+  if (BuiltinID == AArch64::BI_AddressOfReturnAddress) {
+    llvm::Value *F = CGM.getIntrinsic(Intrinsic::addressofreturnaddress);
+    return Builder.CreateCall(F);
+  }
+
   // Find out if any arguments are required to be integer constant
   // expressions.
   unsigned ICEArguments = 0;

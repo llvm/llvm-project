@@ -48,6 +48,7 @@
 // C++ Includes
 #include <csignal>
 
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostProcess.h"
@@ -554,7 +555,8 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
 
       if (command_output_ptr) {
         command_output_ptr->clear();
-        uint64_t file_size = output_file_spec.GetByteSize();
+        uint64_t file_size =
+            FileSystem::Instance().GetByteSize(output_file_spec);
         if (file_size > 0) {
           if (file_size > command_output_ptr->max_size()) {
             error.SetErrorStringWithFormat(
