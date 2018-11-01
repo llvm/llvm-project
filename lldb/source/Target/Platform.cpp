@@ -552,16 +552,17 @@ struct RecurseCopyBaton {
   Status error;
 };
 
-static FileSpec::EnumerateDirectoryResult
+static FileSystem::EnumerateDirectoryResult
 RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
-                     const FileSpec &src) {
+                     llvm::StringRef path) {
   RecurseCopyBaton *rc_baton = (RecurseCopyBaton *)baton;
+  FileSpec src(path, false);
   namespace fs = llvm::sys::fs;
   switch (ft) {
   case fs::file_type::fifo_file:
   case fs::file_type::socket_file:
     // we have no way to copy pipes and sockets - ignore them and continue
-    return FileSpec::eEnumerateDirectoryResultNext;
+    return FileSystem::eEnumerateDirectoryResultNext;
     break;
 
   case fs::file_type::directory_file: {
@@ -574,7 +575,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     if (error.Fail()) {
       rc_baton->error.SetErrorStringWithFormat(
           "unable to setup directory %s on remote end", dst_dir.GetCString());
-      return FileSpec::eEnumerateDirectoryResultQuit; // got an error, bail out
+      return FileSystem::eEnumerateDirectoryResultQuit; // got an error, bail out
     }
 
     // now recurse
@@ -586,13 +587,13 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     recurse_dst.GetDirectory().SetCString(dst_dir.GetPath().c_str());
     RecurseCopyBaton rc_baton2 = {recurse_dst, rc_baton->platform_ptr,
                                   Status()};
-    FileSpec::EnumerateDirectory(src_dir_path, true, true, true,
-                                 RecurseCopy_Callback, &rc_baton2);
+    FileSystem::Instance().EnumerateDirectory(src_dir_path, true, true, true,
+                                              RecurseCopy_Callback, &rc_baton2);
     if (rc_baton2.error.Fail()) {
       rc_baton->error.SetErrorString(rc_baton2.error.AsCString());
-      return FileSpec::eEnumerateDirectoryResultQuit; // got an error, bail out
+      return FileSystem::eEnumerateDirectoryResultQuit; // got an error, bail out
     }
-    return FileSpec::eEnumerateDirectoryResultNext;
+    return FileSystem::eEnumerateDirectoryResultNext;
   } break;
 
   case fs::file_type::symlink_file: {
@@ -606,15 +607,15 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     rc_baton->error = FileSystem::Instance().Readlink(src, src_resolved);
 
     if (rc_baton->error.Fail())
-      return FileSpec::eEnumerateDirectoryResultQuit; // got an error, bail out
+      return FileSystem::eEnumerateDirectoryResultQuit; // got an error, bail out
 
     rc_baton->error =
         rc_baton->platform_ptr->CreateSymlink(dst_file, src_resolved);
 
     if (rc_baton->error.Fail())
-      return FileSpec::eEnumerateDirectoryResultQuit; // got an error, bail out
+      return FileSystem::eEnumerateDirectoryResultQuit; // got an error, bail out
 
-    return FileSpec::eEnumerateDirectoryResultNext;
+    return FileSystem::eEnumerateDirectoryResultNext;
   } break;
 
   case fs::file_type::regular_file: {
@@ -625,15 +626,15 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     Status err = rc_baton->platform_ptr->PutFile(src, dst_file);
     if (err.Fail()) {
       rc_baton->error.SetErrorString(err.AsCString());
-      return FileSpec::eEnumerateDirectoryResultQuit; // got an error, bail out
+      return FileSystem::eEnumerateDirectoryResultQuit; // got an error, bail out
     }
-    return FileSpec::eEnumerateDirectoryResultNext;
+    return FileSystem::eEnumerateDirectoryResultNext;
   } break;
 
   default:
     rc_baton->error.SetErrorStringWithFormat(
         "invalid file detected during copy: %s", src.GetPath().c_str());
-    return FileSpec::eEnumerateDirectoryResultQuit; // got an error, bail out
+    return FileSystem::eEnumerateDirectoryResultQuit; // got an error, bail out
     break;
   }
   llvm_unreachable("Unhandled file_type!");
@@ -719,8 +720,8 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
         recurse_dst.GetDirectory().SetCString(fixed_dst.GetCString());
         std::string src_dir_path(src.GetPath());
         RecurseCopyBaton baton = {recurse_dst, this, Status()};
-        FileSpec::EnumerateDirectory(src_dir_path, true, true, true,
-                                     RecurseCopy_Callback, &baton);
+        FileSystem::Instance().EnumerateDirectory(
+            src_dir_path, true, true, true, RecurseCopy_Callback, &baton);
         return baton.error;
       }
     } break;

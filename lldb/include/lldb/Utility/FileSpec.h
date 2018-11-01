@@ -545,27 +545,6 @@ public:
 
   ConstString GetLastPathComponent() const;
 
-  enum EnumerateDirectoryResult {
-    eEnumerateDirectoryResultNext,  // Enumerate next entry in the current
-                                    // directory
-    eEnumerateDirectoryResultEnter, // Recurse into the current entry if it is a
-                                    // directory or symlink, or next if not
-    eEnumerateDirectoryResultQuit   // Stop directory enumerations at any level
-  };
-
-  typedef EnumerateDirectoryResult (*EnumerateDirectoryCallbackType)(
-      void *baton, llvm::sys::fs::file_type file_type, const FileSpec &spec);
-
-  static void EnumerateDirectory(llvm::StringRef dir_path,
-                                 bool find_directories, bool find_files,
-                                 bool find_other,
-                                 EnumerateDirectoryCallbackType callback,
-                                 void *callback_baton);
-
-  typedef std::function<EnumerateDirectoryResult(
-      llvm::sys::fs::file_type file_type, const FileSpec &spec)>
-      DirectoryCallback;
-
 protected:
   //------------------------------------------------------------------
   // Convenience method for setting the file without changing the style.

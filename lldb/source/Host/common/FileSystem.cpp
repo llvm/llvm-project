@@ -96,6 +96,36 @@ bool FileSystem::Readable(const FileSpec &file_spec) const {
   return Readable(file_spec.GetPath());
 }
 
+void FileSystem::EnumerateDirectory(Twine path, bool find_directories,
+                                    bool find_files, bool find_other,
+                                    EnumerateDirectoryCallbackType callback,
+                                    void *callback_baton) {
+  std::error_code EC;
+  vfs::recursive_directory_iterator Iter(*m_fs, path, EC);
+  vfs::recursive_directory_iterator End;
+  for (; Iter != End && !EC; Iter.increment(EC)) {
+    const auto &Item = *Iter;
+    ErrorOr<vfs::Status> Status = m_fs->status(Item.path());
+    if (!Status)
+      break;
+    if (!find_files && Status->isRegularFile())
+      continue;
+    if (!find_directories && Status->isDirectory())
+      continue;
+    if (!find_other && Status->isOther())
+      continue;
+
+    auto Result = callback(callback_baton, Status->getType(), Item.path());
+    if (Result == eEnumerateDirectoryResultQuit)
+      return;
+    if (Result == eEnumerateDirectoryResultNext) {
+      // Default behavior is to recurse. Opt out if the callback doesn't want
+      // this behavior.
+      Iter.no_push();
+    }
+  }
+}
+
 std::error_code FileSystem::MakeAbsolute(SmallVectorImpl<char> &path) const {
   return m_fs->makeAbsolute(path);
 }
