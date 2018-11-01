@@ -3530,6 +3530,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__builtin_os_log_format:
     return emitBuiltinOSLogFormat(*E);
 
+  case Builtin::BI__builtin_os_log_format_buffer_size: {
+    analyze_os_log::OSLogBufferLayout Layout;
+    analyze_os_log::computeOSLogBufferLayout(CGM.getContext(), E, Layout);
+    return RValue::get(ConstantInt::get(ConvertType(E->getType()),
+                                        Layout.size().getQuantity()));
+  }
+
   case Builtin::BI__xray_customevent: {
     if (!ShouldXRayInstrumentFunction())
       return RValue::getIgnored();

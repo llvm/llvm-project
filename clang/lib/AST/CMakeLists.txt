@@ -72,7 +72,6 @@ add_clang_library(clangAST
   VTTBuilder.cpp
 
   LINK_LIBS
-  clangAnalysis
   clangBasic
   clangLex
   )
