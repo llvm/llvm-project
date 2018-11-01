@@ -23,6 +23,9 @@ struct OSObject {
   static const OSMetaClass * const metaClass;
 };
 
+struct OSIterator : public OSObject {
+};
+
 struct OSArray : public OSObject {
   unsigned int getCount();
 
@@ -32,6 +35,8 @@ struct OSArray : public OSObject {
   static OSArray* consumeArrayHasCode(OS_CONSUME OSArray * array) {
     return nullptr;
   }
+
+  OSIterator * getIterator();
 
   static OS_RETURNS_NOT_RETAINED OSArray *MaskedGetter();
   static OS_RETURNS_RETAINED OSArray *getOoopsActuallyCreate();
@@ -48,6 +53,11 @@ struct OtherStruct {
 struct OSMetaClassBase {
   static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
 };
+
+void check_custom_iterator_rule(OSArray *arr) {
+  OSIterator *it = arr->getIterator();
+  it->release();
+}
 
 void check_no_invalidation() {
   OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to function 'withCapacity' returns an OSObject of type struct OSArray * with a +1 retain count}}
