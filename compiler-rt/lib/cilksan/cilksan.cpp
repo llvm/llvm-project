@@ -477,15 +477,16 @@ void CilkSanImpl_t::do_read(const csi_id_t load_id,
 
   // handle the prefix
   uintptr_t next_addr = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(addr);
-  size_t prefix_size = next_addr - addr;
+  ptrdiff_t prefix_size = next_addr - addr;
   cilksan_assert(prefix_size >= 0 && prefix_size < MAX_GRAIN_SIZE);
 
-  if (prefix_size >= mem_size) { // access falls within a max grain sized block
+  if ((size_t)prefix_size >= mem_size) {
+    // access falls within a max grain sized block
     record_mem_helper(true, load_id, addr, mem_size, on_stack);
   } else {
-    cilksan_assert( prefix_size <= mem_size );
+    cilksan_assert( (size_t)prefix_size <= mem_size );
     if (prefix_size) { // do the prefix first
-      record_mem_helper(true, load_id, addr, prefix_size, on_stack);
+      record_mem_helper(true, load_id, addr, (size_t)prefix_size, on_stack);
       mem_size -= prefix_size;
     }
     addr = next_addr;
@@ -512,13 +513,13 @@ void CilkSanImpl_t::do_write(const csi_id_t store_id,
 
   // handle the prefix
   uintptr_t next_addr = ALIGN_BY_NEXT_MAX_GRAIN_SIZE(addr);
-  size_t prefix_size = next_addr - addr;
+  ptrdiff_t prefix_size = next_addr - addr;
   cilksan_assert(prefix_size >= 0 && prefix_size < MAX_GRAIN_SIZE);
 
-  if (prefix_size >= mem_size) { // access falls within a max grain sized block
+  if ((size_t)prefix_size >= mem_size) { // access falls within a max grain sized block
     record_mem_helper(false, store_id, addr, mem_size, on_stack);
   } else {
-    cilksan_assert(prefix_size <= mem_size);
+    cilksan_assert((size_t)prefix_size <= mem_size);
     if (prefix_size) { // do the prefix first
       record_mem_helper(false, store_id, addr, prefix_size, on_stack);
       mem_size -= prefix_size;

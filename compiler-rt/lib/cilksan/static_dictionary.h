@@ -62,7 +62,7 @@ struct Page_t {
   ~Page_t() {
     decompress();
 
-    for (int i = 0; i < PAGE_SIZE; i++) {
+    for (size_t i = 0; i < PAGE_SIZE; i++) {
       // if (buffer[i].isValid())
       //   buffer[i].invalidate();
       // if (buffer[i] != 0) {

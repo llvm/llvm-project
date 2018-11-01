@@ -53,7 +53,7 @@ void LRU_List::check_invariants(int label) {
   assert(head->previous == NULL);
   assert(tail->next == NULL);
 
-  int counter = 1;
+  size_t counter = 1;
   while (current != tail) {
     assert(current->next);
     assert(current->next->previous == current);
@@ -226,7 +226,7 @@ Static_Dictionary::find_group(uint64_t key, size_t max_size,
     }
   }
   // #pragma unroll(8)
-  for (int i = 1; i < max_size; i++) {
+  for (size_t i = 1; i < max_size; i++) {
     const value_type00 *next = &acc[i];
     if (__builtin_expect(next->getFunc() == acc->getFunc(), 1)) {
       my_num_elems++;
@@ -260,7 +260,7 @@ Static_Dictionary::find_exact_group(uint64_t key, size_t max_size,
     }
   }
   // #pragma unroll(8)
-  for (int i = 1; i < max_size; i++) {
+  for (size_t i = 1; i < max_size; i++) {
     const value_type00 *next = &acc[i];
     if (__builtin_expect((next->getFunc() == acc->getFunc()) &&
                          next->sameAccessLocPtr(*acc), 1)) {
@@ -373,14 +373,14 @@ bool Static_Dictionary::includes(uint64_t key, size_t size) {
   if (__builtin_expect((lru_list.head &&
                         lru_list.head->page->page_id == page_id), 1)) {
     const value_type00 *acc = &(lru_list.head->page->buffer[GET_PAGE_OFFSET(key)]);
-    for (int i = 0; i < size; i++)
+    for (size_t i = 0; i < size; i++)
       if (acc[i].isValid())
         return true;
     return false;
   }
   if (auto *page = lru_list.find_after_head(page_id)) {
     const value_type00 *acc = &(page->buffer[GET_PAGE_OFFSET(key)]);
-    for (int i = 0; i < size; i++)
+    for (size_t i = 0; i < size; i++)
       if (acc[i].isValid())
         return true;
     return false;
@@ -389,7 +389,7 @@ bool Static_Dictionary::includes(uint64_t key, size_t size) {
   if (found_page != page_table.end()) {
     lru_list.access(found_page->second);
     const value_type00 *acc = &(found_page->second->buffer[GET_PAGE_OFFSET(key)]);
-    for (int i = 0; i < size; i++)
+    for (size_t i = 0; i < size; i++)
       if (acc[i].isValid())
         return true;
     return false;
@@ -420,14 +420,13 @@ void Static_Dictionary::insert(uint64_t key, size_t size, const value_type00 &f)
   tmp.inc_ref_counts(size);
   uint64_t page_id = GET_PAGE_ID(key);
   if (lru_list.head && lru_list.head->page->page_id == page_id) {
-    for (int i = 0; i < size; i++) {
-      // lru_list.head->page->buffer[GET_PAGE_OFFSET(key) + i] = f;
+    for (size_t i = 0; i < size; i++) {
       lru_list.head->page->buffer[GET_PAGE_OFFSET(key) + i].inherit(tmp);
     }
     return;
   }
   if (auto *page = lru_list.find_after_head(page_id)) {
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
       page->buffer[GET_PAGE_OFFSET(key) + i].inherit(tmp);
     }
     return;
@@ -435,16 +434,14 @@ void Static_Dictionary::insert(uint64_t key, size_t size, const value_type00 &f)
   auto found_page = page_table.find(page_id);
   if (found_page != page_table.end()) {
     lru_list.access(found_page->second);
-    for (int i = 0; i < size; i++) {
-      // found_page->second->buffer[GET_PAGE_OFFSET(key) + i] = f;
+    for (size_t i = 0; i < size; i++)
       found_page->second->buffer[GET_PAGE_OFFSET(key) + i].inherit(tmp);
-    }
+
   } else {
     Page_t *page = new Page_t(page_id);
     page_table[page_id] = page;
     lru_list.access(page);
-    for (int i = 0; i < size; i++) {
-      // page->buffer[GET_PAGE_OFFSET(key) + i] = f;
+    for (size_t i = 0; i < size; i++) {
       page->buffer[GET_PAGE_OFFSET(key) + i].inherit(tmp);
     }
   }
@@ -496,7 +493,7 @@ void Static_Dictionary::set(uint64_t key, size_t size, value_type00 &&f) {
         page_table[page_id] = page;
         lru_list.access(page);
         acc = &(page->buffer[GET_PAGE_OFFSET(key)]);
-        for (int i = 0; i < eff_size; ++i)
+        for (size_t i = 0; i < eff_size; ++i)
           acc[i].overwrite(f);
         acc = nullptr;
       }
@@ -534,7 +531,7 @@ void Static_Dictionary::insert_into_found_group(uint64_t key, size_t size,
   assert(dst == &lru_list.head->page->buffer[GET_PAGE_OFFSET(key)]);
   value_type00 *my_dst = dst;
   // Overwrite the table entries.
-  for (int i = 0; i < size; i++) {
+  for (size_t i = 0; i < size; i++) {
     my_dst[i].overwrite(f);
   }
 }
