@@ -148,7 +148,8 @@ static XRayFileHeader &fdrCommonHeaderInfo() {
     // Version 2 of the log writes the extents of the buffer, instead of
     // relying on an end-of-buffer record.
     // Version 3 includes PID metadata record
-    H.Version = 3;
+    // Version 4 includes CPU data in the custom event records
+    H.Version = 4;
     H.Type = FileTypes::FDR_LOG;
 
     // Test for required CPU features and cache the cycle frequency
