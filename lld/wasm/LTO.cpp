@@ -55,6 +55,7 @@ static std::unique_ptr<lto::LTO> createLTO() {
   C.DisableVerify = Config->DisableVerify;
   C.DiagHandler = diagnosticHandler;
   C.OptLevel = Config->LTOO;
+  C.MAttrs = GetMAttrs();
 
   if (Config->SaveTemps)
     checkError(C.addSaveTemps(Config->OutputFile.str() + ".",

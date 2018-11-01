@@ -88,6 +88,7 @@ static lto::Config createConfig() {
   C.DiagHandler = diagnosticHandler;
   C.OptLevel = Config->LTOO;
   C.CPU = GetCPUStr();
+  C.MAttrs = GetMAttrs();
 
   // Set up a custom pipeline if we've been asked to.
   C.OptPipeline = Config->LTONewPmPasses;
