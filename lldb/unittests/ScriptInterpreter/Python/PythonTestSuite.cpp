@@ -38,4 +38,6 @@ void PythonTestSuite::TearDown() {
   PyGILState_Release(m_gil_state);
 
   ScriptInterpreterPython::Terminate();
+  HostInfoBase::Terminate();
+  FileSystem::Terminate();
 }

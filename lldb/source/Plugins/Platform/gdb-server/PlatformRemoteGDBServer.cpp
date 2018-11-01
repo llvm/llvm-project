@@ -107,7 +107,7 @@ Status PlatformRemoteGDBServer::ResolveExecutable(
   // Resolve any executable within an apk on Android?
   // Host::ResolveExecutableInBundle (resolved_module_spec.GetFileSpec());
 
-  if (resolved_module_spec.GetFileSpec().Exists() ||
+  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()) ||
       module_spec.GetUUID().IsValid()) {
     if (resolved_module_spec.GetArchitecture().IsValid() ||
         resolved_module_spec.GetUUID().IsValid()) {
@@ -142,7 +142,7 @@ Status PlatformRemoteGDBServer::ResolveExecutable(
     }
 
     if (error.Fail() || !exe_module_sp) {
-      if (resolved_module_spec.GetFileSpec().Readable()) {
+      if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
         error.SetErrorStringWithFormat(
             "'%s' doesn't contain any '%s' platform architectures: %s",
             resolved_module_spec.GetFileSpec().GetPath().c_str(),

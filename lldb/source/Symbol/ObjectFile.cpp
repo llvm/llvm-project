@@ -47,7 +47,7 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
       FileSpec archive_file;
       ObjectContainerCreateInstance create_object_container_callback;
 
-      const bool file_exists = file->Exists();
+      const bool file_exists = FileSystem::Instance().Exists(*file);
       if (!data_sp) {
         // We have an object name which most likely means we have a .o file in
         // a static archive (.a file). Try and see if we have a cached archive
@@ -584,7 +584,7 @@ bool ObjectFile::SplitArchivePathWithObject(const char *path_with_object,
         regex_match.GetMatchAtIndex(path_with_object, 2, obj)) {
       archive_file.SetFile(path, false, FileSpec::Style::native);
       archive_object.SetCString(obj.c_str());
-      if (must_exist && !archive_file.Exists())
+      if (must_exist && !FileSystem::Instance().Exists(archive_file))
         return false;
       return true;
     }

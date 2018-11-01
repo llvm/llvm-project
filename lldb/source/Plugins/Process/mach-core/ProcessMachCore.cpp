@@ -90,7 +90,7 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
     return true;
 
   // For now we are just making sure the file exists for a given module
-  if (!m_core_module_sp && m_core_file.Exists()) {
+  if (!m_core_module_sp && FileSystem::Instance().Exists(m_core_file)) {
     // Don't add the Target's architecture to the ModuleSpec - we may be
     // working with a core file that doesn't have the correct cpusubtype in the
     // header but we should still try to use it -

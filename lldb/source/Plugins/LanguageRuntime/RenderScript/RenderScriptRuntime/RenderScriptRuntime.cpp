@@ -2530,13 +2530,13 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
 
   // Check we can read from file
   FileSpec file(path, true);
-  if (!file.Exists()) {
+  if (!FileSystem::Instance().Exists(file)) {
     strm.Printf("Error: File %s does not exist", path);
     strm.EOL();
     return false;
   }
 
-  if (!file.Readable()) {
+  if (!FileSystem::Instance().Readable(file)) {
     strm.Printf("Error: File %s does not have readable permissions", path);
     strm.EOL();
     return false;
@@ -4652,7 +4652,7 @@ public:
       switch (short_option) {
       case 'f':
         m_outfile.SetFile(option_arg, true, FileSpec::Style::native);
-        if (m_outfile.Exists()) {
+        if (FileSystem::Instance().Exists(m_outfile)) {
           m_outfile.Clear();
           err.SetErrorStringWithFormat("file already exists: '%s'",
                                        option_arg.str().c_str());

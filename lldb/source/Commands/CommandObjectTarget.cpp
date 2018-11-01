@@ -274,13 +274,13 @@ protected:
     FileSpec remote_file(m_remote_file.GetOptionValue().GetCurrentValue());
 
     if (core_file) {
-      if (!core_file.Exists()) {
+      if (!FileSystem::Instance().Exists(core_file)) {
         result.AppendErrorWithFormat("core file '%s' doesn't exist",
                                      core_file.GetPath().c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
-      if (!core_file.Readable()) {
+      if (!FileSystem::Instance().Readable(core_file)) {
         result.AppendErrorWithFormat("core file '%s' is not readable",
                                      core_file.GetPath().c_str());
         result.SetStatus(eReturnStatusFailed);
@@ -291,8 +291,8 @@ protected:
     if (argc == 1 || core_file || remote_file) {
       FileSpec symfile(m_symbol_file.GetOptionValue().GetCurrentValue());
       if (symfile) {
-        if (symfile.Exists()) {
-          if (!symfile.Readable()) {
+        if (FileSystem::Instance().Exists(symfile)) {
+          if (!FileSystem::Instance().Readable(symfile)) {
             result.AppendErrorWithFormat("symbol file '%s' is not readable",
                                          symfile.GetPath().c_str());
             result.SetStatus(eReturnStatusFailed);
@@ -336,7 +336,7 @@ protected:
         if (remote_file) {
           if (platform_sp) {
             // I have a remote file.. two possible cases
-            if (file_spec && file_spec.Exists()) {
+            if (file_spec && FileSystem::Instance().Exists(file_spec)) {
               // if the remote file does not exist, push it there
               if (!platform_sp->GetFileExists(remote_file)) {
                 Status err = platform_sp->PutFile(file_spec, remote_file);
@@ -404,8 +404,8 @@ protected:
         if (core_file) {
           char core_path[PATH_MAX];
           core_file.GetPath(core_path, sizeof(core_path));
-          if (core_file.Exists()) {
-            if (!core_file.Readable()) {
+          if (FileSystem::Instance().Exists(core_file)) {
+            if (!FileSystem::Instance().Readable(core_file)) {
               result.AppendMessageWithFormat(
                   "Core file '%s' is not readable.\n", core_path);
               result.SetStatus(eReturnStatusFailed);
@@ -2533,7 +2533,7 @@ protected:
             continue;
 
           FileSpec file_spec(entry.ref, true);
-          if (file_spec.Exists()) {
+          if (FileSystem::Instance().Exists(file_spec)) {
             ModuleSpec module_spec(file_spec);
             if (m_uuid_option_group.GetOptionValue().OptionWasSet())
               module_spec.GetUUID() =
@@ -4255,7 +4255,8 @@ protected:
                 ModuleSP frame_module_sp(
                     frame->GetSymbolContext(eSymbolContextModule).module_sp);
                 if (frame_module_sp) {
-                  if (frame_module_sp->GetPlatformFileSpec().Exists()) {
+                  if (FileSystem::Instance().Exists(
+                          frame_module_sp->GetPlatformFileSpec())) {
                     module_spec.GetArchitecture() =
                         frame_module_sp->GetArchitecture();
                     module_spec.GetFileSpec() =
@@ -4302,7 +4303,7 @@ protected:
               module_spec.GetArchitecture() = target->GetArchitecture();
             }
             success |= module_spec.GetUUID().IsValid() ||
-                       module_spec.GetFileSpec().Exists();
+                       FileSystem::Instance().Exists(module_spec.GetFileSpec());
           }
         }
 
@@ -4362,7 +4363,8 @@ protected:
             }
 
             ArchSpec arch;
-            bool symfile_exists = module_spec.GetSymbolFileSpec().Exists();
+            bool symfile_exists =
+                FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec());
 
             if (symfile_exists) {
               if (!AddModuleSymbols(target, module_spec, flush, result))

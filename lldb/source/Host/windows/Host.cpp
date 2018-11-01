@@ -15,6 +15,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Process.h"
@@ -189,7 +190,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       return error;
     }
     expand_tool_spec.AppendPathComponent("lldb-argdumper.exe");
-    if (!expand_tool_spec.Exists()) {
+    if (!FileSystem::Instance().Exists(expand_tool_spec)) {
       error.SetErrorString("could not find the lldb-argdumper tool");
       return error;
     }

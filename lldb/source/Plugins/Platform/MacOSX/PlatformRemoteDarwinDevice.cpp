@@ -18,6 +18,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -85,7 +86,7 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
   // ourselves
   Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
 
-  if (resolved_module_spec.GetFileSpec().Exists()) {
+  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec())) {
     if (resolved_module_spec.GetArchitecture().IsValid() ||
         resolved_module_spec.GetUUID().IsValid()) {
       error = ModuleList::GetSharedModule(resolved_module_spec, exe_module_sp,
@@ -119,7 +120,7 @@ Status PlatformRemoteDarwinDevice::ResolveExecutable(
     }
 
     if (error.Fail() || !exe_module_sp) {
-      if (resolved_module_spec.GetFileSpec().Readable()) {
+      if (FileSystem::Instance().Readable(resolved_module_spec.GetFileSpec())) {
         error.SetErrorStringWithFormat(
             "'%s' doesn't contain any '%s' platform architectures: %s",
             resolved_module_spec.GetFileSpec().GetPath().c_str(),
@@ -188,7 +189,7 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
       for (const auto &sdk_directory_info : builtin_sdk_directory_infos) {
         sdk_symbols_symlink_fspec = sdk_directory_info.directory;
         sdk_symbols_symlink_fspec.AppendPathComponent("Symbols");
-        if (sdk_symbols_symlink_fspec.Exists()) {
+        if (FileSystem::Instance().Exists(sdk_symbols_symlink_fspec)) {
           m_sdk_directory_infos.push_back(sdk_directory_info);
           if (log) {
             log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
@@ -207,12 +208,12 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
         std::string local_sdk_cache_str = "~/Library/Developer/Xcode/";
         local_sdk_cache_str += dirname;
         FileSpec local_sdk_cache(local_sdk_cache_str.c_str(), true);
-        if (local_sdk_cache.Exists()) {
-            if (log) {
+        if (FileSystem::Instance().Exists(local_sdk_cache)) {
+          if (log) {
             log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
                         "searching %s for additional SDKs",
                         local_sdk_cache.GetPath().c_str());
-            }
+          }
             char path[PATH_MAX];
             if (local_sdk_cache.GetPath(path, sizeof(path))) {
               FileSystem::Instance().EnumerateDirectory(
@@ -244,7 +245,7 @@ bool PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded() {
         for (const auto &sdk_directory_info : env_var_sdk_directory_infos) {
           sdk_symbols_symlink_fspec = sdk_directory_info.directory;
           sdk_symbols_symlink_fspec.AppendPathComponent("Symbols");
-          if (sdk_symbols_symlink_fspec.Exists()) {
+          if (FileSystem::Instance().Exists(sdk_symbols_symlink_fspec)) {
             m_sdk_directory_infos.push_back(sdk_directory_info);
             if (log) {
               log->Printf("PlatformRemoteDarwinDevice::UpdateSDKDirectoryInfosIfNeeded "
@@ -424,7 +425,7 @@ bool PlatformRemoteDarwinDevice::GetFileInSDK(const char *platform_file_path,
           local_file.AppendPathComponent(paths_to_try[i]);
         local_file.AppendPathComponent(platform_file_path);
         local_file.ResolvePath();
-        if (local_file.Exists()) {
+        if (FileSystem::Instance().Exists(local_file)) {
           if (log)
             log->Printf("Found a copy of %s in the SDK dir %s/%s",
                         platform_file_path, sdkroot_path.c_str(),
@@ -453,7 +454,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
                  platform_file_path);
 
       local_file.SetFile(resolved_path, true, FileSpec::Style::native);
-      if (local_file.Exists()) {
+      if (FileSystem::Instance().Exists(local_file)) {
         if (log) {
           log->Printf("Found a copy of %s in the DeviceSupport dir %s",
                       platform_file_path, os_version_dir);
@@ -465,7 +466,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
                  os_version_dir, platform_file_path);
 
       local_file.SetFile(resolved_path, true, FileSpec::Style::native);
-      if (local_file.Exists()) {
+      if (FileSystem::Instance().Exists(local_file)) {
         if (log) {
           log->Printf(
               "Found a copy of %s in the DeviceSupport dir %s/Symbols.Internal",
@@ -477,7 +478,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
                  os_version_dir, platform_file_path);
 
       local_file.SetFile(resolved_path, true, FileSpec::Style::native);
-      if (local_file.Exists()) {
+      if (FileSystem::Instance().Exists(local_file)) {
         if (log) {
           log->Printf("Found a copy of %s in the DeviceSupport dir %s/Symbols",
                       platform_file_path, os_version_dir);
@@ -486,7 +487,7 @@ Status PlatformRemoteDarwinDevice::GetSymbolFile(const FileSpec &platform_file,
       }
     }
     local_file = platform_file;
-    if (local_file.Exists())
+    if (FileSystem::Instance().Exists(local_file))
       return error;
 
     error.SetErrorStringWithFormat(

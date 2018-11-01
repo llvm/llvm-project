@@ -864,7 +864,7 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
         continue;
       search_path_spec.AppendPathComponent(
           module_spec.GetFileSpec().GetFilename().AsCString());
-      if (!search_path_spec.Exists())
+      if (!FileSystem::Instance().Exists(search_path_spec))
         continue;
 
       auto resolved_module_spec(module_spec);
@@ -905,13 +905,15 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
   // Don't look for the file if it appears to be the same one we already
   // checked for above...
   if (located_binary_modulespec.GetFileSpec() != module_file_spec) {
-    if (!located_binary_modulespec.GetFileSpec().Exists()) {
+    if (!FileSystem::Instance().Exists(
+            located_binary_modulespec.GetFileSpec())) {
       located_binary_modulespec.GetFileSpec().GetPath(path, sizeof(path));
       if (path[0] == '\0')
         module_file_spec.GetPath(path, sizeof(path));
       // How can this check ever be true? This branch it is false, and we
       // haven't modified file_spec.
-      if (located_binary_modulespec.GetFileSpec().Exists()) {
+      if (FileSystem::Instance().Exists(
+              located_binary_modulespec.GetFileSpec())) {
         std::string uuid_str;
         if (uuid_ptr && uuid_ptr->IsValid())
           uuid_str = uuid_ptr->GetAsString();

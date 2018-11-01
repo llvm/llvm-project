@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/MonitoringProcessLauncher.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/Log.h"
@@ -38,7 +39,7 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
     status(exe_spec.GetPath(), stats);
   }
   if (!exists(stats)) {
-    exe_spec.ResolveExecutableLocation();
+    FileSystem::Instance().ResolveExecutableLocation(exe_spec);
     status(exe_spec.GetPath(), stats);
   }
 

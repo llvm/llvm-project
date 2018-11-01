@@ -128,23 +128,24 @@ PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
   if (IsHost()) {
     // If we have "ls" as the exe_file, resolve the executable location based
     // on the current path variables
-    if (!resolved_module_spec.GetFileSpec().Exists()) {
+    if (!FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec())) {
       resolved_module_spec.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
       resolved_module_spec.GetFileSpec().SetFile(exe_path, true,
                                                  FileSpec::Style::native);
     }
 
-    if (!resolved_module_spec.GetFileSpec().Exists())
-      resolved_module_spec.GetFileSpec().ResolveExecutableLocation();
+    if (!FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))
+      FileSystem::Instance().ResolveExecutableLocation(
+          resolved_module_spec.GetFileSpec());
 
     // Resolve any executable within a bundle on MacOSX
     Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
 
-    if (resolved_module_spec.GetFileSpec().Exists())
+    if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))
       error.Clear();
     else {
-      const uint32_t permissions =
-          resolved_module_spec.GetFileSpec().GetPermissions();
+      const uint32_t permissions = FileSystem::Instance().GetPermissions(
+          resolved_module_spec.GetFileSpec());
       if (permissions && (permissions & eFilePermissionsEveryoneR) == 0)
         error.SetErrorStringWithFormat(
             "executable '%s' is not readable",
@@ -166,7 +167,7 @@ PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
       // Resolve any executable within a bundle on MacOSX
       Host::ResolveExecutableInBundle(resolved_module_spec.GetFileSpec());
 
-      if (resolved_module_spec.GetFileSpec().Exists())
+      if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))
         error.Clear();
       else
         error.SetErrorStringWithFormat("the platform is not currently "
@@ -237,7 +238,8 @@ PlatformPOSIX::ResolveExecutable(const ModuleSpec &module_spec,
       }
 
       if (error.Fail() || !exe_module_sp) {
-        if (resolved_module_spec.GetFileSpec().Readable()) {
+        if (FileSystem::Instance().Readable(
+                resolved_module_spec.GetFileSpec())) {
           error.SetErrorStringWithFormat(
               "'%s' doesn't contain any '%s' platform architectures: %s",
               resolved_module_spec.GetFileSpec().GetPath().c_str(),
@@ -464,7 +466,7 @@ Status PlatformPOSIX::CreateSymlink(const FileSpec &src, const FileSpec &dst) {
 
 bool PlatformPOSIX::GetFileExists(const FileSpec &file_spec) {
   if (IsHost())
-    return file_spec.Exists();
+    return FileSystem::Instance().Exists(file_spec);
   else if (m_remote_platform_sp)
     return m_remote_platform_sp->GetFileExists(file_spec);
   else

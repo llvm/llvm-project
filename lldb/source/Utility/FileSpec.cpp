@@ -453,51 +453,6 @@ void FileSpec::Dump(Stream *s) const {
   }
 }
 
-//------------------------------------------------------------------
-// Returns true if the file exists.
-//------------------------------------------------------------------
-bool FileSpec::Exists() const { return llvm::sys::fs::exists(GetPath()); }
-
-bool FileSpec::Readable() const {
-  return GetPermissions() & llvm::sys::fs::perms::all_read;
-}
-
-bool FileSpec::ResolveExecutableLocation() {
-  // CLEANUP: Use StringRef for string handling.
-  if (!m_directory) {
-    const char *file_cstr = m_filename.GetCString();
-    if (file_cstr) {
-      const std::string file_str(file_cstr);
-      llvm::ErrorOr<std::string> error_or_path =
-          llvm::sys::findProgramByName(file_str);
-      if (!error_or_path)
-        return false;
-      std::string path = error_or_path.get();
-      llvm::StringRef dir_ref = llvm::sys::path::parent_path(path);
-      if (!dir_ref.empty()) {
-        // FindProgramByName returns "." if it can't find the file.
-        if (strcmp(".", dir_ref.data()) == 0)
-          return false;
-
-        m_directory.SetCString(dir_ref.data());
-        if (Exists())
-          return true;
-        else {
-          // If FindProgramByName found the file, it returns the directory +
-          // filename in its return results. We need to separate them.
-          FileSpec tmp_file(dir_ref.data(), false);
-          if (tmp_file.Exists()) {
-            m_directory = tmp_file.m_directory;
-            return true;
-          }
-        }
-      }
-    }
-  }
-
-  return false;
-}
-
 bool FileSpec::ResolvePath() {
   if (m_is_resolved)
     return true; // We have already resolved this path
@@ -508,15 +463,6 @@ bool FileSpec::ResolvePath() {
 }
 
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
-
-uint32_t FileSpec::GetPermissions() const {
-  namespace fs = llvm::sys::fs;
-  fs::file_status st;
-  if (fs::status(GetPath(), st, false))
-    return fs::perms::perms_not_known;
-
-  return st.permissions();
-}
 
 //------------------------------------------------------------------
 // Directory string get accessor.

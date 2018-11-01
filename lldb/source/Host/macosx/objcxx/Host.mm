@@ -55,10 +55,11 @@
 #include <unistd.h>
 
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -225,7 +226,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
 
   darwin_debug_file_spec.GetFilename().SetCString("darwin-debug");
 
-  if (!darwin_debug_file_spec.Exists()) {
+  if (!FileSystem::Instance().Exists(darwin_debug_file_spec)) {
     error.SetErrorStringWithFormat(
         "the 'darwin-debug' executable doesn't exists at '%s'",
         darwin_debug_file_spec.GetPath().c_str());
@@ -1282,7 +1283,7 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
     status(exe_spec.GetPath(), stats);
   }
   if (!exists(stats)) {
-    exe_spec.ResolveExecutableLocation();
+    FileSystem::Instance().ResolveExecutableLocation(exe_spec);
     status(exe_spec.GetPath(), stats);
   }
   if (!exists(stats)) {
@@ -1337,7 +1338,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       return error;
     }
     expand_tool_spec.AppendPathComponent("lldb-argdumper");
-    if (!expand_tool_spec.Exists()) {
+    if (!FileSystem::Instance().Exists(expand_tool_spec)) {
       error.SetErrorStringWithFormat(
           "could not find the lldb-argdumper tool: %s",
           expand_tool_spec.GetPath().c_str());
@@ -1354,7 +1355,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     int status;
     std::string output;
     FileSpec cwd(launch_info.GetWorkingDirectory());
-    if (!cwd.Exists()) {
+    if (!FileSystem::Instance().Exists(cwd)) {
       char *wd = getcwd(nullptr, 0);
       if (wd == nullptr) {
         error.SetErrorStringWithFormat(

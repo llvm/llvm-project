@@ -233,7 +233,7 @@ bool ProcessGDBRemote::CanDebug(lldb::TargetSP target_sp,
     case ObjectFile::eTypeUnknown:
       break;
     }
-    return exe_module->GetFileSpec().Exists();
+    return FileSystem::Instance().Exists(exe_module->GetFileSpec());
   }
   // However, if there is no executable module, we return true since we might
   // be preparing to attach.
@@ -439,7 +439,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
 
   FileSpec target_definition_fspec =
       GetGlobalPluginProperties()->GetTargetDefinitionFile();
-  if (!target_definition_fspec.Exists()) {
+  if (!FileSystem::Instance().Exists(target_definition_fspec)) {
     // If the filename doesn't exist, it may be a ~ not having been expanded -
     // try to resolve it.
     target_definition_fspec.ResolvePath();

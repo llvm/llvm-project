@@ -1640,7 +1640,7 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     dwo_file.AppendPathComponent(dwo_name);
   }
 
-  if (!dwo_file.Exists())
+  if (!FileSystem::Instance().Exists(dwo_file))
     return nullptr;
 
   const lldb::offset_t file_offset = 0;
@@ -3879,7 +3879,7 @@ SymbolFileDWARFDwp *SymbolFileDWARF::GetDwpSymbolFile() {
     module_spec.GetSymbolFileSpec() =
         FileSpec(m_obj_file->GetFileSpec().GetPath() + ".dwp", false);
     FileSpec dwp_filespec = Symbols::LocateExecutableSymbolFile(module_spec);
-    if (dwp_filespec.Exists()) {
+    if (FileSystem::Instance().Exists(dwp_filespec)) {
       m_dwp_symfile = SymbolFileDWARFDwp::Create(GetObjectFile()->GetModule(),
                                                  dwp_filespec);
     }

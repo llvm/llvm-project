@@ -2734,7 +2734,7 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
                                       sizeof(local_exec_file_path));
     exe_module->GetPlatformFileSpec().GetPath(platform_exec_file_path,
                                               sizeof(platform_exec_file_path));
-    if (exe_module->GetFileSpec().Exists()) {
+    if (FileSystem::Instance().Exists(exe_module->GetFileSpec())) {
       // Install anything that might need to be installed prior to launching.
       // For host systems, this will do nothing, but if we are connected to a
       // remote platform it will install any needed binaries

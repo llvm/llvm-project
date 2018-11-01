@@ -709,7 +709,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
     switch (fs::get_file_type(src.GetPath(), false)) {
     case fs::file_type::directory_file: {
       llvm::sys::fs::remove(fixed_dst.GetPath());
-      uint32_t permissions = src.GetPermissions();
+      uint32_t permissions = FileSystem::Instance().GetPermissions(src);
       if (permissions == 0)
         permissions = eFilePermissionsDirectoryDefault;
       error = MakeDirectory(fixed_dst, permissions);
@@ -890,7 +890,7 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
                             lldb::ModuleSP &exe_module_sp,
                             const FileSpecList *module_search_paths_ptr) {
   Status error;
-  if (module_spec.GetFileSpec().Exists()) {
+  if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
     if (module_spec.GetArchitecture().IsValid()) {
       error = ModuleList::GetSharedModule(module_spec, exe_module_sp,
                                           module_search_paths_ptr, nullptr,
@@ -921,7 +921,7 @@ Platform::ResolveExecutable(const ModuleSpec &module_spec,
 Status Platform::ResolveSymbolFile(Target &target, const ModuleSpec &sym_spec,
                                    FileSpec &sym_file) {
   Status error;
-  if (sym_spec.GetSymbolFileSpec().Exists())
+  if (FileSystem::Instance().Exists(sym_spec.GetSymbolFileSpec()))
     sym_file = sym_spec.GetSymbolFileSpec();
   else
     error.SetErrorString("unable to resolve symbol file");

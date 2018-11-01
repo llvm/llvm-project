@@ -423,7 +423,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
       const char *oso_path = comp_unit_info->oso_path.GetCString();
       FileSpec oso_file(oso_path, false);
       ConstString oso_object;
-      if (oso_file.Exists()) {
+      if (FileSystem::Instance().Exists(oso_file)) {
         auto oso_mod_time = FileSystem::Instance().GetModificationTime(oso_file);
         if (oso_mod_time != comp_unit_info->oso_mod_time) {
           obj_file->GetModule()->ReportError(

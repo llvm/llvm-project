@@ -24,6 +24,7 @@
 
 // Other libraries and framework includes
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -287,7 +288,7 @@ bool ProcessFreeBSD::CanDebug(lldb::TargetSP target_sp,
   // For now we are just making sure the file exists for a given module
   ModuleSP exe_module_sp(target_sp->GetExecutableModule());
   if (exe_module_sp.get())
-    return exe_module_sp->GetFileSpec().Exists();
+    return FileSystem::Instance()::Exists(exe_module_sp->GetFileSpec());
   // If there is no executable module, we return true since we might be
   // preparing to attach.
   return true;

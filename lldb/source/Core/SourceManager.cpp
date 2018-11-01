@@ -92,7 +92,7 @@ SourceManager::FileSP SourceManager::GetFile(const FileSpec &file_spec) {
     file_sp->UpdateIfNeeded();
 
   // If file_sp is no good or it points to a non-existent file, reset it.
-  if (!file_sp || !file_sp->GetFileSpec().Exists()) {
+  if (!file_sp || !FileSystem::Instance().Exists(file_sp->GetFileSpec())) {
     if (target_sp)
       file_sp = std::make_shared<File>(file_spec, target_sp.get());
     else
@@ -427,7 +427,7 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
         }
       }
       // Try remapping if m_file_spec does not correspond to an existing file.
-      if (!m_file_spec.Exists()) {
+      if (!FileSystem::Instance().Exists(m_file_spec)) {
         FileSpec new_file_spec;
         // Check target specific source remappings first, then fall back to
         // modules objects can have individual path remappings that were

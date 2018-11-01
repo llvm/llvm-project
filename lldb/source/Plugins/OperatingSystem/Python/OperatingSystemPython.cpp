@@ -53,7 +53,8 @@ OperatingSystem *OperatingSystemPython::CreateInstance(Process *process,
   // Python OperatingSystem plug-ins must be requested by name, so force must
   // be true
   FileSpec python_os_plugin_spec(process->GetPythonOSPluginPath());
-  if (python_os_plugin_spec && python_os_plugin_spec.Exists()) {
+  if (python_os_plugin_spec &&
+      FileSystem::Instance().Exists(python_os_plugin_spec)) {
     std::unique_ptr<OperatingSystemPython> os_ap(
         new OperatingSystemPython(process, python_os_plugin_spec));
     if (os_ap.get() && os_ap->IsValid())

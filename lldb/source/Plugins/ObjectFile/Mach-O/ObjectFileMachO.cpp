@@ -2636,7 +2636,7 @@ size_t ObjectFileMachO::ParseSymtab() {
       // shared cache UUID in the development or non-development shared caches
       // on disk.
       if (process_shared_cache_uuid.IsValid()) {
-        if (dsc_development_filespec.Exists()) {
+        if (FileSystem::Instance().Exists(dsc_development_filespec)) {
           UUID dsc_development_uuid = GetSharedCacheUUID(
               dsc_development_filespec, byte_order, addr_byte_size);
           if (dsc_development_uuid.IsValid() &&
@@ -2645,7 +2645,8 @@ size_t ObjectFileMachO::ParseSymtab() {
             dsc_uuid = dsc_development_uuid;
           }
         }
-        if (!dsc_uuid.IsValid() && dsc_nondevelopment_filespec.Exists()) {
+        if (!dsc_uuid.IsValid() &&
+            FileSystem::Instance().Exists(dsc_nondevelopment_filespec)) {
           UUID dsc_nondevelopment_uuid = GetSharedCacheUUID(
               dsc_nondevelopment_filespec, byte_order, addr_byte_size);
           if (dsc_nondevelopment_uuid.IsValid() &&
@@ -2658,8 +2659,8 @@ size_t ObjectFileMachO::ParseSymtab() {
 
       // Failing a UUID match, prefer the development dyld_shared cache if both
       // are present.
-      if (!dsc_filespec.Exists()) {
-        if (dsc_development_filespec.Exists()) {
+      if (!FileSystem::Instance().Exists(dsc_filespec)) {
+        if (FileSystem::Instance().Exists(dsc_development_filespec)) {
           dsc_filespec = dsc_development_filespec;
         } else {
           dsc_filespec = dsc_nondevelopment_filespec;
@@ -3067,11 +3068,11 @@ size_t ObjectFileMachO::ParseSymtab() {
                                   // file so you end up with a path that looks
                                   // like "/tmp/src//tmp/src/"
                                   FileSpec so_dir(so_path, false);
-                                  if (!so_dir.Exists()) {
+                                  if (!FileSystem::Instance().Exists(so_dir)) {
                                     so_dir.SetFile(
                                         &full_so_path[double_slash_pos + 1],
                                         false);
-                                    if (so_dir.Exists()) {
+                                    if (FileSystem::Instance().Exists(so_dir)) {
                                       // Trim off the incorrect path
                                       full_so_path.erase(0,
                                                          double_slash_pos + 1);
@@ -4017,10 +4018,10 @@ size_t ObjectFileMachO::ParseSymtab() {
                     // directory for the source file so you end up with a path
                     // that looks like "/tmp/src//tmp/src/"
                     FileSpec so_dir(so_path, false);
-                    if (!so_dir.Exists()) {
+                    if (!FileSystem::Instance().Exists(so_dir)) {
                       so_dir.SetFile(&full_so_path[double_slash_pos + 1], false,
                                      FileSpec::Style::native);
-                      if (so_dir.Exists()) {
+                      if (FileSystem::Instance().Exists(so_dir)) {
                         // Trim off the incorrect path
                         full_so_path.erase(0, double_slash_pos + 1);
                       }
@@ -5152,7 +5153,8 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
           // It is OK to resolve this path because we must find a file on disk
           // for us to accept it anyway if it is rpath relative.
           FileSpec file_spec(path, true);
-          if (file_spec.Exists() && files.AppendIfUnique(file_spec)) {
+          if (FileSystem::Instance().Exists(file_spec) &&
+              files.AppendIfUnique(file_spec)) {
             count++;
             break;
           }
@@ -5169,7 +5171,8 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
       for (const auto &at_exec_relative_path : at_exec_relative_paths) {
         FileSpec file_spec = 
             exec_dir.CopyByAppendingPathComponent(at_exec_relative_path);
-        if (file_spec.Exists() && files.AppendIfUnique(file_spec))
+        if (FileSystem::Instance().Exists(file_spec) &&
+            files.AppendIfUnique(file_spec))
           count++;
       }
     }

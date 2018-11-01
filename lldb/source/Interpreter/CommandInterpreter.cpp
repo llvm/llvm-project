@@ -2093,7 +2093,7 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
         FileSpec homedir_dot_lldb(home_dir_path.c_str(), false);
         homedir_dot_lldb.AppendPathComponent(".lldbinit");
         homedir_dot_lldb.ResolvePath();
-        if (dot_lldb.Exists() &&
+        if (FileSystem::Instance().Exists(dot_lldb) &&
             dot_lldb.GetDirectory() != homedir_dot_lldb.GetDirectory()) {
           result.AppendErrorWithFormat(
               "There is a .lldbinit file in the current directory which is not "
@@ -2137,7 +2137,7 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
                    "%s-%s", init_file_path.c_str(), program_name);
         init_file.SetFile(program_init_file_name, true,
                           FileSpec::Style::native);
-        if (!init_file.Exists())
+        if (!FileSystem::Instance().Exists(init_file))
           init_file.Clear();
       }
     }
@@ -2150,7 +2150,7 @@ void CommandInterpreter::SourceInitFile(bool in_cwd,
   // actual broadcasting of the commands back to any appropriate listener (see
   // CommandObjectSource::Execute for more details).
 
-  if (init_file.Exists()) {
+  if (FileSystem::Instance().Exists(init_file)) {
     const bool saved_batch = SetBatchCommandMode(true);
     CommandInterpreterRunOptions options;
     options.SetSilent(true);
@@ -2351,7 +2351,7 @@ enum {
 void CommandInterpreter::HandleCommandsFromFile(
     FileSpec &cmd_file, ExecutionContext *context,
     CommandInterpreterRunOptions &options, CommandReturnObject &result) {
-  if (cmd_file.Exists()) {
+  if (FileSystem::Instance().Exists(cmd_file)) {
     StreamFileSP input_file_sp(new StreamFile());
 
     std::string cmd_file_path = cmd_file.GetPath();

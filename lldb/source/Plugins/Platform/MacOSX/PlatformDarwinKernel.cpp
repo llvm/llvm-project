@@ -719,7 +719,7 @@ Status PlatformDarwinKernel::GetSharedModule(
       module_spec.GetUUID().IsValid()) {
     // First try all kernel binaries that have a dSYM next to them
     for (auto possible_kernel : m_kernel_binaries_with_dsyms) {
-      if (possible_kernel.Exists()) {
+      if (FileSystem::Instance().Exists(possible_kernel)) {
         ModuleSpec kern_spec(possible_kernel);
         kern_spec.GetUUID() = module_spec.GetUUID();
         ModuleSP module_sp(new Module(kern_spec));
@@ -755,7 +755,7 @@ Status PlatformDarwinKernel::GetSharedModule(
 
     // Next try all kernel binaries that don't have a dSYM
     for (auto possible_kernel : m_kernel_binaries_without_dsyms) {
-      if (possible_kernel.Exists()) {
+      if (FileSystem::Instance().Exists(possible_kernel)) {
         ModuleSpec kern_spec(possible_kernel);
         kern_spec.GetUUID() = module_spec.GetUUID();
         ModuleSP module_sp(new Module(kern_spec));
@@ -806,7 +806,7 @@ Status PlatformDarwinKernel::ExamineKextForMatchingUUID(
     const ArchSpec &arch, ModuleSP &exe_module_sp) {
   for (const auto &exe_file :
        SearchForExecutablesRecursively(kext_bundle_path.GetPath())) {
-    if (exe_file.Exists()) {
+    if (FileSystem::Instance().Exists(exe_file)) {
       ModuleSpec exe_spec(exe_file);
       exe_spec.GetUUID() = uuid;
       if (!uuid.IsValid()) {

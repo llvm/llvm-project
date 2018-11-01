@@ -273,38 +273,6 @@ public:
   void Dump(Stream *s) const;
 
   //------------------------------------------------------------------
-  /// Existence test.
-  ///
-  /// @return
-  ///     \b true if the file exists on disk, \b false otherwise.
-  //------------------------------------------------------------------
-  bool Exists() const;
-
-  //------------------------------------------------------------------
-  /// Check if a file is readable by the current user
-  ///
-  /// @return
-  ///     \b true if the file exists on disk and is readable, \b false
-  ///     otherwise.
-  //------------------------------------------------------------------
-  bool Readable() const;
-
-  //------------------------------------------------------------------
-  /// Expanded existence test.
-  ///
-  /// Call into the Host to see if it can help find the file (e.g. by
-  /// searching paths set in the environment, etc.).
-  ///
-  /// If found, sets the value of m_directory to the directory where the file
-  /// was found.
-  ///
-  /// @return
-  ///     \b true if was able to find the file using expanded search
-  ///     methods, \b false otherwise.
-  //------------------------------------------------------------------
-  bool ResolveExecutableLocation();
-
-  //------------------------------------------------------------------
   /// Canonicalize this file path (basically running the static
   /// FileSpec::Resolve method on it). Useful if you asked us not to resolve
   /// the file path when you set the file.
@@ -449,19 +417,6 @@ public:
   ///     as a ConstString object.
   //------------------------------------------------------------------
   ConstString GetFileNameStrippingExtension() const;
-
-  //------------------------------------------------------------------
-  /// Return the current permissions of the path.
-  ///
-  /// Returns a bitmask for the current permissions of the file ( zero or more
-  /// of the permission bits defined in File::Permissions).
-  ///
-  /// @return
-  ///     Zero if the file doesn't exist or we are unable to get
-  ///     information for the file, otherwise one or more permission
-  ///     bits from the File::Permissions enumeration.
-  //------------------------------------------------------------------
-  uint32_t GetPermissions() const;
 
   //------------------------------------------------------------------
   /// Get the memory cost of this object.
