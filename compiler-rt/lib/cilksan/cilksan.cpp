@@ -426,7 +426,7 @@ CilkSanImpl_t::record_mem_helper(bool is_read, const csi_id_t acc_id,
   // guaranteed safe if:
   //  1. it's a write, there are no other reads or writes
   //  2. it's a read, there are at most only reads
-  if (!write_in_shadow && (!read_in_shadow || is_read))
+  if (!write_in_shadow && !read_in_shadow)
     shadow_memory.insert_access(is_read, acc_id, addr, mem_size, f,
                                 call_stack);
   else {
@@ -435,13 +435,17 @@ CilkSanImpl_t::record_mem_helper(bool is_read, const csi_id_t acc_id,
     // but that's not true so there's a lot of casework
     if (is_read) {
       if (read_in_shadow) {
-        check_races_and_update(is_read, acc_id, addr, mem_size, on_stack,
-                               f, call_stack, shadow_memory);
+        if (!write_in_shadow)
+          shadow_memory.update_with_read(acc_id, addr, mem_size, on_stack, f,
+                                         call_stack);
+        else
+          check_races_and_update(is_read, acc_id, addr, mem_size, on_stack,
+                                 f, call_stack, shadow_memory);
       } else {
         shadow_memory.insert_access(is_read, acc_id, addr, mem_size, f,
                                     call_stack);
-        shadow_memory.check_race_with_prev_write(true, acc_id, addr,
-                                                 mem_size, on_stack, f, call_stack);
+        shadow_memory.check_race_with_prev_write(true, acc_id, addr, mem_size,
+                                                 on_stack, f, call_stack);
       }
     } else {
       if (read_in_shadow && write_in_shadow) {
