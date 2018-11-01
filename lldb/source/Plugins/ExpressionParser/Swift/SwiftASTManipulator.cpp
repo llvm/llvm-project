@@ -804,29 +804,6 @@ static swift::Expr *getFirstInit(swift::PatternBindingDecl *pattern_binding) {
   return nullptr;
 }
 
-bool SwiftASTManipulator::CheckPatternBindings() {
-  for (swift::Decl *top_level_decl : m_source_file.Decls) {
-    if (swift::TopLevelCodeDecl *top_level_code =
-            llvm::dyn_cast<swift::TopLevelCodeDecl>(top_level_decl)) {
-      for (swift::ASTNode &node : top_level_code->getBody()->getElements()) {
-        if (swift::Decl *decl = node.dyn_cast<swift::Decl *>()) {
-          if (swift::PatternBindingDecl *pattern_binding =
-                  llvm::dyn_cast<swift::PatternBindingDecl>(decl)) {
-            if (!(pattern_binding->isImplicit() || hasInit(pattern_binding))) {
-              m_source_file.getASTContext().Diags.diagnose(
-                  pattern_binding->getStartLoc(),
-                  swift::diag::repl_must_be_initialized);
-
-              return false;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  return true;
-}
 void SwiftASTManipulator::FindVariableDeclarations(
     llvm::SmallVectorImpl<size_t> &found_declarations, bool repl) {
   if (!IsValid())
