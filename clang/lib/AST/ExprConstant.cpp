@@ -11143,9 +11143,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
     case UO_Imag:
       return CheckICE(Exp->getSubExpr(), Ctx);
     }
-
-    // OffsetOf falls through here.
-    LLVM_FALLTHROUGH;
+    llvm_unreachable("invalid unary operator class");
   }
   case Expr::OffsetOfExprClass: {
     // Note that per C99, offsetof must be an ICE. And AFAIK, using
@@ -11249,7 +11247,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
       return Worst(LHSResult, RHSResult);
     }
     }
-    LLVM_FALLTHROUGH;
+    llvm_unreachable("invalid binary operator kind");
   }
   case Expr::ImplicitCastExprClass:
   case Expr::CStyleCastExprClass:
