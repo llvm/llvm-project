@@ -36,9 +36,11 @@ public:
   /// If \p CompileCommandsDir has a value, compile_commands.json will be
   /// loaded only from \p CompileCommandsDir. Otherwise, clangd will look
   /// for compile_commands.json in all parent directories of each file.
+  /// If UseDirBasedCDB is false, compile commands are not read from disk.
+  // FIXME: Clean up signature around CDBs.
   ClangdLSPServer(Transport &Transp, const clangd::CodeCompleteOptions &CCOpts,
-                  llvm::Optional<Path> CompileCommandsDir,
-                  bool ShouldUseInMemoryCDB, const ClangdServer::Options &Opts);
+                  llvm::Optional<Path> CompileCommandsDir, bool UseDirBasedCDB,
+                  const ClangdServer::Options &Opts);
   ~ClangdLSPServer();
 
   /// Run LSP server loop, communicating with the Transport provided in the
@@ -105,43 +107,6 @@ private:
   /// Caches FixIts per file and diagnostics
   llvm::StringMap<DiagnosticToReplacementMap> FixItsMap;
 
-  /// Encapsulates the directory-based or the in-memory compilation database
-  /// that's used by the LSP server.
-  class CompilationDB {
-  public:
-    static CompilationDB makeInMemory();
-    static CompilationDB
-    makeDirectoryBased(llvm::Optional<Path> CompileCommandsDir);
-
-    /// Sets the compilation command for a particular file.
-    /// Only valid for in-memory CDB, no-op and error log on DirectoryBasedCDB.
-    ///
-    /// \returns True if the File had no compilation command before.
-    bool
-    setCompilationCommandForFile(PathRef File,
-                                 tooling::CompileCommand CompilationCommand);
-
-    /// Adds extra compilation flags to the compilation command for a particular
-    /// file. Only valid for directory-based CDB, no-op and error log on
-    /// InMemoryCDB;
-    void setExtraFlagsForFile(PathRef File,
-                              std::vector<std::string> ExtraFlags);
-
-    /// Returns a CDB that should be used to get compile commands for the
-    /// current instance of ClangdLSPServer.
-    GlobalCompilationDatabase &getCDB() { return *CDB; }
-
-  private:
-    CompilationDB(std::unique_ptr<GlobalCompilationDatabase> CDB,
-                  bool IsDirectoryBased)
-        : CDB(std::move(CDB)), IsDirectoryBased(IsDirectoryBased) {}
-
-    // if IsDirectoryBased is true, an instance of InMemoryCDB.
-    // If IsDirectoryBased is false, an instance of DirectoryBasedCDB.
-    std::unique_ptr<GlobalCompilationDatabase> CDB;
-    bool IsDirectoryBased;
-  };
-
   // Most code should not deal with Transport directly.
   // MessageHandler deals with incoming messages, use call() etc for outgoing.
   clangd::Transport &Transp;
@@ -168,9 +133,11 @@ private:
   DraftStore DraftMgr;
 
   // The CDB is created by the "initialize" LSP method.
-  bool UseInMemoryCDB; // FIXME: make this a capability.
+  bool UseDirBasedCDB;                     // FIXME: make this a capability.
   llvm::Optional<Path> CompileCommandsDir; // FIXME: merge with capability?
-  llvm::Optional<CompilationDB> CDB;
+  std::unique_ptr<GlobalCompilationDatabase> BaseCDB;
+  // CDB is BaseCDB plus any comands overridden via LSP extensions.
+  llvm::Optional<OverlayCDB> CDB;
   // The ClangdServer is created by the "initialize" LSP method.
   // It is destroyed before run() returns, to ensure worker threads exit.
   ClangdServer::Options ClangdServerOpts;

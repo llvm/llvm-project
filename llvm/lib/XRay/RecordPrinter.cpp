@@ -66,19 +66,19 @@ Error RecordPrinter::visit(FunctionRecord &R) {
   // FIXME: Support symbolization here?
   switch (R.recordType()) {
   case RecordTypes::ENTER:
-    OS << formatv("<Function Enter: #{0} delta = +{0}>", R.functionId(),
+    OS << formatv("<Function Enter: #{0} delta = +{1}>", R.functionId(),
                   R.delta());
     break;
   case RecordTypes::ENTER_ARG:
-    OS << formatv("<Function Enter With Arg: #{0} delta = +{0}>",
+    OS << formatv("<Function Enter With Arg: #{0} delta = +{1}>",
                   R.functionId(), R.delta());
     break;
   case RecordTypes::EXIT:
-    OS << formatv("<Function Exit: #{0} delta = +{0}>", R.functionId(),
+    OS << formatv("<Function Exit: #{0} delta = +{1}>", R.functionId(),
                   R.delta());
     break;
   case RecordTypes::TAIL_EXIT:
-    OS << formatv("<Function Tail Exit: #{0} delta = +{0}>", R.functionId(),
+    OS << formatv("<Function Tail Exit: #{0} delta = +{1}>", R.functionId(),
                   R.delta());
     break;
   }

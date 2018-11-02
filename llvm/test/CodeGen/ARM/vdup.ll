@@ -488,11 +488,12 @@ define <2 x float> @check_spr_splat2(<2 x float> %p, i16 %q) {
 ; CHECK-LABEL: check_spr_splat2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    lsl r2, r2, #16
-; CHECK-NEXT:    vmov d17, r0, r1
+; CHECK-NEXT:    vmov d16, r0, r1
 ; CHECK-NEXT:    asr r2, r2, #16
-; CHECK-NEXT:    vdup.32 d16, r2
-; CHECK-NEXT:    vcvt.f32.s32 d16, d16
-; CHECK-NEXT:    vsub.f32 d16, d16, d17
+; CHECK-NEXT:    vmov s0, r2
+; CHECK-NEXT:    vcvt.f32.s32 s0, s0
+; CHECK-NEXT:    vdup.32 d17, d0[0]
+; CHECK-NEXT:    vsub.f32 d16, d17, d16
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
   %conv = sitofp i16 %q to float
@@ -505,13 +506,13 @@ define <2 x float> @check_spr_splat2(<2 x float> %p, i16 %q) {
 define <4 x float> @check_spr_splat4(<4 x float> %p, i16 %q) {
 ; CHECK-LABEL: check_spr_splat4:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r12, sp
-; CHECK-NEXT:    vmov d19, r2, r3
-; CHECK-NEXT:    vld1.16 {d16[]}, [r12:16]
-; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vmovl.s16 q8, d16
-; CHECK-NEXT:    vcvt.f32.s32 q8, q8
-; CHECK-NEXT:    vsub.f32 q8, q8, q9
+; CHECK-NEXT:    ldrsh r12, [sp]
+; CHECK-NEXT:    vmov d17, r2, r3
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vmov s0, r12
+; CHECK-NEXT:    vcvt.f32.s32 s0, s0
+; CHECK-NEXT:    vdup.32 q9, d0[0]
+; CHECK-NEXT:    vsub.f32 q8, q9, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
@@ -525,13 +526,13 @@ define <4 x float> @check_spr_splat4(<4 x float> %p, i16 %q) {
 define <4 x float> @check_spr_splat4_lane1(<4 x float> %p, i16 %q) {
 ; CHECK-LABEL: check_spr_splat4_lane1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r12, sp
-; CHECK-NEXT:    vmov d19, r2, r3
-; CHECK-NEXT:    vld1.16 {d16[]}, [r12:16]
-; CHECK-NEXT:    vmov d18, r0, r1
-; CHECK-NEXT:    vmovl.s16 q8, d16
-; CHECK-NEXT:    vcvt.f32.s32 q8, q8
-; CHECK-NEXT:    vsub.f32 q8, q8, q9
+; CHECK-NEXT:    ldrsh r12, [sp]
+; CHECK-NEXT:    vmov d17, r2, r3
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vmov s0, r12
+; CHECK-NEXT:    vcvt.f32.s32 s0, s0
+; CHECK-NEXT:    vdup.32 q9, d0[0]
+; CHECK-NEXT:    vsub.f32 q8, q9, q8
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr

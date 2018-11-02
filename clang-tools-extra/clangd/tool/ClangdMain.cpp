@@ -322,7 +322,7 @@ int main(int argc, char *argv[]) {
       InputStyle);
   ClangdLSPServer LSPServer(
       *Transport, CCOpts, CompileCommandsDirPath,
-      /*ShouldUseInMemoryCDB=*/CompileArgsFrom == LSPCompileArgs, Opts);
+      /*UseDirBasedCDB=*/CompileArgsFrom == FilesystemCompileArgs, Opts);
   constexpr int NoShutdownRequestErrorCode = 1;
   set_thread_name("clangd.main");
   return LSPServer.run() ? 0 : NoShutdownRequestErrorCode;

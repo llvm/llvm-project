@@ -470,7 +470,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     if (path_str.startswith("\\\\?\\"))
       path += 4;
 
-    FileSpec file_spec(path, false);
+    FileSpec file_spec(path);
     ModuleSpec module_spec(file_spec);
     lldb::addr_t load_addr = reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll);
 

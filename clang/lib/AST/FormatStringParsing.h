@@ -3,7 +3,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
-#include "clang/Analysis/Analyses/FormatString.h"
+#include "clang/AST/FormatString.h"
 
 namespace clang {
 

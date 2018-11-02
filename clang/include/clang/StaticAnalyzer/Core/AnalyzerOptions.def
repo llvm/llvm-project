@@ -1,0 +1,467 @@
+//===-- AnalyzerOptions.def - Metadata about Static Analyses ----*- C++ -*-===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+//
+//  This file defines the analyzer options avaible with -analyzer-config.
+//
+//  This file is in part intended for method generation. If it's not included
+//  for that purpose, the following function-like macros should be predefined,
+//  through which all registered options are accessible:
+//
+//    * ANALYZER_OPTION: Register a new option.
+//    * ANALYZER_OPTION_DEPENDS_ON_USER_MODE: Register a new option, default
+//      value depends on the "user-mode" option.
+//
+//  Options where a simple getter method is sufficient are registered with the
+//  following macros:
+//
+//    * ANALYZER_OPTION_GEN_FN: Register a new option, and generate a getter
+//      method for it in AnalyzerOptions.
+//
+//    * ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE: Same as above, but
+//      generates a getter function that depends on the "user-mode" option.
+//
+//  You can only include this file when both or none of the above two macros
+//  are defined!
+//  When they are defined, entries that do not generate functions  won't appear,
+//  and when they aren't, all entries are converted to ANALYZER_OPTION or to
+//  ANALYZER_OPTION_DEPENDS_ON_USER_MODE.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_ADT_STRINGREF_H
+#error This .def file is expected to be included in translation units where \
+"llvm/ADT/StringRef.h" is already included!
+#endif
+
+#ifdef ANALYZER_OPTION
+#ifndef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
+#error If you didnt include this file with the intent of generating methods, \
+define both 'ANALYZER_OPTION' and 'ANALYZER_OPTION_DEPENDS_ON_USER_MODE' macros!
+#endif
+#endif
+
+#ifndef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
+#ifdef ANALYZER_OPTION
+#error If you didnt include this file with the intent of generating methods, \
+define both 'ANALYZER_OPTION' and 'ANALYZER_OPTION_DEPENDS_ON_USER_MODE' macros!
+#endif
+#endif
+
+#ifdef ANALYZER_OPTION_GEN_FN
+#ifndef ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE
+#error If you include this file with the intent of generating functions, \
+define both 'ANALYZER_OPTION_GEN_FN' and \
+'ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE' macros!
+#endif
+#endif
+
+#ifdef ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE
+#ifndef ANALYZER_OPTION_GEN_FN
+#error If you include this file with the intent of generating functions, \
+define both 'ANALYZER_OPTION_GEN_FN' and \
+'ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE' macros!
+#endif
+#endif
+
+#ifndef ANALYZER_OPTION
+/// Create a new analyzer option, but dont generate a method for it in
+/// AnalyzerOptions.
+///
+///   TYPE - The type of the option object that will be stored in
+///          AnalyzerOptions. This file is expected to be icluded in translation
+///          units where AnalyzerOptions.h is included, so types from that
+///          header should be used.
+///   NAME - The name of the option object.
+///   CMDFLAG - The command line flag for the option.
+///             (-analyzer-config CMDFLAG=VALUE)
+///   DESC - Description of the flag.
+///   DEFAULT_VAL - The default value for CMDFLAG.
+#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)
+#endif
+
+#ifndef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
+/// Create a new analyzer option, but dont generate a method for it in
+/// AnalyzerOptions. It's value depends on the option "user-mode".
+///
+///   TYPE - The type of the option object that will be stored in
+///          AnalyzerOptions. This file is expected to be icluded in translation
+///          units where AnalyzerOptions.h is included, so types from that
+///          header should be used.
+///   NAME - The name of the option object.
+///   CMDFLAG - The command line flag for the option.
+///             (-analyzer-config CMDFLAG=VALUE)
+///   DESC - Description of the flag.
+///   SHALLOW_VAL - The default value for CMDFLAG, when "user-mode" was set to
+///                 "shallow".
+///   DEEP_VAL - The default value for CMDFLAG, when "user-mode" was set to
+///              "deep".
+#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
+                                             SHALLOW_VAL, DEEP_VAL)
+#endif
+
+#ifndef ANALYZER_OPTION_GEN_FN
+/// Create a new analyzer option, and generate a getter method for it in
+/// AnalyzerOptions.
+///
+///   TYPE - The type of the option object that will be stored in
+///          AnalyzerOptions. This file is expected to be icluded in translation
+///          units where AnalyzerOptions.h is included, so types from that
+///          header should be used.
+///   NAME - The name of the option object.
+///   CMDFLAG - The command line flag for the option.
+///             (-analyzer-config CMDFLAG=VALUE)
+///   DESC - Description of the flag.
+///   DEFAULT_VAL - The default value for CMDFLAG.
+///   CREATE_FN - Name of the getter function.
+//
+// If this def file wasn't included with the intent of generating functions,
+// regard all entries as ANALYZER_OPTION.
+#define ANALYZER_OPTION_GEN_FN(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL,         \
+                               CREATE_FN)                                      \
+  ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)
+#endif
+
+#ifndef ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE
+/// Create a new analyzer option, and generate a getter method for it in
+/// AnalyzerOptions, and make it's default value depend on the "user-mode"
+/// option.
+///
+///   TYPE - The type of the option object that will be stored in
+///          AnalyzerOptions. This file is expected to be icluded in translation
+///          units where AnalyzerOptions.h is included, so types from that
+///          header should be used.
+///   NAME - The name of the option object.
+///   CMDFLAG - The command line flag for the option.
+///               (-analyzer-config CMDFLAG=VALUE)
+///   DESC - Description of the flago.
+///   SHALLOW_VAL - The default value for CMDFLAG, when "user-mode" was set to
+///                 "shallow".
+///   DEEP_VAL - The default value for CMDFLAG, when "user-mode" was set to
+///              "deep".
+///   CREATE_FN - Name of the getter function.
+//
+// If this def file wasn't included with the intent of generating functions,
+// regard all entries as ANALYZER_OPTION_DEPENDS_ON_USER_MODE.
+#define ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE(                           \
+    TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL, DEEP_VAL, CREATE_FN)               \
+  ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL, \
+                                       DEEP_VAL)
+#endif
+
+//===----------------------------------------------------------------------===//
+// Boolean analyzer options.
+//===----------------------------------------------------------------------===//
+
+ANALYZER_OPTION_GEN_FN(bool, IncludeImplicitDtorsInCFG, "cfg-implicit-dtors",
+                       "Whether or not implicit destructors for C++ objects "
+                       "should be included in the CFG.",
+                       true, includeImplicitDtorsInCFG)
+
+ANALYZER_OPTION_GEN_FN(bool, IncludeTemporaryDtorsInCFG, "cfg-temporary-dtors",
+                       "Whether or not the destructors for C++ temporary "
+                       "objects should be included in the CFG.",
+                       true, includeTemporaryDtorsInCFG)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, IncludeLifetimeInCFG, "cfg-lifetime",
+    "Whether or not end-of-lifetime information should be included in the CFG.",
+    false, includeLifetimeInCFG)
+
+ANALYZER_OPTION_GEN_FN(bool, IncludeLoopExitInCFG, "cfg-loopexit",
+                       "Whether or not the end of the loop information should "
+                       "be included in the CFG.",
+                       false, includeLoopExitInCFG)
+
+ANALYZER_OPTION_GEN_FN(bool, IncludeRichConstructorsInCFG,
+                       "cfg-rich-constructors",
+                       "Whether or not construction site information should be "
+                       "included in the CFG C++ constructor elements.",
+                       true, includeRichConstructorsInCFG)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, IncludeScopesInCFG, "cfg-scopes",
+    "Whether or not scope information should be included in the CFG.", false,
+    includeScopesInCFG)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, InlineTemplateFunctions, "c++-template-inlining",
+    "Whether or not templated functions may be considered for inlining.", true,
+    mayInlineTemplateFunctions)
+
+ANALYZER_OPTION_GEN_FN(bool, InlineCXXStandardLibrary, "c++-stdlib-inlining",
+                       "Whether or not C++ standard library functions may be "
+                       "considered for inlining.",
+                       true, mayInlineCXXStandardLibrary)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, InlineCXXAllocator, "c++-allocator-inlining",
+    "Whether or not allocator call may be considered for inlining.", true,
+    mayInlineCXXAllocator)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, InlineCXXSharedPtrDtor, "c++-shared_ptr-inlining",
+    "Whether or not the destructor of C++ 'shared_ptr' may be considered for "
+    "inlining. This covers std::shared_ptr, std::tr1::shared_ptr, and "
+    "boost::shared_ptr, and indeed any destructor named '~shared_ptr'.",
+    false, mayInlineCXXSharedPtrDtor)
+
+ANALYZER_OPTION_GEN_FN(bool, InlineCXXTemporaryDtors, "c++-temp-dtor-inlining",
+                       "Whether C++ temporary destructors should be inlined "
+                       "during analysis. If temporary destructors are disabled "
+                       "in the CFG via the 'cfg-temporary-dtors' option, "
+                       "temporary destructors would not be inlined anyway.",
+                       true, mayInlineCXXTemporaryDtors)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, SuppressNullReturnPaths, "suppress-null-return-paths",
+    "Whether or not paths that go through null returns should be suppressed. "
+    "This is a heuristic for avoiding bug reports with paths that go through "
+    "inlined functions that are more defensive than their callers.",
+    true, shouldSuppressNullReturnPaths)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, AvoidSuppressingNullArgumentPaths,
+    "avoid-suppressing-null-argument-paths",
+    "Whether a bug report should not be suppressed if its path includes a call "
+    "with a null argument, even if that call has a null return. This option "
+    "has no effect when #shouldSuppressNullReturnPaths() is false. This is a "
+    "counter-heuristic to avoid false negatives.",
+    false, shouldAvoidSuppressingNullArgumentPaths)
+
+ANALYZER_OPTION_GEN_FN(bool, SuppressInlinedDefensiveChecks,
+                       "suppress-inlined-defensive-checks",
+                       "Whether or not diagnostics containing inlined "
+                       "defensive NULL checks should be suppressed.",
+                       true, shouldSuppressInlinedDefensiveChecks)
+
+ANALYZER_OPTION_GEN_FN(bool, InlineCXXContainerMethods,
+                       "c++-container-inlining",
+                       "Whether or not methods of C++ container objects may be "
+                       "considered for inlining.",
+                       false, mayInlineCXXContainerMethods)
+
+ANALYZER_OPTION_GEN_FN(bool, SuppressFromCXXStandardLibrary,
+                       "suppress-c++-stdlib",
+                       "Whether or not diagnostics reported within the C++ "
+                       "standard library should be suppressed.",
+                       true, shouldSuppressFromCXXStandardLibrary)
+
+ANALYZER_OPTION_GEN_FN(bool, CrosscheckWithZ3, "crosscheck-with-z3",
+                       "Whether bug reports should be crosschecked with the Z3 "
+                       "constraint manager backend.",
+                       false, shouldCrosscheckWithZ3)
+
+ANALYZER_OPTION_GEN_FN(bool, ReportIssuesInMainSourceFile,
+                       "report-in-main-source-file",
+                       "Whether or not the diagnostic report should be always "
+                       "reported in the main source file and not the headers.",
+                       false, shouldReportIssuesInMainSourceFile)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, WriteStableReportFilename, "stable-report-filename",
+    "Whether or not the report filename should be random or not.", false,
+    shouldWriteStableReportFilename)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, SerializeStats, "serialize-stats",
+    "Whether the analyzer should serialize statistics to plist output. "
+    "Statistics would be serialized in JSON format inside the main dictionary "
+    "under the statistics key. Available only if compiled in assert mode or "
+    "with LLVM statistics explicitly enabled.",
+    false, shouldSerializeStats)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, InlineObjCMethod, "objc-inlining",
+    "Whether ObjectiveC inlining is enabled, false otherwise.", true,
+    mayInlineObjCMethod)
+
+ANALYZER_OPTION_GEN_FN(bool, PrunePaths, "prune-paths",
+                       "Whether irrelevant parts of a bug report path should "
+                       "be pruned out of the final output.",
+                       true, shouldPrunePaths)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, ConditionalizeStaticInitializers,
+    "cfg-conditional-static-initializers",
+    "Whether 'static' initializers should be in conditional logic in the CFG.",
+    true, shouldConditionalizeStaticInitializers)
+
+ANALYZER_OPTION_GEN_FN(bool, SynthesizeBodies, "faux-bodies",
+                       "Whether the analyzer engine should synthesize fake "
+                       "bodies for well-known functions.",
+                       true, shouldSynthesizeBodies)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, ElideConstructors, "elide-constructors",
+    "Whether elidable C++ copy-constructors and move-constructors should be "
+    "actually elided during analysis. Both behaviors are allowed by the C++ "
+    "standard, and the analyzer, like CodeGen, defaults to eliding. Starting "
+    "with C++17 some elisions become mandatory, and in these cases the option "
+    "will be ignored.",
+    true, shouldElideConstructors)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, InlineLambdas, "inline-lambdas",
+    "Whether lambdas should be inlined. Otherwise a sink node will be "
+    "generated each time a LambdaExpr is visited.",
+    true, shouldInlineLambdas)
+
+ANALYZER_OPTION_GEN_FN(bool, WidenLoops, "widen-loops",
+                       "Whether the analysis should try to widen loops.", false,
+                       shouldWidenLoops)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, UnrollLoops, "unroll-loops",
+    "Whether the analysis should try to unroll loops with known bounds.", false,
+    shouldUnrollLoops)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, DisplayNotesAsEvents, "notes-as-events",
+    "Whether the bug reporter should transparently treat extra note diagnostic "
+    "pieces as event diagnostic pieces. Useful when the diagnostic consumer "
+    "doesn't support the extra note pieces.",
+    false, shouldDisplayNotesAsEvents)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, AggressivelySimplifyBinaryOperation,
+    "aggressive-binary-operation-simplification",
+    "Whether SValBuilder should rearrange comparisons and additive operations "
+    "of symbolic expressions which consist of a sum of a symbol and a concrete "
+    "integer into the format where symbols are on the left-hand side and the "
+    "integer is on the right. This is only done if both symbols and both "
+    "concrete integers are signed, greater than or equal to the quarter of the "
+    "minimum value of the type and less than or equal to the quarter of the "
+    "maximum value of that type. A + n <OP> B + m becomes A - B <OP> m - n, "
+    "where A and B symbolic, n and m are integers. <OP> is any of '==', '!=', "
+    "'<', '<=', '>', '>=', '+' or '-'. The rearrangement also happens with '-' "
+    "instead of '+' on either or both side and also if any or both integers "
+    "are missing.",
+    false, shouldAggressivelySimplifyBinaryOperation)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, EagerlyAssume, "eagerly-assume",
+    "Whether we should eagerly assume evaluations of conditionals, thus, "
+    "bifurcating the path. This indicates how the engine should handle "
+    "expressions such as: 'x = (y != 0)'. When this is true then the "
+    "subexpression 'y != 0' will be eagerly assumed to be true or false, thus "
+    "evaluating it to the integers 0 or 1 respectively. The upside is that "
+    "this can increase analysis precision until we have a better way to lazily "
+    "evaluate such logic. The downside is that it eagerly bifurcates paths.",
+    true, shouldEagerlyAssume)
+
+ANALYZER_OPTION_GEN_FN(
+    bool, NaiveCTU, "experimental-enable-naive-ctu-analysis",
+    "Whether naive cross translation unit analysis is enabled. This is an "
+    "experimental feature to inline functions from another translation units.",
+    false, naiveCTUEnabled)
+
+ANALYZER_OPTION_GEN_FN(bool, DisplayMacroExpansions, "expand-macros",
+                       "Whether macros related to the bugpath should be "
+                       "expanded and included in the plist output.",
+                       false, shouldDisplayMacroExpansions)
+
+//===----------------------------------------------------------------------===//
+// Unsinged analyzer options.
+//===----------------------------------------------------------------------===//
+
+ANALYZER_OPTION_GEN_FN(
+    unsigned, AlwaysInlineSize, "ipa-always-inline-size",
+    "The size of the functions (in basic blocks), which should be considered "
+    "to be small enough to always inline.",
+    3, getAlwaysInlineSize)
+
+ANALYZER_OPTION_GEN_FN(
+    unsigned, GraphTrimInterval, "graph-trim-interval",
+    "How often nodes in the ExplodedGraph should be recycled to save memory. "
+    "To disable node reclamation, set the option to 0.",
+    1000, getGraphTrimInterval)
+
+ANALYZER_OPTION_GEN_FN(
+    unsigned, MinCFGSizeTreatFunctionsAsLarge,
+    "min-cfg-size-treat-functions-as-large",
+    "The number of basic blocks a function needs to have to be considered "
+    "large for the 'max-times-inline-large' config option.",
+    14, getMinCFGSizeTreatFunctionsAsLarge)
+
+ANALYZER_OPTION_GEN_FN(unsigned, MaxSymbolComplexity, "max-symbol-complexity",
+                       "The maximum complexity of symbolic constraint.", 35,
+                       getMaxSymbolComplexity)
+
+ANALYZER_OPTION_GEN_FN(unsigned, MaxTimesInlineLarge, "max-times-inline-large",
+                       "The maximum times a large function could be inlined.",
+                       32, getMaxTimesInlineLarge)
+
+ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE(
+    unsigned, MaxInlinableSize, "max-inlinable-size",
+    "The bound on the number of basic blocks in an inlined function.",
+    /* SHALLOW_VAL */ 4, /* DEEP_VAL */ 100, getMaxInlinableSize)
+
+ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE(
+    unsigned, MaxNodesPerTopLevelFunction, "max-nodes",
+    "The maximum number of nodes the analyzer can generate while exploring a "
+    "top level function (for each exploded graph). 0 means no limit.",
+    /* SHALLOW_VAL */ 75000, /* DEEP_VAL */ 225000,
+    getMaxNodesPerTopLevelFunction)
+
+ANALYZER_OPTION_GEN_FN(
+    unsigned, RegionStoreSmallStructLimit, "region-store-small-struct-limit",
+    "The largest number of fields a struct can have and still be considered "
+    "small This is currently used to decide whether or not it is worth forcing "
+    "a LazyCompoundVal on bind. To disable all small-struct-dependent "
+    "behavior, set the option to 0.",
+    2, getRegionStoreSmallStructLimit)
+
+//===----------------------------------------------------------------------===//
+// String analyzer options.
+//===----------------------------------------------------------------------===//
+
+ANALYZER_OPTION(StringRef, CTUDir, "ctu-dir",
+                "The directory containing the CTU related files.", "")
+
+ANALYZER_OPTION_GEN_FN(
+    StringRef, CTUIndexName, "ctu-index-name",
+    "the name of the file containing the CTU index of functions.",
+    "externalFnMap.txt", getCTUIndexName)
+
+ANALYZER_OPTION_GEN_FN(
+    StringRef, ModelPath, "model-path",
+    "The analyzer can inline an alternative implementation written in C at the "
+    "call site if the called function's body is not available. This is a path "
+    "where to look for those alternative implementations (called models).",
+    "", getModelPath)
+
+ANALYZER_OPTION(StringRef, UserMode, "mode",
+                "Controls the high-level analyzer mode, which influences the "
+                "default settings for some of the lower-level config options "
+                "(such as IPAMode). Value: \"deep\", \"shallow\".",
+                "deep")
+
+ANALYZER_OPTION(
+    StringRef, CXXMemberInliningMode, "c++-inlining",
+    "Controls which C++ member functions will be considered for inlining. "
+    "Value: \"constructors\", \"destructors\", \"methods\".",
+    "destructors")
+
+ANALYZER_OPTION_DEPENDS_ON_USER_MODE(
+    StringRef, IPAMode, "ipa",
+    "Controls the mode of inter-procedural analysis. Value: \"none\", "
+    "\"basic-inlining\", \"inlining\", \"dynamic\", \"dynamic-bifurcate\".",
+    /* SHALLOW_VAL */ "inlining", /* DEEP_VAL */ "dynamic-bifurcate")
+
+ANALYZER_OPTION(
+    StringRef, ExplorationStrategy, "exploration_strategy",
+    "Value: \"dfs\", \"bfs\", \"unexplored_first\", "
+    "\"unexplored_first_queue\", \"unexplored_first_location_queue\", "
+    "\"bfs_block_dfs_contents\".",
+    "unexplored_first_queue")
+
+#undef ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE
+#undef ANALYZER_OPTION_GEN_FN
+#undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
+#undef ANALYZER_OPTION

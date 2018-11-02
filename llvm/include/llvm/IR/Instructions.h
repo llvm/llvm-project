@@ -1523,7 +1523,7 @@ public:
   /// indirect function invocation.
   ///
   Function *getCalledFunction() const {
-    return dyn_cast<Function>(Op<-InstTy::ArgOffset>());
+    return dyn_cast_or_null<Function>(Op<-InstTy::ArgOffset>());
   }
 
   /// Determine whether this call has the given attribute.

@@ -1,42 +1,8 @@
-//RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.InnerPointer %s -analyzer-output=text -verify
+// RUN: %clang_analyze_cc1 -analyzer-checker=cplusplus.InnerPointer \
+// RUN:   %s -analyzer-output=text -verify
 
+#include "Inputs/system-header-simulator-cxx.h"
 namespace std {
-
-typedef int size_type;
-
-template <typename CharT>
-class basic_string {
-public:
-  basic_string();
-  basic_string(const CharT *s);
-
-  ~basic_string();
-  void clear();
-
-  basic_string &operator=(const basic_string &str);
-  basic_string &operator+=(const basic_string &str);
-
-  const CharT *c_str() const;
-  const CharT *data() const;
-  CharT *data();
-
-  basic_string &append(size_type count, CharT ch);
-  basic_string &assign(size_type count, CharT ch);
-  basic_string &erase(size_type index, size_type count);
-  basic_string &insert(size_type index, size_type count, CharT ch);
-  basic_string &replace(size_type pos, size_type count, const basic_string &str);
-  void pop_back();
-  void push_back(CharT ch);
-  void reserve(size_type new_cap);
-  void resize(size_type count);
-  void shrink_to_fit();
-  void swap(basic_string &other);
-};
-
-typedef basic_string<char> string;
-typedef basic_string<wchar_t> wstring;
-typedef basic_string<char16_t> u16string;
-typedef basic_string<char32_t> u32string;
 
 template <typename T>
 void func_ref(T &a);

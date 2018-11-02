@@ -119,14 +119,6 @@ bool fromJSON(const json::Value &Params, TextDocumentItem &R) {
          O.map("version", R.version) && O.map("text", R.text);
 }
 
-bool fromJSON(const json::Value &Params, Metadata &R) {
-  json::ObjectMapper O(Params);
-  if (!O)
-    return false;
-  O.map("extraFlags", R.extraFlags);
-  return true;
-}
-
 bool fromJSON(const json::Value &Params, TextEdit &R) {
   json::ObjectMapper O(Params);
   return O && O.map("range", R.range) && O.map("newText", R.newText);
@@ -262,8 +254,7 @@ bool fromJSON(const json::Value &Params, InitializeParams &R) {
 
 bool fromJSON(const json::Value &Params, DidOpenTextDocumentParams &R) {
   json::ObjectMapper O(Params);
-  return O && O.map("textDocument", R.textDocument) &&
-         O.map("metadata", R.metadata);
+  return O && O.map("textDocument", R.textDocument);
 }
 
 bool fromJSON(const json::Value &Params, DidCloseTextDocumentParams &R) {
@@ -678,6 +669,7 @@ bool fromJSON(const json::Value &Params, InitializationOptions &Opts) {
 
   fromJSON(Params, Opts.ConfigSettings);
   O.map("compilationDatabasePath", Opts.compilationDatabasePath);
+  O.map("fallbackFlags", Opts.fallbackFlags);
   return true;
 }
 
