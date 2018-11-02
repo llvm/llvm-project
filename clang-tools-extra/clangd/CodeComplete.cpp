@@ -219,7 +219,7 @@ struct CompletionCandidate {
       case index::SymbolKind::InstanceMethod:
       case index::SymbolKind::StaticMethod:
         assert(false && "Don't expect members from index in code completion");
-        // fall through
+        LLVM_FALLTHROUGH;
       case index::SymbolKind::Function:
         // We can't group overloads together that need different #includes.
         // This could break #include insertion.
