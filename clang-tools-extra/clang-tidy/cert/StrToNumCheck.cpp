@@ -134,7 +134,7 @@ ConversionKind ClassifyFormatString(StringRef Fmt, const LangOptions &LO,
 StringRef ClassifyConversionType(ConversionKind K) {
   switch (K) {
   case ConversionKind::None:
-    assert(false && "Unexpected conversion kind");
+    llvm_unreachable("Unexpected conversion kind");
   case ConversionKind::ToInt:
   case ConversionKind::ToLongInt:
   case ConversionKind::ToIntMax:
@@ -154,7 +154,7 @@ StringRef ClassifyConversionType(ConversionKind K) {
 StringRef ClassifyReplacement(ConversionKind K) {
   switch (K) {
   case ConversionKind::None:
-    assert(false && "Unexpected conversion kind");
+    llvm_unreachable("Unexpected conversion kind");
   case ConversionKind::ToInt:
     return "strtol";
   case ConversionKind::ToUInt:
