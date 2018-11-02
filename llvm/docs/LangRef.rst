@@ -14016,7 +14016,7 @@ value operands and has the same type as the operands.  The remainder has the
 same sign as the dividend.
 
 '``llvm.experimental.constrained.fma``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -14507,7 +14507,7 @@ mode argument is only intended as information to the compiler.
 
 
 '``llvm.experimental.constrained.maxnum``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -14544,7 +14544,7 @@ mode argument is only intended as information to the compiler.
 
 
 '``llvm.experimental.constrained.minnum``' Intrinsic
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""

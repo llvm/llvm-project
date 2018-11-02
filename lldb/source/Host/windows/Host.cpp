@@ -84,7 +84,7 @@ void GetProcessExecutableAndTriple(const AutoHandle &handle,
   triple.setOS(llvm::Triple::Win32);
   triple.setArch(llvm::Triple::UnknownArch);
   if (GetExecutableForProcess(handle, executable)) {
-    FileSpec executableFile(executable.c_str(), false);
+    FileSpec executableFile(executable.c_str());
     process.SetExecutableFile(executableFile, true);
     GetTripleForProcess(executableFile, triple);
   }
@@ -123,7 +123,7 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
   std::string path;
   if (!llvm::convertWideToUTF8(buffer.data(), path))
     return module_filespec;
-  module_filespec.SetFile(path, false, FileSpec::Style::native);
+  module_filespec.SetFile(path, FileSpec::Style::native);
   return module_filespec;
 }
 
@@ -146,7 +146,7 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
       ProcessInstanceInfo process;
       std::string exeFile;
       llvm::convertWideToUTF8(pe.szExeFile, exeFile);
-      process.SetExecutableFile(FileSpec(exeFile, false), true);
+      process.SetExecutableFile(FileSpec(exeFile), true);
       process.SetProcessID(pe.th32ProcessID);
       process.SetParentProcessID(pe.th32ParentProcessID);
       GetProcessExecutableAndTriple(handle, process);

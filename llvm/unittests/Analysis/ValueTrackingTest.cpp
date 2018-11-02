@@ -494,6 +494,26 @@ TEST(ValueTracking, ComputeNumSignBits_PR32045) {
   EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 1u);
 }
 
+// No guarantees for canonical IR in this analysis, so this just bails out. 
+TEST(ValueTracking, ComputeNumSignBits_Shuffle) {
+  StringRef Assembly = "define <2 x i32> @f() { "
+                       "  %val = shufflevector <2 x i32> undef, <2 x i32> undef, <2 x i32> <i32 0, i32 0> "
+                       "  ret <2 x i32> %val "
+                       "} ";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  assert(M && "Bad assembly?");
+
+  auto *F = M->getFunction("f");
+  assert(F && "Bad assembly?");
+
+  auto *RVal =
+      cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
+  EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 1u);
+}
+
 TEST(ValueTracking, ComputeKnownBits) {
   StringRef Assembly = "define i32 @f(i32 %a, i32 %b) { "
                        "  %ash = mul i32 %a, 8 "

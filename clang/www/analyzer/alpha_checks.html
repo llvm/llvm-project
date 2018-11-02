@@ -27,6 +27,7 @@ Patches welcome!
 <li><a href="#clone_alpha_checkers">Clone Alpha Checkers</a></li>
 <li><a href="#core_alpha_checkers">Core Alpha Checkers</a></li>
 <li><a href="#cplusplus_alpha_checkers">C++ Alpha Checkers</a></li>
+<li><a href="#llvm_alpha_checkers">LLVM Checkers</a></li>
 <li><a href="#valist_alpha_checkers">Variable Argument Alpha Checkers</a></li>
 <li><a href="#deadcode_alpha_checkers">Dead Code Alpha Checkers</a></li>
 <li><a href="#osx_alpha_checkers">OS X Alpha Checkers</a></li>
@@ -582,6 +583,31 @@ void test(id x) {
 }
 </pre></div></div></td></tr>
 </tbody></table>
+
+<!-- =========================== llvm alpha =========================== -->
+<h3 id="llvm_alpha_checkers">LLVM Checkers</h3>
+<table class="checkers">
+<colgroup><col class="namedescr"><col class="example"></colgroup>
+<thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
+
+<tbody>
+<tr><td><div class="namedescr expandable"><span class="name">
+alpha.llvm.Conventions</span><span class="lang">
+(C)</span><div class="descr">
+Check code for LLVM codebase conventions:
+<ul>
+  <li>A <code>StringRef</code> should not be bound to a temporary std::string
+  whose lifetime is shorter than the <code>StringRef</code>'s.</li>
+  <li>Clang AST nodes should not have fields that can allocate memory.</li>
+</ul>
+</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+<!-- TODO: Add examples, as currently it's hard to get this checker working. -->
+</pre></div></div></td></tr>
+
+</tbody></table>
+
 
 <!-- ============================== OS X alpha ============================== -->
 <h3 id="osx_alpha_checkers">OS X Alpha Checkers</h3>

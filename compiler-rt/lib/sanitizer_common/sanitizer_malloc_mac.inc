@@ -302,7 +302,7 @@ boolean_t mi_zone_locked(malloc_zone_t *zone) {
 
 namespace COMMON_MALLOC_NAMESPACE {
 
-void ReplaceSystemMalloc() {
+void InitMallocZoneFields() {
   static malloc_introspection_t sanitizer_zone_introspection;
   // Ok to use internal_memset, these places are not performance-critical.
   internal_memset(&sanitizer_zone_introspection, 0,
@@ -335,6 +335,10 @@ void ReplaceSystemMalloc() {
   sanitizer_zone.free_definite_size = 0;
   sanitizer_zone.memalign = &__sanitizer_mz_memalign;
   sanitizer_zone.introspect = &sanitizer_zone_introspection;
+}
+
+void ReplaceSystemMalloc() {
+  InitMallocZoneFields();
 
   // Register the zone.
   malloc_zone_register(&sanitizer_zone);

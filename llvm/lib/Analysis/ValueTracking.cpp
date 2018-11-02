@@ -2511,26 +2511,28 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
     // extended, shifted, etc).
     return ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
 
-  case Instruction::ShuffleVector:
+  case Instruction::ShuffleVector: {
     // If the shuffle mask contains any undefined elements, that element of the
     // result is undefined. Propagating information from a source operand may
     // not be correct in that case, so just bail out.
     if (cast<ShuffleVectorInst>(U)->getMask()->containsUndefElement())
       break;
 
-    assert((!isa<UndefValue>(U->getOperand(0)) ||
-            !isa<UndefValue>(U->getOperand(1)))
-           && "Should have simplified shuffle with 2 undef inputs");
+    // If everything is undef, we can't say anything. This should be simplified.
+    Value *Op0 = U->getOperand(0), *Op1 = U->getOperand(1);
+    if (isa<UndefValue>(Op0) && isa<UndefValue>(Op1))
+      break;
 
     // Look through shuffle of 1 source vector.
-    if (isa<UndefValue>(U->getOperand(0)))
-      return ComputeNumSignBits(U->getOperand(1), Depth + 1, Q);
-    if (isa<UndefValue>(U->getOperand(1)))
-      return ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
+    if (isa<UndefValue>(Op0))
+      return ComputeNumSignBits(Op1, Depth + 1, Q);
+    if (isa<UndefValue>(Op1))
+      return ComputeNumSignBits(Op0, Depth + 1, Q);
 
     // TODO: We can look through shuffles of 2 sources by computing the minimum
     // sign bits for each operand (similar to what we do for binops).
     break;
+  }
   }
 
   // Finally, if we can prove that the top bits of the result are 0's or 1's,

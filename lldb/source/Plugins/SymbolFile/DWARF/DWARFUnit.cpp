@@ -309,6 +309,8 @@ void DWARFUnit::ExtractDIEsEndCheck(lldb::offset_t offset) const {
 void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   SetAddrBase(
       cu_die.GetAttributeValueAsUnsigned(m_dwarf, this, DW_AT_addr_base, 0));
+  SetRangesBase(cu_die.GetAttributeValueAsUnsigned(m_dwarf, this,
+                                                   DW_AT_rnglists_base, 0));
 
   uint64_t base_addr = cu_die.GetAttributeValueAsAddress(
       m_dwarf, this, DW_AT_low_pc, LLDB_INVALID_ADDRESS);

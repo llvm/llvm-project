@@ -729,25 +729,28 @@ void test_builtin_os_log_merge_helper1(void *buf, unsigned u, long long ll) {
 
 // CHECK-LABEL: define void @test_builtin_os_log_errno
 void test_builtin_os_log_errno() {
-  // CHECK: %[[VLA:.*]] = alloca i8, i64 4, align 16
-  // CHECK: call void @__os_log_helper_16_2_1_0_96(i8* %[[VLA]])
+  // CHECK-NOT: @stacksave
+  // CHECK: %[[BUF:.*]] = alloca [4 x i8], align 1
+  // CHECK: %[[DECAY:.*]] = getelementptr inbounds [4 x i8], [4 x i8]* %[[BUF]], i32 0, i32 0
+  // CHECK: call void @__os_log_helper_1_2_1_0_96(i8* %[[DECAY]])
+  // CHECK-NOT: @stackrestore
 
   char buf[__builtin_os_log_format_buffer_size("%m")];
   __builtin_os_log_format(buf, "%m");
 }
 
-// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_16_2_1_0_96
+// CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_2_1_0_96
 // CHECK: (i8* %[[BUFFER:.*]])
 
 // CHECK: %[[BUFFER_ADDR:.*]] = alloca i8*, align 8
 // CHECK: store i8* %[[BUFFER]], i8** %[[BUFFER_ADDR]], align 8
 // CHECK: %[[BUF:.*]] = load i8*, i8** %[[BUFFER_ADDR]], align 8
 // CHECK: %[[SUMMARY:.*]] = getelementptr i8, i8* %[[BUF]], i64 0
-// CHECK: store i8 2, i8* %[[SUMMARY]], align 16
+// CHECK: store i8 2, i8* %[[SUMMARY]], align 1
 // CHECK: %[[NUMARGS:.*]] = getelementptr i8, i8* %[[BUF]], i64 1
 // CHECK: store i8 1, i8* %[[NUMARGS]], align 1
 // CHECK: %[[ARGDESCRIPTOR:.*]] = getelementptr i8, i8* %[[BUF]], i64 2
-// CHECK: store i8 96, i8* %[[ARGDESCRIPTOR]], align 2
+// CHECK: store i8 96, i8* %[[ARGDESCRIPTOR]], align 1
 // CHECK: %[[ARGSIZE:.*]] = getelementptr i8, i8* %[[BUF]], i64 3
 // CHECK: store i8 0, i8* %[[ARGSIZE]], align 1
 // CHECK-NEXT: ret void

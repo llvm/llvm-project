@@ -49,91 +49,87 @@ AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental /* = false */) {
   return Result;
 }
 
-AnalyzerOptions::UserModeKind AnalyzerOptions::getUserMode() {
+UserModeKind AnalyzerOptions::getUserMode() {
   if (!UserMode.hasValue()) {
-    StringRef ModeStr = getOptionAsString("mode", "deep");
-    UserMode = llvm::StringSwitch<llvm::Optional<UserModeKind>>(ModeStr)
-      .Case("shallow", UMK_Shallow)
-      .Case("deep", UMK_Deep)
-      .Default(None);
-    assert(UserMode.getValue() && "User mode is invalid.");
+    UserMode = getOptionAsString("mode", "deep");
   }
-  return UserMode.getValue();
+
+  auto K = llvm::StringSwitch<llvm::Optional<UserModeKind>>(*UserMode)
+    .Case("shallow", UMK_Shallow)
+    .Case("deep", UMK_Deep)
+    .Default(None);
+  assert(UserMode.hasValue() && "User mode is invalid.");
+  return K.getValue();
 }
 
-AnalyzerOptions::ExplorationStrategyKind
+ExplorationStrategyKind
 AnalyzerOptions::getExplorationStrategy() {
   if (!ExplorationStrategy.hasValue()) {
-    StringRef StratStr = getOptionAsString("exploration_strategy",
-                                           "unexplored_first_queue");
-    ExplorationStrategy =
-        llvm::StringSwitch<llvm::Optional<ExplorationStrategyKind>>(StratStr)
-            .Case("dfs", ExplorationStrategyKind::DFS)
-            .Case("bfs", ExplorationStrategyKind::BFS)
-            .Case("unexplored_first",
-                  ExplorationStrategyKind::UnexploredFirst)
-            .Case("unexplored_first_queue",
-                  ExplorationStrategyKind::UnexploredFirstQueue)
-            .Case("unexplored_first_location_queue",
-                  ExplorationStrategyKind::UnexploredFirstLocationQueue)
-            .Case("bfs_block_dfs_contents",
-                  ExplorationStrategyKind::BFSBlockDFSContents)
-            .Default(None);
-    assert(ExplorationStrategy.hasValue() &&
-           "User mode is invalid.");
+    ExplorationStrategy = getOptionAsString("exploration_strategy",
+                                            "unexplored_first_queue");
   }
-  return ExplorationStrategy.getValue();
+  auto K =
+    llvm::StringSwitch<llvm::Optional<ExplorationStrategyKind>>(
+                                                           *ExplorationStrategy)
+          .Case("dfs", ExplorationStrategyKind::DFS)
+          .Case("bfs", ExplorationStrategyKind::BFS)
+          .Case("unexplored_first",
+                ExplorationStrategyKind::UnexploredFirst)
+          .Case("unexplored_first_queue",
+                ExplorationStrategyKind::UnexploredFirstQueue)
+          .Case("unexplored_first_location_queue",
+                ExplorationStrategyKind::UnexploredFirstLocationQueue)
+          .Case("bfs_block_dfs_contents",
+                ExplorationStrategyKind::BFSBlockDFSContents)
+          .Default(None);
+  assert(K.hasValue() && "User mode is invalid.");
+  return K.getValue();
 }
 
 IPAKind AnalyzerOptions::getIPAMode() {
   if (!IPAMode.hasValue()) {
-    // Use the User Mode to set the default IPA value.
-    // Note, we have to add the string to the Config map for the ConfigDumper
-    // checker to function properly.
-    const char *DefaultIPA = nullptr;
-    UserModeKind HighLevelMode = getUserMode();
-    if (HighLevelMode == UMK_Shallow)
-      DefaultIPA = "inlining";
-    else if (HighLevelMode == UMK_Deep)
-      DefaultIPA = "dynamic-bifurcate";
-    assert(DefaultIPA);
-
-    // Lookup the ipa configuration option, use the default from User Mode.
-    StringRef ModeStr = getOptionAsString("ipa", DefaultIPA);
-    IPAMode = llvm::StringSwitch<llvm::Optional<IPAKind>>(ModeStr)
-            .Case("none", IPAK_None)
-            .Case("basic-inlining", IPAK_BasicInlining)
-            .Case("inlining", IPAK_Inlining)
-            .Case("dynamic", IPAK_DynamicDispatch)
-            .Case("dynamic-bifurcate", IPAK_DynamicDispatchBifurcate)
-            .Default(None);
-    assert(IPAMode.hasValue() && "IPA Mode is invalid.");
+    switch (getUserMode()) {
+    case UMK_Shallow:
+      IPAMode = getOptionAsString("ipa", "inlining");
+      break;
+    case UMK_Deep:
+      IPAMode = getOptionAsString("ipa", "dynamic-bifurcate");
+      break;
+    }
   }
+  auto K = llvm::StringSwitch<llvm::Optional<IPAKind>>(*IPAMode)
+          .Case("none", IPAK_None)
+          .Case("basic-inlining", IPAK_BasicInlining)
+          .Case("inlining", IPAK_Inlining)
+          .Case("dynamic", IPAK_DynamicDispatch)
+          .Case("dynamic-bifurcate", IPAK_DynamicDispatchBifurcate)
+          .Default(None);
+  assert(K.hasValue() && "IPA Mode is invalid.");
 
-  return IPAMode.getValue();
+  return K.getValue();
 }
 
 bool
-AnalyzerOptions::mayInlineCXXMemberFunction(CXXInlineableMemberKind K) {
+AnalyzerOptions::mayInlineCXXMemberFunction(CXXInlineableMemberKind Param) {
+  if (!CXXMemberInliningMode.hasValue()) {
+    CXXMemberInliningMode = getOptionAsString("c++-inlining", "destructors");
+  }
+
   if (getIPAMode() < IPAK_Inlining)
     return false;
 
-  if (!CXXMemberInliningMode) {
-    StringRef ModeStr = getOptionAsString("c++-inlining", "destructors");
+  auto K =
+    llvm::StringSwitch<llvm::Optional<CXXInlineableMemberKind>>(
+                                                         *CXXMemberInliningMode)
+    .Case("constructors", CIMK_Constructors)
+    .Case("destructors", CIMK_Destructors)
+    .Case("methods", CIMK_MemberFunctions)
+    .Case("none", CIMK_None)
+    .Default(None);
 
-    CXXMemberInliningMode =
-      llvm::StringSwitch<llvm::Optional<CXXInlineableMemberKind>>(ModeStr)
-      .Case("constructors", CIMK_Constructors)
-      .Case("destructors", CIMK_Destructors)
-      .Case("methods", CIMK_MemberFunctions)
-      .Case("none", CIMK_None)
-      .Default(None);
+  assert(K.hasValue() && "Invalid c++ member function inlining mode.");
 
-    assert(CXXMemberInliningMode.hasValue() &&
-           "Invalid c++ member function inlining mode.");
-  }
-
-  return *CXXMemberInliningMode >= K;
+  return *K >= Param;
 }
 
 static StringRef toString(bool b) { return b ? "true" : "false"; }
@@ -183,137 +179,6 @@ bool AnalyzerOptions::getBooleanOption(Optional<bool> &V, StringRef Name,
   return V.getValue();
 }
 
-bool AnalyzerOptions::includeTemporaryDtorsInCFG() {
-  return getBooleanOption(IncludeTemporaryDtorsInCFG,
-                          "cfg-temporary-dtors",
-                          /* Default = */ true);
-}
-
-bool AnalyzerOptions::includeImplicitDtorsInCFG() {
-  return getBooleanOption(IncludeImplicitDtorsInCFG,
-                          "cfg-implicit-dtors",
-                          /* Default = */ true);
-}
-
-bool AnalyzerOptions::includeLifetimeInCFG() {
-  return getBooleanOption(IncludeLifetimeInCFG, "cfg-lifetime",
-                          /* Default = */ false);
-}
-
-bool AnalyzerOptions::includeLoopExitInCFG() {
-  return getBooleanOption(IncludeLoopExitInCFG, "cfg-loopexit",
-                          /* Default = */ false);
-}
-
-bool AnalyzerOptions::includeRichConstructorsInCFG() {
-  return getBooleanOption(IncludeRichConstructorsInCFG,
-                          "cfg-rich-constructors",
-                          /* Default = */ true);
-}
-
-bool AnalyzerOptions::includeScopesInCFG() {
-  return getBooleanOption(IncludeScopesInCFG,
-                          "cfg-scopes",
-                          /* Default = */ false);
-}
-
-bool AnalyzerOptions::mayInlineCXXStandardLibrary() {
-  return getBooleanOption(InlineCXXStandardLibrary,
-                          "c++-stdlib-inlining",
-                          /*Default=*/true);
-}
-
-bool AnalyzerOptions::mayInlineTemplateFunctions() {
-  return getBooleanOption(InlineTemplateFunctions,
-                          "c++-template-inlining",
-                          /*Default=*/true);
-}
-
-bool AnalyzerOptions::mayInlineCXXAllocator() {
-  return getBooleanOption(InlineCXXAllocator,
-                          "c++-allocator-inlining",
-                          /*Default=*/true);
-}
-
-bool AnalyzerOptions::mayInlineCXXContainerMethods() {
-  return getBooleanOption(InlineCXXContainerMethods,
-                          "c++-container-inlining",
-                          /*Default=*/false);
-}
-
-bool AnalyzerOptions::mayInlineCXXSharedPtrDtor() {
-  return getBooleanOption(InlineCXXSharedPtrDtor,
-                          "c++-shared_ptr-inlining",
-                          /*Default=*/false);
-}
-
-bool AnalyzerOptions::mayInlineCXXTemporaryDtors() {
-  return getBooleanOption(InlineCXXTemporaryDtors,
-                          "c++-temp-dtor-inlining",
-                          /*Default=*/true);
-}
-
-bool AnalyzerOptions::mayInlineObjCMethod() {
-  return getBooleanOption(ObjCInliningMode,
-                          "objc-inlining",
-                          /* Default = */ true);
-}
-
-bool AnalyzerOptions::shouldSuppressNullReturnPaths() {
-  return getBooleanOption(SuppressNullReturnPaths,
-                          "suppress-null-return-paths",
-                          /* Default = */ true);
-}
-
-bool AnalyzerOptions::shouldAvoidSuppressingNullArgumentPaths() {
-  return getBooleanOption(AvoidSuppressingNullArgumentPaths,
-                          "avoid-suppressing-null-argument-paths",
-                          /* Default = */ false);
-}
-
-bool AnalyzerOptions::shouldSuppressInlinedDefensiveChecks() {
-  return getBooleanOption(SuppressInlinedDefensiveChecks,
-                          "suppress-inlined-defensive-checks",
-                          /* Default = */ true);
-}
-
-bool AnalyzerOptions::shouldSuppressFromCXXStandardLibrary() {
-  return getBooleanOption(SuppressFromCXXStandardLibrary,
-                          "suppress-c++-stdlib",
-                          /* Default = */ true);
-}
-
-bool AnalyzerOptions::shouldCrosscheckWithZ3() {
-  return getBooleanOption(CrosscheckWithZ3,
-                          "crosscheck-with-z3",
-                          /* Default = */ false);
-}
-
-bool AnalyzerOptions::shouldReportIssuesInMainSourceFile() {
-  return getBooleanOption(ReportIssuesInMainSourceFile,
-                          "report-in-main-source-file",
-                          /* Default = */ false);
-}
-
-
-bool AnalyzerOptions::shouldWriteStableReportFilename() {
-  return getBooleanOption(StableReportFilename,
-                          "stable-report-filename",
-                          /* Default = */ false);
-}
-
-bool AnalyzerOptions::shouldSerializeStats() {
-  return getBooleanOption(SerializeStats,
-                          "serialize-stats",
-                          /* Default = */ false);
-}
-
-bool AnalyzerOptions::shouldElideConstructors() {
-  return getBooleanOption(ElideConstructors,
-                          "elide-constructors",
-                          /* Default = */ true);
-}
-
 int AnalyzerOptions::getOptionAsInteger(StringRef Name, int DefaultVal,
                                         const CheckerBase *C,
                                         bool SearchInParents) {
@@ -361,130 +226,45 @@ StringRef AnalyzerOptions::getOptionAsString(Optional<StringRef> &V,
   return V.getValue();
 }
 
-unsigned AnalyzerOptions::getAlwaysInlineSize() {
-  if (!AlwaysInlineSize.hasValue())
-    AlwaysInlineSize = getOptionAsInteger("ipa-always-inline-size", 3);
-  return AlwaysInlineSize.getValue();
+static bool getOption(AnalyzerOptions &A, Optional<bool> &V, StringRef Name,
+                      bool DefaultVal) {
+  return A.getBooleanOption(V, Name, DefaultVal);
 }
 
-unsigned AnalyzerOptions::getMaxInlinableSize() {
-  if (!MaxInlinableSize.hasValue()) {
-    int DefaultValue = 0;
-    UserModeKind HighLevelMode = getUserMode();
-    switch (HighLevelMode) {
-      case UMK_Shallow:
-        DefaultValue = 4;
-        break;
-      case UMK_Deep:
-        DefaultValue = 100;
-        break;
-    }
-
-    MaxInlinableSize = getOptionAsInteger("max-inlinable-size", DefaultValue);
-  }
-  return MaxInlinableSize.getValue();
+static unsigned getOption(AnalyzerOptions &A, Optional<unsigned> &V,
+                          StringRef Name, unsigned DefaultVal) {
+  return A.getOptionAsUInt(V, Name, DefaultVal);
 }
 
-unsigned AnalyzerOptions::getGraphTrimInterval() {
-  if (!GraphTrimInterval.hasValue())
-    GraphTrimInterval = getOptionAsInteger("graph-trim-interval", 1000);
-  return GraphTrimInterval.getValue();
+static StringRef getOption(AnalyzerOptions &A, Optional<StringRef> &V,
+                           StringRef Name, StringRef DefaultVal) {
+  return A.getOptionAsString(V, Name, DefaultVal);
 }
 
-unsigned AnalyzerOptions::getMaxSymbolComplexity() {
-  if (!MaxSymbolComplexity.hasValue())
-    MaxSymbolComplexity = getOptionAsInteger("max-symbol-complexity", 35);
-  return MaxSymbolComplexity.getValue();
+#define ANALYZER_OPTION_GEN_FN(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL,  \
+                                CREATE_FN)                              \
+TYPE AnalyzerOptions::CREATE_FN() {                                     \
+  return getOption(*this, NAME, CMDFLAG, DEFAULT_VAL);                  \
 }
 
-unsigned AnalyzerOptions::getMaxTimesInlineLarge() {
-  if (!MaxTimesInlineLarge.hasValue())
-    MaxTimesInlineLarge = getOptionAsInteger("max-times-inline-large", 32);
-  return MaxTimesInlineLarge.getValue();
+#define ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE(                    \
+    TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL, DEEP_VAL, CREATE_FN)        \
+TYPE AnalyzerOptions::CREATE_FN() {                                     \
+  switch (getUserMode()) {                                              \
+  case UMK_Shallow:                                                     \
+    return getOption(*this, NAME, CMDFLAG, SHALLOW_VAL);                \
+  case UMK_Deep:                                                        \
+    return getOption(*this, NAME, CMDFLAG, DEEP_VAL);                   \
+  }                                                                     \
+                                                                        \
+  llvm_unreachable("Unknown usermode!");                                \
+  return {};                                                            \
 }
 
-unsigned AnalyzerOptions::getMinCFGSizeTreatFunctionsAsLarge() {
-  if (!MinCFGSizeTreatFunctionsAsLarge.hasValue())
-    MinCFGSizeTreatFunctionsAsLarge = getOptionAsInteger(
-      "min-cfg-size-treat-functions-as-large", 14);
-  return MinCFGSizeTreatFunctionsAsLarge.getValue();
-}
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
 
-unsigned AnalyzerOptions::getMaxNodesPerTopLevelFunction() {
-  if (!MaxNodesPerTopLevelFunction.hasValue()) {
-    int DefaultValue = 0;
-    UserModeKind HighLevelMode = getUserMode();
-    switch (HighLevelMode) {
-      case UMK_Shallow:
-        DefaultValue = 75000;
-        break;
-      case UMK_Deep:
-        DefaultValue = 225000;
-        break;
-    }
-    MaxNodesPerTopLevelFunction = getOptionAsInteger("max-nodes", DefaultValue);
-  }
-  return MaxNodesPerTopLevelFunction.getValue();
-}
-
-bool AnalyzerOptions::shouldSynthesizeBodies() {
-  return getBooleanOption("faux-bodies", true);
-}
-
-bool AnalyzerOptions::shouldPrunePaths() {
-  return getBooleanOption("prune-paths", true);
-}
-
-bool AnalyzerOptions::shouldConditionalizeStaticInitializers() {
-  return getBooleanOption("cfg-conditional-static-initializers", true);
-}
-
-bool AnalyzerOptions::shouldInlineLambdas() {
-  if (!InlineLambdas.hasValue())
-    InlineLambdas = getBooleanOption("inline-lambdas", /*Default=*/true);
-  return InlineLambdas.getValue();
-}
-
-bool AnalyzerOptions::shouldWidenLoops() {
-  if (!WidenLoops.hasValue())
-    WidenLoops = getBooleanOption("widen-loops", /*Default=*/false);
-  return WidenLoops.getValue();
-}
-
-bool AnalyzerOptions::shouldUnrollLoops() {
-  if (!UnrollLoops.hasValue())
-    UnrollLoops = getBooleanOption("unroll-loops", /*Default=*/false);
-  return UnrollLoops.getValue();
-}
-
-bool AnalyzerOptions::shouldDisplayNotesAsEvents() {
-  if (!DisplayNotesAsEvents.hasValue())
-    DisplayNotesAsEvents =
-        getBooleanOption("notes-as-events", /*Default=*/false);
-  return DisplayNotesAsEvents.getValue();
-}
-
-bool AnalyzerOptions::shouldDisplayMacroExpansions() {
-  if (!DisplayMacroExpansions.hasValue())
-    DisplayMacroExpansions =
-        getBooleanOption("expand-macros", /*Default=*/false);
-  return DisplayMacroExpansions.getValue();
-}
-
-bool AnalyzerOptions::shouldAggressivelySimplifyBinaryOperation() {
-  if (!AggressiveBinaryOperationSimplification.hasValue())
-    AggressiveBinaryOperationSimplification =
-      getBooleanOption("aggressive-binary-operation-simplification",
-                       /*Default=*/false);
-  return AggressiveBinaryOperationSimplification.getValue();
-}
-
-bool AnalyzerOptions::shouldEagerlyAssume() {
-  if (!EagerlyAssumeBinOpBifurcation.hasValue())
-    EagerlyAssumeBinOpBifurcation =
-        getBooleanOption("eagerly-assume", true);
-  return EagerlyAssumeBinOpBifurcation.getValue();
-}
+#undef ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE
+#undef ANALYZER_OPTION_WITH_FN
 
 StringRef AnalyzerOptions::getCTUDir() {
   if (!CTUDir.hasValue()) {
@@ -493,18 +273,4 @@ StringRef AnalyzerOptions::getCTUDir() {
       CTUDir = "";
   }
   return CTUDir.getValue();
-}
-
-bool AnalyzerOptions::naiveCTUEnabled() {
-  if (!NaiveCTU.hasValue()) {
-    NaiveCTU = getBooleanOption("experimental-enable-naive-ctu-analysis",
-                                /*Default=*/false);
-  }
-  return NaiveCTU.getValue();
-}
-
-StringRef AnalyzerOptions::getCTUIndexName() {
-  if (!CTUIndexName.hasValue())
-    CTUIndexName = getOptionAsString("ctu-index-name", "externalFnMap.txt");
-  return CTUIndexName.getValue();
 }

@@ -92,7 +92,7 @@ FileSpec HostInfoWindows::GetProgramFileSpec() {
     ::GetModuleFileNameW(NULL, buffer.data(), buffer.size());
     std::string path;
     llvm::convertWideToUTF8(buffer.data(), path);
-    m_program_filespec.SetFile(path, false, FileSpec::Style::native);
+    m_program_filespec.SetFile(path, FileSpec::Style::native);
   });
   return m_program_filespec;
 }
@@ -103,9 +103,9 @@ FileSpec HostInfoWindows::GetDefaultShell() {
 
   std::string shell;
   if (GetEnvironmentVar("ComSpec", shell))
-    return FileSpec(shell, false);
+    return FileSpec(shell);
 
-  return FileSpec("C:\\Windows\\system32\\cmd.exe", false);
+  return FileSpec("C:\\Windows\\system32\\cmd.exe");
 }
 
 bool HostInfoWindows::GetEnvironmentVar(const std::string &var_name,

@@ -305,11 +305,12 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                       ErrorCode::InvalidRequest));
   if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
     CompileCommandsDir = Dir;
-  CDB.emplace(UseInMemoryCDB
-                  ? CompilationDB::makeInMemory()
-                  : CompilationDB::makeDirectoryBased(CompileCommandsDir));
-  Server.emplace(CDB->getCDB(), FSProvider,
-                 static_cast<DiagnosticsConsumer &>(*this), ClangdServerOpts);
+  if (UseDirBasedCDB)
+    BaseCDB = llvm::make_unique<DirectoryBasedGlobalCompilationDatabase>(
+        CompileCommandsDir);
+  CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags);
+  Server.emplace(*CDB, FSProvider, static_cast<DiagnosticsConsumer &>(*this),
+                 ClangdServerOpts);
   applyConfiguration(Params.initializationOptions.ConfigSettings);
 
   CCOpts.EnableSnippets = Params.capabilities.CompletionSnippets;
@@ -366,8 +367,6 @@ void ClangdLSPServer::onShutdown(const ShutdownParams &Params,
 void ClangdLSPServer::onDocumentDidOpen(
     const DidOpenTextDocumentParams &Params) {
   PathRef File = Params.textDocument.uri.file();
-  if (Params.metadata && !Params.metadata->extraFlags.empty())
-    CDB->setExtraFlagsForFile(File, std::move(Params.metadata->extraFlags));
 
   const std::string &Contents = Params.textDocument.text;
 
@@ -660,12 +659,15 @@ void ClangdLSPServer::applyConfiguration(
     /// The opened files need to be reparsed only when some existing
     /// entries are changed.
     PathRef File = Entry.first;
-    if (!CDB->setCompilationCommandForFile(
-            File, tooling::CompileCommand(
-                      std::move(Entry.second.workingDirectory), File,
-                      std::move(Entry.second.compilationCommand),
-                      /*Output=*/"")))
+    auto Old = CDB->getCompileCommand(File);
+    auto New =
+        tooling::CompileCommand(std::move(Entry.second.workingDirectory), File,
+                                std::move(Entry.second.compilationCommand),
+                                /*Output=*/"");
+    if (Old != New) {
+      CDB->setCompileCommand(File, std::move(New));
       ShouldReparseOpenFiles = true;
+    }
   }
   if (ShouldReparseOpenFiles)
     reparseOpenedFiles();
@@ -686,12 +688,12 @@ void ClangdLSPServer::onReference(const ReferenceParams &Params,
 ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
                                  const clangd::CodeCompleteOptions &CCOpts,
                                  Optional<Path> CompileCommandsDir,
-                                 bool ShouldUseInMemoryCDB,
+                                 bool UseDirBasedCDB,
                                  const ClangdServer::Options &Opts)
     : Transp(Transp), MsgHandler(new MessageHandler(*this)), CCOpts(CCOpts),
       SupportedSymbolKinds(defaultSymbolKinds()),
       SupportedCompletionItemKinds(defaultCompletionItemKinds()),
-      UseInMemoryCDB(ShouldUseInMemoryCDB),
+      UseDirBasedCDB(UseDirBasedCDB),
       CompileCommandsDir(std::move(CompileCommandsDir)),
       ClangdServerOpts(Opts) {
   // clang-format off
@@ -783,44 +785,6 @@ void ClangdLSPServer::reparseOpenedFiles() {
   for (const Path &FilePath : DraftMgr.getActiveFiles())
     Server->addDocument(FilePath, *DraftMgr.getDraft(FilePath),
                         WantDiagnostics::Auto);
-}
-
-ClangdLSPServer::CompilationDB ClangdLSPServer::CompilationDB::makeInMemory() {
-  return CompilationDB(llvm::make_unique<InMemoryCompilationDb>(),
-                       /*IsDirectoryBased=*/false);
-}
-
-ClangdLSPServer::CompilationDB
-ClangdLSPServer::CompilationDB::makeDirectoryBased(
-    Optional<Path> CompileCommandsDir) {
-  auto CDB = llvm::make_unique<DirectoryBasedGlobalCompilationDatabase>(
-      std::move(CompileCommandsDir));
-  return CompilationDB(std::move(CDB),
-                       /*IsDirectoryBased=*/true);
-}
-
-bool ClangdLSPServer::CompilationDB::setCompilationCommandForFile(
-    PathRef File, tooling::CompileCommand CompilationCommand) {
-  if (IsDirectoryBased) {
-    elog("Trying to set compile command for {0} while using directory-based "
-         "compilation database",
-         File);
-    return false;
-  }
-  return static_cast<InMemoryCompilationDb *>(CDB.get())
-      ->setCompilationCommandForFile(File, std::move(CompilationCommand));
-}
-
-void ClangdLSPServer::CompilationDB::setExtraFlagsForFile(
-    PathRef File, std::vector<std::string> ExtraFlags) {
-  if (!IsDirectoryBased) {
-    elog("Trying to set extra flags for {0} while using in-memory compilation "
-         "database",
-         File);
-    return;
-  }
-  static_cast<DirectoryBasedGlobalCompilationDatabase *>(CDB.get())
-      ->setExtraFlagsForFile(File, std::move(ExtraFlags));
 }
 
 } // namespace clangd

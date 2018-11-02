@@ -175,11 +175,6 @@ struct Location {
 llvm::json::Value toJSON(const Location &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Location &);
 
-struct Metadata {
-  std::vector<std::string> extraFlags;
-};
-bool fromJSON(const llvm::json::Value &, Metadata &);
-
 struct TextEdit {
   /// The range of the text document to be manipulated. To insert
   /// text into a document create a range where start === end.
@@ -373,6 +368,10 @@ struct InitializationOptions {
   ConfigurationSettings ConfigSettings;
 
   llvm::Optional<std::string> compilationDatabasePath;
+  // Additional flags to be included in the "fallback command" used when
+  // the compilation database doesn't describe an opened file.
+  // The command used will be approximately `clang $FILE $fallbackFlags`.
+  std::vector<std::string> fallbackFlags;
 };
 bool fromJSON(const llvm::json::Value &, InitializationOptions &);
 
@@ -411,9 +410,6 @@ bool fromJSON(const llvm::json::Value &, InitializeParams &);
 struct DidOpenTextDocumentParams {
   /// The document that was opened.
   TextDocumentItem textDocument;
-
-  /// Extension storing per-file metadata, such as compilation flags.
-  llvm::Optional<Metadata> metadata;
 };
 bool fromJSON(const llvm::json::Value &, DidOpenTextDocumentParams &);
 

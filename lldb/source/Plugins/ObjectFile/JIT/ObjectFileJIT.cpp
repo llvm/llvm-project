@@ -124,7 +124,6 @@ Symtab *ObjectFileJIT::GetSymtab() {
       if (delegate_sp)
         delegate_sp->PopulateSymtab(this, *m_symtab_ap);
       // TODO: get symbols from delegate
-      m_symtab_ap->Finalize();
     }
   }
   return m_symtab_ap.get();

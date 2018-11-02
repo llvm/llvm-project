@@ -15,7 +15,6 @@ add_clang_library(clangTidyCERTModule
   VariadicFunctionDefCheck.cpp
 
   LINK_LIBS
-  clangAnalysis
   clangAST
   clangASTMatchers
   clangBasic

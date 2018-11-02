@@ -350,7 +350,7 @@ public:
     if (SubEngine *Eng = StateMgr.getOwningEngine()) {
       AnalyzerOptions &Options = Eng->getAnalysisManager().options;
       SmallStructLimit =
-        Options.getOptionAsInteger("region-store-small-struct-limit", 2);
+        Options.getRegionStoreSmallStructLimit();
     }
   }
 

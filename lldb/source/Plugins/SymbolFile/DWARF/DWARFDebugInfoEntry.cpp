@@ -157,6 +157,7 @@ bool DWARFDebugInfoEntry::FastExtract(
 
           // signed or unsigned LEB 128 values
           case DW_FORM_addrx:
+          case DW_FORM_rnglistx:
           case DW_FORM_sdata:
           case DW_FORM_udata:
           case DW_FORM_ref_udata:
@@ -387,6 +388,13 @@ void DWARFDebugInfoEntry::DumpAncestry(SymbolFileDWARF *dwarf2Data,
   Dump(dwarf2Data, cu, s, recurse_depth);
 }
 
+static dw_offset_t GetRangesOffset(const DWARFDebugRangesBase *debug_ranges,
+                                   DWARFFormValue &form_value) {
+  if (form_value.Form() == DW_FORM_rnglistx)
+    return debug_ranges->GetOffset(form_value.Unsigned());
+  return form_value.Unsigned();
+}
+
 //----------------------------------------------------------------------
 // GetDIENamesAndRanges
 //
@@ -464,7 +472,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
         case DW_AT_ranges: {
           const DWARFDebugRangesBase *debug_ranges = dwarf2Data->DebugRanges();
           if (debug_ranges)
-            debug_ranges->FindRanges(cu, form_value.Unsigned(), ranges);
+            debug_ranges->FindRanges(cu, GetRangesOffset(debug_ranges, form_value), ranges);
           else
             cu->GetSymbolFileDWARF()->GetObjectFile()->GetModule()->ReportError(
                 "{0x%8.8x}: DIE has DW_AT_ranges(0x%" PRIx64
@@ -748,11 +756,13 @@ void DWARFDebugInfoEntry::DumpAttribute(
   } break;
 
   case DW_AT_ranges: {
-    lldb::offset_t ranges_offset = form_value.Unsigned();
+    if (!dwarf2Data)
+      break;
+    lldb::offset_t ranges_offset =
+        GetRangesOffset(dwarf2Data->DebugRanges(), form_value);
     dw_addr_t base_addr = cu ? cu->GetBaseAddress() : 0;
-    if (dwarf2Data)
-      DWARFDebugRanges::Dump(s, dwarf2Data->get_debug_ranges_data(),
-                             &ranges_offset, base_addr);
+    DWARFDebugRanges::Dump(s, dwarf2Data->get_debug_ranges_data(),
+                           &ranges_offset, base_addr);
   } break;
 
   default:
@@ -1062,12 +1072,11 @@ size_t DWARFDebugInfoEntry::GetAttributeAddressRanges(
     bool check_specification_or_abstract_origin) const {
   ranges.Clear();
 
-  dw_offset_t debug_ranges_offset = GetAttributeValueAsUnsigned(
-      dwarf2Data, cu, DW_AT_ranges, DW_INVALID_OFFSET,
-      check_specification_or_abstract_origin);
-  if (debug_ranges_offset != DW_INVALID_OFFSET) {
+  DWARFFormValue form_value;
+  if (GetAttributeValue(dwarf2Data, cu, DW_AT_ranges, form_value)) {
     if (DWARFDebugRangesBase *debug_ranges = dwarf2Data->DebugRanges())
-      debug_ranges->FindRanges(cu, debug_ranges_offset, ranges);
+      debug_ranges->FindRanges(cu, GetRangesOffset(debug_ranges, form_value),
+                               ranges);
   } else if (check_hi_lo_pc) {
     dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
     dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
@@ -1718,12 +1727,12 @@ bool DWARFDebugInfoEntry::LookupAddress(const dw_addr_t address,
                            ((function_die != NULL) || (block_die != NULL));
         }
       } else {
-        dw_offset_t debug_ranges_offset = GetAttributeValueAsUnsigned(
-            dwarf2Data, cu, DW_AT_ranges, DW_INVALID_OFFSET);
-        if (debug_ranges_offset != DW_INVALID_OFFSET) {
+        DWARFFormValue form_value;
+        if (GetAttributeValue(dwarf2Data, cu, DW_AT_ranges, form_value)) {
           DWARFRangeList ranges;
           DWARFDebugRangesBase *debug_ranges = dwarf2Data->DebugRanges();
-          debug_ranges->FindRanges(cu, debug_ranges_offset, ranges);
+          debug_ranges->FindRanges(
+              cu, GetRangesOffset(debug_ranges, form_value), ranges);
 
           if (ranges.FindEntryThatContains(address)) {
             found_address = true;

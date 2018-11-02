@@ -7556,7 +7556,7 @@ public:
       BasePointers.push_back(VDLVal.getPointer());
       Pointers.push_back(ThisLVal.getPointer());
       Sizes.push_back(CGF.getTypeSize(CGF.getContext().VoidPtrTy));
-      Types.push_back(OMP_MAP_PTR_AND_OBJ | OMP_MAP_PRIVATE |
+      Types.push_back(OMP_MAP_PTR_AND_OBJ | OMP_MAP_LITERAL |
                       OMP_MAP_MEMBER_OF | OMP_MAP_IMPLICIT);
     }
     for (const LambdaCapture &LC : RD->captures()) {
@@ -7570,7 +7570,7 @@ public:
       Pointers.push_back(VarLVal.getPointer());
       Sizes.push_back(CGF.getTypeSize(
           VD->getType().getCanonicalType().getNonReferenceType()));
-      Types.push_back(OMP_MAP_PTR_AND_OBJ | OMP_MAP_PRIVATE |
+      Types.push_back(OMP_MAP_PTR_AND_OBJ | OMP_MAP_LITERAL |
                       OMP_MAP_MEMBER_OF | OMP_MAP_IMPLICIT);
     }
   }
@@ -7581,7 +7581,7 @@ public:
                                        MapFlagsArrayTy &Types) const {
     for (unsigned I = 0, E = Types.size(); I < E; ++I) {
       // Set correct member_of idx for all implicit lambda captures.
-      if (Types[I] != (OMP_MAP_PTR_AND_OBJ | OMP_MAP_PRIVATE |
+      if (Types[I] != (OMP_MAP_PTR_AND_OBJ | OMP_MAP_LITERAL |
                        OMP_MAP_MEMBER_OF | OMP_MAP_IMPLICIT))
         continue;
       llvm::Value *BasePtr = *BasePointers[I];
