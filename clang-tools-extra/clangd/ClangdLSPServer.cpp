@@ -308,7 +308,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (UseDirBasedCDB)
     BaseCDB = llvm::make_unique<DirectoryBasedGlobalCompilationDatabase>(
         CompileCommandsDir);
-  CDB.emplace(BaseCDB.get());
+  CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags);
   Server.emplace(*CDB, FSProvider, static_cast<DiagnosticsConsumer &>(*this),
                  ClangdServerOpts);
   applyConfiguration(Params.initializationOptions.ConfigSettings);
@@ -664,9 +664,10 @@ void ClangdLSPServer::applyConfiguration(
         tooling::CompileCommand(std::move(Entry.second.workingDirectory), File,
                                 std::move(Entry.second.compilationCommand),
                                 /*Output=*/"");
-    if (Old != New)
+    if (Old != New) {
       CDB->setCompileCommand(File, std::move(New));
-    ShouldReparseOpenFiles = true;
+      ShouldReparseOpenFiles = true;
+    }
   }
   if (ShouldReparseOpenFiles)
     reparseOpenedFiles();
