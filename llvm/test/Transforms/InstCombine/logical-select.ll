@@ -616,3 +616,24 @@ define <4 x i32> @computesignbits_through_shuffles(<4 x float> %x, <4 x float> %
   ret <4 x i32> %sel
 }
 
+define <4 x i32> @computesignbits_through_two_input_shuffle(<4 x i32> %x, <4 x i32> %y, <4 x i1> %cond1, <4 x i1> %cond2) {
+; CHECK-LABEL: @computesignbits_through_two_input_shuffle(
+; CHECK-NEXT:    [[SEXT1:%.*]] = sext <4 x i1> [[COND1:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[SEXT2:%.*]] = sext <4 x i1> [[COND2:%.*]] to <4 x i32>
+; CHECK-NEXT:    [[COND:%.*]] = shufflevector <4 x i32> [[SEXT1]], <4 x i32> [[SEXT2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[NOTCOND:%.*]] = xor <4 x i32> [[COND]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[AND1:%.*]] = and <4 x i32> [[NOTCOND]], [[X:%.*]]
+; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i32> [[COND]], [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = or <4 x i32> [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret <4 x i32> [[SEL]]
+;
+  %sext1 = sext <4 x i1> %cond1 to <4 x i32>
+  %sext2 = sext <4 x i1> %cond2 to <4 x i32>
+  %cond = shufflevector <4 x i32> %sext1, <4 x i32> %sext2, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %notcond = xor <4 x i32> %cond, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %and1 = and <4 x i32> %notcond, %x
+  %and2 = and <4 x i32> %cond, %y
+  %sel = or <4 x i32> %and1, %and2
+  ret <4 x i32> %sel
+}
+

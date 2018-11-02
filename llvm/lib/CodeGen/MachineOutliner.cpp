@@ -548,6 +548,12 @@ struct InstructionMapper {
   /// at index i in \p UnsignedVec for each index i.
   std::vector<MachineBasicBlock::iterator> InstrList;
 
+  // Set if we added an illegal number in the previous step.
+  // Since each illegal number is unique, we only need one of them between
+  // each range of legal numbers. This lets us make sure we don't add more
+  // than one illegal number per range.
+  bool AddedIllegalLastTime = false;
+
   /// Maps \p *It to a legal integer.
   ///
   /// Updates \p InstrList, \p UnsignedVec, \p InstructionIntegerMap,
@@ -555,6 +561,9 @@ struct InstructionMapper {
   ///
   /// \returns The integer that \p *It was mapped to.
   unsigned mapToLegalUnsigned(MachineBasicBlock::iterator &It) {
+    // We added something legal, so we should unset the AddedLegalLastTime
+    // flag.
+    AddedIllegalLastTime = false;
 
     // Get the integer for this instruction or give it the current
     // LegalInstrNumber.
@@ -593,6 +602,12 @@ struct InstructionMapper {
   ///
   /// \returns The integer that \p *It was mapped to.
   unsigned mapToIllegalUnsigned(MachineBasicBlock::iterator &It) {
+    // Only add one illegal number per range of legal numbers.
+    if (AddedIllegalLastTime)
+      return IllegalInstrNumber;
+
+    // Remember that we added an illegal number last time.
+    AddedIllegalLastTime = true;
     unsigned MINumber = IllegalInstrNumber;
 
     InstrList.push_back(It);
@@ -624,38 +639,28 @@ struct InstructionMapper {
   void convertToUnsignedVec(MachineBasicBlock &MBB,
                             const TargetInstrInfo &TII) {
     unsigned Flags = TII.getMachineOutlinerMBBFlags(MBB);
-
-    // Set to true whenever we map an illegal number.
-    bool AddedIllegalLastTime = false;
-    for (MachineBasicBlock::iterator It = MBB.begin(), Et = MBB.end(); It != Et;
-         It++) {
-
+    MachineBasicBlock::iterator It = MBB.begin();
+    for (MachineBasicBlock::iterator Et = MBB.end(); It != Et; It++) {
       // Keep track of where this instruction is in the module.
       switch (TII.getOutliningType(It, Flags)) {
       case InstrType::Illegal:
-        // If we added an illegal number last time, then don't add more of them.
-        // One number is all that is necessary to prevent matches on illegal
-        // instructions.
-        if (AddedIllegalLastTime)
-          break;
-        AddedIllegalLastTime = true;
         mapToIllegalUnsigned(It);
         break;
 
       case InstrType::Legal:
-        AddedIllegalLastTime = false;
         mapToLegalUnsigned(It);
         break;
 
       case InstrType::LegalTerminator:
         mapToLegalUnsigned(It);
-        InstrList.push_back(It);
-        AddedIllegalLastTime = true;
-        UnsignedVec.push_back(IllegalInstrNumber);
-        IllegalInstrNumber--;
+        // The instruction also acts as a terminator, so we have to record that
+        // in the string.
+        mapToIllegalUnsigned(It);
         break;
 
       case InstrType::Invisible:
+        // Normally this is set by mapTo(Blah)Unsigned, but we just want to
+        // skip this instruction. So, unset the flag here.
         AddedIllegalLastTime = false;
         break;
       }
@@ -665,9 +670,7 @@ struct InstructionMapper {
     // "string". This makes sure we won't match across basic block or function
     // boundaries since the "end" is encoded uniquely and thus appears in no
     // repeated substring.
-    InstrList.push_back(MBB.end());
-    UnsignedVec.push_back(IllegalInstrNumber);
-    IllegalInstrNumber--;
+    mapToIllegalUnsigned(It);
   }
 
   InstructionMapper() {
@@ -854,6 +857,10 @@ INITIALIZE_PASS(MachineOutliner, DEBUG_TYPE, "Machine Function Outliner", false,
 void MachineOutliner::emitNotOutliningCheaperRemark(
     unsigned StringLen, std::vector<Candidate> &CandidatesForRepeatedSeq,
     OutlinedFunction &OF) {
+  // FIXME: Right now, we arbitrarily choose some Candidate from the
+  // OutlinedFunction. This isn't necessarily fixed, nor does it have to be.
+  // We should probably sort these by function name or something to make sure
+  // the remarks are stable.
   Candidate &C = CandidatesForRepeatedSeq.front();
   MachineOptimizationRemarkEmitter MORE(*(C.getMF()), nullptr);
   MORE.emit([&]() {

@@ -82,8 +82,14 @@ void ICFLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   computeBlockColors(CurLoop);
 }
 
-void ICFLoopSafetyInfo::dropCachedInfo(const BasicBlock *BB) {
+void ICFLoopSafetyInfo::insertInstructionTo(const BasicBlock *BB) {
   ICF.invalidateBlock(BB);
+}
+
+void ICFLoopSafetyInfo::removeInstruction(const Instruction *Inst) {
+  // TODO: So far we just conservatively drop cache, but maybe we can not do it
+  // when Inst is not an ICF instruction. Follow-up on that.
+  ICF.invalidateBlock(Inst->getParent());
 }
 
 void LoopSafetyInfo::computeBlockColors(const Loop *CurLoop) {

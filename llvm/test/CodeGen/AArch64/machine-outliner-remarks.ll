@@ -9,10 +9,13 @@
 ; CHECK-SAME: <UNKNOWN LOCATION>)
 ; RUN: llc %s -enable-machine-outliner -mtriple=aarch64-unknown-unknown -o /dev/null -pass-remarks-missed=machine-outliner -pass-remarks-output=%t.yaml
 ; RUN: cat %t.yaml | FileCheck %s -check-prefix=YAML
+
+; For the YAML case, the function we pick depends on the order of the candidate
+; list.
 ; YAML: --- !Missed
 ; YAML-NEXT: Pass:            machine-outliner
 ; YAML-NEXT: Name:            NotOutliningCheaper
-; YAML-NEXT: Function:        dog
+; YAML-NEXT: Function:
 ; YAML-NEXT: Args:            
 ; YAML-NEXT:   - String:          'Did not outline '
 ; YAML-NEXT:   - Length:          '2'

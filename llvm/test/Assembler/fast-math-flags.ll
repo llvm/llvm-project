@@ -1,5 +1,5 @@
-; RUN: llvm-as < %s | llvm-dis | FileCheck %s
-; RUN: opt -S < %s | FileCheck %s
+; RUN: llvm-as < %s | llvm-dis | FileCheck -strict-whitespace %s
+; RUN: opt -S < %s | FileCheck -strict-whitespace %s
 ; RUN: verify-uselistorder %s
 
 @addr   = external global i64
@@ -11,67 +11,67 @@ declare float @foo(float)
 
 define float @none(float %x, float %y) {
 entry:
-; CHECK:  %vec = load  <3 x float>,  <3 x float>* @vec
-  %vec    = load  <3 x float>,  <3 x float>* @vec
+; CHECK:  %vec = load <3 x float>, <3 x float>* @vec
+  %vec    = load <3 x float>, <3 x float>* @vec
 ; CHECK:  %select = load i1, i1* @select
   %select = load i1, i1* @select
-; CHECK:  %arr    = load [3 x float], [3 x float]* @arr
+; CHECK:  %arr = load [3 x float], [3 x float]* @arr
   %arr    = load [3 x float], [3 x float]* @arr
 
-; CHECK:  %a = fadd  float %x, %y
-  %a = fadd  float %x, %y
-; CHECK:  %a_vec = fadd  <3 x float> %vec, %vec
-  %a_vec = fadd  <3 x float> %vec, %vec
-; CHECK:  %b = fsub  float %x, %y
-  %b = fsub  float %x, %y
-; CHECK:  %b_vec = fsub  <3 x float> %vec, %vec
-  %b_vec = fsub  <3 x float> %vec, %vec
-; CHECK:  %c = fmul  float %x, %y
-  %c = fmul  float %x, %y
-; CHECK:  %c_vec = fmul  <3 x float> %vec, %vec
-  %c_vec = fmul  <3 x float> %vec, %vec
-; CHECK:  %d = fdiv  float %x, %y
-  %d = fdiv  float %x, %y
-; CHECK:  %d_vec = fdiv  <3 x float> %vec, %vec
-  %d_vec = fdiv  <3 x float> %vec, %vec
-; CHECK:  %e = frem  float %x, %y
-  %e = frem  float %x, %y
-; CHECK:  %e_vec = frem  <3 x float> %vec, %vec
-  %e_vec = frem  <3 x float> %vec, %vec
-; CHECK:  ret  float %e
-  ret  float %e
+; CHECK:  %a = fadd float %x, %y
+  %a = fadd float %x, %y
+; CHECK:  %a_vec = fadd <3 x float> %vec, %vec
+  %a_vec = fadd <3 x float> %vec, %vec
+; CHECK:  %b = fsub float %x, %y
+  %b = fsub float %x, %y
+; CHECK:  %b_vec = fsub <3 x float> %vec, %vec
+  %b_vec = fsub <3 x float> %vec, %vec
+; CHECK:  %c = fmul float %x, %y
+  %c = fmul float %x, %y
+; CHECK:  %c_vec = fmul <3 x float> %vec, %vec
+  %c_vec = fmul <3 x float> %vec, %vec
+; CHECK:  %d = fdiv float %x, %y
+  %d = fdiv float %x, %y
+; CHECK:  %d_vec = fdiv <3 x float> %vec, %vec
+  %d_vec = fdiv <3 x float> %vec, %vec
+; CHECK:  %e = frem float %x, %y
+  %e = frem float %x, %y
+; CHECK:  %e_vec = frem <3 x float> %vec, %vec
+  %e_vec = frem <3 x float> %vec, %vec
+; CHECK:  ret float %e
+  ret float %e
 }
 
 ; CHECK: no_nan
 define float @no_nan(float %x, float %y) {
 entry:
 ; CHECK:  %vec = load <3 x float>, <3 x float>* @vec
-  %vec    = load  <3 x float>,  <3 x float>* @vec
+  %vec    = load <3 x float>, <3 x float>* @vec
 ; CHECK:  %select = load i1, i1* @select
   %select = load i1, i1* @select
-; CHECK:  %arr = load  [3 x float],  [3 x float]* @arr
-  %arr    = load  [3 x float],  [3 x float]* @arr
+; CHECK:  %arr = load [3 x float], [3 x float]* @arr
+  %arr    = load [3 x float], [3 x float]* @arr
 
-; CHECK:  %a = fadd nnan  float %x, %y
-  %a = fadd nnan  float %x, %y
-; CHECK:  %a_vec = fadd nnan  <3 x float> %vec, %vec
-  %a_vec = fadd nnan  <3 x float> %vec, %vec
-; CHECK:  %b = fsub nnan  float %x, %y
-  %b = fsub nnan  float %x, %y
-; CHECK:  %b_vec = fsub nnan  <3 x float> %vec, %vec
-  %b_vec = fsub nnan  <3 x float> %vec, %vec
-; CHECK:  %c = fmul nnan  float %x, %y
-  %c = fmul nnan  float %x, %y
-; CHECK:  %c_vec = fmul nnan  <3 x float> %vec, %vec
+; CHECK:  %a = fadd nnan float %x, %y
+  %a = fadd nnan float %x, %y
+; CHECK:  %a_vec = fadd nnan <3 x float> %vec, %vec
+  %a_vec = fadd nnan <3 x float> %vec, %vec
+; CHECK:  %b = fsub nnan float %x, %y
+  %b = fsub nnan float %x, %y
+; CHECK:  %b_vec = fsub nnan <3 x float> %vec, %vec
+  %b_vec = fsub nnan <3 x float> %vec, %vec
+; CHECK:  %c = fmul nnan float %x, %y
+  %c = fmul nnan float %x, %y
+; CHECK:  %c_vec = fmul nnan <3 x float> %vec, %vec
   %c_vec = fmul nnan <3 x float> %vec, %vec
-; CHECK:  %d = fdiv nnan  float %x, %y
+; CHECK:  %d = fdiv nnan float %x, %y
   %d = fdiv nnan float %x, %y
-; CHECK:  %d_vec = fdiv nnan  <3 x float> %vec, %vec
+; CHECK:  %d_vec = fdiv nnan <3 x float> %vec, %vec
   %d_vec = fdiv nnan <3 x float> %vec, %vec
-; CHECK:  %e = frem nnan  float %x, %y
-  %e = frem nnan  float %x, %y
-; CHECK:  %e_vec = frem nnan  <3 x float> %vec, %vec
-  %e_vec = frem nnan  <3 x float> %vec, %vec
+; CHECK:  %e = frem nnan float %x, %y
+  %e = frem nnan float %x, %y
+; CHECK:  %e_vec = frem nnan <3 x float> %vec, %vec
+  %e_vec = frem nnan <3 x float> %vec, %vec
 ; CHECK:  ret float %e
   ret float %e
 }
@@ -120,28 +120,28 @@ entry:
 ; CHECK:  %arr = load [3 x float], [3 x float]* @arr
   %arr    = load [3 x float], [3 x float]* @arr
 
-; CHECK:  %a = fadd nnan ninf  float %x, %y
-  %a = fadd ninf nnan  float %x, %y
-; CHECK:  %a_vec = fadd nnan  <3 x float> %vec, %vec
-  %a_vec = fadd nnan  <3 x float> %vec, %vec
-; CHECK:  %b = fsub nnan  float %x, %y
-  %b = fsub nnan  float %x, %y
-; CHECK:  %b_vec = fsub nnan ninf  <3 x float> %vec, %vec
-  %b_vec = fsub ninf nnan  <3 x float> %vec, %vec
-; CHECK:  %c = fmul nnan  float %x, %y
-  %c = fmul nnan  float %x, %y
-; CHECK:  %c_vec = fmul nnan  <3 x float> %vec, %vec
+; CHECK:  %a = fadd nnan ninf float %x, %y
+  %a = fadd ninf nnan float %x, %y
+; CHECK:  %a_vec = fadd nnan <3 x float> %vec, %vec
+  %a_vec = fadd nnan <3 x float> %vec, %vec
+; CHECK:  %b = fsub nnan float %x, %y
+  %b = fsub nnan float %x, %y
+; CHECK:  %b_vec = fsub nnan ninf <3 x float> %vec, %vec
+  %b_vec = fsub ninf nnan <3 x float> %vec, %vec
+; CHECK:  %c = fmul nnan float %x, %y
+  %c = fmul nnan float %x, %y
+; CHECK:  %c_vec = fmul nnan <3 x float> %vec, %vec
   %c_vec = fmul nnan <3 x float> %vec, %vec
-; CHECK:  %d = fdiv nnan ninf  float %x, %y
+; CHECK:  %d = fdiv nnan ninf float %x, %y
   %d = fdiv ninf nnan float %x, %y
-; CHECK:  %d_vec = fdiv nnan  <3 x float> %vec, %vec
+; CHECK:  %d_vec = fdiv nnan <3 x float> %vec, %vec
   %d_vec = fdiv nnan <3 x float> %vec, %vec
-; CHECK:  %e = frem nnan  float %x, %y
-  %e = frem nnan  float %x, %y
-; CHECK:  %e_vec = frem nnan ninf  <3 x float> %vec, %vec
-  %e_vec = frem ninf nnan  <3 x float> %vec, %vec
-; CHECK:  ret  float %e
-  ret  float %e
+; CHECK:  %e = frem nnan float %x, %y
+  %e = frem nnan float %x, %y
+; CHECK:  %e_vec = frem nnan ninf <3 x float> %vec, %vec
+  %e_vec = frem ninf nnan <3 x float> %vec, %vec
+; CHECK:  ret float %e
+  ret float %e
 }
 
 ; CHECK: mixed_flags
@@ -151,7 +151,7 @@ entry:
   %vec    = load <3 x float>, <3 x float>* @vec
 ; CHECK:  %select = load i1, i1* @select
   %select = load i1, i1* @select
-; CHECK:  %arr    = load [3 x float], [3 x float]* @arr
+; CHECK:  %arr = load [3 x float], [3 x float]* @arr
   %arr    = load [3 x float], [3 x float]* @arr
 
 ; CHECK:  %a = fadd nnan ninf afn float %x, %y
@@ -174,6 +174,6 @@ entry:
   %e = frem nnan nsz float %x, %y
 ; CHECK:  %e_vec = frem nnan <3 x float> %vec, %vec
   %e_vec = frem nnan <3 x float> %vec, %vec
-; CHECK:  ret  float %e
-  ret  float %e
+; CHECK:  ret float %e
+  ret float %e
 }

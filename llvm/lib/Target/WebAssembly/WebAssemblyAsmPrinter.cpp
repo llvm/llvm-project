@@ -78,6 +78,14 @@ WebAssemblyTargetStreamer *WebAssemblyAsmPrinter::getTargetStreamer() {
 //===----------------------------------------------------------------------===//
 
 void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
+  for (auto &It : OutContext.getSymbols()) {
+    // Emit a .globaltype declaration.
+    auto Sym = cast<MCSymbolWasm>(It.getValue());
+    if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_GLOBAL) {
+      getTargetStreamer()->emitGlobalType(Sym);
+    }
+  }
+
   for (const auto &F : M) {
     // Emit function type info for all undefined functions
     if (F.isDeclarationForLinker() && !F.isIntrinsic()) {
@@ -105,6 +113,7 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
       }
     }
   }
+
   for (const auto &G : M.globals()) {
     if (!G.hasInitializer() && G.hasExternalLinkage()) {
       if (G.getValueType()->isSized()) {

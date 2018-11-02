@@ -101,6 +101,9 @@ class WriteState {
   // field RegisterID from WD.
   unsigned RegisterID;
 
+  // Physical register file that serves register RegisterID.
+  unsigned PRFID;
+
   // True if this write implicitly clears the upper portion of RegisterID's
   // super-registers.
   bool ClearsSuperRegs;
@@ -135,7 +138,7 @@ public:
   WriteState(const WriteDescriptor &Desc, unsigned RegID,
              bool clearsSuperRegs = false, bool writesZero = false)
       : WD(&Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID),
-        ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
+        PRFID(0), ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
         IsEliminated(false), DependentWrite(nullptr), NumWriteUsers(0U) {}
 
   WriteState(const WriteState &Other) = default;
@@ -144,6 +147,7 @@ public:
   int getCyclesLeft() const { return CyclesLeft; }
   unsigned getWriteResourceID() const { return WD->SClassOrWriteResourceID; }
   unsigned getRegisterID() const { return RegisterID; }
+  unsigned getRegisterFileID() const { return PRFID; }
   unsigned getLatency() const { return WD->Latency; }
 
   void addUser(ReadState *Use, int ReadAdvance);
@@ -168,6 +172,8 @@ public:
     IsEliminated = true;
   }
 
+  void setPRF(unsigned PRF) { PRFID = PRF; }
+
   // On every cycle, update CyclesLeft and notify dependent users.
   void cycleEvent();
   void onInstructionIssued();
@@ -185,6 +191,8 @@ class ReadState {
   const ReadDescriptor *RD;
   // Physical register identified associated to this read.
   unsigned RegisterID;
+  // Physical register file that serves register RegisterID.
+  unsigned PRFID;
   // Number of writes that contribute to the definition of RegisterID.
   // In the absence of partial register updates, the number of DependentWrites
   // cannot be more than one.
@@ -201,18 +209,21 @@ class ReadState {
   // This field is set to true only if there are no dependent writes, and
   // there are no `CyclesLeft' to wait.
   bool IsReady;
+  // True if this is a read from a known zero register.
+  bool IsZero;
   // True if this register read is from a dependency-breaking instruction.
   bool IndependentFromDef;
 
 public:
   ReadState(const ReadDescriptor &Desc, unsigned RegID)
-      : RD(&Desc), RegisterID(RegID), DependentWrites(0),
+      : RD(&Desc), RegisterID(RegID), PRFID(0), DependentWrites(0),
         CyclesLeft(UNKNOWN_CYCLES), TotalCycles(0), IsReady(true),
-        IndependentFromDef(false) {}
+        IsZero(false), IndependentFromDef(false) {}
 
   const ReadDescriptor &getDescriptor() const { return *RD; }
   unsigned getSchedClass() const { return RD->SchedClassID; }
   unsigned getRegisterID() const { return RegisterID; }
+  unsigned getRegisterFileID() const { return PRFID; }
 
   bool isReady() const { return IsReady; }
   bool isImplicitRead() const { return RD->isImplicitRead(); }
@@ -226,6 +237,10 @@ public:
     DependentWrites = Writes;
     IsReady = !Writes;
   }
+
+  bool isReadZero() const { return IsZero; }
+  void setReadZero() { IsZero = true; }
+  void setPRF(unsigned ID) { PRFID = ID; }
 };
 
 /// A sequence of cycles.

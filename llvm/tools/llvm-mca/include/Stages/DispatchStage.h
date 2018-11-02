@@ -68,10 +68,6 @@ class DispatchStage final : public Stage {
                                    ArrayRef<unsigned> UsedPhysRegs,
                                    unsigned uOps) const;
 
-  void collectWrites(SmallVectorImpl<WriteRef> &Vec, unsigned RegID) const {
-    return PRF.collectWrites(Vec, RegID);
-  }
-
 public:
   DispatchStage(const MCSubtargetInfo &Subtarget, const MCRegisterInfo &MRI,
                 unsigned MaxDispatchWidth, RetireControlUnit &R,
