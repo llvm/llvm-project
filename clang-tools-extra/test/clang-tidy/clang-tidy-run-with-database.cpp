@@ -11,7 +11,7 @@
 
 // Regression test: shouldn't crash.
 // RUN: not clang-tidy --checks=-*,modernize-use-nullptr -p %T %T/compilation-database-test/b/not-exist -header-filter=.* 2>&1 | FileCheck %s -check-prefix=CHECK-NOT-EXIST
-// CHECK-NOT-EXIST: Error while processing {{.*}}/not-exist.
+// CHECK-NOT-EXIST: Error while processing {{.*[/\\]}}not-exist.
 // CHECK-NOT-EXIST: unable to handle compilation
 // CHECK-NOT-EXIST: Found compiler error
 
