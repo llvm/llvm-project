@@ -1600,6 +1600,7 @@ class Base(unittest2.TestCase):
             # Begin Swift modifications
             "llvm-build/Ninja-DebugAssert/llvm-macosx-x86_64/bin/clang",
             "llvm-build/Ninja-ReleaseAssert/llvm-macosx-x86_64/bin/clang",
+            "llvm-build/Ninja-RelWithDebInfoAssert/llvm-macosx-x86_64/bin/clang",
             # End Swift modifications
             "llvm-build/Release+Asserts/x86_64/bin/clang",
             "llvm-build/Debug+Asserts/x86_64/bin/clang",
