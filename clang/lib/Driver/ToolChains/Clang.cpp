@@ -3250,6 +3250,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsCuda = JA.isOffloading(Action::OFK_Cuda);
   bool IsHIP = JA.isOffloading(Action::OFK_HIP);
   bool IsOpenMPDevice = JA.isDeviceOffloading(Action::OFK_OpenMP);
+  bool IsModulePrecompile =
+      isa<PrecompileJobAction>(JA) && JA.getType() == types::TY_ModuleFile;
   bool IsHeaderModulePrecompile = isa<HeaderModulePrecompileJobAction>(JA);
 
   // A header module compilation doesn't have a main input file, so invent a
@@ -3270,7 +3272,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   for (const InputInfo &I : Inputs) {
     if (&I == &Input) {
       // This is the primary input.
-    } else if (IsHeaderModulePrecompile &&
+    } else if (IsModulePrecompile &&
                types::getPrecompiledType(I.getType()) == types::TY_PCH) {
       types::ID Expected =
           types::lookupHeaderTypeForSourceType(Inputs[0].getType());
@@ -4296,6 +4298,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       Args.AddLastArg(CmdArgs, options::OPT_fopenmp_simd,
                       options::OPT_fno_openmp_simd);
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_version_EQ);
+      Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_cuda_number_of_sm_EQ);
+      Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_cuda_blocks_per_sm_EQ);
 
       // When in OpenMP offloading mode with NVPTX target, forward
       // cuda-mode flag

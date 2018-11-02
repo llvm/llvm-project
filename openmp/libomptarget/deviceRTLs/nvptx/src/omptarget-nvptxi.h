@@ -204,34 +204,29 @@ INLINE omptarget_nvptx_TaskDescr *getMyTopTaskDescriptor() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-// Lightweight runtime functions.
+// Memory management runtime functions.
 ////////////////////////////////////////////////////////////////////////////////
 
-// Shared memory buffer for globalization support.
-static __align__(16) __device__ __shared__ char
-    omptarget_static_buffer[DS_Shared_Memory_Size];
-static __device__ __shared__ void *omptarget_spmd_allocated;
-
-extern __device__ __shared__ void *omptarget_nvptx_simpleGlobalData;
-
-INLINE void *
-omptarget_nvptx_SimpleThreadPrivateContext::Allocate(size_t DataSize) {
-  if (DataSize <= DS_Shared_Memory_Size)
-    return ::omptarget_static_buffer;
-  if (DataSize <= sizeof(omptarget_nvptx_ThreadPrivateContext))
-    return ::omptarget_nvptx_simpleGlobalData;
-  if (threadIdx.x == 0)
-    omptarget_spmd_allocated = SafeMalloc(DataSize, "SPMD teams alloc");
-  __syncthreads();
-  return omptarget_spmd_allocated;
+INLINE void omptarget_nvptx_SimpleMemoryManager::Release() {
+  ASSERT0(LT_FUSSY, usedSlotIdx < MAX_SM,
+          "SlotIdx is too big or uninitialized.");
+  ASSERT0(LT_FUSSY, usedMemIdx < OMP_STATE_COUNT,
+          "MemIdx is too big or uninitialized.");
+  MemDataTy &MD = MemData[usedSlotIdx];
+  atomicExch((unsigned *)&MD.keys[usedMemIdx], 0);
 }
 
-INLINE void
-omptarget_nvptx_SimpleThreadPrivateContext::Deallocate(void *Ptr) {
-  if (Ptr != ::omptarget_static_buffer &&
-      Ptr != ::omptarget_nvptx_simpleGlobalData) {
-    __syncthreads();
-    if (threadIdx.x == 0)
-      SafeFree(Ptr, "SPMD teams dealloc");
+INLINE const void *omptarget_nvptx_SimpleMemoryManager::Acquire(const void *buf,
+                                                                size_t size) {
+  ASSERT0(LT_FUSSY, usedSlotIdx < MAX_SM,
+          "SlotIdx is too big or uninitialized.");
+  const unsigned sm = usedSlotIdx;
+  MemDataTy &MD = MemData[sm];
+  unsigned i = hash(GetBlockIdInKernel());
+  while (atomicCAS((unsigned *)&MD.keys[i], 0, 1) != 0) {
+    i = hash(i + 1);
   }
+  usedSlotIdx = sm;
+  usedMemIdx = i;
+  return static_cast<const char *>(buf) + (sm * OMP_STATE_COUNT + i) * size;
 }

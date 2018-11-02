@@ -2557,7 +2557,8 @@ void InnerLoopVectorizer::emitSCEVChecks(Loop *L, BasicBlock *Bypass) {
     if (C->isZero())
       return;
 
-  assert(!Cost->foldTailByMasking() && "Cannot check stride when folding tail");
+  assert(!Cost->foldTailByMasking() &&
+         "Cannot SCEV check stride or overflow when folding tail");
   // Create a new block containing the stride check.
   BB->setName("vector.scevcheck");
   auto *NewBB = BB->splitBasicBlock(BB->getTerminator(), "vector.ph");
@@ -4634,6 +4635,29 @@ Optional<unsigned> LoopVectorizationCostModel::computeMaxVF(bool OptForSize) {
     LLVM_DEBUG(
         dbgs()
         << "LV: Aborting. Runtime ptr check is required with -Os/-Oz.\n");
+    return None;
+  }
+
+  if (!PSE.getUnionPredicate().getPredicates().empty()) {
+    ORE->emit(createMissedAnalysis("CantVersionLoopWithOptForSize")
+              << "runtime SCEV checks needed. Enable vectorization of this "
+                 "loop with '#pragma clang loop vectorize(enable)' when "
+                 "compiling with -Os/-Oz");
+    LLVM_DEBUG(
+        dbgs()
+        << "LV: Aborting. Runtime SCEV check is required with -Os/-Oz.\n");
+    return None;
+  }
+
+  // FIXME: Avoid specializing for stride==1 instead of bailing out.
+  if (!Legal->getLAI()->getSymbolicStrides().empty()) {
+    ORE->emit(createMissedAnalysis("CantVersionLoopWithOptForSize")
+              << "runtime stride == 1 checks needed. Enable vectorization of "
+                 "this loop with '#pragma clang loop vectorize(enable)' when "
+                 "compiling with -Os/-Oz");
+    LLVM_DEBUG(
+        dbgs()
+        << "LV: Aborting. Runtime stride check is required with -Os/-Oz.\n");
     return None;
   }
 

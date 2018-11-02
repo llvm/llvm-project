@@ -5050,6 +5050,10 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     setValue(&I, DAG.getNode(ISD::ADDROFRETURNADDR, sdl,
                              TLI.getPointerTy(DAG.getDataLayout())));
     return nullptr;
+  case Intrinsic::sponentry:
+    setValue(&I, DAG.getNode(ISD::SPONENTRY, sdl,
+                             TLI.getPointerTy(DAG.getDataLayout())));
+    return nullptr;
   case Intrinsic::frameaddress:
     setValue(&I, DAG.getNode(ISD::FRAMEADDR, sdl,
                              TLI.getPointerTy(DAG.getDataLayout()),

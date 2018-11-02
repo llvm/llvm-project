@@ -660,14 +660,14 @@ GDBRemoteCommunicationServerCommon::Handle_vFile_Mode(
   std::string path;
   packet.GetHexByteString(path);
   if (!path.empty()) {
-    Status error;
     FileSpec file_spec(path);
     FileSystem::Instance().Resolve(file_spec);
-    const uint32_t mode = File::GetPermissions(file_spec, error);
+    std::error_code ec;
+    const uint32_t mode = FileSystem::Instance().GetPermissions(file_spec, ec);
     StreamString response;
     response.Printf("F%u", mode);
-    if (mode == 0 || error.Fail())
-      response.Printf(",%i", (int)error.GetError());
+    if (mode == 0 || ec)
+      response.Printf(",%i", (int)Status(ec).GetError());
     return SendPacketNoLock(response.GetString());
   }
   return SendErrorResponse(23);

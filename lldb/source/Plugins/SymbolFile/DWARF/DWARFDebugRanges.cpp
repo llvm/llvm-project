@@ -128,6 +128,11 @@ bool DWARFDebugRanges::FindRanges(const DWARFUnit *cu,
   return false;
 }
 
+uint64_t DWARFDebugRanges::GetOffset(size_t Index) const {
+  lldbassert(false && "DW_FORM_rnglistx is not present before DWARF5");
+  return 0;
+}
+
 bool DWARFDebugRngLists::ExtractRangeList(
     const DWARFDataExtractor &data, uint8_t addrSize,
     lldb::offset_t *offset_ptr, std::vector<RngListEntry> &rangeList) {
@@ -166,15 +171,42 @@ bool DWARFDebugRngLists::ExtractRangeList(
       break;
     }
 
+    case DW_RLE_base_addressx: {
+      dw_addr_t base = data.GetULEB128(offset_ptr);
+      rangeList.push_back({DW_RLE_base_addressx, base, 0});
+      break;
+    }
+
+    case DW_RLE_startx_endx: {
+      dw_addr_t start = data.GetULEB128(offset_ptr);
+      dw_addr_t end = data.GetULEB128(offset_ptr);
+      rangeList.push_back({DW_RLE_startx_endx, start, end});
+      break;
+    }
+
+    case DW_RLE_startx_length: {
+      dw_addr_t start = data.GetULEB128(offset_ptr);
+      dw_addr_t length = data.GetULEB128(offset_ptr);
+      rangeList.push_back({DW_RLE_startx_length, start, length});
+      break;
+    }
+
     default:
-      // Next encodings are not yet supported:
-      // DW_RLE_base_addressx, DW_RLE_startx_endx, DW_RLE_startx_length.
       lldbassert(0 && "unknown range list entry encoding");
       error = true;
     }
   }
 
   return false;
+}
+
+static uint64_t ReadAddressFromDebugAddrSection(const DWARFUnit *cu,
+                                                uint32_t index) {
+  uint32_t index_size = cu->GetAddressByteSize();
+  dw_offset_t addr_base = cu->GetAddrBase();
+  lldb::offset_t offset = addr_base + index * index_size;
+  return cu->GetSymbolFileDWARF()->get_debug_addr_data().GetMaxU64(&offset,
+                                                                   index_size);
 }
 
 bool DWARFDebugRngLists::FindRanges(const DWARFUnit *cu,
@@ -200,6 +232,21 @@ bool DWARFDebugRngLists::FindRanges(const DWARFUnit *cu,
         range_list.Append(
             DWARFRangeList::Entry(BaseAddr + E.value0, E.value1 - E.value0));
         break;
+      case DW_RLE_base_addressx: {
+        BaseAddr = ReadAddressFromDebugAddrSection(cu, E.value0);
+        break;
+      }
+      case DW_RLE_startx_endx: {
+        dw_addr_t start = ReadAddressFromDebugAddrSection(cu, E.value0);
+        dw_addr_t end = ReadAddressFromDebugAddrSection(cu, E.value1);
+        range_list.Append(DWARFRangeList::Entry(start, end - start));
+        break;
+      }
+      case DW_RLE_startx_length: {
+        dw_addr_t start = ReadAddressFromDebugAddrSection(cu, E.value0);
+        range_list.Append(DWARFRangeList::Entry(start, E.value1));
+        break;
+      }
       default:
         llvm_unreachable("unexpected encoding");
       }
@@ -214,7 +261,8 @@ void DWARFDebugRngLists::Extract(SymbolFileDWARF *dwarf2Data) {
   lldb::offset_t offset = 0;
 
   uint64_t length = data.GetU32(&offset);
-  if (length == 0xffffffff)
+  bool isDwarf64 = (length == 0xffffffff);
+  if (isDwarf64)
     length = data.GetU64(&offset);
   lldb::offset_t end = offset + length;
 
@@ -232,7 +280,7 @@ void DWARFDebugRngLists::Extract(SymbolFileDWARF *dwarf2Data) {
 
   uint32_t offsetsAmount = data.GetU32(&offset);
   for (uint32_t i = 0; i < offsetsAmount; ++i)
-    Offsets.push_back(data.GetPointer(&offset));
+    Offsets.push_back(data.GetMaxU64(&offset, isDwarf64 ? 8 : 4));
 
   lldb::offset_t listOffset = offset;
   std::vector<RngListEntry> rangeList;
@@ -240,4 +288,8 @@ void DWARFDebugRngLists::Extract(SymbolFileDWARF *dwarf2Data) {
     m_range_map[listOffset] = rangeList;
     listOffset = offset;
   }
+}
+
+uint64_t DWARFDebugRngLists::GetOffset(size_t Index) const {
+  return Offsets[Index];
 }

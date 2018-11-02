@@ -464,7 +464,6 @@ namespace {
     SDValue TransformFPLoadStorePair(SDNode *N);
     SDValue convertBuildVecZextToZext(SDNode *N);
     SDValue reduceBuildVecExtToExtBuildVec(SDNode *N);
-    SDValue reduceBuildVecConvertToConvertBuildVec(SDNode *N);
     SDValue reduceBuildVecToShuffle(SDNode *N);
     SDValue createBuildVecShuffle(const SDLoc &DL, SDNode *N,
                                   ArrayRef<int> VectorMask, SDValue VecIn1,
@@ -8696,27 +8695,25 @@ static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
     return true;
   }
 
-  if (N->getOpcode() != ISD::SETCC || N->getValueType(0) != MVT::i1 ||
-      cast<CondCodeSDNode>(N->getOperand(2))->get() != ISD::SETNE)
+  if (N.getOpcode() != ISD::SETCC ||
+      N.getValueType().getScalarType() != MVT::i1 ||
+      cast<CondCodeSDNode>(N.getOperand(2))->get() != ISD::SETNE)
     return false;
 
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   assert(Op0.getValueType() == Op1.getValueType());
 
-  if (isNullConstant(Op0))
+  if (isNullConstantOrNullSplatConstant(Op0))
     Op = Op1;
-  else if (isNullConstant(Op1))
+  else if (isNullConstantOrNullSplatConstant(Op1))
     Op = Op0;
   else
     return false;
 
   DAG.computeKnownBits(Op, Known);
 
-  if (!(Known.Zero | 1).isAllOnesValue())
-    return false;
-
-  return true;
+  return (Known.Zero | 1).isAllOnesValue();
 }
 
 SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
@@ -8736,17 +8733,16 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   // fold (zext (truncate x)) -> (zext x) or
   //      (zext (truncate x)) -> (truncate x)
   // This is valid when the truncated bits of x are already zero.
-  // FIXME: We should extend this to work for vectors too.
   SDValue Op;
   KnownBits Known;
-  if (!VT.isVector() && isTruncateOf(DAG, N0, Op, Known)) {
+  if (isTruncateOf(DAG, N0, Op, Known)) {
     APInt TruncatedBits =
-      (Op.getValueSizeInBits() == N0.getValueSizeInBits()) ?
-      APInt(Op.getValueSizeInBits(), 0) :
-      APInt::getBitsSet(Op.getValueSizeInBits(),
-                        N0.getValueSizeInBits(),
-                        std::min(Op.getValueSizeInBits(),
-                                 VT.getSizeInBits()));
+      (Op.getScalarValueSizeInBits() == N0.getScalarValueSizeInBits()) ?
+      APInt(Op.getScalarValueSizeInBits(), 0) :
+      APInt::getBitsSet(Op.getScalarValueSizeInBits(),
+                        N0.getScalarValueSizeInBits(),
+                        std::min(Op.getScalarValueSizeInBits(),
+                                 VT.getScalarSizeInBits()));
     if (TruncatedBits.isSubsetOf(Known.Zero))
       return DAG.getZExtOrTrunc(Op, SDLoc(N), VT);
   }
@@ -15857,77 +15853,6 @@ SDValue DAGCombiner::reduceBuildVecExtToExtBuildVec(SDNode *N) {
   return DAG.getBitcast(VT, BV);
 }
 
-SDValue DAGCombiner::reduceBuildVecConvertToConvertBuildVec(SDNode *N) {
-  EVT VT = N->getValueType(0);
-
-  unsigned NumInScalars = N->getNumOperands();
-  SDLoc DL(N);
-
-  EVT SrcVT = MVT::Other;
-  unsigned Opcode = ISD::DELETED_NODE;
-  unsigned NumDefs = 0;
-
-  for (unsigned i = 0; i != NumInScalars; ++i) {
-    SDValue In = N->getOperand(i);
-    unsigned Opc = In.getOpcode();
-
-    if (Opc == ISD::UNDEF)
-      continue;
-
-    // If all scalar values are floats and converted from integers.
-    if (Opcode == ISD::DELETED_NODE &&
-        (Opc == ISD::UINT_TO_FP || Opc == ISD::SINT_TO_FP)) {
-      Opcode = Opc;
-    }
-
-    if (Opc != Opcode)
-      return SDValue();
-
-    EVT InVT = In.getOperand(0).getValueType();
-
-    // If all scalar values are typed differently, bail out. It's chosen to
-    // simplify BUILD_VECTOR of integer types.
-    if (SrcVT == MVT::Other)
-      SrcVT = InVT;
-    if (SrcVT != InVT)
-      return SDValue();
-    NumDefs++;
-  }
-
-  // If the vector has just one element defined, it's not worth to fold it into
-  // a vectorized one.
-  if (NumDefs < 2)
-    return SDValue();
-
-  assert((Opcode == ISD::UINT_TO_FP || Opcode == ISD::SINT_TO_FP)
-         && "Should only handle conversion from integer to float.");
-  assert(SrcVT != MVT::Other && "Cannot determine source type!");
-
-  EVT NVT = EVT::getVectorVT(*DAG.getContext(), SrcVT, NumInScalars);
-
-  if (!TLI.isOperationLegalOrCustom(Opcode, NVT))
-    return SDValue();
-
-  // Just because the floating-point vector type is legal does not necessarily
-  // mean that the corresponding integer vector type is.
-  if (!isTypeLegal(NVT))
-    return SDValue();
-
-  SmallVector<SDValue, 8> Opnds;
-  for (unsigned i = 0; i != NumInScalars; ++i) {
-    SDValue In = N->getOperand(i);
-
-    if (In.isUndef())
-      Opnds.push_back(DAG.getUNDEF(SrcVT));
-    else
-      Opnds.push_back(In.getOperand(0));
-  }
-  SDValue BV = DAG.getBuildVector(NVT, DL, Opnds);
-  AddToWorklist(BV.getNode());
-
-  return DAG.getNode(Opcode, DL, VT, BV);
-}
-
 SDValue DAGCombiner::createBuildVecShuffle(const SDLoc &DL, SDNode *N,
                                            ArrayRef<int> VectorMask,
                                            SDValue VecIn1, SDValue VecIn2,
@@ -16372,9 +16297,6 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
     return V;
 
   if (SDValue V = reduceBuildVecExtToExtBuildVec(N))
-    return V;
-
-  if (SDValue V = reduceBuildVecConvertToConvertBuildVec(N))
     return V;
 
   if (SDValue V = reduceBuildVecToShuffle(N))

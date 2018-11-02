@@ -20,6 +20,7 @@ namespace clangd {
 
 void IgnoreDiagnostics::log(DiagnosticsEngine::Level DiagLevel,
                             const clang::Diagnostic &Info) {
+  // FIXME: format lazily, in case vlog is off.
   SmallString<64> Message;
   Info.FormatDiagnostic(Message);
 
@@ -32,7 +33,7 @@ void IgnoreDiagnostics::log(DiagnosticsEngine::Level DiagLevel,
     OS << ":";
   }
 
-  clangd::log("Ignored diagnostic. {0}{1}", Location, Message);
+  clangd::vlog("Ignored diagnostic. {0}{1}", Location, Message);
 }
 
 void IgnoreDiagnostics::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,

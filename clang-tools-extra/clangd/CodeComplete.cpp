@@ -218,8 +218,11 @@ struct CompletionCandidate {
       case index::SymbolKind::ClassMethod:
       case index::SymbolKind::InstanceMethod:
       case index::SymbolKind::StaticMethod:
-        assert(false && "Don't expect members from index in code completion");
-        // fall through
+#ifndef NDEBUG
+        llvm_unreachable("Don't expect members from index in code completion");
+#else
+        LLVM_FALLTHROUGH;
+#endif
       case index::SymbolKind::Function:
         // We can't group overloads together that need different #includes.
         // This could break #include insertion.

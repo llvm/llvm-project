@@ -2219,6 +2219,9 @@ void OMPClauseEnqueue::VisitOMPReverseOffloadClause(
 void OMPClauseEnqueue::VisitOMPDynamicAllocatorsClause(
     const OMPDynamicAllocatorsClause *) {}
 
+void OMPClauseEnqueue::VisitOMPAtomicDefaultMemOrderClause(
+    const OMPAtomicDefaultMemOrderClause *) {}
+
 void OMPClauseEnqueue::VisitOMPDeviceClause(const OMPDeviceClause *C) {
   Visitor->AddStmt(C->getDevice());
 }

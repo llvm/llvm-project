@@ -525,8 +525,7 @@ llvm::Regex *ClangTidyDiagnosticConsumer::getHeaderFilter() {
   return HeaderFilter.get();
 }
 
-void ClangTidyDiagnosticConsumer::removeIncompatibleErrors(
-    SmallVectorImpl<ClangTidyError> &Errors) const {
+void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
   // Each error is modelled as the set of intervals in which it applies
   // replacements. To detect overlapping replacements, we use a sweep line
   // algorithm over these sets of intervals.
@@ -664,17 +663,13 @@ struct EqualClangTidyError {
 };
 } // end anonymous namespace
 
-// Flushes the internal diagnostics buffer to the ClangTidyContext.
-void ClangTidyDiagnosticConsumer::finish() {
+std::vector<ClangTidyError> ClangTidyDiagnosticConsumer::take() {
   finalizeLastError();
 
   std::sort(Errors.begin(), Errors.end(), LessClangTidyError());
   Errors.erase(std::unique(Errors.begin(), Errors.end(), EqualClangTidyError()),
                Errors.end());
-
   if (RemoveIncompatibleErrors)
-    removeIncompatibleErrors(Errors);
-
-  std::move(Errors.begin(), Errors.end(), std::back_inserter(Context.Errors));
-  Errors.clear();
+    removeIncompatibleErrors();
+  return std::move(Errors);
 }

@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Analyses/FormatString.h"
+#include "clang/AST/FormatString.h"
 #include "FormatStringParsing.h"
 #include "clang/Basic/TargetInfo.h"
 

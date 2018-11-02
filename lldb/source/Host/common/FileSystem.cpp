@@ -78,10 +78,23 @@ uint32_t FileSystem::GetPermissions(const FileSpec &file_spec) const {
   return GetPermissions(file_spec.GetPath());
 }
 
+uint32_t FileSystem::GetPermissions(const FileSpec &file_spec,
+                                    std::error_code &ec) const {
+  return GetPermissions(file_spec.GetPath(), ec);
+}
+
 uint32_t FileSystem::GetPermissions(const Twine &path) const {
+  std::error_code ec;
+  return GetPermissions(path, ec);
+}
+
+uint32_t FileSystem::GetPermissions(const Twine &path,
+                                    std::error_code &ec) const {
   ErrorOr<vfs::Status> status = m_fs->status(path);
-  if (!status)
+  if (!status) {
+    ec = status.getError();
     return sys::fs::perms::perms_not_known;
+  }
   return status->getPermissions();
 }
 

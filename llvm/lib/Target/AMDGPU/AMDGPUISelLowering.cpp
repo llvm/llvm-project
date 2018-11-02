@@ -3817,9 +3817,10 @@ SDValue AMDGPUTargetLowering::PerformDAGCombine(SDNode *N,
       if (Src.getValueType() == MVT::i64) {
         SDLoc SL(N);
         uint64_t CVal = C->getZExtValue();
-        return DAG.getNode(ISD::BUILD_VECTOR, SL, DestVT,
-                           DAG.getConstant(Lo_32(CVal), SL, MVT::i32),
-                           DAG.getConstant(Hi_32(CVal), SL, MVT::i32));
+        SDValue BV = DAG.getNode(ISD::BUILD_VECTOR, SL, MVT::v2i32,
+                                 DAG.getConstant(Lo_32(CVal), SL, MVT::i32),
+                                 DAG.getConstant(Hi_32(CVal), SL, MVT::i32));
+        return DAG.getNode(ISD::BITCAST, SL, DestVT, BV);
       }
     }
 

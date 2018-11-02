@@ -3450,6 +3450,21 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     updateValueMap(II, SrcReg);
     return true;
   }
+  case Intrinsic::sponentry: {
+    MachineFrameInfo &MFI = FuncInfo.MF->getFrameInfo();
+
+    // SP = FP + Fixed Object + 16
+    int FI = MFI.CreateFixedObject(4, 0, false);
+    unsigned ResultReg = createResultReg(&AArch64::GPR64spRegClass);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+            TII.get(AArch64::ADDXri), ResultReg)
+            .addFrameIndex(FI)
+            .addImm(0)
+            .addImm(0);
+
+    updateValueMap(II, ResultReg);
+    return true;
+  }
   case Intrinsic::memcpy:
   case Intrinsic::memmove: {
     const auto *MTI = cast<MemTransferInst>(II);

@@ -14,23 +14,16 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/GlobalDecl.h"
-#include "clang/AST/Mangle.h"
-#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Basic/TargetInfo.h"
 #include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
-#include "clang/Index/USRGeneration.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include <sstream>
 #include <string>
-#include <vector>
 
 using namespace llvm;
 using namespace clang;
@@ -41,21 +34,22 @@ static cl::OptionCategory ClangFnMapGenCategory("clang-fnmapgen options");
 
 class MapFunctionNamesConsumer : public ASTConsumer {
 public:
-  MapFunctionNamesConsumer(ASTContext &Context) : Ctx(Context) {}
+  MapFunctionNamesConsumer(ASTContext &Context)
+      : SM(Context.getSourceManager()) {}
 
   ~MapFunctionNamesConsumer() {
     // Flush results to standard output.
     llvm::outs() << createCrossTUIndexString(Index);
   }
 
-  virtual void HandleTranslationUnit(ASTContext &Ctx) {
+  void HandleTranslationUnit(ASTContext &Ctx) override {
     handleDecl(Ctx.getTranslationUnitDecl());
   }
 
 private:
   void handleDecl(const Decl *D);
 
-  ASTContext &Ctx;
+  SourceManager &SM;
   llvm::StringMap<std::string> Index;
   std::string CurrentFileName;
 };
@@ -67,8 +61,6 @@ void MapFunctionNamesConsumer::handleDecl(const Decl *D) {
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->isThisDeclarationADefinition()) {
       if (const Stmt *Body = FD->getBody()) {
-        std::string LookupName = CrossTranslationUnitContext::getLookupName(FD);
-        const SourceManager &SM = Ctx.getSourceManager();
         if (CurrentFileName.empty()) {
           CurrentFileName =
               SM.getFileEntryForID(SM.getMainFileID())->tryGetRealPathName();
@@ -80,8 +72,11 @@ void MapFunctionNamesConsumer::handleDecl(const Decl *D) {
         case ExternalLinkage:
         case VisibleNoLinkage:
         case UniqueExternalLinkage:
-          if (SM.isInMainFile(Body->getBeginLoc()))
+          if (SM.isInMainFile(Body->getBeginLoc())) {
+            std::string LookupName =
+                CrossTranslationUnitContext::getLookupName(FD);
             Index[LookupName] = CurrentFileName;
+          }
           break;
         default:
           break;
@@ -99,9 +94,7 @@ class MapFunctionNamesAction : public ASTFrontendAction {
 protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  llvm::StringRef) {
-    std::unique_ptr<ASTConsumer> PFC(
-        new MapFunctionNamesConsumer(CI.getASTContext()));
-    return PFC;
+    return llvm::make_unique<MapFunctionNamesConsumer>(CI.getASTContext());
   }
 };
 
@@ -120,6 +113,6 @@ int main(int argc, const char **argv) {
 
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
-  Tool.run(newFrontendActionFactory<MapFunctionNamesAction>().get());
-  return 0;
+
+  return Tool.run(newFrontendActionFactory<MapFunctionNamesAction>().get());
 }

@@ -248,6 +248,7 @@ bool DWARFFormValue::ExtractValue(const DWARFDataExtractor &data,
       m_value.value.uval = data.GetU64(offset_ptr);
       break;
     case DW_FORM_addrx:
+    case DW_FORM_rnglistx:
     case DW_FORM_strx:
     case DW_FORM_udata:
     case DW_FORM_ref_udata:
@@ -393,6 +394,7 @@ bool DWARFFormValue::SkipValue(dw_form_t form,
 
     // signed or unsigned LEB 128 values
     case DW_FORM_addrx:
+    case DW_FORM_rnglistx:
     case DW_FORM_sdata:
     case DW_FORM_udata:
     case DW_FORM_ref_udata:
@@ -777,6 +779,7 @@ bool DWARFFormValue::FormIsSupported(dw_form_t form) {
   switch (form) {
     case DW_FORM_addr:
     case DW_FORM_addrx:
+    case DW_FORM_rnglistx:
     case DW_FORM_block2:
     case DW_FORM_block4:
     case DW_FORM_data2:

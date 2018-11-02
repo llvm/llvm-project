@@ -43,8 +43,8 @@ public:
   virtual void emitIndirectFunctionType(MCSymbolWasm *Symbol) = 0;
   /// .indidx
   virtual void emitIndIdx(const MCExpr *Value) = 0;
-  /// .import_global
-  virtual void emitGlobalImport(StringRef name) = 0;
+  /// .globaltype
+  virtual void emitGlobalType(MCSymbolWasm *Sym) = 0;
   /// .import_module
   virtual void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) = 0;
 
@@ -65,7 +65,7 @@ public:
   void emitEndFunc() override;
   void emitIndirectFunctionType(MCSymbolWasm *Symbol) override;
   void emitIndIdx(const MCExpr *Value) override;
-  void emitGlobalImport(StringRef name) override;
+  void emitGlobalType(MCSymbolWasm *Sym) override;
   void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) override;
 };
 
@@ -80,7 +80,7 @@ public:
   void emitEndFunc() override;
   void emitIndirectFunctionType(MCSymbolWasm *Symbol) override;
   void emitIndIdx(const MCExpr *Value) override;
-  void emitGlobalImport(StringRef name) override;
+  void emitGlobalType(MCSymbolWasm *Sym) override;
   void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) override;
 };
 

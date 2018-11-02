@@ -2686,6 +2686,14 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     Opts.Exceptions = 0;
     Opts.CXXExceptions = 0;
   }
+  if (Opts.OpenMPIsDevice && T.isNVPTX()) {
+    Opts.OpenMPCUDANumSMs =
+        getLastArgIntValue(Args, options::OPT_fopenmp_cuda_number_of_sm_EQ,
+                           Opts.OpenMPCUDANumSMs, Diags);
+    Opts.OpenMPCUDABlocksPerSM =
+        getLastArgIntValue(Args, options::OPT_fopenmp_cuda_blocks_per_sm_EQ,
+                           Opts.OpenMPCUDABlocksPerSM, Diags);
+  }
 
   // Get the OpenMP target triples if any.
   if (Arg *A = Args.getLastArg(options::OPT_fopenmp_targets_EQ)) {

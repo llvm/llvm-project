@@ -2863,6 +2863,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerFP_EXTEND(Op, DAG);
   case ISD::FRAMEADDR:
     return LowerFRAMEADDR(Op, DAG);
+  case ISD::SPONENTRY:
+    return LowerSPONENTRY(Op, DAG);
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
   case ISD::ADDROFRETURNADDR:
@@ -5171,6 +5173,16 @@ SDValue AArch64TargetLowering::LowerFRAMEADDR(SDValue Op,
     FrameAddr = DAG.getLoad(VT, DL, DAG.getEntryNode(), FrameAddr,
                             MachinePointerInfo());
   return FrameAddr;
+}
+
+SDValue AArch64TargetLowering::LowerSPONENTRY(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+
+  EVT VT = getPointerTy(DAG.getDataLayout());
+  SDLoc DL(Op);
+  int FI = MFI.CreateFixedObject(4, 0, false);
+  return DAG.getFrameIndex(FI, VT);
 }
 
 // FIXME? Maybe this could be a TableGen attribute on some registers and

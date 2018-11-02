@@ -10,16 +10,7 @@
 #ifndef HEADER
 #define HEADER
 
-#pragma omp requires unified_address 
-// CHECK:#pragma omp requires unified_address
-
-#pragma omp requires unified_shared_memory
-// CHECK:#pragma omp requires unified_shared_memory
-
-#pragma omp requires reverse_offload
-// CHECK:#pragma omp requires reverse_offload
-
-#pragma omp requires dynamic_allocators
-// CHECK:#pragma omp requires dynamic_allocators
+#pragma omp requires atomic_default_mem_order(relaxed)
+// CHECK:#pragma omp requires atomic_default_mem_order(relaxed)
 
 #endif

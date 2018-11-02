@@ -447,9 +447,8 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
   ld_plugin_level Level;
   switch (DI.getSeverity()) {
   case DS_Error:
-    message(LDPL_FATAL, "LLVM gold plugin has failed to create LTO module: %s",
-            ErrStorage.c_str());
-    return;
+    Level = LDPL_FATAL;
+    break;
   case DS_Warning:
     Level = LDPL_WARNING;
     break;
