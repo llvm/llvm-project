@@ -9,8 +9,8 @@
 ; CHECK-NEXT:  <CPU: id = 49, tsc = 18828908666540172>
 ; CHECK-NEXT:  <TSC Wrap: base = 18828908666540172>
 ; CHECK-EMPTY:
-; CHECK-NEXT: -  <Function Enter: #1 delta = +1>
+; CHECK-NEXT: -  <Function Enter: #1 delta = +3146>
 ; CHECK-NEXT:  : <Call Argument: data = 1 (hex = 0x1)>
-; CHECK-NEXT: -  <Function Exit: #1 delta = +1>
+; CHECK-NEXT: -  <Function Exit: #1 delta = +52286>
 ; CHECK-NEXT:  *** <End of Buffer>
 

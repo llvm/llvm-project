@@ -419,8 +419,13 @@ TargetPassConfig::TargetPassConfig()
                      "triple set?");
 }
 
-bool TargetPassConfig::hasLimitedCodeGenPipeline() const {
-  return StartBefore || StartAfter || StopBefore || StopAfter;
+bool TargetPassConfig::willCompleteCodeGenPipeline() {
+  return StopBeforeOpt.empty() && StopAfterOpt.empty();
+}
+
+bool TargetPassConfig::hasLimitedCodeGenPipeline() {
+  return !StartBeforeOpt.empty() || !StartAfterOpt.empty() ||
+         !willCompleteCodeGenPipeline();
 }
 
 std::string

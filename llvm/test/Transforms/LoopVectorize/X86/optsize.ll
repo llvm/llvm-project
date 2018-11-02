@@ -3,6 +3,7 @@
 ; will produce a tail loop with the optimize for size or the minimize size
 ; attributes. This is a target-dependent version of the test.
 ; RUN: opt < %s -loop-vectorize -force-vector-width=64 -S -mtriple=x86_64-unknown-linux -mcpu=skx | FileCheck %s
+; RUN: opt < %s -loop-vectorize -S -mtriple=x86_64-unknown-linux -mcpu=skx | FileCheck %s --check-prefix AUTOVF
 
 target datalayout = "E-m:e-p:32:32-i64:32-f64:32:64-a:0:32-n32-S128"
 
@@ -136,3 +137,62 @@ for.end:                                          ; preds = %for.body
 
 attributes #1 = { minsize }
 
+
+; We can't vectorize this one because we version for stride==1; even having TC
+; a multiple of VF.
+; CHECK-LABEL: @scev4stride1
+; CHECK-NOT: vector.scevcheck
+; CHECK-NOT: vector.body:
+; CHECK-LABEL: for.body:
+; AUTOVF-LABEL: @scev4stride1
+; AUTOVF-NOT: vector.scevcheck
+; AUTOVF-NOT: vector.body:
+; AUTOVF-LABEL: for.body:
+define void @scev4stride1(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32 %k) #2 {
+for.body.preheader:
+  br label %for.body
+
+for.body:                                         ; preds = %for.body.preheader, %for.body
+  %i.07 = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ]
+  %mul = mul nsw i32 %i.07, %k
+  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %mul
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32* %a, i32 %i.07
+  store i32 %0, i32* %arrayidx1, align 4
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond = icmp eq i32 %inc, 256
+  br i1 %exitcond, label %for.end.loopexit, label %for.body
+
+for.end.loopexit:                                 ; preds = %for.body
+  ret void
+}
+
+attributes #2 = { optsize }
+
+
+; PR39497
+; We can't vectorize this one because we version for overflow check and tiny
+; trip count leads to opt-for-size (which otherwise could fold the tail by
+; masking).
+; CHECK-LABEL: @main
+; CHECK-NOT: vector.scevcheck
+; CHECK-NOT: vector.body:
+; CHECK-LABEL: for.cond:
+; AUTOVF-LABEL: @main
+; AUTOVF-NOT: vector.scevcheck
+; AUTOVF-NOT: vector.body:
+; AUTOVF-LABEL: for.cond:
+define i32 @main() local_unnamed_addr {
+while.cond:
+  br label %for.cond
+
+for.cond:
+  %d.0 = phi i32 [ 0, %while.cond ], [ %add, %for.cond ]
+  %conv = and i32 %d.0, 65535
+  %cmp = icmp ult i32 %conv, 4
+  %add = add nuw nsw i32 %conv, 1
+  br i1 %cmp, label %for.cond, label %while.cond.loopexit
+
+while.cond.loopexit:
+  ret i32 0
+}
