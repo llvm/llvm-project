@@ -503,8 +503,21 @@ bool AnalyzerOptions::naiveCTUEnabled() {
   return NaiveCTU.getValue();
 }
 
+unsigned AnalyzerOptions::getRegionStoreSmallStructLimit() {
+  if (!RegionStoreSmallStructLimit.hasValue())
+    RegionStoreSmallStructLimit =
+                       getOptionAsInteger("region-store-small-struct-limit", 2);
+  return RegionStoreSmallStructLimit.getValue();
+}
+
 StringRef AnalyzerOptions::getCTUIndexName() {
   if (!CTUIndexName.hasValue())
     CTUIndexName = getOptionAsString("ctu-index-name", "externalFnMap.txt");
   return CTUIndexName.getValue();
+}
+
+StringRef AnalyzerOptions::getModelPath() {
+  if (!ModelPath.hasValue())
+    ModelPath = getOptionAsString("model-path", "");
+  return ModelPath.getValue();
 }
