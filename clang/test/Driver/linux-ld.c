@@ -1648,6 +1648,14 @@
 // CHECK-ARMV7EB: "--be8"
 // CHECK-ARMV7EB: "-m" "armelfb_linux_eabi"
 
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     --target=aarch64_be-unknown-linux \
+// RUN:     --gcc-toolchain="" \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-AARCH64BE %s
+// CHECK-AARCH64BE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-AARCH64BE: "-m" "aarch64linuxb"
+
 // Check dynamic-linker for musl-libc
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=i386-pc-linux-musl \
