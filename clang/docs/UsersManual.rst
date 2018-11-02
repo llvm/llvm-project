@@ -3000,8 +3000,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fno-debug-macro        Do not emit macro debug information
       -fno-delayed-template-parsing
                               Disable delayed template parsing
-      -fno-sanitize-address-poison-class-member-array-new-cookie
-                              Disable poisoning array cookies when using class member operator new[] in AddressSanitizer
+      -fno-sanitize-address-poison-custom-array-cookie
+                              Disable poisoning array cookies when using custom operator new[] in AddressSanitizer
       -fno-sanitize-address-use-after-scope
                               Disable use-after-scope detection in AddressSanitizer
       -fno-sanitize-blacklist Don't use blacklist file for sanitizers
@@ -3037,8 +3037,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Level of field padding for AddressSanitizer
       -fsanitize-address-globals-dead-stripping
                               Enable linker dead stripping of globals in AddressSanitizer
-      -fsanitize-address-poison-class-member-array-new-cookie
-                              Enable poisoning array cookies when using class member operator new[] in AddressSanitizer
+      -fsanitize-address-poison-custom-array-cookie
+                              Enable poisoning array cookies when using custom operator new[] in AddressSanitizer
       -fsanitize-address-use-after-scope
                               Enable use-after-scope detection in AddressSanitizer
       -fsanitize-blacklist=<value>

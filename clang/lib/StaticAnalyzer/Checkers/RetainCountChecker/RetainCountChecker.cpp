@@ -1393,5 +1393,12 @@ void RetainCountChecker::printState(raw_ostream &Out, ProgramStateRef State,
 //===----------------------------------------------------------------------===//
 
 void ento::registerRetainCountChecker(CheckerManager &Mgr) {
-  Mgr.registerChecker<RetainCountChecker>(Mgr.getAnalyzerOptions());
+  auto *Chk = Mgr.registerChecker<RetainCountChecker>();
+
+  AnalyzerOptions &Options = Mgr.getAnalyzerOptions();
+
+  Chk->IncludeAllocationLine = Options.getBooleanOption(
+                           "leak-diagnostics-reference-allocation", false, Chk);
+  Chk->ShouldCheckOSObjectRetainCount = Options.getBooleanOption(
+                                                   "CheckOSObject", true, Chk);
 }

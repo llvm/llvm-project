@@ -247,10 +247,18 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
     ento::printCheckerHelp(llvm::outs(), Clang->getFrontendOpts().Plugins);
     return true;
   }
+
+  // Honor -analyzer-list-enabled-checkers.
   if (Clang->getAnalyzerOpts()->ShowEnabledCheckerList) {
     ento::printEnabledCheckerList(llvm::outs(),
                                   Clang->getFrontendOpts().Plugins,
                                   *Clang->getAnalyzerOpts());
+  }
+
+  // Honor -analyzer-config-help.
+  if (Clang->getAnalyzerOpts()->ShowConfigOptionsList) {
+    ento::printAnalyzerConfigList(llvm::outs());
+    return true;
   }
 #endif
 

@@ -13,13 +13,13 @@
 #define HEADER
 
 // HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 4, i64 4, i64 0, i64 4, i64 40, i64 4, i64 4, i64 4, i64 8, i64 4, i64 4]
-// HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 547, i64 547, i64 544, i64 33, i64 673, i64 1407374883553936, i64 1407374883553936, i64 1407374883553936, i64 1407374883553936, i64 1407374883553936, i64 800]
+// HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 547, i64 547, i64 544, i64 33, i64 673, i64 1407374883554064, i64 1407374883554064, i64 1407374883554064, i64 1407374883554064, i64 1407374883554064, i64 800]
 // HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 4, i64 4, i64 4, i64 0, i64 4, i64 40, i64 4, i64 4, i64 4, i64 8, i64 4]
-// HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 547, i64 547, i64 547, i64 544, i64 547, i64 673, i64 1688849860264592, i64 1688849860264592, i64 1688849860264592, i64 1688849860264592, i64 1688849860264592]
+// HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 547, i64 547, i64 547, i64 544, i64 547, i64 673, i64 1688849860264720, i64 1688849860264720, i64 1688849860264720, i64 1688849860264720, i64 1688849860264720]
 // HOST-DAG: = private unnamed_addr constant [3 x i64] [i64 4, i64 8, i64 8]
-// HOST-DAG: = private unnamed_addr constant [3 x i64] [i64 547, i64 673, i64 562949953421968]
+// HOST-DAG: = private unnamed_addr constant [3 x i64] [i64 547, i64 673, i64 562949953422096]
 // HOST-DAG: = private unnamed_addr constant [3 x i64] [i64 4, i64 8, i64 8]
-// HOST-DAG: = private unnamed_addr constant [3 x i64] [i64 547, i64 673, i64 562949953421968]
+// HOST-DAG: = private unnamed_addr constant [3 x i64] [i64 547, i64 673, i64 562949953422096]
 // CHECK-DAG: [[S:%.+]] = type { i32 }
 // CHECK-DAG: [[CAP1:%.+]] = type { [[S]]* }
 // CHECK-DAG: [[CAP2:%.+]] = type { i32*, i32*, i32*, i32**, i32* }

@@ -223,6 +223,24 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-WITHOUT-USE-AFTER-SCOPE
 // CHECK-ASAN-WITHOUT-USE-AFTER-SCOPE: -cc1{{.*}}address-use-after-scope
 
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-address-poison-custom-array-cookie %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-POISON-CUSTOM-ARRAY-NEW-COOKIE
+// RUN: %clang_cl --target=x86_64-windows -fsanitize=address -fsanitize-address-poison-custom-array-cookie -### -- %s 2>&1 | FileCheck %s --check-prefix=CHECK-POISON-CUSTOM-ARRAY-NEW-COOKIE
+// CHECK-POISON-CUSTOM-ARRAY-NEW-COOKIE: -cc1{{.*}}-fsanitize-address-poison-custom-array-cookie
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fno-sanitize-address-poison-custom-array-cookie %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-POISON-CUSTOM-ARRAY-NEW-COOKIE-OFF
+// RUN: %clang_cl --target=x86_64-windows -fsanitize=address -fno-sanitize-address-poison-custom-array-cookie -### -- %s 2>&1 | FileCheck %s --check-prefix=CHECK-POISON-CUSTOM-ARRAY-NEW-COOKIE-OFF
+// CHECK-POISON-CUSTOM-ARRAY-NEW-COOKIE-OFF-NOT: -cc1{{.*}}address-poison-custom-array-cookie
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fno-sanitize-address-poison-custom-array-cookie -fsanitize-address-poison-custom-array-cookie %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-POISON-CUSTOM-ARRAY-NEW-COOKIE-BOTH
+// RUN: %clang_cl --target=x86_64-windows -fsanitize=address -fno-sanitize-address-poison-custom-array-cookie -fsanitize-address-poison-custom-array-cookie -### -- %s 2>&1 | FileCheck %s --check-prefix=CHECK-POISON-CUSTOM-ARRAY-NEW-COOKIE-BOTH
+// CHECK-POISON-CUSTOM-ARRAY-NEW-COOKIE-BOTH: -cc1{{.*}}-fsanitize-address-poison-custom-array-cookie
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-address-poison-custom-array-cookie -fno-sanitize-address-poison-custom-array-cookie %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-POISON-CUSTOM-ARRAY-NEW-COOKIE-BOTH-OFF
+// CHECK-POISON-CUSTOM-ARRAY-NEW-COOKIE-BOTH-OFF-NOT: -cc1{{.*}}address-poison-custom-array-cookie
+
+// RUN: %clang -target x86_64-linux-gnu -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-WITHOUT-POISON-CUSTOM-ARRAY-NEW-COOKIE
+// CHECK-ASAN-WITHOUT-POISON-CUSTOM-ARRAY-NEW-COOKIE-NOT: -cc1{{.*}}address-poison-custom-array-cookie
+
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address -fsanitize-address-globals-dead-stripping %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-GLOBALS
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=address %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-ASAN-GLOBALS
 // RUN: %clang_cl --target=x86_64-windows-msvc -fsanitize=address -fsanitize-address-globals-dead-stripping -### -- %s 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-GLOBALS

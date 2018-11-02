@@ -126,6 +126,9 @@
 #ifndef OPENMP_DEFAULTMAP_KIND
 #define OPENMP_DEFAULTMAP_KIND(Name)
 #endif
+#ifndef OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND
+#define OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(Name)
+#endif
 #ifndef OPENMP_DEFAULTMAP_MODIFIER
 #define OPENMP_DEFAULTMAP_MODIFIER(Name)
 #endif
@@ -283,6 +286,7 @@ OPENMP_CLAUSE(unified_address, OMPUnifiedAddressClause)
 OPENMP_CLAUSE(unified_shared_memory, OMPUnifiedSharedMemoryClause)
 OPENMP_CLAUSE(reverse_offload, OMPReverseOffloadClause)
 OPENMP_CLAUSE(dynamic_allocators, OMPDynamicAllocatorsClause)
+OPENMP_CLAUSE(atomic_default_mem_order, OMPAtomicDefaultMemOrderClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -469,6 +473,12 @@ OPENMP_REQUIRES_CLAUSE(unified_address)
 OPENMP_REQUIRES_CLAUSE(unified_shared_memory)
 OPENMP_REQUIRES_CLAUSE(reverse_offload)
 OPENMP_REQUIRES_CLAUSE(dynamic_allocators)
+OPENMP_REQUIRES_CLAUSE(atomic_default_mem_order)
+
+// Modifiers for 'atomic_default_mem_order' clause.
+OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(seq_cst)
+OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(acq_rel)
+OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(relaxed)
 
 // Clauses allowed for OpenMP directive 'target data'.
 OPENMP_TARGET_DATA_CLAUSE(if)
@@ -898,6 +908,7 @@ OPENMP_TASKGROUP_CLAUSE(task_reduction)
 #undef OPENMP_ATOMIC_CLAUSE
 #undef OPENMP_TARGET_CLAUSE
 #undef OPENMP_REQUIRES_CLAUSE
+#undef OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND
 #undef OPENMP_TARGET_DATA_CLAUSE
 #undef OPENMP_TARGET_ENTER_DATA_CLAUSE
 #undef OPENMP_TARGET_EXIT_DATA_CLAUSE

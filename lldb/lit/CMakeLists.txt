@@ -51,11 +51,13 @@ llvm_canonicalize_cmake_booleans(
   LLVM_ENABLE_ZLIB)
 
 configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg)
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py
+  MAIN_CONFIG
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit.cfg.py)
 configure_lit_site_cfg(
-  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg)
+  ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/Suite/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/Suite/lit.site.cfg)
@@ -67,14 +69,8 @@ if(NOT LLDB_BUILT_STANDALONE)
     )
 endif()
 
-set(LLDB_TEST_PARAMS
-  lldb_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
-  )
-
 add_lit_testsuite(check-lldb-lit "Running lldb lit test suite"
   ${CMAKE_CURRENT_BINARY_DIR}
-  PARAMS lldb_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
-         lldb_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   DEPENDS ${LLDB_TEST_DEPS}
   )
 
@@ -88,7 +84,5 @@ endif()
 
 add_lit_testsuites(LLDB
   ${CMAKE_CURRENT_BINARY_DIR}
-  PARAMS lldb_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
-         lldb_unit_site_config=${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg
   DEPENDS ${LLDB_TEST_DEPS}
   )

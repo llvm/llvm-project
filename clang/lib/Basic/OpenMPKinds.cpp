@@ -125,6 +125,12 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind,
   .Case(#Name, static_cast<unsigned>(OMPC_DEFAULTMAP_MODIFIER_##Name))
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_DEFAULTMAP_unknown);
+  case OMPC_atomic_default_mem_order:
+     return llvm::StringSwitch<OpenMPAtomicDefaultMemOrderClauseKind>(Str)
+#define OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(Name)       \
+  .Case(#Name, OMPC_ATOMIC_DEFAULT_MEM_ORDER_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown);
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:
@@ -270,6 +276,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'schedule' clause type");
+  case OMPC_atomic_default_mem_order:
+    switch (Type) {
+    case OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown:
+      return "unknown";
+#define OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(Name)                           \
+    case OMPC_ATOMIC_DEFAULT_MEM_ORDER_##Name:                               \
+      return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+}
+    llvm_unreachable("Invalid OpenMP 'atomic_default_mem_order' clause type");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_if:

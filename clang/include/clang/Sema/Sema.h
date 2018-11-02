@@ -9274,6 +9274,11 @@ public:
   OMPClause *ActOnOpenMPDynamicAllocatorsClause(SourceLocation StartLoc,
                                                 SourceLocation EndLoc);
 
+  /// Called on well-formed 'atomic_default_mem_order' clause.
+  OMPClause *ActOnOpenMPAtomicDefaultMemOrderClause(
+      OpenMPAtomicDefaultMemOrderClauseKind Kind, SourceLocation KindLoc,
+      SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
+
   OMPClause *ActOnOpenMPVarListClause(
       OpenMPClauseKind Kind, ArrayRef<Expr *> Vars, Expr *TailExpr,
       SourceLocation StartLoc, SourceLocation LParenLoc,
