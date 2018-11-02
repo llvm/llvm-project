@@ -13,6 +13,7 @@
 #ifndef COMPILER_RT_LIB_XRAY_XRAY_FDR_CONTROLLER_H_
 #define COMPILER_RT_LIB_XRAY_XRAY_FDR_CONTROLLER_H_
 
+#include <limits>
 #include <time.h>
 
 #include "xray/xray_interface.h"
@@ -158,8 +159,14 @@ template <size_t Version = 3> class FDRController {
       return PreambleResult::WroteMetadata;
     }
 
-    if (UNLIKELY(LatestCPU == LatestCPU && LatestTSC > TSC)) {
-      // The TSC has wrapped around, from the last TSC we've seen.
+    DCHECK_EQ(LatestCPU, CPU);
+
+    if (UNLIKELY(LatestTSC > TSC ||
+                 TSC - LatestTSC >
+                     uint64_t{std::numeric_limits<int32_t>::max()})) {
+      // Either the TSC has wrapped around from the last TSC we've seen or the
+      // delta is too large to fit in a 32-bit signed integer, so we write a
+      // wrap-around record.
       LatestTSC = TSC;
 
       if (B.Generation != BQ->generation())
@@ -248,10 +255,11 @@ public:
     UndoableFunctionEnters = (PreambleStatus == PreambleResult::WroteMetadata)
                                  ? 1
                                  : UndoableFunctionEnters + 1;
+    auto Delta = TSC - LatestTSC;
     LastFunctionEntryTSC = TSC;
     LatestTSC = TSC;
     return W.writeFunction(FDRLogWriter::FunctionRecordKind::Enter,
-                           mask(FuncId), TSC - LatestTSC);
+                           mask(FuncId), Delta);
   }
 
   bool functionTailExit(int32_t FuncId, uint64_t TSC,
@@ -273,9 +281,10 @@ public:
 
     UndoableTailExits = UndoableFunctionEnters ? UndoableTailExits + 1 : 0;
     UndoableFunctionEnters = 0;
+    auto Delta = TSC - LatestTSC;
     LatestTSC = TSC;
     return W.writeFunction(FDRLogWriter::FunctionRecordKind::TailExit,
-                           mask(FuncId), TSC - LatestTSC);
+                           mask(FuncId), Delta);
   }
 
   bool functionEnterArg(int32_t FuncId, uint64_t TSC, uint16_t CPU,
@@ -285,13 +294,14 @@ public:
         functionPreamble(TSC, CPU) == PreambleResult::InvalidBuffer)
       return returnBuffer();
 
+    auto Delta = TSC - LatestTSC;
     LatestTSC = TSC;
     LastFunctionEntryTSC = 0;
     UndoableFunctionEnters = 0;
     UndoableTailExits = 0;
 
     W.writeFunction(FDRLogWriter::FunctionRecordKind::EnterArg, mask(FuncId),
-                    TSC - LatestTSC);
+                    Delta);
     return W.writeMetadata<MetadataRecord::RecordKinds::CallArgument>(Arg);
   }
 
