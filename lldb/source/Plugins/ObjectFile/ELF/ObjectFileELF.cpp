@@ -955,7 +955,7 @@ lldb_private::FileSpecList ObjectFileELF::GetDebugSymbolFilePaths() {
   FileSpecList file_spec_list;
 
   if (!m_gnu_debuglink_file.empty()) {
-    FileSpec file_spec(m_gnu_debuglink_file, false);
+    FileSpec file_spec(m_gnu_debuglink_file);
     file_spec_list.Append(file_spec);
   }
   return file_spec_list;
@@ -1109,7 +1109,9 @@ size_t ObjectFileELF::ParseDependentModules() {
 
       uint32_t str_index = static_cast<uint32_t>(symbol.d_val);
       const char *lib_name = dynstr_data.PeekCStr(str_index);
-      m_filespec_ap->Append(FileSpec(lib_name, true));
+      FileSpec file_spec(lib_name);
+      FileSystem::Instance().Resolve(file_spec);
+      m_filespec_ap->Append(file_spec);
     }
   }
 

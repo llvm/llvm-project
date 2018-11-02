@@ -842,7 +842,7 @@ static void reversePropagateIntererstingSymbols(BugReport &R,
     default:
       if (!isa<CastExpr>(Ex))
         break;
-      // Fall through.
+      LLVM_FALLTHROUGH;
     case Stmt::BinaryOperatorClass:
     case Stmt::UnaryOperatorClass: {
       for (const Stmt *SubStmt : Ex->children()) {

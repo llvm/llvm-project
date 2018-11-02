@@ -569,7 +569,7 @@ uint32_t Module::ResolveSymbolContextForAddress(
 uint32_t Module::ResolveSymbolContextForFilePath(
     const char *file_path, uint32_t line, bool check_inlines,
     lldb::SymbolContextItem resolve_scope, SymbolContextList &sc_list) {
-  FileSpec file_spec(file_path, false);
+  FileSpec file_spec(file_path);
   return ResolveSymbolContextsForFileSpec(file_spec, line, check_inlines,
                                           resolve_scope, sc_list);
 }
@@ -1418,7 +1418,7 @@ void Module::PreloadSymbols() {
 }
 
 void Module::SetSymbolFileFileSpec(const FileSpec &file) {
-  if (!file.Exists())
+  if (!FileSystem::Instance().Exists(file))
     return;
   if (m_symfile_ap) {
     // Remove any sections in the unified section list that come from the
@@ -1537,7 +1537,8 @@ bool Module::LoadScriptingResourceInTarget(Target *target, Status &error,
       if (script_interpreter) {
         for (uint32_t i = 0; i < num_specs; ++i) {
           FileSpec scripting_fspec(file_specs.GetFileSpecAtIndex(i));
-          if (scripting_fspec && scripting_fspec.Exists()) {
+          if (scripting_fspec &&
+              FileSystem::Instance().Exists(scripting_fspec)) {
             if (should_load == eLoadScriptFromSymFileWarn) {
               if (feedback_stream)
                 feedback_stream->Printf(

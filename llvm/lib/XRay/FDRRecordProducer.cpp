@@ -84,6 +84,12 @@ Expected<std::unique_ptr<Record>> FileBasedRecordProducer::produce() {
   // the rest of the bytes.
   auto PreReadOffset = OffsetPtr;
   uint8_t FirstByte = E.getU8(&OffsetPtr);
+  if (OffsetPtr == PreReadOffset)
+    return createStringError(
+        std::make_error_code(std::errc::executable_format_error),
+        "Failed reading one byte from offset %d.", OffsetPtr);
+
+  // Set up our result record.
   std::unique_ptr<Record> R;
 
   // For metadata records, handle especially here.

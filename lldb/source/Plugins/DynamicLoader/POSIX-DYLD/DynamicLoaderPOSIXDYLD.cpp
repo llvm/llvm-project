@@ -512,7 +512,7 @@ void DynamicLoaderPOSIXDYLD::LoadVDSO() {
   if (m_vdso_base == LLDB_INVALID_ADDRESS)
     return;
 
-  FileSpec file("[vdso]", false);
+  FileSpec file("[vdso]");
 
   MemoryRegionInfo info;
   Status status = m_process->GetMemoryRegionInfo(m_vdso_base, info);
@@ -543,7 +543,7 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadInterpreterModule() {
     return nullptr;
   }
 
-  FileSpec file(info.GetName().GetCString(), false);
+  FileSpec file(info.GetName().GetCString());
   ModuleSpec module_spec(file, target.GetArchitecture());
 
   if (ModuleSP module_sp = target.GetSharedModule(module_spec)) {

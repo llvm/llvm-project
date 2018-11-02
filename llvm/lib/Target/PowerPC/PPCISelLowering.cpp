@@ -3970,7 +3970,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_64SVR4(
 
       assert(ObjectVT.getSimpleVT().SimpleTy == MVT::v4f32 &&
              "Invalid QPX parameter type");
-      /* fall through */
+      LLVM_FALLTHROUGH;
 
     case MVT::v4f64:
     case MVT::v4i1:
@@ -6113,7 +6113,7 @@ SDValue PPCTargetLowering::LowerCall_64SVR4(
       assert(Arg.getValueType().getSimpleVT().SimpleTy == MVT::v4f32 &&
              "Invalid QPX parameter type");
 
-      /* fall through */
+      LLVM_FALLTHROUGH;
     case MVT::v4f64:
     case MVT::v4i1: {
       bool IsF32 = Arg.getValueType().getSimpleVT().SimpleTy == MVT::v4f32;

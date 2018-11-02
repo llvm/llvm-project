@@ -3254,12 +3254,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // A header module compilation doesn't have a main input file, so invent a
   // fake one as a placeholder.
-  // FIXME: Pick the language based on the header file language.
   const char *ModuleName = [&]{
     auto *ModuleNameArg = Args.getLastArg(options::OPT_fmodule_name_EQ);
     return ModuleNameArg ? ModuleNameArg->getValue() : "";
   }();
-  InputInfo HeaderModuleInput(types::TY_CXXModule, ModuleName, ModuleName);
+  InputInfo HeaderModuleInput(Inputs[0].getType(), ModuleName, ModuleName);
 
   const InputInfo &Input =
       IsHeaderModulePrecompile ? HeaderModuleInput : Inputs[0];
@@ -3272,8 +3271,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       // This is the primary input.
     } else if (IsHeaderModulePrecompile &&
                types::getPrecompiledType(I.getType()) == types::TY_PCH) {
-      types::ID Expected =
-          types::lookupHeaderTypeForSourceType(Inputs[0].getType());
+      types::ID Expected = HeaderModuleInput.getType();
       if (I.getType() != Expected) {
         D.Diag(diag::err_drv_module_header_wrong_kind)
             << I.getFilename() << types::getTypeName(I.getType())

@@ -45,7 +45,7 @@ static const uint32_t uuid_bytes = 20;
 static const size_t module_size = 5602;
 
 static FileSpec GetDummyRemotePath() {
-  FileSpec fs("/", false, FileSpec::Style::posix);
+  FileSpec fs("/", FileSpec::Style::posix);
   fs.AppendPathComponent(dummy_remote_dir);
   fs.AppendPathComponent(module_name);
   return fs;
@@ -82,12 +82,13 @@ void ModuleCacheTest::TearDownTestCase() {
 
 static void VerifyDiskState(const FileSpec &cache_dir, const char *hostname) {
   FileSpec uuid_view = GetUuidView(cache_dir);
-  EXPECT_TRUE(uuid_view.Exists()) << "uuid_view is: " << uuid_view.GetCString();
+  EXPECT_TRUE(FileSystem::Instance().Exists(uuid_view))
+      << "uuid_view is: " << uuid_view.GetCString();
   EXPECT_EQ(module_size, FileSystem::Instance().GetByteSize(uuid_view));
 
   FileSpec sysroot_view = GetSysrootView(cache_dir, hostname);
-  EXPECT_TRUE(sysroot_view.Exists()) << "sysroot_view is: "
-                                     << sysroot_view.GetCString();
+  EXPECT_TRUE(FileSystem::Instance().Exists(sysroot_view))
+      << "sysroot_view is: " << sysroot_view.GetCString();
   EXPECT_EQ(module_size, FileSystem::Instance().GetByteSize(sysroot_view));
 }
 

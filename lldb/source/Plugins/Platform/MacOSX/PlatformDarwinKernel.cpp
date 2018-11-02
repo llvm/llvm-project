@@ -377,12 +377,15 @@ void PlatformDarwinKernel::CollectKextAndKernelDirectories() {
   GetUserSpecifiedDirectoriesToSearch();
 
   // Add simple directory /Applications/Xcode.app/Contents/Developer/../Symbols
-  FileSpec possible_dir(developer_dir + "/../Symbols", true);
+  FileSpec possible_dir(developer_dir + "/../Symbols");
+  FileSystem::Instance().Resolve(possible_dir);
   if (llvm::sys::fs::is_directory(possible_dir.GetPath()))
     m_search_directories.push_back(possible_dir);
 
   // Add simple directory of the current working directory
-  m_search_directories_no_recursing.push_back(FileSpec(".", true));
+  FileSpec cwd(".");
+  FileSystem::Instance().Resolve(cwd);
+  m_search_directories_no_recursing.push_back(cwd);
 }
 
 void PlatformDarwinKernel::GetUserSpecifiedDirectoriesToSearch() {
@@ -392,7 +395,7 @@ void PlatformDarwinKernel::GetUserSpecifiedDirectoriesToSearch() {
   const uint32_t user_dirs_count = user_dirs.GetSize();
   for (uint32_t i = 0; i < user_dirs_count; i++) {
     FileSpec dir = user_dirs.GetFileSpecAtIndex(i);
-    dir.ResolvePath();
+    FileSystem::Instance().Resolve(dir);
     if (llvm::sys::fs::is_directory(dir.GetPath())) {
       m_search_directories.push_back(dir);
     }
@@ -408,14 +411,14 @@ void PlatformDarwinKernel::AddRootSubdirsToSearchPaths(
                                         // /AppleInternal/Developer/KDKs/*.kdk/...
       nullptr};
   for (int i = 0; subdirs[i] != nullptr; i++) {
-    FileSpec testdir(dir + subdirs[i], true);
+    FileSpec testdir(dir + subdirs[i]);
+    FileSystem::Instance().Resolve(testdir);
     if (llvm::sys::fs::is_directory(testdir.GetPath()))
       thisp->m_search_directories.push_back(testdir);
   }
 
   // Look for kernel binaries in the top level directory, without any recursion
-  thisp->m_search_directories_no_recursing.push_back(
-      FileSpec(dir + "/", false));
+  thisp->m_search_directories_no_recursing.push_back(FileSpec(dir + "/"));
 }
 
 // Given a directory path dir, look for any subdirs named *.kdk and *.sdk
@@ -437,7 +440,7 @@ PlatformDarwinKernel::FindKDKandSDKDirectoriesInDirectory(
   static ConstString g_kdk_suffix = ConstString(".kdk");
 
   PlatformDarwinKernel *thisp = (PlatformDarwinKernel *)baton;
-  FileSpec file_spec(path, false);
+  FileSpec file_spec(path);
   if (ft == llvm::sys::fs::file_type::directory_file &&
       (file_spec.GetFileNameExtension() == g_sdk_suffix ||
        file_spec.GetFileNameExtension() == g_kdk_suffix)) {
@@ -499,7 +502,7 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
   static ConstString g_dsym_suffix = ConstString(".dSYM");
   static ConstString g_bundle_suffix = ConstString("Bundle");
 
-  FileSpec file_spec(path, false);
+  FileSpec file_spec(path);
   ConstString file_spec_extension = file_spec.GetFileNameExtension();
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
@@ -537,12 +540,12 @@ PlatformDarwinKernel::GetKernelsAndKextsInDirectoryHelper(
              file_spec_extension == g_kext_suffix) {
     AddKextToMap(thisp, file_spec);
     // Look to see if there is a PlugIns subdir with more kexts
-    FileSpec contents_plugins(file_spec.GetPath() + "/Contents/PlugIns", false);
+    FileSpec contents_plugins(file_spec.GetPath() + "/Contents/PlugIns");
     std::string search_here_too;
     if (llvm::sys::fs::is_directory(contents_plugins.GetPath())) {
       search_here_too = contents_plugins.GetPath();
     } else {
-      FileSpec plugins(file_spec.GetPath() + "/PlugIns", false);
+      FileSpec plugins(file_spec.GetPath() + "/PlugIns");
       if (llvm::sys::fs::is_directory(plugins.GetPath())) {
         search_here_too = plugins.GetPath();
       }
@@ -628,7 +631,8 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
       kext_bundle_filepath.GetPath() + "/Contents/MacOS/";
   deep_bundle_str += executable_name.AsCString();
   deep_bundle_str += ".dSYM";
-  dsym_fspec.SetFile(deep_bundle_str, true, FileSpec::Style::native);
+  dsym_fspec.SetFile(deep_bundle_str, FileSpec::Style::native);
+  FileSystem::Instance().Resolve(dsym_fspec);
   if (llvm::sys::fs::is_directory(dsym_fspec.GetPath())) {
     return true;
   }
@@ -638,7 +642,8 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   std::string shallow_bundle_str = kext_bundle_filepath.GetPath() + "/";
   shallow_bundle_str += executable_name.AsCString();
   shallow_bundle_str += ".dSYM";
-  dsym_fspec.SetFile(shallow_bundle_str, true, FileSpec::Style::native);
+  dsym_fspec.SetFile(shallow_bundle_str, FileSpec::Style::native);
+  FileSystem::Instance().Resolve(dsym_fspec);
   if (llvm::sys::fs::is_directory(dsym_fspec.GetPath())) {
     return true;
   }
@@ -719,7 +724,7 @@ Status PlatformDarwinKernel::GetSharedModule(
       module_spec.GetUUID().IsValid()) {
     // First try all kernel binaries that have a dSYM next to them
     for (auto possible_kernel : m_kernel_binaries_with_dsyms) {
-      if (possible_kernel.Exists()) {
+      if (FileSystem::Instance().Exists(possible_kernel)) {
         ModuleSpec kern_spec(possible_kernel);
         kern_spec.GetUUID() = module_spec.GetUUID();
         ModuleSP module_sp(new Module(kern_spec));
@@ -755,7 +760,7 @@ Status PlatformDarwinKernel::GetSharedModule(
 
     // Next try all kernel binaries that don't have a dSYM
     for (auto possible_kernel : m_kernel_binaries_without_dsyms) {
-      if (possible_kernel.Exists()) {
+      if (FileSystem::Instance().Exists(possible_kernel)) {
         ModuleSpec kern_spec(possible_kernel);
         kern_spec.GetUUID() = module_spec.GetUUID();
         ModuleSP module_sp(new Module(kern_spec));
@@ -796,7 +801,7 @@ PlatformDarwinKernel::SearchForExecutablesRecursively(const std::string &dir) {
       break;
     if (llvm::sys::fs::is_regular_file(*status) &&
         llvm::sys::fs::can_execute(it->path()))
-      executables.emplace_back(it->path(), false);
+      executables.emplace_back(it->path());
   }
   return executables;
 }
@@ -806,7 +811,7 @@ Status PlatformDarwinKernel::ExamineKextForMatchingUUID(
     const ArchSpec &arch, ModuleSP &exe_module_sp) {
   for (const auto &exe_file :
        SearchForExecutablesRecursively(kext_bundle_path.GetPath())) {
-    if (exe_file.Exists()) {
+    if (FileSystem::Instance().Exists(exe_file)) {
       ModuleSpec exe_spec(exe_file);
       exe_spec.GetUUID() = uuid;
       if (!uuid.IsValid()) {

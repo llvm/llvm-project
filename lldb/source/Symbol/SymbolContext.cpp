@@ -999,7 +999,7 @@ bool SymbolContextSpecifier::AddSpecification(const char *spec_string,
     break;
   case eModuleSpecified: {
     // See if we can find the Module, if so stick it in the SymbolContext.
-    FileSpec module_file_spec(spec_string, false);
+    FileSpec module_file_spec(spec_string);
     ModuleSpec module_spec(module_file_spec);
     lldb::ModuleSP module_sp(
         m_target_sp->GetImages().FindFirstModule(module_spec));
@@ -1013,7 +1013,7 @@ bool SymbolContextSpecifier::AddSpecification(const char *spec_string,
     // CompUnits can't necessarily be resolved here, since an inlined function
     // might show up in a number of CompUnits.  Instead we just convert to a
     // FileSpec and store it away.
-    m_file_spec_ap.reset(new FileSpec(spec_string, false));
+    m_file_spec_ap.reset(new FileSpec(spec_string));
     m_type |= eFileSpecified;
     break;
   case eLineStartSpecified:
@@ -1068,7 +1068,7 @@ bool SymbolContextSpecifier::SymbolContextMatches(SymbolContext &sc) {
         if (m_module_sp.get() != sc.module_sp.get())
           return false;
       } else {
-        FileSpec module_file_spec(m_module_spec, false);
+        FileSpec module_file_spec(m_module_spec);
         if (!FileSpec::Equal(module_file_spec, sc.module_sp->GetFileSpec(),
                              false))
           return false;

@@ -633,8 +633,9 @@ void IRPromoter::TruncateSinks(SmallPtrSetImpl<Value*> &Sources,
     LLVM_DEBUG(dbgs() << "ARM CGP: Creating " << *TruncTy << " Trunc for "
                << *V << "\n");
     Builder.SetInsertPoint(cast<Instruction>(V));
-    auto *Trunc = cast<Instruction>(Builder.CreateTrunc(V, TruncTy));
-    NewInsts.insert(Trunc);
+    auto *Trunc = dyn_cast<Instruction>(Builder.CreateTrunc(V, TruncTy));
+    if (Trunc)
+      NewInsts.insert(Trunc);
     return Trunc;
   };
 

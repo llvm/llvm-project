@@ -419,8 +419,6 @@ public:
   //------------------------------------------------------------------
   uint32_t GetPermissions(Status &error) const;
 
-  static uint32_t GetPermissions(const FileSpec &file_spec, Status &error);
-
   //------------------------------------------------------------------
   /// Return true if this file is interactive.
   ///

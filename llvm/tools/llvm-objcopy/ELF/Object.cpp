@@ -332,6 +332,8 @@ uint16_t Symbol::getShndx() const {
   llvm_unreachable("Symbol with invalid ShndxType encountered");
 }
 
+bool Symbol::isCommon() const { return getShndx() == SHN_COMMON; }
+
 void SymbolTableSection::assignIndices() {
   uint32_t Index = 0;
   for (auto &Sym : Symbols)

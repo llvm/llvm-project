@@ -21,7 +21,7 @@ CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data,
                          const char *pathname, const lldb::user_id_t cu_sym_id,
                          lldb::LanguageType language,
                          lldb_private::LazyBool is_optimized)
-    : ModuleChild(module_sp), FileSpec(pathname, false), UserID(cu_sym_id),
+    : ModuleChild(module_sp), FileSpec(pathname), UserID(cu_sym_id),
       m_user_data(user_data), m_language(language), m_flags(0),
       m_support_files(), m_line_table_ap(), m_variables(),
       m_is_optimized(is_optimized) {

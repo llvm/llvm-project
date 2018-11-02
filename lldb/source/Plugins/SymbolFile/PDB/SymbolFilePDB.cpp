@@ -363,7 +363,7 @@ bool SymbolFilePDB::ParseCompileUnitSupportFiles(
     return false;
 
   while (auto file = files->getNext()) {
-    FileSpec spec(file->getFileName(), false, FileSpec::Style::windows);
+    FileSpec spec(file->getFileName(), FileSpec::Style::windows);
     support_files.AppendIfUnique(spec);
   }
 
@@ -768,7 +768,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
         std::string source_file = compiland->getSourceFileFullPath();
         if (source_file.empty())
           continue;
-        FileSpec this_spec(source_file, false, FileSpec::Style::windows);
+        FileSpec this_spec(source_file, FileSpec::Style::windows);
         bool need_full_match = !file_spec.GetDirectory().IsEmpty();
         if (FileSpec::Compare(file_spec, this_spec, need_full_match) != 0)
           continue;
@@ -929,7 +929,7 @@ VariableSP SymbolFilePDB::ParseVariableForPDBData(
         uint32_t src_file_id = first_line->getSourceFileId();
         auto src_file = m_session_up->getSourceFileById(src_file_id);
         if (src_file) {
-          FileSpec spec(src_file->getFileName(), /*resolve_path*/ false);
+          FileSpec spec(src_file->getFileName());
           decl.SetFile(spec);
           decl.SetColumn(first_line->getColumnNumber());
           decl.SetLine(first_line->getLineNumber());

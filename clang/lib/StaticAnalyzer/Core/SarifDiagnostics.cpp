@@ -232,6 +232,43 @@ static json::Object createResult(const PathDiagnostic &Diag,
       {"ruleId", Diag.getCheckName()}};
 }
 
+static StringRef getRuleDescription(StringRef CheckName) {
+  return llvm::StringSwitch<StringRef>(CheckName)
+#define GET_CHECKERS
+#define CHECKER(FULLNAME, CLASS, CXXFILE, HELPTEXT, GROUPINDEX, HIDDEN)        \
+  .Case(FULLNAME, HELPTEXT)
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER
+#undef GET_CHECKERS
+      ;
+}
+
+static json::Object createRule(const PathDiagnostic &Diag) {
+  StringRef CheckName = Diag.getCheckName();
+  return json::Object{
+      {"fullDescription", createMessage(getRuleDescription(CheckName))},
+      {"name", createMessage(CheckName)}};
+}
+
+static json::Object createRules(std::vector<const PathDiagnostic *> &Diags) {
+  json::Object Rules;
+  llvm::StringSet<> Seen;
+
+  llvm::for_each(Diags, [&](const PathDiagnostic *D) {
+    StringRef RuleID = D->getCheckName();
+    std::pair<llvm::StringSet<>::iterator, bool> P = Seen.insert(RuleID);
+    if (P.second)
+      Rules[RuleID] = createRule(*D);
+  });
+
+  return Rules;
+}
+
+static json::Object
+createResources(std::vector<const PathDiagnostic *> &Diags) {
+  return json::Object{{"rules", createRules(Diags)}};
+}
+
 static json::Object createRun(std::vector<const PathDiagnostic *> &Diags) {
   json::Array Results;
   json::Object Files;
@@ -241,6 +278,7 @@ static json::Object createRun(std::vector<const PathDiagnostic *> &Diags) {
   });
 
   return json::Object{{"tool", createTool()},
+                      {"resources", createResources(Diags)},
                       {"results", std::move(Results)},
                       {"files", std::move(Files)}};
 }

@@ -55,10 +55,11 @@
 #include <unistd.h>
 
 #include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Process.h"
+#include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/CleanUp.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -105,7 +106,7 @@ bool Host::GetBundleDirectory(const FileSpec &file,
     if (file.GetPath(path, sizeof(path))) {
       CFCBundle bundle(path);
       if (bundle.GetPath(path, sizeof(path))) {
-        bundle_directory.SetFile(path, false, FileSpec::Style::native);
+        bundle_directory.SetFile(path, FileSpec::Style::native);
         return true;
       }
     }
@@ -125,7 +126,7 @@ bool Host::ResolveExecutableInBundle(FileSpec &file) {
       if (url.get()) {
         if (::CFURLGetFileSystemRepresentation(url.get(), YES, (UInt8 *)path,
                                                sizeof(path))) {
-          file.SetFile(path, false, FileSpec::Style::native);
+          file.SetFile(path, FileSpec::Style::native);
           return true;
         }
       }
@@ -225,7 +226,7 @@ LaunchInNewTerminalWithAppleScript(const char *exe_path,
 
   darwin_debug_file_spec.GetFilename().SetCString("darwin-debug");
 
-  if (!darwin_debug_file_spec.Exists()) {
+  if (!FileSystem::Instance().Exists(darwin_debug_file_spec)) {
     error.SetErrorStringWithFormat(
         "the 'darwin-debug' executable doesn't exists at '%s'",
         darwin_debug_file_spec.GetPath().c_str());
@@ -541,8 +542,7 @@ static bool GetMacOSXProcessArgs(const ProcessInstanceInfoMatch *match_info_ptr,
            triple_arch == llvm::Triple::x86_64);
       const char *cstr = data.GetCStr(&offset);
       if (cstr) {
-        process_info.GetExecutableFile().SetFile(cstr, false,
-                                                 FileSpec::Style::native);
+        process_info.GetExecutableFile().SetFile(cstr, FileSpec::Style::native);
 
         if (match_info_ptr == NULL ||
             NameMatches(
@@ -1278,11 +1278,11 @@ Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   llvm::sys::fs::file_status stats;
   status(exe_spec.GetPath(), stats);
   if (!exists(stats)) {
-    exe_spec.ResolvePath();
+    FileSystem::Instance().Resolve(exe_spec);
     status(exe_spec.GetPath(), stats);
   }
   if (!exists(stats)) {
-    exe_spec.ResolveExecutableLocation();
+    FileSystem::Instance().ResolveExecutableLocation(exe_spec);
     status(exe_spec.GetPath(), stats);
   }
   if (!exists(stats)) {
@@ -1337,7 +1337,7 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
       return error;
     }
     expand_tool_spec.AppendPathComponent("lldb-argdumper");
-    if (!expand_tool_spec.Exists()) {
+    if (!FileSystem::Instance().Exists(expand_tool_spec)) {
       error.SetErrorStringWithFormat(
           "could not find the lldb-argdumper tool: %s",
           expand_tool_spec.GetPath().c_str());
@@ -1354,14 +1354,14 @@ Status Host::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
     int status;
     std::string output;
     FileSpec cwd(launch_info.GetWorkingDirectory());
-    if (!cwd.Exists()) {
+    if (!FileSystem::Instance().Exists(cwd)) {
       char *wd = getcwd(nullptr, 0);
       if (wd == nullptr) {
         error.SetErrorStringWithFormat(
             "cwd does not exist; cannot launch with shell argument expansion");
         return error;
       } else {
-        FileSpec working_dir(wd, false);
+        FileSpec working_dir(wd);
         free(wd);
         launch_info.SetWorkingDirectory(working_dir);
       }

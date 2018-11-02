@@ -11,8 +11,9 @@
 #include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #endif
 
-#include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBError.h"
+#include "lldb/API/SBHostOS.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostNativeThread.h"
@@ -86,7 +87,8 @@ SBFileSpec SBHostOS::GetUserHomeDirectory() {
 
   llvm::SmallString<64> home_dir_path;
   llvm::sys::path::home_directory(home_dir_path);
-  FileSpec homedir(home_dir_path.c_str(), true);
+  FileSpec homedir(home_dir_path.c_str());
+  FileSystem::Instance().Resolve(homedir);
 
   sb_fspec.SetFileSpec(homedir);
   return sb_fspec;

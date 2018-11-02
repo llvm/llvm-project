@@ -99,8 +99,11 @@ void WebAssemblyTargetAsmStreamer::emitIndirectFunctionType(
   OS << '\n';
 }
 
-void WebAssemblyTargetAsmStreamer::emitGlobalImport(StringRef name) {
-  OS << "\t.import_global\t" << name << '\n';
+void WebAssemblyTargetAsmStreamer::emitGlobalType(MCSymbolWasm *Sym) {
+  OS << "\t.globaltype\t" << Sym->getName() << ", " <<
+        WebAssembly::TypeToString(
+          static_cast<wasm::ValType>(Sym->getGlobalType().Type)) <<
+        '\n';
 }
 
 void WebAssemblyTargetAsmStreamer::emitImportModule(MCSymbolWasm *Sym,
@@ -152,8 +155,8 @@ void WebAssemblyTargetWasmStreamer::emitIndirectFunctionType(
   Symbol->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
 }
 
-void WebAssemblyTargetWasmStreamer::emitGlobalImport(StringRef name) {
-  llvm_unreachable(".global_import is not needed for direct wasm output");
+void WebAssemblyTargetWasmStreamer::emitGlobalType(MCSymbolWasm *Sym) {
+  // Not needed.
 }
 
 void WebAssemblyTargetWasmStreamer::emitImportModule(MCSymbolWasm *Sym,

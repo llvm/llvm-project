@@ -720,6 +720,7 @@ void CommentASTToXMLConverter::visitBlockCommandComment(
   case CommandTraits::KCI_version:
   case CommandTraits::KCI_warning:
     ParagraphKind = C->getCommandName(Traits);
+    break;
   default:
     break;
   }

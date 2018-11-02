@@ -105,6 +105,7 @@ bool VLIWResourceModel::isResourceAvailable(SUnit *SU, bool IsTop) {
   default:
     if (!ResourcesModel->canReserveResources(*SU->getInstr()))
       return false;
+    break;
   case TargetOpcode::EXTRACT_SUBREG:
   case TargetOpcode::INSERT_SUBREG:
   case TargetOpcode::SUBREG_TO_REG:

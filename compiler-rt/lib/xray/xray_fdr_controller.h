@@ -310,11 +310,12 @@ public:
         TSC - LastFunctionEntryTSC < CycleThreshold)
       return rewindRecords(FuncId, TSC, CPU);
 
+    auto Delta = TSC - LatestTSC;
     LatestTSC = TSC;
     UndoableFunctionEnters = 0;
     UndoableTailExits = 0;
     return W.writeFunction(FDRLogWriter::FunctionRecordKind::Exit, mask(FuncId),
-                           TSC - LatestTSC);
+                           Delta);
   }
 
   bool customEvent(uint64_t TSC, uint16_t CPU, const void *Event,

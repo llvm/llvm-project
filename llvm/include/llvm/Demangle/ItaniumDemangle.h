@@ -2807,6 +2807,7 @@ AbstractManglingParser<Derived, Alloc>::parseCtorDtorName(Node *&SoFar,
       SoFar = make<ExpandedSpecialSubstitution>(SSK);
       if (!SoFar)
         return nullptr;
+      break;
     default:
       break;
     }

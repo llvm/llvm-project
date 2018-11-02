@@ -426,7 +426,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
         }
       }
     }
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   case CXXConstructExpr::CK_NonVirtualBase:
     // In C++17, classes with non-virtual bases may be aggregates, so they would
     // be initialized as aggregates without a constructor call, so we may have
@@ -445,7 +445,7 @@ void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
       CallOpts.IsCtorOrDtorWithImproperlyModeledTargetRegion = true;
       break;
     }
-    // FALLTHROUGH
+    LLVM_FALLTHROUGH;
   case CXXConstructExpr::CK_Delegating: {
     const CXXMethodDecl *CurCtor = cast<CXXMethodDecl>(LCtx->getDecl());
     Loc ThisPtr = getSValBuilder().getCXXThis(CurCtor,

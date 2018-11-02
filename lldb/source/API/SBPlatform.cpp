@@ -244,9 +244,9 @@ bool SBPlatform::SetWorkingDirectory(const char *path) {
   PlatformSP platform_sp(GetSP());
   if (platform_sp) {
     if (path)
-      platform_sp->SetWorkingDirectory(FileSpec{path, false});
+      platform_sp->SetWorkingDirectory(FileSpec(path));
     else
-      platform_sp->SetWorkingDirectory(FileSpec{});
+      platform_sp->SetWorkingDirectory(FileSpec());
     return true;
   }
   return false;
@@ -406,7 +406,7 @@ SBError SBPlatform::Run(SBPlatformShellCommand &shell_command) {
       if (working_dir)
         shell_command.SetWorkingDirectory(working_dir);
     }
-    return platform_sp->RunShellCommand(command, FileSpec{working_dir, false},
+    return platform_sp->RunShellCommand(command, FileSpec(working_dir),
                                         &shell_command.m_opaque_ptr->m_status,
                                         &shell_command.m_opaque_ptr->m_signo,
                                         &shell_command.m_opaque_ptr->m_output,
@@ -449,7 +449,7 @@ SBError SBPlatform::MakeDirectory(const char *path, uint32_t file_permissions) {
   PlatformSP platform_sp(GetSP());
   if (platform_sp) {
     sb_error.ref() =
-        platform_sp->MakeDirectory(FileSpec{path, false}, file_permissions);
+        platform_sp->MakeDirectory(FileSpec(path), file_permissions);
   } else {
     sb_error.SetErrorString("invalid platform");
   }
@@ -460,7 +460,7 @@ uint32_t SBPlatform::GetFilePermissions(const char *path) {
   PlatformSP platform_sp(GetSP());
   if (platform_sp) {
     uint32_t file_permissions = 0;
-    platform_sp->GetFilePermissions(FileSpec{path, false}, file_permissions);
+    platform_sp->GetFilePermissions(FileSpec(path), file_permissions);
     return file_permissions;
   }
   return 0;
@@ -471,8 +471,8 @@ SBError SBPlatform::SetFilePermissions(const char *path,
   SBError sb_error;
   PlatformSP platform_sp(GetSP());
   if (platform_sp) {
-    sb_error.ref() = platform_sp->SetFilePermissions(FileSpec{path, false},
-                                                     file_permissions);
+    sb_error.ref() =
+        platform_sp->SetFilePermissions(FileSpec(path), file_permissions);
   } else {
     sb_error.SetErrorString("invalid platform");
   }

@@ -7,7 +7,7 @@
 // CHECK-PRECOMPILE-SAME: -fno-implicit-modules
 // CHECK-PRECOMPILE-SAME: -fmodule-name=foobar
 // CHECK-PRECOMPILE-SAME: -o {{.*}}.pcm
-// CHECK-PRECOMPILE-SAME: -x c++
+// CHECK-PRECOMPILE-SAME: -x c++-header
 // CHECK-PRECOMPILE-SAME: header1.h
 // CHECK-PRECOMPILE-SAME: header2.h
 // CHECK-PRECOMPILE-SAME: header3.h
@@ -18,7 +18,7 @@
 // CHECK-SYNTAX-ONLY-SAME: -fno-implicit-modules
 // CHECK-SYNTAX-ONLY-SAME: -fmodule-name=foobar
 // CHECK-SYNTAX-ONLY-NOT: -o{{ }}
-// CHECK-SYNTAX-ONLY-SAME: -x c++
+// CHECK-SYNTAX-ONLY-SAME: -x c++-header
 // CHECK-SYNTAX-ONLY-SAME: header1.h
 // CHECK-SYNTAX-ONLY-SAME: header2.h
 // CHECK-SYNTAX-ONLY-SAME: header3.h

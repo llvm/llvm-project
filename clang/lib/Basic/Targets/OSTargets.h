@@ -397,7 +397,7 @@ public:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       this->HasFloat128 = true;
-      // FALLTHROUGH
+      LLVM_FALLTHROUGH;
     default:
       this->MCountName = "__mcount";
       break;

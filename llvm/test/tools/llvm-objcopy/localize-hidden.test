@@ -55,6 +55,12 @@ Symbols:
       Value:    0x2006
       Size:     2
       Visibility: STV_HIDDEN
+    - Name:     hiddenGlobalCommon
+      Type:     STT_OBJECT
+      Index:    SHN_COMMON
+      Value:    0x2006
+      Size:     2
+      Visibility: STV_HIDDEN
     - Name:     undefGlobal
       Type:     STT_FUNC
       Size:     8
@@ -140,6 +146,17 @@ Symbols:
 #CHECK-NEXT:    Type: Function
 #CHECK-NEXT:    Other: 0
 #CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: hiddenGlobalCommon
+#CHECK-NEXT:    Value: 0x2006
+#CHECK-NEXT:    Size: 2
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Object
+#CHECK-NEXT:    Other [
+#CHECK-NEXT:      STV_HIDDEN
+#CHECK-NEXT:    ]
+#CHECK-NEXT:    Section: Common (0xF
 #CHECK-NEXT:  }
 #CHECK-NEXT:  Symbol {
 #CHECK-NEXT:    Name: undefGlobal

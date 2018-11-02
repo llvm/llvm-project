@@ -225,6 +225,7 @@ public:
     case 'Y':
       if ((++I != E) && ((*I == '0') || (*I == 'z')))
         return "xmm0";
+      break;
     default:
       break;
     }

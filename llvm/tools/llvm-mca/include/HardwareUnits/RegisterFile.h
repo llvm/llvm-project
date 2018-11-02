@@ -173,6 +173,11 @@ class RegisterFile : public HardwareUnit {
   void freePhysRegs(const RegisterRenamingInfo &Entry,
                     MutableArrayRef<unsigned> FreedPhysRegs);
 
+  // Collects writes that are in a RAW dependency with RS.
+  // This method is called from `addRegisterRead()`.
+  void collectWrites(const ReadState &RS,
+                     SmallVectorImpl<WriteRef> &Writes) const;
+
   // Create an instance of RegisterMappingTracker for every register file
   // specified by the processor model.
   // If no register file is specified, then this method creates a default
@@ -189,6 +194,10 @@ public:
   // No physical regiser is allocated if this write is from a zero-idiom.
   void addRegisterWrite(WriteRef Write, MutableArrayRef<unsigned> UsedPhysRegs);
 
+  // Collect writes that are in a data dependency with RS, and update RS
+  // internal state.
+  void addRegisterRead(ReadState &RS, SmallVectorImpl<WriteRef> &Writes) const;
+
   // Removes write \param WS from the register mappings.
   // Physical registers may be released to reflect this update.
   // No registers are released if this write is from a zero-idiom.
@@ -200,7 +209,7 @@ public:
   // If RS is a read from a zero register, and WS is eliminated, then
   // `WS.WritesZero` is also set, so that method addRegisterWrite() would not
   // reserve a physical register for it.
-  bool tryEliminateMove(WriteState &WS, const ReadState &RS);
+  bool tryEliminateMove(WriteState &WS, ReadState &RS);
 
   // Checks if there are enough physical registers in the register files.
   // Returns a "response mask" where each bit represents the response from a
@@ -212,7 +221,8 @@ public:
   // Current implementation can simulate up to 32 register files (including the
   // special register file at index #0).
   unsigned isAvailable(ArrayRef<unsigned> Regs) const;
-  void collectWrites(SmallVectorImpl<WriteRef> &Writes, unsigned RegID) const;
+
+  // Returns the number of PRFs implemented by this processor.
   unsigned getNumRegisterFiles() const { return RegisterFiles.size(); }
 
   // Notify each PRF that a new cycle just started.

@@ -1,0 +1,301 @@
+{
+  "$schema": "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-10-10",
+  "runs": [
+    {
+      "files": {
+        "file:sarif-multi-diagnostic-test.c": {
+          "fileLocation": {
+            "uri": "file:sarif-multi-diagnostic-test.c"
+          },
+          "length": 665,
+          "mimeType": "text/plain",
+          "roles": [
+            "resultFile"
+          ]
+        }
+      },
+      "resources": {
+        "rules": {
+          "core.CallAndMessage": {
+            "fullDescription": {
+              "text": "Check for logical errors for function calls and Objective-C message expressions (e.g., uninitialized arguments, null function pointers)"
+            },
+            "name": {
+              "text": "core.CallAndMessage"
+            }
+          },
+          "core.DivideZero": {
+            "fullDescription": {
+              "text": "Check for division by zero"
+            },
+            "name": {
+              "text": "core.DivideZero"
+            }
+          },
+          "debug.TaintTest": {
+            "fullDescription": {
+              "text": "Mark tainted symbols as such."
+            },
+            "name": {
+              "text": "debug.TaintTest"
+            }
+          }
+        }
+      },
+      "results": [
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Calling 'f'"
+                        },
+                        "physicalLocation": {
+                          "fileLocation": {
+                            "uri": "file:sarif-multi-diagnostic-test.c"
+                          },
+                          "region": {
+                            "endColumn": 5,
+                            "endLine": 24,
+                            "startColumn": 3,
+                            "startLine": 24
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "tainted"
+                        },
+                        "physicalLocation": {
+                          "fileLocation": {
+                            "uri": "file:sarif-multi-diagnostic-test.c"
+                          },
+                          "region": {
+                            "endColumn": 17,
+                            "endLine": 9,
+                            "startColumn": 11,
+                            "startLine": 9
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "locations": [
+            {
+              "physicalLocation": {
+                "fileLocation": {
+                  "uri": "file:sarif-multi-diagnostic-test.c"
+                },
+                "region": {
+                  "endColumn": 17,
+                  "endLine": 9,
+                  "startColumn": 11,
+                  "startLine": 9
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "tainted"
+          },
+          "ruleId": "debug.TaintTest"
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Calling 'g'"
+                        },
+                        "physicalLocation": {
+                          "fileLocation": {
+                            "uri": "file:sarif-multi-diagnostic-test.c"
+                          },
+                          "region": {
+                            "endColumn": 5,
+                            "endLine": 25,
+                            "startColumn": 3,
+                            "startLine": 25
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "'fp' declared without an initial value"
+                        },
+                        "physicalLocation": {
+                          "fileLocation": {
+                            "uri": "file:sarif-multi-diagnostic-test.c"
+                          },
+                          "region": {
+                            "endColumn": 10,
+                            "endLine": 13,
+                            "startColumn": 3,
+                            "startLine": 13
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Called function pointer is an uninitialized pointer value"
+                        },
+                        "physicalLocation": {
+                          "fileLocation": {
+                            "uri": "file:sarif-multi-diagnostic-test.c"
+                          },
+                          "region": {
+                            "endColumn": 8,
+                            "endLine": 14,
+                            "startColumn": 3,
+                            "startLine": 14
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "locations": [
+            {
+              "physicalLocation": {
+                "fileLocation": {
+                  "uri": "file:sarif-multi-diagnostic-test.c"
+                },
+                "region": {
+                  "endColumn": 8,
+                  "endLine": 14,
+                  "startColumn": 3,
+                  "startLine": 14
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Called function pointer is an uninitialized pointer value"
+          },
+          "ruleId": "core.CallAndMessage"
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "importance": "important",
+                      "location": {
+                        "message": {
+                          "text": "Assuming 'i' is equal to 0"
+                        },
+                        "physicalLocation": {
+                          "fileLocation": {
+                            "uri": "file:sarif-multi-diagnostic-test.c"
+                          },
+                          "region": {
+                            "endColumn": 12,
+                            "endLine": 18,
+                            "startColumn": 7,
+                            "startLine": 18
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "unimportant",
+                      "location": {
+                        "message": {
+                          "text": "Taking true branch"
+                        },
+                        "physicalLocation": {
+                          "fileLocation": {
+                            "uri": "file:sarif-multi-diagnostic-test.c"
+                          },
+                          "region": {
+                            "endColumn": 3,
+                            "endLine": 18,
+                            "startColumn": 3,
+                            "startLine": 18
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "importance": "essential",
+                      "location": {
+                        "message": {
+                          "text": "Division by zero"
+                        },
+                        "physicalLocation": {
+                          "fileLocation": {
+                            "uri": "file:sarif-multi-diagnostic-test.c"
+                          },
+                          "region": {
+                            "endColumn": 14,
+                            "endLine": 19,
+                            "startColumn": 14,
+                            "startLine": 19
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "locations": [
+            {
+              "physicalLocation": {
+                "fileLocation": {
+                  "uri": "file:sarif-multi-diagnostic-test.c"
+                },
+                "region": {
+                  "endColumn": 14,
+                  "endLine": 19,
+                  "startColumn": 14,
+                  "startLine": 19
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Division by zero"
+          },
+          "ruleId": "core.DivideZero"
+        }
+      ],
+      "tool": {
+        "fullName": "clang static analyzer",
+        "language": "en-US",
+        "name": "clang",
+        "version": "clang version 8.0.0 (trunk 345822) (llvm/trunk 345824)"
+      }
+    }
+  ],
+  "version": "2.0.0-csd.2.beta.2018-10-10"
+}

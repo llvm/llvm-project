@@ -73,7 +73,7 @@ TargetInfo *elf::getTarget() {
     case ELF64BEKind:
       return getMipsTargetInfo<ELF64BE>();
     default:
-      fatal("unsupported MIPS target");
+      llvm_unreachable("unsupported MIPS target");
     }
   case EM_PPC:
     return getPPCTargetInfo();
@@ -88,7 +88,7 @@ TargetInfo *elf::getTarget() {
       return getX32TargetInfo();
     return getX86_64TargetInfo();
   }
-  fatal("unknown target machine");
+  llvm_unreachable("unknown target machine");
 }
 
 template <class ELFT> static ErrorPlace getErrPlace(const uint8_t *Loc) {

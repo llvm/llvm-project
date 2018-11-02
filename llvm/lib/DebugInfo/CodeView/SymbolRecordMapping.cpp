@@ -529,6 +529,7 @@ EncodedFramePtrReg codeview::encodeFramePtrReg(RegisterId Reg, CPUType CPU) {
     default:
       break;
     }
+    break;
   case CPUType::X64:
     switch (Reg) {
     case RegisterId::RSP:
@@ -540,6 +541,7 @@ EncodedFramePtrReg codeview::encodeFramePtrReg(RegisterId Reg, CPUType CPU) {
     default:
       break;
     }
+    break;
   }
   return EncodedFramePtrReg::None;
 }

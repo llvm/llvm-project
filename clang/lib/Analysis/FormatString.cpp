@@ -689,7 +689,7 @@ bool FormatSpecifier::hasValidLengthModifier(const TargetInfo &Target) const {
             break;
         }
       }
-      // Fall through.
+      LLVM_FALLTHROUGH;
     case LengthModifier::AsChar:
     case LengthModifier::AsLongLong:
     case LengthModifier::AsQuad:

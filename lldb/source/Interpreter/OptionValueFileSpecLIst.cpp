@@ -69,7 +69,7 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
             count);
       } else {
         for (size_t i = 1; i < argc; ++i, ++idx) {
-          FileSpec file(args.GetArgumentAtIndex(i), false);
+          FileSpec file(args.GetArgumentAtIndex(i));
           if (idx < count)
             m_current_value.Replace(idx, file);
           else
@@ -91,7 +91,7 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
     if (argc > 0) {
       m_value_was_set = true;
       for (size_t i = 0; i < argc; ++i) {
-        FileSpec file(args.GetArgumentAtIndex(i), false);
+        FileSpec file(args.GetArgumentAtIndex(i));
         m_current_value.Append(file);
       }
       NotifyValueChanged();
@@ -115,7 +115,7 @@ Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
         if (op == eVarSetOperationInsertAfter)
           ++idx;
         for (size_t i = 1; i < argc; ++i, ++idx) {
-          FileSpec file(args.GetArgumentAtIndex(i), false);
+          FileSpec file(args.GetArgumentAtIndex(i));
           m_current_value.Insert(idx, file);
         }
         NotifyValueChanged();
