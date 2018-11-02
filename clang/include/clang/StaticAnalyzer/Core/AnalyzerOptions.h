@@ -175,6 +175,7 @@ public:
 
   unsigned ShowCheckerHelp : 1;
   unsigned ShowEnabledCheckerList : 1;
+  unsigned ShowConfigOptionsList : 1;
   unsigned AnalyzeAll : 1;
   unsigned AnalyzerDisplayProgress : 1;
   unsigned AnalyzeNestedBlocks : 1;
