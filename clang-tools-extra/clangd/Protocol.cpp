@@ -669,6 +669,7 @@ bool fromJSON(const json::Value &Params, InitializationOptions &Opts) {
 
   fromJSON(Params, Opts.ConfigSettings);
   O.map("compilationDatabasePath", Opts.compilationDatabasePath);
+  O.map("fallbackFlags", Opts.fallbackFlags);
   return true;
 }
 
