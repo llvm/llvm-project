@@ -566,7 +566,7 @@ int baz(int f, double &a) {
   // CHECK: br i1 [[IS_SPMD]], label
   // CHECK: br label
   // CHECK: [[SIZE:%.+]] = select i1 [[IS_TTD]], i{{64|32}} 4, i{{64|32}} 128
-  // CHECK: [[PTR:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{64|32}} [[SIZE]], i16 0)
+  // CHECK: [[PTR:%.+]] = call i8* @__kmpc_data_sharing_coalesced_push_stack(i{{64|32}} [[SIZE]], i16 0)
   // CHECK: [[REC_ADDR:%.+]] = bitcast i8* [[PTR]] to [[GLOBAL_ST:%.+]]*
   // CHECK: br label
   // CHECK: [[ITEMS:%.+]] = phi [[GLOBAL_ST]]* [ null, {{.+}} ], [ [[REC_ADDR]], {{.+}} ]

@@ -132,7 +132,7 @@ TEST(FDRRecordPrinterTest, WriteFunctionRecordEnter) {
   FunctionRecord R(RecordTypes::ENTER, 1, 2);
   ASSERT_FALSE(errorToBool(R.apply(P)));
   OS.flush();
-  EXPECT_THAT(Data, Eq("<Function Enter: #1 delta = +1>"));
+  EXPECT_THAT(Data, Eq("<Function Enter: #1 delta = +2>"));
 }
 
 TEST(FDRRecordPrinterTest, WriteFunctionRecordExit) {
@@ -142,7 +142,7 @@ TEST(FDRRecordPrinterTest, WriteFunctionRecordExit) {
   FunctionRecord R(RecordTypes::EXIT, 1, 2);
   ASSERT_FALSE(errorToBool(R.apply(P)));
   OS.flush();
-  EXPECT_THAT(Data, Eq("<Function Exit: #1 delta = +1>"));
+  EXPECT_THAT(Data, Eq("<Function Exit: #1 delta = +2>"));
 }
 
 TEST(FDRRecordPrinterTest, WriteFunctionRecordTailExit) {
@@ -152,7 +152,7 @@ TEST(FDRRecordPrinterTest, WriteFunctionRecordTailExit) {
   FunctionRecord R(RecordTypes::TAIL_EXIT, 1, 2);
   ASSERT_FALSE(errorToBool(R.apply(P)));
   OS.flush();
-  EXPECT_THAT(Data, Eq("<Function Tail Exit: #1 delta = +1>"));
+  EXPECT_THAT(Data, Eq("<Function Tail Exit: #1 delta = +2>"));
 }
 
 TEST(FDRRecordPrinterTest, WriteFunctionRecordEnterArg) {
@@ -162,7 +162,7 @@ TEST(FDRRecordPrinterTest, WriteFunctionRecordEnterArg) {
   FunctionRecord R(RecordTypes::ENTER_ARG, 1, 2);
   ASSERT_FALSE(errorToBool(R.apply(P)));
   OS.flush();
-  EXPECT_THAT(Data, Eq("<Function Enter With Arg: #1 delta = +1>"));
+  EXPECT_THAT(Data, Eq("<Function Enter With Arg: #1 delta = +2>"));
 }
 
 } // namespace

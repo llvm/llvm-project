@@ -41,43 +41,12 @@ Optional<tooling::CompileCommand>
 DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
   if (auto CDB = getCDBForFile(File)) {
     auto Candidates = CDB->getCompileCommands(File);
-    if (!Candidates.empty()) {
-      addExtraFlags(File, Candidates.front());
+    if (!Candidates.empty())
       return std::move(Candidates.front());
-    }
   } else {
     log("Failed to find compilation database for {0}", File);
   }
   return None;
-}
-
-tooling::CompileCommand
-DirectoryBasedGlobalCompilationDatabase::getFallbackCommand(
-    PathRef File) const {
-  auto C = GlobalCompilationDatabase::getFallbackCommand(File);
-  addExtraFlags(File, C);
-  return C;
-}
-
-void DirectoryBasedGlobalCompilationDatabase::setExtraFlagsForFile(
-    PathRef File, std::vector<std::string> ExtraFlags) {
-  std::lock_guard<std::mutex> Lock(Mutex);
-  ExtraFlagsForFile[File] = std::move(ExtraFlags);
-}
-
-void DirectoryBasedGlobalCompilationDatabase::addExtraFlags(
-    PathRef File, tooling::CompileCommand &C) const {
-  std::lock_guard<std::mutex> Lock(Mutex);
-
-  auto It = ExtraFlagsForFile.find(File);
-  if (It == ExtraFlagsForFile.end())
-    return;
-
-  auto &Args = C.CommandLine;
-  assert(Args.size() >= 2 && "Expected at least [compiler, source file]");
-  // The last argument of CommandLine is the name of the input file.
-  // Add ExtraFlags before it.
-  Args.insert(Args.end() - 1, It->second.begin(), It->second.end());
 }
 
 tooling::CompilationDatabase *
@@ -111,22 +80,32 @@ DirectoryBasedGlobalCompilationDatabase::getCDBForFile(PathRef File) const {
 }
 
 Optional<tooling::CompileCommand>
-InMemoryCompilationDb::getCompileCommand(PathRef File) const {
-  std::lock_guard<std::mutex> Lock(Mutex);
-  auto It = Commands.find(File);
-  if (It == Commands.end())
-    return None;
-  return It->second;
+OverlayCDB::getCompileCommand(PathRef File) const {
+  {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    auto It = Commands.find(File);
+    if (It != Commands.end())
+      return It->second;
+  }
+  return Base ? Base->getCompileCommand(File) : None;
 }
 
-bool InMemoryCompilationDb::setCompilationCommandForFile(
-    PathRef File, tooling::CompileCommand CompilationCommand) {
+tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
+  auto Cmd = Base ? Base->getFallbackCommand(File)
+                  : GlobalCompilationDatabase::getFallbackCommand(File);
+  std::lock_guard<std::mutex> Lock(Mutex);
+  Cmd.CommandLine.insert(Cmd.CommandLine.end(), FallbackFlags.begin(),
+                         FallbackFlags.end());
+  return Cmd;
+}
+
+void OverlayCDB::setCompileCommand(
+    PathRef File, llvm::Optional<tooling::CompileCommand> Cmd) {
   std::unique_lock<std::mutex> Lock(Mutex);
-  auto ItInserted = Commands.insert(std::make_pair(File, CompilationCommand));
-  if (ItInserted.second)
-    return true;
-  ItInserted.first->setValue(std::move(CompilationCommand));
-  return false;
+  if (Cmd)
+    Commands[File] = std::move(*Cmd);
+  else
+    Commands.erase(File);
 }
 
 } // namespace clangd

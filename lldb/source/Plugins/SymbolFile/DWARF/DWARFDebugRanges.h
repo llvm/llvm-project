@@ -22,15 +22,17 @@ public:
   virtual void Extract(SymbolFileDWARF *dwarf2Data) = 0;
   virtual bool FindRanges(const DWARFUnit *cu, dw_offset_t debug_ranges_offset,
                           DWARFRangeList &range_list) const = 0;
+  virtual uint64_t GetOffset(size_t Index) const = 0;
 };
 
 class DWARFDebugRanges final : public DWARFDebugRangesBase {
 public:
   DWARFDebugRanges();
 
-  virtual void Extract(SymbolFileDWARF *dwarf2Data) override;
-  virtual bool FindRanges(const DWARFUnit *cu, dw_offset_t debug_ranges_offset,
-                          DWARFRangeList &range_list) const override;
+  void Extract(SymbolFileDWARF *dwarf2Data) override;
+  bool FindRanges(const DWARFUnit *cu, dw_offset_t debug_ranges_offset,
+                  DWARFRangeList &range_list) const override;
+  uint64_t GetOffset(size_t Index) const override;
 
   static void Dump(lldb_private::Stream &s,
                    const lldb_private::DWARFDataExtractor &debug_ranges_data,
@@ -58,6 +60,7 @@ public:
   void Extract(SymbolFileDWARF *dwarf2Data) override;
   bool FindRanges(const DWARFUnit *cu, dw_offset_t debug_ranges_offset,
                   DWARFRangeList &range_list) const override;
+  uint64_t GetOffset(size_t Index) const override;
 
 protected:
   bool ExtractRangeList(const lldb_private::DWARFDataExtractor &data,

@@ -8175,6 +8175,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_atomic_default_mem_order:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -8700,6 +8701,7 @@ static OpenMPDirectiveKind getOpenMPCaptureRegionForClause(
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_atomic_default_mem_order:
     llvm_unreachable("Unexpected OpenMP clause.");
   }
   return CaptureRegion;
@@ -8968,6 +8970,11 @@ OMPClause *Sema::ActOnOpenMPSimpleClause(
         static_cast<OpenMPProcBindClauseKind>(Argument), ArgumentLoc, StartLoc,
         LParenLoc, EndLoc);
     break;
+  case OMPC_atomic_default_mem_order:
+    Res = ActOnOpenMPAtomicDefaultMemOrderClause(
+        static_cast<OpenMPAtomicDefaultMemOrderClauseKind>(Argument),
+        ArgumentLoc, StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_if:
   case OMPC_final:
   case OMPC_num_threads:
@@ -9093,6 +9100,21 @@ OMPClause *Sema::ActOnOpenMPProcBindClause(OpenMPProcBindClauseKind Kind,
       OMPProcBindClause(Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
 }
 
+OMPClause *Sema::ActOnOpenMPAtomicDefaultMemOrderClause(
+    OpenMPAtomicDefaultMemOrderClauseKind Kind, SourceLocation KindKwLoc,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc) {
+  if (Kind == OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown) {
+    Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
+        << getListOfPossibleValues(
+               OMPC_atomic_default_mem_order, /*First=*/0,
+               /*Last=*/OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown)
+        << getOpenMPClauseName(OMPC_atomic_default_mem_order);
+    return nullptr;
+  }
+  return new (Context) OMPAtomicDefaultMemOrderClause(Kind, KindKwLoc, StartLoc,
+                                                      LParenLoc, EndLoc);
+}
+
 OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
     OpenMPClauseKind Kind, ArrayRef<unsigned> Argument, Expr *Expr,
     SourceLocation StartLoc, SourceLocation LParenLoc,
@@ -9181,6 +9203,7 @@ OMPClause *Sema::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_atomic_default_mem_order:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -9387,6 +9410,7 @@ OMPClause *Sema::ActOnOpenMPClause(OpenMPClauseKind Kind,
   case OMPC_from:
   case OMPC_use_device_ptr:
   case OMPC_is_device_ptr:
+  case OMPC_atomic_default_mem_order:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;
@@ -9579,6 +9603,7 @@ OMPClause *Sema::ActOnOpenMPVarListClause(
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_atomic_default_mem_order:
     llvm_unreachable("Clause is not allowed.");
   }
   return Res;

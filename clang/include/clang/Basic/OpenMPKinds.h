@@ -120,6 +120,14 @@ enum OpenMPDefaultmapClauseModifier {
   OMPC_DEFAULTMAP_MODIFIER_last
 };
 
+/// OpenMP attributes for 'atomic_default_mem_order' clause.
+enum OpenMPAtomicDefaultMemOrderClauseKind {
+#define OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(Name)  \
+  OMPC_ATOMIC_DEFAULT_MEM_ORDER_##Name,
+#include "clang/Basic/OpenMPKinds.def"
+  OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown
+};
+
 /// Scheduling data for loop-based OpenMP directives.
 struct OpenMPScheduleTy final {
   OpenMPScheduleClauseKind Schedule = OMPC_SCHEDULE_unknown;

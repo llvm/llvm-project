@@ -165,6 +165,8 @@ protected:
                                    // file)
   std::unique_ptr<SymbolFile> m_sym_file_ap; // A single symbol file. Subclasses
                                              // can add more of these if needed.
+  Symtab *m_symtab; // Save a symtab once to not pass it through `AddSymbols` of
+                    // the symbol file each time when it is needed
 
 private:
   //------------------------------------------------------------------

@@ -651,7 +651,6 @@ Symtab *ObjectFilePECOFF::GetSymtab() {
           symbols[i].SetDebug(true);
         }
       }
-      m_symtab_ap->CalculateSymbolSizes();
     }
   }
   return m_symtab_ap.get();

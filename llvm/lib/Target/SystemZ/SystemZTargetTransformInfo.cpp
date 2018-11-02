@@ -979,6 +979,11 @@ int SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   return  NumOps;
 }
 
+// The generic implementation of getInterleavedMemoryOpCost() is based on
+// adding costs of the memory operations plus all the extracts and inserts
+// needed for using / defining the vector operands. The SystemZ version does
+// roughly the same but bases the computations on vector permutations
+// instead.
 int SystemZTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
                                                unsigned Factor,
                                                ArrayRef<unsigned> Indices,
@@ -993,22 +998,49 @@ int SystemZTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   assert(isa<VectorType>(VecTy) &&
          "Expect a vector type for interleaved memory op");
 
-  int NumWideParts = getNumVectorRegs(VecTy);
+  // Return the ceiling of dividing A by B.
+  auto ceil = [](unsigned A, unsigned B) { return (A + B - 1) / B; };
 
-  // How many source vectors are handled to produce a vectorized operand?
-  int NumElsPerVector = (VecTy->getVectorNumElements() / NumWideParts);
-  int NumSrcParts =
-    ((NumWideParts > NumElsPerVector) ? NumElsPerVector : NumWideParts);
+  unsigned NumElts = VecTy->getVectorNumElements();
+  assert(Factor > 1 && NumElts % Factor == 0 && "Invalid interleave factor");
+  unsigned VF = NumElts / Factor;
+  unsigned NumEltsPerVecReg = (128U / getScalarSizeInBits(VecTy));
+  unsigned NumVectorMemOps = getNumVectorRegs(VecTy);
+  unsigned NumPermutes = 0;
 
-  // A Load group may have gaps.
-  unsigned NumOperands =
-    ((Opcode == Instruction::Load) ? Indices.size() : Factor);
+  if (Opcode == Instruction::Load) {
+    // Loading interleave groups may have gaps, which may mean fewer
+    // loads. Find out how many vectors will be loaded in total, and in how
+    // many of them each value will be in.
+    BitVector UsedInsts(NumVectorMemOps, false);
+    std::vector<BitVector> ValueVecs(Factor, BitVector(NumVectorMemOps, false));
+    for (unsigned Index : Indices)
+      for (unsigned Elt = 0; Elt < VF; ++Elt) {
+        unsigned Vec = (Index + Elt * Factor) / NumEltsPerVecReg;
+        UsedInsts.set(Vec);
+        ValueVecs[Index].set(Vec);
+      }
+    NumVectorMemOps = UsedInsts.count();
 
-  // Each needed permute takes two vectors as input.
-  if (NumSrcParts > 1)
-    NumSrcParts--;
-  int NumPermutes = NumSrcParts * NumOperands;
+    for (unsigned Index : Indices) {
+      // Estimate that each loaded source vector containing this Index
+      // requires one operation, except that vperm can handle two input
+      // registers first time for each dst vector.
+      unsigned NumSrcVecs = ValueVecs[Index].count();
+      unsigned NumDstVecs = ceil(VF * getScalarSizeInBits(VecTy), 128U);
+      assert (NumSrcVecs >= NumDstVecs && "Expected at least as many sources");
+      NumPermutes += std::max(1U, NumSrcVecs - NumDstVecs);
+    }
+  } else {
+    // Estimate the permutes for each stored vector as the smaller of the
+    // number of elements and the number of source vectors. Subtract one per
+    // dst vector for vperm (S.A.).
+    unsigned NumSrcVecs = std::min(NumEltsPerVecReg, Factor);
+    unsigned NumDstVecs = NumVectorMemOps;
+    assert (NumSrcVecs > 1 && "Expected at least two source vectors.");
+    NumPermutes += (NumDstVecs * NumSrcVecs) - NumDstVecs;
+  }
 
   // Cost of load/store operations and the permutations needed.
-  return NumWideParts + NumPermutes;
+  return NumVectorMemOps + NumPermutes;
 }

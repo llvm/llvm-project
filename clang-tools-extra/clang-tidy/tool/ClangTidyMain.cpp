@@ -422,9 +422,9 @@ static int clangTidyMain(int argc, const char **argv) {
 
   ClangTidyContext Context(std::move(OwningOptionsProvider),
                            AllowEnablingAnalyzerAlphaCheckers);
-  runClangTidy(Context, OptionsParser.getCompilations(), PathList, BaseFS,
-               EnableCheckProfile, ProfilePrefix);
-  ArrayRef<ClangTidyError> Errors = Context.getErrors();
+  std::vector<ClangTidyError> Errors =
+      runClangTidy(Context, OptionsParser.getCompilations(), PathList, BaseFS,
+                   EnableCheckProfile, ProfilePrefix);
   bool FoundErrors = llvm::find_if(Errors, [](const ClangTidyError &E) {
                        return E.DiagLevel == ClangTidyError::Error;
                      }) != Errors.end();
@@ -434,7 +434,7 @@ static int clangTidyMain(int argc, const char **argv) {
   unsigned WErrorCount = 0;
 
   // -fix-errors implies -fix.
-  handleErrors(Context, (FixErrors || Fix) && !DisableFixes, WErrorCount,
+  handleErrors(Errors, Context, (FixErrors || Fix) && !DisableFixes, WErrorCount,
                BaseFS);
 
   if (!ExportFixes.empty() && !Errors.empty()) {
