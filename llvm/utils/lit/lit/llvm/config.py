@@ -55,6 +55,8 @@ class LLVMConfig(object):
             features.add('system-windows')
         elif platform.system() == "Linux":
             features.add('system-linux')
+        elif platform.system() in ['FreeBSD']:
+            config.available_features.add('system-freebsd')
 
         # Native compilation: host arch == default triple arch
         # Both of these values should probably be in every site config (e.g. as

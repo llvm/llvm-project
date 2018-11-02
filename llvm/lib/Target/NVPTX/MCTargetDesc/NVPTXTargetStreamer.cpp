@@ -25,6 +25,12 @@ NVPTXTargetStreamer::NVPTXTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
 NVPTXTargetStreamer::~NVPTXTargetStreamer() = default;
 
+void NVPTXTargetStreamer::outputDwarfFileDirectives() {
+  for (const std::string &S : DwarfFiles)
+    getStreamer().EmitRawText(S.data());
+  DwarfFiles.clear();
+}
+
 void NVPTXTargetStreamer::emitDwarfFileDirective(StringRef Directive) {
   DwarfFiles.emplace_back(Directive);
 }
@@ -82,9 +88,7 @@ void NVPTXTargetStreamer::changeSection(const MCSection *CurSection,
     OS << "//\t}\n";
   if (isDwarfSection(FI, Section)) {
     // Emit DWARF .file directives in the outermost scope.
-    for (const std::string &S : DwarfFiles)
-      getStreamer().EmitRawText(S.data());
-    DwarfFiles.clear();
+    outputDwarfFileDirectives();
     OS << "//\t.section";
     Section->PrintSwitchToSection(*getStreamer().getContext().getAsmInfo(),
                                   FI->getTargetTriple(), OS, SubSection);
