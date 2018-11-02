@@ -245,6 +245,13 @@ public:
                          lldb::StackFrameSP frame_sp) override;
 
   StructuredData::GenericSP
+  CreateFrameRecognizer(const char *class_name) override;
+
+  lldb::ValueObjectListSP
+  GetRecognizedArguments(const StructuredData::ObjectSP &implementor,
+                         lldb::StackFrameSP frame_sp) override;
+
+  StructuredData::GenericSP
   OSPlugin_CreatePluginObject(const char *class_name,
                               lldb::ProcessSP process_sp) override;
 
