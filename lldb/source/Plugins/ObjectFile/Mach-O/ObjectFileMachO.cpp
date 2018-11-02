@@ -2183,7 +2183,7 @@ size_t ObjectFileMachO::ParseSymtab() {
       uint32_t name_offset = cmd_offset + m_data.GetU32(&offset);
       const char *path = m_data.PeekCStr(name_offset);
       if (path) {
-        FileSpec file_spec(path, false);
+        FileSpec file_spec(path);
         // Strip the path if there is @rpath, @executable, etc so we just use
         // the basename
         if (path[0] == '@')
@@ -2636,7 +2636,7 @@ size_t ObjectFileMachO::ParseSymtab() {
       // shared cache UUID in the development or non-development shared caches
       // on disk.
       if (process_shared_cache_uuid.IsValid()) {
-        if (dsc_development_filespec.Exists()) {
+        if (FileSystem::Instance().Exists(dsc_development_filespec)) {
           UUID dsc_development_uuid = GetSharedCacheUUID(
               dsc_development_filespec, byte_order, addr_byte_size);
           if (dsc_development_uuid.IsValid() &&
@@ -2645,7 +2645,8 @@ size_t ObjectFileMachO::ParseSymtab() {
             dsc_uuid = dsc_development_uuid;
           }
         }
-        if (!dsc_uuid.IsValid() && dsc_nondevelopment_filespec.Exists()) {
+        if (!dsc_uuid.IsValid() &&
+            FileSystem::Instance().Exists(dsc_nondevelopment_filespec)) {
           UUID dsc_nondevelopment_uuid = GetSharedCacheUUID(
               dsc_nondevelopment_filespec, byte_order, addr_byte_size);
           if (dsc_nondevelopment_uuid.IsValid() &&
@@ -2658,8 +2659,8 @@ size_t ObjectFileMachO::ParseSymtab() {
 
       // Failing a UUID match, prefer the development dyld_shared cache if both
       // are present.
-      if (!dsc_filespec.Exists()) {
-        if (dsc_development_filespec.Exists()) {
+      if (!FileSystem::Instance().Exists(dsc_filespec)) {
+        if (FileSystem::Instance().Exists(dsc_development_filespec)) {
           dsc_filespec = dsc_development_filespec;
         } else {
           dsc_filespec = dsc_nondevelopment_filespec;
@@ -3067,11 +3068,11 @@ size_t ObjectFileMachO::ParseSymtab() {
                                   // file so you end up with a path that looks
                                   // like "/tmp/src//tmp/src/"
                                   FileSpec so_dir(so_path, false);
-                                  if (!so_dir.Exists()) {
+                                  if (!FileSystem::Instance().Exists(so_dir)) {
                                     so_dir.SetFile(
                                         &full_so_path[double_slash_pos + 1],
                                         false);
-                                    if (so_dir.Exists()) {
+                                    if (FileSystem::Instance().Exists(so_dir)) {
                                       // Trim off the incorrect path
                                       full_so_path.erase(0,
                                                          double_slash_pos + 1);
@@ -4016,11 +4017,11 @@ size_t ObjectFileMachO::ParseSymtab() {
                     // string in the DW_AT_comp_dir, and the second is the
                     // directory for the source file so you end up with a path
                     // that looks like "/tmp/src//tmp/src/"
-                    FileSpec so_dir(so_path, false);
-                    if (!so_dir.Exists()) {
-                      so_dir.SetFile(&full_so_path[double_slash_pos + 1], false,
+                    FileSpec so_dir(so_path);
+                    if (!FileSystem::Instance().Exists(so_dir)) {
+                      so_dir.SetFile(&full_so_path[double_slash_pos + 1],
                                      FileSpec::Style::native);
-                      if (so_dir.Exists()) {
+                      if (FileSystem::Instance().Exists(so_dir)) {
                         // Trim off the incorrect path
                         full_so_path.erase(0, double_slash_pos + 1);
                       }
@@ -5083,9 +5084,6 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
     std::vector<std::string> rpath_paths;
     std::vector<std::string> rpath_relative_paths;
     std::vector<std::string> at_exec_relative_paths;
-    const bool resolve_path = false; // Don't resolve the dependent file paths
-                                     // since they may not reside on this
-                                     // system
     uint32_t i;
     for (i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
@@ -5114,7 +5112,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
                 at_exec_relative_paths.push_back(path 
                                                  + strlen("@executable_path"));
             } else {
-              FileSpec file_spec(path, resolve_path);
+              FileSpec file_spec(path);
               if (files.AppendIfUnique(file_spec))
                 count++;
             }
@@ -5129,8 +5127,8 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
     }
 
     FileSpec this_file_spec(m_file);
-    this_file_spec.ResolvePath();
-    
+    FileSystem::Instance().Resolve(this_file_spec);
+
     if (!rpath_paths.empty()) {
       // Fixup all LC_RPATH values to be absolute paths
       std::string loader_path("@loader_path");
@@ -5151,8 +5149,10 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
           path += rpath_relative_path;
           // It is OK to resolve this path because we must find a file on disk
           // for us to accept it anyway if it is rpath relative.
-          FileSpec file_spec(path, true);
-          if (file_spec.Exists() && files.AppendIfUnique(file_spec)) {
+          FileSpec file_spec(path);
+          FileSystem::Instance().Resolve(file_spec);
+          if (FileSystem::Instance().Exists(file_spec) &&
+              files.AppendIfUnique(file_spec)) {
             count++;
             break;
           }
@@ -5169,7 +5169,8 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
       for (const auto &at_exec_relative_path : at_exec_relative_paths) {
         FileSpec file_spec = 
             exec_dir.CopyByAppendingPathComponent(at_exec_relative_path);
-        if (file_spec.Exists() && files.AppendIfUnique(file_spec))
+        if (FileSystem::Instance().Exists(file_spec) &&
+            files.AppendIfUnique(file_spec))
           count++;
       }
     }

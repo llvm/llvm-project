@@ -779,7 +779,7 @@ bool ScopDetection::isValidIntrinsicInst(IntrinsicInst &II,
       if (!isValidAccess(&II, AF, BP, Context))
         return false;
     }
-  // Fall through
+    LLVM_FALLTHROUGH;
   case Intrinsic::memset:
     AF = SE.getSCEVAtScope(cast<MemIntrinsic>(II).getDest(), L);
     if (!AF->isZero()) {

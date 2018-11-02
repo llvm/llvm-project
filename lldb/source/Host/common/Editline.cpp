@@ -13,6 +13,7 @@
 
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Editline.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -172,7 +173,8 @@ private:
 
   const char *GetHistoryFilePath() {
     if (m_path.empty() && m_history && !m_prefix.empty()) {
-      FileSpec parent_path{"~/.lldb", true};
+      FileSpec parent_path("~/.lldb");
+      FileSystem::Instance().Resolve(parent_path);
       char history_path[PATH_MAX];
       if (!llvm::sys::fs::create_directory(parent_path.GetPath())) {
         snprintf(history_path, sizeof(history_path), "~/.lldb/%s-history",
@@ -181,7 +183,9 @@ private:
         snprintf(history_path, sizeof(history_path), "~/%s-widehistory",
                  m_prefix.c_str());
       }
-      m_path = FileSpec(history_path, true).GetPath();
+      auto file_spec = FileSpec(history_path);
+      FileSystem::Instance().Resolve(file_spec);
+      m_path = file_spec.GetPath();
     }
     if (m_path.empty())
       return NULL;

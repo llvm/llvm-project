@@ -1175,7 +1175,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
   case tok::kw__Alignof:   // unary-expression: '_Alignof' '(' type-name ')'
     if (!getLangOpts().C11)
       Diag(Tok, diag::ext_c11_alignment) << Tok.getName();
-    // fallthrough
+    LLVM_FALLTHROUGH;
   case tok::kw_alignof:    // unary-expression: 'alignof' '(' type-id ')'
   case tok::kw___alignof:  // unary-expression: '__alignof' unary-expression
                            // unary-expression: '__alignof' '(' type-name ')'
@@ -1241,7 +1241,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
                                            Ty.get(), nullptr);
       break;
     }
-    // Fall through
+    LLVM_FALLTHROUGH;
 
   case tok::annot_decltype:
   case tok::kw_char:
@@ -1447,7 +1447,7 @@ ExprResult Parser::ParseCastExpression(bool isUnaryExpression,
       Res = ParseObjCMessageExpression();
       break;
     }
-    // FALL THROUGH.
+    LLVM_FALLTHROUGH;
   default:
     NotCastExpr = true;
     return ExprError();

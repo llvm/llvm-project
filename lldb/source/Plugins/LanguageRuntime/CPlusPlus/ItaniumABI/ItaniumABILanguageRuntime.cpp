@@ -483,8 +483,8 @@ lldb::SearchFilterSP ItaniumABILanguageRuntime::CreateExceptionSearchFilter() {
     // Limit the number of modules that are searched for these breakpoints for
     // Apple binaries.
     FileSpecList filter_modules;
-    filter_modules.Append(FileSpec("libc++abi.dylib", false));
-    filter_modules.Append(FileSpec("libSystem.B.dylib", false));
+    filter_modules.Append(FileSpec("libc++abi.dylib"));
+    filter_modules.Append(FileSpec("libSystem.B.dylib"));
     return target.GetSearchFilterForModuleList(&filter_modules);
   } else {
     return LanguageRuntime::CreateExceptionSearchFilter();

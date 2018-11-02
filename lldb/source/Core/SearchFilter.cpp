@@ -524,7 +524,7 @@ SearchFilterSP SearchFilterByModule::CreateFromStructuredData(
     error.SetErrorString("SFBM::CFSD: filter module item not a string.");
     return nullptr;
   }
-  FileSpec module_spec(module, false);
+  FileSpec module_spec(module);
 
   return std::make_shared<SearchFilterByModule>(target.shared_from_this(),
                                                 module_spec);
@@ -680,7 +680,7 @@ SearchFilterSP SearchFilterByModuleList::CreateFromStructuredData(
             "SFBM::CFSD: filter module item %zu not a string.", i);
         return nullptr;
       }
-      modules.Append(FileSpec(module, false));
+      modules.Append(FileSpec(module));
     }
   }
 
@@ -745,7 +745,7 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
             "SFBM::CFSD: filter module item %zu not a string.", i);
         return result_sp;
       }
-      modules.Append(FileSpec(module, false));
+      modules.Append(FileSpec(module));
     }
   }
 
@@ -767,7 +767,7 @@ lldb::SearchFilterSP SearchFilterByModuleListAndCU::CreateFromStructuredData(
           "SFBM::CFSD: filter cu item %zu not a string.", i);
       return nullptr;
     }
-    cus.Append(FileSpec(cu, false));
+    cus.Append(FileSpec(cu));
   }
 
   return std::make_shared<SearchFilterByModuleListAndCU>(

@@ -1248,8 +1248,12 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #  define _LIBCPP_DIAGNOSE_ERROR(...)
 #endif
 
-#if __has_attribute(fallthough) || _GNUC_VER >= 700
 // Use a function like macro to imply that it must be followed by a semicolon
+#if __cplusplus > 201402L && __has_cpp_attribute(fallthrough)
+#  define _LIBCPP_FALLTHROUGH() [[fallthrough]]
+#elif __has_cpp_attribute(clang::fallthrough)
+#  define _LIBCPP_FALLTHROUGH() [[clang::fallthrough]]
+#elif __has_attribute(fallthough) || _GNUC_VER >= 700
 #  define _LIBCPP_FALLTHROUGH() __attribute__((__fallthrough__))
 #else
 #  define _LIBCPP_FALLTHROUGH() ((void)0)

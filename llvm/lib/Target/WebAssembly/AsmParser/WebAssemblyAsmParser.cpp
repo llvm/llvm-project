@@ -303,7 +303,7 @@ public:
     // assembly, so we add a dummy one explicitly (since we have no control
     // over signature tables here, we assume these will be regenerated when
     // the wasm module is generated).
-    if (BaseName == "block" || BaseName == "loop") {
+    if (BaseName == "block" || BaseName == "loop" || BaseName == "try") {
       Operands.push_back(make_unique<WebAssemblyOperand>(
           WebAssemblyOperand::Integer, NameLoc, NameLoc,
           WebAssemblyOperand::IntOp{-1}));

@@ -66,7 +66,7 @@ std::string REPL::GetSourcePath() {
     tmpdir_file_spec.GetFilename().SetCString(file_basename.AsCString());
     m_repl_source_path = tmpdir_file_spec.GetPath();
   } else {
-    tmpdir_file_spec = FileSpec("/tmp", false);
+    tmpdir_file_spec = FileSpec("/tmp");
     tmpdir_file_spec.AppendPathComponent(file_basename.AsCString());
   }
 
@@ -429,7 +429,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
 
             // Now set the default file and line to the REPL source file
             m_target.GetSourceManager().SetDefaultFileAndLine(
-                FileSpec(m_repl_source_path, false), new_default_line);
+                FileSpec(m_repl_source_path), new_default_line);
           }
           static_cast<IOHandlerEditline &>(io_handler)
               .SetBaseLineNumber(m_code.GetSize() + 1);

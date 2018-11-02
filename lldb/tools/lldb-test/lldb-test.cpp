@@ -285,7 +285,7 @@ std::string opts::breakpoint::substitute(StringRef Cmd) {
         OS << sys::path::parent_path(breakpoint::CommandFile);
         break;
       }
-      // fall through
+      LLVM_FALLTHROUGH;
     default:
       size_t pos = Cmd.find('%');
       OS << Cmd.substr(0, pos);
@@ -347,7 +347,7 @@ Error opts::symbols::findFunctions(lldb_private::Module &Module) {
   if (!File.empty()) {
     assert(Line != 0);
 
-    FileSpec src_file(File, false);
+    FileSpec src_file(File);
     size_t cu_count = Module.GetNumCompileUnits();
     for (size_t i = 0; i < cu_count; i++) {
       lldb::CompUnitSP cu_sp = Module.GetCompileUnitAtIndex(i);
@@ -397,7 +397,7 @@ Error opts::symbols::findBlocks(lldb_private::Module &Module) {
 
   SymbolContextList List;
 
-  FileSpec src_file(File, false);
+  FileSpec src_file(File);
   size_t cu_count = Module.GetNumCompileUnits();
   for (size_t i = 0; i < cu_count; i++) {
     lldb::CompUnitSP cu_sp = Module.GetCompileUnitAtIndex(i);
@@ -695,8 +695,8 @@ int opts::symbols::dumpSymbols(Debugger &Dbg) {
   int HadErrors = 0;
   for (const auto &File : InputFilenames) {
     outs() << "Module: " << File << "\n";
-    ModuleSpec Spec{FileSpec(File, false)};
-    Spec.GetSymbolFileSpec().SetFile(File, false, FileSpec::Style::native);
+    ModuleSpec Spec{FileSpec(File)};
+    Spec.GetSymbolFileSpec().SetFile(File, FileSpec::Style::native);
 
     auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
     SymbolVendor *Vendor = ModulePtr->GetSymbolVendor();
@@ -721,7 +721,7 @@ static int dumpObjectFiles(Debugger &Dbg) {
 
   int HadErrors = 0;
   for (const auto &File : opts::object::InputFilenames) {
-    ModuleSpec Spec{FileSpec(File, false)};
+    ModuleSpec Spec{FileSpec(File)};
 
     auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
     // Fetch symbol vendor before we get the section list to give the symbol

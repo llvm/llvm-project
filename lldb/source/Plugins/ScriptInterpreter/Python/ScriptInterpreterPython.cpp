@@ -2017,7 +2017,7 @@ ScriptInterpreterPython::ScriptedBreakpointResolverSearchDepth(
 StructuredData::ObjectSP
 ScriptInterpreterPython::LoadPluginModule(const FileSpec &file_spec,
                                           lldb_private::Status &error) {
-  if (!file_spec.Exists()) {
+  if (!FileSystem::Instance().Exists(file_spec)) {
     error.SetErrorString("no such file");
     return StructuredData::ObjectSP();
   }
@@ -2749,7 +2749,8 @@ bool ScriptInterpreterPython::LoadScriptingModule(
   lldb::DebuggerSP debugger_sp = m_interpreter.GetDebugger().shared_from_this();
 
   {
-    FileSpec target_file(pathname, true);
+    FileSpec target_file(pathname);
+    FileSystem::Instance().Resolve(target_file);
     std::string basename(target_file.GetFilename().GetCString());
 
     StreamString command_stream;

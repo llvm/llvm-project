@@ -226,7 +226,8 @@ SBProcess SBTarget::LoadCore(const char *core_file, lldb::SBError &error) {
   SBProcess sb_process;
   TargetSP target_sp(GetSP());
   if (target_sp) {
-    FileSpec filespec(core_file, true);
+    FileSpec filespec(core_file);
+    FileSystem::Instance().Resolve(filespec);
     ProcessSP process_sp(target_sp->CreateProcess(
         target_sp->GetDebugger().GetListener(), "", &filespec));
     if (process_sp) {
@@ -325,10 +326,9 @@ SBProcess SBTarget::Launch(SBListener &listener, char const **argv,
     if (getenv("LLDB_LAUNCH_FLAG_DISABLE_STDIO"))
       launch_flags |= eLaunchFlagDisableSTDIO;
 
-    ProcessLaunchInfo launch_info(
-        FileSpec{stdin_path, false}, FileSpec{stdout_path, false},
-        FileSpec{stderr_path, false}, FileSpec{working_directory, false},
-        launch_flags);
+    ProcessLaunchInfo launch_info(FileSpec(stdin_path), FileSpec(stdout_path),
+                                  FileSpec(stderr_path),
+                                  FileSpec(working_directory), launch_flags);
 
     Module *exe_module = target_sp->GetExecutableModulePointer();
     if (exe_module)
@@ -516,8 +516,7 @@ lldb::SBProcess SBTarget::AttachToProcessWithName(
 
   if (name && target_sp) {
     ProcessAttachInfo attach_info;
-    attach_info.GetExecutableFile().SetFile(name, false,
-                                            FileSpec::Style::native);
+    attach_info.GetExecutableFile().SetFile(name, FileSpec::Style::native);
     attach_info.SetWaitForLaunch(wait_for);
     if (listener.IsValid())
       attach_info.SetListener(listener.GetSP());
@@ -766,7 +765,7 @@ SBBreakpoint SBTarget::BreakpointCreateByName(const char *symbol_name,
     const lldb::addr_t offset = 0;
     if (module_name && module_name[0]) {
       FileSpecList module_spec_list;
-      module_spec_list.Append(FileSpec(module_name, false));
+      module_spec_list.Append(FileSpec(module_name));
       sb_bp = target_sp->CreateBreakpoint(
           &module_spec_list, NULL, symbol_name, eFunctionNameTypeAuto,
           eLanguageTypeUnknown, offset, skip_prologue, internal, hardware);
@@ -894,7 +893,7 @@ SBBreakpoint SBTarget::BreakpointCreateByRegex(const char *symbol_name_regex,
   SBFileSpecList module_spec_list;
   SBFileSpecList comp_unit_list;
   if (module_name && module_name[0]) {
-    module_spec_list.Append(FileSpec(module_name, false));
+    module_spec_list.Append(FileSpec(module_name));
   }
   return BreakpointCreateByRegex(symbol_name_regex, eLanguageTypeUnknown,
                                  module_spec_list, comp_unit_list);
@@ -995,7 +994,7 @@ SBTarget::BreakpointCreateBySourceRegex(const char *source_regex,
   SBFileSpecList module_spec_list;
 
   if (module_name && module_name[0]) {
-    module_spec_list.Append(FileSpec(module_name, false));
+    module_spec_list.Append(FileSpec(module_name));
   }
 
   SBFileSpecList source_file_list;
@@ -1549,7 +1548,7 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
   if (target_sp) {
     ModuleSpec module_spec;
     if (path)
-      module_spec.GetFileSpec().SetFile(path, false, FileSpec::Style::native);
+      module_spec.GetFileSpec().SetFile(path, FileSpec::Style::native);
 
     if (uuid_cstr)
       module_spec.GetUUID().SetFromStringRef(uuid_cstr);
@@ -1561,8 +1560,7 @@ lldb::SBModule SBTarget::AddModule(const char *path, const char *triple,
       module_spec.GetArchitecture() = target_sp->GetArchitecture();
 
     if (symfile)
-      module_spec.GetSymbolFileSpec().SetFile(symfile, false,
-                                              FileSpec::Style::native);
+      module_spec.GetSymbolFileSpec().SetFile(symfile, FileSpec::Style::native);
 
     sb_module.SetSP(target_sp->GetSharedModule(module_spec));
   }

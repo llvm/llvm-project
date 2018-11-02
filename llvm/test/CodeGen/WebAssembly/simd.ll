@@ -54,6 +54,26 @@ define i32 @extract_v16i8_s(<16 x i8> %v) {
   ret i32 %a
 }
 
+; CHECK-LABEL: extract_var_v16i8_s:
+; NO-SIMD128-NOT: i8x16
+; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .result i32{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $2=, $pop[[L2]]
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0
+; SIMD128-NEXT: i32.const $push[[L4:[0-9]+]]=, 15
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L4]]
+; SIMD128-NEXT: i32.or $push[[L6:[0-9]+]]=, $2, $pop[[L5]]
+; SIMD128-NEXT: i32.load8_s $push[[R:[0-9]+]]=, 0($pop[[L6]])
+; SIMD128-NEXT: return $pop[[R]]
+define i32 @extract_var_v16i8_s(<16 x i8> %v, i32 %i) {
+  %elem = extractelement <16 x i8> %v, i32 %i
+  %a = sext i8 %elem to i32
+  ret i32 %a
+}
+
 ; CHECK-LABEL: extract_undef_v16i8_s:
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .param v128{{$}}
@@ -74,6 +94,26 @@ define i32 @extract_undef_v16i8_s(<16 x i8> %v) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define i32 @extract_v16i8_u(<16 x i8> %v) {
   %elem = extractelement <16 x i8> %v, i8 13
+  %a = zext i8 %elem to i32
+  ret i32 %a
+}
+
+; CHECK-LABEL: extract_var_v16i8_u:
+; NO-SIMD128-NOT: i8x16
+; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .result i32{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $2=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L4:[0-9]+]]=, 15{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L4]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L6:[0-9]+]]=, $2, $pop[[L5]]{{$}}
+; SIMD128-NEXT: i32.load8_u $push[[R:[0-9]+]]=, 0($pop[[L6]]){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define i32 @extract_var_v16i8_u(<16 x i8> %v, i32 %i) {
+  %elem = extractelement <16 x i8> %v, i32 %i
   %a = zext i8 %elem to i32
   ret i32 %a
 }
@@ -101,6 +141,25 @@ define i8 @extract_v16i8(<16 x i8> %v) {
   ret i8 %elem
 }
 
+; CHECK-LABEL: extract_var_v16i8:
+; NO-SIMD128-NOT: i8x16
+; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .result i32{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $2=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L4:[0-9]+]]=, 15{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L4]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L6:[0-9]+]]=, $2, $pop[[L5]]{{$}}
+; SIMD128-NEXT: i32.load8_u $push[[R:[0-9]+]]=, 0($pop[[L6]]){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define i8 @extract_var_v16i8(<16 x i8> %v, i32 %i) {
+  %elem = extractelement <16 x i8> %v, i32 %i
+  ret i8 %elem
+}
+
 ; CHECK-LABEL: extract_undef_v16i8:
 ; NO-SIMD128-NOT: i8x16
 ; SIMD128-NEXT: .param v128{{$}}
@@ -120,6 +179,26 @@ define i8 @extract_undef_v16i8(<16 x i8> %v) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @replace_v16i8(<16 x i8> %v, i8 %x) {
   %res = insertelement <16 x i8> %v, i8 %x, i32 11
+  ret <16 x i8> %res
+}
+
+; CHECK-LABEL: replace_var_v16i8:
+; NO-SIMD128-NOT: i8x16
+; SIMD128-NEXT: .param v128, i32, i32{{$}}
+; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $3=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L4:[0-9]+]]=, 15{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L4]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L6:[0-9]+]]=, $3, $pop[[L5]]{{$}}
+; SIMD128-NEXT: i32.store8 0($pop[[L6]]), $2{{$}}
+; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($3){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <16 x i8> @replace_var_v16i8(<16 x i8> %v, i32 %i, i8 %x) {
+  %res = insertelement <16 x i8> %v, i8 %x, i32 %i
   ret <16 x i8> %res
 }
 
@@ -252,6 +331,28 @@ define i32 @extract_v8i16_s(<8 x i16> %v) {
   ret i32 %a
 }
 
+; CHECK-LABEL: extract_var_v8i16_s:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .result i32{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $2=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L4:[0-9]+]]=, 7{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L4]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 1{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L8:[0-9]+]]=, $2, $pop[[L7]]{{$}}
+; SIMD128-NEXT: i32.load16_s $push[[R:[0-9]+]]=, 0($pop[[L8]]){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define i32 @extract_var_v8i16_s(<8 x i16> %v, i32 %i) {
+  %elem = extractelement <8 x i16> %v, i32 %i
+  %a = sext i16 %elem to i32
+  ret i32 %a
+}
+
 ; CHECK-LABEL: extract_undef_v8i16_s:
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128-NEXT: .param v128{{$}}
@@ -272,6 +373,28 @@ define i32 @extract_undef_v8i16_s(<8 x i16> %v) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define i32 @extract_v8i16_u(<8 x i16> %v) {
   %elem = extractelement <8 x i16> %v, i16 5
+  %a = zext i16 %elem to i32
+  ret i32 %a
+}
+
+; CHECK-LABEL: extract_var_v8i16_u:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .result i32{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $2=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L4:[0-9]+]]=, 7{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L4]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 1{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L8:[0-9]+]]=, $2, $pop[[L7]]{{$}}
+; SIMD128-NEXT: i32.load16_u $push[[R:[0-9]+]]=, 0($pop[[L8]]){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define i32 @extract_var_v8i16_u(<8 x i16> %v, i32 %i) {
+  %elem = extractelement <8 x i16> %v, i32 %i
   %a = zext i16 %elem to i32
   ret i32 %a
 }
@@ -299,6 +422,27 @@ define i16 @extract_v8i16(<8 x i16> %v) {
   ret i16 %elem
 }
 
+; CHECK-LABEL: extract_var_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .result i32{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $2=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L4:[0-9]+]]=, 7{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L4]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 1{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L8:[0-9]+]]=, $2, $pop[[L7]]{{$}}
+; SIMD128-NEXT: i32.load16_u $push[[R:[0-9]+]]=, 0($pop[[L8]]){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define i16 @extract_var_v8i16(<8 x i16> %v, i32 %i) {
+  %elem = extractelement <8 x i16> %v, i32 %i
+  ret i16 %elem
+}
+
 ; CHECK-LABEL: extract_undef_v8i16:
 ; NO-SIMD128-NOT: i16x8
 ; SIMD128-NEXT: .param v128{{$}}
@@ -318,6 +462,28 @@ define i16 @extract_undef_v8i16(<8 x i16> %v) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @replace_v8i16(<8 x i16> %v, i16 %x) {
   %res = insertelement <8 x i16> %v, i16 %x, i32 7
+  ret <8 x i16> %res
+}
+
+; CHECK-LABEL: replace_var_v8i16:
+; NO-SIMD128-NOT: i16x8
+; SIMD128-NEXT: .param v128, i32, i32{{$}}
+; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $3=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L4:[0-9]+]]=, 7{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L4]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 1{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L8:[0-9]+]]=, $3, $pop[[L7]]{{$}}
+; SIMD128-NEXT: i32.store16 0($pop[[L8]]), $2{{$}}
+; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($3){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <8 x i16> @replace_var_v8i16(<8 x i16> %v, i32 %i, i16 %x) {
+  %res = insertelement <8 x i16> %v, i16 %x, i32 %i
   ret <8 x i16> %res
 }
 
@@ -427,6 +593,27 @@ define i32 @extract_v4i32(<4 x i32> %v) {
   ret i32 %elem
 }
 
+; CHECK-LABEL: extract_var_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .result i32{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $2=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L4:[0-9]+]]=, 3{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L4]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 2{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L4:[0-9]+]]=, $2, $pop[[L7]]{{$}}
+; SIMD128-NEXT: i32.load $push[[R:[0-9]+]]=, 0($pop[[L4]]){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define i32 @extract_var_v4i32(<4 x i32> %v, i32 %i) {
+  %elem = extractelement <4 x i32> %v, i32 %i
+  ret i32 %elem
+}
+
 ; CHECK-LABEL: extract_undef_v4i32:
 ; NO-SIMD128-NOT: i32x4
 ; SIMD128-NEXT: .param v128{{$}}
@@ -446,6 +633,28 @@ define i32 @extract_undef_v4i32(<4 x i32> %v) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @replace_v4i32(<4 x i32> %v, i32 %x) {
   %res = insertelement <4 x i32> %v, i32 %x, i32 2
+  ret <4 x i32> %res
+}
+
+; CHECK-LABEL: replace_var_v4i32:
+; NO-SIMD128-NOT: i32x4
+; SIMD128-NEXT: .param v128, i32, i32{{$}}
+; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $3=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L4:[0-9]+]]=, 3{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L4]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 2{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L4:[0-9]+]]=, $3, $pop[[L7]]{{$}}
+; SIMD128-NEXT: i32.store 0($pop[[L4]]), $2{{$}}
+; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($3){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x i32> @replace_var_v4i32(<4 x i32> %v, i32 %i, i32 %x) {
+  %res = insertelement <4 x i32> %v, i32 %x, i32 %i
   ret <4 x i32> %res
 }
 
@@ -547,6 +756,27 @@ define i64 @extract_v2i64(<2 x i64> %v) {
   ret i64 %elem
 }
 
+; CHECK-LABEL: extract_var_v2i64:
+; NO-SIMD128-NOT: i64x2
+; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .result i64{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $2=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L2:[0-9]+]]=, 1{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L2]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 3{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L2:[0-9]+]]=, $2, $pop[[L7]]{{$}}
+; SIMD128-NEXT: i64.load $push[[R:[0-9]+]]=, 0($pop[[L2]]){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define i64 @extract_var_v2i64(<2 x i64> %v, i32 %i) {
+  %elem = extractelement <2 x i64> %v, i32 %i
+  ret i64 %elem
+}
+
 ; CHECK-LABEL: extract_undef_v2i64:
 ; NO-SIMD128-NOT: i64x2
 ; SIMD128-VM-NOT: i64x2
@@ -568,6 +798,29 @@ define i64 @extract_undef_v2i64(<2 x i64> %v) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @replace_v2i64(<2 x i64> %v, i64 %x) {
   %res = insertelement <2 x i64> %v, i64 %x, i32 0
+  ret <2 x i64> %res
+}
+
+; CHECK-LABEL: replace_var_v2i64:
+; NO-SIMD128-NOT: i64x2
+; SIMD128-VM-NOT: i64x2
+; SIMD128-NEXT: .param v128, i32, i64{{$}}
+; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $3=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L2:[0-9]+]]=, 1{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L2]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 3{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L2:[0-9]+]]=, $3, $pop[[L7]]{{$}}
+; SIMD128-NEXT: i64.store 0($pop[[L2]]), $2{{$}}
+; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($3){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x i64> @replace_var_v2i64(<2 x i64> %v, i32 %i, i64 %x) {
+  %res = insertelement <2 x i64> %v, i64 %x, i32 %i
   ret <2 x i64> %res
 }
 
@@ -666,6 +919,27 @@ define float @extract_v4f32(<4 x float> %v) {
   ret float %elem
 }
 
+; CHECK-LABEL: extract_var_v4f32:
+; NO-SIMD128-NOT: i64x2
+; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .result f32{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $2=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L2:[0-9]+]]=, 3{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L2]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 2{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L2:[0-9]+]]=, $2, $pop[[L7]]{{$}}
+; SIMD128-NEXT: f32.load $push[[R:[0-9]+]]=, 0($pop[[L2]]){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define float @extract_var_v4f32(<4 x float> %v, i32 %i) {
+  %elem = extractelement <4 x float> %v, i32 %i
+  ret float %elem
+}
+
 ; CHECK-LABEL: extract_undef_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .param v128{{$}}
@@ -685,6 +959,28 @@ define float @extract_undef_v4f32(<4 x float> %v) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @replace_v4f32(<4 x float> %v, float %x) {
   %res = insertelement <4 x float> %v, float %x, i32 2
+  ret <4 x float> %res
+}
+
+; CHECK-LABEL: replace_var_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .param v128, i32, f32{{$}}
+; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $3=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L2:[0-9]+]]=, 3{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L2]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 2{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L2:[0-9]+]]=, $3, $pop[[L7]]{{$}}
+; SIMD128-NEXT: f32.store 0($pop[[L2]]), $2{{$}}
+; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($3){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <4 x float> @replace_var_v4f32(<4 x float> %v, i32 %i, float %x) {
+  %res = insertelement <4 x float> %v, float %x, i32 %i
   ret <4 x float> %res
 }
 
@@ -785,6 +1081,27 @@ define double @extract_v2f64(<2 x double> %v) {
   ret double %elem
 }
 
+; CHECK-LABEL: extract_var_v2f64:
+; NO-SIMD128-NOT: i62x2
+; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .result f64{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $2=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L2:[0-9]+]]=, 1{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L2]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 3{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L2:[0-9]+]]=, $2, $pop[[L7]]{{$}}
+; SIMD128-NEXT: f64.load $push[[R:[0-9]+]]=, 0($pop[[L2]]){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define double @extract_var_v2f64(<2 x double> %v, i32 %i) {
+  %elem = extractelement <2 x double> %v, i32 %i
+  ret double %elem
+}
+
 ; CHECK-LABEL: extract_undef_v2f64:
 ; NO-SIMD128-NOT: f64x2
 ; SIMD128-VM-NOT: f64x2
@@ -806,6 +1123,29 @@ define double @extract_undef_v2f64(<2 x double> %v) {
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @replace_v2f64(<2 x double> %v, double %x) {
   %res = insertelement <2 x double> %v, double %x, i32 0
+  ret <2 x double> %res
+}
+
+; CHECK-LABEL: replace_var_v2f64:
+; NO-SIMD128-NOT: f64x2
+; SIMD128-VM-NOT: f64x2
+; SIMD128-NEXT: .param v128, i32, f64{{$}}
+; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: get_global $push[[L0:[0-9]+]]=, __stack_pointer@GLOBAL{{$}}
+; SIMD128-NEXT: i32.const $push[[L1:[0-9]+]]=, 16{{$}}
+; SIMD128-NEXT: i32.sub $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
+; SIMD128-NEXT: tee_local $push[[L3:[0-9]+]]=, $3=, $pop[[L2]]{{$}}
+; SIMD128-NEXT: v128.store 0($pop[[L3]]), $0{{$}}
+; SIMD128-NEXT: i32.const $push[[L2:[0-9]+]]=, 1{{$}}
+; SIMD128-NEXT: i32.and $push[[L5:[0-9]+]]=, $1, $pop[[L2]]{{$}}
+; SIMD128-NEXT: i32.const $push[[L6:[0-9]+]]=, 3{{$}}
+; SIMD128-NEXT: i32.shl $push[[L7:[0-9]+]]=, $pop[[L5]], $pop[[L6]]{{$}}
+; SIMD128-NEXT: i32.or $push[[L2:[0-9]+]]=, $3, $pop[[L7]]{{$}}
+; SIMD128-NEXT: f64.store 0($pop[[L2]]), $2{{$}}
+; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($3){{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+define <2 x double> @replace_var_v2f64(<2 x double> %v, i32 %i, double %x) {
+  %res = insertelement <2 x double> %v, double %x, i32 %i
   ret <2 x double> %res
 }
 

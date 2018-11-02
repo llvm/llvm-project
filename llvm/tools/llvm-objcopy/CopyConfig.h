@@ -72,6 +72,7 @@ struct CopyConfig {
   StringMap<StringRef> SymbolsToRename;
 
   // Boolean options
+  bool DeterministicArchives = true;
   bool DiscardAll = false;
   bool ExtractDWO = false;
   bool KeepFileSymbols = false;

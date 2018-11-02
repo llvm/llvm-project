@@ -594,7 +594,7 @@ SymbolFileNativePDB::CreateCompileUnit(const CompilandIndexItem &cci) {
 
   llvm::StringRef source_file_name =
       m_index->compilands().GetMainSourceFile(cci);
-  FileSpec fs(source_file_name, false);
+  FileSpec fs(source_file_name);
 
   CompUnitSP cu_sp =
       std::make_shared<CompileUnit>(m_obj_file->GetModule(), nullptr, fs,
@@ -1373,7 +1373,7 @@ bool SymbolFileNativePDB::ParseCompileUnitSupportFiles(
   for (llvm::StringRef f : cci->m_file_list) {
     FileSpec::Style style =
         f.startswith("/") ? FileSpec::Style::posix : FileSpec::Style::windows;
-    FileSpec spec(f, false, style);
+    FileSpec spec(f, style);
     support_files.Append(spec);
   }
 

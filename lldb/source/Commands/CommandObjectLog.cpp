@@ -101,7 +101,8 @@ public:
 
       switch (short_option) {
       case 'f':
-        log_file.SetFile(option_arg, true, FileSpec::Style::native);
+        log_file.SetFile(option_arg, FileSpec::Style::native);
+        FileSystem::Instance().Resolve(log_file);
         break;
       case 't':
         log_options |= LLDB_LOG_OPTION_THREADSAFE;

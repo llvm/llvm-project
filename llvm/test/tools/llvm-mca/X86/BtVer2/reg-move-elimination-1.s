@@ -39,6 +39,10 @@ vaddps %xmm1, %xmm1, %xmm2
 # CHECK-NEXT:    Number of physical registers:     72
 # CHECK-NEXT:    Total number of mappings created: 3
 # CHECK-NEXT:    Max number of mappings used:      3
+# CHECK-NEXT:    Number of optimizable moves:      3
+# CHECK-NEXT:    Number of moves eliminated:       3  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             3  (100.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   1
 
 # CHECK:      *  Register File #2 -- JIntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     64

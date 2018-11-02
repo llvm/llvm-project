@@ -29,10 +29,11 @@ static constexpr size_t kSize = 4096;
 using ::llvm::HasValue;
 using ::llvm::xray::testing::FuncId;
 using ::llvm::xray::testing::RecordType;
-using ::testing::Eq;
 using ::testing::AllOf;
-using ::testing::IsEmpty;
 using ::testing::ElementsAre;
+using ::testing::Eq;
+using ::testing::IsEmpty;
+using ::testing::IsNull;
 
 // Exercise the common code path where we initialize a buffer and are able to
 // write some records successfully.
@@ -71,6 +72,57 @@ TEST(FdrLogWriterTest, WriteSomeRecords) {
       HasValue(ElementsAre(
           AllOf(FuncId(1), RecordType(llvm::xray::RecordTypes::ENTER)),
           AllOf(FuncId(1), RecordType(llvm::xray::RecordTypes::EXIT)))));
+}
+
+// Ensure that we can handle buffer re-use.
+TEST(FdrLogWriterTest, ReuseBuffers) {
+  bool Success = false;
+  BufferQueue Buffers(kSize, 1, Success);
+  BufferQueue::Buffer B;
+  ASSERT_EQ(Buffers.getBuffer(B), BufferQueue::ErrorCode::Ok);
+
+  FDRLogWriter Writer(B);
+  MetadataRecord Preamble[] = {
+      createMetadataRecord<MetadataRecord::RecordKinds::NewBuffer>(int32_t{1}),
+      createMetadataRecord<MetadataRecord::RecordKinds::WalltimeMarker>(
+          int64_t{1}, int32_t{2}),
+      createMetadataRecord<MetadataRecord::RecordKinds::Pid>(int32_t{1}),
+  };
+
+  // First we write the first set of records into the single buffer in the
+  // queue which includes one enter and one exit record.
+  ASSERT_THAT(Writer.writeMetadataRecords(Preamble),
+              Eq(sizeof(MetadataRecord) * 3));
+  ASSERT_TRUE(Writer.writeMetadata<MetadataRecord::RecordKinds::NewCPUId>(
+      uint16_t{1}, uint64_t{1}));
+  uint64_t TSC = 1;
+  ASSERT_TRUE(
+      Writer.writeFunction(FDRLogWriter::FunctionRecordKind::Enter, 1, TSC++));
+  ASSERT_TRUE(
+      Writer.writeFunction(FDRLogWriter::FunctionRecordKind::Exit, 1, TSC++));
+  ASSERT_EQ(Buffers.releaseBuffer(B), BufferQueue::ErrorCode::Ok);
+  ASSERT_THAT(B.Data, IsNull());
+
+  // Then we re-use the buffer, but only write one record.
+  ASSERT_EQ(Buffers.getBuffer(B), BufferQueue::ErrorCode::Ok);
+  Writer.resetRecord();
+  ASSERT_THAT(Writer.writeMetadataRecords(Preamble),
+              Eq(sizeof(MetadataRecord) * 3));
+  ASSERT_TRUE(Writer.writeMetadata<MetadataRecord::RecordKinds::NewCPUId>(
+      uint16_t{1}, uint64_t{1}));
+  ASSERT_TRUE(
+      Writer.writeFunction(FDRLogWriter::FunctionRecordKind::Enter, 1, TSC++));
+  ASSERT_EQ(Buffers.releaseBuffer(B), BufferQueue::ErrorCode::Ok);
+  ASSERT_THAT(B.Data, IsNull());
+  ASSERT_EQ(Buffers.finalize(), BufferQueue::ErrorCode::Ok);
+
+  // Then we validate that we only see the single enter record.
+  std::string Serialized = serialize(Buffers, 3);
+  llvm::DataExtractor DE(Serialized, true, 8);
+  auto TraceOrErr = llvm::xray::loadTrace(DE);
+  EXPECT_THAT_EXPECTED(
+      TraceOrErr, HasValue(ElementsAre(AllOf(
+                      FuncId(1), RecordType(llvm::xray::RecordTypes::ENTER)))));
 }
 
 TEST(FdrLogWriterTest, UnwriteRecords) {

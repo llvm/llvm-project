@@ -248,19 +248,6 @@ Status File::Open(const char *path, uint32_t options, uint32_t permissions) {
   return error;
 }
 
-uint32_t File::GetPermissions(const FileSpec &file_spec, Status &error) {
-  if (file_spec) {
-    error.Clear();
-    auto Perms = llvm::sys::fs::getPermissions(file_spec.GetPath());
-    if (Perms)
-      return *Perms;
-    error = Status(Perms.getError());
-    return 0;
-  } else
-    error.SetErrorString("empty file spec");
-  return 0;
-}
-
 uint32_t File::GetPermissions(Status &error) const {
   int fd = GetDescriptor();
   if (fd != kInvalidDescriptor) {
@@ -315,7 +302,7 @@ Status File::GetFileSpec(FileSpec &file_spec) const {
     if (::fcntl(GetDescriptor(), F_GETPATH, path) == -1)
       error.SetErrorToErrno();
     else
-      file_spec.SetFile(path, false, FileSpec::Style::native);
+      file_spec.SetFile(path, FileSpec::Style::native);
   } else {
     error.SetErrorString("invalid file handle");
   }
@@ -330,7 +317,7 @@ Status File::GetFileSpec(FileSpec &file_spec) const {
       error.SetErrorToErrno();
     else {
       path[len] = '\0';
-      file_spec.SetFile(path, false, FileSpec::Style::native);
+      file_spec.SetFile(path, FileSpec::Style::native);
     }
   }
 #else
