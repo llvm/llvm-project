@@ -2167,6 +2167,8 @@ class TestBase(Base):
 
         # Run FileCheck.
         filecheck_bin = configuration.get_filecheck_path()
+        if not filecheck_bin:
+            self.assertTrue(False, "No valid FileCheck executable specified")
         filecheck_args = [filecheck_bin, check_file_abs]
         if filecheck_options:
             filecheck_args.append(filecheck_options)
