@@ -577,9 +577,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
   // the #if block.
   CurPPLexer->LexingRawMode = false;
 
-  // The last skipped range isn't actually skipped yet if it's truncated
-  // by the end of the preamble; we'll resume parsing after the preamble.
-  if (Callbacks && (Tok.isNot(tok::eof) || !isRecordingPreamble()))
+  if (Callbacks)
     Callbacks->SourceRangeSkipped(
         SourceRange(HashTokenLoc, CurPPLexer->getSourceLocation()),
         Tok.getLocation());
