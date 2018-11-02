@@ -9,6 +9,7 @@ add_clang_unittest(DirectoryWatcherTests
 target_link_libraries(DirectoryWatcherTests
   PRIVATE
   clangDirectoryWatcher
+  clangBasic
   )
 
 if(APPLE)
