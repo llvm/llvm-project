@@ -724,6 +724,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         options::OPT_fsanitize_address_use_after_scope,
         options::OPT_fno_sanitize_address_use_after_scope, AsanUseAfterScope);
 
+    AsanPoisonCustomArrayCookie = Args.hasFlag(
+        options::OPT_fsanitize_address_poison_custom_array_cookie,
+        options::OPT_fno_sanitize_address_poison_custom_array_cookie,
+        AsanPoisonCustomArrayCookie);
+
     // As a workaround for a bug in gold 2.26 and earlier, dead stripping of
     // globals in ASan is disabled by default on ELF targets.
     // See https://sourceware.org/bugzilla/show_bug.cgi?id=19002
@@ -896,6 +901,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (AsanUseAfterScope)
     CmdArgs.push_back("-fsanitize-address-use-after-scope");
+
+  if (AsanPoisonCustomArrayCookie)
+    CmdArgs.push_back("-fsanitize-address-poison-custom-array-cookie");
 
   if (AsanGlobalsDeadStripping)
     CmdArgs.push_back("-fsanitize-address-globals-dead-stripping");

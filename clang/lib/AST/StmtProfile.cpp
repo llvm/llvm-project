@@ -479,6 +479,9 @@ void OMPClauseProfiler::VisitOMPReverseOffloadClause(
 void OMPClauseProfiler::VisitOMPDynamicAllocatorsClause(
     const OMPDynamicAllocatorsClause *C) {}
 
+void OMPClauseProfiler::VisitOMPAtomicDefaultMemOrderClause(
+    const OMPAtomicDefaultMemOrderClause *C) {}
+
 void OMPClauseProfiler::VisitOMPScheduleClause(const OMPScheduleClause *C) {
   VistOMPClauseWithPreInit(C);
   if (auto *S = C->getChunkSize())

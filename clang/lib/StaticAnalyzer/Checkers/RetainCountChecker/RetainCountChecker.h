@@ -16,7 +16,6 @@
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_RETAINCOUNTCHECKER_H
 
 #include "../ClangSACheckers.h"
-#include "../AllocationDiagnostics.h"
 #include "RetainCountDiagnostics.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
@@ -266,24 +265,17 @@ class RetainCountChecker
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
   mutable SummaryLogTy SummaryLog;
 
-  AnalyzerOptions &Options;
   mutable bool ShouldResetSummaryLog;
 
+public:
   /// Optional setting to indicate if leak reports should include
   /// the allocation line.
-  mutable bool IncludeAllocationLine;
+  bool IncludeAllocationLine;
+  bool ShouldCheckOSObjectRetainCount;
 
-public:
-  RetainCountChecker(AnalyzerOptions &Options)
-      : Options(Options), ShouldResetSummaryLog(false),
-        IncludeAllocationLine(
-            shouldIncludeAllocationSiteInLeakDiagnostics(Options)) {}
+  RetainCountChecker() : ShouldResetSummaryLog(false) {}
 
   ~RetainCountChecker() override { DeleteContainerSeconds(DeadSymbolTags); }
-
-  bool shouldCheckOSObjectRetainCount() const {
-    return Options.getBooleanOption("CheckOSObject", true, this);
-  }
 
   void checkEndAnalysis(ExplodedGraph &G, BugReporter &BR,
                         ExprEngine &Eng) const {
@@ -339,7 +331,7 @@ public:
     bool ARCEnabled = (bool)Ctx.getLangOpts().ObjCAutoRefCount;
     if (!Summaries) {
       Summaries.reset(new RetainSummaryManager(
-          Ctx, ARCEnabled, shouldCheckOSObjectRetainCount()));
+          Ctx, ARCEnabled, ShouldCheckOSObjectRetainCount));
     } else {
       assert(Summaries->isARCEnabled() == ARCEnabled);
     }

@@ -21,7 +21,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
-#include "clang/Analysis/Analyses/OSLog.h"
+#include "clang/AST/OSLog.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -711,8 +711,11 @@ static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
   } else {
     Name = SJKind == MSVCSetJmpKind::_setjmp ? "_setjmp" : "_setjmpex";
     Arg1Ty = CGF.Int8PtrTy;
-    Arg1 = CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(Intrinsic::frameaddress),
-                                  llvm::ConstantInt::get(CGF.Int32Ty, 0));
+    if (CGF.getTarget().getTriple().getArch() == llvm::Triple::aarch64) {
+      Arg1 = CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(Intrinsic::sponentry));
+    } else
+      Arg1 = CGF.Builder.CreateCall(CGF.CGM.getIntrinsic(Intrinsic::frameaddress),
+                                    llvm::ConstantInt::get(CGF.Int32Ty, 0));
   }
 
   // Mark the call site and declaration with ReturnsTwice.
@@ -3605,13 +3608,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   }
   case Builtin::BI__builtin_os_log_format:
     return emitBuiltinOSLogFormat(*E);
-
-  case Builtin::BI__builtin_os_log_format_buffer_size: {
-    analyze_os_log::OSLogBufferLayout Layout;
-    analyze_os_log::computeOSLogBufferLayout(CGM.getContext(), E, Layout);
-    return RValue::get(ConstantInt::get(ConvertType(E->getType()),
-                                        Layout.size().getQuantity()));
-  }
 
   case Builtin::BI__xray_customevent: {
     if (!ShouldXRayInstrumentFunction())

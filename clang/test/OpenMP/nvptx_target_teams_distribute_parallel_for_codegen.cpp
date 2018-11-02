@@ -67,15 +67,24 @@ int bar(int n){
   return a;
 }
 
+// CHECK-DAG: [[MEM_TY:%.+]] = type { [4 x i8] }
+// CHECK-DAG: [[GLOBAL_RD:@.+]] = weak global [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]] zeroinitializer
+// CHECK-DAG: [[GLOBAL_RD_PTR:@.+]] = weak unnamed_addr constant i8* getelementptr inbounds ([{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]], [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]]* [[GLOBAL_RD]], i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0)
+// CHECK-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
+// CHECK-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 4
+
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+}}_l32(
 // CHECK-DAG: [[THREAD_LIMIT:%.+]] = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 [[THREAD_LIMIT]], i16 0, i16 1)
-// CHECK: [[TEAM_ALLOC:%.+]] = call i8* @__kmpc_data_sharing_push_stack(i{{[0-9]+}} 4, i16 0)
+// CHECK: [[GLOBAL_RD:%.+]] = load i8*, i8** [[GLOBAL_RD_PTR]],
+// CHECK: call void @__kmpc_get_team_static_memory(i8* [[GLOBAL_RD]], i{{64|32}} 4, i16 0, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CHECK: [[TEAM_ALLOC:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CHECK: [[BC:%.+]] = bitcast i8* [[TEAM_ALLOC]] to [[REC:%.+]]*
 // CHECK: getelementptr inbounds [[REC]], [[REC]]* [[BC]], i{{[0-9]+}} 0, i{{[0-9]+}} 0
 // CHECK: call void @__kmpc_for_static_init_4({{.+}}, {{.+}}, {{.+}} 91,
 // CHECK: {{call|invoke}} void [[OUTL1:@.+]](
 // CHECK: call void @__kmpc_for_static_fini(
+// CHECK: call void @__kmpc_restore_team_static_memory(i16 0)
 // CHECK: call void @__kmpc_spmd_kernel_deinit()
 // CHECK: ret void
 

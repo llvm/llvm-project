@@ -39,6 +39,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/OSLog.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeLoc.h"
@@ -8124,6 +8125,12 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
 
     llvm_unreachable("unexpected EvalMode");
+  }
+
+  case Builtin::BI__builtin_os_log_format_buffer_size: {
+    analyze_os_log::OSLogBufferLayout Layout;
+    analyze_os_log::computeOSLogBufferLayout(Info.Ctx, E, Layout);
+    return Success(Layout.size().getQuantity(), E);
   }
 
   case Builtin::BI__builtin_bswap16:

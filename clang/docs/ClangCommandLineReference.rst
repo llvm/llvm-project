@@ -800,9 +800,11 @@ Level of field padding for AddressSanitizer
 
 Enable linker dead stripping of globals in AddressSanitizer
 
-.. option:: -fsanitize-address-poison-class-member-array-new-cookie, -fno-sanitize-address-poison-class-member-array-new-cookie
+.. option:: -fsanitize-address-poison-custom-array-cookie, -fno-sanitize-address-poison-custom-array-cookie
 
-Enable poisoning array cookies when using class member operator new\[\] in AddressSanitizer
+Enable "poisoning" array cookies when allocating arrays with a custom operator new\[\] in Address Sanitizer, preventing accesses to the cookies from user code. An array cookie is a small implementation-defined header added to certain array allocations to record metadata such as the length of the array. Accesses to array cookies from user code are technically allowed by the standard but are more likely to be the result of an out-of-bounds array access.
+
+An operator new\[\] is "custom" if it is not one of the allocation functions provided by the C++ standard library. Array cookies from non-custom allocation functions are always poisoned.
 
 .. option:: -fsanitize-address-use-after-scope, -fno-sanitize-address-use-after-scope
 

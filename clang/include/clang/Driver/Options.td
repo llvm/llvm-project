@@ -993,14 +993,14 @@ def fno_sanitize_address_use_after_scope : Flag<["-"], "fno-sanitize-address-use
                                            Group<f_clang_Group>,
                                            Flags<[CoreOption, DriverOption]>,
                                            HelpText<"Disable use-after-scope detection in AddressSanitizer">;
-def fsanitize_address_poison_class_member_array_new_cookie
-    : Flag<[ "-" ], "fsanitize-address-poison-class-member-array-new-cookie">,
+def fsanitize_address_poison_custom_array_cookie
+    : Flag<[ "-" ], "fsanitize-address-poison-custom-array-cookie">,
       Group<f_clang_Group>,
-      HelpText<"Enable poisoning array cookies when using class member operator new[] in AddressSanitizer">;
-def fno_sanitize_address_poison_class_member_array_new_cookie
-    : Flag<[ "-" ], "fno-sanitize-address-poison-class-member-array-new-cookie">,
+      HelpText<"Enable poisoning array cookies when using custom operator new[] in AddressSanitizer">;
+def fno_sanitize_address_poison_custom_array_cookie
+    : Flag<[ "-" ], "fno-sanitize-address-poison-custom-array-cookie">,
       Group<f_clang_Group>,
-      HelpText<"Disable poisoning array cookies when using class member operator new[] in AddressSanitizer">;
+      HelpText<"Disable poisoning array cookies when using custom operator new[] in AddressSanitizer">;
 def fsanitize_address_globals_dead_stripping : Flag<["-"], "fsanitize-address-globals-dead-stripping">,
                                         Group<f_clang_Group>,
                                         HelpText<"Enable linker dead stripping of globals in AddressSanitizer">;
@@ -1568,6 +1568,10 @@ def fopenmp_cuda_force_full_runtime : Flag<["-"], "fopenmp-cuda-force-full-runti
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fno_openmp_cuda_force_full_runtime : Flag<["-"], "fno-openmp-cuda-force-full-runtime">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>;
+def fopenmp_cuda_number_of_sm_EQ : Joined<["-"], "fopenmp-cuda-number-of-sm=">, Group<f_Group>,
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
+def fopenmp_cuda_blocks_per_sm_EQ : Joined<["-"], "fopenmp-cuda-blocks-per-sm=">, Group<f_Group>,
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 def fno_optimize_sibling_calls : Flag<["-"], "fno-optimize-sibling-calls">, Group<f_Group>;
 def foptimize_sibling_calls : Flag<["-"], "foptimize-sibling-calls">, Group<f_Group>;
 def fno_escaping_block_tail_calls : Flag<["-"], "fno-escaping-block-tail-calls">, Group<f_Group>, Flags<[CC1Option]>;

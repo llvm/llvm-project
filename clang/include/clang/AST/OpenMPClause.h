@@ -859,6 +859,85 @@ public:
   }
 };
 
+/// This represents 'atomic_default_mem_order' clause in the '#pragma omp
+/// requires'  directive.
+///
+/// \code
+/// #pragma omp requires atomic_default_mem_order(seq_cst)
+/// \endcode
+/// In this example directive '#pragma omp requires' has simple
+/// atomic_default_mem_order' clause with kind 'seq_cst'.
+class OMPAtomicDefaultMemOrderClause final : public OMPClause {
+  friend class OMPClauseReader;
+
+  /// Location of '('
+  SourceLocation LParenLoc;
+
+  /// A kind of the 'atomic_default_mem_order' clause.
+  OpenMPAtomicDefaultMemOrderClauseKind Kind =
+      OMPC_ATOMIC_DEFAULT_MEM_ORDER_unknown;
+
+  /// Start location of the kind in source code.
+  SourceLocation KindKwLoc;
+
+  /// Set kind of the clause.
+  ///
+  /// \param K Kind of clause.
+  void setAtomicDefaultMemOrderKind(OpenMPAtomicDefaultMemOrderClauseKind K) {
+    Kind = K;
+  }
+
+  /// Set clause kind location.
+  ///
+  /// \param KLoc Kind location.
+  void setAtomicDefaultMemOrderKindKwLoc(SourceLocation KLoc) {
+    KindKwLoc = KLoc;
+  }
+
+public:
+  /// Build 'atomic_default_mem_order' clause with argument \a A ('seq_cst',
+  /// 'acq_rel' or 'relaxed').
+  ///
+  /// \param A Argument of the clause ('seq_cst', 'acq_rel' or 'relaxed').
+  /// \param ALoc Starting location of the argument.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPAtomicDefaultMemOrderClause(OpenMPAtomicDefaultMemOrderClauseKind A,
+                                 SourceLocation ALoc, SourceLocation StartLoc,
+                                 SourceLocation LParenLoc,
+                                 SourceLocation EndLoc)
+      : OMPClause(OMPC_atomic_default_mem_order, StartLoc, EndLoc),
+        LParenLoc(LParenLoc), Kind(A), KindKwLoc(ALoc) {}
+
+  /// Build an empty clause.
+  OMPAtomicDefaultMemOrderClause()
+      : OMPClause(OMPC_atomic_default_mem_order, SourceLocation(),
+                  SourceLocation()) {}
+
+  /// Sets the location of '('.
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+
+  /// Returns the locaiton of '('.
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+
+  /// Returns kind of the clause.
+  OpenMPAtomicDefaultMemOrderClauseKind getAtomicDefaultMemOrderKind() const {
+    return Kind;
+  }
+
+  /// Returns location of clause kind.
+  SourceLocation getAtomicDefaultMemOrderKindKwLoc() const { return KindKwLoc; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_atomic_default_mem_order;
+  }
+};
+
 /// This represents 'schedule' clause in the '#pragma omp ...' directive.
 ///
 /// \code

@@ -119,6 +119,24 @@ enum IPAKind {
   IPAK_DynamicDispatchBifurcate = 5
 };
 
+enum class ExplorationStrategyKind {
+  DFS,
+  BFS,
+  UnexploredFirst,
+  UnexploredFirstQueue,
+  UnexploredFirstLocationQueue,
+  BFSBlockDFSContents,
+};
+
+/// Describes the kinds for high-level analyzer mode.
+enum UserModeKind {
+  /// Perform shallow but fast analyzes.
+  UMK_Shallow = 1,
+
+  /// Perform deep analyzes.
+  UMK_Deep = 2
+};
+
 class AnalyzerOptions : public RefCountedBase<AnalyzerOptions> {
 public:
   using ConfigTable = llvm::StringMap<std::string>;
@@ -157,6 +175,7 @@ public:
 
   unsigned ShowCheckerHelp : 1;
   unsigned ShowEnabledCheckerList : 1;
+  unsigned ShowConfigOptionsList : 1;
   unsigned AnalyzeAll : 1;
   unsigned AnalyzerDisplayProgress : 1;
   unsigned AnalyzeNestedBlocks : 1;
@@ -179,155 +198,16 @@ public:
   /// The mode of function selection used during inlining.
   AnalysisInliningMode InliningMode = NoRedundancy;
 
-  enum class ExplorationStrategyKind {
-    DFS,
-    BFS,
-    UnexploredFirst,
-    UnexploredFirstQueue,
-    UnexploredFirstLocationQueue,
-    BFSBlockDFSContents,
-  };
-
 private:
-  /// Describes the kinds for high-level analyzer mode.
-  enum UserModeKind {
-    /// Perform shallow but fast analyzes.
-    UMK_Shallow = 1,
 
-    /// Perform deep analyzes.
-    UMK_Deep = 2
-  };
-
-  llvm::Optional<ExplorationStrategyKind> ExplorationStrategy;
-
-  /// Controls the high-level analyzer mode, which influences the default
-  /// settings for some of the lower-level config options (such as IPAMode).
-  /// \sa getUserMode
-  llvm::Optional<UserModeKind> UserMode;
-
-  /// Controls the mode of inter-procedural analysis.
-  llvm::Optional<IPAKind> IPAMode;
-
-  /// Controls which C++ member functions will be considered for inlining.
-  llvm::Optional<CXXInlineableMemberKind> CXXMemberInliningMode;
-
-  /// \sa includeImplicitDtorsInCFG
-  Optional<bool> IncludeImplicitDtorsInCFG;
-
-  /// \sa includeTemporaryDtorsInCFG
-  Optional<bool> IncludeTemporaryDtorsInCFG;
-
-  /// \sa IncludeLifetimeInCFG
-  Optional<bool> IncludeLifetimeInCFG;
-
-  /// \sa IncludeLoopExitInCFG
-  Optional<bool> IncludeLoopExitInCFG;
-
-  /// \sa IncludeRichConstructorsInCFG
-  Optional<bool> IncludeRichConstructorsInCFG;
-
-  /// \sa mayInlineCXXStandardLibrary
-  Optional<bool> InlineCXXStandardLibrary;
-
-  /// \sa includeScopesInCFG
-  Optional<bool> IncludeScopesInCFG;
-
-  /// \sa mayInlineTemplateFunctions
-  Optional<bool> InlineTemplateFunctions;
-
-  /// \sa mayInlineCXXAllocator
-  Optional<bool> InlineCXXAllocator;
-
-  /// \sa mayInlineCXXContainerMethods
-  Optional<bool> InlineCXXContainerMethods;
-
-  /// \sa mayInlineCXXSharedPtrDtor
-  Optional<bool> InlineCXXSharedPtrDtor;
-
-  /// \sa mayInlineCXXTemporaryDtors
-  Optional<bool> InlineCXXTemporaryDtors;
-
-  /// \sa mayInlineObjCMethod
-  Optional<bool> ObjCInliningMode;
-
-  // Cache of the "ipa-always-inline-size" setting.
-  // \sa getAlwaysInlineSize
-  Optional<unsigned> AlwaysInlineSize;
-
-  /// \sa shouldSuppressNullReturnPaths
-  Optional<bool> SuppressNullReturnPaths;
-
-  // \sa getMaxInlinableSize
-  Optional<unsigned> MaxInlinableSize;
-
-  /// \sa shouldAvoidSuppressingNullArgumentPaths
-  Optional<bool> AvoidSuppressingNullArgumentPaths;
-
-  /// \sa shouldSuppressInlinedDefensiveChecks
-  Optional<bool> SuppressInlinedDefensiveChecks;
-
-  /// \sa shouldSuppressFromCXXStandardLibrary
-  Optional<bool> SuppressFromCXXStandardLibrary;
-
-  /// \sa shouldCrosscheckWithZ3
-  Optional<bool> CrosscheckWithZ3;
-
-  /// \sa reportIssuesInMainSourceFile
-  Optional<bool> ReportIssuesInMainSourceFile;
-
-  /// \sa StableReportFilename
-  Optional<bool> StableReportFilename;
-
-  Optional<bool> SerializeStats;
-
-  /// \sa getGraphTrimInterval
-  Optional<unsigned> GraphTrimInterval;
-
-  /// \sa getMaxSymbolComplexity
-  Optional<unsigned> MaxSymbolComplexity;
-
-  /// \sa getMaxTimesInlineLarge
-  Optional<unsigned> MaxTimesInlineLarge;
-
-  /// \sa getMinCFGSizeTreatFunctionsAsLarge
-  Optional<unsigned> MinCFGSizeTreatFunctionsAsLarge;
-
-  /// \sa getMaxNodesPerTopLevelFunction
-  Optional<unsigned> MaxNodesPerTopLevelFunction;
-
-  /// \sa shouldInlineLambdas
-  Optional<bool> InlineLambdas;
-
-  /// \sa shouldWidenLoops
-  Optional<bool> WidenLoops;
-
-  /// \sa shouldUnrollLoops
-  Optional<bool> UnrollLoops;
-
-  /// \sa shouldDisplayNotesAsEvents
-  Optional<bool> DisplayNotesAsEvents;
-
-  /// \sa shouldDisplayMacroExpansions
-  Optional<bool> DisplayMacroExpansions;
-
-  /// \sa shouldAggressivelySimplifyBinaryOperation
-  Optional<bool> AggressiveBinaryOperationSimplification;
-
-  /// \sa shouldEagerlyAssume
-  Optional<bool> EagerlyAssumeBinOpBifurcation;
-
-  /// \sa getCTUDir
-  Optional<StringRef> CTUDir;
-
-  /// \sa getCTUIndexName
-  Optional<StringRef> CTUIndexName;
-
-  /// \sa naiveCTUEnabled
-  Optional<bool> NaiveCTU;
-
-  /// \sa shouldElideConstructors
-  Optional<bool> ElideConstructors;
-
+#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
+  Optional<TYPE> NAME;
+#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
+                                             SHALLOW_VAL, DEEP_VAL)            \
+  Optional<TYPE> NAME;
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
+#undef ANALYZER_OPTION
+#undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 
   /// A helper function that retrieves option for a given full-qualified
   /// checker name.
@@ -363,7 +243,7 @@ public:
         eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
         visualizeExplodedGraphWithGraphViz(false),
         UnoptimizedCFG(false),
-        PrintStats(false), NoRetryExhausted(false), CXXMemberInliningMode() {}
+        PrintStats(false), NoRetryExhausted(false) {}
 
   /// Interprets an option's string value as a boolean. The "true" string is
   /// interpreted as true and the "false" string is interpreted as false.
@@ -418,7 +298,6 @@ public:
                          const ento::CheckerBase *C = nullptr,
                          bool SearchInParents = false);
 
-
   unsigned getOptionAsUInt(Optional<unsigned> &V, StringRef Name,
                            unsigned DefaultVal,
                            const ento::CheckerBase *C = nullptr,
@@ -446,6 +325,19 @@ public:
                               const ento::CheckerBase *C = nullptr,
                               bool SearchInParents = false);
 
+#define ANALYZER_OPTION_GEN_FN(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL,  \
+                                CREATE_FN)                              \
+  TYPE CREATE_FN();
+
+#define ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE(                    \
+    TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL, DEEP_VAL, CREATE_FN)        \
+  TYPE CREATE_FN();
+
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
+
+#undef ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE
+#undef ANALYZER_OPTION_WITH_FN
+
   /// Retrieves and sets the UserMode. This is a high-level option,
   /// which is used to set other low-level options. It is not accessible
   /// outside of AnalyzerOptions.
@@ -464,287 +356,7 @@ public:
   /// \sa CXXMemberInliningMode
   bool mayInlineCXXMemberFunction(CXXInlineableMemberKind K);
 
-  /// Returns true if ObjectiveC inlining is enabled, false otherwise.
-  bool mayInlineObjCMethod();
-
-  /// Returns whether or not the destructors for C++ temporary objects should
-  /// be included in the CFG.
-  ///
-  /// This is controlled by the 'cfg-temporary-dtors' config option, which
-  /// accepts the values "true" and "false".
-  bool includeTemporaryDtorsInCFG();
-
-  /// Returns whether or not implicit destructors for C++ objects should
-  /// be included in the CFG.
-  ///
-  /// This is controlled by the 'cfg-implicit-dtors' config option, which
-  /// accepts the values "true" and "false".
-  bool includeImplicitDtorsInCFG();
-
-  /// Returns whether or not end-of-lifetime information should be included in
-  /// the CFG.
-  ///
-  /// This is controlled by the 'cfg-lifetime' config option, which accepts
-  /// the values "true" and "false".
-  bool includeLifetimeInCFG();
-
-  /// Returns whether or not the end of the loop information should be included
-  /// in the CFG.
-  ///
-  /// This is controlled by the 'cfg-loopexit' config option, which accepts
-  /// the values "true" and "false".
-  bool includeLoopExitInCFG();
-
-  /// Returns whether or not construction site information should be included
-  /// in the CFG C++ constructor elements.
-  ///
-  /// This is controlled by the 'cfg-rich-constructors' config options,
-  /// which accepts the values "true" and "false".
-  bool includeRichConstructorsInCFG();
-
-  /// Returns whether or not scope information should be included in the CFG.
-  ///
-  /// This is controlled by the 'cfg-scope-info' config option, which accepts
-  /// the values "true" and "false".
-  bool includeScopesInCFG();
-
-  /// Returns whether or not C++ standard library functions may be considered
-  /// for inlining.
-  ///
-  /// This is controlled by the 'c++-stdlib-inlining' config option, which
-  /// accepts the values "true" and "false".
-  bool mayInlineCXXStandardLibrary();
-
-  /// Returns whether or not templated functions may be considered for inlining.
-  ///
-  /// This is controlled by the 'c++-template-inlining' config option, which
-  /// accepts the values "true" and "false".
-  bool mayInlineTemplateFunctions();
-
-  /// Returns whether or not allocator call may be considered for inlining.
-  ///
-  /// This is controlled by the 'c++-allocator-inlining' config option, which
-  /// accepts the values "true" and "false".
-  bool mayInlineCXXAllocator();
-
-  /// Returns whether or not methods of C++ container objects may be considered
-  /// for inlining.
-  ///
-  /// This is controlled by the 'c++-container-inlining' config option, which
-  /// accepts the values "true" and "false".
-  bool mayInlineCXXContainerMethods();
-
-  /// Returns whether or not the destructor of C++ 'shared_ptr' may be
-  /// considered for inlining.
-  ///
-  /// This covers std::shared_ptr, std::tr1::shared_ptr, and boost::shared_ptr,
-  /// and indeed any destructor named "~shared_ptr".
-  ///
-  /// This is controlled by the 'c++-shared_ptr-inlining' config option, which
-  /// accepts the values "true" and "false".
-  bool mayInlineCXXSharedPtrDtor();
-
-  /// Returns true if C++ temporary destructors should be inlined during
-  /// analysis.
-  ///
-  /// If temporary destructors are disabled in the CFG via the
-  /// 'cfg-temporary-dtors' option, temporary destructors would not be
-  /// inlined anyway.
-  ///
-  /// This is controlled by the 'c++-temp-dtor-inlining' config option, which
-  /// accepts the values "true" and "false".
-  bool mayInlineCXXTemporaryDtors();
-
-  /// Returns whether or not paths that go through null returns should be
-  /// suppressed.
-  ///
-  /// This is a heuristic for avoiding bug reports with paths that go through
-  /// inlined functions that are more defensive than their callers.
-  ///
-  /// This is controlled by the 'suppress-null-return-paths' config option,
-  /// which accepts the values "true" and "false".
-  bool shouldSuppressNullReturnPaths();
-
-  /// Returns whether a bug report should \em not be suppressed if its path
-  /// includes a call with a null argument, even if that call has a null return.
-  ///
-  /// This option has no effect when #shouldSuppressNullReturnPaths() is false.
-  ///
-  /// This is a counter-heuristic to avoid false negatives.
-  ///
-  /// This is controlled by the 'avoid-suppressing-null-argument-paths' config
-  /// option, which accepts the values "true" and "false".
-  bool shouldAvoidSuppressingNullArgumentPaths();
-
-  /// Returns whether or not diagnostics containing inlined defensive NULL
-  /// checks should be suppressed.
-  ///
-  /// This is controlled by the 'suppress-inlined-defensive-checks' config
-  /// option, which accepts the values "true" and "false".
-  bool shouldSuppressInlinedDefensiveChecks();
-
-  /// Returns whether or not diagnostics reported within the C++ standard
-  /// library should be suppressed.
-  ///
-  /// This is controlled by the 'suppress-c++-stdlib' config option,
-  /// which accepts the values "true" and "false".
-  bool shouldSuppressFromCXXStandardLibrary();
-
-  /// Returns whether bug reports should be crosschecked with the Z3
-  /// constraint manager backend.
-  ///
-  /// This is controlled by the 'crosscheck-with-z3' config option,
-  /// which accepts the values "true" and "false".
-  bool shouldCrosscheckWithZ3();
-
-  /// Returns whether or not the diagnostic report should be always reported
-  /// in the main source file and not the headers.
-  ///
-  /// This is controlled by the 'report-in-main-source-file' config option,
-  /// which accepts the values "true" and "false".
-  bool shouldReportIssuesInMainSourceFile();
-
-  /// Returns whether or not the report filename should be random or not.
-  ///
-  /// This is controlled by the 'stable-report-filename' config option,
-  /// which accepts the values "true" and "false". Default = false
-  bool shouldWriteStableReportFilename();
-
-  /// \return Whether the analyzer should
-  /// serialize statistics to plist output.
-  /// Statistics would be serialized in JSON format inside the main dictionary
-  /// under the \c statistics key.
-  /// Available only if compiled in assert mode or with LLVM statistics
-  /// explicitly enabled.
-  bool shouldSerializeStats();
-
-  /// Returns whether irrelevant parts of a bug report path should be pruned
-  /// out of the final output.
-  ///
-  /// This is controlled by the 'prune-paths' config option, which accepts the
-  /// values "true" and "false".
-  bool shouldPrunePaths();
-
-  /// Returns true if 'static' initializers should be in conditional logic
-  /// in the CFG.
-  bool shouldConditionalizeStaticInitializers();
-
-  // Returns the size of the functions (in basic blocks), which should be
-  // considered to be small enough to always inline.
-  //
-  // This is controlled by "ipa-always-inline-size" analyzer-config option.
-  unsigned getAlwaysInlineSize();
-
-  // Returns the bound on the number of basic blocks in an inlined function
-  // (50 by default).
-  //
-  // This is controlled by "-analyzer-config max-inlinable-size" option.
-  unsigned getMaxInlinableSize();
-
-  /// Returns true if the analyzer engine should synthesize fake bodies
-  /// for well-known functions.
-  bool shouldSynthesizeBodies();
-
-  /// Returns how often nodes in the ExplodedGraph should be recycled to save
-  /// memory.
-  ///
-  /// This is controlled by the 'graph-trim-interval' config option. To disable
-  /// node reclamation, set the option to "0".
-  unsigned getGraphTrimInterval();
-
-  /// Returns the maximum complexity of symbolic constraint (50 by default).
-  ///
-  /// This is controlled by "-analyzer-config max-symbol-complexity" option.
-  unsigned getMaxSymbolComplexity();
-
-  /// Returns the maximum times a large function could be inlined.
-  ///
-  /// This is controlled by the 'max-times-inline-large' config option.
-  unsigned getMaxTimesInlineLarge();
-
-  /// Returns the number of basic blocks a function needs to have to be
-  /// considered large for the 'max-times-inline-large' config option.
-  ///
-  /// This is controlled by the 'min-cfg-size-treat-functions-as-large' config
-  /// option.
-  unsigned getMinCFGSizeTreatFunctionsAsLarge();
-
-  /// Returns the maximum number of nodes the analyzer can generate while
-  /// exploring a top level function (for each exploded graph).
-  /// 150000 is default; 0 means no limit.
-  ///
-  /// This is controlled by the 'max-nodes' config option.
-  unsigned getMaxNodesPerTopLevelFunction();
-
-  /// Returns true if lambdas should be inlined. Otherwise a sink node will be
-  /// generated each time a LambdaExpr is visited.
-  bool shouldInlineLambdas();
-
-  /// Returns true if the analysis should try to widen loops.
-  /// This is controlled by the 'widen-loops' config option.
-  bool shouldWidenLoops();
-
-  /// Returns true if the analysis should try to unroll loops with known bounds.
-  /// This is controlled by the 'unroll-loops' config option.
-  bool shouldUnrollLoops();
-
-  /// Returns true if the bug reporter should transparently treat extra note
-  /// diagnostic pieces as event diagnostic pieces. Useful when the diagnostic
-  /// consumer doesn't support the extra note pieces.
-  ///
-  /// This is controlled by the 'extra-notes-as-events' option, which defaults
-  /// to false when unset.
-  bool shouldDisplayNotesAsEvents();
-
-  /// Returns true if macros related to the bugpath should be expanded and
-  /// included in the plist output.
-  ///
-  /// This is controlled by the 'expand-macros' option, which defaults to false
-  /// when unset.
-  bool shouldDisplayMacroExpansions();
-
-  /// Returns true if SValBuilder should rearrange comparisons and additive
-  /// operations of symbolic expressions which consist of a sum of a symbol and
-  /// a concrete integer into the format where symbols are on the left-hand
-  /// side and the integer is on the right. This is only done if both symbols
-  /// and both concrete integers are signed, greater than or equal to the
-  /// quarter of the minimum value of the type and less than or equal to the
-  /// quarter of the maximum value of that type.
-  ///
-  /// A + n <OP> B + m becomes A - B <OP> m - n, where A and B symbolic,
-  /// n and m are integers. <OP> is any of '==', '!=', '<', '<=', '>', '>=',
-  /// '+' or '-'. The rearrangement also happens with '-' instead of '+' on
-  // either or both side and also if any or both integers are missing.
-  bool shouldAggressivelySimplifyBinaryOperation();
-
-  /// Returns true if we should eagerly assume evaluations of
-  /// conditionals, thus, bifurcating the path.
-  ///
-  /// This indicates how the engine should handle expressions such as: 'x =
-  /// (y != 0)'.  When this is true then the subexpression 'y != 0' will be
-  /// eagerly assumed to be true or false, thus evaluating it to the integers 0
-  /// or 1 respectively.  The upside is that this can increase analysis
-  /// precision until we have a better way to lazily evaluate such logic.  The
-  /// downside is that it eagerly bifurcates paths.
-  bool shouldEagerlyAssume();
-
-  /// Returns the directory containing the CTU related files.
   StringRef getCTUDir();
-
-  /// Returns the name of the file containing the CTU index of functions.
-  StringRef getCTUIndexName();
-
-  /// Returns true when naive cross translation unit analysis is enabled.
-  /// This is an experimental feature to inline functions from another
-  /// translation units.
-  bool naiveCTUEnabled();
-
-  /// Returns true if elidable C++ copy-constructors and move-constructors
-  /// should be actually elided during analysis. Both behaviors are allowed
-  /// by the C++ standard, and the analyzer, like CodeGen, defaults to eliding.
-  /// Starting with C++17 some elisions become mandatory, and in these cases
-  /// the option will be ignored.
-  bool shouldElideConstructors();
 };
 
 using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;

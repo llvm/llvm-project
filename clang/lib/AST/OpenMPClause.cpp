@@ -111,6 +111,7 @@ const OMPClauseWithPreInit *OMPClauseWithPreInit::get(const OMPClause *C) {
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_atomic_default_mem_order:
     break;
   }
 
@@ -184,6 +185,7 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_atomic_default_mem_order:
     break;
   }
 
@@ -1121,6 +1123,14 @@ void OMPClausePrinter::VisitOMPReverseOffloadClause(OMPReverseOffloadClause *) {
 void OMPClausePrinter::VisitOMPDynamicAllocatorsClause(
     OMPDynamicAllocatorsClause *) {
   OS << "dynamic_allocators";
+}
+
+void OMPClausePrinter::VisitOMPAtomicDefaultMemOrderClause(
+    OMPAtomicDefaultMemOrderClause *Node) {
+  OS << "atomic_default_mem_order("
+     << getOpenMPSimpleClauseTypeName(OMPC_atomic_default_mem_order,
+                                      Node->getAtomicDefaultMemOrderKind())
+     << ")";
 }
 
 void OMPClausePrinter::VisitOMPScheduleClause(OMPScheduleClause *Node) {

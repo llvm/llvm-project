@@ -182,6 +182,7 @@ protected:
 
 public:
   explicit CGOpenMPRuntimeNVPTX(CodeGenModule &CGM);
+  void clear() override;
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
@@ -413,6 +414,23 @@ private:
   /// Maps the function to the list of the globalized variables with their
   /// addresses.
   llvm::SmallDenseMap<llvm::Function *, FunctionData> FunctionGlobalizedDecls;
+  /// List of records for the globalized variables in target/teams/distribute
+  /// contexts. Inner records are going to be joined into the single record,
+  /// while those resulting records are going to be joined into the single
+  /// union. This resulting union (one per CU) is the entry point for the static
+  /// memory management runtime functions.
+  struct GlobalPtrSizeRecsTy {
+    llvm::GlobalVariable *RecSize = nullptr;
+    llvm::SmallVector<const RecordDecl *, 2> Records;
+    unsigned RegionCounter = 0;
+  };
+  llvm::SmallVector<GlobalPtrSizeRecsTy, 8> GlobalizedRecords;
+  /// Global variable used for staticlly allocated global memoryused for
+  /// globalization in target/teams/distribute regions.
+  llvm::GlobalVariable *StaticGlobalized = nullptr;
+  /// Shared pointer for the global memory in the global memory buffer used for
+  /// the given kernel.
+  llvm::GlobalVariable *KernelStaticGlobalized = nullptr;
 };
 
 } // CodeGen namespace.
