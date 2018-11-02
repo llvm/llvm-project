@@ -213,10 +213,11 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
   // them.
   if (Obj.SymbolTable) {
     Obj.SymbolTable->updateSymbols([&](Symbol &Sym) {
-      if ((Config.LocalizeHidden &&
-           (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
-          (!Config.SymbolsToLocalize.empty() &&
-           is_contained(Config.SymbolsToLocalize, Sym.Name)))
+      if (!Sym.isCommon() &&
+          ((Config.LocalizeHidden &&
+            (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
+           (!Config.SymbolsToLocalize.empty() &&
+            is_contained(Config.SymbolsToLocalize, Sym.Name))))
         Sym.Binding = STB_LOCAL;
 
       // Note: these two globalize flags have very similar names but different

@@ -271,7 +271,8 @@ void MipsBranchExpansion::splitMBB(MachineBasicBlock *MBB) {
   // Insert NewMBB and fix control flow.
   MachineBasicBlock *Tgt = getTargetMBB(*FirstBr);
   NewMBB->transferSuccessors(MBB);
-  NewMBB->removeSuccessor(Tgt, true);
+  if (Tgt != getTargetMBB(*LastBr))
+    NewMBB->removeSuccessor(Tgt, true);
   MBB->addSuccessor(NewMBB);
   MBB->addSuccessor(Tgt);
   MFp->insert(std::next(MachineFunction::iterator(MBB)), NewMBB);

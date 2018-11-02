@@ -123,6 +123,8 @@ CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
                             const LoopInfo *LI,
                             const LoopSafetyInfo *SafetyInfo);
 
+static void eraseInstruction(Instruction &I, AliasSetTracker *AST);
+
 namespace {
 struct LoopInvariantCodeMotion {
   using ASTrackerMapTy = DenseMap<Loop *, std::unique_ptr<AliasSetTracker>>;
@@ -404,8 +406,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         LLVM_DEBUG(dbgs() << "LICM deleting dead inst: " << I << '\n');
         salvageDebugInfo(I);
         ++II;
-        CurAST->deleteValue(&I);
-        I.eraseFromParent();
+        eraseInstruction(I, CurAST);
         Changed = true;
         continue;
       }
@@ -422,8 +423,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         if (sink(I, LI, DT, CurLoop, SafetyInfo, ORE, FreeInLoop)) {
           if (!FreeInLoop) {
             ++II;
-            CurAST->deleteValue(&I);
-            I.eraseFromParent();
+            eraseInstruction(I, CurAST);
           }
           Changed = true;
         }
@@ -480,10 +480,8 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
                           << '\n');
         CurAST->copyValue(&I, C);
         I.replaceAllUsesWith(C);
-        if (isInstructionTriviallyDead(&I, TLI)) {
-          CurAST->deleteValue(&I);
-          I.eraseFromParent();
-        }
+        if (isInstructionTriviallyDead(&I, TLI))
+          eraseInstruction(I, CurAST);
         Changed = true;
         continue;
       }
@@ -519,7 +517,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         Product->setFastMathFlags(I.getFastMathFlags());
         Product->insertAfter(&I);
         I.replaceAllUsesWith(Product);
-        I.eraseFromParent();
+        eraseInstruction(I, CurAST);
 
         hoist(*ReciprocalDivisor, DT, CurLoop, SafetyInfo, ORE);
         Changed = true;
@@ -888,6 +886,12 @@ CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
   return New;
 }
 
+static void eraseInstruction(Instruction &I, AliasSetTracker *AST) {
+  if (AST)
+    AST->deleteValue(&I);
+  I.eraseFromParent();
+}
+
 static Instruction *sinkThroughTriviallyReplaceablePHI(
     PHINode *TPN, Instruction *I, LoopInfo *LI,
     SmallDenseMap<BasicBlock *, Instruction *, 32> &SunkCopies,
@@ -1086,7 +1090,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
     Instruction *New = sinkThroughTriviallyReplaceablePHI(PN, &I, LI, SunkCopies,
                                                           SafetyInfo, CurLoop);
     PN->replaceAllUsesWith(New);
-    PN->eraseFromParent();
+    eraseInstruction(*PN, nullptr);
     Changed = true;
   }
   return Changed;
@@ -1516,7 +1520,7 @@ bool llvm::promoteLoopAccessesToScalars(
 
   // If the SSAUpdater didn't use the load in the preheader, just zap it now.
   if (PreheaderLoad->use_empty())
-    PreheaderLoad->eraseFromParent();
+    eraseInstruction(*PreheaderLoad, CurAST);
 
   return true;
 }

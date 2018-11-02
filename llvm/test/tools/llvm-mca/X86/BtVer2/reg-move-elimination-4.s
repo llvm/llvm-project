@@ -45,6 +45,10 @@ mov %edx, %eax
 # CHECK-NEXT:    Number of physical registers:     64
 # CHECK-NEXT:    Total number of mappings created: 0
 # CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      12
+# CHECK-NEXT:    Number of moves eliminated:       12  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             12  (100.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - JALU0

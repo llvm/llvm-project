@@ -3454,9 +3454,8 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     MachineFrameInfo &MFI = FuncInfo.MF->getFrameInfo();
 
     // SP = FP + Fixed Object + 16
-    MVT VT = TLI.getPointerTy(DL);
     int FI = MFI.CreateFixedObject(4, 0, false);
-    unsigned ResultReg = createResultReg(TLI.getRegClassFor(VT));
+    unsigned ResultReg = createResultReg(&AArch64::GPR64spRegClass);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
             TII.get(AArch64::ADDXri), ResultReg)
             .addFrameIndex(FI)

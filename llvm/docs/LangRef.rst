@@ -10328,7 +10328,7 @@ Note that calling this intrinsic does not prevent function inlining or
 other aggressive transformations, so the value returned may not be that
 of the obvious source-language caller.
 
-This intrinsic is only implemented for x86.
+This intrinsic is only implemented for x86 and aarch64.
 
 '``llvm.sponentry``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

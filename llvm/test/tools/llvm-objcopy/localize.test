@@ -1,5 +1,10 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objcopy --localize-symbol Global -L Local -L Weak %t %t2
+# RUN: llvm-objcopy \
+# RUN:     --localize-symbol Global \
+# RUN:     -L Local \
+# RUN:     -L Weak \
+# RUN:     -L GlobalCommon \
+# RUN:     %t %t2
 # RUN: llvm-readobj -symbols %t2 | FileCheck %s
 
 !ELF
@@ -40,6 +45,11 @@ Symbols:
       Size:     8
       Section:  .text
       Value:    0x1010
+    - Name:     GlobalCommon
+      Type:     STT_OBJECT
+      Index:    SHN_COMMON
+      Value:    0x2006
+      Size:     2
 
 #CHECK: Symbols [
 #CHECK-NEXT:  Symbol {
@@ -77,5 +87,14 @@ Symbols:
 #CHECK-NEXT:    Type: Function
 #CHECK-NEXT:    Other: 0
 #CHECK-NEXT:    Section: .text
+#CHECK-NEXT:  }
+#CHECK-NEXT:  Symbol {
+#CHECK-NEXT:    Name: GlobalCommon
+#CHECK-NEXT:    Value: 0x2006
+#CHECK-NEXT:    Size: 2
+#CHECK-NEXT:    Binding: Global
+#CHECK-NEXT:    Type: Object
+#CHECK-NEXT:    Other: 0
+#CHECK-NEXT:    Section: Common (0xF
 #CHECK-NEXT:  }
 #CHECK-NEXT:]
