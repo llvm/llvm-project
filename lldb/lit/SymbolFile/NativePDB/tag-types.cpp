@@ -141,7 +141,7 @@ int main(int argc, char **argv) {
 }
 
 // CHECK:      (lldb) target create "{{.*}}tag-types.cpp.tmp.exe"
-// CHECK-NEXT: Current executable set to '{{.*}}tag-types.cpp.tmp.exe' (x86_64).
+// CHECK-NEXT: Current executable set to '{{.*}}tag-types.cpp.tmp.exe'
 // CHECK-NEXT: (lldb) command source -s 0 '{{.*}}tag-types.lldbinit'
 // CHECK-NEXT: Executing commands in '{{.*}}tag-types.lldbinit'.
 // CHECK-NEXT: (lldb) type lookup -- Struct
