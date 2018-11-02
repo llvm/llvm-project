@@ -59,16 +59,9 @@ public:
   llvm::Optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
 
-  /// Uses the default fallback command, adding any extra flags.
-  tooling::CompileCommand getFallbackCommand(PathRef File) const override;
-
-  /// Sets the extra flags that should be added to a file.
-  void setExtraFlagsForFile(PathRef File, std::vector<std::string> ExtraFlags);
-
 private:
   tooling::CompilationDatabase *getCDBForFile(PathRef File) const;
   tooling::CompilationDatabase *getCDBInDirLocked(PathRef File) const;
-  void addExtraFlags(PathRef File, tooling::CompileCommand &C) const;
 
   mutable std::mutex Mutex;
   /// Caches compilation databases loaded from directories(keys are
@@ -76,8 +69,6 @@ private:
   mutable llvm::StringMap<std::unique_ptr<clang::tooling::CompilationDatabase>>
       CompilationDatabases;
 
-  /// Stores extra flags per file.
-  llvm::StringMap<std::vector<std::string>> ExtraFlagsForFile;
   /// Used for command argument pointing to folder where compile_commands.json
   /// is located.
   llvm::Optional<Path> CompileCommandsDir;

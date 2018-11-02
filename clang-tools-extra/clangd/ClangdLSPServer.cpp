@@ -366,8 +366,6 @@ void ClangdLSPServer::onShutdown(const ShutdownParams &Params,
 void ClangdLSPServer::onDocumentDidOpen(
     const DidOpenTextDocumentParams &Params) {
   PathRef File = Params.textDocument.uri.file();
-  if (Params.metadata && !Params.metadata->extraFlags.empty())
-    CDB->setExtraFlagsForFile(File, std::move(Params.metadata->extraFlags));
 
   const std::string &Contents = Params.textDocument.text;
 
@@ -809,18 +807,6 @@ bool ClangdLSPServer::CompilationDB::setCompilationCommandForFile(
   }
   return static_cast<InMemoryCompilationDb *>(CDB.get())
       ->setCompilationCommandForFile(File, std::move(CompilationCommand));
-}
-
-void ClangdLSPServer::CompilationDB::setExtraFlagsForFile(
-    PathRef File, std::vector<std::string> ExtraFlags) {
-  if (!IsDirectoryBased) {
-    elog("Trying to set extra flags for {0} while using in-memory compilation "
-         "database",
-         File);
-    return;
-  }
-  static_cast<DirectoryBasedGlobalCompilationDatabase *>(CDB.get())
-      ->setExtraFlagsForFile(File, std::move(ExtraFlags));
 }
 
 } // namespace clangd

@@ -175,11 +175,6 @@ struct Location {
 llvm::json::Value toJSON(const Location &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Location &);
 
-struct Metadata {
-  std::vector<std::string> extraFlags;
-};
-bool fromJSON(const llvm::json::Value &, Metadata &);
-
 struct TextEdit {
   /// The range of the text document to be manipulated. To insert
   /// text into a document create a range where start === end.
@@ -411,9 +406,6 @@ bool fromJSON(const llvm::json::Value &, InitializeParams &);
 struct DidOpenTextDocumentParams {
   /// The document that was opened.
   TextDocumentItem textDocument;
-
-  /// Extension storing per-file metadata, such as compilation flags.
-  llvm::Optional<Metadata> metadata;
 };
 bool fromJSON(const llvm::json::Value &, DidOpenTextDocumentParams &);
 
