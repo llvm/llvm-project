@@ -11,6 +11,7 @@
 
 // C includes
 #include <dirent.h>
+#include <fcntl.h>
 #include <sys/mount.h>
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -72,4 +73,8 @@ Status FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
 
 FILE *FileSystem::Fopen(const char *path, const char *mode) {
   return ::fopen(path, mode);
+}
+
+int FileSystem::Open(const char *path, int flags, int mode) {
+  return ::open(path, flags, mode);
 }

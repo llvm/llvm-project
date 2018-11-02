@@ -96,3 +96,12 @@ FILE *FileSystem::Fopen(const char *path, const char *mode) {
     return nullptr;
   return file;
 }
+
+int FileSystem::Open(const char *path, int flags, int mode) {
+  std::wstring wpath;
+  if (!llvm::ConvertUTF8toWide(path, wpath))
+    return -1;
+  int result;
+  ::_wsopen_s(&result, wpath.c_str(), flags, _SH_DENYNO, mode);
+  return result;
+}
