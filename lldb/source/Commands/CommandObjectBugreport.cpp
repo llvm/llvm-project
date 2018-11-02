@@ -72,8 +72,6 @@ protected:
     const FileSpec &outfile_spec =
         m_outfile_options.GetFile().GetCurrentValue();
     if (outfile_spec) {
-      char path[PATH_MAX];
-      outfile_spec.GetPath(path, sizeof(path));
 
       uint32_t open_options =
           File::eOpenOptionWrite | File::eOpenOptionCanCreate |
@@ -84,10 +82,13 @@ protected:
         open_options |= File::eOpenOptionTruncate;
 
       StreamFileSP outfile_stream = std::make_shared<StreamFile>();
-      Status error = outfile_stream->GetFile().Open(path, open_options);
+      File &file = outfile_stream->GetFile();
+      Status error =
+          FileSystem::Instance().Open(file, outfile_spec, open_options);
       if (error.Fail()) {
+        auto path = outfile_spec.GetPath();
         result.AppendErrorWithFormat("Failed to open file '%s' for %s: %s\n",
-                                     path, append ? "append" : "write",
+                                     path.c_str(), append ? "append" : "write",
                                      error.AsCString());
         result.SetStatus(eReturnStatusFailed);
         return false;

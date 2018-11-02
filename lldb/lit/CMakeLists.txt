@@ -83,6 +83,6 @@ if (TARGET clang)
 endif()
 
 add_lit_testsuites(LLDB
-  ${CMAKE_CURRENT_BINARY_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${LLDB_TEST_DEPS}
   )
