@@ -3294,6 +3294,10 @@ def warn_address_of_reference_null_compare : Warning<
   InGroup<TautologicalUndefinedCompare>;
 def note_reference_is_return_value : Note<"%0 returns a reference">;
 
+def warn_division_sizeof_ptr : Warning<
+  "'%0' will return the size of the pointer, not the array itself">,
+  InGroup<DiagGroup<"sizeof-pointer-div">>;
+
 def note_function_warning_silence : Note<
     "prefix with the address-of operator to silence this warning">;
 def note_function_to_function_call : Note<

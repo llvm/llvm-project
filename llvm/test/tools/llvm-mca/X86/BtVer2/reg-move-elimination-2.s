@@ -49,6 +49,10 @@ movdqu %xmm5, %xmm0
 # CHECK-NEXT:    Number of physical registers:     72
 # CHECK-NEXT:    Total number of mappings created: 0
 # CHECK-NEXT:    Max number of mappings used:      0
+# CHECK-NEXT:    Number of optimizable moves:      21
+# CHECK-NEXT:    Number of moves eliminated:       21  (100.0%)
+# CHECK-NEXT:    Number of zero moves:             21  (100.0%)
+# CHECK-NEXT:    Max moves eliminated per cycle:   2
 
 # CHECK:      *  Register File #2 -- JIntegerPRF:
 # CHECK-NEXT:    Number of physical registers:     64

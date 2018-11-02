@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MicrosoftDemangleNodes.h"
+#include "llvm/Demangle/MicrosoftDemangleNodes.h"
 #include "llvm/Demangle/Compiler.h"
 #include "llvm/Demangle/Utility.h"
 #include <cctype>
@@ -558,6 +558,7 @@ void VariableSymbolNode::output(OutputStream &OS, OutputFlags Flags) const {
   case StorageClass::PublicStatic:
   case StorageClass::ProtectedStatic:
     OS << "static ";
+    break;
   default:
     break;
   }

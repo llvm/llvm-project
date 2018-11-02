@@ -420,8 +420,10 @@ FileSpec Host::GetModuleFileSpecForHostAddress(const void *host_addr) {
 #if !defined(__ANDROID__)
   Dl_info info;
   if (::dladdr(host_addr, &info)) {
-    if (info.dli_fname)
-      module_filespec.SetFile(info.dli_fname, true, FileSpec::Style::native);
+    if (info.dli_fname) {
+      module_filespec.SetFile(info.dli_fname, FileSpec::Style::native);
+      FileSystem::Instance().Resolve(module_filespec);
+    }
   }
 #endif
   return module_filespec;
@@ -511,7 +513,7 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
     }
   }
 
-  FileSpec output_file_spec{output_file_path.c_str(), false};
+  FileSpec output_file_spec(output_file_path.c_str());
 
   launch_info.AppendSuppressFileAction(STDIN_FILENO, true, false);
   if (output_file_spec) {

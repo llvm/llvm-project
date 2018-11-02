@@ -83,8 +83,8 @@ TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
   ASSERT_NO_ERROR(llvm::sys::fs::file_size(Obj, Size));
   ASSERT_GT(Size, 0u);
 
-  ModuleSpec Spec{FileSpec(Obj, false)};
-  Spec.GetSymbolFileSpec().SetFile(Obj, false, FileSpec::Style::native);
+  ModuleSpec Spec{FileSpec(Obj)};
+  Spec.GetSymbolFileSpec().SetFile(Obj, FileSpec::Style::native);
   auto M = std::make_shared<Module>(Spec);
 
   auto Count = [M](const char *Name, FunctionNameType Type) -> int {

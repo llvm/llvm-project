@@ -1729,7 +1729,7 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_filenames.AppendIfUnique(FileSpec(option_arg, false));
+        m_filenames.AppendIfUnique(FileSpec(option_arg));
         if (m_filenames.GetSize() > 1)
           return Status("only one source file expected.");
         break;

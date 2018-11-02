@@ -36,6 +36,22 @@ TEST(SparseBitVectorTest, TrivialOperation) {
   const SparseBitVector<> ConstVec = Vec;
   EXPECT_TRUE(ConstVec.test(5));
   EXPECT_FALSE(ConstVec.test(17));
+
+  Vec.set(1337);
+  EXPECT_TRUE(Vec.test(1337));
+  Vec = ConstVec;
+  EXPECT_FALSE(Vec.test(1337));
+
+  Vec.set(1337);
+  EXPECT_FALSE(Vec.empty());
+  SparseBitVector<> MovedVec(std::move(Vec));
+  EXPECT_TRUE(Vec.empty());
+  EXPECT_TRUE(MovedVec.test(5));
+  EXPECT_TRUE(MovedVec.test(1337));
+
+  Vec = std::move(MovedVec);
+  EXPECT_TRUE(MovedVec.empty());
+  EXPECT_FALSE(Vec.empty());
 }
 
 TEST(SparseBitVectorTest, IntersectWith) {

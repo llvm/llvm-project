@@ -21,6 +21,13 @@ private:
   int value;
   MyCls *object;
 };
+
+template <typename T>
+class X {};
+
+class Y : public X<int> {
+  Y() : X<int>() {}
+};
 }
 
 // RUN: c-index-test -code-completion-at=%s:4:9 -std=c++98 %s | FileCheck %s
@@ -35,10 +42,12 @@ private:
 // CHECK-NEXT: Container Kind: StructDecl
 
 // RUN: c-index-test -code-completion-at=%s:18:41 %s | FileCheck -check-prefix=CHECK-CTOR-INIT %s
-// CHECK-CTOR-INIT: NotImplemented:{TypedText MyCls}{LeftParen (}{Placeholder args}{RightParen )} (7)
-// CHECK-CTOR-INIT: MemberRef:{TypedText object}{LeftParen (}{Placeholder args}{RightParen )} (35)
-// CHECK-CTOR-INIT: MemberRef:{TypedText value}{LeftParen (}{Placeholder args}{RightParen )} (35)
+// CHECK-CTOR-INIT: ClassDecl:{TypedText MyCls}{LeftParen (}{Placeholder MyCls}{RightParen )} (7)
+// CHECK-CTOR-INIT: MemberRef:{TypedText object}{LeftParen (}{Placeholder MyCls *}{RightParen )} (35)
+// CHECK-CTOR-INIT: MemberRef:{TypedText value}{LeftParen (}{Placeholder int}{RightParen )} (35)
 // RUN: c-index-test -code-completion-at=%s:18:55 %s | FileCheck -check-prefix=CHECK-CTOR-INIT-2 %s
-// CHECK-CTOR-INIT-2-NOT: NotImplemented:{TypedText MyCls}{LeftParen (}{Placeholder args}{RightParen )}
-// CHECK-CTOR-INIT-2: MemberRef:{TypedText object}{LeftParen (}{Placeholder args}{RightParen )} (35)
-// CHECK-CTOR-INIT-2: MemberRef:{TypedText value}{LeftParen (}{Placeholder args}{RightParen )} (7)
+// CHECK-CTOR-INIT-2-NOT: ClassDecl:{TypedText MyCls}{LeftParen (}{Placeholder MyCls}{RightParen )} (7)
+// CHECK-CTOR-INIT-2: MemberRef:{TypedText object}{LeftParen (}{Placeholder MyCls *}{RightParen )} (35)
+// CHECK-CTOR-INIT-2: MemberRef:{TypedText value}{LeftParen (}{Placeholder int}{RightParen )} (7)
+// RUN: c-index-test -code-completion-at=%s:29:9 %s | FileCheck -check-prefix=CHECK-CTOR-INIT-3 %s
+// CHECK-CTOR-INIT-3: ClassDecl:{TypedText X<int>}{LeftParen (}{Placeholder X<int>}{RightParen )} (7)

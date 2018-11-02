@@ -243,7 +243,7 @@ bool DYLDRendezvous::FillSOEntryFromModuleInfo(
   entry.base_addr = base_addr;
   entry.dyn_addr = dyn_addr;
 
-  entry.file_spec.SetFile(name, false, FileSpec::Style::native);
+  entry.file_spec.SetFile(name, FileSpec::Style::native);
 
   UpdateBaseAddrIfNecessary(entry, name);
 
@@ -517,7 +517,7 @@ bool DYLDRendezvous::ReadSOEntryFromMemory(lldb::addr_t addr, SOEntry &entry) {
     return false;
 
   std::string file_path = ReadStringFromMemory(entry.path_addr);
-  entry.file_spec.SetFile(file_path, false, FileSpec::Style::native);
+  entry.file_spec.SetFile(file_path, FileSpec::Style::native);
 
   UpdateBaseAddrIfNecessary(entry, file_path);
 

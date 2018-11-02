@@ -2529,14 +2529,15 @@ bool RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id,
          "Allocation information not available");
 
   // Check we can read from file
-  FileSpec file(path, true);
-  if (!file.Exists()) {
+  FileSpec file(path);
+  FileSystem::Instance().Resolve(file);
+  if (!FileSystem::Instance().Exists(file)) {
     strm.Printf("Error: File %s does not exist", path);
     strm.EOL();
     return false;
   }
 
-  if (!file.Readable()) {
+  if (!FileSystem::Instance().Readable(file)) {
     strm.Printf("Error: File %s does not have readable permissions", path);
     strm.EOL();
     return false;
@@ -2753,7 +2754,8 @@ bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
          "Allocation information not available");
 
   // Check we can create writable file
-  FileSpec file_spec(path, true);
+  FileSpec file_spec(path);
+  FileSystem::Instance().Resolve(file_spec);
   File file(file_spec, File::eOpenOptionWrite | File::eOpenOptionCanCreate |
                            File::eOpenOptionTruncate);
   if (!file) {
@@ -4651,8 +4653,9 @@ public:
 
       switch (short_option) {
       case 'f':
-        m_outfile.SetFile(option_arg, true, FileSpec::Style::native);
-        if (m_outfile.Exists()) {
+        m_outfile.SetFile(option_arg, FileSpec::Style::native);
+        FileSystem::Instance().Resolve(m_outfile);
+        if (FileSystem::Instance().Exists(m_outfile)) {
           m_outfile.Clear();
           err.SetErrorStringWithFormat("file already exists: '%s'",
                                        option_arg.str().c_str());

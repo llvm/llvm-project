@@ -21,10 +21,12 @@ namespace mca {
 RegisterFileStatistics::RegisterFileStatistics(const MCSubtargetInfo &sti)
     : STI(sti) {
   const MCSchedModel &SM = STI.getSchedModel();
-  RegisterFileUsage Empty = {0, 0, 0};
+  RegisterFileUsage RFUEmpty = {0, 0, 0};
+  MoveEliminationInfo MEIEmpty = {0, 0, 0, 0, 0};
   if (!SM.hasExtraProcessorInfo()) {
     // Assume a single register file.
-    RegisterFiles.emplace_back(Empty);
+    PRFUsage.emplace_back(RFUEmpty);
+    MoveElimInfo.emplace_back(MEIEmpty);
     return;
   }
 
@@ -35,8 +37,42 @@ RegisterFileStatistics::RegisterFileStatistics(const MCSubtargetInfo &sti)
   // be skipped. If there are no user defined register files, then reserve a
   // single entry for the default register file at index #0.
   unsigned NumRegFiles = std::max(PI.NumRegisterFiles, 1U);
-  RegisterFiles.resize(NumRegFiles);
-  std::fill(RegisterFiles.begin(), RegisterFiles.end(), Empty);
+
+  PRFUsage.resize(NumRegFiles);
+  std::fill(PRFUsage.begin(), PRFUsage.end(), RFUEmpty);
+
+  MoveElimInfo.resize(NumRegFiles);
+  std::fill(MoveElimInfo.begin(), MoveElimInfo.end(), MEIEmpty);
+}
+
+void RegisterFileStatistics::updateRegisterFileUsage(
+    ArrayRef<unsigned> UsedPhysRegs) {
+  for (unsigned I = 0, E = PRFUsage.size(); I < E; ++I) {
+    RegisterFileUsage &RFU = PRFUsage[I];
+    unsigned NumUsedPhysRegs = UsedPhysRegs[I];
+    RFU.CurrentlyUsedMappings += NumUsedPhysRegs;
+    RFU.TotalMappings += NumUsedPhysRegs;
+    RFU.MaxUsedMappings =
+        std::max(RFU.MaxUsedMappings, RFU.CurrentlyUsedMappings);
+  }
+}
+
+void RegisterFileStatistics::updateMoveElimInfo(const Instruction &Inst) {
+  if (!Inst.isOptimizableMove())
+    return;
+
+  assert(Inst.getDefs().size() == 1 && "Expected a single definition!");
+  assert(Inst.getUses().size() == 1 && "Expected a single register use!");
+  const WriteState &WS = Inst.getDefs()[0];
+  const ReadState &RS = Inst.getUses()[0];
+
+  MoveEliminationInfo &Info =
+      MoveElimInfo[Inst.getDefs()[0].getRegisterFileID()];
+  Info.TotalMoveEliminationCandidates++;
+  if (WS.isEliminated())
+    Info.CurrentMovesEliminated++;
+  if (WS.isWriteZero() && RS.isReadZero())
+    Info.TotalMovesThatPropagateZero++;
 }
 
 void RegisterFileStatistics::onEvent(const HWInstructionEvent &Event) {
@@ -45,21 +81,24 @@ void RegisterFileStatistics::onEvent(const HWInstructionEvent &Event) {
     break;
   case HWInstructionEvent::Retired: {
     const auto &RE = static_cast<const HWInstructionRetiredEvent &>(Event);
-    for (unsigned I = 0, E = RegisterFiles.size(); I < E; ++I)
-      RegisterFiles[I].CurrentlyUsedMappings -= RE.FreedPhysRegs[I];
+    for (unsigned I = 0, E = PRFUsage.size(); I < E; ++I)
+      PRFUsage[I].CurrentlyUsedMappings -= RE.FreedPhysRegs[I];
     break;
   }
   case HWInstructionEvent::Dispatched: {
     const auto &DE = static_cast<const HWInstructionDispatchedEvent &>(Event);
-    for (unsigned I = 0, E = RegisterFiles.size(); I < E; ++I) {
-      RegisterFileUsage &RFU = RegisterFiles[I];
-      unsigned NumUsedPhysRegs = DE.UsedPhysRegs[I];
-      RFU.CurrentlyUsedMappings += NumUsedPhysRegs;
-      RFU.TotalMappings += NumUsedPhysRegs;
-      RFU.MaxUsedMappings =
-          std::max(RFU.MaxUsedMappings, RFU.CurrentlyUsedMappings);
-    }
+    updateRegisterFileUsage(DE.UsedPhysRegs);
+    updateMoveElimInfo(*DE.IR.getInstruction());
   }
+  }
+}
+
+void RegisterFileStatistics::onCycleEnd() {
+  for (MoveEliminationInfo &MEI : MoveElimInfo) {
+    unsigned &CurrentMax = MEI.MaxMovesEliminatedPerCycle;
+    CurrentMax = std::max(CurrentMax, MEI.CurrentMovesEliminated);
+    MEI.TotalMovesEliminated += MEI.CurrentMovesEliminated;
+    MEI.CurrentMovesEliminated = 0;
   }
 }
 
@@ -68,14 +107,14 @@ void RegisterFileStatistics::printView(raw_ostream &OS) const {
   raw_string_ostream TempStream(Buffer);
 
   TempStream << "\n\nRegister File statistics:";
-  const RegisterFileUsage &GlobalUsage = RegisterFiles[0];
+  const RegisterFileUsage &GlobalUsage = PRFUsage[0];
   TempStream << "\nTotal number of mappings created:    "
              << GlobalUsage.TotalMappings;
   TempStream << "\nMax number of mappings used:         "
              << GlobalUsage.MaxUsedMappings << '\n';
 
-  for (unsigned I = 1, E = RegisterFiles.size(); I < E; ++I) {
-    const RegisterFileUsage &RFU = RegisterFiles[I];
+  for (unsigned I = 1, E = PRFUsage.size(); I < E; ++I) {
+    const RegisterFileUsage &RFU = PRFUsage[I];
     // Obtain the register file descriptor from the scheduling model.
     assert(STI.getSchedModel().hasExtraProcessorInfo() &&
            "Unable to find register file info!");
@@ -98,6 +137,27 @@ void RegisterFileStatistics::printView(raw_ostream &OS) const {
                << RFU.TotalMappings;
     TempStream << "\n   Max number of mappings used:      "
                << RFU.MaxUsedMappings << '\n';
+    const MoveEliminationInfo &MEI = MoveElimInfo[I];
+
+    if (MEI.TotalMoveEliminationCandidates) {
+      TempStream << "   Number of optimizable moves:      "
+                 << MEI.TotalMoveEliminationCandidates;
+      double EliminatedMovProportion = (double)MEI.TotalMovesEliminated /
+                                       MEI.TotalMoveEliminationCandidates *
+                                       100.0;
+      double ZeroMovProportion = (double)MEI.TotalMovesThatPropagateZero /
+                                 MEI.TotalMoveEliminationCandidates * 100.0;
+      TempStream << "\n   Number of moves eliminated:       "
+                 << MEI.TotalMovesEliminated << "  "
+                 << format("(%.1f%%)",
+                           floor((EliminatedMovProportion * 10) + 0.5) / 10);
+      TempStream << "\n   Number of zero moves:             "
+                 << MEI.TotalMovesThatPropagateZero << "  "
+                 << format("(%.1f%%)",
+                           floor((ZeroMovProportion * 10) + 0.5) / 10);
+      TempStream << "\n   Max moves eliminated per cycle:   "
+                 << MEI.MaxMovesEliminatedPerCycle << '\n';
+    }
   }
 
   TempStream.flush();

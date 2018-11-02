@@ -192,16 +192,18 @@ Status PlatformWindows::ResolveExecutable(
   if (IsHost()) {
     // if we cant resolve the executable loation based on the current path
     // variables
-    if (!resolved_module_spec.GetFileSpec().Exists()) {
+    if (!FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec())) {
       resolved_module_spec.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
-      resolved_module_spec.GetFileSpec().SetFile(exe_path, true,
+      resolved_module_spec.GetFileSpec().SetFile(exe_path,
                                                  FileSpec::Style::native);
+      FileSystem::Instance().Resolve(resolved_module_spec.GetFileSpec());
     }
 
-    if (!resolved_module_spec.GetFileSpec().Exists())
-      resolved_module_spec.GetFileSpec().ResolveExecutableLocation();
+    if (!FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))
+      FileSystem::Instance().ResolveExecutableLocation(
+          resolved_module_spec.GetFileSpec());
 
-    if (resolved_module_spec.GetFileSpec().Exists())
+    if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))
       error.Clear();
     else {
       ms.GetFileSpec().GetPath(exe_path, sizeof(exe_path));
@@ -215,7 +217,7 @@ Status PlatformWindows::ResolveExecutable(
     } else {
       // We may connect to a process and use the provided executable (Don't use
       // local $PATH).
-      if (resolved_module_spec.GetFileSpec().Exists())
+      if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()))
         error.Clear();
       else
         error.SetErrorStringWithFormat("the platform is not currently "
@@ -262,7 +264,8 @@ Status PlatformWindows::ResolveExecutable(
       }
 
       if (error.Fail() || !exe_module_sp) {
-        if (resolved_module_spec.GetFileSpec().Readable()) {
+        if (FileSystem::Instance().Readable(
+                resolved_module_spec.GetFileSpec())) {
           error.SetErrorStringWithFormat(
               "'%s' doesn't contain any '%s' platform architectures: %s",
               resolved_module_spec.GetFileSpec().GetPath().c_str(),

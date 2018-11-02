@@ -200,7 +200,7 @@ static bool GetDeclarationForSymbol(const PDBSymbol &symbol,
   if (!src_file_up)
     return false;
 
-  FileSpec spec(src_file_up->getFileName(), /*resolve_path*/ false);
+  FileSpec spec(src_file_up->getFileName());
   decl.SetFile(spec);
   decl.SetColumn(first_line_up->getColumnNumber());
   decl.SetLine(first_line_up->getLineNumber());
@@ -288,6 +288,7 @@ GetClassOrFunctionParent(const llvm::pdb::PDBSymbol &symbol) {
     auto class_parent_id = raw.getClassParentId();
     if (auto class_parent = session.getSymbolById(class_parent_id))
       return class_parent;
+    break;
   }
   default:
     break;

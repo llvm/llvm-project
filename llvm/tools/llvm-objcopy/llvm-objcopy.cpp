@@ -147,7 +147,7 @@ static void executeObjcopyOnArchive(const CopyConfig &Config,
     executeObjcopyOnBinary(Config, *Bin, MB);
 
     Expected<NewArchiveMember> Member =
-        NewArchiveMember::getOldMember(Child, true);
+        NewArchiveMember::getOldMember(Child, Config.DeterministicArchives);
     if (!Member)
       reportError(Ar.getFileName(), Member.takeError());
     Member->Buf = MB.releaseMemoryBuffer();
@@ -157,9 +157,9 @@ static void executeObjcopyOnArchive(const CopyConfig &Config,
 
   if (Err)
     reportError(Config.InputFilename, std::move(Err));
-  if (Error E =
-          deepWriteArchive(Config.OutputFilename, NewArchiveMembers,
-                           Ar.hasSymbolTable(), Ar.kind(), true, Ar.isThin()))
+  if (Error E = deepWriteArchive(Config.OutputFilename, NewArchiveMembers,
+                                 Ar.hasSymbolTable(), Ar.kind(),
+                                 Config.DeterministicArchives, Ar.isThin()))
     reportError(Config.OutputFilename, std::move(E));
 }
 

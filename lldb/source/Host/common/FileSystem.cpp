@@ -9,9 +9,12 @@
 
 #include "lldb/Host/FileSystem.h"
 
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/Threading.h"
 
 #include <algorithm>
@@ -25,17 +28,17 @@ using namespace llvm;
 FileSystem &FileSystem::Instance() { return *InstanceImpl(); }
 
 void FileSystem::Initialize() {
-  assert(!InstanceImpl());
+  lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace();
 }
 
 void FileSystem::Initialize(IntrusiveRefCntPtr<vfs::FileSystem> fs) {
-  assert(!InstanceImpl());
+  lldbassert(!InstanceImpl() && "Already initialized.");
   InstanceImpl().emplace(fs);
 }
 
 void FileSystem::Terminate() {
-  assert(InstanceImpl());
+  lldbassert(InstanceImpl() && "Already terminated.");
   InstanceImpl().reset();
 }
 
@@ -138,7 +141,7 @@ std::error_code FileSystem::MakeAbsolute(FileSpec &file_spec) const {
   if (EC)
     return EC;
 
-  FileSpec new_file_spec(path, false, file_spec.GetPathStyle());
+  FileSpec new_file_spec(path, file_spec.GetPathStyle());
   file_spec = new_file_spec;
   return {};
 }
@@ -176,4 +179,38 @@ void FileSystem::Resolve(FileSpec &file_spec) {
 
   // Update the FileSpec with the resolved path.
   file_spec.SetPath(path);
+  file_spec.SetIsResolved(true);
+}
+
+bool FileSystem::ResolveExecutableLocation(FileSpec &file_spec) {
+  // If the directory is set there's nothing to do.
+  const ConstString &directory = file_spec.GetDirectory();
+  if (directory)
+    return false;
+
+  // We cannot look for a file if there's no file name.
+  const ConstString &filename = file_spec.GetFilename();
+  if (!filename)
+    return false;
+
+  // Search for the file on the host.
+  const std::string filename_str(filename.GetCString());
+  llvm::ErrorOr<std::string> error_or_path =
+      llvm::sys::findProgramByName(filename_str);
+  if (!error_or_path)
+    return false;
+
+  // findProgramByName returns "." if it can't find the file.
+  llvm::StringRef path = *error_or_path;
+  llvm::StringRef parent = llvm::sys::path::parent_path(path);
+  if (parent.empty() || parent == ".")
+    return false;
+
+  // Make sure that the result exists.
+  FileSpec result(*error_or_path);
+  if (!Exists(result))
+    return false;
+
+  file_spec = result;
+  return true;
 }

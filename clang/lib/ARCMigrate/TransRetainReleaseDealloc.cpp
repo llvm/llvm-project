@@ -113,6 +113,7 @@ public:
             return true;
           }
         }
+      break;
     case OMF_dealloc:
       break;
     }

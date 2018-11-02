@@ -102,8 +102,10 @@ Property::Property(const PropertyDefinition &definition)
     // "definition.default_uint_value" represents if the
     // "definition.default_cstr_value" should be resolved or not
     const bool resolve = definition.default_uint_value != 0;
-    m_value_sp.reset(new OptionValueFileSpec(
-        FileSpec(definition.default_cstr_value, resolve), resolve));
+    FileSpec file_spec = FileSpec(definition.default_cstr_value);
+    if (resolve)
+      FileSystem::Instance().Resolve(file_spec);
+    m_value_sp.reset(new OptionValueFileSpec(file_spec, resolve));
     break;
   }
 

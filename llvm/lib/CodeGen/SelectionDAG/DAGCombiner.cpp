@@ -16708,10 +16708,14 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
   assert(ExtractIndex % NumElems == 0 &&
          "Extract index is not a multiple of the vector length.");
   EVT SrcVT = Extract->getOperand(0).getValueType();
+
+  // Bail out if this is not a proper multiple width extraction.
   unsigned NumSrcElems = SrcVT.getVectorNumElements();
-  unsigned NarrowingRatio = NumSrcElems / NumElems;
+  if (NumSrcElems % NumElems != 0)
+    return SDValue();
 
   // Bail out if the target does not support a narrower version of the binop.
+  unsigned NarrowingRatio = NumSrcElems / NumElems;
   unsigned BOpcode = BinOp.getOpcode();
   unsigned WideNumElts = WideBVT.getVectorNumElements();
   EVT NarrowBVT = EVT::getVectorVT(*DAG.getContext(), WideBVT.getScalarType(),

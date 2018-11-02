@@ -129,7 +129,7 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
 
   __kmpc_data_sharing_slot *&SlotP = DataSharingState.SlotPtr[WID];
   void *&StackP = DataSharingState.StackPtr[WID];
-  void *&FrameP = DataSharingState.FramePtr[WID];
+  void * volatile &FrameP = DataSharingState.FramePtr[WID];
   int32_t &ActiveT = DataSharingState.ActiveThreads[WID];
 
   DSPRINT0(DSFLAG, "Save current slot/stack values.\n");
@@ -283,7 +283,7 @@ EXTERN void __kmpc_data_sharing_environment_end(
 
       __kmpc_data_sharing_slot *&SlotP = DataSharingState.SlotPtr[WID];
       void *&StackP = DataSharingState.StackPtr[WID];
-      void *&FrameP = DataSharingState.FramePtr[WID];
+      void * volatile &FrameP = DataSharingState.FramePtr[WID];
 
       SlotP = *SavedSharedSlot;
       StackP = *SavedSharedStack;
@@ -321,7 +321,7 @@ __kmpc_get_data_sharing_environment_frame(int32_t SourceThreadID,
 
   DSPRINT(DSFLAG, "Source  warp: %d\n", SourceWID);
 
-  void *P = DataSharingState.FramePtr[SourceWID];
+  void * volatile P = DataSharingState.FramePtr[SourceWID];
   DSPRINT0(DSFLAG, "Exiting __kmpc_get_data_sharing_environment_frame\n");
   return P;
 }
@@ -369,46 +369,30 @@ EXTERN void __kmpc_data_sharing_init_stack_spmd() {
   __threadfence_block();
 }
 
-// Called at the time of the kernel initialization. This is used to initilize
-// the list of references to shared variables and to pre-allocate global storage
-// for holding the globalized variables.
-//
-// By default the globalized variables are stored in global memory. If the
-// UseSharedMemory is set to true, the runtime will attempt to use shared memory
-// as long as the size requested fits the pre-allocated size.
-EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
-    int16_t UseSharedMemory) {
+INLINE void* data_sharing_push_stack_common(size_t PushSize) {
   if (isRuntimeUninitialized()) {
     ASSERT0(LT_FUSSY, isSPMDMode(),
             "Expected SPMD mode with uninitialized runtime.");
-    return omptarget_nvptx_SimpleThreadPrivateContext::Allocate(DataSize);
+    return omptarget_nvptx_SimpleThreadPrivateContext::Allocate(PushSize);
   }
+
+  // Only warp active master threads manage the stack.
+  bool IsWarpMaster = (getThreadId() % WARPSIZE) == 0;
 
   // Add worst-case padding to DataSize so that future stack allocations are
   // correctly aligned.
   const size_t Alignment = 8;
-  if (DataSize % Alignment != 0) {
-    DataSize += (Alignment - DataSize % Alignment);
-  }
+  PushSize = (PushSize + (Alignment - 1)) / Alignment * Alignment;
 
   // Frame pointer must be visible to all workers in the same warp.
   unsigned WID = getWarpId();
-  void *&FrameP = DataSharingState.FramePtr[WID];
+  void *volatile &FrameP = DataSharingState.FramePtr[WID];
 
-  // Only warp active master threads manage the stack.
-  if (getThreadId() % WARPSIZE == 0) {
+  if (IsWarpMaster) {
     // SlotP will point to either the shared memory slot or an existing
     // global memory slot.
     __kmpc_data_sharing_slot *&SlotP = DataSharingState.SlotPtr[WID];
     void *&StackP = DataSharingState.StackPtr[WID];
-
-    // Compute the total memory footprint of the requested data.
-    // The master thread requires a stack only for itself. A worker
-    // thread (which at this point is a warp master) will require
-    // space for the variables of each thread in the warp,
-    // i.e. one DataSize chunk per warp lane.
-    // TODO: change WARPSIZE to the number of active threads in the warp.
-    size_t PushSize = IsMasterThread() ? DataSize : WARPSIZE * DataSize;
 
     // Check if we have room for the data in the current slot.
     const uintptr_t StartAddress = (uintptr_t)StackP;
@@ -453,12 +437,39 @@ EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
       // Reset stack pointer to the requested address.
       StackP = (void *)RequestedEndAddress;
     }
+  } else {
+    while (!FrameP);
   }
 
-  __threadfence_block();
+  return FrameP;
+}
+
+EXTERN void* __kmpc_data_sharing_coalesced_push_stack(size_t DataSize,
+    int16_t UseSharedMemory) {
+  return data_sharing_push_stack_common(DataSize);
+}
+
+// Called at the time of the kernel initialization. This is used to initilize
+// the list of references to shared variables and to pre-allocate global storage
+// for holding the globalized variables.
+//
+// By default the globalized variables are stored in global memory. If the
+// UseSharedMemory is set to true, the runtime will attempt to use shared memory
+// as long as the size requested fits the pre-allocated size.
+EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
+    int16_t UseSharedMemory) {
+  // Compute the total memory footprint of the requested data.
+  // The master thread requires a stack only for itself. A worker
+  // thread (which at this point is a warp master) will require
+  // space for the variables of each thread in the warp,
+  // i.e. one DataSize chunk per warp lane.
+  // TODO: change WARPSIZE to the number of active threads in the warp.
+  size_t PushSize = (isRuntimeUninitialized() || IsMasterThread()) ?
+      DataSize : WARPSIZE * DataSize;
 
   // Compute the start address of the frame of each thread in the warp.
-  uintptr_t FrameStartAddress = (uintptr_t)FrameP;
+  uintptr_t FrameStartAddress =
+      (uintptr_t) data_sharing_push_stack_common(PushSize);
   FrameStartAddress += (uintptr_t) (getLaneId() * DataSize);
   return (void *)FrameStartAddress;
 }
@@ -474,6 +485,8 @@ EXTERN void __kmpc_data_sharing_pop_stack(void *FrameStart) {
             "Expected SPMD mode with uninitialized runtime.");
     return omptarget_nvptx_SimpleThreadPrivateContext::Deallocate(FrameStart);
   }
+
+  __threadfence_block();
 
   if (getThreadId() % WARPSIZE == 0) {
     unsigned WID = getWarpId();
@@ -501,8 +514,6 @@ EXTERN void __kmpc_data_sharing_pop_stack(void *FrameStart) {
       SlotP->Next = 0;
     }
   }
-
-  __threadfence_block();
 }
 
 // Begin a data sharing context. Maintain a list of references to shared

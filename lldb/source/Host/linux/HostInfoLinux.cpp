@@ -7,8 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
 #include "lldb/Host/linux/HostInfoLinux.h"
+#include "lldb/Host/Config.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Log.h"
 
 #include "llvm/Support/Threading.h"
@@ -170,7 +171,7 @@ FileSpec HostInfoLinux::GetProgramFileSpec() {
     ssize_t len = readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
     if (len > 0) {
       exe_path[len] = 0;
-      g_program_filespec.SetFile(exe_path, false, FileSpec::Style::native);
+      g_program_filespec.SetFile(exe_path, FileSpec::Style::native);
     }
   }
 
@@ -179,14 +180,15 @@ FileSpec HostInfoLinux::GetProgramFileSpec() {
 
 bool HostInfoLinux::ComputeSupportExeDirectory(FileSpec &file_spec) {
   if (HostInfoPosix::ComputeSupportExeDirectory(file_spec) &&
-      file_spec.IsAbsolute() && file_spec.Exists())
+      file_spec.IsAbsolute() && FileSystem::Instance().Exists(file_spec))
     return true;
   file_spec.GetDirectory() = GetProgramFileSpec().GetDirectory();
   return !file_spec.GetDirectory().IsEmpty();
 }
 
 bool HostInfoLinux::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("/usr/lib" LLDB_LIBDIR_SUFFIX "/lldb/plugins", true);
+  FileSpec temp_file("/usr/lib" LLDB_LIBDIR_SUFFIX "/lldb/plugins");
+  FileSystem::Instance().Resolve(temp_file);
   file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
   return true;
 }

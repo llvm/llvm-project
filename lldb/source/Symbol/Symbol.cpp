@@ -141,7 +141,7 @@ FileSpec Symbol::GetReExportedSymbolSharedLibrary() const {
     // back into a string that is the re-exported name.
     intptr_t str_ptr = m_addr_range.GetByteSize();
     if (str_ptr != 0)
-      return FileSpec((const char *)str_ptr, false);
+      return FileSpec((const char *)str_ptr);
   }
   return FileSpec();
 }

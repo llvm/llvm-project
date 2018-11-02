@@ -13,6 +13,7 @@
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
@@ -23,7 +24,7 @@ using namespace lldb_private;
 namespace {
 static bool VerifyPathExists(const char *path) {
   if (path && path[0])
-    return FileSpec(path, false).Exists();
+    return FileSystem::Instance().Exists(path);
   else
     return false;
 }

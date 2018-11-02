@@ -274,13 +274,13 @@ protected:
     FileSpec remote_file(m_remote_file.GetOptionValue().GetCurrentValue());
 
     if (core_file) {
-      if (!core_file.Exists()) {
+      if (!FileSystem::Instance().Exists(core_file)) {
         result.AppendErrorWithFormat("core file '%s' doesn't exist",
                                      core_file.GetPath().c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
-      if (!core_file.Readable()) {
+      if (!FileSystem::Instance().Readable(core_file)) {
         result.AppendErrorWithFormat("core file '%s' is not readable",
                                      core_file.GetPath().c_str());
         result.SetStatus(eReturnStatusFailed);
@@ -291,8 +291,8 @@ protected:
     if (argc == 1 || core_file || remote_file) {
       FileSpec symfile(m_symbol_file.GetOptionValue().GetCurrentValue());
       if (symfile) {
-        if (symfile.Exists()) {
-          if (!symfile.Readable()) {
+        if (FileSystem::Instance().Exists(symfile)) {
+          if (!FileSystem::Instance().Readable(symfile)) {
             result.AppendErrorWithFormat("symbol file '%s' is not readable",
                                          symfile.GetPath().c_str());
             result.SetStatus(eReturnStatusFailed);
@@ -313,8 +313,10 @@ protected:
       Timer scoped_timer(func_cat, "(lldb) target create '%s'", file_path);
       FileSpec file_spec;
 
-      if (file_path)
-        file_spec.SetFile(file_path, true, FileSpec::Style::native);
+      if (file_path) {
+        file_spec.SetFile(file_path, FileSpec::Style::native);
+        FileSystem::Instance().Resolve(file_spec);
+      }
 
       bool must_set_platform_path = false;
 
@@ -336,7 +338,7 @@ protected:
         if (remote_file) {
           if (platform_sp) {
             // I have a remote file.. two possible cases
-            if (file_spec && file_spec.Exists()) {
+            if (file_spec && FileSystem::Instance().Exists(file_spec)) {
               // if the remote file does not exist, push it there
               if (!platform_sp->GetFileExists(remote_file)) {
                 Status err = platform_sp->PutFile(file_spec, remote_file);
@@ -404,8 +406,8 @@ protected:
         if (core_file) {
           char core_path[PATH_MAX];
           core_file.GetPath(core_path, sizeof(core_path));
-          if (core_file.Exists()) {
-            if (!core_file.Readable()) {
+          if (FileSystem::Instance().Exists(core_file)) {
+            if (!FileSystem::Instance().Readable(core_file)) {
               result.AppendMessageWithFormat(
                   "Core file '%s' is not readable.\n", core_path);
               result.SetStatus(eReturnStatusFailed);
@@ -1793,7 +1795,7 @@ static uint32_t LookupFileAndLineInModule(CommandInterpreter &interpreter,
 static size_t FindModulesByName(Target *target, const char *module_name,
                                 ModuleList &module_list,
                                 bool check_global_list) {
-  FileSpec module_file_spec(module_name, false);
+  FileSpec module_file_spec(module_name);
   ModuleSpec module_spec(module_file_spec);
 
   const size_t initial_size = module_list.GetSize();
@@ -2352,7 +2354,7 @@ protected:
       for (int arg_idx = 0;
            (arg_cstr = command.GetArgumentAtIndex(arg_idx)) != nullptr;
            ++arg_idx) {
-        FileSpec file_spec(arg_cstr, false);
+        FileSpec file_spec(arg_cstr);
 
         const ModuleList &target_modules = target->GetImages();
         std::lock_guard<std::recursive_mutex> guard(target_modules.GetMutex());
@@ -2532,8 +2534,8 @@ protected:
           if (entry.ref.empty())
             continue;
 
-          FileSpec file_spec(entry.ref, true);
-          if (file_spec.Exists()) {
+          FileSpec file_spec(entry.ref);
+          if (FileSystem::Instance().Exists(file_spec)) {
             ModuleSpec module_spec(file_spec);
             if (m_uuid_option_group.GetOptionValue().OptionWasSet())
               module_spec.GetUUID() =
@@ -3616,7 +3618,7 @@ public:
         break;
 
       case 'f':
-        m_file.SetFile(option_arg, false, FileSpec::Style::native);
+        m_file.SetFile(option_arg, FileSpec::Style::native);
         m_type = eLookupTypeFileLine;
         break;
 
@@ -4255,7 +4257,8 @@ protected:
                 ModuleSP frame_module_sp(
                     frame->GetSymbolContext(eSymbolContextModule).module_sp);
                 if (frame_module_sp) {
-                  if (frame_module_sp->GetPlatformFileSpec().Exists()) {
+                  if (FileSystem::Instance().Exists(
+                          frame_module_sp->GetPlatformFileSpec())) {
                     module_spec.GetArchitecture() =
                         frame_module_sp->GetArchitecture();
                     module_spec.GetFileSpec() =
@@ -4302,7 +4305,7 @@ protected:
               module_spec.GetArchitecture() = target->GetArchitecture();
             }
             success |= module_spec.GetUUID().IsValid() ||
-                       module_spec.GetFileSpec().Exists();
+                       FileSystem::Instance().Exists(module_spec.GetFileSpec());
           }
         }
 
@@ -4347,8 +4350,9 @@ protected:
 
         for (auto &entry : args.entries()) {
           if (!entry.ref.empty()) {
-            module_spec.GetSymbolFileSpec().SetFile(entry.ref, true,
-                                                    FileSpec::Style::native);
+            auto &symbol_file_spec = module_spec.GetSymbolFileSpec();
+            symbol_file_spec.SetFile(entry.ref, FileSpec::Style::native);
+            FileSystem::Instance().Resolve(symbol_file_spec);
             if (file_option_set) {
               module_spec.GetFileSpec() =
                   m_file_option.GetOptionValue().GetCurrentValue();
@@ -4362,7 +4366,8 @@ protected:
             }
 
             ArchSpec arch;
-            bool symfile_exists = module_spec.GetSymbolFileSpec().Exists();
+            bool symfile_exists =
+                FileSystem::Instance().Exists(module_spec.GetSymbolFileSpec());
 
             if (symfile_exists) {
               if (!AddModuleSymbols(target, module_spec, flush, result))

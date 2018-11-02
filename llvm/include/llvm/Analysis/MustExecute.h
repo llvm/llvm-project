@@ -125,8 +125,9 @@ public:
 
 /// This implementation of LoopSafetyInfo use ImplicitControlFlowTracking to
 /// give precise answers on "may throw" queries. This implementation uses cache
-/// that should be invalidated by calling the method dropCachedInfo whenever we
-/// modify a basic block's contents by adding or removing instructions.
+/// that should be invalidated by calling the methods insertInstructionTo and
+/// removeInstruction whenever we modify a basic block's contents by adding or
+/// removing instructions.
 class ICFLoopSafetyInfo: public LoopSafetyInfo {
   bool MayThrow = false;       // The current loop contains an instruction which
                                // may throw.
@@ -144,10 +145,15 @@ public:
                                      const DominatorTree *DT,
                                      const Loop *CurLoop) const;
 
-  /// Drops cached information regarding the implicit control flow in block
-  /// \p BB. It should be called for every block in which we add or remove any
-  /// instructions  to a block before we make queries to it.
-  void dropCachedInfo(const BasicBlock *BB);
+  /// Inform the safety info that we are planning to insert a new instruction
+  /// into the basic block \p BB. It will make all cache updates to keep it
+  /// correct after this insertion.
+  void insertInstructionTo(const BasicBlock *BB);
+
+  /// Inform safety info that we are planning to remove the instruction \p Inst
+  /// from its block. It will make all cache updates to keep it correct after
+  /// this removal.
+  void removeInstruction(const Instruction *Inst);
 
   ICFLoopSafetyInfo(DominatorTree *DT) : LoopSafetyInfo(), ICF(DT) {};
 

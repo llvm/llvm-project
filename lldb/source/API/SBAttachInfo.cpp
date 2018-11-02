@@ -26,16 +26,14 @@ SBAttachInfo::SBAttachInfo(lldb::pid_t pid)
 SBAttachInfo::SBAttachInfo(const char *path, bool wait_for)
     : m_opaque_sp(new ProcessAttachInfo()) {
   if (path && path[0])
-    m_opaque_sp->GetExecutableFile().SetFile(path, false,
-                                             FileSpec::Style::native);
+    m_opaque_sp->GetExecutableFile().SetFile(path, FileSpec::Style::native);
   m_opaque_sp->SetWaitForLaunch(wait_for);
 }
 
 SBAttachInfo::SBAttachInfo(const char *path, bool wait_for, bool async)
     : m_opaque_sp(new ProcessAttachInfo()) {
   if (path && path[0])
-    m_opaque_sp->GetExecutableFile().SetFile(path, false,
-                                             FileSpec::Style::native);
+    m_opaque_sp->GetExecutableFile().SetFile(path, FileSpec::Style::native);
   m_opaque_sp->SetWaitForLaunch(wait_for);
   m_opaque_sp->SetAsync(async);
 }
@@ -79,8 +77,7 @@ void SBAttachInfo::SetProcessPluginName(const char *plugin_name) {
 
 void SBAttachInfo::SetExecutable(const char *path) {
   if (path && path[0])
-    m_opaque_sp->GetExecutableFile().SetFile(path, false,
-                                             FileSpec::Style::native);
+    m_opaque_sp->GetExecutableFile().SetFile(path, FileSpec::Style::native);
   else
     m_opaque_sp->GetExecutableFile().Clear();
 }

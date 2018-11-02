@@ -1491,15 +1491,11 @@ void RelocationBaseSection::addReloc(const DynamicReloc &Reloc) {
 }
 
 void RelocationBaseSection::finalizeContents() {
-  // If all relocations are R_*_{,I}RELATIVE they don't refer to any dynamic
-  // symbol and we don't need a dynamic symbol table. If that is the case, use
-  // the index of the regular symbol table section (if exists) or 0.
-  if (In.DynSymTab)
-    getParent()->Link = In.DynSymTab->getParent()->SectionIndex;
-  else if (In.SymTab)
-    getParent()->Link = In.SymTab->getParent()->SectionIndex;
-  else
-    getParent()->Link = 0;
+  // When linking glibc statically, .rel{,a}.plt contains R_*_IRELATIVE
+  // relocations due to IFUNC (e.g. strcpy). sh_link will be set to 0 in that
+  // case.
+  InputSection *SymTab = Config->Relocatable ? In.SymTab : In.DynSymTab;
+  getParent()->Link = SymTab ? SymTab->getParent()->SectionIndex : 0;
 
   if (In.RelaIplt == this || In.RelaPlt == this)
     getParent()->Info = In.GotPlt->getParent()->SectionIndex;
