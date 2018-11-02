@@ -32,7 +32,7 @@ void foo() {
 
 int main() {
   // CHECK: define i32 @main()
-  // CHECK: __csan_func_entry(i64 {{.+}}, i8* {{.+}}, i64 2)
+  // CHECK: __csan_func_entry(i64 {{.+}}, i8* {{.+}}, i64 0)
   foo();
   return 0;
 }
