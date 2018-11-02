@@ -330,4 +330,6 @@ define void @inline_asm() {
   ret void
 }
 
+; CHECK: .globaltype	__stack_pointer, i32{{$}}
+
 ; TODO: test over-aligned alloca

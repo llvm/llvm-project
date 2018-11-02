@@ -34,7 +34,7 @@ struct ClangHostTest : public testing::Test {
 static std::string ComputeClangDir(std::string lldb_shlib_path,
                                    bool verify = false) {
   FileSpec clang_dir;
-  FileSpec lldb_shlib_spec(lldb_shlib_path, false);
+  FileSpec lldb_shlib_spec(lldb_shlib_path);
   ComputeClangDirectory(lldb_shlib_spec, clang_dir, verify);
   return clang_dir.GetPath();
 }

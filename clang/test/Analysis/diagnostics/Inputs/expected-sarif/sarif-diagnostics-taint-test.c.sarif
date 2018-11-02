@@ -7,13 +7,25 @@
           "fileLocation": {
             "uri": "file:sarif-diagnostics-taint-test.c"
           },
-          "length": 510,
+          "length": 413,
           "mimeType": "text/plain",
           "roles": [
             "resultFile"
           ]
         }
       },
+      "resources": {
+        "rules": {
+          "debug.TaintTest": {
+            "fullDescription": {
+              "text": "Mark tainted symbols as such."
+            },
+            "name": {
+              "text": "debug.TaintTest"
+            }
+          }
+        }
+      },      
       "results": [
         {
           "codeFlows": [

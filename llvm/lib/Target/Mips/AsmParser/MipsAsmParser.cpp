@@ -767,13 +767,13 @@ public:
 
   ~MipsOperand() override {
     switch (Kind) {
-    case k_Immediate:
-      break;
     case k_Memory:
       delete Mem.Base;
       break;
     case k_RegList:
       delete RegList.List;
+      break;
+    case k_Immediate:
     case k_RegisterIndex:
     case k_Token:
       break;

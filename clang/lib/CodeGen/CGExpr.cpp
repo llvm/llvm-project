@@ -1491,6 +1491,16 @@ CodeGenFunction::tryEmitAsConstant(const MemberExpr *ME) {
   return ConstantEmission();
 }
 
+llvm::Value *CodeGenFunction::emitScalarConstant(
+    const CodeGenFunction::ConstantEmission &Constant, Expr *E) {
+  assert(Constant && "not a constant");
+  if (Constant.isReference())
+    return EmitLoadOfLValue(Constant.getReferenceLValue(*this, E),
+                            E->getExprLoc())
+        .getScalarVal();
+  return Constant.getValue();
+}
+
 llvm::Value *CodeGenFunction::EmitLoadOfScalar(LValue lvalue,
                                                SourceLocation Loc) {
   return EmitLoadOfScalar(lvalue.getAddress(), lvalue.isVolatile(),

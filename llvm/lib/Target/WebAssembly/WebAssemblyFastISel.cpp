@@ -447,6 +447,7 @@ unsigned WebAssemblyFastISel::zeroExtendToI32(unsigned Reg, const Value *V,
           (isa<Argument>(V) && cast<Argument>(V)->hasZExtAttr()))
         return copyValue(Reg);
     }
+    break;
   case MVT::i8:
   case MVT::i16:
     break;

@@ -173,6 +173,7 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
   bool IsEliminated = WS.isEliminated();
   bool ShouldAllocatePhysRegs = !IsWriteZero && !IsEliminated;
   const RegisterRenamingInfo &RRI = RegisterMappings[RegID].second;
+  WS.setPRF(RRI.IndexPlusCost.first);
 
   if (RRI.RenameAs && RRI.RenameAs != RegID) {
     RegID = RRI.RenameAs;
@@ -217,9 +218,9 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
       RegisterMappings[*I].second.AliasRegID = 0U;
     }
 
-    // No physical registers are allocated for instructions that are optimized in
-    // hardware. For example, zero-latency data-dependency breaking instructions
-    // don't consume physical registers.
+    // No physical registers are allocated for instructions that are optimized
+    // in hardware. For example, zero-latency data-dependency breaking
+    // instructions don't consume physical registers.
     if (ShouldAllocatePhysRegs)
       allocatePhysRegs(RegisterMappings[RegID].second, UsedPhysRegs);
   }
@@ -288,7 +289,7 @@ void RegisterFile::removeRegisterWrite(
   }
 }
 
-bool RegisterFile::tryEliminateMove(WriteState &WS, const ReadState &RS) {
+bool RegisterFile::tryEliminateMove(WriteState &WS, ReadState &RS) {
   const RegisterMapping &RMFrom = RegisterMappings[RS.getRegisterID()];
   const RegisterMapping &RMTo = RegisterMappings[WS.getRegisterID()];
 
@@ -349,15 +350,18 @@ bool RegisterFile::tryEliminateMove(WriteState &WS, const ReadState &RS) {
   }
 
   RMT.NumMoveEliminated++;
-  if (IsZeroMove)
+  if (IsZeroMove) {
     WS.setWriteZero();
+    RS.setReadZero();
+  }
   WS.setEliminated();
 
   return true;
 }
 
-void RegisterFile::collectWrites(SmallVectorImpl<WriteRef> &Writes,
-                                 unsigned RegID) const {
+void RegisterFile::collectWrites(const ReadState &RS,
+                                 SmallVectorImpl<WriteRef> &Writes) const {
+  unsigned RegID = RS.getRegisterID();
   assert(RegID && RegID < RegisterMappings.size());
   LLVM_DEBUG(dbgs() << "RegisterFile: collecting writes for register "
                     << MRI.getName(RegID) << '\n');
@@ -379,11 +383,13 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteRef> &Writes,
   }
 
   // Remove duplicate entries and resize the input vector.
-  sort(Writes, [](const WriteRef &Lhs, const WriteRef &Rhs) {
-    return Lhs.getWriteState() < Rhs.getWriteState();
-  });
-  auto It = std::unique(Writes.begin(), Writes.end());
-  Writes.resize(std::distance(Writes.begin(), It));
+  if (Writes.size() > 1) {
+    sort(Writes, [](const WriteRef &Lhs, const WriteRef &Rhs) {
+      return Lhs.getWriteState() < Rhs.getWriteState();
+    });
+    auto It = std::unique(Writes.begin(), Writes.end());
+    Writes.resize(std::distance(Writes.begin(), It));
+  }
 
   LLVM_DEBUG({
     for (const WriteRef &WR : Writes) {
@@ -393,6 +399,20 @@ void RegisterFile::collectWrites(SmallVectorImpl<WriteRef> &Writes,
              << WR.getSourceIndex() << ")\n";
     }
   });
+}
+
+void RegisterFile::addRegisterRead(ReadState &RS,
+                                   SmallVectorImpl<WriteRef> &Defs) const {
+  unsigned RegID = RS.getRegisterID();
+  const RegisterRenamingInfo &RRI = RegisterMappings[RegID].second;
+  RS.setPRF(RRI.IndexPlusCost.first);
+  if (RS.isIndependentFromDef())
+    return;
+
+  if (ZeroRegisters[RS.getRegisterID()])
+    RS.setReadZero();
+  collectWrites(RS, Defs);
+  RS.setDependentWrites(Defs.size());
 }
 
 unsigned RegisterFile::isAvailable(ArrayRef<unsigned> Regs) const {

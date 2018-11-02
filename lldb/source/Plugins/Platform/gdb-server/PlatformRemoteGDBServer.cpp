@@ -107,7 +107,7 @@ Status PlatformRemoteGDBServer::ResolveExecutable(
   // Resolve any executable within an apk on Android?
   // Host::ResolveExecutableInBundle (resolved_module_spec.GetFileSpec());
 
-  if (resolved_module_spec.GetFileSpec().Exists() ||
+  if (FileSystem::Instance().Exists(resolved_module_spec.GetFileSpec()) ||
       module_spec.GetUUID().IsValid()) {
     if (resolved_module_spec.GetArchitecture().IsValid() ||
         resolved_module_spec.GetUUID().IsValid()) {

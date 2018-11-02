@@ -693,7 +693,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
           break;
         }
       }
-      // fall through.
+      LLVM_FALLTHROUGH;
     case 'j':
     case 'J':
       if (isImaginary) break;   // Cannot be repeated.

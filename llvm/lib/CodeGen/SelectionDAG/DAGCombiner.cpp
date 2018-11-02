@@ -8696,27 +8696,25 @@ static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
     return true;
   }
 
-  if (N->getOpcode() != ISD::SETCC || N->getValueType(0) != MVT::i1 ||
-      cast<CondCodeSDNode>(N->getOperand(2))->get() != ISD::SETNE)
+  if (N.getOpcode() != ISD::SETCC ||
+      N.getValueType().getScalarType() != MVT::i1 ||
+      cast<CondCodeSDNode>(N.getOperand(2))->get() != ISD::SETNE)
     return false;
 
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   assert(Op0.getValueType() == Op1.getValueType());
 
-  if (isNullConstant(Op0))
+  if (isNullConstantOrNullSplatConstant(Op0))
     Op = Op1;
-  else if (isNullConstant(Op1))
+  else if (isNullConstantOrNullSplatConstant(Op1))
     Op = Op0;
   else
     return false;
 
   DAG.computeKnownBits(Op, Known);
 
-  if (!(Known.Zero | 1).isAllOnesValue())
-    return false;
-
-  return true;
+  return (Known.Zero | 1).isAllOnesValue();
 }
 
 SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
@@ -8736,17 +8734,16 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
   // fold (zext (truncate x)) -> (zext x) or
   //      (zext (truncate x)) -> (truncate x)
   // This is valid when the truncated bits of x are already zero.
-  // FIXME: We should extend this to work for vectors too.
   SDValue Op;
   KnownBits Known;
-  if (!VT.isVector() && isTruncateOf(DAG, N0, Op, Known)) {
+  if (isTruncateOf(DAG, N0, Op, Known)) {
     APInt TruncatedBits =
-      (Op.getValueSizeInBits() == N0.getValueSizeInBits()) ?
-      APInt(Op.getValueSizeInBits(), 0) :
-      APInt::getBitsSet(Op.getValueSizeInBits(),
-                        N0.getValueSizeInBits(),
-                        std::min(Op.getValueSizeInBits(),
-                                 VT.getSizeInBits()));
+      (Op.getScalarValueSizeInBits() == N0.getScalarValueSizeInBits()) ?
+      APInt(Op.getScalarValueSizeInBits(), 0) :
+      APInt::getBitsSet(Op.getScalarValueSizeInBits(),
+                        N0.getScalarValueSizeInBits(),
+                        std::min(Op.getScalarValueSizeInBits(),
+                                 VT.getScalarSizeInBits()));
     if (TruncatedBits.isSubsetOf(Known.Zero))
       return DAG.getZExtOrTrunc(Op, SDLoc(N), VT);
   }

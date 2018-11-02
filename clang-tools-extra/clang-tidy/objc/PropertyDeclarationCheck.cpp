@@ -201,8 +201,7 @@ PropertyDeclarationCheck::PropertyDeclarationCheck(StringRef Name,
 
 void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   // this check should only be applied to ObjC sources.
-  if (!getLangOpts().ObjC)
-    return;
+  if (!getLangOpts().ObjC) return;
 
   if (IncludeDefaultAcronyms) {
     EscapedAcronyms.reserve(llvm::array_lengthof(DefaultSpecialAcronyms) +
@@ -235,9 +234,9 @@ void PropertyDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   auto *DeclContext = MatchedDecl->getDeclContext();
   auto *CategoryDecl = llvm::dyn_cast<ObjCCategoryDecl>(DeclContext);
 
-  auto AcronymsRegex =
-      llvm::Regex("^" + AcronymsGroupRegex(EscapedAcronyms) + "$");
-  if (AcronymsRegex.match(MatchedDecl->getName())) {
+  auto SingleAcronymRegex =
+      llvm::Regex("^([a-zA-Z]+_)?" + AcronymsGroupRegex(EscapedAcronyms) + "$");
+  if (SingleAcronymRegex.match(MatchedDecl->getName())) {
     return;
   }
   if (CategoryDecl != nullptr &&

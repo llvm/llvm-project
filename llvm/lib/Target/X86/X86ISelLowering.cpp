@@ -25103,57 +25103,6 @@ static SDValue LowerVectorCTPOPInRegLUT(SDValue Op, const SDLoc &DL,
   return DAG.getNode(ISD::ADD, DL, VT, HiPopCnt, LoPopCnt);
 }
 
-static SDValue LowerVectorCTPOPBitmath(SDValue Op, const SDLoc &DL,
-                                       const X86Subtarget &Subtarget,
-                                       SelectionDAG &DAG) {
-  MVT VT = Op.getSimpleValueType();
-  assert(VT == MVT::v16i8 && "Only v16i8 vector CTPOP lowering supported.");
-
-  // This is the vectorized version of the "best" algorithm from
-  // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
-  // with a minor tweak to use a series of adds + shifts instead of vector
-  // multiplications. Implemented for all integer vector types. We only use
-  // this when we don't have SSSE3 which allows a LUT-based lowering that is
-  // much faster, even faster than using native popcnt instructions.
-
-  auto GetShift = [&](unsigned OpCode, SDValue V, int Shifter) {
-    MVT VT = V.getSimpleValueType();
-    SDValue ShifterV = DAG.getConstant(Shifter, DL, VT);
-    return DAG.getNode(OpCode, DL, VT, V, ShifterV);
-  };
-  auto GetMask = [&](SDValue V, APInt Mask) {
-    MVT VT = V.getSimpleValueType();
-    SDValue MaskV = DAG.getConstant(Mask, DL, VT);
-    return DAG.getNode(ISD::AND, DL, VT, V, MaskV);
-  };
-
-  // We don't want to incur the implicit masks required to SRL vNi8 vectors on
-  // x86, so set the SRL type to have elements at least i16 wide. This is
-  // correct because all of our SRLs are followed immediately by a mask anyways
-  // that handles any bits that sneak into the high bits of the byte elements.
-  MVT SrlVT = MVT::v8i16;
-  SDValue V = Op;
-
-  // v = v - ((v >> 1) & 0x55555555...)
-  SDValue Srl =
-      DAG.getBitcast(VT, GetShift(ISD::SRL, DAG.getBitcast(SrlVT, V), 1));
-  SDValue And = GetMask(Srl, APInt(8, 0x55));
-  V = DAG.getNode(ISD::SUB, DL, VT, V, And);
-
-  // v = (v & 0x33333333...) + ((v >> 2) & 0x33333333...)
-  SDValue AndLHS = GetMask(V, APInt(8, 0x33));
-  Srl = DAG.getBitcast(VT, GetShift(ISD::SRL, DAG.getBitcast(SrlVT, V), 2));
-  SDValue AndRHS = GetMask(Srl, APInt(8, 0x33));
-  V = DAG.getNode(ISD::ADD, DL, VT, AndLHS, AndRHS);
-
-  // v = (v + (v >> 4)) & 0x0F0F0F0F...
-  Srl = DAG.getBitcast(VT, GetShift(ISD::SRL, DAG.getBitcast(SrlVT, V), 4));
-  SDValue Add = DAG.getNode(ISD::ADD, DL, VT, V, Srl);
-  V = GetMask(Add, APInt(8, 0x0F));
-
-  return V;
-}
-
 // Please ensure that any codegen change from LowerVectorCTPOP is reflected in
 // updated cost models in X86TTIImpl::getIntrinsicInstrCost.
 static SDValue LowerVectorCTPOP(SDValue Op, const X86Subtarget &Subtarget,
@@ -25193,9 +25142,9 @@ static SDValue LowerVectorCTPOP(SDValue Op, const X86Subtarget &Subtarget,
     return LowerHorizontalByteSum(PopCnt8, VT, Subtarget, DAG);
   }
 
-  // We can't use the fast LUT approach, so fall back on vectorized bitmath.
+  // We can't use the fast LUT approach, so fall back on LegalizeDAG.
   if (!Subtarget.hasSSSE3())
-    return LowerVectorCTPOPBitmath(Op0, DL, Subtarget, DAG);
+    return SDValue();
 
   return LowerVectorCTPOPInRegLUT(Op0, DL, Subtarget, DAG);
 }

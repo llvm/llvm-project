@@ -7,8 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/macosx/HostInfoMacOSX.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Log.h"
 
@@ -96,14 +97,13 @@ FileSpec HostInfoMacOSX::GetProgramFileSpec() {
     uint32_t len = sizeof(program_fullpath);
     int err = _NSGetExecutablePath(program_fullpath, &len);
     if (err == 0)
-      g_program_filespec.SetFile(program_fullpath, false,
-                                 FileSpec::Style::native);
+      g_program_filespec.SetFile(program_fullpath, FileSpec::Style::native);
     else if (err == -1) {
       char *large_program_fullpath = (char *)::malloc(len + 1);
 
       err = _NSGetExecutablePath(large_program_fullpath, &len);
       if (err == 0)
-        g_program_filespec.SetFile(large_program_fullpath, false,
+        g_program_filespec.SetFile(large_program_fullpath,
                                    FileSpec::Style::native);
 
       ::free(large_program_fullpath);
@@ -139,7 +139,8 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
     // as in the case of a python script, the executable is python, not
     // the lldb driver.
     raw_path.append("/../bin");
-    FileSpec support_dir_spec(raw_path, true);
+    FileSpec support_dir_spec(raw_path);
+    FileSystem::Instance().Resolve(support_dir_spec);
     if (!llvm::sys::fs::is_directory(support_dir_spec.GetPath())) {
       Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
       if (log)
@@ -203,7 +204,8 @@ bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
 }
 
 bool HostInfoMacOSX::ComputeUserPluginsDirectory(FileSpec &file_spec) {
-  FileSpec temp_file("~/Library/Application Support/LLDB/PlugIns", true);
+  FileSpec temp_file("~/Library/Application Support/LLDB/PlugIns");
+  FileSystem::Instance().Resolve(temp_file);
   file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
   return true;
 }

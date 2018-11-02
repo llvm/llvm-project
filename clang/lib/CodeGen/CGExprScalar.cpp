@@ -466,19 +466,10 @@ public:
     return CGF.getOrCreateOpaqueRValueMapping(E).getScalarVal();
   }
 
-  Value *emitConstant(const CodeGenFunction::ConstantEmission &Constant,
-                      Expr *E) {
-    assert(Constant && "not a constant");
-    if (Constant.isReference())
-      return EmitLoadOfLValue(Constant.getReferenceLValue(CGF, E),
-                              E->getExprLoc());
-    return Constant.getValue();
-  }
-
   // l-values.
   Value *VisitDeclRefExpr(DeclRefExpr *E) {
     if (CodeGenFunction::ConstantEmission Constant = CGF.tryEmitAsConstant(E))
-      return emitConstant(Constant, E);
+      return CGF.emitScalarConstant(Constant, E);
     return EmitLoadOfLValue(E);
   }
 
@@ -680,7 +671,7 @@ public:
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
           return Builder.CreateNSWMul(Ops.LHS, Ops.RHS, "mul");
-        // Fall through.
+        LLVM_FALLTHROUGH;
       case LangOptions::SOB_Trapping:
         if (CanElideOverflowCheck(CGF.getContext(), Ops))
           return Builder.CreateNSWMul(Ops.LHS, Ops.RHS, "mul");
@@ -1714,7 +1705,7 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
 Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
   if (CodeGenFunction::ConstantEmission Constant = CGF.tryEmitAsConstant(E)) {
     CGF.EmitIgnoredExpr(E->getBase());
-    return emitConstant(Constant, E);
+    return CGF.emitScalarConstant(Constant, E);
   } else {
     llvm::APSInt Value;
     if (E->EvaluateAsInt(Value, CGF.getContext(), Expr::SE_AllowSideEffects)) {
@@ -2305,7 +2296,7 @@ llvm::Value *ScalarExprEmitter::EmitIncDecConsiderOverflowBehavior(
   case LangOptions::SOB_Undefined:
     if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
       return Builder.CreateNSWAdd(InVal, Amount, Name);
-    // Fall through.
+    LLVM_FALLTHROUGH;
   case LangOptions::SOB_Trapping:
     if (!E->canOverflow())
       return Builder.CreateNSWAdd(InVal, Amount, Name);
@@ -3311,7 +3302,7 @@ Value *ScalarExprEmitter::EmitAdd(const BinOpInfo &op) {
     case LangOptions::SOB_Undefined:
       if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
         return Builder.CreateNSWAdd(op.LHS, op.RHS, "add");
-      // Fall through.
+      LLVM_FALLTHROUGH;
     case LangOptions::SOB_Trapping:
       if (CanElideOverflowCheck(CGF.getContext(), op))
         return Builder.CreateNSWAdd(op.LHS, op.RHS, "add");
@@ -3346,7 +3337,7 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
       case LangOptions::SOB_Undefined:
         if (!CGF.SanOpts.has(SanitizerKind::SignedIntegerOverflow))
           return Builder.CreateNSWSub(op.LHS, op.RHS, "sub");
-        // Fall through.
+        LLVM_FALLTHROUGH;
       case LangOptions::SOB_Trapping:
         if (CanElideOverflowCheck(CGF.getContext(), op))
           return Builder.CreateNSWSub(op.LHS, op.RHS, "sub");

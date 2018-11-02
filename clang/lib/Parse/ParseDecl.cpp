@@ -4661,7 +4661,7 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::identifier:   // foo::bar
     if (TryAltiVecVectorToken())
       return true;
-    // Fall through.
+    LLVM_FALLTHROUGH;
   case tok::kw_typename:  // typename T::type
     // Annotate typenames and C++ scope specifiers.  If we get one, just
     // recurse to handle whatever we get.
@@ -4795,7 +4795,7 @@ bool Parser::isDeclarationSpecifier(bool DisambiguatingWithExpression) {
       return false;
     if (TryAltiVecVectorToken())
       return true;
-    // Fall through.
+    LLVM_FALLTHROUGH;
   case tok::kw_decltype: // decltype(T())::type
   case tok::kw_typename: // typename T::type
     // Annotate typenames and C++ scope specifiers.  If we get one, just

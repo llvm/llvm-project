@@ -438,7 +438,7 @@ public:
       } break;
 
       case 'f':
-        m_filenames.AppendIfUnique(FileSpec(option_arg, false));
+        m_filenames.AppendIfUnique(FileSpec(option_arg));
         break;
 
       case 'F':
@@ -557,7 +557,7 @@ public:
         break;
 
       case 's':
-        m_modules.AppendIfUnique(FileSpec(option_arg, false));
+        m_modules.AppendIfUnique(FileSpec(option_arg));
         break;
 
       case 'S':
@@ -2370,7 +2370,8 @@ protected:
     std::unique_lock<std::recursive_mutex> lock;
     target->GetBreakpointList().GetListMutex(lock);
 
-    FileSpec input_spec(m_options.m_filename, true);
+    FileSpec input_spec(m_options.m_filename);
+    FileSystem::Instance().Resolve(input_spec);
     BreakpointIDList new_bps;
     Status error = target->CreateBreakpointsFromFile(
         input_spec, m_options.m_names, new_bps);
@@ -2504,8 +2505,10 @@ protected:
         return false;
       }
     }
-    Status error = target->SerializeBreakpointsToFile(
-        FileSpec(m_options.m_filename, true), valid_bp_ids, m_options.m_append);
+    FileSpec file_spec(m_options.m_filename);
+    FileSystem::Instance().Resolve(file_spec);
+    Status error = target->SerializeBreakpointsToFile(file_spec, valid_bp_ids,
+                                                      m_options.m_append);
     if (!error.Success()) {
       result.AppendErrorWithFormat("error serializing breakpoints: %s.",
                                    error.AsCString());

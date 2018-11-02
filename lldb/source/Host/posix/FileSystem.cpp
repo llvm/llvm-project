@@ -47,7 +47,7 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
     error.SetErrorToErrno();
   else {
     buf[count] = '\0'; // Success
-    dst.SetFile(buf, false, FileSpec::Style::native);
+    dst.SetFile(buf, FileSpec::Style::native);
   }
   return error;
 }
@@ -65,7 +65,7 @@ Status FileSystem::ResolveSymbolicLink(const FileSpec &src, FileSpec &dst) {
     return err;
   }
 
-  dst = FileSpec(real_path, false);
+  dst = FileSpec(real_path);
 
   return Status();
 }

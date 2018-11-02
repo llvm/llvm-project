@@ -389,10 +389,6 @@ public:
   /// set is returned.
   AliasSet &getAliasSetFor(const MemoryLocation &MemLoc);
 
-  /// Return true if the specified instruction "may" (or must) alias one of the
-  /// members in any of the sets.
-  bool containsUnknown(const Instruction *I) const;
-
   /// Return the underlying alias analysis object used by this tracker.
   AliasAnalysis &getAliasAnalysis() const { return AA; }
 

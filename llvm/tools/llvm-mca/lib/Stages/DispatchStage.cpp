@@ -67,8 +67,9 @@ void DispatchStage::updateRAWDependencies(ReadState &RS,
                                           const MCSubtargetInfo &STI) {
   SmallVector<WriteRef, 4> DependentWrites;
 
-  collectWrites(DependentWrites, RS.getRegisterID());
-  RS.setDependentWrites(DependentWrites.size());
+  // Collect all the dependent writes, and update RS internal state.
+  PRF.addRegisterRead(RS, DependentWrites);
+
   // We know that this read depends on all the writes in DependentWrites.
   // For each write, check if we have ReadAdvance information, and use it
   // to figure out in how many cycles this read becomes available.
@@ -116,10 +117,8 @@ Error DispatchStage::dispatch(InstRef IR) {
   // We also don't update data dependencies for instructions that have been
   // eliminated at register renaming stage.
   if (!IsEliminated) {
-    for (ReadState &RS : IS.getUses()) {
-      if (!RS.isIndependentFromDef())
-        updateRAWDependencies(RS, STI);
-    }
+    for (ReadState &RS : IS.getUses())
+      updateRAWDependencies(RS, STI);
   }
 
   // By default, a dependency-breaking zero-idiom is expected to be optimized
@@ -127,8 +126,7 @@ Error DispatchStage::dispatch(InstRef IR) {
   // to the instruction.
   SmallVector<unsigned, 4> RegisterFiles(PRF.getNumRegisterFiles());
   for (WriteState &WS : IS.getDefs())
-    PRF.addRegisterWrite(WriteRef(IR.getSourceIndex(), &WS),
-                         RegisterFiles);
+    PRF.addRegisterWrite(WriteRef(IR.getSourceIndex(), &WS), RegisterFiles);
 
   // Reserve slots in the RCU, and notify the instruction that it has been
   // dispatched to the schedulers for execution.

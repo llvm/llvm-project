@@ -720,6 +720,7 @@ bool CallAnalyzer::visitCastInst(CastInst &I) {
   case Instruction::FPToSI:
     if (TTI.getFPOpCost(I.getType()) == TargetTransformInfo::TCC_Expensive)
       Cost += InlineConstants::CallPenalty;
+    break;
   default:
     break;
   }

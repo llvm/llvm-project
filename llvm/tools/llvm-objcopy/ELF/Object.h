@@ -415,6 +415,7 @@ struct Symbol {
   bool Referenced = false;
 
   uint16_t getShndx() const;
+  bool isCommon() const;
 };
 
 class SectionIndexSection : public SectionBase {

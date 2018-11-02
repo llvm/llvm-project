@@ -831,7 +831,7 @@ bool Options::HandleOptionArgumentCompletion(
         const char *module_name =
             request.GetParsedLine().GetArgumentAtIndex(cur_arg_pos);
         if (module_name) {
-          FileSpec module_spec(module_name, false);
+          FileSpec module_spec(module_name);
           lldb::TargetSP target_sp =
               interpreter.GetDebugger().GetSelectedTarget();
           // Search filters require a target...

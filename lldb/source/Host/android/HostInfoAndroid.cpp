@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/android/HostInfoAndroid.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/linux/HostInfoLinux.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -28,7 +29,7 @@ void HostInfoAndroid::ComputeHostArchitectureSupport(ArchSpec &arch_32,
 }
 
 FileSpec HostInfoAndroid::GetDefaultShell() {
-  return FileSpec("/system/bin/sh", false);
+  return FileSpec("/system/bin/sh");
 }
 
 FileSpec HostInfoAndroid::ResolveLibraryPath(const std::string &module_path,
@@ -65,10 +66,11 @@ FileSpec HostInfoAndroid::ResolveLibraryPath(const std::string &module_path,
     ld_paths.push_back(StringRef(*it));
 
   for (const StringRef &path : ld_paths) {
-    FileSpec file_candidate(path.str().c_str(), true);
+    FileSpec file_candidate(path.str().c_str());
+    FileSystem::Instance().Resolve(file_candidate);
     file_candidate.AppendPathComponent(module_path.c_str());
 
-    if (file_candidate.Exists())
+    if (FileSystem::Instance().Exists(file_candidate))
       return file_candidate;
   }
 
@@ -83,8 +85,8 @@ bool HostInfoAndroid::ComputeTempFileBaseDirectory(FileSpec &file_spec) {
   // algorithm will deduce /tmp, which is plain wrong. In that case we have an
   // invalid directory, we substitute the path with /data/local/tmp, which is
   // correct at least in some cases (i.e., when running as shell user).
-  if (!success || !file_spec.Exists())
-    file_spec = FileSpec("/data/local/tmp", false);
+  if (!success || !FileSystem::Instance().Exists(file_spec))
+    file_spec = FileSpec("/data/local/tmp");
 
-  return file_spec.Exists();
+  return FileSystem::Instance().Exists(file_spec);
 }

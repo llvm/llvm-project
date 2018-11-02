@@ -558,6 +558,7 @@ void VariableSymbolNode::output(OutputStream &OS, OutputFlags Flags) const {
   case StorageClass::PublicStatic:
   case StorageClass::ProtectedStatic:
     OS << "static ";
+    break;
   default:
     break;
   }

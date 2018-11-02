@@ -690,7 +690,7 @@ ModuleList::ResolveSymbolContextForAddress(const Address &so_addr,
 uint32_t ModuleList::ResolveSymbolContextForFilePath(
     const char *file_path, uint32_t line, bool check_inlines,
     SymbolContextItem resolve_scope, SymbolContextList &sc_list) const {
-  FileSpec file_spec(file_path, false);
+  FileSpec file_spec(file_path);
   return ResolveSymbolContextsForFileSpec(file_spec, line, check_inlines,
                                           resolve_scope, sc_list);
 }
@@ -857,14 +857,13 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
     const auto num_directories = module_search_paths_ptr->GetSize();
     for (size_t idx = 0; idx < num_directories; ++idx) {
       auto search_path_spec = module_search_paths_ptr->GetFileSpecAtIndex(idx);
-      if (!search_path_spec.ResolvePath())
-        continue;
+      FileSystem::Instance().Resolve(search_path_spec);
       namespace fs = llvm::sys::fs;
       if (!fs::is_directory(search_path_spec.GetPath()))
         continue;
       search_path_spec.AppendPathComponent(
           module_spec.GetFileSpec().GetFilename().AsCString());
-      if (!search_path_spec.Exists())
+      if (!FileSystem::Instance().Exists(search_path_spec))
         continue;
 
       auto resolved_module_spec(module_spec);
@@ -905,13 +904,15 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
   // Don't look for the file if it appears to be the same one we already
   // checked for above...
   if (located_binary_modulespec.GetFileSpec() != module_file_spec) {
-    if (!located_binary_modulespec.GetFileSpec().Exists()) {
+    if (!FileSystem::Instance().Exists(
+            located_binary_modulespec.GetFileSpec())) {
       located_binary_modulespec.GetFileSpec().GetPath(path, sizeof(path));
       if (path[0] == '\0')
         module_file_spec.GetPath(path, sizeof(path));
       // How can this check ever be true? This branch it is false, and we
       // haven't modified file_spec.
-      if (located_binary_modulespec.GetFileSpec().Exists()) {
+      if (FileSystem::Instance().Exists(
+              located_binary_modulespec.GetFileSpec())) {
         std::string uuid_str;
         if (uuid_ptr && uuid_ptr->IsValid())
           uuid_str = uuid_ptr->GetAsString();

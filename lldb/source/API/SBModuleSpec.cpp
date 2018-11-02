@@ -114,7 +114,8 @@ SBModuleSpecList::~SBModuleSpecList() {}
 
 SBModuleSpecList SBModuleSpecList::GetModuleSpecifications(const char *path) {
   SBModuleSpecList specs;
-  FileSpec file_spec(path, true);
+  FileSpec file_spec(path);
+  FileSystem::Instance().Resolve(file_spec);
   Host::ResolveExecutableInBundle(file_spec);
   ObjectFile::GetModuleSpecifications(file_spec, 0, 0, *specs.m_opaque_ap);
   return specs;

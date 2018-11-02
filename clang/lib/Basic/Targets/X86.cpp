@@ -1681,6 +1681,7 @@ bool X86TargetInfo::validateOperandSize(StringRef Constraint,
         return false;
       break;
     }
+    LLVM_FALLTHROUGH;
   case 'v':
   case 'x':
     if (SSELevel >= AVX512F)

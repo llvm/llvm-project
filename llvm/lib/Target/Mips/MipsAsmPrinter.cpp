@@ -561,6 +561,7 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
         O << '$' << MipsInstPrinter::getRegisterName(Reg);
         return false;
       }
+      break;
     }
     case 'w':
       // Print MSA registers for the 'f' constraint

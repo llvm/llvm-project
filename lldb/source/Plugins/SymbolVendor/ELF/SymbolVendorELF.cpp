@@ -101,7 +101,7 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
     const FileSpec fspec = file_spec_list.GetFileSpecAtIndex(idx);
 
     module_spec.GetFileSpec() = obj_file->GetFileSpec();
-    module_spec.GetFileSpec().ResolvePath();
+    FileSystem::Instance().Resolve(module_spec.GetFileSpec());
     module_spec.GetSymbolFileSpec() = fspec;
     module_spec.GetUUID() = uuid;
     FileSpec dsym_fspec = Symbols::LocateExecutableSymbolFile(module_spec);

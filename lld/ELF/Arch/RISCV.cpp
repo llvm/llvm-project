@@ -22,7 +22,7 @@ namespace {
 class RISCV final : public TargetInfo {
 public:
   RISCV();
-  virtual uint32_t calcEFlags() const override;
+  uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;

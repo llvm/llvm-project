@@ -229,9 +229,8 @@ FileSpec PlatformAppleSimulator::GetCoreSimulatorPath() {
       cs_path.Printf(
           "%s/Library/PrivateFrameworks/CoreSimulator.framework/CoreSimulator",
           developer_dir);
-      const bool resolve_path = true;
-      m_core_simulator_framework_path =
-          FileSpec(cs_path.GetData(), resolve_path);
+      m_core_simulator_framework_path = FileSpec(cs_path.GetData());
+      FileSystem::Instance().Resolve(*m_core_simulator_framework_path);
     }
   }
 

@@ -82,6 +82,7 @@ void MapFunctionNamesConsumer::handleDecl(const Decl *D) {
         case UniqueExternalLinkage:
           if (SM.isInMainFile(Body->getBeginLoc()))
             Index[LookupName] = CurrentFileName;
+          break;
         default:
           break;
         }
