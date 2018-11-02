@@ -137,6 +137,30 @@ TEST_F(FunctionSequenceTest, PreservedCallsHaveCorrectTSC) {
                 TSCIs(Gt(1000uL))))));
 }
 
+TEST_F(FunctionSequenceTest, PreservedCallsSupportLargeDeltas) {
+  C = llvm::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
+  uint64_t TSC = 1;
+  uint16_t CPU = 0;
+  const auto LargeDelta = uint64_t{std::numeric_limits<int32_t>::max()};
+  ASSERT_TRUE(C->functionEnter(1, TSC++, CPU));
+  ASSERT_TRUE(C->functionExit(1, TSC += LargeDelta, CPU));
+  ASSERT_TRUE(C->flush());
+  ASSERT_EQ(BQ->finalize(), BufferQueue::ErrorCode::Ok);
+
+  // Serialize the buffer then test to see if we find the right TSC with a large
+  // delta.
+  std::string Serialized = serialize(*BQ, 3);
+  llvm::DataExtractor DE(Serialized, true, 8);
+  auto TraceOrErr = llvm::xray::loadTrace(DE);
+  EXPECT_THAT_EXPECTED(
+      TraceOrErr,
+      HasValue(ElementsAre(
+          AllOf(FuncId(1), RecordType(llvm::xray::RecordTypes::ENTER),
+                TSCIs(Eq(1uL))),
+          AllOf(FuncId(1), RecordType(llvm::xray::RecordTypes::EXIT),
+                TSCIs(Gt(LargeDelta))))));
+}
+
 TEST_F(FunctionSequenceTest, RewindingMultipleCalls) {
   C = llvm::make_unique<FDRController<>>(BQ.get(), B, *W, clock_gettime, 1000);
 
