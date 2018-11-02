@@ -415,36 +415,26 @@ bool lldb_private::formatters::swift::SwiftSharedString_SummaryProvider_2(
   if (!process)
     return false;
 
+  Status error;
   auto ptr_size = process->GetAddressByteSize();
 
-  static ConstString g__value("_value");
-  static ConstString g__start("_start");
-  auto start = valobj.GetChildAtNamePath({g__start});
-  if (!start)
+  lldb::addr_t raw1 = valobj.GetPointerValue();
+  lldb::addr_t address = (raw1 & 0x00FFFFFFFFFFFFFF);
+  uint64_t startOffset = (ptr_size == 8 ? 24 : 12);
+
+  lldb::addr_t start =
+      process->ReadPointerFromMemory(address + startOffset, error);
+  if (error.Fail())
+    return false;
+  lldb::addr_t raw0 =
+      process->ReadPointerFromMemory(address + startOffset + 8, error);
+  if (error.Fail())
     return false;
 
-  uint64_t startAddress = start->GetValueAsUnsigned(0);
-  uint64_t count;
-  if (ptr_size == 8) {
-    // Top 16 bits are flags, bottom 48 is length
-    static ConstString g__countAndFlags("_countAndFlags");
-    auto countAndFlags =
-      valobj.GetChildAtNamePath({g__countAndFlags, g__value});
-    if (!countAndFlags) {
-      return false;
-    }
-    count = countAndFlags->GetValueAsUnsigned(0) & 0x0000FFFFFFFFFFFF;
-  } else if (ptr_size == 4) {
-    static ConstString g__count("_count");
-    auto rawCount = valobj.GetChildAtNamePath({g__count, g__value});
-    count = rawCount->GetValueAsUnsigned(0);
-  } else {
-    lldbassert("Unsupported arch?");
-    return false;
-  }
+  uint64_t count = raw0 & 0x0000FFFFFFFFFFFF;
 
-  return readStringFromAddress(
-    startAddress, count, process, stream, summary_options, read_options);
+  return readStringFromAddress(start, count, process, stream, summary_options,
+                               read_options);
 }
 
 bool lldb_private::formatters::swift::Bool_SummaryProvider(
