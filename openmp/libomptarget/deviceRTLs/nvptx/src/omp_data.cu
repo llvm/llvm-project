@@ -31,14 +31,17 @@ __device__ omptarget_nvptx_Queue<omptarget_nvptx_SimpleThreadPrivateContext,
                                  OMP_STATE_COUNT>
     omptarget_nvptx_device_simpleState[MAX_SM];
 
+__device__ omptarget_nvptx_SimpleMemoryManager
+    omptarget_nvptx_simpleMemoryManager;
+__device__ __shared__ uint32_t usedMemIdx;
+__device__ __shared__ uint32_t usedSlotIdx;
+
 // Pointer to this team's OpenMP state object
 __device__ __shared__
     omptarget_nvptx_ThreadPrivateContext *omptarget_nvptx_threadPrivateContext;
 
 __device__ __shared__ omptarget_nvptx_SimpleThreadPrivateContext
     *omptarget_nvptx_simpleThreadPrivateContext;
-
-__device__ __shared__ void *omptarget_nvptx_simpleGlobalData;
 
 ////////////////////////////////////////////////////////////////////////////////
 // The team master sets the outlined parallel function in this variable to

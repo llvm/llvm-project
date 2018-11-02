@@ -543,7 +543,7 @@ int target_data_update(DeviceTy &Device, int32_t arg_num,
 }
 
 static const unsigned LambdaMapping = OMP_TGT_MAPTYPE_PTR_AND_OBJ |
-                                      OMP_TGT_MAPTYPE_PRIVATE |
+                                      OMP_TGT_MAPTYPE_LITERAL |
                                       OMP_TGT_MAPTYPE_IMPLICIT;
 static bool isLambdaMapping(int64_t Mapping) {
   return (Mapping & LambdaMapping) == LambdaMapping;
