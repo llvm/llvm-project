@@ -624,7 +624,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
       case BO_LE:
       case BO_GE:
         op = BinaryOperator::reverseComparisonOp(op);
-        // FALL-THROUGH
+        LLVM_FALLTHROUGH;
       case BO_EQ:
       case BO_NE:
       case BO_Add:
@@ -638,7 +638,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
         // (~0)>>a
         if (LHSValue.isAllOnesValue() && LHSValue.isSigned())
           return evalCastFromNonLoc(lhs, resultTy);
-        // FALL-THROUGH
+        LLVM_FALLTHROUGH;
       case BO_Shl:
         // 0<<a and 0>>a
         if (LHSValue == 0)

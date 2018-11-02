@@ -154,10 +154,9 @@ static StringRef importanceToStr(Importance I) {
   llvm_unreachable("Fully covered switch is not so fully covered");
 }
 
-static json::Object createThreadFlowLocation(int Step, json::Object &&Location,
+static json::Object createThreadFlowLocation(json::Object &&Location,
                                              Importance I) {
-  return json::Object{{"step", Step},
-                      {"location", std::move(Location)},
+  return json::Object{{"location", std::move(Location)},
                       {"importance", importanceToStr(I)}};
 }
 
@@ -192,12 +191,10 @@ static Importance calculateImportance(const PathDiagnosticPiece &Piece) {
 static json::Object createThreadFlow(const PathPieces &Pieces,
                                      json::Object &Files) {
   const SourceManager &SMgr = Pieces.front()->getLocation().getManager();
-  int Step = 1;
   json::Array Locations;
   for (const auto &Piece : Pieces) {
     const PathDiagnosticLocation &P = Piece->getLocation();
     Locations.push_back(createThreadFlowLocation(
-        Step++,
         createLocation(createPhysicalLocation(P.asRange(),
                                               *P.asLocation().getFileEntry(),
                                               SMgr, Files),
@@ -235,6 +232,43 @@ static json::Object createResult(const PathDiagnostic &Diag,
       {"ruleId", Diag.getCheckName()}};
 }
 
+static StringRef getRuleDescription(StringRef CheckName) {
+  return llvm::StringSwitch<StringRef>(CheckName)
+#define GET_CHECKERS
+#define CHECKER(FULLNAME, CLASS, CXXFILE, HELPTEXT, GROUPINDEX, HIDDEN)        \
+  .Case(FULLNAME, HELPTEXT)
+#include "clang/StaticAnalyzer/Checkers/Checkers.inc"
+#undef CHECKER
+#undef GET_CHECKERS
+      ;
+}
+
+static json::Object createRule(const PathDiagnostic &Diag) {
+  StringRef CheckName = Diag.getCheckName();
+  return json::Object{
+      {"fullDescription", createMessage(getRuleDescription(CheckName))},
+      {"name", createMessage(CheckName)}};
+}
+
+static json::Object createRules(std::vector<const PathDiagnostic *> &Diags) {
+  json::Object Rules;
+  llvm::StringSet<> Seen;
+
+  llvm::for_each(Diags, [&](const PathDiagnostic *D) {
+    StringRef RuleID = D->getCheckName();
+    std::pair<llvm::StringSet<>::iterator, bool> P = Seen.insert(RuleID);
+    if (P.second)
+      Rules[RuleID] = createRule(*D);
+  });
+
+  return Rules;
+}
+
+static json::Object
+createResources(std::vector<const PathDiagnostic *> &Diags) {
+  return json::Object{{"rules", createRules(Diags)}};
+}
+
 static json::Object createRun(std::vector<const PathDiagnostic *> &Diags) {
   json::Array Results;
   json::Object Files;
@@ -244,6 +278,7 @@ static json::Object createRun(std::vector<const PathDiagnostic *> &Diags) {
   });
 
   return json::Object{{"tool", createTool()},
+                      {"resources", createResources(Diags)},
                       {"results", std::move(Results)},
                       {"files", std::move(Files)}};
 }
@@ -261,8 +296,10 @@ void SarifDiagnostics::FlushDiagnosticsImpl(
     llvm::errs() << "warning: could not create file: " << EC.message() << '\n';
     return;
   }
-  json::Object Sarif{{"$schema", "http://json.schemastore.org/sarif-2.0.0"},
-                     {"version", "2.0.0-beta.2018-09-26"},
-                     {"runs", json::Array{createRun(Diags)}}};
+  json::Object Sarif{
+      {"$schema",
+       "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-10-10"},
+      {"version", "2.0.0-csd.2.beta.2018-10-10"},
+      {"runs", json::Array{createRun(Diags)}}};
   OS << llvm::formatv("{0:2}", json::Value(std::move(Sarif)));
 }

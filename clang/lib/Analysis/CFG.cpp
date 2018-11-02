@@ -1334,6 +1334,7 @@ void CFGBuilder::findConstructionContexts(
     case CK_NoOp:
     case CK_ConstructorConversion:
       findConstructionContexts(Layer, Cast->getSubExpr());
+      break;
     default:
       break;
     }

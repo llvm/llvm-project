@@ -962,7 +962,7 @@ void ExprEngine::VisitUnaryOperator(const UnaryOperator* U, ExplodedNode *Pred,
     }
     case UO_Plus:
       assert(!U->isGLValue());
-      // FALL-THROUGH.
+      LLVM_FALLTHROUGH;
     case UO_Deref:
     case UO_Extension: {
       handleUOExtension(I, U, Bldr);

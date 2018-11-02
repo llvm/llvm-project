@@ -729,7 +729,7 @@ bool Parser::ConsumeAndStoreUntil(tok::TokenKind T1, tok::TokenKind T2,
     case tok::semi:
       if (StopAtSemi)
         return false;
-      // FALL THROUGH.
+      LLVM_FALLTHROUGH;
     default:
       // consume this token.
       Toks.push_back(Tok);
@@ -1109,13 +1109,13 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
         goto consume_token;
       if (AngleCount) --AngleCount;
       if (KnownTemplateCount) --KnownTemplateCount;
-      // Fall through.
+      LLVM_FALLTHROUGH;
     case tok::greatergreater:
       if (!getLangOpts().CPlusPlus11)
         goto consume_token;
       if (AngleCount) --AngleCount;
       if (KnownTemplateCount) --KnownTemplateCount;
-      // Fall through.
+      LLVM_FALLTHROUGH;
     case tok::greater:
       if (AngleCount) --AngleCount;
       if (KnownTemplateCount) --KnownTemplateCount;
@@ -1220,7 +1220,7 @@ bool Parser::ConsumeAndStoreInitializer(CachedTokens &Toks,
     case tok::semi:
       if (CIK == CIK_DefaultInitializer)
         return true; // End of the default initializer.
-      // FALL THROUGH.
+      LLVM_FALLTHROUGH;
     default:
     consume_token:
       Toks.push_back(Tok);

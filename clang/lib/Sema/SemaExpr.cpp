@@ -8736,6 +8736,32 @@ static void checkArithmeticNull(Sema &S, ExprResult &LHS, ExprResult &RHS,
       << LHS.get()->getSourceRange() << RHS.get()->getSourceRange();
 }
 
+static void DiagnoseDivisionSizeofPointer(Sema &S, Expr *LHS, Expr *RHS,
+                                          SourceLocation Loc) {
+  const auto *LUE = dyn_cast<UnaryExprOrTypeTraitExpr>(LHS);
+  const auto *RUE = dyn_cast<UnaryExprOrTypeTraitExpr>(RHS);
+  if (!LUE || !RUE)
+    return;
+  if (LUE->getKind() != UETT_SizeOf || LUE->isArgumentType() ||
+      RUE->getKind() != UETT_SizeOf)
+    return;
+
+  QualType LHSTy = LUE->getArgumentExpr()->IgnoreParens()->getType();
+  QualType RHSTy;
+
+  if (RUE->isArgumentType())
+    RHSTy = RUE->getArgumentType();
+  else
+    RHSTy = RUE->getArgumentExpr()->IgnoreParens()->getType();
+
+  if (!LHSTy->isPointerType() || RHSTy->isPointerType())
+    return;
+  if (LHSTy->getPointeeType() != RHSTy)
+    return;
+
+  S.Diag(Loc, diag::warn_division_sizeof_ptr) << LHS << LHS->getSourceRange();
+}
+
 static void DiagnoseBadDivideOrRemainderValues(Sema& S, ExprResult &LHS,
                                                ExprResult &RHS,
                                                SourceLocation Loc, bool IsDiv) {
@@ -8766,8 +8792,10 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
 
   if (compType.isNull() || !compType->isArithmeticType())
     return InvalidOperands(Loc, LHS, RHS);
-  if (IsDiv)
+  if (IsDiv) {
     DiagnoseBadDivideOrRemainderValues(*this, LHS, RHS, Loc, IsDiv);
+    DiagnoseDivisionSizeofPointer(*this, LHS.get(), RHS.get(), Loc);
+  }
   return compType;
 }
 
@@ -10507,6 +10535,10 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
   }
 
   if (getLangOpts().OpenCLVersion >= 200) {
+    if (LHSType->isClkEventT() && RHSType->isClkEventT()) {
+      return computeResultTy();
+    }
+
     if (LHSType->isQueueT() && RHSType->isQueueT()) {
       return computeResultTy();
     }
