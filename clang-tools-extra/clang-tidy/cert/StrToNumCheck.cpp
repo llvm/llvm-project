@@ -10,7 +10,7 @@
 #include "StrToNumCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Analysis/Analyses/FormatString.h"
+#include "clang/AST/FormatString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <cassert>
 
