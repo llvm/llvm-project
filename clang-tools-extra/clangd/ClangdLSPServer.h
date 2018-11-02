@@ -121,12 +121,6 @@ private:
     setCompilationCommandForFile(PathRef File,
                                  tooling::CompileCommand CompilationCommand);
 
-    /// Adds extra compilation flags to the compilation command for a particular
-    /// file. Only valid for directory-based CDB, no-op and error log on
-    /// InMemoryCDB;
-    void setExtraFlagsForFile(PathRef File,
-                              std::vector<std::string> ExtraFlags);
-
     /// Returns a CDB that should be used to get compile commands for the
     /// current instance of ClangdLSPServer.
     GlobalCompilationDatabase &getCDB() { return *CDB; }

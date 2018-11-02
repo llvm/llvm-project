@@ -41,43 +41,12 @@ Optional<tooling::CompileCommand>
 DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
   if (auto CDB = getCDBForFile(File)) {
     auto Candidates = CDB->getCompileCommands(File);
-    if (!Candidates.empty()) {
-      addExtraFlags(File, Candidates.front());
+    if (!Candidates.empty())
       return std::move(Candidates.front());
-    }
   } else {
     log("Failed to find compilation database for {0}", File);
   }
   return None;
-}
-
-tooling::CompileCommand
-DirectoryBasedGlobalCompilationDatabase::getFallbackCommand(
-    PathRef File) const {
-  auto C = GlobalCompilationDatabase::getFallbackCommand(File);
-  addExtraFlags(File, C);
-  return C;
-}
-
-void DirectoryBasedGlobalCompilationDatabase::setExtraFlagsForFile(
-    PathRef File, std::vector<std::string> ExtraFlags) {
-  std::lock_guard<std::mutex> Lock(Mutex);
-  ExtraFlagsForFile[File] = std::move(ExtraFlags);
-}
-
-void DirectoryBasedGlobalCompilationDatabase::addExtraFlags(
-    PathRef File, tooling::CompileCommand &C) const {
-  std::lock_guard<std::mutex> Lock(Mutex);
-
-  auto It = ExtraFlagsForFile.find(File);
-  if (It == ExtraFlagsForFile.end())
-    return;
-
-  auto &Args = C.CommandLine;
-  assert(Args.size() >= 2 && "Expected at least [compiler, source file]");
-  // The last argument of CommandLine is the name of the input file.
-  // Add ExtraFlags before it.
-  Args.insert(Args.end() - 1, It->second.begin(), It->second.end());
 }
 
 tooling::CompilationDatabase *
