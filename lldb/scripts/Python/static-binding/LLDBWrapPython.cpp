@@ -2900,105 +2900,107 @@ void LLDBSwigPythonCallPythonLogOutputCallback(const char *str, void *baton);
 #define SWIGTYPE_p_std__shared_ptrT_lldb_private__QueueItem_t swig_types[155]
 #define SWIGTYPE_p_std__shared_ptrT_lldb_private__Queue_t swig_types[156]
 #define SWIGTYPE_p_std__shared_ptrT_lldb_private__REPL_t swig_types[157]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__RegisterCheckpoint_t swig_types[158]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__RegisterContext_t swig_types[159]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__RegularExpression_t swig_types[160]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ScriptInterpreter_t swig_types[161]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ScriptSummaryFormat_t swig_types[162]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ScriptedSyntheticChildren_t swig_types[163]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SearchFilter_t swig_types[164]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SectionLoadList_t swig_types[165]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Section_t swig_types[166]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Settings_t swig_types[167]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StackFrameList_t swig_types[168]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StackFrame_t swig_types[169]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StopInfo_t swig_types[170]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StoppointLocation_t swig_types[171]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StreamFile_t swig_types[172]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Stream_t swig_types[173]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StringSummaryFormat_t swig_types[174]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StructuredDataPlugin_t swig_types[175]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SwiftASTContext_t swig_types[176]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SymbolContextSpecifier_t swig_types[177]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SymbolFileType_t swig_types[178]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SymbolFile_t swig_types[179]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SyntheticChildrenFrontEnd_t swig_types[180]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SyntheticChildren_t swig_types[181]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SystemRuntime_t swig_types[182]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TargetProperties_t swig_types[183]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Target_t swig_types[184]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ThreadCollection_t swig_types[185]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ThreadPlanTracer_t swig_types[186]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ThreadPlan_t swig_types[187]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Thread_t swig_types[188]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TraceOptions_t swig_types[189]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeCategoryImpl_t swig_types[190]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeEnumMemberImpl_t swig_types[191]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeFilterImpl_t swig_types[192]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeFormatImpl_t swig_types[193]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeImpl_t swig_types[194]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeMemberFunctionImpl_t swig_types[195]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeNameSpecifierImpl_t swig_types[196]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeSummaryImpl_t swig_types[197]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeSummaryOptions_t swig_types[198]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeSystem_t swig_types[199]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeValidatorImpl_t swig_types[200]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Type_t swig_types[201]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__UnixSignals_t swig_types[202]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__UnwindAssembly_t swig_types[203]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__UnwindPlan_t swig_types[204]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__UserExpression_t swig_types[205]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__UtilityFunction_t swig_types[206]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ValueList_t swig_types[207]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ValueObjectList_t swig_types[208]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Value_t swig_types[209]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__VariableList_t swig_types[210]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Variable_t swig_types[211]
-#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Watchpoint_t swig_types[212]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ClangASTContext_t swig_types[213]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ClangModulesDeclVendor_t swig_types[214]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ClangPersistentVariables_t swig_types[215]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__DynamicCheckerFunctions_t swig_types[216]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__DynamicLoader_t swig_types[217]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__GoASTContext_t swig_types[218]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__JITLoaderList_t swig_types[219]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__MemoryRegionInfo_t swig_types[220]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__OperatingSystem_t swig_types[221]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ScriptInterpreter_t swig_types[222]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SectionList_t swig_types[223]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SourceManager_t swig_types[224]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__StackFrame_t swig_types[225]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__StructuredDataImpl_t swig_types[226]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SymbolVendor_t swig_types[227]
-#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SystemRuntime_t swig_types[228]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__BreakpointLocation_t swig_types[229]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__BreakpointSite_t swig_types[230]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Breakpoint_t swig_types[231]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__BroadcasterManager_t swig_types[232]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Debugger_t swig_types[233]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Listener_t swig_types[234]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Module_t swig_types[235]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__ObjectFileJITDelegate_t swig_types[236]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__ObjectFile_t swig_types[237]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__OptionValue_t swig_types[238]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Process_t swig_types[239]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Queue_t swig_types[240]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Section_t swig_types[241]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__StackFrame_t swig_types[242]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Stream_t swig_types[243]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__StructuredDataPlugin_t swig_types[244]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__SymbolFileType_t swig_types[245]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Target_t swig_types[246]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Thread_t swig_types[247]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Type_t swig_types[248]
-#define SWIGTYPE_p_std__weak_ptrT_lldb_private__UnixSignals_t swig_types[249]
-#define SWIGTYPE_p_unsigned_char swig_types[250]
-#define SWIGTYPE_p_unsigned_int swig_types[251]
-#define SWIGTYPE_p_unsigned_long_long swig_types[252]
-#define SWIGTYPE_p_unsigned_short swig_types[253]
-#define SWIGTYPE_p_void swig_types[254]
-static swig_type_info *swig_types[256];
-static swig_module_info swig_module = {swig_types, 255, 0, 0, 0, 0};
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__RecognizedStackFrame_t swig_types[158]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__RegisterCheckpoint_t swig_types[159]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__RegisterContext_t swig_types[160]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__RegularExpression_t swig_types[161]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ScriptInterpreter_t swig_types[162]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ScriptSummaryFormat_t swig_types[163]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ScriptedSyntheticChildren_t swig_types[164]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SearchFilter_t swig_types[165]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SectionLoadList_t swig_types[166]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Section_t swig_types[167]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Settings_t swig_types[168]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StackFrameList_t swig_types[169]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StackFrameRecognizer_t swig_types[170]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StackFrame_t swig_types[171]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StopInfo_t swig_types[172]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StoppointLocation_t swig_types[173]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StreamFile_t swig_types[174]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Stream_t swig_types[175]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StringSummaryFormat_t swig_types[176]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__StructuredDataPlugin_t swig_types[177]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SwiftASTContext_t swig_types[178]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SymbolContextSpecifier_t swig_types[179]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SymbolFileType_t swig_types[180]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SymbolFile_t swig_types[181]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SyntheticChildrenFrontEnd_t swig_types[182]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SyntheticChildren_t swig_types[183]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__SystemRuntime_t swig_types[184]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TargetProperties_t swig_types[185]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Target_t swig_types[186]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ThreadCollection_t swig_types[187]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ThreadPlanTracer_t swig_types[188]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ThreadPlan_t swig_types[189]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Thread_t swig_types[190]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TraceOptions_t swig_types[191]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeCategoryImpl_t swig_types[192]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeEnumMemberImpl_t swig_types[193]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeFilterImpl_t swig_types[194]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeFormatImpl_t swig_types[195]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeImpl_t swig_types[196]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeMemberFunctionImpl_t swig_types[197]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeNameSpecifierImpl_t swig_types[198]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeSummaryImpl_t swig_types[199]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeSummaryOptions_t swig_types[200]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeSystem_t swig_types[201]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__TypeValidatorImpl_t swig_types[202]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Type_t swig_types[203]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__UnixSignals_t swig_types[204]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__UnwindAssembly_t swig_types[205]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__UnwindPlan_t swig_types[206]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__UserExpression_t swig_types[207]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__UtilityFunction_t swig_types[208]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ValueList_t swig_types[209]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__ValueObjectList_t swig_types[210]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Value_t swig_types[211]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__VariableList_t swig_types[212]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Variable_t swig_types[213]
+#define SWIGTYPE_p_std__shared_ptrT_lldb_private__Watchpoint_t swig_types[214]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ClangASTContext_t swig_types[215]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ClangModulesDeclVendor_t swig_types[216]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ClangPersistentVariables_t swig_types[217]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__DynamicCheckerFunctions_t swig_types[218]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__DynamicLoader_t swig_types[219]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__GoASTContext_t swig_types[220]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__JITLoaderList_t swig_types[221]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__MemoryRegionInfo_t swig_types[222]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__OperatingSystem_t swig_types[223]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__ScriptInterpreter_t swig_types[224]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SectionList_t swig_types[225]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SourceManager_t swig_types[226]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__StackFrame_t swig_types[227]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__StructuredDataImpl_t swig_types[228]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SymbolVendor_t swig_types[229]
+#define SWIGTYPE_p_std__unique_ptrT_lldb_private__SystemRuntime_t swig_types[230]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__BreakpointLocation_t swig_types[231]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__BreakpointSite_t swig_types[232]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Breakpoint_t swig_types[233]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__BroadcasterManager_t swig_types[234]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Debugger_t swig_types[235]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Listener_t swig_types[236]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Module_t swig_types[237]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__ObjectFileJITDelegate_t swig_types[238]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__ObjectFile_t swig_types[239]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__OptionValue_t swig_types[240]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Process_t swig_types[241]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Queue_t swig_types[242]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Section_t swig_types[243]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__StackFrame_t swig_types[244]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Stream_t swig_types[245]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__StructuredDataPlugin_t swig_types[246]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__SymbolFileType_t swig_types[247]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Target_t swig_types[248]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Thread_t swig_types[249]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__Type_t swig_types[250]
+#define SWIGTYPE_p_std__weak_ptrT_lldb_private__UnixSignals_t swig_types[251]
+#define SWIGTYPE_p_unsigned_char swig_types[252]
+#define SWIGTYPE_p_unsigned_int swig_types[253]
+#define SWIGTYPE_p_unsigned_long_long swig_types[254]
+#define SWIGTYPE_p_unsigned_short swig_types[255]
+#define SWIGTYPE_p_void swig_types[256]
+static swig_type_info *swig_types[258];
+static swig_module_info swig_module = {swig_types, 257, 0, 0, 0, 0};
 #define SWIG_TypeQuery(name) SWIG_TypeQueryModule(&swig_module, &swig_module, name)
 #define SWIG_MangledTypeQuery(name) SWIG_MangledTypeQueryModule(&swig_module, &swig_module, name)
 
@@ -73398,6 +73400,66 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBVariablesOptions_GetIncludeRecognizedArguments(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBVariablesOptions *arg1 = (lldb::SBVariablesOptions *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBVariablesOptions_GetIncludeRecognizedArguments",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBVariablesOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBVariablesOptions_GetIncludeRecognizedArguments" "', argument " "1"" of type '" "lldb::SBVariablesOptions const *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBVariablesOptions * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)((lldb::SBVariablesOptions const *)arg1)->GetIncludeRecognizedArguments();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_SBVariablesOptions_SetIncludeRecognizedArguments(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBVariablesOptions *arg1 = (lldb::SBVariablesOptions *) 0 ;
+  bool arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  bool val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:SBVariablesOptions_SetIncludeRecognizedArguments",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBVariablesOptions, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBVariablesOptions_SetIncludeRecognizedArguments" "', argument " "1"" of type '" "lldb::SBVariablesOptions *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBVariablesOptions * >(argp1);
+  ecode2 = SWIG_AsVal_bool(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "SBVariablesOptions_SetIncludeRecognizedArguments" "', argument " "2"" of type '" "bool""'");
+  } 
+  arg2 = static_cast< bool >(val2);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    (arg1)->SetIncludeRecognizedArguments(arg2);
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBVariablesOptions_GetIncludeLocals(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBVariablesOptions *arg1 = (lldb::SBVariablesOptions *) 0 ;
@@ -75622,6 +75684,52 @@ LLDBSWIGPythonCreateOSPlugin
         return result.release();
 
     Py_RETURN_NONE;
+}
+
+SWIGEXPORT void*
+LLDBSWIGPython_CreateFrameRecognizer
+(
+    const char *python_class_name,
+    const char *session_dictionary_name
+)
+{
+    using namespace lldb_private;
+
+    if (python_class_name == NULL || python_class_name[0] == '\0' || !session_dictionary_name)
+        Py_RETURN_NONE;
+
+    PyErr_Cleaner py_err_cleaner(true);
+
+    auto dict = PythonModule::MainModule().ResolveName<PythonDictionary>(session_dictionary_name);
+    auto pfunc = PythonObject::ResolveNameWithDictionary<PythonCallable>(python_class_name, dict);
+
+    if (!pfunc.IsAllocated())
+        Py_RETURN_NONE;
+
+    auto result = pfunc();
+
+    if (result.IsAllocated())
+        return result.release();
+
+    Py_RETURN_NONE;
+}
+
+SWIGEXPORT PyObject*
+LLDBSwigPython_GetRecognizedArguments
+(
+    PyObject *implementor,
+    const lldb::StackFrameSP& frame_sp
+)
+{
+    using namespace lldb_private;
+
+    static char callee_name[] = "get_recognized_arguments";
+
+    lldb::SBFrame frame_sb(frame_sp);
+    PyObject *arg = SBTypeToSWIGWrapper(frame_sb);
+
+    PyObject* result = PyObject_CallMethodObjArgs(implementor, PyString_FromString(callee_name), arg, NULL);
+    return result;
 }
 
 SWIGEXPORT void*
@@ -79517,6 +79625,8 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBVariablesOptions_IsValid", _wrap_SBVariablesOptions_IsValid, METH_VARARGS, (char *)"SBVariablesOptions_IsValid(SBVariablesOptions self) -> bool"},
 	 { (char *)"SBVariablesOptions_GetIncludeArguments", _wrap_SBVariablesOptions_GetIncludeArguments, METH_VARARGS, (char *)"SBVariablesOptions_GetIncludeArguments(SBVariablesOptions self) -> bool"},
 	 { (char *)"SBVariablesOptions_SetIncludeArguments", _wrap_SBVariablesOptions_SetIncludeArguments, METH_VARARGS, (char *)"SBVariablesOptions_SetIncludeArguments(SBVariablesOptions self, bool arg1)"},
+	 { (char *)"SBVariablesOptions_GetIncludeRecognizedArguments", _wrap_SBVariablesOptions_GetIncludeRecognizedArguments, METH_VARARGS, (char *)"SBVariablesOptions_GetIncludeRecognizedArguments(SBVariablesOptions self) -> bool"},
+	 { (char *)"SBVariablesOptions_SetIncludeRecognizedArguments", _wrap_SBVariablesOptions_SetIncludeRecognizedArguments, METH_VARARGS, (char *)"SBVariablesOptions_SetIncludeRecognizedArguments(SBVariablesOptions self, bool arg1)"},
 	 { (char *)"SBVariablesOptions_GetIncludeLocals", _wrap_SBVariablesOptions_GetIncludeLocals, METH_VARARGS, (char *)"SBVariablesOptions_GetIncludeLocals(SBVariablesOptions self) -> bool"},
 	 { (char *)"SBVariablesOptions_SetIncludeLocals", _wrap_SBVariablesOptions_SetIncludeLocals, METH_VARARGS, (char *)"SBVariablesOptions_SetIncludeLocals(SBVariablesOptions self, bool arg1)"},
 	 { (char *)"SBVariablesOptions_GetIncludeStatics", _wrap_SBVariablesOptions_GetIncludeStatics, METH_VARARGS, (char *)"SBVariablesOptions_GetIncludeStatics(SBVariablesOptions self) -> bool"},
@@ -79755,6 +79865,7 @@ static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__Property_t = {"_p
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__QueueItem_t = {"_p_std__shared_ptrT_lldb_private__QueueItem_t", "std::shared_ptr< lldb_private::QueueItem > *|lldb::QueueItemSP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__Queue_t = {"_p_std__shared_ptrT_lldb_private__Queue_t", "std::shared_ptr< lldb_private::Queue > *|lldb::QueueSP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__REPL_t = {"_p_std__shared_ptrT_lldb_private__REPL_t", "lldb::REPLSP *|std::shared_ptr< lldb_private::REPL > *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__RecognizedStackFrame_t = {"_p_std__shared_ptrT_lldb_private__RecognizedStackFrame_t", "lldb::RecognizedStackFrameSP *|std::shared_ptr< lldb_private::RecognizedStackFrame > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__RegisterCheckpoint_t = {"_p_std__shared_ptrT_lldb_private__RegisterCheckpoint_t", "std::shared_ptr< lldb_private::RegisterCheckpoint > *|lldb::RegisterCheckpointSP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__RegisterContext_t = {"_p_std__shared_ptrT_lldb_private__RegisterContext_t", "lldb::RegisterContextSP *|std::shared_ptr< lldb_private::RegisterContext > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__RegularExpression_t = {"_p_std__shared_ptrT_lldb_private__RegularExpression_t", "lldb::RegularExpressionSP *|std::shared_ptr< lldb_private::RegularExpression > *", 0, 0, (void*)0, 0};
@@ -79766,6 +79877,7 @@ static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__SectionLoadList_t
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__Section_t = {"_p_std__shared_ptrT_lldb_private__Section_t", "lldb::SectionSP *|std::shared_ptr< lldb_private::Section > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__Settings_t = {"_p_std__shared_ptrT_lldb_private__Settings_t", "std::shared_ptr< lldb_private::Settings > *|lldb::SettingsSP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__StackFrameList_t = {"_p_std__shared_ptrT_lldb_private__StackFrameList_t", "std::shared_ptr< lldb_private::StackFrameList > *|lldb::StackFrameListSP *", 0, 0, (void*)0, 0};
+static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__StackFrameRecognizer_t = {"_p_std__shared_ptrT_lldb_private__StackFrameRecognizer_t", "std::shared_ptr< lldb_private::StackFrameRecognizer > *|lldb::StackFrameRecognizerSP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__StackFrame_t = {"_p_std__shared_ptrT_lldb_private__StackFrame_t", "std::shared_ptr< lldb_private::StackFrame > *|lldb::StackFrameSP *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__StopInfo_t = {"_p_std__shared_ptrT_lldb_private__StopInfo_t", "lldb::StopInfoSP *|std::shared_ptr< lldb_private::StopInfo > *", 0, 0, (void*)0, 0};
 static swig_type_info _swigt__p_std__shared_ptrT_lldb_private__StoppointLocation_t = {"_p_std__shared_ptrT_lldb_private__StoppointLocation_t", "std::shared_ptr< lldb_private::StoppointLocation > *|lldb::StoppointLocationSP *", 0, 0, (void*)0, 0};
@@ -80012,6 +80124,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__shared_ptrT_lldb_private__QueueItem_t,
   &_swigt__p_std__shared_ptrT_lldb_private__Queue_t,
   &_swigt__p_std__shared_ptrT_lldb_private__REPL_t,
+  &_swigt__p_std__shared_ptrT_lldb_private__RecognizedStackFrame_t,
   &_swigt__p_std__shared_ptrT_lldb_private__RegisterCheckpoint_t,
   &_swigt__p_std__shared_ptrT_lldb_private__RegisterContext_t,
   &_swigt__p_std__shared_ptrT_lldb_private__RegularExpression_t,
@@ -80023,6 +80136,7 @@ static swig_type_info *swig_type_initial[] = {
   &_swigt__p_std__shared_ptrT_lldb_private__Section_t,
   &_swigt__p_std__shared_ptrT_lldb_private__Settings_t,
   &_swigt__p_std__shared_ptrT_lldb_private__StackFrameList_t,
+  &_swigt__p_std__shared_ptrT_lldb_private__StackFrameRecognizer_t,
   &_swigt__p_std__shared_ptrT_lldb_private__StackFrame_t,
   &_swigt__p_std__shared_ptrT_lldb_private__StopInfo_t,
   &_swigt__p_std__shared_ptrT_lldb_private__StoppointLocation_t,
@@ -80269,6 +80383,7 @@ static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__Property_t[] = { 
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__QueueItem_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__QueueItem_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__Queue_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__Queue_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__REPL_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__REPL_t, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__RecognizedStackFrame_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__RecognizedStackFrame_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__RegisterCheckpoint_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__RegisterCheckpoint_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__RegisterContext_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__RegisterContext_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__RegularExpression_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__RegularExpression_t, 0, 0, 0},{0, 0, 0, 0}};
@@ -80280,6 +80395,7 @@ static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__SectionLoadList_t
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__Section_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__Section_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__Settings_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__Settings_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__StackFrameList_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__StackFrameList_t, 0, 0, 0},{0, 0, 0, 0}};
+static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__StackFrameRecognizer_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__StackFrameRecognizer_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__StackFrame_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__StackFrame_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__StopInfo_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__StopInfo_t, 0, 0, 0},{0, 0, 0, 0}};
 static swig_cast_info _swigc__p_std__shared_ptrT_lldb_private__StoppointLocation_t[] = {  {&_swigt__p_std__shared_ptrT_lldb_private__StoppointLocation_t, 0, 0, 0},{0, 0, 0, 0}};
@@ -80526,6 +80642,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__shared_ptrT_lldb_private__QueueItem_t,
   _swigc__p_std__shared_ptrT_lldb_private__Queue_t,
   _swigc__p_std__shared_ptrT_lldb_private__REPL_t,
+  _swigc__p_std__shared_ptrT_lldb_private__RecognizedStackFrame_t,
   _swigc__p_std__shared_ptrT_lldb_private__RegisterCheckpoint_t,
   _swigc__p_std__shared_ptrT_lldb_private__RegisterContext_t,
   _swigc__p_std__shared_ptrT_lldb_private__RegularExpression_t,
@@ -80537,6 +80654,7 @@ static swig_cast_info *swig_cast_initial[] = {
   _swigc__p_std__shared_ptrT_lldb_private__Section_t,
   _swigc__p_std__shared_ptrT_lldb_private__Settings_t,
   _swigc__p_std__shared_ptrT_lldb_private__StackFrameList_t,
+  _swigc__p_std__shared_ptrT_lldb_private__StackFrameRecognizer_t,
   _swigc__p_std__shared_ptrT_lldb_private__StackFrame_t,
   _swigc__p_std__shared_ptrT_lldb_private__StopInfo_t,
   _swigc__p_std__shared_ptrT_lldb_private__StoppointLocation_t,

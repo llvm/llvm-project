@@ -13321,6 +13321,14 @@ class SBVariablesOptions(_object):
         """SetIncludeArguments(self, bool arg0)"""
         return _lldb.SBVariablesOptions_SetIncludeArguments(self, *args)
 
+    def GetIncludeRecognizedArguments(self):
+        """GetIncludeRecognizedArguments(self) -> bool"""
+        return _lldb.SBVariablesOptions_GetIncludeRecognizedArguments(self)
+
+    def SetIncludeRecognizedArguments(self, *args):
+        """SetIncludeRecognizedArguments(self, bool arg0)"""
+        return _lldb.SBVariablesOptions_SetIncludeRecognizedArguments(self, *args)
+
     def GetIncludeLocals(self):
         """GetIncludeLocals(self) -> bool"""
         return _lldb.SBVariablesOptions_GetIncludeLocals(self)
