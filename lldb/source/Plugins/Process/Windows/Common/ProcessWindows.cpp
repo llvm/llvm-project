@@ -252,11 +252,13 @@ Status ProcessWindows::DoLaunch(Module *exe_module,
 
   FileSpec working_dir = launch_info.GetWorkingDirectory();
   namespace fs = llvm::sys::fs;
-  if (working_dir && (!working_dir.ResolvePath() ||
-                      !fs::is_directory(working_dir.GetPath()))) {
-    result.SetErrorStringWithFormat("No such file or directory: %s",
-                                    working_dir.GetCString());
-    return result;
+  if (working_dir) {
+    FileSystem::Instance().Resolve(working_dir);
+    if (!fs::is_directory(working_dir.GetPath())) {
+      result.SetErrorStringWithFormat("No such file or directory: %s",
+                                      working_dir.GetCString());
+      return result;
+    }
   }
 
   if (!launch_info.GetFlags().Test(eLaunchFlagDebug)) {
@@ -904,7 +906,8 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
       return;
     }
 
-    FileSpec executable_file(file_name, true);
+    FileSpec executable_file(file_name);
+    FileSystem::Instance().Resolve(executable_file);
     ModuleSpec module_spec(executable_file);
     Status error;
     module = GetTarget().GetSharedModule(module_spec, &error);
