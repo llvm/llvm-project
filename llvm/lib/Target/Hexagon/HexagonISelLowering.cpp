@@ -3080,6 +3080,21 @@ HexagonTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
   return TargetLowering::findRepresentativeClass(TRI, VT);
 }
 
+bool HexagonTargetLowering::shouldReduceLoadWidth(SDNode *Load,
+      ISD::LoadExtType ExtTy, EVT NewVT) const {
+  auto *L = cast<LoadSDNode>(Load);
+  std::pair<SDValue,int> BO = getBaseAndOffset(L->getBasePtr());
+  // Small-data object, do not shrink.
+  if (BO.first.getOpcode() == HexagonISD::CONST32_GP)
+    return false;
+  if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(BO.first)) {
+    auto &HTM = static_cast<const HexagonTargetMachine&>(getTargetMachine());
+    const auto *GO = dyn_cast_or_null<const GlobalObject>(GA->getGlobal());
+    return !GO || !HTM.getObjFileLowering()->isGlobalInSmallSection(GO, HTM);
+  }
+  return true;
+}
+
 Value *HexagonTargetLowering::emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
       AtomicOrdering Ord) const {
   BasicBlock *BB = Builder.GetInsertBlock();

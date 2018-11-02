@@ -8,26 +8,27 @@
 define <2 x float> @uitofp_2i32_cvt_buildvector(i32 %x, i32 %y, <2 x float> %v) {
 ; X32-LABEL: uitofp_2i32_cvt_buildvector:
 ; X32:       # %bb.0:
-; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X32-NEXT:    movdqa {{.*#+}} xmm2 = [1258291200,1258291200,1258291200,1258291200]
-; X32-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0],xmm2[1],xmm1[2],xmm2[3],xmm1[4],xmm2[5],xmm1[6],xmm2[7]
-; X32-NEXT:    psrld $16, %xmm1
-; X32-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2],mem[3],xmm1[4],mem[5],xmm1[6],mem[7]
-; X32-NEXT:    addps {{\.LCPI.*}}, %xmm1
-; X32-NEXT:    addps %xmm2, %xmm1
+; X32-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; X32-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
+; X32-NEXT:    orpd %xmm2, %xmm1
+; X32-NEXT:    subsd %xmm2, %xmm1
+; X32-NEXT:    cvtsd2ss %xmm1, %xmm1
+; X32-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X32-NEXT:    orpd %xmm2, %xmm3
+; X32-NEXT:    subsd %xmm2, %xmm3
+; X32-NEXT:    xorps %xmm2, %xmm2
+; X32-NEXT:    cvtsd2ss %xmm3, %xmm2
+; X32-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
 ; X32-NEXT:    mulps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: uitofp_2i32_cvt_buildvector:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %edi, %xmm1
-; X64-NEXT:    pinsrd $1, %esi, %xmm1
-; X64-NEXT:    movdqa {{.*#+}} xmm2 = [1258291200,1258291200,1258291200,1258291200]
-; X64-NEXT:    pblendw {{.*#+}} xmm2 = xmm1[0],xmm2[1],xmm1[2],xmm2[3],xmm1[4],xmm2[5],xmm1[6],xmm2[7]
-; X64-NEXT:    psrld $16, %xmm1
-; X64-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0],mem[1],xmm1[2],mem[3],xmm1[4],mem[5],xmm1[6],mem[7]
-; X64-NEXT:    addps {{.*}}(%rip), %xmm1
-; X64-NEXT:    addps %xmm2, %xmm1
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    cvtsi2ssq %rax, %xmm1
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    cvtsi2ssq %rax, %xmm2
+; X64-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[2,3]
 ; X64-NEXT:    mulps %xmm1, %xmm0
 ; X64-NEXT:    retq
   %t1 = uitofp i32 %x to float

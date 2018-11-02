@@ -304,6 +304,9 @@ namespace HexagonISD {
     SDValue getPICJumpTableRelocBase(SDValue Table, SelectionDAG &DAG)
                                      const override;
 
+    bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
+                               EVT NewVT) const override;
+
     // Handling of atomic RMW instructions.
     Value *emitLoadLinked(IRBuilder<> &Builder, Value *Addr,
         AtomicOrdering Ord) const override;

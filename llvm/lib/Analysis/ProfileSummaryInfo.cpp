@@ -51,6 +51,18 @@ static cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold(
              " blocks required to reach the -profile-summary-cutoff-hot"
              " percentile exceeds this count."));
 
+// The next two options override the counts derived from summary computation and
+// are useful for debugging purposes.
+static cl::opt<int> ProfileSummaryHotCount(
+    "profile-summary-hot-count", cl::ReallyHidden, cl::ZeroOrMore,
+    cl::desc("A fixed hot count that overrides the count derived from"
+             " profile-summary-cutoff-hot"));
+
+static cl::opt<int> ProfileSummaryColdCount(
+    "profile-summary-cold-count", cl::ReallyHidden, cl::ZeroOrMore,
+    cl::desc("A fixed cold count that overrides the count derived from"
+             " profile-summary-cutoff-cold"));
+
 // Find the summary entry for a desired percentile of counts.
 static const ProfileSummaryEntry &getEntryForPercentile(SummaryEntryVector &DS,
                                                         uint64_t Percentile) {
@@ -198,9 +210,15 @@ void ProfileSummaryInfo::computeThresholds() {
   auto &HotEntry =
       getEntryForPercentile(DetailedSummary, ProfileSummaryCutoffHot);
   HotCountThreshold = HotEntry.MinCount;
+  if (ProfileSummaryHotCount.getNumOccurrences() > 0)
+    HotCountThreshold = ProfileSummaryHotCount;
   auto &ColdEntry =
       getEntryForPercentile(DetailedSummary, ProfileSummaryCutoffCold);
   ColdCountThreshold = ColdEntry.MinCount;
+  if (ProfileSummaryColdCount.getNumOccurrences() > 0)
+    ColdCountThreshold = ProfileSummaryColdCount;
+  assert(ColdCountThreshold <= HotCountThreshold &&
+         "Cold count threshold cannot exceed hot count threshold!");
   HasHugeWorkingSetSize =
       HotEntry.NumCounts > ProfileSummaryHugeWorkingSetSizeThreshold;
 }

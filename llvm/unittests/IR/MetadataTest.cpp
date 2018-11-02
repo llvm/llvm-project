@@ -402,6 +402,27 @@ TEST_F(MDNodeTest, PrintFromMetadataAsValue) {
   EXPECT_PRINTER_EQ("metadata !0", MAV0->printAsOperand(OS, true, MST));
   EXPECT_PRINTER_EQ("metadata !1", MAV1->printAsOperand(OS, true, MST));
 }
+
+TEST_F(MDNodeTest, PrintWithDroppedCallOperand) {
+  Module M("test", Context);
+
+  auto *FTy = FunctionType::get(Type::getVoidTy(Context), false);
+  auto *F0 = Function::Create(FTy, GlobalValue::ExternalLinkage, "F0", &M);
+  auto *F1 = Function::Create(FTy, GlobalValue::ExternalLinkage, "F1", &M);
+  auto *BB0 = BasicBlock::Create(Context, "entry", F0);
+
+  CallInst *CI0 = CallInst::Create(F1, "", BB0);
+  CI0->dropAllReferences();
+
+  auto *R0 = ReturnInst::Create(Context, BB0);
+  auto *N0 = MDNode::getDistinct(Context, None);
+  R0->setMetadata("md", N0);
+
+  // Printing the metadata node would previously result in a failed assertion
+  // due to the call instruction's dropped function operand.
+  ModuleSlotTracker MST(&M);
+  EXPECT_PRINTER_EQ("!0 = distinct !{}", N0->print(OS, MST));
+}
 #undef EXPECT_PRINTER_EQ
 
 TEST_F(MDNodeTest, NullOperand) {
