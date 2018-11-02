@@ -370,11 +370,7 @@ EXTERN void __kmpc_data_sharing_init_stack_spmd() {
 }
 
 INLINE void* data_sharing_push_stack_common(size_t PushSize) {
-  if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
-            "Expected SPMD mode with uninitialized runtime.");
-    return omptarget_nvptx_SimpleThreadPrivateContext::Allocate(PushSize);
-  }
+  ASSERT0(LT_FUSSY, isRuntimeInitialized(), "Expected initialized runtime.");
 
   // Only warp active master threads manage the stack.
   bool IsWarpMaster = (getThreadId() % WARPSIZE) == 0;
@@ -480,11 +476,7 @@ EXTERN void* __kmpc_data_sharing_push_stack(size_t DataSize,
 // reclaim all outstanding global memory slots since it is
 // likely we have reached the end of the kernel.
 EXTERN void __kmpc_data_sharing_pop_stack(void *FrameStart) {
-  if (isRuntimeUninitialized()) {
-    ASSERT0(LT_FUSSY, isSPMDMode(),
-            "Expected SPMD mode with uninitialized runtime.");
-    return omptarget_nvptx_SimpleThreadPrivateContext::Deallocate(FrameStart);
-  }
+  ASSERT0(LT_FUSSY, isRuntimeInitialized(), "Expected initialized runtime.");
 
   __threadfence_block();
 
@@ -544,3 +536,44 @@ EXTERN void __kmpc_end_sharing_variables() {
 EXTERN void __kmpc_get_shared_variables(void ***GlobalArgs) {
   *GlobalArgs = omptarget_nvptx_globalArgs.GetArgs();
 }
+
+// This function is used to init static memory manager. This manager is used to
+// manage statically allocated global memory. This memory is allocated by the
+// compiler and used to correctly implement globalization of the variables in
+// target, teams and distribute regions.
+EXTERN void __kmpc_get_team_static_memory(const void *buf, size_t size,
+                                          int16_t is_shared,
+                                          const void **frame) {
+  if (is_shared) {
+    *frame = buf;
+    return;
+  }
+  if (isSPMDMode()) {
+    if (GetThreadIdInBlock() == 0) {
+      *frame = omptarget_nvptx_simpleMemoryManager.Acquire(buf, size);
+    }
+    __syncthreads();
+    return;
+  }
+  ASSERT0(LT_FUSSY, GetThreadIdInBlock() == getMasterThreadId(),
+          "Must be called only in the target master thread.");
+  *frame = omptarget_nvptx_simpleMemoryManager.Acquire(buf, size);
+  __threadfence();
+}
+
+EXTERN void __kmpc_restore_team_static_memory(int16_t is_shared) {
+  if (is_shared)
+    return;
+  if (isSPMDMode()) {
+    __syncthreads();
+    if (GetThreadIdInBlock() == 0) {
+      omptarget_nvptx_simpleMemoryManager.Release();
+    }
+    return;
+  }
+  __threadfence();
+  ASSERT0(LT_FUSSY, GetThreadIdInBlock() == getMasterThreadId(),
+          "Must be called only in the target master thread.");
+  omptarget_nvptx_simpleMemoryManager.Release();
+}
+
