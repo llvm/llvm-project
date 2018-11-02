@@ -1,0 +1,28 @@
+# RUN: yaml2obj %p/Inputs/debug_rnglistx_rlex.yaml > %ttest
+# RUN: lldb-test breakpoints %ttest %s | FileCheck %s
+
+# The following code and invocation were used.
+# clang -gdwarf-5 test.cc -o test_v5 -fuse-ld=lld -fno-rtti -O2 -ffunction-sections
+# Then output was converted to yaml and reduced.
+#
+# int bar(int x) {
+#    return ++x;
+# }
+# 
+# int main() {
+#   int y = 1;
+#   return bar(y);
+# }
+#
+# clang and LLD versions were 8.0.0 (trunk 345699)
+#
+# Output file contains DW_FORM_rnglistx and DW_RLE_startx_length.
+
+b bar
+b main
+
+# CHECK-LABEL: b bar
+# CHECK: Address: {{.*}}`bar(int) at test.cc:4:11
+
+# CHECK-LABEL: b main
+# CHECK: Address: {{.*}}`main at test.cc:9:3

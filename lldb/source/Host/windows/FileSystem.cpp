@@ -75,7 +75,7 @@ Status FileSystem::Readlink(const FileSpec &src, FileSpec &dst) {
   else if (!llvm::convertWideToUTF8(buf.data(), path))
     error.SetErrorString(PATH_CONVERSION_ERROR);
   else
-    dst.SetFile(path, false, FileSpec::Style::native);
+    dst.SetFile(path, FileSpec::Style::native);
 
   ::CloseHandle(h);
   return error;

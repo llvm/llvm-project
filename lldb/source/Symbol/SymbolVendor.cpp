@@ -61,7 +61,7 @@ SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
 //----------------------------------------------------------------------
 SymbolVendor::SymbolVendor(const lldb::ModuleSP &module_sp)
     : ModuleChild(module_sp), m_type_list(), m_compile_units(),
-      m_sym_file_ap() {}
+      m_sym_file_ap(), m_symtab() {}
 
 //----------------------------------------------------------------------
 // Destructor
@@ -438,14 +438,26 @@ FileSpec SymbolVendor::GetMainFileSpec() const {
 
 Symtab *SymbolVendor::GetSymtab() {
   ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    ObjectFile *objfile = module_sp->GetObjectFile();
-    if (objfile) {
-      // Get symbol table from unified section list.
-      return objfile->GetSymtab();
-    }
-  }
-  return nullptr;
+  if (!module_sp)
+    return nullptr;
+
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+
+  if (m_symtab)
+    return m_symtab;
+
+  ObjectFile *objfile = module_sp->GetObjectFile();
+  if (!objfile)
+    return nullptr;
+
+  m_symtab = objfile->GetSymtab();
+  if (m_symtab && m_sym_file_ap)
+    m_sym_file_ap->AddSymbols(*m_symtab);
+
+  m_symtab->CalculateSymbolSizes();
+  m_symtab->Finalize();
+
+  return m_symtab;
 }
 
 void SymbolVendor::ClearSymtab() {

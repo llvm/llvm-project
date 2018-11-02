@@ -57,7 +57,7 @@ Status HostProcessWindows::GetMainModule(FileSpec &file_spec) const {
   if (::GetProcessImageFileNameW(m_process, wpath.data(), wpath.size())) {
     std::string path;
     if (llvm::convertWideToUTF8(wpath.data(), path))
-      file_spec.SetFile(path, false, FileSpec::Style::native);
+      file_spec.SetFile(path, FileSpec::Style::native);
     else
       error.SetErrorString("Error converting path to UTF-8");
   } else
