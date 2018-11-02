@@ -19,10 +19,6 @@
 ; RUN: ld.lld --thinlto-cache-dir=%t.cache --thinlto-cache-policy cache_size_bytes=128k:prune_interval=0s -o %t3 %t2.o %t.o
 ; RUN: ls %t.cache | count 5
 
-; Increase the age of llvmcache-foo, which will give it the oldest time stamp
-; so that it is processed and removed first.
-; RUN: touch -r %t.cache/llvmcache-foo -d '-2 minutes' %t.cache/llvmcache-foo
-
 ; This should remove it.
 ; RUN: ld.lld --thinlto-cache-dir=%t.cache --thinlto-cache-policy cache_size_bytes=32k:prune_interval=0s -o %t3 %t2.o %t.o
 ; RUN: ls %t.cache | count 4
