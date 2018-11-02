@@ -2010,6 +2010,17 @@ void CheckASLR() {
     Printf("This sanitizer is not compatible with enabled ASLR\n");
     Die();
   }
+#elif SANITIZER_PPC64V2
+  // Disable ASLR for Linux PPC64LE.
+  int old_personality = personality(0xffffffff);
+  if (old_personality != -1 && (old_personality & ADDR_NO_RANDOMIZE) == 0) {
+    VReport(1, "WARNING: Program is being run with address space layout "
+               "randomization (ASLR) enabled which prevents the thread and "
+               "memory sanitizers from working on powerpc64le.\n"
+               "ASLR will be disabled and the program re-executed.\n");
+    CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
+    ReExec();
+  }
 #else
   // Do nothing
 #endif
