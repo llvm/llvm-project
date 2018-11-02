@@ -11,6 +11,9 @@ framework: cleanup
 
 exec_impl:
 	$(SWIFTC) $(SWIFT_MODULE_CACHE_FLAGS) -g -Onone -o main main.swift -framework aTestFramework -framework Cocoa -sdk "$(SWIFTSDKROOT)" -F "$(PWD)"
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - main
+endif
 
 exec: framework exec_impl
 
