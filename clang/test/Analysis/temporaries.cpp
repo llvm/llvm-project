@@ -9,7 +9,7 @@ extern bool clang_analyzer_eval(bool);
 extern bool clang_analyzer_warnIfReached();
 void clang_analyzer_checkInlined(bool);
 
-#include "Inputs/system-header-simulator-cxx.h";
+#include "Inputs/system-header-simulator-cxx.h"
 
 struct Trivial {
   Trivial(int x) : value(x) {}
