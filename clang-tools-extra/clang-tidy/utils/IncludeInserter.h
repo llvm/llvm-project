@@ -31,8 +31,8 @@ namespace utils {
 /// class MyCheck : public ClangTidyCheck {
 ///  public:
 ///   void registerPPCallbacks(CompilerInstance& Compiler) override {
-///     Inserter.reset(new IncludeInserter(&Compiler.getSourceManager(),
-///                                        &Compiler.getLangOpts()));
+///     Inserter = llvm::make_unique<IncludeInserter>(&Compiler.getSourceManager(),
+///                                                   &Compiler.getLangOpts());
 ///     Compiler.getPreprocessor().addPPCallbacks(
 ///         Inserter->CreatePPCallback());
 ///   }
