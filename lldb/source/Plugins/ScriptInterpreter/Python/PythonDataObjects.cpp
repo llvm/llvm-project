@@ -939,7 +939,8 @@ PythonFile::PythonFile() : PythonObject() {}
 PythonFile::PythonFile(File &file, const char *mode) { Reset(file, mode); }
 
 PythonFile::PythonFile(const char *path, const char *mode) {
-  lldb_private::File file(path, GetOptionsFromMode(mode));
+  lldb_private::File file;
+  FileSystem::Instance().Open(file, FileSpec(path), GetOptionsFromMode(mode));
   Reset(file, mode);
 }
 

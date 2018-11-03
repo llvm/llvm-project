@@ -132,6 +132,14 @@ public:
 
     void
     SetTopLevel(bool b = true);
+  
+    %feature("docstring", "Gets whether to JIT an expression if it cannot be interpreted.") GetAllowJIT;
+    bool
+    GetAllowJIT();
+  
+    %feature("docstring", "Sets whether to JIT an expression if it cannot be interpreted.") SetAllowJIT;
+    void
+    SetAllowJIT(bool allow);
 
 protected:
 

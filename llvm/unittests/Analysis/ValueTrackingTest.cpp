@@ -514,6 +514,29 @@ TEST(ValueTracking, ComputeNumSignBits_Shuffle) {
   EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 1u);
 }
 
+// FIXME:
+// No guarantees for canonical IR in this analysis, so a shuffle element that
+// references an undef value means this can't return any extra information. 
+TEST(ValueTracking, ComputeNumSignBits_Shuffle2) {
+  StringRef Assembly = "define <2 x i32> @f(<2 x i1> %x) { "
+                       "  %sext = sext <2 x i1> %x to <2 x i32> "
+                       "  %val = shufflevector <2 x i32> %sext, <2 x i32> undef, <2 x i32> <i32 0, i32 2> "
+                       "  ret <2 x i32> %val "
+                       "} ";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  assert(M && "Bad assembly?");
+
+  auto *F = M->getFunction("f");
+  assert(F && "Bad assembly?");
+
+  auto *RVal =
+      cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
+  EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 32u);
+}
+
 TEST(ValueTracking, ComputeKnownBits) {
   StringRef Assembly = "define i32 @f(i32 %a, i32 %b) { "
                        "  %ash = mul i32 %a, 8 "

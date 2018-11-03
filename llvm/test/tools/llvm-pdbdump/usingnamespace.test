@@ -1,3 +1,5 @@
+; REQUIRES: diasdk
+
 ; RUN: llvm-pdbutil pretty -module-syms %p/Inputs/UsingNamespaceTest.pdb > %t
 ; RUN: FileCheck -input-file=%t %s
 

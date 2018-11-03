@@ -83,12 +83,12 @@
 ; OBJ:   }
 ; OBJ:   FrameData {
 ; OBJ:     FrameFunc [
-; OBJ:       $T1 $ebp 4 + =
-; OBJ:       $T0 $T1 4 - 8 @ =
-; OBJ:       $eip $T1 ^ =
-; OBJ:       $esp $T1 4 + =
-; OBJ:       $ebp $T1 4 - ^ =
-; OBJ:     ]
+; OBJ-NEXT:   $T1 $ebp 4 + =
+; OBJ-NEXT:   $T0 $T1 4 - 8 @ =
+; OBJ-NEXT:   $eip $T1 ^ =
+; OBJ-NEXT:   $esp $T1 4 + =
+; OBJ-NEXT:   $ebp $T1 4 - ^ =
+; OBJ-NEXT: ]
 ; OBJ:   }
 ; OBJ: ]
 ; OBJ: Subsection [

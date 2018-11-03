@@ -128,6 +128,7 @@ module Clang_StaticAnalyzer_Core {
   umbrella "StaticAnalyzer/Core"
 
   textual header "StaticAnalyzer/Core/Analyses.def"
+  textual header "StaticAnalyzer/Core/AnalyzerOptions.def"
   textual header "StaticAnalyzer/Core/PathSensitive/SVals.def"
   textual header "StaticAnalyzer/Core/PathSensitive/Symbols.def"
   textual header "StaticAnalyzer/Core/PathSensitive/Regions.def"

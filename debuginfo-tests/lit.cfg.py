@@ -5,7 +5,6 @@ import platform
 import re
 import subprocess
 import tempfile
-import commands
 
 import lit.formats
 import lit.util
@@ -64,6 +63,7 @@ llvm_config.add_tool_substitutions(tools, tool_dirs)
 lit.util.usePlatformSdkOnDarwin(config, lit_config)
 
 if platform.system() == 'Darwin':
+    import commands
     xcode_lldb_vers = commands.getoutput("xcrun lldb --version")
     match = re.search('lldb-(\d+)', xcode_lldb_vers)
     if match:

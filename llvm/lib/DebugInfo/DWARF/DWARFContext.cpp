@@ -581,7 +581,7 @@ void DWARFContext::dump(
                              DObj->getStringDWOSection(), dwo_units(),
                              isLittleEndian(), getMaxDWOVersion());
 
-  if (shouldDump(Explicit, ".gnu_index", DIDT_ID_GdbIndex,
+  if (shouldDump(Explicit, ".gdb_index", DIDT_ID_GdbIndex,
                  DObj->getGdbIndexSection())) {
     getGdbIndex().dump(OS);
   }
