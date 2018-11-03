@@ -3295,25 +3295,27 @@ createVFSFromCompilerInvocation(const CompilerInvocation &CI,
   if (CI.getHeaderSearchOpts().VFSOverlayFiles.empty())
     return BaseFS;
 
-  IntrusiveRefCntPtr<vfs::OverlayFileSystem> Overlay(
-      new vfs::OverlayFileSystem(BaseFS));
+  IntrusiveRefCntPtr<vfs::FileSystem> Result = BaseFS;
   // earlier vfs files are on the bottom
   for (const auto &File : CI.getHeaderSearchOpts().VFSOverlayFiles) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-        BaseFS->getBufferForFile(File);
+        Result->getBufferForFile(File);
     if (!Buffer) {
       Diags.Report(diag::err_missing_vfs_overlay_file) << File;
       continue;
     }
 
     IntrusiveRefCntPtr<vfs::FileSystem> FS = vfs::getVFSFromYAML(
-        std::move(Buffer.get()), /*DiagHandler*/ nullptr, File);
-    if (FS)
-      Overlay->pushOverlay(FS);
-    else
+        std::move(Buffer.get()), /*DiagHandler*/ nullptr, File,
+        /*DiagContext*/ nullptr, Result);
+    if (!FS) {
       Diags.Report(diag::err_invalid_vfs_overlay) << File;
+      continue;
+    }
+
+    Result = FS;
   }
-  return Overlay;
+  return Result;
 }
 
 } // namespace clang

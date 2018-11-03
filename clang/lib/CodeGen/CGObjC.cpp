@@ -2446,24 +2446,33 @@ void CodeGenFunction::EmitObjCAutoreleasePoolCleanup(llvm::Value *Ptr) {
     EHStack.pushCleanup<CallObjCMRRAutoreleasePoolObject>(NormalCleanup, Ptr);
 }
 
-static TryEmitResult tryEmitARCRetainLoadOfScalar(CodeGenFunction &CGF,
-                                                  LValue lvalue,
-                                                  QualType type) {
-  switch (type.getObjCLifetime()) {
+static bool shouldRetainObjCLifetime(Qualifiers::ObjCLifetime lifetime) {
+  switch (lifetime) {
   case Qualifiers::OCL_None:
   case Qualifiers::OCL_ExplicitNone:
   case Qualifiers::OCL_Strong:
   case Qualifiers::OCL_Autoreleasing:
-    return TryEmitResult(CGF.EmitLoadOfLValue(lvalue,
-                                              SourceLocation()).getScalarVal(),
-                         false);
+    return true;
 
   case Qualifiers::OCL_Weak:
-    return TryEmitResult(CGF.EmitARCLoadWeakRetained(lvalue.getAddress()),
-                         true);
+    return false;
   }
 
   llvm_unreachable("impossible lifetime!");
+}
+
+static TryEmitResult tryEmitARCRetainLoadOfScalar(CodeGenFunction &CGF,
+                                                  LValue lvalue,
+                                                  QualType type) {
+  llvm::Value *result;
+  bool shouldRetain = shouldRetainObjCLifetime(type.getObjCLifetime());
+  if (shouldRetain) {
+    result = CGF.EmitLoadOfLValue(lvalue, SourceLocation()).getScalarVal();
+  } else {
+    assert(type.getObjCLifetime() == Qualifiers::OCL_Weak);
+    result = CGF.EmitARCLoadWeakRetained(lvalue.getAddress());
+  }
+  return TryEmitResult(result, !shouldRetain);
 }
 
 static TryEmitResult tryEmitARCRetainLoadOfScalar(CodeGenFunction &CGF,
@@ -2499,6 +2508,16 @@ static TryEmitResult tryEmitARCRetainLoadOfScalar(CodeGenFunction &CGF,
       isa<BinaryOperator>(e) &&
       cast<BinaryOperator>(e)->getOpcode() == BO_Assign)
     return TryEmitResult(CGF.EmitScalarExpr(e), false);
+
+  // Try to emit code for scalar constant instead of emitting LValue and
+  // loading it because we are not guaranteed to have an l-value. One of such
+  // cases is DeclRefExpr referencing non-odr-used constant-evaluated variable.
+  if (const auto *decl_expr = dyn_cast<DeclRefExpr>(e)) {
+    auto *DRE = const_cast<DeclRefExpr *>(decl_expr);
+    if (CodeGenFunction::ConstantEmission constant = CGF.tryEmitAsConstant(DRE))
+      return TryEmitResult(CGF.emitScalarConstant(constant, DRE),
+                           !shouldRetainObjCLifetime(type.getObjCLifetime()));
+  }
 
   return tryEmitARCRetainLoadOfScalar(CGF, CGF.EmitLValue(e), type);
 }
