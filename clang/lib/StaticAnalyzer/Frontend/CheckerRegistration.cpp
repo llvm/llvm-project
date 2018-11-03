@@ -178,7 +178,8 @@ void ento::printAnalyzerConfigList(raw_ostream &out) {
     {                                                                          \
       CMDFLAG,                                                                 \
       llvm::Twine(llvm::Twine() + "(" +                                        \
-                  (#TYPE == "StringRef" ? "string" : #TYPE ) + ") " DESC       \
+                  (StringRef(#TYPE) == "StringRef" ? "string" : #TYPE ) +      \
+                  ") " DESC                                                    \
                   " (default: " #DEFAULT_VAL ")").str()                        \
     },
 
@@ -187,7 +188,8 @@ void ento::printAnalyzerConfigList(raw_ostream &out) {
     {                                                                          \
       CMDFLAG,                                                                 \
       llvm::Twine(llvm::Twine() + "(" +                                        \
-                  (#TYPE == "StringRef" ? "string" : #TYPE ) + ") " DESC       \
+                  (StringRef(#TYPE) == "StringRef" ? "string" : #TYPE ) +      \
+                  ") " DESC                                                    \
                   " (default: " #SHALLOW_VAL " in shallow mode, " #DEEP_VAL    \
                   " in deep mode)").str()                                      \
     },

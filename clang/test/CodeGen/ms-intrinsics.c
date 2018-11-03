@@ -698,6 +698,90 @@ __int64 test_InterlockedExchangeAdd64_nf(__int64 volatile *value, __int64 mask) 
 // CHECK-ARM-ARM64:   ret i64 [[RESULT:%[0-9]+]]
 // CHECK-ARM-ARM64: }
 
+char test_InterlockedExchange8_acq(char volatile *value, char mask) {
+  return _InterlockedExchange8_acq(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i8 @test_InterlockedExchange8_acq(i8*{{[a-z_ ]*}}%value, i8{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i8* %value, i8 %mask acquire
+// CHECK-ARM-ARM64:   ret i8 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
+char test_InterlockedExchange8_rel(char volatile *value, char mask) {
+  return _InterlockedExchange8_rel(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i8 @test_InterlockedExchange8_rel(i8*{{[a-z_ ]*}}%value, i8{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i8* %value, i8 %mask release
+// CHECK-ARM-ARM64:   ret i8 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
+char test_InterlockedExchange8_nf(char volatile *value, char mask) {
+  return _InterlockedExchange8_nf(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i8 @test_InterlockedExchange8_nf(i8*{{[a-z_ ]*}}%value, i8{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i8* %value, i8 %mask monotonic
+// CHECK-ARM-ARM64:   ret i8 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
+short test_InterlockedExchange16_acq(short volatile *value, short mask) {
+  return _InterlockedExchange16_acq(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i16 @test_InterlockedExchange16_acq(i16*{{[a-z_ ]*}}%value, i16{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i16* %value, i16 %mask acquire
+// CHECK-ARM-ARM64:   ret i16 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
+short test_InterlockedExchange16_rel(short volatile *value, short mask) {
+  return _InterlockedExchange16_rel(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i16 @test_InterlockedExchange16_rel(i16*{{[a-z_ ]*}}%value, i16{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i16* %value, i16 %mask release
+// CHECK-ARM-ARM64:   ret i16 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
+short test_InterlockedExchange16_nf(short volatile *value, short mask) {
+  return _InterlockedExchange16_nf(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i16 @test_InterlockedExchange16_nf(i16*{{[a-z_ ]*}}%value, i16{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i16* %value, i16 %mask monotonic
+// CHECK-ARM-ARM64:   ret i16 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
+long test_InterlockedExchange_acq(long volatile *value, long mask) {
+  return _InterlockedExchange_acq(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_InterlockedExchange_acq(i32*{{[a-z_ ]*}}%value, i32{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i32* %value, i32 %mask acquire
+// CHECK-ARM-ARM64:   ret i32 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
+long test_InterlockedExchange_rel(long volatile *value, long mask) {
+  return _InterlockedExchange_rel(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_InterlockedExchange_rel(i32*{{[a-z_ ]*}}%value, i32{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i32* %value, i32 %mask release
+// CHECK-ARM-ARM64:   ret i32 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
+long test_InterlockedExchange_nf(long volatile *value, long mask) {
+  return _InterlockedExchange_nf(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i32 @test_InterlockedExchange_nf(i32*{{[a-z_ ]*}}%value, i32{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i32* %value, i32 %mask monotonic
+// CHECK-ARM-ARM64:   ret i32 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
+__int64 test_InterlockedExchange64_acq(__int64 volatile *value, __int64 mask) {
+  return _InterlockedExchange64_acq(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i64 @test_InterlockedExchange64_acq(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i64* %value, i64 %mask acquire
+// CHECK-ARM-ARM64:   ret i64 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
+__int64 test_InterlockedExchange64_rel(__int64 volatile *value, __int64 mask) {
+  return _InterlockedExchange64_rel(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i64 @test_InterlockedExchange64_rel(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i64* %value, i64 %mask release
+// CHECK-ARM-ARM64:   ret i64 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
+__int64 test_InterlockedExchange64_nf(__int64 volatile *value, __int64 mask) {
+  return _InterlockedExchange64_nf(value, mask);
+}
+// CHECK-ARM-ARM64: define{{.*}}i64 @test_InterlockedExchange64_nf(i64*{{[a-z_ ]*}}%value, i64{{[a-z_ ]*}}%mask){{.*}}{
+// CHECK-ARM-ARM64:   [[RESULT:%[0-9]+]] = atomicrmw xchg i64* %value, i64 %mask monotonic
+// CHECK-ARM-ARM64:   ret i64 [[RESULT:%[0-9]+]]
+// CHECK-ARM-ARM64: }
 #endif
 
 #if !defined(__aarch64__)
