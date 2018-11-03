@@ -48,3 +48,4 @@ currently at a shell prompt in a checked-out LLDB repository.
 	the top left of the Xcode window.
 
 6.	Build lldb.xcodeproj.
+
