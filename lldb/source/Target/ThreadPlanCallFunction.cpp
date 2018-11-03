@@ -466,7 +466,7 @@ void ThreadPlanCallFunction::SetBreakpoints() {
         if (!backstop_name.IsEmpty()) {
           FileSpecList stdlib_module_list;
           stdlib_module_list.Append(FileSpec(
-              swift_runtime->GetStandardLibraryName().AsCString(), false));
+              swift_runtime->GetStandardLibraryName().AsCString()));
           const LazyBool skip_prologue = eLazyBoolNo;
           const bool is_internal = true;
           const bool is_hardware = false;

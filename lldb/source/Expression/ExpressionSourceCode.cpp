@@ -500,7 +500,6 @@ bool ExpressionSourceCode::GetText(
           }
         }
       }
-      const bool playground = options.GetPlaygroundTransformEnabled();
       SwiftPersistentExpressionState *persistent_state =
         llvm::cast<SwiftPersistentExpressionState>(target->GetPersistentExpressionStateForLanguage(lldb::eLanguageTypeSwift));
       std::vector<swift::ValueDecl *> persistent_results;
