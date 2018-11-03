@@ -1472,7 +1472,7 @@ SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
       done = true;
     } else {
       // Try to load the specified file.
-      FileSpec file_spec(symbol->GetName().GetCString(), false);
+      FileSpec file_spec(symbol->GetName().GetCString());
       if (FileSystem::Instance().Exists(file_spec)) {
         // We found the source data for the AST data blob.
         // Read it in and add it to our return vector.
