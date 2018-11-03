@@ -12,10 +12,26 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 
+#include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Threading.h"
+
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
+#include <stdarg.h>
+#include <stdio.h>
+
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#else
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <termios.h>
+#include <unistd.h>
+#endif
 
 #include <algorithm>
 #include <fstream>
@@ -222,4 +238,99 @@ bool FileSystem::ResolveExecutableLocation(FileSpec &file_spec) {
 
   file_spec = result;
   return true;
+}
+
+static int OpenWithFS(const FileSystem &fs, const char *path, int flags,
+                      int mode) {
+  return const_cast<FileSystem &>(fs).Open(path, flags, mode);
+}
+
+static int GetOpenFlags(uint32_t options) {
+  const bool read = options & File::eOpenOptionRead;
+  const bool write = options & File::eOpenOptionWrite;
+
+  int open_flags = 0;
+  if (write) {
+    if (read)
+      open_flags |= O_RDWR;
+    else
+      open_flags |= O_WRONLY;
+
+    if (options & File::eOpenOptionAppend)
+      open_flags |= O_APPEND;
+
+    if (options & File::eOpenOptionTruncate)
+      open_flags |= O_TRUNC;
+
+    if (options & File::eOpenOptionCanCreate)
+      open_flags |= O_CREAT;
+
+    if (options & File::eOpenOptionCanCreateNewOnly)
+      open_flags |= O_CREAT | O_EXCL;
+  } else if (read) {
+    open_flags |= O_RDONLY;
+
+#ifndef _WIN32
+    if (options & File::eOpenOptionDontFollowSymlinks)
+      open_flags |= O_NOFOLLOW;
+#endif
+  }
+
+#ifndef _WIN32
+  if (options & File::eOpenOptionNonBlocking)
+    open_flags |= O_NONBLOCK;
+  if (options & File::eOpenOptionCloseOnExec)
+    open_flags |= O_CLOEXEC;
+#else
+  open_flags |= O_BINARY;
+#endif
+
+  return open_flags;
+}
+
+static mode_t GetOpenMode(uint32_t permissions) {
+  mode_t mode = 0;
+  if (permissions & lldb::eFilePermissionsUserRead)
+    mode |= S_IRUSR;
+  if (permissions & lldb::eFilePermissionsUserWrite)
+    mode |= S_IWUSR;
+  if (permissions & lldb::eFilePermissionsUserExecute)
+    mode |= S_IXUSR;
+  if (permissions & lldb::eFilePermissionsGroupRead)
+    mode |= S_IRGRP;
+  if (permissions & lldb::eFilePermissionsGroupWrite)
+    mode |= S_IWGRP;
+  if (permissions & lldb::eFilePermissionsGroupExecute)
+    mode |= S_IXGRP;
+  if (permissions & lldb::eFilePermissionsWorldRead)
+    mode |= S_IROTH;
+  if (permissions & lldb::eFilePermissionsWorldWrite)
+    mode |= S_IWOTH;
+  if (permissions & lldb::eFilePermissionsWorldExecute)
+    mode |= S_IXOTH;
+  return mode;
+}
+
+Status FileSystem::Open(File &File, const FileSpec &file_spec, uint32_t options,
+                        uint32_t permissions) {
+  if (File.IsValid())
+    File.Close();
+
+  const int open_flags = GetOpenFlags(options);
+  const mode_t open_mode =
+      (open_flags & O_CREAT) ? GetOpenMode(permissions) : 0;
+  const std::string path = file_spec.GetPath();
+
+  int descriptor = llvm::sys::RetryAfterSignal(
+      -1, OpenWithFS, *this, path.c_str(), open_flags, open_mode);
+
+  Status error;
+  if (!File::DescriptorIsValid(descriptor)) {
+    File.SetDescriptor(descriptor, false);
+    error.SetErrorToErrno();
+  } else {
+    File.SetDescriptor(descriptor, true);
+    File.SetOptions(options);
+  }
+  return error;
 }

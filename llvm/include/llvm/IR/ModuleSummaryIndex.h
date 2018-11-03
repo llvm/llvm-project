@@ -408,6 +408,7 @@ public:
     return const_cast<GlobalValueSummary &>(
                          static_cast<const AliasSummary *>(this)->getAliasee());
   }
+  bool hasAliaseeGUID() const { return AliaseeGUID != 0; }
   const GlobalValue::GUID &getAliaseeGUID() const {
     assert(AliaseeGUID && "Unexpected missing aliasee GUID");
     return AliaseeGUID;

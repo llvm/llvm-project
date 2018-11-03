@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Host/FileSystem.h"
 
 #include <stdio.h>
 
@@ -28,14 +29,18 @@ StreamFile::StreamFile(int fd, bool transfer_ownership)
 StreamFile::StreamFile(FILE *fh, bool transfer_ownership)
     : Stream(), m_file(fh, transfer_ownership) {}
 
-StreamFile::StreamFile(const char *path)
-    : Stream(),
-      m_file(path, File::eOpenOptionWrite | File::eOpenOptionCanCreate |
-                       File::eOpenOptionCloseOnExec,
-             lldb::eFilePermissionsFileDefault) {}
+StreamFile::StreamFile(const char *path) : Stream(), m_file() {
+  FileSystem::Instance().Open(m_file, FileSpec(path),
+                              File::eOpenOptionWrite |
+                                  File::eOpenOptionCanCreate |
+                                  File::eOpenOptionCloseOnExec);
+}
 
 StreamFile::StreamFile(const char *path, uint32_t options, uint32_t permissions)
-    : Stream(), m_file(path, options, permissions) {}
+    : Stream(), m_file() {
+
+  FileSystem::Instance().Open(m_file, FileSpec(path), options, permissions);
+}
 
 StreamFile::~StreamFile() {}
 
