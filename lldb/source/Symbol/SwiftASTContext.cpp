@@ -2321,7 +2321,7 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
     sdk_path.Printf(
         "%sDeveloper/Platforms/MacOSX.platform/Developer/SDKs/MacOSX%u.%u.sdk",
         xcode_contents_path.c_str(), major, minor);
-    fspec.SetFile(sdk_path.GetString(), false, FileSpec::Style::native);
+    fspec.SetFile(sdk_path.GetString(), FileSpec::Style::native);
     if (fspec.Exists()) {
       ConstString path(sdk_path.GetString());
       // Cache results
@@ -2333,7 +2333,7 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
       sdk_path.Printf("%sDeveloper/Platforms/MacOSX.platform/Developer/SDKs/"
                       "MacOSX%u.%u.sdk",
                       xcode_contents_path.c_str(), least_major, least_minor);
-      fspec.SetFile(sdk_path.GetString(), false, FileSpec::Style::native);
+      fspec.SetFile(sdk_path.GetString(), FileSpec::Style::native);
       if (fspec.Exists()) {
         ConstString path(sdk_path.GetString());
         // Cache results
@@ -3484,7 +3484,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       system_path.append(library_name);
       system_path.append(".framework/");
       system_path.append(library_name);
-      framework_spec.SetFile(system_path.c_str(), true, FileSpec::Style::native);
+      framework_spec.SetFile(system_path.c_str(), FileSpec::Style::native);
       if (LoadOneImage(process, framework_spec, load_image_error))
         return;
       else
