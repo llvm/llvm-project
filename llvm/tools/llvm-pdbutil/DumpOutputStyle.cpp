@@ -250,7 +250,7 @@ Error DumpOutputStyle::dumpFileSummary() {
 static StatCollection getSymbolStats(const SymbolGroup &SG,
                                      StatCollection &CumulativeStats) {
   StatCollection Stats;
-  if (SG.getFile().isPdb()) {
+  if (SG.getFile().isPdb() && SG.hasDebugStream()) {
     // For PDB files, all symbols are packed into one stream.
     for (const auto &S : SG.getPdbModuleStream().symbols(nullptr)) {
       Stats.update(S.kind(), S.length());
@@ -1420,19 +1420,21 @@ Error DumpOutputStyle::dumpTpiStream(uint32_t StreamIdx) {
       P.formatLine("TI: {0}, Offset: {1}", IO.Type, fmtle(IO.Offset));
     }
 
-    P.NewLine();
-    P.formatLine("Hash Adjusters:");
-    auto &Adjusters = Stream.getHashAdjusters();
-    auto &Strings = Err(getPdb().getStringTable());
-    for (const auto &A : Adjusters) {
-      AutoIndent Indent2(P);
-      auto ExpectedStr = Strings.getStringForID(A.first);
-      TypeIndex TI(A.second);
-      if (ExpectedStr)
-        P.formatLine("`{0}` -> {1}", *ExpectedStr, TI);
-      else {
-        P.formatLine("unknown str id ({0}) -> {1}", A.first, TI);
-        consumeError(ExpectedStr.takeError());
+    if (getPdb().hasPDBStringTable()) {
+      P.NewLine();
+      P.formatLine("Hash Adjusters:");
+      auto &Adjusters = Stream.getHashAdjusters();
+      auto &Strings = Err(getPdb().getStringTable());
+      for (const auto &A : Adjusters) {
+        AutoIndent Indent2(P);
+        auto ExpectedStr = Strings.getStringForID(A.first);
+        TypeIndex TI(A.second);
+        if (ExpectedStr)
+          P.formatLine("`{0}` -> {1}", *ExpectedStr, TI);
+        else {
+          P.formatLine("unknown str id ({0}) -> {1}", A.first, TI);
+          consumeError(ExpectedStr.takeError());
+        }
       }
     }
   }

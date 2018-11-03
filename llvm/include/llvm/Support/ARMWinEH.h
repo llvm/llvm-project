@@ -339,7 +339,7 @@ struct EpilogueScope {
     return ((ES & 0xff000000) >> 24);
   }
 
-  uint8_t EpilogueStartIndexAArch64() const {
+  uint16_t EpilogueStartIndexAArch64() const {
     return ((ES & 0xffc00000) >> 22);
   }
 };
@@ -428,7 +428,7 @@ struct ExceptionDataRecord {
 
 inline size_t HeaderWords(const ExceptionDataRecord &XR) {
   if (XR.isAArch64)
-    return (XR.Data[0] & 0xffc0000) ? 1 : 2;
+    return (XR.Data[0] & 0xffc00000) ? 1 : 2;
   return (XR.Data[0] & 0xff800000) ? 1 : 2;
 }
 }

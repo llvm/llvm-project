@@ -36,6 +36,7 @@ class SanitizerArgs {
   int AsanFieldPadding = 0;
   bool SharedRuntime = false;
   bool AsanUseAfterScope = true;
+  bool AsanPoisonCustomArrayCookie = false;
   bool AsanGlobalsDeadStripping = false;
   bool LinkCXXRuntimes = false;
   bool NeedPIE = false;

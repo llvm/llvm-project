@@ -30,6 +30,7 @@
 #include "llvm/Support/Process.h" // for llvm::sys::Process::FileDescriptorHasColors()
 
 #include "lldb/Host/Config.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
@@ -160,16 +161,7 @@ void File::SetStream(FILE *fh, bool transfer_ownership) {
 }
 
 static int DoOpen(const char *path, int flags, int mode) {
-#ifdef _MSC_VER
-  std::wstring wpath;
-  if (!llvm::ConvertUTF8toWide(path, wpath))
-    return -1;
-  int result;
-  ::_wsopen_s(&result, wpath.c_str(), flags, _SH_DENYNO, mode);
-  return result;
-#else
-  return ::open(path, flags, mode);
-#endif
+  return FileSystem::Instance().Open(path, flags, mode);
 }
 
 Status File::Open(const char *path, uint32_t options, uint32_t permissions) {

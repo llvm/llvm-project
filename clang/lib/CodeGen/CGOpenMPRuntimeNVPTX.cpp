@@ -84,9 +84,9 @@ enum OpenMPRTLFunctionNVPTX {
   OMPRTL_NVPTX__kmpc_data_sharing_init_stack,
   /// Call to void __kmpc_data_sharing_init_stack_spmd();
   OMPRTL_NVPTX__kmpc_data_sharing_init_stack_spmd,
-  /// Call to void* __kmpc_data_sharing_push_stack(size_t size,
+  /// Call to void* __kmpc_data_sharing_coalesced_push_stack(size_t size,
   /// int16_t UseSharedMemory);
-  OMPRTL_NVPTX__kmpc_data_sharing_push_stack,
+  OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack,
   /// Call to void __kmpc_data_sharing_pop_stack(void *a);
   OMPRTL_NVPTX__kmpc_data_sharing_pop_stack,
   /// Call to void __kmpc_begin_sharing_variables(void ***args,
@@ -1745,14 +1745,14 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
         CGM.CreateRuntimeFunction(FnTy, "__kmpc_data_sharing_init_stack_spmd");
     break;
   }
-  case OMPRTL_NVPTX__kmpc_data_sharing_push_stack: {
-    // Build void *__kmpc_data_sharing_push_stack(size_t size,
+  case OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack: {
+    // Build void *__kmpc_data_sharing_coalesced_push_stack(size_t size,
     // int16_t UseSharedMemory);
     llvm::Type *TypeParams[] = {CGM.SizeTy, CGM.Int16Ty};
     auto *FnTy =
         llvm::FunctionType::get(CGM.VoidPtrTy, TypeParams, /*isVarArg=*/false);
     RTLFn = CGM.CreateRuntimeFunction(
-        FnTy, /*Name=*/"__kmpc_data_sharing_push_stack");
+        FnTy, /*Name=*/"__kmpc_data_sharing_coalesced_push_stack");
     break;
   }
   case OMPRTL_NVPTX__kmpc_data_sharing_pop_stack: {
@@ -2105,10 +2105,10 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
       // the user, for now, default to global.
       llvm::Value *GlobalRecordSizeArg[] = {
           Size, CGF.Builder.getInt16(/*UseSharedMemory=*/0)};
-      llvm::Value *GlobalRecValue =
-          CGF.EmitRuntimeCall(createNVPTXRuntimeFunction(
-                                  OMPRTL_NVPTX__kmpc_data_sharing_push_stack),
-                              GlobalRecordSizeArg);
+      llvm::Value *GlobalRecValue = CGF.EmitRuntimeCall(
+          createNVPTXRuntimeFunction(
+              OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack),
+          GlobalRecordSizeArg);
       GlobalRecCastAddr = Bld.CreatePointerBitCastOrAddrSpaceCast(
           GlobalRecValue, GlobalRecPtrTy);
       CGF.EmitBlock(ExitBB);
@@ -2182,10 +2182,10 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
       llvm::Value *GlobalRecordSizeArg[] = {
           llvm::ConstantInt::get(CGM.SizeTy, GlobalRecordSize),
           CGF.Builder.getInt16(/*UseSharedMemory=*/0)};
-      llvm::Value *GlobalRecValue =
-          CGF.EmitRuntimeCall(createNVPTXRuntimeFunction(
-                                  OMPRTL_NVPTX__kmpc_data_sharing_push_stack),
-                              GlobalRecordSizeArg);
+      llvm::Value *GlobalRecValue = CGF.EmitRuntimeCall(
+          createNVPTXRuntimeFunction(
+              OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack),
+          GlobalRecordSizeArg);
       GlobalRecCastAddr = Bld.CreatePointerBitCastOrAddrSpaceCast(
           GlobalRecValue, GlobalRecPtrTy);
       I->getSecond().GlobalRecordAddr = GlobalRecValue;
@@ -2282,7 +2282,8 @@ void CGOpenMPRuntimeNVPTX::emitGenericVarsProlog(CodeGenFunction &CGF,
     llvm::Value *GlobalRecordSizeArg[] = {
         Size, CGF.Builder.getInt16(/*UseSharedMemory=*/0)};
     llvm::Value *GlobalRecValue = CGF.EmitRuntimeCall(
-        createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_data_sharing_push_stack),
+        createNVPTXRuntimeFunction(
+            OMPRTL_NVPTX__kmpc_data_sharing_coalesced_push_stack),
         GlobalRecordSizeArg);
     llvm::Value *GlobalRecCastAddr = Bld.CreatePointerBitCastOrAddrSpaceCast(
         GlobalRecValue, CGF.ConvertTypeForMem(VD->getType())->getPointerTo());

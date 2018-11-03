@@ -92,9 +92,9 @@ struct WasmFunctionTypeDenseMapInfo {
   static unsigned getHashValue(const WasmFunctionType &FuncTy) {
     uintptr_t Value = FuncTy.State;
     for (wasm::ValType Ret : FuncTy.Returns)
-      Value += DenseMapInfo<int32_t>::getHashValue(int32_t(Ret));
+      Value += DenseMapInfo<uint32_t>::getHashValue(uint32_t(Ret));
     for (wasm::ValType Param : FuncTy.Params)
-      Value += DenseMapInfo<int32_t>::getHashValue(int32_t(Param));
+      Value += DenseMapInfo<uint32_t>::getHashValue(uint32_t(Param));
     return Value;
   }
   static bool isEqual(const WasmFunctionType &LHS,
@@ -118,7 +118,7 @@ struct WasmDataSegment {
 
 // A wasm function to be written into the function section.
 struct WasmFunction {
-  int32_t Type;
+  uint32_t Type;
   const MCSymbolWasm *Sym;
 };
 
@@ -231,7 +231,7 @@ class WasmObjectWriter : public MCObjectWriter {
   // Map from section to defining function symbol.
   DenseMap<const MCSection *, const MCSymbol *> SectionFunctions;
 
-  DenseMap<WasmFunctionType, int32_t, WasmFunctionTypeDenseMapInfo>
+  DenseMap<WasmFunctionType, uint32_t, WasmFunctionTypeDenseMapInfo>
       FunctionTypeIndices;
   SmallVector<WasmFunctionType, 4> FunctionTypes;
   SmallVector<WasmGlobal, 4> Globals;

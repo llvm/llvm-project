@@ -1,4 +1,4 @@
-REQUIRES: windows
+REQUIRES: system-windows
 RUN: clang-cl /Zi %S/Inputs/UdtLayoutTest.cpp /o %t.exe
 RUN: %lldb -b -s %S/Inputs/UdtLayoutTest.script -- %t.exe | FileCheck %s
 

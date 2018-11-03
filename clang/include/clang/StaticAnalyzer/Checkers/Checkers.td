@@ -83,6 +83,7 @@ def LocalizabilityOptIn : Package<"localizability">, InPackage<CocoaOptIn>;
 def MPI : Package<"mpi">, InPackage<OptIn>;
 
 def LLVM : Package<"llvm">;
+def LLVMAlpha : Package<"llvm">, InPackage<Alpha>, Hidden;
 
 // The APIModeling package is for checkers that model APIs and don't perform
 // any diagnostics. These checkers are always turned on; this package is
@@ -730,7 +731,7 @@ let ParentPackage = MPI in {
 //===----------------------------------------------------------------------===//
 
 def LLVMConventionsChecker : Checker<"Conventions">,
-  InPackage<LLVM>,
+  InPackage<LLVMAlpha>,
   HelpText<"Check code for LLVM codebase conventions">,
   DescFile<"LLVMConventionsChecker.cpp">;
 

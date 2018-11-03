@@ -47,10 +47,6 @@ Optional<FileSystem> &FileSystem::InstanceImpl() {
   return g_fs;
 }
 
-void FileSystem::SetFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> fs) {
-  m_fs = fs;
-}
-
 sys::TimePoint<>
 FileSystem::GetModificationTime(const FileSpec &file_spec) const {
   return GetModificationTime(file_spec.GetPath());

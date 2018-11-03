@@ -1,4 +1,4 @@
-# REQUIRES: windows
+# REQUIRES: system-windows
 
 # RUN: clang-cl /Zi %p/Inputs/call-function.cpp -o %t
 
