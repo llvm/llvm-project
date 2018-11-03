@@ -384,7 +384,7 @@ void ScriptParser::readOutputArch() {
 }
 
 std::pair<ELFKind, uint16_t> ScriptParser::readBfdName() {
-  StringRef S = next();
+  StringRef S = unquote(next());
   if (S == "elf32-i386")
     return {ELF32LEKind, EM_386};
   if (S == "elf32-iamcu")

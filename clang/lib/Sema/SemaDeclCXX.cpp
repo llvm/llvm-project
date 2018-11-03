@@ -5707,8 +5707,28 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
       continue;
 
     if (!getDLLAttr(Member)) {
-      auto *NewAttr =
-          cast<InheritableAttr>(ClassAttr->clone(getASTContext()));
+      InheritableAttr *NewAttr = nullptr;
+
+      // Do not export/import inline function when -fno-dllexport-inlines is
+      // passed. But add attribute for later local static var check.
+      if (!getLangOpts().DllExportInlines && MD && MD->isInlined() &&
+          TSK != TSK_ExplicitInstantiationDeclaration &&
+          TSK != TSK_ExplicitInstantiationDefinition) {
+        if (ClassExported) {
+          NewAttr = ::new (getASTContext())
+            DLLExportStaticLocalAttr(ClassAttr->getRange(),
+                                     getASTContext(),
+                                     ClassAttr->getSpellingListIndex());
+        } else {
+          NewAttr = ::new (getASTContext())
+            DLLImportStaticLocalAttr(ClassAttr->getRange(),
+                                     getASTContext(),
+                                     ClassAttr->getSpellingListIndex());
+        }
+      } else {
+        NewAttr = cast<InheritableAttr>(ClassAttr->clone(getASTContext()));
+      }
+
       NewAttr->setInherited(true);
       Member->addAttr(NewAttr);
 
