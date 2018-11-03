@@ -5537,6 +5537,11 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
   if (VolatileOptionID == options::OPT__SLASH_volatile_ms)
     CmdArgs.push_back("-fms-volatile");
 
+ if (Args.hasFlag(options::OPT__SLASH_Zc_dllexportInlines_,
+                  options::OPT__SLASH_Zc_dllexportInlines,
+                  false))
+    CmdArgs.push_back("-fno-dllexport-inlines");
+
   Arg *MostGeneralArg = Args.getLastArg(options::OPT__SLASH_vmg);
   Arg *BestCaseArg = Args.getLastArg(options::OPT__SLASH_vmb);
   if (MostGeneralArg && BestCaseArg)

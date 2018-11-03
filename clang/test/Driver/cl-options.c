@@ -490,6 +490,11 @@
 // RUN: %clang_cl /Zc:threadSafeInit /c -### -- %s 2>&1 | FileCheck -check-prefix=ThreadSafeStatics %s
 // ThreadSafeStatics-NOT: "-fno-threadsafe-statics"
 
+// RUN: %clang_cl /Zc:dllexportInlines- /c -### -- %s 2>&1 | FileCheck -check-prefix=NoDllExportInlines %s
+// NoDllExportInlines: "-fno-dllexport-inlines"
+// RUN: %clang_cl /Zc:dllexportInlines /c -### -- %s 2>&1 | FileCheck -check-prefix=DllExportInlines %s
+// DllExportInlines-NOT: "-fno-dllexport-inlines"
+
 // RUN: %clang_cl /Zi /c -### -- %s 2>&1 | FileCheck -check-prefix=Zi %s
 // Zi: "-gcodeview"
 // Zi: "-debug-info-kind=limited"

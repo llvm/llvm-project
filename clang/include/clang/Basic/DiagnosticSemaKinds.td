@@ -9560,10 +9560,9 @@ def ext_warn_gnu_final : ExtWarn<
   "__final is a GNU extension, consider using C++11 final">,
   InGroup<GccCompat>;
 
-def warn_shadow_field :
-  Warning<"non-static data member %0 of %1 shadows member inherited from "
-  "type %2">,
-  InGroup<ShadowField>, DefaultIgnore;
+def warn_shadow_field : Warning<
+  "%select{parameter|non-static data member}3 %0 %select{|of %1 }3shadows "
+  "member inherited from type %2">, InGroup<ShadowField>, DefaultIgnore;
 def note_shadow_field : Note<"declared here">;
 
 def err_multiversion_required_in_redecl : Error<
