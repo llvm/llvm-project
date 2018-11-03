@@ -551,6 +551,9 @@ macro(add_custom_libcxx name prefix)
   set(PASSTHROUGH_VARIABLES
     CMAKE_C_COMPILER_TARGET
     CMAKE_CXX_COMPILER_TARGET
+    CMAKE_SHARED_LINKER_FLAGS
+    CMAKE_MODULE_LINKER_FLAGS
+    CMAKE_EXE_LINKER_FLAGS
     CMAKE_INSTALL_PREFIX
     CMAKE_MAKE_PROGRAM
     CMAKE_LINKER
@@ -563,8 +566,10 @@ macro(add_custom_libcxx name prefix)
     CMAKE_SYSROOT
     CMAKE_SYSTEM_NAME)
   foreach(variable ${PASSTHROUGH_VARIABLES})
-    if(${variable})
-      list(APPEND CMAKE_PASSTHROUGH_VARIABLES -D${variable}=${${variable}})
+    get_property(is_value_set CACHE ${variable} PROPERTY VALUE SET)
+    if(${is_value_set})
+      get_property(value CACHE ${variable} PROPERTY VALUE)
+      list(APPEND CMAKE_PASSTHROUGH_VARIABLES -D${variable}=${value})
     endif()
   endforeach()
 
