@@ -198,9 +198,12 @@ static std::string getSummaryAttributes(GlobalValueSummary* GVS) {
          ", ffl: " + fflagsToString(FS->fflags());
 }
 
+static std::string getNodeVisualName(GlobalValue::GUID Id) {
+  return std::string("@") + std::to_string(Id);
+}
+
 static std::string getNodeVisualName(const ValueInfo &VI) {
-  return VI.name().empty() ? std::string("@") + std::to_string(VI.getGUID())
-                           : VI.name().str();
+  return VI.name().empty() ? getNodeVisualName(VI.getGUID()) : VI.name().str();
 }
 
 static std::string getNodeLabel(const ValueInfo &VI, GlobalValueSummary *GVS) {
@@ -221,13 +224,19 @@ static std::string getNodeLabel(const ValueInfo &VI, GlobalValueSummary *GVS) {
 // specific module associated with it. Typically this is function
 // or variable defined in native object or library.
 static void defineExternalNode(raw_ostream &OS, const char *Pfx,
-                               const ValueInfo &VI) {
-  auto StrId = std::to_string(VI.getGUID());
-  OS << "  " << StrId << " [label=\"" << getNodeVisualName(VI)
-     << "\"]; // defined externally\n";
+                               const ValueInfo &VI, GlobalValue::GUID Id) {
+  auto StrId = std::to_string(Id);
+  OS << "  " << StrId << " [label=\"";
+
+  if (VI) {
+    OS << getNodeVisualName(VI);
+  } else {
+    OS << getNodeVisualName(Id);
+  }
+  OS << "\"]; // defined externally\n";
 }
 
-void ModuleSummaryIndex::exportToDot(raw_ostream& OS) const {
+void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
   std::vector<Edge> CrossModuleEdges;
   DenseMap<GlobalValue::GUID, std::vector<uint64_t>> NodeMap;
   StringMap<GVSummaryMapTy> ModuleToDefinedGVS;
@@ -311,10 +320,17 @@ void ModuleSummaryIndex::exportToDot(raw_ostream& OS) const {
         Draw(SummaryIt.first, R.getGUID(), -1);
 
       if (auto *AS = dyn_cast_or_null<AliasSummary>(SummaryIt.second)) {
-        auto AliaseeOrigId = AS->getAliasee().getOriginalName();
-        auto AliaseeId = getGUIDFromOriginalID(AliaseeOrigId);
+        GlobalValue::GUID AliaseeId;
+        if (AS->hasAliaseeGUID())
+          AliaseeId = AS->getAliaseeGUID();
+        else {
+          auto AliaseeOrigId = AS->getAliasee().getOriginalName();
+          AliaseeId = getGUIDFromOriginalID(AliaseeOrigId);
+          if (!AliaseeId)
+            AliaseeId = AliaseeOrigId;
+        }
 
-        Draw(SummaryIt.first, AliaseeId ? AliaseeId : AliaseeOrigId, -2);
+        Draw(SummaryIt.first, AliaseeId, -2);
         continue;
       }
 
@@ -330,7 +346,7 @@ void ModuleSummaryIndex::exportToDot(raw_ostream& OS) const {
   for (auto &E : CrossModuleEdges) {
     auto &ModList = NodeMap[E.Dst];
     if (ModList.empty()) {
-      defineExternalNode(OS, "  ", getValueInfo(E.Dst));
+      defineExternalNode(OS, "  ", getValueInfo(E.Dst), E.Dst);
       // Add fake module to the list to draw an edge to an external node
       // in the loop below.
       ModList.push_back(-1);

@@ -120,10 +120,9 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, raw_ostream &OS,
     case WebAssembly::CATCH_I64_S:
     case WebAssembly::CATCH_ALL:
     case WebAssembly::CATCH_ALL_S:
-      assert(LastSeenEHInst != END_TRY);
       // There can be multiple catch instructions for one try instruction, so we
-      // only print 'catch' label when the last seen EH instruction was 'try'.
-      if (LastSeenEHInst == TRY) {
+      // print a label only for the first 'catch' label.
+      if (LastSeenEHInst != CATCH) {
         assert(!EHPadStack.empty() && "try-catch mismatch!");
         printAnnotation(OS, "catch" + utostr(EHPadStack.pop_back_val()) + ':');
       }

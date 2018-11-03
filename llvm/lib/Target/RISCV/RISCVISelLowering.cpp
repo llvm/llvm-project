@@ -111,6 +111,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       ISD::SETUGT, ISD::SETUGE, ISD::SETULT, ISD::SETULE, ISD::SETUNE,
       ISD::SETGT,  ISD::SETGE,  ISD::SETNE};
 
+  // TODO: add proper support for the various FMA variants
+  // (FMADD.S, FMSUB.S, FNMSUB.S, FNMADD.S).
+  ISD::NodeType FPOpToExtend[] = {
+      ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FMA};
+
   if (Subtarget.hasStdExtF()) {
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
     setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
@@ -119,6 +124,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SELECT_CC, MVT::f32, Expand);
     setOperationAction(ISD::SELECT, MVT::f32, Custom);
     setOperationAction(ISD::BR_CC, MVT::f32, Expand);
+    for (auto Op : FPOpToExtend)
+      setOperationAction(Op, MVT::f32, Expand);
   }
 
   if (Subtarget.hasStdExtD()) {
@@ -131,6 +138,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BR_CC, MVT::f64, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
     setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+    for (auto Op : FPOpToExtend)
+      setOperationAction(Op, MVT::f64, Expand);
   }
 
   setOperationAction(ISD::GlobalAddress, XLenVT, Custom);

@@ -430,7 +430,6 @@ void CommandInterpreter::Initialize() {
     AddAlias("var", cmd_obj_sp);
     AddAlias("vo", cmd_obj_sp, "--object-description");
   }
-  
 }
 
 void CommandInterpreter::Clear() {
@@ -2357,9 +2356,8 @@ void CommandInterpreter::HandleCommandsFromFile(
     StreamFileSP input_file_sp(new StreamFile());
 
     std::string cmd_file_path = cmd_file.GetPath();
-    Status error = input_file_sp->GetFile().Open(cmd_file_path.c_str(),
-                                                 File::eOpenOptionRead);
-
+    Status error = FileSystem::Instance().Open(input_file_sp->GetFile(),
+                                               cmd_file, File::eOpenOptionRead);
     if (error.Success()) {
       Debugger &debugger = GetDebugger();
 

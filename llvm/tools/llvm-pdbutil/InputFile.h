@@ -110,6 +110,8 @@ public:
   const InputFile &getFile() const { return *File; }
   InputFile &getFile() { return *File; }
 
+  bool hasDebugStream() const { return DebugStream != nullptr; }
+
 private:
   void initializeForPdb(uint32_t Modi);
   void updatePdbModi(uint32_t Modi);

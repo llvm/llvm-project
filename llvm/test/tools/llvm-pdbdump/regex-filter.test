@@ -1,3 +1,5 @@
+; REQUIRES: diasdk
+
 ; RUN: llvm-pdbutil pretty -module-syms -globals -types %p/Inputs/FilterTest.pdb \
 ; RUN:    | FileCheck --check-prefix=NO_FILTER %s
 

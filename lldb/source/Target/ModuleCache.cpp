@@ -159,9 +159,10 @@ ModuleLock::ModuleLock(const FileSpec &root_dir_spec, const UUID &uuid,
     return;
 
   m_file_spec = JoinPath(lock_dir_spec, uuid.GetAsString().c_str());
-  m_file.Open(m_file_spec.GetCString(), File::eOpenOptionWrite |
-                                            File::eOpenOptionCanCreate |
-                                            File::eOpenOptionCloseOnExec);
+  FileSystem::Instance().Open(m_file, m_file_spec,
+                              File::eOpenOptionWrite |
+                                  File::eOpenOptionCanCreate |
+                                  File::eOpenOptionCloseOnExec);
   if (!m_file) {
     error.SetErrorToErrno();
     return;

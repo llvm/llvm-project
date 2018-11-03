@@ -2835,7 +2835,8 @@ static const ParsedAttr *getMSPropertyAttr(const ParsedAttributesView &list) {
 // Check if there is a field shadowing.
 void Sema::CheckShadowInheritedFields(const SourceLocation &Loc,
                                       DeclarationName FieldName,
-                                      const CXXRecordDecl *RD) {
+                                      const CXXRecordDecl *RD,
+                                      bool DeclIsField) {
   if (Diags.isIgnored(diag::warn_shadow_field, Loc))
     return;
 
@@ -2875,7 +2876,7 @@ void Sema::CheckShadowInheritedFields(const SourceLocation &Loc,
     if (AS_none !=
         CXXRecordDecl::MergeAccess(P.Access, BaseField->getAccess())) {
       Diag(Loc, diag::warn_shadow_field)
-        << FieldName << RD << Base;
+        << FieldName << RD << Base << DeclIsField;
       Diag(BaseField->getLocation(), diag::note_shadow_field);
       Bases.erase(It);
     }

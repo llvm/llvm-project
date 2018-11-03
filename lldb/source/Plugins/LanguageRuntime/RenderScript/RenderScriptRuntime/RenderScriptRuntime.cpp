@@ -2756,8 +2756,12 @@ bool RenderScriptRuntime::SaveAllocation(Stream &strm, const uint32_t alloc_id,
   // Check we can create writable file
   FileSpec file_spec(path);
   FileSystem::Instance().Resolve(file_spec);
-  File file(file_spec, File::eOpenOptionWrite | File::eOpenOptionCanCreate |
-                           File::eOpenOptionTruncate);
+  File file;
+  FileSystem::Instance().Open(file, file_spec,
+                              File::eOpenOptionWrite |
+                                  File::eOpenOptionCanCreate |
+                                  File::eOpenOptionTruncate);
+
   if (!file) {
     strm.Printf("Error: Failed to open '%s' for writing", path);
     strm.EOL();
@@ -4710,16 +4714,17 @@ public:
         m_options.m_outfile; // Dump allocation to file instead
     if (outfile_spec) {
       // Open output file
-      char path[256];
-      outfile_spec.GetPath(path, sizeof(path));
-      if (outfile_stream.GetFile()
-              .Open(path, File::eOpenOptionWrite | File::eOpenOptionCanCreate)
-              .Success()) {
+      std::string path = outfile_spec.GetPath();
+      auto error = FileSystem::Instance().Open(
+          outfile_stream.GetFile(), outfile_spec,
+          File::eOpenOptionWrite | File::eOpenOptionCanCreate);
+      if (error.Success()) {
         output_strm = &outfile_stream;
-        result.GetOutputStream().Printf("Results written to '%s'", path);
+        result.GetOutputStream().Printf("Results written to '%s'",
+                                        path.c_str());
         result.GetOutputStream().EOL();
       } else {
-        result.AppendErrorWithFormat("Couldn't open file '%s'", path);
+        result.AppendErrorWithFormat("Couldn't open file '%s'", path.c_str());
         result.SetStatus(eReturnStatusFailed);
         return false;
       }
