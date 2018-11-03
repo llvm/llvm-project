@@ -2199,17 +2199,17 @@ static bool SDKSupportsSwift(const FileSpec &sdk_path, SDKType desired_type) {
   return false;
 }
 
-FileSpec::EnumerateDirectoryResult
+FileSystem::EnumerateDirectoryResult
 DirectoryEnumerator(void *baton, llvm::sys::fs::file_type file_type,
-                    const FileSpec &spec) {
+                    StringRef path) {
   SDKEnumeratorInfo *enumerator_info = static_cast<SDKEnumeratorInfo *>(baton);
-
+  const FileSpec spec(path);
   if (SDKSupportsSwift(spec, enumerator_info->sdk_type)) {
     enumerator_info->found_path = spec;
-    return FileSpec::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
+    return FileSystem::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
   }
 
-  return FileSpec::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
+  return FileSystem::EnumerateDirectoryResult::eEnumerateDirectoryResultNext;
 };
 
 static ConstString EnumerateSDKsForVersion(FileSpec sdks_spec, SDKType sdk_type,
@@ -2228,9 +2228,11 @@ static ConstString EnumerateSDKsForVersion(FileSpec sdks_spec, SDKType sdk_type,
   enumerator_info.least_major = least_major;
   enumerator_info.least_minor = least_minor;
 
-  FileSpec::EnumerateDirectory(sdks_spec.GetPath().c_str(), find_directories,
-                               find_files, find_other, DirectoryEnumerator,
-                               &enumerator_info);
+  FileSystem::Instance().EnumerateDirectory(sdks_spec.GetPath().c_str(),
+                                            find_directories,
+                                            find_files, find_other,
+                                            DirectoryEnumerator,
+                                            &enumerator_info);
 
   if (IsDirectory(enumerator_info.found_path))
     return ConstString(enumerator_info.found_path.GetPath());
