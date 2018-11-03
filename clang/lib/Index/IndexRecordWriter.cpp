@@ -138,6 +138,7 @@ static void writeDecls(BitstreamWriter &Stream, ArrayRef<DeclInfo> Decls,
 
 #ifndef NDEBUG
   StringSet<> USRSet;
+  bool enableValidation = getenv("CLANG_INDEX_VALIDATION_CHECKS") != nullptr;
 #endif
 
   RecordData Record;
@@ -157,10 +158,12 @@ static void writeDecls(BitstreamWriter &Stream, ArrayRef<DeclInfo> Decls,
     Blob += SymInfo.CodeGenName;
 
 #ifndef NDEBUG
-    bool IsNew = USRSet.insert(SymInfo.USR).second;
-    if (!IsNew) {
-      llvm::errs() << "Index: Duplicate USR! " << SymInfo.USR << "\n";
-      // FIXME: print more information so it's easier to find the declaration.
+    if (enableValidation) {
+      bool IsNew = USRSet.insert(SymInfo.USR).second;
+      if (!IsNew) {
+        llvm::errs() << "Index: Duplicate USR! " << SymInfo.USR << "\n";
+        // FIXME: print more information so it's easier to find the declaration.
+      }
     }
 #endif
 
