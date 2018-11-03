@@ -1354,7 +1354,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     StreamString ss;
     module.GetDescription(&ss);
     log->Printf("SwiftASTContext::CreateInstance(Module=%s)", ss.GetData());
-    if (main_compile_unit_sp && !main_compile_unit_sp->Exists())
+    if (main_compile_unit_sp && !FileSystem::Instance().Exists(*main_compile_unit_sp))
       log->Printf("Corresponding source not found for %s, loading module "
                   "is unlikely to succeed",
                   main_compile_unit_sp->GetCString());
@@ -1447,7 +1447,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         log->Printf("\tGot serialized SDK path %s.",
                     serialized_sdk_path.data());
       FileSpec sdk_spec(serialized_sdk_path.data(), false);
-      if (sdk_spec.Exists()) {
+      if (FileSystem::Instance().Exists(sdk_spec)) {
         swift_ast_sp->SetPlatformSDKPath(serialized_sdk_path.data());
       }
     }
@@ -1456,7 +1456,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       std::string platform_sdk_path;
       if (sym_vendor->GetCompileOption("-sdk", platform_sdk_path)) {
         FileSpec sdk_spec(platform_sdk_path.c_str(), false);
-        if (sdk_spec.Exists()) {
+        if (FileSystem::Instance().Exists(sdk_spec)) {
           swift_ast_sp->SetPlatformSDKPath(platform_sdk_path.c_str());
         }
 
@@ -1485,7 +1485,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
         for (std::string &search_path : include_paths) {
           const FileSpec path_spec(search_path.c_str(), false);
 
-          if (path_spec.Exists()) {
+          if (FileSystem::Instance().Exists(path_spec)) {
             static const ConstString s_hmap_extension("hmap");
 
             if (IsDirectory(path_spec)) {
@@ -1594,7 +1594,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   // create search path options we put in the wrong SDK path.
 
   FileSpec &target_sdk_spec = target.GetSDKPath();
-  if (target_sdk_spec && target_sdk_spec.Exists()) {
+  if (target_sdk_spec && FileSystem::Instance().Exists(target_sdk_spec)) {
     std::string platform_sdk_path(target_sdk_spec.GetPath());
     swift_ast_sp->SetPlatformSDKPath(std::move(platform_sdk_path));
     handled_sdk_path = true;
@@ -1764,12 +1764,12 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
             FileSpec headers_spec =
                 path_spec.CopyByAppendingPathComponent("Headers");
             bool add_it = false;
-            if (headers_spec.Exists())
+            if (FileSystem::Instance().Exists(headers_spec))
               add_it = true;
             if (!add_it) {
               FileSpec module_spec =
                   path_spec.CopyByAppendingPathComponent("Modules");
-              if (module_spec.Exists())
+              if (FileSystem::Instance().Exists(module_spec))
                 add_it = true;
             }
 
@@ -2324,7 +2324,7 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
         "%sDeveloper/Platforms/MacOSX.platform/Developer/SDKs/MacOSX%u.%u.sdk",
         xcode_contents_path.c_str(), major, minor);
     fspec.SetFile(sdk_path.GetString(), FileSpec::Style::native);
-    if (fspec.Exists()) {
+    if (FileSystem::Instance().Exists(fspec)) {
       ConstString path(sdk_path.GetString());
       // Cache results
       g_sdk_cache[major_minor] = path;
@@ -2336,7 +2336,7 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
                       "MacOSX%u.%u.sdk",
                       xcode_contents_path.c_str(), least_major, least_minor);
       fspec.SetFile(sdk_path.GetString(), FileSpec::Style::native);
-      if (fspec.Exists()) {
+      if (FileSystem::Instance().Exists(fspec)) {
         ConstString path(sdk_path.GetString());
         // Cache results
         g_sdk_cache[major_minor] = path;
@@ -2418,7 +2418,7 @@ swift::ClangImporterOptions &SwiftASTContext::GetClangImporterOptions() {
 
     FileSpec clang_dir_spec;
     clang_dir_spec = GetClangResourceDir();
-    if (clang_dir_spec.Exists())
+    if (FileSystem::Instance().Exists(clang_dir_spec))
       clang_importer_options.OverrideResourceDir = clang_dir_spec.GetPath();
     clang_importer_options.DebuggerSupport = true;
   }
@@ -2435,7 +2435,7 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
     bool set_sdk = false;
     if (!search_path_opts.SDKPath.empty()) {
       FileSpec provided_sdk_path(search_path_opts.SDKPath, false);
-      if (provided_sdk_path.Exists()) {
+      if (FileSystem::Instance().Exists(provided_sdk_path)) {
         // We don't check whether the SDK supports swift because we figure if
         // someone is passing this to us on the command line (e.g., for the
         // REPL), they probably know what they're doing.
@@ -2445,7 +2445,7 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
     } else if (!m_platform_sdk_path.empty()) {
       FileSpec platform_sdk(m_platform_sdk_path.c_str(), false);
 
-      if (platform_sdk.Exists() &&
+      if (FileSystem::Instance().Exists(platform_sdk) &&
           SDKSupportsSwift(platform_sdk, SDKType::unknown)) {
         search_path_opts.SDKPath = m_platform_sdk_path.c_str();
         set_sdk = true;
@@ -3212,7 +3212,7 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const FileSpec &module_spec,
     if (iter != m_swift_module_cache.end())
       return iter->second;
 
-    if (module_spec.Exists()) {
+    if (FileSystem::Instance().Exists(module_spec)) {
       swift::ASTContext *ast = GetASTContext();
       if (!GetClangImporter()) {
         if (log)
