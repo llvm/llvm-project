@@ -131,12 +131,8 @@ define <8 x i32> @and_mask_constant(<8 x i32> %v0, <8 x i32> %v1) {
 ; X32-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; X32-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
 ; X32-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; X32-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vpand LCPI2_0, %xmm0, %xmm0
-; X32-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X32-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X32-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X32-NEXT:    vandps LCPI2_0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: and_mask_constant:
@@ -145,12 +141,8 @@ define <8 x i32> @and_mask_constant(<8 x i32> %v0, <8 x i32> %v1) {
 ; X64-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; X64-NEXT:    vpcmpeqd %xmm2, %xmm1, %xmm1
 ; X64-NEXT:    vpcmpeqd %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; X64-NEXT:    vpmovzxwd {{.*#+}} xmm1 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
-; X64-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; X64-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
 ;
 ; X32-AVX2-LABEL: and_mask_constant:

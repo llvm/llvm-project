@@ -829,11 +829,15 @@ bool ScriptInterpreterPython::ExecuteOneLine(
                                                  error_file_sp);
     } else {
       input_file_sp.reset(new StreamFile());
-      input_file_sp->GetFile().Open(FileSystem::DEV_NULL,
-                                    File::eOpenOptionRead);
+      FileSystem::Instance().Open(input_file_sp->GetFile(),
+                                  FileSpec(FileSystem::DEV_NULL),
+                                  File::eOpenOptionRead);
+
       output_file_sp.reset(new StreamFile());
-      output_file_sp->GetFile().Open(FileSystem::DEV_NULL,
-                                     File::eOpenOptionWrite);
+      FileSystem::Instance().Open(output_file_sp->GetFile(),
+                                  FileSpec(FileSystem::DEV_NULL),
+                                  File::eOpenOptionWrite);
+
       error_file_sp = output_file_sp;
     }
 

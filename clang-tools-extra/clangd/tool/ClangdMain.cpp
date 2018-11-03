@@ -217,6 +217,8 @@ int main(int argc, char *argv[]) {
     if (EC) {
       InputMirrorStream.reset();
       errs() << "Error while opening an input mirror file: " << EC.message();
+    } else {
+      InputMirrorStream->SetUnbuffered();
     }
   }
 

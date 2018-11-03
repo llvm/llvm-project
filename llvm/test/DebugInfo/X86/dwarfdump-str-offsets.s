@@ -1,5 +1,6 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
 # RUN: llvm-dwarfdump -v %t.o 2> %t.err | FileCheck --check-prefix=COMMON --check-prefix=SPLIT %s
+# RUN: llvm-dwarfdump -verify %t.o | FileCheck --check-prefix=VERIFY %s
 # 
 # Check that we don't report an error on a non-existent range list table.
 # RUN: FileCheck -allow-empty --check-prefix ERR %s < %t.err
@@ -136,6 +137,8 @@ dwo_str_TU_5_type:
         .byte 0x00  # DW_CHILDREN_no
         .byte 0x03  # DW_AT_name
         .byte 0x26  # DW_FORM_strx2
+        .byte 0x49  # DW_AT_type
+        .byte 0x13  # DW_FORM_ref4
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
         .byte 0x06  # Abbrev code
@@ -143,6 +146,8 @@ dwo_str_TU_5_type:
         .byte 0x00  # DW_CHILDREN_no
         .byte 0x03  # DW_AT_name
         .byte 0x27  # DW_FORM_strx3
+        .byte 0x49  # DW_AT_type
+        .byte 0x13  # DW_FORM_ref4
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
         .byte 0x07  # Abbrev code
@@ -150,6 +155,15 @@ dwo_str_TU_5_type:
         .byte 0x00  # DW_CHILDREN_no
         .byte 0x03  # DW_AT_name
         .byte 0x28  # DW_FORM_strx4
+        .byte 0x49  # DW_AT_type
+        .byte 0x13  # DW_FORM_ref4
+        .byte 0x00  # EOM(1)
+        .byte 0x00  # EOM(2)
+        .byte 0x08  # Abbrev code
+        .byte 0x24  # DW_TAG_base_type
+        .byte 0x00  # DW_CHILDREN_no
+        .byte 0x3e  # DW_AT_encoding
+        .byte 0x0b  # DW_FORM_data1
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
         .byte 0x00  # EOM(3)
@@ -202,17 +216,24 @@ CU1_5_version:
 # A subprogram DIE with DW_AT_name, using DW_FORM_strx1.
         .byte 4                # Abbreviation code
         .byte 3                # Subprogram name string (DW_FORM_strx1)
-# A variable DIE with DW_AT_name, using DW_FORM_strx2.
+# A variable DIE with DW_AT_name, using DW_FORM_strx2, and DW_AT_type.
         .byte 5                # Abbreviation code
         .short 0x0004          # Subprogram name string (DW_FORM_strx2)
-# A variable DIE with DW_AT_name, using DW_FORM_strx3.
+        .long TypeDie-.debug_info
+# A variable DIE with DW_AT_name, using DW_FORM_strx3, and DW_AT_type.
         .byte 6                # Abbreviation code
         .byte 5                # Subprogram name string (DW_FORM_strx3)
         .short 0               # Subprogram name string (DW_FORM_strx3)
-# A variable DIE with DW_AT_name, using DW_FORM_strx4.
+        .long TypeDie-.debug_info
+# A variable DIE with DW_AT_name, using DW_FORM_strx4, and DW_AT_type.
         .byte 7                # Abbreviation code
-        .quad 0x00000006       # Subprogram name string (DW_FORM_strx4)
+        .long 6                # Subprogram name string (DW_FORM_strx4)
+        .long TypeDie-.debug_info
         .byte 0 # NULL
+# A base type DIE with DW_AT_encoding.
+TypeDie:
+        .byte 8                # Abbreviation code
+        .byte 5                # DW_ATE_signed
         .byte 0 # NULL
         .byte 0 # NULL
 CU1_5_end:
@@ -385,5 +406,7 @@ TU_split_5_end:
 # SPLIT-NEXT:  0x00000010: 00000034 "/home/test/splitCU"
 # SPLIT-NEXT:  0x00000014: 00000047 "V5_split_type_unit"
 # SPLIT-NEXT:  0x00000018: 0000005a "V5_split_Mystruct"
+
+# VERIFY: No errors.
 
 # ERR-NOT: parsing a range list table:

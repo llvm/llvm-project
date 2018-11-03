@@ -971,14 +971,14 @@ def fno_sanitize_address_use_after_scope : Flag<["-"], "fno-sanitize-address-use
                                            Group<f_clang_Group>,
                                            Flags<[CoreOption, DriverOption]>,
                                            HelpText<"Disable use-after-scope detection in AddressSanitizer">;
-def fsanitize_address_poison_class_member_array_new_cookie
-    : Flag<[ "-" ], "fsanitize-address-poison-class-member-array-new-cookie">,
+def fsanitize_address_poison_custom_array_cookie
+    : Flag<[ "-" ], "fsanitize-address-poison-custom-array-cookie">,
       Group<f_clang_Group>,
-      HelpText<"Enable poisoning array cookies when using class member operator new[] in AddressSanitizer">;
-def fno_sanitize_address_poison_class_member_array_new_cookie
-    : Flag<[ "-" ], "fno-sanitize-address-poison-class-member-array-new-cookie">,
+      HelpText<"Enable poisoning array cookies when using custom operator new[] in AddressSanitizer">;
+def fno_sanitize_address_poison_custom_array_cookie
+    : Flag<[ "-" ], "fno-sanitize-address-poison-custom-array-cookie">,
       Group<f_clang_Group>,
-      HelpText<"Disable poisoning array cookies when using class member operator new[] in AddressSanitizer">;
+      HelpText<"Disable poisoning array cookies when using custom operator new[] in AddressSanitizer">;
 def fsanitize_address_globals_dead_stripping : Flag<["-"], "fsanitize-address-globals-dead-stripping">,
                                         Group<f_clang_Group>,
                                         HelpText<"Enable linker dead stripping of globals in AddressSanitizer">;

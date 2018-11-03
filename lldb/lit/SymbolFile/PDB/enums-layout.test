@@ -1,4 +1,4 @@
-REQUIRES: windows
+REQUIRES: system-windows
 RUN: clang-cl -m32 /Z7 /c /GS- %S/Inputs/SimpleTypesTest.cpp /o %T/SimpleTypesTest.cpp.enums.obj
 RUN: link %T/SimpleTypesTest.cpp.enums.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/SimpleTypesTest.cpp.enums.exe
 RUN: lldb-test symbols %T/SimpleTypesTest.cpp.enums.exe | FileCheck %s

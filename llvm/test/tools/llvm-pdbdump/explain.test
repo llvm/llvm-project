@@ -1,3 +1,5 @@
+; REQUIRES: diasdk
+
 ; RUN: llvm-pdbutil explain -offset=0 %p/Inputs/InjectedSource.pdb \
 ; RUN:  | FileCheck --check-prefix=ZERO %s
 ; RUN: llvm-pdbutil explain -offset=40 %p/Inputs/InjectedSource.pdb \

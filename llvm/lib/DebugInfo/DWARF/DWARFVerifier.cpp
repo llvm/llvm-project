@@ -611,6 +611,45 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     }
     break;
   }
+  case DW_FORM_strx:
+  case DW_FORM_strx1:
+  case DW_FORM_strx2:
+  case DW_FORM_strx3:
+  case DW_FORM_strx4: {
+    auto Index = AttrValue.Value.getRawUValue();
+    auto DieCU = Die.getDwarfUnit();
+    // Check that we have a valid DWARF v5 string offsets table.
+    if (!DieCU->getStringOffsetsTableContribution()) {
+      ++NumErrors;
+      error() << FormEncodingString(Form)
+              << " used without a valid string offsets table:\n";
+      dump(Die) << '\n';
+      break;
+    }
+    // Check that the index is within the bounds of the section. 
+    unsigned ItemSize = DieCU->getDwarfStringOffsetsByteSize();
+    // Use a 64-bit type to calculate the offset to guard against overflow.
+    uint64_t Offset =
+        (uint64_t)DieCU->getStringOffsetsBase() + Index * ItemSize;
+    if (DObj.getStringOffsetSection().Data.size() < Offset + ItemSize) {
+      ++NumErrors;
+      error() << FormEncodingString(Form) << " uses index "
+              << format("%" PRIu64, Index) << ", which is too large:\n";
+      dump(Die) << '\n';
+      break;
+    }
+    // Check that the string offset is valid.
+    uint64_t StringOffset = *DieCU->getStringOffsetSectionItem(Index);
+    if (StringOffset >= DObj.getStringSection().size()) {
+      ++NumErrors;
+      error() << FormEncodingString(Form) << " uses index "
+              << format("%" PRIu64, Index)
+              << ", but the referenced string"
+                 " offset is beyond .debug_str bounds:\n";
+      dump(Die) << '\n';
+    }
+    break;
+  }
   default:
     break;
   }

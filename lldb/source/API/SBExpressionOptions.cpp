@@ -159,6 +159,15 @@ void SBExpressionOptions::SetTopLevel(bool b) {
                                     : m_opaque_ap->default_execution_policy);
 }
 
+bool SBExpressionOptions::GetAllowJIT() {
+  return m_opaque_ap->GetExecutionPolicy() != eExecutionPolicyNever;
+}
+
+void SBExpressionOptions::SetAllowJIT(bool allow) {
+  m_opaque_ap->SetExecutionPolicy(allow ? m_opaque_ap->default_execution_policy
+                                    : eExecutionPolicyNever);
+}
+
 EvaluateExpressionOptions *SBExpressionOptions::get() const {
   return m_opaque_ap.get();
 }

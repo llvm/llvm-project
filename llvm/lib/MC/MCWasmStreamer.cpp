@@ -61,7 +61,7 @@ void MCWasmStreamer::EmitAssemblerFlag(MCAssemblerFlag Flag) {
 void MCWasmStreamer::ChangeSection(MCSection *Section,
                                    const MCExpr *Subsection) {
   MCAssembler &Asm = getAssembler();
-  auto *SectionWasm = static_cast<const MCSectionWasm *>(Section);
+  auto *SectionWasm = cast<MCSectionWasm>(Section);
   const MCSymbol *Grp = SectionWasm->getGroup();
   if (Grp)
     Asm.registerSymbol(*Grp);

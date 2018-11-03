@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -emit-llvm -o - %s | FileCheck %s -check-prefix=PLAIN
 // RUN: %clang_cc1 -triple x86_64-gnu-linux -emit-llvm -o - -fsanitize=address %s | FileCheck %s -check-prefix=ASAN
-// RUN: %clang_cc1 -triple x86_64-gnu-linux -emit-llvm -o - -fsanitize=address -fsanitize-address-poison-class-member-array-new-cookie %s | FileCheck %s -check-prefix=ASAN-POISON-ALL-NEW-ARRAY
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -emit-llvm -o - -fsanitize=address -fsanitize-address-poison-custom-array-cookie %s | FileCheck %s -check-prefix=ASAN-POISON-ALL-NEW-ARRAY
 
 typedef __typeof__(sizeof(0)) size_t;
 namespace std {

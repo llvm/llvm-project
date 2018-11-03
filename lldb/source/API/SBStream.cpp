@@ -10,6 +10,7 @@
 #include "lldb/API/SBStream.h"
 
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
@@ -70,9 +71,9 @@ void SBStream::RedirectToFile(const char *path, bool append) {
     open_options |= File::eOpenOptionAppend;
   else
     open_options |= File::eOpenOptionTruncate;
-  stream_file->GetFile().Open(path, open_options,
-                              lldb::eFilePermissionsFileDefault);
 
+  FileSystem::Instance().Open(stream_file->GetFile(), FileSpec(path),
+                              open_options);
   m_opaque_ap.reset(stream_file);
 
   if (m_opaque_ap.get()) {

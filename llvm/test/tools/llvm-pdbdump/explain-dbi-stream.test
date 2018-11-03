@@ -1,3 +1,5 @@
+; REQUIRES: diasdk
+
 ; RUN: llvm-pdbutil explain \
 ; RUN: -offset=0xF000 \
 ; RUN: -offset=0xF004 \

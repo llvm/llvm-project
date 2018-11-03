@@ -10,6 +10,7 @@
 #ifndef liblldb_Host_FileSystem_h
 #define liblldb_Host_FileSystem_h
 
+#include "lldb/Host/File.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 
@@ -43,9 +44,14 @@ public:
 
   Status ResolveSymbolicLink(const FileSpec &src, FileSpec &dst);
 
-  /// Wraps ::fopen in a platform-independent way. Once opened, FILEs can be
-  /// manipulated and closed with the normal ::fread, ::fclose, etc. functions.
+  /// Wraps ::fopen in a platform-independent way.
   FILE *Fopen(const char *path, const char *mode);
+
+  /// Wraps ::open in a platform-independent way.
+  int Open(const char *path, int flags, int mode);
+
+  Status Open(File &File, const FileSpec &file_spec, uint32_t options,
+              uint32_t permissions = lldb::eFilePermissionsFileDefault);
 
   /// Returns the modification time of the given file.
   /// @{
@@ -121,9 +127,6 @@ public:
 
   std::error_code GetRealPath(const llvm::Twine &path,
                               llvm::SmallVectorImpl<char> &output) const;
-
-protected:
-  void SetFileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs);
 
 private:
   static llvm::Optional<FileSystem> &InstanceImpl();

@@ -1,3 +1,5 @@
+; REQUIRES: diasdk
+
 ; RUN: llvm-pdbutil pretty -classes -class-definitions=layout \
 ; RUN:     -include-types=Test %p/Inputs/ComplexPaddingTest.pdb > %t
 

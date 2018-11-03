@@ -7,7 +7,7 @@
 # CHECK-NEXT: DW_AT_producer [DW_FORM_strp]	( .debug_str[0x00000000] = "clang version 5.0.0 (trunk 308185) (llvm/trunk 308186)")
 # CHECK-NEXT: DW_AT_language [DW_FORM_data2]	(DW_LANG_C99)
 # CHECK-NEXT: DW_AT_name [DW_FORM_strp]	( .debug_str[0x00000037] = "basic.c")
-# CHECK-NEXT: DW_AT_stmt_list [DW_FORM_strx4]	( indexed (00000000) string = )
+# CHECK-NEXT: DW_AT_stmt_list [DW_FORM_block4]
 # CHECK-NEXT: DW_AT_comp_dir [DW_FORM_strp]	( .debug_str[0x0000003f] = "/Users/sgravani/Development/tests")
 # CHECK-NEXT: DW_AT_low_pc [DW_FORM_addr]	(0x0000000000000000)
 # CHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]	(0x00000016){{[[:space:]]}}
@@ -82,7 +82,7 @@ Lsection_abbrev:
 	.byte	3                       ## DW_AT_name
 	.byte	14                      ## DW_FORM_strp
 	.byte	16                      ## DW_AT_stmt_list
-	.byte	40                      ## DW_FORM_sec_offset -- error: DIE has invalid DW_AT_stmt_list encoding:
+	.byte	4                       ## DW_FORM_sec_offset -- error: DIE has invalid DW_AT_stmt_list encoding:
 	.byte	27                      ## DW_AT_comp_dir
 	.byte	14                      ## DW_FORM_strp
 	.byte	17                      ## DW_AT_low_pc

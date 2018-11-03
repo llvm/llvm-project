@@ -19,7 +19,8 @@ config.host_arch = "@HOST_ARCH@"
 
 config.llvm_use_sanitizer = "@LLVM_USE_SANITIZER@"
 
-@LIT_SITE_CFG_IN_FOOTER@
+import lit.llvm
+lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@DEBUGINFO_TESTS_SOURCE_DIR@/lit.cfg.py")

@@ -167,7 +167,7 @@ TEST_F(PythonDataObjectsTest, TestDictionaryResolutionWithDot) {
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonInteger) {
-// Test that integers behave correctly when wrapped by a PythonInteger.
+  // Test that integers behave correctly when wrapped by a PythonInteger.
 
 #if PY_MAJOR_VERSION < 3
   // Verify that `PythonInt` works correctly when given a PyInt object.
@@ -557,7 +557,9 @@ TEST_F(PythonDataObjectsTest, TestPythonCallableInvoke) {
 }
 
 TEST_F(PythonDataObjectsTest, TestPythonFile) {
-  File file(FileSystem::DEV_NULL, File::eOpenOptionRead);
+  File file;
+  FileSystem::Instance().Open(file, FileSpec(FileSystem::DEV_NULL),
+                              File::eOpenOptionRead);
   PythonFile py_file(file, "r");
   EXPECT_TRUE(PythonFile::Check(py_file.get()));
 }
