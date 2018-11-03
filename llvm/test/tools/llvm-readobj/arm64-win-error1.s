@@ -7,6 +7,7 @@
 
 // CHECK:     Prologue [
 // CHECK:        0xdf                ; Bad opcode!
+// CHECK:        0xff                ; Bad opcode!
 // CHECK:        0xd600              ; stp x19, lr, [sp, #0]
 // CHECK:        0x01                ; sub sp, #16
 // CHECK:        0xe4                ; end
@@ -48,6 +49,6 @@
 	.long		0x10800012
 	.long 		0x8
 	.long 		0xe
-	.long 		0x100d6df
-	.long 		0xe3e3e3e4
+	.long 		0x00d6ffdf
+	.long 		0xe3e3e401
 
