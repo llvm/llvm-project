@@ -15,7 +15,7 @@
 # CHECK-NEXT: }
 # CHECK-NEXT: DefRangeFramePointerRelSym {
 # CHECK-NEXT:   Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
-# CHECK-NEXT:   Offset: 8
+# CHECK-NEXT:   Offset: 12
 # CHECK-NEXT:   LocalVariableAddrRange {
 # CHECK-NEXT:     OffsetStart:
 # CHECK-NEXT:     ISectStart:
@@ -32,7 +32,7 @@
 # CHECK-NEXT: }
 # CHECK-NEXT: DefRangeFramePointerRelSym {
 # CHECK-NEXT:   Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
-# CHECK-NEXT:   Offset: 4
+# CHECK-NEXT:   Offset: 8
 # CHECK-NEXT:   LocalVariableAddrRange {
 # CHECK-NEXT:     OffsetStart: .text+0x5
 # CHECK-NEXT:     ISectStart: 0x0

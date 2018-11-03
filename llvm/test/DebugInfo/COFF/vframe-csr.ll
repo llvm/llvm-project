@@ -3,50 +3,12 @@
 
 ; PR38857
 
-; When stack realignment is required by dynamic allocas are not used, the
-; compiler will address locals with the ESP register. However, if call argument
-; set up uses PUSH instructions, ESP may vary over the course of the function.
-; This means it's not useful as a base register for describing the locations of
-; variables. Instead, our CodeView output prefers to use the VFRAME virtual
-; register, which is defined in the FPO data as $T0. Make sure we define it.
-
-; Original C++ test case, which uses __thiscall to encourage PUSH conversion:
-; struct Foo {
-;   int x = 42;
-;   int __declspec(noinline) foo();
-;   void __declspec(noinline) bar(int *a, int *b, double *c);
-; };
-; int Foo::foo() {
-;   int a = 1;
-;   int b = 2;
-;   double __declspec(align(8)) force_alignment = 0.42;
-;   bar(&a, &b, &force_alignment);
-;   x += (int)force_alignment;
-;   return x;
-; }
-; void Foo::bar(int *a, int *b, double *c) {
-;   __debugbreak();
-;   *c += *a + *b;
-; }
-; int main() {
-;   Foo o;
-;   o.foo();
-; }
-; This stops the debugger in bar, and locals in Foo::foo would be corrupt.
-
-; More reduced C code to generate this IR:
-; int getval(void);
-; void usevals(int *, int *, double *);
-; int realign_with_csrs(int x) {
-;   int a = getval();
-;   double __declspec(align(8)) force_alignment = 0.42;
-;   usevals(&a, &x, &force_alignment);
-;   return x;
-; }
+; This test case is identical to the fpo-realign-vframe.ll test, except it uses
+; two callee-saved registers.
 
 ; Match the prologue for the .cv_fpo* directives.
 ; ASM-LABEL: _realign_with_csrs:
-; ASM:         .cv_fpo_proc    _realign_with_csrs 4
+; ASM:         .cv_fpo_proc    _realign_with_csrs 0
 ; ASM: # %bb.0:                                # %entry
 ; ASM:         pushl   %ebp
 ; ASM:         .cv_fpo_pushreg %ebp
@@ -54,17 +16,17 @@
 ; ASM:         .cv_fpo_setframe        %ebp
 ; ASM:         andl    $-8, %esp
 ; ASM:         .cv_fpo_stackalign      8
-; ASM:         subl    $16, %esp
-; ASM:         .cv_fpo_stackalloc      16
+; FIXME: Why 24 bytes? We only need 12 bytes of data.
+; ASM:         subl    $24, %esp
+; ASM:         .cv_fpo_stackalloc      24
 ; ASM:         .cv_fpo_endprologue
 
 ; 'x' should be EBP-relative, 'a' and 'force_alignment' ESP relative.
 ; ASM:         calll   _getval
 ; ASM-DAG:     leal    8(%esp), %[[LEA_DBL:[^ ]*]]
-; ASM-DAG:     leal    8(%ebp), %[[LEA_X:[^ ]*]]
 ; ASM-DAG:     leal    4(%esp), %[[LEA_A:[^ ]*]]
 ; ASM:         pushl   %[[LEA_DBL]]
-; ASM:         pushl   %[[LEA_X]]
+; ASM:         pushl   %[[LEA_A]]
 ; ASM:         pushl   %[[LEA_A]]
 ; ASM:         calll   _usevals
 ; ASM:         addl    $12, %esp
@@ -82,12 +44,15 @@
 ; OBJ:   FrameData {
 ; OBJ:   }
 ; OBJ:   FrameData {
+; OBJ:   }
+; OBJ:   FrameData {
 ; OBJ:     FrameFunc [
 ; OBJ-NEXT:   $T1 $ebp 4 + =
-; OBJ-NEXT:   $T0 $T1 4 - 8 @ =
+; OBJ-NEXT:   $T0 $T1 8 - 8 @ =
 ; OBJ-NEXT:   $eip $T1 ^ =
 ; OBJ-NEXT:   $esp $T1 4 + =
 ; OBJ-NEXT:   $ebp $T1 4 - ^ =
+; OBJ-NEXT:   $esi $T1 8 - ^ =
 ; OBJ-NEXT: ]
 ; OBJ:   }
 ; OBJ: ]
@@ -101,24 +66,11 @@
 ; 	The frame register for locals should be VFRAME, and EBP for parameters.
 ; OBJ:   FrameProcSym {
 ; OBJ:     Kind: S_FRAMEPROC (0x1012)
-; OBJ:     TotalFrameBytes: 0x14
+; OBJ:     TotalFrameBytes: 0x18
 ; OBJ:     LocalFramePtrReg: VFRAME (0x7536)
 ; OBJ:     ParamFramePtrReg: EBP (0x16)
 ; OBJ:   }
-; 	As seen in ASM, offset of x is 8.
-; OBJ:   LocalSym {
-; OBJ:     Kind: S_LOCAL (0x113E)
-; OBJ:     Type: int (0x74)
-; OBJ:     Flags [ (0x1)
-; OBJ:       IsParameter (0x1)
-; OBJ:     ]
-; OBJ:     VarName: x
-; OBJ:   }
-; OBJ:   DefRangeFramePointerRelSym {
-; OBJ:     Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
-; OBJ:     Offset: 8
-; OBJ:   }
-; 	ESP is VFRAME - 16, ESP offset of 'a' is 4, so -12.
+; 	ESP is VFRAME - 24, ESP offset of 'a' is 4, so -20.
 ; OBJ:   LocalSym {
 ; OBJ:     Kind: S_LOCAL (0x113E)
 ; OBJ:     Type: int (0x74)
@@ -128,7 +80,7 @@
 ; OBJ:   }
 ; OBJ:   DefRangeFramePointerRelSym {
 ; OBJ:     Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
-; OBJ:     Offset: -12
+; OBJ:     Offset: -20
 ; OBJ:   }
 ; 	ESP is VFRAME - 16, ESP offset of 'force_alignment' is 8, so -8.
 ; OBJ:   LocalSym {
@@ -140,7 +92,7 @@
 ; OBJ:   }
 ; OBJ:   DefRangeFramePointerRelSym {
 ; OBJ:     Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
-; OBJ:     Offset: -8
+; OBJ:     Offset: -16
 ; OBJ:   }
 ; OBJ:   ProcEnd {
 ; OBJ:     Kind: S_PROC_ID_END (0x114F)
@@ -153,27 +105,22 @@ target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i386-pc-windows-msvc19.14.26433"
 
 ; Function Attrs: nounwind
-define dso_local i32 @realign_with_csrs(i32 %x) local_unnamed_addr #0 !dbg !8 {
+define dso_local i32 @realign_with_csrs() local_unnamed_addr #0 !dbg !8 {
 entry:
-  %x.addr = alloca i32, align 4
   %a = alloca i32, align 4
   %force_alignment = alloca double, align 8
-  store i32 %x, i32* %x.addr, align 4, !tbaa !17
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !13, metadata !DIExpression()), !dbg !21
   %0 = bitcast i32* %a to i8*, !dbg !22
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0) #4, !dbg !22
   call void @llvm.dbg.declare(metadata i32* %a, metadata !14, metadata !DIExpression()), !dbg !22
+  %csr1 = tail call i32 @getval() #4
   %call = tail call i32 @getval() #4, !dbg !22
   store i32 %call, i32* %a, align 4, !dbg !22, !tbaa !17
   %1 = bitcast double* %force_alignment to i8*, !dbg !23
   call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %1) #4, !dbg !23
   call void @llvm.dbg.declare(metadata double* %force_alignment, metadata !15, metadata !DIExpression()), !dbg !23
   store double 4.200000e-01, double* %force_alignment, align 8, !dbg !23, !tbaa !24
-  call void @usevals(i32* nonnull %a, i32* nonnull %x.addr, double* nonnull %force_alignment) #4, !dbg !26
-  %2 = load i32, i32* %x.addr, align 4, !dbg !27, !tbaa !17
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %1) #4, !dbg !28
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0) #4, !dbg !28
-  ret i32 %2, !dbg !27
+  call void @usevals(i32* nonnull %a, i32* nonnull %a, double* nonnull %force_alignment) #4, !dbg !26
+  call void @usecsrs(i32 %csr1, i32 %csr1)
+  ret i32 0
 }
 
 ; Function Attrs: nounwind readnone speculatable
@@ -185,6 +132,8 @@ declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
 declare dso_local i32 @getval() local_unnamed_addr #3
 
 declare dso_local void @usevals(i32*, i32*, double*) local_unnamed_addr #3
+
+declare dso_local void @usecsrs(i32, i32) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
