@@ -1,5 +1,5 @@
-# REQUIRES: windows
-# XFAIL: windows
+# REQUIRES: system-windows
+# XFAIL: system-windows
 # -> llvm.org/pr24528
 #
 # RUN: %cc %p/Inputs/case-sensitive.c -g -o %t

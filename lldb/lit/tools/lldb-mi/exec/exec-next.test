@@ -1,4 +1,4 @@
-# XFAIL: windows
+# XFAIL: system-windows
 # -> llvm.org/pr24452
 # REQUIRES: FIX_FOR_RACE_CONDITION
 #

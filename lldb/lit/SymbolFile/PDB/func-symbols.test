@@ -1,4 +1,4 @@
-REQUIRES: windows
+REQUIRES: system-windows
 RUN: clang-cl -m32 /Z7 /c /GS- %S/Inputs/FuncSymbolsTestMain.cpp /o %T/FuncSymbolsTestMain.cpp.obj
 RUN: clang-cl -m32 /Z7 /c /GS- %S/Inputs/FuncSymbols.cpp /o %T/FuncSymbols.cpp.obj
 RUN: link %T/FuncSymbolsTestMain.cpp.obj %T/FuncSymbols.cpp.obj /DEBUG /nodefaultlib /Entry:main /OUT:%T/FuncSymbolsTest.exe

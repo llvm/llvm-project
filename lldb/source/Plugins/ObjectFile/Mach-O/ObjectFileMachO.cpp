@@ -1323,6 +1323,7 @@ Symtab *ObjectFileMachO::GetSymtab() {
       std::lock_guard<std::recursive_mutex> symtab_guard(
           m_symtab_ap->GetMutex());
       ParseSymtab();
+      m_symtab_ap->Finalize();
     }
   }
   return m_symtab_ap.get();
@@ -5009,6 +5010,16 @@ size_t ObjectFileMachO::ParseSymtab() {
       }
     }
 
+    //        StreamFile s(stdout, false);
+    //        s.Printf ("Symbol table before CalculateSymbolSizes():\n");
+    //        symtab->Dump(&s, NULL, eSortOrderNone);
+    // Set symbol byte sizes correctly since mach-o nlist entries don't have
+    // sizes
+    symtab->CalculateSymbolSizes();
+
+    //        s.Printf ("Symbol table after CalculateSymbolSizes():\n");
+    //        symtab->Dump(&s, NULL, eSortOrderNone);
+
     return symtab->GetNumSymbols();
   }
   return 0;
@@ -6516,10 +6527,10 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
           File core_file;
           std::string core_file_path(outfile.GetPath());
-          error = core_file.Open(core_file_path.c_str(),
-                                 File::eOpenOptionWrite |
-                                     File::eOpenOptionTruncate |
-                                     File::eOpenOptionCanCreate);
+          error = FileSystem::Instance().Open(core_file, outfile,
+                                              File::eOpenOptionWrite |
+                                                  File::eOpenOptionTruncate |
+                                                  File::eOpenOptionCanCreate);
           if (error.Success()) {
             // Read 1 page at a time
             uint8_t bytes[0x1000];
