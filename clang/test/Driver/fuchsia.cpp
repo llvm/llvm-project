@@ -15,7 +15,11 @@
 // CHECK-NOT: crti.o
 // CHECK-NOT: crtbegin.o
 // CHECK: "-L[[SYSROOT]]{{/|\\\\}}lib"
-// CHECK: "-lc++" "-lm"
+// CHECK: "--push-state"
+// CHECK: "--as-needed"
+// CHECK: "-lc++"
+// CHECK: "-lm"
+// CHECK: "--pop-state"
 // CHECK: "{{.*[/\\]}}libclang_rt.builtins-x86_64.a"
 // CHECK: "-lc"
 // CHECK-NOT: crtend.o
@@ -29,8 +33,10 @@
 // RUN: %clangxx %s -### --target=x86_64-unknown-fuchsia -static-libstdc++ \
 // RUN:     -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC
-// CHECK-STATIC: "-Bstatic"
+// CHECK-STATIC: "--push-state"
+// CHECK-STATIC: "--as-needed"
+// CHECK-STATIC: "-static"
 // CHECK-STATIC: "-lc++"
-// CHECK-STATIC: "-Bdynamic"
 // CHECK-STATIC: "-lm"
+// CHECK-STATIC: "--pop-state"
 // CHECK-STATIC: "-lc"
