@@ -379,6 +379,7 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
       case CK_BitCast:
       case CK_AddressSpaceConversion:
       case CK_BooleanToSignedIntegral:
+      case CK_NullToPointer:
       case CK_IntegralToPointer:
       case CK_PointerToIntegral: {
         SVal V = state->getSVal(Ex, LCtx);
@@ -498,12 +499,6 @@ void ExprEngine::VisitCast(const CastExpr *CastE, const Expr *Ex,
                                          currBldrCtx->blockCount());
         }
         state = state->BindExpr(CastE, LCtx, val);
-        Bldr.generateNode(CastE, Pred, state);
-        continue;
-      }
-      case CK_NullToPointer: {
-        SVal V = svalBuilder.makeNull();
-        state = state->BindExpr(CastE, LCtx, V);
         Bldr.generateNode(CastE, Pred, state);
         continue;
       }
