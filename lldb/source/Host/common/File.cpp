@@ -72,27 +72,6 @@ static const char *GetStreamOpenModeFromOptions(uint32_t options) {
 int File::kInvalidDescriptor = -1;
 FILE *File::kInvalidStream = NULL;
 
-File::File(const char *path, uint32_t options, uint32_t permissions)
-    : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
-      m_stream(kInvalidStream), m_options(), m_own_stream(false),
-      m_is_interactive(eLazyBoolCalculate),
-      m_is_real_terminal(eLazyBoolCalculate),
-      m_supports_colors(eLazyBoolCalculate) {
-  Open(path, options, permissions);
-}
-
-File::File(const FileSpec &filespec, uint32_t options, uint32_t permissions)
-    : IOObject(eFDTypeFile, false), m_descriptor(kInvalidDescriptor),
-      m_stream(kInvalidStream), m_options(0), m_own_stream(false),
-      m_is_interactive(eLazyBoolCalculate),
-      m_is_real_terminal(eLazyBoolCalculate),
-      m_supports_colors(eLazyBoolCalculate)
-{
-  if (filespec) {
-    Open(filespec.GetPath().c_str(), options, permissions);
-  }
-}
-
 File::~File() { Close(); }
 
 int File::GetDescriptor() const {
@@ -159,86 +138,6 @@ void File::SetStream(FILE *fh, bool transfer_ownership) {
     Close();
   m_stream = fh;
   m_own_stream = transfer_ownership;
-}
-
-static int DoOpen(const char *path, int flags, int mode) {
-  return FileSystem::Instance().Open(path, flags, mode);
-}
-
-Status File::Open(const char *path, uint32_t options, uint32_t permissions) {
-  Status error;
-  if (IsValid())
-    Close();
-
-  int oflag = 0;
-  const bool read = options & eOpenOptionRead;
-  const bool write = options & eOpenOptionWrite;
-  if (write) {
-    if (read)
-      oflag |= O_RDWR;
-    else
-      oflag |= O_WRONLY;
-
-    if (options & eOpenOptionAppend)
-      oflag |= O_APPEND;
-
-    if (options & eOpenOptionTruncate)
-      oflag |= O_TRUNC;
-
-    if (options & eOpenOptionCanCreate)
-      oflag |= O_CREAT;
-
-    if (options & eOpenOptionCanCreateNewOnly)
-      oflag |= O_CREAT | O_EXCL;
-  } else if (read) {
-    oflag |= O_RDONLY;
-
-#ifndef _WIN32
-    if (options & eOpenOptionDontFollowSymlinks)
-      oflag |= O_NOFOLLOW;
-#endif
-  }
-
-#ifndef _WIN32
-  if (options & eOpenOptionNonBlocking)
-    oflag |= O_NONBLOCK;
-  if (options & eOpenOptionCloseOnExec)
-    oflag |= O_CLOEXEC;
-#else
-  oflag |= O_BINARY;
-#endif
-
-  mode_t mode = 0;
-  if (oflag & O_CREAT) {
-    if (permissions & lldb::eFilePermissionsUserRead)
-      mode |= S_IRUSR;
-    if (permissions & lldb::eFilePermissionsUserWrite)
-      mode |= S_IWUSR;
-    if (permissions & lldb::eFilePermissionsUserExecute)
-      mode |= S_IXUSR;
-    if (permissions & lldb::eFilePermissionsGroupRead)
-      mode |= S_IRGRP;
-    if (permissions & lldb::eFilePermissionsGroupWrite)
-      mode |= S_IWGRP;
-    if (permissions & lldb::eFilePermissionsGroupExecute)
-      mode |= S_IXGRP;
-    if (permissions & lldb::eFilePermissionsWorldRead)
-      mode |= S_IROTH;
-    if (permissions & lldb::eFilePermissionsWorldWrite)
-      mode |= S_IWOTH;
-    if (permissions & lldb::eFilePermissionsWorldExecute)
-      mode |= S_IXOTH;
-  }
-
-  m_descriptor = llvm::sys::RetryAfterSignal(-1, DoOpen, path, oflag, mode);
-  if (!DescriptorIsValid())
-    error.SetErrorToErrno();
-  else {
-    m_should_close_fd = true;
-    m_options = options;
-  }
-
-  return error;
 }
 
 uint32_t File::GetPermissions(Status &error) const {

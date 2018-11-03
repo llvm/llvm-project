@@ -37,8 +37,9 @@ namespace {
 bool GetTripleForProcess(const FileSpec &executable, llvm::Triple &triple) {
   // Open the PE File as a binary file, and parse just enough information to
   // determine the machine type.
-  File imageBinary(executable.GetPath().c_str(), File::eOpenOptionRead,
-                   lldb::eFilePermissionsUserRead);
+  File imageBinary;
+  FileSystem::Instance().Open(imageBinary, executable, File::eOpenOptionRead,
+                              lldb::eFilePermissionsUserRead);
   imageBinary.SeekFromStart(0x3c);
   int32_t peOffset = 0;
   uint32_t peHead = 0;

@@ -1,4 +1,4 @@
-REQUIRES: windows
+REQUIRES: system-windows
 RUN: clang-cl /Zi %S/Inputs/VariablesLocationsTest.cpp /o %t.exe
 RUN: %lldb -b -s %S/Inputs/VariablesLocationsTest.script -- %t.exe | FileCheck %s
 

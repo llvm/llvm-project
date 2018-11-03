@@ -10,6 +10,7 @@
 #ifndef liblldb_Host_FileSystem_h
 #define liblldb_Host_FileSystem_h
 
+#include "lldb/Host/File.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 
@@ -48,6 +49,9 @@ public:
 
   /// Wraps ::open in a platform-independent way.
   int Open(const char *path, int flags, int mode);
+
+  Status Open(File &File, const FileSpec &file_spec, uint32_t options,
+              uint32_t permissions = lldb::eFilePermissionsFileDefault);
 
   /// Returns the modification time of the given file.
   /// @{

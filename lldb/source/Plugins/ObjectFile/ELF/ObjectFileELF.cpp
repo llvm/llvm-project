@@ -2887,6 +2887,8 @@ Symtab *ObjectFileELF::GetSymtab() {
     // do the section lookup next time.
     if (m_symtab_ap == nullptr)
       m_symtab_ap.reset(new Symtab(this));
+
+    m_symtab_ap->CalculateSymbolSizes();
   }
 
   return m_symtab_ap.get();
