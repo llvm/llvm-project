@@ -29,7 +29,6 @@
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Host/common/NativeBreakpoint.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/linux/Ptrace.h"
 #include "lldb/Host/linux/Uio.h"

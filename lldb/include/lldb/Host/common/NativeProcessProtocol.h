@@ -25,6 +25,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <mutex>
+#include <unordered_map>
 #include <vector>
 
 namespace lldb_private {
@@ -35,8 +37,6 @@ class ResumeActionList;
 // NativeProcessProtocol
 //------------------------------------------------------------------
 class NativeProcessProtocol {
-  friend class SoftwareBreakpoint;
-
 public:
   virtual ~NativeProcessProtocol() {}
 
@@ -110,10 +110,6 @@ public:
                                bool hardware) = 0;
 
   virtual Status RemoveBreakpoint(lldb::addr_t addr, bool hardware = false);
-
-  virtual Status EnableBreakpoint(lldb::addr_t addr);
-
-  virtual Status DisableBreakpoint(lldb::addr_t addr);
 
   //----------------------------------------------------------------------
   // Hardware Breakpoint functions
@@ -402,6 +398,13 @@ public:
   }
 
 protected:
+  struct SoftwareBreakpoint {
+    uint32_t ref_count;
+    llvm::SmallVector<uint8_t, 4> saved_opcodes;
+    llvm::ArrayRef<uint8_t> breakpoint_opcodes;
+  };
+
+  std::unordered_map<lldb::addr_t, SoftwareBreakpoint> m_software_breakpoints;
   lldb::pid_t m_pid;
 
   std::vector<std::unique_ptr<NativeThreadProtocol>> m_threads;
@@ -415,7 +418,6 @@ protected:
 
   std::recursive_mutex m_delegates_mutex;
   std::vector<NativeDelegate *> m_delegates;
-  NativeBreakpointList m_breakpoint_list;
   NativeWatchpointList m_watchpoint_list;
   HardwareBreakpointMap m_hw_breakpoints_map;
   int m_terminal_fd;
@@ -446,7 +448,9 @@ protected:
   // ----------------------------------------------------------- Internal
   // interface for software breakpoints
   // -----------------------------------------------------------
+
   Status SetSoftwareBreakpoint(lldb::addr_t addr, uint32_t size_hint);
+  Status RemoveSoftwareBreakpoint(lldb::addr_t addr);
 
   virtual llvm::Expected<llvm::ArrayRef<uint8_t>>
   GetSoftwareBreakpointTrapOpcode(size_t size_hint);
@@ -474,6 +478,8 @@ protected:
 
 private:
   void SynchronouslyNotifyProcessStateChanged(lldb::StateType state);
+  llvm::Expected<SoftwareBreakpoint>
+  EnableSoftwareBreakpoint(lldb::addr_t addr, uint32_t size_hint);
 };
 } // namespace lldb_private
 
