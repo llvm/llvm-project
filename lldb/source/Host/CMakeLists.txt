@@ -28,8 +28,6 @@ add_host_subdirectory(common
   common/LockFileBase.cpp
   common/MainLoop.cpp
   common/MonitoringProcessLauncher.cpp
-  common/NativeBreakpoint.cpp
-  common/NativeBreakpointList.cpp
   common/NativeWatchpointList.cpp
   common/NativeProcessProtocol.cpp
   common/NativeRegisterContext.cpp
@@ -40,7 +38,6 @@ add_host_subdirectory(common
   common/PseudoTerminal.cpp
   common/Socket.cpp
   common/SocketAddress.cpp
-  common/SoftwareBreakpoint.cpp
   common/StringConvert.cpp
   common/Symbols.cpp
   common/TaskPool.cpp

@@ -11,7 +11,6 @@
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
-#include "lldb/Host/common/SoftwareBreakpoint.h"
 
 using namespace lldb;
 using namespace lldb_private;
