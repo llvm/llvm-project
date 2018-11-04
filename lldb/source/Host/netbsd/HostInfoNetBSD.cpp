@@ -85,7 +85,7 @@ FileSpec HostInfoNetBSD::GetProgramFileSpec() {
 
     len = sizeof(path);
     if (sysctl(name, __arraycount(name), path, &len, NULL, 0) != -1) {
-      g_program_filespec.SetFile(path, false, FileSpec::Style::native);
+      g_program_filespec.SetFile(path, FileSpec::Style::native);
     }
   }
   return g_program_filespec;

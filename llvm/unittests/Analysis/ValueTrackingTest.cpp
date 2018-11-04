@@ -156,8 +156,8 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero1) {
       "  %A = select i1 %1, float 0.0, float %a\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMINNUM, SPNB_RETURNS_NAN, true});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero2) {
@@ -167,8 +167,8 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero2) {
       "  %A = select i1 %1, float 0.0, float %a\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMINNUM, SPNB_RETURNS_NAN, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero3) {
@@ -178,8 +178,8 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero3) {
       "  %A = select i1 %1, float -0.0, float %a\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMINNUM, SPNB_RETURNS_NAN, true});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero4) {
@@ -189,8 +189,8 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero4) {
       "  %A = select i1 %1, float -0.0, float %a\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMINNUM, SPNB_RETURNS_NAN, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero5) {
@@ -200,8 +200,8 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero5) {
       "  %A = select i1 %1, float %a, float 0.0\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero6) {
@@ -211,8 +211,8 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero6) {
       "  %A = select i1 %1, float %a, float 0.0\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, true});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero7) {
@@ -222,8 +222,8 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero7) {
       "  %A = select i1 %1, float %a, float -0.0\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero8) {
@@ -233,8 +233,8 @@ TEST_F(MatchSelectPatternTest, FMinMismatchConstantZero8) {
       "  %A = select i1 %1, float %a, float -0.0\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMINNUM, SPNB_RETURNS_OTHER, true});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero1) {
@@ -244,8 +244,8 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero1) {
       "  %A = select i1 %1, float 0.0, float %a\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_NAN, true});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero2) {
@@ -255,8 +255,8 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero2) {
       "  %A = select i1 %1, float 0.0, float %a\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_NAN, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero3) {
@@ -266,8 +266,8 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero3) {
       "  %A = select i1 %1, float -0.0, float %a\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_NAN, true});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero4) {
@@ -277,8 +277,8 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero4) {
       "  %A = select i1 %1, float -0.0, float %a\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_NAN, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero5) {
@@ -288,8 +288,8 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero5) {
       "  %A = select i1 %1, float %a, float 0.0\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_OTHER, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero6) {
@@ -299,8 +299,8 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero6) {
       "  %A = select i1 %1, float %a, float 0.0\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_OTHER, true});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero7) {
@@ -310,8 +310,8 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero7) {
       "  %A = select i1 %1, float %a, float -0.0\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
-  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_OTHER, false});
 }
 
 TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero8) {
@@ -321,7 +321,29 @@ TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZero8) {
       "  %A = select i1 %1, float %a, float -0.0\n"
       "  ret float %A\n"
       "}\n");
-  // FIXME: The sign of zero doesn't matter in fcmp.
+  // The sign of zero doesn't matter in fcmp.
+  expectPattern({SPF_FMAXNUM, SPNB_RETURNS_OTHER, true});
+}
+
+TEST_F(MatchSelectPatternTest, FMinMismatchConstantZeroVecUndef) {
+  parseAssembly(
+      "define <2 x float> @test(<2 x float> %a) {\n"
+      "  %1 = fcmp ogt <2 x float> %a, <float -0.0, float -0.0>\n"
+      "  %A = select <2 x i1> %1, <2 x float> <float undef, float 0.0>, <2 x float> %a\n"
+      "  ret <2 x float> %A\n"
+      "}\n");
+  // An undef in a vector constant can not be back-propagated for this analysis.
+  expectPattern({SPF_UNKNOWN, SPNB_NA, false});
+}
+
+TEST_F(MatchSelectPatternTest, FMaxMismatchConstantZeroVecUndef) {
+  parseAssembly(
+      "define <2 x float> @test(<2 x float> %a) {\n"
+      "  %1 = fcmp ogt <2 x float> %a, zeroinitializer\n"
+      "  %A = select <2 x i1> %1, <2 x float> %a, <2 x float> <float -0.0, float undef>\n"
+      "  ret <2 x float> %A\n"
+      "}\n");
+  // An undef in a vector constant can not be back-propagated for this analysis.
   expectPattern({SPF_UNKNOWN, SPNB_NA, false});
 }
 

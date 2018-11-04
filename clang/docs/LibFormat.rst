@@ -45,7 +45,7 @@ two style guides are hard-coded:
 .. code-block:: c++
 
   /// Returns a format style complying with the LLVM coding standards:
-  /// http://llvm.org/docs/CodingStandards.html.
+  /// https://llvm.org/docs/CodingStandards.html.
   FormatStyle getLLVMStyle();
 
   /// Returns a format style complying with Google's C++ style guide:

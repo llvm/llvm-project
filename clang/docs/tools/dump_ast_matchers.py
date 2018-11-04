@@ -38,7 +38,7 @@ def esc(text):
   text = re.sub(r'>', '&gt;', text)
   def link_if_exists(m):
     name = m.group(1)
-    url = 'http://clang.llvm.org/doxygen/classclang_1_1%s.html' % name
+    url = 'https://clang.llvm.org/doxygen/classclang_1_1%s.html' % name
     if url not in doxygen_probes:
       try:
         print 'Probing %s...' % url
