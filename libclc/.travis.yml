@@ -28,7 +28,7 @@ matrix:
         - LABEL="make gcc LLVM-4.0"
         - LLVM_VERSION=4.0
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
-        - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
+        - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
           sources:
@@ -43,7 +43,7 @@ matrix:
         - LABEL="make gcc LLVM-5.0"
         - LLVM_VERSION=5.0
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
-        - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
+        - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
       addons:
         apt:
           sources:
@@ -58,7 +58,7 @@ matrix:
         - LABEL="make gcc LLVM-6.0"
         - LLVM_VERSION=6.0
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
-        - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
+        - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
         # llvm passes -Werror=date-time which is only supported in gcc-4.9+
         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
       addons:
@@ -77,7 +77,7 @@ matrix:
         - LABEL="make gcc LLVM-7"
         - LLVM_VERSION=7
         - LLVM_CONFIG="llvm-config-${LLVM_VERSION}"
-        - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
+        - CHECK_FILES="barts-r600--.bc cayman-r600--.bc cedar-r600--.bc cypress-r600--.bc tahiti-amdgcn--.bc amdgcn--amdhsa.bc tahiti-amdgcn-mesa-mesa3d.bc nvptx--nvidiacl.bc nvptx64--nvidiacl.bc"
         # llvm passes -Werror=date-time which is only supported in gcc-4.9+
         - MATRIX_EVAL="CC=gcc-4.9 && CXX=g++-4.9"
       addons:
