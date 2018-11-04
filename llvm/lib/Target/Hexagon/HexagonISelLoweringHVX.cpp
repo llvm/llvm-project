@@ -1426,7 +1426,8 @@ SDValue
 HexagonTargetLowering::LowerHvxExtend(SDValue Op, SelectionDAG &DAG) const {
   // Sign- and zero-extends are legal.
   assert(Op.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG);
-  return DAG.getZeroExtendVectorInReg(Op.getOperand(0), SDLoc(Op), ty(Op));
+  return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(Op), ty(Op),
+                     Op.getOperand(0));
 }
 
 SDValue

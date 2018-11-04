@@ -5453,8 +5453,9 @@ static SDValue getExtendInVec(unsigned Opc, const SDLoc &DL, EVT VT, SDValue In,
   assert((X86ISD::VSEXT == Opc || X86ISD::VZEXT == Opc) && "Unexpected opcode");
 
   if (VT.is128BitVector() && InVT.is128BitVector())
-    return X86ISD::VSEXT == Opc ? DAG.getSignExtendVectorInReg(In, DL, VT)
-                                : DAG.getZeroExtendVectorInReg(In, DL, VT);
+    return DAG.getNode(X86ISD::VSEXT == Opc ? ISD::SIGN_EXTEND_VECTOR_INREG
+                                            : ISD::ZERO_EXTEND_VECTOR_INREG,
+                       DL, VT, In);
 
   // For 256-bit vectors, we only need the lower (128-bit) input half.
   // For 512-bit vectors, we only need the lower input half or quarter.
@@ -17459,7 +17460,7 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
   MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(),
                                 VT.getVectorNumElements() / 2);
 
-  SDValue OpLo = DAG.getZeroExtendVectorInReg(In, dl, HalfVT);
+  SDValue OpLo = DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, dl, HalfVT, In);
 
   SDValue ZeroVec = DAG.getConstant(0, dl, InVT);
   SDValue Undef = DAG.getUNDEF(InVT);
@@ -19884,7 +19885,7 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
   MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(),
                                 VT.getVectorNumElements() / 2);
 
-  SDValue OpLo = DAG.getSignExtendVectorInReg(In, dl, HalfVT);
+  SDValue OpLo = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, HalfVT, In);
 
   unsigned NumElems = InVT.getVectorNumElements();
   SmallVector<int,8> ShufMask(NumElems, -1);
@@ -19892,7 +19893,7 @@ static SDValue LowerSIGN_EXTEND(SDValue Op, const X86Subtarget &Subtarget,
     ShufMask[i] = i + NumElems/2;
 
   SDValue OpHi = DAG.getVectorShuffle(InVT, dl, In, In, ShufMask);
-  OpHi = DAG.getSignExtendVectorInReg(OpHi, dl, HalfVT);
+  OpHi = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, HalfVT, OpHi);
 
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, OpLo, OpHi);
 }
@@ -20138,7 +20139,8 @@ static SDValue LowerLoad(SDValue Op, const X86Subtarget &Subtarget,
     assert(TLI.isOperationLegalOrCustom(ISD::SIGN_EXTEND_VECTOR_INREG, RegVT) &&
            "We can't implement a sext load without SIGN_EXTEND_VECTOR_INREG!");
 
-    SDValue Shuff = DAG.getSignExtendVectorInReg(SlicedVec, dl, RegVT);
+    SDValue Shuff = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, RegVT,
+                                SlicedVec);
     return DAG.getMergeValues({Shuff, TF}, dl);
   }
 
@@ -20823,7 +20825,8 @@ static SDValue getTargetVShiftNode(unsigned Opc, const SDLoc &dl, MVT VT,
     MVT AmtTy = ShAmt.getSimpleValueType() == MVT::i8 ? MVT::v16i8 : MVT::v8i16;
     ShAmt = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(ShAmt), AmtTy, ShAmt);
     if (Subtarget.hasSSE41())
-      ShAmt = DAG.getZeroExtendVectorInReg(ShAmt, SDLoc(ShAmt), MVT::v2i64);
+      ShAmt = DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(ShAmt),
+                          MVT::v2i64, ShAmt);
     else {
       SDValue ByteShift = DAG.getConstant(
           (128 - AmtTy.getScalarSizeInBits()) / 8, SDLoc(ShAmt), MVT::i8);
@@ -20836,7 +20839,8 @@ static SDValue getTargetVShiftNode(unsigned Opc, const SDLoc &dl, MVT VT,
   } else if (Subtarget.hasSSE41() &&
              ShAmt.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     ShAmt = DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(ShAmt), MVT::v4i32, ShAmt);
-    ShAmt = DAG.getZeroExtendVectorInReg(ShAmt, SDLoc(ShAmt), MVT::v2i64);
+    ShAmt = DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, SDLoc(ShAmt),
+                        MVT::v2i64, ShAmt);
   } else {
     SDValue ShOps[4] = {ShAmt, DAG.getConstant(0, dl, SVT), DAG.getUNDEF(SVT),
                         DAG.getUNDEF(SVT)};
@@ -38312,8 +38316,8 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
   if (InSVT != MVT::i32 && InSVT != MVT::i16 && InSVT != MVT::i8)
     return SDValue();
 
-  // On AVX2+ targets, if the input/output types are both legal then we will be
-  // able to use SIGN_EXTEND/ZERO_EXTEND directly.
+  // If the input/output types are both legal then we have at least AVX1 and
+  // we will be able to use SIGN_EXTEND/ZERO_EXTEND directly.
   if (DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
       DAG.getTargetLoweringInfo().isTypeLegal(InVT))
     return SDValue();
@@ -38349,9 +38353,9 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
       (VT.is256BitVector() && Subtarget.hasAVX()) ||
       (VT.is512BitVector() && Subtarget.useAVX512Regs())) {
     SDValue ExOp = ExtendVecSize(DL, N0, VT.getSizeInBits());
-    return Opcode == ISD::SIGN_EXTEND
-               ? DAG.getSignExtendVectorInReg(ExOp, DL, VT)
-               : DAG.getZeroExtendVectorInReg(ExOp, DL, VT);
+    Opcode = Opcode == ISD::SIGN_EXTEND ? ISD::SIGN_EXTEND_VECTOR_INREG
+                                        : ISD::ZERO_EXTEND_VECTOR_INREG;
+    return DAG.getNode(Opcode, DL, VT, ExOp);
   }
 
   auto SplitAndExtendInReg = [&](unsigned SplitSize) {
@@ -38360,14 +38364,15 @@ static SDValue combineToExtendVectorInReg(SDNode *N, SelectionDAG &DAG,
     EVT SubVT = EVT::getVectorVT(*DAG.getContext(), SVT, NumSubElts);
     EVT InSubVT = EVT::getVectorVT(*DAG.getContext(), InSVT, NumSubElts);
 
+    unsigned IROpc = Opcode == ISD::SIGN_EXTEND ? ISD::SIGN_EXTEND_VECTOR_INREG
+                                                : ISD::ZERO_EXTEND_VECTOR_INREG;
+
     SmallVector<SDValue, 8> Opnds;
     for (unsigned i = 0, Offset = 0; i != NumVecs; ++i, Offset += NumSubElts) {
       SDValue SrcVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, InSubVT, N0,
                                    DAG.getIntPtrConstant(Offset, DL));
       SrcVec = ExtendVecSize(DL, SrcVec, SplitSize);
-      SrcVec = Opcode == ISD::SIGN_EXTEND
-                   ? DAG.getSignExtendVectorInReg(SrcVec, DL, SubVT)
-                   : DAG.getZeroExtendVectorInReg(SrcVec, DL, SubVT);
+      SrcVec = DAG.getNode(IROpc, DL, SubVT, SrcVec);
       Opnds.push_back(SrcVec);
     }
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Opnds);
