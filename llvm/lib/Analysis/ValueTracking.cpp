@@ -4760,6 +4760,27 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
                                               Value *TrueVal, Value *FalseVal,
                                               Value *&LHS, Value *&RHS,
                                               unsigned Depth) {
+  if (CmpInst::isFPPredicate(Pred)) {
+    // IEEE-754 ignores the sign of 0.0 in comparisons. So if the select has one
+    // 0.0 operand, set the compare's 0.0 operands to that same value for the
+    // purpose of identifying min/max. Disregard vector constants with undefined
+    // elements because those can not be back-propagated for analysis.
+    Value *OutputZeroVal = nullptr;
+    if (match(TrueVal, m_AnyZeroFP()) && !match(FalseVal, m_AnyZeroFP()) &&
+        !cast<Constant>(TrueVal)->containsUndefElement())
+      OutputZeroVal = TrueVal;
+    else if (match(FalseVal, m_AnyZeroFP()) && !match(TrueVal, m_AnyZeroFP()) &&
+             !cast<Constant>(FalseVal)->containsUndefElement())
+      OutputZeroVal = FalseVal;
+
+    if (OutputZeroVal) {
+      if (match(CmpLHS, m_AnyZeroFP()))
+        CmpLHS = OutputZeroVal;
+      if (match(CmpRHS, m_AnyZeroFP()))
+        CmpRHS = OutputZeroVal;
+    }
+  }
+
   LHS = CmpLHS;
   RHS = CmpRHS;
 

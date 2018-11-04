@@ -523,8 +523,6 @@
 		3F81691A1ABA2419001DA9DF /* NameMatches.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3F8169181ABA2419001DA9DF /* NameMatches.cpp */; };
 		9A3D43D81F3151C400EB767C /* NameMatchesTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A3D43CB1F3150D200EB767C /* NameMatchesTest.cpp */; };
 		268900C913353E5F00698AC0 /* NameToDIE.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2618D9EA12406FE600F2B8FE /* NameToDIE.cpp */; };
-		232CB615191E00CD00EF39FC /* NativeBreakpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 232CB60B191E00CC00EF39FC /* NativeBreakpoint.cpp */; };
-		232CB617191E00CD00EF39FC /* NativeBreakpointList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 232CB60D191E00CC00EF39FC /* NativeBreakpointList.cpp */; };
 		232CB619191E00CD00EF39FC /* NativeProcessProtocol.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 232CB60F191E00CC00EF39FC /* NativeProcessProtocol.cpp */; };
 		267A47FB1B1411C40021A5BC /* NativeRegisterContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 267A47FA1B1411C40021A5BC /* NativeRegisterContext.cpp */; };
 		23F4034D1926E0F60046DC9B /* NativeRegisterContextRegisterInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23F403481926CC250046DC9B /* NativeRegisterContextRegisterInfo.cpp */; };
@@ -870,7 +868,6 @@
 		26D7E45D13D5E30A007FD12B /* SocketAddress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26D7E45C13D5E30A007FD12B /* SocketAddress.cpp */; };
 		23CB15451D66DA9300EDDDE1 /* SocketAddressTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */; };
 		23CB153B1D66DA9300EDDDE1 /* SocketTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F93A1BDD332400BA9A93 /* SocketTest.cpp */; };
-		232CB61D191E00CD00EF39FC /* SoftwareBreakpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 232CB613191E00CC00EF39FC /* SoftwareBreakpoint.cpp */; };
 		26603879211CA90F00329572 /* SourceBreakpoint.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26603870211CA90D00329572 /* SourceBreakpoint.cpp */; };
 		2689004C13353E0400698AC0 /* SourceManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E8F10F1B85900F91463 /* SourceManager.cpp */; };
 		268900F313353E6F00698AC0 /* StackFrame.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F3810F1B90C00F91463 /* StackFrame.cpp */; };
@@ -2299,9 +2296,6 @@
 		9A3D43CB1F3150D200EB767C /* NameMatchesTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NameMatchesTest.cpp; sourceTree = "<group>"; };
 		2618D9EA12406FE600F2B8FE /* NameToDIE.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = NameToDIE.cpp; sourceTree = "<group>"; };
 		2618D957124056C700F2B8FE /* NameToDIE.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = NameToDIE.h; sourceTree = "<group>"; };
-		232CB60B191E00CC00EF39FC /* NativeBreakpoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NativeBreakpoint.cpp; path = source/Host/common/NativeBreakpoint.cpp; sourceTree = "<group>"; };
-		267A47F31B14116E0021A5BC /* NativeBreakpoint.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = NativeBreakpoint.h; path = include/lldb/Host/common/NativeBreakpoint.h; sourceTree = "<group>"; };
-		232CB60D191E00CC00EF39FC /* NativeBreakpointList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NativeBreakpointList.cpp; path = source/Host/common/NativeBreakpointList.cpp; sourceTree = "<group>"; };
 		267A47F41B1411750021A5BC /* NativeBreakpointList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = NativeBreakpointList.h; path = include/lldb/Host/common/NativeBreakpointList.h; sourceTree = "<group>"; };
 		232CB60F191E00CC00EF39FC /* NativeProcessProtocol.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = NativeProcessProtocol.cpp; path = source/Host/common/NativeProcessProtocol.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		267A47F51B14117F0021A5BC /* NativeProcessProtocol.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = NativeProcessProtocol.h; path = include/lldb/Host/common/NativeProcessProtocol.h; sourceTree = "<group>"; };
@@ -2925,8 +2919,6 @@
 		26D7E45B13D5E2F9007FD12B /* SocketAddress.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SocketAddress.h; path = include/lldb/Host/SocketAddress.h; sourceTree = "<group>"; };
 		2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SocketAddressTest.cpp; sourceTree = "<group>"; };
 		2321F93A1BDD332400BA9A93 /* SocketTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = SocketTest.cpp; sourceTree = "<group>"; };
-		232CB613191E00CC00EF39FC /* SoftwareBreakpoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SoftwareBreakpoint.cpp; path = source/Host/common/SoftwareBreakpoint.cpp; sourceTree = "<group>"; };
-		267A47F21B14115A0021A5BC /* SoftwareBreakpoint.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SoftwareBreakpoint.h; path = include/lldb/Host/common/SoftwareBreakpoint.h; sourceTree = "<group>"; };
 		26603870211CA90D00329572 /* SourceBreakpoint.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SourceBreakpoint.cpp; path = "tools/lldb-vscode/SourceBreakpoint.cpp"; sourceTree = "<group>"; };
 		2660386D211CA90C00329572 /* SourceBreakpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SourceBreakpoint.h; path = "tools/lldb-vscode/SourceBreakpoint.h"; sourceTree = "<group>"; };
 		26BC7E8F10F1B85900F91463 /* SourceManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SourceManager.cpp; path = source/Core/SourceManager.cpp; sourceTree = "<group>"; };
@@ -5486,10 +5478,7 @@
 				3FDFED2119BA6D55009756A7 /* HostNativeThreadBase.h */,
 				3FDFE57419AFABFD009756A7 /* HostProcess.h */,
 				3FDFE57519AFABFD009756A7 /* HostThread.h */,
-				267A47F31B14116E0021A5BC /* NativeBreakpoint.h */,
-				232CB60B191E00CC00EF39FC /* NativeBreakpoint.cpp */,
 				267A47F41B1411750021A5BC /* NativeBreakpointList.h */,
-				232CB60D191E00CC00EF39FC /* NativeBreakpointList.cpp */,
 				267A47F51B14117F0021A5BC /* NativeProcessProtocol.h */,
 				232CB60F191E00CC00EF39FC /* NativeProcessProtocol.cpp */,
 				267A47F61B14118F0021A5BC /* NativeRegisterContext.h */,
@@ -5508,8 +5497,6 @@
 				236124A71986B50E004EFC37 /* Socket.h */,
 				26D7E45B13D5E2F9007FD12B /* SocketAddress.h */,
 				26D7E45C13D5E30A007FD12B /* SocketAddress.cpp */,
-				267A47F21B14115A0021A5BC /* SoftwareBreakpoint.h */,
-				232CB613191E00CC00EF39FC /* SoftwareBreakpoint.cpp */,
 				2689B0A4113EE3CD00A4AEDB /* Symbols.h */,
 				6DEC6F3A1BD66D950091ABA6 /* TaskPool.h */,
 				6DEC6F381BD66D750091ABA6 /* TaskPool.cpp */,
@@ -8277,11 +8264,9 @@
 				2689010113353E6F00698AC0 /* ThreadPlanStepOut.cpp in Sources */,
 				2689010213353E6F00698AC0 /* ThreadPlanStepOverBreakpoint.cpp in Sources */,
 				3FDFED2919BA6D96009756A7 /* ThreadLauncher.cpp in Sources */,
-				232CB617191E00CD00EF39FC /* NativeBreakpointList.cpp in Sources */,
 				4C719395207D235400FDF430 /* OptionArgParser.cpp in Sources */,
 				942829561A89614C00521B30 /* JSON.cpp in Sources */,
 				267F68531CC02E920086832B /* RegisterContextLinux_s390x.cpp in Sources */,
-				232CB615191E00CD00EF39FC /* NativeBreakpoint.cpp in Sources */,
 				2689010313353E6F00698AC0 /* ThreadPlanStepRange.cpp in Sources */,
 				2689010413353E6F00698AC0 /* ThreadPlanStepInRange.cpp in Sources */,
 				2689010513353E6F00698AC0 /* ThreadPlanStepOverRange.cpp in Sources */,
@@ -8369,7 +8354,6 @@
 				26F006561B4DD86700B872E5 /* DynamicLoaderWindowsDYLD.cpp in Sources */,
 				26DB3E1C1379E7AD0080DC73 /* ABIMacOSX_i386.cpp in Sources */,
 				26DB3E1F1379E7AD0080DC73 /* ABISysV_x86_64.cpp in Sources */,
-				232CB61D191E00CD00EF39FC /* SoftwareBreakpoint.cpp in Sources */,
 				26A69C5F137A17A500262477 /* RegisterValue.cpp in Sources */,
 				2690B3711381D5C300ECFBAE /* Memory.cpp in Sources */,
 				4C562CC71CC07DF700C52EAC /* PDBASTParser.cpp in Sources */,

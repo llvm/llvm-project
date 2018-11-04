@@ -31817,6 +31817,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
 bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     SDValue Op, const APInt &OriginalDemandedBits, KnownBits &Known,
     TargetLoweringOpt &TLO, unsigned Depth) const {
+  unsigned BitWidth = OriginalDemandedBits.getBitWidth();
   unsigned Opc = Op.getOpcode();
   switch(Opc) {
   case X86ISD::PMULDQ:
@@ -31831,6 +31832,42 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       return true;
     if (SimplifyDemandedBits(RHS, DemandedMask, KnownOp, TLO, Depth + 1))
       return true;
+    break;
+  }
+  case X86ISD::VSHLI: {
+    if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+      if (ShiftImm->getAPIntValue().uge(BitWidth))
+        break;
+
+      KnownBits KnownOp;
+      unsigned ShAmt = ShiftImm->getZExtValue();
+      APInt DemandedMask = OriginalDemandedBits.lshr(ShAmt);
+      if (SimplifyDemandedBits(Op.getOperand(0), DemandedMask, KnownOp, TLO,
+                               Depth + 1))
+        return true;
+    }
+    break;
+  }
+  case X86ISD::VSRAI:
+  case X86ISD::VSRLI: {
+    if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+      if (ShiftImm->getAPIntValue().uge(BitWidth))
+        break;
+
+      KnownBits KnownOp;
+      unsigned ShAmt = ShiftImm->getZExtValue();
+      APInt DemandedMask = OriginalDemandedBits << ShAmt;
+
+      // If any of the demanded bits are produced by the sign extension, we also
+      // demand the input sign bit.
+      if (Opc == X86ISD::VSRAI &&
+          OriginalDemandedBits.countLeadingZeros() < ShAmt)
+        DemandedMask.setSignBit();
+
+      if (SimplifyDemandedBits(Op.getOperand(0), DemandedMask, KnownOp, TLO,
+                               Depth + 1))
+        return true;
+    }
     break;
   }
   }
@@ -34860,6 +34897,11 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
     }
     return getConstVector(EltBits, UndefElts, VT.getSimpleVT(), DAG, SDLoc(N));
   }
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedBits(SDValue(N, 0),
+                               APInt::getAllOnesValue(NumBitsPerElt), DCI))
+    return SDValue(N, 0);
 
   return SDValue();
 }

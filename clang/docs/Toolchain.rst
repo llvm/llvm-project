@@ -121,7 +121,7 @@ Clang can be configured to use one of several different linkers:
 * MSVC's link.exe
 
 Link-time optimization is natively supported by lld, and supported via
-a `linker plugin <http://llvm.org/docs/GoldPlugin.html>`_ when using gold.
+a `linker plugin <https://llvm.org/docs/GoldPlugin.html>`_ when using gold.
 
 The default linker varies between targets, and can be overridden via the
 ``-fuse-ld=<linker name>`` flag.
@@ -233,7 +233,7 @@ LLVM's unwinder library can be obtained from subversion:
 
 .. code-block:: console
 
-  llvm-src$ svn co http://llvm.org/svn/llvm-project/libunwind/trunk projects/libunwind
+  llvm-src$ svn co https://llvm.org/svn/llvm-project/libunwind/trunk projects/libunwind
 
 When checked out into projects/libunwind within an LLVM checkout,
 it should be automatically picked up by the LLVM build system.

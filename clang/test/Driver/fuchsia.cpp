@@ -1,8 +1,10 @@
-// RUN: %clangxx %s -### -no-canonical-prefixes --target=x86_64-unknown-fuchsia \
+// RUN: %clangxx %s -### -no-canonical-prefixes --target=x86_64-fuchsia \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     --sysroot=%S/platform -fuse-ld=lld 2>&1 | FileCheck %s
 // CHECK: {{.*}}clang{{.*}}" "-cc1"
 // CHECK: "-triple" "x86_64-fuchsia"
 // CHECK: "-fuse-init-array"
+// CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-isystem" "{{.*[/\\]}}include{{/|\\\\}}c++{{/|\\\\}}v1"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
@@ -20,7 +22,7 @@
 // CHECK: "-lc++"
 // CHECK: "-lm"
 // CHECK: "--pop-state"
-// CHECK: "{{.*[/\\]}}libclang_rt.builtins-x86_64.a"
+// CHECK: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.builtins.a"
 // CHECK: "-lc"
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
