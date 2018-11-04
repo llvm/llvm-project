@@ -10,6 +10,7 @@
 // CHECK: "--mrelax-relocations"
 // CHECK: "-munwind-tables"
 // CHECK: "-fuse-init-array"
+// CHECK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK: "-internal-externc-isystem" "[[SYSROOT]]{{/|\\\\}}include"
 // CHECK: "-fsanitize=safe-stack"
@@ -25,8 +26,8 @@
 // CHECK-NOT: crti.o
 // CHECK-NOT: crtbegin.o
 // CHECK: "-L[[SYSROOT]]{{/|\\\\}}lib"
-// CHECK-X86_64: "{{.*[/\\]}}libclang_rt.builtins.a"
-// CHECK-AARCH64: "{{.*[/\\]}}libclang_rt.builtins.a"
+// CHECK-X86_64: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.builtins.a"
+// CHECK-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.builtins.a"
 // CHECK: "-lc"
 // CHECK-NOT: crtend.o
 // CHECK-NOT: crtn.o
@@ -57,8 +58,9 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SAFESTACK
+// CHECK-SAFESTACK: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SAFESTACK: "-fsanitize=safe-stack"
-// CHECK-SAFESTACK-NOT: "{{.*[/\\]}}libclang_rt.safestack.a"
+// CHECK-SAFESTACK-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.safestack.a"
 // CHECK-SAFESTACK-NOT: "__safestack_init"
 
 // RUN: %clang %s -### --target=x86_64-fuchsia \
@@ -94,52 +96,58 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-ASAN-SHARED
+// CHECK-ASAN-SHARED: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-ASAN-SHARED: "-fsanitize=address"
 // CHECK-ASAN-SHARED: "-fsanitize-address-globals-dead-stripping"
-// CHECK-ASAN-SHARED: "{{.*[/\\]}}libclang_rt.asan.so"
-// CHECK-ASAN-SHARED-NOT: "{{.*[/\\]}}libclang_rt.asan-preinit.a"
+// CHECK-ASAN-SHARED: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.asan.so"
+// CHECK-ASAN-SHARED-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.asan-preinit.a"
 
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=fuzzer 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FUZZER-X86
+// CHECK-FUZZER-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-FUZZER-X86: "-fsanitize=fuzzer,fuzzer-no-link,safe-stack"
-// CHECK-FUZZER-X86: "{{.*[/\\]}}libclang_rt.fuzzer.a"
+// CHECK-FUZZER-X86: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.fuzzer.a"
 
 // RUN: %clang %s -### --target=aarch64-fuchsia \
 // RUN:     -fsanitize=fuzzer 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-FUZZER-AARCH64
+// CHECK-FUZZER-AARCH64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-FUZZER-AARCH64: "-fsanitize=fuzzer,fuzzer-no-link,safe-stack"
-// CHECK-FUZZER-AARCH64: "{{.*[/\\]}}libclang_rt.fuzzer.a"
+// CHECK-FUZZER-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.fuzzer.a"
 
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=scudo 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-X86
+// CHECK-SCUDO-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SCUDO-X86: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-X86: "-pie"
-// CHECK-SCUDO-X86: "{{.*[/\\]}}libclang_rt.scudo.so"
+// CHECK-SCUDO-X86: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.scudo.so"
 
 // RUN: %clang %s -### --target=aarch64-fuchsia \
 // RUN:     -fsanitize=scudo 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-AARCH64
+// CHECK-SCUDO-AARCH64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SCUDO-AARCH64: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-AARCH64: "-pie"
-// CHECK-SCUDO-AARCH64: "{{.*[/\\]}}libclang_rt.scudo.so"
+// CHECK-SCUDO-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.scudo.so"
 
 // RUN: %clang %s -### --target=x86_64-fuchsia \
 // RUN:     -fsanitize=scudo -fPIC -shared 2>&1 \
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     -fuse-ld=lld \
 // RUN:     | FileCheck %s -check-prefix=CHECK-SCUDO-SHARED
+// CHECK-SCUDO-SHARED: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
 // CHECK-SCUDO-SHARED: "-fsanitize=safe-stack,scudo"
-// CHECK-SCUDO-SHARED: "{{.*[/\\]}}libclang_rt.scudo.so"
+// CHECK-SCUDO-SHARED: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.scudo.so"
 
 // RUN: %clang %s -### --target=aarch64-fuchsia \
 // RUN:     -O3 -flto -mcpu=cortex-a53 2>&1 \
