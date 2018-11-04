@@ -872,7 +872,7 @@ SDValue VectorLegalizer::ExpandSIGN_EXTEND_VECTOR_INREG(SDValue Op) {
 
   // First build an any-extend node which can be legalized above when we
   // recurse through it.
-  Op = DAG.getAnyExtendVectorInReg(Src, DL, VT);
+  Op = DAG.getNode(ISD::ANY_EXTEND_VECTOR_INREG, DL, VT, Src);
 
   // Now we need sign extend. Do this by shifting the elements. Even if these
   // aren't legal operations, they have a better chance of being legalized
