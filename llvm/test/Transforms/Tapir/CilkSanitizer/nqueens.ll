@@ -152,7 +152,7 @@ for.body:                                         ; preds = %for.inc, %for.body.
 ; CHECK-NOT: @__csi_after_alloca
 ; CHECK: @__csan_large_load
 ; CHECK-NEXT: call void @llvm.memcpy
-; CHECK: i8* %a
+; CHECK: i8*{{.*}} %a,
 ; CHECK-NOT: @__csan_store
 ; CHECK: store i8 %conv9, i8* %arrayidx
 ; CHECK: @__cilksan_disable_checking
@@ -348,7 +348,7 @@ attributes #9 = { nounwind readonly }
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = !{i32 1, !"wchar_size", i32 4}
 !13 = !{!"clang version 6.0.0 (git@github.com:wsmoses/Tapir-Clang.git 051bd478f93bf64db3934d14f97a36137bffef5e) (git@github.mit.edu:SuperTech/Tapir-CSI-llvm.git 9de43afffece94ca0534b391544bbfd246fc7b91)"}
-!14 = distinct !DISubprogram(name: "todval", scope: !1, file: !1, line: 12, type: !15, isLocal: false, isDefinition: true, scopeLine: 12, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !28)
+!14 = distinct !DISubprogram(name: "todval", scope: !1, file: !1, line: 12, type: !15, isLocal: false, isDefinition: true, scopeLine: 12, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !28)
 !15 = !DISubroutineType(types: !16)
 !16 = !{!17, !18}
 !17 = !DIBasicType(name: "long long unsigned int", size: 64, encoding: DW_ATE_unsigned)
@@ -376,7 +376,7 @@ attributes #9 = { nounwind readonly }
 !39 = !{!33, !34, i64 8}
 !40 = !DILocation(line: 13, column: 37, scope: !14)
 !41 = !DILocation(line: 14, column: 1, scope: !14)
-!42 = distinct !DISubprogram(name: "ok", scope: !1, file: !1, line: 37, type: !43, isLocal: false, isDefinition: true, scopeLine: 37, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !45)
+!42 = distinct !DISubprogram(name: "ok", scope: !1, file: !1, line: 37, type: !43, isLocal: false, isDefinition: true, scopeLine: 37, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !45)
 !43 = !DISubroutineType(types: !44)
 !44 = !{!5, !5, !6}
 !45 = !{!46, !47, !48, !49, !50, !51}
@@ -422,7 +422,7 @@ attributes #9 = { nounwind readonly }
 !85 = distinct !{!85, !58, !86}
 !86 = !DILocation(line: 49, column: 3, scope: !57)
 !87 = !DILocation(line: 52, column: 1, scope: !42)
-!88 = distinct !DISubprogram(name: "nqueens", scope: !1, file: !1, line: 54, type: !89, isLocal: false, isDefinition: true, scopeLine: 54, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !91)
+!88 = distinct !DISubprogram(name: "nqueens", scope: !1, file: !1, line: 54, type: !89, isLocal: false, isDefinition: true, scopeLine: 54, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !91)
 !89 = !DISubroutineType(types: !90)
 !90 = !{!5, !5, !5, !6}
 !91 = !{!92, !93, !94, !95, !96, !97, !98, !100}
@@ -481,7 +481,7 @@ attributes #9 = { nounwind readonly }
 !144 = distinct !{!144, !139, !145}
 !145 = !DILocation(line: 95, column: 3, scope: !101)
 !146 = !DILocation(line: 98, column: 1, scope: !88)
-!147 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 101, type: !148, isLocal: false, isDefinition: true, scopeLine: 101, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !150)
+!147 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 101, type: !148, isLocal: false, isDefinition: true, scopeLine: 101, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !150)
 !148 = !DISubroutineType(types: !149)
 !149 = !{!5, !5, !8}
 !150 = !{!151, !152, !153, !154, !155, !156, !157, !158}
@@ -540,7 +540,7 @@ attributes #9 = { nounwind readonly }
 !203 = !DILocation(line: 131, column: 5, scope: !204)
 !204 = distinct !DILexicalBlock(scope: !198, file: !1, line: 130, column: 10)
 !205 = !DILocation(line: 135, column: 1, scope: !147)
-!206 = distinct !DISubprogram(name: "atoi", scope: !207, file: !207, line: 361, type: !208, isLocal: false, isDefinition: true, scopeLine: 362, flags: DIFlagPrototyped, isOptimized: true, unit: !0, variables: !212)
+!206 = distinct !DISubprogram(name: "atoi", scope: !207, file: !207, line: 361, type: !208, isLocal: false, isDefinition: true, scopeLine: 362, flags: DIFlagPrototyped, isOptimized: true, unit: !0, retainedNodes: !212)
 !207 = !DIFile(filename: "/usr/include/stdlib.h", directory: "/data/compilers/tests/cilksan")
 !208 = !DISubroutineType(types: !209)
 !209 = !{!5, !210}

@@ -2800,13 +2800,11 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
   assert(VectorPH && "Invalid loop structure");
   assert(ExitBlock && "Must have an exit block");
 
-  BasicBlock *sync_split = nullptr;
+  BasicBlock *SyncSplit = nullptr;
   if (isa<SyncInst>(VectorPH->getTerminator())) {
-    sync_split = VectorPH->splitBasicBlockWithTerminator("vector.sync_split");
-    DT->splitBlock(sync_split);
-    //DT->changeImmediateDominator(LoopExitBlock, LoopBypassBlocks[0]);
-    DT->verifyDomTree();
-    VectorPH = sync_split;
+    SyncSplit = VectorPH->splitBasicBlockWithTerminator("vector.sync_split");
+    DT->splitBlock(SyncSplit);
+    VectorPH = SyncSplit;
   }
 
   // Some loops have a single integer induction variable, while other loops
@@ -2841,7 +2839,7 @@ BasicBlock *InnerLoopVectorizer::createVectorizedLoopSkeleton() {
     ParentLoop->addChildLoop(Lp);
     ParentLoop->addBasicBlockToLoop(ScalarPH, *LI);
     ParentLoop->addBasicBlockToLoop(MiddleBlock, *LI);
-    if (sync_split) ParentLoop->addBasicBlockToLoop(sync_split, *LI);
+    if (SyncSplit) ParentLoop->addBasicBlockToLoop(SyncSplit, *LI);
   } else {
     LI->addTopLevelLoop(Lp);
   }

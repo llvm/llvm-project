@@ -71,7 +71,8 @@ findTaskInputsOutputs(Task *T, ValueSet &Inputs, ValueSet &Outputs,
   }
 
   for (Spindle *S : depth_first<InTask<Spindle *>>(T->getEntrySpindle())) {
-    DEBUG(dbgs() << "Examining spindle for inputs/outputs: " << *S << "\n");
+    LLVM_DEBUG(dbgs() <<
+               "Examining spindle for inputs/outputs: " << *S << "\n");
     for (BasicBlock *BB : S->blocks()) {
       // Skip basic blocks that are successors of detached rethrows.  They're
       // dead anyway.
@@ -89,9 +90,10 @@ findTaskInputsOutputs(Task *T, ValueSet &Inputs, ValueSet &Outputs,
           // nodes for blocks not in this task.
           if (S->isSharedEH() && S->isEntry(BB))
             if (PHINode *PN = dyn_cast<PHINode>(&II)) {
-              DEBUG(dbgs() << "\tPHI node in shared-EH spindle: " << *PN << "\n");
+              LLVM_DEBUG(dbgs() <<
+                         "\tPHI node in shared-EH spindle: " << *PN << "\n");
               if (!T->simplyEncloses(PN->getIncomingBlock(*OI))) {
-                DEBUG(dbgs() << "skipping\n");
+                LLVM_DEBUG(dbgs() << "skipping\n");
                 continue;
               }
             }
@@ -132,12 +134,13 @@ llvm::findAllTaskInputs(Function &F, DominatorTree &DT, TaskInfo &TI) {
     // Skip the root task
     if (T->isRootTask()) break;
 
-    DEBUG(dbgs() << "Finding inputs/outputs for task @ "
+    LLVM_DEBUG(dbgs() << "Finding inputs/outputs for task @ "
           << T->getEntry()->getName() << "\n");
     ValueSet Inputs, Outputs;
     // Check all inputs of subtasks to determine if they're inputs to this task.
     for (Task *SubT : T->subtasks()) {
-      DEBUG(dbgs() << "\tsubtask @ " << SubT->getEntry()->getName() << "\n");
+      LLVM_DEBUG(dbgs() <<
+                 "\tsubtask @ " << SubT->getEntry()->getName() << "\n");
 
       if (TaskInputs.count(SubT))
         for (Value *V : TaskInputs[SubT])
@@ -145,7 +148,7 @@ llvm::findAllTaskInputs(Function &F, DominatorTree &DT, TaskInfo &TI) {
             Inputs.insert(V);
     }
 
-    DEBUG({
+    LLVM_DEBUG({
         dbgs() << "Subtask Inputs:\n";
         for (Value *V : Inputs)
           dbgs() << "\t" << *V << "\n";
@@ -159,7 +162,7 @@ llvm::findAllTaskInputs(Function &F, DominatorTree &DT, TaskInfo &TI) {
     // not in any subtask of T.
     findTaskInputsOutputs(T, Inputs, Outputs, DT);
 
-    DEBUG({
+    LLVM_DEBUG({
         dbgs() << "Inputs:\n";
         for (Value *V : Inputs)
           dbgs() << "\t" << *V << "\n";
@@ -215,7 +218,7 @@ llvm::createTaskArgsStruct(ValueSet &Inputs, Task *T,
   // Create an alloca for this struct in the parent task's entry block.
   AllocaInst *Closure;
   StructType *ST = StructType::get(T->getEntry()->getContext(), StructIT);
-  DEBUG(dbgs() << "Closure struct type " << *ST << "\n");
+  LLVM_DEBUG(dbgs() << "Closure struct type " << *ST << "\n");
   {
     BasicBlock *AllocaInsertBlk = T->getParentTask()->getEntry();
     IRBuilder<> Builder(&*AllocaInsertBlk->getFirstInsertionPt());
@@ -279,7 +282,7 @@ Instruction *llvm::fixupHelperInputs(
     }
   }
   if (SRetInput) {
-    DEBUG(dbgs() << "sret input " << *SRetInput << "\n");
+    LLVM_DEBUG(dbgs() << "sret input " << *SRetInput << "\n");
     HelperArgs.insert(SRetInput);
   }
 
@@ -289,7 +292,7 @@ Instruction *llvm::fixupHelperInputs(
   for (Value *V : TaskInputs)
     if (V != SRetInput)
       InputsToSort.push_back(V);
-  DEBUG({
+  LLVM_DEBUG({
       dbgs() << "After sorting:\n";
       for (Value *V : InputsToSort)
         dbgs() << "\t" << *V << "\n";
@@ -374,7 +377,12 @@ Function *llvm::createHelperForTask(
 
   // Use a fast calling convention for the helper.
   Helper->setCallingConv(CallingConv::Fast);
+  // Inlining the helper function is not legal.
   Helper->addFnAttr(Attribute::NoInline);
+  // Note that the address of the helper is unimportant.
+  Helper->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
+  // The helper is private to this module.
+  Helper->setLinkage(GlobalValue::InternalLinkage);
 
   // Add alignment assumptions to arguments of helper, based on alignment of
   // values in old function.
@@ -548,7 +556,7 @@ ValueSet llvm::getTapirLoopInputs(TapirLoopInfo *TL, ValueSet &TaskInputs) {
         // If the operand is the sync region of this task's detach, skip it.
         if (SyncRegion == *OI)
           continue;
-        DEBUG({
+        LLVM_DEBUG({
             if (Instruction *OP = dyn_cast<Instruction>(*OI))
               assert(!T->encloses(OP->getParent()) &&
                      "Loop control uses value defined in body task.");
@@ -569,7 +577,7 @@ Instruction *llvm::replaceLoopWithCallToOutline(TapirLoopInfo *TL,
   // Remove any dependencies from the detach unwind of T code to T's parent.
   unlinkTaskEHFromParent(TL->getTask());
 
-  DEBUG({
+  LLVM_DEBUG({
       dbgs() << "Creating call with arguments:\n";
       for (Value *V : Out.OutlineInputs)
         dbgs() << "\t" << *V << "\n";
@@ -654,9 +662,9 @@ Function *llvm::extractDetachBodyToFunction(
   }
 
   // Check the detached task's predecessors.  Perform simple cleanup if need be.
-  DEBUG(dbgs() << "Function pieces:");
+  LLVM_DEBUG(dbgs() << "Function pieces:");
   for (BasicBlock *BB : FunctionPieces) {
-    DEBUG(dbgs() << *BB);
+    LLVM_DEBUG(dbgs() << *BB);
     if (ExitBlocks.count(BB)) continue;
     for (BasicBlock *Pred : predecessors(BB)) {
       if (Pred == Detach.getParent()) {
@@ -676,7 +684,7 @@ Function *llvm::extractDetachBodyToFunction(
         BB->removePredecessor(Pred);
 
       // There should be no other predecessor blocks of the detached task.
-      DEBUG({
+      LLVM_DEBUG({
           if (!(FunctionPieces.count(Pred) || !DT.isReachableFromEntry(Pred)))
             dbgs() << "Problem block found: " << *BB
                    << "reachable via " << *Pred;
@@ -689,7 +697,7 @@ Function *llvm::extractDetachBodyToFunction(
   // Get the inputs and outputs for the detached CFG.
   SetVector<Value *> BodyInputs, Outputs;
   findInputsOutputs(FunctionPieces, BodyInputs, Outputs, &ExitBlocks, &DT);
-  DEBUG({
+  LLVM_DEBUG({
       for (Value *V : Outputs)
         dbgs() << "EL output: " << *V << "\n";
     });
@@ -716,7 +724,7 @@ Function *llvm::extractDetachBodyToFunction(
       }
     }
     if (SRetInput) {
-      DEBUG(dbgs() << "sret input " << *SRetInput << "\n");
+      LLVM_DEBUG(dbgs() << "sret input " << *SRetInput << "\n");
       Inputs.insert(SRetInput);
       StructInputs.push_back(SRetInput);
       StructIT.push_back(SRetInput->getType());
@@ -734,7 +742,7 @@ Function *llvm::extractDetachBodyToFunction(
   SetVector<Value *> HelperInputs;
   if (StructTaskArgs) {
     StructType *ST = StructType::get(F.getContext(), StructIT);
-    DEBUG(dbgs() << "Closure struct type " << *ST << "\n");
+    LLVM_DEBUG(dbgs() << "Closure struct type " << *ST << "\n");
     {
       BasicBlock *AllocaInsertBlk = &F.getEntryBlock();
       IRBuilder<> Builder(&*AllocaInsertBlk->getFirstInsertionPt());

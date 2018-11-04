@@ -633,7 +633,8 @@ BranchInst *llvm::SerializeDetachedCFG(DetachInst *DI, DominatorTree *DT) {
         SingleReattacher = Pred;
       if (DT) {
         assert(DT->dominates(DetachEdge, Pred) &&
-               "Detach edge does not dominate a reattach into its continuation.");
+               "Detach edge does not dominate a reattach "
+               "into its continuation.");
       }
       Reattaches.push_back(cast<ReattachInst>(Pred->getTerminator()));
     }
@@ -768,7 +769,7 @@ void llvm::GetDetachedCFG(const DetachInst &DI, const DominatorTree &DT,
   SmallVector<BasicBlock *, 32> Todo;
   SmallVector<BasicBlock *, 4> WorkListEH;
 
-  DEBUG(dbgs() << "Finding CFG detached by " << DI << "\n");
+  LLVM_DEBUG(dbgs() << "Finding CFG detached by " << DI << "\n");
 
   BasicBlock *Detached = DI.getDetached();
   BasicBlock *Continue = DI.getContinue();
@@ -781,7 +782,7 @@ void llvm::GetDetachedCFG(const DetachInst &DI, const DominatorTree &DT,
 
     if (!TaskBlocks.insert(BB).second) continue;
 
-    DEBUG(dbgs() << "  Found block " << BB->getName() << "\n");
+    LLVM_DEBUG(dbgs() << "  Found block " << BB->getName() << "\n");
 
     TerminatorInst *Term = BB->getTerminator();
     if (nullptr == Term)
@@ -817,18 +818,20 @@ void llvm::GetDetachedCFG(const DetachInst &DI, const DominatorTree &DT,
       if (isDetachedRethrow(Term, SyncRegion)) {
         // A detached rethrow terminates this task and is included in the set of
         // exception-handling blocks that might not be unique to this task.
-        DEBUG(dbgs() << "  Exit block " << BB->getName() << "\n");
+        LLVM_DEBUG(dbgs() << "  Exit block " << BB->getName() << "\n");
         TaskReturns.insert(BB);
         EHBlocks.insert(BB);
       } else {
         for (BasicBlock *Succ : successors(BB)) {
           if (DT.dominates(DetachEdge, Succ)) {
-            DEBUG(dbgs() << "Adding successor " << Succ->getName() << "\n");
+            LLVM_DEBUG(dbgs() <<
+                       "Adding successor " << Succ->getName() << "\n");
             Todo.push_back(Succ);
           } else {
             // We assume that this block is an exception-handling block and save
             // it for later processing.
-            DEBUG(dbgs() << "  Exit block to search " << Succ->getName() << "\n");
+            LLVM_DEBUG(dbgs() <<
+                       "  Exit block to search " << Succ->getName() << "\n");
             EHBlocks.insert(Succ);
             WorkListEH.push_back(Succ);
           }
@@ -867,7 +870,7 @@ void llvm::GetDetachedCFG(const DetachInst &DI, const DominatorTree &DT,
 
       // Make sure that the control flow through these exception-handling blocks
       // doesn't reattach to the detached CFG's continuation.
-      DEBUG({
+      LLVM_DEBUG({
           if (ReattachInst *RI = dyn_cast<ReattachInst>(BB->getTerminator()))
             assert(RI->getSuccessor(0) != Continue &&
                    "Exit block reaches a reattach to the continuation.");
@@ -891,7 +894,7 @@ void llvm::GetDetachedCFG(const DetachInst &DI, const DominatorTree &DT,
       TaskBlocks.insert(EHBlock);
   }
 
-  DEBUG({
+  LLVM_DEBUG({
       dbgs() << "Exit blocks:";
       for (BasicBlock *Exit : EHBlocks) {
         if (DT.dominates(DetachEdge, Exit))
@@ -993,8 +996,8 @@ void llvm::TapirLoopHints::setHint(StringRef Name, Metadata *Arg) {
       if (H->validate(Val))
         H->Value = Val;
       else
-        DEBUG(dbgs() << "Tapir: ignoring invalid hint '" <<
-              Name << "'\n");
+        LLVM_DEBUG(dbgs() << "Tapir: ignoring invalid hint '" <<
+                   Name << "'\n");
       break;
     }
   }
@@ -1108,31 +1111,32 @@ Task *llvm::getTaskIfTapirLoop(const Loop *L, TaskInfo *TI) {
   const BasicBlock *Header = L->getHeader();
   const BasicBlock *Latch = L->getLoopLatch();
 
-  DEBUG(dbgs() << "Analyzing loop: " << *L);
+  LLVM_DEBUG(dbgs() << "Analyzing loop: " << *L);
 
   TapirLoopHints Hints(L);
 
-  DEBUG(dbgs() << "Loop hints:"
-               << " strategy = " << Hints.printStrategy(Hints.getStrategy())
-               << " grainsize = " << Hints.getGrainsize()
-               << "\n");
+  LLVM_DEBUG(dbgs() << "Loop hints:"
+             << " strategy = " << Hints.printStrategy(Hints.getStrategy())
+             << " grainsize = " << Hints.getGrainsize()
+             << "\n");
 
   // Header must be terminated by a detach.
   const DetachInst *DI = dyn_cast<DetachInst>(Header->getTerminator());
   if (!DI) {
-    DEBUG(dbgs() << "Loop header does not detach.\n");
+    LLVM_DEBUG(dbgs() << "Loop header does not detach.\n");
     return nullptr;
   }
 
   // Loop must have a unique latch.
   if (!Latch) {
-    DEBUG(dbgs() << "Loop does not have a unique latch.\n");
+    LLVM_DEBUG(dbgs() << "Loop does not have a unique latch.\n");
     return nullptr;
   }
 
   // The loop latch must be the continuation of the detach in the header.
   if (Latch != DI->getContinue()) {
-    DEBUG(dbgs() << "Continuation of detach in header is not the latch.\n");
+    LLVM_DEBUG(dbgs() <<
+               "Continuation of detach in header is not the latch.\n");
     return nullptr;
   }
 
@@ -1144,7 +1148,7 @@ Task *llvm::getTaskIfTapirLoop(const Loop *L, TaskInfo *TI) {
   for (const BasicBlock *Pred : predecessors(Latch)) {
     if (Header == Pred) continue;
     if (!T->encloses(Pred)) {
-      DEBUG(dbgs() << "Latch has predecessor outside of spawned body.\n");
+      LLVM_DEBUG(dbgs() << "Latch has predecessor outside of spawned body.\n");
       return nullptr;
     }
   }
@@ -1155,8 +1159,9 @@ Task *llvm::getTaskIfTapirLoop(const Loop *L, TaskInfo *TI) {
     for (const BasicBlock *ExitPred : predecessors(Exit)) {
       if (!L->contains(ExitPred)) continue;
       if (Header != ExitPred && Latch != ExitPred) {
-        DEBUG(dbgs() << "Loop branches to an exit of the latch from a block "
-              << "other than the header or latch.\n");
+        LLVM_DEBUG(dbgs() <<
+                   "Loop branches to an exit of the latch from a block " <<
+                   "other than the header or latch.\n");
         return nullptr;
       }
     }

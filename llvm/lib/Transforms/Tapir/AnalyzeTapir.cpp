@@ -103,7 +103,7 @@ struct IsSyncedState {
   // This method is called once per spindle during an initial DFS traversal of
   // the spindle graph.
   bool markDefiningSpindle(const Spindle *S) {
-    DEBUG(dbgs() << "markDefiningSpindle @ " << *S << "\n");
+    LLVM_DEBUG(dbgs() << "markDefiningSpindle @ " << *S << "\n");
     // Entry spindles, detach spindles, sync spindles, and continuation-Phi
     // spindles all define their sync state directly.  Other Phi spindles
     // determine their sync state based on their predecessors.
@@ -127,7 +127,7 @@ struct IsSyncedState {
   // This method is called once per unevaluated spindle in an inverse-post-order
   // walk of the spindle graph.
   bool evaluate(const Spindle *S, unsigned EvalNum) {
-    DEBUG(dbgs() << "evaluate @ " << *S << "\n");
+    LLVM_DEBUG(dbgs() << "evaluate @ " << *S << "\n");
 
     // if (!EvalNum && SyncedState.count(S)) return;
 
@@ -188,7 +188,7 @@ struct MaybeParallelTasks {
   // This method is called once per spindle during an initial DFS traversal of
   // the spindle graph.
   bool markDefiningSpindle(const Spindle *S) {
-    DEBUG(dbgs() << "markDefiningSpindle @ " << *S << "\n");
+    LLVM_DEBUG(dbgs() << "markDefiningSpindle @ " << *S << "\n");
     switch (S->getType()) {
       // Emplace empty task lists for Entry, Detach, and Sync spindles.
     case Spindle::SPType::Entry:
@@ -204,10 +204,10 @@ struct MaybeParallelTasks {
         // At task-continuation Phi's, initialize the task list with the
         // detached task that reattaches to this continuation.
         if (S->isTaskContinuation()) {
-          DEBUG(dbgs() << "TaskCont spindle " << *S << "\n");
+          LLVM_DEBUG(dbgs() << "TaskCont spindle " << *S << "\n");
           bool Complete = true;
           for (const Spindle *Pred : predecessors(S)) {
-            DEBUG(dbgs() << "pred spindle " << *Pred << "\n");
+            LLVM_DEBUG(dbgs() << "pred spindle " << *Pred << "\n");
             if (S->predInDifferentTask(Pred))
               TaskList[S].insert(Pred->getParentTask());
             // If we have a Phi predecessor of this spindle, we'll want to
@@ -215,7 +215,7 @@ struct MaybeParallelTasks {
             if (Pred->isPhi())
               Complete = false;
           }
-          DEBUG({
+          LLVM_DEBUG({
               for (const Task *MPT : TaskList[S])
                 dbgs() << "Added MPT " << MPT->getEntry()->getName() << "\n";
             });
@@ -230,7 +230,7 @@ struct MaybeParallelTasks {
   // This method is called once per unevaluated spindle in an inverse-post-order
   // walk of the spindle graph.
   bool evaluate(const Spindle *S, unsigned EvalNum) {
-    DEBUG(dbgs() << "evaluate @ " << *S << "\n");
+    LLVM_DEBUG(dbgs() << "evaluate @ " << *S << "\n");
     if (!TaskList.count(S))
       TaskList.try_emplace(S);
 
@@ -257,7 +257,7 @@ struct MaybeParallelTasks {
           Complete = false;
       }
     }
-    DEBUG({
+    LLVM_DEBUG({
         dbgs() << "New MPT list for " << *S << "(Complete? " << Complete << ")\n";
         for (const Task *MP : TaskList[S])
           dbgs() << "\t" << MP->getEntry()->getName() << "\n";
@@ -279,7 +279,7 @@ bool AnalyzeTapir::runOnFunction(Function &F) {
 
   // dbgs() << "Analyzing function " << F.getName() << "\n";
 
-  // DEBUG({
+  // LLVM_DEBUG({
   //     ReversePostOrderTraversal<Spindle *>
   //       RPOT(TI.getRootTask()->getEntrySpindle());
   //     // SmallPtrSet<Spindle *, 8> Visited;
@@ -316,7 +316,7 @@ bool AnalyzeTapir::runOnFunction(Function &F) {
   MaybeParallelTasks MPTasks;
   TI.evaluateParallelState<MaybeParallelTasks>(MPTasks);
   // DEBUGGING: Print out the non-empty may-parallel task lists.
-  DEBUG({
+  LLVM_DEBUG({
       for (const Task *T : depth_first(TI.getRootTask())) {
         // Skip tasks with no subtasks.
         if (T->isSerial()) continue;

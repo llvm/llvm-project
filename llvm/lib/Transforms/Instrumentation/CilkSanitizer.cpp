@@ -39,8 +39,8 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Transforms/CSI.h"
 #include "llvm/Transforms/Instrumentation.h"
+#include "llvm/Transforms/Instrumentation/CSI.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -723,7 +723,7 @@ bool CilkSanitizerImpl::run() {
   // Examine all functions in the module to find IR objects within each function
   // that require instrumentation.
   for (Function &F : M) {
-    DEBUG(dbgs() << "Preparing to instrument " << F.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Preparing to instrument " << F.getName() << "\n");
     prepareToInstrumentFunction(F);
   }
 
@@ -743,7 +743,7 @@ bool CilkSanitizerImpl::run() {
   // Insert the necessary instrumentation throughout each function in the
   // module.
   for (Function &F : M) {
-    DEBUG(dbgs() << "Instrumenting " << F.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "Instrumenting " << F.getName() << "\n");
     instrumentFunction(F, ToInstrumentByFunction[&F],
                        NoRaceCallsitesByFunction[&F]);
   }
@@ -1049,7 +1049,7 @@ struct MaybeParallelTasks {
   // This method is called once per spindle during an initial DFS traversal of
   // the spindle graph.
   bool markDefiningSpindle(const Spindle *S) {
-    DEBUG(dbgs() << "markDefiningSpindle @ " << *S << "\n");
+    LLVM_DEBUG(dbgs() << "markDefiningSpindle @ " << *S << "\n");
     switch (S->getType()) {
       // Emplace empty task lists for Entry, Detach, and Sync spindles.
     case Spindle::SPType::Entry:
@@ -1063,10 +1063,10 @@ struct MaybeParallelTasks {
         // At task-continuation Phi's, initialize the task list with the
         // detached task that reattaches to this continuation.
         if (S->isTaskContinuation()) {
-          DEBUG(dbgs() << "TaskCont spindle " << *S << "\n");
+          LLVM_DEBUG(dbgs() << "TaskCont spindle " << *S << "\n");
           bool Complete = true;
           for (const Spindle *Pred : predecessors(S)) {
-            DEBUG(dbgs() << "pred spindle " << *Pred << "\n");
+            LLVM_DEBUG(dbgs() << "pred spindle " << *Pred << "\n");
             if (S->predInDifferentTask(Pred))
               TaskList[S].insert(Pred->getParentTask());
             // If we have a Phi predecessor of this spindle, we'll want to
@@ -1074,7 +1074,7 @@ struct MaybeParallelTasks {
             if (Pred->isPhi())
               Complete = false;
           }
-          DEBUG({
+          LLVM_DEBUG({
               for (const Task *MPT : TaskList[S])
                 dbgs() << "Added MPT " << MPT->getEntry()->getName() << "\n";
             });
@@ -1089,7 +1089,7 @@ struct MaybeParallelTasks {
   // This method is called once per unevaluated spindle in an inverse-post-order
   // walk of the spindle graph.
   bool evaluate(const Spindle *S, unsigned EvalNum) {
-    DEBUG(dbgs() << "evaluate @ " << *S << "\n");
+    LLVM_DEBUG(dbgs() << "evaluate @ " << *S << "\n");
     if (!TaskList.count(S))
       TaskList.try_emplace(S);
 
@@ -1116,7 +1116,7 @@ struct MaybeParallelTasks {
           Complete = false;
       }
     }
-    DEBUG({
+    LLVM_DEBUG({
         dbgs() << "New MPT list for " << *S << "(Complete? " << Complete << ")\n";
         for (const Task *MP : TaskList[S])
           dbgs() << "\t" << MP->getEntry()->getName() << "\n";
@@ -1148,7 +1148,8 @@ static bool GetGeneralAccesses(
   }
 
   // Handle more standard memory operations.
-  if (GA.Loc = MemoryLocation::getOrNone(I)) {
+  if (Optional<MemoryLocation> MLoc = MemoryLocation::getOrNone(I)) {
+    GA.Loc = *MLoc;
     GA.Type = isa<LoadInst>(I) ? GeneralAccess::READ : GeneralAccess::WRITE;
     AccI.push_back(GA);
     return true;
@@ -1206,7 +1207,7 @@ struct MaybeParallelTasksInLoopBody : public MaybeParallelTasks {
   // This method is called once per unevaluated spindle in an inverse-post-order
   // walk of the spindle graph.
   bool evaluate(const Spindle *S, unsigned EvalNum) {
-    DEBUG(dbgs() << "evaluate @ " << *S << "\n");
+    LLVM_DEBUG(dbgs() << "evaluate @ " << *S << "\n");
     if (!TaskList.count(S))
       TaskList.try_emplace(S);
 
@@ -1238,8 +1239,9 @@ struct MaybeParallelTasksInLoopBody : public MaybeParallelTasks {
           Complete = false;
       }
     }
-    DEBUG({
-        dbgs() << "New MPT list for " << *S << "(Complete? " << Complete << ")\n";
+    LLVM_DEBUG({
+        dbgs() << "New MPT list for " << *S
+               << (Complete ? "(complete)\n" : "(not complete)\n");
         for (const Task *MP : TaskList[S])
           dbgs() << "\t" << MP->getEntry()->getName() << "\n";
       });
@@ -1256,7 +1258,7 @@ static bool DependenceMightRace(
     // No dependence means no race.
     return false;
 
-  DEBUG({
+  LLVM_DEBUG({
       D->dump(dbgs());
       StringRef DepType =
         D->isFlow() ? "flow" : D->isAnti() ? "anti" : "output";
@@ -1296,8 +1298,8 @@ static bool DependenceMightRace(
     if (ObjDepth < MinObjDepth)
       MinObjDepth = ObjDepth;
   }
-  DEBUG(dbgs() << "Min loop depth " << MinObjDepth <<
-        " for underlying object.\n");
+  LLVM_DEBUG(dbgs() << "Min loop depth " << MinObjDepth <<
+             " for underlying object.\n");
 
   // Find the spindle that dominates both instructions.
   Spindle *DomSpindle = TI.getSpindleFor(
@@ -1370,14 +1372,14 @@ static bool DependenceMightRace(
 
   // Scan the loop nests in common from inside out.
   for (unsigned II = MaxLoopDepthToCheck; II >= MinLoopDepthToCheck; --II) {
-    DEBUG(dbgs() << "Checking loop level " << II << "\n");
+    LLVM_DEBUG(dbgs() << "Checking loop level " << II << "\n");
     if (D->isScalar(II))
       return true;
     if (D->getDirection(II) & unsigned(~Dependence::DVEntry::EQ))
       return true;
   }
 
-  DEBUG(dbgs() << "Dependence does not cross parallel tasks.\n");
+  LLVM_DEBUG(dbgs() << "Dependence does not cross parallel tasks.\n");
   return false;
 }
 
@@ -1427,8 +1429,8 @@ static RaceType InstrsMightRace(Instruction *I, Instruction *MPI,
       // Two parallel loads cannot race.
       if (GeneralAccess::READ == GA1.Type && GeneralAccess::READ == GA2.Type)
         continue;
-      DEBUG(dbgs() << "Checking addresses " << *GA1.Loc->Ptr << " vs " <<
-            *GA2.Loc->Ptr << "\n");
+      LLVM_DEBUG(dbgs() << "Checking addresses " << *GA1.Loc->Ptr << " vs " <<
+                 *GA2.Loc->Ptr << "\n");
       if (DependenceMightRace(
               DI.depends(&GA1, &GA2, true), GA1.I, GA2.I,
               const_cast<Value *>(GA1.Loc->Ptr),
@@ -1460,8 +1462,8 @@ static bool InstrMightRaceWithTask(
     return true;
   }
 
-  DEBUG(dbgs() << "Checking for races with " << *I << ", in "
-        << I->getParent()->getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Checking for races with " << *I << ", in "
+             << I->getParent()->getName() << "\n");
 
   // Collect all logically parallel tasks.
   SmallPtrSet<const Task *, 2> AllMPTasks;
@@ -1478,18 +1480,18 @@ static bool InstrMightRaceWithTask(
 
   // Check the instructions in each logically parallel task for potential races.
   for (const Task *MPT : AllMPTasks) {
-    DEBUG(dbgs() << "MaybeParallel Task @ " << MPT->getEntry()->getName()
-          << "\n");
+    LLVM_DEBUG(dbgs() << "MaybeParallel Task @ " << MPT->getEntry()->getName()
+               << "\n");
     for (Instruction *MPI : TaskToMemAcc[MPT]) {
-      DEBUG(dbgs() << "Checking instructions " << *I << " vs. " << *MPI
-            << "\n");
+      LLVM_DEBUG(dbgs() << "Checking instructions " << *I << " vs. " << *MPI
+                 << "\n");
       RaceType RT =
         InstrsMightRace(I, MPI, MPTasks, MPTasksInLoop,
                         DI, DT, TI, LI, TLI, DL, SkipRead, SkipWrite);
       if (RaceType::None == RT)
         continue;
 
-      DEBUG(dbgs() << "Treating instructions as possibly racing\n");
+      LLVM_DEBUG(dbgs() << "Treating instructions as possibly racing\n");
 
       // Ensure that the potentially-racing instructions are marked for
       // instrumentation.
@@ -1538,7 +1540,7 @@ static bool LocalBaseObj(Value *Addr, const DataLayout &DL, LoopInfo *LI,
   // local.
   for (const Value *BaseObj : BaseObjs)
     if (!isa<AllocaInst>(BaseObj) && !isAllocationFn(BaseObj, TLI)) {
-      DEBUG(dbgs() << "Non-local base object " << *BaseObj << "\n");
+      LLVM_DEBUG(dbgs() << "Non-local base object " << *BaseObj << "\n");
       return false;
     }
 
@@ -1589,7 +1591,7 @@ static bool MightHaveDetachedUse(const Instruction *AI, const TaskInfo &TI) {
 
     // Check if this use of AI is in a different task from the allocation.
     Instruction *I = cast<Instruction>(U->getUser());
-    DEBUG(dbgs() << "\tExamining use: " << *I << "\n");
+    LLVM_DEBUG(dbgs() << "\tExamining use: " << *I << "\n");
     if (AllocTask != TI.getTaskFor(I->getParent())) {
       assert(TI.getTaskFor(I->getParent()) != AllocTask->getParentTask() &&
              "Use of alloca appears in a parent task of that alloca");
@@ -1694,7 +1696,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
     if (ToInstrument.count(I))
       continue;
 
-    DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
+    LLVM_DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
     MemoryLocation Loc = MemoryLocation::get(I);
     if (AA->pointsToConstantMemory(Loc)) {
       NumOmittedReadsFromConstants++;
@@ -1713,7 +1715,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
     // If the underlying object is not locally allocated, then it can race with
     // accesses in other functions.
     if (!LocalBaseObj(Addr, DL, &LI, TLI)) {
-      DEBUG(dbgs() << "Non-local base object of load/store\n");
+      LLVM_DEBUG(dbgs() << "Non-local base object of load/store\n");
       ToInstrument.insert(I);
       // continue;
     }
@@ -1721,7 +1723,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
     if (InstrMightRaceWithTask(
             I, MPTasks, MPTasksInLoop.TaskList, TaskToMemAcc,
             ToInstrument, MemTransferAccTypes, DT, TI, LI, DI, TLI, DL)) {
-      DEBUG(dbgs() << "Possible internal race with load/store\n");
+      LLVM_DEBUG(dbgs() << "Possible internal race with load/store\n");
       MayRaceInternally = true;
     } else
       NumOmittedStaticNoRace++;
@@ -1732,7 +1734,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
     if (ToInstrument.count(I))
       continue;
 
-    DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
+    LLVM_DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
 
     MemoryLocation Loc = MemoryLocation::get(I);
     if (AA->pointsToConstantMemory(Loc)) {
@@ -1769,7 +1771,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
     if (ToInstrument.count(I))
       continue;
 
-    DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
+    LLVM_DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
     if (MemSetInst *M = dyn_cast<MemSetInst>(I)) {
       Value *Addr = M->getArgOperand(0);
 
@@ -1784,7 +1786,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
       // If the underlying object is not locally allocated, then it can race
       // with accesses in other functions.
       if (!LocalBaseObj(Addr, DL, &LI, TLI)) {
-        DEBUG(dbgs() << "MemSetInst base object is not local\n");
+        LLVM_DEBUG(dbgs() << "MemSetInst base object is not local\n");
         ToInstrument.insert(I);
         // continue;
       }
@@ -1813,7 +1815,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
         NumOmittedNonCaptured++;
         SkipRead = true;
       } else if (!LocalBaseObj(const_cast<Value *>(ReadLoc.Ptr), DL, &LI, TLI)) {
-        DEBUG(dbgs() << "MemTransferInst load base object is not local\n");
+        LLVM_DEBUG(dbgs() << "MemTransferInst load base object is not local\n");
         ToInstrument.insert(I);
         if (!MemTransferAccTypes.count(M))
           MemTransferAccTypes[M] = AccessType::Read;
@@ -1832,7 +1834,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
           NumOmittedNonCaptured++;
           SkipWrite = true;
       } else if (!LocalBaseObj(const_cast<Value *>(WriteLoc.Ptr), DL, &LI, TLI)) {
-        DEBUG(dbgs() << "MemTransferInst store base object is not local\n");
+        LLVM_DEBUG(dbgs() << "MemTransferInst store base object is not local\n");
         ToInstrument.insert(I);
         if (!MemTransferAccTypes.count(M))
           MemTransferAccTypes[M] = AccessType::Write;
@@ -1860,7 +1862,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
     if (ToInstrument.count(I))
       continue;
 
-    DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
+    LLVM_DEBUG(dbgs() << "Looking for racing accesses with " << *I << "\n");
     ImmutableCallSite CS(I);
     if (AA->doesNotAccessMemory(CS)) {
       // The callsite I might invoke a function that contains an internal race,
@@ -1883,7 +1885,7 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
     // instrument this call incase the called function itself contains a race.
     const Function *Called = CS.getCalledFunction();
     if (!Called) {
-      DEBUG(dbgs() << "Missing called function for call.\n");
+      LLVM_DEBUG(dbgs() << "Missing called function for call.\n");
       ToInstrument.insert(I);
       continue;
     }
@@ -1893,10 +1895,10 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
       if (!TLI->getLibFunc(*Called, LF))
         ToInstrument.insert(I);
       else
-        DEBUG(dbgs() << "Assuming race-free library function " <<
-              Called->getName() << ".\n");
+        LLVM_DEBUG(dbgs() << "Assuming race-free library function " <<
+                   Called->getName() << ".\n");
       // } else {
-      //   DEBUG(dbgs() << "Missing exact definition of called function.\n");
+      //   LLVM_DEBUG(dbgs() << "Missing exact definition of called function.\n");
       //   ToInstrument.insert(I);
       // }
       // // continue;
@@ -1907,20 +1909,20 @@ bool CilkSanitizerImpl::GetMaybeRacingAccesses(
     // participate in a race.
     if (!IgnoreInaccessibleMemory &&
         AliasAnalysis::doesAccessInaccessibleMem(CSB)) {
-      DEBUG(dbgs() << "Call access inaccessible memory\n");
+      LLVM_DEBUG(dbgs() << "Call access inaccessible memory\n");
       ToInstrument.insert(I);
       // continue;
     } else if (!((!IgnoreInaccessibleMemory &&
                   AliasAnalysis::onlyAccessesArgPointees(CSB)) ||
                  (IgnoreInaccessibleMemory &&
                   AliasAnalysis::onlyAccessesInaccessibleOrArgMem(CSB)))) {
-      DEBUG(dbgs() << "Call access memory other than pointees\n");
+      LLVM_DEBUG(dbgs() << "Call access memory other than pointees\n");
       ToInstrument.insert(I);
       // continue;
     } else if (!LocalBaseObj(CS, DL, &LI, TLI)) {
       // If the callsite accesses an underlying object that is not locally
       // allocated, then it can race with accesses in other functions.
-      DEBUG(dbgs() << "CS accesses non-local object.\n");
+      LLVM_DEBUG(dbgs() << "CS accesses non-local object.\n");
       ToInstrument.insert(I);
       // continue;
     }
@@ -1979,7 +1981,7 @@ void CilkSanitizerImpl::chooseInstructionsToInstrument(
       NumOmittedNonCaptured++;
       continue;
     }
-    DEBUG(dbgs() << "Pushing " << *I << "\n");
+    LLVM_DEBUG(dbgs() << "Pushing " << *I << "\n");
     All.push_back(I);
   }
   Local.clear();

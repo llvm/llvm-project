@@ -519,8 +519,8 @@ static bool needPhiInTaskContinue(
       const BasicBlock *P = *PI;
       if (TI.getSpindleFor(BB) && TI.getSpindleFor(P) &&
           TI.getSpindleFor(BB)->predInDifferentTask(TI.getSpindleFor(P))) {
-        DEBUG(dbgs() << "Alloca " << *AI << " has use reattached from " <<
-              P->getName() << "\n");
+        LLVM_DEBUG(dbgs() << "Alloca " << *AI << " has use reattached from " <<
+                   P->getName() << "\n");
         return true;
       }
     }

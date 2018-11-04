@@ -943,7 +943,7 @@ static bool makeFunctionDetachable(Function &Extracted,
   Value *args[1] = { SF };
 
   // Scan function to see if it detaches.
-  DEBUG({
+  LLVM_DEBUG({
       bool SimpleHelper = !canDetach(&Extracted);
       if (!SimpleHelper)
         dbgs() << "NOTE: Detachable helper function itself detaches.\n";

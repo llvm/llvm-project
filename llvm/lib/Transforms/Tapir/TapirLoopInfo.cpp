@@ -92,7 +92,7 @@ void TapirLoopInfo::addInductionPhi(PHINode *Phi,
   //   AllowedExit.insert(Phi->getIncomingValueForBlock(TheLoop->getLoopLatch()));
   // }
 
-  DEBUG(dbgs() << "LS: Found an induction variable.\n");
+  LLVM_DEBUG(dbgs() << "LS: Found an induction variable.\n");
 }
 
 /// Create an analysis remark that explains why vectorization failed
@@ -131,7 +131,7 @@ bool TapirLoopInfo::collectIVs(PredicatedScalarEvolution &PSE,
           !PhiTy->isPointerTy()) {
         ORE.emit(createMissedAnalysis("CFGNotUnderstood", L, Phi)
                  << "loop control flow is not understood by loop spawning");
-        DEBUG(dbgs() << "LS: Found an non-int non-pointer PHI.\n");
+        LLVM_DEBUG(dbgs() << "LS: Found an non-int non-pointer PHI.\n");
         return false;
       }
 
@@ -139,13 +139,13 @@ bool TapirLoopInfo::collectIVs(PredicatedScalarEvolution &PSE,
       if (Phi->getNumIncomingValues() != 2) {
         ORE.emit(createMissedAnalysis("CFGNotUnderstood", L, Phi)
                  << "loop control flow is not understood by loop spawning");
-        DEBUG(dbgs() << "LS: Found an invalid PHI.\n");
+        LLVM_DEBUG(dbgs() << "LS: Found an invalid PHI.\n");
         return false;
       }
 
       InductionDescriptor ID;
       if (InductionDescriptor::isInductionPHI(Phi, L, PSE, ID)) {
-        DEBUG(dbgs() << "\tFound induction PHI " << *Phi << "\n");
+        LLVM_DEBUG(dbgs() << "\tFound induction PHI " << *Phi << "\n");
         addInductionPhi(Phi, ID);
         // if (ID.hasUnsafeAlgebra() && !HasFunNoNaNAttr)
         //   Requirements->addUnsafeAlgebraInst(ID.getUnsafeAlgebraInst());
@@ -155,17 +155,17 @@ bool TapirLoopInfo::collectIVs(PredicatedScalarEvolution &PSE,
       // As a last resort, coerce the PHI to a AddRec expression and re-try
       // classifying it a an induction PHI.
       if (InductionDescriptor::isInductionPHI(Phi, L, PSE, ID, true)) {
-        DEBUG(dbgs() << "\tCoerced induction PHI " << *Phi << "\n");
+        LLVM_DEBUG(dbgs() << "\tCoerced induction PHI " << *Phi << "\n");
         addInductionPhi(Phi, ID);
         continue;
       }
 
-      DEBUG(dbgs() << "\tPassed PHI " << *Phi << "\n");
+      LLVM_DEBUG(dbgs() << "\tPassed PHI " << *Phi << "\n");
     } // end of PHI handling
   }
 
   if (!PrimaryInduction) {
-    DEBUG(dbgs() << "LS: Did not find one integer induction var.\n");
+    LLVM_DEBUG(dbgs() << "LS: Did not find one integer induction var.\n");
     if (Inductions.empty()) {
       ORE.emit(createMissedAnalysis("NoInductionVariable", L)
                << "loop induction variable could not be identified");
@@ -194,7 +194,7 @@ void TapirLoopInfo::replaceNonPrimaryIVs(PredicatedScalarEvolution &PSE) {
     PHINode *OrigPhi = InductionEntry.first;
     InductionDescriptor II = InductionEntry.second;
     if (OrigPhi == PrimaryInduction) continue;
-    DEBUG(dbgs() << "Replacing Phi " << *OrigPhi << "\n");
+    LLVM_DEBUG(dbgs() << "Replacing Phi " << *OrigPhi << "\n");
     // If Induction is not canonical, replace it with some computation based on
     // PrimaryInduction.
     Type *StepType = II.getStep()->getType();
@@ -368,7 +368,7 @@ bool TapirLoopInfo::prepareForOutlining(
     PredicatedScalarEvolution &PSE, AssumptionCache &AC,
     OptimizationRemarkEmitter &ORE, const TargetTransformInfo &TTI) {
   Loop *L = getLoop();
-  DEBUG(dbgs() << "LS processing loop " << *L << "\n");
+  LLVM_DEBUG(dbgs() << "LS processing loop " << *L << "\n");
 
   // Collect the IVs in this loop.
   collectIVs(PSE, ORE);
@@ -377,7 +377,7 @@ bool TapirLoopInfo::prepareForOutlining(
   if (!PrimaryInduction)
     return false;
 
-  DEBUG(dbgs() << "\tPrimary induction " << *PrimaryInduction << "\n");
+  LLVM_DEBUG(dbgs() << "\tPrimary induction " << *PrimaryInduction << "\n");
 
   // Replace any non-primary IV's.
   replaceNonPrimaryIVs(PSE);
@@ -387,7 +387,7 @@ bool TapirLoopInfo::prepareForOutlining(
     dyn_cast<BranchInst>(getLoop()->getLoopLatch()->getTerminator());
   assert(BI && "Loop latch not terminated by a branch.");
   Condition = dyn_cast<ICmpInst>(BI->getCondition());
-  DEBUG(dbgs() << "\tLoop condition " << *Condition << "\n");
+  LLVM_DEBUG(dbgs() << "\tLoop condition " << *Condition << "\n");
   assert(Condition && "Condition is not an integer comparison.");
   assert(Condition->isEquality() && "Condition is not an equality comparison.");
 
@@ -410,7 +410,7 @@ bool TapirLoopInfo::prepareForOutlining(
   if (!TripCount)
     return false;
 
-  DEBUG(dbgs() << "\tTrip count " << *TripCount << "\n");
+  LLVM_DEBUG(dbgs() << "\tTrip count " << *TripCount << "\n");
 
   // FIXME: This test is probably too simple.
   assert(((Condition->getOperand(0) == TripCount) ||

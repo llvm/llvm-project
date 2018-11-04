@@ -10,6 +10,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/Passes.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/DataLayout.h"
@@ -236,6 +237,28 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
   return true;
 }
 
+// Helper function to check if an instruction is guaranteed to execute in the
+// task T containing it.
+static bool isGuaranteedToExecuteInTask(const Instruction &Inst,
+                                        const DominatorTree *DT,
+                                        const Task *T) {
+  assert(T && T->encloses(Inst.getParent()) && "Inst is not in given task.");
+  // Examine all exiting blocks of the task.
+  for (const Spindle *S :
+         depth_first<InTask<Spindle *>>(T->getEntrySpindle())) {
+    for (const BasicBlock *Exit : S->spindle_exits()) {
+      if (!T->isTaskExiting(Exit))
+        continue;
+
+      // If Inst does not dominate the exiting block, then it's not guaranteed
+      // to execute.
+      if (!DT->dominates(Inst.getParent(), Exit))
+        return false;
+    }
+  }
+  return true;
+}
+
 /// Returns true if the instruction in a loop is guaranteed to execute at least
 /// once.
 bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
@@ -252,6 +275,34 @@ bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
     return !HeaderMayThrow ||
            Inst.getParent()->getFirstNonPHIOrDbg() == &Inst;
 
+  // If the instruction is inside of a subtask, verify that it dominates the
+  // exits of the subtask, and use the corresponding detach to determine whether
+  // the instruction is guaranteed to execute.
+  bool InstGuaranteedToExecuteInSubtask = true;
+  const Instruction *RepInst = &Inst;
+  if (TI) {
+    const Task *LoopTask = TI->getTaskFor(CurLoop->getHeader());
+    while (InstGuaranteedToExecuteInSubtask) {
+      const Task *T = TI->getTaskFor(RepInst->getParent());
+      // If the representative instruction and loop are in the same task, we're
+      // done traversing subtasks.
+      if (T == LoopTask)
+        break;
+
+      // Check if the instruction is guaranteed to execute in its task.
+      if (!isGuaranteedToExecuteInTask(*RepInst, DT, T))
+        InstGuaranteedToExecuteInSubtask = false;
+      else
+        // Use the task's detach in place of the original instruction.
+        RepInst = T->getDetach();
+    }
+  }
+
+  // If a subtask was found in which the instruction is not guaranteed to
+  // execute, then the instruction is not guaranteed to execute.
+  if (!InstGuaranteedToExecuteInSubtask)
+    return false;
+
   // If there is a path from header to exit or latch that doesn't lead to our
   // instruction's block, return false.
   return allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
@@ -260,8 +311,38 @@ bool SimpleLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
 bool ICFLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
                                               const DominatorTree *DT,
                                               const Loop *CurLoop) const {
-  return !ICF.isDominatedByICFIFromSameBlock(&Inst) &&
-         allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
+  if (ICF.isDominatedByICFIFromSameBlock(&Inst))
+    return false;
+
+  // If the instruction is inside of a subtask, verify that it dominates the
+  // exits of the subtask, and use the corresponding detach to determine whether
+  // the instruction is guaranteed to execute.
+  bool InstGuaranteedToExecuteInSubtask = true;
+  const Instruction *RepInst = &Inst;
+  if (TI) {
+    const Task *LoopTask = TI->getTaskFor(CurLoop->getHeader());
+    while (InstGuaranteedToExecuteInSubtask) {
+      const Task *T = TI->getTaskFor(RepInst->getParent());
+      // If the representative instruction and loop are in the same task, we're
+      // done traversing subtasks.
+      if (T == LoopTask)
+        break;
+
+      // Check if the instruction is guaranteed to execute in its task.
+      if (!isGuaranteedToExecuteInTask(*RepInst, DT, T))
+        InstGuaranteedToExecuteInSubtask = false;
+      else
+        // Use the task's detach in place of the original instruction.
+        RepInst = T->getDetach();
+    }
+  }
+
+  // If a subtask was found in which the instruction is not guaranteed to
+  // execute, then the instruction is not guaranteed to execute.
+  if (!InstGuaranteedToExecuteInSubtask)
+    return false;
+
+  return allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
 }
 
 bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const BasicBlock *BB,

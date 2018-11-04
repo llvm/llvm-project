@@ -176,7 +176,7 @@ bool TapirToTargetImpl::processSimpleABI(Function &F) {
   // Lower calls to get Tapir-loop grainsizes.
   while (!GrainsizeCalls.empty()) {
     CallInst *GrainsizeCall = GrainsizeCalls.pop_back_val();
-    DEBUG(dbgs() << "Lowering grainsize call " << *GrainsizeCall << "\n");
+    LLVM_DEBUG(dbgs() << "Lowering grainsize call " << *GrainsizeCall << "\n");
     Target->lowerGrainsizeCall(GrainsizeCall);
     Changed = true;
   }
@@ -225,7 +225,7 @@ void TapirToTargetImpl::processFunction(
     Function &F, SmallVectorImpl<Function *> &NewHelpers) {
   unifyReturns(F);
 
-  DEBUG(dbgs() << "Tapir: Processing function " << F.getName() << "\n");
+  LLVM_DEBUG(dbgs() << "Tapir: Processing function " << F.getName() << "\n");
 
   Target->preProcessFunction(F);
 

@@ -48,6 +48,7 @@
 #include "llvm/Transforms/Tapir/CilkABI.h"
 #include "llvm/Transforms/Tapir/LoweringUtils.h"
 #include "llvm/Transforms/Tapir/Outline.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -287,12 +288,13 @@ PHINode* LoopOutline::canonicalizeIVs(Type *Ty) {
   SCEVExpander Exp(SE, DL, "ls");
 
   PHINode *CanonicalIV = Exp.getOrInsertCanonicalInductionVariable(L, Ty);
-  DEBUG(dbgs() << "LS Canonical induction variable " << *CanonicalIV << "\n");
+  LLVM_DEBUG(dbgs() <<
+             "LS Canonical induction variable " << *CanonicalIV << "\n");
 
   SmallVector<WeakTrackingVH, 16> DeadInsts;
   Exp.replaceCongruentIVs(L, DT, DeadInsts);
   for (WeakTrackingVH V : DeadInsts) {
-    DEBUG(dbgs() << "LS erasing dead inst " << *V << "\n");
+    LLVM_DEBUG(dbgs() << "LS erasing dead inst " << *V << "\n");
     Instruction *I = cast<Instruction>(V);
     I->eraseFromParent();
   }
@@ -538,7 +540,7 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(
     Instruction *PreheaderOrigFront = &(DACHead->front());
     IRBuilder<> Builder(PreheaderOrigFront);
     // Create branch based on grainsize.
-    DEBUG(dbgs() << "LS CanonicalIV: " << *CanonicalIV << "\n");
+    LLVM_DEBUG(dbgs() << "LS CanonicalIV: " << *CanonicalIV << "\n");
     CanonicalIVInput = CanonicalIV->getIncomingValueForBlock(DACHead);
     CanonicalIVStart = Builder.CreatePHI(CanonicalIV->getType(), 2,
                                          CanonicalIV->getName()+".dac");
@@ -589,7 +591,7 @@ void DACLoopSpawning::implementDACIterSpawnOnHelper(
     ++AI;
     for (Function::arg_iterator AE = Helper->arg_end(); AI != AE; ++AI)
       RecurInputs.insert(&*AI);
-    DEBUG({
+    LLVM_DEBUG({
         dbgs() << "RecurInputs: ";
         for (Value *Input : RecurInputs)
           dbgs() << *Input << ", ";
@@ -692,7 +694,7 @@ bool DACLoopSpawning::processLoop() {
   BasicBlock *Preheader = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
 
-  DEBUG({
+  LLVM_DEBUG({
       LoopBlocksDFS DFS(L);
       DFS.perform(LI);
       dbgs() << "Blocks in loop (from DFS):\n";
@@ -704,7 +706,8 @@ bool DACLoopSpawning::processLoop() {
 
   // Check that this loop has a valid exit block after the latch.
   if (!ExitBlock) {
-    DEBUG(dbgs() << "LS loop does not contain valid exit block after latch.\n");
+    LLVM_DEBUG(dbgs() <<
+               "LS loop does not contain valid exit block after latch.\n");
     ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "InvalidLatchExit",
                                         L->getStartLoc(),
                                         Header)
@@ -736,7 +739,7 @@ bool DACLoopSpawning::processLoop() {
     if (Exit == ExitBlock) continue;
     if (Exit == DetachUnwind) continue;
     if (!HandledExits.count(Exit)) {
-      DEBUG(dbgs() << "LS loop contains a bad exit block " << *Exit);
+      LLVM_DEBUG(dbgs() << "LS loop contains a bad exit block " << *Exit);
       ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "BadExit",
                                           L->getStartLoc(),
                                           Header)
@@ -748,20 +751,21 @@ bool DACLoopSpawning::processLoop() {
   Function *F = Header->getParent();
   Module *M = F->getParent();
 
-  DEBUG(dbgs() << "LS loop header:" << *Header);
-  DEBUG(dbgs() << "LS loop latch:" << *Latch);
-  DEBUG(dbgs() << "LS SE exit count: " << *(SE.getExitCount(L, Latch)) << "\n");
+  LLVM_DEBUG(dbgs() << "LS loop header:" << *Header);
+  LLVM_DEBUG(dbgs() << "LS loop latch:" << *Latch);
+  LLVM_DEBUG(dbgs() <<
+             "LS SE exit count: " << *(SE.getExitCount(L, Latch)) << "\n");
 
   /// Get loop limit.
   const SCEV *Limit = SE.getExitCount(L, Latch);
-  DEBUG(dbgs() << "LS Loop limit: " << *Limit << "\n");
+  LLVM_DEBUG(dbgs() << "LS Loop limit: " << *Limit << "\n");
   // PredicatedScalarEvolution PSE(SE, *L);
   // const SCEV *PLimit = PSE.getExitCount(L, Latch);
-  // DEBUG(dbgs() << "LS predicated loop limit: " << *PLimit << "\n");
+  // LLVM_DEBUG(dbgs() << "LS predicated loop limit: " << *PLimit << "\n");
   // emitAnalysis(LoopSpawningReport()
   //              << "computed loop limit " << *Limit << "\n");
   if (SE.getCouldNotCompute() == Limit) {
-    DEBUG(dbgs() << "SE could not compute loop limit.\n");
+    LLVM_DEBUG(dbgs() << "SE could not compute loop limit.\n");
     ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "UnknownLoopLimit",
                                         L->getStartLoc(),
                                         Header)
@@ -785,7 +789,7 @@ bool DACLoopSpawning::processLoop() {
   /// Clean up the loop's induction variables.
   PHINode *CanonicalIV = canonicalizeIVs(CanonicalIVTy);
   if (!CanonicalIV) {
-    DEBUG(dbgs() << "Could not get canonical IV.\n");
+    LLVM_DEBUG(dbgs() << "Could not get canonical IV.\n");
     // emitAnalysis(LoopSpawningReport()
     //              << "Could not get a canonical IV.\n");
     ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "NoCanonicalIV",
@@ -814,7 +818,7 @@ bool DACLoopSpawning::processLoop() {
   }
 
   if (!CanRemoveIVs) {
-    DEBUG(dbgs() << "Could not compute scalar evolutions for all IV's.\n");
+    LLVM_DEBUG(dbgs() << "Could not compute scalar evolutions for all IV's.\n");
     return false;
   }
 
@@ -835,7 +839,7 @@ bool DACLoopSpawning::processLoop() {
     for (PHINode &PN : Header->phis()) {
       if (&PN == CanonicalIV) continue;
       const SCEV *S = SE.getSCEV(&PN);
-      DEBUG(dbgs() << "Removing the IV " << PN << " (" << *S << ")\n");
+      LLVM_DEBUG(dbgs() << "Removing the IV " << PN << " (" << *S << ")\n");
       ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "RemoveIV", &PN)
                << "removing the IV "
                << NV("PHINode", &PN));
@@ -854,7 +858,7 @@ bool DACLoopSpawning::processLoop() {
   SmallVector<PHINode*, 8> IVs;
   bool AllCanonical = true;
   for (PHINode &PN : Header->phis()) {
-    DEBUG({
+    LLVM_DEBUG({
         const SCEVAddRecExpr *PNSCEV =
           dyn_cast<const SCEVAddRecExpr>(SE.getSCEV(&PN));
         assert(PNSCEV && "PHINode did not have corresponding SCEVAddRecExpr");
@@ -868,11 +872,12 @@ bool DACLoopSpawning::processLoop() {
     if (ConstantInt *C =
         dyn_cast<ConstantInt>(PN.getIncomingValueForBlock(Preheader))) {
       if (C->isZero()) {
-        DEBUG({
+        LLVM_DEBUG({
             if (&PN != CanonicalIV) {
               const SCEVAddRecExpr *PNSCEV =
                 dyn_cast<const SCEVAddRecExpr>(SE.getSCEV(&PN));
-              dbgs() << "Saving the canonical IV " << PN << " (" << *PNSCEV << ")\n";
+              dbgs() <<
+                "Saving the canonical IV " << PN << " (" << *PNSCEV << ")\n";
             }
           });
         if (&PN != CanonicalIV)
@@ -883,8 +888,8 @@ bool DACLoopSpawning::processLoop() {
       }
     } else {
       AllCanonical = false;
-      DEBUG(dbgs() << "Remaining non-canonical PHI Node found: " << PN <<
-            "\n");
+      LLVM_DEBUG(dbgs() << "Remaining non-canonical PHI Node found: " << PN <<
+                 "\n");
       // emitAnalysis(LoopSpawningReport(PN)
       //              << "Found a remaining non-canonical IV.\n");
       ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "NonCanonicalIV", &PN)
@@ -897,7 +902,7 @@ bool DACLoopSpawning::processLoop() {
   // Insert the computation for the loop limit into the Preheader.
   Value *LimitVar = Exp.expandCodeFor(Limit, CanonicalIVTy,
                                       Preheader->getTerminator());
-  DEBUG(dbgs() << "LimitVar: " << *LimitVar << "\n");
+  LLVM_DEBUG(dbgs() << "LimitVar: " << *LimitVar << "\n");
 
   // Canonicalize the loop latch.
   assert(SE.isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_ULT,
@@ -915,7 +920,7 @@ bool DACLoopSpawning::processLoop() {
   else
     GrainVar = ConstantInt::get(LimitVar->getType(), SpecifiedGrainsize);
 
-  DEBUG(dbgs() << "GrainVar: " << *GrainVar << "\n");
+  LLVM_DEBUG(dbgs() << "GrainVar: " << *GrainVar << "\n");
   // emitAnalysis(LoopSpawningReport()
   //              << "grainsize value " << *GrainVar << "\n");
   // ORE.emit(OptimizationRemarkAnalysis(LS_NAME, "UsingGrainsize",
@@ -945,7 +950,7 @@ bool DACLoopSpawning::processLoop() {
 
     // Add unreachable and exception-handling exits to the set of loop blocks to
     // clone.
-    DEBUG({
+    LLVM_DEBUG({
         dbgs() << "Handled exits of loop:";
         for (BasicBlock *HE : HandledExits)
           dbgs() << *HE;
@@ -975,12 +980,12 @@ bool DACLoopSpawning::processLoop() {
       }
     }
     if (SRetInput) {
-      DEBUG(dbgs() << "sret input " << *SRetInput << "\n");
+      LLVM_DEBUG(dbgs() << "sret input " << *SRetInput << "\n");
       Inputs.insert(SRetInput);
     }
 
     // Add argument for start of CanonicalIV.
-    DEBUG({
+    LLVM_DEBUG({
         Value *CanonicalIVInput =
           CanonicalIV->getIncomingValueForBlock(Preheader);
         // CanonicalIVInput should be the constant 0.
@@ -1043,7 +1048,7 @@ bool DACLoopSpawning::processLoop() {
         BodyInputsToRemove.push_back(V);
     for (Value *V : BodyInputsToRemove)
       BodyInputs.remove(V);
-    DEBUG({
+    LLVM_DEBUG({
         for (Value *V : BodyInputs)
           dbgs() << "Remaining body input: " << *V << "\n";
       });
@@ -1052,7 +1057,7 @@ bool DACLoopSpawning::processLoop() {
     assert(BodyOutputs.empty() &&
            "All results from parallel loop should be passed by memory already.");
   }
-  DEBUG({
+  LLVM_DEBUG({
       for (Value *V : Inputs)
         dbgs() << "EL input: " << *V << "\n";
       for (Value *V : Outputs)
@@ -1128,18 +1133,18 @@ bool DACLoopSpawning::processLoop() {
 
     // Rewrite other cloned IV's to start at their value at the start iteration.
     const SCEV *StartIterSCEV = SE.getSCEV(NewCanonicalIVStart);
-    DEBUG(dbgs() << "StartIterSCEV: " << *StartIterSCEV << "\n");
+    LLVM_DEBUG(dbgs() << "StartIterSCEV: " << *StartIterSCEV << "\n");
     for (PHINode *IV : IVs) {
       if (CanonicalIV == IV) continue;
 
       // Get the value of the IV at the start iteration.
-      DEBUG(dbgs() << "IV " << *IV);
+      LLVM_DEBUG(dbgs() << "IV " << *IV);
       const SCEV *IVSCEV = SE.getSCEV(IV);
-      DEBUG(dbgs() << " (SCEV " << *IVSCEV << ")");
+      LLVM_DEBUG(dbgs() << " (SCEV " << *IVSCEV << ")");
       const SCEVAddRecExpr *IVSCEVAddRec = cast<const SCEVAddRecExpr>(IVSCEV);
       const SCEV *IVAtIter = IVSCEVAddRec->evaluateAtIteration(StartIterSCEV, SE);
-      DEBUG(dbgs() << " expands at iter " << *StartIterSCEV <<
-            " to " << *IVAtIter << "\n");
+      LLVM_DEBUG(dbgs() << " expands at iter " << *StartIterSCEV <<
+                 " to " << *IVAtIter << "\n");
 
       // NOTE: Expanded code should not refer to other IV's.
       Value *IVStart = Exp.expandCodeFor(IVAtIter, IVAtIter->getType(),
@@ -1177,8 +1182,8 @@ bool DACLoopSpawning::processLoop() {
                                                  VMap[InputMap[LimitVar]]);
     HelperCond->replaceAllUsesWith(NewHelperCond);
     HelperCond->eraseFromParent();
-    DEBUG(dbgs() << "Rewritten Latch: " <<
-          *(cast<Instruction>(NewHelperCond)->getParent()));
+    LLVM_DEBUG(dbgs() << "Rewritten Latch: " <<
+               *(cast<Instruction>(NewHelperCond)->getParent()));
   }
 
   // DEBUGGING: Simply serialize the cloned loop.
@@ -1263,7 +1268,7 @@ bool DACLoopSpawning::processLoop() {
     // Add the rest of the arguments.
     for (Value *V : BodyInputs)
       TopCallArgs.push_back(V);
-    DEBUG({
+    LLVM_DEBUG({
         for (Value *TCArg : TopCallArgs)
           dbgs() << "Top call arg: " << *TCArg << "\n";
       });
@@ -1289,7 +1294,7 @@ bool DACLoopSpawning::processLoop() {
       for (PHINode &P : DetachUnwind->phis()) {
         int j = P.getBasicBlockIndex(Header);
         assert(j >= 0 && "Can't find exiting block in exit block's phi node!");
-        DEBUG({
+        LLVM_DEBUG({
             if (Instruction *I = dyn_cast<Instruction>(P.getIncomingValue(j)))
               assert(I->getParent() != Header &&
                      "DetachUnwind PHI node uses value from header!");
@@ -1344,9 +1349,10 @@ bool DACLoopSpawning::processLoop() {
       ReplaceInstWithInst(LoopSync,
                           BranchInst::Create(LoopSync->getSuccessor(0)));
     else if (!LoopSync)
-      DEBUG(dbgs() << "No sync found for this loop.\n");
+      LLVM_DEBUG(dbgs() << "No sync found for this loop.\n");
     else
-      DEBUG(dbgs() << "No single sync found that only affects this loop.\n");
+      LLVM_DEBUG(dbgs() <<
+                 "No single sync found that only affects this loop.\n");
   }
 
   ++LoopsConvertedToDAC;
@@ -1368,27 +1374,29 @@ bool LoopSpawningImpl::isTapirLoop(const Loop *L) {
   const BasicBlock *Latch = L->getLoopLatch();
   // const BasicBlock *Exit = L->getExitBlock();
 
-  DEBUG(dbgs() << "LS checking if loop is Tapir loop: " << *L);
+  LLVM_DEBUG(dbgs() << "LS checking if loop is Tapir loop: " << *L);
 
   // Header must be terminated by a detach.
   if (!isa<DetachInst>(Header->getTerminator())) {
-    DEBUG(dbgs() << "LS loop header is not terminated by a detach: " << *L << "\n");
+    LLVM_DEBUG(dbgs() <<
+               "LS loop header is not terminated by a detach: " << *L << "\n");
     return false;
   }
 
   // Loop must have a unique latch.
   if (nullptr == Latch) {
-    DEBUG(dbgs() << "LS loop does not have a unique latch: " << *L << "\n");
+    LLVM_DEBUG(dbgs() <<
+               "LS loop does not have a unique latch: " << *L << "\n");
     return false;
   }
 
   // // Loop must have a unique exit block.
   // if (nullptr == Exit) {
-  //   DEBUG(dbgs() << "LS loop does not have a unique exit block: " << *L << "\n");
+  //   LLVM_DEBUG(dbgs() << "LS loop does not have a unique exit block: " << *L << "\n");
   //   SmallVector<BasicBlock *, 4> ExitBlocks;
   //   L->getUniqueExitBlocks(ExitBlocks);
   //   for (BasicBlock *Exit : ExitBlocks)
-  //     DEBUG(dbgs() << *Exit);
+  //     LLVM_DEBUG(dbgs() << *Exit);
   //   return false;
   // }
 
@@ -1396,8 +1404,9 @@ bool LoopSpawningImpl::isTapirLoop(const Loop *L) {
   const DetachInst *HeaderDetach = cast<DetachInst>(Header->getTerminator());
   const BasicBlock *Continuation = HeaderDetach->getContinue();
   if (Continuation != Latch) {
-    DEBUG(dbgs() << "LS continuation of detach in header is not the latch: "
-                 << *L << "\n");
+    LLVM_DEBUG(dbgs() <<
+               "LS continuation of detach in header is not the latch: " <<
+               *L << "\n");
     return false;
   }
 
@@ -1406,8 +1415,8 @@ bool LoopSpawningImpl::isTapirLoop(const Loop *L) {
     const BasicBlock *Pred = *PI;
     if (Header == Pred) continue;
     if (!isa<ReattachInst>(Pred->getTerminator())) {
-      DEBUG(dbgs() << "LS Latch has a predecessor that is not terminated "
-                   << "by a reattach: " << *L << "\n");
+      LLVM_DEBUG(dbgs() << "LS Latch has a predecessor that is not terminated "
+                 << "by a reattach: " << *L << "\n");
       return false;
     }
   }
@@ -1423,8 +1432,8 @@ bool LoopSpawningImpl::isTapirLoop(const Loop *L) {
     if (!L->contains(Pred))
       continue;
     if (Header != Pred && Latch != Pred) {
-      DEBUG(dbgs() << "LS Loop branches to exit block from a block "
-                   << "other than the header or latch" << *L << "\n");
+      LLVM_DEBUG(dbgs() << "LS Loop branches to exit block from a block "
+                 << "other than the header or latch" << *L << "\n");
       return false;
     }
   }
@@ -1439,10 +1448,10 @@ bool LoopSpawningImpl::isTapirLoop(const Loop *L) {
 void LoopSpawningImpl::addTapirLoop(Loop *L, SmallVectorImpl<Loop *> &V) {
   TapirLoopHints Hints(L);
 
-  DEBUG(dbgs() << "LS: Loop hints:"
-               << " strategy = " << Hints.printStrategy(Hints.getStrategy())
-               << " grainsize = " << Hints.getGrainsize()
-               << "\n");
+  LLVM_DEBUG(dbgs() << "LS: Loop hints:"
+             << " strategy = " << Hints.printStrategy(Hints.getStrategy())
+             << " grainsize = " << Hints.getGrainsize()
+             << "\n");
 
   if (isTapirLoop(L)) {
     V.push_back(L);
@@ -1452,10 +1461,10 @@ void LoopSpawningImpl::addTapirLoop(Loop *L, SmallVectorImpl<Loop *> &V) {
   using namespace ore;
 
   if (TapirLoopHints::ST_SEQ != Hints.getStrategy()) {
-    DEBUG(dbgs() << "LS: Marked loop is not a valid Tapir loop.\n"
-          << "\tLoop hints:"
-          << " strategy = " << Hints.printStrategy(Hints.getStrategy())
-          << "\n");
+    LLVM_DEBUG(dbgs() << "LS: Marked loop is not a valid Tapir loop.\n"
+               << "\tLoop hints:"
+               << " strategy = " << Hints.printStrategy(Hints.getStrategy())
+               << "\n");
     ORE.emit(OptimizationRemarkMissed(LS_NAME, "NotTapir",
                                       L->getStartLoc(), L->getHeader())
              << "marked loop is not a valid Tapir loop");
@@ -1516,16 +1525,16 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
   // Function containing loop
   Function *F = L->getHeader()->getParent();
 
-  DEBUG(dbgs() << "\nLS: Checking a Tapir loop in \""
-               << L->getHeader()->getParent()->getName() << "\" from "
-        << DebugLocStr << ": " << *L << "\n");
+  LLVM_DEBUG(dbgs() << "\nLS: Checking a Tapir loop in \""
+             << L->getHeader()->getParent()->getName() << "\" from "
+             << DebugLocStr << ": " << *L << "\n");
 
   TapirLoopHints Hints(L);
 
-  DEBUG(dbgs() << "LS: Loop hints:"
-               << " strategy = " << Hints.printStrategy(Hints.getStrategy())
-               << " grainsize = " << Hints.getGrainsize()
-               << "\n");
+  LLVM_DEBUG(dbgs() << "LS: Loop hints:"
+             << " strategy = " << Hints.printStrategy(Hints.getStrategy())
+             << " grainsize = " << Hints.getGrainsize()
+             << "\n");
 
   using namespace ore;
 
@@ -1533,14 +1542,14 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
   // preheader is not terminated by a sync.
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
-    DEBUG(dbgs() << "LS: Loop lacks a preheader.\n");
+    LLVM_DEBUG(dbgs() << "LS: Loop lacks a preheader.\n");
     ORE.emit(OptimizationRemarkMissed(LS_NAME, "NoPreheader",
                                       L->getStartLoc(), L->getHeader())
              << "loop lacks a preheader");
     emitMissedWarning(F, L, Hints, &ORE);
     return false;
   } else if (!isa<BranchInst>(Preheader->getTerminator())) {
-    DEBUG(dbgs() << "LS: Loop preheader is not terminated by a branch.\n");
+    LLVM_DEBUG(dbgs() << "LS: Loop preheader is not terminated by a branch.\n");
     ORE.emit(OptimizationRemarkMissed(LS_NAME, "ComplexPreheader",
                                       L->getStartLoc(), L->getHeader())
              << "loop preheader not terminated by a branch");
@@ -1550,17 +1559,17 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
 
   switch(Hints.getStrategy()) {
   case TapirLoopHints::ST_SEQ:
-    DEBUG(dbgs() << "LS: Hints dictate sequential spawning.\n");
+    LLVM_DEBUG(dbgs() << "LS: Hints dictate sequential spawning.\n");
     break;
   case TapirLoopHints::ST_DAC:
-    DEBUG(dbgs() << "LS: Hints dictate DAC spawning.\n");
+    LLVM_DEBUG(dbgs() << "LS: Hints dictate DAC spawning.\n");
     {
       DebugLoc DLoc = L->getStartLoc();
       BasicBlock *Header = L->getHeader();
       if (UseCilkABI) {
         CilkABILoopSpawning DLS(L, Hints.getGrainsize(), SE, &LI, &DT, &AC, ORE);
         if (DLS.processLoop()) {
-          DEBUG({
+          LLVM_DEBUG({
               if (verifyFunction(*F, &dbgs())) {
                 dbgs() << "Transformed function is invalid.\n";
                 return false;
@@ -1582,7 +1591,7 @@ bool LoopSpawningImpl::processLoop(Loop *L) {
         DACLoopSpawning DLS(L, Hints.getGrainsize(), SE, &LI, &DT, &AC, ORE);
         // DACLoopSpawning DLS(L, SE, LI, DT, TLI, TTI, ORE);
         if (DLS.processLoop()) {
-          DEBUG({
+          LLVM_DEBUG({
               if (verifyFunction(*F, &dbgs())) {
                 dbgs() << "Transformed function is invalid.\n";
                 return false;

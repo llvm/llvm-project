@@ -49,6 +49,7 @@
 #include "llvm/Transforms/Tapir/LoweringUtils.h"
 #include "llvm/Transforms/Tapir/Outline.h"
 #include "llvm/Transforms/Tapir/TapirLoopInfo.h"
+#include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/TapirUtils.h"
@@ -507,7 +508,7 @@ void DACSpawning::implementDACIterSpawnOnHelper(
 /// processed.  Returns the Task that encodes the loop body if so, or nullptr if
 /// not.
 Task *LoopSpawningImpl::getTaskIfTapirLoop(const Loop *L) {
-  DEBUG(dbgs() << "Analyzing for spawning: " << *L);
+  LLVM_DEBUG(dbgs() << "Analyzing for spawning: " << *L);
 
   TapirLoopHints Hints(L);
 
@@ -515,7 +516,7 @@ Task *LoopSpawningImpl::getTaskIfTapirLoop(const Loop *L) {
   // preheader is not terminated by a sync.
   const BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
-    DEBUG(dbgs() << "Loop lacks a preheader.\n");
+    LLVM_DEBUG(dbgs() << "Loop lacks a preheader.\n");
     if (hintsDemandOutlining(Hints)) {
       ORE.emit(createMissedAnalysis("NoPreheader", L)
                << "loop lacks a preheader");
@@ -523,7 +524,7 @@ Task *LoopSpawningImpl::getTaskIfTapirLoop(const Loop *L) {
     }
     return nullptr;
   } else if (!isa<BranchInst>(Preheader->getTerminator())) {
-    DEBUG(dbgs() << "Loop preheader is not terminated by a branch.\n");
+    LLVM_DEBUG(dbgs() << "Loop preheader is not terminated by a branch.\n");
     if (hintsDemandOutlining(Hints)) {
       ORE.emit(createMissedAnalysis("ComplexPreheader", L)
                << "loop preheader not terminated by a branch");
@@ -534,7 +535,7 @@ Task *LoopSpawningImpl::getTaskIfTapirLoop(const Loop *L) {
 
   Task *T = llvm::getTaskIfTapirLoop(L, &TI);
   if (!T) {
-    DEBUG(dbgs() << "Loop does not match structure of Tapir loop.\n");
+    LLVM_DEBUG(dbgs() << "Loop does not match structure of Tapir loop.\n");
     if (hintsDemandOutlining(Hints)) {
       ORE.emit(createMissedAnalysis("NonCanonicalLoop", L)
                << "loop does not have the canonical structure of a Tapir loop");
@@ -633,7 +634,7 @@ void LoopSpawningImpl::getTapirLoopTaskBlocks(
         if (TopLevelTaskSpindle && isSuccessorOfDetachedRethrow(B))
           continue;
 
-        DEBUG(dbgs() << "Adding block " << B->getName() << "\n");        
+        LLVM_DEBUG(dbgs() << "Adding block " << B->getName() << "\n");
         TaskBlocks.push_back(B);
 
         if (TopLevelTaskSpindle) {
@@ -669,7 +670,7 @@ static Value *getGrainsizeVal(TapirLoopInfo *TL) {
   else
     GrainVal = computeGrainsize(TL);
 
-  DEBUG(dbgs() << "Grainsize value: " << *GrainVal << "\n");
+  LLVM_DEBUG(dbgs() << "Grainsize value: " << *GrainVal << "\n");
   return GrainVal;
 }
 
@@ -742,7 +743,7 @@ void LoopSpawningImpl::getAllTapirLoopInputs(
 
       // Convert inputs for task T to Tapir-loop inputs.
       ValueSet TLInputs = getTapirLoopInputs(TL, TaskInputs[T]);
-      DEBUG({
+      LLVM_DEBUG({
           dbgs() << "TLInputs\n";
           for (Value *V : TLInputs)
             dbgs() << "\t" << *V << "\n";
@@ -784,7 +785,7 @@ void LoopSpawningImpl::getAllTapirLoopInputs(
         HelperInputs.push_back(V);
       }
 
-      DEBUG({
+      LLVM_DEBUG({
           dbgs() << "HelperArgs:\n";
           for (Value *V : HelperArgs)
             dbgs() << "\t" << *V << "\n";
@@ -910,6 +911,10 @@ Function *LoopSpawningImpl::createHelperForTapirLoop(
 
   // Use a fast calling convention for the helper.
   Helper->setCallingConv(CallingConv::Fast);
+  // Note that the address of the helper is unimportant.
+  Helper->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
+  // The helper is private to this module.
+  Helper->setLinkage(GlobalValue::InternalLinkage);
 
   // Add alignment assumptions to arguments of helper, based on alignment of
   // values in old function.
@@ -1021,7 +1026,9 @@ LoopSpawningImpl::outlineAllTapirLoops() {
   associateTasksToTapirLoops();
 
   for (Task *T : post_order(TI.getRootTask())) {
-    DEBUG(dbgs() << "Examining task @ " << T->getEntry()->getName() << " for outlining\n");
+    LLVM_DEBUG(dbgs() <<
+               "Examining task @ " << T->getEntry()->getName() <<
+               " for outlining\n");
     // If any subtasks were outlined as Tapir loops, replace these loops with
     // calls to the outlined functions.
     for (Task *SubT : T->subtasks()) {
@@ -1037,7 +1044,7 @@ LoopSpawningImpl::outlineAllTapirLoops() {
       continue;
 
     Loop *L = TL->getLoop();
-    DEBUG(dbgs() << "Outlining Tapir " << *L << "\n");
+    LLVM_DEBUG(dbgs() << "Outlining Tapir " << *L << "\n");
 
     ValueToValueMapTy VMap;
     // Create the helper function.
@@ -1178,7 +1185,7 @@ struct LoopSpawningTI : public FunctionPass {
     auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
-    DEBUG(dbgs() << "LoopSpawningTI on function " << F.getName() << "\n");
+    LLVM_DEBUG(dbgs() << "LoopSpawningTI on function " << F.getName() << "\n");
     return LoopSpawningImpl(F, F.getParent()->getDataLayout(), DT, LI, TI, SE,
                             AC, TTI, ORE).run();
   }

@@ -787,8 +787,8 @@ static bool foldReturnAndProcessPred(
 
       // Check that the sync region begins in the entry block of the function.
       if (cast<Instruction>(SyncRegion)->getParent() != OldEntryBlock) {
-        DEBUG(dbgs() << "Cannot eliminate tail call " << *CI <<
-              ": sync region does not start in entry block.");
+        LLVM_DEBUG(dbgs() << "Cannot eliminate tail call " << *CI <<
+                   ": sync region does not start in entry block.");
         continue;
       }
 
@@ -797,8 +797,8 @@ static bool foldReturnAndProcessPred(
       getReturnBlocksToSync(OldEntryBlock, SI, ReturnBlocksToSync);
 
       // Remove the sync.
-      DEBUG(dbgs() << "FOLDING: " << *BB
-            << "INTO SYNC PRED: " << *Pred);
+      LLVM_DEBUG(dbgs() << "FOLDING: " << *BB
+                 << "INTO SYNC PRED: " << *Pred);
       ReturnInst *RI = FoldReturnIntoUncondBranch(Ret, BB, Pred);
 
       // Cleanup: if all predecessors of BB have been eliminated by

@@ -732,8 +732,8 @@ void PromoteMem2Reg::run() {
            PI != E; ++PI) {
         BasicBlock *P = *PI;
         if (isa<ReattachInst>(P->getTerminator())) {
-          DEBUG(dbgs() << "Illegal PHI inserted in block " << BB->getName()
-                << "\n");
+          LLVM_DEBUG(dbgs() << "Illegal PHI inserted in block " << BB->getName()
+                     << "\n");
           badPhi = true;
         }
       }
