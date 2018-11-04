@@ -512,7 +512,7 @@ NativeProcessProtocol::EnableSoftwareBreakpoint(lldb::addr_t addr,
         addr);
   }
 
-  LLDB_LOG(log, "addr = {0:x}: SUCCESS");
+  LLDB_LOG(log, "addr = {0:x}: SUCCESS", addr);
   return SoftwareBreakpoint{1, saved_opcode_bytes, *expected_trap};
 }
 
