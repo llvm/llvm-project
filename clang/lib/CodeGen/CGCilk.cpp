@@ -140,7 +140,7 @@ void CodeGenFunction::DetachScope::StartDetach() {
   OldEHSelectorSlot = CGF.EHSelectorSlot;
   CGF.EHSelectorSlot = nullptr;
   OldNormalCleanupDest = CGF.NormalCleanupDest;
-  CGF.NormalCleanupDest = nullptr;
+  CGF.NormalCleanupDest = Address::invalid();
 
   // Emit the detached block.
   CGF.EmitBlock(DetachedBlock);
@@ -368,7 +368,7 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
   llvm::BasicBlock *OldEHResumeBlock = EHResumeBlock;
   llvm::Value *OldExceptionSlot = ExceptionSlot;
   llvm::AllocaInst *OldEHSelectorSlot = EHSelectorSlot;
-  llvm::AllocaInst *OldNormalCleanupDest = NormalCleanupDest;
+  Address OldNormalCleanupDest = NormalCleanupDest;
 
   const VarDecl *LoopVar = S.getLoopVariable();
   RValue LoopVarInitRV;
@@ -428,7 +428,7 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
     EHResumeBlock = nullptr;
     ExceptionSlot = nullptr;
     EHSelectorSlot = nullptr;
-    NormalCleanupDest = nullptr;
+    NormalCleanupDest = Address::invalid();
 
     EmitBlock(ForBodyEntry);
   }
