@@ -14,6 +14,7 @@ void __clc_amdgcn_s_waitcnt(unsigned flags);
 #  define __waitcnt(x) __builtin_amdgcn_s_waitcnt(x)
 #else
 #  define __waitcnt(x) __clc_amdgcn_s_waitcnt(x)
+_CLC_DEF void __clc_amdgcn_s_waitcnt(unsigned)  __asm("llvm.amdgcn.s.waitcnt");
 #endif
 
 _CLC_DEF void mem_fence(cl_mem_fence_flags flags)
