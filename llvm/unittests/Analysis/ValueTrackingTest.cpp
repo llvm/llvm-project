@@ -514,7 +514,6 @@ TEST(ValueTracking, ComputeNumSignBits_Shuffle) {
   EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 1u);
 }
 
-// FIXME:
 // No guarantees for canonical IR in this analysis, so a shuffle element that
 // references an undef value means this can't return any extra information. 
 TEST(ValueTracking, ComputeNumSignBits_Shuffle2) {
@@ -534,7 +533,7 @@ TEST(ValueTracking, ComputeNumSignBits_Shuffle2) {
 
   auto *RVal =
       cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
-  EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 32u);
+  EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 1u);
 }
 
 TEST(ValueTracking, ComputeKnownBits) {
