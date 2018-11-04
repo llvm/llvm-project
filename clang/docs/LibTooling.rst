@@ -198,4 +198,4 @@ Linking
 
 For a list of libraries to link, look at one of the tools' Makefiles (for
 example `clang-check/Makefile
-<http://llvm.org/viewvc/llvm-project/cfe/trunk/tools/clang-check/Makefile?view=markup>`_).
+<https://llvm.org/viewvc/llvm-project/cfe/trunk/tools/clang-check/Makefile?view=markup>`_).
