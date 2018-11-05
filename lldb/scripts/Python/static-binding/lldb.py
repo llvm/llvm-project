@@ -4616,6 +4616,22 @@ class SBExpressionOptions(_object):
         """
         return _lldb.SBExpressionOptions_SetTopLevel(self, b)
 
+    def GetAllowJIT(self):
+        """
+        GetAllowJIT(self) -> bool
+
+        Gets whether to JIT an expression if it cannot be interpreted.
+        """
+        return _lldb.SBExpressionOptions_GetAllowJIT(self)
+
+    def SetAllowJIT(self, *args):
+        """
+        SetAllowJIT(self, bool allow)
+
+        Sets whether to JIT an expression if it cannot be interpreted.
+        """
+        return _lldb.SBExpressionOptions_SetAllowJIT(self, *args)
+
 SBExpressionOptions_swigregister = _lldb.SBExpressionOptions_swigregister
 SBExpressionOptions_swigregister(SBExpressionOptions)
 

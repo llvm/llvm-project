@@ -46,7 +46,7 @@ using namespace lldb_private::formatters;
 namespace lldb_private {
 namespace formatters {
 namespace swift {
-bool NSContiguousString_SummaryProvider(ValueObject &valobj, Stream &stream,
+bool SwiftSharedString_SummaryProvider(ValueObject &valobj, Stream &stream,
                                         const TypeSummaryOptions &options);
 }
 }
