@@ -107,7 +107,7 @@ Options
     When non-zero, the check will ignore implicitly constructed arguments of
     ``push_back``, e.g.
 
-.. code-block:: c++
+    .. code-block:: c++
 
         std::vector<std::string> v;
         v.push_back("a"); // Ignored when IgnoreImplicitConstructors is ``1``.

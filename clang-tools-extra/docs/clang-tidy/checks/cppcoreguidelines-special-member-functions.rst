@@ -28,7 +28,7 @@ Options
    When set to `1` (default is `0`), this check doesn't flag classes with a sole, explicitly
    defaulted destructor. An example for such a class is:
    
-.. code-block:: c++
+   .. code-block:: c++
    
      struct A {
        virtual ~A() = default;
@@ -40,7 +40,7 @@ Options
    operations at all. It still flags classes which define only one of either
    move constructor or move assignment operator. With this option enabled, the following class won't be flagged:
    
-.. code-block:: c++
+   .. code-block:: c++
    
      struct A {
        A(const A&);
