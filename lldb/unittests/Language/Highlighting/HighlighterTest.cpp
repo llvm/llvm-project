@@ -12,7 +12,6 @@
 #include "lldb/Core/Highlighter.h"
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/Go/GoLanguage.h"
 #include "Plugins/Language/Java/JavaLanguage.h"
 #include "Plugins/Language/OCaml/OCamlLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
@@ -32,7 +31,6 @@ void HighlighterTest::SetUpTestCase() {
   // The HighlighterManager uses the language plugins under the hood, so we
   // have to initialize them here for our test process.
   CPlusPlusLanguage::Initialize();
-  GoLanguage::Initialize();
   JavaLanguage::Initialize();
   ObjCLanguage::Initialize();
   ObjCPlusPlusLanguage::Initialize();
@@ -41,7 +39,6 @@ void HighlighterTest::SetUpTestCase() {
 
 void HighlighterTest::TearDownTestCase() {
   CPlusPlusLanguage::Terminate();
-  GoLanguage::Terminate();
   JavaLanguage::Terminate();
   ObjCLanguage::Terminate();
   ObjCPlusPlusLanguage::Terminate();
