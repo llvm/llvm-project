@@ -249,12 +249,11 @@ private:
 public:
   AnalyzerOptions()
       : DisableAllChecks(false), ShowCheckerHelp(false),
-        ShowEnabledCheckerList(false), AnalyzeAll(false),
-        AnalyzerDisplayProgress(false), AnalyzeNestedBlocks(false),
-        eagerlyAssumeBinOpBifurcation(false), TrimGraph(false),
-        visualizeExplodedGraphWithGraphViz(false),
-        UnoptimizedCFG(false),
-        PrintStats(false), NoRetryExhausted(false) {}
+        ShowEnabledCheckerList(false), ShowConfigOptionsList(false),
+        AnalyzeAll(false), AnalyzerDisplayProgress(false),
+        AnalyzeNestedBlocks(false), eagerlyAssumeBinOpBifurcation(false),
+        TrimGraph(false), visualizeExplodedGraphWithGraphViz(false),
+        UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false) {}
 
   /// Interprets an option's string value as a boolean. The "true" string is
   /// interpreted as true and the "false" string is interpreted as false.
