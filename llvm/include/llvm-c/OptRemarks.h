@@ -187,6 +187,13 @@ LLVMOptRemarkParserGetErrorMessage(LLVMOptRemarkParserRef Parser);
 extern void LLVMOptRemarkParserDispose(LLVMOptRemarkParserRef Parser);
 
 /**
+ * Returns the version of the opt-remarks dylib.
+ *
+ * \since OPT_REMARKS_API_VERSION=0
+ */
+extern uint32_t LLVMOptRemarkVersion(void);
+
+/**
  * @} // endgoup LLVMCOPTREMARKS
  */
 
