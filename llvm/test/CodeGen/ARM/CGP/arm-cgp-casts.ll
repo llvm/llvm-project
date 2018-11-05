@@ -232,9 +232,10 @@ exit:
 ; promote %1 for the call - unless we can generate a uadd16.
 ; CHECK-COMMON-LABEL: zext_load_sink_call:
 ; CHECK-COMMON: uxt
-; uadd16
-; cmp
-; CHECK-COMMON: uxt
+; CHECK-DSP-IMM: uadd16
+; CHECK-COMMON: cmp
+; CHECK-NODSP: uxt
+; CHECK-DSP-IMM-NOT: uxt
 define i32 @zext_load_sink_call(i16* %ptr, i16 %exp) {
 entry:
   %0 = load i16, i16* %ptr, align 4
@@ -338,3 +339,27 @@ declare i32 @dummy(i32, i32)
 @d_uch = hidden local_unnamed_addr global [16 x i8] zeroinitializer, align 1
 @sh1 = hidden local_unnamed_addr global i16 0, align 2
 @d_sh = hidden local_unnamed_addr global [16 x i16] zeroinitializer, align 2
+
+; CHECK-LABEL: two_stage_zext_trunc_mix
+; CHECK-NOT: uxt
+define i8* @two_stage_zext_trunc_mix(i32* %this, i32 %__pos1, i32 %__n1, i32** %__str, i32 %__pos2, i32 %__n2) {
+entry:
+  %__size_.i.i.i.i = bitcast i32** %__str to i8*
+  %0 = load i8, i8* %__size_.i.i.i.i, align 4
+  %1 = and i8 %0, 1
+  %tobool.i.i.i.i = icmp eq i8 %1, 0
+  %__size_.i5.i.i = getelementptr inbounds i32*, i32** %__str, i32 %__n1
+  %cast = bitcast i32** %__size_.i5.i.i to i32*
+  %2 = load i32, i32* %cast, align 4
+  %3 = lshr i8 %0, 1
+  %4 = zext i8 %3 to i32
+  %cond.i.i = select i1 %tobool.i.i.i.i, i32 %4, i32 %2
+  %__size_.i.i.i.i.i = bitcast i32* %this to i8*
+  %5 = load i8, i8* %__size_.i.i.i.i.i, align 4
+  %6 = and i8 %5, 1
+  %tobool.i.i.i.i.i = icmp eq i8 %6, 0
+  %7 = getelementptr inbounds i8, i8* %__size_.i.i.i.i, i32 %__pos1
+  %8 = getelementptr inbounds i8, i8* %__size_.i.i.i.i, i32 %__pos2
+  %res = select i1 %tobool.i.i.i.i.i,  i8* %7, i8* %8
+  ret i8* %res
+}

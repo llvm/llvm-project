@@ -1391,6 +1391,12 @@ size_t SymbolFileNativePDB::ParseFunctionBlocks(const SymbolContext &sc) {
   return 0;
 }
 
+void SymbolFileNativePDB::DumpClangAST(Stream &s) {
+  if (!m_clang)
+    return;
+  m_clang->Dump(s);
+}
+
 uint32_t SymbolFileNativePDB::FindGlobalVariables(
     const ConstString &name, const CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, VariableList &variables) {

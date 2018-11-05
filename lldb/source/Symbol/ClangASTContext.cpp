@@ -1285,7 +1285,7 @@ CompilerType ClangASTContext::GetCStringType(bool is_const) {
   return CompilerType(ast, ast->getPointerType(char_type));
 }
 
-clang::DeclContext *
+clang::TranslationUnitDecl *
 ClangASTContext::GetTranslationUnitDecl(clang::ASTContext *ast) {
   return ast->getTranslationUnitDecl();
 }
@@ -8964,6 +8964,11 @@ ClangASTContext::ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
 // Dumping types
 //----------------------------------------------------------------------
 #define DEPTH_INCREMENT 2
+
+void ClangASTContext::Dump(Stream &s) {
+  TranslationUnitDecl *tu = GetTranslationUnitDecl();
+  tu->dump(s.AsRawOstream());
+}
 
 void ClangASTContext::DumpValue(
     lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s,

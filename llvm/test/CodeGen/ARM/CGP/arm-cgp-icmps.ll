@@ -310,3 +310,23 @@ entry:
   ret i32 %conv1
 }
 
+; CHECK-COMMON-LABEL: mul_with_neg_imm
+; CHECK-COMMON-NOT: uxtb
+; CHECK-COMMON:     and [[BIT0:r[0-9]+]], r0, #1
+; CHECK-COMMON:     add.w [[MUL32:r[0-9]+]], [[BIT0]], [[BIT0]], lsl #5
+; CHECK-COMMON:     cmp.w r0, [[MUL32]], lsl #2
+define void @mul_with_neg_imm(i32, i32* %b) {
+entry:
+  %1 = trunc i32 %0 to i8
+  %2 = and i8 %1, 1
+  %conv.i = mul nuw i8 %2, -124
+  %tobool = icmp eq i8 %conv.i, 0
+  br i1 %tobool, label %if.end, label %if.then
+
+if.then:
+  store i32 0, i32* %b, align 4
+  br label %if.end
+
+if.end:
+  ret void
+}

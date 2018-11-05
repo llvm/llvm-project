@@ -75,12 +75,21 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   else
     return nullptr;
 
-  // A select operand must be a binop, and the compare constant must be the
-  // identity constant for that binop.
+  // A select operand must be a binop.
   BinaryOperator *BO;
-  if (!match(Sel.getOperand(IsEq ? 1 : 2), m_BinOp(BO)) ||
-      ConstantExpr::getBinOpIdentity(BO->getOpcode(), BO->getType(), true) != C)
+  if (!match(Sel.getOperand(IsEq ? 1 : 2), m_BinOp(BO)))
     return nullptr;
+
+  // The compare constant must be the identity constant for that binop.
+  // If this a floating-point compare with 0.0, any zero constant will do.
+  Type *Ty = BO->getType();
+  Constant *IdC = ConstantExpr::getBinOpIdentity(BO->getOpcode(), Ty, true);
+  if (IdC != C) {
+    if (!IdC || !CmpInst::isFPPredicate(Pred))
+      return nullptr;
+    if (!match(IdC, m_AnyZeroFP()) || !match(C, m_AnyZeroFP()))
+      return nullptr;
+  }
 
   // Last, match the compare variable operand with a binop operand.
   Value *Y;

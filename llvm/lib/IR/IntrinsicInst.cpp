@@ -152,6 +152,10 @@ bool ConstrainedFPIntrinsic::isUnaryOp() const {
     case Intrinsic::experimental_constrained_log2:
     case Intrinsic::experimental_constrained_rint:
     case Intrinsic::experimental_constrained_nearbyint:
+    case Intrinsic::experimental_constrained_ceil:
+    case Intrinsic::experimental_constrained_floor:
+    case Intrinsic::experimental_constrained_round:
+    case Intrinsic::experimental_constrained_trunc:
       return true;
   }
 }

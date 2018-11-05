@@ -1227,6 +1227,13 @@ CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
   return matching_namespace;
 }
 
+void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
+  ForEachSymbolFile([&s](SymbolFileDWARF *oso_dwarf) -> bool {
+    oso_dwarf->DumpClangAST(s);
+    return true;
+  });
+}
+
 //------------------------------------------------------------------
 // PluginInterface protocol
 //------------------------------------------------------------------

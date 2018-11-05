@@ -1110,6 +1110,10 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::STRICT_FNEARBYINT:
   case ISD::STRICT_FMAXNUM:
   case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FTRUNC:
     // These pseudo-ops get legalized as if they were their non-strict
     // equivalent.  For instance, if ISD::FSQRT is legal then ISD::STRICT_FSQRT
     // is also legal, but if ISD::FSQRT requires expansion then so does
@@ -3940,16 +3944,19 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                         RTLIB::EXP2_PPCF128));
     break;
   case ISD::FTRUNC:
+  case ISD::STRICT_FTRUNC:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::TRUNC_F32, RTLIB::TRUNC_F64,
                                       RTLIB::TRUNC_F80, RTLIB::TRUNC_F128,
                                       RTLIB::TRUNC_PPCF128));
     break;
   case ISD::FFLOOR:
+  case ISD::STRICT_FFLOOR:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::FLOOR_F32, RTLIB::FLOOR_F64,
                                       RTLIB::FLOOR_F80, RTLIB::FLOOR_F128,
                                       RTLIB::FLOOR_PPCF128));
     break;
   case ISD::FCEIL:
+  case ISD::STRICT_FCEIL:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::CEIL_F32, RTLIB::CEIL_F64,
                                       RTLIB::CEIL_F80, RTLIB::CEIL_F128,
                                       RTLIB::CEIL_PPCF128));
@@ -3969,6 +3976,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
                                       RTLIB::NEARBYINT_PPCF128));
     break;
   case ISD::FROUND:
+  case ISD::STRICT_FROUND:
     Results.push_back(ExpandFPLibCall(Node, RTLIB::ROUND_F32,
                                       RTLIB::ROUND_F64,
                                       RTLIB::ROUND_F80,

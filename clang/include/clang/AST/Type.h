@@ -4901,7 +4901,9 @@ public:
     return !isDependentType() || isCurrentInstantiation() || isTypeAlias();
   }
 
-  QualType desugar() const { return getCanonicalTypeInternal(); }
+  QualType desugar() const {
+    return isTypeAlias() ? getAliasedType() : getCanonicalTypeInternal();
+  }
 
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) {
     Profile(ID, Template, template_arguments(), Ctx);

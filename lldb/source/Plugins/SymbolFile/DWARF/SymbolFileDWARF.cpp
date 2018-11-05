@@ -3854,6 +3854,14 @@ uint32_t SymbolFileDWARF::GetPluginVersion() { return 1; }
 
 void SymbolFileDWARF::Dump(lldb_private::Stream &s) { m_index->Dump(s); }
 
+void SymbolFileDWARF::DumpClangAST(Stream &s) {
+  TypeSystem *ts = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+  ClangASTContext *clang = llvm::dyn_cast_or_null<ClangASTContext>(ts);
+  if (!clang)
+    return;
+  clang->Dump(s);
+}
+
 SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
   if (m_debug_map_symfile == NULL && !m_debug_map_module_wp.expired()) {
     lldb::ModuleSP module_sp(m_debug_map_module_wp.lock());

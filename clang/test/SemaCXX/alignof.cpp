@@ -97,3 +97,8 @@ struct S {
   typedef __attribute__((aligned(N))) int Field[sizeof(N)]; // expected-error {{requested alignment is dependent but declaration is not dependent}}
 };
 }
+
+typedef int __attribute__((aligned(16))) aligned_int;
+template <typename>
+using template_alias = aligned_int;
+static_assert(alignof(template_alias<void>) == 16, "Expected alignment of 16" );

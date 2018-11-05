@@ -1356,6 +1356,14 @@ uint32_t SymbolFilePDB::FindTypes(
   return types.GetSize();
 }
 
+void SymbolFilePDB::DumpClangAST(Stream &s) {
+  auto type_system = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  auto clang = llvm::dyn_cast_or_null<ClangASTContext>(type_system);
+  if (!clang)
+    return;
+  clang->Dump(s);
+}
+
 void SymbolFilePDB::FindTypesByRegex(
     const lldb_private::RegularExpression &regex, uint32_t max_matches,
     lldb_private::TypeMap &types) {

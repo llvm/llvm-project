@@ -2002,13 +2002,19 @@ let isPseudo = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
 // branches.  See the comment in file MipsLongBranch.cpp for detailed
 // explanation.
 
-// Expands to: lui $dst, %hi($tgt - $baltgt)
+// Expands to: lui $dst, %highest/%higher/%hi/%lo($tgt - $baltgt)
 def LONG_BRANCH_LUi : PseudoSE<(outs GPR32Opnd:$dst),
   (ins brtarget:$tgt, brtarget:$baltgt), []>;
+// Expands to: lui $dst, highest/%higher/%hi/%lo($tgt)
+def LONG_BRANCH_LUi2Op : PseudoSE<(outs GPR32Opnd:$dst),
+  (ins brtarget:$tgt), []>;
 
-// Expands to: addiu $dst, $src, %lo($tgt - $baltgt)
+// Expands to: addiu $dst, $src, %highest/%higher/%hi/%lo($tgt - $baltgt)
 def LONG_BRANCH_ADDiu : PseudoSE<(outs GPR32Opnd:$dst),
   (ins GPR32Opnd:$src, brtarget:$tgt, brtarget:$baltgt), []>;
+// Expands to: addiu $dst, $src, %highest/%higher/%hi/%lo($tgt)
+def LONG_BRANCH_ADDiu2Op : PseudoSE<(outs GPR32Opnd:$dst),
+  (ins GPR32Opnd:$src, brtarget:$tgt), []>;
 
 //===----------------------------------------------------------------------===//
 // Instruction definition

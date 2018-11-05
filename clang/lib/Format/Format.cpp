@@ -1504,7 +1504,8 @@ public:
           SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
           FormatTokenLexer &Tokens) override {
     assert(Style.Language == FormatStyle::LK_Cpp);
-    IsObjC = guessIsObjC(AnnotatedLines, Tokens.getKeywords());
+    IsObjC = guessIsObjC(Env.getSourceManager(), AnnotatedLines,
+                         Tokens.getKeywords());
     tooling::Replacements Result;
     return {Result, 0};
   }
@@ -1512,8 +1513,10 @@ public:
   bool isObjC() { return IsObjC; }
 
 private:
-  static bool guessIsObjC(const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
-                          const AdditionalKeywords &Keywords) {
+  static bool
+  guessIsObjC(const SourceManager &SourceManager,
+              const SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+              const AdditionalKeywords &Keywords) {
     // Keep this array sorted, since we are binary searching over it.
     static constexpr llvm::StringLiteral FoundationIdentifiers[] = {
         "CGFloat",
@@ -1604,9 +1607,15 @@ private:
                                TT_ObjCBlockLBrace, TT_ObjCBlockLParen,
                                TT_ObjCDecl, TT_ObjCForIn, TT_ObjCMethodExpr,
                                TT_ObjCMethodSpecifier, TT_ObjCProperty)) {
+          LLVM_DEBUG(llvm::dbgs()
+                     << "Detected ObjC at location "
+                     << FormatTok->Tok.getLocation().printToString(
+                            SourceManager)
+                     << " token: " << FormatTok->TokenText << " token type: "
+                     << getTokenTypeName(FormatTok->Type) << "\n");
           return true;
         }
-        if (guessIsObjC(Line->Children, Keywords))
+        if (guessIsObjC(SourceManager, Line->Children, Keywords))
           return true;
       }
     }

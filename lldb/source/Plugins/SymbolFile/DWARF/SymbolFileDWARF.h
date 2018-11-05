@@ -329,6 +329,8 @@ public:
 
   void Dump(lldb_private::Stream &s) override;
 
+  void DumpClangAST(lldb_private::Stream &s) override;
+
 protected:
   typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb_private::Type *>
       DIEToTypePtr;

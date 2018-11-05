@@ -98,7 +98,7 @@ BCEAtom visitICmpLoadOperand(Value *const Val) {
     Value *const Addr = LoadI->getOperand(0);
     if (auto *const GEP = dyn_cast<GetElementPtrInst>(Addr)) {
       LLVM_DEBUG(dbgs() << "GEP\n");
-      if (LoadI->isUsedOutsideOfBlock(LoadI->getParent())) {
+      if (GEP->isUsedOutsideOfBlock(LoadI->getParent())) {
         LLVM_DEBUG(dbgs() << "used outside of block\n");
         return {};
       }

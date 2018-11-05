@@ -3,6 +3,8 @@
 
 // REQUIRES: cxxabi
 // UNSUPPORTED: windows-msvc
+// Nested crash reported
+// UNSUPPORTED: freebsd
 
 struct S { virtual int f() { return 0; } };
 struct T : virtual S {};

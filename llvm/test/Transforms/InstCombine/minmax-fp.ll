@@ -78,7 +78,7 @@ define double @t6(float %a) {
 
 define double @t7(float %a) {
 ; CHECK-LABEL: @t7(
-; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp oge float [[A:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp oge float [[A:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTINV]], float -0.000000e+00, float [[A]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fpext float [[TMP1]] to double
 ; CHECK-NEXT:    ret double [[TMP2]]

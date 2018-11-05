@@ -161,6 +161,8 @@ public:
                                         uint32_t line, bool check_inlines,
                                         lldb::SymbolContextItem resolve_scope,
                                         SymbolContextList &sc_list);
+
+  virtual void DumpClangAST(Stream &s) {}
   virtual uint32_t
   FindGlobalVariables(const ConstString &name,
                       const CompilerDeclContext *parent_decl_ctx,
