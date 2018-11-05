@@ -6112,7 +6112,8 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
 }
 
 uint32_t SwiftASTContext::GetNumChildren(void *type,
-                                         bool omit_empty_base_classes) {
+                                         bool omit_empty_base_classes,
+                                         const ExecutionContext *exe_ctx) {
   VALID_OR_RETURN(0);
 
   if (!type)
@@ -6146,7 +6147,7 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
   case swift::TypeKind::WeakStorage:
     return CompilerType(GetASTContext(),
                         swift_can_type->getReferenceStorageReferent())
-        .GetNumChildren(omit_empty_base_classes);
+      .GetNumChildren(omit_empty_base_classes, exe_ctx);
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
     break;
@@ -6190,7 +6191,7 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
 
     uint32_t num_pointee_children =
         CompilerType(GetASTContext(), deref_type)
-            .GetNumChildren(omit_empty_base_classes);
+            .GetNumChildren(omit_empty_base_classes, exe_ctx);
     // If this type points to a simple type (or to a class), then it has 1 child
     if (num_pointee_children == 0 || deref_type->getClassOrBoundGenericClass())
       num_children = 1;
@@ -6295,7 +6296,7 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
 
   case swift::TypeKind::Protocol:
   case swift::TypeKind::ProtocolComposition:
-    return GetNumChildren(type, /*omit_empty_base_classes=*/false);
+    return GetNumChildren(type, /*omit_empty_base_classes=*/false, nullptr);
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
@@ -7018,7 +7019,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     break;
 
   case swift::TypeKind::LValue:
-    if (idx < GetNumChildren(type, omit_empty_base_classes)) {
+    if (idx < GetNumChildren(type, omit_empty_base_classes, exe_ctx)) {
       CompilerType pointee_clang_type(GetNonReferenceType(type));
       Flags pointee_clang_type_flags(pointee_clang_type.GetTypeInfo());
       const char *parent_name = valobj ? valobj->GetName().GetCString() : NULL;

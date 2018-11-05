@@ -592,7 +592,8 @@ public:
 
   lldb::Format GetFormat(void *type) override;
 
-  uint32_t GetNumChildren(void *type, bool omit_empty_base_classes) override;
+  uint32_t GetNumChildren(void *type, bool omit_empty_base_classes,
+                          const ExecutionContext *exe_ctx) override;
 
   lldb::BasicType GetBasicTypeEnumeration(void *type) override;
 
