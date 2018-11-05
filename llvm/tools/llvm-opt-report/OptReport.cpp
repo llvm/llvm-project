@@ -28,6 +28,7 @@
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm-c/OptRemarks.h"
 #include <cstdlib>
 #include <map>
 #include <set>
@@ -142,104 +143,44 @@ typedef std::map<std::string, std::map<int, std::map<std::string, std::map<int,
           OptReportLocationInfo>>>> LocationInfoTy;
 } // anonymous namespace
 
-static void collectLocationInfo(yaml::Stream &Stream,
-                                LocationInfoTy &LocationInfo) {
-  SmallVector<char, 8> Tmp;
+static bool readLocationInfo(LocationInfoTy &LocationInfo) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+      MemoryBuffer::getFile(InputFileName.c_str());
+  if (std::error_code EC = Buf.getError()) {
+    WithColor::error() << "Can't open file " << InputFileName << ": "
+                       << EC.message() << "\n";
+    return false;
+  }
 
-  // Note: We're using the YAML parser here directly, instead of using the
-  // YAMLTraits implementation, because the YAMLTraits implementation does not
-  // support a way to handle only a subset of the input keys (it will error out
-  // if there is an input key that you don't map to your class), and
-  // furthermore, it does not provide a way to handle the Args sequence of
-  // key/value pairs, where the order must be captured and the 'String' key
-  // might be repeated.
-  for (auto &Doc : Stream) {
-    auto *Root = dyn_cast<yaml::MappingNode>(Doc.getRoot());
-    if (!Root)
-      continue;
+  StringRef Buffer = (*Buf)->getBuffer();
+  LLVMOptRemarkParserRef Parser =
+      LLVMOptRemarkParserCreate(Buffer.data(), Buffer.size());
 
-    bool Transformed = Root->getRawTag() == "!Passed";
-    std::string Pass, File, Function;
-    int Line = 0, Column = 1;
+  LLVMOptRemarkEntry *Remark = nullptr;
+  while ((Remark = LLVMOptRemarkParserGetNext(Parser))) {
+    bool Transformed =
+        StringRef(Remark->RemarkType.Str, Remark->RemarkType.Len) == "!Passed";
+    StringRef Pass(Remark->PassName.Str, Remark->PassName.Len);
+    StringRef File(Remark->DebugLoc.SourceFile.Str,
+                   Remark->DebugLoc.SourceFile.Len);
+    StringRef Function(Remark->FunctionName.Str, Remark->FunctionName.Len);
+    uint32_t Line = Remark->DebugLoc.SourceLineNumber;
+    uint32_t Column = Remark->DebugLoc.SourceColumnNumber;
+    ArrayRef<LLVMOptRemarkArg> Args(Remark->Args, Remark->NumArgs);
 
     int VectorizationFactor = 1;
     int InterleaveCount = 1;
     int UnrollCount = 1;
 
-    for (auto &RootChild : *Root) {
-      auto *Key = dyn_cast<yaml::ScalarNode>(RootChild.getKey());
-      if (!Key)
-        continue;
-      StringRef KeyName = Key->getValue(Tmp);
-      if (KeyName == "Pass") {
-        auto *Value = dyn_cast<yaml::ScalarNode>(RootChild.getValue());
-        if (!Value)
-          continue;
-        Pass = Value->getValue(Tmp);
-      } else if (KeyName == "Function") {
-        auto *Value = dyn_cast<yaml::ScalarNode>(RootChild.getValue());
-        if (!Value)
-          continue;
-        Function = Value->getValue(Tmp);
-      } else if (KeyName == "DebugLoc") {
-        auto *DebugLoc = dyn_cast<yaml::MappingNode>(RootChild.getValue());
-        if (!DebugLoc)
-          continue;
-
-        for (auto &DLChild : *DebugLoc) {
-          auto *DLKey = dyn_cast<yaml::ScalarNode>(DLChild.getKey());
-          if (!DLKey)
-            continue;
-          StringRef DLKeyName = DLKey->getValue(Tmp);
-          if (DLKeyName == "File") {
-            auto *Value = dyn_cast<yaml::ScalarNode>(DLChild.getValue());
-            if (!Value)
-              continue;
-            File = Value->getValue(Tmp);
-          } else if (DLKeyName == "Line") {
-            auto *Value = dyn_cast<yaml::ScalarNode>(DLChild.getValue());
-            if (!Value)
-              continue;
-            Value->getValue(Tmp).getAsInteger(10, Line);
-          } else if (DLKeyName == "Column") {
-            auto *Value = dyn_cast<yaml::ScalarNode>(DLChild.getValue());
-            if (!Value)
-              continue;
-            Value->getValue(Tmp).getAsInteger(10, Column);
-          }
-        }
-      } else if (KeyName == "Args") {
-        auto *Args = dyn_cast<yaml::SequenceNode>(RootChild.getValue());
-        if (!Args)
-          continue;
-        for (auto &ArgChild : *Args) {
-          auto *ArgMap = dyn_cast<yaml::MappingNode>(&ArgChild);
-          if (!ArgMap)
-            continue;
-          for (auto &ArgKV : *ArgMap) {
-            auto *ArgKey = dyn_cast<yaml::ScalarNode>(ArgKV.getKey());
-            if (!ArgKey)
-              continue;
-            StringRef ArgKeyName = ArgKey->getValue(Tmp);
-            if (ArgKeyName == "VectorizationFactor") {
-              auto *Value = dyn_cast<yaml::ScalarNode>(ArgKV.getValue());
-              if (!Value)
-                continue;
-              Value->getValue(Tmp).getAsInteger(10, VectorizationFactor);
-            } else if (ArgKeyName == "InterleaveCount") {
-              auto *Value = dyn_cast<yaml::ScalarNode>(ArgKV.getValue());
-              if (!Value)
-                continue;
-              Value->getValue(Tmp).getAsInteger(10, InterleaveCount);
-            } else if (ArgKeyName == "UnrollCount") {
-              auto *Value = dyn_cast<yaml::ScalarNode>(ArgKV.getValue());
-              if (!Value)
-                continue;
-              Value->getValue(Tmp).getAsInteger(10, UnrollCount);
-            }
-          }
-        }
-      }
+    for (const LLVMOptRemarkArg &Arg : Args) {
+      StringRef ArgKeyName(Arg.Key.Str, Arg.Key.Len);
+      StringRef ArgValue(Arg.Value.Str, Arg.Value.Len);
+      if (ArgKeyName == "VectorizationFactor")
+        ArgValue.getAsInteger(10, VectorizationFactor);
+      else if (ArgKeyName == "InterleaveCount")
+        ArgValue.getAsInteger(10, InterleaveCount);
+      else if (ArgKeyName == "UnrollCount")
+        ArgValue.getAsInteger(10, UnrollCount);
     }
 
     if (Line < 1 || File.empty())
@@ -268,22 +209,13 @@ static void collectLocationInfo(yaml::Stream &Stream,
       UpdateLLII(LI.Vectorized);
     }
   }
-}
 
-static bool readLocationInfo(LocationInfoTy &LocationInfo) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
-      MemoryBuffer::getFileOrSTDIN(InputFileName);
-  if (std::error_code EC = Buf.getError()) {
-    WithColor::error() << "Can't open file " << InputFileName << ": "
-                       << EC.message() << "\n";
-    return false;
-  }
+  bool HasError = LLVMOptRemarkParserHasError(Parser);
+  if (HasError)
+    WithColor::error() << LLVMOptRemarkParserGetErrorMessage(Parser) << "\n";
 
-  SourceMgr SM;
-  yaml::Stream Stream(Buf.get()->getBuffer(), SM);
-  collectLocationInfo(Stream, LocationInfo);
-
-  return true;
+  LLVMOptRemarkParserDispose(Parser);
+  return !HasError;
 }
 
 static bool writeReport(LocationInfoTy &LocationInfo) {
