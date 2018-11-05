@@ -24,7 +24,6 @@
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Symbol/OCamlASTContext.h"
 #include "lldb/Symbol/SwiftASTContext.h"
 #include "lldb/Utility/Timer.h"
 
@@ -58,7 +57,6 @@
 #include "Plugins/InstrumentationRuntime/SwiftRuntimeReporting/SwiftRuntimeReporting.h"
 #include "Plugins/JITLoader/GDB/JITLoaderGDB.h"
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/OCaml/OCamlLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
 #include "Plugins/LanguageRuntime/CPlusPlus/ItaniumABI/ItaniumABILanguageRuntime.h"
@@ -317,7 +315,6 @@ void SystemInitializerFull::Initialize() {
   llvm::InitializeAllDisassemblers();
 
   ClangASTContext::Initialize();
-  OCamlASTContext::Initialize();
   SwiftASTContext::Initialize();
 
   ABIMacOSX_i386::Initialize();
@@ -368,7 +365,6 @@ void SystemInitializerFull::Initialize() {
   CPlusPlusLanguage::Initialize();
   ObjCLanguage::Initialize();
   ObjCPlusPlusLanguage::Initialize();
-  OCamlLanguage::Initialize();
   ::SwiftInitialize();
 
 #if defined(_WIN32)
@@ -448,7 +444,6 @@ void SystemInitializerFull::Terminate() {
   PluginManager::Terminate();
 
   ClangASTContext::Terminate();
-  OCamlASTContext::Terminate();
   SwiftASTContext::Terminate();
 
   ABIMacOSX_i386::Terminate();
@@ -496,7 +491,6 @@ void SystemInitializerFull::Terminate() {
   CPlusPlusLanguage::Terminate();
   ObjCLanguage::Terminate();
   ObjCPlusPlusLanguage::Terminate();
-  OCamlLanguage::Terminate();
 
 #if defined(__APPLE__)
   DynamicLoaderDarwinKernel::Terminate();

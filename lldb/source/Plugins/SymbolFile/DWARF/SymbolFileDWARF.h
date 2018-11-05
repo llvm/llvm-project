@@ -75,7 +75,6 @@ public:
   friend class DWARFDIE;
   friend class DWARFASTParserClang;
   friend class DWARFASTParserSwift;
-  friend class DWARFASTParserOCaml;
 
   //------------------------------------------------------------------
   // Static Functions
