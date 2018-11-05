@@ -375,11 +375,13 @@ Status ProcessFreeBSD::DoLaunch(Module *module,
 
   FileSpec working_dir = launch_info.GetWorkingDirectory();
   namespace fs = llvm::sys::fs;
-  if (working_dir && (!working_dir.ResolvePath() ||
-                      !fs::is_directory(working_dir.GetPath()))) {
-    error.SetErrorStringWithFormat("No such file or directory: %s",
+  if (working_dir) {
+    FileSystem::Instance().Resolve(working_dir);
+    if (!fs::is_directory(working_dir.GetPath())) {
+      error.SetErrorStringWithFormat("No such file or directory: %s",
                                    working_dir.GetCString());
-    return error;
+      return error;
+    }
   }
 
   SetPrivateState(eStateLaunching);
