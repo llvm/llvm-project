@@ -91,17 +91,14 @@ define float @signbits_ashr_extract_sitofp_1(<2 x i64> %a0) nounwind {
 ; X32-LABEL: signbits_ashr_extract_sitofp_1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,2147483648,0,2147483648]
-; X32-NEXT:    vpsrlq $63, %xmm1, %xmm2
-; X32-NEXT:    vpsrlq $32, %xmm1, %xmm1
-; X32-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
-; X32-NEXT:    vpsrlq $63, %xmm0, %xmm2
+; X32-NEXT:    vpsrlq $63, %xmm0, %xmm1
 ; X32-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,32768,0,0,1,0,0,0]
 ; X32-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vmovd %xmm0, %eax
-; X32-NEXT:    vcvtsi2ssl %eax, %xmm3, %xmm0
+; X32-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -128,18 +125,15 @@ define float @signbits_ashr_shl_extract_sitofp(<2 x i64> %a0) nounwind {
 ; X32-LABEL: signbits_ashr_shl_extract_sitofp:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,2147483648,0,2147483648]
-; X32-NEXT:    vpsrlq $60, %xmm1, %xmm2
-; X32-NEXT:    vpsrlq $61, %xmm1, %xmm1
-; X32-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1,2,3],xmm2[4,5,6,7]
-; X32-NEXT:    vpsrlq $60, %xmm0, %xmm2
+; X32-NEXT:    vpsrlq $60, %xmm0, %xmm1
 ; X32-NEXT:    vpsrlq $61, %xmm0, %xmm0
-; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]
+; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [4,0,0,0,8,0,0,0]
 ; X32-NEXT:    vpxor %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpsllq $20, %xmm0, %xmm0
 ; X32-NEXT:    vmovd %xmm0, %eax
-; X32-NEXT:    vcvtsi2ssl %eax, %xmm3, %xmm0
+; X32-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -263,13 +257,10 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,2147483648,0,2147483648]
-; X32-NEXT:    vpsrlq $60, %xmm2, %xmm3
-; X32-NEXT:    vpsrlq $61, %xmm2, %xmm2
-; X32-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm3[4,5,6,7]
-; X32-NEXT:    vpsrlq $60, %xmm0, %xmm3
+; X32-NEXT:    vpsrlq $60, %xmm0, %xmm2
 ; X32-NEXT:    vpsrlq $61, %xmm0, %xmm0
-; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm3[4,5,6,7]
+; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,0,0,0,8,0,0,0]
 ; X32-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    vpinsrd $0, %eax, %xmm1, %xmm1
@@ -281,7 +272,7 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ; X32-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; X32-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vmovd %xmm0, %eax
-; X32-NEXT:    vcvtsi2ssl %eax, %xmm4, %xmm0
+; X32-NEXT:    vcvtsi2ssl %eax, %xmm3, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -320,13 +311,10 @@ define float @signbits_ashr_sextvecinreg_bitops_extract_sitofp(<2 x i64> %a0, <4
 ; X32-LABEL: signbits_ashr_sextvecinreg_bitops_extract_sitofp:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,2147483648,0,2147483648]
-; X32-NEXT:    vpsrlq $60, %xmm2, %xmm3
-; X32-NEXT:    vpsrlq $61, %xmm2, %xmm2
-; X32-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm3[4,5,6,7]
-; X32-NEXT:    vpsrlq $60, %xmm0, %xmm3
+; X32-NEXT:    vpsrlq $60, %xmm0, %xmm2
 ; X32-NEXT:    vpsrlq $61, %xmm0, %xmm0
-; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm3[4,5,6,7]
+; X32-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm2[4,5,6,7]
+; X32-NEXT:    vmovdqa {{.*#+}} xmm2 = [4,0,0,0,8,0,0,0]
 ; X32-NEXT:    vpxor %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
 ; X32-NEXT:    vpmovsxdq %xmm1, %xmm1
@@ -334,7 +322,7 @@ define float @signbits_ashr_sextvecinreg_bitops_extract_sitofp(<2 x i64> %a0, <4
 ; X32-NEXT:    vpor %xmm1, %xmm2, %xmm1
 ; X32-NEXT:    vpxor %xmm0, %xmm1, %xmm0
 ; X32-NEXT:    vmovd %xmm0, %eax
-; X32-NEXT:    vcvtsi2ssl %eax, %xmm4, %xmm0
+; X32-NEXT:    vcvtsi2ssl %eax, %xmm3, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)
 ; X32-NEXT:    popl %eax
@@ -375,22 +363,19 @@ define <4 x float> @signbits_ashr_sext_select_shuffle_sitofp(<4 x i64> %a0, <4 x
 ; X32-NEXT:    subl $16, %esp
 ; X32-NEXT:    vpmovsxdq 16(%ebp), %xmm3
 ; X32-NEXT:    vpmovsxdq 8(%ebp), %xmm4
-; X32-NEXT:    vmovdqa {{.*#+}} xmm5 = [0,2147483648,0,2147483648]
+; X32-NEXT:    vextractf128 $1, %ymm2, %xmm5
 ; X32-NEXT:    vpsrlq $63, %xmm5, %xmm6
 ; X32-NEXT:    vpsrlq $33, %xmm5, %xmm5
 ; X32-NEXT:    vpblendw {{.*#+}} xmm5 = xmm5[0,1,2,3],xmm6[4,5,6,7]
-; X32-NEXT:    vextractf128 $1, %ymm2, %xmm6
-; X32-NEXT:    vpsrlq $63, %xmm6, %xmm7
-; X32-NEXT:    vpsrlq $33, %xmm6, %xmm6
-; X32-NEXT:    vpblendw {{.*#+}} xmm6 = xmm6[0,1,2,3],xmm7[4,5,6,7]
-; X32-NEXT:    vpxor %xmm5, %xmm6, %xmm6
-; X32-NEXT:    vpsubq %xmm5, %xmm6, %xmm6
+; X32-NEXT:    vmovdqa {{.*#+}} xmm6 = [0,16384,0,0,1,0,0,0]
+; X32-NEXT:    vpxor %xmm6, %xmm5, %xmm5
+; X32-NEXT:    vpsubq %xmm6, %xmm5, %xmm5
 ; X32-NEXT:    vpsrlq $63, %xmm2, %xmm7
 ; X32-NEXT:    vpsrlq $33, %xmm2, %xmm2
 ; X32-NEXT:    vpblendw {{.*#+}} xmm2 = xmm2[0,1,2,3],xmm7[4,5,6,7]
-; X32-NEXT:    vpxor %xmm5, %xmm2, %xmm2
-; X32-NEXT:    vpsubq %xmm5, %xmm2, %xmm2
-; X32-NEXT:    vinsertf128 $1, %xmm6, %ymm2, %ymm2
+; X32-NEXT:    vpxor %xmm6, %xmm2, %xmm2
+; X32-NEXT:    vpsubq %xmm6, %xmm2, %xmm2
+; X32-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
 ; X32-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; X32-NEXT:    vextractf128 $1, %ymm1, %xmm4
 ; X32-NEXT:    vextractf128 $1, %ymm0, %xmm5
