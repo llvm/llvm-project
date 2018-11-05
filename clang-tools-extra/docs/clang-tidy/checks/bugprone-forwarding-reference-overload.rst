@@ -13,7 +13,7 @@ Item 26.
 
 Consider the following example:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     class Person {
     public:
