@@ -10,6 +10,8 @@ import Foundation
 let u = URL(string: "http://www.apple.com")!
 // CHECK:      {{u}}: URL = "http://www.apple.com"
 
+let u3 = URL(string: "invalid.com")!
+// CHECK: {{u3}}: URL = "invalid.com"
 
 let n = Notification(name: Notification.Name("abc"), object: Double(42.0), userInfo: ["hello":"world"])
 
