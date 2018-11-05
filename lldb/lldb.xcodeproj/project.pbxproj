@@ -277,9 +277,6 @@
 		945261BF1B9A11FC00BF138D /* CxxStringTypes.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 945261B31B9A11E800BF138D /* CxxStringTypes.cpp */; };
 		6D95DC001B9DC057000E318A /* DIERef.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D95DBFD1B9DC057000E318A /* DIERef.cpp */; };
 		269DDD4A1B8FD1C300D0DBD8 /* DWARFASTParserClang.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 269DDD481B8FD1C300D0DBD8 /* DWARFASTParserClang.cpp */; };
-		AE6897281B94F6DE0018845D /* DWARFASTParserGo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE6897261B94F6DE0018845D /* DWARFASTParserGo.cpp */; };
-		6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */; };
-		4CC7C6581D529B950076FF94 /* DWARFASTParserOCaml.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C6521D5299140076FF94 /* DWARFASTParserOCaml.cpp */; };
 		268900B713353E5F00698AC0 /* DWARFAbbreviationDeclaration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89B310F57C5600BB2B04 /* DWARFAbbreviationDeclaration.cpp */; };
 		266E829D1B8E542C008FCA06 /* DWARFAttribute.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266E829C1B8E542C008FCA06 /* DWARFAttribute.cpp */; };
 		4CD44D4220B777850003557C /* DWARFBaseDIE.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44D4020B777850003557C /* DWARFBaseDIE.cpp */; };
@@ -385,14 +382,6 @@
 		2689009E13353E4200698AC0 /* GDBRemoteRegisterContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2618EE5D1315B29C001D6D71 /* GDBRemoteRegisterContext.cpp */; };
 		E7E94ABC1B54961F00D0AE30 /* GDBRemoteSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = E73A15A41B548EC500786197 /* GDBRemoteSignals.cpp */; };
 		23CB15461D66DA9300EDDDE1 /* GDBRemoteTestUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2370A37F1D66C587000E7BE6 /* GDBRemoteTestUtils.cpp */; };
-		AE7F56291B8FE418001377A8 /* GoASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEFFBA7C1AC4835D0087B932 /* GoASTContext.cpp */; };
-		AE44FB4C1BB4BB540033EB62 /* GoFormatterFunctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE44FB4A1BB4BB540033EB62 /* GoFormatterFunctions.cpp */; };
-		AE44FB471BB4BB090033EB62 /* GoLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE44FB451BB4BB090033EB62 /* GoLanguage.cpp */; };
-		AE44FB3E1BB485960033EB62 /* GoLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE44FB3D1BB485960033EB62 /* GoLanguageRuntime.cpp */; };
-		AE44FB311BB07EB80033EB62 /* GoLexer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE44FB2A1BB07DD80033EB62 /* GoLexer.cpp */; };
-		AE44FB321BB07EBC0033EB62 /* GoParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE44FB2B1BB07DD80033EB62 /* GoParser.cpp */; };
-		23CB15331D66DA9300EDDDE1 /* GoParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AEC6FF9F1BE970A2007882C1 /* GoParserTest.cpp */; };
-		AE44FB301BB07EB20033EB62 /* GoUserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE44FB2C1BB07DD80033EB62 /* GoUserExpression.cpp */; };
 		6D95DC011B9DC057000E318A /* HashedNameToDIE.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D95DBFE1B9DC057000E318A /* HashedNameToDIE.cpp */; };
 		2666ADC81B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2666ADC31B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp */; };
 		58A080B42112AB3800D5580F /* Highlighter.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 58A080A92112AA9400D5580F /* Highlighter.cpp */; };
@@ -429,11 +418,6 @@
 		942829561A89614C00521B30 /* JSON.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 942829551A89614C00521B30 /* JSON.cpp */; };
 		8C3BD9A01EF5D1FF0016C343 /* JSONTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C3BD99F1EF5D1B50016C343 /* JSONTest.cpp */; };
 		2660387B211CA90F00329572 /* JSONUtils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26603875211CA90E00329572 /* JSONUtils.cpp */; };
-		6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */; };
-		6D0F61591C80AB3500A4ECEE /* JavaFormatterFunctions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61511C80AB3000A4ECEE /* JavaFormatterFunctions.cpp */; };
-		6D0F615A1C80AB3900A4ECEE /* JavaLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F61531C80AB3000A4ECEE /* JavaLanguage.cpp */; };
-		6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */; };
-		6D0F614F1C80AB0C00A4ECEE /* JavaLanguageRuntime.h in Headers */ = {isa = PBXBuildFile; fileRef = 6D0F614B1C80AB0400A4ECEE /* JavaLanguageRuntime.h */; };
 		2668035C11601108008E1FE4 /* LLDB.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26680207115FD0ED008E1FE4 /* LLDB.framework */; };
 		2669424D1A6DC32B0063BE93 /* LLDB.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26680207115FD0ED008E1FE4 /* LLDB.framework */; };
 		26792623211CA42300EE1D10 /* LLDB.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26680207115FD0ED008E1FE4 /* LLDB.framework */; };
@@ -583,8 +567,6 @@
 		267A47FF1B1411D90021A5BC /* NativeWatchpointList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 267A47FE1B1411D90021A5BC /* NativeWatchpointList.cpp */; };
 		AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */; };
 		AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */ = {isa = PBXBuildFile; fileRef = AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */; };
-		4CC7C6571D52997A0076FF94 /* OCamlASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C6551D52996C0076FF94 /* OCamlASTContext.cpp */; };
-		4CC7C6501D5298F30076FF94 /* OCamlLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CC7C64D1D5298E20076FF94 /* OCamlLanguage.cpp */; };
 		942612F81B952C9B00EF842E /* ObjCLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B6385E1B8FB7A2004FE1E4 /* ObjCLanguage.cpp */; };
 		268900ED13353E6F00698AC0 /* ObjCLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CB443F212499B5000C13DC2 /* ObjCLanguageRuntime.cpp */; };
 		94B638631B8FB7F1004FE1E4 /* ObjCPlusPlusLanguage.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94B638621B8FB7F1004FE1E4 /* ObjCPlusPlusLanguage.cpp */; };
@@ -598,7 +580,6 @@
 		26E152261419CAD4007967D0 /* ObjectFilePECOFF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26E152231419CACA007967D0 /* ObjectFilePECOFF.cpp */; };
 		26651A18133BF9E0005B64B7 /* Opcode.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26651A17133BF9DF005B64B7 /* Opcode.cpp */; };
 		266DFE9713FD656E00D0C574 /* OperatingSystem.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266DFE9613FD656E00D0C574 /* OperatingSystem.cpp */; };
-		AE8F624919EF3E1E00326B21 /* OperatingSystemGo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AE8F624719EF3E1E00326B21 /* OperatingSystemGo.cpp */; };
 		2698699B15E6CBD0002415FF /* OperatingSystemPython.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2698699815E6CBD0002415FF /* OperatingSystemPython.cpp */; };
 		4C719395207D235400FDF430 /* OptionArgParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C719394207D235400FDF430 /* OptionArgParser.cpp */; };
 		26D5E15F135BAEA2006EA0A7 /* OptionGroupArchitecture.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26D5E15E135BAEA2006EA0A7 /* OptionGroupArchitecture.cpp */; };
@@ -1845,12 +1826,6 @@
 		269DDD451B8FD01A00D0DBD8 /* DWARFASTParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFASTParser.h; sourceTree = "<group>"; };
 		269DDD481B8FD1C300D0DBD8 /* DWARFASTParserClang.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFASTParserClang.cpp; sourceTree = "<group>"; };
 		269DDD491B8FD1C300D0DBD8 /* DWARFASTParserClang.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFASTParserClang.h; sourceTree = "<group>"; };
-		AE6897261B94F6DE0018845D /* DWARFASTParserGo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFASTParserGo.cpp; sourceTree = "<group>"; };
-		AE6897271B94F6DE0018845D /* DWARFASTParserGo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFASTParserGo.h; sourceTree = "<group>"; };
-		6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFASTParserJava.cpp; sourceTree = "<group>"; };
-		6D0F61451C80AACF00A4ECEE /* DWARFASTParserJava.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFASTParserJava.h; sourceTree = "<group>"; };
-		4CC7C6521D5299140076FF94 /* DWARFASTParserOCaml.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFASTParserOCaml.cpp; sourceTree = "<group>"; };
-		4CC7C6511D5299140076FF94 /* DWARFASTParserOCaml.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFASTParserOCaml.h; sourceTree = "<group>"; };
 		260C89B310F57C5600BB2B04 /* DWARFAbbreviationDeclaration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFAbbreviationDeclaration.cpp; sourceTree = "<group>"; };
 		260C89B410F57C5600BB2B04 /* DWARFAbbreviationDeclaration.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFAbbreviationDeclaration.h; sourceTree = "<group>"; };
 		266E829C1B8E542C008FCA06 /* DWARFAttribute.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFAttribute.cpp; sourceTree = "<group>"; };
@@ -2067,22 +2042,6 @@
 		E73A15A51B548EC500786197 /* GDBRemoteSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GDBRemoteSignals.h; path = Utility/GDBRemoteSignals.h; sourceTree = "<group>"; };
 		2370A37F1D66C587000E7BE6 /* GDBRemoteTestUtils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GDBRemoteTestUtils.cpp; sourceTree = "<group>"; };
 		2370A3801D66C587000E7BE6 /* GDBRemoteTestUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GDBRemoteTestUtils.h; sourceTree = "<group>"; };
-		AE44FB261BB07DC60033EB62 /* GoAST.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = GoAST.h; path = ExpressionParser/Go/GoAST.h; sourceTree = "<group>"; };
-		AEFFBA7C1AC4835D0087B932 /* GoASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GoASTContext.cpp; path = source/Symbol/GoASTContext.cpp; sourceTree = "<group>"; };
-		AEEA340F1ACA08A000AB639D /* GoASTContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GoASTContext.h; path = include/lldb/Symbol/GoASTContext.h; sourceTree = "<group>"; };
-		AE44FB4A1BB4BB540033EB62 /* GoFormatterFunctions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GoFormatterFunctions.cpp; path = Language/Go/GoFormatterFunctions.cpp; sourceTree = "<group>"; };
-		AE44FB4B1BB4BB540033EB62 /* GoFormatterFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GoFormatterFunctions.h; path = Language/Go/GoFormatterFunctions.h; sourceTree = "<group>"; };
-		AE44FB451BB4BB090033EB62 /* GoLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GoLanguage.cpp; path = Language/Go/GoLanguage.cpp; sourceTree = "<group>"; };
-		AE44FB461BB4BB090033EB62 /* GoLanguage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = GoLanguage.h; path = Language/Go/GoLanguage.h; sourceTree = "<group>"; };
-		AE44FB3D1BB485960033EB62 /* GoLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GoLanguageRuntime.cpp; path = Go/GoLanguageRuntime.cpp; sourceTree = "<group>"; };
-		AE44FB3C1BB4858A0033EB62 /* GoLanguageRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = GoLanguageRuntime.h; path = Go/GoLanguageRuntime.h; sourceTree = "<group>"; };
-		AE44FB2A1BB07DD80033EB62 /* GoLexer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GoLexer.cpp; path = ExpressionParser/Go/GoLexer.cpp; sourceTree = "<group>"; };
-		AE44FB271BB07DC60033EB62 /* GoLexer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = GoLexer.h; path = ExpressionParser/Go/GoLexer.h; sourceTree = "<group>"; };
-		AE44FB2B1BB07DD80033EB62 /* GoParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GoParser.cpp; path = ExpressionParser/Go/GoParser.cpp; sourceTree = "<group>"; };
-		AE44FB281BB07DC60033EB62 /* GoParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = GoParser.h; path = ExpressionParser/Go/GoParser.h; sourceTree = "<group>"; };
-		AEC6FF9F1BE970A2007882C1 /* GoParserTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GoParserTest.cpp; sourceTree = "<group>"; };
-		AE44FB2C1BB07DD80033EB62 /* GoUserExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = GoUserExpression.cpp; path = ExpressionParser/Go/GoUserExpression.cpp; sourceTree = "<group>"; };
-		AE44FB291BB07DC60033EB62 /* GoUserExpression.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = GoUserExpression.h; path = ExpressionParser/Go/GoUserExpression.h; sourceTree = "<group>"; };
 		6D95DBFE1B9DC057000E318A /* HashedNameToDIE.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HashedNameToDIE.cpp; sourceTree = "<group>"; };
 		26A0DA4D140F721D006DA411 /* HashedNameToDIE.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = HashedNameToDIE.h; sourceTree = "<group>"; };
 		2666ADC31B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = HexagonDYLDRendezvous.cpp; sourceTree = "<group>"; };
@@ -2175,14 +2134,6 @@
 		8C3BD99F1EF5D1B50016C343 /* JSONTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = JSONTest.cpp; sourceTree = "<group>"; };
 		26603875211CA90E00329572 /* JSONUtils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JSONUtils.cpp; path = "tools/lldb-vscode/JSONUtils.cpp"; sourceTree = "<group>"; };
 		26603876211CA90E00329572 /* JSONUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JSONUtils.h; path = "tools/lldb-vscode/JSONUtils.h"; sourceTree = "<group>"; };
-		6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaASTContext.cpp; path = source/Symbol/JavaASTContext.cpp; sourceTree = "<group>"; };
-		6D0F613D1C80AA8900A4ECEE /* JavaASTContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaASTContext.h; path = include/lldb/Symbol/JavaASTContext.h; sourceTree = "<group>"; };
-		6D0F61511C80AB3000A4ECEE /* JavaFormatterFunctions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaFormatterFunctions.cpp; path = Language/Java/JavaFormatterFunctions.cpp; sourceTree = "<group>"; };
-		6D0F61521C80AB3000A4ECEE /* JavaFormatterFunctions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaFormatterFunctions.h; path = Language/Java/JavaFormatterFunctions.h; sourceTree = "<group>"; };
-		6D0F61531C80AB3000A4ECEE /* JavaLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaLanguage.cpp; path = Language/Java/JavaLanguage.cpp; sourceTree = "<group>"; };
-		6D0F61541C80AB3000A4ECEE /* JavaLanguage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaLanguage.h; path = Language/Java/JavaLanguage.h; sourceTree = "<group>"; };
-		6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = JavaLanguageRuntime.cpp; path = Java/JavaLanguageRuntime.cpp; sourceTree = "<group>"; };
-		6D0F614B1C80AB0400A4ECEE /* JavaLanguageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = JavaLanguageRuntime.h; path = Java/JavaLanguageRuntime.h; sourceTree = "<group>"; };
 		26680207115FD0ED008E1FE4 /* LLDB.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = LLDB.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		26B42C4C1187ABA50079C8C8 /* LLDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LLDB.h; path = include/lldb/API/LLDB.h; sourceTree = "<group>"; };
 		943BDEFD1AA7B2F800789CE8 /* LLDBAssert.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LLDBAssert.cpp; path = source/Utility/LLDBAssert.cpp; sourceTree = "<group>"; };
@@ -2397,7 +2348,6 @@
 		8C3BD9951EF45D9B0016C343 /* MainThreadCheckerRuntime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MainThreadCheckerRuntime.cpp; sourceTree = "<group>"; };
 		8C3BD9931EF45D9B0016C343 /* MainThreadCheckerRuntime.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = MainThreadCheckerRuntime.h; sourceTree = "<group>"; };
 		2665CD0D15080846002C8FAE /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
-		2669415F1A6DC2AB0063BE93 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; name = Makefile; path = "tools/lldb-mi/Makefile"; sourceTree = SOURCE_ROOT; };
 		26BC7E8010F1B85900F91463 /* Mangled.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Mangled.cpp; path = source/Core/Mangled.cpp; sourceTree = "<group>"; };
 		26BC7D6910F1B77400F91463 /* Mangled.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Mangled.h; path = include/lldb/Core/Mangled.h; sourceTree = "<group>"; };
 		4F29D3CD21010F84003B549A /* MangledTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MangledTest.cpp; sourceTree = "<group>"; };
@@ -2459,10 +2409,6 @@
 		267A47F91B1411AC0021A5BC /* NativeWatchpointList.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = NativeWatchpointList.h; path = include/lldb/Host/common/NativeWatchpointList.h; sourceTree = "<group>"; };
 		AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetBSDSignals.cpp; path = Utility/NetBSDSignals.cpp; sourceTree = "<group>"; };
 		AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetBSDSignals.h; path = Utility/NetBSDSignals.h; sourceTree = "<group>"; };
-		4CC7C6551D52996C0076FF94 /* OCamlASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = OCamlASTContext.cpp; path = source/Symbol/OCamlASTContext.cpp; sourceTree = "<group>"; };
-		239D38071D70E6C700D8E937 /* OCamlASTContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OCamlASTContext.h; path = include/lldb/Symbol/OCamlASTContext.h; sourceTree = "<group>"; };
-		4CC7C64D1D5298E20076FF94 /* OCamlLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = OCamlLanguage.cpp; path = Language/OCaml/OCamlLanguage.cpp; sourceTree = "<group>"; };
-		4CC7C64C1D5298E20076FF94 /* OCamlLanguage.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OCamlLanguage.h; path = Language/OCaml/OCamlLanguage.h; sourceTree = "<group>"; };
 		94B6385E1B8FB7A2004FE1E4 /* ObjCLanguage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ObjCLanguage.cpp; path = Language/ObjC/ObjCLanguage.cpp; sourceTree = "<group>"; };
 		94B6385F1B8FB7A2004FE1E4 /* ObjCLanguage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ObjCLanguage.h; path = Language/ObjC/ObjCLanguage.h; sourceTree = "<group>"; };
 		4CB443F212499B5000C13DC2 /* ObjCLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ObjCLanguageRuntime.cpp; path = source/Target/ObjCLanguageRuntime.cpp; sourceTree = "<group>"; };
@@ -2490,8 +2436,6 @@
 		26651A15133BF9CC005B64B7 /* Opcode.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Opcode.h; path = include/lldb/Core/Opcode.h; sourceTree = "<group>"; };
 		266DFE9613FD656E00D0C574 /* OperatingSystem.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = OperatingSystem.cpp; path = source/Target/OperatingSystem.cpp; sourceTree = "<group>"; };
 		266DFE9813FD658300D0C574 /* OperatingSystem.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = OperatingSystem.h; path = include/lldb/Target/OperatingSystem.h; sourceTree = "<group>"; };
-		AE8F624719EF3E1E00326B21 /* OperatingSystemGo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = OperatingSystemGo.cpp; path = Go/OperatingSystemGo.cpp; sourceTree = "<group>"; };
-		AE8F624819EF3E1E00326B21 /* OperatingSystemGo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OperatingSystemGo.h; path = Go/OperatingSystemGo.h; sourceTree = "<group>"; };
 		2698699815E6CBD0002415FF /* OperatingSystemPython.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OperatingSystemPython.cpp; sourceTree = "<group>"; };
 		2698699915E6CBD0002415FF /* OperatingSystemPython.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = OperatingSystemPython.h; sourceTree = "<group>"; };
 		4C719394207D235400FDF430 /* OptionArgParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = OptionArgParser.cpp; path = source/Interpreter/OptionArgParser.cpp; sourceTree = "<group>"; };
@@ -2633,7 +2577,6 @@
 		26BC7D7010F1B77400F91463 /* PluginInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PluginInterface.h; path = include/lldb/Core/PluginInterface.h; sourceTree = "<group>"; };
 		26BC7E8A10F1B85900F91463 /* PluginManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PluginManager.cpp; path = source/Core/PluginManager.cpp; sourceTree = "<group>"; };
 		26BC7D7110F1B77400F91463 /* PluginManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PluginManager.h; path = include/lldb/Core/PluginManager.h; sourceTree = "<group>"; };
-		26BC7DD610F1B7D500F91463 /* Predicate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Predicate.h; path = include/lldb/Host/Predicate.h; sourceTree = "<group>"; };
 		26BC7F3610F1B90C00F91463 /* Process.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Process.cpp; path = source/Target/Process.cpp; sourceTree = "<group>"; };
 		26BC7DF310F1B81A00F91463 /* Process.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Process.h; path = include/lldb/Target/Process.h; sourceTree = "<group>"; };
 		26BC17A218C7F4CB00D2196D /* ProcessElfCore.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessElfCore.cpp; sourceTree = "<group>"; };
@@ -3038,7 +2981,6 @@
 		B2A58721143119810092BFBA /* SBWatchpoint.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBWatchpoint.h; path = include/lldb/API/SBWatchpoint.h; sourceTree = "<group>"; };
 		B2A5872514313B480092BFBA /* SBWatchpoint.i */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; path = SBWatchpoint.i; sourceTree = "<group>"; };
 		26BC7D7810F1B77400F91463 /* STLUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = STLUtils.h; path = include/lldb/Core/STLUtils.h; sourceTree = "<group>"; };
-		4CAB257C18EC9DB800BAD33E /* SafeMachO.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SafeMachO.h; path = include/lldb/Utility/SafeMachO.h; sourceTree = "<group>"; };
 		26BC7E8D10F1B85900F91463 /* Scalar.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Scalar.cpp; path = source/Utility/Scalar.cpp; sourceTree = "<group>"; };
 		26BC7D7410F1B77400F91463 /* Scalar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Scalar.h; path = include/lldb/Utility/Scalar.h; sourceTree = "<group>"; };
 		23CB14E91D66CC0E00EDDDE1 /* ScalarTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ScalarTest.cpp; sourceTree = "<group>"; };
@@ -4194,12 +4136,6 @@
 				269DDD481B8FD1C300D0DBD8 /* DWARFASTParserClang.cpp */,
 				26B41ED61B9654E60097C7D2 /* DWARFASTParserSwift.h */,
 				26B41ED51B9654E60097C7D2 /* DWARFASTParserSwift.cpp */,
-				AE6897271B94F6DE0018845D /* DWARFASTParserGo.h */,
-				AE6897261B94F6DE0018845D /* DWARFASTParserGo.cpp */,
-				6D0F61441C80AACF00A4ECEE /* DWARFASTParserJava.cpp */,
-				6D0F61451C80AACF00A4ECEE /* DWARFASTParserJava.h */,
-				4CC7C6511D5299140076FF94 /* DWARFASTParserOCaml.h */,
-				4CC7C6521D5299140076FF94 /* DWARFASTParserOCaml.cpp */,
 				260C89B610F57C5600BB2B04 /* DWARFAttribute.h */,
 				266E829C1B8E542C008FCA06 /* DWARFAttribute.cpp */,
 				4CD44D4020B777850003557C /* DWARFBaseDIE.cpp */,
@@ -4673,7 +4609,6 @@
 		266DFE9013FD64D200D0C574 /* OperatingSystem */ = {
 			isa = PBXGroup;
 			children = (
-				AE8F624519EF3DFC00326B21 /* Go */,
 				2698699715E6CBD0002415FF /* Python */,
 			);
 			path = OperatingSystem;
@@ -4761,7 +4696,6 @@
 				26C6886E137880C400407EDF /* RegisterValue.cpp */,
 				26764C9C1E48F516008D3573 /* RegularExpression.h */,
 				26764C9F1E48F528008D3573 /* RegularExpression.cpp */,
-				4CAB257C18EC9DB800BAD33E /* SafeMachO.h */,
 				26BC7D7410F1B77400F91463 /* Scalar.h */,
 				26BC7E8D10F1B85900F91463 /* Scalar.cpp */,
 				26A375841D59487700D6CBDB /* SelectHelper.h */,
@@ -4826,7 +4760,6 @@
 			children = (
 				2669415B1A6DC2AB0063BE93 /* CMakeLists.txt */,
 				2669415E1A6DC2AB0063BE93 /* lldb-Info.plist */,
-				2669415F1A6DC2AB0063BE93 /* Makefile */,
 				266941601A6DC2AB0063BE93 /* MICmdArgContext.cpp */,
 				266941611A6DC2AB0063BE93 /* MICmdArgContext.h */,
 				266941621A6DC2AB0063BE93 /* MICmdArgSet.cpp */,
@@ -5350,9 +5283,7 @@
 			children = (
 				3032B1B91CAAA400004BE1AB /* ClangUtil.h */,
 				3032B1B61CAAA3D1004BE1AB /* ClangUtil.cpp */,
-				6D0F61411C80AAAA00A4ECEE /* JavaASTContext.cpp */,
 				6D0F613C1C80AA8900A4ECEE /* DebugMacros.h */,
-				6D0F613D1C80AA8900A4ECEE /* JavaASTContext.h */,
 				6D9AB3DE1BB2B76B003F2289 /* TypeMap.h */,
 				6D9AB3DC1BB2B74E003F2289 /* TypeMap.cpp */,
 				6D99A3621BBC2F3200979793 /* ArmUnwindInfo.cpp */,
@@ -5386,8 +5317,6 @@
 				26BC7F1810F1B8EC00F91463 /* Function.cpp */,
 				269FF07D12494F7D00225026 /* FuncUnwinders.h */,
 				961FABB81235DE1600F93A47 /* FuncUnwinders.cpp */,
-				AEEA340F1ACA08A000AB639D /* GoASTContext.h */,
-				AEFFBA7C1AC4835D0087B932 /* GoASTContext.cpp */,
 				26BC7C5B10F1B6E900F91463 /* LineEntry.h */,
 				26BC7F1910F1B8EC00F91463 /* LineEntry.cpp */,
 				26BC7C5C10F1B6E900F91463 /* LineTable.h */,
@@ -5395,8 +5324,6 @@
 				26BC7C5D10F1B6E900F91463 /* ObjectContainer.h */,
 				26BC7C5E10F1B6E900F91463 /* ObjectFile.h */,
 				26BC7F4C10F1BC1A00F91463 /* ObjectFile.cpp */,
-				239D38071D70E6C700D8E937 /* OCamlASTContext.h */,
-				4CC7C6551D52996C0076FF94 /* OCamlASTContext.cpp */,
 				4C848E0518D288FC00EC6DD0 /* SwiftASTContext.h */,
 				4C848E0718D2892900EC6DD0 /* SwiftASTContext.cpp */,
 				26BC7C5F10F1B6E900F91463 /* Symbol.h */,
@@ -5625,7 +5552,6 @@
 				A36FF33D17D8E98800244D40 /* OptionParser.h */,
 				260A39A519647A3A004B4130 /* Pipe.h */,
 				3F5E8AF31A40D4A500A73232 /* PipeBase.h */,
-				26BC7DD610F1B7D500F91463 /* Predicate.h */,
 				3FDFED2219BA6D55009756A7 /* ProcessRunLock.h */,
 				2654A68E1E552D2400DA1013 /* PseudoTerminal.h */,
 				2654A68C1E552D1500DA1013 /* PseudoTerminal.cpp */,
@@ -6318,7 +6244,6 @@
 			children = (
 				4984BA0C1B97620B008658D4 /* Clang */,
 				492E8AFF1BA37C790034B4D7 /* Swift */,
-				AE44FB371BB35A2E0033EB62 /* Go */,
 			);
 			name = ExpressionParser;
 			sourceTree = "<group>";
@@ -6365,32 +6290,13 @@
 			children = (
 				4C14CEF72057258D00DEEF94 /* ArchitecturePPC64.h */,
 				4C14CEF82057258D00DEEF94 /* ArchitecturePPC64.cpp */,
-				4C14CEF92057258D00DEEF94 /* New Group */,
 			);
 			path = PPC64;
-			sourceTree = "<group>";
-		};
-		4C14CEF92057258D00DEEF94 /* New Group */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = "New Group";
-			sourceTree = "<group>";
-		};
-		4CC7C64B1D5298AB0076FF94 /* OCaml */ = {
-			isa = PBXGroup;
-			children = (
-				4CC7C64C1D5298E20076FF94 /* OCamlLanguage.h */,
-				4CC7C64D1D5298E20076FF94 /* OCamlLanguage.cpp */,
-			);
-			name = OCaml;
 			sourceTree = "<group>";
 		};
 		4CCA643A13B40B82003BDF98 /* LanguageRuntime */ = {
 			isa = PBXGroup;
 			children = (
-				6D0F61491C80AAF200A4ECEE /* Java */,
-				AE44FB3B1BB485730033EB62 /* Go */,
 				49724D961AD6ECFA0033C538 /* RenderScript */,
 				4CCA643B13B40B82003BDF98 /* CPlusPlus */,
 				4CCA644013B40B82003BDF98 /* ObjC */,
@@ -6537,26 +6443,6 @@
 			);
 			name = common;
 			path = source/Host/common;
-			sourceTree = "<group>";
-		};
-		6D0F61491C80AAF200A4ECEE /* Java */ = {
-			isa = PBXGroup;
-			children = (
-				6D0F614A1C80AB0400A4ECEE /* JavaLanguageRuntime.cpp */,
-				6D0F614B1C80AB0400A4ECEE /* JavaLanguageRuntime.h */,
-			);
-			name = Java;
-			sourceTree = "<group>";
-		};
-		6D0F61501C80AB1400A4ECEE /* Java */ = {
-			isa = PBXGroup;
-			children = (
-				6D0F61511C80AB3000A4ECEE /* JavaFormatterFunctions.cpp */,
-				6D0F61521C80AB3000A4ECEE /* JavaFormatterFunctions.h */,
-				6D0F61531C80AB3000A4ECEE /* JavaLanguage.cpp */,
-				6D0F61541C80AB3000A4ECEE /* JavaLanguage.h */,
-			);
-			name = Java;
 			sourceTree = "<group>";
 		};
 		6D55B29B1A8CCFF000A70529 /* android */ = {
@@ -6748,13 +6634,10 @@
 			children = (
 				58A080AD2112AAC500D5580F /* ClangHighlighter.h */,
 				58A080AB2112AABB00D5580F /* ClangHighlighter.cpp */,
-				6D0F61501C80AB1400A4ECEE /* Java */,
 				94B6385A1B8FB109004FE1E4 /* CPlusPlus */,
-				AE44FB431BB4BAC20033EB62 /* Go */,
 				94B638551B8FAC87004FE1E4 /* ObjC */,
 				94B638601B8FB7BE004FE1E4 /* ObjCPlusPlus */,
 				942612ED1B94D30100EF842E /* Swift */,
-				4CC7C64B1D5298AB0076FF94 /* OCaml */,
 			);
 			name = Language;
 			sourceTree = "<group>";
@@ -6942,62 +6825,10 @@
 			name = debugserver;
 			sourceTree = "<group>";
 		};
-		AE44FB371BB35A2E0033EB62 /* Go */ = {
-			isa = PBXGroup;
-			children = (
-				AE44FB261BB07DC60033EB62 /* GoAST.h */,
-				AE44FB271BB07DC60033EB62 /* GoLexer.h */,
-				AE44FB2A1BB07DD80033EB62 /* GoLexer.cpp */,
-				AE44FB281BB07DC60033EB62 /* GoParser.h */,
-				AE44FB2B1BB07DD80033EB62 /* GoParser.cpp */,
-				AE44FB291BB07DC60033EB62 /* GoUserExpression.h */,
-				AE44FB2C1BB07DD80033EB62 /* GoUserExpression.cpp */,
-			);
-			name = Go;
-			sourceTree = "<group>";
-		};
-		AE44FB3B1BB485730033EB62 /* Go */ = {
-			isa = PBXGroup;
-			children = (
-				AE44FB3C1BB4858A0033EB62 /* GoLanguageRuntime.h */,
-				AE44FB3D1BB485960033EB62 /* GoLanguageRuntime.cpp */,
-			);
-			name = Go;
-			sourceTree = "<group>";
-		};
-		AE44FB431BB4BAC20033EB62 /* Go */ = {
-			isa = PBXGroup;
-			children = (
-				AE44FB491BB4BB1B0033EB62 /* Formatters */,
-				AE44FB461BB4BB090033EB62 /* GoLanguage.h */,
-				AE44FB451BB4BB090033EB62 /* GoLanguage.cpp */,
-			);
-			name = Go;
-			sourceTree = "<group>";
-		};
-		AE44FB491BB4BB1B0033EB62 /* Formatters */ = {
-			isa = PBXGroup;
-			children = (
-				AE44FB4B1BB4BB540033EB62 /* GoFormatterFunctions.h */,
-				AE44FB4A1BB4BB540033EB62 /* GoFormatterFunctions.cpp */,
-			);
-			name = Formatters;
-			sourceTree = "<group>";
-		};
-		AE8F624519EF3DFC00326B21 /* Go */ = {
-			isa = PBXGroup;
-			children = (
-				AE8F624719EF3E1E00326B21 /* OperatingSystemGo.cpp */,
-				AE8F624819EF3E1E00326B21 /* OperatingSystemGo.h */,
-			);
-			name = Go;
-			sourceTree = "<group>";
-		};
 		AEC6FF9D1BE97035007882C1 /* Expression */ = {
 			isa = PBXGroup;
 			children = (
 				23CB14F31D66CC9B00EDDDE1 /* CMakeLists.txt */,
-				AEC6FF9F1BE970A2007882C1 /* GoParserTest.cpp */,
 			);
 			path = Expression;
 			sourceTree = "<group>";
@@ -7345,7 +7176,6 @@
 				260A63171861008E00FECF8E /* IOHandler.h in Headers */,
 				AF0639B81BEC2D2500EA1B29 /* PlatformRemoteiOS.h in Headers */,
 				267F68581CC02EAE0086832B /* RegisterContextPOSIX_s390x.h in Headers */,
-				6D0F614F1C80AB0C00A4ECEE /* JavaLanguageRuntime.h in Headers */,
 				AF27AD561D3603EA00CF2833 /* DynamicLoaderDarwin.h in Headers */,
 				AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */,
 				E414F6EE21388F0300C50BC6 /* LibCxxVariant.h in Headers */,
@@ -8076,7 +7906,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				9A3D43D91F3151C400EB767C /* StatusTest.cpp in Sources */,
-				23CB15331D66DA9300EDDDE1 /* GoParserTest.cpp in Sources */,
 				23CB15341D66DA9300EDDDE1 /* CPlusPlusLanguageTest.cpp in Sources */,
 				9A2057381F3B8E7E00F6C293 /* FileSystemTest.cpp in Sources */,
 				9A2057201F3B8D2500F6C293 /* UnixSignalsTest.cpp in Sources */,
@@ -8290,7 +8119,6 @@
 				2689001213353DDE00698AC0 /* CommandObjectApropos.cpp in Sources */,
 				948C86D91B97764D00F3CAC3 /* SwiftSet.cpp in Sources */,
 				4C88BC2A1BA3722B00AA0964 /* Expression.cpp in Sources */,
-				AE44FB4C1BB4BB540033EB62 /* GoFormatterFunctions.cpp in Sources */,
 				8C3BD9961EF45DA50016C343 /* MainThreadCheckerRuntime.cpp in Sources */,
 				23042D121976CA1D00621B2C /* PlatformKalimba.cpp in Sources */,
 				2689001413353DDE00698AC0 /* CommandObjectBreakpoint.cpp in Sources */,
@@ -8325,14 +8153,13 @@
 				2689002413353DDE00698AC0 /* CommandObjectSettings.cpp in Sources */,
 				2689002513353DDE00698AC0 /* CommandObjectSource.cpp in Sources */,
 				267A48011B1411E40021A5BC /* XML.cpp in Sources */,
-				6D0F614E1C80AB0700A4ECEE /* JavaLanguageRuntime.cpp in Sources */,
+				AF8AD6371BEC28C400150209 /* PlatformRemoteAppleTV.cpp in Sources */,
 				2666ADC61B3CB675001FAFD3 /* DynamicLoaderHexagonDYLD.cpp in Sources */,
 				3F8169331ABB7A6D001DA9DF /* SystemLifetimeManager.cpp in Sources */,
 				AF2E02A31FA2CEAF00A86C34 /* ArchitectureArm.cpp in Sources */,
 				4959511F1A1BC4BC00F6F8FC /* ClangModulesDeclVendor.cpp in Sources */,
 				26BC179918C7F2B300D2196D /* JITLoader.cpp in Sources */,
 				4999FD071BC355630014BA69 /* SwiftREPLMaterializer.cpp in Sources */,
-				4CC7C6571D52997A0076FF94 /* OCamlASTContext.cpp in Sources */,
 				947CF7761DC7B20D00EF980B /* RegisterContextMinidump_x86_32.cpp in Sources */,
 				2689002713353DDE00698AC0 /* CommandObjectTarget.cpp in Sources */,
 				2689002813353DDE00698AC0 /* CommandObjectThread.cpp in Sources */,
@@ -8379,7 +8206,6 @@
 				26764C9E1E48F51E008D3573 /* Stream.cpp in Sources */,
 				2689004613353E0400698AC0 /* ModuleList.cpp in Sources */,
 				2689004713353E0400698AC0 /* PluginManager.cpp in Sources */,
-				AE44FB3E1BB485960033EB62 /* GoLanguageRuntime.cpp in Sources */,
 				AFF81FAF20D1CC400010F95E /* HostThreadMacOSX.mm in Sources */,
 				AF0C112818580CD800C4C45B /* QueueItem.cpp in Sources */,
 				2689004913353E0400698AC0 /* Scalar.cpp in Sources */,
@@ -8396,7 +8222,6 @@
 				4984BA131B978C55008658D4 /* ClangExpressionVariable.cpp in Sources */,
 				3F81691A1ABA2419001DA9DF /* NameMatches.cpp in Sources */,
 				AF0E22F018A09FB20009B7D1 /* AppleGetItemInfoHandler.cpp in Sources */,
-				AE44FB301BB07EB20033EB62 /* GoUserExpression.cpp in Sources */,
 				2689004F13353E0400698AC0 /* StreamFile.cpp in Sources */,
 				2689005113353E0400698AC0 /* StringList.cpp in Sources */,
 				2689005213353E0400698AC0 /* Timer.cpp in Sources */,
@@ -8413,7 +8238,6 @@
 				2689005813353E0400698AC0 /* ValueObjectChild.cpp in Sources */,
 				E7723D441AC4A7FB002BA082 /* RegisterContextPOSIXCore_arm64.cpp in Sources */,
 				233B007F1960CB280090E598 /* ProcessLaunchInfo.cpp in Sources */,
-				6D0F61591C80AB3500A4ECEE /* JavaFormatterFunctions.cpp in Sources */,
 				2689005913353E0400698AC0 /* ValueObjectConstResult.cpp in Sources */,
 				4CCF9F612143014D006CC7EA /* BreakpointResolverScripted.cpp in Sources */,
 				2689005A13353E0400698AC0 /* ValueObjectList.cpp in Sources */,
@@ -8465,7 +8289,6 @@
 				948C86D51B97764D00F3CAC3 /* SwiftHashedContainer.cpp in Sources */,
 				2689007413353E1A00698AC0 /* Terminal.cpp in Sources */,
 				942612F01B94D33200EF842E /* SwiftLanguage.cpp in Sources */,
-				6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */,
 				2689007613353E1A00698AC0 /* CFCBundle.cpp in Sources */,
 				9A0FDEA71E8EF5110086B2F5 /* RegisterContextLinux_mips.cpp in Sources */,
 				94BA8B70176F97CE005A91B5 /* CommandHistory.cpp in Sources */,
@@ -8483,7 +8306,6 @@
 				2689007C13353E1A00698AC0 /* Symbols.cpp in Sources */,
 				2689007D13353E2200698AC0 /* Args.cpp in Sources */,
 				2689007F13353E2200698AC0 /* CommandCompletions.cpp in Sources */,
-				AE6897281B94F6DE0018845D /* DWARFASTParserGo.cpp in Sources */,
 				945261C41B9A11FC00BF138D /* LibCxxUnorderedMap.cpp in Sources */,
 				26CEB5F218762056008F575A /* CommandObjectGUI.cpp in Sources */,
 				AF3A4AD21EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.cpp in Sources */,
@@ -8515,7 +8337,6 @@
 				2689009613353E4200698AC0 /* ObjectContainerBSDArchive.cpp in Sources */,
 				49CA96FF1E6AACC900C03FEE /* DataExtractor.cpp in Sources */,
 				2579065D1BD0488100178368 /* UDPSocket.cpp in Sources */,
-				AE8F624919EF3E1E00326B21 /* OperatingSystemGo.cpp in Sources */,
 				26BC179A18C7F2B300D2196D /* JITLoaderList.cpp in Sources */,
 				23D065901D4A7BEE0008EDE6 /* RenderScriptRuntime.cpp in Sources */,
 				2689009713353E4200698AC0 /* ObjectContainerUniversalMachO.cpp in Sources */,
@@ -8541,7 +8362,6 @@
 				AFD966BB217140B6006714AC /* SymbolFileNativePDB.cpp in Sources */,
 				3FDFE56C19AF9C44009756A7 /* HostProcessPosix.cpp in Sources */,
 				268900B413353E5000698AC0 /* RegisterContextMacOSXFrameBackchain.cpp in Sources */,
-				AE44FB321BB07EBC0033EB62 /* GoParser.cpp in Sources */,
 				6B74D89B200696BB0074051B /* Environment.cpp in Sources */,
 				3F8169311ABB7A6D001DA9DF /* SystemInitializer.cpp in Sources */,
 				3FDFED2D19C257A0009756A7 /* HostProcess.cpp in Sources */,
@@ -8635,7 +8455,6 @@
 				268900EB13353E6F00698AC0 /* ExecutionContext.cpp in Sources */,
 				268900EC13353E6F00698AC0 /* LanguageRuntime.cpp in Sources */,
 				268900ED13353E6F00698AC0 /* ObjCLanguageRuntime.cpp in Sources */,
-				4CC7C6581D529B950076FF94 /* DWARFASTParserOCaml.cpp in Sources */,
 				268900EE13353E6F00698AC0 /* PathMappingList.cpp in Sources */,
 				4C2479BD1BA39295009C9A7B /* FunctionCaller.cpp in Sources */,
 				AF2907BF1D3F082400E10654 /* DynamicLoaderMacOS.cpp in Sources */,
@@ -8705,7 +8524,6 @@
 				2689010C13353E6F00698AC0 /* UnixSignals.cpp in Sources */,
 				2689011013353E8200698AC0 /* SharingPtr.cpp in Sources */,
 				2689011113353E8200698AC0 /* StringExtractor.cpp in Sources */,
-				6D0F615A1C80AB3900A4ECEE /* JavaLanguage.cpp in Sources */,
 				2689011213353E8200698AC0 /* StringExtractorGDBRemote.cpp in Sources */,
 				26BC17AB18C7F4CB00D2196D /* ProcessElfCore.cpp in Sources */,
 				AF1F7B07189C904B0087DB9C /* AppleGetPendingItemsHandler.cpp in Sources */,
@@ -8728,19 +8546,16 @@
 				23E2E5441D904913006F38BB /* MinidumpParser.cpp in Sources */,
 				AF77E0931A033C7F0096C0EA /* ABISysV_ppc64.cpp in Sources */,
 				26D5E15F135BAEA2006EA0A7 /* OptionGroupArchitecture.cpp in Sources */,
-				6D0F61481C80AAD600A4ECEE /* DWARFASTParserJava.cpp in Sources */,
 				26D5E163135BB054006EA0A7 /* OptionGroupPlatform.cpp in Sources */,
 				94CD131A19BA33B400DB7BED /* TypeValidator.cpp in Sources */,
 				26BD407F135D2AE000237D80 /* FileLineResolver.cpp in Sources */,
 				230EC45B1D63C3BA008DF59F /* ThreadPlanCallOnFunctionExit.cpp in Sources */,
-				AE44FB311BB07EB80033EB62 /* GoLexer.cpp in Sources */,
 				26A7A035135E6E4200FB369E /* OptionValue.cpp in Sources */,
 				9A22A161135E30370024DDC3 /* EmulateInstructionARM.cpp in Sources */,
 				3FBA69ED1B60674B0008F44A /* ScriptInterpreterPython.cpp in Sources */,
 				9A22A163135E30370024DDC3 /* EmulationStateARM.cpp in Sources */,
 				9A4F35101368A51A00823F52 /* StreamAsynchronousIO.cpp in Sources */,
 				AF1D88691B575E8D003CB899 /* ValueObjectConstResultCast.cpp in Sources */,
-				4CC7C6501D5298F30076FF94 /* OCamlLanguage.cpp in Sources */,
 				2692BA15136610C100F9E14D /* UnwindAssemblyInstEmulation.cpp in Sources */,
 				263E949F13661AEA00E7D1CE /* UnwindAssembly-x86.cpp in Sources */,
 				AFA585D02107EB7400D7689A /* DumpRegisterValue.cpp in Sources */,
@@ -8871,7 +8686,6 @@
 				260CC64C15D0440D002BF2E0 /* OptionValueDictionary.cpp in Sources */,
 				49DCF6FE170E6B4A0092F75E /* IRMemoryMap.cpp in Sources */,
 				260CC64D15D0440D002BF2E0 /* OptionValueEnumeration.cpp in Sources */,
-				AE7F56291B8FE418001377A8 /* GoASTContext.cpp in Sources */,
 				260CC64E15D0440D002BF2E0 /* OptionValueFileSpec.cpp in Sources */,
 				AF2BCA6C18C7EFDE005B4526 /* JITLoaderGDB.cpp in Sources */,
 				267F68571CC02EAE0086832B /* RegisterContextPOSIX_s390x.cpp in Sources */,
@@ -8902,7 +8716,6 @@
 				2666ADC81B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp in Sources */,
 				26A375811D59462700D6CBDB /* SelectHelper.cpp in Sources */,
 				AFD966BA217140B6006714AC /* PdbIndex.cpp in Sources */,
-				AE44FB471BB4BB090033EB62 /* GoLanguage.cpp in Sources */,
 				262ED0081631FA3A00879631 /* OptionGroupString.cpp in Sources */,
 				94094C6B163B6F840083A547 /* ValueObjectCast.cpp in Sources */,
 				AF9107EF168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */,

@@ -145,6 +145,23 @@ public:
   virtual size_t ParseTypes(const SymbolContext &sc) = 0;
   virtual size_t ParseVariablesForContext(const SymbolContext &sc) = 0;
   virtual Type *ResolveTypeUID(lldb::user_id_t type_uid) = 0;
+
+
+  /// The characteristics of an array type.
+  struct ArrayInfo {
+    int64_t first_index;
+    llvm::SmallVector<uint64_t, 1> element_orders;
+    uint32_t byte_stride;
+    uint32_t bit_stride;
+  };
+  /// If \c type_uid points to an array type, return its characteristics.
+  /// To support variable-length array types, this function takes an
+  /// optional \p ExtecutionContext. If \c exe_ctx is non-null, the
+  /// dynamic characteristics for that context are returned.
+  virtual llvm::Optional<ArrayInfo>
+  GetDynamicArrayInfoForUID(lldb::user_id_t type_uid,
+                            const lldb_private::ExecutionContext *exe_ctx) = 0;
+
   virtual bool CompleteType(CompilerType &compiler_type) = 0;
   virtual void ParseDeclsForContext(CompilerDeclContext decl_ctx) {}
   virtual CompilerDecl GetDeclForUID(lldb::user_id_t uid) {
@@ -163,6 +180,8 @@ public:
                                         uint32_t line, bool check_inlines,
                                         lldb::SymbolContextItem resolve_scope,
                                         SymbolContextList &sc_list);
+
+  virtual void DumpClangAST(Stream &s) {}
   virtual uint32_t
   FindGlobalVariables(const ConstString &name,
                       const CompilerDeclContext *parent_decl_ctx,
