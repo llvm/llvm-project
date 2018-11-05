@@ -121,10 +121,10 @@ TEST(profileCollectorServiceTest, PostSerializeCollect) {
   FunctionCallTrie T(Allocators);
 
   // Then, we populate the trie with some data.
-  T.enterFunction(1, 1);
-  T.enterFunction(2, 2);
-  T.exitFunction(2, 3);
-  T.exitFunction(1, 4);
+  T.enterFunction(1, 1, 0);
+  T.enterFunction(2, 2, 0);
+  T.exitFunction(2, 3, 0);
+  T.exitFunction(1, 4, 0);
 
   // Then we post the data to the global profile collector service.
   profileCollectorService::post(T, 1);
@@ -177,10 +177,10 @@ void threadProcessing() {
   thread_local auto Allocators = FunctionCallTrie::InitAllocators();
   FunctionCallTrie T(Allocators);
 
-  T.enterFunction(1, 1);
-  T.enterFunction(2, 2);
-  T.exitFunction(2, 3);
-  T.exitFunction(1, 4);
+  T.enterFunction(1, 1, 0);
+  T.enterFunction(2, 2, 0);
+  T.exitFunction(2, 3, 0);
+  T.exitFunction(1, 4, 0);
 
   profileCollectorService::post(T, GetTid());
 }

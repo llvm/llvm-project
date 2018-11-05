@@ -674,32 +674,32 @@ void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
       // instructions, where we first load the offset into register, and then we
       // do branch register.
       if (ABI.IsN64()) {
-        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_LUi))
-            .addReg(Mips::AT_64)
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_LUi2Op_64),
+                Mips::AT_64)
             .addMBB(TgtMBB, MipsII::MO_HIGHEST);
-        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu),
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu2Op),
                 Mips::AT_64)
             .addReg(Mips::AT_64)
             .addMBB(TgtMBB, MipsII::MO_HIGHER);
         BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::DSLL), Mips::AT_64)
             .addReg(Mips::AT_64)
             .addImm(16);
-        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu),
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu2Op),
                 Mips::AT_64)
             .addReg(Mips::AT_64)
             .addMBB(TgtMBB, MipsII::MO_ABS_HI);
         BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::DSLL), Mips::AT_64)
             .addReg(Mips::AT_64)
             .addImm(16);
-        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu),
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_DADDiu2Op),
                 Mips::AT_64)
             .addReg(Mips::AT_64)
             .addMBB(TgtMBB, MipsII::MO_ABS_LO);
       } else {
-        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_LUi))
-            .addReg(Mips::AT)
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_LUi2Op),
+                Mips::AT)
             .addMBB(TgtMBB, MipsII::MO_ABS_HI);
-        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_ADDiu),
+        BuildMI(*LongBrMBB, Pos, DL, TII->get(Mips::LONG_BRANCH_ADDiu2Op),
                 Mips::AT)
             .addReg(Mips::AT)
             .addMBB(TgtMBB, MipsII::MO_ABS_LO);

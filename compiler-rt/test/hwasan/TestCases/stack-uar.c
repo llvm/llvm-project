@@ -1,5 +1,5 @@
 // Tests use-after-return detection and reporting.
-// RUN: %clang_hwasan -O0 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -O0 -fno-discard-value-names %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: stable-runtime
 

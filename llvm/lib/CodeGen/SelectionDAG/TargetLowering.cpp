@@ -4077,64 +4077,64 @@ bool TargetLowering::expandMUL(SDNode *N, SDValue &Lo, SDValue &Hi, EVT HiLoVT,
 
 bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
                                SelectionDAG &DAG) const {
-  EVT VT = Node->getOperand(0).getValueType();
-  EVT NVT = Node->getValueType(0);
+  SDValue Src = Node->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT DstVT = Node->getValueType(0);
   SDLoc dl(SDValue(Node, 0));
 
   // FIXME: Only f32 to i64 conversions are supported.
-  if (VT != MVT::f32 || NVT != MVT::i64)
+  if (SrcVT != MVT::f32 || DstVT != MVT::i64)
     return false;
 
   // Expand f32 -> i64 conversion
   // This algorithm comes from compiler-rt's implementation of fixsfdi:
   // https://github.com/llvm-mirror/compiler-rt/blob/master/lib/builtins/fixsfdi.c
-  EVT IntVT = EVT::getIntegerVT(*DAG.getContext(),
-                                VT.getSizeInBits());
+  unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+  EVT IntVT = SrcVT.changeTypeToInteger();
+  EVT IntShVT = getShiftAmountTy(IntVT, DAG.getDataLayout());
+
   SDValue ExponentMask = DAG.getConstant(0x7F800000, dl, IntVT);
   SDValue ExponentLoBit = DAG.getConstant(23, dl, IntVT);
   SDValue Bias = DAG.getConstant(127, dl, IntVT);
-  SDValue SignMask = DAG.getConstant(APInt::getSignMask(VT.getSizeInBits()), dl,
-                                     IntVT);
-  SDValue SignLowBit = DAG.getConstant(VT.getSizeInBits() - 1, dl, IntVT);
+  SDValue SignMask = DAG.getConstant(APInt::getSignMask(SrcEltBits), dl, IntVT);
+  SDValue SignLowBit = DAG.getConstant(SrcEltBits - 1, dl, IntVT);
   SDValue MantissaMask = DAG.getConstant(0x007FFFFF, dl, IntVT);
 
-  SDValue Bits = DAG.getNode(ISD::BITCAST, dl, IntVT, Node->getOperand(0));
+  SDValue Bits = DAG.getNode(ISD::BITCAST, dl, IntVT, Src);
 
-  auto &DL = DAG.getDataLayout();
   SDValue ExponentBits = DAG.getNode(
       ISD::SRL, dl, IntVT, DAG.getNode(ISD::AND, dl, IntVT, Bits, ExponentMask),
-      DAG.getZExtOrTrunc(ExponentLoBit, dl, getShiftAmountTy(IntVT, DL)));
+      DAG.getZExtOrTrunc(ExponentLoBit, dl, IntShVT));
   SDValue Exponent = DAG.getNode(ISD::SUB, dl, IntVT, ExponentBits, Bias);
 
-  SDValue Sign = DAG.getNode(
-      ISD::SRA, dl, IntVT, DAG.getNode(ISD::AND, dl, IntVT, Bits, SignMask),
-      DAG.getZExtOrTrunc(SignLowBit, dl, getShiftAmountTy(IntVT, DL)));
-  Sign = DAG.getSExtOrTrunc(Sign, dl, NVT);
+  SDValue Sign = DAG.getNode(ISD::SRA, dl, IntVT,
+                             DAG.getNode(ISD::AND, dl, IntVT, Bits, SignMask),
+                             DAG.getZExtOrTrunc(SignLowBit, dl, IntShVT));
+  Sign = DAG.getSExtOrTrunc(Sign, dl, DstVT);
 
   SDValue R = DAG.getNode(ISD::OR, dl, IntVT,
-      DAG.getNode(ISD::AND, dl, IntVT, Bits, MantissaMask),
-      DAG.getConstant(0x00800000, dl, IntVT));
+                          DAG.getNode(ISD::AND, dl, IntVT, Bits, MantissaMask),
+                          DAG.getConstant(0x00800000, dl, IntVT));
 
-  R = DAG.getZExtOrTrunc(R, dl, NVT);
+  R = DAG.getZExtOrTrunc(R, dl, DstVT);
 
   R = DAG.getSelectCC(
       dl, Exponent, ExponentLoBit,
-      DAG.getNode(ISD::SHL, dl, NVT, R,
+      DAG.getNode(ISD::SHL, dl, DstVT, R,
                   DAG.getZExtOrTrunc(
                       DAG.getNode(ISD::SUB, dl, IntVT, Exponent, ExponentLoBit),
-                      dl, getShiftAmountTy(IntVT, DL))),
-      DAG.getNode(ISD::SRL, dl, NVT, R,
+                      dl, IntShVT)),
+      DAG.getNode(ISD::SRL, dl, DstVT, R,
                   DAG.getZExtOrTrunc(
                       DAG.getNode(ISD::SUB, dl, IntVT, ExponentLoBit, Exponent),
-                      dl, getShiftAmountTy(IntVT, DL))),
+                      dl, IntShVT)),
       ISD::SETGT);
 
-  SDValue Ret = DAG.getNode(ISD::SUB, dl, NVT,
-      DAG.getNode(ISD::XOR, dl, NVT, R, Sign),
-      Sign);
+  SDValue Ret = DAG.getNode(ISD::SUB, dl, DstVT,
+                            DAG.getNode(ISD::XOR, dl, DstVT, R, Sign), Sign);
 
   Result = DAG.getSelectCC(dl, Exponent, DAG.getConstant(0, dl, IntVT),
-      DAG.getConstant(0, dl, NVT), Ret, ISD::SETLT);
+                           DAG.getConstant(0, dl, DstVT), Ret, ISD::SETLT);
   return true;
 }
 
