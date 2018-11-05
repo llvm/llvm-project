@@ -347,9 +347,7 @@ Value *getOrCreateDefaultLocation(Module *M) {
 
 //##############################################################################
 
-llvm::OpenMPABI::OpenMPABI() {}
-
-/// \brief Lower a call to get the grainsize of this Tapir loop.
+/// Lower a call to get the grainsize of this Tapir loop.
 Value *llvm::OpenMPABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
   Value *Limit = GrainsizeCall->getArgOperand(0);
   Module *M = GrainsizeCall->getModule();
@@ -360,7 +358,7 @@ Value *llvm::OpenMPABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
   return StaticGrainsize;
 }
 
-void llvm::OpenMPABI::createSync(SyncInst &SI) {
+void llvm::OpenMPABI::lowerSync(SyncInst &SI) {
   std::vector<Value *> Args = {DefaultOpenMPLocation,
                             getThreadID(SI.getParent()->getParent())};
   IRBuilder<> builder(&SI);
@@ -564,8 +562,10 @@ Function* formatFunctionToTask(Function* extracted, Instruction* CallSite) {
             DL.getTypeAllocSize(LoadedCapturedArgs[i]->getType()));
       }
 
-  std::vector<Value *> TaskArgs = {DefaultOpenMPLocation,
-                                getThreadID(cal->getParent()->getParent()), NewTask};
+  std::vector<Value *> TaskArgs =
+    {DefaultOpenMPLocation, getThreadID(cal->getParent()->getParent()),
+     NewTask};
+
   emitRuntimeCall(
       createRuntimeFunction(OpenMPRuntimeFunction::OMPRTL__kmpc_omp_task, M),
       TaskArgs, "", CallerIRBuilder);
@@ -584,44 +584,17 @@ void OpenMPABI::processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) {
   TOI.Outline = formatFunctionToTask(Outline, ReplCall);
 }
 
-Function *llvm::OpenMPABI::createDetach(DetachInst &detach,
-                                        DominatorTree &DT, AssumptionCache &AC) {
-  BasicBlock *detB = detach.getParent();
-  Function &F = *(detB->getParent());
-
-  BasicBlock *Spawned  = detach.getDetached();
-  BasicBlock *Continue = detach.getContinue();
-
-  Module *M = F.getParent();
-
-  Instruction *CallSite = nullptr;
-  Function *Extracted = extractDetachBodyToFunction(detach, DT, AC, &CallSite);
-  Extracted = formatFunctionToTask(Extracted, CallSite);
-
-  // Replace the detach with a branch to the continuation.
-  BranchInst *ContinueBr = BranchInst::Create(Continue);
-  ReplaceInstWithInst(&detach, ContinueBr);
-
-  // Rewrite phis in the detached block.
-  {
-    BasicBlock::iterator BI = Spawned->begin();
-    while (PHINode *P = dyn_cast<PHINode>(BI)) {
-      P->removeIncomingValue(detB);
-      ++BI;
-    }
-  }
-  return Extracted;
-}
-
 void llvm::OpenMPABI::preProcessFunction(Function &F) {
   auto M = (Module *)F.getParent();
   getOrCreateIdentTy(M);
   getOrCreateDefaultLocation(M);
 }
 
+cl::opt<bool> fastOpenMP(
+    "fast-openmp", cl::init(false), cl::Hidden,
+    cl::desc("Attempt faster OpenMP implementation, "
+             "assuming parallel outside set"));
 
-cl::opt<bool> fastOpenMP("fast-openmp", cl::init(false), cl::Hidden,
-                       cl::desc("Attempt faster OpenMP implementation, assuming parallel outside set"));
 void llvm::OpenMPABI::postProcessFunction(Function &F) {
   if (fastOpenMP) return;
 

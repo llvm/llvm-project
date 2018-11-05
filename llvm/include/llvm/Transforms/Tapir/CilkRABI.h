@@ -22,13 +22,11 @@ class Value;
 class CilkRABI : public TapirTarget {
   ValueToValueMapTy DetachCtxToStackFrame;
 public:
-  CilkRABI();
+  CilkRABI() {}
   ~CilkRABI() { DetachCtxToStackFrame.clear(); }
   Value *lowerGrainsizeCall(CallInst *GrainsizeCall) override final;
-  void createSync(SyncInst &inst) override final;
+  void lowerSync(SyncInst &inst) override final;
 
-  Function *createDetach(DetachInst &Detach,
-                         DominatorTree &DT, AssumptionCache &AC) override final;
   void preProcessFunction(Function &F) override final;
   void postProcessFunction(Function &F) override final;
   void postProcessHelper(Function &F) override final;

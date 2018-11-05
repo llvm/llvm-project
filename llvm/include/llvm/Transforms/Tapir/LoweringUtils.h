@@ -164,9 +164,8 @@ class TapirTarget {
 public:
   virtual ~TapirTarget() {};
   virtual Value *lowerGrainsizeCall(CallInst *GrainsizeCall) = 0;
-  virtual void createSync(SyncInst &inst) = 0;
-  virtual Function *createDetach(DetachInst &Detach,
-                                 DominatorTree &DT, AssumptionCache &AC) = 0;
+  virtual void lowerSync(SyncInst &inst) = 0;
+
   virtual bool shouldProcessFunction(const Function &F);
   virtual void preProcessFunction(Function &F) = 0;
   virtual void postProcessFunction(Function &F) = 0;

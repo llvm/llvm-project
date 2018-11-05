@@ -106,7 +106,7 @@ bool TapirToTargetImpl::unifyReturns(Function &F) {
   return true;
 }
 
-// Outline all tasks in this function in post order.
+/// Outline all tasks in this function in post order.
 TaskOutlineMapTy
 TapirToTargetImpl::outlineAllTasks(Function &F, DominatorTree &DT,
                                    AssumptionCache &AC, TaskInfo &TI) {
@@ -151,6 +151,7 @@ TapirToTargetImpl::outlineAllTasks(Function &F, DominatorTree &DT,
   return TaskToOutline;
 }
 
+/// Process the Tapir instructions in function \p F directly.
 bool TapirToTargetImpl::processSimpleABI(Function &F) {
   // Get the simple Tapir instructions to process, including syncs and
   // loop-grainsize calls.
@@ -184,7 +185,7 @@ bool TapirToTargetImpl::processSimpleABI(Function &F) {
   // Process the set of syncs.
   while (!Syncs.empty()) {
     SyncInst *SI = Syncs.pop_back_val();
-    Target->createSync(*SI);
+    Target->lowerSync(*SI);
     Changed = true;
   }
 
@@ -197,11 +198,14 @@ bool TapirToTargetImpl::processRootTask(
   bool Changed = false;
   if (!TI.isSerial()) {
     Changed = true;
+    // Process root-task function F as a spawner.
     Target->processSpawner(F);
 
+    // Process each call to a subtask.
     for (Task *SubT : TI.getRootTask()->subtasks())
       Target->processSubTaskCall(TaskToOutline[SubT], DT);
   }
+  // Process the Tapir instructions in F directly.
   Changed |= processSimpleABI(F);
   return Changed;
 }
@@ -212,11 +216,14 @@ bool TapirToTargetImpl::processOutlinedTask(
   Function &F = *TaskToOutline[T].Outline;
   Target->processOutlinedTask(F);
   if (!T->isSerial()) {
+    // Process outlined function F for a task as a spawner.
     Target->processSpawner(F);
 
+    // Process each call to a subtask.
     for (Task *SubT : T->subtasks())
       Target->processSubTaskCall(TaskToOutline[SubT], DT);
   }
+  // Process the Tapir instructions in F directly.
   processSimpleABI(F);
   return true;
 }

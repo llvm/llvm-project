@@ -379,8 +379,7 @@ static Value *LoadSTyField(
   return L;
 }
 
-/// \brief Emit inline assembly code to save the floating point
-/// state, for x86 Only.
+/// Emit inline assembly code to save the floating point state, for x86 Only.
 static void EmitSaveFloatingPointState(IRBuilder<> &B, Value *SF) {
   using AsmPrototype = void (uint32_t *, uint16_t *);
   FunctionType *FTy =
@@ -399,9 +398,9 @@ static void EmitSaveFloatingPointState(IRBuilder<> &B, Value *SF) {
   B.CreateCall(Asm, args);
 }
 
-/// \brief Helper to find a function with the given name, creating it if it
-/// doesn't already exist. If the function needed to be created then return
-/// false, signifying that the caller needs to add the function body.
+/// Helper to find a function with the given name, creating it if it doesn't
+/// already exist. If the function needed to be created then return false,
+/// signifying that the caller needs to add the function body.
 template <typename T>
 static bool GetOrCreateFunction(const char *FnName, Module& M,
                                 Function *&Fn,
@@ -430,7 +429,7 @@ static bool GetOrCreateFunction(const char *FnName, Module& M,
   return false;
 }
 
-/// \brief Emit a call to the CILK_SETJMP function.
+/// Emit a call to the CILK_SETJMP function.
 static CallInst *EmitCilkSetJmp(IRBuilder<> &B, Value *SF, Module& M) {
   LLVMContext &Ctx = M.getContext();
 
@@ -472,8 +471,8 @@ static CallInst *EmitCilkSetJmp(IRBuilder<> &B, Value *SF, Module& M) {
   return SetjmpCall;
 }
 
-/// \brief Get or create a LLVM function for __cilkrts_pop_frame.
-/// It is equivalent to the following C code
+/// Get or create a LLVM function for __cilkrts_pop_frame.  It is equivalent to
+/// the following C code:
 ///
 /// __cilkrts_pop_frame(__cilkrts_stack_frame *sf) {
 ///   sf->worker->current_stack_frame = sf->call_parent;
@@ -523,8 +522,8 @@ static Function *Get__cilkrts_pop_frame(Module &M) {
   return Fn;
 }
 
-/// \brief Get or create a LLVM function for __cilkrts_detach.
-/// It is equivalent to the following C code
+/// Get or create a LLVM function for __cilkrts_detach.  It is equivalent to the
+/// following C code:
 ///
 /// void __cilkrts_detach(struct __cilkrts_stack_frame *sf) {
 ///   struct __cilkrts_worker *w = sf->worker;
@@ -636,13 +635,12 @@ static Function *Get__cilkrts_detach(Module &M) {
   return Fn;
 }
 
-/// \brief Get or create a LLVM function for __cilk_sync.
-/// Calls to this function is always inlined, as it saves
-/// the current stack/frame pointer values. This function must be marked
-/// as returns_twice to allow it to be inlined, since the call to setjmp
-/// is marked returns_twice.
+/// Get or create a LLVM function for __cilk_sync.  Calls to this function is
+/// always inlined, as it saves the current stack/frame pointer values. This
+/// function must be marked as returns_twice to allow it to be inlined, since
+/// the call to setjmp is marked returns_twice.
 ///
-/// It is equivalent to the following C code
+/// It is equivalent to the following C code:
 ///
 /// void __cilk_sync(struct __cilkrts_stack_frame *sf) {
 ///   if (sf->flags & CILK_FRAME_UNSYNCHED) {
@@ -790,13 +788,12 @@ static Function *GetCilkSyncFn(Module &M, bool instrument = false) {
   return Fn;
 }
 
-/// \brief Get or create a LLVM function for __cilk_sync.
-/// Calls to this function is always inlined, as it saves
-/// the current stack/frame pointer values. This function must be marked
-/// as returns_twice to allow it to be inlined, since the call to setjmp
-/// is marked returns_twice.
+/// Get or create a LLVM function for __cilk_sync.  Calls to this function is
+/// always inlined, as it saves the current stack/frame pointer values. This
+/// function must be marked as returns_twice to allow it to be inlined, since
+/// the call to setjmp is marked returns_twice.
 ///
-/// It is equivalent to the following C code
+/// It is equivalent to the following C code:
 ///
 /// void __cilk_sync_nothrow(struct __cilkrts_stack_frame *sf) {
 ///   if (sf->flags & CILK_FRAME_UNSYNCHED) {
@@ -912,8 +909,8 @@ static Function *GetCilkSyncNoThrowFn(Module &M, bool instrument = false) {
   return Fn;
 }
 
-/// \brief Get or create a LLVM function for __cilkrts_enter_frame.
-/// It is equivalent to the following C code
+/// Get or create a LLVM function for __cilkrts_enter_frame.  It is equivalent
+/// to the following C code:
 ///
 /// void __cilkrts_enter_frame_1(struct __cilkrts_stack_frame *sf)
 /// {
@@ -1022,8 +1019,8 @@ static Function *Get__cilkrts_enter_frame_1(Module &M) {
   return Fn;
 }
 
-/// \brief Get or create a LLVM function for __cilkrts_enter_frame_fast.
-/// It is equivalent to the following C code
+/// Get or create a LLVM function for __cilkrts_enter_frame_fast.  It is
+/// equivalent to the following C code:
 ///
 /// void __cilkrts_enter_frame_fast_1(struct __cilkrts_stack_frame *sf)
 /// {
@@ -1089,8 +1086,8 @@ static Function *Get__cilkrts_enter_frame_fast_1(Module &M) {
   return Fn;
 }
 
-// /// \brief Get or create a LLVM function for __cilk_parent_prologue.
-// /// It is equivalent to the following C code
+// /// Get or create a LLVM function for __cilk_parent_prologue.
+// /// It is equivalent to the following C code:
 // ///
 // /// void __cilk_parent_prologue(__cilkrts_stack_frame *sf) {
 // ///   __cilkrts_enter_frame_1(sf);
@@ -1120,8 +1117,8 @@ static Function *Get__cilkrts_enter_frame_fast_1(Module &M) {
 //   return Fn;
 // }
 
-/// \brief Get or create a LLVM function for __cilk_parent_epilogue.
-/// It is equivalent to the following C code
+/// Get or create a LLVM function for __cilk_parent_epilogue.  It is equivalent
+/// to the following C code:
 ///
 /// void __cilk_parent_epilogue(__cilkrts_stack_frame *sf) {
 ///   __cilkrts_pop_frame(sf);
@@ -1191,7 +1188,7 @@ static Function *GetCilkParentEpilogue(Module &M, bool instrument = false) {
 static const StringRef stack_frame_name = "__cilkrts_sf";
 static const StringRef worker8_name = "__cilkrts_wc8";
 
-/// \brief Create the __cilkrts_stack_frame for the spawning function.
+/// Create the __cilkrts_stack_frame for the spawning function.
 static AllocaInst *CreateStackFrame(Function &F) {
   // assert(!LookupStackFrame(F) && "already created the stack frame");
 
@@ -1220,8 +1217,6 @@ static Value *GetOrInitCilkStackFrame(
     bool Helper, bool instrument = false) {
   if (DetachCtxToStackFrame.count(&F))
     return DetachCtxToStackFrame[&F];
-  // if (Value *V = DetachCtxToStackFrame[&F])
-  //   return V;
 
   Module *M = F.getParent();
 
@@ -1249,11 +1244,11 @@ static Value *GetOrInitCilkStackFrame(
   //     IRB.CreateCall(CILK_CSI_FUNC(enter_begin, *M), begin_args);
   //   }
   // }
-  Value *args[1] = { SF };
+  Value *Args[1] = { SF };
   if (Helper || fastCilk)
-    IRB.CreateCall(CILKRTS_FUNC(enter_frame_fast_1, *M), args);
+    IRB.CreateCall(CILKRTS_FUNC(enter_frame_fast_1, *M), Args);
   else
-    IRB.CreateCall(CILKRTS_FUNC(enter_frame_1, *M), args);
+    IRB.CreateCall(CILKRTS_FUNC(enter_frame_1, *M), Args);
 
   // if (instrument) {
   //   Value* end_args[2] = { SF, StackSave };
@@ -1263,7 +1258,7 @@ static Value *GetOrInitCilkStackFrame(
   EscapeEnumerator EE(F, "cilkabi_epilogue", false);
   while (IRBuilder<> *AtExit = EE.Next()) {
     if (isa<ReturnInst>(AtExit->GetInsertPoint()))
-      AtExit->CreateCall(GetCilkParentEpilogue(*M, instrument), args, "");
+      AtExit->CreateCall(GetCilkParentEpilogue(*M, instrument), Args, "");
     else if (ResumeInst *RI = dyn_cast<ResumeInst>(AtExit->GetInsertPoint())) {
       // /*
       //   sf.flags = sf.flags | CILK_FRAME_EXCEPTING;
@@ -1290,7 +1285,7 @@ static Value *GetOrInitCilkStackFrame(
         if (sf->flags)
           __cilkrts_leave_frame(&sf);
       */
-      AtExit->CreateCall(GetCilkParentEpilogue(*M, instrument), args, "");
+      AtExit->CreateCall(GetCilkParentEpilogue(*M, instrument), Args, "");
     }
   }
 
@@ -1392,9 +1387,7 @@ static bool makeFunctionDetachable(
   return true;
 }
 
-// CilkABI::CilkABI() {}
-
-/// \brief Lower a call to get the grainsize of this Tapir loop.
+/// Lower a call to get the grainsize of this Tapir loop.
 ///
 /// The grainsize is computed by the following equation:
 ///
@@ -1427,7 +1420,7 @@ Value *CilkABI::lowerGrainsizeCall(CallInst *GrainsizeCall) {
   return Grainsize;
 }
 
-void CilkABI::createSync(SyncInst &SI) {
+void CilkABI::lowerSync(SyncInst &SI) {
   Function &Fn = *(SI.getParent()->getParent());
   Module &M = *(Fn.getParent());
 
@@ -1500,65 +1493,6 @@ void CilkABI::processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) {
   SetJmpPt->eraseFromParent();
 }
 
-Function *CilkABI::createDetach(DetachInst &Detach,
-                                DominatorTree &DT, AssumptionCache &AC) {
-  BasicBlock *Detacher = Detach.getParent();
-  Function &F = *(Detacher->getParent());
-
-  BasicBlock *Continue = Detach.getContinue();
-
-  Module *M = F.getParent();
-  //replace with branch to succesor
-  //entry / cilk.spawn.savestate
-  Value *SF = GetOrInitCilkStackFrame(F, DetachCtxToStackFrame,
-                                      /*isFast=*/false, false);
-  assert(SF && "null stack frame unexpected");
-
-  BasicBlock *CallBlock = SplitBlock(Detacher, &Detach, &DT);
-  Instruction *SetJmpPt = Detacher->getTerminator();
-
-  Instruction *CallSite = nullptr;
-  Function *Extracted = extractDetachBodyToFunction(Detach, DT, AC, &CallSite);
-  assert(Extracted && "could not extract detach body to function");
-
-  // Unlink the detached CFG in the original function.  The heavy lifting of
-  // removing the outlined detached-CFG is left to subsequent DCE.
-
-  // Replace the detach with a branch to the continuation.
-  BranchInst *ContinueBr = BranchInst::Create(Continue);
-  ReplaceInstWithInst(&Detach, ContinueBr);
-
-  Value *SetJmpRes;
-  {
-    IRBuilder<> B(SetJmpPt);
-    SetJmpRes = EmitCilkSetJmp(B, SF, *M);
-  }
-
-  // Conditionally call the new helper function based on the result of the
-  // setjmp.
-  {
-    // BasicBlock *CallBlock = SplitBlock(CallSite->getParent(), CallSite, &DT);
-    BasicBlock *CallCont;
-    if (InvokeInst *II = dyn_cast<InvokeInst>(CallSite))
-      CallCont = SplitEdge(CallBlock, II->getNormalDest(), &DT);
-    else // isa<CallInst>(CallSite)
-      CallCont = SplitBlock(CallBlock, CallBlock->getTerminator(), &DT);
-
-    IRBuilder<> B(SetJmpPt);
-    SetJmpRes = B.CreateICmpEQ(SetJmpRes,
-                               ConstantInt::get(SetJmpRes->getType(), 0));
-    B.CreateCondBr(SetJmpRes, CallBlock, CallCont);
-    SetJmpPt->eraseFromParent();
-  }
-
-  // Mark this function as stealable.
-  F.addFnAttr(Attribute::Stealable);
-
-  makeFunctionDetachable(*Extracted, DetachCtxToStackFrame, false);
-
-  return Extracted;
-}
-
 // Helper function to inline calls to compiler-generated Cilk Plus runtime
 // functions when possible.  This inlining is necessary to properly implement
 // some Cilk runtime "calls," such as __cilkrts_detach().
@@ -1603,8 +1537,8 @@ void CilkABI::postProcessHelper(Function &F) {
 }
 
 
-/// \brief Replace the latch of the loop to check that IV is always less than or
-/// equal to the limit.
+/// Replace the latch of the loop to check that IV is always less than or equal
+/// to the limit.
 ///
 /// This method assumes that the loop has a single loop latch.
 Value *CilkABILoopSpawning::canonicalizeLoopLatch(PHINode *IV, Value *Limit) {
