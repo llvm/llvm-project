@@ -5,6 +5,5 @@ add_lldb_unittest(HighlighterTests
     lldbPluginCPlusPlusLanguage
     lldbPluginObjCLanguage
     lldbPluginObjCPlusPlusLanguage
-    lldbPluginJavaLanguage
     lldbPluginOCamlLanguage
   )
