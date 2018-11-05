@@ -346,5 +346,5 @@ void ento::registerNumberObjectConversionChecker(CheckerManager &Mgr) {
   NumberObjectConversionChecker *Chk =
       Mgr.registerChecker<NumberObjectConversionChecker>();
   Chk->Pedantic =
-      Mgr.getAnalyzerOptions().getBooleanOption("Pedantic", false, Chk);
+      Mgr.getAnalyzerOptions().getCheckerBooleanOption("Pedantic", false, Chk);
 }

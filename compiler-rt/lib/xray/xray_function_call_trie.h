@@ -18,6 +18,7 @@
 #include "xray_defs.h"
 #include "xray_profiling_flags.h"
 #include "xray_segmented_array.h"
+#include <limits>
 #include <memory> // For placement new.
 #include <utility>
 
@@ -113,13 +114,13 @@ public:
   struct Node {
     Node *Parent;
     NodeIdPairArray Callees;
-    int64_t CallCount;
-    int64_t CumulativeLocalTime; // Typically in TSC deltas, not wall-time.
+    uint64_t CallCount;
+    uint64_t CumulativeLocalTime; // Typically in TSC deltas, not wall-time.
     int32_t FId;
 
     // We add a constructor here to allow us to inplace-construct through
     // Array<...>'s AppendEmplace.
-    Node(Node *P, NodeIdPairAllocatorType &A, int64_t CC, int64_t CLT,
+    Node(Node *P, NodeIdPairAllocatorType &A, uint64_t CC, uint64_t CLT,
          int32_t F) XRAY_NEVER_INSTRUMENT : Parent(P),
                                             Callees(A),
                                             CallCount(CC),
@@ -133,11 +134,14 @@ private:
   struct ShadowStackEntry {
     uint64_t EntryTSC;
     Node *NodePtr;
+    uint16_t EntryCPU;
 
     // We add a constructor here to allow us to inplace-construct through
     // Array<...>'s AppendEmplace.
-    ShadowStackEntry(uint64_t T, Node *N) XRAY_NEVER_INSTRUMENT : EntryTSC{T},
-                                                                  NodePtr{N} {}
+    ShadowStackEntry(uint64_t T, Node *N, uint16_t C) XRAY_NEVER_INSTRUMENT
+        : EntryTSC{T},
+          NodePtr{N},
+          EntryCPU{C} {}
   };
 
   using NodeArray = Array<Node>;
@@ -262,17 +266,18 @@ public:
         ShadowStack(*A.ShadowStackAllocator),
         NodeIdPairAllocator(A.NodeIdPairAllocator) {}
 
-  void enterFunction(const int32_t FId, uint64_t TSC) XRAY_NEVER_INSTRUMENT {
+  void enterFunction(const int32_t FId, uint64_t TSC,
+                     uint16_t CPU) XRAY_NEVER_INSTRUMENT {
     DCHECK_NE(FId, 0);
     // This function primarily deals with ensuring that the ShadowStack is
     // consistent and ready for when an exit event is encountered.
     if (UNLIKELY(ShadowStack.empty())) {
       auto NewRoot =
-          Nodes.AppendEmplace(nullptr, *NodeIdPairAllocator, 0, 0, FId);
+          Nodes.AppendEmplace(nullptr, *NodeIdPairAllocator, 0u, 0u, FId);
       if (UNLIKELY(NewRoot == nullptr))
         return;
       Roots.Append(NewRoot);
-      ShadowStack.AppendEmplace(TSC, NewRoot);
+      ShadowStack.AppendEmplace(TSC, NewRoot, CPU);
       return;
     }
 
@@ -286,23 +291,24 @@ public:
         [FId](const NodeIdPair &NR) { return NR.FId == FId; });
     if (Callee != nullptr) {
       CHECK_NE(Callee->NodePtr, nullptr);
-      ShadowStack.AppendEmplace(TSC, Callee->NodePtr);
+      ShadowStack.AppendEmplace(TSC, Callee->NodePtr, CPU);
       return;
     }
 
     // This means we've never seen this stack before, create a new node here.
     auto NewNode =
-        Nodes.AppendEmplace(TopNode, *NodeIdPairAllocator, 0, 0, FId);
+        Nodes.AppendEmplace(TopNode, *NodeIdPairAllocator, 0u, 0u, FId);
     if (UNLIKELY(NewNode == nullptr))
       return;
     DCHECK_NE(NewNode, nullptr);
     TopNode->Callees.AppendEmplace(NewNode, FId);
-    ShadowStack.AppendEmplace(TSC, NewNode);
+    ShadowStack.AppendEmplace(TSC, NewNode, CPU);
     DCHECK_NE(ShadowStack.back().NodePtr, nullptr);
     return;
   }
 
-  void exitFunction(int32_t FId, uint64_t TSC) XRAY_NEVER_INSTRUMENT {
+  void exitFunction(int32_t FId, uint64_t TSC,
+                    uint16_t CPU) XRAY_NEVER_INSTRUMENT {
     // When we exit a function, we look up the ShadowStack to see whether we've
     // entered this function before. We do as little processing here as we can,
     // since most of the hard work would have already been done at function
@@ -312,7 +318,24 @@ public:
       const auto &Top = ShadowStack.back();
       auto TopNode = Top.NodePtr;
       DCHECK_NE(TopNode, nullptr);
-      auto LocalTime = TSC - Top.EntryTSC;
+
+      // We may encounter overflow on the TSC we're provided, which may end up
+      // being less than the TSC when we first entered the function.
+      //
+      // To get the accurate measurement of cycles, we need to check whether
+      // we've overflowed (TSC < Top.EntryTSC) and then account the difference
+      // between the entry TSC and the max for the TSC counter (max of uint64_t)
+      // then add the value of TSC. We can prove that the maximum delta we will
+      // get is at most the 64-bit unsigned value, since the difference between
+      // a TSC of 0 and a Top.EntryTSC of 1 is (numeric_limits<uint64_t>::max()
+      // - 1) + 1.
+      //
+      // NOTE: This assumes that TSCs are synchronised across CPUs.
+      // TODO: Count the number of times we've seen CPU migrations.
+      uint64_t LocalTime =
+          Top.EntryTSC > TSC
+              ? (std::numeric_limits<uint64_t>::max() - Top.EntryTSC) + TSC
+              : TSC - Top.EntryTSC;
       TopNode->CallCount++;
       TopNode->CumulativeLocalTime += LocalTime - CumulativeTreeTime;
       CumulativeTreeTime += LocalTime;
@@ -410,8 +433,8 @@ public:
       auto R = O.Roots.find_element(
           [&](const Node *Node) { return Node->FId == Root->FId; });
       if (R == nullptr) {
-        TargetRoot = O.Nodes.AppendEmplace(nullptr, *O.NodeIdPairAllocator, 0,
-                                           0, Root->FId);
+        TargetRoot = O.Nodes.AppendEmplace(nullptr, *O.NodeIdPairAllocator, 0u,
+                                           0u, Root->FId);
         if (UNLIKELY(TargetRoot == nullptr))
           return;
 
@@ -436,7 +459,7 @@ public:
               });
           if (TargetCallee == nullptr) {
             auto NewTargetNode = O.Nodes.AppendEmplace(
-                NT.TargetNode, *O.NodeIdPairAllocator, 0, 0, Callee.FId);
+                NT.TargetNode, *O.NodeIdPairAllocator, 0u, 0u, Callee.FId);
 
             if (UNLIKELY(NewTargetNode == nullptr))
               return;
