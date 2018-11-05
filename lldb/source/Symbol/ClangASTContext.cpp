@@ -5482,8 +5482,21 @@ static bool ObjCDeclHasIVars(clang::ObjCInterfaceDecl *class_interface_decl,
   return false;
 }
 
+static llvm::Optional<SymbolFile::ArrayInfo>
+GetDynamicArrayInfo(ClangASTContext &ast, SymbolFile *sym_file,
+                    clang::QualType qual_type,
+                    const ExecutionContext *exe_ctx) {
+  if (qual_type->isIncompleteArrayType())
+    if (auto *metadata = ast.GetMetadata(qual_type.getAsOpaquePtr()))
+      if (auto *dwarf_parser = ast.GetDWARFParser())
+        return sym_file->GetDynamicArrayInfoForUID(metadata->GetUserID(),
+                                                   exe_ctx);
+  return llvm::None;
+}
+
 uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
-                                         bool omit_empty_base_classes) {
+                                         bool omit_empty_base_classes,
+                                         const ExecutionContext *exe_ctx) {
   if (!type)
     return 0;
 
@@ -5505,7 +5518,6 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
 
   case clang::Type::Complex:
     return 0;
-
   case clang::Type::Record:
     if (GetCompleteQualType(getASTContext(), qual_type)) {
       const clang::RecordType *record_type =
@@ -5583,7 +5595,7 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
     clang::QualType pointee_type = pointer_type->getPointeeType();
     uint32_t num_pointee_children =
         CompilerType(getASTContext(), pointee_type)
-            .GetNumChildren(omit_empty_base_classes);
+            .GetNumChildren(omit_empty_base_classes, exe_ctx);
     // If this type points to a simple type, then it has 1 child
     if (num_pointee_children == 0)
       num_children = 1;
@@ -5602,6 +5614,14 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
                        ->getSize()
                        .getLimitedValue();
     break;
+  case clang::Type::IncompleteArray:
+    if (auto array_info =
+            GetDynamicArrayInfo(*this, GetSymbolFile(), qual_type, exe_ctx))
+      // Only 1-dimensional arrays are supported.
+      num_children = array_info->element_orders.size()
+                         ? array_info->element_orders.back()
+                         : 0;
+    break;
 
   case clang::Type::Pointer: {
     const clang::PointerType *pointer_type =
@@ -5609,7 +5629,7 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
     clang::QualType pointee_type(pointer_type->getPointeeType());
     uint32_t num_pointee_children =
         CompilerType(getASTContext(), pointee_type)
-            .GetNumChildren(omit_empty_base_classes);
+      .GetNumChildren(omit_empty_base_classes, exe_ctx);
     if (num_pointee_children == 0) {
       // We have a pointer to a pointee type that claims it has no children. We
       // will want to look at
@@ -5625,7 +5645,7 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
     clang::QualType pointee_type = reference_type->getPointeeType();
     uint32_t num_pointee_children =
         CompilerType(getASTContext(), pointee_type)
-            .GetNumChildren(omit_empty_base_classes);
+            .GetNumChildren(omit_empty_base_classes, exe_ctx);
     // If this type points to a simple type, then it has 1 child
     if (num_pointee_children == 0)
       num_children = 1;
@@ -5638,14 +5658,14 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
         CompilerType(getASTContext(), llvm::cast<clang::TypedefType>(qual_type)
                                           ->getDecl()
                                           ->getUnderlyingType())
-            .GetNumChildren(omit_empty_base_classes);
+            .GetNumChildren(omit_empty_base_classes, exe_ctx);
     break;
 
   case clang::Type::Auto:
     num_children =
         CompilerType(getASTContext(),
                      llvm::cast<clang::AutoType>(qual_type)->getDeducedType())
-            .GetNumChildren(omit_empty_base_classes);
+            .GetNumChildren(omit_empty_base_classes, exe_ctx);
     break;
 
   case clang::Type::Elaborated:
@@ -5653,14 +5673,14 @@ uint32_t ClangASTContext::GetNumChildren(lldb::opaque_compiler_type_t type,
         CompilerType(
             getASTContext(),
             llvm::cast<clang::ElaboratedType>(qual_type)->getNamedType())
-            .GetNumChildren(omit_empty_base_classes);
+            .GetNumChildren(omit_empty_base_classes, exe_ctx);
     break;
 
   case clang::Type::Paren:
     num_children =
         CompilerType(getASTContext(),
                      llvm::cast<clang::ParenType>(qual_type)->desugar())
-            .GetNumChildren(omit_empty_base_classes);
+            .GetNumChildren(omit_empty_base_classes, exe_ctx);
     break;
   default:
     break;
@@ -6537,7 +6557,8 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
   child_is_base_class = false;
   language_flags = 0;
 
-  const bool idx_is_valid = idx < GetNumChildren(type, omit_empty_base_classes);
+  const bool idx_is_valid =
+      idx < GetNumChildren(type, omit_empty_base_classes, exe_ctx);
   int32_t bit_offset;
   switch (parent_type_class) {
   case clang::Type::Builtin:
@@ -6759,8 +6780,8 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
               CompilerType base_class_clang_type(
                   getASTContext(), getASTContext()->getObjCInterfaceType(
                                        superclass_interface_decl));
-              if (base_class_clang_type.GetNumChildren(
-                      omit_empty_base_classes) > 0) {
+              if (base_class_clang_type.GetNumChildren(omit_empty_base_classes,
+                                                       exe_ctx) > 0) {
                 if (idx == 0) {
                   clang::QualType ivar_qual_type(
                       getASTContext()->getObjCInterfaceType(
@@ -9047,6 +9068,11 @@ ClangASTContext::ConvertStringToFloatValue(lldb::opaque_compiler_type_t type,
 // Dumping types
 //----------------------------------------------------------------------
 #define DEPTH_INCREMENT 2
+
+void ClangASTContext::Dump(Stream &s) {
+  Decl *tu = Decl::castFromDeclContext(GetTranslationUnitDecl());
+  tu->dump(s.AsRawOstream());
+}
 
 void ClangASTContext::DumpValue(
     lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s,

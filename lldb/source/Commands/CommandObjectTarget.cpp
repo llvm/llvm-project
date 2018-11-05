@@ -2242,6 +2242,85 @@ protected:
   }
 };
 
+#pragma mark CommandObjectTargetModulesDumpSections
+
+//----------------------------------------------------------------------
+// Clang AST dumping command
+//----------------------------------------------------------------------
+
+class CommandObjectTargetModulesDumpClangAST
+    : public CommandObjectTargetModulesModuleAutoComplete {
+public:
+  CommandObjectTargetModulesDumpClangAST(CommandInterpreter &interpreter)
+      : CommandObjectTargetModulesModuleAutoComplete(
+            interpreter, "target modules dump ast",
+            "Dump the clang ast for a given module's symbol file.",
+            //"target modules dump ast [<file1> ...]")
+            nullptr) {}
+
+  ~CommandObjectTargetModulesDumpClangAST() override = default;
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    Target *target = m_interpreter.GetDebugger().GetSelectedTarget().get();
+    if (target == nullptr) {
+      result.AppendError("invalid target, create a debug target using the "
+                         "'target create' command");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    const size_t num_modules = target->GetImages().GetSize();
+    if (num_modules == 0) {
+      result.AppendError("the target has no associated executable images");
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    if (command.GetArgumentCount() == 0) {
+      // Dump all ASTs for all modules images
+      result.GetOutputStream().Printf("Dumping clang ast for %" PRIu64
+                                      " modules.\n",
+                                      (uint64_t)num_modules);
+      for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
+        if (m_interpreter.WasInterrupted())
+          break;
+        Module *m = target->GetImages().GetModulePointerAtIndex(image_idx);
+        SymbolFile *sf = m->GetSymbolVendor()->GetSymbolFile();
+        sf->DumpClangAST(result.GetOutputStream());
+      }
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return true;
+    }
+
+    // Dump specified ASTs (by basename or fullpath)
+    for (const Args::ArgEntry &arg : command.entries()) {
+      ModuleList module_list;
+      const size_t num_matches =
+          FindModulesByName(target, arg.c_str(), module_list, true);
+      if (num_matches == 0) {
+        // Check the global list
+        std::lock_guard<std::recursive_mutex> guard(
+            Module::GetAllocationModuleCollectionMutex());
+
+        result.AppendWarningWithFormat(
+            "Unable to find an image that matches '%s'.\n", arg.c_str());
+        continue;
+      }
+
+      for (size_t i = 0; i < num_matches; ++i) {
+        if (m_interpreter.WasInterrupted())
+          break;
+        Module *m = module_list.GetModulePointerAtIndex(i);
+        SymbolFile *sf = m->GetSymbolVendor()->GetSymbolFile();
+        sf->DumpClangAST(result.GetOutputStream());
+      }
+    }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    return true;
+  }
+};
+
 #pragma mark CommandObjectTargetModulesDumpSymfile
 
 //----------------------------------------------------------------------
@@ -2417,12 +2496,13 @@ public:
   // Constructors and Destructors
   //------------------------------------------------------------------
   CommandObjectTargetModulesDump(CommandInterpreter &interpreter)
-      : CommandObjectMultiword(interpreter, "target modules dump",
-                               "Commands for dumping information about one or "
-                               "more target modules.",
-                               "target modules dump "
-                               "[headers|symtab|sections|symfile|line-table] "
-                               "[<file1> <file2> ...]") {
+      : CommandObjectMultiword(
+            interpreter, "target modules dump",
+            "Commands for dumping information about one or "
+            "more target modules.",
+            "target modules dump "
+            "[headers|symtab|sections|ast|symfile|line-table] "
+            "[<file1> <file2> ...]") {
     LoadSubCommand("objfile",
                    CommandObjectSP(
                        new CommandObjectTargetModulesDumpObjfile(interpreter)));
@@ -2435,6 +2515,9 @@ public:
     LoadSubCommand("symfile",
                    CommandObjectSP(
                        new CommandObjectTargetModulesDumpSymfile(interpreter)));
+    LoadSubCommand(
+        "ast", CommandObjectSP(
+                   new CommandObjectTargetModulesDumpClangAST(interpreter)));
     LoadSubCommand("line-table",
                    CommandObjectSP(new CommandObjectTargetModulesDumpLineTable(
                        interpreter)));
