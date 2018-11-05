@@ -30,10 +30,6 @@ struct SpawnRestructure : public FunctionPass {
 
     F.setName("SpawnRestructure_"+F.getName());
 
-    for (BasicBlock &BB: F) {
-
-    }
-
     return true;
   }
 };
