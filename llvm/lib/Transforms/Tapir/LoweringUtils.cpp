@@ -256,6 +256,9 @@ llvm::createTaskArgsStruct(ValueSet &Inputs, Task *T,
   return std::make_pair(Closure, ArgsStart);
 }
 
+/// Organize the inputs to task \p T, given in \p TaskInputs, to create an
+/// appropriate set of inputs, \p HelperInputs, to pass to the outlined
+/// function for \p T.
 Instruction *llvm::fixupHelperInputs(
     Function &F, Task *T, ValueSet &TaskInputs, ValueSet &HelperArgs,
     Instruction *StorePt, Instruction *LoadPt) {
@@ -312,6 +315,8 @@ Instruction *llvm::fixupHelperInputs(
   return StorePt;
 }
 
+/// Returns true if BasicBlock \p B is the immediate successor of a
+/// detached-rethrow instruction.
 bool llvm::isSuccessorOfDetachedRethrow(const BasicBlock *B) {
   for (const BasicBlock *Pred : predecessors(B))
     if (isDetachedRethrow(Pred->getTerminator()))
@@ -319,6 +324,12 @@ bool llvm::isSuccessorOfDetachedRethrow(const BasicBlock *B) {
   return false;
 }
 
+/// Collect the set of blocks in task \p T.  All blocks enclosed by \p T will be
+/// pushed onto \p TaskBlocks.  The set of blocks terminated by reattaches from
+/// \p T are added to \p ReattachBlocks.  The set of blocks terminated by
+/// detached-rethrow instructions are added to \p DetachedRethrowBlocks.  The
+/// set of entry points to exception-handling blocks shared by \p T and other
+/// tasks in the same function are added to \p SharedEHEntries.
 void llvm::getTaskBlocks(Task *T, std::vector<BasicBlock *> &TaskBlocks,
                          SmallPtrSetImpl<BasicBlock *> &ReattachBlocks,
                          SmallPtrSetImpl<BasicBlock *> &DetachedRethrowBlocks,
@@ -345,6 +356,10 @@ void llvm::getTaskBlocks(Task *T, std::vector<BasicBlock *> &TaskBlocks,
   }
 }
 
+/// Outlines the content of task \p T in function \p F into a new helper
+/// function.  The parameter \p Inputs specified the inputs to the helper
+/// function.  The map \p VMap is updated with the mapping of instructions in
+/// \p T to instructions in the new helper function.
 Function *llvm::createHelperForTask(
     Function &F, Task *T, ValueSet &Args, ValueToValueMapTy &VMap,
     AssumptionCache *AC, DominatorTree *DT) {
@@ -447,7 +462,9 @@ static void unlinkTaskEHFromParent(Task *T) {
     I->eraseFromParent();
 }
 
-/// Replace the detach that spawns T with a call to the outlined function.
+/// Replaces the detach instruction that spawns task \p T, with associated
+/// TaskOutlineInfo \p Out, with a call or invoke to the outlined helper function
+/// created for \p T.
 Instruction *llvm::replaceDetachWithCallToOutline(Task *T,
                                                   TaskOutlineInfo &Out) {
   // Remove any dependencies from T's exception-handling code to T's parent.
@@ -485,6 +502,10 @@ Instruction *llvm::replaceDetachWithCallToOutline(Task *T,
   }
 }
 
+/// Outlines a task \p T into a helper function that accepts the inputs \p
+/// Inputs.  The map \p VMap is updated with the mapping of instructions in \p T
+/// to instructions in the new helper function.  Information about the helper
+/// function is returned as a TaskOutlineInfo structure.
 TaskOutlineInfo llvm::outlineTask(
     Task *T, ValueSet &Inputs, ValueToValueMapTy &VMap, AssumptionCache *AC,
     DominatorTree *DT) {
@@ -524,6 +545,8 @@ static bool taskInputDefinedOutsideLoop(const Value *V, const Loop *L) {
   return false;
 }
 
+/// Returns true if the value \p V is defined outside the set \p Blocks of basic
+/// blocks in a function.
 static bool definedOutsideBlocks(const Value *V,
                                  SmallPtrSetImpl<BasicBlock *> &Blocks) {
   if (isa<Argument>(V)) return true;
@@ -532,6 +555,8 @@ static bool definedOutsideBlocks(const Value *V,
   return false;
 }
 
+/// Given a Tapir loop \p TL and the set of inputs to the task inside that loop,
+/// returns the set of inputs for the Tapir loop itself.
 ValueSet llvm::getTapirLoopInputs(TapirLoopInfo *TL, ValueSet &TaskInputs) {
   Loop *L = TL->getLoop();
   Task *T = TL->getTask();
@@ -571,7 +596,8 @@ ValueSet llvm::getTapirLoopInputs(TapirLoopInfo *TL, ValueSet &TaskInputs) {
   return LoopInputs;
 }
 
-/// Replace the detach that spawns T with a call to the outlined function.
+/// Replaces the Tapir loop \p TL, with associated TaskOutlineInfo \p Out, with
+/// a call or invoke to the outlined helper function created for \p TL.
 Instruction *llvm::replaceLoopWithCallToOutline(TapirLoopInfo *TL,
                                                 TaskOutlineInfo &Out) {
   // Remove any dependencies from the detach unwind of T code to T's parent.

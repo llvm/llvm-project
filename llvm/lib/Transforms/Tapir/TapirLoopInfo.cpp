@@ -7,7 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements utility functions for hanling Tapir loops.
+// This file implements utility functions for handling Tapir loops.
+//
+// Many of these routines are adapted from
+// Transforms/Vectorize/LoopVectorize.cpp.
 //
 //===----------------------------------------------------------------------===//
 
@@ -52,6 +55,9 @@ static Type *getWiderType(const DataLayout &DL, Type *Ty0, Type *Ty1) {
   return Ty1;
 }
 
+/// Adds \p Phi, with induction descriptor ID, to the inductions list.  This can
+/// set \p Phi as the main induction of the loop if \p Phi is a better choice
+/// for the main induction than the existing one.
 void TapirLoopInfo::addInductionPhi(PHINode *Phi,
                                     const InductionDescriptor &ID) {
   Inductions[Phi] = ID;
@@ -69,8 +75,7 @@ void TapirLoopInfo::addInductionPhi(PHINode *Phi,
 
   // Int inductions are special because we only allow one IV.
   if (ID.getKind() == InductionDescriptor::IK_IntInduction &&
-      ID.getConstIntStepValue() &&
-      ID.getConstIntStepValue()->isOne() &&
+      ID.getConstIntStepValue() && ID.getConstIntStepValue()->isOne() &&
       isa<Constant>(ID.getStartValue()) &&
       cast<Constant>(ID.getStartValue())->isNullValue()) {
 
@@ -120,6 +125,8 @@ createMissedAnalysis(StringRef RemarkName, const Loop *TheLoop,
   return R;
 }
 
+/// Gather all induction variables in this loop that need special handling
+/// during outlining.
 bool TapirLoopInfo::collectIVs(PredicatedScalarEvolution &PSE,
                                OptimizationRemarkEmitter &ORE) {
   Loop *L = getLoop();
@@ -183,6 +190,8 @@ bool TapirLoopInfo::collectIVs(PredicatedScalarEvolution &PSE,
   return true;
 }
 
+/// Replace all induction variables in this loop that are not primary with
+/// stronger forms.
 void TapirLoopInfo::replaceNonPrimaryIVs(PredicatedScalarEvolution &PSE) {
   BasicBlock *Header = getLoop()->getHeader();
   IRBuilder<> B(&*Header->getFirstInsertionPt());
@@ -243,8 +252,6 @@ static Value *getEscapeValue(Instruction *UI, const InductionDescriptor &II,
 /// form, with all external PHIs that use the IV having one input value, coming
 /// from the remainder loop.  We need those PHIs to also have a correct value
 /// for the IV when arriving directly from the middle block.
-//
-// This routine is adapted from Transforms/Vectorize/LoopVectorize.cpp.
 void TapirLoopInfo::fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II,
                                  PredicatedScalarEvolution &PSE) {
   // There are two kinds of external IV usages - those that use the value
@@ -288,6 +295,7 @@ void TapirLoopInfo::fixupIVUsers(PHINode *OrigPhi, const InductionDescriptor &II
   }
 }
 
+/// Returns (and creates if needed) the original loop trip count.
 Value *TapirLoopInfo::getOrCreateTripCount(PredicatedScalarEvolution &PSE) {
   if (TripCount)
     return TripCount;
@@ -363,6 +371,7 @@ Value *TapirLoopInfo::getOrCreateTripCount(PredicatedScalarEvolution &PSE) {
   return TripCount;
 }
 
+/// Top-level call to prepare a Tapir loop for outlining.
 bool TapirLoopInfo::prepareForOutlining(
     DominatorTree &DT, LoopInfo &LI, TaskInfo &TI,
     PredicatedScalarEvolution &PSE, AssumptionCache &AC,

@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines utility functions for hanling Tapir loops.
+// This file defines utility functions for handling Tapir loops.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef TAPIR_UTILS_H_
-#define TAPIR_UTILS_H_
+#ifndef TAPIR_LOOP_INFO_H_
+#define TAPIR_LOOP_INFO_H_
 
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TapirTaskInfo.h"
@@ -36,6 +36,12 @@ class PredicatedScalarEvolution;
 class ScalarEvolution;
 class TargetTransformInfo;
 
+/// Class for managing information about a Tapir loop, primarily for the purpose
+/// of outlining Tapir loops.
+///
+/// A Tapir loop is defined as an ordinary Loop whose body -- all code in the
+/// loop except for the indiction variables and loop control --- is contained in
+/// a spawned task.
 class TapirLoopInfo {
 public:
   /// InductionList saves induction variables and maps them to the induction
@@ -117,6 +123,7 @@ public:
   /// Returns the widest induction type.
   Type *getWidestInductionType() const { return WidestIndTy; }
 
+  /// Get the primary induction variable for this Tapir loop.
   const std::pair<PHINode *, InductionDescriptor> &getPrimaryInduction() const {
     assert(PrimaryInduction && "No primary induction.");
     return *Inductions.find(PrimaryInduction);
@@ -146,6 +153,7 @@ public:
   /// Update information on this Tapir loop based on its metadata.
   void readTapirLoopMetadata(OptimizationRemarkEmitter &ORE);
 
+  /// Get the debug location for this loop.
   DebugLoc getDebugLoc() const { return TheTask->getDetach()->getDebugLoc(); }
 
 private:
