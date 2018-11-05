@@ -137,13 +137,6 @@ struct IsSyncedState {
   }
 };
 
-static bool hasPredecessorSync(const Spindle *S) {
-  for (const BasicBlock *Pred : predecessors(S->getEntry()))
-    if (isa<SyncInst>(Pred->getTerminator()))
-      return true;
-  return false;
-}
-
 // Structure to record the set of child tasks that might be in parallel with
 // this spindle.
 struct MaybeParallelTasks {
