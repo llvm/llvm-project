@@ -1,4 +1,4 @@
-;===- ./lib/LLVMBuild.txt --------------------------------------*- Conf -*--===;
+;===- ./lib/OptRemarks/LLVMBuild.txt ---------------------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -15,38 +15,8 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories =
- Analysis
- AsmParser
- Bitcode
- CodeGen
- DebugInfo
- Demangle
- ExecutionEngine
- FuzzMutate
- LineEditor
- Linker
- IR
- IRReader
- LTO
- MC
- Object
- BinaryFormat
- ObjectYAML
- Option
- OptRemarks
- Passes
- ProfileData
- Support
- TableGen
- Target
- Testing
- ToolDrivers
- Transforms
- WindowsManifest
-
 [component_0]
-type = Group
-name = Libraries
-parent = $ROOT
+type = Library
+name = OptRemarks
+parent = Libraries
+required_libraries = Support

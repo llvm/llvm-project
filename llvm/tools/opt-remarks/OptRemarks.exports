@@ -1,0 +1,6 @@
+LLVMOptRemarkParserCreate
+LLVMOptRemarkParserGetNext
+LLVMOptRemarkParserHasError
+LLVMOptRemarkParserGetErrorMessage
+LLVMOptRemarkParserDispose
+LLVMOptRemarkVersion
