@@ -44,8 +44,8 @@ svn.exe export -r %revision% http://llvm.org/svn/llvm-project/openmp/%branch% ll
 
 
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
-set cmake_flags=-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_USE_CRT_RELEASE=MT -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON -DCLANG_FORMAT_VS_VERSION=%clang_format_vs_version% -DPACKAGE_VERSION=%package_version% -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: "
-
+REM Excluding wasm target to work around PR39448.
+set cmake_flags=-DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_USE_CRT_RELEASE=MT -DLLVM_INSTALL_TOOLCHAIN_ONLY=ON -DCLANG_FORMAT_VS_VERSION=%clang_format_vs_version% -DPACKAGE_VERSION=%package_version% -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: " -DLLVM_TARGETS_TO_BUILD="AArch64;AMDGPU;ARM;BPF;Hexagon;Lanai;Mips;MSP430;NVPTX;PowerPC;Sparc;SystemZ;X86;XCore"
 REM TODO: Run all tests, including lld and compiler-rt.
 
 set "VSCMD_START_DIR=%CD%"

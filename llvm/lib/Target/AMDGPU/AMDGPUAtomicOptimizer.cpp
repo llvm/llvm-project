@@ -53,6 +53,7 @@ private:
   const DataLayout *DL;
   DominatorTree *DT;
   bool HasDPP;
+  bool IsPixelShader;
 
   void optimizeAtomic(Instruction &I, Instruction::BinaryOps Op,
                       unsigned ValIdx, bool ValDivergent) const;
@@ -96,6 +97,7 @@ bool AMDGPUAtomicOptimizer::runOnFunction(Function &F) {
   const TargetMachine &TM = TPC.getTM<TargetMachine>();
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
   HasDPP = ST.hasDPP();
+  IsPixelShader = F.getCallingConv() == CallingConv::AMDGPU_PS;
 
   visit(F);
 
@@ -214,6 +216,31 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
 
   // Start building just before the instruction.
   IRBuilder<> B(&I);
+
+  // If we are in a pixel shader, because of how we have to mask out helper
+  // lane invocations, we need to record the entry and exit BB's.
+  BasicBlock *PixelEntryBB = nullptr;
+  BasicBlock *PixelExitBB = nullptr;
+
+  // If we're optimizing an atomic within a pixel shader, we need to wrap the
+  // entire atomic operation in a helper-lane check. We do not want any helper
+  // lanes that are around only for the purposes of derivatives to take part
+  // in any cross-lane communication, and we use a branch on whether the lane is
+  // live to do this.
+  if (IsPixelShader) {
+    // Record I's original position as the entry block.
+    PixelEntryBB = I.getParent();
+
+    Value *const Cond = B.CreateIntrinsic(Intrinsic::amdgcn_ps_live, {}, {});
+    Instruction *const NonHelperTerminator =
+        SplitBlockAndInsertIfThen(Cond, &I, false, nullptr, DT, nullptr);
+
+    // Record I's new position as the exit block.
+    PixelExitBB = I.getParent();
+
+    I.moveBefore(NonHelperTerminator);
+    B.SetInsertPoint(&I);
+  }
 
   Type *const Ty = I.getType();
   const unsigned TyBitWidth = DL->getTypeSizeInBits(Ty);
@@ -398,8 +425,18 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
   // first lane, to get our lane's index into the atomic result.
   Value *const Result = B.CreateBinOp(Op, BroadcastI, LaneOffset);
 
-  // Replace the original atomic instruction with the new one.
-  I.replaceAllUsesWith(Result);
+  if (IsPixelShader) {
+    // Need a final PHI to reconverge to above the helper lane branch mask.
+    B.SetInsertPoint(PixelExitBB->getFirstNonPHI());
+
+    PHINode *const PHI = B.CreatePHI(Ty, 2);
+    PHI->addIncoming(UndefValue::get(Ty), PixelEntryBB);
+    PHI->addIncoming(Result, I.getParent());
+    I.replaceAllUsesWith(PHI);
+  } else {
+    // Replace the original atomic instruction with the new one.
+    I.replaceAllUsesWith(Result);
+  }
 
   // And delete the original.
   I.eraseFromParent();

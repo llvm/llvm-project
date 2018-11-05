@@ -53,6 +53,12 @@ private:
 
 } // namespace
 
+llvm::cl::opt<std::string>
+    Filter("filter",
+           llvm::cl::desc("Only process files that match this filter. "
+                          "This flag only applies to all-TUs."),
+           llvm::cl::init(".*"));
+
 AllTUsToolExecutor::AllTUsToolExecutor(
     const CompilationDatabase &Compilations, unsigned ThreadCount,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps)
@@ -90,7 +96,12 @@ llvm::Error AllTUsToolExecutor::execute(
     llvm::errs() << Msg.str() << "\n";
   };
 
-  auto Files = Compilations.getAllFiles();
+  std::vector<std::string> Files;
+  llvm::Regex RegexFilter(Filter);
+  for (const auto& File : Compilations.getAllFiles()) {
+    if (RegexFilter.match(File))
+      Files.push_back(File);
+  }
   // Add a counter to track the progress.
   const std::string TotalNumStr = std::to_string(Files.size());
   unsigned Counter = 0;
@@ -147,7 +158,8 @@ llvm::Error AllTUsToolExecutor::execute(
 static llvm::cl::opt<unsigned> ExecutorConcurrency(
     "execute-concurrency",
     llvm::cl::desc("The number of threads used to process all files in "
-                   "parallel. Set to 0 for hardware concurrency."),
+                   "parallel. Set to 0 for hardware concurrency. "
+                   "This flag only applies to all-TUs."),
     llvm::cl::init(0));
 
 class AllTUsToolExecutorPlugin : public ToolExecutorPlugin {

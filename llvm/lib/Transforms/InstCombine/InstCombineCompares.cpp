@@ -5397,6 +5397,13 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
         return nullptr;
     }
 
+  // The sign of 0.0 is ignored by fcmp, so canonicalize to +0.0:
+  // fcmp Pred X, -0.0 --> fcmp Pred X, 0.0
+  if (match(Op1, m_AnyZeroFP()) && !match(Op1, m_PosZeroFP())) {
+    I.setOperand(1, ConstantFP::getNullValue(Op1->getType()));
+    return &I;
+  }
+
   // Handle fcmp with instruction LHS and constant RHS.
   Instruction *LHSI;
   Constant *RHSC;

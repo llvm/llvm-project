@@ -155,6 +155,8 @@ public:
   ClangASTContext &GetASTContext() { return *m_clang; }
   ClangASTImporter &GetASTImporter() { return *m_importer; }
 
+  void DumpClangAST(Stream &s) override;
+
 private:
   size_t FindTypesByName(llvm::StringRef name, uint32_t max_matches,
                          TypeMap &types);

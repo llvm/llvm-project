@@ -1,12 +1,12 @@
-; RUN: llc -O0 -mtriple=mips-img-linux-gnu -mcpu=mips32r2 < %s -o - | FileCheck %s --check-prefixes=CHECK32R2
-; RUN: llc -O0 -mtriple=mips-img-linux-gnu -mcpu=mips32r6 < %s -o - | FileCheck %s --check-prefixes=CHECK32R6
-; RUN: llc -O0 -mtriple=mips-img-linux-gnu -mcpu=mips32r2 -mattr=+use-indirect-jump-hazard < %s -o - | FileCheck %s --check-prefixes=CHECK32-IJH
-; RUN: llc -O0 -mtriple=mips-img-linux-gnu -mcpu=mips32r6 -mattr=+use-indirect-jump-hazard < %s -o - | FileCheck %s --check-prefixes=CHECK32-IJH
+; RUN: llc -O0 -mtriple=mips-img-linux-gnu -mcpu=mips32r2 -verify-machineinstrs < %s -o - | FileCheck %s --check-prefixes=CHECK32R2
+; RUN: llc -O0 -mtriple=mips-img-linux-gnu -mcpu=mips32r6 -verify-machineinstrs < %s -o - | FileCheck %s --check-prefixes=CHECK32R6
+; RUN: llc -O0 -mtriple=mips-img-linux-gnu -mcpu=mips32r2 -verify-machineinstrs -mattr=+use-indirect-jump-hazard < %s -o - | FileCheck %s --check-prefixes=CHECK32-IJH
+; RUN: llc -O0 -mtriple=mips-img-linux-gnu -mcpu=mips32r6 -verify-machineinstrs -mattr=+use-indirect-jump-hazard < %s -o - | FileCheck %s --check-prefixes=CHECK32-IJH
 
-; RUN: llc -O0 -mtriple=mips64-img-linux-gnu -mcpu=mips64r2 < %s -o - | FileCheck %s --check-prefixes=CHECK64R2
-; RUN: llc -O0 -mtriple=mips64-img-linux-gnu -mcpu=mips64r6 < %s -o - | FileCheck %s --check-prefixes=CHECK64R6
-; RUN: llc -O0 -mtriple=mips64-img-linux-gnu -mcpu=mips64r2 -mattr=+use-indirect-jump-hazard < %s -o - | FileCheck %s --check-prefixes=CHECK64-IJH
-; RUN: llc -O0 -mtriple=mips64-img-linux-gnu -mcpu=mips64r6 -mattr=+use-indirect-jump-hazard < %s -o - | FileCheck %s --check-prefixes=CHECK64-IJH
+; RUN: llc -O0 -mtriple=mips64-img-linux-gnu -mcpu=mips64r2 -verify-machineinstrs < %s -o - | FileCheck %s --check-prefixes=CHECK64R2
+; RUN: llc -O0 -mtriple=mips64-img-linux-gnu -mcpu=mips64r6 -verify-machineinstrs < %s -o - | FileCheck %s --check-prefixes=CHECK64R6
+; RUN: llc -O0 -mtriple=mips64-img-linux-gnu -mcpu=mips64r2 -verify-machineinstrs -mattr=+use-indirect-jump-hazard < %s -o - | FileCheck %s --check-prefixes=CHECK64-IJH
+; RUN: llc -O0 -mtriple=mips64-img-linux-gnu -mcpu=mips64r6 -verify-machineinstrs -mattr=+use-indirect-jump-hazard < %s -o - | FileCheck %s --check-prefixes=CHECK64-IJH
 
 declare i32 @foo(...)
 

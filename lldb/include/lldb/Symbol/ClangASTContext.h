@@ -194,9 +194,10 @@ public:
 
   uint32_t GetPointerByteSize() override;
 
-  static clang::DeclContext *GetTranslationUnitDecl(clang::ASTContext *ast);
+  static clang::TranslationUnitDecl *
+  GetTranslationUnitDecl(clang::ASTContext *ast);
 
-  clang::DeclContext *GetTranslationUnitDecl() {
+  clang::TranslationUnitDecl *GetTranslationUnitDecl() {
     return GetTranslationUnitDecl(getASTContext());
   }
 
@@ -926,6 +927,8 @@ public:
   //----------------------------------------------------------------------
   // Dumping types
   //----------------------------------------------------------------------
+  void Dump(Stream &s);
+
   void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
                  Stream *s, lldb::Format format, const DataExtractor &data,
                  lldb::offset_t data_offset, size_t data_byte_size,

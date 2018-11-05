@@ -126,6 +126,8 @@ public:
   std::vector<lldb_private::CallEdge>
   ParseCallEdgesInFunction(lldb_private::UserID func_id) override;
 
+  void DumpClangAST(lldb_private::Stream &s) override;
+
   //------------------------------------------------------------------
   // PluginInterface protocol
   //------------------------------------------------------------------

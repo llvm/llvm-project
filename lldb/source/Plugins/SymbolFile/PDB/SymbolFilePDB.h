@@ -169,6 +169,8 @@ public:
 
   const llvm::pdb::IPDBSession &GetPDBSession() const;
 
+  void DumpClangAST(lldb_private::Stream &s) override;
+
 private:
   struct SecContribInfo {
     uint32_t Offset;

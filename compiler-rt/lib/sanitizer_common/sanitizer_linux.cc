@@ -1946,14 +1946,14 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 #elif defined(__sparc__)
   ucontext_t *ucontext = (ucontext_t*)context;
   uptr *stk_ptr;
-# if defined (__sparcv9)
+# if defined(__sparcv9) || defined (__arch64__)
 # ifndef MC_PC
 #  define MC_PC REG_PC
 # endif
 # ifndef MC_O6
 #  define MC_O6 REG_O6
 # endif
-# ifdef SANITIZER_SOLARIS
+# if SANITIZER_SOLARIS
 #  define mc_gregs gregs
 # endif
   *pc = ucontext->uc_mcontext.mc_gregs[MC_PC];
