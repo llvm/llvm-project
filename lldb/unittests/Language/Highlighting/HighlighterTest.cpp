@@ -12,7 +12,6 @@
 #include "lldb/Core/Highlighter.h"
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/OCaml/OCamlLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
 
@@ -32,14 +31,12 @@ void HighlighterTest::SetUpTestCase() {
   CPlusPlusLanguage::Initialize();
   ObjCLanguage::Initialize();
   ObjCPlusPlusLanguage::Initialize();
-  OCamlLanguage::Initialize();
 }
 
 void HighlighterTest::TearDownTestCase() {
   CPlusPlusLanguage::Terminate();
   ObjCLanguage::Terminate();
   ObjCPlusPlusLanguage::Terminate();
-  OCamlLanguage::Terminate();
 }
 
 static std::string getName(lldb::LanguageType type) {

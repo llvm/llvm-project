@@ -19,7 +19,6 @@ add_lldb_library(lldbSymbol
   LineEntry.cpp
   LineTable.cpp
   ObjectFile.cpp
-  OCamlASTContext.cpp
   SwiftASTContext.cpp
   Symbol.cpp
   SymbolContext.cpp
