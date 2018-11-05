@@ -60,8 +60,11 @@ bool StaticString_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &,
     StringPrinter::ReadStringAndDumpToStreamOptions);
 
-bool NSContiguousString_SummaryProvider(ValueObject &valobj, Stream &stream,
-                                        const TypeSummaryOptions &options);
+bool SwiftSharedString_SummaryProvider(ValueObject &valobj, Stream &stream,
+                                       const TypeSummaryOptions &options);
+bool SwiftSharedString_SummaryProvider_2(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &,
+    StringPrinter::ReadStringAndDumpToStreamOptions);
 
 bool Bool_SummaryProvider(ValueObject &valobj, Stream &stream,
                           const TypeSummaryOptions &options);
