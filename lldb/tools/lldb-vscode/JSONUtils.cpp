@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
+
 #include "llvm/Support/FormatAdapters.h"
 
 #include "lldb/API/SBBreakpoint.h"
@@ -541,8 +543,10 @@ llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
       line_strm << llvm::formatv("{0:X+}: <{1}> {2} {3,12} {4}", inst_addr,
                                  inst_offset, llvm::fmt_repeat(' ', spaces),
                                  m, o);
-      const uint32_t comment_row = 60;
-      // If there is a comment append it starting at column 60
+
+      // If there is a comment append it starting at column 60 or after one
+      // space past the last char
+      const uint32_t comment_row = std::max(line_strm.str().size(), (size_t)60);
       if (c && c[0]) {
         if (line.size() < comment_row)
           line_strm.indent(comment_row - line_strm.str().size());
