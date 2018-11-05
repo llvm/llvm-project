@@ -82,7 +82,9 @@ void ento::registerMmapWriteExecChecker(CheckerManager &mgr) {
   MmapWriteExecChecker *Mwec =
       mgr.registerChecker<MmapWriteExecChecker>();
   Mwec->ProtExecOv =
-    mgr.getAnalyzerOptions().getOptionAsInteger("MmapProtExec", 0x04, Mwec);
+    mgr.getAnalyzerOptions()
+      .getCheckerIntegerOption("MmapProtExec", 0x04, Mwec);
   Mwec->ProtReadOv =
-    mgr.getAnalyzerOptions().getOptionAsInteger("MmapProtRead", 0x01, Mwec);
+    mgr.getAnalyzerOptions()
+      .getCheckerIntegerOption("MmapProtRead", 0x01, Mwec);
 }
