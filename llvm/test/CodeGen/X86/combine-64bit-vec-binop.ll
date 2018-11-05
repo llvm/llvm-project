@@ -97,7 +97,7 @@ define double @test2_mul(double %A, double %B) {
   ret double %3
 }
 
-; There is no legal ISD::MUL with type MVT::v8i16.
+; There is no legal ISD::MUL with type MVT::v16i8.
 define double @test3_mul(double %A, double %B) {
 ; SSE41-LABEL: test3_mul:
 ; SSE41:       # %bb.0:

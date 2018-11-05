@@ -63,12 +63,13 @@ Status NativeProcessProtocol::Launch(
 
   // Verify the working directory is valid if one was specified.
   FileSpec working_dir(launch_info.GetWorkingDirectory());
-  if (working_dir &&
-      (!working_dir.ResolvePath() ||
-       !llvm::sys::fs::is_directory(working_dir.GetPath())) {
-    error.SetErrorStringWithFormat("No such file or directory: %s",
+  if (working_dir) {
+    FileInstance::Instance().Resolve(working_dir);
+    if (!llvm::sys::fs::is_directory(working_dir.GetPath())) {
+      error.SetErrorStringWithFormat("No such file or directory: %s",
                                    working_dir.GetCString());
-    return error;
+      return error;
+    }
   }
 
   // Launch the inferior.

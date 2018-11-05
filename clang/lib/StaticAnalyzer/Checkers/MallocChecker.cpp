@@ -3084,7 +3084,7 @@ markReleased(ProgramStateRef State, SymbolRef Sym, const Expr *Origin) {
 void ento::registerNewDeleteLeaksChecker(CheckerManager &mgr) {
   registerCStringCheckerBasic(mgr);
   MallocChecker *checker = mgr.registerChecker<MallocChecker>();
-  checker->IsOptimistic = mgr.getAnalyzerOptions().getBooleanOption(
+  checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(
       "Optimistic", false, checker);
   checker->ChecksEnabled[MallocChecker::CK_NewDeleteLeaksChecker] = true;
   checker->CheckNames[MallocChecker::CK_NewDeleteLeaksChecker] =
@@ -3105,7 +3105,7 @@ void ento::registerNewDeleteLeaksChecker(CheckerManager &mgr) {
 void ento::registerInnerPointerCheckerAux(CheckerManager &mgr) {
     registerCStringCheckerBasic(mgr);
     MallocChecker *checker = mgr.registerChecker<MallocChecker>();
-    checker->IsOptimistic = mgr.getAnalyzerOptions().getBooleanOption(
+    checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(
         "Optimistic", false, checker);
     checker->ChecksEnabled[MallocChecker::CK_InnerPointerChecker] = true;
     checker->CheckNames[MallocChecker::CK_InnerPointerChecker] =
@@ -3116,7 +3116,7 @@ void ento::registerInnerPointerCheckerAux(CheckerManager &mgr) {
   void ento::register##name(CheckerManager &mgr) {                             \
     registerCStringCheckerBasic(mgr);                                          \
     MallocChecker *checker = mgr.registerChecker<MallocChecker>();             \
-    checker->IsOptimistic = mgr.getAnalyzerOptions().getBooleanOption(         \
+    checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(  \
         "Optimistic", false, checker);                                         \
     checker->ChecksEnabled[MallocChecker::CK_##name] = true;                   \
     checker->CheckNames[MallocChecker::CK_##name] = mgr.getCurrentCheckName(); \

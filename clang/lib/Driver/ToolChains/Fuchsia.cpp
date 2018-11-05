@@ -125,8 +125,10 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("--push-state");
         CmdArgs.push_back("--as-needed");
         if (OnlyLibstdcxxStatic)
-          CmdArgs.push_back("-static");
+          CmdArgs.push_back("-Bstatic");
         ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+        if (OnlyLibstdcxxStatic)
+          CmdArgs.push_back("-Bdynamic");
         CmdArgs.push_back("-lm");
         CmdArgs.push_back("--pop-state");
       }

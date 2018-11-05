@@ -1193,7 +1193,7 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
     checker->NeedTracking = checker->NeedTracking || trackingRequired;         \
     checker->NoDiagnoseCallsToSystemHeaders =                                  \
         checker->NoDiagnoseCallsToSystemHeaders ||                             \
-        mgr.getAnalyzerOptions().getBooleanOption(                             \
+        mgr.getAnalyzerOptions().getCheckerBooleanOption(                             \
                       "NoDiagnoseCallsToSystemHeaders", false, checker, true); \
   }
 
