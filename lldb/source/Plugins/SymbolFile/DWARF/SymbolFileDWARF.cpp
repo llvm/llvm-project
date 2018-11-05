@@ -1444,6 +1444,17 @@ Type *SymbolFileDWARF::ResolveTypeUID(lldb::user_id_t type_uid) {
     return nullptr;
 }
 
+llvm::Optional<SymbolFile::ArrayInfo>
+SymbolFileDWARF::GetDynamicArrayInfoForUID(
+    lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  DWARFDIE type_die = GetDIEFromUID(type_uid);
+  if (type_die)
+    return DWARFASTParser::ParseChildArrayInfo(type_die, exe_ctx);
+  else
+    return llvm::None;
+}
+
 Type *SymbolFileDWARF::ResolveTypeUID(const DIERef &die_ref) {
   return ResolveType(GetDIE(die_ref), true);
 }

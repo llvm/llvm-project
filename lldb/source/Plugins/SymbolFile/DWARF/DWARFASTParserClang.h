@@ -28,6 +28,7 @@
 
 class DWARFDebugInfoEntry;
 class DWARFDIECollection;
+class SymbolFileDWARF;
 
 class DWARFASTParserClang : public DWARFASTParser {
 public:
@@ -100,11 +101,6 @@ protected:
                        std::vector<lldb_private::CompilerType> &function_args,
                        std::vector<clang::ParmVarDecl *> &function_param_decls,
                        unsigned &type_quals);
-
-  void ParseChildArrayInfo(const lldb_private::SymbolContext &sc,
-                           const DWARFDIE &parent_die, int64_t &first_index,
-                           std::vector<uint64_t> &element_orders,
-                           uint32_t &byte_stride, uint32_t &bit_stride);
 
   size_t ParseChildEnumerators(const lldb_private::SymbolContext &sc,
                                lldb_private::CompilerType &compiler_type,

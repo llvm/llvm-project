@@ -3777,7 +3777,8 @@ SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
     if (swift_type.IsValid()) {
       ExecutionContext exe_ctx(GetProcess());
       bool any_projected = false;
-      for (size_t idx = 0; idx < swift_type.GetNumChildren(true); idx++) {
+      for (size_t idx = 0, e = swift_type.GetNumChildren(true, &exe_ctx);
+           idx < e; idx++) {
         // if a projection fails, keep going - we have offsets here, so it
         // should be OK to skip some members
         if (auto projection = ProjectionSyntheticChildren::FieldProjection(
