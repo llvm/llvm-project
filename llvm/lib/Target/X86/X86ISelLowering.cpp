@@ -791,6 +791,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::UDIV, MVT::v2i32, Custom);
     setOperationAction(ISD::UREM, MVT::v2i32, Custom);
 
+    setOperationAction(ISD::MUL,                MVT::v2i8,  Custom);
+    setOperationAction(ISD::MUL,                MVT::v2i16, Custom);
+    setOperationAction(ISD::MUL,                MVT::v2i32, Custom);
+
     setOperationAction(ISD::MUL,                MVT::v16i8, Custom);
     setOperationAction(ISD::MUL,                MVT::v4i32, Custom);
     setOperationAction(ISD::MUL,                MVT::v2i64, Custom);
@@ -25911,6 +25915,24 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   switch (N->getOpcode()) {
   default:
     llvm_unreachable("Do not know how to custom type legalize this operation!");
+  case ISD::MUL: {
+    EVT VT = N->getValueType(0);
+    assert(VT.isVector() && VT.getVectorNumElements() == 2 && "Unexpected VT");
+    if (getTypeAction(*DAG.getContext(), VT) == TypePromoteInteger) {
+      // Promote to a pattern that will be turned into PMULUDQ.
+      SDValue N0 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v2i64,
+                               N->getOperand(0));
+      N0 = DAG.getNode(ISD::AND, dl, MVT::v2i64, N0,
+                       DAG.getConstant(0xffffffff, dl, MVT::v2i64));
+      SDValue N1 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v2i64,
+                               N->getOperand(1));
+      N1 = DAG.getNode(ISD::AND, dl, MVT::v2i64, N1,
+                       DAG.getConstant(0xffffffff, dl, MVT::v2i64));
+      SDValue Mul = DAG.getNode(ISD::MUL, dl, MVT::v2i64, N0, N1);
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, VT, Mul));
+    }
+    return;
+  }
   case X86ISD::ADDUS:
   case X86ISD::SUBUS:
   case X86ISD::AVG: {
@@ -31817,6 +31839,7 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
 bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
     SDValue Op, const APInt &OriginalDemandedBits, KnownBits &Known,
     TargetLoweringOpt &TLO, unsigned Depth) const {
+  unsigned BitWidth = OriginalDemandedBits.getBitWidth();
   unsigned Opc = Op.getOpcode();
   switch(Opc) {
   case X86ISD::PMULDQ:
@@ -31831,6 +31854,42 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
       return true;
     if (SimplifyDemandedBits(RHS, DemandedMask, KnownOp, TLO, Depth + 1))
       return true;
+    break;
+  }
+  case X86ISD::VSHLI: {
+    if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+      if (ShiftImm->getAPIntValue().uge(BitWidth))
+        break;
+
+      KnownBits KnownOp;
+      unsigned ShAmt = ShiftImm->getZExtValue();
+      APInt DemandedMask = OriginalDemandedBits.lshr(ShAmt);
+      if (SimplifyDemandedBits(Op.getOperand(0), DemandedMask, KnownOp, TLO,
+                               Depth + 1))
+        return true;
+    }
+    break;
+  }
+  case X86ISD::VSRAI:
+  case X86ISD::VSRLI: {
+    if (auto *ShiftImm = dyn_cast<ConstantSDNode>(Op.getOperand(1))) {
+      if (ShiftImm->getAPIntValue().uge(BitWidth))
+        break;
+
+      KnownBits KnownOp;
+      unsigned ShAmt = ShiftImm->getZExtValue();
+      APInt DemandedMask = OriginalDemandedBits << ShAmt;
+
+      // If any of the demanded bits are produced by the sign extension, we also
+      // demand the input sign bit.
+      if (Opc == X86ISD::VSRAI &&
+          OriginalDemandedBits.countLeadingZeros() < ShAmt)
+        DemandedMask.setSignBit();
+
+      if (SimplifyDemandedBits(Op.getOperand(0), DemandedMask, KnownOp, TLO,
+                               Depth + 1))
+        return true;
+    }
     break;
   }
   }
@@ -34385,6 +34444,26 @@ static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                           const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
 
+  // Look for multiply of 2 identical shuffles with a zero vector. Shuffle the
+  // result and insert the zero there instead. This can occur due to
+  // type legalization of v2i32 multiply to a PMULUDQ pattern.
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  if (!DCI.isBeforeLegalize() && isa<ShuffleVectorSDNode>(LHS) &&
+      isa<ShuffleVectorSDNode>(RHS) && LHS.hasOneUse() && RHS.hasOneUse() &&
+      LHS.getOperand(1) == RHS.getOperand(1) &&
+      ISD::isBuildVectorAllZeros(LHS.getOperand(1).getNode())) {
+    ShuffleVectorSDNode *SVN0 = cast<ShuffleVectorSDNode>(LHS);
+    ShuffleVectorSDNode *SVN1 = cast<ShuffleVectorSDNode>(RHS);
+    if (SVN0->getMask().equals(SVN1->getMask())) {
+      SDLoc dl(N);
+      SDValue Mul = DAG.getNode(ISD::MUL, dl, VT, LHS.getOperand(0),
+                                RHS.getOperand(0));
+      return DAG.getVectorShuffle(VT, dl, Mul, DAG.getConstant(0, dl, VT),
+                                  SVN0->getMask());
+    }
+  }
+
   if (SDValue V = combineMulToPMADDWD(N, DAG, Subtarget))
     return V;
 
@@ -34860,6 +34939,11 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
     }
     return getConstVector(EltBits, UndefElts, VT.getSimpleVT(), DAG, SDLoc(N));
   }
+
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  if (TLI.SimplifyDemandedBits(SDValue(N, 0),
+                               APInt::getAllOnesValue(NumBitsPerElt), DCI))
+    return SDValue(N, 0);
 
   return SDValue();
 }

@@ -9,28 +9,12 @@
 define <2 x i32> @_mul2xi32a(<2 x i32>, <2 x i32>) {
 ; SSE-LABEL: _mul2xi32a:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    psrlq $32, %xmm2
-; SSE-NEXT:    pmuludq %xmm1, %xmm2
-; SSE-NEXT:    movdqa %xmm1, %xmm3
-; SSE-NEXT:    psrlq $32, %xmm3
-; SSE-NEXT:    pmuludq %xmm0, %xmm3
-; SSE-NEXT:    paddq %xmm2, %xmm3
-; SSE-NEXT:    psllq $32, %xmm3
 ; SSE-NEXT:    pmuludq %xmm1, %xmm0
-; SSE-NEXT:    paddq %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: _mul2xi32a:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpsrlq $32, %xmm0, %xmm2
-; AVX-NEXT:    vpmuludq %xmm1, %xmm2, %xmm2
-; AVX-NEXT:    vpsrlq $32, %xmm1, %xmm3
-; AVX-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
-; AVX-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
-; AVX-NEXT:    vpsllq $32, %xmm2, %xmm2
 ; AVX-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %r = mul <2 x i32> %0, %1
   ret <2 x i32> %r
