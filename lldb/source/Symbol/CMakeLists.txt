@@ -16,7 +16,6 @@ add_lldb_library(lldbSymbol
   DWARFCallFrameInfo.cpp
   Function.cpp
   FuncUnwinders.cpp
-  JavaASTContext.cpp
   LineEntry.cpp
   LineTable.cpp
   ObjectFile.cpp
