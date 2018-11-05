@@ -301,7 +301,8 @@ public:
 
   size_t GetTypeBitAlign() const;
 
-  uint32_t GetNumChildren(bool omit_empty_base_classes) const;
+  uint32_t GetNumChildren(bool omit_empty_base_classes,
+                          const ExecutionContext *exe_ctx) const;
 
   lldb::BasicType GetBasicTypeEnumeration() const;
 

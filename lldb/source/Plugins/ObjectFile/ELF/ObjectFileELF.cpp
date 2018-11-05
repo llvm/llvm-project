@@ -2703,6 +2703,7 @@ unsigned ObjectFileELF::ApplyRelocations(
       }
     } else {
       switch (reloc_type(rel)) {
+      case R_AARCH64_ABS64:
       case R_X86_64_64: {
         symbol = symtab->FindSymbolByID(reloc_symbol(rel));
         if (symbol) {
@@ -2722,13 +2723,15 @@ unsigned ObjectFileELF::ApplyRelocations(
         if (symbol) {
           addr_t value = symbol->GetAddressRef().GetFileAddress();
           value += ELFRelocation::RelocAddend32(rel);
-          if ((reloc_type(rel) == R_X86_64_32 && (value <= UINT32_MAX)) ||
+          if ((reloc_type(rel) == R_X86_64_32 && (value > UINT32_MAX)) ||
               (reloc_type(rel) == R_X86_64_32S &&
-               ((int64_t)value <= INT32_MAX && (int64_t)value >= INT32_MIN)) ||
-              (reloc_type(rel) == R_AARCH64_ABS32 && (value <= UINT32_MAX))) {
+               ((int64_t)value > INT32_MAX && (int64_t)value < INT32_MIN)) ||
+              (reloc_type(rel) == R_AARCH64_ABS32 &&
+               ((int64_t)value > INT32_MAX && (int64_t)value < INT32_MIN))) {
             Log *log =
                 lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
             log->Printf("Failed to apply debug info relocations");
+            break;
           }
           uint32_t truncated_addr = (value & 0xFFFFFFFF);
           DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();

@@ -587,6 +587,11 @@ lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
   return result.get();
 }
 
+llvm::Optional<SymbolFile::ArrayInfo> SymbolFilePDB::GetDynamicArrayInfoForUID(
+    lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
+  return llvm::None;
+}
+
 bool SymbolFilePDB::CompleteType(lldb_private::CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(
       GetObjectFile()->GetModule()->GetMutex());
@@ -1354,6 +1359,14 @@ uint32_t SymbolFilePDB::FindTypes(
   FindTypesByName(name_str, parent_decl_ctx, max_matches, types);
 
   return types.GetSize();
+}
+
+void SymbolFilePDB::DumpClangAST(Stream &s) {
+  auto type_system = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  auto clang = llvm::dyn_cast_or_null<ClangASTContext>(type_system);
+  if (!clang)
+    return;
+  clang->Dump(s);
 }
 
 void SymbolFilePDB::FindTypesByRegex(

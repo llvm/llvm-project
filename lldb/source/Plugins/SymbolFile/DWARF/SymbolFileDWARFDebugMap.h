@@ -77,6 +77,10 @@ public:
   ParseVariablesForContext(const lldb_private::SymbolContext &sc) override;
 
   lldb_private::Type *ResolveTypeUID(lldb::user_id_t type_uid) override;
+  llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
+      lldb::user_id_t type_uid,
+      const lldb_private::ExecutionContext *exe_ctx) override;
+
   lldb_private::CompilerDeclContext
   GetDeclContextForUID(lldb::user_id_t uid) override;
   lldb_private::CompilerDeclContext
@@ -125,6 +129,8 @@ public:
                   lldb_private::TypeList &type_list) override;
   std::vector<lldb_private::CallEdge>
   ParseCallEdgesInFunction(lldb_private::UserID func_id) override;
+
+  void DumpClangAST(lldb_private::Stream &s) override;
 
   //------------------------------------------------------------------
   // PluginInterface protocol

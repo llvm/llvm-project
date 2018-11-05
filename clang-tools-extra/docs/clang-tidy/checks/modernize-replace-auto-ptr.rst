@@ -46,7 +46,7 @@ Known Limitations
   sense and usually ``std::auto_ptr`` are stored by value (otherwise what is
   the point in using them instead of a reference or a pointer?).
 
-  .. code-block:: c++
+.. code-block:: c++
 
      // <3rd-party header...>
      std::auto_ptr<int> get_value();
@@ -61,7 +61,7 @@ Known Limitations
 
 * Non-instantiated templates aren't modified.
 
-  .. code-block:: c++
+.. code-block:: c++
 
      template <typename X>
      void f() {
