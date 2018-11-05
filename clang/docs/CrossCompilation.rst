@@ -15,7 +15,7 @@ build system or Makefiles, nor choosing the right CMake options, etc.
 Also, it does not cover all the possible options, nor does it contain
 specific examples for specific architectures. For a concrete example, the
 `instructions for cross-compiling LLVM itself
-<http://llvm.org/docs/HowToCrossCompileLLVM.html>`_ may be of interest.
+<https://llvm.org/docs/HowToCrossCompileLLVM.html>`_ may be of interest.
 
 After reading this document, you should be familiar with the main issues
 related to cross-compilation, and what main compiler options Clang provides

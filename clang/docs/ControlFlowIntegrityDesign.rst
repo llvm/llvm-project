@@ -93,8 +93,8 @@ the bit vectors for the whole program. It currently does this using LLVM's
 `type metadata`_ mechanism together with link-time optimization.
 
 .. _address point: http://itanium-cxx-abi.github.io/cxx-abi/abi.html#vtable-general
-.. _type metadata: http://llvm.org/docs/TypeMetadata.html
-.. _ByteArrayBuilder: http://llvm.org/docs/doxygen/html/structllvm_1_1ByteArrayBuilder.html
+.. _type metadata: https://llvm.org/docs/TypeMetadata.html
+.. _ByteArrayBuilder: https://llvm.org/docs/doxygen/html/structllvm_1_1ByteArrayBuilder.html
 
 Optimizations
 -------------
@@ -196,7 +196,7 @@ those sub-hierarchies need to be (see "Stripping Leading/Trailing Zeros in Bit
 Vectors" above). The `GlobalLayoutBuilder`_ class is responsible for laying
 out the globals efficiently to minimize the sizes of the underlying bitsets.
 
-.. _GlobalLayoutBuilder: http://llvm.org/viewvc/llvm-project/llvm/trunk/include/llvm/Transforms/IPO/LowerTypeTests.h?view=markup
+.. _GlobalLayoutBuilder: https://llvm.org/viewvc/llvm-project/llvm/trunk/include/llvm/Transforms/IPO/LowerTypeTests.h?view=markup
 
 Alignment
 ~~~~~~~~~

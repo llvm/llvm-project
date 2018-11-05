@@ -62,6 +62,7 @@ public:
     UbuntuArtful,
     UbuntuBionic,
     UbuntuCosmic,
+    UbuntuDisco,
     UnknownDistro
   };
 
@@ -115,7 +116,7 @@ public:
   }
 
   bool IsUbuntu() const {
-    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuCosmic;
+    return DistroVal >= UbuntuHardy && DistroVal <= UbuntuDisco;
   }
 
   bool IsAlpineLinux() const {

@@ -108,7 +108,7 @@ Configuring Style in Code
 
 When using ``clang::format::reformat(...)`` functions, the format is specified
 by supplying the `clang::format::FormatStyle
-<http://clang.llvm.org/doxygen/structclang_1_1format_1_1FormatStyle.html>`_
+<https://clang.llvm.org/doxygen/structclang_1_1format_1_1FormatStyle.html>`_
 structure.
 
 
@@ -131,7 +131,7 @@ the configuration (without a prefix: ``Auto``).
 
   * ``LLVM``
     A style complying with the `LLVM coding standards
-    <http://llvm.org/docs/CodingStandards.html>`_
+    <https://llvm.org/docs/CodingStandards.html>`_
   * ``Google``
     A style complying with `Google's C++ style guide
     <http://google-styleguide.googlecode.com/svn/trunk/cppguide.xml>`_
@@ -1290,7 +1290,7 @@ the configuration (without a prefix: ``Auto``).
   If none of the regular expressions match, INT_MAX is assigned as
   category. The main header for a source file automatically gets category 0.
   so that it is generally kept at the beginning of the ``#includes``
-  (http://llvm.org/docs/CodingStandards.html#include-style). However, you
+  (https://llvm.org/docs/CodingStandards.html#include-style). However, you
   can also assign negative priorities if you have certain headers that
   always need to be first.
 
