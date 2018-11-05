@@ -1397,8 +1397,8 @@ void ento::registerRetainCountChecker(CheckerManager &Mgr) {
 
   AnalyzerOptions &Options = Mgr.getAnalyzerOptions();
 
-  Chk->IncludeAllocationLine = Options.getBooleanOption(
+  Chk->IncludeAllocationLine = Options.getCheckerBooleanOption(
                            "leak-diagnostics-reference-allocation", false, Chk);
-  Chk->ShouldCheckOSObjectRetainCount = Options.getBooleanOption(
-                                                   "CheckOSObject", true, Chk);
+  Chk->ShouldCheckOSObjectRetainCount = Options.getCheckerBooleanOption(
+                                                    "CheckOSObject", true, Chk);
 }

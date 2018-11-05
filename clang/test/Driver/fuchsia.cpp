@@ -37,8 +37,9 @@
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC
 // CHECK-STATIC: "--push-state"
 // CHECK-STATIC: "--as-needed"
-// CHECK-STATIC: "-static"
+// CHECK-STATIC: "-Bstatic"
 // CHECK-STATIC: "-lc++"
+// CHECK-STATIC: "-Bdynamic"
 // CHECK-STATIC: "-lm"
 // CHECK-STATIC: "--pop-state"
 // CHECK-STATIC: "-lc"
