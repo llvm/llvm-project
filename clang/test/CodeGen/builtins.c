@@ -443,10 +443,17 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   // CHECK: call void @__os_log_helper_1_3_1_8_33(
   __builtin_os_log_format(buf, "%{ xyz, private }s", "abc");
 
+  // CHECK: call void @__os_log_helper_1_3_1_8_37(
+  __builtin_os_log_format(buf, "%{ xyz, sensitive }s", "abc");
+
   // The strictest privacy annotation in the string wins.
 
   // CHECK: call void @__os_log_helper_1_3_1_8_33(
   __builtin_os_log_format(buf, "%{ private, public, private, public}s", "abc");
+
+  // CHECK: call void @__os_log_helper_1_3_1_8_37(
+  __builtin_os_log_format(buf, "%{ private, sensitive, private, public}s",
+                          "abc");
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49

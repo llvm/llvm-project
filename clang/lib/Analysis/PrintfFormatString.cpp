@@ -127,7 +127,8 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
 
     do {
       StringRef Str(I, E - I);
-      std::string Match = "^[[:space:]]*(private|public)[[:space:]]*(,|})";
+      std::string Match = "^[[:space:]]*(private|public|sensitive)"
+                          "[[:space:]]*(,|})";
       llvm::Regex R(Match);
       SmallVector<StringRef, 2> Matches;
 
@@ -138,7 +139,11 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
         // Set the privacy flag if the privacy annotation in the
         // comma-delimited segment is at least as strict as the privacy
         // annotations in previous comma-delimited segments.
-        if (MatchedStr.equals("private"))
+        if (MatchedStr.equals("sensitive"))
+          PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsSensitive;
+        else if (PrivacyFlags !=
+                 clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
+                 MatchedStr.equals("private"))
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPrivate;
         else if (PrivacyFlags == 0 && MatchedStr.equals("public"))
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsPublic;
@@ -167,6 +172,9 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
       break;
     case clang::analyze_os_log::OSLogBufferItem::IsPublic:
       FS.setIsPublic(MatchedStr.data());
+      break;
+    case clang::analyze_os_log::OSLogBufferItem::IsSensitive:
+      FS.setIsSensitive(MatchedStr.data());
       break;
     default:
       llvm_unreachable("Unexpected privacy flag value");

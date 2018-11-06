@@ -120,7 +120,9 @@ public:
       ArgsData.back().FieldWidth = Args[FS.getFieldWidth().getArgIndex()];
     }
 
-    if (FS.isPrivate())
+    if (FS.isSensitive())
+      ArgsData.back().Flags |= OSLogBufferItem::IsSensitive;
+    else if (FS.isPrivate())
       ArgsData.back().Flags |= OSLogBufferItem::IsPrivate;
     else if (FS.isPublic())
       ArgsData.back().Flags |= OSLogBufferItem::IsPublic;

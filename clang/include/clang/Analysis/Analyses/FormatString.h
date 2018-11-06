@@ -475,13 +475,15 @@ class PrintfSpecifier : public analyze_format_string::FormatSpecifier {
   OptionalFlag HasObjCTechnicalTerm; // '[tt]'
   OptionalFlag IsPrivate;            // '{private}'
   OptionalFlag IsPublic;             // '{public}'
+  OptionalFlag IsSensitive;          // '{sensitive}'
   OptionalAmount Precision;
 public:
   PrintfSpecifier()
       : FormatSpecifier(/* isPrintf = */ true), HasThousandsGrouping("'"),
         IsLeftJustified("-"), HasPlusPrefix("+"), HasSpacePrefix(" "),
         HasAlternativeForm("#"), HasLeadingZeroes("0"),
-        HasObjCTechnicalTerm("tt"), IsPrivate("private"), IsPublic("public") {}
+        HasObjCTechnicalTerm("tt"), IsPrivate("private"), IsPublic("public"),
+        IsSensitive("sensitive") {}
 
   static PrintfSpecifier Parse(const char *beg, const char *end);
 
@@ -512,6 +514,9 @@ public:
   }
   void setIsPrivate(const char *position) { IsPrivate.setPosition(position); }
   void setIsPublic(const char *position) { IsPublic.setPosition(position); }
+  void setIsSensitive(const char *position) {
+    IsSensitive.setPosition(position);
+  }
   void setUsesPositionalArg() { UsesPositionalArg = true; }
 
     // Methods for querying the format specifier.
@@ -551,6 +556,7 @@ public:
   const OptionalFlag &hasObjCTechnicalTerm() const { return HasObjCTechnicalTerm; }
   const OptionalFlag &isPrivate() const { return IsPrivate; }
   const OptionalFlag &isPublic() const { return IsPublic; }
+  const OptionalFlag &isSensitive() const { return IsSensitive; }
   bool usesPositionalArg() const { return UsesPositionalArg; }
 
   /// Changes the specifier and length according to a QualType, retaining any
