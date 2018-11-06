@@ -60,7 +60,10 @@ public:
     IsPrivate = 0x1,
 
     // The item is marked "public" in the format string.
-    IsPublic = 0x2
+    IsPublic = 0x2,
+
+    // The item is marked "sensitive" in the format string.
+    IsSensitive = 0x4 | IsPrivate
   };
 
 private:
@@ -73,7 +76,8 @@ private:
 public:
   OSLogBufferItem(Kind kind, const Expr *expr, CharUnits size, unsigned flags)
       : TheKind(kind), TheExpr(expr), Size(size), Flags(flags) {
-    assert(((Flags == 0) || (Flags == IsPrivate) || (Flags == IsPublic)) &&
+    assert(((Flags == 0) || (Flags == IsPrivate) || (Flags == IsPublic) ||
+            (Flags == IsSensitive)) &&
            "unexpected privacy flag");
   }
 
