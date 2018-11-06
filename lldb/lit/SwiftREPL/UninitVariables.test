@@ -1,0 +1,11 @@
+// Document the way we handle uninitialized variables.
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+var x : Int
+// CHECK: Welcome to Swift
+// CHECK: Type :help
+// CHECK: {{x}}: Int = 0
+x = 42
+x 
+// CHECK: {{R0}}: Int = 42
