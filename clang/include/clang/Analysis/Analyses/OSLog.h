@@ -52,7 +52,10 @@ public:
 
     // The item is corresponding to the '%m' format specifier, no value is
     // populated in the buffer and the runtime is loading the errno value.
-    ErrnoKind
+    ErrnoKind,
+
+    // The item is a mask type.
+    MaskKind
   };
 
   enum {
@@ -72,10 +75,13 @@ private:
   CharUnits ConstValue;
   CharUnits Size; // size of the data, not including the header bytes
   unsigned Flags = 0;
+  StringRef MaskType;
 
 public:
-  OSLogBufferItem(Kind kind, const Expr *expr, CharUnits size, unsigned flags)
-      : TheKind(kind), TheExpr(expr), Size(size), Flags(flags) {
+  OSLogBufferItem(Kind kind, const Expr *expr, CharUnits size, unsigned flags,
+                  StringRef maskType = StringRef())
+      : TheKind(kind), TheExpr(expr), Size(size), Flags(flags),
+        MaskType(maskType) {
     assert(((Flags == 0) || (Flags == IsPrivate) || (Flags == IsPublic) ||
             (Flags == IsSensitive)) &&
            "unexpected privacy flag");
@@ -99,6 +105,8 @@ public:
   const Expr *getExpr() const { return TheExpr; }
   CharUnits getConstValue() const { return ConstValue; }
   CharUnits size() const { return Size; }
+
+  StringRef getMaskType() const { return MaskType; }
 };
 
 class OSLogBufferLayout {
@@ -122,9 +130,10 @@ public:
         Items, [](const OSLogBufferItem &Item) { return Item.getIsPrivate(); });
   }
 
-  bool hasNonScalar() const {
+  bool hasNonScalarOrMask() const {
     return llvm::any_of(Items, [](const OSLogBufferItem &Item) {
-      return Item.getKind() != OSLogBufferItem::ScalarKind;
+      return Item.getKind() != OSLogBufferItem::ScalarKind ||
+             !Item.getMaskType().empty();
     });
   }
 
@@ -132,7 +141,7 @@ public:
     unsigned char result = 0;
     if (hasPrivateItems())
       result |= HasPrivateItems;
-    if (hasNonScalar())
+    if (hasNonScalarOrMask())
       result |= HasNonScalarItems;
     return result;
   }

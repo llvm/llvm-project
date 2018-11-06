@@ -477,6 +477,7 @@ class PrintfSpecifier : public analyze_format_string::FormatSpecifier {
   OptionalFlag IsPublic;             // '{public}'
   OptionalFlag IsSensitive;          // '{sensitive}'
   OptionalAmount Precision;
+  StringRef MaskType;
 public:
   PrintfSpecifier()
       : FormatSpecifier(/* isPrintf = */ true), HasThousandsGrouping("'"),
@@ -558,6 +559,9 @@ public:
   const OptionalFlag &isPublic() const { return IsPublic; }
   const OptionalFlag &isSensitive() const { return IsSensitive; }
   bool usesPositionalArg() const { return UsesPositionalArg; }
+
+  StringRef getMaskType() const { return MaskType; }
+  void setMaskType(StringRef S) { MaskType = S; }
 
   /// Changes the specifier and length according to a QualType, retaining any
   /// flags or options. Returns true on success, or false when a conversion
@@ -690,6 +694,9 @@ public:
                                      unsigned specifierLen) {
     return true;
   }
+
+  /// Handle mask types whose sizes are not between one and eight bytes.
+  virtual void handleInvalidMaskType(StringRef MaskType) {}
 
     // Scanf-specific handlers.
 
