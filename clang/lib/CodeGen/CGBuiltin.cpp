@@ -200,6 +200,9 @@ static RValue EmitBinaryAtomicPost(CodeGenFunction &CGF,
 ///                   cmpxchg result or the old value.
 ///
 /// @returns result of cmpxchg, according to ReturnBool
+///
+/// Note: In order to lower Microsoft's _InterlockedCompareExchange* intrinsics
+/// invoke the function EmitAtomicCmpXchgForMSIntrin.
 static Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
                                      bool ReturnBool) {
   QualType T = ReturnBool ? E->getArg(1)->getType() : E->getType();
@@ -228,6 +231,45 @@ static Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
     // Extract old value and emit it using the same type as compare value.
     return EmitFromInt(CGF, CGF.Builder.CreateExtractValue(Pair, 0), T,
                        ValueType);
+}
+
+/// This function should be invoked to emit atomic cmpxchg for Microsoft's
+/// _InterlockedCompareExchange* intrinsics which have the following signature:
+/// T _InterlockedCompareExchange(T volatile *Destination,
+///                               T Exchange,
+///                               T Comparand);
+///
+/// Whereas the llvm 'cmpxchg' instruction has the following syntax:
+/// cmpxchg *Destination, Comparand, Exchange.
+/// So we need to swap Comparand and Exchange when invoking
+/// CreateAtomicCmpXchg. That is the reason we could not use the above utility
+/// function MakeAtomicCmpXchgValue since it expects the arguments to be
+/// already swapped.
+
+static
+Value *EmitAtomicCmpXchgForMSIntrin(CodeGenFunction &CGF, const CallExpr *E,
+    AtomicOrdering SuccessOrdering = AtomicOrdering::SequentiallyConsistent) {
+  auto T = E->getType();
+  assert(E->getArg(0)->getType()->isPointerType());
+  assert(CGF.getContext().hasSameUnqualifiedType(T,
+                                  E->getArg(0)->getType()->getPointeeType()));
+  assert(CGF.getContext().hasSameUnqualifiedType(T, E->getArg(1)->getType()));
+  assert(CGF.getContext().hasSameUnqualifiedType(T, E->getArg(2)->getType()));
+
+  auto *Destination = CGF.EmitScalarExpr(E->getArg(0));
+  auto *Comparand = CGF.EmitScalarExpr(E->getArg(2));
+  auto *Exchange = CGF.EmitScalarExpr(E->getArg(1));
+
+  // For Release ordering, the failure ordering should be Monotonic.
+  auto FailureOrdering = SuccessOrdering == AtomicOrdering::Release ?
+                         AtomicOrdering::Monotonic :
+                         SuccessOrdering;
+
+  auto *Result = CGF.Builder.CreateAtomicCmpXchg(
+                   Destination, Comparand, Exchange,
+                   SuccessOrdering, FailureOrdering);
+  Result->setVolatile(true);
+  return CGF.Builder.CreateExtractValue(Result, 0);
 }
 
 // Emit a simple mangled intrinsic that has 1 argument and a return type
@@ -754,6 +796,12 @@ enum class CodeGenFunction::MSVCIntrin {
   _InterlockedExchange_acq,
   _InterlockedExchange_rel,
   _InterlockedExchange_nf,
+  _InterlockedCompareExchange_acq,
+  _InterlockedCompareExchange_rel,
+  _InterlockedCompareExchange_nf,
+  _InterlockedOr_acq,
+  _InterlockedOr_rel,
+  _InterlockedOr_nf,
   __fastfail,
 };
 
@@ -837,6 +885,21 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
                                  AtomicOrdering::Release);
   case MSVCIntrin::_InterlockedExchange_nf:
     return MakeBinaryAtomicValue(*this, AtomicRMWInst::Xchg, E,
+                                 AtomicOrdering::Monotonic);
+  case MSVCIntrin::_InterlockedCompareExchange_acq:
+    return EmitAtomicCmpXchgForMSIntrin(*this, E, AtomicOrdering::Acquire);
+  case MSVCIntrin::_InterlockedCompareExchange_rel:
+    return EmitAtomicCmpXchgForMSIntrin(*this, E, AtomicOrdering::Release);
+  case MSVCIntrin::_InterlockedCompareExchange_nf:
+    return EmitAtomicCmpXchgForMSIntrin(*this, E, AtomicOrdering::Monotonic);
+  case MSVCIntrin::_InterlockedOr_acq:
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::Or, E,
+                                 AtomicOrdering::Acquire);
+  case MSVCIntrin::_InterlockedOr_rel:
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::Or, E,
+                                 AtomicOrdering::Release);
+  case MSVCIntrin::_InterlockedOr_nf:
+    return MakeBinaryAtomicValue(*this, AtomicRMWInst::Or, E,
                                  AtomicOrdering::Monotonic);
 
   case MSVCIntrin::_InterlockedDecrement: {
@@ -3059,16 +3122,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI_InterlockedCompareExchange8:
   case Builtin::BI_InterlockedCompareExchange16:
   case Builtin::BI_InterlockedCompareExchange:
-  case Builtin::BI_InterlockedCompareExchange64: {
-    AtomicCmpXchgInst *CXI = Builder.CreateAtomicCmpXchg(
-        EmitScalarExpr(E->getArg(0)),
-        EmitScalarExpr(E->getArg(2)),
-        EmitScalarExpr(E->getArg(1)),
-        AtomicOrdering::SequentiallyConsistent,
-        AtomicOrdering::SequentiallyConsistent);
-      CXI->setVolatile(true);
-      return RValue::get(Builder.CreateExtractValue(CXI, 0));
-  }
+  case Builtin::BI_InterlockedCompareExchange64:
+    return RValue::get(EmitAtomicCmpXchgForMSIntrin(*this, E));
   case Builtin::BI_InterlockedIncrement16:
   case Builtin::BI_InterlockedIncrement:
     return RValue::get(
@@ -6159,6 +6214,36 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   case ARM::BI_InterlockedExchange_nf:
   case ARM::BI_InterlockedExchange64_nf:
     return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange_nf, E);
+  case ARM::BI_InterlockedCompareExchange8_acq:
+  case ARM::BI_InterlockedCompareExchange16_acq:
+  case ARM::BI_InterlockedCompareExchange_acq:
+  case ARM::BI_InterlockedCompareExchange64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_acq, E);
+  case ARM::BI_InterlockedCompareExchange8_rel:
+  case ARM::BI_InterlockedCompareExchange16_rel:
+  case ARM::BI_InterlockedCompareExchange_rel:
+  case ARM::BI_InterlockedCompareExchange64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_rel, E);
+  case ARM::BI_InterlockedCompareExchange8_nf:
+  case ARM::BI_InterlockedCompareExchange16_nf:
+  case ARM::BI_InterlockedCompareExchange_nf:
+  case ARM::BI_InterlockedCompareExchange64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_nf, E);
+  case ARM::BI_InterlockedOr8_acq:
+  case ARM::BI_InterlockedOr16_acq:
+  case ARM::BI_InterlockedOr_acq:
+  case ARM::BI_InterlockedOr64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_acq, E);
+  case ARM::BI_InterlockedOr8_rel:
+  case ARM::BI_InterlockedOr16_rel:
+  case ARM::BI_InterlockedOr_rel:
+  case ARM::BI_InterlockedOr64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_rel, E);
+  case ARM::BI_InterlockedOr8_nf:
+  case ARM::BI_InterlockedOr16_nf:
+  case ARM::BI_InterlockedOr_nf:
+  case ARM::BI_InterlockedOr64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_nf, E);
   }
 
   // Get the last argument, which specifies the vector type.
@@ -8675,6 +8760,36 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   case AArch64::BI_InterlockedExchange_nf:
   case AArch64::BI_InterlockedExchange64_nf:
     return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedExchange_nf, E);
+  case AArch64::BI_InterlockedCompareExchange8_acq:
+  case AArch64::BI_InterlockedCompareExchange16_acq:
+  case AArch64::BI_InterlockedCompareExchange_acq:
+  case AArch64::BI_InterlockedCompareExchange64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_acq, E);
+  case AArch64::BI_InterlockedCompareExchange8_rel:
+  case AArch64::BI_InterlockedCompareExchange16_rel:
+  case AArch64::BI_InterlockedCompareExchange_rel:
+  case AArch64::BI_InterlockedCompareExchange64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_rel, E);
+  case AArch64::BI_InterlockedCompareExchange8_nf:
+  case AArch64::BI_InterlockedCompareExchange16_nf:
+  case AArch64::BI_InterlockedCompareExchange_nf:
+  case AArch64::BI_InterlockedCompareExchange64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedCompareExchange_nf, E);
+  case AArch64::BI_InterlockedOr8_acq:
+  case AArch64::BI_InterlockedOr16_acq:
+  case AArch64::BI_InterlockedOr_acq:
+  case AArch64::BI_InterlockedOr64_acq:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_acq, E);
+  case AArch64::BI_InterlockedOr8_rel:
+  case AArch64::BI_InterlockedOr16_rel:
+  case AArch64::BI_InterlockedOr_rel:
+  case AArch64::BI_InterlockedOr64_rel:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_rel, E);
+  case AArch64::BI_InterlockedOr8_nf:
+  case AArch64::BI_InterlockedOr16_nf:
+  case AArch64::BI_InterlockedOr_nf:
+  case AArch64::BI_InterlockedOr64_nf:
+    return EmitMSVCBuiltinExpr(MSVCIntrin::_InterlockedOr_nf, E);
 
   case AArch64::BI_InterlockedAdd: {
     Value *Arg0 = EmitScalarExpr(E->getArg(0));

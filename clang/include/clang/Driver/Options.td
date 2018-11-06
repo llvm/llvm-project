@@ -2128,6 +2128,10 @@ def mxnack : Flag<["-"], "mxnack">, Group<m_amdgpu_Features_Group>,
   HelpText<"Enable XNACK (AMDGPU only)">;
 def mno_xnack : Flag<["-"], "mno-xnack">, Group<m_amdgpu_Features_Group>,
   HelpText<"Disable XNACK (AMDGPU only)">;
+def msram_ecc : Flag<["-"], "msram-ecc">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Enable SRAM ECC (AMDGPU only)">;
+def mno_sram_ecc : Flag<["-"], "mno-sram-ecc">, Group<m_amdgpu_Features_Group>,
+  HelpText<"Disable SRAM ECC (AMDGPU only)">;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>, Flags<[DriverOption]>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>, Flags<[DriverOption]>;
