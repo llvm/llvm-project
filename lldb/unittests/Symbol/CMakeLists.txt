@@ -2,6 +2,7 @@ add_lldb_unittest(SymbolTests
   TestClangASTContext.cpp
   TestDWARFCallFrameInfo.cpp
   TestType.cpp
+  TestSwiftASTContext.cpp
 
   LINK_LIBS
     lldbHost
