@@ -143,10 +143,17 @@ TEST_F(ObjectFileELFTest, GetModuleSpecifications_EarlySectionHeaders) {
   EXPECT_EQ(Spec.GetUUID(), Uuid);
 }
 
-#define CHECK_ABS32(offset, addend)                                            \
-  ASSERT_EQ((uint32_t)addend, *(uint32_t *)(bytes + offset))
-#define CHECK_ABS64(offset, addend)                                            \
-  ASSERT_EQ((uint64_t)addend, *(uint64_t *)(bytes + offset))
+static void CHECK_ABS32(uint8_t *bytes, uint32_t offset, uint32_t addend) {
+  uint32_t res;
+  memcpy(&res, (uint32_t *)(bytes + offset), sizeof(uint32_t));
+  ASSERT_EQ(addend, res);
+}
+
+static void CHECK_ABS64(uint8_t *bytes, uint64_t offset, uint64_t addend) {
+  uint64_t res;
+  memcpy(&res, (uint64_t *)(bytes + offset), sizeof(uint64_t));
+  ASSERT_EQ(addend, res);
+}
 
 TEST_F(ObjectFileELFTest, TestAARCH64Relocations) {
   std::string yaml = GetInputFilePath("debug-info-relocations.pcm.yaml");
@@ -193,13 +200,13 @@ TEST_F(ObjectFileELFTest, TestAARCH64Relocations) {
   // .rela.debug_info contains 9 relocations:
   // 7 R_AARCH64_ABS32 - 2 R_AARCH64_ABS64
   // None have a value. Four have addends.
-  CHECK_ABS32(0x6, 0);
-  CHECK_ABS32(0xC, 0);
-  CHECK_ABS32(0x12, 45);
-  CHECK_ABS32(0x16, 0);
-  CHECK_ABS32(0x1A, 55);
-  CHECK_ABS64(0x1E, 0);
-  CHECK_ABS64(0x2B, 0);
-  CHECK_ABS32(0x39, 73);
-  CHECK_ABS32(0x44, 75);
+  CHECK_ABS32(bytes, 0x6, 0);
+  CHECK_ABS32(bytes, 0xC, 0);
+  CHECK_ABS32(bytes, 0x12, 45);
+  CHECK_ABS32(bytes, 0x16, 0);
+  CHECK_ABS32(bytes, 0x1A, 55);
+  CHECK_ABS64(bytes, 0x1E, 0);
+  CHECK_ABS64(bytes, 0x2B, 0);
+  CHECK_ABS32(bytes, 0x39, 73);
+  CHECK_ABS32(bytes, 0x44, 75);
 }
