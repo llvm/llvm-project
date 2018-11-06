@@ -11,6 +11,9 @@
 // REQUIRES: x86_64-target-arch
 // REQUIRES: built-in-llvm-tree
 
+// Not ported.
+// UNSUPPORTED: netbsd
+
 #include "xray/xray_log_interface.h"
 #include <stdio.h>
 #include <unistd.h>
