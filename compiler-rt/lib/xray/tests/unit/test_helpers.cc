@@ -30,6 +30,10 @@ std::string RecordTypeAsString(RecordTypes T) {
     return "llvm::xray::RecordTypes::TAIL_EXIT";
   case RecordTypes::ENTER_ARG:
     return "llvm::xray::RecordTypes::ENTER_ARG";
+  case RecordTypes::CUSTOM_EVENT:
+    return "llvm::xray::RecordTypes::CUSTOM_EVENT";
+  case RecordTypes::TYPED_EVENT:
+    return "llvm::xray::RecordTypes::TYPED_EVENT";
   }
   return "<UNKNOWN>";
 }
