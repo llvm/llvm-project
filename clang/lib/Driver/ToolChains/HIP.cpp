@@ -153,8 +153,12 @@ const char *AMDGCN::Linker::constructLlcCommand(
     const llvm::opt::ArgList &Args, llvm::StringRef SubArchName,
     llvm::StringRef OutputFilePrefix, const char *InputFileName) const {
   // Construct llc command.
+  // FIXME: -disable-promote-alloca-to-lds is a workaround for issues in
+  // AMDGPUPromoteAlloca pass which cause invalid memory access in PyTorch.
+  // Remove this once the issue is fixed.
   ArgStringList LlcArgs{InputFileName, "-mtriple=amdgcn-amd-amdhsa",
                         "-filetype=obj", "-mattr=-code-object-v3",
+                        "-disable-promote-alloca-to-lds",
                         Args.MakeArgString("-mcpu=" + SubArchName), "-o"};
   std::string LlcOutputFileName =
       C.getDriver().GetTemporaryPath(OutputFilePrefix, "o");
