@@ -353,7 +353,7 @@ protected:
   bool HasDPP;
   bool HasR128A16;
   bool HasDLInsts;
-  bool D16PreservesUnusedBits;
+  bool EnableSRAMECC;
   bool FlatAddressSpace;
   bool FlatInstOffsets;
   bool FlatGlobalInsts;
@@ -679,8 +679,8 @@ public:
     return HasDLInsts;
   }
 
-  bool d16PreservesUnusedBits() const {
-    return D16PreservesUnusedBits;
+  bool isSRAMECCEnabled() const {
+    return EnableSRAMECC;
   }
 
   // Scratch is allocated in 256 dword per wave blocks for the entire

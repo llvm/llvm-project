@@ -711,9 +711,12 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_FIRST = EF_AMDGPU_MACH_AMDGCN_GFX600,
   EF_AMDGPU_MACH_AMDGCN_LAST = EF_AMDGPU_MACH_AMDGCN_GFX909,
 
-  // Indicates if the xnack target feature is enabled for all code contained in
-  // the object.
+  // Indicates if the "xnack" target feature is enabled for all code contained
+  // in the object.
   EF_AMDGPU_XNACK = 0x100,
+  // Indicates if the "sram-ecc" target feature is enabled for all code
+  // contained in the object.
+  EF_AMDGPU_SRAM_ECC = 0x200,
 };
 
 // ELF Relocation types for AMDGPU

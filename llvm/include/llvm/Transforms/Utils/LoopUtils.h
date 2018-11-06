@@ -109,7 +109,7 @@ bool formLCSSARecursively(Loop &L, DominatorTree &DT, LoopInfo *LI,
 /// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
 bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                 TargetLibraryInfo *, TargetTransformInfo *, Loop *,
-                AliasSetTracker *, LoopSafetyInfo *,
+                AliasSetTracker *, ICFLoopSafetyInfo *,
                 OptimizationRemarkEmitter *ORE);
 
 /// Walk the specified region of the CFG (defined by all blocks
@@ -122,7 +122,7 @@ bool sinkRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
 /// ORE. It returns changed status.
 bool hoistRegion(DomTreeNode *, AliasAnalysis *, LoopInfo *, DominatorTree *,
                  TargetLibraryInfo *, Loop *, AliasSetTracker *,
-                 LoopSafetyInfo *, OptimizationRemarkEmitter *ORE);
+                 ICFLoopSafetyInfo *, OptimizationRemarkEmitter *ORE);
 
 /// This function deletes dead loops. The caller of this function needs to
 /// guarantee that the loop is infact dead.
@@ -151,7 +151,8 @@ bool promoteLoopAccessesToScalars(const SmallSetVector<Value *, 8> &,
                                   SmallVectorImpl<Instruction *> &,
                                   PredIteratorCache &, LoopInfo *,
                                   DominatorTree *, const TargetLibraryInfo *,
-                                  Loop *, AliasSetTracker *, LoopSafetyInfo *,
+                                  Loop *, AliasSetTracker *,
+                                  ICFLoopSafetyInfo *,
                                   OptimizationRemarkEmitter *);
 
 /// Does a BFS from a given node to all of its children inside a given loop.

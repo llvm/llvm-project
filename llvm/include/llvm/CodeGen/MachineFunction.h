@@ -58,6 +58,7 @@ class DILocalVariable;
 class DILocation;
 class Function;
 class GlobalValue;
+class LLVMTargetMachine;
 class MachineConstantPool;
 class MachineFrameInfo;
 class MachineFunction;
@@ -70,7 +71,6 @@ class Pass;
 class PseudoSourceValueManager;
 class raw_ostream;
 class SlotIndexes;
-class TargetMachine;
 class TargetRegisterClass;
 class TargetSubtargetInfo;
 struct WasmEHFuncInfo;
@@ -225,7 +225,7 @@ struct LandingPadInfo {
 
 class MachineFunction {
   const Function &F;
-  const TargetMachine &Target;
+  const LLVMTargetMachine &Target;
   const TargetSubtargetInfo *STI;
   MCContext &Ctx;
   MachineModuleInfo &MMI;
@@ -388,7 +388,7 @@ public:
   using VariableDbgInfoMapTy = SmallVector<VariableDbgInfo, 4>;
   VariableDbgInfoMapTy VariableDbgInfos;
 
-  MachineFunction(const Function &F, const TargetMachine &Target,
+  MachineFunction(const Function &F, const LLVMTargetMachine &Target,
                   const TargetSubtargetInfo &STI, unsigned FunctionNum,
                   MachineModuleInfo &MMI);
   MachineFunction(const MachineFunction &) = delete;
@@ -436,7 +436,7 @@ public:
   unsigned getFunctionNumber() const { return FunctionNumber; }
 
   /// getTarget - Return the target machine this machine code is compiled with
-  const TargetMachine &getTarget() const { return Target; }
+  const LLVMTargetMachine &getTarget() const { return Target; }
 
   /// getSubtarget - Return the subtarget for which this machine code is being
   /// compiled.

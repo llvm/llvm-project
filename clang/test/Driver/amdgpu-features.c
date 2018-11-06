@@ -17,3 +17,9 @@
 
 // RUN: %clang -### -target amdgcn -mcpu=gfx700 -mno-xnack %s 2>&1 | FileCheck --check-prefix=NO-XNACK %s
 // NO-XNACK: "-target-feature" "-xnack"
+
+// RUN: %clang -### -target amdgcn -mcpu=gfx700 -msram-ecc %s 2>&1 | FileCheck --check-prefix=SRAM-ECC %s
+// SRAM-ECC: "-target-feature" "+sram-ecc"
+
+// RUN: %clang -### -target amdgcn -mcpu=gfx700 -mno-sram-ecc %s 2>&1 | FileCheck --check-prefix=NO-SRAM-ECC %s
+// NO-SRAM-ECC: "-target-feature" "-sram-ecc"

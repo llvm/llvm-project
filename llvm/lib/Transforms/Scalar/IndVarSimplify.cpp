@@ -145,7 +145,6 @@ class IndVarSimplify {
   bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet);
   bool rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter);
   bool rewriteFirstIterationLoopExitValues(Loop *L);
-  bool hasHardUserWithinLoop(const Loop *L, const Instruction *I) const;
 
   bool linearFunctionTestReplace(Loop *L, const SCEV *BackedgeTakenCount,
                                  PHINode *IndVar, SCEVExpander &Rewriter);
@@ -525,29 +524,6 @@ struct RewritePhi {
 // As a side effect, reduces the amount of IV processing within the loop.
 //===----------------------------------------------------------------------===//
 
-bool IndVarSimplify::hasHardUserWithinLoop(const Loop *L, const Instruction *I) const {
-  SmallPtrSet<const Instruction *, 8> Visited;
-  SmallVector<const Instruction *, 8> WorkList;
-  Visited.insert(I);
-  WorkList.push_back(I);
-  while (!WorkList.empty()) {
-    const Instruction *Curr = WorkList.pop_back_val();
-    // This use is outside the loop, nothing to do.
-    if (!L->contains(Curr))
-      continue;
-    // Do we assume it is a "hard" use which will not be eliminated easily?
-    if (Curr->mayHaveSideEffects())
-      return true;
-    // Otherwise, add all its users to worklist.
-    for (auto U : Curr->users()) {
-      auto *UI = cast<Instruction>(U);
-      if (Visited.insert(UI).second)
-        WorkList.push_back(UI);
-    }
-  }
-  return false;
-}
-
 /// Check to see if this loop has a computable loop-invariant execution count.
 /// If so, this means that we can compute the final value of any expressions
 /// that are recurrent in the loop, and substitute the exit values from the loop
@@ -622,8 +598,19 @@ bool IndVarSimplify::rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter) {
         // Computing the value outside of the loop brings no benefit if it is
         // definitely used inside the loop in a way which can not be optimized
         // away.
-        if (hasHardUserWithinLoop(L, Inst))
-          continue;
+        if (ExitValue->getSCEVType()>=scMulExpr) {
+          bool HasHardInternalUses = false;
+          for (auto *IB : Inst->users()) {
+            Instruction *UseInstr = cast<Instruction>(IB);
+            unsigned Opc = UseInstr->getOpcode();
+            if (L->contains(UseInstr) && Opc == Instruction::Call) {
+              HasHardInternalUses = true;
+              break;
+            }
+          }
+          if (HasHardInternalUses)
+            continue;
+        }
 
         bool HighCost = Rewriter.isHighCostExpansion(ExitValue, L, Inst);
         Value *ExitVal = Rewriter.expandCodeFor(ExitValue, PN->getType(), Inst);

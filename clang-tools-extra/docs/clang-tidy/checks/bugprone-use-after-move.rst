@@ -5,7 +5,7 @@ bugprone-use-after-move
 
 Warns if an object is used after it has been moved, for example:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     std::string str = "Hello, world!\n";
     std::vector<std::string> messages;
@@ -18,7 +18,7 @@ moved.
 The check does not trigger a warning if the object is reinitialized after the
 move and before the use. For example, no warning will be output for this code:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     messages.emplace_back(std::move(str));
     str = "Greetings, stranger!\n";
@@ -28,7 +28,7 @@ The check takes control flow into account. A warning is only emitted if the use
 can be reached from the move. This means that the following code does not
 produce a warning:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     if (condition) {
       messages.emplace_back(std::move(str));
@@ -38,7 +38,7 @@ produce a warning:
 
 On the other hand, the following code does produce a warning:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     for (int i = 0; i < 10; ++i) {
       std::cout << str;
@@ -50,7 +50,7 @@ On the other hand, the following code does produce a warning:
 In some cases, the check may not be able to detect that two branches are
 mutually exclusive. For example (assuming that ``i`` is an int):
 
-  .. code-block:: c++
+.. code-block:: c++
 
     if (i == 1) {
       messages.emplace_back(std::move(str));
@@ -65,7 +65,7 @@ not possible for both the move and the use to be executed.
 An erroneous warning can be silenced by reinitializing the object after the
 move:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     if (i == 1) {
       messages.emplace_back(std::move(str));
@@ -86,7 +86,7 @@ sub-expressions of a statement are evaluated. This means that in code like the
 following, it is not guaranteed whether the use will happen before or after the
 move:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     void f(int i, std::vector<int> v);
     std::vector<int> v = { 1, 2, 3 };
@@ -124,7 +124,7 @@ that consumes this parameter does not move from it, or if it does so only
 conditionally. For example, in the following situation, the check will assume
 that a move always takes place:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     std::vector<std::string> messages;
     void f(std::string &&str) {
@@ -186,7 +186,7 @@ that struct is written to, the check does not consider this to be a
 reinitialization -- even if, eventually, all member variables of the struct are
 written to. For example:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     struct S {
       std::string str;

@@ -19,3 +19,5 @@ Changes:
   is applied to fix cross compilation with MinGW headers
 * https://github.com/google/benchmark/commit/439d6b1c2a6da5cb6adc4c4dfc555af235722396
   is applied to fix building with MinGW headers for ARM
+* https://github.com/google/benchmark/commit/a9b31c51b1ee7ec7b31438c647123c2cbac5d956
+  is applied to disable exceptions in Microsoft STL when exceptions are disabled

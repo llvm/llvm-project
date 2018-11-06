@@ -1,4 +1,4 @@
-UNSUPPORTED: aarch64
+UNSUPPORTED: aarch64, ios
 # Tests break on windows unless exe extension is used (because there are periods
 # in expansion of %t, the string after the period is interpreted as the file
 # extension, so each compilation will clobber the previous one's lib and exp

@@ -146,6 +146,10 @@ bool LatencyAccountant::accountRecord(const XRayRecord &Record) {
 
   auto &ThreadStack = PerThreadFunctionStack[Record.TId];
   switch (Record.Type) {
+  case RecordTypes::CUSTOM_EVENT:
+  case RecordTypes::TYPED_EVENT:
+    // TODO: Support custom and typed event accounting in the future.
+    return true;
   case RecordTypes::ENTER:
   case RecordTypes::ENTER_ARG: {
     ThreadStack.emplace_back(Record.FuncId, Record.TSC);
@@ -417,19 +421,25 @@ namespace llvm {
 template <> struct format_provider<llvm::xray::RecordTypes> {
   static void format(const llvm::xray::RecordTypes &T, raw_ostream &Stream,
                      StringRef Style) {
-    switch(T) {
-      case RecordTypes::ENTER:
-        Stream << "enter";
-        break;
-      case RecordTypes::ENTER_ARG:
-        Stream << "enter-arg";
-        break;
-      case RecordTypes::EXIT:
-        Stream << "exit";
-        break;
-      case RecordTypes::TAIL_EXIT:
-        Stream << "tail-exit";
-        break;
+    switch (T) {
+    case RecordTypes::ENTER:
+      Stream << "enter";
+      break;
+    case RecordTypes::ENTER_ARG:
+      Stream << "enter-arg";
+      break;
+    case RecordTypes::EXIT:
+      Stream << "exit";
+      break;
+    case RecordTypes::TAIL_EXIT:
+      Stream << "tail-exit";
+      break;
+    case RecordTypes::CUSTOM_EVENT:
+      Stream << "custom-event";
+      break;
+    case RecordTypes::TYPED_EVENT:
+      Stream << "typed-event";
+      break;
     }
   }
 };

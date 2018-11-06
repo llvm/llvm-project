@@ -103,10 +103,10 @@ static bool isNotUsedOrFreeInLoop(const Instruction &I, const Loop *CurLoop,
                                   const LoopSafetyInfo *SafetyInfo,
                                   TargetTransformInfo *TTI, bool &FreeInLoop);
 static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
-                  LoopSafetyInfo *SafetyInfo,
+                  ICFLoopSafetyInfo *SafetyInfo,
                   OptimizationRemarkEmitter *ORE);
 static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
-                 const Loop *CurLoop, LoopSafetyInfo *SafetyInfo,
+                 const Loop *CurLoop, ICFLoopSafetyInfo *SafetyInfo,
                  OptimizationRemarkEmitter *ORE, bool FreeInLoop);
 static bool isSafeToExecuteUnconditionally(Instruction &Inst,
                                            const DominatorTree *DT,
@@ -123,7 +123,8 @@ CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
                             const LoopInfo *LI,
                             const LoopSafetyInfo *SafetyInfo);
 
-static void eraseInstruction(Instruction &I, AliasSetTracker *AST);
+static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
+                             AliasSetTracker *AST);
 
 namespace {
 struct LoopInvariantCodeMotion {
@@ -269,7 +270,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
   BasicBlock *Preheader = L->getLoopPreheader();
 
   // Compute loop safety information.
-  SimpleLoopSafetyInfo SafetyInfo;
+  ICFLoopSafetyInfo SafetyInfo(DT);
   SafetyInfo.computeLoopSafetyInfo(L);
 
   // We want to visit all of the instructions in this loop... that are not parts
@@ -376,7 +377,7 @@ bool LoopInvariantCodeMotion::runOnLoop(
 bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
                       DominatorTree *DT, TargetLibraryInfo *TLI,
                       TargetTransformInfo *TTI, Loop *CurLoop,
-                      AliasSetTracker *CurAST, LoopSafetyInfo *SafetyInfo,
+                      AliasSetTracker *CurAST, ICFLoopSafetyInfo *SafetyInfo,
                       OptimizationRemarkEmitter *ORE) {
 
   // Verify inputs.
@@ -406,7 +407,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         LLVM_DEBUG(dbgs() << "LICM deleting dead inst: " << I << '\n');
         salvageDebugInfo(I);
         ++II;
-        eraseInstruction(I, CurAST);
+        eraseInstruction(I, *SafetyInfo, CurAST);
         Changed = true;
         continue;
       }
@@ -423,7 +424,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         if (sink(I, LI, DT, CurLoop, SafetyInfo, ORE, FreeInLoop)) {
           if (!FreeInLoop) {
             ++II;
-            eraseInstruction(I, CurAST);
+            eraseInstruction(I, *SafetyInfo, CurAST);
           }
           Changed = true;
         }
@@ -440,7 +441,7 @@ bool llvm::sinkRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
 ///
 bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
                        DominatorTree *DT, TargetLibraryInfo *TLI, Loop *CurLoop,
-                       AliasSetTracker *CurAST, LoopSafetyInfo *SafetyInfo,
+                       AliasSetTracker *CurAST, ICFLoopSafetyInfo *SafetyInfo,
                        OptimizationRemarkEmitter *ORE) {
   // Verify inputs.
   assert(N != nullptr && AA != nullptr && LI != nullptr && DT != nullptr &&
@@ -459,14 +460,10 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
     if (inSubLoop(BB, CurLoop, LI))
       continue;
 
-    // Keep track of whether the prefix of instructions visited so far are such
-    // that the next instruction visited is guaranteed to execute if the loop
-    // is entered.
-    bool IsMustExecute = CurLoop->getHeader() == BB;
     // Keep track of whether the prefix instructions could have written memory.
-    // TODO: This and IsMustExecute may be done smarter if we keep track of all
-    // throwing and mem-writing operations in every block, e.g. using something
-    // similar to isGuaranteedToExecute.
+    // TODO: This may be done smarter if we keep track of all throwing and
+    // mem-writing operations in every block, e.g. using something similar to
+    // isGuaranteedToExecute.
     bool IsMemoryNotModified = CurLoop->getHeader() == BB;
 
     for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
@@ -481,7 +478,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         CurAST->copyValue(&I, C);
         I.replaceAllUsesWith(C);
         if (isInstructionTriviallyDead(&I, TLI))
-          eraseInstruction(I, CurAST);
+          eraseInstruction(I, *SafetyInfo, CurAST);
         Changed = true;
         continue;
       }
@@ -492,10 +489,9 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       //
       if (CurLoop->hasLoopInvariantOperands(&I) &&
           canSinkOrHoistInst(I, AA, DT, CurLoop, CurAST, true, ORE) &&
-          (IsMustExecute ||
-           isSafeToExecuteUnconditionally(
-               I, DT, CurLoop, SafetyInfo, ORE,
-               CurLoop->getLoopPreheader()->getTerminator()))) {
+          isSafeToExecuteUnconditionally(
+              I, DT, CurLoop, SafetyInfo, ORE,
+              CurLoop->getLoopPreheader()->getTerminator())) {
         hoist(I, DT, CurLoop, SafetyInfo, ORE);
         Changed = true;
         continue;
@@ -510,14 +506,16 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
         auto One = llvm::ConstantFP::get(Divisor->getType(), 1.0);
         auto ReciprocalDivisor = BinaryOperator::CreateFDiv(One, Divisor);
         ReciprocalDivisor->setFastMathFlags(I.getFastMathFlags());
+        SafetyInfo->insertInstructionTo(I.getParent());
         ReciprocalDivisor->insertBefore(&I);
 
         auto Product =
             BinaryOperator::CreateFMul(I.getOperand(0), ReciprocalDivisor);
         Product->setFastMathFlags(I.getFastMathFlags());
+        SafetyInfo->insertInstructionTo(I.getParent());
         Product->insertAfter(&I);
         I.replaceAllUsesWith(Product);
-        eraseInstruction(I, CurAST);
+        eraseInstruction(I, *SafetyInfo, CurAST);
 
         hoist(*ReciprocalDivisor, DT, CurLoop, SafetyInfo, ORE);
         Changed = true;
@@ -528,15 +526,13 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       if (((I.use_empty() &&
             match(&I, m_Intrinsic<Intrinsic::invariant_start>())) ||
            isGuard(&I)) &&
-          IsMustExecute && IsMemoryNotModified &&
-          CurLoop->hasLoopInvariantOperands(&I)) {
+          IsMemoryNotModified && CurLoop->hasLoopInvariantOperands(&I) &&
+          SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop)) {
         hoist(I, DT, CurLoop, SafetyInfo, ORE);
         Changed = true;
         continue;
       }
 
-      if (IsMustExecute)
-        IsMustExecute = isGuaranteedToTransferExecutionToSuccessor(&I);
       if (IsMemoryNotModified)
         IsMemoryNotModified = !I.mayWriteToMemory();
     }
@@ -886,9 +882,11 @@ CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
   return New;
 }
 
-static void eraseInstruction(Instruction &I, AliasSetTracker *AST) {
+static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
+                             AliasSetTracker *AST) {
   if (AST)
     AST->deleteValue(&I);
+  SafetyInfo.removeInstruction(&I);
   I.eraseFromParent();
 }
 
@@ -999,7 +997,7 @@ static void splitPredecessorsOfLoopExit(PHINode *PN, DominatorTree *DT,
 /// position, and may either delete it or move it to outside of the loop.
 ///
 static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
-                 const Loop *CurLoop, LoopSafetyInfo *SafetyInfo,
+                 const Loop *CurLoop, ICFLoopSafetyInfo *SafetyInfo,
                  OptimizationRemarkEmitter *ORE, bool FreeInLoop) {
   LLVM_DEBUG(dbgs() << "LICM sinking instruction: " << I << "\n");
   ORE->emit([&]() {
@@ -1090,7 +1088,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
     Instruction *New = sinkThroughTriviallyReplaceablePHI(PN, &I, LI, SunkCopies,
                                                           SafetyInfo, CurLoop);
     PN->replaceAllUsesWith(New);
-    eraseInstruction(*PN, nullptr);
+    eraseInstruction(*PN, *SafetyInfo, nullptr);
     Changed = true;
   }
   return Changed;
@@ -1100,7 +1098,7 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
 /// is safe to hoist, this instruction is called to do the dirty work.
 ///
 static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
-                  LoopSafetyInfo *SafetyInfo, OptimizationRemarkEmitter *ORE) {
+                  ICFLoopSafetyInfo *SafetyInfo, OptimizationRemarkEmitter *ORE) {
   auto *Preheader = CurLoop->getLoopPreheader();
   LLVM_DEBUG(dbgs() << "LICM hoisting to " << Preheader->getName() << ": " << I
                     << "\n");
@@ -1120,6 +1118,8 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop))
     I.dropUnknownNonDebugMetadata();
 
+  SafetyInfo->removeInstruction(&I);
+  SafetyInfo->insertInstructionTo(Preheader);
   // Move the new node to the Preheader, before its terminator.
   I.moveBefore(Preheader->getTerminator());
 
@@ -1180,6 +1180,7 @@ class LoopPromoter : public LoadAndStorePromoter {
   int Alignment;
   bool UnorderedAtomic;
   AAMDNodes AATags;
+  ICFLoopSafetyInfo &SafetyInfo;
 
   Value *maybeInsertLCSSAPHI(Value *V, BasicBlock *BB) const {
     if (Instruction *I = dyn_cast<Instruction>(V))
@@ -1202,11 +1203,13 @@ public:
                SmallVectorImpl<BasicBlock *> &LEB,
                SmallVectorImpl<Instruction *> &LIP, PredIteratorCache &PIC,
                AliasSetTracker &ast, LoopInfo &li, DebugLoc dl, int alignment,
-               bool UnorderedAtomic, const AAMDNodes &AATags)
+               bool UnorderedAtomic, const AAMDNodes &AATags,
+               ICFLoopSafetyInfo &SafetyInfo)
       : LoadAndStorePromoter(Insts, S), SomePtr(SP), PointerMustAliases(PMA),
         LoopExitBlocks(LEB), LoopInsertPts(LIP), PredCache(PIC), AST(ast),
         LI(li), DL(std::move(dl)), Alignment(alignment),
-        UnorderedAtomic(UnorderedAtomic), AATags(AATags) {}
+        UnorderedAtomic(UnorderedAtomic), AATags(AATags), SafetyInfo(SafetyInfo)
+      {}
 
   bool isInstInList(Instruction *I,
                     const SmallVectorImpl<Instruction *> &) const override {
@@ -1243,7 +1246,10 @@ public:
     // Update alias analysis.
     AST.copyValue(LI, V);
   }
-  void instructionDeleted(Instruction *I) const override { AST.deleteValue(I); }
+  void instructionDeleted(Instruction *I) const override {
+    SafetyInfo.removeInstruction(I);
+    AST.deleteValue(I);
+  }
 };
 
 
@@ -1281,7 +1287,7 @@ bool llvm::promoteLoopAccessesToScalars(
     SmallVectorImpl<BasicBlock *> &ExitBlocks,
     SmallVectorImpl<Instruction *> &InsertPts, PredIteratorCache &PIC,
     LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
-    Loop *CurLoop, AliasSetTracker *CurAST, LoopSafetyInfo *SafetyInfo,
+    Loop *CurLoop, AliasSetTracker *CurAST, ICFLoopSafetyInfo *SafetyInfo,
     OptimizationRemarkEmitter *ORE) {
   // Verify inputs.
   assert(LI != nullptr && DT != nullptr && CurLoop != nullptr &&
@@ -1500,7 +1506,7 @@ bool llvm::promoteLoopAccessesToScalars(
   SSAUpdater SSA(&NewPHIs);
   LoopPromoter Promoter(SomePtr, LoopUses, SSA, PointerMustAliases, ExitBlocks,
                         InsertPts, PIC, *CurAST, *LI, DL, Alignment,
-                        SawUnorderedAtomic, AATags);
+                        SawUnorderedAtomic, AATags, *SafetyInfo);
 
   // Set up the preheader to have a definition of the value.  It is the live-out
   // value from the preheader that uses in the loop will use.
@@ -1520,7 +1526,7 @@ bool llvm::promoteLoopAccessesToScalars(
 
   // If the SSAUpdater didn't use the load in the preheader, just zap it now.
   if (PreheaderLoad->use_empty())
-    eraseInstruction(*PreheaderLoad, CurAST);
+    eraseInstruction(*PreheaderLoad, *SafetyInfo, CurAST);
 
   return true;
 }

@@ -75,6 +75,9 @@ getMemoryOperandRanges(llvm::ArrayRef<Operand> Operands) {
 
 static llvm::Error IsInvalidOpcode(const Instruction &Instr) {
   const auto OpcodeName = Instr.Name;
+  if ((Instr.Description->TSFlags & X86II::FormMask) == X86II::Pseudo)
+    return llvm::make_error<BenchmarkFailure>(
+        "unsupported opcode: pseudo instruction");
   if (OpcodeName.startswith("POPF") || OpcodeName.startswith("PUSHF") ||
       OpcodeName.startswith("ADJCALLSTACK"))
     return llvm::make_error<BenchmarkFailure>(

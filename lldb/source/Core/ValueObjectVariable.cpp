@@ -98,8 +98,9 @@ size_t ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   if (!type.IsValid())
     return 0;
 
+  ExecutionContext exe_ctx(GetExecutionContextRef());
   const bool omit_empty_base_classes = true;
-  auto child_count = type.GetNumChildren(omit_empty_base_classes);
+  auto child_count = type.GetNumChildren(omit_empty_base_classes, &exe_ctx);
   return child_count <= max ? child_count : max;
 }
 

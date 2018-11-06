@@ -277,7 +277,10 @@ TEST_F(BufferManagementTest, HandlesOverflowWithCustomEvents) {
   std::string Serialized = serialize(*BQ, 3);
   llvm::DataExtractor DE(Serialized, true, 8);
   auto TraceOrErr = llvm::xray::loadTrace(DE);
-  EXPECT_THAT_EXPECTED(TraceOrErr, HasValue(SizeIs(kBuffers)));
+
+  // We expect to also now count the kBuffers/2 custom event records showing up
+  // in the Trace.
+  EXPECT_THAT_EXPECTED(TraceOrErr, HasValue(SizeIs(kBuffers + (kBuffers / 2))));
 }
 
 TEST_F(BufferManagementTest, HandlesFinalizedBufferQueue) {

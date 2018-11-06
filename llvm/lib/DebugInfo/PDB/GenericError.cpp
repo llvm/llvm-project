@@ -24,8 +24,6 @@ public:
     switch (static_cast<pdb_error_code>(Condition)) {
     case pdb_error_code::unspecified:
       return "An unknown error has occurred.";
-    case pdb_error_code::type_server_not_found:
-        return "Type server PDB was not found.";
     case pdb_error_code::dia_sdk_not_present:
       return "LLVM was not compiled with support for DIA. This usually means "
              "that you are not using MSVC, or your Visual Studio "
