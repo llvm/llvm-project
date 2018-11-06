@@ -454,6 +454,22 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   // CHECK: call void @__os_log_helper_1_3_1_8_37(
   __builtin_os_log_format(buf, "%{ private, sensitive, private, public}s",
                           "abc");
+
+  // CHECK: store volatile i32 22, i32* %[[LEN]], align 4
+  len = __builtin_os_log_format_buffer_size("%{mask.xyz}s", "abc");
+
+  // CHECK: call void @__os_log_helper_1_2_2_8_112_8_34(i8* {{.*}}, i64 8026488
+  __builtin_os_log_format(buf, "%{mask.xyz, public}s", "abc");
+
+  // CHECK: call void @__os_log_helper_1_3_2_8_112_4_1(i8* {{.*}}, i64 8026488
+  __builtin_os_log_format(buf, "%{ mask.xyz, private }d", 11);
+
+  // Mask type is silently ignored.
+  // CHECK: call void @__os_log_helper_1_2_1_8_32(
+  __builtin_os_log_format(buf, "%{ mask. xyz }s", "abc");
+
+  // CHECK: call void @__os_log_helper_1_2_1_8_32(
+  __builtin_os_log_format(buf, "%{ mask.xy z }s", "abc");
 }
 
 // CHECK-LABEL: define linkonce_odr hidden void @__os_log_helper_1_3_4_4_0_8_34_4_17_8_49

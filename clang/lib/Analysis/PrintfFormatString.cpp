@@ -127,7 +127,8 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
 
     do {
       StringRef Str(I, E - I);
-      std::string Match = "^[[:space:]]*(private|public|sensitive)"
+      std::string Match = "^[[:space:]]*"
+                          "(private|public|sensitive|mask\\.[^[:space:],}]*)"
                           "[[:space:]]*(,|})";
       llvm::Regex R(Match);
       SmallVector<StringRef, 2> Matches;
@@ -139,7 +140,13 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
         // Set the privacy flag if the privacy annotation in the
         // comma-delimited segment is at least as strict as the privacy
         // annotations in previous comma-delimited segments.
-        if (MatchedStr.equals("sensitive"))
+        if (MatchedStr.startswith("mask")) {
+          StringRef MaskType = MatchedStr.substr(sizeof("mask.") - 1);
+          unsigned Size = MaskType.size();
+          if (Warn && (Size == 0 || Size > 8))
+            H.handleInvalidMaskType(MaskType);
+          FS.setMaskType(MaskType);
+        } else if (MatchedStr.equals("sensitive"))
           PrivacyFlags = clang::analyze_os_log::OSLogBufferItem::IsSensitive;
         else if (PrivacyFlags !=
                  clang::analyze_os_log::OSLogBufferItem::IsSensitive &&
