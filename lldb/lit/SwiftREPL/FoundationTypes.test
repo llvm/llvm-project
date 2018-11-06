@@ -10,6 +10,12 @@ import Foundation
 let u = URL(string: "http://www.apple.com")!
 // CHECK:      {{u}}: URL = "http://www.apple.com"
 
+// Test a non-literal.
+var str = "http://www.patatino."
+str += "com"
+let u2 = URL(string: str)!
+// CHECK: {{u2}}: URL = "http://www.patatino.com"
+
 let u3 = URL(string: "invalid.com")!
 // CHECK: {{u3}}: URL = "invalid.com"
 
