@@ -60,7 +60,7 @@ foreach(tgt IN LISTS POLLY_CONFIG_EXPORTED_TARGETS)
   if (NOT tgt_type STREQUAL "INTERFACE_LIBRARY")
     set(POLLY_EXPORTS
       "set_target_properties(${tgt} PROPERTIES
-              IMPORTED_LOCATION_$<UPPER_CASE:$<CONFIG>> $<TARGET_FILE:${tgt}>)
+              IMPORTED_LOCATION$<$<NOT:$<CONFIG:>>:_$<UPPER_CASE:$<CONFIG>>> $<TARGET_FILE:${tgt}>)
 ${POLLY_EXPORTS}")
   endif()
 endforeach(tgt)
@@ -111,7 +111,7 @@ foreach(tgt IN LISTS POLLY_CONFIG_EXPORTED_TARGETS)
   if (NOT tgt_type STREQUAL "INTERFACE_LIBRARY")
     set(POLLY_EXPORTS
 "set_target_properties(${tgt} PROPERTIES
-        IMPORTED_LOCATION$<$<NOT:$<CONFIG:>>:_<UPPER_CASE:$<CONFIG>> \${CMAKE_CURRENT_LIST_DIR}/${tgt_path})
+        IMPORTED_LOCATION$<$<NOT:$<CONFIG:>>:_$<UPPER_CASE:$<CONFIG>>> \${CMAKE_CURRENT_LIST_DIR}/${tgt_path})
 ${POLLY_EXPORTS}")
   endif()
 endforeach(tgt)
