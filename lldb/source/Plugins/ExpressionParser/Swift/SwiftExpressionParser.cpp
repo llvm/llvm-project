@@ -1561,7 +1561,10 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   if (repl || !playground) {
     code_manipulator =
         llvm::make_unique<SwiftASTManipulator>(*source_file, repl);
-    code_manipulator->RewriteResult();
+
+    if (!playground) {
+      code_manipulator->RewriteResult();
+    }
   }
 
   Status auto_import_error;
@@ -1778,13 +1781,6 @@ unsigned SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
 
   // Allow variables to be re-used from previous REPL statements.
   if (m_sc.target_sp && (repl || !playground)) {
-    // Do this first so we don't pollute the persistent variable
-    // namespace.
-    if (!parsed_expr->code_manipulator->CheckPatternBindings()) {
-      DiagnoseSwiftASTContextError();
-      return 1;
-    }
-
     Status error;
     SwiftASTContext *scratch_ast_context = m_swift_ast_context->get();
 

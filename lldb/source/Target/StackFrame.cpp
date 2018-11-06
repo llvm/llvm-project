@@ -32,6 +32,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 
@@ -56,7 +57,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_id(pc, cfa, nullptr), m_frame_code_addr(pc), m_sc(), m_flags(),
       m_frame_base(), m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
       m_stack_frame_kind(kind), m_variable_list_sp(),
-      m_variable_list_value_objects(), m_disassembly(), m_mutex() {
+      m_variable_list_value_objects(), m_recognized_frame_sp(), m_disassembly(),
+      m_mutex() {
   // If we don't have a CFA value, use the frame index for our StackID so that
   // recursive functions properly aren't confused with one another on a history
   // stack.
@@ -80,7 +82,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular), m_variable_list_sp(),
-      m_variable_list_value_objects(), m_disassembly(), m_mutex() {
+      m_variable_list_value_objects(), m_recognized_frame_sp(), m_disassembly(),
+      m_mutex() {
   if (sc_ptr != nullptr) {
     m_sc = *sc_ptr;
     m_flags.Set(m_sc.GetResolvedMask());
@@ -105,7 +108,8 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_frame_code_addr(pc_addr), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular), m_variable_list_sp(),
-      m_variable_list_value_objects(), m_disassembly(), m_mutex() {
+      m_variable_list_value_objects(), m_recognized_frame_sp(), m_disassembly(),
+      m_mutex() {
   if (sc_ptr != nullptr) {
     m_sc = *sc_ptr;
     m_flags.Set(m_sc.GetResolvedMask());
@@ -1713,6 +1717,41 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
                         GetFrameCodeAddress());
 }
 
+lldb::ValueObjectSP StackFrame::FindVariable(ConstString name) {
+  ValueObjectSP value_sp;
+
+  if (!name)
+    return value_sp;
+
+  TargetSP target_sp = CalculateTarget();
+  ProcessSP process_sp = CalculateProcess();
+
+  if (!target_sp && !process_sp)
+    return value_sp;
+
+  VariableList variable_list;
+  VariableSP var_sp;
+  SymbolContext sc(GetSymbolContext(eSymbolContextBlock));
+
+  if (sc.block) {
+    const bool can_create = true;
+    const bool get_parent_variables = true;
+    const bool stop_if_block_is_inlined_function = true;
+
+    if (sc.block->AppendVariables(
+            can_create, get_parent_variables, stop_if_block_is_inlined_function,
+            [this](Variable *v) { return v->IsInScope(this); },
+            &variable_list)) {
+      var_sp = variable_list.FindVariable(name);
+    }
+
+    if (var_sp)
+      value_sp = GetValueObjectForFrameVariable(var_sp, eNoDynamicValues);
+  }
+
+  return value_sp;
+}
+
 TargetSP StackFrame::CalculateTarget() {
   TargetSP target_sp;
   ThreadSP thread_sp(GetThread());
@@ -1913,4 +1952,12 @@ bool StackFrame::GetStatus(Stream &strm, bool show_frame_info, bool show_source,
     }
   }
   return true;
+}
+
+RecognizedStackFrameSP StackFrame::GetRecognizedFrame() {
+  if (!m_recognized_frame_sp) {
+    m_recognized_frame_sp =
+        StackFrameRecognizerManager::RecognizeFrame(CalculateStackFrame());
+  }
+  return m_recognized_frame_sp;
 }

@@ -149,8 +149,6 @@ public:
 
   void MakeDeclarationsPublic();
 
-  bool CheckPatternBindings();
-
   void
   FindVariableDeclarations(llvm::SmallVectorImpl<size_t> &found_declarations,
                            bool repl);
