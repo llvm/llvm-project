@@ -1142,6 +1142,23 @@ TEST(CompletionTest, GlobalQualifiedQuery) {
                                           UnorderedElementsAre(""))));
 }
 
+TEST(CompletionTest, NoDuplicatedQueryScopes) {
+  auto Requests = captureIndexRequests(R"cpp(
+      namespace {}
+
+      namespace na {
+      namespace {}
+      namespace nb {
+      ^
+      } // namespace nb
+      } // namespace na
+  )cpp");
+
+  EXPECT_THAT(Requests,
+              ElementsAre(Field(&FuzzyFindRequest::Scopes,
+                                UnorderedElementsAre("na::", "na::nb::", ""))));
+}
+
 TEST(CompletionTest, NoIndexCompletionsInsideClasses) {
   auto Completions = completions(
       R"cpp(

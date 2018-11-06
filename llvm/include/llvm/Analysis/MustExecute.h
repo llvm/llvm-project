@@ -49,13 +49,6 @@ class LoopSafetyInfo {
   // Used to update funclet bundle operands.
   DenseMap<BasicBlock *, ColorVector> BlockColors;
 
-  /// Collect all blocks from \p CurLoop which lie on all possible paths from
-  /// the header of \p CurLoop (inclusive) to BB (exclusive) into the set
-  /// \p Predecessors. If \p BB is the header, \p Predecessors will be empty.
-  void collectTransitivePredecessors(
-      const Loop *CurLoop, const BasicBlock *BB,
-      SmallPtrSetImpl<const BasicBlock *> &Predecessors) const;
-
 protected:
   /// Computes block colors.
   void computeBlockColors(const Loop *CurLoop);

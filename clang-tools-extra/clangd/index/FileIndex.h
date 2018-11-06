@@ -34,6 +34,14 @@ enum class IndexType {
   Heavy,
 };
 
+/// How to handle duplicated symbols across multiple files.
+enum class DuplicateHandling {
+  // Pick a random symbol. Less accurate but faster.
+  PickOne,
+  // Merge symbols. More accurate but slower.
+  Merge,
+};
+
 /// A container of Symbols from several source files. It can be updated
 /// at source-file granularity, replacing all symbols from one file with a new
 /// set.
@@ -56,7 +64,9 @@ public:
 
   // The index keeps the symbols alive.
   std::unique_ptr<SymbolIndex>
-  buildIndex(IndexType, ArrayRef<std::string> URISchemes = {});
+  buildIndex(IndexType,
+             DuplicateHandling DuplicateHandle = DuplicateHandling::PickOne,
+             ArrayRef<std::string> URISchemes = {});
 
 private:
   mutable std::mutex Mutex;

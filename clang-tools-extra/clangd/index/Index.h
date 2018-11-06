@@ -460,9 +460,6 @@ struct FuzzyFindRequest {
   /// namespace xyz::abc.
   ///
   /// The global scope is "", a top level scope is "foo::", etc.
-  /// FIXME: drop the special case for empty list, which is the same as
-  /// `AnyScope = true`.
-  /// FIXME: support scope proximity.
   std::vector<std::string> Scopes;
   /// If set to true, allow symbols from any scope. Scopes explicitly listed
   /// above will be ranked higher.

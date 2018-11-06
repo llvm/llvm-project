@@ -640,6 +640,10 @@ void ReExec() {
 #elif SANITIZER_SOLARIS
   pathname = getexecname();
   CHECK_NE(pathname, NULL);
+#elif SANITIZER_USE_GETAUXVAL
+  // Calling execve with /proc/self/exe sets that as $EXEC_ORIGIN. Binaries that
+  // rely on that will fail to load shared libraries. Query AT_EXECFN instead.
+  pathname = reinterpret_cast<const char *>(getauxval(AT_EXECFN));
 #endif
 
   GetArgsAndEnv(&argv, &envp);
