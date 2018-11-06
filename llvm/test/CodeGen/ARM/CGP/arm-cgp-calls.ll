@@ -144,10 +144,9 @@ if.then:                                          ; preds = %for.cond
   br label %for.cond.backedge
 }
 
-; Transform will bail because of the zext
 ; Check that d.sroa.0.0.be is promoted passed directly into the tail call.
 ; CHECK-LABEL: check_zext_phi_call_arg
-; CHECK: uxt
+; CHECK-NOT: uxt
 define i32 @check_zext_phi_call_arg() {
 entry:
   br label %for.cond
@@ -167,6 +166,19 @@ if.then:                                          ; preds = %for.cond
   br label %for.cond.backedge
 }
 
+%struct.atomic_flag = type { i8 }
+
+; CHECK-LABEL: atomic_flag_test_and_set
+; CHECK-NOT: uxt
+define zeroext i1 @atomic_flag_test_and_set(%struct.atomic_flag* %object) {
+entry:
+  %_Value = getelementptr inbounds %struct.atomic_flag, %struct.atomic_flag* %object, i32 0, i32 0
+  %call = tail call arm_aapcscc zeroext i8 @__atomic_exchange_1(i8* %_Value, i8 zeroext 1, i32 5) #1
+  %0 = and i8 %call, 1
+  %tobool = icmp ne i8 %0, 0
+  ret i1 %tobool
+}
+
 declare i32 @assert(...)
 declare i8 @dummy_i8(i8)
 declare i8 @dummy2(i8*, i8, i8)
@@ -174,6 +186,7 @@ declare i16 @dummy3(i16)
 
 declare dso_local i32 @e(...) local_unnamed_addr #1
 declare dso_local zeroext i16 @f(...) local_unnamed_addr #1
+declare dso_local arm_aapcscc i8 @__atomic_exchange_1(i8*, i8, i32) local_unnamed_addr
 
 declare noalias i16** @func_62(i8 zeroext %p_63, i32 %p_64, i16 signext %p_65, i32* nocapture readnone %p_66)
 declare fastcc signext i16 @safe_sub_func_int16_t_s_s(i16 signext %si2)

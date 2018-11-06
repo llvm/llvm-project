@@ -360,7 +360,7 @@ define i1 @test26_recipX_unorderd(float %X) {
 ; Fold <-1.0, -1.0> / X > <-0.0, -0.0>
 define <2 x i1> @test27_recipX_gt_vecsplat(<2 x float> %X) {
 ; CHECK-LABEL: @test27_recipX_gt_vecsplat(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf olt <2 x float> [[X:%.*]], <float -0.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf olt <2 x float> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %div = fdiv ninf <2 x float> <float -1.0, float -1.0>, %X

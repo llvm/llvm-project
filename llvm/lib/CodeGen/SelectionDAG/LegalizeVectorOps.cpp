@@ -308,6 +308,10 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::STRICT_FNEARBYINT:
   case ISD::STRICT_FMAXNUM:
   case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FTRUNC:
     // These pseudo-ops get legalized as if they were their non-strict
     // equivalent.  For instance, if ISD::FSQRT is legal then ISD::STRICT_FSQRT
     // is also legal, but if ISD::FSQRT requires expansion then so does
@@ -758,6 +762,10 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
   case ISD::STRICT_FNEARBYINT:
   case ISD::STRICT_FMAXNUM:
   case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FTRUNC:
     return ExpandStrictFPOp(Op);
   default:
     return DAG.UnrollVectorOp(Op.getNode());

@@ -266,13 +266,10 @@ def FeatureDLInsts : SubtargetFeature<"dl-insts",
   "Has deep learning instructions"
 >;
 
-def FeatureD16PreservesUnusedBits : SubtargetFeature<
-  "d16-preserves-unused-bits",
-  "D16PreservesUnusedBits",
+def FeatureSRAMECC : SubtargetFeature<"sram-ecc",
+  "EnableSRAMECC",
   "true",
-  "If present, then instructions defined by HasD16LoadStore predicate preserve "
-  "unused bits. Otherwise instructions defined by HasD16LoadStore predicate "
-  "zero unused bits."
+  "Enable SRAM ECC"
 >;
 
 //===------------------------------------------------------------===//
@@ -524,35 +521,32 @@ def FeatureISAVersion8_1_0 : SubtargetFeatureISAVersion <8,1,0,
 def FeatureISAVersion9_0_0 : SubtargetFeatureISAVersion <9,0,0,
   [FeatureGFX9,
    FeatureMadMixInsts,
-   FeatureLDSBankCount32,
-   FeatureD16PreservesUnusedBits]>;
+   FeatureLDSBankCount32]>;
 
 def FeatureISAVersion9_0_2 : SubtargetFeatureISAVersion <9,0,2,
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
-   FeatureXNACK,
-   FeatureD16PreservesUnusedBits]>;
+   FeatureXNACK]>;
 
 def FeatureISAVersion9_0_4 : SubtargetFeatureISAVersion <9,0,4,
   [FeatureGFX9,
    FeatureLDSBankCount32,
-   FeatureFmaMixInsts,
-   FeatureD16PreservesUnusedBits]>;
+   FeatureFmaMixInsts]>;
 
 def FeatureISAVersion9_0_6 : SubtargetFeatureISAVersion <9,0,6,
   [FeatureGFX9,
    HalfRate64Ops,
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
-   FeatureDLInsts]>;
+   FeatureDLInsts,
+   FeatureSRAMECC]>;
 
 def FeatureISAVersion9_0_9 : SubtargetFeatureISAVersion <9,0,9,
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
-   FeatureXNACK,
-   FeatureD16PreservesUnusedBits]>;
+   FeatureXNACK]>;
 
 //===----------------------------------------------------------------------===//
 // Debugger related subtarget features.
@@ -684,8 +678,9 @@ def HasUnpackedD16VMem : Predicate<"Subtarget->hasUnpackedD16VMem()">,
 def HasPackedD16VMem : Predicate<"!Subtarget->hasUnpackedD16VMem()">,
   AssemblerPredicate<"!FeatureUnpackedD16VMem">;
 
-def D16PreservesUnusedBits : Predicate<"Subtarget->d16PreservesUnusedBits()">,
-  AssemblerPredicate<"FeatureD16PreservesUnusedBits">;
+def D16PreservesUnusedBits :
+  Predicate<"Subtarget->hasD16LoadStore() && !Subtarget->isSRAMECCEnabled()">,
+  AssemblerPredicate<"FeatureGFX9Insts,!FeatureSRAMECC">;
 
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;

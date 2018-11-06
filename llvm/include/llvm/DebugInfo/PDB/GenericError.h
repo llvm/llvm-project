@@ -21,24 +21,23 @@ enum class pdb_error_code {
   dia_sdk_not_present,
   dia_failed_loading,
   signature_out_of_date,
-  type_server_not_found,
   unspecified,
 };
-} // namespace codeview
+} // namespace pdb
 } // namespace llvm
 
 namespace std {
-    template <>
-    struct is_error_code_enum<llvm::pdb::pdb_error_code> : std::true_type {};
+template <>
+struct is_error_code_enum<llvm::pdb::pdb_error_code> : std::true_type {};
 } // namespace std
 
 namespace llvm {
 namespace pdb {
-    const std::error_category &PDBErrCategory();
+const std::error_category &PDBErrCategory();
 
-    inline std::error_code make_error_code(pdb_error_code E) {
-        return std::error_code(static_cast<int>(E), PDBErrCategory());
-    }
+inline std::error_code make_error_code(pdb_error_code E) {
+  return std::error_code(static_cast<int>(E), PDBErrCategory());
+}
 
 /// Base class for errors originating when parsing raw PDB files
 class PDBError : public ErrorInfo<PDBError, StringError> {

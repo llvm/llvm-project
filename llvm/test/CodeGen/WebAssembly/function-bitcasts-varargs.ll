@@ -1,4 +1,4 @@
-; RUN: llc < %s -asm-verbose=false -wasm-keep-registers | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -wasm-temporary-workarounds=false -wasm-keep-registers | FileCheck %s
 
 ; Test that function pointer casts casting away varargs are replaced with
 ; wrappers.

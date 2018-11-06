@@ -284,18 +284,6 @@ public:
   void getNameWithPrefix(SmallVectorImpl<char> &Name, const GlobalValue *GV,
                          Mangler &Mang, bool MayAlwaysUsePrivate = false) const;
   MCSymbol *getSymbol(const GlobalValue *GV) const;
-
-  /// True if the target uses physical regs at Prolog/Epilog insertion
-  /// time. If true (most machines), all vregs must be allocated before
-  /// PEI. If false (virtual-register machines), then callee-save register
-  /// spilling and scavenging are not needed or used.
-  virtual bool usesPhysRegsForPEI() const { return true; }
-
-  /// True if the target wants to use interprocedural register allocation by
-  /// default. The -enable-ipra flag can be used to override this.
-  virtual bool useIPRA() const {
-    return false;
-  }
 };
 
 /// This class describes a target machine that is implemented with the LLVM
@@ -349,6 +337,18 @@ public:
   bool addAsmPrinter(PassManagerBase &PM, raw_pwrite_stream &Out,
                      raw_pwrite_stream *DwoOut, CodeGenFileType FileTYpe,
                      MCContext &Context);
+
+  /// True if the target uses physical regs at Prolog/Epilog insertion
+  /// time. If true (most machines), all vregs must be allocated before
+  /// PEI. If false (virtual-register machines), then callee-save register
+  /// spilling and scavenging are not needed or used.
+  virtual bool usesPhysRegsForPEI() const { return true; }
+
+  /// True if the target wants to use interprocedural register allocation by
+  /// default. The -enable-ipra flag can be used to override this.
+  virtual bool useIPRA() const {
+    return false;
+  }
 };
 
 } // end namespace llvm

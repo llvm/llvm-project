@@ -41,6 +41,7 @@
 #include "llvm/Config/config.h" // Get build system configuration settings
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/VersionTuple.h"
 #include <cassert>
 #include <string>
 #include <system_error>
@@ -69,6 +70,40 @@ inline bool RunningWindows8OrGreater() {
   return VerifyVersionInfoW(&osvi, VER_MAJORVERSION | VER_MINORVERSION |
                                        VER_SERVICEPACKMAJOR,
                             Mask) != FALSE;
+}
+
+typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
+#define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
+
+inline llvm::VersionTuple GetWindowsOSVersion() {
+  HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
+  if (hMod) {
+    auto getVer = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
+    if (getVer) {
+      RTL_OSVERSIONINFOEXW info{};
+      info.dwOSVersionInfoSize = sizeof(info);
+      if (getVer((PRTL_OSVERSIONINFOW)&info) == STATUS_SUCCESS) {
+        return llvm::VersionTuple(info.dwMajorVersion, info.dwMinorVersion, 0,
+                                  info.dwBuildNumber);
+      }
+    }
+  }
+
+  OSVERSIONINFOEX info;
+  ZeroMemory(&info, sizeof(OSVERSIONINFOEX));
+  info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+#pragma warning(push)
+#pragma warning(disable : 4996)
+  // Starting with Microsoft SDK for Windows 8.1, this function is deprecated
+  // in favor of the new Windows Version Helper APIs.  Since we don't specify a
+  // minimum SDK version, it's easier to simply disable the warning rather than
+  // try to support both APIs.
+  if (GetVersionEx((LPOSVERSIONINFO)&info) == 0)
+    return llvm::VersionTuple();
+#pragma warning(pop)
+
+  return llvm::VersionTuple(info.dwMajorVersion, info.dwMinorVersion, 0,
+                            info.dwBuildNumber);
 }
 
 inline bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix) {

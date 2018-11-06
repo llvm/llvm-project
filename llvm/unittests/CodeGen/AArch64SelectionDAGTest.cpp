@@ -42,8 +42,9 @@ protected:
       return;
 
     TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        "AArch64", "", "", Options, None, None, CodeGenOpt::Aggressive));
+    TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
+        T->createTargetMachine("AArch64", "", "", Options, None, None,
+                               CodeGenOpt::Aggressive)));
     if (!TM)
       return;
 
@@ -70,7 +71,7 @@ protected:
   }
 
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = nullptr;
+  std::unique_ptr<LLVMTargetMachine> TM;
   std::unique_ptr<Module> M;
   Function *F;
   std::unique_ptr<MachineFunction> MF;
