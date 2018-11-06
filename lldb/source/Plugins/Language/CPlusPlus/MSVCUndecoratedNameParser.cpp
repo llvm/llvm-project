@@ -22,7 +22,7 @@ MSVCUndecoratedNameParser::MSVCUndecoratedNameParser(llvm::StringRef name) {
       // Do not treat `operator<' and `operator<<' as templates
       // (sometimes they represented as `<' and `<<' in the name).
       if (i == last_base_start ||
-          i == last_base_start + 1 && name[last_base_start] == '<')
+          (i == last_base_start + 1 && name[last_base_start] == '<'))
         break;
 
       stack.push(i);
