@@ -92,15 +92,19 @@ inline llvm::VersionTuple GetWindowsOSVersion() {
   OSVERSIONINFOEX info;
   ZeroMemory(&info, sizeof(OSVERSIONINFOEX));
   info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+#if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable : 4996)
+#endif // _MSC_VER
   // Starting with Microsoft SDK for Windows 8.1, this function is deprecated
   // in favor of the new Windows Version Helper APIs.  Since we don't specify a
   // minimum SDK version, it's easier to simply disable the warning rather than
   // try to support both APIs.
   if (GetVersionEx((LPOSVERSIONINFO)&info) == 0)
     return llvm::VersionTuple();
+#if defined(_MSC_VER)
 #pragma warning(pop)
+#endif // _MSC_VER
 
   return llvm::VersionTuple(info.dwMajorVersion, info.dwMinorVersion, 0,
                             info.dwBuildNumber);

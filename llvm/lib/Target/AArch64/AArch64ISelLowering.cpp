@@ -1521,7 +1521,7 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 /// The CCMP/CCMN/FCCMP/FCCMPE instructions allow the conditional execution of
 /// a comparison. They set the NZCV flags to a predefined value if their
 /// predicate is false. This allows to express arbitrary conjunctions, for
-/// example "cmp 0 (and (setCA (cmp A)) (setCB (cmp B))))"
+/// example "cmp 0 (and (setCA (cmp A)) (setCB (cmp B)))"
 /// expressed as:
 ///   cmp A
 ///   ccmp B, inv(CB), CA
@@ -1591,14 +1591,12 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
   return DAG.getNode(Opcode, DL, MVT_CC, LHS, RHS, NZCVOp, Condition, CCOp);
 }
 
-/// Returns true if @p Val is a tree of AND/OR/SETCC operations.
-/// CanPushNegate is set to true if we can push a negate operation through
-/// the tree in a was that we are left with AND operations and negate operations
-/// at the leafs only. i.e. "not (or (or x y) z)" can be changed to
-/// "and (and (not x) (not y)) (not z)"; "not (or (and x y) z)" cannot be
-/// brought into such a form.
-static bool isConjunctionDisjunctionTree(const SDValue Val, bool &CanNegate,
-                                         unsigned Depth = 0) {
+/// Returns true if @p Val is a tree of AND/OR/SETCC operations that can be
+/// expressed as a conjunction. See \ref AArch64CCMP.
+/// \param CanNegate        Set to true if we can also emit the negation of the
+///                         tree as a conjunction.
+static bool canEmitConjunction(const SDValue Val, bool &CanNegate,
+                               unsigned Depth = 0) {
   if (!Val.hasOneUse())
     return false;
   unsigned Opcode = Val->getOpcode();
@@ -1615,10 +1613,10 @@ static bool isConjunctionDisjunctionTree(const SDValue Val, bool &CanNegate,
     SDValue O0 = Val->getOperand(0);
     SDValue O1 = Val->getOperand(1);
     bool CanNegateL;
-    if (!isConjunctionDisjunctionTree(O0, CanNegateL, Depth+1))
+    if (!canEmitConjunction(O0, CanNegateL, Depth+1))
       return false;
     bool CanNegateR;
-    if (!isConjunctionDisjunctionTree(O1, CanNegateR, Depth+1))
+    if (!canEmitConjunction(O1, CanNegateR, Depth+1))
       return false;
 
     if (Opcode == ISD::OR) {
@@ -1626,8 +1624,11 @@ static bool isConjunctionDisjunctionTree(const SDValue Val, bool &CanNegate,
       // we cannot do the transformation at all.
       if (!CanNegateL && !CanNegateR)
         return false;
-      // We can however change a (not (or x y)) to (and (not x) (not y)) if we
-      // can negate the x and y subtrees.
+      // However if we can negate x and y, then we can change
+      // (not (or x y))
+      // into
+      // (and (not x) (not y))
+      // to eliminate the outer negation.
       CanNegate = CanNegateL && CanNegateR;
     } else {
       // If the operands are OR expressions then we finally need to negate their
@@ -1637,7 +1638,7 @@ static bool isConjunctionDisjunctionTree(const SDValue Val, bool &CanNegate,
       bool NeedsNegOutR = O1->getOpcode() == ISD::OR;
       if (NeedsNegOutL && NeedsNegOutR)
         return false;
-      // We cannot negate an AND operation (it would become an OR),
+      // We cannot negate an AND operation.
       CanNegate = false;
     }
     return true;
@@ -1655,7 +1656,7 @@ static bool isConjunctionDisjunctionTree(const SDValue Val, bool &CanNegate,
 /// effects pushed to the tree leafs; @p Predicate is an NZCV flag predicate
 /// for the comparisons in the current subtree; @p Depth limits the search
 /// depth to avoid stack overflow.
-static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
+static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
     AArch64CC::CondCode &OutCC, bool Negate, SDValue CCOp,
     AArch64CC::CondCode Predicate) {
   // We're at a tree leaf, produce a conditional comparison operation.
@@ -1712,13 +1713,13 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
   if (NegateOpsAndResult) {
     // See which side we can negate.
     bool CanNegateL;
-    bool isValidL = isConjunctionDisjunctionTree(LHS, CanNegateL);
+    bool isValidL = canEmitConjunction(LHS, CanNegateL);
     assert(isValidL && "Valid conjunction/disjunction tree");
     (void)isValidL;
 
 #ifndef NDEBUG
     bool CanNegateR;
-    bool isValidR = isConjunctionDisjunctionTree(RHS, CanNegateR);
+    bool isValidR = canEmitConjunction(RHS, CanNegateR);
     assert(isValidR && "Valid conjunction/disjunction tree");
     assert((CanNegateL || CanNegateR) && "Valid conjunction/disjunction tree");
 #endif
@@ -1740,12 +1741,12 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
   // through if we are already in a PushNegate case, otherwise we can negate
   // the "flags to test" afterwards.
   AArch64CC::CondCode RHSCC;
-  SDValue CmpR = emitConjunctionDisjunctionTreeRec(DAG, RHS, RHSCC, Negate,
+  SDValue CmpR = emitConjunctionRec(DAG, RHS, RHSCC, Negate,
                                                    CCOp, Predicate);
   if (NegateOpsAndResult && !Negate)
     RHSCC = AArch64CC::getInvertedCondCode(RHSCC);
   // Emit LHS. We may need to negate it.
-  SDValue CmpL = emitConjunctionDisjunctionTreeRec(DAG, LHS, OutCC,
+  SDValue CmpL = emitConjunctionRec(DAG, LHS, OutCC,
                                                    NegateOpsAndResult, CmpR,
                                                    RHSCC);
   // If we transformed an OR to and AND then we have to negate the result
@@ -1755,17 +1756,17 @@ static SDValue emitConjunctionDisjunctionTreeRec(SelectionDAG &DAG, SDValue Val,
   return CmpL;
 }
 
-/// Emit conjunction or disjunction tree with the CMP/FCMP followed by a chain
-/// of CCMP/CFCMP ops. See @ref AArch64CCMP.
-/// \see emitConjunctionDisjunctionTreeRec().
-static SDValue emitConjunctionDisjunctionTree(SelectionDAG &DAG, SDValue Val,
-                                              AArch64CC::CondCode &OutCC) {
-  bool CanNegate;
-  if (!isConjunctionDisjunctionTree(Val, CanNegate))
+/// Emit expression as a conjunction (a series of CCMP/CFCMP ops).
+/// In some cases this is even possible with OR operations in the expression.
+/// See \ref AArch64CCMP.
+/// \see emitConjunctionRec().
+static SDValue emitConjunction(SelectionDAG &DAG, SDValue Val,
+                               AArch64CC::CondCode &OutCC) {
+  bool DummyCanNegate;
+  if (!canEmitConjunction(Val, DummyCanNegate))
     return SDValue();
 
-  return emitConjunctionDisjunctionTreeRec(DAG, Val, OutCC, false, SDValue(),
-                                           AArch64CC::AL);
+  return emitConjunctionRec(DAG, Val, OutCC, false, SDValue(), AArch64CC::AL);
 }
 
 /// @}
@@ -1922,7 +1923,7 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     }
 
     if (!Cmp && (RHSC->isNullValue() || RHSC->isOne())) {
-      if ((Cmp = emitConjunctionDisjunctionTree(DAG, LHS, AArch64CC))) {
+      if ((Cmp = emitConjunction(DAG, LHS, AArch64CC))) {
         if ((CC == ISD::SETNE) ^ RHSC->isNullValue())
           AArch64CC = AArch64CC::getInvertedCondCode(AArch64CC);
       }

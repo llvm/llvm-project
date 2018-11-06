@@ -8,10 +8,10 @@
 ; CHECK-NEXT:   nonstop-tsc:     true
 ; CHECK-NEXT:   cycle-frequency: 2601000000
 ; CHECK-NEXT: records:
-; CHECK-NEXT:   - { type: 0, func-id: 3, function: main, cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841453914 }
-; CHECK-NEXT:   - { type: 0, func-id: 2, function: {{.*foo.*}}, cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841454542 }
-; CHECK-NEXT:   - { type: 0, func-id: 2, function: {{.*foo.*}}, cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841454670 }
-; CHECK-NEXT:   - { type: 0, func-id: 1, function: {{.*bar.*}}, cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841454762 }
-; CHECK-NEXT:   - { type: 0, func-id: 1, function: {{.*bar.*}}, cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841454802 }
-; CHECK-NEXT:   - { type: 0, func-id: 3, function: main, cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841494828 }
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: main, cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841453914, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: {{.*foo.*}}, cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841454542, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 2, function: {{.*foo.*}}, cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841454670, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: {{.*bar.*}}, cpu: 37, thread: 84697, kind: function-enter, tsc: 3315356841454762, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: {{.*bar.*}}, cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841454802, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 3, function: main, cpu: 37, thread: 84697, kind: function-exit, tsc: 3315356841494828, data: '' }
 ; CHECK-NEXT: ...
