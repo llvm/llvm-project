@@ -530,6 +530,7 @@
 		266942451A6DC2AC0063BE93 /* MIUtilString.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266941EE1A6DC2AC0063BE93 /* MIUtilString.cpp */; };
 		2669424A1A6DC2AC0063BE93 /* MIUtilThreadBaseStd.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266941F81A6DC2AC0063BE93 /* MIUtilThreadBaseStd.cpp */; };
 		2669424B1A6DC2AC0063BE93 /* MIUtilVariant.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 266941FA1A6DC2AC0063BE93 /* MIUtilVariant.cpp */; };
+		AF395C03219254F300894EC3 /* MSVCUndecoratedNameParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF395C01219254F200894EC3 /* MSVCUndecoratedNameParser.cpp */; };
 		D67521381EA17C4200439694 /* MainLoop.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D67521351EA17C3900439694 /* MainLoop.cpp */; };
 		9A20573A1F3B8E7E00F6C293 /* MainLoopTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A2057301F3B8E7600F6C293 /* MainLoopTest.cpp */; };
 		8C3BD9961EF45DA50016C343 /* MainThreadCheckerRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 8C3BD9951EF45D9B0016C343 /* MainThreadCheckerRuntime.cpp */; };
@@ -2343,6 +2344,8 @@
 		266941F91A6DC2AC0063BE93 /* MIUtilThreadBaseStd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MIUtilThreadBaseStd.h; path = "tools/lldb-mi/MIUtilThreadBaseStd.h"; sourceTree = SOURCE_ROOT; };
 		266941FA1A6DC2AC0063BE93 /* MIUtilVariant.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MIUtilVariant.cpp; path = "tools/lldb-mi/MIUtilVariant.cpp"; sourceTree = SOURCE_ROOT; };
 		266941FB1A6DC2AC0063BE93 /* MIUtilVariant.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MIUtilVariant.h; path = "tools/lldb-mi/MIUtilVariant.h"; sourceTree = SOURCE_ROOT; };
+		AF395C01219254F200894EC3 /* MSVCUndecoratedNameParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MSVCUndecoratedNameParser.cpp; path = Language/CPlusPlus/MSVCUndecoratedNameParser.cpp; sourceTree = "<group>"; };
+		AF395C00219254F200894EC3 /* MSVCUndecoratedNameParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MSVCUndecoratedNameParser.h; path = Language/CPlusPlus/MSVCUndecoratedNameParser.h; sourceTree = "<group>"; };
 		D67521351EA17C3900439694 /* MainLoop.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MainLoop.cpp; sourceTree = "<group>"; };
 		9A2057301F3B8E7600F6C293 /* MainLoopTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = MainLoopTest.cpp; sourceTree = "<group>"; };
 		8C3BD9951EF45D9B0016C343 /* MainThreadCheckerRuntime.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = MainThreadCheckerRuntime.cpp; sourceTree = "<group>"; };
@@ -6660,6 +6663,8 @@
 				94B6385B1B8FB174004FE1E4 /* CPlusPlusLanguage.cpp */,
 				49F811F01E931B1500F4E163 /* CPlusPlusNameParser.h */,
 				49F811EF1E931B1500F4E163 /* CPlusPlusNameParser.cpp */,
+				AF395C01219254F200894EC3 /* MSVCUndecoratedNameParser.cpp */,
+				AF395C00219254F200894EC3 /* MSVCUndecoratedNameParser.h */,
 			);
 			name = CPlusPlus;
 			sourceTree = "<group>";
@@ -8137,6 +8142,7 @@
 				964463EC1A330C0500154ED8 /* CompactUnwindInfo.cpp in Sources */,
 				26B7564E14F89356008D9CB3 /* PlatformiOSSimulator.cpp in Sources */,
 				94B638531B8F8E6C004FE1E4 /* Language.cpp in Sources */,
+				AF395C03219254F300894EC3 /* MSVCUndecoratedNameParser.cpp in Sources */,
 				2689001D13353DDE00698AC0 /* CommandObjectLog.cpp in Sources */,
 				949ADF031406F648004833E1 /* ValueObjectConstResultImpl.cpp in Sources */,
 				262173A318395D4600C52091 /* SectionLoadHistory.cpp in Sources */,

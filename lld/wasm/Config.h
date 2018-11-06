@@ -28,6 +28,7 @@ struct Configuration {
   bool ExportTable;
   bool GcSections;
   bool ImportMemory;
+  bool SharedMemory;
   bool ImportTable;
   bool MergeDataSegments;
   bool PrintGcSections;
