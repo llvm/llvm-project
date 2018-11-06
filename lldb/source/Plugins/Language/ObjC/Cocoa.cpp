@@ -43,15 +43,6 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
-namespace lldb_private {
-namespace formatters {
-namespace swift {
-bool SwiftSharedString_SummaryProvider(ValueObject &valobj, Stream &stream,
-                                        const TypeSummaryOptions &options);
-}
-}
-}
-
 bool lldb_private::formatters::NSBundleSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ProcessSP process_sp = valobj.GetProcessSP();

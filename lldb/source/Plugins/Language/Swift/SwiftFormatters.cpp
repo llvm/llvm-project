@@ -437,6 +437,27 @@ bool lldb_private::formatters::swift::SwiftSharedString_SummaryProvider_2(
                                read_options);
 }
 
+bool lldb_private::formatters::swift::SwiftStringStorage_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ProcessSP process(valobj.GetProcessSP());
+  if (!process)
+    return false;
+  auto ptrSize = process->GetAddressByteSize();
+  uint64_t bias = (ptrSize == 8 ? 32 : 20);
+  uint64_t raw0_offset = (ptrSize == 8 ? 24 : 12);
+  lldb::addr_t raw1 = valobj.GetPointerValue();
+  lldb::addr_t address = (raw1 & 0x00FFFFFFFFFFFFFF) + bias;
+
+  Status error;
+  lldb::addr_t raw0 = process->ReadPointerFromMemory(raw1 + raw0_offset, error);
+  if (error.Fail())
+    return false;
+  uint64_t count = raw0 & 0x0000FFFFFFFFFFFF;
+  return readStringFromAddress(
+      address, count, process, stream, options,
+      StringPrinter::ReadStringAndDumpToStreamOptions());
+}
+
 bool lldb_private::formatters::swift::Bool_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   static ConstString g_value("_value");
