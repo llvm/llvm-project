@@ -21,10 +21,6 @@ typedef enum {
     __OCKL_AS_BUILTIN_SERVICE_PRINTF = 42
 } __ockl_as_builtin_service_t;
 
-typedef enum {
-    __OCKL_AS_FEATURE_ASYNCHRONOUS = 1
-} __ockl_as_feature_t;
-
 typedef struct {
     // Opaque handle. The value 0 is reserved.
     ulong handle;
@@ -38,12 +34,11 @@ typedef struct {
     __ockl_as_signal_t doorbell_signal;
     __global __ockl_as_packet_t *base_address;
     ulong size;
-    uint features;
 } __ockl_as_stream_t;
 
 __ockl_as_status_t
 __ockl_as_write_block(__global __ockl_as_stream_t *stream, uchar service_id,
-                      ulong *connection_id, const uchar *str, size_t len,
+                      ulong *connection_id, const uchar *str, uint len,
                       uchar flags);
 
 #endif

@@ -120,8 +120,7 @@ reserve_packet(__global __ockl_as_stream_t *stream,
     ulong write_index = load_write_index(stream, __ockl_memory_order_acquire);
     ulong read_index = load_read_index(stream, __ockl_memory_order_acquire);
 
-    if ((stream->features & __OCKL_AS_FEATURE_ASYNCHRONOUS) == 0 &&
-        write_index >= stream->size) {
+    if (stream->doorbell_signal.handle == 0 && write_index >= stream->size) {
         return __OCKL_AS_STATUS_OUT_OF_RESOURCES;
     }
 
@@ -198,7 +197,7 @@ write_packet(__global __ockl_as_stream_t *stream, uchar service_id,
 
 __ockl_as_status_t
 __ockl_as_write_block(__global __ockl_as_stream_t *stream, uchar service_id,
-                      ulong *connection_id, const uchar *str, size_t len,
+                      ulong *connection_id, const uchar *str, uint len,
                       uchar flags)
 {
     // The block may be split into multiple packets. The BEGIN flag
