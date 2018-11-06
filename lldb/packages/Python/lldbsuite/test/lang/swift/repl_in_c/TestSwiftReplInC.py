@@ -19,6 +19,7 @@ class TestSwiftReplInC(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest
+    @expectedFailureAll(bugnumber="rdar://45579668")
     @add_test_categories(["swiftpr"])
     def test_repl_in_c(self):
         self.build()

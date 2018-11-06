@@ -517,6 +517,21 @@ public:
                                                      int64_t offset);
 
   //------------------------------------------------------------------
+  /// Attempt to reconstruct the ValueObject for a variable with a given \a name
+  /// from within the current StackFrame, within the current block. The search
+  /// for the variable starts in the deepest block corresponding to the current
+  /// PC in the stack frame and traverse through all parent blocks stopping at
+  /// inlined function boundaries.
+  ///
+  /// @params [in] name
+  ///   The name of the variable.
+  ///
+  /// @return
+  ///   The ValueObject if found.
+  //------------------------------------------------------------------
+  lldb::ValueObjectSP FindVariable(ConstString name);
+
+  //------------------------------------------------------------------
   // lldb::ExecutionContextScope pure virtual functions
   //------------------------------------------------------------------
   lldb::TargetSP CalculateTarget() override;
@@ -528,6 +543,8 @@ public:
   lldb::StackFrameSP CalculateStackFrame() override;
 
   void CalculateExecutionContext(ExecutionContext &exe_ctx) override;
+
+  lldb::RecognizedStackFrameSP GetRecognizedFrame();
 
 protected:
   friend class StackFrameList;
@@ -563,6 +580,7 @@ private:
   ValueObjectList m_variable_list_value_objects; // Value objects for each
                                                  // variable in
                                                  // m_variable_list_sp
+  lldb::RecognizedStackFrameSP m_recognized_frame_sp;
   StreamString m_disassembly;
   std::recursive_mutex m_mutex;
 
