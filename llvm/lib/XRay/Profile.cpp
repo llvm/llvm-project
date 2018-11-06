@@ -374,6 +374,12 @@ Expected<Profile> profileFromTrace(const Trace &T) {
       }
 
       break;
+
+    case RecordTypes::CUSTOM_EVENT:
+    case RecordTypes::TYPED_EVENT:
+      // TODO: Support an extension point to allow handling of custom and typed
+      // events in profiles.
+      break;
     }
   }
 
