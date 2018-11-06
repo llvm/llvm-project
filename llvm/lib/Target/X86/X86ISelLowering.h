@@ -1113,7 +1113,7 @@ namespace llvm {
     bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
 
     /// Customize the preferred legalization strategy for certain types.
-    LegalizeTypeAction getPreferredVectorAction(EVT VT) const override;
+    LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
     MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                       EVT VT) const override;

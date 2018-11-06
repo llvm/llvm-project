@@ -395,7 +395,7 @@ public:
 
   bool useLoadStackGuardNode() const override;
   TargetLoweringBase::LegalizeTypeAction
-  getPreferredVectorAction(EVT VT) const override;
+  getPreferredVectorAction(MVT VT) const override;
 
   /// If the target has a standard location for the stack protector cookie,
   /// returns the address of that location. Otherwise, returns nullptr.

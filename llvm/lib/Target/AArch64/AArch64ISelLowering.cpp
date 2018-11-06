@@ -11506,12 +11506,11 @@ unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
 }
 
 TargetLoweringBase::LegalizeTypeAction
-AArch64TargetLowering::getPreferredVectorAction(EVT VT) const {
-  MVT SVT = VT.getSimpleVT();
+AArch64TargetLowering::getPreferredVectorAction(MVT VT) const {
   // During type legalization, we prefer to widen v1i8, v1i16, v1i32  to v8i8,
   // v4i16, v2i32 instead of to promote.
-  if (SVT == MVT::v1i8 || SVT == MVT::v1i16 || SVT == MVT::v1i32
-      || SVT == MVT::v1f32)
+  if (VT == MVT::v1i8 || VT == MVT::v1i16 || VT == MVT::v1i32 ||
+      VT == MVT::v1f32)
     return TypeWidenVector;
 
   return TargetLoweringBase::getPreferredVectorAction(VT);

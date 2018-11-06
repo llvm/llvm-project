@@ -81,7 +81,7 @@ FunctionPass *llvm::createRegUsageInfoCollector() {
 bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
-  const TargetMachine &TM = MF.getTarget();
+  const LLVMTargetMachine &TM = MF.getTarget();
 
   LLVM_DEBUG(dbgs() << " -------------------- " << getPassName()
                     << " -------------------- \n");

@@ -75,12 +75,21 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   else
     return nullptr;
 
-  // A select operand must be a binop, and the compare constant must be the
-  // identity constant for that binop.
+  // A select operand must be a binop.
   BinaryOperator *BO;
-  if (!match(Sel.getOperand(IsEq ? 1 : 2), m_BinOp(BO)) ||
-      ConstantExpr::getBinOpIdentity(BO->getOpcode(), BO->getType(), true) != C)
+  if (!match(Sel.getOperand(IsEq ? 1 : 2), m_BinOp(BO)))
     return nullptr;
+
+  // The compare constant must be the identity constant for that binop.
+  // If this a floating-point compare with 0.0, any zero constant will do.
+  Type *Ty = BO->getType();
+  Constant *IdC = ConstantExpr::getBinOpIdentity(BO->getOpcode(), Ty, true);
+  if (IdC != C) {
+    if (!IdC || !CmpInst::isFPPredicate(Pred))
+      return nullptr;
+    if (!match(IdC, m_AnyZeroFP()) || !match(C, m_AnyZeroFP()))
+      return nullptr;
+  }
 
   // Last, match the compare variable operand with a binop operand.
   Value *Y;
@@ -1651,31 +1660,6 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   // See if we are selecting two values based on a comparison of the two values.
   if (FCmpInst *FCI = dyn_cast<FCmpInst>(CondVal)) {
     if (FCI->getOperand(0) == TrueVal && FCI->getOperand(1) == FalseVal) {
-      // Transform (X == Y) ? X : Y  -> Y
-      if (FCI->getPredicate() == FCmpInst::FCMP_OEQ) {
-        // This is not safe in general for floating point:
-        // consider X== -0, Y== +0.
-        // It becomes safe if either operand is a nonzero constant.
-        ConstantFP *CFPt, *CFPf;
-        if (((CFPt = dyn_cast<ConstantFP>(TrueVal)) &&
-              !CFPt->getValueAPF().isZero()) ||
-            ((CFPf = dyn_cast<ConstantFP>(FalseVal)) &&
-             !CFPf->getValueAPF().isZero()))
-        return replaceInstUsesWith(SI, FalseVal);
-      }
-      // Transform (X une Y) ? X : Y  -> X
-      if (FCI->getPredicate() == FCmpInst::FCMP_UNE) {
-        // This is not safe in general for floating point:
-        // consider X== -0, Y== +0.
-        // It becomes safe if either operand is a nonzero constant.
-        ConstantFP *CFPt, *CFPf;
-        if (((CFPt = dyn_cast<ConstantFP>(TrueVal)) &&
-              !CFPt->getValueAPF().isZero()) ||
-            ((CFPf = dyn_cast<ConstantFP>(FalseVal)) &&
-             !CFPf->getValueAPF().isZero()))
-        return replaceInstUsesWith(SI, TrueVal);
-      }
-
       // Canonicalize to use ordered comparisons by swapping the select
       // operands.
       //
@@ -1694,31 +1678,6 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
 
       // NOTE: if we wanted to, this is where to detect MIN/MAX
     } else if (FCI->getOperand(0) == FalseVal && FCI->getOperand(1) == TrueVal){
-      // Transform (X == Y) ? Y : X  -> X
-      if (FCI->getPredicate() == FCmpInst::FCMP_OEQ) {
-        // This is not safe in general for floating point:
-        // consider X== -0, Y== +0.
-        // It becomes safe if either operand is a nonzero constant.
-        ConstantFP *CFPt, *CFPf;
-        if (((CFPt = dyn_cast<ConstantFP>(TrueVal)) &&
-              !CFPt->getValueAPF().isZero()) ||
-            ((CFPf = dyn_cast<ConstantFP>(FalseVal)) &&
-             !CFPf->getValueAPF().isZero()))
-          return replaceInstUsesWith(SI, FalseVal);
-      }
-      // Transform (X une Y) ? Y : X  -> Y
-      if (FCI->getPredicate() == FCmpInst::FCMP_UNE) {
-        // This is not safe in general for floating point:
-        // consider X== -0, Y== +0.
-        // It becomes safe if either operand is a nonzero constant.
-        ConstantFP *CFPt, *CFPf;
-        if (((CFPt = dyn_cast<ConstantFP>(TrueVal)) &&
-              !CFPt->getValueAPF().isZero()) ||
-            ((CFPf = dyn_cast<ConstantFP>(FalseVal)) &&
-             !CFPf->getValueAPF().isZero()))
-          return replaceInstUsesWith(SI, TrueVal);
-      }
-
       // Canonicalize to use ordered comparisons by swapping the select
       // operands.
       //

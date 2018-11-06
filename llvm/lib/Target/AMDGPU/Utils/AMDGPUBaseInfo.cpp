@@ -152,6 +152,8 @@ void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream) {
 
   if (hasXNACK(*STI))
     Stream << "+xnack";
+  if (hasSRAMECC(*STI))
+    Stream << "+sram-ecc";
 
   Stream.flush();
 }
@@ -591,6 +593,10 @@ bool isEntryFunctionCC(CallingConv::ID CC) {
 
 bool hasXNACK(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureXNACK];
+}
+
+bool hasSRAMECC(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureSRAMECC];
 }
 
 bool hasMIMG_R128(const MCSubtargetInfo &STI) {

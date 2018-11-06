@@ -674,6 +674,10 @@ public:
       case ISD::STRICT_FNEARBYINT:
       case ISD::STRICT_FMAXNUM:
       case ISD::STRICT_FMINNUM:
+      case ISD::STRICT_FCEIL:
+      case ISD::STRICT_FFLOOR:
+      case ISD::STRICT_FROUND:
+      case ISD::STRICT_FTRUNC:
         return true;
     }
   }

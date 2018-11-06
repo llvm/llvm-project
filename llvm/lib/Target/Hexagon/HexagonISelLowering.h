@@ -141,7 +141,7 @@ namespace HexagonISD {
         unsigned DefinedValues) const override;
 
     bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override;
-    TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(EVT VT)
+    TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)
         const override;
 
     SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;

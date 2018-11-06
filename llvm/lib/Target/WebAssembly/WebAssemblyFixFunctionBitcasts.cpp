@@ -36,6 +36,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-fix-function-bitcasts"
 
+static cl::opt<bool>
+    TemporaryWorkarounds("wasm-temporary-workarounds",
+                         cl::desc("Apply certain temporary workarounds"),
+                         cl::init(true), cl::Hidden);
+
 namespace {
 class FixFunctionBitcasts final : public ModulePass {
   StringRef getPassName() const override {
@@ -236,7 +241,7 @@ bool FixFunctionBitcasts::runOnModule(Module &M) {
     // "int main(int argc, char *argv[])", create an artificial call with it
     // bitcasted to that type so that we generate a wrapper for it, so that
     // the C runtime can call it.
-    if (!F.isDeclaration() && F.getName() == "main") {
+    if (!TemporaryWorkarounds && !F.isDeclaration() && F.getName() == "main") {
       Main = &F;
       LLVMContext &C = M.getContext();
       Type *MainArgTys[] = {Type::getInt32Ty(C),

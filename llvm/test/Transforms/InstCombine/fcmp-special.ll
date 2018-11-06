@@ -190,7 +190,7 @@ define i1 @nnan_ops_to_fcmp_uno(float %x, float %y) {
 
 define i1 @negative_zero_oeq(float %x) {
 ; CHECK-LABEL: @negative_zero_oeq(
-; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = fcmp oeq float %x, -0.0
@@ -199,7 +199,7 @@ define i1 @negative_zero_oeq(float %x) {
 
 define i1 @negative_zero_oge(double %x) {
 ; CHECK-LABEL: @negative_zero_oge(
-; CHECK-NEXT:    [[R:%.*]] = fcmp nnan oge double [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan oge double [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = fcmp nnan oge double %x, -0.0
@@ -208,7 +208,7 @@ define i1 @negative_zero_oge(double %x) {
 
 define i1 @negative_zero_uge(half %x) {
 ; CHECK-LABEL: @negative_zero_uge(
-; CHECK-NEXT:    [[R:%.*]] = fcmp fast uge half [[X:%.*]], 0xH8000
+; CHECK-NEXT:    [[R:%.*]] = fcmp fast uge half [[X:%.*]], 0xH0000
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = fcmp fast uge half %x, -0.0
@@ -217,7 +217,7 @@ define i1 @negative_zero_uge(half %x) {
 
 define <2 x i1> @negative_zero_olt_vec(<2 x float> %x) {
 ; CHECK-LABEL: @negative_zero_olt_vec(
-; CHECK-NEXT:    [[R:%.*]] = fcmp reassoc ninf olt <2 x float> [[X:%.*]], <float -0.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    [[R:%.*]] = fcmp reassoc ninf olt <2 x float> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %r = fcmp reassoc ninf olt <2 x float> %x, <float -0.0, float -0.0>
@@ -226,7 +226,7 @@ define <2 x i1> @negative_zero_olt_vec(<2 x float> %x) {
 
 define <2 x i1> @negative_zero_une_vec_undef(<2 x double> %x) {
 ; CHECK-LABEL: @negative_zero_une_vec_undef(
-; CHECK-NEXT:    [[R:%.*]] = fcmp nnan une <2 x double> [[X:%.*]], <double -0.000000e+00, double undef>
+; CHECK-NEXT:    [[R:%.*]] = fcmp nnan une <2 x double> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %r = fcmp nnan une <2 x double> %x, <double -0.0, double undef>
@@ -235,7 +235,7 @@ define <2 x i1> @negative_zero_une_vec_undef(<2 x double> %x) {
 
 define <2 x i1> @negative_zero_ule_vec_mixed(<2 x float> %x) {
 ; CHECK-LABEL: @negative_zero_ule_vec_mixed(
-; CHECK-NEXT:    [[R:%.*]] = fcmp ule <2 x float> [[X:%.*]], <float 0.000000e+00, float -0.000000e+00>
+; CHECK-NEXT:    [[R:%.*]] = fcmp ule <2 x float> [[X:%.*]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %r = fcmp ule <2 x float> %x, <float 0.0, float -0.0>

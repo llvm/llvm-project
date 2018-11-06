@@ -54,7 +54,7 @@ bool HexagonTTIImpl::isTypeForHVX(Type *VecTy) const {
     return false;
   if (ST.isHVXVectorType(VecVT.getSimpleVT()))
     return true;
-  auto Action = TLI.getPreferredVectorAction(VecVT);
+  auto Action = TLI.getPreferredVectorAction(VecVT.getSimpleVT());
   return Action == TargetLoweringBase::TypeWidenVector;
 }
 
