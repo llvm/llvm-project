@@ -1533,6 +1533,13 @@ Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
   return &*type_sp;
 }
 
+llvm::Optional<SymbolFile::ArrayInfo>
+SymbolFileNativePDB::GetDynamicArrayInfoForUID(
+    lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
+  return llvm::None;
+}
+
+
 bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
   // If this is not in our map, it's an error.
   clang::TagDecl *tag_decl = m_clang->GetAsTagDecl(compiler_type);

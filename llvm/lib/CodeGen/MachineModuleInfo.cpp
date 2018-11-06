@@ -194,7 +194,7 @@ void MMIAddrLabelMapCallbackPtr::allUsesReplacedWith(Value *V2) {
   Map->UpdateForRAUWBlock(cast<BasicBlock>(getValPtr()), cast<BasicBlock>(V2));
 }
 
-MachineModuleInfo::MachineModuleInfo(const TargetMachine *TM)
+MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
   : ImmutablePass(ID), TM(*TM),
     Context(TM->getMCAsmInfo(), TM->getMCRegisterInfo(),
             TM->getObjFileLowering(), nullptr, false) {

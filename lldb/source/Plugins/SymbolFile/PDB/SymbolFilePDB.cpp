@@ -587,6 +587,11 @@ lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
   return result.get();
 }
 
+llvm::Optional<SymbolFile::ArrayInfo> SymbolFilePDB::GetDynamicArrayInfoForUID(
+    lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
+  return llvm::None;
+}
+
 bool SymbolFilePDB::CompleteType(lldb_private::CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(
       GetObjectFile()->GetModule()->GetMutex());

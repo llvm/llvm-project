@@ -194,10 +194,9 @@ public:
 
   uint32_t GetPointerByteSize() override;
 
-  static clang::TranslationUnitDecl *
-  GetTranslationUnitDecl(clang::ASTContext *ast);
+  static clang::DeclContext *GetTranslationUnitDecl(clang::ASTContext *ast);
 
-  clang::TranslationUnitDecl *GetTranslationUnitDecl() {
+  clang::DeclContext *GetTranslationUnitDecl() {
     return GetTranslationUnitDecl(getASTContext());
   }
 
@@ -745,7 +744,8 @@ public:
   size_t GetTypeBitAlign(lldb::opaque_compiler_type_t type) override;
 
   uint32_t GetNumChildren(lldb::opaque_compiler_type_t type,
-                          bool omit_empty_base_classes) override;
+                          bool omit_empty_base_classes,
+                          const ExecutionContext *exe_ctx) override;
 
   CompilerType GetBuiltinTypeByName(const ConstString &name) override;
 

@@ -41,6 +41,8 @@ public:
 };
 
 static llvm::ManagedStatic<CodeViewErrorCategory> CodeViewErrCategory;
-const std::error_category &llvm::codeview::CVErrorCategory() { return *CodeViewErrCategory; }
+const std::error_category &llvm::codeview::CVErrorCategory() {
+  return *CodeViewErrCategory;
+}
 
 char CodeViewError::ID;

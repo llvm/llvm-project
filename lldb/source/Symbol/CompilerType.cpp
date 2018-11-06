@@ -535,10 +535,12 @@ lldb::Format CompilerType::GetFormat() const {
   return m_type_system->GetFormat(m_type);
 }
 
-uint32_t CompilerType::GetNumChildren(bool omit_empty_base_classes) const {
+uint32_t CompilerType::GetNumChildren(bool omit_empty_base_classes,
+                                      const ExecutionContext *exe_ctx) const {
   if (!IsValid())
     return 0;
-  return m_type_system->GetNumChildren(m_type, omit_empty_base_classes);
+  return m_type_system->GetNumChildren(m_type, omit_empty_base_classes,
+                                       exe_ctx);
 }
 
 lldb::BasicType CompilerType::GetBasicTypeEnumeration() const {

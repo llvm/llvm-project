@@ -13,7 +13,7 @@ The transformation is usually beneficial when the calling code passes an
 *rvalue* and assumes the move construction is a cheap operation. This short
 example illustrates how the construction of the value happens:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     void foo(std::string s);
     std::string get_str();
@@ -39,7 +39,7 @@ Since ``std::move()`` is a library function declared in `<utility>` it may be
 necessary to add this include. The check will add the include directive when
 necessary.
 
-  .. code-block:: c++
+.. code-block:: c++
 
      #include <string>
 

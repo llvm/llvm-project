@@ -854,16 +854,37 @@ mapped_file_region::mapped_file_region(int fd, mapmode mode, size_t length,
     Mapping = 0;
 }
 
+static bool hasFlushBufferKernelBug() {
+  static bool Ret{GetWindowsOSVersion() < llvm::VersionTuple(10, 0, 0, 17763)};
+  return Ret;
+}
+
+static bool isEXE(StringRef Magic) {
+  static const char PEMagic[] = {'P', 'E', '\0', '\0'};
+  if (Magic.startswith(StringRef("MZ")) && Magic.size() >= 0x3c + 4) {
+    uint32_t off = read32le(Magic.data() + 0x3c);
+    // PE/COFF file, either EXE or DLL.
+    if (Magic.substr(off).startswith(StringRef(PEMagic, sizeof(PEMagic))))
+      return true;
+  }
+  return false;
+}
+
 mapped_file_region::~mapped_file_region() {
   if (Mapping) {
+
+    bool Exe = isEXE(StringRef((char *)Mapping, Size));
+
     ::UnmapViewOfFile(Mapping);
 
-    if (Mode == mapmode::readwrite) {
+    if (Mode == mapmode::readwrite && Exe && hasFlushBufferKernelBug()) {
       // There is a Windows kernel bug, the exact trigger conditions of which
       // are not well understood.  When triggered, dirty pages are not properly
       // flushed and subsequent process's attempts to read a file can return
       // invalid data.  Calling FlushFileBuffers on the write handle is
       // sufficient to ensure that this bug is not triggered.
+      // The bug only occurs when writing an executable and executing it right
+      // after, under high I/O pressure.
       ::FlushFileBuffers(FileHandle);
     }
 

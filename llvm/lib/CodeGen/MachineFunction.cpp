@@ -130,7 +130,8 @@ static inline unsigned getFnStackAlignment(const TargetSubtargetInfo *STI,
   return STI->getFrameLowering()->getStackAlignment();
 }
 
-MachineFunction::MachineFunction(const Function &F, const TargetMachine &Target,
+MachineFunction::MachineFunction(const Function &F,
+                                 const LLVMTargetMachine &Target,
                                  const TargetSubtargetInfo &STI,
                                  unsigned FunctionNum, MachineModuleInfo &mmi)
     : F(F), Target(Target), STI(&STI), Ctx(mmi.getContext()), MMI(mmi) {

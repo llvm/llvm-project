@@ -1185,7 +1185,7 @@ bool SITargetLowering::isMemOpUniform(const SDNode *N) const {
 }
 
 TargetLoweringBase::LegalizeTypeAction
-SITargetLowering::getPreferredVectorAction(EVT VT) const {
+SITargetLowering::getPreferredVectorAction(MVT VT) const {
   if (VT.getVectorNumElements() != 1 && VT.getScalarType().bitsLE(MVT::i16))
     return TypeSplitVector;
 

@@ -18,7 +18,7 @@ bb1:
   %tmp4 = bitcast half %tmp3 to i16
   %tmp5 = insertelement <2 x i16> <i16 0, i16 undef>, i16 %tmp4, i32 1
   %tmp6 = bitcast i16* %arg to half*
-  store half %tmp2, half* %tmp6, align 2
+  store volatile half %tmp2, half* %tmp6, align 2
   %tmp7 = bitcast <2 x i16> %tmp to <2 x half>
   %tmp8 = extractelement <2 x half> %tmp7, i32 0
   br label %bb1

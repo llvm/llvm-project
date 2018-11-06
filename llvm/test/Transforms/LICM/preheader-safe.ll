@@ -112,11 +112,31 @@ loop-if:
 exit:
   ret void
 }
+
+; Positive test - can hoist something that happens before thrower.
+define void @nothrow_header_pos(i64 %x, i64 %y, i1 %cond) {
+; CHECK-LABEL: nothrow_header_pos
+; CHECK-LABEL: entry
+; CHECK: %div = udiv i64 %x, %y
+; CHECK-LABEL: loop
+; CHECK: call void @use(i64 %div)
+entry:
+  br label %loop
+loop:                                         ; preds = %entry, %for.inc
+  br label %loop-if
+loop-if:
+  %div = udiv i64 %x, %y
+  call void @use(i64 %div)
+  br label %loop
+}
+
+
 ; Negative test - can't move out of throwing block
 define void @nothrow_header_neg(i64 %x, i64 %y, i1 %cond) {
 ; CHECK-LABEL: nothrow_header_neg
 ; CHECK-LABEL: entry
 ; CHECK-LABEL: loop
+; CHECK: call void @maythrow()
 ; CHECK: %div = udiv i64 %x, %y
 ; CHECK: call void @use(i64 %div)
 entry:
@@ -124,6 +144,7 @@ entry:
 loop:                                         ; preds = %entry, %for.inc
   br label %loop-if
 loop-if:
+  call void @maythrow()
   %div = udiv i64 %x, %y
   call void @use(i64 %div)
   br label %loop

@@ -113,6 +113,10 @@ public:
     return 0;
   }
   Type *ResolveTypeUID(lldb::user_id_t type_uid) override;
+  llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
+      lldb::user_id_t type_uid,
+      const lldb_private::ExecutionContext *exe_ctx) override;
+
   bool CompleteType(CompilerType &compiler_type) override;
   uint32_t ResolveSymbolContext(const Address &so_addr,
                                 lldb::SymbolContextItem resolve_scope,

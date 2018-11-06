@@ -404,6 +404,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX906, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX909, EF_AMDGPU_MACH);
     BCase(EF_AMDGPU_XNACK);
+    BCase(EF_AMDGPU_SRAM_ECC);
     break;
   case ELF::EM_X86_64:
     break;

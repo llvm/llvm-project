@@ -603,7 +603,7 @@ static void PrivateAutoComplete(
       case eTypeClassObjCObjectPointer:
       case eTypeClassPointer: {
         bool omit_empty_base_classes = true;
-        if (compiler_type.GetNumChildren(omit_empty_base_classes) > 0)
+        if (compiler_type.GetNumChildren(omit_empty_base_classes, nullptr) > 0)
           matches.AppendString((prefix_path + "->").str());
         else {
           matches.AppendString(prefix_path.str());
