@@ -59,6 +59,8 @@ using lldb_private::formatters::swift::SetConfig;
 
 void SwiftLanguage::Initialize() {
   static ConstString g_SwiftSharedStringClass(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs20_SharedStringStorage"));
+  static ConstString g_SwiftStringStorageClass(
+      SwiftLanguageRuntime::GetCurrentMangledName("_TtCs14_StringStorage"));
   static ConstString g_NSArrayClass1Old("_TtCs22__SwiftDeferredNSArray");
   static ConstString g_NSArrayClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray"));
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Swift Language",
@@ -68,7 +70,10 @@ void SwiftLanguage::Initialize() {
       .emplace(
           g_SwiftSharedStringClass,
           lldb_private::formatters::swift::SwiftSharedString_SummaryProvider);
-
+  lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
+      .emplace(
+          g_SwiftStringStorageClass,
+          lldb_private::formatters::swift::SwiftStringStorage_SummaryProvider);
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries()
       .emplace(g_NSArrayClass1,
                lldb_private::formatters::swift::Array_SummaryProvider);
@@ -83,11 +88,15 @@ void SwiftLanguage::Initialize() {
 void SwiftLanguage::Terminate() {
   // FIXME: Duplicating this list from Initialize seems error-prone.
   static ConstString g_SwiftSharedStringClass(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs20_SharedStringStorage"));
+  static ConstString g_SwiftStringStorageClass(
+      SwiftLanguageRuntime::GetCurrentMangledName("_TtCs14_StringStorage"));
   static ConstString g_NSArrayClass1Old("_TtCs22__SwiftDeferredNSArray");
   static ConstString g_NSArrayClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray"));
 
   lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
       .erase(g_SwiftSharedStringClass);
+  lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
+      .erase(g_SwiftStringStorageClass);
 
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries().erase(
       g_NSArrayClass1);
