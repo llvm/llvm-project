@@ -1027,7 +1027,7 @@ RValue CodeGenFunction::emitBuiltinOSLogFormat(const CallExpr &E) {
     if (Item.getKind() == analyze_os_log::OSLogBufferItem::MaskKind) {
       uint64_t Val = 0;
       for (unsigned I = 0, E = Item.getMaskType().size(); I < E; ++I)
-        Val |= ((unsigned )Item.getMaskType()[I]) << I * 8;
+        Val |= ((uint64_t)Item.getMaskType()[I]) << I * 8;
       ArgVal = llvm::Constant::getIntegerValue(Int64Ty, llvm::APInt(64, Val));
     } else if (const Expr *TheExpr = Item.getExpr()) {
       ArgVal = EmitScalarExpr(TheExpr, /*Ignore*/ false);
