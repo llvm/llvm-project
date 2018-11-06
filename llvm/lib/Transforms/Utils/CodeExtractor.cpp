@@ -57,6 +57,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -1304,12 +1305,20 @@ Function *CodeExtractor::extractCodeRegion() {
   // for the new function.
   for (BasicBlock &BB : *newFunction) {
     auto BlockIt = BB.begin();
+    // Remove debug info intrinsics from the new function.
     while (BlockIt != BB.end()) {
       Instruction *Inst = &*BlockIt;
       ++BlockIt;
       if (isa<DbgInfoIntrinsic>(Inst))
         Inst->eraseFromParent();
     }
+    // Remove debug info intrinsics which refer to values in the new function
+    // from the old function.
+    SmallVector<DbgInfoIntrinsic *, 4> DbgUsers;
+    for (Instruction &I : BB)
+      findDbgUsers(DbgUsers, &I);
+    for (auto *DVI : DbgUsers)
+      DVI->eraseFromParent();
   }
 
   LLVM_DEBUG(if (verifyFunction(*newFunction))
