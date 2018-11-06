@@ -145,13 +145,13 @@ TEST_F(ObjectFileELFTest, GetModuleSpecifications_EarlySectionHeaders) {
 
 static void CHECK_ABS32(uint8_t *bytes, uint32_t offset, uint32_t addend) {
   uint32_t res;
-  memcpy(&res, (uint32_t *)(bytes + offset), sizeof(uint32_t));
+  memcpy(&res, reinterpret_cast<uint32_t *>(bytes + offset), sizeof(uint32_t));
   ASSERT_EQ(addend, res);
 }
 
 static void CHECK_ABS64(uint8_t *bytes, uint64_t offset, uint64_t addend) {
   uint64_t res;
-  memcpy(&res, (uint64_t *)(bytes + offset), sizeof(uint64_t));
+  memcpy(&res, reinterpret_cast<uint64_t *>(bytes + offset), sizeof(uint64_t));
   ASSERT_EQ(addend, res);
 }
 
