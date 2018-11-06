@@ -38,6 +38,8 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 
+#include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::pdb;
@@ -330,7 +332,7 @@ GetDeclFromContextByName(const clang::ASTContext &ast,
   return result[0];
 }
 
-static bool IsAnonymousNamespaceName(const std::string &name) {
+static bool IsAnonymousNamespaceName(llvm::StringRef name) {
   return name == "`anonymous namespace'" || name == "`anonymous-namespace'";
 }
 
@@ -387,7 +389,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       return nullptr;
 
     // Ignore unnamed-tag UDTs.
-    auto name = PDBNameDropScope(udt->getName());
+    std::string name = MSVCUndecoratedNameParser::DropScope(udt->getName());
     if (name.empty())
       return nullptr;
 
@@ -465,7 +467,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     auto enum_type = llvm::dyn_cast<PDBSymbolTypeEnum>(&type);
     assert(enum_type);
 
-    std::string name = PDBNameDropScope(enum_type->getName());
+    std::string name =
+        MSVCUndecoratedNameParser::DropScope(enum_type->getName());
     auto decl_context = GetDeclContextContainingSymbol(type);
     uint64_t bytes = enum_type->getLength();
 
@@ -537,7 +540,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (!target_type)
       return nullptr;
 
-    std::string name = PDBNameDropScope(type_def->getName());
+    std::string name =
+        MSVCUndecoratedNameParser::DropScope(type_def->getName());
     auto decl_ctx = GetDeclContextContainingSymbol(type);
 
     // Check if such a typedef already exists in the current context
@@ -583,7 +587,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         return nullptr;
       func_sig = sig.release();
       // Function type is named.
-      name = PDBNameDropScope(pdb_func->getName());
+      name = MSVCUndecoratedNameParser::DropScope(pdb_func->getName());
     } else if (auto pdb_func_sig =
                    llvm::dyn_cast<PDBSymbolTypeFunctionSig>(&type)) {
       func_sig = const_cast<PDBSymbolTypeFunctionSig *>(pdb_func_sig);
@@ -796,7 +800,8 @@ bool PDBASTParser::CompleteTypeFromPDB(
 
 clang::Decl *
 PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
-  auto it = m_uid_to_decl.find(symbol.getSymIndexId());
+  uint32_t sym_id = symbol.getSymIndexId();
+  auto it = m_uid_to_decl.find(sym_id);
   if (it != m_uid_to_decl.end())
     return it->second;
 
@@ -812,14 +817,50 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
     const IPDBRawSymbol &raw = symbol.getRawSymbol();
 
     auto class_parent_id = raw.getClassParentId();
-    if (session.getSymbolById(class_parent_id)) {
+    if (std::unique_ptr<PDBSymbol> class_parent =
+            session.getSymbolById(class_parent_id)) {
       auto class_parent_type = symbol_file->ResolveTypeUID(class_parent_id);
       if (!class_parent_type)
         return nullptr;
 
-      class_parent_type->GetFullCompilerType();
+      CompilerType class_parent_ct = class_parent_type->GetFullCompilerType();
 
-      return m_uid_to_decl.lookup(symbol.getSymIndexId());
+      // Look a declaration up in the cache after completing the class
+      clang::Decl *decl = m_uid_to_decl.lookup(sym_id);
+      if (decl)
+        return decl;
+
+      // A declaration was not found in the cache. It means that the symbol
+      // has the class parent, but the class doesn't have the symbol in its
+      // children list.
+      if (auto func = llvm::dyn_cast_or_null<PDBSymbolFunc>(&symbol)) {
+        // Try to find a class child method with the same RVA and use its
+        // declaration if found.
+        if (uint32_t rva = func->getRelativeVirtualAddress()) {
+          if (std::unique_ptr<ConcreteSymbolEnumerator<PDBSymbolFunc>>
+                  methods_enum =
+                      class_parent->findAllChildren<PDBSymbolFunc>()) {
+            while (std::unique_ptr<PDBSymbolFunc> method =
+                       methods_enum->getNext()) {
+              if (method->getRelativeVirtualAddress() == rva) {
+                decl = m_uid_to_decl.lookup(method->getSymIndexId());
+                if (decl)
+                  break;
+              }
+            }
+          }
+        }
+
+        // If no class methods with the same RVA were found, then create a new
+        // method. It is possible for template methods.
+        if (!decl)
+          decl = AddRecordMethod(*symbol_file, class_parent_ct, *func);
+      }
+
+      if (decl)
+        m_uid_to_decl[sym_id] = decl;
+
+      return decl;
     }
   }
 
@@ -841,7 +882,7 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
     if (auto parent_decl = llvm::dyn_cast_or_null<clang::TagDecl>(decl_context))
       m_ast.GetCompleteDecl(parent_decl);
 
-    auto name = PDBNameDropScope(data->getName());
+    std::string name = MSVCUndecoratedNameParser::DropScope(data->getName());
 
     // Check if the current context already contains the symbol with the name.
     clang::Decl *decl =
@@ -856,7 +897,7 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
           ClangUtil::GetQualType(type->GetLayoutCompilerType()));
     }
 
-    m_uid_to_decl[data->getSymIndexId()] = decl;
+    m_uid_to_decl[sym_id] = decl;
 
     return decl;
   }
@@ -867,9 +908,9 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
     auto decl_context = GetDeclContextContainingSymbol(symbol);
     assert(decl_context);
 
-    auto name = PDBNameDropScope(func->getName());
+    std::string name = MSVCUndecoratedNameParser::DropScope(func->getName());
 
-    auto type = symbol_file->ResolveTypeUID(func->getSymIndexId());
+    Type *type = symbol_file->ResolveTypeUID(sym_id);
     if (!type)
       return nullptr;
 
@@ -880,17 +921,17 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
         decl_context, name.c_str(), type->GetForwardCompilerType(), storage,
         func->hasInlineAttribute());
 
-    m_uid_to_decl[func->getSymIndexId()] = decl;
+    m_uid_to_decl[sym_id] = decl;
 
     return decl;
   }
   default: {
     // It's not a variable and not a function, check if it's a type
-    auto type = symbol_file->ResolveTypeUID(symbol.getSymIndexId());
+    Type *type = symbol_file->ResolveTypeUID(sym_id);
     if (!type)
       return nullptr;
 
-    return m_uid_to_decl.lookup(symbol.getSymIndexId());
+    return m_uid_to_decl.lookup(sym_id);
   }
   }
 }
@@ -937,19 +978,15 @@ clang::DeclContext *PDBASTParser::GetDeclContextContainingSymbol(
   // We can't find any class or function parent of the symbol. So analyze
   // the full symbol name. The symbol may be belonging to a namespace
   // or function (or even to a class if it's e.g. a static variable symbol).
-  // We do not use CPlusPlusNameParser because it fails on things like
-  // `anonymous namespace'.
 
   // TODO: Make clang to emit full names for variables in namespaces
   // (as MSVC does)
 
-  auto context = symbol.getRawSymbol().getName();
-  auto context_size = context.rfind("::");
-  if (context_size == std::string::npos)
-    context_size = 0;
-  context = context.substr(0, context_size);
-
-  // Check if there is a symbol with the name of the context.
+  std::string name(symbol.getRawSymbol().getName());
+  MSVCUndecoratedNameParser parser(name);
+  llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specs = parser.GetSpecifiers();
+  if (specs.empty())
+    return m_ast.GetTranslationUnitDecl();
 
   auto symbol_file = static_cast<SymbolFilePDB *>(m_ast.GetSymbolFile());
   if (!symbol_file)
@@ -959,32 +996,43 @@ clang::DeclContext *PDBASTParser::GetDeclContextContainingSymbol(
   if (!global)
     return m_ast.GetTranslationUnitDecl();
 
-  TypeMap types;
-  if (auto children_enum =
-          global->findChildren(PDB_SymType::None, context, NS_CaseSensitive))
-    while (auto child = children_enum->getNext())
-      if (auto child_context = GetDeclContextForSymbol(*child))
-        return child_context;
-
-  // Split context and retrieve nested namespaces
+  bool has_type_or_function_parent = false;
   clang::DeclContext *curr_context = m_ast.GetTranslationUnitDecl();
-  std::string::size_type from = 0;
-  while (from < context_size) {
-    auto to = context.find("::", from);
-    if (to == std::string::npos)
-      to = context_size;
+  for (std::size_t i = 0; i < specs.size() - 1; i++) {
+    // Check if there is a function or a type with the current context's name.
+    if (std::unique_ptr<IPDBEnumSymbols> children_enum = global->findChildren(
+            PDB_SymType::None, specs[i].GetFullName(), NS_CaseSensitive)) {
+      while (IPDBEnumChildren<PDBSymbol>::ChildTypePtr child =
+                 children_enum->getNext()) {
+        if (clang::DeclContext *child_context =
+                GetDeclContextForSymbol(*child)) {
+          // Note that `GetDeclContextForSymbol' retrieves
+          // a declaration context for functions and types only,
+          // so if we are here then `child_context' is guaranteed
+          // a function or a type declaration context.
+          has_type_or_function_parent = true;
+          curr_context = child_context;
+        }
+      }
+    }
 
-    auto namespace_name = context.substr(from, to - from);
-    auto namespace_name_c_str = IsAnonymousNamespaceName(namespace_name)
-                                    ? nullptr
-                                    : namespace_name.c_str();
-    auto namespace_decl =
-        m_ast.GetUniqueNamespaceDeclaration(namespace_name_c_str, curr_context);
+    // If there were no functions or types above then retrieve a namespace with
+    // the current context's name. There can be no namespaces inside a function
+    // or a type. We check it to avoid fake namespaces such as `__l2':
+    // `N0::N1::CClass::PrivateFunc::__l2::InnerFuncStruct'
+    if (!has_type_or_function_parent) {
+      std::string namespace_name = specs[i].GetBaseName();
+      const char *namespace_name_c_str =
+          IsAnonymousNamespaceName(namespace_name) ? nullptr
+                                                   : namespace_name.data();
+      clang::NamespaceDecl *namespace_decl =
+          m_ast.GetUniqueNamespaceDeclaration(namespace_name_c_str,
+                                              curr_context);
 
-    m_parent_to_namespaces[curr_context].insert(namespace_decl);
+      m_parent_to_namespaces[curr_context].insert(namespace_decl);
 
-    curr_context = namespace_decl;
-    from = to + 2;
+      curr_context = namespace_decl;
+    }
   }
 
   return curr_context;
@@ -1035,24 +1083,11 @@ PDBASTParser::FindNamespaceDecl(const clang::DeclContext *parent,
   return nullptr;
 }
 
-std::string PDBASTParser::PDBNameDropScope(const std::string &name) {
-  // Not all PDB names can be parsed with CPlusPlusNameParser.
-  // E.g. it fails on names containing `anonymous namespace'.
-  // So we simply drop everything before '::'
-
-  auto offset = name.rfind("::");
-  if (offset == std::string::npos)
-    return name;
-  assert(offset + 2 <= name.size());
-
-  return name.substr(offset + 2);
-}
-
 bool PDBASTParser::AddEnumValue(CompilerType enum_type,
                                 const PDBSymbolData &enum_value) {
   Declaration decl;
   Variant v = enum_value.getValue();
-  std::string name = PDBNameDropScope(enum_value.getName());
+  std::string name = MSVCUndecoratedNameParser::DropScope(enum_value.getName());
   int64_t raw_value;
   switch (v.Type) {
   case PDB_VariantType::Int8:
@@ -1257,36 +1292,43 @@ void PDBASTParser::AddRecordBases(
 void PDBASTParser::AddRecordMethods(lldb_private::SymbolFile &symbol_file,
                                     lldb_private::CompilerType &record_type,
                                     PDBFuncSymbolEnumerator &methods_enum) {
-  while (auto method = methods_enum.getNext()) {
-    auto name = PDBNameDropScope(method->getName().c_str());
+  while (std::unique_ptr<PDBSymbolFunc> method = methods_enum.getNext())
+    if (clang::CXXMethodDecl *decl =
+            AddRecordMethod(symbol_file, record_type, *method))
+      m_uid_to_decl[method->getSymIndexId()] = decl;
+}
 
-    auto method_type = symbol_file.ResolveTypeUID(method->getSymIndexId());
-    // MSVC specific __vecDelDtor.
-    if (!method_type)
-      continue;
+clang::CXXMethodDecl *
+PDBASTParser::AddRecordMethod(lldb_private::SymbolFile &symbol_file,
+                              lldb_private::CompilerType &record_type,
+                              const llvm::pdb::PDBSymbolFunc &method) const {
+  std::string name = MSVCUndecoratedNameParser::DropScope(method.getName());
 
-    auto method_comp_type = method_type->GetFullCompilerType();
-    if (!method_comp_type.GetCompleteType()) {
-      symbol_file.GetObjectFile()->GetModule()->ReportError(
-          ":: Class '%s' has a method '%s' whose type cannot be completed.",
-          record_type.GetTypeName().GetCString(),
-          method_comp_type.GetTypeName().GetCString());
-      if (ClangASTContext::StartTagDeclarationDefinition(method_comp_type))
-        ClangASTContext::CompleteTagDeclarationDefinition(method_comp_type);
-    }
+  Type *method_type = symbol_file.ResolveTypeUID(method.getSymIndexId());
+  // MSVC specific __vecDelDtor.
+  if (!method_type)
+    return nullptr;
 
-    // TODO: get mangled name for the method.
-    auto decl = m_ast.AddMethodToCXXRecordType(
-        record_type.GetOpaqueQualType(), name.c_str(),
-        /*mangled_name*/ nullptr, method_comp_type,
-        TranslateMemberAccess(method->getAccess()), method->isVirtual(),
-        method->isStatic(), method->hasInlineAttribute(),
-        /*is_explicit*/ false, // FIXME: Need this field in CodeView.
-        /*is_attr_used*/ false,
-        /*is_artificial*/ method->isCompilerGenerated());
-    if (!decl)
-      continue;
-
-    m_uid_to_decl[method->getSymIndexId()] = decl;
+  CompilerType method_comp_type = method_type->GetFullCompilerType();
+  if (!method_comp_type.GetCompleteType()) {
+    symbol_file.GetObjectFile()->GetModule()->ReportError(
+        ":: Class '%s' has a method '%s' whose type cannot be completed.",
+        record_type.GetTypeName().GetCString(),
+        method_comp_type.GetTypeName().GetCString());
+    if (ClangASTContext::StartTagDeclarationDefinition(method_comp_type))
+      ClangASTContext::CompleteTagDeclarationDefinition(method_comp_type);
   }
+
+  AccessType access = TranslateMemberAccess(method.getAccess());
+  if (access == eAccessNone)
+    access = eAccessPublic;
+
+  // TODO: get mangled name for the method.
+  return m_ast.AddMethodToCXXRecordType(
+      record_type.GetOpaqueQualType(), name.c_str(),
+      /*mangled_name*/ nullptr, method_comp_type, access, method.isVirtual(),
+      method.isStatic(), method.hasInlineAttribute(),
+      /*is_explicit*/ false, // FIXME: Need this field in CodeView.
+      /*is_attr_used*/ false,
+      /*is_artificial*/ method.isCompilerGenerated());
 }
