@@ -12,11 +12,16 @@
 #include "Logger.h"
 #include "SymbolCollector.h"
 #include "index/Index.h"
+#include "index/MemIndex.h"
 #include "index/Merge.h"
 #include "index/dex/Dex.h"
 #include "clang/Index/IndexingAction.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 
 using namespace llvm;
@@ -101,7 +106,8 @@ void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Symbols,
 }
 
 std::unique_ptr<SymbolIndex>
-FileSymbols::buildIndex(IndexType Type, ArrayRef<std::string> URISchemes) {
+FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
+                        ArrayRef<std::string> URISchemes) {
   std::vector<std::shared_ptr<SymbolSlab>> SymbolSlabs;
   std::vector<std::shared_ptr<RefSlab>> RefSlabs;
   {
@@ -112,9 +118,34 @@ FileSymbols::buildIndex(IndexType Type, ArrayRef<std::string> URISchemes) {
       RefSlabs.push_back(FileAndRefs.second);
   }
   std::vector<const Symbol *> AllSymbols;
-  for (const auto &Slab : SymbolSlabs)
-    for (const auto &Sym : *Slab)
-      AllSymbols.push_back(&Sym);
+  std::vector<Symbol> SymsStorage;
+  switch (DuplicateHandle) {
+  case DuplicateHandling::Merge: {
+    DenseMap<SymbolID, Symbol> Merged;
+    for (const auto &Slab : SymbolSlabs) {
+      for (const auto &Sym : *Slab) {
+        auto I = Merged.try_emplace(Sym.ID, Sym);
+        if (!I.second)
+          I.first->second = mergeSymbol(std::move(I.first->second), Sym);
+      }
+    }
+    SymsStorage.reserve(Merged.size());
+    for (auto &Sym : Merged) {
+      SymsStorage.push_back(std::move(Sym.second));
+      AllSymbols.push_back(&SymsStorage.back());
+    }
+    // FIXME: aggregate symbol reference count based on references.
+    break;
+  }
+  case DuplicateHandling::PickOne: {
+    llvm::DenseSet<SymbolID> AddedSymbols;
+    for (const auto &Slab : SymbolSlabs)
+      for (const auto &Sym : *Slab)
+        if (AddedSymbols.insert(Sym.ID).second)
+          AllSymbols.push_back(&Sym);
+    break;
+  }
+  }
 
   std::vector<Ref> RefsStorage; // Contiguous ranges for each SymbolID.
   DenseMap<SymbolID, ArrayRef<Ref>> AllRefs;
@@ -140,7 +171,8 @@ FileSymbols::buildIndex(IndexType Type, ArrayRef<std::string> URISchemes) {
     }
   }
 
-  size_t StorageSize = RefsStorage.size() * sizeof(Ref);
+  size_t StorageSize =
+      RefsStorage.size() * sizeof(Ref) + SymsStorage.size() * sizeof(Symbol);
   for (const auto &Slab : SymbolSlabs)
     StorageSize += Slab->bytes();
   for (const auto &RefSlab : RefSlabs)
@@ -152,13 +184,13 @@ FileSymbols::buildIndex(IndexType Type, ArrayRef<std::string> URISchemes) {
     return llvm::make_unique<MemIndex>(
         make_pointee_range(AllSymbols), std::move(AllRefs),
         std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
-                        std::move(RefsStorage)),
+                        std::move(RefsStorage), std::move(SymsStorage)),
         StorageSize);
   case IndexType::Heavy:
     return llvm::make_unique<dex::Dex>(
         make_pointee_range(AllSymbols), std::move(AllRefs),
         std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
-                        std::move(RefsStorage)),
+                        std::move(RefsStorage), std::move(SymsStorage)),
         StorageSize, std::move(URISchemes));
   }
   llvm_unreachable("Unknown clangd::IndexType");
@@ -176,8 +208,9 @@ void FileIndex::updatePreamble(PathRef Path, ASTContext &AST,
   PreambleSymbols.update(Path,
                          llvm::make_unique<SymbolSlab>(std::move(Symbols)),
                          llvm::make_unique<RefSlab>());
-  PreambleIndex.reset(PreambleSymbols.buildIndex(
-      UseDex ? IndexType::Heavy : IndexType::Light, URISchemes));
+  PreambleIndex.reset(
+      PreambleSymbols.buildIndex(UseDex ? IndexType::Heavy : IndexType::Light,
+                                 DuplicateHandling::PickOne, URISchemes));
 }
 
 void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
@@ -185,7 +218,8 @@ void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
   MainFileSymbols.update(
       Path, llvm::make_unique<SymbolSlab>(std::move(Contents.first)),
       llvm::make_unique<RefSlab>(std::move(Contents.second)));
-  MainFileIndex.reset(MainFileSymbols.buildIndex(IndexType::Light, URISchemes));
+  MainFileIndex.reset(MainFileSymbols.buildIndex(
+      IndexType::Light, DuplicateHandling::PickOne, URISchemes));
 }
 
 } // namespace clangd

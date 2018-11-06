@@ -491,15 +491,6 @@ TEST(Dex, FuzzyFind) {
                                    "other::A"));
 }
 
-TEST(DexTest, DexDeduplicate) {
-  std::vector<Symbol> Symbols = {symbol("1"), symbol("2"), symbol("3"),
-                                 symbol("2") /* duplicate */};
-  FuzzyFindRequest Req;
-  Req.Query = "2";
-  Dex I(Symbols, RefSlab(), URISchemes);
-  EXPECT_THAT(match(I, Req), ElementsAre("2"));
-}
-
 TEST(DexTest, DexLimitedNumMatches) {
   auto I = Dex::build(generateNumSymbols(0, 100), RefSlab(), URISchemes);
   FuzzyFindRequest Req;
