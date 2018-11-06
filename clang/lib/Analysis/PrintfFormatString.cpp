@@ -127,7 +127,7 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
 
     do {
       StringRef Str(I, E - I);
-      std::string Match = "^[\t\n\v\f\r ]*(private|public)[\t\n\v\f\r ]*(,|})";
+      std::string Match = "^[[:space:]]*(private|public)[[:space:]]*(,|})";
       llvm::Regex R(Match);
       SmallVector<StringRef, 2> Matches;
 
