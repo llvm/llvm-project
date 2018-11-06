@@ -485,6 +485,7 @@ TEST(Dex, FuzzyFind) {
               UnorderedElementsAre("other::A", "other::ABC"));
   Req.Query = "";
   Req.Scopes = {};
+  Req.AnyScope = true;
   EXPECT_THAT(match(*Index, Req),
               UnorderedElementsAre("ns::ABC", "ns::BCD", "::ABC",
                                    "ns::nested::ABC", "other::ABC",
@@ -495,6 +496,7 @@ TEST(DexTest, DexLimitedNumMatches) {
   auto I = Dex::build(generateNumSymbols(0, 100), RefSlab(), URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "5";
+  Req.AnyScope = true;
   Req.Limit = 3;
   bool Incomplete;
   auto Matches = match(*I, Req, &Incomplete);
@@ -509,6 +511,7 @@ TEST(DexTest, FuzzyMatch) {
       RefSlab(), URISchemes);
   FuzzyFindRequest Req;
   Req.Query = "lol";
+  Req.AnyScope = true;
   Req.Limit = 2;
   EXPECT_THAT(match(*I, Req),
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
@@ -518,6 +521,7 @@ TEST(DexTest, ShortQuery) {
   auto I =
       Dex::build(generateSymbols({"OneTwoThreeFour"}), RefSlab(), URISchemes);
   FuzzyFindRequest Req;
+  Req.AnyScope = true;
   bool Incomplete;
 
   EXPECT_THAT(match(*I, Req, &Incomplete), ElementsAre("OneTwoThreeFour"));
@@ -540,6 +544,7 @@ TEST(DexTest, MatchQualifiedNamesWithoutSpecificScope) {
   auto I = Dex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab(),
                       URISchemes);
   FuzzyFindRequest Req;
+  Req.AnyScope = true;
   Req.Query = "y";
   EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
 }
@@ -584,9 +589,9 @@ TEST(DexTest, WildcardScope) {
   auto I =
       Dex::build(generateSymbols({"a::y1", "a::b::y2", "c::y3"}), RefSlab(), URISchemes);
   FuzzyFindRequest Req;
+  Req.AnyScope = true;
   Req.Query = "y";
   Req.Scopes = {"a::"};
-  Req.AnyScope = true;
   EXPECT_THAT(match(*I, Req),
               UnorderedElementsAre("a::y1", "a::b::y2", "c::y3"));
 }
@@ -626,6 +631,7 @@ TEST(DexTest, SymbolIndexOptionsFilter) {
   std::vector<Symbol> Symbols{CodeCompletionSymbol, NonCodeCompletionSymbol};
   Dex I(Symbols, RefSlab(), URISchemes);
   FuzzyFindRequest Req;
+  Req.AnyScope = true;
   Req.RestrictForCodeCompletion = false;
   EXPECT_THAT(match(I, Req), ElementsAre("Completion", "NoCompletion"));
   Req.RestrictForCodeCompletion = true;
@@ -642,6 +648,7 @@ TEST(DexTest, ProximityPathsBoosting) {
   Dex I(Symbols, RefSlab(), URISchemes);
 
   FuzzyFindRequest Req;
+  Req.AnyScope = true;
   Req.Query = "abc";
   // The best candidate can change depending on the proximity paths.
   Req.Limit = 1;

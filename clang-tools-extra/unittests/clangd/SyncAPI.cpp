@@ -130,6 +130,7 @@ runDocumentSymbols(ClangdServer &Server, PathRef File) {
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, StringRef Query) {
   FuzzyFindRequest Req;
   Req.Query = Query;
+  Req.AnyScope = true;
   return runFuzzyFind(Index, Req);
 }
 
