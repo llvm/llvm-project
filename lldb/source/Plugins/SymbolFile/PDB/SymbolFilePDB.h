@@ -192,7 +192,7 @@ private:
       const llvm::pdb::PDBSymbolCompiland &pdb_compiland,
       llvm::DenseMap<uint32_t, uint32_t> &index_map) const;
 
-  void FindTypesByName(const std::string &name,
+  void FindTypesByName(llvm::StringRef name,
                        const lldb_private::CompilerDeclContext *parent_decl_ctx,
                        uint32_t max_matches, lldb_private::TypeMap &types);
 

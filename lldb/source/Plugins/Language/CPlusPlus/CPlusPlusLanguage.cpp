@@ -41,6 +41,7 @@
 #include "LibCxxAtomic.h"
 #include "LibCxxVariant.h"
 #include "LibStdcpp.h"
+#include "MSVCUndecoratedNameParser.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -265,6 +266,10 @@ bool CPlusPlusLanguage::IsCPPMangledName(const char *name) {
 
 bool CPlusPlusLanguage::ExtractContextAndIdentifier(
     const char *name, llvm::StringRef &context, llvm::StringRef &identifier) {
+  if (MSVCUndecoratedNameParser::IsMSVCUndecoratedName(name))
+    return MSVCUndecoratedNameParser::ExtractContextAndIdentifier(name, context,
+                                                                  identifier);
+
   CPlusPlusNameParser parser(name);
   if (auto full_name = parser.ParseAsFullName()) {
     identifier = full_name.getValue().basename;

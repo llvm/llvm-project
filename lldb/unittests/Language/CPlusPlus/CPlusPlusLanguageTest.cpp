@@ -138,7 +138,14 @@ TEST(CPlusPlusLanguage, ExtractContextAndIdentifier) {
       {"std::vector<Class, std::allocator<Class>>"
        "::_M_emplace_back_aux<Class const&>",
        "std::vector<Class, std::allocator<Class>>",
-       "_M_emplace_back_aux<Class const&>"}};
+       "_M_emplace_back_aux<Class const&>"},
+      {"`anonymous namespace'::foo", "`anonymous namespace'", "foo"},
+      {"`operator<<A>'::`2'::B<0>::operator>",
+       "`operator<<A>'::`2'::B<0>",
+       "operator>"},
+      {"`anonymous namespace'::S::<<::__l2::Foo",
+       "`anonymous namespace'::S::<<::__l2",
+       "Foo"}};
 
   llvm::StringRef context, basename;
   for (const auto &test : test_cases) {
