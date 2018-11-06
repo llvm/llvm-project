@@ -72,18 +72,17 @@ private:
 
 public:
   OSLogBufferItem(Kind kind, const Expr *expr, CharUnits size, unsigned flags)
-      : TheKind(kind), TheExpr(expr), Size(size), Flags(flags) {}
+      : TheKind(kind), TheExpr(expr), Size(size), Flags(flags) {
+    assert(((Flags == 0) || (Flags == IsPrivate) || (Flags == IsPublic)) &&
+           "unexpected privacy flag");
+  }
 
   OSLogBufferItem(ASTContext &Ctx, CharUnits value, unsigned flags)
       : TheKind(CountKind), ConstValue(value),
         Size(Ctx.getTypeSizeInChars(Ctx.IntTy)), Flags(flags) {}
 
   unsigned char getDescriptorByte() const {
-    unsigned char result = 0;
-    if (getIsPrivate())
-      result |= IsPrivate;
-    if (getIsPublic())
-      result |= IsPublic;
+    unsigned char result = Flags;
     result |= ((unsigned)getKind()) << 4;
     return result;
   }
@@ -92,7 +91,6 @@ public:
 
   Kind getKind() const { return TheKind; }
   bool getIsPrivate() const { return (Flags & IsPrivate) != 0; }
-  bool getIsPublic() const { return (Flags & IsPublic) != 0; }
 
   const Expr *getExpr() const { return TheExpr; }
   CharUnits getConstValue() const { return ConstValue; }
@@ -118,11 +116,6 @@ public:
   bool hasPrivateItems() const {
     return llvm::any_of(
         Items, [](const OSLogBufferItem &Item) { return Item.getIsPrivate(); });
-  }
-
-  bool hasPublicItems() const {
-    return llvm::any_of(
-        Items, [](const OSLogBufferItem &Item) { return Item.getIsPublic(); });
   }
 
   bool hasNonScalar() const {

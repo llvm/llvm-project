@@ -440,7 +440,10 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   // CHECK: call void @__os_log_helper_1_2_1_8_34(
   __builtin_os_log_format(buf, "%{ xyz, public }s", "abc");
 
-  // The last privacy annotation in the string wins.
+  // CHECK: call void @__os_log_helper_1_3_1_8_33(
+  __builtin_os_log_format(buf, "%{ xyz, private }s", "abc");
+
+  // The strictest privacy annotation in the string wins.
 
   // CHECK: call void @__os_log_helper_1_3_1_8_33(
   __builtin_os_log_format(buf, "%{ private, public, private, public}s", "abc");
