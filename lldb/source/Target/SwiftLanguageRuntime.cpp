@@ -40,6 +40,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Section.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObjectConstResult.h"
@@ -82,20 +83,36 @@
 using namespace lldb;
 using namespace lldb_private;
 
-//----------------------------------------------------------------------
-// Destructor
-//----------------------------------------------------------------------
-SwiftLanguageRuntime::~SwiftLanguageRuntime() {
-  delete reflection_ctx;
-  reflection_ctx = nullptr;
+SwiftLanguageRuntime::~SwiftLanguageRuntime() = default;
+
+static bool HasReflectionInfo(ObjectFile *obj_file) {
+  auto findSectionInObject = [&](std::string name) {
+    ConstString section_name(name);
+    SectionSP section_sp =
+        obj_file->GetSectionList()->FindSectionByName(section_name);
+    if (section_sp)
+      return true;
+    return false;
+  };
+
+  bool hasReflectionSection = false;
+  hasReflectionSection |= findSectionInObject("__swift5_fieldmd");
+  hasReflectionSection |= findSectionInObject("__swift5_assocty");
+  hasReflectionSection |= findSectionInObject("__swift5_builtin");
+  hasReflectionSection |= findSectionInObject("__swift5_capture");
+  hasReflectionSection |= findSectionInObject("__swift5_typeref");
+  hasReflectionSection |= findSectionInObject("__swift5_reflstr");
+  return hasReflectionSection;
 }
 
 void SwiftLanguageRuntime::SetupReflection() {
-  reflection_ctx = new NativeReflectionContext(this->GetMemoryReader());
+  reflection_ctx.reset(new NativeReflectionContext(this->GetMemoryReader()));
 
   auto &target = m_process->GetTarget();
   auto M = target.GetExecutableModule();
   auto *obj_file = M->GetObjectFile();
+  if (!obj_file)
+      return;
   Address start_address = obj_file->GetHeaderAddress();
   auto load_ptr = static_cast<uintptr_t>(start_address.GetLoadAddress(&target));
 
@@ -103,19 +120,21 @@ void SwiftLanguageRuntime::SetupReflection() {
   if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
     return;
 
-  reflection_ctx = new NativeReflectionContext(this->GetMemoryReader());
+  reflection_ctx.reset(new NativeReflectionContext(this->GetMemoryReader()));
   reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
 
   auto module_list = GetTargetRef().GetImages();
   module_list.ForEach([&](const ModuleSP &module_sp) -> bool {
-    std::string module_path = module_sp->GetFileSpec().GetPath();
     auto *obj_file = module_sp->GetObjectFile();
+    if (!obj_file)
+        return false;
     Address start_address = obj_file->GetHeaderAddress();
     auto load_ptr = static_cast<uintptr_t>(
         start_address.GetLoadAddress(&(m_process->GetTarget())));
     if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
       return false;
-    reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
+    if (HasReflectionInfo(obj_file))
+      reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
     return true;
   });
 }
@@ -191,14 +210,18 @@ void SwiftLanguageRuntime::SetupExclusivity() {
 
 void SwiftLanguageRuntime::ModulesDidLoad(const ModuleList &module_list) {
   module_list.ForEach([&](const ModuleSP &module_sp) -> bool {
-    std::string module_path = module_sp->GetFileSpec().GetPath();
-    auto *obj_file = module_sp->GetObjectFile();
+  auto *obj_file = module_sp->GetObjectFile();
+    if (!obj_file)
+        return true;
     Address start_address = obj_file->GetHeaderAddress();
     auto load_ptr = static_cast<uintptr_t>(
         start_address.GetLoadAddress(&(m_process->GetTarget())));
     if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
       return false;
-    reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
+    if (!reflection_ctx)
+      return false;
+    if (HasReflectionInfo(obj_file))
+      reflection_ctx->addImage(swift::remote::RemoteAddress(load_ptr));
     return true;
   });
 }
