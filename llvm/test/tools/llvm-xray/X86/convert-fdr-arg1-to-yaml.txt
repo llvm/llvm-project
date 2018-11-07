@@ -8,6 +8,6 @@
 ; CHECK-NEXT:   nonstop-tsc:     true
 ; CHECK-NEXT:   cycle-frequency: 3500000000
 ; CHECK-NEXT: records:
-; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', args: [ 1 ], cpu: 49, thread: 14648, kind: function-enter-arg, tsc: 18828908666543318 }
-; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 49, thread: 14648, kind: function-exit, tsc: 18828908666595604 }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', args: [ 1 ], cpu: 49, thread: 14648, kind: function-enter-arg, tsc: 18828908666543318, data: '' }
+; CHECK-NEXT:   - { type: 0, func-id: 1, function: '1', cpu: 49, thread: 14648, kind: function-exit, tsc: 18828908666595604, data: '' }
 ; CHECK-NEXT: ...

@@ -20,7 +20,7 @@
 
 int32_t implicitSignChange(uint32_t argc) {
   return argc; // BOOM
-// CHECK: {{.*}}integer-sign-change-blacklist.c:[[@LINE-1]]:10: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 4294967295 (32-bit, unsigned) to type 'int32_t' (aka 'int') changed the value to -1 (32-bit, signed)
+// CHECK: {{.*}}integer-sign-change-blacklist.c:[[@LINE-1]]:10: runtime error: implicit conversion from type '{{.*}}' (aka 'unsigned int') of value 4294967295 (32-bit, unsigned) to type '{{.*}}' (aka 'int') changed the value to -1 (32-bit, signed)
 }
 
 int main(int argc, char **argv) {

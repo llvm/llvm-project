@@ -279,7 +279,7 @@ public:
 
   /// Return the preferred vector type legalization action.
   virtual TargetLoweringBase::LegalizeTypeAction
-  getPreferredVectorAction(EVT VT) const {
+  getPreferredVectorAction(MVT VT) const {
     // The default action for one element vectors is to scalarize
     if (VT.getVectorNumElements() == 1)
       return TypeScalarizeVector;
@@ -821,6 +821,10 @@ public:
       case ISD::STRICT_FNEARBYINT: EqOpc = ISD::FNEARBYINT; break;
       case ISD::STRICT_FMAXNUM: EqOpc = ISD::FMAXNUM; break;
       case ISD::STRICT_FMINNUM: EqOpc = ISD::FMINNUM; break;
+      case ISD::STRICT_FCEIL: EqOpc = ISD::FCEIL; break;
+      case ISD::STRICT_FFLOOR: EqOpc = ISD::FFLOOR; break;
+      case ISD::STRICT_FROUND: EqOpc = ISD::FROUND; break;
+      case ISD::STRICT_FTRUNC: EqOpc = ISD::FTRUNC; break;
     }
 
     auto Action = getOperationAction(EqOpc, VT);

@@ -48,10 +48,21 @@ namespace __sanitizer {
   DECLARE__REAL(ret_type, func, __VA_ARGS__); \
   ret_type internal_ ## func(__VA_ARGS__)
 
+#if !defined(_LP64) && _FILE_OFFSET_BITS == 64
+#define _REAL64(func) _ ## func ## 64
+#else
+#define _REAL64(func) _REAL(func)
+#endif
+#define DECLARE__REAL64(ret_type, func, ...) \
+  extern "C" ret_type _REAL64(func)(__VA_ARGS__)
+#define DECLARE__REAL_AND_INTERNAL64(ret_type, func, ...) \
+  DECLARE__REAL64(ret_type, func, __VA_ARGS__); \
+  ret_type internal_ ## func(__VA_ARGS__)
+
 // ---------------------- sanitizer_libc.h
-DECLARE__REAL_AND_INTERNAL(uptr, mmap, void *addr, uptr /*size_t*/ length,
-                           int prot, int flags, int fd, OFF_T offset) {
-  return (uptr)_REAL(mmap)(addr, length, prot, flags, fd, offset);
+DECLARE__REAL_AND_INTERNAL64(uptr, mmap, void *addr, uptr /*size_t*/ length,
+                             int prot, int flags, int fd, OFF_T offset) {
+  return (uptr)_REAL64(mmap)(addr, length, prot, flags, fd, offset);
 }
 
 DECLARE__REAL_AND_INTERNAL(uptr, munmap, void *addr, uptr length) {
@@ -66,14 +77,14 @@ DECLARE__REAL_AND_INTERNAL(uptr, close, fd_t fd) {
   return _REAL(close)(fd);
 }
 
-extern "C" int _REAL(open)(const char *, int, ...);
+extern "C" int _REAL64(open)(const char *, int, ...);
 
 uptr internal_open(const char *filename, int flags) {
-  return _REAL(open)(filename, flags);
+  return _REAL64(open)(filename, flags);
 }
 
 uptr internal_open(const char *filename, int flags, u32 mode) {
-  return _REAL(open)(filename, flags, mode);
+  return _REAL64(open)(filename, flags, mode);
 }
 
 uptr OpenFile(const char *filename, bool write) {
@@ -94,16 +105,16 @@ DECLARE__REAL_AND_INTERNAL(uptr, ftruncate, fd_t fd, uptr size) {
   return ftruncate(fd, size);
 }
 
-DECLARE__REAL_AND_INTERNAL(uptr, stat, const char *path, void *buf) {
-  return _REAL(stat)(path, (struct stat *)buf);
+DECLARE__REAL_AND_INTERNAL64(uptr, stat, const char *path, void *buf) {
+  return _REAL64(stat)(path, (struct stat *)buf);
 }
 
-DECLARE__REAL_AND_INTERNAL(uptr, lstat, const char *path, void *buf) {
-  return _REAL(lstat)(path, (struct stat *)buf);
+DECLARE__REAL_AND_INTERNAL64(uptr, lstat, const char *path, void *buf) {
+  return _REAL64(lstat)(path, (struct stat *)buf);
 }
 
-DECLARE__REAL_AND_INTERNAL(uptr, fstat, fd_t fd, void *buf) {
-  return _REAL(fstat)(fd, (struct stat *)buf);
+DECLARE__REAL_AND_INTERNAL64(uptr, fstat, fd_t fd, void *buf) {
+  return _REAL64(fstat)(fd, (struct stat *)buf);
 }
 
 uptr internal_filesize(fd_t fd) {
@@ -153,13 +164,13 @@ DECLARE__REAL_AND_INTERNAL(uptr, getpid, void) {
 }
 
 // FIXME: This might be wrong: _getdents doesn't take a struct linux_dirent *.
-DECLARE__REAL_AND_INTERNAL(uptr, getdents, fd_t fd, struct linux_dirent *dirp,
-                           unsigned int count) {
-  return _REAL(getdents)(fd, dirp, count);
+DECLARE__REAL_AND_INTERNAL64(uptr, getdents, fd_t fd, struct linux_dirent *dirp,
+                             unsigned int count) {
+  return _REAL64(getdents)(fd, dirp, count);
 }
 
-DECLARE__REAL_AND_INTERNAL(uptr, lseek, fd_t fd, OFF_T offset, int whence) {
-  return _REAL(lseek)(fd, offset, whence);
+DECLARE__REAL_AND_INTERNAL64(uptr, lseek, fd_t fd, OFF_T offset, int whence) {
+  return _REAL64(lseek)(fd, offset, whence);
 }
 
 // FIXME: This might be wrong: _sigfillset doesn't take a

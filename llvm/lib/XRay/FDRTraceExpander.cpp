@@ -12,10 +12,11 @@ namespace llvm {
 namespace xray {
 
 void TraceExpander::resetCurrentRecord() {
-  if (BuildingFunction)
+  if (BuildingRecord)
     C(CurrentRecord);
-  BuildingFunction = false;
+  BuildingRecord = false;
   CurrentRecord.CallArgs.clear();
+  CurrentRecord.Data.clear();
 }
 
 Error TraceExpander::visit(BufferExtents &) {
@@ -36,9 +37,18 @@ Error TraceExpander::visit(TSCWrapRecord &R) {
   return Error::success();
 }
 
-Error TraceExpander::visit(CustomEventRecord &) {
-  // TODO: Support custom event records in the future.
+Error TraceExpander::visit(CustomEventRecord &R) {
   resetCurrentRecord();
+  if (!IgnoringRecords) {
+    CurrentRecord.TSC = R.tsc();
+    CurrentRecord.CPU = R.cpu();
+    CurrentRecord.PId = PID;
+    CurrentRecord.TId = TID;
+    CurrentRecord.Type = RecordTypes::CUSTOM_EVENT;
+    std::copy(R.data().begin(), R.data().end(),
+              std::back_inserter(CurrentRecord.Data));
+    BuildingRecord = true;
+  }
   return Error::success();
 }
 
@@ -78,7 +88,7 @@ Error TraceExpander::visit(FunctionRecord &R) {
     CurrentRecord.PId = PID;
     CurrentRecord.TId = TID;
     CurrentRecord.CPU = CPUId;
-    BuildingFunction = true;
+    BuildingRecord = true;
   }
   return Error::success();
 }

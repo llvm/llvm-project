@@ -1,7 +1,7 @@
 ; RUN: opt < %s -mtriple=x86_64-- -inferattrs -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-- -passes=inferattrs -S | FileCheck %s
 ; RUN: opt < %s -mtriple=x86_64-apple-macosx10.8.0 -inferattrs -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-DARWIN %s
-; RUN: opt < %s -mtriple=x86_64-unknown-linux -inferattrs -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LINUX %s
+; RUN: opt < %s -mtriple=x86_64-unknown-linux-gnu -inferattrs -S | FileCheck -check-prefix=CHECK -check-prefix=CHECK-LINUX %s
 ; RUN: opt < %s -mtriple=nvptx -inferattrs -S | FileCheck -check-prefix=CHECK-NVPTX %s
 
 ; operator new routines

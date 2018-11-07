@@ -1,5 +1,6 @@
 ; Make sure that absolute source dir is detected correctly regardless of the platform.
-; REQUIRES: object-emission
+; REQUIRES: object-emission, default_triple
+
 ; On powerpc llvm-nm describes win_func as a global variable, not a function. It breaks the test.
 ; It is not essential to DWARF path handling code we're testing here.
 ; UNSUPPORTED: powerpc

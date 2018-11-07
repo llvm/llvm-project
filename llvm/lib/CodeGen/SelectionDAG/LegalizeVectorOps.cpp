@@ -308,6 +308,10 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::STRICT_FNEARBYINT:
   case ISD::STRICT_FMAXNUM:
   case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FTRUNC:
     // These pseudo-ops get legalized as if they were their non-strict
     // equivalent.  For instance, if ISD::FSQRT is legal then ISD::STRICT_FSQRT
     // is also legal, but if ISD::FSQRT requires expansion then so does
@@ -758,6 +762,10 @@ SDValue VectorLegalizer::Expand(SDValue Op) {
   case ISD::STRICT_FNEARBYINT:
   case ISD::STRICT_FMAXNUM:
   case ISD::STRICT_FMINNUM:
+  case ISD::STRICT_FCEIL:
+  case ISD::STRICT_FFLOOR:
+  case ISD::STRICT_FROUND:
+  case ISD::STRICT_FTRUNC:
     return ExpandStrictFPOp(Op);
   default:
     return DAG.UnrollVectorOp(Op.getNode());
@@ -872,7 +880,7 @@ SDValue VectorLegalizer::ExpandSIGN_EXTEND_VECTOR_INREG(SDValue Op) {
 
   // First build an any-extend node which can be legalized above when we
   // recurse through it.
-  Op = DAG.getAnyExtendVectorInReg(Src, DL, VT);
+  Op = DAG.getNode(ISD::ANY_EXTEND_VECTOR_INREG, DL, VT, Src);
 
   // Now we need sign extend. Do this by shifting the elements. Even if these
   // aren't legal operations, they have a better chance of being legalized

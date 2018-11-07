@@ -786,24 +786,6 @@ public:
   /// value assuming it was the smaller SrcTy value.
   SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
 
-  /// Return an operation which will any-extend the low lanes of the operand
-  /// into the specified vector type. For example,
-  /// this can convert a v16i8 into a v4i32 by any-extending the low four
-  /// lanes of the operand from i8 to i32.
-  SDValue getAnyExtendVectorInReg(SDValue Op, const SDLoc &DL, EVT VT);
-
-  /// Return an operation which will sign extend the low lanes of the operand
-  /// into the specified vector type. For example,
-  /// this can convert a v16i8 into a v4i32 by sign extending the low four
-  /// lanes of the operand from i8 to i32.
-  SDValue getSignExtendVectorInReg(SDValue Op, const SDLoc &DL, EVT VT);
-
-  /// Return an operation which will zero extend the low lanes of the operand
-  /// into the specified vector type. For example,
-  /// this can convert a v16i8 into a v4i32 by zero extending the low four
-  /// lanes of the operand from i8 to i32.
-  SDValue getZeroExtendVectorInReg(SDValue Op, const SDLoc &DL, EVT VT);
-
   /// Convert Op, which must be of integer type, to the integer type VT,
   /// by using an extension appropriate for the target's
   /// BooleanContent for type OpVT or truncating it.

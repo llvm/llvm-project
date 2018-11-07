@@ -52,6 +52,7 @@ runDocumentSymbols(ClangdServer &Server, PathRef File);
 
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, StringRef Query);
 SymbolSlab runFuzzyFind(const SymbolIndex &Index, const FuzzyFindRequest &Req);
+RefSlab getRefs(const SymbolIndex &Index, SymbolID ID);
 
 } // namespace clangd
 } // namespace clang

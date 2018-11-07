@@ -16,12 +16,9 @@ add_lldb_library(lldbSymbol
   DWARFCallFrameInfo.cpp
   Function.cpp
   FuncUnwinders.cpp
-  GoASTContext.cpp
-  JavaASTContext.cpp
   LineEntry.cpp
   LineTable.cpp
   ObjectFile.cpp
-  OCamlASTContext.cpp
   Symbol.cpp
   SymbolContext.cpp
   SymbolFile.cpp
@@ -29,7 +26,7 @@ add_lldb_library(lldbSymbol
   Symtab.cpp
   Type.cpp
   TypeList.cpp
-  TypeMap.cpp 
+  TypeMap.cpp
   TypeSystem.cpp
   UnwindPlan.cpp
   UnwindTable.cpp
@@ -47,7 +44,6 @@ add_lldb_library(lldbSymbol
     lldbTarget
     lldbUtility
     lldbPluginExpressionParserClang
-    lldbPluginExpressionParserGo
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
     lldbPluginCPlusPlusLanguage

@@ -34,6 +34,22 @@ define i32 @bextr32_a0(i32 %val, i32 %numskipbits, i32 %numlowbits) nounwind {
   ret i32 %masked
 }
 
+define i32 @bextr32_a0_arithmetic(i32 %val, i32 %numskipbits, i32 %numlowbits) nounwind {
+; CHECK-LABEL: bextr32_a0_arithmetic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w9, wzr, #0x1
+; CHECK-NEXT:    lsl w9, w9, w2
+; CHECK-NEXT:    asr w8, w0, w1
+; CHECK-NEXT:    sub w9, w9, #1 // =1
+; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    ret
+  %shifted = ashr i32 %val, %numskipbits
+  %onebit = shl i32 1, %numlowbits
+  %mask = add nsw i32 %onebit, -1
+  %masked = and i32 %mask, %shifted
+  ret i32 %masked
+}
+
 define i32 @bextr32_a1_indexzext(i32 %val, i8 zeroext %numskipbits, i8 zeroext %numlowbits) nounwind {
 ; CHECK-LABEL: bextr32_a1_indexzext:
 ; CHECK:       // %bb.0:
@@ -118,6 +134,22 @@ define i64 @bextr64_a0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
 ; CHECK-NEXT:    and x0, x9, x8
 ; CHECK-NEXT:    ret
   %shifted = lshr i64 %val, %numskipbits
+  %onebit = shl i64 1, %numlowbits
+  %mask = add nsw i64 %onebit, -1
+  %masked = and i64 %mask, %shifted
+  ret i64 %masked
+}
+
+define i64 @bextr64_a0_arithmetic(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
+; CHECK-LABEL: bextr64_a0_arithmetic:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr w9, wzr, #0x1
+; CHECK-NEXT:    lsl x9, x9, x2
+; CHECK-NEXT:    asr x8, x0, x1
+; CHECK-NEXT:    sub x9, x9, #1 // =1
+; CHECK-NEXT:    and x0, x9, x8
+; CHECK-NEXT:    ret
+  %shifted = ashr i64 %val, %numskipbits
   %onebit = shl i64 1, %numlowbits
   %mask = add nsw i64 %onebit, -1
   %masked = and i64 %mask, %shifted

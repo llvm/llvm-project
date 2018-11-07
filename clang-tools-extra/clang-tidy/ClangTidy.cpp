@@ -441,7 +441,9 @@ DiagnosticBuilder ClangTidyCheck::diag(SourceLocation Loc, StringRef Message,
 }
 
 void ClangTidyCheck::run(const ast_matchers::MatchFinder::MatchResult &Result) {
-  Context->setSourceManager(Result.SourceManager);
+  // For historical reasons, checks don't implement the MatchFinder run()
+  // callback directly. We keep the run()/check() distinction to avoid interface
+  // churn, and to allow us to add cross-cutting logic in the future.
   check(Result);
 }
 

@@ -352,8 +352,9 @@ Error loadYAMLLog(StringRef Data, XRayFileHeader &FileHeader,
   Records.clear();
   std::transform(Trace.Records.begin(), Trace.Records.end(),
                  std::back_inserter(Records), [&](const YAMLXRayRecord &R) {
-                   return XRayRecord{R.RecordType, R.CPU, R.Type, R.FuncId,
-                                     R.TSC,        R.TId, R.PId,  R.CallArgs};
+                   return XRayRecord{R.RecordType, R.CPU,      R.Type,
+                                     R.FuncId,     R.TSC,      R.TId,
+                                     R.PId,        R.CallArgs, R.Data};
                  });
   return Error::success();
 }

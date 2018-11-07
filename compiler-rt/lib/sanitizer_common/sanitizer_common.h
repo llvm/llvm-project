@@ -224,6 +224,7 @@ u32 GetUid();
 void ReExec();
 void CheckASLR();
 char **GetArgv();
+char **GetEnviron();
 void PrintCmdline();
 bool StackSizeIsUnlimited();
 uptr GetStackSizeLimitInBytes();

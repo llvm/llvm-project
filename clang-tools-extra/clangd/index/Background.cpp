@@ -13,11 +13,19 @@
 #include "Logger.h"
 #include "Threading.h"
 #include "Trace.h"
+#include "URI.h"
 #include "index/IndexAction.h"
 #include "index/MemIndex.h"
 #include "index/Serialization.h"
+#include "index/SymbolCollector.h"
+#include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SHA1.h"
 #include <random>
+#include <string>
 
 using namespace llvm;
 namespace clang {
@@ -125,6 +133,142 @@ void BackgroundIndex::enqueueLocked(tooling::CompileCommand Cmd) {
       std::move(Cmd)));
 }
 
+static BackgroundIndex::FileDigest digest(StringRef Content) {
+  return SHA1::hash({(const uint8_t *)Content.data(), Content.size()});
+}
+
+static Optional<BackgroundIndex::FileDigest> digestFile(const SourceManager &SM,
+                                                        FileID FID) {
+  bool Invalid = false;
+  StringRef Content = SM.getBufferData(FID, &Invalid);
+  if (Invalid)
+    return None;
+  return digest(Content);
+}
+
+// Resolves URI to file paths with cache.
+class URIToFileCache {
+public:
+  URIToFileCache(llvm::StringRef HintPath) : HintPath(HintPath) {}
+
+  llvm::StringRef resolve(llvm::StringRef FileURI) {
+    auto I = URIToPathCache.try_emplace(FileURI);
+    if (I.second) {
+      auto U = URI::parse(FileURI);
+      if (!U) {
+        elog("Failed to parse URI {0}: {1}", FileURI, U.takeError());
+        assert(false && "Failed to parse URI");
+        return "";
+      }
+      auto Path = URI::resolve(*U, HintPath);
+      if (!Path) {
+        elog("Failed to resolve URI {0}: {1}", FileURI, Path.takeError());
+        assert(false && "Failed to resolve URI");
+        return "";
+      }
+      I.first->second = *Path;
+    }
+    return I.first->second;
+  }
+
+private:
+  std::string HintPath;
+  llvm::StringMap<std::string> URIToPathCache;
+};
+
+/// Given index results from a TU, only update files in \p FilesToUpdate.
+void BackgroundIndex::update(StringRef MainFile, SymbolSlab Symbols,
+                             RefSlab Refs,
+                             const StringMap<FileDigest> &FilesToUpdate) {
+  // Partition symbols/references into files.
+  struct File {
+    DenseSet<const Symbol *> Symbols;
+    DenseSet<const Ref *> Refs;
+  };
+  StringMap<File> Files;
+  URIToFileCache URICache(MainFile);
+  for (const auto &Sym : Symbols) {
+    if (Sym.CanonicalDeclaration) {
+      auto DeclPath = URICache.resolve(Sym.CanonicalDeclaration.FileURI);
+      if (FilesToUpdate.count(DeclPath) != 0)
+        Files[DeclPath].Symbols.insert(&Sym);
+    }
+    // For symbols with different declaration and definition locations, we store
+    // the full symbol in both the header file and the implementation file, so
+    // that merging can tell the preferred symbols (from canonical headers) from
+    // other symbols (e.g. forward declarations).
+    if (Sym.Definition &&
+        Sym.Definition.FileURI != Sym.CanonicalDeclaration.FileURI) {
+      auto DefPath = URICache.resolve(Sym.Definition.FileURI);
+      if (FilesToUpdate.count(DefPath) != 0)
+        Files[DefPath].Symbols.insert(&Sym);
+    }
+  }
+  DenseMap<const Ref *, SymbolID> RefToIDs;
+  for (const auto &SymRefs : Refs) {
+    for (const auto &R : SymRefs.second) {
+      auto Path = URICache.resolve(R.Location.FileURI);
+      if (FilesToUpdate.count(Path) != 0) {
+        auto &F = Files[Path];
+        RefToIDs[&R] = SymRefs.first;
+        F.Refs.insert(&R);
+      }
+    }
+  }
+
+  // Build and store new slabs for each updated file.
+  for (const auto &F : Files) {
+    StringRef Path = F.first();
+    vlog("Update symbols in {0}", Path);
+    SymbolSlab::Builder Syms;
+    RefSlab::Builder Refs;
+    for (const auto *S : F.second.Symbols)
+      Syms.insert(*S);
+    for (const auto *R : F.second.Refs)
+      Refs.insert(RefToIDs[R], *R);
+
+    std::lock_guard<std::mutex> Lock(DigestsMu);
+    // This can override a newer version that is added in another thread,
+    // if this thread sees the older version but finishes later. This should be
+    // rare in practice.
+    IndexedFileDigests[Path] = FilesToUpdate.lookup(Path);
+    IndexedSymbols.update(Path,
+                          make_unique<SymbolSlab>(std::move(Syms).build()),
+                          make_unique<RefSlab>(std::move(Refs).build()));
+  }
+}
+
+// Creates a filter to not collect index results from files with unchanged
+// digests.
+// \p FileDigests contains file digests for the current indexed files, and all changed files will be added to \p FilesToUpdate.
+decltype(SymbolCollector::Options::FileFilter) createFileFilter(
+    const llvm::StringMap<BackgroundIndex::FileDigest> &FileDigests,
+    llvm::StringMap<BackgroundIndex::FileDigest> &FilesToUpdate) {
+  return [&FileDigests, &FilesToUpdate](const SourceManager &SM, FileID FID) {
+    StringRef Path;
+    if (const auto *F = SM.getFileEntryForID(FID))
+      Path = F->getName();
+    if (Path.empty())
+      return false; // Skip invalid files.
+    SmallString<128> AbsPath(Path);
+    if (std::error_code EC =
+            SM.getFileManager().getVirtualFileSystem()->makeAbsolute(AbsPath)) {
+      elog("Warning: could not make absolute file: {0}", EC.message());
+      return false; // Skip files without absolute path.
+    }
+    sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
+    auto Digest = digestFile(SM, FID);
+    if (!Digest)
+      return false;
+    auto D = FileDigests.find(AbsPath);
+    if (D != FileDigests.end() && D->second == Digest)
+      return false; // Skip files that haven't changed.
+
+    FilesToUpdate[AbsPath] = *Digest;
+    return true;
+  };
+}
+
 Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   trace::Span Tracer("BackgroundIndex");
   SPAN_ATTACH(Tracer, "file", Cmd.Filename);
@@ -140,12 +284,18 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   auto Buf = FS->getBufferForFile(AbsolutePath);
   if (!Buf)
     return errorCodeToError(Buf.getError());
-  StringRef Contents = Buf->get()->getBuffer();
-  auto Hash = SHA1::hash({(const uint8_t *)Contents.data(), Contents.size()});
+  auto Hash = digest(Buf->get()->getBuffer());
 
-  if (FileHash.lookup(AbsolutePath) == Hash) {
-    vlog("No need to index {0}, already up to date", AbsolutePath);
-    return Error::success();
+  // Take a snapshot of the digests to avoid locking for each file in the TU.
+  llvm::StringMap<FileDigest> DigestsSnapshot;
+  {
+    std::lock_guard<std::mutex> Lock(DigestsMu);
+    if (IndexedFileDigests.lookup(AbsolutePath) == Hash) {
+      vlog("No need to index {0}, already up to date", AbsolutePath);
+      return Error::success();
+    }
+
+    DigestsSnapshot = IndexedFileDigests;
   }
 
   log("Indexing {0}", Cmd.Filename, toHex(Hash));
@@ -166,9 +316,11 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
                              "Couldn't build compiler instance");
 
   SymbolCollector::Options IndexOpts;
+  IndexOpts.URISchemes = URISchemes;
+  StringMap<FileDigest> FilesToUpdate;
+  IndexOpts.FileFilter = createFileFilter(DigestsSnapshot, FilesToUpdate);
   SymbolSlab Symbols;
   RefSlab Refs;
-  IndexFileIn IndexData;
   auto Action = createStaticIndexingAction(
       IndexOpts, [&](SymbolSlab S) { Symbols = std::move(S); },
       [&](RefSlab R) { Refs = std::move(R); });
@@ -190,16 +342,20 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
       Symbols.size(), Refs.numRefs());
   SPAN_ATTACH(Tracer, "symbols", int(Symbols.size()));
   SPAN_ATTACH(Tracer, "refs", int(Refs.numRefs()));
-  // FIXME: partition the symbols by file rather than TU, to avoid duplication.
-  IndexedSymbols.update(AbsolutePath,
-                        llvm::make_unique<SymbolSlab>(std::move(Symbols)),
-                        llvm::make_unique<RefSlab>(std::move(Refs)));
-  FileHash[AbsolutePath] = Hash;
+  update(AbsolutePath, std::move(Symbols), std::move(Refs), FilesToUpdate);
+  {
+    // Make sure hash for the main file is always updated even if there is no
+    // index data in it.
+    std::lock_guard<std::mutex> Lock(DigestsMu);
+    IndexedFileDigests[AbsolutePath] = Hash;
+  }
 
   // FIXME: this should rebuild once-in-a-while, not after every file.
   //       At that point we should use Dex, too.
   vlog("Rebuilding automatic index");
-  reset(IndexedSymbols.buildIndex(IndexType::Light, URISchemes));
+  reset(IndexedSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge,
+                                  URISchemes));
+
   return Error::success();
 }
 

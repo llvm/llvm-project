@@ -15,6 +15,7 @@
 #include "index/FileIndex.h"
 #include "index/Index.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/Threading.h"
 #include <condition_variable>
@@ -34,8 +35,7 @@ class BackgroundIndex : public SwapIndex {
 public:
   // FIXME: resource-dir injection should be hoisted somewhere common.
   BackgroundIndex(Context BackgroundContext, StringRef ResourceDir,
-                  const FileSystemProvider &,
-                  ArrayRef<std::string> URISchemes = {},
+                  const FileSystemProvider &, ArrayRef<std::string> URISchemes,
                   size_t ThreadPoolSize = llvm::hardware_concurrency());
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
@@ -54,7 +54,13 @@ public:
   // Wait until the queue is empty, to allow deterministic testing.
   void blockUntilIdleForTest();
 
+  using FileDigest = decltype(llvm::SHA1::hash({}));
+
 private:
+  /// Given index results from a TU, only update files in \p FilesToUpdate.
+  void update(llvm::StringRef MainFile, SymbolSlab Symbols, RefSlab Refs,
+              const llvm::StringMap<FileDigest> &FilesToUpdate);
+
   // configuration
   std::string ResourceDir;
   const FileSystemProvider &FSProvider;
@@ -63,9 +69,10 @@ private:
 
   // index state
   llvm::Error index(tooling::CompileCommand);
-  FileSymbols IndexedSymbols; // Index contents.
-  using Hash = decltype(llvm::SHA1::hash({}));
-  llvm::StringMap<Hash> FileHash; // Digest of indexed file.
+
+  FileSymbols IndexedSymbols;
+  llvm::StringMap<FileDigest> IndexedFileDigests; // Key is absolute file path.
+  std::mutex DigestsMu;
 
   // queue management
   using Task = std::function<void()>;

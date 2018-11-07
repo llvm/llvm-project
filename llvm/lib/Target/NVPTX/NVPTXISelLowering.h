@@ -511,7 +511,7 @@ public:
   }
 
   TargetLoweringBase::LegalizeTypeAction
-  getPreferredVectorAction(EVT VT) const override;
+  getPreferredVectorAction(MVT VT) const override;
 
   // Get the degree of precision we want from 32-bit floating point division
   // operations.

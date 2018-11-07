@@ -1170,7 +1170,7 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
 }
 
 TargetLoweringBase::LegalizeTypeAction
-NVPTXTargetLowering::getPreferredVectorAction(EVT VT) const {
+NVPTXTargetLowering::getPreferredVectorAction(MVT VT) const {
   if (VT.getVectorNumElements() != 1 && VT.getScalarType() == MVT::i1)
     return TypeSplitVector;
   if (VT == MVT::v2f16)

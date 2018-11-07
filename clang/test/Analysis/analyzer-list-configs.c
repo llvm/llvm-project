@@ -23,7 +23,8 @@
 // CHECK:                   integers are signed, greater than or equal
 // CHECK:                   to the quarter of the minimum value of the
 // CHECK:                   type and less than or equal to the quarter
-// CHECK:                   of the maximum value of that type. A + n
+// CHECK:                   of the maximum value of that type. A
+// CHECK:                   + n
 // CHECK:                   <OP> B + m becomes A - B <OP> m - n, where
 // CHECK:                   A and B symbolic, n and m are integers.
 // CHECK:                   <OP> is any of '==', '!=', '<', '<=', '>',

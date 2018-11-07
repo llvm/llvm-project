@@ -169,6 +169,10 @@
   rdpgpr $3, $9            # CHECK: $3, $9              # encoding: [0x00,0x69,0xe1,0x7c]
   sdbbp                    # CHECK: sdbbp               # encoding: [0x00,0x00,0xdb,0x7c]
   sdbbp 34                 # CHECK: sdbbp 34            # encoding: [0x00,0x22,0xdb,0x7c]
+  sigrie                   # CHECK: sigrie              # encoding: [0x00,0x00,0x00,0x3f]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} SIGRIE_MM
+  sigrie    257            # CHECK: sigrie 257          # encoding: [0x00,0x00,0x40,0x7f]
+                           # CHECK-NEXT:                # <MCInst #{{[0-9]+}} SIGRIE_MM
   xor $3, $4, $5           # CHECK: xor $3, $4, $5      # encoding: [0x00,0xa4,0x1b,0x10]
   xori $3, $4, 1234        # CHECK: xori $3, $4, 1234   # encoding: [0x70,0x64,0x04,0xd2]
   sw $5, 4($6)             # CHECK: sw $5, 4($6)        # encoding: [0xf8,0xa6,0x00,0x04]

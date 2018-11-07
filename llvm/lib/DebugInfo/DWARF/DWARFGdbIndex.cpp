@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -31,6 +32,16 @@ void DWARFGdbIndex::dumpCUList(raw_ostream &OS) const {
   for (const CompUnitEntry &CU : CuList)
     OS << format("    %d: Offset = 0x%llx, Length = 0x%llx\n", I++, CU.Offset,
                  CU.Length);
+}
+
+void DWARFGdbIndex::dumpTUList(raw_ostream &OS) const {
+  OS << formatv("\n  Types CU list offset = {0:x}, has {1} entries:\n",
+                TuListOffset, TuList.size());
+  uint32_t I = 0;
+  for (const TypeUnitEntry &TU : TuList)
+    OS << formatv("    {0}: offset = {1:x8}, type_offset = {2:x8}, "
+                  "type_signature = {3:x16}\n",
+                  I++, TU.Offset, TU.TypeOffset, TU.TypeSignature);
 }
 
 void DWARFGdbIndex::dumpAddressArea(raw_ostream &OS) const {
@@ -94,6 +105,7 @@ void DWARFGdbIndex::dump(raw_ostream &OS) {
   if (HasContent) {
     OS << "  Version = " << Version << '\n';
     dumpCUList(OS);
+    dumpTUList(OS);
     dumpAddressArea(OS);
     dumpSymbolTable(OS);
     dumpConstantPool(OS);
@@ -127,9 +139,14 @@ bool DWARFGdbIndex::parseImpl(DataExtractor Data) {
 
   // CU Types are no longer needed as DWARF skeleton type units never made it
   // into the standard.
-  uint32_t CuTypesListSize = (AddressAreaOffset - CuTypesOffset) / 24;
-  if (CuTypesListSize != 0)
-    return false;
+  uint32_t TuListSize = (AddressAreaOffset - CuTypesOffset) / 24;
+  TuList.resize(TuListSize);
+  for (uint32_t I = 0; I < TuListSize; ++I) {
+    uint64_t CuOffset = Data.getU64(&Offset);
+    uint64_t TypeOffset = Data.getU64(&Offset);
+    uint64_t Signature = Data.getU64(&Offset);
+    TuList[I] = {CuOffset, TypeOffset, Signature};
+  }
 
   uint32_t AddressAreaSize = (SymbolTableOffset - AddressAreaOffset) / 20;
   AddressArea.reserve(AddressAreaSize);

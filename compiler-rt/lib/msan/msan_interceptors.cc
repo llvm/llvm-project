@@ -1072,6 +1072,7 @@ extern char *tzname[2];
 
 INTERCEPTOR(void, tzset, int fake) {
   ENSURE_MSAN_INITED();
+  InterceptorScope interceptor_scope;
   REAL(tzset)(fake);
   if (tzname[0])
     __msan_unpoison(tzname[0], REAL(strlen)(tzname[0]) + 1);

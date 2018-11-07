@@ -42,6 +42,8 @@
 // UNSUPPORTED: android
 // Compilation error
 // UNSUPPORTED: openbsd
+// Compilation error
+// UNSUPPORTED: freebsd
 #include <new>
 #include <typeinfo>
 #include <assert.h>

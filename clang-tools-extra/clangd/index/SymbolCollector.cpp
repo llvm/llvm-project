@@ -203,6 +203,17 @@ getTokenRange(SourceLocation TokLoc, const SourceManager &SM,
           CreatePosition(TokLoc.getLocWithOffset(TokenLength))};
 }
 
+bool shouldIndexFile(const SourceManager &SM, FileID FID,
+                     const SymbolCollector::Options &Opts,
+                     llvm::DenseMap<FileID, bool> *FilesToIndexCache) {
+  if (!Opts.FileFilter)
+    return true;
+  auto I = FilesToIndexCache->try_emplace(FID);
+  if (I.second)
+    I.first->second = Opts.FileFilter(SM, FID);
+  return I.first->second;
+}
+
 // Return the symbol location of the token at \p TokLoc.
 Optional<SymbolLocation> getTokenLocation(SourceLocation TokLoc,
                                           const SourceManager &SM,
@@ -392,7 +403,8 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
   assert(PP.get());
 
   const auto &SM = PP->getSourceManager();
-  if (SM.isInMainFile(SM.getExpansionLoc(MI->getDefinitionLoc())))
+  auto DefLoc = MI->getDefinitionLoc();
+  if (SM.isInMainFile(SM.getExpansionLoc(DefLoc)))
     return true;
   // Header guards are not interesting in index. Builtin macros don't have
   // useful locations and are not needed for code completions.
@@ -426,8 +438,10 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
   S.Flags |= Symbol::IndexedForCodeCompletion;
   S.SymInfo = index::getSymbolInfoForMacro(*MI);
   std::string FileURI;
-  if (auto DeclLoc = getTokenLocation(MI->getDefinitionLoc(), SM, Opts,
-                                      PP->getLangOpts(), FileURI))
+  // FIXME: use the result to filter out symbols.
+  shouldIndexFile(SM, SM.getFileID(Loc), Opts, &FilesToIndexCache);
+  if (auto DeclLoc =
+          getTokenLocation(DefLoc, SM, Opts, PP->getLangOpts(), FileURI))
     S.CanonicalDeclaration = *DeclLoc;
 
   CodeCompletionResult SymbolCompletion(Name);
@@ -439,9 +453,8 @@ bool SymbolCollector::handleMacroOccurence(const IdentifierInfo *Name,
 
   std::string Include;
   if (Opts.CollectIncludePath && shouldCollectIncludePath(S.SymInfo.Kind)) {
-    if (auto Header =
-            getIncludeHeader(Name->getName(), SM,
-                             SM.getExpansionLoc(MI->getDefinitionLoc()), Opts))
+    if (auto Header = getIncludeHeader(Name->getName(), SM,
+                                       SM.getExpansionLoc(DefLoc), Opts))
       Include = std::move(*Header);
   }
   S.Signature = Signature;
@@ -503,6 +516,8 @@ void SymbolCollector::finish() {
       if (auto ID = getSymbolID(It.first)) {
         for (const auto &LocAndRole : It.second) {
           auto FileID = SM.getFileID(LocAndRole.first);
+          // FIXME: use the result to filter out references.
+          shouldIndexFile(SM, FileID, Opts, &FilesToIndexCache);
           if (auto FileURI = GetURI(FileID)) {
             auto Range =
                 getTokenRange(LocAndRole.first, SM, ASTCtx->getLangOpts());
@@ -521,6 +536,7 @@ void SymbolCollector::finish() {
   ReferencedDecls.clear();
   ReferencedMacros.clear();
   DeclRefs.clear();
+  FilesToIndexCache.clear();
 }
 
 const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
@@ -541,8 +557,11 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
     S.Flags |= Symbol::ImplementationDetail;
   S.SymInfo = index::getSymbolInfo(&ND);
   std::string FileURI;
-  if (auto DeclLoc = getTokenLocation(findNameLoc(&ND), SM, Opts,
-                                      ASTCtx->getLangOpts(), FileURI))
+  auto Loc = findNameLoc(&ND);
+  // FIXME: use the result to filter out symbols.
+  shouldIndexFile(SM, SM.getFileID(Loc), Opts, &FilesToIndexCache);
+  if (auto DeclLoc =
+          getTokenLocation(Loc, SM, Opts, ASTCtx->getLangOpts(), FileURI))
     S.CanonicalDeclaration = *DeclLoc;
 
   // Add completion info.
@@ -593,9 +612,12 @@ void SymbolCollector::addDefinition(const NamedDecl &ND,
   // in clang::index. We should only see one definition.
   Symbol S = DeclSym;
   std::string FileURI;
-  if (auto DefLoc = getTokenLocation(findNameLoc(&ND),
-                                     ND.getASTContext().getSourceManager(),
-                                     Opts, ASTCtx->getLangOpts(), FileURI))
+  auto Loc = findNameLoc(&ND);
+  const auto &SM = ND.getASTContext().getSourceManager();
+  // FIXME: use the result to filter out symbols.
+  shouldIndexFile(SM, SM.getFileID(Loc), Opts, &FilesToIndexCache);
+  if (auto DefLoc =
+          getTokenLocation(Loc, SM, Opts, ASTCtx->getLangOpts(), FileURI))
     S.Definition = *DefLoc;
   Symbols.insert(S);
 }

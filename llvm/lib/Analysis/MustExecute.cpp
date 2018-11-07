@@ -145,9 +145,12 @@ static bool CanProveNotTakenFirstIteration(const BasicBlock *ExitBlock,
   return SimpleCst->isAllOnesValue();
 }
 
-void LoopSafetyInfo::collectTransitivePredecessors(
+/// Collect all blocks from \p CurLoop which lie on all possible paths from
+/// the header of \p CurLoop (inclusive) to BB (exclusive) into the set
+/// \p Predecessors. If \p BB is the header, \p Predecessors will be empty.
+static void collectTransitivePredecessors(
     const Loop *CurLoop, const BasicBlock *BB,
-    SmallPtrSetImpl<const BasicBlock *> &Predecessors) const {
+    SmallPtrSetImpl<const BasicBlock *> &Predecessors) {
   assert(Predecessors.empty() && "Garbage in predecessors set?");
   assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
   if (BB == CurLoop->getHeader())

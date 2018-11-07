@@ -123,6 +123,9 @@ def global_base: J<"global-base=">,
 def import_memory: F<"import-memory">,
   HelpText<"Import memory from the environment">;
 
+def shared_memory: F<"shared-memory">,
+  HelpText<"Use shared linear memory">;
+
 def import_table: F<"import-table">,
   HelpText<"Import function table from the environment">;
 

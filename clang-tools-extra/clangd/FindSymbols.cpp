@@ -116,6 +116,8 @@ getWorkspaceSymbols(StringRef Query, int Limit, const SymbolIndex *const Index,
   // not).
   if (IsGlobalQuery || !Names.first.empty())
     Req.Scopes = {Names.first};
+  else
+    Req.AnyScope = true;
   if (Limit)
     Req.Limit = Limit;
   TopN<ScoredSymbolInfo, ScoredSymbolGreater> Top(

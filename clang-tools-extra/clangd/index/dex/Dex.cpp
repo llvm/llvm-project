@@ -178,7 +178,7 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   std::vector<std::unique_ptr<Iterator>> ScopeIterators;
   for (const auto &Scope : Req.Scopes)
     ScopeIterators.push_back(iterator(Token(Token::Kind::Scope, Scope)));
-  if (Req.AnyScope || /*legacy*/ Req.Scopes.empty())
+  if (Req.AnyScope)
     ScopeIterators.push_back(
         Corpus.boost(Corpus.all(), ScopeIterators.empty() ? 1.0 : 0.2));
   Criteria.push_back(Corpus.unionOf(move(ScopeIterators)));

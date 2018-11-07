@@ -12,9 +12,6 @@
 #include "lldb/Core/Highlighter.h"
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
-#include "Plugins/Language/Go/GoLanguage.h"
-#include "Plugins/Language/Java/JavaLanguage.h"
-#include "Plugins/Language/OCaml/OCamlLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 #include "Plugins/Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h"
 
@@ -32,20 +29,14 @@ void HighlighterTest::SetUpTestCase() {
   // The HighlighterManager uses the language plugins under the hood, so we
   // have to initialize them here for our test process.
   CPlusPlusLanguage::Initialize();
-  GoLanguage::Initialize();
-  JavaLanguage::Initialize();
   ObjCLanguage::Initialize();
   ObjCPlusPlusLanguage::Initialize();
-  OCamlLanguage::Initialize();
 }
 
 void HighlighterTest::TearDownTestCase() {
   CPlusPlusLanguage::Terminate();
-  GoLanguage::Terminate();
-  JavaLanguage::Terminate();
   ObjCLanguage::Terminate();
   ObjCPlusPlusLanguage::Terminate();
-  OCamlLanguage::Terminate();
 }
 
 static std::string getName(lldb::LanguageType type) {
@@ -68,7 +59,6 @@ TEST_F(HighlighterTest, HighlighterSelectionType) {
 
   EXPECT_EQ(getName(lldb::eLanguageTypeUnknown), "none");
   EXPECT_EQ(getName(lldb::eLanguageTypeJulia), "none");
-  EXPECT_EQ(getName(lldb::eLanguageTypeJava), "none");
   EXPECT_EQ(getName(lldb::eLanguageTypeHaskell), "none");
 }
 

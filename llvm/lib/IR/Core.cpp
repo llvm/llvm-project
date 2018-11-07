@@ -2280,6 +2280,50 @@ unsigned LLVMGetIntrinsicID(LLVMValueRef Fn) {
   return 0;
 }
 
+static Intrinsic::ID llvm_map_to_intrinsic_id(unsigned ID) {
+  assert(ID < llvm::Intrinsic::num_intrinsics && "Intrinsic ID out of range");
+  return llvm::Intrinsic::ID(ID);
+}
+
+LLVMValueRef LLVMGetIntrinsicDeclaration(LLVMModuleRef Mod,
+                                         unsigned ID,
+                                         LLVMTypeRef *ParamTypes,
+                                         size_t ParamCount) {
+  ArrayRef<Type*> Tys(unwrap(ParamTypes), ParamCount);
+  auto IID = llvm_map_to_intrinsic_id(ID);
+  return wrap(llvm::Intrinsic::getDeclaration(unwrap(Mod), IID, Tys));
+}
+
+const char *LLVMIntrinsicGetName(unsigned ID, size_t *NameLength) {
+  auto IID = llvm_map_to_intrinsic_id(ID);
+  auto Str = llvm::Intrinsic::getName(IID);
+  *NameLength = Str.size();
+  return Str.data();
+}
+
+LLVMTypeRef LLVMIntrinsicGetType(LLVMContextRef Ctx, unsigned ID,
+                                 LLVMTypeRef *ParamTypes, size_t ParamCount) {
+  auto IID = llvm_map_to_intrinsic_id(ID);
+  ArrayRef<Type*> Tys(unwrap(ParamTypes), ParamCount);
+  return wrap(llvm::Intrinsic::getType(*unwrap(Ctx), IID, Tys));
+}
+
+const char *LLVMIntrinsicCopyOverloadedName(unsigned ID,
+                                            LLVMTypeRef *ParamTypes,
+                                            size_t ParamCount,
+                                            size_t *NameLength) {
+  auto IID = llvm_map_to_intrinsic_id(ID);
+  ArrayRef<Type*> Tys(unwrap(ParamTypes), ParamCount);
+  auto Str = llvm::Intrinsic::getName(IID, Tys);
+  *NameLength = Str.length();
+  return strdup(Str.c_str());
+}
+
+LLVMBool LLVMIntrinsicIsOverloaded(unsigned ID) {
+  auto IID = llvm_map_to_intrinsic_id(ID);
+  return llvm::Intrinsic::isOverloaded(IID);
+}
+
 unsigned LLVMGetFunctionCallConv(LLVMValueRef Fn) {
   return unwrap<Function>(Fn)->getCallingConv();
 }

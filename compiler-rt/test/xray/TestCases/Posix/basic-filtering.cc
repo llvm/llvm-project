@@ -57,5 +57,5 @@ always_shows() {
 
 // TRACE-NOT: - { type: 0, func-id: {{.*}}, function: {{.*filtered.*}}, {{.*}} }
 // TRACE-NOT: - { type: 0, func-id: {{.*}}, function: {{.*beyond_stack.*}}, {{.*}} }
-// TRACE-DAG: - { type: 0, func-id: [[FID:[0-9]+]], function: {{.*always_shows.*}}, cpu: {{.*}}, thread: {{.*}}, kind: function-enter, tsc: {{[0-9]+}} }
-// TRACE-DAG: - { type: 0, func-id: [[FID]], function: {{.*always_shows.*}}, cpu: {{.*}}, thread: {{.*}}, kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}} }
+// TRACE-DAG: - { type: 0, func-id: [[FID:[0-9]+]], function: {{.*always_shows.*}}, cpu: {{.*}}, thread: {{.*}}, kind: function-enter, tsc: {{[0-9]+}}, data: '' }
+// TRACE-DAG: - { type: 0, func-id: [[FID]], function: {{.*always_shows.*}}, cpu: {{.*}}, thread: {{.*}}, kind: function-{{exit|tail-exit}}, tsc: {{[0-9]+}}, data: '' }

@@ -11930,12 +11930,38 @@ void Sema::CheckStaticLocalForDllExport(VarDecl *VD) {
   assert(VD->isStaticLocal());
 
   auto *FD = dyn_cast_or_null<FunctionDecl>(VD->getParentFunctionOrMethod());
+
+  // Find outermost function when VD is in lambda function.
+  while (FD && !getDLLAttr(FD) &&
+         !FD->hasAttr<DLLExportStaticLocalAttr>() &&
+         !FD->hasAttr<DLLImportStaticLocalAttr>()) {
+    FD = dyn_cast_or_null<FunctionDecl>(FD->getParentFunctionOrMethod());
+  }
+
   if (!FD)
     return;
 
   // Static locals inherit dll attributes from their function.
   if (Attr *A = getDLLAttr(FD)) {
     auto *NewAttr = cast<InheritableAttr>(A->clone(getASTContext()));
+    NewAttr->setInherited(true);
+    VD->addAttr(NewAttr);
+  } else if (Attr *A = FD->getAttr<DLLExportStaticLocalAttr>()) {
+    auto *NewAttr = ::new (getASTContext()) DLLExportAttr(A->getRange(),
+                                                          getASTContext(),
+                                                          A->getSpellingListIndex());
+    NewAttr->setInherited(true);
+    VD->addAttr(NewAttr);
+
+    // Export this function to enforce exporting this static variable even
+    // if it is not used in this compilation unit.
+    if (!FD->hasAttr<DLLExportAttr>())
+      FD->addAttr(NewAttr);
+
+  } else if (Attr *A = FD->getAttr<DLLImportStaticLocalAttr>()) {
+    auto *NewAttr = ::new (getASTContext()) DLLImportAttr(A->getRange(),
+                                                          getASTContext(),
+                                                          A->getSpellingListIndex());
     NewAttr->setInherited(true);
     VD->addAttr(NewAttr);
   }

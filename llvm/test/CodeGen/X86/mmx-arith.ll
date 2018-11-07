@@ -213,28 +213,23 @@ define void @test1(x86_mmx* %A, x86_mmx* %B) {
 ; X32-NEXT:    movq %xmm0, (%eax)
 ; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; X32-NEXT:    movdqa %xmm1, %xmm2
-; X32-NEXT:    pmuludq %xmm0, %xmm2
-; X32-NEXT:    psrlq $32, %xmm1
-; X32-NEXT:    pmuludq %xmm0, %xmm1
-; X32-NEXT:    psllq $32, %xmm1
-; X32-NEXT:    paddq %xmm2, %xmm1
-; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
-; X32-NEXT:    movq %xmm0, (%eax)
-; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; X32-NEXT:    andps %xmm1, %xmm0
+; X32-NEXT:    pmuludq %xmm1, %xmm0
 ; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,2,2,3]
 ; X32-NEXT:    movq %xmm1, (%eax)
 ; X32-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1,1,3]
-; X32-NEXT:    orps %xmm0, %xmm1
+; X32-NEXT:    andps %xmm0, %xmm1
 ; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; X32-NEXT:    movq %xmm0, (%eax)
 ; X32-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; X32-NEXT:    xorps %xmm1, %xmm0
-; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X32-NEXT:    orps %xmm1, %xmm0
+; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,2,2,3]
+; X32-NEXT:    movq %xmm1, (%eax)
+; X32-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1,1,3]
+; X32-NEXT:    xorps %xmm0, %xmm1
+; X32-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; X32-NEXT:    movq %xmm0, (%eax)
 ; X32-NEXT:    emms
 ; X32-NEXT:    retl
@@ -250,28 +245,23 @@ define void @test1(x86_mmx* %A, x86_mmx* %B) {
 ; X64-NEXT:    movq %xmm0, (%rdi)
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; X64-NEXT:    movdqa %xmm1, %xmm2
-; X64-NEXT:    pmuludq %xmm0, %xmm2
-; X64-NEXT:    psrlq $32, %xmm1
-; X64-NEXT:    pmuludq %xmm0, %xmm1
-; X64-NEXT:    psllq $32, %xmm1
-; X64-NEXT:    paddq %xmm2, %xmm1
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
-; X64-NEXT:    movq %xmm0, (%rdi)
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; X64-NEXT:    pand %xmm1, %xmm0
+; X64-NEXT:    pmuludq %xmm1, %xmm0
 ; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,2,2,3]
 ; X64-NEXT:    movq %xmm1, (%rdi)
 ; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,1,3]
-; X64-NEXT:    por %xmm0, %xmm1
+; X64-NEXT:    pand %xmm0, %xmm1
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; X64-NEXT:    movq %xmm0, (%rdi)
 ; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
-; X64-NEXT:    pxor %xmm1, %xmm0
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X64-NEXT:    por %xmm1, %xmm0
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,2,2,3]
+; X64-NEXT:    movq %xmm1, (%rdi)
+; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,1,3]
+; X64-NEXT:    pxor %xmm0, %xmm1
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[0,2,2,3]
 ; X64-NEXT:    movq %xmm0, (%rdi)
 ; X64-NEXT:    emms
 ; X64-NEXT:    retq

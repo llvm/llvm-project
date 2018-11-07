@@ -451,6 +451,7 @@ char **StoredArgv;
 char **StoredEnviron;
 
 char **GetArgv() { return StoredArgv; }
+char **GetEnviron() { return StoredEnviron; }
 
 const char *GetEnv(const char *name) {
   if (StoredEnviron) {

@@ -240,6 +240,7 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
 }
 
 char **GetArgv() { return nullptr; }
+char **GetEnviron() { return nullptr; }
 
 const char *GetEnv(const char *name) {
   return getenv(name);

@@ -541,16 +541,14 @@ struct SpecifiedScope {
   // Set if the qualifier is not fully resolved by Sema.
   Optional<std::string> UnresolvedQualifier;
 
-  // Construct scopes being queried in indexes.
+  // Construct scopes being queried in indexes. The results are deduplicated.
   // This method format the scopes to match the index request representation.
   std::vector<std::string> scopesForIndexQuery() {
-    std::vector<std::string> Results;
-    for (StringRef AS : AccessibleScopes) {
-      Results.push_back(AS);
-      if (UnresolvedQualifier)
-        Results.back() += *UnresolvedQualifier;
-    }
-    return Results;
+    std::set<std::string> Results;
+    for (StringRef AS : AccessibleScopes)
+      Results.insert(
+          ((UnresolvedQualifier ? *UnresolvedQualifier : "") + AS).str());
+    return {Results.begin(), Results.end()};
   }
 };
 

@@ -381,6 +381,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   errorHandler().FatalWarnings =
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
+  Config->SharedMemory = Args.hasArg(OPT_shared_memory);
   Config->ImportTable = Args.hasArg(OPT_import_table);
   Config->LTOO = args::getInteger(Args, OPT_lto_O, 2);
   Config->LTOPartitions = args::getInteger(Args, OPT_lto_partitions, 1);

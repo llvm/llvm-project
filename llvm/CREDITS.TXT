@@ -506,3 +506,7 @@ D: PowerPC Backend Developer
 N: Li Jia He
 E: hljhehlj@cn.ibm.com
 D: PowerPC Backend Developer
+
+N: Zixuan Wu
+E: wuzish@cn.ibm.com
+D: PowerPC Backend Developer

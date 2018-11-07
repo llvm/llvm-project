@@ -197,11 +197,11 @@ void profilingHandleArg0(int32_t FuncId,
   switch (Entry) {
   case XRayEntryType::ENTRY:
   case XRayEntryType::LOG_ARGS_ENTRY:
-    TLD.FCT->enterFunction(FuncId, TSC);
+    TLD.FCT->enterFunction(FuncId, TSC, CPU);
     break;
   case XRayEntryType::EXIT:
   case XRayEntryType::TAIL:
-    TLD.FCT->exitFunction(FuncId, TSC);
+    TLD.FCT->exitFunction(FuncId, TSC, CPU);
     break;
   default:
     // FIXME: Handle bugs.

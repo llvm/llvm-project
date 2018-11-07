@@ -19,7 +19,6 @@
 
 #include "sanitizer_common.h"
 #include "sanitizer_flags.h"
-#include "sanitizer_getauxval.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_libc.h"
 #include "sanitizer_linux.h"
@@ -623,33 +622,13 @@ char **GetArgv() {
   return argv;
 }
 
-void ReExec() {
+char **GetEnviron() {
   char **argv, **envp;
-  const char *pathname = "/proc/self/exe";
-
-#if SANITIZER_NETBSD
-  static const int name[] = {
-    CTL_KERN, KERN_PROC_ARGS, -1, KERN_PROC_PATHNAME,
-  };
-  char path[400];
-  uptr len;
-
-  len = sizeof(path);
-  if (internal_sysctl(name, ARRAY_SIZE(name), path, &len, NULL, 0) != -1)
-    pathname = path;
-#elif SANITIZER_SOLARIS
-  pathname = getexecname();
-  CHECK_NE(pathname, NULL);
-#endif
-
   GetArgsAndEnv(&argv, &envp);
-  uptr rv = internal_execve(pathname, argv, envp);
-  int rverrno;
-  CHECK_EQ(internal_iserror(rv, &rverrno), true);
-  Printf("execve failed, errno %d\n", rverrno);
-  Die();
+  return envp;
 }
-#endif
+
+#endif  // !SANITIZER_OPENBSD
 
 #if !SANITIZER_SOLARIS
 enum MutexState {
@@ -1946,14 +1925,14 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 #elif defined(__sparc__)
   ucontext_t *ucontext = (ucontext_t*)context;
   uptr *stk_ptr;
-# if defined (__sparcv9)
+# if defined(__sparcv9) || defined (__arch64__)
 # ifndef MC_PC
 #  define MC_PC REG_PC
 # endif
 # ifndef MC_O6
 #  define MC_O6 REG_O6
 # endif
-# ifdef SANITIZER_SOLARIS
+# if SANITIZER_SOLARIS
 #  define mc_gregs gregs
 # endif
   *pc = ucontext->uc_mcontext.mc_gregs[MC_PC];

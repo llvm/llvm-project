@@ -16,7 +16,6 @@
 // Other libraries and framework includes
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/HostProcess.h"
-#include "lldb/Host/common/NativeBreakpoint.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
 #include "lldb/Target/Process.h"
@@ -543,7 +542,7 @@ Status NativeProcessNetBSD::PopulateMemoryRegionCache() {
       info.SetName(vm[i].kve_path);
 
     m_mem_region_cache.emplace_back(
-        info, FileSpec(info.GetName().GetCString(), true));
+        info, FileSpec(info.GetName().GetCString()));
   }
   free(vm);
 

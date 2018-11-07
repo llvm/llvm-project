@@ -366,6 +366,9 @@ public:
                                     AccountRecordState *state) {
     auto &TS = ThreadStackMap[R.TId];
     switch (R.Type) {
+    case RecordTypes::CUSTOM_EVENT:
+    case RecordTypes::TYPED_EVENT:
+      return AccountRecordStatus::OK;
     case RecordTypes::ENTER:
     case RecordTypes::ENTER_ARG: {
       state->wasLastRecordExit = false;

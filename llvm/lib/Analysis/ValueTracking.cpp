@@ -2512,26 +2512,41 @@ static unsigned ComputeNumSignBitsImpl(const Value *V, unsigned Depth,
     return ComputeNumSignBits(U->getOperand(0), Depth + 1, Q);
 
   case Instruction::ShuffleVector: {
-    // If the shuffle mask contains any undefined elements, that element of the
-    // result is undefined. Propagating information from a source operand may
-    // not be correct in that case, so just bail out.
-    if (cast<ShuffleVectorInst>(U)->getMask()->containsUndefElement())
+    // TODO: This is copied almost directly from the SelectionDAG version of
+    //       ComputeNumSignBits. It would be better if we could share common
+    //       code. If not, make sure that changes are translated to the DAG.
+
+    // Collect the minimum number of sign bits that are shared by every vector
+    // element referenced by the shuffle.
+    auto *Shuf = cast<ShuffleVectorInst>(U);
+    int NumElts = Shuf->getOperand(0)->getType()->getVectorNumElements();
+    int NumMaskElts = Shuf->getMask()->getType()->getVectorNumElements();
+    APInt DemandedLHS(NumElts, 0), DemandedRHS(NumElts, 0);
+    for (int i = 0; i != NumMaskElts; ++i) {
+      int M = Shuf->getMaskValue(i);
+      assert(M < NumElts * 2 && "Invalid shuffle mask constant");
+      // For undef elements, we don't know anything about the common state of
+      // the shuffle result.
+      if (M == -1)
+        return 1;
+      if (M < NumElts)
+        DemandedLHS.setBit(M % NumElts);
+      else
+        DemandedRHS.setBit(M % NumElts);
+    }
+    Tmp = std::numeric_limits<unsigned>::max();
+    if (!!DemandedLHS)
+      Tmp = ComputeNumSignBits(Shuf->getOperand(0), Depth + 1, Q);
+    if (!!DemandedRHS) {
+      Tmp2 = ComputeNumSignBits(Shuf->getOperand(1), Depth + 1, Q);
+      Tmp = std::min(Tmp, Tmp2);
+    }
+    // If we don't know anything, early out and try computeKnownBits fall-back.
+    if (Tmp == 1)
       break;
-
-    // If everything is undef, we can't say anything. This should be simplified.
-    Value *Op0 = U->getOperand(0), *Op1 = U->getOperand(1);
-    if (isa<UndefValue>(Op0) && isa<UndefValue>(Op1))
-      break;
-
-    // Look through shuffle of 1 source vector.
-    if (isa<UndefValue>(Op0))
-      return ComputeNumSignBits(Op1, Depth + 1, Q);
-    if (isa<UndefValue>(Op1))
-      return ComputeNumSignBits(Op0, Depth + 1, Q);
-
-    // TODO: We can look through shuffles of 2 sources by computing the minimum
-    // sign bits for each operand (similar to what we do for binops).
-    break;
+    assert(Tmp <= V->getType()->getScalarSizeInBits() &&
+           "Failed to determine minimum sign bits");
+    return Tmp;
   }
   }
 
@@ -4745,6 +4760,27 @@ static SelectPatternResult matchSelectPattern(CmpInst::Predicate Pred,
                                               Value *TrueVal, Value *FalseVal,
                                               Value *&LHS, Value *&RHS,
                                               unsigned Depth) {
+  if (CmpInst::isFPPredicate(Pred)) {
+    // IEEE-754 ignores the sign of 0.0 in comparisons. So if the select has one
+    // 0.0 operand, set the compare's 0.0 operands to that same value for the
+    // purpose of identifying min/max. Disregard vector constants with undefined
+    // elements because those can not be back-propagated for analysis.
+    Value *OutputZeroVal = nullptr;
+    if (match(TrueVal, m_AnyZeroFP()) && !match(FalseVal, m_AnyZeroFP()) &&
+        !cast<Constant>(TrueVal)->containsUndefElement())
+      OutputZeroVal = TrueVal;
+    else if (match(FalseVal, m_AnyZeroFP()) && !match(TrueVal, m_AnyZeroFP()) &&
+             !cast<Constant>(FalseVal)->containsUndefElement())
+      OutputZeroVal = FalseVal;
+
+    if (OutputZeroVal) {
+      if (match(CmpLHS, m_AnyZeroFP()))
+        CmpLHS = OutputZeroVal;
+      if (match(CmpRHS, m_AnyZeroFP()))
+        CmpRHS = OutputZeroVal;
+    }
+  }
+
   LHS = CmpLHS;
   RHS = CmpRHS;
 

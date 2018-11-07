@@ -42,8 +42,9 @@ protected:
       return;
 
     TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        "AArch64", "", "", Options, None, None, CodeGenOpt::Aggressive));
+    TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
+        T->createTargetMachine("AArch64", "", "", Options, None, None,
+                               CodeGenOpt::Aggressive)));
     if (!TM)
       return;
 
@@ -70,7 +71,7 @@ protected:
   }
 
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = nullptr;
+  std::unique_ptr<LLVMTargetMachine> TM;
   std::unique_ptr<Module> M;
   Function *F;
   std::unique_ptr<MachineFunction> MF;
@@ -86,7 +87,7 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_ZERO_EXTEND_VECTOR_INREG) {
   auto InVecVT = EVT::getVectorVT(Context, Int8VT, 4);
   auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2);
   auto InVec = DAG->getConstant(0, Loc, InVecVT);
-  auto Op = DAG->getZeroExtendVectorInReg(InVec, Loc, OutVecVT);
+  auto Op = DAG->getNode(ISD::ZERO_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
   auto DemandedElts = APInt(4, 15);
   KnownBits Known;
   DAG->computeKnownBits(Op, Known, DemandedElts);
@@ -118,7 +119,7 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SIGN_EXTEND_VECTOR_INREG) {
   auto InVecVT = EVT::getVectorVT(Context, Int8VT, 4);
   auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2);
   auto InVec = DAG->getConstant(1, Loc, InVecVT);
-  auto Op = DAG->getSignExtendVectorInReg(InVec, Loc, OutVecVT);
+  auto Op = DAG->getNode(ISD::SIGN_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
   auto DemandedElts = APInt(4, 15);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 15u);
 }

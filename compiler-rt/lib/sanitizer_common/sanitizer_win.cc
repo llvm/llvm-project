@@ -1021,6 +1021,11 @@ char **GetArgv() {
   return 0;
 }
 
+char **GetEnviron() {
+  // FIXME: Actually implement this function.
+  return 0;
+}
+
 pid_t StartSubprocess(const char *program, const char *const argv[],
                       fd_t stdin_fd, fd_t stdout_fd, fd_t stderr_fd) {
   // FIXME: implement on this platform

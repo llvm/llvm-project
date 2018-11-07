@@ -23,6 +23,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -30,6 +31,7 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/InstVisitor.h"
@@ -1884,6 +1886,24 @@ InlineResult CallAnalyzer::analyzeCall(CallSite CS) {
   // is not actually duplicated, just moved).
   if (!OnlyOneCallAndLocalLinkage && ContainsNoDuplicateCall)
     return "noduplicate";
+
+  // Loops generally act a lot like calls in that they act like barriers to
+  // movement, require a certain amount of setup, etc. So when optimising for
+  // size, we penalise any call sites that perform loops. We do this after all
+  // other costs here, so will likely only be dealing with relatively small
+  // functions (and hence DT and LI will hopefully be cheap).
+  if (Caller->optForMinSize()) {
+    DominatorTree DT(F);
+    LoopInfo LI(DT);
+    int NumLoops = 0;
+    for (Loop *L : LI) {
+      // Ignore loops that will not be executed
+      if (DeadBlocks.count(L->getHeader()))
+        continue;
+      NumLoops++;
+    }
+    Cost += NumLoops * InlineConstants::CallPenalty;
+  }
 
   // We applied the maximum possible vector bonus at the beginning. Now,
   // subtract the excess bonus, if any, from the Threshold before

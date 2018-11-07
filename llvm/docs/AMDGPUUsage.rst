@@ -207,6 +207,8 @@ names from both the *Processor* and *Alternative Processor* can be used.
                                                                          names.
      ``gfx906``                  ``amdgcn``   dGPU  - xnack           *TBA*
                                                       [off]
+                                                      sram-ecc
+                                                      [on]
                                                                       .. TODO
                                                                          Add product
                                                                          names.
@@ -246,24 +248,26 @@ For example:
   .. table:: AMDGPU Target Features
      :name: amdgpu-target-feature-table
 
-     ============== ==================================================
-     Target Feature Description
-     ============== ==================================================
-     -m[no-]xnack   Enable/disable generating code that has
-                    memory clauses that are compatible with
-                    having XNACK replay enabled.
+     =============== ==================================================
+     Target Feature  Description
+     =============== ==================================================
+     -m[no-]xnack    Enable/disable generating code that has
+                     memory clauses that are compatible with
+                     having XNACK replay enabled.
 
-                    This is used for demand paging and page
-                    migration. If XNACK replay is enabled in
-                    the device, then if a page fault occurs
-                    the code may execute incorrectly if the
-                    ``xnack`` feature is not enabled. Executing
-                    code that has the feature enabled on a
-                    device that does not have XNACK replay
-                    enabled will execute correctly, but may
-                    be less performant than code with the
-                    feature disabled.
-     ============== ==================================================
+                     This is used for demand paging and page
+                     migration. If XNACK replay is enabled in
+                     the device, then if a page fault occurs
+                     the code may execute incorrectly if the
+                     ``xnack`` feature is not enabled. Executing
+                     code that has the feature enabled on a
+                     device that does not have XNACK replay
+                     enabled will execute correctly, but may
+                     be less performant than code with the
+                     feature disabled.
+     -m[no-]sram-ecc Enable/disable generating code that assumes SRAM
+                     ECC is enabled/disabled.
+     =============== ==================================================
 
 .. _amdgpu-address-spaces:
 
@@ -545,6 +549,17 @@ The AMDGPU backend uses the following ELF header:
                                                   If the processor
                                                   does not support the
                                                   ``xnack`` target
+                                                  feature then must
+                                                  be 0.
+                                                  See
+                                                  :ref:`amdgpu-target-features`.
+     ``EF_AMDGPU_SRAM_ECC``            0x00000200 Indicates if the ``sram-ecc``
+                                                  target feature is
+                                                  enabled for all code
+                                                  contained in the code object.
+                                                  If the processor
+                                                  does not support the
+                                                  ``sram-ecc`` target
                                                   feature then must
                                                   be 0.
                                                   See
