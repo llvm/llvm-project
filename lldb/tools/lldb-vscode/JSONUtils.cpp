@@ -288,8 +288,7 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpointLocation &bp_loc) {
     return llvm::json::Value(std::move(object));
 
   object.try_emplace("verified", true);
-  const auto bp_id = bp_loc.GetBreakpoint().GetID();
-  const auto vs_id = (int64_t)(((int64_t)bp_id << 32) | bp_loc.GetID());
+  const auto vs_id = MakeVSCodeBreakpointID(bp_loc);
   object.try_emplace("id", vs_id);
   auto bp_addr = bp_loc.GetAddress();
   if (bp_addr.IsValid()) {
