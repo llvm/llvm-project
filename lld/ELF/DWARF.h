@@ -11,6 +11,7 @@
 #define LLD_ELF_DWARF_H
 
 #include "InputFiles.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Object/ELF.h"
 
@@ -27,8 +28,9 @@ template <class ELFT> class LLDDwarfObj final : public llvm::DWARFObject {
 public:
   explicit LLDDwarfObj(ObjFile<ELFT> *Obj);
 
-  const llvm::DWARFSection &getInfoSection() const override {
-    return InfoSection;
+  void forEachInfoSections(
+      llvm::function_ref<void(const llvm::DWARFSection &)> F) const override {
+    F(InfoSection);
   }
 
   const llvm::DWARFSection &getRangeSection() const override {
