@@ -801,7 +801,8 @@ struct MachineOutliner : public ModulePass {
 
   /// Creates a function for \p OF and inserts it into the module.
   MachineFunction *createOutlinedFunction(Module &M, const OutlinedFunction &OF,
-                                          InstructionMapper &Mapper);
+                                          InstructionMapper &Mapper,
+                                          unsigned Name);
 
   /// Find potential outlining candidates and store them in \p CandidateList.
   ///
@@ -1035,7 +1036,6 @@ unsigned MachineOutliner::findCandidates(
     for (unsigned i = StartIdx; i < StartIdx + StringLen; i++)
       Seq.push_back(ST.Str[i]);
     OF.Sequence = Seq;
-    OF.Name = FunctionList.size();
 
     // Is it better to outline this candidate than not?
     if (OF.getBenefit() < 1) {
@@ -1190,13 +1190,16 @@ unsigned MachineOutliner::buildCandidateList(
 
 MachineFunction *
 MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
-                                        InstructionMapper &Mapper) {
+                                        InstructionMapper &Mapper,
+                                        unsigned Name) {
 
   // Create the function name. This should be unique. For now, just hash the
   // module name and include it in the function name plus the number of this
   // function.
   std::ostringstream NameStream;
-  NameStream << "OUTLINED_FUNCTION_" << OF.Name;
+  // FIXME: We should have a better naming scheme. This should be stable,
+  // regardless of changes to the outliner's cost model/traversal order.
+  NameStream << "OUTLINED_FUNCTION_" << Name;
 
   // Create the function using an IR-level function.
   LLVMContext &C = M.getContext();
@@ -1295,6 +1298,10 @@ bool MachineOutliner::outline(
     std::vector<OutlinedFunction> &FunctionList, InstructionMapper &Mapper) {
 
   bool OutlinedSomething = false;
+
+  // Number to append to the current outlined function.
+  unsigned OutlinedFunctionNum = 0;
+
   // Replace the candidates with calls to their respective outlined functions.
   for (const std::shared_ptr<Candidate> &Cptr : CandidateList) {
     Candidate &C = *Cptr;
@@ -1311,9 +1318,10 @@ bool MachineOutliner::outline(
 
     // Does this candidate have a function yet?
     if (!OF.MF) {
-      OF.MF = createOutlinedFunction(M, OF, Mapper);
+      OF.MF = createOutlinedFunction(M, OF, Mapper, OutlinedFunctionNum);
       emitOutlinedFunctionRemark(OF);
       FunctionsCreated++;
+      OutlinedFunctionNum++; // Created a function, move to the next name.
     }
 
     MachineFunction *MF = OF.MF;

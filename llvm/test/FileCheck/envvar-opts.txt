@@ -3,11 +3,11 @@
 ; CHECK: foo
 ; CHECK: bar
 
-; RUN: FILECHECK_OPTS= \
+; RUN: env FILECHECK_OPTS= \
 ; RUN: not FileCheck %s -input-file %t.in 2>&1 \
 ; RUN: | FileCheck -check-prefix QUIET %s
 
-; RUN: FILECHECK_OPTS=-v \
+; RUN: env FILECHECK_OPTS=-v \
 ; RUN: not FileCheck %s -input-file %t.in 2>&1 \
 ; RUN: | FileCheck -check-prefix VERB %s
 

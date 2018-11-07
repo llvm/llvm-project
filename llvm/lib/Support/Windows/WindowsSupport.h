@@ -50,99 +50,29 @@
 // Must be included after windows.h
 #include <wincrypt.h>
 
+namespace llvm {
+
 /// Determines if the program is running on Windows 8 or newer. This
 /// reimplements one of the helpers in the Windows 8.1 SDK, which are intended
 /// to supercede raw calls to GetVersionEx. Old SDKs, Cygwin, and MinGW don't
 /// yet have VersionHelpers.h, so we have our own helper.
-inline bool RunningWindows8OrGreater() {
-  // Windows 8 is version 6.2, service pack 0.
-  OSVERSIONINFOEXW osvi = {};
-  osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-  osvi.dwMajorVersion = 6;
-  osvi.dwMinorVersion = 2;
-  osvi.wServicePackMajor = 0;
+bool RunningWindows8OrGreater();
 
-  DWORDLONG Mask = 0;
-  Mask = VerSetConditionMask(Mask, VER_MAJORVERSION, VER_GREATER_EQUAL);
-  Mask = VerSetConditionMask(Mask, VER_MINORVERSION, VER_GREATER_EQUAL);
-  Mask = VerSetConditionMask(Mask, VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
+/// Returns the Windows version as Major.Minor.0.BuildNumber. Uses
+/// RtlGetVersion or GetVersionEx under the hood depending on what is available.
+/// GetVersionEx is deprecated, but this API exposes the build number which can
+/// be useful for working around certain kernel bugs.
+llvm::VersionTuple GetWindowsOSVersion();
 
-  return VerifyVersionInfoW(&osvi, VER_MAJORVERSION | VER_MINORVERSION |
-                                       VER_SERVICEPACKMAJOR,
-                            Mask) != FALSE;
-}
-
-typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
-#define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
-
-inline llvm::VersionTuple GetWindowsOSVersion() {
-  HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
-  if (hMod) {
-    auto getVer = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
-    if (getVer) {
-      RTL_OSVERSIONINFOEXW info{};
-      info.dwOSVersionInfoSize = sizeof(info);
-      if (getVer((PRTL_OSVERSIONINFOW)&info) == STATUS_SUCCESS) {
-        return llvm::VersionTuple(info.dwMajorVersion, info.dwMinorVersion, 0,
-                                  info.dwBuildNumber);
-      }
-    }
-  }
-
-  OSVERSIONINFOEX info;
-  ZeroMemory(&info, sizeof(OSVERSIONINFOEX));
-  info.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable : 4996)
-#endif // _MSC_VER
-#if defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated"
-#endif // __clang__
-  // Starting with Microsoft SDK for Windows 8.1, this function is deprecated
-  // in favor of the new Windows Version Helper APIs.  Since we don't specify a
-  // minimum SDK version, it's easier to simply disable the warning rather than
-  // try to support both APIs.
-  if (GetVersionEx((LPOSVERSIONINFO)&info) == 0)
-    return llvm::VersionTuple();
-#if defined(__clang__)
-#pragma clang diagnostic pop
-#endif // __clang__
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif // _MSC_VER
-
-  return llvm::VersionTuple(info.dwMajorVersion, info.dwMinorVersion, 0,
-                            info.dwBuildNumber);
-}
-
-inline bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix) {
-  if (!ErrMsg)
-    return true;
-  char *buffer = NULL;
-  DWORD LastError = GetLastError();
-  DWORD R = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
-                               FORMAT_MESSAGE_FROM_SYSTEM |
-                               FORMAT_MESSAGE_MAX_WIDTH_MASK,
-                           NULL, LastError, 0, (LPSTR)&buffer, 1, NULL);
-  if (R)
-    *ErrMsg = prefix + ": " + buffer;
-  else
-    *ErrMsg = prefix + ": Unknown error";
-  *ErrMsg += " (0x" + llvm::utohexstr(LastError) + ")";
-
-  LocalFree(buffer);
-  return R != 0;
-}
+bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix);
 
 template <typename HandleTraits>
 class ScopedHandle {
   typedef typename HandleTraits::handle_type handle_type;
   handle_type Handle;
 
-  ScopedHandle(const ScopedHandle &other); // = delete;
-  void operator=(const ScopedHandle &other); // = delete;
+  ScopedHandle(const ScopedHandle &other) = delete;
+  void operator=(const ScopedHandle &other) = delete;
 public:
   ScopedHandle()
     : Handle(HandleTraits::GetInvalid()) {}
@@ -247,7 +177,6 @@ typedef ScopedHandle<RegTraits>          ScopedRegHandle;
 typedef ScopedHandle<FindHandleTraits>   ScopedFindHandle;
 typedef ScopedHandle<JobHandleTraits>    ScopedJobHandle;
 
-namespace llvm {
 template <class T>
 class SmallVectorImpl;
 

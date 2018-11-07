@@ -93,7 +93,7 @@ PlatformSP PlatformMacOSX::CreateInstance(bool force, const ArchSpec *arch) {
 #if defined(__APPLE__)
     // Only accept "unknown" for vendor if the host is Apple and it "unknown"
     // wasn't specified (it was just returned because it was NOT specified)
-    case llvm::Triple::UnknownArch:
+    case llvm::Triple::UnknownVendor:
       create = !arch->TripleVendorWasSpecified();
       break;
 #endif

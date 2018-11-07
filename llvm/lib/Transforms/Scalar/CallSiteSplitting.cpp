@@ -197,7 +197,7 @@ static bool canSplitCallSite(CallSite CS, TargetTransformInfo &TTI) {
       isa<IndirectBrInst>(Preds[1]->getTerminator()))
     return false;
 
-  // BasicBlock::canSplitPredecessors is more agressive, so checking for
+  // BasicBlock::canSplitPredecessors is more aggressive, so checking for
   // BasicBlock::isEHPad as well.
   if (!CallSiteBB->canSplitPredecessors() || CallSiteBB->isEHPad())
     return false;

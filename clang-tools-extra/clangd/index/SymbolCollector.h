@@ -60,6 +60,9 @@ public:
     bool CountReferences = false;
     /// The symbol ref kinds that will be collected.
     /// If not set, SymbolCollector will not collect refs.
+    /// Note that references of namespace decls are not collected, as they
+    /// contribute large part of the index, and they are less useful compared
+    /// with other decls.
     RefKind RefFilter = RefKind::Unknown;
     /// If set to true, SymbolCollector will collect all refs (from main file
     /// and included headers); otherwise, only refs from main file will be

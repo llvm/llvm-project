@@ -5897,6 +5897,13 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     setValue(&I, Res);
     return nullptr;
   }
+
+  case Intrinsic::is_constant:
+    // If this wasn't constant-folded away by now, then it's not a
+    // constant.
+    setValue(&I, DAG.getConstant(0, sdl, MVT::i1));
+    return nullptr;
+
   case Intrinsic::annotation:
   case Intrinsic::ptr_annotation:
   case Intrinsic::launder_invariant_group:

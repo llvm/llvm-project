@@ -33,6 +33,7 @@ public:
     NewCPUId,
     TSCWrap,
     CustomEvent,
+    TypedEvent,
     Function,
     CallArg,
     EndOfBuffer,
@@ -58,6 +59,8 @@ public:
   Error visit(NewBufferRecord &) override;
   Error visit(EndBufferRecord &) override;
   Error visit(FunctionRecord &) override;
+  Error visit(CustomEventRecordV5 &) override;
+  Error visit(TypedEventRecord &) override;
 
   Error verify();
   void reset();

@@ -1450,6 +1450,14 @@ bool FastISel::selectIntrinsicCall(const IntrinsicInst *II) {
     updateValueMap(II, ResultReg);
     return true;
   }
+  case Intrinsic::is_constant: {
+    Constant *ResCI = ConstantInt::get(II->getType(), 0);
+    unsigned ResultReg = getRegForValue(ResCI);
+    if (!ResultReg)
+      return false;
+    updateValueMap(II, ResultReg);
+    return true;
+  }
   case Intrinsic::launder_invariant_group:
   case Intrinsic::strip_invariant_group:
   case Intrinsic::expect: {

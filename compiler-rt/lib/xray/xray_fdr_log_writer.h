@@ -110,8 +110,7 @@ public:
     return true;
   }
 
-  bool writeCustomEvent(uint64_t TSC, uint16_t CPU, const void *Event,
-                        int32_t EventSize) {
+  bool writeCustomEvent(int32_t Delta, const void *Event, int32_t EventSize) {
     // We write the metadata record and the custom event data into the buffer
     // first, before we atomically update the extents for the buffer. This
     // allows us to ensure that any threads reading the extents of the buffer
@@ -119,7 +118,7 @@ public:
     // (no partial writes accounted).
     MetadataRecord R =
         createMetadataRecord<MetadataRecord::RecordKinds::CustomEventMarker>(
-            EventSize, TSC, CPU);
+            EventSize, Delta);
     NextRecord = reinterpret_cast<char *>(internal_memcpy(
                      NextRecord, reinterpret_cast<char *>(&R), sizeof(R))) +
                  sizeof(R);
@@ -131,13 +130,13 @@ public:
     return true;
   }
 
-  bool writeTypedEvent(uint64_t TSC, uint16_t EventType, const void *Event,
+  bool writeTypedEvent(int32_t Delta, uint16_t EventType, const void *Event,
                        int32_t EventSize) {
     // We do something similar when writing out typed events, see
     // writeCustomEvent(...) above for details.
     MetadataRecord R =
         createMetadataRecord<MetadataRecord::RecordKinds::TypedEventMarker>(
-            EventSize, TSC, EventType);
+            EventSize, Delta, EventType);
     NextRecord = reinterpret_cast<char *>(internal_memcpy(
                      NextRecord, reinterpret_cast<char *>(&R), sizeof(R))) +
                  sizeof(R);

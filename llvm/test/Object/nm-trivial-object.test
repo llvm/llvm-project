@@ -61,6 +61,7 @@ COFF32-NEXT:          U _puts
 
 
 WASM:      00000000 d .L.str
+WASM-NEXT: 00000003 t .LSomeOtherFunction_bitcast
 WASM-NEXT:          U SomeOtherFunction
 WASM-NEXT: 00000002 T main
 WASM-NEXT:          U puts

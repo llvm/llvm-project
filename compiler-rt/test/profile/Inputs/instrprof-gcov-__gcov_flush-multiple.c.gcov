@@ -1,0 +1,21 @@
+// CHECK:        -:    0:Source:{{.*}}Inputs/instrprof-gcov-__gcov_flush-multiple.c
+// CHECK-NEXT:        -:    0:Graph:instrprof-gcov-__gcov_flush-multiple.gcno
+// CHECK-NEXT:        -:    0:Data:instrprof-gcov-__gcov_flush-multiple.gcda
+// CHECK-NEXT:        -:    0:Runs:1
+// CHECK-NEXT:        -:    0:Programs:1
+// CHECK-NEXT:    #####:    1:int main(void) {
+// CHECK-NEXT:    #####:    2:  __gcov_flush();
+// CHECK-NEXT:        -:    3:
+// CHECK-NEXT:    #####:    4:  if (remove("instrprof-gcov-__gcov_flush-multiple.gcda") != 0) {
+// CHECK-NEXT:    #####:    5:    return 1;
+// CHECK-NEXT:        -:    6:  }
+// CHECK-NEXT:        -:    7:
+// CHECK-NEXT:    #####:    8:  __gcov_flush();
+// CHECK-NEXT:    #####:    9:  __gcov_flush();
+// CHECK-NEXT:        -:   10:
+// CHECK-NEXT:    #####:   11:  if (remove("instrprof-gcov-__gcov_flush-multiple.gcda") != 0) {
+// CHECK-NEXT:    #####:   12:    return 1;
+// CHECK-NEXT:        -:   13:  }
+// CHECK-NEXT:        -:   14:
+// CHECK-NEXT:        1:   15:  return 0;
+// CHECK-NEXT:        1:   16:}

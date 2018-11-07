@@ -39,8 +39,8 @@ class FixupLEAPass : public MachineFunctionPass {
   /// Loop over all of the instructions in the basic block
   /// replacing applicable instructions with LEA instructions,
   /// where appropriate.
-  bool processBasicBlock(MachineFunction &MF, MachineFunction::iterator MFI);
-
+  bool processBasicBlock(MachineFunction &MF, MachineFunction::iterator MFI,
+                         bool IsSlowLEA, bool IsSlow3OpsLEA);
 
   /// Given a machine register, look for the instruction
   /// which writes it in the current basic block. If found,
@@ -192,8 +192,11 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &Func) {
 
   MF = &Func;
   const X86Subtarget &ST = Func.getSubtarget<X86Subtarget>();
+  bool IsSlowLEA = ST.slowLEA();
+  bool IsSlow3OpsLEA = ST.slow3OpsLEA();
+
   OptIncDec = !ST.slowIncDec() || Func.getFunction().optForMinSize();
-  OptLEA = ST.LEAusesAG() || ST.slowLEA() || ST.slow3OpsLEA();
+  OptLEA = ST.LEAusesAG() || IsSlowLEA || IsSlow3OpsLEA;
 
   if (!OptLEA && !OptIncDec)
     return false;
@@ -204,7 +207,7 @@ bool FixupLEAPass::runOnMachineFunction(MachineFunction &Func) {
   LLVM_DEBUG(dbgs() << "Start X86FixupLEAs\n";);
   // Process all basic blocks.
   for (MachineFunction::iterator I = Func.begin(), E = Func.end(); I != E; ++I)
-    processBasicBlock(Func, I);
+    processBasicBlock(Func, I, IsSlowLEA, IsSlow3OpsLEA);
   LLVM_DEBUG(dbgs() << "End X86FixupLEAs\n";);
 
   return true;
@@ -280,8 +283,9 @@ static inline bool isInefficientLEAReg(unsigned int Reg) {
 static inline bool isRegOperand(const MachineOperand &Op) {
   return Op.isReg() && Op.getReg() != X86::NoRegister;
 }
-/// hasIneffecientLEARegs - LEA that uses base and index registers
-/// where the base is EBP, RBP, or R13
+
+/// Returns true if this LEA uses base an index registers, and the base register
+/// is known to be inefficient for the subtarget.
 // TODO: use a variant scheduling class to model the latency profile
 // of LEA instructions, and implement this logic as a scheduling predicate.
 static inline bool hasInefficientLEABaseReg(const MachineOperand &Base,
@@ -566,26 +570,28 @@ FixupLEAPass::processInstrForSlow3OpLEA(MachineInstr &MI,
 }
 
 bool FixupLEAPass::processBasicBlock(MachineFunction &MF,
-                                     MachineFunction::iterator MFI) {
-
+                                     MachineFunction::iterator MFI,
+                                     bool IsSlowLEA, bool IsSlow3OpsLEA) {
   for (MachineBasicBlock::iterator I = MFI->begin(); I != MFI->end(); ++I) {
     if (OptIncDec)
       if (fixupIncDec(I, MFI))
         continue;
 
     if (OptLEA) {
-      if (MF.getSubtarget<X86Subtarget>().slowLEA())
+      if (IsSlowLEA) {
         processInstructionForSlowLEA(I, MFI);
-
-      else {
-        if (MF.getSubtarget<X86Subtarget>().slow3OpsLEA()) {
-          if (auto *NewMI = processInstrForSlow3OpLEA(*I, MFI)) {
-            MFI->erase(I);
-            I = NewMI;
-          }
-        } else
-          processInstruction(I, MFI);
+        continue;
       }
+      
+      if (IsSlow3OpsLEA) {
+        if (auto *NewMI = processInstrForSlow3OpLEA(*I, MFI)) {
+          MFI->erase(I);
+          I = NewMI;
+        }
+        continue;
+      }
+
+      processInstruction(I, MFI);
     }
   }
   return false;

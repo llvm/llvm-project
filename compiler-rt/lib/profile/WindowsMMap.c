@@ -24,14 +24,6 @@
 
 #include "InstrProfiling.h"
 
-#ifdef __USE_FILE_OFFSET64
-# define DWORD_HI(x) (x >> 32)
-# define DWORD_LO(x) ((x) & 0xffffffff)
-#else
-# define DWORD_HI(x) (0)
-# define DWORD_LO(x) (x)
-#endif
-
 COMPILER_RT_VISIBILITY
 void *mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset)
 {

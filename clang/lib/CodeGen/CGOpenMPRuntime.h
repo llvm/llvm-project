@@ -19,8 +19,8 @@
 #include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/ValueHandle.h"
 
@@ -602,7 +602,11 @@ private:
   OffloadEntriesInfoManagerTy OffloadEntriesInfoManager;
 
   bool ShouldMarkAsGlobal = true;
-  llvm::SmallDenseSet<const Decl *> AlreadyEmittedTargetFunctions;
+  /// List of the emitted functions.
+  llvm::StringSet<> AlreadyEmittedTargetFunctions;
+  /// List of the global variables with their addresses that should not be
+  /// emitted for the target.
+  llvm::StringMap<llvm::WeakTrackingVH> EmittedNonTargetVariables;
 
   /// List of variables that can become declare target implicitly and, thus,
   /// must be emitted.
@@ -679,10 +683,10 @@ private:
                                               const llvm::Twine &Name);
 
   /// Set of threadprivate variables with the generated initializer.
-  llvm::SmallPtrSet<const VarDecl *, 4> ThreadPrivateWithDefinition;
+  llvm::StringSet<> ThreadPrivateWithDefinition;
 
   /// Set of declare target variables with the generated initializer.
-  llvm::SmallPtrSet<const VarDecl *, 4> DeclareTargetWithDefinition;
+  llvm::StringSet<> DeclareTargetWithDefinition;
 
   /// Emits initialization code for the threadprivate variables.
   /// \param VDAddr Address of the global variable \a VD.
