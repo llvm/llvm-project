@@ -17,7 +17,6 @@
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/Declaration.h"
-#include "lldb/Symbol/GoASTContext.h"
 
 using namespace clang;
 using namespace lldb;
@@ -232,11 +231,6 @@ TEST_F(TestClangASTContext, TestIsClangType) {
 
   // Default constructed type should fail
   EXPECT_FALSE(ClangUtil::IsClangType(CompilerType()));
-
-  // Go type should fail
-  GoASTContext go_ast;
-  CompilerType go_type(&go_ast, bool_ctype);
-  EXPECT_FALSE(ClangUtil::IsClangType(go_type));
 }
 
 TEST_F(TestClangASTContext, TestRemoveFastQualifiers) {
