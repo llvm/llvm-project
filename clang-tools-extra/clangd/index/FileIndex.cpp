@@ -126,7 +126,7 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
       for (const auto &Sym : *Slab) {
         auto I = Merged.try_emplace(Sym.ID, Sym);
         if (!I.second)
-          I.first->second = mergeSymbol(std::move(I.first->second), Sym);
+          I.first->second = mergeSymbol(I.first->second, Sym);
       }
     }
     SymsStorage.reserve(Merged.size());
