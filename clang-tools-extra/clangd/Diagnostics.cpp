@@ -79,7 +79,7 @@ Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
 }
 
 bool isInsideMainFile(const SourceLocation Loc, const SourceManager &M) {
-  return Loc.isValid() && M.isInMainFile(Loc);
+  return Loc.isValid() && M.isWrittenInMainFile(Loc);
 }
 
 bool isInsideMainFile(const clang::Diagnostic &D) {
