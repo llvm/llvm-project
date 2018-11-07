@@ -50,7 +50,7 @@
 
 int8_t implicitConversion(uint32_t argc) {
   return argc; // BOOM
-// CHECK: {{.*}}signed-integer-truncation-or-sign-change-blacklist.c:[[@LINE-1]]:10: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 4294967295 (32-bit, unsigned) to type 'int8_t' (aka 'signed char') changed the value to -1 (8-bit, signed)
+// CHECK: {{.*}}signed-integer-truncation-or-sign-change-blacklist.c:[[@LINE-1]]:10: runtime error: implicit conversion from type '{{.*}}' (aka 'unsigned int') of value 4294967295 (32-bit, unsigned) to type '{{.*}}' (aka 'signed char') changed the value to -1 (8-bit, signed)
 }
 
 int main(int argc, char **argv) {
