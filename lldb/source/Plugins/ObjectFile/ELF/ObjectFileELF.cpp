@@ -2712,7 +2712,8 @@ unsigned ObjectFileELF::ApplyRelocations(
           uint64_t *dst = reinterpret_cast<uint64_t *>(
               data_buffer_sp->GetBytes() + rel_section->GetFileOffset() +
               ELFRelocation::RelocOffset64(rel));
-          *dst = value + ELFRelocation::RelocAddend64(rel);
+          uint64_t val_offset = value + ELFRelocation::RelocAddend64(rel);
+          memcpy(dst, &val_offset, sizeof(uint64_t));
         }
         break;
       }
@@ -2738,7 +2739,7 @@ unsigned ObjectFileELF::ApplyRelocations(
           uint32_t *dst = reinterpret_cast<uint32_t *>(
               data_buffer_sp->GetBytes() + rel_section->GetFileOffset() +
               ELFRelocation::RelocOffset32(rel));
-          *dst = truncated_addr;
+          memcpy(dst, &truncated_addr, sizeof(uint32_t));
         }
         break;
       }

@@ -77,8 +77,8 @@ define void @foo() {
 ; 6860-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; 6860-NEXT:    shrdl %cl, %edi, %esi
 ; 6860-NEXT:    testb $32, %bl
-; 6860-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; 6860-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; 6860-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; 6860-NEXT:    jne .LBB0_2
 ; 6860-NEXT:  # %bb.1: # %bb
 ; 6860-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload

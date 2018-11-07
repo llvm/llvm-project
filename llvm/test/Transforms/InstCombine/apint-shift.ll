@@ -526,3 +526,22 @@ define i40 @test26(i40 %A) {
   %D = shl i40 %C, 1
   ret i40 %D
 }
+
+; OSS-Fuzz #9880
+; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=9880
+define i177 @ossfuzz_9880(i177 %X) {
+; CHECK-LABEL: @ossfuzz_9880(
+; CHECK-NEXT:    ret i177 1
+;
+  %A = alloca i177
+  %L1 = load i177, i177* %A
+  %B = or i177 0, -1
+  %B5 = udiv i177 %L1, %B
+  %B4 = add i177 %B5, %B
+  %B2 = add i177 %B, %B4
+  %B6 = mul i177 %B5, %B2
+  %B20 = shl i177 %L1, %B6
+  %B14 = sub i177 %B20, %B5
+  %B1 = udiv i177 %B14, %B6
+  ret i177 %B1
+}

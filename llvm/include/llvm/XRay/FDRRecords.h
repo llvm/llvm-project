@@ -66,6 +66,7 @@ public:
     PIDEntry,
     NewBuffer,
     EndOfBuffer,
+    TypedEvent,
   };
 
   Type type() const override { return Type::Metadata; }
@@ -174,6 +175,52 @@ public:
   Error apply(RecordVisitor &V) override;
 };
 
+class CustomEventRecordV5 : public MetadataRecord {
+  int32_t Size = 0;
+  int32_t Delta = 0;
+  std::string Data{};
+  friend class RecordInitializer;
+
+public:
+  CustomEventRecordV5() = default;
+  explicit CustomEventRecordV5(int32_t S, int32_t D, std::string P)
+      : MetadataRecord(), Size(S), Delta(D), Data(std::move(P)) {}
+
+  MetadataType metadataType() const override {
+    return MetadataType::CustomEvent;
+  }
+
+  int32_t size() const { return Size; }
+  int32_t delta() const { return Delta; }
+  StringRef data() const { return Data; }
+
+  Error apply(RecordVisitor &V) override;
+};
+
+class TypedEventRecord : public MetadataRecord {
+  int32_t Size = 0;
+  int32_t Delta = 0;
+  uint16_t EventType = 0;
+  std::string Data{};
+  friend class RecordInitializer;
+
+public:
+  TypedEventRecord() = default;
+  explicit TypedEventRecord(int32_t S, int32_t D, uint16_t E, std::string P)
+      : MetadataRecord(), Size(S), Delta(D), Data(std::move(P)) {}
+
+  MetadataType metadataType() const override {
+    return MetadataType::TypedEvent;
+  }
+
+  int32_t size() const { return Size; }
+  int32_t delta() const { return Delta; }
+  uint16_t eventType() const { return EventType; }
+  StringRef data() const { return Data; }
+
+  Error apply(RecordVisitor &V) override;
+};
+
 class CallArgRecord : public MetadataRecord {
   uint64_t Arg;
   friend class RecordInitializer;
@@ -269,6 +316,8 @@ public:
   virtual Error visit(NewBufferRecord &) = 0;
   virtual Error visit(EndBufferRecord &) = 0;
   virtual Error visit(FunctionRecord &) = 0;
+  virtual Error visit(CustomEventRecordV5 &) = 0;
+  virtual Error visit(TypedEventRecord &) = 0;
 };
 
 class RecordInitializer : public RecordVisitor {
@@ -277,7 +326,7 @@ class RecordInitializer : public RecordVisitor {
   uint16_t Version;
 
 public:
-  static constexpr uint16_t DefaultVersion = 4u;
+  static constexpr uint16_t DefaultVersion = 5u;
 
   explicit RecordInitializer(DataExtractor &DE, uint32_t &OP, uint16_t V)
       : RecordVisitor(), E(DE), OffsetPtr(OP), Version(V) {}
@@ -295,6 +344,8 @@ public:
   Error visit(NewBufferRecord &) override;
   Error visit(EndBufferRecord &) override;
   Error visit(FunctionRecord &) override;
+  Error visit(CustomEventRecordV5 &) override;
+  Error visit(TypedEventRecord &) override;
 };
 
 } // namespace xray

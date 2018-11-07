@@ -219,7 +219,7 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
   DriverConfig DriverConfig;
-  if (sys::path::stem(ToolName).endswith_lower("strip"))
+  if (sys::path::stem(ToolName).contains("strip"))
     DriverConfig = parseStripOptions(makeArrayRef(argv + 1, argc));
   else
     DriverConfig = parseObjcopyOptions(makeArrayRef(argv + 1, argc));

@@ -1708,7 +1708,7 @@ bool HexagonFrameLowering::expandStoreVec2(MachineBasicBlock &B,
   // register that is entirely undefined.
   LivePhysRegs LPR(HRI);
   LPR.addLiveIns(B);
-  SmallVector<std::pair<unsigned, const MachineOperand*>,2> Clobbers;
+  SmallVector<std::pair<MCPhysReg, const MachineOperand*>,2> Clobbers;
   for (auto R = B.begin(); R != It; ++R) {
     Clobbers.clear();
     LPR.stepForward(*R, Clobbers);

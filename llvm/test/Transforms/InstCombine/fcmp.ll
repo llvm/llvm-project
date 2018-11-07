@@ -5,29 +5,39 @@ declare half @llvm.fabs.f16(half)
 declare double @llvm.fabs.f64(double)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 
-define i1 @test1(float %x, float %y) {
-; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], [[Y:%.*]]
+define i1 @fpext_fpext(float %x, float %y) {
+; CHECK-LABEL: @fpext_fpext(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ogt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ext1 = fpext float %x to double
   %ext2 = fpext float %y to double
-  %cmp = fcmp ogt double %ext1, %ext2
+  %cmp = fcmp nnan ogt double %ext1, %ext2
   ret i1 %cmp
 }
 
-define i1 @test2(float %a) {
-; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A:%.*]], 1.000000e+00
+define i1 @fpext_constant(float %a) {
+; CHECK-LABEL: @fpext_constant(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf ogt float [[A:%.*]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %ext = fpext float %a to double
-  %cmp = fcmp ogt double %ext, 1.000000e+00
+  %cmp = fcmp ninf ogt double %ext, 1.000000e+00
   ret i1 %cmp
 }
 
-define i1 @test3(float %a) {
-; CHECK-LABEL: @test3(
+define <2 x i1> @fpext_constant_vec_splat(<2 x half> %a) {
+; CHECK-LABEL: @fpext_constant_vec_splat(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ole <2 x half> [[A:%.*]], <half 0xH5140, half 0xH5140>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %ext = fpext <2 x half> %a to <2 x double>
+  %cmp = fcmp nnan ole <2 x double> %ext, <double 42.0, double 42.0>
+  ret <2 x i1> %cmp
+}
+
+define i1 @fpext_constant_lossy(float %a) {
+; CHECK-LABEL: @fpext_constant_lossy(
 ; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[A:%.*]] to double
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[EXT]], 0x3FF0000000000001
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -37,8 +47,8 @@ define i1 @test3(float %a) {
   ret i1 %cmp
 }
 
-define i1 @test4(float %a) {
-; CHECK-LABEL: @test4(
+define i1 @fpext_constant_denorm(float %a) {
+; CHECK-LABEL: @fpext_constant_denorm(
 ; CHECK-NEXT:    [[EXT:%.*]] = fpext float [[A:%.*]] to double
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[EXT]], 0x36A0000000000000
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -78,25 +88,49 @@ define <2 x i1> @fneg_constant_swap_pred_vec_undef(<2 x float> %x) {
   ret <2 x i1> %cmp
 }
 
+; The new fcmp should have the same FMF as the original.
+
+define i1 @fneg_fmf(float %x) {
+; CHECK-LABEL: @fneg_fmf(
+; CHECK-NEXT:    [[R:%.*]] = fcmp fast oeq float [[X:%.*]], -4.200000e+01
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %n = fsub fast float -0.0, %x
+  %r = fcmp fast oeq float %n, 42.0
+  ret i1 %r
+}
+
+; The new fcmp should have the same FMF as the original, vector edition.
+
+define <2 x i1> @fcmp_fneg_fmf_vec(<2 x float> %x) {
+; CHECK-LABEL: @fcmp_fneg_fmf_vec(
+; CHECK-NEXT:    [[R:%.*]] = fcmp reassoc nnan ule <2 x float> [[X:%.*]], <float -4.200000e+01, float 1.900000e+01>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %n = fsub nsz <2 x float> zeroinitializer, %x
+  %r = fcmp nnan reassoc uge <2 x float> %n, <float 42.0, float -19.0>
+  ret <2 x i1> %r
+}
+
 define i1 @fneg_fneg_swap_pred(float %x, float %y) {
 ; CHECK-LABEL: @fneg_fneg_swap_pred(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ogt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %neg1 = fsub float -0.0, %x
   %neg2 = fsub float -0.0, %y
-  %cmp = fcmp olt float %neg1, %neg2
+  %cmp = fcmp nnan olt float %neg1, %neg2
   ret i1 %cmp
 }
 
 define <2 x i1> @fneg_fneg_swap_pred_vec(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @fneg_fneg_swap_pred_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ninf ogt <2 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %neg1 = fsub <2 x float> <float -0.0, float -0.0>, %x
   %neg2 = fsub <2 x float> <float -0.0, float -0.0>, %y
-  %cmp = fcmp olt <2 x float> %neg1, %neg2
+  %cmp = fcmp ninf olt <2 x float> %neg1, %neg2
   ret <2 x i1> %cmp
 }
 

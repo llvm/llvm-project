@@ -159,6 +159,7 @@ class SYNC_MMR6_ENC : POOL32A_SYNC_FM_MMR6;
 class SYNCI_MMR6_ENC : POOL32I_SYNCI_FM_MMR6, MMR6Arch<"synci">;
 class RDPGPR_MMR6_ENC : POOL32A_RDPGPR_FM_MMR6<0b1110000101>;
 class SDBBP_MMR6_ENC : SDBBP_FM_MM, MMR6Arch<"sdbbp">;
+class SIGRIE_MMR6_ENC : SIGRIE_FM_MM, MMR6Arch<"sigrie">;
 class XOR_MMR6_ENC : ARITH_FM_MMR6<"xor", 0x310>;
 class XORI_MMR6_ENC : ADDI_FM_MMR6<"xori", 0x1c>;
 class ABS_S_MMR6_ENC : POOL32F_ABS_FM_MMR6<"abs.s", 0, 0b0001101>;
@@ -1162,6 +1163,14 @@ class SDBBP_MMR6_DESC : MipsR6Inst {
   InstrItinClass Itinerary = II_SDBBP;
 }
 
+class SIGRIE_MMR6_DESC : MipsR6Inst {
+  dag OutOperandList = (outs);
+  dag InOperandList = (ins uimm16:$code_);
+  string AsmString = !strconcat("sigrie", "\t$code_");
+  list<dag> Pattern = [];
+  InstrItinClass Itinerary = II_SIGRIE;
+}
+
 class LWM16_MMR6_DESC
     : MicroMipsInst16<(outs reglist16:$rt), (ins mem_mm_4sp:$addr),
                       !strconcat("lwm16", "\t$rt, $addr"), [],
@@ -1427,6 +1436,7 @@ def SYNCI_MMR6 : StdMMR6Rel, SYNCI_MMR6_DESC, SYNCI_MMR6_ENC, ISA_MICROMIPS32R6;
 def RDPGPR_MMR6 : R6MMR6Rel, RDPGPR_MMR6_DESC, RDPGPR_MMR6_ENC,
                   ISA_MICROMIPS32R6;
 def SDBBP_MMR6 : R6MMR6Rel, SDBBP_MMR6_DESC, SDBBP_MMR6_ENC, ISA_MICROMIPS32R6;
+def SIGRIE_MMR6 : R6MMR6Rel, SIGRIE_MMR6_DESC, SIGRIE_MMR6_ENC, ISA_MICROMIPS32R6;
 def XOR_MMR6 : StdMMR6Rel, XOR_MMR6_DESC, XOR_MMR6_ENC, ISA_MICROMIPS32R6;
 def XORI_MMR6 : StdMMR6Rel, XORI_MMR6_DESC, XORI_MMR6_ENC, ISA_MICROMIPS32R6;
 let DecoderMethod = "DecodeMemMMImm16" in {
@@ -1635,6 +1645,7 @@ def B_MMR6_Pseudo : MipsAsmPseudoInst<(outs), (ins brtarget_mm:$offset),
 }
 def : MipsInstAlias<"sync", (SYNC_MMR6 0), 1>, ISA_MICROMIPS32R6;
 def : MipsInstAlias<"sdbbp", (SDBBP_MMR6 0), 1>, ISA_MICROMIPS32R6;
+def : MipsInstAlias<"sigrie", (SIGRIE_MMR6 0), 1>, ISA_MICROMIPS32R6;
 def : MipsInstAlias<"rdhwr $rt, $rs",
                     (RDHWR_MMR6 GPR32Opnd:$rt, HWRegsOpnd:$rs, 0), 1>,
                     ISA_MICROMIPS32R6;

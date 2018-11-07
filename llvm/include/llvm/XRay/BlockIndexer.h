@@ -54,6 +54,8 @@ public:
   Error visit(NewBufferRecord &) override;
   Error visit(EndBufferRecord &) override;
   Error visit(FunctionRecord &) override;
+  Error visit(CustomEventRecordV5 &) override;
+  Error visit(TypedEventRecord &) override;
 
   /// The flush() function will clear out the current state of the visitor, to
   /// allow for explicitly flushing a block's records to the currently

@@ -43,6 +43,8 @@ public:
   Error visit(NewBufferRecord &) override;
   Error visit(EndBufferRecord &) override;
   Error visit(FunctionRecord &) override;
+  Error visit(CustomEventRecordV5 &) override;
+  Error visit(TypedEventRecord &) override;
 
 private:
   support::endian::Writer OS;

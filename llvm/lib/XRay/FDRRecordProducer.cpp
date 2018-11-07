@@ -53,14 +53,15 @@ metadataRecordType(const XRayFileHeader &Header, uint8_t T) {
   case MetadataRecordKinds::WalltimeMarkerKind:
     return make_unique<WallclockRecord>();
   case MetadataRecordKinds::CustomEventMarkerKind:
+    if (Header.Version >= 5)
+      return make_unique<CustomEventRecordV5>();
     return make_unique<CustomEventRecord>();
   case MetadataRecordKinds::CallArgumentKind:
     return make_unique<CallArgRecord>();
   case MetadataRecordKinds::BufferExtentsKind:
     return make_unique<BufferExtents>();
   case MetadataRecordKinds::TypedEventMarkerKind:
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Encountered an unsupported TypedEventMarker.");
+    return make_unique<TypedEventRecord>();
   case MetadataRecordKinds::PidKind:
     return make_unique<PIDRecord>();
   case MetadataRecordKinds::EnumEndMarker:

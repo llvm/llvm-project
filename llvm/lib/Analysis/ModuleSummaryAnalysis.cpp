@@ -350,20 +350,18 @@ static void computeFunctionSummary(
 
   bool NonRenamableLocal = isNonRenamableLocal(F);
   bool NotEligibleForImport =
-      NonRenamableLocal || HasInlineAsmMaybeReferencingInternal ||
-      // Inliner doesn't handle variadic functions.
-      // FIXME: refactor this to use the same code that inliner is using.
-      F.isVarArg() ||
-      // Don't try to import functions with noinline attribute.
-      F.getAttributes().hasFnAttribute(Attribute::NoInline);
+      NonRenamableLocal || HasInlineAsmMaybeReferencingInternal;
   GlobalValueSummary::GVFlags Flags(F.getLinkage(), NotEligibleForImport,
                                     /* Live = */ false, F.isDSOLocal());
   FunctionSummary::FFlags FunFlags{
       F.hasFnAttribute(Attribute::ReadNone),
       F.hasFnAttribute(Attribute::ReadOnly),
-      F.hasFnAttribute(Attribute::NoRecurse),
-      F.returnDoesNotAlias(),
-  };
+      F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
+      // Inliner doesn't handle variadic functions.
+      // FIXME: refactor this to use the same code that inliner is using.
+      F.isVarArg() ||
+          // Don't try to import functions with noinline attribute.
+          F.getAttributes().hasFnAttribute(Attribute::NoInline)};
   auto FuncSummary = llvm::make_unique<FunctionSummary>(
       Flags, NumInsts, FunFlags, RefEdges.takeVector(),
       CallGraphEdges.takeVector(), TypeTests.takeVector(),
@@ -478,7 +476,8 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                         F->hasFnAttribute(Attribute::ReadNone),
                         F->hasFnAttribute(Attribute::ReadOnly),
                         F->hasFnAttribute(Attribute::NoRecurse),
-                        F->returnDoesNotAlias()},
+                        F->returnDoesNotAlias(),
+                        /* NoInline = */ false},
                     ArrayRef<ValueInfo>{}, ArrayRef<FunctionSummary::EdgeTy>{},
                     ArrayRef<GlobalValue::GUID>{},
                     ArrayRef<FunctionSummary::VFuncId>{},

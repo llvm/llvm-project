@@ -63,6 +63,7 @@ MSVCUndecoratedNameParser::MSVCUndecoratedNameParser(llvm::StringRef name) {
                                 name.slice(last_base_start, i - 1));
 
       last_base_start = i + 1;
+      break;
     default:
       break;
     }
