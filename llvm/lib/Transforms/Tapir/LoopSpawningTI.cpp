@@ -126,6 +126,7 @@ static void emitMissedWarning(const Loop *L, const TapirLoopHints &LH,
 /// divide-and-conquer.
 class LoopOutlineProcessor {
 public:
+  virtual ~LoopOutlineProcessor() = default;
   virtual void postProcessOutline(TapirLoopInfo &TL, TaskOutlineInfo &Out,
                                   ValueToValueMapTy &VMap) = 0;
 };
@@ -155,12 +156,10 @@ private:
 /// Process Tapir loops within the given function for loop spawning.
 class LoopSpawningImpl {
 public:
-  LoopSpawningImpl(Function &F, const DataLayout &DL, DominatorTree &DT,
-                   LoopInfo &LI, TaskInfo &TI, ScalarEvolution &SE,
-                   AssumptionCache &AC, TargetTransformInfo &TTI,
-                   OptimizationRemarkEmitter &ORE)
-      : F(F), DL(DL), DT(DT), LI(LI), TI(TI),
-        SE(SE), AC(AC), TTI(TTI), ORE(ORE) {}
+  LoopSpawningImpl(Function &F, DominatorTree &DT, LoopInfo &LI, TaskInfo &TI,
+                   ScalarEvolution &SE, AssumptionCache &AC,
+                   TargetTransformInfo &TTI, OptimizationRemarkEmitter &ORE)
+      : F(F), DT(DT), LI(LI), TI(TI), SE(SE), AC(AC), TTI(TTI), ORE(ORE) {}
 
   ~LoopSpawningImpl() {
     for (TapirLoopInfo *TL : TapirLoops)
@@ -172,23 +171,30 @@ public:
 
   bool run();
 
+  // If loop \p L defines a recorded Tapir loop, returns the Tapir loop info for
+  // that Tapir loop.  Otherwise returns null.
   TapirLoopInfo *getTapirLoop(Loop *L) {
     if (!LoopToTapirLoop.count(L))
       return nullptr;
     return LoopToTapirLoop[L];
   }
 
+  // If task \p T defines a recorded Tapir loop, returns the Tapir loop info for
+  // that Tapir loop.  Otherwise returns null.
   TapirLoopInfo *getTapirLoop(Task *T) {
     if (!TaskToTapirLoop.count(T))
       return nullptr;
     return TaskToTapirLoop[T];
   }
 
+  // Gets the Tapir loop that contains basic block \p B, i.e., the Tapir loop
+  // for the loop associated with \p B.
   TapirLoopInfo *getTapirLoop(const BasicBlock *B) {
     return getTapirLoop(LI.getLoopFor(B));
   }
 
 private:
+  // Record a Tapir loop defined by loop \p L and task \p T.
   TapirLoopInfo *createTapirLoop(Loop *L, Task *T) {
     TapirLoops.push_back(new TapirLoopInfo(L, T));
     TaskToTapirLoop[T] = TapirLoops.back();
@@ -197,35 +203,62 @@ private:
     return TapirLoops.back();
   }
 
+  // Forget the specified Tapir loop \p TL.
   void forgetTapirLoop(TapirLoopInfo *TL) {
     TaskToTapirLoop.erase(TL->getTask());
     LoopToTapirLoop.erase(TL->getLoop());
   }
 
+  // If loop \p L is a Tapir loop, return its corresponding task.
   Task *getTaskIfTapirLoop(const Loop *L);
 
+  // Get the LoopOutlineProcessor for handling Tapir loop \p TL.
   LoopOutlineProcessor *getOutlineProcessor(TapirLoopInfo *TL);
 
+  // For all recorded Tapir loops, determine the function arguments and inputs
+  // for the outlined helper functions for those loops.
+  //
+  // The \p LoopArgs map will store the function arguments for these outlined
+  // loop helpers.  The \p LoopInputs map will store the corresponding arguments
+  // for calling those outlined helpers from the parent function.  The \p
+  // LoopArgStarts map will store the instruction in the parent where new code
+  // for computing these outlined-helper-call arguments is first inserted.
   void getAllTapirLoopInputs(
       DenseMap<Loop *, ValueSet> &LoopArgs,
       DenseMap<Loop *, SmallVector<Value *, 1>> &LoopInputs,
       DenseMap<Loop *, Instruction *> &LoopArgStarts);
 
+  // Associate tasks with Tapir loops that enclose them.
   void associateTasksToTapirLoops();
 
+  // Get the set of basic blocks within the task of Tapir loop \p TL.  The \p
+  // TaskBlocks vector stores all of these basic blocks.  The \p ReattachBlocks
+  // set identifies which blocks are terminated by a reattach instruction that
+  // terminates the task.  The \p DetachedRethrowBlocks set identifies which
+  // blocks are terminated by detached-rethrow instructions that terminate the
+  // task.  Entry points to shared exception-handling code is stored in the
+  // \p SharedEHEntries set.
+  //
+  // This method relies on being executed on the Tapir loops in a function in
+  // post order.
   void getTapirLoopTaskBlocks(
       TapirLoopInfo *TL, std::vector<BasicBlock *> &TaskBlocks,
       SmallPtrSetImpl<BasicBlock *> &ReattachBlocks,
       SmallPtrSetImpl<BasicBlock *> &DetachedRethrowBlocks,
       SmallPtrSetImpl<BasicBlock *> &SharedEHEntries);
 
+  // Outline Tapir loop \p TL into a helper function.  The \p Args set specified
+  // the arguments to that helper function.  The map \p VMap will store the
+  // mapping of values in the original function to values in the outlined
+  // helper.
   Function *createHelperForTapirLoop(
       TapirLoopInfo *TL, ValueSet &Args, ValueToValueMapTy &VMap);
 
+  // Outline all recorded Tapir loops in the function.
   TaskOutlineMapTy outlineAllTapirLoops();
 
+private:
   Function &F;
-  const DataLayout &DL;
 
   DominatorTree &DT;
   LoopInfo &LI;
@@ -547,6 +580,7 @@ Task *LoopSpawningImpl::getTaskIfTapirLoop(const Loop *L) {
   return T;
 }
 
+/// Get the LoopOutlineProcessor for handling Tapir loop \p TL.
 LoopOutlineProcessor *LoopSpawningImpl::getOutlineProcessor(TapirLoopInfo *TL) {
   Loop *L = TL->getLoop();
   TapirLoopHints Hints(L);
@@ -581,8 +615,13 @@ void LoopSpawningImpl::associateTasksToTapirLoops() {
   }
 }
 
-/// Scan the spindles of the task inside this Tapir loop to determine which
-/// spindles belong to this Tapir loop.
+/// Get the set of basic blocks within the task of Tapir loop \p TL.  The \p
+/// TaskBlocks vector stores all of these basic blocks.  The \p ReattachBlocks
+/// set identifies which blocks are terminated by a reattach instruction that
+/// terminates the task.  The \p DetachedRethrowBlocks set identifies which
+/// blocks are terminated by detached-rethrow instructions that terminate the
+/// task.  Entry points to shared exception-handling code is stored in the
+/// \p SharedEHEntries set.
 ///
 /// This method relies on being executed on the Tapir loops in a function in
 /// post order.
@@ -649,7 +688,9 @@ void LoopSpawningImpl::getTapirLoopTaskBlocks(
   }
 }
 
-/// \brief Compute the grainsize of the loop, based on the limit.
+/// Compute the grainsize of the loop, based on the limit.  Currently this
+/// routine injects a call to the tapir_loop_grainsize intrinsic, which is
+/// handled in a target-specific way by subsequent lowering passes.
 static Value *computeGrainsize(TapirLoopInfo *TL) {
   Value *TripCount = TL->getTripCount();
   assert(TripCount &&
@@ -663,6 +704,8 @@ static Value *computeGrainsize(TapirLoopInfo *TL) {
                                 { IdxTy }), { TripCount });
 }
 
+/// Get the grainsize of this loop either from metadata or by computing the
+/// grainsize.
 static Value *getGrainsizeVal(TapirLoopInfo *TL) {
   Value *GrainVal;
   if (unsigned Grainsize = TL->getGrainsize())
@@ -674,6 +717,7 @@ static Value *getGrainsizeVal(TapirLoopInfo *TL) {
   return GrainVal;
 }
 
+/// Determine the inputs to Tapir loop \p TL for the loop control.
 static void getLoopControlInputs(TapirLoopInfo *TL,
                                  SmallVectorImpl<Value *> &LCArgs,
                                  SmallVectorImpl<Value *> &LCInputs) {
@@ -725,6 +769,14 @@ static bool isSRetInput(const Value *V, Function &F) {
   return false;
 }
 
+/// For all recorded Tapir loops, determine the function arguments and inputs
+/// for the outlined helper functions for those loops.
+///
+/// The \p LoopArgs map will store the function arguments for these outlined
+/// loop helpers.  The \p LoopInputs map will store the corresponding arguments
+/// for calling those outlined helpers from the parent function.  The \p
+/// LoopArgStarts map will store the instruction in the parent where new code
+/// for computing these outlined-helper-call arguments is first inserted.
 void LoopSpawningImpl::getAllTapirLoopInputs(
     DenseMap<Loop *, ValueSet> &LoopArgs,
     DenseMap<Loop *, SmallVector<Value *, 1>> &LoopInputs,
@@ -848,6 +900,9 @@ static void updateClonedIVs(
   }
 }
 
+/// Outline Tapir loop \p TL into a helper function.  The \p Args set specified
+/// the arguments to that helper function.  The map \p VMap will store the
+/// mapping of values in the original function to values in the outlined helper.
 Function *LoopSpawningImpl::createHelperForTapirLoop(
     TapirLoopInfo *TL, ValueSet &Args, ValueToValueMapTy &VMap) {
   Task *T = TL->getTask();
@@ -991,8 +1046,8 @@ static void addSyncToOutlineReturns(TapirLoopInfo &TL, TaskOutlineInfo &Out,
   }
 }
 
-TaskOutlineMapTy
-LoopSpawningImpl::outlineAllTapirLoops() {
+/// Outline all recorded Tapir loops in the function.
+TaskOutlineMapTy LoopSpawningImpl::outlineAllTapirLoops() {
   DenseMap<TapirLoopInfo *, std::unique_ptr<LoopOutlineProcessor>>
     OutlineProcessors;
 
@@ -1152,9 +1207,8 @@ PreservedAnalyses LoopSpawningPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   // Now process each loop.
   for (Function *F : WorkList)
-    Changed |= LoopSpawningImpl(*F, M.getDataLayout(), GetDT(*F), GetLI(*F),
-                                GetTI(*F), GetSE(*F), GetAC(*F), GetTTI(*F),
-                                GetORE(*F)).run();
+    Changed |= LoopSpawningImpl(*F, GetDT(*F), GetLI(*F), GetTI(*F), GetSE(*F),
+                                GetAC(*F), GetTTI(*F), GetORE(*F)).run();
   if (Changed)
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
@@ -1186,8 +1240,7 @@ struct LoopSpawningTI : public FunctionPass {
     auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
     LLVM_DEBUG(dbgs() << "LoopSpawningTI on function " << F.getName() << "\n");
-    return LoopSpawningImpl(F, F.getParent()->getDataLayout(), DT, LI, TI, SE,
-                            AC, TTI, ORE).run();
+    return LoopSpawningImpl(F, DT, LI, TI, SE, AC, TTI, ORE).run();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
