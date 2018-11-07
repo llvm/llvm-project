@@ -443,6 +443,8 @@ TEST_F(SymbolCollectorTest, Refs) {
   };
   class $bar[[Bar]];
   void $func[[func]]();
+
+  namespace $ns[[NS]] {} // namespace ref is ignored
   )");
   Annotations Main(R"(
   class $bar[[Bar]] {};
@@ -474,6 +476,7 @@ TEST_F(SymbolCollectorTest, Refs) {
                                   HaveRanges(Main.ranges("bar")))));
   EXPECT_THAT(Refs, Contains(Pair(findSymbol(Symbols, "func").ID,
                                   HaveRanges(Main.ranges("func")))));
+  EXPECT_THAT(Refs, Not(Contains(Pair(findSymbol(Symbols, "NS").ID, _))));
   // Symbols *only* in the main file (a, b, c) had no refs collected.
   auto MainSymbols =
       TestTU::withHeaderCode(SymbolsOnlyInMainCode.code()).headerSymbols();

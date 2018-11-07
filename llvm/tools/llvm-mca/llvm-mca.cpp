@@ -22,6 +22,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeRegion.h"
+#include "CodeRegionGenerator.h"
 #include "PipelinePrinter.h"
 #include "Stages/FetchStage.h"
 #include "Stages/InstructionTables.h"
@@ -39,9 +40,7 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
-#include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -199,59 +198,6 @@ const Target *getTarget(const char *ProgName) {
   return TheTarget;
 }
 
-// A comment consumer that parses strings.
-// The only valid tokens are strings.
-class MCACommentConsumer : public AsmCommentConsumer {
-public:
-  mca::CodeRegions &Regions;
-
-  MCACommentConsumer(mca::CodeRegions &R) : Regions(R) {}
-  void HandleComment(SMLoc Loc, StringRef CommentText) override {
-    // Skip empty comments.
-    StringRef Comment(CommentText);
-    if (Comment.empty())
-      return;
-
-    // Skip spaces and tabs
-    unsigned Position = Comment.find_first_not_of(" \t");
-    if (Position >= Comment.size())
-      // We reached the end of the comment. Bail out.
-      return;
-
-    Comment = Comment.drop_front(Position);
-    if (Comment.consume_front("LLVM-MCA-END")) {
-      Regions.endRegion(Loc);
-      return;
-    }
-
-    // Now try to parse string LLVM-MCA-BEGIN
-    if (!Comment.consume_front("LLVM-MCA-BEGIN"))
-      return;
-
-    // Skip spaces and tabs
-    Position = Comment.find_first_not_of(" \t");
-    if (Position < Comment.size())
-      Comment = Comment.drop_front(Position);
-    // Use the rest of the string as a descriptor for this code snippet.
-    Regions.beginRegion(Comment, Loc);
-  }
-};
-
-int AssembleInput(MCAsmParser &Parser, const Target *TheTarget,
-                  MCSubtargetInfo &STI, MCInstrInfo &MCII,
-                  MCTargetOptions &MCOptions) {
-  std::unique_ptr<MCTargetAsmParser> TAP(
-      TheTarget->createMCAsmParser(STI, Parser, MCII, MCOptions));
-
-  if (!TAP) {
-    WithColor::error() << "this target does not support assembly parsing.\n";
-    return 1;
-  }
-
-  Parser.setTargetParser(*TAP);
-  return Parser.Run(false);
-}
-
 ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
   if (OutputFilename == "")
     OutputFilename = "-";
@@ -262,40 +208,6 @@ ErrorOr<std::unique_ptr<ToolOutputFile>> getOutputStream() {
     return std::move(Out);
   return EC;
 }
-
-class MCStreamerWrapper final : public MCStreamer {
-  mca::CodeRegions &Regions;
-
-public:
-  MCStreamerWrapper(MCContext &Context, mca::CodeRegions &R)
-      : MCStreamer(Context), Regions(R) {}
-
-  // We only want to intercept the emission of new instructions.
-  virtual void EmitInstruction(const MCInst &Inst,
-                               const MCSubtargetInfo & /* unused */,
-                               bool /* unused */) override {
-    Regions.addInstruction(Inst);
-  }
-
-  bool EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
-    return true;
-  }
-
-  void EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        unsigned ByteAlignment) override {}
-  void EmitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                    uint64_t Size = 0, unsigned ByteAlignment = 0,
-                    SMLoc Loc = SMLoc()) override {}
-  void EmitGPRel32Value(const MCExpr *Value) override {}
-  void BeginCOFFSymbolDef(const MCSymbol *Symbol) override {}
-  void EmitCOFFSymbolStorageClass(int StorageClass) override {}
-  void EmitCOFFSymbolType(int Type) override {}
-  void EndCOFFSymbolDef() override {}
-
-  ArrayRef<MCInst> GetInstructionSequence(unsigned Index) const {
-    return Regions.getInstructionSequence(Index);
-  }
-};
 } // end of anonymous namespace
 
 static void processOptionImpl(cl::opt<bool> &O, const cl::opt<bool> &Default) {
@@ -352,9 +264,6 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv,
                               "llvm machine code performance analyzer.\n");
 
-  MCTargetOptions MCOptions;
-  MCOptions.PreserveAsmComments = false;
-
   // Get the target from the triple. If a triple is not specified, then select
   // the default triple for the host. If the triple doesn't correspond to any
   // registered target, then exit with an error message.
@@ -394,9 +303,6 @@ int main(int argc, char **argv) {
 
   std::unique_ptr<buffer_ostream> BOS;
 
-  mca::CodeRegions Regions(SrcMgr);
-  MCStreamerWrapper Str(Ctx, Regions);
-
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
 
   std::unique_ptr<MCInstrAnalysis> MCIA(
@@ -429,14 +335,14 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::unique_ptr<MCAsmParser> P(createMCAsmParser(SrcMgr, Ctx, Str, *MAI));
-  MCAsmLexer &Lexer = P->getLexer();
-  MCACommentConsumer CC(Regions);
-  Lexer.setCommentConsumer(&CC);
-
-  if (AssembleInput(*P, TheTarget, *STI, *MCII, MCOptions))
+  // Parse the input and create CodeRegions that llvm-mca can analyze.
+  mca::AsmCodeRegionGenerator CRG(*TheTarget, SrcMgr, Ctx, *MAI, *STI, *MCII);
+  Expected<const mca::CodeRegions &> RegionsOrErr = CRG.parseCodeRegions();
+  if (auto Err = RegionsOrErr.takeError()) {
+    WithColor::error() << Err << "\n";
     return 1;
-
+  }
+  const mca::CodeRegions &Regions = *RegionsOrErr;
   if (Regions.empty()) {
     WithColor::error() << "no assembly instructions found.\n";
     return 1;
@@ -449,7 +355,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  unsigned AssemblerDialect = P->getAssemblerDialect();
+  unsigned AssemblerDialect = CRG.getAssemblerDialect();
   if (OutputAsmVariant >= 0)
     AssemblerDialect = static_cast<unsigned>(OutputAsmVariant);
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(

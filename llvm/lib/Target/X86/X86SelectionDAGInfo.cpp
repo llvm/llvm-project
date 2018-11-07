@@ -250,7 +250,7 @@ SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
 
     if (Repeats.BytesLeft() > 0 &&
         DAG.getMachineFunction().getFunction().optForMinSize()) {
-      // When agressively optimizing for size, avoid generating the code to
+      // When aggressively optimizing for size, avoid generating the code to
       // handle BytesLeft.
       Repeats.AVT = MVT::i8;
     }

@@ -258,3 +258,16 @@ define i64 @test11b() {
 }
 
 declare i64 @llvm.ctpop.i64(i64)
+
+;;======================== test12
+;; Ensure that a struct as an arg to a potentially constant-foldable
+;; function does not crash SCCP (for now it'll just ignores it)
+
+define i1 @test12() {
+  %c = call i1 @llvm.is.constant.sl_i32i32s({i32, i32} {i32 -1, i32 32})
+  ret i1 %c
+; CHECK-LABEL: define i1 @test12
+; CHECK: ret i1 %c
+}
+
+declare i1 @llvm.is.constant.sl_i32i32s({i32, i32} %a)

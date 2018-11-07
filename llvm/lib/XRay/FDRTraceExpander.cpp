@@ -45,8 +45,7 @@ Error TraceExpander::visit(CustomEventRecord &R) {
     CurrentRecord.PId = PID;
     CurrentRecord.TId = TID;
     CurrentRecord.Type = RecordTypes::CUSTOM_EVENT;
-    std::copy(R.data().begin(), R.data().end(),
-              std::back_inserter(CurrentRecord.Data));
+    CurrentRecord.Data = R.data();
     BuildingRecord = true;
   }
   return Error::success();
@@ -61,8 +60,7 @@ Error TraceExpander::visit(CustomEventRecordV5 &R) {
     CurrentRecord.PId = PID;
     CurrentRecord.TId = TID;
     CurrentRecord.Type = RecordTypes::CUSTOM_EVENT;
-    std::copy(R.data().begin(), R.data().end(),
-              std::back_inserter(CurrentRecord.Data));
+    CurrentRecord.Data = R.data();
     BuildingRecord = true;
   }
   return Error::success();
@@ -78,8 +76,7 @@ Error TraceExpander::visit(TypedEventRecord &R) {
     CurrentRecord.TId = TID;
     CurrentRecord.RecordType = R.eventType();
     CurrentRecord.Type = RecordTypes::TYPED_EVENT;
-    std::copy(R.data().begin(), R.data().end(),
-              std::back_inserter(CurrentRecord.Data));
+    CurrentRecord.Data = R.data();
     BuildingRecord = true;
   }
   return Error::success();

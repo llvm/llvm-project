@@ -22,55 +22,124 @@ namespace exegesis {
 
 namespace {
 
-// A chunk of instruction's operands that represents a single memory access.
-struct MemoryOperandRange {
-  MemoryOperandRange(llvm::ArrayRef<Operand> Operands) : Ops(Operands) {}
-
-  // Setup InstructionTemplate so the memory access represented by this object
-  // points to [reg] + offset.
-  void fillOrDie(InstructionTemplate &IT, unsigned Reg, unsigned Offset) {
-    switch (Ops.size()) {
-    case 5:
-      IT.getValueFor(Ops[0]) = llvm::MCOperand::createReg(Reg);    // BaseReg
-      IT.getValueFor(Ops[1]) = llvm::MCOperand::createImm(1);      // ScaleAmt
-      IT.getValueFor(Ops[2]) = llvm::MCOperand::createReg(0);      // IndexReg
-      IT.getValueFor(Ops[3]) = llvm::MCOperand::createImm(Offset); // Disp
-      IT.getValueFor(Ops[4]) = llvm::MCOperand::createReg(0);      // Segment
-      break;
-    default:
-      llvm::errs() << Ops.size() << "-op are not handled right now ("
-                   << IT.Instr.Name << ")\n";
-      llvm_unreachable("Invalid memory configuration");
-    }
+// Returns an error if we cannot handle the memory references in this
+// instruction.
+Error isInvalidMemoryInstr(const Instruction &Instr) {
+  switch (Instr.Description->TSFlags & X86II::FormMask) {
+  default:
+    llvm_unreachable("Unknown FormMask value");
+  // These have no memory access.
+  case X86II::Pseudo:
+  case X86II::RawFrm:
+  case X86II::MRMDestReg:
+  case X86II::MRMSrcReg:
+  case X86II::MRMSrcReg4VOp3:
+  case X86II::MRMSrcRegOp4:
+  case X86II::MRMXr:
+  case X86II::MRM0r:
+  case X86II::MRM1r:
+  case X86II::MRM2r:
+  case X86II::MRM3r:
+  case X86II::MRM4r:
+  case X86II::MRM5r:
+  case X86II::MRM6r:
+  case X86II::MRM7r:
+  case X86II::MRM_C0:
+  case X86II::MRM_C1:
+  case X86II::MRM_C2:
+  case X86II::MRM_C3:
+  case X86II::MRM_C4:
+  case X86II::MRM_C5:
+  case X86II::MRM_C6:
+  case X86II::MRM_C7:
+  case X86II::MRM_C8:
+  case X86II::MRM_C9:
+  case X86II::MRM_CA:
+  case X86II::MRM_CB:
+  case X86II::MRM_CC:
+  case X86II::MRM_CD:
+  case X86II::MRM_CE:
+  case X86II::MRM_CF:
+  case X86II::MRM_D0:
+  case X86II::MRM_D1:
+  case X86II::MRM_D2:
+  case X86II::MRM_D3:
+  case X86II::MRM_D4:
+  case X86II::MRM_D5:
+  case X86II::MRM_D6:
+  case X86II::MRM_D7:
+  case X86II::MRM_D8:
+  case X86II::MRM_D9:
+  case X86II::MRM_DA:
+  case X86II::MRM_DB:
+  case X86II::MRM_DC:
+  case X86II::MRM_DD:
+  case X86II::MRM_DE:
+  case X86II::MRM_DF:
+  case X86II::MRM_E0:
+  case X86II::MRM_E1:
+  case X86II::MRM_E2:
+  case X86II::MRM_E3:
+  case X86II::MRM_E4:
+  case X86II::MRM_E5:
+  case X86II::MRM_E6:
+  case X86II::MRM_E7:
+  case X86II::MRM_E8:
+  case X86II::MRM_E9:
+  case X86II::MRM_EA:
+  case X86II::MRM_EB:
+  case X86II::MRM_EC:
+  case X86II::MRM_ED:
+  case X86II::MRM_EE:
+  case X86II::MRM_EF:
+  case X86II::MRM_F0:
+  case X86II::MRM_F1:
+  case X86II::MRM_F2:
+  case X86II::MRM_F3:
+  case X86II::MRM_F4:
+  case X86II::MRM_F5:
+  case X86II::MRM_F6:
+  case X86II::MRM_F7:
+  case X86II::MRM_F8:
+  case X86II::MRM_F9:
+  case X86II::MRM_FA:
+  case X86II::MRM_FB:
+  case X86II::MRM_FC:
+  case X86II::MRM_FD:
+  case X86II::MRM_FE:
+  case X86II::MRM_FF:
+  case X86II::RawFrmImm8:
+    return Error::success();
+  case X86II::AddRegFrm:
+    return (Instr.Description->Opcode == X86::POP16r || Instr.Description->Opcode == X86::POP32r ||
+            Instr.Description->Opcode == X86::PUSH16r || Instr.Description->Opcode == X86::PUSH32r)
+               ? make_error<BenchmarkFailure>(
+                     "unsupported opcode: unsupported memory access")
+               : Error::success();
+  // These access memory and are handled.
+  case X86II::MRMDestMem:
+  case X86II::MRMSrcMem:
+  case X86II::MRMSrcMem4VOp3:
+  case X86II::MRMSrcMemOp4:
+  case X86II::MRMXm:
+  case X86II::MRM0m:
+  case X86II::MRM1m:
+  case X86II::MRM2m:
+  case X86II::MRM3m:
+  case X86II::MRM4m:
+  case X86II::MRM5m:
+  case X86II::MRM6m:
+  case X86II::MRM7m:
+    return Error::success();
+  // These access memory and are not handled yet.
+  case X86II::RawFrmImm16:
+  case X86II::RawFrmMemOffs:
+  case X86II::RawFrmSrc:
+  case X86II::RawFrmDst:
+  case X86II::RawFrmDstSrc:
+    return make_error<BenchmarkFailure>(
+        "unsupported opcode: non uniform memory access");
   }
-
-  // Returns whether Range can be filled.
-  static bool isValid(const MemoryOperandRange &Range) {
-    return Range.Ops.size() == 5;
-  }
-
-  // Returns whether Op is a valid memory operand.
-  static bool isMemoryOperand(const Operand &Op) {
-    return Op.isMemory() && Op.isExplicit();
-  }
-
-  llvm::ArrayRef<Operand> Ops;
-};
-
-// X86 memory access involve non constant number of operands, this function
-// extracts contiguous memory operands into MemoryOperandRange so it's easier to
-// check and fill.
-static std::vector<MemoryOperandRange>
-getMemoryOperandRanges(llvm::ArrayRef<Operand> Operands) {
-  std::vector<MemoryOperandRange> Result;
-  while (!Operands.empty()) {
-    Operands = Operands.drop_until(MemoryOperandRange::isMemoryOperand);
-    auto MemoryOps = Operands.take_while(MemoryOperandRange::isMemoryOperand);
-    if (!MemoryOps.empty())
-      Result.push_back(MemoryOps);
-    Operands = Operands.drop_front(MemoryOps.size());
-  }
-  return Result;
 }
 
 static llvm::Error IsInvalidOpcode(const Instruction &Instr) {
@@ -82,23 +151,14 @@ static llvm::Error IsInvalidOpcode(const Instruction &Instr) {
       OpcodeName.startswith("ADJCALLSTACK"))
     return llvm::make_error<BenchmarkFailure>(
         "unsupported opcode: Push/Pop/AdjCallStack");
-  const bool ValidMemoryOperands = llvm::all_of(
-      getMemoryOperandRanges(Instr.Operands), MemoryOperandRange::isValid);
-  if (!ValidMemoryOperands)
-    return llvm::make_error<BenchmarkFailure>(
-        "unsupported opcode: non uniform memory access");
+  if (llvm::Error Error = isInvalidMemoryInstr(Instr))
+    return Error;
   // We do not handle instructions with OPERAND_PCREL.
   for (const Operand &Op : Instr.Operands)
     if (Op.isExplicit() &&
         Op.getExplicitOperandInfo().OperandType == llvm::MCOI::OPERAND_PCREL)
       return llvm::make_error<BenchmarkFailure>(
           "unsupported opcode: PC relative operand");
-  for (const Operand &Op : Instr.Operands)
-    if (Op.isReg() && Op.isExplicit() &&
-        Op.getExplicitOperandInfo().RegClass ==
-            llvm::X86::SEGMENT_REGRegClassID)
-      return llvm::make_error<BenchmarkFailure>(
-          "unsupported opcode: access segment memory");
   // We do not handle second-form X87 instructions. We only handle first-form
   // ones (_Fp), see comment in X86InstrFPStack.td.
   for (const Operand &Op : Instr.Operands)
@@ -357,10 +417,28 @@ private:
 
   void fillMemoryOperands(InstructionTemplate &IT, unsigned Reg,
                           unsigned Offset) const override {
-    // FIXME: For instructions that read AND write to memory, we use the same
-    // value for input and output.
-    for (auto &MemoryRange : getMemoryOperandRanges(IT.Instr.Operands))
-      MemoryRange.fillOrDie(IT, Reg, Offset);
+    assert(!isInvalidMemoryInstr(IT.Instr) &&
+           "fillMemoryOperands requires a valid memory instruction");
+    int MemOpIdx = X86II::getMemoryOperandNo(IT.Instr.Description->TSFlags);
+    assert(MemOpIdx >= 0 && "invalid memory operand index");
+    // getMemoryOperandNo() ignores tied operands, so we have to add them back.
+    for (unsigned I = 0; I <= static_cast<unsigned>(MemOpIdx); ++I) {
+      const auto &Op = IT.Instr.Operands[I];
+      if (Op.isTied() && Op.getTiedToIndex() < I) {
+        ++MemOpIdx;
+      }
+    }
+    // Now fill in the memory operands.
+    const auto SetOp = [&IT](int OpIdx, const MCOperand &OpVal) {
+      const auto Op = IT.Instr.Operands[OpIdx];
+      assert(Op.isMemory() && Op.isExplicit() && "invalid memory pattern");
+      IT.getValueFor(Op) = OpVal;
+    };
+    SetOp(MemOpIdx + 0, MCOperand::createReg(Reg));    // BaseReg
+    SetOp(MemOpIdx + 1, MCOperand::createImm(1));      // ScaleAmt
+    SetOp(MemOpIdx + 2, MCOperand::createReg(0));      // IndexReg
+    SetOp(MemOpIdx + 3, MCOperand::createImm(Offset)); // Disp
+    SetOp(MemOpIdx + 4, MCOperand::createReg(0));      // Segment
   }
 
   std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,

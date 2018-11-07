@@ -344,7 +344,7 @@ InstructionBenchmark::readYamls(const LLVMState &State,
 
 void InstructionBenchmark::writeYamlTo(const LLVMState &State,
                                        llvm::raw_ostream &OS) {
-  llvm::yaml::Output Yout(OS);
+  llvm::yaml::Output Yout(OS, nullptr /*Ctx*/, 200 /*WrapColumn*/);
   YamlContext Context(State);
   Yout.beginDocuments();
   llvm::yaml::yamlize(Yout, *this, /*unused*/ true, Context);

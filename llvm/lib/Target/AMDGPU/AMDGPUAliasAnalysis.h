@@ -96,6 +96,19 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
 
+// Wrapper around ExternalAAWrapperPass so that the default constructor gets the
+// callback.
+class AMDGPUExternalAAWrapper : public ExternalAAWrapperPass {
+public:
+  static char ID;
+
+  AMDGPUExternalAAWrapper() : ExternalAAWrapperPass(
+    [](Pass &P, Function &, AAResults &AAR) {
+      if (auto *WrapperPass = P.getAnalysisIfAvailable<AMDGPUAAWrapperPass>())
+        AAR.addAAResult(WrapperPass->getResult());
+    }) {}
+};
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_AMDGPU_AMDGPUALIASANALYSIS_H

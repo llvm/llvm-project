@@ -2038,10 +2038,10 @@ define i32 @AtomicCmpSwap32(i32 signext %oldval, i32 signext %newval) nounwind {
 ; MIPS32R6O0-NEXT:    beqzc $7, $BB7_1
 ; MIPS32R6O0-NEXT:  $BB7_3: # %entry
 ; MIPS32R6O0-NEXT:    move $2, $6
+; MIPS32R6O0-NEXT:    sw $25, 12($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $1, 8($sp) # 4-byte Folded Spill
 ; MIPS32R6O0-NEXT:    sw $6, 16($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $3, 8($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $25, 4($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $3, 4($sp) # 4-byte Folded Spill
 ; MIPS32R6O0-NEXT:    addiu $sp, $sp, 24
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
@@ -4550,11 +4550,11 @@ define signext i8 @AtomicCmpSwap8(i8 signext %oldval, i8 signext %newval) nounwi
 ; MIPS32R6O0-NEXT:    srlv $8, $10, $2
 ; MIPS32R6O0-NEXT:    seb $8, $8
 ; MIPS32R6O0-NEXT:  # %bb.4: # %entry
-; MIPS32R6O0-NEXT:    sw $1, 12($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $8, 8($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $25, 4($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $25, 12($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $1, 8($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $8, 4($sp) # 4-byte Folded Spill
 ; MIPS32R6O0-NEXT:  # %bb.5: # %entry
-; MIPS32R6O0-NEXT:    lw $2, 8($sp) # 4-byte Folded Reload
+; MIPS32R6O0-NEXT:    lw $2, 4($sp) # 4-byte Folded Reload
 ; MIPS32R6O0-NEXT:    addiu $sp, $sp, 16
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
@@ -5127,14 +5127,14 @@ define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) n
 ; MIPS32R6O0-NEXT:    srlv $11, $13, $4
 ; MIPS32R6O0-NEXT:    seb $11, $11
 ; MIPS32R6O0-NEXT:  # %bb.4: # %entry
-; MIPS32R6O0-NEXT:    sw $11, 20($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $5, 16($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $3, 12($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $1, 8($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $5, 20($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $1, 16($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $2, 12($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $3, 8($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $11, 4($sp) # 4-byte Folded Spill
 ; MIPS32R6O0-NEXT:  # %bb.5: # %entry
-; MIPS32R6O0-NEXT:    lw $1, 20($sp) # 4-byte Folded Reload
-; MIPS32R6O0-NEXT:    lw $2, 16($sp) # 4-byte Folded Reload
+; MIPS32R6O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
+; MIPS32R6O0-NEXT:    lw $2, 20($sp) # 4-byte Folded Reload
 ; MIPS32R6O0-NEXT:    xor $1, $1, $2
 ; MIPS32R6O0-NEXT:    sltiu $2, $1, 1
 ; MIPS32R6O0-NEXT:    addiu $sp, $sp, 24
@@ -5282,7 +5282,7 @@ define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) n
 ;
 ; MIPS64R6O0-LABEL: AtomicCmpSwapRes8:
 ; MIPS64R6O0:       # %bb.0: # %entry
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -16
+; MIPS64R6O0-NEXT:    daddiu $sp, $sp, -32
 ; MIPS64R6O0-NEXT:    move $1, $6
 ; MIPS64R6O0-NEXT:    move $2, $5
 ; MIPS64R6O0-NEXT:    move $5, $4
@@ -5313,15 +5313,15 @@ define i1 @AtomicCmpSwapRes8(i8* %ptr, i8 signext %oldval, i8 signext %newval) n
 ; MIPS64R6O0-NEXT:    srlv $10, $12, $3
 ; MIPS64R6O0-NEXT:    seb $10, $10
 ; MIPS64R6O0-NEXT:  # %bb.4: # %entry
-; MIPS64R6O0-NEXT:    sd $5, 8($sp) # 8-byte Folded Spill
-; MIPS64R6O0-NEXT:    sw $10, 4($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:    sw $2, 0($sp) # 4-byte Folded Spill
+; MIPS64R6O0-NEXT:    sw $2, 28($sp) # 4-byte Folded Spill
+; MIPS64R6O0-NEXT:    sd $5, 16($sp) # 8-byte Folded Spill
+; MIPS64R6O0-NEXT:    sw $10, 12($sp) # 4-byte Folded Spill
 ; MIPS64R6O0-NEXT:  # %bb.5: # %entry
-; MIPS64R6O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
-; MIPS64R6O0-NEXT:    lw $2, 0($sp) # 4-byte Folded Reload
+; MIPS64R6O0-NEXT:    lw $1, 12($sp) # 4-byte Folded Reload
+; MIPS64R6O0-NEXT:    lw $2, 28($sp) # 4-byte Folded Reload
 ; MIPS64R6O0-NEXT:    xor $1, $1, $2
 ; MIPS64R6O0-NEXT:    sltiu $2, $1, 1
-; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
+; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 32
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
 ; MM32-LABEL: AtomicCmpSwapRes8:
@@ -6233,20 +6233,20 @@ define {i16, i1} @foo(i16* %addr, i16 %l, i16 %r, i16 %new) {
 ; MIPS32R6O0-NEXT:    srlv $12, $14, $4
 ; MIPS32R6O0-NEXT:    seh $12, $12
 ; MIPS32R6O0-NEXT:  # %bb.4:
-; MIPS32R6O0-NEXT:    sw $12, 20($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $3, 16($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $8, 12($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $5, 8($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
-; MIPS32R6O0-NEXT:    sw $2, 0($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $1, 20($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $2, 16($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $3, 12($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $8, 8($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $5, 4($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $12, 0($sp) # 4-byte Folded Spill
 ; MIPS32R6O0-NEXT:  # %bb.5:
-; MIPS32R6O0-NEXT:    lw $1, 8($sp) # 4-byte Folded Reload
+; MIPS32R6O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
 ; MIPS32R6O0-NEXT:    seh $2, $1
-; MIPS32R6O0-NEXT:    lw $3, 20($sp) # 4-byte Folded Reload
+; MIPS32R6O0-NEXT:    lw $3, 0($sp) # 4-byte Folded Reload
 ; MIPS32R6O0-NEXT:    xor $2, $3, $2
 ; MIPS32R6O0-NEXT:    sltiu $3, $2, 1
 ; MIPS32R6O0-NEXT:    sync
-; MIPS32R6O0-NEXT:    lw $2, 20($sp) # 4-byte Folded Reload
+; MIPS32R6O0-NEXT:    lw $2, 0($sp) # 4-byte Folded Reload
 ; MIPS32R6O0-NEXT:    addiu $sp, $sp, 24
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
@@ -6449,17 +6449,17 @@ define {i16, i1} @foo(i16* %addr, i16 %l, i16 %r, i16 %new) {
 ; MIPS64R6O0-NEXT:    srlv $11, $13, $3
 ; MIPS64R6O0-NEXT:    seh $11, $11
 ; MIPS64R6O0-NEXT:  # %bb.4:
-; MIPS64R6O0-NEXT:    sw $2, 12($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:    sw $11, 8($sp) # 4-byte Folded Spill
-; MIPS64R6O0-NEXT:    sd $5, 0($sp) # 8-byte Folded Spill
+; MIPS64R6O0-NEXT:    sd $5, 8($sp) # 8-byte Folded Spill
+; MIPS64R6O0-NEXT:    sw $2, 4($sp) # 4-byte Folded Spill
+; MIPS64R6O0-NEXT:    sw $11, 0($sp) # 4-byte Folded Spill
 ; MIPS64R6O0-NEXT:  # %bb.5:
-; MIPS64R6O0-NEXT:    lw $1, 12($sp) # 4-byte Folded Reload
+; MIPS64R6O0-NEXT:    lw $1, 4($sp) # 4-byte Folded Reload
 ; MIPS64R6O0-NEXT:    seh $2, $1
-; MIPS64R6O0-NEXT:    lw $3, 8($sp) # 4-byte Folded Reload
+; MIPS64R6O0-NEXT:    lw $3, 0($sp) # 4-byte Folded Reload
 ; MIPS64R6O0-NEXT:    xor $2, $3, $2
 ; MIPS64R6O0-NEXT:    sltiu $3, $2, 1
 ; MIPS64R6O0-NEXT:    sync
-; MIPS64R6O0-NEXT:    lw $2, 8($sp) # 4-byte Folded Reload
+; MIPS64R6O0-NEXT:    lw $2, 0($sp) # 4-byte Folded Reload
 ; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;
@@ -7016,8 +7016,8 @@ define i32 @zeroreg() nounwind {
 ; MIPS32O0-NEXT:    xor $2, $5, $2
 ; MIPS32O0-NEXT:    sltiu $2, $2, 1
 ; MIPS32O0-NEXT:    andi $2, $2, 1
-; MIPS32O0-NEXT:    sw $3, 8($sp) # 4-byte Folded Spill
 ; MIPS32O0-NEXT:    sw $5, 12($sp) # 4-byte Folded Spill
+; MIPS32O0-NEXT:    sw $3, 8($sp) # 4-byte Folded Spill
 ; MIPS32O0-NEXT:    sw $1, 4($sp) # 4-byte Folded Spill
 ; MIPS32O0-NEXT:    addiu $sp, $sp, 16
 ; MIPS32O0-NEXT:    jr $ra
@@ -7099,8 +7099,8 @@ define i32 @zeroreg() nounwind {
 ; MIPS32R6O0-NEXT:    xor $1, $5, $1
 ; MIPS32R6O0-NEXT:    sltiu $2, $1, 1
 ; MIPS32R6O0-NEXT:    sync
-; MIPS32R6O0-NEXT:    sw $3, 0($sp) # 4-byte Folded Spill
 ; MIPS32R6O0-NEXT:    sw $5, 4($sp) # 4-byte Folded Spill
+; MIPS32R6O0-NEXT:    sw $3, 0($sp) # 4-byte Folded Spill
 ; MIPS32R6O0-NEXT:    addiu $sp, $sp, 8
 ; MIPS32R6O0-NEXT:    jrc $ra
 ;
@@ -7234,8 +7234,8 @@ define i32 @zeroreg() nounwind {
 ; MIPS64R6O0-NEXT:    xor $2, $6, $3
 ; MIPS64R6O0-NEXT:    sltiu $2, $2, 1
 ; MIPS64R6O0-NEXT:    sync
-; MIPS64R6O0-NEXT:    sw $4, 8($sp) # 4-byte Folded Spill
 ; MIPS64R6O0-NEXT:    sw $6, 12($sp) # 4-byte Folded Spill
+; MIPS64R6O0-NEXT:    sw $4, 8($sp) # 4-byte Folded Spill
 ; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 16
 ; MIPS64R6O0-NEXT:    jrc $ra
 ;

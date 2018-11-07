@@ -12,7 +12,7 @@
 
 // SIMD-ONLY-NOT: {{__kmpc|__tgt}}
 
-// CHECK-NOT: define {{.*}}{{baz1|baz4|maini1|Base}}
+// CHECK-NOT: define {{.*}}{{baz1|baz4|maini1|Base|virtual_}}
 // CHECK-DAG: Bake
 // CHECK-NOT: @{{hhh|ggg|fff|eee}} =
 // CHECK-DAG: @aaa = external global i32,
@@ -167,11 +167,25 @@ struct BakeNonT {
 };
 #pragma omp end declare target
 
+template <typename T>
+struct B {
+  virtual void virtual_foo();
+};
+
+void new_bar() { new B<int>(); }
+
+template <typename T>
+void B<T>::virtual_foo() {
+#pragma omp target
+  {}
+}
+
 // CHECK-DAG: declare extern_weak signext i32 @__create()
 
-// CHECK-NOT: define {{.*}}{{baz1|baz4|maini1|Base}}
+// CHECK-NOT: define {{.*}}{{baz1|baz4|maini1|Base|virtual_}}
 
 // CHECK-DAG: !{i32 1, !"aaa", i32 0, i32 {{[0-9]+}}}
 // CHECK-DAG: !{i32 1, !"ccc", i32 0, i32 {{[0-9]+}}}
+// CHECK-DAG: !{{{.+}}virtual_foo
 
 #endif // HEADER

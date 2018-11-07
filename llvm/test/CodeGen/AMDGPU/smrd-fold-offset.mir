@@ -1,8 +1,6 @@
 # RUN: llc -march=amdgcn -run-pass si-fix-sgpr-copies -o - %s | FileCheck -check-prefix=GCN %s
 
-# GCN-LABEL: name: smrd_vgpr_offset_imm
-# GCN: V_READFIRSTLANE_B32
-# GCN: S_BUFFER_LOAD_DWORD_SGPR
+# GCN: BUFFER_LOAD_DWORD_OFFEN %{{[0-9]+}}, killed %{{[0-9]+}}, 0, 4095
 ---
 name:            smrd_vgpr_offset_imm
 body:             |
@@ -24,9 +22,7 @@ body:             |
     SI_RETURN_TO_EPILOG $vgpr0
 ...
 
-# GCN-LABEL: name: smrd_vgpr_offset_imm_add_u32
-# GCN: V_READFIRSTLANE_B32
-# GCN: S_BUFFER_LOAD_DWORD_SGPR
+# GCN: BUFFER_LOAD_DWORD_OFFEN %{{[0-9]+}}, killed %{{[0-9]+}}, 0, 4095
 ---
 name:            smrd_vgpr_offset_imm_add_u32
 body:             |

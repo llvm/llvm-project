@@ -222,8 +222,8 @@ define void @f1() {
 ; 686-O0-NEXT:    movl %ebp, _ZN8struct_210member_2_0E
 ; 686-O0-NEXT:    movl $0, _ZN8struct_210member_2_0E+4
 ; 686-O0-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; 686-O0-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; 686-O0-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; 686-O0-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; 686-O0-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; 686-O0-NEXT:    movl %edi, (%esp) # 4-byte Spill
 ; 686-O0-NEXT:    addl $24, %esp

@@ -1223,6 +1223,17 @@ CGOpenMPRuntime::CGOpenMPRuntime(CodeGenModule &CGM, StringRef FirstSeparator,
 
 void CGOpenMPRuntime::clear() {
   InternalVars.clear();
+  // Clean non-target variable declarations possibly used only in debug info.
+  for (const auto &Data : EmittedNonTargetVariables) {
+    if (!Data.getValue().pointsToAliveValue())
+      continue;
+    auto *GV = dyn_cast<llvm::GlobalVariable>(Data.getValue());
+    if (!GV)
+      continue;
+    if (!GV->isDeclaration() || GV->getNumUses() > 0)
+      continue;
+    GV->eraseFromParent();
+  }
 }
 
 std::string CGOpenMPRuntime::getName(ArrayRef<StringRef> Parts) const {
@@ -2501,8 +2512,7 @@ llvm::Function *CGOpenMPRuntime::emitThreadPrivateVarDefinition(
     return nullptr;
 
   VD = VD->getDefinition(CGM.getContext());
-  if (VD && ThreadPrivateWithDefinition.count(VD) == 0) {
-    ThreadPrivateWithDefinition.insert(VD);
+  if (VD && ThreadPrivateWithDefinition.insert(CGM.getMangledName(VD)).second) {
     QualType ASTTy = VD->getType();
 
     llvm::Value *Ctor = nullptr, *CopyCtor = nullptr, *Dtor = nullptr;
@@ -2648,7 +2658,7 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
   if (!Res || *Res == OMPDeclareTargetDeclAttr::MT_Link)
     return CGM.getLangOpts().OpenMPIsDevice;
   VD = VD->getDefinition(CGM.getContext());
-  if (VD && !DeclareTargetWithDefinition.insert(VD).second)
+  if (VD && !DeclareTargetWithDefinition.insert(CGM.getMangledName(VD)).second)
     return CGM.getLangOpts().OpenMPIsDevice;
 
   QualType ASTTy = VD->getType();
@@ -3924,6 +3934,8 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
   llvm::LLVMContext &C = M.getContext();
   SmallVector<const OffloadEntriesInfoManagerTy::OffloadEntryInfo *, 16>
       OrderedEntries(OffloadEntriesInfoManager.size());
+  llvm::SmallVector<StringRef, 16> ParentFunctions(
+      OffloadEntriesInfoManager.size());
 
   // Auxiliary methods to create metadata values and strings.
   auto &&GetMDInt = [this](unsigned V) {
@@ -3938,7 +3950,7 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
 
   // Create function that emits metadata for each target region entry;
   auto &&TargetRegionMetadataEmitter =
-      [&C, MD, &OrderedEntries, &GetMDInt, &GetMDString](
+      [&C, MD, &OrderedEntries, &ParentFunctions, &GetMDInt, &GetMDString](
           unsigned DeviceID, unsigned FileID, StringRef ParentName,
           unsigned Line,
           const OffloadEntriesInfoManagerTy::OffloadEntryInfoTargetRegion &E) {
@@ -3958,6 +3970,7 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
 
         // Save this entry in the right position of the ordered entries array.
         OrderedEntries[E.getOrder()] = &E;
+        ParentFunctions[E.getOrder()] = ParentName;
 
         // Add metadata to the named metadata node.
         MD->addOperand(llvm::MDNode::get(C, Ops));
@@ -3999,6 +4012,10 @@ void CGOpenMPRuntime::createOffloadEntriesAndInfoMetadata() {
             dyn_cast<OffloadEntriesInfoManagerTy::OffloadEntryInfoTargetRegion>(
                 E)) {
       if (!CE->getID() || !CE->getAddress()) {
+        // Do not blame the entry if the parent funtion is not emitted.
+        StringRef FnName = ParentFunctions[CE->getOrder()];
+        if (!CGM.GetGlobalValue(FnName))
+          continue;
         unsigned DiagID = CGM.getDiags().getCustomDiagID(
             DiagnosticsEngine::Error,
             "Offloading entry for target region is incorrect: either the "
@@ -8425,14 +8442,15 @@ bool CGOpenMPRuntime::emitTargetFunctions(GlobalDecl GD) {
   if (!CGM.getLangOpts().OpenMPIsDevice)
     return false;
 
-  // Try to detect target regions in the function.
   const ValueDecl *VD = cast<ValueDecl>(GD.getDecl());
+  StringRef Name = CGM.getMangledName(GD);
+  // Try to detect target regions in the function.
   if (const auto *FD = dyn_cast<FunctionDecl>(VD))
-    scanForTargetRegionsFunctions(FD->getBody(), CGM.getMangledName(GD));
+    scanForTargetRegionsFunctions(FD->getBody(), Name);
 
   // Do not to emit function if it is not marked as declare target.
   return !OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD) &&
-         AlreadyEmittedTargetFunctions.count(VD->getCanonicalDecl()) == 0;
+         AlreadyEmittedTargetFunctions.count(Name) == 0;
 }
 
 bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
@@ -8469,54 +8487,62 @@ bool CGOpenMPRuntime::emitTargetGlobalVariable(GlobalDecl GD) {
 
 void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
                                                    llvm::Constant *Addr) {
-  if (llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
-          OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
-    OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryKind Flags;
-    StringRef VarName;
-    CharUnits VarSize;
-    llvm::GlobalValue::LinkageTypes Linkage;
-    switch (*Res) {
-    case OMPDeclareTargetDeclAttr::MT_To:
-      Flags = OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryTo;
-      VarName = CGM.getMangledName(VD);
-      if (VD->hasDefinition(CGM.getContext()) != VarDecl::DeclarationOnly) {
-        VarSize = CGM.getContext().getTypeSizeInChars(VD->getType());
-        assert(!VarSize.isZero() && "Expected non-zero size of the variable");
-      } else {
-        VarSize = CharUnits::Zero();
-      }
-      Linkage = CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false);
-      // Temp solution to prevent optimizations of the internal variables.
-      if (CGM.getLangOpts().OpenMPIsDevice && !VD->isExternallyVisible()) {
-        std::string RefName = getName({VarName, "ref"});
-        if (!CGM.GetGlobalValue(RefName)) {
-          llvm::Constant *AddrRef =
-              getOrCreateInternalVariable(Addr->getType(), RefName);
-          auto *GVAddrRef = cast<llvm::GlobalVariable>(AddrRef);
-          GVAddrRef->setConstant(/*Val=*/true);
-          GVAddrRef->setLinkage(llvm::GlobalValue::InternalLinkage);
-          GVAddrRef->setInitializer(Addr);
-          CGM.addCompilerUsedGlobal(GVAddrRef);
-        }
-      }
-      break;
-    case OMPDeclareTargetDeclAttr::MT_Link:
-      Flags = OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryLink;
-      if (CGM.getLangOpts().OpenMPIsDevice) {
-        VarName = Addr->getName();
-        Addr = nullptr;
-      } else {
-        VarName = getAddrOfDeclareTargetLink(VD).getName();
-        Addr =
-            cast<llvm::Constant>(getAddrOfDeclareTargetLink(VD).getPointer());
-      }
-      VarSize = CGM.getPointerSize();
-      Linkage = llvm::GlobalValue::WeakAnyLinkage;
-      break;
+  llvm::Optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
+      OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
+  if (!Res) {
+    if (CGM.getLangOpts().OpenMPIsDevice) {
+      // Register non-target variables being emitted in device code (debug info
+      // may cause this).
+      StringRef VarName = CGM.getMangledName(VD);
+      EmittedNonTargetVariables.try_emplace(VarName, Addr);
     }
-    OffloadEntriesInfoManager.registerDeviceGlobalVarEntryInfo(
-        VarName, Addr, VarSize, Flags, Linkage);
+    return;
   }
+  // Register declare target variables.
+  OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryKind Flags;
+  StringRef VarName;
+  CharUnits VarSize;
+  llvm::GlobalValue::LinkageTypes Linkage;
+  switch (*Res) {
+  case OMPDeclareTargetDeclAttr::MT_To:
+    Flags = OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryTo;
+    VarName = CGM.getMangledName(VD);
+    if (VD->hasDefinition(CGM.getContext()) != VarDecl::DeclarationOnly) {
+      VarSize = CGM.getContext().getTypeSizeInChars(VD->getType());
+      assert(!VarSize.isZero() && "Expected non-zero size of the variable");
+    } else {
+      VarSize = CharUnits::Zero();
+    }
+    Linkage = CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false);
+    // Temp solution to prevent optimizations of the internal variables.
+    if (CGM.getLangOpts().OpenMPIsDevice && !VD->isExternallyVisible()) {
+      std::string RefName = getName({VarName, "ref"});
+      if (!CGM.GetGlobalValue(RefName)) {
+        llvm::Constant *AddrRef =
+            getOrCreateInternalVariable(Addr->getType(), RefName);
+        auto *GVAddrRef = cast<llvm::GlobalVariable>(AddrRef);
+        GVAddrRef->setConstant(/*Val=*/true);
+        GVAddrRef->setLinkage(llvm::GlobalValue::InternalLinkage);
+        GVAddrRef->setInitializer(Addr);
+        CGM.addCompilerUsedGlobal(GVAddrRef);
+      }
+    }
+    break;
+  case OMPDeclareTargetDeclAttr::MT_Link:
+    Flags = OffloadEntriesInfoManagerTy::OMPTargetGlobalVarEntryLink;
+    if (CGM.getLangOpts().OpenMPIsDevice) {
+      VarName = Addr->getName();
+      Addr = nullptr;
+    } else {
+      VarName = getAddrOfDeclareTargetLink(VD).getName();
+      Addr = cast<llvm::Constant>(getAddrOfDeclareTargetLink(VD).getPointer());
+    }
+    VarSize = CGM.getPointerSize();
+    Linkage = llvm::GlobalValue::WeakAnyLinkage;
+    break;
+  }
+  OffloadEntriesInfoManager.registerDeviceGlobalVarEntryInfo(
+      VarName, Addr, VarSize, Flags, Linkage);
 }
 
 bool CGOpenMPRuntime::emitTargetGlobal(GlobalDecl GD) {
@@ -8567,21 +8593,20 @@ bool CGOpenMPRuntime::markAsGlobalTarget(GlobalDecl GD) {
   if (!CGM.getLangOpts().OpenMPIsDevice || !ShouldMarkAsGlobal)
     return true;
 
+  StringRef Name = CGM.getMangledName(GD);
   const auto *D = cast<FunctionDecl>(GD.getDecl());
-  const FunctionDecl *FD = D->getCanonicalDecl();
   // Do not to emit function if it is marked as declare target as it was already
   // emitted.
   if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(D)) {
-    if (D->hasBody() && AlreadyEmittedTargetFunctions.count(FD) == 0) {
-      if (auto *F = dyn_cast_or_null<llvm::Function>(
-              CGM.GetGlobalValue(CGM.getMangledName(GD))))
+    if (D->hasBody() && AlreadyEmittedTargetFunctions.count(Name) == 0) {
+      if (auto *F = dyn_cast_or_null<llvm::Function>(CGM.GetGlobalValue(Name)))
         return !F->isDeclaration();
       return false;
     }
     return true;
   }
 
-  return !AlreadyEmittedTargetFunctions.insert(FD).second;
+  return !AlreadyEmittedTargetFunctions.insert(Name).second;
 }
 
 llvm::Function *CGOpenMPRuntime::emitRegistrationFunction() {
