@@ -10,6 +10,10 @@ USERDIR := $(BUILDDIR)/user
 
 a.out: main.m libFoo.dylib
 	$(CC) $(CFLAGS) $(MANDATORY_MODULE_BUILD_CFLAGS) -I$(shell pwd) -lFoo -L$(shell pwd) -o $@ $<
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
+
 	mv $(BOTDIR) $(USERDIR)
 
 libFoo.dylib: Foo.swift
@@ -20,6 +24,9 @@ libFoo.dylib: Foo.swift
             -Xlinker -install_name -Xlinker @executable_path/$@ \
             -Xcc -I$(BOTDIR)/Foo $(SWIFTFLAGS) -emit-objc-header-path Foo.h \
             -sdk "$(SWIFTSDKROOT)" -import-objc-header $(BOTDIR)/Foo/bridge.h
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
 	UUID=$$(dwarfdump --uuid "$@.dSYM" | awk '{ print $$2 }') ; \
 	echo "UUID = $$UUID" ; \
 	PLIST="$@.dSYM/Contents/Resources/$$UUID.plist" ; \

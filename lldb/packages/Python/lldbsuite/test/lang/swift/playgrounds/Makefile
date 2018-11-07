@@ -18,6 +18,9 @@ SWIFTFLAGS_NOLINK=$(subst $(LINKFLAGS),,$(SWIFTFLAGS))
 
 libPlaygroundsRuntime.dylib: PlaygroundsRuntime.swift
 	$(SWIFTC) $(SWIFTFLAGS_NOLINK) -module-name PlaygroundsRuntime -emit-library -o $@ -Xlinker -install_name -Xlinker @executable_path/$@ $< 
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
 
 clean::
 	rm -rf *.dSYM *.dylib *.swiftdoc *.swiftmodule PlaygroundStub libPlaygroundsRuntime.dylib

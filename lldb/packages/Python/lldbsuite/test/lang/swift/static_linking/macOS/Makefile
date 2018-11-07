@@ -25,6 +25,10 @@ SWIFT_LIB_DIR="$(shell xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/
 
 main: objc_main.m A.o B.o
 	$(CC) $(CFLAGS) $< -fobjc-arc -o main A.o B.o -L $(SWIFT_LIB_DIR) -Xlinker -add_ast_path -Xlinker A.swiftmodule -Xlinker -add_ast_path -Xlinker B.swiftmodule -Xlinker -rpath -Xlinker $(SWIFT_LIB_DIR)
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
+
 
 A.o: A.swift
 	$(SWIFTC) $(SWIFTFLAGS) -c -parse-as-library -module-name A -emit-module-path A.swiftmodule -emit-objc-header-path A-Swift.h -output-file-map output_map $<

@@ -20,6 +20,10 @@ MOD4_FLAGS = -swift-version 4
 
 libmod%.dylib: mod%.swift
 	$(SWIFTC) $(SWIFTFLAGS_NOLINK) $(SWIFT_TRIPLE) $(MOD$*_FLAGS) -emit-module -module-name mod$* $< -emit-library -o libmod$*.dylib -Xlinker -install_name -Xlinker @executable_path/libmod$*.dylib
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
+
 
 clean::
 	rm -rf main main.a main.b *.dylib *.dSYM *.swiftdoc *.swiftmodule mod.swift
