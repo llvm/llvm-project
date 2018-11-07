@@ -208,7 +208,8 @@ uint64_t ValueObjectConstResult::GetByteSize() {
 void ValueObjectConstResult::SetByteSize(size_t size) { m_byte_size = size; }
 
 size_t ValueObjectConstResult::CalculateNumChildren(uint32_t max) {
-  auto children_count = GetCompilerType().GetNumChildren(true);
+  ExecutionContext exe_ctx(GetExecutionContextRef());
+  auto children_count = GetCompilerType().GetNumChildren(true, &exe_ctx);
   return children_count <= max ? children_count : max;
 }
 
