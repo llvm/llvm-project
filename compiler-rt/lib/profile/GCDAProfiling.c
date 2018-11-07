@@ -29,6 +29,8 @@
 #include <string.h>
 
 #if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 #include "WindowsMMap.h"
 #else
 #include <sys/mman.h>
@@ -86,6 +88,9 @@ static uint64_t cur_buffer_size = 0;
 static uint64_t cur_pos = 0;
 static uint64_t file_size = 0;
 static int new_file = 0;
+#if defined(_WIN32)
+static HANDLE mmap_handle = NULL;
+#endif
 static int fd = -1;
 
 typedef void (*fn_ptr)();
@@ -255,6 +260,28 @@ static int map_file() {
   if (file_size == 0)
     return -1;
 
+#if defined(_WIN32)
+  HANDLE mmap_fd;
+  if (fd == -1)
+    mmap_fd = INVALID_HANDLE_VALUE;
+  else
+    mmap_fd = (HANDLE)_get_osfhandle(fd);
+
+  mmap_handle = CreateFileMapping(mmap_fd, NULL, PAGE_READWRITE, DWORD_HI(file_size), DWORD_LO(file_size), NULL);
+  if (mmap_handle == NULL) {
+    fprintf(stderr, "profiling: %s: cannot create file mapping: %d\n", filename,
+            GetLastError());
+    return -1;
+  }
+
+  write_buffer = MapViewOfFile(mmap_handle, FILE_MAP_WRITE, 0, 0, file_size);
+  if (write_buffer == NULL) {
+    fprintf(stderr, "profiling: %s: cannot map: %d\n", filename,
+            GetLastError());
+    CloseHandle(mmap_handle);
+    return -1;
+  }
+#else
   write_buffer = mmap(0, file_size, PROT_READ | PROT_WRITE,
                       MAP_FILE | MAP_SHARED, fd, 0);
   if (write_buffer == (void *)-1) {
@@ -263,10 +290,30 @@ static int map_file() {
             strerror(errnum));
     return -1;
   }
+#endif
+
   return 0;
 }
 
 static void unmap_file() {
+#if defined(_WIN32)
+  if (!FlushViewOfFile(write_buffer, file_size)) {
+    fprintf(stderr, "profiling: %s: cannot flush mapped view: %d\n", filename,
+            GetLastError());
+  }
+
+  if (!UnmapViewOfFile(write_buffer)) {
+    fprintf(stderr, "profiling: %s: cannot unmap mapped view: %d\n", filename,
+            GetLastError());
+  }
+
+  if (!CloseHandle(mmap_handle)) {
+    fprintf(stderr, "profiling: %s: cannot close file mapping handle: %d\n", filename,
+            GetLastError());
+  }
+
+  mmap_handle = NULL;
+#else
   if (msync(write_buffer, file_size, MS_SYNC) == -1) {
     int errnum = errno;
     fprintf(stderr, "profiling: %s: cannot msync: %s\n", filename,
@@ -277,6 +324,8 @@ static void unmap_file() {
    * is written and we don't care.
    */
   (void)munmap(write_buffer, file_size);
+#endif
+
   write_buffer = NULL;
   file_size = 0;
 }

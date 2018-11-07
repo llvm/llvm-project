@@ -226,12 +226,12 @@ body:             |
     ; MIPS32: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
     ; MIPS32: [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
     ; MIPS32: [[COPY3:%[0-9]+]]:_(s32) = COPY $a3
-    ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY3]], [[COPY1]]
-    ; MIPS32: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY]]
-    ; MIPS32: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD1]](s32), [[COPY2]]
+    ; MIPS32: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY2]], [[COPY]]
+    ; MIPS32: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[COPY3]], [[COPY1]]
+    ; MIPS32: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD1]](s32), [[COPY3]]
     ; MIPS32: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD]], [[ICMP]]
-    ; MIPS32: $v0 = COPY [[ADD1]](s32)
-    ; MIPS32: $v1 = COPY [[ADD2]](s32)
+    ; MIPS32: $v0 = COPY [[ADD2]](s32)
+    ; MIPS32: $v1 = COPY [[ADD1]](s32)
     ; MIPS32: RetRA implicit $v0, implicit $v1
     %2:_(s32) = COPY $a0
     %3:_(s32) = COPY $a1

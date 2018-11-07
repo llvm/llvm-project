@@ -21,8 +21,8 @@ body:             |
     ; MIPS32-LABEL: name: any_i64
     ; MIPS32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; MIPS32: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
-    ; MIPS32: $v0 = COPY [[C]](s32)
-    ; MIPS32: $v1 = COPY [[C1]](s32)
+    ; MIPS32: $v0 = COPY [[C1]](s32)
+    ; MIPS32: $v1 = COPY [[C]](s32)
     ; MIPS32: RetRA implicit $v0, implicit $v1
     %0:_(s64) = G_CONSTANT i64 -9223372036854775808
     %1:_(s32), %2:_(s32) = G_UNMERGE_VALUES %0(s64)

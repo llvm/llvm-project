@@ -42,6 +42,45 @@ exit:
   ret i32 %i.2
 }
 
+; Make sure that we can eliminate a provably dead backedge with switch.
+define i32 @dead_backedge_test_switch_loop(i32 %end) {
+; CHECK-LABEL: @dead_backedge_test_switch_loop(
+; CHECK-NEXT:  preheader:
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       header:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_BE:%.*]], [[HEADER_BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[I_1:%.*]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[I_1]], 100
+; CHECK-NEXT:    br i1 [[CMP1]], label [[HEADER_BACKEDGE]], label [[DEAD_BACKEDGE:%.*]]
+; CHECK:       header.backedge:
+; CHECK-NEXT:    [[I_BE]] = phi i32 [ [[I_1]], [[HEADER]] ], [ [[I_2:%.*]], [[DEAD_BACKEDGE]] ]
+; CHECK-NEXT:    br label [[HEADER]]
+; CHECK:       dead_backedge:
+; CHECK-NEXT:    [[I_2]] = add i32 [[I_1]], 10
+; CHECK-NEXT:    switch i32 1, label [[EXIT:%.*]] [
+; CHECK-NEXT:    i32 0, label [[HEADER_BACKEDGE]]
+; CHECK-NEXT:    ]
+; CHECK:       exit:
+; CHECK-NEXT:    [[I_2_LCSSA:%.*]] = phi i32 [ [[I_2]], [[DEAD_BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[I_2_LCSSA]]
+;
+preheader:
+  br label %header
+
+header:
+  %i = phi i32 [0, %preheader], [%i.1, %header], [%i.2, %dead_backedge]
+  %i.1 = add i32 %i, 1
+  %cmp1 = icmp slt i32 %i.1, 100
+  br i1 %cmp1, label %header, label %dead_backedge
+
+dead_backedge:
+  %i.2 = add i32 %i.1, 10
+  switch i32 1, label %exit [i32 0, label %header]
+
+exit:
+  ret i32 %i.2
+}
+
 ; Check that we can eliminate a triangle.
 define i32 @dead_block_test_branch_loop(i32 %end) {
 ; CHECK-LABEL: @dead_block_test_branch_loop(
@@ -660,8 +699,8 @@ exit:
 }
 
 ; Check that when the block is not actually dead, we don't remove it.
-define i32 @no_live_block_test_branch_loop(i1 %c, i32 %end) {
-; CHECK-LABEL: @no_live_block_test_branch_loop(
+define i32 @live_block_test_branch_loop(i1 %c, i32 %end) {
+; CHECK-LABEL: @live_block_test_branch_loop(
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
@@ -705,8 +744,8 @@ exit:
   ret i32 %i.inc
 }
 
-define i32 @no_live_block_test_switch_loop(i1 %c, i32 %end) {
-; CHECK-LABEL: @no_live_block_test_switch_loop(
+define i32 @live_block_test_switch_loop(i1 %c, i32 %end) {
+; CHECK-LABEL: @live_block_test_switch_loop(
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:

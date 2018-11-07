@@ -56,9 +56,18 @@ namespace cl {
 // Returns true on success. Otherwise, this will print the error message to
 // stderr and exit if \p Errs is not set (nullptr by default), or print the
 // error message to \p Errs and return false if \p Errs is provided.
+//
+// If EnvVar is not nullptr, command-line options are also parsed from the
+// environment variable named by EnvVar.  Precedence is given to occurrences
+// from argv.  This precedence is currently implemented by parsing argv after
+// the environment variable, so it is only implemented correctly for options
+// that give precedence to later occurrences.  If your program supports options
+// that give precedence to earlier occurrences, you will need to extend this
+// function to support it correctly.
 bool ParseCommandLineOptions(int argc, const char *const *argv,
                              StringRef Overview = "",
-                             raw_ostream *Errs = nullptr);
+                             raw_ostream *Errs = nullptr,
+                             const char *EnvVar = nullptr);
 
 //===----------------------------------------------------------------------===//
 // ParseEnvironmentOptions - Environment variable option processing alternate

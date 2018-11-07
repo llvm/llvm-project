@@ -1,4 +1,4 @@
-XFAIL: *
+XFAIL: arm
 
 RUN: mkdir -p %t.d
 RUN: cd %t.d

@@ -106,6 +106,7 @@ public:
   void beginRegion(llvm::StringRef Description, llvm::SMLoc Loc);
   void endRegion(llvm::SMLoc Loc);
   void addInstruction(const llvm::MCInst &Instruction);
+  llvm::SourceMgr &getSourceMgr() const { return SM; }
 
   CodeRegions(llvm::SourceMgr &S) : SM(S) {
     // Create a default region for the input code sequence.

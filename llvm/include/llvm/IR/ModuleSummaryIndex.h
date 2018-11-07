@@ -478,13 +478,17 @@ public:
         TypeCheckedLoadConstVCalls;
   };
 
-  /// Function attribute flags. Used to track if a function accesses memory,
-  /// recurses or aliases.
+  /// Flags specific to function summaries.
   struct FFlags {
+    // Function attribute flags. Used to track if a function accesses memory,
+    // recurses or aliases.
     unsigned ReadNone : 1;
     unsigned ReadOnly : 1;
     unsigned NoRecurse : 1;
     unsigned ReturnDoesNotAlias : 1;
+
+    // Indicate if the global value cannot be inlined.
+    unsigned NoInline : 1;
   };
 
   /// Create an empty FunctionSummary (with specified call edges).
@@ -511,8 +515,7 @@ private:
   /// during the initial compile step when the summary index is first built.
   unsigned InstCount;
 
-  /// Function attribute flags. Used to track if a function accesses memory,
-  /// recurses or aliases.
+  /// Function summary specific flags.
   FFlags FunFlags;
 
   /// List of <CalleeValueInfo, CalleeInfo> call edge pairs from this function.
@@ -546,7 +549,7 @@ public:
     return GVS->getSummaryKind() == FunctionKind;
   }
 
-  /// Get function attribute flags.
+  /// Get function summary flags.
   FFlags fflags() const { return FunFlags; }
 
   /// Get the instruction count recorded for this function.

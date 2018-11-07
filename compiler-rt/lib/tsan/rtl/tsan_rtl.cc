@@ -359,7 +359,9 @@ void Initialize(ThreadState *thr) {
   CheckASLR();
   InitializeFlags(&ctx->flags, options);
   AvoidCVE_2016_2143();
-  InitializePlatformEarly();
+  __sanitizer::InitializePlatformEarly();
+  __tsan::InitializePlatformEarly();
+
 #if !SANITIZER_GO
   // Re-exec ourselves if we need to set additional env or command line args.
   MaybeReexec();

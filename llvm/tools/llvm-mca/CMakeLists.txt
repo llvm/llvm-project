@@ -14,6 +14,7 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-mca
   llvm-mca.cpp
   CodeRegion.cpp
+  CodeRegionGenerator.cpp
   PipelinePrinter.cpp
   Views/DispatchStatistics.cpp
   Views/InstructionInfoView.cpp

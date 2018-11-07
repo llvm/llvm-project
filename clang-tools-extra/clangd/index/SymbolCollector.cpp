@@ -367,7 +367,7 @@ bool SymbolCollector::handleDeclOccurence(
     return true;
   if (!shouldCollectSymbol(*ND, *ASTCtx, Opts))
     return true;
-  if (CollectRef &&
+  if (CollectRef && !isa<NamespaceDecl>(ND) &&
       (Opts.RefsInHeaders || SM.getFileID(SpellingLoc) == SM.getMainFileID()))
     DeclRefs[ND].emplace_back(SpellingLoc, Roles);
   // Don't continue indexing if this is a mere reference.

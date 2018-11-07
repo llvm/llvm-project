@@ -898,6 +898,7 @@ struct SignalContext {
   bool IsMemoryAccess() const;
 };
 
+void InitializePlatformEarly();
 void MaybeReexec();
 
 template <typename Fn>

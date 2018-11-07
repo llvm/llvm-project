@@ -68,6 +68,24 @@ Error BlockPrinter::visit(CustomEventRecord &R) {
   return E;
 }
 
+Error BlockPrinter::visit(CustomEventRecordV5 &R) {
+  if (CurrentState == State::Metadata)
+    OS << "\n";
+  CurrentState = State::CustomEvent;
+  OS << "*  ";
+  auto E = RP.visit(R);
+  return E;
+}
+
+Error BlockPrinter::visit(TypedEventRecord &R) {
+  if (CurrentState == State::Metadata)
+    OS << "\n";
+  CurrentState = State::CustomEvent;
+  OS << "*  ";
+  auto E = RP.visit(R);
+  return E;
+}
+
 // Function call printing.
 Error BlockPrinter::visit(FunctionRecord &R) {
   if (CurrentState == State::Metadata)

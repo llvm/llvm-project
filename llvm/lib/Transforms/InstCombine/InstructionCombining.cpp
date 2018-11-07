@@ -2510,9 +2510,11 @@ Instruction *InstCombiner::visitSwitchInst(SwitchInst &SI) {
   unsigned NewWidth = Known.getBitWidth() - std::max(LeadingKnownZeros, LeadingKnownOnes);
 
   // Shrink the condition operand if the new type is smaller than the old type.
-  // This may produce a non-standard type for the switch, but that's ok because
-  // the backend should extend back to a legal type for the target.
-  if (NewWidth > 0 && NewWidth < Known.getBitWidth()) {
+  // But do not shrink to a non-standard type, because backend can't generate 
+  // good code for that yet.
+  // TODO: We can make it aggressive again after fixing PR39569.
+  if (NewWidth > 0 && NewWidth < Known.getBitWidth() &&
+      shouldChangeType(Known.getBitWidth(), NewWidth)) {
     IntegerType *Ty = IntegerType::get(SI.getContext(), NewWidth);
     Builder.SetInsertPoint(&SI);
     Value *NewCond = Builder.CreateTrunc(Cond, Ty, "trunc");

@@ -105,6 +105,25 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
   return std::string(U8Result.begin(), U8Result.end());
 }
 
+bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix) {
+  if (!ErrMsg)
+    return true;
+  char *buffer = NULL;
+  DWORD LastError = GetLastError();
+  DWORD R = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                               FORMAT_MESSAGE_FROM_SYSTEM |
+                               FORMAT_MESSAGE_MAX_WIDTH_MASK,
+                           NULL, LastError, 0, (LPSTR)&buffer, 1, NULL);
+  if (R)
+    *ErrMsg = prefix + ": " + buffer;
+  else
+    *ErrMsg = prefix + ": Unknown error";
+  *ErrMsg += " (0x" + llvm::utohexstr(LastError) + ")";
+
+  LocalFree(buffer);
+  return R != 0;
+}
+
 static HANDLE RedirectIO(Optional<StringRef> Path, int fd,
                          std::string *ErrMsg) {
   HANDLE h;

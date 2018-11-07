@@ -39,6 +39,16 @@ Error BlockIndexer::visit(CustomEventRecord &R) {
   return Error::success();
 }
 
+Error BlockIndexer::visit(CustomEventRecordV5 &R) {
+  CurrentBlock.Records.push_back(&R);
+  return Error::success();
+}
+
+Error BlockIndexer::visit(TypedEventRecord &R) {
+  CurrentBlock.Records.push_back(&R);
+  return Error::success();
+}
+
 Error BlockIndexer::visit(CallArgRecord &R) {
   CurrentBlock.Records.push_back(&R);
   return Error::success();

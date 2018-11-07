@@ -38,7 +38,7 @@ public:
     bool assignVRegs(ArrayRef<unsigned> VRegs, ArrayRef<CCValAssign> ArgLocs,
                      unsigned Index);
 
-    void setMostSignificantFirst(SmallVectorImpl<unsigned> &VRegs);
+    void setLeastSignificantFirst(SmallVectorImpl<unsigned> &VRegs);
 
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
