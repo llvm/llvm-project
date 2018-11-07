@@ -12,10 +12,15 @@
 
 #include "DWARFDefines.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/CompilerDecl.h"
 #include "lldb/Symbol/CompilerDeclContext.h"
 
 class DWARFDIE;
+namespace lldb_private {
+class ExecutionContext;
+}
+class SymbolFileDWARF;
 
 class DWARFASTParser {
 public:
@@ -45,6 +50,10 @@ public:
 
   virtual std::vector<DWARFDIE>
   GetDIEForDeclContext(lldb_private::CompilerDeclContext decl_context) = 0;
+
+  static llvm::Optional<lldb_private::SymbolFile::ArrayInfo>
+  ParseChildArrayInfo(const DWARFDIE &parent_die,
+                      const lldb_private::ExecutionContext *exe_ctx = nullptr);
 };
 
 #endif // SymbolFileDWARF_DWARFASTParser_h_

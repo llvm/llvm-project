@@ -52,7 +52,7 @@
 
 uint8_t implicitUnsignedTruncation(uint32_t argc) {
   return argc; // BOOM
-// CHECK: {{.*}}unsigned-integer-truncation-blacklist.c:[[@LINE-1]]:10: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 4294967295 (32-bit, unsigned) to type 'uint8_t' (aka 'unsigned char') changed the value to 255 (8-bit, unsigned)
+// CHECK: {{.*}}unsigned-integer-truncation-blacklist.c:[[@LINE-1]]:10: runtime error: implicit conversion from type '{{.*}}' (aka 'unsigned int') of value 4294967295 (32-bit, unsigned) to type '{{.*}}' (aka 'unsigned char') changed the value to 255 (8-bit, unsigned)
 }
 
 int main(int argc, char **argv) {

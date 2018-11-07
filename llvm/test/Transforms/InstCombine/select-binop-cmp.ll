@@ -142,7 +142,7 @@ define i32 @select_xor_inv_icmp2(i32 %x, i32 %y, i32 %z) {
 
 define float @select_fadd_fcmp(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp(
-; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Z:%.*]], float [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
@@ -168,7 +168,7 @@ define float @select_fadd_fcmp_poszero(float %x, float %y, float %z) {
 
 define float @select_fadd_fcmp_2(float %x, float %y, float %v) {
 ; CHECK-LABEL: @select_fadd_fcmp_2(
-; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[Z:%.*]] = fadd float [[V:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[Z]]
 ; CHECK-NEXT:    ret float [[C]]
@@ -198,7 +198,7 @@ define float @select_fadd_fcmp_2_poszero(float %x, float %y, float %v) {
 
 define float @select_fadd_fcmp_3(float %x, float %y) {
 ; CHECK-LABEL: @select_fadd_fcmp_3(
-; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float 6.000000e+00
 ; CHECK-NEXT:    ret float [[C]]
 ;
@@ -224,7 +224,7 @@ define float @select_fadd_fcmp_3_poszero(float %x, float %y) {
 
 define float @select_fadd_fcmp_4(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_4(
-; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[Z:%.*]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
@@ -250,7 +250,7 @@ define float @select_fadd_fcmp_4_poszero(float %x, float %y, float %z) {
 
 define float @select_fadd_fcmp_5(float %x, float %y, float %v) {
 ; CHECK-LABEL: @select_fadd_fcmp_5(
-; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[Z:%.*]] = fadd float [[V:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Z]], float [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[C]]
@@ -280,7 +280,7 @@ define float @select_fadd_fcmp_5_poszero(float %x, float %y, float %v) {
 
 define float @select_fadd_fcmp_6(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_6(
-; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float 6.000000e+00, float [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
@@ -332,7 +332,7 @@ define float @select_fsub_fcmp(float %x, float %y, float %z) {
 
 define float @select_fsub_fcmp_negzero(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fsub_fcmp_negzero(
-; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Z:%.*]], float [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[C]]
 ;
@@ -675,7 +675,7 @@ define float @select_fadd_fcmp_bad_3(float %x, float %y, float %z, float %k) {
 ; Invalid order of operands of select
 define float @select_fadd_fcmp_bad_4(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_4(
-; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[B:%.*]] = fadd float [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[B]], float [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[C]]
@@ -689,7 +689,7 @@ define float @select_fadd_fcmp_bad_4(float %x, float %y, float %z) {
 ; Invalid comparison type
 define float @select_fadd_fcmp_bad_5(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_5(
-; CHECK-NEXT:    [[A:%.*]] = fcmp one float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp one float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[B:%.*]] = fadd nsz float [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[B]]
 ; CHECK-NEXT:    ret float [[C]]
@@ -703,7 +703,7 @@ define float @select_fadd_fcmp_bad_5(float %x, float %y, float %z) {
 ; Invalid order of operands of select
 define float @select_fadd_fcmp_bad_6(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_6(
-; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[B:%.*]] = fadd nsz float [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[B]]
 ; CHECK-NEXT:    ret float [[C]]
@@ -717,7 +717,7 @@ define float @select_fadd_fcmp_bad_6(float %x, float %y, float %z) {
 ; Do not transform if we have signed zeros and if Z is possibly negative zero
 define float @select_fadd_fcmp_bad_7(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_7(
-; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[B:%.*]] = fadd float [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[B]], float [[Y:%.*]]
 ; CHECK-NEXT:    ret float [[C]]
@@ -731,7 +731,7 @@ define float @select_fadd_fcmp_bad_7(float %x, float %y, float %z) {
 ; Invalid comparison type
 define float @select_fadd_fcmp_bad_8(float %x, float %y, float %v) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_8(
-; CHECK-NEXT:    [[A:%.*]] = fcmp one float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp one float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[Z:%.*]] = fadd float [[V:%.*]], -1.000000e+00
 ; CHECK-NEXT:    [[B:%.*]] = fadd float [[Z]], [[X]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[B]]
@@ -747,7 +747,7 @@ define float @select_fadd_fcmp_bad_8(float %x, float %y, float %v) {
 ; Invalid comparison type
 define float @select_fadd_fcmp_bad_9(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_9(
-; CHECK-NEXT:    [[A:%.*]] = fcmp one float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp one float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[B:%.*]] = fadd nsz float [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[B]]
 ; CHECK-NEXT:    ret float [[C]]
@@ -761,7 +761,7 @@ define float @select_fadd_fcmp_bad_9(float %x, float %y, float %z) {
 ; Invalid comparison type
 define float @select_fadd_fcmp_bad_10(float %x, float %y, float %v) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_10(
-; CHECK-NEXT:    [[A:%.*]] = fcmp one float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp one float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[Z:%.*]] = fadd float [[V:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[B:%.*]] = fadd float [[Z]], [[X]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[B]]
@@ -777,7 +777,7 @@ define float @select_fadd_fcmp_bad_10(float %x, float %y, float %v) {
 ; Do not transform if Z is possibly negative zero
 define float @select_fadd_fcmp_bad_11(float %x, float %y, float %v) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_11(
-; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[Z:%.*]] = fadd float [[V:%.*]], -1.000000e+00
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[Z]]
 ; CHECK-NEXT:    ret float [[C]]
@@ -792,7 +792,7 @@ define float @select_fadd_fcmp_bad_11(float %x, float %y, float %v) {
 ; Do not transform if we have signed zeros and if Z is possibly negative zero
 define float @select_fadd_fcmp_bad_12(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_12(
-; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp une float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[B:%.*]] = fadd float [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[B]]
 ; CHECK-NEXT:    ret float [[C]]
@@ -806,7 +806,7 @@ define float @select_fadd_fcmp_bad_12(float %x, float %y, float %z) {
 ; Invalid order of operands of select
 define float @select_fadd_fcmp_bad_13(float %x, float %y, float %z) {
 ; CHECK-LABEL: @select_fadd_fcmp_bad_13(
-; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], -0.000000e+00
+; CHECK-NEXT:    [[A:%.*]] = fcmp oeq float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[B:%.*]] = fadd nsz float [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    [[C:%.*]] = select i1 [[A]], float [[Y:%.*]], float [[B]]
 ; CHECK-NEXT:    ret float [[C]]

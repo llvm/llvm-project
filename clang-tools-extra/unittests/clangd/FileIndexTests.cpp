@@ -14,6 +14,7 @@
 #include "TestFS.h"
 #include "TestTU.h"
 #include "index/FileIndex.h"
+#include "index/Index.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Frontend/Utils.h"
@@ -39,6 +40,7 @@ MATCHER_P(RefRange, Range, "") {
 }
 MATCHER_P(FileURI, F, "") { return arg.Location.FileURI == F; }
 MATCHER_P(DeclURI, U, "") { return arg.CanonicalDeclaration.FileURI == U; }
+MATCHER_P(DefURI, U, "") { return arg.Definition.FileURI == U; }
 MATCHER_P(QName, N, "") { return (arg.Scope + arg.Name).str() == N; }
 
 using namespace llvm;
@@ -73,14 +75,6 @@ std::unique_ptr<RefSlab> refSlab(const SymbolID &ID, StringRef Path) {
   return llvm::make_unique<RefSlab>(std::move(Slab).build());
 }
 
-RefSlab getRefs(const SymbolIndex &I, SymbolID ID) {
-  RefsRequest Req;
-  Req.IDs = {ID};
-  RefSlab::Builder Slab;
-  I.refs(Req, [&](const Ref &S) { Slab.insert(ID, S); });
-  return std::move(Slab).build();
-}
-
 TEST(FileSymbolsTest, UpdateAndGet) {
   FileSymbols FS;
   EXPECT_THAT(runFuzzyFind(*FS.buildIndex(IndexType::Light), ""), IsEmpty());
@@ -100,6 +94,27 @@ TEST(FileSymbolsTest, Overlap) {
     EXPECT_THAT(runFuzzyFind(*FS.buildIndex(Type), ""),
                 UnorderedElementsAre(QName("1"), QName("2"), QName("3"),
                                      QName("4"), QName("5")));
+}
+
+TEST(FileSymbolsTest, MergeOverlap) {
+  FileSymbols FS;
+  auto OneSymboSlab = [](Symbol Sym) {
+    SymbolSlab::Builder S;
+    S.insert(Sym);
+    return make_unique<SymbolSlab>(std::move(S).build());
+  };
+  auto X1 = symbol("x");
+  X1.CanonicalDeclaration.FileURI = "file:///x1";
+  auto X2 = symbol("x");
+  X2.Definition.FileURI = "file:///x2";
+
+  FS.update("f1", OneSymboSlab(X1), nullptr);
+  FS.update("f2", OneSymboSlab(X2), nullptr);
+  for (auto Type : {IndexType::Light, IndexType::Heavy})
+    EXPECT_THAT(
+        runFuzzyFind(*FS.buildIndex(Type, DuplicateHandling::Merge), "x"),
+        UnorderedElementsAre(
+            AllOf(QName("x"), DeclURI("file:///x1"), DefURI("file:///x2"))));
 }
 
 TEST(FileSymbolsTest, SnapshotAliveAfterRemove) {

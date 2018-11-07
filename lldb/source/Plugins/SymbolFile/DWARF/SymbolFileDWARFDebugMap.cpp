@@ -518,7 +518,8 @@ uint32_t SymbolFileDWARFDebugMap::GetCompUnitInfoIndex(
 
 SymbolFileDWARF *
 SymbolFileDWARFDebugMap::GetSymbolFileByOSOIndex(uint32_t oso_idx) {
-  if (oso_idx < m_compile_unit_infos.size())
+  unsigned size = m_compile_unit_infos.size();
+  if (oso_idx < size)
     return GetSymbolFileByCompUnitInfo(&m_compile_unit_infos[oso_idx]);
   return NULL;
 }
@@ -700,6 +701,16 @@ Type *SymbolFileDWARFDebugMap::ResolveTypeUID(lldb::user_id_t type_uid) {
   if (oso_dwarf)
     return oso_dwarf->ResolveTypeUID(type_uid);
   return NULL;
+}
+
+llvm::Optional<SymbolFile::ArrayInfo>
+SymbolFileDWARFDebugMap::GetDynamicArrayInfoForUID(
+    lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
+  const uint64_t oso_idx = GetOSOIndexFromUserID(type_uid);
+  SymbolFileDWARF *oso_dwarf = GetSymbolFileByOSOIndex(oso_idx);
+  if (oso_dwarf)
+    return oso_dwarf->GetDynamicArrayInfoForUID(type_uid, exe_ctx);
+  return llvm::None;
 }
 
 bool SymbolFileDWARFDebugMap::CompleteType(CompilerType &compiler_type) {
@@ -1225,6 +1236,13 @@ CompilerDeclContext SymbolFileDWARFDebugMap::FindNamespace(
   }
 
   return matching_namespace;
+}
+
+void SymbolFileDWARFDebugMap::DumpClangAST(Stream &s) {
+  ForEachSymbolFile([&s](SymbolFileDWARF *oso_dwarf) -> bool {
+    oso_dwarf->DumpClangAST(s);
+    return true;
+  });
 }
 
 //------------------------------------------------------------------

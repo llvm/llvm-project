@@ -33,15 +33,15 @@
 namespace llvm {
 
 template<class Graph> class GraphWriter;
+class LLVMTargetMachine;
 class MachineFunction;
 class MachineRegisterInfo;
 class MCInstrDesc;
 struct MCSchedClassDesc;
-class ScheduleDAG;
 class SDNode;
 class SUnit;
+class ScheduleDAG;
 class TargetInstrInfo;
-class TargetMachine;
 class TargetRegisterClass;
 class TargetRegisterInfo;
 
@@ -558,7 +558,7 @@ class TargetRegisterInfo;
 
   class ScheduleDAG {
   public:
-    const TargetMachine &TM;            ///< Target processor
+    const LLVMTargetMachine &TM;        ///< Target processor
     const TargetInstrInfo *TII;         ///< Target instruction information
     const TargetRegisterInfo *TRI;      ///< Target processor register info
     MachineFunction &MF;                ///< Machine function

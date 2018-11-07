@@ -7135,6 +7135,8 @@ public:
                                       const char *startSpecifier,
                                       unsigned specifierLen) override;
 
+  void handleInvalidMaskType(StringRef MaskType) override;
+
   bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
                              const char *startSpecifier,
                              unsigned specifierLen) override;
@@ -7184,6 +7186,10 @@ bool CheckPrintfHandler::HandleInvalidPrintfConversionSpecifier(
                                           getLocationOfByte(CS.getStart()),
                                           startSpecifier, specifierLen,
                                           CS.getStart(), CS.getLength());
+}
+
+void CheckPrintfHandler::handleInvalidMaskType(StringRef MaskType) {
+  S.Diag(getLocationOfByte(MaskType.data()), diag::err_invalid_mask_type_size);
 }
 
 bool CheckPrintfHandler::HandleAmount(

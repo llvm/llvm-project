@@ -108,9 +108,20 @@ extern "C" int __munmap(void *, size_t) SANITIZER_WEAK_ATTRIBUTE;
 #define VM_MEMORY_SANITIZER 99
 #endif
 
+// XNU on Darwin provides a mmap flag that optimizes allocation/deallocation of
+// giant memory regions (i.e. shadow memory regions).
+#define kXnuFastMmapFd 0x4
+static size_t kXnuFastMmapThreshold = 2 << 30; // 2 GB
+static bool use_xnu_fast_mmap = false;
+
 uptr internal_mmap(void *addr, size_t length, int prot, int flags,
                    int fd, u64 offset) {
-  if (fd == -1) fd = VM_MAKE_TAG(VM_MEMORY_SANITIZER);
+  if (fd == -1) {
+    fd = VM_MAKE_TAG(VM_MEMORY_SANITIZER);
+    if (length >= kXnuFastMmapThreshold) {
+      if (use_xnu_fast_mmap) fd |= kXnuFastMmapFd;
+    }
+  }
   if (&__mmap) return (uptr)__mmap(addr, length, prot, flags, fd, offset);
   return (uptr)mmap(addr, length, prot, flags, fd, offset);
 }
@@ -684,6 +695,16 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 }
 
 void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }
+
+void InitializePlatformEarly() {
+  // Only use xnu_fast_mmap when on x86_64 and the OS supports it.
+  use_xnu_fast_mmap =
+#if defined(__x86_64__)
+      GetMacosVersion() >= MACOS_VERSION_HIGH_SIERRA_DOT_RELEASE_4;
+#else
+      false;
+#endif
+}
 
 #if !SANITIZER_GO
 static const char kDyldInsertLibraries[] = "DYLD_INSERT_LIBRARIES";

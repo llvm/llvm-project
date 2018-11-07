@@ -569,7 +569,7 @@ namespace llvm {
     /// of v4i8's and shuffle them. This will turn into a mess of 8 extending
     /// loads, moves back into VSR's (or memory ops if we don't have moves) and
     /// then the VPERM for the shuffle. All in all a very slow sequence.
-    TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(EVT VT)
+    TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)
       const override {
       if (VT.getScalarSizeInBits() % 8 == 0)
         return TypeWidenVector;

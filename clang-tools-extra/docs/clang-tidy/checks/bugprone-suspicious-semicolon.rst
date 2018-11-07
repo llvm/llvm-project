@@ -9,7 +9,7 @@ the code. More specifically, it looks for ``if``, ``while``, ``for`` and
 context of the code (e.g. indentation) in an attempt to determine whether that
 is intentional.
 
-  .. code-block:: c++
+.. code-block:: c++
 
     if (x < y);
     {
@@ -20,7 +20,7 @@ Here the body of the ``if`` statement consists of only the semicolon at the end
 of the first line, and `x` will be incremented regardless of the condition.
 
 
-  .. code-block:: c++
+.. code-block:: c++
 
     while ((line = readLine(file)) != NULL);
       processLine(line);
@@ -30,7 +30,7 @@ As a result of this code, `processLine()` will only be called once, when the
 the code indicates the intention of the programmer.
 
 
-  .. code-block:: c++
+.. code-block:: c++
 
     if (x >= y);
     x -= y;
@@ -43,7 +43,7 @@ To solve the issue remove the stray semicolon or in case the empty body is
 intentional, reflect this using code indentation or put the semicolon in a new
 line. For example:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     while (readWhitespace());
       Token t = readNextToken();
@@ -54,14 +54,14 @@ semicolon at the end of the first line.
 
 Either remove the indentation from the second line:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     while (readWhitespace());
     Token t = readNextToken();
 
 ... or move the semicolon from the end of the first line to a new line:
 
-  .. code-block:: c++
+.. code-block:: c++
 
     while (readWhitespace())
       ;

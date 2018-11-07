@@ -1008,6 +1008,10 @@ void CheckVMASize() {
   // Do nothing.
 }
 
+void InitializePlatformEarly() {
+  // Do nothing.
+}
+
 void MaybeReexec() {
   // No need to re-exec on Windows.
 }
@@ -1017,6 +1021,11 @@ void CheckASLR() {
 }
 
 char **GetArgv() {
+  // FIXME: Actually implement this function.
+  return 0;
+}
+
+char **GetEnviron() {
   // FIXME: Actually implement this function.
   return 0;
 }

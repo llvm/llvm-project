@@ -125,6 +125,8 @@ public:
   BinaryStreamRef getUnderlyingStream() const { return Stream; }
   void setUnderlyingStream(BinaryStreamRef S) { Stream = S; }
 
+  void drop_front() { Stream = Stream.drop_front(begin()->length()); }
+
 private:
   BinaryStreamRef Stream;
   Extractor E;

@@ -413,17 +413,17 @@ static void initialize(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_flsll);
   }
 
-  // The following functions are available on Linux,
-  // but Android uses bionic instead of glibc.
-  if (!T.isOSLinux() || T.isAndroid()) {
+  // The following functions are only available on GNU/Linux (using glibc).
+  // Linux variants without glibc (eg: bionic, musl) may have some subset.
+  if (!T.isOSLinux() || !T.isGNUEnvironment()) {
     TLI.setUnavailable(LibFunc_dunder_strdup);
     TLI.setUnavailable(LibFunc_dunder_strtok_r);
     TLI.setUnavailable(LibFunc_dunder_isoc99_scanf);
     TLI.setUnavailable(LibFunc_dunder_isoc99_sscanf);
     TLI.setUnavailable(LibFunc_under_IO_getc);
     TLI.setUnavailable(LibFunc_under_IO_putc);
-    // But, Android has memalign.
-    if (!T.isAndroid())
+    // But, Android and musl have memalign.
+    if (!T.isAndroid() && !T.isMusl())
       TLI.setUnavailable(LibFunc_memalign);
     TLI.setUnavailable(LibFunc_fopen64);
     TLI.setUnavailable(LibFunc_fseeko64);

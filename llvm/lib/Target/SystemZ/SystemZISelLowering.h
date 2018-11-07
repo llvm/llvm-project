@@ -379,7 +379,7 @@ public:
     // want to clobber the upper 32 bits of a GPR unnecessarily.
     return MVT::i32;
   }
-  TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(EVT VT)
+  TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)
     const override {
     // Widen subvectors to the full width rather than promoting integer
     // elements.  This is better because:

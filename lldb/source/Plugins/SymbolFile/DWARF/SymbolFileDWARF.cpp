@@ -1415,6 +1415,17 @@ Type *SymbolFileDWARF::ResolveTypeUID(lldb::user_id_t type_uid) {
     return nullptr;
 }
 
+llvm::Optional<SymbolFile::ArrayInfo>
+SymbolFileDWARF::GetDynamicArrayInfoForUID(
+    lldb::user_id_t type_uid, const lldb_private::ExecutionContext *exe_ctx) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  DWARFDIE type_die = GetDIEFromUID(type_uid);
+  if (type_die)
+    return DWARFASTParser::ParseChildArrayInfo(type_die, exe_ctx);
+  else
+    return llvm::None;
+}
+
 Type *SymbolFileDWARF::ResolveTypeUID(const DIERef &die_ref) {
   return ResolveType(GetDIE(die_ref), true);
 }
@@ -3853,6 +3864,14 @@ ConstString SymbolFileDWARF::GetPluginName() { return GetPluginNameStatic(); }
 uint32_t SymbolFileDWARF::GetPluginVersion() { return 1; }
 
 void SymbolFileDWARF::Dump(lldb_private::Stream &s) { m_index->Dump(s); }
+
+void SymbolFileDWARF::DumpClangAST(Stream &s) {
+  TypeSystem *ts = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
+  ClangASTContext *clang = llvm::dyn_cast_or_null<ClangASTContext>(ts);
+  if (!clang)
+    return;
+  clang->Dump(s);
+}
 
 SymbolFileDWARFDebugMap *SymbolFileDWARF::GetDebugMapSymfile() {
   if (m_debug_map_symfile == NULL && !m_debug_map_module_wp.expired()) {

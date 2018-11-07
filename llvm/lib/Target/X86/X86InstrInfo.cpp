@@ -2550,7 +2550,7 @@ void X86InstrInfo::replaceBranchWithTailCall(
   // call. This way they still appear live across the call.
   LivePhysRegs LiveRegs(getRegisterInfo());
   LiveRegs.addLiveOuts(MBB);
-  SmallVector<std::pair<unsigned, const MachineOperand *>, 8> Clobbers;
+  SmallVector<std::pair<MCPhysReg, const MachineOperand *>, 8> Clobbers;
   LiveRegs.stepForward(*MIB, Clobbers);
   for (const auto &C : Clobbers) {
     MIB.addReg(C.first, RegState::Implicit);

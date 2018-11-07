@@ -81,6 +81,10 @@ Error RecordPrinter::visit(FunctionRecord &R) {
     OS << formatv("<Function Tail Exit: #{0} delta = +{1}>", R.functionId(),
                   R.delta());
     break;
+  case RecordTypes::CUSTOM_EVENT:
+  case RecordTypes::TYPED_EVENT:
+    // TODO: Flag as a bug?
+    break;
   }
   OS << Delim;
   return Error::success();

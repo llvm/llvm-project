@@ -40,7 +40,7 @@ INITIALIZE_PASS(PhysicalRegisterUsageInfo, "reg-usage-info",
 
 char PhysicalRegisterUsageInfo::ID = 0;
 
-void PhysicalRegisterUsageInfo::setTargetMachine(const TargetMachine &TM) {
+void PhysicalRegisterUsageInfo::setTargetMachine(const LLVMTargetMachine &TM) {
   this->TM = &TM;
 }
 

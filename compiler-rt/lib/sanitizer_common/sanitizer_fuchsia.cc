@@ -86,6 +86,7 @@ void GetThreadStackTopAndBottom(bool, uptr *stack_top, uptr *stack_bottom) {
   *stack_top = *stack_bottom + size;
 }
 
+void InitializePlatformEarly() {}
 void MaybeReexec() {}
 void CheckASLR() {}
 void PlatformPrepareForSandboxing(__sanitizer_sandbox_arguments *args) {}
@@ -451,6 +452,7 @@ char **StoredArgv;
 char **StoredEnviron;
 
 char **GetArgv() { return StoredArgv; }
+char **GetEnviron() { return StoredEnviron; }
 
 const char *GetEnv(const char *name) {
   if (StoredEnviron) {

@@ -43,7 +43,7 @@ void initLLVM() {
 
 /// Create a TargetMachine. As we lack a dedicated always available target for
 /// unittests, we go for "AArch64".
-std::unique_ptr<TargetMachine> createTargetMachine() {
+std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   Triple TargetTriple("aarch64--");
   std::string Error;
   const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
@@ -51,8 +51,9 @@ std::unique_ptr<TargetMachine> createTargetMachine() {
     return nullptr;
 
   TargetOptions Options;
-  return std::unique_ptr<TargetMachine>(T->createTargetMachine(
-      "AArch64", "", "", Options, None, None, CodeGenOpt::Aggressive));
+  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine*>(
+      T->createTargetMachine("AArch64", "", "", Options, None, None,
+                             CodeGenOpt::Aggressive)));
 }
 
 std::unique_ptr<Module> parseMIR(LLVMContext &Context,
@@ -78,7 +79,7 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
 }
 
 std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
-createDummyModule(LLVMContext &Context, const TargetMachine &TM,
+createDummyModule(LLVMContext &Context, const LLVMTargetMachine &TM,
                   StringRef MIRFunc) {
   SmallString<512> S;
   StringRef MIRString = (Twine(R"MIR(
@@ -122,7 +123,7 @@ static void collectCopies(SmallVectorImpl<unsigned> &Copies,
 
 TEST(PatternMatchInstr, MatchIntConstant) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");
@@ -143,7 +144,7 @@ TEST(PatternMatchInstr, MatchIntConstant) {
 
 TEST(PatternMatchInstr, MatchBinaryOp) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");
@@ -270,7 +271,7 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
 
 TEST(PatternMatchInstr, MatchFPUnaryOp) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");
@@ -341,7 +342,7 @@ TEST(PatternMatchInstr, MatchFPUnaryOp) {
 
 TEST(PatternMatchInstr, MatchExtendsTrunc) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");
@@ -397,7 +398,7 @@ TEST(PatternMatchInstr, MatchExtendsTrunc) {
 
 TEST(PatternMatchInstr, MatchSpecificType) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");
@@ -444,7 +445,7 @@ TEST(PatternMatchInstr, MatchSpecificType) {
 
 TEST(PatternMatchInstr, MatchCombinators) {
   LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
   if (!TM)
     return;
   auto ModuleMMIPair = createDummyModule(Context, *TM, "");

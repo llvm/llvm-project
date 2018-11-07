@@ -758,7 +758,7 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   llvm_unreachable("Unknown opcode to check as cheap as a move!");
 }
 
-bool AArch64InstrInfo::isExynosResetFast(const MachineInstr &MI) const {
+bool AArch64InstrInfo::isExynosResetFast(const MachineInstr &MI) {
   unsigned Reg, Imm, Shift;
 
   switch (MI.getOpcode()) {
@@ -829,7 +829,7 @@ bool AArch64InstrInfo::isExynosResetFast(const MachineInstr &MI) const {
   }
 }
 
-bool AArch64InstrInfo::isExynosLdStExtFast(const MachineInstr &MI) const {
+bool AArch64InstrInfo::isExynosLdStExtFast(const MachineInstr &MI) {
   unsigned Imm;
   AArch64_AM::ShiftExtendType Ext;
 
@@ -894,7 +894,7 @@ bool AArch64InstrInfo::isExynosLdStExtFast(const MachineInstr &MI) const {
   }
 }
 
-bool AArch64InstrInfo::isExynosShiftExtFast(const MachineInstr &MI) const {
+bool AArch64InstrInfo::isExynosShiftExtFast(const MachineInstr &MI) {
   unsigned Imm, Shift;
   AArch64_AM::ShiftExtendType Ext;
 
@@ -963,7 +963,7 @@ bool AArch64InstrInfo::isExynosShiftExtFast(const MachineInstr &MI) const {
   }
 }
 
-bool AArch64InstrInfo::isFalkorShiftExtFast(const MachineInstr &MI) const {
+bool AArch64InstrInfo::isFalkorShiftExtFast(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
     return false;

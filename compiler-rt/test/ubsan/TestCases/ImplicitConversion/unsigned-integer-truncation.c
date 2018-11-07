@@ -153,7 +153,7 @@ int main() {
   convert_signed_int_to_signed_int((int32_t)(uint32_t)UINT32_MAX);
   convert_signed_char_to_signed_char((int8_t)UINT8_MAX);
   convert_unsigned_int_to_unsigned_char((uint32_t)UINT32_MAX);
-// CHECK-V0: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 4294967295 (32-bit, unsigned) to type 'uint8_t' (aka 'unsigned char') changed the value to 255 (8-bit, unsigned
+// CHECK-V0: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type '{{.*}}' (aka 'unsigned int') of value 4294967295 (32-bit, unsigned) to type '{{.*}}' (aka 'unsigned char') changed the value to 255 (8-bit, unsigned
   convert_unsigned_char_to_unsigned_int((uint8_t)UINT8_MAX);
   convert_unsigned_char_to_signed_int((uint8_t)UINT8_MAX);
   convert_signed_char_to_signed_int((int8_t)UINT8_MAX);
@@ -172,7 +172,7 @@ int main() {
   convert_signed_int_to_signed_int((int32_t)(uint32_t)INT32_MIN);
   convert_signed_char_to_signed_char((int8_t)INT8_MIN);
   convert_unsigned_int_to_unsigned_char((uint32_t)INT32_MIN);
-// CHECK-V1: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 2147483648 (32-bit, unsigned) to type 'uint8_t' (aka 'unsigned char') changed the value to 0 (8-bit, unsigned)
+// CHECK-V1: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type '{{.*}}' (aka 'unsigned int') of value 2147483648 (32-bit, unsigned) to type '{{.*}}' (aka 'unsigned char') changed the value to 0 (8-bit, unsigned)
   convert_unsigned_char_to_unsigned_int((uint8_t)INT8_MIN);
   convert_unsigned_char_to_signed_int((uint8_t)INT8_MIN);
   convert_signed_char_to_signed_int((int8_t)INT8_MIN);
@@ -191,7 +191,7 @@ int main() {
   convert_signed_int_to_signed_int((int32_t)(uint32_t)INT32_MAX);
   convert_signed_char_to_signed_char((int8_t)INT8_MAX);
   convert_unsigned_int_to_unsigned_char((uint32_t)INT32_MAX);
-// CHECK-V2: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 2147483647 (32-bit, unsigned) to type 'uint8_t' (aka 'unsigned char') changed the value to 255 (8-bit, unsigned)
+// CHECK-V2: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type '{{.*}}' (aka 'unsigned int') of value 2147483647 (32-bit, unsigned) to type '{{.*}}' (aka 'unsigned char') changed the value to 255 (8-bit, unsigned)
   convert_unsigned_char_to_unsigned_int((uint8_t)INT8_MAX);
   convert_unsigned_char_to_signed_int((uint8_t)INT8_MAX);
   convert_signed_char_to_signed_int((int8_t)INT8_MAX);
@@ -246,7 +246,7 @@ int main() {
   convert_signed_int_to_signed_int((int32_t)(~((uint32_t)(uint8_t)INT8_MIN)));
   convert_signed_char_to_signed_char((int8_t)(uint8_t)INT8_MIN);
   convert_unsigned_int_to_unsigned_char((~((uint32_t)(uint8_t)INT8_MIN)));
-// CHECK-V5: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 4294967167 (32-bit, unsigned) to type 'uint8_t' (aka 'unsigned char') changed the value to 127 (8-bit, unsigned)
+// CHECK-V5: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type '{{.*}}' (aka 'unsigned int') of value 4294967167 (32-bit, unsigned) to type '{{.*}}' (aka 'unsigned char') changed the value to 127 (8-bit, unsigned)
   convert_unsigned_char_to_unsigned_int((uint8_t)(uint8_t)INT8_MIN);
   convert_unsigned_char_to_signed_int((uint8_t)(uint8_t)INT8_MIN);
   convert_signed_char_to_signed_int((int8_t)(uint8_t)INT8_MIN);
@@ -265,7 +265,7 @@ int main() {
   convert_signed_int_to_signed_int((int32_t)INT32_MIN);
   convert_signed_char_to_signed_char((int8_t)INT8_MIN);
   convert_unsigned_int_to_unsigned_char(((uint32_t)INT32_MIN) | ((uint32_t)(uint8_t)INT8_MIN));
-// CHECK-V6: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 2147483776 (32-bit, unsigned) to type 'uint8_t' (aka 'unsigned char') changed the value to 128 (8-bit, unsigned)
+// CHECK-V6: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type '{{.*}}' (aka 'unsigned int') of value 2147483776 (32-bit, unsigned) to type '{{.*}}' (aka 'unsigned char') changed the value to 128 (8-bit, unsigned)
   convert_unsigned_char_to_unsigned_int((uint8_t)INT8_MIN);
   convert_unsigned_char_to_signed_int((uint8_t)INT8_MIN);
   convert_signed_char_to_signed_int((int8_t)INT8_MIN);
@@ -284,7 +284,7 @@ int main() {
   convert_signed_int_to_signed_int((int32_t)INT32_MAX);
   convert_signed_char_to_signed_char((int8_t)INT8_MAX);
   convert_unsigned_int_to_unsigned_char(~(((uint32_t)INT32_MIN) | ((uint32_t)(uint8_t)INT8_MIN)));
-// CHECK-V7: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type 'uint32_t' (aka 'unsigned int') of value 2147483519 (32-bit, unsigned) to type 'uint8_t' (aka 'unsigned char') changed the value to 127 (8-bit, unsigned)
+// CHECK-V7: {{.*}}unsigned-integer-truncation.c:500:10: runtime error: implicit conversion from type '{{.*}}' (aka 'unsigned int') of value 2147483519 (32-bit, unsigned) to type '{{.*}}' (aka 'unsigned char') changed the value to 127 (8-bit, unsigned)
   convert_unsigned_char_to_unsigned_int((uint8_t)INT8_MAX);
   convert_unsigned_char_to_signed_int((uint8_t)INT8_MAX);
   convert_signed_char_to_signed_int((int8_t)INT8_MAX);

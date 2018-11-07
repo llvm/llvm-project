@@ -36,7 +36,15 @@ private:
 };
 int Class::ClassStatic = 7;
 
-void foo() { Class::StaticFunc(Class(Enum_0)); }
+template<typename T>
+struct Template {
+  template<Enum E>
+  void TemplateFunc() {
+    T::StaticFunc(T(E));
+  }
+};
+
+void foo() { Template<Class>().TemplateFunc<Enum_0>(); }
 
 } // namespace N1
 } // namespace N0

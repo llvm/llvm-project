@@ -971,6 +971,7 @@ static uint64_t getEncodedFFlags(FunctionSummary::FFlags Flags) {
   RawFlags |= (Flags.ReadOnly << 1);
   RawFlags |= (Flags.NoRecurse << 2);
   RawFlags |= (Flags.ReturnDoesNotAlias << 3);
+  RawFlags |= (Flags.NoInline << 4);
   return RawFlags;
 }
 

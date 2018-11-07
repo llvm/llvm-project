@@ -128,8 +128,10 @@ size_t ValueObjectMemory::CalculateNumChildren(uint32_t max) {
     return child_count <= max ? child_count : max;
   }
 
+  ExecutionContext exe_ctx(GetExecutionContextRef());
   const bool omit_empty_base_classes = true;
-  auto child_count = m_compiler_type.GetNumChildren(omit_empty_base_classes);
+  auto child_count =
+      m_compiler_type.GetNumChildren(omit_empty_base_classes, &exe_ctx);
   return child_count <= max ? child_count : max;
 }
 

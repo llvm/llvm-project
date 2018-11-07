@@ -90,6 +90,7 @@ TEST(MemIndexTest, MemIndexDeduplicate) {
                                  symbol("2") /* duplicate */};
   FuzzyFindRequest Req;
   Req.Query = "2";
+  Req.AnyScope = true;
   MemIndex I(Symbols, RefSlab());
   EXPECT_THAT(match(I, Req), ElementsAre("2"));
 }
@@ -98,6 +99,7 @@ TEST(MemIndexTest, MemIndexLimitedNumMatches) {
   auto I = MemIndex::build(generateNumSymbols(0, 100), RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "5";
+  Req.AnyScope = true;
   Req.Limit = 3;
   bool Incomplete;
   auto Matches = match(*I, Req, &Incomplete);
@@ -112,6 +114,7 @@ TEST(MemIndexTest, FuzzyMatch) {
       RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "lol";
+  Req.AnyScope = true;
   Req.Limit = 2;
   EXPECT_THAT(match(*I, Req),
               UnorderedElementsAre("LaughingOutLoud", "LittleOldLady"));
@@ -122,6 +125,7 @@ TEST(MemIndexTest, MatchQualifiedNamesWithoutSpecificScope) {
       MemIndex::build(generateSymbols({"a::y1", "b::y2", "y3"}), RefSlab());
   FuzzyFindRequest Req;
   Req.Query = "y";
+  Req.AnyScope = true;
   EXPECT_THAT(match(*I, Req), UnorderedElementsAre("a::y1", "b::y2", "y3"));
 }
 

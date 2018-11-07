@@ -7714,6 +7714,7 @@ bool LLParser::ParseFlag(unsigned &Val) {
 ///   := 'funcFlags' ':' '(' ['readNone' ':' Flag]?
 ///        [',' 'readOnly' ':' Flag]? [',' 'noRecurse' ':' Flag]?
 ///        [',' 'returnDoesNotAlias' ':' Flag]? ')'
+///        [',' 'noInline' ':' Flag]? ')'
 bool LLParser::ParseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
   assert(Lex.getKind() == lltok::kw_funcFlags);
   Lex.Lex();
@@ -7748,6 +7749,12 @@ bool LLParser::ParseOptionalFFlags(FunctionSummary::FFlags &FFlags) {
       if (ParseToken(lltok::colon, "expected ':'") || ParseFlag(Val))
         return true;
       FFlags.ReturnDoesNotAlias = Val;
+      break;
+    case lltok::kw_noInline:
+      Lex.Lex();
+      if (ParseToken(lltok::colon, "expected ':'") || ParseFlag(Val))
+        return true;
+      FFlags.NoInline = Val;
       break;
     default:
       return Error(Lex.getLoc(), "expected function flag type");

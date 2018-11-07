@@ -623,33 +623,13 @@ char **GetArgv() {
   return argv;
 }
 
-void ReExec() {
+char **GetEnviron() {
   char **argv, **envp;
-  const char *pathname = "/proc/self/exe";
-
-#if SANITIZER_NETBSD
-  static const int name[] = {
-    CTL_KERN, KERN_PROC_ARGS, -1, KERN_PROC_PATHNAME,
-  };
-  char path[400];
-  uptr len;
-
-  len = sizeof(path);
-  if (internal_sysctl(name, ARRAY_SIZE(name), path, &len, NULL, 0) != -1)
-    pathname = path;
-#elif SANITIZER_SOLARIS
-  pathname = getexecname();
-  CHECK_NE(pathname, NULL);
-#endif
-
   GetArgsAndEnv(&argv, &envp);
-  uptr rv = internal_execve(pathname, argv, envp);
-  int rverrno;
-  CHECK_EQ(internal_iserror(rv, &rverrno), true);
-  Printf("execve failed, errno %d\n", rverrno);
-  Die();
+  return envp;
 }
-#endif
+
+#endif  // !SANITIZER_OPENBSD
 
 #if !SANITIZER_SOLARIS
 enum MutexState {
@@ -1986,6 +1966,10 @@ static void GetPcSpBp(void *context, uptr *pc, uptr *sp, uptr *bp) {
 }
 
 void SignalContext::InitPcSpBp() { GetPcSpBp(context, &pc, &sp, &bp); }
+
+void InitializePlatformEarly() {
+  // Do nothing.
+}
 
 void MaybeReexec() {
   // No need to re-exec on Linux.

@@ -142,8 +142,10 @@ llvm::BitVector getFunctionReservedRegs(const llvm::TargetMachine &TM) {
       llvm::make_unique<llvm::LLVMContext>();
   std::unique_ptr<llvm::Module> Module =
       createModule(Context, TM.createDataLayout());
+  // TODO: This only works for targets implementing LLVMTargetMachine.
+  const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine&>(TM);
   std::unique_ptr<llvm::MachineModuleInfo> MMI =
-      llvm::make_unique<llvm::MachineModuleInfo>(&TM);
+      llvm::make_unique<llvm::MachineModuleInfo>(&LLVMTM);
   llvm::MachineFunction &MF =
       createVoidVoidPtrMachineFunction(FunctionID, Module.get(), MMI.get());
   // Saving reserved registers for client.

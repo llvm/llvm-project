@@ -279,7 +279,7 @@ public:
 
   /// Return the preferred vector type legalization action.
   virtual TargetLoweringBase::LegalizeTypeAction
-  getPreferredVectorAction(EVT VT) const {
+  getPreferredVectorAction(MVT VT) const {
     // The default action for one element vectors is to scalarize
     if (VT.getVectorNumElements() == 1)
       return TypeScalarizeVector;

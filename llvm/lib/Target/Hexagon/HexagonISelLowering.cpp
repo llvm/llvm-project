@@ -1834,12 +1834,12 @@ bool HexagonTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask,
 }
 
 TargetLoweringBase::LegalizeTypeAction
-HexagonTargetLowering::getPreferredVectorAction(EVT VT) const {
+HexagonTargetLowering::getPreferredVectorAction(MVT VT) const {
   if (VT.getVectorNumElements() == 1)
     return TargetLoweringBase::TypeScalarizeVector;
 
   // Always widen vectors of i1.
-  MVT ElemTy = VT.getSimpleVT().getVectorElementType();
+  MVT ElemTy = VT.getVectorElementType();
   if (ElemTy == MVT::i1)
     return TargetLoweringBase::TypeWidenVector;
 

@@ -214,6 +214,7 @@ enum : unsigned {
 
 enum : unsigned {
   WASM_LIMITS_FLAG_HAS_MAX = 0x1,
+  WASM_LIMITS_FLAG_IS_SHARED = 0x2,
 };
 
 // Kind codes used in the custom "name" section

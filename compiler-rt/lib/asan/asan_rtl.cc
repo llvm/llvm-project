@@ -420,6 +420,8 @@ static void AsanInitInternal() {
   __asan_option_detect_stack_use_after_return =
       flags()->detect_stack_use_after_return;
 
+  __sanitizer::InitializePlatformEarly();
+
   // Re-exec ourselves if we need to set additional env or command line args.
   MaybeReexec();
 
