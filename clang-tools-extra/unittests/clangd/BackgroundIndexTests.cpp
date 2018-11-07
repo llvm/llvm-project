@@ -43,7 +43,7 @@ TEST(BackgroundIndexTest, IndexTwoFiles) {
       void f_b() {
         (void)common;
       })cpp";
-  BackgroundIndex Idx(Context::empty(), "", FS, /*URISchmes=*/{"unittest"});
+  BackgroundIndex Idx(Context::empty(), "", FS, /*URISchemes=*/{"unittest"});
 
   tooling::CompileCommand Cmd;
   Cmd.Filename = testPath("root/A.cc");

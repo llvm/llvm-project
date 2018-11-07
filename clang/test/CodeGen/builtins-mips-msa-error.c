@@ -112,9 +112,9 @@ void test(void) {
   v4i32_r = __msa_insve_w(v4i32_r, 4, v4i32_a);      // expected-error {{argument value 4 is outside the valid range [0, 3]}}
   v2i64_r = __msa_insve_d(v2i64_r, 2, v2i64_a);      // expected-error {{argument value 2 is outside the valid range [0, 1]}}
 
-  v8i16_r = __msa_ld_h(&v8i16_a, 77);                // expected-error {{argument should be a multiple of 16}}
-  v4i32_r = __msa_ld_w(&v4i32_a, 14);                // expected-error {{argument should be a multiple of 16}}
-  v2i64_r = __msa_ld_d(&v2i64_a, 23);                // expected-error {{argument should be a multiple of 16}}
+  v8i16_r = __msa_ld_h(&v8i16_a, 77);                // expected-error {{argument should be a multiple of 2}}
+  v4i32_r = __msa_ld_w(&v4i32_a, 14);                // expected-error {{argument should be a multiple of 4}}
+  v2i64_r = __msa_ld_d(&v2i64_a, 23);                // expected-error {{argument should be a multiple of 8}}
 
   v16i8_r = __msa_ld_b(&v16i8_a, 512);               // expected-error {{argument value 512 is outside the valid range [-512, 511]}}
   v8i16_r = __msa_ld_h(&v8i16_a, 1024);              // expected-error {{argument value 1024 is outside the valid range [-1024, 1022]}}
@@ -199,9 +199,9 @@ void test(void) {
   v4i32_r = __msa_srlri_w(v4i32_a, 32);              // expected-error {{argument value 32 is outside the valid range [0, 31]}}
   v2i64_r = __msa_srlri_d(v2i64_a, 64);              // expected-error {{argument value 64 is outside the valid range [0, 63]}}
 
-  __msa_st_h(v8i16_b, &v8i16_a, 51);                // expected-error {{argument should be a multiple of 16}}
-  __msa_st_w(v4i32_b, &v4i32_a, 51);                // expected-error {{argument should be a multiple of 16}}
-  __msa_st_d(v2i64_b, &v2i64_a, 12);                // expected-error {{argument should be a multiple of 16}}
+  __msa_st_h(v8i16_b, &v8i16_a, 51);                // expected-error {{argument should be a multiple of 2}}
+  __msa_st_w(v4i32_b, &v4i32_a, 51);                // expected-error {{argument should be a multiple of 4}}
+  __msa_st_d(v2i64_b, &v2i64_a, 12);                // expected-error {{argument should be a multiple of 8}}
 
   __msa_st_b(v16i8_b, &v16i8_a, 512);                // expected-error {{argument value 512 is outside the valid range [-512, 511]}}
   __msa_st_h(v8i16_b, &v8i16_a, 1024);                // expected-error {{argument value 1024 is outside the valid range [-1024, 1022]}}

@@ -1230,6 +1230,8 @@ CallOverdefined:
       SmallVector<Constant*, 8> Operands;
       for (CallSite::arg_iterator AI = CS.arg_begin(), E = CS.arg_end();
            AI != E; ++AI) {
+        if (AI->get()->getType()->isStructTy())
+          return markOverdefined(I); // Can't handle struct args.
         LatticeVal State = getValueState(*AI);
 
         if (State.isUnknown())

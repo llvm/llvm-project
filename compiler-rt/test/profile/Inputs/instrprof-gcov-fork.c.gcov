@@ -10,8 +10,8 @@
 // CHECK-NEXT:function func2 called 2 returned 100% blocks executed 100%
 // CHECK-NEXT:        2:    4:void func2() {}
 // CHECK-NEXT:        -:    5:
-// CHECK-NEXT:function main called 1 returned 100% blocks executed 100%
-// CHECK-NEXT:        -:    6:int main(void)
+// CHECK-NEXT:function main called 1 returned 200% blocks executed 100%
+// CHECK-NEXT:        1:    6:int main(void)
 // CHECK-NEXT:        -:    7:{
 // CHECK-NEXT:        1:    8:  func1();
 // CHECK-NEXT:        -:    9:

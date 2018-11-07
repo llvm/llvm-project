@@ -101,6 +101,10 @@ append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread ASAN_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log ASAN_DYNAMIC_LIBS)
 append_list_if(MINGW "${MINGW_LIBRARIES}" ASAN_DYNAMIC_LIBS)
 
+if (TARGET cxx-headers OR HAVE_LIBCXX)
+  set(ASAN_DEPS cxx-headers)
+endif()
+
 # Compile ASan sources into an object library.
 
 add_compiler_rt_object_libraries(RTAsan_dynamic
@@ -109,7 +113,8 @@ add_compiler_rt_object_libraries(RTAsan_dynamic
   SOURCES ${ASAN_SOURCES} ${ASAN_CXX_SOURCES}
   ADDITIONAL_HEADERS ${ASAN_HEADERS}
   CFLAGS ${ASAN_DYNAMIC_CFLAGS}
-  DEFS ${ASAN_DYNAMIC_DEFINITIONS})
+  DEFS ${ASAN_DYNAMIC_DEFINITIONS}
+  DEPS ${ASAN_DEPS})
 
 if(NOT APPLE)
   add_compiler_rt_object_libraries(RTAsan
@@ -117,26 +122,30 @@ if(NOT APPLE)
     SOURCES ${ASAN_SOURCES}
     ADDITIONAL_HEADERS ${ASAN_HEADERS}
     CFLAGS ${ASAN_CFLAGS}
-    DEFS ${ASAN_COMMON_DEFINITIONS})
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    DEPS ${ASAN_DEPS})
   add_compiler_rt_object_libraries(RTAsan_cxx
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${ASAN_CXX_SOURCES}
     ADDITIONAL_HEADERS ${ASAN_HEADERS}
     CFLAGS ${ASAN_CFLAGS}
-    DEFS ${ASAN_COMMON_DEFINITIONS})
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    DEPS ${ASAN_DEPS})
   add_compiler_rt_object_libraries(RTAsan_preinit
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${ASAN_PREINIT_SOURCES}
     ADDITIONAL_HEADERS ${ASAN_HEADERS}
     CFLAGS ${ASAN_CFLAGS}
-    DEFS ${ASAN_COMMON_DEFINITIONS})
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    DEPS ${ASAN_DEPS})
 
   file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc "")
   add_compiler_rt_object_libraries(RTAsan_dynamic_version_script_dummy
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc
     CFLAGS ${ASAN_DYNAMIC_CFLAGS}
-    DEFS ${ASAN_DYNAMIC_DEFINITIONS})
+    DEFS ${ASAN_DYNAMIC_DEFINITIONS}
+    DEPS ${ASAN_DEPS})
 endif()
 
 # Build ASan runtimes shipped with Clang.
@@ -231,7 +240,8 @@ else()
         ARCHS ${arch}
         SOURCES asan_win_weak_interception.cc
         CFLAGS ${ASAN_CFLAGS} -DSANITIZER_DYNAMIC
-        DEFS ${ASAN_COMMON_DEFINITIONS})
+        DEFS ${ASAN_COMMON_DEFINITIONS}
+        DEPS ${ASAN_DEPS})
       set(ASAN_DYNAMIC_WEAK_INTERCEPTION
           AsanWeakInterception
           UbsanWeakInterception
@@ -276,7 +286,8 @@ else()
         SOURCES asan_globals_win.cc
                 asan_win_dll_thunk.cc
         CFLAGS ${ASAN_CFLAGS} -DSANITIZER_DLL_THUNK
-        DEFS ${ASAN_COMMON_DEFINITIONS})
+        DEFS ${ASAN_COMMON_DEFINITIONS}
+        DEPS ${ASAN_DEPS})
 
       add_compiler_rt_runtime(clang_rt.asan_dll_thunk
         STATIC
@@ -301,7 +312,8 @@ else()
         SOURCES asan_globals_win.cc
                 asan_win_dynamic_runtime_thunk.cc
         CFLAGS ${ASAN_CFLAGS} ${DYNAMIC_RUNTIME_THUNK_CFLAGS}
-        DEFS ${ASAN_COMMON_DEFINITIONS})
+        DEFS ${ASAN_COMMON_DEFINITIONS}
+        DEPS ${ASAN_DEPS})
 
       add_compiler_rt_runtime(clang_rt.asan_dynamic_runtime_thunk
         STATIC

@@ -45,9 +45,9 @@ bool MipsCallLowering::MipsHandler::assignVRegs(ArrayRef<unsigned> VRegs,
   return true;
 }
 
-void MipsCallLowering::MipsHandler::setMostSignificantFirst(
+void MipsCallLowering::MipsHandler::setLeastSignificantFirst(
     SmallVectorImpl<unsigned> &VRegs) {
-  if (MIRBuilder.getMF().getDataLayout().isLittleEndian())
+  if (!MIRBuilder.getMF().getDataLayout().isLittleEndian())
     std::reverse(VRegs.begin(), VRegs.end());
 }
 
@@ -181,7 +181,7 @@ bool IncomingValueHandler::handleSplit(SmallVectorImpl<unsigned> &VRegs,
                                        unsigned ArgsReg) {
   if (!assignVRegs(VRegs, ArgLocs, ArgLocsStartIndex))
     return false;
-  setMostSignificantFirst(VRegs);
+  setLeastSignificantFirst(VRegs);
   MIRBuilder.buildMerge(ArgsReg, VRegs);
   return true;
 }
@@ -283,7 +283,7 @@ bool OutgoingValueHandler::handleSplit(SmallVectorImpl<unsigned> &VRegs,
                                        unsigned ArgLocsStartIndex,
                                        unsigned ArgsReg) {
   MIRBuilder.buildUnmerge(VRegs, ArgsReg);
-  setMostSignificantFirst(VRegs);
+  setLeastSignificantFirst(VRegs);
   if (!assignVRegs(VRegs, ArgLocs, ArgLocsStartIndex))
     return false;
 

@@ -364,15 +364,18 @@ unsigned DWARFVerifier::verifyUnitSection(const DWARFSection &S,
 
 bool DWARFVerifier::handleDebugInfo() {
   const DWARFObject &DObj = DCtx.getDWARFObj();
+  unsigned NumErrors = 0;
 
   OS << "Verifying .debug_info Unit Header Chain...\n";
-  unsigned result = verifyUnitSection(DObj.getInfoSection(), DW_SECT_INFO);
+  DObj.forEachInfoSections([&](const DWARFSection &S) {
+    NumErrors += verifyUnitSection(S, DW_SECT_INFO);
+  });
 
   OS << "Verifying .debug_types Unit Header Chain...\n";
   DObj.forEachTypesSections([&](const DWARFSection &S) {
-    result += verifyUnitSection(S, DW_SECT_TYPES);
+    NumErrors += verifyUnitSection(S, DW_SECT_TYPES);
   });
-  return result == 0;
+  return NumErrors == 0;
 }
 
 unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
@@ -551,6 +554,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
 unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
                                             DWARFAttribute &AttrValue) {
   const DWARFObject &DObj = DCtx.getDWARFObj();
+  auto DieCU = Die.getDwarfUnit();
   unsigned NumErrors = 0;
   const auto Form = AttrValue.Value.getForm();
   switch (Form) {
@@ -563,7 +567,6 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     Optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
     assert(RefVal);
     if (RefVal) {
-      auto DieCU = Die.getDwarfUnit();
       auto CUSize = DieCU->getNextUnitOffset() - DieCU->getOffset();
       auto CUOffset = AttrValue.Value.getRawUValue();
       if (CUOffset >= CUSize) {
@@ -588,7 +591,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
     Optional<uint64_t> RefVal = AttrValue.Value.getAsReference();
     assert(RefVal);
     if (RefVal) {
-      if (*RefVal >= DObj.getInfoSection().Data.size()) {
+      if (*RefVal >= DieCU->getInfoSection().Data.size()) {
         ++NumErrors;
         error() << "DW_FORM_ref_addr offset beyond .debug_info "
                    "bounds:\n";
