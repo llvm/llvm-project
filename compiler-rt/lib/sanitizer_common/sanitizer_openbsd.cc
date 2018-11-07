@@ -99,6 +99,12 @@ char **GetArgv() {
   return argv;
 }
 
+char **GetEnviron() {
+  char **argv, **envp;
+  GetArgsAndEnv(&argv, &envp);
+  return envp;
+}
+
 void ReExec() {
   UNIMPLEMENTED();
 }

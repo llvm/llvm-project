@@ -1299,12 +1299,13 @@ public:
 
   /// Constructor with no-insertion semantics
   FCmpInst(
-    Predicate pred, ///< The predicate to use for the comparison
+    Predicate Pred, ///< The predicate to use for the comparison
     Value *LHS,     ///< The left-hand-side of the expression
     Value *RHS,     ///< The right-hand-side of the expression
-    const Twine &NameStr = "" ///< Name of the instruction
-  ) : CmpInst(makeCmpResultType(LHS->getType()),
-              Instruction::FCmp, pred, LHS, RHS, NameStr) {
+    const Twine &NameStr = "", ///< Name of the instruction
+    Instruction *FlagsSource = nullptr
+  ) : CmpInst(makeCmpResultType(LHS->getType()), Instruction::FCmp, Pred, LHS,
+              RHS, NameStr, nullptr, FlagsSource) {
     AssertOK();
   }
 

@@ -5281,11 +5281,7 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
   if (C->isNegative())
     Pred = I.getSwappedPredicate();
 
-  // Finally emit the new fcmp.
-  Value *X = LHSI->getOperand(1);
-  FCmpInst *NewFCI = new FCmpInst(Pred, X, RHSC);
-  NewFCI->copyFastMathFlags(&I);
-  return NewFCI;
+  return new FCmpInst(Pred, LHSI->getOperand(1), RHSC, "", &I);
 }
 
 /// Optimize fabs(X) compared with zero.
@@ -5434,43 +5430,34 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
             if (Instruction *Res = foldCmpLoadFromIndexedGlobal(GEP, GV, I))
               return Res;
       break;
-    case Instruction::Call:
-      if (Instruction *X = foldFabsWithFcmpZero(I))
-        return X;
-      break;
   }
   }
+
+  if (Instruction *R = foldFabsWithFcmpZero(I))
+    return R;
 
   Value *X, *Y;
   if (match(Op0, m_FNeg(m_Value(X)))) {
-    if (match(Op1, m_FNeg(m_Value(Y)))) {
-      // fcmp pred (fneg X), (fneg Y) -> fcmp swap(pred) X, Y
-      Instruction *NewFCmp = new FCmpInst(I.getSwappedPredicate(), X, Y);
-      NewFCmp->copyFastMathFlags(&I);
-      return NewFCmp;
-    }
+    // fcmp pred (fneg X), (fneg Y) -> fcmp swap(pred) X, Y
+    if (match(Op1, m_FNeg(m_Value(Y))))
+      return new FCmpInst(I.getSwappedPredicate(), X, Y, "", &I);
 
+    // fcmp pred (fneg X), C --> fcmp swap(pred) X, -C
     Constant *C;
     if (match(Op1, m_Constant(C))) {
-      // fcmp pred (fneg X), C --> fcmp swap(pred) X, -C
       Constant *NegC = ConstantExpr::getFNeg(C);
-      Instruction *NewFCmp = new FCmpInst(I.getSwappedPredicate(), X, NegC);
-      NewFCmp->copyFastMathFlags(&I);
-      return NewFCmp;
+      return new FCmpInst(I.getSwappedPredicate(), X, NegC, "", &I);
     }
   }
 
   if (match(Op0, m_FPExt(m_Value(X)))) {
-    if (match(Op1, m_FPExt(m_Value(Y))) && X->getType() == Y->getType()) {
-      // fcmp (fpext X), (fpext Y) -> fcmp X, Y
-      Instruction *NewFCmp = new FCmpInst(Pred, X, Y);
-      NewFCmp->copyFastMathFlags(&I);
-      return NewFCmp;
-    }
+    // fcmp (fpext X), (fpext Y) -> fcmp X, Y
+    if (match(Op1, m_FPExt(m_Value(Y))) && X->getType() == Y->getType())
+      return new FCmpInst(Pred, X, Y, "", &I);
 
+    // fcmp (fpext X), C -> fcmp X, (fptrunc C) if fptrunc is lossless
     const APFloat *C;
     if (match(Op1, m_APFloat(C))) {
-      // fcmp (fpext X), C -> fcmp X, (fptrunc C) if fptrunc is lossless
       const fltSemantics &FPSem =
           X->getType()->getScalarType()->getFltSemantics();
       bool Lossy;
@@ -5485,9 +5472,7 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
           ((Fabs.compare(APFloat::getSmallestNormalized(FPSem)) !=
             APFloat::cmpLessThan) || Fabs.isZero())) {
         Constant *NewC = ConstantFP::get(X->getType(), TruncC);
-        Instruction *NewFCmp = new FCmpInst(Pred, X, NewC);
-        NewFCmp->copyFastMathFlags(&I);
-        return NewFCmp;
+        return new FCmpInst(Pred, X, NewC, "", &I);
       }
     }
   }

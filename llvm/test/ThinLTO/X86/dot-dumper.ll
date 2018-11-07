@@ -34,7 +34,7 @@
 ; CLUSTER1:         // Module: {{.*}}2.bc
 ; CLUSTER1-NEXT:    subgraph cluster_1 {
 ; CLUSTER1-DAG:       M1_[[A:[0-9]+]] [{{.*}}A|extern{{.*}}]; // variable
-; CLUSTER1-DAG:       M1_[[FOO:[0-9]+]] [{{.*}}foo|extern{{.*}}]; // function, not eligible to import
+; CLUSTER1-DAG:       M1_[[FOO:[0-9]+]] [{{.*}}foo|extern{{.*}} ffl: 00001{{.*}}]; // function
 ; CLUSTER1-DAG:       M1_[[B:[0-9]+]] [{{.*}}B|extern{{.*}}]; // variable
 ; CLUSTER1-DAG:       M1_[[BAR:[0-9]+]] [{{.*}}bar|extern{{.*}}]; // function, dead
 ; CLUSTER1-NEXT:      // Edges:

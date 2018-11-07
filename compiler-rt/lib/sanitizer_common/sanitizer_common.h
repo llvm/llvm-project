@@ -224,6 +224,7 @@ u32 GetUid();
 void ReExec();
 void CheckASLR();
 char **GetArgv();
+char **GetEnviron();
 void PrintCmdline();
 bool StackSizeIsUnlimited();
 uptr GetStackSizeLimitInBytes();
@@ -897,6 +898,7 @@ struct SignalContext {
   bool IsMemoryAccess() const;
 };
 
+void InitializePlatformEarly();
 void MaybeReexec();
 
 template <typename Fn>

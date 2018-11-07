@@ -26,9 +26,7 @@ class SmallVectorSynthProvider:
         self.update() # initialize this provider
 
     def num_children(self):
-        begin = self.begin.GetValueAsUnsigned(0)
-        end = self.end.GetValueAsUnsigned(0)
-        return (end - begin)/self.type_size
+        return self.size.GetValueAsUnsigned(0)
 
     def get_child_index(self, name):
         try:
@@ -49,7 +47,7 @@ class SmallVectorSynthProvider:
 
     def update(self):
         self.begin = self.valobj.GetChildMemberWithName('BeginX')
-        self.end = self.valobj.GetChildMemberWithName('EndX')
+        self.size = self.valobj.GetChildMemberWithName('Size')
         the_type = self.valobj.GetType()
         # If this is a reference type we have to dereference it to get to the
         # template parameter.

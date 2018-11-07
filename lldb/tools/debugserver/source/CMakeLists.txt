@@ -239,7 +239,6 @@ else()
             codesign --force --sign ${LLDB_CODESIGN_IDENTITY}
             ${entitlements_flags}
             $<TARGET_FILE:debugserver>
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
   )
   if(IOS)
     add_custom_command(TARGET debugserver-nonui
@@ -248,7 +247,6 @@ else()
               codesign --force --sign ${LLDB_CODESIGN_IDENTITY}
               ${entitlements_flags}
               $<TARGET_FILE:debugserver>
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
     )
   endif()
 endif()

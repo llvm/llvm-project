@@ -302,6 +302,11 @@ WASM-NEXT:     }
 WASM-NEXT:     Relocation {
 WASM-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
 WASM-NEXT:       Offset: 0x11
+WASM-NEXT:       Symbol: .LSomeOtherFunction_bitcast
+WASM-NEXT:     }
+WASM-NEXT:     Relocation {
+WASM-NEXT:       Type: R_WEBASSEMBLY_FUNCTION_INDEX_LEB (0)
+WASM-NEXT:       Offset: 0x1E
 WASM-NEXT:       Symbol: SomeOtherFunction
 WASM-NEXT:     }
 WASM-NEXT:   }

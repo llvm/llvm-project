@@ -70,6 +70,11 @@ static cl::opt<bool> DisablePromoteAllocaToVector(
   cl::desc("Disable promote alloca to vector"),
   cl::init(false));
 
+static cl::opt<bool> DisablePromoteAllocaToLDS(
+  "disable-promote-alloca-to-lds",
+  cl::desc("Disable promote alloca to LDS"),
+  cl::init(false));
+
 // FIXME: This can create globals so should be a module pass.
 class AMDGPUPromoteAlloca : public FunctionPass {
 private:
@@ -705,6 +710,9 @@ bool AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I, bool SufficientLDS) {
 
   if (tryPromoteAllocaToVector(&I))
     return true; // Promoted to vector.
+
+  if (DisablePromoteAllocaToLDS)
+    return false;
 
   const Function &ContainingFunction = *I.getParent()->getParent();
   CallingConv::ID CC = ContainingFunction.getCallingConv();
