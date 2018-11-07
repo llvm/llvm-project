@@ -25,9 +25,6 @@ class TestSwiftModuleSearchPaths(TestBase):
 
     def setUp(self):
         TestBase.setUp(self)
-        system([["make", "module"]])
-        self.addTearDownHook(lambda: system([["make", "cleanup"]]))
-        
         self.main_source = "main.swift"
         self.main_source_spec = lldb.SBFileSpec(self.main_source)
 
@@ -46,26 +43,12 @@ class TestSwiftModuleSearchPaths(TestBase):
         exe_name = "a.out"
         exe = self.getBuildArtifact(exe_name)
 
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        a_breakpoint = target.BreakpointCreateBySourceRegex(
-            'break here', self.main_source_spec)
-        self.assertTrue(a_breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT)
-
-        process = target.LaunchSimple(None, None, os.getcwd())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, a_breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
+        lldbutil.run_to_source_breakpoint(self, "break here",
+                                          lldb.SBFileSpec('main.swift'))
 
         # Add the current working dir to the swift-module-search-paths
-        self.runCmd("settings append target.swift-module-search-paths .")
+        self.runCmd("settings append target.swift-module-search-paths " +
+                    self.getBuildDir())
         
         # import the module
         self.runCmd("e import Module")
