@@ -78,6 +78,10 @@ static const char* ittnotify_lib_name = "libittnotify.dylib";
 
 #endif
 
+#ifndef PATH_MAX
+#define PATH_MAX 4096
+#endif
+
 
 #ifndef LIB_VAR_NAME
 #if ITT_ARCH==ITT_ARCH_IA32 || ITT_ARCH==ITT_ARCH_ARM || ITT_ARCH==ITT_ARCH_MIPS
