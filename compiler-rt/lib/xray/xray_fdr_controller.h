@@ -23,7 +23,7 @@
 
 namespace __xray {
 
-template <size_t Version = 3> class FDRController {
+template <size_t Version = 5> class FDRController {
   BufferQueue *BQ;
   BufferQueue::Buffer &B;
   FDRLogWriter &W;
@@ -144,8 +144,8 @@ template <size_t Version = 3> class FDRController {
   }
 
   enum class PreambleResult { NoChange, WroteMetadata, InvalidBuffer };
-  PreambleResult functionPreamble(uint64_t TSC,
-                                  uint16_t CPU) XRAY_NEVER_INSTRUMENT {
+  PreambleResult recordPreamble(uint64_t TSC,
+                                uint16_t CPU) XRAY_NEVER_INSTRUMENT {
     if (UNLIKELY(LatestCPU != CPU || LatestTSC == 0)) {
       // We update our internal tracking state for the Latest TSC and CPU we've
       // seen, then write out the appropriate metadata and function records.
@@ -248,7 +248,7 @@ public:
         !prepareBuffer(sizeof(MetadataRecord) + sizeof(FunctionRecord)))
       return returnBuffer();
 
-    auto PreambleStatus = functionPreamble(TSC, CPU);
+    auto PreambleStatus = recordPreamble(TSC, CPU);
     if (PreambleStatus == PreambleResult::InvalidBuffer)
       return returnBuffer();
 
@@ -270,7 +270,7 @@ public:
     if (!prepareBuffer(sizeof(MetadataRecord) + sizeof(FunctionRecord)))
       return returnBuffer();
 
-    auto PreambleStatus = functionPreamble(TSC, CPU);
+    auto PreambleStatus = recordPreamble(TSC, CPU);
     if (PreambleStatus == PreambleResult::InvalidBuffer)
       return returnBuffer();
 
@@ -291,7 +291,7 @@ public:
                         uint64_t Arg) XRAY_NEVER_INSTRUMENT {
     if (finalized() ||
         !prepareBuffer((2 * sizeof(MetadataRecord)) + sizeof(FunctionRecord)) ||
-        functionPreamble(TSC, CPU) == PreambleResult::InvalidBuffer)
+        recordPreamble(TSC, CPU) == PreambleResult::InvalidBuffer)
       return returnBuffer();
 
     auto Delta = TSC - LatestTSC;
@@ -311,7 +311,7 @@ public:
         !prepareBuffer(sizeof(MetadataRecord) + sizeof(FunctionRecord)))
       return returnBuffer();
 
-    auto PreambleStatus = functionPreamble(TSC, CPU);
+    auto PreambleStatus = recordPreamble(TSC, CPU);
     if (PreambleStatus == PreambleResult::InvalidBuffer)
       return returnBuffer();
 
@@ -332,26 +332,28 @@ public:
                    int32_t EventSize) XRAY_NEVER_INSTRUMENT {
     if (finalized() ||
         !prepareBuffer((2 * sizeof(MetadataRecord)) + EventSize) ||
-        functionPreamble(TSC, CPU) == PreambleResult::InvalidBuffer)
+        recordPreamble(TSC, CPU) == PreambleResult::InvalidBuffer)
       return returnBuffer();
 
-    LatestTSC = 0;
+    auto Delta = TSC - LatestTSC;
+    LatestTSC = TSC;
     UndoableFunctionEnters = 0;
     UndoableTailExits = 0;
-    return W.writeCustomEvent(TSC, CPU, Event, EventSize);
+    return W.writeCustomEvent(Delta, Event, EventSize);
   }
 
   bool typedEvent(uint64_t TSC, uint16_t CPU, uint16_t EventType,
                   const void *Event, int32_t EventSize) XRAY_NEVER_INSTRUMENT {
     if (finalized() ||
         !prepareBuffer((2 * sizeof(MetadataRecord)) + EventSize) ||
-        functionPreamble(TSC, CPU) == PreambleResult::InvalidBuffer)
+        recordPreamble(TSC, CPU) == PreambleResult::InvalidBuffer)
       return returnBuffer();
 
-    LatestTSC = 0;
+    auto Delta = TSC - LatestTSC;
+    LatestTSC = TSC;
     UndoableFunctionEnters = 0;
     UndoableTailExits = 0;
-    return W.writeTypedEvent(TSC, EventType, Event, EventSize);
+    return W.writeTypedEvent(Delta, EventType, Event, EventSize);
   }
 
   bool flush() XRAY_NEVER_INSTRUMENT {
