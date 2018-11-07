@@ -1061,8 +1061,27 @@ void cl::ParseEnvironmentOptions(const char *progName, const char *envVar,
 }
 
 bool cl::ParseCommandLineOptions(int argc, const char *const *argv,
-                                 StringRef Overview, raw_ostream *Errs) {
-  return GlobalParser->ParseCommandLineOptions(argc, argv, Overview,
+                                 StringRef Overview, raw_ostream *Errs,
+                                 const char *EnvVar) {
+  SmallVector<const char *, 20> NewArgv;
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  NewArgv.push_back(argv[0]);
+
+  // Parse options from environment variable.
+  if (EnvVar) {
+    if (llvm::Optional<std::string> EnvValue =
+            sys::Process::GetEnv(StringRef(EnvVar)))
+      TokenizeGNUCommandLine(*EnvValue, Saver, NewArgv);
+  }
+
+  // Append options from command line.
+  for (int I = 1; I < argc; ++I)
+    NewArgv.push_back(argv[I]);
+  int NewArgc = static_cast<int>(NewArgv.size());
+
+  // Parse all options.
+  return GlobalParser->ParseCommandLineOptions(NewArgc, &NewArgv[0], Overview,
                                                Errs);
 }
 

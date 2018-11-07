@@ -535,7 +535,7 @@ __stosq(unsigned __int64 *__dst, unsigned __int64 __x, size_t __n) {
 static __inline__ void __DEFAULT_FN_ATTRS
 __cpuid(int __info[4], int __level) {
   __asm__ ("cpuid" : "=a"(__info[0]), "=b" (__info[1]), "=c"(__info[2]), "=d"(__info[3])
-                   : "a"(__level));
+                   : "a"(__level), "c"(0));
 }
 static __inline__ void __DEFAULT_FN_ATTRS
 __cpuidex(int __info[4], int __level, int __ecx) {

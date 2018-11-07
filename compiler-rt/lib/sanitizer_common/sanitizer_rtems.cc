@@ -95,6 +95,7 @@ void GetThreadStackAndTls(bool main, uptr *stk_addr, uptr *stk_size,
   *tls_addr = *tls_size = 0;
 }
 
+void InitializePlatformEarly() {}
 void MaybeReexec() {}
 void CheckASLR() {}
 void DisableCoreDumperIfNecessary() {}
@@ -240,6 +241,7 @@ bool IsAccessibleMemoryRange(uptr beg, uptr size) {
 }
 
 char **GetArgv() { return nullptr; }
+char **GetEnviron() { return nullptr; }
 
 const char *GetEnv(const char *name) {
   return getenv(name);

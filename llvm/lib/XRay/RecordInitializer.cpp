@@ -151,6 +151,105 @@ Error RecordInitializer::visit(CustomEventRecord &R) {
   return Error::success();
 }
 
+Error RecordInitializer::visit(CustomEventRecordV5 &R) {
+  if (!E.isValidOffsetForDataOfSize(OffsetPtr,
+                                    MetadataRecord::kMetadataBodySize))
+    return createStringError(std::make_error_code(std::errc::bad_address),
+                             "Invalid offset for a custom event record (%d).",
+                             OffsetPtr);
+
+  auto BeginOffset = OffsetPtr;
+  auto PreReadOffset = OffsetPtr;
+
+  R.Size = E.getSigned(&OffsetPtr, sizeof(int32_t));
+  if (PreReadOffset == OffsetPtr)
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Cannot read a custom event record size field offset %d.", OffsetPtr);
+
+  PreReadOffset = OffsetPtr;
+  R.Delta = E.getSigned(&OffsetPtr, sizeof(int32_t));
+  if (PreReadOffset == OffsetPtr)
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Cannot read a custom event record TSC delta field at offset %d.",
+        OffsetPtr);
+
+  assert(OffsetPtr > BeginOffset &&
+         OffsetPtr - BeginOffset <= MetadataRecord::kMetadataBodySize);
+  OffsetPtr += MetadataRecord::kMetadataBodySize - (OffsetPtr - BeginOffset);
+
+  // Next we read in a fixed chunk of data from the given offset.
+  if (!E.isValidOffsetForDataOfSize(OffsetPtr, R.Size))
+    return createStringError(
+        std::make_error_code(std::errc::bad_address),
+        "Cannot read %d bytes of custom event data from offset %d.", R.Size,
+        OffsetPtr);
+
+  std::vector<uint8_t> Buffer;
+  Buffer.resize(R.Size);
+  if (E.getU8(&OffsetPtr, Buffer.data(), R.Size) != Buffer.data())
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Failed reading data into buffer of size %d at offset %d.", R.Size,
+        OffsetPtr);
+  R.Data.assign(Buffer.begin(), Buffer.end());
+  return Error::success();
+}
+
+Error RecordInitializer::visit(TypedEventRecord &R) {
+  if (!E.isValidOffsetForDataOfSize(OffsetPtr,
+                                    MetadataRecord::kMetadataBodySize))
+    return createStringError(std::make_error_code(std::errc::bad_address),
+                             "Invalid offset for a typed event record (%d).",
+                             OffsetPtr);
+
+  auto BeginOffset = OffsetPtr;
+  auto PreReadOffset = OffsetPtr;
+
+  R.Size = E.getSigned(&OffsetPtr, sizeof(int32_t));
+  if (PreReadOffset == OffsetPtr)
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Cannot read a typed event record size field offset %d.", OffsetPtr);
+
+  PreReadOffset = OffsetPtr;
+  R.Delta = E.getSigned(&OffsetPtr, sizeof(int32_t));
+  if (PreReadOffset == OffsetPtr)
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Cannot read a typed event record TSC delta field at offset %d.",
+        OffsetPtr);
+
+  PreReadOffset = OffsetPtr;
+  R.EventType = E.getU16(&OffsetPtr);
+  if (PreReadOffset == OffsetPtr)
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Cannot read a typed event record type field at offset %d.", OffsetPtr);
+
+  assert(OffsetPtr > BeginOffset &&
+         OffsetPtr - BeginOffset <= MetadataRecord::kMetadataBodySize);
+  OffsetPtr += MetadataRecord::kMetadataBodySize - (OffsetPtr - BeginOffset);
+
+  // Next we read in a fixed chunk of data from the given offset.
+  if (!E.isValidOffsetForDataOfSize(OffsetPtr, R.Size))
+    return createStringError(
+        std::make_error_code(std::errc::bad_address),
+        "Cannot read %d bytes of custom event data from offset %d.", R.Size,
+        OffsetPtr);
+
+  std::vector<uint8_t> Buffer;
+  Buffer.resize(R.Size);
+  if (E.getU8(&OffsetPtr, Buffer.data(), R.Size) != Buffer.data())
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Failed reading data into buffer of size %d at offset %d.", R.Size,
+        OffsetPtr);
+  R.Data.assign(Buffer.begin(), Buffer.end());
+  return Error::success();
+}
+
 Error RecordInitializer::visit(CallArgRecord &R) {
   if (!E.isValidOffsetForDataOfSize(OffsetPtr,
                                     MetadataRecord::kMetadataBodySize))

@@ -26,6 +26,8 @@ Error PIDRecord::apply(RecordVisitor &V) { return V.visit(*this); }
 Error NewBufferRecord::apply(RecordVisitor &V) { return V.visit(*this); }
 Error EndBufferRecord::apply(RecordVisitor &V) { return V.visit(*this); }
 Error FunctionRecord::apply(RecordVisitor &V) { return V.visit(*this); }
+Error CustomEventRecordV5::apply(RecordVisitor &V) { return V.visit(*this); }
+Error TypedEventRecord::apply(RecordVisitor &V) { return V.visit(*this); }
 
 } // namespace xray
 } // namespace llvm

@@ -14,12 +14,14 @@
 
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "legalizer"
+using namespace llvm::MIPatternMatch;
 
 namespace llvm {
 class LegalizationArtifactCombiner {
@@ -36,15 +38,17 @@ public:
                         SmallVectorImpl<MachineInstr *> &DeadInsts) {
     if (MI.getOpcode() != TargetOpcode::G_ANYEXT)
       return false;
-    if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_TRUNC,
-                                           MI.getOperand(1).getReg(), MRI)) {
+
+    Builder.setInstr(MI);
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
+
+    // aext(trunc x) - > aext/copy/trunc x
+    unsigned TruncSrc;
+    if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
-      unsigned DstReg = MI.getOperand(0).getReg();
-      unsigned SrcReg = DefMI->getOperand(1).getReg();
-      Builder.setInstr(MI);
-      // We get a copy/trunc/extend depending on the sizes
-      Builder.buildAnyExtOrTrunc(DstReg, SrcReg);
-      markInstAndDefDead(MI, *DefMI, DeadInsts);
+      Builder.buildAnyExtOrTrunc(DstReg, TruncSrc);
+      markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
     return tryFoldImplicitDef(MI, DeadInsts);
@@ -55,24 +59,25 @@ public:
 
     if (MI.getOpcode() != TargetOpcode::G_ZEXT)
       return false;
-    if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_TRUNC,
-                                           MI.getOperand(1).getReg(), MRI)) {
-      unsigned DstReg = MI.getOperand(0).getReg();
+
+    Builder.setInstr(MI);
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
+
+    // zext(trunc x) - > and (aext/copy/trunc x), mask
+    unsigned TruncSrc;
+    if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported({TargetOpcode::G_AND, {DstTy}}) ||
           isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
         return false;
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
-      Builder.setInstr(MI);
-      unsigned ZExtSrc = MI.getOperand(1).getReg();
-      LLT ZExtSrcTy = MRI.getType(ZExtSrc);
-      APInt Mask = APInt::getAllOnesValue(ZExtSrcTy.getSizeInBits());
-      auto MaskCstMIB = Builder.buildConstant(DstTy, Mask.getZExtValue());
-      unsigned TruncSrc = DefMI->getOperand(1).getReg();
-      // We get a copy/trunc/extend depending on the sizes
-      auto SrcCopyOrTrunc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrc);
-      Builder.buildAnd(DstReg, SrcCopyOrTrunc, MaskCstMIB);
-      markInstAndDefDead(MI, *DefMI, DeadInsts);
+      LLT SrcTy = MRI.getType(SrcReg);
+      APInt Mask = APInt::getAllOnesValue(SrcTy.getSizeInBits());
+      auto MIBMask = Builder.buildConstant(DstTy, Mask.getZExtValue());
+      Builder.buildAnd(DstReg, Builder.buildAnyExtOrTrunc(DstTy, TruncSrc),
+                       MIBMask);
+      markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
     return tryFoldImplicitDef(MI, DeadInsts);
@@ -83,27 +88,28 @@ public:
 
     if (MI.getOpcode() != TargetOpcode::G_SEXT)
       return false;
-    if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_TRUNC,
-                                           MI.getOperand(1).getReg(), MRI)) {
-      unsigned DstReg = MI.getOperand(0).getReg();
+
+    Builder.setInstr(MI);
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
+
+    // sext(trunc x) - > ashr (shl (aext/copy/trunc x), c), c
+    unsigned TruncSrc;
+    if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported({TargetOpcode::G_SHL, {DstTy}}) ||
           isInstUnsupported({TargetOpcode::G_ASHR, {DstTy}}) ||
           isInstUnsupported({TargetOpcode::G_CONSTANT, {DstTy}}))
         return false;
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
-      Builder.setInstr(MI);
-      unsigned SExtSrc = MI.getOperand(1).getReg();
-      LLT SExtSrcTy = MRI.getType(SExtSrc);
-      unsigned SizeDiff = DstTy.getSizeInBits() - SExtSrcTy.getSizeInBits();
-      auto SizeDiffMIB = Builder.buildConstant(DstTy, SizeDiff);
-      unsigned TruncSrcReg = DefMI->getOperand(1).getReg();
-      // We get a copy/trunc/extend depending on the sizes
-      auto SrcCopyExtOrTrunc = Builder.buildAnyExtOrTrunc(DstTy, TruncSrcReg);
-      auto ShlMIB = Builder.buildInstr(TargetOpcode::G_SHL, DstTy,
-                                       SrcCopyExtOrTrunc, SizeDiffMIB);
-      Builder.buildInstr(TargetOpcode::G_ASHR, DstReg, ShlMIB, SizeDiffMIB);
-      markInstAndDefDead(MI, *DefMI, DeadInsts);
+      LLT SrcTy = MRI.getType(SrcReg);
+      unsigned ShAmt = DstTy.getSizeInBits() - SrcTy.getSizeInBits();
+      auto MIBShAmt = Builder.buildConstant(DstTy, ShAmt);
+      auto MIBShl = Builder.buildInstr(
+          TargetOpcode::G_SHL, DstTy,
+          Builder.buildAnyExtOrTrunc(DstTy, TruncSrc), MIBShAmt);
+      Builder.buildInstr(TargetOpcode::G_ASHR, DstReg, MIBShl, MIBShAmt);
+      markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
     return tryFoldImplicitDef(MI, DeadInsts);
@@ -288,6 +294,19 @@ private:
     using namespace LegalizeActions;
     auto Step = LI.getAction(Query);
     return Step.Action == Unsupported || Step.Action == NotFound;
+  }
+
+  /// Looks through copy instructions and returns the actual
+  /// source register.
+  unsigned lookThroughCopyInstrs(unsigned Reg) {
+    unsigned TmpReg;
+    while (mi_match(Reg, MRI, m_Copy(m_Reg(TmpReg)))) {
+      if (MRI.getType(TmpReg).isValid())
+        Reg = TmpReg;
+      else
+        break;
+    }
+    return Reg;
   }
 };
 
