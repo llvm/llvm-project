@@ -256,16 +256,16 @@ public:
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
   /// Returns true if the instruction sets a constant value that can be
   /// executed more efficiently.
-  bool isExynosResetFast(const MachineInstr &MI) const;
+  static bool isExynosResetFast(const MachineInstr &MI);
   /// Returns true if the load or store has an extension that can be executed
   /// more efficiently.
-  bool isExynosLdStExtFast(const MachineInstr &MI) const;
+  static bool isExynosLdStExtFast(const MachineInstr &MI);
   /// Returns true if the instruction has a constant shift left or extension
   /// that can be executed more efficiently.
-  bool isExynosShiftExtFast(const MachineInstr &MI) const;
+  static bool isExynosShiftExtFast(const MachineInstr &MI);
   /// Returns true if the instruction has a shift by immediate that can be
   /// executed in one cycle less.
-  bool isFalkorShiftExtFast(const MachineInstr &MI) const;
+  static bool isFalkorShiftExtFast(const MachineInstr &MI);
   /// Return true if the instructions is a SEH instruciton used for unwinding
   /// on Windows.
   static bool isSEHInstruction(const MachineInstr &MI);

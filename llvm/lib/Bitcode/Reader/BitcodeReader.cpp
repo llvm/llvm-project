@@ -876,6 +876,7 @@ static FunctionSummary::FFlags getDecodedFFlags(uint64_t RawFlags) {
   Flags.ReadOnly = (RawFlags >> 1) & 0x1;
   Flags.NoRecurse = (RawFlags >> 2) & 0x1;
   Flags.ReturnDoesNotAlias = (RawFlags >> 3) & 0x1;
+  Flags.NoInline = (RawFlags >> 4) & 0x1;
   return Flags;
 }
 

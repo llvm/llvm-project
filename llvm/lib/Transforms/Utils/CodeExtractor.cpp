@@ -57,6 +57,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -167,14 +168,22 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
       continue;
     }
 
-    if (const CallInst *CI = dyn_cast<CallInst>(I))
-      if (const Function *F = CI->getCalledFunction())
-        if (F->getIntrinsicID() == Intrinsic::vastart) {
+    if (const CallInst *CI = dyn_cast<CallInst>(I)) {
+      if (const Function *F = CI->getCalledFunction()) {
+        auto IID = F->getIntrinsicID();
+        if (IID == Intrinsic::vastart) {
           if (AllowVarArgs)
             continue;
           else
             return false;
         }
+
+        // Currently, we miscompile outlined copies of eh_typid_for. There are
+        // proposals for fixing this in llvm.org/PR39545.
+        if (IID == Intrinsic::eh_typeid_for)
+          return false;
+      }
+    }
   }
 
   return true;
@@ -1305,12 +1314,20 @@ Function *CodeExtractor::extractCodeRegion() {
   // for the new function.
   for (BasicBlock &BB : *newFunction) {
     auto BlockIt = BB.begin();
+    // Remove debug info intrinsics from the new function.
     while (BlockIt != BB.end()) {
       Instruction *Inst = &*BlockIt;
       ++BlockIt;
       if (isa<DbgInfoIntrinsic>(Inst))
         Inst->eraseFromParent();
     }
+    // Remove debug info intrinsics which refer to values in the new function
+    // from the old function.
+    SmallVector<DbgVariableIntrinsic *, 4> DbgUsers;
+    for (Instruction &I : BB)
+      findDbgUsers(DbgUsers, &I);
+    for (DbgVariableIntrinsic *DVI : DbgUsers)
+      DVI->eraseFromParent();
   }
 
   LLVM_DEBUG(if (verifyFunction(*newFunction))

@@ -266,12 +266,12 @@ namespace X86II {
     RawFrmSrc      = 4,
 
     /// RawFrmDst - This form is for instructions that use the destination index
-    /// register DI/EDI/ESI.
+    /// register DI/EDI/RDI.
     RawFrmDst      = 5,
 
-    /// RawFrmSrc - This form is for instructions that use the source index
-    /// register SI/ESI/ERI with a possible segment override, and also the
-    /// destination index register DI/ESI/RDI.
+    /// RawFrmDstSrc - This form is for instructions that use the source index
+    /// register SI/ESI/RSI with a possible segment override, and also the
+    /// destination index register DI/EDI/RDI.
     RawFrmDstSrc   = 6,
 
     /// RawFrmImm8 - This is used for the ENTER instruction, which has two

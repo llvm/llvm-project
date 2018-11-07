@@ -1289,8 +1289,8 @@ define i64 @AtomicCmpSwap64(i64 signext %oldval, i64 signext %newval) nounwind {
 ; MIPS64R6O0-NEXT:  .LBB7_3: # %entry
 ; MIPS64R6O0-NEXT:    sd $2, 24($sp) # 8-byte Folded Spill
 ; MIPS64R6O0-NEXT:    move $2, $6
-; MIPS64R6O0-NEXT:    sd $6, 32($sp) # 8-byte Folded Spill
 ; MIPS64R6O0-NEXT:    sd $25, 16($sp) # 8-byte Folded Spill
+; MIPS64R6O0-NEXT:    sd $6, 32($sp) # 8-byte Folded Spill
 ; MIPS64R6O0-NEXT:    sd $3, 8($sp) # 8-byte Folded Spill
 ; MIPS64R6O0-NEXT:    daddiu $sp, $sp, 48
 ; MIPS64R6O0-NEXT:    jrc $ra

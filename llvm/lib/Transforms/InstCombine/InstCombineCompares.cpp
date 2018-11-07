@@ -5281,11 +5281,7 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
   if (C->isNegative())
     Pred = I.getSwappedPredicate();
 
-  // Finally emit the new fcmp.
-  Value *X = LHSI->getOperand(1);
-  FCmpInst *NewFCI = new FCmpInst(Pred, X, RHSC);
-  NewFCI->setFastMathFlags(I.getFastMathFlags());
-  return NewFCI;
+  return new FCmpInst(Pred, LHSI->getOperand(1), RHSC, "", &I);
 }
 
 /// Optimize fabs(X) compared with zero.
@@ -5409,29 +5405,6 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
   Constant *RHSC;
   if (match(Op0, m_Instruction(LHSI)) && match(Op1, m_Constant(RHSC))) {
     switch (LHSI->getOpcode()) {
-    case Instruction::FPExt: {
-      // fcmp (fpext x), C -> fcmp x, (fptrunc C) if fptrunc is lossless
-      FPExtInst *LHSExt = cast<FPExtInst>(LHSI);
-      ConstantFP *RHSF = dyn_cast<ConstantFP>(RHSC);
-      if (!RHSF)
-        break;
-
-      const fltSemantics &FPSem = LHSExt->getSrcTy()->getFltSemantics();
-      bool Lossy;
-      APFloat F = RHSF->getValueAPF();
-      F.convert(FPSem, APFloat::rmNearestTiesToEven, &Lossy);
-
-      // Avoid lossy conversions and denormals.
-      // Zero is a special case that's OK to convert.
-      APFloat Fabs = F;
-      Fabs.clearSign();
-      if (!Lossy &&
-          ((Fabs.compare(APFloat::getSmallestNormalized(FPSem)) !=
-                APFloat::cmpLessThan) || Fabs.isZero()))
-        return new FCmpInst(Pred, LHSExt->getOperand(0),
-                            ConstantFP::get(RHSC->getContext(), F));
-      break;
-    }
     case Instruction::PHI:
       // Only fold fcmp into the PHI if the phi and fcmp are in the same
       // block.  If in the same block, we're encouraging jump threading.  If
@@ -5445,14 +5418,6 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
       if (Instruction *NV = foldFCmpIntToFPConst(I, LHSI, RHSC))
         return NV;
       break;
-    case Instruction::FSub: {
-      // fcmp pred (fneg x), C -> fcmp swap(pred) x, -C
-      Value *Op;
-      if (match(LHSI, m_FNeg(m_Value(Op))))
-        return new FCmpInst(I.getSwappedPredicate(), Op,
-                            ConstantExpr::getFNeg(RHSC));
-      break;
-    }
     case Instruction::FDiv:
       if (Instruction *NV = foldFCmpReciprocalAndZero(I, LHSI, RHSC))
         return NV;
@@ -5465,23 +5430,52 @@ Instruction *InstCombiner::visitFCmpInst(FCmpInst &I) {
             if (Instruction *Res = foldCmpLoadFromIndexedGlobal(GEP, GV, I))
               return Res;
       break;
-    case Instruction::Call:
-      if (Instruction *X = foldFabsWithFcmpZero(I))
-        return X;
-      break;
   }
   }
 
-  // fcmp pred (fneg x), (fneg y) -> fcmp swap(pred) x, y
+  if (Instruction *R = foldFabsWithFcmpZero(I))
+    return R;
+
   Value *X, *Y;
-  if (match(Op0, m_FNeg(m_Value(X))) && match(Op1, m_FNeg(m_Value(Y))))
-    return new FCmpInst(I.getSwappedPredicate(), X, Y);
+  if (match(Op0, m_FNeg(m_Value(X)))) {
+    // fcmp pred (fneg X), (fneg Y) -> fcmp swap(pred) X, Y
+    if (match(Op1, m_FNeg(m_Value(Y))))
+      return new FCmpInst(I.getSwappedPredicate(), X, Y, "", &I);
 
-  // fcmp (fpext x), (fpext y) -> fcmp x, y
-  if (FPExtInst *LHSExt = dyn_cast<FPExtInst>(Op0))
-    if (FPExtInst *RHSExt = dyn_cast<FPExtInst>(Op1))
-      if (LHSExt->getSrcTy() == RHSExt->getSrcTy())
-        return new FCmpInst(Pred, LHSExt->getOperand(0), RHSExt->getOperand(0));
+    // fcmp pred (fneg X), C --> fcmp swap(pred) X, -C
+    Constant *C;
+    if (match(Op1, m_Constant(C))) {
+      Constant *NegC = ConstantExpr::getFNeg(C);
+      return new FCmpInst(I.getSwappedPredicate(), X, NegC, "", &I);
+    }
+  }
+
+  if (match(Op0, m_FPExt(m_Value(X)))) {
+    // fcmp (fpext X), (fpext Y) -> fcmp X, Y
+    if (match(Op1, m_FPExt(m_Value(Y))) && X->getType() == Y->getType())
+      return new FCmpInst(Pred, X, Y, "", &I);
+
+    // fcmp (fpext X), C -> fcmp X, (fptrunc C) if fptrunc is lossless
+    const APFloat *C;
+    if (match(Op1, m_APFloat(C))) {
+      const fltSemantics &FPSem =
+          X->getType()->getScalarType()->getFltSemantics();
+      bool Lossy;
+      APFloat TruncC = *C;
+      TruncC.convert(FPSem, APFloat::rmNearestTiesToEven, &Lossy);
+
+      // Avoid lossy conversions and denormals.
+      // Zero is a special case that's OK to convert.
+      APFloat Fabs = TruncC;
+      Fabs.clearSign();
+      if (!Lossy &&
+          ((Fabs.compare(APFloat::getSmallestNormalized(FPSem)) !=
+            APFloat::cmpLessThan) || Fabs.isZero())) {
+        Constant *NewC = ConstantFP::get(X->getType(), TruncC);
+        return new FCmpInst(Pred, X, NewC, "", &I);
+      }
+    }
+  }
 
   if (I.getType()->isVectorTy())
     if (Instruction *Res = foldVectorCmp(I, Builder))

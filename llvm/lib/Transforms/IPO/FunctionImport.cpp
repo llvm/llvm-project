@@ -237,8 +237,16 @@ selectCallee(const ModuleSummaryIndex &Index,
           return false;
         }
 
+        // Skip if it isn't legal to import (e.g. may reference unpromotable
+        // locals).
         if (Summary->notEligibleToImport()) {
           Reason = FunctionImporter::ImportFailureReason::NotEligible;
+          return false;
+        }
+
+        // Don't bother importing if we can't inline it anyway.
+        if (Summary->fflags().NoInline) {
+          Reason = FunctionImporter::ImportFailureReason::NoInline;
           return false;
         }
 
@@ -318,6 +326,8 @@ getFailureName(FunctionImporter::ImportFailureReason Reason) {
     return "LocalLinkageNotInModule";
   case FunctionImporter::ImportFailureReason::NotEligible:
     return "NotEligible";
+  case FunctionImporter::ImportFailureReason::NoInline:
+    return "NoInline";
   }
   llvm_unreachable("invalid reason");
 }

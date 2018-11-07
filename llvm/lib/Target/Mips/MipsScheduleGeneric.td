@@ -179,7 +179,7 @@ def GenericWriteTrap : SchedWriteRes<[GenericIssueCTISTD]>;
 def : ItinRW<[GenericWriteTrap], [II_BREAK, II_SYSCALL, II_TEQ, II_TEQI,
                                   II_TGE, II_TGEI, II_TGEIU, II_TGEU, II_TNE,
                                   II_TNEI, II_TLT, II_TLTI, II_TLTU, II_TTLTIU,
-                                  II_TRAP, II_SDBBP]>;
+                                  II_TRAP, II_SDBBP, II_SIGRIE]>;
 
 // COP0 Pipeline
 // =============

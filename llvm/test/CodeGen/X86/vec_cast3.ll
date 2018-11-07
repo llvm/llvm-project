@@ -111,19 +111,8 @@ define <2 x float> @cvt_v2u32_v2f32(<2 x i32> %src) {
 define <2 x i8> @cvt_v2f32_v2i8(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2i8:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    subl $68, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 72
-; CHECK-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fisttpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fisttpll (%esp)
-; CHECK-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrd $2, (%esp), %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; CHECK-NEXT:    addl $68, %esp
+; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; CHECK-NEXT:    retl
 ;
 ; CHECK-WIDE-LABEL: cvt_v2f32_v2i8:
@@ -141,19 +130,8 @@ define <2 x i8> @cvt_v2f32_v2i8(<2 x float> %src) {
 define <2 x i16> @cvt_v2f32_v2i16(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2i16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    subl $68, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 72
-; CHECK-NEXT:    vmovss %xmm0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fisttpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fisttpll (%esp)
-; CHECK-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrd $2, (%esp), %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; CHECK-NEXT:    addl $68, %esp
+; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; CHECK-NEXT:    retl
 ;
 ; CHECK-WIDE-LABEL: cvt_v2f32_v2i16:
@@ -186,37 +164,8 @@ define <2 x i32> @cvt_v2f32_v2i32(<2 x float> %src) {
 define <2 x i8> @cvt_v2f32_v2u8(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2u8:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    subl $68, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 72
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vcmpltss %xmm2, %xmm1, %xmm3
-; CHECK-NEXT:    vsubss %xmm2, %xmm1, %xmm4
-; CHECK-NEXT:    vblendvps %xmm3, %xmm1, %xmm4, %xmm3
-; CHECK-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    vcmpltss %xmm2, %xmm0, %xmm3
-; CHECK-NEXT:    vsubss %xmm2, %xmm0, %xmm4
-; CHECK-NEXT:    vblendvps %xmm3, %xmm0, %xmm4, %xmm3
-; CHECK-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fisttpll (%esp)
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fisttpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    vucomiss %xmm2, %xmm1
-; CHECK-NEXT:    setae %al
-; CHECK-NEXT:    shll $31, %eax
-; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    vucomiss %xmm2, %xmm0
-; CHECK-NEXT:    setae %cl
-; CHECK-NEXT:    shll $31, %ecx
-; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrd $2, (%esp), %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    addl $68, %esp
+; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; CHECK-NEXT:    retl
 ;
 ; CHECK-WIDE-LABEL: cvt_v2f32_v2u8:
@@ -234,37 +183,8 @@ define <2 x i8> @cvt_v2f32_v2u8(<2 x float> %src) {
 define <2 x i16> @cvt_v2f32_v2u16(<2 x float> %src) {
 ; CHECK-LABEL: cvt_v2f32_v2u16:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    subl $68, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 72
-; CHECK-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vcmpltss %xmm2, %xmm1, %xmm3
-; CHECK-NEXT:    vsubss %xmm2, %xmm1, %xmm4
-; CHECK-NEXT:    vblendvps %xmm3, %xmm1, %xmm4, %xmm3
-; CHECK-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    vcmpltss %xmm2, %xmm0, %xmm3
-; CHECK-NEXT:    vsubss %xmm2, %xmm0, %xmm4
-; CHECK-NEXT:    vblendvps %xmm3, %xmm0, %xmm4, %xmm3
-; CHECK-NEXT:    vmovss %xmm3, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fisttpll (%esp)
-; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
-; CHECK-NEXT:    fisttpll {{[0-9]+}}(%esp)
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    vucomiss %xmm2, %xmm1
-; CHECK-NEXT:    setae %al
-; CHECK-NEXT:    shll $31, %eax
-; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    vucomiss %xmm2, %xmm0
-; CHECK-NEXT:    setae %cl
-; CHECK-NEXT:    shll $31, %ecx
-; CHECK-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrd $2, (%esp), %xmm0, %xmm0
-; CHECK-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
-; CHECK-NEXT:    addl $68, %esp
+; CHECK-NEXT:    vcvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; CHECK-NEXT:    retl
 ;
 ; CHECK-WIDE-LABEL: cvt_v2f32_v2u16:

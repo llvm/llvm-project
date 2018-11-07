@@ -247,6 +247,17 @@ Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
 /// ThreadBuffer: BufferExtents NewBuffer WallClockTime Pid NewCPUId
 ///               FunctionSequence
 /// EOB: *deprecated*
+///
+/// In Version 4, we make the following changes:
+///
+/// CustomEventRecord now includes the CPU data.
+///
+/// In Version 5, we make the following changes:
+///
+/// CustomEventRecord and TypedEventRecord now use TSC delta encoding similar to
+/// what FunctionRecord instances use, and we no longer need to include the CPU
+/// id in the CustomEventRecord.
+///
 Error loadFDRLog(StringRef Data, bool IsLittleEndian,
                  XRayFileHeader &FileHeader, std::vector<XRayRecord> &Records) {
 
@@ -435,7 +446,7 @@ Expected<Trace> llvm::xray::loadTrace(const DataExtractor &DE, bool Sort) {
     }
     break;
   case FLIGHT_DATA_RECORDER_FORMAT:
-    if (Version >= 1 && Version <= 4) {
+    if (Version >= 1 && Version <= 5) {
       if (auto E = loadFDRLog(DE.getData(), DE.isLittleEndian(), T.FileHeader,
                               T.Records))
         return std::move(E);
