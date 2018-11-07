@@ -405,8 +405,17 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
 
 #ifndef LLDB_DISABLE_PYTHON
   lldb::TypeSummaryImplSP std_string_summary_sp(new CXXFunctionSummaryFormat(
-      stl_summary_flags, lldb_private::formatters::LibcxxStringSummaryProvider,
+      stl_summary_flags,
+      lldb_private::formatters::LibcxxStringSummaryProviderASCII,
       "std::string summary provider"));
+  lldb::TypeSummaryImplSP std_stringu16_summary_sp(new CXXFunctionSummaryFormat(
+      stl_summary_flags,
+      lldb_private::formatters::LibcxxStringSummaryProviderUTF16,
+      "std::u16string summary provider"));
+  lldb::TypeSummaryImplSP std_stringu32_summary_sp(new CXXFunctionSummaryFormat(
+      stl_summary_flags,
+      lldb_private::formatters::LibcxxStringSummaryProviderUTF32,
+      "std::u32string summary provider"));
   lldb::TypeSummaryImplSP std_wstring_summary_sp(new CXXFunctionSummaryFormat(
       stl_summary_flags, lldb_private::formatters::LibcxxWStringSummaryProvider,
       "std::wstring summary provider"));
@@ -419,6 +428,16 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
       ConstString("std::__1::basic_string<char, std::__1::char_traits<char>, "
                   "std::__1::allocator<char> >"),
       std_string_summary_sp);
+  cpp_category_sp->GetTypeSummariesContainer()->Add(
+      ConstString(
+          "std::__1::basic_string<char16_t, std::__1::char_traits<char16_t>, "
+          "std::__1::allocator<char16_t> >"),
+      std_stringu16_summary_sp);
+  cpp_category_sp->GetTypeSummariesContainer()->Add(
+      ConstString(
+          "std::__1::basic_string<char32_t, std::__1::char_traits<char32_t>, "
+          "std::__1::allocator<char32_t> >"),
+      std_stringu32_summary_sp);
   cpp_category_sp->GetTypeSummariesContainer()->Add(
       ConstString("std::__ndk1::basic_string<char, "
                   "std::__ndk1::char_traits<char>, "

@@ -4,4 +4,4 @@ CXX_SOURCES := main.cpp
 
 USE_LIBCPP := 1
 include $(LEVEL)/Makefile.rules
-CXXFLAGS += -O0
+CXXFLAGS += -std=c++11 -O0

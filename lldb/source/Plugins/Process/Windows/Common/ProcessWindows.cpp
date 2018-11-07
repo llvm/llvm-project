@@ -837,7 +837,7 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
       return;
     }
 
-    GetTarget().SetExecutableModule(module, false);
+    GetTarget().SetExecutableModule(module, eLoadDependentsNo);
   }
 
   bool load_addr_changed;
