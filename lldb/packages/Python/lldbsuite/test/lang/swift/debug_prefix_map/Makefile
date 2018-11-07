@@ -15,6 +15,10 @@ a.out: main.swift
 	mkdir srcroot
 	cp $^ srcroot
 	$(SWIFTC) srcroot/main.swift -debug-prefix-map $(realpath .)=. -o $@ $(SWIFTFLAGS)
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
+
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ a.out *.o srcroot
