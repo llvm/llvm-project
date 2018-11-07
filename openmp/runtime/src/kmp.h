@@ -1050,6 +1050,10 @@ extern kmp_uint64 __kmp_now_nsec();
 /* TODO: tune for KMP_OS_NETBSD */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_HURD
+/* TODO: tune for KMP_OS_HURD */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #endif
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64

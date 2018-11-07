@@ -444,8 +444,7 @@ void __kmp_terminate_thread(int gtid) {
    determined exactly, FALSE if incremental refinement is necessary. */
 static kmp_int32 __kmp_set_stack_info(int gtid, kmp_info_t *th) {
   int stack_data;
-#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD
-  /* Linux* OS only -- no pthread_getattr_np support on OS X* */
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_HURD
   pthread_attr_t attr;
   int status;
   size_t size = 0;
@@ -497,7 +496,7 @@ static void *__kmp_launch_worker(void *thr) {
   sigset_t new_set, old_set;
 #endif /* KMP_BLOCK_SIGNALS */
   void *exit_val;
-#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_HURD
   void *volatile padding = 0;
 #endif
   int gtid;
@@ -1765,7 +1764,7 @@ static int __kmp_get_xproc(void) {
 
   int r = 0;
 
-#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_HURD
 
   r = sysconf(_SC_NPROCESSORS_ONLN);
 
@@ -1953,9 +1952,9 @@ int __kmp_is_address_mapped(void *addr) {
   int found = 0;
   int rc;
 
-#if KMP_OS_LINUX || KMP_OS_FREEBSD
+#if KMP_OS_LINUX || KMP_OS_FREEBSD || KMP_OS_HURD
 
-  /* On Linux* OS, read the /proc/<pid>/maps pseudo-file to get all the address
+  /* On GNUish OSes, read the /proc/<pid>/maps pseudo-file to get all the address
      ranges mapped into the address space. */
 
   char *name = __kmp_str_format("/proc/%d/maps", getpid());
