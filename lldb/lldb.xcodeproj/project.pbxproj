@@ -1348,6 +1348,15 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		2679260A211CA3AC00EE1D10 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
 		49753FB21BEAB2BB00019E45 /* Copy Files */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 8;
@@ -1377,15 +1386,6 @@
 			dstSubfolderSpec = 0;
 			files = (
 				49753FBD1BEAB2BB00019E45 /* repl_swift in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 1;
-		};
-		2679260A211CA3AC00EE1D10 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = /usr/share/man/man1/;
-			dstSubfolderSpec = 0;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 1;
 		};
@@ -3394,7 +3394,7 @@
 		26DE1E6A11616C2E00A093E2 /* lldb-forward.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = "lldb-forward.h"; path = "include/lldb/lldb-forward.h"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		26D6F3F4183E7F9300194858 /* lldb-gdbserver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "lldb-gdbserver.cpp"; path = "tools/lldb-server/lldb-gdbserver.cpp"; sourceTree = "<group>"; };
 		239504D41BDD451400963CEA /* lldb-gtest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "lldb-gtest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		23CB15561D66DA9300EDDDE1 /* lldb-gtest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = "lldb-gtest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		23CB15561D66DA9300EDDDE1 /* lldb-gtest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "lldb-gtest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2690CD171A6DC0D000E717C8 /* lldb-mi */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "lldb-mi"; sourceTree = BUILT_PRODUCTS_DIR; };
 		26DC6A1C1337FECA00FF7998 /* lldb-platform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "lldb-platform.cpp"; path = "tools/lldb-server/lldb-platform.cpp"; sourceTree = "<group>"; };
 		26217932133BCB850083B112 /* lldb-private-enumerations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "lldb-private-enumerations.h"; path = "include/lldb/lldb-private-enumerations.h"; sourceTree = "<group>"; };
@@ -3489,13 +3489,6 @@
 			files = (
 				26792623211CA42300EE1D10 /* LLDB.framework in Frameworks */,
 				26792622211CA41E00EE1D10 /* libncurses.tbd in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		2689FFC713353D7A00698AC0 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3856,7 +3849,7 @@
 				23CB14E61D66CC0E00EDDDE1 /* BroadcasterTest.cpp */,
 				23CB14E71D66CC0E00EDDDE1 /* CMakeLists.txt */,
 				23CB14E81D66CC0E00EDDDE1 /* DataExtractorTest.cpp */,
-				58A080B12112AB2200D5580F /* HighlighterTest.cpp */,                                                  
+				58A080B12112AB2200D5580F /* HighlighterTest.cpp */,
 				9A3D43E31F3237D500EB767C /* ListenerTest.cpp */,
 				4F29D3CD21010F84003B549A /* MangledTest.cpp */,
 				4FBC04F3211A0F0F0015A814 /* RichManglingContextTest.cpp */,
@@ -7477,14 +7470,14 @@
 						LastSwiftUpdateCheck = 0800;
 						ProvisioningStyle = Manual;
 					};
+					2679260B211CA3AC00EE1D10 = {
+						CreatedOnToolsVersion = 9.4.1;
+					};
 					2687EAC51508110B00DD8C2E = {
 						ProvisioningStyle = Manual;
 					};
 					2689FFC913353D7A00698AC0 = {
 						ProvisioningStyle = Manual;
-					};
-					2679260B211CA3AC00EE1D10 = {
-						CreatedOnToolsVersion = 9.4.1;
 					};
 					2690CD161A6DC0D000E717C8 = {
 						CreatedOnToolsVersion = 6.3;
@@ -7966,7 +7959,6 @@
 				9A3D43DD1F3151C400EB767C /* TimerTest.cpp in Sources */,
 				23CB15461D66DA9300EDDDE1 /* GDBRemoteTestUtils.cpp in Sources */,
 				AF7F97682141FA4500795BC0 /* TestArmv7Disassembly.cpp in Sources */,
-				23E2E5271D903782006F38BB /* MinidumpParserTest.cpp in Sources */,
 				23CB15471D66DA9300EDDDE1 /* EditlineTest.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -8232,7 +8224,7 @@
 				2689005113353E0400698AC0 /* StringList.cpp in Sources */,
 				2689005213353E0400698AC0 /* Timer.cpp in Sources */,
 				2689005413353E0400698AC0 /* UserSettingsController.cpp in Sources */,
-				2619C4852107A9A2009CDE81 /* RegisterContextMinidump_ARM.cpp in Sources */,                           
+				2619C4852107A9A2009CDE81 /* RegisterContextMinidump_ARM.cpp in Sources */,
 				948C86D61B97764D00F3CAC3 /* SwiftMetatype.cpp in Sources */,
 				23059A0719532B96007B8189 /* LinuxSignals.cpp in Sources */,
 				8CCB017E19BA28A80009FD44 /* ThreadCollection.cpp in Sources */,
@@ -10081,7 +10073,7 @@
 			};
 			name = Release;
 		};
-		239504DB1BDD451400963CEA /* BuildAndIntegration */ = {
+		239504DB1BDD451400963CEA /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				FRAMEWORK_SEARCH_PATHS = (
@@ -10123,267 +10115,6 @@
 			};
 			name = Release;
 		};
-		26792610211CA3AD00EE1D10 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
-				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_LDFLAGS = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/tools/lldb-vscode/lldb-vscode-Info.plist",
-					"-Wl,-rpath,@loader_path/",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
-				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = Debug;
-		};
-		26792611211CA3AD00EE1D10 /* DebugClang */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
-				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_LDFLAGS = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/tools/lldb-vscode/lldb-vscode-Info.plist",
-					"-Wl,-rpath,@loader_path/",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
-				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = DebugClang;
-		};
-		26792612211CA3AD00EE1D10 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
-				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_LDFLAGS = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/tools/lldb-vscode/lldb-vscode-Info.plist",
-					"-Wl,-rpath,@loader_path/",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
-				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = Release;
-		};
-		26792613211CA3AD00EE1D10 /* BuildAndIntegration */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_ANALYZER_NONNULL = YES;
-				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_NS_ASSERTIONS = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
-				MTL_ENABLE_DEBUG_INFO = NO;
-				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/tools/lldb-vscode/lldb-vscode-Info.plist",
-					"-Wl,-rpath,@loader_path/../../../System/Library/PrivateFrameworks",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-				);
-				"OTHER_LDFLAGS[sdk=macosx*]" = (
-					"-sectcreate",
-					__TEXT,
-					__info_plist,
-					"$(PROJECT_DIR)/tools/lldb-vscode/lldb-vscode-Info.plist",
-					"-Wl,-rpath,@loader_path/../../Library/PrivateFrameworks/",
-					"-Wl,-rpath,@loader_path/../../../SharedFrameworks",
-					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
-					"-Wl,-rpath,@loader_path/../../Library/PrivateFrameworks",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
-				);
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-				STRIP_INSTALLED_PRODUCT = YES;
-				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
-				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = BuildAndIntegration;
-		};
-		2687EAC71508110B00DD8C2E /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				DEBUGGING_SYMBOLS = YES;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = Debug;
-		};
-		2687EAC81508110B00DD8C2E /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = Release;
-		};
-		2687EAC91508110B00DD8C2E /* BuildAndIntegration */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.99.0;
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-			};
-			name = BuildAndIntegration;
-		};
 		239D37F81D70A4AD00D8E937 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -10407,7 +10138,7 @@
 					"-DGTEST_HAS_RTTI=0",
 				);
 				OTHER_LDFLAGS = (
-					"$(LLDB_GTESTS_LDFLAGS)",
+					"$(inherited)",
 					"-filelist",
 					"$(LLVM_BUILD_DIR)/archives.txt",
 					"-framework",
@@ -10420,7 +10151,9 @@
 					CoreServices,
 					"-framework",
 					ApplicationServices,
-					"$(inherited)",
+					"$(LLDB_GTESTS_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PATH = /opt/local/bin;
 				PRODUCT_NAME = "lldb-gtest";
@@ -10468,6 +10201,8 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
@@ -10502,8 +10237,12 @@
 					"-framework",
 					Security,
 					"-framework",
+					CoreServices,
+					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
@@ -10568,6 +10307,26 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
+				);
+				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
+					"$(inherited)",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-framework",
+					Foundation,
+					"-framework",
+					DebugSymbols,
+					"-framework",
+					Security,
+					"-framework",
+					CoreServices,
+					"-framework",
+					ApplicationServices,
+					"$(LLDB_GTESTS_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
@@ -10608,8 +10367,12 @@
 					"-framework",
 					Security,
 					"-framework",
+					CoreServices,
+					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
@@ -10652,6 +10415,8 @@
 					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
@@ -10684,8 +10449,12 @@
 					"-framework",
 					Security,
 					"-framework",
+					CoreServices,
+					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
@@ -10720,8 +10489,12 @@
 					"-framework",
 					Security,
 					"-framework",
+					CoreServices,
+					"-framework",
 					ApplicationServices,
 					"$(LLDB_GTESTS_LDFLAGS)",
+					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PRODUCT_NAME = "lldb-gtest";
 			};
@@ -10945,6 +10718,212 @@
 			};
 			name = Release;
 		};
+		26792610211CA3AD00EE1D10 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CURRENT_PROJECT_VERSION = 360.99.0;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_LDFLAGS = (
+					"-sectcreate",
+					__TEXT,
+					__info_plist,
+					"$(PROJECT_DIR)/tools/lldb-vscode/lldb-vscode-Info.plist",
+					"-Wl,-rpath,@loader_path/",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		26792611211CA3AD00EE1D10 /* DebugClang */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CURRENT_PROJECT_VERSION = 360.99.0;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
+				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_LDFLAGS = (
+					"-sectcreate",
+					__TEXT,
+					__info_plist,
+					"$(PROJECT_DIR)/tools/lldb-vscode/lldb-vscode-Info.plist",
+					"-Wl,-rpath,@loader_path/",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = DebugClang;
+		};
+		26792612211CA3AD00EE1D10 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CURRENT_PROJECT_VERSION = 360.99.0;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_LDFLAGS = (
+					"-sectcreate",
+					__TEXT,
+					__info_plist,
+					"$(PROJECT_DIR)/tools/lldb-vscode/lldb-vscode-Info.plist",
+					"-Wl,-rpath,@loader_path/",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+		26792613211CA3AD00EE1D10 /* BuildAndIntegration */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				COPY_PHASE_STRIP = YES;
+				CURRENT_PROJECT_VERSION = 360.99.0;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
+					"-sectcreate",
+					__TEXT,
+					__info_plist,
+					"$(PROJECT_DIR)/tools/lldb-vscode/lldb-vscode-Info.plist",
+					"-Wl,-rpath,@loader_path/../../../System/Library/PrivateFrameworks",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+				);
+				"OTHER_LDFLAGS[sdk=macosx*]" = (
+					"-sectcreate",
+					__TEXT,
+					__info_plist,
+					"$(PROJECT_DIR)/tools/lldb-vscode/lldb-vscode-Info.plist",
+					"-Wl,-rpath,@loader_path/../../Library/PrivateFrameworks/",
+					"-Wl,-rpath,@loader_path/../../../SharedFrameworks",
+					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
+					"-Wl,-rpath,@loader_path/../../Library/PrivateFrameworks",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+				);
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				STRIP_INSTALLED_PRODUCT = YES;
+				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = BuildAndIntegration;
+		};
 		2687EAC71508110B00DD8C2E /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -10984,6 +10963,21 @@
 				SDKROOT = macosx;
 			};
 			name = Release;
+		};
+		2687EAC91508110B00DD8C2E /* BuildAndIntegration */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COMBINE_HIDPI_IMAGES = YES;
+				COPY_PHASE_STRIP = YES;
+				CURRENT_PROJECT_VERSION = 360.99.0;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = BuildAndIntegration;
 		};
 		2689FFD513353D7A00698AC0 /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -15057,6 +15051,34 @@
 			};
 			name = "CustomSwift-Release";
 		};
+		AF213BB82193751500A9BB37 /* BuildAndIntegration */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "lldb-gtest";
+			};
+			name = BuildAndIntegration;
+		};
+		AF213BB92193751500A9BB37 /* DebugPresubmission */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "lldb-vscode";
+			};
+			name = DebugPresubmission;
+		};
+		AF213BBA2193751500A9BB37 /* CustomSwift-Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "lldb-vscode";
+			};
+			name = "CustomSwift-Debug";
+		};
+		AF213BBB2193751500A9BB37 /* CustomSwift-Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "lldb-vscode";
+			};
+			name = "CustomSwift-Release";
+		};
 		AF6967891B4609A80014D221 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -15279,11 +15301,12 @@
 				239504D81BDD451400963CEA /* Debug */,
 				239504D91BDD451400963CEA /* DebugClang */,
 				239504DA1BDD451400963CEA /* Release */,
-				239504DB1BDD451400963CEA /* BuildAndIntegration */,
+				239504DB1BDD451400963CEA /* Release */,
 				49CE1A521BDFDDEB00953D79 /* DebugPresubmission */,
 				49CE1A531BDFDDEB00953D79 /* CustomSwift-Debug */,
 				49CE1A541BDFDDEB00953D79 /* CustomSwift-Release */,
 				237965FB1C12369B008D490F /* CustomSwift-RelWithDebInfo */,
+				AF213BB82193751500A9BB37 /* BuildAndIntegration */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = BuildAndIntegration;
@@ -15340,6 +15363,9 @@
 				26792611211CA3AD00EE1D10 /* DebugClang */,
 				26792612211CA3AD00EE1D10 /* Release */,
 				26792613211CA3AD00EE1D10 /* BuildAndIntegration */,
+				AF213BB92193751500A9BB37 /* DebugPresubmission */,
+				AF213BBA2193751500A9BB37 /* CustomSwift-Debug */,
+				AF213BBB2193751500A9BB37 /* CustomSwift-Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = BuildAndIntegration;
