@@ -1748,9 +1748,12 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
           Type *element_type = dwarf->ResolveTypeUID(type_die_ref);
 
           if (element_type) {
-            std::vector<uint64_t> element_orders;
-            ParseChildArrayInfo(sc, die, first_index, element_orders,
-                                byte_stride, bit_stride);
+            auto array_info = ParseChildArrayInfo(die);
+            if (array_info) {
+              first_index = array_info->first_index;
+              byte_stride = array_info->byte_stride;
+              bit_stride = array_info->bit_stride;
+            }
             if (byte_stride == 0 && bit_stride == 0)
               byte_stride = element_type->GetByteSize();
             CompilerType array_element_type =
@@ -1800,12 +1803,11 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
             }
 
             uint64_t array_element_bit_stride = byte_stride * 8 + bit_stride;
-            if (element_orders.size() > 0) {
+            if (array_info && array_info->element_orders.size() > 0) {
               uint64_t num_elements = 0;
-              std::vector<uint64_t>::const_reverse_iterator pos;
-              std::vector<uint64_t>::const_reverse_iterator end =
-                  element_orders.rend();
-              for (pos = element_orders.rbegin(); pos != end; ++pos) {
+              auto end = array_info->element_orders.rend();
+              for (auto pos = array_info->element_orders.rbegin(); pos != end;
+                   ++pos) {
                 num_elements = *pos;
                 clang_type = m_ast.CreateArrayType(array_element_type,
                                                    num_elements, is_vector);
@@ -1824,6 +1826,8 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
                 NULL, DIERef(type_die_form).GetUID(dwarf), Type::eEncodingIsUID,
                 &decl, clang_type, Type::eResolveStateFull));
             type_sp->SetEncodingType(element_type);
+            m_ast.SetMetadataAsUserID(clang_type.GetOpaqueQualType(),
+                                      die.GetID());
           }
         }
       } break;
@@ -3551,12 +3555,12 @@ size_t DWARFASTParserClang::ParseChildParameters(
   return arg_idx;
 }
 
-void DWARFASTParserClang::ParseChildArrayInfo(
-    const SymbolContext &sc, const DWARFDIE &parent_die, int64_t &first_index,
-    std::vector<uint64_t> &element_orders, uint32_t &byte_stride,
-    uint32_t &bit_stride) {
+llvm::Optional<SymbolFile::ArrayInfo>
+DWARFASTParser::ParseChildArrayInfo(const DWARFDIE &parent_die,
+                                    const ExecutionContext *exe_ctx) {
+  SymbolFile::ArrayInfo array_info;
   if (!parent_die)
-    return;
+    return llvm::None;
 
   for (DWARFDIE die = parent_die.GetFirstChild(); die.IsValid();
        die = die.GetSibling()) {
@@ -3580,15 +3584,31 @@ void DWARFASTParserClang::ParseChildArrayInfo(
               break;
 
             case DW_AT_count:
-              num_elements = form_value.Unsigned();
+              if (DWARFDIE var_die = die.GetReferencedDIE(DW_AT_count)) {
+                if (var_die.Tag() == DW_TAG_variable)
+                  if (exe_ctx) {
+                    if (auto frame = exe_ctx->GetFrameSP()) {
+                      Status error;
+                      lldb::VariableSP var_sp;
+                      auto valobj_sp = frame->GetValueForVariableExpressionPath(
+                          var_die.GetName(), eNoDynamicValues, 0, var_sp,
+                          error);
+                      if (valobj_sp) {
+                        num_elements = valobj_sp->GetValueAsUnsigned(0);
+                        break;
+                      }
+                    }
+                  }
+              } else
+                num_elements = form_value.Unsigned();
               break;
 
             case DW_AT_bit_stride:
-              bit_stride = form_value.Unsigned();
+              array_info.bit_stride = form_value.Unsigned();
               break;
 
             case DW_AT_byte_stride:
-              byte_stride = form_value.Unsigned();
+              array_info.byte_stride = form_value.Unsigned();
               break;
 
             case DW_AT_lower_bound:
@@ -3622,11 +3642,12 @@ void DWARFASTParserClang::ParseChildArrayInfo(
             num_elements = upper_bound - lower_bound + 1;
         }
 
-        element_orders.push_back(num_elements);
+        array_info.element_orders.push_back(num_elements);
       }
     } break;
     }
   }
+  return array_info;
 }
 
 Type *DWARFASTParserClang::GetTypeForDIE(const DWARFDIE &die) {

@@ -342,7 +342,7 @@ uint64_t Type::GetByteSize() {
 }
 
 uint32_t Type::GetNumChildren(bool omit_empty_base_classes) {
-  return GetForwardCompilerType().GetNumChildren(omit_empty_base_classes);
+  return GetForwardCompilerType().GetNumChildren(omit_empty_base_classes, nullptr);
 }
 
 bool Type::IsAggregateType() {
