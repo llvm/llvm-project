@@ -301,6 +301,6 @@ bool HostInfoMacOSX::ComputeSwiftDirectory(FileSpec &file_spec) {
     raw_path.resize(framework_pos);
     raw_path.append("/Resources/Swift");
   }
-  file_spec.SetFile(raw_path.c_str(), true, FileSpec::Style::native);
+  file_spec.SetFile(raw_path.c_str(), FileSpec::Style::native);
   return true;
 }
