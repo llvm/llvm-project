@@ -1764,18 +1764,18 @@ declare double @llvm.log2.f64(double) #8
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #5
 
-; CHECK: define internal fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach.ls1(i64 %indvars.iv1146.start.ls1
-; CHECK: define internal fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach36.ls1(i64 %indvars.iv1142.start.ls1
-; CHECK: define internal fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach90.ls1(i64 %indvars.iv1138.start.ls1
-; CHECK: define internal fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach90.us.ls1(i64 %indvars.iv1134.start.ls1
-; CHECK: define internal fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach.i.ls2(i64 %indvars.iv.i.start.ls2
-; CHECK: define internal fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach323.ls2(i64 %indvars.iv1126.start.ls2
-; CHECK: define internal fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach254.ls3(i64 %indvars.iv1118.start.ls3
-; CHECK: define internal fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach230.ls2(i64 %indvars.iv1122.start.ls2
+; CHECK: define private fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach.ls1(i64 %indvars.iv1146.start.ls1
+; CHECK: define private fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach36.ls1(i64 %indvars.iv1142.start.ls1
+; CHECK: define private fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach90.ls1(i64 %indvars.iv1138.start.ls1
+; CHECK: define private fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach90.us.ls1(i64 %indvars.iv1134.start.ls1
+; CHECK: define private fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach.i.ls2(i64 %indvars.iv.i.start.ls2
+; CHECK: define private fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach323.ls2(i64 %indvars.iv1126.start.ls2
+; CHECK: define private fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach254.ls3(i64 %indvars.iv1118.start.ls3
+; CHECK: define private fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach230.ls2(i64 %indvars.iv1122.start.ls2
 ; CHECK: pfor.detach254.lr.ph.ls2:
 ; CHECK: call fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach254.ls3(i64 0, i64 %wide.trip.count1120.ls2
-; CHECK: define internal fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach186.ls2(i64 %indvars.iv1114.start.ls2
-; CHECK: define internal fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach388.ls1(i64 %indvars.iv.start.ls1
+; CHECK: define private fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach186.ls2(i64 %indvars.iv1114.start.ls2
+; CHECK: define private fastcc void @_Z19suffixArrayInternalPhl.outline_pfor.detach388.ls1(i64 %indvars.iv.start.ls1
 
 !2 = !{!3, !3, i64 0}
 !3 = !{!"__int128", !4, i64 0}

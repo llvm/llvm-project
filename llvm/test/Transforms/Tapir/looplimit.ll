@@ -30,7 +30,7 @@ pfor.cond.cleanup:                                ; preds = %pfor.inc, %entry
 pfor.end.continue:                                ; preds = %pfor.cond.cleanup
   ret void
 
-; CHECK: define internal fastcc void @[[OUTLINED]](
+; CHECK: define private fastcc void @[[OUTLINED]](
 ; CHECK: [[TYPE]] [[START:%[a-zA-Z0-9._]+]]
 ; CHECK: [[TYPE]] [[END:%[a-zA-Z0-9._]+]]
 ; CHECK: [[TYPE]] [[GRAIN:%[a-zA-Z0-9._]+]]

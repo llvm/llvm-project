@@ -37,7 +37,7 @@ pfor.detach:                                      ; preds = %pfor.detach.prehead
 ; CHECK-NOT: phi
 ; CHECK: detach
 
-; CHECK: define internal fastcc void @[[OUTLINED]](
+; CHECK: define private fastcc void @[[OUTLINED]](
 ; CHECK: [[TYPE]] [[START:%[a-zA-Z0-9._]+]]
 ; CHECK: [[TYPE]] [[END:%[a-zA-Z0-9._]+]]
 ; CHECK: [[TYPE]] [[GRAIN:%[a-zA-Z0-9._]+]]

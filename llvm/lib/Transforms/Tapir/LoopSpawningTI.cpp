@@ -967,9 +967,9 @@ Function *LoopSpawningImpl::createHelperForTapirLoop(
   // Use a fast calling convention for the helper.
   Helper->setCallingConv(CallingConv::Fast);
   // Note that the address of the helper is unimportant.
-  Helper->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
+  Helper->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   // The helper is private to this module.
-  Helper->setLinkage(GlobalValue::InternalLinkage);
+  Helper->setLinkage(GlobalValue::PrivateLinkage);
 
   // Add alignment assumptions to arguments of helper, based on alignment of
   // values in old function.

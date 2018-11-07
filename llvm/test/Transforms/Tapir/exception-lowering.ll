@@ -423,7 +423,7 @@ terminate.lpad:                                   ; preds = %lpad30
 }
 
 
-; CHECK-DAG: define internal fastcc void @_Z14spawn_tryblocki.outline_det.achd13.otd1(i32
+; CHECK-DAG: define private fastcc void @_Z14spawn_tryblocki.outline_det.achd13.otd1(i32
 ; CHECK: %[[ARG:[a-zA-Z0-9._]+]])
 ; CHECK: %[[CILKSF:.+]] = alloca %struct.__cilkrts_stack_frame
 ; CHECK: call void @__cilkrts_enter_frame_fast_1(%struct.__cilkrts_stack_frame* %[[CILKSF]])
@@ -435,7 +435,7 @@ terminate.lpad:                                   ; preds = %lpad30
 ; CHECK-NEXT: br label %{{.+}}
 
 
-; CHECK-DAG: define internal fastcc void @_Z14spawn_tryblocki.outline_det.achd4.otd1(%class.Foo*
+; CHECK-DAG: define private fastcc void @_Z14spawn_tryblocki.outline_det.achd4.otd1(%class.Foo*
 ; CHECK: %[[ARG:[a-zA-Z0-9._]+]])
 ; CHECK: %[[CILKSF:.+]] = alloca %struct.__cilkrts_stack_frame
 ; CHECK: call void @__cilkrts_enter_frame_fast_1(%struct.__cilkrts_stack_frame* %[[CILKSF]])
@@ -460,7 +460,7 @@ terminate.lpad:                                   ; preds = %lpad30
 ; CHECK-NEXT: resume { i8*, i32 } %[[LPADVAL]]
  
 
-; CHECK-DAG: define internal fastcc void @_Z18spawn_throw_inlinei.outline_det.achd.otd1(%class.Foo*
+; CHECK-DAG: define private fastcc void @_Z18spawn_throw_inlinei.outline_det.achd.otd1(%class.Foo*
 ; CHECK: %[[ARG:[a-zA-Z0-9._]+]])
 ; CHECK: %[[CILKSF:.+]] = alloca %struct.__cilkrts_stack_frame
 ; CHECK: call void @__cilkrts_enter_frame_fast_1(%struct.__cilkrts_stack_frame* %[[CILKSF]])
@@ -496,7 +496,7 @@ terminate.lpad:                                   ; preds = %lpad30
 ; CHECK: [[LPADIN]]:
 ; CHECK: br label %[[RESUMEIN]]
 
-; CHECK-DAG: define internal fastcc void @_Z12spawn_excepti.outline_det.achd.otd1(%class.Foo*
+; CHECK-DAG: define private fastcc void @_Z12spawn_excepti.outline_det.achd.otd1(%class.Foo*
 ; CHECK: %[[ARG:[a-zA-Z0-9._]+]])
 ; CHECK: %[[CILKSF:.+]] = alloca %struct.__cilkrts_stack_frame
 ; CHECK: call void @__cilkrts_enter_frame_fast_1(%struct.__cilkrts_stack_frame* %[[CILKSF]])

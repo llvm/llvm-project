@@ -395,9 +395,9 @@ Function *llvm::createHelperForTask(
   // Inlining the helper function is not legal.
   Helper->addFnAttr(Attribute::NoInline);
   // Note that the address of the helper is unimportant.
-  Helper->setUnnamedAddr(GlobalValue::UnnamedAddr::Local);
+  Helper->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   // The helper is private to this module.
-  Helper->setLinkage(GlobalValue::InternalLinkage);
+  Helper->setLinkage(GlobalValue::PrivateLinkage);
 
   // Add alignment assumptions to arguments of helper, based on alignment of
   // values in old function.

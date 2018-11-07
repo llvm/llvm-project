@@ -62,7 +62,7 @@ pfor.detach.us.preheader:                         ; preds = %pfor.detach.lr.ph
 pfor.detach.us:                                   ; preds = %pfor.detach.us.preheader, %pfor.inc.us
   %indvars.iv97 = phi i64 [ %indvars.iv.next98, %pfor.inc.us ], [ 0, %pfor.detach.us.preheader ]
   detach within %syncreg, label %for.body.lr.ph.i.us, label %pfor.inc.us
-; LOWERING: _ZN9gTreeNodeI8_point3dIdE7_vect3dIdE6vertexIS1_Li1EE5nDataIS5_EE13sortBlocksBigEPPS5_iiidS1_Pi.outline_pfor.detach.us.ls1({{[^)]*}}) local_unnamed_addr [[FUNCATTR:#[0-9]+]]
+; LOWERING: _ZN9gTreeNodeI8_point3dIdE7_vect3dIdE6vertexIS1_Li1EE5nDataIS5_EE13sortBlocksBigEPPS5_iiidS1_Pi.outline_pfor.detach.us.ls1({{[^)]*}}) unnamed_addr [[FUNCATTR:#[0-9]+]]
 ; LOWERING: attributes [[FUNCATTR]] = { {{[^}]*}}stealable
 ; ASM: _ZN9gTreeNodeI8_point3dIdE7_vect3dIdE6vertexIS1_Li1EE5nDataIS5_EE13sortBlocksBigEPPS5_iiidS1_Pi.outline_pfor.detach.us.ls1:
 ; ASM-NOT: (%rsp)

@@ -472,7 +472,7 @@ pfor.detach122:                                   ; preds = %pfor.inc159, %invok
   %67 = mul i64 %63, %__begin113.0663
   %scevgep = getelementptr i8, i8* %call.i575, i64 %67
   detach within %syncreg111, label %pfor.body126, label %pfor.inc159 unwind label %lpad161.loopexit
-; CHECK: define internal fastcc void @_ZN4pbbs12sample_sort_Im8sequenceIlESt4lessIlEEES1_INT0_1TEES5_RKT1_b.outline_pfor.detach122.ls1(i64 %__begin113.0663.start.ls1,
+; CHECK: define private fastcc void @_ZN4pbbs12sample_sort_Im8sequenceIlESt4lessIlEEES1_INT0_1TEES5_RKT1_b.outline_pfor.detach122.ls1(i64 %__begin113.0663.start.ls1,
 ; CHECK: pfor.detach122.ls1:
 ; CHECK-NOT: indvars.iv = phi
 ; CHECK: %__begin113.0663.ls1 = phi i64

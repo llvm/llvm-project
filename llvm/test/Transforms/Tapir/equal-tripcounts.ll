@@ -242,7 +242,7 @@ for.end123:                                       ; preds = %for.inc121
   ret void
 }
 
-; CHECK: define internal fastcc void @test_correctness.outline_pfor.detach.us.i.ls2(i64 %indvars.iv.i.start.ls2, i64 %end.ls2
+; CHECK: define private fastcc void @test_correctness.outline_pfor.detach.us.i.ls2(i64 %indvars.iv.i.start.ls2, i64 %end.ls2
 ; CHECK: pfor.inc.us.i.ls2:
 ; CHECK: %exitcond.i.ls2 = icmp eq i64 %indvars.iv.next.i.ls2, %end.ls2
 

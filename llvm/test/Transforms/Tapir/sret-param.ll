@@ -810,12 +810,12 @@ _ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit71: ; preds
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
 
-; LS-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach.ls1(%"class.std::vector.0"* noalias sret align 8 %agg.result.ls1,
+; LS-LABEL: define private fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach.ls1(%"class.std::vector.0"* noalias sret align 8 %agg.result.ls1,
 ; LS: [[IVTYPE]] {{.+}}, [[IVTYPE]] {{.+}}, [[IVTYPE]] {{.*}}%[[GRAINSIZE:.+]],
 ; LS: {{^.split:}}
 ; LS-NEXT: invoke fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach.ls1(%"class.std::vector.0"* %agg.result.ls1, [[IVTYPE]] {{.+}}, [[IVTYPE]] {{.+}}, [[IVTYPE]] {{.*}}[[GRAINSIZE]],
 
-; TT-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.body.otd1(%"class.std::vector.0"* {{.*}}sret {{.*}}%agg.result.otd1,
+; TT-LABEL: define private fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.body.otd1(%"class.std::vector.0"* {{.*}}sret {{.*}}%agg.result.otd1,
 
 attributes #0 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }

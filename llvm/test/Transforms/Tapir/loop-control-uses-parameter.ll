@@ -364,7 +364,7 @@ eh.resume:                                        ; preds = %lpad43, %lpad23
   resume { i8*, i32 } %lpad.val59
 }
 
-; CHECK: define internal fastcc void @_ZN4pbbs9transposeIjjE6transREmmmmmm.outline_pfor.detach.ls1(
+; CHECK: define private fastcc void @_ZN4pbbs9transposeIjjE6transREmmmmmm.outline_pfor.detach.ls1(
 ; CHECK: i64 %rStart.ls1
 ; CHECK: )
 ; CHECK: call fastcc void @_ZN4pbbs9transposeIjjE6transREmmmmmm.outline_pfor.detach.ls1(

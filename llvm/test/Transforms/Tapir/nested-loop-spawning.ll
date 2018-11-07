@@ -844,13 +844,13 @@ _ZNSt12_Vector_baseISt5tupleIJidiEESaIS1_EE13_M_deallocateEPS1_m.exit: ; preds =
 ; Function Attrs: argmemonly nounwind
 declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i32, i1) #1
 
-; CHECK-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach21.ls2(i64
+; CHECK-LABEL: define private fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach21.ls2(i64
 ; CHECK: %[[SYNCREG:.+]] = call token @llvm.syncregion.start()
 ; CHECK: detach within %[[SYNCREG]], label %.split, label %{{.+}}
 ; CHECK: {{^.split}}:
 ; CHECK-NEXT: call fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach21.ls2(i64
 
-; CHECK-LABEL: define internal fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach.ls1(i64
+; CHECK-LABEL: define private fastcc void @_Z14func_with_sretidRSt6vectorI6paramsSaIS0_EE.outline_pfor.detach.ls1(i64
 ; CHECK: %[[SYNCREG:.+]] = tail call token @llvm.syncregion.start()
 ; CHECK: detach within %[[SYNCREG]], label %.split, label %{{.+}}
 ; CHECK: {{^.split:}}

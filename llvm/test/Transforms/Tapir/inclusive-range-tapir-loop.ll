@@ -1334,14 +1334,14 @@ for.inc.i258.3:                                   ; preds = %if.then3.i254.3, %f
   br i1 %niter532.ncmp.3, label %invoke.cont86.loopexit.unr-lcssa, label %for.body.i251
 }
 
-; CHECK-LABEL: define internal fastcc void @_ZN8sequence4packIllN5utils9identityFIlEEEE4_seqIT_EPS5_PbT0_S9_T1_.outline_pfor.detach64.ls1(i64 %__begin55.0288.start.ls1,
+; CHECK-LABEL: define private fastcc void @_ZN8sequence4packIllN5utils9identityFIlEEEE4_seqIT_EPS5_PbT0_S9_T1_.outline_pfor.detach64.ls1(i64 %__begin55.0288.start.ls1,
 ; CHECK: %__begin55.0288.ls1.dac = phi i64
 ; CHECK: [ %__begin55.0288.start.ls1, %pfor.detach64.lr.ph.ls1 ]
 ; CHECK: [ %[[NEXTITERVAR:.+]], %[[RECURCONT:.+]] ]
 ; CHECK: [[RECURCONT]]:
 ; CHECK: %[[NEXTITERVAR]] = add nuw nsw i64 {{.+}}, 1
 
-; CHECK-LABEL: define internal fastcc void @_ZN8sequence4packIllN5utils9identityFIlEEEE4_seqIT_EPS5_PbT0_S9_T1_.outline_pfor.detach.ls1(i64 %__begin.0290.start.ls1
+; CHECK-LABEL: define private fastcc void @_ZN8sequence4packIllN5utils9identityFIlEEEE4_seqIT_EPS5_PbT0_S9_T1_.outline_pfor.detach.ls1(i64 %__begin.0290.start.ls1
 ; CHECK: %__begin.0290.ls1.dac = phi i64
 ; CHECK: [ %__begin.0290.start.ls1, %pfor.detach.lr.ph.ls1 ]
 ; CHECK: [ %[[NEXTITERVAR:.+]], %[[RECURCONT:.+]] ]
