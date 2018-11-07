@@ -699,19 +699,6 @@ static bool StringHasAnyOf(const llvm::StringRef &s,
   return false;
 }
 
-bool StringHasAnyOf(const llvm::StringRef &s, const char *which,
-                    size_t &where) {
-  for (const char *c = which; *c != 0; c++) {
-    size_t where_item = s.find(*c);
-    if (where_item != llvm::StringRef::npos) {
-      where = where_item;
-      return true;
-    }
-  }
-  where = llvm::StringRef::npos;
-  return false;
-}
-
 static bool UnpackTerminatedSubstring(const llvm::StringRef &s,
                                       const char start, const char stop,
                                       llvm::StringRef &dest) {
@@ -1977,7 +1964,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     return false;
 
   switch (promise_sp->FulfillKindPromise().getValue()) {
-  case swift::MetadataKind::Class: {
+  case swift::MetadataKind::Class:
+  case swift::MetadataKind::ObjCClassWrapper: {
     CompilerType dyn_type(promise_sp->FulfillTypePromise());
     if (!dyn_type.IsValid())
       return false;
@@ -2014,57 +2002,28 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
   } break;
   case swift::MetadataKind::Existential: {
     CompilerType protocol_type(promise_sp->FulfillTypePromise());
-    // Error has a special, NSError-compatible layout.
     SwiftASTContext *swift_ast_ctx =
         llvm::dyn_cast_or_null<SwiftASTContext>(protocol_type.GetTypeSystem());
-    if (swift_ast_ctx && swift_ast_ctx->IsErrorType(protocol_type)) {
-      Status error;
-      lldb::addr_t archetype_ptr_value = in_value.GetValueAsUnsigned(0);
-      lldb::addr_t metadata_ptr =
-          m_process->ReadPointerFromMemory(archetype_ptr_value, error);
-      MetadataPromiseSP promise_sp(GetMetadataPromise(metadata_ptr, in_value));
-      if (!promise_sp)
-        return false;
-      CompilerType dynamic_type(promise_sp->FulfillTypePromise());
-      if (dynamic_type.IsValid()) {
-        class_type_or_name.SetCompilerType(dynamic_type);
-        address.SetLoadAddress(archetype_ptr_value, &m_process->GetTarget());
-        return true;
-      }
-    } else {
-      Status error;
-      lldb::addr_t ptr_to_instance_type = in_value.GetValueAsUnsigned(0) +
-                                          (3 * m_process->GetAddressByteSize());
-      lldb::addr_t metadata_of_impl_addr =
-          m_process->ReadPointerFromMemory(ptr_to_instance_type, error);
-      if (error.Fail() || metadata_of_impl_addr == 0 ||
-          metadata_of_impl_addr == LLDB_INVALID_ADDRESS)
-        return false;
-      MetadataPromiseSP promise_of_impl_sp(
-          GetMetadataPromise(metadata_of_impl_addr, in_value));
-      if (GetDynamicTypeAndAddress_Promise(in_value, promise_of_impl_sp,
-                                           use_dynamic, class_type_or_name,
-                                           address)) {
-        lldb::addr_t load_addr = in_value.GetValueAsUnsigned(0);
-        if (promise_of_impl_sp->FulfillKindPromise() &&
-            promise_of_impl_sp->FulfillKindPromise().getValue() ==
-                swift::MetadataKind::Class) {
-          load_addr = m_process->ReadPointerFromMemory(load_addr, error);
-          if (error.Fail() || load_addr == 0 ||
-              load_addr == LLDB_INVALID_ADDRESS)
-            return false;
-        } else if (promise_of_impl_sp->FulfillKindPromise() &&
-                   (promise_of_impl_sp->FulfillKindPromise().getValue() ==
-                        swift::MetadataKind::Enum ||
-                    promise_of_impl_sp->FulfillKindPromise().getValue() ==
-                        swift::MetadataKind::Struct)) {
-        } else
-          lldbassert(false && "class, enum and struct are the only protocol "
-                              "implementor types I know about");
-        address.SetLoadAddress(load_addr, &m_process->GetTarget());
-        return true;
-      }
-    }
+    lldb::addr_t existential_address = in_value.GetPointerValue();
+    if (!existential_address || existential_address == LLDB_INVALID_ADDRESS)
+      return false;
+    auto &target = m_process->GetTarget();
+    assert(IsScratchContextLocked(target) &&
+           "Swift scratch context not locked ahead");
+    auto scratch_ctx = in_value.GetSwiftASTContext();
+    auto &remote_ast = GetRemoteASTContext(*scratch_ctx);
+    swift::remote::RemoteAddress remote_existential(existential_address);
+    auto result = remote_ast.getDynamicTypeAndAddressForExistential(
+        remote_existential, GetSwiftType(protocol_type));
+    if (!result.isSuccess())
+      return false;
+    auto type_and_address = result.getValue();
+    CompilerType dynamic_type(scratch_ctx->GetASTContext(),
+                              type_and_address.first);
+    class_type_or_name.SetCompilerType(dynamic_type);
+    address.SetLoadAddress(type_and_address.second.getAddressData(),
+                           &m_process->GetTarget());
+    return true;
   } break;
   default:
     break;
@@ -2235,11 +2194,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Tuple(
   CompilerType dyn_tuple_type = scratch_ctx.CreateTupleType(dyn_types);
   class_type_or_name.SetCompilerType(dyn_tuple_type);
 
-  lldb::addr_t tuple_address = in_value.GetPointerValue();
-  if (!tuple_address || tuple_address == LLDB_INVALID_ADDRESS)
-    tuple_address = in_value.GetAddressOf(true, nullptr);
-  else
-    tuple_address = m_process->ReadPointerFromMemory(tuple_address, error);
+  lldb::addr_t tuple_address = in_value.GetAddressOf(true, nullptr);
   if (error.Fail() || !tuple_address || tuple_address == LLDB_INVALID_ADDRESS)
       return false;
 
@@ -2252,16 +2207,12 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Struct(
     ValueObject &in_value, CompilerType &bound_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address) {
-  std::vector<CompilerType> generic_args;
   class_type_or_name.SetCompilerType(bound_type);
 
-  lldb::addr_t struct_address = in_value.GetPointerValue();
+  lldb::addr_t struct_address = in_value.GetAddressOf(true, nullptr);
   if (!struct_address || struct_address == LLDB_INVALID_ADDRESS)
-    struct_address = in_value.GetAddressOf(true, nullptr);
-  if (!struct_address || struct_address == LLDB_INVALID_ADDRESS) {
     if (!SwiftASTContext::IsPossibleZeroSizeType(bound_type))
       return false;
-  }
 
   address.SetLoadAddress(struct_address, in_value.GetTargetSP().get());
   return true;
@@ -2271,17 +2222,12 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Enum(
     ValueObject &in_value, CompilerType &bound_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
     Address &address) {
-  std::vector<CompilerType> generic_args;
   class_type_or_name.SetCompilerType(bound_type);
 
-  lldb::addr_t enum_address = in_value.GetPointerValue();
+  lldb::addr_t enum_address = in_value.GetAddressOf(true, nullptr);
   if (!enum_address || LLDB_INVALID_ADDRESS == enum_address)
-    enum_address = in_value.GetAddressOf(true, nullptr);
-  if (!enum_address || LLDB_INVALID_ADDRESS == enum_address) {
-    if (false == SwiftASTContext::IsPossibleZeroSizeType(
-                     class_type_or_name.GetCompilerType()))
+    if (!SwiftASTContext::IsPossibleZeroSizeType(bound_type))
       return false;
-  }
 
   address.SetLoadAddress(enum_address, in_value.GetTargetSP().get());
   return true;
@@ -2591,18 +2537,6 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
     else if (should_be_made_into_ref)
       corrected_type = orig_type.GetLValueReferenceType();
     ret.SetCompilerType(corrected_type);
-  } else /*if (m_dynamic_type_info.HasName())*/
-  {
-    // If we are here we need to adjust our dynamic type name to include the
-    // correct & or * symbol
-    std::string corrected_name(type_and_or_name.GetName().GetCString());
-    if (should_be_made_into_ptr)
-      corrected_name.append(" *");
-    else if (should_be_made_into_ref)
-      corrected_name.append(" &");
-    // the parent type should be a correctly pointer'ed or referenc'ed type
-    ret.SetCompilerType(static_value.GetCompilerType());
-    ret.SetName(corrected_name.c_str());
   }
   return ret;
 }
