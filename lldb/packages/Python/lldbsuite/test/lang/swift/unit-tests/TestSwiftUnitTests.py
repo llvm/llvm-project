@@ -17,6 +17,7 @@ class TestSwiftUnitTests(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll(bugnumber="rdar://45579668")
     @skipUnlessDarwin
     @swiftTest
     # The creation of the .xctest framework messes with the AST search path.

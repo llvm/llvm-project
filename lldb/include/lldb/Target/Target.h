@@ -415,6 +415,10 @@ public:
 
   void SetIsForUtilityExpr(bool b) { m_running_utility_expression = b; }
 
+  void SetPreparePlaygroundStubFunctions(bool b) { m_prepare_playground_stub_functions = b; }
+
+  bool GetPreparePlaygroundStubFunctions() const { return m_prepare_playground_stub_functions; }
+
 private:
   ExecutionPolicy m_execution_policy = default_execution_policy;
   lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
@@ -450,6 +454,7 @@ private:
   // originates
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line;
+  bool m_prepare_playground_stub_functions = true;
 };
 
 //----------------------------------------------------------------------

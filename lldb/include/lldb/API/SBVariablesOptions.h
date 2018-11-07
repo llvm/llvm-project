@@ -33,6 +33,10 @@ public:
 
   void SetIncludeArguments(bool);
 
+  bool GetIncludeRecognizedArguments() const;
+
+  void SetIncludeRecognizedArguments(bool);
+
   bool GetIncludeLocals() const;
 
   void SetIncludeLocals(bool);

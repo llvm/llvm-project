@@ -13,12 +13,22 @@ include $(LEVEL)/Makefile.rules
 
 a.out: main.swift libDylib.dylib libConflict.dylib
 	$(SWIFTC) -g -Onone $^ -lDylib -lConflict -L$(shell pwd) -o $@ $(SWIFTFLAGS) -Xcc -I$(SRCDIR)/hidden/Bar -I. -import-objc-header $(SRCDIR)/bridging.h
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
+
 
 libDylib.dylib: Library.swift
 	$(SWIFTC) -g -Onone $^ -emit-library -module-name Dylib -emit-module -Xlinker -install_name -Xlinker @executable_path/$@ -I. $(SWIFTFLAGS)
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
 
 libConflict.dylib: Conflict.swift
 	$(SWIFTC) -g -Onone $^ -emit-library -module-name Conflict -emit-module -Xlinker -install_name -Xlinker @executable_path/$@ -I. -Xcc -I$(SRCDIR)/hidden/Foo $(SWIFTFLAGS)
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o
