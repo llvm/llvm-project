@@ -4699,7 +4699,12 @@ void Sema::CodeCompleteInitializer(Scope *S, Decl *D) {
     return;
   }
 
-  CodeCompleteExpression(S, VD->getType());
+  CodeCompleteExpressionData Data;
+  Data.PreferredType = VD->getType();
+  // Ignore VD to avoid completing the variable itself, e.g. in 'int foo = ^'.
+  Data.IgnoreDecls.push_back(VD);
+
+  CodeCompleteExpression(S, Data);
 }
 
 void Sema::CodeCompleteReturn(Scope *S) {
