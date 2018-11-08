@@ -7788,7 +7788,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-swift-resources.py $TARGET_BUILD_DIR ${LLDB_PATH_TO_SWIFT_BUILD:-$LLVM_BUILD_DIR/swift-macosx-$CURRENT_ARCH}";
+			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-swift-resources.py $TARGET_BUILD_DIR ${LLDB_PATH_TO_SWIFT_BUILD:-$LLVM_BUILD_DIR/swift-macosx-x86_64}";
 		};
 		49DFDE781BEBD8FE008A6797 /* Delete debugserver (install) */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -7831,7 +7831,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-clang-headers.py $TARGET_BUILD_DIR ${LLDB_PATH_TO_LLVM_BUILD:-$LLVM_BUILD_DIR/llvm-macosx-$CURRENT_ARCH}";
+			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-clang-headers.py $TARGET_BUILD_DIR ${LLDB_PATH_TO_LLVM_BUILD:-$LLVM_BUILD_DIR/llvm-macosx-x86_64}";
 		};
 		94C8C91C1D6F9249000EA446 /* Check AST Context */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -7855,7 +7855,7 @@
 			inputPaths = (
 				"$(BUILT_PRODUCTS_DIR)/lldb.py",
 				"$(SRCROOT)/source/Interpreter/embedded_interpreter.py",
-				"$(OBJECT_FILE_DIR_normal)/$(CURRENT_ARCH)/LLDBWrapPython.o",
+				"$(OBJECT_FILE_DIR_normal)/x86_64/LLDBWrapPython.o",
 			);
 			name = "Finish swig wrapper classes (lldb)";
 			outputPaths = (
@@ -9074,10 +9074,10 @@
 				LLDB_IS_BUILDBOT_BUILD = 0;
 				LLDB_PATH_TO_CLANG_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
-				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -9086,10 +9086,10 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				LLVM_CONFIGURATION = ReleaseAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				ONLY_ACTIVE_ARCH = YES;
@@ -9202,10 +9202,10 @@
 				LLDB_IS_BUILDBOT_BUILD = 0;
 				LLDB_PATH_TO_CLANG_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
-				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -9214,10 +9214,10 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				LLVM_CONFIGURATION = ReleaseAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				ONLY_ACTIVE_ARCH = YES;
@@ -9492,10 +9492,10 @@
 				LLDB_GTESTS_CFLAGS = "-I unittests -I ${SOURCE_ROOT} -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include  -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/llvm-macosx-x86_64/bin/yaml2obj\\\"\" -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_TOOLS_INSTALL_DIR = "";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				OTHER_CFLAGS = (
 					"-fno-rtti",
 					"-Wglobal-constructors",
@@ -9540,10 +9540,10 @@
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -9609,10 +9609,10 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				SWIFT_SOURCE_DIR = "$(SRCROOT)/swift";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -9647,8 +9647,8 @@
 				);
 				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLVM_SOURCE_DIR)/utils/unittest/googlemock/include -I $(LLVM_SOURCE_DIR)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLVM_BUILD_DIR)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/llvm-macosx-x86_64/bin/yaml2obj\\\"\" -I include -I source -I $PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/include/python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -9852,8 +9852,8 @@
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
 				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/x86_64/include -DYAML2OBJ=\"\\\"$(LLVM_BUILD_DIR)/llvm-macosx-x86_64/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_PATH_TO_LLVM_BUILD)/x86_64/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -9894,8 +9894,8 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
 			};
 			name = "CustomSwift-RelWithDebInfo";
@@ -10219,7 +10219,7 @@
 				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLDB_PATH_TO_LLVM_BUILD)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/libgtest.a -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -10331,7 +10331,7 @@
 				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLDB_PATH_TO_LLVM_BUILD)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -10454,7 +10454,7 @@
 				LLDB_GTESTS_CFLAGS = "-I unittests -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googlemock/include -I $(LLDB_PATH_TO_LLVM_SOURCE)/utils/unittest/googletest/include -I $(LLVM_SOURCE_DIR)/include -I $(LLDB_PATH_TO_LLVM_BUILD)/include -DYAML2OBJ=\"\\\"$(LLDB_PATH_TO_LLVM_BUILD)/bin/yaml2obj\\\"\" -I include -I source -I $(PYTHON_FRAMEWORK_PATH)/Headers -DGTEST_HAS_RTTI=0";
 				LLDB_GTESTS_LDFLAGS = "$(LLDB_GTEST_LIB) -L $(PYTHON_FRAMEWORK_PATH)/Versions/$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)/lib -l python$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)";
 				LLDB_GTEST_LIB = "$(LLDB_PATH_TO_LLVM_BUILD)/lib/libgtest.a";
-				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_LLVM_BUILD = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/llvm";
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -10555,10 +10555,10 @@
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -10603,10 +10603,10 @@
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -10643,10 +10643,10 @@
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -10691,10 +10691,10 @@
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -11005,10 +11005,10 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				SWIFT_SOURCE_DIR = "$(SRCROOT)/llvm/tools/swift";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -11057,10 +11057,10 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				SWIFT_SOURCE_DIR = "$(SRCROOT)/llvm/tools/swift";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -11110,10 +11110,10 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				SWIFT_SOURCE_DIR = "$(SRCROOT)/llvm/tools/swift";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -11191,10 +11191,10 @@
 				LLDB_IS_BUILDBOT_BUILD = 0;
 				LLDB_PATH_TO_CLANG_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
-				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "/$(DT_VARIANT)/Applications/Xcode.app/Contents/Developer/usr/bin";
 				"LLDB_TOOLS_INSTALL_DIR[sdk=iphoneos*]" = "/$(DT_VARIANT)/usr/local/bin";
@@ -11204,10 +11204,10 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(OBJROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				LLVM_CONFIGURATION = BuildAndIntegration;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				OTHER_CFLAGS = (
@@ -11320,10 +11320,10 @@
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -11369,10 +11369,10 @@
 				);
 				PRODUCT_NAME = LLDB;
 				STRIP_INSTALLED_PRODUCT = YES;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -11639,10 +11639,10 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -11688,10 +11688,10 @@
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = Debug;
@@ -11727,10 +11727,10 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -11811,10 +11811,10 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -11861,10 +11861,10 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRIP_INSTALLED_PRODUCT = YES;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = BuildAndIntegration;
@@ -12203,10 +12203,10 @@
 				LLDB_IS_BUILDBOT_BUILD = 0;
 				LLDB_PATH_TO_CLANG_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
-				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -12215,10 +12215,10 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				LLVM_CONFIGURATION = DebugAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				ONLY_ACTIVE_ARCH = YES;
@@ -12339,10 +12339,10 @@
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -12387,10 +12387,10 @@
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -12452,10 +12452,10 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				SWIFT_SOURCE_DIR = "$(SRCROOT)/llvm/tools/swift";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -12495,8 +12495,8 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -12542,8 +12542,8 @@
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 			};
 			name = DebugClang;
@@ -12898,10 +12898,10 @@
 				LLDB_IS_BUILDBOT_BUILD = 0;
 				LLDB_PATH_TO_CLANG_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
-				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_BUILD = "$(LLVM_BUILD_DIR)";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = /usr/bin;
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -12910,10 +12910,10 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLVM_BUILD_DIRTREE)/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				LLVM_CONFIGURATION = DebugPresubmission;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				ONLY_ACTIVE_ARCH = YES;
@@ -13036,10 +13036,10 @@
 					"$(inherited)",
 				);
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -13083,10 +13083,10 @@
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -13148,10 +13148,10 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				SWIFT_SOURCE_DIR = "$(SRCROOT)/llvm/tools/swift";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -13192,8 +13192,8 @@
 					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 				);
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -13240,8 +13240,8 @@
 				PRODUCT_NAME = "lldb-server";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include";
 			};
 			name = DebugPresubmission;
@@ -13317,7 +13317,7 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(OBJROOT)/llvm";
 				LLVM_BUILD_DIRTREE = "$(OBJROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "x86_64/";
 				LLVM_CONFIGURATION = Release;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				OTHER_CFLAGS = (
@@ -13416,8 +13416,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LIBRARY_SEARCH_PATHS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -13460,8 +13460,8 @@
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
 				STRIP_INSTALLED_PRODUCT = YES;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -13525,8 +13525,8 @@
 					"/$(DT_VARIANT)/usr/include/libxml2",
 				);
 				LIBRARY_SEARCH_PATHS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -13567,10 +13567,10 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -13601,8 +13601,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LIBRARY_SEARCH_PATHS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -13644,8 +13644,8 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -13673,8 +13673,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LIBRARY_SEARCH_PATHS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -13716,8 +13716,8 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -13750,10 +13750,10 @@
 				);
 				INSTALL_PATH = "$(LLDB_FRAMEWORK_INSTALL_DIR)/LLDB.framework/Resources";
 				LIBRARY_SEARCH_PATHS = "$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -13796,10 +13796,10 @@
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
 				STRIP_INSTALLED_PRODUCT = YES;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_SOURCE_DIR)/tools/swift/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/swift/include $(LLVM_SOURCE_DIR)/tools/swift/lib";
 			};
 			name = BuildAndIntegration;
@@ -13872,12 +13872,12 @@
 				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
 				LLDB_IS_BUILDBOT_BUILD = 0;
-				LLDB_PATH_TO_CLANG_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CLANG_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
 				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
-				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
+				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -13886,10 +13886,10 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
 				LLVM_BUILD_DIRTREE = "$(PREBUILT_SWIFTLANG)/..";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				LLVM_CONFIGURATION = DebugAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				OBJROOT = "$(SYMROOT)";
@@ -14015,10 +14015,10 @@
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_TOOLS_INSTALL_DIR = "";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
 					"-Wparentheses",
@@ -14068,10 +14068,10 @@
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -14131,10 +14131,10 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				SWIFT_SOURCE_DIR = "$(SRCROOT)/swift";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source $(LLDB_PATH_TO_LLVM_BUILD)/lib/Target/ARM";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -14171,8 +14171,8 @@
 					"-Wl,-v",
 				);
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -14217,8 +14217,8 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STRIP_INSTALLED_PRODUCT = YES;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(SRCROOT)/source $(LLDB_PATH_TO_LLVM_BUILD)/lib/Target/ARM";
 			};
 			name = "CustomSwift-Debug";
@@ -14356,8 +14356,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MTL_ENABLE_DEBUG_INFO = YES;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -14398,8 +14398,8 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(SRCROOT)/source";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -14478,12 +14478,12 @@
 				"LLDB_GUI_LDFLAGS[sdk=iphoneos*]" = "";
 				"LLDB_GUI_LDFLAGS[sdk=watchos*]" = "";
 				LLDB_IS_BUILDBOT_BUILD = 0;
-				LLDB_PATH_TO_CLANG_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CLANG_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
 				LLDB_PATH_TO_CLANG_SOURCE = "$(PROJECT_DIR)/../clang";
-				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-$(CURRENT_ARCH)";
-				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_CMARK_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/cmark-macosx-x86_64";
+				LLDB_PATH_TO_LLVM_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/llvm-macosx-x86_64";
 				LLDB_PATH_TO_LLVM_SOURCE = "$(PROJECT_DIR)/../llvm";
-				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-$(CURRENT_ARCH)";
+				LLDB_PATH_TO_SWIFT_BUILD = "$(PROJECT_DIR)/../build/Ninja-$(LLVM_CONFIGURATION)/swift-macosx-x86_64";
 				LLDB_PATH_TO_SWIFT_SOURCE = "$(PROJECT_DIR)/../swift";
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
@@ -14492,10 +14492,10 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
 				LLVM_BUILD_DIRTREE = "$(PREBUILT_SWIFTLANG)/..";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				LLVM_CONFIGURATION = ReleaseAssert;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				OBJROOT = "$(SYMROOT)";
@@ -14614,10 +14614,10 @@
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
 				LLDB_TOOLS_INSTALL_DIR = "";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-fno-rtti",
@@ -14662,10 +14662,10 @@
 					"$(LLDB_GUI_LDFLAGS)",
 				);
 				PRODUCT_NAME = LLDB;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";
 				VERSIONING_SYSTEM = "apple-generic";
 			};
@@ -14731,10 +14731,10 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=appletvos*]" = "swift-appletvos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=watchos*]" = "swift-watchos-x86_64/";
 				SWIFT_SOURCE_DIR = "$(SRCROOT)/swift";
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source $(CONFIGURATION_BUILD_DIR)";
 				VERSIONING_SYSTEM = "apple-generic";
@@ -14769,8 +14769,8 @@
 					"-Wl,-v",
 				);
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MACH_O_TYPE = mh_execute;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -14936,8 +14936,8 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LIBRARY_SEARCH_PATHS = "$(LLDB_PATH_TO_LLVM_BUILD)";
-				LLVM_BUILD_DIR_ARCH = "llvm-macosx-$(CURRENT_ARCH)/";
-				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "llvm-macosx-x86_64/";
+				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_CFLAGS = (
 					"$(inherited)",
@@ -14976,8 +14976,8 @@
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
-				SWIFT_BUILD_DIR_ARCH = "swift-macosx-$(CURRENT_ARCH)/";
-				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-$(CURRENT_ARCH)/";
+				SWIFT_BUILD_DIR_ARCH = "swift-macosx-x86_64/";
+				"SWIFT_BUILD_DIR_ARCH[sdk=iphoneos*]" = "swift-iphoneos-x86_64/";
 			};
 			name = "CustomSwift-Release";
 		};
