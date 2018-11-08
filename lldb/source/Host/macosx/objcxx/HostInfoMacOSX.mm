@@ -141,7 +141,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
     raw_path.append("/../bin");
     FileSpec support_dir_spec(raw_path);
     FileSystem::Instance().Resolve(support_dir_spec);
-    if (!llvm::sys::fs::is_directory(support_dir_spec.GetPath())) {
+    if (!FileSystem::Instance().IsDirectory(support_dir_spec)) {
       Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
       if (log)
         log->Printf("HostInfoMacOSX::%s(): failed to find support directory",

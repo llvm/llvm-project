@@ -101,7 +101,7 @@ using namespace lldb_private;
 bool Host::GetBundleDirectory(const FileSpec &file,
                               FileSpec &bundle_directory) {
 #if defined(__APPLE__)
-  if (llvm::sys::fs::is_directory(file.GetPath())) {
+  if (FileSystem::Instance().IsDirectory(file)) {
     char path[PATH_MAX];
     if (file.GetPath(path, sizeof(path))) {
       CFCBundle bundle(path);
@@ -118,7 +118,7 @@ bool Host::GetBundleDirectory(const FileSpec &file,
 
 bool Host::ResolveExecutableInBundle(FileSpec &file) {
 #if defined(__APPLE__)
-  if (llvm::sys::fs::is_directory(file.GetPath())) {
+  if (FileSystem::Instance().IsDirectory(file)) {
     char path[PATH_MAX];
     if (file.GetPath(path, sizeof(path))) {
       CFCBundle bundle(path);
