@@ -1,4 +1,4 @@
-//===-- BreakpointResolverAddress.h -----------------------------*- C++ -*-===//
+//===-- BreakpointResolverScripted.h -----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,33 +7,36 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_BreakpointResolverAddress_h_
-#define liblldb_BreakpointResolverAddress_h_
+#ifndef liblldb_BreakpointResolverScripted_h_
+#define liblldb_BreakpointResolverScripted_h_
 
 // C Includes
 // C++ Includes
 // Other libraries and framework includes
 // Project includes
+#include "lldb/lldb-forward.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/ModuleSpec.h"
+
 
 namespace lldb_private {
 
 //----------------------------------------------------------------------
-/// @class BreakpointResolverAddress BreakpointResolverAddress.h
-/// "lldb/Breakpoint/BreakpointResolverAddress.h" This class sets breakpoints
+/// @class BreakpointResolverScripted BreakpointResolverScripted.h
+/// "lldb/Breakpoint/BreakpointResolverScripted.h" This class sets breakpoints
 /// on a given Address.  This breakpoint only takes once, and then it won't
 /// attempt to reset itself.
 //----------------------------------------------------------------------
 
-class BreakpointResolverAddress : public BreakpointResolver {
+class BreakpointResolverScripted : public BreakpointResolver {
 public:
-  BreakpointResolverAddress(Breakpoint *bkpt, const Address &addr);
+  BreakpointResolverScripted(Breakpoint *bkpt,
+                             const llvm::StringRef class_name,
+                             lldb::SearchDepth depth,
+                             StructuredDataImpl *args_data,
+                             ScriptInterpreter &script_interp);
 
-  BreakpointResolverAddress(Breakpoint *bkpt, const Address &addr,
-                            const FileSpec &module_spec);
-
-  ~BreakpointResolverAddress() override;
+  ~BreakpointResolverScripted() override;
 
   static BreakpointResolver *
   CreateFromStructuredData(Breakpoint *bkpt,
@@ -41,11 +44,6 @@ public:
                            Status &error);
 
   StructuredData::ObjectSP SerializeToStructuredData() override;
-
-  void ResolveBreakpoint(SearchFilter &filter) override;
-
-  void ResolveBreakpointInModules(SearchFilter &filter,
-                                  ModuleList &modules) override;
 
   Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                           SymbolContext &context, Address *addr,
@@ -58,26 +56,30 @@ public:
   void Dump(Stream *s) const override;
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static inline bool classof(const BreakpointResolverAddress *) { return true; }
+  static inline bool classof(const BreakpointResolverScripted *) { return true; }
   static inline bool classof(const BreakpointResolver *V) {
-    return V->getResolverID() == BreakpointResolver::AddressResolver;
+    return V->getResolverID() == BreakpointResolver::PythonResolver;
   }
 
   lldb::BreakpointResolverSP CopyForBreakpoint(Breakpoint &breakpoint) override;
 
 protected:
-  Address
-      m_addr; // The address - may be Section Offset or may be just an offset
-  lldb::addr_t m_resolved_addr; // The current value of the resolved load
-                                // address for this breakpoint,
-  FileSpec m_module_filespec;   // If this filespec is Valid, and m_addr is an
-                                // offset, then it will be converted
-  // to a Section+Offset address in this module, whenever that module gets
-  // around to being loaded.
+  void NotifyBreakpointSet() override;
 private:
-  DISALLOW_COPY_AND_ASSIGN(BreakpointResolverAddress);
+  void CreateImplementationIfNeeded();
+  ScriptInterpreter *GetScriptInterpreter();
+  
+  std::string m_class_name;
+  lldb::SearchDepth m_depth;
+  StructuredDataImpl *m_args_ptr; // We own this, but the implementation
+                                  // has to manage the UP (since that is
+                                  // how it gets stored in the
+                                  // SBStructuredData).
+  StructuredData::GenericSP m_implementation_sp;
+
+  DISALLOW_COPY_AND_ASSIGN(BreakpointResolverScripted);
 };
 
 } // namespace lldb_private
 
-#endif // liblldb_BreakpointResolverAddress_h_
+#endif // liblldb_BreakpointResolverScripted_h_

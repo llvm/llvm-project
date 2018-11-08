@@ -116,7 +116,7 @@ public:
     CallbackReturn SearchCallback(SearchFilter &filter, SymbolContext &context,
                                   Address *addr, bool complete) override = 0;
 
-    Depth GetDepth() override = 0;
+    lldb::SearchDepth GetDepth() override = 0;
 
     virtual size_t DoCompletion(SearchFilter *filter) = 0;
 
@@ -136,7 +136,7 @@ public:
     SourceFileCompleter(CommandInterpreter &interpreter,
                         bool include_support_files, CompletionRequest &request);
 
-    Searcher::Depth GetDepth() override;
+    lldb::SearchDepth GetDepth() override;
 
     Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                             SymbolContext &context,
@@ -162,7 +162,7 @@ public:
     ModuleCompleter(CommandInterpreter &interpreter,
                     CompletionRequest &request);
 
-    Searcher::Depth GetDepth() override;
+    lldb::SearchDepth GetDepth() override;
 
     Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                             SymbolContext &context,
@@ -186,7 +186,7 @@ public:
     SymbolCompleter(CommandInterpreter &interpreter,
                     CompletionRequest &request);
 
-    Searcher::Depth GetDepth() override;
+    lldb::SearchDepth GetDepth() override;
 
     Searcher::CallbackReturn SearchCallback(SearchFilter &filter,
                                             SymbolContext &context,

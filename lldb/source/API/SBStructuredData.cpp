@@ -10,6 +10,7 @@
 #include "lldb/API/SBStructuredData.h"
 
 #include "lldb/API/SBStream.h"
+#include "lldb/API/SBStringList.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Target/StructuredDataPlugin.h"
@@ -30,6 +31,9 @@ SBStructuredData::SBStructuredData(const lldb::SBStructuredData &rhs)
 
 SBStructuredData::SBStructuredData(const lldb::EventSP &event_sp)
     : m_impl_up(new StructuredDataImpl(event_sp)) {}
+
+SBStructuredData::SBStructuredData(lldb_private::StructuredDataImpl *impl)
+    : m_impl_up(impl) {}
 
 SBStructuredData::~SBStructuredData() {}
 
@@ -74,6 +78,33 @@ StructuredDataType SBStructuredData::GetType() const {
 
 size_t SBStructuredData::GetSize() const {
   return (m_impl_up ? m_impl_up->GetSize() : 0);
+}
+
+bool SBStructuredData::GetKeys(lldb::SBStringList &keys) const {
+  if (!m_impl_up)
+    return false;
+  
+  if (GetType() != eStructuredDataTypeDictionary)
+    return false;
+  
+  StructuredData::ObjectSP obj_sp = m_impl_up->GetObjectSP();
+  if (!obj_sp)
+    return false;
+
+  StructuredData::Dictionary *dict = obj_sp->GetAsDictionary();
+  // We claimed we were a dictionary, so this can't be null.
+  assert(dict);
+  // The return kind of GetKeys is an Array:
+  StructuredData::ObjectSP array_sp = dict->GetKeys();
+  StructuredData::Array *key_arr = array_sp->GetAsArray();
+  assert(key_arr);
+  
+  key_arr->ForEach([&keys] (StructuredData::Object *object) -> bool {
+    llvm::StringRef key = object->GetStringValue("");
+    keys.AppendString(key.str().c_str());
+    return true;
+  });
+  return true;
 }
 
 lldb::SBStructuredData SBStructuredData::GetValueForKey(const char *key) const {

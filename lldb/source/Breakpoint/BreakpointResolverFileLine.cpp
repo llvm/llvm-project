@@ -256,8 +256,8 @@ BreakpointResolverFileLine::SearchCallback(SearchFilter &filter,
   return Searcher::eCallbackReturnContinue;
 }
 
-Searcher::Depth BreakpointResolverFileLine::GetDepth() {
-  return Searcher::eDepthModule;
+lldb::SearchDepth BreakpointResolverFileLine::GetDepth() {
+  return lldb::eSearchDepthModule;
 }
 
 void BreakpointResolverFileLine::GetDescription(Stream *s) {

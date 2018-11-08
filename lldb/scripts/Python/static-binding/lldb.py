@@ -149,6 +149,7 @@ LLDB_OPT_SET_7 = _lldb.LLDB_OPT_SET_7
 LLDB_OPT_SET_8 = _lldb.LLDB_OPT_SET_8
 LLDB_OPT_SET_9 = _lldb.LLDB_OPT_SET_9
 LLDB_OPT_SET_10 = _lldb.LLDB_OPT_SET_10
+LLDB_OPT_SET_11 = _lldb.LLDB_OPT_SET_11
 eStateInvalid = _lldb.eStateInvalid
 eStateUnloaded = _lldb.eStateUnloaded
 eStateConnected = _lldb.eStateConnected
@@ -271,6 +272,14 @@ eExpressionHitBreakpoint = _lldb.eExpressionHitBreakpoint
 eExpressionTimedOut = _lldb.eExpressionTimedOut
 eExpressionResultUnavailable = _lldb.eExpressionResultUnavailable
 eExpressionStoppedForDebug = _lldb.eExpressionStoppedForDebug
+eSearchDepthInvalid = _lldb.eSearchDepthInvalid
+eSearchDepthTarget = _lldb.eSearchDepthTarget
+eSearchDepthModule = _lldb.eSearchDepthModule
+eSearchDepthCompUnit = _lldb.eSearchDepthCompUnit
+eSearchDepthFunction = _lldb.eSearchDepthFunction
+eSearchDepthBlock = _lldb.eSearchDepthBlock
+eSearchDepthAddress = _lldb.eSearchDepthAddress
+kLastSearchDepthKind = _lldb.kLastSearchDepthKind
 eConnectionStatusSuccess = _lldb.eConnectionStatusSuccess
 eConnectionStatusEndOfFile = _lldb.eConnectionStatusEndOfFile
 eConnectionStatusError = _lldb.eConnectionStatusError
@@ -1630,6 +1639,10 @@ class SBBreakpoint(_object):
         GetDescription(self, SBStream description, bool include_locations) -> bool
         """
         return _lldb.SBBreakpoint_GetDescription(self, *args)
+
+    def AddLocation(self, *args):
+        """AddLocation(self, SBAddress address) -> SBError"""
+        return _lldb.SBBreakpoint_AddLocation(self, *args)
 
     def __eq__(self, *args):
         """__eq__(self, SBBreakpoint rhs) -> bool"""
@@ -8535,6 +8548,10 @@ class SBStructuredData(_object):
         """GetSize(self) -> size_t"""
         return _lldb.SBStructuredData_GetSize(self)
 
+    def GetKeys(self, *args):
+        """GetKeys(self, SBStringList keys) -> bool"""
+        return _lldb.SBStructuredData_GetKeys(self, *args)
+
     def GetValueForKey(self, *args):
         """GetValueForKey(self, str key) -> SBStructuredData"""
         return _lldb.SBStructuredData_GetValueForKey(self, *args)
@@ -9670,6 +9687,74 @@ class SBTarget(_object):
     def BreakpointCreateBySBAddress(self, *args):
         """BreakpointCreateBySBAddress(self, SBAddress sb_address) -> SBBreakpoint"""
         return _lldb.SBTarget_BreakpointCreateBySBAddress(self, *args)
+
+    def BreakpointCreateFromScript(self, *args):
+        """
+        BreakpointCreateFromScript(self, str class_name, SBStructuredData extra_args, SBFileSpecList module_list, 
+            SBFileSpecList file_list, 
+            bool request_hardware = False) -> SBBreakpoint
+        BreakpointCreateFromScript(self, str class_name, SBStructuredData extra_args, SBFileSpecList module_list, 
+            SBFileSpecList file_list) -> SBBreakpoint
+
+        Create a breakpoint using a scripted resolver.
+        
+        @param[in] class_name
+           This is the name of the class that implements a scripted resolver.
+           The class should have the following signature:
+           class Resolver:
+               def __init__(self, bkpt, extra_args):
+                   # bkpt - the breakpoint for which this is the resolver.  When
+                   # the resolver finds an interesting address, call AddLocation
+                   # on this breakpoint to add it.
+                   #
+                   # extra_args - an SBStructuredData that can be used to 
+                   # parametrize this instance.  Same as the extra_args passed
+                   # to BreakpointCreateFromScript.
+        
+               def __get_depth__ (self):
+                   # This is optional, but if defined, you should return the
+                   # depth at which you want the callback to be called.  The
+                   # available options are:
+                   #    lldb.eSearchDepthModule
+                   #    lldb.eSearchDepthCompUnit
+                   # The default if you don't implement this method is
+                   # eSearchDepthModule.
+                   
+               def __callback__(self, sym_ctx):
+                   # sym_ctx - an SBSymbolContext that is the cursor in the 
+                   # search through the program to resolve breakpoints.  
+                   # The sym_ctx will be filled out to the depth requested in
+                   # __get_depth__.
+                   # Look in this sym_ctx for new breakpoint locations,
+                   # and if found use bkpt.AddLocation to add them.
+                   # Note, you will only get called for modules/compile_units that
+                   # pass the SearchFilter provided by the module_list & file_list
+                   # passed into BreakpointCreateFromScript.
+        
+               def get_short_help(self):
+                   # Optional, but if implemented return a short string that will
+                   # be printed at the beginning of the break list output for the
+                   # breakpoint.
+        
+        @param[in] extra_args
+           This is an SBStructuredData object that will get passed to the
+           constructor of the class in class_name.  You can use this to 
+           reuse the same class, parametrizing it with entries from this 
+           dictionary.
+        
+        @param module_list
+           If this is non-empty, this will be used as the module filter in the 
+           SearchFilter created for this breakpoint.
+        
+        @param file_list
+           If this is non-empty, this will be used as the comp unit filter in the 
+           SearchFilter created for this breakpoint.
+        
+        @return
+            An SBBreakpoint that will set locations based on the logic in the
+            resolver's search callback.
+        """
+        return _lldb.SBTarget_BreakpointCreateFromScript(self, *args)
 
     def GetNumBreakpoints(self):
         """GetNumBreakpoints(self) -> uint32_t"""

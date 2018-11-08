@@ -158,6 +158,7 @@ public:
     AddressResolver,      // This is an instance of BreakpointResolverAddress
     NameResolver,         // This is an instance of BreakpointResolverName
     FileRegexResolver,
+    PythonResolver,
     ExceptionResolver,
     LastKnownResolverType = ExceptionResolver,
     UnknownResolver
@@ -204,14 +205,19 @@ protected:
     ModuleName,
     NameMaskArray,
     Offset,
+    PythonClassName,
     RegexString,
+    ScriptArgs,
     SectionName,
+    SearchDepth,
     SkipPrologue,
     SymbolNameArray,
     LastOptionName
   };
   static const char
       *g_option_names[static_cast<uint32_t>(OptionNames::LastOptionName)];
+  
+  virtual void NotifyBreakpointSet() {};
 
 public:
   static const char *GetKey(OptionNames enum_value) {

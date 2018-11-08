@@ -23,6 +23,8 @@
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Breakpoint/BreakpointResolver.h"
+#include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
@@ -486,6 +488,40 @@ bool SBBreakpoint::GetDescription(SBStream &s, bool include_locations) {
   s.Printf("No value");
   return false;
 }
+
+SBError
+SBBreakpoint::AddLocation(SBAddress &address) {
+    BreakpointSP bkpt_sp = GetSP();
+    SBError error;
+  
+    if (!address.IsValid()) {
+      error.SetErrorString("Can't add an invalid address.");
+      return error;
+    }
+  
+    if (!bkpt_sp) {
+      error.SetErrorString("No breakpoint to add a location to.");
+      return error;
+    }
+  
+    if (!llvm::isa<BreakpointResolverScripted>(bkpt_sp->GetResolver().get())) {
+      error.SetErrorString("Only a scripted resolver can add locations.");
+      return error;
+    }
+  
+    if (bkpt_sp->GetSearchFilter()->AddressPasses(address.ref()))
+      bkpt_sp->AddLocation(address.ref());
+    else
+    {
+      StreamString s;
+      address.get()->Dump(&s, &bkpt_sp->GetTarget(),
+                          Address::DumpStyleModuleWithFileAddress);
+      error.SetErrorStringWithFormat("Address: %s didn't pass the filter.",
+                                     s.GetData());
+    }
+    return error;
+}
+
 
 void SBBreakpoint
   ::SetCallback(SBBreakpointHitCallback callback,

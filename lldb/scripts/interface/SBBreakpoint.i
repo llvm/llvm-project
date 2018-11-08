@@ -226,6 +226,10 @@ public:
     bool 
     GetDescription(lldb::SBStream &description, bool include_locations);
 
+    // Can only be called from a ScriptedBreakpointResolver...
+    SBError
+    AddLocation(SBAddress &address);
+
     bool
     operator == (const lldb::SBBreakpoint& rhs);
            
