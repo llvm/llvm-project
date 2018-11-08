@@ -303,8 +303,6 @@ bool ToolInvocation::run() {
 
   const std::unique_ptr<driver::Driver> Driver(
       newDriver(&Diagnostics, BinaryName, Files->getVirtualFileSystem()));
-  // Since the input might only be virtual, don't check whether it exists.
-  Driver->setCheckInputsExist(false);
   const std::unique_ptr<driver::Compilation> Compilation(
       Driver->BuildCompilation(llvm::makeArrayRef(Argv)));
   if (!Compilation)

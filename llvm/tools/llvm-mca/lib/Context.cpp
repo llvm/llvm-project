@@ -20,8 +20,8 @@
 #include "HardwareUnits/RetireControlUnit.h"
 #include "HardwareUnits/Scheduler.h"
 #include "Stages/DispatchStage.h"
+#include "Stages/EntryStage.h"
 #include "Stages/ExecuteStage.h"
-#include "Stages/FetchStage.h"
 #include "Stages/RetireStage.h"
 
 namespace llvm {
@@ -40,7 +40,7 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
   auto HWS = llvm::make_unique<Scheduler>(SM, LSU.get());
 
   // Create the pipeline stages.
-  auto Fetch = llvm::make_unique<FetchStage>(SrcMgr);
+  auto Fetch = llvm::make_unique<EntryStage>(SrcMgr);
   auto Dispatch = llvm::make_unique<DispatchStage>(STI, MRI, Opts.DispatchWidth,
                                                    *RCU, *PRF);
   auto Execute = llvm::make_unique<ExecuteStage>(*HWS);

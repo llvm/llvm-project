@@ -3479,21 +3479,13 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
     bool Signed = II->getIntrinsicID() == Intrinsic::amdgcn_sbfe;
 
-    // TODO: Also emit sub if only width is constant.
-    if (!CWidth && COffset && Offset == 0) {
-      Constant *KSize = ConstantInt::get(COffset->getType(), IntSize);
-      Value *ShiftVal = Builder.CreateSub(KSize, II->getArgOperand(2));
-      ShiftVal = Builder.CreateZExt(ShiftVal, II->getType());
-
-      Value *Shl = Builder.CreateShl(Src, ShiftVal);
-      Value *RightShift = Signed ? Builder.CreateAShr(Shl, ShiftVal)
-                                 : Builder.CreateLShr(Shl, ShiftVal);
-      RightShift->takeName(II);
-      return replaceInstUsesWith(*II, RightShift);
-    }
-
     if (!CWidth || !COffset)
       break;
+
+    // The case of Width == 0 is handled above, which makes this tranformation
+    // safe.  If Width == 0, then the ashr and lshr instructions become poison
+    // value since the shift amount would be equal to the bit size.
+    assert(Width != 0);
 
     // TODO: This allows folding to undef when the hardware has specific
     // behavior?

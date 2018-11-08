@@ -645,7 +645,7 @@ PDBLinker::mergeInPrecompHeaderObj(ObjFile *File, const CVType &FirstType,
 
   auto E = aquirePrecompObj(File, Precomp);
   if (!E)
-    return createFileError(Precomp.getPrecompFilePath().str(), E.takeError());
+    return E.takeError();
 
   const CVIndexMap &PrecompIndexMap = *E;
   assert(PrecompIndexMap.IsPrecompiledTypeMap);
@@ -670,28 +670,18 @@ static bool equals_path(StringRef path1, StringRef path2) {
 #endif
 }
 
-// Find an OBJ provided on the command line, either by name or full path
-static Optional<std::pair<ObjFile *, std::string>>
-findObjByName(StringRef NameOrPath) {
+// Find by name an OBJ provided on the command line
+static ObjFile *findObjByName(StringRef FileNameOnly) {
   SmallString<128> CurrentPath;
 
-  StringRef FileNameOnly = sys::path::filename(NameOrPath);
-
   for (ObjFile *F : ObjFile::Instances) {
-    CurrentPath = F->getName();
-    sys::fs::make_absolute(CurrentPath);
+    StringRef CurrentFileName = sys::path::filename(F->getName());
 
-    // First compare with the full path name
-    if (equals_path(CurrentPath, NameOrPath))
-      return std::make_pair(F, CurrentPath.str().str());
-
-    StringRef CurrentFileName = sys::path::filename(CurrentPath);
-
-    // Otherwise compare based solely on the file name (link.exe behavior)
+    // Compare based solely on the file name (link.exe behavior)
     if (equals_path(CurrentFileName, FileNameOnly))
-      return std::make_pair(F, CurrentPath.str().str());
+      return F;
   }
-  return {};
+  return nullptr;
 }
 
 std::pair<CVIndexMap &, bool /*already there*/>
@@ -715,29 +705,29 @@ PDBLinker::aquirePrecompObj(ObjFile *File, PrecompRecord Precomp) {
 
   CVIndexMap &IndexMap = R.first;
 
-  SmallString<128> PrecompPath = Precomp.getPrecompFilePath();
-  sys::fs::make_absolute(PrecompPath);
-
   // Cross-compile warning: given that Clang doesn't generate LF_PRECOMP
   // records, we assume the OBJ comes from a Windows build of cl.exe. Thusly,
   // the paths embedded in the OBJs are in the Windows format.
-  sys::path::native(PrecompPath, sys::path::Style::windows);
+  SmallString<128> PrecompFileName = sys::path::filename(
+      Precomp.getPrecompFilePath(), sys::path::Style::windows);
 
   // link.exe requires that a precompiled headers object must always be provided
   // on the command-line, even if that's not necessary.
-  auto PrecompFilePath = findObjByName(PrecompPath);
-  if (!PrecompFilePath)
-    return errorCodeToError(std::error_code(ENOENT, std::generic_category()));
+  auto PrecompFile = findObjByName(PrecompFileName);
+  if (!PrecompFile)
+    return createFileError(
+        PrecompFileName.str(),
+        make_error<pdb::PDBError>(pdb::pdb_error_code::external_cmdline_ref));
 
-  ObjFile *CurrentFile = PrecompFilePath->first;
+  addObjFile(PrecompFile, &IndexMap);
 
-  addObjFile(CurrentFile, &IndexMap);
+  if (!PrecompFile->EndPrecomp)
+    fatal(PrecompFile->getName() + " is not a precompiled headers object");
 
-  if (!CurrentFile->EndPrecomp)
-    fatal(PrecompFilePath->second + " is not a precompiled headers object");
-
-  if (Precomp.getSignature() != CurrentFile->EndPrecomp->getSignature())
-    return make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date);
+  if (Precomp.getSignature() != PrecompFile->EndPrecomp->getSignature())
+    return createFileError(
+        Precomp.getPrecompFilePath().str(),
+        make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date));
 
   return IndexMap;
 }

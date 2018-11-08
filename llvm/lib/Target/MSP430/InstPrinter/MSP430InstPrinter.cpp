@@ -16,34 +16,28 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
+
 // Include the auto-generated portion of the assembly writer.
-#define PRINT_ALIAS_INSTR
 #include "MSP430GenAsmWriter.inc"
 
 void MSP430InstPrinter::printInst(const MCInst *MI, raw_ostream &O,
                                   StringRef Annot, const MCSubtargetInfo &STI) {
-  if (!printAliasInstr(MI, O))
-    printInstruction(MI, O);
+  printInstruction(MI, O);
   printAnnotation(O, Annot);
 }
 
 void MSP430InstPrinter::printPCRelImmOperand(const MCInst *MI, unsigned OpNo,
                                              raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
-  if (Op.isImm()) {
-    int64_t Imm = Op.getImm() * 2 + 2;
-    O << "$";
-    if (Imm >= 0)
-      O << '+';
-    O << Imm;
-  } else {
+  if (Op.isImm())
+    O << Op.getImm();
+  else {
     assert(Op.isExpr() && "unknown pcrel immediate operand");
     Op.getExpr()->print(O, &MAI);
   }
@@ -78,7 +72,7 @@ void MSP430InstPrinter::printSrcMemOperand(const MCInst *MI, unsigned OpNo,
   // vs
   //   mov.w glb(r1), r2
   // Otherwise (!) msp430-as will silently miscompile the output :(
-  if (Base.getReg() == MSP430::SR)
+  if (!Base.getReg())
     O << '&';
 
   if (Disp.isExpr())
@@ -89,21 +83,8 @@ void MSP430InstPrinter::printSrcMemOperand(const MCInst *MI, unsigned OpNo,
   }
 
   // Print register base field
-  if ((Base.getReg() != MSP430::SR) &&
-      (Base.getReg() != MSP430::PC))
+  if (Base.getReg())
     O << '(' << getRegisterName(Base.getReg()) << ')';
-}
-
-void MSP430InstPrinter::printIndRegOperand(const MCInst *MI, unsigned OpNo,
-                                           raw_ostream &O) {
-  const MCOperand &Base = MI->getOperand(OpNo);
-  O << "@" << getRegisterName(Base.getReg());
-}
-
-void MSP430InstPrinter::printPostIndRegOperand(const MCInst *MI, unsigned OpNo,
-                                               raw_ostream &O) {
-  const MCOperand &Base = MI->getOperand(OpNo);
-  O << "@" << getRegisterName(Base.getReg()) << "+";
 }
 
 void MSP430InstPrinter::printCCOperand(const MCInst *MI, unsigned OpNo,
@@ -130,9 +111,6 @@ void MSP430InstPrinter::printCCOperand(const MCInst *MI, unsigned OpNo,
    break;
   case MSP430CC::COND_L:
    O << 'l';
-   break;
-  case MSP430CC::COND_N:
-   O << 'n';
    break;
   }
 }

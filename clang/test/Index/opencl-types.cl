@@ -124,3 +124,11 @@ void kernel testMiscOpenCLTypes() {
 // CHECK: VarDecl=scalarOCLEvent:118:15 (Definition) [type=clk_event_t] [typekind=Typedef] [canonicaltype=clk_event_t] [canonicaltypekind=Unexposed] [isPOD=1]
 // CHECK: VarDecl=scalarOCLQueue:119:11 (Definition) [type=queue_t] [typekind=Typedef] [canonicaltype=queue_t] [canonicaltypekind=OCLQueue] [isPOD=1]
 // CHECK: VarDecl=scalarOCLReserveID:120:16 (Definition) [type=reserve_id_t] [typekind=Typedef] [canonicaltype=reserve_id_t] [canonicaltypekind=OCLReserveID] [isPOD=1]
+
+#pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : enable
+
+void kernel testExtOpenCLTypes() {
+  intel_sub_group_avc_mce_payload_t mce_payload;
+}
+
+// CHECK: VarDecl=mce_payload:131:37 (Definition){{( \(invalid\))?}} [type=intel_sub_group_avc_mce_payload_t] [typekind=Typedef] [canonicaltype=intel_sub_group_avc_mce_payload_t] [canonicaltypekind=OCLIntelSubgroupAVCMcePayload] [isPOD=1]
