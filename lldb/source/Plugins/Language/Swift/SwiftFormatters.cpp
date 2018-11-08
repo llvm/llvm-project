@@ -1001,6 +1001,19 @@ public:
   }
 };
 
+/// Read a vector from a buffer target.
+llvm::Optional<std::vector<std::string>>
+ReadVector(const SIMDElementFormatter &formatter, const uint8_t *buffer,
+           unsigned len, unsigned offset, unsigned num_elements) {
+  unsigned elt_size = formatter.getElementSize();
+  if ((offset + num_elements * elt_size) > len)
+    return llvm::None;
+  std::vector<std::string> elements;
+  for (unsigned I = 0; I < num_elements; ++I)
+    elements.emplace_back(formatter.Format(buffer + offset + (I * elt_size)));
+  return elements;
+}
+
 /// Read a SIMD vector from the target.
 llvm::Optional<std::vector<std::string>>
 ReadVector(Process &process, ValueObject &valobj,
@@ -1016,14 +1029,11 @@ ReadVector(Process &process, ValueObject &valobj,
   DataExtractor data;
   uint64_t len = value_sp->GetData(data, error);
   unsigned elt_size = formatter.getElementSize();
-  if (error.Fail() || (num_elements * elt_size) > len)
+  if (error.Fail())
     return llvm::None;
 
-  std::vector<std::string> elements;
   const uint8_t *buffer = data.GetDataStart();
-  for (unsigned I = 0; I < num_elements; ++I)
-    elements.emplace_back(formatter.Format(buffer + (I * elt_size)));
-  return elements;
+  return ReadVector(formatter, buffer, len, 0, num_elements);
 }
 
 /// Print a vector of elements as a row, if possible.
@@ -1034,6 +1044,30 @@ bool PrintRow(Stream &stream, llvm::Optional<std::vector<std::string>> vec) {
   std::string joined = llvm::join(*vec, ", ");
   stream.Printf("(%s)", joined.c_str());
   return true;
+}
+
+void PrintMatrix(Stream &stream,
+                 const std::vector<std::vector<std::string>> &matrix,
+                 int num_columns, int num_rows) {
+  // Print each row.
+  stream.Printf("\n[ ");
+  for (unsigned J = 0; J < num_rows; ++J) {
+    // Join the J-th row's elements with commas.
+    std::vector<std::string> row;
+    for (unsigned I = 0; I < num_columns; ++I)
+      row.emplace_back(std::move(matrix[I][J]));
+    std::string joined = llvm::join(row, ", ");
+
+    // Add spacing and punctuation to 1) make it possible to copy the matrix
+    // into a Python repl and 2) to avoid writing '[[' in FileCheck tests.
+    if (J > 0)
+      stream.Printf("  ");
+    stream.Printf("[%s]", joined.c_str());
+    if (J != (num_rows - 1))
+      stream.Printf(",\n");
+    else
+      stream.Printf(" ]\n");
+  }
 }
 
 } // end anonymous namespace
@@ -1115,27 +1149,59 @@ bool lldb_private::formatters::swift::AccelerateSIMD_SummaryProvider(
       columns.emplace_back(std::move(*vec));
     }
 
-    // Print each row.
-    stream.Printf("\n[ ");
-    for (unsigned J = 0; J < num_rows; ++J) {
-      // Join the J-th row's elements with commas.
-      std::vector<std::string> row;
-      for (unsigned I = 0; I < num_columns; ++I)
-        row.emplace_back(std::move(columns[I][J]));
-      std::string joined = llvm::join(row, ", ");
-
-      // Add spacing and punctuation to 1) make it possible to copy the matrix
-      // into a Python repl and 2) to avoid writing '[[' in FileCheck tests.
-      if (J > 0)
-        stream.Printf("  ");
-      stream.Printf("[%s]", joined.c_str());
-      if (J != (num_rows - 1))
-        stream.Printf(",\n");
-      else
-        stream.Printf(" ]\n");
-    }
+    PrintMatrix(stream, columns, num_columns, num_rows);
     return true;
   }
 
   return false;
+}
+
+bool lldb_private::formatters::swift::GLKit_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  Status error;
+
+  ProcessSP process_sp(valobj.GetProcessSP());
+  if (!process_sp)
+    return false;
+
+  Process &process = *process_sp.get();
+
+  // Get the type name without the "simd.simd_" prefix.
+  ConstString full_type_name = valobj.GetTypeName();
+  llvm::StringRef type_name = full_type_name.GetStringRef();
+
+  // Get the type of object this is.
+  bool is_quaternion = type_name == "GLKQuaternion";
+  bool is_matrix = type_name.startswith("GLKMatrix");
+  bool is_vector = type_name.startswith("GLKVector");
+
+  if (!(is_quaternion || is_matrix || is_vector))
+    return false;
+
+  SIMDElementFormatter formatter(SIMDElementKind::Float32);
+
+  unsigned num_elements =
+      is_quaternion ? 4 : llvm::hexDigitValue(type_name.back());
+  DataExtractor data;
+  uint64_t len = valobj.GetData(data, error);
+  const uint8_t *buffer = data.GetDataStart();
+  if (!is_matrix) {
+    return PrintRow(stream,
+                    ReadVector(formatter, buffer, len, 0, num_elements));
+  }
+
+  // GLKit matrices are stored column-major. Collect each column vector as a
+  // precursor for row-by-row pretty-printing.
+  std::vector<std::vector<std::string>> columns;
+  for (unsigned I = 0; I < num_elements; ++I) {
+    auto vec =
+        ReadVector(formatter, buffer, len, I * 4 * num_elements, num_elements);
+    if (!vec)
+      return false;
+
+    columns.emplace_back(std::move(*vec));
+  }
+
+  PrintMatrix(stream, columns, num_elements, num_elements);
+  return true;
 }
