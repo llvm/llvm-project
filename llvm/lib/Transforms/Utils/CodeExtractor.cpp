@@ -925,8 +925,16 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
     auto *OutI = dyn_cast<Instruction>(outputs[i]);
     if (!OutI)
       continue;
+
     // Find proper insertion point.
-    Instruction *InsertPt = OutI->getNextNode();
+    Instruction *InsertPt;
+    // In case OutI is an invoke, we insert the store at the beginning in the
+    // 'normal destination' BB. Otherwise we insert the store right after OutI.
+    if (auto *InvokeI = dyn_cast<InvokeInst>(OutI))
+      InsertPt = InvokeI->getNormalDest()->getFirstNonPHI();
+    else
+      InsertPt = OutI->getNextNode();
+
     // Let's assume that there is no other guy interleave non-PHI in PHIs.
     if (isa<PHINode>(InsertPt))
       InsertPt = InsertPt->getParent()->getFirstNonPHI();
