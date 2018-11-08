@@ -1426,6 +1426,7 @@ bool llvm::canConstantFoldCallTo(ImmutableCallSite CS, const Function *F) {
   case Intrinsic::x86_avx512_vcvtsd2usi64:
   case Intrinsic::x86_avx512_cvttsd2usi:
   case Intrinsic::x86_avx512_cvttsd2usi64:
+  case Intrinsic::is_constant:
     return true;
   default:
     return false;
@@ -1600,11 +1601,32 @@ double getValueAsDouble(ConstantFP *Op) {
   return APF.convertToDouble();
 }
 
+static bool isManifestConstant(const Constant *c) {
+  if (isa<ConstantData>(c)) {
+    return true;
+  } else if (isa<ConstantAggregate>(c) || isa<ConstantExpr>(c)) {
+    for (const Value *subc : c->operand_values()) {
+      if (!isManifestConstant(cast<Constant>(subc)))
+        return false;
+    }
+    return true;
+  }
+  return false;
+}
+
 Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
                                  ArrayRef<Constant *> Operands,
                                  const TargetLibraryInfo *TLI,
                                  ImmutableCallSite CS) {
   if (Operands.size() == 1) {
+    if (IntrinsicID == Intrinsic::is_constant) {
+      // We know we have a "Constant" argument. But we want to only
+      // return true for manifest constants, not those that depend on
+      // constants with unknowable values, e.g. GlobalValue or BlockAddress.
+      if (isManifestConstant(Operands[0]))
+        return ConstantInt::getTrue(Ty->getContext());
+      return nullptr;
+    }
     if (isa<UndefValue>(Operands[0])) {
       // cosine(arg) is between -1 and 1. cosine(invalid arg) is NaN
       if (IntrinsicID == Intrinsic::cos)

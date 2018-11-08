@@ -110,6 +110,9 @@ LowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym) const {
   return MCOperand::createExpr(Expr);
 }
 
+#define GET_REGINFO_ENUM
+#include "MSP430GenRegisterInfo.inc"
+
 void MSP430MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   OutMI.setOpcode(MI->getOpcode());
 

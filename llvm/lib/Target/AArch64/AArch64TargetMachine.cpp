@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
@@ -261,6 +262,16 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
     this->Options.NoTrapAfterNoreturn = true;
+  }
+
+  if (getMCAsmInfo()->usesWindowsCFI()) {
+    // Unwinding can get confused if the last instruction in an
+    // exception-handling region (function, funclet, try block, etc.)
+    // is a call.
+    //
+    // FIXME: We could elide the trap if the next instruction would be in
+    // the same region anyway.
+    this->Options.TrapUnreachable = true;
   }
 
   // Enable GlobalISel at or below EnableGlobalISelAt0.

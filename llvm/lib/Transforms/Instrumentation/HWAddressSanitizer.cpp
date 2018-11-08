@@ -743,7 +743,8 @@ void HWAddressSanitizer::createFrameGlobal(Function &F,
   appendToCompilerUsed(M, GV);
   // Put GV into the F's Comadat so that if F is deleted GV can be deleted too.
   if (&F != HwasanCtorFunction)
-    if (auto Comdat = GetOrCreateFunctionComdat(F, CurModuleUniqueId))
+    if (auto Comdat =
+            GetOrCreateFunctionComdat(F, TargetTriple, CurModuleUniqueId))
       GV->setComdat(Comdat);
 }
 

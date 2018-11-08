@@ -80,15 +80,15 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
     unsigned Carry = MRI.createGenericVirtualRegister(sHalf);
     unsigned TmpResHigh = MRI.createGenericVirtualRegister(sHalf);
 
-    MIRBuilder.buildUnmerge({RHSHigh, RHSLow}, MI.getOperand(2).getReg());
-    MIRBuilder.buildUnmerge({LHSHigh, LHSLow}, MI.getOperand(1).getReg());
+    MIRBuilder.buildUnmerge({RHSLow, RHSHigh}, MI.getOperand(2).getReg());
+    MIRBuilder.buildUnmerge({LHSLow, LHSHigh}, MI.getOperand(1).getReg());
 
     MIRBuilder.buildAdd(TmpResHigh, LHSHigh, RHSHigh);
     MIRBuilder.buildAdd(ResLow, LHSLow, RHSLow);
     MIRBuilder.buildICmp(CmpInst::ICMP_ULT, Carry, ResLow, LHSLow);
     MIRBuilder.buildAdd(ResHigh, TmpResHigh, Carry);
 
-    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), {ResHigh, ResLow});
+    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), {ResLow, ResHigh});
 
     MI.eraseFromParent();
     break;
@@ -109,7 +109,7 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
         ResHigh, *ConstantInt::get(MI.getMF()->getFunction().getContext(),
                                    CImmValue.lshr(Size / 2).trunc(Size / 2)));
 
-    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), {ResHigh, ResLow});
+    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), {ResLow, ResHigh});
 
     MI.eraseFromParent();
     break;

@@ -169,9 +169,6 @@ public:
   /// This is initialized after we go through and create the actual function.
   MachineFunction *MF = nullptr;
 
-  /// A number assigned to this function which appears at the end of its name.
-  unsigned Name;
-
   /// The sequence of integers corresponding to the instructions in this
   /// function.
   std::vector<unsigned> Sequence;

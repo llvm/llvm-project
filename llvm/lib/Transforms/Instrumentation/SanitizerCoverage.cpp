@@ -577,8 +577,9 @@ GlobalVariable *SanitizerCoverageModule::CreateFunctionLocalArrayInSection(
       *CurModule, ArrayTy, false, GlobalVariable::PrivateLinkage,
       Constant::getNullValue(ArrayTy), "__sancov_gen_");
 
-  if (TargetTriple.isOSBinFormatELF())
-    if (auto Comdat = GetOrCreateFunctionComdat(F, CurModuleUniqueId))
+  if (TargetTriple.supportsCOMDAT())
+    if (auto Comdat =
+            GetOrCreateFunctionComdat(F, TargetTriple, CurModuleUniqueId))
       Array->setComdat(Comdat);
   Array->setSection(getSectionName(Section));
   Array->setAlignment(Ty->isPointerTy() ? DL->getPointerSize()
