@@ -10,19 +10,19 @@ jobs:
       - run:
           name: submodules
           command: |
-	    git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
-	    git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
-	    git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
-	    git clone https://github.com/llvm-mirror/lld.git tools/lld
-	    cd tools/clang
-	    git checkout xla
-	    cd ../polly
-	    git checkout release_70
-	    cd ../lld
-	    git checkout release_70
-	    cd ../../projects/compiler-rt
-	    git checkout xla
-	    cd ../..
+            git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
+            git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
+            git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
+            git clone https://github.com/llvm-mirror/lld.git tools/lld
+            cd tools/clang
+            git checkout xla
+            cd ../polly
+            git checkout release_70
+            cd ../lld
+            git checkout release_70
+            cd ../../projects/compiler-rt
+            git checkout xla
+            cd ../..
       - run:
           name: cmake
           command: |
@@ -62,19 +62,19 @@ jobs:
       - run:
           name: submodules
           command: |
-	    git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
-	    git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
-	    git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
-	    git clone https://github.com/llvm-mirror/lld.git tools/lld
-	    cd tools/clang
-	    git checkout xla
-	    cd ../polly
-	    git checkout release_70
-	    cd ../lld
-	    git checkout release_70
-	    cd ../../projects/compiler-rt
-	    git checkout xla
-	    cd ../..
+            git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
+            git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
+            git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
+            git clone https://github.com/llvm-mirror/lld.git tools/lld
+            cd tools/clang
+            git checkout xla
+            cd ../polly
+            git checkout release_70
+            cd ../lld
+            git checkout release_70
+            cd ../../projects/compiler-rt
+            git checkout xla
+            cd ../..
       - run:
           name: cmake
           command: |
@@ -114,19 +114,19 @@ jobs:
       - run:
           name: submodules
           command: |
-	    git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
-	    git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
-	    git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
-	    git clone https://github.com/llvm-mirror/lld.git tools/lld
-	    cd tools/clang
-	    git checkout xla
-	    cd ../polly
-	    git checkout release_70
-	    cd ../lld
-	    git checkout release_70
-	    cd ../../projects/compiler-rt
-	    git checkout xla
-	    cd ../..
+            git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
+            git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
+            git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
+            git clone https://github.com/llvm-mirror/lld.git tools/lld
+            cd tools/clang
+            git checkout xla
+            cd ../polly
+            git checkout release_70
+            cd ../lld
+            git checkout release_70
+            cd ../../projects/compiler-rt
+            git checkout xla
+            cd ../..
       - run:
           name: cmake
           command: |
