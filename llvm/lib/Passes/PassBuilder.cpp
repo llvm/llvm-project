@@ -608,9 +608,6 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                            true));
   }
 
-  if (EnableHotColdSplit)
-    MPM.addPass(HotColdSplittingPass());
-
   // Interprocedural constant propagation now that basic cleanup has occurred
   // and prior to optimizing globals.
   // FIXME: This position in the pipeline hasn't been carefully considered in
@@ -698,6 +695,9 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   // CGSCC walk.
   MainCGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
       buildFunctionSimplificationPipeline(Level, Phase, DebugLogging)));
+
+  if (EnableHotColdSplit)
+    MPM.addPass(HotColdSplittingPass());
 
   for (auto &C : CGSCCOptimizerLateEPCallbacks)
     C(MainCGPipeline, Level);
