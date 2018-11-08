@@ -5195,6 +5195,20 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Kind::PseudoObject:
     case clang::BuiltinType::Kind::UnknownAny:
       break;
+
+    case clang::BuiltinType::OCLIntelSubgroupAVCMcePayload:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImePayload:
+    case clang::BuiltinType::OCLIntelSubgroupAVCRefPayload:
+    case clang::BuiltinType::OCLIntelSubgroupAVCSicPayload:
+    case clang::BuiltinType::OCLIntelSubgroupAVCMceResult:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeResult:
+    case clang::BuiltinType::OCLIntelSubgroupAVCRefResult:
+    case clang::BuiltinType::OCLIntelSubgroupAVCSicResult:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeResultSingleRefStreamout:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeResultDualRefStreamout:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeSingleRefStreamin:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeDualRefStreamin:
+      break;
     }
     break;
   // All pointer types are represented as unsigned integer encodings. We may
