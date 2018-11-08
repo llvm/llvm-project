@@ -8959,43 +8959,55 @@ bool ClangASTContext::CompleteTagDeclarationDefinition(
 }
 
 clang::EnumConstantDecl *ClangASTContext::AddEnumerationValueToEnumerationType(
-    lldb::opaque_compiler_type_t type,
-    const CompilerType &enumerator_clang_type, const Declaration &decl,
-    const char *name, int64_t enum_value, uint32_t enum_value_bit_size) {
-  if (type && enumerator_clang_type.IsValid() && name && name[0]) {
-    clang::QualType enum_qual_type(GetCanonicalQualType(type));
+    const CompilerType &enum_type, const Declaration &decl, const char *name,
+    int64_t enum_value, uint32_t enum_value_bit_size) {
 
-    bool is_signed = false;
-    enumerator_clang_type.IsIntegerType(is_signed);
-    const clang::Type *clang_type = enum_qual_type.getTypePtr();
-    if (clang_type) {
-      const clang::EnumType *enutype =
-          llvm::dyn_cast<clang::EnumType>(clang_type);
+  if (!enum_type || ConstString(name).IsEmpty())
+    return nullptr;
 
-      if (enutype) {
-        llvm::APSInt enum_llvm_apsint(enum_value_bit_size, is_signed);
-        enum_llvm_apsint = enum_value;
-        clang::EnumConstantDecl *enumerator_decl =
-            clang::EnumConstantDecl::Create(
-                *getASTContext(), enutype->getDecl(), clang::SourceLocation(),
-                name ? &getASTContext()->Idents.get(name)
-                     : nullptr, // Identifier
-                ClangUtil::GetQualType(enumerator_clang_type),
-                nullptr, enum_llvm_apsint);
+  lldbassert(enum_type.GetTypeSystem() == static_cast<TypeSystem *>(this));
 
-        if (enumerator_decl) {
-          enutype->getDecl()->addDecl(enumerator_decl);
+  lldb::opaque_compiler_type_t enum_opaque_compiler_type =
+      enum_type.GetOpaqueQualType();
+
+  if (!enum_opaque_compiler_type)
+    return nullptr;
+
+  CompilerType underlying_type =
+      GetEnumerationIntegerType(enum_type.GetOpaqueQualType());
+
+  clang::QualType enum_qual_type(
+      GetCanonicalQualType(enum_opaque_compiler_type));
+
+  bool is_signed = false;
+  underlying_type.IsIntegerType(is_signed);
+  const clang::Type *clang_type = enum_qual_type.getTypePtr();
+
+  if (!clang_type)
+    return nullptr;
+
+  const clang::EnumType *enutype = llvm::dyn_cast<clang::EnumType>(clang_type);
+
+  if (!enutype)
+    return nullptr;
+
+  llvm::APSInt enum_llvm_apsint(enum_value_bit_size, is_signed);
+  enum_llvm_apsint = enum_value;
+  clang::EnumConstantDecl *enumerator_decl = clang::EnumConstantDecl::Create(
+      *getASTContext(), enutype->getDecl(), clang::SourceLocation(),
+      name ? &getASTContext()->Idents.get(name) : nullptr, // Identifier
+      clang::QualType(enutype, 0), nullptr, enum_llvm_apsint);
+
+  if (!enumerator_decl)
+    return nullptr;
+
+  enutype->getDecl()->addDecl(enumerator_decl);
 
 #ifdef LLDB_CONFIGURATION_DEBUG
-          VerifyDecl(enumerator_decl);
+  VerifyDecl(enumerator_decl);
 #endif
 
-          return enumerator_decl;
-        }
-      }
-    }
-  }
-  return nullptr;
+  return enumerator_decl;
 }
 
 CompilerType
