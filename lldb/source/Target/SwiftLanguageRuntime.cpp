@@ -1162,7 +1162,7 @@ SwiftLanguageRuntime::GetMemoryReader() {
         return false;
       }
 
-      if (log) {
+      if (log && log->GetVerbose()) {
         StreamString stream;
         for (uint64_t i = 0; i < size; i++) {
           stream.PutHex8(dest[i]);
