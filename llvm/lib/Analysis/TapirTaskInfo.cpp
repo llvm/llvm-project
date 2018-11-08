@@ -768,6 +768,7 @@ void Task::verify(const TaskInfo *TI, const BasicBlock *Entry,
     BasicBlock *TEntry = T->getEntry();
     assert(DetachedBlocks.count(TEntry) &&
            "Subtask entry not among set of detached blocks");
+#ifndef NDEBUG
     BasicBlock *TPred = TEntry->getSinglePredecessor();
     assert(TPred && "Task entry does not have a single predecessors");
 
@@ -789,7 +790,7 @@ void Task::verify(const TaskInfo *TI, const BasicBlock *Entry,
     for (BasicBlock *B : TaskBlocks)
       assert(DT.dominates(DetachEdge, B) &&
              "Detach edge does not dominate all blocks in task");
-
+#endif
     // Recursively verify the subtask.
     T->verify(TI, TEntry, DT);
   }
@@ -803,12 +804,14 @@ void TaskInfo::verify(const DominatorTree &DT) const {
   // associated dominator tree.
   SmallVector<BasicBlock *, 32> TaskBlocks;
   RootTask->getDominatedBlocks(TaskBlocks);
+#ifndef NDEBUG
   for (BasicBlock *B : TaskBlocks) {
     Spindle *S = getSpindleFor(B);
     assert(S && "TaskInfo does not associate this block with a spindle");
     assert(getTaskFor(S) &&
            "TaskInfo does not associate a task with this spindle");
   }
+#endif
   RootTask->verify(this, DT.getRoot(), DT);
 }
 
