@@ -11,4 +11,6 @@ target variable -T UnnamedClassInstance
 target variable -T PointersInstance
 target variable -T ReferencesInstance
 
+target modules dump ast
+
 quit

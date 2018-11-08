@@ -159,13 +159,9 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
   TypeSP underlying_type =
       m_symbol_file.GetOrCreateType(m_cvr.er.getUnderlyingType());
 
-  lldb::opaque_compiler_type_t enum_qt = m_derived_ct.GetOpaqueQualType();
-
-  CompilerType enumerator_type = clang.GetEnumerationIntegerType(enum_qt);
   uint64_t byte_size = underlying_type->GetByteSize();
   clang.AddEnumerationValueToEnumerationType(
-      m_derived_ct.GetOpaqueQualType(), enumerator_type, decl,
-      name.str().c_str(), enumerator.Value.getSExtValue(),
+      m_derived_ct, decl, name.str().c_str(), enumerator.Value.getSExtValue(),
       byte_size * 8);
   return Error::success();
 }

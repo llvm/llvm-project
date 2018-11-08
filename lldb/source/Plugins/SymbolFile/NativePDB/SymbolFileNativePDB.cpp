@@ -13,13 +13,16 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Type.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamBuffer.h"
+#include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/ClangASTImporter.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
+#include "lldb/Symbol/ClangUtil.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -43,13 +46,13 @@
 #include "llvm/DebugInfo/PDB/Native/SymbolStream.h"
 #include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
+#include "llvm/Demangle/MicrosoftDemangle.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryStreamReader.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
-
-#include "Plugins/Language/CPlusPlus/CPlusPlusNameParser.h"
 
 #include "PdbSymUid.h"
 #include "PdbUtil.h"
@@ -527,7 +530,58 @@ void SymbolFileNativePDB::InitializeObject() {
   TypeSystem *ts = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);
   m_clang = llvm::dyn_cast_or_null<ClangASTContext>(ts);
   m_importer = llvm::make_unique<ClangASTImporter>();
+
+  PreprocessTpiStream();
   lldbassert(m_clang);
+}
+
+void SymbolFileNativePDB::PreprocessTpiStream() {
+  LazyRandomTypeCollection &types = m_index->tpi().typeCollection();
+
+  for (auto ti = types.getFirst(); ti; ti = types.getNext(*ti)) {
+    CVType type = types.getType(*ti);
+    if (!IsTagRecord(type))
+      continue;
+
+    CVTagRecord tag = CVTagRecord::create(type);
+    // We're looking for LF_NESTTYPE records in the field list, so ignore
+    // forward references (no field list), and anything without a nested class
+    // (since there won't be any LF_NESTTYPE records).
+    if (tag.asTag().isForwardRef() || !tag.asTag().containsNestedClass())
+      continue;
+
+    struct ProcessTpiStream : public TypeVisitorCallbacks {
+      ProcessTpiStream(PdbIndex &index, TypeIndex parent,
+                       llvm::DenseMap<TypeIndex, TypeIndex> &parents)
+          : index(index), parents(parents), parent(parent) {}
+
+      PdbIndex &index;
+      llvm::DenseMap<TypeIndex, TypeIndex> &parents;
+      TypeIndex parent;
+
+      llvm::Error visitKnownMember(CVMemberRecord &CVR,
+                                   NestedTypeRecord &Record) override {
+        parents[Record.Type] = parent;
+        CVType child = index.tpi().getType(Record.Type);
+        if (!IsForwardRefUdt(child))
+          return llvm::ErrorSuccess();
+        llvm::Expected<TypeIndex> full_decl =
+            index.tpi().findFullDeclForForwardRef(Record.Type);
+        if (!full_decl) {
+          llvm::consumeError(full_decl.takeError());
+          return llvm::ErrorSuccess();
+        }
+        parents[*full_decl] = parent;
+        return llvm::ErrorSuccess();
+      }
+    };
+
+    CVType field_list = m_index->tpi().getType(tag.asTag().FieldList);
+    ProcessTpiStream process(*m_index, *ti, m_parent_types);
+    llvm::Error error = visitMemberRecordStream(field_list.data(), process);
+    if (error)
+      llvm::consumeError(std::move(error));
+  }
 }
 
 uint32_t SymbolFileNativePDB::GetNumCompileUnits() {
@@ -730,16 +784,69 @@ lldb::TypeSP SymbolFileNativePDB::CreateSimpleType(TypeIndex ti) {
                                 ct, Type::eResolveStateFull);
 }
 
+static std::string RenderDemanglerNode(llvm::ms_demangle::Node *n) {
+  OutputStream OS;
+  initializeOutputStream(nullptr, nullptr, OS, 1024);
+  n->output(OS, llvm::ms_demangle::OF_Default);
+  OS << '\0';
+  return {OS.getBuffer()};
+}
+
+std::pair<clang::DeclContext *, std::string>
+SymbolFileNativePDB::CreateDeclInfoForType(const TagRecord &record,
+                                           TypeIndex ti) {
+  llvm::ms_demangle::Demangler demangler;
+  StringView sv(record.UniqueName.begin(), record.UniqueName.size());
+  llvm::ms_demangle::TagTypeNode *ttn = demangler.parseTagUniqueName(sv);
+  llvm::ms_demangle::IdentifierNode *idn =
+      ttn->QualifiedName->getUnqualifiedIdentifier();
+  std::string uname = RenderDemanglerNode(idn);
+
+  llvm::ms_demangle::NodeArrayNode *name_components =
+      ttn->QualifiedName->Components;
+  llvm::ArrayRef<llvm::ms_demangle::Node *> scopes(name_components->Nodes,
+                                                   name_components->Count - 1);
+
+  clang::DeclContext *context = m_clang->GetTranslationUnitDecl();
+
+  // If this type doesn't have a parent type in the debug info, then the best we
+  // can do is to say that it's either a series of namespaces (if the scope is
+  // non-empty), or the translation unit (if the scope is empty).
+  auto parent_iter = m_parent_types.find(ti);
+  if (parent_iter == m_parent_types.end()) {
+    if (scopes.empty())
+      return {context, uname};
+
+    for (llvm::ms_demangle::Node *scope : scopes) {
+      auto *nii = static_cast<llvm::ms_demangle::NamedIdentifierNode *>(scope);
+      std::string str = RenderDemanglerNode(nii);
+      context = m_clang->GetUniqueNamespaceDeclaration(str.c_str(), context);
+    }
+    return {context, uname};
+  }
+
+  // Otherwise, all we need to do is get the parent type of this type and
+  // recurse into our lazy type creation / AST reconstruction logic to get an
+  // LLDB TypeSP for the parent.  This will cause the AST to automatically get
+  // the right DeclContext created for any parent.
+  TypeSP parent = GetOrCreateType(parent_iter->second);
+  if (!parent)
+    return {context, uname};
+  CompilerType parent_ct = parent->GetForwardCompilerType();
+  clang::QualType qt = ClangUtil::GetCanonicalQualType(parent_ct);
+  context = clang::TagDecl::castToDeclContext(qt->getAsTagDecl());
+  return {context, uname};
+}
+
 lldb::TypeSP SymbolFileNativePDB::CreateClassStructUnion(
-    PdbSymUid type_uid, llvm::StringRef name, size_t size,
+    PdbSymUid type_uid, const llvm::codeview::TagRecord &record, size_t size,
     clang::TagTypeKind ttk, clang::MSInheritanceAttr::Spelling inheritance) {
 
-  // Ignore unnamed-tag UDTs.
-  name = DropNameScope(name);
-  if (name.empty())
-    return nullptr;
-
-  clang::DeclContext *decl_context = m_clang->GetTranslationUnitDecl();
+  const PdbTypeSymId &tid = type_uid.asTypeSym();
+  TypeIndex ti(tid.index);
+  clang::DeclContext *decl_context = nullptr;
+  std::string uname;
+  std::tie(decl_context, uname) = CreateDeclInfoForType(record, ti);
 
   lldb::AccessType access =
       (ttk == clang::TTK_Class) ? lldb::eAccessPrivate : lldb::eAccessPublic;
@@ -749,8 +856,9 @@ lldb::TypeSP SymbolFileNativePDB::CreateClassStructUnion(
   metadata.SetIsDynamicCXXType(false);
 
   CompilerType ct =
-      m_clang->CreateRecordType(decl_context, access, name.str().c_str(), ttk,
+      m_clang->CreateRecordType(decl_context, access, uname.c_str(), ttk,
                                 lldb::eLanguageTypeC_plus_plus, &metadata);
+
   lldbassert(ct.IsValid());
 
   clang::CXXRecordDecl *record_decl =
@@ -771,7 +879,7 @@ lldb::TypeSP SymbolFileNativePDB::CreateClassStructUnion(
   // FIXME: Search IPI stream for LF_UDT_MOD_SRC_LINE.
   Declaration decl;
   return std::make_shared<Type>(type_uid.toOpaqueId(), m_clang->GetSymbolFile(),
-                                ConstString(name), size, nullptr,
+                                ConstString(uname), size, nullptr,
                                 LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
                                 ct, Type::eResolveStateForward);
 }
@@ -782,14 +890,13 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbSymUid type_uid,
 
   clang::MSInheritanceAttr::Spelling inheritance =
       GetMSInheritance(m_index->tpi().typeCollection(), cr);
-  return CreateClassStructUnion(type_uid, cr.getName(), cr.getSize(), ttk,
-                                inheritance);
+  return CreateClassStructUnion(type_uid, cr, cr.getSize(), ttk, inheritance);
 }
 
 lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbSymUid type_uid,
                                                 const UnionRecord &ur) {
   return CreateClassStructUnion(
-      type_uid, ur.getName(), ur.getSize(), clang::TTK_Union,
+      type_uid, ur, ur.getSize(), clang::TTK_Union,
       clang::MSInheritanceAttr::Spelling::Keyword_single_inheritance);
 }
 

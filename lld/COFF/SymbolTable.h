@@ -123,6 +123,8 @@ private:
 
 extern SymbolTable *Symtab;
 
+std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex);
+
 } // namespace coff
 } // namespace lld
 

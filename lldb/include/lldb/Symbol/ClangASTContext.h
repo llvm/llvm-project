@@ -903,9 +903,8 @@ public:
   // Modifying Enumeration types
   //----------------------------------------------------------------------
   clang::EnumConstantDecl *AddEnumerationValueToEnumerationType(
-      lldb::opaque_compiler_type_t type,
-      const CompilerType &enumerator_qual_type, const Declaration &decl,
-      const char *name, int64_t enum_value, uint32_t enum_value_bit_size);
+      const CompilerType &enum_type, const Declaration &decl, const char *name,
+      int64_t enum_value, uint32_t enum_value_bit_size);
 
   CompilerType GetEnumerationIntegerType(lldb::opaque_compiler_type_t type);
 
