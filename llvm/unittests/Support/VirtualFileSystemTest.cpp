@@ -885,6 +885,17 @@ TEST_F(InMemoryFileSystemTest, WorkingDirectory) {
             getPosixPath(NormalizedFS.getCurrentWorkingDirectory().get()));
 }
 
+TEST_F(InMemoryFileSystemTest, IsLocal) {
+  FS.setCurrentWorkingDirectory("/b");
+  FS.addFile("c", 0, MemoryBuffer::getMemBuffer(""));
+
+  std::error_code EC;
+  bool IsLocal = true;
+  EC = FS.isLocal("c", IsLocal);
+  ASSERT_FALSE(EC);
+  ASSERT_FALSE(IsLocal);
+}
+
 #if !defined(_WIN32)
 TEST_F(InMemoryFileSystemTest, GetRealPath) {
   SmallString<16> Path;

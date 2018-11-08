@@ -22,9 +22,9 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -43,6 +43,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
@@ -3654,40 +3655,41 @@ static std::string getAMDGPUNoteTypeName(const uint32_t NT) {
 }
 
 template <typename ELFT>
-static void printGNUProperty(raw_ostream &OS, uint32_t Type, uint32_t DataSize,
-                             ArrayRef<uint8_t> Data) {
+static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
+                                  ArrayRef<uint8_t> Data) {
+  std::string str;
+  raw_string_ostream OS(str);
   switch (Type) {
   default:
-    OS << format("    <application-specific type 0x%x>\n", Type);
-    return;
+    OS << format("<application-specific type 0x%x>", Type);
+    return OS.str();
   case GNU_PROPERTY_STACK_SIZE: {
-    OS << "    stack size: ";
+    OS << "stack size: ";
     if (DataSize == sizeof(typename ELFT::uint))
-      OS << format("0x%llx\n",
-                   (uint64_t)(*(const typename ELFT::Addr *)Data.data()));
+      OS << formatv("{0:x}",
+                    (uint64_t)(*(const typename ELFT::Addr *)Data.data()));
     else
-      OS << format("<corrupt length: 0x%x>\n", DataSize);
-    break;
+      OS << format("<corrupt length: 0x%x>", DataSize);
+    return OS.str();
   }
   case GNU_PROPERTY_NO_COPY_ON_PROTECTED:
-    OS << "    no copy on protected";
+    OS << "no copy on protected";
     if (DataSize)
       OS << format(" <corrupt length: 0x%x>", DataSize);
-    OS << "\n";
-    break;
+    return OS.str();
   case GNU_PROPERTY_X86_FEATURE_1_AND:
-    OS << "    X86 features: ";
+    OS << "X86 features: ";
     if (DataSize != 4 && DataSize != 8) {
-      OS << format("<corrupt length: 0x%x>\n", DataSize);
-      break;
+      OS << format("<corrupt length: 0x%x>", DataSize);
+      return OS.str();
     }
     uint64_t CFProtection =
         (DataSize == 4)
             ? support::endian::read32<ELFT::TargetEndianness>(Data.data())
             : support::endian::read64<ELFT::TargetEndianness>(Data.data());
     if (CFProtection == 0) {
-      OS << "none\n";
-      break;
+      OS << "none";
+      return OS.str();
     }
     if (CFProtection & GNU_PROPERTY_X86_FEATURE_1_IBT) {
       OS << "IBT";
@@ -3703,105 +3705,144 @@ static void printGNUProperty(raw_ostream &OS, uint32_t Type, uint32_t DataSize,
     }
     if (CFProtection)
       OS << format("<unknown flags: 0x%llx>", CFProtection);
-    OS << "\n";
-    break;
+    return OS.str();
   }
 }
 
 template <typename ELFT>
-static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
-                         ArrayRef<typename ELFT::Word> Words, size_t Size) {
+static SmallVector<std::string, 4>
+getGNUPropertyList(ArrayRef<typename ELFT::Word> Words) {
   using Elf_Word = typename ELFT::Word;
 
+  SmallVector<std::string, 4> Properties;
+  ArrayRef<uint8_t> Arr(reinterpret_cast<const uint8_t *>(Words.data()),
+                        Words.size());
+  while (Arr.size() >= 8) {
+    uint32_t Type = *reinterpret_cast<const Elf_Word *>(Arr.data());
+    uint32_t DataSize = *reinterpret_cast<const Elf_Word *>(Arr.data() + 4);
+    Arr = Arr.drop_front(8);
+
+    // Take padding size into account if present.
+    uint64_t PaddedSize = alignTo(DataSize, sizeof(typename ELFT::uint));
+    std::string str;
+    raw_string_ostream OS(str);
+    if (Arr.size() < PaddedSize) {
+      OS << format("<corrupt type (0x%x) datasz: 0x%x>", Type, DataSize);
+      Properties.push_back(OS.str());
+      break;
+    }
+    Properties.push_back(
+        getGNUProperty<ELFT>(Type, DataSize, Arr.take_front(PaddedSize)));
+    Arr = Arr.drop_front(PaddedSize);
+  }
+
+  if (!Arr.empty())
+    Properties.push_back("<corrupted GNU_PROPERTY_TYPE_0>");
+
+  return Properties;
+}
+
+struct GNUAbiTag {
+  std::string OSName;
+  std::string ABI;
+  bool IsValid;
+};
+
+template <typename ELFT>
+static GNUAbiTag getGNUAbiTag(ArrayRef<typename ELFT::Word> Words) {
+  if (Words.size() < 4)
+    return {"", "", /*IsValid=*/false};
+
+  static const char *OSNames[] = {
+      "Linux", "Hurd", "Solaris", "FreeBSD", "NetBSD", "Syllable", "NaCl",
+  };
+  StringRef OSName = "Unknown";
+  if (Words[0] < array_lengthof(OSNames))
+    OSName = OSNames[Words[0]];
+  uint32_t Major = Words[1], Minor = Words[2], Patch = Words[3];
+  std::string str;
+  raw_string_ostream ABI(str);
+  ABI << Major << "." << Minor << "." << Patch;
+  return {OSName, ABI.str(), /*IsValid=*/true};
+}
+
+template <typename ELFT>
+static std::string getGNUBuildId(ArrayRef<typename ELFT::Word> Words) {
+  std::string str;
+  raw_string_ostream OS(str);
+  ArrayRef<uint8_t> ID(reinterpret_cast<const uint8_t *>(Words.data()),
+                       Words.size());
+  for (const auto &B : ID)
+    OS << format_hex_no_prefix(B, 2);
+  return OS.str();
+}
+
+template <typename ELFT>
+static StringRef getGNUGoldVersion(ArrayRef<typename ELFT::Word> Words) {
+  return StringRef(reinterpret_cast<const char *>(Words.data()), Words.size());
+}
+
+template <typename ELFT>
+static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
+                         ArrayRef<typename ELFT::Word> Words) {
   switch (NoteType) {
   default:
     return;
   case ELF::NT_GNU_ABI_TAG: {
-    static const char *OSNames[] = {
-        "Linux", "Hurd", "Solaris", "FreeBSD", "NetBSD", "Syllable", "NaCl",
-    };
-
-    StringRef OSName = "Unknown";
-    if (Words[0] < array_lengthof(OSNames))
-      OSName = OSNames[Words[0]];
-    uint32_t Major = Words[1], Minor = Words[2], Patch = Words[3];
-
-    if (Words.size() < 4)
+    const GNUAbiTag &AbiTag = getGNUAbiTag<ELFT>(Words);
+    if (!AbiTag.IsValid)
       OS << "    <corrupt GNU_ABI_TAG>";
     else
-      OS << "    OS: " << OSName << ", ABI: " << Major << "." << Minor << "."
-         << Patch;
+      OS << "    OS: " << AbiTag.OSName << ", ABI: " << AbiTag.ABI;
     break;
   }
   case ELF::NT_GNU_BUILD_ID: {
-    OS << "    Build ID: ";
-    ArrayRef<uint8_t> ID(reinterpret_cast<const uint8_t *>(Words.data()), Size);
-    for (const auto &B : ID)
-      OS << format_hex_no_prefix(B, 2);
+    OS << "    Build ID: " << getGNUBuildId<ELFT>(Words);
     break;
   }
   case ELF::NT_GNU_GOLD_VERSION:
-    OS << "    Version: "
-       << StringRef(reinterpret_cast<const char *>(Words.data()), Size);
+    OS << "    Version: " << getGNUGoldVersion<ELFT>(Words);
     break;
   case ELF::NT_GNU_PROPERTY_TYPE_0:
     OS << "    Properties:";
-
-    ArrayRef<uint8_t> Arr(reinterpret_cast<const uint8_t *>(Words.data()),
-                          Size);
-    while (Arr.size() >= 8) {
-      uint32_t Type = *reinterpret_cast<const Elf_Word *>(Arr.data());
-      uint32_t DataSize = *reinterpret_cast<const Elf_Word *>(Arr.data() + 4);
-      Arr = Arr.drop_front(8);
-
-      // Take padding size into account if present.
-      uint64_t PaddedSize = alignTo(DataSize, sizeof(typename ELFT::uint));
-      if (Arr.size() < PaddedSize) {
-        OS << format("    <corrupt type (0x%x) datasz: 0x%x>\n", Type,
-                     DataSize);
-        break;
-      }
-      printGNUProperty<ELFT>(OS, Type, DataSize, Arr.take_front(PaddedSize));
-      Arr = Arr.drop_front(PaddedSize);
-    }
-
-    if (!Arr.empty())
-      OS << "    <corrupted GNU_PROPERTY_TYPE_0>";
+    for (const auto &Property : getGNUPropertyList<ELFT>(Words))
+      OS << "    " << Property << "\n";
     break;
   }
   OS << '\n';
 }
 
+struct AMDGPUNote {
+  std::string type;
+  std::string value;
+};
+
 template <typename ELFT>
-static void printAMDGPUNote(raw_ostream &OS, uint32_t NoteType,
-                            ArrayRef<typename ELFT::Word> Words, size_t Size) {
+static AMDGPUNote getAMDGPUNote(uint32_t NoteType,
+                                ArrayRef<typename ELFT::Word> Words) {
   switch (NoteType) {
   default:
-    return;
-    case ELF::NT_AMD_AMDGPU_HSA_METADATA:
-      OS << "    HSA Metadata:\n"
-         << StringRef(reinterpret_cast<const char *>(Words.data()), Size);
-      break;
-    case ELF::NT_AMD_AMDGPU_ISA:
-      OS << "    ISA Version:\n"
-         << "        "
-         << StringRef(reinterpret_cast<const char *>(Words.data()), Size);
-      break;
-    case ELF::NT_AMD_AMDGPU_PAL_METADATA:
-      const uint32_t *PALMetadataBegin = reinterpret_cast<const uint32_t *>(Words.data());
-      const uint32_t *PALMetadataEnd = PALMetadataBegin + Size;
-      std::vector<uint32_t> PALMetadata(PALMetadataBegin, PALMetadataEnd);
-      std::string PALMetadataString;
-      auto Error = AMDGPU::PALMD::toString(PALMetadata, PALMetadataString);
-      OS << "    PAL Metadata:\n";
-      if (Error) {
-        OS << "        Invalid";
-        return;
-      }
-      OS << PALMetadataString;
-      break;
+    return {"", ""};
+  case ELF::NT_AMD_AMDGPU_HSA_METADATA:
+    return {"HSA Metadata",
+            std::string(reinterpret_cast<const char *>(Words.data()),
+                        Words.size())};
+  case ELF::NT_AMD_AMDGPU_ISA:
+    return {"ISA Version",
+            std::string(reinterpret_cast<const char *>(Words.data()),
+                        Words.size())};
+  case ELF::NT_AMD_AMDGPU_PAL_METADATA:
+    const uint32_t *PALMetadataBegin =
+        reinterpret_cast<const uint32_t *>(Words.data());
+    const uint32_t *PALMetadataEnd = PALMetadataBegin + Words.size();
+    std::vector<uint32_t> PALMetadata(PALMetadataBegin, PALMetadataEnd);
+    std::string PALMetadataString;
+    auto Error = AMDGPU::PALMD::toString(PALMetadata, PALMetadataString);
+    if (Error) {
+      return {"PAL Metadata", "Invalid"};
+    }
+    return {"PAL Metadata", PALMetadataString};
   }
-  OS.flush();
 }
 
 template <class ELFT>
@@ -3826,12 +3867,14 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
 
     if (Name == "GNU") {
       OS << getGNUNoteTypeName(Type) << '\n';
-      printGNUNote<ELFT>(OS, Type, Descriptor, Descriptor.size());
+      printGNUNote<ELFT>(OS, Type, Descriptor);
     } else if (Name == "FreeBSD") {
       OS << getFreeBSDNoteTypeName(Type) << '\n';
     } else if (Name == "AMD") {
       OS << getAMDGPUNoteTypeName(Type) << '\n';
-      printAMDGPUNote<ELFT>(OS, Type, Descriptor, Descriptor.size());
+      const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
+      if (!N.type.empty())
+        OS << "    " << N.type << ":\n        " << N.value << '\n';
     } else {
       OS << "Unknown note type: (" << format_hex(Type, 10) << ')';
     }
@@ -4435,9 +4478,98 @@ void LLVMStyle<ELFT>::printAddrsig(const ELFFile<ELFT> *Obj) {
   }
 }
 
+template <typename ELFT>
+static void printGNUNoteLLVMStyle(uint32_t NoteType,
+                                  ArrayRef<typename ELFT::Word> Words,
+                                  ScopedPrinter &W) {
+  switch (NoteType) {
+  default:
+    return;
+  case ELF::NT_GNU_ABI_TAG: {
+    const GNUAbiTag &AbiTag = getGNUAbiTag<ELFT>(Words);
+    if (!AbiTag.IsValid) {
+      W.printString("ABI", "<corrupt GNU_ABI_TAG>");
+    } else {
+      W.printString("OS", AbiTag.OSName);
+      W.printString("ABI", AbiTag.ABI);
+    }
+    break;
+  }
+  case ELF::NT_GNU_BUILD_ID: {
+    W.printString("Build ID", getGNUBuildId<ELFT>(Words));
+    break;
+  }
+  case ELF::NT_GNU_GOLD_VERSION:
+    W.printString("Version", getGNUGoldVersion<ELFT>(Words));
+    break;
+  case ELF::NT_GNU_PROPERTY_TYPE_0:
+    ListScope D(W, "Property");
+    for (const auto &Property : getGNUPropertyList<ELFT>(Words))
+      W.printString(Property);
+    break;
+  }
+}
+
 template <class ELFT>
 void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
-  W.startLine() << "printNotes not implemented!\n";
+  ListScope L(W, "Notes");
+  const Elf_Ehdr *e = Obj->getHeader();
+  bool IsCore = e->e_type == ELF::ET_CORE;
+
+  auto PrintHeader = [&](const typename ELFT::Off Offset,
+                         const typename ELFT::Addr Size) {
+    W.printHex("Offset", Offset);
+    W.printHex("Size", Size);
+  };
+
+  auto ProcessNote = [&](const Elf_Note &Note) {
+    DictScope D2(W, "Note");
+    StringRef Name = Note.getName();
+    ArrayRef<Elf_Word> Descriptor = Note.getDesc();
+    Elf_Word Type = Note.getType();
+
+    W.printString("Owner", Name);
+    W.printHex("Data size", Descriptor.size());
+    if (Name == "GNU") {
+      W.printString("Type", getGNUNoteTypeName(Type));
+      printGNUNoteLLVMStyle<ELFT>(Type, Descriptor, W);
+    } else if (Name == "FreeBSD") {
+      W.printString("Type", getFreeBSDNoteTypeName(Type));
+    } else if (Name == "AMD") {
+      W.printString("Type", getAMDGPUNoteTypeName(Type));
+      const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
+      if (!N.type.empty())
+        W.printString(N.type, N.value);
+    } else {
+      W.getOStream() << "Unknown note type: (" << format_hex(Type, 10) << ')';
+    }
+  };
+
+  if (IsCore) {
+    for (const auto &P : unwrapOrError(Obj->program_headers())) {
+      if (P.p_type != PT_NOTE)
+        continue;
+      DictScope D(W, "NoteSection");
+      PrintHeader(P.p_offset, P.p_filesz);
+      Error Err = Error::success();
+      for (const auto &Note : Obj->notes(P, Err))
+        ProcessNote(Note);
+      if (Err)
+        error(std::move(Err));
+    }
+  } else {
+    for (const auto &S : unwrapOrError(Obj->sections())) {
+      if (S.sh_type != SHT_NOTE)
+        continue;
+      DictScope D(W, "NoteSection");
+      PrintHeader(S.sh_offset, S.sh_size);
+      Error Err = Error::success();
+      for (const auto &Note : Obj->notes(S, Err))
+        ProcessNote(Note);
+      if (Err)
+        error(std::move(Err));
+    }
+  }
 }
 
 template <class ELFT>

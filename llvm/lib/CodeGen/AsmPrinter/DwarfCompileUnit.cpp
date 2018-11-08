@@ -430,8 +430,7 @@ void DwarfCompileUnit::addScopeRangeList(DIE &ScopeDIE,
   // Add the range list to the set of ranges to be emitted.
   auto IndexAndList =
       (DD->getDwarfVersion() < 5 && Skeleton ? Skeleton->DU : DU)
-          ->addRange((Skeleton ? Skeleton->BaseAddress : BaseAddress),
-                     std::move(Range));
+          ->addRange(*(Skeleton ? Skeleton : this), std::move(Range));
 
   uint32_t Index = IndexAndList.first;
   auto &List = *IndexAndList.second;

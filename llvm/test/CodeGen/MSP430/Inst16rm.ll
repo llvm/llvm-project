@@ -5,7 +5,7 @@ target triple = "msp430-generic-generic"
 
 define i16 @add(i16 %a) nounwind {
 ; CHECK-LABEL: add:
-; CHECK: add.w	&foo, r12
+; CHECK: add	&foo, r12
 	%1 = load i16, i16* @foo
 	%2 = add i16 %a, %1
 	ret i16 %2
@@ -13,7 +13,7 @@ define i16 @add(i16 %a) nounwind {
 
 define i16 @and(i16 %a) nounwind {
 ; CHECK-LABEL: and:
-; CHECK: and.w	&foo, r12
+; CHECK: and	&foo, r12
 	%1 = load i16, i16* @foo
 	%2 = and i16 %a, %1
 	ret i16 %2
@@ -21,7 +21,7 @@ define i16 @and(i16 %a) nounwind {
 
 define i16 @bis(i16 %a) nounwind {
 ; CHECK-LABEL: bis:
-; CHECK: bis.w	&foo, r12
+; CHECK: bis	&foo, r12
 	%1 = load i16, i16* @foo
 	%2 = or i16 %a, %1
 	ret i16 %2
@@ -29,7 +29,7 @@ define i16 @bis(i16 %a) nounwind {
 
 define i16  @bic(i16 %a) nounwind {
 ; CHECK-LABEL: bic:
-; CHECK: bic.w	&foo, r12
+; CHECK: bic	&foo, r12
         %1 = load i16, i16* @foo
         %2 = xor i16 %1, -1
         %3 = and i16 %a, %2
@@ -38,7 +38,7 @@ define i16  @bic(i16 %a) nounwind {
 
 define i16 @xor(i16 %a) nounwind {
 ; CHECK-LABEL: xor:
-; CHECK: xor.w	&foo, r12
+; CHECK: xor	&foo, r12
 	%1 = load i16, i16* @foo
 	%2 = xor i16 %a, %1
 	ret i16 %2

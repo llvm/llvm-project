@@ -1,15 +1,55 @@
 # RUN: yaml2obj %s > %t.so
-# RUN: llvm-readobj -elf-output-style GNU --notes %t.so | FileCheck %s
+# RUN: llvm-readobj -elf-output-style GNU --notes %t.so | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readobj -elf-output-style LLVM --notes %t.so | FileCheck %s --check-prefix=LLVM
 
-# CHECK: Displaying notes found at file offset 0x00000300 with length 0x00000020:
-# CHECK:   Owner                 Data size       Description
-# CHECK:   GNU                  0x00000010       NT_GNU_BUILD_ID (unique build ID bitstring)
-# CHECK:     Build ID: 4fcb712aa6387724a9f465a32cd8c14b
+# GNU:      Displaying notes found at file offset 0x00000340 with length 0x00000020:
+# GNU-NEXT:   Owner                 Data size       Description
+# GNU-NEXT:   GNU                   0x00000010      NT_GNU_ABI_TAG (ABI version tag)
+# GNU-NEXT:     OS: Linux, ABI: 2.6.32
 
-# CHECK: Displaying notes found at file offset 0x0000036c with length 0x0000001c:
-# CHECK:   Owner                 Data size       Description
-# CHECK:   GNU                  0x00000009       NT_GNU_GOLD_VERSION (gold version)
-# CHECK:     Version: gold 1.11
+# GNU:      Displaying notes found at file offset 0x00000360 with length 0x00000020:
+# GNU-NEXT:   Owner                 Data size       Description
+# GNU-NEXT:   GNU                  0x00000010       NT_GNU_BUILD_ID (unique build ID bitstring)
+# GNU-NEXT:     Build ID: 4fcb712aa6387724a9f465a32cd8c14b
+
+# GNU:      Displaying notes found at file offset 0x000003cc with length 0x0000001c:
+# GNU-NEXT:   Owner                 Data size       Description
+# GNU-NEXT:   GNU                  0x00000009       NT_GNU_GOLD_VERSION (gold version)
+# GNU-NEXT:     Version: gold 1.11
+
+# LLVM:      Notes [
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Offset: 0x340
+# LLVM-NEXT:     Size: 0x20
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: GNU
+# LLVM-NEXT:       Data size: 0x10
+# LLVM-NEXT:       Type: NT_GNU_ABI_TAG (ABI version tag)
+# LLVM-NEXT:       OS: Linux
+# LLVM-NEXT:       ABI: 2.6.32
+# LLVM-NEXT:     }
+# LLVM-NEXT:   }
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Offset: 0x360
+# LLVM-NEXT:     Size: 0x20
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: GNU
+# LLVM-NEXT:       Data size: 0x10
+# LLVM-NEXT:       Type: NT_GNU_BUILD_ID (unique build ID bitstring)
+# LLVM-NEXT:       Build ID: 4fcb712aa6387724a9f465a32cd8c14b
+# LLVM-NEXT:     }
+# LLVM-NEXT:   }
+# LLVM-NEXT:   NoteSection {
+# LLVM-NEXT:     Offset: 0x3CC
+# LLVM-NEXT:     Size: 0x1C
+# LLVM-NEXT:     Note {
+# LLVM-NEXT:       Owner: GNU
+# LLVM-NEXT:       Data size: 0x9
+# LLVM-NEXT:       Type: NT_GNU_GOLD_VERSION (gold version)
+# LLVM-NEXT:       Version: gold 1.11
+# LLVM-NEXT:     }
+# LLVM-NEXT:   }
+# LLVM-NEXT: ]
 
 --- !ELF
 FileHeader:
@@ -18,6 +58,10 @@ FileHeader:
   Type:            ET_EXEC
   Machine:         EM_X86_64
 Sections:
+  - Name:            .note.ABI-tag
+    Type:            SHT_NOTE
+    AddressAlign:    0x0000000000000004
+    Content:         040000001000000001000000474E550000000000020000000600000020000000
   - Name:            .note.gnu.build-id
     Type:            SHT_NOTE
     Flags:           [ SHF_ALLOC ]

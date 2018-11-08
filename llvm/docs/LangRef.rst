@@ -15417,6 +15417,51 @@ Semantics:
 This intrinsic actually does nothing, but optimizers must assume that it
 has externally observable side effects.
 
+'``llvm.is.constant.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use llvm.is.constant with any argument type.
+
+::
+
+      declare i1 @llvm.is.constant.i32(i32 %operand) nounwind readnone
+      declare i1 @llvm.is.constant.f32(float %operand) nounwind readnone
+      declare i1 @llvm.is.constant.TYPENAME(TYPE %operand) nounwind readnone
+
+Overview:
+"""""""""
+
+The '``llvm.is.constant``' intrinsic will return true if the argument
+is known to be a manifest compile-time constant. It is guaranteed to
+fold to either true or false before generating machine code.
+
+Semantics:
+""""""""""
+
+This intrinsic generates no code. If its argument is known to be a
+manifest compile-time constant value, then the intrinsic will be
+converted to a constant true value. Otherwise, it will be converted to
+a constant false value.
+
+In particular, note that if the argument is a constant expression
+which refers to a global (the address of which _is_ a constant, but
+not manifest during the compile), then the intrinsic evaluates to
+false.
+
+The result also intentionally depends on the result of optimization
+passes -- e.g., the result can change depending on whether a
+function gets inlined or not. A function's parameters are
+obviously not constant. However, a call like
+``llvm.is.constant.i32(i32 %param)`` *can* return true after the
+function is inlined, if the value passed to the function parameter was
+a constant.
+
+On the other hand, if constant folding is not run, it will never
+evaluate to true, even in simple cases.
+
 Stack Map Intrinsics
 --------------------
 

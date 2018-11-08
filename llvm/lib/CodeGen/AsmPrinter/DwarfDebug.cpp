@@ -2275,7 +2275,8 @@ static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
   for (const RangeSpan &Range : List.getRanges())
     SectionRanges[&Range.getStart()->getSection()].push_back(&Range);
 
-  const MCSymbol *CUBase = List.getBaseAddress();
+  const DwarfCompileUnit &CU = List.getCU();
+  const MCSymbol *CUBase = CU.getBaseAddress();
   bool BaseIsSet = false;
   for (const auto &P : SectionRanges) {
     // Don't bother with a base address entry if there's only one range in

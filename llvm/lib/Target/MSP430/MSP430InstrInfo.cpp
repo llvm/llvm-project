@@ -301,35 +301,20 @@ unsigned MSP430InstrInfo::insertBranch(MachineBasicBlock &MBB,
 unsigned MSP430InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
 
-  switch (Desc.TSFlags & MSP430II::SizeMask) {
-  default:
-    switch (Desc.getOpcode()) {
-    default: llvm_unreachable("Unknown instruction size!");
-    case TargetOpcode::CFI_INSTRUCTION:
-    case TargetOpcode::EH_LABEL:
-    case TargetOpcode::IMPLICIT_DEF:
-    case TargetOpcode::KILL:
-    case TargetOpcode::DBG_VALUE:
-      return 0;
-    case TargetOpcode::INLINEASM: {
-      const MachineFunction *MF = MI.getParent()->getParent();
-      const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
-      return TII.getInlineAsmLength(MI.getOperand(0).getSymbolName(),
-                                    *MF->getTarget().getMCAsmInfo());
-    }
-    }
-  case MSP430II::SizeSpecial:
-    switch (MI.getOpcode()) {
-    default: llvm_unreachable("Unknown instruction size!");
-    case MSP430::SAR8r1c:
-    case MSP430::SAR16r1c:
-      return 4;
-    }
-  case MSP430II::Size2Bytes:
-    return 2;
-  case MSP430II::Size4Bytes:
-    return 4;
-  case MSP430II::Size6Bytes:
-    return 6;
+  switch (Desc.getOpcode()) {
+  case TargetOpcode::CFI_INSTRUCTION:
+  case TargetOpcode::EH_LABEL:
+  case TargetOpcode::IMPLICIT_DEF:
+  case TargetOpcode::KILL:
+  case TargetOpcode::DBG_VALUE:
+    return 0;
+  case TargetOpcode::INLINEASM: {
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
+    return TII.getInlineAsmLength(MI.getOperand(0).getSymbolName(),
+                                  *MF->getTarget().getMCAsmInfo());
   }
+  }
+
+  return Desc.getSize();
 }

@@ -160,14 +160,7 @@ attributes #2 = { "no-frame-pointer-elim"="false" nounwind }
 ;
 ; CHECK-LABEL: segmentedStack:
 ; CHECK: cmpq
-; CHECK-NEXT: ja [[ENTRY_LABEL:LBB[0-9_]+]]
-;
-; CHECK: callq ___morestack
-; CHECK-NEXT: retq
-;
-; CHECK: [[ENTRY_LABEL]]:
-; Prologue
-; CHECK: push
+; CHECK-NEXT: jbe [[ENTRY_LABEL:LBB[0-9_]+]]
 ;
 ; In PR26107, we use to drop these two basic blocks, because
 ; the segmentedStack entry block was jumping directly to
@@ -186,6 +179,12 @@ attributes #2 = { "no-frame-pointer-elim"="false" nounwind }
 ;
 ; CHECK: [[STRINGS_EQUAL]]
 ; CHECK: popq
+;
+; CHECK: [[ENTRY_LABEL]]:
+; CHECK: callq ___morestack
+; CHECK-NEXT: retq
+;
+
 define zeroext i1 @segmentedStack(i8* readonly %vk1, i8* readonly %vk2, i64 %key_size) #5 {
 entry:
   %cmp.i = icmp eq i8* %vk1, null

@@ -859,7 +859,7 @@ public:
         FreqAttr(FFA_Normal) {}
 
   // Read counts for the instrumented BB from profile.
-  bool readCounters(IndexedInstrProfReader *PGOReader);
+  bool readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros);
 
   // Populate the counts for all BBs.
   void populateCounters();
@@ -904,6 +904,7 @@ public:
     FuncInfo.dumpInfo(Str);
   }
 
+  uint64_t getProgramMaxCount() const { return ProgramMaxCount; }
 private:
   Function &F;
   Module *M;
@@ -1013,7 +1014,7 @@ void PGOUseFunc::setEdgeCount(DirectEdges &Edges, uint64_t Value) {
 // Read the profile from ProfileFileName and assign the value to the
 // instrumented BB and the edges. This function also updates ProgramMaxCount.
 // Return true if the profile are successfully read, and false on errors.
-bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader) {
+bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader, bool &AllZeros) {
   auto &Ctx = M->getContext();
   Expected<InstrProfRecord> Result =
       PGOReader->getInstrProfRecord(FuncInfo.FuncName, FuncInfo.FunctionHash);
@@ -1053,6 +1054,7 @@ bool PGOUseFunc::readCounters(IndexedInstrProfReader *PGOReader) {
     LLVM_DEBUG(dbgs() << "  " << I << ": " << CountFromProfile[I] << "\n");
     ValueSum += CountFromProfile[I];
   }
+  AllZeros = (ValueSum == 0);
 
   LLVM_DEBUG(dbgs() << "SUM =  " << ValueSum << "\n");
 
@@ -1477,8 +1479,15 @@ static bool annotateAllFunctions(
     // later in getInstrBB() to avoid invalidating it.
     SplitIndirectBrCriticalEdges(F, BPI, BFI);
     PGOUseFunc Func(F, &M, ComdatMembers, BPI, BFI);
-    if (!Func.readCounters(PGOReader.get()))
+    bool AllZeros = false;
+    if (!Func.readCounters(PGOReader.get(), AllZeros))
       continue;
+    if (AllZeros) {
+      F.setEntryCount(ProfileCount(0, Function::PCT_Real));
+      if (Func.getProgramMaxCount() != 0)
+        ColdFunctions.push_back(&F);
+      continue;
+    }
     Func.populateCounters();
     Func.setBranchWeights();
     Func.annotateValueSites();

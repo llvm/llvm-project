@@ -136,6 +136,10 @@ std::error_code FileSystem::getRealPath(const Twine &Path,
   return errc::operation_not_permitted;
 }
 
+std::error_code FileSystem::isLocal(const Twine &Path, bool &Result) {
+  return errc::operation_not_permitted;
+}
+
 bool FileSystem::exists(const Twine &Path) {
   auto Status = status(Path);
   return Status && Status->exists();
@@ -233,6 +237,7 @@ public:
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
+  std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) const override;
 
@@ -286,6 +291,10 @@ std::error_code RealFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
   std::lock_guard<std::mutex> Lock(CWDMutex);
   CWDCache.clear();
   return std::error_code();
+}
+
+std::error_code RealFileSystem::isLocal(const Twine &Path, bool &Result) {
+  return llvm::sys::fs::is_local(Path, Result);
 }
 
 std::error_code
@@ -375,6 +384,13 @@ OverlayFileSystem::setCurrentWorkingDirectory(const Twine &Path) {
     if (std::error_code EC = FS->setCurrentWorkingDirectory(Path))
       return EC;
   return {};
+}
+
+std::error_code OverlayFileSystem::isLocal(const Twine &Path, bool &Result) {
+  for (auto &FS : FSList)
+    if (FS->exists(Path))
+      return FS->isLocal(Path, Result);
+  return errc::no_such_file_or_directory;
 }
 
 std::error_code
@@ -913,6 +929,11 @@ InMemoryFileSystem::getRealPath(const Twine &Path,
   return {};
 }
 
+std::error_code InMemoryFileSystem::isLocal(const Twine &Path, bool &Result) {
+  Result = false;
+  return {};
+}
+
 } // namespace vfs
 } // namespace llvm
 
@@ -1168,6 +1189,10 @@ public:
 
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
     return ExternalFS->setCurrentWorkingDirectory(Path);
+  }
+
+  std::error_code isLocal(const Twine &Path, bool &Result) override {
+    return ExternalFS->isLocal(Path, Result);
   }
 
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override {
