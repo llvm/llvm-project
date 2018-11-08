@@ -111,6 +111,18 @@ bool blockEndsInUnreachable(const BasicBlock &BB) {
   return succ_empty(&BB);
 }
 
+static bool exceptionHandlingFunctions(const CallInst *CI) {
+  auto F = CI->getCalledFunction();
+  if (!F)
+    return false;
+  auto FName = F->getName();
+  return FName == "__cxa_begin_catch" ||
+         FName == "__cxa_free_exception" ||
+         FName == "__cxa_allocate_exception" ||
+         FName == "__cxa_begin_catch" ||
+         FName == "__cxa_end_catch";
+}
+
 static
 bool unlikelyExecuted(const BasicBlock &BB) {
   if (blockEndsInUnreachable(BB))
@@ -122,7 +134,8 @@ bool unlikelyExecuted(const BasicBlock &BB) {
     if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
       // The block is cold if it calls functions tagged as cold or noreturn.
       if (CI->hasFnAttr(Attribute::Cold) ||
-          CI->hasFnAttr(Attribute::NoReturn))
+          CI->hasFnAttr(Attribute::NoReturn) ||
+          exceptionHandlingFunctions(CI))
         return true;
 
       // Assume that inline assembly is hot code.
