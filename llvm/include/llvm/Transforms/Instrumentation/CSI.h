@@ -732,6 +732,10 @@ protected:
   /// Return true if the given function should not be instrumented.
   bool shouldNotInstrumentFunction(Function &F);
 
+  // Update the attributes on the instrumented function that might be
+  // invalidated by the inserted instrumentation.
+  void updateInstrumentedFnAttrs(Function &F);
+
   Module &M;
   const DataLayout &DL;
   CallGraph *CG;

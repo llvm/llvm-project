@@ -1425,10 +1425,14 @@ void CSIImpl::computeLoadAndStoreProperties(
 
 // Update the attributes on the instrumented function that might be invalidated
 // by the inserted instrumentation.
-static void updateInstrumentedFnAttrs(Function &F) {
-  F.removeFnAttr(Attribute::ReadNone);
-  F.removeFnAttr(Attribute::ReadOnly);
-  F.removeFnAttr(Attribute::ArgMemOnly);
+void CSIImpl::updateInstrumentedFnAttrs(Function &F) {
+  AttrBuilder B;
+  B.addAttribute(Attribute::ReadOnly)
+    .addAttribute(Attribute::ReadNone)
+    .addAttribute(Attribute::ArgMemOnly)
+    .addAttribute(Attribute::InaccessibleMemOnly)
+    .addAttribute(Attribute::InaccessibleMemOrArgMemOnly);
+  F.removeAttributes(AttributeList::FunctionIndex, B);
 }
 
 void CSIImpl::instrumentFunction(Function &F) {
