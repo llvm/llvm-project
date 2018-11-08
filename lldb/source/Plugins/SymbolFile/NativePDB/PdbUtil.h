@@ -56,12 +56,12 @@ private:
   CVTagRecord(llvm::codeview::ClassRecord &&c);
   CVTagRecord(llvm::codeview::UnionRecord &&u);
   CVTagRecord(llvm::codeview::EnumRecord &&e);
-  Kind m_kind;
   union {
     llvm::codeview::ClassRecord cvclass;
     llvm::codeview::EnumRecord cvenum;
     llvm::codeview::UnionRecord cvunion;
   };
+  Kind m_kind;
 };
 
 struct SegmentOffset {
