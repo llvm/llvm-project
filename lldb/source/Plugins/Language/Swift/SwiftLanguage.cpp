@@ -559,7 +559,7 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       .SetDontShowChildren(true)
       .SetHideItemNames(true)
       .SetShowMembersOneLiner(false);
-  const char *accelSIMDTypes = "^(simd\.)?(simd_)?("
+  const char *accelSIMDTypes = "^(simd\\.)?(simd_)?("
                                "(int|uint|float|double)[234]|"
                                "(float|double)[234]x[234]|"
                                "quat(f|d)"
@@ -567,6 +567,12 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   AddCXXSummary(swift_category_sp,
                 lldb_private::formatters::swift::AccelerateSIMD_SummaryProvider,
                 "Accelerate/SIMD summary provider", ConstString(accelSIMDTypes),
+                simd_summary_flags, true);
+
+  const char *GLKitTypes = "^(GLKMatrix[234]|GLKVector[234]|GLKQuaternion)$";
+  AddCXXSummary(swift_category_sp,
+                lldb_private::formatters::swift::GLKit_SummaryProvider,
+                "GLKit summary provider", ConstString(GLKitTypes),
                 simd_summary_flags, true);
 
   TypeSummaryImpl::Flags nil_summary_flags;
