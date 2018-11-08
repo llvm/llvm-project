@@ -34,11 +34,17 @@ a.out: main.swift libDylib
           -module-name main -o main.swiftmodule -I$(SRCDIR)
 	$(SWIFTC) -o $@ main.o -Xlinker -add_ast_path -Xlinker main.swiftmodule \
           -lDylib -L.
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
 	$(DSYMUTIL) a.out
 
 libDylib: dylib.swift
 	$(SWIFTC) -g -Onone $^ -emit-library -module-name Dylib -emit-module \
 	  -Xlinker -install_name -Xlinker @executable_path/$@.dylib $(SWIFTFLAGS)
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o

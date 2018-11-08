@@ -3332,6 +3332,7 @@
 		26DE1E6A11616C2E00A093E2 /* lldb-forward.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = "lldb-forward.h"; path = "include/lldb/lldb-forward.h"; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		26D6F3F4183E7F9300194858 /* lldb-gdbserver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "lldb-gdbserver.cpp"; path = "tools/lldb-server/lldb-gdbserver.cpp"; sourceTree = "<group>"; };
 		239504D41BDD451400963CEA /* lldb-gtest */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "lldb-gtest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		23CB15561D66DA9300EDDDE1 /* lldb-gtest-build */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "lldb-gtest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2690CD171A6DC0D000E717C8 /* lldb-mi */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "lldb-mi"; sourceTree = BUILT_PRODUCTS_DIR; };
 		26DC6A1C1337FECA00FF7998 /* lldb-platform.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = "lldb-platform.cpp"; path = "tools/lldb-server/lldb-platform.cpp"; sourceTree = "<group>"; };
 		26217932133BCB850083B112 /* lldb-private-enumerations.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "lldb-private-enumerations.h"; path = "include/lldb/lldb-private-enumerations.h"; sourceTree = "<group>"; };
@@ -9908,7 +9909,7 @@
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				PATH = /opt/local/bin;
-				PRODUCT_NAME = "lib$(TARGET_NAME)";
+				PRODUCT_NAME = "lldb-gtest";
 				SKIP_INSTALL = YES;
 				STANDARD_C_PLUS_PLUS_LIBRARY_TYPE = static;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_SOURCE_DIR)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/tools/clang/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib/Target/ARM";
@@ -10159,6 +10160,7 @@
 		239D37FE1D70A4AD00D8E937 /* CustomSwift-RelWithDebInfo */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				DEBUG_INFORMATION_FORMAT = dwarf;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
