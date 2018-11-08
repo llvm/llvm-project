@@ -13,7 +13,7 @@ entry:
   br i1 undef, label %if.then, label %if.else
 
 if.then:
-  unreachable
+  ret void
 
 if.else:
   br label %if.then4
