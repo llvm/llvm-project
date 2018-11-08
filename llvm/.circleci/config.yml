@@ -10,14 +10,25 @@ jobs:
       - run:
           name: submodules
           command: |
-            git submodule sync
-            git submodule update --init --recursive
+	    git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
+	    git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
+	    git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
+	    git clone https://github.com/llvm-mirror/lld.git tools/lld
+	    cd tools/clang
+	    git checkout xla
+	    cd ../polly
+	    git checkout release_70
+	    cd ../lld
+	    git checkout release_70
+	    cd ../../projects/compiler-rt
+	    git checkout xla
+	    cd ../..
       - run:
           name: cmake
           command: |
             mkdir build
             cd build
-            cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=host -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_USE_LINKER=gold -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 1"
+            cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=host -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 1"
       - run:
           name: make
           command: |
@@ -35,7 +46,7 @@ jobs:
           command: |
             git clone https://github.com/CilkHub/cilkrts.git
             cd cilkrts
-            git checkout tags/v0.1.1
+            git checkout tags/v0.1.2
             mkdir build
             cd build
             cmake -DCMAKE_C_COMPILER=$HOME/project/build/bin/clang -DCMAKE_CXX_COMPILER=$HOME/project/build/bin/clang++ ..
@@ -51,8 +62,19 @@ jobs:
       - run:
           name: submodules
           command: |
-            git submodule sync
-            git submodule update --init --recursive
+	    git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
+	    git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
+	    git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
+	    git clone https://github.com/llvm-mirror/lld.git tools/lld
+	    cd tools/clang
+	    git checkout xla
+	    cd ../polly
+	    git checkout release_70
+	    cd ../lld
+	    git checkout release_70
+	    cd ../../projects/compiler-rt
+	    git checkout xla
+	    cd ../..
       - run:
           name: cmake
           command: |
@@ -76,7 +98,59 @@ jobs:
           command: |
             git clone https://github.com/CilkHub/cilkrts.git
             cd cilkrts
-            git checkout tags/v0.1.1
+            git checkout tags/v0.1.2
+            mkdir build
+            cd build
+            cmake -DCMAKE_C_COMPILER=$HOME/project/build/bin/clang -DCMAKE_CXX_COMPILER=$HOME/project/build/bin/clang++ ..
+            make -j2
+
+  "build-1804":
+    resource_class: xlarge
+    docker:
+      - image: wsmoses/tapir:1804
+
+    steps:
+      - checkout
+      - run:
+          name: submodules
+          command: |
+	    git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
+	    git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
+	    git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
+	    git clone https://github.com/llvm-mirror/lld.git tools/lld
+	    cd tools/clang
+	    git checkout xla
+	    cd ../polly
+	    git checkout release_70
+	    cd ../lld
+	    git checkout release_70
+	    cd ../../projects/compiler-rt
+	    git checkout xla
+	    cd ../..
+      - run:
+          name: cmake
+          command: |
+            mkdir build
+            cd build
+            cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=host -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_USE_LINKER=lld -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 1"
+      - run:
+          name: make
+          command: |
+            cd build
+            make -j2
+      - run:
+          name: test
+          no_output_timeout: 1200
+          command: |
+            cd build
+            ls lib
+            make check-all -j2
+      - run:
+          name: cilkrts-build-test
+          command: |
+            git clone https://github.com/CilkHub/cilkrts.git
+            cd cilkrts
+            git checkout tags/v0.1.2
             mkdir build
             cd build
             cmake -DCMAKE_C_COMPILER=$HOME/project/build/bin/clang -DCMAKE_CXX_COMPILER=$HOME/project/build/bin/clang++ ..
@@ -87,3 +161,4 @@ workflows:
     jobs:
       - "build-1404"
       - "build-1604"
+      - "build-1804"
