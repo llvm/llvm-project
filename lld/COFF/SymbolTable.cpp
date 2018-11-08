@@ -241,6 +241,11 @@ void SymbolTable::reportRemainingUndefines() {
       }
     }
 
+    // We don't want to report missing Microsoft precompiled headers symbols.
+    // A proper message will be emitted instead in PDBLinker::aquirePrecompObj
+    if (Name.contains("_PchSym_"))
+      continue;
+
     if (Config->MinGW && handleMinGWAutomaticImport(Sym, Name))
       continue;
 
