@@ -50,7 +50,7 @@ bb:
   ret void
 }
 
-; CHECK-LABEL: define internal void @_Z3foov.1_
+; CHECK-LABEL: define internal void @_Z3foov.1.
 ; CHECK: bb9:
 ; CHECK: call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %tmp1)
 ; CHECK:  br label %.exitStub

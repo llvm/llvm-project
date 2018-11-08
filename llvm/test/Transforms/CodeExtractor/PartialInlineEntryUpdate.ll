@@ -17,9 +17,9 @@ define internal i32 @Caller1(i1 %cond, i32* align 2 %align.val) !prof !3{
 entry:
 ; CHECK-LABEL: @Caller1
 ; CHECK: br
-; CHECK: call void @Func.1_ 
+; CHECK: call void @Func.1.
 ; CHECK: br
-; CHECK: call void @Func.1_ 
+; CHECK: call void @Func.1.
   %val = call i32 @Func(i1 %cond, i32* %align.val)
   %val2 = call i32 @Func(i1 %cond, i32* %align.val)
   ret i32 %val
@@ -29,7 +29,7 @@ define internal i32 @Caller2(i1 %cond, i32* align 2 %align.val) !prof !2{
 entry:
 ; CHECK-LABEL: @Caller2
 ; CHECK: br
-; CHECK: call void @Func.1_ 
+; CHECK: call void @Func.1.
   %val = call i32 @Func(i1 %cond, i32* %align.val)
   ret i32 %val
 }

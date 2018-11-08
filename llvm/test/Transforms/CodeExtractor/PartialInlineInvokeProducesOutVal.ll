@@ -26,14 +26,14 @@ bb5:                                              ; preds = %bb4, %bb1, %bb
 ; CHECK-LABEL: bb:
 ; CHECK-NEXT:  [[CALL26LOC:%.*]] = alloca i8*
 ; CHECK-LABEL: codeRepl.i:
-; CHECK-NEXT:   call void @bar.1_bb1(i8** [[CALL26LOC]])
+; CHECK-NEXT:   call void @bar.1.bb1(i8** [[CALL26LOC]])
 define i8* @dummy_caller(i32 %arg) {
 bb:
   %tmp = tail call i8* @bar(i32 %arg)
   ret i8* %tmp
 }
 
-; CHECK-LABEL: define internal void @bar.1_bb1
+; CHECK-LABEL: define internal void @bar.1.bb1
 ; CHECK-LABEL: bb1:
 ; CHECK-NEXT:    %call26 = invoke i8* @invoke_callee()
 ; CHECK-NEXT:            to label %cont unwind label %lpad
