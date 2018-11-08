@@ -1208,7 +1208,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
           developer_dir_path[i] = '\0';
 
           FileSpec devel_dir(developer_dir_path);
-          if (llvm::sys::fs::is_directory(devel_dir.GetPath())) {
+          if (FileSystem::Instance().IsDirectory(devel_dir)) {
             developer_dir_path_valid = true;
           }
         }
@@ -1435,7 +1435,7 @@ FileSpec PlatformDarwin::FindSDKInXcodeForModules(SDKType sdk_type,
                                                   const FileSpec &sdks_spec) {
   // Look inside Xcode for the required installed iOS SDK version
 
-  if (!llvm::sys::fs::is_directory(sdks_spec.GetPath())) {
+  if (!FileSystem::Instance().IsDirectory(sdks_spec)) {
     return FileSpec();
   }
 
@@ -1451,7 +1451,7 @@ FileSpec PlatformDarwin::FindSDKInXcodeForModules(SDKType sdk_type,
       sdks_spec.GetPath(), find_directories, find_files, find_other,
       DirectoryEnumerator, &enumerator_info);
 
-  if (llvm::sys::fs::is_directory(enumerator_info.found_path.GetPath()))
+  if (FileSystem::Instance().IsDirectory(enumerator_info.found_path))
     return enumerator_info.found_path;
   else
     return FileSpec();
@@ -1596,7 +1596,7 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
     sysroot_spec = GetSDKDirectoryForModules(sdk_type);
   }
 
-  if (llvm::sys::fs::is_directory(sysroot_spec.GetPath())) {
+  if (FileSystem::Instance().IsDirectory(sysroot_spec.GetPath())) {
     options.push_back("-isysroot");
     options.push_back(sysroot_spec.GetPath());
   }
