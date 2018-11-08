@@ -24,22 +24,6 @@ namespace llvm {
 
 class MSP430Subtarget;
 
-/// MSP430II - This namespace holds all of the target specific flags that
-/// instruction info tracks.
-///
-namespace MSP430II {
-  enum {
-    SizeShift   = 2,
-    SizeMask    = 7 << SizeShift,
-
-    SizeUnknown = 0 << SizeShift,
-    SizeSpecial = 1 << SizeShift,
-    Size2Bytes  = 2 << SizeShift,
-    Size4Bytes  = 3 << SizeShift,
-    Size6Bytes  = 4 << SizeShift
-  };
-}
-
 class MSP430InstrInfo : public MSP430GenInstrInfo {
   const MSP430RegisterInfo RI;
   virtual void anchor();

@@ -366,7 +366,7 @@ SBError SBPlatform::Put(SBFileSpec &src, SBFileSpec &dst) {
     if (src.Exists()) {
       uint32_t permissions = FileSystem::Instance().GetPermissions(src.ref());
       if (permissions == 0) {
-        if (llvm::sys::fs::is_directory(src.ref().GetPath()))
+        if (FileSystem::Instance().IsDirectory(src.ref()))
           permissions = eFilePermissionsDirectoryDefault;
         else
           permissions = eFilePermissionsFileDefault;

@@ -701,7 +701,7 @@ TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
     PN->addIncoming(Dec, IncBB);
     BranchInst::Create(CondBB, IncBB);
 
-    Accum = GetElementPtrInst::Create(I8Ty, Accum, Dec, "gep", EndBB);
+    Accum = GetElementPtrInst::Create(I8Ty, Accum, PN, "gep", EndBB);
 
     PrevBB = CondBB;
     CondBB = NextBB;
