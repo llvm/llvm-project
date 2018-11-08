@@ -66,16 +66,9 @@ ValueObjectVariable::~ValueObjectVariable() {}
 
 CompilerType ValueObjectVariable::GetCompilerTypeImpl() {
   Type *var_type = m_variable_sp->GetType();
-  if (!var_type)
-    return CompilerType();
-
-  // It's important to return the layout type here.  If we have an enum then the
-  // symbol file plugin may have decided to complete it lazily, in which case a
-  // forward type won't be sufficient to display the variable.  On the other
-  // hand, if we have a pointer to a class type, then getting the full type will
-  // resolve the class type, which is too much.  The layout type is both
-  // necessary and sufficient.
-  return var_type->GetLayoutCompilerType();
+  if (var_type)
+    return var_type->GetForwardCompilerType();
+  return CompilerType();
 }
 
 ConstString ValueObjectVariable::GetTypeName() {
