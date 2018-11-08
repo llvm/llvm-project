@@ -219,9 +219,8 @@ public:
 
 private:
   bool shouldOutlineFrom(const Function &F) const;
-  Function *outlineColdBlocks(Function &F,
-                              const DenseSetBB &ColdBlock,
-                              DominatorTree *DT, PostDomTree *PDT);
+  const Function *outlineColdBlocks(Function &F, const DenseSetBB &ColdBlock,
+                                    DominatorTree *DT, PostDomTree *PDT);
   Function *extractColdRegion(const SmallVectorImpl<BasicBlock *> &Region,
                               DominatorTree *DT, BlockFrequencyInfo *BFI,
                               OptimizationRemarkEmitter &ORE);
@@ -264,9 +263,12 @@ public:
 } // end anonymous namespace
 
 // Returns false if the function should not be considered for hot-cold split
-// optimization. Already outlined functions have coldcc so no need to check
-// for them here.
+// optimization.
 bool HotColdSplitting::shouldOutlineFrom(const Function &F) const {
+  // Do not try to outline again from an already outlined cold function.
+  if (OutlinedFunctions.count(&F))
+    return false;
+
   if (F.size() <= 2)
     return false;
 
@@ -314,7 +316,7 @@ HotColdSplitting::extractColdRegion(const SmallVectorImpl<BasicBlock *> &Region,
       CS.setCallingConv(CallingConv::Cold);
     }
     CI->setIsNoInline();
-    LLVM_DEBUG(llvm::dbgs() << "Outlined Region at block: " << Region.front());
+    LLVM_DEBUG(llvm::dbgs() << "Outlined Region: " << *OutF);
     return OutF;
   }
 
@@ -328,10 +330,10 @@ HotColdSplitting::extractColdRegion(const SmallVectorImpl<BasicBlock *> &Region,
 }
 
 // Return the function created after outlining, nullptr otherwise.
-Function *HotColdSplitting::outlineColdBlocks(Function &F,
-                                              const DenseSetBB &HotBlocks,
-                                              DominatorTree *DT,
-                                              PostDomTree *PDT) {
+const Function *HotColdSplitting::outlineColdBlocks(Function &F,
+                                                    const DenseSetBB &HotBlocks,
+                                                    DominatorTree *DT,
+                                                    PostDomTree *PDT) {
   auto BFI = GetBFI(F);
   auto &ORE = (*GetORE)(F);
   // Walking the dominator tree allows us to find the largest
@@ -342,12 +344,10 @@ Function *HotColdSplitting::outlineColdBlocks(Function &F,
     if (PSI->isColdBB(BB, BFI) || !HotBlocks.count(BB)) {
       SmallVector<BasicBlock *, 4> ValidColdRegion, Region;
       BasicBlock *Exit = (*PDT)[BB]->getIDom()->getBlock();
-      // We might need a virtual exit which post-dominates all basic blocks.
-      if (!Exit)
-        continue;
       BasicBlock *ExitColdRegion = nullptr;
+
       // Estimated cold region between a BB and its dom-frontier.
-      while (isSingleEntrySingleExit(BB, Exit, DT, PDT, Region) &&
+      while (Exit && isSingleEntrySingleExit(BB, Exit, DT, PDT, Region) &&
              isOutlineCandidate(Region, Exit)) {
         ExitColdRegion = Exit;
         ValidColdRegion = Region;
@@ -361,6 +361,7 @@ Function *HotColdSplitting::outlineColdBlocks(Function &F,
           continue;
 
         ++NumColdSESEFound;
+        ValidColdRegion.push_back(ExitColdRegion);
         // Candidate for outlining. FIXME: Continue outlining.
         return extractColdRegion(ValidColdRegion, DT, BFI, ORE);
       }
@@ -380,7 +381,7 @@ bool HotColdSplitting::run(Module &M) {
     if (EnableStaticAnalyis) // Static analysis of cold blocks.
       HotBlocks = getHotBlocks(F);
 
-    auto Outlined = outlineColdBlocks(F, HotBlocks, &DT, &PDT);
+    const Function *Outlined = outlineColdBlocks(F, HotBlocks, &DT, &PDT);
     if (Outlined)
       OutlinedFunctions.insert(Outlined);
   }
