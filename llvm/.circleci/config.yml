@@ -159,6 +159,6 @@ workflows:
   version: 2
   build:
     jobs:
-      - "build-1404"
+      # - "build-1404"
       - "build-1604"
       - "build-1804"
