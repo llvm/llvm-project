@@ -360,6 +360,13 @@ HotColdSplitting::extractColdRegion(const SmallVectorImpl<BasicBlock *> &Region,
       CS.setCallingConv(CallingConv::Cold);
     }
     CI->setIsNoInline();
+
+    // Try to make the outlined code as small as possible on the assumption
+    // that it's cold.
+    assert(!OutF->hasFnAttribute(Attribute::OptimizeNone) &&
+           "An outlined function should never be marked optnone");
+    OutF->addFnAttr(Attribute::MinSize);
+
     LLVM_DEBUG(llvm::dbgs() << "Outlined Region: " << *OutF);
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "HotColdSplit",
