@@ -117,6 +117,7 @@
 		4C848E0118D2873500EC6DD0 /* SwiftSILManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C848DFE18D2873500EC6DD0 /* SwiftSILManipulator.cpp */; };
 		948C86D91B97764D00F3CAC3 /* SwiftSet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948C86CF1B97763200F3CAC3 /* SwiftSet.cpp */; };
 		49224F8A1BB9E4D20041AB62 /* SwiftUserExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49224F881BB9DA370041AB62 /* SwiftUserExpression.cpp */; };
+		AF6F1EDE2193B022008F190E /* TestSwiftASTContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF6F1EDD2193B021008F190E /* TestSwiftASTContext.cpp */; };
 		49753FBB1BEAB2BB00019E45 /* repl_swift in Copy Files */ = {isa = PBXBuildFile; fileRef = 26F8EA1718F6096400EFD6B1 /* repl_swift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		49753FBD1BEAB2BB00019E45 /* repl_swift in CopyFiles */ = {isa = PBXBuildFile; fileRef = 26F8EA1718F6096400EFD6B1 /* repl_swift */; };
 		268900E813353E6F00698AC0 /* ABI.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 497E7B9D1188F6690065CCA1 /* ABI.cpp */; };
@@ -1449,6 +1450,7 @@
 		948C86D01B97763200F3CAC3 /* SwiftSet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftSet.h; path = Language/Swift/SwiftSet.h; sourceTree = "<group>"; };
 		49224F881BB9DA370041AB62 /* SwiftUserExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SwiftUserExpression.cpp; path = ExpressionParser/Swift/SwiftUserExpression.cpp; sourceTree = "<group>"; };
 		49224F871BB9DA050041AB62 /* SwiftUserExpression.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SwiftUserExpression.h; path = ExpressionParser/Swift/SwiftUserExpression.h; sourceTree = "<group>"; };
+		AF6F1EDD2193B021008F190E /* TestSwiftASTContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = TestSwiftASTContext.cpp; sourceTree = "<group>"; };
 		26F8EA1718F6096400EFD6B1 /* repl_swift */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = repl_swift; sourceTree = BUILT_PRODUCTS_DIR; };
 		497E7B9D1188F6690065CCA1 /* ABI.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ABI.cpp; path = source/Target/ABI.cpp; sourceTree = "<group>"; };
 		497E7B331188ED300065CCA1 /* ABI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ABI.h; path = include/lldb/Target/ABI.h; sourceTree = "<group>"; };
@@ -3816,6 +3818,7 @@
 				9A2057141F3B860D00F6C293 /* TestType.cpp */,
 				23CB150B1D66CF5600EDDDE1 /* CMakeLists.txt */,
 				23CB150C1D66CF5600EDDDE1 /* TestClangASTContext.cpp */,
+				AF6F1EDD2193B021008F190E /* TestSwiftASTContext.cpp */,
 			);
 			path = Symbol;
 			sourceTree = "<group>";
@@ -7732,6 +7735,7 @@
 				23CB15411D66DA9300EDDDE1 /* StringExtractorTest.cpp in Sources */,
 				9A2057031F3A605200F6C293 /* VASprintfTest.cpp in Sources */,
 				9A18903C1F47D5E600394BCA /* TestUtilities.cpp in Sources */,
+				AF6F1EDE2193B022008F190E /* TestSwiftASTContext.cpp in Sources */,
 				23CB15421D66DA9300EDDDE1 /* TaskPoolTest.cpp in Sources */,
 				23CB15431D66DA9300EDDDE1 /* BroadcasterTest.cpp in Sources */,
 				9A3D43EE1F3237F900EB767C /* StreamCallbackTest.cpp in Sources */,
