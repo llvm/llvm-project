@@ -124,6 +124,17 @@ bool FileSystem::Readable(const FileSpec &file_spec) const {
   return Readable(file_spec.GetPath());
 }
 
+bool FileSystem::IsDirectory(const Twine &path) const {
+  ErrorOr<vfs::Status> status = m_fs->status(path);
+  if (!status)
+    return false;
+  return status->isDirectory();
+}
+
+bool FileSystem::IsDirectory(const FileSpec &file_spec) const {
+  return IsDirectory(file_spec.GetPath());
+}
+
 void FileSystem::EnumerateDirectory(Twine path, bool find_directories,
                                     bool find_files, bool find_other,
                                     EnumerateDirectoryCallbackType callback,
