@@ -368,25 +368,32 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   bool Is64Bit = Writer.is64Bit();
   MachO::symtab_command SymtabCmd = InputBinary.getSymtabLoadCommand();
 
-  // Get UUID.
-  MachO::uuid_command UUIDCmd;
-  memset(&UUIDCmd, 0, sizeof(UUIDCmd));
-  UUIDCmd.cmd = MachO::LC_UUID;
-  UUIDCmd.cmdsize = sizeof(MachO::uuid_command);
-  for (auto &LCI : InputBinary.load_commands()) {
-    if (LCI.C.cmd == MachO::LC_UUID) {
-      UUIDCmd = InputBinary.getUuidCommand(LCI);
-      break;
-    }
-  }
-
   // Compute the number of load commands we will need.
   unsigned LoadCommandSize = 0;
   unsigned NumLoadCommands = 0;
-  // We will copy the UUID if there is one.
-  if (UUIDCmd.cmd != 0) {
-    ++NumLoadCommands;
-    LoadCommandSize += sizeof(MachO::uuid_command);
+
+  // Get LC_UUID and LC_BUILD_VERSION.
+  MachO::uuid_command UUIDCmd;
+  MachO::build_version_command BuildVersionCmd;
+  memset(&UUIDCmd, 0, sizeof(UUIDCmd));
+  memset(&BuildVersionCmd, 0, sizeof(BuildVersionCmd));
+  for (auto &LCI : InputBinary.load_commands()) {
+    switch (LCI.C.cmd) {
+    case MachO::LC_UUID:
+      UUIDCmd = InputBinary.getUuidCommand(LCI);
+      ++NumLoadCommands;
+      LoadCommandSize += sizeof(MachO::uuid_command);
+      break;
+    case MachO::LC_BUILD_VERSION:
+      BuildVersionCmd = InputBinary.getBuildVersionLoadCommand(LCI);
+      ++NumLoadCommands;
+      LoadCommandSize += sizeof(MachO::build_version_command);
+      // LLDB doesn't care about the build tools for now.
+      BuildVersionCmd.ntools = 0;
+      break;
+    default:
+      break;
+    }
   }
 
   // If we have a valid symtab to copy, do it.
@@ -452,9 +459,17 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
   assert(OutFile.tell() == HeaderSize);
   if (UUIDCmd.cmd != 0) {
     Writer.W.write<uint32_t>(UUIDCmd.cmd);
-    Writer.W.write<uint32_t>(UUIDCmd.cmdsize);
+    Writer.W.write<uint32_t>(sizeof(UUIDCmd));
     OutFile.write(reinterpret_cast<const char *>(UUIDCmd.uuid), 16);
     assert(OutFile.tell() == HeaderSize + sizeof(UUIDCmd));
+  }
+  if (BuildVersionCmd.cmd != 0) {
+    Writer.W.write<uint32_t>(BuildVersionCmd.cmd);
+    Writer.W.write<uint32_t>(sizeof(BuildVersionCmd));
+    Writer.W.write<uint32_t>(BuildVersionCmd.platform);
+    Writer.W.write<uint32_t>(BuildVersionCmd.minos);
+    Writer.W.write<uint32_t>(BuildVersionCmd.sdk);
+    Writer.W.write<uint32_t>(BuildVersionCmd.ntools);
   }
 
   assert(SymtabCmd.cmd && "No symbol table.");

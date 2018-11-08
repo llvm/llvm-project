@@ -254,7 +254,7 @@ Status ProcessWindows::DoLaunch(Module *exe_module,
   namespace fs = llvm::sys::fs;
   if (working_dir) {
     FileSystem::Instance().Resolve(working_dir);
-    if (!fs::is_directory(working_dir.GetPath())) {
+    if (!FileSystem::Instance().IsDirectory(working_dir)) {
       result.SetErrorStringWithFormat("No such file or directory: %s",
                                       working_dir.GetCString());
       return result;

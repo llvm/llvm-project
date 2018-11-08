@@ -284,7 +284,7 @@ private:
   // modified, i.e. in insert(), remove(), and replaceFunctionInTree(), to avoid
   // dangling iterators into FnTree. The invariant that preserves this is that
   // there is exactly one mapping F -> FN for each FunctionNode FN in FnTree.
-  ValueMap<Function*, FnTreeType::iterator> FNodesInTree;
+  DenseMap<AssertingVH<Function>, FnTreeType::iterator> FNodesInTree;
 };
 
 } // end anonymous namespace
@@ -425,6 +425,7 @@ bool MergeFunctions::runOnModule(Module &M) {
   } while (!Deferred.empty());
 
   FnTree.clear();
+  FNodesInTree.clear();
   GlobalNumbers.clear();
 
   return Changed;
@@ -770,6 +771,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
         GlobalNumbers.erase(G);
         // If G's address is not significant, replace it entirely.
         Constant *BitcastF = ConstantExpr::getBitCast(F, G->getType());
+        removeUsers(G);
         G->replaceAllUsesWith(BitcastF);
       } else {
         // Redirect direct callers of G to F. (See note on MergeFunctionsPDI
@@ -816,6 +818,24 @@ void MergeFunctions::replaceFunctionInTree(const FunctionNode &FN,
   FN.replaceBy(G);
 }
 
+// Ordering for functions that are equal under FunctionComparator
+static bool isFuncOrderCorrect(const Function *F, const Function *G) {
+  if (F->isInterposable() != G->isInterposable()) {
+    // Strong before weak, because the weak function may call the strong
+    // one, but not the other way around.
+    return !F->isInterposable();
+  }
+  if (F->hasLocalLinkage() != G->hasLocalLinkage()) {
+    // External before local, because we definitely have to keep the external
+    // function, but may be able to drop the local one.
+    return !F->hasLocalLinkage();
+  }
+  // Impose a total order (by name) on the replacement of functions. This is
+  // important when operating on more than one module independently to prevent
+  // cycles of thunks calling each other when the modules are linked together.
+  return F->getName() <= G->getName();
+}
+
 // Insert a ComparableFunction into the FnTree, or merge it away if equal to one
 // that was already inserted.
 bool MergeFunctions::insert(Function *NewFunction) {
@@ -832,14 +852,7 @@ bool MergeFunctions::insert(Function *NewFunction) {
 
   const FunctionNode &OldF = *Result.first;
 
-  // Impose a total order (by name) on the replacement of functions. This is
-  // important when operating on more than one module independently to prevent
-  // cycles of thunks calling each other when the modules are linked together.
-  //
-  // First of all, we process strong functions before weak functions.
-  if ((OldF.getFunc()->isInterposable() && !NewFunction->isInterposable()) ||
-     (OldF.getFunc()->isInterposable() == NewFunction->isInterposable() &&
-       OldF.getFunc()->getName() > NewFunction->getName())) {
+  if (!isFuncOrderCorrect(OldF.getFunc(), NewFunction)) {
     // Swap the two functions.
     Function *F = OldF.getFunc();
     replaceFunctionInTree(*Result.first, NewFunction);

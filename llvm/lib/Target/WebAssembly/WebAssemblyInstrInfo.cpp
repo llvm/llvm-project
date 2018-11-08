@@ -70,6 +70,8 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     CopyOpcode = WebAssembly::COPY_F32;
   else if (RC == &WebAssembly::F64RegClass)
     CopyOpcode = WebAssembly::COPY_F64;
+  else if (RC == &WebAssembly::V128RegClass)
+    CopyOpcode = WebAssembly::COPY_V128;
   else
     llvm_unreachable("Unexpected register class");
 

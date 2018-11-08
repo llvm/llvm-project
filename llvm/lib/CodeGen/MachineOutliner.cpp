@@ -640,18 +640,32 @@ struct InstructionMapper {
 
   /// Maps \p *It to a legal integer.
   ///
-  /// Updates \p InstrList, \p UnsignedVec, \p InstructionIntegerMap,
-  /// \p IntegerInstructionMap, and \p LegalInstrNumber.
+  /// Updates \p CanOutlineWithPrevInstr, \p HaveLegalRange, \p InstrListForMBB,
+  /// \p UnsignedVecForMBB, \p InstructionIntegerMap, \p IntegerInstructionMap,
+  /// and \p LegalInstrNumber.
   ///
   /// \returns The integer that \p *It was mapped to.
-  unsigned mapToLegalUnsigned(MachineBasicBlock::iterator &It) {
+  unsigned mapToLegalUnsigned(
+      MachineBasicBlock::iterator &It, bool &CanOutlineWithPrevInstr,
+      bool &HaveLegalRange, unsigned &NumLegalInBlock,
+      std::vector<unsigned> &UnsignedVecForMBB,
+      std::vector<MachineBasicBlock::iterator> &InstrListForMBB) {
     // We added something legal, so we should unset the AddedLegalLastTime
     // flag.
     AddedIllegalLastTime = false;
 
+    // If we have at least two adjacent legal instructions (which may have
+    // invisible instructions in between), remember that.
+    if (CanOutlineWithPrevInstr)
+      HaveLegalRange = true;
+    CanOutlineWithPrevInstr = true;
+
+    // Keep track of the number of legal instructions we insert.
+    NumLegalInBlock++;
+
     // Get the integer for this instruction or give it the current
     // LegalInstrNumber.
-    InstrList.push_back(It);
+    InstrListForMBB.push_back(It);
     MachineInstr &MI = *It;
     bool WasInserted;
     DenseMap<MachineInstr *, unsigned, MachineInstrExpressionTrait>::iterator
@@ -666,7 +680,7 @@ struct InstructionMapper {
       IntegerInstructionMap.insert(std::make_pair(MINumber, &MI));
     }
 
-    UnsignedVec.push_back(MINumber);
+    UnsignedVecForMBB.push_back(MINumber);
 
     // Make sure we don't overflow or use any integers reserved by the DenseMap.
     if (LegalInstrNumber >= IllegalInstrNumber)
@@ -682,10 +696,16 @@ struct InstructionMapper {
 
   /// Maps \p *It to an illegal integer.
   ///
-  /// Updates \p InstrList, \p UnsignedVec, and \p IllegalInstrNumber.
+  /// Updates \p InstrListForMBB, \p UnsignedVecForMBB, and \p
+  /// IllegalInstrNumber.
   ///
   /// \returns The integer that \p *It was mapped to.
-  unsigned mapToIllegalUnsigned(MachineBasicBlock::iterator &It) {
+  unsigned mapToIllegalUnsigned(MachineBasicBlock::iterator &It,
+  bool &CanOutlineWithPrevInstr, std::vector<unsigned> &UnsignedVecForMBB,
+  std::vector<MachineBasicBlock::iterator> &InstrListForMBB) {
+    // Can't outline an illegal instruction. Set the flag.
+    CanOutlineWithPrevInstr = false;
+
     // Only add one illegal number per range of legal numbers.
     if (AddedIllegalLastTime)
       return IllegalInstrNumber;
@@ -694,8 +714,8 @@ struct InstructionMapper {
     AddedIllegalLastTime = true;
     unsigned MINumber = IllegalInstrNumber;
 
-    InstrList.push_back(It);
-    UnsignedVec.push_back(IllegalInstrNumber);
+    InstrListForMBB.push_back(It);
+    UnsignedVecForMBB.push_back(IllegalInstrNumber);
     IllegalInstrNumber--;
 
     assert(LegalInstrNumber < IllegalInstrNumber &&
@@ -724,22 +744,44 @@ struct InstructionMapper {
                             const TargetInstrInfo &TII) {
     unsigned Flags = TII.getMachineOutlinerMBBFlags(MBB);
     MachineBasicBlock::iterator It = MBB.begin();
+
+    // The number of instructions in this block that will be considered for
+    // outlining.
+    unsigned NumLegalInBlock = 0;
+
+    // True if we have at least two legal instructions which aren't separated
+    // by an illegal instruction.
+    bool HaveLegalRange = false;
+
+    // True if we can perform outlining given the last mapped (non-invisible)
+    // instruction. This lets us know if we have a legal range.
+    bool CanOutlineWithPrevInstr = false;
+
+    // FIXME: Should this all just be handled in the target, rather than using
+    // repeated calls to getOutliningType?
+    std::vector<unsigned> UnsignedVecForMBB;
+    std::vector<MachineBasicBlock::iterator> InstrListForMBB;
+
     for (MachineBasicBlock::iterator Et = MBB.end(); It != Et; It++) {
       // Keep track of where this instruction is in the module.
       switch (TII.getOutliningType(It, Flags)) {
       case InstrType::Illegal:
-        mapToIllegalUnsigned(It);
+        mapToIllegalUnsigned(It, CanOutlineWithPrevInstr,
+                             UnsignedVecForMBB, InstrListForMBB);
         break;
 
       case InstrType::Legal:
-        mapToLegalUnsigned(It);
+        mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
+                           NumLegalInBlock, UnsignedVecForMBB, InstrListForMBB);
         break;
 
       case InstrType::LegalTerminator:
-        mapToLegalUnsigned(It);
+        mapToLegalUnsigned(It, CanOutlineWithPrevInstr, HaveLegalRange,
+                           NumLegalInBlock, UnsignedVecForMBB, InstrListForMBB);
         // The instruction also acts as a terminator, so we have to record that
         // in the string.
-        mapToIllegalUnsigned(It);
+        mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
+        InstrListForMBB);
         break;
 
       case InstrType::Invisible:
@@ -750,11 +792,20 @@ struct InstructionMapper {
       }
     }
 
-    // After we're done every insertion, uniquely terminate this part of the
-    // "string". This makes sure we won't match across basic block or function
-    // boundaries since the "end" is encoded uniquely and thus appears in no
-    // repeated substring.
-    mapToIllegalUnsigned(It);
+    // Are there enough legal instructions in the block for outlining to be
+    // possible?
+    if (HaveLegalRange) {
+      // After we're done every insertion, uniquely terminate this part of the
+      // "string". This makes sure we won't match across basic block or function
+      // boundaries since the "end" is encoded uniquely and thus appears in no
+      // repeated substring.
+      mapToIllegalUnsigned(It, CanOutlineWithPrevInstr, UnsignedVecForMBB,
+      InstrListForMBB);
+      InstrList.insert(InstrList.end(), InstrListForMBB.begin(),
+                       InstrListForMBB.end());
+      UnsignedVec.insert(UnsignedVec.end(), UnsignedVecForMBB.begin(),
+                         UnsignedVecForMBB.end());
+    }
   }
 
   InstructionMapper() {

@@ -109,7 +109,7 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
             if (path[0] == '~')
               FileSystem::Instance().Resolve(dsym_filespec);
 
-            if (llvm::sys::fs::is_directory(dsym_filespec.GetPath())) {
+            if (FileSystem::Instance().IsDirectory(dsym_filespec)) {
               dsym_filespec =
                   Symbols::FindSymbolFileInBundle(dsym_filespec, uuid, arch);
               ++items_found;

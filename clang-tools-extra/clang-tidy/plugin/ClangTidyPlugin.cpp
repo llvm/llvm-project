@@ -35,7 +35,7 @@ public:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                  StringRef File) override {
     // Insert the current diagnostics engine.
-    Context->DiagEngine = &Compiler.getDiagnostics();
+    Context->setDiagnosticsEngine(&Compiler.getDiagnostics());
 
     // Create the AST consumer.
     ClangTidyASTConsumerFactory Factory(*Context);

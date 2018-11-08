@@ -374,10 +374,9 @@ Status ProcessFreeBSD::DoLaunch(Module *module,
   assert(m_monitor == NULL);
 
   FileSpec working_dir = launch_info.GetWorkingDirectory();
-  namespace fs = llvm::sys::fs;
   if (working_dir) {
     FileSystem::Instance().Resolve(working_dir);
-    if (!fs::is_directory(working_dir.GetPath())) {
+    if (!FileSystem::Instance().IsDirectory(working_dir.GetPath())) {
       error.SetErrorStringWithFormat("No such file or directory: %s",
                                    working_dir.GetCString());
       return error;

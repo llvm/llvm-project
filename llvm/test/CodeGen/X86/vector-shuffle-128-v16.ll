@@ -579,6 +579,72 @@ define <16 x i8> @shuffle_v16i8_16_17_18_19_04_05_06_07_24_25_10_11_28_13_30_15(
   ret <16 x i8> %shuffle
 }
 
+; PR39387
+define <16 x i8> @shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4(<16 x i8> %a, <16 x i8> %b) {
+; SSE2-LABEL: shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,255]
+; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    pand %xmm2, %xmm3
+; SSE2-NEXT:    pandn %xmm1, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm1[8],xmm2[9],xmm1[9],xmm2[10],xmm1[10],xmm2[11],xmm1[11],xmm2[12],xmm1[12],xmm2[13],xmm1[13],xmm2[14],xmm1[14],xmm2[15],xmm1[15]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,65535,65535,0,0,65535]
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    pandn %xmm2, %xmm3
+; SSE2-NEXT:    pslldq {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,xmm2[0,1,2,3,4,5,6,7,8,9]
+; SSE2-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    por %xmm0, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[3,1,2,0]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,7,5,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,1]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[2,0,0,3,4,5,6,7]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,6,7,4]
+; SSE2-NEXT:    packuswb %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,xmm1[11,12,13,14,14],zero,zero,zero,zero,zero
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[5,6,7,8,9,10],zero,zero,zero,zero,zero,xmm0[1,1,2,3,4]
+; SSSE3-NEXT:    por %xmm1, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pshufb {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,xmm1[11,12,13,14,14],zero,zero,zero,zero,zero
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[5,6,7,8,9,10],zero,zero,zero,zero,zero,xmm0[1,1,2,3,4]
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX1OR2-LABEL: shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4:
+; AVX1OR2:       # %bb.0:
+; AVX1OR2-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,xmm1[11,12,13,14,14],zero,zero,zero,zero,zero
+; AVX1OR2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[5,6,7,8,9,10],zero,zero,zero,zero,zero,xmm0[1,1,2,3,4]
+; AVX1OR2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1OR2-NEXT:    retq
+;
+; AVX512VLBW-LABEL: shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4:
+; AVX512VLBW:       # %bb.0:
+; AVX512VLBW-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,xmm1[11,12,13,14,14],zero,zero,zero,zero,zero
+; AVX512VLBW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[5,6,7,8,9,10],zero,zero,zero,zero,zero,xmm0[1,1,2,3,4]
+; AVX512VLBW-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512VLBW-NEXT:    retq
+;
+; AVX512VLVBMI-LABEL: shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4:
+; AVX512VLVBMI:       # %bb.0:
+; AVX512VLVBMI-NEXT:    vmovdqa {{.*#+}} xmm2 = [5,6,7,8,9,10,27,28,29,30,30,1,1,2,3,4]
+; AVX512VLVBMI-NEXT:    vpermt2b %xmm1, %xmm2, %xmm0
+; AVX512VLVBMI-NEXT:    retq
+  %1 = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 27, i32 28, i32 29, i32 30, i32 30, i32 1, i32 1, i32 2, i32 3, i32 4>
+  ret <16 x i8> %1
+}
+
 ; PR27780 - https://bugs.llvm.org/show_bug.cgi?id=27780
 
 define <16 x i8> @load_fold_pblendvb(<16 x i8>* %px, <16 x i8> %y) {

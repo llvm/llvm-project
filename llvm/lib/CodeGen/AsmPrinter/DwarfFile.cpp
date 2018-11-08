@@ -111,9 +111,8 @@ void DwarfFile::addScopeLabel(LexicalScope *LS, DbgLabel *Label) {
 }
 
 std::pair<uint32_t, RangeSpanList *>
-DwarfFile::addRange(const MCSymbol *&CUBaseAddress,
-                    SmallVector<RangeSpan, 2> R) {
-  CURangeLists.push_back(RangeSpanList(Asm->createTempSymbol("debug_ranges"),
-                                       CUBaseAddress, std::move(R)));
+DwarfFile::addRange(const DwarfCompileUnit &CU, SmallVector<RangeSpan, 2> R) {
+  CURangeLists.push_back(
+      RangeSpanList(Asm->createTempSymbol("debug_ranges"), CU, std::move(R)));
   return std::make_pair(CURangeLists.size() - 1, &CURangeLists.back());
 }
