@@ -3781,7 +3781,7 @@ ConstString SwiftASTContext::GetMangledTypeName(swift::TypeBase *type_base) {
 
   assert(!swift_type->hasArchetype() && "type has not been mapped out of context");
   swift::Mangle::ASTMangler mangler(true);
-  std::string s = mangler.mangleTypeForDebugger(swift_type, nullptr, nullptr);
+  std::string s = mangler.mangleTypeForDebugger(swift_type, nullptr);
   if (s.empty())
     return ConstString();
 
