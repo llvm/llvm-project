@@ -41,13 +41,13 @@ bb:
 ; CHECK-NOT: llvm.lifetime
 ; CHECK: br i1
 ; CHECK: codeRepl.i:
-; CHECK: call void @_Z3foov.1_
+; CHECK: call void @_Z3foov.1.
 
   tail call void @_Z3foov()
   ret void
 }
 
-; CHECK-LABEL: define internal void @_Z3foov.1_
+; CHECK-LABEL: define internal void @_Z3foov.1.
 ; CHECK: newFuncRoot:
 ; CHECK-NEXT:  %tmp = alloca %class.A
 ; CHECK-NEXT:  %tmp1 = bitcast %class.A* %tmp to i8*

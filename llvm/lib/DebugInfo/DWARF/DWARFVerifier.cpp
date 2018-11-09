@@ -745,7 +745,8 @@ void DWARFVerifier::verifyDebugLineRows() {
 
 DWARFVerifier::DWARFVerifier(raw_ostream &S, DWARFContext &D,
                              DIDumpOptions DumpOpts)
-    : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)) {
+    : OS(S), DCtx(D), DumpOpts(std::move(DumpOpts)), IsObjectFile(false),
+      IsMachOObject(false) {
   if (const auto *F = DCtx.getDWARFObj().getFile()) {
     IsObjectFile = F->isRelocatableObject();
     IsMachOObject = F->isMachO();

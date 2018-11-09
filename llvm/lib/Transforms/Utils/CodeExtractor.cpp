@@ -57,6 +57,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -167,14 +168,22 @@ static bool isBlockValidForExtraction(const BasicBlock &BB,
       continue;
     }
 
-    if (const CallInst *CI = dyn_cast<CallInst>(I))
-      if (const Function *F = CI->getCalledFunction())
-        if (F->getIntrinsicID() == Intrinsic::vastart) {
+    if (const CallInst *CI = dyn_cast<CallInst>(I)) {
+      if (const Function *F = CI->getCalledFunction()) {
+        auto IID = F->getIntrinsicID();
+        if (IID == Intrinsic::vastart) {
           if (AllowVarArgs)
             continue;
           else
             return false;
         }
+
+        // Currently, we miscompile outlined copies of eh_typid_for. There are
+        // proposals for fixing this in llvm.org/PR39545.
+        if (IID == Intrinsic::eh_typeid_for)
+          return false;
+      }
+    }
   }
 
   return true;
@@ -228,19 +237,21 @@ buildExtractionBlockSet(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
 CodeExtractor::CodeExtractor(ArrayRef<BasicBlock *> BBs, DominatorTree *DT,
                              bool AggregateArgs, BlockFrequencyInfo *BFI,
                              BranchProbabilityInfo *BPI, bool AllowVarArgs,
-                             bool AllowAlloca)
+                             bool AllowAlloca, std::string Suffix)
     : DT(DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
       BPI(BPI), AllowVarArgs(AllowVarArgs),
-      Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)) {}
+      Blocks(buildExtractionBlockSet(BBs, DT, AllowVarArgs, AllowAlloca)),
+      Suffix(Suffix) {}
 
 CodeExtractor::CodeExtractor(DominatorTree &DT, Loop &L, bool AggregateArgs,
                              BlockFrequencyInfo *BFI,
-                             BranchProbabilityInfo *BPI)
+                             BranchProbabilityInfo *BPI, std::string Suffix)
     : DT(&DT), AggregateArgs(AggregateArgs || AggregateArgsOpt), BFI(BFI),
       BPI(BPI), AllowVarArgs(false),
       Blocks(buildExtractionBlockSet(L.getBlocks(), &DT,
                                      /* AllowVarArgs */ false,
-                                     /* AllowAlloca */ false)) {}
+                                     /* AllowAlloca */ false)),
+      Suffix(Suffix) {}
 
 /// definedInRegion - Return true if the specified value is defined in the
 /// extracted region.
@@ -669,11 +680,14 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
                   FunctionType::get(RetTy, paramTy,
                                     AllowVarArgs && oldFunction->isVarArg());
 
+  std::string SuffixToUse =
+      Suffix.empty()
+          ? (header->getName().empty() ? "extracted" : header->getName().str())
+          : Suffix;
   // Create the new function
-  Function *newFunction = Function::Create(funcType,
-                                           GlobalValue::InternalLinkage,
-                                           oldFunction->getName() + "_" +
-                                           header->getName(), M);
+  Function *newFunction =
+      Function::Create(funcType, GlobalValue::InternalLinkage,
+                       oldFunction->getName() + "." + SuffixToUse, M);
   // If the old function is no-throw, so is the new one.
   if (oldFunction->doesNotThrow())
     newFunction->setDoesNotThrow();
@@ -925,8 +939,16 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
     auto *OutI = dyn_cast<Instruction>(outputs[i]);
     if (!OutI)
       continue;
+
     // Find proper insertion point.
-    Instruction *InsertPt = OutI->getNextNode();
+    Instruction *InsertPt;
+    // In case OutI is an invoke, we insert the store at the beginning in the
+    // 'normal destination' BB. Otherwise we insert the store right after OutI.
+    if (auto *InvokeI = dyn_cast<InvokeInst>(OutI))
+      InsertPt = InvokeI->getNormalDest()->getFirstNonPHI();
+    else
+      InsertPt = OutI->getNextNode();
+
     // Let's assume that there is no other guy interleave non-PHI in PHIs.
     if (isa<PHINode>(InsertPt))
       InsertPt = InsertPt->getParent()->getFirstNonPHI();
@@ -1259,24 +1281,60 @@ Function *CodeExtractor::extractCodeRegion() {
   // Look at all successors of the codeReplacer block.  If any of these blocks
   // had PHI nodes in them, we need to update the "from" block to be the code
   // replacer, not the original block in the extracted region.
-  std::vector<BasicBlock *> Succs(succ_begin(codeReplacer),
-                                  succ_end(codeReplacer));
-  for (unsigned i = 0, e = Succs.size(); i != e; ++i)
-    for (BasicBlock::iterator I = Succs[i]->begin(); isa<PHINode>(I); ++I) {
-      PHINode *PN = cast<PHINode>(I);
-      std::set<BasicBlock*> ProcessedPreds;
-      for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
-        if (Blocks.count(PN->getIncomingBlock(i))) {
-          if (ProcessedPreds.insert(PN->getIncomingBlock(i)).second)
-            PN->setIncomingBlock(i, codeReplacer);
-          else {
-            // There were multiple entries in the PHI for this block, now there
-            // is only one, so remove the duplicated entries.
-            PN->removeIncomingValue(i, false);
-            --i; --e;
-          }
+  for (BasicBlock *SuccBB : successors(codeReplacer)) {
+    for (PHINode &PN : SuccBB->phis()) {
+      Value *IncomingCodeReplacerVal = nullptr;
+      SmallVector<unsigned, 2> IncomingValsToRemove;
+      for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
+        BasicBlock *IncomingBB = PN.getIncomingBlock(I);
+
+        // Ignore incoming values from outside of the extracted region.
+        if (!Blocks.count(IncomingBB))
+          continue;
+
+        // Ensure that there is only one incoming value from codeReplacer.
+        if (!IncomingCodeReplacerVal) {
+          PN.setIncomingBlock(I, codeReplacer);
+          IncomingCodeReplacerVal = PN.getIncomingValue(I);
+        } else {
+          assert(IncomingCodeReplacerVal == PN.getIncomingValue(I) &&
+                 "PHI has two incompatbile incoming values from codeRepl");
+          IncomingValsToRemove.push_back(I);
         }
+      }
+
+      for (unsigned I : reverse(IncomingValsToRemove))
+        PN.removeIncomingValue(I, /*DeletePHIIfEmpty=*/false);
     }
+  }
+
+  // Erase debug info intrinsics. Variable updates within the new function are
+  // invisible to debuggers. This could be improved by defining a DISubprogram
+  // for the new function.
+  for (BasicBlock &BB : *newFunction) {
+    auto BlockIt = BB.begin();
+    // Remove debug info intrinsics from the new function.
+    while (BlockIt != BB.end()) {
+      Instruction *Inst = &*BlockIt;
+      ++BlockIt;
+      if (isa<DbgInfoIntrinsic>(Inst))
+        Inst->eraseFromParent();
+    }
+    // Remove debug info intrinsics which refer to values in the new function
+    // from the old function.
+    SmallVector<DbgInfoIntrinsic *, 4> DbgUsers;
+    for (Instruction &I : BB)
+      findDbgUsers(DbgUsers, &I);
+    for (auto *DVI : DbgUsers)
+      DVI->eraseFromParent();
+  }
+
+  // Mark the new function `noreturn` if applicable.
+  bool doesNotReturn = none_of(*newFunction, [](const BasicBlock &BB) {
+    return isa<ReturnInst>(BB.getTerminator());
+  });
+  if (doesNotReturn)
+    newFunction->setDoesNotReturn();
 
   LLVM_DEBUG(if (verifyFunction(*newFunction))
                  report_fatal_error("verifyFunction failed!"));
