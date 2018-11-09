@@ -123,17 +123,33 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
                                            DataMemberRecord &data_member) {
 
-  TypeSP member_type = m_symbol_file.GetOrCreateType(data_member.Type);
-  CompilerType complete_member_type = member_type->GetFullCompilerType();
+  uint64_t offset = data_member.FieldOffset * 8;
+  uint32_t bitfield_width = 0;
 
+  TypeSP member_type;
+  TpiStream &tpi = m_symbol_file.m_index->tpi();
+  TypeIndex ti(data_member.Type);
+  if (!ti.isSimple()) {
+    CVType cvt = tpi.getType(ti);
+    if (cvt.kind() == LF_BITFIELD) {
+      BitFieldRecord bfr;
+      llvm::cantFail(TypeDeserializer::deserializeAs<BitFieldRecord>(cvt, bfr));
+      offset += bfr.BitOffset;
+      bitfield_width = bfr.BitSize;
+      ti = bfr.Type;
+    }
+  }
+
+  member_type = m_symbol_file.GetOrCreateType(ti);
+  CompilerType complete_member_type = member_type->GetFullCompilerType();
   lldb::AccessType access = TranslateMemberAccess(data_member.getAccess());
 
   clang::FieldDecl *decl = ClangASTContext::AddFieldToRecordType(
-      m_derived_ct, data_member.Name, complete_member_type, access, 0);
+      m_derived_ct, data_member.Name, complete_member_type, access,
+      bitfield_width);
   // FIXME: Add a PdbSymUid namespace for field list members and update
   // the m_uid_to_decl map with this decl.
 
-  uint64_t offset = data_member.FieldOffset * 8;
   m_layout.field_offsets.insert(std::make_pair(decl, offset));
 
   return Error::success();

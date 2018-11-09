@@ -89,22 +89,23 @@ Anonymous<A::B::C<int>>::D AnonABCVoidD;
 // CHECK: (TrivialC) TC = {}
 // CHECK: (TrivialS) TS = {}
 // CHECK: (TrivialU) TU = {}
-// CHECK: (TrivialE) TE = <Unable to determine byte size.>
-// CHECK: (A::B::C<int>) ABCInt = (ABCMember = <read memory from {{.*}} failed>)
-// CHECK: (A::B::C<float>) ABCFloat = (ABCMember = <read memory from {{.*}} failed>)
-// CHECK: (A::B::C<void>) ABCVoid = (ABCSpecializationMember = <read memory from {{.*}} failed>)
+// CHECK: (TrivialE) TE = TE_A
+// CHECK: (A::B::C<int>) ABCInt = (ABCMember = 0)
+// CHECK: (A::B::C<float>) ABCFloat = (ABCMember = 0)
+// CHECK: (A::B::C<void>) ABCVoid = (ABCSpecializationMember = 0x0000000000000000)
 // CHECK: (A::C<0>) AC0 = {}
 // CHECK: (A::C<-1>) ACNeg1 = {}
-// CHECK: (A::C<0>::D) AC0D = (ACDMember = <read memory from {{.*}} failed>, CPtr = <read memory from {{.*}} failed>)
-// CHECK: (A::C<-1>::D) ACNeg1D = (ACDMember = <read memory from {{.*}} failed>, CPtr = <read memory from {{.*}} failed>)
+// CHECK: (A::C<0>::D) AC0D = (ACDMember = 0, CPtr = 0x0000000000000000)
+// CHECK: (A::C<-1>::D) ACNeg1D = (ACDMember = 0, CPtr = 0x0000000000000000)
 // CHECK: (A::D) AD = {}
-// CHECK: (A::D::E) ADE = (ADDMember = <read memory from {{.*}} failed>)
+// CHECK: (A::D::E) ADE = (ADDMember = 0)
 // CHECK: Dumping clang ast for 1 modules.
 // CHECK: TranslationUnitDecl {{.*}}
 // CHECK: |-CXXRecordDecl {{.*}} class TrivialC definition
 // CHECK: |-CXXRecordDecl {{.*}} struct TrivialS definition
 // CHECK: |-CXXRecordDecl {{.*}} union TrivialU definition
 // CHECK: |-EnumDecl {{.*}} TrivialE
+// CHECK: | `-EnumConstantDecl {{.*}} TE_A 'TrivialE'
 // CHECK: |-NamespaceDecl {{.*}} A
 // CHECK: | |-NamespaceDecl {{.*}} B
 // CHECK: | | |-CXXRecordDecl {{.*}} struct C<int> definition
