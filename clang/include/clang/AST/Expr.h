@@ -3024,8 +3024,7 @@ class ImplicitCastExpr final
 private:
   ImplicitCastExpr(QualType ty, CastKind kind, Expr *op,
                    unsigned BasePathLength, ExprValueKind VK)
-    : CastExpr(ImplicitCastExprClass, ty, VK, kind, op, BasePathLength) {
-  }
+    : CastExpr(ImplicitCastExprClass, ty, VK, kind, op, BasePathLength) { }
 
   /// Construct an empty implicit cast.
   explicit ImplicitCastExpr(EmptyShell Shell, unsigned PathSize)
@@ -3068,8 +3067,13 @@ public:
 
 inline Expr *Expr::IgnoreImpCasts() {
   Expr *e = this;
-  while (ImplicitCastExpr *ice = dyn_cast<ImplicitCastExpr>(e))
-    e = ice->getSubExpr();
+  while (true)
+    if (ImplicitCastExpr *ice = dyn_cast<ImplicitCastExpr>(e))
+      e = ice->getSubExpr();
+    else if (ConstantExpr *ce = dyn_cast<ConstantExpr>(e))
+      e = ce->getSubExpr();
+    else
+      break;
   return e;
 }
 

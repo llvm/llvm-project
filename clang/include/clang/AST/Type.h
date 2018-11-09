@@ -2046,6 +2046,13 @@ public:
   bool isQueueT() const;                        // OpenCL queue_t
   bool isReserveIDT() const;                    // OpenCL reserve_id_t
 
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+  bool is##Id##Type() const;
+#include "clang/Basic/OpenCLExtensionTypes.def"
+  // Type defined in cl_intel_device_side_avc_motion_estimation OpenCL extension
+  bool isOCLIntelSubgroupAVCType() const;
+  bool isOCLExtOpaqueType() const;              // Any OpenCL extension type
+
   bool isPipeType() const;                      // OpenCL pipe type
   bool isOpenCLSpecificType() const;            // Any OpenCL specific type
 
@@ -2393,6 +2400,9 @@ public:
 // OpenCL image types
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) Id,
 #include "clang/Basic/OpenCLImageTypes.def"
+// OpenCL extension types
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) Id,
+#include "clang/Basic/OpenCLExtensionTypes.def"
 // All other builtin types
 #define BUILTIN_TYPE(Id, SingletonId) Id,
 #define LAST_BUILTIN_TYPE(Id) LastKind = Id
@@ -6454,9 +6464,30 @@ inline bool Type::isPipeType() const {
   return isa<PipeType>(CanonicalType);
 }
 
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+  inline bool Type::is##Id##Type() const { \
+    return isSpecificBuiltinType(BuiltinType::Id); \
+  }
+#include "clang/Basic/OpenCLExtensionTypes.def"
+
+inline bool Type::isOCLIntelSubgroupAVCType() const {
+#define INTEL_SUBGROUP_AVC_TYPE(ExtType, Id) \
+  isOCLIntelSubgroupAVC##Id##Type() ||
+  return
+#include "clang/Basic/OpenCLExtensionTypes.def"
+    false; // end of boolean or operation
+}
+
+inline bool Type::isOCLExtOpaqueType() const {
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) is##Id##Type() ||
+  return
+#include "clang/Basic/OpenCLExtensionTypes.def"
+    false; // end of boolean or operation
+}
+
 inline bool Type::isOpenCLSpecificType() const {
   return isSamplerT() || isEventT() || isImageType() || isClkEventT() ||
-         isQueueT() || isReserveIDT() || isPipeType();
+         isQueueT() || isReserveIDT() || isPipeType() || isOCLExtOpaqueType();
 }
 
 inline bool Type::isTemplateTypeParmType() const {

@@ -3297,7 +3297,21 @@ enum CXTypeKind {
 
   CXType_ObjCObject = 161,
   CXType_ObjCTypeParam = 162,
-  CXType_Attributed = 163
+  CXType_Attributed = 163,
+
+  CXType_OCLIntelSubgroupAVCMcePayload = 164,
+  CXType_OCLIntelSubgroupAVCImePayload = 165,
+  CXType_OCLIntelSubgroupAVCRefPayload = 166,
+  CXType_OCLIntelSubgroupAVCSicPayload = 167,
+  CXType_OCLIntelSubgroupAVCMceResult = 168,
+  CXType_OCLIntelSubgroupAVCImeResult = 169,
+  CXType_OCLIntelSubgroupAVCRefResult = 170,
+  CXType_OCLIntelSubgroupAVCSicResult = 171,
+  CXType_OCLIntelSubgroupAVCImeResultSingleRefStreamout = 172,
+  CXType_OCLIntelSubgroupAVCImeResultDualRefStreamout = 173,
+  CXType_OCLIntelSubgroupAVCImeSingleRefStreamin = 174,
+
+  CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175
 };
 
 /**

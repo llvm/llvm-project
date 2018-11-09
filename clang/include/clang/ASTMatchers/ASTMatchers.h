@@ -1574,6 +1574,18 @@ extern const internal::VariadicDynCastAllOfMatcher<Decl,
                                                    UnresolvedUsingTypenameDecl>
     unresolvedUsingTypenameDecl;
 
+/// Matches a constant expression wrapper.
+///
+/// Example matches the constant in the case statement:
+///     (matcher = constantExpr())
+/// \code
+///   switch (a) {
+///   case 37: break;
+///   }
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, ConstantExpr>
+    constantExpr;
+
 /// Matches parentheses used in expressions.
 ///
 /// Example matches (foo() + 1)

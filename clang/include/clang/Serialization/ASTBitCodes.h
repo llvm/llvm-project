@@ -993,6 +993,10 @@ namespace serialization {
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
       PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/OpenCLImageTypes.def"
+      /// \brief OpenCL extension types with auto numeration
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+      PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/OpenCLExtensionTypes.def"
     };
 
     /// The number of predefined type IDs that are reserved for

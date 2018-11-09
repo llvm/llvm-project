@@ -1066,13 +1066,17 @@ void test1() {
 
   /* vec_sr */
   res_vsll = vec_sr(vsll, vull);
-// CHECK: lshr <2 x i64>
-// CHECK-LE: lshr <2 x i64>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
+// CHECK: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
+// CHECK-LE: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 // CHECK-PPC: error: call to 'vec_sr' is ambiguous
 
   res_vull = vec_sr(vull, vull);
-// CHECK: lshr <2 x i64>
-// CHECK-LE: lshr <2 x i64>
+// CHECK: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
+// CHECK: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
+// CHECK-LE: [[UREM:[0-9a-zA-Z%.]+]] = urem <2 x i64> {{[0-9a-zA-Z%.]+}}, <i64 64, i64 64>
+// CHECK-LE: lshr <2 x i64> {{[0-9a-zA-Z%.]+}}, [[UREM]]
 // CHECK-PPC: error: call to 'vec_sr' is ambiguous
 
   /* vec_sra */

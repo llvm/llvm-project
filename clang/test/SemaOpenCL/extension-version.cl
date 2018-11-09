@@ -312,3 +312,12 @@
 #endif
 #pragma OPENCL EXTENSION cl_intel_subgroups_short : enable
 
+#if (__OPENCL_C_VERSION__ >= 120)
+#ifndef cl_intel_device_side_avc_motion_estimation
+#error "Missing cl_intel_device_side_avc_motion_estimation define"
+#endif
+#else
+// expected-warning@+2{{unsupported OpenCL extension 'cl_intel_device_side_avc_motion_estimation' - ignoring}}
+#endif
+#pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : enable
+
