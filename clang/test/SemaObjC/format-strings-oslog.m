@@ -39,6 +39,10 @@ void test_os_log_format(const char *pc, int i, void *p, void *buf) {
 
   struct { char data[0x100]; } toobig;
   __builtin_os_log_format(buf, "%s", toobig); // expected-error {{os_log() argument 2 is too big (256 bytes, max 255)}}
+
+  __builtin_os_log_format(buf, "%{mask.xyz}s", "abc");
+  __builtin_os_log_format(buf, "%{mask.}s", "abc"); // expected-error {{mask type size must be between 1-byte and 8-bytes}}
+  __builtin_os_log_format(buf, "%{mask.abcdefghi}s", "abc"); // expected-error {{mask type size must be between 1-byte and 8-bytes}}
 }
 
 // Test os_log_format primitive with ObjC string literal format argument.
