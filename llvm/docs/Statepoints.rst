@@ -590,8 +590,15 @@ Stack Map Format
 ================
 
 Locations for each pointer value which may need read and/or updated by
-the runtime or collector are provided via the :ref:`Stack Map format
-<stackmap-format>` specified in the PatchPoint documentation.
+the runtime or collector are provided in a separate section of the
+generated object file as specified specified in the PatchPoint
+documentation.  This special section is encoded per the
+:ref:`Stack Map format <stackmap-format>`.
+
+The general expectation is that a JIT compiler will parse and discard this
+format; it is not particularly memory efficient.  If you need an alternate
+format (e.g. for an ahead of time compiler), see discussion under
+:ref: `open work items <OpenWork>` below.
 
 Each statepoint generates the following Locations:
 
@@ -831,7 +838,9 @@ Supported Architectures
 =======================
 
 Support for statepoint generation requires some code for each backend.
-Today, only X86_64 is supported.  
+Today, only X86_64 is supported.
+
+.. _OpenWork:
 
 Problem Areas and Active Work
 =============================
@@ -860,6 +869,16 @@ Problem Areas and Active Work
    also has relocations.  See `this llvm-dev discussion
    <https://groups.google.com/forum/#!topic/llvm-dev/AE417XjgxvI>`_ for more
    detail.
+
+#. Support for alternate stackmap formats.  For some use cases, it is
+   desirable to directly encode a final memory efficient stackmap format for
+   use by the runtime.  This is particularly relevant for ahead of time
+   compilers which wish to directly link object files without the need for
+   post processing of each individual object file.  While not implemented
+   today for statepoints, there is precedent for a GCStrategy to be able to
+   select a customer GCMetataPrinter for this purpose.  Patches to enable
+   this functionality upstream are welcome.
+   
 
 Bugs and Enhancements
 =====================

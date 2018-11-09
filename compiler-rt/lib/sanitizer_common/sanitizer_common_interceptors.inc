@@ -4836,6 +4836,14 @@ INTERCEPTOR(float, remquof, float x, float y, int *quo) {
   if (quo) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, quo, sizeof(*quo));
   return res;
 }
+#define INIT_REMQUO                   \
+  COMMON_INTERCEPT_FUNCTION(remquo);  \
+  COMMON_INTERCEPT_FUNCTION(remquof);
+#else
+#define INIT_REMQUO
+#endif
+
+#if SANITIZER_INTERCEPT_REMQUOL
 INTERCEPTOR(long double, remquol, long double x, long double y, int *quo) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, remquol, x, y, quo);
@@ -4846,12 +4854,10 @@ INTERCEPTOR(long double, remquol, long double x, long double y, int *quo) {
   if (quo) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, quo, sizeof(*quo));
   return res;
 }
-#define INIT_REMQUO                   \
-  COMMON_INTERCEPT_FUNCTION(remquo);  \
-  COMMON_INTERCEPT_FUNCTION(remquof); \
+#define INIT_REMQUOL                  \
   COMMON_INTERCEPT_FUNCTION_LDBL(remquol);
 #else
-#define INIT_REMQUO
+#define INIT_REMQUOL
 #endif
 
 #if SANITIZER_INTERCEPT_LGAMMA
@@ -4870,6 +4876,14 @@ INTERCEPTOR(float, lgammaf, float x) {
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, &signgam, sizeof(signgam));
   return res;
 }
+#define INIT_LGAMMA                   \
+  COMMON_INTERCEPT_FUNCTION(lgamma);  \
+  COMMON_INTERCEPT_FUNCTION(lgammaf);
+#else
+#define INIT_LGAMMA
+#endif
+
+#if SANITIZER_INTERCEPT_LGAMMAL
 INTERCEPTOR(long double, lgammal, long double x) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, lgammal, x);
@@ -4877,12 +4891,10 @@ INTERCEPTOR(long double, lgammal, long double x) {
   COMMON_INTERCEPTOR_WRITE_RANGE(ctx, &signgam, sizeof(signgam));
   return res;
 }
-#define INIT_LGAMMA                   \
-  COMMON_INTERCEPT_FUNCTION(lgamma);  \
-  COMMON_INTERCEPT_FUNCTION(lgammaf); \
+#define INIT_LGAMMAL                  \
   COMMON_INTERCEPT_FUNCTION_LDBL(lgammal);
 #else
-#define INIT_LGAMMA
+#define INIT_LGAMMAL
 #endif
 
 #if SANITIZER_INTERCEPT_LGAMMA_R
@@ -7427,7 +7439,9 @@ static void InitializeCommonInterceptors() {
   INIT_PTHREAD_GETNAME_NP;
   INIT_SINCOS;
   INIT_REMQUO;
+  INIT_REMQUOL;
   INIT_LGAMMA;
+  INIT_LGAMMAL;
   INIT_LGAMMA_R;
   INIT_LGAMMAL_R;
   INIT_DRAND48_R;

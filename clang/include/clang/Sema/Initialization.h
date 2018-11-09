@@ -1335,6 +1335,10 @@ public:
   /// from a zero constant.
   void AddOCLZeroOpaqueTypeStep(QualType T);
 
+  /// Add a step to initialize by zero types defined in the
+  /// cl_intel_device_side_avc_motion_estimation OpenCL extension
+  void AddOCLIntelSubgroupAVCZeroInitStep(QualType T);
+
   /// Add steps to unwrap a initializer list for a reference around a
   /// single element and rewrap it at the end.
   void RewrapReferenceInitList(QualType T, InitListExpr *Syntactic);

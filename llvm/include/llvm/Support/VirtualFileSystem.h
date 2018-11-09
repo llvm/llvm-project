@@ -279,6 +279,9 @@ public:
   /// Check whether a file exists. Provided for convenience.
   bool exists(const Twine &Path);
 
+  /// Is the file mounted on a local filesystem?
+  virtual std::error_code isLocal(const Twine &Path, bool &Result);
+
   /// Make \a Path an absolute path.
   ///
   /// Makes \a Path absolute using the current directory if it is not already.
@@ -326,6 +329,7 @@ public:
   directory_iterator dir_begin(const Twine &Dir, std::error_code &EC) override;
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
+  std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) const override;
 
@@ -463,7 +467,7 @@ public:
   /// system.
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) const override;
-
+  std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
 };
 

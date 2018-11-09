@@ -129,4 +129,19 @@ int main(int argc, char **argv) {
   return argc + s.foo();
 }
 
+
+// HOST-LABEL: @main
+
+// HOST-DAG: call i32 @__tgt_target(i64 -1, i8* @{{.+}}, i32 11, i8** [[BASES:%.+]], i8** [[PTRS:%.+]],
+// HOST-DAG: [[BASES:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[BASE_PTR:%.+]], i32 0, i32 0
+// HOST-DAG: [[PTRS:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[PTR_PTR:%.+]], i32 0, i32 0
+// HOST-DAG: [[BASE_REF:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[BASE_PTR]], i32 0, i32 5
+// HOST-DAG: [[BASE_REF_CAST:%.+]] = bitcast i8** [[BASE_REF]] to i32***
+// HOST-DAG: store i32** [[BASE:%.+]], i32*** [[BASE_REF_CAST]],
+// HOST-DAG: [[BASE]] = getelementptr inbounds [[LAMBDA:%.+]], [[LAMBDA]]* [[LAMBDA_ADDR:%.+]], i32 0, i32 0
+// HOST-DAG: [[PTR_REF:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[PTR_PTR]], i32 0, i32 5
+// HOST-DAG: [[PTR_REF_CAST:%.+]] = bitcast i8** [[PTR_REF]] to i32**
+// HOST-DAG: store i32* [[PTR:%.+]], i32** [[PTR_REF_CAST]],
+// HOST-DAG: [[PTR]] = load i32*, i32** [[PTR_REF:%.+]],
+// HOST-DAG: [[PTR_REF]] = getelementptr inbounds [[LAMBDA]], [[LAMBDA]]* [[LAMBDA_ADDR]], i32 0, i32 0
 #endif // HEADER

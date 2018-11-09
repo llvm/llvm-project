@@ -7550,11 +7550,11 @@ public:
   }
 
   /// Emit capture info for lambdas for variables captured by reference.
-  void generateInfoForLambdaCaptures(const ValueDecl *VD, llvm::Value *Arg,
-                                     MapBaseValuesArrayTy &BasePointers,
-                                     MapValuesArrayTy &Pointers,
-                                     MapValuesArrayTy &Sizes,
-                                     MapFlagsArrayTy &Types) const {
+  void generateInfoForLambdaCaptures(
+      const ValueDecl *VD, llvm::Value *Arg, MapBaseValuesArrayTy &BasePointers,
+      MapValuesArrayTy &Pointers, MapValuesArrayTy &Sizes,
+      MapFlagsArrayTy &Types,
+      llvm::DenseMap<llvm::Value *, llvm::Value *> &LambdaPointers) const {
     const auto *RD = VD->getType()
                          .getCanonicalType()
                          .getNonReferenceType()
@@ -7570,8 +7570,10 @@ public:
     if (ThisCapture) {
       LValue ThisLVal =
           CGF.EmitLValueForFieldInitialization(VDLVal, ThisCapture);
-      BasePointers.push_back(VDLVal.getPointer());
-      Pointers.push_back(ThisLVal.getPointer());
+      LValue ThisLValVal = CGF.EmitLValueForField(VDLVal, ThisCapture);
+      LambdaPointers.try_emplace(ThisLVal.getPointer(), VDLVal.getPointer());
+      BasePointers.push_back(ThisLVal.getPointer());
+      Pointers.push_back(ThisLValVal.getPointer());
       Sizes.push_back(CGF.getTypeSize(CGF.getContext().VoidPtrTy));
       Types.push_back(OMP_MAP_PTR_AND_OBJ | OMP_MAP_LITERAL |
                       OMP_MAP_MEMBER_OF | OMP_MAP_IMPLICIT);
@@ -7583,8 +7585,10 @@ public:
       auto It = Captures.find(VD);
       assert(It != Captures.end() && "Found lambda capture without field.");
       LValue VarLVal = CGF.EmitLValueForFieldInitialization(VDLVal, It->second);
-      BasePointers.push_back(VDLVal.getPointer());
-      Pointers.push_back(VarLVal.getPointer());
+      LValue VarLValVal = CGF.EmitLValueForField(VDLVal, It->second);
+      LambdaPointers.try_emplace(VarLVal.getPointer(), VDLVal.getPointer());
+      BasePointers.push_back(VarLVal.getPointer());
+      Pointers.push_back(VarLValVal.getPointer());
       Sizes.push_back(CGF.getTypeSize(
           VD->getType().getCanonicalType().getNonReferenceType()));
       Types.push_back(OMP_MAP_PTR_AND_OBJ | OMP_MAP_LITERAL |
@@ -7593,15 +7597,17 @@ public:
   }
 
   /// Set correct indices for lambdas captures.
-  void adjustMemberOfForLambdaCaptures(MapBaseValuesArrayTy &BasePointers,
-                                       MapValuesArrayTy &Pointers,
-                                       MapFlagsArrayTy &Types) const {
+  void adjustMemberOfForLambdaCaptures(
+      const llvm::DenseMap<llvm::Value *, llvm::Value *> &LambdaPointers,
+      MapBaseValuesArrayTy &BasePointers, MapValuesArrayTy &Pointers,
+      MapFlagsArrayTy &Types) const {
     for (unsigned I = 0, E = Types.size(); I < E; ++I) {
       // Set correct member_of idx for all implicit lambda captures.
       if (Types[I] != (OMP_MAP_PTR_AND_OBJ | OMP_MAP_LITERAL |
                        OMP_MAP_MEMBER_OF | OMP_MAP_IMPLICIT))
         continue;
-      llvm::Value *BasePtr = *BasePointers[I];
+      llvm::Value *BasePtr = LambdaPointers.lookup(*BasePointers[I]);
+      assert(BasePtr && "Unable to find base lambda address.");
       int TgtIdx = -1;
       for (unsigned J = I; J > 0; --J) {
         unsigned Idx = J - 1;
@@ -8191,6 +8197,7 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
 
     // Get mappable expression information.
     MappableExprsHandler MEHandler(D, CGF);
+    llvm::DenseMap<llvm::Value *, llvm::Value *> LambdaPointers;
 
     auto RI = CS.getCapturedRecordDecl()->field_begin();
     auto CV = CapturedVars.begin();
@@ -8223,9 +8230,9 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
         // Generate correct mapping for variables captured by reference in
         // lambdas.
         if (CI->capturesVariable())
-          MEHandler.generateInfoForLambdaCaptures(CI->getCapturedVar(), *CV,
-                                                  CurBasePointers, CurPointers,
-                                                  CurSizes, CurMapTypes);
+          MEHandler.generateInfoForLambdaCaptures(
+              CI->getCapturedVar(), *CV, CurBasePointers, CurPointers, CurSizes,
+              CurMapTypes, LambdaPointers);
       }
       // We expect to have at least an element of information for this capture.
       assert(!CurBasePointers.empty() &&
@@ -8248,7 +8255,8 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
       MapTypes.append(CurMapTypes.begin(), CurMapTypes.end());
     }
     // Adjust MEMBER_OF flags for the lambdas captures.
-    MEHandler.adjustMemberOfForLambdaCaptures(BasePointers, Pointers, MapTypes);
+    MEHandler.adjustMemberOfForLambdaCaptures(LambdaPointers, BasePointers,
+                                              Pointers, MapTypes);
     // Map other list items in the map clause which are not captured variables
     // but "declare target link" global variables.
     MEHandler.generateInfoForDeclareTargetLink(BasePointers, Pointers, Sizes,

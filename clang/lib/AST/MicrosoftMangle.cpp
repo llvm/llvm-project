@@ -1985,6 +1985,11 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     Out << "PA";
     mangleArtificalTagType(TTK_Struct, "ocl_reserveid");
     break;
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+  case BuiltinType::Id: \
+    mangleArtificalTagType(TTK_Struct, "ocl_" #ExtType); \
+    break;
+#include "clang/Basic/OpenCLExtensionTypes.def"
 
   case BuiltinType::NullPtr:
     Out << "$$T";

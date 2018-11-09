@@ -65,7 +65,7 @@ Status NativeProcessProtocol::Launch(
   FileSpec working_dir(launch_info.GetWorkingDirectory());
   if (working_dir) {
     FileInstance::Instance().Resolve(working_dir);
-    if (!llvm::sys::fs::is_directory(working_dir.GetPath())) {
+    if (!FileSystem::Instance().IsDirectory(working_dir)) {
       error.SetErrorStringWithFormat("No such file or directory: %s",
                                    working_dir.GetCString());
       return error;

@@ -2044,6 +2044,18 @@ static void unswitchNontrivialInvariants(
     assert(UnswitchedSuccBBs.size() == 1 &&
            "Only one possible unswitched block for a branch!");
     BasicBlock *ClonedPH = ClonedPHs.begin()->second;
+
+    // When considering multiple partially-unswitched invariants
+    // we cant just go replace them with constants in both branches.
+    //
+    // For 'AND' we infer that true branch ("continue") means true
+    // for each invariant operand.
+    // For 'OR' we can infer that false branch ("continue") means false
+    // for each invariant operand.
+    // So it happens that for multiple-partial case we dont replace
+    // in the unswitched branch.
+    bool ReplaceUnswitched = FullUnswitch || (Invariants.size() == 1);
+
     ConstantInt *UnswitchedReplacement =
         Direction ? ConstantInt::getTrue(BI->getContext())
                   : ConstantInt::getFalse(BI->getContext());
@@ -2063,7 +2075,8 @@ static void unswitchNontrivialInvariants(
         // unswitched if in the cloned blocks.
         if (DT.dominates(LoopPH, UserI->getParent()))
           U->set(ContinueReplacement);
-        else if (DT.dominates(ClonedPH, UserI->getParent()))
+        else if (ReplaceUnswitched &&
+                 DT.dominates(ClonedPH, UserI->getParent()))
           U->set(UnswitchedReplacement);
       }
   }
