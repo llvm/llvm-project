@@ -159,11 +159,6 @@ void GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc, uptr bp,
                 request_fast_unwind);
 }
 
-void PrintWarning(uptr pc, uptr bp) {
-  GET_FATAL_STACK_TRACE_PC_BP(pc, bp);
-  ReportInvalidAccess(&stack, 0);
-}
-
 static void HWAsanCheckFailed(const char *file, int line, const char *cond,
                               u64 v1, u64 v2) {
   Report("HWAddressSanitizer CHECK failed: %s:%d \"%s\" (0x%zx, 0x%zx)\n", file,

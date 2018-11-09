@@ -228,35 +228,7 @@ void PrintAddressDescription(
     Printf("HWAddressSanitizer can not describe address in more detail.\n");
 }
 
-void ReportInvalidAccess(StackTrace *stack, u32 origin) {
-  ScopedErrorReportLock l;
-
-  Decorator d;
-  Printf("%s", d.Warning());
-  Report("WARNING: HWAddressSanitizer: invalid access\n");
-  Printf("%s", d.Default());
-  stack->Print();
-  ReportErrorSummary("invalid-access", stack);
-}
-
 void ReportStats() {}
-
-void ReportInvalidAccessInsideAddressRange(const char *what, const void *start,
-                                           uptr size, uptr offset) {
-  ScopedErrorReportLock l;
-  SavedStackAllocations current_stack_allocations(
-      GetCurrentThread()->stack_allocations());
-
-  Decorator d;
-  Printf("%s", d.Warning());
-  Printf("%sTag mismatch in %s%s%s at offset %zu inside [%p, %zu)%s\n",
-         d.Warning(), d.Name(), what, d.Warning(), offset, start, size,
-         d.Default());
-  PrintAddressDescription((uptr)start + offset, 1,
-                          current_stack_allocations.get());
-  // if (__sanitizer::Verbosity())
-  //   DescribeMemoryRange(start, size);
-}
 
 static void PrintTagsAroundAddr(tag_t *tag_ptr) {
   Printf(

@@ -243,6 +243,13 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
   // out to disk. The difference here would be that we still write "empty"
   // buffers, or at least go through the iterators faithfully to let the
   // handlers see the empty buffers in the queue.
+  //
+  // We need this atomic fence here to ensure that writes happening to the
+  // buffer have been committed before we load the extents atomically. Because
+  // the buffer is not explicitly synchronised across threads, we rely on the
+  // fence ordering to ensure that writes we expect to have been completed
+  // before the fence are fully committed before we read the extents.
+  atomic_thread_fence(memory_order_acquire);
   auto BufferSize = atomic_load(&It->Extents, memory_order_acquire);
   SerializedBufferSize = BufferSize + sizeof(MetadataRecord);
   CurrentBuffer = allocateBuffer(SerializedBufferSize);
