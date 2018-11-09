@@ -13,10 +13,9 @@
 using namespace lldb_private;
 using namespace llvm;
 
-MockTildeExpressionResolver::MockTildeExpressionResolver(FileSystem &fs,
-                                                         StringRef CurrentUser,
+MockTildeExpressionResolver::MockTildeExpressionResolver(StringRef CurrentUser,
                                                          StringRef HomeDir)
-    : TildeExpressionResolver(fs), CurrentUser(CurrentUser) {
+    : CurrentUser(CurrentUser) {
   UserDirectories.insert(std::make_pair(CurrentUser, HomeDir));
 }
 

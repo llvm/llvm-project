@@ -8,13 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/TildeExpressionResolver.h"
-#include "lldb/Host/FileSystem.h"
 
 #include <assert.h>     // for assert
 #include <system_error> // for error_code
 
 #include "llvm/ADT/STLExtras.h"      // for any_of
 #include "llvm/ADT/SmallVector.h"    // for SmallVectorImpl
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h" // for fs
 
@@ -37,7 +37,7 @@ bool StandardTildeExpressionResolver::ResolveExact(
   assert(!llvm::any_of(Expr, [](char c) { return path::is_separator(c); }));
   assert(Expr.empty() || Expr[0] == '~');
 
-  return !m_fs.GetRealPath(Expr, Output, true);
+  return !fs::real_path(Expr, Output, true);
 }
 
 bool StandardTildeExpressionResolver::ResolvePartial(StringRef Expr,
