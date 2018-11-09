@@ -351,8 +351,8 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     // we want to expand the tilde but we don't want to resolve any symbolic
     // links so we can't use the FileSpec constructor's resolve flag
     llvm::SmallString<64> unglobbed_path;
-    StandardTildeExpressionResolver Resolver;
-    Resolver.ResolveFullPath(user_exe_path, unglobbed_path);
+    StandardTildeExpressionResolver resolver(FileSystem::Instance());
+    resolver.ResolveFullPath(user_exe_path, unglobbed_path);
 
     if (unglobbed_path.empty())
       file = FileSpec(user_exe_path);
