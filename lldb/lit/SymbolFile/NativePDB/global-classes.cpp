@@ -304,8 +304,8 @@ constexpr References ReferencesInstance;
 // CHECK: | |-FieldDecl {{.*}} o 'long long'
 // CHECK: | `-FieldDecl {{.*}} p 'int [5]'
 // CHECK: |-EnumDecl {{.*}} EnumType
-// CHECK: | |-EnumConstantDecl {{.*}} A 'unsigned int'
-// CHECK: | `-EnumConstantDecl {{.*}} B 'unsigned int'
+// CHECK: | |-EnumConstantDecl {{.*}} A 'EnumType'
+// CHECK: | `-EnumConstantDecl {{.*}} B 'EnumType'
 // CHECK: |-CXXRecordDecl {{.*}} struct DerivedClass definition
 // CHECK: | |-public 'BaseClass<int>'
 // CHECK: | `-FieldDecl {{.*}} DerivedMember 'int'

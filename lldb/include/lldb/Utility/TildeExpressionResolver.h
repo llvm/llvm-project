@@ -18,8 +18,10 @@ template <typename T> class SmallVectorImpl;
 }
 
 namespace lldb_private {
+class FileSystem;
 class TildeExpressionResolver {
 public:
+  TildeExpressionResolver(FileSystem &fs) : m_fs(fs) {}
   virtual ~TildeExpressionResolver();
 
   /// Resolve a Tilde Expression contained according to bash rules.
@@ -52,14 +54,20 @@ public:
   /// the username portion with the matched result.
   bool ResolveFullPath(llvm::StringRef Expr,
                        llvm::SmallVectorImpl<char> &Output);
+
+protected:
+  FileSystem &m_fs;
 };
 
 class StandardTildeExpressionResolver : public TildeExpressionResolver {
 public:
+  StandardTildeExpressionResolver(FileSystem &fs)
+      : TildeExpressionResolver(fs) {}
+
   bool ResolveExact(llvm::StringRef Expr,
                     llvm::SmallVectorImpl<char> &Output) override;
   bool ResolvePartial(llvm::StringRef Expr, llvm::StringSet<> &Output) override;
 };
-}
+} // namespace lldb_private
 
 #endif // #ifndef LLDB_UTILITY_TILDE_EXPRESSION_RESOLVER_H
