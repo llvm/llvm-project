@@ -50,6 +50,7 @@
 #include <zlib.h>
 #endif
 
+#include <llvm/Support/Compiler.h>
 #include <TargetConditionals.h> // for endianness predefines
 #include <iomanip>
 #include <sstream>
