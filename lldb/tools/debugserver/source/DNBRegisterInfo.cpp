@@ -13,6 +13,7 @@
 
 #include "DNBRegisterInfo.h"
 #include "DNBLog.h"
+#include <llvm/Support/Compiler.h>
 #include <string.h>
 
 DNBRegisterValueClass::DNBRegisterValueClass(const DNBRegisterInfo *regInfo) {
