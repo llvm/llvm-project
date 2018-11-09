@@ -24,20 +24,34 @@ MATH_MANGLE(rootn)(float x, int ny)
 MATH_MANGLE(pow)(float x, float y)
 #endif
 {
-    if (DAZ_OPT()) {
-        x = BUILTIN_CANONICALIZE_F32(x);
-    }
-
-#if defined COMPILING_POWN || defined COMPILING_ROOTN
-    int nyh = ny & 0xffff0000;
-    float2 y = fadd((float)nyh, (float)(ny - nyh));
-#if defined(COMPILING_ROOTN)
-    y = rcp(y);
-#endif
-#endif
-
     float ax = BUILTIN_ABS_F32(x);
-    float expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
+    float expylnx;
+
+    if (UNSAFE_MATH_OPT()) {
+#if defined COMPILING_POWN
+        float y = (float)ny;
+#elif defined COMPILING_ROOTN
+        float y = MATH_FAST_RCP((float)ny);
+#endif
+        if (DAZ_OPT()) {
+            expylnx = BUILTIN_EXP2_F32(y * BUILTIN_LOG2_F32(ax));
+        } else {
+            bool b = ax < 0x1.0p-126f;
+            float ylnx = y * (BUILTIN_LOG2_F32(ax * (b ? 0x1.0p+24f : 1.0f)) - (b ? 24.0f : 0.0f));
+            b = ylnx < -126.0f;
+            expylnx = BUILTIN_EXP2_F32(ylnx + (b ? 24.0f : 0.0f)) * (b ? 0x1.0p-24f : 1.0f);
+        }
+    } else {
+#if defined COMPILING_POWN || defined COMPILING_ROOTN
+        int nyh = ny & 0xffff0000;
+        float2 y = fadd((float)nyh, (float)(ny - nyh));
+#if defined(COMPILING_ROOTN)
+        y = rcp(y);
+#endif
+#endif
+
+        expylnx = MATH_PRIVATE(expep)(omul(y, MATH_PRIVATE(epln)(ax)));
+    }
 
     // y status: 0=not integer, 1=odd, 2=even
 #if defined(COMPILING_POWN) || defined(COMPILING_ROOTN)
