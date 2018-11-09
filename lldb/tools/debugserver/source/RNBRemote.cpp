@@ -50,7 +50,6 @@
 #include <zlib.h>
 #endif
 
-#include <llvm/Support/Compiler.h>
 #include <TargetConditionals.h> // for endianness predefines
 #include <iomanip>
 #include <sstream>
@@ -3691,7 +3690,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
           return HandlePacket_ILLFORMED(
               __FILE__, __LINE__, p, "Could not parse signal in vCont packet");
       // Fall through to next case...
-        LLVM_FALLTHROUGH;
+        [[clang::fallthrough]];
       case 'c':
         // Continue
         thread_action.state = eStateRunning;
@@ -3704,7 +3703,7 @@ rnb_err_t RNBRemote::HandlePacket_v(const char *p) {
           return HandlePacket_ILLFORMED(
               __FILE__, __LINE__, p, "Could not parse signal in vCont packet");
       // Fall through to next case...
-        LLVM_FALLTHROUGH;
+        [[clang::fallthrough]];
       case 's':
         // Step
         thread_action.state = eStateStepping;
