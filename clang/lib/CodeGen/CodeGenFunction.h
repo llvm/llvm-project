@@ -1197,6 +1197,8 @@ public:
 
 private:
   CGDebugInfo *DebugInfo;
+  /// Used to create unique names for artificial VLA size debug info variables.
+  unsigned VLAExprCounter = 0;
   bool DisableDebugInfo = false;
 
   /// DidCallStackSave - Whether llvm.stacksave has been called. Used to avoid
