@@ -89,7 +89,7 @@ Anonymous<A::B::C<int>>::D AnonABCVoidD;
 // CHECK: (TrivialC) TC = {}
 // CHECK: (TrivialS) TS = {}
 // CHECK: (TrivialU) TU = {}
-// CHECK: (TrivialE) TE = <Unable to determine byte size.>
+// CHECK: (TrivialE) TE = TE_A
 // CHECK: (A::B::C<int>) ABCInt = (ABCMember = 0)
 // CHECK: (A::B::C<float>) ABCFloat = (ABCMember = 0)
 // CHECK: (A::B::C<void>) ABCVoid = (ABCSpecializationMember = 0x0000000000000000)
@@ -105,6 +105,7 @@ Anonymous<A::B::C<int>>::D AnonABCVoidD;
 // CHECK: |-CXXRecordDecl {{.*}} struct TrivialS definition
 // CHECK: |-CXXRecordDecl {{.*}} union TrivialU definition
 // CHECK: |-EnumDecl {{.*}} TrivialE
+// CHECK: | `-EnumConstantDecl {{.*}} TE_A 'TrivialE'
 // CHECK: |-NamespaceDecl {{.*}} A
 // CHECK: | |-NamespaceDecl {{.*}} B
 // CHECK: | | |-CXXRecordDecl {{.*}} struct C<int> definition
