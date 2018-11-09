@@ -792,10 +792,16 @@ bool Target::ProcessIsValid() {
   return (m_process_sp && m_process_sp->IsAlive());
 }
 
-static bool CheckIfWatchpointsExhausted(Target *target, Status &error) {
+static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
   uint32_t num_supported_hardware_watchpoints;
   Status rc = target->GetProcessSP()->GetWatchpointSupportInfo(
       num_supported_hardware_watchpoints);
+
+  // If unable to determine the # of watchpoints available,
+  // assume they are supported.
+  if (rc.Fail())
+    return true;
+
   if (num_supported_hardware_watchpoints == 0) {
     error.SetErrorStringWithFormat(
         "Target supports (%u) hardware watchpoint slots.\n",
@@ -834,7 +840,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     error.SetErrorStringWithFormat("invalid watchpoint type: %d", kind);
   }
 
-  if (!CheckIfWatchpointsExhausted(this, error))
+  if (!CheckIfWatchpointsSupported(this, error))
     return wp_sp;
 
   // Currently we only support one watchpoint per address, with total number of
