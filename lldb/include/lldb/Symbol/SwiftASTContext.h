@@ -834,7 +834,6 @@ protected:
                                     // an expression has been evaluated will the
                                     // target's process pointer be filled in
   std::string m_platform_sdk_path;
-  std::string m_resource_dir;
 
   typedef std::map<Module *, std::vector<lldb::DataBufferSP>> ASTFileDataMap;
   ASTFileDataMap m_ast_file_data_map;
@@ -850,7 +849,6 @@ protected:
   bool m_initialized_clang_importer_options;
   bool m_reported_fatal_error;
   Status m_fatal_errors;
-  std::once_flag m_once_flag;
 
   typedef ThreadSafeDenseSet<const char *> SwiftMangledNameSet;
   SwiftMangledNameSet m_negative_type_cache;
