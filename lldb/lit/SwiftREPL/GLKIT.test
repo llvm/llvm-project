@@ -1,0 +1,46 @@
+// Test formatters for Accelerate/simd.
+// REQUIRES: darwin
+
+// RUN: %lldb --repl < %s | FileCheck %s
+
+import GLKit
+
+GLKVector3(v: (1, 2, 3))
+// CHECK: $R{{.*}}: GLKVector3 = (1.000000e+00, 2.000000e+00, 3.000000e+00)
+
+GLKVector4(v: (1, 2, 3, 4))
+// CHECK: $R{{.*}}: GLKVector4 = (1.000000e+00, 2.000000e+00, 3.000000e+00, 4.000000e+00)
+
+GLKVector2(v: (4, 5))
+// CHECK: $R{{.*}}: GLKVector2 = (4.000000e+00, 5.000000e+00)
+
+GLKQuaternion(q: (4, 3, 2, 1))
+// CHECK: $R{{.*}}: GLKQuaternion = (4.000000e+00, 3.000000e+00, 2.000000e+00, 1.000000e+00)
+
+GLKMatrix3Identity
+// CHECK: $R{{.*}}: GLKMatrix3 =
+// CHECK: [ [1.000000e+00, 0.000000e+00, 0.000000e+00],
+// CHECK:   [0.000000e+00, 1.000000e+00, 0.000000e+00],
+// CHECK:   [0.000000e+00, 0.000000e+00, 1.000000e+00] ]
+
+GLKMatrix4Identity
+// CHECK: $R{{.*}}: GLKMatrix4 =
+// CHECK: [ [1.000000e+00, 0.000000e+00, 0.000000e+00, 0.000000e+00],
+// CHECK:   [0.000000e+00, 1.000000e+00, 0.000000e+00, 0.000000e+00],
+// CHECK:   [0.000000e+00, 0.000000e+00, 1.000000e+00, 0.000000e+00],
+// CHECK:   [0.000000e+00, 0.000000e+00, 0.000000e+00, 1.000000e+00] ]
+
+let mat = GLKMatrix3Make(10, 20, 30, 40, 50, 60, 70, 80, 90)
+// CHECK: {{mat}}: GLKMatrix3 =
+// CHECK: [ [1.000000e+01, 4.000000e+01, 7.000000e+01],
+// CHECK:   [2.000000e+01, 5.000000e+01, 8.000000e+01],
+// CHECK:   [3.000000e+01, 6.000000e+01, 9.000000e+01] ]
+
+GLKMatrix3GetMatrix2(mat)
+// CHECK: $R{{.*}}: GLKMatrix2 =
+// CHECK: [ [1.000000e+01, 4.000000e+01],
+// CHECK:   [2.000000e+01, 5.000000e+01] ]
+
+
+
+
