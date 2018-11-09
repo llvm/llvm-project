@@ -132,7 +132,8 @@ public:
                           void *callback_baton);
 
   std::error_code GetRealPath(const llvm::Twine &path,
-                              llvm::SmallVectorImpl<char> &output) const;
+                              llvm::SmallVectorImpl<char> &output,
+                              bool expand_tilde) const;
 
 private:
   static llvm::Optional<FileSystem> &InstanceImpl();

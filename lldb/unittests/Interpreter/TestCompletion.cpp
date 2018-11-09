@@ -7,9 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -65,6 +67,8 @@ protected:
   SmallString<128> FileBaz;
 
   void SetUp() override {
+    FileSystem::Initialize();
+
     // chdir back into the original working dir this test binary started with.
     // A previous test may have have changed the working dir.
     ASSERT_NO_ERROR(fs::set_current_path(OriginalWorkingDir));
@@ -105,7 +109,10 @@ protected:
     ASSERT_NO_ERROR(fs::current_path(OriginalWorkingDir));
   }
 
-  void TearDown() override { ASSERT_NO_ERROR(fs::remove_directories(BaseDir)); }
+  void TearDown() override {
+    ASSERT_NO_ERROR(fs::remove_directories(BaseDir));
+    FileSystem::Terminate();
+  }
 
   static bool HasEquivalentFile(const Twine &Path, const StringList &Paths) {
     for (size_t I = 0; I < Paths.GetSize(); ++I) {
@@ -158,7 +165,7 @@ TEST_F(CompletionTest, DirCompletionAbsolute) {
 
   std::string Prefixes[] = {(Twine(BaseDir) + "/").str(), ""};
 
-  StandardTildeExpressionResolver Resolver;
+  StandardTildeExpressionResolver Resolver(FileSystem::Instance());
   StringList Results;
 
   // When a directory is specified that doesn't end in a slash, it searches
@@ -197,7 +204,7 @@ TEST_F(CompletionTest, FileCompletionAbsolute) {
   // all check this by asserting an exact result count, and verifying against
   // known folders.
 
-  StandardTildeExpressionResolver Resolver;
+  StandardTildeExpressionResolver Resolver(FileSystem::Instance());
   StringList Results;
   // When an item is specified that doesn't end in a slash but exactly matches
   // one item, it returns that item.
@@ -248,7 +255,8 @@ TEST_F(CompletionTest, FileCompletionAbsolute) {
 }
 
 TEST_F(CompletionTest, DirCompletionUsername) {
-  MockTildeExpressionResolver Resolver("James", BaseDir);
+  MockTildeExpressionResolver Resolver(FileSystem::Instance(), "James",
+                                       BaseDir);
   Resolver.AddKnownUser("Kirk", DirFooB);
   Resolver.AddKnownUser("Lars", DirFooC);
   Resolver.AddKnownUser("Jason", DirFoo);
