@@ -1,26 +1,16 @@
 LEVEL = ../../../make
 
+SWIFT_SOURCES := main.swift
+
+all: aTestFramework.framework a.out
+
 include $(LEVEL)/Makefile.rules
 
-framework_nodbg: framework
-	rm -rf aTestFramework.framework.dSYM
+SWIFTFLAGS += -framework aTestFramework -framework Cocoa -F $(shell pwd) -Xlinker -rpath -Xlinker $(shell pwd)
 
-framework: cleanup
-	xcodebuild -configuration Release -project framework/aTestFramework/aTestFramework.xcodeproj CONFIGURATION_BUILD_DIR=$(shell pwd)
-	cp module.map aTestFramework.framework/
+aTestFramework.framework:
+	xcodebuild -configuration Release -project $(SRCDIR)/framework/aTestFramework/aTestFramework.xcodeproj CONFIGURATION_BUILD_DIR=$(shell pwd)
+	cp $(SRCDIR)/module.map $(shell pwd)/aTestFramework.framework/
 
-exec_impl:
-	$(SWIFTC) $(SWIFT_MODULE_CACHE_FLAGS) -g -Onone -o main main.swift -framework aTestFramework -framework Cocoa -sdk "$(SWIFTSDKROOT)" -F "$(shell pwd)"
-ifneq "$(CODESIGN)" ""
-	$(CODESIGN) -s - main
-endif
 
-exec: framework exec_impl
-
-exec_nodbg: framework_nodbg exec_impl
-
-cleanup:
-	rm -rf main aTestFramework.framework aTestFramework.framework.dSYM main.dSYM
-	rm -rf framework/aTestFramework/build
-	rm -rf framework/aTestFramework/intermediates
 
