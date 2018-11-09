@@ -93,7 +93,10 @@ the collector must be able to:
 
 This document describes the mechanism by which an LLVM based compiler
 can provide this information to a language runtime/collector, and
-ensure that all pointers can be read and updated if desired.  
+ensure that all pointers can be read and updated if desired.
+
+Abstract Machine Model
+^^^^^^^^^^^^^^^^^^^^^^^
 
 At a high level, LLVM has been extended to support compiling to an abstract 
 machine which extends the actual target with a non-integral pointer type 
@@ -103,10 +106,16 @@ integer representation.  This semantic quirk allows the runtime to pick a
 integer mapping for each point in the program allowing relocations of objects 
 without visible effects.
 
-Warning: Non-Integral Pointer Types are a newly added concept in LLVM IR.  
-It's possible that we've missed disabling some of the optimizations which 
-assume an integral value for pointers.  If you find such a case, please 
-file a bug or share a patch.
+This high level abstract machine model is used for most of the optimizer.  As
+a result, transform passes do not need to be extended to look through explicit
+relocation sequence.  Before starting code generation, we switch
+representations to an explicit form.  The exact location chosen for lowering
+is an implementation detail.
+
+Note that most of the value of the abstract machine model comes for collectors
+which need to model potentially relocatable objects.  For a compiler which
+supports only a non-relocating collector, you may wish to consider starting
+with the fully explicit form.  
 
 Warning: There is one currently known semantic hole in the definition of 
 non-integral pointers which has not been addressed upstream.  To work around
@@ -116,10 +125,13 @@ not safe to speculate a load if doing causes a non-integral pointer value to
 be loaded as any other type or vice versa.  In practice, this restriction is 
 well isolated to isSafeToSpeculate in ValueTracking.cpp.
 
-This high level abstract machine model is used for most of the LLVM optimizer.
-Before starting code generation, we switch representations to an explicit form.
-In theory, a frontend could directly generate this low level explicit form, but 
-doing so is likely to inhibit optimization.  
+Explicit Representation
+^^^^^^^^^^^^^^^^^^^^^^^
+
+A frontend could directly generate this low level explicit form, but 
+doing so may inhibit optimization.  Instead, it is recommended that
+compilers with relocating collectors target the abstract machine model just
+described.  
 
 The heart of the explicit approach is to construct (or rewrite) the IR in a 
 manner where the possible updates performed by the garbage collector are
@@ -242,6 +254,56 @@ following command.
 
   opt -rewrite-statepoints-for-gc test/Transforms/RewriteStatepointsForGC/basics.ll -S | llc -debug-only=stackmaps
 
+Simplifications for Non-Relocating GCs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some of the complexity in the previous example is unnecessary for a
+non-relocating collector.  While a non-relocating collector still needs the
+information about which location contain live references, it doesn't need to
+represent explicit relocations.  As such, the previously described explicit
+lowering can be simplified to remove all of the ``gc.relocate`` intrinsic
+calls and leave uses in terms of the original reference value.  
+
+Here's the explicit lowering for the previous example for a non-relocating
+collector:
+
+.. code-block:: llvm
+
+  define i8 addrspace(1)* @test1(i8 addrspace(1)* %obj) 
+         gc "statepoint-example" {
+    call token (i64, i32, void ()*, i32, i32, ...)* @llvm.experimental.gc.statepoint.p0f_isVoidf(i64 0, i32 0, void ()* @foo, i32 0, i32 0, i32 0, i32 0, i8 addrspace(1)* %obj)
+    ret i8 addrspace(1)* %obj
+  }
+
+Recording On Stack Regions
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In addition to the explicit relocation form previously described, the
+statepoint infrastructure also allows the listing of allocas within the gc
+pointer list.  Allocas can be listed with or without additional explicit gc
+pointer values and relocations.
+
+An alloca in the gc region of the statepoint operand list will cause the
+address of the stack region to be listed in the stackmap for the statepoint.
+
+This mechanism can be used to describe explicit spill slots if desired.  It
+then becomes the generator's responsibility to ensure that values are
+spill/filled to/from the alloca as needed on either side of the safepoint.
+Note that there is no way to indicate a corresponding base pointer for such
+an explicitly specified spill slot, so usage is restricted to values for
+which the associated collector can derive the object base from the pointer
+itself.
+
+This mechanism can be used to describe on stack objects containing
+references provided that the collector can map from the location on the
+stack to a heap map describing the internal layout of the references the
+collector needs to process.
+
+WARNING: At the moment, this alternate form is not well exercised.  It is
+recommended to use this with caution and expect to have to fix a few bugs.
+In particular, the RewriteStatepointsForGC utility pass does not do
+anything for allocas today.
+  
 Base & Derived Pointers
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -590,8 +652,15 @@ Stack Map Format
 ================
 
 Locations for each pointer value which may need read and/or updated by
-the runtime or collector are provided via the :ref:`Stack Map format
-<stackmap-format>` specified in the PatchPoint documentation.
+the runtime or collector are provided in a separate section of the
+generated object file as specified in the PatchPoint documentation.
+This special section is encoded per the
+:ref:`Stack Map format <stackmap-format>`.
+
+The general expectation is that a JIT compiler will parse and discard this
+format; it is not particularly memory efficient.  If you need an alternate
+format (e.g. for an ahead of time compiler), see discussion under
+:ref: `open work items <OpenWork>` below.
 
 Each statepoint generates the following Locations:
 
@@ -831,7 +900,9 @@ Supported Architectures
 =======================
 
 Support for statepoint generation requires some code for each backend.
-Today, only X86_64 is supported.  
+Today, only X86_64 is supported.
+
+.. _OpenWork:
 
 Problem Areas and Active Work
 =============================
@@ -860,6 +931,16 @@ Problem Areas and Active Work
    also has relocations.  See `this llvm-dev discussion
    <https://groups.google.com/forum/#!topic/llvm-dev/AE417XjgxvI>`_ for more
    detail.
+
+#. Support for alternate stackmap formats.  For some use cases, it is
+   desirable to directly encode a final memory efficient stackmap format for
+   use by the runtime.  This is particularly relevant for ahead of time
+   compilers which wish to directly link object files without the need for
+   post processing of each individual object file.  While not implemented
+   today for statepoints, there is precedent for a GCStrategy to be able to
+   select a customer GCMetataPrinter for this purpose.  Patches to enable
+   this functionality upstream are welcome.
+   
 
 Bugs and Enhancements
 =====================

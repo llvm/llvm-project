@@ -401,6 +401,10 @@ public:
   /// returns the address of that location. Otherwise, returns nullptr.
   Value *getIRStackGuard(IRBuilder<> &IRB) const override;
 
+  void insertSSPDeclarations(Module &M) const override;
+  Value *getSDagStackGuard(const Module &M) const override;
+  Value *getSSPStackGuardCheck(const Module &M) const override;
+
   /// If the target has a standard location for the unsafe stack pointer,
   /// returns the address of that location. Otherwise, returns nullptr.
   Value *getSafeStackPointerLocation(IRBuilder<> &IRB) const override;

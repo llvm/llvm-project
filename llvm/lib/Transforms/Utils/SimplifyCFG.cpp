@@ -1372,6 +1372,14 @@ HoistTerminator:
     }
   }
 
+  // As the parent basic block terminator is a branch instruction which is
+  // removed at the end of the current transformation, use its previous
+  // non-debug instruction, as the reference insertion point, which will
+  // provide the debug location for the instruction being hoisted. For BBs
+  // with only debug instructions, use an empty debug location.
+  Instruction *InsertPt =
+      BIParent->getTerminator()->getPrevNonDebugInstruction();
+
   // Okay, it is safe to hoist the terminator.
   Instruction *NT = I1->clone();
   BIParent->getInstList().insert(BI->getIterator(), NT);
@@ -1380,6 +1388,14 @@ HoistTerminator:
     I2->replaceAllUsesWith(NT);
     NT->takeName(I1);
   }
+
+  // The instruction NT being hoisted, is the terminator for the true branch,
+  // with debug location (DILocation) within that branch. We can't retain
+  // its original debug location value, otherwise 'select' instructions that
+  // are created from any PHI nodes, will take its debug location, giving
+  // the impression that those 'select' instructions are in the true branch,
+  // causing incorrect stepping, affecting the debug experience.
+  NT->setDebugLoc(InsertPt ? InsertPt->getDebugLoc() : DebugLoc());
 
   IRBuilder<NoFolder> Builder(NT);
   // Hoisting one of the terminators from our successor is a great thing.

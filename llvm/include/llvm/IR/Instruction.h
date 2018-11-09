@@ -586,6 +586,14 @@ public:
         static_cast<const Instruction *>(this)->getNextNonDebugInstruction());
   }
 
+  /// Return a pointer to the previous non-debug instruction in the same basic
+  /// block as 'this', or nullptr if no such instruction exists.
+  const Instruction *getPrevNonDebugInstruction() const;
+  Instruction *getPrevNonDebugInstruction() {
+    return const_cast<Instruction *>(
+        static_cast<const Instruction *>(this)->getPrevNonDebugInstruction());
+  }
+
   /// Create a copy of 'this' instruction that is identical in all ways except
   /// the following:
   ///   * The instruction has no parent

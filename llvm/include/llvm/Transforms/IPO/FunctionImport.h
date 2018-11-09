@@ -201,10 +201,10 @@ std::error_code EmitImportsFiles(
     StringRef ModulePath, StringRef OutputFilename,
     const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
-/// Resolve WeakForLinker values in \p TheModule based on the information
+/// Resolve prevailing symbol linkages in \p TheModule based on the information
 /// recorded in the summaries during global summary-based analysis.
-void thinLTOResolveWeakForLinkerModule(Module &TheModule,
-                                       const GVSummaryMapTy &DefinedGlobals);
+void thinLTOResolvePrevailingInModule(Module &TheModule,
+                                      const GVSummaryMapTy &DefinedGlobals);
 
 /// Internalize \p TheModule based on the information recorded in the summaries
 /// during global summary-based analysis.

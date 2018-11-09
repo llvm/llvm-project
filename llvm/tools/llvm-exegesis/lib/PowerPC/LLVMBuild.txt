@@ -1,4 +1,4 @@
-;===- lib/Target/MSP430/AsmParser/LLVMBuild.txt ----------------*- Conf -*--===;
+;===- ./tools/llvm-exegesis/lib/PowerPC/LLVMBuild.txt ---------------*- Conf -*--===;
 ;
 ;                     The LLVM Compiler Infrastructure
 ;
@@ -17,7 +17,6 @@
 
 [component_0]
 type = Library
-name = MSP430AsmParser
-parent = MSP430
-required_libraries = MC MCParser MSP430Desc MSP430Info Support
-add_to_library_groups = MSP430
+name = ExegesisPowerPC
+parent = Libraries
+required_libraries = PowerPC

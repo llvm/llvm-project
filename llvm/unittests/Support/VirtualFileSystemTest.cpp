@@ -73,8 +73,8 @@ public:
     return std::error_code();
   }
   // Map any symlink to "/symlink".
-  std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override {
+  std::error_code getRealPath(const Twine &Path, SmallVectorImpl<char> &Output,
+                              bool ExpandTilde) const override {
     auto I = FilesAndDirs.find(Path.str());
     if (I == FilesAndDirs.end())
       return make_error_code(llvm::errc::no_such_file_or_directory);

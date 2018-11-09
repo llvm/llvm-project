@@ -132,7 +132,8 @@ std::error_code FileSystem::makeAbsolute(SmallVectorImpl<char> &Path) const {
 }
 
 std::error_code FileSystem::getRealPath(const Twine &Path,
-                                        SmallVectorImpl<char> &Output) const {
+                                        SmallVectorImpl<char> &Output,
+                                        bool ExpandTilde) const {
   return errc::operation_not_permitted;
 }
 
@@ -238,8 +239,8 @@ public:
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
   std::error_code setCurrentWorkingDirectory(const Twine &Path) override;
   std::error_code isLocal(const Twine &Path, bool &Result) override;
-  std::error_code getRealPath(const Twine &Path,
-                              SmallVectorImpl<char> &Output) const override;
+  std::error_code getRealPath(const Twine &Path, SmallVectorImpl<char> &Output,
+                              bool ExpandTilde = false) const override;
 
 private:
   mutable std::mutex CWDMutex;
@@ -297,9 +298,9 @@ std::error_code RealFileSystem::isLocal(const Twine &Path, bool &Result) {
   return llvm::sys::fs::is_local(Path, Result);
 }
 
-std::error_code
-RealFileSystem::getRealPath(const Twine &Path,
-                            SmallVectorImpl<char> &Output) const {
+std::error_code RealFileSystem::getRealPath(const Twine &Path,
+                                            SmallVectorImpl<char> &Output,
+                                            bool ExpandTilde) const {
   return llvm::sys::fs::real_path(Path, Output);
 }
 
@@ -393,12 +394,12 @@ std::error_code OverlayFileSystem::isLocal(const Twine &Path, bool &Result) {
   return errc::no_such_file_or_directory;
 }
 
-std::error_code
-OverlayFileSystem::getRealPath(const Twine &Path,
-                               SmallVectorImpl<char> &Output) const {
+std::error_code OverlayFileSystem::getRealPath(const Twine &Path,
+                                               SmallVectorImpl<char> &Output,
+                                               bool ExpandTilde) const {
   for (auto &FS : FSList)
     if (FS->exists(Path))
-      return FS->getRealPath(Path, Output);
+      return FS->getRealPath(Path, Output, ExpandTilde);
   return errc::no_such_file_or_directory;
 }
 
@@ -916,9 +917,9 @@ std::error_code InMemoryFileSystem::setCurrentWorkingDirectory(const Twine &P) {
   return {};
 }
 
-std::error_code
-InMemoryFileSystem::getRealPath(const Twine &Path,
-                                SmallVectorImpl<char> &Output) const {
+std::error_code InMemoryFileSystem::getRealPath(const Twine &Path,
+                                                SmallVectorImpl<char> &Output,
+                                                bool ExpandTilde) const {
   auto CWD = getCurrentWorkingDirectory();
   if (!CWD || CWD->empty())
     return errc::operation_not_permitted;

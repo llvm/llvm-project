@@ -24,7 +24,7 @@
 #include "CodeRegion.h"
 #include "CodeRegionGenerator.h"
 #include "PipelinePrinter.h"
-#include "Stages/FetchStage.h"
+#include "Stages/EntryStage.h"
 #include "Stages/InstructionTables.h"
 #include "Views/DispatchStatistics.h"
 #include "Views/InstructionInfoView.h"
@@ -251,9 +251,9 @@ int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
   // Initialize targets and assembly parsers.
-  llvm::InitializeAllTargetInfos();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmParsers();
+  InitializeAllTargetInfos();
+  InitializeAllTargetMCs();
+  InitializeAllAsmParsers();
 
   // Enable printing of available targets when flag --version is specified.
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
@@ -368,7 +368,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  std::unique_ptr<llvm::ToolOutputFile> TOF = std::move(*OF);
+  std::unique_ptr<ToolOutputFile> TOF = std::move(*OF);
 
   const MCSchedModel &SM = STI->getSchedModel();
 
@@ -407,7 +407,7 @@ int main(int argc, char **argv) {
     ArrayRef<MCInst> Insts = Region->getInstructions();
     std::vector<std::unique_ptr<mca::Instruction>> LoweredSequence;
     for (const MCInst &MCI : Insts) {
-      llvm::Expected<std::unique_ptr<mca::Instruction>> Inst =
+      Expected<std::unique_ptr<mca::Instruction>> Inst =
           IB.createInstruction(MCI);
       if (!Inst) {
         if (auto NewE = handleErrors(
@@ -435,7 +435,7 @@ int main(int argc, char **argv) {
     if (PrintInstructionTables) {
       //  Create a pipeline, stages, and a printer.
       auto P = llvm::make_unique<mca::Pipeline>();
-      P->appendStage(llvm::make_unique<mca::FetchStage>(S));
+      P->appendStage(llvm::make_unique<mca::EntryStage>(S));
       P->appendStage(llvm::make_unique<mca::InstructionTables>(SM));
       mca::PipelinePrinter Printer(*P);
 

@@ -897,10 +897,10 @@ def SKLWriteResGroup55 : SchedWriteRes<[SKLPort6,SKLPort0156]> {
 }
 def: InstRW<[SKLWriteResGroup55], (instrs PAUSE)>;
 
-def SKLWriteResGroup56 : SchedWriteRes<[SKLPort015,SKLPort0156]> {
-  let Latency = 4;
+def SKLWriteResGroup56 : SchedWriteRes<[]> {
+  let Latency = 0;
   let NumMicroOps = 4;
-  let ResourceCycles = [1,3];
+  let ResourceCycles = [];
 }
 def: InstRW<[SKLWriteResGroup56], (instrs VZEROUPPER)>;
 

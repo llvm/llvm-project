@@ -19,6 +19,8 @@
 
 namespace llvm {
 
+static constexpr int WebAssemblyInstructionTableSize = 256;
+
 void emitWebAssemblyDisassemblerTables(
     raw_ostream &OS,
     const ArrayRef<const CodeGenInstruction *> &NumberedInstructions) {
@@ -59,6 +61,8 @@ void emitWebAssemblyDisassemblerTables(
   OS << "#include \"MCTargetDesc/WebAssemblyMCTargetDesc.h\"\n";
   OS << "\n";
   OS << "namespace llvm {\n\n";
+  OS << "static constexpr int WebAssemblyInstructionTableSize = ";
+  OS << WebAssemblyInstructionTableSize << ";\n\n";
   OS << "enum EntryType : uint8_t { ";
   OS << "ET_Unused, ET_Prefix, ET_Instruction };\n\n";
   OS << "struct WebAssemblyInstruction {\n";
@@ -74,7 +78,7 @@ void emitWebAssemblyDisassemblerTables(
       continue;
     OS << "WebAssemblyInstruction InstructionTable" << PrefixPair.first;
     OS << "[] = {\n";
-    for (unsigned I = 0; I <= 0xFF; I++) {
+    for (unsigned I = 0; I < WebAssemblyInstructionTableSize; I++) {
       auto InstIt = PrefixPair.second.find(I);
       if (InstIt != PrefixPair.second.end()) {
         // Regular instruction.

@@ -22,12 +22,10 @@ define i16 @test_call(i8 zeroext %arg) {
   ret i16 %conv
 }
 
-; Test that the transformation bails when it finds that i16 is larger than i8.
-; TODO: We should be able to remove the uxtb in these cases.
 ; CHECK-LABEL: promote_i8_sink_i16_1
 ; CHECK: bl dummy_i8
 ; CHECK: add{{.*}} r0, #1
-; CHECK: uxtb r0, r0
+; CHECK-NOT: uxt
 ; CHECK: cmp r0
 define i16 @promote_i8_sink_i16_1(i8 zeroext %arg0, i16 zeroext %arg1, i16 zeroext %arg2) {
   %call = tail call zeroext i8 @dummy_i8(i8 %arg0)

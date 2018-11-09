@@ -48,7 +48,7 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; GENERIC-NEXT:    vfmaddpd (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfmaddpd %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfmaddpd_256:
@@ -113,7 +113,7 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; GENERIC-NEXT:    vfmaddps (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfmaddps %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfmaddps_256:
@@ -244,7 +244,7 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; GENERIC-NEXT:    vfmaddsubpd (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfmaddsubpd %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfmaddsubpd_256:
@@ -309,7 +309,7 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; GENERIC-NEXT:    vfmaddsubps (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfmaddsubps %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfmaddsubps_256:
@@ -378,7 +378,7 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; GENERIC-NEXT:    vfmsubaddpd (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfmsubaddpd %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfmsubaddpd_256:
@@ -443,7 +443,7 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; GENERIC-NEXT:    vfmsubaddps (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfmsubaddps %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfmsubaddps_256:
@@ -512,7 +512,7 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; GENERIC-NEXT:    vfmsubpd (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfmsubpd %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfmsubpd_256:
@@ -577,7 +577,7 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; GENERIC-NEXT:    vfmsubps (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfmsubps %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfmsubps_256:
@@ -708,7 +708,7 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; GENERIC-NEXT:    vfnmaddpd (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfnmaddpd %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfnmaddpd_256:
@@ -773,7 +773,7 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; GENERIC-NEXT:    vfnmaddps (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfnmaddps %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfnmaddps_256:
@@ -904,7 +904,7 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; GENERIC-NEXT:    vfnmsubpd (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfnmsubpd %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfnmsubpd_256:
@@ -969,7 +969,7 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; GENERIC-NEXT:    vfnmsubps (%rdi), %ymm1, %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    vfnmsubps %ymm1, (%rdi), %ymm0, %ymm0 # sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfnmsubps_256:
