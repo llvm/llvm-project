@@ -834,6 +834,8 @@ protected:
                                     // an expression has been evaluated will the
                                     // target's process pointer be filled in
   std::string m_platform_sdk_path;
+  std::string m_resource_dir;
+
   typedef std::map<Module *, std::vector<lldb::DataBufferSP>> ASTFileDataMap;
   ASTFileDataMap m_ast_file_data_map;
   // FIXME: this vector is needed because the LLDBNameLookup debugger clients
@@ -848,6 +850,7 @@ protected:
   bool m_initialized_clang_importer_options;
   bool m_reported_fatal_error;
   Status m_fatal_errors;
+  std::once_flag m_once_flag;
 
   typedef ThreadSafeDenseSet<const char *> SwiftMangledNameSet;
   SwiftMangledNameSet m_negative_type_cache;
@@ -881,6 +884,22 @@ protected:
   /// Apply a PathMappingList dictionary on all search paths in the
   /// ClangImporterOptions.
   void RemapClangImporterOptions(const PathMappingList &path_map);
+
+  /// Infer the appropriate Swift resource directory for a target triple.
+  llvm::StringRef GetResourceDir(const llvm::Triple &target);
+
+  /// Implementation of \c GetResourceDir.
+  static std::string GetResourceDir(llvm::StringRef platform_sdk_path,
+                                    llvm::StringRef swift_stdlib_os_dir,
+                                    std::string swift_dir,
+                                    std::string xcode_contents_path,
+                                    std::string toolchain_path,
+                                    std::string cl_tools_path);
+
+  /// Return the name of the OS-specific subdirectory containing the
+  /// Swift stdlib needed for \p target.
+  static llvm::StringRef GetSwiftStdlibOSDir(const llvm::Triple &target,
+                                             const llvm::Triple &host);
 };
 
 class SwiftASTContextForExpressions : public SwiftASTContext {
