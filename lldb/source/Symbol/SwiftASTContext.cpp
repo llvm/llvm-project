@@ -925,8 +925,7 @@ static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
 static std::string GetXcodeContentsPath() {
   const char substr[] = ".app/Contents/";
 
-  // First, try based on the current shlib's location
-
+  // First, try based on the current shlib's location.
   {
     if (FileSpec fspec = HostInfo::GetShlibDir()) {
       std::string path_to_shlib = fspec.GetPath();
@@ -938,9 +937,8 @@ static std::string GetXcodeContentsPath() {
     }
   }
 
-  // Fall back to using xcrun
-
-  {
+  // Fall back to using xcrun.
+  if (HostInfo::GetArchitecture().GetTriple().getOS() == llvm::Triple::MacOSX) {
     int status = 0;
     int signo = 0;
     std::string output;
@@ -966,7 +964,7 @@ static std::string GetXcodeContentsPath() {
     }
   }
 
-  return std::string();
+  return {};
 }
 
 static std::string GetCurrentToolchainPath() {
@@ -983,7 +981,7 @@ static std::string GetCurrentToolchainPath() {
     }
   }
 
-  return std::string();
+  return {};
 }
 
 static std::string GetCurrentCLToolsPath() {
@@ -2414,7 +2412,7 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
         // Okay, we're going to do an exhaustive search for *any* SDK that has
         // an adequate version.
 
-        std::string sdks_path = GetXcodeContentsPath();
+        std::string sdks_path = xcode_contents_path;
         sdks_path.append("Developer/Platforms/MacOSX.platform/Developer/SDKs");
 
         FileSpec sdks_spec(sdks_path.c_str(), false);
