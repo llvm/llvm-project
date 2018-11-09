@@ -1062,6 +1062,9 @@ public:
   CanQualType OCLSamplerTy, OCLEventTy, OCLClkEventTy;
   CanQualType OCLQueueTy, OCLReserveIDTy;
   CanQualType OMPArraySectionTy;
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+  CanQualType Id##Ty;
+#include "clang/Basic/OpenCLExtensionTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.

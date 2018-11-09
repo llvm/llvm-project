@@ -1574,13 +1574,16 @@ TEST(SwitchCase, MatchesEachCase) {
     ifStmt(has(switchStmt(forEachSwitchCase(defaultStmt()))))));
   EXPECT_TRUE(matches("void x() { switch(42) { case 1+1: case 4:; } }",
                       switchStmt(forEachSwitchCase(
-                        caseStmt(hasCaseConstant(integerLiteral()))))));
+                        caseStmt(hasCaseConstant(
+                            constantExpr(has(integerLiteral()))))))));
   EXPECT_TRUE(notMatches("void x() { switch(42) { case 1+1: case 2+2:; } }",
                          switchStmt(forEachSwitchCase(
-                           caseStmt(hasCaseConstant(integerLiteral()))))));
+                           caseStmt(hasCaseConstant(
+                               constantExpr(has(integerLiteral()))))))));
   EXPECT_TRUE(notMatches("void x() { switch(42) { case 1 ... 2:; } }",
                          switchStmt(forEachSwitchCase(
-                           caseStmt(hasCaseConstant(integerLiteral()))))));
+                           caseStmt(hasCaseConstant(
+                               constantExpr(has(integerLiteral()))))))));
   EXPECT_TRUE(matchAndVerifyResultTrue(
     "void x() { switch (42) { case 1: case 2: case 3: default:; } }",
     switchStmt(forEachSwitchCase(caseStmt().bind("x"))),

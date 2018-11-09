@@ -4719,6 +4719,8 @@ public:
     return Error(E);
   }
 
+  bool VisitConstantExpr(const ConstantExpr *E)
+    { return StmtVisitorTy::Visit(E->getSubExpr()); }
   bool VisitParenExpr(const ParenExpr *E)
     { return StmtVisitorTy::Visit(E->getSubExpr()); }
   bool VisitUnaryExtension(const UnaryOperator *E)
@@ -7644,6 +7646,9 @@ EvaluateBuiltinClassifyType(QualType T, const LangOptions &LangOpts) {
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
     case BuiltinType::Id:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+    case BuiltinType::Id:
+#include "clang/Basic/OpenCLExtensionTypes.def"
     case BuiltinType::OCLSampler:
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLClkEvent:

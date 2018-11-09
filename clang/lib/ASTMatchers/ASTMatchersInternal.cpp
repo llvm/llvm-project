@@ -666,6 +666,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, UnresolvedUsingValueDecl>
     unresolvedUsingValueDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, UnresolvedUsingTypenameDecl>
     unresolvedUsingTypenameDecl;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ConstantExpr> constantExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ParenExpr> parenExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstructExpr>
     cxxConstructExpr;

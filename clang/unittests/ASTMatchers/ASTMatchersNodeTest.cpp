@@ -760,23 +760,23 @@ TEST(Matcher, Initializers) {
                                has(
                                  designatedInitExpr(
                                    designatorCountIs(2),
-                                   has(floatLiteral(
+                                   hasDescendant(floatLiteral(
                                      equals(1.0))),
-                                   has(integerLiteral(
+                                   hasDescendant(integerLiteral(
                                      equals(2))))),
                                has(
                                  designatedInitExpr(
                                    designatorCountIs(2),
-                                   has(floatLiteral(
+                                   hasDescendant(floatLiteral(
                                      equals(2.0))),
-                                   has(integerLiteral(
+                                   hasDescendant(integerLiteral(
                                      equals(2))))),
                                has(
                                  designatedInitExpr(
                                    designatorCountIs(2),
-                                   has(floatLiteral(
+                                   hasDescendant(floatLiteral(
                                      equals(1.0))),
-                                   has(integerLiteral(
+                                   hasDescendant(integerLiteral(
                                      equals(0)))))
                              )))));
 }

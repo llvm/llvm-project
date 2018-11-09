@@ -2776,6 +2776,10 @@ StringRef BuiltinType::getName(const PrintingPolicy &Policy) const {
     return "reserve_id_t";
   case OMPArraySection:
     return "<OpenMP array section type>";
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+  case Id: \
+    return #ExtType;
+#include "clang/Basic/OpenCLExtensionTypes.def"
   }
 
   llvm_unreachable("Invalid builtin type.");
@@ -3736,6 +3740,9 @@ bool Type::canHaveNullability(bool ResultIfUnknown) const {
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
     case BuiltinType::Id:
 #include "clang/Basic/OpenCLImageTypes.def"
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+    case BuiltinType::Id:
+#include "clang/Basic/OpenCLExtensionTypes.def"
     case BuiltinType::OCLSampler:
     case BuiltinType::OCLEvent:
     case BuiltinType::OCLClkEvent:

@@ -46,6 +46,7 @@
 
 // Verify that called builtins occur in the generated IR.
 
+// CHECK-NOT: intel_sub_group_avc_mce_get_default_inter_base_multi_reference_penalty
 // CHECK-NOT: ndrange_t
 // CHECK20: ndrange_t
 // CHECK: _Z16convert_char_rtec

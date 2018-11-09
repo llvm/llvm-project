@@ -326,6 +326,10 @@ void Sema::Initialize() {
 #define GENERIC_IMAGE_TYPE_EXT(Type, Id, Ext) \
     setOpenCLExtensionForType(Context.Id, Ext);
 #include "clang/Basic/OpenCLImageTypes.def"
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
+    addImplicitTypedef(#ExtType, Context.Id##Ty); \
+    setOpenCLExtensionForType(Context.Id##Ty, #Ext);
+#include "clang/Basic/OpenCLExtensionTypes.def"
     };
 
   if (Context.getTargetInfo().hasBuiltinMSVaList()) {

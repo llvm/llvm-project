@@ -23,7 +23,8 @@ struct [[deprecated]] Test4 {
 // CHECK-NEXT:   FieldDecl{{.*}}Test6
 // CHECK-NEXT:     DeprecatedAttr 0x{{[^ ]*}} <col:5, col:25> "Frobble" ""
 // CHECK-NEXT:   FieldDecl{{.*}}Test7
-// CHECK-NEXT:     IntegerLiteral{{.*}}'int' 12
+// CHECK-NEXT:     Constant{{.*}}'int'
+// CHECK-NEXT:       IntegerLiteral{{.*}}'int' 12
 // CHECK-NEXT:     DeprecatedAttr 0x{{[^ ]*}} <col:15> "" ""
 
 struct [[deprecated]] Test8;

@@ -9492,49 +9492,51 @@ vec_splat_u32(signed char __a) {
 
 /* vec_sr */
 
-static __inline__ vector signed char __ATTRS_o_ai
-vec_sr(vector signed char __a, vector unsigned char __b) {
-  vector unsigned char __res = (vector unsigned char)__a >> __b;
-  return (vector signed char)__res;
-}
-
+// vec_sr does modulo arithmetic on __b first, so __b is allowed to be more
+// than the length of __a.
 static __inline__ vector unsigned char __ATTRS_o_ai
 vec_sr(vector unsigned char __a, vector unsigned char __b) {
-  return __a >> __b;
+  return __a >>
+         (__b % (vector unsigned char)(sizeof(unsigned char) * __CHAR_BIT__));
 }
 
-static __inline__ vector signed short __ATTRS_o_ai
-vec_sr(vector signed short __a, vector unsigned short __b) {
-  vector unsigned short __res = (vector unsigned short)__a >> __b;
-  return (vector signed short)__res;
+static __inline__ vector signed char __ATTRS_o_ai
+vec_sr(vector signed char __a, vector unsigned char __b) {
+  return (vector signed char)vec_sr((vector unsigned char)__a, __b);
 }
 
 static __inline__ vector unsigned short __ATTRS_o_ai
 vec_sr(vector unsigned short __a, vector unsigned short __b) {
-  return __a >> __b;
+  return __a >>
+         (__b % (vector unsigned short)(sizeof(unsigned short) * __CHAR_BIT__));
 }
 
-static __inline__ vector signed int __ATTRS_o_ai
-vec_sr(vector signed int __a, vector unsigned int __b) {
-  vector unsigned int __res = (vector unsigned int)__a >> __b;
-  return (vector signed int)__res;
+static __inline__ vector short __ATTRS_o_ai vec_sr(vector short __a,
+                                                   vector unsigned short __b) {
+  return (vector short)vec_sr((vector unsigned short)__a, __b);
 }
 
 static __inline__ vector unsigned int __ATTRS_o_ai
 vec_sr(vector unsigned int __a, vector unsigned int __b) {
-  return __a >> __b;
+  return __a >>
+         (__b % (vector unsigned int)(sizeof(unsigned int) * __CHAR_BIT__));
+}
+
+static __inline__ vector int __ATTRS_o_ai vec_sr(vector int __a,
+                                                 vector unsigned int __b) {
+  return (vector int)vec_sr((vector unsigned int)__a, __b);
 }
 
 #ifdef __POWER8_VECTOR__
-static __inline__ vector signed long long __ATTRS_o_ai
-vec_sr(vector signed long long __a, vector unsigned long long __b) {
-  vector unsigned long long __res = (vector unsigned long long)__a >> __b;
-  return (vector signed long long)__res;
-}
-
 static __inline__ vector unsigned long long __ATTRS_o_ai
 vec_sr(vector unsigned long long __a, vector unsigned long long __b) {
-  return __a >> __b;
+  return __a >> (__b % (vector unsigned long long)(sizeof(unsigned long long) *
+                                                   __CHAR_BIT__));
+}
+
+static __inline__ vector long long __ATTRS_o_ai
+vec_sr(vector long long __a, vector unsigned long long __b) {
+  return (vector long long)vec_sr((vector unsigned long long)__a, __b);
 }
 #endif
 
@@ -9544,12 +9546,12 @@ vec_sr(vector unsigned long long __a, vector unsigned long long __b) {
 
 static __inline__ vector signed char __ATTRS_o_ai
 vec_vsrb(vector signed char __a, vector unsigned char __b) {
-  return __a >> (vector signed char)__b;
+  return vec_sr(__a, __b);
 }
 
 static __inline__ vector unsigned char __ATTRS_o_ai
 vec_vsrb(vector unsigned char __a, vector unsigned char __b) {
-  return __a >> __b;
+  return vec_sr(__a, __b);
 }
 
 /* vec_vsrh */
@@ -9558,12 +9560,12 @@ vec_vsrb(vector unsigned char __a, vector unsigned char __b) {
 
 static __inline__ vector short __ATTRS_o_ai
 vec_vsrh(vector short __a, vector unsigned short __b) {
-  return __a >> (vector short)__b;
+  return vec_sr(__a, __b);
 }
 
 static __inline__ vector unsigned short __ATTRS_o_ai
 vec_vsrh(vector unsigned short __a, vector unsigned short __b) {
-  return __a >> __b;
+  return vec_sr(__a, __b);
 }
 
 /* vec_vsrw */
@@ -9572,12 +9574,12 @@ vec_vsrh(vector unsigned short __a, vector unsigned short __b) {
 
 static __inline__ vector int __ATTRS_o_ai vec_vsrw(vector int __a,
                                                    vector unsigned int __b) {
-  return __a >> (vector int)__b;
+  return vec_sr(__a, __b);
 }
 
 static __inline__ vector unsigned int __ATTRS_o_ai
 vec_vsrw(vector unsigned int __a, vector unsigned int __b) {
-  return __a >> __b;
+  return vec_sr(__a, __b);
 }
 
 /* vec_sra */

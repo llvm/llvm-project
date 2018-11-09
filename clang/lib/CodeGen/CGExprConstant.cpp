@@ -723,6 +723,10 @@ public:
     return nullptr;
   }
 
+  llvm::Constant *VisitConstantExpr(ConstantExpr *CE, QualType T) {
+    return Visit(CE->getSubExpr(), T);
+  }
+
   llvm::Constant *VisitParenExpr(ParenExpr *PE, QualType T) {
     return Visit(PE->getSubExpr(), T);
   }
@@ -1601,6 +1605,7 @@ private:
   ConstantLValue tryEmitBase(const APValue::LValueBase &base);
 
   ConstantLValue VisitStmt(const Stmt *S) { return nullptr; }
+  ConstantLValue VisitConstantExpr(const ConstantExpr *E);
   ConstantLValue VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   ConstantLValue VisitStringLiteral(const StringLiteral *E);
   ConstantLValue VisitObjCEncodeExpr(const ObjCEncodeExpr *E);
@@ -1753,6 +1758,11 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
 
   // Otherwise, it must be an expression.
   return Visit(base.get<const Expr*>());
+}
+
+ConstantLValue
+ConstantLValueEmitter::VisitConstantExpr(const ConstantExpr *E) {
+  return Visit(E->getSubExpr());
 }
 
 ConstantLValue
