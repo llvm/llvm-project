@@ -41,7 +41,7 @@ ParsedAST TestTU::build() const {
   auto Preamble =
       buildPreamble(FullFilename, *createInvocationFromCommandLine(Cmd),
                     /*OldPreamble=*/nullptr,
-                    /*OldCommand=*/Inputs.CompileCommand, Inputs, PCHs,
+                    /*OldCompileCommand=*/Inputs.CompileCommand, Inputs, PCHs,
                     /*StoreInMemory=*/true, /*PreambleCallback=*/nullptr);
   auto AST = buildAST(FullFilename, createInvocationFromCommandLine(Cmd),
                       Inputs, Preamble, PCHs);
@@ -109,17 +109,17 @@ const NamedDecl &findDecl(ParsedAST &AST, StringRef QName) {
 }
 
 const NamedDecl &findDecl(ParsedAST &AST,
-                          std::function<bool(const NamedDecl &)> Callback) {
+                          std::function<bool(const NamedDecl &)> Filter) {
   struct Visitor : RecursiveASTVisitor<Visitor> {
-    decltype(Callback) CB;
+    decltype(Filter) F;
     SmallVector<const NamedDecl *, 1> Decls;
     bool VisitNamedDecl(const NamedDecl *ND) {
-      if (CB(*ND))
+      if (F(*ND))
         Decls.push_back(ND);
       return true;
     }
   } Visitor;
-  Visitor.CB = Callback;
+  Visitor.F = Filter;
   Visitor.TraverseDecl(AST.getASTContext().getTranslationUnitDecl());
   if (Visitor.Decls.size() != 1) {
     ADD_FAILURE() << Visitor.Decls.size() << " symbols matched.";

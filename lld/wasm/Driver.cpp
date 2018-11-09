@@ -310,10 +310,8 @@ static void handleWeakUndefines() {
 
     // Add a synthetic dummy for weak undefined functions.  These dummies will
     // be GC'd if not used as the target of any "call" instructions.
-    Optional<std::string> SymName = demangleItanium(Sym->getName());
-    StringRef DebugName =
-        Saver.save("undefined function " +
-                   (SymName ? StringRef(*SymName) : Sym->getName()));
+    std::string SymName = toString(*Sym);
+    StringRef DebugName = Saver.save("undefined function " + SymName);
     SyntheticFunction *Func =
         make<SyntheticFunction>(Sig, Sym->getName(), DebugName);
     Func->setBody(UnreachableFn);
