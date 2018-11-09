@@ -88,7 +88,7 @@ TEST_F(AArch64SelectionDAGTest, computeKnownBits_ZERO_EXTEND_VECTOR_INREG) {
   auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2);
   auto InVec = DAG->getConstant(0, Loc, InVecVT);
   auto Op = DAG->getNode(ISD::ZERO_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
-  auto DemandedElts = APInt(4, 15);
+  auto DemandedElts = APInt(2, 3);
   KnownBits Known;
   DAG->computeKnownBits(Op, Known, DemandedElts);
   EXPECT_TRUE(Known.isZero());
@@ -120,7 +120,7 @@ TEST_F(AArch64SelectionDAGTest, ComputeNumSignBits_SIGN_EXTEND_VECTOR_INREG) {
   auto OutVecVT = EVT::getVectorVT(Context, Int16VT, 2);
   auto InVec = DAG->getConstant(1, Loc, InVecVT);
   auto Op = DAG->getNode(ISD::SIGN_EXTEND_VECTOR_INREG, Loc, OutVecVT, InVec);
-  auto DemandedElts = APInt(4, 15);
+  auto DemandedElts = APInt(2, 3);
   EXPECT_EQ(DAG->ComputeNumSignBits(Op, DemandedElts), 15u);
 }
 

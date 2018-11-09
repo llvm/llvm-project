@@ -1502,6 +1502,10 @@ ResourceFileWriter::loadFile(StringRef File) const {
   SmallString<128> Cwd;
   std::unique_ptr<MemoryBuffer> Result;
 
+  // 0. The file path is absolute and the file exists.
+  if (sys::path::is_absolute(File))
+    return errorOrToExpected(MemoryBuffer::getFile(File, -1, false));
+
   // 1. The current working directory.
   sys::fs::current_path(Cwd);
   Path.assign(Cwd.begin(), Cwd.end());
@@ -1510,8 +1514,7 @@ ResourceFileWriter::loadFile(StringRef File) const {
     return errorOrToExpected(MemoryBuffer::getFile(Path, -1, false));
 
   // 2. The directory of the input resource file, if it is different from the
-  // current
-  //    working directory.
+  // current working directory.
   StringRef InputFileDir = sys::path::parent_path(Params.InputFilePath);
   Path.assign(InputFileDir.begin(), InputFileDir.end());
   sys::path::append(Path, File);

@@ -1720,7 +1720,7 @@ vzeroupper
 # CHECK-NEXT:  1      1     0.33                        vxorps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      8     0.50    *                   vxorps	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  34     12    5.00    *      *      U     vzeroall
-# CHECK-NEXT:  4      4     1.00    *      *      U     vzeroupper
+# CHECK-NEXT:  4      0     0.67    *      *      U     vzeroupper
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SKXDivider
@@ -1736,7 +1736,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     123.00 318.50 197.50 173.17 173.17 34.00  339.00 7.00   12.67
+# CHECK-NEXT:  -     123.00 317.42 196.42 173.17 173.17 34.00  337.92 6.25   12.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -2430,4 +2430,4 @@ vzeroupper
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vxorps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vxorps	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -     2.00   1.00    -      -      -     2.00   5.00    -     vzeroall
-# CHECK-NEXT:  -      -     1.08   1.08    -      -      -     1.08   0.75    -     vzeroupper
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     vzeroupper

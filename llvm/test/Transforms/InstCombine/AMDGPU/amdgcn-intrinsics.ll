@@ -934,32 +934,23 @@ define i32 @ubfe_offset_33(i32 %src, i32 %width) {
 }
 
 ; CHECK-LABEL: @ubfe_offset_0(
-; CHECK-NEXT: %1 = sub i32 32, %width
-; CHECK-NEXT: %2 = lshr i32 -1, %1
-; CHECK-NEXT: %bfe = and i32 %2, %src
-; CHECK-NEXT: ret i32 %bfe
+; CHECK-NEXT: %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 0, i32 %width)
 define i32 @ubfe_offset_0(i32 %src, i32 %width) {
   %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 0, i32 %width)
   ret i32 %bfe
 }
 
 ; CHECK-LABEL: @ubfe_offset_32(
-; CHECK-NEXT: %1 = sub i32 32, %width
-; CHECK-NEXT: %2 = lshr i32 -1, %1
-; CHECK-NEXT: %bfe = and i32 %2, %src
-; CHECK-NEXT: ret i32 %bfe
+; CHECK-NEXT: %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 0, i32 %width)
 define i32 @ubfe_offset_32(i32 %src, i32 %width) {
   %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 32, i32 %width)
   ret i32 %bfe
 }
 
 ; CHECK-LABEL: @ubfe_offset_31(
-; CHECK-NEXT: %1 = sub i32 32, %width
-; CHECK-NEXT: %2 = lshr i32 -1, %1
-; CHECK-NEXT: %bfe = and i32 %2, %src
-; CHECK-NEXT: ret i32 %bfe
+; CHECK-NEXT: %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 31, i32 %width)
 define i32 @ubfe_offset_31(i32 %src, i32 %width) {
-  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 32, i32 %width)
+  %bfe = call i32 @llvm.amdgcn.ubfe.i32(i32 %src, i32 31, i32 %width)
   ret i32 %bfe
 }
 
@@ -1040,11 +1031,7 @@ define i64 @ubfe_offset_33_width_4_i64(i64 %src) {
 }
 
 ; CHECK-LABEL: @ubfe_offset_0_i64(
-; CHECK-NEXT: %1 = sub i32 64, %width
-; CHECK-NEXT: %2 = zext i32 %1 to i64
-; CHECK-NEXT: %3 = lshr i64 -1, %2
-; CHECK-NEXT: %bfe = and i64 %3, %src
-; CHECK-NEXT: ret i64 %bfe
+; CHECK-NEXT: %bfe = call i64 @llvm.amdgcn.ubfe.i64(i64 %src, i32 0, i32 %width)
 define i64 @ubfe_offset_0_i64(i64 %src, i32 %width) {
   %bfe = call i64 @llvm.amdgcn.ubfe.i64(i64 %src, i32 0, i32 %width)
   ret i64 %bfe
@@ -1066,12 +1053,9 @@ declare i32 @llvm.amdgcn.sbfe.i32(i32, i32, i32) nounwind readnone
 declare i64 @llvm.amdgcn.sbfe.i64(i64, i32, i32) nounwind readnone
 
 ; CHECK-LABEL: @sbfe_offset_31(
-; CHECK-NEXT: %1 = sub i32 32, %width
-; CHECK-NEXT: %2 = shl i32 %src, %1
-; CHECK-NEXT: %bfe = ashr i32 %2, %1
-; CHECK-NEXT: ret i32 %bfe
+; CHECK-NEXT: %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %src, i32 31, i32 %width)
 define i32 @sbfe_offset_31(i32 %src, i32 %width) {
-  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %src, i32 32, i32 %width)
+  %bfe = call i32 @llvm.amdgcn.sbfe.i32(i32 %src, i32 31, i32 %width)
   ret i32 %bfe
 }
 

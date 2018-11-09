@@ -2195,6 +2195,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   KnownBits Known2;
   unsigned NumElts = DemandedElts.getBitWidth();
+  assert(!Op.getValueType().isVector() ||
+         NumElts == Op.getValueType().getVectorNumElements() &&
+         "Unexpected vector size");
 
   if (!DemandedElts)
     return Known;  // No demanded elts, better to assume we don't know anything.
@@ -2203,8 +2206,6 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   switch (Opcode) {
   case ISD::BUILD_VECTOR:
     // Collect the known bits that are shared by every demanded vector element.
-    assert(NumElts == Op.getValueType().getVectorNumElements() &&
-           "Unexpected vector size");
     Known.Zero.setAllBits(); Known.One.setAllBits();
     for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
       if (!DemandedElts[i])

@@ -340,8 +340,8 @@ declare i32 @dummy(i32, i32)
 @sh1 = hidden local_unnamed_addr global i16 0, align 2
 @d_sh = hidden local_unnamed_addr global [16 x i16] zeroinitializer, align 2
 
-; CHECK-LABEL: two_stage_zext_trunc_mix
-; CHECK-NOT: uxt
+; CHECK-COMMON-LABEL: two_stage_zext_trunc_mix
+; CHECK-COMMON-NOT: uxt
 define i8* @two_stage_zext_trunc_mix(i32* %this, i32 %__pos1, i32 %__n1, i32** %__str, i32 %__pos2, i32 %__n2) {
 entry:
   %__size_.i.i.i.i = bitcast i32** %__str to i8*
@@ -362,4 +362,223 @@ entry:
   %8 = getelementptr inbounds i8, i8* %__size_.i.i.i.i, i32 %__pos2
   %res = select i1 %tobool.i.i.i.i.i,  i8* %7, i8* %8
   ret i8* %res
+}
+
+; CHECK-COMMON-LABEL: search_through_zext_1
+; CHECK-COMMON-NOT: uxt
+define i8 @search_through_zext_1(i8 zeroext %a, i8 zeroext %b, i16 zeroext %c) {
+entry:
+  %add = add nuw i8 %a, %b
+  %conv = zext i8 %add to i16
+  %cmp = icmp ult i16 %conv, %c
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %sub = sub nuw i8 %b, %a
+  %conv2 = zext i8 %sub to i16
+  %cmp2 = icmp ugt i16 %conv2, %c
+  %res = select i1 %cmp2, i8 %a, i8 %b
+  br label %if.end
+
+if.end:
+  %retval = phi i8 [ 0, %entry ], [ %res, %if.then ]
+  ret i8 %retval
+}
+
+; TODO: We should be able to remove the uxtb here. The transform fails because
+; the icmp ugt uses an i32, which is too large... but this doesn't matter
+; because it won't be writing a large value to a register as a result.
+; CHECK-COMMON-LABEL: search_through_zext_2
+; CHECK-COMMON: uxtb
+; CHECK-COMMON: uxtb
+define i8 @search_through_zext_2(i8 zeroext %a, i8 zeroext %b, i16 zeroext %c, i32 %d) {
+entry:
+  %add = add nuw i8 %a, %b
+  %conv = zext i8 %add to i16
+  %cmp = icmp ult i16 %conv, %c
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %sub = sub nuw i8 %b, %a
+  %conv2 = zext i8 %sub to i32
+  %cmp2 = icmp ugt i32 %conv2, %d
+  %res = select i1 %cmp2, i8 %a, i8 %b
+  br label %if.end
+
+if.end:
+  %retval = phi i8 [ 0, %entry ], [ %res, %if.then ]
+  ret i8 %retval
+}
+
+; TODO: We should be able to remove the uxtb here as all the calculations are
+; performed on i8s. The promotion of i8 to i16 and then the later truncation
+; results in the uxtb.
+; CHECK-COMMON-LABEL: search_through_zext_3
+; CHECK-COMMON: uxtb
+; CHECK-COMMON: uxtb
+define i8 @search_through_zext_3(i8 zeroext %a, i8 zeroext %b, i16 zeroext %c, i32 %d) {
+entry:
+  %add = add nuw i8 %a, %b
+  %conv = zext i8 %add to i16
+  %cmp = icmp ult i16 %conv, %c
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %trunc = trunc i16 %conv to i8
+  %sub = sub nuw i8 %b, %trunc
+  %conv2 = zext i8 %sub to i32
+  %cmp2 = icmp ugt i32 %conv2, %d
+  %res = select i1 %cmp2, i8 %a, i8 %b
+  br label %if.end
+
+if.end:
+  %retval = phi i8 [ 0, %entry ], [ %res, %if.then ]
+  ret i8 %retval
+}
+
+; TODO: We should be able to remove the uxt that gets introduced for %conv2
+; CHECK-COMMON-LABEL: search_through_zext_cmp
+; CHECK-COMMON: uxt
+define i8 @search_through_zext_cmp(i8 zeroext %a, i8 zeroext %b, i16 zeroext %c) {
+entry:
+  %cmp = icmp ne i8 %a, %b
+  %conv = zext i1 %cmp to i16
+  %cmp1 = icmp ult i16 %conv, %c
+  br i1 %cmp1, label %if.then, label %if.end
+
+if.then:
+  %sub = sub nuw i8 %b, %a
+  %conv2 = zext i8 %sub to i16
+  %cmp3 = icmp ugt i16 %conv2, %c
+  %res = select i1 %cmp3, i8 %a, i8 %b
+  br label %if.end
+
+if.end:
+  %retval = phi i8 [ 0, %entry ], [ %res, %if.then ]
+  ret i8 %retval
+}
+
+; CHECK-COMMON-LABEL: search_through_zext_load
+; CHECK-COMMON-NOT: uxt
+define i8 @search_through_zext_load(i8* %a, i8 zeroext %b, i16 zeroext %c) {
+entry:
+  %load = load i8, i8* %a
+  %conv = zext i8 %load to i16
+  %cmp1 = icmp ult i16 %conv, %c
+  br i1 %cmp1, label %if.then, label %if.end
+
+if.then:
+  %sub = sub nuw i8 %b, %load
+  %conv2 = zext i8 %sub to i16
+  %cmp3 = icmp ugt i16 %conv2, %c
+  %res = select i1 %cmp3, i8 %load, i8 %b
+  br label %if.end
+
+if.end:
+  %retval = phi i8 [ 0, %entry ], [ %res, %if.then ]
+  ret i8 %retval
+}
+
+; CHECK-COMMON-LABEL: trunc_sink_less_than
+; CHECK-COMMON-NOT: uxth
+; CHECK-COMMON: cmp
+; CHECK-COMMON: uxtb
+define i16 @trunc_sink_less_than_cmp(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i8 zeroext %d) {
+entry:
+  %sub = sub nuw i16 %b, %a
+  %cmp = icmp ult i16 %sub, %c
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %trunc = trunc i16 %sub to i8
+  %add = add nuw i8 %d, 1
+  %cmp2 = icmp ugt i8 %trunc, %add
+  %res = select i1 %cmp2, i16 %a, i16 %b
+  br label %if.end
+
+if.end:
+  %retval = phi i16 [ 0, %entry ], [ %res, %if.then ]
+  ret i16 %retval
+}
+
+; TODO: We should be able to remove the uxth introduced to handle %sub
+; CHECK-COMMON-LABEL: trunc_sink_less_than_arith
+; CHECK-COMMON: uxth
+; CHECK-COMMON: cmp
+; CHECK-COMMON: uxtb
+define i16 @trunc_sink_less_than_arith(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i8 zeroext %d, i8 zeroext %e) {
+entry:
+  %sub = sub nuw i16 %b, %a
+  %cmp = icmp ult i16 %sub, %c
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %trunc = trunc i16 %sub to i8
+  %add = add nuw i8 %d, %trunc
+  %cmp2 = icmp ugt i8 %e, %add
+  %res = select i1 %cmp2, i16 %a, i16 %b
+  br label %if.end
+
+if.end:
+  %retval = phi i16 [ 0, %entry ], [ %res, %if.then ]
+  ret i16 %retval
+}
+
+; CHECK-COMMON-LABEL: trunc_sink_less_than_store
+; CHECK-COMMON-NOT: uxt
+; CHECK-COMMON: cmp
+; CHECK-COMMON-NOT: uxt
+define i16 @trunc_sink_less_than_store(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i8 zeroext %d, i8* %e) {
+entry:
+  %sub = sub nuw i16 %b, %a
+  %cmp = icmp ult i16 %sub, %c
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %trunc = trunc i16 %sub to i8
+  %add = add nuw i8 %d, %trunc
+  store i8 %add, i8* %e
+  br label %if.end
+
+if.end:
+  %retval = phi i16 [ 0, %entry ], [ %sub, %if.then ]
+  ret i16 %retval
+}
+
+; CHECK-COMMON-LABEL: trunc_sink_less_than_ret
+; CHECK-COMMON-NOT: uxt
+define i8 @trunc_sink_less_than_ret(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i8 zeroext %d, i8 zeroext %e) {
+entry:
+  %sub = sub nuw i16 %b, %a
+  %cmp = icmp ult i16 %sub, %c
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %trunc = trunc i16 %sub to i8
+  %add = add nuw i8 %d, %trunc
+  br label %if.end
+
+if.end:
+  %retval = phi i8 [ 0, %entry ], [ %add, %if.then ]
+  ret i8 %retval
+}
+
+; CHECK-COMMON-LABEL: trunc_sink_less_than_zext_ret
+; CHECK-COMMON-NOT: uxt
+; CHECK-COMMON: cmp
+; CHECK-COMMON: uxtb
+define zeroext i8 @trunc_sink_less_than_zext_ret(i16 zeroext %a, i16 zeroext %b, i16 zeroext %c, i8 zeroext %d, i8 zeroext %e) {
+entry:
+  %sub = sub nuw i16 %b, %a
+  %cmp = icmp ult i16 %sub, %c
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  %trunc = trunc i16 %sub to i8
+  %add = add nuw i8 %d, %trunc
+  br label %if.end
+
+if.end:
+  %retval = phi i8 [ 0, %entry ], [ %add, %if.then ]
+  ret i8 %retval
 }

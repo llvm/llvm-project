@@ -457,8 +457,8 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
   if (!SingleModule) {
     promoteModule(TheModule, Index);
 
-    // Apply summary-based LinkOnce/Weak resolution decisions.
-    thinLTOResolveWeakForLinkerModule(TheModule, DefinedGlobals);
+    // Apply summary-based prevailing-symbol resolution decisions.
+    thinLTOResolvePrevailingInModule(TheModule, DefinedGlobals);
 
     // Save temps: after promotion.
     saveTempBitcode(TheModule, SaveTempsDir, count, ".1.promoted.bc");
@@ -500,12 +500,12 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
   return codegenModule(TheModule, TM);
 }
 
-/// Resolve LinkOnce/Weak symbols. Record resolutions in the \p ResolvedODR map
+/// Resolve prevailing symbols. Record resolutions in the \p ResolvedODR map
 /// for caching, and in the \p Index for application during the ThinLTO
 /// backends. This is needed for correctness for exported symbols (ensure
 /// at least one copy kept) and a compile-time optimization (to drop duplicate
 /// copies when possible).
-static void resolveWeakForLinkerInIndex(
+static void resolvePrevailingInIndex(
     ModuleSummaryIndex &Index,
     StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>>
         &ResolvedODR) {
@@ -527,7 +527,7 @@ static void resolveWeakForLinkerInIndex(
     ResolvedODR[ModuleIdentifier][GUID] = NewLinkage;
   };
 
-  thinLTOResolveWeakForLinkerInIndex(Index, isPrevailing, recordNewLinkage);
+  thinLTOResolvePrevailingInIndex(Index, isPrevailing, recordNewLinkage);
 }
 
 // Initialize the TargetMachine builder for a given Triple
@@ -675,11 +675,11 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
                            ExportLists);
 
-  // Resolve LinkOnce/Weak symbols.
+  // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  resolveWeakForLinkerInIndex(Index, ResolvedODR);
+  resolvePrevailingInIndex(Index, ResolvedODR);
 
-  thinLTOResolveWeakForLinkerModule(
+  thinLTOResolvePrevailingInModule(
       TheModule, ModuleToDefinedGVSummaries[ModuleIdentifier]);
 
   // Promote the exported values in the index, so that they are promoted
@@ -942,9 +942,9 @@ void ThinLTOCodeGenerator::run() {
   // on the index, and nuke this map.
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
 
-  // Resolve LinkOnce/Weak symbols, this has to be computed early because it
+  // Resolve prevailing symbols, this has to be computed early because it
   // impacts the caching.
-  resolveWeakForLinkerInIndex(*Index, ResolvedODR);
+  resolvePrevailingInIndex(*Index, ResolvedODR);
 
   // Use global summary-based analysis to identify symbols that can be
   // internalized (because they aren't exported or preserved as per callback).

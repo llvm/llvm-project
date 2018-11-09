@@ -729,38 +729,6 @@ enum {
 #include "ELFRelocs/BPF.def"
 };
 
-// MSP430 specific e_flags
-enum : unsigned {
-  EF_MSP430_MACH_MSP430x11 = 11,
-  EF_MSP430_MACH_MSP430x11x1 = 110,
-  EF_MSP430_MACH_MSP430x12 = 12,
-  EF_MSP430_MACH_MSP430x13 = 13,
-  EF_MSP430_MACH_MSP430x14 = 14,
-  EF_MSP430_MACH_MSP430x15 = 15,
-  EF_MSP430_MACH_MSP430x16 = 16,
-  EF_MSP430_MACH_MSP430x20 = 20,
-  EF_MSP430_MACH_MSP430x22 = 22,
-  EF_MSP430_MACH_MSP430x23 = 23,
-  EF_MSP430_MACH_MSP430x24 = 24,
-  EF_MSP430_MACH_MSP430x26 = 26,
-  EF_MSP430_MACH_MSP430x31 = 31,
-  EF_MSP430_MACH_MSP430x32 = 32,
-  EF_MSP430_MACH_MSP430x33 = 33,
-  EF_MSP430_MACH_MSP430x41 = 41,
-  EF_MSP430_MACH_MSP430x42 = 42,
-  EF_MSP430_MACH_MSP430x43 = 43,
-  EF_MSP430_MACH_MSP430x44 = 44,
-  EF_MSP430_MACH_MSP430X = 45,
-  EF_MSP430_MACH_MSP430x46 = 46,
-  EF_MSP430_MACH_MSP430x47 = 47,
-  EF_MSP430_MACH_MSP430x54 = 54,
-};
-
-// ELF Relocation types for MSP430
-enum {
-#include "ELFRelocs/MSP430.def"
-};
-
 #undef ELF_RELOC
 
 // Section header.
@@ -864,8 +832,6 @@ enum : unsigned {
   SHT_MIPS_OPTIONS = 0x7000000d,        // General options
   SHT_MIPS_DWARF = 0x7000001e,          // DWARF debugging section.
   SHT_MIPS_ABIFLAGS = 0x7000002a,       // ABI information.
-
-  SHT_MSP430_ATTRIBUTES = 0x70000003U,
 
   SHT_HIPROC = 0x7fffffff,              // Highest processor arch-specific type.
   SHT_LOUSER = 0x80000000,              // Lowest type reserved for applications.

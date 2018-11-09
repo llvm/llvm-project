@@ -126,6 +126,9 @@ CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
 static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
                              AliasSetTracker *AST);
 
+static void moveInstructionBefore(Instruction &I, Instruction &Dest,
+                                  ICFLoopSafetyInfo &SafetyInfo);
+
 namespace {
 struct LoopInvariantCodeMotion {
   using ASTrackerMapTy = DenseMap<Loop *, std::unique_ptr<AliasSetTracker>>;
@@ -890,6 +893,13 @@ static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
   I.eraseFromParent();
 }
 
+static void moveInstructionBefore(Instruction &I, Instruction &Dest,
+                                  ICFLoopSafetyInfo &SafetyInfo) {
+  SafetyInfo.removeInstruction(&I);
+  SafetyInfo.insertInstructionTo(Dest.getParent());
+  I.moveBefore(&Dest);
+}
+
 static Instruction *sinkThroughTriviallyReplaceablePHI(
     PHINode *TPN, Instruction *I, LoopInfo *LI,
     SmallDenseMap<BasicBlock *, Instruction *, 32> &SunkCopies,
@@ -1118,10 +1128,8 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop))
     I.dropUnknownNonDebugMetadata();
 
-  SafetyInfo->removeInstruction(&I);
-  SafetyInfo->insertInstructionTo(Preheader);
   // Move the new node to the Preheader, before its terminator.
-  I.moveBefore(Preheader->getTerminator());
+  moveInstructionBefore(I, *Preheader->getTerminator(), *SafetyInfo);
 
   // Do not retain debug locations when we are moving instructions to different
   // basic blocks, because we want to avoid jumpy line tables. Calls, however,

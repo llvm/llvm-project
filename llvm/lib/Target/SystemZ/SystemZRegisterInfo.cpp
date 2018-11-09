@@ -270,25 +270,30 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
 
   // Check that the two virtual registers are local to MBB.
   MachineBasicBlock *MBB = MI->getParent();
-  if (LIS.isLiveInToMBB(IntGR128, MBB) || LIS.isLiveOutOfMBB(IntGR128, MBB) ||
-      LIS.isLiveInToMBB(IntGRNar, MBB) || LIS.isLiveOutOfMBB(IntGRNar, MBB))
+  MachineInstr *FirstMI_GR128 =
+    LIS.getInstructionFromIndex(IntGR128.beginIndex());
+  MachineInstr *FirstMI_GRNar =
+    LIS.getInstructionFromIndex(IntGRNar.beginIndex());
+  MachineInstr *LastMI_GR128 = LIS.getInstructionFromIndex(IntGR128.endIndex());
+  MachineInstr *LastMI_GRNar = LIS.getInstructionFromIndex(IntGRNar.endIndex());
+  if ((!FirstMI_GR128 || FirstMI_GR128->getParent() != MBB) ||
+      (!FirstMI_GRNar || FirstMI_GRNar->getParent() != MBB) ||
+      (!LastMI_GR128 || LastMI_GR128->getParent() != MBB) ||
+      (!LastMI_GRNar || LastMI_GRNar->getParent() != MBB))
     return false;
 
-  // Find the first and last MIs of the registers.
-  MachineInstr *FirstMI = nullptr, *LastMI = nullptr;
+  MachineBasicBlock::iterator MII = nullptr, MEE = nullptr;
   if (WideOpNo == 1) {
-    FirstMI = LIS.getInstructionFromIndex(IntGR128.beginIndex());
-    LastMI  = LIS.getInstructionFromIndex(IntGRNar.endIndex());
+    MII = FirstMI_GR128;
+    MEE = LastMI_GRNar;
   } else {
-    FirstMI = LIS.getInstructionFromIndex(IntGRNar.beginIndex());
-    LastMI  = LIS.getInstructionFromIndex(IntGR128.endIndex());
+    MII = FirstMI_GRNar;
+    MEE = LastMI_GR128;
   }
-  assert (FirstMI && LastMI && "No instruction from index?");
 
   // Check if coalescing seems safe by finding the set of clobbered physreg
   // pairs in the region.
   BitVector PhysClobbered(getNumRegs());
-  MachineBasicBlock::iterator MII = FirstMI, MEE = LastMI;
   MEE++;
   for (; MII != MEE; ++MII) {
     for (const MachineOperand &MO : MII->operands())

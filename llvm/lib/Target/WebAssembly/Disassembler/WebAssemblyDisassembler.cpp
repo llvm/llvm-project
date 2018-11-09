@@ -66,7 +66,7 @@ extern "C" void LLVMInitializeWebAssemblyDisassembler() {
                                          createWebAssemblyDisassembler);
 }
 
-static int nextByte(ArrayRef<uint8_t> Bytes, uint64_t &Size) {
+static uint8_t nextByte(ArrayRef<uint8_t> Bytes, uint64_t &Size) {
   if (Size >= Bytes.size())
     return -1;
   auto V = Bytes[Size];
@@ -74,18 +74,26 @@ static int nextByte(ArrayRef<uint8_t> Bytes, uint64_t &Size) {
   return V;
 }
 
-static bool parseLEBImmediate(MCInst &MI, uint64_t &Size,
-                              ArrayRef<uint8_t> Bytes, bool Signed) {
+static bool nextLEB(int64_t &Val, ArrayRef<uint8_t> Bytes, uint64_t &Size,
+                    bool Signed = false) {
   unsigned N = 0;
   const char *Error = nullptr;
-  auto Val = Signed ? decodeSLEB128(Bytes.data() + Size, &N,
-                                    Bytes.data() + Bytes.size(), &Error)
-                    : static_cast<int64_t>(
-                          decodeULEB128(Bytes.data() + Size, &N,
-                                        Bytes.data() + Bytes.size(), &Error));
+  Val = Signed ? decodeSLEB128(Bytes.data() + Size, &N,
+                               Bytes.data() + Bytes.size(), &Error)
+               : static_cast<int64_t>(decodeULEB128(Bytes.data() + Size, &N,
+                                                    Bytes.data() + Bytes.size(),
+                                                    &Error));
   if (Error)
     return false;
   Size += N;
+  return true;
+}
+
+static bool parseLEBImmediate(MCInst &MI, uint64_t &Size,
+                              ArrayRef<uint8_t> Bytes, bool Signed) {
+  int64_t Val;
+  if (!nextLEB(Val, Bytes, Size, Signed))
+    return false;
   MI.addOperand(MCOperand::createImm(Val));
   return true;
 }
@@ -127,10 +135,12 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     }
     if (!WasmInst)
       return MCDisassembler::Fail;
-    Opc = nextByte(Bytes, Size);
-    if (Opc < 0)
+    int64_t PrefixedOpc;
+    if (!nextLEB(PrefixedOpc, Bytes, Size))
       return MCDisassembler::Fail;
-    WasmInst += Opc;
+    if (PrefixedOpc < 0 || PrefixedOpc >= WebAssemblyInstructionTableSize)
+      return MCDisassembler::Fail;
+    WasmInst += PrefixedOpc;
   }
   if (WasmInst->ET == ET_Unused)
     return MCDisassembler::Fail;
