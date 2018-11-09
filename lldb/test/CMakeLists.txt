@@ -47,7 +47,6 @@ set(LLDB_TEST_USER_ARGS
 # the build directory.
 set(LLDB_TEST_COMMON_ARGS
   --arch=${LLDB_TEST_ARCH}
-  --executable $<TARGET_FILE:lldb>
   -s
   ${CMAKE_BINARY_DIR}/lldb-test-traces
   --build-dir
