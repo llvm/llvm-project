@@ -913,6 +913,7 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbSymUid type_uid,
       underlying_type->GetFullCompilerType(), er.isScoped());
 
   ClangASTContext::StartTagDeclarationDefinition(enum_ct);
+  ClangASTContext::SetHasExternalStorage(enum_ct.GetOpaqueQualType(), true);
 
   // We're just going to forward resolve this for now.  We'll complete
   // it only if the user requests.

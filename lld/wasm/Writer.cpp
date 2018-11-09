@@ -554,8 +554,7 @@ void Writer::createNameSection() {
   for (const Symbol *S : ImportedSymbols) {
     if (auto *F = dyn_cast<FunctionSymbol>(S)) {
       writeUleb128(Sub.OS, F->getFunctionIndex(), "func index");
-      Optional<std::string> Name = demangleItanium(F->getName());
-      writeStr(Sub.OS, Name ? StringRef(*Name) : F->getName(), "symbol name");
+      writeStr(Sub.OS, toString(*S), "symbol name");
     }
   }
   for (const InputFunction *F : InputFunctions) {
@@ -564,8 +563,7 @@ void Writer::createNameSection() {
       if (!F->getDebugName().empty()) {
         writeStr(Sub.OS, F->getDebugName(), "symbol name");
       } else {
-        Optional<std::string> Name = demangleItanium(F->getName());
-        writeStr(Sub.OS, Name ? StringRef(*Name) : F->getName(), "symbol name");
+        writeStr(Sub.OS, maybeDemangleSymbol(F->getName()), "symbol name");
       }
     }
   }
