@@ -1,4 +1,4 @@
-FROM library/ubuntu:18.04
+FROM library/ubuntu:18.10
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends cmake
 RUN apt-get install -y --no-install-recommends build-essential

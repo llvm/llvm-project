@@ -65,12 +65,9 @@ jobs:
             git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
             git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
             git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
-            git clone https://github.com/llvm-mirror/lld.git tools/lld
             cd tools/clang
             git checkout xla
             cd ../polly
-            git checkout release_70
-            cd ../lld
             git checkout release_70
             cd ../../projects/compiler-rt
             git checkout xla
@@ -104,10 +101,10 @@ jobs:
             cmake -DCMAKE_C_COMPILER=$HOME/project/build/bin/clang -DCMAKE_CXX_COMPILER=$HOME/project/build/bin/clang++ ..
             make -j2
 
-  "build-1804":
+  "build-1810":
     resource_class: xlarge
     docker:
-      - image: wsmoses/tapir:1804
+      - image: wsmoses/tapir:1810
 
     steps:
       - checkout
@@ -117,12 +114,9 @@ jobs:
             git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
             git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
             git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
-            git clone https://github.com/llvm-mirror/lld.git tools/lld
             cd tools/clang
             git checkout xla
             cd ../polly
-            git checkout release_70
-            cd ../lld
             git checkout release_70
             cd ../../projects/compiler-rt
             git checkout xla
@@ -161,4 +155,4 @@ workflows:
     jobs:
       # - "build-1404"
       - "build-1604"
-      - "build-1804"
+      - "build-1810"
