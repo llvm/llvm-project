@@ -34,6 +34,8 @@ public:
       return "The PDB file path is an invalid UTF8 sequence.";
     case pdb_error_code::signature_out_of_date:
       return "The signature does not match; the file(s) might be out of date.";
+    case pdb_error_code::external_cmdline_ref:
+      return "The path to this file must be provided on the command-line.";
     }
     llvm_unreachable("Unrecognized generic_error_code");
   }

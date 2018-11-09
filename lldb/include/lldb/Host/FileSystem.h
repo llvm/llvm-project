@@ -88,6 +88,12 @@ public:
   bool Readable(const llvm::Twine &path) const;
   /// @}
 
+  /// Returns whether the given path is a directory.
+  /// @{
+  bool IsDirectory(const FileSpec &file_spec) const;
+  bool IsDirectory(const llvm::Twine &path) const;
+  /// @}
+
   /// Make the given file path absolute.
   /// @{
   std::error_code MakeAbsolute(llvm::SmallVectorImpl<char> &path) const;

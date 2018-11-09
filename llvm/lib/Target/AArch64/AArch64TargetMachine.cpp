@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
@@ -263,7 +264,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     this->Options.NoTrapAfterNoreturn = true;
   }
 
-  if (TT.isOSWindows()) {
+  if (getMCAsmInfo()->usesWindowsCFI()) {
     // Unwinding can get confused if the last instruction in an
     // exception-handling region (function, funclet, try block, etc.)
     // is a call.

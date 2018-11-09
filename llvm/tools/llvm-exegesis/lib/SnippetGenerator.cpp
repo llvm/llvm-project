@@ -91,7 +91,7 @@ std::vector<RegisterValue> SnippetGenerator::computeRegisterInitialValues(
       if (Op.isUse()) {
         const unsigned Reg = GetOpReg(Op);
         if (Reg > 0 && !DefinedRegs.test(Reg)) {
-          RIV.push_back(RegisterValue{Reg, llvm::APInt()});
+          RIV.push_back(RegisterValue::zero(Reg));
           DefinedRegs.set(Reg);
         }
       }

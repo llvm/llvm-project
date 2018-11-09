@@ -7,7 +7,7 @@ define void @am1(i16* %a, i16 %b) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am1:
-; CHECK:		mov.w	r13, 0(r12)
+; CHECK:		mov	r13, 0(r12)
 
 @foo = external global i16
 
@@ -16,7 +16,7 @@ define void @am2(i16 %a) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am2:
-; CHECK:		mov.w	r12, &foo
+; CHECK:		mov	r12, &foo
 
 @bar = external global [2 x i8]
 
@@ -33,7 +33,7 @@ define void @am4(i16 %a) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am4:
-; CHECK:		mov.w	r12, &32
+; CHECK:		mov	r12, &32
 
 define void @am5(i16* nocapture %p, i16 %a) nounwind readonly {
 	%1 = getelementptr inbounds i16, i16* %p, i16 2
@@ -41,7 +41,7 @@ define void @am5(i16* nocapture %p, i16 %a) nounwind readonly {
 	ret void
 }
 ; CHECK-LABEL: am5:
-; CHECK:		mov.w	r13, 4(r12)
+; CHECK:		mov	r13, 4(r12)
 
 %S = type { i16, i16 }
 @baz = common global %S zeroinitializer, align 1
@@ -51,7 +51,7 @@ define void @am6(i16 %a) nounwind {
 	ret void
 }
 ; CHECK-LABEL: am6:
-; CHECK:		mov.w	r12, &baz+2
+; CHECK:		mov	r12, &baz+2
 
 %T = type { i16, [2 x i8] }
 @duh = external global %T

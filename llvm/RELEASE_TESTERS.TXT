@@ -41,7 +41,7 @@ E: hans@chromium.org
 T: x86
 O: Windows
 
-N: Diana Picus
-E: diana.picus@linaro.org
+N: Diana Picus, Yvan Roux
+E: diana.picus@linaro.org, yvan.roux@linaro.org
 T: ARM, AArch64
 O: Linux
