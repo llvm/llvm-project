@@ -16,13 +16,12 @@
 #include "llvm/ADT/StringMap.h"
 
 namespace lldb_private {
-class FileSystem;
 class MockTildeExpressionResolver : public TildeExpressionResolver {
   llvm::StringRef CurrentUser;
   llvm::StringMap<llvm::StringRef> UserDirectories;
 
 public:
-  MockTildeExpressionResolver(FileSystem &fs, llvm::StringRef CurrentUser,
+  MockTildeExpressionResolver(llvm::StringRef CurrentUser,
                               llvm::StringRef HomeDir);
 
   void AddKnownUser(llvm::StringRef User, llvm::StringRef HomeDir);

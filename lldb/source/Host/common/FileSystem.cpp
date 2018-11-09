@@ -183,9 +183,8 @@ std::error_code FileSystem::MakeAbsolute(FileSpec &file_spec) const {
 }
 
 std::error_code FileSystem::GetRealPath(const Twine &path,
-                                        SmallVectorImpl<char> &output,
-                                        bool expand_tilde) const {
-  return m_fs->getRealPath(path, output, expand_tilde);
+                                        SmallVectorImpl<char> &output) const {
+  return m_fs->getRealPath(path, output);
 }
 
 void FileSystem::Resolve(SmallVectorImpl<char> &path) {
@@ -194,8 +193,8 @@ void FileSystem::Resolve(SmallVectorImpl<char> &path) {
 
   // Resolve tilde.
   SmallString<128> original_path(path.begin(), path.end());
-  StandardTildeExpressionResolver resolver(*this);
-  resolver.ResolveFullPath(original_path, path);
+  StandardTildeExpressionResolver Resolver;
+  Resolver.ResolveFullPath(original_path, path);
 
   // Try making the path absolute if it exists.
   SmallString<128> absolute_path(path.begin(), path.end());

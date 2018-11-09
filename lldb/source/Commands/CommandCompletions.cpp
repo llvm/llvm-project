@@ -231,7 +231,7 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
 static int DiskFilesOrDirectories(CompletionRequest &request,
                                   bool only_directories) {
   request.SetWordComplete(false);
-  StandardTildeExpressionResolver resolver(FileSystem::Instance());
+  StandardTildeExpressionResolver resolver;
   StringList matches;
   DiskFilesOrDirectories(request.GetCursorArgumentPrefix(), only_directories,
                          matches, resolver);

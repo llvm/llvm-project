@@ -1,7 +1,6 @@
 #include "gtest/gtest.h"
 
 #include "TestingSupport/MockTildeExpressionResolver.h"
-#include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 
 #include "llvm/ADT/SmallString.h"
@@ -10,8 +9,7 @@ using namespace llvm;
 using namespace lldb_private;
 
 TEST(TildeExpressionResolver, ResolveFullPath) {
-  FileSystem fs;
-  MockTildeExpressionResolver Resolver(fs, "James", "/james");
+  MockTildeExpressionResolver Resolver("James", "/james");
   Resolver.AddKnownUser("Kirk", "/kirk");
   Resolver.AddKnownUser("Lars", "/lars");
   Resolver.AddKnownUser("Jason", "/jason");
