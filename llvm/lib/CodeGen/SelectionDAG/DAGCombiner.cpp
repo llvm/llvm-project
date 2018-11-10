@@ -16933,12 +16933,15 @@ static SDValue combineShuffleOfScalars(ShuffleVectorSDNode *SVN,
   SDValue N0 = SVN->getOperand(0);
   SDValue N1 = SVN->getOperand(1);
 
-  if (!N0->hasOneUse() || !N1->hasOneUse())
+  if (!N0->hasOneUse())
     return SDValue();
 
   // If only one of N1,N2 is constant, bail out if it is not ALL_ZEROS as
   // discussed above.
   if (!N1.isUndef()) {
+    if (!N1->hasOneUse())
+      return SDValue();
+
     bool N0AnyConst = isAnyConstantBuildVector(N0.getNode());
     bool N1AnyConst = isAnyConstantBuildVector(N1.getNode());
     if (N0AnyConst && !N1AnyConst && !ISD::isBuildVectorAllZeros(N0.getNode()))
@@ -17371,7 +17374,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
 
   // Attempt to combine a shuffle of 2 inputs of 'scalar sources' -
   // BUILD_VECTOR or SCALAR_TO_VECTOR into a single BUILD_VECTOR.
-  if (Level < AfterLegalizeVectorOps && TLI.isTypeLegal(VT))
+  if (Level < AfterLegalizeDAG && TLI.isTypeLegal(VT))
     if (SDValue Res = combineShuffleOfScalars(SVN, DAG, TLI))
       return Res;
 
@@ -18173,6 +18176,7 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   EVT VT = N2.getValueType();
   ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1.getNode());
   ConstantSDNode *N2C = dyn_cast<ConstantSDNode>(N2.getNode());
+  ConstantSDNode *N3C = dyn_cast<ConstantSDNode>(N3.getNode());
 
   // Determine if the condition we're dealing with is constant
   SDValue SCC = SimplifySetCC(getSetCCResultType(N0.getValueType()),
@@ -18273,48 +18277,49 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   }
 
   // fold select C, 16, 0 -> shl C, 4
-  if (N2C && isNullConstant(N3) && N2C->getAPIntValue().isPowerOf2() &&
+  bool Fold = N2C && isNullConstant(N3) && N2C->getAPIntValue().isPowerOf2();
+  bool Swap = N3C && isNullConstant(N2) && N3C->getAPIntValue().isPowerOf2();
+
+  if ((Fold || Swap) &&
       TLI.getBooleanContents(N0.getValueType()) ==
-          TargetLowering::ZeroOrOneBooleanContent) {
+          TargetLowering::ZeroOrOneBooleanContent &&
+      (!LegalOperations ||
+       TLI.isOperationLegal(ISD::SETCC, N0.getValueType()))) {
+
+    if (Swap) {
+      CC = ISD::getSetCCInverse(CC, N0.getValueType().isInteger());
+      std::swap(N2C, N3C);
+    }
 
     // If the caller doesn't want us to simplify this into a zext of a compare,
     // don't do it.
     if (NotExtCompare && N2C->isOne())
       return SDValue();
 
-    // Get a SetCC of the condition
-    // NOTE: Don't create a SETCC if it's not legal on this target.
-    if (!LegalOperations ||
-        TLI.isOperationLegal(ISD::SETCC, N0.getValueType())) {
-      SDValue Temp, SCC;
-      // cast from setcc result type to select result type
-      if (LegalTypes) {
-        SCC  = DAG.getSetCC(DL, getSetCCResultType(N0.getValueType()),
-                            N0, N1, CC);
-        if (N2.getValueType().bitsLT(SCC.getValueType()))
-          Temp = DAG.getZeroExtendInReg(SCC, SDLoc(N2),
-                                        N2.getValueType());
-        else
-          Temp = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N2),
-                             N2.getValueType(), SCC);
-      } else {
-        SCC  = DAG.getSetCC(SDLoc(N0), MVT::i1, N0, N1, CC);
-        Temp = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N2),
-                           N2.getValueType(), SCC);
-      }
-
-      AddToWorklist(SCC.getNode());
-      AddToWorklist(Temp.getNode());
-
-      if (N2C->isOne())
-        return Temp;
-
-      // shl setcc result by log2 n2c
-      return DAG.getNode(
-          ISD::SHL, DL, N2.getValueType(), Temp,
-          DAG.getConstant(N2C->getAPIntValue().logBase2(), SDLoc(Temp),
-                          getShiftAmountTy(Temp.getValueType())));
+    SDValue Temp, SCC;
+    // zext (setcc n0, n1)
+    if (LegalTypes) {
+      SCC = DAG.getSetCC(DL, getSetCCResultType(N0.getValueType()), N0, N1, CC);
+      if (N2.getValueType().bitsLT(SCC.getValueType()))
+        Temp = DAG.getZeroExtendInReg(SCC, SDLoc(N2), N2.getValueType());
+      else
+        Temp = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N2), N2.getValueType(), SCC);
+    } else {
+      SCC = DAG.getSetCC(SDLoc(N0), MVT::i1, N0, N1, CC);
+      Temp = DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N2), N2.getValueType(), SCC);
     }
+
+    AddToWorklist(SCC.getNode());
+    AddToWorklist(Temp.getNode());
+
+    if (N2C->isOne())
+      return Temp;
+
+    // shl setcc result by log2 n2c
+    return DAG.getNode(ISD::SHL, DL, N2.getValueType(), Temp,
+                       DAG.getConstant(N2C->getAPIntValue().logBase2(),
+                                       SDLoc(Temp),
+                                       getShiftAmountTy(Temp.getValueType())));
   }
 
   // Check to see if this is an integer abs.

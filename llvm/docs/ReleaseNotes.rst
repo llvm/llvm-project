@@ -40,7 +40,8 @@ Non-comprehensive list of changes in this release
    functionality, or simply have a lot to talk about), see the `NOTE` below
    for adding a new subsection.
 
-* Note..
+* The **llvm-cov** tool can now export lcov trace files using the
+  `-format=lcov` option of the `export` command.
 
 .. NOTE
    If you would like to document a larger change, then you can add a

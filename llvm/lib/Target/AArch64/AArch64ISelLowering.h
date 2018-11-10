@@ -302,6 +302,12 @@ public:
   MachineBasicBlock *EmitF128CSEL(MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
 
+  MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
+                                           MachineBasicBlock *BB) const;
+
+  MachineBasicBlock *EmitLoweredCatchPad(MachineInstr &MI,
+                                         MachineBasicBlock *BB) const;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
@@ -521,6 +527,8 @@ public:
   bool functionArgumentNeedsConsecutiveRegisters(Type *Ty,
                                                  CallingConv::ID CallConv,
                                                  bool isVarArg) const override;
+  /// Used for exception handling on Win64.
+  bool needsFixedCatchObjects() const override;
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.

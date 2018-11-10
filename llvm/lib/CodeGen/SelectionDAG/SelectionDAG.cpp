@@ -2195,8 +2195,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   KnownBits Known2;
   unsigned NumElts = DemandedElts.getBitWidth();
-  assert(!Op.getValueType().isVector() ||
-         NumElts == Op.getValueType().getVectorNumElements() &&
+  assert((!Op.getValueType().isVector() ||
+          NumElts == Op.getValueType().getVectorNumElements()) &&
          "Unexpected vector size");
 
   if (!DemandedElts)

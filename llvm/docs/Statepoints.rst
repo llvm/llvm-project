@@ -26,8 +26,8 @@ historical interest at this point with one exception - its implementation of
 shadow stacks has been used successfully by a number of language frontends and
 is still supported.  
 
-Overview
-========
+Overview & Core Concepts
+========================
 
 To collect dead objects, garbage collectors must be able to identify
 any references to objects contained within executing code, and,
@@ -904,43 +904,69 @@ Today, only X86_64 is supported.
 
 .. _OpenWork:
 
-Problem Areas and Active Work
-=============================
+Limitations and Half Baked Ideas
+================================
 
-#. Support for languages which allow unmanaged pointers to garbage collected
-   objects (i.e. pass a pointer to an object to a C routine) via pinning.
+Mixing References and Raw Pointers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-#. Support for garbage collected objects allocated on the stack.  Specifically,
-   allocas are always assumed to be in address space 0 and we need a
-   cast/promotion operator to let rewriting identify them.
+Support for languages which allow unmanaged pointers to garbage collected
+objects (i.e. pass a pointer to an object to a C routine) in the abstract
+machine model.  At the moment, the best idea on how to approach this
+involves an intrinsic or opaque function which hides the connection between
+the reference value and the raw pointer.  The problem is that having a
+ptrtoint or inttoptr cast (which is common for such use cases) breaks the
+rules used for inferring base pointers for arbitrary references when
+lowering out of the abstract model to the explicit physical model.  Note
+that a frontend which lowers directly to the physical model doesn't have
+any problems here.
 
-#. The current statepoint lowering is known to be somewhat poor.  In the very
-   long term, we'd like to integrate statepoints with the register allocator;
-   in the near term this is unlikely to happen.  We've found the quality of
-   lowering to be relatively unimportant as hot-statepoints are almost always
-   inliner bugs.
+Objects on the Stack
+^^^^^^^^^^^^^^^^^^^^
 
-#. Concerns have been raised that the statepoint representation results in a
-   large amount of IR being produced for some examples and that this
-   contributes to higher than expected memory usage and compile times.  There's
-   no immediate plans to make changes due to this, but alternate models may be
-   explored in the future.
+As noted above, the explicit lowering supports objects allocated on the
+stack provided the collector can find a heap map given the stack address.
 
-#. Relocations along exceptional paths are currently broken in ToT.  In
-   particular, there is current no way to represent a rethrow on a path which
-   also has relocations.  See `this llvm-dev discussion
-   <https://groups.google.com/forum/#!topic/llvm-dev/AE417XjgxvI>`_ for more
-   detail.
+The missing pieces are a) integration with rewriting (RS4GC) from the
+abstract machine model and b) support for optionally decomposing on stack
+objects so as not to require heap maps for them.  The later is required
+for ease of integration with some collectors.  
 
-#. Support for alternate stackmap formats.  For some use cases, it is
-   desirable to directly encode a final memory efficient stackmap format for
-   use by the runtime.  This is particularly relevant for ahead of time
-   compilers which wish to directly link object files without the need for
-   post processing of each individual object file.  While not implemented
-   today for statepoints, there is precedent for a GCStrategy to be able to
-   select a customer GCMetataPrinter for this purpose.  Patches to enable
-   this functionality upstream are welcome.
-   
+Lowering Quality and Representation Overhead
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The current statepoint lowering is known to be somewhat poor.  In the very
+long term, we'd like to integrate statepoints with the register allocator;
+in the near term this is unlikely to happen.  We've found the quality of
+lowering to be relatively unimportant as hot-statepoints are almost always
+inliner bugs.
+
+Concerns have been raised that the statepoint representation results in a
+large amount of IR being produced for some examples and that this
+contributes to higher than expected memory usage and compile times.  There's
+no immediate plans to make changes due to this, but alternate models may be
+explored in the future.
+
+Relocations Along Exceptional Edges
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Relocations along exceptional paths are currently broken in ToT.  In
+particular, there is current no way to represent a rethrow on a path which
+also has relocations.  See `this llvm-dev discussion
+<https://groups.google.com/forum/#!topic/llvm-dev/AE417XjgxvI>`_ for more
+detail.
+
+Support for alternate stackmap formats
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For some use cases, it is
+desirable to directly encode a final memory efficient stackmap format for
+use by the runtime.  This is particularly relevant for ahead of time
+compilers which wish to directly link object files without the need for
+post processing of each individual object file.  While not implemented
+today for statepoints, there is precedent for a GCStrategy to be able to
+select a customer GCMetataPrinter for this purpose.  Patches to enable
+this functionality upstream are welcome.   
 
 Bugs and Enhancements
 =====================

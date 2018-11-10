@@ -26,14 +26,14 @@ class FunctionPass;
 /// RegisterRegAlloc class - Track the registration of register allocators.
 ///
 //===----------------------------------------------------------------------===//
-class RegisterRegAlloc : public MachinePassRegistryNode {
+class RegisterRegAlloc : public MachinePassRegistryNode<FunctionPass *(*)()> {
 public:
   using FunctionPassCtor = FunctionPass *(*)();
 
-  static MachinePassRegistry Registry;
+  static MachinePassRegistry<FunctionPassCtor> Registry;
 
   RegisterRegAlloc(const char *N, const char *D, FunctionPassCtor C)
-      : MachinePassRegistryNode(N, D, (MachinePassCtor)C) {
+      : MachinePassRegistryNode(N, D, C) {
     Registry.Add(this);
   }
 
@@ -48,15 +48,11 @@ public:
     return (RegisterRegAlloc *)Registry.getList();
   }
 
-  static FunctionPassCtor getDefault() {
-    return (FunctionPassCtor)Registry.getDefault();
-  }
+  static FunctionPassCtor getDefault() { return Registry.getDefault(); }
 
-  static void setDefault(FunctionPassCtor C) {
-    Registry.setDefault((MachinePassCtor)C);
-  }
+  static void setDefault(FunctionPassCtor C) { Registry.setDefault(C); }
 
-  static void setListener(MachinePassRegistryListener *L) {
+  static void setListener(MachinePassRegistryListener<FunctionPassCtor> *L) {
     Registry.setListener(L);
   }
 };

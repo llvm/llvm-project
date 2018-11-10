@@ -153,7 +153,7 @@
 ; CHECK: `struct S & __cdecl getS(void)'::`2'::`local static guard'{2}
 
 ??_C@_02PCEFGMJL@hi?$AA@
-; CHECK: const char * {"hi"}
+; CHECK: "hi"
 
 ??_DDiamond@@QEAAXXZ
 ; CHECK: void __cdecl Diamond::`vbase dtor'(void)

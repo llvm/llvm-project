@@ -1320,6 +1320,15 @@ def : Pat<(i64 (anyext GR16:$src)),
 def : Pat<(i64 (anyext GR32:$src)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GR32:$src, sub_32bit)>;
 
+// If this is an anyext of the remainder of an 8-bit sdivrem, use a MOVSX
+// instead of a MOVZX. The sdivrem lowering will emit emit a MOVSX to move
+// %ah to the lower byte of a register. By using a MOVSX here we allow a
+// post-isel peephole to merge the two MOVSX instructions into one.
+def anyext_sdiv : PatFrag<(ops node:$lhs), (anyext node:$lhs),[{
+  return (N->getOperand(0).getOpcode() == ISD::SDIVREM &&
+          N->getOperand(0).getResNo() == 1);
+}]>;
+def : Pat<(i32 (anyext_sdiv GR8:$src)), (MOVSX32rr8 GR8:$src)>;
 
 // Any instruction that defines a 32-bit result leaves the high half of the
 // register. Truncate can be lowered to EXTRACT_SUBREG. CopyFromReg may

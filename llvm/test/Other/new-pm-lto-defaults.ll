@@ -38,13 +38,13 @@
 ; CHECK-O2-NEXT: Running pass: CallSiteSplittingPass on foo
 ; CHECK-O2-NEXT: Running analysis: TargetLibraryAnalysis on foo
 ; CHECK-O2-NEXT: Running analysis: TargetIRAnalysis on foo
-; CHECK-O2-NEXT: Running analysis: DominatorTreeAnalysis on foo
 ; CHECK-O2-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-O2-NEXT: PGOIndirectCallPromotion
 ; CHECK-O2-NEXT: Running analysis: ProfileSummaryAnalysis
 ; CHECK-O2-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis
 ; CHECK-O2-NEXT: Running pass: IPSCCPPass
-; CHECK-O2-NEXT: Running analysis: AssumptionAnalysis on foo
+; CHECK-O2-DAG: Running analysis: AssumptionAnalysis on foo
+; CHECK-O2-DAG: Running analysis: DominatorTreeAnalysis on foo
 ; CHECK-O2-NEXT: Running pass: CalledValuePropagationPass
 ; CHECK-O-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor<{{.*}}PostOrderFunctionAttrsPass>
 ; CHECK-O-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}SCC

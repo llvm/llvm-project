@@ -4,129 +4,121 @@
 define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; RISCV32-LABEL: muloti_test:
 ; RISCV32:       # %bb.0: # %start
-; RISCV32-NEXT:    addi sp, sp, -80
-; RISCV32-NEXT:    sw ra, 76(sp)
-; RISCV32-NEXT:    sw s1, 72(sp)
-; RISCV32-NEXT:    sw s2, 68(sp)
-; RISCV32-NEXT:    sw s3, 64(sp)
-; RISCV32-NEXT:    sw s4, 60(sp)
-; RISCV32-NEXT:    sw s5, 56(sp)
-; RISCV32-NEXT:    sw s6, 52(sp)
-; RISCV32-NEXT:    sw s7, 48(sp)
+; RISCV32-NEXT:    addi sp, sp, -96
+; RISCV32-NEXT:    sw ra, 92(sp)
+; RISCV32-NEXT:    sw s1, 88(sp)
+; RISCV32-NEXT:    sw s2, 84(sp)
+; RISCV32-NEXT:    sw s3, 80(sp)
+; RISCV32-NEXT:    sw s4, 76(sp)
+; RISCV32-NEXT:    sw s5, 72(sp)
+; RISCV32-NEXT:    sw s6, 68(sp)
+; RISCV32-NEXT:    sw s7, 64(sp)
+; RISCV32-NEXT:    sw s8, 60(sp)
 ; RISCV32-NEXT:    mv s3, a2
 ; RISCV32-NEXT:    mv s1, a1
 ; RISCV32-NEXT:    mv s2, a0
-; RISCV32-NEXT:    sw zero, 12(sp)
-; RISCV32-NEXT:    sw zero, 8(sp)
-; RISCV32-NEXT:    sw zero, 28(sp)
-; RISCV32-NEXT:    sw zero, 24(sp)
+; RISCV32-NEXT:    mv s4, zero
+; RISCV32-NEXT:    sw zero, 20(sp)
+; RISCV32-NEXT:    sw zero, 16(sp)
+; RISCV32-NEXT:    sw zero, 36(sp)
+; RISCV32-NEXT:    sw zero, 32(sp)
 ; RISCV32-NEXT:    lw s5, 4(a2)
-; RISCV32-NEXT:    sw s5, 4(sp)
-; RISCV32-NEXT:    lw s6, 0(a2)
-; RISCV32-NEXT:    sw s6, 0(sp)
-; RISCV32-NEXT:    lw s4, 4(a1)
-; RISCV32-NEXT:    sw s4, 20(sp)
-; RISCV32-NEXT:    lw s7, 0(a1)
-; RISCV32-NEXT:    sw s7, 16(sp)
-; RISCV32-NEXT:    addi a0, sp, 32
-; RISCV32-NEXT:    addi a1, sp, 16
-; RISCV32-NEXT:    mv a2, sp
+; RISCV32-NEXT:    sw s5, 12(sp)
+; RISCV32-NEXT:    lw s7, 0(a2)
+; RISCV32-NEXT:    sw s7, 8(sp)
+; RISCV32-NEXT:    lw s6, 4(a1)
+; RISCV32-NEXT:    sw s6, 28(sp)
+; RISCV32-NEXT:    lw s8, 0(a1)
+; RISCV32-NEXT:    sw s8, 24(sp)
+; RISCV32-NEXT:    addi a0, sp, 40
+; RISCV32-NEXT:    addi a1, sp, 24
+; RISCV32-NEXT:    addi a2, sp, 8
 ; RISCV32-NEXT:    call __multi3
-; RISCV32-NEXT:    lw t1, 12(s1)
+; RISCV32-NEXT:    lw t2, 12(s1)
 ; RISCV32-NEXT:    lw a1, 8(s1)
 ; RISCV32-NEXT:    mul a0, s5, a1
-; RISCV32-NEXT:    mul a2, t1, s6
+; RISCV32-NEXT:    mul a2, t2, s7
 ; RISCV32-NEXT:    add a0, a2, a0
-; RISCV32-NEXT:    lw t5, 12(s3)
+; RISCV32-NEXT:    lw t3, 12(s3)
 ; RISCV32-NEXT:    lw a3, 8(s3)
-; RISCV32-NEXT:    mul a2, s4, a3
-; RISCV32-NEXT:    mul a4, t5, s7
+; RISCV32-NEXT:    mul a2, s6, a3
+; RISCV32-NEXT:    mul a4, t3, s8
 ; RISCV32-NEXT:    add a2, a4, a2
-; RISCV32-NEXT:    mul a4, a3, s7
-; RISCV32-NEXT:    mul a5, a1, s6
-; RISCV32-NEXT:    add s1, a5, a4
-; RISCV32-NEXT:    sltu a4, s1, a5
-; RISCV32-NEXT:    mulhu a6, a3, s7
+; RISCV32-NEXT:    mul a4, a3, s8
+; RISCV32-NEXT:    mul a5, a1, s7
+; RISCV32-NEXT:    add a4, a5, a4
+; RISCV32-NEXT:    sltu a5, a4, a5
+; RISCV32-NEXT:    mulhu a6, a3, s8
 ; RISCV32-NEXT:    add a7, a6, a2
-; RISCV32-NEXT:    mulhu t2, a1, s6
-; RISCV32-NEXT:    add t4, t2, a0
-; RISCV32-NEXT:    add a0, t4, a7
-; RISCV32-NEXT:    add a0, a0, a4
-; RISCV32-NEXT:    xor a2, s5, zero
-; RISCV32-NEXT:    snez a2, a2
-; RISCV32-NEXT:    xor a4, t1, zero
-; RISCV32-NEXT:    snez a4, a4
-; RISCV32-NEXT:    and a2, a4, a2
-; RISCV32-NEXT:    xor a4, s4, zero
-; RISCV32-NEXT:    snez a4, a4
-; RISCV32-NEXT:    xor a5, t5, zero
-; RISCV32-NEXT:    snez a5, a5
-; RISCV32-NEXT:    and a4, a5, a4
-; RISCV32-NEXT:    mulhu a5, t5, s7
-; RISCV32-NEXT:    xor a5, a5, zero
-; RISCV32-NEXT:    snez a5, a5
-; RISCV32-NEXT:    or t0, a4, a5
-; RISCV32-NEXT:    mulhu a4, t1, s6
-; RISCV32-NEXT:    xor a4, a4, zero
-; RISCV32-NEXT:    snez a4, a4
-; RISCV32-NEXT:    or t3, a2, a4
-; RISCV32-NEXT:    lw a4, 44(sp)
-; RISCV32-NEXT:    add a5, a4, a0
-; RISCV32-NEXT:    lw a2, 40(sp)
-; RISCV32-NEXT:    add a0, a2, s1
-; RISCV32-NEXT:    sltu t6, a0, a2
-; RISCV32-NEXT:    add s1, a5, t6
-; RISCV32-NEXT:    beq s1, a4, .LBB0_2
+; RISCV32-NEXT:    mulhu t0, a1, s7
+; RISCV32-NEXT:    add t1, t0, a0
+; RISCV32-NEXT:    add a0, t1, a7
+; RISCV32-NEXT:    add a2, a0, a5
+; RISCV32-NEXT:    lw a0, 52(sp)
+; RISCV32-NEXT:    add a5, a0, a2
+; RISCV32-NEXT:    lw a2, 48(sp)
+; RISCV32-NEXT:    add t4, a2, a4
+; RISCV32-NEXT:    sltu s1, t4, a2
+; RISCV32-NEXT:    add a4, a5, s1
+; RISCV32-NEXT:    beq a4, a0, .LBB0_2
 ; RISCV32-NEXT:  # %bb.1: # %start
-; RISCV32-NEXT:    sltu t6, s1, a4
+; RISCV32-NEXT:    sltu s1, a4, a0
 ; RISCV32-NEXT:  .LBB0_2: # %start
-; RISCV32-NEXT:    xor a4, s1, a4
-; RISCV32-NEXT:    xor a2, a0, a2
-; RISCV32-NEXT:    or a2, a2, a4
-; RISCV32-NEXT:    sltu t2, t4, t2
-; RISCV32-NEXT:    mulhu a4, s5, a1
-; RISCV32-NEXT:    xor a4, a4, zero
-; RISCV32-NEXT:    snez a4, a4
-; RISCV32-NEXT:    or t3, t3, a4
-; RISCV32-NEXT:    sltu a6, a7, a6
-; RISCV32-NEXT:    mulhu a4, s4, a3
-; RISCV32-NEXT:    xor a4, a4, zero
-; RISCV32-NEXT:    snez a4, a4
-; RISCV32-NEXT:    or a4, t0, a4
-; RISCV32-NEXT:    lw a5, 36(sp)
-; RISCV32-NEXT:    sw a5, 4(s2)
-; RISCV32-NEXT:    lw a5, 32(sp)
-; RISCV32-NEXT:    sw a5, 0(s2)
-; RISCV32-NEXT:    sw a0, 8(s2)
-; RISCV32-NEXT:    sw s1, 12(s2)
-; RISCV32-NEXT:    mv a0, zero
-; RISCV32-NEXT:    beqz a2, .LBB0_4
+; RISCV32-NEXT:    xor a0, a4, a0
+; RISCV32-NEXT:    xor a2, t4, a2
+; RISCV32-NEXT:    or a0, a2, a0
+; RISCV32-NEXT:    beq a0, s4, .LBB0_4
 ; RISCV32-NEXT:  # %bb.3: # %start
-; RISCV32-NEXT:    mv a0, t6
+; RISCV32-NEXT:    mv s4, s1
 ; RISCV32-NEXT:  .LBB0_4: # %start
-; RISCV32-NEXT:    or a2, a4, a6
-; RISCV32-NEXT:    or a4, t3, t2
-; RISCV32-NEXT:    or a3, a3, t5
-; RISCV32-NEXT:    or a1, a1, t1
-; RISCV32-NEXT:    xor a1, a1, zero
-; RISCV32-NEXT:    xor a3, a3, zero
+; RISCV32-NEXT:    snez a0, s5
+; RISCV32-NEXT:    snez a2, t2
+; RISCV32-NEXT:    and a0, a2, a0
+; RISCV32-NEXT:    snez a2, s6
+; RISCV32-NEXT:    snez a5, t3
+; RISCV32-NEXT:    and a2, a5, a2
+; RISCV32-NEXT:    mulhu a5, t3, s8
+; RISCV32-NEXT:    snez a5, a5
+; RISCV32-NEXT:    or a2, a2, a5
+; RISCV32-NEXT:    mulhu a5, t2, s7
+; RISCV32-NEXT:    snez a5, a5
+; RISCV32-NEXT:    or a0, a0, a5
+; RISCV32-NEXT:    sltu t0, t1, t0
+; RISCV32-NEXT:    mulhu s1, s5, a1
+; RISCV32-NEXT:    snez s1, s1
+; RISCV32-NEXT:    or a0, a0, s1
+; RISCV32-NEXT:    sltu s1, a7, a6
+; RISCV32-NEXT:    mulhu a5, s6, a3
+; RISCV32-NEXT:    snez a5, a5
+; RISCV32-NEXT:    or a2, a2, a5
+; RISCV32-NEXT:    lw a5, 44(sp)
+; RISCV32-NEXT:    sw a5, 4(s2)
+; RISCV32-NEXT:    lw a5, 40(sp)
+; RISCV32-NEXT:    sw a5, 0(s2)
+; RISCV32-NEXT:    sw t4, 8(s2)
+; RISCV32-NEXT:    sw a4, 12(s2)
+; RISCV32-NEXT:    or a2, a2, s1
+; RISCV32-NEXT:    or a0, a0, t0
+; RISCV32-NEXT:    or a1, a1, t2
+; RISCV32-NEXT:    or a3, a3, t3
 ; RISCV32-NEXT:    snez a3, a3
 ; RISCV32-NEXT:    snez a1, a1
 ; RISCV32-NEXT:    and a1, a1, a3
-; RISCV32-NEXT:    or a1, a1, a4
-; RISCV32-NEXT:    or a1, a1, a2
 ; RISCV32-NEXT:    or a0, a1, a0
+; RISCV32-NEXT:    or a0, a0, a2
+; RISCV32-NEXT:    or a0, a0, s4
 ; RISCV32-NEXT:    andi a0, a0, 1
 ; RISCV32-NEXT:    sb a0, 16(s2)
-; RISCV32-NEXT:    lw s7, 48(sp)
-; RISCV32-NEXT:    lw s6, 52(sp)
-; RISCV32-NEXT:    lw s5, 56(sp)
-; RISCV32-NEXT:    lw s4, 60(sp)
-; RISCV32-NEXT:    lw s3, 64(sp)
-; RISCV32-NEXT:    lw s2, 68(sp)
-; RISCV32-NEXT:    lw s1, 72(sp)
-; RISCV32-NEXT:    lw ra, 76(sp)
-; RISCV32-NEXT:    addi sp, sp, 80
+; RISCV32-NEXT:    lw s8, 60(sp)
+; RISCV32-NEXT:    lw s7, 64(sp)
+; RISCV32-NEXT:    lw s6, 68(sp)
+; RISCV32-NEXT:    lw s5, 72(sp)
+; RISCV32-NEXT:    lw s4, 76(sp)
+; RISCV32-NEXT:    lw s3, 80(sp)
+; RISCV32-NEXT:    lw s2, 84(sp)
+; RISCV32-NEXT:    lw s1, 88(sp)
+; RISCV32-NEXT:    lw ra, 92(sp)
+; RISCV32-NEXT:    addi sp, sp, 96
 ; RISCV32-NEXT:    ret
 start:
   %0 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %l, i128 %r) #2

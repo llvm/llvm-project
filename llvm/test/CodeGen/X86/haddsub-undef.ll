@@ -696,7 +696,7 @@ define <4 x float> @add_ps_007_2(<4 x float> %x) {
 ;
 ; AVX2-SLOW-LABEL: add_ps_007_2:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
+; AVX2-SLOW-NEXT:    vbroadcastss %xmm0, %xmm1
 ; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; AVX2-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX2-SLOW-NEXT:    retq
@@ -826,7 +826,7 @@ define <4 x float> @add_ps_018(<4 x float> %x) {
 ;
 ; AVX2-SLOW-LABEL: add_ps_018:
 ; AVX2-SLOW:       # %bb.0:
-; AVX2-SLOW-NEXT:    vmovddup {{.*#+}} xmm1 = xmm0[0,0]
+; AVX2-SLOW-NEXT:    vbroadcastss %xmm0, %xmm1
 ; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,3]
 ; AVX2-SLOW-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]

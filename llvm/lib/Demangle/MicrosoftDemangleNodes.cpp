@@ -161,22 +161,21 @@ void EncodedStringLiteralNode::output(OutputStream &OS,
                                       OutputFlags Flags) const {
   switch (Char) {
   case CharKind::Wchar:
-    OS << "const wchar_t * {L\"";
+    OS << "L\"";
     break;
   case CharKind::Char:
-    OS << "const char * {\"";
+    OS << "\"";
     break;
   case CharKind::Char16:
-    OS << "const char16_t * {u\"";
+    OS << "u\"";
     break;
   case CharKind::Char32:
-    OS << "const char32_t * {U\"";
+    OS << "U\"";
     break;
   }
   OS << DecodedString << "\"";
   if (IsTruncated)
     OS << "...";
-  OS << "}";
 }
 
 void IntegerLiteralNode::output(OutputStream &OS, OutputFlags Flags) const {

@@ -401,18 +401,20 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
   for (const auto &CSInfo : MFI.getCalleeSavedInfo()) {
     yaml::StringValue Reg;
     printRegMIR(CSInfo.getReg(), Reg, TRI);
-    auto StackObjectInfo = StackObjectOperandMapping.find(CSInfo.getFrameIdx());
-    assert(StackObjectInfo != StackObjectOperandMapping.end() &&
-           "Invalid stack object index");
-    const FrameIndexOperand &StackObject = StackObjectInfo->second;
-    if (StackObject.IsFixed) {
-      YMF.FixedStackObjects[StackObject.ID].CalleeSavedRegister = Reg;
-      YMF.FixedStackObjects[StackObject.ID].CalleeSavedRestored =
-        CSInfo.isRestored();
-    } else {
-      YMF.StackObjects[StackObject.ID].CalleeSavedRegister = Reg;
-      YMF.StackObjects[StackObject.ID].CalleeSavedRestored =
-        CSInfo.isRestored();
+    if (!CSInfo.isSpilledToReg()) {
+      auto StackObjectInfo = StackObjectOperandMapping.find(CSInfo.getFrameIdx());
+      assert(StackObjectInfo != StackObjectOperandMapping.end() &&
+             "Invalid stack object index");
+      const FrameIndexOperand &StackObject = StackObjectInfo->second;
+      if (StackObject.IsFixed) {
+        YMF.FixedStackObjects[StackObject.ID].CalleeSavedRegister = Reg;
+        YMF.FixedStackObjects[StackObject.ID].CalleeSavedRestored =
+          CSInfo.isRestored();
+      } else {
+        YMF.StackObjects[StackObject.ID].CalleeSavedRegister = Reg;
+        YMF.StackObjects[StackObject.ID].CalleeSavedRestored =
+          CSInfo.isRestored();
+      }
     }
   }
   for (unsigned I = 0, E = MFI.getLocalFrameObjectCount(); I < E; ++I) {

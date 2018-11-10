@@ -187,6 +187,8 @@ static void computeCacheKey(
       AddUnsigned(VI.isDSOLocal());
       AddUsedCfiGlobal(VI.getGUID());
     }
+    if (auto *GVS = dyn_cast<GlobalVarSummary>(GS))
+      AddUnsigned(GVS->isReadOnly());
     if (auto *FS = dyn_cast<FunctionSummary>(GS)) {
       for (auto &TT : FS->type_tests())
         UsedTypeIds.insert(TT);
@@ -809,7 +811,8 @@ Error LTO::run(AddStreamFn AddStream, NativeObjectCache Cache) {
       return PrevailingType::Unknown;
     return It->second;
   };
-  computeDeadSymbols(ThinLTO.CombinedIndex, GUIDPreservedSymbols, isPrevailing);
+  computeDeadSymbolsWithConstProp(ThinLTO.CombinedIndex, GUIDPreservedSymbols,
+                                  isPrevailing, Conf.OptLevel > 0);
 
   // Setup output file to emit statistics.
   std::unique_ptr<ToolOutputFile> StatsFile = nullptr;

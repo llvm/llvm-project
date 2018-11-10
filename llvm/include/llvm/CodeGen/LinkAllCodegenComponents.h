@@ -36,11 +36,7 @@ namespace {
       (void) llvm::createGreedyRegisterAllocator();
       (void) llvm::createDefaultPBQPRegisterAllocator();
 
-      llvm::linkCoreCLRGC();
-      llvm::linkOcamlGC();
-      llvm::linkErlangGC();
-      llvm::linkShadowStackGC();
-      llvm::linkStatepointExampleGC();
+      llvm::linkAllBuiltinGCs();
 
       (void) llvm::createBURRListDAGScheduler(nullptr,
                                               llvm::CodeGenOpt::Default);

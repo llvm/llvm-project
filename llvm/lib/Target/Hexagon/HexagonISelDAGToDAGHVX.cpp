@@ -120,7 +120,7 @@ struct Coloring {
     return Color == ColorKind::Red ? ColorKind::Black : ColorKind::Red;
   }
 
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 
 private:
   ArrayRef<Node> Order;
@@ -267,7 +267,7 @@ bool Coloring::color() {
   return true;
 }
 
-LLVM_DUMP_METHOD
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Coloring::dump() const {
   dbgs() << "{ Order:   {";
   for (unsigned I = 0; I != Order.size(); ++I) {
@@ -309,6 +309,7 @@ void Coloring::dump() const {
     dbgs() << "    " << C.first << " -> " << ColorKindToName(C.second) << "\n";
   dbgs() << "  }\n}\n";
 }
+#endif
 
 namespace {
 // Base class of for reordering networks. They don't strictly need to be
@@ -651,6 +652,7 @@ struct OpRef {
     IndexBits = 28,
   };
 
+  LLVM_DUMP_METHOD
   void print(raw_ostream &OS, const SelectionDAG &G) const;
 
 private:
@@ -663,7 +665,7 @@ struct NodeTemplate {
   MVT Ty = MVT::Other;
   std::vector<OpRef> Ops;
 
-  void print(raw_ostream &OS, const SelectionDAG &G) const;
+  LLVM_DUMP_METHOD void print(raw_ostream &OS, const SelectionDAG &G) const;
 };
 
 struct ResultStack {
@@ -699,10 +701,12 @@ struct ResultStack {
 
   BaseType List;
 
+  LLVM_DUMP_METHOD
   void print(raw_ostream &OS, const SelectionDAG &G) const;
 };
 } // namespace
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void OpRef::print(raw_ostream &OS, const SelectionDAG &G) const {
   if (isValue()) {
     OpV.getNode()->print(OS, &G);
@@ -752,6 +756,7 @@ void ResultStack::print(raw_ostream &OS, const SelectionDAG &G) const {
     OS << '\n';
   }
 }
+#endif
 
 namespace {
 struct ShuffleMask {

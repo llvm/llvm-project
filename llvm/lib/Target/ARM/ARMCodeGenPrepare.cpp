@@ -206,7 +206,8 @@ static bool isSupportedType(Value *V) {
   if (auto *Ld = dyn_cast<LoadInst>(V))
     Ty = cast<PointerType>(Ld->getPointerOperandType())->getElementType();
 
-  if (!isa<IntegerType>(Ty))
+  if (!isa<IntegerType>(Ty) ||
+      cast<IntegerType>(V->getType())->getBitWidth() == 1)
     return false;
 
   return LessOrEqualTypeSize(V);
@@ -222,6 +223,7 @@ static bool isSupportedType(Value *V) {
 static bool isSource(Value *V) {
   if (!isa<IntegerType>(V->getType()))
     return false;
+
   // TODO Allow zext to be sources.
   if (isa<Argument>(V))
     return true;
