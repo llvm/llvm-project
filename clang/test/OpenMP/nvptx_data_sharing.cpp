@@ -27,10 +27,10 @@ void test_ds(){
   }
 }
 // CK1: [[MEM_TY:%.+]] = type { [8 x i8] }
-// CK1-DAG: [[GLOBAL_RD:@.+]] = weak global [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]] zeroinitializer
-// CK1-DAG: [[GLOBAL_RD_PTR:@.+]] = weak unnamed_addr constant i8* getelementptr inbounds ([{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]], [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]]* [[GLOBAL_RD]], i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0)
+// CK1-DAG: [[SHARED_GLOBAL_RD:@.+]] = weak addrspace(3) global [[MEM_TY]] zeroinitializer
 // CK1-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
 // CK1-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i64 8
+// CK1-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
 
 /// ========= In the worker function ========= ///
 // CK1: {{.*}}define internal void @__omp_offloading{{.*}}test_ds{{.*}}_worker()
@@ -44,9 +44,9 @@ void test_ds(){
 // CK1: [[SHAREDARGS2:%.+]] = alloca i8**
 // CK1: call void @__kmpc_kernel_init
 // CK1: call void @__kmpc_data_sharing_init_stack
-// CK1: [[GLOBAL_RD:%.+]] = load i8*, i8** [[GLOBAL_RD_PTR]],
+// CK1: [[SHARED_MEM_FLAG:%.+]] = load i16, i16* [[KERNEL_SHARED]],
 // CK1: [[SIZE:%.+]] = load i64, i64* [[KERNEL_SIZE]],
-// CK1: call void @__kmpc_get_team_static_memory(i8* [[GLOBAL_RD]], i64 [[SIZE]], i16 0, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CK1: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i64 [[SIZE]], i16 [[SHARED_MEM_FLAG]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CK1: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CK1: [[GLOBALSTACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i64 0
 // CK1: [[GLOBALSTACK2:%.+]] = bitcast i8* [[GLOBALSTACK]] to %struct._globalized_locals_ty*
@@ -75,7 +75,8 @@ void test_ds(){
 // CK1: call void @llvm.nvvm.barrier0()
 // CK1: call void @llvm.nvvm.barrier0()
 // CK1: call void @__kmpc_end_sharing_variables()
-// CK1: call void @__kmpc_restore_team_static_memory(i16 0)
+// CK1: [[SHARED_MEM_FLAG:%.+]] = load i16, i16* [[KERNEL_SHARED]],
+// CK1: call void @__kmpc_restore_team_static_memory(i16 [[SHARED_MEM_FLAG]])
 // CK1: call void @__kmpc_kernel_deinit(i16 1)
 
 /// ========= In the data sharing wrapper function ========= ///

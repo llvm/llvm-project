@@ -420,14 +420,14 @@ private:
   /// union. This resulting union (one per CU) is the entry point for the static
   /// memory management runtime functions.
   struct GlobalPtrSizeRecsTy {
+    llvm::GlobalVariable *UseSharedMemory = nullptr;
     llvm::GlobalVariable *RecSize = nullptr;
+    llvm::GlobalVariable *Buffer = nullptr;
+    SourceLocation Loc;
     llvm::SmallVector<const RecordDecl *, 2> Records;
     unsigned RegionCounter = 0;
   };
   llvm::SmallVector<GlobalPtrSizeRecsTy, 8> GlobalizedRecords;
-  /// Global variable used for staticlly allocated global memoryused for
-  /// globalization in target/teams/distribute regions.
-  llvm::GlobalVariable *StaticGlobalized = nullptr;
   /// Shared pointer for the global memory in the global memory buffer used for
   /// the given kernel.
   llvm::GlobalVariable *KernelStaticGlobalized = nullptr;

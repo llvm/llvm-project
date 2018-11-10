@@ -1436,6 +1436,10 @@ void tools::AddHIPLinkerScript(const ToolChain &TC, Compilation &C,
   LksStream << "    PROVIDE_HIDDEN(__hip_fatbin = .);\n";
   LksStream << "    " << BundleFileName << "\n";
   LksStream << "  }\n";
+  LksStream << "  /DISCARD/ :\n";
+  LksStream << "  {\n";
+  LksStream << "    * ( __CLANG_OFFLOAD_BUNDLE__* )\n";
+  LksStream << "  }\n";
   LksStream << "}\n";
   LksStream << "INSERT BEFORE .data\n";
   LksStream.flush();

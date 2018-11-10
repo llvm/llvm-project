@@ -3792,6 +3792,28 @@ IdentifierInfo *Parser::TryParseCXX11AttributeIdentifier(SourceLocation &Loc) {
     }
     return nullptr;
 
+  case tok::numeric_constant: {
+    // If we got a numeric constant, check to see if it comes from a macro that
+    // corresponds to the predefined __clang__ macro. If it does, warn the user
+    // and recover by pretending they said _Clang instead.
+    if (Tok.getLocation().isMacroID()) {
+      SmallString<8> ExpansionBuf;
+      SourceLocation ExpansionLoc =
+          PP.getSourceManager().getExpansionLoc(Tok.getLocation());
+      StringRef Spelling = PP.getSpelling(ExpansionLoc, ExpansionBuf);
+      if (Spelling == "__clang__") {
+        SourceRange TokRange(
+            ExpansionLoc,
+            PP.getSourceManager().getExpansionLoc(Tok.getEndLoc()));
+        Diag(Tok, diag::warn_wrong_clang_attr_namespace)
+            << FixItHint::CreateReplacement(TokRange, "_Clang");
+        Loc = ConsumeToken();
+        return &PP.getIdentifierTable().get("_Clang");
+      }
+    }
+    return nullptr;
+  }
+
   case tok::ampamp:       // 'and'
   case tok::pipe:         // 'bitor'
   case tok::pipepipe:     // 'or'
@@ -3870,8 +3892,7 @@ bool Parser::ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
     return false;
   }
 
-  if (ScopeName &&
-      (ScopeName->getName() == "gnu" || ScopeName->getName() == "__gnu__")) {
+  if (ScopeName && (ScopeName->isStr("gnu") || ScopeName->isStr("__gnu__"))) {
     // GNU-scoped attributes have some special cases to handle GNU-specific
     // behaviors.
     ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
@@ -3881,10 +3902,9 @@ bool Parser::ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
 
   unsigned NumArgs;
   // Some Clang-scoped attributes have some special parsing behavior.
-  if (ScopeName && ScopeName->getName() == "clang")
-    NumArgs =
-        ParseClangAttributeArgs(AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
-                                ScopeLoc, Syntax);
+  if (ScopeName && (ScopeName->isStr("clang") || ScopeName->isStr("_Clang")))
+    NumArgs = ParseClangAttributeArgs(AttrName, AttrNameLoc, Attrs, EndLoc,
+                                      ScopeName, ScopeLoc, Syntax);
   else
     NumArgs =
         ParseAttributeArgsCommon(AttrName, AttrNameLoc, Attrs, EndLoc,

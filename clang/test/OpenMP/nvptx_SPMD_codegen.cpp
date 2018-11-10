@@ -40,7 +40,7 @@ void foo() {
   for (int i = 0; i < 10; ++i)
     ;
 int a;
-// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 1)
+// CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
@@ -76,17 +76,28 @@ int a;
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
 #pragma omp target teams
+   {
+     int b;
 #pragma omp distribute parallel for simd
   for (int i = 0; i < 10; ++i)
     ;
+  ;
+   }
 #pragma omp target teams
+   {
+     int b[] = {2, 3, sizeof(int)};
 #pragma omp distribute parallel for simd schedule(static)
   for (int i = 0; i < 10; ++i)
     ;
+   }
 #pragma omp target teams
+   {
+     int b;
 #pragma omp distribute parallel for simd schedule(static, 1)
   for (int i = 0; i < 10; ++i)
     ;
+  int &c = b;
+   }
 #pragma omp target teams
 #pragma omp distribute parallel for simd schedule(auto)
   for (int i = 0; i < 10; ++i)

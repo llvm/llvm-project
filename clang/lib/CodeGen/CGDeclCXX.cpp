@@ -63,15 +63,15 @@ static void EmitDeclInit(CodeGenFunction &CGF, const VarDecl &D,
 /// Emit code to cause the destruction of the given variable with
 /// static storage duration.
 static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
-                            ConstantAddress addr) {
+                            ConstantAddress Addr) {
   CodeGenModule &CGM = CGF.CGM;
 
   // FIXME:  __attribute__((cleanup)) ?
 
-  QualType type = D.getType();
-  QualType::DestructionKind dtorKind = type.isDestructedType();
+  QualType Type = D.getType();
+  QualType::DestructionKind DtorKind = Type.isDestructedType();
 
-  switch (dtorKind) {
+  switch (DtorKind) {
   case QualType::DK_none:
     return;
 
@@ -86,13 +86,14 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
     return;
   }
 
-  llvm::Constant *function;
-  llvm::Constant *argument;
+  llvm::Constant *Func;
+  llvm::Constant *Argument;
 
   // Special-case non-array C++ destructors, if they have the right signature.
   // Under some ABIs, destructors return this instead of void, and cannot be
-  // passed directly to __cxa_atexit if the target does not allow this mismatch.
-  const CXXRecordDecl *Record = type->getAsCXXRecordDecl();
+  // passed directly to __cxa_atexit if the target does not allow this
+  // mismatch.
+  const CXXRecordDecl *Record = Type->getAsCXXRecordDecl();
   bool CanRegisterDestructor =
       Record && (!CGM.getCXXABI().HasThisReturn(
                      GlobalDecl(Record->getDestructor(), Dtor_Complete)) ||
@@ -103,21 +104,21 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
   bool UsingExternalHelper = !CGM.getCodeGenOpts().CXAAtExit;
   if (Record && (CanRegisterDestructor || UsingExternalHelper)) {
     assert(!Record->hasTrivialDestructor());
-    CXXDestructorDecl *dtor = Record->getDestructor();
+    CXXDestructorDecl *Dtor = Record->getDestructor();
 
-    function = CGM.getAddrOfCXXStructor(dtor, StructorType::Complete);
-    argument = llvm::ConstantExpr::getBitCast(
-        addr.getPointer(), CGF.getTypes().ConvertType(type)->getPointerTo());
+    Func = CGM.getAddrOfCXXStructor(Dtor, StructorType::Complete);
+    Argument = llvm::ConstantExpr::getBitCast(
+        Addr.getPointer(), CGF.getTypes().ConvertType(Type)->getPointerTo());
 
   // Otherwise, the standard logic requires a helper function.
   } else {
-    function = CodeGenFunction(CGM)
-        .generateDestroyHelper(addr, type, CGF.getDestroyer(dtorKind),
-                               CGF.needsEHCleanup(dtorKind), &D);
-    argument = llvm::Constant::getNullValue(CGF.Int8PtrTy);
+    Func = CodeGenFunction(CGM)
+           .generateDestroyHelper(Addr, Type, CGF.getDestroyer(DtorKind),
+                                  CGF.needsEHCleanup(DtorKind), &D);
+    Argument = llvm::Constant::getNullValue(CGF.Int8PtrTy);
   }
 
-  CGM.getCXXABI().registerGlobalDtor(CGF, D, function, argument);
+  CGM.getCXXABI().registerGlobalDtor(CGF, D, Func, Argument);
 }
 
 /// Emit code to cause the variable at the given address to be considered as

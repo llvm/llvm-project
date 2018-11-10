@@ -1147,6 +1147,14 @@ TEST(ParenExpression, SimpleCases) {
                          parenExpr()));
 }
 
+TEST(ParenExpression, IgnoringParens) {
+  EXPECT_FALSE(matches("const char* str = (\"my-string\");",
+                       implicitCastExpr(hasSourceExpression(stringLiteral()))));
+  EXPECT_TRUE(matches(
+      "const char* str = (\"my-string\");",
+      implicitCastExpr(hasSourceExpression(ignoringParens(stringLiteral())))));
+}
+
 TEST(TypeMatching, MatchesTypes) {
   EXPECT_TRUE(matches("struct S {};", qualType().bind("loc")));
 }

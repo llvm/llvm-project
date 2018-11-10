@@ -669,6 +669,12 @@ std::unique_ptr<Command> visualstudio::Compiler::GetCommand(
   // them too.
   Args.AddAllArgs(CmdArgs, options::OPT_UNKNOWN);
 
+  // Warning for ignored flag.
+  if (const Arg *dllexportInlines =
+      Args.getLastArg(options::OPT__SLASH_Zc_dllexportInlines_))
+    C.getDriver().Diag(clang::diag::warn_drv_non_fallback_argument_clang_cl)
+      << dllexportInlines->getAsString(Args);
+
   // Input filename.
   assert(Inputs.size() == 1);
   const InputInfo &II = Inputs[0];
