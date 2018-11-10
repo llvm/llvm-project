@@ -158,6 +158,20 @@ public:
   void addSections(ArrayRef<OutputSection *> OutputSections,
                    ArrayRef<uint8_t> SectionTable);
 
+  /// Get the type table or the global type table if /DEBUG:GHASH is enabled.
+  TypeCollection &getTypeTable() {
+    if (Config->DebugGHashes)
+      return GlobalTypeTable;
+    return TypeTable;
+  }
+
+  /// Get the ID table or the global ID table if /DEBUG:GHASH is enabled.
+  TypeCollection &getIDTable() {
+    if (Config->DebugGHashes)
+      return GlobalIDTable;
+    return IDTable;
+  }
+
   /// Write the PDB to disk and store the Guid generated for it in *Guid.
   void commit(codeview::GUID *Guid);
 
@@ -1166,17 +1180,12 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
       NewFpoFrames.push_back(std::move(FDS));
       break;
     }
-    case DebugSubsectionKind::Symbols:
-      if (Config->DebugGHashes) {
-        mergeSymbolRecords(Linker.Alloc, &File, Linker.Builder.getGsiBuilder(),
-                           IndexMap, Linker.GlobalIDTable,
-                           StringTableReferences, SS.getRecordData());
-      } else {
-        mergeSymbolRecords(Linker.Alloc, &File, Linker.Builder.getGsiBuilder(),
-                           IndexMap, Linker.IDTable, StringTableReferences,
-                           SS.getRecordData());
-      }
+    case DebugSubsectionKind::Symbols: {
+      mergeSymbolRecords(Linker.Alloc, &File, Linker.Builder.getGsiBuilder(),
+                         IndexMap, Linker.getIDTable(), StringTableReferences,
+                         SS.getRecordData());
       break;
+    }
     default:
       // FIXME: Process the rest of the subsections.
       break;
@@ -1339,13 +1348,8 @@ void PDBLinker::addObjectsToPDB() {
 
   // Construct TPI and IPI stream contents.
   ScopedTimer T2(TpiStreamLayoutTimer);
-  if (Config->DebugGHashes) {
-    addTypeInfo(Builder.getTpiBuilder(), GlobalTypeTable);
-    addTypeInfo(Builder.getIpiBuilder(), GlobalIDTable);
-  } else {
-    addTypeInfo(Builder.getTpiBuilder(), TypeTable);
-    addTypeInfo(Builder.getIpiBuilder(), IDTable);
-  }
+  addTypeInfo(Builder.getTpiBuilder(), getTypeTable());
+  addTypeInfo(Builder.getIpiBuilder(), getIDTable());
   T2.stop();
 
   ScopedTimer T3(GlobalsLayoutTimer);

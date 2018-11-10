@@ -292,6 +292,7 @@ void __hwasan_init() {
 
   MadviseShadow();
 
+  SetPrintfAndReportCallback(AppendToErrorMessageBuffer);
   // This may call libc -> needs initialized shadow.
   AndroidLogInit();
 
