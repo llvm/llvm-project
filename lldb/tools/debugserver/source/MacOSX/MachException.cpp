@@ -386,24 +386,29 @@ void MachException::Data::Dump() const {
   }
 }
 
-#define PREV_EXC_MASK_ALL                                                      \
-  (EXC_MASK_BAD_ACCESS | EXC_MASK_BAD_INSTRUCTION | EXC_MASK_ARITHMETIC |      \
-   EXC_MASK_EMULATION | EXC_MASK_SOFTWARE | EXC_MASK_BREAKPOINT |              \
-   EXC_MASK_SYSCALL | EXC_MASK_MACH_SYSCALL | EXC_MASK_RPC_ALERT |             \
-   EXC_MASK_MACHINE)
+// The EXC_MASK_ALL value hard-coded here so that lldb can be built
+// on a new OS with an older deployment target .  The new OS may have
+// an addition to its EXC_MASK_ALL that the old OS will not recognize -
+// <mach/exception_types.h> doesn't vary the value based on the deployment
+// target.  So we need a known set of masks that can be assumed to be
+// valid when running on an older OS.  We'll fall back to trying
+// PREV_EXC_MASK_ALL if the EXC_MASK_ALL value lldb was compiled with is
+// not recognized.
 
-// Don't listen for EXC_RESOURCE, it should really get handled by the system
-// handler.
+#define PREV_EXC_MASK_ALL (EXC_MASK_BAD_ACCESS |                \
+                         EXC_MASK_BAD_INSTRUCTION |             \
+                         EXC_MASK_ARITHMETIC |                  \
+                         EXC_MASK_EMULATION |                   \
+                         EXC_MASK_SOFTWARE |                    \
+                         EXC_MASK_BREAKPOINT |                  \
+                         EXC_MASK_SYSCALL |                     \
+                         EXC_MASK_MACH_SYSCALL |                \
+                         EXC_MASK_RPC_ALERT |                   \
+                         EXC_MASK_RESOURCE |                    \
+                         EXC_MASK_GUARD |                       \
+                         EXC_MASK_MACHINE)
 
-#ifndef EXC_RESOURCE
-#define EXC_RESOURCE 11
-#endif
-
-#ifndef EXC_MASK_RESOURCE
-#define EXC_MASK_RESOURCE (1 << EXC_RESOURCE)
-#endif
-
-#define LLDB_EXC_MASK (EXC_MASK_ALL & ~EXC_MASK_RESOURCE)
+#define LLDB_EXC_MASK EXC_MASK_ALL
 
 kern_return_t MachException::PortInfo::Save(task_t task) {
   DNBLogThreadedIf(LOG_EXCEPTIONS | LOG_VERBOSE,
@@ -485,9 +490,21 @@ const char *MachException::Name(exception_type_t exc_type) {
     return "EXC_MACH_SYSCALL";
   case EXC_RPC_ALERT:
     return "EXC_RPC_ALERT";
-#ifdef EXC_CRASH
   case EXC_CRASH:
     return "EXC_CRASH";
+  case EXC_RESOURCE:
+    return "EXC_RESOURCE";
+#ifdef EXC_GUARD
+  case EXC_GUARD:
+    return "EXC_GUARD";
+#endif
+#ifdef EXC_CORPSE_NOTIFY
+  case EXC_CORPSE_NOTIFY:
+    return "EXC_CORPSE_NOTIFY";
+#endif
+#ifdef EXC_CORPSE_VARIANT_BIT
+  case EXC_CORPSE_VARIANT_BIT:
+    return "EXC_CORPSE_VARIANT_BIT";
 #endif
   default:
     break;
