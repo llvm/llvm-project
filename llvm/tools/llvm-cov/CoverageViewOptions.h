@@ -20,7 +20,8 @@ namespace llvm {
 struct CoverageViewOptions {
   enum class OutputFormat {
     Text,
-    HTML
+    HTML,
+    Lcov
   };
 
   bool Debug;

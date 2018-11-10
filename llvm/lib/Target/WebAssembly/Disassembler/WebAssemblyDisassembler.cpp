@@ -36,6 +36,8 @@ using DecodeStatus = MCDisassembler::DecodeStatus;
 #include "WebAssemblyGenDisassemblerTables.inc"
 
 namespace {
+static constexpr int WebAssemblyInstructionTableSize = 256;
+
 class WebAssemblyDisassembler final : public MCDisassembler {
   std::unique_ptr<const MCInstrInfo> MCII;
 

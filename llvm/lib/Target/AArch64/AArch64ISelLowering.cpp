@@ -1273,6 +1273,20 @@ AArch64TargetLowering::EmitF128CSEL(MachineInstr &MI,
   return EndBB;
 }
 
+MachineBasicBlock *AArch64TargetLowering::EmitLoweredCatchRet(
+       MachineInstr &MI, MachineBasicBlock *BB) const {
+  assert(!isAsynchronousEHPersonality(classifyEHPersonality(
+             BB->getParent()->getFunction().getPersonalityFn())) &&
+         "SEH does not use catchret!");
+  return BB;
+}
+
+MachineBasicBlock *AArch64TargetLowering::EmitLoweredCatchPad(
+     MachineInstr &MI, MachineBasicBlock *BB) const {
+  MI.eraseFromParent();
+  return BB;
+}
+
 MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     MachineInstr &MI, MachineBasicBlock *BB) const {
   switch (MI.getOpcode()) {
@@ -1288,6 +1302,11 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
   case TargetOpcode::STACKMAP:
   case TargetOpcode::PATCHPOINT:
     return emitPatchPoint(MI, BB);
+
+  case AArch64::CATCHRET:
+    return EmitLoweredCatchRet(MI, BB);
+  case AArch64::CATCHPAD:
+    return EmitLoweredCatchPad(MI, BB);
   }
 }
 
@@ -11804,4 +11823,9 @@ AArch64TargetLowering::getVaListSizeInBits(const DataLayout &DL) const {
 void AArch64TargetLowering::finalizeLowering(MachineFunction &MF) const {
   MF.getFrameInfo().computeMaxCallFrameSize(MF);
   TargetLoweringBase::finalizeLowering(MF);
+}
+
+// Unlike X86, we let frame lowering assign offsets to all catch objects.
+bool AArch64TargetLowering::needsFixedCatchObjects() const {
+  return false;
 }

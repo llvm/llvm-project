@@ -28,7 +28,6 @@
 ; CHECK-NEXT:     Force set function attributes
 ; CHECK-NEXT:     Infer set function attributes
 ; CHECK-NEXT:     FunctionPass Manager
-; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Call-site splitting
 ; CHECK-NEXT:     Interprocedural Sparse Conditional Constant Propagation
 ; CHECK-NEXT:       Unnamed pass: implement Pass::getPassName()

@@ -59,16 +59,16 @@
 ; DWO-4: 0x00000000: Type Unit: {{.*}} version = 0x0004 abbr_offset
 ; DWO-4: 0x00000017: DW_TAG_type_unit
 
-; Verify the v5 non-split headers.
+; Verify the v5 non-split headers. Type units come first.
+; All .debug_info sections are reported in one go, but the offset resets for
+; each new section.
 ;
 ; SINGLE-5: .debug_info contents:
-; SINGLE-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005 unit_type = DW_UT_compile abbr_offset
-; SINGLE-5: 0x0000000c: DW_TAG_compile_unit
-;
-; FIXME: V5 wants type units in .debug_info not .debug_types.
-; SINGLE-5: .debug_types contents:
 ; SINGLE-5: 0x00000000: Type Unit: {{.*}} version = 0x0005 unit_type = DW_UT_type abbr_offset
 ; SINGLE-5: 0x00000018: DW_TAG_type_unit
+; SINGLE-5-NOT: contents:
+; SINGLE-5: 0x00000000: Compile Unit: {{.*}} version = 0x0005 unit_type = DW_UT_compile abbr_offset
+; SINGLE-5: 0x0000000c: DW_TAG_compile_unit
 
 ; Verify the v5 split headers.
 ;

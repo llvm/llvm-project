@@ -132,17 +132,19 @@ struct MachineSchedContext {
 
 /// MachineSchedRegistry provides a selection of available machine instruction
 /// schedulers.
-class MachineSchedRegistry : public MachinePassRegistryNode {
+class MachineSchedRegistry
+    : public MachinePassRegistryNode<
+          ScheduleDAGInstrs *(*)(MachineSchedContext *)> {
 public:
   using ScheduleDAGCtor = ScheduleDAGInstrs *(*)(MachineSchedContext *);
 
   // RegisterPassParser requires a (misnamed) FunctionPassCtor type.
   using FunctionPassCtor = ScheduleDAGCtor;
 
-  static MachinePassRegistry Registry;
+  static MachinePassRegistry<ScheduleDAGCtor> Registry;
 
   MachineSchedRegistry(const char *N, const char *D, ScheduleDAGCtor C)
-    : MachinePassRegistryNode(N, D, (MachinePassCtor)C) {
+      : MachinePassRegistryNode(N, D, C) {
     Registry.Add(this);
   }
 
@@ -158,7 +160,7 @@ public:
     return (MachineSchedRegistry *)Registry.getList();
   }
 
-  static void setListener(MachinePassRegistryListener *L) {
+  static void setListener(MachinePassRegistryListener<FunctionPassCtor> *L) {
     Registry.setListener(L);
   }
 };

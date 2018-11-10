@@ -898,6 +898,11 @@ static GlobalValueSummary::GVFlags getDecodedGVSummaryFlags(uint64_t RawFlags,
   return GlobalValueSummary::GVFlags(Linkage, NotEligibleToImport, Live, Local);
 }
 
+// Decode the flags for GlobalVariable in the summary
+static GlobalVarSummary::GVarFlags getDecodedGVarFlags(uint64_t RawFlags) {
+  return GlobalVarSummary::GVarFlags((RawFlags & 0x1) ? true : false);
+}
+
 static GlobalValue::VisibilityTypes getDecodedVisibility(unsigned Val) {
   switch (Val) {
   default: // Map unknown visibilities to default.
@@ -5170,6 +5175,12 @@ static void parseTypeIdSummaryRecord(ArrayRef<uint64_t> Record,
     parseWholeProgramDevirtResolution(Record, Strtab, Slot, TypeId);
 }
 
+static void setImmutableRefs(std::vector<ValueInfo> &Refs, unsigned Count) {
+  // Read-only refs are in the end of the refs list.
+  for (unsigned RefNo = Refs.size() - Count; RefNo < Refs.size(); ++RefNo)
+    Refs[RefNo].setReadOnly();
+}
+
 // Eagerly parse the entire summary block. This populates the GlobalValueSummary
 // objects in the index.
 Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
@@ -5187,9 +5198,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   }
   const uint64_t Version = Record[0];
   const bool IsOldProfileFormat = Version == 1;
-  if (Version < 1 || Version > 4)
+  if (Version < 1 || Version > 5)
     return error("Invalid summary version " + Twine(Version) +
-                 ", 1, 2, 3 or 4 expected");
+                 ", 1, 2, 3, 4 or 5 expected");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional
@@ -5268,11 +5279,16 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       unsigned InstCount = Record[2];
       uint64_t RawFunFlags = 0;
       unsigned NumRefs = Record[3];
+      unsigned NumImmutableRefs = 0;
       int RefListStartIndex = 4;
       if (Version >= 4) {
         RawFunFlags = Record[3];
         NumRefs = Record[4];
         RefListStartIndex = 5;
+        if (Version >= 5) {
+          NumImmutableRefs = Record[5];
+          RefListStartIndex = 6;
+        }
       }
 
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
@@ -5291,6 +5307,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       std::vector<FunctionSummary::EdgeTy> Calls = makeCallList(
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, HasRelBF);
+      setImmutableRefs(Refs, NumImmutableRefs);
       auto FS = llvm::make_unique<FunctionSummary>(
           Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
           std::move(Calls), std::move(PendingTypeTests),
@@ -5339,14 +5356,21 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       TheIndex.addGlobalValueSummary(GUID.first, std::move(AS));
       break;
     }
-    // FS_PERMODULE_GLOBALVAR_INIT_REFS: [valueid, flags, n x valueid]
+    // FS_PERMODULE_GLOBALVAR_INIT_REFS: [valueid, flags, varflags, n x valueid]
     case bitc::FS_PERMODULE_GLOBALVAR_INIT_REFS: {
       unsigned ValueID = Record[0];
       uint64_t RawFlags = Record[1];
+      unsigned RefArrayStart = 2;
+      GlobalVarSummary::GVarFlags GVF;
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
+      if (Version >= 5) {
+        GVF = getDecodedGVarFlags(Record[2]);
+        RefArrayStart = 3;
+      }
       std::vector<ValueInfo> Refs =
-          makeRefList(ArrayRef<uint64_t>(Record).slice(2));
-      auto FS = llvm::make_unique<GlobalVarSummary>(Flags, std::move(Refs));
+          makeRefList(ArrayRef<uint64_t>(Record).slice(RefArrayStart));
+      auto FS =
+          llvm::make_unique<GlobalVarSummary>(Flags, GVF, std::move(Refs));
       FS->setModulePath(getThisModule()->first());
       auto GUID = getValueInfoFromValueId(ValueID);
       FS->setOriginalName(GUID.second);
@@ -5365,12 +5389,17 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       unsigned InstCount = Record[3];
       uint64_t RawFunFlags = 0;
       unsigned NumRefs = Record[4];
+      unsigned NumImmutableRefs = 0;
       int RefListStartIndex = 5;
 
       if (Version >= 4) {
         RawFunFlags = Record[4];
         NumRefs = Record[5];
         RefListStartIndex = 6;
+        if (Version >= 5) {
+          NumImmutableRefs = Record[6];
+          RefListStartIndex = 7;
+        }
       }
 
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
@@ -5384,6 +5413,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           ArrayRef<uint64_t>(Record).slice(CallGraphEdgeStartIndex),
           IsOldProfileFormat, HasProfile, false);
       ValueInfo VI = getValueInfoFromValueId(ValueID).first;
+      setImmutableRefs(Refs, NumImmutableRefs);
       auto FS = llvm::make_unique<FunctionSummary>(
           Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
           std::move(Edges), std::move(PendingTypeTests),
@@ -5432,10 +5462,17 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       unsigned ValueID = Record[0];
       uint64_t ModuleId = Record[1];
       uint64_t RawFlags = Record[2];
+      unsigned RefArrayStart = 3;
+      GlobalVarSummary::GVarFlags GVF;
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
+      if (Version >= 5) {
+        GVF = getDecodedGVarFlags(Record[3]);
+        RefArrayStart = 4;
+      }
       std::vector<ValueInfo> Refs =
-          makeRefList(ArrayRef<uint64_t>(Record).slice(3));
-      auto FS = llvm::make_unique<GlobalVarSummary>(Flags, std::move(Refs));
+          makeRefList(ArrayRef<uint64_t>(Record).slice(RefArrayStart));
+      auto FS =
+          llvm::make_unique<GlobalVarSummary>(Flags, GVF, std::move(Refs));
       LastSeenSummary = FS.get();
       FS->setModulePath(ModuleIdMap[ModuleId]);
       ValueInfo VI = getValueInfoFromValueId(ValueID).first;

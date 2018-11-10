@@ -66,7 +66,8 @@ static cl::opt<unsigned>
                         cl::desc("Restrict range of Bcc instructions (DEBUG)"));
 
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
-    : AArch64GenInstrInfo(AArch64::ADJCALLSTACKDOWN, AArch64::ADJCALLSTACKUP),
+    : AArch64GenInstrInfo(AArch64::ADJCALLSTACKDOWN, AArch64::ADJCALLSTACKUP,
+                          AArch64::CATCHRET),
       RI(STI.getTargetTriple()), Subtarget(STI) {}
 
 /// GetInstSize - Return the number of bytes of code the specified
@@ -1657,11 +1658,36 @@ bool AArch64InstrInfo::substituteCmpToZero(
 }
 
 bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
-  if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD)
+  if (MI.getOpcode() != TargetOpcode::LOAD_STACK_GUARD &&
+      MI.getOpcode() != AArch64::CATCHRET)
     return false;
 
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
+
+  if (MI.getOpcode() == AArch64::CATCHRET) {
+    // Skip to the first instruction before the epilog.
+    const TargetInstrInfo *TII =
+      MBB.getParent()->getSubtarget().getInstrInfo();
+    MachineBasicBlock *TargetMBB = MI.getOperand(0).getMBB();
+    auto MBBI = MachineBasicBlock::iterator(MI);
+    MachineBasicBlock::iterator FirstEpilogSEH = std::prev(MBBI);
+    while (FirstEpilogSEH->getFlag(MachineInstr::FrameDestroy) &&
+           FirstEpilogSEH != MBB.begin())
+      FirstEpilogSEH = std::prev(FirstEpilogSEH);
+    if (FirstEpilogSEH != MBB.begin())
+      FirstEpilogSEH = std::next(FirstEpilogSEH);
+    BuildMI(MBB, FirstEpilogSEH, DL, TII->get(AArch64::ADRP))
+        .addReg(AArch64::X0, RegState::Define)
+        .addMBB(TargetMBB);
+    BuildMI(MBB, FirstEpilogSEH, DL, TII->get(AArch64::ADDXri))
+        .addReg(AArch64::X0, RegState::Define)
+        .addReg(AArch64::X0)
+        .addMBB(TargetMBB)
+        .addImm(0);
+    return true;
+  }
+
   unsigned Reg = MI.getOperand(0).getReg();
   const GlobalValue *GV =
       cast<GlobalValue>((*MI.memoperands_begin())->getValue());

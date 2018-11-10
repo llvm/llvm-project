@@ -646,7 +646,8 @@ static void computeDeadSymbolsInIndex(
   auto isPrevailing = [&](GlobalValue::GUID G) {
     return PrevailingType::Unknown;
   };
-  computeDeadSymbols(Index, GUIDPreservedSymbols, isPrevailing);
+  computeDeadSymbolsWithConstProp(Index, GUIDPreservedSymbols, isPrevailing,
+                                  /* ImportEnabled = */ true);
 }
 
 /**

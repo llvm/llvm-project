@@ -4934,10 +4934,10 @@ void SIInstrInfo::addSCCDefUsersToVALUWorklist(
        make_range(MachineBasicBlock::iterator(SCCDefInst),
                       SCCDefInst.getParent()->end())) {
     // Exit if we find another SCC def.
-    if (MI.findRegisterDefOperandIdx(AMDGPU::SCC) != -1)
+    if (MI.findRegisterDefOperandIdx(AMDGPU::SCC, false, false, &RI) != -1)
       return;
 
-    if (MI.findRegisterUseOperandIdx(AMDGPU::SCC) != -1)
+    if (MI.findRegisterUseOperandIdx(AMDGPU::SCC, false, &RI) != -1)
       Worklist.insert(&MI);
   }
 }

@@ -352,13 +352,11 @@ define <8 x float> @elt6_v8f32(float %x) {
 ; X64SSE4-NEXT:    movaps {{.*#+}} xmm0 = [4.2E+1,1.0E+0,2.0E+0,3.0E+0]
 ; X64SSE4-NEXT:    retq
 ;
-; X32AVX1-LABEL: elt6_v8f32:
-; X32AVX1:       # %bb.0:
-; X32AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
-; X32AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X32AVX1-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4,5],ymm0[6],mem[7]
-; X32AVX1-NEXT:    retl
+; X32AVX-LABEL: elt6_v8f32:
+; X32AVX:       # %bb.0:
+; X32AVX-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %ymm0
+; X32AVX-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4,5],ymm0[6],mem[7]
+; X32AVX-NEXT:    retl
 ;
 ; X64AVX1-LABEL: elt6_v8f32:
 ; X64AVX1:       # %bb.0:
@@ -367,29 +365,15 @@ define <8 x float> @elt6_v8f32(float %x) {
 ; X64AVX1-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4,5],ymm0[6],mem[7]
 ; X64AVX1-NEXT:    retq
 ;
-; X32AVX2-LABEL: elt6_v8f32:
-; X32AVX2:       # %bb.0:
-; X32AVX2-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32AVX2-NEXT:    vbroadcastsd %xmm0, %ymm0
-; X32AVX2-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4,5],ymm0[6],mem[7]
-; X32AVX2-NEXT:    retl
-;
 ; X64AVX2-LABEL: elt6_v8f32:
 ; X64AVX2:       # %bb.0:
-; X64AVX2-NEXT:    vbroadcastsd %xmm0, %ymm0
+; X64AVX2-NEXT:    vbroadcastss %xmm0, %ymm0
 ; X64AVX2-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4,5],ymm0[6],mem[7]
 ; X64AVX2-NEXT:    retq
 ;
-; X32AVX512F-LABEL: elt6_v8f32:
-; X32AVX512F:       # %bb.0:
-; X32AVX512F-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X32AVX512F-NEXT:    vbroadcastsd %xmm0, %ymm0
-; X32AVX512F-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4,5],ymm0[6],mem[7]
-; X32AVX512F-NEXT:    retl
-;
 ; X64AVX512F-LABEL: elt6_v8f32:
 ; X64AVX512F:       # %bb.0:
-; X64AVX512F-NEXT:    vbroadcastsd %xmm0, %ymm0
+; X64AVX512F-NEXT:    vbroadcastss %xmm0, %ymm0
 ; X64AVX512F-NEXT:    vblendps {{.*#+}} ymm0 = mem[0,1,2,3,4,5],ymm0[6],mem[7]
 ; X64AVX512F-NEXT:    retq
    %ins = insertelement <8 x float> <float 42.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0>, float %x, i32 6

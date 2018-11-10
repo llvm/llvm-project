@@ -25,7 +25,7 @@ struct PerFunctionStats {
   bool IsFunction = false;
 };
 
-/// Holds accumulated global statistics about local variables.
+/// Holds accumulated global statistics about DIEs.
 struct GlobalStats {
   /// Total number of PC range bytes covered by DW_AT_locations.
   unsigned ScopeBytesCovered = 0;
@@ -34,6 +34,13 @@ struct GlobalStats {
   unsigned ScopeBytesFromFirstDefinition = 0;
   /// Total number of call site entries (DW_TAG_call_site).
   unsigned CallSiteEntries = 0;
+  /// Total byte size of concrete functions. This byte size includes
+  /// inline functions contained in the concrete functions.
+  uint64_t FunctionSize = 0;
+  /// Total byte size of inlined functions. This is the total number of bytes
+  /// for the top inline functions within concrete functions. This can help
+  /// tune the inline settings when compiling to match user expectations.
+  uint64_t InlineFunctionSize = 0;
 };
 
 /// Extract the low pc from a Die.
@@ -53,6 +60,7 @@ static uint64_t getLowPC(DWARFDie Die) {
 static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
                                std::string VarPrefix, uint64_t ScopeLowPC,
                                uint64_t BytesInScope,
+                               uint32_t InlineDepth,
                                StringMap<PerFunctionStats> &FnStatMap,
                                GlobalStats &GlobalStats) {
   bool HasLoc = false;
@@ -137,24 +145,27 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
 static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
                                   std::string VarPrefix, uint64_t ScopeLowPC,
                                   uint64_t BytesInScope,
+                                  uint32_t InlineDepth,
                                   StringMap<PerFunctionStats> &FnStatMap,
                                   GlobalStats &GlobalStats) {
   // Handle any kind of lexical scope.
-  if (Die.getTag() == dwarf::DW_TAG_subprogram ||
-      Die.getTag() == dwarf::DW_TAG_inlined_subroutine ||
-      Die.getTag() == dwarf::DW_TAG_lexical_block) {
+  const dwarf::Tag Tag = Die.getTag();
+  const bool IsFunction = Tag == dwarf::DW_TAG_subprogram;
+  const bool IsBlock = Tag == dwarf::DW_TAG_lexical_block;
+  const bool IsInlinedFunction = Tag == dwarf::DW_TAG_inlined_subroutine;
+  if (IsFunction || IsInlinedFunction || IsBlock) {
 
     // Reset VarPrefix when entering a new function.
     if (Die.getTag() == dwarf::DW_TAG_subprogram ||
         Die.getTag() == dwarf::DW_TAG_inlined_subroutine)
       VarPrefix = "v";
-  
+
     // Ignore forward declarations.
     if (Die.find(dwarf::DW_AT_declaration))
       return;
 
     // Count the function.
-    if (Die.getTag() != dwarf::DW_TAG_lexical_block) {
+    if (!IsBlock) {
       StringRef Name = Die.getName(DINameKind::LinkageName);
       if (Name.empty())
         Name = Die.getName(DINameKind::ShortName);
@@ -174,20 +185,31 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
       llvm::consumeError(RangesOrError.takeError());
       return;
     }
-       
+
     auto Ranges = RangesOrError.get();
     uint64_t BytesInThisScope = 0;
     for (auto Range : Ranges)
       BytesInThisScope += Range.HighPC - Range.LowPC;
     ScopeLowPC = getLowPC(Die);
 
-    if (BytesInThisScope)
+    if (BytesInThisScope) {
       BytesInScope = BytesInThisScope;
+      if (IsFunction)
+        GlobalStats.FunctionSize += BytesInThisScope;
+      else if (IsInlinedFunction && InlineDepth == 0)
+        GlobalStats.InlineFunctionSize += BytesInThisScope;
+    }
   } else {
     // Not a scope, visit the Die itself. It could be a variable.
     collectStatsForDie(Die, FnPrefix, VarPrefix, ScopeLowPC, BytesInScope,
-                       FnStatMap, GlobalStats);
+                       InlineDepth, FnStatMap, GlobalStats);
   }
+
+  // Set InlineDepth correctly for child recursion
+  if (IsFunction)
+    InlineDepth = 0;
+  else if (IsInlinedFunction)
+    ++InlineDepth;
 
   // Traverse children.
   unsigned LexicalBlockIndex = 0;
@@ -198,7 +220,7 @@ static void collectStatsRecursive(DWARFDie Die, std::string FnPrefix,
       ChildVarPrefix += toHex(LexicalBlockIndex++) + '.';
 
     collectStatsRecursive(Child, FnPrefix, ChildVarPrefix, ScopeLowPC,
-                          BytesInScope, FnStatMap, GlobalStats);
+                          BytesInScope, InlineDepth, FnStatMap, GlobalStats);
     Child = Child.getSibling();
   }
 }
@@ -231,7 +253,7 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   StringMap<PerFunctionStats> Statistics;
   for (const auto &CU : static_cast<DWARFContext *>(&DICtx)->compile_units())
     if (DWARFDie CUDie = CU->getUnitDIE(false))
-      collectStatsRecursive(CUDie, "/", "g", 0, 0, Statistics, GlobalStats);
+      collectStatsRecursive(CUDie, "/", "g", 0, 0, 0, Statistics, GlobalStats);
 
   /// The version number should be increased every time the algorithm is changed
   /// (including bug fixes). New metrics may be added without increasing the
@@ -271,6 +293,8 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   printDatum(OS, "scope bytes total",
              GlobalStats.ScopeBytesFromFirstDefinition);
   printDatum(OS, "scope bytes covered", GlobalStats.ScopeBytesCovered);
+  printDatum(OS, "total function size", GlobalStats.FunctionSize);
+  printDatum(OS, "total inlined function size", GlobalStats.InlineFunctionSize);
   OS << "}\n";
   LLVM_DEBUG(
       llvm::dbgs() << "Total Availability: "

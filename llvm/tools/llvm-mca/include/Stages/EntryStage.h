@@ -19,16 +19,16 @@
 
 #include "SourceMgr.h"
 #include "Stages/Stage.h"
-#include <map>
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 namespace mca {
 
 class EntryStage final : public Stage {
   InstRef CurrentInstruction;
-  using InstMap = std::map<unsigned, std::unique_ptr<Instruction>>;
-  InstMap Instructions;
+  SmallVector<std::unique_ptr<Instruction>, 16> Instructions;
   SourceMgr &SM;
+  unsigned NumRetired;
 
   // Updates the program counter, and sets 'CurrentInstruction'.
   void getNextInstruction();
@@ -37,7 +37,7 @@ class EntryStage final : public Stage {
   EntryStage &operator=(const EntryStage &Other) = delete;
 
 public:
-  EntryStage(SourceMgr &SM) : CurrentInstruction(), SM(SM) {}
+  EntryStage(SourceMgr &SM) : CurrentInstruction(), SM(SM), NumRetired(0) { }
 
   bool isAvailable(const InstRef &IR) const override;
   bool hasWorkToComplete() const override;

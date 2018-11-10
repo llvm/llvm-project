@@ -343,7 +343,7 @@ define <8 x i32> @test11b(<8 x i1> %mask, <8 x i32>* %addr, <8 x i32> %dst) {
 ; AVX512F-LABEL: test11b:
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmd (%rdi), %zmm1, %zmm0 {%k1}
@@ -383,7 +383,7 @@ define <8 x float> @test11c(<8 x i1> %mask, <8 x float>* %addr) {
 ;
 ; AVX512F-LABEL: test11c:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z}
@@ -423,7 +423,7 @@ define <8 x i32> @test11d(<8 x i1> %mask, <8 x i32>* %addr) {
 ;
 ; AVX512F-LABEL: test11d:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
+; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} {z}

@@ -4479,6 +4479,7 @@ static SDValue buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
   // Constants with undefs to get a full vector constant and use that
   // as the starting point.
   SDValue Result;
+  SDValue ReplicatedVal;
   if (NumConstants > 0) {
     for (unsigned I = 0; I < NumElements; ++I)
       if (!Constants[I].getNode())
@@ -4500,6 +4501,7 @@ static SDValue buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
     if (LoadElIdx != UINT_MAX) {
       Result = DAG.getNode(SystemZISD::REPLICATE, DL, VT, Elems[LoadElIdx]);
       Done[LoadElIdx] = true;
+      ReplicatedVal = Elems[LoadElIdx];
     } else {
       // Try to use VLVGP.
       unsigned I1 = NumElements / 2 - 1;
@@ -4520,7 +4522,7 @@ static SDValue buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
 
   // Use VLVGx to insert the other elements.
   for (unsigned I = 0; I < NumElements; ++I)
-    if (!Done[I] && !Elems[I].isUndef())
+    if (!Done[I] && !Elems[I].isUndef() && Elems[I] != ReplicatedVal)
       Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, Result, Elems[I],
                            DAG.getConstant(I, DL, MVT::i32));
   return Result;

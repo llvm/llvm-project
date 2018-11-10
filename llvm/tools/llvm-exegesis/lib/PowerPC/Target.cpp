@@ -15,24 +15,12 @@
 namespace llvm {
 namespace exegesis {
 
-namespace {
-class PowerPCLatencyBenchmarkRunner : public LatencyBenchmarkRunner {
-public:
-  PowerPCLatencyBenchmarkRunner(const LLVMState &State)
-      : LatencyBenchmarkRunner(State) {}
-
-private:
-  const char *getCounterName() const override {
-    // All PowerPC subtargets have CYCLES as the cycle counter name
-    return "CYCLES";
-  }
-};
-} // end anonymous namespace
+#include "PPCGenExegesis.inc"
 
 namespace {
 class ExegesisPowerPCTarget : public ExegesisTarget {
 public:
-  ExegesisPowerPCTarget() : ExegesisTarget({}) {}
+  ExegesisPowerPCTarget() : ExegesisTarget(PPCCpuPfmCounters) {}
 
 private:
   std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
@@ -40,10 +28,6 @@ private:
                                      const llvm::APInt &Value) const override;
   bool matchesArch(llvm::Triple::ArchType Arch) const override {
     return Arch == llvm::Triple::ppc64le;
-  }
-  std::unique_ptr<BenchmarkRunner>
-  createLatencyBenchmarkRunner(const LLVMState &State) const override {
-    return llvm::make_unique<PowerPCLatencyBenchmarkRunner>(State);
   }
 };
 } // end anonymous namespace

@@ -308,7 +308,7 @@ define <4 x i32> @testv4i32(<4 x i32> %in) nounwind {
 ; BITALG-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; BITALG-NEXT:    vpunpckhdq {{.*#+}} xmm2 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm2, %xmm2
-; BITALG-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; BITALG-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
 ; BITALG-NEXT:    vpsadbw %xmm1, %xmm0, %xmm0
 ; BITALG-NEXT:    vpackuswb %xmm2, %xmm0, %xmm0
 ; BITALG-NEXT:    retq

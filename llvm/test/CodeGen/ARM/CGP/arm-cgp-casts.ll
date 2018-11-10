@@ -582,3 +582,22 @@ if.end:
   %retval = phi i8 [ 0, %entry ], [ %add, %if.then ]
   ret i8 %retval
 }
+
+define i32 @bitcast_i1(i16 zeroext %a, i32 %b, i32 %c) {
+entry:
+  %0 = bitcast i1 1 to i1
+  %1 = trunc i16 %a to i1
+  %cmp = icmp eq i1 %1, %0
+  br i1 %cmp, label %if.then, label %exit
+
+if.then:
+  %conv = zext i1 %0 to i16
+  %conv1 = zext i1 %1 to i16
+  %cmp1 = icmp uge i16 %conv, %conv1
+  %select = select i1 %cmp1, i32 %b, i32 %c
+  br label %exit
+
+exit:
+  %retval = phi i32 [ %select, %if.then ], [ 0, %entry ]
+  ret i32 %retval
+}

@@ -136,9 +136,5 @@ static GCRegistry::Add<StatepointGC> D("statepoint-example",
                                        "an example strategy for statepoint");
 static GCRegistry::Add<CoreCLRGC> E("coreclr", "CoreCLR-compatible GC");
 
-// Provide hooks to ensure the containing library is fully loaded.
-void llvm::linkErlangGC() {}
-void llvm::linkOcamlGC() {}
-void llvm::linkShadowStackGC() {}
-void llvm::linkStatepointExampleGC() {}
-void llvm::linkCoreCLRGC() {}
+// Provide hook to ensure the containing library is fully loaded.
+void llvm::linkAllBuiltinGCs() {}
