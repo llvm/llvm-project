@@ -30,6 +30,49 @@ using namespace __sanitizer;
 
 namespace __hwasan {
 
+class ScopedReport {
+ public:
+  ScopedReport(bool fatal = false) : error_message_(1), fatal(fatal) {
+    BlockingMutexLock lock(&error_message_lock_);
+    error_message_ptr_ = fatal ? &error_message_ : nullptr;
+  }
+
+  ~ScopedReport() {
+    BlockingMutexLock lock(&error_message_lock_);
+    if (fatal) {
+      SetAbortMessage(error_message_.data());
+      Die();
+    }
+    error_message_ptr_ = nullptr;
+  }
+
+  static void MaybeAppendToErrorMessage(const char *msg) {
+    BlockingMutexLock lock(&error_message_lock_);
+    if (!error_message_ptr_)
+      return;
+    uptr len = internal_strlen(msg);
+    uptr old_size = error_message_ptr_->size();
+    error_message_ptr_->resize(old_size + len);
+    // overwrite old trailing '\0', keep new trailing '\0' untouched.
+    internal_memcpy(&(*error_message_ptr_)[old_size - 1], msg, len);
+  }
+ private:
+  ScopedErrorReportLock error_report_lock_;
+  InternalMmapVector<char> error_message_;
+  bool fatal;
+
+  static InternalMmapVector<char> *error_message_ptr_;
+  static BlockingMutex error_message_lock_;
+};
+
+InternalMmapVector<char> *ScopedReport::error_message_ptr_;
+BlockingMutex ScopedReport::error_message_lock_;
+
+// If there is an active ScopedReport, append to its error message.
+void AppendToErrorMessageBuffer(const char *buffer) {
+  ScopedReport::MaybeAppendToErrorMessage(buffer);
+}
+
 static StackTrace GetStackTraceFromId(u32 id) {
   CHECK(id);
   StackTrace res = StackDepotGet(id);
@@ -255,7 +298,8 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
 }
 
 void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
-  ScopedErrorReportLock l;
+  ScopedReport R(flags()->halt_on_error);
+
   uptr untagged_addr = UntagAddr(tagged_addr);
   tag_t ptr_tag = GetTagFromPointer(tagged_addr);
   tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
@@ -277,12 +321,11 @@ void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
   PrintTagsAroundAddr(tag_ptr);
 
   ReportErrorSummary(bug_type, stack);
-  Die();
 }
 
 void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
-                       bool is_store) {
-  ScopedErrorReportLock l;
+                       bool is_store, bool fatal) {
+  ScopedReport R(fatal);
   SavedStackAllocations current_stack_allocations(
       GetCurrentThread()->stack_allocations());
 

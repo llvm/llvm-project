@@ -154,6 +154,14 @@ INTERCEPTOR_WINAPI(DWORD, CreateThread,
                             asan_thread_start, t, thr_flags, tid);
 }
 
+INTERCEPTOR_WINAPI(LONG, NtTerminateThread, HANDLE handle, LONG status) {
+  // Unpoison the terminating thread's stack because the memory may be re-used.
+  NT_TIB *tib = (NT_TIB *)NtCurrentTeb();
+  uptr stackSize = (uptr)tib->StackBase - (uptr)tib->StackLimit;
+  __asan_unpoison_memory_region(tib->StackLimit, stackSize);
+  return REAL(NtTerminateThread(handle, status));
+}
+
 // }}}
 
 namespace __asan {
@@ -169,7 +177,9 @@ void InitializePlatformInterceptors() {
 
   ASAN_INTERCEPT_FUNC(CreateThread);
   ASAN_INTERCEPT_FUNC(SetUnhandledExceptionFilter);
-
+  CHECK(::__interception::OverrideFunction("NtTerminateThread",
+                                           (uptr)WRAP(NtTerminateThread),
+                                           (uptr *)&REAL(NtTerminateThread)));
 #ifdef _WIN64
   ASAN_INTERCEPT_FUNC(__C_specific_handler);
 #else
