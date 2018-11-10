@@ -10,7 +10,11 @@
 #include "StopInfoMachException.h"
 
 // C Includes
+
+#if defined(__APPLE__)
+// Needed for the EXC_RESOURCE interpretation macros
 #include <kern/exc_resource.h>
+#endif
 
 // C++ Includes
 // Other libraries and framework includes
@@ -281,6 +285,7 @@ const char *StopInfoMachException::GetDescription() {
       break;
     case 11:
       exc_desc = "EXC_RESOURCE";
+#if defined(__APPLE__)
       {
         int resource_type = EXC_RESOURCE_DECODE_RESOURCE_TYPE(m_exc_code);
 
@@ -320,6 +325,7 @@ const char *StopInfoMachException::GetDescription() {
           break;
         }
       }
+#endif
       break;
     case 12:
       exc_desc = "EXC_GUARD";
