@@ -28,10 +28,10 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/linux/Support.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/DataExtractor.h"
 
 using namespace lldb;
@@ -125,7 +125,7 @@ static bool IsDirNumeric(const char *dname) {
 static ArchSpec GetELFProcessCPUType(llvm::StringRef exe_path) {
   Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
 
-  auto buffer_sp = DataBufferLLVM::CreateSliceFromPath(exe_path, 0x20, 0);
+  auto buffer_sp = FileSystem::Instance().CreateDataBuffer(exe_path, 0x20, 0);
   if (!buffer_sp)
     return ArchSpec();
 

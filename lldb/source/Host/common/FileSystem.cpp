@@ -135,6 +135,16 @@ bool FileSystem::IsDirectory(const FileSpec &file_spec) const {
   return IsDirectory(file_spec.GetPath());
 }
 
+bool FileSystem::IsLocal(const Twine &path) const {
+  bool b;
+  m_fs->isLocal(path, b);
+  return b;
+}
+
+bool FileSystem::IsLocal(const FileSpec &file_spec) const {
+  return IsLocal(file_spec.GetPath());
+}
+
 void FileSystem::EnumerateDirectory(Twine path, bool find_directories,
                                     bool find_files, bool find_other,
                                     EnumerateDirectoryCallbackType callback,
@@ -216,6 +226,34 @@ void FileSystem::Resolve(FileSpec &file_spec) {
   // Update the FileSpec with the resolved path.
   file_spec.SetPath(path);
   file_spec.SetIsResolved(true);
+}
+
+std::shared_ptr<DataBufferLLVM>
+FileSystem::CreateDataBuffer(const llvm::Twine &path, uint64_t size,
+                             uint64_t offset) {
+  const bool is_volatile = !IsLocal(path);
+
+  std::unique_ptr<llvm::WritableMemoryBuffer> buffer;
+  if (size == 0) {
+    auto buffer_or_error =
+        llvm::WritableMemoryBuffer::getFile(path, -1, is_volatile);
+    if (!buffer_or_error)
+      return nullptr;
+    buffer = std::move(*buffer_or_error);
+  } else {
+    auto buffer_or_error = llvm::WritableMemoryBuffer::getFileSlice(
+        path, size, offset, is_volatile);
+    if (!buffer_or_error)
+      return nullptr;
+    buffer = std::move(*buffer_or_error);
+  }
+  return std::shared_ptr<DataBufferLLVM>(new DataBufferLLVM(std::move(buffer)));
+}
+
+std::shared_ptr<DataBufferLLVM>
+FileSystem::CreateDataBuffer(const FileSpec &file_spec, uint64_t size,
+                             uint64_t offset) {
+  return CreateDataBuffer(file_spec.GetPath(), size, offset);
 }
 
 bool FileSystem::ResolveExecutableLocation(FileSpec &file_spec) {
