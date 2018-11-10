@@ -27,34 +27,6 @@ DataBufferLLVM::DataBufferLLVM(
 
 DataBufferLLVM::~DataBufferLLVM() {}
 
-std::shared_ptr<DataBufferLLVM>
-DataBufferLLVM::CreateSliceFromPath(const llvm::Twine &Path, uint64_t Size,
-                                    uint64_t Offset) {
-  // If the file resides non-locally, pass the volatile flag so that we don't
-  // mmap it.
-  bool IsVolatile = !llvm::sys::fs::is_local(Path);
-
-  auto Buffer =
-      llvm::WritableMemoryBuffer::getFileSlice(Path, Size, Offset, IsVolatile);
-  if (!Buffer)
-    return nullptr;
-  return std::shared_ptr<DataBufferLLVM>(
-      new DataBufferLLVM(std::move(*Buffer)));
-}
-
-std::shared_ptr<DataBufferLLVM>
-DataBufferLLVM::CreateFromPath(const llvm::Twine &Path) {
-  // If the file resides non-locally, pass the volatile flag so that we don't
-  // mmap it.
-  bool IsVolatile = !llvm::sys::fs::is_local(Path);
-
-  auto Buffer = llvm::WritableMemoryBuffer::getFile(Path, -1, IsVolatile);
-  if (!Buffer)
-    return nullptr;
-  return std::shared_ptr<DataBufferLLVM>(
-      new DataBufferLLVM(std::move(*Buffer)));
-}
-
 uint8_t *DataBufferLLVM::GetBytes() {
   return reinterpret_cast<uint8_t *>(Buffer->getBufferStart());
 }

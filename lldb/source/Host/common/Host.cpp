@@ -565,7 +565,7 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
                 "shell command output is too large to fit into a std::string");
           } else {
             auto Buffer =
-                DataBufferLLVM::CreateFromPath(output_file_spec.GetPath());
+                FileSystem::Instance().CreateDataBuffer(output_file_spec);
             if (error.Success())
               command_output_ptr->assign(Buffer->GetChars(),
                                          Buffer->GetByteSize());
