@@ -47,7 +47,7 @@ enum : SanitizerMask {
   TrappingDefault = CFI,
   CFIClasses =
       CFIVCall | CFINVCall | CFIMFCall | CFIDerivedCast | CFIUnrelatedCast,
-  CompatibleWithMinimalRuntime = TrappingSupported | Scudo,
+  CompatibleWithMinimalRuntime = TrappingSupported | Scudo | ShadowCallStack,
 };
 
 enum CoverageFeature {

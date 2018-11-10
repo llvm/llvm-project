@@ -106,6 +106,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_OVERLOADED_2(callee);
   REGISTER_OVERLOADED_2(hasPrefix);
   REGISTER_OVERLOADED_2(hasType);
+  REGISTER_OVERLOADED_2(ignoringParens);
   REGISTER_OVERLOADED_2(isDerivedFrom);
   REGISTER_OVERLOADED_2(isSameOrDerivedFrom);
   REGISTER_OVERLOADED_2(loc);
@@ -318,7 +319,6 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(ignoringImplicit);
   REGISTER_MATCHER(ignoringParenCasts);
   REGISTER_MATCHER(ignoringParenImpCasts);
-  REGISTER_MATCHER(ignoringParens);
   REGISTER_MATCHER(imaginaryLiteral);
   REGISTER_MATCHER(implicitCastExpr);
   REGISTER_MATCHER(implicitValueInitExpr);

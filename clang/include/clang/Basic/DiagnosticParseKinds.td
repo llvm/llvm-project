@@ -575,6 +575,9 @@ def warn_cxx98_compat_noexcept_expr : Warning<
 def warn_cxx98_compat_nullptr : Warning<
   "'nullptr' is incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
 
+def warn_wrong_clang_attr_namespace : Warning<
+  "'__clang__' is a predefined macro name, not an attribute scope specifier; "
+  "did you mean '_Clang' instead?">, InGroup<IgnoredAttributes>;
 def ext_ns_enum_attribute : Extension<
   "attributes on %select{a namespace|an enumerator}0 declaration are "
   "a C++17 extension">, InGroup<CXX17>;

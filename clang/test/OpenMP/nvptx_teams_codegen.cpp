@@ -28,11 +28,12 @@ int main (int argc, char **argv) {
 }
 
 // CK1: [[MEM_TY:%.+]] = type { [{{4|8}} x i8] }
-// CK1-DAG: [[GLOBAL_RD:@.+]] = weak global [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]] zeroinitializer
-// CK1-DAG: [[GLOBAL_RD_PTR:@.+]] = weak unnamed_addr constant i8* getelementptr inbounds ([{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]], [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]]* [[GLOBAL_RD]], i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0)
+// CK1-DAG: [[SHARED_GLOBAL_RD:@.+]] = weak addrspace(3) global [[MEM_TY]] zeroinitializer
 // CK1-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
 // CK1-DAG: [[KERNEL_SIZE1:@.+]] = internal unnamed_addr constant i{{64|32}} 4
 // CK1-DAG: [[KERNEL_SIZE2:@.+]] = internal unnamed_addr constant i{{64|32}} {{8|4}}
+// CK1-DAG: [[KERNEL_SHARED1:@.+]] = internal unnamed_addr constant i16 1
+// CK1-DAG: [[KERNEL_SHARED2:@.+]] = internal unnamed_addr constant i16 1
 
 // only nvptx side: do not outline teams region and do not call fork_teams
 // CK1:  define {{.*}}void @{{[^,]+}}(i{{[0-9]+}} [[ARGC:%.+]])
@@ -43,9 +44,9 @@ int main (int argc, char **argv) {
 // CK1:  store {{.+}} 0, {{.+}},
 // CK1:  store i{{[0-9]+}} [[ARGC]], i{{[0-9]+}}* [[ARGCADDR]],
 // CK1-64:  [[CONV:%.+]] = bitcast i{{[0-9]+}}* [[ARGCADDR]] to i{{[0-9]+}}*
-// CK1: [[GLOBAL_RD:%.+]] = load i8*, i8** [[GLOBAL_RD_PTR]],
+// CK1: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED1]],
 // CK1: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE1]],
-// CK1: call void @__kmpc_get_team_static_memory(i8* [[GLOBAL_RD]], i{{64|32}} [[SIZE]], i16 0, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CK1: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} [[SIZE]], i16 [[IS_SHARED]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CK1: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CK1: [[GLOBALSTACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
 // CK1-64:  [[ARG:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[CONV]]
@@ -64,9 +65,9 @@ int main (int argc, char **argv) {
 // CK1: [[ARGCADDR_PTR:%.+]] = alloca i{{.+}}***,
 // CK1: [[ARGCADDR:%.+]] = alloca i{{.+}}**,
 // CK1: store i{{.+}}** [[ARGC]], i{{.+}}*** [[ARGCADDR]]
-// CK1: [[GLOBAL_RD:%.+]] = load i8*, i8** [[GLOBAL_RD_PTR]],
+// CK1: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED2]],
 // CK1: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE2]],
-// CK1: call void @__kmpc_get_team_static_memory(i8* [[GLOBAL_RD]], i{{64|32}} [[SIZE]], i16 0, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CK1: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} [[SIZE]], i16 [[IS_SHARED]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CK1: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CK1: [[GLOBALSTACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
 // CK1: [[ARG:%.+]] = load i{{[0-9]+}}**, i{{[0-9]+}}*** [[ARGCADDR]]
@@ -114,11 +115,12 @@ int main (int argc, char **argv) {
 }
 
 // CK2: [[MEM_TY:%.+]] = type { [{{4|8}} x i8] }
-// CK2-DAG: [[GLOBAL_RD:@.+]] = weak global [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]] zeroinitializer
-// CK2-DAG: [[GLOBAL_RD_PTR:@.+]] = weak unnamed_addr constant i8* getelementptr inbounds ([{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]], [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]]* [[GLOBAL_RD]], i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0)
+// CK2-DAG: [[SHARED_GLOBAL_RD:@.+]] = weak addrspace(3) global [[MEM_TY]] zeroinitializer
 // CK2-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
 // CK2-DAG: [[KERNEL_SIZE1:@.+]] = internal unnamed_addr constant i{{64|32}} 4
 // CK2-DAG: [[KERNEL_SIZE2:@.+]] = internal unnamed_addr constant i{{64|32}} {{8|4}}
+// CK2-DAG: [[KERNEL_SHARED1:@.+]] = internal unnamed_addr constant i16 1
+// CK2-DAG: [[KERNEL_SHARED2:@.+]] = internal unnamed_addr constant i16 1
 
 // CK2: define {{.*}}void @{{[^,]+}}(i{{[0-9]+}} [[A_IN:%.+]], i{{[0-9]+}} [[B_IN:%.+]], i{{[0-9]+}} [[ARGC_IN:.+]])
 // CK2: {{.}} = alloca i{{[0-9]+}}*,
@@ -133,9 +135,9 @@ int main (int argc, char **argv) {
 // CK2-64: [[ACONV:%.+]] = bitcast i64* [[AADDR]] to i32*
 // CK2-64: [[BCONV:%.+]] = bitcast i64* [[BADDR]] to i32*
 // CK2-64: [[CONV:%.+]] = bitcast i64* [[ARGCADDR]] to i32*
-// CK2: [[GLOBAL_RD:%.+]] = load i8*, i8** [[GLOBAL_RD_PTR]],
+// CK2: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED1]],
 // CK2: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE1]],
-// CK2: call void @__kmpc_get_team_static_memory(i8* [[GLOBAL_RD]], i{{64|32}} [[SIZE]], i16 0, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CK2: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} [[SIZE]], i16 [[IS_SHARED]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CK2: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CK2: [[GLOBALSTACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
 // CK2-64:  [[ARG:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[CONV]]
@@ -158,9 +160,9 @@ int main (int argc, char **argv) {
 // CK2: store i{{[0-9]+}} [[A_IN]], i{{[0-9]+}}* [[AADDR]],
 // CK2: store i{{[0-9]+}} [[B_IN]], i{{[0-9]+}}* [[BADDR]],
 // CK2: store i{{[0-9]+}}** [[ARGC]], i{{[0-9]+}}*** [[ARGCADDR]],
-// CK2: [[GLOBAL_RD:%.+]] = load i8*, i8** [[GLOBAL_RD_PTR]],
+// CK2: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED2]],
 // CK2: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE2]],
-// CK2: call void @__kmpc_get_team_static_memory(i8* [[GLOBAL_RD]], i{{64|32}} [[SIZE]], i16 0, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CK2: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} [[SIZE]], i16 [[IS_SHARED]], i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CK2: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CK2: [[GLOBALSTACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
 // CK2: [[ARG:%.+]] = load i{{[0-9]+}}**, i{{[0-9]+}}*** [[ARGCADDR]]

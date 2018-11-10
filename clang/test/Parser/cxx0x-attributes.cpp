@@ -373,3 +373,11 @@ int fallthru(int n) {
 [[attr_name, attr_name_2(bitor), attr_name_3(com, pl)]] int macro_attrs; // expected-warning {{unknown attribute 'compl' ignored}} \
    expected-warning {{unknown attribute 'bitor' ignored}} \
    expected-warning {{unknown attribute 'bitand' ignored}}
+
+// Check that we can parse an attribute in our vendor namespace.
+[[clang::annotate("test")]] void annotate1();
+[[_Clang::annotate("test")]] void annotate2();
+// Note: __clang__ is a predefined macro, which is why _Clang is the
+// prefered "protected" vendor namespace. We support __clang__ only for
+// people expecting it to behave the same as __gnu__.
+[[__clang__::annotate("test")]] void annotate3();  // expected-warning {{'__clang__' is a predefined macro name, not an attribute scope specifier; did you mean '_Clang' instead?}}
