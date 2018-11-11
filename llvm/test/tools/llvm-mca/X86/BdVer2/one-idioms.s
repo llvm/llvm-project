@@ -96,29 +96,32 @@ vpcmpeqw  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT: [13]  - PdFPU2
 # CHECK-NEXT: [14]  - PdFPU3
 # CHECK-NEXT: [15]  - PdFPXBR
-# CHECK-NEXT: [16]  - PdMul
+# CHECK-NEXT: [16.0] - PdLoad
+# CHECK-NEXT: [16.1] - PdLoad
+# CHECK-NEXT: [17]  - PdMul
+# CHECK-NEXT: [18]  - PdStore
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     7.50   7.50    -      -     7.50   7.50    -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     7.50   7.50    -      -     7.50   7.50    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     pcmpeqb	%mm2, %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     pcmpeqd	%mm2, %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     pcmpeqw	%mm2, %mm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     pcmpeqb	%xmm2, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     pcmpeqd	%xmm2, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     1.00    -      -      -      -     pcmpeqq	%xmm2, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     pcmpeqw	%xmm2, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     vpcmpeqb	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     1.00    -      -      -      -      -     vpcmpeqd	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     vpcmpeqw	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     vpcmpeqb	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     vpcmpeqd	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     vpcmpeqw	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqb	%mm2, %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqd	%mm2, %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqw	%mm2, %mm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqb	%xmm2, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqd	%xmm2, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     1.00    -      -      -      -      -      -      -     pcmpeqq	%xmm2, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqw	%xmm2, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqb	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     1.00    -      -      -      -      -      -      -      -     vpcmpeqd	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqw	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqb	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqd	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqw	%xmm3, %xmm3, %xmm5
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01

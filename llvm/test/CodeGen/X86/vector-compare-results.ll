@@ -7509,57 +7509,41 @@ define <32 x i1> @test_cmp_v32i64(<32 x i64> %a0, <32 x i64> %a1) nounwind {
 ; AVX1-NEXT:    movq %rsp, %rbp
 ; AVX1-NEXT:    andq $-32, %rsp
 ; AVX1-NEXT:    subq $32, %rsp
-; AVX1-NEXT:    vmovdqa 240(%rbp), %ymm8
-; AVX1-NEXT:    vextractf128 $1, %ymm8, %xmm9
-; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm10
-; AVX1-NEXT:    vpcmpgtq %xmm9, %xmm10, %xmm9
-; AVX1-NEXT:    vmovdqa 208(%rbp), %ymm10
-; AVX1-NEXT:    vpcmpgtq %xmm8, %xmm7, %xmm7
-; AVX1-NEXT:    vpackssdw %xmm9, %xmm7, %xmm8
-; AVX1-NEXT:    vextractf128 $1, %ymm10, %xmm9
+; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm8
+; AVX1-NEXT:    vpcmpgtq 256(%rbp), %xmm8, %xmm8
+; AVX1-NEXT:    vpcmpgtq 240(%rbp), %xmm7, %xmm7
+; AVX1-NEXT:    vpackssdw %xmm8, %xmm7, %xmm8
 ; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm7
-; AVX1-NEXT:    vpcmpgtq %xmm9, %xmm7, %xmm7
-; AVX1-NEXT:    vpcmpgtq %xmm10, %xmm6, %xmm6
-; AVX1-NEXT:    vmovdqa 176(%rbp), %ymm9
+; AVX1-NEXT:    vpcmpgtq 224(%rbp), %xmm7, %xmm7
+; AVX1-NEXT:    vpcmpgtq 208(%rbp), %xmm6, %xmm6
 ; AVX1-NEXT:    vpackssdw %xmm7, %xmm6, %xmm6
-; AVX1-NEXT:    vpackssdw %xmm8, %xmm6, %xmm8
-; AVX1-NEXT:    vextractf128 $1, %ymm9, %xmm7
-; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm6
-; AVX1-NEXT:    vpcmpgtq %xmm7, %xmm6, %xmm6
-; AVX1-NEXT:    vmovdqa 144(%rbp), %ymm10
-; AVX1-NEXT:    vpcmpgtq %xmm9, %xmm5, %xmm5
-; AVX1-NEXT:    vpackssdw %xmm6, %xmm5, %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm10, %xmm6
+; AVX1-NEXT:    vpackssdw %xmm8, %xmm6, %xmm6
+; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm7
+; AVX1-NEXT:    vpcmpgtq 192(%rbp), %xmm7, %xmm7
+; AVX1-NEXT:    vpcmpgtq 176(%rbp), %xmm5, %xmm5
+; AVX1-NEXT:    vpackssdw %xmm7, %xmm5, %xmm5
 ; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm7
-; AVX1-NEXT:    vpcmpgtq %xmm6, %xmm7, %xmm6
-; AVX1-NEXT:    vpcmpgtq %xmm10, %xmm4, %xmm4
-; AVX1-NEXT:    vpackssdw %xmm6, %xmm4, %xmm4
-; AVX1-NEXT:    vmovdqa 112(%rbp), %ymm6
+; AVX1-NEXT:    vpcmpgtq 160(%rbp), %xmm7, %xmm7
+; AVX1-NEXT:    vpcmpgtq 144(%rbp), %xmm4, %xmm4
+; AVX1-NEXT:    vpackssdw %xmm7, %xmm4, %xmm4
 ; AVX1-NEXT:    vpackssdw %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vpacksswb %xmm8, %xmm4, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm7
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm7, %xmm5
-; AVX1-NEXT:    vmovdqa 80(%rbp), %ymm7
-; AVX1-NEXT:    vpcmpgtq %xmm6, %xmm3, %xmm3
+; AVX1-NEXT:    vpacksswb %xmm6, %xmm4, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm5
+; AVX1-NEXT:    vpcmpgtq 128(%rbp), %xmm5, %xmm5
+; AVX1-NEXT:    vpcmpgtq 112(%rbp), %xmm3, %xmm3
 ; AVX1-NEXT:    vpackssdw %xmm5, %xmm3, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm6
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vpcmpgtq %xmm7, %xmm2, %xmm2
-; AVX1-NEXT:    vmovdqa 48(%rbp), %ymm6
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
+; AVX1-NEXT:    vpcmpgtq 96(%rbp), %xmm5, %xmm5
+; AVX1-NEXT:    vpcmpgtq 80(%rbp), %xmm2, %xmm2
 ; AVX1-NEXT:    vpackssdw %xmm5, %xmm2, %xmm2
 ; AVX1-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
-; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm5, %xmm3
-; AVX1-NEXT:    vmovdqa 16(%rbp), %ymm5
-; AVX1-NEXT:    vpcmpgtq %xmm6, %xmm1, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpcmpgtq 64(%rbp), %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtq 48(%rbp), %xmm1, %xmm1
 ; AVX1-NEXT:    vpackssdw %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
-; AVX1-NEXT:    vpcmpgtq %xmm3, %xmm6, %xmm3
-; AVX1-NEXT:    vpcmpgtq %xmm5, %xmm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpcmpgtq 32(%rbp), %xmm3, %xmm3
+; AVX1-NEXT:    vpcmpgtq 16(%rbp), %xmm0, %xmm0
 ; AVX1-NEXT:    vpackssdw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0

@@ -655,8 +655,11 @@ bool AMDGPUTargetLowering::ShouldShrinkFPConstant(EVT VT) const {
 }
 
 bool AMDGPUTargetLowering::shouldReduceLoadWidth(SDNode *N,
-                                                 ISD::LoadExtType,
+                                                 ISD::LoadExtType ExtTy,
                                                  EVT NewVT) const {
+  // TODO: This may be worth removing. Check regression tests for diffs.
+  if (!TargetLoweringBase::shouldReduceLoadWidth(N, ExtTy, NewVT))
+    return false;
 
   unsigned NewSize = NewVT.getStoreSizeInBits();
 

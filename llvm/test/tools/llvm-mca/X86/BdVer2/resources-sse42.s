@@ -81,31 +81,34 @@ pcmpgtq     (%rax), %xmm2
 # CHECK-NEXT: [13]  - PdFPU2
 # CHECK-NEXT: [14]  - PdFPU3
 # CHECK-NEXT: [15]  - PdFPXBR
-# CHECK-NEXT: [16]  - PdMul
+# CHECK-NEXT: [16.0] - PdLoad
+# CHECK-NEXT: [16.1] - PdLoad
+# CHECK-NEXT: [17]  - PdMul
+# CHECK-NEXT: [18]  - PdStore
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT: 21.00  21.00   -      -      -     28.00  20.00   -     6.00   6.00   9.00   9.00    -      -     1.00   9.00    -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
+# CHECK-NEXT: 21.00  21.00   -      -      -     28.00  20.00   -     6.00   6.00   9.00   9.00    -      -     1.00   9.00    -      -      -     17.00  17.00   -     8.00
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     crc32b	%al, %ecx
-# CHECK-NEXT: 0.50   0.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     crc32b	(%rax), %ecx
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     crc32l	%eax, %ecx
-# CHECK-NEXT: 0.50   0.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     crc32l	(%rax), %ecx
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     crc32w	%ax, %ecx
-# CHECK-NEXT: 0.50   0.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     crc32w	(%rax), %ecx
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     crc32b	%al, %rcx
-# CHECK-NEXT: 0.50   0.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     crc32b	(%rax), %rcx
-# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     crc32q	%rax, %rcx
-# CHECK-NEXT: 0.50   0.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -     crc32q	(%rax), %rcx
-# CHECK-NEXT: 4.00   4.00    -      -      -     1.00    -      -     0.50   0.50   2.00   2.00    -      -      -     1.00    -      -      -      -     pcmpestri	$1, %xmm0, %xmm2
-# CHECK-NEXT: 4.50   4.50    -      -      -     1.00    -      -     0.50   0.50   2.00   2.00    -      -      -     1.00    -      -      -      -     pcmpestri	$1, (%rax), %xmm2
-# CHECK-NEXT: 4.00   4.00    -      -      -     1.00    -      -     0.50   0.50   2.00   2.00    -      -      -     1.00    -      -      -      -     pcmpestrm	$1, %xmm0, %xmm2
-# CHECK-NEXT: 4.50   4.50    -      -      -     1.00    -      -     0.50   0.50   2.00   2.00    -      -      -     1.00    -      -      -      -     pcmpestrm	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -      -      -     1.00    -      -      -      -     pcmpistri	$1, %xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -     1.00    -      -     1.00   1.00    -      -      -      -      -     1.00    -      -      -      -     pcmpistri	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -      -      -     1.00    -      -      -      -     pcmpistrm	$1, %xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -     1.00    -      -     1.00   1.00    -      -      -      -      -     1.00    -      -      -      -     pcmpistrm	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     pcmpgtq	%xmm0, %xmm2
-# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -     pcmpgtq	(%rax), %xmm2
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     crc32b	%al, %ecx
+# CHECK-NEXT: 0.50   0.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     crc32b	(%rax), %ecx
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     crc32l	%eax, %ecx
+# CHECK-NEXT: 0.50   0.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     crc32l	(%rax), %ecx
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     crc32w	%ax, %ecx
+# CHECK-NEXT: 0.50   0.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     crc32w	(%rax), %ecx
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     crc32b	%al, %rcx
+# CHECK-NEXT: 0.50   0.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     crc32b	(%rax), %rcx
+# CHECK-NEXT:  -      -      -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     crc32q	%rax, %rcx
+# CHECK-NEXT: 0.50   0.50    -      -      -     2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     crc32q	(%rax), %rcx
+# CHECK-NEXT: 4.00   4.00    -      -      -     1.00    -      -     0.50   0.50   2.00   2.00    -      -      -     1.00    -      -      -     3.00   3.00    -     2.00   pcmpestri	$1, %xmm0, %xmm2
+# CHECK-NEXT: 4.50   4.50    -      -      -     1.00    -      -     0.50   0.50   2.00   2.00    -      -      -     1.00    -      -      -     3.50   3.50    -     2.00   pcmpestri	$1, (%rax), %xmm2
+# CHECK-NEXT: 4.00   4.00    -      -      -     1.00    -      -     0.50   0.50   2.00   2.00    -      -      -     1.00    -      -      -     3.00   3.00    -     2.00   pcmpestrm	$1, %xmm0, %xmm2
+# CHECK-NEXT: 4.50   4.50    -      -      -     1.00    -      -     0.50   0.50   2.00   2.00    -      -      -     1.00    -      -      -     3.50   3.50    -     2.00   pcmpestrm	$1, (%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -      -      -     1.00    -      -      -      -      -      -      -     pcmpistri	$1, %xmm0, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -     1.00    -      -     1.00   1.00    -      -      -      -      -     1.00    -      -      -     0.50   0.50    -      -     pcmpistri	$1, (%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     1.00   1.00    -      -      -      -      -     1.00    -      -      -      -      -      -      -     pcmpistrm	$1, %xmm0, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -     1.00    -      -     1.00   1.00    -      -      -      -      -     1.00    -      -      -     0.50   0.50    -      -     pcmpistrm	$1, (%rax), %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpgtq	%xmm0, %xmm2
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -     0.50   0.50    -      -     pcmpgtq	(%rax), %xmm2

@@ -3821,12 +3821,12 @@ define void @test_lfence() {
 ;
 ; BDVER2-SSE-LABEL: test_lfence:
 ; BDVER2-SSE:       # %bb.0:
-; BDVER2-SSE-NEXT:    lfence # sched: [1:0.50]
+; BDVER2-SSE-NEXT:    lfence # sched: [1:1.00]
 ; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
 ;
 ; BDVER2-LABEL: test_lfence:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    lfence # sched: [1:0.50]
+; BDVER2-NEXT:    lfence # sched: [1:1.00]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_lfence:
@@ -3927,12 +3927,12 @@ define void @test_mfence() {
 ;
 ; BDVER2-SSE-LABEL: test_mfence:
 ; BDVER2-SSE:       # %bb.0:
-; BDVER2-SSE-NEXT:    mfence # sched: [1:0.50]
+; BDVER2-SSE-NEXT:    mfence # sched: [1:1.00]
 ; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
 ;
 ; BDVER2-LABEL: test_mfence:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    mfence # sched: [1:0.50]
+; BDVER2-NEXT:    mfence # sched: [1:1.00]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_mfence:

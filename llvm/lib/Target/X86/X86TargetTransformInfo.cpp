@@ -874,7 +874,7 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
 
   // Subvector extractions are free if they start at beginning of the
   // vector.
-  if (Kind == TTI::SK_ExtractSubvector &&
+  if (Kind == TTI::SK_ExtractSubvector && LT.second.isVector() &&
       ((Index % LT.second.getVectorNumElements()) == 0))
     return 0;
 

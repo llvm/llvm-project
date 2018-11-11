@@ -222,20 +222,19 @@ define <2 x float> @sltof2f32(<2 x i64> %a) {
 define <4 x float> @slto4f32_mem(<4 x i64>* %a) {
 ; NODQ-LABEL: slto4f32_mem:
 ; NODQ:       # %bb.0:
-; NODQ-NEXT:    vmovdqu (%rdi), %ymm0
+; NODQ-NEXT:    vmovdqu (%rdi), %xmm0
+; NODQ-NEXT:    vmovdqu 16(%rdi), %xmm1
 ; NODQ-NEXT:    vpextrq $1, %xmm0, %rax
-; NODQ-NEXT:    vcvtsi2ssq %rax, %xmm1, %xmm1
-; NODQ-NEXT:    vmovq %xmm0, %rax
 ; NODQ-NEXT:    vcvtsi2ssq %rax, %xmm2, %xmm2
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
-; NODQ-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; NODQ-NEXT:    vmovq %xmm0, %rax
-; NODQ-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm2
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
-; NODQ-NEXT:    vpextrq $1, %xmm0, %rax
 ; NODQ-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm0
-; NODQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; NODQ-NEXT:    vzeroupper
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; NODQ-NEXT:    vmovq %xmm1, %rax
+; NODQ-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm2
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; NODQ-NEXT:    vpextrq $1, %xmm1, %rax
+; NODQ-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm1
+; NODQ-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
 ; NODQ-NEXT:    retq
 ;
 ; VLDQ-LABEL: slto4f32_mem:
@@ -253,20 +252,19 @@ define <4 x float> @slto4f32_mem(<4 x i64>* %a) {
 ;
 ; KNL_WIDEN-LABEL: slto4f32_mem:
 ; KNL_WIDEN:       # %bb.0:
-; KNL_WIDEN-NEXT:    vmovdqu (%rdi), %ymm0
+; KNL_WIDEN-NEXT:    vmovdqu (%rdi), %xmm0
+; KNL_WIDEN-NEXT:    vmovdqu 16(%rdi), %xmm1
 ; KNL_WIDEN-NEXT:    vpextrq $1, %xmm0, %rax
-; KNL_WIDEN-NEXT:    vcvtsi2ssq %rax, %xmm1, %xmm1
-; KNL_WIDEN-NEXT:    vmovq %xmm0, %rax
 ; KNL_WIDEN-NEXT:    vcvtsi2ssq %rax, %xmm2, %xmm2
-; KNL_WIDEN-NEXT:    vinsertps {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[2,3]
-; KNL_WIDEN-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; KNL_WIDEN-NEXT:    vmovq %xmm0, %rax
-; KNL_WIDEN-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm2
-; KNL_WIDEN-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0],xmm1[3]
-; KNL_WIDEN-NEXT:    vpextrq $1, %xmm0, %rax
 ; KNL_WIDEN-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm0
-; KNL_WIDEN-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
-; KNL_WIDEN-NEXT:    vzeroupper
+; KNL_WIDEN-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; KNL_WIDEN-NEXT:    vmovq %xmm1, %rax
+; KNL_WIDEN-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm2
+; KNL_WIDEN-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
+; KNL_WIDEN-NEXT:    vpextrq $1, %xmm1, %rax
+; KNL_WIDEN-NEXT:    vcvtsi2ssq %rax, %xmm3, %xmm1
+; KNL_WIDEN-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[0]
 ; KNL_WIDEN-NEXT:    retq
   %a1 = load <4 x i64>, <4 x i64>* %a, align 8
   %b = sitofp <4 x i64> %a1 to <4 x float>

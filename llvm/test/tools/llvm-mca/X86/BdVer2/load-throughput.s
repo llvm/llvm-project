@@ -88,10 +88,10 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             22         24         40
+# CHECK-NEXT: PdEX             35         40         40
 # CHECK-NEXT: PdFPU            0          0          64
-# CHECK-NEXT: PdLoad           22         24         40
-# CHECK-NEXT: PdStore          22         24         24
+# CHECK-NEXT: PdLoad           35         40         40
+# CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -113,18 +113,21 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [13]  - PdFPU2
 # CHECK-NEXT: [14]  - PdFPU3
 # CHECK-NEXT: [15]  - PdFPXBR
-# CHECK-NEXT: [16]  - PdMul
+# CHECK-NEXT: [16.0] - PdLoad
+# CHECK-NEXT: [16.1] - PdLoad
+# CHECK-NEXT: [17]  - PdMul
+# CHECK-NEXT: [18]  - PdStore
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movb	(%rax), %spl
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movb	(%rcx), %bpl
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movb	(%rdx), %sil
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movb	(%rbx), %dil
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     movb	(%rax), %spl
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     movb	(%rcx), %bpl
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     movb	(%rdx), %sil
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     movb	(%rbx), %dil
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
@@ -184,10 +187,10 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             22         24         40
+# CHECK-NEXT: PdEX             35         40         40
 # CHECK-NEXT: PdFPU            0          0          64
-# CHECK-NEXT: PdLoad           22         24         40
-# CHECK-NEXT: PdStore          22         24         24
+# CHECK-NEXT: PdLoad           35         40         40
+# CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -209,18 +212,21 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [13]  - PdFPU2
 # CHECK-NEXT: [14]  - PdFPU3
 # CHECK-NEXT: [15]  - PdFPXBR
-# CHECK-NEXT: [16]  - PdMul
+# CHECK-NEXT: [16.0] - PdLoad
+# CHECK-NEXT: [16.1] - PdLoad
+# CHECK-NEXT: [17]  - PdMul
+# CHECK-NEXT: [18]  - PdStore
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movw	(%rax), %sp
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movw	(%rcx), %bp
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movw	(%rdx), %si
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movw	(%rbx), %di
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     movw	(%rax), %sp
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     movw	(%rcx), %bp
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     movw	(%rdx), %si
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     movw	(%rbx), %di
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
@@ -280,10 +286,10 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             22         24         40
+# CHECK-NEXT: PdEX             35         40         40
 # CHECK-NEXT: PdFPU            0          0          64
-# CHECK-NEXT: PdLoad           22         24         40
-# CHECK-NEXT: PdStore          22         24         24
+# CHECK-NEXT: PdLoad           35         40         40
+# CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -305,18 +311,21 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [13]  - PdFPU2
 # CHECK-NEXT: [14]  - PdFPU3
 # CHECK-NEXT: [15]  - PdFPXBR
-# CHECK-NEXT: [16]  - PdMul
+# CHECK-NEXT: [16.0] - PdLoad
+# CHECK-NEXT: [16.1] - PdLoad
+# CHECK-NEXT: [17]  - PdMul
+# CHECK-NEXT: [18]  - PdStore
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	(%rax), %esp
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	(%rcx), %ebp
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	(%rdx), %esi
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movl	(%rbx), %edi
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     movl	(%rax), %esp
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     movl	(%rcx), %ebp
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     movl	(%rdx), %esi
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     movl	(%rbx), %edi
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
@@ -376,10 +385,10 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             22         24         40
+# CHECK-NEXT: PdEX             35         40         40
 # CHECK-NEXT: PdFPU            0          0          64
-# CHECK-NEXT: PdLoad           22         24         40
-# CHECK-NEXT: PdStore          22         24         24
+# CHECK-NEXT: PdLoad           35         40         40
+# CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -401,18 +410,21 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [13]  - PdFPU2
 # CHECK-NEXT: [14]  - PdFPU3
 # CHECK-NEXT: [15]  - PdFPXBR
-# CHECK-NEXT: [16]  - PdMul
+# CHECK-NEXT: [16.0] - PdLoad
+# CHECK-NEXT: [16.1] - PdLoad
+# CHECK-NEXT: [17]  - PdMul
+# CHECK-NEXT: [18]  - PdStore
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     2.00   2.00    -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	(%rax), %rsp
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	(%rcx), %rbp
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	(%rdx), %rsi
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     movq	(%rbx), %rdi
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     movq	(%rax), %rsp
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     movq	(%rcx), %rbp
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     movq	(%rdx), %rsi
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     movq	(%rbx), %rdi
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
@@ -472,10 +484,10 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             22         24         40
-# CHECK-NEXT: PdFPU            22         24         64
-# CHECK-NEXT: PdLoad           22         24         40
-# CHECK-NEXT: PdStore          22         24         24
+# CHECK-NEXT: PdEX             35         40         40
+# CHECK-NEXT: PdFPU            35         40         64
+# CHECK-NEXT: PdLoad           35         40         40
+# CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -497,18 +509,21 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [13]  - PdFPU2
 # CHECK-NEXT: [14]  - PdFPU3
 # CHECK-NEXT: [15]  - PdFPXBR
-# CHECK-NEXT: [16]  - PdMul
+# CHECK-NEXT: [16.0] - PdLoad
+# CHECK-NEXT: [16.1] - PdLoad
+# CHECK-NEXT: [17]  - PdMul
+# CHECK-NEXT: [18]  - PdStore
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -     2.00   2.00    -      -     2.00   2.00    -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -      -      -     2.00   2.00    -      -     2.00   2.00    -      -      -     2.00   2.00    -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -     movd	(%rax), %mm0
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -      -     movd	(%rcx), %mm1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     1.00    -      -      -      -     movd	(%rdx), %mm2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -     movd	(%rbx), %mm3
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -     1.00    -      -     movd	(%rax), %mm0
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -     1.00    -      -      -     movd	(%rcx), %mm1
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     1.00    -      -      -     1.00    -      -      -     movd	(%rdx), %mm2
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -     1.00    -      -     movd	(%rbx), %mm3
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
@@ -568,10 +583,10 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [4] Total number of buffer entries.
 
 # CHECK:       [1]            [2]        [3]        [4]
-# CHECK-NEXT: PdEX             22         24         40
-# CHECK-NEXT: PdFPU            22         24         64
-# CHECK-NEXT: PdLoad           22         24         40
-# CHECK-NEXT: PdStore          22         24         24
+# CHECK-NEXT: PdEX             35         40         40
+# CHECK-NEXT: PdFPU            35         40         64
+# CHECK-NEXT: PdLoad           35         40         40
+# CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -593,18 +608,21 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [13]  - PdFPU2
 # CHECK-NEXT: [14]  - PdFPU3
 # CHECK-NEXT: [15]  - PdFPXBR
-# CHECK-NEXT: [16]  - PdMul
+# CHECK-NEXT: [16.0] - PdLoad
+# CHECK-NEXT: [16.1] - PdLoad
+# CHECK-NEXT: [17]  - PdMul
+# CHECK-NEXT: [18]  - PdStore
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -     2.00   2.00    -      -      -      -     2.00   2.00    -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -     2.00   2.00    -      -      -      -     2.00   2.00    -      -      -     2.00   2.00    -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -     movaps	(%rax), %xmm0
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -      -     movaps	(%rcx), %xmm1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -      -      -     movaps	(%rdx), %xmm2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     movaps	(%rbx), %xmm3
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -     1.00    -      -     movaps	(%rax), %xmm0
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -     1.00    -      -      -     movaps	(%rcx), %xmm1
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     movaps	(%rdx), %xmm2
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     1.00    -      -     movaps	(%rbx), %xmm3
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678
@@ -667,7 +685,7 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: PdEX             1          2          40
 # CHECK-NEXT: PdFPU            1          2          64
 # CHECK-NEXT: PdLoad           1          2          40
-# CHECK-NEXT: PdStore          1          2          24
+# CHECK-NEXT: PdStore          0          0          24
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -689,18 +707,21 @@ vmovaps (%rbx), %ymm3
 # CHECK-NEXT: [13]  - PdFPU2
 # CHECK-NEXT: [14]  - PdFPU3
 # CHECK-NEXT: [15]  - PdFPXBR
-# CHECK-NEXT: [16]  - PdMul
+# CHECK-NEXT: [16.0] - PdLoad
+# CHECK-NEXT: [16.1] - PdLoad
+# CHECK-NEXT: [17]  - PdMul
+# CHECK-NEXT: [18]  - PdStore
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -     2.00   2.00    -      -      -      -     2.00   2.00    -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
+# CHECK-NEXT: 2.00   2.00    -      -      -      -      -      -     2.00   2.00    -      -      -      -     2.00   2.00    -      -      -     2.00   2.00    -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -     vmovaps	(%rax), %ymm0
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -      -     vmovaps	(%rcx), %ymm1
-# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -      -      -     vmovaps	(%rdx), %ymm2
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     vmovaps	(%rbx), %ymm3
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -     1.00    -      -     vmovaps	(%rax), %ymm0
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -     1.00    -      -      -     vmovaps	(%rcx), %ymm1
+# CHECK-NEXT: 1.00    -      -      -      -      -      -      -     1.00    -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -     vmovaps	(%rdx), %ymm2
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -      -     1.00    -      -      -      -     1.00    -      -      -      -      -     1.00    -      -     vmovaps	(%rbx), %ymm3
 
 # CHECK:      Timeline view:
 # CHECK-NEXT: Index     012345678

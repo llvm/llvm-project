@@ -209,7 +209,7 @@ static bool error(std::error_code EC, Twine Path = Twine()) {
 
 // This version of error() prints the archive name and member name, for example:
 // "libx.a(foo.o)" after the ToolName before the error message.  It sets
-// HadError but returns allowing the code to move on to other archive members. 
+// HadError but returns allowing the code to move on to other archive members.
 static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
                   StringRef ArchitectureName = StringRef()) {
   HadError = true;
@@ -230,7 +230,7 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
 
   std::string Buf;
   raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS, "");
+  logAllUnhandledErrors(std::move(E), OS);
   OS.flush();
   errs() << " " << Buf << "\n";
 }
@@ -238,7 +238,7 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
 // This version of error() prints the file name and which architecture slice it
 // is from, for example: "foo.o (for architecture i386)" after the ToolName
 // before the error message.  It sets HadError but returns allowing the code to
-// move on to other architecture slices. 
+// move on to other architecture slices.
 static void error(llvm::Error E, StringRef FileName,
                   StringRef ArchitectureName = StringRef()) {
   HadError = true;
@@ -249,7 +249,7 @@ static void error(llvm::Error E, StringRef FileName,
 
   std::string Buf;
   raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS, "");
+  logAllUnhandledErrors(std::move(E), OS);
   OS.flush();
   errs() << " " << Buf << "\n";
 }
@@ -1029,8 +1029,7 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
     StringRef SectionName;
     Obj.getSectionName(Ref, SectionName);
     StringRef SegmentName = Obj.getSectionFinalSegmentName(Ref);
-    if (Obj.is64Bit() && 
-        Obj.getHeader64().filetype == MachO::MH_KEXT_BUNDLE &&
+    if (Obj.is64Bit() && Obj.getHeader64().filetype == MachO::MH_KEXT_BUNDLE &&
         SegmentName == "__TEXT_EXEC" && SectionName == "__text")
       return 't';
     if (SegmentName == "__TEXT" && SectionName == "__text")
@@ -1606,7 +1605,7 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
       uint64_t lc_main_offset = UINT64_MAX;
       for (const auto &Command : MachO->load_commands()) {
         if (Command.C.cmd == MachO::LC_FUNCTION_STARTS) {
-          // We found a function starts segment, parse the addresses for 
+          // We found a function starts segment, parse the addresses for
           // consumption.
           MachO::linkedit_data_command LLC =
             MachO->getLinkeditDataLoadCommand(Command);

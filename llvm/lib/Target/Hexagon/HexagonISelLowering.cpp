@@ -3082,6 +3082,10 @@ HexagonTargetLowering::findRepresentativeClass(const TargetRegisterInfo *TRI,
 
 bool HexagonTargetLowering::shouldReduceLoadWidth(SDNode *Load,
       ISD::LoadExtType ExtTy, EVT NewVT) const {
+  // TODO: This may be worth removing. Check regression tests for diffs.
+  if (!TargetLoweringBase::shouldReduceLoadWidth(Load, ExtTy, NewVT))
+    return false;
+
   auto *L = cast<LoadSDNode>(Load);
   std::pair<SDValue,int> BO = getBaseAndOffset(L->getBasePtr());
   // Small-data object, do not shrink.

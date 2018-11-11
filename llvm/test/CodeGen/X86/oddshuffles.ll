@@ -1055,26 +1055,25 @@ define void @interleave_24i16_out(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2
 ;
 ; AVX1-LABEL: interleave_24i16_out:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqu 32(%rdi), %xmm0
-; AVX1-NEXT:    vmovdqu (%rdi), %ymm1
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm1[0],xmm2[1],xmm1[2,3],xmm2[4],xmm1[5,6],xmm2[7]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm3 = xmm3[0,1,6,7,12,13,2,3,8,9,14,15,u,u,u,u]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm0[0,1,2,1]
-; AVX1-NEXT:    vpshufhw {{.*#+}} xmm4 = xmm4[0,1,2,3,4,5,6,5]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,5],xmm4[6,7]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm1[0,1],xmm2[2],xmm1[3,4],xmm2[5],xmm1[6,7]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm4[2,3,8,9,14,15,4,5,10,11,u,u,u,u,u,u]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm5 = xmm0[0,1,6,7,4,5,6,7,0,1,0,1,6,7,12,13]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0,1,2,3,4],xmm5[5,6,7]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2],xmm2[3,4],xmm1[5],xmm2[6,7]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm1 = xmm1[4,5,10,11,0,1,6,7,12,13,14,15,0,1,2,3]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,9,2,3,8,9,14,15]
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4],xmm0[5,6,7]
+; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
+; AVX1-NEXT:    vmovdqu 32(%rdi), %xmm2
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[0,1,2,1]
+; AVX1-NEXT:    vpshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,4,5,6,5]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm0[0],xmm1[1],xmm0[2,3],xmm1[4],xmm0[5,6],xmm1[7]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm4[0,1,6,7,12,13,2,3,8,9,14,15,u,u,u,u]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm3 = xmm4[0,1,2,3,4,5],xmm3[6,7]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm2[0,1,6,7,4,5,6,7,0,1,0,1,6,7,12,13]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm5 = xmm0[0,1],xmm1[2],xmm0[3,4],xmm1[5],xmm0[6,7]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm5 = xmm5[2,3,8,9,14,15,4,5,10,11,u,u,u,u,u,u]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm5[0,1,2,3,4],xmm4[5,6,7]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5,6,7,8,9,2,3,8,9,14,15]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3,4],xmm0[5],xmm1[6,7]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,10,11,0,1,6,7,12,13,14,15,0,1,2,3]
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4],xmm2[5,6,7]
 ; AVX1-NEXT:    vmovdqu %xmm3, (%rsi)
 ; AVX1-NEXT:    vmovdqu %xmm4, (%rdx)
 ; AVX1-NEXT:    vmovdqu %xmm0, (%rcx)
-; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: interleave_24i16_out:
@@ -1101,19 +1100,18 @@ define void @interleave_24i16_out(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2
 ;
 ; XOP-LABEL: interleave_24i16_out:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovdqu 32(%rdi), %xmm0
-; XOP-NEXT:    vmovdqu (%rdi), %ymm1
-; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; XOP-NEXT:    vpblendw {{.*#+}} xmm3 = xmm1[0],xmm2[1],xmm1[2,3],xmm2[4],xmm1[5,6],xmm2[7]
-; XOP-NEXT:    vpperm {{.*#+}} xmm3 = xmm3[0,1,6,7,12,13,2,3,8,9,14,15],xmm0[4,5,10,11]
-; XOP-NEXT:    vpblendw {{.*#+}} xmm4 = xmm1[0,1],xmm2[2],xmm1[3,4],xmm2[5],xmm1[6,7]
-; XOP-NEXT:    vpperm {{.*#+}} xmm4 = xmm4[2,3,8,9,14,15,4,5,10,11],xmm0[0,1,6,7,12,13]
-; XOP-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[4,5,10,11],xmm2[0,1,6,7,12,13,14,15,0,1,2,3]
-; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5,6,7,8,9],xmm0[2,3,8,9,14,15]
+; XOP-NEXT:    vmovdqu (%rdi), %xmm0
+; XOP-NEXT:    vmovdqu 16(%rdi), %xmm1
+; XOP-NEXT:    vmovdqu 32(%rdi), %xmm2
+; XOP-NEXT:    vpblendw {{.*#+}} xmm3 = xmm0[0],xmm1[1],xmm0[2,3],xmm1[4],xmm0[5,6],xmm1[7]
+; XOP-NEXT:    vpperm {{.*#+}} xmm3 = xmm3[0,1,6,7,12,13,2,3,8,9,14,15],xmm2[4,5,10,11]
+; XOP-NEXT:    vpblendw {{.*#+}} xmm4 = xmm0[0,1],xmm1[2],xmm0[3,4],xmm1[5],xmm0[6,7]
+; XOP-NEXT:    vpperm {{.*#+}} xmm4 = xmm4[2,3,8,9,14,15,4,5,10,11],xmm2[0,1,6,7,12,13]
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[4,5,10,11],xmm1[0,1,6,7,12,13,14,15,0,1,2,3]
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,9],xmm2[2,3,8,9,14,15]
 ; XOP-NEXT:    vmovdqu %xmm3, (%rsi)
 ; XOP-NEXT:    vmovdqu %xmm4, (%rdx)
 ; XOP-NEXT:    vmovdqu %xmm0, (%rcx)
-; XOP-NEXT:    vzeroupper
 ; XOP-NEXT:    retq
   %wide.vec = load <24 x i16>, <24 x i16>* %p, align 4
   %s1 = shufflevector <24 x i16> %wide.vec, <24 x i16> undef, <8 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21>
@@ -1353,9 +1351,9 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovups (%rdi), %ymm0
 ; AVX1-NEXT:    vmovups 32(%rdi), %ymm1
-; AVX1-NEXT:    vmovups 64(%rdi), %ymm2
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm4 = zero,zero,xmm2[2],xmm3[1]
+; AVX1-NEXT:    vmovups 80(%rdi), %xmm2
+; AVX1-NEXT:    vmovups 64(%rdi), %xmm3
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm4 = zero,zero,xmm3[2],xmm2[1]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm4
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm5 = ymm0[0],ymm1[1],ymm0[2,3],ymm1[4],ymm0[5,6],ymm1[7]
 ; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm6
@@ -1364,7 +1362,7 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ; AVX1-NEXT:    vpermilps {{.*#+}} xmm6 = xmm6[0,3,2,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm4 = ymm5[0,1,2,3,4,5],ymm4[6,7]
-; AVX1-NEXT:    vblendps {{.*#+}} xmm5 = xmm2[0,1],xmm3[2],xmm2[3]
+; AVX1-NEXT:    vblendps {{.*#+}} xmm5 = xmm3[0,1],xmm2[2],xmm3[3]
 ; AVX1-NEXT:    vpermilps {{.*#+}} xmm5 = xmm5[0,0,3,2]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm5
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm6 = ymm0[0,1],ymm1[2],ymm0[3,4],ymm1[5],ymm0[6,7]
@@ -1374,7 +1372,7 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ; AVX1-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm7[1,1,3,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm7, %ymm6, %ymm6
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm5 = ymm6[0,1,2,3,4],ymm5[5,6,7]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0,3]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm3[0,1],xmm2[0,3]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm2
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3,4],ymm0[5],ymm1[6,7]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
@@ -1451,9 +1449,9 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovups (%rdi), %ymm0
 ; XOP-NEXT:    vmovups 32(%rdi), %ymm1
-; XOP-NEXT:    vmovups 64(%rdi), %ymm2
-; XOP-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; XOP-NEXT:    vinsertps {{.*#+}} xmm4 = zero,zero,xmm2[2],xmm3[1]
+; XOP-NEXT:    vmovups 80(%rdi), %xmm2
+; XOP-NEXT:    vmovups 64(%rdi), %xmm3
+; XOP-NEXT:    vinsertps {{.*#+}} xmm4 = zero,zero,xmm3[2],xmm2[1]
 ; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm0, %ymm4
 ; XOP-NEXT:    vblendps {{.*#+}} ymm5 = ymm0[0],ymm1[1],ymm0[2,3],ymm1[4],ymm0[5,6],ymm1[7]
 ; XOP-NEXT:    vextractf128 $1, %ymm5, %xmm6
@@ -1462,7 +1460,7 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ; XOP-NEXT:    vpermilps {{.*#+}} xmm6 = xmm6[0,3,2,3]
 ; XOP-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
 ; XOP-NEXT:    vblendps {{.*#+}} ymm4 = ymm5[0,1,2,3,4,5],ymm4[6,7]
-; XOP-NEXT:    vblendps {{.*#+}} xmm5 = xmm2[0,1],xmm3[2],xmm2[3]
+; XOP-NEXT:    vblendps {{.*#+}} xmm5 = xmm3[0,1],xmm2[2],xmm3[3]
 ; XOP-NEXT:    vpermilps {{.*#+}} xmm5 = xmm5[0,0,3,2]
 ; XOP-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm5
 ; XOP-NEXT:    vblendps {{.*#+}} ymm6 = ymm0[0,1],ymm1[2],ymm0[3,4],ymm1[5],ymm0[6,7]
@@ -1472,7 +1470,7 @@ define void @interleave_24i32_out(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2
 ; XOP-NEXT:    vmovshdup {{.*#+}} xmm7 = xmm7[1,1,3,3]
 ; XOP-NEXT:    vinsertf128 $1, %xmm7, %ymm6, %ymm6
 ; XOP-NEXT:    vblendps {{.*#+}} ymm5 = ymm6[0,1,2,3,4],ymm5[5,6,7]
-; XOP-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,1],xmm3[0,3]
+; XOP-NEXT:    vshufps {{.*#+}} xmm2 = xmm3[0,1],xmm2[0,3]
 ; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm2
 ; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3,4],ymm0[5],ymm1[6,7]
 ; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm1
@@ -1583,35 +1581,36 @@ define void @interleave_24i32_in(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2,
 ;
 ; AVX1-LABEL: interleave_24i32_in:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovups (%rsi), %ymm0
-; AVX1-NEXT:    vmovups (%rdx), %ymm1
-; AVX1-NEXT:    vmovupd (%rcx), %ymm2
-; AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[2,0],xmm1[2,0]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[1,1],xmm3[0,2]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm4 = xmm1[0,0],xmm0[0,0]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[2,0],xmm0[2,1]
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
-; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = xmm2[0,0]
+; AVX1-NEXT:    vmovupd (%rsi), %ymm0
+; AVX1-NEXT:    vmovupd (%rcx), %ymm1
+; AVX1-NEXT:    vmovups 16(%rcx), %xmm2
+; AVX1-NEXT:    vmovups (%rdx), %xmm3
+; AVX1-NEXT:    vmovups 16(%rdx), %xmm4
+; AVX1-NEXT:    vshufps {{.*#+}} xmm5 = xmm4[3,0],xmm2[3,0]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm5 = xmm2[2,1],xmm5[0,2]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[1,0],xmm4[1,0]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[2,0],xmm4[2,2]
+; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
+; AVX1-NEXT:    vpermilpd {{.*#+}} ymm4 = ymm0[1,1,3,3]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm4[2,3,2,3]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1],ymm4[2],ymm2[3,4],ymm4[5],ymm2[6,7]
+; AVX1-NEXT:    vmovups (%rsi), %xmm4
+; AVX1-NEXT:    vshufps {{.*#+}} xmm5 = xmm4[2,0],xmm3[2,0]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm5 = xmm3[1,1],xmm5[0,2]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[0,0],xmm4[0,0]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[2,0],xmm4[2,1]
+; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm3, %ymm3
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm4 = xmm1[0,0]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm4, %ymm4
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0,1],ymm4[2],ymm3[3,4],ymm4[5],ymm3[6,7]
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
-; AVX1-NEXT:    vshufps {{.*#+}} xmm6 = xmm5[3,0],xmm4[3,0]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm6 = xmm4[2,1],xmm6[0,2]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[1,0],xmm5[1,0]
-; AVX1-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[2,0],xmm5[2,2]
-; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm4
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm5 = ymm0[1,1,3,3]
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm5[2,3,2,3]
-; AVX1-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0,1],ymm5[2],ymm4[3,4],ymm5[5],ymm4[6,7]
 ; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,2]
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm2 = ymm2[1,1,2,2]
-; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3],ymm0[4],ymm2[5,6],ymm0[7]
-; AVX1-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[0,0,3,3,4,4,7,7]
+; AVX1-NEXT:    vpermilpd {{.*#+}} ymm1 = ymm1[1,1,2,2]
+; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2,3],ymm0[4],ymm1[5,6],ymm0[7]
+; AVX1-NEXT:    vpermilps {{.*#+}} ymm1 = mem[0,0,3,3,4,4,7,7]
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3,4],ymm1[5],ymm0[6,7]
 ; AVX1-NEXT:    vmovups %ymm0, 32(%rdi)
-; AVX1-NEXT:    vmovups %ymm4, 64(%rdi)
 ; AVX1-NEXT:    vmovups %ymm3, (%rdi)
+; AVX1-NEXT:    vmovups %ymm2, 64(%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -1620,17 +1619,17 @@ define void @interleave_24i32_in(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2,
 ; AVX2-SLOW-NEXT:    vmovups (%rsi), %ymm0
 ; AVX2-SLOW-NEXT:    vmovups (%rdx), %ymm1
 ; AVX2-SLOW-NEXT:    vmovups (%rcx), %ymm2
-; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} xmm3 = xmm1[1,0,2,2]
-; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm3 = ymm3[0,1,0,1]
-; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm4 = ymm0[0,0,2,1]
+; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm3 = ymm2[2,1,3,3]
+; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} ymm4 = ymm1[1,2,3,3,5,6,7,7]
+; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm4 = ymm4[2,2,2,3]
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm3 = ymm4[0],ymm3[1],ymm4[2,3],ymm3[4],ymm4[5,6],ymm3[7]
-; AVX2-SLOW-NEXT:    vbroadcastsd %xmm2, %ymm4
+; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm4 = ymm0[0,3,3,3]
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0,1],ymm4[2],ymm3[3,4],ymm4[5],ymm3[6,7]
-; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm4 = ymm2[2,1,3,3]
-; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} ymm5 = ymm1[1,2,3,3,5,6,7,7]
-; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm5 = ymm5[2,2,2,3]
+; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} xmm4 = mem[1,0,2,2]
+; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm4 = ymm4[0,1,0,1]
+; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm5 = ymm0[0,0,2,1]
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm4 = ymm5[0],ymm4[1],ymm5[2,3],ymm4[4],ymm5[5,6],ymm4[7]
-; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm5 = ymm0[0,3,3,3]
+; AVX2-SLOW-NEXT:    vbroadcastsd (%rcx), %ymm5
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0,1],ymm5[2],ymm4[3,4],ymm5[5],ymm4[6,7]
 ; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,1,2,2]
 ; AVX2-SLOW-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[1,1,2,2]
@@ -1638,8 +1637,8 @@ define void @interleave_24i32_in(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2,
 ; AVX2-SLOW-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[0,0,3,3,4,4,7,7]
 ; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3,4],ymm1[5],ymm0[6,7]
 ; AVX2-SLOW-NEXT:    vmovups %ymm0, 32(%rdi)
-; AVX2-SLOW-NEXT:    vmovups %ymm4, 64(%rdi)
-; AVX2-SLOW-NEXT:    vmovups %ymm3, (%rdi)
+; AVX2-SLOW-NEXT:    vmovups %ymm4, (%rdi)
+; AVX2-SLOW-NEXT:    vmovups %ymm3, 64(%rdi)
 ; AVX2-SLOW-NEXT:    vzeroupper
 ; AVX2-SLOW-NEXT:    retq
 ;
@@ -1648,58 +1647,59 @@ define void @interleave_24i32_in(<24 x i32>* %p, <8 x i32>* %q1, <8 x i32>* %q2,
 ; AVX2-FAST-NEXT:    vmovups (%rsi), %ymm0
 ; AVX2-FAST-NEXT:    vmovups (%rdx), %ymm1
 ; AVX2-FAST-NEXT:    vmovups (%rcx), %ymm2
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm3 = [1,0,2,2,1,0,2,2]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm3 = [5,6,5,6,5,6,7,7]
 ; AVX2-FAST-NEXT:    vpermps %ymm1, %ymm3, %ymm3
-; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm4 = ymm0[0,0,2,1]
-; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm3 = ymm4[0],ymm3[1],ymm4[2,3],ymm3[4],ymm4[5,6],ymm3[7]
-; AVX2-FAST-NEXT:    vbroadcastsd %xmm2, %ymm4
+; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm4 = ymm2[2,1,3,3]
+; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0],ymm4[1],ymm3[2,3],ymm4[4],ymm3[5,6],ymm4[7]
+; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm4 = ymm0[0,3,3,3]
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0,1],ymm4[2],ymm3[3,4],ymm4[5],ymm3[6,7]
-; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm4 = ymm0[1,1,2,2]
-; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm5 = ymm2[1,1,2,2]
+; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm4 = [1,0,2,2,1,0,2,2]
+; AVX2-FAST-NEXT:    vpermps %ymm1, %ymm4, %ymm4
+; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm5 = ymm0[0,0,2,1]
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm4 = ymm5[0],ymm4[1],ymm5[2,3],ymm4[4],ymm5[5,6],ymm4[7]
-; AVX2-FAST-NEXT:    vpermilps {{.*#+}} ymm5 = ymm1[0,0,3,3,4,4,7,7]
+; AVX2-FAST-NEXT:    vbroadcastsd (%rcx), %ymm5
 ; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0,1],ymm5[2],ymm4[3,4],ymm5[5],ymm4[6,7]
-; AVX2-FAST-NEXT:    vmovaps {{.*#+}} ymm5 = [5,6,5,6,5,6,7,7]
-; AVX2-FAST-NEXT:    vpermps %ymm1, %ymm5, %ymm1
-; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[2,1,3,3]
-; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0],ymm2[1],ymm1[2,3],ymm2[4],ymm1[5,6],ymm2[7]
-; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,3,3,3]
-; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2],ymm1[3,4],ymm0[5],ymm1[6,7]
-; AVX2-FAST-NEXT:    vmovups %ymm0, 64(%rdi)
-; AVX2-FAST-NEXT:    vmovups %ymm4, 32(%rdi)
-; AVX2-FAST-NEXT:    vmovups %ymm3, (%rdi)
+; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,1,2,2]
+; AVX2-FAST-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[1,1,2,2]
+; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0],ymm0[1],ymm2[2,3],ymm0[4],ymm2[5,6],ymm0[7]
+; AVX2-FAST-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[0,0,3,3,4,4,7,7]
+; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3,4],ymm1[5],ymm0[6,7]
+; AVX2-FAST-NEXT:    vmovups %ymm0, 32(%rdi)
+; AVX2-FAST-NEXT:    vmovups %ymm4, (%rdi)
+; AVX2-FAST-NEXT:    vmovups %ymm3, 64(%rdi)
 ; AVX2-FAST-NEXT:    vzeroupper
 ; AVX2-FAST-NEXT:    retq
 ;
 ; XOP-LABEL: interleave_24i32_in:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovups (%rsi), %ymm0
-; XOP-NEXT:    vmovups (%rdx), %ymm1
-; XOP-NEXT:    vmovupd (%rcx), %ymm2
-; XOP-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[2,0],xmm1[2,0]
-; XOP-NEXT:    vshufps {{.*#+}} xmm3 = xmm1[1,1],xmm3[0,2]
-; XOP-NEXT:    vshufps {{.*#+}} xmm4 = xmm1[0,0],xmm0[0,0]
-; XOP-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[2,0],xmm0[2,1]
-; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
-; XOP-NEXT:    vmovddup {{.*#+}} xmm4 = xmm2[0,0]
+; XOP-NEXT:    vmovupd (%rsi), %ymm0
+; XOP-NEXT:    vmovupd (%rcx), %ymm1
+; XOP-NEXT:    vmovups 16(%rcx), %xmm2
+; XOP-NEXT:    vmovups (%rdx), %xmm3
+; XOP-NEXT:    vmovups 16(%rdx), %xmm4
+; XOP-NEXT:    vshufps {{.*#+}} xmm5 = xmm4[3,0],xmm2[3,0]
+; XOP-NEXT:    vshufps {{.*#+}} xmm5 = xmm2[2,1],xmm5[0,2]
+; XOP-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[1,0],xmm4[1,0]
+; XOP-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[2,0],xmm4[2,2]
+; XOP-NEXT:    vinsertf128 $1, %xmm5, %ymm2, %ymm2
+; XOP-NEXT:    vpermilpd {{.*#+}} ymm4 = ymm0[1,1,3,3]
+; XOP-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm4[2,3,2,3]
+; XOP-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1],ymm4[2],ymm2[3,4],ymm4[5],ymm2[6,7]
+; XOP-NEXT:    vmovups (%rsi), %xmm4
+; XOP-NEXT:    vshufps {{.*#+}} xmm5 = xmm4[2,0],xmm3[2,0]
+; XOP-NEXT:    vshufps {{.*#+}} xmm5 = xmm3[1,1],xmm5[0,2]
+; XOP-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[0,0],xmm4[0,0]
+; XOP-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[2,0],xmm4[2,1]
+; XOP-NEXT:    vinsertf128 $1, %xmm5, %ymm3, %ymm3
+; XOP-NEXT:    vmovddup {{.*#+}} xmm4 = xmm1[0,0]
 ; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm4, %ymm4
 ; XOP-NEXT:    vblendps {{.*#+}} ymm3 = ymm3[0,1],ymm4[2],ymm3[3,4],ymm4[5],ymm3[6,7]
-; XOP-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; XOP-NEXT:    vextractf128 $1, %ymm1, %xmm5
-; XOP-NEXT:    vshufps {{.*#+}} xmm6 = xmm5[3,0],xmm4[3,0]
-; XOP-NEXT:    vshufps {{.*#+}} xmm6 = xmm4[2,1],xmm6[0,2]
-; XOP-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[1,0],xmm5[1,0]
-; XOP-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[2,0],xmm5[2,2]
-; XOP-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm4
-; XOP-NEXT:    vpermilpd {{.*#+}} ymm5 = ymm0[1,1,3,3]
-; XOP-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm5[2,3,2,3]
-; XOP-NEXT:    vblendps {{.*#+}} ymm4 = ymm4[0,1],ymm5[2],ymm4[3,4],ymm5[5],ymm4[6,7]
-; XOP-NEXT:    vpermil2ps {{.*#+}} ymm0 = ymm2[2],ymm0[3],ymm2[2,3],ymm0[4],ymm2[5,4],ymm0[5]
-; XOP-NEXT:    vpermilps {{.*#+}} ymm1 = ymm1[0,0,3,3,4,4,7,7]
+; XOP-NEXT:    vpermil2ps {{.*#+}} ymm0 = ymm1[2],ymm0[3],ymm1[2,3],ymm0[4],ymm1[5,4],ymm0[5]
+; XOP-NEXT:    vpermilps {{.*#+}} ymm1 = mem[0,0,3,3,4,4,7,7]
 ; XOP-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],ymm1[2],ymm0[3,4],ymm1[5],ymm0[6,7]
 ; XOP-NEXT:    vmovups %ymm0, 32(%rdi)
-; XOP-NEXT:    vmovups %ymm4, 64(%rdi)
 ; XOP-NEXT:    vmovups %ymm3, (%rdi)
+; XOP-NEXT:    vmovups %ymm2, 64(%rdi)
 ; XOP-NEXT:    vzeroupper
 ; XOP-NEXT:    retq
   %s1 = load <8 x i32>, <8 x i32>* %q1, align 4

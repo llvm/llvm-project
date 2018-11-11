@@ -440,9 +440,8 @@ define void @PR39483() {
 ; X32-AVX1-LABEL: PR39483:
 ; X32-AVX1:       # %bb.0: # %entry
 ; X32-AVX1-NEXT:    vmovups 32, %ymm0
-; X32-AVX1-NEXT:    vmovups 64, %ymm1
-; X32-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X32-AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,3]
+; X32-AVX1-NEXT:    vmovups 64, %xmm1
+; X32-AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,1],mem[0,3]
 ; X32-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; X32-AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3,4],mem[5],ymm0[6,7]
 ; X32-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
@@ -484,9 +483,8 @@ define void @PR39483() {
 ; X64-AVX1-LABEL: PR39483:
 ; X64-AVX1:       # %bb.0: # %entry
 ; X64-AVX1-NEXT:    vmovups 32, %ymm0
-; X64-AVX1-NEXT:    vmovups 64, %ymm1
-; X64-AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,1],xmm2[0,3]
+; X64-AVX1-NEXT:    vmovups 64, %xmm1
+; X64-AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,1],mem[0,3]
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
 ; X64-AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2],ymm0[3,4],mem[5],ymm0[6,7]
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
