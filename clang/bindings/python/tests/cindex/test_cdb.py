@@ -11,6 +11,8 @@ import os
 import gc
 import unittest
 import sys
+from .util import skip_if_no_fspath
+from .util import str_to_path
 
 
 kInputsDir = os.path.join(os.path.dirname(__file__), 'INPUTS')
@@ -35,6 +37,13 @@ class TestCDB(unittest.TestCase):
         """Check we get some results if the file exists in the db"""
         cdb = CompilationDatabase.fromDirectory(kInputsDir)
         cmds = cdb.getCompileCommands('/home/john.doe/MyProject/project.cpp')
+        self.assertNotEqual(len(cmds), 0)
+
+    @skip_if_no_fspath
+    def test_lookup_succeed_pathlike(self):
+        """Same as test_lookup_succeed, but with PathLikes"""
+        cdb = CompilationDatabase.fromDirectory(str_to_path(kInputsDir))
+        cmds = cdb.getCompileCommands(str_to_path('/home/john.doe/MyProject/project.cpp'))
         self.assertNotEqual(len(cmds), 0)
 
     def test_all_compilecommand(self):
