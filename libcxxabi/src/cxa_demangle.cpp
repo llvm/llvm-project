@@ -352,7 +352,7 @@ __cxa_demangle(const char *MangledName, char *Buf, size_t *N, int *Status) {
 
   if (AST == nullptr)
     InternalStatus = demangle_invalid_mangled_name;
-  else if (initializeOutputStream(Buf, N, S, 1024))
+  else if (!initializeOutputStream(Buf, N, S, 1024))
     InternalStatus = demangle_memory_alloc_failure;
   else {
     assert(Parser.ForwardTemplateRefs.empty());
