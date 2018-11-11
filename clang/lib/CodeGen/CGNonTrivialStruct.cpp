@@ -463,7 +463,8 @@ template <class Derived> struct GenFuncBase {
     IdentifierInfo *II = &Ctx.Idents.get(FuncName);
     FunctionDecl *FD = FunctionDecl::Create(
         Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
-        II, Ctx.VoidTy, nullptr, SC_PrivateExtern, false, false);
+        II, Ctx.getFunctionType(Ctx.VoidTy, llvm::None, {}), nullptr,
+        SC_PrivateExtern, false, false);
     CodeGenFunction NewCGF(CGM);
     setCGF(&NewCGF);
     CGF->StartFunction(FD, Ctx.VoidTy, F, FI, Args);

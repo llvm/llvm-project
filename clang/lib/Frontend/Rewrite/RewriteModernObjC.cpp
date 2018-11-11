@@ -3099,10 +3099,9 @@ Expr *RewriteModernObjC::SynthMsgSendStretCallExpr(FunctionDecl *MsgSendStretFla
                                                  SmallVectorImpl<Expr*> &MsgExprs,
                                                  ObjCMethodDecl *Method) {
   // Now do the "normal" pointer to function cast.
-  QualType castType = getSimpleFunctionType(returnType, ArgTypes,
-                                            Method ? Method->isVariadic()
-                                                   : false);
-  castType = Context->getPointerType(castType);
+  QualType FuncType = getSimpleFunctionType(
+      returnType, ArgTypes, Method ? Method->isVariadic() : false);
+  QualType castType = Context->getPointerType(FuncType);
 
   // build type for containing the objc_msgSend_stret object.
   static unsigned stretCount=0;
@@ -3176,9 +3175,9 @@ Expr *RewriteModernObjC::SynthMsgSendStretCallExpr(FunctionDecl *MsgSendStretFla
 
   // AST for __Stretn(receiver, args).s;
   IdentifierInfo *ID = &Context->Idents.get(name);
-  FunctionDecl *FD = FunctionDecl::Create(*Context, TUDecl, SourceLocation(),
-                                          SourceLocation(), ID, castType,
-                                          nullptr, SC_Extern, false, false);
+  FunctionDecl *FD =
+      FunctionDecl::Create(*Context, TUDecl, SourceLocation(), SourceLocation(),
+                           ID, FuncType, nullptr, SC_Extern, false, false);
   DeclRefExpr *DRE = new (Context) DeclRefExpr(FD, false, castType, VK_RValue,
                                                SourceLocation());
   CallExpr *STCE = new (Context) CallExpr(*Context, DRE, MsgExprs,

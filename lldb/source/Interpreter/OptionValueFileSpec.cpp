@@ -14,7 +14,6 @@
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/State.h"
 
 using namespace lldb;
@@ -114,7 +113,8 @@ const lldb::DataBufferSP &OptionValueFileSpec::GetFileContents() {
     const auto file_mod_time = FileSystem::Instance().GetModificationTime(m_current_value);
     if (m_data_sp && m_data_mod_time == file_mod_time)
       return m_data_sp;
-    m_data_sp = DataBufferLLVM::CreateFromPath(m_current_value.GetPath());
+    m_data_sp =
+        FileSystem::Instance().CreateDataBuffer(m_current_value.GetPath());
     m_data_mod_time = file_mod_time;
   }
   return m_data_sp;

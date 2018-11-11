@@ -2652,6 +2652,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
                      StartLoc),
       DeclContext(DK), redeclarable_base(C), ODRHash(0),
       EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {
+  assert(T.isNull() || T->isFunctionType());
   setStorageClass(S);
   setInlineSpecified(isInlineSpecified);
   setExplicitSpecified(false);

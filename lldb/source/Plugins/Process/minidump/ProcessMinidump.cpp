@@ -21,7 +21,6 @@
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -101,8 +100,8 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
   lldb::ProcessSP process_sp;
   // Read enough data for the Minidump header
   constexpr size_t header_size = sizeof(MinidumpHeader);
-  auto DataPtr =
-      DataBufferLLVM::CreateSliceFromPath(crash_file->GetPath(), header_size, 0);
+  auto DataPtr = FileSystem::Instance().CreateDataBuffer(crash_file->GetPath(),
+                                                         header_size, 0);
   if (!DataPtr)
     return nullptr;
 
@@ -114,7 +113,8 @@ lldb::ProcessSP ProcessMinidump::CreateInstance(lldb::TargetSP target_sp,
   if (header == nullptr)
     return nullptr;
 
-  auto AllData = DataBufferLLVM::CreateSliceFromPath(crash_file->GetPath(), -1, 0);
+  auto AllData =
+      FileSystem::Instance().CreateDataBuffer(crash_file->GetPath(), -1, 0);
   if (!AllData)
     return nullptr;
 
