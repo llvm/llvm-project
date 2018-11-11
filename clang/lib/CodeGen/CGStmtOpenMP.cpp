@@ -385,12 +385,12 @@ static llvm::Function *emitOutlinedFunctionPrologue(
   FunctionDecl *DebugFunctionDecl = nullptr;
   if (!FO.UIntPtrCastRequired) {
     FunctionProtoType::ExtProtoInfo EPI;
+    QualType FunctionTy = Ctx.getFunctionType(Ctx.VoidTy, llvm::None, EPI);
     DebugFunctionDecl = FunctionDecl::Create(
         Ctx, Ctx.getTranslationUnitDecl(), FO.S->getLocStart(),
-        SourceLocation(), DeclarationName(), Ctx.VoidTy,
-        Ctx.getTrivialTypeSourceInfo(
-            Ctx.getFunctionType(Ctx.VoidTy, llvm::None, EPI)),
-        SC_Static, /*isInlineSpecified=*/false, /*hasWrittenPrototype=*/false);
+        SourceLocation(), DeclarationName(), FunctionTy,
+        Ctx.getTrivialTypeSourceInfo(FunctionTy), SC_Static,
+        /*isInlineSpecified=*/false, /*hasWrittenPrototype=*/false);
   }
   for (const FieldDecl *FD : RD->fields()) {
     QualType ArgType = FD->getType();
