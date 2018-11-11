@@ -4,8 +4,7 @@
 define void @endless_loop() {
 ; CHECK-LABEL: endless_loop:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovaps (%eax), %ymm0
-; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; CHECK-NEXT:    vmovaps (%eax), %xmm0
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]

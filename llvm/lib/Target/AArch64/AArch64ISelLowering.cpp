@@ -8103,6 +8103,10 @@ bool AArch64TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 bool AArch64TargetLowering::shouldReduceLoadWidth(SDNode *Load,
                                                   ISD::LoadExtType ExtTy,
                                                   EVT NewVT) const {
+  // TODO: This may be worth removing. Check regression tests for diffs.
+  if (!TargetLoweringBase::shouldReduceLoadWidth(Load, ExtTy, NewVT))
+    return false;
+
   // If we're reducing the load width in order to avoid having to use an extra
   // instruction to do extension then it's probably a good idea.
   if (ExtTy != ISD::NON_EXTLOAD)

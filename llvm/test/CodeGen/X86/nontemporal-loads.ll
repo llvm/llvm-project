@@ -852,12 +852,12 @@ define <8 x i32> @test_arg_v8i32(<8 x i32> %arg, <8 x i32>* %src) {
 ;
 ; AVX1-LABEL: test_arg_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovntdqa (%rdi), %xmm1
-; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpaddd %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vmovntdqa (%rdi), %xmm2
+; AVX1-NEXT:    vpaddd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_arg_v8i32:
@@ -932,12 +932,12 @@ define <4 x i64> @test_arg_v4i64(<4 x i64> %arg, <4 x i64>* %src) {
 ;
 ; AVX1-LABEL: test_arg_v4i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovntdqa (%rdi), %xmm1
-; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpaddq %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vmovntdqa (%rdi), %xmm2
+; AVX1-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_arg_v4i64:
@@ -973,12 +973,12 @@ define <16 x i16> @test_arg_v16i16(<16 x i16> %arg, <16 x i16>* %src) {
 ;
 ; AVX1-LABEL: test_arg_v16i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovntdqa (%rdi), %xmm1
-; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpaddw %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpaddw %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vmovntdqa (%rdi), %xmm2
+; AVX1-NEXT:    vpaddw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_arg_v16i16:
@@ -1014,12 +1014,12 @@ define <32 x i8> @test_arg_v32i8(<32 x i8> %arg, <32 x i8>* %src) {
 ;
 ; AVX1-LABEL: test_arg_v32i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovntdqa (%rdi), %xmm1
-; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vpaddb %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpaddb %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vmovntdqa (%rdi), %xmm2
+; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_arg_v32i8:
@@ -1114,18 +1114,18 @@ define <16 x i32> @test_arg_v16i32(<16 x i32> %arg, <16 x i32>* %src) {
 ;
 ; AVX1-LABEL: test_arg_v16i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm3
-; AVX1-NEXT:    vmovntdqa (%rdi), %xmm4
-; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
-; AVX1-NEXT:    vpaddd %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vpaddd %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX1-NEXT:    vpaddd %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vmovntdqa (%rdi), %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm3
+; AVX1-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_arg_v16i32:
@@ -1220,18 +1220,18 @@ define <8 x i64> @test_arg_v8i64(<8 x i64> %arg, <8 x i64>* %src) {
 ;
 ; AVX1-LABEL: test_arg_v8i64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm3
-; AVX1-NEXT:    vmovntdqa (%rdi), %xmm4
-; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
-; AVX1-NEXT:    vpaddq %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vpaddq %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX1-NEXT:    vpaddq %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vmovntdqa (%rdi), %xmm3
+; AVX1-NEXT:    vpaddq %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm3
+; AVX1-NEXT:    vpaddq %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_arg_v8i64:
@@ -1275,18 +1275,18 @@ define <32 x i16> @test_arg_v32i16(<32 x i16> %arg, <32 x i16>* %src) {
 ;
 ; AVX1-LABEL: test_arg_v32i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm3
-; AVX1-NEXT:    vmovntdqa (%rdi), %xmm4
-; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
-; AVX1-NEXT:    vpaddw %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vpaddw %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX1-NEXT:    vpaddw %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpaddw %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpaddw %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vmovntdqa (%rdi), %xmm3
+; AVX1-NEXT:    vpaddw %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpaddw %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm3
+; AVX1-NEXT:    vpaddw %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_arg_v32i16:
@@ -1346,18 +1346,18 @@ define <64 x i8> @test_arg_v64i8(<64 x i8> %arg, <64 x i8>* %src) {
 ;
 ; AVX1-LABEL: test_arg_v64i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm2
-; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm3
-; AVX1-NEXT:    vmovntdqa (%rdi), %xmm4
-; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm6
-; AVX1-NEXT:    vpaddb %xmm5, %xmm6, %xmm5
-; AVX1-NEXT:    vpaddb %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; AVX1-NEXT:    vpaddb %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpaddb %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; AVX1-NEXT:    vmovntdqa 16(%rdi), %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpaddb %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vmovntdqa (%rdi), %xmm3
+; AVX1-NEXT:    vpaddb %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovntdqa 48(%rdi), %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vpaddb %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vmovntdqa 32(%rdi), %xmm3
+; AVX1-NEXT:    vpaddb %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_arg_v64i8:

@@ -1498,64 +1498,45 @@ Instruction *InstCombiner::visitStoreInst(StoreInst &SI) {
   if (isa<UndefValue>(Val))
     return eraseInstFromFunction(SI);
 
-  // If this store is the last instruction in the basic block (possibly
-  // excepting debug info instructions), and if the block ends with an
-  // unconditional branch, try to move it to the successor block.
+  // If this store is the second-to-last instruction in the basic block
+  // (excluding debug info and bitcasts of pointers) and if the block ends with
+  // an unconditional branch, try to move the store to the successor block.
   BBI = SI.getIterator();
   do {
     ++BBI;
   } while (isa<DbgInfoIntrinsic>(BBI) ||
            (isa<BitCastInst>(BBI) && BBI->getType()->isPointerTy()));
+
   if (BranchInst *BI = dyn_cast<BranchInst>(BBI))
     if (BI->isUnconditional())
-      if (SimplifyStoreAtEndOfBlock(SI))
-        return nullptr;  // xform done!
+      mergeStoreIntoSuccessor(SI);
 
   return nullptr;
 }
 
-/// SimplifyStoreAtEndOfBlock - Turn things like:
+/// Try to transform:
 ///   if () { *P = v1; } else { *P = v2 }
-/// into a phi node with a store in the successor.
-///
-/// Simplify things like:
+/// or:
 ///   *P = v1; if () { *P = v2; }
 /// into a phi node with a store in the successor.
-///
-bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
+bool InstCombiner::mergeStoreIntoSuccessor(StoreInst &SI) {
   assert(SI.isUnordered() &&
-         "this code has not been auditted for volatile or ordered store case");
+         "This code has not been audited for volatile or ordered store case.");
 
+  // Check if the successor block has exactly 2 incoming edges.
   BasicBlock *StoreBB = SI.getParent();
-
-  // Check to see if the successor block has exactly two incoming edges.  If
-  // so, see if the other predecessor contains a store to the same location.
-  // if so, insert a PHI node (if needed) and move the stores down.
   BasicBlock *DestBB = StoreBB->getTerminator()->getSuccessor(0);
-
-  // Determine whether Dest has exactly two predecessors and, if so, compute
-  // the other predecessor.
-  pred_iterator PI = pred_begin(DestBB);
-  BasicBlock *P = *PI;
-  BasicBlock *OtherBB = nullptr;
-
-  if (P != StoreBB)
-    OtherBB = P;
-
-  if (++PI == pred_end(DestBB))
+  if (pred_size(DestBB) != 2)
     return false;
 
-  P = *PI;
-  if (P != StoreBB) {
-    if (OtherBB)
-      return false;
-    OtherBB = P;
-  }
-  if (++PI != pred_end(DestBB))
-    return false;
+  // Capture the other block (the block that doesn't contain our store).
+  pred_iterator PredIter = pred_begin(DestBB);
+  if (*PredIter == StoreBB)
+    ++PredIter;
+  BasicBlock *OtherBB = *PredIter;
 
-  // Bail out if all the relevant blocks aren't distinct (this can happen,
-  // for example, if SI is in an infinite loop)
+  // Bail out if all of the relevant blocks aren't distinct. This can happen,
+  // for example, if SI is in an infinite loop.
   if (StoreBB == DestBB || OtherBB == DestBB)
     return false;
 
@@ -1566,7 +1547,7 @@ bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
     return false;
 
   // If the other block ends in an unconditional branch, check for the 'if then
-  // else' case.  there is an instruction before the branch.
+  // else' case. There is an instruction before the branch.
   StoreInst *OtherStore = nullptr;
   if (OtherBr->isUnconditional()) {
     --BBI;
@@ -1591,7 +1572,7 @@ bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
       return false;
 
     // Okay, we know that OtherBr now goes to Dest and StoreBB, so this is an
-    // if/then triangle.  See if there is a store to the same ptr as SI that
+    // if/then triangle. See if there is a store to the same ptr as SI that
     // lives in OtherBB.
     for (;; --BBI) {
       // Check to see if we find the matching store.
@@ -1602,15 +1583,14 @@ bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
         break;
       }
       // If we find something that may be using or overwriting the stored
-      // value, or if we run out of instructions, we can't do the xform.
+      // value, or if we run out of instructions, we can't do the transform.
       if (BBI->mayReadFromMemory() || BBI->mayThrow() ||
           BBI->mayWriteToMemory() || BBI == OtherBB->begin())
         return false;
     }
 
-    // In order to eliminate the store in OtherBr, we have to
-    // make sure nothing reads or overwrites the stored value in
-    // StoreBB.
+    // In order to eliminate the store in OtherBr, we have to make sure nothing
+    // reads or overwrites the stored value in StoreBB.
     for (BasicBlock::iterator I = StoreBB->begin(); &*I != &SI; ++I) {
       // FIXME: This should really be AA driven.
       if (I->mayReadFromMemory() || I->mayThrow() || I->mayWriteToMemory())
@@ -1627,16 +1607,13 @@ bool InstCombiner::SimplifyStoreAtEndOfBlock(StoreInst &SI) {
     MergedVal = InsertNewInstBefore(PN, DestBB->front());
   }
 
-  // Advance to a place where it is safe to insert the new store and
-  // insert it.
+  // Advance to a place where it is safe to insert the new store and insert it.
   BBI = DestBB->getFirstInsertionPt();
   StoreInst *NewSI = new StoreInst(MergedVal, SI.getOperand(1),
-                                   SI.isVolatile(),
-                                   SI.getAlignment(),
-                                   SI.getOrdering(),
-                                   SI.getSyncScopeID());
+                                   SI.isVolatile(), SI.getAlignment(),
+                                   SI.getOrdering(), SI.getSyncScopeID());
   InsertNewInstBefore(NewSI, *BBI);
-  // The debug locations of the original instructions might differ; merge them.
+  // The debug locations of the original instructions might differ. Merge them.
   NewSI->applyMergedLocation(SI.getDebugLoc(), OtherStore->getDebugLoc());
 
   // If the two stores had AA tags, merge them.

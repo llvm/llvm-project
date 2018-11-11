@@ -75,23 +75,26 @@ movdqu %xmm5, %xmm0
 # CHECK-NEXT: [13]  - PdFPU2
 # CHECK-NEXT: [14]  - PdFPU3
 # CHECK-NEXT: [15]  - PdFPXBR
-# CHECK-NEXT: [16]  - PdMul
+# CHECK-NEXT: [16.0] - PdLoad
+# CHECK-NEXT: [16.1] - PdLoad
+# CHECK-NEXT: [17]  - PdMul
+# CHECK-NEXT: [18]  - PdStore
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.67   1.33    -     3.00    -      -     3.33   3.67    -      -      -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.67   1.33    -     3.00    -      -     3.33   3.67    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     pxor	%mm0, %mm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -     movq	%mm0, %mm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xorps	%xmm0, %xmm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.67   0.33    -      -      -      -     0.33   0.67    -      -      -      -     movaps	%xmm0, %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.67   0.33    -      -      -      -     0.33   0.67    -      -      -      -     movups	%xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.67   0.33    -      -      -      -     1.00    -      -      -      -      -     movapd	%xmm2, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.67   0.33    -      -      -      -     0.33   0.67    -      -      -      -     movupd	%xmm3, %xmm4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -     movdqa	%xmm4, %xmm5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     0.33   0.67    -      -      -      -     movdqu	%xmm5, %xmm0
+# CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     pxor	%mm0, %mm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -      -      -      -     movq	%mm0, %mm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     xorps	%xmm0, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.67   0.33    -      -      -      -     0.33   0.67    -      -      -      -      -      -      -     movaps	%xmm0, %xmm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.67   0.33    -      -      -      -     0.33   0.67    -      -      -      -      -      -      -     movups	%xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.67   0.33    -      -      -      -     1.00    -      -      -      -      -      -      -      -     movapd	%xmm2, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.67   0.33    -      -      -      -     0.33   0.67    -      -      -      -      -      -      -     movupd	%xmm3, %xmm4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     1.00    -      -      -      -      -      -      -      -     movdqa	%xmm4, %xmm5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     0.33   0.67    -      -      -      -      -      -      -     movdqu	%xmm5, %xmm0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01234567

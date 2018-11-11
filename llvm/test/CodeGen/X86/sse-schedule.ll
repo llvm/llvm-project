@@ -2230,13 +2230,13 @@ define void @test_ldmxcsr(i32 %a0) {
 ;
 ; BDVER2-SSE-LABEL: test_ldmxcsr:
 ; BDVER2-SSE:       # %bb.0:
-; BDVER2-SSE-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:0.50]
+; BDVER2-SSE-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
 ; BDVER2-SSE-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp) # sched: [5:0.50]
 ; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
 ;
 ; BDVER2-LABEL: test_ldmxcsr:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:0.50]
+; BDVER2-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # sched: [1:1.00]
 ; BDVER2-NEXT:    vldmxcsr -{{[0-9]+}}(%rsp) # sched: [5:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -5290,12 +5290,12 @@ define void @test_sfence() {
 ;
 ; BDVER2-SSE-LABEL: test_sfence:
 ; BDVER2-SSE:       # %bb.0:
-; BDVER2-SSE-NEXT:    sfence # sched: [1:0.50]
+; BDVER2-SSE-NEXT:    sfence # sched: [1:1.00]
 ; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
 ;
 ; BDVER2-LABEL: test_sfence:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    sfence # sched: [1:0.50]
+; BDVER2-NEXT:    sfence # sched: [1:1.00]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-SSE-LABEL: test_sfence:
@@ -5847,13 +5847,13 @@ define i32 @test_stmxcsr() {
 ;
 ; BDVER2-SSE-LABEL: test_stmxcsr:
 ; BDVER2-SSE:       # %bb.0:
-; BDVER2-SSE-NEXT:    stmxcsr -{{[0-9]+}}(%rsp) # sched: [1:0.50]
+; BDVER2-SSE-NEXT:    stmxcsr -{{[0-9]+}}(%rsp) # sched: [1:1.00]
 ; BDVER2-SSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # sched: [5:0.50]
 ; BDVER2-SSE-NEXT:    retq # sched: [5:1.00]
 ;
 ; BDVER2-LABEL: test_stmxcsr:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # sched: [1:0.50]
+; BDVER2-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # sched: [1:1.00]
 ; BDVER2-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # sched: [5:0.50]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;

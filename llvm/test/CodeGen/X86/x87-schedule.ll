@@ -2792,14 +2792,14 @@ define void @test_fist_fistp_fisttp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %ecx # sched: [5:0.50]
 ; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; BDVER2-NEXT:    #APP
-; BDVER2-NEXT:    fists (%edx) # sched: [1:0.50]
-; BDVER2-NEXT:    fistl (%ecx) # sched: [1:0.50]
-; BDVER2-NEXT:    fistps (%edx) # sched: [1:0.50]
-; BDVER2-NEXT:    fistpl (%ecx) # sched: [1:0.50]
-; BDVER2-NEXT:    fistpll (%eax) # sched: [1:0.50]
-; BDVER2-NEXT:    fisttps (%edx) # sched: [1:0.50]
-; BDVER2-NEXT:    fisttpl (%ecx) # sched: [1:0.50]
-; BDVER2-NEXT:    fisttpll (%eax) # sched: [1:0.50]
+; BDVER2-NEXT:    fists (%edx) # sched: [1:1.00]
+; BDVER2-NEXT:    fistl (%ecx) # sched: [1:1.00]
+; BDVER2-NEXT:    fistps (%edx) # sched: [1:1.00]
+; BDVER2-NEXT:    fistpl (%ecx) # sched: [1:1.00]
+; BDVER2-NEXT:    fistpll (%eax) # sched: [1:1.00]
+; BDVER2-NEXT:    fisttps (%edx) # sched: [1:1.00]
+; BDVER2-NEXT:    fisttpl (%ecx) # sched: [1:1.00]
+; BDVER2-NEXT:    fisttpll (%eax) # sched: [1:1.00]
 ; BDVER2-NEXT:    #NO_APP
 ; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
@@ -4672,12 +4672,12 @@ define void @test_fst_fstp(i16* %a0, i32* %a1, i64 *%a2) optsize {
 ; BDVER2-NEXT:    movl {{[0-9]+}}(%esp), %edx # sched: [5:0.50]
 ; BDVER2-NEXT:    #APP
 ; BDVER2-NEXT:    fst %st(0) # sched: [1:0.50]
-; BDVER2-NEXT:    fsts (%edx) # sched: [1:0.50]
-; BDVER2-NEXT:    fstl (%ecx) # sched: [1:0.50]
+; BDVER2-NEXT:    fsts (%edx) # sched: [1:1.00]
+; BDVER2-NEXT:    fstl (%ecx) # sched: [1:1.00]
 ; BDVER2-NEXT:    fstp %st(0) # sched: [1:0.50]
-; BDVER2-NEXT:    fstpl (%edx) # sched: [1:0.50]
-; BDVER2-NEXT:    fstpl (%ecx) # sched: [1:0.50]
-; BDVER2-NEXT:    fstpt (%eax) # sched: [1:0.50]
+; BDVER2-NEXT:    fstpl (%edx) # sched: [1:1.00]
+; BDVER2-NEXT:    fstpl (%ecx) # sched: [1:1.00]
+; BDVER2-NEXT:    fstpt (%eax) # sched: [1:1.00]
 ; BDVER2-NEXT:    #NO_APP
 ; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;

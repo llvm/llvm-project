@@ -1,4 +1,4 @@
-//===-- GCs.h - Garbage collector linkage hacks ---------------------------===//
+//===-- BuiltinGCs.h - Garbage collector linkage hacks --------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains hack functions to force linking in the GC components.
+// This file contains hack functions to force linking in the builtin GC
+// components.
 //
 //===----------------------------------------------------------------------===//
 
