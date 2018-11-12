@@ -72,6 +72,7 @@ bool ICFLoopSafetyInfo::anyBlockMayThrow() const {
 void ICFLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   assert(CurLoop != nullptr && "CurLoop can't be null");
   ICF.clear();
+  MW.clear();
   MayThrow = false;
   // Figure out the fact that at least one block may throw.
   for (auto &BB : CurLoop->blocks())
@@ -84,12 +85,14 @@ void ICFLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
 
 void ICFLoopSafetyInfo::insertInstructionTo(const BasicBlock *BB) {
   ICF.invalidateBlock(BB);
+  MW.invalidateBlock(BB);
 }
 
 void ICFLoopSafetyInfo::removeInstruction(const Instruction *Inst) {
   // TODO: So far we just conservatively drop cache, but maybe we can not do it
   // when Inst is not an ICF instruction. Follow-up on that.
   ICF.invalidateBlock(Inst->getParent());
+  MW.invalidateBlock(Inst->getParent());
 }
 
 void LoopSafetyInfo::computeBlockColors(const Loop *CurLoop) {
@@ -254,6 +257,34 @@ bool ICFLoopSafetyInfo::isGuaranteedToExecute(const Instruction &Inst,
                                               const Loop *CurLoop) const {
   return !ICF.isDominatedByICFIFromSameBlock(&Inst) &&
          allLoopPathsLeadToBlock(CurLoop, Inst.getParent(), DT);
+}
+
+bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const BasicBlock *BB,
+                                                 const Loop *CurLoop) const {
+  assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
+
+  // Fast path: there are no instructions before header.
+  if (BB == CurLoop->getHeader())
+    return true;
+
+  // Collect all transitive predecessors of BB in the same loop. This set will
+  // be a subset of the blocks within the loop.
+  SmallPtrSet<const BasicBlock *, 4> Predecessors;
+  collectTransitivePredecessors(CurLoop, BB, Predecessors);
+  // Find if there any instruction in either predecessor that could write
+  // to memory.
+  for (auto *Pred : Predecessors)
+    if (MW.mayWriteToMemory(Pred))
+      return false;
+  return true;
+}
+
+bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const Instruction &I,
+                                                 const Loop *CurLoop) const {
+  auto *BB = I.getParent();
+  assert(CurLoop->contains(BB) && "Should only be called for loop blocks!");
+  return !MW.isDominatedByMemoryWriteFromSameBlock(&I) &&
+         doesNotWriteMemoryBefore(BB, CurLoop);
 }
 
 namespace {

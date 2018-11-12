@@ -549,24 +549,24 @@ void DWARFContext::dump(
   }
 
   if (shouldDump(Explicit, ".debug_pubnames", DIDT_ID_DebugPubnames,
-                 DObj->getPubNamesSection()))
-    DWARFDebugPubTable(DObj->getPubNamesSection(), isLittleEndian(), false)
+                 DObj->getPubNamesSection().Data))
+    DWARFDebugPubTable(*DObj, DObj->getPubNamesSection(), isLittleEndian(), false)
         .dump(OS);
 
   if (shouldDump(Explicit, ".debug_pubtypes", DIDT_ID_DebugPubtypes,
-                 DObj->getPubTypesSection()))
-    DWARFDebugPubTable(DObj->getPubTypesSection(), isLittleEndian(), false)
+                 DObj->getPubTypesSection().Data))
+    DWARFDebugPubTable(*DObj, DObj->getPubTypesSection(), isLittleEndian(), false)
         .dump(OS);
 
   if (shouldDump(Explicit, ".debug_gnu_pubnames", DIDT_ID_DebugGnuPubnames,
-                 DObj->getGnuPubNamesSection()))
-    DWARFDebugPubTable(DObj->getGnuPubNamesSection(), isLittleEndian(),
+                 DObj->getGnuPubNamesSection().Data))
+    DWARFDebugPubTable(*DObj, DObj->getGnuPubNamesSection(), isLittleEndian(),
                        true /* GnuStyle */)
         .dump(OS);
 
   if (shouldDump(Explicit, ".debug_gnu_pubtypes", DIDT_ID_DebugGnuPubtypes,
-                 DObj->getGnuPubTypesSection()))
-    DWARFDebugPubTable(DObj->getGnuPubTypesSection(), isLittleEndian(),
+                 DObj->getGnuPubTypesSection().Data))
+    DWARFDebugPubTable(*DObj, DObj->getGnuPubTypesSection(), isLittleEndian(),
                        true /* GnuStyle */)
         .dump(OS);
 
@@ -1265,6 +1265,10 @@ class DWARFObjInMemory final : public DWARFObject {
   DWARFSectionMap AppleNamespacesSection;
   DWARFSectionMap AppleObjCSection;
   DWARFSectionMap DebugNamesSection;
+  DWARFSectionMap PubNamesSection;
+  DWARFSectionMap PubTypesSection;
+  DWARFSectionMap GnuPubNamesSection;
+  DWARFSectionMap GnuPubTypesSection;
 
   DWARFSectionMap *mapNameToDWARFSection(StringRef Name) {
     return StringSwitch<DWARFSectionMap *>(Name)
@@ -1281,6 +1285,10 @@ class DWARFObjInMemory final : public DWARFObject {
         .Case("debug_str_offsets.dwo", &StringOffsetDWOSection)
         .Case("debug_addr", &AddrSection)
         .Case("apple_names", &AppleNamesSection)
+        .Case("debug_pubnames", &PubNamesSection)
+        .Case("debug_pubtypes", &PubTypesSection)
+        .Case("debug_gnu_pubnames", &GnuPubNamesSection)
+        .Case("debug_gnu_pubtypes", &GnuPubTypesSection)
         .Case("apple_types", &AppleTypesSection)
         .Case("apple_namespaces", &AppleNamespacesSection)
         .Case("apple_namespac", &AppleNamespacesSection)
@@ -1294,12 +1302,8 @@ class DWARFObjInMemory final : public DWARFObject {
   StringRef EHFrameSection;
   StringRef StringSection;
   StringRef MacinfoSection;
-  StringRef PubNamesSection;
-  StringRef PubTypesSection;
-  StringRef GnuPubNamesSection;
   StringRef AbbrevDWOSection;
   StringRef StringDWOSection;
-  StringRef GnuPubTypesSection;
   StringRef CUIndexSection;
   StringRef GdbIndexSection;
   StringRef TUIndexSection;
@@ -1319,10 +1323,6 @@ class DWARFObjInMemory final : public DWARFObject {
         .Case("eh_frame", &EHFrameSection)
         .Case("debug_str", &StringSection)
         .Case("debug_macinfo", &MacinfoSection)
-        .Case("debug_pubnames", &PubNamesSection)
-        .Case("debug_pubtypes", &PubTypesSection)
-        .Case("debug_gnu_pubnames", &GnuPubNamesSection)
-        .Case("debug_gnu_pubtypes", &GnuPubTypesSection)
         .Case("debug_abbrev.dwo", &AbbrevDWOSection)
         .Case("debug_str.dwo", &StringDWOSection)
         .Case("debug_cu_index", &CUIndexSection)
@@ -1598,12 +1598,12 @@ public:
     return RnglistsSection;
   }
   StringRef getMacinfoSection() const override { return MacinfoSection; }
-  StringRef getPubNamesSection() const override { return PubNamesSection; }
-  StringRef getPubTypesSection() const override { return PubTypesSection; }
-  StringRef getGnuPubNamesSection() const override {
+  const DWARFSection &getPubNamesSection() const override { return PubNamesSection; }
+  const DWARFSection &getPubTypesSection() const override { return PubTypesSection; }
+  const DWARFSection &getGnuPubNamesSection() const override {
     return GnuPubNamesSection;
   }
-  StringRef getGnuPubTypesSection() const override {
+  const DWARFSection &getGnuPubTypesSection() const override {
     return GnuPubTypesSection;
   }
   const DWARFSection &getAppleNamesSection() const override {

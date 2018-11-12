@@ -3,31 +3,24 @@
 ; IPSCCP can simplify, so we can test the case where IPSCCP makes changes.
 
 ; RUN: opt -disable-verify -debug-pass-manager \
-; RUN:     -passes='ipsccp,globalopt' -S  %s 2>&1 \
+; RUN:     -passes='function(require<domtree>,require<postdomtree>),ipsccp,function(require<domtree>,require<postdomtree>)' -S  %s 2>&1 \
 ; RUN:     | FileCheck -check-prefixes='IR,NEW-PM' %s
 
-; RUN: opt -passes='ipsccp,function(verify<domtree>)' -S  %s | FileCheck -check-prefixes='IR' %s
+; RUN: opt -passes='function(require<postdomtree>),ipsccp,function(verify<domtree>)' -S  %s | FileCheck -check-prefixes='IR' %s
 
 ; NEW-PM: Starting llvm::Module pass manager run.
-; NEW-PM-NEXT: Running pass: IPSCCPPass
-; NEW-PM-DAG: Running analysis: TargetLibraryAnalysis
-; NEW-PM-DAG: Running analysis: InnerAnalysisManagerProxy
+; NEW-PM: Running analysis: DominatorTreeAnalysis on f1
+; NEW-PM: Running analysis: PostDominatorTreeAnalysis on f1
+; NEW-PM: Running analysis: DominatorTreeAnalysis on f2
+; NEW-PM: Running analysis: PostDominatorTreeAnalysis on f2
+; NEW-PM: Running pass: IPSCCPPass
 ; NEW-PM-DAG: Running analysis: AssumptionAnalysis on f1
-; NEW-PM-DAG: Running analysis: DominatorTreeAnalysis on f1
-; NEW-PM-DAG: Running analysis: PassInstrumentationAnalysis on f1
-; NEW-PM-DAG: Running analysis: DominatorTreeAnalysis on f2
 ; NEW-PM-DAG: Running analysis: AssumptionAnalysis on f2
-; NEW-PM-DAG: Running analysis: PassInstrumentationAnalysis on f2
 ; NEW-PM-NEXT: Invalidating all non-preserved analyses for:
 ; NEW-PM-NEXT: Invalidating all non-preserved analyses for: f1
 ; NEW-PM-NEXT: Invalidating all non-preserved analyses for: f2
-; NEW-PM-NEXT: Running pass: GlobalOptPass on
-; NEW-PM-DAG: Running analysis: BlockFrequencyAnalysis on f2
-; NEW-PM-DAG: Running analysis: LoopAnalysis on f2
-; NEW-PM-DAG: Running analysis: BranchProbabilityAnalysis on f2
-; NEW-PM-DAG: Running analysis: TargetLibraryAnalysis on f2
-; NEW-PM-NEXT: Running analysis: TargetIRAnalysis on f1
-; NEW-PM-NEXT: Invalidating all non-preserved analyses for:
+; NEW-PM-NEXT: Running pass: ModuleToFunctionPassAdaptor
+; NEW-PM-NOT: Running analysis:
 
 ; IR-LABEL: @f1
 ; IR-LABEL: entry:

@@ -9,10 +9,10 @@ r0 = add(pc, ##dst2@PCREL)
 r0 = add(pc, ##dst4@PCREL)
 r0 = add(pc, ##dst8@PCREL)
 
-# CHECK: 00000000 l       .sbss.1                 00000001 dst1
-# CHECK: 00000000 l       .sbss.2                 00000002 dst2
-# CHECK: 00000000 l       .sbss.4                 00000004 dst4
-# CHECK: 00000000 l       .sbss.8                 00000008 dst8
+# CHECK: 00000000 l     O .sbss.1                 00000001 dst1
+# CHECK: 00000000 l     O .sbss.2                 00000002 dst2
+# CHECK: 00000000 l     O .sbss.4                 00000004 dst4
+# CHECK: 00000000 l     O .sbss.8                 00000008 dst8
 # CHECK: 00000000 l    d  .sbss.1                 00000000 .sbss.1
 # CHECK: 00000000 l    d  .sbss.2                 00000000 .sbss.2
 # CHECK: 00000000 l    d  .sbss.4                 00000000 .sbss.4

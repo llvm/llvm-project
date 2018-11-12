@@ -38,6 +38,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <vector>
 
@@ -196,7 +197,7 @@ std::string ToolName;
 
 static void error(Twine Message, Twine Path = Twine()) {
   HadError = true;
-  errs() << ToolName << ": " << Path << ": " << Message << ".\n";
+  WithColor::error(errs(), ToolName) << Path << ": " << Message << ".\n";
 }
 
 static bool error(std::error_code EC, Twine Path = Twine()) {
@@ -213,7 +214,7 @@ static bool error(std::error_code EC, Twine Path = Twine()) {
 static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
                   StringRef ArchitectureName = StringRef()) {
   HadError = true;
-  errs() << ToolName << ": " << FileName;
+  WithColor::error(errs(), ToolName) << FileName;
 
   Expected<StringRef> NameOrErr = C.getName();
   // TODO: if we have a error getting the name then it would be nice to print
@@ -242,7 +243,7 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
 static void error(llvm::Error E, StringRef FileName,
                   StringRef ArchitectureName = StringRef()) {
   HadError = true;
-  errs() << ToolName << ": " << FileName;
+  WithColor::error(errs(), ToolName) << FileName;
 
   if (!ArchitectureName.empty())
     errs() << " (for architecture " << ArchitectureName << ") ";
@@ -1775,8 +1776,8 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
         }
         if (SymbolicFile *O = dyn_cast<SymbolicFile>(&*ChildOrErr.get())) {
           if (!MachOPrintSizeWarning && PrintSize &&  isa<MachOObjectFile>(O)) {
-            errs() << ToolName << ": warning sizes with -print-size for Mach-O "
-                      "files are always zero.\n";
+            WithColor::warning(errs(), ToolName)
+                << "sizes with -print-size for Mach-O files are always zero.\n";
             MachOPrintSizeWarning = true;
           }
           if (!checkMachOAndArchFlags(O, Filename))
@@ -2016,8 +2017,8 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
   }
   if (SymbolicFile *O = dyn_cast<SymbolicFile>(&Bin)) {
     if (!MachOPrintSizeWarning && PrintSize &&  isa<MachOObjectFile>(O)) {
-      errs() << ToolName << ": warning sizes with -print-size for Mach-O files "
-                "are always zero.\n";
+      WithColor::warning(errs(), ToolName)
+          << "sizes with -print-size for Mach-O files are always zero.\n";
       MachOPrintSizeWarning = true;
     }
     if (!checkMachOAndArchFlags(O, Filename))
