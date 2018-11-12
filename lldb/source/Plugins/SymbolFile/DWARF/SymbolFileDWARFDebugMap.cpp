@@ -1491,7 +1491,7 @@ SymbolFileDWARFDebugMap::GetASTData(lldb::LanguageType language) {
         // We found the source data for the AST data blob.
         // Read it in and add it to our return vector.
         std::shared_ptr<DataBufferLLVM> data_buf_sp 
-                = DataBufferLLVM::CreateFromPath(file_spec.GetPath());
+                = FileSystem::Instance().CreateDataBuffer(file_spec.GetPath());
         if (data_buf_sp) {
           ast_datas.push_back(data_buf_sp);
           if (log)

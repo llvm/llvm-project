@@ -1051,7 +1051,7 @@ std::string SwiftASTContext::GetResourceDir(StringRef platform_sdk_path,
 
   // First, check if there's something in our bundle.
   {
-    FileSpec swift_dir_spec(swift_dir, false);
+    FileSpec swift_dir_spec(swift_dir);
     if (swift_dir_spec) {
       if (log)
         log->Printf("%s: trying ePathTypeSwiftDir: %s", fn,
@@ -1126,7 +1126,7 @@ std::string SwiftASTContext::GetResourceDir(StringRef platform_sdk_path,
           llvm::sys::path::append(path, "usr/lib/swift");
           StringRef resource_dir = path;
           llvm::sys::path::append(path, swift_stdlib_os_dir);
-          if (IsDirectory(FileSpec(path, false))) {
+          if (IsDirectory(FileSpec(path))) {
             if (log)
               log->Printf("%s: found Swift resource dir via "
                           "Xcode contents path + cross-compilation SDK "
@@ -1168,7 +1168,7 @@ std::string SwiftASTContext::GetResourceDir(StringRef platform_sdk_path,
   // to the lldb build dir.  This looks much different than the install-
   // dir layout that the previous checks would try.
   {
-    FileSpec faux_swift_dir_spec(swift_dir, false);
+    FileSpec faux_swift_dir_spec(swift_dir);
     if (faux_swift_dir_spec) {
 // We can't use a C++11 stdlib regex feature here because it
 // doesn't work on Ubuntu 14.04 x86_64.  Once we don't care
@@ -1631,7 +1631,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
 
   StringRef resource_dir = swift_ast_sp->GetResourceDir(triple);
   ConfigureResourceDirs(swift_ast_sp->GetCompilerInvocation(),
-                        FileSpec(resource_dir, false), triple);
+                        FileSpec(resource_dir), triple);
 
   // Apply source path remappings found in the module's dSYM.
   swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
