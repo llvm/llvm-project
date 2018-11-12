@@ -10,16 +10,12 @@
 #ifndef liblldb_Predicate_h_
 #define liblldb_Predicate_h_
 
-// C Includes
 #include <stdint.h>
 #include <time.h>
 
-// C++ Includes
 #include <condition_variable>
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-defines.h"
 

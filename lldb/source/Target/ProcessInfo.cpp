@@ -9,12 +9,8 @@
 
 #include "lldb/Target/ProcessInfo.h"
 
-// C Includes
-// C++ Includes
 #include <climits>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/Stream.h"
 

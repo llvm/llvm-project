@@ -7,10 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Project includes
 #include "RegisterContextMinidump_ARM.h"
 
-// Other libraries and framework includes
 #include "Utility/ARM_DWARF_Registers.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/DataExtractor.h"

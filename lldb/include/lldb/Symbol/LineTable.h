@@ -10,12 +10,8 @@
 #ifndef liblldb_LineTable_h_
 #define liblldb_LineTable_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Core/Section.h"

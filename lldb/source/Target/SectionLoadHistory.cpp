@@ -9,10 +9,6 @@
 
 #include "lldb/Target/SectionLoadHistory.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Utility/Stream.h"
 

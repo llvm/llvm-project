@@ -9,14 +9,11 @@
 
 #include "CommunicationKDP.h"
 
-// C Includes
 #include <errno.h>
 #include <limits.h>
 #include <string.h>
 
-// C++ Includes
 
-// Other libraries and framework includes
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Target/Process.h"
@@ -27,7 +24,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/UUID.h"
 
-// Project includes
 #include "ProcessKDPLog.h"
 
 using namespace lldb;

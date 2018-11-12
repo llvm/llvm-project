@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -18,12 +17,9 @@
 #include <sys/utsname.h>
 #include <unistd.h>
 
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/ScopedPrinter.h"
 
-// Project includes
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"

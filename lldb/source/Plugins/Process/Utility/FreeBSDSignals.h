@@ -10,7 +10,6 @@
 #ifndef liblldb_FreeBSDSignals_H_
 #define liblldb_FreeBSDSignals_H_
 
-// Project includes
 #include "lldb/Target/UnixSignals.h"
 
 namespace lldb_private {

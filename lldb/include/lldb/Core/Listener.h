@@ -10,22 +10,22 @@
 #ifndef liblldb_Select_h_
 #define liblldb_Select_h_
 
-#include "lldb/Core/Broadcaster.h" // for Broadcaster::BroadcasterImplWP
+#include "lldb/Core/Broadcaster.h"
 #include "lldb/Utility/Timeout.h"
-#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-forward.h" // for BroadcasterManagerWP, EventSP
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-forward.h"
 
 #include <condition_variable>
 #include <list>
 #include <map>
-#include <memory> // for owner_less, enable_shared_from_this
+#include <memory>
 #include <mutex>
-#include <ratio> // for micro
+#include <ratio>
 #include <string>
 #include <vector>
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 class ConstString;

@@ -10,13 +10,9 @@
 #ifndef liblldb_PlatformRemoteAppleWatch_h_
 #define liblldb_PlatformRemoteAppleWatch_h_
 
-// C Includes
-// C++ Includes
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/FileSpec.h"
 
 #include "PlatformRemoteDarwinDevice.h"

@@ -11,16 +11,16 @@
 #include "lldb/Utility/Status.h"
 
 #include "lldb/Utility/VASPrintf.h"
-#include "lldb/lldb-defines.h"      // for LLDB_GENERIC_ERROR
-#include "lldb/lldb-enumerations.h" // for ErrorType, ErrorType::eErr...
-#include "llvm/ADT/SmallString.h"   // for SmallString
-#include "llvm/ADT/StringRef.h"     // for StringRef
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errno.h"
-#include "llvm/Support/FormatProviders.h" // for format_provider
+#include "llvm/Support/FormatProviders.h"
 
 #include <cerrno>
 #include <cstdarg>
-#include <string> // for string
+#include <string>
 #include <system_error>
 
 #ifdef __APPLE__
@@ -30,7 +30,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#include <stdint.h> // for uint32_t
+#include <stdint.h>
 
 namespace llvm {
 class raw_ostream;

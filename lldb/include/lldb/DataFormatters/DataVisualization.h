@@ -10,11 +10,7 @@
 #ifndef lldb_DataVisualization_h_
 #define lldb_DataVisualization_h_
 
-// C Includes
-// C++ Includes
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Utility/ConstString.h"

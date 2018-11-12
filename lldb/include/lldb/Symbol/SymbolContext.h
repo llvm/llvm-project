@@ -10,14 +10,10 @@
 #ifndef liblldb_SymbolContext_h_
 #define liblldb_SymbolContext_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Symbol/LineEntry.h"

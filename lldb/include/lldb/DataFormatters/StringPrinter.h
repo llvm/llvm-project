@@ -10,13 +10,9 @@
 #ifndef liblldb_StringPrinter_h_
 #define liblldb_StringPrinter_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-forward.h"
 
 #include "lldb/Utility/DataExtractor.h"

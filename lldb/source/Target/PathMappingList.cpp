@@ -7,13 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <climits>
 #include <cstring>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Target/PathMappingList.h"

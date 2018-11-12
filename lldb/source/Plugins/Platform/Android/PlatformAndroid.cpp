@@ -17,7 +17,6 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/UriParser.h"
 
-// Project includes
 #include "AdbClient.h"
 #include "PlatformAndroid.h"
 #include "PlatformAndroidRemoteGDBServer.h"

@@ -13,8 +13,8 @@
 #include "lldb/lldb-types.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint64_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 

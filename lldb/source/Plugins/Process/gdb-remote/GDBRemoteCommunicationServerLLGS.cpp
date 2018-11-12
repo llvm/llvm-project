@@ -14,13 +14,10 @@
 #include "GDBRemoteCommunicationServerLLGS.h"
 #include "lldb/Utility/StreamGDBRemote.h"
 
-// C Includes
-// C++ Includes
 #include <chrono>
 #include <cstring>
 #include <thread>
 
-// Other libraries and framework includes
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/File.h"
@@ -46,7 +43,6 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/Support/ScopedPrinter.h"
 
-// Project includes
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"

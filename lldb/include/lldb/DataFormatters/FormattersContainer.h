@@ -10,16 +10,12 @@
 #ifndef lldb_FormattersContainer_h_
 #define lldb_FormattersContainer_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-public.h"
 
 #include "lldb/Core/ValueObject.h"

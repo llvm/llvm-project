@@ -10,12 +10,8 @@
 #ifndef liblldb_AppleObjCTypeEncodingParser_h_
 #define liblldb_AppleObjCTypeEncodingParser_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "clang/AST/ASTContext.h"
 
-// Project includes
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/lldb-private.h"
 

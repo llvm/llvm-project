@@ -10,14 +10,14 @@
 #ifndef liblldb_ValueObjectConstResultImpl_h_
 #define liblldb_ValueObjectConstResultImpl_h_
 
-#include "lldb/Utility/ConstString.h"       // for ConstString
-#include "lldb/lldb-defines.h"              // for LLDB_INVALID_ADDRESS
-#include "lldb/lldb-forward.h"              // for ValueObjectSP
-#include "lldb/lldb-private-enumerations.h" // for AddressType, AddressType...
-#include "lldb/lldb-types.h"                // for addr_t
+#include "lldb/Utility/ConstString.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-private-enumerations.h"
+#include "lldb/lldb-types.h"
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, int32_t
+#include <stddef.h>
+#include <stdint.h>
 namespace lldb_private {
 class CompilerType;
 }

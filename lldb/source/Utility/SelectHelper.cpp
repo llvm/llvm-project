@@ -17,14 +17,14 @@
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/lldb-enumerations.h" // for ErrorType::eErrorTypePOSIX
-#include "lldb/lldb-types.h"        // for socket_t
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
 
-#include "llvm/ADT/DenseMap.h" // for DenseMapPair, DenseMap, Dense...
-#include "llvm/ADT/Optional.h" // for Optional
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 
 #include <algorithm>
-#include <chrono> // for microseconds, seconds, steady...
+#include <chrono>
 
 #include <errno.h>
 #if defined(_WIN32)

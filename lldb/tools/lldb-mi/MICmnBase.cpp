@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 // Third party headers
-#include <stdarg.h> // va_list, va_start, var_end
+#include <stdarg.h>
 
 // In-house headers:
 #include "MICmnBase.h"

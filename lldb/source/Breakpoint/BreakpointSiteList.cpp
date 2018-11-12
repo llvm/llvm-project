@@ -9,10 +9,6 @@
 
 #include "lldb/Breakpoint/BreakpointSiteList.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Stream.h"
 #include <algorithm>
 

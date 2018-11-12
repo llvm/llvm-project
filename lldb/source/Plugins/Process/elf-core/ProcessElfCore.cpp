@@ -7,13 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <stdlib.h>
 
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"

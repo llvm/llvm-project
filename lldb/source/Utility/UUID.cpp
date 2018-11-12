@@ -9,13 +9,10 @@
 
 #include "lldb/Utility/UUID.h"
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Format.h"
 
-// C Includes
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>

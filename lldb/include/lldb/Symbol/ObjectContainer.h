@@ -10,10 +10,6 @@
 #ifndef liblldb_ObjectContainer_h_
 #define liblldb_ObjectContainer_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/ModuleChild.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/DataExtractor.h"

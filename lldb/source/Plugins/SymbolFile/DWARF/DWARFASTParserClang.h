@@ -10,15 +10,11 @@
 #ifndef SymbolFileDWARF_DWARFASTParserClang_h_
 #define SymbolFileDWARF_DWARFASTParserClang_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "clang/AST/CharUnits.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 
-// Project includes
 #include "DWARFASTParser.h"
 #include "DWARFDefines.h"
 #include "lldb/Core/ClangForward.h"

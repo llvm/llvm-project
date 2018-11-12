@@ -13,28 +13,28 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/StringList.h" // for StringList
+#include "lldb/Utility/StringList.h"
 
 #if defined(_WIN32)
-#include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
+#include "lldb/Host/windows/PosixApi.h"
 #endif
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/FileSystem.h"  // for file_type, file_...
-#include "llvm/Support/raw_ostream.h" // for fs
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 
-#include <map>    // for map<>::const_ite...
-#include <memory> // for shared_ptr
+#include <map>
+#include <memory>
 #include <mutex>
 #include <string>
-#include <utility> // for pair
+#include <utility>
 #include <vector>
 
-#include <assert.h> // for assert
+#include <assert.h>
 
 namespace lldb_private {
 class CommandInterpreter;

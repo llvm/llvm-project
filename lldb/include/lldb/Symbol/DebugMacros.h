@@ -10,13 +10,9 @@
 #ifndef liblldb_DebugMacros_h_
 #define liblldb_DebugMacros_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 

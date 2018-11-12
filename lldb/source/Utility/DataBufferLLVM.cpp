@@ -13,8 +13,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 
-#include <assert.h>    // for assert
-#include <type_traits> // for move
+#include <assert.h>
+#include <type_traits>
 
 using namespace lldb_private;
 

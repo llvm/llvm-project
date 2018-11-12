@@ -7,14 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <stdlib.h>
 
-// C++ Includes
 #include <algorithm>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"

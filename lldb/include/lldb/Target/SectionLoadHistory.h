@@ -10,12 +10,9 @@
 #ifndef liblldb_SectionLoadHistory_h_
 #define liblldb_SectionLoadHistory_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <mutex>
 
-// Project includes
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {

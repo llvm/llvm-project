@@ -9,8 +9,8 @@
 
 #include "lldb/Utility/StreamGDBRemote.h"
 
-#include "lldb/Utility/Flags.h"  // for Flags
-#include "lldb/Utility/Stream.h" // for Stream::::eBinary
+#include "lldb/Utility/Flags.h"
+#include "lldb/Utility/Stream.h"
 
 #include <stdio.h>
 

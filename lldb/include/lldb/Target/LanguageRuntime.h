@@ -11,10 +11,6 @@
 #ifndef liblldb_LanguageRuntime_h_
 #define liblldb_LanguageRuntime_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverName.h"
 #include "lldb/Core/PluginInterface.h"

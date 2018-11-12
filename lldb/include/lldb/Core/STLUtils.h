@@ -10,16 +10,12 @@
 #ifndef liblldb_STLUtils_h_
 #define liblldb_STLUtils_h_
 
-// C Includes
 #include <string.h>
 
-// C++ Includes
 #include <map>
 #include <ostream>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 
 //----------------------------------------------------------------------
 // C string less than compare function object

@@ -9,16 +9,12 @@
 
 #include "StopInfoMachException.h"
 
-// C Includes
 
 #if defined(__APPLE__)
 // Needed for the EXC_RESOURCE interpretation macros
 #include <kern/exc_resource.h>
 #endif
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/DynamicLoader.h"

@@ -12,13 +12,10 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
-// C Includes
-// C++ Includes
 #include <mutex>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
 
 // Clang headers like to use NDEBUG inside of them to enable/disable debug
 // related features using "#ifndef NDEBUG" preprocessor blocks to do one thing

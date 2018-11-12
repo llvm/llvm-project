@@ -10,14 +10,10 @@
 #ifndef SymbolFileDWARFDwp_SymbolFileDWARFDwp_h_
 #define SymbolFileDWARFDwp_SymbolFileDWARFDwp_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 
-// Other libraries and framework includes
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 
-// Project includes
 #include "lldb/Core/Module.h"
 
 #include "DWARFDataExtractor.h"

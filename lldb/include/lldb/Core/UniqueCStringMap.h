@@ -10,13 +10,9 @@
 #ifndef liblldb_UniqueCStringMap_h_
 #define liblldb_UniqueCStringMap_h_
 
-// C Includes
-// C++ Includes
 #include <algorithm>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
 

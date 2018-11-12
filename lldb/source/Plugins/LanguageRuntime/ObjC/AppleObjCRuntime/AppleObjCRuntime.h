@@ -10,12 +10,8 @@
 #ifndef liblldb_AppleObjCRuntime_h_
 #define liblldb_AppleObjCRuntime_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/Optional.h"
 
-// Project includes
 #include "AppleObjCTrampolineHandler.h"
 #include "AppleThreadPlanStepThroughObjCTrampoline.h"
 #include "lldb/Target/LanguageRuntime.h"

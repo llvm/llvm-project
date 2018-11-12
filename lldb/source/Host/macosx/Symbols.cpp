@@ -9,15 +9,11 @@
 
 #include "lldb/Host/Symbols.h"
 
-// C Includes
 #include <dirent.h>
 #include <pwd.h>
 
-// C++ Includes
-// Other libraries and framework includes
 #include <CoreFoundation/CoreFoundation.h>
 
-// Project includes
 #include "Host/macosx/cfcpp/CFCBundle.h"
 #include "Host/macosx/cfcpp/CFCData.h"
 #include "Host/macosx/cfcpp/CFCReleaser.h"

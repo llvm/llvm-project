@@ -8,16 +8,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <errno.h>
 #include <stdlib.h>
 
-// C++ Includes
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Threading.h"
 #include <mutex>
 
-// Other libraries and framework includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -32,7 +29,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
-// Project includes
 #include "ProcessMachCore.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 #include "ThreadMachCore.h"

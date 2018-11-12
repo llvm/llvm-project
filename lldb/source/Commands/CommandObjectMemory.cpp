@@ -7,14 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <inttypes.h>
 
-// C++ Includes
-// Other libraries and framework includes
 #include "clang/AST/Decl.h"
 
-// Project includes
 #include "CommandObjectMemory.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Core/Debugger.h"

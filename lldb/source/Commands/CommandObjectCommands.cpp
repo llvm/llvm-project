@@ -7,12 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 
-// Project includes
 #include "CommandObjectCommands.h"
 #include "CommandObjectHelp.h"
 #include "lldb/Core/Debugger.h"

@@ -7,11 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-#include <stddef.h> // offsetof
+#include <stddef.h>
 
-// C++ Includes
-// Other libraries and framework includes
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
@@ -27,7 +24,6 @@
 #define LLVM_EXTENSION
 #endif
 
-// Project includes
 #include "RegisterContextDarwin_i386.h"
 
 using namespace lldb;

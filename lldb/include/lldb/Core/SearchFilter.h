@@ -13,10 +13,10 @@
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Utility/StructuredData.h"
 
-#include "lldb/Utility/FileSpec.h" // for FileSpec
-#include "lldb/lldb-forward.h"     // for SearchFilterSP, TargetSP, Modu...
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/lldb-forward.h"
 
-#include <stdint.h> // for uint32_t
+#include <stdint.h>
 
 namespace lldb_private {
 class Address;

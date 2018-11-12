@@ -9,70 +9,70 @@
 
 #include "lldb/Core/Debugger.h"
 
-#include "lldb/Breakpoint/Breakpoint.h" // for Breakpoint, Brea...
-#include "lldb/Core/Event.h"            // for Event, EventData...
+#include "lldb/Breakpoint/Breakpoint.h"
+#include "lldb/Core/Event.h"
 #include "lldb/Core/FormatEntity.h"
-#include "lldb/Core/Listener.h"   // for Listener
-#include "lldb/Core/Mangled.h"    // for Mangled
-#include "lldb/Core/ModuleList.h" // for Mangled
+#include "lldb/Core/Listener.h"
+#include "lldb/Core/Mangled.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/StreamAsynchronousIO.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Expression/REPL.h"
-#include "lldb/Host/File.h" // for File, File::kInv...
+#include "lldb/Host/File.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
-#include "lldb/Interpreter/OptionValue.h" // for OptionValue, Opt...
+#include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
 #include "lldb/Interpreter/OptionValueString.h"
-#include "lldb/Interpreter/Property.h"          // for PropertyDefinition
-#include "lldb/Interpreter/ScriptInterpreter.h" // for ScriptInterpreter
+#include "lldb/Interpreter/Property.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
-#include "lldb/Symbol/SymbolContext.h" // for SymbolContext
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StructuredDataPlugin.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Target/ThreadList.h" // for ThreadList
+#include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/AnsiTerminal.h"
-#include "lldb/Utility/Log.h" // for LLDB_LOG_OPTION_...
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
-#include "lldb/Utility/Stream.h" // for Stream
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamCallback.h"
 #include "lldb/Utility/StreamString.h"
 
 #if defined(_WIN32)
-#include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
+#include "lldb/Host/windows/PosixApi.h"
 #include "lldb/Host/windows/windows.h"
 #endif
 
-#include "llvm/ADT/None.h"      // for None
-#include "llvm/ADT/STLExtras.h" // for make_unique
+#include "llvm/ADT/None.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator.h" // for iterator_facade_...
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Threading.h"
-#include "llvm/Support/raw_ostream.h" // for raw_fd_ostream
+#include "llvm/Support/raw_ostream.h"
 
-#include <list>   // for list
-#include <memory> // for make_shared
+#include <list>
+#include <memory>
 #include <mutex>
-#include <set>          // for set
-#include <stdio.h>      // for size_t, NULL
-#include <stdlib.h>     // for getenv
-#include <string.h>     // for strcmp
-#include <string>       // for string
-#include <system_error> // for error_code
+#include <set>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <string>
+#include <system_error>
 
 namespace lldb_private {
 class Address;

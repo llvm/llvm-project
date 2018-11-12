@@ -11,15 +11,12 @@
 
 #include <errno.h>
 
-// C Includes
-// C++ Includes
 #include <chrono>
 #include <csignal>
 #include <cstring>
 #include <mutex>
 #include <sstream>
 
-// Other libraries and framework includes
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
@@ -38,7 +35,6 @@
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UriParser.h"
 
-// Project includes
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
 using namespace lldb;

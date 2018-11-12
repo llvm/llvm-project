@@ -16,14 +16,10 @@
 
 #else
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "PythonDataObjects.h"
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Core/IOHandler.h"

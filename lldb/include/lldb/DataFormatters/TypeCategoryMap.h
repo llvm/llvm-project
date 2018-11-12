@@ -10,15 +10,11 @@
 #ifndef lldb_TypeCategoryMap_h_
 #define lldb_TypeCategoryMap_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <list>
 #include <map>
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 

@@ -10,10 +10,6 @@
 #ifndef liblldb_RegisterContextPOSIX_arm_h_
 #define liblldb_RegisterContextPOSIX_arm_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "RegisterInfoInterface.h"
 #include "lldb-arm-register-enums.h"
 #include "lldb/Target/RegisterContext.h"

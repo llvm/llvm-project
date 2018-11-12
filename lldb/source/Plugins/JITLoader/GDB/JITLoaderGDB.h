@@ -10,12 +10,8 @@
 #ifndef liblldb_JITLoaderGDB_h_
 #define liblldb_JITLoaderGDB_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/JITLoader.h"
 #include "lldb/Target/Process.h"
 

@@ -10,12 +10,12 @@
 // Third party headers
 #include "llvm/Support/Compiler.h"
 #include <cstdlib>
-#include <inttypes.h> // for PRIx8
-#include <limits.h>   // for ULONG_MAX
-#include <memory>     // std::unique_ptr
-#include <sstream>    // std::stringstream
-#include <stdarg.h>   // va_list, va_start, var_end
-#include <string.h>   // for strncmp
+#include <inttypes.h>
+#include <limits.h>
+#include <memory>
+#include <sstream>
+#include <stdarg.h>
+#include <string.h>
 
 // In-house headers:
 #include "MIUtilString.h"

@@ -11,7 +11,6 @@
 #include <cstddef>
 #include <cstdint>
 
-// Project includes
 
 #ifdef DECLARE_REGISTER_INFOS_I386_STRUCT
 

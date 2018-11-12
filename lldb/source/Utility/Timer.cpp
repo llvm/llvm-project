@@ -12,11 +12,11 @@
 #include <algorithm>
 #include <map>
 #include <mutex>
-#include <utility> // for pair
+#include <utility>
 #include <vector>
 
-#include <assert.h> // for assert
-#include <stdarg.h> // for va_end, va_list, va_start
+#include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 
 using namespace lldb_private;

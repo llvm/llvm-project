@@ -10,10 +10,6 @@
 #ifndef SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_
 #define SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "SymbolFileDWARF.h"
 
 class SymbolFileDWARFDwo : public SymbolFileDWARF {

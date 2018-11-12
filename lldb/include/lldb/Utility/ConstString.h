@@ -11,9 +11,9 @@
 #define liblldb_ConstString_h_
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/FormatVariadic.h" // for format_provider
+#include "llvm/Support/FormatVariadic.h"
 
-#include <stddef.h> // for size_t
+#include <stddef.h>
 
 namespace lldb_private {
 class Stream;

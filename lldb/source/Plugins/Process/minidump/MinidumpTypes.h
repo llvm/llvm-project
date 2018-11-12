@@ -10,9 +10,7 @@
 #ifndef liblldb_MinidumpTypes_h_
 #define liblldb_MinidumpTypes_h_
 
-// Project includes
 
-// Other libraries and framework includes
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/ArrayRef.h"

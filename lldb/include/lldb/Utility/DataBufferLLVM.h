@@ -11,10 +11,10 @@
 #define LLDB_CORE_DATABUFFERLLVM_H
 
 #include "lldb/Utility/DataBuffer.h"
-#include "lldb/lldb-types.h" // for offset_t
+#include "lldb/lldb-types.h"
 
 #include <memory>
-#include <stdint.h> // for uint8_t, uint64_t
+#include <stdint.h>
 
 namespace llvm {
 class WritableMemoryBuffer;

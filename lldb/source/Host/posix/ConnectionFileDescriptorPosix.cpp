@@ -21,7 +21,6 @@
 #include "lldb/Utility/SelectHelper.h"
 #include "lldb/Utility/Timeout.h"
 
-// C Includes
 #include <errno.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -33,16 +32,13 @@
 #include <unistd.h>
 #endif
 
-// C++ Includes
 #include <sstream>
 
-// Other libraries and framework includes
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/ErrorHandling.h"
 #if defined(__APPLE__)
 #include "llvm/ADT/SmallVector.h"
 #endif
-// Project includes
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/common/TCPSocket.h"

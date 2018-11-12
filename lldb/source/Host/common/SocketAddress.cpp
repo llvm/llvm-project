@@ -21,7 +21,6 @@
 #include <stddef.h>
 #include <stdio.h>
 
-// C Includes
 #if !defined(_WIN32)
 #include <arpa/inet.h>
 #endif
@@ -29,9 +28,6 @@
 #include <assert.h>
 #include <string.h>
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/PosixApi.h"
 
 // WindowsXP needs an inet_ntop implementation

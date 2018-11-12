@@ -12,12 +12,12 @@
 #include "lldb/Core/ValueObjectDynamicValue.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/ExecutionContextScope.h" // for ExecutionContextScope
+#include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/Process.h"
-#include "lldb/Utility/DataBuffer.h"     // for DataBuffer
-#include "lldb/Utility/DataBufferHeap.h" // for DataBufferHeap
+#include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
-#include "lldb/Utility/Scalar.h" // for Scalar
+#include "lldb/Utility/Scalar.h"
 
 namespace lldb_private {
 class Module;

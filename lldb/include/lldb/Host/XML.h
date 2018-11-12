@@ -10,20 +10,16 @@
 #ifndef liblldb_XML_h_
 #define liblldb_XML_h_
 
-// C Includes
 #if defined(LIBXML2_DEFINED)
 #include <libxml/xmlreader.h>
 #endif
 
-// C++ Includes
 #include <functional>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 
-// Project includes
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"
