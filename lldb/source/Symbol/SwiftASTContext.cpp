@@ -923,50 +923,53 @@ static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
 }
 
 static std::string GetXcodeContentsPath() {
-  const char substr[] = ".app/Contents/";
+  static std::once_flag g_once_flag;
+  static std::string g_xcode_contents_path;
+  std::call_once(g_once_flag, [&]() {
+    const char substr[] = ".app/Contents/";
 
-  // First, try based on the current shlib's location
-
-  {
+    // First, try based on the current shlib's location.
     if (FileSpec fspec = HostInfo::GetShlibDir()) {
       std::string path_to_shlib = fspec.GetPath();
       size_t pos = path_to_shlib.rfind(substr);
       if (pos != std::string::npos) {
         path_to_shlib.erase(pos + strlen(substr));
-        return path_to_shlib;
+        g_xcode_contents_path = path_to_shlib;
+        return;
       }
     }
-  }
 
-  // Fall back to using xcrun
+    // Fall back to using xcrun.
+    if (HostInfo::GetArchitecture().GetTriple().getOS() ==
+        llvm::Triple::MacOSX) {
+      int status = 0;
+      int signo = 0;
+      std::string output;
+      const char *command = "xcrun -sdk macosx --show-sdk-path";
+      lldb_private::Status error = Host::RunShellCommand(
+          command, // shell command to run
+          NULL,    // current working directory
+          &status, // Put the exit status of the process in here
+          &signo,  // Put the signal that caused the process to exit in here
+          &output, // Get the output from the command and place it in this
+                   // string
+          std::chrono::seconds(
+              3)); // Timeout in seconds to wait for shell program to finish
+      if (status == 0 && !output.empty()) {
+        size_t first_non_newline = output.find_last_not_of("\r\n");
+        if (first_non_newline != std::string::npos) {
+          output.erase(first_non_newline + 1);
+        }
 
-  {
-    int status = 0;
-    int signo = 0;
-    std::string output;
-    const char *command = "xcrun -sdk macosx --show-sdk-path";
-    lldb_private::Status error = Host::RunShellCommand(
-        command, // shell command to run
-        NULL,    // current working directory
-        &status, // Put the exit status of the process in here
-        &signo,  // Put the signal that caused the process to exit in here
-        &output, // Get the output from the command and place it in this string
-        std::chrono::seconds(3));      // Timeout in seconds to wait for shell program to finish
-    if (status == 0 && !output.empty()) {
-      size_t first_non_newline = output.find_last_not_of("\r\n");
-      if (first_non_newline != std::string::npos) {
-        output.erase(first_non_newline + 1);
-      }
-
-      size_t pos = output.rfind(substr);
-      if (pos != std::string::npos) {
-        output.erase(pos + strlen(substr));
-        return output;
+        size_t pos = output.rfind(substr);
+        if (pos != std::string::npos) {
+          output.erase(pos + strlen(substr));
+          g_xcode_contents_path = output;
+        }
       }
     }
-  }
-
-  return std::string();
+  });
+  return g_xcode_contents_path;
 }
 
 static std::string GetCurrentToolchainPath() {
@@ -983,7 +986,7 @@ static std::string GetCurrentToolchainPath() {
     }
   }
 
-  return std::string();
+  return {};
 }
 
 static std::string GetCurrentCLToolsPath() {
@@ -1000,7 +1003,7 @@ static std::string GetCurrentCLToolsPath() {
     }
   }
 
-  return std::string();
+  return {};
 }
 
 
@@ -1015,14 +1018,26 @@ StringRef SwiftASTContext::GetSwiftStdlibOSDir(const llvm::Triple &target,
 }
 
 StringRef SwiftASTContext::GetResourceDir(const llvm::Triple &triple) {
-  std::call_once(m_once_flag, [&]() {
-    m_resource_dir = GetResourceDir(
-        GetPlatformSDKPath(),
-        GetSwiftStdlibOSDir(triple, HostInfo::GetArchitecture().GetTriple()),
-        HostInfo::GetSwiftDir().GetPath(), GetXcodeContentsPath(),
-        GetCurrentToolchainPath(), GetCurrentCLToolsPath());
-  });
-  return m_resource_dir;
+  static std::mutex g_mutex;
+  std::lock_guard<std::mutex> locker(g_mutex);
+  auto platform_sdk_path = StringRef::withNullAsEmpty(GetPlatformSDKPath());
+  auto swift_stdlib_os_dir =
+      GetSwiftStdlibOSDir(triple, HostInfo::GetArchitecture().GetTriple());
+
+  // The resource dir depends on the SDK path and the expected os name.
+  llvm::SmallString<128> key(platform_sdk_path);
+  key.append(swift_stdlib_os_dir);
+  static llvm::StringMap<std::string> g_resource_dir_cache;
+  auto it = g_resource_dir_cache.find(key);
+  if (it != g_resource_dir_cache.end())
+    return it->getValue();
+
+  auto value =
+      GetResourceDir(platform_sdk_path, swift_stdlib_os_dir,
+                     HostInfo::GetSwiftDir().GetPath(), GetXcodeContentsPath(),
+                     GetCurrentToolchainPath(), GetCurrentCLToolsPath());
+  g_resource_dir_cache.insert({key, value});
+  return g_resource_dir_cache[key];
 }
 
 std::string SwiftASTContext::GetResourceDir(StringRef platform_sdk_path,
@@ -2420,7 +2435,7 @@ static ConstString GetSDKDirectory(SDKType sdk_type, uint32_t least_major,
         // Okay, we're going to do an exhaustive search for *any* SDK that has
         // an adequate version.
 
-        std::string sdks_path = GetXcodeContentsPath();
+        std::string sdks_path = xcode_contents_path;
         sdks_path.append("Developer/Platforms/MacOSX.platform/Developer/SDKs");
 
         FileSpec sdks_spec(sdks_path.c_str());
@@ -3844,7 +3859,7 @@ ConstString SwiftASTContext::GetMangledTypeName(swift::TypeBase *type_base) {
 
   assert(!swift_type->hasArchetype() && "type has not been mapped out of context");
   swift::Mangle::ASTMangler mangler(true);
-  std::string s = mangler.mangleTypeForDebugger(swift_type, nullptr, nullptr);
+  std::string s = mangler.mangleTypeForDebugger(swift_type, nullptr);
   if (s.empty())
     return ConstString();
 

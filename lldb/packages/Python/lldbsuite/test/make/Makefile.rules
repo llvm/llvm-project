@@ -264,8 +264,9 @@ DEBUG_INFO_FLAG ?= -g
 CFLAGS ?= $(DEBUG_INFO_FLAG) -O0 -fno-builtin
 SWIFTFLAGS ?= -g -Onone -Xfrontend -serialize-debugging-options
 
+STATIC_STDLIB = 
 ifneq (,$(findstring arm,$(ARCH)))
-	SWIFTFLAGS += -static-stdlib
+	STATIC_STDLIB = -static-stdlib
 endif
 
 ifeq "$(OS)" "Darwin"
@@ -630,7 +631,7 @@ VPATHSOURCES=$(patsubst %,$(VPATH)/%,$(SWIFT_SOURCES))
 ifeq "$(OS)" "Darwin"
 $(EXE): $(MODULENAME).swiftmodule $(SWIFT_OBJECTS)
 	@echo "### Linking" $(EXE)
-	$(SWIFTC) $(LD_EXTRAS) \
+	$(SWIFTC) $(STATIC_STDLIB) $(LD_EXTRAS) \
 	  $(patsubst $<,-Xlinker -add_ast_path -Xlinker $(BUILDDIR)/$<,$^) \
 	  $(patsubst -g,,$(SWIFTFLAGS)) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
