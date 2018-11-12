@@ -286,7 +286,10 @@ struct ArchitectureInstance {
 
 typedef std::vector<ArchitectureInstance> ArchitectureInstances;
 
-static std::mutex g_architecture_mutex;
+static std::mutex &GetArchitectureMutex() {
+    static std::mutex g_architecture_mutex;
+    return g_architecture_mutex;
+}
 
 static ArchitectureInstances &GetArchitectureInstances() {
   static ArchitectureInstances g_instances;
@@ -296,13 +299,13 @@ static ArchitectureInstances &GetArchitectureInstances() {
 void PluginManager::RegisterPlugin(const ConstString &name,
                                    llvm::StringRef description,
                                    ArchitectureCreateInstance create_callback) {
-  std::lock_guard<std::mutex> guard(g_architecture_mutex);
+  std::lock_guard<std::mutex> guard(GetArchitectureMutex());
   GetArchitectureInstances().push_back({name, description, create_callback});
 }
 
 void PluginManager::UnregisterPlugin(
     ArchitectureCreateInstance create_callback) {
-  std::lock_guard<std::mutex> guard(g_architecture_mutex);
+  std::lock_guard<std::mutex> guard(GetArchitectureMutex());
   auto &instances = GetArchitectureInstances();
 
   for (auto pos = instances.begin(), end = instances.end(); pos != end; ++pos) {
@@ -316,7 +319,7 @@ void PluginManager::UnregisterPlugin(
 
 std::unique_ptr<Architecture>
 PluginManager::CreateArchitectureInstance(const ArchSpec &arch) {
-  std::lock_guard<std::mutex> guard(g_architecture_mutex);
+  std::lock_guard<std::mutex> guard(GetArchitectureMutex());
   for (const auto &instances : GetArchitectureInstances()) {
     if (auto plugin_up = instances.create_callback(arch))
       return plugin_up;

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s bugprone-too-small-loop-variable %t
+// RUN: %check_clang_tidy %s bugprone-too-small-loop-variable %t -- -- --target=x86_64-linux
 
 long size() { return 294967296l; }
 
