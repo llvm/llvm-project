@@ -2410,7 +2410,7 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (const auto *SE = dyn_cast_or_null<StringLiteral>(AL.getReplacementExpr()))
     Replacement = SE->getString();
 
-  if (II->getName() == "swift") {
+  if (II->isStr("swift")) {
     if (Introduced.isValid() || Obsoleted.isValid() ||
         (!IsUnavailable && !Deprecated.isValid())) {
       S.Diag(AL.getLoc(),

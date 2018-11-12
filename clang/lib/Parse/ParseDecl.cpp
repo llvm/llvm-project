@@ -1038,9 +1038,9 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
     }
 
     if (Keyword == Ident_deprecated && Platform->Ident &&
-        Platform->Ident->getName() == "swift") {
+        Platform->Ident->isStr("swift")) {
       // For swift, we deprecate for all versions.
-      if (!Changes[Deprecated].KeywordLoc.isInvalid()) {
+      if (Changes[Deprecated].KeywordLoc.isValid()) {
         Diag(KeywordLoc, diag::err_availability_redundant)
           << Keyword
           << SourceRange(Changes[Deprecated].KeywordLoc);

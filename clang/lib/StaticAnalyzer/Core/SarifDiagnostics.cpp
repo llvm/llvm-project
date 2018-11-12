@@ -237,7 +237,7 @@ static json::Object createResult(const PathDiagnostic &Diag,
 static StringRef getRuleDescription(StringRef CheckName) {
   return llvm::StringSwitch<StringRef>(CheckName)
 #define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, CXXFILE, HELPTEXT, GROUPINDEX, HIDDEN)        \
+#define CHECKER(FULLNAME, CLASS, HELPTEXT)                                     \
   .Case(FULLNAME, HELPTEXT)
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER

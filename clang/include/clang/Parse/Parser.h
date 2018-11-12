@@ -2667,9 +2667,16 @@ private:
   DeclGroupPtrTy ParseNamespace(DeclaratorContext Context,
                                 SourceLocation &DeclEnd,
                                 SourceLocation InlineLoc = SourceLocation());
-  void ParseInnerNamespace(std::vector<SourceLocation> &IdentLoc,
-                           std::vector<IdentifierInfo *> &Ident,
-                           std::vector<SourceLocation> &NamespaceLoc,
+
+  struct InnerNamespaceInfo {
+    SourceLocation NamespaceLoc;
+    SourceLocation InlineLoc;
+    SourceLocation IdentLoc;
+    IdentifierInfo *Ident;
+  };
+  using InnerNamespaceInfoList = llvm::SmallVector<InnerNamespaceInfo, 4>;
+
+  void ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
                            unsigned int index, SourceLocation &InlineLoc,
                            ParsedAttributes &attrs,
                            BalancedDelimiterTracker &Tracker);

@@ -33,24 +33,23 @@ using namespace clang;
 /// may either be a top level namespace or a block-level namespace alias. If
 /// there was an inline keyword, it has already been parsed.
 ///
-///       namespace-definition: [C++ 7.3: basic.namespace]
+///       namespace-definition: [C++: namespace.def]
 ///         named-namespace-definition
 ///         unnamed-namespace-definition
+///         nested-namespace-definition
+///
+///       named-namespace-definition:
+///         'inline'[opt] 'namespace' attributes[opt] identifier '{' namespace-body '}'
 ///
 ///       unnamed-namespace-definition:
 ///         'inline'[opt] 'namespace' attributes[opt] '{' namespace-body '}'
 ///
-///       named-namespace-definition:
-///         original-namespace-definition
-///         extension-namespace-definition
+///       nested-namespace-definition:
+///         'namespace' enclosing-namespace-specifier '::' 'inline'[opt] identifier '{' namespace-body '}'
 ///
-///       original-namespace-definition:
-///         'inline'[opt] 'namespace' identifier attributes[opt]
-///             '{' namespace-body '}'
-///
-///       extension-namespace-definition:
-///         'inline'[opt] 'namespace' original-namespace-name
-///             '{' namespace-body '}'
+///       enclosing-namespace-specifier:
+///         identifier
+///         enclosing-namespace-specifier '::' 'inline'[opt] identifier
 ///
 ///       namespace-alias-definition:  [C++ 7.3.2: namespace.alias]
 ///         'namespace' identifier '=' qualified-namespace-specifier ';'
@@ -70,9 +69,8 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
 
   SourceLocation IdentLoc;
   IdentifierInfo *Ident = nullptr;
-  std::vector<SourceLocation> ExtraIdentLoc;
-  std::vector<IdentifierInfo*> ExtraIdent;
-  std::vector<SourceLocation> ExtraNamespaceLoc;
+  InnerNamespaceInfoList ExtraNSs;
+  SourceLocation FirstNestedInlineLoc;
 
   ParsedAttributesWithRange attrs(AttrFactory);
   SourceLocation attrLoc;
@@ -88,15 +86,29 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
   if (Tok.is(tok::identifier)) {
     Ident = Tok.getIdentifierInfo();
     IdentLoc = ConsumeToken();  // eat the identifier.
-    while (Tok.is(tok::coloncolon) && NextToken().is(tok::identifier)) {
-      ExtraNamespaceLoc.push_back(ConsumeToken());
-      ExtraIdent.push_back(Tok.getIdentifierInfo());
-      ExtraIdentLoc.push_back(ConsumeToken());
+    while (Tok.is(tok::coloncolon) &&
+           (NextToken().is(tok::identifier) ||
+            (NextToken().is(tok::kw_inline) &&
+             GetLookAheadToken(2).is(tok::identifier)))) {
+
+      InnerNamespaceInfo Info;
+      Info.NamespaceLoc = ConsumeToken();
+
+      if (Tok.is(tok::kw_inline)) {
+        Info.InlineLoc = ConsumeToken();
+        if (FirstNestedInlineLoc.isInvalid())
+          FirstNestedInlineLoc = Info.InlineLoc;
+      }
+
+      Info.Ident = Tok.getIdentifierInfo();
+      Info.IdentLoc = ConsumeToken();
+
+      ExtraNSs.push_back(Info);
     }
   }
 
   // A nested namespace definition cannot have attributes.
-  if (!ExtraNamespaceLoc.empty() && attrLoc.isValid())
+  if (!ExtraNSs.empty() && attrLoc.isValid())
     Diag(attrLoc, diag::err_unexpected_nested_namespace_attribute);
 
   // Read label attributes, if present.
@@ -138,13 +150,21 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     return nullptr;
   }
 
-  if (ExtraIdent.empty()) {
+  if (ExtraNSs.empty()) {
     // Normal namespace definition, not a nested-namespace-definition.
   } else if (InlineLoc.isValid()) {
     Diag(InlineLoc, diag::err_inline_nested_namespace_definition);
-  } else if (getLangOpts().CPlusPlus17) {
-    Diag(ExtraNamespaceLoc[0],
+  } else if (getLangOpts().CPlusPlus2a) {
+    Diag(ExtraNSs[0].NamespaceLoc,
          diag::warn_cxx14_compat_nested_namespace_definition);
+    if (FirstNestedInlineLoc.isValid())
+      Diag(FirstNestedInlineLoc,
+           diag::warn_cxx17_compat_inline_nested_namespace_definition);
+  } else if (getLangOpts().CPlusPlus17) {
+    Diag(ExtraNSs[0].NamespaceLoc,
+         diag::warn_cxx14_compat_nested_namespace_definition);
+    if (FirstNestedInlineLoc.isValid())
+      Diag(FirstNestedInlineLoc, diag::ext_inline_nested_namespace_definition);
   } else {
     TentativeParsingAction TPA(*this);
     SkipUntil(tok::r_brace, StopBeforeMatch);
@@ -152,26 +172,31 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     TPA.Revert();
 
     if (!rBraceToken.is(tok::r_brace)) {
-      Diag(ExtraNamespaceLoc[0], diag::ext_nested_namespace_definition)
-          << SourceRange(ExtraNamespaceLoc.front(), ExtraIdentLoc.back());
+      Diag(ExtraNSs[0].NamespaceLoc, diag::ext_nested_namespace_definition)
+          << SourceRange(ExtraNSs.front().NamespaceLoc,
+                         ExtraNSs.back().IdentLoc);
     } else {
       std::string NamespaceFix;
-      for (std::vector<IdentifierInfo*>::iterator I = ExtraIdent.begin(),
-           E = ExtraIdent.end(); I != E; ++I) {
+      for (const auto &ExtraNS : ExtraNSs) {
         NamespaceFix += " { namespace ";
-        NamespaceFix += (*I)->getName();
+        NamespaceFix += ExtraNS.Ident->getName();
       }
 
       std::string RBraces;
-      for (unsigned i = 0, e = ExtraIdent.size(); i != e; ++i)
+      for (unsigned i = 0, e = ExtraNSs.size(); i != e; ++i)
         RBraces +=  "} ";
 
-      Diag(ExtraNamespaceLoc[0], diag::ext_nested_namespace_definition)
-          << FixItHint::CreateReplacement(SourceRange(ExtraNamespaceLoc.front(),
-                                                      ExtraIdentLoc.back()),
-                                          NamespaceFix)
+      Diag(ExtraNSs[0].NamespaceLoc, diag::ext_nested_namespace_definition)
+          << FixItHint::CreateReplacement(
+                 SourceRange(ExtraNSs.front().NamespaceLoc,
+                             ExtraNSs.back().IdentLoc),
+                 NamespaceFix)
           << FixItHint::CreateInsertion(rBraceToken.getLocation(), RBraces);
     }
+
+    // Warn about nested inline namespaces.
+    if (FirstNestedInlineLoc.isValid())
+      Diag(FirstNestedInlineLoc, diag::ext_inline_nested_namespace_definition);
   }
 
   // If we're still good, complain about inline namespaces in non-C++0x now.
@@ -192,8 +217,7 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
 
   // Parse the contents of the namespace.  This includes parsing recovery on
   // any improperly nested namespaces.
-  ParseInnerNamespace(ExtraIdentLoc, ExtraIdent, ExtraNamespaceLoc, 0,
-                      InlineLoc, attrs, T);
+  ParseInnerNamespace(ExtraNSs, 0, InlineLoc, attrs, T);
 
   // Leave the namespace scope.
   NamespaceScope.Exit();
@@ -206,13 +230,11 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
 }
 
 /// ParseInnerNamespace - Parse the contents of a namespace.
-void Parser::ParseInnerNamespace(std::vector<SourceLocation> &IdentLoc,
-                                 std::vector<IdentifierInfo *> &Ident,
-                                 std::vector<SourceLocation> &NamespaceLoc,
+void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
                                  unsigned int index, SourceLocation &InlineLoc,
                                  ParsedAttributes &attrs,
                                  BalancedDelimiterTracker &Tracker) {
-  if (index == Ident.size()) {
+  if (index == InnerNSs.size()) {
     while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
            Tok.isNot(tok::eof)) {
       ParsedAttributesWithRange attrs(AttrFactory);
@@ -233,13 +255,13 @@ void Parser::ParseInnerNamespace(std::vector<SourceLocation> &IdentLoc,
   ParseScope NamespaceScope(this, Scope::DeclScope);
   UsingDirectiveDecl *ImplicitUsingDirectiveDecl = nullptr;
   Decl *NamespcDecl = Actions.ActOnStartNamespaceDef(
-      getCurScope(), SourceLocation(), NamespaceLoc[index], IdentLoc[index],
-      Ident[index], Tracker.getOpenLocation(), attrs,
-      ImplicitUsingDirectiveDecl);
+      getCurScope(), InnerNSs[index].InlineLoc, InnerNSs[index].NamespaceLoc,
+      InnerNSs[index].IdentLoc, InnerNSs[index].Ident,
+      Tracker.getOpenLocation(), attrs, ImplicitUsingDirectiveDecl);
   assert(!ImplicitUsingDirectiveDecl &&
          "nested namespace definition cannot define anonymous namespace");
 
-  ParseInnerNamespace(IdentLoc, Ident, NamespaceLoc, ++index, InlineLoc,
+  ParseInnerNamespace(InnerNSs, ++index, InlineLoc,
                       attrs, Tracker);
 
   NamespaceScope.Exit();
