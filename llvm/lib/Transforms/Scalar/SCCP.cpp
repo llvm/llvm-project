@@ -262,10 +262,10 @@ public:
     return A->second.PredInfo->getPredicateInfoFor(I);
   }
 
-  DominatorTree *getDomTree(Function &F) {
+  DomTreeUpdater getDTU(Function &F) {
     auto A = AnalysisResults.find(&F);
     assert(A != AnalysisResults.end() && "Need analysis results for function.");
-    return A->second.DT;
+    return {A->second.DT, A->second.PDT, DomTreeUpdater::UpdateStrategy::Lazy};
   }
 
   SCCPSolver(const DataLayout &DL, const TargetLibraryInfo *tli)
@@ -2036,8 +2036,7 @@ bool llvm::runIPSCCP(
       }
     }
 
-    DomTreeUpdater DTU(Solver.getDomTree(F),
-                       DomTreeUpdater::UpdateStrategy::Lazy);
+    DomTreeUpdater DTU = Solver.getDTU(F);
     // Change dead blocks to unreachable. We do it after replacing constants
     // in all executable blocks, because changeToUnreachable may remove PHI
     // nodes in executable blocks we found values for. The function's entry

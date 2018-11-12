@@ -4490,18 +4490,21 @@ static SDValue buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
     // avoid a false dependency on any previous contents of the vector
     // register.
 
-    // Use a VLREP if at least one element is a load.
-    unsigned LoadElIdx = UINT_MAX;
+    // Use a VLREP if at least one element is a load. Make sure to replicate
+    // the load with the most elements having its value.
+    std::map<const SDNode*, unsigned> UseCounts;
+    SDNode *LoadMaxUses = nullptr;
     for (unsigned I = 0; I < NumElements; ++I)
       if (Elems[I].getOpcode() == ISD::LOAD &&
           cast<LoadSDNode>(Elems[I])->isUnindexed()) {
-        LoadElIdx = I;
-        break;
+        SDNode *Ld = Elems[I].getNode();
+        UseCounts[Ld]++;
+        if (LoadMaxUses == nullptr || UseCounts[LoadMaxUses] < UseCounts[Ld])
+          LoadMaxUses = Ld;
       }
-    if (LoadElIdx != UINT_MAX) {
-      Result = DAG.getNode(SystemZISD::REPLICATE, DL, VT, Elems[LoadElIdx]);
-      Done[LoadElIdx] = true;
-      ReplicatedVal = Elems[LoadElIdx];
+    if (LoadMaxUses != nullptr) {
+      ReplicatedVal = SDValue(LoadMaxUses, 0);
+      Result = DAG.getNode(SystemZISD::REPLICATE, DL, VT, ReplicatedVal);
     } else {
       // Try to use VLVGP.
       unsigned I1 = NumElements / 2 - 1;

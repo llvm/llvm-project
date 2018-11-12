@@ -114,6 +114,31 @@ public:
   virtual bool isSpecialInstruction(const Instruction *Insn) const;
 };
 
+class MemoryWriteTracking : public InstructionPrecedenceTracking {
+public:
+  MemoryWriteTracking(DominatorTree *DT) : InstructionPrecedenceTracking(DT) {}
+
+  /// Returns the topmost instruction that may write memory from the given
+  /// basic block. Returns nullptr if there is no such instructions in the block.
+  const Instruction *getFirstMemoryWrite(const BasicBlock *BB) {
+    return getFirstSpecialInstruction(BB);
+  }
+
+  /// Returns true if at least one instruction from the given basic block may
+  /// write memory.
+  bool mayWriteToMemory(const BasicBlock *BB) {
+    return hasSpecialInstructions(BB);
+  }
+
+  /// Returns true if the first memory writing instruction of Insn's block
+  /// exists and dominates Insn.
+  bool isDominatedByMemoryWriteFromSameBlock(const Instruction *Insn) {
+    return isPreceededBySpecialInstruction(Insn);
+  }
+
+  virtual bool isSpecialInstruction(const Instruction *Insn) const;
+};
+
 } // llvm
 
 #endif // LLVM_ANALYSIS_INSTRUCTIONPRECEDENCETRACKING_H

@@ -463,12 +463,6 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
     if (inSubLoop(BB, CurLoop, LI))
       continue;
 
-    // Keep track of whether the prefix instructions could have written memory.
-    // TODO: This may be done smarter if we keep track of all throwing and
-    // mem-writing operations in every block, e.g. using something similar to
-    // isGuaranteedToExecute.
-    bool IsMemoryNotModified = CurLoop->getHeader() == BB;
-
     for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
       Instruction &I = *II++;
       // Try constant folding this instruction.  If all the operands are
@@ -529,15 +523,13 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       if (((I.use_empty() &&
             match(&I, m_Intrinsic<Intrinsic::invariant_start>())) ||
            isGuard(&I)) &&
-          IsMemoryNotModified && CurLoop->hasLoopInvariantOperands(&I) &&
-          SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop)) {
+          CurLoop->hasLoopInvariantOperands(&I) &&
+          SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop) &&
+          SafetyInfo->doesNotWriteMemoryBefore(I, CurLoop)) {
         hoist(I, DT, CurLoop, SafetyInfo, ORE);
         Changed = true;
         continue;
       }
-
-      if (IsMemoryNotModified)
-        IsMemoryNotModified = !I.mayWriteToMemory();
     }
   }
 
