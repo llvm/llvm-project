@@ -10,16 +10,12 @@
 #ifndef lldb_TypeCategory_h_
 #define lldb_TypeCategory_h_
 
-// C Includes
-// C++ Includes
 #include <initializer_list>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 

@@ -7,12 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "clang/AST/DeclCXX.h"
 
-// Project includes
 #include "Cocoa.h"
 
 #include "lldb/Core/ValueObject.h"

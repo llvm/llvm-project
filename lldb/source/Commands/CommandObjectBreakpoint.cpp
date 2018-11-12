@@ -7,12 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "CommandObjectBreakpoint.h"
 #include "CommandObjectBreakpointCommand.h"
 #include "lldb/Breakpoint/Breakpoint.h"

@@ -11,7 +11,7 @@
 
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/VASPrintf.h"
-#include "llvm/ADT/SmallString.h" // for SmallString
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/LEB128.h"
 
 #include <string>

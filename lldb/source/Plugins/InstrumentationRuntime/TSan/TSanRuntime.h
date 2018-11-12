@@ -10,10 +10,6 @@
 #ifndef liblldb_ThreadSanitizerRuntime_h_
 #define liblldb_ThreadSanitizerRuntime_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Utility/StructuredData.h"

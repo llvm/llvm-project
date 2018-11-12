@@ -8,16 +8,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <errno.h>
 #include <stdlib.h>
 
-// C++ Includes
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Threading.h"
 #include <mutex>
 
-// Other libraries and framework includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -29,10 +26,10 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
-// Project includes
 #include "ProcessMachCore.h"
 #include "Plugins/Process/Utility/StopInfoMachException.h"
 #include "ThreadMachCore.h"
@@ -66,8 +63,8 @@ lldb::ProcessSP ProcessMachCore::CreateInstance(lldb::TargetSP target_sp,
   lldb::ProcessSP process_sp;
   if (crash_file) {
     const size_t header_size = sizeof(llvm::MachO::mach_header);
-    auto data_sp = FileSystem::Instance().CreateDataBuffer(
-        crash_file->GetPath(), header_size, 0);
+    auto data_sp =
+        DataBufferLLVM::CreateSliceFromPath(crash_file->GetPath(), header_size, 0);
     if (data_sp && data_sp->GetByteSize() == header_size) {
       DataExtractor data(data_sp, lldb::eByteOrderLittle, 4);
 

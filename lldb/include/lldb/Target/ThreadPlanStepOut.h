@@ -10,10 +10,6 @@
 #ifndef liblldb_ThreadPlanStepOut_h_
 #define liblldb_ThreadPlanStepOut_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanShouldStopHere.h"

@@ -11,7 +11,6 @@
 #define liblldb_Host_FileSystem_h
 
 #include "lldb/Host/File.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 
@@ -95,12 +94,6 @@ public:
   bool IsDirectory(const llvm::Twine &path) const;
   /// @}
 
-  /// Returns whether the given path is local to the file system.
-  /// @{
-  bool IsLocal(const FileSpec &file_spec) const;
-  bool IsLocal(const llvm::Twine &path) const;
-  /// @}
-
   /// Make the given file path absolute.
   /// @{
   std::error_code MakeAbsolute(llvm::SmallVectorImpl<char> &path) const;
@@ -111,16 +104,6 @@ public:
   /// @{
   void Resolve(llvm::SmallVectorImpl<char> &path);
   void Resolve(FileSpec &file_spec);
-  /// @}
-
-  //// Create memory buffer from path.
-  /// @{
-  std::shared_ptr<DataBufferLLVM> CreateDataBuffer(const llvm::Twine &path,
-                                                   uint64_t size = 0,
-                                                   uint64_t offset = 0);
-  std::shared_ptr<DataBufferLLVM> CreateDataBuffer(const FileSpec &file_spec,
-                                                   uint64_t size = 0,
-                                                   uint64_t offset = 0);
   /// @}
 
   /// Call into the Host to see if it can help find the file.

@@ -10,11 +10,7 @@
 #ifndef liblldb_CommandObjectType_h_
 #define liblldb_CommandObjectType_h_
 
-// C Includes
-// C++ Includes
 
-// Other libraries and framework includes
-// Project includes
 
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/Options.h"

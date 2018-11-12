@@ -10,13 +10,9 @@
 #ifndef liblldb_BreakpointIDList_h_
 #define liblldb_BreakpointIDList_h_
 
-// C Includes
-// C++ Includes
 #include <utility>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 
 #include "lldb/lldb-enumerations.h"
 #include "lldb/Breakpoint/BreakpointID.h"

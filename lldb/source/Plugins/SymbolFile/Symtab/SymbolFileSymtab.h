@@ -10,13 +10,9 @@
 #ifndef liblldb_SymbolFileSymtab_h_
 #define liblldb_SymbolFileSymtab_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/Symtab.h"
 

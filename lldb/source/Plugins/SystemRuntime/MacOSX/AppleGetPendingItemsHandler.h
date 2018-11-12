@@ -11,14 +11,10 @@
 #ifndef lldb_AppleGetPendingItemsHandler_h_
 #define lldb_AppleGetPendingItemsHandler_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <mutex>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-public.h"

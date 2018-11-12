@@ -8,7 +8,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <errno.h>
 #include <pthread.h>
 #include <pthread_np.h>
@@ -18,11 +17,9 @@
 #include <sys/user.h>
 #include <machine/elf.h>
 
-// C++ Includes
 #include <mutex>
 #include <unordered_map>
 
-// Other libraries and framework includes
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -39,7 +36,6 @@
 #include "ProcessFreeBSD.h"
 #include "ProcessMonitor.h"
 
-// Other libraries and framework includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Module.h"

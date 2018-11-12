@@ -10,16 +10,12 @@
 #ifndef lldb_TypeSummary_h_
 #define lldb_TypeSummary_h_
 
-// C Includes
 #include <stdint.h>
 
-// C++ Includes
 #include <functional>
 #include <memory>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 

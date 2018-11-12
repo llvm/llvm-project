@@ -9,31 +9,31 @@
 
 #include "lldb/Core/SearchFilter.h"
 
-#include "lldb/Breakpoint/Breakpoint.h" // for Breakpoint
+#include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h" // for ModuleList
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Symbol/CompileUnit.h"
-#include "lldb/Symbol/SymbolContext.h" // for SymbolContext
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/Target.h"
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-private.h"
 
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/Status.h"      // for Status
-#include "lldb/Utility/Stream.h"      // for Stream
-#include "lldb/lldb-enumerations.h"   // for SymbolContextItem::eSymbolCo...
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/lldb-enumerations.h"
 
-#include "llvm/ADT/StringRef.h"         // for StringRef
-#include "llvm/Support/ErrorHandling.h" // for llvm_unreachable
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ErrorHandling.h"
 
-#include <memory> // for shared_ptr
-#include <mutex>  // for recursive_mutex, lock_guard
-#include <string> // for string
+#include <memory>
+#include <mutex>
+#include <string>
 
-#include <inttypes.h> // for PRIu64
-#include <string.h>   // for size_t, strcmp
+#include <inttypes.h>
+#include <string.h>
 
 namespace lldb_private {
 class Address;

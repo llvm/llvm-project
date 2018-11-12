@@ -26,8 +26,7 @@
 #include "Utility/ARM_DWARF_Registers.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/MathExtras.h" // for SignExtend32 template function
-                                     // and countTrailingZeros function
+#include "llvm/Support/MathExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;

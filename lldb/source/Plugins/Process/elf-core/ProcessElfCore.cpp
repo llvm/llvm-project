@@ -7,13 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <stdlib.h>
 
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
@@ -23,6 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
@@ -60,8 +58,8 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
     // the header extension.
     const size_t header_size = sizeof(llvm::ELF::Elf64_Ehdr);
 
-    auto data_sp = FileSystem::Instance().CreateDataBuffer(
-        crash_file->GetPath(), header_size, 0);
+    auto data_sp = DataBufferLLVM::CreateSliceFromPath(crash_file->GetPath(),
+                                                       header_size, 0);
     if (data_sp && data_sp->GetByteSize() == header_size &&
         elf::ELFHeader::MagicBytesMatch(data_sp->GetBytes())) {
       elf::ELFHeader elf_header;

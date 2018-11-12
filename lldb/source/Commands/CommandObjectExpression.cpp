@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "swift/AST/Identifier.h"
 #include "swift/AST/Module.h"
 #include "swift/IDE/REPLCodeCompletion.h"
@@ -19,7 +16,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
 
-// Project includes
 #include "CommandObjectExpression.h"
 #include "Plugins/ExpressionParser/Clang/ClangExpressionVariable.h"
 #include "lldb/Core/Debugger.h"

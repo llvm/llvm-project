@@ -9,12 +9,8 @@
 
 #ifdef DECLARE_REGISTER_INFOS_ARM_STRUCT
 
-// C Includes
 #include <stddef.h>
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"

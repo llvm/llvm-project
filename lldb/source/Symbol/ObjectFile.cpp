@@ -20,6 +20,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Timer.h"
@@ -75,8 +76,8 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
         // container plug-ins can use these bytes to see if they can parse this
         // file.
         if (file_size > 0) {
-          data_sp = FileSystem::Instance().CreateDataBuffer(file->GetPath(),
-                                                            512, file_offset);
+          data_sp =
+              DataBufferLLVM::CreateSliceFromPath(file->GetPath(), 512, file_offset);
           data_offset = 0;
         }
       }
@@ -120,8 +121,8 @@ ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file,
             }
             // We failed to find any cached object files in the container plug-
             // ins, so lets read the first 512 bytes and try again below...
-            data_sp = FileSystem::Instance().CreateDataBuffer(
-                archive_file.GetPath(), 512, file_offset);
+            data_sp = DataBufferLLVM::CreateSliceFromPath(archive_file.GetPath(),
+                                                     512, file_offset);
           }
         }
       }
@@ -209,8 +210,7 @@ size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
                                            lldb::offset_t file_offset,
                                            lldb::offset_t file_size,
                                            ModuleSpecList &specs) {
-  DataBufferSP data_sp =
-      FileSystem::Instance().CreateDataBuffer(file.GetPath(), 512, file_offset);
+  DataBufferSP data_sp = DataBufferLLVM::CreateSliceFromPath(file.GetPath(), 512, file_offset);
   if (data_sp) {
     if (file_size == 0) {
       const lldb::offset_t actual_file_size =
@@ -690,5 +690,5 @@ void ObjectFile::RelocateSection(lldb_private::Section *section)
 
 DataBufferSP ObjectFile::MapFileData(const FileSpec &file, uint64_t Size,
                                      uint64_t Offset) {
-  return FileSystem::Instance().CreateDataBuffer(file.GetPath(), Size, Offset);
+  return DataBufferLLVM::CreateSliceFromPath(file.GetPath(), Size, Offset);
 }

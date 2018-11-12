@@ -10,12 +10,8 @@
 #ifndef liblldb_ClangPersistentVariables_h_
 #define liblldb_ClangPersistentVariables_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/DenseMap.h"
 
-// Project includes
 #include "ClangExpressionVariable.h"
 #include "ClangModulesDeclVendor.h"
 

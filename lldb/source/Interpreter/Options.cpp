@@ -9,15 +9,11 @@
 
 #include "lldb/Interpreter/Options.h"
 
-// C Includes
-// C++ Includes
 #include <algorithm>
 #include <bitset>
 #include <map>
 #include <set>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"

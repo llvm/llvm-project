@@ -7,12 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "CommandObjectFrame.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"

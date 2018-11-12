@@ -10,10 +10,6 @@
 #ifndef liblldb_NativeRegisterContext_h_
 #define liblldb_NativeRegisterContext_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/common/NativeWatchpointList.h"
 #include "lldb/lldb-private.h"
 

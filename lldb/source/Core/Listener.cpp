@@ -11,15 +11,15 @@
 
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Event.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h" // for GetLogIfAllCategoriesSet, LIBL...
+#include "lldb/Utility/Logging.h"
 
-#include "llvm/ADT/Optional.h" // for Optional
+#include "llvm/ADT/Optional.h"
 
 #include <algorithm>
-#include <memory>  // for make_shared
-#include <utility> // for pair, make_pair
+#include <memory>
+#include <utility>
 
 using namespace lldb;
 using namespace lldb_private;

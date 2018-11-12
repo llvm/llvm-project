@@ -17,7 +17,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 
-// Project includes
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #if !defined(_WIN32)

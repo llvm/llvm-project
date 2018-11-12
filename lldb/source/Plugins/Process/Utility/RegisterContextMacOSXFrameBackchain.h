@@ -10,10 +10,6 @@
 #ifndef lldb_RegisterContextMacOSXFrameBackchain_h_
 #define lldb_RegisterContextMacOSXFrameBackchain_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
 

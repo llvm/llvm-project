@@ -10,12 +10,8 @@
 #ifndef lldb_UnwindLLDB_h_
 #define lldb_UnwindLLDB_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Symbol/FuncUnwinders.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/UnwindPlan.h"

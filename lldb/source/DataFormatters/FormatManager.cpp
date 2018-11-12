@@ -11,10 +11,6 @@
 
 #include "llvm/ADT/STLExtras.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 #include "Plugins/ScriptInterpreter/Python/lldb-python.h"
 #include "lldb/Core/Debugger.h"

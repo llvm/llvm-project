@@ -10,13 +10,10 @@
 #ifndef liblldb_ProcessKDP_h_
 #define liblldb_ProcessKDP_h_
 
-// C Includes
 
-// C++ Includes
 #include <list>
 #include <vector>
 
-// Other libraries and framework includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Host/HostThread.h"

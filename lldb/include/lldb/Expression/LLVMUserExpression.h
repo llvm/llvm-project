@@ -10,16 +10,12 @@
 #ifndef liblldb_LLVMUserExpression_h
 #define liblldb_LLVMUserExpression_h
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/IR/LegacyPassManager.h"
 
-// Project includes
 #include "lldb/Expression/UserExpression.h"
 
 namespace lldb_private {

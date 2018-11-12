@@ -12,7 +12,7 @@
 
 #include "llvm/ADT/StringRef.h"
 
-#include <stddef.h> // for size_t
+#include <stddef.h>
 #include <string>
 #include <vector>
 

@@ -9,10 +9,6 @@
 
 #include "PlatformPOSIX.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"

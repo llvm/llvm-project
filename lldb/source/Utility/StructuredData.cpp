@@ -12,14 +12,14 @@
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/JSON.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h" // for Stream
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
-#include "llvm/ADT/STLExtras.h" // for make_unique
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <cerrno>
 #include <cstdlib>
 #include <inttypes.h>
-#include <limits> // for numeric_limits
+#include <limits>
 
 using namespace lldb_private;
 

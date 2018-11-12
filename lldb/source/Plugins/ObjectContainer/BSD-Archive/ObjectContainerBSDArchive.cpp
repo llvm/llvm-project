@@ -33,6 +33,7 @@ typedef struct ar_hdr {
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
 
@@ -312,7 +313,7 @@ ObjectContainer *ObjectContainerBSDArchive::CreateInstance(
       // file gets updated by a new build while this .a file is being used for
       // debugging
       DataBufferSP archive_data_sp =
-          FileSystem::Instance().CreateDataBuffer(*file, length, file_offset);
+          DataBufferLLVM::CreateSliceFromPath(file->GetPath(), length, file_offset);
       if (!archive_data_sp)
         return nullptr;
 
@@ -467,7 +468,7 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
   if (!archive_sp) {
     set_archive_arch = true;
     data_sp =
-        FileSystem::Instance().CreateDataBuffer(file, file_size, file_offset);
+        DataBufferLLVM::CreateSliceFromPath(file.GetPath(), file_size, file_offset);
     if (data_sp) {
       data.SetData(data_sp, 0, data_sp->GetByteSize());
       archive_sp = Archive::ParseAndCacheArchiveForFile(

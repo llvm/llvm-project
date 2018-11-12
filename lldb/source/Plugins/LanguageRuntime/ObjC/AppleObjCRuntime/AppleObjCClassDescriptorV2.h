@@ -10,12 +10,8 @@
 #ifndef liblldb_AppleObjCClassDescriptorV2_h_
 #define liblldb_AppleObjCClassDescriptorV2_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "AppleObjCRuntimeV2.h"
 #include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/lldb-private.h"

@@ -10,31 +10,31 @@
 #ifndef liblldb_Module_h_
 #define liblldb_Module_h_
 
-#include "lldb/Core/Address.h"    // for Address
-#include "lldb/Core/ModuleSpec.h" // for ModuleSpec
-#include "lldb/Symbol/ObjectFile.h" // for ObjectFile
+#include "lldb/Core/Address.h"
+#include "lldb/Core/ModuleSpec.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContextScope.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
-#include "lldb/Utility/Status.h" // for Status
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/UUID.h"
-#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h" // for LanguageType, SymbolType
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
-#include "lldb/lldb-types.h" // for addr_t, offset_t
+#include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Chrono.h"
 
 #include <atomic>
-#include <memory> // for enable_shared_from_this
+#include <memory>
 #include <mutex>
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t
+#include <stddef.h>
+#include <stdint.h>
 #include <string>
 #include <vector>
 

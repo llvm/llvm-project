@@ -10,16 +10,12 @@
 #ifndef liblldb_GDBRemoteCommunication_h_
 #define liblldb_GDBRemoteCommunication_h_
 
-// C Includes
-// C++ Includes
 #include <condition_variable>
 #include <mutex>
 #include <queue>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Communication.h"
 #include "lldb/Core/Listener.h"
 #include "lldb/Host/HostThread.h"

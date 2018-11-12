@@ -23,9 +23,9 @@
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBThread.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/StringRef.h"
-#include <inttypes.h> // For PRIx64
+#include "llvm/ADT/Twine.h"
+#include <inttypes.h>
 #include <string>
 
 // In-house headers:

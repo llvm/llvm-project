@@ -11,19 +11,15 @@
 #ifndef liblldb_PlatformiOSSimulatorCoreSimulatorSupport_h_
 #define liblldb_PlatformiOSSimulatorCoreSimulatorSupport_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <ostream>
 #include <string>
 #include <vector>
-// Other libraries and framework includes
 #ifdef __APPLE__
 #include <objc/objc.h>
 #else
 typedef void *id;
 #endif
-// Project includes
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/ConstString.h"

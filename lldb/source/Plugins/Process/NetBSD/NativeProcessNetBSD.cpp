@@ -9,11 +9,8 @@
 
 #include "NativeProcessNetBSD.h"
 
-// C Includes
 
-// C++ Includes
 
-// Other libraries and framework includes
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/common/NativeRegisterContext.h"

@@ -10,16 +10,16 @@
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/FileSpec.h"    // for FileSpec
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/lldb-defines.h" // for LLDB_INVALID_ADDRESS
+#include "lldb/lldb-defines.h"
 
-#include "llvm/Support/Compiler.h" // for LLVM_FALLTHROUGH
+#include "llvm/Support/Compiler.h"
 
-#include <memory> // for shared_ptr
+#include <memory>
 
-#include <inttypes.h> // for PRIx64
+#include <inttypes.h>
 
 namespace lldb_private {
 class SectionList;

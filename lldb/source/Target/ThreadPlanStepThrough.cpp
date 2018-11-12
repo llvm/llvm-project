@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/ThreadPlanStepThrough.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Target/CPPLanguageRuntime.h"

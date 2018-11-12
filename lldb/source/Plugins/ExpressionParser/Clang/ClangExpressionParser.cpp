@@ -7,10 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-#include <cctype> // for alnum
-// Other libraries and framework includes
+#include <cctype>
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -61,7 +58,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 
-// Project includes
 #include "ClangDiagnostic.h"
 #include "ClangExpressionParser.h"
 

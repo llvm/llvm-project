@@ -18,13 +18,9 @@
 #ifndef liblldb_DynamicLoaderMacOS_h_
 #define liblldb_DynamicLoaderMacOS_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"

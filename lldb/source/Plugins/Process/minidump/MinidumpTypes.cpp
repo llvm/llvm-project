@@ -7,10 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Project includes
 #include "MinidumpTypes.h"
 
-// Other libraries and framework includes
 // C includes
 // C++ includes
 

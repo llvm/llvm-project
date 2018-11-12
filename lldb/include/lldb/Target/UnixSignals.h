@@ -10,14 +10,10 @@
 #ifndef lldb_UnixSignals_h_
 #define lldb_UnixSignals_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 #include "llvm/ADT/Optional.h"

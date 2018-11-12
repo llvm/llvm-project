@@ -9,15 +9,12 @@
 
 #include "GDBRemoteCommunicationClient.h"
 
-// C Includes
 #include <math.h>
 #include <sys/stat.h>
 
-// C++ Includes
 #include <numeric>
 #include <sstream>
 
-// Other libraries and framework includes
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/XML.h"
@@ -33,7 +30,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 
-// Project includes
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"

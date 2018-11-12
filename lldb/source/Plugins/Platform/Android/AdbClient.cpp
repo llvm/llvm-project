@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Other libraries and framework includes
 #include "AdbClient.h"
 
 #include "llvm/ADT/STLExtras.h"

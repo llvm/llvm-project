@@ -10,12 +10,8 @@
 #ifndef liblldb_Symbols_h_
 #define liblldb_Symbols_h_
 
-// C Includes
 #include <stdint.h>
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/FileSpec.h"
 
 namespace lldb_private {

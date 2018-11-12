@@ -10,10 +10,8 @@
 #ifndef liblldb_ClangASTContext_h_
 #define liblldb_ClangASTContext_h_
 
-// C Includes
 #include <stdint.h>
 
-// C++ Includes
 #include <functional>
 #include <initializer_list>
 #include <map>
@@ -23,13 +21,11 @@
 #include <utility>
 #include <vector>
 
-// Other libraries and framework includes
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExternalASTMerger.h"
 #include "clang/AST/TemplateBase.h"
 #include "llvm/ADT/SmallVector.h"
 
-// Project includes
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/CompilerType.h"

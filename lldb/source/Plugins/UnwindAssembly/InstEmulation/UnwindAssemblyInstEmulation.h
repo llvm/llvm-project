@@ -10,10 +10,6 @@
 #ifndef liblldb_UnwindAssemblyInstEmulation_h_
 #define liblldb_UnwindAssemblyInstEmulation_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/UnwindAssembly.h"

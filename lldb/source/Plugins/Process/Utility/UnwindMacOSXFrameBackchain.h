@@ -10,12 +10,8 @@
 #ifndef lldb_UnwindMacOSXFrameBackchain_h_
 #define lldb_UnwindMacOSXFrameBackchain_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Unwind.h"
 #include "lldb/lldb-private.h"
 

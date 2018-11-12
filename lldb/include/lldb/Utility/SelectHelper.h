@@ -10,8 +10,8 @@
 #ifndef liblldb_SelectHelper_h_
 #define liblldb_SelectHelper_h_
 
-#include "lldb/Utility/Status.h" // for Status
-#include "lldb/lldb-types.h"    // for socket_t
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"

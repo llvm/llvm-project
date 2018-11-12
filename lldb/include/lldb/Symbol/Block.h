@@ -10,12 +10,8 @@
 #ifndef liblldb_Block_h_
 #define liblldb_Block_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Symbol/CompilerType.h"

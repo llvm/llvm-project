@@ -12,8 +12,6 @@
 
 #include "GDBRemoteClientBase.h"
 
-// C Includes
-// C++ Includes
 #include <chrono>
 #include <map>
 #include <mutex>

@@ -10,11 +10,9 @@
 #ifndef liblldb_ProcessMinidump_h_
 #define liblldb_ProcessMinidump_h_
 
-// Project includes
 #include "MinidumpParser.h"
 #include "MinidumpTypes.h"
 
-// Other libraries and framework includes
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
@@ -24,8 +22,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
-// C Includes
-// C++ Includes
 
 namespace lldb_private {
 

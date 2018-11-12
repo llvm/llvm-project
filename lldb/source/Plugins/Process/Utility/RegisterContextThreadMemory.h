@@ -10,12 +10,8 @@
 #ifndef lldb_RegisterContextThreadMemory_h_
 #define lldb_RegisterContextThreadMemory_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"

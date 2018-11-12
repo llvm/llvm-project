@@ -9,12 +9,12 @@
 
 #include "lldb/Core/ValueObjectVariable.h"
 
-#include "lldb/Core/Address.h"      // for Address
-#include "lldb/Core/AddressRange.h" // for AddressRange
+#include "lldb/Core/Address.h"
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Expression/DWARFExpression.h" // for DWARFExpression
-#include "lldb/Symbol/Declaration.h"         // for Declaration
+#include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Symbol/Declaration.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -25,17 +25,17 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataExtractor.h" // for DataExtractor
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/RegisterValue.h"
-#include "lldb/Utility/Scalar.h"            // for Scalar, operator!=
-#include "lldb/Utility/Status.h"            // for Status
-#include "lldb/lldb-private-enumerations.h" // for AddressType::eAddressTy...
-#include "lldb/lldb-types.h"                // for addr_t
+#include "lldb/Utility/Scalar.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-private-enumerations.h"
+#include "lldb/lldb-types.h"
 
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "llvm/ADT/StringRef.h"
 
-#include <assert.h> // for assert
-#include <memory>   // for shared_ptr
+#include <assert.h>
+#include <memory>
 
 namespace lldb_private {
 class ExecutionContextScope;

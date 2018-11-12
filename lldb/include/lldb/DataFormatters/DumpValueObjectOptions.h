@@ -10,12 +10,8 @@
 #ifndef lldb_DumpValueObjectOptions_h_
 #define lldb_DumpValueObjectOptions_h_
 
-// C Includes
-// C++ Includes
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
 

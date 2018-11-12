@@ -13,7 +13,7 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/lldb-types.h" // for offset_t
+#include "lldb/lldb-types.h"
 
 #include "llvm/ADT/SmallString.h"
 

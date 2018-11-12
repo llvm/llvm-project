@@ -42,7 +42,7 @@
 #include "MIDriver.h"
 #include "MIDriverMgr.h"
 #include "MIUtilDebug.h"
-#include "Platform.h" // Define signals - CODETAG_IOR_SIGNALS
+#include "Platform.h"
 
 #if defined(_MSC_VER)
 #pragma warning(                                                               \

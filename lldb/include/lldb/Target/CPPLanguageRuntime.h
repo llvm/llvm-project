@@ -11,11 +11,7 @@
 #ifndef liblldb_CPPLanguageRuntime_h_
 #define liblldb_CPPLanguageRuntime_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"

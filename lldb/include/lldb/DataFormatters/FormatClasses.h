@@ -10,15 +10,11 @@
 #ifndef lldb_FormatClasses_h_
 #define lldb_FormatClasses_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/DataFormatters/TypeFormat.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"

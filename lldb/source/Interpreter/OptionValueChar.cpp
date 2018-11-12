@@ -9,10 +9,6 @@
 
 #include "lldb/Interpreter/OptionValueChar.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"

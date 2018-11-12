@@ -10,13 +10,9 @@
 #ifndef liblldb_BreakpointLocation_h_
 #define liblldb_BreakpointLocation_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/BreakpointOptions.h"
 #include "lldb/Breakpoint/StoppointLocation.h"
 #include "lldb/Core/Address.h"

@@ -11,15 +11,11 @@
 #ifndef liblldb_Language_h_
 #define liblldb_Language_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <memory>
 #include <set>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Highlighter.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"

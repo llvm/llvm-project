@@ -7,13 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "PlatformRemoteAppleWatch.h"
 
 #include "lldb/Breakpoint/BreakpointLocation.h"

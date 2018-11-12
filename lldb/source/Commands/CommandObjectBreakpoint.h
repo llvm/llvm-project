@@ -10,14 +10,10 @@
 #ifndef liblldb_CommandObjectBreakpoint_h_
 #define liblldb_CommandObjectBreakpoint_h_
 
-// C Includes
-// C++ Includes
 
 #include <utility>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Core/Address.h"

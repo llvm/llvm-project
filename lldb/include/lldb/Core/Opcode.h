@@ -11,12 +11,12 @@
 #define lldb_Opcode_h
 
 #include "lldb/Utility/Endian.h"
-#include "lldb/lldb-enumerations.h" // for ByteOrder, ByteOrder::eByteOrde...
+#include "lldb/lldb-enumerations.h"
 
 #include "llvm/Support/MathExtras.h"
 
-#include <assert.h> // for assert
-#include <stdint.h> // for uint32_t, uint8_t, uint16_t
+#include <assert.h>
+#include <stdint.h>
 #include <string.h>
 
 namespace lldb_private {

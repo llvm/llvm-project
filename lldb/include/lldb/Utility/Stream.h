@@ -12,15 +12,15 @@
 
 #include "lldb/Utility/Flags.h"
 #include "lldb/lldb-defines.h"
-#include "lldb/lldb-enumerations.h" // for ByteOrder::eByteOrderInvalid
-#include "llvm/ADT/StringRef.h"     // for StringRef
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <stdarg.h>
-#include <stddef.h>    // for size_t
-#include <stdint.h>    // for uint32_t, uint64_t, uint8_t
-#include <type_traits> // for forward
+#include <stddef.h>
+#include <stdint.h>
+#include <type_traits>
 
 namespace lldb_private {
 
