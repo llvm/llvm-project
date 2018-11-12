@@ -219,7 +219,7 @@ SelectorParser::ParseState SelectorParser::stateForToken(const Token &RawTok) {
   case ExpectingRParenOrColon:
     if (RawTok.is(tok::colon))
       return ExpectingRParen;
-  // Fallthrough
+    LLVM_FALLTHROUGH;
   case ExpectingRParen:
     if (RawTok.is(tok::r_paren)) {
       // We found the selector that we were looking for.
