@@ -2804,31 +2804,6 @@ ValueObjectSP ValueObject::GetQualifiedRepresentationIfAvailable(
   return result_sp;
 }
 
-lldb::addr_t ValueObject::GetCPPVTableAddress(AddressType &address_type) {
-  CompilerType pointee_type;
-  CompilerType this_type(GetCompilerType());
-  uint32_t type_info = this_type.GetTypeInfo(&pointee_type);
-  if (type_info) {
-    bool ptr_or_ref = false;
-    if (type_info & (eTypeIsPointer | eTypeIsReference)) {
-      ptr_or_ref = true;
-      type_info = pointee_type.GetTypeInfo();
-    }
-
-    const uint32_t cpp_class = eTypeIsClass | eTypeIsCPlusPlus;
-    if ((type_info & cpp_class) == cpp_class) {
-      if (ptr_or_ref) {
-        address_type = GetAddressTypeOfChildren();
-        return GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
-      } else
-        return GetAddressOf(false, &address_type);
-    }
-  }
-
-  address_type = eAddressTypeInvalid;
-  return LLDB_INVALID_ADDRESS;
-}
-
 ValueObjectSP ValueObject::Dereference(Status &error) {
   if (m_deref_valobj)
     return m_deref_valobj->GetSP();

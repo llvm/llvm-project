@@ -635,9 +635,6 @@ public:
   virtual void SetLiveAddress(lldb::addr_t addr = LLDB_INVALID_ADDRESS,
                               AddressType address_type = eAddressTypeLoad) {}
 
-  // Find the address of the C++ vtable pointer
-  virtual lldb::addr_t GetCPPVTableAddress(AddressType &address_type);
-
   virtual lldb::ValueObjectSP Cast(const CompilerType &compiler_type);
 
   virtual lldb::ValueObjectSP CastPointerType(const char *name,
