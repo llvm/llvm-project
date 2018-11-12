@@ -431,6 +431,7 @@ hash_code IndexRecordHasher::hashImpl(DeclarationName Name) {
       break;
     case DeclarationName::CXXLiteralOperatorName:
       COMBINE_HASH(computeHash(Name.getCXXLiteralIdentifier()));
+      break;
     case DeclarationName::CXXUsingDirective:
       break;
     case DeclarationName::CXXDeductionGuideName:
