@@ -15,9 +15,9 @@
 #include "Plugins/Process/minidump/RegisterContextMinidump_x86_64.h"
 
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -37,9 +37,13 @@ using namespace minidump;
 
 class MinidumpParserTest : public testing::Test {
 public:
+  void SetUp() override { FileSystem::Initialize(); }
+
+  void TearDown() override { FileSystem::Terminate(); }
+
   void SetUpData(const char *minidump_filename) {
     std::string filename = GetInputFilePath(minidump_filename);
-    auto BufferPtr = DataBufferLLVM::CreateSliceFromPath(filename, -1, 0);
+    auto BufferPtr = FileSystem::Instance().CreateDataBuffer(filename, -1, 0);
     ASSERT_NE(BufferPtr, nullptr);
     llvm::Optional<MinidumpParser> optional_parser =
         MinidumpParser::Create(BufferPtr);
@@ -53,7 +57,7 @@ public:
   void InvalidMinidump(const char *minidump_filename, uint64_t load_size) {
     std::string filename = GetInputFilePath(minidump_filename);
     auto BufferPtr =
-        DataBufferLLVM::CreateSliceFromPath(filename, load_size, 0);
+        FileSystem::Instance().CreateDataBuffer(filename, load_size, 0);
     ASSERT_NE(BufferPtr, nullptr);
 
     llvm::Optional<MinidumpParser> optional_parser =
@@ -88,7 +92,7 @@ TEST_F(MinidumpParserTest, GetThreadListNotPadded) {
   // after the thread count.
   SetUpData("thread-list-not-padded.dmp");
   llvm::ArrayRef<MinidumpThread> thread_list;
-  
+
   thread_list = parser->GetThreads();
   ASSERT_EQ(2UL, thread_list.size());
   EXPECT_EQ(0x11223344UL, thread_list[0].thread_id);

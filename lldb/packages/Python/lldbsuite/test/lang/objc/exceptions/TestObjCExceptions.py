@@ -28,7 +28,8 @@ class ObjCExceptionsTestCase(TestBase):
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
                     substrs=['stopped', 'stop reason = breakpoint'])
 
-        thread = self.dbg.GetSelectedTarget().GetProcess().GetSelectedThread()
+        target = self.dbg.GetSelectedTarget()
+        thread = target.GetProcess().GetSelectedThread()
         frame = thread.GetSelectedFrame()
 
         self.expect(
@@ -87,4 +88,13 @@ class ObjCExceptionsTestCase(TestBase):
         self.assertEqual(userInfo.summary, "1 key/value pair")
         self.assertEqual(userInfo.GetChildAtIndex(0).GetChildAtIndex(0).description, "some_key")
         self.assertEqual(userInfo.GetChildAtIndex(0).GetChildAtIndex(1).description, "some_value")
-        self.assertGreater(e2.GetChildMemberWithName("reserved").dynamic.num_children, 0)
+        reserved = e2.GetChildMemberWithName("reserved").dynamic
+        self.assertGreater(reserved.num_children, 0)
+        callStackReturnAddresses = [reserved.GetChildAtIndex(i).GetChildAtIndex(1) for i in range(0, reserved.GetNumChildren())
+                if reserved.GetChildAtIndex(i).GetChildAtIndex(0).description == "callStackReturnAddresses"][0].dynamic
+        children = [callStackReturnAddresses.GetChildAtIndex(i) for i in range(0, callStackReturnAddresses.num_children)]
+
+        pcs = [i.unsigned for i in children]
+        names = [target.ResolveSymbolContextForAddress(lldb.SBAddress(pc, target), lldb.eSymbolContextSymbol).GetSymbol().name for pc in pcs]
+        for n in ["objc_exception_throw", "foo", "main"]:
+            self.assertTrue(n in names, "%s is in the exception backtrace (%s)" % (n, names))
