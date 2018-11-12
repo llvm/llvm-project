@@ -409,6 +409,9 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
       "NSArray summary provider", ConstString("__NSCFArray"), appkit_flags);
   AddCXXSummary(
       objc_category_sp, lldb_private::formatters::NSArraySummaryProvider,
+      "NSArray summary provider", ConstString("_NSCallStackArray"), appkit_flags);
+  AddCXXSummary(
+      objc_category_sp, lldb_private::formatters::NSArraySummaryProvider,
       "NSArray summary provider", ConstString("CFArrayRef"), appkit_flags);
   AddCXXSummary(objc_category_sp,
                 lldb_private::formatters::NSArraySummaryProvider,
@@ -525,6 +528,10 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
   AddCXXSynthetic(objc_category_sp,
                   lldb_private::formatters::NSArraySyntheticFrontEndCreator,
                   "NSArray synthetic children", ConstString("__NSCFArray"),
+                  ScriptedSyntheticChildren::Flags());
+  AddCXXSynthetic(objc_category_sp,
+                  lldb_private::formatters::NSArraySyntheticFrontEndCreator,
+                  "NSArray synthetic children", ConstString("_NSCallStackArray"),
                   ScriptedSyntheticChildren::Flags());
   AddCXXSynthetic(objc_category_sp,
                   lldb_private::formatters::NSArraySyntheticFrontEndCreator,

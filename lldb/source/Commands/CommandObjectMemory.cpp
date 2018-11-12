@@ -1357,7 +1357,7 @@ protected:
       size_t length = SIZE_MAX;
       if (item_byte_size > 1)
         length = item_byte_size;
-      auto data_sp = DataBufferLLVM::CreateSliceFromPath(
+      auto data_sp = FileSystem::Instance().CreateDataBuffer(
           m_memory_options.m_infile.GetPath(), length,
           m_memory_options.m_infile_offset);
       if (data_sp) {
