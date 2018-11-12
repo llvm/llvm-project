@@ -4274,6 +4274,11 @@ ASTReader::readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
     return Failure;
   }
 
+  // FIXME: Should we check the signature even if DisableValidation?
+  if (PP.getLangOpts().NeededByPCHOrCompilationUsesPCH || DisableValidation ||
+      (AllowConfigurationMismatch && Result == ConfigurationMismatch))
+    return Success;
+
   if (Result == OutOfDate && F.Kind == MK_ImplicitModule) {
     // If this module has already been finalized in the PCMCache, we're stuck
     // with it; we can only load a single version of each module.
