@@ -16,6 +16,9 @@ a.out: main.o
 	$(SWIFTC) $(SWIFTFLAGS) $< -lFoo -lBar -L$(shell pwd) -o $@ \
 	    -Xlinker -add_ast_path -Xlinker $(shell pwd)/Foo.swiftmodule \
 	    -Xlinker -add_ast_path -Xlinker $(shell pwd)/Bar.swiftmodule
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
 
 main.o: main.m libFoo.a libBar.a
 	$(CC) $(CFLAGS) $(MANDATORY_MODULE_BUILD_CFLAGS) -c -o $@ $< \

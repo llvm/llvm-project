@@ -9,6 +9,10 @@ include $(LEVEL)/Makefile.rules
 
 a.out: main.m libFoo.dylib libBar.dylib
 	$(CC) $(CFLAGS) $(MANDATORY_MODULE_BUILD_CFLAGS) -I$(shell pwd) -lFoo -lBar -L$(shell pwd) -o $@ $<
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
+
 
 lib%.dylib: %.swift
 	$(SWIFTC) $(SWIFTFLAGS) -sdk "$(SWIFTSDKROOT)" $^ -emit-library \
@@ -18,6 +22,9 @@ lib%.dylib: %.swift
 		-emit-objc-header-path $(shell basename $< .swift)-Swift.h \
 		-import-objc-header \
 $(SRCDIR)/$(shell basename $< .swift)/$(shell basename $< .swift)-Bridging.h
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$@"
+endif
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o

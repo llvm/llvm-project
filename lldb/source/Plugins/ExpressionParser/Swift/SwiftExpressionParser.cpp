@@ -217,9 +217,7 @@ static bool PerformAutoImport(SwiftASTContext &swift_ast_context,
     cu_modules = &compile_unit->GetImportedModules();
 
   llvm::SmallVector<swift::ModuleDecl::ImportedModule, 2> imported_modules;
-  llvm::SmallVector<std::pair<swift::ModuleDecl::ImportedModule,
-                              swift::SourceFile::ImportOptions>,
-                    2>
+  llvm::SmallVector<swift::SourceFile::ImportedModuleDesc, 2>
       additional_imports;
 
   source_file.getImportedModules(imported_modules,
@@ -276,7 +274,7 @@ static bool PerformAutoImport(SwiftASTContext &swift_ast_context,
       }
     }
 
-    additional_imports.push_back(std::make_pair(
+    additional_imports.push_back(swift::SourceFile::ImportedModuleDesc(
         std::make_pair(swift::ModuleDecl::AccessPathTy(), swift_module),
         swift::SourceFile::ImportOptions()));
     imported_modules.push_back(

@@ -14,9 +14,15 @@ include $(LEVEL)/Makefile.rules
 
 a.out: main.swift
 	$(SWIFTC) -g -Onone $^ -lDylib -L$(shell pwd) -o $@ $(SWIFTFLAGS) -Xcc -I$(SRCDIR)/Bar -I. -Xcc -I$(SRCDIR)/Foo
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - "$(EXE)"
+endif
 
 libDylib.dylib: dylib.swift
 	$(SWIFTC) -g -Onone $^ -emit-library -module-name Dylib -emit-module -Xlinker -install_name -Xlinker @executable_path/$@ -Xcc -I$(SRCDIR) -Xcc -I$(SRCDIR)/Foo $(SWIFTFLAGS)
+ifneq "$(CODESIGN)" ""
+	$(CODESIGN) -s - libDylib.dylib
+endif
 
 clean::
 	rm -rf *.swiftmodule *.swiftdoc *.dSYM *~ lib*.dylib a.out *.o
