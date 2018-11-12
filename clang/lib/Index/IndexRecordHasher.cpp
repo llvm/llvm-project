@@ -340,7 +340,7 @@ static hash_code computeHash(const TemplateArgument &Arg,
 
   case TemplateArgument::TemplateExpansion:
     COMBINE_HASH('P'); // pack expansion of...
-    // Fall through
+    LLVM_FALLTHROUGH;
   case TemplateArgument::Template:
     COMBINE_HASH(computeHash(Arg.getAsTemplateOrTemplatePattern(), Hasher));
     break;
