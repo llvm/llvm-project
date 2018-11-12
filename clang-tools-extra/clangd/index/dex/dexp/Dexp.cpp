@@ -139,6 +139,7 @@ class FuzzyFind : public Command {
       StringRef(this->Scopes).split(Scopes, ',');
       Request.Scopes = {Scopes.begin(), Scopes.end()};
     }
+    Request.AnyScope = Request.Scopes.empty();
     // FIXME(kbobyrev): Print symbol final scores to see the distribution.
     static const auto OutputFormat = "{0,-4} | {1,-40} | {2,-25}\n";
     outs() << formatv(OutputFormat, "Rank", "Symbol ID", "Symbol Name");
