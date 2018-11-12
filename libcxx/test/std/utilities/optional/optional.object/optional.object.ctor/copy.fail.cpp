@@ -25,7 +25,7 @@ struct S {
     S(int v)        : v_(v) {}
     S(const S &rhs) : v_(rhs.v_) {}  // make it not trivially copyable
     int v_;
-    };
+};
 
 
 int main()

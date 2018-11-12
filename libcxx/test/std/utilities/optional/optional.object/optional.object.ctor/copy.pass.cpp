@@ -166,8 +166,8 @@ int main()
         test_reference_extension();
     }
     {
-    constexpr std::optional<int> o1{4};
-    constexpr std::optional<int> o2 = o1;
-    static_assert( *o2 == 4, "" );
+        constexpr std::optional<int> o1{4};
+        constexpr std::optional<int> o2 = o1;
+        static_assert( *o2 == 4, "" );
     }
 }
