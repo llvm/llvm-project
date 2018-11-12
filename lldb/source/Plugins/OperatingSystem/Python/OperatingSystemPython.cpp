@@ -10,9 +10,6 @@
 #ifndef LLDB_DISABLE_PYTHON
 
 #include "OperatingSystemPython.h"
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "Plugins/Process/Utility/DynamicRegisterInfo.h"
 #include "Plugins/Process/Utility/RegisterContextDummy.h"
 #include "Plugins/Process/Utility/RegisterContextMemory.h"

@@ -9,13 +9,9 @@
 
 #include "lldb/DataFormatters/TypeFormat.h"
 
-// C Includes
 
-// C++ Includes
 
-// Other libraries and framework includes
 
-// Project includes
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 

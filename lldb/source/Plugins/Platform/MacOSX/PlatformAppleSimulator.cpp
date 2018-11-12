@@ -9,16 +9,12 @@
 
 #include "PlatformAppleSimulator.h"
 
-// C Includes
 #if defined(__APPLE__)
 #include <dlfcn.h>
 #endif
 
-// C++ Includes
 #include <mutex>
 #include <thread>
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/LLDBAssert.h"

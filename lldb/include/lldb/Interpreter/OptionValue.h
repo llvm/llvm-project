@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionValue_h_
 #define liblldb_OptionValue_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/ConstString.h"

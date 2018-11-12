@@ -14,17 +14,17 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/StructuredData.h"
-#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-forward.h" // for EventDataSP, ProcessSP, Struct...
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-forward.h"
 
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "llvm/ADT/StringRef.h"
 
 #include <chrono>
 #include <memory>
 #include <string>
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 class Event;

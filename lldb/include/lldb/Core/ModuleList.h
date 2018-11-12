@@ -10,12 +10,12 @@
 #ifndef liblldb_ModuleList_h_
 #define liblldb_ModuleList_h_
 
-#include "lldb/Core/Address.h"     // for Address
-#include "lldb/Core/ModuleSpec.h"  // for ModuleSpec
+#include "lldb/Core/Address.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/UserSettingsController.h"
-#include "lldb/Utility/FileSpec.h" // for FileSpec
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Iterable.h"
-#include "lldb/Utility/Status.h" // for Status
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
@@ -27,8 +27,8 @@
 #include <mutex>
 #include <vector>
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 class ConstString;

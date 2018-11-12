@@ -10,18 +10,14 @@
 #ifndef liblldb_TypeSystem_h_
 #define liblldb_TypeSystem_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <map>
 #include <mutex>
 #include <string>
 
-// Other libraries and framework includes
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Casting.h"
 
-// Project includes
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Symbol/CompilerDecl.h"

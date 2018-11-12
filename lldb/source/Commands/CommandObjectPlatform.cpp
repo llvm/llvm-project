@@ -7,11 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <mutex>
-// Other libraries and framework includes
-// Project includes
 #include "CommandObjectPlatform.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"

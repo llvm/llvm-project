@@ -237,5 +237,4 @@ def library_paths():
 def package_build_path():
     return os.path.join(
         llvm_build_dirtree(),
-        LLVM_BUILD_DIRS()[
-            lldb_configuration()])
+        LLVM_BUILD_DIRS()[lldb_configuration()])

@@ -9,34 +9,34 @@
 
 #include "lldb/Core/SourceManager.h"
 
-#include "lldb/Core/Address.h"      // for Address
-#include "lldb/Core/AddressRange.h" // for AddressRange
+#include "lldb/Core/Address.h"
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/FormatEntity.h" // for FormatEntity
+#include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Highlighter.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h" // for ModuleList
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
-#include "lldb/Symbol/LineEntry.h" // for LineEntry
+#include "lldb/Symbol/LineEntry.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Target/PathMappingList.h" // for PathMappingList
+#include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/lldb-enumerations.h" // for StopShowColumn::eStopSho...
+#include "lldb/lldb-enumerations.h"
 
-#include "llvm/ADT/Twine.h" // for Twine
+#include "llvm/ADT/Twine.h"
 
 #include <memory>
-#include <utility> // for pair
+#include <utility>
 
-#include <assert.h> // for assert
-#include <stdio.h>  // for size_t, NULL, snprintf
+#include <assert.h>
+#include <stdio.h>
 
 namespace lldb_private {
 class ExecutionContext;
@@ -477,7 +477,7 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
   }
 
   if (m_mod_time != llvm::sys::TimePoint<>())
-    m_data_sp = FileSystem::Instance().CreateDataBuffer(m_file_spec);
+    m_data_sp = DataBufferLLVM::CreateFromPath(m_file_spec.GetPath());
 }
 
 uint32_t SourceManager::File::GetLineOffset(uint32_t line) {
@@ -555,7 +555,7 @@ void SourceManager::File::UpdateIfNeeded() {
   if (curr_mod_time != llvm::sys::TimePoint<>() &&
       m_mod_time != curr_mod_time) {
     m_mod_time = curr_mod_time;
-    m_data_sp = FileSystem::Instance().CreateDataBuffer(m_file_spec);
+    m_data_sp = DataBufferLLVM::CreateFromPath(m_file_spec.GetPath());
     m_offsets.clear();
   }
 }

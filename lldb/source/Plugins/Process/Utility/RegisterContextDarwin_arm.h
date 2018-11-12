@@ -10,10 +10,6 @@
 #ifndef liblldb_RegisterContextDarwin_arm_h_
 #define liblldb_RegisterContextDarwin_arm_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"
 

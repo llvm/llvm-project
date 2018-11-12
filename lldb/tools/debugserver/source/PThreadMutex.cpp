@@ -13,10 +13,6 @@
 
 #include "PThreadMutex.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "DNBTimer.h"
 
 #if defined(DEBUG_PTHREAD_MUTEX_DEADLOCKS)

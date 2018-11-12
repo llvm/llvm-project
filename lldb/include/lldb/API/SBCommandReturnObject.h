@@ -10,14 +10,10 @@
 #ifndef LLDB_SBCommandReturnObject_h_
 #define LLDB_SBCommandReturnObject_h_
 
-// C Includes
 #include <stdio.h>
 
-// C++ Includes
 #include <memory>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/API/SBDefines.h"
 
 namespace lldb {

@@ -10,10 +10,6 @@
 #ifndef liblldb_RegisterContextPOSIX_s390x_h_
 #define liblldb_RegisterContextPOSIX_s390x_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "RegisterContext_s390x.h"
 #include "RegisterInfoInterface.h"
 #include "lldb-s390x-register-enums.h"

@@ -10,12 +10,8 @@
 #ifndef liblldb_ClangUserExpression_h_
 #define liblldb_ClangUserExpression_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "ASTResultSynthesizer.h"
 #include "ASTStructExtractor.h"
 #include "ClangExpressionDeclMap.h"

@@ -9,10 +9,6 @@
 
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"

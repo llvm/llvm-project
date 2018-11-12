@@ -20,9 +20,9 @@
 #include "lldb/API/SBUnixSignals.h"
 #include "llvm/Support/Compiler.h"
 #ifdef _WIN32
-#include <io.h> // For the ::_access()
+#include <io.h>
 #else
-#include <unistd.h> // For the ::access()
+#include <unistd.h>
 #endif              // _WIN32
 
 // In-house headers:
@@ -39,7 +39,7 @@
 #include "MICmnStreamStdout.h"
 #include "MIDriver.h"
 #include "MIUtilDebug.h"
-#include "Platform.h" // for PATH_MAX
+#include "Platform.h"
 
 #include <algorithm>
 

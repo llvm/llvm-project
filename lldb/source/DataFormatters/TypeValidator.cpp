@@ -7,13 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 
-// C++ Includes
 
-// Other libraries and framework includes
 
-// Project includes
 #include "lldb/DataFormatters/TypeValidator.h"
 #include "lldb/Utility/StreamString.h"
 

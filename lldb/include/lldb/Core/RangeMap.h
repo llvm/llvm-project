@@ -10,15 +10,11 @@
 #ifndef liblldb_RangeMap_h_
 #define liblldb_RangeMap_h_
 
-// C Includes
-// C++ Includes
 #include <algorithm>
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/SmallVector.h"
 
-// Project includes
 #include "lldb/lldb-private.h"
 
 // Uncomment to make sure all Range objects are sorted when needed

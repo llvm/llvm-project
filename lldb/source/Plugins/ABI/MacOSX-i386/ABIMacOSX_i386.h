@@ -10,10 +10,6 @@
 #ifndef liblldb_ABIMacOSX_i386_h_
 #define liblldb_ABIMacOSX_i386_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Value.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/lldb-private.h"

@@ -10,10 +10,6 @@
 #ifndef liblldb_RegisterContextKDP_i386_h_
 #define liblldb_RegisterContextKDP_i386_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Process/Utility/RegisterContextDarwin_i386.h"
 
 class ThreadKDP;

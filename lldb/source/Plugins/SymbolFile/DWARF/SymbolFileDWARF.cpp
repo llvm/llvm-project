@@ -9,7 +9,6 @@
 
 #include "SymbolFileDWARF.h"
 
-// Other libraries and framework includes
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Threading.h"
 

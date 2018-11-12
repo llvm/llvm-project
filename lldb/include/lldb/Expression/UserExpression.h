@@ -10,14 +10,10 @@
 #ifndef liblldb_UserExpression_h_
 #define liblldb_UserExpression_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Address.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Expression/Materializer.h"

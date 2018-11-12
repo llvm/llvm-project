@@ -10,18 +10,14 @@
 #ifndef liblldb_GDBRemoteCommunicationServerLLGS_h_
 #define liblldb_GDBRemoteCommunicationServerLLGS_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 #include <unordered_map>
 
-// Other libraries and framework includes
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/lldb-private-forward.h"
 
-// Project includes
 #include "GDBRemoteCommunicationServerCommon.h"
 
 class StringExtractorGDBRemote;

@@ -10,13 +10,13 @@
 #include "lldb/Utility/StringList.h"
 
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Stream.h" // for Stream
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
-#include "llvm/ADT/ArrayRef.h" // for ArrayRef, makeArrayRef
+#include "llvm/ADT/ArrayRef.h"
 
-#include <algorithm> // for min
-#include <stdint.h>  // for SIZE_MAX, uint32_t
-#include <string.h>  // for size_t, strcspn, NULL
+#include <algorithm>
+#include <stdint.h>
+#include <string.h>
 
 using namespace lldb_private;
 

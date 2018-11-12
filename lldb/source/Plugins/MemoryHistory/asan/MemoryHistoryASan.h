@@ -10,10 +10,6 @@
 #ifndef liblldb_MemoryHistoryASan_h_
 #define liblldb_MemoryHistoryASan_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/MemoryHistory.h"
 #include "lldb/Target/Process.h"

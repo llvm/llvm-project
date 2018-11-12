@@ -10,14 +10,10 @@
 #ifndef liblldb_ClangUtilityFunction_h_
 #define liblldb_ClangUtilityFunction_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "ClangExpressionHelper.h"
 
 #include "lldb/Core/ClangForward.h"

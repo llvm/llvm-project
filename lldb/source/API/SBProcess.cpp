@@ -9,7 +9,6 @@
 
 #include "lldb/API/SBProcess.h"
 
-// C Includes
 #include <inttypes.h>
 
 #include "lldb/lldb-defines.h"
@@ -30,7 +29,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 
-// Project includes
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandReturnObject.h"

@@ -10,14 +10,10 @@
 #ifndef lldb_AppleGetItemInfoHandler_h_
 #define lldb_AppleGetItemInfoHandler_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <mutex>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/Status.h"

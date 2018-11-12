@@ -10,18 +10,14 @@
 #ifndef liblldb_ClangExpressionDeclMap_h_
 #define liblldb_ClangExpressionDeclMap_h_
 
-// C Includes
 #include <signal.h>
 #include <stdint.h>
 
-// C++ Includes
 #include <vector>
 
 #include "ClangASTSource.h"
 #include "ClangExpressionVariable.h"
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/Materializer.h"

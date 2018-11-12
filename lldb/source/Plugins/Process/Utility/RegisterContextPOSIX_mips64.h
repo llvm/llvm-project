@@ -10,10 +10,6 @@
 #ifndef liblldb_RegisterContextPOSIX_mips64_h_
 #define liblldb_RegisterContextPOSIX_mips64_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "RegisterContext_mips.h"
 #include "RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"

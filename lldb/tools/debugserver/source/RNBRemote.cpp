@@ -50,7 +50,7 @@
 #include <zlib.h>
 #endif
 
-#include <TargetConditionals.h> // for endianness predefines
+#include <TargetConditionals.h>
 #include <iomanip>
 #include <sstream>
 #include <unordered_set>

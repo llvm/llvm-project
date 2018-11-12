@@ -12,10 +12,8 @@
 
 #include "lldb/Host/Config.h"
 
-// C Includes
 #include <limits.h>
 
-// C++ Includes
 #include <chrono>
 #include <list>
 #include <memory>
@@ -24,8 +22,6 @@
 #include <unordered_set>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/BreakpointSiteList.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Communication.h"

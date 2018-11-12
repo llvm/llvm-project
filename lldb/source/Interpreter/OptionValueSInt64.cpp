@@ -9,10 +9,6 @@
 
 #include "lldb/Interpreter/OptionValueSInt64.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/Stream.h"
 

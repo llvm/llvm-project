@@ -9,14 +9,11 @@
 
 #include "PlatformDarwin.h"
 
-// C Includes
 #include <string.h>
 
-// C++ Includes
 #include <algorithm>
 #include <mutex>
 
-// Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Debugger.h"
@@ -33,6 +30,7 @@
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/DataBufferLLVM.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
@@ -42,7 +40,7 @@
 #include "llvm/Support/VersionTuple.h"
 
 #if defined(__APPLE__)
-#include <TargetConditionals.h> // for TARGET_OS_TV, TARGET_OS_WATCH
+#include <TargetConditionals.h>
 #endif
 
 using namespace lldb;
@@ -1169,7 +1167,7 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
       xcode_dir_path.append("/usr/share/xcode-select/xcode_dir_path");
       temp_file_spec.SetFile(xcode_dir_path, FileSpec::Style::native);
       auto dir_buffer =
-          FileSystem::Instance().CreateDataBuffer(temp_file_spec.GetPath());
+          DataBufferLLVM::CreateFromPath(temp_file_spec.GetPath());
       if (dir_buffer && dir_buffer->GetByteSize() > 0) {
         llvm::StringRef path_ref(dir_buffer->GetChars());
         // Trim tailing newlines and make sure there is enough room for a null

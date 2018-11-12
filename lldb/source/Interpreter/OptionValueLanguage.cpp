@@ -9,10 +9,6 @@
 
 #include "lldb/Interpreter/OptionValueLanguage.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/Args.h"

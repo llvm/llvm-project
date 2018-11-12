@@ -21,7 +21,7 @@
 #include <unistd.h>
 
 #include <algorithm>
-#include <mutex> // std::once
+#include <mutex>
 
 using namespace lldb_private;
 

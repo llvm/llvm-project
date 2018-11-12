@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <cstring>
 
 #include "lldb/Core/Debugger.h"

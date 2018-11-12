@@ -13,10 +13,6 @@
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/Utility/Log.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 using namespace lldb;
 using namespace lldb_private;

@@ -9,14 +9,14 @@
 
 #include "lldb/Utility/TildeExpressionResolver.h"
 
-#include <assert.h>     // for assert
-#include <system_error> // for error_code
+#include <assert.h>
+#include <system_error>
 
-#include "llvm/ADT/STLExtras.h"      // for any_of
-#include "llvm/ADT/SmallVector.h"    // for SmallVectorImpl
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/raw_ostream.h" // for fs
+#include "llvm/Support/raw_ostream.h"
 
 #if !defined(_WIN32)
 #include <pwd.h>

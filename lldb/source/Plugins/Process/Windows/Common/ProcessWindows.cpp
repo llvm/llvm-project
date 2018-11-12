@@ -13,7 +13,6 @@
 #include "lldb/Host/windows/windows.h"
 #include <psapi.h>
 
-// Other libraries and framework includes
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"

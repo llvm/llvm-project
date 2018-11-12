@@ -10,18 +10,14 @@
 #ifndef liblldb_RenderScriptRuntime_h_
 #define liblldb_RenderScriptRuntime_h_
 
-// C Includes
-// C++ Includes
 #include <array>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-// Project includes
 #include "lldb/Core/Module.h"
 #include "lldb/Expression/LLVMUserExpression.h"
 #include "lldb/Target/CPPLanguageRuntime.h"

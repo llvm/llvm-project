@@ -1,0 +1,15 @@
+REQUIRES: system-windows
+RUN: clang-cl /Zi %S/Inputs/VBases.cpp /o %t.exe
+RUN: %lldb -b -s %S/Inputs/VBases.script -- %t.exe | FileCheck %s
+
+CHECK: {
+CHECK:   A = (a = '\x01')
+CHECK:   B = (b = 2)
+CHECK:   c = 3
+CHECK: }
+
+CHECK: {
+CHECK:   A = (a = '\x01')
+CHECK:   B = (b = 2)
+CHECK:   c = 3
+CHECK: }

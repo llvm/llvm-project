@@ -10,11 +10,7 @@
 #ifndef liblldb_PlatformDarwin_h_
 #define liblldb_PlatformDarwin_h_
 
-// C Includes
-// C++ Includes
 
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/FileSpec.h"

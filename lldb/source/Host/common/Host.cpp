@@ -45,7 +45,6 @@
 #include <lwp.h>
 #endif
 
-// C++ Includes
 #include <csignal>
 
 #include "lldb/Host/FileSystem.h"
@@ -565,7 +564,7 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
                 "shell command output is too large to fit into a std::string");
           } else {
             auto Buffer =
-                FileSystem::Instance().CreateDataBuffer(output_file_spec);
+                DataBufferLLVM::CreateFromPath(output_file_spec.GetPath());
             if (error.Success())
               command_output_ptr->assign(Buffer->GetChars(),
                                          Buffer->GetByteSize());

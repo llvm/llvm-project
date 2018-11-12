@@ -7,12 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "ObjCLanguage.h"
 
 #include "lldb/Core/PluginManager.h"

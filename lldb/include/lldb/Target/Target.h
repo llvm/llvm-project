@@ -10,8 +10,6 @@
 #ifndef liblldb_Target_h_
 #define liblldb_Target_h_
 
-// C Includes
-// C++ Includes
 #include <list>
 #include <map>
 #include <memory>
@@ -19,8 +17,6 @@
 #include <unordered_set>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Breakpoint/BreakpointList.h"

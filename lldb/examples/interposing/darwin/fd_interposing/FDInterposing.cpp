@@ -65,7 +65,7 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <tr1/memory> // for std::tr1::shared_ptr
+#include <tr1/memory>
 #include <unistd.h>
 #include <vector>
 

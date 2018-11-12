@@ -10,13 +10,9 @@
 #ifndef liblldb_GDBRemoteCommunicationServer_h_
 #define liblldb_GDBRemoteCommunicationServer_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <map>
 
-// Other libraries and framework includes
-// Project includes
 #include "GDBRemoteCommunication.h"
 #include "lldb/lldb-private-forward.h"
 

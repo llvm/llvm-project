@@ -9,10 +9,6 @@
 
 #include "SymbolFileDWARFDwp.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/ObjectFile.h"
 

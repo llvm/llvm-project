@@ -9,21 +9,17 @@
 
 #include "CPlusPlusLanguage.h"
 
-// C Includes
 #include <cctype>
 #include <cstring>
 
-// C++ Includes
 #include <functional>
 #include <memory>
 #include <mutex>
 #include <set>
 
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 
-// Project includes
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/DataFormatters/CXXFunctionPointer.h"

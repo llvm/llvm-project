@@ -9,13 +9,10 @@
 
 #include "CommandObjectType.h"
 
-// C Includes
-// C++ Includes
 #include <algorithm>
 #include <cctype>
 #include <functional>
 
-// Project includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -41,7 +38,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StringList.h"
 
-// Other libraries and framework includes
 #include "llvm/ADT/STLExtras.h"
 
 using namespace lldb;

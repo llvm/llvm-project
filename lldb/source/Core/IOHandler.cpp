@@ -9,28 +9,24 @@
 
 #include "lldb/Core/IOHandler.h"
 
-// C Includes
 #ifndef LLDB_DISABLE_CURSES
 #include <curses.h>
 #include <panel.h>
 #endif
 
-// C++ Includes
 #if defined(__APPLE__)
 #include <deque>
 #endif
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Host/File.h"            // for File
-#include "lldb/Utility/Predicate.h"    // for Predicate, ::eBroad...
-#include "lldb/Utility/Status.h"       // for Status
-#include "lldb/Utility/StreamString.h" // for StreamString
-#include "lldb/Utility/StringList.h"   // for StringList
-#include "lldb/lldb-forward.h"         // for StreamFileSP
+#include "lldb/Host/File.h"
+#include "lldb/Utility/Predicate.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringList.h"
+#include "lldb/lldb-forward.h"
 
 #ifndef LLDB_DISABLE_LIBEDIT
 #include "lldb/Host/Editline.h"
@@ -55,23 +51,23 @@
 #include "lldb/Utility/State.h"
 #endif
 
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "llvm/ADT/StringRef.h"
 
 #ifdef _MSC_VER
 #include "lldb/Host/windows/windows.h"
 #endif
 
-#include <memory> // for shared_ptr
-#include <mutex>  // for recursive_mutex
+#include <memory>
+#include <mutex>
 
-#include <assert.h>    // for assert
-#include <ctype.h>     // for isspace
-#include <errno.h>     // for EINTR, errno
-#include <locale.h>    // for setlocale
-#include <stdint.h>    // for uint32_t, UINT32_MAX
-#include <stdio.h>     // for size_t, fprintf, feof
-#include <string.h>    // for strlen
-#include <type_traits> // for move
+#include <assert.h>
+#include <ctype.h>
+#include <errno.h>
+#include <locale.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <type_traits>
 
 using namespace lldb;
 using namespace lldb_private;

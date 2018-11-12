@@ -10,10 +10,6 @@
 #ifndef liblldb_ObjCPlusPlusLanguage_h_
 #define liblldb_ObjCPlusPlusLanguage_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Language/ClangCommon/ClangHighlighter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/lldb-private.h"

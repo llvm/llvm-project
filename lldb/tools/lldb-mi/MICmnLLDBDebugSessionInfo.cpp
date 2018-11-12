@@ -9,11 +9,11 @@
 
 // Third party headers:
 #include "lldb/API/SBThread.h"
-#include <inttypes.h> // For PRIx64
+#include <inttypes.h>
 #ifdef _WIN32
-#include <io.h> // For the ::_access()
+#include <io.h>
 #else
-#include <unistd.h> // For the ::access()
+#include <unistd.h>
 #endif              // _WIN32
 #include "lldb/API/SBBreakpointLocation.h"
 

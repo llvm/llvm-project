@@ -13,14 +13,14 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataExtractor.h" // for DataExtractor
-#include "lldb/Utility/Scalar.h"        // for Scalar, operator!=
-#include "lldb/Utility/Status.h"        // for Status
-#include "lldb/lldb-types.h"            // for addr_t
-#include "llvm/Support/ErrorHandling.h" // for llvm_unreachable
+#include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Scalar.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-types.h"
+#include "llvm/Support/ErrorHandling.h"
 
-#include <assert.h> // for assert
-#include <memory>   // for shared_ptr
+#include <assert.h>
+#include <memory>
 
 namespace lldb_private {
 class ExecutionContextScope;

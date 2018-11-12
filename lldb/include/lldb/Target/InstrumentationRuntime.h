@@ -10,13 +10,9 @@
 #ifndef liblldb_InstrumentationRuntime_h_
 #define liblldb_InstrumentationRuntime_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-forward.h"

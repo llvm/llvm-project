@@ -9,13 +9,10 @@
 
 #include "GDBRemoteCommunication.h"
 
-// C Includes
 #include <limits.h>
 #include <string.h>
 #include <sys/stat.h>
 
-// C++ Includes
-// Other libraries and framework includes
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/FileSystem.h"
@@ -34,7 +31,6 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ScopedPrinter.h"
 
-// Project includes
 #include "ProcessGDBRemoteLog.h"
 
 #if defined(__APPLE__)

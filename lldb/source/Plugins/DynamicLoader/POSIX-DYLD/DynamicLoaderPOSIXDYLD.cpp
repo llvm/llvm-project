@@ -10,10 +10,8 @@
 // Main header include
 #include "DynamicLoaderPOSIXDYLD.h"
 
-// Project includes
 #include "AuxVector.h"
 
-// Other libraries and framework includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -29,8 +27,6 @@
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Utility/Log.h"
 
-// C++ Includes
-// C Includes
 
 using namespace lldb;
 using namespace lldb_private;

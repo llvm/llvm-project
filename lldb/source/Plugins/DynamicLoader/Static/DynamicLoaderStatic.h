@@ -10,10 +10,6 @@
 #ifndef liblldb_DynamicLoaderStatic_h_
 #define liblldb_DynamicLoaderStatic_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
