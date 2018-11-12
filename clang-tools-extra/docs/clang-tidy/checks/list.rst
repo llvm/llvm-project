@@ -59,6 +59,7 @@ Clang-Tidy Checks
    bugprone-swapped-arguments
    bugprone-terminating-continue
    bugprone-throw-keyword-missing
+   bugprone-too-small-loop-variable
    bugprone-undefined-memory-manipulation
    bugprone-undelegated-constructor
    bugprone-unused-raii
