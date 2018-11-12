@@ -922,7 +922,7 @@ static SDKTypeMinVersion GetSDKType(const llvm::Triple &target,
   }
 }
 
-static std::string GetXcodeContentsPath() {
+static StringRef GetXcodeContentsPath() {
   static std::once_flag g_once_flag;
   static std::string g_xcode_contents_path;
   std::call_once(g_once_flag, [&]() {
