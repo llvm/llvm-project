@@ -64,6 +64,15 @@ static void EmitDeclInit(CodeGenFunction &CGF, const VarDecl &D,
 /// static storage duration.
 static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
                             ConstantAddress Addr) {
+  // Honor __attribute__((no_destroy)) and bail instead of attempting
+  // to emit a reference to a possibly nonexistent destructor, which
+  // in turn can cause a crash. This will result in a global constructor
+  // that isn't balanced out by a destructor call as intended by the
+  // attribute. This also checks for -fno-c++-static-destructors and
+  // bails even if the attribute is not present.
+  if (D.isNoDestroy(CGF.getContext()))
+    return;
+  
   CodeGenModule &CGM = CGF.CGM;
 
   // FIXME:  __attribute__((cleanup)) ?
