@@ -930,6 +930,9 @@ void Linux::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
       // Freescale SDK C++ headers are directly in <sysroot>/usr/include/c++,
       // without a subdirectory corresponding to the gcc version.
       LibDir.str() + "/../include/c++",
+      // Cray's gcc installation puts headers under "g++" without a
+      // version suffix.
+      LibDir.str() + "/../include/g++",
   };
 
   for (const auto &IncludePath : LibStdCXXIncludePathCandidates) {
