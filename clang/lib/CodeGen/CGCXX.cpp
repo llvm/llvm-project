@@ -276,7 +276,7 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
     CGF.Builder.CreateConstInBoundsGEP1_64(VTable, VTableIndex, "vfnkxt");
   llvm::Value *VFunc =
     CGF.Builder.CreateAlignedLoad(VFuncPtr, CGF.PointerAlignInBytes);
-  CGCallee Callee(GD.getDecl()->getCanonicalDecl(), VFunc);
+  CGCallee Callee(GD, VFunc);
   return Callee;
 }
 

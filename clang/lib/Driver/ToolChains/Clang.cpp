@@ -3188,6 +3188,11 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
                             ? "-gpubnames"
                             : "-ggnu-pubnames");
 
+  if (Args.hasFlag(options::OPT_fdebug_ranges_base_address,
+                   options::OPT_fno_debug_ranges_base_address, false)) {
+    CmdArgs.push_back("-fdebug-ranges-base-address");
+  }
+
   // -gdwarf-aranges turns on the emission of the aranges section in the
   // backend.
   // Always enabled for SCE tuning.
