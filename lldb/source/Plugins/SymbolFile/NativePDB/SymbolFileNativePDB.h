@@ -201,6 +201,8 @@ private:
   lldb::TypeSP CreateType(PdbSymUid type_uid);
   lldb::TypeSP CreateAndCacheType(PdbSymUid type_uid);
   lldb::VariableSP CreateGlobalVariable(PdbSymUid var_uid);
+  lldb::VariableSP CreateConstantSymbol(PdbSymUid var_uid,
+                                        const llvm::codeview::CVSymbol &cvs);
 
   llvm::BumpPtrAllocator m_allocator;
 
