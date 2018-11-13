@@ -1139,3 +1139,6 @@ def SLTUImm64 : MipsAsmPseudoInst<(outs GPR64Opnd:$rs),
                                   "sltu\t$rs, $rt, $imm">, GPR_64;
 def : MipsInstAlias<"sltu\t$rs, $imm", (SLTUImm64 GPR64Opnd:$rs, GPR64Opnd:$rs,
                                                   imm64:$imm)>, GPR_64;
+
+def : MipsInstAlias<"rdhwr $rt, $rs",
+                    (RDHWR64 GPR64Opnd:$rt, HWRegsOpnd:$rs, 0), 1>, GPR_64;
