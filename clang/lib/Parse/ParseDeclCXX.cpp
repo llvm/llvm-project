@@ -178,7 +178,10 @@ Parser::DeclGroupPtrTy Parser::ParseNamespace(DeclaratorContext Context,
     } else {
       std::string NamespaceFix;
       for (const auto &ExtraNS : ExtraNSs) {
-        NamespaceFix += " { namespace ";
+        NamespaceFix += " { ";
+        if (ExtraNS.InlineLoc.isValid())
+          NamespaceFix += "inline ";
+        NamespaceFix += "namespace ";
         NamespaceFix += ExtraNS.Ident->getName();
       }
 
