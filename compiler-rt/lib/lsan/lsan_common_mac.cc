@@ -118,7 +118,7 @@ static const char *kSkippedSecNames[] = {
 // Scans global variables for heap pointers.
 void ProcessGlobalRegions(Frontier *frontier) {
   for (auto name : kSkippedSecNames)
-    CHECK(internal_strnlen(name, kMaxSegName) < kMaxSegName);
+    CHECK(internal_strnlen(name, kMaxSegName + 1) <= kMaxSegName);
 
   MemoryMappingLayout memory_mapping(false);
   InternalMmapVector<LoadedModule> modules;
