@@ -40,6 +40,7 @@ class VPValue {
   friend class VPBuilder;
   friend class VPlanHCFGTransforms;
   friend class VPBasicBlock;
+  friend class VPInterleavedAccessInfo;
 
 private:
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).

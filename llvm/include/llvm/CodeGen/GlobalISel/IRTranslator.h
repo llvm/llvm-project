@@ -300,6 +300,8 @@ private:
 
   bool translateFSub(const User &U, MachineIRBuilder &MIRBuilder);
 
+  bool translateFNeg(const User &U, MachineIRBuilder &MIRBuilder);
+
   bool translateAdd(const User &U, MachineIRBuilder &MIRBuilder) {
     return translateBinaryOp(TargetOpcode::G_ADD, U, MIRBuilder);
   }

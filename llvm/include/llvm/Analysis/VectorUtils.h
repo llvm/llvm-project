@@ -24,7 +24,7 @@ namespace llvm {
 template <typename T> class ArrayRef;
 class DemandedBits;
 class GetElementPtrInst;
-class InterleaveGroup; 
+template <typename InstTy> class InterleaveGroup;
 class Loop;
 class ScalarEvolution;
 class TargetTransformInfo;
@@ -138,7 +138,7 @@ Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 /// create[*]Mask() utilities which create a shuffle mask (mask that
 /// consists of indices).
 Constant *createBitMaskForGaps(IRBuilder<> &Builder, unsigned VF,
-                               const InterleaveGroup &Group);
+                               const InterleaveGroup<Instruction> &Group);
 
 /// Create a mask with replicated elements.
 ///
@@ -233,9 +233,12 @@ Value *concatenateVectors(IRBuilder<> &Builder, ArrayRef<Value *> Vecs);
 ///
 /// Note: the interleaved load group could have gaps (missing members), but
 /// the interleaved store group doesn't allow gaps.
-class InterleaveGroup {
+template <typename InstTy> class InterleaveGroup {
 public:
-  InterleaveGroup(Instruction *Instr, int Stride, unsigned Align)
+  InterleaveGroup(unsigned Factor, bool Reverse, unsigned Align)
+      : Factor(Factor), Reverse(Reverse), Align(Align), InsertPos(nullptr) {}
+
+  InterleaveGroup(InstTy *Instr, int Stride, unsigned Align)
       : Align(Align), InsertPos(Instr) {
     assert(Align && "The alignment should be non-zero");
 
@@ -256,7 +259,7 @@ public:
   /// negative if it is the new leader.
   ///
   /// \returns false if the instruction doesn't belong to the group.
-  bool insertMember(Instruction *Instr, int Index, unsigned NewAlign) {
+  bool insertMember(InstTy *Instr, int Index, unsigned NewAlign) {
     assert(NewAlign && "The new member's alignment should be non-zero");
 
     int Key = Index + SmallestKey;
@@ -288,7 +291,7 @@ public:
   /// Get the member with the given index \p Index
   ///
   /// \returns nullptr if contains no such member.
-  Instruction *getMember(unsigned Index) const {
+  InstTy *getMember(unsigned Index) const {
     int Key = SmallestKey + Index;
     auto Member = Members.find(Key);
     if (Member == Members.end())
@@ -299,16 +302,17 @@ public:
 
   /// Get the index for the given member. Unlike the key in the member
   /// map, the index starts from 0.
-  unsigned getIndex(Instruction *Instr) const {
-    for (auto I : Members)
+  unsigned getIndex(const InstTy *Instr) const {
+    for (auto I : Members) {
       if (I.second == Instr)
         return I.first - SmallestKey;
+    }
 
     llvm_unreachable("InterleaveGroup contains no such member");
   }
 
-  Instruction *getInsertPos() const { return InsertPos; }
-  void setInsertPos(Instruction *Inst) { InsertPos = Inst; }
+  InstTy *getInsertPos() const { return InsertPos; }
+  void setInsertPos(InstTy *Inst) { InsertPos = Inst; }
 
   /// Add metadata (e.g. alias info) from the instructions in this group to \p
   /// NewInst.
@@ -316,12 +320,7 @@ public:
   /// FIXME: this function currently does not add noalias metadata a'la
   /// addNewMedata.  To do that we need to compute the intersection of the
   /// noalias info from all members.
-  void addMetadata(Instruction *NewInst) const {
-    SmallVector<Value *, 4> VL;
-    std::transform(Members.begin(), Members.end(), std::back_inserter(VL),
-                   [](std::pair<int, Instruction *> p) { return p.second; });
-    propagateMetadata(NewInst, VL);
-  }
+  void addMetadata(InstTy *NewInst) const;
 
   /// Returns true if this Group requires a scalar iteration to handle gaps.
   bool requiresScalarEpilogue() const {
@@ -344,7 +343,7 @@ private:
   unsigned Factor; // Interleave Factor.
   bool Reverse;
   unsigned Align;
-  DenseMap<int, Instruction *> Members;
+  DenseMap<int, InstTy *> Members;
   int SmallestKey = 0;
   int LargestKey = 0;
 
@@ -359,7 +358,7 @@ private:
   //      store i32 %even
   //      %odd = add i32               // Def of %odd
   //      store i32 %odd               // Insert Position
-  Instruction *InsertPos;
+  InstTy *InsertPos;
 };
 
 /// Drive the analysis of interleaved memory accesses in the loop.
@@ -390,7 +389,7 @@ public:
   /// formation for predicated accesses, we may be able to relax this limitation
   /// in the future once we handle more complicated blocks.
   void reset() {
-    SmallPtrSet<InterleaveGroup *, 4> DelSet;
+    SmallPtrSet<InterleaveGroup<Instruction> *, 4> DelSet;
     // Avoid releasing a pointer twice.
     for (auto &I : InterleaveGroupMap)
       DelSet.insert(I.second);
@@ -409,11 +408,16 @@ public:
   /// Get the interleave group that \p Instr belongs to.
   ///
   /// \returns nullptr if doesn't have such group.
-  InterleaveGroup *getInterleaveGroup(Instruction *Instr) const {
-    auto Group = InterleaveGroupMap.find(Instr);
-    if (Group == InterleaveGroupMap.end())
-      return nullptr;
-    return Group->second;
+  InterleaveGroup<Instruction> *
+  getInterleaveGroup(const Instruction *Instr) const {
+    if (InterleaveGroupMap.count(Instr))
+      return InterleaveGroupMap.find(Instr)->second;
+    return nullptr;
+  }
+
+  iterator_range<SmallPtrSetIterator<llvm::InterleaveGroup<Instruction> *>>
+  getInterleaveGroups() {
+    return make_range(InterleaveGroups.begin(), InterleaveGroups.end());
   }
 
   /// Returns true if an interleaved group that may access memory
@@ -443,7 +447,9 @@ private:
   bool RequiresScalarEpilogue = false;
 
   /// Holds the relationships between the members and the interleave group.
-  DenseMap<Instruction *, InterleaveGroup *> InterleaveGroupMap;
+  DenseMap<Instruction *, InterleaveGroup<Instruction> *> InterleaveGroupMap;
+
+  SmallPtrSet<InterleaveGroup<Instruction> *, 4> InterleaveGroups;
 
   /// Holds dependences among the memory accesses in the loop. It maps a source
   /// access to a set of dependent sink accesses.
@@ -476,19 +482,23 @@ private:
   /// stride \p Stride and alignment \p Align.
   ///
   /// \returns the newly created interleave group.
-  InterleaveGroup *createInterleaveGroup(Instruction *Instr, int Stride,
-                                         unsigned Align) {
-    assert(!isInterleaved(Instr) && "Already in an interleaved access group");
-    InterleaveGroupMap[Instr] = new InterleaveGroup(Instr, Stride, Align);
+  InterleaveGroup<Instruction> *
+  createInterleaveGroup(Instruction *Instr, int Stride, unsigned Align) {
+    assert(!InterleaveGroupMap.count(Instr) &&
+           "Already in an interleaved access group");
+    InterleaveGroupMap[Instr] =
+        new InterleaveGroup<Instruction>(Instr, Stride, Align);
+    InterleaveGroups.insert(InterleaveGroupMap[Instr]);
     return InterleaveGroupMap[Instr];
   }
 
   /// Release the group and remove all the relationships.
-  void releaseGroup(InterleaveGroup *Group) {
+  void releaseGroup(InterleaveGroup<Instruction> *Group) {
     for (unsigned i = 0; i < Group->getFactor(); i++)
       if (Instruction *Member = Group->getMember(i))
         InterleaveGroupMap.erase(Member);
 
+    InterleaveGroups.erase(Group);
     delete Group;
   }
 

@@ -680,7 +680,7 @@ static std::unique_ptr<FunctionAST> ParseTopLevelExpr(unsigned ExprCount) {
   if (auto E = ParseExpression()) {
     // Make an anonymous proto.
     auto Proto = llvm::make_unique<PrototypeAST>
-        ("__anon_expr" + Twine(ExprCount)).str(), std::vector<std::string>());
+        (("__anon_expr" + Twine(ExprCount)).str(), std::vector<std::string>());
     return llvm::make_unique<FunctionAST>(std::move(Proto), std::move(E));
   }
   return nullptr;

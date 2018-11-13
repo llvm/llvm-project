@@ -368,15 +368,22 @@ void LiteralOperatorIdentifierNode::output(OutputStream &OS,
 
 void FunctionSignatureNode::outputPre(OutputStream &OS,
                                       OutputFlags Flags) const {
+  if (FunctionClass & FC_Public)
+    OS << "public: ";
+  if (FunctionClass & FC_Protected)
+    OS << "protected: ";
+  if (FunctionClass & FC_Private)
+    OS << "private: ";
+
   if (!(FunctionClass & FC_Global)) {
     if (FunctionClass & FC_Static)
       OS << "static ";
   }
-  if (FunctionClass & FC_ExternC)
-    OS << "extern \"C\" ";
-
   if (FunctionClass & FC_Virtual)
     OS << "virtual ";
+
+  if (FunctionClass & FC_ExternC)
+    OS << "extern \"C\" ";
 
   if (ReturnType) {
     ReturnType->outputPre(OS, Flags);
@@ -554,9 +561,13 @@ void FunctionSymbolNode::output(OutputStream &OS, OutputFlags Flags) const {
 void VariableSymbolNode::output(OutputStream &OS, OutputFlags Flags) const {
   switch (SC) {
   case StorageClass::PrivateStatic:
+    OS << "private: static ";
+    break;
   case StorageClass::PublicStatic:
+    OS << "public: static ";
+    break;
   case StorageClass::ProtectedStatic:
-    OS << "static ";
+    OS << "protected: static ";
     break;
   default:
     break;

@@ -111,10 +111,10 @@
 ; CHECK: int __cdecl PR18204::f<union PR18204::<unnamed-type-$S1>>(union PR18204::<unnamed-type-$S1> *)
 
 ??R<lambda_0>@?0??PR26105@@YAHXZ@QBE@H@Z
-; CHECK: __thiscall `int __cdecl PR26105(void)'::`1'::<lambda_0>::operator()(int) const
+; CHECK: public: __thiscall `int __cdecl PR26105(void)'::`1'::<lambda_0>::operator()(int) const
 
 ??R<lambda_1>@?0???R<lambda_0>@?0??PR26105@@YAHXZ@QBE@H@Z@QBE@H@Z
-; CHECK: __thiscall `__thiscall `int __cdecl PR26105(void)'::`1'::<lambda_0>::operator()(int) const'::`1'::<lambda_1>::operator()(int) const
+; CHECK: public: __thiscall `public: __thiscall `int __cdecl PR26105(void)'::`1'::<lambda_0>::operator()(int) const'::`1'::<lambda_1>::operator()(int) const
 
 ?unaligned_foo1@@YAPFAHXZ
 ; CHECK: int __unaligned * __cdecl unaligned_foo1(void)
@@ -144,7 +144,7 @@
 ; CHECK: __thiscall PR31197::A::x::<lambda_1>::operator()(void) const
 
 ?white@?1???R<lambda_1>@x@A@PR31197@@QBE@XZ@4HA
-; CHECK: int `__thiscall PR31197::A::x::<lambda_1>::operator()(void) const'::`2'::white
+; CHECK: int `public: __thiscall PR31197::A::x::<lambda_1>::operator()(void) const'::`2'::white
 
 ?f@@YAXW4<unnamed-enum-enumerator>@@@Z
 ; CHECK: void __cdecl f(enum <unnamed-enum-enumerator>)

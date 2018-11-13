@@ -47,6 +47,7 @@ class LoopInfo;
 class Module;
 class ProfileSummaryInfo;
 class ReturnInst;
+class DomTreeUpdater;
 
 /// Return an exact copy of the specified module
 std::unique_ptr<Module> CloneModule(const Module &M);
@@ -262,11 +263,12 @@ void remapInstructionsInBlocks(const SmallVectorImpl<BasicBlock *> &Blocks,
 /// we replace them with the uses of corresponding Phi inputs. ValueMapping
 /// is used to map the original instructions from BB to their newly-created
 /// copies. Returns the split block.
-BasicBlock *
-DuplicateInstructionsInSplitBetween(BasicBlock *BB, BasicBlock *PredBB,
-                                    Instruction *StopAt,
-                                    ValueToValueMapTy &ValueMapping,
-                                    DominatorTree *DT = nullptr);
+BasicBlock *DuplicateInstructionsInSplitBetween(BasicBlock *BB,
+                                                BasicBlock *PredBB,
+                                                Instruction *StopAt,
+                                                ValueToValueMapTy &ValueMapping,
+                                                DomTreeUpdater &DTU);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CLONING_H

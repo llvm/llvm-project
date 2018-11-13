@@ -516,6 +516,8 @@ TEST_F(FileSystemTest, RealPath) {
   EXPECT_EQ(Expected, Actual);
 
   SmallString<64> HomeDir;
+
+  // This can fail if $HOME is not set and getpwuid fails.
   bool Result = llvm::sys::path::home_directory(HomeDir);
   if (Result) {
     ASSERT_NO_ERROR(fs::real_path(HomeDir, Expected));
@@ -526,6 +528,25 @@ TEST_F(FileSystemTest, RealPath) {
   }
 
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/test1"));
+}
+
+TEST_F(FileSystemTest, ExpandTilde) {
+  SmallString<64> Expected;
+  SmallString<64> Actual;
+  SmallString<64> HomeDir;
+
+  // This can fail if $HOME is not set and getpwuid fails.
+  bool Result = llvm::sys::path::home_directory(HomeDir);
+  if (Result) {
+    fs::expand_tilde(HomeDir, Expected);
+
+    fs::expand_tilde("~", Actual);
+    EXPECT_EQ(Expected, Actual);
+
+    path::append(Expected, "foo");
+    fs::expand_tilde("~/foo", Actual);
+    EXPECT_EQ(Expected, Actual);
+  }
 }
 
 #ifdef LLVM_ON_UNIX

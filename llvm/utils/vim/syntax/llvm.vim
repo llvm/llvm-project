@@ -26,7 +26,7 @@ syn keyword llvmStatement add addrspacecast alloca and arcp ashr atomicrmw
 syn keyword llvmStatement bitcast br catchpad catchswitch catchret call
 syn keyword llvmStatement cleanuppad cleanupret cmpxchg eq exact extractelement
 syn keyword llvmStatement extractvalue fadd fast fcmp fdiv fence fmul fpext
-syn keyword llvmStatement fptosi fptoui fptrunc free frem fsub getelementptr
+syn keyword llvmStatement fptosi fptoui fptrunc free frem fsub fneg getelementptr
 syn keyword llvmStatement icmp inbounds indirectbr insertelement insertvalue
 syn keyword llvmStatement inttoptr invoke landingpad load lshr malloc max min
 syn keyword llvmStatement mul nand ne ninf nnan nsw nsz nuw oeq oge ogt ole
