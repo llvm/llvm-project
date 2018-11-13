@@ -10,11 +10,11 @@
 #ifndef LLDB_CORE_DUMPDATAEXTRACTOR_H
 #define LLDB_CORE_DUMPDATAEXTRACTOR_H
 
-#include "lldb/lldb-enumerations.h" // for Format
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-types.h"
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 class DataExtractor;

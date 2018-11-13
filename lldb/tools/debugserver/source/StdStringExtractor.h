@@ -10,13 +10,9 @@
 #ifndef utility_StdStringExtractor_h_
 #define utility_StdStringExtractor_h_
 
-// C Includes
-// C++ Includes
 #include <stdint.h>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 
 // Based on StringExtractor, with the added limitation that this file should not
 // take a dependency on LLVM, as it is used from debugserver.

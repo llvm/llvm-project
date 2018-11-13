@@ -10,13 +10,10 @@
 #ifndef liblldb_DisassemblerLLVMC_h_
 #define liblldb_DisassemblerLLVMC_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <mutex>
 #include <string>
 
-// Project includes
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/PluginManager.h"

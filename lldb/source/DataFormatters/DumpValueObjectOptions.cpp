@@ -10,10 +10,6 @@
 
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/ValueObject.h"
 
 using namespace lldb;

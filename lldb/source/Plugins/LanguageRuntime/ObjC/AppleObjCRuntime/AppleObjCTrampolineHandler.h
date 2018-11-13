@@ -10,14 +10,10 @@
 #ifndef lldb_AppleObjCTrampolineHandler_h_
 #define lldb_AppleObjCTrampolineHandler_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <mutex>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/lldb-public.h"
 

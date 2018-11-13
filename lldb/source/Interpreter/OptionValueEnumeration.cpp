@@ -9,10 +9,6 @@
 
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/StringList.h"
 
 using namespace lldb;

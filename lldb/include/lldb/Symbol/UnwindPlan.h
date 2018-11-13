@@ -10,14 +10,10 @@
 #ifndef liblldb_UnwindPlan_h
 #define liblldb_UnwindPlan_h
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <memory>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Stream.h"

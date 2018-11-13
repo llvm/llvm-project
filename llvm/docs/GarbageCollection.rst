@@ -835,45 +835,23 @@ for collector plugins which implement reference counting or a shadow stack.
 
 .. _init-roots:
 
-Initializing roots to null: ``InitRoots``
------------------------------------------
+Initializing roots to null
+---------------------------
 
-.. code-block:: c++
+It is recommended that frontends initialize roots explicitly to avoid
+potentially confusing the optimizer.  This prevents the GC from visiting
+uninitialized pointers, which will almost certainly cause it to crash.
 
-  MyGC::MyGC() {
-    InitRoots = true;
-  }
+As a fallback, LLVM will automatically initialize each root to ``null``
+upon entry to the function.  Support for this mode in code generation is
+largely a legacy detail to keep old collector implementations working.
 
-When set, LLVM will automatically initialize each root to ``null`` upon entry to
-the function.  This prevents the GC's sweep phase from visiting uninitialized
-pointers, which will almost certainly cause it to crash.  This initialization
-occurs before custom lowering, so the two may be used together.
+Custom lowering of intrinsics
+------------------------------
 
-Since LLVM does not yet compute liveness information, there is no means of
-distinguishing an uninitialized stack root from an initialized one.  Therefore,
-this feature should be used by all GC plugins.  It is enabled by default.
-
-Custom lowering of intrinsics: ``CustomRoots``, ``CustomReadBarriers``, and ``CustomWriteBarriers``
----------------------------------------------------------------------------------------------------
-
-For GCs which use barriers or unusual treatment of stack roots, these 
-flags allow the collector to perform arbitrary transformations of the
-LLVM IR:
-
-.. code-block:: c++
-
-  class MyGC : public GCStrategy {
-  public:
-    MyGC() {
-      CustomRoots = true;
-      CustomReadBarriers = true;
-      CustomWriteBarriers = true;
-    }
-  };
-
-If any of these flags are set, LLVM suppresses its default lowering for
-the corresponding intrinsics.  Instead, you must provide a custom Pass
-which lowers the intrinsics as desired.  If you have opted in to custom
+For GCs which use barriers or unusual treatment of stack roots, the
+implementor is responsibly for providing a custom pass to lower the
+intrinsics with the desired semantics.  If you have opted in to custom
 lowering of a particular intrinsic your pass **must** eliminate all 
 instances of the corresponding intrinsic in functions which opt in to
 your GC.  The best example of such a pass is the ShadowStackGC and it's 
@@ -884,62 +862,14 @@ without building a custom copy of LLVM.
 
 .. _safe-points:
 
-Generating safe points: ``NeededSafePoints``
---------------------------------------------
+Generating safe points
+-----------------------
 
-LLVM can compute four kinds of safe points:
-
-.. code-block:: c++
-
-  namespace GC {
-    /// PointKind - The type of a collector-safe point.
-    ///
-    enum PointKind {
-      Loop,    //< Instr is a loop (backwards branch).
-      Return,  //< Instr is a return instruction.
-      PreCall, //< Instr is a call instruction.
-      PostCall //< Instr is the return address of a call.
-    };
-  }
-
-A collector can request any combination of the four by setting the
-``NeededSafePoints`` mask:
-
-.. code-block:: c++
-
-  MyGC::MyGC()  {
-    NeededSafePoints = 1 << GC::Loop
-                     | 1 << GC::Return
-                     | 1 << GC::PreCall
-                     | 1 << GC::PostCall;
-  }
-
-It can then use the following routines to access safe points.
-
-.. code-block:: c++
-
-  for (iterator I = begin(), E = end(); I != E; ++I) {
-    GCFunctionInfo *MD = *I;
-    size_t PointCount = MD->size();
-
-    for (GCFunctionInfo::iterator PI = MD->begin(),
-                                  PE = MD->end(); PI != PE; ++PI) {
-      GC::PointKind PointKind = PI->Kind;
-      unsigned PointNum = PI->Num;
-    }
-  }
-
-Almost every collector requires ``PostCall`` safe points, since these correspond
-to the moments when the function is suspended during a call to a subroutine.
-
-Threaded programs generally require ``Loop`` safe points to guarantee that the
-application will reach a safe point within a bounded amount of time, even if it
-is executing a long-running loop which contains no function calls.
-
-Threaded collectors may also require ``Return`` and ``PreCall`` safe points to
-implement "stop the world" techniques using self-modifying code, where it is
-important that the program not exit the function without reaching a safe point
-(because only the topmost function has been patched).
+LLVM provides support for associating stackmaps with the return address of
+a call.  Any loop or return safepoints required by a given collector design
+can be modeled via calls to runtime routines, or potentially patchable call
+sequences.  Using gcroot, all call instructions are inferred to be possible
+safepoints and will thus have an associated stackmap.
 
 .. _assembly:
 

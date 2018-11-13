@@ -802,7 +802,7 @@ define <4 x i32> @combine_nested_undef_test12(<4 x i32> %A, <4 x i32> %B) {
 ;
 ; AVX2-LABEL: combine_nested_undef_test12:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-NEXT:    vbroadcastss %xmm0, %xmm0
 ; AVX2-NEXT:    retq
   %1 = shufflevector <4 x i32> %A, <4 x i32> %B, <4 x i32> <i32 0, i32 0, i32 2, i32 4>
   %2 = shufflevector <4 x i32> %1, <4 x i32> undef, <4 x i32> <i32 1, i32 4, i32 0, i32 4>

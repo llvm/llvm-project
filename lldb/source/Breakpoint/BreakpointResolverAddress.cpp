@@ -9,10 +9,6 @@
 
 #include "lldb/Breakpoint/BreakpointResolverAddress.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"

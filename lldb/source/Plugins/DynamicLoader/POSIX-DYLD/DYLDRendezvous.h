@@ -10,12 +10,9 @@
 #ifndef liblldb_Rendezvous_H_
 #define liblldb_Rendezvous_H_
 
-// C Includes
-// C++ Includes
 #include <list>
 #include <string>
 
-// Other libraries and framework includes
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"

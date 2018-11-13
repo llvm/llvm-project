@@ -148,6 +148,11 @@ void AArch64Subtarget::initializeProperties() {
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     break;
+  case TSV110:
+    CacheLineSize = 64;
+    PrefFunctionAlignment = 4;
+    PrefLoopAlignment = 2;
+    break;
   }
 }
 

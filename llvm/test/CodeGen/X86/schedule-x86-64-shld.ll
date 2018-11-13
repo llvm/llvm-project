@@ -325,7 +325,7 @@ define void @lshift_mem_cl(i64 %a, i64 %c) nounwind readnone {
 ; BDVER12-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BDVER12-NEXT:    shrq %cl, %rdi # sched: [1:0.50]
 ; BDVER12-NEXT:    orq %rax, %rdi # sched: [1:0.50]
-; BDVER12-NEXT:    movq %rdi, {{.*}}(%rip) # sched: [1:0.50]
+; BDVER12-NEXT:    movq %rdi, {{.*}}(%rip) # sched: [1:1.00]
 ; BDVER12-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: lshift_mem_cl:
@@ -361,7 +361,7 @@ define void @lshift_mem(i64 %a) nounwind readnone {
 ; BDVER12-NEXT:    shrq $54, %rdi # sched: [1:0.50]
 ; BDVER12-NEXT:    shlq $10, %rax # sched: [1:0.50]
 ; BDVER12-NEXT:    orq %rax, %rdi # sched: [1:0.50]
-; BDVER12-NEXT:    movq %rdi, {{.*}}(%rip) # sched: [1:0.50]
+; BDVER12-NEXT:    movq %rdi, {{.*}}(%rip) # sched: [1:1.00]
 ; BDVER12-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: lshift_mem:
@@ -419,7 +419,7 @@ define void @lshift_mem_b(i64 %b) nounwind readnone {
 ; BDVER12-NEXT:    shlq $10, %rdi # sched: [1:0.50]
 ; BDVER12-NEXT:    shrq $54, %rax # sched: [1:0.50]
 ; BDVER12-NEXT:    orq %rdi, %rax # sched: [1:0.50]
-; BDVER12-NEXT:    movq %rax, {{.*}}(%rip) # sched: [1:0.50]
+; BDVER12-NEXT:    movq %rax, {{.*}}(%rip) # sched: [1:1.00]
 ; BDVER12-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: lshift_mem_b:
@@ -451,7 +451,7 @@ define void @lshift_mem_b_optsize(i64 %b) nounwind readnone optsize {
 ; BDVER12:       # %bb.0: # %entry
 ; BDVER12-NEXT:    movq {{.*}}(%rip), %rax # sched: [5:0.50]
 ; BDVER12-NEXT:    shrdq $54, %rdi, %rax # sched: [4:3.00]
-; BDVER12-NEXT:    movq %rax, {{.*}}(%rip) # sched: [1:0.50]
+; BDVER12-NEXT:    movq %rax, {{.*}}(%rip) # sched: [1:1.00]
 ; BDVER12-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: lshift_mem_b_optsize:

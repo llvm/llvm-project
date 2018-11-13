@@ -41,8 +41,7 @@
 #include "Plugins/Process/Utility/RegisterInfos_arm64.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/MathExtras.h" // for SignExtend32 template function
-                                     // and CountTrailingZeros_32 function
+#include "llvm/Support/MathExtras.h"
 
 #include "Plugins/Process/Utility/InstructionUtils.h"
 

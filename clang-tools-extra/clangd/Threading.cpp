@@ -101,7 +101,8 @@ void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,
 }
 
 void setThreadPriority(std::thread &T, ThreadPriority Priority) {
-#ifdef __linux__
+  // Some *really* old glibcs are missing SCHED_IDLE.
+#if defined(__linux__) && defined(SCHED_IDLE)
   sched_param priority;
   priority.sched_priority = 0;
   pthread_setschedparam(

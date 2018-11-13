@@ -9,10 +9,6 @@
 
 #include "lldb/Interpreter/OptionValueProperties.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Flags.h"
 
 #include "lldb/Core/UserSettingsController.h"

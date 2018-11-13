@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/ThreadPlanCallFunctionUsingABI.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Target/Process.h"

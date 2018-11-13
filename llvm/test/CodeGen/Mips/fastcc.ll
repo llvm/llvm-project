@@ -223,24 +223,24 @@ entry:
 define internal fastcc void @callee1(float %a0, float %a1, float %a2, float %a3, float %a4, float %a5, float %a6, float %a7, float %a8, float %a9, float %a10, float %a11, float %a12, float %a13, float %a14, float %a15, float %a16, float %a17, float %a18, float %a19, float %a20) nounwind noinline {
 entry:
 ; CHECK-LABEL: callee1:
-; CHECK-DAG: swc1  $f0
-; CHECK-DAG: swc1  $f1
-; CHECK-DAG: swc1  $f2
-; CHECK-DAG: swc1  $f3
-; CHECK-DAG: swc1  $f4
-; CHECK-DAG: swc1  $f5
-; CHECK-DAG: swc1  $f6
-; CHECK-DAG: swc1  $f7
-; CHECK-DAG: swc1  $f8
-; CHECK-DAG: swc1  $f9
-; CHECK-DAG: swc1  $f10
-; CHECK-DAG: swc1  $f11
-; CHECK-DAG: swc1  $f12
-; CHECK-DAG: swc1  $f13
-; CHECK-DAG: swc1  $f14
-; CHECK-DAG: swc1  $f15
-; CHECK-DAG: swc1  $f16
 ; CHECK-DAG: swc1  $f17
+; CHECK-DAG: swc1  $f16
+; CHECK-DAG: swc1  $f15
+; CHECK-DAG: swc1  $f14
+; CHECK-DAG: swc1  $f13
+; CHECK-DAG: swc1  $f12
+; CHECK-DAG: swc1  $f11
+; CHECK-DAG: swc1  $f10
+; CHECK-DAG: swc1  $f9
+; CHECK-DAG: swc1  $f8
+; CHECK-DAG: swc1  $f7
+; CHECK-DAG: swc1  $f6
+; CHECK-DAG: swc1  $f5
+; CHECK-DAG: swc1  $f4
+; CHECK-DAG: swc1  $f3
+; CHECK-DAG: swc1  $f2
+; CHECK-DAG: swc1  $f1
+; CHECK-DAG: swc1  $f0
 ; CHECK-DAG: swc1  $f18
 ; CHECK-DAG: swc1  $f19
 
@@ -330,7 +330,7 @@ entry:
 ; NOODDSPREG-DAG:    swc1    $f16, 32($[[R0]])
 ; NOODDSPREG-DAG:    swc1    $f18, 36($[[R0]])
 
-; NOODDSPREG-DAG:    lwc1    $[[F0:f[0-9]*[02468]]], 0($sp)
+; NOODDSPREG-DAG:    lwc1    $[[F0:f[0-9]*[02468]]], {{[0-9]+}}($sp)
 ; NOODDSPREG-DAG:    swc1    $[[F0]], 40($[[R0]])
 
   store float %a0, float* getelementptr ([11 x float], [11 x float]* @fa, i32 0, i32 0), align 4

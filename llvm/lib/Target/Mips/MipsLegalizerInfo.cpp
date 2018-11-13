@@ -41,8 +41,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
 
   getActionDefinitionsBuilder(G_CONSTANT)
       .legalFor({s32})
-      .minScalar(0, s32)
-      .customFor({s64});
+      .clampScalar(0, s32, s32);
 
   getActionDefinitionsBuilder(G_GEP)
       .legalFor({{p0, s32}});
@@ -87,27 +86,6 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
     MIRBuilder.buildAdd(ResLow, LHSLow, RHSLow);
     MIRBuilder.buildICmp(CmpInst::ICMP_ULT, Carry, ResLow, LHSLow);
     MIRBuilder.buildAdd(ResHigh, TmpResHigh, Carry);
-
-    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), {ResLow, ResHigh});
-
-    MI.eraseFromParent();
-    break;
-  }
-  case G_CONSTANT: {
-
-    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
-    const LLT sHalf = LLT::scalar(Size / 2);
-
-    const APInt &CImmValue = MI.getOperand(1).getCImm()->getValue();
-
-    unsigned ResLow = MRI.createGenericVirtualRegister(sHalf);
-    unsigned ResHigh = MRI.createGenericVirtualRegister(sHalf);
-    MIRBuilder.buildConstant(
-        ResLow, *ConstantInt::get(MI.getMF()->getFunction().getContext(),
-                                  CImmValue.trunc(Size / 2)));
-    MIRBuilder.buildConstant(
-        ResHigh, *ConstantInt::get(MI.getMF()->getFunction().getContext(),
-                                   CImmValue.lshr(Size / 2).trunc(Size / 2)));
 
     MIRBuilder.buildMerge(MI.getOperand(0).getReg(), {ResLow, ResHigh});
 

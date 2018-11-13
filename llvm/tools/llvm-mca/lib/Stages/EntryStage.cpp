@@ -34,7 +34,7 @@ void EntryStage::getNextInstruction() {
   SourceRef SR = SM.peekNext();
   std::unique_ptr<Instruction> Inst = llvm::make_unique<Instruction>(SR.second);
   CurrentInstruction = InstRef(SR.first, Inst.get());
-  Instructions[SR.first] = std::move(Inst);
+  Instructions.emplace_back(std::move(Inst));
   SM.updateNext();
 }
 
@@ -57,14 +57,17 @@ llvm::Error EntryStage::cycleStart() {
 
 llvm::Error EntryStage::cycleEnd() {
   // Find the first instruction which hasn't been retired.
-  const InstMap::iterator It =
-      llvm::find_if(Instructions, [](const InstMap::value_type &KeyValuePair) {
-        return !KeyValuePair.second->isRetired();
-      });
+  auto Range = make_range(&Instructions[NumRetired], Instructions.end());
+  auto It = find_if(Range, [](const std::unique_ptr<Instruction> &I) {
+    return !I->isRetired();
+  });
 
+  NumRetired = std::distance(Instructions.begin(), It);
   // Erase instructions up to the first that hasn't been retired.
-  if (It != Instructions.begin())
+  if ((NumRetired * 2) >= Instructions.size()) {
     Instructions.erase(Instructions.begin(), It);
+    NumRetired = 0;
+  }
 
   return llvm::ErrorSuccess();
 }

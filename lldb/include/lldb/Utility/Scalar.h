@@ -10,13 +10,13 @@
 #ifndef LLDB_UTILITY_SCALAR_H
 #define LLDB_UTILITY_SCALAR_H
 
-#include "lldb/Utility/Status.h"     // for Status
-#include "lldb/lldb-enumerations.h"  // for Encoding, ByteOrder
-#include "lldb/lldb-private-types.h" // for type128
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-types.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include <cstddef> // for size_t
-#include <cstdint> // for uint32_t, uint64_t, int64_t
+#include <cstddef>
+#include <cstdint>
 
 namespace lldb_private {
 class DataExtractor;

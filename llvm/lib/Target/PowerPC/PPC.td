@@ -305,11 +305,11 @@ def : Processor<"generic", G3Itineraries, [Directive32, FeatureHardFloat,
                                            FeatureMFTB]>;
 def : ProcessorModel<"440", PPC440Model, [Directive440, FeatureISEL,
                                           FeatureFRES, FeatureFRSQRTE,
-                                          FeatureICBT, FeatureBookE, 
+                                          FeatureICBT, FeatureBookE,
                                           FeatureMSYNC, FeatureMFTB]>;
 def : ProcessorModel<"450", PPC440Model, [Directive440, FeatureISEL,
                                           FeatureFRES, FeatureFRSQRTE,
-                                          FeatureICBT, FeatureBookE, 
+                                          FeatureICBT, FeatureBookE,
                                           FeatureMSYNC, FeatureMFTB]>;
 def : Processor<"601", G3Itineraries, [Directive601, FeatureFPU]>;
 def : Processor<"602", G3Itineraries, [Directive602, FeatureFPU,
@@ -348,7 +348,7 @@ def : Processor<"7450", G4PlusItineraries, [Directive7400, FeatureAltivec,
                                             FeatureFRES, FeatureFRSQRTE,
                                             FeatureMFTB]>;
 def : Processor<"g4+", G4PlusItineraries, [Directive7400, FeatureAltivec,
-                                           FeatureFRES, FeatureFRSQRTE, 
+                                           FeatureFRES, FeatureFRSQRTE,
                                            FeatureMFTB]>;
 
 def : ProcessorModel<"970", G5Model,
@@ -369,11 +369,11 @@ def : ProcessorModel<"e500", PPCE500Model,
                    FeatureISEL, FeatureMFTB]>;
 def : ProcessorModel<"e500mc", PPCE500mcModel,
                   [DirectiveE500mc,
-                   FeatureSTFIWX, FeatureICBT, FeatureBookE, 
+                   FeatureSTFIWX, FeatureICBT, FeatureBookE,
                    FeatureISEL, FeatureMFTB]>;
 def : ProcessorModel<"e5500", PPCE5500Model,
                   [DirectiveE5500, FeatureMFOCRF, Feature64Bit,
-                   FeatureSTFIWX, FeatureICBT, FeatureBookE, 
+                   FeatureSTFIWX, FeatureICBT, FeatureBookE,
                    FeatureISEL, FeatureMFTB]>;
 def : ProcessorModel<"a2", PPCA2Model,
                   [DirectiveA2, FeatureICBT, FeatureBookE, FeatureMFOCRF,
@@ -428,7 +428,7 @@ def : ProcessorModel<"pwr6x", G5Model,
                    FeatureMFTB, DeprecatedDST]>;
 def : ProcessorModel<"pwr7", P7Model, ProcessorFeatures.Power7FeatureList>;
 def : ProcessorModel<"pwr8", P8Model, ProcessorFeatures.Power8FeatureList>;
-def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.Power9FeatureList>; 
+def : ProcessorModel<"pwr9", P9Model, ProcessorFeatures.Power9FeatureList>;
 def : Processor<"ppc", G3Itineraries, [Directive32, FeatureHardFloat,
                                        FeatureMFTB]>;
 def : Processor<"ppc32", G3Itineraries, [Directive32, FeatureHardFloat,
@@ -478,3 +478,9 @@ def PPC : Target {
   let AssemblyParserVariants = [PPCAsmParserVariant];
   let AllowRegisterRenaming = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// Pfm Counters
+//===----------------------------------------------------------------------===//
+
+include "PPCPfmCounters.td"

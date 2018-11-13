@@ -2585,6 +2585,10 @@ Expr *Expr::IgnoreParenCasts() {
       E = NTTP->getReplacement();
       continue;
     }
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
+      E = CE->getSubExpr();
+      continue;
+    }
     return E;
   }
 }
@@ -2604,6 +2608,10 @@ Expr *Expr::IgnoreCasts() {
     if (SubstNonTypeTemplateParmExpr *NTTP
         = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
       E = NTTP->getReplacement();
+      continue;
+    }
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
+      E = CE->getSubExpr();
       continue;
     }
     return E;
@@ -2630,6 +2638,9 @@ Expr *Expr::IgnoreParenLValueCasts() {
     } else if (SubstNonTypeTemplateParmExpr *NTTP
                                   = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
       E = NTTP->getReplacement();
+      continue;
+    } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
+      E = CE->getSubExpr();
       continue;
     }
     break;
@@ -2670,6 +2681,10 @@ Expr *Expr::IgnoreParenImpCasts() {
     if (SubstNonTypeTemplateParmExpr *NTTP
                                   = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
       E = NTTP->getReplacement();
+      continue;
+    }
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
+      E = CE->getSubExpr();
       continue;
     }
     return E;

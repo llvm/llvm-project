@@ -7,11 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <vector>
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Module.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/Symbol.h"

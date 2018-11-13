@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Disassembler.h"

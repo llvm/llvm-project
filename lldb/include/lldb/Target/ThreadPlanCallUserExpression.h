@@ -11,10 +11,6 @@
 #ifndef liblldb_ThreadPlanCallUserExpression_h_
 #define liblldb_ThreadPlanCallUserExpression_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"

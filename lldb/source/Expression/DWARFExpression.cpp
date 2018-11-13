@@ -9,10 +9,8 @@
 
 #include "lldb/Expression/DWARFExpression.h"
 
-// C Includes
 #include <inttypes.h>
 
-// C++ Includes
 #include <vector>
 
 #include "lldb/Core/Module.h"

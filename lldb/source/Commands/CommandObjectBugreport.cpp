@@ -9,13 +9,9 @@
 
 #include "CommandObjectBugreport.h"
 
-// C Includes
 #include <cstdio>
 
-// C++ Includes
-// Other libraries and framework includes
 
-// Project includes
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupOutputFile.h"

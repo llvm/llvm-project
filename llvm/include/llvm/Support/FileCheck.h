@@ -43,7 +43,8 @@ struct FileCheckRequest {
 //===----------------------------------------------------------------------===//
 
 namespace Check {
-enum FileCheckType {
+
+enum FileCheckKind {
   CheckNone = 0,
   CheckPlain,
   CheckNext,
@@ -58,7 +59,26 @@ enum FileCheckType {
   CheckEOF,
 
   /// Marks when parsing found a -NOT check combined with another CHECK suffix.
-  CheckBadNot
+  CheckBadNot,
+
+  /// Marks when parsing found a -COUNT directive with invalid count value.
+  CheckBadCount
+};
+
+class FileCheckType {
+  FileCheckKind Kind;
+  int Count; //< optional Count for some checks
+
+public:
+  FileCheckType(FileCheckKind Kind = CheckNone) : Kind(Kind), Count(1) {}
+  FileCheckType(const FileCheckType &) = default;
+
+  operator FileCheckKind() const { return Kind; }
+
+  int getCount() const { return Count; }
+  FileCheckType &setCount(int C);
+
+  std::string getDescription(StringRef Prefix) const;
 };
 }
 
@@ -112,6 +132,8 @@ public:
   }
 
   Check::FileCheckType getCheckTy() const { return CheckTy; }
+
+  int getCount() const { return CheckTy.getCount(); }
 
 private:
   bool AddRegExToRegEx(StringRef RS, unsigned &CurParen, SourceMgr &SM);

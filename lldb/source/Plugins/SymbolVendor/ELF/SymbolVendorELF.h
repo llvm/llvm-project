@@ -10,10 +10,6 @@
 #ifndef liblldb_SymbolVendorELF_h_
 #define liblldb_SymbolVendorELF_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/lldb-private.h"
 

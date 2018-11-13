@@ -216,7 +216,7 @@ void MCJIT::generateCodeForModule(Module *M) {
   if (!LoadedObject) {
     std::string Buf;
     raw_string_ostream OS(Buf);
-    logAllUnhandledErrors(LoadedObject.takeError(), OS, "");
+    logAllUnhandledErrors(LoadedObject.takeError(), OS);
     OS.flush();
     report_fatal_error(Buf);
   }

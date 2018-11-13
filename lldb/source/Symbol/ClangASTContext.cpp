@@ -12,13 +12,10 @@
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
-// C Includes
-// C++ Includes
 #include <mutex>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
 
 // Clang headers like to use NDEBUG inside of them to enable/disable debug
 // related features using "#ifndef NDEBUG" preprocessor blocks to do one thing
@@ -202,6 +199,122 @@ void addOverridesForMethod(clang::CXXMethodDecl *decl) {
           llvm::cast<clang::CXXMethodDecl>(overridden_decl));
   }
 }
+}
+
+static lldb::addr_t GetVTableAddress(Process &process,
+                                     VTableContextBase &vtable_ctx,
+                                     ValueObject &valobj,
+                                     const ASTRecordLayout &record_layout) {
+  // Retrieve type info
+  CompilerType pointee_type;
+  CompilerType this_type(valobj.GetCompilerType());
+  uint32_t type_info = this_type.GetTypeInfo(&pointee_type);
+  if (!type_info)
+    return LLDB_INVALID_ADDRESS;
+
+  // Check if it's a pointer or reference
+  bool ptr_or_ref = false;
+  if (type_info & (eTypeIsPointer | eTypeIsReference)) {
+    ptr_or_ref = true;
+    type_info = pointee_type.GetTypeInfo();
+  }
+
+  // We process only C++ classes
+  const uint32_t cpp_class = eTypeIsClass | eTypeIsCPlusPlus;
+  if ((type_info & cpp_class) != cpp_class)
+    return LLDB_INVALID_ADDRESS;
+
+  // Calculate offset to VTable pointer
+  lldb::offset_t vbtable_ptr_offset =
+      vtable_ctx.isMicrosoft() ? record_layout.getVBPtrOffset().getQuantity()
+                               : 0;
+
+  if (ptr_or_ref) {
+    // We have a pointer / ref to object, so read
+    // VTable pointer from process memory
+
+    if (valobj.GetAddressTypeOfChildren() != eAddressTypeLoad)
+      return LLDB_INVALID_ADDRESS;
+
+    auto vbtable_ptr_addr = valobj.GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
+    if (vbtable_ptr_addr == LLDB_INVALID_ADDRESS)
+      return LLDB_INVALID_ADDRESS;
+
+    vbtable_ptr_addr += vbtable_ptr_offset;
+
+    Status err;
+    return process.ReadPointerFromMemory(vbtable_ptr_addr, err);
+  }
+
+  // We have an object already read from process memory,
+  // so just extract VTable pointer from it
+
+  DataExtractor data;
+  Status err;
+  auto size = valobj.GetData(data, err);
+  if (err.Fail() || vbtable_ptr_offset + data.GetAddressByteSize() > size)
+    return LLDB_INVALID_ADDRESS;
+
+  return data.GetPointer(&vbtable_ptr_offset);
+}
+
+static int64_t ReadVBaseOffsetFromVTable(Process &process,
+                                         VTableContextBase &vtable_ctx,
+                                         lldb::addr_t vtable_ptr,
+                                         const CXXRecordDecl *cxx_record_decl,
+                                         const CXXRecordDecl *base_class_decl) {
+  if (vtable_ctx.isMicrosoft()) {
+    clang::MicrosoftVTableContext &msoft_vtable_ctx =
+        static_cast<clang::MicrosoftVTableContext &>(vtable_ctx);
+
+    // Get the index into the virtual base table. The
+    // index is the index in uint32_t from vbtable_ptr
+    const unsigned vbtable_index =
+        msoft_vtable_ctx.getVBTableIndex(cxx_record_decl, base_class_decl);
+    const lldb::addr_t base_offset_addr = vtable_ptr + vbtable_index * 4;
+    Status err;
+    return process.ReadSignedIntegerFromMemory(base_offset_addr, 4, INT64_MAX,
+                                               err);
+  }
+
+  clang::ItaniumVTableContext &itanium_vtable_ctx =
+      static_cast<clang::ItaniumVTableContext &>(vtable_ctx);
+
+  clang::CharUnits base_offset_offset =
+      itanium_vtable_ctx.getVirtualBaseOffsetOffset(cxx_record_decl,
+                                                    base_class_decl);
+  const lldb::addr_t base_offset_addr =
+      vtable_ptr + base_offset_offset.getQuantity();
+  const uint32_t base_offset_size = process.GetAddressByteSize();
+  Status err;
+  return process.ReadSignedIntegerFromMemory(base_offset_addr, base_offset_size,
+                                             INT64_MAX, err);
+}
+
+static bool GetVBaseBitOffset(VTableContextBase &vtable_ctx,
+                              ValueObject &valobj,
+                              const ASTRecordLayout &record_layout,
+                              const CXXRecordDecl *cxx_record_decl,
+                              const CXXRecordDecl *base_class_decl,
+                              int32_t &bit_offset) {
+  ExecutionContext exe_ctx(valobj.GetExecutionContextRef());
+  Process *process = exe_ctx.GetProcessPtr();
+  if (!process)
+    return false;
+
+  lldb::addr_t vtable_ptr =
+      GetVTableAddress(*process, vtable_ctx, valobj, record_layout);
+  if (vtable_ptr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  auto base_offset = ReadVBaseOffsetFromVTable(
+      *process, vtable_ctx, vtable_ptr, cxx_record_decl, base_class_decl);
+  if (base_offset == INT64_MAX)
+    return false;
+
+  bit_offset = base_offset * 8;
+
+  return true;
 }
 
 typedef lldb_private::ThreadSafeDenseMap<clang::ASTContext *, ClangASTContext *>
@@ -5113,6 +5226,20 @@ lldb::Encoding ClangASTContext::GetEncoding(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Kind::PseudoObject:
     case clang::BuiltinType::Kind::UnknownAny:
       break;
+
+    case clang::BuiltinType::OCLIntelSubgroupAVCMcePayload:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImePayload:
+    case clang::BuiltinType::OCLIntelSubgroupAVCRefPayload:
+    case clang::BuiltinType::OCLIntelSubgroupAVCSicPayload:
+    case clang::BuiltinType::OCLIntelSubgroupAVCMceResult:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeResult:
+    case clang::BuiltinType::OCLIntelSubgroupAVCRefResult:
+    case clang::BuiltinType::OCLIntelSubgroupAVCSicResult:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeResultSingleRefStreamout:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeResultDualRefStreamout:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeSingleRefStreamin:
+    case clang::BuiltinType::OCLIntelSubgroupAVCImeDualRefStreamin:
+      break;
     }
     break;
   // All pointer types are represented as unsigned integer encodings. We may
@@ -6534,80 +6661,12 @@ CompilerType ClangASTContext::GetChildCompilerTypeAtIndex(
             if (base_class->isVirtual()) {
               bool handled = false;
               if (valobj) {
-                Status err;
-                AddressType addr_type = eAddressTypeInvalid;
-                lldb::addr_t vtable_ptr_addr =
-                    valobj->GetCPPVTableAddress(addr_type);
-
-                if (vtable_ptr_addr != LLDB_INVALID_ADDRESS &&
-                    addr_type == eAddressTypeLoad) {
-
-                  ExecutionContext exe_ctx(valobj->GetExecutionContextRef());
-                  Process *process = exe_ctx.GetProcessPtr();
-                  if (process) {
-                    clang::VTableContextBase *vtable_ctx =
-                        getASTContext()->getVTableContext();
-                    if (vtable_ctx) {
-                      if (vtable_ctx->isMicrosoft()) {
-                        clang::MicrosoftVTableContext *msoft_vtable_ctx =
-                            static_cast<clang::MicrosoftVTableContext *>(
-                                vtable_ctx);
-
-                        if (vtable_ptr_addr) {
-                          const lldb::addr_t vbtable_ptr_addr =
-                              vtable_ptr_addr +
-                              record_layout.getVBPtrOffset().getQuantity();
-
-                          const lldb::addr_t vbtable_ptr =
-                              process->ReadPointerFromMemory(vbtable_ptr_addr,
-                                                             err);
-                          if (vbtable_ptr != LLDB_INVALID_ADDRESS) {
-                            // Get the index into the virtual base table. The
-                            // index is the index in uint32_t from vbtable_ptr
-                            const unsigned vbtable_index =
-                                msoft_vtable_ctx->getVBTableIndex(
-                                    cxx_record_decl, base_class_decl);
-                            const lldb::addr_t base_offset_addr =
-                                vbtable_ptr + vbtable_index * 4;
-                            const int32_t base_offset =
-                                process->ReadSignedIntegerFromMemory(
-                                    base_offset_addr, 4, INT32_MAX, err);
-                            if (base_offset != INT32_MAX) {
-                              handled = true;
-                              bit_offset = base_offset * 8;
-                            }
-                          }
-                        }
-                      } else {
-                        clang::ItaniumVTableContext *itanium_vtable_ctx =
-                            static_cast<clang::ItaniumVTableContext *>(
-                                vtable_ctx);
-                        if (vtable_ptr_addr) {
-                          const lldb::addr_t vtable_ptr =
-                              process->ReadPointerFromMemory(vtable_ptr_addr,
-                                                             err);
-                          if (vtable_ptr != LLDB_INVALID_ADDRESS) {
-                            clang::CharUnits base_offset_offset =
-                                itanium_vtable_ctx->getVirtualBaseOffsetOffset(
-                                    cxx_record_decl, base_class_decl);
-                            const lldb::addr_t base_offset_addr =
-                                vtable_ptr + base_offset_offset.getQuantity();
-                            const uint32_t base_offset_size =
-                                process->GetAddressByteSize();
-                            const int64_t base_offset =
-                                process->ReadSignedIntegerFromMemory(
-                                    base_offset_addr, base_offset_size,
-                                    UINT32_MAX, err);
-                            if (base_offset < UINT32_MAX) {
-                              handled = true;
-                              bit_offset = base_offset * 8;
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                clang::VTableContextBase *vtable_ctx =
+                    getASTContext()->getVTableContext();
+                if (vtable_ctx)
+                  handled = GetVBaseBitOffset(*vtable_ctx, *valobj,
+                                              record_layout, cxx_record_decl,
+                                              base_class_decl, bit_offset);
               }
               if (!handled)
                 bit_offset = record_layout.getVBaseClassOffset(base_class_decl)
@@ -8876,43 +8935,55 @@ bool ClangASTContext::CompleteTagDeclarationDefinition(
 }
 
 clang::EnumConstantDecl *ClangASTContext::AddEnumerationValueToEnumerationType(
-    lldb::opaque_compiler_type_t type,
-    const CompilerType &enumerator_clang_type, const Declaration &decl,
-    const char *name, int64_t enum_value, uint32_t enum_value_bit_size) {
-  if (type && enumerator_clang_type.IsValid() && name && name[0]) {
-    clang::QualType enum_qual_type(GetCanonicalQualType(type));
+    const CompilerType &enum_type, const Declaration &decl, const char *name,
+    int64_t enum_value, uint32_t enum_value_bit_size) {
 
-    bool is_signed = false;
-    enumerator_clang_type.IsIntegerType(is_signed);
-    const clang::Type *clang_type = enum_qual_type.getTypePtr();
-    if (clang_type) {
-      const clang::EnumType *enutype =
-          llvm::dyn_cast<clang::EnumType>(clang_type);
+  if (!enum_type || ConstString(name).IsEmpty())
+    return nullptr;
 
-      if (enutype) {
-        llvm::APSInt enum_llvm_apsint(enum_value_bit_size, is_signed);
-        enum_llvm_apsint = enum_value;
-        clang::EnumConstantDecl *enumerator_decl =
-            clang::EnumConstantDecl::Create(
-                *getASTContext(), enutype->getDecl(), clang::SourceLocation(),
-                name ? &getASTContext()->Idents.get(name)
-                     : nullptr, // Identifier
-                ClangUtil::GetQualType(enumerator_clang_type),
-                nullptr, enum_llvm_apsint);
+  lldbassert(enum_type.GetTypeSystem() == static_cast<TypeSystem *>(this));
 
-        if (enumerator_decl) {
-          enutype->getDecl()->addDecl(enumerator_decl);
+  lldb::opaque_compiler_type_t enum_opaque_compiler_type =
+      enum_type.GetOpaqueQualType();
+
+  if (!enum_opaque_compiler_type)
+    return nullptr;
+
+  CompilerType underlying_type =
+      GetEnumerationIntegerType(enum_type.GetOpaqueQualType());
+
+  clang::QualType enum_qual_type(
+      GetCanonicalQualType(enum_opaque_compiler_type));
+
+  bool is_signed = false;
+  underlying_type.IsIntegerType(is_signed);
+  const clang::Type *clang_type = enum_qual_type.getTypePtr();
+
+  if (!clang_type)
+    return nullptr;
+
+  const clang::EnumType *enutype = llvm::dyn_cast<clang::EnumType>(clang_type);
+
+  if (!enutype)
+    return nullptr;
+
+  llvm::APSInt enum_llvm_apsint(enum_value_bit_size, is_signed);
+  enum_llvm_apsint = enum_value;
+  clang::EnumConstantDecl *enumerator_decl = clang::EnumConstantDecl::Create(
+      *getASTContext(), enutype->getDecl(), clang::SourceLocation(),
+      name ? &getASTContext()->Idents.get(name) : nullptr, // Identifier
+      clang::QualType(enutype, 0), nullptr, enum_llvm_apsint);
+
+  if (!enumerator_decl)
+    return nullptr;
+
+  enutype->getDecl()->addDecl(enumerator_decl);
 
 #ifdef LLDB_CONFIGURATION_DEBUG
-          VerifyDecl(enumerator_decl);
+  VerifyDecl(enumerator_decl);
 #endif
 
-          return enumerator_decl;
-        }
-      }
-    }
-  }
-  return nullptr;
+  return enumerator_decl;
 }
 
 CompilerType

@@ -10,10 +10,6 @@
 #ifndef liblldb_ThreadPlanStepInRange_h_
 #define liblldb_ThreadPlanStepInRange_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Thread.h"

@@ -10,14 +10,10 @@
 #ifndef liblldb_CommandHistory_h_
 #define liblldb_CommandHistory_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
 

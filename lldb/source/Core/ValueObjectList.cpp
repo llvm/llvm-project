@@ -9,11 +9,11 @@
 
 #include "lldb/Core/ValueObjectList.h"
 
-#include "lldb/Core/ValueObject.h"    // for ValueObject
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/SharingPtr.h"  // for SharingPtr
+#include "lldb/Core/ValueObject.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/SharingPtr.h"
 
-#include <utility> // for back_insert_iterator, back_ins...
+#include <utility>
 
 using namespace lldb;
 using namespace lldb_private;

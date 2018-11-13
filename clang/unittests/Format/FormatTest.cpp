@@ -6472,6 +6472,8 @@ TEST_F(FormatTest, UnderstandsSquareAttributes) {
   // Make sure we do not mistake attributes for array subscripts.
   verifyFormat("int a() {}\n"
                "[[unused]] int b() {}\n");
+  verifyFormat("NSArray *arr;\n"
+               "arr[[Foo() bar]];");
 
   // On the other hand, we still need to correctly find array subscripts.
   verifyFormat("int a = std::vector<int>{1, 2, 3}[0];");

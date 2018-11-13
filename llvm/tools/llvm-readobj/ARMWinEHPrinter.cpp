@@ -903,7 +903,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
     if (!Name) {
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(Name.takeError(), OS, "");
+      logAllUnhandledErrors(Name.takeError(), OS);
       OS.flush();
       report_fatal_error(Buf);
     }
@@ -942,7 +942,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
     if (!FunctionNameOrErr) {
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS, "");
+      logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
       OS.flush();
       report_fatal_error(Buf);
     }
@@ -951,7 +951,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
     if (!FunctionAddressOrErr) {
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(FunctionAddressOrErr.takeError(), OS, "");
+      logAllUnhandledErrors(FunctionAddressOrErr.takeError(), OS);
       OS.flush();
       report_fatal_error(Buf);
     }
@@ -967,7 +967,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
     if (!Name) {
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(Name.takeError(), OS, "");
+      logAllUnhandledErrors(Name.takeError(), OS);
       OS.flush();
       report_fatal_error(Buf);
     }
@@ -976,7 +976,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
     if (!AddressOrErr) {
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(AddressOrErr.takeError(), OS, "");
+      logAllUnhandledErrors(AddressOrErr.takeError(), OS);
       OS.flush();
       report_fatal_error(Buf);
     }
@@ -1025,7 +1025,7 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
     if (!FunctionNameOrErr) {
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS, "");
+      logAllUnhandledErrors(FunctionNameOrErr.takeError(), OS);
       OS.flush();
       report_fatal_error(Buf);
     }
@@ -1034,7 +1034,7 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
     if (!FunctionAddressOrErr) {
       std::string Buf;
       llvm::raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(FunctionAddressOrErr.takeError(), OS, "");
+      logAllUnhandledErrors(FunctionAddressOrErr.takeError(), OS);
       OS.flush();
       report_fatal_error(Buf);
     }

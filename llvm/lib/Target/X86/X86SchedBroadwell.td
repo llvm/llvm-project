@@ -878,10 +878,10 @@ def BWWriteResGroup45 : SchedWriteRes<[BWPort0156]> {
 }
 def: InstRW<[BWWriteResGroup45], (instrs FNCLEX)>;
 
-def BWWriteResGroup46 : SchedWriteRes<[BWPort015,BWPort0156]> {
-  let Latency = 4;
+def BWWriteResGroup46 : SchedWriteRes<[]> {
+  let Latency = 0;
   let NumMicroOps = 4;
-  let ResourceCycles = [1,3];
+  let ResourceCycles = [];
 }
 def: InstRW<[BWWriteResGroup46], (instrs VZEROUPPER)>;
 

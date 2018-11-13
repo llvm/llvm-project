@@ -9,65 +9,65 @@
 
 #include "lldb/Core/Module.h"
 
-#include "lldb/Core/AddressRange.h" // for AddressRange
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Core/AddressResolverFileLine.h"
-#include "lldb/Core/Debugger.h"     // for Debugger
-#include "lldb/Core/FileSpecList.h" // for FileSpecList
-#include "lldb/Core/Mangled.h"      // for Mangled
+#include "lldb/Core/Debugger.h"
+#include "lldb/Core/FileSpecList.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/SearchFilter.h" // for SearchFilt...
+#include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
-#include "lldb/Symbol/Function.h" // for Function
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Symbol/Symbol.h" // for Symbol
+#include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/SymbolVendor.h"
-#include "lldb/Symbol/Symtab.h"   // for Symtab
-#include "lldb/Symbol/Type.h"     // for Type
-#include "lldb/Symbol/TypeList.h" // for TypeList
+#include "lldb/Symbol/Symtab.h"
+#include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/Platform.h" // for Platform
+#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h" // for GetLogIfAn...
+#include "lldb/Utility/Logging.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h" // for Stream
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
 #if defined(_WIN32)
-#include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
+#include "lldb/Host/windows/PosixApi.h"
 #endif
 
 #include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
 
-#include "llvm/ADT/STLExtras.h"    // for make_unique
-#include "llvm/Support/Compiler.h" // for LLVM_PRETT...
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Signals.h"
-#include "llvm/Support/raw_ostream.h" // for raw_string...
+#include "llvm/Support/raw_ostream.h"
 
-#include <assert.h>    // for assert
-#include <cstdint>     // for uint32_t
-#include <inttypes.h>  // for PRIx64
-#include <map>         // for map
-#include <stdarg.h>    // for va_end
-#include <string.h>    // for size_t
-#include <type_traits> // for move
-#include <utility>     // for find, pair
+#include <assert.h>
+#include <cstdint>
+#include <inttypes.h>
+#include <map>
+#include <stdarg.h>
+#include <string.h>
+#include <type_traits>
+#include <utility>
 
 namespace lldb_private {
 class CompilerDeclContext;

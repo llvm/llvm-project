@@ -9,21 +9,21 @@
 
 #include "lldb/Core/AddressResolverFileLine.h"
 
-#include "lldb/Core/Address.h"      // for Address
-#include "lldb/Core/AddressRange.h" // for AddressRange
+#include "lldb/Core/Address.h"
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Symbol/CompileUnit.h"
-#include "lldb/Symbol/LineEntry.h" // for LineEntry
+#include "lldb/Symbol/LineEntry.h"
 #include "lldb/Symbol/SymbolContext.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h" // for GetLogIfAllCategoriesSet, LIB...
-#include "lldb/Utility/Stream.h"  // for Stream
+#include "lldb/Utility/Logging.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
-#include "lldb/lldb-enumerations.h" // for SymbolContextItem::eSymbolCon...
-#include "lldb/lldb-types.h"        // for addr_t
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
 
-#include <inttypes.h> // for PRIx64
-#include <vector>     // for vector
+#include <inttypes.h>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;

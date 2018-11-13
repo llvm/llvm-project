@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionGroupFormat_h_
 #define liblldb_OptionGroupFormat_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/OptionValueFormat.h"
 #include "lldb/Interpreter/OptionValueSInt64.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"

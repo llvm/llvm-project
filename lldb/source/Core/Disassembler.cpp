@@ -9,14 +9,14 @@
 
 #include "lldb/Core/Disassembler.h"
 
-#include "lldb/Core/AddressRange.h" // for AddressRange
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/EmulateInstruction.h"
-#include "lldb/Core/Mangled.h" // for Mangled, Mangled...
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h" // for ModuleList
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/SourceManager.h" // for SourceManager
+#include "lldb/Core/SourceManager.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Interpreter/OptionValueArray.h"
@@ -25,31 +25,31 @@
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Symbol/Function.h"
-#include "lldb/Symbol/Symbol.h"        // for Symbol
-#include "lldb/Symbol/SymbolContext.h" // for SymbolContext
+#include "lldb/Symbol/Symbol.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Target/Thread.h" // for Thread
+#include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/Stream.h"       // for Stream
-#include "lldb/Utility/StreamString.h" // for StreamString
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
-#include "lldb/lldb-private-enumerations.h" // for InstructionType:...
-#include "lldb/lldb-private-interfaces.h"   // for DisassemblerCrea...
-#include "lldb/lldb-private-types.h"        // for RegisterInfo
-#include "llvm/ADT/Triple.h"                // for Triple, Triple::...
-#include "llvm/Support/Compiler.h"          // for LLVM_PRETTY_FUNC...
+#include "lldb/lldb-private-enumerations.h"
+#include "lldb/lldb-private-interfaces.h"
+#include "lldb/lldb-private-types.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Support/Compiler.h"
 
-#include <cstdint> // for uint32_t, UINT32...
+#include <cstdint>
 #include <cstring>
-#include <utility> // for pair
+#include <utility>
 
-#include <assert.h> // for assert
+#include <assert.h>
 
 #define DEFAULT_DISASM_BYTE_SIZE 32
 

@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Queue.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/QueueList.h"

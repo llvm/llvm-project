@@ -35,7 +35,7 @@
 #include "llvm/ADT/STLExtras.h"
 
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "Plugins/Process/Utility/RegisterContext_mips.h" //mips32 has same registers nos as mips64
+#include "Plugins/Process/Utility/RegisterContext_mips.h"
 
 using namespace lldb;
 using namespace lldb_private;

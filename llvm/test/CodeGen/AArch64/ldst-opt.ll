@@ -1465,10 +1465,10 @@ entry:
 define void @merge_zr32_3vec(<3 x i32>* %p) {
 ; CHECK-LABEL: merge_zr32_3vec:
 ; CHECK: // %entry
-; NOSTRICTALIGN-NEXT: str xzr, [x{{[0-9]+}}]
 ; NOSTRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #8]
-; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
-; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}, #8]
+; NOSTRICTALIGN-NEXT: str xzr, [x{{[0-9]+}}]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #4]
+; STRICTALIGN-NEXT: str wzr, [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
 entry:
   store <3 x i32> zeroinitializer, <3 x i32>* %p
@@ -1480,8 +1480,8 @@ define void @merge_zr32_4vec(<4 x i32>* %p) {
 ; CHECK-LABEL: merge_zr32_4vec:
 ; CHECK: // %entry
 ; NOSTRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
-; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
 ; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #8]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
 entry:
   store <4 x i32> zeroinitializer, <4 x i32>* %p
@@ -1505,8 +1505,8 @@ define void @merge_zr32_4vecf(<4 x float>* %p) {
 ; CHECK-LABEL: merge_zr32_4vecf:
 ; CHECK: // %entry
 ; NOSTRICTALIGN-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
-; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
 ; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}, #8]
+; STRICTALIGN-NEXT: stp wzr, wzr, [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
 entry:
   store <4 x float> zeroinitializer, <4 x float>* %p
@@ -1589,8 +1589,8 @@ entry:
 define void @merge_zr64_3vec(<3 x i64>* %p) {
 ; CHECK-LABEL: merge_zr64_3vec:
 ; CHECK: // %entry
-; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}]
-; CHECK-NEXT: str xzr, [x{{[0-9]+}}, #16]
+; CHECK-NEXT: stp xzr, xzr, [x{{[0-9]+}}, #8]
+; CHECK-NEXT: str xzr, [x{{[0-9]+}}]
 ; CHECK-NEXT: ret
 entry:
   store <3 x i64> zeroinitializer, <3 x i64>* %p

@@ -610,30 +610,26 @@ define <16 x i8> @shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4(<16 x i8> 
 ;
 ; SSSE3-LABEL: shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,xmm1[11,12,13,14,14],zero,zero,zero,zero,zero
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[5,6,7,8,9,10],zero,zero,zero,zero,zero,xmm0[1,1,2,3,4]
-; SSSE3-NEXT:    por %xmm1, %xmm0
+; SSSE3-NEXT:    palignr {{.*#+}} xmm0 = xmm1[11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7,8,9,10]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15,0,1,2,3,3,6,6,7,8,9]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    pshufb {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,xmm1[11,12,13,14,14],zero,zero,zero,zero,zero
-; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[5,6,7,8,9,10],zero,zero,zero,zero,zero,xmm0[1,1,2,3,4]
-; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    palignr {{.*#+}} xmm0 = xmm1[11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7,8,9,10]
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15,0,1,2,3,3,6,6,7,8,9]
 ; SSE41-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4:
 ; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,xmm1[11,12,13,14,14],zero,zero,zero,zero,zero
-; AVX1OR2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[5,6,7,8,9,10],zero,zero,zero,zero,zero,xmm0[1,1,2,3,4]
-; AVX1OR2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vpalignr {{.*#+}} xmm0 = xmm1[11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7,8,9,10]
+; AVX1OR2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15,0,1,2,3,3,6,6,7,8,9]
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4:
 ; AVX512VLBW:       # %bb.0:
-; AVX512VLBW-NEXT:    vpshufb {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,xmm1[11,12,13,14,14],zero,zero,zero,zero,zero
-; AVX512VLBW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[5,6,7,8,9,10],zero,zero,zero,zero,zero,xmm0[1,1,2,3,4]
-; AVX512VLBW-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX512VLBW-NEXT:    vpalignr {{.*#+}} xmm0 = xmm1[11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7,8,9,10]
+; AVX512VLBW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15,0,1,2,3,3,6,6,7,8,9]
 ; AVX512VLBW-NEXT:    retq
 ;
 ; AVX512VLVBMI-LABEL: shuffle_v16i8_5_6_7_8_9_10_27_28_29_30_31_0_1_2_3_4:

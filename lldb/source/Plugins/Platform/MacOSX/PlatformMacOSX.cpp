@@ -10,12 +10,9 @@
 #include "PlatformMacOSX.h"
 #include "lldb/Host/Config.h"
 
-// C++ Includes
 
 #include <sstream>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"

@@ -7,12 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/RISCVAsmBackend.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
 #include "Utils/RISCVBaseInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -1164,6 +1166,21 @@ bool RISCVAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
                                       StringRef Name, SMLoc NameLoc,
                                       OperandVector &Operands) {
+  // Ensure that if the instruction occurs when relaxation is enabled,
+  // relocations are forced for the file. Ideally this would be done when there
+  // is enough information to reliably determine if the instruction itself may
+  // cause relaxations. Unfortunately instruction processing stage occurs in the
+  // same pass as relocation emission, so it's too late to set a 'sticky bit'
+  // for the entire file.
+  if (getSTI().getFeatureBits()[RISCV::FeatureRelax]) {
+    auto *Assembler = getTargetStreamer().getStreamer().getAssemblerPtr();
+    if (Assembler != nullptr) {
+      RISCVAsmBackend &MAB =
+          static_cast<RISCVAsmBackend &>(Assembler->getBackend());
+      MAB.setForceRelocs();
+    }
+  }
+
   // First operand is token for instruction
   Operands.push_back(RISCVOperand::createToken(Name, NameLoc, isRV64()));
 
@@ -1291,9 +1308,33 @@ bool RISCVAsmParser::parseDirectiveOption() {
     return false;
   }
 
+  if (Option == "relax") {
+    getTargetStreamer().emitDirectiveOptionRelax();
+
+    Parser.Lex();
+    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
+      return Error(Parser.getTok().getLoc(),
+                   "unexpected token, expected end of statement");
+
+    setFeatureBits(RISCV::FeatureRelax, "relax");
+    return false;
+  }
+
+  if (Option == "norelax") {
+    getTargetStreamer().emitDirectiveOptionNoRelax();
+
+    Parser.Lex();
+    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
+      return Error(Parser.getTok().getLoc(),
+                   "unexpected token, expected end of statement");
+
+    clearFeatureBits(RISCV::FeatureRelax, "relax");
+    return false;
+  }
+
   // Unknown option.
   Warning(Parser.getTok().getLoc(),
-          "unknown option, expected 'rvc' or 'norvc'");
+          "unknown option, expected 'rvc', 'norvc', 'relax' or 'norelax'");
   Parser.eatToEndOfStatement();
   return false;
 }

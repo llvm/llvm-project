@@ -7,11 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -24,7 +21,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 
-// Project includes
 #include "ClangHost.h"
 #include "ClangModulesDeclVendor.h"
 

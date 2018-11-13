@@ -10,11 +10,7 @@
 #ifndef lldb_Host_MonitoringProcessLauncher_h_
 #define lldb_Host_MonitoringProcessLauncher_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/ProcessLauncher.h"
 
 namespace lldb_private {

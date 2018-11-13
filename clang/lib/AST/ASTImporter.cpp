@@ -579,6 +579,7 @@ namespace clang {
     ExpectedStmt VisitCompoundLiteralExpr(CompoundLiteralExpr *E);
     ExpectedStmt VisitAtomicExpr(AtomicExpr *E);
     ExpectedStmt VisitAddrLabelExpr(AddrLabelExpr *E);
+    ExpectedStmt VisitConstantExpr(ConstantExpr *E);
     ExpectedStmt VisitParenExpr(ParenExpr *E);
     ExpectedStmt VisitParenListExpr(ParenListExpr *E);
     ExpectedStmt VisitStmtExpr(StmtExpr *E);
@@ -6364,6 +6365,17 @@ ExpectedStmt ASTNodeImporter::VisitAddrLabelExpr(AddrLabelExpr *E) {
 
   return new (Importer.getToContext()) AddrLabelExpr(
       ToAmpAmpLoc, ToLabelLoc, ToLabel, ToType);
+}
+
+ExpectedStmt ASTNodeImporter::VisitConstantExpr(ConstantExpr *E) {
+  auto Imp = importSeq(E->getSubExpr());
+  if (!Imp)
+    return Imp.takeError();
+
+  Expr *ToSubExpr;
+  std::tie(ToSubExpr) = *Imp;
+
+  return new (Importer.getToContext()) ConstantExpr(ToSubExpr);
 }
 
 ExpectedStmt ASTNodeImporter::VisitParenExpr(ParenExpr *E) {

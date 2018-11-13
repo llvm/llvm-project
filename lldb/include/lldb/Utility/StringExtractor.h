@@ -10,12 +10,10 @@
 #ifndef utility_StringExtractor_h_
 #define utility_StringExtractor_h_
 
-// Other libraries and framework includes
-// Project includes
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
-#include <stddef.h> // for size_t
+#include <stddef.h>
 #include <stdint.h>
 #include <string>
 

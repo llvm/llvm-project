@@ -20,7 +20,6 @@
 // file. So we have to define NDEBUG when including clang headers to avoid any
 // mismatches. This is covered by rdar://problem/8691220
 
-// C Includes
 #if !defined(NDEBUG) && !defined(LLVM_NDEBUG_OFF)
 #define LLDB_DEFINED_NDEBUG_FOR_CLANG
 #define NDEBUG
@@ -35,11 +34,8 @@
 #include <assert.h>
 #endif
 
-// C++ Includes
-// Other libraries and framework includes
 #include "clang/AST/ExternalASTSource.h"
 
-// Project includes
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"

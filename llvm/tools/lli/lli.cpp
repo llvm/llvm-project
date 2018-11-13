@@ -511,7 +511,7 @@ int main(int argc, char **argv, char * const *envp) {
     if (!ArOrErr) {
       std::string Buf;
       raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(ArOrErr.takeError(), OS, "");
+      logAllUnhandledErrors(ArOrErr.takeError(), OS);
       OS.flush();
       errs() << Buf;
       exit(1);

@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/ThreadPlanStepInRange.h"
 #include "lldb/Core/Architecture.h"
 #include "lldb/Core/Module.h"

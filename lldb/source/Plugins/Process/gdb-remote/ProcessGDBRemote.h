@@ -10,8 +10,6 @@
 #ifndef liblldb_ProcessGDBRemote_h_
 #define liblldb_ProcessGDBRemote_h_
 
-// C Includes
-// C++ Includes
 #include <atomic>
 #include <map>
 #include <mutex>

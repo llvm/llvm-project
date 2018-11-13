@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Project includes
 #include "ThreadMinidump.h"
 #include "ProcessMinidump.h"
 
@@ -16,7 +15,6 @@
 #include "RegisterContextMinidump_x86_32.h"
 #include "RegisterContextMinidump_x86_64.h"
 
-// Other libraries and framework includes
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "Plugins/Process/elf-core/RegisterContextPOSIXCore_x86_64.h"
@@ -29,8 +27,6 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
 
-// C Includes
-// C++ Includes
 
 using namespace lldb;
 using namespace lldb_private;

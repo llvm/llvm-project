@@ -12,12 +12,12 @@
 
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Scalar.h"
-#include "lldb/Utility/Status.h"    // for Status
-#include "lldb/lldb-enumerations.h" // for ByteOrder, Format
-#include "lldb/lldb-types.h"        // for offset_t
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/StringRef.h" // for StringRef
-#include <cstdint>              // for uint32_t, uint8_t, uint64_t, uin...
+#include "llvm/ADT/StringRef.h"
+#include <cstdint>
 #include <cstring>
 
 namespace lldb_private {

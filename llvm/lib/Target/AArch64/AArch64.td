@@ -546,6 +546,21 @@ def ProcThunderXT83 : SubtargetFeature<"thunderxt83", "ARMProcFamily",
                                        FeaturePredictableSelectIsExpensive,
                                        FeatureNEON]>;
 
+def ProcTSV110 : SubtargetFeature<"tsv110", "ARMProcFamily", "TSV110",
+                                  "HiSilicon TS-V110 processors", [
+                                  HasV8_2aOps,
+                                  FeatureCrypto,
+                                  FeatureCustomCheapAsMoveHandling,
+                                  FeatureFPARMv8,
+                                  FeatureFuseAES,
+                                  FeatureNEON,
+                                  FeaturePerfMon,
+                                  FeaturePostRAScheduler,
+                                  FeatureSPE,
+                                  FeatureFullFP16,
+                                  FeatureFP16FML,
+                                  FeatureDotProd]>;
+
 def : ProcessorModel<"generic", NoSchedModel, [
                      FeatureFPARMv8,
                      FeatureFuseAES,
@@ -578,6 +593,8 @@ def : ProcessorModel<"thunderxt81", ThunderXT8XModel,  [ProcThunderXT81]>;
 def : ProcessorModel<"thunderxt83", ThunderXT8XModel,  [ProcThunderXT83]>;
 // Cavium ThunderX2T9X  Processors. Formerly Broadcom Vulcan.
 def : ProcessorModel<"thunderx2t99", ThunderX2T99Model, [ProcThunderX2T99]>;
+// FIXME: HiSilicon TSV110 is currently modeled as a Cortex-A57.
+def : ProcessorModel<"tsv110", CortexA57Model, [ProcTSV110]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser
@@ -626,3 +643,9 @@ def AArch64 : Target {
   let AssemblyWriters = [GenericAsmWriter, AppleAsmWriter];
   let AllowRegisterRenaming = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// Pfm Counters
+//===----------------------------------------------------------------------===//
+
+include "AArch64PfmCounters.td"

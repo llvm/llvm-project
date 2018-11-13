@@ -1009,10 +1009,10 @@ def SKXWriteResGroup55 : SchedWriteRes<[SKXPort0156]> {
 }
 def: InstRW<[SKXWriteResGroup55], (instrs FNCLEX)>;
 
-def SKXWriteResGroup56 : SchedWriteRes<[SKXPort015,SKXPort0156]> {
-  let Latency = 4;
+def SKXWriteResGroup56 : SchedWriteRes<[]> {
+  let Latency = 0;
   let NumMicroOps = 4;
-  let ResourceCycles = [1,3];
+  let ResourceCycles = [];
 }
 def: InstRW<[SKXWriteResGroup56], (instrs VZEROUPPER)>;
 

@@ -139,6 +139,7 @@ class FuzzyFind : public Command {
       StringRef(this->Scopes).split(Scopes, ',');
       Request.Scopes = {Scopes.begin(), Scopes.end()};
     }
+    Request.AnyScope = Request.Scopes.empty();
     // FIXME(kbobyrev): Print symbol final scores to see the distribution.
     static const auto OutputFormat = "{0,-4} | {1,-40} | {2,-25}\n";
     outs() << formatv(OutputFormat, "Rank", "Symbol ID", "Symbol Name");
@@ -217,6 +218,12 @@ class Refs : public Command {
       IDs.push_back(*SID);
     } else {
       IDs = getSymbolIDsFromIndex(Name, Index);
+      if (IDs.size() > 1) {
+        outs() << formatv("The name {0} is ambiguous, found {1} different "
+                          "symbols. Please use id flag to disambiguate.\n",
+                          Name, IDs.size());
+        return;
+      }
     }
     RefsRequest RefRequest;
     RefRequest.IDs.insert(IDs.begin(), IDs.end());

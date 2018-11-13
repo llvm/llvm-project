@@ -140,6 +140,7 @@ class TestImportBase : public ParameterizedTestsFixture {
     if (!Imported)
       return testing::AssertionFailure() << "Import failed, nullptr returned!";
 
+
     return Verifier.match(Imported, WrapperMatcher);
   }
 
@@ -502,7 +503,6 @@ TEST_P(CanonicalRedeclChain, ShouldBeSameForAllDeclInTheChain) {
   EXPECT_THAT(RedeclsD1, ::testing::ContainerEq(RedeclsD2));
 }
 
-
 TEST_P(ImportExpr, ImportStringLiteral) {
   MatchVerifier<Decl> Verifier;
   testImport(
@@ -719,18 +719,17 @@ TEST_P(ImportExpr, ImportDesignatedInitExpr) {
           initListExpr(
               has(designatedInitExpr(
                   designatorCountIs(2),
-                  has(floatLiteral(equals(1.0))),
-                  has(integerLiteral(equals(2))))),
+                  hasDescendant(floatLiteral(equals(1.0))),
+                  hasDescendant(integerLiteral(equals(2))))),
               has(designatedInitExpr(
                   designatorCountIs(2),
-                  has(floatLiteral(equals(2.0))),
-                  has(integerLiteral(equals(2))))),
+                  hasDescendant(floatLiteral(equals(2.0))),
+                  hasDescendant(integerLiteral(equals(2))))),
               has(designatedInitExpr(
                   designatorCountIs(2),
-                  has(floatLiteral(equals(1.0))),
-                  has(integerLiteral(equals(0)))))))));
+                  hasDescendant(floatLiteral(equals(1.0))),
+                  hasDescendant(integerLiteral(equals(0)))))))));
 }
-
 
 TEST_P(ImportExpr, ImportPredefinedExpr) {
   MatchVerifier<Decl> Verifier;

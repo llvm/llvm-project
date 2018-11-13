@@ -10,15 +10,11 @@
 #ifndef liblldb_FunctionCaller_h_
 #define liblldb_FunctionCaller_h_
 
-// C Includes
-// C++ Includes
 #include <list>
 #include <memory>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/Expression.h"

@@ -35,7 +35,8 @@ int TestAlignedNull __attribute__((aligned));
 int TestAlignedExpr __attribute__((aligned(4)));
 // CHECK:      VarDecl{{.*}}TestAlignedExpr
 // CHECK-NEXT:   AlignedAttr {{.*}} aligned
-// CHECK-NEXT:     IntegerLiteral
+// CHECK-NEXT:     ConstantExpr
+// CHECK-NEXT:       IntegerLiteral
 
 int TestEnum __attribute__((visibility("default")));
 // CHECK:      VarDecl{{.*}}TestEnum

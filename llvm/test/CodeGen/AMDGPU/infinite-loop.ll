@@ -36,7 +36,7 @@ loop:
 ; SI: s_and_b64 vcc, exec, -1
 ; SI: s_waitcnt lgkmcnt(0)
 ; SI: buffer_store_dword [[REG]]
-; SI: s_cbranch_vccnz [[LOOP]]
+; SI: s_cbranch_execnz [[LOOP]]
 
 ; SI: [[RET]]:  ; %UnifiedReturnBlock
 ; SI: s_endpgm

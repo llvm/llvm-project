@@ -10,10 +10,6 @@
 #ifndef liblldb_ScriptInterpreter_h_
 #define liblldb_ScriptInterpreter_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-private.h"
 
 #include "lldb/Breakpoint/BreakpointOptions.h"

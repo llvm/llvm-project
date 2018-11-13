@@ -15,14 +15,10 @@
 #if defined(__APPLE__) // This Plugin uses the Mac-specific
                        // source/Host/macosx/cfcpp utilities
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "lldb/Utility/FileSpec.h"
 
 #include "llvm/Support/FileSystem.h"
 
-// Project includes
 #include "PlatformDarwin.h"
 
 class PlatformDarwinKernel : public PlatformDarwin {

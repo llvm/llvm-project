@@ -21,7 +21,7 @@
 
 // Debugging:
 #ifdef _DEBUG
-#include <crtdbg.h> // C-runtime debugging library (defines _ASSERT).
+#include <crtdbg.h>
 #endif              // _DEBUG
 
 #endif // _WIN32

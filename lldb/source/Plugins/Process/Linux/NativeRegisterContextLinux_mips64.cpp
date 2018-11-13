@@ -11,10 +11,7 @@
 
 #include "NativeRegisterContextLinux_mips64.h"
 
-// C Includes
-// C++ Includes
 
-// Other libraries and framework includes
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"

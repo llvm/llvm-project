@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Other libraries and framework includes
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/common/TCPSocket.h"
 #include "lldb/Utility/Log.h"

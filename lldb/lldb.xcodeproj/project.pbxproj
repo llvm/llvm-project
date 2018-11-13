@@ -7433,7 +7433,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-clang-headers.py $TARGET_BUILD_DIR $LLVM_BUILD_DIR/$CURRENT_ARCH\n";
+			shellScript = "/usr/bin/python $SRCROOT/scripts/Xcode/package-clang-headers.py $TARGET_BUILD_DIR $LLVM_BUILD_DIR/x86_64\n";
 		};
 		4C3326CA18B2A2B800EB5DD7 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -7469,7 +7469,7 @@
 			inputPaths = (
 				"$(BUILT_PRODUCTS_DIR)/lldb.py",
 				"$(SRCROOT)/source/Interpreter/embedded_interpreter.py",
-				"$(OBJECT_FILE_DIR_normal)/$(CURRENT_ARCH)/LLDBWrapPython.o",
+				"$(OBJECT_FILE_DIR_normal)/x86_64/LLDBWrapPython.o",
 			);
 			name = "Finish swig wrapper classes (lldb)";
 			outputPaths = (
@@ -8611,7 +8611,7 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "x86_64/";
 				LLVM_CONFIGURATION = "Release+Asserts";
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				ONLY_ACTIVE_ARCH = YES;
@@ -8701,7 +8701,7 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "x86_64/";
 				LLVM_CONFIGURATION = "Release+Asserts";
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				ONLY_ACTIVE_ARCH = YES;
@@ -9859,7 +9859,7 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(OBJROOT)/llvm";
 				LLVM_BUILD_DIRTREE = "$(OBJROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "x86_64/";
 				LLVM_CONFIGURATION = Release;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				OTHER_CFLAGS = (
@@ -10575,7 +10575,7 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "$(CURRENT_ARCH)/";
+				LLVM_BUILD_DIR_ARCH = "x86_64/";
 				LLVM_CONFIGURATION = "Debug+Asserts";
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				ONLY_ACTIVE_ARCH = YES;

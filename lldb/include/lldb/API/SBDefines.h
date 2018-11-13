@@ -10,10 +10,6 @@
 #ifndef LLDB_SBDefines_h_
 #define LLDB_SBDefines_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"

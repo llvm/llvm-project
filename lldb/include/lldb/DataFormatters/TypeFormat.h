@@ -11,16 +11,12 @@
 #ifndef lldb_TypeFormat_h_
 #define lldb_TypeFormat_h_
 
-// C Includes
 
-// C++ Includes
 #include <functional>
 #include <string>
 #include <unordered_map>
 
-// Other libraries and framework includes
 
-// Project includes
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 

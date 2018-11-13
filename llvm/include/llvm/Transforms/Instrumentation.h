@@ -77,6 +77,12 @@ struct GCOVOptions {
   // Emit the exit block immediately after the start block, rather than after
   // all of the function body's blocks.
   bool ExitBlockBeforeBody;
+
+  // Regexes separated by a semi-colon to filter the files to instrument.
+  std::string Filter;
+
+  // Regexes separated by a semi-colon to filter the files to not instrument.
+  std::string Exclude;
 };
 
 ModulePass *createGCOVProfilerPass(const GCOVOptions &Options =

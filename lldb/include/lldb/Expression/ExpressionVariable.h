@@ -10,15 +10,11 @@
 #ifndef liblldb_ExpressionVariable_h_
 #define liblldb_ExpressionVariable_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/DenseMap.h"
 
-// Project includes
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-public.h"

@@ -11,12 +11,8 @@
 #ifndef lldb_RegisterContextHistory_h_
 #define lldb_RegisterContextHistory_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/lldb-private.h"

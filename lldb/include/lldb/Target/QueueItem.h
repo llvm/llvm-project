@@ -10,14 +10,10 @@
 #ifndef liblldb_QueueItem_h_
 #define liblldb_QueueItem_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"

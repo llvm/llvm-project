@@ -10,12 +10,8 @@
 #ifndef liblldb_Iterable_h_
 #define liblldb_Iterable_h_
 
-// C Includes
-// C++ Includes
 #include <utility>
 
-// Other libraries and framework includes
-// Project includes
 
 namespace lldb_private {
 

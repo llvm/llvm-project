@@ -10,10 +10,6 @@
 #ifndef liblldb_StackFrameRecognizer_h_
 #define liblldb_StackFrameRecognizer_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/StructuredData.h"

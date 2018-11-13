@@ -10,10 +10,6 @@
 #ifndef liblldb_Stoppoint_h_
 #define liblldb_Stoppoint_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 

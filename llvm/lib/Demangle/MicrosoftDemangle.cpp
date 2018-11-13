@@ -874,7 +874,7 @@ void Demangler::memorizeIdentifier(IdentifierNode *Identifier) {
   // Render this class template name into a string buffer so that we can
   // memorize it for the purpose of back-referencing.
   OutputStream OS;
-  if (initializeOutputStream(nullptr, nullptr, OS, 1024))
+  if (!initializeOutputStream(nullptr, nullptr, OS, 1024))
     // FIXME: Propagate out-of-memory as an error?
     std::terminate();
   Identifier->output(OS, OF_Default);
@@ -1207,7 +1207,7 @@ Demangler::demangleStringLiteral(StringView &MangledName) {
   if (MangledName.empty())
     goto StringLiteralError;
 
-  if (initializeOutputStream(nullptr, nullptr, OS, 1024))
+  if (!initializeOutputStream(nullptr, nullptr, OS, 1024))
     // FIXME: Propagate out-of-memory as an error?
     std::terminate();
   if (IsWcharT) {
@@ -1330,7 +1330,7 @@ Demangler::demangleLocallyScopedNamePiece(StringView &MangledName) {
 
   // Render the parent symbol's name into a buffer.
   OutputStream OS;
-  if (initializeOutputStream(nullptr, nullptr, OS, 1024))
+  if (!initializeOutputStream(nullptr, nullptr, OS, 1024))
     // FIXME: Propagate out-of-memory as an error?
     std::terminate();
   OS << '`';
@@ -2156,7 +2156,7 @@ void Demangler::dumpBackReferences() {
 
   // Create an output stream so we can render each type.
   OutputStream OS;
-  if (initializeOutputStream(nullptr, nullptr, OS, 1024))
+  if (!initializeOutputStream(nullptr, nullptr, OS, 1024))
     std::terminate();
   for (size_t I = 0; I < Backrefs.FunctionParamCount; ++I) {
     OS.setCurrentPosition(0);
@@ -2194,7 +2194,7 @@ char *llvm::microsoftDemangle(const char *MangledName, char *Buf, size_t *N,
 
   if (D.Error)
     InternalStatus = demangle_invalid_mangled_name;
-  else if (initializeOutputStream(Buf, N, S, 1024))
+  else if (!initializeOutputStream(Buf, N, S, 1024))
     InternalStatus = demangle_memory_alloc_failure;
   else {
     AST->output(S, OF_Default);

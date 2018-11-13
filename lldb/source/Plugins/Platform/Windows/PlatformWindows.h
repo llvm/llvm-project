@@ -10,10 +10,6 @@
 #ifndef liblldb_PlatformWindows_h_
 #define liblldb_PlatformWindows_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Platform.h"
 
 namespace lldb_private {

@@ -10,12 +10,8 @@
 #ifndef lldb_GDBRemoteRegisterContext_h_
 #define lldb_GDBRemoteRegisterContext_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Process/Utility/DynamicRegisterInfo.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/ConstString.h"

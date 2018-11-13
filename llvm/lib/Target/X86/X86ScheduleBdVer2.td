@@ -130,14 +130,14 @@ def PdFPU : ProcResGroup<[PdFPU0, PdFPU1, PdFPU2, PdFPU3]> {
 // Load-Store Units
 //
 
-// FIXME: does this even make sense?
-
-def PdLoad  : ProcResGroup<[PdAGLU01]> {
+let Super = PdAGLU01 in
+def PdLoad  : ProcResource<2> {
   // For Piledriver, the load queue is 40 entries deep.
   let BufferSize = 40;
 }
 
-def PdStore : ProcResGroup<[PdAGLU01]> {
+let Super = PdAGLU01 in
+def PdStore : ProcResource<1> {
   // For Piledriver, the store queue is 24 entries deep.
   let BufferSize = 24;
 }

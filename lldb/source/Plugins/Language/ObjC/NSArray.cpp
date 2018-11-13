@@ -7,12 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "clang/AST/ASTContext.h"
 
-// Project includes
 #include "Cocoa.h"
 
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntime.h"
@@ -218,6 +214,25 @@ namespace Foundation1437 {
 
 }
 
+namespace CallStackArray {
+struct DataDescriptor_32 {
+  uint32_t _data;
+  uint32_t _used;
+  uint32_t _offset;
+  const uint32_t _size = 0;
+};
+
+struct DataDescriptor_64 {
+  uint64_t _data;
+  uint64_t _used;
+  uint64_t _offset;
+  const uint64_t _size = 0;
+};
+
+using NSCallStackArraySyntheticFrontEnd =
+    GenericNSArrayMSyntheticFrontEnd<DataDescriptor_32, DataDescriptor_64>;
+} // namespace CallStackArray
+
 template <typename D32, typename D64, bool Inline>
 class GenericNSArrayISyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
@@ -368,6 +383,7 @@ bool lldb_private::formatters::NSArraySummaryProvider(
   static const ConstString g_NSArrayCF("__NSCFArray");
   static const ConstString g_NSArrayMLegacy("__NSArrayM_Legacy");
   static const ConstString g_NSArrayMImmutable("__NSArrayM_Immutable");
+  static const ConstString g_NSCallStackArray("_NSCallStackArray");
 
   if (class_name.IsEmpty())
     return false;
@@ -417,7 +433,9 @@ bool lldb_private::formatters::NSArraySummaryProvider(
     value = 0;
   } else if (class_name == g_NSArray1) {
     value = 1;
-  } else if (class_name == g_NSArrayCF) {
+  } else if (class_name == g_NSArrayCF || class_name == g_NSCallStackArray) {
+    // __NSCFArray and _NSCallStackArray store the number of elements as a
+    // pointer-sized value at offset `2 * ptr_size`.
     Status error;
     value = process_sp->ReadUnsignedIntegerFromMemory(
         valobj_addr + 2 * ptr_size, ptr_size, 0, error);
@@ -817,6 +835,7 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
   static const ConstString g_NSArray1("__NSSingleObjectArrayI");
   static const ConstString g_NSArrayMLegacy("__NSArrayM_Legacy");
   static const ConstString g_NSArrayMImmutable("__NSArrayM_Immutable");
+  static const ConstString g_NSCallStackArray("_NSCallStackArray");
 
   if (class_name.IsEmpty())
     return nullptr;
@@ -846,6 +865,8 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
       return (new Foundation1010::NSArrayMSyntheticFrontEnd(valobj_sp));
     else
       return (new Foundation109::NSArrayMSyntheticFrontEnd(valobj_sp));
+  } else if (class_name == g_NSCallStackArray) {
+    return (new CallStackArray::NSCallStackArraySyntheticFrontEnd(valobj_sp));
   } else {
     auto &map(NSArray_Additionals::GetAdditionalSynthetics());
     auto iter = map.find(class_name), end = map.end();

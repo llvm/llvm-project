@@ -10,12 +10,8 @@
 #ifndef liblldb_StopInfo_h_
 #define liblldb_StopInfo_h_
 
-// C Includes
-// C++ Includes
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-public.h"

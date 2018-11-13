@@ -13,12 +13,12 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Stream.h"
-#include "lldb/Utility/StreamString.h" // for StreamString
-#include "lldb/lldb-enumerations.h"    // for Format::eFormatBytes
+#include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <algorithm>
 
-#include <ctype.h> // for isprint
+#include <ctype.h>
 
 using namespace lldb;
 using namespace lldb_private;

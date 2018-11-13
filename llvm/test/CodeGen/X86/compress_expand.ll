@@ -53,7 +53,7 @@ define <8 x double> @test3(double* %base, <8 x double> %src0, <8 x i1> %mask) {
 ;
 ; KNL-LABEL: test3:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpmovsxwq %xmm1, %zmm1
+; KNL-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
@@ -138,7 +138,7 @@ define void @test7(float* %base, <8 x float> %V, <8 x i1> %mask) {
 ; KNL-LABEL: test7:
 ; KNL:       # %bb.0:
 ; KNL-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; KNL-NEXT:    vpmovsxwq %xmm1, %zmm1
+; KNL-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
@@ -158,7 +158,7 @@ define void @test8(double* %base, <8 x double> %V, <8 x i1> %mask) {
 ;
 ; KNL-LABEL: test8:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpmovsxwq %xmm1, %zmm1
+; KNL-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
@@ -178,7 +178,7 @@ define void @test9(i64* %base, <8 x i64> %V, <8 x i1> %mask) {
 ;
 ; KNL-LABEL: test9:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpmovsxwq %xmm1, %zmm1
+; KNL-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
 ; KNL-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; KNL-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; KNL-NEXT:    vpcompressq %zmm0, (%rdi) {%k1}
@@ -384,7 +384,7 @@ define void @test18(double* %base, <16 x double> %V, <16 x i1> %mask) {
 ;
 ; KNL-LABEL: test18:
 ; KNL:       # %bb.0:
-; KNL-NEXT:    vpmovsxbd %xmm2, %zmm2
+; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; KNL-NEXT:    vpslld $31, %zmm2, %zmm2
 ; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1
 ; KNL-NEXT:    kshiftrw $8, %k1, %k2

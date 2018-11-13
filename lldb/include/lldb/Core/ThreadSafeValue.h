@@ -10,13 +10,9 @@
 #ifndef liblldb_ThreadSafeValue_h_
 #define liblldb_ThreadSafeValue_h_
 
-// C Includes
 
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-defines.h"
 
 namespace lldb_private {

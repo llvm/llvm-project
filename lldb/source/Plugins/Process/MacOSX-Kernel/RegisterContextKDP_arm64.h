@@ -11,11 +11,7 @@
 #ifndef liblldb_RegisterContextKDP_arm64_h_
 #define liblldb_RegisterContextKDP_arm64_h_
 
-// C Includes
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
 
 class ThreadKDP;

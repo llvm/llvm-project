@@ -9,10 +9,12 @@
 
 #include "StopInfoMachException.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
+
+#if defined(__APPLE__)
+// Needed for the EXC_RESOURCE interpretation macros
+#include <kern/exc_resource.h>
+#endif
+
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -41,6 +43,12 @@ const char *StopInfoMachException::GetDescription() {
     const char *code_desc = NULL;
     const char *subcode_label = "subcode";
     const char *subcode_desc = NULL;
+
+#if defined(__APPLE__)
+    char code_desc_buf[32];
+    char subcode_desc_buf[32];
+#endif
+
     switch (m_value) {
     case 1: // EXC_BAD_ACCESS
       exc_desc = "EXC_BAD_ACCESS";
@@ -275,6 +283,47 @@ const char *StopInfoMachException::GetDescription() {
       break;
     case 11:
       exc_desc = "EXC_RESOURCE";
+#if defined(__APPLE__)
+      {
+        int resource_type = EXC_RESOURCE_DECODE_RESOURCE_TYPE(m_exc_code);
+
+        code_label = "limit";
+        code_desc = code_desc_buf;
+        subcode_label = "observed";
+        subcode_desc = subcode_desc_buf;
+
+        switch (resource_type) {
+        case RESOURCE_TYPE_CPU:
+          exc_desc = "EXC_RESOURCE RESOURCE_TYPE_CPU";
+          snprintf(code_desc_buf, sizeof(code_desc_buf), "%d%%",
+            (int)EXC_RESOURCE_CPUMONITOR_DECODE_PERCENTAGE(m_exc_code));
+          snprintf(subcode_desc_buf, sizeof(subcode_desc_buf), "%d%%",
+            (int)EXC_RESOURCE_CPUMONITOR_DECODE_PERCENTAGE_OBSERVED(m_exc_subcode));
+          break;
+        case RESOURCE_TYPE_WAKEUPS:
+          exc_desc = "EXC_RESOURCE RESOURCE_TYPE_WAKEUPS";
+          snprintf(code_desc_buf, sizeof(code_desc_buf), "%d w/s",
+            (int)EXC_RESOURCE_CPUMONITOR_DECODE_WAKEUPS_PERMITTED(m_exc_code));
+          snprintf(subcode_desc_buf, sizeof(subcode_desc_buf), "%d w/s",
+            (int)EXC_RESOURCE_CPUMONITOR_DECODE_WAKEUPS_OBSERVED(m_exc_subcode));
+          break;
+        case RESOURCE_TYPE_MEMORY:
+          exc_desc = "EXC_RESOURCE RESOURCE_TYPE_MEMORY";
+          snprintf(code_desc_buf, sizeof(code_desc_buf), "%d MB",
+            (int)EXC_RESOURCE_HWM_DECODE_LIMIT(m_exc_code));
+          subcode_desc = nullptr;
+          subcode_label = "unused";
+          break;
+        case RESOURCE_TYPE_IO:
+          exc_desc = "EXC_RESOURCE RESOURCE_TYPE_IO";
+          snprintf(code_desc_buf, sizeof(code_desc_buf), "%d MB",
+            (int)EXC_RESOURCE_IO_DECODE_LIMIT(m_exc_code));
+          snprintf(subcode_desc_buf, sizeof(subcode_desc_buf), "%d MB",
+            (int)EXC_RESOURCE_IO_OBSERVED(m_exc_subcode));;
+          break;
+        }
+      }
+#endif
       break;
     case 12:
       exc_desc = "EXC_GUARD";

@@ -46,8 +46,27 @@ template <size_t Index> struct SerializerImpl {
 
 using Serializer = SerializerImpl<0>;
 
+template <class Tuple, size_t Index> struct AggregateSizesImpl {
+  static constexpr size_t value =
+      sizeof(typename std::tuple_element<Index, Tuple>::type) +
+      AggregateSizesImpl<Tuple, Index - 1>::value;
+};
+
+template <class Tuple> struct AggregateSizesImpl<Tuple, 0> {
+  static constexpr size_t value =
+      sizeof(typename std::tuple_element<0, Tuple>::type);
+};
+
+template <class Tuple> struct AggregateSizes {
+  static constexpr size_t value =
+      AggregateSizesImpl<Tuple, std::tuple_size<Tuple>::value - 1>::value;
+};
+
 template <MetadataRecord::RecordKinds Kind, class... DataTypes>
 MetadataRecord createMetadataRecord(DataTypes &&... Ds) {
+  static_assert(AggregateSizes<std::tuple<DataTypes...>>::value <=
+                    sizeof(MetadataRecord) - 1,
+                "Metadata payload longer than metadata buffer!");
   MetadataRecord R;
   R.Type = 1;
   R.RecordKind = static_cast<uint8_t>(Kind);
@@ -63,6 +82,10 @@ class FDRLogWriter {
   template <class T> void writeRecord(const T &R) {
     internal_memcpy(NextRecord, reinterpret_cast<const char *>(&R), sizeof(T));
     NextRecord += sizeof(T);
+    // We need this atomic fence here to ensure that other threads attempting to
+    // read the bytes in the buffer will see the writes committed before the
+    // extents are updated.
+    atomic_thread_fence(memory_order_release);
     atomic_fetch_add(&Buffer.Extents, sizeof(T), memory_order_acq_rel);
   }
 
@@ -89,6 +112,10 @@ public:
     constexpr auto Size = sizeof(MetadataRecord) * N;
     internal_memcpy(NextRecord, reinterpret_cast<const char *>(Recs), Size);
     NextRecord += Size;
+    // We need this atomic fence here to ensure that other threads attempting to
+    // read the bytes in the buffer will see the writes committed before the
+    // extents are updated.
+    atomic_thread_fence(memory_order_release);
     atomic_fetch_add(&Buffer.Extents, Size, memory_order_acq_rel);
     return Size;
   }
@@ -110,6 +137,34 @@ public:
     return true;
   }
 
+  bool writeFunctionWithArg(FunctionRecordKind Kind, int32_t FuncId,
+                            int32_t Delta, uint64_t Arg) {
+    // We need to write the function with arg into the buffer, and then
+    // atomically update the buffer extents. This ensures that any reads
+    // synchronised on the buffer extents record will always see the writes
+    // that happen before the atomic update.
+    FunctionRecord R;
+    R.Type = 0;
+    R.RecordKind = uint8_t(Kind);
+    R.FuncId = FuncId;
+    R.TSCDelta = Delta;
+    MetadataRecord A =
+        createMetadataRecord<MetadataRecord::RecordKinds::CallArgument>(Arg);
+    NextRecord = reinterpret_cast<char *>(internal_memcpy(
+                     NextRecord, reinterpret_cast<char *>(&R), sizeof(R))) +
+                 sizeof(R);
+    NextRecord = reinterpret_cast<char *>(internal_memcpy(
+                     NextRecord, reinterpret_cast<char *>(&A), sizeof(A))) +
+                 sizeof(A);
+    // We need this atomic fence here to ensure that other threads attempting to
+    // read the bytes in the buffer will see the writes committed before the
+    // extents are updated.
+    atomic_thread_fence(memory_order_release);
+    atomic_fetch_add(&Buffer.Extents, sizeof(R) + sizeof(A),
+                     memory_order_acq_rel);
+    return true;
+  }
+
   bool writeCustomEvent(int32_t Delta, const void *Event, int32_t EventSize) {
     // We write the metadata record and the custom event data into the buffer
     // first, before we atomically update the extents for the buffer. This
@@ -125,6 +180,11 @@ public:
     NextRecord = reinterpret_cast<char *>(
                      internal_memcpy(NextRecord, Event, EventSize)) +
                  EventSize;
+
+    // We need this atomic fence here to ensure that other threads attempting to
+    // read the bytes in the buffer will see the writes committed before the
+    // extents are updated.
+    atomic_thread_fence(memory_order_release);
     atomic_fetch_add(&Buffer.Extents, sizeof(R) + EventSize,
                      memory_order_acq_rel);
     return true;
@@ -143,6 +203,11 @@ public:
     NextRecord = reinterpret_cast<char *>(
                      internal_memcpy(NextRecord, Event, EventSize)) +
                  EventSize;
+
+    // We need this atomic fence here to ensure that other threads attempting to
+    // read the bytes in the buffer will see the writes committed before the
+    // extents are updated.
+    atomic_thread_fence(memory_order_release);
     atomic_fetch_add(&Buffer.Extents, EventSize, memory_order_acq_rel);
     return true;
   }

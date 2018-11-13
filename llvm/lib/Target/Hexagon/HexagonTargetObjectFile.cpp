@@ -199,11 +199,10 @@ MCSection *HexagonTargetObjectFile::getExplicitSectionGlobal(
 /// section.
 bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
       const TargetMachine &TM) const {
-  if (!isSmallDataEnabled(TM)) {
-    LLVM_DEBUG(dbgs() << "Small data is not available.\n");
-    return false;
-  }
-
+  bool HaveSData = isSmallDataEnabled(TM);
+  if (!HaveSData)
+    LLVM_DEBUG(dbgs() << "Small-data allocation is disabled, but symbols "
+                         "may have explicit section assignments...\n");
   // Only global variables, not functions.
   LLVM_DEBUG(dbgs() << "Checking if value is in small-data, -G"
                     << SmallDataThreshold << ": \"" << GO->getName() << "\": ");
@@ -221,6 +220,12 @@ bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
     LLVM_DEBUG(dbgs() << (IsSmall ? "yes" : "no")
                       << ", has section: " << GVar->getSection() << '\n');
     return IsSmall;
+  }
+
+  // If sdata is disabled, stop the checks here.
+  if (!HaveSData) {
+    LLVM_DEBUG(dbgs() << "no, small-data allocation is disabled\n");
+    return false;
   }
 
   if (GVar->isConstant()) {

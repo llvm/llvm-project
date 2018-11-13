@@ -242,6 +242,11 @@ CPU part	: 0x0a1
                                               "CPU implementer	: 0x43\n"
                                               "CPU part	: 0xa1"),
             "thunderxt88");
+
+  // Verify HiSilicon processors.
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x48\n"
+                                              "CPU part        : 0xd01"),
+            "tsv110");
 }
 
 #if defined(__APPLE__)
