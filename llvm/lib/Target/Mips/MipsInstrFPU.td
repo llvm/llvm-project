@@ -485,14 +485,14 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def CTC1 : MMRel, MTC1_FT<"ctc1", CCROpnd, GPR32Opnd, II_CTC1>, MFC1_FM<6>,
              ISA_MIPS1;
 
-  def MFC1 : MMRel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd, II_MFC1,
-                            bitconvert>, MFC1_FM<0>, ISA_MIPS1;
+  def MFC1 : MMRel, StdMMR6Rel, MFC1_FT<"mfc1", GPR32Opnd, FGR32Opnd, II_MFC1,
+                                        bitconvert>, MFC1_FM<0>, ISA_MIPS1;
   def MFC1_D64 : MFC1_FT<"mfc1", GPR32Opnd, FGR64Opnd, II_MFC1>, MFC1_FM<0>,
                  ISA_MIPS1, FGR_64 {
     let DecoderNamespace = "MipsFP64";
   }
-  def MTC1 : MMRel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd, II_MTC1,
-                            bitconvert>, MFC1_FM<4>, ISA_MIPS1;
+  def MTC1 : MMRel, StdMMR6Rel, MTC1_FT<"mtc1", FGR32Opnd, GPR32Opnd, II_MTC1,
+                                        bitconvert>, MFC1_FM<4>, ISA_MIPS1;
   def MTC1_D64 : MTC1_FT<"mtc1", FGR64Opnd, GPR32Opnd, II_MTC1>, MFC1_FM<4>,
                  ISA_MIPS1, FGR_64 {
     let DecoderNamespace = "MipsFP64";
