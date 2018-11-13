@@ -7,20 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-// <set>
+// <unordered_set>
 
-// class multiset
+// class unordered_multiset
 
 // insert(...)
 
 // UNSUPPORTED: c++98, c++03
 
-#include <set>
-
+#include <unordered_set>
 #include "container_test_types.h"
 #include "../../set_allocator_requirement_test_templates.h"
 
 int main()
 {
-  testMultisetInsert<TCT::multiset<> >();
+  testMultisetInsert<TCT::unordered_multiset<> >();
+  testMultisetEmplace<TCT::unordered_multiset<> >();
 }
