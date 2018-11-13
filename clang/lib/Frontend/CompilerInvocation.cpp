@@ -3178,6 +3178,10 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   ParsePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), Args,
                               Res.getFrontendOpts().ProgramAction);
 
+  if (!Res.getPreprocessorOpts().ImplicitPCHInclude.empty() ||
+      Res.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
+    LangOpts.NeededByPCHOrCompilationUsesPCH = true;
+
   // Turn on -Wspir-compat for SPIR target.
   llvm::Triple T(Res.getTargetOpts().Triple);
   auto Arch = T.getArch();
