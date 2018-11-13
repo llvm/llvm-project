@@ -30,8 +30,8 @@ using namespace lldb_private;
 using namespace lldb_private::formatters;
 
 static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
-                          ValueObjectSP *reason_sp,
-                          ValueObjectSP *userinfo_sp) {
+                          ValueObjectSP *reason_sp, ValueObjectSP *userinfo_sp,
+                          ValueObjectSP *reserved_sp) {
   ProcessSP process_sp(valobj.GetProcessSP());
   if (!process_sp)
     return false;
@@ -61,10 +61,14 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
   auto userinfo = process_sp->ReadPointerFromMemory(ptr + 3 * ptr_size, error);
   if (error.Fail() || userinfo == LLDB_INVALID_ADDRESS)
     return false;
+  auto reserved = process_sp->ReadPointerFromMemory(ptr + 4 * ptr_size, error);
+  if (error.Fail() || reserved == LLDB_INVALID_ADDRESS)
+    return false;
 
   InferiorSizedWord name_isw(name, *process_sp);
   InferiorSizedWord reason_isw(reason, *process_sp);
   InferiorSizedWord userinfo_isw(userinfo, *process_sp);
+  InferiorSizedWord reserved_isw(reserved, *process_sp);
 
   CompilerType voidstar = process_sp->GetTarget()
                               .GetScratchClangASTContext()
@@ -83,6 +87,10 @@ static bool ExtractFields(ValueObject &valobj, ValueObjectSP *name_sp,
     *userinfo_sp = ValueObject::CreateValueObjectFromData(
         "userInfo", userinfo_isw.GetAsData(process_sp->GetByteOrder()),
         valobj.GetExecutionContextRef(), voidstar);
+  if (reserved_sp)
+    *reserved_sp = ValueObject::CreateValueObjectFromData(
+        "reserved", reserved_isw.GetAsData(process_sp->GetByteOrder()),
+        valobj.GetExecutionContextRef(), voidstar);
 
   return true;
 }
@@ -91,7 +99,7 @@ bool lldb_private::formatters::NSException_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   lldb::ValueObjectSP name_sp;
   lldb::ValueObjectSP reason_sp;
-  if (!ExtractFields(valobj, &name_sp, &reason_sp, nullptr))
+  if (!ExtractFields(valobj, &name_sp, &reason_sp, nullptr, nullptr))
     return false;
 
   if (!name_sp || !reason_sp)
@@ -117,19 +125,27 @@ public:
   ~NSExceptionSyntheticFrontEnd() override = default;
 
   size_t CalculateNumChildren() override {
-    return 1;
+    return 4;
   }
 
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
     switch (idx) {
-      case 0: return m_userinfo_sp;
+      case 0: return m_name_sp;
+      case 1: return m_reason_sp;
+      case 2: return m_userinfo_sp;
+      case 3: return m_reserved_sp;
     }
     return lldb::ValueObjectSP();
   }
 
   bool Update() override {
+    m_name_sp.reset();
+    m_reason_sp.reset();
     m_userinfo_sp.reset();
-    if (!ExtractFields(m_backend, nullptr, nullptr, &m_userinfo_sp)) {
+    m_reserved_sp.reset();
+
+    if (!ExtractFields(m_backend, &m_name_sp, &m_reason_sp, &m_userinfo_sp,
+                       &m_reserved_sp)) {
       return false;
     }
     return true;
@@ -138,14 +154,27 @@ public:
   bool MightHaveChildren() override { return true; }
 
   size_t GetIndexOfChildWithName(const ConstString &name) override {
+    // NSException has 4 members:
+    //   NSString *name;
+    //   NSString *reason;
+    //   NSDictionary *userInfo;
+    //   id reserved;
+    static ConstString g___name("name");
+    static ConstString g___reason("reason");
     static ConstString g___userInfo("userInfo");
-    if (name == g___userInfo)
-      return 0;
+    static ConstString g___reserved("reserved");
+    if (name == g___name) return 0;
+    if (name == g___reason) return 1;
+    if (name == g___userInfo) return 2;
+    if (name == g___reserved) return 3;
     return UINT32_MAX;
   }
 
 private:
+  ValueObjectSP m_name_sp;
+  ValueObjectSP m_reason_sp;
   ValueObjectSP m_userinfo_sp;
+  ValueObjectSP m_reserved_sp;
 };
 
 SyntheticChildrenFrontEnd *
