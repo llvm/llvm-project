@@ -8,4 +8,4 @@ CHECK-NEXT:    platform:        1
 CHECK-NEXT:    minos:           658944
 CHECK-NEXT:    sdk:             658944
 CHECK-NEXT:    ntools:          0
-CHECK-NEXT: - cmd
+CHECK-NEXT:   - cmd:             LC_BUILD_VERSION
