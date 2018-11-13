@@ -4435,7 +4435,7 @@ SubstDefaultTemplateArgument(Sema &SemaRef,
 
   // If the argument type is dependent, instantiate it now based
   // on the previously-computed template arguments.
-  if (ArgType->getType()->isDependentType()) {
+  if (ArgType->getType()->isInstantiationDependentType()) {
     Sema::InstantiatingTemplate Inst(SemaRef, TemplateLoc,
                                      Param, Template, Converted,
                                      SourceRange(TemplateLoc, RAngleLoc));
