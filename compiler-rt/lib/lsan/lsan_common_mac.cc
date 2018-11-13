@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common/sanitizer_platform.h"
+#include "sanitizer_common/sanitizer_libc.h"
 #include "lsan_common.h"
 
 #if CAN_SANITIZE_LEAKS && SANITIZER_MAC
@@ -116,7 +117,8 @@ static const char *kSkippedSecNames[] = {
 
 // Scans global variables for heap pointers.
 void ProcessGlobalRegions(Frontier *frontier) {
-  for (auto name : kSkippedSecNames) CHECK(ARRAY_SIZE(name) < kMaxSegName);
+  for (auto name : kSkippedSecNames)
+    CHECK(internal_strnlen(name, kMaxSegName) < kMaxSegName);
 
   MemoryMappingLayout memory_mapping(false);
   InternalMmapVector<LoadedModule> modules;
