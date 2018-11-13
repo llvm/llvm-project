@@ -25,9 +25,14 @@
 
 using namespace llvm;
 
+static unsigned getUnconditionalBranch(const MipsSubtarget &STI) {
+  if (STI.inMicroMipsMode())
+    return STI.isPositionIndependent() ? Mips::B_MM : Mips::J_MM;
+  return STI.isPositionIndependent() ? Mips::B : Mips::J;
+}
+
 MipsSEInstrInfo::MipsSEInstrInfo(const MipsSubtarget &STI)
-    : MipsInstrInfo(STI, STI.isPositionIndependent() ? Mips::B : Mips::J),
-      RI() {}
+    : MipsInstrInfo(STI, getUnconditionalBranch(STI)), RI() {}
 
 const MipsRegisterInfo &MipsSEInstrInfo::getRegisterInfo() const {
   return RI;
