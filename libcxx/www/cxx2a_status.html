@@ -122,8 +122,8 @@
 	<tr><td><a href="https://wg21.link/P0896R4">P0896R4</a></td><td>LWG</td><td>The One Ranges Proposal</td><td>San Diego</td><td><i> </i></td><td></td></tr>
 	<tr><td><a href="https://wg21.link/P0899R1">P0899R1</a></td><td>LWG</td><td>P0899R1 - LWG 3016 is not a defect</td><td>San Diego</td><td><i> </i></td><td></td></tr>
 	<tr><td><a href="https://wg21.link/P0919R3">P0919R3</a></td><td>LWG</td><td>Heterogeneous lookup for unordered containers</td><td>San Diego</td><td><i> </i></td><td></td></tr>
-	<tr><td><a href="https://wg21.link/P0972R0">P0972R0</a></td><td>LWG</td><td>&lt;chrono&gt; zero(), min(), and max() should be noexcept</td><td>San Diego</td><td><i> </i></td><td></td></tr>
-	<tr><td><a href="https://wg21.link/P1006R1">P1006R1</a></td><td>LWG</td><td>Constexpr in std::pointer_traits</td><td>San Diego</td><td><i> </i></td><td></td></tr>
+	<tr><td><a href="https://wg21.link/P0972R0">P0972R0</a></td><td>LWG</td><td>&lt;chrono&gt; <tt>zero()</tt>, <tt>min()</tt>, and <tt>max()</tt> should be noexcept</td><td>San Diego</td><td>Complete</td><td>8.0</td></tr>
+	<tr><td><a href="https://wg21.link/P1006R1">P1006R1</a></td><td>LWG</td><td>Constexpr in std::pointer_traits</td><td>San Diego</td><td>Complete</td><td>8.0</td></tr>
 	<tr><td><a href="https://wg21.link/P1007R3">P1007R3</a></td><td>LWG</td><td><tt>std::assume_aligned</tt></td><td>San Diego</td><td><i> </i></td><td></td></tr>
 	<tr><td><a href="https://wg21.link/P1020R1">P1020R1</a></td><td>LWG</td><td>Smart pointer creation with default initialization</td><td>San Diego</td><td><i> </i></td><td></td></tr>
 	<tr><td><a href="https://wg21.link/P1032R1">P1032R1</a></td><td>LWG</td><td>Misc constexpr bits</td><td>San Diego</td><td><i> </i></td><td></td></tr>
@@ -273,16 +273,15 @@
 	<tr><td><a href="https://wg21.link/LWG3065">3065</a></td><td>LWG 2989 missed that all <tt>path</tt>'s other operators should be hidden friends as well</td><td>San Diego</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3096">3096</a></td><td><tt>path::lexically_relative</tt> is confused by trailing slashes</td><td>San Diego</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3116">3116</a></td><td><tt><i>OUTERMOST_ALLOC_TRAITS</i></tt> needs <tt>remove_reference_t</tt></td><td>San Diego</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG3122">3122</a></td><td><tt>__cpp_lib_chrono_udls</tt> was accidentally dropped</td><td>San Diego</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3122">3122</a></td><td><tt>__cpp_lib_chrono_udls</tt> was accidentally dropped</td><td>San Diego</td><td><i>We've already made the update; but we don't support all the test macros. When we do, this will be closed</i></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3127">3127</a></td><td><tt>basic_osyncstream::rdbuf</tt> needs a <tt>const_cast</tt></td><td>San Diego</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3128">3128</a></td><td><tt>strstream::rdbuf</tt> needs a <tt>const_cast</tt></td><td>San Diego</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3129">3129</a></td><td><tt>regex_token_iterator</tt> constructor uses wrong pointer arithmetic</td><td>San Diego</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3130">3130</a></td><td>&sect;[input.output] needs many <tt>addressof</tt></td><td>San Diego</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3131">3131</a></td><td><tt>addressof</tt> all the things</td><td>San Diego</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3132">3132</a></td><td>Library needs to ban macros named <tt>expects</tt> or <tt>ensures</tt></td><td>San Diego</td><td></td></tr>
-	<tr><td><a href="https://wg21.link/LWG3134">3134</a></td><td>[fund.ts.v3] LFTSv3 contains extraneous [meta] variable templates that should have been deleted by P09961</td><td>San Diego</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3134">3134</a></td><td>[fund.ts.v3] LFTSv3 contains extraneous [meta] variable templates that should have been deleted by P09961</td><td>San Diego</td><td>Resolved by P1210R0</td></tr>
-	<tr><td><a href="https://wg21.link/LWG3137">3137</a></td><td>Header for <tt>__cpp_lib_to_chars</tt></td><td>San Diego</td><td></td></tr>
+	<tr><td><a href="https://wg21.link/LWG3137">3137</a></td><td>Header for <tt>__cpp_lib_to_chars</tt></td><td>San Diego</td><td><i>We've already made the update; but we don't support all the test macros. When we do, this will be closed</i></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3145">3145</a></td><td><tt>file_clock</tt> breaks ABI for C++17 implementations</td><td>San Diego</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3147">3147</a></td><td>Definitions of "likely" and "unlikely" are likely to cause problems</td><td>San Diego</td><td></td></tr>
 	<tr><td><a href="https://wg21.link/LWG3148">3148</a></td><td><tt>&lt;concepts&gt;</tt> should be freestanding</td><td>San Diego</td><td></td></tr>
@@ -292,7 +291,7 @@
 <!-- 	<tr><td></td><td></td><td></td><td></td></tr> -->
   </table>
 
-  <p>Last Updated: 11-Nov-2018</p>
+  <p>Last Updated: 12-Nov-2018</p>
 </div>
 </body>
 </html>

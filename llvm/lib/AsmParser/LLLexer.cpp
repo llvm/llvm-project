@@ -823,6 +823,8 @@ lltok::Kind LLLexer::LexIdentifier() {
     }                                                                          \
   } while (false)
 
+  INSTKEYWORD(fneg,  FNeg);
+
   INSTKEYWORD(add,   Add);  INSTKEYWORD(fadd,   FAdd);
   INSTKEYWORD(sub,   Sub);  INSTKEYWORD(fsub,   FSub);
   INSTKEYWORD(mul,   Mul);  INSTKEYWORD(fmul,   FMul);

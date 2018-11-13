@@ -302,7 +302,7 @@ static void copyMustTailReturn(BasicBlock *SplitBB, Instruction *CI,
 static void splitCallSite(
     CallSite CS,
     const SmallVectorImpl<std::pair<BasicBlock *, ConditionsTy>> &Preds,
-    DominatorTree *DT) {
+    DomTreeUpdater &DTU) {
   Instruction *Instr = CS.getInstruction();
   BasicBlock *TailBB = Instr->getParent();
   bool IsMustTailCall = CS.isMustTailCall();
@@ -327,7 +327,7 @@ static void splitCallSite(
     BasicBlock *PredBB = Preds[i].first;
     BasicBlock *SplitBlock = DuplicateInstructionsInSplitBetween(
         TailBB, PredBB, &*std::next(Instr->getIterator()), ValueToValueMaps[i],
-        DT);
+        DTU);
     assert(SplitBlock && "Unexpected new basic block split.");
 
     Instruction *NewCI =
@@ -369,7 +369,7 @@ static void splitCallSite(
       Splits[i]->getTerminator()->eraseFromParent();
 
     // Erase the tail block once done with musttail patching
-    TailBB->eraseFromParent();
+    DTU.deleteBB(TailBB);
     return;
   }
 
@@ -438,21 +438,25 @@ static bool isPredicatedOnPHI(CallSite CS) {
   return false;
 }
 
-static bool tryToSplitOnPHIPredicatedArgument(CallSite CS, DominatorTree *DT) {
+using PredsWithCondsTy = SmallVector<std::pair<BasicBlock *, ConditionsTy>, 2>;
+
+// Check if any of the arguments in CS are predicated on a PHI node and return
+// the set of predecessors we should use for splitting.
+static PredsWithCondsTy shouldSplitOnPHIPredicatedArgument(CallSite CS) {
   if (!isPredicatedOnPHI(CS))
-    return false;
+    return {};
 
   auto Preds = getTwoPredecessors(CS.getInstruction()->getParent());
-  SmallVector<std::pair<BasicBlock *, ConditionsTy>, 2> PredsCS = {
-      {Preds[0], {}}, {Preds[1], {}}};
-  splitCallSite(CS, PredsCS, DT);
-  return true;
+  return {{Preds[0], {}}, {Preds[1], {}}};
 }
 
-static bool tryToSplitOnPredicatedArgument(CallSite CS, DominatorTree *DT) {
+// Checks if any of the arguments in CS are predicated in a predecessor and
+// returns a list of predecessors with the conditions that hold on their edges
+// to CS.
+static PredsWithCondsTy shouldSplitOnPredicatedArgument(CallSite CS) {
   auto Preds = getTwoPredecessors(CS.getInstruction()->getParent());
   if (Preds[0] == Preds[1])
-    return false;
+    return {};
 
   SmallVector<std::pair<BasicBlock *, ConditionsTy>, 2> PredsCS;
   for (auto *Pred : make_range(Preds.rbegin(), Preds.rend())) {
@@ -464,22 +468,31 @@ static bool tryToSplitOnPredicatedArgument(CallSite CS, DominatorTree *DT) {
   if (all_of(PredsCS, [](const std::pair<BasicBlock *, ConditionsTy> &P) {
         return P.second.empty();
       }))
-    return false;
+    return {};
 
-  splitCallSite(CS, PredsCS, DT);
-  return true;
+  return PredsCS;
 }
 
 static bool tryToSplitCallSite(CallSite CS, TargetTransformInfo &TTI,
-                               DominatorTree *DT) {
+                               DomTreeUpdater &DTU) {
+  // Check if we can split the call site.
   if (!CS.arg_size() || !canSplitCallSite(CS, TTI))
     return false;
-  return tryToSplitOnPredicatedArgument(CS, DT) ||
-         tryToSplitOnPHIPredicatedArgument(CS, DT);
+
+  auto PredsWithConds = shouldSplitOnPredicatedArgument(CS);
+  if (PredsWithConds.empty())
+    PredsWithConds = shouldSplitOnPHIPredicatedArgument(CS);
+  if (PredsWithConds.empty())
+    return false;
+
+  splitCallSite(CS, PredsWithConds, DTU);
+  return true;
 }
 
 static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
                                 TargetTransformInfo &TTI, DominatorTree *DT) {
+
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
   for (Function::iterator BI = F.begin(), BE = F.end(); BI != BE;) {
     BasicBlock &BB = *BI++;
@@ -503,7 +516,7 @@ static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
       // Check if such path is possible before attempting the splitting.
       bool IsMustTail = CS.isMustTailCall();
 
-      Changed |= tryToSplitCallSite(CS, TTI, DT);
+      Changed |= tryToSplitCallSite(CS, TTI, DTU);
 
       // There're no interesting instructions after this. The call site
       // itself might have been erased on splitting.

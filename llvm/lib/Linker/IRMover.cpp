@@ -1062,6 +1062,11 @@ void IRLinker::prepareCompileUnitsForImport() {
     ValueMap.MD()[CU->getRawEnumTypes()].reset(nullptr);
     ValueMap.MD()[CU->getRawMacros()].reset(nullptr);
     ValueMap.MD()[CU->getRawRetainedTypes()].reset(nullptr);
+    // We import global variables only temporarily in order for instcombine
+    // and globalopt to perform constant folding and static constructor
+    // evaluation. After that elim-avail-extern will covert imported globals
+    // back to declarations, so we don't need debug info for them.
+    ValueMap.MD()[CU->getRawGlobalVariables()].reset(nullptr);
 
     // Imported entities only need to be mapped in if they have local
     // scope, as those might correspond to an imported entity inside a

@@ -127,6 +127,7 @@ public:
 
   const char *getOpcodeName() const { return getOpcodeName(getOpcode()); }
   bool isTerminator() const { return isTerminator(getOpcode()); }
+  bool isUnaryOp() const { return isUnaryOp(getOpcode()); }
   bool isBinaryOp() const { return isBinaryOp(getOpcode()); }
   bool isIntDivRem() const { return isIntDivRem(getOpcode()); }
   bool isShift() { return isShift(getOpcode()); }
@@ -142,6 +143,9 @@ public:
     return OpCode >= TermOpsBegin && OpCode < TermOpsEnd;
   }
 
+  static inline bool isUnaryOp(unsigned Opcode) {
+    return Opcode >= UnaryOpsBegin && Opcode < UnaryOpsEnd;
+  }
   static inline bool isBinaryOp(unsigned Opcode) {
     return Opcode >= BinaryOpsBegin && Opcode < BinaryOpsEnd;
   }
@@ -659,6 +663,13 @@ public:
 #define  FIRST_TERM_INST(N)             TermOpsBegin = N,
 #define HANDLE_TERM_INST(N, OPC, CLASS) OPC = N,
 #define   LAST_TERM_INST(N)             TermOpsEnd = N+1
+#include "llvm/IR/Instruction.def"
+  };
+
+  enum UnaryOps {
+#define  FIRST_UNARY_INST(N)             UnaryOpsBegin = N,
+#define HANDLE_UNARY_INST(N, OPC, CLASS) OPC = N,
+#define   LAST_UNARY_INST(N)             UnaryOpsEnd = N+1
 #include "llvm/IR/Instruction.def"
   };
 

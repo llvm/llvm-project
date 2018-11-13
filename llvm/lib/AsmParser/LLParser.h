@@ -571,6 +571,8 @@ namespace llvm {
     bool ParseCatchPad(Instruction *&Inst, PerFunctionState &PFS);
     bool ParseCleanupPad(Instruction *&Inst, PerFunctionState &PFS);
 
+    bool ParseUnaryOp(Instruction *&Inst, PerFunctionState &PFS, unsigned Opc,
+                      unsigned OperandType);
     bool ParseArithmetic(Instruction *&Inst, PerFunctionState &PFS, unsigned Opc,
                          unsigned OperandType);
     bool ParseLogical(Instruction *&Inst, PerFunctionState &PFS, unsigned Opc);

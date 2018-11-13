@@ -680,3 +680,48 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O,
 }
 
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
+
+void VPInterleavedAccessInfo::visitRegion(VPRegionBlock *Region,
+                                          Old2NewTy &Old2New,
+                                          InterleavedAccessInfo &IAI) {
+  ReversePostOrderTraversal<VPBlockBase *> RPOT(Region->getEntry());
+  for (VPBlockBase *Base : RPOT) {
+    visitBlock(Base, Old2New, IAI);
+  }
+}
+
+void VPInterleavedAccessInfo::visitBlock(VPBlockBase *Block, Old2NewTy &Old2New,
+                                         InterleavedAccessInfo &IAI) {
+  if (VPBasicBlock *VPBB = dyn_cast<VPBasicBlock>(Block)) {
+    for (VPRecipeBase &VPI : *VPBB) {
+      assert(isa<VPInstruction>(&VPI) && "Can only handle VPInstructions");
+      auto *VPInst = cast<VPInstruction>(&VPI);
+      auto *Inst = cast<Instruction>(VPInst->getUnderlyingValue());
+      auto *IG = IAI.getInterleaveGroup(Inst);
+      if (!IG)
+        continue;
+
+      auto NewIGIter = Old2New.find(IG);
+      if (NewIGIter == Old2New.end())
+        Old2New[IG] = new InterleaveGroup<VPInstruction>(
+            IG->getFactor(), IG->isReverse(), IG->getAlignment());
+
+      if (Inst == IG->getInsertPos())
+        Old2New[IG]->setInsertPos(VPInst);
+
+      InterleaveGroupMap[VPInst] = Old2New[IG];
+      InterleaveGroupMap[VPInst]->insertMember(
+          VPInst, IG->getIndex(Inst),
+          IG->isReverse() ? (-1) * int(IG->getFactor()) : IG->getFactor());
+    }
+  } else if (VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
+    visitRegion(Region, Old2New, IAI);
+  else
+    llvm_unreachable("Unsupported kind of VPBlock.");
+}
+
+VPInterleavedAccessInfo::VPInterleavedAccessInfo(VPlan &Plan,
+                                                 InterleavedAccessInfo &IAI) {
+  Old2NewTy Old2New;
+  visitRegion(cast<VPRegionBlock>(Plan.getEntry()), Old2New, IAI);
+}

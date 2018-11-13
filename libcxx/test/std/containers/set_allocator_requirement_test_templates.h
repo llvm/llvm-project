@@ -344,9 +344,52 @@ void testMultisetInsert()
   {
     CHECKPOINT("Testing C::insert(Iter, Iter) for *Iter = value_type&");
     Container c;
-    ValueTp ValueList[] = { ValueTp(1), ValueTp(2) , ValueTp(3) };
+    ValueTp ValueList[] = { ValueTp(1), ValueTp(2) , ValueTp(1) };
     cc->expect<ValueTp&>(3);
     c.insert(std::begin(ValueList), std::end(ValueList));
+    assert(!cc->unchecked());
+  }
+}
+
+
+template <class Container>
+void testMultisetEmplace()
+{
+  typedef typename Container::value_type ValueTp;
+  typedef Container C;
+  typedef std::pair<typename C::iterator, bool> R;
+  ConstructController* cc = getConstructController();
+  cc->reset();
+  {
+    CHECKPOINT("Testing C::emplace(const value_type&)");
+    Container c;
+    const ValueTp v(42);
+    cc->expect<const ValueTp&>();
+    c.emplace(v);
+    assert(!cc->unchecked());
+  }
+  {
+    CHECKPOINT("Testing C::emplace(value_type&)");
+    Container c;
+    ValueTp v(42);
+    cc->expect<ValueTp&>();
+    c.emplace(v);
+    assert(!cc->unchecked());
+  }
+  {
+    CHECKPOINT("Testing C::emplace(value_type&&)");
+    Container c;
+    ValueTp v(42);
+    cc->expect<ValueTp&&>();
+    c.emplace(std::move(v));
+    assert(!cc->unchecked());
+  }
+  {
+    CHECKPOINT("Testing C::emplace(const value_type&&)");
+    Container c;
+    const ValueTp v(42);
+    cc->expect<const ValueTp&&>();
+    c.emplace(std::move(v));
     assert(!cc->unchecked());
   }
 }

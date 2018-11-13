@@ -351,7 +351,8 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
                          const TemplateArgumentListInfo *TemplateArgs,
                          QualType T, ExprValueKind VK)
   : Expr(DeclRefExprClass, T, VK, OK_Ordinary, false, false, false, false),
-    D(D), Loc(NameInfo.getLoc()), DNLoc(NameInfo.getInfo()) {
+    D(D), DNLoc(NameInfo.getInfo()) {
+  DeclRefExprBits.Loc = NameInfo.getLoc();
   DeclRefExprBits.HasQualifier = QualifierLoc ? 1 : 0;
   if (QualifierLoc) {
     new (getTrailingObjects<NestedNameSpecifierLoc>())

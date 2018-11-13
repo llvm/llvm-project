@@ -404,8 +404,9 @@ private:
         Contexts.back().CanBeExpression && Left->isNot(TT_LambdaLSquare) &&
         !CurrentToken->isOneOf(tok::l_brace, tok::r_square) &&
         (!Parent ||
-         Parent->isOneOf(tok::colon, tok::l_square, tok::l_paren,
-                         tok::kw_return, tok::kw_throw) ||
+         (Parent->is(tok::colon) && Parent->isNot(TT_InlineASMColon)) ||
+         Parent->isOneOf(tok::l_square, tok::l_paren, tok::kw_return,
+                         tok::kw_throw) ||
          Parent->isUnaryOperator() ||
          // FIXME(bug 36976): ObjC return types shouldn't use TT_CastRParen.
          Parent->isOneOf(TT_ObjCForIn, TT_CastRParen) ||

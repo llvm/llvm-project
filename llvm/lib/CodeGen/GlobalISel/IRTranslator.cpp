@@ -330,6 +330,13 @@ bool IRTranslator::translateFSub(const User &U, MachineIRBuilder &MIRBuilder) {
   return translateBinaryOp(TargetOpcode::G_FSUB, U, MIRBuilder);
 }
 
+bool IRTranslator::translateFNeg(const User &U, MachineIRBuilder &MIRBuilder) {
+  MIRBuilder.buildInstr(TargetOpcode::G_FNEG)
+      .addDef(getOrCreateVReg(U))
+      .addUse(getOrCreateVReg(*U.getOperand(1)));
+  return true;
+}
+
 bool IRTranslator::translateCompare(const User &U,
                                     MachineIRBuilder &MIRBuilder) {
   const CmpInst *CI = dyn_cast<CmpInst>(&U);

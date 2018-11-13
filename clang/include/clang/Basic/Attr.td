@@ -864,10 +864,8 @@ def CPUSpecific : InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let Documentation = [CPUSpecificCPUDispatchDocs];
   let AdditionalMembers = [{
-    unsigned ActiveArgIndex = 0;
-
-    IdentifierInfo *getCurCPUName() const {
-      return *(cpus_begin() + ActiveArgIndex);
+    IdentifierInfo *getCPUName(unsigned Index) const {
+      return *(cpus_begin() + Index);
     }
   }];
 }

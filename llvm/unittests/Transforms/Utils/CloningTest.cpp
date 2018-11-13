@@ -14,6 +14,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -224,9 +225,11 @@ TEST_F(CloneInstruction, DuplicateInstructionsToSplit) {
   Instruction *SubInst = cast<Instruction>(Builder2.CreateSub(MulInst, V));
   Builder2.CreateRetVoid();
 
+  // Dummy DTU.
   ValueToValueMapTy Mapping;
-
-  auto Split = DuplicateInstructionsInSplitBetween(BB2, BB1, SubInst, Mapping);
+  DomTreeUpdater DTU(DomTreeUpdater::UpdateStrategy::Lazy);
+  auto Split =
+      DuplicateInstructionsInSplitBetween(BB2, BB1, SubInst, Mapping, DTU);
 
   EXPECT_TRUE(Split);
   EXPECT_EQ(Mapping.size(), 2u);
@@ -271,9 +274,11 @@ TEST_F(CloneInstruction, DuplicateInstructionsToSplitBlocksEq1) {
   Instruction *SubInst = cast<Instruction>(Builder2.CreateSub(MulInst, V));
   Builder2.CreateBr(BB2);
 
+  // Dummy DTU.
+  DomTreeUpdater DTU(DomTreeUpdater::UpdateStrategy::Lazy);
   ValueToValueMapTy Mapping;
-
-  auto Split = DuplicateInstructionsInSplitBetween(BB2, BB2, BB2->getTerminator(), Mapping);
+  auto Split = DuplicateInstructionsInSplitBetween(
+      BB2, BB2, BB2->getTerminator(), Mapping, DTU);
 
   EXPECT_TRUE(Split);
   EXPECT_EQ(Mapping.size(), 3u);
@@ -322,9 +327,11 @@ TEST_F(CloneInstruction, DuplicateInstructionsToSplitBlocksEq2) {
   Instruction *SubInst = cast<Instruction>(Builder2.CreateSub(MulInst, V));
   Builder2.CreateBr(BB2);
 
+  // Dummy DTU.
+  DomTreeUpdater DTU(DomTreeUpdater::UpdateStrategy::Lazy);
   ValueToValueMapTy Mapping;
-
-  auto Split = DuplicateInstructionsInSplitBetween(BB2, BB2, SubInst, Mapping);
+  auto Split =
+      DuplicateInstructionsInSplitBetween(BB2, BB2, SubInst, Mapping, DTU);
 
   EXPECT_TRUE(Split);
   EXPECT_EQ(Mapping.size(), 2u);

@@ -505,8 +505,9 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   return Inst;
 }
 
-Constant *llvm::createBitMaskForGaps(IRBuilder<> &Builder, unsigned VF,
-                                           const InterleaveGroup &Group) {
+Constant *
+llvm::createBitMaskForGaps(IRBuilder<> &Builder, unsigned VF,
+                           const InterleaveGroup<Instruction> &Group) {
   // All 1's means mask is not needed.
   if (Group.getNumMembers() == Group.getFactor())
     return nullptr;
@@ -720,9 +721,9 @@ void InterleavedAccessInfo::analyzeInterleaving(
   collectDependences();
 
   // Holds all interleaved store groups temporarily.
-  SmallSetVector<InterleaveGroup *, 4> StoreGroups;
+  SmallSetVector<InterleaveGroup<Instruction> *, 4> StoreGroups;
   // Holds all interleaved load groups temporarily.
-  SmallSetVector<InterleaveGroup *, 4> LoadGroups;
+  SmallSetVector<InterleaveGroup<Instruction> *, 4> LoadGroups;
 
   // Search in bottom-up program order for pairs of accesses (A and B) that can
   // form interleaved load or store groups. In the algorithm below, access A
@@ -744,7 +745,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // Initialize a group for B if it has an allowable stride. Even if we don't
     // create a group for B, we continue with the bottom-up algorithm to ensure
     // we don't break any of B's dependences.
-    InterleaveGroup *Group = nullptr;
+    InterleaveGroup<Instruction> *Group = nullptr;
     if (isStrided(DesB.Stride) && 
         (!isPredicated(B->getParent()) || EnablePredicatedInterleavedMemAccesses)) {
       Group = getInterleaveGroup(B);
@@ -789,7 +790,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
         // illegal code motion. A will then be free to form another group with
         // instructions that precede it.
         if (isInterleaved(A)) {
-          InterleaveGroup *StoreGroup = getInterleaveGroup(A);
+          InterleaveGroup<Instruction> *StoreGroup = getInterleaveGroup(A);
           StoreGroups.remove(StoreGroup);
           releaseGroup(StoreGroup);
         }
@@ -868,7 +869,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
   }   // Iteration over B accesses.
 
   // Remove interleaved store groups with gaps.
-  for (InterleaveGroup *Group : StoreGroups)
+  for (auto *Group : StoreGroups)
     if (Group->getNumMembers() != Group->getFactor()) {
       LLVM_DEBUG(
           dbgs() << "LV: Invalidate candidate interleaved store group due "
@@ -889,7 +890,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
   // This means that we can forcefully peel the loop in order to only have to
   // check the first pointer for no-wrap. When we'll change to use Assume=true
   // we'll only need at most one runtime check per interleaved group.
-  for (InterleaveGroup *Group : LoadGroups) {
+  for (auto *Group : LoadGroups) {
     // Case 1: A full group. Can Skip the checks; For full groups, if the wide
     // load would wrap around the address space we would do a memory access at
     // nullptr even without the transformation.
@@ -947,9 +948,9 @@ void InterleavedAccessInfo::invalidateGroupsRequiringScalarEpilogue() {
     return;
 
   // Avoid releasing a Group twice.
-  SmallPtrSet<InterleaveGroup *, 4> DelSet;
+  SmallPtrSet<InterleaveGroup<Instruction> *, 4> DelSet;
   for (auto &I : InterleaveGroupMap) {
-    InterleaveGroup *Group = I.second;
+    InterleaveGroup<Instruction> *Group = I.second;
     if (Group->requiresScalarEpilogue())
       DelSet.insert(Group);
   }
@@ -963,4 +964,19 @@ void InterleavedAccessInfo::invalidateGroupsRequiringScalarEpilogue() {
   }
 
   RequiresScalarEpilogue = false;
+}
+
+template <typename InstT>
+void InterleaveGroup<InstT>::addMetadata(InstT *NewInst) const {
+  llvm_unreachable("addMetadata can only be used for Instruction");
+}
+
+namespace llvm {
+template <>
+void InterleaveGroup<Instruction>::addMetadata(Instruction *NewInst) const {
+  SmallVector<Value *, 4> VL;
+  std::transform(Members.begin(), Members.end(), std::back_inserter(VL),
+                 [](std::pair<int, Instruction *> p) { return p.second; });
+  propagateMetadata(NewInst, VL);
+}
 }
