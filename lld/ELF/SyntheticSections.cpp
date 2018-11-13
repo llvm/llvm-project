@@ -2413,13 +2413,13 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
 }
 
 template <class ELFT>
-static std::vector<GdbIndexSection::NameTypeEntry>
+static std::vector<GdbIndexSection::NameAttrEntry>
 readPubNamesAndTypes(const LLDDwarfObj<ELFT> &Obj,
                      const std::vector<GdbIndexSection::CuEntry> &CUs) {
   const DWARFSection &PubNames = Obj.getGnuPubNamesSection();
   const DWARFSection &PubTypes = Obj.getGnuPubTypesSection();
 
-  std::vector<GdbIndexSection::NameTypeEntry> Ret;
+  std::vector<GdbIndexSection::NameAttrEntry> Ret;
   for (const DWARFSection *Pub : {&PubNames, &PubTypes}) {
     DWARFDebugPubTable Table(Obj, *Pub, Config->IsLE, true);
     uint32_t I = 0;
@@ -2443,10 +2443,10 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &Obj,
 // Create a list of symbols from a given list of symbol names and types
 // by uniquifying them by name.
 static std::vector<GdbIndexSection::GdbSymbol>
-createSymbols(ArrayRef<std::vector<GdbIndexSection::NameTypeEntry>> NameTypes,
+createSymbols(ArrayRef<std::vector<GdbIndexSection::NameAttrEntry>> NameAttrs,
               const std::vector<GdbIndexSection::GdbChunk> &Chunks) {
   typedef GdbIndexSection::GdbSymbol GdbSymbol;
-  typedef GdbIndexSection::NameTypeEntry NameTypeEntry;
+  typedef GdbIndexSection::NameAttrEntry NameAttrEntry;
 
   // For each chunk, compute the number of compilation units preceding it.
   uint32_t CuIdx = 0;
@@ -2473,13 +2473,13 @@ createSymbols(ArrayRef<std::vector<GdbIndexSection::NameTypeEntry>> NameTypes,
   std::vector<std::vector<GdbSymbol>> Symbols(NumShards);
   parallelForEachN(0, Concurrency, [&](size_t ThreadId) {
     uint32_t I = 0;
-    for (ArrayRef<NameTypeEntry> Entries : NameTypes) {
-      for (const NameTypeEntry &Ent : Entries) {
+    for (ArrayRef<NameAttrEntry> Entries : NameAttrs) {
+      for (const NameAttrEntry &Ent : Entries) {
         size_t ShardId = Ent.Name.hash() >> Shift;
         if ((ShardId & (Concurrency - 1)) != ThreadId)
           continue;
 
-        uint32_t V = Ent.Type + CuIdxs[I];
+        uint32_t V = Ent.CuIndexAndAttrs + CuIdxs[I];
         size_t &Idx = Map[ShardId][Ent.Name];
         if (Idx) {
           Symbols[ShardId][Idx - 1].CuVector.push_back(V);
@@ -2532,7 +2532,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
       S->Live = false;
 
   std::vector<GdbChunk> Chunks(Sections.size());
-  std::vector<std::vector<NameTypeEntry>> NameTypes(Sections.size());
+  std::vector<std::vector<NameAttrEntry>> NameAttrs(Sections.size());
 
   parallelForEachN(0, Sections.size(), [&](size_t I) {
     ObjFile<ELFT> *File = Sections[I]->getFile<ELFT>();
@@ -2541,14 +2541,14 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
     Chunks[I].Sec = Sections[I];
     Chunks[I].CompilationUnits = readCuList(Dwarf);
     Chunks[I].AddressAreas = readAddressAreas(Dwarf, Sections[I]);
-    NameTypes[I] = readPubNamesAndTypes<ELFT>(
+    NameAttrs[I] = readPubNamesAndTypes<ELFT>(
         static_cast<const LLDDwarfObj<ELFT> &>(Dwarf.getDWARFObj()),
         Chunks[I].CompilationUnits);
   });
 
   auto *Ret = make<GdbIndexSection>();
   Ret->Chunks = std::move(Chunks);
-  Ret->Symbols = createSymbols(NameTypes, Ret->Chunks);
+  Ret->Symbols = createSymbols(NameAttrs, Ret->Chunks);
   Ret->initOutputSize();
   return Ret;
 }
