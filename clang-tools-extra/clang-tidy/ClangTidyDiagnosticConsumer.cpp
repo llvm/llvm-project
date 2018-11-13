@@ -267,13 +267,7 @@ ClangTidyDiagnosticConsumer::ClangTidyDiagnosticConsumer(
     ClangTidyContext &Ctx, bool RemoveIncompatibleErrors)
     : Context(Ctx), RemoveIncompatibleErrors(RemoveIncompatibleErrors),
       LastErrorRelatesToUserCode(false), LastErrorPassesLineFilter(false),
-      LastErrorWasIgnored(false) {
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
-  Diags = llvm::make_unique<DiagnosticsEngine>(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), &*DiagOpts, this,
-      /*ShouldOwnClient=*/false);
-  Context.DiagEngine = Diags.get();
-}
+      LastErrorWasIgnored(false) {}
 
 void ClangTidyDiagnosticConsumer::finalizeLastError() {
   if (!Errors.empty()) {
@@ -391,7 +385,7 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
 
   if (Info.getLocation().isValid() && DiagLevel != DiagnosticsEngine::Error &&
       DiagLevel != DiagnosticsEngine::Fatal &&
-      LineIsMarkedWithNOLINTinMacro(Diags->getSourceManager(),
+      LineIsMarkedWithNOLINTinMacro(Info.getSourceManager(),
                                     Info.getLocation(), Info.getID(),
                                     Context)) {
     ++Context.Stats.ErrorsIgnoredNOLINT;
@@ -453,14 +447,14 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
       Errors.back());
   SmallString<100> Message;
   Info.FormatDiagnostic(Message);
-  FullSourceLoc Loc =
-      (Info.getLocation().isInvalid())
-          ? FullSourceLoc()
-          : FullSourceLoc(Info.getLocation(), Info.getSourceManager());
+  FullSourceLoc Loc;
+  if (Info.getLocation().isValid() && Info.hasSourceManager())
+    Loc = FullSourceLoc(Info.getLocation(), Info.getSourceManager());
   Converter.emitDiagnostic(Loc, DiagLevel, Message, Info.getRanges(),
                            Info.getFixItHints());
 
-  checkFilters(Info.getLocation());
+  if (Info.hasSourceManager())
+    checkFilters(Info.getLocation(), Info.getSourceManager());
 }
 
 bool ClangTidyDiagnosticConsumer::passesLineFilter(StringRef FileName,
@@ -481,7 +475,8 @@ bool ClangTidyDiagnosticConsumer::passesLineFilter(StringRef FileName,
   return false;
 }
 
-void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location) {
+void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
+                                               const SourceManager &Sources) {
   // Invalid location may mean a diagnostic in a command line, don't skip these.
   if (!Location.isValid()) {
     LastErrorRelatesToUserCode = true;
@@ -489,7 +484,6 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location) {
     return;
   }
 
-  const SourceManager &Sources = Diags->getSourceManager();
   if (!*Context.getOptions().SystemHeaders &&
       Sources.isInSystemHeader(Location))
     return;

@@ -574,10 +574,8 @@ define  <2 x double> @test16(<4 x double> * nocapture %srcA, <2 x double>* nocap
 ; X86-AVX-LABEL: test16:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX-NEXT:    vmovaps 96(%eax), %ymm0
-; X86-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X86-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X86-AVX-NEXT:    vzeroupper
+; X86-AVX-NEXT:    vmovaps 96(%eax), %xmm0
+; X86-AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test16:
@@ -588,10 +586,8 @@ define  <2 x double> @test16(<4 x double> * nocapture %srcA, <2 x double>* nocap
 ;
 ; X64-AVX-LABEL: test16:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovaps 96(%rdi), %ymm0
-; X64-AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; X64-AVX-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; X64-AVX-NEXT:    vzeroupper
+; X64-AVX-NEXT:    vmovaps 96(%rdi), %xmm0
+; X64-AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X64-AVX-NEXT:    retq
   %i5 = getelementptr inbounds <4 x double>, <4 x double>* %srcA, i32 3
   %i6 = load <4 x double>, <4 x double>* %i5, align 32

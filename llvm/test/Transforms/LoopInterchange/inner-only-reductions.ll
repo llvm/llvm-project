@@ -1,5 +1,5 @@
 ; RUN: opt < %s -basicaa -loop-interchange -pass-remarks-missed='loop-interchange' -pass-remarks-output=%t -S \
-; RUN:     -verify-dom-info -verify-loop-info 2>&1 | FileCheck -check-prefix=IR %s
+; RUN:     -verify-dom-info -verify-loop-info -verify-loop-lcssa 2>&1 | FileCheck -check-prefix=IR %s
 ; RUN: FileCheck --input-file=%t %s
 
 ; Inner loop only reductions are not supported currently. See discussion at

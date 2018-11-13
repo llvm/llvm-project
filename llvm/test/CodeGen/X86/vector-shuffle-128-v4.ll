@@ -403,9 +403,9 @@ define <4 x i32> @shuffle_v4i32_0142(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; AVX2OR512VL-LABEL: shuffle_v4i32_0142:
 ; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    vpbroadcastq %xmm1, %xmm1
-; AVX2OR512VL-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,2,2]
-; AVX2OR512VL-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3]
+; AVX2OR512VL-NEXT:    vbroadcastss %xmm1, %xmm1
+; AVX2OR512VL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,2,2]
+; AVX2OR512VL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2],xmm0[3]
 ; AVX2OR512VL-NEXT:    retq
   %shuffle = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 2>
   ret <4 x i32> %shuffle

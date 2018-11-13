@@ -197,35 +197,35 @@ define <8 x i16> @test_vcvtps2ph_256(<8 x float> %a0, <8 x float> %a1, <8 x i16>
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [3:1.00]
 ; GENERIC-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [4:1.00]
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; IVY-LABEL: test_vcvtps2ph_256:
 ; IVY:       # %bb.0:
 ; IVY-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [3:1.00]
 ; IVY-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [4:1.00]
-; IVY-NEXT:    vzeroupper # sched: [100:0.33]
+; IVY-NEXT:    vzeroupper # sched: [1:1.00]
 ; IVY-NEXT:    retq # sched: [1:1.00]
 ;
 ; HASWELL-LABEL: test_vcvtps2ph_256:
 ; HASWELL:       # %bb.0:
 ; HASWELL-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [6:1.00]
 ; HASWELL-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [7:1.00]
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vcvtps2ph_256:
 ; BROADWELL:       # %bb.0:
 ; BROADWELL-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [6:1.00]
 ; BROADWELL-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [7:1.00]
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vcvtps2ph_256:
 ; SKYLAKE:       # %bb.0:
 ; SKYLAKE-NEXT:    vcvtps2ph $0, %ymm0, %xmm0 # sched: [7:1.00]
 ; SKYLAKE-NEXT:    vcvtps2ph $0, %ymm1, (%rdi) # sched: [8:1.00]
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; BDVER2-LABEL: test_vcvtps2ph_256:

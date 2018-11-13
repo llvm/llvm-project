@@ -21,6 +21,38 @@ using namespace lldb_private::npdb;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
+CVTagRecord CVTagRecord::create(CVType type) {
+  assert(IsTagRecord(type) && "type is not a tag record!");
+  switch (type.kind()) {
+  case LF_CLASS:
+  case LF_STRUCTURE:
+  case LF_INTERFACE: {
+    ClassRecord cr;
+    llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(type, cr));
+    return CVTagRecord(std::move(cr));
+  }
+  case LF_UNION: {
+    UnionRecord ur;
+    llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(type, ur));
+    return CVTagRecord(std::move(ur));
+  }
+  case LF_ENUM: {
+    EnumRecord er;
+    llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(type, er));
+    return CVTagRecord(std::move(er));
+  }
+  default:
+    llvm_unreachable("Unreachable!");
+  }
+}
+
+CVTagRecord::CVTagRecord(ClassRecord &&c)
+    : cvclass(std::move(c)),
+      m_kind(cvclass.Kind == TypeRecordKind::Struct ? Struct : Class) {}
+CVTagRecord::CVTagRecord(UnionRecord &&u)
+    : cvunion(std::move(u)), m_kind(Union) {}
+CVTagRecord::CVTagRecord(EnumRecord &&e) : cvenum(std::move(e)), m_kind(Enum) {}
+
 PDB_SymType lldb_private::npdb::CVSymToPDBSym(SymbolKind kind) {
   switch (kind) {
   case S_COMPILE3:
@@ -94,6 +126,8 @@ PDB_SymType lldb_private::npdb::CVTypeToPDBType(TypeLeafKind kind) {
     return PDB_SymType::Enum;
   case LF_PROCEDURE:
     return PDB_SymType::FunctionSig;
+  case LF_BITFIELD:
+    return PDB_SymType::BuiltinType;
   default:
     lldbassert(false && "Invalid type record kind!");
   }
@@ -301,6 +335,18 @@ bool lldb_private::npdb::IsForwardRefUdt(CVType cvt) {
   case LF_ENUM:
     llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, er));
     return er.isForwardRef();
+  default:
+    return false;
+  }
+}
+
+bool lldb_private::npdb::IsTagRecord(llvm::codeview::CVType cvt) {
+  switch (cvt.kind()) {
+  case LF_CLASS:
+  case LF_STRUCTURE:
+  case LF_UNION:
+  case LF_ENUM:
+    return true;
   default:
     return false;
   }

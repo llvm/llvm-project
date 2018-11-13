@@ -71,7 +71,8 @@ def : ProcessorModel<"generic", NoSchedModel, []>;
 
 // Latest and greatest experimental version of WebAssembly. Bugs included!
 def : ProcessorModel<"bleeding-edge", NoSchedModel,
-                      [FeatureSIMD128, FeatureAtomics]>;
+                      [FeatureSIMD128, FeatureAtomics,
+                       FeatureNontrappingFPToInt, FeatureSignExt]>;
 
 //===----------------------------------------------------------------------===//
 // Target Declaration

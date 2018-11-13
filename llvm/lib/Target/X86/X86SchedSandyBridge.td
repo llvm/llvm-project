@@ -1112,6 +1112,13 @@ def SBWriteResGroupVzeroall : SchedWriteRes<[SBPort5]> {
 }
 def: InstRW<[SBWriteResGroupVzeroall], (instrs VZEROALL)>;
 
+def SBWriteResGroupVzeroupper : SchedWriteRes<[]> {
+  let Latency = 1;
+  let NumMicroOps = 4;
+  let ResourceCycles = [];
+}
+def: InstRW<[SBWriteResGroupVzeroupper], (instrs VZEROUPPER)>;
+
 def: InstRW<[WriteZero], (instrs CLC)>;
 
 // Intruction variants handled by the renamer. These might not need execution

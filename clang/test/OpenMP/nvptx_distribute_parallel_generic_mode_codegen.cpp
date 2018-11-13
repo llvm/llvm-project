@@ -22,8 +22,7 @@ int main(int argc, char **argv) {
 }
 
 // CHECK: [[MEM_TY:%.+]] = type { [84 x i8] }
-// CHECK-DAG: [[GLOBAL_RD:@.+]] = weak global [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]] zeroinitializer
-// CHECK-DAG: [[GLOBAL_RD_PTR:@.+]] = weak unnamed_addr constant i8* getelementptr inbounds ([{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]], [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]]* [[GLOBAL_RD]], i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0)
+// CHECK-DAG: [[SHARED_GLOBAL_RD:@.+]] = weak addrspace(3) global [[MEM_TY]] zeroinitializer
 // CHECK-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
 // CHECK-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 84
 // CHECK-DAG: @__omp_offloading_{{.*}}_main_l17_exec_mode = weak constant i8 1
@@ -31,8 +30,7 @@ int main(int argc, char **argv) {
 // CHECK-LABEL: define internal void @__omp_offloading_{{.*}}_main_l17_worker(
 
 // CHECK: define weak void @__omp_offloading_{{.*}}_main_l17([10 x i32]* dereferenceable(40) %{{.+}}, [10 x i32]* dereferenceable(40) %{{.+}}, i32* dereferenceable(4) %{{.+}}, i{{64|32}} %{{.+}}, [10 x i32]* dereferenceable(40) %{{.+}})
-// CHECK: [[GLOBAL_RD:%.+]] = load i8*, i8** [[GLOBAL_RD_PTR]],
-// CHECK: call void @__kmpc_get_team_static_memory(i8* [[GLOBAL_RD]], i{{64|32}} 84, i16 0, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CHECK: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i{{64|32}} 84, i16 1, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CHECK: [[PTR:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CHECK: [[STACK:%.+]] = bitcast i8* [[PTR]] to %struct._globalized_locals_ty*
 // CHECK: [[ARGC:%.+]] = load i32, i32* %{{.+}}, align
@@ -48,7 +46,7 @@ int main(int argc, char **argv) {
 
 // CHECK: call void @__kmpc_for_static_fini(%struct.ident_t* @
 
-// CHECK: call void @__kmpc_restore_team_static_memory(i16 0)
+// CHECK: call void @__kmpc_restore_team_static_memory(i16 1)
 
 // CHECK: define internal void [[PARALLEL]](
 // CHECK-NOT: call i8* @__kmpc_data_sharing_push_stack(

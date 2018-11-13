@@ -1972,7 +1972,7 @@ static bool DiagnoseInputExistence(const Driver &D, const DerivedArgList &Args,
     }
   }
 
-  if (llvm::sys::fs::exists(Twine(Path)))
+  if (D.getVFS().exists(Path))
     return true;
 
   if (D.IsCLMode()) {

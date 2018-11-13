@@ -50,10 +50,7 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
     #define DECL_NAME(x, y) x##_##y##_Decl
     #define DECL(x, y) class DECL_NAME(x, y) {};
     DECL(X, Y); // X_Y_Decl
-
-    class MAC {};
   )cpp");
-  Header.ExtraArgs = {"-DMAC=mac_name"};
 
   auto Symbols = Header.headerSymbols();
   auto AST = Header.build();
@@ -67,11 +64,6 @@ TEST(QualityTests, SymbolQualitySignalExtraction) {
   EXPECT_EQ(Quality.Category, SymbolQualitySignals::Variable);
 
   Quality.merge(findSymbol(Symbols, "X_Y_Decl"));
-  EXPECT_TRUE(Quality.ImplementationDetail);
-
-  Quality.ImplementationDetail = false;
-  Quality.merge(
-      CodeCompletionResult(&findDecl(AST, "mac_name"), /*Priority=*/42));
   EXPECT_TRUE(Quality.ImplementationDetail);
 
   Symbol F = findSymbol(Symbols, "_f");
@@ -148,17 +140,13 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
 
   auto constructShadowDeclCompletionResult = [&](const std::string DeclName) {
     auto *Shadow =
-        *dyn_cast<UsingDecl>(
-             &findAnyDecl(AST,
-                          [&](const NamedDecl &ND) {
-                            if (const UsingDecl *Using =
-                                    dyn_cast<UsingDecl>(&ND))
-                              if (Using->shadow_size() &&
-                                  Using->getQualifiedNameAsString() == DeclName)
-                                return true;
-                            return false;
-                          }))
-             ->shadow_begin();
+        *dyn_cast<UsingDecl>(&findDecl(AST, [&](const NamedDecl &ND) {
+           if (const UsingDecl *Using = dyn_cast<UsingDecl>(&ND))
+             if (Using->shadow_size() &&
+                 Using->getQualifiedNameAsString() == DeclName)
+               return true;
+           return false;
+         }))->shadow_begin();
     CodeCompletionResult Result(Shadow->getTargetDecl(), 42);
     Result.ShadowDecl = Shadow;
     return Result;
@@ -173,13 +161,13 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
       << "Using declaration in main file";
 
   Relevance = {};
-  Relevance.merge(CodeCompletionResult(&findAnyDecl(AST, "X"), 42));
+  Relevance.merge(CodeCompletionResult(&findUnqualifiedDecl(AST, "X"), 42));
   EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FileScope);
   Relevance = {};
-  Relevance.merge(CodeCompletionResult(&findAnyDecl(AST, "y"), 42));
+  Relevance.merge(CodeCompletionResult(&findUnqualifiedDecl(AST, "y"), 42));
   EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::ClassScope);
   Relevance = {};
-  Relevance.merge(CodeCompletionResult(&findAnyDecl(AST, "z"), 42));
+  Relevance.merge(CodeCompletionResult(&findUnqualifiedDecl(AST, "z"), 42));
   EXPECT_EQ(Relevance.Scope, SymbolRelevanceSignals::FunctionScope);
   // The injected class name is treated as the outer class name.
   Relevance = {};
@@ -188,7 +176,7 @@ TEST(QualityTests, SymbolRelevanceSignalExtraction) {
 
   Relevance = {};
   EXPECT_FALSE(Relevance.InBaseClass);
-  auto BaseMember = CodeCompletionResult(&findAnyDecl(AST, "y"), 42);
+  auto BaseMember = CodeCompletionResult(&findUnqualifiedDecl(AST, "y"), 42);
   BaseMember.InBaseClass = true;
   Relevance.merge(BaseMember);
   EXPECT_TRUE(Relevance.InBaseClass);
@@ -345,7 +333,7 @@ TEST(QualityTests, NoBoostForClassConstructor) {
   SymbolRelevanceSignals Cls;
   Cls.merge(CodeCompletionResult(Foo, /*Priority=*/0));
 
-  const NamedDecl *CtorDecl = &findAnyDecl(AST, [](const NamedDecl &ND) {
+  const NamedDecl *CtorDecl = &findDecl(AST, [](const NamedDecl &ND) {
     return (ND.getQualifiedNameAsString() == "Foo::Foo") &&
            isa<CXXConstructorDecl>(&ND);
   });
@@ -407,7 +395,7 @@ TEST(QualityTests, ConstructorQuality) {
   auto Symbols = Header.headerSymbols();
   auto AST = Header.build();
 
-  const NamedDecl *CtorDecl = &findAnyDecl(AST, [](const NamedDecl &ND) {
+  const NamedDecl *CtorDecl = &findDecl(AST, [](const NamedDecl &ND) {
     return (ND.getQualifiedNameAsString() == "Foo::Foo") &&
            isa<CXXConstructorDecl>(&ND);
   });

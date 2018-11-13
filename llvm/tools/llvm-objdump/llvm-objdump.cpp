@@ -372,7 +372,7 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
   assert(E);
   std::string Buf;
   raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS, "");
+  logAllUnhandledErrors(std::move(E), OS);
   OS.flush();
   errs() << ToolName << ": '" << File << "': " << Buf;
   exit(1);
@@ -392,7 +392,7 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef ArchiveName,
     errs() << " (for architecture " << ArchitectureName << ")";
   std::string Buf;
   raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS, "");
+  logAllUnhandledErrors(std::move(E), OS);
   OS.flush();
   errs() << ": " << Buf;
   exit(1);
@@ -2014,6 +2014,8 @@ void llvm::PrintSymbolTable(const ObjectFile *o, StringRef ArchiveName,
       FileFunc = 'f';
     else if (Type == SymbolRef::ST_Function)
       FileFunc = 'F';
+    else if (Type == SymbolRef::ST_Data)
+      FileFunc = 'O';
 
     const char *Fmt = o->getBytesInAddress() > 4 ? "%016" PRIx64 :
                                                    "%08" PRIx64;

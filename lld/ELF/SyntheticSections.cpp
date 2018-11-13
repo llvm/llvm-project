@@ -2412,14 +2412,16 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
   return Ret;
 }
 
+template <class ELFT>
 static std::vector<GdbIndexSection::NameTypeEntry>
 readPubNamesAndTypes(DWARFContext &Dwarf, uint32_t Idx) {
-  StringRef Sec1 = Dwarf.getDWARFObj().getGnuPubNamesSection();
-  StringRef Sec2 = Dwarf.getDWARFObj().getGnuPubTypesSection();
+  auto &Obj = static_cast<const LLDDwarfObj<ELFT> &>(Dwarf.getDWARFObj());
+  const DWARFSection &PubNames = Obj.getGnuPubNamesSection();
+  const DWARFSection &PubTypes = Obj.getGnuPubTypesSection();
 
   std::vector<GdbIndexSection::NameTypeEntry> Ret;
-  for (StringRef Sec : {Sec1, Sec2}) {
-    DWARFDebugPubTable Table(Sec, Config->IsLE, true);
+  for (const DWARFSection *Pub : {&PubNames, &PubTypes}) {
+    DWARFDebugPubTable Table(Obj, *Pub, Config->IsLE, true);
     for (const DWARFDebugPubTable::Set &Set : Table.getData())
       for (const DWARFDebugPubTable::Entry &Ent : Set.Entries)
         Ret.push_back({{Ent.Name, computeGdbHash(Ent.Name)},
@@ -2517,7 +2519,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
     Chunks[I].Sec = Sections[I];
     Chunks[I].CompilationUnits = readCuList(Dwarf);
     Chunks[I].AddressAreas = readAddressAreas(Dwarf, Sections[I]);
-    NameTypes[I] = readPubNamesAndTypes(Dwarf, I);
+    NameTypes[I] = readPubNamesAndTypes<ELFT>(Dwarf, I);
   });
 
   auto *Ret = make<GdbIndexSection>();

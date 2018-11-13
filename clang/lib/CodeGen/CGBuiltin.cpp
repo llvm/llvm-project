@@ -1068,30 +1068,37 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
   if (llvm::Function *F = CGM.getModule().getFunction(Name))
     return F;
 
+  llvm::SmallVector<QualType, 4> ArgTys;
   llvm::SmallVector<ImplicitParamDecl, 4> Params;
   Params.emplace_back(Ctx, nullptr, SourceLocation(), &Ctx.Idents.get("buffer"),
                       Ctx.VoidPtrTy, ImplicitParamDecl::Other);
+  ArgTys.emplace_back(Ctx.VoidPtrTy);
 
   for (unsigned int I = 0, E = Layout.Items.size(); I < E; ++I) {
     char Size = Layout.Items[I].getSizeByte();
     if (!Size)
       continue;
 
+    QualType ArgTy = getOSLogArgType(Ctx, Size);
     Params.emplace_back(
         Ctx, nullptr, SourceLocation(),
-        &Ctx.Idents.get(std::string("arg") + llvm::to_string(I)),
-        getOSLogArgType(Ctx, Size), ImplicitParamDecl::Other);
+        &Ctx.Idents.get(std::string("arg") + llvm::to_string(I)), ArgTy,
+        ImplicitParamDecl::Other);
+    ArgTys.emplace_back(ArgTy);
   }
 
   FunctionArgList Args;
   for (auto &P : Params)
     Args.push_back(&P);
 
+  QualType ReturnTy = Ctx.VoidTy;
+  QualType FuncionTy = Ctx.getFunctionType(ReturnTy, ArgTys, {});
+
   // The helper function has linkonce_odr linkage to enable the linker to merge
   // identical functions. To ensure the merging always happens, 'noinline' is
   // attached to the function when compiling with -Oz.
   const CGFunctionInfo &FI =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Args);
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, Args);
   llvm::FunctionType *FuncTy = CGM.getTypes().GetFunctionType(FI);
   llvm::Function *Fn = llvm::Function::Create(
       FuncTy, llvm::GlobalValue::LinkOnceODRLinkage, Name, &CGM.getModule());
@@ -1107,9 +1114,9 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
   IdentifierInfo *II = &Ctx.Idents.get(Name);
   FunctionDecl *FD = FunctionDecl::Create(
       Ctx, Ctx.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
-      Ctx.VoidTy, nullptr, SC_PrivateExtern, false, false);
+      FuncionTy, nullptr, SC_PrivateExtern, false, false);
 
-  StartFunction(FD, Ctx.VoidTy, Fn, FI, Args);
+  StartFunction(FD, ReturnTy, Fn, FI, Args);
 
   // Create a scope with an artificial location for the body of this function.
   auto AL = ApplyDebugLocation::CreateArtificial(*this);

@@ -125,6 +125,10 @@ public:
     return Visit(E->getReplacement());
   }
 
+  void VisitConstantExpr(ConstantExpr *E) {
+    return Visit(E->getSubExpr());
+  }
+
   // l-values.
   void VisitDeclRefExpr(DeclRefExpr *E) { EmitAggLoadOfLValue(E); }
   void VisitMemberExpr(MemberExpr *ME) { EmitAggLoadOfLValue(ME); }

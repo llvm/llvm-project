@@ -487,8 +487,8 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
 
   // Code Words, Epilog count, E, X, Vers, Function Length
   uint32_t row1 = 0x0;
-  uint8_t CodeWords = TotalCodeBytes / 4;
-  uint8_t CodeWordsMod = TotalCodeBytes % 4;
+  uint32_t CodeWords = TotalCodeBytes / 4;
+  uint32_t CodeWordsMod = TotalCodeBytes % 4;
   if (CodeWordsMod)
     CodeWords++;
   uint32_t EpilogCount = info->EpilogMap.size();
@@ -505,6 +505,11 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info) {
 
   // Extended Code Words, Extended Epilog Count
   if (ExtensionWord) {
+    // FIXME: We should be able to split unwind info into multiple sections.
+    // FIXME: We should share epilog codes across epilogs, where possible,
+    // which would make this issue show up less frequently.
+    if (CodeWords > 0xFF || EpilogCount > 0xFFFF)
+      report_fatal_error("SEH unwind data splitting not yet implemented");
     uint32_t row2 = 0x0;
     row2 |= (CodeWords & 0xFF) << 16;
     row2 |= (EpilogCount & 0xFFFF);

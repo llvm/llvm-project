@@ -309,7 +309,7 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
     if (!MaybeObj) {
       std::string Buf;
       raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(MaybeObj.takeError(), OS, "");
+      logAllUnhandledErrors(MaybeObj.takeError(), OS);
       OS.flush();
       ErrorAndExit("unable to create object file: '" + Buf + "'");
     }
@@ -438,7 +438,7 @@ static int executeInput() {
     if (!MaybeObj) {
       std::string Buf;
       raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(MaybeObj.takeError(), OS, "");
+      logAllUnhandledErrors(MaybeObj.takeError(), OS);
       OS.flush();
       ErrorAndExit("unable to create object file: '" + Buf + "'");
     }
@@ -710,7 +710,7 @@ static int linkAndVerify() {
     if (!MaybeObj) {
       std::string Buf;
       raw_string_ostream OS(Buf);
-      logAllUnhandledErrors(MaybeObj.takeError(), OS, "");
+      logAllUnhandledErrors(MaybeObj.takeError(), OS);
       OS.flush();
       ErrorAndExit("unable to create object file: '" + Buf + "'");
     }

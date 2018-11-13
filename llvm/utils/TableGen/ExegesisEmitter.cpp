@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -114,10 +115,6 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
   const size_t NumIssueCounters =
       Def.getValueAsListOfDefs("IssueCounters").size();
 
-  // This is the default, do not emit.
-  if (CycleCounter.empty() && UopsCounter.empty() && NumIssueCounters == 0)
-    return;
-
   OS << "\nstatic const PfmCountersInfo " << Target << Def.getName()
      << " = {\n";
 
@@ -157,16 +154,22 @@ void ExegesisEmitter::emitPfmCounters(raw_ostream &OS) const {
   // Emit the IssueCounters table.
   const auto PfmCounterDefs =
       Records.getAllDerivedDefinitions("ProcPfmCounters");
-  OS << "static const PfmCountersInfo::IssueCounter " << Target
-     << "PfmIssueCounters[] = {\n";
-  for (const Record *Def : PfmCounterDefs) {
-    for (const Record *ICDef : Def->getValueAsListOfDefs("IssueCounters"))
-      OS << "  { " << Target << "PfmCounterNames["
-         << getPfmCounterId(ICDef->getValueAsString("Counter")) << "], \""
-         << ICDef->getValueAsString("ResourceName") << "\"},\n";
+  // Only emit if non-empty.
+  const bool HasAtLeastOnePfmIssueCounter =
+      llvm::any_of(PfmCounterDefs, [](const Record *Def) {
+        return !Def->getValueAsListOfDefs("IssueCounters").empty();
+      });
+  if (HasAtLeastOnePfmIssueCounter) {
+    OS << "static const PfmCountersInfo::IssueCounter " << Target
+       << "PfmIssueCounters[] = {\n";
+    for (const Record *Def : PfmCounterDefs) {
+      for (const Record *ICDef : Def->getValueAsListOfDefs("IssueCounters"))
+        OS << "  { " << Target << "PfmCounterNames["
+           << getPfmCounterId(ICDef->getValueAsString("Counter")) << "], \""
+           << ICDef->getValueAsString("ResourceName") << "\"},\n";
+    }
+    OS << "};\n";
   }
-
-  OS << "};\n";
 
   // Now generate the PfmCountersInfo.
   unsigned IssueCountersTableOffset = 0;
@@ -174,11 +177,12 @@ void ExegesisEmitter::emitPfmCounters(raw_ostream &OS) const {
     emitPfmCountersInfo(*Def, IssueCountersTableOffset, OS);
 
   OS << "\n";
-}
+} // namespace
 
 void ExegesisEmitter::emitPfmCountersLookupTable(raw_ostream &OS) const {
   std::vector<Record *> Bindings =
       Records.getAllDerivedDefinitions("PfmCountersBinding");
+  assert(!Bindings.empty() && "there must be at least one binding");
   llvm::sort(Bindings, [](const Record *L, const Record *R) {
     return L->getValueAsString("CpuName") < R->getValueAsString("CpuName");
   });

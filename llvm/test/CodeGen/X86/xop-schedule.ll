@@ -14,7 +14,7 @@ define void @test_vfrczpd(<2 x double> %a0, <4 x double> %a1, <2 x double> *%a2,
 ; GENERIC-NEXT:    vfrczpd (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    vfrczpd (%rsi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfrczpd:
@@ -62,7 +62,7 @@ define void @test_vfrczps(<4 x float> %a0, <4 x double> %a1, <4 x float> *%a2, <
 ; GENERIC-NEXT:    vfrczps (%rdi), %xmm0 # sched: [9:1.00]
 ; GENERIC-NEXT:    vfrczps (%rsi), %ymm1 # sched: [10:1.00]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vfrczps:
@@ -221,7 +221,7 @@ define void @test_vpcmov_256(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> %a2, <4 x i
 ; GENERIC-NEXT:    vpcmov (%rdi), %ymm1, %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vpcmov %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vpcmov_256:
@@ -425,7 +425,7 @@ define void @test_vpermil2pd_256(<4 x double> %a0, <4 x double> %a1, <4 x double
 ; GENERIC-NEXT:    vpermil2pd $3, %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vpermil2pd $3, (%rdi), %ymm1, %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vpermil2pd_256:
@@ -509,7 +509,7 @@ define void @test_vpermil2ps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %
 ; GENERIC-NEXT:    vpermil2ps $3, %ymm2, (%rdi), %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    vpermil2ps $3, (%rdi), %ymm1, %ymm0, %ymm0 # sched: [8:1.00]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER12-LABEL: test_vpermil2ps_256:

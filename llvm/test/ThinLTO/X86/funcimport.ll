@@ -40,7 +40,7 @@
 ; CODEGEN: T _main
 
 ; Verify that all run together
-; RUN: llvm-lto -thinlto-action=run %t2.bc  %t.bc
+; RUN: llvm-lto -thinlto-action=run %t2.bc  %t.bc  -exported-symbol=_main
 ; RUN: llvm-nm -o - < %t.bc.thinlto.o | FileCheck %s --check-prefix=ALL
 ; RUN: llvm-nm -o - < %t2.bc.thinlto.o | FileCheck %s --check-prefix=ALL2
 ; ALL: T _callfuncptr

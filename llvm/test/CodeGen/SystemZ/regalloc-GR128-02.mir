@@ -1,0 +1,68 @@
+# RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 \
+# RUN:   -start-before=simple-register-coalescing -o - 2>&1 > /dev/null
+
+# Test that the SystemZ shouldCoalesce() implementation does not crash in
+# case of an undef use in another MBB. This was discovered in testing with
+# -systemz-subreg-liveness.
+
+--- |
+  @g_74 = external dso_local unnamed_addr global i32, align 4
+  @g_193 = external dso_local unnamed_addr global i32, align 4
+  
+  define dso_local void @main() local_unnamed_addr {
+    %1 = load i32, i32* @g_193
+    %2 = or i32 %1, -1395153718
+    %3 = sdiv i32 -1395153718, %2
+    br i1 undef, label %5, label %4
+  
+  ; <label>:4:                                      ; preds = %0
+    store i32 %3, i32* @g_74
+    store i32 -9, i32* @g_74
+    ret void
+  
+  ; <label>:5:                                      ; preds = %0
+    unreachable
+  }
+
+...
+---
+name:            main
+alignment:       4
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: grx32bit }
+  - { id: 1, class: addr64bit }
+  - { id: 2, class: gr32bit }
+  - { id: 3, class: gr32bit }
+  - { id: 4, class: gr64bit }
+  - { id: 5, class: gr128bit }
+  - { id: 6, class: gr128bit }
+  - { id: 7, class: grx32bit }
+  - { id: 8, class: gr32bit }
+  - { id: 9, class: gr128bit }
+body:             |
+  bb.0 (%ir-block.0):
+    successors: %bb.2(0x00000001), %bb.1(0x7fffffff)
+  
+    %1:addr64bit = LARL @g_193
+    %2:gr32bit = IIFMux 2899813578
+    %3:gr32bit = COPY killed %2
+    %3:gr32bit = O %3, killed %1, 0, $noreg, implicit-def dead $cc :: (dereferenceable load 4 from @g_193)
+    %4:gr64bit = LGFI -1395153718
+    undef %5.subreg_l64:gr128bit = COPY killed %4
+    %6:gr128bit = COPY killed %5
+    dead %6:gr128bit = DSGFR %6, killed %3
+    %7:grx32bit = LHIMux 0
+    CHIMux killed %7, 0, implicit-def $cc
+    BRC 14, 6, %bb.2, implicit killed $cc
+    J %bb.1
+  
+  bb.1 (%ir-block.4):
+    %8:gr32bit = LHIMux -9
+    STRL killed %8, @g_74 :: (store 4 into @g_74)
+    Return
+  
+  bb.2 (%ir-block.5):
+    dead %0:grx32bit = COPY undef %6.subreg_l32
+
+...

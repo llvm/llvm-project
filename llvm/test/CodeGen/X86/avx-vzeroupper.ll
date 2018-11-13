@@ -145,9 +145,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; VZ-NEXT:    # =>This Inner Loop Header: Depth=1
 ; VZ-NEXT:    callq do_sse
 ; VZ-NEXT:    callq do_sse
-; VZ-NEXT:    vmovaps {{.*}}(%rip), %ymm0
-; VZ-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; VZ-NEXT:    vzeroupper
+; VZ-NEXT:    vmovaps g+{{.*}}(%rip), %xmm0
 ; VZ-NEXT:    callq do_sse
 ; VZ-NEXT:    decl %ebx
 ; VZ-NEXT:    jne .LBB3_3
@@ -176,8 +174,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; FAST-ymm-zmm-NEXT:    # =>This Inner Loop Header: Depth=1
 ; FAST-ymm-zmm-NEXT:    callq do_sse
 ; FAST-ymm-zmm-NEXT:    callq do_sse
-; FAST-ymm-zmm-NEXT:    vmovaps {{.*}}(%rip), %ymm0
-; FAST-ymm-zmm-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; FAST-ymm-zmm-NEXT:    vmovaps g+{{.*}}(%rip), %xmm0
 ; FAST-ymm-zmm-NEXT:    callq do_sse
 ; FAST-ymm-zmm-NEXT:    decl %ebx
 ; FAST-ymm-zmm-NEXT:    jne .LBB3_3
@@ -206,9 +203,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; BDVER2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; BDVER2-NEXT:    callq do_sse
 ; BDVER2-NEXT:    callq do_sse
-; BDVER2-NEXT:    vmovaps {{.*}}(%rip), %ymm0
-; BDVER2-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; BDVER2-NEXT:    vzeroupper
+; BDVER2-NEXT:    vmovaps g+{{.*}}(%rip), %xmm0
 ; BDVER2-NEXT:    callq do_sse
 ; BDVER2-NEXT:    decl %ebx
 ; BDVER2-NEXT:    jne .LBB3_3
@@ -237,8 +232,7 @@ define <4 x float> @test03(<4 x float> %a, <4 x float> %b) nounwind {
 ; BTVER2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; BTVER2-NEXT:    callq do_sse
 ; BTVER2-NEXT:    callq do_sse
-; BTVER2-NEXT:    vmovaps {{.*}}(%rip), %ymm0
-; BTVER2-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; BTVER2-NEXT:    vmovaps g+{{.*}}(%rip), %xmm0
 ; BTVER2-NEXT:    callq do_sse
 ; BTVER2-NEXT:    decl %ebx
 ; BTVER2-NEXT:    jne .LBB3_3

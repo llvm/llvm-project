@@ -113,7 +113,7 @@ public:
   bool shouldCollect(StringRef Name, bool Qualified = true) {
     assert(AST.hasValue());
     return SymbolCollector::shouldCollectSymbol(
-        Qualified ? findDecl(*AST, Name) : findAnyDecl(*AST, Name),
+        Qualified ? findDecl(*AST, Name) : findUnqualifiedDecl(*AST, Name),
         AST->getASTContext(), SymbolCollector::Options());
   }
 
@@ -127,8 +127,8 @@ protected:
 TEST_F(ShouldCollectSymbolTest, ShouldCollectSymbol) {
   build(R"(
     namespace nx {
-    class X{}
-    void f() { int Local; }
+    class X{};
+    auto f() { int Local; } // auto ensures function body is parsed.
     struct { int x } var;
     namespace { class InAnonymous {}; }
     }
@@ -626,22 +626,6 @@ TEST_F(SymbolCollectorTest, SymbolFormedFromMacro) {
                 DeclURI(TestHeaderURI)),
           AllOf(QName("Test"), DeclRange(Header.range("spelling")),
                 DeclURI(TestHeaderURI))));
-}
-
-TEST_F(SymbolCollectorTest, SymbolFormedByCLI) {
-  Annotations Header(R"(
-    #ifdef NAME
-    class $expansion[[NAME]] {};
-    #endif
-  )");
-
-  runSymbolCollector(Header.code(), /*Main=*/"",
-                     /*ExtraArgs=*/{"-DNAME=name"});
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(AllOf(
-                  QName("name"),
-                  DeclRange(Header.range("expansion")),
-                  DeclURI(TestHeaderURI))));
 }
 
 TEST_F(SymbolCollectorTest, IgnoreSymbolsInMainFile) {

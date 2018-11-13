@@ -2610,9 +2610,14 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   Ins.first->second = Signature;
 
   if (useSplitDwarf())
+    // FIXME: v5 split type units belong in .debug_info.dwo.
     NewTU.setSection(Asm->getObjFileLowering().getDwarfTypesDWOSection());
   else {
-    NewTU.setSection(Asm->getObjFileLowering().getDwarfTypesSection(Signature));
+    MCSection *Section =
+        getDwarfVersion() <= 4
+            ? Asm->getObjFileLowering().getDwarfTypesSection(Signature)
+            : Asm->getObjFileLowering().getDwarfInfoSection(Signature);
+    NewTU.setSection(Section);
     // Non-split type units reuse the compile unit's line table.
     CU.applyStmtList(UnitDie);
   }

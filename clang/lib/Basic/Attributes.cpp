@@ -12,10 +12,12 @@ int clang::hasAttribute(AttrSyntax Syntax, const IdentifierInfo *Scope,
   if (Name.size() >= 4 && Name.startswith("__") && Name.endswith("__"))
     Name = Name.substr(2, Name.size() - 4);
 
-  // Normalize the scope name, but only for gnu attributes.
+  // Normalize the scope name, but only for gnu and clang attributes.
   StringRef ScopeName = Scope ? Scope->getName() : "";
   if (ScopeName == "__gnu__")
-    ScopeName = ScopeName.slice(2, ScopeName.size() - 2);
+    ScopeName = "gnu";
+  else if (ScopeName == "_Clang")
+    ScopeName = "clang";
 
 #include "clang/Basic/AttrHasAttributeImpl.inc"
 

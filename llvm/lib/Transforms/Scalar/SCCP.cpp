@@ -247,19 +247,25 @@ class SCCPSolver : public InstVisitor<SCCPSolver> {
   using Edge = std::pair<BasicBlock *, BasicBlock *>;
   DenseSet<Edge> KnownFeasibleEdges;
 
-  DenseMap<Function *, std::unique_ptr<PredicateInfo>> PredInfos;
+  DenseMap<Function *, AnalysisResultsForFn> AnalysisResults;
   DenseMap<Value *, SmallPtrSet<User *, 2>> AdditionalUsers;
 
 public:
-  void addPredInfo(Function &F, std::unique_ptr<PredicateInfo> PI) {
-    PredInfos[&F] = std::move(PI);
+  void addAnalysis(Function &F, AnalysisResultsForFn A) {
+    AnalysisResults.insert({&F, std::move(A)});
   }
 
   const PredicateBase *getPredicateInfoFor(Instruction *I) {
-    auto PI = PredInfos.find(I->getFunction());
-    if (PI == PredInfos.end())
+    auto A = AnalysisResults.find(I->getParent()->getParent());
+    if (A == AnalysisResults.end())
       return nullptr;
-    return PI->second->getPredicateInfoFor(I);
+    return A->second.PredInfo->getPredicateInfoFor(I);
+  }
+
+  DominatorTree *getDomTree(Function &F) {
+    auto A = AnalysisResults.find(&F);
+    assert(A != AnalysisResults.end() && "Need analysis results for function.");
+    return A->second.DT;
   }
 
   SCCPSolver(const DataLayout &DL, const TargetLibraryInfo *tli)
@@ -1927,10 +1933,9 @@ static void forceIndeterminateEdge(Instruction* I, SCCPSolver &Solver) {
   }
 }
 
-
 bool llvm::runIPSCCP(
     Module &M, const DataLayout &DL, const TargetLibraryInfo *TLI,
-    function_ref<std::unique_ptr<PredicateInfo>(Function &)> getPredicateInfo) {
+    function_ref<AnalysisResultsForFn(Function &)> getAnalysis) {
   SCCPSolver Solver(DL, TLI);
 
   // Loop over all functions, marking arguments to those with their addresses
@@ -1939,7 +1944,8 @@ bool llvm::runIPSCCP(
     if (F.isDeclaration())
       continue;
 
-    Solver.addPredInfo(F, getPredicateInfo(F));
+    Solver.addAnalysis(F, getAnalysis(F));
+
     // Determine if we can track the function's return values. If so, add the
     // function to the solver's set of return-tracked functions.
     if (canTrackReturnsInterprocedurally(&F))
@@ -1988,11 +1994,12 @@ bool llvm::runIPSCCP(
 
   // Iterate over all of the instructions in the module, replacing them with
   // constants if we have found them to be of constant values.
-  SmallVector<BasicBlock*, 512> BlocksToErase;
 
   for (Function &F : M) {
     if (F.isDeclaration())
       continue;
+
+    SmallVector<BasicBlock *, 512> BlocksToErase;
 
     if (Solver.isBlockExecutable(&F.front()))
       for (Function::arg_iterator AI = F.arg_begin(), E = F.arg_end(); AI != E;
@@ -2029,23 +2036,27 @@ bool llvm::runIPSCCP(
       }
     }
 
-    // Change dead blocks to unreachable. We do it after replacing constants in
-    // all executable blocks, because changeToUnreachable may remove PHI nodes
-    // in executable blocks we found values for. The function's entry block is
-    // not part of BlocksToErase, so we have to handle it separately.
-    for (BasicBlock *BB : BlocksToErase)
+    DomTreeUpdater DTU(Solver.getDomTree(F),
+                       DomTreeUpdater::UpdateStrategy::Lazy);
+    // Change dead blocks to unreachable. We do it after replacing constants
+    // in all executable blocks, because changeToUnreachable may remove PHI
+    // nodes in executable blocks we found values for. The function's entry
+    // block is not part of BlocksToErase, so we have to handle it separately.
+    for (BasicBlock *BB : BlocksToErase) {
       NumInstRemoved +=
-          changeToUnreachable(BB->getFirstNonPHI(), /*UseLLVMTrap=*/false);
+          changeToUnreachable(BB->getFirstNonPHI(), /*UseLLVMTrap=*/false,
+                              /*PreserveLCSSA=*/false, &DTU);
+    }
     if (!Solver.isBlockExecutable(&F.front()))
       NumInstRemoved += changeToUnreachable(F.front().getFirstNonPHI(),
-                                            /*UseLLVMTrap=*/false);
+                                            /*UseLLVMTrap=*/false,
+                                            /*PreserveLCSSA=*/false, &DTU);
 
-    // Now that all instructions in the function are constant folded, erase dead
-    // blocks, because we can now use ConstantFoldTerminator to get rid of
-    // in-edges.
-    for (unsigned i = 0, e = BlocksToErase.size(); i != e; ++i) {
+    // Now that all instructions in the function are constant folded,
+    // use ConstantFoldTerminator to get rid of in-edges, record DT updates and
+    // delete dead BBs.
+    for (BasicBlock *DeadBB : BlocksToErase) {
       // If there are any PHI nodes in this successor, drop entries for BB now.
-      BasicBlock *DeadBB = BlocksToErase[i];
       for (Value::user_iterator UI = DeadBB->user_begin(),
                                 UE = DeadBB->user_end();
            UI != UE;) {
@@ -2060,16 +2071,16 @@ bool llvm::runIPSCCP(
         // If we have forced an edge for an indeterminate value, then force the
         // terminator to fold to that edge.
         forceIndeterminateEdge(I, Solver);
-        bool Folded = ConstantFoldTerminator(I->getParent());
+        bool Folded = ConstantFoldTerminator(I->getParent(),
+                                             /*DeleteDeadConditions=*/false,
+                                             /*TLI=*/nullptr, &DTU);
         assert(Folded &&
               "Expect TermInst on constantint or blockaddress to be folded");
         (void) Folded;
       }
-
-      // Finally, delete the basic block.
-      F.getBasicBlockList().erase(DeadBB);
+      // Mark dead BB for deletion.
+      DTU.deleteBB(DeadBB);
     }
-    BlocksToErase.clear();
 
     for (BasicBlock &BB : F) {
       for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E;) {

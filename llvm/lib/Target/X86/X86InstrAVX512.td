@@ -9774,6 +9774,18 @@ multiclass AVX512_pmovx_patterns<string OpcPrefix, SDNode ExtOp,
 defm : AVX512_pmovx_patterns<"VPMOVSX", X86vsext, sext_invec>;
 defm : AVX512_pmovx_patterns<"VPMOVZX", X86vzext, zext_invec>;
 
+// Without BWI we can't do a trunc from v16i16 to v16i8. DAG combine can merge
+// ext+trunc aggresively making it impossible to legalize the DAG to this
+// pattern directly.
+let Predicates = [HasAVX512, NoBWI] in {
+def: Pat<(v16i8 (trunc (v16i16 VR256X:$src))),
+         (VPMOVDBZrr (v16i32 (VPMOVZXWDZrr VR256X:$src)))>;
+def: Pat<(v16i8 (trunc (bc_v16i16 (loadv4i64 addr:$src)))),
+         (VPMOVDBZrr (v16i32 (VPMOVZXWDZrm addr:$src)))>;
+def: Pat<(store (v16i8 (trunc (v16i16 VR256X:$src))), addr:$dst),
+         (VPMOVDBZmr addr:$dst, (v16i32 (VPMOVZXWDZrr VR256X:$src)))>;
+}
+
 //===----------------------------------------------------------------------===//
 // GATHER - SCATTER Operations
 

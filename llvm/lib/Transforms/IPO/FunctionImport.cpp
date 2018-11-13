@@ -294,10 +294,8 @@ static void computeImportForReferencedGlobals(
     LLVM_DEBUG(dbgs() << " ref -> " << VI << "\n");
 
     for (auto &RefSummary : VI.getSummaryList())
-      if (RefSummary->getSummaryKind() == GlobalValueSummary::GlobalVarKind &&
-          !RefSummary->notEligibleToImport() &&
-          !GlobalValue::isInterposableLinkage(RefSummary->linkage()) &&
-          RefSummary->refs().empty()) {
+      if (isa<GlobalVarSummary>(RefSummary.get()) &&
+          canImportGlobalVar(RefSummary.get())) {
         auto ILI = ImportList[RefSummary->modulePath()].insert(VI.getGUID());
         // Only update stat if we haven't already imported this variable.
         if (ILI.second)
@@ -824,6 +822,25 @@ void llvm::computeDeadSymbols(
   NumLiveSymbols += LiveSymbols;
 }
 
+// Compute dead symbols and propagate constants in combined index.
+void llvm::computeDeadSymbolsWithConstProp(
+    ModuleSummaryIndex &Index,
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
+    function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing,
+    bool ImportEnabled) {
+  computeDeadSymbols(Index, GUIDPreservedSymbols, isPrevailing);
+  if (ImportEnabled) {
+    Index.propagateConstants(GUIDPreservedSymbols);
+  } else {
+    // If import is disabled we should drop read-only attribute
+    // from all summaries to prevent internalization.
+    for (auto &P : Index)
+      for (auto &S : P.second.SummaryList)
+        if (auto *GVS = dyn_cast<GlobalVarSummary>(S.get()))
+          GVS->setReadOnly(false);
+  }
+}
+
 /// Compute the set of summaries needed for a ThinLTO backend compilation of
 /// \p ModulePath.
 void llvm::gatherImportedSummariesForModule(
@@ -897,8 +914,8 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
   return true;
 }
 
-/// Fixup WeakForLinker linkages in \p TheModule based on summary analysis.
-void llvm::thinLTOResolveWeakForLinkerModule(
+/// Fixup prevailing symbol linkages in \p TheModule based on summary analysis.
+void llvm::thinLTOResolvePrevailingInModule(
     Module &TheModule, const GVSummaryMapTy &DefinedGlobals) {
   auto updateLinkage = [&](GlobalValue &GV) {
     // See if the global summary analysis computed a new resolved linkage.
@@ -915,13 +932,15 @@ void llvm::thinLTOResolveWeakForLinkerModule(
     // as we need access to the resolution vectors for each input file in
     // order to find which symbols have been redefined.
     // We may consider reorganizing this code and moving the linkage recording
-    // somewhere else, e.g. in thinLTOResolveWeakForLinkerInIndex.
+    // somewhere else, e.g. in thinLTOResolvePrevailingInIndex.
     if (NewLinkage == GlobalValue::WeakAnyLinkage) {
       GV.setLinkage(NewLinkage);
       return;
     }
 
-    if (!GlobalValue::isWeakForLinker(GV.getLinkage()))
+    if (GlobalValue::isLocalLinkage(GV.getLinkage()) ||
+        // In case it was dead and already converted to declaration.
+        GV.isDeclaration())
       return;
     // Check for a non-prevailing def that has interposable linkage
     // (e.g. non-odr weak or linkonce). In that case we can't simply
@@ -932,7 +951,7 @@ void llvm::thinLTOResolveWeakForLinkerModule(
         GlobalValue::isInterposableLinkage(GV.getLinkage())) {
       if (!convertToDeclaration(GV))
         // FIXME: Change this to collect replaced GVs and later erase
-        // them from the parent module once thinLTOResolveWeakForLinkerGUID is
+        // them from the parent module once thinLTOResolvePrevailingGUID is
         // changed to enable this for aliases.
         llvm_unreachable("Expected GV to be converted");
     } else {
@@ -1016,6 +1035,22 @@ static Function *replaceAliasWithAliasee(Module *SrcModule, GlobalAlias *GA) {
   GA->replaceAllUsesWith(ConstantExpr::getBitCast(NewFn, GA->getType()));
   NewFn->takeName(GA);
   return NewFn;
+}
+
+// Internalize values that we marked with specific attribute
+// in processGlobalForThinLTO.
+static void internalizeImmutableGVs(Module &M) {
+  for (auto &GV : M.globals()) {
+    // Skip GVs which have been converted to declarations
+    // by dropDeadSymbols.
+    if (GV.isDeclaration())
+      continue;
+    if (auto *GVar = dyn_cast<GlobalVariable>(&GV))
+      if (GVar->hasAttribute("thinlto-internalize")) {
+        GVar->setLinkage(GlobalValue::InternalLinkage);
+        GVar->setVisibility(GlobalValue::DefaultVisibility);
+      }
+  }
 }
 
 // Automatically import functions in Module \p DestModule based on the summaries
@@ -1141,6 +1176,8 @@ Expected<bool> FunctionImporter::importFunctions(
     NumImportedModules++;
   }
 
+  internalizeImmutableGVs(DestModule);
+
   NumImportedFunctions += (ImportedCount - ImportedGVCount);
   NumImportedGlobalVars += ImportedGVCount;
 
@@ -1157,7 +1194,7 @@ static bool doImportingForModule(Module &M) {
   if (SummaryFile.empty())
     report_fatal_error("error: -function-import requires -summary-file\n");
   Expected<std::unique_ptr<ModuleSummaryIndex>> IndexPtrOrErr =
-      getModuleSummaryIndexForFile(SummaryFile);
+      getModuleSummaryIndexForFile(SummaryFile);  
   if (!IndexPtrOrErr) {
     logAllUnhandledErrors(IndexPtrOrErr.takeError(), errs(),
                           "Error loading file '" + SummaryFile + "': ");

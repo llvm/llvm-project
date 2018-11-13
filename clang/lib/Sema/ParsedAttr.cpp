@@ -105,11 +105,15 @@ void AttributePool::takePool(AttributePool &pool) {
 
 static StringRef normalizeAttrScopeName(StringRef ScopeName,
                                         ParsedAttr::Syntax SyntaxUsed) {
-  // We currently only normalize the "__gnu__" scope name to be "gnu".
-  if ((SyntaxUsed == ParsedAttr::AS_CXX11 ||
-       SyntaxUsed == ParsedAttr::AS_C2x) &&
-      ScopeName == "__gnu__")
-    ScopeName = ScopeName.slice(2, ScopeName.size() - 2);
+  // Normalize the "__gnu__" scope name to be "gnu" and the "_Clang" scope name
+  // to be "clang".
+  if (SyntaxUsed == ParsedAttr::AS_CXX11 ||
+    SyntaxUsed == ParsedAttr::AS_C2x) {
+    if (ScopeName == "__gnu__")
+      ScopeName = "gnu";
+    else if (ScopeName == "_Clang")
+      ScopeName = "clang";
+  }
   return ScopeName;
 }
 
@@ -118,11 +122,12 @@ static StringRef normalizeAttrName(StringRef AttrName,
                                    ParsedAttr::Syntax SyntaxUsed) {
   // Normalize the attribute name, __foo__ becomes foo. This is only allowable
   // for GNU attributes, and attributes using the double square bracket syntax.
-  bool IsGNU = SyntaxUsed == ParsedAttr::AS_GNU ||
-               ((SyntaxUsed == ParsedAttr::AS_CXX11 ||
-                 SyntaxUsed == ParsedAttr::AS_C2x) &&
-                NormalizedScopeName == "gnu");
-  if (IsGNU && AttrName.size() >= 4 && AttrName.startswith("__") &&
+  bool ShouldNormalize =
+      SyntaxUsed == ParsedAttr::AS_GNU ||
+      ((SyntaxUsed == ParsedAttr::AS_CXX11 ||
+        SyntaxUsed == ParsedAttr::AS_C2x) &&
+       (NormalizedScopeName == "gnu" || NormalizedScopeName == "clang"));
+  if (ShouldNormalize && AttrName.size() >= 4 && AttrName.startswith("__") &&
       AttrName.endswith("__"))
     AttrName = AttrName.slice(2, AttrName.size() - 2);
 

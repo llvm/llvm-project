@@ -156,6 +156,7 @@ void DNBRegisterValueClass::Dump(const char *pre, const char *post) const {
             DNBLogError(
                 "unsupported vector format %d, defaulting to hex bytes.",
                 info.format);
+            [[clang::fallthrough]];
           case VectorOfUInt8:
             snprintf(str, sizeof(str), "%s", "uint8   { ");
             pos = str + strlen(str);

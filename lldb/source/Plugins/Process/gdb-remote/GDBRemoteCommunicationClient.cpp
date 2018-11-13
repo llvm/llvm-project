@@ -1689,11 +1689,16 @@ Status GDBRemoteCommunicationClient::GetWatchpointSupportInfo(uint32_t &num) {
       m_supports_watchpoint_support_info = eLazyBoolYes;
       llvm::StringRef name;
       llvm::StringRef value;
+      bool found_num_field = false;
       while (response.GetNameColonValue(name, value)) {
         if (name.equals("num")) {
           value.getAsInteger(0, m_num_supported_hardware_watchpoints);
           num = m_num_supported_hardware_watchpoints;
+          found_num_field = true;
         }
+      }
+      if (found_num_field == false) {
+        m_supports_watchpoint_support_info = eLazyBoolNo;
       }
     } else {
       m_supports_watchpoint_support_info = eLazyBoolNo;

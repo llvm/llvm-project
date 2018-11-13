@@ -31,10 +31,10 @@ int bar(int n){
 }
 
 // CHECK: [[MEM_TY:%.+]] = type { [4 x i8] }
-// CHECK-DAG: [[GLOBAL_RD:@.+]] = weak global [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]] zeroinitializer
-// CHECK-DAG: [[GLOBAL_RD_PTR:@.+]] = weak unnamed_addr constant i8* getelementptr inbounds ([{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]], [{{[0-9]+}} x [{{[0-9]+}} x [[MEM_TY]]]]* [[GLOBAL_RD]], i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0, i{{[0-9]+}} 0)
+// CHECK-DAG: [[SHARED_GLOBAL_RD:@.+]] = weak addrspace(3) global [[MEM_TY]] zeroinitializer
 // CHECK-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
 // CHECK-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 4
+// CHECK-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l12}}_worker()
 // CHECK: call void @llvm.nvvm.barrier0()
@@ -45,9 +45,9 @@ int bar(int n){
 // CHECK: call void @__omp_offloading_{{.*}}l12_worker()
 // CHECK: call void @__kmpc_kernel_init(
 // CHECK: call void @__kmpc_data_sharing_init_stack()
-// CHECK: [[GLOBAL_RD:%.+]] = load i8*, i8** [[GLOBAL_RD_PTR]],
+// CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
 // CHECK: [[SIZE:%.+]] = load i{{64|32}}, i{{64|32}}* [[KERNEL_SIZE]],
-// CHECK: call void @__kmpc_get_team_static_memory(i8* [[GLOBAL_RD]], i{{64|32}} [[SIZE]], i16 0, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
+// CHECK: call void @__kmpc_get_team_static_memory(i8* addrspacecast (i8 addrspace(3)* getelementptr inbounds ([[MEM_TY]], [[MEM_TY]] addrspace(3)* [[SHARED_GLOBAL_RD]], i32 0, i32 0, i32 0) to i8*), i64 %7, i16 %6, i8** addrspacecast (i8* addrspace(3)* [[KERNEL_PTR]] to i8**))
 // CHECK: [[KERNEL_RD:%.+]] = load i8*, i8* addrspace(3)* [[KERNEL_PTR]],
 // CHECK: [[STACK:%.+]] = getelementptr inbounds i8, i8* [[KERNEL_RD]], i{{64|32}} 0
 // CHECK: call void @__kmpc_kernel_prepare_parallel(
@@ -55,7 +55,8 @@ int bar(int n){
 // CHECK: call void @llvm.nvvm.barrier0()
 // CHECK: call void @llvm.nvvm.barrier0()
 // CHECK: call void @__kmpc_end_sharing_variables()
-// CHECK: call void @__kmpc_restore_team_static_memory(i16 0)
+// CHECK: [[IS_SHARED:%.+]] = load i16, i16* [[KERNEL_SHARED]],
+// CHECK: call void @__kmpc_restore_team_static_memory(i16 [[IS_SHARED]])
 // CHECK: call void @__kmpc_kernel_deinit(i16 1)
 
 // CHECK: define internal void @__omp_outlined__(
