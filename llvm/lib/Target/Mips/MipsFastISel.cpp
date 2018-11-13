@@ -953,6 +953,11 @@ bool MipsFastISel::selectBranch(const Instruction *I) {
   MachineBasicBlock *FBB = FuncInfo.MBBMap[BI->getSuccessor(1)];
   // For now, just try the simplest case where it's fed by a compare.
   if (const CmpInst *CI = dyn_cast<CmpInst>(BI->getCondition())) {
+    MVT CIMVT =
+        TLI.getValueType(DL, CI->getOperand(0)->getType(), true).getSimpleVT();
+    if (CIMVT == MVT::i1)
+      return false;
+
     unsigned CondReg = getRegForValue(CI);
     BuildMI(*BrBB, FuncInfo.InsertPt, DbgLoc, TII.get(Mips::BGTZ))
         .addReg(CondReg)
