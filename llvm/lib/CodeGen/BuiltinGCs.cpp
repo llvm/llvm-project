@@ -28,7 +28,7 @@ namespace {
 class ErlangGC : public GCStrategy {
 public:
   ErlangGC() {
-    NeededSafePoints = 1 << GC::PostCall;
+    NeededSafePoints = true;
     UsesMetadata = true;
   }
 };
@@ -39,7 +39,7 @@ public:
 class OcamlGC : public GCStrategy {
 public:
   OcamlGC() {
-    NeededSafePoints = 1 << GC::PostCall;
+    NeededSafePoints = true;
     UsesMetadata = true;
   }
 };
@@ -69,7 +69,7 @@ public:
     UseStatepoints = true;
     // These options are all gc.root specific, we specify them so that the
     // gc.root lowering code doesn't run.
-    NeededSafePoints = 0;
+    NeededSafePoints = false;
     UsesMetadata = false;
   }
 
@@ -101,7 +101,7 @@ public:
     UseStatepoints = true;
     // These options are all gc.root specific, we specify them so that the
     // gc.root lowering code doesn't run.
-    NeededSafePoints = 0;
+    NeededSafePoints = false;
     UsesMetadata = false;
   }
 

@@ -132,13 +132,12 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
 class WebAssemblyAsmParser final : public MCTargetAsmParser {
   MCAsmParser &Parser;
   MCAsmLexer &Lexer;
-  MCSymbolWasm *LastSymbol;
 
 public:
   WebAssemblyAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                        const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII), Parser(Parser),
-        Lexer(Parser.getLexer()), LastSymbol(nullptr) {
+        Lexer(Parser.getLexer()) {
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 
@@ -189,6 +188,19 @@ public:
         // to accept more specific SIMD register types?
         .Case("v128", {MVT::v16i8, wasm::WASM_TYPE_V128})
         .Default({MVT::INVALID_SIMPLE_VALUE_TYPE, wasm::WASM_TYPE_NORESULT});
+  }
+
+  bool ParseRegTypeList(std::vector<MVT> &Types) {
+    while (Lexer.is(AsmToken::Identifier)) {
+      auto RegType = ParseRegType(Lexer.getTok().getString()).first;
+      if (RegType == MVT::INVALID_SIMPLE_VALUE_TYPE)
+        return true;
+      Types.push_back(RegType);
+      Parser.Lex();
+      if (!IsNext(AsmToken::Comma))
+        break;
+    }
+    return Expect(AsmToken::EndOfStatement, "EOL");
   }
 
   void ParseSingleInteger(bool IsNegative, OperandVector &Operands) {
@@ -314,10 +326,9 @@ public:
     return false;
   }
 
-  void onLabelParsed(MCSymbol *Symbol) override {
-    LastSymbol = cast<MCSymbolWasm>(Symbol);
-  }
-
+  // This function processes wasm-specific directives streamed to
+  // WebAssemblyTargetStreamer, all others go to the generic parser
+  // (see WasmAsmParser).
   bool ParseDirective(AsmToken DirectiveID) override {
     // This function has a really weird return value behavior that is different
     // from all the other parsing functions:
@@ -331,44 +342,7 @@ public:
         reinterpret_cast<WebAssemblyTargetStreamer &>(*Out.getTargetStreamer());
     // TODO: any time we return an error, at least one token must have been
     // consumed, otherwise this will not signal an error to the caller.
-    if (DirectiveID.getString() == ".type") {
-      // This could be the start of a function, check if followed by
-      // "label,@function"
-      if (!Lexer.is(AsmToken::Identifier))
-        return Error("Expected label after .type directive, got: ",
-                     Lexer.getTok());
-      auto WasmSym = cast<MCSymbolWasm>(
-                       TOut.getStreamer().getContext().getOrCreateSymbol(
-                         Lexer.getTok().getString()));
-      Parser.Lex();
-      if (!(IsNext(AsmToken::Comma) && IsNext(AsmToken::At) &&
-            Lexer.is(AsmToken::Identifier)))
-        return Error("Expected label,@type declaration, got: ", Lexer.getTok());
-      auto TypeName = Lexer.getTok().getString();
-      if (TypeName == "function")
-        WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
-      else if (TypeName == "global")
-        WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
-      else
-        return Error("Unknown WASM symbol type: ", Lexer.getTok());
-      Parser.Lex();
-      return Expect(AsmToken::EndOfStatement, "EOL");
-    } else if (DirectiveID.getString() == ".size") {
-      if (!Lexer.is(AsmToken::Identifier))
-        return Error("Expected label after .size directive, got: ",
-                     Lexer.getTok());
-      auto WasmSym = cast<MCSymbolWasm>(
-                       TOut.getStreamer().getContext().getOrCreateSymbol(
-                         Lexer.getTok().getString()));
-      Parser.Lex();
-      if (!IsNext(AsmToken::Comma))
-        return Error("Expected `,`, got: ", Lexer.getTok());
-      const MCExpr *Exp;
-      if (Parser.parseExpression(Exp))
-        return Error("Cannot parse .size expression: ", Lexer.getTok());
-      WasmSym->setSize(Exp);
-      return Expect(AsmToken::EndOfStatement, "EOL");
-    } else if (DirectiveID.getString() == ".globaltype") {
+    if (DirectiveID.getString() == ".globaltype") {
       if (!Lexer.is(AsmToken::Identifier))
         return Error("Expected symbol name after .globaltype directive, got: ",
                      Lexer.getTok());
@@ -392,40 +366,23 @@ public:
       // And emit the directive again.
       TOut.emitGlobalType(WasmSym);
       return Expect(AsmToken::EndOfStatement, "EOL");
-    } else if (DirectiveID.getString() == ".param" ||
-               DirectiveID.getString() == ".local") {
-      // Track the number of locals, needed for correct virtual register
-      // assignment elsewhere.
-      // Also output a directive to the streamer.
+    } else if (DirectiveID.getString() == ".param") {
       std::vector<MVT> Params;
+      if (ParseRegTypeList(Params)) return true;
+      TOut.emitParam(nullptr /* unused */, Params);
+      return false;
+    } else if (DirectiveID.getString() == ".result") {
+      std::vector<MVT> Results;
+      if (ParseRegTypeList(Results)) return true;
+      TOut.emitResult(nullptr /* unused */, Results);
+      return false;
+    } else if (DirectiveID.getString() == ".local") {
       std::vector<MVT> Locals;
-      while (Lexer.is(AsmToken::Identifier)) {
-        auto RegType = ParseRegType(Lexer.getTok().getString()).first;
-        if (RegType == MVT::INVALID_SIMPLE_VALUE_TYPE)
-          return true;
-        if (DirectiveID.getString() == ".param") {
-          Params.push_back(RegType);
-        } else {
-          Locals.push_back(RegType);
-        }
-        Parser.Lex();
-        if (!IsNext(AsmToken::Comma))
-          break;
-      }
-      assert(LastSymbol);
-      // TODO: LastSymbol isn't even used by emitParam, so could be removed.
-      TOut.emitParam(LastSymbol, Params);
+      if (ParseRegTypeList(Locals)) return true;
       TOut.emitLocal(Locals);
-      return Expect(AsmToken::EndOfStatement, "EOL");
-    } else {
-      // TODO: remove.
-      while (Lexer.isNot(AsmToken::EndOfStatement))
-        Parser.Lex();
-      return Expect(AsmToken::EndOfStatement, "EOL");
+      return false;
     }
-    // TODO: current ELF directive parsing is broken, fix this is a followup.
-    //return true;  // We didn't process this directive.
-    return false;
+    return true;  // We didn't process this directive.
   }
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned & /*Opcode*/,

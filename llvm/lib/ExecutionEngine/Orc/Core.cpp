@@ -1947,7 +1947,8 @@ ExecutionSession::lookup(ArrayRef<JITDylib *> SearchOrder,
                          SymbolStringPtr Name) {
   SymbolNameSet Names({Name});
 
-  JITDylibSearchList FullSearchOrder(SearchOrder.size());
+  JITDylibSearchList FullSearchOrder;
+  FullSearchOrder.reserve(SearchOrder.size());
   for (auto *JD : SearchOrder)
     FullSearchOrder.push_back({JD, false});
 

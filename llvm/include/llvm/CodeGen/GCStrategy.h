@@ -59,19 +59,6 @@ namespace llvm {
 
 class Type;
 
-namespace GC {
-
-/// PointKind - Used to indicate whether the address of the call instruction
-/// or the address after the call instruction is listed in the stackmap.  For
-/// most runtimes, PostCall safepoints are appropriate.
-///
-enum PointKind {
-  PreCall, ///< Instr is a call instruction.
-  PostCall ///< Instr is the return address of a call.
-};
-
-} // end namespace GC
-
 /// GCStrategy describes a garbage collector algorithm's code generation
 /// requirements, and provides overridable hooks for those needs which cannot
 /// be abstractly described.  GCStrategy objects must be looked up through
@@ -88,7 +75,7 @@ protected:
                                /// if set, none of the other options can be
                                /// anything but their default values.
 
-  unsigned NeededSafePoints = 0;    ///< Bitmask of required safe points.
+  bool NeededSafePoints = false;    ///< if set, calls are inferred to be safepoints
   bool UsesMetadata = false;     ///< If set, backend must emit metadata tables.
 
 public:
@@ -121,15 +108,8 @@ public:
    */
   ///@{
 
-  /// True if safe points of any kind are required. By default, none are
-  /// recorded.
-  bool needsSafePoints() const { return NeededSafePoints != 0; }
-
-  /// True if the given kind of safe point is required. By default, none are
-  /// recorded.
-  bool needsSafePoint(GC::PointKind Kind) const {
-    return (NeededSafePoints & 1 << Kind) != 0;
-  }
+  /// True if safe points need to be inferred on call sites
+  bool needsSafePoints() const { return NeededSafePoints; }
 
   /// If set, appropriate metadata tables must be emitted by the back-end
   /// (assembler, JIT, or otherwise). For statepoint, this method is

@@ -111,7 +111,7 @@ RelExpr AArch64::getRelExpr(RelType Type, const Symbol &S,
     return R_GOT;
   case R_AARCH64_ADR_GOT_PAGE:
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
-    return R_GOT_PAGE_PC;
+    return R_AARCH64_GOT_PAGE_PC;
   case R_AARCH64_NONE:
     return R_NONE;
   default:
@@ -123,7 +123,7 @@ RelExpr AArch64::adjustRelaxExpr(RelType Type, const uint8_t *Data,
                                  RelExpr Expr) const {
   if (Expr == R_RELAX_TLS_GD_TO_IE) {
     if (Type == R_AARCH64_TLSDESC_ADR_PAGE21)
-      return R_RELAX_TLS_GD_TO_IE_PAGE_PC;
+      return R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC;
     return R_RELAX_TLS_GD_TO_IE_ABS;
   }
   return Expr;

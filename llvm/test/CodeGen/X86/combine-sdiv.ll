@@ -3169,8 +3169,8 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ; AVX512F-NEXT:    vpmovsxbw %xmm0, %ymm1
 ; AVX512F-NEXT:    vpmullw {{.*}}(%rip), %ymm1, %ymm1
 ; AVX512F-NEXT:    vpsrlw $8, %ymm1, %ymm1
-; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX512F-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
+; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm1[0],zero,ymm1[1],zero,ymm1[2],zero,ymm1[3],zero,ymm1[4],zero,ymm1[5],zero,ymm1[6],zero,ymm1[7],zero,ymm1[8],zero,ymm1[9],zero,ymm1[10],zero,ymm1[11],zero,ymm1[12],zero,ymm1[13],zero,ymm1[14],zero,ymm1[15],zero
+; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
 ; AVX512F-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; AVX512F-NEXT:    vpsrlw $7, %xmm0, %xmm1
 ; AVX512F-NEXT:    vpand {{.*}}(%rip), %xmm1, %xmm1

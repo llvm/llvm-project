@@ -112,6 +112,17 @@
     ret void
   }
 
+  define amdgpu_kernel void @if_and_xor_read_exec_copy_subreg() {
+  main_body:
+    br i1 undef, label %if, label %end
+
+  if:                                               ; preds = %main_body
+    br label %end
+
+  end:                                              ; preds = %if, %main_body
+    ret void
+  }
+
 ...
 ---
 # CHECK-LABEL: name: optimize_if_and_saveexec_xor{{$}}
@@ -500,4 +511,42 @@ body:             |
     BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM
 
+...
+---
+# A read from exec copy subreg prevents optimization
+# CHECK-LABEL: name: if_and_xor_read_exec_copy_subreg{{$}}
+# CHECK: $sgpr0_sgpr1 = COPY $exec
+# CHECK-NEXT: $sgpr4 = S_MOV_B32 $sgpr1
+name:            if_and_xor_read_exec_copy_subreg
+liveins:
+  - { reg: '$vgpr0' }
+body:             |
+  bb.0.main_body:
+    liveins: $vgpr0
+
+    $sgpr0_sgpr1 = COPY $exec
+    $sgpr4 = S_MOV_B32 $sgpr1
+    $vcc = V_CMP_EQ_I32_e64 0, killed $vgpr0, implicit $exec
+    $vgpr0 = V_MOV_B32_e32 4, implicit $exec
+    $sgpr2_sgpr3 = S_AND_B64 $sgpr0_sgpr1, killed $vcc, implicit-def $scc
+    $sgpr0_sgpr1 = S_XOR_B64 $sgpr2_sgpr3, killed $sgpr0_sgpr1, implicit-def $scc
+    $exec = S_MOV_B64_term killed $sgpr2_sgpr3
+    SI_MASK_BRANCH %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1.if:
+    liveins: $sgpr0_sgpr1
+
+    $sgpr7 = S_MOV_B32 61440
+    $sgpr6 = S_MOV_B32 -1
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, 0, implicit $exec
+
+  bb.2.end:
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    $sgpr3 = S_MOV_B32 61440
+    $sgpr2 = S_MOV_B32 -1
+    BUFFER_STORE_DWORD_OFFSET killed $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM
 ...

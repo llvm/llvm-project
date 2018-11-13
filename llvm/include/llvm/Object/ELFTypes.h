@@ -605,13 +605,12 @@ public:
   }
 
   /// Get the note's descriptor.
-  ArrayRef<Elf_Word> getDesc() const {
+  ArrayRef<uint8_t> getDesc() const {
     if (!Nhdr.n_descsz)
-      return ArrayRef<Elf_Word>();
-    return ArrayRef<Elf_Word>(
-        reinterpret_cast<const Elf_Word *>(
-            reinterpret_cast<const uint8_t *>(&Nhdr) + sizeof(Nhdr) +
-            alignTo<Elf_Nhdr_Impl<ELFT>::Align>(Nhdr.n_namesz)),
+      return ArrayRef<uint8_t>();
+    return ArrayRef<uint8_t>(
+        reinterpret_cast<const uint8_t *>(&Nhdr) + sizeof(Nhdr) +
+          alignTo<Elf_Nhdr_Impl<ELFT>::Align>(Nhdr.n_namesz),
         Nhdr.n_descsz);
   }
 

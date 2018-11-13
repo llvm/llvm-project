@@ -872,11 +872,19 @@ int X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, Type *Tp, int Index,
   if (Kind == TTI::SK_Broadcast)
     LT.first = 1;
 
-  // Subvector extractions are free if they start at beginning of the
-  // vector.
-  if (Kind == TTI::SK_ExtractSubvector && LT.second.isVector() &&
-      ((Index % LT.second.getVectorNumElements()) == 0))
-    return 0;
+  // Subvector extractions are free if they start at the beginning of a
+  // vector and cheap if the subvectors are aligned.
+  if (Kind == TTI::SK_ExtractSubvector && LT.second.isVector()) {
+    int NumElts = LT.second.getVectorNumElements();
+    if ((Index % NumElts) == 0)
+      return 0;
+    std::pair<int, MVT> SubLT = TLI->getTypeLegalizationCost(DL, SubTp);
+    if (SubLT.second.isVector()) {
+      int NumSubElts = SubLT.second.getVectorNumElements();
+      if ((Index % NumSubElts) == 0 && (NumElts % NumSubElts) == 0)
+        return SubLT.first;
+    }
+  }
 
   // We are going to permute multiple sources and the result will be in multiple
   // destinations. Providing an accurate cost only for splits where the element
@@ -1840,12 +1848,16 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::FSQRT,      MVT::v4f32,  56 }, // Pentium III from http://www.agner.org/
   };
   static const CostTblEntry X64CostTbl[] = { // 64-bit targets
-    { ISD::BITREVERSE, MVT::i64,    14 }
+    { ISD::BITREVERSE, MVT::i64,    14 },
+    { X86ISD::SHLD,    MVT::i64,     4 } 
   };
   static const CostTblEntry X86CostTbl[] = { // 32 or 64-bit targets
     { ISD::BITREVERSE, MVT::i32,    14 },
     { ISD::BITREVERSE, MVT::i16,    14 },
-    { ISD::BITREVERSE, MVT::i8,     11 }
+    { ISD::BITREVERSE, MVT::i8,     11 },
+    { X86ISD::SHLD,    MVT::i32,     4 },
+    { X86ISD::SHLD,    MVT::i16,     4 },
+    { X86ISD::SHLD,    MVT::i8,      4 }
   };
 
   unsigned ISD = ISD::DELETED_NODE;
@@ -1866,6 +1878,11 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     break;
   case Intrinsic::cttz:
     ISD = ISD::CTTZ;
+    break;
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
+    // SHRD has same costs so don't duplicate.
+    ISD = X86ISD::SHLD;
     break;
   case Intrinsic::sqrt:
     ISD = ISD::FSQRT;
@@ -1936,7 +1953,88 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
 }
 
 int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
-                     ArrayRef<Value *> Args, FastMathFlags FMF, unsigned VF) {
+                                      ArrayRef<Value *> Args, FastMathFlags FMF,
+                                      unsigned VF) {
+  static const CostTblEntry AVX512CostTbl[] = {
+    { ISD::ROTL,       MVT::v8i64,   1 },
+    { ISD::ROTL,       MVT::v4i64,   1 },
+    { ISD::ROTL,       MVT::v2i64,   1 },
+    { ISD::ROTL,       MVT::v16i32,  1 },
+    { ISD::ROTL,       MVT::v8i32,   1 },
+    { ISD::ROTL,       MVT::v4i32,   1 },
+    { ISD::ROTR,       MVT::v8i64,   1 },
+    { ISD::ROTR,       MVT::v4i64,   1 },
+    { ISD::ROTR,       MVT::v2i64,   1 },
+    { ISD::ROTR,       MVT::v16i32,  1 },
+    { ISD::ROTR,       MVT::v8i32,   1 },
+    { ISD::ROTR,       MVT::v4i32,   1 }
+  };
+  // XOP: ROTL = VPROT(X,Y), ROTR = VPROT(SUB(0,X),Y)
+  static const CostTblEntry XOPCostTbl[] = {
+    { ISD::ROTL,       MVT::v4i64,   4 },
+    { ISD::ROTL,       MVT::v8i32,   4 },
+    { ISD::ROTL,       MVT::v16i16,  4 },
+    { ISD::ROTL,       MVT::v32i8,   4 },
+    { ISD::ROTL,       MVT::v2i64,   1 },
+    { ISD::ROTL,       MVT::v4i32,   1 },
+    { ISD::ROTL,       MVT::v8i16,   1 },
+    { ISD::ROTL,       MVT::v16i8,   1 },
+    { ISD::ROTR,       MVT::v4i64,   6 },
+    { ISD::ROTR,       MVT::v8i32,   6 },
+    { ISD::ROTR,       MVT::v16i16,  6 },
+    { ISD::ROTR,       MVT::v32i8,   6 },
+    { ISD::ROTR,       MVT::v2i64,   2 },
+    { ISD::ROTR,       MVT::v4i32,   2 },
+    { ISD::ROTR,       MVT::v8i16,   2 },
+    { ISD::ROTR,       MVT::v16i8,   2 }
+  };
+  static const CostTblEntry X64CostTbl[] = { // 64-bit targets
+    { ISD::ROTL,       MVT::i64,     1 },
+    { ISD::ROTR,       MVT::i64,     1 }
+  };
+  static const CostTblEntry X86CostTbl[] = { // 32 or 64-bit targets
+    { ISD::ROTL,       MVT::i32,     1 },
+    { ISD::ROTL,       MVT::i16,     1 },
+    { ISD::ROTL,       MVT::i8,      1 },
+    { ISD::ROTR,       MVT::i32,     1 },
+    { ISD::ROTR,       MVT::i16,     1 },
+    { ISD::ROTR,       MVT::i8,      1 }
+  };
+
+  unsigned ISD = ISD::DELETED_NODE;
+  switch (IID) {
+  default:
+    break;
+  case Intrinsic::fshl:
+    if (Args[0] == Args[1])
+      ISD = ISD::ROTL;
+    break;
+  case Intrinsic::fshr:
+    if (Args[0] == Args[1])
+      ISD = ISD::ROTR;
+    break;
+  }
+
+  // Legalize the type.
+  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
+  MVT MTy = LT.second;
+
+  // Attempt to lookup cost.
+  if (ST->hasAVX512())
+    if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
+      return LT.first * Entry->Cost;
+
+  if (ST->hasXOP())
+    if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
+      return LT.first * Entry->Cost;
+
+  if (ST->is64Bit())
+    if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
+      return LT.first * Entry->Cost;
+
+  if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
+    return LT.first * Entry->Cost;
+
   return BaseT::getIntrinsicInstrCost(IID, RetTy, Args, FMF, VF);
 }
 

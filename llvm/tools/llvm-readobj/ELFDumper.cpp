@@ -143,7 +143,7 @@ public:
   ELFDumper(const ELFFile<ELFT> *Obj, ScopedPrinter &Writer);
 
   void printFileHeaders() override;
-  void printSections() override;
+  void printSectionHeaders() override;
   void printRelocations() override;
   void printDynamicRelocations() override;
   void printSymbols() override;
@@ -324,7 +324,7 @@ public:
   virtual void printFileHeaders(const ELFFile<ELFT> *Obj) = 0;
   virtual void printGroupSections(const ELFFile<ELFT> *Obj) = 0;
   virtual void printRelocations(const ELFFile<ELFT> *Obj) = 0;
-  virtual void printSections(const ELFFile<ELFT> *Obj) = 0;
+  virtual void printSectionHeaders(const ELFFile<ELFT> *Obj) = 0;
   virtual void printSymbols(const ELFFile<ELFT> *Obj) = 0;
   virtual void printDynamicSymbols(const ELFFile<ELFT> *Obj) = 0;
   virtual void printDynamicRelocations(const ELFFile<ELFT> *Obj) = 0;
@@ -359,7 +359,7 @@ public:
   void printFileHeaders(const ELFO *Obj) override;
   void printGroupSections(const ELFFile<ELFT> *Obj) override;
   void printRelocations(const ELFO *Obj) override;
-  void printSections(const ELFO *Obj) override;
+  void printSectionHeaders(const ELFO *Obj) override;
   void printSymbols(const ELFO *Obj) override;
   void printDynamicSymbols(const ELFO *Obj) override;
   void printDynamicRelocations(const ELFO *Obj) override;
@@ -452,7 +452,7 @@ public:
   void printGroupSections(const ELFFile<ELFT> *Obj) override;
   void printRelocations(const ELFO *Obj) override;
   void printRelocations(const Elf_Shdr *Sec, const ELFO *Obj);
-  void printSections(const ELFO *Obj) override;
+  void printSectionHeaders(const ELFO *Obj) override;
   void printSymbols(const ELFO *Obj) override;
   void printDynamicSymbols(const ELFO *Obj) override;
   void printDynamicRelocations(const ELFO *Obj) override;
@@ -1592,9 +1592,8 @@ void ELFDumper<ELFT>::printFileHeaders() {
   ELFDumperStyle->printFileHeaders(Obj);
 }
 
-template<class ELFT>
-void ELFDumper<ELFT>::printSections() {
-  ELFDumperStyle->printSections(Obj);
+template <class ELFT> void ELFDumper<ELFT>::printSectionHeaders() {
+  ELFDumperStyle->printSectionHeaders(Obj);
 }
 
 template<class ELFT>
@@ -2920,7 +2919,8 @@ std::string getSectionTypeString(unsigned Arch, unsigned Type) {
   return "";
 }
 
-template <class ELFT> void GNUStyle<ELFT>::printSections(const ELFO *Obj) {
+template <class ELFT>
+void GNUStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
   size_t SectionIndex = 0;
   std::string Number, Type, Size, Address, Offset, Flags, Link, Info, EntrySize,
       Alignment;
@@ -3711,12 +3711,10 @@ static std::string getGNUProperty(uint32_t Type, uint32_t DataSize,
 
 template <typename ELFT>
 static SmallVector<std::string, 4>
-getGNUPropertyList(ArrayRef<typename ELFT::Word> Words) {
+getGNUPropertyList(ArrayRef<uint8_t> Arr) {
   using Elf_Word = typename ELFT::Word;
 
   SmallVector<std::string, 4> Properties;
-  ArrayRef<uint8_t> Arr(reinterpret_cast<const uint8_t *>(Words.data()),
-                        Words.size());
   while (Arr.size() >= 8) {
     uint32_t Type = *reinterpret_cast<const Elf_Word *>(Arr.data());
     uint32_t DataSize = *reinterpret_cast<const Elf_Word *>(Arr.data() + 4);
@@ -3749,7 +3747,12 @@ struct GNUAbiTag {
 };
 
 template <typename ELFT>
-static GNUAbiTag getGNUAbiTag(ArrayRef<typename ELFT::Word> Words) {
+static GNUAbiTag getGNUAbiTag(ArrayRef<uint8_t> Desc) {
+  typedef typename ELFT::Word Elf_Word;
+
+  ArrayRef<Elf_Word> Words(reinterpret_cast<const Elf_Word*>(Desc.begin()),
+                           reinterpret_cast<const Elf_Word*>(Desc.end()));
+
   if (Words.size() < 4)
     return {"", "", /*IsValid=*/false};
 
@@ -3766,30 +3769,26 @@ static GNUAbiTag getGNUAbiTag(ArrayRef<typename ELFT::Word> Words) {
   return {OSName, ABI.str(), /*IsValid=*/true};
 }
 
-template <typename ELFT>
-static std::string getGNUBuildId(ArrayRef<typename ELFT::Word> Words) {
+static std::string getGNUBuildId(ArrayRef<uint8_t> Desc) {
   std::string str;
   raw_string_ostream OS(str);
-  ArrayRef<uint8_t> ID(reinterpret_cast<const uint8_t *>(Words.data()),
-                       Words.size());
-  for (const auto &B : ID)
+  for (const auto &B : Desc)
     OS << format_hex_no_prefix(B, 2);
   return OS.str();
 }
 
-template <typename ELFT>
-static StringRef getGNUGoldVersion(ArrayRef<typename ELFT::Word> Words) {
-  return StringRef(reinterpret_cast<const char *>(Words.data()), Words.size());
+static StringRef getGNUGoldVersion(ArrayRef<uint8_t> Desc) {
+  return StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
 }
 
 template <typename ELFT>
 static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
-                         ArrayRef<typename ELFT::Word> Words) {
+                         ArrayRef<uint8_t> Desc) {
   switch (NoteType) {
   default:
     return;
   case ELF::NT_GNU_ABI_TAG: {
-    const GNUAbiTag &AbiTag = getGNUAbiTag<ELFT>(Words);
+    const GNUAbiTag &AbiTag = getGNUAbiTag<ELFT>(Desc);
     if (!AbiTag.IsValid)
       OS << "    <corrupt GNU_ABI_TAG>";
     else
@@ -3797,15 +3796,15 @@ static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
     break;
   }
   case ELF::NT_GNU_BUILD_ID: {
-    OS << "    Build ID: " << getGNUBuildId<ELFT>(Words);
+    OS << "    Build ID: " << getGNUBuildId(Desc);
     break;
   }
   case ELF::NT_GNU_GOLD_VERSION:
-    OS << "    Version: " << getGNUGoldVersion<ELFT>(Words);
+    OS << "    Version: " << getGNUGoldVersion(Desc);
     break;
   case ELF::NT_GNU_PROPERTY_TYPE_0:
     OS << "    Properties:";
-    for (const auto &Property : getGNUPropertyList<ELFT>(Words))
+    for (const auto &Property : getGNUPropertyList<ELFT>(Desc))
       OS << "    " << Property << "\n";
     break;
   }
@@ -3819,22 +3818,22 @@ struct AMDGPUNote {
 
 template <typename ELFT>
 static AMDGPUNote getAMDGPUNote(uint32_t NoteType,
-                                ArrayRef<typename ELFT::Word> Words) {
+                                ArrayRef<uint8_t> Desc) {
   switch (NoteType) {
   default:
     return {"", ""};
   case ELF::NT_AMD_AMDGPU_HSA_METADATA:
     return {"HSA Metadata",
-            std::string(reinterpret_cast<const char *>(Words.data()),
-                        Words.size())};
+            std::string(reinterpret_cast<const char *>(Desc.data()),
+                        Desc.size())};
   case ELF::NT_AMD_AMDGPU_ISA:
     return {"ISA Version",
-            std::string(reinterpret_cast<const char *>(Words.data()),
-                        Words.size())};
+            std::string(reinterpret_cast<const char *>(Desc.data()),
+                        Desc.size())};
   case ELF::NT_AMD_AMDGPU_PAL_METADATA:
     const uint32_t *PALMetadataBegin =
-        reinterpret_cast<const uint32_t *>(Words.data());
-    const uint32_t *PALMetadataEnd = PALMetadataBegin + Words.size();
+        reinterpret_cast<const uint32_t *>(Desc.data());
+    const uint32_t *PALMetadataEnd = PALMetadataBegin + Desc.size();
     std::vector<uint32_t> PALMetadata(PALMetadataBegin, PALMetadataEnd);
     std::string PALMetadataString;
     auto Error = AMDGPU::PALMD::toString(PALMetadata, PALMetadataString);
@@ -3859,7 +3858,7 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
 
   auto ProcessNote = [&](const Elf_Note &Note) {
     StringRef Name = Note.getName();
-    ArrayRef<Elf_Word> Descriptor = Note.getDesc();
+    ArrayRef<uint8_t> Descriptor = Note.getDesc();
     Elf_Word Type = Note.getType();
 
     OS << "  " << Name << std::string(22 - Name.size(), ' ')
@@ -4213,7 +4212,8 @@ void LLVMStyle<ELFT>::printRelocation(const ELFO *Obj, Elf_Rela Rel,
   }
 }
 
-template <class ELFT> void LLVMStyle<ELFT>::printSections(const ELFO *Obj) {
+template <class ELFT>
+void LLVMStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
   ListScope SectionsD(W, "Sections");
 
   int SectionIndex = -1;
@@ -4480,13 +4480,13 @@ void LLVMStyle<ELFT>::printAddrsig(const ELFFile<ELFT> *Obj) {
 
 template <typename ELFT>
 static void printGNUNoteLLVMStyle(uint32_t NoteType,
-                                  ArrayRef<typename ELFT::Word> Words,
+                                  ArrayRef<uint8_t> Desc,
                                   ScopedPrinter &W) {
   switch (NoteType) {
   default:
     return;
   case ELF::NT_GNU_ABI_TAG: {
-    const GNUAbiTag &AbiTag = getGNUAbiTag<ELFT>(Words);
+    const GNUAbiTag &AbiTag = getGNUAbiTag<ELFT>(Desc);
     if (!AbiTag.IsValid) {
       W.printString("ABI", "<corrupt GNU_ABI_TAG>");
     } else {
@@ -4496,15 +4496,15 @@ static void printGNUNoteLLVMStyle(uint32_t NoteType,
     break;
   }
   case ELF::NT_GNU_BUILD_ID: {
-    W.printString("Build ID", getGNUBuildId<ELFT>(Words));
+    W.printString("Build ID", getGNUBuildId(Desc));
     break;
   }
   case ELF::NT_GNU_GOLD_VERSION:
-    W.printString("Version", getGNUGoldVersion<ELFT>(Words));
+    W.printString("Version", getGNUGoldVersion(Desc));
     break;
   case ELF::NT_GNU_PROPERTY_TYPE_0:
     ListScope D(W, "Property");
-    for (const auto &Property : getGNUPropertyList<ELFT>(Words))
+    for (const auto &Property : getGNUPropertyList<ELFT>(Desc))
       W.printString(Property);
     break;
   }
@@ -4525,7 +4525,7 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
   auto ProcessNote = [&](const Elf_Note &Note) {
     DictScope D2(W, "Note");
     StringRef Name = Note.getName();
-    ArrayRef<Elf_Word> Descriptor = Note.getDesc();
+    ArrayRef<uint8_t> Descriptor = Note.getDesc();
     Elf_Word Type = Note.getType();
 
     W.printString("Owner", Name);
