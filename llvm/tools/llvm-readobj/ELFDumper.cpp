@@ -3824,13 +3824,12 @@ static void printGNUNote(raw_ostream &OS, uint32_t NoteType,
 }
 
 struct AMDNote {
-  std::string type;
-  std::string value;
+  std::string Type;
+  std::string Value;
 };
 
 template <typename ELFT>
-static AMDNote getAMDNote(uint32_t NoteType,
-                          ArrayRef<uint8_t> Desc) {
+static AMDNote getAMDNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
   switch (NoteType) {
   default:
     return {"", ""};
@@ -3862,8 +3861,7 @@ struct AMDGPUNote {
 };
 
 template <typename ELFT>
-static AMDGPUNote getAMDGPUNote(uint32_t NoteType,
-                                ArrayRef<uint8_t> Desc) {
+static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
   switch (NoteType) {
   default:
     return {"", ""};
@@ -3872,7 +3870,7 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType,
         StringRef(reinterpret_cast<const char *>(Desc.data()), Desc.size());
     msgpack::Reader MsgPackReader(MsgPackString);
     auto OptMsgPackNodeOrErr = msgpack::Node::read(MsgPackReader);
-    if (auto Err = OptMsgPackNodeOrErr.takeError())
+    if (errorToBool(OptMsgPackNodeOrErr.takeError()))
       return {"AMDGPU Metadata", "Invalid AMDGPU Metadata"};
     auto &OptMsgPackNode = *OptMsgPackNodeOrErr;
     if (!OptMsgPackNode)
@@ -3920,8 +3918,8 @@ void GNUStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
     } else if (Name == "AMD") {
       OS << getAMDNoteTypeName(Type) << '\n';
       const AMDNote N = getAMDNote<ELFT>(Type, Descriptor);
-      if (!N.type.empty())
-        OS << "    " << N.type << ":\n        " << N.value << '\n';
+      if (!N.Type.empty())
+        OS << "    " << N.Type << ":\n        " << N.Value << '\n';
     } else if (Name == "AMDGPU") {
       OS << getAMDGPUNoteTypeName(Type) << '\n';
       const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
@@ -4591,8 +4589,8 @@ void LLVMStyle<ELFT>::printNotes(const ELFFile<ELFT> *Obj) {
     } else if (Name == "AMD") {
       W.printString("Type", getAMDNoteTypeName(Type));
       const AMDNote N = getAMDNote<ELFT>(Type, Descriptor);
-      if (!N.type.empty())
-        W.printString(N.type, N.value);
+      if (!N.Type.empty())
+        W.printString(N.Type, N.Value);
     } else if (Name == "AMDGPU") {
       W.printString("Type", getAMDGPUNoteTypeName(Type));
       const AMDGPUNote N = getAMDGPUNote<ELFT>(Type, Descriptor);
