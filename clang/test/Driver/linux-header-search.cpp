@@ -517,3 +517,15 @@
 // CHECK-OE-AARCH64: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-OE-AARCH64: "-internal-isystem" "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../include/c++/6.3.0"
 // CHECK-OE-AARCH64: "-internal-isystem" "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../include/c++/6.3.0/backward"
+
+// Check header search with Cray's gcc package.
+// RUN: %clang -no-canonical-prefixes %s -### -fsyntax-only 2>&1 \
+// RUN:     -target x86_64-unknown-linux-gnu -stdlib=libstdc++ \
+// RUN:     --sysroot=%S/Inputs/cray_suse_gcc_tree \
+// RUN:     --gcc-toolchain="%S/Inputs/cray_suse_gcc_tree/opt/gcc/8.2.0/snos" \
+// RUN:   | FileCheck --check-prefix=CHECK-CRAY-X86 %s
+
+// CHECK-CRAY-X86: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
+// CHECK-CRAY-X86: "-isysroot" "[[SYSROOT:[^"]+]]"
+// CHECK-CRAY-X86: "-internal-isystem" "[[SYSROOT]]/opt/gcc/8.2.0/snos/lib/gcc/x86_64-suse-linux/8.2.0/../../../../include/g++"
+// CHECK-CRAY-X86: "-internal-isystem" "[[SYSROOT]]/opt/gcc/8.2.0/snos/lib/gcc/x86_64-suse-linux/8.2.0/../../../../include/g++/backward"

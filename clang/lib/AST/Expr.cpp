@@ -1174,8 +1174,8 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
 
 /// getOpcodeStr - Turn an Opcode enum value into the punctuation char it
 /// corresponds to, e.g. "sizeof" or "[pre]++".
-StringRef UnaryOperator::getOpcodeStr(Opcode Opc) {
-  switch (Opc) {
+StringRef UnaryOperator::getOpcodeStr(Opcode Op) {
+  switch (Op) {
 #define UNARY_OPERATION(Name, Spelling) case UO_##Name: return Spelling;
 #include "clang/AST/OperationKinds.def"
   }

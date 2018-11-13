@@ -1876,27 +1876,27 @@ private:
   unsigned Opc : 5;
   unsigned CanOverflow : 1;
   SourceLocation Loc;
-  Stmt *Operand;
-
+  Stmt *Val;
 public:
-  UnaryOperator(Expr *Operand, Opcode Opc, QualType Ty, ExprValueKind VK,
-                ExprObjectKind OK, SourceLocation Loc, bool CanOverflow)
-      : Expr(UnaryOperatorClass, Ty, VK, OK,
-             Operand->isTypeDependent() || Ty->isDependentType(),
-             Operand->isValueDependent(),
-             (Operand->isInstantiationDependent() ||
-              Ty->isInstantiationDependentType()),
-             Operand->containsUnexpandedParameterPack()),
-        Opc(Opc), CanOverflow(CanOverflow), Loc(Loc), Operand(Operand) {}
+  UnaryOperator(Expr *input, Opcode opc, QualType type, ExprValueKind VK,
+                ExprObjectKind OK, SourceLocation l, bool CanOverflow)
+      : Expr(UnaryOperatorClass, type, VK, OK,
+             input->isTypeDependent() || type->isDependentType(),
+             input->isValueDependent(),
+             (input->isInstantiationDependent() ||
+              type->isInstantiationDependentType()),
+             input->containsUnexpandedParameterPack()),
+        Opc(opc), CanOverflow(CanOverflow), Loc(l), Val(input) {}
 
   /// Build an empty unary operator.
-  explicit UnaryOperator(EmptyShell Empty) : Expr(UnaryOperatorClass, Empty) {}
+  explicit UnaryOperator(EmptyShell Empty)
+    : Expr(UnaryOperatorClass, Empty), Opc(UO_AddrOf) { }
 
   Opcode getOpcode() const { return static_cast<Opcode>(Opc); }
   void setOpcode(Opcode O) { Opc = O; }
 
-  Expr *getSubExpr() const { return cast<Expr>(Operand); }
-  void setSubExpr(Expr *E) { Operand = E; }
+  Expr *getSubExpr() const { return cast<Expr>(Val); }
+  void setSubExpr(Expr *E) { Val = E; }
 
   /// getOperatorLoc - Return the location of the operator.
   SourceLocation getOperatorLoc() const { return Loc; }
@@ -1912,41 +1912,45 @@ public:
   void setCanOverflow(bool C) { CanOverflow = C; }
 
   /// isPostfix - Return true if this is a postfix operation, like x++.
-  static bool isPostfix(Opcode Opc) {
-    return Opc == UO_PostInc || Opc == UO_PostDec;
+  static bool isPostfix(Opcode Op) {
+    return Op == UO_PostInc || Op == UO_PostDec;
   }
 
   /// isPrefix - Return true if this is a prefix operation, like --x.
-  static bool isPrefix(Opcode Opc) {
-    return Opc == UO_PreInc || Opc == UO_PreDec;
+  static bool isPrefix(Opcode Op) {
+    return Op == UO_PreInc || Op == UO_PreDec;
   }
 
   bool isPrefix() const { return isPrefix(getOpcode()); }
   bool isPostfix() const { return isPostfix(getOpcode()); }
 
-  static bool isIncrementOp(Opcode Opc) {
-    return Opc == UO_PreInc || Opc == UO_PostInc;
+  static bool isIncrementOp(Opcode Op) {
+    return Op == UO_PreInc || Op == UO_PostInc;
   }
-  bool isIncrementOp() const { return isIncrementOp(getOpcode()); }
-
-  static bool isDecrementOp(Opcode Opc) {
-    return Opc == UO_PreDec || Opc == UO_PostDec;
+  bool isIncrementOp() const {
+    return isIncrementOp(getOpcode());
   }
-  bool isDecrementOp() const { return isDecrementOp(getOpcode()); }
 
-  static bool isIncrementDecrementOp(Opcode Opc) { return Opc <= UO_PreDec; }
+  static bool isDecrementOp(Opcode Op) {
+    return Op == UO_PreDec || Op == UO_PostDec;
+  }
+  bool isDecrementOp() const {
+    return isDecrementOp(getOpcode());
+  }
+
+  static bool isIncrementDecrementOp(Opcode Op) { return Op <= UO_PreDec; }
   bool isIncrementDecrementOp() const {
     return isIncrementDecrementOp(getOpcode());
   }
 
-  static bool isArithmeticOp(Opcode Opc) {
-    return Opc >= UO_Plus && Opc <= UO_LNot;
+  static bool isArithmeticOp(Opcode Op) {
+    return Op >= UO_Plus && Op <= UO_LNot;
   }
   bool isArithmeticOp() const { return isArithmeticOp(getOpcode()); }
 
   /// getOpcodeStr - Turn an Opcode enum value into the punctuation char it
   /// corresponds to, e.g. "sizeof" or "[pre]++"
-  static StringRef getOpcodeStr(Opcode Opc);
+  static StringRef getOpcodeStr(Opcode Op);
 
   /// Retrieve the unary opcode that corresponds to the given
   /// overloaded operator.
@@ -1957,21 +1961,21 @@ public:
   static OverloadedOperatorKind getOverloadedOperator(Opcode Opc);
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    return isPostfix() ? Operand->getBeginLoc() : getOperatorLoc();
+    return isPostfix() ? Val->getBeginLoc() : Loc;
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
-    return isPostfix() ? getOperatorLoc() : Operand->getEndLoc();
+    return isPostfix() ? Loc : Val->getEndLoc();
   }
-  SourceLocation getExprLoc() const { return getOperatorLoc(); }
+  SourceLocation getExprLoc() const LLVM_READONLY { return Loc; }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == UnaryOperatorClass;
   }
 
   // Iterators
-  child_range children() { return child_range(&Operand, &Operand + 1); }
+  child_range children() { return child_range(&Val, &Val+1); }
   const_child_range children() const {
-    return const_child_range(&Operand, &Operand + 1);
+    return const_child_range(&Val, &Val + 1);
   }
 };
 
