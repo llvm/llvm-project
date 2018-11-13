@@ -301,6 +301,9 @@ def : MipsPat<(select (i32 (seteq i32:$cond, immz)), immz, i64:$f),
 
 // Patterns used for matching away redundant sign extensions.
 // MIPS32 arithmetic instructions sign extend their result implicitly.
+def : MipsPat<(i64 (sext (i32 (mul GPR32:$src, GPR32:$src2)))),
+              (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
+              (MUL_R6 GPR32:$src, GPR32:$src2), sub_32)>, ISA_MIPS64R6;
 def : MipsPat<(i64 (sext (i32 (sdiv GPR32:$src, GPR32:$src2)))),
               (INSERT_SUBREG (i64 (IMPLICIT_DEF)),
               (DIV GPR32:$src, GPR32:$src2), sub_32)>, ISA_MIPS64R6;
