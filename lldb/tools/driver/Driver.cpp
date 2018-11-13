@@ -120,19 +120,23 @@ static constexpr OptionDefinition g_options[] = {
      "Tells the debugger to execute this one-line lldb command after any file "
      "provided on the command line has been loaded."},
     {LLDB_3_TO_5, false, "source-before-file", 'S', required_argument, 0,
-     eArgTypeFilename, "Tells the debugger to read in and execute the lldb "
-                       "commands in the given file, before any file provided "
-                       "on the command line has been loaded."},
+     eArgTypeFilename,
+     "Tells the debugger to read in and execute the lldb "
+     "commands in the given file, before any file provided "
+     "on the command line has been loaded."},
     {LLDB_3_TO_5, false, "one-line-before-file", 'O', required_argument, 0,
-     eArgTypeNone, "Tells the debugger to execute this one-line lldb command "
-                   "before any file provided on the command line has been "
-                   "loaded."},
+     eArgTypeNone,
+     "Tells the debugger to execute this one-line lldb command "
+     "before any file provided on the command line has been "
+     "loaded."},
     {LLDB_3_TO_5, false, "one-line-on-crash", 'k', required_argument, 0,
-     eArgTypeNone, "When in batch mode, tells the debugger to execute this "
-                   "one-line lldb command if the target crashes."},
+     eArgTypeNone,
+     "When in batch mode, tells the debugger to execute this "
+     "one-line lldb command if the target crashes."},
     {LLDB_3_TO_5, false, "source-on-crash", 'K', required_argument, 0,
-     eArgTypeFilename, "When in batch mode, tells the debugger to source this "
-                       "file of lldb commands if the target crashes."},
+     eArgTypeFilename,
+     "When in batch mode, tells the debugger to source this "
+     "file of lldb commands if the target crashes."},
     {LLDB_3_TO_5, false, "source-quietly", 'Q', no_argument, 0, eArgTypeNone,
      "Tells the debugger to execute this one-line lldb command before any file "
      "provided on the command line has been loaded."},
@@ -159,6 +163,9 @@ static constexpr OptionDefinition g_options[] = {
      "extensions have been implemented."},
     {LLDB_3_TO_5, false, "debug", 'd', no_argument, 0, eArgTypeNone,
      "Tells the debugger to print out extra information for debugging itself."},
+    {LLDB_3_TO_5, false, "reproducer", 'z', required_argument, 0,
+     eArgTypeFilename,
+     "Tells the debugger to use the fullpath to <path> as a reproducer."},
     {LLDB_OPT_SET_7, true, "repl", 'r', optional_argument, 0, eArgTypeNone,
      "Runs lldb in REPL mode with a stub process."},
     {LLDB_OPT_SET_7, true, "repl-language", 'R', required_argument, 0,
@@ -725,6 +732,16 @@ SBError Driver::ParseArgs(int argc, const char *argv[], FILE *out_fh,
         case 'd':
           m_option_data.m_debug_mode = true;
           break;
+
+        case 'z': {
+          SBFileSpec file(optarg);
+          if (file.Exists()) {
+            m_debugger.SetReproducerPath(optarg);
+          } else
+            error.SetErrorStringWithFormat("file specified in --reproducer "
+                                           "(-z) option doesn't exist: '%s'",
+                                           optarg);
+        } break;
 
         case 'Q':
           m_option_data.m_source_quietly = true;

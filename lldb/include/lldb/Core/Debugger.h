@@ -264,6 +264,11 @@ public:
   void SetPrompt(llvm::StringRef p);
   void SetPrompt(const char *) = delete;
 
+  llvm::StringRef GetReproducerPath() const;
+
+  void SetReproducerPath(llvm::StringRef p);
+  void SetReproducerPath(const char *) = delete;
+
   bool GetUseExternalEditor() const;
 
   bool SetUseExternalEditor(bool use_external_editor_p);

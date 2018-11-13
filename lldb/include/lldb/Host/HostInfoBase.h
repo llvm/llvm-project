@@ -93,6 +93,12 @@ public:
   /// FileSpec is filled in.
   static FileSpec GetGlobalTempDir();
 
+  /// Returns the reproducer temporary directory. This directory will **not**
+  /// be automatically cleaned up when this process exits, but might be removed
+  /// by the reproducer generator. Only the directory member of the FileSpec is
+  /// filled in.
+  static FileSpec GetReproducerTempDir();
+
   static FileSpec GetSwiftDir();
 
   //---------------------------------------------------------------------------
@@ -107,6 +113,7 @@ protected:
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static bool ComputeProcessTempFileDirectory(FileSpec &file_spec);
   static bool ComputeGlobalTempFileDirectory(FileSpec &file_spec);
+  static bool ComputeReproducerTempFileDirectory(FileSpec &file_spec);
   static bool ComputeTempFileBaseDirectory(FileSpec &file_spec);
   static bool ComputeHeaderDirectory(FileSpec &file_spec);
   static bool ComputeSystemPluginsDirectory(FileSpec &file_spec);

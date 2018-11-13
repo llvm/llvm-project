@@ -18,6 +18,7 @@ add_lldb_library(lldbCommands
   CommandObjectProcess.cpp
   CommandObjectQuit.cpp
   CommandObjectRegister.cpp
+  CommandObjectReproducer.cpp
   CommandObjectSettings.cpp
   CommandObjectSource.cpp
   CommandObjectStats.cpp
