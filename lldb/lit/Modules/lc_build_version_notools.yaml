@@ -10,7 +10,7 @@ FileHeader:
   cpusubtype:      0x80000003
   filetype:        0x00000002
   ncmds:           14
-  sizeofcmds:      744
+  sizeofcmds:      738
   flags:           0x00200085
   reserved:        0x00000000
 LoadCommands:    
@@ -119,14 +119,11 @@ LoadCommands:
     cmdsize:         24
     uuid:            8F41E140-23B9-3720-AC28-4E7AF9D159BA
   - cmd:             LC_BUILD_VERSION
-    cmdsize:         32
+    cmdsize:         24
     platform:        1
     minos:           658944
     sdk:             658944
-    ntools:          1
-    Tools:           
-      - tool:            3
-        version:         26738944
+    ntools:          0
   - cmd:             LC_SOURCE_VERSION
     cmdsize:         16
     version:         0
