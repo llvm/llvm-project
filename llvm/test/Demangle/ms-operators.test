@@ -162,7 +162,7 @@
 ; CHECK: virtual void * __cdecl Base::`vector deleting dtor'(unsigned int)
 
 ??_EBase@@G3AEPAXI@Z
-; CHECK: [thunk]: void * __thiscall Base::`vector deleting dtor'`adjustor{4}'(unsigned int)
+; CHECK: [thunk]: private: void * __thiscall Base::`vector deleting dtor'`adjustor{4}'(unsigned int)
 
 ??_F?$SomeTemplate@H@@QAEXXZ
 ; CHECK: void __thiscall SomeTemplate<int>::`default ctor closure'(void)
@@ -228,7 +228,7 @@
 ; CHECK: void __cdecl `dynamic atexit destructor for 'Foo''(void)
 
 ??__F_decisionToDFA@XPathLexer@@0V?$vector@VDFA@dfa@antlr4@@V?$allocator@VDFA@dfa@antlr4@@@std@@@std@@A@YAXXZ
-; CHECK: void __cdecl `dynamic atexit destructor for `static class std::vector<class antlr4::dfa::DFA, class std::allocator<class antlr4::dfa::DFA>> XPathLexer::_decisionToDFA''(void)
+; CHECK: void __cdecl `dynamic atexit destructor for `private: static class std::vector<class antlr4::dfa::DFA, class std::allocator<class antlr4::dfa::DFA>> XPathLexer::_decisionToDFA''(void)
 
 ??__K_deg@@YAHO@Z
 ; CHECK: int __cdecl operator ""_deg(long double)

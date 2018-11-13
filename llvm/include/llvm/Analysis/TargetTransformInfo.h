@@ -744,9 +744,9 @@ public:
   /// and the number of execution units in the CPU.
   unsigned getMaxInterleaveFactor(unsigned VF) const;
 
-  /// Collect properties of V used in cost analyzis, e.g. OP_PowerOf2.
-  OperandValueKind getOperandInfo(Value *V,
-                                  OperandValueProperties &OpProps) const;
+  /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
+  static OperandValueKind getOperandInfo(Value *V,
+                                         OperandValueProperties &OpProps);
 
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.

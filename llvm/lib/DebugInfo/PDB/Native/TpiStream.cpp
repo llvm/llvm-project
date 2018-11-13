@@ -215,6 +215,7 @@ TpiStream::findFullDeclForForwardRef(TypeIndex ForwardRefTI) const {
 }
 
 codeview::CVType TpiStream::getType(codeview::TypeIndex Index) {
+  assert(!Index.isSimple());
   return Types->getType(Index);
 }
 

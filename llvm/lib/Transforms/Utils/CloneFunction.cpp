@@ -18,11 +18,11 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
-#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
@@ -32,6 +32,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <map>
 using namespace llvm;
@@ -795,11 +796,12 @@ Loop *llvm::cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
 
 /// Duplicate non-Phi instructions from the beginning of block up to
 /// StopAt instruction into a split block between BB and its predecessor.
-BasicBlock *
-llvm::DuplicateInstructionsInSplitBetween(BasicBlock *BB, BasicBlock *PredBB,
-                                          Instruction *StopAt,
-                                          ValueToValueMapTy &ValueMapping,
-                                          DominatorTree *DT) {
+BasicBlock *llvm::DuplicateInstructionsInSplitBetween(
+    BasicBlock *BB, BasicBlock *PredBB, Instruction *StopAt,
+    ValueToValueMapTy &ValueMapping, DomTreeUpdater &DTU) {
+
+  assert(count(successors(PredBB), BB) == 1 &&
+         "There must be a single edge between PredBB and BB!");
   // We are going to have to map operands from the original BB block to the new
   // copy of the block 'NewBB'.  If there are PHI nodes in BB, evaluate them to
   // account for entry from PredBB.
@@ -807,9 +809,15 @@ llvm::DuplicateInstructionsInSplitBetween(BasicBlock *BB, BasicBlock *PredBB,
   for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI)
     ValueMapping[PN] = PN->getIncomingValueForBlock(PredBB);
 
-  BasicBlock *NewBB = SplitEdge(PredBB, BB, DT);
+  BasicBlock *NewBB = SplitEdge(PredBB, BB);
   NewBB->setName(PredBB->getName() + ".split");
   Instruction *NewTerm = NewBB->getTerminator();
+
+  // FIXME: SplitEdge does not yet take a DTU, so we include the split edge
+  //        in the update set here.
+  DTU.applyUpdates({{DominatorTree::Delete, PredBB, BB},
+                    {DominatorTree::Insert, PredBB, NewBB},
+                    {DominatorTree::Insert, NewBB, BB}});
 
   // Clone the non-phi instructions of BB into NewBB, keeping track of the
   // mapping and using it to remap operands in the cloned instructions.

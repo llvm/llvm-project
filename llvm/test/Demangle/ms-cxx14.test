@@ -16,10 +16,10 @@
 ; CHECK: <auto> __thiscall <lambda_0>::operator()(void) const
 
 ?ValueFromLambdaWithLocalType@@3ULocalType@?1???R<lambda_0>@@QBE?A?<auto>@@XZ@A
-; CHECK: struct `<auto> __thiscall <lambda_0>::operator()(void) const'::`2'::LocalType ValueFromLambdaWithLocalType
+; CHECK: struct `public: <auto> __thiscall <lambda_0>::operator()(void) const'::`2'::LocalType ValueFromLambdaWithLocalType
 
 ?ValueFromTemplateFuncionWithLocalLambda@@3ULocalType@?2???R<lambda_1>@?0???$TemplateFuncionWithLocalLambda@H@@YA?A?<auto>@@H@Z@QBE?A?3@XZ@A
-; CHECK: struct `<auto> __thiscall `<auto> __cdecl TemplateFuncionWithLocalLambda<int>(int)'::`1'::<lambda_1>::operator()(void) const'::`3'::LocalType ValueFromTemplateFuncionWithLocalLambda
+; CHECK: struct `public: <auto> __thiscall `<auto> __cdecl TemplateFuncionWithLocalLambda<int>(int)'::`1'::<lambda_1>::operator()(void) const'::`3'::LocalType ValueFromTemplateFuncionWithLocalLambda
 
 ??$TemplateFuncionWithLocalLambda@H@@YA?A?<auto>@@H@Z
 ; CHECK: <auto> __cdecl TemplateFuncionWithLocalLambda<int>(int)

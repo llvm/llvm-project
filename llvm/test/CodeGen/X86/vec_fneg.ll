@@ -127,3 +127,18 @@ define <4 x float> @fsub0_undef_elts_v4f32(<4 x float> %x) {
   ret <4 x float> %r
 }
 
+define <4 x float> @fneg(<4 x float> %Q) nounwind {
+; X32-SSE-LABEL: fneg:
+; X32-SSE:       # %bb.0:
+; X32-SSE-NEXT:    xorps {{\.LCPI.*}}, %xmm0
+; X32-SSE-NEXT:    retl
+;
+; X64-SSE-LABEL: fneg:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    xorps {{.*}}(%rip), %xmm0
+; X64-SSE-NEXT:    retq
+  %tmp = fneg <4 x float> %Q
+  ret <4 x float> %tmp
+}
+
+

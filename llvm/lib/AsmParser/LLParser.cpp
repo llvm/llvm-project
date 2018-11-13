@@ -3295,7 +3295,31 @@ bool LLParser::ParseValID(ValID &ID, PerFunctionState *PFS) {
     ID.Kind = ValID::t_Constant;
     return false;
   }
-
+ 
+  // Unary Operators.
+  case lltok::kw_fneg: {
+    unsigned Opc = Lex.getUIntVal();
+    Constant *Val;
+    Lex.Lex();
+    if (ParseToken(lltok::lparen, "expected '(' in unary constantexpr") ||
+        ParseGlobalTypeAndValue(Val) ||
+        ParseToken(lltok::rparen, "expected ')' in unary constantexpr"))
+      return true;
+    
+    // Check that the type is valid for the operator.
+    switch (Opc) {
+    case Instruction::FNeg:
+      if (!Val->getType()->isFPOrFPVectorTy())
+        return Error(ID.Loc, "constexpr requires fp operands");
+      break;
+    default: llvm_unreachable("Unknown unary operator!");
+    }
+    unsigned Flags = 0;
+    Constant *C = ConstantExpr::get(Opc, Val, Flags);
+    ID.ConstantVal = C;
+    ID.Kind = ValID::t_Constant;
+    return false;
+  }
   // Binary Operators.
   case lltok::kw_add:
   case lltok::kw_fadd:
@@ -4473,7 +4497,8 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(dwoId, MDUnsignedField, );                                          \
   OPTIONAL(splitDebugInlining, MDBoolField, = true);                           \
   OPTIONAL(debugInfoForProfiling, MDBoolField, = false);                       \
-  OPTIONAL(nameTableKind, NameTableKindField, );
+  OPTIONAL(nameTableKind, NameTableKindField, );                               \
+  OPTIONAL(debugBaseAddress, MDBoolField, = false);
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
@@ -4481,7 +4506,8 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
       Context, language.Val, file.Val, producer.Val, isOptimized.Val, flags.Val,
       runtimeVersion.Val, splitDebugFilename.Val, emissionKind.Val, enums.Val,
       retainedTypes.Val, globals.Val, imports.Val, macros.Val, dwoId.Val,
-      splitDebugInlining.Val, debugInfoForProfiling.Val, nameTableKind.Val);
+      splitDebugInlining.Val, debugInfoForProfiling.Val, nameTableKind.Val,
+      debugBaseAddress.Val);
   return false;
 }
 
@@ -5492,6 +5518,16 @@ int LLParser::ParseInstruction(Instruction *&Inst, BasicBlock *BB,
   case lltok::kw_catchswitch: return ParseCatchSwitch(Inst, PFS);
   case lltok::kw_catchpad:    return ParseCatchPad(Inst, PFS);
   case lltok::kw_cleanuppad:  return ParseCleanupPad(Inst, PFS);
+  // Unary Operators.
+  case lltok::kw_fneg: {
+    FastMathFlags FMF = EatFastMathFlagsIfPresent();
+    int Res = ParseUnaryOp(Inst, PFS, KeywordVal, 2);
+    if (Res != 0)
+      return Res;
+    if (FMF.any())
+      Inst->setFastMathFlags(FMF);
+    return false;
+  }
   // Binary Operators.
   case lltok::kw_add:
   case lltok::kw_sub:
@@ -6060,6 +6096,43 @@ bool LLParser::ParseCleanupPad(Instruction *&Inst, PerFunctionState &PFS) {
     return true;
 
   Inst = CleanupPadInst::Create(ParentPad, Args);
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
+// Unary Operators.
+//===----------------------------------------------------------------------===//
+
+/// ParseUnaryOp
+///  ::= UnaryOp TypeAndValue ',' Value
+///
+/// If OperandType is 0, then any FP or integer operand is allowed.  If it is 1,
+/// then any integer operand is allowed, if it is 2, any fp operand is allowed.
+bool LLParser::ParseUnaryOp(Instruction *&Inst, PerFunctionState &PFS,
+                            unsigned Opc, unsigned OperandType) {
+  LocTy Loc; Value *LHS;
+  if (ParseTypeAndValue(LHS, Loc, PFS))
+    return true;
+
+  bool Valid;
+  switch (OperandType) {
+  default: llvm_unreachable("Unknown operand type!");
+  case 0: // int or FP.
+    Valid = LHS->getType()->isIntOrIntVectorTy() ||
+            LHS->getType()->isFPOrFPVectorTy();
+    break;
+  case 1: 
+    Valid = LHS->getType()->isIntOrIntVectorTy(); 
+    break;
+  case 2: 
+    Valid = LHS->getType()->isFPOrFPVectorTy(); 
+    break;
+  }
+
+  if (!Valid)
+    return Error(Loc, "invalid operand type for instruction");
+
+  Inst = UnaryOperator::Create((Instruction::UnaryOps)Opc, LHS);
   return false;
 }
 
@@ -7642,8 +7715,7 @@ bool LLParser::ParseVariableSummary(std::string Name, GlobalValue::GUID GUID,
   if (ParseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  auto GS = llvm::make_unique<GlobalVarSummary>(
-      GVFlags, GlobalVarSummary::GVarFlags(), std::move(Refs));
+  auto GS = llvm::make_unique<GlobalVarSummary>(GVFlags, std::move(Refs));
 
   GS->setModulePath(ModulePath);
 

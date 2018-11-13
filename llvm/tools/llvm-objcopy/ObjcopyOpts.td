@@ -76,7 +76,8 @@ defm rename_section
 defm redefine_symbol
     : Eq<"redefine-sym", "Change the name of a symbol old to new">,
       MetaVarName<"old=new">;
-defm keep : Eq<"keep", "Keep <section>">, MetaVarName<"section">;
+defm keep_section : Eq<"keep-section", "Keep <section>">,
+                    MetaVarName<"section">;
 defm only_keep : Eq<"only-keep", "Remove all but <section>">,
                  MetaVarName<"section">;
 def j : JoinedOrSeparate<["-"], "j">, Alias<only_keep>;

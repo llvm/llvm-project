@@ -270,6 +270,7 @@ enum Kind {
   kw_umin,
 
   // Instruction Opcodes (Opcode in UIntVal).
+  kw_fneg,
   kw_add,
   kw_fadd,
   kw_sub,

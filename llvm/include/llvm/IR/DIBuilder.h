@@ -145,7 +145,8 @@ namespace llvm {
                       uint64_t DWOId = 0, bool SplitDebugInlining = true,
                       bool DebugInfoForProfiling = false,
                       DICompileUnit::DebugNameTableKind NameTableKind =
-                          DICompileUnit::DebugNameTableKind::Default);
+                          DICompileUnit::DebugNameTableKind::Default,
+                      bool RangesBaseAddress = false);
 
     /// Create a file descriptor to hold debugging information for a file.
     /// \param Filename  File name.

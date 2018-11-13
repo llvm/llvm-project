@@ -54,6 +54,8 @@ extern "C" {
  * @{
  */
 
+/// External users depend on the following values being stable. It is not safe
+/// to reorder them.
 typedef enum {
   /* Terminator Instructions */
   LLVMRet            = 1,
@@ -63,6 +65,9 @@ typedef enum {
   LLVMInvoke         = 5,
   /* removed 6 due to API changes */
   LLVMUnreachable    = 7,
+
+  /* Standard Unary Operators */
+  LLVMFNeg           = 66,
 
   /* Standard Binary Operators */
   LLVMAdd            = 8,

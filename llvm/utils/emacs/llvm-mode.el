@@ -62,7 +62,7 @@
    `(,(regexp-opt '("add" "sub" "mul" "sdiv" "udiv" "urem" "srem" "and" "or" "xor"
                     "setne" "seteq" "setlt" "setgt" "setle" "setge") 'symbols) . font-lock-keyword-face)
    ;; Floating-point operators
-   `(,(regexp-opt '("fadd" "fsub" "fmul" "fdiv" "frem") 'symbols) . font-lock-keyword-face)
+   `(,(regexp-opt '("fadd" "fsub" "fneg" "fmul" "fdiv" "frem") 'symbols) . font-lock-keyword-face)
    ;; Special instructions
    `(,(regexp-opt '("phi" "tail" "call" "select" "to" "shl" "lshr" "ashr" "fcmp" "icmp" "va_arg" "landingpad") 'symbols) . font-lock-keyword-face)
    ;; Control instructions

@@ -6,10 +6,10 @@
 ; OPT-LABEL: define amdgpu_kernel void @float4_alloca_store4
 
 ; GFX-NOT: buffer_
-; GCN:  v_readfirstlane_b32
-; GFX8: v_movrels_b32
-; GFX9: s_set_gpr_idx_on
-; GFX9: s_set_gpr_idx_off
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32_e32 [[RES:v[0-9]+]], 4.0,
+; GCN: store_dword v[{{[0-9:]+}}], [[RES]]
 
 ; OPT:  %gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(5)* %alloca, i32 0, i32 %sel2
 ; OPT:  store <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>, <4 x float> addrspace(5)* %alloca, align 4

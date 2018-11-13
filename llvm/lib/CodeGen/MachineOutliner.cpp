@@ -742,7 +742,7 @@ struct InstructionMapper {
   /// \param TII \p TargetInstrInfo for the function.
   void convertToUnsignedVec(MachineBasicBlock &MBB,
                             const TargetInstrInfo &TII) {
-    unsigned Flags;
+    unsigned Flags = 0;
 
     // Don't even map in this case.
     if (!TII.isMBBSafeToOutlineFrom(MBB, Flags))

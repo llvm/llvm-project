@@ -385,10 +385,10 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
     };
   }
 
-  if (!Config.Keep.empty()) {
+  if (!Config.KeepSection.empty()) {
     RemovePred = [&Config, RemovePred](const SectionBase &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      if (is_contained(Config.Keep, Sec.Name))
+      if (is_contained(Config.KeepSection, Sec.Name))
         return false;
       // Otherwise defer to RemovePred.
       return RemovePred(Sec);
