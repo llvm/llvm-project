@@ -88,13 +88,13 @@ vaddps  %ymm1, %ymm1, %ymm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.52   2.48    -      -      -      -     3.00   3.00    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.01   2.99    -      -      -      -     3.00   3.00    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm0, %ymm0, %ymm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.99   0.01    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm0, %ymm0, %ymm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -     0.98   1.02    -      -      -      -      -      -      -     vxorps	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.02   0.98    -      -      -      -     0.02   1.98    -      -      -      -      -      -      -     vblendps	$2, %ymm1, %ymm2, %ymm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.02   1.98    -      -      -      -     0.02   1.98    -      -      -      -      -      -      -     vblendps	$2, %ymm1, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
@@ -173,13 +173,13 @@ vaddps  %ymm1, %ymm1, %ymm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.52   2.48    -      -      -      -     3.00   3.00    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.01   2.99    -      -      -      -     3.00   3.00    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddpd	%ymm0, %ymm0, %ymm1
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.99   0.01    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddpd	%ymm0, %ymm0, %ymm1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -     0.98   1.02    -      -      -      -      -      -      -     vxorpd	%ymm1, %ymm1, %ymm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.02   0.98    -      -      -      -     0.02   1.98    -      -      -      -      -      -      -     vblendpd	$2, %ymm1, %ymm2, %ymm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.02   1.98    -      -      -      -     0.02   1.98    -      -      -      -      -      -      -     vblendpd	$2, %ymm1, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
@@ -257,12 +257,12 @@ vaddps  %ymm1, %ymm1, %ymm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -      -     2.00   2.00    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   1.00    -      -      -      -     2.00   2.00    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     2.00    -      -      -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -336,12 +336,12 @@ vaddps  %ymm1, %ymm1, %ymm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.50   1.50    -      -      -      -     2.00   2.00    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   1.00    -      -      -      -     2.00   2.00    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -      -     2.00    -      -      -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00    -      -      -      -      -      -     2.00    -      -      -      -      -      -      -     vandnps	%ymm2, %ymm2, %ymm3
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     01
@@ -415,12 +415,12 @@ vaddps  %ymm1, %ymm1, %ymm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     2.00   1.00    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00   1.00    -      -      -      -     2.00   1.00    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -      -      -      -     vperm2f128	$136, %ymm0, %ymm0, %ymm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm1, %ymm1, %ymm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm1, %ymm1, %ymm0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789

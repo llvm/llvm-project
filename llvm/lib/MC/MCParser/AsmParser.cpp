@@ -675,6 +675,7 @@ namespace llvm {
 extern MCAsmParserExtension *createDarwinAsmParser();
 extern MCAsmParserExtension *createELFAsmParser();
 extern MCAsmParserExtension *createCOFFAsmParser();
+extern MCAsmParserExtension *createWasmAsmParser();
 
 } // end namespace llvm
 
@@ -705,10 +706,7 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
     PlatformParser.reset(createELFAsmParser());
     break;
   case MCObjectFileInfo::IsWasm:
-    // TODO: WASM will need its own MCAsmParserExtension implementation, but
-    // for now we can re-use the ELF one, since the directives can be the
-    // same for now.
-    PlatformParser.reset(createELFAsmParser());
+    PlatformParser.reset(createWasmAsmParser());
     break;
   }
 
@@ -3921,7 +3919,7 @@ bool AsmParser::parseDirectiveCFIStartProc() {
         parseToken(AsmToken::EndOfStatement))
       return addErrorSuffix(" in '.cfi_startproc' directive");
   }
-  
+
   // TODO(kristina): Deal with a corner case of incorrect diagnostic context
   // being produced if this directive is emitted as part of preprocessor macro
   // expansion which can *ONLY* happen if Clang's cc1as is the API consumer.

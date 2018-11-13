@@ -263,20 +263,13 @@ MCSymbol *GCMachineCodeAnalysis::InsertLabel(MachineBasicBlock &MBB,
 }
 
 void GCMachineCodeAnalysis::VisitCallPoint(MachineBasicBlock::iterator CI) {
-  // Find the return address (next instruction), too, so as to bracket the call
-  // instruction.
+  // Find the return address (next instruction), since that's what will be on
+  // the stack when the call is suspended and we need to inspect the stack.
   MachineBasicBlock::iterator RAI = CI;
   ++RAI;
 
-  if (FI->getStrategy().needsSafePoint(GC::PreCall)) {
-    MCSymbol *Label = InsertLabel(*CI->getParent(), CI, CI->getDebugLoc());
-    FI->addSafePoint(GC::PreCall, Label, CI->getDebugLoc());
-  }
-
-  if (FI->getStrategy().needsSafePoint(GC::PostCall)) {
-    MCSymbol *Label = InsertLabel(*CI->getParent(), RAI, CI->getDebugLoc());
-    FI->addSafePoint(GC::PostCall, Label, CI->getDebugLoc());
-  }
+  MCSymbol *Label = InsertLabel(*CI->getParent(), RAI, CI->getDebugLoc());
+  FI->addSafePoint(Label, CI->getDebugLoc());
 }
 
 void GCMachineCodeAnalysis::FindSafePoints(MachineFunction &MF) {

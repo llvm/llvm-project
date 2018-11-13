@@ -501,6 +501,18 @@ public:
     PipelineStartEPCallbacks.push_back(C);
   }
 
+  /// Register a callback for a default optimizer pipeline extension point
+  ///
+  /// This extension point allows adding optimizations at the very end of the
+  /// function optimization pipeline. A key difference between this and the
+  /// legacy PassManager's OptimizerLast callback is that this extension point
+  /// is not triggered at O0. Extensions to the O0 pipeline should append their
+  /// passes to the end of the overall pipeline.
+  void registerOptimizerLastEPCallback(
+      const std::function<void(FunctionPassManager &, OptimizationLevel)> &C) {
+    OptimizerLastEPCallbacks.push_back(C);
+  }
+
   /// Register a callback for parsing an AliasAnalysis Name to populate
   /// the given AAManager \p AA
   void registerParseAACallback(
@@ -614,6 +626,8 @@ private:
       CGSCCOptimizerLateEPCallbacks;
   SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
       VectorizerStartEPCallbacks;
+  SmallVector<std::function<void(FunctionPassManager &, OptimizationLevel)>, 2>
+      OptimizerLastEPCallbacks;
   // Module callbacks
   SmallVector<std::function<void(ModulePassManager &)>, 2>
       PipelineStartEPCallbacks;

@@ -344,15 +344,14 @@ define <16 x i8> @insert_v16i8_x123456789ABCDEx(<16 x i8> %a) {
 ;
 ; SSSE3-LABEL: insert_v16i8_x123456789ABCDEx:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = zero,xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 ; SSSE3-NEXT:    movl $255, %eax
 ; SSSE3-NEXT:    movd %eax, %xmm1
 ; SSSE3-NEXT:    movdqa %xmm1, %xmm2
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSSE3-NEXT:    por %xmm2, %xmm0
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14],zero
+; SSSE3-NEXT:    palignr {{.*#+}} xmm2 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm2[0]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm2 = xmm2[15,0,1,2,3,4,5,6,7,8,9,10,11,12,13],zero
 ; SSSE3-NEXT:    pslldq {{.*#+}} xmm1 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm1[0]
-; SSSE3-NEXT:    por %xmm1, %xmm0
+; SSSE3-NEXT:    por %xmm2, %xmm1
+; SSSE3-NEXT:    movdqa %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: insert_v16i8_x123456789ABCDEx:
@@ -420,22 +419,20 @@ define <32 x i8> @insert_v32i8_x123456789ABCDEzGHIJKLMNOPQRSTxx(<32 x i8> %a) {
 ;
 ; SSSE3-LABEL: insert_v32i8_x123456789ABCDEzGHIJKLMNOPQRSTxx:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = zero,xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 ; SSSE3-NEXT:    movl $255, %eax
-; SSSE3-NEXT:    movd %eax, %xmm2
-; SSSE3-NEXT:    movdqa %xmm2, %xmm3
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; SSSE3-NEXT:    por %xmm3, %xmm0
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,128]
-; SSSE3-NEXT:    pshufb %xmm3, %xmm0
-; SSSE3-NEXT:    movdqa %xmm2, %xmm4
-; SSSE3-NEXT:    pslldq {{.*#+}} xmm4 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm4[0]
-; SSSE3-NEXT:    por %xmm4, %xmm0
+; SSSE3-NEXT:    movd %eax, %xmm3
+; SSSE3-NEXT:    movdqa %xmm3, %xmm2
+; SSSE3-NEXT:    palignr {{.*#+}} xmm2 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],xmm2[0]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm2 = xmm2[15,0,1,2,3,4,5,6,7,8,9,10,11,12,13],zero
+; SSSE3-NEXT:    movdqa %xmm3, %xmm0
+; SSSE3-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0]
+; SSSE3-NEXT:    por %xmm0, %xmm2
 ; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,8,9,10,11,12,13],zero,xmm1[15]
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm2[0],zero
-; SSSE3-NEXT:    por %xmm2, %xmm1
-; SSSE3-NEXT:    pshufb %xmm3, %xmm1
-; SSSE3-NEXT:    por %xmm4, %xmm1
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm3 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,xmm3[0],zero
+; SSSE3-NEXT:    por %xmm3, %xmm1
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14],zero
+; SSSE3-NEXT:    por %xmm0, %xmm1
+; SSSE3-NEXT:    movdqa %xmm2, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: insert_v32i8_x123456789ABCDEzGHIJKLMNOPQRSTxx:

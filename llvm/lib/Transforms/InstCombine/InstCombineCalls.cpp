@@ -3902,8 +3902,11 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
         return replaceInstUsesWith(*II, ConstantPointerNull::get(PT));
 
       // isKnownNonNull -> nonnull attribute
-      if (isKnownNonZero(DerivedPtr, DL, 0, &AC, II, &DT))
+      if (!II->hasRetAttr(Attribute::NonNull) &&
+          isKnownNonZero(DerivedPtr, DL, 0, &AC, II, &DT)) {
         II->addAttribute(AttributeList::ReturnIndex, Attribute::NonNull);
+        return II;
+      }
     }
 
     // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))

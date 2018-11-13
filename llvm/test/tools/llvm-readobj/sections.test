@@ -1,21 +1,28 @@
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.coff-i386 \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.coff-i386 \
 RUN:   | FileCheck %s -check-prefix COFF
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.elf-i386 \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-i386 \
 RUN:   | FileCheck %s -check-prefix ELF
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.elf-mipsel \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-mipsel \
 RUN:   | FileCheck %s -check-prefix ELF-MIPSEL
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-i386 \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-i386 \
 RUN:   | FileCheck %s -check-prefix MACHO-I386
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-x86-64 \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-x86-64 \
 RUN:   | FileCheck %s -check-prefix MACHO-X86-64
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-ppc \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-ppc \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-ppc64 \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-ppc64 \
 RUN:   | FileCheck %s -check-prefix MACHO-PPC64
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.macho-arm \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.macho-arm \
 RUN:   | FileCheck %s -check-prefix MACHO-ARM
-RUN: llvm-readobj -s %p/Inputs/trivial.obj.wasm \
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.wasm \
 RUN:   | FileCheck %s -check-prefix WASM
+
+# Check flag aliases produce identical output.
+RUN: llvm-readobj --sections %p/Inputs/trivial.obj.elf-i386 > %t.sections
+RUN: llvm-readobj -S %p/Inputs/trivial.obj.elf-i386 > %t.uppers
+RUN: cmp %t.sections %t.uppers
+RUN: llvm-readobj -s %p/Inputs/trivial.obj.elf-i386 > %t.lowers
+RUN: cmp %t.sections %t.lowers
 
 COFF:      Sections [
 COFF-NEXT:   Section {

@@ -79,7 +79,7 @@ public:
       : ObjDumper(Writer), Obj(Obj), Writer(Writer), Types(100) {}
 
   void printFileHeaders() override;
-  void printSections() override;
+  void printSectionHeaders() override;
   void printRelocations() override;
   void printSymbols() override;
   void printDynamicSymbols() override;
@@ -959,7 +959,7 @@ void COFFDumper::printCodeViewSymbolSection(StringRef SectionName,
   StringMap<StringRef> FunctionLineTables;
 
   ListScope D(W, "CodeViewDebugInfo");
-  // Print the section to allow correlation with printSections.
+  // Print the section to allow correlation with printSectionHeaders.
   W.printNumber("Section", SectionName, Obj->getSectionID(Section));
 
   uint32_t Magic;
@@ -1279,7 +1279,7 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
   W.flush();
 }
 
-void COFFDumper::printSections() {
+void COFFDumper::printSectionHeaders() {
   ListScope SectionsD(W, "Sections");
   int SectionNumber = 0;
   for (const SectionRef &Sec : Obj->sections()) {

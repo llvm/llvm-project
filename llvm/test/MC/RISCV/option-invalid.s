@@ -13,5 +13,5 @@
 # CHECK: error: unexpected token, expected end of statement
 .option rvc foo
 
-# CHECK: warning: unknown option, expected 'rvc' or 'norvc'
+# CHECK: warning: unknown option, expected 'rvc', 'norvc', 'relax' or 'norelax'
 .option bar

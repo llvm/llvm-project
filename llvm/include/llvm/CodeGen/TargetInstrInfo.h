@@ -1635,10 +1635,11 @@ public:
         "Target didn't implement TargetInstrInfo::getOutliningType!");
   }
 
-  /// Returns target-defined flags defining properties of the MBB for
-  /// the outliner.
-  virtual unsigned getMachineOutlinerMBBFlags(MachineBasicBlock &MBB) const {
-    return 0x0;
+  /// Optional target hook that returns true if \p MBB is safe to outline from,
+  /// and returns any target-specific information in \p Flags.
+  virtual bool isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
+                                      unsigned &Flags) const {
+    return true;
   }
 
   /// Insert a custom frame for outlined functions.

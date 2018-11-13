@@ -33,7 +33,7 @@ public:
   virtual ~ObjDumper();
 
   virtual void printFileHeaders() = 0;
-  virtual void printSections() = 0;
+  virtual void printSectionHeaders() = 0;
   virtual void printRelocations() = 0;
   virtual void printSymbols() = 0;
   virtual void printDynamicSymbols() = 0;

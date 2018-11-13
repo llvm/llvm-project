@@ -53,12 +53,12 @@ vbroadcastss (%rax), %ymm0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -     1.00    -      -      -     0.50   0.50    -     2.00   2.00    -      -      -      -     1.00   1.00    -      -      -      -     1.00    -      -
+# CHECK-NEXT: 0.50   0.50    -      -      -     0.50   0.50    -     2.00   2.00    -      -      -      -     1.00   1.00    -      -      -     0.50   0.50    -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -     0.50   0.50    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     leaq	8(%rsp,%rdi,2), %rax
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     2.00   2.00    -      -      -      -     1.00   1.00    -      -      -      -     1.00    -      -     vbroadcastss	(%rax), %ymm0
+# CHECK-NEXT: 0.50   0.50    -      -      -      -      -      -     2.00   2.00    -      -      -      -     1.00   1.00    -      -      -     0.50   0.50    -      -     vbroadcastss	(%rax), %ymm0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     012
