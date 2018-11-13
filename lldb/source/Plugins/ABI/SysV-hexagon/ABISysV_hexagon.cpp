@@ -1016,11 +1016,8 @@ size_t ABISysV_hexagon::GetRedZoneSize() const { return 0; }
 
 ABISP
 ABISysV_hexagon::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
-  static ABISP g_abi_sp;
   if (arch.GetTriple().getArch() == llvm::Triple::hexagon) {
-    if (!g_abi_sp)
-      g_abi_sp.reset(new ABISysV_hexagon(process_sp));
-    return g_abi_sp;
+    return ABISP(new ABISysV_hexagon(process_sp));
   }
   return ABISP();
 }
