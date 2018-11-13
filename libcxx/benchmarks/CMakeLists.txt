@@ -11,6 +11,7 @@ set(BENCHMARK_LIBCXX_COMPILE_FLAGS
     -isystem ${LIBCXX_SOURCE_DIR}/include
     -L${LIBCXX_LIBRARY_DIR}
     -Wl,-rpath,${LIBCXX_LIBRARY_DIR}
+    ${SANITIZER_FLAGS}
     )
 if (DEFINED LIBCXX_CXX_ABI_LIBRARY_PATH)
   list(APPEND BENCHMARK_LIBCXX_COMPILE_FLAGS
@@ -87,11 +88,13 @@ set(BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS
     -nostdinc++
     -isystem ${LIBCXX_SOURCE_DIR}/include
     ${BENCHMARK_TEST_COMPILE_FLAGS}
+    ${SANITIZER_FLAGS}
     -Wno-user-defined-literals
 )
 set(BENCHMARK_TEST_LIBCXX_LINK_FLAGS
     -nodefaultlibs
     -L${BENCHMARK_LIBCXX_INSTALL}/lib/
+    ${SANITIZER_FLAGS}
 )
 set(BENCHMARK_TEST_NATIVE_COMPILE_FLAGS
   ${BENCHMARK_NATIVE_TARGET_FLAGS}
@@ -106,8 +109,12 @@ split_list(BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS)
 split_list(BENCHMARK_TEST_LIBCXX_LINK_FLAGS)
 split_list(BENCHMARK_TEST_NATIVE_COMPILE_FLAGS)
 split_list(BENCHMARK_TEST_NATIVE_LINK_FLAGS)
+
+set(libcxx_benchmark_targets)
+
 macro(add_benchmark_test name source_file)
   set(libcxx_target ${name}_libcxx)
+  list(APPEND libcxx_benchmark_targets ${libcxx_target})
   add_executable(${libcxx_target} EXCLUDE_FROM_ALL ${source_file})
   add_dependencies(${libcxx_target} cxx google-benchmark-libcxx)
   add_dependencies(cxx-benchmarks ${libcxx_target})
@@ -123,6 +130,9 @@ macro(add_benchmark_test name source_file)
     target_link_libraries(${libcxx_target} cxx_filesystem)
   endif()
   target_link_libraries(${libcxx_target} -lbenchmark)
+  if (LLVM_USE_SANITIZER)
+    target_link_libraries(${libcxx_target} -ldl)
+  endif()
   set_target_properties(${libcxx_target}
     PROPERTIES
           OUTPUT_NAME "${name}.libcxx.out"
@@ -168,4 +178,17 @@ foreach(test_path ${BENCHMARK_TESTS})
     set(${test_name}_REPORTED ON CACHE INTERNAL "")
   endif()
   add_benchmark_test(${test_name} ${test_file})
+endforeach()
+
+
+add_custom_target(cxx-benchmark-unittests)
+foreach(libcxx_tg ${libcxx_benchmark_targets})
+  message("Adding test ${libcxx_tg}")
+  # Add a target that runs the benchmark for the smallest possible time, simply so we get test
+  # and sanitizer coverage on the targets.
+  add_custom_target(${libcxx_tg}_test
+          COMMAND ${libcxx_tg} --benchmark_min_time=0.01
+          COMMENT "Running test ${libcxx_tg}"
+          )
+  add_dependencies(cxx-benchmark-unittests ${libcxx_tg}_test)
 endforeach()
