@@ -5165,8 +5165,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
                                             CantGuaranteeValueAcrossCall),
                              RepeatedSequenceLocs.end());
 
-  // If the sequence is empty, we're done.
-  if (RepeatedSequenceLocs.empty())
+  // If the sequence doesn't have enough candidates left, then we're done.
+  if (RepeatedSequenceLocs.size() < 2)
     return outliner::OutlinedFunction();
 
   // At this point, we have only "safe" candidates to outline. Figure out

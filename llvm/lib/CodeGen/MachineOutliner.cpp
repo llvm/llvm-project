@@ -1127,8 +1127,9 @@ unsigned MachineOutliner::findCandidates(
     OutlinedFunction OF =
         TII->getOutliningCandidateInfo(CandidatesForRepeatedSeq);
 
-    // If we deleted every candidate, then there's nothing to outline.
-    if (OF.Candidates.empty())
+    // If we deleted too many candidates, then there's nothing worth outlining.
+    // FIXME: This should take target-specified instruction sizes into account.
+    if (OF.Candidates.size() < 2)
       continue;
 
     std::vector<unsigned> Seq;
