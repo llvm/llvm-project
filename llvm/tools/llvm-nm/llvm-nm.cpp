@@ -38,6 +38,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <vector>
 
@@ -196,7 +197,7 @@ std::string ToolName;
 
 static void error(Twine Message, Twine Path = Twine()) {
   HadError = true;
-  errs() << ToolName << ": " << Path << ": " << Message << ".\n";
+  WithColor::error(errs(), ToolName) << Path << ": " << Message << ".\n";
 }
 
 static bool error(std::error_code EC, Twine Path = Twine()) {
@@ -209,11 +210,11 @@ static bool error(std::error_code EC, Twine Path = Twine()) {
 
 // This version of error() prints the archive name and member name, for example:
 // "libx.a(foo.o)" after the ToolName before the error message.  It sets
-// HadError but returns allowing the code to move on to other archive members. 
+// HadError but returns allowing the code to move on to other archive members.
 static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
                   StringRef ArchitectureName = StringRef()) {
   HadError = true;
-  errs() << ToolName << ": " << FileName;
+  WithColor::error(errs(), ToolName) << FileName;
 
   Expected<StringRef> NameOrErr = C.getName();
   // TODO: if we have a error getting the name then it would be nice to print
@@ -230,7 +231,7 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
 
   std::string Buf;
   raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS, "");
+  logAllUnhandledErrors(std::move(E), OS);
   OS.flush();
   errs() << " " << Buf << "\n";
 }
@@ -238,18 +239,18 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
 // This version of error() prints the file name and which architecture slice it
 // is from, for example: "foo.o (for architecture i386)" after the ToolName
 // before the error message.  It sets HadError but returns allowing the code to
-// move on to other architecture slices. 
+// move on to other architecture slices.
 static void error(llvm::Error E, StringRef FileName,
                   StringRef ArchitectureName = StringRef()) {
   HadError = true;
-  errs() << ToolName << ": " << FileName;
+  WithColor::error(errs(), ToolName) << FileName;
 
   if (!ArchitectureName.empty())
     errs() << " (for architecture " << ArchitectureName << ") ";
 
   std::string Buf;
   raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS, "");
+  logAllUnhandledErrors(std::move(E), OS);
   OS.flush();
   errs() << " " << Buf << "\n";
 }
@@ -1029,8 +1030,7 @@ static char getSymbolNMTypeChar(MachOObjectFile &Obj, basic_symbol_iterator I) {
     StringRef SectionName;
     Obj.getSectionName(Ref, SectionName);
     StringRef SegmentName = Obj.getSectionFinalSegmentName(Ref);
-    if (Obj.is64Bit() && 
-        Obj.getHeader64().filetype == MachO::MH_KEXT_BUNDLE &&
+    if (Obj.is64Bit() && Obj.getHeader64().filetype == MachO::MH_KEXT_BUNDLE &&
         SegmentName == "__TEXT_EXEC" && SectionName == "__text")
       return 't';
     if (SegmentName == "__TEXT" && SectionName == "__text")
@@ -1606,7 +1606,7 @@ dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
       uint64_t lc_main_offset = UINT64_MAX;
       for (const auto &Command : MachO->load_commands()) {
         if (Command.C.cmd == MachO::LC_FUNCTION_STARTS) {
-          // We found a function starts segment, parse the addresses for 
+          // We found a function starts segment, parse the addresses for
           // consumption.
           MachO::linkedit_data_command LLC =
             MachO->getLinkeditDataLoadCommand(Command);
@@ -1776,8 +1776,8 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
         }
         if (SymbolicFile *O = dyn_cast<SymbolicFile>(&*ChildOrErr.get())) {
           if (!MachOPrintSizeWarning && PrintSize &&  isa<MachOObjectFile>(O)) {
-            errs() << ToolName << ": warning sizes with -print-size for Mach-O "
-                      "files are always zero.\n";
+            WithColor::warning(errs(), ToolName)
+                << "sizes with -print-size for Mach-O files are always zero.\n";
             MachOPrintSizeWarning = true;
           }
           if (!checkMachOAndArchFlags(O, Filename))
@@ -2017,8 +2017,8 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
   }
   if (SymbolicFile *O = dyn_cast<SymbolicFile>(&Bin)) {
     if (!MachOPrintSizeWarning && PrintSize &&  isa<MachOObjectFile>(O)) {
-      errs() << ToolName << ": warning sizes with -print-size for Mach-O files "
-                "are always zero.\n";
+      WithColor::warning(errs(), ToolName)
+          << "sizes with -print-size for Mach-O files are always zero.\n";
       MachOPrintSizeWarning = true;
     }
     if (!checkMachOAndArchFlags(O, Filename))

@@ -11,12 +11,8 @@
 #ifndef lldb_RegisterContextLLDB_h_
 #define lldb_RegisterContextLLDB_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "UnwindLLDB.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/UnwindPlan.h"

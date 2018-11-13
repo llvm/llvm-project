@@ -11,13 +11,9 @@
 #ifndef lldb_FormatCache_h_
 #define lldb_FormatCache_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-public.h"
 

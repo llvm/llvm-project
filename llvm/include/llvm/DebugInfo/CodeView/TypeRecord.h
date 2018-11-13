@@ -429,6 +429,10 @@ public:
     return (Options & ClassOptions::ForwardReference) != ClassOptions::None;
   }
 
+  bool containsNestedClass() const {
+    return (Options & ClassOptions::ContainsNestedClass) != ClassOptions::None;
+  }
+
   bool isScoped() const {
     return (Options & ClassOptions::Scoped) != ClassOptions::None;
   }

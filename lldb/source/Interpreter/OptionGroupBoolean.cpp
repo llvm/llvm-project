@@ -9,10 +9,6 @@
 
 #include "lldb/Interpreter/OptionGroupBoolean.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/OptionParser.h"
 
 using namespace lldb;

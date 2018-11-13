@@ -9,10 +9,6 @@
 
 #include "CFCMutableSet.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 //----------------------------------------------------------------------
 // CFCString constructor

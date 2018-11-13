@@ -10,12 +10,8 @@
 #ifndef liblldb_UnwindAssembly_x86_h_
 #define liblldb_UnwindAssembly_x86_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "x86AssemblyInspectionEngine.h"
 
-// Project includes
 #include "lldb/Target/UnwindAssembly.h"
 #include "lldb/lldb-private.h"
 

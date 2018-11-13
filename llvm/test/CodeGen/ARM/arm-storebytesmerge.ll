@@ -8,101 +8,95 @@ target triple = "thumbv7em-arm-none-eabi"
 define arm_aapcs_vfpcc void @test(i8* %v50) #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    movw r1, #35722
-; CHECK-NEXT:    movt r1, #36236
-; CHECK-NEXT:    str.w r1, [r0, #394]
-; CHECK-NEXT:    movw r1, #36750
-; CHECK-NEXT:    movt r1, #37264
-; CHECK-NEXT:    str.w r1, [r0, #398]
-; CHECK-NEXT:    movw r1, #37778
-; CHECK-NEXT:    movt r1, #38292
-; CHECK-NEXT:    str.w r1, [r0, #402]
-; CHECK-NEXT:    movw r1, #38806
-; CHECK-NEXT:    movt r1, #39320
-; CHECK-NEXT:    str.w r1, [r0, #406]
-; CHECK-NEXT:    movw r1, #39834
-; CHECK-NEXT:    strh.w r1, [r0, #410]
-; CHECK-NEXT:    movw r1, #40348
-; CHECK-NEXT:    movt r1, #40862
-; CHECK-NEXT:    str.w r1, [r0, #412]
-; CHECK-NEXT:    movw r1, #41376
-; CHECK-NEXT:    movt r1, #41890
-; CHECK-NEXT:    str.w r1, [r0, #416]
-; CHECK-NEXT:    movw r1, #42404
-; CHECK-NEXT:    movt r1, #42918
-; CHECK-NEXT:    str.w r1, [r0, #420]
-; CHECK-NEXT:    movw r1, #43432
-; CHECK-NEXT:    movt r1, #43946
-; CHECK-NEXT:    str.w r1, [r0, #424]
-; CHECK-NEXT:    movw r1, #44460
-; CHECK-NEXT:    movt r1, #44974
-; CHECK-NEXT:    str.w r1, [r0, #428]
-; CHECK-NEXT:    movw r1, #45488
-; CHECK-NEXT:    strh.w r1, [r0, #432]
+; CHECK-NEXT:    movw r1, #65534
+; CHECK-NEXT:    strh.w r1, [r0, #510]
+; CHECK-NEXT:    movw r1, #64506
+; CHECK-NEXT:    movt r1, #65020
+; CHECK-NEXT:    str.w r1, [r0, #506]
+; CHECK-NEXT:    movw r1, #63478
+; CHECK-NEXT:    movt r1, #63992
+; CHECK-NEXT:    str.w r1, [r0, #502]
+; CHECK-NEXT:    movw r1, #62450
+; CHECK-NEXT:    movt r1, #62964
+; CHECK-NEXT:    str.w r1, [r0, #498]
+; CHECK-NEXT:    movw r1, #61422
+; CHECK-NEXT:    movt r1, #61936
+; CHECK-NEXT:    str.w r1, [r0, #494]
+; CHECK-NEXT:    movw r1, #60394
+; CHECK-NEXT:    movt r1, #60908
+; CHECK-NEXT:    str.w r1, [r0, #490]
+; CHECK-NEXT:    movw r1, #59366
+; CHECK-NEXT:    movt r1, #59880
+; CHECK-NEXT:    str.w r1, [r0, #486]
+; CHECK-NEXT:    movw r1, #58338
+; CHECK-NEXT:    movt r1, #58852
+; CHECK-NEXT:    str.w r1, [r0, #482]
+; CHECK-NEXT:    movw r1, #57310
+; CHECK-NEXT:    movt r1, #57824
+; CHECK-NEXT:    str.w r1, [r0, #478]
+; CHECK-NEXT:    movw r1, #56282
+; CHECK-NEXT:    movt r1, #56796
+; CHECK-NEXT:    str.w r1, [r0, #474]
+; CHECK-NEXT:    movw r1, #55254
+; CHECK-NEXT:    movt r1, #55768
+; CHECK-NEXT:    str.w r1, [r0, #470]
+; CHECK-NEXT:    movw r1, #54226
+; CHECK-NEXT:    movt r1, #54740
+; CHECK-NEXT:    str.w r1, [r0, #466]
+; CHECK-NEXT:    movw r1, #53198
+; CHECK-NEXT:    movt r1, #53712
+; CHECK-NEXT:    str.w r1, [r0, #462]
+; CHECK-NEXT:    movw r1, #52170
+; CHECK-NEXT:    movt r1, #52684
+; CHECK-NEXT:    str.w r1, [r0, #458]
+; CHECK-NEXT:    movw r1, #51142
+; CHECK-NEXT:    movt r1, #51656
+; CHECK-NEXT:    str.w r1, [r0, #454]
+; CHECK-NEXT:    movw r1, #50114
+; CHECK-NEXT:    movt r1, #50628
+; CHECK-NEXT:    str.w r1, [r0, #450]
+; CHECK-NEXT:    movw r1, #49086
+; CHECK-NEXT:    movt r1, #49600
+; CHECK-NEXT:    str.w r1, [r0, #446]
+; CHECK-NEXT:    movw r1, #48058
+; CHECK-NEXT:    movt r1, #48572
+; CHECK-NEXT:    str.w r1, [r0, #442]
+; CHECK-NEXT:    movw r1, #47030
+; CHECK-NEXT:    movt r1, #47544
+; CHECK-NEXT:    str.w r1, [r0, #438]
 ; CHECK-NEXT:    movw r1, #46002
 ; CHECK-NEXT:    movt r1, #46516
 ; CHECK-NEXT:    str.w r1, [r0, #434]
-; CHECK-NEXT:    movw r1, #47030
-; CHECK-NEXT:    strh.w r1, [r0, #438]
-; CHECK-NEXT:    movw r1, #47544
-; CHECK-NEXT:    movt r1, #48058
-; CHECK-NEXT:    str.w r1, [r0, #440]
-; CHECK-NEXT:    movw r1, #48572
-; CHECK-NEXT:    movt r1, #49086
-; CHECK-NEXT:    str.w r1, [r0, #444]
-; CHECK-NEXT:    movw r1, #49600
-; CHECK-NEXT:    strh.w r1, [r0, #448]
-; CHECK-NEXT:    movs r1, #194
-; CHECK-NEXT:    strb.w r1, [r0, #450]
-; CHECK-NEXT:    movw r1, #50371
-; CHECK-NEXT:    movt r1, #50885
-; CHECK-NEXT:    str.w r1, [r0, #451]
-; CHECK-NEXT:    movw r1, #51399
-; CHECK-NEXT:    movt r1, #51913
-; CHECK-NEXT:    str.w r1, [r0, #455]
-; CHECK-NEXT:    movw r1, #52427
-; CHECK-NEXT:    movt r1, #52941
-; CHECK-NEXT:    str.w r1, [r0, #459]
-; CHECK-NEXT:    movw r1, #53455
-; CHECK-NEXT:    movt r1, #53969
-; CHECK-NEXT:    str.w r1, [r0, #463]
-; CHECK-NEXT:    movw r1, #54483
-; CHECK-NEXT:    strh.w r1, [r0, #467]
-; CHECK-NEXT:    movw r1, #54997
-; CHECK-NEXT:    movt r1, #55511
-; CHECK-NEXT:    str.w r1, [r0, #469]
-; CHECK-NEXT:    movw r1, #56025
-; CHECK-NEXT:    movt r1, #56539
-; CHECK-NEXT:    str.w r1, [r0, #473]
-; CHECK-NEXT:    movw r1, #57053
-; CHECK-NEXT:    movt r1, #57567
-; CHECK-NEXT:    str.w r1, [r0, #477]
-; CHECK-NEXT:    movw r1, #58081
-; CHECK-NEXT:    movt r1, #58595
-; CHECK-NEXT:    str.w r1, [r0, #481]
-; CHECK-NEXT:    movw r1, #59109
-; CHECK-NEXT:    movt r1, #59623
-; CHECK-NEXT:    str.w r1, [r0, #485]
-; CHECK-NEXT:    movw r1, #60137
-; CHECK-NEXT:    strh.w r1, [r0, #489]
-; CHECK-NEXT:    movw r1, #60651
-; CHECK-NEXT:    movt r1, #61165
-; CHECK-NEXT:    str.w r1, [r0, #491]
-; CHECK-NEXT:    movw r1, #61679
-; CHECK-NEXT:    strh.w r1, [r0, #495]
-; CHECK-NEXT:    movw r1, #62193
-; CHECK-NEXT:    movt r1, #62707
-; CHECK-NEXT:    str.w r1, [r0, #497]
-; CHECK-NEXT:    movw r1, #63221
-; CHECK-NEXT:    movt r1, #63735
-; CHECK-NEXT:    str.w r1, [r0, #501]
-; CHECK-NEXT:    movw r1, #64249
-; CHECK-NEXT:    strh.w r1, [r0, #505]
-; CHECK-NEXT:    movs r1, #251
-; CHECK-NEXT:    strb.w r1, [r0, #507]
-; CHECK-NEXT:    movw r1, #65020
-; CHECK-NEXT:    movt r1, #65534
-; CHECK-NEXT:    str.w r1, [r0, #508]
+; CHECK-NEXT:    movw r1, #44974
+; CHECK-NEXT:    movt r1, #45488
+; CHECK-NEXT:    str.w r1, [r0, #430]
+; CHECK-NEXT:    movw r1, #43946
+; CHECK-NEXT:    movt r1, #44460
+; CHECK-NEXT:    str.w r1, [r0, #426]
+; CHECK-NEXT:    movw r1, #42918
+; CHECK-NEXT:    movt r1, #43432
+; CHECK-NEXT:    str.w r1, [r0, #422]
+; CHECK-NEXT:    movw r1, #41890
+; CHECK-NEXT:    movt r1, #42404
+; CHECK-NEXT:    str.w r1, [r0, #418]
+; CHECK-NEXT:    movw r1, #40862
+; CHECK-NEXT:    movt r1, #41376
+; CHECK-NEXT:    str.w r1, [r0, #414]
+; CHECK-NEXT:    movw r1, #39834
+; CHECK-NEXT:    movt r1, #40348
+; CHECK-NEXT:    str.w r1, [r0, #410]
+; CHECK-NEXT:    movw r1, #38806
+; CHECK-NEXT:    movt r1, #39320
+; CHECK-NEXT:    str.w r1, [r0, #406]
+; CHECK-NEXT:    movw r1, #37778
+; CHECK-NEXT:    movt r1, #38292
+; CHECK-NEXT:    str.w r1, [r0, #402]
+; CHECK-NEXT:    movw r1, #36750
+; CHECK-NEXT:    movt r1, #37264
+; CHECK-NEXT:    str.w r1, [r0, #398]
+; CHECK-NEXT:    movw r1, #35722
+; CHECK-NEXT:    movt r1, #36236
+; CHECK-NEXT:    str.w r1, [r0, #394]
 ; CHECK-NEXT:    bx lr
   %v190 = getelementptr inbounds i8, i8* %v50, i32 394
   store i8 -118, i8* %v190, align 1

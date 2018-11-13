@@ -176,6 +176,14 @@ void computeDeadSymbols(
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing);
 
+/// Compute dead symbols and run constant propagation in combined index
+/// after that.
+void computeDeadSymbolsWithConstProp(
+    ModuleSummaryIndex &Index,
+    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
+    function_ref<PrevailingType(GlobalValue::GUID)> isPrevailing,
+    bool ImportEnabled);
+
 /// Converts value \p GV to declaration, or replaces with a declaration if
 /// it is an alias. Returns true if converted, false if replaced.
 bool convertToDeclaration(GlobalValue &GV);
@@ -201,10 +209,10 @@ std::error_code EmitImportsFiles(
     StringRef ModulePath, StringRef OutputFilename,
     const std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
-/// Resolve WeakForLinker values in \p TheModule based on the information
+/// Resolve prevailing symbol linkages in \p TheModule based on the information
 /// recorded in the summaries during global summary-based analysis.
-void thinLTOResolveWeakForLinkerModule(Module &TheModule,
-                                       const GVSummaryMapTy &DefinedGlobals);
+void thinLTOResolvePrevailingInModule(Module &TheModule,
+                                      const GVSummaryMapTy &DefinedGlobals);
 
 /// Internalize \p TheModule based on the information recorded in the summaries
 /// during global summary-based analysis.

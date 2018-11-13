@@ -65,7 +65,7 @@ public:
     template <class U1, class U2>
         tuple& operator=(const pair<U1, U2>&); // iff sizeof...(T) == 2
     template <class U1, class U2>
-        tuple& operator=(pair<U1, U2>&&); //iffsizeof...(T) == 2
+        tuple& operator=(pair<U1, U2>&&); // iff sizeof...(T) == 2
 
     void swap(tuple&) noexcept(AND(swap(declval<T&>(), declval<T&>())...));
 };

@@ -10,11 +10,7 @@
 #ifndef liblldb_ProcessGDBRemoteLog_h_
 #define liblldb_ProcessGDBRemoteLog_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 
-// Project includes
 #include "lldb/Utility/Log.h"
 
 #define GDBR_LOG_PROCESS (1u << 1)

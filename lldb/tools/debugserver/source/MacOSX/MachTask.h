@@ -18,14 +18,10 @@
 #ifndef __MachTask_h__
 #define __MachTask_h__
 
-// C Includes
 #include <mach/mach.h>
 #include <sys/socket.h>
-// C++ Includes
 #include <map>
 #include <string>
-// Other libraries and framework includes
-// Project includes
 #include "DNBDefs.h"
 #include "MachException.h"
 #include "MachVMMemory.h"

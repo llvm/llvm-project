@@ -11,7 +11,6 @@
 #ifndef liblldb_MinidumpParser_h_
 #define liblldb_MinidumpParser_h_
 
-// Project includes
 #include "MinidumpTypes.h"
 
 #include "lldb/Utility/ArchSpec.h"

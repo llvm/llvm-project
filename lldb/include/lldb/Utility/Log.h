@@ -15,8 +15,8 @@
 #include "lldb/lldb-defines.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/StringMap.h" // for StringMap
-#include "llvm/ADT/StringRef.h" // for StringRef, StringLiteral
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -25,9 +25,9 @@
 #include <atomic>
 #include <cstdarg>
 #include <cstdint>
-#include <memory>      // for shared_ptr
-#include <string>      // for string
-#include <type_traits> // for forward
+#include <memory>
+#include <string>
+#include <type_traits>
 
 namespace llvm {
 class raw_ostream;

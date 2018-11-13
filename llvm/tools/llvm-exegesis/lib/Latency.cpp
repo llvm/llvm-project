@@ -166,13 +166,6 @@ LatencySnippetGenerator::generateCodeTemplates(const Instruction &Instr) const {
   return std::move(Results);
 }
 
-const char *LatencyBenchmarkRunner::getCounterName() const {
-  const char *CounterName = State.getPfmCounters().CycleCounter;
-  if (!CounterName)
-    llvm::report_fatal_error("sched model does not define a cycle counter");
-  return CounterName;
-}
-
 LatencyBenchmarkRunner::~LatencyBenchmarkRunner() = default;
 
 llvm::Expected<std::vector<BenchmarkMeasure>>
@@ -182,9 +175,9 @@ LatencyBenchmarkRunner::runMeasurements(
   // measure several times and take the minimum value.
   constexpr const int NumMeasurements = 30;
   int64_t MinValue = std::numeric_limits<int64_t>::max();
-  const char *CounterName = getCounterName();
+  const char *CounterName = State.getPfmCounters().CycleCounter;
   if (!CounterName)
-    llvm::report_fatal_error("could not determine cycle counter name");
+    llvm::report_fatal_error("sched model does not define a cycle counter");
   for (size_t I = 0; I < NumMeasurements; ++I) {
     auto ExpectedCounterValue = Executor.runAndMeasure(CounterName);
     if (!ExpectedCounterValue)

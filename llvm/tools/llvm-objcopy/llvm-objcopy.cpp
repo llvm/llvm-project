@@ -66,7 +66,7 @@ LLVM_ATTRIBUTE_NORETURN void reportError(StringRef File, Error E) {
   assert(E);
   std::string Buf;
   raw_string_ostream OS(Buf);
-  logAllUnhandledErrors(std::move(E), OS, "");
+  logAllUnhandledErrors(std::move(E), OS);
   OS.flush();
   WithColor::error(errs(), ToolName) << "'" << File << "': " << Buf;
   exit(1);

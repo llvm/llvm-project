@@ -10,12 +10,8 @@
 #ifndef liblldb_OptionValueDictionary_h_
 #define liblldb_OptionValueDictionary_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/OptionValue.h"
 
 namespace lldb_private {

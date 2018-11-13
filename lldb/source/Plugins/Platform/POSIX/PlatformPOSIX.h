@@ -10,13 +10,9 @@
 #ifndef liblldb_PlatformPOSIX_h_
 #define liblldb_PlatformPOSIX_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <memory>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Target/Platform.h"
 

@@ -9,18 +9,16 @@
 
 #include <arpa/inet.h>
 #include <asl.h>
-#include <crt_externs.h> // for _NSGetEnviron()
+#include <crt_externs.h>
 #include <errno.h>
 #include <getopt.h>
 #include <netdb.h>
-#include <netinet/in.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <string>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <sys/sysctl.h>
-#include <sys/types.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <vector>

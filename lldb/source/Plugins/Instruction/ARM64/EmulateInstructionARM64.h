@@ -10,10 +10,6 @@
 #ifndef EmulateInstructionARM64_h_
 #define EmulateInstructionARM64_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Process/Utility/ARMDefines.h"
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"

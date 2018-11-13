@@ -17,13 +17,9 @@
 #ifndef liblldb_ProcessElfCore_h_
 #define liblldb_ProcessElfCore_h_
 
-// C Includes
-// C++ Includes
 #include <list>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"

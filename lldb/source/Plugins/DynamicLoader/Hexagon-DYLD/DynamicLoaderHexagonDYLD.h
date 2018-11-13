@@ -10,10 +10,6 @@
 #ifndef liblldb_DynamicLoaderHexagonDYLD_h_
 #define liblldb_DynamicLoaderHexagonDYLD_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Target/DynamicLoader.h"
 

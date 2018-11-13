@@ -303,6 +303,12 @@ bool ToolInvocation::run() {
 
   const std::unique_ptr<driver::Driver> Driver(
       newDriver(&Diagnostics, BinaryName, Files->getVirtualFileSystem()));
+  // The "input file not found" diagnostics from the driver are useful.
+  // The driver is only aware of the VFS working directory, but some clients
+  // change this at the FileManager level instead.
+  // In this case the checks have false positives, so skip them.
+  if (!Files->getFileSystemOpts().WorkingDir.empty())
+    Driver->setCheckInputsExist(false);
   const std::unique_ptr<driver::Compilation> Compilation(
       Driver->BuildCompilation(llvm::makeArrayRef(Argv)));
   if (!Compilation)

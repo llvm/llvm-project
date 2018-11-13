@@ -4,15 +4,21 @@
 // CHECK-NEXT: IntegerLiteral
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: CaseStmt
+// CHECK-NEXT: ConstantExpr
 // CHECK-NEXT: IntegerLiteral
 // CHECK-NEXT: CaseStmt
+// CHECK-NEXT: ConstantExpr
 // CHECK-NEXT: IntegerLiteral
 // CHECK-NEXT: BreakStmt
 // CHECK-NEXT: CaseStmt
+// CHECK-NEXT: ConstantExpr
 // CHECK-NEXT: IntegerLiteral
+// CHECK-NEXT: ConstantExpr
 // CHECK-NEXT: IntegerLiteral
 // CHECK-NEXT: CaseStmt
+// CHECK-NEXT: ConstantExpr
 // CHECK-NEXT: IntegerLiteral
+// CHECK-NEXT: ConstantExpr
 // CHECK-NEXT: IntegerLiteral
 // CHECK-NEXT: BreakStmt
 
@@ -23,13 +29,17 @@
 // CHECK-NEXT: IntegerLiteral
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: CaseStmt
+// CHECK-NEXT: ConstantExpr
 // CHECK-NEXT: IntegerLiteral
 // CHECK-NEXT: BreakStmt
 // CHECK-NEXT: CaseStmt
+// CHECK-NEXT: ConstantExpr
 // CHECK-NEXT: IntegerLiteral
 // CHECK-NEXT: BreakStmt
 // CHECK-NEXT: CaseStmt
+// CHECK-NEXT: ConstantExpr
 // CHECK-NEXT: IntegerLiteral
+// CHECK-NEXT: ConstantExpr
 // CHECK-NEXT: IntegerLiteral
 // CHECK-NEXT: BreakStmt
 

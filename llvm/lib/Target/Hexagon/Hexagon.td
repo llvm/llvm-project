@@ -60,6 +60,9 @@ def FeatureDuplex: SubtargetFeature<"duplex", "EnableDuplex", "true",
       "Enable generation of duplex instruction">;
 def FeatureReservedR19: SubtargetFeature<"reserved-r19", "ReservedR19",
       "true", "Reserve register R19">;
+def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
+      "NoreturnStackElim", "true",
+      "Eliminate stack allocation in a noreturn function when possible">;
 
 //===----------------------------------------------------------------------===//
 // Hexagon Instruction Predicate Definitions.

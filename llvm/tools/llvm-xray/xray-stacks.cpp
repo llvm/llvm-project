@@ -737,7 +737,7 @@ static CommandRegistration Unused(&Stack, []() -> Error {
                 Twine("Failed loading input file '") + Filename + "'",
                 std::make_error_code(std::errc::invalid_argument)),
             TraceOrErr.takeError());
-      logAllUnhandledErrors(TraceOrErr.takeError(), errs(), "");
+      logAllUnhandledErrors(TraceOrErr.takeError(), errs());
       continue;
     }
     auto &T = *TraceOrErr;

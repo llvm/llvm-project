@@ -10,10 +10,8 @@
 #ifndef liblldb_ClangASTContext_h_
 #define liblldb_ClangASTContext_h_
 
-// C Includes
 #include <stdint.h>
 
-// C++ Includes
 #include <functional>
 #include <initializer_list>
 #include <map>
@@ -23,13 +21,11 @@
 #include <utility>
 #include <vector>
 
-// Other libraries and framework includes
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExternalASTMerger.h"
 #include "clang/AST/TemplateBase.h"
 #include "llvm/ADT/SmallVector.h"
 
-// Project includes
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/CompilerType.h"
@@ -903,9 +899,8 @@ public:
   // Modifying Enumeration types
   //----------------------------------------------------------------------
   clang::EnumConstantDecl *AddEnumerationValueToEnumerationType(
-      lldb::opaque_compiler_type_t type,
-      const CompilerType &enumerator_qual_type, const Declaration &decl,
-      const char *name, int64_t enum_value, uint32_t enum_value_bit_size);
+      const CompilerType &enum_type, const Declaration &decl, const char *name,
+      int64_t enum_value, uint32_t enum_value_bit_size);
 
   CompilerType GetEnumerationIntegerType(lldb::opaque_compiler_type_t type);
 

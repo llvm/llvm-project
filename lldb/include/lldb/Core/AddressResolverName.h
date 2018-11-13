@@ -11,10 +11,10 @@
 #define liblldb_AddressResolverName_h_
 
 #include "lldb/Core/AddressResolver.h"
-#include "lldb/Core/SearchFilter.h"   // for Searcher, Searcher::Call...
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Core/SearchFilter.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
-#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-defines.h"
 
 namespace lldb_private {
 class Address;

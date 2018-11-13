@@ -920,7 +920,7 @@ private:
                          bool isSigned, bool Inside);
   Instruction *PromoteCastOfAllocation(BitCastInst &CI, AllocaInst &AI);
   Instruction *MatchBSwap(BinaryOperator &I);
-  bool SimplifyStoreAtEndOfBlock(StoreInst &SI);
+  bool mergeStoreIntoSuccessor(StoreInst &SI);
 
   Instruction *SimplifyAnyMemTransfer(AnyMemTransferInst *MI);
   Instruction *SimplifyAnyMemSet(AnyMemSetInst *MI);

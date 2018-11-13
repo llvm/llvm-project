@@ -240,7 +240,8 @@ void PostMachineScheduler::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MachinePassRegistry MachineSchedRegistry::Registry;
+MachinePassRegistry<MachineSchedRegistry::ScheduleDAGCtor>
+    MachineSchedRegistry::Registry;
 
 /// A dummy default scheduler factory indicates whether the scheduler
 /// is overridden on the command line.

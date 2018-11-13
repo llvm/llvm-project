@@ -10,10 +10,6 @@
 #ifndef liblldb_PlatformAppleWatchSimulator_h_
 #define liblldb_PlatformAppleWatchSimulator_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "PlatformDarwin.h"
 
 class PlatformAppleWatchSimulator : public PlatformDarwin {

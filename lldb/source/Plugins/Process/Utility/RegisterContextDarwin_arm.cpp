@@ -10,8 +10,6 @@
 #include "RegisterContextDarwin_arm.h"
 #include "RegisterContextDarwinConstants.h"
 
-// C++ Includes
-// Other libraries and framework includes
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
@@ -28,7 +26,6 @@
 #define LLVM_EXTENSION
 #endif
 
-// Project includes
 #include "Utility/ARM_DWARF_Registers.h"
 #include "Utility/ARM_ehframe_Registers.h"
 

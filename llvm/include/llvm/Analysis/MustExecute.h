@@ -126,6 +126,8 @@ class ICFLoopSafetyInfo: public LoopSafetyInfo {
                                // may throw.
   // Contains information about implicit control flow in this loop's blocks.
   mutable ImplicitControlFlowTracking ICF;
+  // Contains information about instruction that may possibly write memory.
+  mutable MemoryWriteTracking MW;
 
 public:
   virtual bool blockMayThrow(const BasicBlock *BB) const;
@@ -138,6 +140,16 @@ public:
                                      const DominatorTree *DT,
                                      const Loop *CurLoop) const;
 
+  /// Returns true if we could not execute a memory-modifying instruction before
+  /// we enter \p BB under assumption that \p CurLoop is entered.
+  bool doesNotWriteMemoryBefore(const BasicBlock *BB, const Loop *CurLoop)
+      const;
+
+  /// Returns true if we could not execute a memory-modifying instruction before
+  /// we execute \p I under assumption that \p CurLoop is entered.
+  bool doesNotWriteMemoryBefore(const Instruction &I, const Loop *CurLoop)
+      const;
+
   /// Inform the safety info that we are planning to insert a new instruction
   /// into the basic block \p BB. It will make all cache updates to keep it
   /// correct after this insertion.
@@ -148,7 +160,7 @@ public:
   /// this removal.
   void removeInstruction(const Instruction *Inst);
 
-  ICFLoopSafetyInfo(DominatorTree *DT) : LoopSafetyInfo(), ICF(DT) {};
+  ICFLoopSafetyInfo(DominatorTree *DT) : LoopSafetyInfo(), ICF(DT), MW(DT) {};
 
   virtual ~ICFLoopSafetyInfo() {};
 };

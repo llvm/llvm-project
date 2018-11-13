@@ -10,14 +10,11 @@
 #ifndef liblldb_ProcessMonitor_H_
 #define liblldb_ProcessMonitor_H_
 
-// C Includes
 #include <semaphore.h>
 #include <signal.h>
 
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
 #include "lldb/Host/HostThread.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-types.h"

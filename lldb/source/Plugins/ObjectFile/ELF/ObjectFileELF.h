@@ -10,10 +10,8 @@
 #ifndef liblldb_ObjectFileELF_h_
 #define liblldb_ObjectFileELF_h_
 
-// C Includes
 #include <stdint.h>
 
-// C++ Includes
 #include <vector>
 
 #include "lldb/Symbol/ObjectFile.h"

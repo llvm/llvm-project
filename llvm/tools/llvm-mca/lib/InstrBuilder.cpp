@@ -55,12 +55,15 @@ static void initializeUsedResources(InstrDesc &ID,
   // part of a "Super" resource. The key value is the "Super" resource mask ID.
   DenseMap<uint64_t, unsigned> SuperResources;
 
+  unsigned NumProcResources = SM.getNumProcResourceKinds();
+  APInt Buffers(NumProcResources, 0);
+
   for (unsigned I = 0, E = SCDesc.NumWriteProcResEntries; I < E; ++I) {
     const MCWriteProcResEntry *PRE = STI.getWriteProcResBegin(&SCDesc) + I;
     const MCProcResourceDesc &PR = *SM.getProcResource(PRE->ProcResourceIdx);
     uint64_t Mask = ProcResourceMasks[PRE->ProcResourceIdx];
     if (PR.BufferSize != -1)
-      ID.Buffers.push_back(Mask);
+      Buffers.setBit(PRE->ProcResourceIdx);
     CycleSegment RCy(0, PRE->Cycles, false);
     Worklist.emplace_back(ResourcePlusCycles(Mask, ResourceUsage(RCy)));
     if (PR.SuperIdx) {
@@ -135,6 +138,30 @@ static void initializeUsedResources(InstrDesc &ID,
       uint64_t Mask = RPC.first ^ PowerOf2Floor(RPC.first);
       if ((Mask & UsedResourceUnits) == Mask)
         RPC.second.setReserved();
+    }
+  }
+
+  // Identify extra buffers that are consumed through super resources.
+  for (const std::pair<uint64_t, unsigned> &SR : SuperResources) {
+    for (unsigned I = 1, E = NumProcResources; I < E; ++I) {
+      const MCProcResourceDesc &PR = *SM.getProcResource(I);
+      if (PR.BufferSize == -1)
+        continue;
+
+      uint64_t Mask = ProcResourceMasks[I];
+      if (Mask != SR.first && ((Mask & SR.first) == SR.first))
+        Buffers.setBit(I);
+    }
+  }
+
+  // Now set the buffers.
+  if (unsigned NumBuffers = Buffers.countPopulation()) {
+    ID.Buffers.resize(NumBuffers);
+    for (unsigned I = 0, E = NumProcResources; I < E && NumBuffers; ++I) {
+      if (Buffers[I]) {
+        --NumBuffers;
+        ID.Buffers[NumBuffers] = ProcResourceMasks[I];
+      }
     }
   }
 

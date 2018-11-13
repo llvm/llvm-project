@@ -5,7 +5,7 @@
 define <16 x float> @test_x86_fmadd_ps_z(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2) {
 ; ALL-LABEL: test_x86_fmadd_ps_z:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vfmadd213ps %zmm2, %zmm1, %zmm0
+; ALL-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; ALL-NEXT:    retq
   %x = fmul <16 x float> %a0, %a1
   %res = fadd <16 x float> %x, %a2
@@ -15,7 +15,7 @@ define <16 x float> @test_x86_fmadd_ps_z(<16 x float> %a0, <16 x float> %a1, <16
 define <16 x float> @test_x86_fmsub_ps_z(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2) {
 ; ALL-LABEL: test_x86_fmsub_ps_z:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vfmsub213ps %zmm2, %zmm1, %zmm0
+; ALL-NEXT:    vfmsub213ps {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
 ; ALL-NEXT:    retq
   %x = fmul <16 x float> %a0, %a1
   %res = fsub <16 x float> %x, %a2
@@ -25,7 +25,7 @@ define <16 x float> @test_x86_fmsub_ps_z(<16 x float> %a0, <16 x float> %a1, <16
 define <16 x float> @test_x86_fnmadd_ps_z(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2) {
 ; ALL-LABEL: test_x86_fnmadd_ps_z:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vfnmadd213ps %zmm2, %zmm1, %zmm0
+; ALL-NEXT:    vfnmadd213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) + zmm2
 ; ALL-NEXT:    retq
   %x = fmul <16 x float> %a0, %a1
   %res = fsub <16 x float> %a2, %x
@@ -35,7 +35,7 @@ define <16 x float> @test_x86_fnmadd_ps_z(<16 x float> %a0, <16 x float> %a1, <1
 define <16 x float> @test_x86_fnmsub_ps_z(<16 x float> %a0, <16 x float> %a1, <16 x float> %a2) {
 ; ALL-LABEL: test_x86_fnmsub_ps_z:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vfnmsub213ps %zmm2, %zmm1, %zmm0
+; ALL-NEXT:    vfnmsub213ps {{.*#+}} zmm0 = -(zmm1 * zmm0) - zmm2
 ; ALL-NEXT:    retq
   %x = fmul <16 x float> %a0, %a1
   %y = fsub <16 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00,
@@ -49,7 +49,7 @@ define <16 x float> @test_x86_fnmsub_ps_z(<16 x float> %a0, <16 x float> %a1, <1
 define <8 x double> @test_x86_fmadd_pd_z(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2) {
 ; ALL-LABEL: test_x86_fmadd_pd_z:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vfmadd213pd %zmm2, %zmm1, %zmm0
+; ALL-NEXT:    vfmadd213pd {{.*#+}} zmm0 = (zmm1 * zmm0) + zmm2
 ; ALL-NEXT:    retq
   %x = fmul <8 x double> %a0, %a1
   %res = fadd <8 x double> %x, %a2
@@ -59,7 +59,7 @@ define <8 x double> @test_x86_fmadd_pd_z(<8 x double> %a0, <8 x double> %a1, <8 
 define <8 x double> @test_x86_fmsub_pd_z(<8 x double> %a0, <8 x double> %a1, <8 x double> %a2) {
 ; ALL-LABEL: test_x86_fmsub_pd_z:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vfmsub213pd %zmm2, %zmm1, %zmm0
+; ALL-NEXT:    vfmsub213pd {{.*#+}} zmm0 = (zmm1 * zmm0) - zmm2
 ; ALL-NEXT:    retq
   %x = fmul <8 x double> %a0, %a1
   %res = fsub <8 x double> %x, %a2
@@ -69,7 +69,7 @@ define <8 x double> @test_x86_fmsub_pd_z(<8 x double> %a0, <8 x double> %a1, <8 
 define double @test_x86_fmsub_213(double %a0, double %a1, double %a2) {
 ; ALL-LABEL: test_x86_fmsub_213:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vfmsub213sd %xmm2, %xmm1, %xmm0
+; ALL-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - xmm2
 ; ALL-NEXT:    retq
   %x = fmul double %a0, %a1
   %res = fsub double %x, %a2
@@ -79,7 +79,7 @@ define double @test_x86_fmsub_213(double %a0, double %a1, double %a2) {
 define double @test_x86_fmsub_213_m(double %a0, double %a1, double * %a2_ptr) {
 ; ALL-LABEL: test_x86_fmsub_213_m:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vfmsub213sd (%rdi), %xmm1, %xmm0
+; ALL-NEXT:    vfmsub213sd {{.*#+}} xmm0 = (xmm1 * xmm0) - mem
 ; ALL-NEXT:    retq
   %a2 = load double , double *%a2_ptr
   %x = fmul double %a0, %a1
@@ -90,7 +90,7 @@ define double @test_x86_fmsub_213_m(double %a0, double %a1, double * %a2_ptr) {
 define double @test_x86_fmsub_231_m(double %a0, double %a1, double * %a2_ptr) {
 ; ALL-LABEL: test_x86_fmsub_231_m:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vfmsub132sd (%rdi), %xmm1, %xmm0
+; ALL-NEXT:    vfmsub132sd {{.*#+}} xmm0 = (xmm0 * mem) - xmm1
 ; ALL-NEXT:    retq
   %a2 = load double , double *%a2_ptr
   %x = fmul double %a0, %a2
@@ -101,7 +101,7 @@ define double @test_x86_fmsub_231_m(double %a0, double %a1, double * %a2_ptr) {
 define <16 x float> @test231_br(<16 x float> %a1, <16 x float> %a2) nounwind {
 ; ALL-LABEL: test231_br:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vfmadd132ps {{.*}}(%rip){1to16}, %zmm1, %zmm0
+; ALL-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm1
 ; ALL-NEXT:    retq
   %b1 = fmul <16 x float> %a1, <float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000>
   %b2 = fadd <16 x float> %b1, %a2
@@ -111,7 +111,7 @@ define <16 x float> @test231_br(<16 x float> %a1, <16 x float> %a2) nounwind {
 define <16 x float> @test213_br(<16 x float> %a1, <16 x float> %a2) nounwind {
 ; ALL-LABEL: test213_br:
 ; ALL:       ## %bb.0:
-; ALL-NEXT:    vfmadd213ps {{.*}}(%rip){1to16}, %zmm1, %zmm0
+; ALL-NEXT:    vfmadd213ps {{.*#+}} zmm0 = (zmm1 * zmm0) + mem
 ; ALL-NEXT:    retq
   %b1 = fmul <16 x float> %a1, %a2
   %b2 = fadd <16 x float> %b1, <float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000, float 0x3FB99999A0000000>
@@ -122,17 +122,17 @@ define <16 x float> @test213_br(<16 x float> %a1, <16 x float> %a2) nounwind {
 define <16 x float> @test_x86_fmadd132_ps(<16 x float> %a0, <16 x float> %a1, <16 x float> *%a2_ptrt, <16 x i1> %mask) {
 ; KNL-LABEL: test_x86_fmadd132_ps:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovsxbd %xmm2, %zmm2
+; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; KNL-NEXT:    vpslld $31, %zmm2, %zmm2
 ; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; KNL-NEXT:    vfmadd132ps (%rdi), %zmm1, %zmm0 {%k1}
+; KNL-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm1
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_x86_fmadd132_ps:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; SKX-NEXT:    vpmovb2m %xmm2, %k1
-; SKX-NEXT:    vfmadd132ps (%rdi), %zmm1, %zmm0 {%k1}
+; SKX-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm1
 ; SKX-NEXT:    retq
   %a2   = load <16 x float>,<16 x float> *%a2_ptrt,align 1
   %x = fmul <16 x float> %a0, %a2
@@ -145,10 +145,10 @@ define <16 x float> @test_x86_fmadd132_ps(<16 x float> %a0, <16 x float> %a1, <1
 define <16 x float> @test_x86_fmadd231_ps(<16 x float> %a0, <16 x float> %a1, <16 x float> *%a2_ptrt, <16 x i1> %mask) {
 ; KNL-LABEL: test_x86_fmadd231_ps:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovsxbd %xmm2, %zmm2
+; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; KNL-NEXT:    vpslld $31, %zmm2, %zmm2
 ; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; KNL-NEXT:    vfmadd231ps (%rdi), %zmm0, %zmm1 {%k1}
+; KNL-NEXT:    vfmadd231ps {{.*#+}} zmm1 = (zmm0 * mem) + zmm1
 ; KNL-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL-NEXT:    retq
 ;
@@ -156,7 +156,7 @@ define <16 x float> @test_x86_fmadd231_ps(<16 x float> %a0, <16 x float> %a1, <1
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; SKX-NEXT:    vpmovb2m %xmm2, %k1
-; SKX-NEXT:    vfmadd231ps (%rdi), %zmm0, %zmm1 {%k1}
+; SKX-NEXT:    vfmadd231ps {{.*#+}} zmm1 = (zmm0 * mem) + zmm1
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %a2   = load <16 x float>,<16 x float> *%a2_ptrt,align 1
@@ -170,10 +170,10 @@ define <16 x float> @test_x86_fmadd231_ps(<16 x float> %a0, <16 x float> %a1, <1
 define <16 x float> @test_x86_fmadd213_ps(<16 x float> %a0, <16 x float> %a1, <16 x float> *%a2_ptrt, <16 x i1> %mask) {
 ; KNL-LABEL: test_x86_fmadd213_ps:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    vpmovsxbd %xmm2, %zmm2
+; KNL-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; KNL-NEXT:    vpslld $31, %zmm2, %zmm2
 ; KNL-NEXT:    vptestmd %zmm2, %zmm2, %k1
-; KNL-NEXT:    vfmadd213ps (%rdi), %zmm0, %zmm1 {%k1}
+; KNL-NEXT:    vfmadd213ps {{.*#+}} zmm1 = (zmm0 * zmm1) + mem
 ; KNL-NEXT:    vmovaps %zmm1, %zmm0
 ; KNL-NEXT:    retq
 ;
@@ -181,7 +181,7 @@ define <16 x float> @test_x86_fmadd213_ps(<16 x float> %a0, <16 x float> %a1, <1
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; SKX-NEXT:    vpmovb2m %xmm2, %k1
-; SKX-NEXT:    vfmadd213ps (%rdi), %zmm0, %zmm1 {%k1}
+; SKX-NEXT:    vfmadd213ps {{.*#+}} zmm1 = (zmm0 * zmm1) + mem
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %a2   = load <16 x float>,<16 x float> *%a2_ptrt,align 1

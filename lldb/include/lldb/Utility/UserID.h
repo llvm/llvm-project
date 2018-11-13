@@ -10,8 +10,8 @@
 #ifndef liblldb_UserID_h_
 #define liblldb_UserID_h_
 
-#include "lldb/lldb-defines.h" // for LLDB_INVALID_UID
-#include "lldb/lldb-types.h"   // for user_id_t
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
 namespace lldb_private {
 class Stream;
 }

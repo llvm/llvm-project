@@ -9,12 +9,8 @@
 
 #pragma once
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "MICmdArgContext.h"
 #include "MICmnBase.h"
 

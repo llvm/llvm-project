@@ -51,13 +51,11 @@ define <16 x i16> @pmaddubsw_256(<32 x i8>* %Aptr, <32 x i8>* %Bptr) {
 ;
 ; AVX1-LABEL: pmaddubsw_256:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX1-NEXT:    vmovdqa (%rsi), %ymm1
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpmaddubsw %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vmovdqa (%rsi), %xmm0
+; AVX1-NEXT:    vmovdqa 16(%rsi), %xmm1
+; AVX1-NEXT:    vpmaddubsw 16(%rdi), %xmm1, %xmm1
+; AVX1-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX256-LABEL: pmaddubsw_256:
@@ -90,61 +88,53 @@ define <64 x i16> @pmaddubsw_512(<128 x i8>* %Aptr, <128 x i8>* %Bptr) {
 ; SSE-LABEL: pmaddubsw_512:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
-; SSE-NEXT:    movdqa 112(%rdx), %xmm0
-; SSE-NEXT:    movdqa 96(%rdx), %xmm1
-; SSE-NEXT:    movdqa 80(%rdx), %xmm2
-; SSE-NEXT:    movdqa 64(%rdx), %xmm3
-; SSE-NEXT:    movdqa (%rdx), %xmm4
-; SSE-NEXT:    movdqa 16(%rdx), %xmm5
-; SSE-NEXT:    movdqa 32(%rdx), %xmm6
-; SSE-NEXT:    movdqa 48(%rdx), %xmm7
-; SSE-NEXT:    pmaddubsw (%rsi), %xmm4
-; SSE-NEXT:    pmaddubsw 16(%rsi), %xmm5
-; SSE-NEXT:    pmaddubsw 32(%rsi), %xmm6
-; SSE-NEXT:    pmaddubsw 48(%rsi), %xmm7
-; SSE-NEXT:    pmaddubsw 64(%rsi), %xmm3
-; SSE-NEXT:    pmaddubsw 80(%rsi), %xmm2
-; SSE-NEXT:    pmaddubsw 96(%rsi), %xmm1
-; SSE-NEXT:    pmaddubsw 112(%rsi), %xmm0
-; SSE-NEXT:    movdqa %xmm0, 112(%rdi)
-; SSE-NEXT:    movdqa %xmm1, 96(%rdi)
-; SSE-NEXT:    movdqa %xmm2, 80(%rdi)
-; SSE-NEXT:    movdqa %xmm3, 64(%rdi)
-; SSE-NEXT:    movdqa %xmm7, 48(%rdi)
-; SSE-NEXT:    movdqa %xmm6, 32(%rdi)
-; SSE-NEXT:    movdqa %xmm5, 16(%rdi)
-; SSE-NEXT:    movdqa %xmm4, (%rdi)
+; SSE-NEXT:    movdqa (%rdx), %xmm0
+; SSE-NEXT:    movdqa 16(%rdx), %xmm1
+; SSE-NEXT:    movdqa 32(%rdx), %xmm2
+; SSE-NEXT:    movdqa 48(%rdx), %xmm3
+; SSE-NEXT:    pmaddubsw (%rsi), %xmm0
+; SSE-NEXT:    pmaddubsw 16(%rsi), %xmm1
+; SSE-NEXT:    pmaddubsw 32(%rsi), %xmm2
+; SSE-NEXT:    pmaddubsw 48(%rsi), %xmm3
+; SSE-NEXT:    movdqa 64(%rdx), %xmm4
+; SSE-NEXT:    pmaddubsw 64(%rsi), %xmm4
+; SSE-NEXT:    movdqa 80(%rdx), %xmm5
+; SSE-NEXT:    pmaddubsw 80(%rsi), %xmm5
+; SSE-NEXT:    movdqa 96(%rdx), %xmm6
+; SSE-NEXT:    pmaddubsw 96(%rsi), %xmm6
+; SSE-NEXT:    movdqa 112(%rdx), %xmm7
+; SSE-NEXT:    pmaddubsw 112(%rsi), %xmm7
+; SSE-NEXT:    movdqa %xmm7, 112(%rdi)
+; SSE-NEXT:    movdqa %xmm6, 96(%rdi)
+; SSE-NEXT:    movdqa %xmm5, 80(%rdi)
+; SSE-NEXT:    movdqa %xmm4, 64(%rdi)
+; SSE-NEXT:    movdqa %xmm3, 48(%rdi)
+; SSE-NEXT:    movdqa %xmm2, 32(%rdi)
+; SSE-NEXT:    movdqa %xmm1, 16(%rdi)
+; SSE-NEXT:    movdqa %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: pmaddubsw_512:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa (%rdi), %ymm0
-; AVX1-NEXT:    vmovdqa 32(%rdi), %ymm1
-; AVX1-NEXT:    vmovdqa 64(%rdi), %ymm2
-; AVX1-NEXT:    vmovdqa 96(%rdi), %ymm8
-; AVX1-NEXT:    vmovdqa (%rsi), %ymm4
-; AVX1-NEXT:    vmovdqa 32(%rsi), %ymm5
-; AVX1-NEXT:    vmovdqa 64(%rsi), %ymm6
-; AVX1-NEXT:    vmovdqa 96(%rsi), %ymm9
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm7
-; AVX1-NEXT:    vpmaddubsw %xmm3, %xmm7, %xmm3
-; AVX1-NEXT:    vpmaddubsw %xmm0, %xmm4, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm4
-; AVX1-NEXT:    vpmaddubsw %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm5, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm4
-; AVX1-NEXT:    vpmaddubsw %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm6, %xmm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
-; AVX1-NEXT:    vextractf128 $1, %ymm8, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm9, %xmm4
-; AVX1-NEXT:    vpmaddubsw %xmm3, %xmm4, %xmm3
-; AVX1-NEXT:    vpmaddubsw %xmm8, %xmm9, %xmm4
+; AVX1-NEXT:    vmovdqa (%rsi), %xmm0
+; AVX1-NEXT:    vmovdqa 16(%rsi), %xmm1
+; AVX1-NEXT:    vmovdqa 32(%rsi), %xmm2
+; AVX1-NEXT:    vmovdqa 48(%rsi), %xmm3
+; AVX1-NEXT:    vpmaddubsw 16(%rdi), %xmm1, %xmm1
+; AVX1-NEXT:    vpmaddubsw (%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vpmaddubsw 48(%rdi), %xmm3, %xmm1
+; AVX1-NEXT:    vpmaddubsw 32(%rdi), %xmm2, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
+; AVX1-NEXT:    vmovdqa 80(%rsi), %xmm2
+; AVX1-NEXT:    vpmaddubsw 80(%rdi), %xmm2, %xmm2
+; AVX1-NEXT:    vmovdqa 64(%rsi), %xmm3
+; AVX1-NEXT:    vpmaddubsw 64(%rdi), %xmm3, %xmm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm3, %ymm2
+; AVX1-NEXT:    vmovdqa 112(%rsi), %xmm3
+; AVX1-NEXT:    vpmaddubsw 112(%rdi), %xmm3, %xmm3
+; AVX1-NEXT:    vmovdqa 96(%rsi), %xmm4
+; AVX1-NEXT:    vpmaddubsw 96(%rdi), %xmm4, %xmm4
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
 ; AVX1-NEXT:    retq
 ;

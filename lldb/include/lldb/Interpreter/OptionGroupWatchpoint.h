@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionGroupWatchpoint_h_
 #define liblldb_OptionGroupWatchpoint_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/Options.h"
 
 namespace lldb_private {

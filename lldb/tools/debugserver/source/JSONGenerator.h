@@ -10,8 +10,6 @@
 #ifndef __JSONGenerator_h_
 #define __JSONGenerator_h_
 
-// C Includes
-// C++ Includes
 
 #include <iomanip>
 #include <sstream>

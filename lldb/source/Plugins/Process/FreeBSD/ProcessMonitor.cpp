@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <errno.h>
 #include <poll.h>
 #include <signal.h>
@@ -19,8 +18,6 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// C++ Includes
-// Other libraries and framework includes
 #include "lldb/Host/Host.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"

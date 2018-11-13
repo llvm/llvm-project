@@ -10,12 +10,8 @@
 #ifndef liblldb_CommandAlias_h_
 #define liblldb_CommandAlias_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/CompletionRequest.h"

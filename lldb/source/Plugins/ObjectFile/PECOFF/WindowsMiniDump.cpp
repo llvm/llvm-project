@@ -16,7 +16,7 @@
 
 #ifdef _WIN32
 #include "lldb/Host/windows/windows.h"
-#include <dbghelp.h> // for MiniDumpWriteDump
+#include <dbghelp.h>
 #endif
 
 namespace lldb_private {

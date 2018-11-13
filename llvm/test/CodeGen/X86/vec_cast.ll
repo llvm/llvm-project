@@ -28,10 +28,10 @@ define <8 x i32> @a(<8 x i16> %a) nounwind {
 define <3 x i32> @b(<3 x i16> %a) nounwind {
 ; CHECK-LIN-LABEL: b:
 ; CHECK-LIN:       # %bb.0:
-; CHECK-LIN-NEXT:    movd %edi, %xmm0
-; CHECK-LIN-NEXT:    pinsrw $1, %esi, %xmm0
-; CHECK-LIN-NEXT:    pinsrw $2, %edx, %xmm0
-; CHECK-LIN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; CHECK-LIN-NEXT:    pxor %xmm0, %xmm0
+; CHECK-LIN-NEXT:    pinsrw $1, %edi, %xmm0
+; CHECK-LIN-NEXT:    pinsrw $3, %esi, %xmm0
+; CHECK-LIN-NEXT:    pinsrw $5, %edx, %xmm0
 ; CHECK-LIN-NEXT:    psrad $16, %xmm0
 ; CHECK-LIN-NEXT:    retq
 ;
@@ -40,10 +40,10 @@ define <3 x i32> @b(<3 x i16> %a) nounwind {
 ; CHECK-WIN-NEXT:    # kill: def $r8w killed $r8w def $r8d
 ; CHECK-WIN-NEXT:    # kill: def $dx killed $dx def $edx
 ; CHECK-WIN-NEXT:    # kill: def $cx killed $cx def $ecx
-; CHECK-WIN-NEXT:    movd %ecx, %xmm0
-; CHECK-WIN-NEXT:    pinsrw $1, %edx, %xmm0
-; CHECK-WIN-NEXT:    pinsrw $2, %r8d, %xmm0
-; CHECK-WIN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; CHECK-WIN-NEXT:    pxor %xmm0, %xmm0
+; CHECK-WIN-NEXT:    pinsrw $1, %ecx, %xmm0
+; CHECK-WIN-NEXT:    pinsrw $3, %edx, %xmm0
+; CHECK-WIN-NEXT:    pinsrw $5, %r8d, %xmm0
 ; CHECK-WIN-NEXT:    psrad $16, %xmm0
 ; CHECK-WIN-NEXT:    retq
   %c = sext <3 x i16> %a to <3 x i32>
@@ -88,11 +88,10 @@ define <8 x i32> @d(<8 x i16> %a) nounwind {
 define <3 x i32> @e(<3 x i16> %a) nounwind {
 ; CHECK-LIN-LABEL: e:
 ; CHECK-LIN:       # %bb.0:
-; CHECK-LIN-NEXT:    movd %edi, %xmm0
-; CHECK-LIN-NEXT:    pinsrw $1, %esi, %xmm0
-; CHECK-LIN-NEXT:    pinsrw $2, %edx, %xmm0
-; CHECK-LIN-NEXT:    pxor %xmm1, %xmm1
-; CHECK-LIN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-LIN-NEXT:    pxor %xmm0, %xmm0
+; CHECK-LIN-NEXT:    pinsrw $0, %edi, %xmm0
+; CHECK-LIN-NEXT:    pinsrw $2, %esi, %xmm0
+; CHECK-LIN-NEXT:    pinsrw $4, %edx, %xmm0
 ; CHECK-LIN-NEXT:    retq
 ;
 ; CHECK-WIN-LABEL: e:
@@ -100,11 +99,10 @@ define <3 x i32> @e(<3 x i16> %a) nounwind {
 ; CHECK-WIN-NEXT:    # kill: def $r8w killed $r8w def $r8d
 ; CHECK-WIN-NEXT:    # kill: def $dx killed $dx def $edx
 ; CHECK-WIN-NEXT:    # kill: def $cx killed $cx def $ecx
-; CHECK-WIN-NEXT:    movd %ecx, %xmm0
-; CHECK-WIN-NEXT:    pinsrw $1, %edx, %xmm0
-; CHECK-WIN-NEXT:    pinsrw $2, %r8d, %xmm0
-; CHECK-WIN-NEXT:    pxor %xmm1, %xmm1
-; CHECK-WIN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; CHECK-WIN-NEXT:    pxor %xmm0, %xmm0
+; CHECK-WIN-NEXT:    pinsrw $0, %ecx, %xmm0
+; CHECK-WIN-NEXT:    pinsrw $2, %edx, %xmm0
+; CHECK-WIN-NEXT:    pinsrw $4, %r8d, %xmm0
 ; CHECK-WIN-NEXT:    retq
   %c = zext <3 x i16> %a to <3 x i32>
   ret <3 x i32> %c

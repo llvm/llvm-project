@@ -7,14 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <algorithm>
 #include <set>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/API/SBFrame.h"
 
 #include "lldb/lldb-types.h"

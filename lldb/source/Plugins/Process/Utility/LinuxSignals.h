@@ -10,10 +10,6 @@
 #ifndef liblldb_LinuxSignals_H_
 #define liblldb_LinuxSignals_H_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/UnixSignals.h"
 
 namespace lldb_private {

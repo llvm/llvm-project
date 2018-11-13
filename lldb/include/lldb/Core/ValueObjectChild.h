@@ -12,17 +12,17 @@
 
 #include "lldb/Core/ValueObject.h"
 
-#include "lldb/Symbol/CompilerType.h"       // for CompilerType
-#include "lldb/Utility/ConstString.h"       // for ConstString
-#include "lldb/lldb-defines.h"              // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h"         // for ValueType
-#include "lldb/lldb-private-enumerations.h" // for LazyBool, AddressType
-#include "lldb/lldb-types.h"                // for offset_t
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/ConstString.h"
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-private-enumerations.h"
+#include "lldb/lldb-types.h"
 
 #include "llvm/ADT/Optional.h"
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t, int32_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 

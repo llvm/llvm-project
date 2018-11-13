@@ -9,7 +9,7 @@
 
 // Third party headers
 #include "assert.h"
-#include <inttypes.h> // For PRIx64
+#include <inttypes.h>
 
 // In-house headers:
 #include "MICmnResources.h"

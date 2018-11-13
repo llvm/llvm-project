@@ -13,7 +13,7 @@
 ; Vector cost is 5, Scalar cost is 7
 ; CHECK: Adding cost -2 for reduction that starts with   %7 = load i32, i32* %arrayidx.7, align 4 (It is a splitting reduction)
 ; Vector cost is 11, Scalar cost is 7
-; SSE2:  Adding cost 4 for reduction that starts with   %7 = load i32, i32* %arrayidx.7, align 4 (It is a splitting reduction)
+; SSE2:  Adding cost 3 for reduction that starts with   %7 = load i32, i32* %arrayidx.7, align 4 (It is a splitting reduction)
 define i32 @test_add(i32* nocapture readonly %p) {
 ; CHECK-LABEL: @test_add(
 ; CHECK-NEXT:  entry:

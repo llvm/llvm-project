@@ -84,7 +84,7 @@ static Symbol *getSymbol(SectionChunk *SC, uint32_t Addr) {
   return Candidate;
 }
 
-static std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
+std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
   struct Location {
     Symbol *Sym;
     std::pair<StringRef, uint32_t> FileLine;

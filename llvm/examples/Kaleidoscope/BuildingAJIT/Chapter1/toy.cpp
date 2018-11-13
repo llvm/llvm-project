@@ -679,9 +679,8 @@ static std::unique_ptr<FunctionAST> ParseDefinition() {
 static std::unique_ptr<FunctionAST> ParseTopLevelExpr(unsigned ExprCount) {
   if (auto E = ParseExpression()) {
     // Make an anonymous proto.
-    auto Proto = llvm::make_unique<PrototypeAST>(("__anon_expr" +
-                                                  Twine(ExprCount)).str(),
-                                                 std::vector<std::string>());
+    auto Proto = llvm::make_unique<PrototypeAST>
+        ("__anon_expr" + Twine(ExprCount)).str(), std::vector<std::string>());
     return llvm::make_unique<FunctionAST>(std::move(Proto), std::move(E));
   }
   return nullptr;
@@ -1157,7 +1156,7 @@ static void HandleTopLevelExpression() {
 
       // Get the anonymous expression's JITSymbol.
       auto Sym =
-        ExitOnErr(TheJIT->lookup(("__anon_expr" + Twine(ExprCount)).str()));
+          ExitOnErr(TheJIT->lookup(("__anon_expr" + Twine(ExprCount)).str()));
 
       auto *FP = (double (*)())(intptr_t)Sym.getAddress();
       assert(FP && "Failed to codegen function");

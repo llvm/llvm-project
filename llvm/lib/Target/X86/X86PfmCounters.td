@@ -14,6 +14,10 @@
 def UnhaltedCoreCyclesPfmCounter : PfmCounter<"unhalted_core_cycles">;
 def UopsIssuedPfmCounter : PfmCounter<"uops_issued:any">;
 
+// No default counters on X86.
+def DefaultPfmCounters : ProcPfmCounters {}
+def : PfmCountersDefaultBinding<DefaultPfmCounters>;
+
 def SandyBridgePfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
   let UopsCounter = UopsIssuedPfmCounter;

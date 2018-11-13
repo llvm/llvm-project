@@ -15,10 +15,6 @@
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Flags.h"
 
 #include "lldb/Host/File.h"

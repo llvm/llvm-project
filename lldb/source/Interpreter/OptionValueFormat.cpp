@@ -9,10 +9,6 @@
 
 #include "lldb/Interpreter/OptionValueFormat.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/Stream.h"

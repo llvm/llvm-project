@@ -46,7 +46,7 @@ public:
 // Function used to report errors
 void Z3ErrorHandler(Z3_context Context, Z3_error_code Error) {
   llvm::report_fatal_error("Z3 error: " +
-                           llvm::Twine(Z3_get_error_msg_ex(Context, Error)));
+                           llvm::Twine(Z3_get_error_msg(Context, Error)));
 }
 
 /// Wrapper for Z3 context

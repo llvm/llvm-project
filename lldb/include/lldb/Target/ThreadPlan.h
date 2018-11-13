@@ -10,13 +10,9 @@
 #ifndef liblldb_ThreadPlan_h_
 #define liblldb_ThreadPlan_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"

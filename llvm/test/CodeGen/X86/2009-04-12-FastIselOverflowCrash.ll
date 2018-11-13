@@ -12,12 +12,10 @@ define fastcc i32 @test() nounwind {
 entry:
 ; CHECK-LABEL: test:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    movl $1, %eax
-; CHECK-NEXT:    addl $0, %eax
-; CHECK-NEXT:    seto %cl
-; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp) ## 4-byte Spill
-; CHECK-NEXT:    movb %cl, -{{[0-9]+}}(%rsp) ## 1-byte Spill
-; CHECK-NEXT:    jo LBB0_2
+; CHECK-NEXT:    movl $1, [[REG:%e[a-z]+]]
+; CHECK-NEXT:    addl $0, [[REG]]
+; CHECK-NEXT:    seto {{%[a-z]+l}}
+; CHECK:         jo LBB0_2
 	%tmp1 = call %0 @llvm.sadd.with.overflow.i32(i32 1, i32 0)
 	%tmp2 = extractvalue %0 %tmp1, 1
 	br i1 %tmp2, label %.backedge, label %BB3

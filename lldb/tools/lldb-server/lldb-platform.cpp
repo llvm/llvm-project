@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <errno.h>
 #if defined(__APPLE__)
 #include <netinet/in.h>
@@ -19,10 +18,8 @@
 #include <string.h>
 #include <sys/wait.h>
 
-// C++ Includes
 #include <fstream>
 
-// Other libraries and framework includes
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 

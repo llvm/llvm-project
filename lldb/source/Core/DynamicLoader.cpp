@@ -10,22 +10,22 @@
 #include "lldb/Target/DynamicLoader.h"
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ModuleList.h" // for ModuleList
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Symbol/ObjectFile.h" // for ObjectFile
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ConstString.h"     // for ConstString
-#include "lldb/lldb-private-interfaces.h" // for DynamicLoaderCreateInstance
+#include "lldb/Utility/ConstString.h"
+#include "lldb/lldb-private-interfaces.h"
 
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "llvm/ADT/StringRef.h"
 
-#include <memory> // for shared_ptr, unique_ptr
+#include <memory>
 
-#include <assert.h> // for assert
+#include <assert.h>
 
 using namespace lldb;
 using namespace lldb_private;

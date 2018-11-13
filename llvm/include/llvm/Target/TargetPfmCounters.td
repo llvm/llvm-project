@@ -44,3 +44,7 @@ class PfmCountersBinding<string cpu_name, ProcPfmCounters counters> {
   string CpuName = cpu_name;
   ProcPfmCounters Counters = counters;
 }
+
+// Declares the default binding for unbound CPUs for the target.
+class PfmCountersDefaultBinding<ProcPfmCounters counters>
+    : PfmCountersBinding<"", counters> {}

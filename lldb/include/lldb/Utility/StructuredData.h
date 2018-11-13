@@ -13,17 +13,17 @@
 #include "llvm/ADT/StringRef.h"
 
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/FileSpec.h"  // for FileSpec
-#include "lldb/lldb-enumerations.h" // for StructuredDataType
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/lldb-enumerations.h"
 
-#include <cassert> // for assert
-#include <cstddef> // for size_t
-#include <cstdint> // for uint64_t
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
-#include <type_traits> // for move
+#include <type_traits>
 #include <utility>
 #include <vector>
 

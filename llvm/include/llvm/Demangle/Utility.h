@@ -175,13 +175,13 @@ inline bool initializeOutputStream(char *Buf, size_t *N, OutputStream &S,
   if (Buf == nullptr) {
     Buf = static_cast<char *>(std::malloc(InitSize));
     if (Buf == nullptr)
-      return true;
+      return false;
     BufferSize = InitSize;
   } else
     BufferSize = *N;
 
   S.reset(Buf, BufferSize);
-  return false;
+  return true;
 }
 
 #endif

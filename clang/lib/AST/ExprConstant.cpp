@@ -2074,11 +2074,12 @@ static APSInt HandleIntToIntCast(EvalInfo &Info, const Expr *E,
                                  QualType DestType, QualType SrcType,
                                  const APSInt &Value) {
   unsigned DestWidth = Info.Ctx.getIntWidth(DestType);
-  APSInt Result = Value;
   // Figure out if this is a truncate, extend or noop cast.
   // If the input is signed, do a sign extend, noop, or truncate.
-  Result = Result.extOrTrunc(DestWidth);
+  APSInt Result = Value.extOrTrunc(DestWidth);
   Result.setIsUnsigned(DestType->isUnsignedIntegerOrEnumerationType());
+  if (DestType->isBooleanType())
+    Result = Value.getBoolValue();
   return Result;
 }
 
@@ -4719,6 +4720,8 @@ public:
     return Error(E);
   }
 
+  bool VisitConstantExpr(const ConstantExpr *E)
+    { return StmtVisitorTy::Visit(E->getSubExpr()); }
   bool VisitParenExpr(const ParenExpr *E)
     { return StmtVisitorTy::Visit(E->getSubExpr()); }
   bool VisitUnaryExtension(const UnaryOperator *E)

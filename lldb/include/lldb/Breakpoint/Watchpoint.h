@@ -10,13 +10,9 @@
 #ifndef liblldb_Watchpoint_h_
 #define liblldb_Watchpoint_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/StoppointLocation.h"
 #include "lldb/Breakpoint/WatchpointOptions.h"
 #include "lldb/Symbol/CompilerType.h"

@@ -10,8 +10,6 @@
 #ifndef SymbolFileDWARF_SymbolFileDWARF_h_
 #define SymbolFileDWARF_SymbolFileDWARF_h_
 
-// C Includes
-// C++ Includes
 #include <list>
 #include <map>
 #include <mutex>
@@ -19,7 +17,6 @@
 #include <unordered_map>
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Threading.h"
 
@@ -35,7 +32,6 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
-// Project includes
 #include "DWARFDataExtractor.h"
 #include "DWARFDefines.h"
 #include "DWARFIndex.h"

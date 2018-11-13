@@ -644,7 +644,7 @@ define void @test_bound(i16 %a0, i16 *%a1, i32 %a2, i32 *%a3) optsize {
 ;
 ; BDVER2-LABEL: test_bound:
 ; BDVER2:       # %bb.0:
-; BDVER2-NEXT:    pushl %esi # sched: [1:0.50]
+; BDVER2-NEXT:    pushl %esi # sched: [1:1.00]
 ; BDVER2-NEXT:    .cfi_def_cfa_offset 8
 ; BDVER2-NEXT:    .cfi_offset %esi, -8
 ; BDVER2-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # sched: [5:0.50]
@@ -1924,11 +1924,11 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; BDVER2-NEXT:    #APP
 ; BDVER2-NEXT:    popw %ax # sched: [5:0.50]
 ; BDVER2-NEXT:    popw (%ecx) # sched: [6:1.00]
-; BDVER2-NEXT:    pushw %ax # sched: [1:0.50]
+; BDVER2-NEXT:    pushw %ax # sched: [1:1.00]
 ; BDVER2-NEXT:    pushw (%ecx) # sched: [6:1.00]
 ; BDVER2-NEXT:    pushw $4095 # imm = 0xFFF
-; BDVER2-NEXT:    # sched: [1:0.50]
-; BDVER2-NEXT:    pushw $7 # sched: [1:0.50]
+; BDVER2-NEXT:    # sched: [1:1.00]
+; BDVER2-NEXT:    pushw $7 # sched: [1:1.00]
 ; BDVER2-NEXT:    #NO_APP
 ; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
@@ -2091,11 +2091,11 @@ define i32 @test_pop_push_32(i32 %a0, i32 *%a1) optsize {
 ; BDVER2-NEXT:    #APP
 ; BDVER2-NEXT:    popl %eax # sched: [5:0.50]
 ; BDVER2-NEXT:    popl (%ecx) # sched: [6:1.00]
-; BDVER2-NEXT:    pushl %eax # sched: [1:0.50]
+; BDVER2-NEXT:    pushl %eax # sched: [1:1.00]
 ; BDVER2-NEXT:    pushl (%ecx) # sched: [6:1.00]
 ; BDVER2-NEXT:    pushl $4095 # imm = 0xFFF
-; BDVER2-NEXT:    # sched: [1:0.50]
-; BDVER2-NEXT:    pushl $7 # sched: [1:0.50]
+; BDVER2-NEXT:    # sched: [1:1.00]
+; BDVER2-NEXT:    pushl $7 # sched: [1:1.00]
 ; BDVER2-NEXT:    #NO_APP
 ; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;
@@ -2218,8 +2218,8 @@ define void @test_popa_popf_pusha_pushf() optsize {
 ; BDVER2-NEXT:    #APP
 ; BDVER2-NEXT:    popal # sched: [5:0.50]
 ; BDVER2-NEXT:    popfl # sched: [5:0.50]
-; BDVER2-NEXT:    pushal # sched: [1:0.50]
-; BDVER2-NEXT:    pushfl # sched: [1:0.50]
+; BDVER2-NEXT:    pushal # sched: [1:1.00]
+; BDVER2-NEXT:    pushfl # sched: [1:1.00]
 ; BDVER2-NEXT:    #NO_APP
 ; BDVER2-NEXT:    retl # sched: [5:1.00]
 ;

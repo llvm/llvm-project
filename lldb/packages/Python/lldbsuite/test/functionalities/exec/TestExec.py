@@ -61,6 +61,8 @@ class ExecTestCase(TestBase):
             None, None, self.get_process_working_directory())
         self.assertTrue(process, PROCESS_IS_VALID)
 
+        if self.TraceOn():
+            self.runCmd("settings show target.process.stop-on-exec", check=False)
         if skip_exec:
             self.dbg.HandleCommand("settings set target.process.stop-on-exec false")
             def cleanup():
@@ -94,6 +96,8 @@ class ExecTestCase(TestBase):
         process.Continue()
 
         if not skip_exec:
+            self.assertFalse(process.GetState() == lldb.eStateExited,
+                             "Process should not have exited!")
             self.assertTrue(process.GetState() == lldb.eStateStopped,
                             "Process should be stopped at __dyld_start")
 

@@ -11,6 +11,7 @@
 #include "InputFiles.h"
 #include "Symbols.h"
 #include "Writer.h"
+#include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -356,7 +357,8 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
       // with relocations against discarded comdat sections. Such sections
       // are left as is, with relocations untouched.
       if (!Config->MinGW)
-        error("relocation against symbol in discarded section: " + Name);
+        error("relocation against symbol in discarded section: " + Name +
+              getSymbolLocations(File, Rel.SymbolTableIndex));
       continue;
     }
     // Get the output section of the symbol for this relocation.  The output
@@ -374,7 +376,7 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
       if (isCodeView() || isDWARF())
         continue;
       error("relocation against symbol in discarded section: " +
-            Sym->getName());
+            Sym->getName() + getSymbolLocations(File, Rel.SymbolTableIndex));
       continue;
     }
     uint64_t S = Sym->getRVA();

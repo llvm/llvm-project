@@ -10,16 +10,16 @@
 #ifndef liblldb_Connection_h_
 #define liblldb_Connection_h_
 
-#include "lldb/lldb-defines.h"      // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h" // for ConnectionStatus
-#include "lldb/lldb-forward.h"      // for IOObjectSP
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "llvm/ADT/StringRef.h"
 
-#include <ratio> // for micro
+#include <ratio>
 #include <string>
 
-#include <stddef.h> // for size_t
+#include <stddef.h>
 
 namespace lldb_private {
 class Status;

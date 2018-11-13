@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Project includes
 #include "lldb/Target/TargetList.h"
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Debugger.h"
@@ -25,7 +24,6 @@
 #include "lldb/Utility/TildeExpressionResolver.h"
 #include "lldb/Utility/Timer.h"
 
-// Other libraries and framework includes
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
 

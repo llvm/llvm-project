@@ -787,7 +787,7 @@ define i32 @test_movd(x86_mmx %a0, i32 %a1, i32 *%a2) {
 ; BDVER2-NEXT:    paddd %mm2, %mm0 # sched: [2:0.50]
 ; BDVER2-NEXT:    movd %mm2, %ecx # sched: [10:1.00]
 ; BDVER2-NEXT:    movd %mm0, %eax # sched: [10:1.00]
-; BDVER2-NEXT:    movl %ecx, (%rsi) # sched: [1:0.50]
+; BDVER2-NEXT:    movl %ecx, (%rsi) # sched: [1:1.00]
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
 ; BTVER2-LABEL: test_movd:

@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionGroupPlatform_h_
 #define liblldb_OptionGroupPlatform_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/Options.h"
 #include "lldb/Utility/ConstString.h"
 #include "llvm/Support/VersionTuple.h"

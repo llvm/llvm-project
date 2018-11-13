@@ -226,11 +226,11 @@ private:
         // occur in the same basic block as its definition, because
         // it is illegal for the scheduler to schedule them in
         // different blocks.
-        if (UseI->readsRegister(MOI->getReg()))
+        if (UseI->readsRegister(MOI->getReg(), &TRI))
           LastUseCount = AluInstCount;
 
         // Exit early if the current use kills the register
-        if (UseI != Def && UseI->killsRegister(MOI->getReg()))
+        if (UseI != Def && UseI->killsRegister(MOI->getReg(), &TRI))
           break;
       }
       if (LastUseCount)

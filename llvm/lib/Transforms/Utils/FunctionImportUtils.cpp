@@ -204,13 +204,30 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
 
   // Check the summaries to see if the symbol gets resolved to a known local
   // definition.
+  ValueInfo VI;
   if (GV.hasName()) {
-    ValueInfo VI = ImportIndex.getValueInfo(GV.getGUID());
+    VI = ImportIndex.getValueInfo(GV.getGUID());
     if (VI && VI.isDSOLocal()) {
       GV.setDSOLocal(true);
       if (GV.hasDLLImportStorageClass())
         GV.setDLLStorageClass(GlobalValue::DefaultStorageClass);
     }
+  }
+
+  // Mark read-only variables which can be imported with specific attribute.
+  // We can't internalize them now because IRMover will fail to link variable
+  // definitions to their external declarations during ThinLTO import. We'll
+  // internalize read-only variables later, after import is finished.
+  // See internalizeImmutableGVs.
+  //
+  // If global value dead stripping is not enabled in summary then
+  // propagateConstants hasn't been run (may be because we're using
+  // distriuted import. We can't internalize GV in such case.
+  if (!GV.isDeclaration() && VI && ImportIndex.withGlobalValueDeadStripping()) {
+    const auto &SL = VI.getSummaryList();
+    auto *GVS = SL.empty() ? nullptr : dyn_cast<GlobalVarSummary>(SL[0].get());
+    if (GVS && GVS->isReadOnly())
+      cast<GlobalVariable>(&GV)->addAttribute("thinlto-internalize");
   }
 
   bool DoPromote = false;
@@ -230,7 +247,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   // Remove functions imported as available externally defs from comdats,
   // as this is a declaration for the linker, and will be dropped eventually.
   // It is illegal for comdats to contain declarations.
-  auto *GO = dyn_cast_or_null<GlobalObject>(&GV);
+  auto *GO = dyn_cast<GlobalObject>(&GV);
   if (GO && GO->isDeclarationForLinker() && GO->hasComdat()) {
     // The IRMover should not have placed any imported declarations in
     // a comdat, so the only declaration that should be in a comdat

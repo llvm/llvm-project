@@ -862,6 +862,9 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // inserting redudnancies into the progrem. This even includes SimplifyCFG.
   OptimizePM.addPass(SpeculateAroundPHIsPass());
 
+  for (auto &C : OptimizerLastEPCallbacks)
+    C(OptimizePM, Level);
+
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM)));
 

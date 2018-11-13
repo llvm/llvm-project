@@ -269,4 +269,17 @@ void AArch64MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     if (lowerOperand(MO, MCOp))
       OutMI.addOperand(MCOp);
   }
+
+  switch (OutMI.getOpcode()) {
+  case AArch64::CATCHRET:
+    OutMI = MCInst();
+    OutMI.setOpcode(AArch64::RET);
+    OutMI.addOperand(MCOperand::createReg(AArch64::LR));
+    break;
+  case AArch64::CLEANUPRET:
+    OutMI = MCInst();
+    OutMI.setOpcode(AArch64::RET);
+    OutMI.addOperand(MCOperand::createReg(AArch64::LR));
+    break;
+  }
 }

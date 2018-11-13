@@ -550,6 +550,37 @@ void HexagonFrameLowering::emitPrologue(MachineFunction &MF,
   }
 }
 
+/// Returns true if the target can safely skip saving callee-saved registers
+/// for noreturn nounwind functions.
+bool HexagonFrameLowering::enableCalleeSaveSkip(
+    const MachineFunction &MF) const {
+  const auto &F = MF.getFunction();
+  assert(F.hasFnAttribute(Attribute::NoReturn) &&
+         F.getFunction().hasFnAttribute(Attribute::NoUnwind) &&
+         !F.getFunction().hasFnAttribute(Attribute::UWTable));
+  (void)F;
+
+  // No need to save callee saved registers if the function does not return.
+  return MF.getSubtarget<HexagonSubtarget>().noreturnStackElim();
+}
+
+// Helper function used to determine when to eliminate the stack frame for
+// functions marked as noreturn and when the noreturn-stack-elim options are
+// specified. When both these conditions are true, then a FP may not be needed
+// if the function makes a call. It is very similar to enableCalleeSaveSkip,
+// but it used to check if the allocframe can be eliminated as well.
+static bool enableAllocFrameElim(const MachineFunction &MF) {
+  const auto &F = MF.getFunction();
+  const auto &MFI = MF.getFrameInfo();
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  assert(!MFI.hasVarSizedObjects() &&
+         !HST.getRegisterInfo()->needsStackRealignment(MF));
+  return F.hasFnAttribute(Attribute::NoReturn) &&
+    F.hasFnAttribute(Attribute::NoUnwind) &&
+    !F.hasFnAttribute(Attribute::UWTable) && HST.noreturnStackElim() &&
+    MFI.getStackSize() == 0;
+}
+
 void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
       bool PrologueStubs) const {
   MachineFunction &MF = *MBB.getParent();
@@ -994,7 +1025,7 @@ bool HexagonFrameLowering::hasFP(const MachineFunction &MF) const {
   }
 
   const auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
-  if (MFI.hasCalls() || HMFI.hasClobberLR())
+  if ((MFI.hasCalls() && !enableAllocFrameElim(MF)) || HMFI.hasClobberLR())
     return true;
 
   return false;

@@ -10,14 +10,10 @@
 #ifndef liblldb_PathMappingList_h_
 #define liblldb_PathMappingList_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <vector>
-// Other libraries and framework includes
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
-// Project includes
 
 namespace lldb_private {
 

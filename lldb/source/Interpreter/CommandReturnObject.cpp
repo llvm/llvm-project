@@ -9,10 +9,6 @@
 
 #include "lldb/Interpreter/CommandReturnObject.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 

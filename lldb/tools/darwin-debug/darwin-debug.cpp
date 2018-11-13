@@ -24,7 +24,7 @@
 //----------------------------------------------------------------------
 #if defined(__APPLE__)
 
-#include <crt_externs.h> // for _NSGetEnviron()
+#include <crt_externs.h>
 #include <getopt.h>
 #include <limits.h>
 #include <mach/machine.h>

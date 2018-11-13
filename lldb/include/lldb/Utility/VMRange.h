@@ -10,10 +10,10 @@
 #ifndef liblldb_VMRange_h_
 #define liblldb_VMRange_h_
 
-#include "lldb/lldb-types.h" // for addr_t
+#include "lldb/lldb-types.h"
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
+#include <stddef.h>
+#include <stdint.h>
 #include <vector>
 
 namespace lldb_private {

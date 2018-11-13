@@ -9,10 +9,6 @@
 
 #include "CommandObjectThread.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Host/Host.h"

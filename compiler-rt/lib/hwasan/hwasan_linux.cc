@@ -358,11 +358,10 @@ static bool HwasanOnSIGTRAP(int signo, siginfo_t *info, ucontext_t *uc) {
   GetStackTrace(stack, kStackTraceMax, StackTrace::GetNextInstructionPc(sig.pc),
                 sig.bp, uc, common_flags()->fast_unwind_on_fatal);
 
-  ReportTagMismatch(stack, ai.addr, ai.size, ai.is_store);
-
   ++hwasan_report_count;
-  if (flags()->halt_on_error || !ai.recover)
-    Die();
+
+  bool fatal = flags()->halt_on_error || !ai.recover;
+  ReportTagMismatch(stack, ai.addr, ai.size, ai.is_store, fatal);
 
 #if defined(__aarch64__)
   uc->uc_mcontext.pc += 4;

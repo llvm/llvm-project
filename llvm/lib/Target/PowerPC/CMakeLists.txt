@@ -10,6 +10,7 @@ tablegen(LLVM PPCGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM PPCGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM PPCGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM PPCGenSubtargetInfo.inc -gen-subtarget)
+tablegen(LLVM PPCGenExegesis.inc -gen-exegesis)
 
 add_public_tablegen_target(PowerPCCommonTableGen)
 

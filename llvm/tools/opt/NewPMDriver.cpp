@@ -95,6 +95,12 @@ static cl::opt<std::string> PipelineStartEPPipeline(
     cl::desc("A textual description of the function pass pipeline inserted at "
              "the PipelineStart extension point into default pipelines"),
     cl::Hidden);
+static cl::opt<std::string> OptimizerLastEPPipeline(
+    "passes-ep-optimizer-last",
+    cl::desc("A textual description of the function pass pipeline inserted at "
+             "the OptimizerLast extension point into default pipelines"),
+    cl::Hidden);
+
 enum PGOKind { NoPGO, InstrGen, InstrUse, SampleUse };
 static cl::opt<PGOKind> PGOKindFlag(
     "pgo-kind", cl::init(NoPGO), cl::Hidden,
@@ -193,6 +199,14 @@ static void registerEPCallbacks(PassBuilder &PB, bool VerifyEachPass,
         [&PB, VerifyEachPass, DebugLogging](ModulePassManager &PM) {
           ExitOnError Err("Unable to parse PipelineStartEP pipeline: ");
           Err(PB.parsePassPipeline(PM, PipelineStartEPPipeline, VerifyEachPass,
+                                   DebugLogging));
+        });
+  if (tryParsePipelineText<FunctionPassManager>(PB, OptimizerLastEPPipeline))
+    PB.registerOptimizerLastEPCallback(
+        [&PB, VerifyEachPass, DebugLogging](FunctionPassManager &PM,
+                                            PassBuilder::OptimizationLevel) {
+          ExitOnError Err("Unable to parse OptimizerLastEP pipeline: ");
+          Err(PB.parsePassPipeline(PM, OptimizerLastEPPipeline, VerifyEachPass,
                                    DebugLogging));
         });
 }

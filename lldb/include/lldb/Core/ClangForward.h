@@ -10,10 +10,6 @@
 #ifndef liblldb_ClangForward_h_
 #define liblldb_ClangForward_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 #if defined(__cplusplus)
 

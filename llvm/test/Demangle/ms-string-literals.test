@@ -259,268 +259,268 @@
 ??_C@_01KHDNNMEB@?$AB?$AA@
 ??_C@_01LOCGONAA@?$AA?$AA@
 
-; CHECK: const char * {"\xFF"}
-; CHECK: const char * {"\xFE"}
-; CHECK: const char * {"\xFD"}
-; CHECK: const char * {"\xFC"}
-; CHECK: const char * {"\xFB"}
-; CHECK: const char * {"\xFA"}
-; CHECK: const char * {"\xF9"}
-; CHECK: const char * {"\xF8"}
-; CHECK: const char * {"\xF7"}
-; CHECK: const char * {"\xF6"}
-; CHECK: const char * {"\xF5"}
-; CHECK: const char * {"\xF4"}
-; CHECK: const char * {"\xF3"}
-; CHECK: const char * {"\xF2"}
-; CHECK: const char * {"\xF1"}
-; CHECK: const char * {"\xF0"}
-; CHECK: const char * {"\xEF"}
-; CHECK: const char * {"\xEE"}
-; CHECK: const char * {"\xED"}
-; CHECK: const char * {"\xEC"}
-; CHECK: const char * {"\xEB"}
-; CHECK: const char * {"\xEA"}
-; CHECK: const char * {"\xE9"}
-; CHECK: const char * {"\xE8"}
-; CHECK: const char * {"\xE7"}
-; CHECK: const char * {"\xE6"}
-; CHECK: const char * {"\xE5"}
-; CHECK: const char * {"\xE4"}
-; CHECK: const char * {"\xE3"}
-; CHECK: const char * {"\xE2"}
-; CHECK: const char * {"\xE1"}
-; CHECK: const char * {"\xE0"}
-; CHECK: const char * {"\xDF"}
-; CHECK: const char * {"\xDE"}
-; CHECK: const char * {"\xDD"}
-; CHECK: const char * {"\xDC"}
-; CHECK: const char * {"\xDB"}
-; CHECK: const char * {"\xDA"}
-; CHECK: const char * {"\xD9"}
-; CHECK: const char * {"\xD8"}
-; CHECK: const char * {"\xD7"}
-; CHECK: const char * {"\xD6"}
-; CHECK: const char * {"\xD5"}
-; CHECK: const char * {"\xD4"}
-; CHECK: const char * {"\xD3"}
-; CHECK: const char * {"\xD2"}
-; CHECK: const char * {"\xD1"}
-; CHECK: const char * {"\xD0"}
-; CHECK: const char * {"\xCF"}
-; CHECK: const char * {"\xCE"}
-; CHECK: const char * {"\xCD"}
-; CHECK: const char * {"\xCC"}
-; CHECK: const char * {"\xCB"}
-; CHECK: const char * {"\xCA"}
-; CHECK: const char * {"\xC9"}
-; CHECK: const char * {"\xC8"}
-; CHECK: const char * {"\xC7"}
-; CHECK: const char * {"\xC6"}
-; CHECK: const char * {"\xC5"}
-; CHECK: const char * {"\xC4"}
-; CHECK: const char * {"\xC3"}
-; CHECK: const char * {"\xC2"}
-; CHECK: const char * {"\xC1"}
-; CHECK: const char * {"\xC0"}
-; CHECK: const char * {"\xBF"}
-; CHECK: const char * {"\xBE"}
-; CHECK: const char * {"\xBD"}
-; CHECK: const char * {"\xBC"}
-; CHECK: const char * {"\xBB"}
-; CHECK: const char * {"\xBA"}
-; CHECK: const char * {"\xB9"}
-; CHECK: const char * {"\xB8"}
-; CHECK: const char * {"\xB7"}
-; CHECK: const char * {"\xB6"}
-; CHECK: const char * {"\xB5"}
-; CHECK: const char * {"\xB4"}
-; CHECK: const char * {"\xB3"}
-; CHECK: const char * {"\xB2"}
-; CHECK: const char * {"\xB1"}
-; CHECK: const char * {"\xB0"}
-; CHECK: const char * {"\xAF"}
-; CHECK: const char * {"\xAE"}
-; CHECK: const char * {"\xAD"}
-; CHECK: const char * {"\xAC"}
-; CHECK: const char * {"\xAB"}
-; CHECK: const char * {"\xAA"}
-; CHECK: const char * {"\xA9"}
-; CHECK: const char * {"\xA8"}
-; CHECK: const char * {"\xA7"}
-; CHECK: const char * {"\xA6"}
-; CHECK: const char * {"\xA5"}
-; CHECK: const char * {"\xA4"}
-; CHECK: const char * {"\xA3"}
-; CHECK: const char * {"\xA2"}
-; CHECK: const char * {"\xA1"}
-; CHECK: const char * {"\xA0"}
-; CHECK: const char * {"\x9F"}
-; CHECK: const char * {"\x9E"}
-; CHECK: const char * {"\x9D"}
-; CHECK: const char * {"\x9C"}
-; CHECK: const char * {"\x9B"}
-; CHECK: const char * {"\x9A"}
-; CHECK: const char * {"\x99"}
-; CHECK: const char * {"\x98"}
-; CHECK: const char * {"\x97"}
-; CHECK: const char * {"\x96"}
-; CHECK: const char * {"\x95"}
-; CHECK: const char * {"\x94"}
-; CHECK: const char * {"\x93"}
-; CHECK: const char * {"\x92"}
-; CHECK: const char * {"\x91"}
-; CHECK: const char * {"\x90"}
-; CHECK: const char * {"\x8F"}
-; CHECK: const char * {"\x8E"}
-; CHECK: const char * {"\x8D"}
-; CHECK: const char * {"\x8C"}
-; CHECK: const char * {"\x8B"}
-; CHECK: const char * {"\x8A"}
-; CHECK: const char * {"\x89"}
-; CHECK: const char * {"\x88"}
-; CHECK: const char * {"\x87"}
-; CHECK: const char * {"\x86"}
-; CHECK: const char * {"\x85"}
-; CHECK: const char * {"\x84"}
-; CHECK: const char * {"\x83"}
-; CHECK: const char * {"\x82"}
-; CHECK: const char * {"\x81"}
-; CHECK: const char * {"\x80"}
-; CHECK: const char * {"\x7F"}
-; CHECK: const char * {"~"}
-; CHECK: const char * {"}"}
-; CHECK: const char * {"|"}
-; CHECK: const char * {"{"}
-; CHECK: const char * {"z"}
-; CHECK: const char * {"y"}
-; CHECK: const char * {"x"}
-; CHECK: const char * {"w"}
-; CHECK: const char * {"v"}
-; CHECK: const char * {"u"}
-; CHECK: const char * {"t"}
-; CHECK: const char * {"s"}
-; CHECK: const char * {"r"}
-; CHECK: const char * {"q"}
-; CHECK: const char * {"p"}
-; CHECK: const char * {"o"}
-; CHECK: const char * {"n"}
-; CHECK: const char * {"m"}
-; CHECK: const char * {"l"}
-; CHECK: const char * {"k"}
-; CHECK: const char * {"j"}
-; CHECK: const char * {"i"}
-; CHECK: const char * {"h"}
-; CHECK: const char * {"g"}
-; CHECK: const char * {"f"}
-; CHECK: const char * {"e"}
-; CHECK: const char * {"d"}
-; CHECK: const char * {"c"}
-; CHECK: const char * {"b"}
-; CHECK: const char * {"a"}
-; CHECK: const char * {"`"}
-; CHECK: const char * {"_"}
-; CHECK: const char * {"^"}
-; CHECK: const char * {"]"}
-; CHECK: const char * {"\\"}
-; CHECK: const char * {"["}
-; CHECK: const char * {"Z"}
-; CHECK: const char * {"Y"}
-; CHECK: const char * {"X"}
-; CHECK: const char * {"W"}
-; CHECK: const char * {"V"}
-; CHECK: const char * {"U"}
-; CHECK: const char * {"T"}
-; CHECK: const char * {"S"}
-; CHECK: const char * {"R"}
-; CHECK: const char * {"Q"}
-; CHECK: const char * {"P"}
-; CHECK: const char * {"O"}
-; CHECK: const char * {"N"}
-; CHECK: const char * {"M"}
-; CHECK: const char * {"L"}
-; CHECK: const char * {"K"}
-; CHECK: const char * {"J"}
-; CHECK: const char * {"I"}
-; CHECK: const char * {"H"}
-; CHECK: const char * {"G"}
-; CHECK: const char * {"F"}
-; CHECK: const char * {"E"}
-; CHECK: const char * {"D"}
-; CHECK: const char * {"C"}
-; CHECK: const char * {"B"}
-; CHECK: const char * {"A"}
-; CHECK: const char * {"@"}
-; CHECK: const char * {"?"}
-; CHECK: const char * {">"}
-; CHECK: const char * {"="}
-; CHECK: const char * {"<"}
-; CHECK: const char * {";"}
-; CHECK: const char * {":"}
-; CHECK: const char * {"9"}
-; CHECK: const char * {"8"}
-; CHECK: const char * {"7"}
-; CHECK: const char * {"6"}
-; CHECK: const char * {"5"}
-; CHECK: const char * {"4"}
-; CHECK: const char * {"3"}
-; CHECK: const char * {"2"}
-; CHECK: const char * {"1"}
-; CHECK: const char * {"0"}
-; CHECK: const char * {"/"}
-; CHECK: const char * {"."}
-; CHECK: const char * {"-"}
-; CHECK: const char * {","}
-; CHECK: const char * {"+"}
-; CHECK: const char * {"*"}
-; CHECK: const char * {")"}
-; CHECK: const char * {"("}
-; CHECK: const char * {"\'"}
-; CHECK: const char * {"&"}
-; CHECK: const char * {"%"}
-; CHECK: const char * {"$"}
-; CHECK: const char * {"#"}
-; CHECK: const char * {"\""}
-; CHECK: const char * {"!"}
-; CHECK: const char * {" "}
-; CHECK: const char * {"\x1F"}
-; CHECK: const char * {"\x1E"}
-; CHECK: const char * {"\x1D"}
-; CHECK: const char * {"\x1C"}
-; CHECK: const char * {"\x1B"}
-; CHECK: const char * {"\x1A"}
-; CHECK: const char * {"\x19"}
-; CHECK: const char * {"\x18"}
-; CHECK: const char * {"\x17"}
-; CHECK: const char * {"\x16"}
-; CHECK: const char * {"\x15"}
-; CHECK: const char * {"\x14"}
-; CHECK: const char * {"\x13"}
-; CHECK: const char * {"\x12"}
-; CHECK: const char * {"\x11"}
-; CHECK: const char * {"\x10"}
-; CHECK: const char * {"\x0F"}
-; CHECK: const char * {"\x0E"}
-; CHECK: const char * {"\r"}
-; CHECK: const char * {"\f"}
-; CHECK: const char * {"\v"}
-; CHECK: const char * {"\n"}
-; CHECK: const char * {"\t"}
-; CHECK: const char * {"\b"}
-; CHECK: const char * {"\a"}
-; CHECK: const char * {"\x06"}
-; CHECK: const char * {"\x05"}
-; CHECK: const char * {"\x04"}
-; CHECK: const char * {"\x03"}
-; CHECK: const char * {"\x02"}
-; CHECK: const char * {"\x01"}
+; CHECK: "\xFF"
+; CHECK: "\xFE"
+; CHECK: "\xFD"
+; CHECK: "\xFC"
+; CHECK: "\xFB"
+; CHECK: "\xFA"
+; CHECK: "\xF9"
+; CHECK: "\xF8"
+; CHECK: "\xF7"
+; CHECK: "\xF6"
+; CHECK: "\xF5"
+; CHECK: "\xF4"
+; CHECK: "\xF3"
+; CHECK: "\xF2"
+; CHECK: "\xF1"
+; CHECK: "\xF0"
+; CHECK: "\xEF"
+; CHECK: "\xEE"
+; CHECK: "\xED"
+; CHECK: "\xEC"
+; CHECK: "\xEB"
+; CHECK: "\xEA"
+; CHECK: "\xE9"
+; CHECK: "\xE8"
+; CHECK: "\xE7"
+; CHECK: "\xE6"
+; CHECK: "\xE5"
+; CHECK: "\xE4"
+; CHECK: "\xE3"
+; CHECK: "\xE2"
+; CHECK: "\xE1"
+; CHECK: "\xE0"
+; CHECK: "\xDF"
+; CHECK: "\xDE"
+; CHECK: "\xDD"
+; CHECK: "\xDC"
+; CHECK: "\xDB"
+; CHECK: "\xDA"
+; CHECK: "\xD9"
+; CHECK: "\xD8"
+; CHECK: "\xD7"
+; CHECK: "\xD6"
+; CHECK: "\xD5"
+; CHECK: "\xD4"
+; CHECK: "\xD3"
+; CHECK: "\xD2"
+; CHECK: "\xD1"
+; CHECK: "\xD0"
+; CHECK: "\xCF"
+; CHECK: "\xCE"
+; CHECK: "\xCD"
+; CHECK: "\xCC"
+; CHECK: "\xCB"
+; CHECK: "\xCA"
+; CHECK: "\xC9"
+; CHECK: "\xC8"
+; CHECK: "\xC7"
+; CHECK: "\xC6"
+; CHECK: "\xC5"
+; CHECK: "\xC4"
+; CHECK: "\xC3"
+; CHECK: "\xC2"
+; CHECK: "\xC1"
+; CHECK: "\xC0"
+; CHECK: "\xBF"
+; CHECK: "\xBE"
+; CHECK: "\xBD"
+; CHECK: "\xBC"
+; CHECK: "\xBB"
+; CHECK: "\xBA"
+; CHECK: "\xB9"
+; CHECK: "\xB8"
+; CHECK: "\xB7"
+; CHECK: "\xB6"
+; CHECK: "\xB5"
+; CHECK: "\xB4"
+; CHECK: "\xB3"
+; CHECK: "\xB2"
+; CHECK: "\xB1"
+; CHECK: "\xB0"
+; CHECK: "\xAF"
+; CHECK: "\xAE"
+; CHECK: "\xAD"
+; CHECK: "\xAC"
+; CHECK: "\xAB"
+; CHECK: "\xAA"
+; CHECK: "\xA9"
+; CHECK: "\xA8"
+; CHECK: "\xA7"
+; CHECK: "\xA6"
+; CHECK: "\xA5"
+; CHECK: "\xA4"
+; CHECK: "\xA3"
+; CHECK: "\xA2"
+; CHECK: "\xA1"
+; CHECK: "\xA0"
+; CHECK: "\x9F"
+; CHECK: "\x9E"
+; CHECK: "\x9D"
+; CHECK: "\x9C"
+; CHECK: "\x9B"
+; CHECK: "\x9A"
+; CHECK: "\x99"
+; CHECK: "\x98"
+; CHECK: "\x97"
+; CHECK: "\x96"
+; CHECK: "\x95"
+; CHECK: "\x94"
+; CHECK: "\x93"
+; CHECK: "\x92"
+; CHECK: "\x91"
+; CHECK: "\x90"
+; CHECK: "\x8F"
+; CHECK: "\x8E"
+; CHECK: "\x8D"
+; CHECK: "\x8C"
+; CHECK: "\x8B"
+; CHECK: "\x8A"
+; CHECK: "\x89"
+; CHECK: "\x88"
+; CHECK: "\x87"
+; CHECK: "\x86"
+; CHECK: "\x85"
+; CHECK: "\x84"
+; CHECK: "\x83"
+; CHECK: "\x82"
+; CHECK: "\x81"
+; CHECK: "\x80"
+; CHECK: "\x7F"
+; CHECK: "~"
+; CHECK: "}"
+; CHECK: "|"
+; CHECK: "{"
+; CHECK: "z"
+; CHECK: "y"
+; CHECK: "x"
+; CHECK: "w"
+; CHECK: "v"
+; CHECK: "u"
+; CHECK: "t"
+; CHECK: "s"
+; CHECK: "r"
+; CHECK: "q"
+; CHECK: "p"
+; CHECK: "o"
+; CHECK: "n"
+; CHECK: "m"
+; CHECK: "l"
+; CHECK: "k"
+; CHECK: "j"
+; CHECK: "i"
+; CHECK: "h"
+; CHECK: "g"
+; CHECK: "f"
+; CHECK: "e"
+; CHECK: "d"
+; CHECK: "c"
+; CHECK: "b"
+; CHECK: "a"
+; CHECK: "`"
+; CHECK: "_"
+; CHECK: "^"
+; CHECK: "]"
+; CHECK: "\\"
+; CHECK: "["
+; CHECK: "Z"
+; CHECK: "Y"
+; CHECK: "X"
+; CHECK: "W"
+; CHECK: "V"
+; CHECK: "U"
+; CHECK: "T"
+; CHECK: "S"
+; CHECK: "R"
+; CHECK: "Q"
+; CHECK: "P"
+; CHECK: "O"
+; CHECK: "N"
+; CHECK: "M"
+; CHECK: "L"
+; CHECK: "K"
+; CHECK: "J"
+; CHECK: "I"
+; CHECK: "H"
+; CHECK: "G"
+; CHECK: "F"
+; CHECK: "E"
+; CHECK: "D"
+; CHECK: "C"
+; CHECK: "B"
+; CHECK: "A"
+; CHECK: "@"
+; CHECK: "?"
+; CHECK: ">"
+; CHECK: "="
+; CHECK: "<"
+; CHECK: ";"
+; CHECK: ":"
+; CHECK: "9"
+; CHECK: "8"
+; CHECK: "7"
+; CHECK: "6"
+; CHECK: "5"
+; CHECK: "4"
+; CHECK: "3"
+; CHECK: "2"
+; CHECK: "1"
+; CHECK: "0"
+; CHECK: "/"
+; CHECK: "."
+; CHECK: "-"
+; CHECK: ","
+; CHECK: "+"
+; CHECK: "*"
+; CHECK: ")"
+; CHECK: "("
+; CHECK: "\'"
+; CHECK: "&"
+; CHECK: "%"
+; CHECK: "$"
+; CHECK: "#"
+; CHECK: "\""
+; CHECK: "!"
+; CHECK: " "
+; CHECK: "\x1F"
+; CHECK: "\x1E"
+; CHECK: "\x1D"
+; CHECK: "\x1C"
+; CHECK: "\x1B"
+; CHECK: "\x1A"
+; CHECK: "\x19"
+; CHECK: "\x18"
+; CHECK: "\x17"
+; CHECK: "\x16"
+; CHECK: "\x15"
+; CHECK: "\x14"
+; CHECK: "\x13"
+; CHECK: "\x12"
+; CHECK: "\x11"
+; CHECK: "\x10"
+; CHECK: "\x0F"
+; CHECK: "\x0E"
+; CHECK: "\r"
+; CHECK: "\f"
+; CHECK: "\v"
+; CHECK: "\n"
+; CHECK: "\t"
+; CHECK: "\b"
+; CHECK: "\a"
+; CHECK: "\x06"
+; CHECK: "\x05"
+; CHECK: "\x04"
+; CHECK: "\x03"
+; CHECK: "\x02"
+; CHECK: "\x01"
 
 ; The mangling doesn't distinguish between char and char16 types, so even though
-; this was originally written as a char * with one embedded null, it mangles
-; identically to a char16_t * that is empty.  So when demangling, we choose the
+; this was originally written as a char[] with one embedded null, it mangles
+; identically to a char16_t[] that is empty.  So when demangling, we choose the
 ; "smartest" one, which happened to be wrong, but it's still a "better"
 ; demangling.
-; CHECK: const char16_t * {u""}
+; CHECK: u""
 
 
 ??_C@_13KDLDGPGJ@?$AA?7?$AA?$AA@
@@ -622,152 +622,152 @@
 ??_C@_13EHOOFIKC@?$AA?$HN?$AA?$AA@
 ??_C@_13FFFLPHEM@?$AA?$HO?$AA?$AA@
 
-; CHECK: const wchar_t * {L"\t"}
-; CHECK: const wchar_t * {L"\n"}
-; CHECK: const wchar_t * {L"\v"}
-; CHECK: const wchar_t * {L" "}
-; CHECK: const wchar_t * {L"!"}
-; CHECK: const wchar_t * {L"\""}
-; CHECK: const wchar_t * {L"#"}
-; CHECK: const wchar_t * {L"$"}
-; CHECK: const wchar_t * {L"%"}
-; CHECK: const wchar_t * {L"&"}
-; CHECK: const wchar_t * {L"\'"}
-; CHECK: const wchar_t * {L"("}
-; CHECK: const wchar_t * {L")"}
-; CHECK: const wchar_t * {L"*"}
-; CHECK: const wchar_t * {L"+"}
-; CHECK: const wchar_t * {L","}
-; CHECK: const wchar_t * {L"-"}
-; CHECK: const wchar_t * {L"."}
-; CHECK: const wchar_t * {L"/"}
-; CHECK: const wchar_t * {L"0"}
-; CHECK: const wchar_t * {L"1"}
-; CHECK: const wchar_t * {L"2"}
-; CHECK: const wchar_t * {L"3"}
-; CHECK: const wchar_t * {L"4"}
-; CHECK: const wchar_t * {L"5"}
-; CHECK: const wchar_t * {L"6"}
-; CHECK: const wchar_t * {L"7"}
-; CHECK: const wchar_t * {L"8"}
-; CHECK: const wchar_t * {L"9"}
-; CHECK: const wchar_t * {L":"}
-; CHECK: const wchar_t * {L";"}
-; CHECK: const wchar_t * {L"<"}
-; CHECK: const wchar_t * {L"="}
-; CHECK: const wchar_t * {L">"}
-; CHECK: const wchar_t * {L"?"}
-; CHECK: const wchar_t * {L"@"}
-; CHECK: const wchar_t * {L"A"}
-; CHECK: const wchar_t * {L"B"}
-; CHECK: const wchar_t * {L"C"}
-; CHECK: const wchar_t * {L"D"}
-; CHECK: const wchar_t * {L"E"}
-; CHECK: const wchar_t * {L"F"}
-; CHECK: const wchar_t * {L"G"}
-; CHECK: const wchar_t * {L"H"}
-; CHECK: const wchar_t * {L"I"}
-; CHECK: const wchar_t * {L"J"}
-; CHECK: const wchar_t * {L"K"}
-; CHECK: const wchar_t * {L"L"}
-; CHECK: const wchar_t * {L"M"}
-; CHECK: const wchar_t * {L"N"}
-; CHECK: const wchar_t * {L"O"}
-; CHECK: const wchar_t * {L"P"}
-; CHECK: const wchar_t * {L"Q"}
-; CHECK: const wchar_t * {L"R"}
-; CHECK: const wchar_t * {L"S"}
-; CHECK: const wchar_t * {L"T"}
-; CHECK: const wchar_t * {L"U"}
-; CHECK: const wchar_t * {L"V"}
-; CHECK: const wchar_t * {L"W"}
-; CHECK: const wchar_t * {L"X"}
-; CHECK: const wchar_t * {L"Y"}
-; CHECK: const wchar_t * {L"Z"}
-; CHECK: const wchar_t * {L"["}
-; CHECK: const wchar_t * {L"\\"}
-; CHECK: const wchar_t * {L"]"}
-; CHECK: const wchar_t * {L"^"}
-; CHECK: const wchar_t * {L"_"}
-; CHECK: const wchar_t * {L"`"}
-; CHECK: const wchar_t * {L"a"}
-; CHECK: const wchar_t * {L"b"}
-; CHECK: const wchar_t * {L"c"}
-; CHECK: const wchar_t * {L"d"}
-; CHECK: const wchar_t * {L"e"}
-; CHECK: const wchar_t * {L"f"}
-; CHECK: const wchar_t * {L"g"}
-; CHECK: const wchar_t * {L"h"}
-; CHECK: const wchar_t * {L"i"}
-; CHECK: const wchar_t * {L"j"}
-; CHECK: const wchar_t * {L"k"}
-; CHECK: const wchar_t * {L"l"}
-; CHECK: const wchar_t * {L"m"}
-; CHECK: const wchar_t * {L"n"}
-; CHECK: const wchar_t * {L"o"}
-; CHECK: const wchar_t * {L"p"}
-; CHECK: const wchar_t * {L"q"}
-; CHECK: const wchar_t * {L"r"}
-; CHECK: const wchar_t * {L"s"}
-; CHECK: const wchar_t * {L"t"}
-; CHECK: const wchar_t * {L"u"}
-; CHECK: const wchar_t * {L"v"}
-; CHECK: const wchar_t * {L"w"}
-; CHECK: const wchar_t * {L"x"}
-; CHECK: const wchar_t * {L"y"}
-; CHECK: const wchar_t * {L"z"}
-; CHECK: const wchar_t * {L"{"}
-; CHECK: const wchar_t * {L"|"}
-; CHECK: const wchar_t * {L"}"}
-; CHECK: const wchar_t * {L"~"}
+; CHECK: L"\t"
+; CHECK: L"\n"
+; CHECK: L"\v"
+; CHECK: L" "
+; CHECK: L"!"
+; CHECK: L"\""
+; CHECK: L"#"
+; CHECK: L"$"
+; CHECK: L"%"
+; CHECK: L"&"
+; CHECK: L"\'"
+; CHECK: L"("
+; CHECK: L")"
+; CHECK: L"*"
+; CHECK: L"+"
+; CHECK: L","
+; CHECK: L"-"
+; CHECK: L"."
+; CHECK: L"/"
+; CHECK: L"0"
+; CHECK: L"1"
+; CHECK: L"2"
+; CHECK: L"3"
+; CHECK: L"4"
+; CHECK: L"5"
+; CHECK: L"6"
+; CHECK: L"7"
+; CHECK: L"8"
+; CHECK: L"9"
+; CHECK: L":"
+; CHECK: L";"
+; CHECK: L"<"
+; CHECK: L"="
+; CHECK: L">"
+; CHECK: L"?"
+; CHECK: L"@"
+; CHECK: L"A"
+; CHECK: L"B"
+; CHECK: L"C"
+; CHECK: L"D"
+; CHECK: L"E"
+; CHECK: L"F"
+; CHECK: L"G"
+; CHECK: L"H"
+; CHECK: L"I"
+; CHECK: L"J"
+; CHECK: L"K"
+; CHECK: L"L"
+; CHECK: L"M"
+; CHECK: L"N"
+; CHECK: L"O"
+; CHECK: L"P"
+; CHECK: L"Q"
+; CHECK: L"R"
+; CHECK: L"S"
+; CHECK: L"T"
+; CHECK: L"U"
+; CHECK: L"V"
+; CHECK: L"W"
+; CHECK: L"X"
+; CHECK: L"Y"
+; CHECK: L"Z"
+; CHECK: L"["
+; CHECK: L"\\"
+; CHECK: L"]"
+; CHECK: L"^"
+; CHECK: L"_"
+; CHECK: L"`"
+; CHECK: L"a"
+; CHECK: L"b"
+; CHECK: L"c"
+; CHECK: L"d"
+; CHECK: L"e"
+; CHECK: L"f"
+; CHECK: L"g"
+; CHECK: L"h"
+; CHECK: L"i"
+; CHECK: L"j"
+; CHECK: L"k"
+; CHECK: L"l"
+; CHECK: L"m"
+; CHECK: L"n"
+; CHECK: L"o"
+; CHECK: L"p"
+; CHECK: L"q"
+; CHECK: L"r"
+; CHECK: L"s"
+; CHECK: L"t"
+; CHECK: L"u"
+; CHECK: L"v"
+; CHECK: L"w"
+; CHECK: L"x"
+; CHECK: L"y"
+; CHECK: L"z"
+; CHECK: L"{"
+; CHECK: L"|"
+; CHECK: L"}"
+; CHECK: L"~"
 
 
 
 ??_C@_0CF@LABBIIMO@012345678901234567890123456789AB@
-; CHECK: const char * {"012345678901234567890123456789AB"...}
+; CHECK: "012345678901234567890123456789AB"...
 
 ??_C@_1EK@KFPEBLPK@?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AAA?$AAB@
-; CHECK: const wchar_t * {L"012345678901234567890123456789AB"...}
+; CHECK: L"012345678901234567890123456789AB"...
 
 ??_C@_13IIHIAFKH@?W?$PP?$AA?$AA@
-; CHECK: const wchar_t * {L"\xD7\xFF"}
+; CHECK: L"\xD7\xFF"
 
 ??_C@_02PCEFGMJL@hi?$AA@
-; CHECK: const char * {"hi"}
+; CHECK: "hi"
 
 ??_C@_05OMLEGLOC@h?$AAi?$AA?$AA?$AA@
-; CHECK: const char16_t * {u"hi"}
+; CHECK: u"hi"
 
 ??_C@_0EK@FEAOBHPP@o?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA@
-; CHECK: const char16_t * {u"o123456789012345"...}
+; CHECK: u"o123456789012345"...
 
 ??_C@_0M@GFNAJIPG@h?$AA?$AA?$AAi?$AA?$AA?$AA?$AA?$AA?$AA?$AA@
-; CHECK: const char32_t * {U"hi"}
+; CHECK: U"hi"
 
 ??_C@_0JE@IMHFEDAA@0?$AA?$AA?$AA1?$AA?$AA?$AA2?$AA?$AA?$AA3?$AA?$AA?$AA4?$AA?$AA?$AA5?$AA?$AA?$AA6?$AA?$AA?$AA7?$AA?$AA?$AA@
-; CHECK: const char32_t * {U"01234567"...}
+; CHECK: U"01234567"...
 
 ; These all have just the right length that the trailing 0 just fits.
 ??_C@_0CA@NMANGEKF@012345678901234567890123456789A?$AA@
-; CHECK: const char * {"012345678901234567890123456789A"}
+; CHECK: "012345678901234567890123456789A"
 
 ??_C@_1EA@LJAFPILO@?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AAA?$AA?$AA@
-; CHECK: const wchar_t * {L"012345678901234567890123456789A"}
+; CHECK: L"012345678901234567890123456789A"
 
 ??_C@_0CA@NMANGEKF@012345678901234567890123456789A?$AA@
-; CHECK: const char * {"012345678901234567890123456789A"}
+; CHECK: "012345678901234567890123456789A"
 
 ??_C@_0CA@NFEFHIFO@0?$AA1?$AA2?$AA3?$AA4?$AA5?$AA6?$AA7?$AA8?$AA9?$AA0?$AA1?$AA2?$AA3?$AA4?$AA?$AA?$AA@
-; CHECK: const char16_t * {u"012345678901234"}
+; CHECK: u"012345678901234"
 
 ??_C@_0CA@KFPHPCC@0?$AA?$AA?$AA1?$AA?$AA?$AA2?$AA?$AA?$AA3?$AA?$AA?$AA4?$AA?$AA?$AA5?$AA?$AA?$AA6?$AA?$AA?$AA?$AA?$AA?$AA?$AA@
-; CHECK: const char32_t * {U"0123456"}
+; CHECK: U"0123456"
 
 ; There are too many bytes encoded in this string literal (it should encode a max of 32 bytes)
 ; but some buggy compilers will incorrectly generate this, so we need to be able to demangle
 ; both the correct and incorrect versions.
 ??_C@_0CG@HJGBPLNO@l?$AAo?$AAo?$AAk?$AAA?$AAh?$AAe?$AAa?$AAd?$AAH?$AAa?$AAr?$AAd?$AAB?$AAr?$AAe?$AAa?$AAk?$AA?$AA?$AA@
-; CHECK: const char16_t * {u"lookAheadHardBreak"}
+; CHECK: u"lookAheadHardBreak"
 
 ??_C@_0CG@HJGBPLNO@l?$AAo?$AAo?$AAk?$AAA?$AAh?$AAe?$AAa?$AAd?$AAH?$AAa?$AAr?$AAd?$AAB?$AAr?$AAe?$AA@
-; CHECK: const char16_t * {u"lookAheadHardBre"...}
+; CHECK: u"lookAheadHardBre"...

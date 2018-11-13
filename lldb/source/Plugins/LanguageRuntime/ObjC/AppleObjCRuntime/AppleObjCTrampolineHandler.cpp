@@ -10,10 +10,6 @@
 
 #include "AppleObjCTrampolineHandler.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "AppleThreadPlanStepThroughObjCTrampoline.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"

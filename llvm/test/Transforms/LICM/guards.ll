@@ -85,16 +85,15 @@ loop:
 }
 
 
-; TODO: We can also hoist this guard from mustexec non-header block.
 define void @test4(i1 %c, i32* %p) {
 
 ; CHECK-LABEL: @test4(
 ; CHECK-LABEL: entry:
 ; CHECK:       %a = load i32, i32* %p
 ; CHECK:       %invariant_cond = icmp ne i32 %a, 100
+; CHECK:       call void (i1, ...) @llvm.experimental.guard(i1 %invariant_cond)
 ; CHECK-LABEL: loop:
 ; CHECK-LABEL: backedge:
-; CHECK:       call void (i1, ...) @llvm.experimental.guard(i1 %invariant_cond)
 
 entry:
   br label %loop
@@ -190,6 +189,155 @@ if.false:
   br label %backedge
 
 backedge:
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Check that we don't hoist across a store in the header.
+define void @test4c(i1 %c, i32* %p, i8* noalias %s) {
+
+; CHECK-LABEL: @test4c(
+; CHECK-LABEL: entry:
+; CHECK:       %a = load i32, i32* %p
+; CHECK:       %invariant_cond = icmp ne i32 %a, 100
+; CHECK:       call void (i1, ...) @llvm.experimental.guard(i1 %invariant_cond)
+; CHECK-LABEL: loop:
+; CHECK-LABEL: backedge:
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ]
+  %iv.next = add i32 %iv, 1
+  store i8 0, i8* %s
+  br i1 %c, label %if.true, label %if.false
+
+if.true:
+  br label %backedge
+
+if.false:
+  br label %backedge
+
+backedge:
+  %a = load i32, i32* %p
+  %invariant_cond = icmp ne i32 %a, 100
+  call void (i1, ...) @llvm.experimental.guard(i1 %invariant_cond) [ "deopt"() ]
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Check that we don't hoist across a store in a conditionally execute block.
+define void @test4d(i1 %c, i32* %p, i8* noalias %s) {
+
+; CHECK-LABEL: @test4d(
+; CHECK-LABEL: entry:
+; CHECK:       %a = load i32, i32* %p
+; CHECK:       %invariant_cond = icmp ne i32 %a, 100
+; CHECK-LABEL: loop:
+; CHECK-LABEL: backedge:
+; CHECK:       call void (i1, ...) @llvm.experimental.guard(i1 %invariant_cond)
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ]
+  %iv.next = add i32 %iv, 1
+  br i1 %c, label %if.true, label %if.false
+
+if.true:
+  store i8 0, i8* %s
+  br label %backedge
+
+if.false:
+  br label %backedge
+
+backedge:
+  %a = load i32, i32* %p
+  %invariant_cond = icmp ne i32 %a, 100
+  call void (i1, ...) @llvm.experimental.guard(i1 %invariant_cond) [ "deopt"() ]
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Check that we don't hoist across a store before the guard in the backedge.
+define void @test4e(i1 %c, i32* %p, i8* noalias %s) {
+
+; CHECK-LABEL: @test4e(
+; CHECK-LABEL: entry:
+; CHECK:       %a = load i32, i32* %p
+; CHECK:       %invariant_cond = icmp ne i32 %a, 100
+; CHECK:       store i8 0, i8* %s
+; CHECK:       call void (i1, ...) @llvm.experimental.guard(i1 %invariant_cond)
+; CHECK-LABEL: loop:
+; CHECK-LABEL: backedge:
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ]
+  %iv.next = add i32 %iv, 1
+  br i1 %c, label %if.true, label %if.false
+
+if.true:
+  br label %backedge
+
+if.false:
+  br label %backedge
+
+backedge:
+  %a = load i32, i32* %p
+  %invariant_cond = icmp ne i32 %a, 100
+  store i8 0, i8* %s
+  call void (i1, ...) @llvm.experimental.guard(i1 %invariant_cond) [ "deopt"() ]
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Check that we can hoist the guard in spite of store which happens after.
+define void @test4f(i1 %c, i32* %p, i8* noalias %s) {
+
+; CHECK-LABEL: @test4f(
+; CHECK-LABEL: entry:
+; CHECK:       %a = load i32, i32* %p
+; CHECK:       %invariant_cond = icmp ne i32 %a, 100
+; CHECK:       call void (i1, ...) @llvm.experimental.guard(i1 %invariant_cond)
+; CHECK-LABEL: loop:
+; CHECK-LABEL: backedge:
+
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %backedge ]
+  %iv.next = add i32 %iv, 1
+  br i1 %c, label %if.true, label %if.false
+
+if.true:
+  br label %backedge
+
+if.false:
+  br label %backedge
+
+backedge:
+  %a = load i32, i32* %p
+  %invariant_cond = icmp ne i32 %a, 100
+  call void (i1, ...) @llvm.experimental.guard(i1 %invariant_cond) [ "deopt"() ]
+  store i8 0, i8* %s
   %loop_cond = icmp slt i32 %iv.next, 1000
   br i1 %loop_cond, label %loop, label %exit
 

@@ -22,6 +22,7 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Win64EH.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -579,8 +580,9 @@ static void printRuntimeFunctionRels(const COFFObjectFile *Obj,
 
 void llvm::printCOFFUnwindInfo(const COFFObjectFile *Obj) {
   if (Obj->getMachine() != COFF::IMAGE_FILE_MACHINE_AMD64) {
-    errs() << "Unsupported image machine type "
-              "(currently only AMD64 is supported).\n";
+    WithColor::error(errs(), "llvm-objdump")
+        << "unsupported image machine type "
+           "(currently only AMD64 is supported).\n";
     return;
   }
 

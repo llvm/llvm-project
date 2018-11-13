@@ -111,6 +111,12 @@ Error RecordInitializer::visit(CustomEventRecord &R) {
         std::make_error_code(std::errc::invalid_argument),
         "Cannot read a custom event record size field offset %d.", OffsetPtr);
 
+  if (R.Size <= 0)
+    return createStringError(
+        std::make_error_code(std::errc::bad_address),
+        "Invalid size for custom event (size = %d) at offset %d.", R.Size,
+        OffsetPtr);
+
   PreReadOffset = OffsetPtr;
   R.TSC = E.getU64(&OffsetPtr);
   if (PreReadOffset == OffsetPtr)
@@ -142,11 +148,21 @@ Error RecordInitializer::visit(CustomEventRecord &R) {
 
   std::vector<uint8_t> Buffer;
   Buffer.resize(R.Size);
+  PreReadOffset = OffsetPtr;
   if (E.getU8(&OffsetPtr, Buffer.data(), R.Size) != Buffer.data())
     return createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Failed reading data into buffer of size %d at offset %d.", R.Size,
         OffsetPtr);
+
+  assert(OffsetPtr >= PreReadOffset);
+  if (OffsetPtr - PreReadOffset != static_cast<uint32_t>(R.Size))
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Failed reading enough bytes for the custom event payload -- read %d "
+        "expecting %d bytes at offset %d.",
+        OffsetPtr - PreReadOffset, R.Size, PreReadOffset);
+
   R.Data.assign(Buffer.begin(), Buffer.end());
   return Error::success();
 }
@@ -166,6 +182,12 @@ Error RecordInitializer::visit(CustomEventRecordV5 &R) {
     return createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Cannot read a custom event record size field offset %d.", OffsetPtr);
+
+  if (R.Size <= 0)
+    return createStringError(
+        std::make_error_code(std::errc::bad_address),
+        "Invalid size for custom event (size = %d) at offset %d.", R.Size,
+        OffsetPtr);
 
   PreReadOffset = OffsetPtr;
   R.Delta = E.getSigned(&OffsetPtr, sizeof(int32_t));
@@ -188,11 +210,21 @@ Error RecordInitializer::visit(CustomEventRecordV5 &R) {
 
   std::vector<uint8_t> Buffer;
   Buffer.resize(R.Size);
+  PreReadOffset = OffsetPtr;
   if (E.getU8(&OffsetPtr, Buffer.data(), R.Size) != Buffer.data())
     return createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Failed reading data into buffer of size %d at offset %d.", R.Size,
         OffsetPtr);
+
+  assert(OffsetPtr >= PreReadOffset);
+  if (OffsetPtr - PreReadOffset != static_cast<uint32_t>(R.Size))
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Failed reading enough bytes for the custom event payload -- read %d "
+        "expecting %d bytes at offset %d.",
+        OffsetPtr - PreReadOffset, R.Size, PreReadOffset);
+
   R.Data.assign(Buffer.begin(), Buffer.end());
   return Error::success();
 }
@@ -212,6 +244,12 @@ Error RecordInitializer::visit(TypedEventRecord &R) {
     return createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Cannot read a typed event record size field offset %d.", OffsetPtr);
+
+  if (R.Size <= 0)
+    return createStringError(
+        std::make_error_code(std::errc::bad_address),
+        "Invalid size for typed event (size = %d) at offset %d.", R.Size,
+        OffsetPtr);
 
   PreReadOffset = OffsetPtr;
   R.Delta = E.getSigned(&OffsetPtr, sizeof(int32_t));
@@ -241,11 +279,21 @@ Error RecordInitializer::visit(TypedEventRecord &R) {
 
   std::vector<uint8_t> Buffer;
   Buffer.resize(R.Size);
+  PreReadOffset = OffsetPtr;
   if (E.getU8(&OffsetPtr, Buffer.data(), R.Size) != Buffer.data())
     return createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "Failed reading data into buffer of size %d at offset %d.", R.Size,
         OffsetPtr);
+
+  assert(OffsetPtr >= PreReadOffset);
+  if (OffsetPtr - PreReadOffset != static_cast<uint32_t>(R.Size))
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "Failed reading enough bytes for the typed event payload -- read %d "
+        "expecting %d bytes at offset %d.",
+        OffsetPtr - PreReadOffset, R.Size, PreReadOffset);
+
   R.Data.assign(Buffer.begin(), Buffer.end());
   return Error::success();
 }
@@ -337,7 +385,11 @@ Error RecordInitializer::visit(FunctionRecord &R) {
     return createStringError(std::make_error_code(std::errc::bad_address),
                              "Cannot read function id field from offset %d.",
                              OffsetPtr);
-  unsigned FunctionType = (Buffer >> 1) & 0x07;
+
+  // To get the function record type, we shift the buffer one to the right
+  // (truncating the function record indicator) then take the three bits
+  // (0b0111) to get the record type as an unsigned value.
+  unsigned FunctionType = (Buffer >> 1) & 0x07u;
   switch (FunctionType) {
   case static_cast<unsigned>(RecordTypes::ENTER):
   case static_cast<unsigned>(RecordTypes::ENTER_ARG):

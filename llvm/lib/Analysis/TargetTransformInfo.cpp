@@ -1108,14 +1108,20 @@ int TargetTransformInfo::getInstructionThroughput(const Instruction *I) const {
   }
   case Instruction::ShuffleVector: {
     const ShuffleVectorInst *Shuffle = cast<ShuffleVectorInst>(I);
-    // TODO: Identify and add costs for insert/extract subvector, etc.
+    Type *Ty = Shuffle->getType();
+    Type *SrcTy = Shuffle->getOperand(0)->getType();
+
+    // TODO: Identify and add costs for insert subvector, etc.
+    int SubIndex;
+    if (Shuffle->isExtractSubvectorMask(SubIndex))
+      return TTIImpl->getShuffleCost(SK_ExtractSubvector, SrcTy, SubIndex, Ty);
+
     if (Shuffle->changesLength())
       return -1;
 
     if (Shuffle->isIdentity())
       return 0;
 
-    Type *Ty = Shuffle->getType();
     if (Shuffle->isReverse())
       return TTIImpl->getShuffleCost(SK_Reverse, Ty, 0, nullptr);
 
