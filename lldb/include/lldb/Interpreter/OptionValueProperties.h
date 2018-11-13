@@ -10,12 +10,8 @@
 #ifndef liblldb_OptionValueProperties_h_
 #define liblldb_OptionValueProperties_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Interpreter/OptionValue.h"

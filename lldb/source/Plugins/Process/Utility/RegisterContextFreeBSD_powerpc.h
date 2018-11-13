@@ -11,10 +11,6 @@
 #ifndef liblldb_RegisterContextFreeBSD_powerpc_h_
 #define liblldb_RegisterContextFreeBSD_powerpc_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "RegisterInfoInterface.h"
 
 class RegisterContextFreeBSD_powerpc

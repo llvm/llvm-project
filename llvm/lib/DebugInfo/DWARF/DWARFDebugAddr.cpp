@@ -148,7 +148,7 @@ void DWARFDebugAddrTable::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
                HeaderData.Length, HeaderData.Version, HeaderData.AddrSize,
                HeaderData.SegSize);
 
-  static const char *Fmt32 = "0x%8.8" PRIx32;
+  static const char *Fmt32 = "0x%8.8" PRIx64;
   static const char *Fmt64 = "0x%16.16" PRIx64;
   std::string AddrFmt = "\n";
   std::string AddrFmtVerbose = " => ";

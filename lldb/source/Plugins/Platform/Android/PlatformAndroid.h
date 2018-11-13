@@ -10,13 +10,9 @@
 #ifndef liblldb_PlatformAndroid_h_
 #define liblldb_PlatformAndroid_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Platform/Linux/PlatformLinux.h"
 
 #include "AdbClient.h"

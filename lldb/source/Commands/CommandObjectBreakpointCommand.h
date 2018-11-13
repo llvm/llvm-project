@@ -10,11 +10,7 @@
 #ifndef liblldb_CommandObjectBreakpointCommand_h_
 #define liblldb_CommandObjectBreakpointCommand_h_
 
-// C Includes
-// C++ Includes
 
-// Other libraries and framework includes
-// Project includes
 
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"

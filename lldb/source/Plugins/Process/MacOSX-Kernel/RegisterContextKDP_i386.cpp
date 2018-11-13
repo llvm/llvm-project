@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "RegisterContextKDP_i386.h"
 #include "ProcessKDP.h"
 #include "ThreadKDP.h"

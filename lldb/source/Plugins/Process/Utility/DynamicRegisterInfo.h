@@ -10,13 +10,9 @@
 #ifndef lldb_DynamicRegisterInfo_h_
 #define lldb_DynamicRegisterInfo_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-private.h"

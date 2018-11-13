@@ -10,11 +10,7 @@
 #ifndef liblldb_CommandInterpreter_h_
 #define liblldb_CommandInterpreter_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Event.h"

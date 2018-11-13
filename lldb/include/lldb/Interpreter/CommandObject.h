@@ -10,14 +10,10 @@
 #ifndef liblldb_CommandObject_h_
 #define liblldb_CommandObject_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Flags.h"
 
 #include "lldb/Interpreter/CommandCompletions.h"

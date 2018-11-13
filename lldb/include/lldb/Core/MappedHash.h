@@ -10,18 +10,14 @@
 #ifndef liblldb_MappedHash_h_
 #define liblldb_MappedHash_h_
 
-// C Includes
 #include <assert.h>
 #include <stdint.h>
 
-// C++ Includes
 #include <algorithm>
 #include <functional>
 #include <map>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
 #include "llvm/Support/DJB.h"

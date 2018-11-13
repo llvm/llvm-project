@@ -10,14 +10,10 @@
 #ifndef lldb_UniqueDWARFASTType_h_
 #define lldb_UniqueDWARFASTType_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/DenseMap.h"
 
-// Project includes
 #include "DWARFDIE.h"
 #include "lldb/Symbol/Declaration.h"
 

@@ -112,10 +112,9 @@ TEST(RemoteObjectLayer, AddObject) {
 
   auto Channels = createPairedQueueChannels();
 
-  auto ReportError =
-    [](Error Err) {
-      logAllUnhandledErrors(std::move(Err), llvm::errs(), "");
-    };
+  auto ReportError = [](Error Err) {
+    logAllUnhandledErrors(std::move(Err), llvm::errs());
+  };
 
   // Copy the bytes out of the test object: the copy will be used to verify
   // that the original is correctly transmitted over RPC to the mock layer.
@@ -225,10 +224,9 @@ TEST(RemoteObjectLayer, RemoveObject) {
 
   auto Channels = createPairedQueueChannels();
 
-  auto ReportError =
-    [](Error Err) {
-      logAllUnhandledErrors(std::move(Err), llvm::errs(), "");
-    };
+  auto ReportError = [](Error Err) {
+    logAllUnhandledErrors(std::move(Err), llvm::errs());
+  };
 
   RPCEndpoint ClientEP(*Channels.first, true);
   RemoteObjectClientLayer<RPCEndpoint> Client(ClientEP, ReportError);
@@ -489,10 +487,9 @@ TEST(RemoteObjectLayer, EmitAndFinalize) {
 
   auto Channels = createPairedQueueChannels();
 
-  auto ReportError =
-    [](Error Err) {
-      logAllUnhandledErrors(std::move(Err), llvm::errs(), "");
-    };
+  auto ReportError = [](Error Err) {
+    logAllUnhandledErrors(std::move(Err), llvm::errs());
+  };
 
   RPCEndpoint ClientEP(*Channels.first, true);
   RemoteObjectClientLayer<RPCEndpoint> Client(ClientEP, ReportError);

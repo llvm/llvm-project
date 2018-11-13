@@ -1,3 +1,3 @@
 @ RUN: llvm-nm -print-size -arch armv7m %p/Inputs/print-size.macho-armv7m 2>&1 | FileCheck %s
 
-@ CHECK: warning sizes with -print-size for Mach-O files are always zero.
+@ CHECK: warning: sizes with -print-size for Mach-O files are always zero.

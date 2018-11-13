@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionValueRegex_h_
 #define liblldb_OptionValueRegex_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/RegularExpression.h"
 

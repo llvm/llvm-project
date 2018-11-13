@@ -10,10 +10,6 @@
 #ifndef liblldb_RegisterContextPOSIX_ppc64le_h_
 #define liblldb_RegisterContextPOSIX_ppc64le_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
 #include "RegisterInfoInterface.h"
 #include "Utility/PPC64LE_DWARF_Registers.h"

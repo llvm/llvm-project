@@ -2993,6 +2993,9 @@ def warn_availability_on_static_initializer : Warning<
   InGroup<Availability>;
 def note_overridden_method : Note<
   "overridden method is here">;
+def warn_availability_swift_unavailable_deprecated_only : Warning<
+  "only 'unavailable' and 'deprecated' are supported for Swift availability">,
+  InGroup<Availability>;
 def note_protocol_method : Note<
   "protocol method is here">;
 

@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/ThreadPlanRunToAddress.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"

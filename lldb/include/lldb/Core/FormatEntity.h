@@ -11,13 +11,13 @@
 #define liblldb_FormatEntity_h_
 
 #include "lldb/Utility/CompletionRequest.h"
-#include "lldb/Utility/FileSpec.h" // for FileSpec
+#include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/lldb-enumerations.h" // for Format::eFormatDefault, Format
-#include "lldb/lldb-types.h"        // for addr_t
-#include <algorithm>                // for min
-#include <stddef.h>                 // for size_t
-#include <stdint.h>                 // for uint32_t, uint64_t
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-types.h"
+#include <algorithm>
+#include <stddef.h>
+#include <stdint.h>
 
 #include <string>
 #include <vector>

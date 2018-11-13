@@ -10,10 +10,6 @@
 #ifndef liblldb_ThreadPlanFundamental_h_
 #define liblldb_ThreadPlanFundamental_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"

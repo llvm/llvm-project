@@ -9,10 +9,6 @@
 
 #include "lldb/Interpreter/OptionValueBoolean.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/Stream.h"

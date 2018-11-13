@@ -11,18 +11,17 @@
 ; CHECK-NODSP: sxtb
 ; CHECK-NODSP: cmp
 
-; CHECK-DSP: add
-; CHECK-DSP: uxtb
+; CHECK-DSP: uadd8
+; CHECK-DSP: sub
 ; CHECK-DSP: cmp
 ; CHECK-DSP: sxtb
-; CHECK-DSP: sub
 ; CHECK-DSP: sxtb
 ; CHECK-DSP: cmp
 
 ; CHECK-DSP-IMM: uadd8 [[ADD:r[0-9]+]],
 ; CHECK-DSP-IMM: cmp [[ADD]],
+; CHECK-DSP-IMM: subs [[SUB:r[0-9]+]],
 ; CHECK-DSP-IMM: sxtb [[SEXT0:r[0-9]+]], [[ADD]]
-; CHECK-DSP-IMM: usub8 [[SUB:r[0-9]+]],
 ; CHECK-DSP-IMM: sxtb [[SEXT1:r[0-9]+]], [[SUB]]
 ; CHECK-DSP-IMM: cmp [[SEXT1]], [[SEXT0]]
 define i8 @eq_sgt(i8* %x, i8 *%y, i8 zeroext %z) {

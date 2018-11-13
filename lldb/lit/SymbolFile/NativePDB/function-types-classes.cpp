@@ -2,7 +2,7 @@
 // REQUIRES: lld
 
 // Test that we can display function signatures with class types.
-// RUN: clang-cl /Z7 /GS- /GR- /c -Xclang -fkeep-static-consts /Fo%t.obj -- %s
+// RUN: clang-cl /Z7 /GS- /GR- /c -fstandalone-debug -Xclang -fkeep-static-consts /Fo%t.obj -- %s
 // RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb -- %t.obj
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb -f %t.exe -s \
 // RUN:     %p/Inputs/function-types-classes.lldbinit | FileCheck %s
@@ -66,6 +66,13 @@ struct B {
   };
 };
 
+// clang (incorrectly) doesn't emit debug information for outer classes
+// unless they are instantiated.  They should also be emitted if there
+// is an inner class which is instantiated.
+A::C ForceInstantiateAC;
+B ForceInstantiateB;
+B::A ForceInstantiateBA;
+
 template<typename T>
 struct TC {};
 
@@ -81,37 +88,44 @@ auto d = &four<C, const volatile U*, const volatile E&, const volatile S&&>;
 
 // classes nested in namespaces and inner classes
 
-// FIXME: LLDB with native pdb plugin doesn't currently resolve nested names
-// correctly, because it requires creating clang::NamespaceDecl or
-// clang::RecordDecl for the outer namespace or classes.  PDB doesn't contain
-// sufficient information to distinguish namespace scopes from nested class
-// scopes, so the best we can hope for is a heuristic reconstruction of the
-// clang AST based on demangling the type's unique name.  However, this is
-// as-yet unimplemented in the native PDB plugin, so for now all of these will
-// all just look like `S` when LLDB prints them.
 auto e = &three<A::B::S*, B::A::S*, A::C::S&>;
-// CHECK: (S *(*)(S *, S &)) e = {{.*}}
+// CHECK: (A::B::S *(*)(B::A::S *, A::C::S &)) e = {{.*}}
 auto f = &three<A::C::S&, A::B::S*, B::A::S*>;
-// CHECK: (S &(*)(S *, S *)) f = {{.*}}
+// CHECK: (A::C::S &(*)(A::B::S *, B::A::S *)) f = {{.*}}
 auto g = &three<B::A::S*, A::C::S&, A::B::S*>;
-// CHECK: (S *(*)(S &, S *)) g = {{.*}}
+// CHECK: (B::A::S *(*)(A::C::S &, A::B::S *)) g = {{.*}}
 
 // parameter types that are themselves template instantiations.
 auto h = &four<TC<void>, TC<int>, TC<TC<int>>, TC<A::B::S>>;
-// Note the awkward space in TC<TC<int> >.  This is because this is how template
-// instantiations are emitted by the compiler, as the fully instantiated name.
-// Only via reconstruction of the AST through the mangled type name (see above
-// comment) can we hope to do better than this).
-// CHECK: (TC<void> (*)(TC<int>, TC<TC<int> >, S>)) h = {{.*}}
+// CHECK: (TC<void> (*)(TC<int>, TC<struct TC<int>>, TC<struct A::B::S>)) h = {{.*}}
 
 auto i = &nullary<A::B::S>;
-// CHECK: (S (*)()) i = {{.*}}
+// CHECK: (A::B::S (*)()) i = {{.*}}
 
 
 // Make sure we can handle types that don't have complete debug info.
 struct Incomplete;
 auto incomplete = &three<Incomplete*, Incomplete**, const Incomplete*>;
 // CHECK: (Incomplete *(*)(Incomplete **, const Incomplete *)) incomplete = {{.*}}
+
+// CHECK: TranslationUnitDecl {{.*}}
+// CHECK: |-CXXRecordDecl {{.*}} class C definition
+// CHECK: |-CXXRecordDecl {{.*}} union U definition
+// CHECK: |-EnumDecl {{.*}} E
+// CHECK: |-CXXRecordDecl {{.*}} struct S definition
+// CHECK: |-CXXRecordDecl {{.*}} struct B
+// CHECK: | |-CXXRecordDecl {{.*}} struct A
+// CHECK: | | |-CXXRecordDecl {{.*}} struct S
+// CHECK: |-NamespaceDecl {{.*}} A
+// CHECK: | |-CXXRecordDecl {{.*}} struct C
+// CHECK: | | |-CXXRecordDecl {{.*}} struct S
+// CHECK: | `-NamespaceDecl {{.*}} B
+// CHECK: |   `-CXXRecordDecl {{.*}} struct S definition
+// CHECK: |-CXXRecordDecl {{.*}} struct TC<int> definition
+// CHECK: |-CXXRecordDecl {{.*}} struct TC<struct TC<int>> definition
+// CHECK: |-CXXRecordDecl {{.*}} struct TC<struct A::B::S> definition
+// CHECK: |-CXXRecordDecl {{.*}} struct TC<void> definition
+// CHECK: |-CXXRecordDecl {{.*}} struct Incomplete
 
 int main(int argc, char **argv) {
   return 0;

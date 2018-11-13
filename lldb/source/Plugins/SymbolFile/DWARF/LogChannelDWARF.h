@@ -10,10 +10,6 @@
 #ifndef SymbolFileDWARF_LogChannelDWARF_h_
 #define SymbolFileDWARF_LogChannelDWARF_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Log.h"
 
 #define DWARF_LOG_DEBUG_INFO (1u << 1)

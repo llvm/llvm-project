@@ -10,10 +10,6 @@
 #ifndef liblldb_CommandReturnObject_h_
 #define liblldb_CommandReturnObject_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/STLUtils.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Utility/StreamString.h"

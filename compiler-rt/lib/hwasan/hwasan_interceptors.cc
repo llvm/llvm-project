@@ -92,42 +92,6 @@ static void *AllocateFromLocalPool(uptr size_in_bytes) {
 } while (0)
 
 
-
-#define HWASAN_READ_RANGE(ctx, offset, size) \
-  CHECK_UNPOISONED(offset, size)
-#define HWASAN_WRITE_RANGE(ctx, offset, size) \
-  CHECK_UNPOISONED(offset, size)
-
-
-
-// Check that [x, x+n) range is unpoisoned.
-#define CHECK_UNPOISONED_0(x, n)                                       \
-  do {                                                                 \
-    sptr __offset = __hwasan_test_shadow(x, n);                         \
-    if (__hwasan::IsInSymbolizer()) break;                              \
-    if (__offset >= 0) {                                               \
-      GET_CALLER_PC_BP_SP;                                             \
-      (void)sp;                                                        \
-      ReportInvalidAccessInsideAddressRange(__func__, x, n, __offset); \
-      __hwasan::PrintWarning(pc, bp);                                   \
-      if (__hwasan::flags()->halt_on_error) {                           \
-        Printf("Exiting\n");                                           \
-        Die();                                                         \
-      }                                                                \
-    }                                                                  \
-  } while (0)
-
-// Check that [x, x+n) range is unpoisoned unless we are in a nested
-// interceptor.
-#define CHECK_UNPOISONED(x, n)                             \
-  do {                                                     \
-    if (!IsInInterceptorScope()) CHECK_UNPOISONED_0(x, n); \
-  } while (0)
-
-#define CHECK_UNPOISONED_STRING_OF_LEN(x, len, n)               \
-  CHECK_UNPOISONED((x),                                         \
-    common_flags()->strict_string_checks ? (len) + 1 : (n) )
-
 int __sanitizer_posix_memalign(void **memptr, uptr alignment, uptr size) {
   GET_MALLOC_STACK_TRACE;
   CHECK_NE(memptr, 0);

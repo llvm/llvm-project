@@ -10,10 +10,6 @@
 #ifndef liblldb_BreakpointResolver_h_
 #define liblldb_BreakpointResolver_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/SearchFilter.h"

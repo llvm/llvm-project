@@ -10,10 +10,6 @@
 #ifndef liblldb_ObjectFileJIT_h_
 #define liblldb_ObjectFileJIT_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Address.h"
 #include "lldb/Symbol/ObjectFile.h"
 

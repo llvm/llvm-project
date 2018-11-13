@@ -10,10 +10,6 @@
 #ifndef liblldb_PluginInterface_h_
 #define liblldb_PluginInterface_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-private.h"
 
 namespace lldb_private {

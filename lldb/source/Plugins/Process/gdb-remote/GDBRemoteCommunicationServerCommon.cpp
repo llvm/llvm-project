@@ -11,17 +11,14 @@
 
 #include <errno.h>
 
-// C Includes
 
 #ifdef __APPLE__
 #include <TargetConditionals.h>
 #endif
 
-// C++ Includes
 #include <chrono>
 #include <cstring>
 
-// Other libraries and framework includes
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
@@ -41,7 +38,6 @@
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/Triple.h"
 
-// Project includes
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 

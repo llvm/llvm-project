@@ -9,7 +9,6 @@
 
 #include "CommandObjectTarget.h"
 
-// Project includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/Module.h"
@@ -56,8 +55,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatAdapters.h"
 
-// C Includes
-// C++ Includes
 #include <cerrno>
 
 using namespace lldb;

@@ -12,24 +12,24 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/Twine.h"    // for operator+, Twine
-#include "llvm/ADT/iterator.h" // for iterator_facade_base
+#include "llvm/ADT/Twine.h"
+#include "llvm/ADT/iterator.h"
 
 #include "llvm/Support/Chrono.h"
-#include "llvm/Support/ManagedStatic.h" // for ManagedStatic
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <chrono> // for duration, system_clock, syst...
+#include <chrono>
 #include <cstdarg>
 #include <mutex>
-#include <utility> // for pair
+#include <utility>
 
-#include <assert.h>  // for assert
+#include <assert.h>
 #if defined(_WIN32)
-#include <process.h> // for getpid
+#include <process.h>
 #else
 #include <unistd.h>
 #include <pthread.h>

@@ -7,15 +7,11 @@
 //
 //===---------------------------------------------------------------------===//
 
-// C Includes
 #include <stddef.h>
 
-// C++ Includes
-// Other libraries and framework includes
 #include "lldb/Core/dwarf.h"
 #include "llvm/Support/Compiler.h"
 
-// Project includes
 
 #ifdef DECLARE_REGISTER_INFOS_MIPS_STRUCT
 

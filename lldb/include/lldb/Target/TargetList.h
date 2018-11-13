@@ -10,13 +10,9 @@
 #ifndef liblldb_TargetList_h_
 #define liblldb_TargetList_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Target/Target.h"
 

@@ -10,10 +10,6 @@
 #ifndef liblldb_ClangFunctionCaller_h_
 #define liblldb_ClangFunctionCaller_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "ClangExpressionHelper.h"
 
 #include "lldb/Core/Address.h"

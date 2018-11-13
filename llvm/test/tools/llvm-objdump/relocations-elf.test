@@ -1,6 +1,8 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objdump --reloc %t | FileCheck %s
-# RUN: llvm-objdump -r      %t | FileCheck %s
+# RUN: llvm-objdump --reloc %t > %t1
+# RUN: llvm-objdump -r      %t > %t2
+# RUN: cmp %t1 %t2
+# RUN: FileCheck %s --input-file=%t1
 
 # CHECK: RELOCATION RECORDS FOR [.rel.text]:
 # CHECK: 0000000000000001 R_X86_64_32 glob1

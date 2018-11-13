@@ -10,10 +10,8 @@
 #ifndef liblldb_RegisterContextMinidump_x86_32_h_
 #define liblldb_RegisterContextMinidump_x86_32_h_
 
-// Project includes
 #include "MinidumpTypes.h"
 
-// Other libraries and framework includes
 #include "Plugins/Process/Utility/RegisterInfoInterface.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 

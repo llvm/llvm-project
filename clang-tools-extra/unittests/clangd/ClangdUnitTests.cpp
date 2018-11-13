@@ -257,6 +257,28 @@ Bar* bar;
   }
 }
 
+MATCHER_P(DeclNamed, Name, "") {
+  if (NamedDecl *ND = dyn_cast<NamedDecl>(arg))
+    if (ND->getName() == Name)
+      return true;
+  if (auto *Stream = result_listener->stream()) {
+    llvm::raw_os_ostream OS(*Stream);
+    arg->dump(OS);
+  }
+  return false;
+}
+
+TEST(ClangdUnitTest, TopLevelDecls) {
+  TestTU TU;
+  TU.HeaderCode = R"(
+    int header1();
+    int header2;
+  )";
+  TU.Code = "int main();";
+  auto AST = TU.build();
+  EXPECT_THAT(AST.getLocalTopLevelDecls(), ElementsAre(DeclNamed("main")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

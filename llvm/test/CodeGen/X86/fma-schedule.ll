@@ -123,7 +123,7 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; GENERIC-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfmaddpd_256:
@@ -149,7 +149,7 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; HASWELL-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddpd_256:
@@ -162,7 +162,7 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; BROADWELL-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmaddpd_256:
@@ -175,7 +175,7 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; SKYLAKE-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmaddpd_256:
@@ -200,7 +200,7 @@ define void @test_vfmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; SKX-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
 ; SKX-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmaddpd_256:
@@ -330,7 +330,7 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; GENERIC-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfmaddps_256:
@@ -356,7 +356,7 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; HASWELL-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddps_256:
@@ -369,7 +369,7 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; BROADWELL-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmaddps_256:
@@ -382,7 +382,7 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; SKYLAKE-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmaddps_256:
@@ -407,7 +407,7 @@ define void @test_vfmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; SKX-NEXT:    vfmadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) + mem sched: [11:0.50]
 ; SKX-NEXT:    vfmadd231ps {{.*#+}} ymm0 = (ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmaddps_256:
@@ -741,7 +741,7 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; GENERIC-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfmaddsubpd_256:
@@ -767,7 +767,7 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; HASWELL-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddsubpd_256:
@@ -780,7 +780,7 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; BROADWELL-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmaddsubpd_256:
@@ -793,7 +793,7 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; SKYLAKE-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmaddsubpd_256:
@@ -818,7 +818,7 @@ define void @test_vfmaddsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; SKX-NEXT:    vfmaddsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
 ; SKX-NEXT:    vfmaddsub231pd {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmaddsubpd_256:
@@ -948,7 +948,7 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; GENERIC-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfmaddsubps_256:
@@ -974,7 +974,7 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; HASWELL-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmaddsubps_256:
@@ -987,7 +987,7 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; BROADWELL-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmaddsubps_256:
@@ -1000,7 +1000,7 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; SKYLAKE-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmaddsubps_256:
@@ -1025,7 +1025,7 @@ define void @test_vfmaddsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; SKX-NEXT:    vfmaddsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) +/- mem sched: [11:0.50]
 ; SKX-NEXT:    vfmaddsub231ps {{.*#+}} ymm0 = (ymm1 * mem) +/- ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmaddsubps_256:
@@ -1159,7 +1159,7 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; GENERIC-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfmsubaddpd_256:
@@ -1185,7 +1185,7 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; HASWELL-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubaddpd_256:
@@ -1198,7 +1198,7 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; BROADWELL-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmsubaddpd_256:
@@ -1211,7 +1211,7 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; SKYLAKE-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmsubaddpd_256:
@@ -1236,7 +1236,7 @@ define void @test_vfmsubaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x doubl
 ; SKX-NEXT:    vfmsubadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
 ; SKX-NEXT:    vfmsubadd231pd {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmsubaddpd_256:
@@ -1366,7 +1366,7 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; GENERIC-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfmsubaddps_256:
@@ -1392,7 +1392,7 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; HASWELL-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubaddps_256:
@@ -1405,7 +1405,7 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; BROADWELL-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmsubaddps_256:
@@ -1418,7 +1418,7 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; SKYLAKE-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmsubaddps_256:
@@ -1443,7 +1443,7 @@ define void @test_vfmsubaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> 
 ; SKX-NEXT:    vfmsubadd213ps {{.*#+}} ymm0 = (ymm1 * ymm0) -/+ mem sched: [11:0.50]
 ; SKX-NEXT:    vfmsubadd231ps {{.*#+}} ymm0 = (ymm1 * mem) -/+ ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmsubaddps_256:
@@ -1577,7 +1577,7 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; GENERIC-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfmsubpd_256:
@@ -1603,7 +1603,7 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; HASWELL-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubpd_256:
@@ -1616,7 +1616,7 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; BROADWELL-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmsubpd_256:
@@ -1629,7 +1629,7 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; SKYLAKE-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmsubpd_256:
@@ -1654,7 +1654,7 @@ define void @test_vfmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double> 
 ; SKX-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
 ; SKX-NEXT:    vfmsub231pd {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmsubpd_256:
@@ -1784,7 +1784,7 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; GENERIC-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfmsubps_256:
@@ -1810,7 +1810,7 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; HASWELL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfmsubps_256:
@@ -1823,7 +1823,7 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; BROADWELL-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfmsubps_256:
@@ -1836,7 +1836,7 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; SKYLAKE-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfmsubps_256:
@@ -1861,7 +1861,7 @@ define void @test_vfmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a2
 ; SKX-NEXT:    vfmsub213ps {{.*#+}} ymm0 = (ymm1 * ymm0) - mem sched: [11:0.50]
 ; SKX-NEXT:    vfmsub231ps {{.*#+}} ymm0 = (ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfmsubps_256:
@@ -2195,7 +2195,7 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; GENERIC-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfnmaddpd_256:
@@ -2221,7 +2221,7 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; HASWELL-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmaddpd_256:
@@ -2234,7 +2234,7 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; BROADWELL-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmaddpd_256:
@@ -2247,7 +2247,7 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; SKYLAKE-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmaddpd_256:
@@ -2272,7 +2272,7 @@ define void @test_vfnmaddpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; SKX-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
 ; SKX-NEXT:    vfnmadd231pd {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmaddpd_256:
@@ -2402,7 +2402,7 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; GENERIC-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfnmaddps_256:
@@ -2428,7 +2428,7 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; HASWELL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmaddps_256:
@@ -2441,7 +2441,7 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; BROADWELL-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmaddps_256:
@@ -2454,7 +2454,7 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; SKYLAKE-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmaddps_256:
@@ -2479,7 +2479,7 @@ define void @test_vfnmaddps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; SKX-NEXT:    vfnmadd213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) + mem sched: [11:0.50]
 ; SKX-NEXT:    vfnmadd231ps {{.*#+}} ymm0 = -(ymm1 * mem) + ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmaddps_256:
@@ -2813,7 +2813,7 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; GENERIC-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfnmsubpd_256:
@@ -2839,7 +2839,7 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; HASWELL-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsubpd_256:
@@ -2852,7 +2852,7 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; BROADWELL-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmsubpd_256:
@@ -2865,7 +2865,7 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; SKYLAKE-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmsubpd_256:
@@ -2890,7 +2890,7 @@ define void @test_vfnmsubpd_256(<4 x double> %a0, <4 x double> %a1, <4 x double>
 ; SKX-NEXT:    vfnmsub213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
 ; SKX-NEXT:    vfnmsub231pd {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmsubpd_256:
@@ -3020,7 +3020,7 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; GENERIC-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [10:0.50]
 ; GENERIC-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [10:0.50]
 ; GENERIC-NEXT:    #NO_APP
-; GENERIC-NEXT:    vzeroupper # sched: [100:0.33]
+; GENERIC-NEXT:    vzeroupper # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; BDVER2-LABEL: test_vfnmsubps_256:
@@ -3046,7 +3046,7 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; HASWELL-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [12:0.50]
 ; HASWELL-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [12:0.50]
 ; HASWELL-NEXT:    #NO_APP
-; HASWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; HASWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; HASWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; BROADWELL-LABEL: test_vfnmsubps_256:
@@ -3059,7 +3059,7 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; BROADWELL-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
 ; BROADWELL-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; BROADWELL-NEXT:    #NO_APP
-; BROADWELL-NEXT:    vzeroupper # sched: [4:1.00]
+; BROADWELL-NEXT:    vzeroupper # sched: [0:1.00]
 ; BROADWELL-NEXT:    retq # sched: [7:1.00]
 ;
 ; SKYLAKE-LABEL: test_vfnmsubps_256:
@@ -3072,7 +3072,7 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; SKYLAKE-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
 ; SKYLAKE-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKYLAKE-NEXT:    #NO_APP
-; SKYLAKE-NEXT:    vzeroupper # sched: [4:1.00]
+; SKYLAKE-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKYLAKE-NEXT:    retq # sched: [7:1.00]
 ;
 ; KNL-LABEL: test_vfnmsubps_256:
@@ -3097,7 +3097,7 @@ define void @test_vfnmsubps_256(<8 x float> %a0, <8 x float> %a1, <8 x float> %a
 ; SKX-NEXT:    vfnmsub213ps {{.*#+}} ymm0 = -(ymm1 * ymm0) - mem sched: [11:0.50]
 ; SKX-NEXT:    vfnmsub231ps {{.*#+}} ymm0 = -(ymm1 * mem) - ymm0 sched: [11:0.50]
 ; SKX-NEXT:    #NO_APP
-; SKX-NEXT:    vzeroupper # sched: [4:1.00]
+; SKX-NEXT:    vzeroupper # sched: [0:0.67]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ;
 ; ZNVER1-LABEL: test_vfnmsubps_256:

@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionValueUUID_h_
 #define liblldb_OptionValueUUID_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/UUID.h"
 #include "lldb/Interpreter/OptionValue.h"
 

@@ -9,6 +9,9 @@
 ; CHECK: codeRepl:
 ; CHECK-NEXT: call void @fun.cold.1
 
+; CHECK: define {{.*}}@fun.cold.1{{.*}} [[cold_attr:#[0-9]+]]
+; CHECK: attributes [[cold_attr]] = { {{.*}}noreturn
+
 define void @fun() {
 entry:
   br i1 undef, label %if.then, label %if.else

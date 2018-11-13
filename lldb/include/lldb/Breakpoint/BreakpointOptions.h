@@ -10,13 +10,9 @@
 #ifndef liblldb_BreakpointOptions_h_
 #define liblldb_BreakpointOptions_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Baton.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/StringList.h"

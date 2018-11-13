@@ -7,14 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Project includes
 #include "Decoder.h"
 
 // C/C++ Includes
 #include <cinttypes>
 #include <cstring>
 
-// Other libraries and framework includes
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBThread.h"

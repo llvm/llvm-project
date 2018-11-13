@@ -21,14 +21,14 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>    // for replace, min, unique
-#include <system_error> // for error_code
-#include <vector>       // for vector
+#include <algorithm>
+#include <system_error>
+#include <vector>
 
-#include <assert.h> // for assert
-#include <limits.h> // for PATH_MAX
-#include <stdio.h>  // for size_t, NULL, snpr...
-#include <string.h> // for strcmp
+#include <assert.h>
+#include <limits.h>
+#include <stdio.h>
+#include <string.h>
 
 using namespace lldb;
 using namespace lldb_private;

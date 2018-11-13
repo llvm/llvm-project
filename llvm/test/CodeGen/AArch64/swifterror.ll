@@ -314,13 +314,12 @@ define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-APPLE-DAG: strb [[ID]], [x0, #8]
 
 ; First vararg
-; CHECK-APPLE-DAG: orr {{x[0-9]+}}, [[ARGS]], #0x8
 ; CHECK-APPLE-DAG: ldr {{w[0-9]+}}, [{{.*}}[[TMP]], #16]
 ; Second vararg
-; CHECK-APPLE-DAG: ldr {{w[0-9]+}}, [{{x[0-9]+}}], #8
+; CHECK-APPLE-DAG: ldr {{w[0-9]+}}, [{{.*}}[[TMP]], #24]
 ; CHECK-APPLE-DAG: add {{x[0-9]+}}, {{x[0-9]+}}, #16
 ; Third vararg
-; CHECK-APPLE: ldr {{w[0-9]+}}, [{{x[0-9]+}}], #8
+; CHECK-APPLE-DAG: ldr {{w[0-9]+}}, [{{.*}}[[TMP]], #32]
 
 ; CHECK-APPLE: mov x21, x0
 ; CHECK-APPLE-NOT: x21

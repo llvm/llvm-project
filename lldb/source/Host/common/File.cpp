@@ -27,7 +27,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Process.h" // for llvm::sys::Process::FileDescriptorHasColors()
+#include "llvm/Support/Process.h"
 
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"

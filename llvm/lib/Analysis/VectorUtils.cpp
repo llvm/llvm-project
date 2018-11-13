@@ -37,13 +37,19 @@ static cl::opt<unsigned> MaxInterleaveGroupFactor(
     cl::desc("Maximum factor for an interleaved access group (default = 8)"),
     cl::init(8));
 
-/// Identify if the intrinsic is trivially vectorizable.
-/// This method returns true if the intrinsic's argument types are all
-/// scalars for the scalar form of the intrinsic and all vectors for
-/// the vector form of the intrinsic.
+/// Return true if all of the intrinsic's arguments and return type are scalars
+/// for the scalar form of the intrinsic and vectors for the vector form of the
+/// intrinsic.
 bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   switch (ID) {
-  case Intrinsic::sqrt:
+  case Intrinsic::bswap: // Begin integer bit-manipulation.
+  case Intrinsic::bitreverse:
+  case Intrinsic::ctpop:
+  case Intrinsic::ctlz:
+  case Intrinsic::cttz:
+  case Intrinsic::fshl:
+  case Intrinsic::fshr:
+  case Intrinsic::sqrt: // Begin floating-point.
   case Intrinsic::sin:
   case Intrinsic::cos:
   case Intrinsic::exp:
@@ -63,14 +69,9 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::rint:
   case Intrinsic::nearbyint:
   case Intrinsic::round:
-  case Intrinsic::bswap:
-  case Intrinsic::bitreverse:
-  case Intrinsic::ctpop:
   case Intrinsic::pow:
   case Intrinsic::fma:
   case Intrinsic::fmuladd:
-  case Intrinsic::ctlz:
-  case Intrinsic::cttz:
   case Intrinsic::powi:
   case Intrinsic::canonicalize:
     return true;

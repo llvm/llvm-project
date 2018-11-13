@@ -9,10 +9,6 @@
 
 #include "lldb/Interpreter/OptionValueRegex.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;

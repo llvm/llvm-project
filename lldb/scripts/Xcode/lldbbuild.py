@@ -190,4 +190,4 @@ def package_build_path():
     return os.path.join(
         llvm_build_dirtree(),
         os.environ["LLVM_CONFIGURATION"],
-        os.environ["CURRENT_ARCH"])
+        "x86_64")

@@ -30,3 +30,11 @@ void RISCVTargetAsmStreamer::emitDirectiveOptionRVC() {
 void RISCVTargetAsmStreamer::emitDirectiveOptionNoRVC() {
   OS << "\t.option\tnorvc\n";
 }
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionRelax() {
+  OS << "\t.option\trelax\n";
+}
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionNoRelax() {
+  OS << "\t.option\tnorelax\n";
+}

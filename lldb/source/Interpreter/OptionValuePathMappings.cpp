@@ -9,10 +9,6 @@
 
 #include "lldb/Interpreter/OptionValuePathMappings.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Utility/Args.h"

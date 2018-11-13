@@ -1,6 +1,7 @@
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+ras < %s | FileCheck %s
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=cortex-a55 < %s | FileCheck %s
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=cortex-a75 < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=tsv110 < %s | FileCheck %s
 
   esb
 // CHECK: esb                             // encoding: [0x1f,0x22,0x03,0xd5]

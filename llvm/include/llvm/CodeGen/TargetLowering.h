@@ -1213,13 +1213,15 @@ public:
   /// reduce runtime.
   virtual bool ShouldShrinkFPConstant(EVT) const { return true; }
 
-  // Return true if it is profitable to reduce the given load node to a smaller
-  // type.
-  //
-  // e.g. (i16 (trunc (i32 (load x))) -> i16 load x should be performed
-  virtual bool shouldReduceLoadWidth(SDNode *Load,
-                                     ISD::LoadExtType ExtTy,
+  /// Return true if it is profitable to reduce a load to a smaller type.
+  /// Example: (i16 (trunc (i32 (load x))) -> i16 load x
+  virtual bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtTy,
                                      EVT NewVT) const {
+    // By default, assume that it is cheaper to extract a subvector from a wide
+    // vector load rather than creating multiple narrow vector loads.
+    if (NewVT.isVector() && !Load->hasOneUse())
+      return false;
+
     return true;
   }
 

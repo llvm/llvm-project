@@ -48,7 +48,7 @@ public:
       : ObjDumper(Writer), Obj(Obj) {}
 
   void printFileHeaders() override;
-  void printSections() override;
+  void printSectionHeaders() override;
   void printRelocations() override;
   void printSymbols() override;
   void printDynamicSymbols() override { llvm_unreachable("unimplemented"); }
@@ -148,7 +148,7 @@ void WasmDumper::printSymbols() {
     printSymbol(Symbol);
 }
 
-void WasmDumper::printSections() {
+void WasmDumper::printSectionHeaders() {
   ListScope Group(W, "Sections");
   for (const SectionRef &Section : Obj->sections()) {
     const WasmSection &WasmSec = Obj->getWasmSection(Section);

@@ -104,8 +104,6 @@ struct SymbolizerScope {
   ~SymbolizerScope() { ExitSymbolizer(); }
 };
 
-void PrintWarning(uptr pc, uptr bp);
-
 void GetStackTrace(BufferedStackTrace *stack, uptr max_s, uptr pc, uptr bp,
                    void *context, bool request_fast_unwind);
 
@@ -153,6 +151,8 @@ void HwasanTSDThreadInit();
 void HwasanOnDeadlySignal(int signo, void *info, void *context);
 
 void UpdateMemoryUsage();
+
+void AppendToErrorMessageBuffer(const char *buffer);
 
 }  // namespace __hwasan
 

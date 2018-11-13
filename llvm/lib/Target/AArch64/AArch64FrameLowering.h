@@ -69,6 +69,17 @@ public:
 
   bool enableStackSlotScavenging(const MachineFunction &MF) const override;
 
+  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
+                                             RegScavenger *RS) const override;
+
+  unsigned getWinEHParentFrameOffset(const MachineFunction &MF) const override;
+
+  unsigned getWinEHFuncletFrameSize(const MachineFunction &MF) const;
+
+  int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
+                                     unsigned &FrameReg,
+                                     bool IgnoreSPUpdates) const override;
+
 private:
   bool shouldCombineCSRLocalStackBump(MachineFunction &MF,
                                       unsigned StackBumpBytes) const;

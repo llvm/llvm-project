@@ -66,6 +66,11 @@
 ; RUN:     -passes='lto-pre-link<O3>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3 \
 ; RUN:     --check-prefix=CHECK-EP-PIPELINE-START
+; RUN: opt -disable-verify -debug-pass-manager \
+; RUN:     -passes-ep-optimizer-last='no-op-function' \
+; RUN:     -passes='default<O3>' -S  %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=CHECK-O --check-prefix=CHECK-O3 \
+; RUN:     --check-prefix=CHECK-EP-OPTIMIZER-LAST
 
 ; CHECK-O: Running analysis: PassInstrumentationAnalysis
 ; CHECK-O-NEXT: Starting llvm::Module pass manager run.
@@ -254,6 +259,7 @@
 ; CHECK-O-NEXT: Running pass: DivRemPairsPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
 ; CHECK-O-NEXT: Running pass: SpeculateAroundPHIsPass
+; CHECK-EP-OPTIMIZER-LAST: Running pass: NoOpFunctionPass
 ; CHECK-O-NEXT: Finished llvm::Function pass manager run.
 ; CHECK-O-NEXT: Running pass: CGProfilePass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass

@@ -11,7 +11,7 @@
 #include <assert.h>
 #include <cerrno>
 #include <stdio.h>
-#include <string.h> // For strerror()
+#include <string.h>
 
 // In-house headers:
 #include "MICmnResources.h"

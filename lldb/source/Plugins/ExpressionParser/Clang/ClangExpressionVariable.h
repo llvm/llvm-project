@@ -10,20 +10,16 @@
 #ifndef liblldb_ClangExpressionVariable_h_
 #define liblldb_ClangExpressionVariable_h_
 
-// C Includes
 #include <signal.h>
 #include <stdint.h>
 #include <string.h>
 
-// C++ Includes
 #include <map>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/Support/Casting.h"
 
-// Project includes
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/ExpressionVariable.h"

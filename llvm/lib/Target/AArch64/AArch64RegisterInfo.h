@@ -65,6 +65,9 @@ public:
   // normal calls, so they need a different mask to represent this.
   const uint32_t *getTLSCallPreservedMask() const;
 
+  // Funclets on ARM64 Windows don't preserve any registers.
+  const uint32_t *getNoPreservedMask() const override;
+
   /// getThisReturnPreservedMask - Returns a call preserved mask specific to the
   /// case that 'returned' is on an i64 first argument if the calling convention
   /// is one that can (partially) model this attribute with a preserved mask

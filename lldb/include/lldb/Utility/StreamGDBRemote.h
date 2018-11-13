@@ -10,11 +10,11 @@
 #ifndef liblldb_StreamGDBRemote_h_
 #define liblldb_StreamGDBRemote_h_
 
-#include "lldb/Utility/StreamString.h" // for StreamString
-#include "lldb/lldb-enumerations.h"    // for ByteOrder
+#include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 

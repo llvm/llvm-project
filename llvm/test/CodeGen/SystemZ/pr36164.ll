@@ -15,54 +15,39 @@
 define void @main() local_unnamed_addr #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    stmg %r12, %r15, 96(%r15)
-; CHECK-NEXT:    .cfi_offset %r12, -64
-; CHECK-NEXT:    .cfi_offset %r13, -56
-; CHECK-NEXT:    .cfi_offset %r14, -48
-; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    lhi %r0, 1
 ; CHECK-NEXT:    larl %r1, g_938
-; CHECK-NEXT:    lhi %r2, 2
-; CHECK-NEXT:    lhi %r3, 3
-; CHECK-NEXT:    lhi %r4, 0
-; CHECK-NEXT:    lhi %r5, 4
-; CHECK-NEXT:    larl %r14, g_11
+; CHECK-NEXT:    lhi %r2, 0
+; CHECK-NEXT:    lhi %r3, 4
+; CHECK-NEXT:    larl %r4, g_11
 ; CHECK-NEXT:  .LBB0_1: # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    strl %r0, g_73
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    strl %r0, g_69
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-DAG:     lghi %r13, 24
-; CHECK-DAG:     strl %r2, g_69
-; CHECK-DAG:     ag %r13, 0(%r1)
-; CHECK-NEXT:    lrl %r12, g_832
-; CHECK-NEXT:    strl %r3, g_69
-; CHECK-NEXT:    lrl %r12, g_832
-; CHECK-NEXT:    strl %r4, g_69
-; CHECK-NEXT:    lrl %r12, g_832
-; CHECK-NEXT:    strl %r0, g_69
-; CHECK-NEXT:    lrl %r12, g_832
 ; CHECK-NEXT:    strl %r2, g_69
-; CHECK-NEXT:    lrl %r12, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    lrl %r5, g_832
+; CHECK-NEXT:    agsi 0(%r1), 24
+; CHECK-NEXT:    lrl %r5, g_832
 ; CHECK-NEXT:    strl %r3, g_69
-; CHECK-NEXT:    stgrl %r13, g_938
-; CHECK-NEXT:    lrl %r13, g_832
-; CHECK-NEXT:    strl %r5, g_69
-; CHECK-NEXT:    mvi 0(%r14), 1
+; CHECK-NEXT:    mvi 0(%r4), 1
 ; CHECK-NEXT:    j .LBB0_1
   br label %1
 

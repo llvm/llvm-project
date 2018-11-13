@@ -13,7 +13,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
 
-#include <memory> // for shared_ptr
+#include <memory>
 
 namespace lldb_private {
 class CommandInterpreter;

@@ -9,15 +9,12 @@
 
 #include "GDBRemoteCommunicationClient.h"
 
-// C Includes
 #include <math.h>
 #include <sys/stat.h>
 
-// C++ Includes
 #include <numeric>
 #include <sstream>
 
-// Other libraries and framework includes
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/XML.h"
@@ -33,7 +30,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 
-// Project includes
 #include "ProcessGDBRemote.h"
 #include "ProcessGDBRemoteLog.h"
 #include "lldb/Host/Config.h"
@@ -1689,11 +1685,16 @@ Status GDBRemoteCommunicationClient::GetWatchpointSupportInfo(uint32_t &num) {
       m_supports_watchpoint_support_info = eLazyBoolYes;
       llvm::StringRef name;
       llvm::StringRef value;
+      bool found_num_field = false;
       while (response.GetNameColonValue(name, value)) {
         if (name.equals("num")) {
           value.getAsInteger(0, m_num_supported_hardware_watchpoints);
           num = m_num_supported_hardware_watchpoints;
+          found_num_field = true;
         }
+      }
+      if (found_num_field == false) {
+        m_supports_watchpoint_support_info = eLazyBoolNo;
       }
     } else {
       m_supports_watchpoint_support_info = eLazyBoolNo;

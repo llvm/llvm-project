@@ -21,7 +21,6 @@
 #include <mutex>
 #include <unordered_set>
 
-// Other libraries and framework includes
 #include "lldb/Host/Debug.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/Pipe.h"

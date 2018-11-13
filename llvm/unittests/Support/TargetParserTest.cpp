@@ -488,7 +488,7 @@ TEST(TargetParserTest, testARMExtension) {
                                 ARM::ArchKind::ARMV7EM, "crypto"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8A, "ras"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_1A, "ras"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_2A, "spe"));
+  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_2A, "profile"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_2A, "fp16"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_2A, "fp16fml"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV8_3A, "fp16"));
@@ -795,9 +795,16 @@ TEST(TargetParserTest, testAArch64CPU) {
       AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_SIMD |
       AArch64::AEK_FP | AArch64::AEK_PROFILE,
       "8-A"));
+  EXPECT_TRUE(testAArch64CPU(
+      "tsv110", "armv8.2-a", "crypto-neon-fp-armv8",
+      AArch64::AEK_CRC | AArch64::AEK_CRYPTO | AArch64::AEK_FP |
+      AArch64::AEK_SIMD | AArch64::AEK_RAS | AArch64::AEK_LSE |
+      AArch64::AEK_RDM | AArch64::AEK_PROFILE | AArch64::AEK_FP16 |
+      AArch64::AEK_FP16FML | AArch64::AEK_DOTPROD,
+      "8.2-A"));
 }
 
-static constexpr unsigned NumAArch64CPUArchs = 20;
+static constexpr unsigned NumAArch64CPUArchs = 21;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -888,10 +895,14 @@ TEST(TargetParserTest, testAArch64Extension) {
                                     AArch64::ArchKind::INVALID, "fp16"));
   EXPECT_FALSE(testAArch64Extension("cortex-a55",
                                     AArch64::ArchKind::INVALID, "fp16fml"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a55",
+                                    AArch64::ArchKind::INVALID, "dotprod"));
   EXPECT_TRUE(testAArch64Extension("cortex-a75",
                                     AArch64::ArchKind::INVALID, "fp16"));
   EXPECT_FALSE(testAArch64Extension("cortex-a75",
                                     AArch64::ArchKind::INVALID, "fp16fml"));
+  EXPECT_TRUE(testAArch64Extension("cortex-a75",
+                                    AArch64::ArchKind::INVALID, "dotprod"));
   EXPECT_FALSE(testAArch64Extension("thunderx2t99",
                                     AArch64::ArchKind::INVALID, "ras"));
   EXPECT_FALSE(testAArch64Extension("thunderx",
@@ -902,13 +913,29 @@ TEST(TargetParserTest, testAArch64Extension) {
                                     AArch64::ArchKind::INVALID, "lse"));
   EXPECT_FALSE(testAArch64Extension("thunderxt88",
                                     AArch64::ArchKind::INVALID, "lse"));
+  EXPECT_TRUE(testAArch64Extension("tsv110",
+                                   AArch64::ArchKind::INVALID, "crypto"));
+  EXPECT_FALSE(testAArch64Extension("tsv110",
+                                    AArch64::ArchKind::INVALID, "sha3"));
+  EXPECT_FALSE(testAArch64Extension("tsv110",
+                                    AArch64::ArchKind::INVALID, "sm4"));
+  EXPECT_TRUE(testAArch64Extension("tsv110",
+                                   AArch64::ArchKind::INVALID, "ras"));
+  EXPECT_TRUE(testAArch64Extension("tsv110",
+                                   AArch64::ArchKind::INVALID, "profile"));
+  EXPECT_TRUE(testAArch64Extension("tsv110",
+                                   AArch64::ArchKind::INVALID, "fp16"));
+  EXPECT_TRUE(testAArch64Extension("tsv110",
+                                   AArch64::ArchKind::INVALID, "fp16fml"));
+  EXPECT_TRUE(testAArch64Extension("tsv110",
+                                   AArch64::ArchKind::INVALID, "dotprod"));
 
   EXPECT_FALSE(testAArch64Extension(
       "generic", AArch64::ArchKind::ARMV8A, "ras"));
   EXPECT_FALSE(testAArch64Extension(
       "generic", AArch64::ArchKind::ARMV8_1A, "ras"));
   EXPECT_FALSE(testAArch64Extension(
-      "generic", AArch64::ArchKind::ARMV8_2A, "spe"));
+      "generic", AArch64::ArchKind::ARMV8_2A, "profile"));
   EXPECT_FALSE(testAArch64Extension(
       "generic", AArch64::ArchKind::ARMV8_2A, "fp16"));
   EXPECT_FALSE(testAArch64Extension(

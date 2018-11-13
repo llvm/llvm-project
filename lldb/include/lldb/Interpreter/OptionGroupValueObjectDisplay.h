@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionGroupValueObjectDisplay_h_
 #define liblldb_OptionGroupValueObjectDisplay_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/Options.h"
 

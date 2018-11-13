@@ -11,16 +11,16 @@
 #define liblldb_ValueObjectRegister_h_
 
 #include "lldb/Core/ValueObject.h"
-#include "lldb/Symbol/CompilerType.h" // for CompilerType
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Symbol/CompilerType.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegisterValue.h"
-#include "lldb/lldb-defines.h"       // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h"  // for ValueType, ValueType::eValueTy...
-#include "lldb/lldb-forward.h"       // for RegisterContextSP, ValueObjectSP
-#include "lldb/lldb-private-types.h" // for RegisterInfo, RegisterSet (ptr...
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-private-types.h"
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t, int32_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 class DataExtractor;

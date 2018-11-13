@@ -7,12 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Project includes
 #include "MinidumpParser.h"
 #include "NtStructures.h"
 #include "RegisterContextMinidump_x86_32.h"
 
-// Other libraries and framework includes
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Utility/LLDBAssert.h"
 

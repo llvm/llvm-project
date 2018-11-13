@@ -10,15 +10,11 @@
 #ifndef liblldb_CPlusPlusLanguage_h_
 #define liblldb_CPlusPlusLanguage_h_
 
-// C Includes
-// C++ Includes
 #include <set>
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 
-// Project includes
 #include "Plugins/Language/ClangCommon/ClangHighlighter.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"

@@ -10,17 +10,13 @@
 #ifndef liblldb_DynamicLoaderDarwinKernel_h_
 #define liblldb_DynamicLoaderDarwinKernel_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
 
 #include "lldb/Host/SafeMachO.h"
 
-// Project includes
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"

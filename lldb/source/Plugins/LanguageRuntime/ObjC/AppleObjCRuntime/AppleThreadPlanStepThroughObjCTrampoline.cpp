@@ -8,10 +8,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "AppleThreadPlanStepThroughObjCTrampoline.h"
 #include "AppleObjCTrampolineHandler.h"
 #include "lldb/Expression/DiagnosticManager.h"

@@ -9,20 +9,17 @@
 
 #include "NativeProcessLinux.h"
 
-// C Includes
 #include <errno.h>
 #include <stdint.h>
 #include <string.h>
 #include <unistd.h>
 
-// C++ Includes
 #include <fstream>
 #include <mutex>
 #include <sstream>
 #include <string>
 #include <unordered_map>
 
-// Other libraries and framework includes
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/Host.h"

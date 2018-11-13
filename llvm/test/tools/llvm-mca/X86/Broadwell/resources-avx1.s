@@ -1720,7 +1720,7 @@ vzeroupper
 # CHECK-NEXT:  1      1     1.00                        vxorps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      7     1.00    *                   vxorps	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  20     8     1.00    *      *      U     vzeroall
-# CHECK-NEXT:  4      4     1.00    *      *      U     vzeroupper
+# CHECK-NEXT:  4      0     1.00    *      *      U     vzeroupper
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - BWDivider
@@ -1736,7 +1736,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     257.00 216.33 236.33 176.17 176.17 38.00  427.33 3.00   12.67
+# CHECK-NEXT:  -     257.00 215.25 235.25 176.17 176.17 38.00  426.25 2.25   12.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -2430,4 +2430,4 @@ vzeroupper
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vxorps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     vxorps	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00   1.00    -     vzeroall
-# CHECK-NEXT:  -      -     1.08   1.08    -      -      -     1.08   0.75    -     vzeroupper
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     vzeroupper

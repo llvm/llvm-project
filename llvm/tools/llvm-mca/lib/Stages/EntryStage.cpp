@@ -1,4 +1,4 @@
-//===---------------------- FetchStage.cpp ----------------------*- C++ -*-===//
+//===---------------------- EntryStage.cpp ----------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -13,32 +13,32 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Stages/FetchStage.h"
+#include "Stages/EntryStage.h"
 #include "Instruction.h"
 
 namespace llvm {
 namespace mca {
 
-bool FetchStage::hasWorkToComplete() const { return CurrentInstruction; }
+bool EntryStage::hasWorkToComplete() const { return CurrentInstruction; }
 
-bool FetchStage::isAvailable(const InstRef & /* unused */) const {
+bool EntryStage::isAvailable(const InstRef & /* unused */) const {
   if (CurrentInstruction)
     return checkNextStage(CurrentInstruction);
   return false;
 }
 
-void FetchStage::getNextInstruction() {
+void EntryStage::getNextInstruction() {
   assert(!CurrentInstruction && "There is already an instruction to process!");
   if (!SM.hasNext())
     return;
   SourceRef SR = SM.peekNext();
   std::unique_ptr<Instruction> Inst = llvm::make_unique<Instruction>(SR.second);
   CurrentInstruction = InstRef(SR.first, Inst.get());
-  Instructions[SR.first] = std::move(Inst);
+  Instructions.emplace_back(std::move(Inst));
   SM.updateNext();
 }
 
-llvm::Error FetchStage::execute(InstRef & /*unused */) {
+llvm::Error EntryStage::execute(InstRef & /*unused */) {
   assert(CurrentInstruction && "There is no instruction to process!");
   if (llvm::Error Val = moveToTheNextStage(CurrentInstruction))
     return Val;
@@ -49,22 +49,25 @@ llvm::Error FetchStage::execute(InstRef & /*unused */) {
   return llvm::ErrorSuccess();
 }
 
-llvm::Error FetchStage::cycleStart() {
+llvm::Error EntryStage::cycleStart() {
   if (!CurrentInstruction)
     getNextInstruction();
   return llvm::ErrorSuccess();
 }
 
-llvm::Error FetchStage::cycleEnd() {
+llvm::Error EntryStage::cycleEnd() {
   // Find the first instruction which hasn't been retired.
-  const InstMap::iterator It =
-      llvm::find_if(Instructions, [](const InstMap::value_type &KeyValuePair) {
-        return !KeyValuePair.second->isRetired();
-      });
+  auto Range = make_range(&Instructions[NumRetired], Instructions.end());
+  auto It = find_if(Range, [](const std::unique_ptr<Instruction> &I) {
+    return !I->isRetired();
+  });
 
+  NumRetired = std::distance(Instructions.begin(), It);
   // Erase instructions up to the first that hasn't been retired.
-  if (It != Instructions.begin())
+  if ((NumRetired * 2) >= Instructions.size()) {
     Instructions.erase(Instructions.begin(), It);
+    NumRetired = 0;
+  }
 
   return llvm::ErrorSuccess();
 }

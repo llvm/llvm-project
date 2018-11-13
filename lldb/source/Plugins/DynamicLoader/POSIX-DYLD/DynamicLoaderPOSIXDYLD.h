@@ -10,13 +10,9 @@
 #ifndef liblldb_DynamicLoaderPOSIXDYLD_h_
 #define liblldb_DynamicLoaderPOSIXDYLD_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <memory>
 
-// Other libraries and framework includes
-// Project includes
 #include "DYLDRendezvous.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/ModuleList.h"

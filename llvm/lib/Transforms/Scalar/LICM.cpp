@@ -126,6 +126,9 @@ CloneInstructionInExitBlock(Instruction &I, BasicBlock &ExitBlock, PHINode &PN,
 static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
                              AliasSetTracker *AST);
 
+static void moveInstructionBefore(Instruction &I, Instruction &Dest,
+                                  ICFLoopSafetyInfo &SafetyInfo);
+
 namespace {
 struct LoopInvariantCodeMotion {
   using ASTrackerMapTy = DenseMap<Loop *, std::unique_ptr<AliasSetTracker>>;
@@ -460,12 +463,6 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
     if (inSubLoop(BB, CurLoop, LI))
       continue;
 
-    // Keep track of whether the prefix instructions could have written memory.
-    // TODO: This may be done smarter if we keep track of all throwing and
-    // mem-writing operations in every block, e.g. using something similar to
-    // isGuaranteedToExecute.
-    bool IsMemoryNotModified = CurLoop->getHeader() == BB;
-
     for (BasicBlock::iterator II = BB->begin(), E = BB->end(); II != E;) {
       Instruction &I = *II++;
       // Try constant folding this instruction.  If all the operands are
@@ -526,15 +523,13 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       if (((I.use_empty() &&
             match(&I, m_Intrinsic<Intrinsic::invariant_start>())) ||
            isGuard(&I)) &&
-          IsMemoryNotModified && CurLoop->hasLoopInvariantOperands(&I) &&
-          SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop)) {
+          CurLoop->hasLoopInvariantOperands(&I) &&
+          SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop) &&
+          SafetyInfo->doesNotWriteMemoryBefore(I, CurLoop)) {
         hoist(I, DT, CurLoop, SafetyInfo, ORE);
         Changed = true;
         continue;
       }
-
-      if (IsMemoryNotModified)
-        IsMemoryNotModified = !I.mayWriteToMemory();
     }
   }
 
@@ -890,6 +885,13 @@ static void eraseInstruction(Instruction &I, ICFLoopSafetyInfo &SafetyInfo,
   I.eraseFromParent();
 }
 
+static void moveInstructionBefore(Instruction &I, Instruction &Dest,
+                                  ICFLoopSafetyInfo &SafetyInfo) {
+  SafetyInfo.removeInstruction(&I);
+  SafetyInfo.insertInstructionTo(Dest.getParent());
+  I.moveBefore(&Dest);
+}
+
 static Instruction *sinkThroughTriviallyReplaceablePHI(
     PHINode *TPN, Instruction *I, LoopInfo *LI,
     SmallDenseMap<BasicBlock *, Instruction *, 32> &SunkCopies,
@@ -1118,10 +1120,8 @@ static void hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
       !SafetyInfo->isGuaranteedToExecute(I, DT, CurLoop))
     I.dropUnknownNonDebugMetadata();
 
-  SafetyInfo->removeInstruction(&I);
-  SafetyInfo->insertInstructionTo(Preheader);
   // Move the new node to the Preheader, before its terminator.
-  I.moveBefore(Preheader->getTerminator());
+  moveInstructionBefore(I, *Preheader->getTerminator(), *SafetyInfo);
 
   // Do not retain debug locations when we are moving instructions to different
   // basic blocks, because we want to avoid jumpy line tables. Calls, however,

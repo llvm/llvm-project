@@ -10,15 +10,11 @@
 #ifndef liblldb_Debugger_h_
 #define liblldb_Debugger_h_
 
-// C Includes
 #include <stdint.h>
 
-// C++ Includes
 #include <memory>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
@@ -26,28 +22,28 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Host/Terminal.h"
-#include "lldb/Target/ExecutionContext.h" // for ExecutionContext
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/TargetList.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
-#include "lldb/Utility/FileSpec.h"    // for FileSpec
-#include "lldb/Utility/Status.h"      // for Status
+#include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/Utility/UserID.h"
-#include "lldb/lldb-defines.h"              // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-enumerations.h"         // for ScriptLanguage, Langua...
-#include "lldb/lldb-forward.h"              // for StreamFileSP, DebuggerSP
-#include "lldb/lldb-private-enumerations.h" // for VarSetOperationType
-#include "lldb/lldb-private-types.h"        // for LoadPluginCallbackType
-#include "lldb/lldb-types.h"                // for LogOutputCallback, thr...
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-private-enumerations.h"
+#include "lldb/lldb-private-types.h"
+#include "lldb/lldb-types.h"
 
-#include "llvm/ADT/ArrayRef.h"           // for ArrayRef
-#include "llvm/ADT/StringMap.h"          // for StringMap
-#include "llvm/ADT/StringRef.h"          // for StringRef
-#include "llvm/Support/DynamicLibrary.h" // for DynamicLibrary
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Threading.h"
 
-#include <assert.h> // for assert
-#include <stddef.h> // for size_t
+#include <assert.h>
+#include <stddef.h>
 #include <stdio.h>
 
 namespace lldb_private {

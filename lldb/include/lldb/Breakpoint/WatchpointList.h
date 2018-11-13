@@ -10,14 +10,10 @@
 #ifndef liblldb_WatchpointList_h_
 #define liblldb_WatchpointList_h_
 
-// C Includes
-// C++ Includes
 #include <list>
 #include <mutex>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Address.h"
 #include "lldb/lldb-private.h"
 

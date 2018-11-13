@@ -10,15 +10,11 @@
 #ifndef LLDB_RENDERSCRIPT_EXPROPTS_H
 #define LLDB_RENDERSCRIPT_EXPROPTS_H
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/IR/Module.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
-// Project includes
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/lldb-private.h"

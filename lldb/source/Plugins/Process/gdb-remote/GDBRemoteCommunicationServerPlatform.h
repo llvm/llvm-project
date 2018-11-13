@@ -10,14 +10,10 @@
 #ifndef liblldb_GDBRemoteCommunicationServerPlatform_h_
 #define liblldb_GDBRemoteCommunicationServerPlatform_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <mutex>
 #include <set>
 
-// Other libraries and framework includes
-// Project includes
 #include "GDBRemoteCommunicationServerCommon.h"
 #include "lldb/Host/Socket.h"
 

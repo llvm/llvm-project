@@ -11,13 +11,9 @@
 #ifndef liblldb_ThreadSafeSTLVector_h_
 #define liblldb_ThreadSafeSTLVector_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-defines.h"
 
 namespace lldb_private {

@@ -1,6 +1,7 @@
 // RUN: llvm-mc -triple aarch64 -mattr=+dotprod -show-encoding < %s | FileCheck %s  --check-prefix=CHECK-DOTPROD
 // RUN: llvm-mc -triple aarch64 -mcpu=cortex-a75 -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DOTPROD
 // RUN: llvm-mc -triple aarch64 -mcpu=cortex-a55 -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DOTPROD
+// RUN: llvm-mc -triple aarch64 -mcpu=tsv110 -show-encoding < %s | FileCheck %s --check-prefix=CHECK-DOTPROD
 // RUN: not llvm-mc -triple aarch64 -mattr=+v8.2a -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s
 

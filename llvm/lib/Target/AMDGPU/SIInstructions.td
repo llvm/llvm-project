@@ -579,7 +579,8 @@ def : Pat <
   (int_amdgcn_kill (i1 (setcc f32:$src, InlineFPImm<f32>:$imm, cond:$cond))),
   (SI_KILL_F32_COND_IMM_PSEUDO $src, (bitcast_fpimm_to_i32 $imm), (cond_as_i32imm $cond))
 >;
-// TODO: we could add more variants for other types of conditionals
+
+  // TODO: we could add more variants for other types of conditionals
 
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
@@ -1621,8 +1622,8 @@ defm : BFMPatterns <i32, S_BFM_B32, S_MOV_B32>;
 defm : BFEPattern <V_BFE_U32, V_BFE_I32, S_MOV_B32>;
 defm : SHA256MaPattern <V_BFI_B32, V_XOR_B32_e64, SReg_64>;
 
-def : IntMed3Pat<V_MED3_I32, smax, smax_oneuse, smin_oneuse>;
-def : IntMed3Pat<V_MED3_U32, umax, umax_oneuse, umin_oneuse>;
+defm : IntMed3Pat<V_MED3_I32, smin, smax, smin_oneuse, smax_oneuse>;
+defm : IntMed3Pat<V_MED3_U32, umin, umax, umin_oneuse, umax_oneuse>;
 
 }
 

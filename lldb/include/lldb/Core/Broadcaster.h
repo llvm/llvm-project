@@ -11,18 +11,18 @@
 #define liblldb_Broadcaster_h_
 
 #include "lldb/Utility/ConstString.h"
-#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-forward.h" // for ListenerSP, EventSP, Broadcast...
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-forward.h"
 
 #include "llvm/ADT/SmallVector.h"
 
-#include <cstdint> // for uint32_t, UINT32_MAX
+#include <cstdint>
 #include <map>
-#include <memory> // for shared_ptr, operator==, enable...
+#include <memory>
 #include <mutex>
-#include <set> // for set
+#include <set>
 #include <string>
-#include <utility> // for pair
+#include <utility>
 #include <vector>
 
 namespace lldb_private {

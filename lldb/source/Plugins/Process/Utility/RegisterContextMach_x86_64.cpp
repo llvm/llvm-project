@@ -9,12 +9,8 @@
 
 #if defined(__APPLE__)
 
-// C Includes
 #include <mach/thread_act.h>
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "RegisterContextMach_x86_64.h"
 
 using namespace lldb;

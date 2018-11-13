@@ -10,13 +10,9 @@
 #ifndef liblldb_StackFrame_h_
 #define liblldb_StackFrame_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Flags.h"
 
 #include "lldb/Core/ValueObjectList.h"

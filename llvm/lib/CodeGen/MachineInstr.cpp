@@ -933,9 +933,7 @@ int MachineInstr::findRegisterUseOperandIdx(
     unsigned MOReg = MO.getReg();
     if (!MOReg)
       continue;
-    if (MOReg == Reg || (TRI && TargetRegisterInfo::isPhysicalRegister(MOReg) &&
-                         TargetRegisterInfo::isPhysicalRegister(Reg) &&
-                         TRI->isSubRegister(MOReg, Reg)))
+    if (MOReg == Reg || (TRI && Reg && MOReg && TRI->regsOverlap(MOReg, Reg)))
       if (!isKill || MO.isKill())
         return i;
   }

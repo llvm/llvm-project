@@ -11,12 +11,8 @@
 #ifndef liblldb_MemoryHistory_h_
 #define liblldb_MemoryHistory_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-types.h"

@@ -14,22 +14,6 @@
 namespace llvm {
 namespace exegesis {
 
-namespace {
-
-class AArch64LatencyBenchmarkRunner : public LatencyBenchmarkRunner {
-public:
-  AArch64LatencyBenchmarkRunner(const LLVMState &State)
-      : LatencyBenchmarkRunner(State) {}
-
-private:
-  const char *getCounterName() const override {
-    // All AArch64 subtargets have CPU_CYCLES as the cycle counter name
-    return "CPU_CYCLES";
-  }
-};
-
-namespace {
-
 static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
   switch (RegBitWidth) {
   case 32:
@@ -50,11 +34,13 @@ static llvm::MCInst loadImmediate(unsigned Reg, unsigned RegBitWidth,
       .addImm(Value.getZExtValue());
 }
 
-} // namespace
+#include "AArch64GenExegesis.inc"
+
+namespace {
 
 class ExegesisAArch64Target : public ExegesisTarget {
 public:
-  ExegesisAArch64Target() : ExegesisTarget({}) {}
+  ExegesisAArch64Target() : ExegesisTarget(AArch64CpuPfmCounters) {}
 
 private:
   std::vector<llvm::MCInst> setRegTo(const llvm::MCSubtargetInfo &STI,
@@ -75,11 +61,6 @@ private:
   void addTargetSpecificPasses(llvm::PassManagerBase &PM) const override {
     // Function return is a pseudo-instruction that needs to be expanded
     PM.add(llvm::createAArch64ExpandPseudoPass());
-  }
-
-  std::unique_ptr<BenchmarkRunner>
-  createLatencyBenchmarkRunner(const LLVMState &State) const override {
-    return llvm::make_unique<AArch64LatencyBenchmarkRunner>(State);
   }
 };
 

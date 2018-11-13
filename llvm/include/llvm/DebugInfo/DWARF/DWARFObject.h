@@ -49,10 +49,10 @@ public:
   virtual const DWARFSection &getRangeSection() const { return Dummy; }
   virtual const DWARFSection &getRnglistsSection() const { return Dummy; }
   virtual StringRef getMacinfoSection() const { return ""; }
-  virtual StringRef getPubNamesSection() const { return ""; }
-  virtual StringRef getPubTypesSection() const { return ""; }
-  virtual StringRef getGnuPubNamesSection() const { return ""; }
-  virtual StringRef getGnuPubTypesSection() const { return ""; }
+  virtual const DWARFSection &getPubNamesSection() const { return Dummy; }
+  virtual const DWARFSection &getPubTypesSection() const { return Dummy; }
+  virtual const DWARFSection &getGnuPubNamesSection() const { return Dummy; }
+  virtual const DWARFSection &getGnuPubTypesSection() const { return Dummy; }
   virtual const DWARFSection &getStringOffsetSection() const { return Dummy; }
   virtual void
   forEachInfoDWOSections(function_ref<void(const DWARFSection &)> F) const {}

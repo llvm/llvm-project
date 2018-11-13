@@ -9,12 +9,8 @@
 
 #include "StdStringExtractor.h"
 
-// C Includes
 #include <stdlib.h>
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 static inline int xdigit_to_sint(char ch) {
   if (ch >= 'a' && ch <= 'f')

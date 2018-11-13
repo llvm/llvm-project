@@ -1,0 +1,62 @@
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -run-pass=prologepilog -ppc-enable-pe-vector-spills %s -o - | FileCheck %s
+
+---
+name:            test1BB
+alignment:       4
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0.entry:
+    $r14 = IMPLICIT_DEF
+    $r15 = IMPLICIT_DEF
+    $r16 = IMPLICIT_DEF
+    $f0 = IMPLICIT_DEF
+    $v20 = IMPLICIT_DEF
+    BLR8 implicit undef $lr8, implicit undef $rm
+
+# CHECK-LABEL: name:            test1BB
+# CHECK: body:             |
+# CHECK: $f1 = MTVSRD killed $x14
+# CHECK-NEXT: $f2 = MTVSRD killed $x15
+# CHECK-NEXT: $f3 = MTVSRD killed $x16
+# CHECK: $x16 = MFVSRD killed $f3
+# CHECK-NEXT: $x15 = MFVSRD killed $f2
+# CHECK-NEXT: $x14 = MFVSRD killed $f1
+...
+
+---
+name:            test2BBs
+alignment:       4
+tracksRegLiveness: true
+liveins:
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+
+    $cr0 = IMPLICIT_DEF
+    BCC 4, killed renamable $cr0, %bb.2
+    B %bb.1
+
+  bb.1:
+    $r14 = IMPLICIT_DEF
+    $r15 = IMPLICIT_DEF
+    $r16 = IMPLICIT_DEF
+    $r3 = IMPLICIT_DEF
+    B %bb.3
+
+  bb.2:
+    liveins: $x3
+    $r3 = IMPLICIT_DEF
+
+  bb.3:
+    BLR8 implicit undef $lr8, implicit undef $rm
+
+# CHECK-LABEL: name:            test2BB
+# CHECK: body:             |
+# CHECK: $f0 = MTVSRD killed $x14
+# CHECK-NEXT: $f1 = MTVSRD killed $x15
+# CHECK-NEXT: $f2 = MTVSRD killed $x16
+# CHECK: $x16 = MFVSRD killed $f2
+# CHECK-NEXT: $x15 = MFVSRD killed $f1
+# CHECK-NEXT: $x14 = MFVSRD killed $f0
+...

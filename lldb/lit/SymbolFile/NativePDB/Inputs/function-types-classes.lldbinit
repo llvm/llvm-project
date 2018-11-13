@@ -9,4 +9,6 @@ target variable h
 target variable i
 target variable incomplete
 
+target modules dump ast
+
 quit

@@ -812,16 +812,17 @@ void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,
   }
 }
 
-MCSection *MCObjectFileInfo::getDwarfTypesSection(uint64_t Hash) const {
+MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
+                                                   uint64_t Hash) const {
   switch (TT.getObjectFormat()) {
   case Triple::ELF:
-    return Ctx->getELFSection(".debug_types", ELF::SHT_PROGBITS, ELF::SHF_GROUP,
-                              0, utostr(Hash));
+    return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, ELF::SHF_GROUP, 0,
+                              utostr(Hash));
   case Triple::MachO:
   case Triple::COFF:
   case Triple::Wasm:
   case Triple::UnknownObjectFormat:
-    report_fatal_error("Cannot get DWARF types section for this object file "
+    report_fatal_error("Cannot get DWARF comdat section for this object file "
                        "format: not implemented.");
     break;
   }

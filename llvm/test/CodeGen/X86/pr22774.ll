@@ -7,11 +7,9 @@
 define i32 @_Z3foov() {
 ; CHECK-LABEL: _Z3foov:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovdqa {{.*}}(%rip), %ymm0
-; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; CHECK-NEXT:    vmovdqa %xmm0, {{.*}}(%rip)
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; CHECK-NEXT:    vmovaps %xmm0, {{.*}}(%rip)
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
 entry:
   %0 = load <4 x i64>, <4 x i64>* @in, align 32

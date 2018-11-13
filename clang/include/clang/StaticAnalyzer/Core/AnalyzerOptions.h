@@ -234,7 +234,7 @@ private:
   /// Query an option's string value.
   ///
   /// If an option value is not provided, returns the given \p DefaultVal.
-  /// @param [in] Name Name for option to retrieve.
+  /// @param [in] OptionName Name for option to retrieve.
   /// @param [in] DefaultVal Default value returned if no such option was
   /// specified.
   StringRef getStringOption(StringRef OptionName, StringRef DefaultVal);

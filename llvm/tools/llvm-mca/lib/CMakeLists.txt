@@ -14,8 +14,8 @@ add_library(LLVMMCA
   Instruction.cpp
   Pipeline.cpp
   Stages/DispatchStage.cpp
+  Stages/EntryStage.cpp
   Stages/ExecuteStage.cpp
-  Stages/FetchStage.cpp
   Stages/InstructionTables.cpp
   Stages/RetireStage.cpp
   Stages/Stage.cpp

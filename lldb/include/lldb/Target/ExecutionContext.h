@@ -10,12 +10,8 @@
 #ifndef liblldb_ExecutionContext_h_
 #define liblldb_ExecutionContext_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/StackID.h"
 #include "lldb/lldb-private.h"
 

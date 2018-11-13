@@ -56,6 +56,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool HasMemNoShuf = false;
   bool EnableDuplex = false;
   bool ReservedR19 = false;
+  bool NoreturnStackElim = false;
 
 public:
   Hexagon::ArchEnum HexagonArchVersion;
@@ -167,6 +168,8 @@ public:
   bool hasMemNoShuf() const { return HasMemNoShuf; }
   bool hasReservedR19() const { return ReservedR19; }
   bool usePredicatedCalls() const;
+
+  bool noreturnStackElim() const { return NoreturnStackElim; }
 
   bool useBSBScheduling() const { return UseBSBScheduling; }
   bool enableMachineScheduler() const override;

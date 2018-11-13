@@ -10,13 +10,9 @@
 #ifndef SymbolFileDWARF_DWARFDeclContext_h_
 #define SymbolFileDWARF_DWARFDeclContext_h_
 
-// C Includes
-// C++ Includes
 #include <string>
 #include <vector>
-// Other libraries and framework includes
 #include "lldb/Utility/ConstString.h"
-// Project includes
 #include "DWARFDefines.h"
 
 //----------------------------------------------------------------------

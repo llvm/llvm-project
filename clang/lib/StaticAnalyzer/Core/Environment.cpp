@@ -92,6 +92,7 @@ SVal Environment::getSVal(const EnvironmentEntry &Entry,
   case Stmt::ExprWithCleanupsClass:
   case Stmt::GenericSelectionExprClass:
   case Stmt::OpaqueValueExprClass:
+  case Stmt::ConstantExprClass:
   case Stmt::ParenExprClass:
   case Stmt::SubstNonTypeTemplateParmExprClass:
     llvm_unreachable("Should have been handled by ignoreTransparentExprs");

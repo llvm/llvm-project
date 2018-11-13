@@ -29,6 +29,11 @@ class FileBasedRecordProducer : public RecordProducer {
   const XRayFileHeader &Header;
   DataExtractor &E;
   uint32_t &OffsetPtr;
+  uint32_t CurrentBufferBytes = 0;
+
+  // Helper function which gets the next record by speculatively reading through
+  // the log, finding a buffer extents record.
+  Expected<std::unique_ptr<Record>> findNextBufferExtent();
 
 public:
   FileBasedRecordProducer(const XRayFileHeader &FH, DataExtractor &DE,

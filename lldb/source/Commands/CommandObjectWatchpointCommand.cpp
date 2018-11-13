@@ -7,12 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "CommandObjectWatchpoint.h"
 #include "CommandObjectWatchpointCommand.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"

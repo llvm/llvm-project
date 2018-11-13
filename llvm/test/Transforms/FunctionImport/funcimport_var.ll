@@ -4,7 +4,7 @@
 ; RUN: opt -module-summary %p/Inputs/funcimport_var2.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -thinlto-action=thinlink -o %t3 %t.bc %t2.bc
 ; RUN: llvm-lto -thinlto -thinlto-action=import -thinlto-index=%t3 %t.bc %t2.bc
-; RUN: llvm-lto -thinlto -thinlto-action=run %t.bc %t2.bc
+; RUN: llvm-lto -thinlto -thinlto-action=run %t.bc %t2.bc -exported-symbol=_Z4LinkPKcS0_
 ; RUN: llvm-nm %t.bc.thinlto.o | FileCheck %s
 ; RUN: llvm-lto2 run %t.bc %t2.bc -o %t.out \
 ; RUN:   -r %t.bc,_Z4LinkPKcS0_,plx \

@@ -8475,8 +8475,8 @@ define void @test_movnti(i32 %a0, i32 *%a1, i64 %a2, i64 *%a3) optsize {
 ; BDVER2-LABEL: test_movnti:
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    #APP
-; BDVER2-NEXT:    movntil %edi, (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    movntiq %rdx, (%rcx) # sched: [1:0.50]
+; BDVER2-NEXT:    movntil %edi, (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    movntiq %rdx, (%rcx) # sched: [1:1.00]
 ; BDVER2-NEXT:    #NO_APP
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -10658,11 +10658,11 @@ define i16 @test_pop_push_16(i16 %a0, i16 *%a1) optsize {
 ; BDVER2-NEXT:    #APP
 ; BDVER2-NEXT:    popw %ax # sched: [5:0.50]
 ; BDVER2-NEXT:    popw (%rsi) # sched: [6:1.00]
-; BDVER2-NEXT:    pushw %di # sched: [1:0.50]
+; BDVER2-NEXT:    pushw %di # sched: [1:1.00]
 ; BDVER2-NEXT:    pushw (%rsi) # sched: [6:1.00]
 ; BDVER2-NEXT:    pushw $4095 # imm = 0xFFF
-; BDVER2-NEXT:    # sched: [1:0.50]
-; BDVER2-NEXT:    pushw $7 # sched: [1:0.50]
+; BDVER2-NEXT:    # sched: [1:1.00]
+; BDVER2-NEXT:    pushw $7 # sched: [1:1.00]
 ; BDVER2-NEXT:    #NO_APP
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -10804,11 +10804,11 @@ define i64 @test_pop_push_64(i64 %a0, i64 *%a1) optsize {
 ; BDVER2-NEXT:    #APP
 ; BDVER2-NEXT:    popq %rax # sched: [5:0.50]
 ; BDVER2-NEXT:    popq (%rsi) # sched: [6:1.00]
-; BDVER2-NEXT:    pushq %rdi # sched: [1:0.50]
+; BDVER2-NEXT:    pushq %rdi # sched: [1:1.00]
 ; BDVER2-NEXT:    pushq (%rsi) # sched: [6:1.00]
 ; BDVER2-NEXT:    pushq $4095 # imm = 0xFFF
-; BDVER2-NEXT:    # sched: [1:0.50]
-; BDVER2-NEXT:    pushq $7 # sched: [1:0.50]
+; BDVER2-NEXT:    # sched: [1:1.00]
+; BDVER2-NEXT:    pushq $7 # sched: [1:1.00]
 ; BDVER2-NEXT:    #NO_APP
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -10910,7 +10910,7 @@ define void @test_popf_pushf() optsize {
 ; BDVER2:       # %bb.0:
 ; BDVER2-NEXT:    #APP
 ; BDVER2-NEXT:    popfq # sched: [5:0.50]
-; BDVER2-NEXT:    pushfq # sched: [1:0.50]
+; BDVER2-NEXT:    pushfq # sched: [1:1.00]
 ; BDVER2-NEXT:    #NO_APP
 ; BDVER2-NEXT:    retq # sched: [5:1.00]
 ;
@@ -15157,18 +15157,18 @@ define void @test_setcc(i8 %a0, i8 *%a1) optsize {
 ; BDVER2-NEXT:    setge %dil # sched: [1:0.50]
 ; BDVER2-NEXT:    setle %dil # sched: [1:0.50]
 ; BDVER2-NEXT:    setg %dil # sched: [1:0.50]
-; BDVER2-NEXT:    seto (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    setno (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    setb (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    setae (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    sete (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    setne (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    setbe (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    seta (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    sets (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    setns (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    setp (%rsi) # sched: [1:0.50]
-; BDVER2-NEXT:    setnp (%rsi) # sched: [1:0.50]
+; BDVER2-NEXT:    seto (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    setno (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    setb (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    setae (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    sete (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    setne (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    setbe (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    seta (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    sets (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    setns (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    setp (%rsi) # sched: [1:1.00]
+; BDVER2-NEXT:    setnp (%rsi) # sched: [1:1.00]
 ; BDVER2-NEXT:    setl (%rsi) # sched: [1:1.00]
 ; BDVER2-NEXT:    setge (%rsi) # sched: [1:1.00]
 ; BDVER2-NEXT:    setle (%rsi) # sched: [1:1.00]

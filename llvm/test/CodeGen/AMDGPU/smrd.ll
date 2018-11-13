@@ -615,6 +615,30 @@ exit:
 }
 
 
+; This test checks that the load after some control flow with an offset based
+; on a divergent shader input is correctly recognized as divergent. This was
+; reduced from an actual regression. Yes, the %unused argument matters, as
+; well as the fact that %arg4 is a vector.
+;
+; GCN-LABEL: {{^}}arg_divergence:
+; GCN: buffer_load_dword v0, v0,
+; GCN-NEXT: s_waitcnt
+; GCN-NEXT: ; return to shader part epilog
+define amdgpu_cs float @arg_divergence(i32 inreg %unused, <3 x i32> %arg4) #0 {
+main_body:
+  br i1 undef, label %if1, label %endif1
+
+if1:                                              ; preds = %main_body
+  store i32 0, i32 addrspace(3)* undef, align 4
+  br label %endif1
+
+endif1:                                           ; preds = %if1, %main_body
+  %tmp13 = extractelement <3 x i32> %arg4, i32 0
+  %tmp97 = call float @llvm.SI.load.const.v4i32(<4 x i32> undef, i32 %tmp13)
+  ret float %tmp97
+}
+
+
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare float @llvm.SI.load.const.v4i32(<4 x i32>, i32) #1
 declare float @llvm.amdgcn.interp.p1(float, i32, i32, i32) #2

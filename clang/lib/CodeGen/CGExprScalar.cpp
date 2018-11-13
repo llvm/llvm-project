@@ -398,6 +398,9 @@ public:
   }
   Value *VisitExpr(Expr *S);
 
+  Value *VisitConstantExpr(ConstantExpr *E) {
+    return Visit(E->getSubExpr());
+  }
   Value *VisitParenExpr(ParenExpr *PE) {
     return Visit(PE->getSubExpr());
   }

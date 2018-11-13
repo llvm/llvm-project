@@ -10,10 +10,6 @@
 #ifndef liblldb_RegisterContextMach_i386_h_
 #define liblldb_RegisterContextMach_i386_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "RegisterContextDarwin_i386.h"
 
 class RegisterContextMach_i386 : public RegisterContextDarwin_i386 {

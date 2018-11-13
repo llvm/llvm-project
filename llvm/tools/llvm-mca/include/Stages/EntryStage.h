@@ -1,4 +1,4 @@
-//===---------------------- FetchStage.h ------------------------*- C++ -*-===//
+//===---------------------- EntryStage.h ------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,35 +8,36 @@
 //===----------------------------------------------------------------------===//
 /// \file
 ///
-/// This file defines the Fetch stage of an instruction pipeline.  Its sole
-/// purpose in life is to produce instructions for the rest of the pipeline.
+/// This file defines the Entry stage of an instruction pipeline.  Its sole
+/// purpose in life is to pick instructions in sequence and move them to the
+/// next pipeline stage.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TOOLS_LLVM_MCA_FETCH_STAGE_H
-#define LLVM_TOOLS_LLVM_MCA_FETCH_STAGE_H
+#ifndef LLVM_TOOLS_LLVM_MCA_ENTRY_STAGE_H
+#define LLVM_TOOLS_LLVM_MCA_ENTRY_STAGE_H
 
 #include "SourceMgr.h"
 #include "Stages/Stage.h"
-#include <map>
+#include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 namespace mca {
 
-class FetchStage final : public Stage {
+class EntryStage final : public Stage {
   InstRef CurrentInstruction;
-  using InstMap = std::map<unsigned, std::unique_ptr<Instruction>>;
-  InstMap Instructions;
+  SmallVector<std::unique_ptr<Instruction>, 16> Instructions;
   SourceMgr &SM;
+  unsigned NumRetired;
 
   // Updates the program counter, and sets 'CurrentInstruction'.
   void getNextInstruction();
 
-  FetchStage(const FetchStage &Other) = delete;
-  FetchStage &operator=(const FetchStage &Other) = delete;
+  EntryStage(const EntryStage &Other) = delete;
+  EntryStage &operator=(const EntryStage &Other) = delete;
 
 public:
-  FetchStage(SourceMgr &SM) : CurrentInstruction(), SM(SM) {}
+  EntryStage(SourceMgr &SM) : CurrentInstruction(), SM(SM), NumRetired(0) { }
 
   bool isAvailable(const InstRef &IR) const override;
   bool hasWorkToComplete() const override;

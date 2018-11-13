@@ -28,10 +28,9 @@ define <4 x float> @signbits_sext_v4i64_sitofp_v4f32(i8 signext %a0, i16 signext
 ; X32-NEXT:    movswl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movsbl {{[0-9]+}}(%esp), %ecx
 ; X32-NEXT:    vmovd %ecx, %xmm0
-; X32-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; X32-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm1, %xmm1
-; X32-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; X32-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X32-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    retl
 ;

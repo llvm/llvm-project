@@ -16,14 +16,14 @@
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DataExtractor.h" // for DataExtractor
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Log.h"
-#include "lldb/Utility/Logging.h" // for GetLogIfAllCategoriesSet
-#include "lldb/Utility/Scalar.h"  // for Scalar, operator!=
-#include "lldb/Utility/Status.h"  // for Status
-#include "lldb/lldb-types.h"      // for addr_t, offset_t
+#include "lldb/Utility/Logging.h"
+#include "lldb/Utility/Scalar.h"
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-types.h"
 
-#include <string.h> // for strcmp, size_t
+#include <string.h>
 namespace lldb_private {
 class Declaration;
 }

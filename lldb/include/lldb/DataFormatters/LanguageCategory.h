@@ -11,11 +11,7 @@
 #ifndef lldb_LanguageCategory_h_
 #define lldb_LanguageCategory_h_
 
-// C Includes
-// C++ Includes
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/DataFormatters/FormatCache.h"
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/lldb-public.h"
