@@ -681,9 +681,9 @@ public:
     uint64_t CuLength;
   };
 
-  struct NameTypeEntry {
+  struct NameAttrEntry {
     llvm::CachedHashStringRef Name;
-    uint32_t Type;
+    uint32_t CuIndexAndAttrs;
   };
 
   struct GdbChunk {
