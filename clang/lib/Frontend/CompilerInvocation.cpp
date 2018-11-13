@@ -651,6 +651,7 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
           : Args.hasArg(OPT_gpubnames)
                 ? llvm::DICompileUnit::DebugNameTableKind::Default
                 : llvm::DICompileUnit::DebugNameTableKind::None);
+  Opts.DebugRangesBaseAddress = Args.hasArg(OPT_fdebug_ranges_base_address);
 
   setPGOInstrumentor(Opts, Args, Diags);
   Opts.InstrProfileOutput =

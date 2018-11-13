@@ -39,13 +39,15 @@ using namespace clang;
 ///         nested-namespace-definition
 ///
 ///       named-namespace-definition:
-///         'inline'[opt] 'namespace' attributes[opt] identifier '{' namespace-body '}'
+///         'inline'[opt] 'namespace' attributes[opt] identifier '{'
+///         namespace-body '}'
 ///
 ///       unnamed-namespace-definition:
 ///         'inline'[opt] 'namespace' attributes[opt] '{' namespace-body '}'
 ///
 ///       nested-namespace-definition:
-///         'namespace' enclosing-namespace-specifier '::' 'inline'[opt] identifier '{' namespace-body '}'
+///         'namespace' enclosing-namespace-specifier '::' 'inline'[opt]
+///         identifier '{' namespace-body '}'
 ///
 ///       enclosing-namespace-specifier:
 ///         identifier
@@ -264,8 +266,7 @@ void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
   assert(!ImplicitUsingDirectiveDecl &&
          "nested namespace definition cannot define anonymous namespace");
 
-  ParseInnerNamespace(InnerNSs, ++index, InlineLoc,
-                      attrs, Tracker);
+  ParseInnerNamespace(InnerNSs, ++index, InlineLoc, attrs, Tracker);
 
   NamespaceScope.Exit();
   Actions.ActOnFinishNamespaceDef(NamespcDecl, Tracker.getCloseLocation());

@@ -1038,61 +1038,60 @@ class DeclRefExpr final
       private llvm::TrailingObjects<DeclRefExpr, NestedNameSpecifierLoc,
                                     NamedDecl *, ASTTemplateKWAndArgsInfo,
                                     TemplateArgumentLoc> {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+  friend TrailingObjects;
+
   /// The declaration that we are referencing.
   ValueDecl *D;
-
-  /// The location of the declaration name itself.
-  SourceLocation Loc;
 
   /// Provides source/type location info for the declaration name
   /// embedded in D.
   DeclarationNameLoc DNLoc;
 
   size_t numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
-    return hasQualifier() ? 1 : 0;
+    return hasQualifier();
   }
 
   size_t numTrailingObjects(OverloadToken<NamedDecl *>) const {
-    return hasFoundDecl() ? 1 : 0;
+    return hasFoundDecl();
   }
 
   size_t numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
-    return hasTemplateKWAndArgsInfo() ? 1 : 0;
+    return hasTemplateKWAndArgsInfo();
   }
 
   /// Test whether there is a distinct FoundDecl attached to the end of
   /// this DRE.
   bool hasFoundDecl() const { return DeclRefExprBits.HasFoundDecl; }
 
-  DeclRefExpr(const ASTContext &Ctx,
-              NestedNameSpecifierLoc QualifierLoc,
-              SourceLocation TemplateKWLoc,
-              ValueDecl *D, bool RefersToEnlosingVariableOrCapture,
-              const DeclarationNameInfo &NameInfo,
-              NamedDecl *FoundD,
-              const TemplateArgumentListInfo *TemplateArgs,
-              QualType T, ExprValueKind VK);
+  DeclRefExpr(const ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
+              SourceLocation TemplateKWLoc, ValueDecl *D,
+              bool RefersToEnlosingVariableOrCapture,
+              const DeclarationNameInfo &NameInfo, NamedDecl *FoundD,
+              const TemplateArgumentListInfo *TemplateArgs, QualType T,
+              ExprValueKind VK);
 
   /// Construct an empty declaration reference expression.
-  explicit DeclRefExpr(EmptyShell Empty)
-    : Expr(DeclRefExprClass, Empty) { }
+  explicit DeclRefExpr(EmptyShell Empty) : Expr(DeclRefExprClass, Empty) {}
 
   /// Computes the type- and value-dependence flags for this
   /// declaration reference expression.
-  void computeDependence(const ASTContext &C);
+  void computeDependence(const ASTContext &Ctx);
 
 public:
   DeclRefExpr(ValueDecl *D, bool RefersToEnclosingVariableOrCapture, QualType T,
               ExprValueKind VK, SourceLocation L,
               const DeclarationNameLoc &LocInfo = DeclarationNameLoc())
-    : Expr(DeclRefExprClass, T, VK, OK_Ordinary, false, false, false, false),
-      D(D), Loc(L), DNLoc(LocInfo) {
-    DeclRefExprBits.HasQualifier = 0;
-    DeclRefExprBits.HasTemplateKWAndArgsInfo = 0;
-    DeclRefExprBits.HasFoundDecl = 0;
-    DeclRefExprBits.HadMultipleCandidates = 0;
+      : Expr(DeclRefExprClass, T, VK, OK_Ordinary, false, false, false, false),
+        D(D), DNLoc(LocInfo) {
+    DeclRefExprBits.HasQualifier = false;
+    DeclRefExprBits.HasTemplateKWAndArgsInfo = false;
+    DeclRefExprBits.HasFoundDecl = false;
+    DeclRefExprBits.HadMultipleCandidates = false;
     DeclRefExprBits.RefersToEnclosingVariableOrCapture =
         RefersToEnclosingVariableOrCapture;
+    DeclRefExprBits.Loc = L;
     computeDependence(D->getASTContext());
   }
 
@@ -1112,8 +1111,7 @@ public:
          const TemplateArgumentListInfo *TemplateArgs = nullptr);
 
   /// Construct an empty declaration reference expression.
-  static DeclRefExpr *CreateEmpty(const ASTContext &Context,
-                                  bool HasQualifier,
+  static DeclRefExpr *CreateEmpty(const ASTContext &Context, bool HasQualifier,
                                   bool HasFoundDecl,
                                   bool HasTemplateKWAndArgsInfo,
                                   unsigned NumTemplateArgs);
@@ -1123,11 +1121,11 @@ public:
   void setDecl(ValueDecl *NewD) { D = NewD; }
 
   DeclarationNameInfo getNameInfo() const {
-    return DeclarationNameInfo(getDecl()->getDeclName(), Loc, DNLoc);
+    return DeclarationNameInfo(getDecl()->getDeclName(), getLocation(), DNLoc);
   }
 
-  SourceLocation getLocation() const { return Loc; }
-  void setLocation(SourceLocation L) { Loc = L; }
+  SourceLocation getLocation() const { return DeclRefExprBits.Loc; }
+  void setLocation(SourceLocation L) { DeclRefExprBits.Loc = L; }
   SourceLocation getBeginLoc() const LLVM_READONLY;
   SourceLocation getEndLoc() const LLVM_READONLY;
 
@@ -1172,21 +1170,24 @@ public:
   /// Retrieve the location of the template keyword preceding
   /// this name, if any.
   SourceLocation getTemplateKeywordLoc() const {
-    if (!hasTemplateKWAndArgsInfo()) return SourceLocation();
+    if (!hasTemplateKWAndArgsInfo())
+      return SourceLocation();
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->TemplateKWLoc;
   }
 
   /// Retrieve the location of the left angle bracket starting the
   /// explicit template argument list following the name, if any.
   SourceLocation getLAngleLoc() const {
-    if (!hasTemplateKWAndArgsInfo()) return SourceLocation();
+    if (!hasTemplateKWAndArgsInfo())
+      return SourceLocation();
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->LAngleLoc;
   }
 
   /// Retrieve the location of the right angle bracket ending the
   /// explicit template argument list following the name, if any.
   SourceLocation getRAngleLoc() const {
-    if (!hasTemplateKWAndArgsInfo()) return SourceLocation();
+    if (!hasTemplateKWAndArgsInfo())
+      return SourceLocation();
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->RAngleLoc;
   }
 
@@ -1211,7 +1212,6 @@ public:
   const TemplateArgumentLoc *getTemplateArgs() const {
     if (!hasExplicitTemplateArgs())
       return nullptr;
-
     return getTrailingObjects<TemplateArgumentLoc>();
   }
 
@@ -1220,7 +1220,6 @@ public:
   unsigned getNumTemplateArgs() const {
     if (!hasExplicitTemplateArgs())
       return 0;
-
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
   }
 
@@ -1258,10 +1257,6 @@ public:
   const_child_range children() const {
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
-
-  friend TrailingObjects;
-  friend class ASTStmtReader;
-  friend class ASTStmtWriter;
 };
 
 /// Used by IntegerLiteral/FloatingLiteral to store the numeric without
@@ -1881,27 +1876,27 @@ private:
   unsigned Opc : 5;
   unsigned CanOverflow : 1;
   SourceLocation Loc;
-  Stmt *Val;
+  Stmt *Operand;
+
 public:
-  UnaryOperator(Expr *input, Opcode opc, QualType type, ExprValueKind VK,
-                ExprObjectKind OK, SourceLocation l, bool CanOverflow)
-      : Expr(UnaryOperatorClass, type, VK, OK,
-             input->isTypeDependent() || type->isDependentType(),
-             input->isValueDependent(),
-             (input->isInstantiationDependent() ||
-              type->isInstantiationDependentType()),
-             input->containsUnexpandedParameterPack()),
-        Opc(opc), CanOverflow(CanOverflow), Loc(l), Val(input) {}
+  UnaryOperator(Expr *Operand, Opcode Opc, QualType Ty, ExprValueKind VK,
+                ExprObjectKind OK, SourceLocation Loc, bool CanOverflow)
+      : Expr(UnaryOperatorClass, Ty, VK, OK,
+             Operand->isTypeDependent() || Ty->isDependentType(),
+             Operand->isValueDependent(),
+             (Operand->isInstantiationDependent() ||
+              Ty->isInstantiationDependentType()),
+             Operand->containsUnexpandedParameterPack()),
+        Opc(Opc), CanOverflow(CanOverflow), Loc(Loc), Operand(Operand) {}
 
   /// Build an empty unary operator.
-  explicit UnaryOperator(EmptyShell Empty)
-    : Expr(UnaryOperatorClass, Empty), Opc(UO_AddrOf) { }
+  explicit UnaryOperator(EmptyShell Empty) : Expr(UnaryOperatorClass, Empty) {}
 
   Opcode getOpcode() const { return static_cast<Opcode>(Opc); }
   void setOpcode(Opcode O) { Opc = O; }
 
-  Expr *getSubExpr() const { return cast<Expr>(Val); }
-  void setSubExpr(Expr *E) { Val = E; }
+  Expr *getSubExpr() const { return cast<Expr>(Operand); }
+  void setSubExpr(Expr *E) { Operand = E; }
 
   /// getOperatorLoc - Return the location of the operator.
   SourceLocation getOperatorLoc() const { return Loc; }
@@ -1917,45 +1912,41 @@ public:
   void setCanOverflow(bool C) { CanOverflow = C; }
 
   /// isPostfix - Return true if this is a postfix operation, like x++.
-  static bool isPostfix(Opcode Op) {
-    return Op == UO_PostInc || Op == UO_PostDec;
+  static bool isPostfix(Opcode Opc) {
+    return Opc == UO_PostInc || Opc == UO_PostDec;
   }
 
   /// isPrefix - Return true if this is a prefix operation, like --x.
-  static bool isPrefix(Opcode Op) {
-    return Op == UO_PreInc || Op == UO_PreDec;
+  static bool isPrefix(Opcode Opc) {
+    return Opc == UO_PreInc || Opc == UO_PreDec;
   }
 
   bool isPrefix() const { return isPrefix(getOpcode()); }
   bool isPostfix() const { return isPostfix(getOpcode()); }
 
-  static bool isIncrementOp(Opcode Op) {
-    return Op == UO_PreInc || Op == UO_PostInc;
+  static bool isIncrementOp(Opcode Opc) {
+    return Opc == UO_PreInc || Opc == UO_PostInc;
   }
-  bool isIncrementOp() const {
-    return isIncrementOp(getOpcode());
-  }
+  bool isIncrementOp() const { return isIncrementOp(getOpcode()); }
 
-  static bool isDecrementOp(Opcode Op) {
-    return Op == UO_PreDec || Op == UO_PostDec;
+  static bool isDecrementOp(Opcode Opc) {
+    return Opc == UO_PreDec || Opc == UO_PostDec;
   }
-  bool isDecrementOp() const {
-    return isDecrementOp(getOpcode());
-  }
+  bool isDecrementOp() const { return isDecrementOp(getOpcode()); }
 
-  static bool isIncrementDecrementOp(Opcode Op) { return Op <= UO_PreDec; }
+  static bool isIncrementDecrementOp(Opcode Opc) { return Opc <= UO_PreDec; }
   bool isIncrementDecrementOp() const {
     return isIncrementDecrementOp(getOpcode());
   }
 
-  static bool isArithmeticOp(Opcode Op) {
-    return Op >= UO_Plus && Op <= UO_LNot;
+  static bool isArithmeticOp(Opcode Opc) {
+    return Opc >= UO_Plus && Opc <= UO_LNot;
   }
   bool isArithmeticOp() const { return isArithmeticOp(getOpcode()); }
 
   /// getOpcodeStr - Turn an Opcode enum value into the punctuation char it
   /// corresponds to, e.g. "sizeof" or "[pre]++"
-  static StringRef getOpcodeStr(Opcode Op);
+  static StringRef getOpcodeStr(Opcode Opc);
 
   /// Retrieve the unary opcode that corresponds to the given
   /// overloaded operator.
@@ -1966,21 +1957,21 @@ public:
   static OverloadedOperatorKind getOverloadedOperator(Opcode Opc);
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    return isPostfix() ? Val->getBeginLoc() : Loc;
+    return isPostfix() ? Operand->getBeginLoc() : getOperatorLoc();
   }
   SourceLocation getEndLoc() const LLVM_READONLY {
-    return isPostfix() ? Loc : Val->getEndLoc();
+    return isPostfix() ? getOperatorLoc() : Operand->getEndLoc();
   }
-  SourceLocation getExprLoc() const LLVM_READONLY { return Loc; }
+  SourceLocation getExprLoc() const { return getOperatorLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == UnaryOperatorClass;
   }
 
   // Iterators
-  child_range children() { return child_range(&Val, &Val+1); }
+  child_range children() { return child_range(&Operand, &Operand + 1); }
   const_child_range children() const {
-    return const_child_range(&Val, &Val + 1);
+    return const_child_range(&Operand, &Operand + 1);
   }
 };
 

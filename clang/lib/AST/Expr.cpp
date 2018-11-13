@@ -351,7 +351,8 @@ DeclRefExpr::DeclRefExpr(const ASTContext &Ctx,
                          const TemplateArgumentListInfo *TemplateArgs,
                          QualType T, ExprValueKind VK)
   : Expr(DeclRefExprClass, T, VK, OK_Ordinary, false, false, false, false),
-    D(D), Loc(NameInfo.getLoc()), DNLoc(NameInfo.getInfo()) {
+    D(D), DNLoc(NameInfo.getInfo()) {
+  DeclRefExprBits.Loc = NameInfo.getLoc();
   DeclRefExprBits.HasQualifier = QualifierLoc ? 1 : 0;
   if (QualifierLoc) {
     new (getTrailingObjects<NestedNameSpecifierLoc>())
@@ -1173,8 +1174,8 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
 
 /// getOpcodeStr - Turn an Opcode enum value into the punctuation char it
 /// corresponds to, e.g. "sizeof" or "[pre]++".
-StringRef UnaryOperator::getOpcodeStr(Opcode Op) {
-  switch (Op) {
+StringRef UnaryOperator::getOpcodeStr(Opcode Opc) {
+  switch (Opc) {
 #define UNARY_OPERATION(Name, Spelling) case UO_##Name: return Spelling;
 #include "clang/AST/OperationKinds.def"
   }

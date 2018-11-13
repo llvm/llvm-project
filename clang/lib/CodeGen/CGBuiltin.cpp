@@ -385,7 +385,7 @@ static Value *EmitSignBit(CodeGenFunction &CGF, Value *V) {
 
 static RValue emitLibraryCall(CodeGenFunction &CGF, const FunctionDecl *FD,
                               const CallExpr *E, llvm::Constant *calleeValue) {
-  CGCallee callee = CGCallee::forDirect(calleeValue, FD);
+  CGCallee callee = CGCallee::forDirect(calleeValue, GlobalDecl(FD));
   return CGF.EmitCall(E->getCallee()->getType(), callee, E, ReturnValueSlot());
 }
 
@@ -1103,7 +1103,7 @@ llvm::Function *CodeGenFunction::generateBuiltinOSLogHelperFunction(
   llvm::Function *Fn = llvm::Function::Create(
       FuncTy, llvm::GlobalValue::LinkOnceODRLinkage, Name, &CGM.getModule());
   Fn->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  CGM.SetLLVMFunctionAttributes(nullptr, FI, Fn);
+  CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, Fn);
   CGM.SetLLVMFunctionAttributesForDefinition(nullptr, Fn);
 
   // Attach 'noinline' at -Oz.
@@ -1424,9 +1424,10 @@ RValue CodeGenFunction::emitRotate(const CallExpr *E, bool IsRotateRight) {
   return RValue::get(Builder.CreateCall(F, { Src, Src, ShiftAmt }));
 }
 
-RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
-                                        unsigned BuiltinID, const CallExpr *E,
+RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
+                                        const CallExpr *E,
                                         ReturnValueSlot ReturnValue) {
+  const FunctionDecl *FD = GD.getDecl()->getAsFunction();
   // See if we can constant fold this builtin.  If so, don't emit it at all.
   Expr::EvalResult Result;
   if (E->EvaluateAsRValue(Result, CGM.getContext()) &&
