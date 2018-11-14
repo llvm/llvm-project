@@ -74,11 +74,18 @@ static constexpr PropertyDefinition g_properties[] = {
      "Control the use of external tools or libraries to locate symbol files. "
      "On macOS, Spotlight is used to locate a matching .dSYM bundle based on "
      "the UUID of the executable."},
+    {"use-swift-dwarfimporter", OptionValue::eTypeBoolean, false, true, nullptr,
+     {}, "Reconstruct Clang module dependencies from DWARF "
+         "when debugging Swift code"},
     {"clang-modules-cache-path", OptionValue::eTypeFileSpec, true, 0, nullptr,
      {},
      "The path to the clang modules cache directory (-fmodules-cache-path)."}};
 
-enum { ePropertyEnableExternalLookup, ePropertyClangModulesCachePath };
+enum {
+  ePropertyEnableExternalLookup,
+  ePropertyUseDWARFImporter,
+  ePropertyClangModulesCachePath
+};
 
 } // namespace
 
@@ -102,6 +109,12 @@ FileSpec ModuleListProperties::GetClangModulesCachePath() const {
       ->GetPropertyAtIndexAsOptionValueFileSpec(nullptr, false,
                                                 ePropertyClangModulesCachePath)
       ->GetCurrentValue();
+}
+
+bool ModuleListProperties::GetUseDWARFImporter() const {
+  const uint32_t idx = ePropertyUseDWARFImporter;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      NULL, idx, g_properties[idx].default_uint_value != 0);
 }
 
 bool ModuleListProperties::SetClangModulesCachePath(llvm::StringRef path) {

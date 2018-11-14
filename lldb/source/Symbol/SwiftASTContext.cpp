@@ -43,6 +43,7 @@
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Driver/Util.h"
+#include "swift/DWARFImporter/DWARFImporter.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
 #include "swift/IDE/Utils.h"
@@ -763,11 +764,11 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
     : TypeSystem(TypeSystem::eKindSwift),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
       m_scratch_module(NULL), m_serialized_module_loader(NULL),
-      m_clang_importer(NULL), m_swift_module_cache(),
-      m_mangled_name_to_type_map(), m_type_to_mangled_name_map(),
-      m_pointer_byte_size(0), m_pointer_bit_align(0), m_void_function_type(),
-      m_target_wp(), m_process(NULL), m_platform_sdk_path(),
-      m_ast_file_data_map(), m_initialized_language_options(false),
+      m_swift_module_cache(), m_mangled_name_to_type_map(),
+      m_type_to_mangled_name_map(), m_pointer_byte_size(0),
+      m_pointer_bit_align(0), m_void_function_type(), m_target_wp(),
+      m_process(NULL), m_platform_sdk_path(), m_ast_file_data_map(),
+      m_initialized_language_options(false),
       m_initialized_search_path_options(false),
       m_initialized_clang_importer_options(false),
       m_reported_fatal_error(false), m_fatal_errors(), m_negative_type_cache(),
@@ -797,11 +798,11 @@ SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
     : TypeSystem(rhs.getKind()),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
       m_scratch_module(NULL), m_serialized_module_loader(NULL),
-      m_clang_importer(NULL), m_swift_module_cache(),
-      m_mangled_name_to_type_map(), m_type_to_mangled_name_map(),
-      m_pointer_byte_size(0), m_pointer_bit_align(0), m_void_function_type(),
-      m_target_wp(), m_process(NULL), m_platform_sdk_path(),
-      m_ast_file_data_map(), m_initialized_language_options(false),
+      m_swift_module_cache(), m_mangled_name_to_type_map(),
+      m_type_to_mangled_name_map(), m_pointer_byte_size(0),
+      m_pointer_bit_align(0), m_void_function_type(), m_target_wp(),
+      m_process(NULL), m_platform_sdk_path(), m_ast_file_data_map(),
+      m_initialized_language_options(false),
       m_initialized_search_path_options(false),
       m_initialized_clang_importer_options(false),
       m_reported_fatal_error(false), m_fatal_errors(), m_negative_type_cache(),
@@ -2930,38 +2931,40 @@ swift::SerializedModuleLoader *SwiftASTContext::GetSerializeModuleLoader() {
 swift::ClangImporter *SwiftASTContext::GetClangImporter() {
   VALID_OR_RETURN(nullptr);
 
-  if (m_clang_importer == NULL) {
+  const bool is_clang = true;
+  auto &clang_importer_options = GetClangImporterOptions();
+
+  if (!m_clang_importer) {
     swift::ASTContext *ast_ctx = GetASTContext();
-
-    if (!ast_ctx) {
-      return nullptr;
-    }
-
-    // Install the Clang module loader
-    TargetSP target_sp(m_target_wp.lock());
-    if (true /*target_sp*/) {
-      // PlatformSP platform_sp = target_sp->GetPlatform();
-      if (true /*platform_sp*/) {
-        if (!ast_ctx->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK()) {
-          swift::ClangImporterOptions &clang_importer_options =
-              GetClangImporterOptions();
-          if (!clang_importer_options.OverrideResourceDir.empty()) {
-            std::unique_ptr<swift::ModuleLoader> clang_importer_ap(
-                swift::ClangImporter::create(*m_ast_context_ap,
-                                             clang_importer_options));
-
-            if (clang_importer_ap) {
-              const bool isClang = true;
-              m_clang_importer =
-                  (swift::ClangImporter *)clang_importer_ap.get();
-              m_ast_context_ap->addModuleLoader(std::move(clang_importer_ap),
-                                                isClang);
-            }
-          }
+    // Install the Clang module loader.
+    if (ast_ctx &&
+        (!ast_ctx->SearchPathOpts.SDKPath.empty() || TargetHasNoSDK())) {
+      if (!clang_importer_options.OverrideResourceDir.empty()) {
+        auto clang_importer_ap = swift::ClangImporter::create(
+            *m_ast_context_ap, clang_importer_options);
+        if (clang_importer_ap) {
+          m_clang_importer = (swift::ClangImporter *)clang_importer_ap.get();
+          m_ast_context_ap->addModuleLoader(std::move(clang_importer_ap),
+                                            is_clang);
         }
       }
     }
   }
+
+  if (!m_dwarf_importer) {
+    // Install the DWARF importer fallback loader.
+    auto props = ModuleList::GetGlobalModuleListProperties();
+    if (props.GetUseDWARFImporter()) {
+      auto dwarf_importer_ap = swift::DWARFImporter::create(
+          *m_ast_context_ap, clang_importer_options);
+      if (dwarf_importer_ap) {
+        m_dwarf_importer = dwarf_importer_ap.get();
+        m_ast_context_ap->addModuleLoader(std::move(dwarf_importer_ap),
+                                          is_clang);
+      }
+    }
+  }
+
   return m_clang_importer;
 }
 
