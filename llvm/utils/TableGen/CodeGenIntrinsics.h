@@ -124,6 +124,9 @@ struct CodeGenIntrinsic {
   /// True if the intrinsic is no-return.
   bool isNoReturn;
 
+  /// True if the intrinsic is cold.
+  bool isCold;
+
   /// True if the intrinsic is marked as convergent.
   bool isConvergent;
 

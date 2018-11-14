@@ -70,4 +70,4 @@ define void @trap() {
 }
 
 ; CHECK: attributes #0 = { nounwind readnone speculatable }
-; CHECK: attributes #1 = { noreturn nounwind }
+; CHECK: attributes #1 = { cold noreturn nounwind }
