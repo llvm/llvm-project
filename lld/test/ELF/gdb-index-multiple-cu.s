@@ -2,7 +2,7 @@
 # RUN: ld.lld --gdb-index %t.o -o %t
 # RUN: llvm-dwarfdump -gdb-index %t | FileCheck %s
 
-# Kind << 24 | CuIndex = 48 << 24 | 1 = 0x30000001
+# Attributes << 24 | CuIndex = 48 << 24 | 1 = 0x30000001
 # CHECK: Constant pool
 # CHECK-NEXT: 0(0x0): 0x30000001
 
@@ -58,7 +58,7 @@ _start:
 	.long	.Lcu_begin1    # CU Offset
 	.long	.Lcu_end1 - .Lcu_begin1
 	.long	.Ldie - .Lcu_begin1
-	.byte	48             # Kind: FUNCTION, EXTERNAL
+	.byte	48             # Attributes: FUNCTION, EXTERNAL
 	.asciz	"_start"       # External Name
 	.long	0
 .LpubNames_end1:

@@ -305,8 +305,8 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_remove_section))
     Config.ToRemove.push_back(Arg->getValue());
-  for (auto Arg : InputArgs.filtered(OBJCOPY_keep))
-    Config.Keep.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(OBJCOPY_keep_section))
+    Config.KeepSection.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_only_keep))
     Config.OnlyKeep.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_section))
@@ -411,8 +411,8 @@ DriverConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
       !Config.StripAllGNU)
     Config.StripAll = true;
 
-  for (auto Arg : InputArgs.filtered(STRIP_keep))
-    Config.Keep.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(STRIP_keep_section))
+    Config.KeepSection.push_back(Arg->getValue());
 
   for (auto Arg : InputArgs.filtered(STRIP_remove_section))
     Config.ToRemove.push_back(Arg->getValue());

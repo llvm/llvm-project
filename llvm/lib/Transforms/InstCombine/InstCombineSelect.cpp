@@ -1546,6 +1546,66 @@ static Instruction *factorizeMinMaxTree(SelectPatternFlavor SPF, Value *LHS,
   return SelectInst::Create(CmpABC, MinMaxOp, ThirdOp);
 }
 
+/// Try to reduce a rotate pattern that includes a compare and select into a
+/// sequence of ALU ops only. Example:
+/// rotl32(a, b) --> (b == 0 ? a : ((a >> (32 - b)) | (a << b)))
+///              --> (a >> (-b & 31)) | (a << (b & 31))
+static Instruction *foldSelectRotate(SelectInst &Sel,
+                                     InstCombiner::BuilderTy &Builder) {
+  // The false value of the select must be a rotate of the true value.
+  Value *Or0, *Or1;
+  if (!match(Sel.getFalseValue(), m_OneUse(m_Or(m_Value(Or0), m_Value(Or1)))))
+    return nullptr;
+
+  Value *TVal = Sel.getTrueValue();
+  Value *SA0, *SA1;
+  if (!match(Or0, m_OneUse(m_LogicalShift(m_Specific(TVal), m_Value(SA0)))) ||
+      !match(Or1, m_OneUse(m_LogicalShift(m_Specific(TVal), m_Value(SA1)))))
+    return nullptr;
+
+  auto ShiftOpcode0 = cast<BinaryOperator>(Or0)->getOpcode();
+  auto ShiftOpcode1 = cast<BinaryOperator>(Or1)->getOpcode();
+  if (ShiftOpcode0 == ShiftOpcode1)
+    return nullptr;
+
+  // We have one of these patterns so far:
+  // select ?, TVal, (or (lshr TVal, SA0), (shl TVal, SA1))
+  // select ?, TVal, (or (shl TVal, SA0), (lshr TVal, SA1))
+  // This must be a power-of-2 rotate for a bitmasking transform to be valid.
+  unsigned Width = Sel.getType()->getScalarSizeInBits();
+  if (!isPowerOf2_32(Width))
+    return nullptr;
+
+  // Check the shift amounts to see if they are an opposite pair.
+  Value *ShAmt;
+  if (match(SA1, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(SA0)))))
+    ShAmt = SA0;
+  else if (match(SA0, m_OneUse(m_Sub(m_SpecificInt(Width), m_Specific(SA1)))))
+    ShAmt = SA1;
+  else
+    return nullptr;
+
+  // Finally, see if the select is filtering out a shift-by-zero.
+  Value *Cond = Sel.getCondition();
+  ICmpInst::Predicate Pred;
+  if (!match(Cond, m_OneUse(m_ICmp(Pred, m_Specific(ShAmt), m_ZeroInt()))) ||
+      Pred != ICmpInst::ICMP_EQ)
+    return nullptr;
+
+  // This is a rotate that avoids shift-by-bitwidth UB in a suboptimal way.
+  // Convert to safely bitmasked shifts.
+  // TODO: When we can canonicalize to funnel shift intrinsics without risk of
+  // performance regressions, replace this sequence with that call.
+  Value *NegShAmt = Builder.CreateNeg(ShAmt);
+  Value *MaskedShAmt = Builder.CreateAnd(ShAmt, Width - 1);
+  Value *MaskedNegShAmt = Builder.CreateAnd(NegShAmt, Width - 1);
+  Value *NewSA0 = ShAmt == SA0 ? MaskedShAmt : MaskedNegShAmt;
+  Value *NewSA1 = ShAmt == SA1 ? MaskedShAmt : MaskedNegShAmt;
+  Value *NewSh0 = Builder.CreateBinOp(ShiftOpcode0, TVal, NewSA0);
+  Value *NewSh1 = Builder.CreateBinOp(ShiftOpcode1, TVal, NewSA1);
+  return BinaryOperator::CreateOr(NewSh0, NewSh1);
+}
+
 Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -2009,6 +2069,9 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
 
   if (Instruction *Select = foldSelectBinOpIdentity(SI, TLI))
     return Select;
+
+  if (Instruction *Rot = foldSelectRotate(SI, Builder))
+    return Rot;
 
   return nullptr;
 }

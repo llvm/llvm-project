@@ -331,6 +331,9 @@ CODEGENOPT(PreserveVec3Type, 1, 0)
 /// Whether to emit .debug_gnu_pubnames section instead of .debug_pubnames.
 CODEGENOPT(DebugNameTable, 2, 0)
 
+/// Whether to use DWARF base address specifiers in .debug_ranges.
+CODEGENOPT(DebugRangesBaseAddress, 1, 0)
+
 CODEGENOPT(NoPLT, 1, 0)
 
 /// Whether to embed source in DWARF debug line section.

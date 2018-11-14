@@ -37,6 +37,7 @@ private:
   int writeSectionContent(raw_ostream &OS, WasmYAML::TableSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::MemorySection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::GlobalSection &Section);
+  int writeSectionContent(raw_ostream &OS, WasmYAML::EventSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::ExportSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::StartSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::ElemSection &Section);
@@ -49,6 +50,7 @@ private:
   WasmYAML::Object &Obj;
   uint32_t NumImportedFunctions = 0;
   uint32_t NumImportedGlobals = 0;
+  uint32_t NumImportedEvents = 0;
 };
 
 static int writeUint64(raw_ostream &OS, uint64_t Value) {
@@ -152,6 +154,7 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
       switch (Info.Kind) {
       case wasm::WASM_SYMBOL_TYPE_FUNCTION:
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:
+      case wasm::WASM_SYMBOL_TYPE_EVENT:
         encodeULEB128(Info.ElementIndex, SubSection.GetStream());
         if ((Info.Flags & wasm::WASM_SYMBOL_UNDEFINED) == 0)
           writeStringRef(Info.Name, SubSection.GetStream());
@@ -292,6 +295,11 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
       writeUint8(OS, Import.GlobalImport.Mutable);
       NumImportedGlobals++;
       break;
+    case wasm::WASM_EXTERNAL_EVENT:
+      writeUint32(OS, Import.EventImport.Attribute);
+      writeUint32(OS, Import.EventImport.SigIndex);
+      NumImportedGlobals++;
+      break;
     case wasm::WASM_EXTERNAL_MEMORY:
       writeLimits(Import.Memory, OS);
       break;
@@ -365,6 +373,22 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
     writeUint8(OS, Global.Type);
     writeUint8(OS, Global.Mutable);
     writeInitExpr(Global.InitExpr, OS);
+  }
+  return 0;
+}
+
+int WasmWriter::writeSectionContent(raw_ostream &OS,
+                                    WasmYAML::EventSection &Section) {
+  encodeULEB128(Section.Events.size(), OS);
+  uint32_t ExpectedIndex = NumImportedEvents;
+  for (auto &Event : Section.Events) {
+    if (Event.Index != ExpectedIndex) {
+      errs() << "Unexpected event index: " << Event.Index << "\n";
+      return 1;
+    }
+    ++ExpectedIndex;
+    encodeULEB128(Event.Attribute, OS);
+    encodeULEB128(Event.SigIndex, OS);
   }
   return 0;
 }
@@ -474,17 +498,7 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
   writeUint32(OS, Obj.Header.Version);
 
   // Write each section
-  uint32_t LastType = 0;
   for (const std::unique_ptr<WasmYAML::Section> &Sec : Obj.Sections) {
-    uint32_t Type = Sec->Type;
-    if (Type != wasm::WASM_SEC_CUSTOM) {
-      if (Type < LastType) {
-        errs() << "Out of order section type: " << Type << "\n";
-        return 1;
-      }
-      LastType = Type;
-    }
-
     encodeULEB128(Sec->Type, OS);
     std::string OutString;
     raw_string_ostream StringStream(OutString);
@@ -507,6 +521,9 @@ int WasmWriter::writeWasm(raw_ostream &OS) {
       if (auto Err = writeSectionContent(StringStream, *S))
         return Err;
     } else if (auto S = dyn_cast<WasmYAML::GlobalSection>(Sec.get())) {
+      if (auto Err = writeSectionContent(StringStream, *S))
+        return Err;
+    } else if (auto S = dyn_cast<WasmYAML::EventSection>(Sec.get())) {
       if (auto Err = writeSectionContent(StringStream, *S))
         return Err;
     } else if (auto S = dyn_cast<WasmYAML::ExportSection>(Sec.get())) {

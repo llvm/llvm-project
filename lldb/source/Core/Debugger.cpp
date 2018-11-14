@@ -44,6 +44,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Reproducer.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamCallback.h"
@@ -410,6 +411,17 @@ void Debugger::SetPrompt(llvm::StringRef p) {
   if (str.length())
     new_prompt = str;
   GetCommandInterpreter().UpdatePrompt(new_prompt);
+}
+
+llvm::StringRef Debugger::GetReproducerPath() const {
+  auto &r = repro::Reproducer::Instance();
+  return r.GetReproducerPath().GetCString();
+}
+
+void Debugger::SetReproducerPath(llvm::StringRef p) {
+  auto &r = repro::Reproducer::Instance();
+  if (auto e = r.SetReproducerPath(FileSpec(p)))
+    llvm::consumeError(std::move(e));
 }
 
 const FormatEntity::Entry *Debugger::GetThreadFormat() const {

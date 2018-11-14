@@ -63,7 +63,8 @@ std::string one_register_hex = "41424344";
 class GDBRemoteCommunicationClientTest : public GDBRemoteTest {
 public:
   void SetUp() override {
-    ASSERT_THAT_ERROR(Connect(client, server), llvm::Succeeded());
+    ASSERT_THAT_ERROR(GDBRemoteCommunication::ConnectLocally(client, server),
+                      llvm::Succeeded());
   }
 
 protected:

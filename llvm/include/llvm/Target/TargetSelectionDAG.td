@@ -162,7 +162,7 @@ def SDTExtInreg : SDTypeProfile<1, 2, [     // sext_inreg
 ]>;
 def SDTExtInvec : SDTypeProfile<1, 1, [     // sext_invec
   SDTCisInt<0>, SDTCisVec<0>, SDTCisInt<1>, SDTCisVec<1>,
-  SDTCisOpSmallerThanOp<1, 0>, SDTCisSameSizeAs<0,1>
+  SDTCisOpSmallerThanOp<1, 0>
 ]>;
 
 def SDTSetCC : SDTypeProfile<1, 3, [        // setcc

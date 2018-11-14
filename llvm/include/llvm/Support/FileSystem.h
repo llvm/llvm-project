@@ -349,6 +349,12 @@ std::error_code create_hard_link(const Twine &to, const Twine &from);
 std::error_code real_path(const Twine &path, SmallVectorImpl<char> &output,
                           bool expand_tilde = false);
 
+/// Expands ~ expressions to the user's home directory. On Unix ~user
+/// directories are resolved as well.
+///
+/// @param path The path to resolve.
+void expand_tilde(const Twine &path, SmallVectorImpl<char> &output);
+
 /// Get the current path.
 ///
 /// @param result Holds the current path on return.

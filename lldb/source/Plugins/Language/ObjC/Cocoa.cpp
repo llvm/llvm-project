@@ -742,6 +742,60 @@ bool lldb_private::formatters::NSURLSummaryProvider(
   return false;
 }
 
+/// Bias value for tagged pointer exponents.
+/// Recommended values:
+/// 0x3e3: encodes all dates between distantPast and distantFuture
+///   except for the range within about 1e-28 second of the reference date.
+/// 0x3ef: encodes all dates for a few million years beyond distantPast and
+///   distantFuture, except within about 1e-25 second of the reference date.
+const int TAGGED_DATE_EXPONENT_BIAS = 0x3ef;
+
+typedef union {
+  struct {
+    uint64_t fraction:52;  // unsigned
+    uint64_t exponent:11;  // signed
+    uint64_t sign:1;
+  };
+  uint64_t i;
+  double d;
+} DoubleBits;
+typedef union {
+  struct {
+    uint64_t fraction:52;  // unsigned
+    uint64_t exponent:7;   // signed
+    uint64_t sign:1;
+    uint64_t unused:4;  // placeholder for pointer tag bits
+  };
+  uint64_t i;
+} TaggedDoubleBits;
+
+static uint64_t decodeExponent(uint64_t exp) {
+  int64_t exp7 = exp;
+  // Tagged exponent field is 7-bit signed. Sign-extend the value to 64 bits
+  // before performing arithmetic.
+  int64_t exp11 = ((exp7 << 57) >> 57) + TAGGED_DATE_EXPONENT_BIAS;
+  return exp11;
+}
+
+static uint64_t decodeTaggedTimeInterval(uint64_t encodedTimeInterval) {
+  if (encodedTimeInterval == 0)
+    return 0.0;
+  if (encodedTimeInterval == std::numeric_limits<uint64_t>::max())
+    return -0.0;
+
+  TaggedDoubleBits encodedBits = { .i = encodedTimeInterval };
+  DoubleBits decodedBits;
+
+  // Sign and fraction are represented exactly.
+  // Exponent is encoded.
+  assert(encodedBits.unused == 0);
+  decodedBits.sign = encodedBits.sign;
+  decodedBits.fraction = encodedBits.fraction;
+  decodedBits.exponent = decodeExponent(encodedBits.exponent);
+
+  return decodedBits.d;
+}
+
 bool lldb_private::formatters::NSDateSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ProcessSP process_sp = valobj.GetProcessSP();
@@ -781,9 +835,9 @@ bool lldb_private::formatters::NSDateSummaryProvider(
   if (class_name.IsEmpty())
     return false;
 
+  uint64_t info_bits = 0, value_bits = 0;
   if ((class_name == g_NSDate) || (class_name == g___NSDate) ||
       (class_name == g___NSTaggedDate)) {
-    uint64_t info_bits = 0, value_bits = 0;
     if (descriptor->GetTaggedPointerInfo(&info_bits, &value_bits)) {
       date_value_bits = ((value_bits << 8) | (info_bits << 4));
       memcpy(&date_value, &date_value_bits, sizeof(date_value_bits));
@@ -813,6 +867,14 @@ bool lldb_private::formatters::NSDateSummaryProvider(
     stream.Printf("0001-12-30 00:00:00 +0000");
     return true;
   }
+
+  // Accomodate for the __NSTaggedDate format introduced in Foundation 1600.
+  if (class_name == g___NSTaggedDate) {
+    auto *runtime = llvm::dyn_cast_or_null<AppleObjCRuntime>(process_sp->GetObjCLanguageRuntime());
+    if (runtime && runtime->GetFoundationVersion() >= 1600)
+      date_value = decodeTaggedTimeInterval(value_bits << 4);
+  }
+
   // this snippet of code assumes that time_t == seconds since Jan-1-1970 this
   // is generally true and POSIXly happy, but might break if a library vendor
   // decides to get creative

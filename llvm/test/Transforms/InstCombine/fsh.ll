@@ -10,9 +10,7 @@ declare <2 x i31> @llvm.fshl.v2i31(<2 x i31>, <2 x i31>, <2 x i31>)
 
 define i32 @fshl_mask_simplify1(i32 %x, i32 %y, i32 %sh) {
 ; CHECK-LABEL: @fshl_mask_simplify1(
-; CHECK-NEXT:    [[MASKEDSH:%.*]] = and i32 [[SH:%.*]], 32
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[MASKEDSH]])
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %maskedsh = and i32 %sh, 32
   %r = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %maskedsh)
@@ -21,9 +19,7 @@ define i32 @fshl_mask_simplify1(i32 %x, i32 %y, i32 %sh) {
 
 define <2 x i32> @fshr_mask_simplify2(<2 x i32> %x, <2 x i32> %y, <2 x i32> %sh) {
 ; CHECK-LABEL: @fshr_mask_simplify2(
-; CHECK-NEXT:    [[MASKEDSH:%.*]] = and <2 x i32> [[SH:%.*]], <i32 64, i32 64>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[MASKEDSH]])
-; CHECK-NEXT:    ret <2 x i32> [[R]]
+; CHECK-NEXT:    ret <2 x i32> [[Y:%.*]]
 ;
   %maskedsh = and <2 x i32> %sh, <i32 64, i32 64>
   %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %maskedsh)
@@ -43,7 +39,7 @@ define i32 @fshl_mask_simplify3(i32 %x, i32 %y, i32 %sh) {
   ret i32 %r
 }
 
-; Check again with weird bitwidths; log2(33) means we demand the low 6 bits.
+; Check again with weird bitwidths - the analysis is invalid with non-power-of-2.
 
 define i33 @fshr_mask_simplify1(i33 %x, i33 %y, i33 %sh) {
 ; CHECK-LABEL: @fshr_mask_simplify1(
@@ -56,7 +52,7 @@ define i33 @fshr_mask_simplify1(i33 %x, i33 %y, i33 %sh) {
   ret i33 %r
 }
 
-; Check again with weird bitwidths; log2(31) means we demand the low 5 bits.
+; Check again with weird bitwidths - the analysis is invalid with non-power-of-2.
 
 define <2 x i31> @fshl_mask_simplify2(<2 x i31> %x, <2 x i31> %y, <2 x i31> %sh) {
 ; CHECK-LABEL: @fshl_mask_simplify2(
@@ -69,7 +65,7 @@ define <2 x i31> @fshl_mask_simplify2(<2 x i31> %x, <2 x i31> %y, <2 x i31> %sh)
   ret <2 x i31> %r
 }
 
-; Negative test.
+; Check again with weird bitwidths - the analysis is invalid with non-power-of-2.
 
 define i33 @fshr_mask_simplify3(i33 %x, i33 %y, i33 %sh) {
 ; CHECK-LABEL: @fshr_mask_simplify3(
@@ -86,8 +82,7 @@ define i33 @fshr_mask_simplify3(i33 %x, i33 %y, i33 %sh) {
 
 define i32 @fshl_mask_not_required(i32 %x, i32 %y, i32 %sh) {
 ; CHECK-LABEL: @fshl_mask_not_required(
-; CHECK-NEXT:    [[MASKEDSH:%.*]] = and i32 [[SH:%.*]], 31
-; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[MASKEDSH]])
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[SH:%.*]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %maskedsh = and i32 %sh, 31
@@ -99,7 +94,7 @@ define i32 @fshl_mask_not_required(i32 %x, i32 %y, i32 %sh) {
 
 define i32 @fshl_mask_reduce_constant(i32 %x, i32 %y, i32 %sh) {
 ; CHECK-LABEL: @fshl_mask_reduce_constant(
-; CHECK-NEXT:    [[MASKEDSH:%.*]] = and i32 [[SH:%.*]], 33
+; CHECK-NEXT:    [[MASKEDSH:%.*]] = and i32 [[SH:%.*]], 1
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[MASKEDSH]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -125,14 +120,15 @@ define i32 @fshl_mask_negative(i32 %x, i32 %y, i32 %sh) {
 
 define <2 x i32> @fshr_set_but_not_demanded_vec(<2 x i32> %x, <2 x i32> %y, <2 x i32> %sh) {
 ; CHECK-LABEL: @fshr_set_but_not_demanded_vec(
-; CHECK-NEXT:    [[BOGUSBITS:%.*]] = or <2 x i32> [[SH:%.*]], <i32 32, i32 32>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[BOGUSBITS]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]], <2 x i32> [[SH:%.*]])
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %bogusbits = or <2 x i32> %sh, <i32 32, i32 32>
   %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i32> %bogusbits)
   ret <2 x i32> %r
 }
+
+; Check again with weird bitwidths - the analysis is invalid with non-power-of-2.
 
 define <2 x i31> @fshl_set_but_not_demanded_vec(<2 x i31> %x, <2 x i31> %y, <2 x i31> %sh) {
 ; CHECK-LABEL: @fshl_set_but_not_demanded_vec(

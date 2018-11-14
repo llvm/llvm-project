@@ -25,20 +25,19 @@ namespace {
 static const EnumEntry<unsigned> WasmSymbolTypes[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SYMBOL_TYPE_##X }
-    ENUM_ENTRY(FUNCTION),
-    ENUM_ENTRY(DATA),
-    ENUM_ENTRY(GLOBAL),
-    ENUM_ENTRY(SECTION),
+    ENUM_ENTRY(FUNCTION), ENUM_ENTRY(DATA),  ENUM_ENTRY(GLOBAL),
+    ENUM_ENTRY(SECTION),  ENUM_ENTRY(EVENT),
 #undef ENUM_ENTRY
 };
 
 static const EnumEntry<uint32_t> WasmSectionTypes[] = {
 #define ENUM_ENTRY(X)                                                          \
   { #X, wasm::WASM_SEC_##X }
-    ENUM_ENTRY(CUSTOM),   ENUM_ENTRY(TYPE),   ENUM_ENTRY(IMPORT),
-    ENUM_ENTRY(FUNCTION), ENUM_ENTRY(TABLE),  ENUM_ENTRY(MEMORY),
-    ENUM_ENTRY(GLOBAL),   ENUM_ENTRY(EXPORT), ENUM_ENTRY(START),
-    ENUM_ENTRY(ELEM),     ENUM_ENTRY(CODE),   ENUM_ENTRY(DATA),
+    ENUM_ENTRY(CUSTOM),   ENUM_ENTRY(TYPE),  ENUM_ENTRY(IMPORT),
+    ENUM_ENTRY(FUNCTION), ENUM_ENTRY(TABLE), ENUM_ENTRY(MEMORY),
+    ENUM_ENTRY(GLOBAL),   ENUM_ENTRY(EVENT), ENUM_ENTRY(EXPORT),
+    ENUM_ENTRY(START),    ENUM_ENTRY(ELEM),  ENUM_ENTRY(CODE),
+    ENUM_ENTRY(DATA),
 #undef ENUM_ENTRY
 };
 
