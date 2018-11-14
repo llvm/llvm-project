@@ -1,4 +1,4 @@
-// mod3.swift
+// mod5.swift
 //
 // This source file is part of the Swift.org open source project
 //
@@ -10,10 +10,10 @@
 //
 // -----------------------------------------------------------------------------
 
-struct S3 {
-  var i = 3
+struct S5 {
+  var i = 5
 }
 
-public func f3() -> Int {
-  return 3 // break 3
+public func f5() -> Int {
+  return 5 // break 5
 }
