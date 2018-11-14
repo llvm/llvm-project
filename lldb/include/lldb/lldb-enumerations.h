@@ -713,6 +713,10 @@ enum SectionType {
   eSectionTypeDWARFDebugLineStr, // DWARF v5 .debug_line_str
   eSectionTypeDWARFDebugRngLists, // DWARF v5 .debug_rnglists
   eSectionTypeDWARFDebugLocLists, // DWARF v5 .debug_loclists
+  eSectionTypeDWARFDebugAbbrevDwo,
+  eSectionTypeDWARFDebugInfoDwo,
+  eSectionTypeDWARFDebugStrDwo,
+  eSectionTypeDWARFDebugStrOffsetsDwo,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){
