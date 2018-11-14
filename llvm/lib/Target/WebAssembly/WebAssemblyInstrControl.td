@@ -146,14 +146,16 @@ let Predicates = [HasExceptionHandling] in {
 
 // Throwing an exception: throw / rethrow
 let isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in {
-defm THROW_I32 : I<(outs), (ins i32imm:$tag, I32:$val),
-                   (outs), (ins i32imm:$tag),
-                   [(int_wasm_throw imm:$tag, I32:$val)],
+defm THROW_I32 : I<(outs), (ins event_op:$tag, I32:$val),
+                   (outs), (ins event_op:$tag),
+                   [(WebAssemblythrow (WebAssemblywrapper texternalsym:$tag),
+                                      I32:$val)],
                    "throw   \t$tag, $val", "throw   \t$tag",
                    0x08>;
-defm THROW_I64 : I<(outs), (ins i32imm:$tag, I64:$val),
-                   (outs), (ins i32imm:$tag),
-                   [(int_wasm_throw imm:$tag, I64:$val)],
+defm THROW_I64 : I<(outs), (ins event_op:$tag, I64:$val),
+                   (outs), (ins event_op:$tag),
+                   [(WebAssemblythrow (WebAssemblywrapper texternalsym:$tag),
+                                      I64:$val)],
                    "throw   \t$tag, $val", "throw   \t$tag",
                    0x08>;
 defm RETHROW : NRI<(outs), (ins bb_op:$dst), [], "rethrow \t$dst", 0x09>;

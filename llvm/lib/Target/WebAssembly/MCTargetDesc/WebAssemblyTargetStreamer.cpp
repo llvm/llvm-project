@@ -100,10 +100,26 @@ void WebAssemblyTargetAsmStreamer::emitIndirectFunctionType(
 }
 
 void WebAssemblyTargetAsmStreamer::emitGlobalType(MCSymbolWasm *Sym) {
+  assert(Sym->isGlobal());
   OS << "\t.globaltype\t" << Sym->getName() << ", " <<
         WebAssembly::TypeToString(
           static_cast<wasm::ValType>(Sym->getGlobalType().Type)) <<
         '\n';
+}
+
+void WebAssemblyTargetAsmStreamer::emitEventType(MCSymbolWasm *Sym) {
+  assert(Sym->isEvent());
+  OS << "\t.eventtype\t" << Sym->getName();
+  if (Sym->getSignature()->Returns.empty())
+    OS << ", void";
+  else {
+    assert(Sym->getSignature()->Returns.size() == 1);
+    OS << ", "
+       << WebAssembly::TypeToString(Sym->getSignature()->Returns.front());
+  }
+  for (auto Ty : Sym->getSignature()->Params)
+    OS << ", " << WebAssembly::TypeToString(Ty);
+  OS << '\n';
 }
 
 void WebAssemblyTargetAsmStreamer::emitImportModule(MCSymbolWasm *Sym,
@@ -159,6 +175,9 @@ void WebAssemblyTargetWasmStreamer::emitGlobalType(MCSymbolWasm *Sym) {
   // Not needed.
 }
 
+void WebAssemblyTargetWasmStreamer::emitEventType(MCSymbolWasm *Sym) {
+  // Not needed.
+}
 void WebAssemblyTargetWasmStreamer::emitImportModule(MCSymbolWasm *Sym,
                                                      StringRef ModuleName) {
   Sym->setModuleName(ModuleName);

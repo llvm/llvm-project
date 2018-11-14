@@ -5128,17 +5128,23 @@ AArch64InstrInfo::findRegisterToSaveLRTo(const outliner::Candidate &C) const {
 outliner::OutlinedFunction
 AArch64InstrInfo::getOutliningCandidateInfo(
     std::vector<outliner::Candidate> &RepeatedSequenceLocs) const {
-  unsigned SequenceSize = std::accumulate(
-      RepeatedSequenceLocs[0].front(),
-      std::next(RepeatedSequenceLocs[0].back()),
-      0, [this](unsigned Sum, const MachineInstr &MI) {
-        return Sum + getInstSizeInBytes(MI);
-      });
+  outliner::Candidate &FirstCand = RepeatedSequenceLocs[0];
+  unsigned SequenceSize =
+      std::accumulate(FirstCand.front(), std::next(FirstCand.back()), 0,
+                      [this](unsigned Sum, const MachineInstr &MI) {
+                        return Sum + getInstSizeInBytes(MI);
+                      });
 
-  // Compute liveness information for each candidate.
+  // Properties about candidate MBBs that hold for all of them.
+  unsigned FlagsSetInAll = 0xF;
+
+  // Compute liveness information for each candidate, and set FlagsSetInAll.
   const TargetRegisterInfo &TRI = getRegisterInfo();
   std::for_each(RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
-                [&TRI](outliner::Candidate &C) { C.initLRU(TRI); });
+                [&TRI, &FlagsSetInAll](outliner::Candidate &C) {
+                  FlagsSetInAll &= C.Flags;
+                  C.initLRU(TRI);
+                });
 
   // According to the AArch64 Procedure Call Standard, the following are
   // undefined on entry/exit from a function call:
@@ -5240,21 +5246,24 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     }
   }
 
-  // Check if the range contains a call. These require a save + restore of the
-  // link register.
-  if (std::any_of(RepeatedSequenceLocs[0].front(),
-                  RepeatedSequenceLocs[0].back(),
-                  [](const MachineInstr &MI) { return MI.isCall(); }))
-    NumBytesToCreateFrame += 8; // Save + restore the link register.
+  // Does every candidate's MBB contain a call? If so, then we might have a call
+  // in the range.
+  if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
+    // Check if the range contains a call. These require a save + restore of the
+    // link register.
+    if (std::any_of(FirstCand.front(), FirstCand.back(),
+                    [](const MachineInstr &MI) { return MI.isCall(); }))
+      NumBytesToCreateFrame += 8; // Save + restore the link register.
 
-  // Handle the last instruction separately. If this is a tail call, then the
-  // last instruction is a call. We don't want to save + restore in this case.
-  // However, it could be possible that the last instruction is a call without
-  // it being valid to tail call this sequence. We should consider this as well.
-  else if (FrameID != MachineOutlinerThunk &&
-           FrameID != MachineOutlinerTailCall &&
-           RepeatedSequenceLocs[0].back()->isCall())
-    NumBytesToCreateFrame += 8;
+    // Handle the last instruction separately. If this is a tail call, then the
+    // last instruction is a call. We don't want to save + restore in this case.
+    // However, it could be possible that the last instruction is a call without
+    // it being valid to tail call this sequence. We should consider this as
+    // well.
+    else if (FrameID != MachineOutlinerThunk &&
+             FrameID != MachineOutlinerTailCall && FirstCand.back()->isCall())
+      NumBytesToCreateFrame += 8;
+  }
 
   return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
                                     NumBytesToCreateFrame, FrameID);

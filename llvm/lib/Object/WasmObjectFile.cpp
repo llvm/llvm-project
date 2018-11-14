@@ -295,6 +295,8 @@ Error WasmObjectFile::parseSection(WasmSection &Sec) {
     return parseMemorySection(Ctx);
   case wasm::WASM_SEC_GLOBAL:
     return parseGlobalSection(Ctx);
+  case wasm::WASM_SEC_EVENT:
+    return parseEventSection(Ctx);
   case wasm::WASM_SEC_EXPORT:
     return parseExportSection(Ctx);
   case wasm::WASM_SEC_START:
@@ -439,19 +441,24 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
 
   std::vector<wasm::WasmImport *> ImportedGlobals;
   std::vector<wasm::WasmImport *> ImportedFunctions;
+  std::vector<wasm::WasmImport *> ImportedEvents;
   ImportedGlobals.reserve(Imports.size());
   ImportedFunctions.reserve(Imports.size());
+  ImportedEvents.reserve(Imports.size());
   for (auto &I : Imports) {
     if (I.Kind == wasm::WASM_EXTERNAL_FUNCTION)
       ImportedFunctions.emplace_back(&I);
     else if (I.Kind == wasm::WASM_EXTERNAL_GLOBAL)
       ImportedGlobals.emplace_back(&I);
+    else if (I.Kind == wasm::WASM_EXTERNAL_EVENT)
+      ImportedEvents.emplace_back(&I);
   }
 
   while (Count--) {
     wasm::WasmSymbolInfo Info;
     const wasm::WasmSignature *FunctionType = nullptr;
     const wasm::WasmGlobalType *GlobalType = nullptr;
+    const wasm::WasmEventType *EventType = nullptr;
 
     Info.Kind = readUint8(Ctx);
     Info.Flags = readVaruint32(Ctx);
@@ -532,6 +539,32 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
       break;
     }
 
+    case wasm::WASM_SYMBOL_TYPE_EVENT: {
+      Info.ElementIndex = readVaruint32(Ctx);
+      if (!isValidEventIndex(Info.ElementIndex) ||
+          IsDefined != isDefinedEventIndex(Info.ElementIndex))
+        return make_error<GenericBinaryError>("invalid event symbol index",
+                                              object_error::parse_failed);
+      if (!IsDefined && (Info.Flags & wasm::WASM_SYMBOL_BINDING_MASK) ==
+                            wasm::WASM_SYMBOL_BINDING_WEAK)
+        return make_error<GenericBinaryError>("undefined weak global symbol",
+                                              object_error::parse_failed);
+      if (IsDefined) {
+        Info.Name = readString(Ctx);
+        unsigned EventIndex = Info.ElementIndex - NumImportedEvents;
+        wasm::WasmEvent &Event = Events[EventIndex];
+        EventType = &Event.Type;
+        if (Event.SymbolName.empty())
+          Event.SymbolName = Info.Name;
+
+      } else {
+        wasm::WasmImport &Import = *ImportedEvents[Info.ElementIndex];
+        EventType = &Import.Event;
+        Info.Name = Import.Field;
+      }
+      break;
+    }
+
     default:
       return make_error<GenericBinaryError>("Invalid symbol type",
                                             object_error::parse_failed);
@@ -545,7 +578,7 @@ Error WasmObjectFile::parseLinkingSectionSymtab(ReadContext &Ctx) {
                                             object_error::parse_failed);
     LinkingData.SymbolTable.emplace_back(Info);
     Symbols.emplace_back(LinkingData.SymbolTable.back(), FunctionType,
-                         GlobalType);
+                         GlobalType, EventType);
     LLVM_DEBUG(dbgs() << "Adding symbol: " << Symbols.back() << "\n");
   }
 
@@ -633,6 +666,11 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     case wasm::R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
       if (!isValidGlobalSymbol(Reloc.Index))
         return make_error<GenericBinaryError>("Bad relocation global index",
+                                              object_error::parse_failed);
+      break;
+    case wasm::R_WEBASSEMBLY_EVENT_INDEX_LEB:
+      if (!isValidEventSymbol(Reloc.Index))
+        return make_error<GenericBinaryError>("Bad relocation event index",
                                               object_error::parse_failed);
       break;
     case wasm::R_WEBASSEMBLY_MEMORY_ADDR_LEB:
@@ -755,6 +793,11 @@ Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
         return make_error<GenericBinaryError>("Invalid table element type",
                                               object_error::parse_failed);
       break;
+    case wasm::WASM_EXTERNAL_EVENT:
+      NumImportedEvents++;
+      Im.Event.Attribute = readVarint32(Ctx);
+      Im.Event.SigIndex = readVarint32(Ctx);
+      break;
     default:
       return make_error<GenericBinaryError>("Unexpected import kind",
                                             object_error::parse_failed);
@@ -831,6 +874,24 @@ Error WasmObjectFile::parseGlobalSection(ReadContext &Ctx) {
   return Error::success();
 }
 
+Error WasmObjectFile::parseEventSection(ReadContext &Ctx) {
+  EventSection = Sections.size();
+  uint32_t Count = readVarint32(Ctx);
+  Events.reserve(Count);
+  while (Count--) {
+    wasm::WasmEvent Event;
+    Event.Index = NumImportedEvents + Events.size();
+    Event.Type.Attribute = readVaruint32(Ctx);
+    Event.Type.SigIndex = readVarint32(Ctx);
+    Events.push_back(Event);
+  }
+
+  if (Ctx.Ptr != Ctx.End)
+    return make_error<GenericBinaryError>("Event section ended prematurely",
+                                          object_error::parse_failed);
+  return Error::success();
+}
+
 Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
   Exports.reserve(Count);
@@ -848,6 +909,11 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
     case wasm::WASM_EXTERNAL_GLOBAL:
       if (!isValidGlobalIndex(Ex.Index))
         return make_error<GenericBinaryError>("Invalid global export",
+                                              object_error::parse_failed);
+      break;
+    case wasm::WASM_EXTERNAL_EVENT:
+      if (!isValidEventIndex(Ex.Index))
+        return make_error<GenericBinaryError>("Invalid event export",
                                               object_error::parse_failed);
       break;
     case wasm::WASM_EXTERNAL_MEMORY:
@@ -881,12 +947,24 @@ bool WasmObjectFile::isDefinedGlobalIndex(uint32_t Index) const {
   return Index >= NumImportedGlobals && isValidGlobalIndex(Index);
 }
 
+bool WasmObjectFile::isValidEventIndex(uint32_t Index) const {
+  return Index < NumImportedEvents + Events.size();
+}
+
+bool WasmObjectFile::isDefinedEventIndex(uint32_t Index) const {
+  return Index >= NumImportedEvents && isValidEventIndex(Index);
+}
+
 bool WasmObjectFile::isValidFunctionSymbol(uint32_t Index) const {
   return Index < Symbols.size() && Symbols[Index].isTypeFunction();
 }
 
 bool WasmObjectFile::isValidGlobalSymbol(uint32_t Index) const {
   return Index < Symbols.size() && Symbols[Index].isTypeGlobal();
+}
+
+bool WasmObjectFile::isValidEventSymbol(uint32_t Index) const {
+  return Index < Symbols.size() && Symbols[Index].isTypeEvent();
 }
 
 bool WasmObjectFile::isValidDataSymbol(uint32_t Index) const {
@@ -905,6 +983,11 @@ wasm::WasmFunction &WasmObjectFile::getDefinedFunction(uint32_t Index) {
 wasm::WasmGlobal &WasmObjectFile::getDefinedGlobal(uint32_t Index) {
   assert(isDefinedGlobalIndex(Index));
   return Globals[Index - NumImportedGlobals];
+}
+
+wasm::WasmEvent &WasmObjectFile::getDefinedEvent(uint32_t Index) {
+  assert(isDefinedEventIndex(Index));
+  return Events[Index - NumImportedEvents];
 }
 
 Error WasmObjectFile::parseStartSection(ReadContext &Ctx) {
@@ -1070,6 +1153,7 @@ uint64_t WasmObjectFile::getWasmSymbolValue(const WasmSymbol &Sym) const {
   switch (Sym.Info.Kind) {
   case wasm::WASM_SYMBOL_TYPE_FUNCTION:
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
+  case wasm::WASM_SYMBOL_TYPE_EVENT:
     return Sym.Info.ElementIndex;
   case wasm::WASM_SYMBOL_TYPE_DATA: {
     // The value of a data symbol is the segment offset, plus the symbol
@@ -1112,6 +1196,8 @@ WasmObjectFile::getSymbolType(DataRefImpl Symb) const {
     return SymbolRef::ST_Data;
   case wasm::WASM_SYMBOL_TYPE_SECTION:
     return SymbolRef::ST_Debug;
+  case wasm::WASM_SYMBOL_TYPE_EVENT:
+    return SymbolRef::ST_Other;
   }
 
   llvm_unreachable("Unknown WasmSymbol::SymbolType");
@@ -1135,10 +1221,12 @@ WasmObjectFile::getSymbolSection(DataRefImpl Symb) const {
   case wasm::WASM_SYMBOL_TYPE_DATA:
     Ref.d.a = DataSection;
     break;
-  case wasm::WASM_SYMBOL_TYPE_SECTION: {
+  case wasm::WASM_SYMBOL_TYPE_SECTION:
     Ref.d.a = Sym.Info.ElementIndex;
     break;
-  }
+  case wasm::WASM_SYMBOL_TYPE_EVENT:
+    Ref.d.a = EventSection;
+    break;
   default:
     llvm_unreachable("Unknown WasmSymbol::SymbolType");
   }
@@ -1161,6 +1249,7 @@ std::error_code WasmObjectFile::getSectionName(DataRefImpl Sec,
     ECase(TABLE);
     ECase(MEMORY);
     ECase(GLOBAL);
+    ECase(EVENT);
     ECase(EXPORT);
     ECase(START);
     ECase(ELEM);

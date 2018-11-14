@@ -625,6 +625,9 @@ struct InstructionMapper {
   /// Inverse of \p InstructionIntegerMap.
   DenseMap<unsigned, MachineInstr *> IntegerInstructionMap;
 
+  /// Correspondence between \p MachineBasicBlocks and target-defined flags.
+  DenseMap<MachineBasicBlock *, unsigned> MBBFlagsMap;
+
   /// The vector of unsigned integers that the module is mapped to.
   std::vector<unsigned> UnsignedVec;
 
@@ -747,6 +750,9 @@ struct InstructionMapper {
     // Don't even map in this case.
     if (!TII.isMBBSafeToOutlineFrom(MBB, Flags))
       return;
+
+    // Store info for the MBB for later outlining.
+    MBBFlagsMap[&MBB] = Flags;
 
     MachineBasicBlock::iterator It = MBB.begin();
 
@@ -1106,10 +1112,11 @@ unsigned MachineOutliner::findCandidates(
 
         MachineBasicBlock::iterator StartIt = Mapper.InstrList[StartIdx];
         MachineBasicBlock::iterator EndIt = Mapper.InstrList[EndIdx];
+        MachineBasicBlock *MBB = StartIt->getParent();
 
         CandidatesForRepeatedSeq.emplace_back(StartIdx, StringLen, StartIt,
-                                              EndIt, StartIt->getParent(),
-                                              FunctionList.size());
+                                              EndIt, MBB, FunctionList.size(),
+                                              Mapper.MBBFlagsMap[MBB]);
       }
     }
 
