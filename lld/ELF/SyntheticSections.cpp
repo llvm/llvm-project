@@ -3070,6 +3070,53 @@ bool ThunkSection::assignOffsets() {
   return Changed;
 }
 
+// If linking position-dependent code then the table will store the addresses
+// directly in the binary so the section has type SHT_PROGBITS. If linking
+// position-independent code the section has type SHT_NOBITS since it will be
+// allocated and filled in by the dynamic linker.
+PPC64LongBranchTargetSection::PPC64LongBranchTargetSection()
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE,
+                       Config->Pic ? SHT_NOBITS : SHT_PROGBITS, 8,
+                       ".branch_lt") {}
+
+void PPC64LongBranchTargetSection::addEntry(Symbol &Sym) {
+  assert(Sym.PPC64BranchltIndex == 0xffff);
+  Sym.PPC64BranchltIndex = Entries.size();
+  Entries.push_back(&Sym);
+}
+
+size_t PPC64LongBranchTargetSection::getSize() const {
+  return Entries.size() * 8;
+}
+
+void PPC64LongBranchTargetSection::writeTo(uint8_t *Buf) {
+  assert(Target->GotPltEntrySize == 8);
+  // If linking non-pic we have the final addresses of the targets and they get
+  // written to the table directly. For pic the dynamic linker will allocate
+  // the section and fill it it.
+  if (Config->Pic)
+    return;
+
+  for (const Symbol *Sym : Entries) {
+    assert(Sym->getVA());
+    // Need calls to branch to the local entry-point since a long-branch
+    // must be a local-call.
+    write64(Buf,
+            Sym->getVA() + getPPC64GlobalEntryToLocalEntryOffset(Sym->StOther));
+    Buf += Target->GotPltEntrySize;
+  }
+}
+
+bool PPC64LongBranchTargetSection::empty() const {
+  // `removeUnusedSyntheticSections()` is called before thunk allocation which
+  // is too early to determine if this section will be empty or not. We need
+  // Finalized to keep the section alive until after thunk creation. Finalized
+  // only gets set to true once `finalizeSections()` is called after thunk
+  // creation. Becuase of this, if we don't create any long-branch thunks we end
+  // up with an empty .branch_lt section in the binary.
+  return Finalized && Entries.empty();
+}
+
 InStruct elf::In;
 
 template GdbIndexSection *GdbIndexSection::create<ELF32LE>();

@@ -79,6 +79,7 @@ public:
   uint32_t DynsymIndex = 0;
   uint32_t GotIndex = -1;
   uint32_t PltIndex = -1;
+
   uint32_t GlobalDynIndex = -1;
 
   // This field is a index to the symbol's version definition.
@@ -86,6 +87,9 @@ public:
 
   // Version definition index.
   uint16_t VersionId;
+
+  // An index into the .branch_lt section on PPC64.
+  uint16_t PPC64BranchltIndex = -1;
 
   // Symbol binding. This is not overwritten by replaceSymbol to track
   // changes during resolution. In particular:
@@ -159,6 +163,7 @@ public:
 
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
+  bool isInPPC64Branchlt() const { return PPC64BranchltIndex != 0xffff; }
 
   uint64_t getVA(int64_t Addend = 0) const;
 
@@ -168,6 +173,8 @@ public:
   uint64_t getGotPltVA() const;
   uint64_t getPltVA() const;
   uint64_t getPltOffset() const;
+  uint64_t getPPC64LongBranchTableVA() const;
+  uint64_t getPPC64LongBranchOffset() const;
   uint64_t getSize() const;
   OutputSection *getOutputSection() const;
 
