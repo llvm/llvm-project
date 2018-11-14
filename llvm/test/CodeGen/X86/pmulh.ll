@@ -24,11 +24,6 @@ define <4 x i16> @mulhuw_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; SSE2-WIDEN-LABEL: mulhuw_v4i16:
 ; SSE2-WIDEN:       # %bb.0:
 ; SSE2-WIDEN-NEXT:    pmulhuw %xmm1, %xmm0
-; SSE2-WIDEN-NEXT:    pxor %xmm1, %xmm1
-; SSE2-WIDEN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SSE2-WIDEN-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; SSE2-WIDEN-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
-; SSE2-WIDEN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SSE2-WIDEN-NEXT:    retq
 ;
 ; SSE41-PROMOTE-LABEL: mulhuw_v4i16:
@@ -42,11 +37,7 @@ define <4 x i16> @mulhuw_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ;
 ; SSE41-WIDEN-LABEL: mulhuw_v4i16:
 ; SSE41-WIDEN:       # %bb.0:
-; SSE41-WIDEN-NEXT:    pmovzxwd {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; SSE41-WIDEN-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
-; SSE41-WIDEN-NEXT:    pmulld %xmm2, %xmm0
-; SSE41-WIDEN-NEXT:    psrld $16, %xmm0
-; SSE41-WIDEN-NEXT:    packusdw %xmm0, %xmm0
+; SSE41-WIDEN-NEXT:    pmulhuw %xmm1, %xmm0
 ; SSE41-WIDEN-NEXT:    retq
 ;
 ; AVX-LABEL: mulhuw_v4i16:
@@ -82,11 +73,6 @@ define <4 x i16> @mulhw_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; SSE2-WIDEN-LABEL: mulhw_v4i16:
 ; SSE2-WIDEN:       # %bb.0:
 ; SSE2-WIDEN-NEXT:    pmulhw %xmm1, %xmm0
-; SSE2-WIDEN-NEXT:    pxor %xmm1, %xmm1
-; SSE2-WIDEN-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SSE2-WIDEN-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; SSE2-WIDEN-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
-; SSE2-WIDEN-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SSE2-WIDEN-NEXT:    retq
 ;
 ; SSE41-PROMOTE-LABEL: mulhw_v4i16:
@@ -101,11 +87,7 @@ define <4 x i16> @mulhw_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ;
 ; SSE41-WIDEN-LABEL: mulhw_v4i16:
 ; SSE41-WIDEN:       # %bb.0:
-; SSE41-WIDEN-NEXT:    pmovsxwd %xmm0, %xmm2
-; SSE41-WIDEN-NEXT:    pmovsxwd %xmm1, %xmm0
-; SSE41-WIDEN-NEXT:    pmulld %xmm2, %xmm0
-; SSE41-WIDEN-NEXT:    psrld $16, %xmm0
-; SSE41-WIDEN-NEXT:    packusdw %xmm0, %xmm0
+; SSE41-WIDEN-NEXT:    pmulhw %xmm1, %xmm0
 ; SSE41-WIDEN-NEXT:    retq
 ;
 ; AVX-LABEL: mulhw_v4i16:

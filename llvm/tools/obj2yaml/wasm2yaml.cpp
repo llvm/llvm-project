@@ -52,7 +52,16 @@ static WasmYAML::Limits make_limits(const wasm::WasmLimits &Limits) {
 std::unique_ptr<WasmYAML::CustomSection>
 WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
   std::unique_ptr<WasmYAML::CustomSection> CustomSec;
-  if (WasmSec.Name == "name") {
+  if (WasmSec.Name == "dylink") {
+    std::unique_ptr<WasmYAML::DylinkSection> DylinkSec =
+        make_unique<WasmYAML::DylinkSection>();
+    const wasm::WasmDylinkInfo& Info = Obj.dylinkInfo();
+    DylinkSec->MemorySize = Info.MemorySize;
+    DylinkSec->MemoryAlignment = Info.MemoryAlignment;
+    DylinkSec->TableSize = Info.TableSize;
+    DylinkSec->TableAlignment = Info.TableAlignment;
+    CustomSec = std::move(DylinkSec);
+  } else if (WasmSec.Name == "name") {
     std::unique_ptr<WasmYAML::NameSection> NameSec =
         make_unique<WasmYAML::NameSection>();
     for (const llvm::wasm::WasmFunctionName &Func : Obj.debugNames()) {
