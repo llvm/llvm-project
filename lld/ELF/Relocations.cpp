@@ -489,6 +489,7 @@ static void replaceWithDefined(Symbol &Sym, SectionBase *Sec, uint64_t Value,
   Sym.PltIndex = Old.PltIndex;
   Sym.GotIndex = Old.GotIndex;
   Sym.VerdefIndex = Old.VerdefIndex;
+  Sym.PPC64BranchltIndex = Old.PPC64BranchltIndex;
   Sym.IsPreemptible = true;
   Sym.ExportDynamic = true;
   Sym.IsUsedInRegularObj = true;
