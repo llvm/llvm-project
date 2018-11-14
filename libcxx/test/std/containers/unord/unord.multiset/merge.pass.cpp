@@ -23,6 +23,7 @@
 //   void merge(unordered_multiset<key_type, H2, P2, allocator_type>&& source);
 
 #include <unordered_set>
+#include <cassert>
 #include "test_macros.h"
 #include "Counter.h"
 

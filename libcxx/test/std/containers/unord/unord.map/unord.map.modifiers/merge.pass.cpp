@@ -23,6 +23,7 @@
 //   void merge(unordered_multimap<key_type, value_type, H2, P2, allocator_type>&& source);
 
 #include <unordered_map>
+#include <cassert>
 #include "test_macros.h"
 #include "Counter.h"
 
