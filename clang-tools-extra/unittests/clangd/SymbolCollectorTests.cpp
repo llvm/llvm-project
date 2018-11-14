@@ -53,8 +53,10 @@ MATCHER_P(Snippet, S, "") {
   return (arg.Name + arg.CompletionSnippetSuffix).str() == S;
 }
 MATCHER_P(QName, Name, "") { return (arg.Scope + arg.Name).str() == Name; }
-MATCHER_P(DeclURI, P, "") { return arg.CanonicalDeclaration.FileURI == P; }
-MATCHER_P(DefURI, P, "") { return arg.Definition.FileURI == P; }
+MATCHER_P(DeclURI, P, "") {
+  return StringRef(arg.CanonicalDeclaration.FileURI) == P;
+}
+MATCHER_P(DefURI, P, "") { return StringRef(arg.Definition.FileURI) == P; }
 MATCHER_P(IncludeHeader, P, "") {
   return (arg.IncludeHeaders.size() == 1) &&
          (arg.IncludeHeaders.begin()->IncludeHeader == P);

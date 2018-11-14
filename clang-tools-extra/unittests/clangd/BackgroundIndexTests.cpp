@@ -9,14 +9,16 @@ using testing::AllOf;
 using testing::Not;
 using testing::UnorderedElementsAre;
 
+using namespace llvm;
 namespace clang {
 namespace clangd {
 
 MATCHER_P(Named, N, "") { return arg.Name == N; }
-MATCHER(Declared, "") { return !arg.CanonicalDeclaration.FileURI.empty(); }
-MATCHER(Defined, "") { return !arg.Definition.FileURI.empty(); }
-
-MATCHER_P(FileURI, F, "") { return arg.Location.FileURI == F; }
+MATCHER(Declared, "") {
+  return !StringRef(arg.CanonicalDeclaration.FileURI).empty();
+}
+MATCHER(Defined, "") { return !StringRef(arg.Definition.FileURI).empty(); }
+MATCHER_P(FileURI, F, "") { return StringRef(arg.Location.FileURI) == F; }
 testing::Matcher<const RefSlab &>
 RefsAre(std::vector<testing::Matcher<Ref>> Matchers) {
   return ElementsAre(testing::Pair(_, UnorderedElementsAreArray(Matchers)));

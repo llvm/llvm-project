@@ -31,6 +31,7 @@ using testing::ElementsAre;
 using testing::IsEmpty;
 using testing::Pair;
 using testing::UnorderedElementsAre;
+using namespace llvm;
 
 MATCHER_P(RefRange, Range, "") {
   return std::make_tuple(arg.Location.Start.line(), arg.Location.Start.column(),
@@ -38,12 +39,13 @@ MATCHER_P(RefRange, Range, "") {
          std::make_tuple(Range.start.line, Range.start.character,
                          Range.end.line, Range.end.character);
 }
-MATCHER_P(FileURI, F, "") { return arg.Location.FileURI == F; }
-MATCHER_P(DeclURI, U, "") { return arg.CanonicalDeclaration.FileURI == U; }
-MATCHER_P(DefURI, U, "") { return arg.Definition.FileURI == U; }
+MATCHER_P(FileURI, F, "") { return StringRef(arg.Location.FileURI) == F; }
+MATCHER_P(DeclURI, U, "") {
+  return StringRef(arg.CanonicalDeclaration.FileURI) == U;
+}
+MATCHER_P(DefURI, U, "") { return StringRef(arg.Definition.FileURI) == U; }
 MATCHER_P(QName, N, "") { return (arg.Scope + arg.Name).str() == N; }
 
-using namespace llvm;
 namespace clang {
 namespace clangd {
 namespace {
@@ -66,7 +68,7 @@ std::unique_ptr<SymbolSlab> numSlab(int Begin, int End) {
   return llvm::make_unique<SymbolSlab>(std::move(Slab).build());
 }
 
-std::unique_ptr<RefSlab> refSlab(const SymbolID &ID, StringRef Path) {
+std::unique_ptr<RefSlab> refSlab(const SymbolID &ID, const char *Path) {
   RefSlab::Builder Slab;
   Ref R;
   R.Location.FileURI = Path;
