@@ -41,9 +41,6 @@ struct throw_hasher
 
     throw_hasher(bool& should_throw) : should_throw_(should_throw) {}
 
-    typedef size_t result_type;
-    typedef T argument_type;
-
     size_t operator()(const T& p) const
     {
         if (should_throw_)
@@ -99,8 +96,6 @@ int main()
     struct hasher
     {
         hasher() = default;
-        typedef Counter<int> argument_type;
-        typedef size_t result_type;
         size_t operator()(const Counter<int>& p) const { return std::hash<Counter<int>>()(p); }
     };
     {
