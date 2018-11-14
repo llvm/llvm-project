@@ -61,6 +61,8 @@ const char *Section::GetTypeAsCString() const {
     return "objc-cfstrings";
   case eSectionTypeDWARFDebugAbbrev:
     return "dwarf-abbrev";
+  case eSectionTypeDWARFDebugAbbrevDwo:
+    return "dwarf-abbrev-dwo";
   case eSectionTypeDWARFDebugAddr:
     return "dwarf-addr";
   case eSectionTypeDWARFDebugAranges:
@@ -71,6 +73,8 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-frame";
   case eSectionTypeDWARFDebugInfo:
     return "dwarf-info";
+  case eSectionTypeDWARFDebugInfoDwo:
+    return "dwarf-info-dwo";
   case eSectionTypeDWARFDebugLine:
     return "dwarf-line";
   case eSectionTypeDWARFDebugLineStr:
@@ -93,8 +97,12 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-rnglists";
   case eSectionTypeDWARFDebugStr:
     return "dwarf-str";
+  case eSectionTypeDWARFDebugStrDwo:
+    return "dwarf-str-dwo";
   case eSectionTypeDWARFDebugStrOffsets:
     return "dwarf-str-offsets";
+  case eSectionTypeDWARFDebugStrOffsetsDwo:
+    return "dwarf-str-offsets-dwo";
   case eSectionTypeDWARFDebugTypes:
     return "dwarf-types";
   case eSectionTypeDWARFDebugNames:
