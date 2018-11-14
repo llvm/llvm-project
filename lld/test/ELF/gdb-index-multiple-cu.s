@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: ld.lld --gdb-index %t.o -o %t
 # RUN: llvm-dwarfdump -gdb-index %t | FileCheck %s

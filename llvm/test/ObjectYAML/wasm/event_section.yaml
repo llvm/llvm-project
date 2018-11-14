@@ -1,0 +1,92 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ReturnType:      I32
+        ParamTypes:
+          - I32
+      - Index:           1
+        ReturnType:      NORESULT
+        ParamTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            EVENT
+    Events:
+      - Index:           0
+        Attribute:       0
+        SigIndex:        1
+  - Type:            CODE
+    Relocations:
+      - Type:            R_WEBASSEMBLY_EVENT_INDEX_LEB
+        Index:           1
+        Offset:          0x00000006
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            200008808080800041000B
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         1
+    SymbolTable:
+      - Index:           0
+        Kind:            FUNCTION
+        Name:            test_throw0
+        Flags:           [  ]
+        Function:        0
+      - Index:           1
+        Kind:            EVENT
+        Name:            __cpp_exception
+        Flags:           [ BINDING_WEAK ]
+        Event:           0
+...
+
+# CHECK:      --- !WASM
+# CHECK-NEXT: FileHeader:
+# CHECK-NEXT:   Version:         0x00000001
+# CHECK-NEXT: Sections:
+# CHECK-NEXT:   - Type:            TYPE
+# CHECK-NEXT:     Signatures:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         ReturnType:      I32
+# CHECK-NEXT:         ParamTypes:
+# CHECK-NEXT:           - I32
+# CHECK-NEXT:       - Index:           1
+# CHECK-NEXT:         ReturnType:      NORESULT
+# CHECK-NEXT:         ParamTypes:
+# CHECK-NEXT:           - I32
+# CHECK-NEXT:   - Type:            FUNCTION
+# CHECK-NEXT:     FunctionTypes:   [ 0 ]
+# CHECK-NEXT:   - Type:            EVENT
+# CHECK-NEXT:     Events:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         Attribute:       0
+# CHECK-NEXT:         SigIndex:        1
+# CHECK-NEXT:   - Type:            CODE
+# CHECK-NEXT:     Relocations:
+# CHECK-NEXT:       - Type:            R_WEBASSEMBLY_EVENT_INDEX_LEB
+# CHECK-NEXT:         Index:           1
+# CHECK-NEXT:         Offset:          0x00000006
+# CHECK-NEXT:     Functions:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         Locals:
+# CHECK-NEXT:         Body:            200008808080800041000B
+# CHECK-NEXT:   - Type:            CUSTOM
+# CHECK-NEXT:     Name:            linking
+# CHECK-NEXT:     Version:         1
+# CHECK-NEXT:     SymbolTable:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         Kind:            FUNCTION
+# CHECK-NEXT:         Name:            test_throw0
+# CHECK-NEXT:         Flags:           [  ]
+# CHECK-NEXT:         Function:        0
+# CHECK-NEXT:       - Index:           1
+# CHECK-NEXT:         Kind:            EVENT
+# CHECK-NEXT:         Name:            __cpp_exception
+# CHECK-NEXT:         Flags:           [ BINDING_WEAK ]
+# CHECK-NEXT:         Event:           0

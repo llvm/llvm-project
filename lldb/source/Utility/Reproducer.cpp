@@ -152,8 +152,8 @@ void Generator::AddProviderToIndex(const ProviderInfo &provider_info) {
   index.AppendPathComponent("index.yaml");
 
   std::error_code EC;
-  auto strm = make_unique<raw_fd_ostream>(index.GetPath(), EC,
-                                          sys::fs::OpenFlags::F_None);
+  auto strm = llvm::make_unique<raw_fd_ostream>(index.GetPath(), EC,
+                                                sys::fs::OpenFlags::F_None);
   yaml::Output yout(*strm);
   yout << const_cast<ProviderInfo &>(provider_info);
 }

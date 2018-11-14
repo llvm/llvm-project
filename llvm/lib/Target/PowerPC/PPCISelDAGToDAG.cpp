@@ -4736,14 +4736,6 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     CurDAG->SelectNodeTo(N, SelectCCOp, N->getValueType(0), Ops);
     return;
   }
-  case ISD::VSELECT:
-    if (PPCSubTarget->hasVSX()) {
-      SDValue Ops[] = { N->getOperand(2), N->getOperand(1), N->getOperand(0) };
-      CurDAG->SelectNodeTo(N, PPC::XXSEL, N->getValueType(0), Ops);
-      return;
-    }
-    break;
-
   case ISD::VECTOR_SHUFFLE:
     if (PPCSubTarget->hasVSX() && (N->getValueType(0) == MVT::v2f64 ||
                                   N->getValueType(0) == MVT::v2i64)) {

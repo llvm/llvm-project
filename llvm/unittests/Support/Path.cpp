@@ -544,7 +544,13 @@ TEST_F(FileSystemTest, ExpandTilde) {
     EXPECT_EQ(Expected, Actual);
 
     path::append(Expected, "foo");
+
+#ifdef _WIN32
+    fs::expand_tilde("~\\foo", Actual);
+#else
     fs::expand_tilde("~/foo", Actual);
+#endif
+
     EXPECT_EQ(Expected, Actual);
   }
 }
