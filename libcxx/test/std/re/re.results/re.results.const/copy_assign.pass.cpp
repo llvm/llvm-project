@@ -25,7 +25,7 @@ test(const Allocator& a)
     typedef std::match_results<const CharT*, Allocator> SM;
     SM m0(a);
     SM m1;
-    
+
     m1 = m0;
     assert(m1.size()          == m0.size());
     assert(m1.str()           == m0.str());

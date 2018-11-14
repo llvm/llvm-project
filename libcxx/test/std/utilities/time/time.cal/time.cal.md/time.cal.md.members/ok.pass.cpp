@@ -13,7 +13,7 @@
 
 // constexpr bool ok() const noexcept;
 //  Returns: true if m_.ok() is true, 1d <= d_, and d_ is less than or equal to the
-//    number of days in month m_; otherwise returns false. 
+//    number of days in month m_; otherwise returns false.
 //  When m_ == February, the number of days is considered to be 29.
 
 #include <chrono>

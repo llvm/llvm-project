@@ -39,7 +39,7 @@ int main()
 
     ASSERT_SAME_TYPE(month , decltype(  std::declval<month&>()++));
     ASSERT_SAME_TYPE(month&, decltype(++std::declval<month&>()  ));
-    
+
     static_assert(testConstexpr<month>(), "");
 
     for (unsigned i = 0; i <= 10; ++i)

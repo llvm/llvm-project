@@ -14,15 +14,15 @@
 // constexpr month_day_last
 //   operator/(const month& m, last_spec) noexcept;
 // Returns: month_day_last{m}.
-// 
+//
 // constexpr month_day_last
 //   operator/(int m, last_spec) noexcept;
 // Returns: month(m) / last.
-// 
+//
 // constexpr month_day_last
 //   operator/(last_spec, const month& m) noexcept;
-// Returns: m / last. 
-// 
+// Returns: m / last.
+//
 // constexpr month_day_last
 //   operator/(last_spec, int m) noexcept;
 // Returns: month(m) / last.
@@ -51,7 +51,7 @@ int main()
 {
     using month          = std::chrono::month;
     using month_day_last = std::chrono::month_day_last;
-    
+
     constexpr month February = std::chrono::February;
     constexpr std::chrono::last_spec last = std::chrono::last;
 
@@ -63,7 +63,7 @@ int main()
     constexpr auto mdl = February/std::chrono::last;
     static_assert(mdl.month() == February, "");
     }
-    
+
     { // operator/(const month& m, last_spec) and switched
         ASSERT_NOEXCEPT (                         last/February);
         ASSERT_SAME_TYPE(month_day_last, decltype(last/February));

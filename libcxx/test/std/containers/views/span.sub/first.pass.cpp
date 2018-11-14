@@ -7,7 +7,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -114,7 +114,7 @@ int main ()
     {
     using Sp = std::span<std::string>;
     testConstexprSpan<Sp, 0>(Sp{});
-    
+
     testRuntimeSpan<Sp, 0>(Sp{sarr});
     testRuntimeSpan<Sp, 1>(Sp{sarr});
     testRuntimeSpan<Sp, 2>(Sp{sarr});
@@ -125,7 +125,7 @@ int main ()
 
     {
     using Sp = std::span<std::string, 5>;
-    
+
     testRuntimeSpan<Sp, 0>(Sp{sarr});
     testRuntimeSpan<Sp, 1>(Sp{sarr});
     testRuntimeSpan<Sp, 2>(Sp{sarr});

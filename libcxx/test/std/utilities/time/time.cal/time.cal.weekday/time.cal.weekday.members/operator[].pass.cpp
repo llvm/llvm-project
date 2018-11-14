@@ -13,8 +13,8 @@
 
 //   constexpr weekday_indexed operator[](unsigned index) const noexcept;
 //   constexpr weekday_last    operator[](last_spec)      const noexcept;
-  
-  
+
+
 #include <chrono>
 #include <type_traits>
 #include <cassert>
@@ -35,7 +35,7 @@ int main()
 
     ASSERT_NOEXCEPT(                           std::declval<weekday>()[std::chrono::last]);
     ASSERT_SAME_TYPE(weekday_last,    decltype(std::declval<weekday>()[std::chrono::last]));
-    
+
     static_assert(Sunday[2].weekday() == Sunday, "");
     static_assert(Sunday[2].index  () == 2, "");
 

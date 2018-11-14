@@ -38,5 +38,5 @@ int main()
 
 //  ASSERT_NOEXCEPT(year_month_day{std::declval<const year_month_day_last>()});
     assert(false);
-    
+
 }

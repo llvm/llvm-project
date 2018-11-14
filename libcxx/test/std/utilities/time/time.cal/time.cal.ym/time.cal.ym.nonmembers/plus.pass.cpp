@@ -13,14 +13,14 @@
 
 // constexpr year_month operator+(const year_month& ym, const years& dy) noexcept;
 // Returns: (ym.year() + dy) / ym.month().
-// 
+//
 // constexpr year_month operator+(const years& dy, const year_month& ym) noexcept;
 // Returns: ym + dy.
 //
 // constexpr year_month operator+(const year_month& ym, const months& dm) noexcept;
-// Returns: A year_month value z such that z - ym == dm. 
+// Returns: A year_month value z such that z - ym == dm.
 // Complexity: O(1) with respect to the value of dm.
-// 
+//
 // constexpr year_month operator+(const months& dm, const year_month& ym) noexcept;
 // Returns: ym + dm.
 
@@ -66,7 +66,7 @@ int main()
 
     ASSERT_SAME_TYPE(year_month, decltype(std::declval<year_month>() + std::declval<years>()));
     ASSERT_SAME_TYPE(year_month, decltype(std::declval<years>() + std::declval<year_month>()));
-    
+
     static_assert(testConstexprYears (year_month{year{1}, month{1}}), "");
 
     year_month ym{year{1234}, std::chrono::January};

@@ -15,7 +15,7 @@
 //   template<class charT, class traits>
 //     basic_ostream<charT, traits>&
 //     operator<<(basic_ostream<charT, traits>& os, const weekday_last& wdl);
-// 
+//
 //   Returns: os << wdl.weekday() << "[last]".
 
 #include <chrono>
@@ -29,6 +29,6 @@ int main()
 {
    using weekday_last = std::chrono::weekday_last;
    using weekday      = std::chrono::weekday;
-   
+
    std::cout << weekday_last{weekday{3}};
 }

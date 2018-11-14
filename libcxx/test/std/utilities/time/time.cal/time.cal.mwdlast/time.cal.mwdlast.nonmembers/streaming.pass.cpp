@@ -15,7 +15,7 @@
 // template<class charT, class traits>
 //     basic_ostream<charT, traits>&
 //     operator<<(basic_ostream<charT, traits>& os, const month_weekday_last& mdl);
-// 
+//
 //     Returns: os << mdl.month() << "/last".
 
 
@@ -32,6 +32,6 @@ int main()
     using month              = std::chrono::month;
     using weekday            = std::chrono::weekday;
     using weekday_last       = std::chrono::weekday_last;
-    
+
     std::cout << month_weekday_last{month{1}, weekday_last{weekday{3}}};
 }

@@ -32,7 +32,7 @@ int main()
 //  TODO: wait for calendar
 //     ASSERT_NOEXCEPT(               std::declval<const year_month_day_last>().day());
 //     ASSERT_SAME_TYPE(day, decltype(std::declval<const year_month_day_last>().day()));
-// 
+//
 //     static_assert( year_month_day_last{}.day() == day{}, "");
 
     for (unsigned i = 1; i <= 12; ++i)

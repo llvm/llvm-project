@@ -81,7 +81,7 @@ TEST_CONSTEXPR_CXX14 bool testComparisons6Values(Param val1, Param val2)
 {
     const bool isEqual = val1 == val2;
     const bool isLess  = val1  < val2;
-    
+
     return testComparisons6(T(val1), T(val2), isEqual, isLess);
 }
 
@@ -146,7 +146,7 @@ template <class T, class Param>
 TEST_CONSTEXPR_CXX14 bool testComparisons2Values(Param val1, Param val2)
 {
     const bool isEqual = val1 == val2;
-    
+
     return testComparisons2(T(val1), T(val2), isEqual);
 }
 

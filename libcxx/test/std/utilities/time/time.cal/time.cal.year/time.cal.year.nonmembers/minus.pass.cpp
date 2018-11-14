@@ -15,9 +15,9 @@
 //   Returns: x + -y.
 //
 // constexpr years operator-(const year& x, const year& y) noexcept;
-//   Returns: If x.ok() == true and y.ok() == true, returns a value m in the range 
-//   [years{0}, years{11}] satisfying y + m == x. 
-//   Otherwise the value returned is unspecified. 
+//   Returns: If x.ok() == true and y.ok() == true, returns a value m in the range
+//   [years{0}, years{11}] satisfying y + m == x.
+//   Otherwise the value returned is unspecified.
 //   [Example: January - February == years{11}. —end example]
 
 extern "C" int printf(const char *, ...);
@@ -48,7 +48,7 @@ int main()
 
     ASSERT_NOEXCEPT(                 std::declval<year>() - std::declval<year>());
     ASSERT_SAME_TYPE(years, decltype(std::declval<year>() - std::declval<year>()));
-    
+
     static_assert(testConstexpr<year, years>(), "");
 
     year y{1223};
