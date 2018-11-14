@@ -19,7 +19,7 @@
 //  constexpr chrono::month month() const noexcept;
 //  constexpr chrono::day     day() const noexcept;
 //  constexpr bool             ok() const noexcept;
-         
+
 #include <chrono>
 #include <type_traits>
 #include <cassert>
@@ -34,7 +34,7 @@ int main()
 
     ASSERT_NOEXCEPT(month_day{});
     ASSERT_NOEXCEPT(month_day{month{1}, day{1}});
-    
+
     constexpr month_day md0{};
     static_assert( md0.month() == month{}, "");
     static_assert( md0.day()   == day{},   "");

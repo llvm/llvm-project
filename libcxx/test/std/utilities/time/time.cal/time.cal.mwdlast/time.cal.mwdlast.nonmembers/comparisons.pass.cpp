@@ -40,12 +40,12 @@ int main()
     AssertComparisons2ReturnBool<month_weekday_last>();
 
     static_assert( testComparisons2(
-        month_weekday_last{std::chrono::January, weekday_last{Tuesday}}, 
+        month_weekday_last{std::chrono::January, weekday_last{Tuesday}},
         month_weekday_last{std::chrono::January, weekday_last{Tuesday}},
         true), "");
 
     static_assert( testComparisons2(
-        month_weekday_last{std::chrono::January, weekday_last{Tuesday}}, 
+        month_weekday_last{std::chrono::January, weekday_last{Tuesday}},
         month_weekday_last{std::chrono::January, weekday_last{Wednesday}},
         false), "");
 

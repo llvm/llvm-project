@@ -7,7 +7,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -99,6 +99,6 @@ int main ()
     std::span<float> s2{sp0};   // expected-error {{no matching constructor for initialization of 'std::span<float>'}}
     std::span<float, 0> s3{sp}; // expected-error {{no matching constructor for initialization of 'std::span<float, 0>'}}
     std::span<float, 0> s4{sp0};    // expected-error {{no matching constructor for initialization of 'std::span<float, 0>'}}
-    
+
     checkCV();
 }

@@ -33,14 +33,14 @@ int main()
 
     AssertComparisons6AreNoexcept<year>();
     AssertComparisons6ReturnBool<year>();
-    
+
     static_assert(testComparisons6Values<year>(0,0), "");
     static_assert(testComparisons6Values<year>(0,1), "");
-    
+
 //  Some 'ok' values as well
     static_assert(testComparisons6Values<year>( 5, 5), "");
     static_assert(testComparisons6Values<year>( 5,10), "");
-    
+
     for (int i = 1; i < 10; ++i)
         for (int j = 1; j < 10; ++j)
             assert(testComparisons6Values<year>(i, j));

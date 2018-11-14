@@ -15,9 +15,9 @@
 //   Returns: x + -y.
 //
 // constexpr months operator-(const month& x, const month& y) noexcept;
-//   Returns: If x.ok() == true and y.ok() == true, returns a value m in the range 
-//   [months{0}, months{11}] satisfying y + m == x. 
-//   Otherwise the value returned is unspecified. 
+//   Returns: If x.ok() == true and y.ok() == true, returns a value m in the range
+//   [months{0}, months{11}] satisfying y + m == x.
+//   Otherwise the value returned is unspecified.
 //   [Example: January - February == months{11}. —end example]
 
 extern "C" int printf(const char *, ...);
@@ -55,7 +55,7 @@ int main()
 
     ASSERT_SAME_TYPE(month , decltype(std::declval<month>() - std::declval<months>()));
     ASSERT_SAME_TYPE(months, decltype(std::declval<month>() - std::declval<month> ()));
-    
+
 static_assert(testConstexpr<month, months>(), "");
 
     month m{6};

@@ -7,7 +7,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-// 
+//
 // <execution> feature macros
 
 /*  Constant                                    Value

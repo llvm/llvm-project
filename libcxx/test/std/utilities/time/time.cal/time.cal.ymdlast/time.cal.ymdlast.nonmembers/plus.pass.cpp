@@ -15,22 +15,22 @@
 //   operator+(const year_month_day_last& ymdl, const months& dm) noexcept;
 //
 //   Returns: (ymdl.year() / ymdl.month() + dm) / last.
-// 
+//
 // constexpr year_month_day_last
 //   operator+(const months& dm, const year_month_day_last& ymdl) noexcept;
 //
 //   Returns: ymdl + dm.
 //
 //
-// constexpr year_month_day_last 
+// constexpr year_month_day_last
 //   operator+(const year_month_day_last& ymdl, const years& dy) noexcept;
 //
 //   Returns: {ymdl.year()+dy, ymdl.month_day_last()}.
-// 
+//
 // constexpr year_month_day_last
 //   operator+(const years& dy, const year_month_day_last& ymdl) noexcept;
 //
-//   Returns: ymdl + dy 
+//   Returns: ymdl + dy
 
 
 
@@ -104,7 +104,7 @@ int main()
 
     ASSERT_SAME_TYPE(year_month_day_last, decltype(std::declval<year_month_day_last>() + std::declval<years>()));
     ASSERT_SAME_TYPE(year_month_day_last, decltype(std::declval<years>() + std::declval<year_month_day_last>()));
-    
+
     static_assert(testConstexprYears(year_month_day_last{year{1}, month_day_last{January}}), "");
 
     year_month_day_last ym{year{1234}, month_day_last{January}};
