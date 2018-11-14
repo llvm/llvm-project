@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/gdb-index-multiple-cu-2.s -o %t1.o
 # RUN: ld.lld --gdb-index %t.o %t1.o -o %t
