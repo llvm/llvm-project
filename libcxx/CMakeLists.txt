@@ -83,6 +83,11 @@ option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
 
 # Benchmark options -----------------------------------------------------------
 option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependencies" ON)
+
+set(LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT --benchmark_min_time=0.01)
+set(LIBCXX_BENCHMARK_TEST_ARGS "${LIBCXX_BENCHMARK_TEST_ARGS_DEFAULT}" CACHE STRING
+    "Arguments to pass when running the benchmarks using check-cxx-benchmarks")
+
 set(LIBCXX_BENCHMARK_NATIVE_STDLIB "" CACHE STRING
         "Build the benchmarks against the specified native STL.
          The value must be one of libc++/libstdc++")
@@ -766,6 +771,18 @@ include_directories(include)
 add_subdirectory(include)
 add_subdirectory(lib)
 
+set(LIBCXX_TEST_DEPS "")
+
+if (LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
+  list(APPEND LIBCXX_TEST_DEPS cxx_experimental)
+endif()
+if (LIBCXX_ENABLE_FILESYSTEM)
+  list(APPEND LIBCXX_TEST_DEPS cxx_filesystem)
+endif()
+
+if (LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
+  list(APPEND LIBCXX_TEST_DEPS cxx_external_threads)
+endif()
 
 if (LIBCXX_INCLUDE_BENCHMARKS)
   add_subdirectory(benchmarks)
