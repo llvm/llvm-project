@@ -651,7 +651,9 @@ def fblocks_runtime_optional : Flag<["-"], "fblocks-runtime-optional">,
 def fexternc_nounwind : Flag<["-"], "fexternc-nounwind">,
   HelpText<"Assume all functions with C linkage do not unwind">;
 def enable_split_dwarf : Flag<["-"], "enable-split-dwarf">,
-  HelpText<"Use split dwarf/Fission">;
+  HelpText<"Use DWARF fission in 'split' mode">;
+def enable_split_dwarf_EQ : Joined<["-"], "enable-split-dwarf=">,
+  HelpText<"Set DWARF fission mode to either 'split' or 'single'">, Values<"split,single">;
 def fno_wchar : Flag<["-"], "fno-wchar">,
   HelpText<"Disable C++ builtin type wchar_t">;
 def fconstant_string_class : Separate<["-"], "fconstant-string-class">,

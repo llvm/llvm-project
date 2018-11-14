@@ -2618,17 +2618,19 @@ class OffloadingActionBuilder final {
             C.MakeAction<LinkJobAction>(CudaDeviceActions,
                 types::TY_HIP_FATBIN);
 
-        DA.add(*CudaFatBinary, *ToolChains.front(), /*BoundArch=*/nullptr,
-               AssociatedOffloadKind);
-        // Clear the fat binary, it is already a dependence to an host
-        // action.
-        CudaFatBinary = nullptr;
+        if (!CompileDeviceOnly) {
+          DA.add(*CudaFatBinary, *ToolChains.front(), /*BoundArch=*/nullptr,
+                 AssociatedOffloadKind);
+          // Clear the fat binary, it is already a dependence to an host
+          // action.
+          CudaFatBinary = nullptr;
+        }
 
         // Remove the CUDA actions as they are already connected to an host
         // action or fat binary.
         CudaDeviceActions.clear();
 
-        return ABRT_Success;
+        return CompileDeviceOnly ? ABRT_Ignore_Host : ABRT_Success;
       } else if (CurPhase == phases::Link) {
         // Save CudaDeviceActions to DeviceLinkerInputs for each GPU subarch.
         // This happens to each device action originated from each input file.
@@ -3016,8 +3018,10 @@ public:
     }
 
     // If we can use the bundler, replace the host action by the bundling one in
-    // the resulting list. Otherwise, just append the device actions.
-    if (CanUseBundler && !OffloadAL.empty()) {
+    // the resulting list. Otherwise, just append the device actions. For
+    // device only compilation, HostAction is a null pointer, therefore only do
+    // this when HostAction is not a null pointer.
+    if (CanUseBundler && HostAction && !OffloadAL.empty()) {
       // Add the host action to the list in order to create the bundling action.
       OffloadAL.push_back(HostAction);
 

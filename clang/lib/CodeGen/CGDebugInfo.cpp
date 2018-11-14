@@ -581,8 +581,11 @@ void CGDebugInfo::CreateCompileUnit() {
       CGOpts.EmitVersionIdentMetadata ? Producer : "",
       LO.Optimize || CGOpts.PrepareForLTO || CGOpts.PrepareForThinLTO,
       CGOpts.DwarfDebugFlags, RuntimeVers,
-      CGOpts.EnableSplitDwarf ? "" : CGOpts.SplitDwarfFile, EmissionKind,
-      0 /* DWOid */, CGOpts.SplitDwarfInlining, CGOpts.DebugInfoForProfiling,
+      (CGOpts.getSplitDwarfMode() != CodeGenOptions::NoFission)
+          ? ""
+          : CGOpts.SplitDwarfFile,
+      EmissionKind, 0 /* DWOid */, CGOpts.SplitDwarfInlining,
+      CGOpts.DebugInfoForProfiling,
       CGM.getTarget().getTriple().isNVPTX()
           ? llvm::DICompileUnit::DebugNameTableKind::None
           : static_cast<llvm::DICompileUnit::DebugNameTableKind>(
