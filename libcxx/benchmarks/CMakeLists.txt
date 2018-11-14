@@ -191,9 +191,9 @@ if (LIBCXX_INCLUDE_TESTS)
           ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
           ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)
 
-  set(BENCHMARK_LIT_ARGS "--show-all --show-xfail --show-unsupported ${LIT_ARGS_DEFAULT}")
+  set(BENCHMARK_LIT_ARGS "--show-all --show-xfail --show-unsupported --no-progress-bar ${LIT_ARGS_DEFAULT}")
 
-  add_lit_testsuite(check-cxx-benchmarks
+  add_lit_target(check-cxx-benchmarks
           "Running libcxx benchmarks tests"
           ${CMAKE_CURRENT_BINARY_DIR}
           DEPENDS cxx-benchmarks ${LIBCXX_TEST_DEPS}

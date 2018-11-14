@@ -56,7 +56,7 @@ template <class ELFT> MIPS<ELFT>::MIPS() {
   NoneRel = R_MIPS_NONE;
   PltRel = R_MIPS_JUMP_SLOT;
   NeedsThunks = true;
-  TrapInstr = 0xefefefef;
+  TrapInstr = {0xef, 0xef, 0xef, 0xef};
 
   if (ELFT::Is64Bits) {
     RelativeRel = (R_MIPS_64 << 8) | R_MIPS_REL32;

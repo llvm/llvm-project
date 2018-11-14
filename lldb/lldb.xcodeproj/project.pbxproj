@@ -194,6 +194,7 @@
 		2689002113353DDE00698AC0 /* CommandObjectQuit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E3910F1B84700F91463 /* CommandObjectQuit.cpp */; };
 		2689008413353E2200698AC0 /* CommandObjectRegexCommand.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26DFBC59113B48F300DD817F /* CommandObjectRegexCommand.cpp */; };
 		2689002213353DDE00698AC0 /* CommandObjectRegister.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E3B10F1B84700F91463 /* CommandObjectRegister.cpp */; };
+		AFCB1D5C219CD5A800730AD5 /* CommandObjectReproducer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCB1D5A219CD5A700730AD5 /* CommandObjectReproducer.cpp */; };
 		2689002313353DDE00698AC0 /* CommandObjectScript.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E3D10F1B84700F91463 /* CommandObjectScript.cpp */; };
 		2689002413353DDE00698AC0 /* CommandObjectSettings.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E4010F1B84700F91463 /* CommandObjectSettings.cpp */; };
 		2689002513353DDE00698AC0 /* CommandObjectSource.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E4210F1B84700F91463 /* CommandObjectSource.cpp */; };
@@ -321,6 +322,8 @@
 		2689009D13353E4200698AC0 /* GDBRemoteCommunication.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2618EE5B1315B29C001D6D71 /* GDBRemoteCommunication.cpp */; };
 		26744EF11338317700EF765A /* GDBRemoteCommunicationClient.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26744EED1338317700EF765A /* GDBRemoteCommunicationClient.cpp */; };
 		23CB153D1D66DA9300EDDDE1 /* GDBRemoteCommunicationClientTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2370A37E1D66C587000E7BE6 /* GDBRemoteCommunicationClientTest.cpp */; };
+		AF8AD945219CD45800614785 /* GDBRemoteCommunicationHistory.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF8AD943219CD45700614785 /* GDBRemoteCommunicationHistory.cpp */; };
+		AFCB1D59219CD4FD00730AD5 /* GDBRemoteCommunicationReplayServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCB1D57219CD4FD00730AD5 /* GDBRemoteCommunicationReplayServer.cpp */; };
 		26744EF31338317700EF765A /* GDBRemoteCommunicationServer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26744EEF1338317700EF765A /* GDBRemoteCommunicationServer.cpp */; };
 		6D55B2901A8A806200A70529 /* GDBRemoteCommunicationServerCommon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D55B28D1A8A806200A70529 /* GDBRemoteCommunicationServerCommon.cpp */; };
 		6D55B2911A8A806200A70529 /* GDBRemoteCommunicationServerLLGS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D55B28E1A8A806200A70529 /* GDBRemoteCommunicationServerLLGS.cpp */; };
@@ -698,6 +701,7 @@
 		23D065901D4A7BEE0008EDE6 /* RenderScriptRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D065841D4A7BDA0008EDE6 /* RenderScriptRuntime.cpp */; };
 		9485545A1DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 948554591DCBAE3B00345FF5 /* RenderScriptScriptGroup.cpp */; };
 		23D065911D4A7BEE0008EDE6 /* RenderScriptx86ABIFixups.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23D065861D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.cpp */; };
+		AFCB1D5F219CD5EA00730AD5 /* Reproducer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */; };
 		4FBC04ED211A06200015A814 /* RichManglingContext.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4FBC04EC211A06200015A814 /* RichManglingContext.cpp */; };
 		4FBC04EF211A06820015A814 /* RichManglingContext.h in Headers */ = {isa = PBXBuildFile; fileRef = 4FBC04EE211A06820015A814 /* RichManglingContext.h */; };
 		4FBC04F5211A13770015A814 /* RichManglingContextTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4FBC04F3211A0F0F0015A814 /* RichManglingContextTest.cpp */; };
@@ -1616,6 +1620,8 @@
 		26DFBC52113B48D600DD817F /* CommandObjectRegexCommand.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectRegexCommand.h; path = include/lldb/Interpreter/CommandObjectRegexCommand.h; sourceTree = "<group>"; };
 		26BC7E3B10F1B84700F91463 /* CommandObjectRegister.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectRegister.cpp; path = source/Commands/CommandObjectRegister.cpp; sourceTree = "<group>"; };
 		26BC7D2210F1B76300F91463 /* CommandObjectRegister.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectRegister.h; path = source/Commands/CommandObjectRegister.h; sourceTree = "<group>"; };
+		AFCB1D5A219CD5A700730AD5 /* CommandObjectReproducer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectReproducer.cpp; path = source/Commands/CommandObjectReproducer.cpp; sourceTree = "<group>"; };
+		AFCB1D5B219CD5A700730AD5 /* CommandObjectReproducer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectReproducer.h; path = source/Commands/CommandObjectReproducer.h; sourceTree = "<group>"; };
 		26BC7E3D10F1B84700F91463 /* CommandObjectScript.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectScript.cpp; path = source/Interpreter/CommandObjectScript.cpp; sourceTree = "<group>"; };
 		26BC7D2410F1B76300F91463 /* CommandObjectScript.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CommandObjectScript.h; path = source/Interpreter/CommandObjectScript.h; sourceTree = "<group>"; };
 		26BC7E4010F1B84700F91463 /* CommandObjectSettings.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandObjectSettings.cpp; path = source/Commands/CommandObjectSettings.cpp; sourceTree = "<group>"; };
@@ -1877,6 +1883,10 @@
 		26744EED1338317700EF765A /* GDBRemoteCommunicationClient.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GDBRemoteCommunicationClient.cpp; sourceTree = "<group>"; };
 		26744EEE1338317700EF765A /* GDBRemoteCommunicationClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GDBRemoteCommunicationClient.h; sourceTree = "<group>"; };
 		2370A37E1D66C587000E7BE6 /* GDBRemoteCommunicationClientTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GDBRemoteCommunicationClientTest.cpp; sourceTree = "<group>"; };
+		AF8AD943219CD45700614785 /* GDBRemoteCommunicationHistory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GDBRemoteCommunicationHistory.cpp; sourceTree = "<group>"; };
+		AF8AD944219CD45700614785 /* GDBRemoteCommunicationHistory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GDBRemoteCommunicationHistory.h; sourceTree = "<group>"; };
+		AFCB1D57219CD4FD00730AD5 /* GDBRemoteCommunicationReplayServer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GDBRemoteCommunicationReplayServer.cpp; sourceTree = "<group>"; };
+		AFCB1D56219CD4FD00730AD5 /* GDBRemoteCommunicationReplayServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GDBRemoteCommunicationReplayServer.h; sourceTree = "<group>"; };
 		26744EEF1338317700EF765A /* GDBRemoteCommunicationServer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GDBRemoteCommunicationServer.cpp; sourceTree = "<group>"; };
 		26744EF01338317700EF765A /* GDBRemoteCommunicationServer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GDBRemoteCommunicationServer.h; sourceTree = "<group>"; };
 		6D55B28D1A8A806200A70529 /* GDBRemoteCommunicationServerCommon.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GDBRemoteCommunicationServerCommon.cpp; sourceTree = "<group>"; };
@@ -2636,6 +2646,7 @@
 		948554581DCBAE3200345FF5 /* RenderScriptScriptGroup.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RenderScriptScriptGroup.h; sourceTree = "<group>"; };
 		23D065861D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = RenderScriptx86ABIFixups.cpp; sourceTree = "<group>"; };
 		23D065871D4A7BDA0008EDE6 /* RenderScriptx86ABIFixups.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RenderScriptx86ABIFixups.h; sourceTree = "<group>"; };
+		AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Reproducer.cpp; path = source/Utility/Reproducer.cpp; sourceTree = "<group>"; };
 		4FBC04EC211A06200015A814 /* RichManglingContext.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = RichManglingContext.cpp; path = source/Core/RichManglingContext.cpp; sourceTree = "<group>"; };
 		4FBC04EE211A06820015A814 /* RichManglingContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = RichManglingContext.h; path = include/lldb/Core/RichManglingContext.h; sourceTree = "<group>"; };
 		4FBC04F3211A0F0F0015A814 /* RichManglingContextTest.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = RichManglingContextTest.cpp; sourceTree = "<group>"; };
@@ -4572,6 +4583,7 @@
 				26C6886E137880C400407EDF /* RegisterValue.cpp */,
 				26764C9C1E48F516008D3573 /* RegularExpression.h */,
 				26764C9F1E48F528008D3573 /* RegularExpression.cpp */,
+				AFCB1D5E219CD5EA00730AD5 /* Reproducer.cpp */,
 				26BC7D7410F1B77400F91463 /* Scalar.h */,
 				26BC7E8D10F1B85900F91463 /* Scalar.cpp */,
 				26A375841D59487700D6CBDB /* SelectHelper.h */,
@@ -5321,6 +5333,8 @@
 				26BC7E3910F1B84700F91463 /* CommandObjectQuit.cpp */,
 				26BC7D2210F1B76300F91463 /* CommandObjectRegister.h */,
 				26BC7E3B10F1B84700F91463 /* CommandObjectRegister.cpp */,
+				AFCB1D5A219CD5A700730AD5 /* CommandObjectReproducer.cpp */,
+				AFCB1D5B219CD5A700730AD5 /* CommandObjectReproducer.h */,
 				26BC7D2410F1B76300F91463 /* CommandObjectScript.h */,
 				26BC7E3D10F1B84700F91463 /* CommandObjectScript.cpp */,
 				26BC7D2710F1B76300F91463 /* CommandObjectSettings.h */,
@@ -6223,6 +6237,10 @@
 				2618EE5C1315B29C001D6D71 /* GDBRemoteCommunication.h */,
 				26744EED1338317700EF765A /* GDBRemoteCommunicationClient.cpp */,
 				26744EEE1338317700EF765A /* GDBRemoteCommunicationClient.h */,
+				AF8AD943219CD45700614785 /* GDBRemoteCommunicationHistory.cpp */,
+				AF8AD944219CD45700614785 /* GDBRemoteCommunicationHistory.h */,
+				AFCB1D57219CD4FD00730AD5 /* GDBRemoteCommunicationReplayServer.cpp */,
+				AFCB1D56219CD4FD00730AD5 /* GDBRemoteCommunicationReplayServer.h */,
 				26744EEF1338317700EF765A /* GDBRemoteCommunicationServer.cpp */,
 				26744EF01338317700EF765A /* GDBRemoteCommunicationServer.h */,
 				2618EE5D1315B29C001D6D71 /* GDBRemoteRegisterContext.cpp */,
@@ -7954,6 +7972,7 @@
 				AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */,
 				949EEDA31BA76577008C63CF /* Cocoa.cpp in Sources */,
 				AFD966BB217140B6006714AC /* SymbolFileNativePDB.cpp in Sources */,
+				AFCB1D59219CD4FD00730AD5 /* GDBRemoteCommunicationReplayServer.cpp in Sources */,
 				3FDFE56C19AF9C44009756A7 /* HostProcessPosix.cpp in Sources */,
 				268900B413353E5000698AC0 /* RegisterContextMacOSXFrameBackchain.cpp in Sources */,
 				6B74D89B200696BB0074051B /* Environment.cpp in Sources */,
@@ -7967,6 +7986,7 @@
 				AFD966B8217140B6006714AC /* CompileUnitIndex.cpp in Sources */,
 				268900B813353E5F00698AC0 /* DWARFCompileUnit.cpp in Sources */,
 				268900B913353E5F00698AC0 /* DWARFDebugAbbrev.cpp in Sources */,
+				AF8AD945219CD45800614785 /* GDBRemoteCommunicationHistory.cpp in Sources */,
 				949EEDB31BA76736008C63CF /* NSSet.cpp in Sources */,
 				268900BA13353E5F00698AC0 /* DWARFDebugAranges.cpp in Sources */,
 				268900BB13353E5F00698AC0 /* DWARFDebugArangeSet.cpp in Sources */,
@@ -8007,6 +8027,7 @@
 				945261C11B9A11FC00BF138D /* LibCxxInitializerList.cpp in Sources */,
 				268900D313353E6F00698AC0 /* ClangExternalASTSourceCallbacks.cpp in Sources */,
 				268900D513353E6F00698AC0 /* CompileUnit.cpp in Sources */,
+				AFCB1D5C219CD5A800730AD5 /* CommandObjectReproducer.cpp in Sources */,
 				268900D613353E6F00698AC0 /* Declaration.cpp in Sources */,
 				2579065C1BD0488100178368 /* TCPSocket.cpp in Sources */,
 				268900D713353E6F00698AC0 /* DWARFCallFrameInfo.cpp in Sources */,
@@ -8051,6 +8072,7 @@
 				268900EE13353E6F00698AC0 /* PathMappingList.cpp in Sources */,
 				4C2479BD1BA39295009C9A7B /* FunctionCaller.cpp in Sources */,
 				AF2907BF1D3F082400E10654 /* DynamicLoaderMacOS.cpp in Sources */,
+				AFCB1D5F219CD5EA00730AD5 /* Reproducer.cpp in Sources */,
 				268900EF13353E6F00698AC0 /* Platform.cpp in Sources */,
 				268900F013353E6F00698AC0 /* Process.cpp in Sources */,
 				26BC17AD18C7F4CB00D2196D /* RegisterContextPOSIXCore_mips64.cpp in Sources */,
@@ -8611,7 +8633,7 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "x86_64/";
+				LLVM_BUILD_DIR_ARCH = x86_64/;
 				LLVM_CONFIGURATION = "Release+Asserts";
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				ONLY_ACTIVE_ARCH = YES;
@@ -8701,7 +8723,7 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "x86_64/";
+				LLVM_BUILD_DIR_ARCH = x86_64/;
 				LLVM_CONFIGURATION = "Release+Asserts";
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				ONLY_ACTIVE_ARCH = YES;
@@ -9859,7 +9881,7 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(OBJROOT)/llvm";
 				LLVM_BUILD_DIRTREE = "$(OBJROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "x86_64/";
+				LLVM_BUILD_DIR_ARCH = x86_64/;
 				LLVM_CONFIGURATION = Release;
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				OTHER_CFLAGS = (
@@ -10575,7 +10597,7 @@
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(SRCROOT)/llvm-build/$(LLVM_CONFIGURATION)";
 				LLVM_BUILD_DIRTREE = "$(SRCROOT)/llvm-build";
-				LLVM_BUILD_DIR_ARCH = "x86_64/";
+				LLVM_BUILD_DIR_ARCH = x86_64/;
 				LLVM_CONFIGURATION = "Debug+Asserts";
 				LLVM_SOURCE_DIR = "$(SRCROOT)/llvm";
 				ONLY_ACTIVE_ARCH = YES;
