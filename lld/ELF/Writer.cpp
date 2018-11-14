@@ -365,6 +365,11 @@ template <class ELFT> static void createSyntheticSections() {
     Add(In.Got);
   }
 
+  if (Config->EMachine == EM_PPC64) {
+    In.PPC64LongBranchTarget = make<PPC64LongBranchTargetSection>();
+    Add(In.PPC64LongBranchTarget);
+  }
+
   In.GotPlt = make<GotPltSection>();
   Add(In.GotPlt);
   In.IgotPlt = make<IgotPltSection>();
@@ -1756,6 +1761,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // maybeAddThunks may have added local symbols to the static symbol table.
   finalizeSynthetic(In.SymTab);
+  finalizeSynthetic(In.PPC64LongBranchTarget);
 
   // Fill other section headers. The dynamic table is finalized
   // at the end because some tags like RELSZ depend on result

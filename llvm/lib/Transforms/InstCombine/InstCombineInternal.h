@@ -919,8 +919,11 @@ private:
   Value *insertRangeTest(Value *V, const APInt &Lo, const APInt &Hi,
                          bool isSigned, bool Inside);
   Instruction *PromoteCastOfAllocation(BitCastInst &CI, AllocaInst &AI);
-  Instruction *MatchBSwap(BinaryOperator &I);
   bool mergeStoreIntoSuccessor(StoreInst &SI);
+
+  /// Given an 'or' instruction, check to see if it is part of a bswap idiom.
+  /// If so, return the equivalent bswap intrinsic.
+  Instruction *matchBSwap(BinaryOperator &Or);
 
   Instruction *SimplifyAnyMemTransfer(AnyMemTransferInst *MI);
   Instruction *SimplifyAnyMemSet(AnyMemSetInst *MI);

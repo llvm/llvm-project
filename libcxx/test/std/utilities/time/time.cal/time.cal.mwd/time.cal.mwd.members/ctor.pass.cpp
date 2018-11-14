@@ -18,7 +18,7 @@
 //  constexpr chrono::month                     month() const noexcept;
 //  constexpr chrono::weekday_indexed weekday_indexed() const noexcept;
 //  constexpr bool                                 ok() const noexcept;
-         
+
 #include <chrono>
 #include <type_traits>
 #include <cassert>
@@ -33,7 +33,7 @@ int main()
     using weekday_indexed = std::chrono::weekday_indexed;
 
     ASSERT_NOEXCEPT(month_weekday{month{1}, weekday_indexed{weekday{}, 1}});
-    
+
     constexpr month_weekday md0{month{}, weekday_indexed{}};
     static_assert( md0.month()           == month{},           "");
     static_assert( md0.weekday_indexed() == weekday_indexed{}, "");

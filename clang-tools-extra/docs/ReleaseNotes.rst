@@ -130,6 +130,12 @@ Improvements to clang-tidy
   but also have logic (non-static member functions), and diagnoses all member
   variables that have any other scope other than ``private``.
 
+- New :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize-avoid-c-arrays>` check.
+
+  Finds C-style array types and recommend to use ``std::array<>`` /
+  ``std::vector<>``.
+
 - New :doc:`modernize-concat-nested-namespaces
   <clang-tidy/checks/modernize-concat-nested-namespaces>` check.
 
@@ -173,11 +179,21 @@ Improvements to clang-tidy
   <clang-tidy/checks/readability-uppercase-literal-suffix>`
   added.
 
+- New alias :doc:`cppcoreguidelines-avoid-c-arrays
+  <clang-tidy/checks/cppcoreguidelines-avoid-c-arrays>`
+  to :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize-avoid-c-arrays>` added.
+
 - New alias :doc:`cppcoreguidelines-non-private-member-variables-in-classes
   <clang-tidy/checks/cppcoreguidelines-non-private-member-variables-in-classes>`
   to :doc:`misc-non-private-member-variables-in-classes
   <clang-tidy/checks/misc-non-private-member-variables-in-classes>`
   added.
+
+- New alias :doc:`hicpp-avoid-c-arrays
+  <clang-tidy/checks/hicpp-avoid-c-arrays>`
+  to :doc:`modernize-avoid-c-arrays
+  <clang-tidy/checks/modernize-avoid-c-arrays>` added.
 
 - New alias :doc:`hicpp-uppercase-literal-suffix
   <clang-tidy/checks/hicpp-uppercase-literal-suffix>` to

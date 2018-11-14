@@ -39,7 +39,7 @@ int main()
 
     ASSERT_SAME_TYPE(year, decltype(+std::declval<year>()));
     ASSERT_SAME_TYPE(year, decltype(-std::declval<year>()));
-    
+
     static_assert(testConstexpr<year>(), "");
 
     for (int i = 10000; i <= 10020; ++i)

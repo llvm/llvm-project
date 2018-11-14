@@ -43,7 +43,7 @@ int main()
 
     ASSERT_SAME_TYPE(day&, decltype(std::declval<day&>() += std::declval<days>()));
     ASSERT_SAME_TYPE(day&, decltype(std::declval<day&>() -= std::declval<days>()));
-    
+
     static_assert(testConstexpr<day, days>(), "");
 
     for (unsigned i = 0; i <= 10; ++i)

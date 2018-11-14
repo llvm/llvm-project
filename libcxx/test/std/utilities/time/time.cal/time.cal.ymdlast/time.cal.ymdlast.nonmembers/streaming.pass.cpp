@@ -15,7 +15,7 @@
 // template<class charT, class traits>
 //   basic_ostream<charT, traits>&
 //   operator<<(basic_ostream<charT, traits>& os, const year_month_day_last& ymdl);
-// 
+//
 // Returns: os << ymdl.year() << '/' << ymdl.month_day_last().
 
 

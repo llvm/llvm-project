@@ -3610,7 +3610,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       llvm::Value *ClkEvent = EmitScalarExpr(E->getArg(5));
       // Convert to generic address space.
       EventList = Builder.CreatePointerCast(EventList, EventPtrTy);
-      ClkEvent = Builder.CreatePointerCast(ClkEvent, EventPtrTy);
+      ClkEvent = ClkEvent->getType()->isIntegerTy()
+                   ? Builder.CreateBitOrPointerCast(ClkEvent, EventPtrTy)
+                   : Builder.CreatePointerCast(ClkEvent, EventPtrTy);
       auto Info =
           CGM.getOpenCLRuntime().emitOpenCLEnqueuedBlock(*this, E->getArg(6));
       llvm::Value *Kernel =

@@ -39,7 +39,7 @@ int main()
     t += Duration(2);
     assert(t.time_since_epoch() == Duration(5));
     }
-    
+
 #if TEST_STD_VER > 14
     static_assert(constexpr_test(), "");
 #endif

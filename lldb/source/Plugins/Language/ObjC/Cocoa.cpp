@@ -781,9 +781,10 @@ static uint64_t decodeTaggedTimeInterval(uint64_t encodedTimeInterval) {
   if (encodedTimeInterval == 0)
     return 0.0;
   if (encodedTimeInterval == std::numeric_limits<uint64_t>::max())
-    return -0.0;
+    return (uint64_t)-0.0;
 
-  TaggedDoubleBits encodedBits = { .i = encodedTimeInterval };
+  TaggedDoubleBits encodedBits = {};
+  encodedBits.i = encodedTimeInterval;
   DoubleBits decodedBits;
 
   // Sign and fraction are represented exactly.

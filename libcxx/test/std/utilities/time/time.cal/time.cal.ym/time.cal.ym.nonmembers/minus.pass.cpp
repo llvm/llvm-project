@@ -12,11 +12,11 @@
 // class year_month;
 
 // constexpr year_month operator-(const year_month& ym, const years& dy) noexcept;
-// Returns: ym + -dy.                
-// 
+// Returns: ym + -dy.
+//
 // constexpr year_month operator-(const year_month& ym, const months& dm) noexcept;
 // Returns: ym + -dm.
-// 
+//
 // constexpr months operator-(const year_month& x, const year_month& y) noexcept;
 // Returns: x.year() - y.year() + months{static_cast<int>(unsigned{x.month()}) -
 //                                       static_cast<int>(unsigned{y.month()})}
@@ -41,7 +41,7 @@ int main()
     {   // year_month - years
     ASSERT_NOEXCEPT(                      std::declval<year_month>() - std::declval<years>());
     ASSERT_SAME_TYPE(year_month, decltype(std::declval<year_month>() - std::declval<years>()));
-    
+
 //  static_assert(testConstexprYears (year_month{year{1}, month{1}}), "");
 
     year_month ym{year{1234}, std::chrono::January};
@@ -56,7 +56,7 @@ int main()
     {   // year_month - months
     ASSERT_NOEXCEPT(                      std::declval<year_month>() - std::declval<months>());
     ASSERT_SAME_TYPE(year_month, decltype(std::declval<year_month>() - std::declval<months>()));
-    
+
 //  static_assert(testConstexprMonths(year_month{year{1}, month{1}}), "");
 
     year_month ym{year{1234}, std::chrono::November};
@@ -71,7 +71,7 @@ int main()
     {   // year_month - year_month
     ASSERT_NOEXCEPT(                  std::declval<year_month>() - std::declval<year_month>());
     ASSERT_SAME_TYPE(months, decltype(std::declval<year_month>() - std::declval<year_month>()));
-    
+
 //  static_assert(testConstexprMonths(year_month{year{1}, month{1}}), "");
 
 //  Same year

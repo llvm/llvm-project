@@ -309,8 +309,10 @@ make_pointee_range(RangeT &&Range) {
 template <typename WrappedIteratorT,
           typename T = decltype(&*std::declval<WrappedIteratorT>())>
 class pointer_iterator
-    : public iterator_adaptor_base<pointer_iterator<WrappedIteratorT, T>,
-                                   WrappedIteratorT, T> {
+    : public iterator_adaptor_base<
+          pointer_iterator<WrappedIteratorT, T>, WrappedIteratorT,
+          typename std::iterator_traits<WrappedIteratorT>::iterator_category,
+          T> {
   mutable T Ptr;
 
 public:

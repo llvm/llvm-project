@@ -1,5 +1,6 @@
-; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %s -o - | obj2yaml | FileCheck %s
-; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling %s -o - | llvm-readobj -s | FileCheck -check-prefix=SEC %s
+; XFAIL: *
+; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs %s -o - | obj2yaml | FileCheck %s
+; RUN: llc -filetype=obj -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs %s -o - | llvm-readobj -s | FileCheck -check-prefix=SEC %s
 
 target triple = "wasm32-unknown-unknown"
 

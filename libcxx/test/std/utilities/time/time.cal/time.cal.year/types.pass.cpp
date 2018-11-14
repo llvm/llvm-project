@@ -20,7 +20,7 @@
 int main()
 {
     using year = std::chrono::year;
-    
+
     static_assert(std::is_trivially_copyable_v<year>, "");
     static_assert(std::is_standard_layout_v<year>, "");
 }

@@ -332,12 +332,20 @@ protected:
     SourceLocation Loc;
   };
 
-  class CharacterLiteralBitfields {
-    friend class CharacterLiteral;
+  class DeclRefExprBitfields {
+    friend class ASTStmtReader; // deserialization
+    friend class DeclRefExpr;
 
     unsigned : NumExprBits;
 
-    unsigned Kind : 3;
+    unsigned HasQualifier : 1;
+    unsigned HasTemplateKWAndArgsInfo : 1;
+    unsigned HasFoundDecl : 1;
+    unsigned HadMultipleCandidates : 1;
+    unsigned RefersToEnclosingVariableOrCapture : 1;
+
+    /// The location of the declaration name itself.
+    SourceLocation Loc;
   };
 
   enum APFloatSemantics {
@@ -358,6 +366,14 @@ protected:
     unsigned IsExact : 1;
   };
 
+  class CharacterLiteralBitfields {
+    friend class CharacterLiteral;
+
+    unsigned : NumExprBits;
+
+    unsigned Kind : 3;
+  };
+
   class UnaryExprOrTypeTraitExprBitfields {
     friend class UnaryExprOrTypeTraitExpr;
 
@@ -367,20 +383,12 @@ protected:
     unsigned IsType : 1; // true if operand is a type, false if an expression.
   };
 
-  class DeclRefExprBitfields {
-    friend class ASTStmtReader; // deserialization
-    friend class DeclRefExpr;
+  class CallExprBitfields {
+    friend class CallExpr;
 
     unsigned : NumExprBits;
 
-    unsigned HasQualifier : 1;
-    unsigned HasTemplateKWAndArgsInfo : 1;
-    unsigned HasFoundDecl : 1;
-    unsigned HadMultipleCandidates : 1;
-    unsigned RefersToEnclosingVariableOrCapture : 1;
-
-    /// The location of the declaration name itself.
-    SourceLocation Loc;
+    unsigned NumPreArgs : 1;
   };
 
   class CastExprBitfields {
@@ -394,24 +402,14 @@ protected:
     unsigned BasePathIsEmpty : 1;
   };
 
-  class CallExprBitfields {
-    friend class CallExpr;
+  class InitListExprBitfields {
+    friend class InitListExpr;
 
     unsigned : NumExprBits;
 
-    unsigned NumPreArgs : 1;
-  };
-
-  class ExprWithCleanupsBitfields {
-    friend class ASTStmtReader; // deserialization
-    friend class ExprWithCleanups;
-
-    unsigned : NumExprBits;
-
-    // When false, it must not have side effects.
-    unsigned CleanupsHaveSideEffects : 1;
-
-    unsigned NumObjects : 32 - 1 - NumExprBits;
+    /// Whether this initializer list originally had a GNU array-range
+    /// designator in it. This is a temporary marker used by CodeGen.
+    unsigned HadArrayRangeDesignator : 1;
   };
 
   class PseudoObjectExprBitfields {
@@ -426,33 +424,7 @@ protected:
     unsigned ResultIndex : 32 - 8 - NumExprBits;
   };
 
-  class OpaqueValueExprBitfields {
-    friend class OpaqueValueExpr;
-
-    unsigned : NumExprBits;
-
-    /// The OVE is a unique semantic reference to its source expressio if this
-    /// bit is set to true.
-    unsigned IsUnique : 1;
-  };
-
-  class ObjCIndirectCopyRestoreExprBitfields {
-    friend class ObjCIndirectCopyRestoreExpr;
-
-    unsigned : NumExprBits;
-
-    unsigned ShouldCopy : 1;
-  };
-
-  class InitListExprBitfields {
-    friend class InitListExpr;
-
-    unsigned : NumExprBits;
-
-    /// Whether this initializer list originally had a GNU array-range
-    /// designator in it. This is a temporary marker used by CodeGen.
-    unsigned HadArrayRangeDesignator : 1;
-  };
+  //===--- C++ Expression bitfields classes ---===//
 
   class TypeTraitExprBitfields {
     friend class ASTStmtReader;
@@ -472,6 +444,20 @@ protected:
     unsigned NumArgs : 32 - 8 - 1 - NumExprBits;
   };
 
+  class ExprWithCleanupsBitfields {
+    friend class ASTStmtReader; // deserialization
+    friend class ExprWithCleanups;
+
+    unsigned : NumExprBits;
+
+    // When false, it must not have side effects.
+    unsigned CleanupsHaveSideEffects : 1;
+
+    unsigned NumObjects : 32 - 1 - NumExprBits;
+  };
+
+  //===--- C++ Coroutines TS bitfields classes ---===//
+
   class CoawaitExprBitfields {
     friend class CoawaitExpr;
 
@@ -480,7 +466,30 @@ protected:
     unsigned IsImplicit : 1;
   };
 
+  //===--- Obj-C Expression bitfields classes ---===//
+
+  class ObjCIndirectCopyRestoreExprBitfields {
+    friend class ObjCIndirectCopyRestoreExpr;
+
+    unsigned : NumExprBits;
+
+    unsigned ShouldCopy : 1;
+  };
+
+  //===--- Clang Extensions bitfields classes ---===//
+
+  class OpaqueValueExprBitfields {
+    friend class OpaqueValueExpr;
+
+    unsigned : NumExprBits;
+
+    /// The OVE is a unique semantic reference to its source expressio if this
+    /// bit is set to true.
+    unsigned IsUnique : 1;
+  };
+
   union {
+    // Same order as in StmtNodes.td.
     // Statements
     StmtBitfields StmtBits;
     NullStmtBitfields NullStmtBits;
@@ -501,19 +510,27 @@ protected:
     // Expressions
     ExprBitfields ExprBits;
     PredefinedExprBitfields PredefinedExprBits;
-    CharacterLiteralBitfields CharacterLiteralBits;
-    FloatingLiteralBitfields FloatingLiteralBits;
-    UnaryExprOrTypeTraitExprBitfields UnaryExprOrTypeTraitExprBits;
     DeclRefExprBitfields DeclRefExprBits;
-    CastExprBitfields CastExprBits;
+    FloatingLiteralBitfields FloatingLiteralBits;
+    CharacterLiteralBitfields CharacterLiteralBits;
+    UnaryExprOrTypeTraitExprBitfields UnaryExprOrTypeTraitExprBits;
     CallExprBitfields CallExprBits;
-    ExprWithCleanupsBitfields ExprWithCleanupsBits;
-    PseudoObjectExprBitfields PseudoObjectExprBits;
-    OpaqueValueExprBitfields OpaqueValueExprBits;
-    ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
+    CastExprBitfields CastExprBits;
     InitListExprBitfields InitListExprBits;
+    PseudoObjectExprBitfields PseudoObjectExprBits;
+
+    // C++ Expressions
     TypeTraitExprBitfields TypeTraitExprBits;
+    ExprWithCleanupsBitfields ExprWithCleanupsBits;
+
+    // C++ Coroutines TS expressions
     CoawaitExprBitfields CoawaitBits;
+
+    // Obj-C Expressions
+    ObjCIndirectCopyRestoreExprBitfields ObjCIndirectCopyRestoreExprBits;
+
+    // Clang Extensions
+    OpaqueValueExprBitfields OpaqueValueExprBits;
   };
 
 public:

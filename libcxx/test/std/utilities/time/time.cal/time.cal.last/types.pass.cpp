@@ -25,7 +25,7 @@
 int main()
 {
     using last_spec = std::chrono::last_spec;
-    
+
     ASSERT_SAME_TYPE(const last_spec, decltype(std::chrono::last));
 
     static_assert(std::is_trivially_copyable_v<last_spec>, "");

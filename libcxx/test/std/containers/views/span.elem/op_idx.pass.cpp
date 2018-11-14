@@ -7,7 +7,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -28,7 +28,7 @@ constexpr bool testConstexprSpan(Span sp, ptrdiff_t idx)
 {
     _LIBCPP_ASSERT(noexcept(sp[idx]), "");
     _LIBCPP_ASSERT(noexcept(sp(idx)), "");
-    
+
     typename Span::reference r1 = sp[idx];
     typename Span::reference r2 = sp(idx);
     typename Span::reference r3 = *(sp.data() + idx);
@@ -41,7 +41,7 @@ void testRuntimeSpan(Span sp, ptrdiff_t idx)
 {
     _LIBCPP_ASSERT(noexcept(sp[idx]), "");
     _LIBCPP_ASSERT(noexcept(sp(idx)), "");
-    
+
     typename Span::reference r1 = sp[idx];
     typename Span::reference r2 = sp(idx);
     typename Span::reference r3 = *(sp.data() + idx);

@@ -305,6 +305,21 @@ useful to use C style (``/* */``) comments however:
 #. When writing a source file that is used by a tool that only accepts C style
    comments.
 
+#. When documenting the significance of constants used as actual parameters in
+   a call. This is most helpful for ``bool`` parameters, or passing ``0`` or
+   ``nullptr``. Typically you add the formal parameter name, which ought to be
+   meaningful. For example, it's not clear what the parameter means in this call:
+
+   .. code-block:: c++
+
+     Object.emitName(nullptr);
+
+   An in-line C-style comment makes the intent obvious:
+
+   .. code-block:: c++
+
+     Object.emitName(/*Prefix=*/nullptr);
+
 Commenting out large blocks of code is discouraged, but if you really have to do
 this (for documentation purposes or as a suggestion for debug printing), use
 ``#if 0`` and ``#endif``. These nest properly and are better behaved in general
