@@ -8,11 +8,9 @@
 //===----------------------------------------------------------------------===//
 #include "TestFS.h"
 #include "URI.h"
-#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
-#include "gtest/gtest.h"
 
 namespace clang {
 namespace clangd {
