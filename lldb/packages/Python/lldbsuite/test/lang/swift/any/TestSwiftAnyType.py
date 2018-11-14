@@ -13,7 +13,7 @@
 Test the Any type
 """
 import lldb
-import lldbsuite.test.decorators as decorators
+from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.lldbutil as lldbutil
 import os
@@ -24,51 +24,18 @@ class TestSwiftAnyType(lldbtest.TestBase):
 
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
-    @decorators.swiftTest
-    @decorators.expectedFailureAll(oslist=["linux"], bugnumber="rdar://35671239")
+    @swiftTest
+    @expectedFailureAll(oslist=["linux"], bugnumber="rdar://35671239")
     def test_any_type(self):
         """Test the Any type"""
         self.build()
-        self.do_test()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
-    def setUp(self):
-        lldbtest.TestBase.setUp(self)
-        self.main_source = "main.swift"
-        self.main_source_spec = lldb.SBFileSpec(self.main_source)
-
-    def do_test(self):
-        """Test the Any type"""
-        exe_name = "a.out"
-        exe = self.getBuildArtifact(exe_name)
-
-        # Create the target
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, lldbtest.VALID_TARGET)
-
-        # Set the breakpoints
-        breakpoint = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint here', self.main_source_spec)
-        self.assertTrue(
-            breakpoint.GetNumLocations() > 0,
-            lldbtest.VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, os.getcwd())
-
-        self.assertTrue(process, lldbtest.PROCESS_IS_VALID)
-
-        # Frame #0 should be at our breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(
-            process, breakpoint)
-
-        self.assertTrue(len(threads) == 1)
-        self.thread = threads[0]
-        self.frame = self.thread.frames[0]
-        self.assertTrue(self.frame, "Frame 0 is valid.")
-
-        var_c = self.frame.FindVariable("c")
+        frame = thread.frames[0]
+        var_c = frame.FindVariable("c")
         var_c_x = var_c.GetChildMemberWithName("x")
-        var_q = self.frame.FindVariable("q")
+        var_q = frame.FindVariable("q")
         lldbutil.check_variable(self, var_c_x, True, value="12")
         lldbutil.check_variable(self, var_q, True, value="12")
 
