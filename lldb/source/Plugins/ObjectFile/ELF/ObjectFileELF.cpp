@@ -1899,9 +1899,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
       else if (name == g_sect_name_dwarf_debug_str_offsets)
         sect_type = eSectionTypeDWARFDebugStrOffsets;
       else if (name == g_sect_name_dwarf_debug_abbrev_dwo)
-        sect_type = eSectionTypeDWARFDebugAbbrevDwo;
+        sect_type = eSectionTypeDWARFDebugAbbrev;
       else if (name == g_sect_name_dwarf_debug_info_dwo)
-        sect_type = eSectionTypeDWARFDebugInfoDwo;
+        sect_type = eSectionTypeDWARFDebugInfo;
       else if (name == g_sect_name_dwarf_debug_line_dwo)
         sect_type = eSectionTypeDWARFDebugLine;
       else if (name == g_sect_name_dwarf_debug_line_str_dwo)
@@ -1913,9 +1913,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
       else if (name == g_sect_name_dwarf_debug_loclists_dwo)
         sect_type = eSectionTypeDWARFDebugLocLists;
       else if (name == g_sect_name_dwarf_debug_str_dwo)
-        sect_type = eSectionTypeDWARFDebugStrDwo;
+        sect_type = eSectionTypeDWARFDebugStr;
       else if (name == g_sect_name_dwarf_debug_str_offsets_dwo)
-        sect_type = eSectionTypeDWARFDebugStrOffsetsDwo;
+        sect_type = eSectionTypeDWARFDebugStrOffsets;
       else if (name == g_sect_name_eh_frame)
         sect_type = eSectionTypeEHFrame;
       else if (name == g_sect_name_swift_ast)
