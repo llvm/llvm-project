@@ -244,9 +244,6 @@ void DWARFUnit::ExtractDIEsRWLocked() {
 
       if (depth > 0)
         --depth;
-      if (depth == 0)
-        break; // We are done with this compile unit!
-
       prev_die_had_children = false;
     } else {
       die_index_stack.back() = m_die_array.size() - 1;
@@ -258,6 +255,9 @@ void DWARFUnit::ExtractDIEsRWLocked() {
       }
       prev_die_had_children = die_has_children;
     }
+
+    if (depth == 0)
+      break; // We are done with this compile unit!
   }
 
   if (!m_die_array.empty()) {

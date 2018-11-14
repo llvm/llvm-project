@@ -583,7 +583,7 @@ TEST(CompletionTest, IncludeInsertionPreprocessorIntegrationTests) {
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
   auto BarURI = URI::createFile(BarHeader).toString();
   Symbol Sym = cls("ns::X");
-  Sym.CanonicalDeclaration.FileURI = BarURI;
+  Sym.CanonicalDeclaration.FileURI = BarURI.c_str();
   Sym.IncludeHeaders.emplace_back(BarURI, 1);
   // Shoten include path based on search dirctory and insert.
   auto Results = completions(Server,
@@ -614,8 +614,8 @@ TEST(CompletionTest, NoIncludeInsertionWhenDeclFoundInFile) {
   Symbol SymY = cls("ns::Y");
   std::string BarHeader = testPath("bar.h");
   auto BarURI = URI::createFile(BarHeader).toString();
-  SymX.CanonicalDeclaration.FileURI = BarURI;
-  SymY.CanonicalDeclaration.FileURI = BarURI;
+  SymX.CanonicalDeclaration.FileURI = BarURI.c_str();
+  SymY.CanonicalDeclaration.FileURI = BarURI.c_str();
   SymX.IncludeHeaders.emplace_back("<bar>", 1);
   SymY.IncludeHeaders.emplace_back("<bar>", 1);
   // Shoten include path based on search dirctory and insert.
@@ -1252,7 +1252,7 @@ TEST(CompletionTest, OverloadBundling) {
 
   // Differences in header-to-insert suppress bundling.
   std::string DeclFile = URI::createFile(testPath("foo")).toString();
-  NoArgsGFunc.CanonicalDeclaration.FileURI = DeclFile;
+  NoArgsGFunc.CanonicalDeclaration.FileURI = DeclFile.c_str();
   NoArgsGFunc.IncludeHeaders.emplace_back("<foo>", 1);
   EXPECT_THAT(
       completions(Context + "int y = GFunc^", {NoArgsGFunc}, Opts).Completions,
@@ -1959,7 +1959,7 @@ TEST(CompletionTest, EnableSpeculativeIndexRequest) {
 TEST(CompletionTest, InsertTheMostPopularHeader) {
   std::string DeclFile = URI::createFile(testPath("foo")).toString();
   Symbol sym = func("Func");
-  sym.CanonicalDeclaration.FileURI = DeclFile;
+  sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
   sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
   sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
 
@@ -1981,7 +1981,7 @@ TEST(CompletionTest, NoInsertIncludeIfOnePresent) {
 
   std::string DeclFile = URI::createFile(testPath("foo")).toString();
   Symbol sym = func("Func");
-  sym.CanonicalDeclaration.FileURI = DeclFile;
+  sym.CanonicalDeclaration.FileURI = DeclFile.c_str();
   sym.IncludeHeaders.emplace_back("\"foo.h\"", 2);
   sym.IncludeHeaders.emplace_back("\"bar.h\"", 1000);
 
