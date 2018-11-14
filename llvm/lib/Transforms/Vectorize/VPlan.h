@@ -60,6 +60,7 @@ class Value;
 class VPBasicBlock;
 class VPRegionBlock;
 class VPlan;
+class VPlanSlp;
 
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
@@ -609,10 +610,16 @@ public:
 /// the VPInstruction is also a single def-use vertex.
 class VPInstruction : public VPUser, public VPRecipeBase {
   friend class VPlanHCFGTransforms;
+  friend class VPlanSlp;
 
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
-  enum { Not = Instruction::OtherOpsEnd + 1, ICmpULE };
+  enum {
+    Not = Instruction::OtherOpsEnd + 1,
+    ICmpULE,
+    SLPLoad,
+    SLPStore,
+  };
 
 private:
   typedef unsigned char OpcodeTy;
@@ -621,6 +628,13 @@ private:
   /// Utility method serving execute(): generates a single instance of the
   /// modeled instruction.
   void generateInstruction(VPTransformState &State, unsigned Part);
+
+protected:
+  Instruction *getUnderlyingInstr() {
+    return cast_or_null<Instruction>(getUnderlyingValue());
+  }
+
+  void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands)
@@ -633,6 +647,11 @@ public:
   /// Method to support type inquiry through isa, cast, and dyn_cast.
   static inline bool classof(const VPValue *V) {
     return V->getVPValueID() == VPValue::VPInstructionSC;
+  }
+
+  VPInstruction *clone() const {
+    SmallVector<VPValue *, 2> Operands(operands());
+    return new VPInstruction(Opcode, Operands);
   }
 
   /// Method to support type inquiry through isa, cast, and dyn_cast.
@@ -652,6 +671,14 @@ public:
 
   /// Print the VPInstruction.
   void print(raw_ostream &O) const;
+
+  /// Return true if this instruction may modify memory.
+  bool mayWriteToMemory() const {
+    // TODO: we can use attributes of the called function to rule out memory
+    //       modifications.
+    return Opcode == Instruction::Store || Opcode == Instruction::Call ||
+           Opcode == Instruction::Invoke || Opcode == SLPStore;
+  }
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type for each
@@ -1508,6 +1535,102 @@ public:
   }
 };
 
+/// Class that maps (parts of) an existing VPlan to trees of combined
+/// VPInstructions.
+class VPlanSlp {
+private:
+  enum class OpMode { Failed, Load, Opcode };
+
+  /// A DenseMapInfo implementation for using SmallVector<VPValue *, 4> as
+  /// DenseMap keys.
+  struct BundleDenseMapInfo {
+    static SmallVector<VPValue *, 4> getEmptyKey() {
+      return {reinterpret_cast<VPValue *>(-1)};
+    }
+
+    static SmallVector<VPValue *, 4> getTombstoneKey() {
+      return {reinterpret_cast<VPValue *>(-2)};
+    }
+
+    static unsigned getHashValue(const SmallVector<VPValue *, 4> &V) {
+      return static_cast<unsigned>(hash_combine_range(V.begin(), V.end()));
+    }
+
+    static bool isEqual(const SmallVector<VPValue *, 4> &LHS,
+                        const SmallVector<VPValue *, 4> &RHS) {
+      return LHS == RHS;
+    }
+  };
+
+  /// Mapping of values in the original VPlan to a combined VPInstruction.
+  DenseMap<SmallVector<VPValue *, 4>, VPInstruction *, BundleDenseMapInfo>
+      BundleToCombined;
+
+  VPInterleavedAccessInfo &IAI;
+
+  /// Basic block to operate on. For now, only instructions in a single BB are
+  /// considered.
+  const VPBasicBlock &BB;
+
+  /// Indicates whether we managed to combine all visited instructions or not.
+  bool CompletelySLP = true;
+
+  /// Width of the widest combined bundle in bits.
+  unsigned WidestBundleBits = 0;
+
+  using MultiNodeOpTy =
+      typename std::pair<VPInstruction *, SmallVector<VPValue *, 4>>;
+
+  // Input operand bundles for the current multi node. Each multi node operand
+  // bundle contains values not matching the multi node's opcode. They will
+  // be reordered in reorderMultiNodeOps, once we completed building a
+  // multi node.
+  SmallVector<MultiNodeOpTy, 4> MultiNodeOps;
+
+  /// Indicates whether we are building a multi node currently.
+  bool MultiNodeActive = false;
+
+  /// Check if we can vectorize Operands together.
+  bool areVectorizable(ArrayRef<VPValue *> Operands) const;
+
+  /// Add combined instruction \p New for the bundle \p Operands.
+  void addCombined(ArrayRef<VPValue *> Operands, VPInstruction *New);
+
+  /// Indicate we hit a bundle we failed to combine. Returns nullptr for now.
+  VPInstruction *markFailed();
+
+  /// Reorder operands in the multi node to maximize sequential memory access
+  /// and commutative operations.
+  SmallVector<MultiNodeOpTy, 4> reorderMultiNodeOps();
+
+  /// Choose the best candidate to use for the lane after \p Last. The set of
+  /// candidates to choose from are values with an opcode matching \p Last's
+  /// or loads consecutive to \p Last.
+  std::pair<OpMode, VPValue *> getBest(OpMode Mode, VPValue *Last,
+                                       SmallPtrSetImpl<VPValue *> &Candidates,
+                                       VPInterleavedAccessInfo &IAI);
+
+  /// Print bundle \p Values to dbgs().
+  void dumpBundle(ArrayRef<VPValue *> Values);
+
+public:
+  VPlanSlp(VPInterleavedAccessInfo &IAI, VPBasicBlock &BB) : IAI(IAI), BB(BB) {}
+
+  ~VPlanSlp() {
+    for (auto &KV : BundleToCombined)
+      delete KV.second;
+  }
+
+  /// Tries to build an SLP tree rooted at \p Operands and returns a
+  /// VPInstruction combining \p Operands, if they can be combined.
+  VPInstruction *buildGraph(ArrayRef<VPValue *> Operands);
+
+  /// Return the width of the widest combined bundle in bits.
+  unsigned getWidestBundleBits() const { return WidestBundleBits; }
+
+  /// Return true if all visited instruction can be combined.
+  bool isCompletelySLP() const { return CompletelySLP; }
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_H

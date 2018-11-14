@@ -48,6 +48,15 @@ static void commonSectionMapping(IO &IO, WasmYAML::Section &Section) {
   IO.mapOptional("Relocations", Section.Relocations);
 }
 
+static void sectionMapping(IO &IO, WasmYAML::DylinkSection &Section) {
+  commonSectionMapping(IO, Section);
+  IO.mapRequired("Name", Section.Name);
+  IO.mapRequired("MemorySize", Section.MemorySize);
+  IO.mapRequired("MemoryAlignment", Section.MemoryAlignment);
+  IO.mapRequired("TableSize", Section.TableSize);
+  IO.mapRequired("TableAlignment", Section.TableAlignment);
+}
+
 static void sectionMapping(IO &IO, WasmYAML::NameSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapRequired("Name", Section.Name);
@@ -147,7 +156,11 @@ void MappingTraits<std::unique_ptr<WasmYAML::Section>>::mapping(
     } else {
       IO.mapRequired("Name", SectionName);
     }
-    if (SectionName == "linking") {
+    if (SectionName == "dylink") {
+      if (!IO.outputting())
+        Section.reset(new WasmYAML::DylinkSection());
+      sectionMapping(IO, *cast<WasmYAML::DylinkSection>(Section.get()));
+    } else if (SectionName == "linking") {
       if (!IO.outputting())
         Section.reset(new WasmYAML::LinkingSection());
       sectionMapping(IO, *cast<WasmYAML::LinkingSection>(Section.get()));

@@ -183,6 +183,20 @@ struct CustomSection : Section {
   yaml::BinaryRef Payload;
 };
 
+struct DylinkSection : CustomSection {
+  DylinkSection() : CustomSection("dylink") {}
+
+  static bool classof(const Section *S) {
+    auto C = dyn_cast<CustomSection>(S);
+    return C && C->Name == "dylink";
+  }
+
+  uint32_t MemorySize;
+  uint32_t MemoryAlignment;
+  uint32_t TableSize;
+  uint32_t TableAlignment;
+};
+
 struct NameSection : CustomSection {
   NameSection() : CustomSection("name") {}
 

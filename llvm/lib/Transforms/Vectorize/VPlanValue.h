@@ -106,6 +106,20 @@ public:
   const_user_range users() const {
     return const_user_range(user_begin(), user_end());
   }
+
+  /// Returns true if the value has more than one unique user.
+  bool hasMoreThanOneUniqueUser() {
+    if (getNumUsers() == 0)
+      return false;
+
+    // Check if all users match the first user.
+    auto Current = std::next(user_begin());
+    while (Current != user_end() && *user_begin() == *Current)
+      Current++;
+    return Current != user_end();
+  }
+
+  void replaceAllUsesWith(VPValue *New);
 };
 
 typedef DenseMap<Value *, VPValue *> Value2VPValueTy;
@@ -150,6 +164,8 @@ public:
     assert(N < Operands.size() && "Operand index out of bounds");
     return Operands[N];
   }
+
+  void setOperand(unsigned I, VPValue *New) { Operands[I] = New; }
 
   typedef SmallVectorImpl<VPValue *>::iterator operand_iterator;
   typedef SmallVectorImpl<VPValue *>::const_iterator const_operand_iterator;
