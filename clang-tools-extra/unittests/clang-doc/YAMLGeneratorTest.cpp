@@ -58,7 +58,7 @@ ChildRecords:
 ChildFunctions:  
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneFunction'
-    ReturnType:      
+    ReturnType:      {}
 ChildEnums:      
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneEnum'
@@ -123,7 +123,7 @@ ChildRecords:
 ChildFunctions:  
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneFunction'
-    ReturnType:      
+    ReturnType:      {}
 ChildEnums:      
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'OneEnum'
