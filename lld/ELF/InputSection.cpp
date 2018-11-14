@@ -668,14 +668,13 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_MIPS_TLSLD:
     return In.MipsGot->getVA() + In.MipsGot->getTlsIndexOffset(File) -
            In.MipsGot->getGp(File);
-  case R_PAGE_PC:
+  case R_PAGE_PC: {
+    uint64_t Val = Sym.isUndefWeak() ? A : Sym.getVA(A);
+    return getAArch64Page(Val) - getAArch64Page(P);
+  }
   case R_PLT_PAGE_PC: {
-    uint64_t Dest;
-    if (Sym.isUndefWeak())
-      Dest = getAArch64Page(A);
-    else
-      Dest = getAArch64Page(Sym.getVA(A));
-    return Dest - getAArch64Page(P);
+    uint64_t Val = Sym.isUndefWeak() ? A : Sym.getPltVA() + A;
+    return getAArch64Page(Val) - getAArch64Page(P);
   }
   case R_RISCV_PC_INDIRECT: {
     const Relocation *HiRel = getRISCVPCRelHi20(&Sym, A);
