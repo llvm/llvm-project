@@ -19,7 +19,6 @@
 #include "test_macros.h"
 
 int main() {
-    typedef std::endian E;
     static_assert(std::is_enum<std::endian>::value, "");
 
 // Check that E is a scoped enum by checking for conversions.

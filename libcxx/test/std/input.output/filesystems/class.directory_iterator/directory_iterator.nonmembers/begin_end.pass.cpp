@@ -32,7 +32,6 @@ TEST_SUITE(directory_iterator_begin_end_tests)
 
 TEST_CASE(test_function_signatures)
 {
-    using D = directory_iterator;
     directory_iterator d; ((void)d);
 
     ASSERT_SAME_TYPE(decltype(begin(d)), directory_iterator);
