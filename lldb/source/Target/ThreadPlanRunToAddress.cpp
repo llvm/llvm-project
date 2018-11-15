@@ -73,6 +73,8 @@ void ThreadPlanRunToAddress::SetInitialBreakpoints() {
                      ->CreateBreakpoint(m_addresses[i], true, false)
                      .get();
     if (breakpoint != nullptr) {
+      if (breakpoint->IsHardware() && !breakpoint->HasResolvedLocations())
+        m_could_not_resolve_hw_bp = true;
       m_break_ids[i] = breakpoint->GetID();
       breakpoint->SetThreadID(m_thread.GetID());
       breakpoint->SetBreakpointKind("run-to-address");
@@ -85,6 +87,7 @@ ThreadPlanRunToAddress::~ThreadPlanRunToAddress() {
   for (size_t i = 0; i < num_break_ids; i++) {
     m_thread.CalculateTarget()->RemoveBreakpointByID(m_break_ids[i]);
   }
+  m_could_not_resolve_hw_bp = false;
 }
 
 void ThreadPlanRunToAddress::GetDescription(Stream *s,
@@ -133,10 +136,15 @@ void ThreadPlanRunToAddress::GetDescription(Stream *s,
 }
 
 bool ThreadPlanRunToAddress::ValidatePlan(Stream *error) {
+  if (m_could_not_resolve_hw_bp) {
+    if (error)
+      error->Printf("Could not set hardware breakpoint(s)");
+    return false;
+  }
+
   // If we couldn't set the breakpoint for some reason, then this won't work.
   bool all_bps_good = true;
   size_t num_break_ids = m_break_ids.size();
-
   for (size_t i = 0; i < num_break_ids; i++) {
     if (m_break_ids[i] == LLDB_INVALID_BREAK_ID) {
       all_bps_good = false;

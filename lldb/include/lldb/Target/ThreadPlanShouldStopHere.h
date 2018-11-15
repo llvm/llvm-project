@@ -101,10 +101,12 @@ public:
 
   void ClearShouldStopHereCallbacks() { m_callbacks.Clear(); }
 
-  bool InvokeShouldStopHereCallback(lldb::FrameComparison operation);
+  bool InvokeShouldStopHereCallback(lldb::FrameComparison operation,
+                                    Status &status);
 
   lldb::ThreadPlanSP
-  CheckShouldStopHereAndQueueStepOut(lldb::FrameComparison operation);
+  CheckShouldStopHereAndQueueStepOut(lldb::FrameComparison operation,
+                                     Status &status);
 
   lldb_private::Flags &GetFlags() { return m_flags; }
 
@@ -114,14 +116,16 @@ protected:
   static bool DefaultShouldStopHereCallback(ThreadPlan *current_plan,
                                             Flags &flags,
                                             lldb::FrameComparison operation,
-                                            void *baton);
+                                            Status &status, void *baton);
 
   static lldb::ThreadPlanSP
   DefaultStepFromHereCallback(ThreadPlan *current_plan, Flags &flags,
-                              lldb::FrameComparison operation, void *baton);
+                              lldb::FrameComparison operation, Status &status,
+                              void *baton);
 
   virtual lldb::ThreadPlanSP
-  QueueStepOutFromHerePlan(Flags &flags, lldb::FrameComparison operation);
+  QueueStepOutFromHerePlan(Flags &flags, lldb::FrameComparison operation,
+                           Status &status);
 
   // Implement this, and call it in the plan's constructor to set the default
   // flags.

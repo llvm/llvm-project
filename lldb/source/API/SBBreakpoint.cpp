@@ -692,6 +692,13 @@ SBBreakpoint::GetNumBreakpointLocationsFromEvent(const lldb::SBEvent &event) {
   return num_locations;
 }
 
+bool SBBreakpoint::IsHardware() const {
+  BreakpointSP bkpt_sp = GetSP();
+  if (bkpt_sp)
+    return bkpt_sp->IsHardware();
+  return false;
+}
+
 BreakpointSP SBBreakpoint::GetSP() const { return m_opaque_wp.lock(); }
 
 // This is simple collection of breakpoint id's and their target.
