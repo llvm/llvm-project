@@ -12,10 +12,6 @@ N: Aaron Ballman
 E: aaron@aaronballman.com
 D: clang-query
 
-N: Peter Collingbourne
-E: peter@pcc.me.uk
-D: clang-query
-
 N: Manuel Klimek
 E: klimek@google.com
 D: clang-rename, all parts of clang-tools-extra not covered by someone else
