@@ -58,6 +58,10 @@ std::vector<SymbolID> getSymbolIDsFromIndex(StringRef QualifiedName,
   auto Names = splitQualifiedName(QualifiedName);
   if (IsGlobalScope || !Names.first.empty())
     Request.Scopes = {Names.first};
+  else
+    // QualifiedName refers to a symbol in global scope (e.g. "GlobalSymbol"),
+    // add the global scope to the request.
+    Request.Scopes = {""};
 
   Request.Query = Names.second;
   std::vector<SymbolID> SymIDs;
