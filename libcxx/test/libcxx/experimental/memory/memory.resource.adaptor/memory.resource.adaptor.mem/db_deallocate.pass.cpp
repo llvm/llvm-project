@@ -30,7 +30,7 @@ namespace ex = std::experimental::pmr;
 int main()
 {
     using Alloc = NullAllocator<char>;
-    using R = ex::resource_adaptor<Alloc>;
+
     AllocController P;
     ex::resource_adaptor<Alloc> r(Alloc{P});
     ex::memory_resource & m1 = r;

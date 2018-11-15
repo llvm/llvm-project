@@ -24,7 +24,6 @@ int main()
 {
     using year               = std::chrono::year;
     using month              = std::chrono::month;
-    using day                = std::chrono::day;
     using weekday            = std::chrono::weekday;
     using weekday_indexed    = std::chrono::weekday_indexed;
     using year_month_weekday = std::chrono::year_month_weekday;
