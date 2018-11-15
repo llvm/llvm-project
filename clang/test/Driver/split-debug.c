@@ -5,6 +5,21 @@
 //
 // CHECK-ACTIONS: "-split-dwarf-file" "split-debug.dwo"
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf -c -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf=split -c -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-ACTIONS < %t %s
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf=single -c -### %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-ACTIONS-SINGLE-SPLIT < %t %s
+//
+// CHECK-ACTIONS-SINGLE-SPLIT: "-enable-split-dwarf=single"
+// CHECK-ACTIONS-SINGLE-SPLIT: "-split-dwarf-file" "split-debug.o"
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -gsplit-dwarf=single -c -### -o %tfoo.o %s 2> %t
+// RUN: FileCheck -check-prefix=CHECK-SINGLE-SPLIT-FILENAME < %t %s
+//
+// CHECK-SINGLE-SPLIT-FILENAME: "-split-dwarf-file" "{{.*}}foo.o"
 
 // RUN: %clang -target x86_64-macosx -gsplit-dwarf -c -### %s 2> %t
 // RUN: FileCheck -check-prefix=CHECK-NO-ACTIONS < %t %s

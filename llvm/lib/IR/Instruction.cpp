@@ -303,6 +303,9 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case CatchPad: return "catchpad";
   case CatchSwitch: return "catchswitch";
 
+  // Standard unary operators...
+  case FNeg: return "fneg";
+
   // Standard binary operators...
   case Add: return "add";
   case FAdd: return "fadd";

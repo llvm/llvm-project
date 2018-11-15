@@ -12755,6 +12755,21 @@ TEST_F(FormatTest, GuessLanguageWithCaret) {
       guessLanguage("foo.h", "int(^foo[(kNumEntries + 10)])(char, float);"));
 }
 
+TEST_F(FormatTest, GuessedLanguageWithInlineAsmClobbers) {
+  EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo.h",
+                                               "void f() {\n"
+                                               "  asm (\"mov %[e], %[d]\"\n"
+                                               "     : [d] \"=rm\" (d)\n"
+                                               "       [e] \"rm\" (*e));\n"
+                                               "}"));
+  EXPECT_EQ(FormatStyle::LK_Cpp,
+            guessLanguage("foo.h", "void f() {\n"
+                                   "  asm volatile (\"mov %[e], %[d]\"\n"
+                                   "     : [d] \"=rm\" (d)\n"
+                                   "       [e] \"rm\" (*e));\n"
+                                   "}"));
+}
+
 TEST_F(FormatTest, GuessLanguageWithChildLines) {
   EXPECT_EQ(FormatStyle::LK_Cpp,
             guessLanguage("foo.h", "#define FOO ({ std::string s; })"));

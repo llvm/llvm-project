@@ -31,6 +31,7 @@
 #include "Commands/CommandObjectProcess.h"
 #include "Commands/CommandObjectQuit.h"
 #include "Commands/CommandObjectRegister.h"
+#include "Commands/CommandObjectReproducer.h"
 #include "Commands/CommandObjectSettings.h"
 #include "Commands/CommandObjectSource.h"
 #include "Commands/CommandObjectStats.h"
@@ -483,6 +484,8 @@ void CommandInterpreter::LoadCommandDictionary() {
   m_command_dict["quit"] = CommandObjectSP(new CommandObjectQuit(*this));
   m_command_dict["register"] =
       CommandObjectSP(new CommandObjectRegister(*this));
+  m_command_dict["reproducer"] =
+      CommandObjectSP(new CommandObjectReproducer(*this));
   m_command_dict["script"] =
       CommandObjectSP(new CommandObjectScript(*this, script_language));
   m_command_dict["settings"] =
@@ -2387,7 +2390,7 @@ void CommandInterpreter::HandleCommandsFromFile(
         flags |= eHandleCommandFlagStopOnError;
       }
 
-      // stop-on-crash can only be set, if it is present in all levels of 
+      // stop-on-crash can only be set, if it is present in all levels of
       // pushed flag sets.
       if (options.GetStopOnCrash()) {
         if (m_command_source_flags.empty()) {

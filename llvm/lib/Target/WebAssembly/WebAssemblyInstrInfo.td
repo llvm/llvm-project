@@ -64,6 +64,7 @@ def SDT_WebAssemblyArgument : SDTypeProfile<1, 1, [SDTCisVT<1, i32>]>;
 def SDT_WebAssemblyReturn   : SDTypeProfile<0, -1, []>;
 def SDT_WebAssemblyWrapper  : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>,
                                                    SDTCisPtrTy<0>]>;
+def SDT_WebAssemblyThrow    : SDTypeProfile<0, 2, [SDTCisPtrTy<0>]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Nodes.
@@ -90,6 +91,8 @@ def WebAssemblyreturn   : SDNode<"WebAssemblyISD::RETURN",
                                  SDT_WebAssemblyReturn, [SDNPHasChain]>;
 def WebAssemblywrapper  : SDNode<"WebAssemblyISD::Wrapper",
                                  SDT_WebAssemblyWrapper>;
+def WebAssemblythrow : SDNode<"WebAssemblyISD::THROW", SDT_WebAssemblyThrow,
+                              [SDNPHasChain]>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific Operands.
@@ -140,6 +143,10 @@ let OperandType = "OPERAND_P2ALIGN" in {
 def P2Align : Operand<i32> {
   let PrintMethod = "printWebAssemblyP2AlignOperand";
 }
+
+let OperandType = "OPERAND_EVENT" in
+def event_op : Operand<i32>;
+
 } // OperandType = "OPERAND_P2ALIGN"
 
 let OperandType = "OPERAND_SIGNATURE" in {

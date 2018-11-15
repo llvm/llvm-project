@@ -7,7 +7,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -26,7 +26,7 @@
 int main ()
 {
     std::span<int, 2> s; // expected-error@span:* {{static_assert failed "Can't default construct a statically sized span with size > 0"}}
-    
+
 //  TODO: This is what I want:
 // eXpected-error {{no matching constructor for initialization of 'std::span<int, 2>'}}
 }

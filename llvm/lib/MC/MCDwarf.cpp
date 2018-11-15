@@ -1418,7 +1418,12 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
     unsigned Reg = Instr.getRegister();
     if (!IsEH)
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
-    Streamer.EmitIntValue(dwarf::DW_CFA_restore | Reg, 1);
+    if (Reg < 64) {
+      Streamer.EmitIntValue(dwarf::DW_CFA_restore | Reg, 1);
+    } else {
+      Streamer.EmitIntValue(dwarf::DW_CFA_restore_extended, 1);
+      Streamer.EmitULEB128IntValue(Reg);
+    }
     return;
   }
   case MCCFIInstruction::OpGnuArgsSize:

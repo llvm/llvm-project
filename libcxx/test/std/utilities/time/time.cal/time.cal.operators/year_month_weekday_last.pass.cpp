@@ -14,19 +14,19 @@
 // constexpr year_month_weekday_last
 //   operator/(const year_month& ym, const weekday_last& wdl) noexcept;
 // Returns: {ym.year(), ym.month(), wdl}.
-// 
+//
 // constexpr year_month_weekday_last
 //   operator/(const year& y, const month_weekday_last& mwdl) noexcept;
 // Returns: {y, mwdl.month(), mwdl.weekday_last()}.
-// 
+//
 // constexpr year_month_weekday_last
 //   operator/(int y, const month_weekday_last& mwdl) noexcept;
 // Returns: year(y) / mwdl.
-// 
+//
 // constexpr year_month_weekday_last
 //   operator/(const month_weekday_last& mwdl, const year& y) noexcept;
 // Returns: y / mwdl.
-// 
+//
 // constexpr year_month_weekday_last
 //   operator/(const month_weekday_last& mwdl, int y) noexcept;
 // Returns: year(y) / mwdl.
@@ -53,7 +53,7 @@ int main()
 
     constexpr weekday Tuesday = std::chrono::Tuesday;
     constexpr month February = std::chrono::February;
-    
+
     { // operator/(const year_month& ym, const weekday_last& wdl) (and switched)
         constexpr year_month Feb2018{year{2018}, February};
 
@@ -63,7 +63,7 @@ int main()
         static_assert((Feb2018/weekday_last{Tuesday}).year()    == year{2018}, "");
         static_assert((Feb2018/weekday_last{Tuesday}).month()   == February,   "");
         static_assert((Feb2018/weekday_last{Tuesday}).weekday() == Tuesday,    "");
-    
+
         for (int i = 1000; i < 1010; ++i)
             for (unsigned j = 1; j <= 12; ++j)
                 for (unsigned k = 0; k <= 6; ++k)
@@ -81,7 +81,7 @@ int main()
 
     { // operator/(const year& y, const month_weekday_last& mwdl) (and switched)
         constexpr month_weekday_last FebLastTues{February, weekday_last{Tuesday}};
-        
+
         ASSERT_NOEXCEPT (                                  year{2018}/FebLastTues);
         ASSERT_SAME_TYPE(year_month_weekday_last, decltype(year{2018}/FebLastTues));
         ASSERT_NOEXCEPT (                                  FebLastTues/year{2018});
@@ -118,7 +118,7 @@ int main()
 
     { // operator/(int y, const month_weekday_last& mwdl) (and switched)
         constexpr month_weekday_last FebLastTues{February, weekday_last{Tuesday}};
-        
+
         ASSERT_NOEXCEPT (                                  2018/FebLastTues);
         ASSERT_SAME_TYPE(year_month_weekday_last, decltype(2018/FebLastTues));
         ASSERT_NOEXCEPT (                                  FebLastTues/2018);

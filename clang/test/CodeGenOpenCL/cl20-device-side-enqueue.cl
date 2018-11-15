@@ -106,6 +106,13 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
                    a[i] = b[i];
                  });
 
+  // COMMON-LABEL: call i32 @__enqueue_kernel_basic_events
+  // COMMON-SAME: (%opencl.queue_t{{.*}}* {{%[0-9]+}}, i32 {{%[0-9]+}}, %struct.ndrange_t* {{.*}}, i32 1, %opencl.clk_event_t{{.*}}* addrspace(4)* {{%[0-9]+}}, %opencl.clk_event_t{{.*}}* addrspace(4)* null,
+  enqueue_kernel(default_queue, flags, ndrange, 1, &event_wait_list, 0,
+                 ^(void) {
+                   return;
+                 });
+
   // Emits global block literal [[BLG1]] and block kernel [[INVGK1]].
   // COMMON: [[DEF_Q:%[0-9]+]] = load %opencl.queue_t{{.*}}*, %opencl.queue_t{{.*}}** %default_queue
   // COMMON: [[FLAGS:%[0-9]+]] = load i32, i32* %flags
@@ -390,7 +397,7 @@ kernel void device_side_enqueue(global int *a, global int *b, int i) {
 // COMMON: define internal spir_kernel void [[INVGK5]](i8 addrspace(4)*{{.*}}, i8 addrspace(3)*{{.*}})
 // COMMON: define internal spir_kernel void [[INVGK6]](i8 addrspace(4)*, i8 addrspace(3)*, i8 addrspace(3)*, i8 addrspace(3)*) #{{[0-9]+}} {
 // COMMON: entry:
-// COMMON:  call void @__device_side_enqueue_block_invoke_8(i8 addrspace(4)* %0, i8 addrspace(3)* %1, i8 addrspace(3)* %2, i8 addrspace(3)* %3)
+// COMMON:  call void @__device_side_enqueue_block_invoke_9(i8 addrspace(4)* %0, i8 addrspace(3)* %1, i8 addrspace(3)* %2, i8 addrspace(3)* %3)
 // COMMON:  ret void
 // COMMON: }
 // COMMON: define internal spir_kernel void [[INVGK7]](i8 addrspace(4)*{{.*}}, i8 addrspace(3)*{{.*}})

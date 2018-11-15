@@ -316,6 +316,32 @@ void SectionChunk::applyRelARM64(uint8_t *Off, uint16_t Type, OutputSection *OS,
   }
 }
 
+static void maybeReportRelocationToDiscarded(const SectionChunk *FromChunk,
+                                             Defined *Sym,
+                                             const coff_relocation &Rel) {
+  // Don't report these errors when the relocation comes from a debug info
+  // section or in mingw mode. MinGW mode object files (built by GCC) can
+  // have leftover sections with relocations against discarded comdat
+  // sections. Such sections are left as is, with relocations untouched.
+  if (FromChunk->isCodeView() || FromChunk->isDWARF() || Config->MinGW)
+    return;
+
+  // Get the name of the symbol. If it's null, it was discarded early, so we
+  // have to go back to the object file.
+  ObjFile *File = FromChunk->File;
+  StringRef Name;
+  if (Sym) {
+    Name = Sym->getName();
+  } else {
+    COFFSymbolRef COFFSym =
+        check(File->getCOFFObj()->getSymbol(Rel.SymbolTableIndex));
+    File->getCOFFObj()->getSymbolName(COFFSym, Name);
+  }
+
+  error("relocation against symbol in discarded section: " + Name +
+        getSymbolLocations(File, Rel.SymbolTableIndex));
+}
+
 void SectionChunk::writeTo(uint8_t *Buf) const {
   if (!hasData())
     return;
@@ -343,42 +369,23 @@ void SectionChunk::writeTo(uint8_t *Buf) const {
     // Use the potentially remapped Symbol instead of the one that the
     // relocation points to.
     auto *Sym = dyn_cast_or_null<Defined>(RelocTargets[I]);
-    if (!Sym) {
-      if (isCodeView() || isDWARF())
-        continue;
-      // Symbols in early discarded sections are represented using null pointers,
-      // so we need to retrieve the name from the object file.
-      COFFSymbolRef Sym =
-          check(File->getCOFFObj()->getSymbol(Rel.SymbolTableIndex));
-      StringRef Name;
-      File->getCOFFObj()->getSymbolName(Sym, Name);
 
-      // MinGW mode object files (built by GCC) can have leftover sections
-      // with relocations against discarded comdat sections. Such sections
-      // are left as is, with relocations untouched.
-      if (!Config->MinGW)
-        error("relocation against symbol in discarded section: " + Name +
-              getSymbolLocations(File, Rel.SymbolTableIndex));
-      continue;
-    }
     // Get the output section of the symbol for this relocation.  The output
     // section is needed to compute SECREL and SECTION relocations used in debug
     // info.
-    Chunk *C = Sym->getChunk();
+    Chunk *C = Sym ? Sym->getChunk() : nullptr;
     OutputSection *OS = C ? C->getOutputSection() : nullptr;
 
-    // Only absolute and __ImageBase symbols lack an output section. For any
-    // other symbol, this indicates that the chunk was discarded.  Normally
-    // relocations against discarded sections are an error.  However, debug info
-    // sections are not GC roots and can end up with these kinds of relocations.
-    // Skip these relocations.
-    if (!OS && !isa<DefinedAbsolute>(Sym) && !isa<DefinedSynthetic>(Sym)) {
-      if (isCodeView() || isDWARF())
-        continue;
-      error("relocation against symbol in discarded section: " +
-            Sym->getName() + getSymbolLocations(File, Rel.SymbolTableIndex));
+    // Skip the relocation if it refers to a discarded section, and diagnose it
+    // as an error if appropriate. If a symbol was discarded early, it may be
+    // null. If it was discarded late, the output section will be null, unless
+    // it was an absolute or synthetic symbol.
+    if (!Sym ||
+        (!OS && !isa<DefinedAbsolute>(Sym) && !isa<DefinedSynthetic>(Sym))) {
+      maybeReportRelocationToDiscarded(this, Sym, Rel);
       continue;
     }
+
     uint64_t S = Sym->getRVA();
 
     // Compute the RVA of the relocation for relative relocations.

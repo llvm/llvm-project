@@ -20,7 +20,7 @@
 int main()
 {
     using weekday = std::chrono::weekday;
-    
+
     static_assert(std::is_trivially_copyable_v<weekday>, "");
     static_assert(std::is_standard_layout_v<weekday>, "");
 }

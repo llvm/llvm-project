@@ -103,16 +103,6 @@ def X86vzmovl  : SDNode<"X86ISD::VZEXT_MOVL",
 def X86vzload  : SDNode<"X86ISD::VZEXT_LOAD", SDTLoad,
                         [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
-def X86vzext   : SDNode<"X86ISD::VZEXT",
-                         SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>,
-                                              SDTCisInt<0>, SDTCisInt<1>,
-                                              SDTCisOpSmallerThanOp<1, 0>]>>;
-
-def X86vsext   : SDNode<"X86ISD::VSEXT",
-                         SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>,
-                                              SDTCisInt<0>, SDTCisInt<1>,
-                                              SDTCisOpSmallerThanOp<1, 0>]>>;
-
 def SDTVtrunc    : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>,
                                        SDTCisInt<0>, SDTCisInt<1>,
                                        SDTCisOpSmallerThanOp<0, 1>]>;

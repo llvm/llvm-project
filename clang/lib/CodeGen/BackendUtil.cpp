@@ -468,7 +468,7 @@ static void initTargetOptions(llvm::TargetOptions &Options,
   Options.EmitStackSizeSection = CodeGenOpts.StackSizeSection;
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
 
-  if (CodeGenOpts.EnableSplitDwarf)
+  if (CodeGenOpts.getSplitDwarfMode() != CodeGenOptions::NoFission)
     Options.MCOptions.SplitDwarfFile = CodeGenOpts.SplitDwarfFile;
   Options.MCOptions.MCRelaxAll = CodeGenOpts.RelaxAll;
   Options.MCOptions.MCSaveTempLabels = CodeGenOpts.SaveTempLabels;
@@ -832,7 +832,8 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
     break;
 
   default:
-    if (!CodeGenOpts.SplitDwarfFile.empty()) {
+    if (!CodeGenOpts.SplitDwarfFile.empty() &&
+        (CodeGenOpts.getSplitDwarfMode() == CodeGenOptions::SplitFileFission)) {
       DwoOS = openOutputFile(CodeGenOpts.SplitDwarfFile);
       if (!DwoOS)
         return;

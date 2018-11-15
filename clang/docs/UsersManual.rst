@@ -2947,8 +2947,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Yc<filename>           Generate a pch file for all code up to and including <filename>
       /Yu<filename>           Load a pch file and use it instead of all code up to and including <filename>
       /Z7                     Enable CodeView debug information in object files
-      /Zc:dllexportInlines-   Don't dllexport/import inline member functions of dllexport/import classes
-      /Zc:dllexportInlines    dllexport/import inline member functions of dllexport/import classes (default)
+      /Zc:dllexportInlines-   Don't dllexport/dllimport inline member functions of dllexport/import classes
+      /Zc:dllexportInlines    dllexport/dllimport inline member functions of dllexport/import classes (default)
       /Zc:sizedDealloc-       Disable C++14 sized global deallocation functions
       /Zc:sizedDealloc        Enable C++14 sized global deallocation functions
       /Zc:strictStrings       Treat string literals as const
@@ -3101,10 +3101,10 @@ line.
 The /Zc:dllexportInlines- Option
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This causes the class-level `dllexport` and `dllimport` attributes not to be
-applied to inline member functions, as they otherwise would. For example, in
-the code below `S::foo()` would normally be defined and exported by the DLL,
-but when using the ``/Zc:dllexportInlines-`` flag it is not:
+This causes the class-level `dllexport` and `dllimport` attributes to not apply
+to inline member functions, as they otherwise would. For example, in the code
+below `S::foo()` would normally be defined and exported by the DLL, but when
+using the ``/Zc:dllexportInlines-`` flag it is not:
 
 .. code-block:: c
 
@@ -3170,7 +3170,8 @@ different instance of that variable than in the DLL:
   }
 
 This could lead to very subtle bugs. Using ``-fvisibility-inlines-hidden`` can
-lead to the same issue.
+lead to the same issue. To avoid it in this case, make `S::foo()` or
+`internal()` non-inline, or mark them `dllimport/dllexport` explicitly.
 
 The /fallback Option
 ^^^^^^^^^^^^^^^^^^^^

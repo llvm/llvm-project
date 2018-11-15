@@ -15,9 +15,9 @@
 //   Returns: x.year() == y.year() && x.month() == y.month().
 //
 // constexpr bool operator< (const year_month& x, const year_month& y) noexcept;
-//   Returns: 
-//      If x.year() < y.year() returns true. 
-//      Otherwise, if x.year() > y.year() returns false. 
+//   Returns:
+//      If x.year() < y.year() returns true.
+//      Otherwise, if x.year() > y.year() returns false.
 //      Otherwise, returns x.month() < y.month().
 
 #include <chrono>
@@ -35,19 +35,19 @@ int main()
 
     AssertComparisons6AreNoexcept<year_month>();
     AssertComparisons6ReturnBool<year_month>();
-    
+
     static_assert( testComparisons6(
-        year_month{year{1234}, std::chrono::January}, 
+        year_month{year{1234}, std::chrono::January},
         year_month{year{1234}, std::chrono::January},
         true, false), "");
-    
+
     static_assert( testComparisons6(
-        year_month{year{1234}, std::chrono::January}, 
+        year_month{year{1234}, std::chrono::January},
         year_month{year{1234}, std::chrono::February},
         false, true), "");
 
     static_assert( testComparisons6(
-        year_month{year{1234}, std::chrono::January}, 
+        year_month{year{1234}, std::chrono::January},
         year_month{year{1235}, std::chrono::January},
         false, true), "");
 
@@ -55,15 +55,15 @@ int main()
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
             assert((testComparisons6(
-                year_month{year{1234}, month{i}}, 
-                year_month{year{1234}, month{j}}, 
+                year_month{year{1234}, month{i}},
+                year_month{year{1234}, month{j}},
                 i == j, i < j )));
-    
+
 //  same month, different years
     for (int i = 1000; i < 20; ++i)
         for (int j = 1000; j < 20; ++j)
         assert((testComparisons6(
-            year_month{year{i}, std::chrono::January}, 
+            year_month{year{i}, std::chrono::January},
             year_month{year{j}, std::chrono::January},
             i == j, i < j )));
 }

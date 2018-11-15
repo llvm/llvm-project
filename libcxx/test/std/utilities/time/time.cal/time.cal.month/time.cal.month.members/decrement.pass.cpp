@@ -34,13 +34,13 @@ constexpr bool testConstexpr()
 int main()
 {
     using month = std::chrono::month;
-    
+
     ASSERT_NOEXCEPT(--(std::declval<month&>())  );
     ASSERT_NOEXCEPT(  (std::declval<month&>())--);
 
     ASSERT_SAME_TYPE(month , decltype(  std::declval<month&>()--));
     ASSERT_SAME_TYPE(month&, decltype(--std::declval<month&>()  ));
-    
+
     static_assert(testConstexpr<month>(), "");
 
     for (unsigned i = 10; i <= 20; ++i)

@@ -362,6 +362,12 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     case 'Z':
       if (Target.getTriple().isOSMSVCRT())
         k = ConversionSpecifier::ZArg;
+      break;
+    // OpenCL specific.
+    case 'v':
+      if (LO.OpenCL)
+        k = ConversionSpecifier::VArg;
+      break;
   }
 
   // Check to see if we used the Objective-C modifier flags with
@@ -1026,6 +1032,7 @@ bool PrintfSpecifier::hasValidPrecision() const {
   case ConversionSpecifier::FreeBSDrArg:
   case ConversionSpecifier::FreeBSDyArg:
   case ConversionSpecifier::PArg:
+  case ConversionSpecifier::VArg:
     return true;
 
   default:

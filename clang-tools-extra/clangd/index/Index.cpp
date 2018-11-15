@@ -165,7 +165,8 @@ raw_ostream &operator<<(raw_ostream &OS, const Ref &R) {
 void RefSlab::Builder::insert(const SymbolID &ID, const Ref &S) {
   auto &M = Refs[ID];
   M.push_back(S);
-  M.back().Location.FileURI = UniqueStrings.save(M.back().Location.FileURI);
+  M.back().Location.FileURI =
+      UniqueStrings.save(M.back().Location.FileURI).data();
 }
 
 RefSlab RefSlab::Builder::build() && {

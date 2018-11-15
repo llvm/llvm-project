@@ -109,7 +109,7 @@ public:
                                              const char *archname);
 
   lldb::SBTarget CreateTarget(const char *filename);
-  
+
   lldb::SBTarget GetDummyTarget();
 
   // Return true if target is deleted from the target list of the debugger.
@@ -225,6 +225,10 @@ public:
   const char *GetPrompt() const;
 
   void SetPrompt(const char *prompt);
+
+  const char *GetReproducerPath() const;
+
+  void SetReproducerPath(const char *reproducer);
 
   lldb::ScriptLanguage GetScriptLanguage() const;
 

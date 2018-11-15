@@ -2654,28 +2654,16 @@ bool JumpThreadingPass::ThreadGuard(BasicBlock *BB, IntrinsicInst *Guard,
   // Duplicate all instructions before the guard and the guard itself to the
   // branch where implication is not proved.
   BasicBlock *GuardedBlock = DuplicateInstructionsInSplitBetween(
-      BB, PredGuardedBlock, AfterGuard, GuardedMapping);
+      BB, PredGuardedBlock, AfterGuard, GuardedMapping, *DTU);
   assert(GuardedBlock && "Could not create the guarded block?");
   // Duplicate all instructions before the guard in the unguarded branch.
   // Since we have successfully duplicated the guarded block and this block
   // has fewer instructions, we expect it to succeed.
   BasicBlock *UnguardedBlock = DuplicateInstructionsInSplitBetween(
-      BB, PredUnguardedBlock, Guard, UnguardedMapping);
+      BB, PredUnguardedBlock, Guard, UnguardedMapping, *DTU);
   assert(UnguardedBlock && "Could not create the unguarded block?");
   LLVM_DEBUG(dbgs() << "Moved guard " << *Guard << " to block "
                     << GuardedBlock->getName() << "\n");
-  // DuplicateInstructionsInSplitBetween inserts a new block "BB.split" between
-  // PredBB and BB. We need to perform two inserts and one delete for each of
-  // the above calls to update Dominators.
-  DTU->applyUpdates(
-      {// Guarded block split.
-       {DominatorTree::Delete, PredGuardedBlock, BB},
-       {DominatorTree::Insert, PredGuardedBlock, GuardedBlock},
-       {DominatorTree::Insert, GuardedBlock, BB},
-       // Unguarded block split.
-       {DominatorTree::Delete, PredUnguardedBlock, BB},
-       {DominatorTree::Insert, PredUnguardedBlock, UnguardedBlock},
-       {DominatorTree::Insert, UnguardedBlock, BB}});
   // Some instructions before the guard may still have uses. For them, we need
   // to create Phi nodes merging their copies in both guarded and unguarded
   // branches. Those instructions that have no uses can be just removed.

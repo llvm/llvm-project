@@ -2413,19 +2413,29 @@ readAddressAreas(DWARFContext &Dwarf, InputSection *Sec) {
 }
 
 template <class ELFT>
-static std::vector<GdbIndexSection::NameTypeEntry>
-readPubNamesAndTypes(DWARFContext &Dwarf, uint32_t Idx) {
-  auto &Obj = static_cast<const LLDDwarfObj<ELFT> &>(Dwarf.getDWARFObj());
+static std::vector<GdbIndexSection::NameAttrEntry>
+readPubNamesAndTypes(const LLDDwarfObj<ELFT> &Obj,
+                     const std::vector<GdbIndexSection::CuEntry> &CUs) {
   const DWARFSection &PubNames = Obj.getGnuPubNamesSection();
   const DWARFSection &PubTypes = Obj.getGnuPubTypesSection();
 
-  std::vector<GdbIndexSection::NameTypeEntry> Ret;
+  std::vector<GdbIndexSection::NameAttrEntry> Ret;
   for (const DWARFSection *Pub : {&PubNames, &PubTypes}) {
     DWARFDebugPubTable Table(Obj, *Pub, Config->IsLE, true);
-    for (const DWARFDebugPubTable::Set &Set : Table.getData())
+    uint32_t I = 0;
+    for (const DWARFDebugPubTable::Set &Set : Table.getData()) {
+      // The value written into the constant pool is Kind << 24 | CuIndex. As we
+      // don't know how many compilation units precede this object to compute
+      // CuIndex, we compute (Kind << 24 | CuIndexInThisObject) instead, and add
+      // the number of preceding compilation units later.
+      //
+      // We assume both CUs[*].CuOff and Set.Offset are increasing.
+      while (I < CUs.size() && CUs[I].CuOffset < Set.Offset)
+        ++I;
       for (const DWARFDebugPubTable::Entry &Ent : Set.Entries)
         Ret.push_back({{Ent.Name, computeGdbHash(Ent.Name)},
-                       (Ent.Descriptor.toBits() << 24) | Idx});
+                       (Ent.Descriptor.toBits() << 24) | I});
+    }
   }
   return Ret;
 }
@@ -2433,9 +2443,18 @@ readPubNamesAndTypes(DWARFContext &Dwarf, uint32_t Idx) {
 // Create a list of symbols from a given list of symbol names and types
 // by uniquifying them by name.
 static std::vector<GdbIndexSection::GdbSymbol>
-createSymbols(ArrayRef<std::vector<GdbIndexSection::NameTypeEntry>> NameTypes) {
+createSymbols(ArrayRef<std::vector<GdbIndexSection::NameAttrEntry>> NameAttrs,
+              const std::vector<GdbIndexSection::GdbChunk> &Chunks) {
   typedef GdbIndexSection::GdbSymbol GdbSymbol;
-  typedef GdbIndexSection::NameTypeEntry NameTypeEntry;
+  typedef GdbIndexSection::NameAttrEntry NameAttrEntry;
+
+  // For each chunk, compute the number of compilation units preceding it.
+  uint32_t CuIdx = 0;
+  std::vector<uint32_t> CuIdxs(Chunks.size());
+  for (uint32_t I = 0, E = Chunks.size(); I != E; ++I) {
+    CuIdxs[I] = CuIdx;
+    CuIdx += Chunks[I].CompilationUnits.size();
+  }
 
   // The number of symbols we will handle in this function is of the order
   // of millions for very large executables, so we use multi-threading to
@@ -2453,21 +2472,24 @@ createSymbols(ArrayRef<std::vector<GdbIndexSection::NameTypeEntry>> NameTypes) {
   // Instantiate GdbSymbols while uniqufying them by name.
   std::vector<std::vector<GdbSymbol>> Symbols(NumShards);
   parallelForEachN(0, Concurrency, [&](size_t ThreadId) {
-    for (ArrayRef<NameTypeEntry> Entries : NameTypes) {
-      for (const NameTypeEntry &Ent : Entries) {
+    uint32_t I = 0;
+    for (ArrayRef<NameAttrEntry> Entries : NameAttrs) {
+      for (const NameAttrEntry &Ent : Entries) {
         size_t ShardId = Ent.Name.hash() >> Shift;
         if ((ShardId & (Concurrency - 1)) != ThreadId)
           continue;
 
+        uint32_t V = Ent.CuIndexAndAttrs + CuIdxs[I];
         size_t &Idx = Map[ShardId][Ent.Name];
         if (Idx) {
-          Symbols[ShardId][Idx - 1].CuVector.push_back(Ent.Type);
+          Symbols[ShardId][Idx - 1].CuVector.push_back(V);
           continue;
         }
 
         Idx = Symbols[ShardId].size() + 1;
-        Symbols[ShardId].push_back({Ent.Name, {Ent.Type}, 0, 0});
+        Symbols[ShardId].push_back({Ent.Name, {V}, 0, 0});
       }
+      ++I;
     }
   });
 
@@ -2510,7 +2532,7 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
       S->Live = false;
 
   std::vector<GdbChunk> Chunks(Sections.size());
-  std::vector<std::vector<NameTypeEntry>> NameTypes(Sections.size());
+  std::vector<std::vector<NameAttrEntry>> NameAttrs(Sections.size());
 
   parallelForEachN(0, Sections.size(), [&](size_t I) {
     ObjFile<ELFT> *File = Sections[I]->getFile<ELFT>();
@@ -2519,12 +2541,14 @@ template <class ELFT> GdbIndexSection *GdbIndexSection::create() {
     Chunks[I].Sec = Sections[I];
     Chunks[I].CompilationUnits = readCuList(Dwarf);
     Chunks[I].AddressAreas = readAddressAreas(Dwarf, Sections[I]);
-    NameTypes[I] = readPubNamesAndTypes<ELFT>(Dwarf, I);
+    NameAttrs[I] = readPubNamesAndTypes<ELFT>(
+        static_cast<const LLDDwarfObj<ELFT> &>(Dwarf.getDWARFObj()),
+        Chunks[I].CompilationUnits);
   });
 
   auto *Ret = make<GdbIndexSection>();
   Ret->Chunks = std::move(Chunks);
-  Ret->Symbols = createSymbols(NameTypes);
+  Ret->Symbols = createSymbols(NameAttrs, Ret->Chunks);
   Ret->initOutputSize();
   return Ret;
 }
@@ -3044,6 +3068,53 @@ bool ThunkSection::assignOffsets() {
   bool Changed = Off != Size;
   Size = Off;
   return Changed;
+}
+
+// If linking position-dependent code then the table will store the addresses
+// directly in the binary so the section has type SHT_PROGBITS. If linking
+// position-independent code the section has type SHT_NOBITS since it will be
+// allocated and filled in by the dynamic linker.
+PPC64LongBranchTargetSection::PPC64LongBranchTargetSection()
+    : SyntheticSection(SHF_ALLOC | SHF_WRITE,
+                       Config->Pic ? SHT_NOBITS : SHT_PROGBITS, 8,
+                       ".branch_lt") {}
+
+void PPC64LongBranchTargetSection::addEntry(Symbol &Sym) {
+  assert(Sym.PPC64BranchltIndex == 0xffff);
+  Sym.PPC64BranchltIndex = Entries.size();
+  Entries.push_back(&Sym);
+}
+
+size_t PPC64LongBranchTargetSection::getSize() const {
+  return Entries.size() * 8;
+}
+
+void PPC64LongBranchTargetSection::writeTo(uint8_t *Buf) {
+  assert(Target->GotPltEntrySize == 8);
+  // If linking non-pic we have the final addresses of the targets and they get
+  // written to the table directly. For pic the dynamic linker will allocate
+  // the section and fill it it.
+  if (Config->Pic)
+    return;
+
+  for (const Symbol *Sym : Entries) {
+    assert(Sym->getVA());
+    // Need calls to branch to the local entry-point since a long-branch
+    // must be a local-call.
+    write64(Buf,
+            Sym->getVA() + getPPC64GlobalEntryToLocalEntryOffset(Sym->StOther));
+    Buf += Target->GotPltEntrySize;
+  }
+}
+
+bool PPC64LongBranchTargetSection::empty() const {
+  // `removeUnusedSyntheticSections()` is called before thunk allocation which
+  // is too early to determine if this section will be empty or not. We need
+  // Finalized to keep the section alive until after thunk creation. Finalized
+  // only gets set to true once `finalizeSections()` is called after thunk
+  // creation. Becuase of this, if we don't create any long-branch thunks we end
+  // up with an empty .branch_lt section in the binary.
+  return Finalized && Entries.empty();
 }
 
 InStruct elf::In;

@@ -15,7 +15,7 @@
 //  explicit constexpr year_month_day(const local_days& dp) noexcept;
 //
 //
-//  Effects:  Constructs an object of type year_month_day that corresponds 
+//  Effects:  Constructs an object of type year_month_day that corresponds
 //                to the date represented by dp
 //
 //  Remarks: Equivalent to constructing with sys_days{dp.time_since_epoch()}.

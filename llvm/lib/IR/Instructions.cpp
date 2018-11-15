@@ -1957,6 +1957,59 @@ Type *ExtractValueInst::getIndexedType(Type *Agg,
 }
 
 //===----------------------------------------------------------------------===//
+//                             UnaryOperator Class
+//===----------------------------------------------------------------------===//
+
+UnaryOperator::UnaryOperator(UnaryOps iType, Value *S,
+                             Type *Ty, const Twine &Name,
+                             Instruction *InsertBefore)
+  : UnaryInstruction(Ty, iType, S, InsertBefore) {
+  Op<0>() = S;
+  setName(Name);
+  AssertOK();
+}
+
+UnaryOperator::UnaryOperator(UnaryOps iType, Value *S,
+                             Type *Ty, const Twine &Name,
+                             BasicBlock *InsertAtEnd)
+  : UnaryInstruction(Ty, iType, S, InsertAtEnd) {
+  Op<0>() = S;
+  setName(Name);
+  AssertOK();
+}
+
+UnaryOperator *UnaryOperator::Create(UnaryOps Op, Value *S,
+                                     const Twine &Name,
+                                     Instruction *InsertBefore) {
+  return new UnaryOperator(Op, S, S->getType(), Name, InsertBefore);
+}
+
+UnaryOperator *UnaryOperator::Create(UnaryOps Op, Value *S,
+                                     const Twine &Name,
+                                     BasicBlock *InsertAtEnd) {
+  UnaryOperator *Res = Create(Op, S, Name);
+  InsertAtEnd->getInstList().push_back(Res);
+  return Res;
+}
+
+void UnaryOperator::AssertOK() {
+  Value *LHS = getOperand(0);
+  (void)LHS; // Silence warnings.
+#ifndef NDEBUG
+  switch (getOpcode()) {
+  case FNeg:
+    assert(getType() == LHS->getType() &&
+           "Unary operation should return same type as operand!");
+    assert(getType()->isFPOrFPVectorTy() &&
+           "Tried to create a floating-point operation on a "
+           "non-floating-point type!");
+    break;
+  default: llvm_unreachable("Invalid opcode provided");
+  }
+#endif
+}
+
+//===----------------------------------------------------------------------===//
 //                             BinaryOperator Class
 //===----------------------------------------------------------------------===//
 
@@ -3695,6 +3748,10 @@ void IndirectBrInst::removeDestination(unsigned idx) {
 
 GetElementPtrInst *GetElementPtrInst::cloneImpl() const {
   return new (getNumOperands()) GetElementPtrInst(*this);
+}
+
+UnaryOperator *UnaryOperator::cloneImpl() const {
+  return Create(getOpcode(), Op<0>());
 }
 
 BinaryOperator *BinaryOperator::cloneImpl() const {

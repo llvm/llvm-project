@@ -7,12 +7,12 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
 // constexpr span(pointer first, pointer last);
-// Requires: [first, last) shall be a valid range. 
+// Requires: [first, last) shall be a valid range.
 //   If extent is not equal to dynamic_extent, then last - first shall be equal to extent.
 //
 
@@ -38,7 +38,7 @@ int main ()
     std::span<float>    s1(arr, arr + 3);   // expected-error {{no matching constructor for initialization of 'std::span<float>'}}
     std::span<float, 3> s2(arr, arr + 3);   // expected-error {{no matching constructor for initialization of 'std::span<float, 3>'}}
     }
-    
+
 //  CV wrong (dynamically sized)
     {
     std::span<               int> s1{ carr,  carr + 3}; // expected-error {{no matching constructor for initialization of 'std::span<int>'}}

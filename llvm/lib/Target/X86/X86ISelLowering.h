@@ -295,11 +295,6 @@ namespace llvm {
       // Vector move to low scalar and zero higher vector elements.
       VZEXT_MOVL,
 
-      // Vector integer zero-extend.
-      VZEXT,
-      // Vector integer signed-extend.
-      VSEXT,
-
       // Vector integer truncate.
       VTRUNC,
       // Vector integer truncate with unsigned/signed saturation.

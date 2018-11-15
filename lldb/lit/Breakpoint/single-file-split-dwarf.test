@@ -1,0 +1,44 @@
+# RUN: rm -rf %t.dir
+# RUN: mkdir %t.dir
+# RUN: cd %t.dir
+# RUN: yaml2obj %p/Inputs/single-file-split-dwarf.yaml > %t.dir/test
+# RUN: yaml2obj %p/Inputs/single-file-split-dwarf.o.yaml > %t.dir/test.o
+# RUN: lldb-test breakpoints %t.dir/test %s | FileCheck %s
+
+# This test checks that source code location is shown correctly
+# when single split file debug information is used (when .dwo sections are in .o files).
+#
+# single-file-split-dwarf.yaml and single-file-split-dwarf.o.yaml are
+# reduced yaml files produces from the object file and the corresponding executable.
+#
+# The following code was used initially:
+# int main() {
+#   return 0;
+# }
+# 
+# void foo() {
+# }
+#
+# Invocation used to produce .o file was:
+# clang test.cpp -gdwarf-5 -gsplit-dwarf=single -c -o test.o -v
+#
+# The full invocation used to produce the executable was:
+# "/usr/local/bin/ld" -z relro --hash-style=gnu --eh-frame-hdr -m elf_x86_64 -dynamic-linker
+#  /lib64/ld-linux-x86-64.so.2 -o test /usr/lib/gcc/x86_64-linux-gnu/7.3.0/../../../x86_64-linux-gnu/crt1.o
+#  /usr/lib/gcc/x86_64-linux-gnu/7.3.0/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/7.3.0/crtbegin.o
+#  -L/usr/lib/gcc/x86_64-linux-gnu/7.3.0 -L/usr/lib/gcc/x86_64-linux-gnu/7.3.0/../../../x86_64-linux-gnu
+#  -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/7.3.0/../../..
+#  -L/home/umb/LLVM/build/bin/../lib -L/lib -L/usr/lib test.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc
+#  --as-needed -lgcc_s --no-as-needed /usr/lib/gcc/x86_64-linux-gnu/7.3.0/crtend.o
+#  /usr/lib/gcc/x86_64-linux-gnu/7.3.0/../../../x86_64-linux-gnu/crtn.o
+#
+# Also, the DW_AT_comp_dir string value set to empty in yaml produced. 
+# Build bots had different path there and failed to find object.
+
+b main
+# CHECK-LABEL: b main
+# CHECK: Address: {{.*}}main + 13 at test.cpp:2:3
+
+b foo
+# CHECK-LABEL: b foo
+# CHECK: Address: {{.*}}foo() + 4 at test.cpp:6:1

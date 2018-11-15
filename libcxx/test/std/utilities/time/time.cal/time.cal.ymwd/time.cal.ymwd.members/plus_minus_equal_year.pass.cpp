@@ -49,7 +49,7 @@ int main()
 
     ASSERT_NOEXCEPT(                               std::declval<year_month_weekday&>() -= std::declval<years>());
     ASSERT_SAME_TYPE(year_month_weekday&, decltype(std::declval<year_month_weekday&>() -= std::declval<years>()));
-    
+
     constexpr weekday Tuesday = std::chrono::Tuesday;
     constexpr month January = std::chrono::January;
 

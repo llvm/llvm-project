@@ -1762,10 +1762,9 @@ Instruction *InstCombiner::visitAnd(BinaryOperator &I) {
   return nullptr;
 }
 
-/// Given an OR instruction, check to see if this is a bswap idiom. If so,
-/// insert the new intrinsic and return it.
-Instruction *InstCombiner::MatchBSwap(BinaryOperator &I) {
-  Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
+Instruction *InstCombiner::matchBSwap(BinaryOperator &Or) {
+  assert(Or.getOpcode() == Instruction::Or && "bswap requires an 'or'");
+  Value *Op0 = Or.getOperand(0), *Op1 = Or.getOperand(1);
 
   // Look through zero extends.
   if (Instruction *Ext = dyn_cast<ZExtInst>(Op0))
@@ -1801,7 +1800,7 @@ Instruction *InstCombiner::MatchBSwap(BinaryOperator &I) {
     return nullptr;
 
   SmallVector<Instruction*, 4> Insts;
-  if (!recognizeBSwapOrBitReverseIdiom(&I, true, false, Insts))
+  if (!recognizeBSwapOrBitReverseIdiom(&Or, true, false, Insts))
     return nullptr;
   Instruction *LastInst = Insts.pop_back_val();
   LastInst->removeFromParent();
@@ -2168,7 +2167,7 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (Instruction *FoldedLogic = foldBinOpIntoSelectOrPhi(I))
     return FoldedLogic;
 
-  if (Instruction *BSwap = MatchBSwap(I))
+  if (Instruction *BSwap = matchBSwap(I))
     return BSwap;
 
   Value *X, *Y;

@@ -20,7 +20,7 @@
 //  constexpr chrono::weekday weekday() const noexcept;
 //  constexpr unsigned        index()   const noexcept;
 //  constexpr bool ok()                 const noexcept;
-         
+
 #include <chrono>
 #include <type_traits>
 #include <cassert>
@@ -34,7 +34,7 @@ int main()
 
     ASSERT_NOEXCEPT(weekday_indexed{});
     ASSERT_NOEXCEPT(weekday_indexed(weekday{1}, 1));
-    
+
     constexpr weekday_indexed wdi0{};
     static_assert( wdi0.weekday() == weekday{}, "");
     static_assert( wdi0.index() == 0,           "");
@@ -44,7 +44,7 @@ int main()
     static_assert( wdi1.weekday() == std::chrono::Sunday, "");
     static_assert( wdi1.index() == 2,                     "");
     static_assert( wdi1.ok(),                             "");
-    
+
     for (unsigned i = 1; i <= 5; ++i)
     {
         weekday_indexed wdi(std::chrono::Tuesday, i);

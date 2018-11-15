@@ -79,11 +79,12 @@ WebAssemblyTargetStreamer *WebAssemblyAsmPrinter::getTargetStreamer() {
 
 void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
   for (auto &It : OutContext.getSymbols()) {
-    // Emit a .globaltype declaration.
+    // Emit a .globaltype and .eventtype declaration.
     auto Sym = cast<MCSymbolWasm>(It.getValue());
-    if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_GLOBAL) {
+    if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_GLOBAL)
       getTargetStreamer()->emitGlobalType(Sym);
-    }
+    else if (Sym->getType() == wasm::WASM_SYMBOL_TYPE_EVENT)
+      getTargetStreamer()->emitEventType(Sym);
   }
 
   for (const auto &F : M) {

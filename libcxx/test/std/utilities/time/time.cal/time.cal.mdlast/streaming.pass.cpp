@@ -15,7 +15,7 @@
 // template<class charT, class traits>
 //     basic_ostream<charT, traits>&
 //     operator<<(basic_ostream<charT, traits>& os, const month_day_last& mdl);
-// 
+//
 //     Returns: os << mdl.month() << "/last".
 
 

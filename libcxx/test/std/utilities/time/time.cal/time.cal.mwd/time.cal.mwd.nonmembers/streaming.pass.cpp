@@ -15,7 +15,7 @@
 // template<class charT, class traits>
 //     basic_ostream<charT, traits>&
 //     operator<<(basic_ostream<charT, traits>& os, const month_weekday& mwd);
-// 
+//
 //     Returns: os << mwd.month() << '/' << mwd.weekday_indexed().
 
 #include <chrono>
@@ -31,6 +31,6 @@ int main()
     using month           = std::chrono::month;
     using weekday_indexed = std::chrono::weekday_indexed;
     using weekday         = std::chrono::weekday;
-    
+
     std::cout << month_weekday{month{1}, weekday_indexed{weekday{3}, 3}};
 }

@@ -76,6 +76,7 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
 void getSignature(const CodeCompletionString &CCS, std::string *Signature,
                   std::string *Snippet, std::string *RequiredQualifiers) {
   unsigned ArgCount = 0;
+  bool HadObjCArguments = false;
   for (const auto &Chunk : CCS) {
     // Informative qualifier chunks only clutter completion results, skip
     // them.
@@ -85,13 +86,36 @@ void getSignature(const CodeCompletionString &CCS, std::string *Signature,
     switch (Chunk.Kind) {
     case CodeCompletionString::CK_TypedText:
       // The typed-text chunk is the actual name. We don't record this chunk.
-      // In general our string looks like <qualifiers><name><signature>.
-      // So once we see the name, any text we recorded so far should be
-      // reclassified as qualifiers.
-      if (RequiredQualifiers)
-        *RequiredQualifiers = std::move(*Signature);
-      Signature->clear();
-      Snippet->clear();
+      // C++:
+      //   In general our string looks like <qualifiers><name><signature>.
+      //   So once we see the name, any text we recorded so far should be
+      //   reclassified as qualifiers.
+      //
+      // Objective-C:
+      //   Objective-C methods may have multiple typed-text chunks, so we must
+      //   treat them carefully. For Objective-C methods, all typed-text chunks
+      //   will end in ':' (unless there are no arguments, in which case we
+      //   can safely treat them as C++).
+      if (!StringRef(Chunk.Text).endswith(":")) {  // Treat as C++.
+        if (RequiredQualifiers)
+          *RequiredQualifiers = std::move(*Signature);
+        Signature->clear();
+        Snippet->clear();
+      } else {  // Objective-C method with args.
+        // If this is the first TypedText to the Objective-C method, discard any
+        // text that we've previously seen (such as previous parameter selector,
+        // which will be marked as Informative text).
+        //
+        // TODO: Make previous parameters part of the signature for Objective-C
+        // methods.
+        if (!HadObjCArguments) {
+          HadObjCArguments = true;
+          Signature->clear();
+        } else {  // Subsequent argument, considered part of snippet/signature.
+          *Signature += Chunk.Text;
+          *Snippet += Chunk.Text;
+        }
+      }
       break;
     case CodeCompletionString::CK_Text:
       *Signature += Chunk.Text;

@@ -1187,11 +1187,13 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
 
           case eSectionTypeDebug:
           case eSectionTypeDWARFDebugAbbrev:
+          case eSectionTypeDWARFDebugAbbrevDwo:
           case eSectionTypeDWARFDebugAddr:
           case eSectionTypeDWARFDebugAranges:
           case eSectionTypeDWARFDebugCuIndex:
           case eSectionTypeDWARFDebugFrame:
           case eSectionTypeDWARFDebugInfo:
+          case eSectionTypeDWARFDebugInfoDwo:
           case eSectionTypeDWARFDebugLine:
           case eSectionTypeDWARFDebugLineStr:
           case eSectionTypeDWARFDebugLoc:
@@ -1204,7 +1206,9 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
           case eSectionTypeDWARFDebugRanges:
           case eSectionTypeDWARFDebugRngLists:
           case eSectionTypeDWARFDebugStr:
+          case eSectionTypeDWARFDebugStrDwo:
           case eSectionTypeDWARFDebugStrOffsets:
+          case eSectionTypeDWARFDebugStrOffsetsDwo:
           case eSectionTypeDWARFDebugTypes:
           case eSectionTypeDWARFAppleNames:
           case eSectionTypeDWARFAppleTypes:
@@ -5027,24 +5031,28 @@ bool ObjectFileMachO::GetArchitecture(const llvm::MachO::mach_header &header,
         const lldb::offset_t cmd_offset = offset;
         if (data.GetU32(&offset, &load_cmd, 2) == NULL)
           break;
-
-        if (load_cmd.cmd == llvm::MachO::LC_BUILD_VERSION) {
-          struct build_version_command build_version;
-          if (load_cmd.cmdsize != sizeof(build_version))
+        do {
+          if (load_cmd.cmd == llvm::MachO::LC_BUILD_VERSION) {
+            struct build_version_command build_version;
+            if (load_cmd.cmdsize < sizeof(build_version)) {
+              // Malformed load command.
+              break;
+            }
             if (data.ExtractBytes(cmd_offset, sizeof(build_version),
                                   data.GetByteOrder(), &build_version) == 0)
-              continue;
-          MinOS min_os(build_version.minos);
-          OSEnv os_env(build_version.platform);
-          if (os_env.os_type.empty())
-            continue;
-          os << os_env.os_type << min_os.major_version << '.'
-             << min_os.minor_version << '.' << min_os.patch_version;
-          triple.setOSName(os.str());
-          if (!os_env.environment.empty())
-            triple.setEnvironmentName(os_env.environment);
-          return true;
-        }
+              break;
+            MinOS min_os(build_version.minos);
+            OSEnv os_env(build_version.platform);
+            if (os_env.os_type.empty())
+              break;
+            os << os_env.os_type << min_os.major_version << '.'
+               << min_os.minor_version << '.' << min_os.patch_version;
+            triple.setOSName(os.str());
+            if (!os_env.environment.empty())
+              triple.setEnvironmentName(os_env.environment);
+            return true;
+          }
+        } while (0);
         offset = cmd_offset + load_cmd.cmdsize;
       }
 

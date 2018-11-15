@@ -612,9 +612,18 @@ int X86TTIImpl::getArithmeticInstrCost(
   };
 
   // Look for XOP lowering tricks.
-  if (ST->hasXOP())
-    if (const auto *Entry = CostTableLookup(XOPShiftCostTable, ISD, LT.second))
+  if (ST->hasXOP()) {
+    // If the right shift is constant then we'll fold the negation so
+    // it's as cheap as a left shift.
+    int ShiftISD = ISD;
+    if ((ShiftISD == ISD::SRL || ShiftISD == ISD::SRA) &&
+        (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
+         Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
+      ShiftISD = ISD::SHL;
+    if (const auto *Entry =
+            CostTableLookup(XOPShiftCostTable, ShiftISD, LT.second))
       return LT.first * Entry->Cost;
+  }
 
   static const CostTblEntry SSE2UniformShiftCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
@@ -1848,16 +1857,12 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::FSQRT,      MVT::v4f32,  56 }, // Pentium III from http://www.agner.org/
   };
   static const CostTblEntry X64CostTbl[] = { // 64-bit targets
-    { ISD::BITREVERSE, MVT::i64,    14 },
-    { X86ISD::SHLD,    MVT::i64,     4 } 
+    { ISD::BITREVERSE, MVT::i64,    14 } 
   };
   static const CostTblEntry X86CostTbl[] = { // 32 or 64-bit targets
     { ISD::BITREVERSE, MVT::i32,    14 },
     { ISD::BITREVERSE, MVT::i16,    14 },
-    { ISD::BITREVERSE, MVT::i8,     11 },
-    { X86ISD::SHLD,    MVT::i32,     4 },
-    { X86ISD::SHLD,    MVT::i16,     4 },
-    { X86ISD::SHLD,    MVT::i8,      4 }
+    { ISD::BITREVERSE, MVT::i8,     11 }
   };
 
   unsigned ISD = ISD::DELETED_NODE;
@@ -1878,11 +1883,6 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     break;
   case Intrinsic::cttz:
     ISD = ISD::CTTZ;
-    break;
-  case Intrinsic::fshl:
-  case Intrinsic::fshr:
-    // SHRD has same costs so don't duplicate.
-    ISD = X86ISD::SHLD;
     break;
   case Intrinsic::sqrt:
     ISD = ISD::FSQRT;
@@ -1969,7 +1969,7 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::ROTR,       MVT::v8i32,   1 },
     { ISD::ROTR,       MVT::v4i32,   1 }
   };
-  // XOP: ROTL = VPROT(X,Y), ROTR = VPROT(SUB(0,X),Y)
+  // XOP: ROTL = VPROT(X,Y), ROTR = VPROT(X,SUB(0,Y))
   static const CostTblEntry XOPCostTbl[] = {
     { ISD::ROTL,       MVT::v4i64,   4 },
     { ISD::ROTL,       MVT::v8i32,   4 },
@@ -1990,7 +1990,8 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
   };
   static const CostTblEntry X64CostTbl[] = { // 64-bit targets
     { ISD::ROTL,       MVT::i64,     1 },
-    { ISD::ROTR,       MVT::i64,     1 }
+    { ISD::ROTR,       MVT::i64,     1 },
+    { X86ISD::SHLD,    MVT::i64,     4 }
   };
   static const CostTblEntry X86CostTbl[] = { // 32 or 64-bit targets
     { ISD::ROTL,       MVT::i32,     1 },
@@ -1998,7 +1999,10 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::ROTL,       MVT::i8,      1 },
     { ISD::ROTR,       MVT::i32,     1 },
     { ISD::ROTR,       MVT::i16,     1 },
-    { ISD::ROTR,       MVT::i8,      1 }
+    { ISD::ROTR,       MVT::i8,      1 },
+    { X86ISD::SHLD,    MVT::i32,     4 },
+    { X86ISD::SHLD,    MVT::i16,     4 },
+    { X86ISD::SHLD,    MVT::i8,      4 }
   };
 
   unsigned ISD = ISD::DELETED_NODE;
@@ -2006,10 +2010,13 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
   default:
     break;
   case Intrinsic::fshl:
+    ISD = X86ISD::SHLD;
     if (Args[0] == Args[1])
       ISD = ISD::ROTL;
     break;
   case Intrinsic::fshr:
+    // SHRD has same costs so don't duplicate.
+    ISD = X86ISD::SHLD;
     if (Args[0] == Args[1])
       ISD = ISD::ROTR;
     break;

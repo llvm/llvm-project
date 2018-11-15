@@ -618,6 +618,9 @@ const char *ConversionSpecifier::toString() const {
 
   // MS specific specifiers.
   case ZArg: return "Z";
+
+ // OpenCL specific specifiers.
+  case VArg: return "v";
   }
   return nullptr;
 }
@@ -875,6 +878,8 @@ bool FormatSpecifier::hasStandardConversionSpecifier(
     case ConversionSpecifier::CArg:
     case ConversionSpecifier::SArg:
       return LangOpt.ObjC;
+    case ConversionSpecifier::VArg:
+      return LangOpt.OpenCL;
     case ConversionSpecifier::InvalidSpecifier:
     case ConversionSpecifier::FreeBSDbArg:
     case ConversionSpecifier::FreeBSDDArg:

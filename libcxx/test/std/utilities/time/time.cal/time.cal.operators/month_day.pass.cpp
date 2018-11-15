@@ -14,19 +14,19 @@
 // constexpr month_day
 //   operator/(const month& m, const day& d) noexcept;
 // Returns: {m, d}.
-// 
+//
 // constexpr month_day
 //   operator/(const day& d, const month& m) noexcept;
 // Returns: m / d.
 
 // constexpr month_day
 //   operator/(const month& m, int d) noexcept;
-// Returns: m / day(d). 
-// 
+// Returns: m / day(d).
+//
 // constexpr month_day
 //   operator/(int m, const day& d) noexcept;
 // Returns: month(m) / d.
-// 
+//
 // constexpr month_day
 //   operator/(const day& d, int m) noexcept;
 // Returns: month(m) / d.
@@ -46,7 +46,7 @@ int main()
     using day       = std::chrono::day;
 
     constexpr month February = std::chrono::February;
-    
+
     { // operator/(const month& m, const day& d) (and switched)
         ASSERT_NOEXCEPT (                    February/day{1});
         ASSERT_SAME_TYPE(month_day, decltype(February/day{1}));

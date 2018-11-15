@@ -38,8 +38,12 @@ entry:
   %e = frem float %x, %y
 ; CHECK:  %e_vec = frem <3 x float> %vec, %vec
   %e_vec = frem <3 x float> %vec, %vec
-; CHECK:  ret float %e
-  ret float %e
+; CHECK:  %f = fneg float %x
+  %f = fneg float %x
+; CHECK:  %f_vec = fneg <3 x float> %vec
+  %f_vec = fneg <3 x float> %vec
+; CHECK:  ret float %f
+  ret  float %f
 }
 
 ; CHECK: no_nan
@@ -72,8 +76,12 @@ entry:
   %e = frem nnan float %x, %y
 ; CHECK:  %e_vec = frem nnan <3 x float> %vec, %vec
   %e_vec = frem nnan <3 x float> %vec, %vec
-; CHECK:  ret float %e
-  ret float %e
+; CHECK:  %f = fneg nnan float %x
+  %f = fneg nnan float %x
+; CHECK:  %f_vec = fneg nnan <3 x float> %vec
+  %f_vec = fneg nnan <3 x float> %vec
+; CHECK:  ret float %f
+  ret float %f
 }
 
 ; CHECK: @contract(
@@ -174,6 +182,10 @@ entry:
   %e = frem nnan nsz float %x, %y
 ; CHECK:  %e_vec = frem nnan <3 x float> %vec, %vec
   %e_vec = frem nnan <3 x float> %vec, %vec
-; CHECK:  ret float %e
-  ret float %e
+; CHECK:  %f = fneg nnan nsz float %x
+  %f = fneg nnan nsz float %x
+; CHECK:  %f_vec = fneg fast <3 x float> %vec
+  %f_vec = fneg fast <3 x float> %vec
+; CHECK:  ret float %f
+  ret float %f
 }
