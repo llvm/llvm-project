@@ -82,7 +82,7 @@ TEST(BackgroundIndexTest, ShardStorageTest) {
   class MemoryShardStorage : public ShardStorage {
     mutable std::mutex StorageMu;
     llvm::StringMap<std::string> &Storage;
-    size_t& CacheHits;
+    size_t &CacheHits;
 
   public:
     MemoryShardStorage(llvm::StringMap<std::string> &Storage, size_t &CacheHits)
@@ -103,7 +103,7 @@ TEST(BackgroundIndexTest, ShardStorageTest) {
         return llvm::make_error<llvm::StringError>(
             "Shard not found.", llvm::inconvertibleErrorCode());
       auto IndexFile = readIndexFile(Storage[ShardIdentifier]);
-      if(!IndexFile)
+      if (!IndexFile)
         return IndexFile;
       CacheHits++;
       return IndexFile;
