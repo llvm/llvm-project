@@ -56,15 +56,77 @@ getShardPathFromFilePath(llvm::SmallString<128> ShardRoot,
   return ShardRoot;
 }
 
+// Uses disk as a storage for index shards. Creates a directory called
+// ".clangd-index/" under the path provided during initialize.
+// Note: Requires initialize to be called before storing or retrieval.
+// This class is thread-safe.
+class DiskBackedIndexStorage : public BackgroundIndexStorage {
+  llvm::SmallString<128> DiskShardRoot;
+
+public:
+  llvm::Expected<IndexFileIn>
+  retrieveShard(llvm::StringRef ShardIdentifier) const override {
+    auto ShardPath = getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
+    auto Buffer = MemoryBuffer::getFile(ShardPath);
+    if (!Buffer) {
+      elog("Couldn't retrieve {0}: {1}", ShardPath,
+           Buffer.getError().message());
+      return llvm::make_error<llvm::StringError>(Buffer.getError());
+    }
+    // FIXME: Change readIndexFile to also look at Hash of the source that
+    // generated index and skip if there is a mismatch.
+    return readIndexFile(Buffer->get()->getBuffer());
+  }
+
+  bool storeShard(llvm::StringRef ShardIdentifier,
+                  IndexFileOut Shard) const override {
+    auto ShardPath = getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
+    std::error_code EC;
+    llvm::raw_fd_ostream OS(ShardPath, EC);
+    if (EC) {
+      elog("Failed to open {0} for writing: {1}", ShardPath, EC.message());
+      return false;
+    }
+    OS << Shard;
+    return true;
+  }
+
+  // Initializes DiskShardRoot to (Directory + ".clangd-index/") which is the
+  // base directory for all shard files. After the initialization succeeds all
+  // subsequent calls are no-op.
+  DiskBackedIndexStorage(llvm::StringRef Directory) : DiskShardRoot(Directory) {
+    sys::path::append(DiskShardRoot, ".clangd-index/");
+    if (!llvm::sys::fs::exists(DiskShardRoot)) {
+      std::error_code OK;
+      std::error_code EC = llvm::sys::fs::create_directory(DiskShardRoot);
+      if (EC != OK) {
+        elog("Failed to create {0}: {1}", DiskShardRoot, EC.message());
+      }
+    }
+  }
+};
+
+SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
+  SmallString<128> AbsolutePath;
+  if (sys::path::is_absolute(Cmd.Filename)) {
+    AbsolutePath = Cmd.Filename;
+  } else {
+    AbsolutePath = Cmd.Directory;
+    sys::path::append(AbsolutePath, Cmd.Filename);
+  }
+  return AbsolutePath;
+}
+
 } // namespace
 
-BackgroundIndex::BackgroundIndex(
-    Context BackgroundContext, StringRef ResourceDir,
-    const FileSystemProvider &FSProvider, ArrayRef<std::string> URISchemes,
-    std::unique_ptr<ShardStorage> IndexShardStorage, size_t ThreadPoolSize)
+BackgroundIndex::BackgroundIndex(Context BackgroundContext,
+                                 StringRef ResourceDir,
+                                 const FileSystemProvider &FSProvider,
+                                 ArrayRef<std::string> URISchemes,
+                                 size_t ThreadPoolSize)
     : SwapIndex(make_unique<MemIndex>()), ResourceDir(ResourceDir),
       FSProvider(FSProvider), BackgroundContext(std::move(BackgroundContext)),
-      URISchemes(URISchemes), IndexShardStorage(std::move(IndexShardStorage)) {
+      URISchemes(URISchemes) {
   assert(ThreadPoolSize > 0 && "Thread pool size can't be zero.");
   while (ThreadPoolSize--) {
     ThreadPool.emplace_back([this] { run(); });
@@ -123,11 +185,45 @@ void BackgroundIndex::blockUntilIdleForTest() {
 
 void BackgroundIndex::enqueue(StringRef Directory,
                               tooling::CompileCommand Cmd) {
+  auto IndexStorage = BackgroundIndexStorage::getForDirectory(Directory);
+  if (IndexStorage)
+    loadShard(IndexStorage.get(), Cmd);
+  else
+    elog("No index storage for: {0}", Directory);
   {
     std::lock_guard<std::mutex> Lock(QueueMu);
-    enqueueLocked(std::move(Cmd));
+    enqueueLocked(std::move(Cmd), std::move(IndexStorage));
   }
   QueueCV.notify_all();
+}
+
+void BackgroundIndex::loadShard(BackgroundIndexStorage *IndexStorage,
+                                const tooling::CompileCommand &Cmd) {
+  assert(IndexStorage && "No index storage to load from?");
+  auto AbsolutePath = getAbsolutePath(Cmd);
+  auto Shard = IndexStorage->retrieveShard(AbsolutePath);
+  if (Shard) {
+    // FIXME: Updated hashes once we have them in serialized format.
+    // IndexedFileDigests[AbsolutePath] = Hash;
+    IndexedSymbols.update(AbsolutePath,
+                          make_unique<SymbolSlab>(std::move(*Shard->Symbols)),
+                          make_unique<RefSlab>(std::move(*Shard->Refs)));
+
+    vlog("Loaded {0} from storage", AbsolutePath);
+  }
+}
+
+void BackgroundIndex::loadShards(
+    BackgroundIndexStorage *IndexStorage,
+    const std::vector<tooling::CompileCommand> &Cmds) {
+  assert(IndexStorage && "No index storage to load from?");
+  for (const auto &Cmd : Cmds)
+    loadShard(IndexStorage, Cmd);
+  // FIXME: Maybe we should get rid of this one once we start building index
+  // periodically? Especially if we also offload this task onto the queue.
+  vlog("Rebuilding automatic index");
+  reset(IndexedSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge,
+                                  URISchemes));
 }
 
 void BackgroundIndex::enqueueAll(StringRef Directory,
@@ -136,6 +232,11 @@ void BackgroundIndex::enqueueAll(StringRef Directory,
   // FIXME: this function may be slow. Perhaps enqueue a task to re-read the CDB
   // from disk and enqueue the commands asynchronously?
   auto Cmds = CDB.getAllCompileCommands();
+  auto IndexStorage = BackgroundIndexStorage::getForDirectory(Directory);
+  if (IndexStorage)
+    loadShards(IndexStorage.get(), Cmds);
+  else
+    elog("No index storage for: {0}", Directory);
   SPAN_ATTACH(Tracer, "commands", int64_t(Cmds.size()));
   std::mt19937 Generator(std::random_device{}());
   std::shuffle(Cmds.begin(), Cmds.end(), Generator);
@@ -143,26 +244,23 @@ void BackgroundIndex::enqueueAll(StringRef Directory,
   {
     std::lock_guard<std::mutex> Lock(QueueMu);
     for (auto &Cmd : Cmds)
-      enqueueLocked(std::move(Cmd));
+      enqueueLocked(std::move(Cmd), IndexStorage);
   }
   QueueCV.notify_all();
 }
 
-void BackgroundIndex::enqueueLocked(tooling::CompileCommand Cmd) {
-  // Initialize storage to project root. Since Initialize is no-op for multiple
-  // calls we can simply call it for each file.
-  if (IndexShardStorage && !IndexShardStorage->initialize(Cmd.Directory)) {
-    elog("Failed to initialize shard storage");
-    IndexShardStorage.reset();
-  }
+void BackgroundIndex::enqueueLocked(
+    tooling::CompileCommand Cmd,
+    std::shared_ptr<BackgroundIndexStorage> IndexStorage) {
   Queue.push_back(Bind(
-      [this](tooling::CompileCommand Cmd) {
+      [this](tooling::CompileCommand Cmd,
+             std::shared_ptr<BackgroundIndexStorage> IndexStorage) {
         std::string Filename = Cmd.Filename;
         Cmd.CommandLine.push_back("-resource-dir=" + ResourceDir);
-        if (auto Error = index(std::move(Cmd)))
+        if (auto Error = index(std::move(Cmd), IndexStorage.get()))
           log("Indexing {0} failed: {1}", Filename, std::move(Error));
       },
-      std::move(Cmd)));
+      std::move(Cmd), std::move(IndexStorage)));
 }
 
 // Resolves URI to file paths with cache.
@@ -198,7 +296,8 @@ private:
 /// Given index results from a TU, only update files in \p FilesToUpdate.
 void BackgroundIndex::update(StringRef MainFile, SymbolSlab Symbols,
                              RefSlab Refs,
-                             const StringMap<FileDigest> &FilesToUpdate) {
+                             const StringMap<FileDigest> &FilesToUpdate,
+                             BackgroundIndexStorage *IndexStorage) {
   // Partition symbols/references into files.
   struct File {
     DenseSet<const Symbol *> Symbols;
@@ -250,13 +349,14 @@ void BackgroundIndex::update(StringRef MainFile, SymbolSlab Symbols,
     auto RS = llvm::make_unique<RefSlab>(std::move(Refs).build());
 
     auto Hash = FilesToUpdate.lookup(Path);
-    // Put shards into storage for subsequent use.
+    // We need to store shards before updating the index, since the latter
+    // consumes slabs.
     // FIXME: Store Hash in the Shard.
-    if (IndexShardStorage) {
+    if (IndexStorage) {
       IndexFileOut Shard;
       Shard.Symbols = SS.get();
       Shard.Refs = RS.get();
-      IndexShardStorage->storeShard(Path, Shard);
+      IndexStorage->storeShard(Path, Shard);
     }
 
     std::lock_guard<std::mutex> Lock(DigestsMu);
@@ -270,7 +370,8 @@ void BackgroundIndex::update(StringRef MainFile, SymbolSlab Symbols,
 
 // Creates a filter to not collect index results from files with unchanged
 // digests.
-// \p FileDigests contains file digests for the current indexed files, and all changed files will be added to \p FilesToUpdate.
+// \p FileDigests contains file digests for the current indexed files, and all
+// changed files will be added to \p FilesToUpdate.
 decltype(SymbolCollector::Options::FileFilter) createFileFilter(
     const llvm::StringMap<BackgroundIndex::FileDigest> &FileDigests,
     llvm::StringMap<BackgroundIndex::FileDigest> &FilesToUpdate) {
@@ -299,16 +400,11 @@ decltype(SymbolCollector::Options::FileFilter) createFileFilter(
   };
 }
 
-Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
+Error BackgroundIndex::index(tooling::CompileCommand Cmd,
+                             BackgroundIndexStorage *IndexStorage) {
   trace::Span Tracer("BackgroundIndex");
   SPAN_ATTACH(Tracer, "file", Cmd.Filename);
-  SmallString<128> AbsolutePath;
-  if (sys::path::is_absolute(Cmd.Filename)) {
-    AbsolutePath = Cmd.Filename;
-  } else {
-    AbsolutePath = Cmd.Directory;
-    sys::path::append(AbsolutePath, Cmd.Filename);
-  }
+  SmallString<128> AbsolutePath = getAbsolutePath(Cmd);
 
   auto FS = FSProvider.getFileSystem();
   auto Buf = FS->getBufferForFile(AbsolutePath);
@@ -323,18 +419,6 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
     if (IndexedFileDigests.lookup(AbsolutePath) == Hash) {
       vlog("No need to index {0}, already up to date", AbsolutePath);
       return Error::success();
-    } else if (IndexShardStorage) { // Check if shard storage has the index.
-      auto Shard = IndexShardStorage->retrieveShard(AbsolutePath, Hash);
-      if (Shard) {
-        // FIXME: We might still want to re-index headers.
-        IndexedFileDigests[AbsolutePath] = Hash;
-        IndexedSymbols.update(
-            AbsolutePath, make_unique<SymbolSlab>(std::move(*Shard->Symbols)),
-            make_unique<RefSlab>(std::move(*Shard->Refs)));
-
-        vlog("Loaded {0} from storage", AbsolutePath);
-        return Error::success();
-      }
     }
 
     DigestsSnapshot = IndexedFileDigests;
@@ -384,7 +468,8 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
       Symbols.size(), Refs.numRefs());
   SPAN_ATTACH(Tracer, "symbols", int(Symbols.size()));
   SPAN_ATTACH(Tracer, "refs", int(Refs.numRefs()));
-  update(AbsolutePath, std::move(Symbols), std::move(Refs), FilesToUpdate);
+  update(AbsolutePath, std::move(Symbols), std::move(Refs), FilesToUpdate,
+         IndexStorage);
   {
     // Make sure hash for the main file is always updated even if there is no
     // index data in it.
@@ -401,59 +486,8 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   return Error::success();
 }
 
-llvm::Expected<IndexFileIn>
-DiskShardStorage::retrieveShard(llvm::StringRef ShardIdentifier,
-                                FileDigest Hash) const {
-  assert(Initialized && "Not initialized?");
-  llvm::SmallString<128> ShardPath;
-  {
-    std::lock_guard<std::mutex> Lock(DiskShardRootMu);
-    ShardPath = getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
-  }
-  auto Buffer = MemoryBuffer::getFile(ShardPath);
-  if (!Buffer) {
-    elog("Couldn't retrieve {0}: {1}", ShardPath, Buffer.getError().message());
-    return llvm::make_error<llvm::StringError>(Buffer.getError());
-  }
-  // FIXME: Change readIndexFile to also look at Hash of the source that
-  // generated index and skip if there is a mismatch.
-  return readIndexFile(Buffer->get()->getBuffer());
-}
-
-bool DiskShardStorage::storeShard(llvm::StringRef ShardIdentifier,
-                                  IndexFileOut Shard) const {
-  assert(Initialized && "Not initialized?");
-  llvm::SmallString<128> ShardPath;
-  {
-    std::lock_guard<std::mutex> Lock(DiskShardRootMu);
-    ShardPath = getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
-  }
-  std::error_code EC;
-  llvm::raw_fd_ostream OS(ShardPath, EC);
-  if (EC) {
-    elog("Failed to open {0} for writing: {1}", ShardPath, EC.message());
-    return false;
-  }
-  OS << Shard;
-  return true;
-}
-
-bool DiskShardStorage::initialize(llvm::StringRef Directory) {
-  if (Initialized)
-    return true;
-  std::lock_guard<std::mutex> Lock(DiskShardRootMu);
-  DiskShardRoot = Directory;
-  sys::path::append(DiskShardRoot, ".clangd-index/");
-  if (!llvm::sys::fs::exists(DiskShardRoot)) {
-    std::error_code OK;
-    std::error_code EC = llvm::sys::fs::create_directory(DiskShardRoot);
-    if (EC != OK) {
-      elog("Failed to create {0}: {1}", DiskShardRoot, EC.message());
-      return Initialized = false;
-    }
-  }
-  return Initialized = true;
-}
+std::function<std::shared_ptr<BackgroundIndexStorage>(llvm::StringRef)>
+    BackgroundIndexStorage::Factory = nullptr;
 
 } // namespace clangd
 } // namespace clang

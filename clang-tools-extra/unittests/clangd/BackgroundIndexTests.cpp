@@ -79,7 +79,7 @@ TEST(BackgroundIndexTest, IndexTwoFiles) {
 }
 
 TEST(BackgroundIndexTest, ShardStorageTest) {
-  class MemoryShardStorage : public ShardStorage {
+  class MemoryShardStorage : public BackgroundIndexStorage {
     mutable std::mutex StorageMu;
     llvm::StringMap<std::string> &Storage;
     size_t &CacheHits;
@@ -88,7 +88,8 @@ TEST(BackgroundIndexTest, ShardStorageTest) {
     MemoryShardStorage(llvm::StringMap<std::string> &Storage, size_t &CacheHits)
         : Storage(Storage), CacheHits(CacheHits) {}
 
-    bool storeShard(llvm::StringRef ShardIdentifier, IndexFileOut Shard) const {
+    bool storeShard(llvm::StringRef ShardIdentifier,
+                    IndexFileOut Shard) const override {
       std::lock_guard<std::mutex> Lock(StorageMu);
       std::string &str = Storage[ShardIdentifier];
       llvm::raw_string_ostream OS(str);
@@ -96,8 +97,8 @@ TEST(BackgroundIndexTest, ShardStorageTest) {
       OS.flush();
       return true;
     }
-    llvm::Expected<IndexFileIn> retrieveShard(llvm::StringRef ShardIdentifier,
-                                              FileDigest Hash) const {
+    llvm::Expected<IndexFileIn>
+    retrieveShard(llvm::StringRef ShardIdentifier) const override {
       std::lock_guard<std::mutex> Lock(StorageMu);
       if (Storage.find(ShardIdentifier) == Storage.end())
         return llvm::make_error<llvm::StringError>(
@@ -118,17 +119,21 @@ TEST(BackgroundIndexTest, ShardStorageTest) {
       )cpp";
   FS.Files[testPath("root/A.cc")] =
       "#include \"A.h\"\nvoid g() { (void)common; }";
+
   llvm::StringMap<std::string> Storage;
   size_t CacheHits = 0;
+  BackgroundIndexStorage::setStorageFactory(
+      [&Storage, &CacheHits](llvm::StringRef) {
+        return std::make_shared<MemoryShardStorage>(Storage, CacheHits);
+      });
+
   tooling::CompileCommand Cmd;
   Cmd.Filename = testPath("root/A.cc");
   Cmd.Directory = testPath("root");
   Cmd.CommandLine = {"clang++", testPath("root/A.cc")};
+  // Check nothing is loaded from Storage, but A.cc and A.h has been stored.
   {
-    BackgroundIndex Idx(
-        Context::empty(), "", FS, /*URISchemes=*/{"unittest"},
-        /*IndexShardStorage=*/
-        llvm::make_unique<MemoryShardStorage>(Storage, CacheHits));
+    BackgroundIndex Idx(Context::empty(), "", FS, /*URISchemes=*/{"unittest"});
     Idx.enqueue(testPath("root"), Cmd);
     Idx.blockUntilIdleForTest();
   }
@@ -137,11 +142,9 @@ TEST(BackgroundIndexTest, ShardStorageTest) {
   EXPECT_NE(Storage.find(testPath("root/A.h")), Storage.end());
   EXPECT_NE(Storage.find(testPath("root/A.cc")), Storage.end());
 
+  // Check A.cc has been loaded from cache.
   {
-    BackgroundIndex Idx(
-        Context::empty(), "", FS, /*URISchemes=*/{"unittest"},
-        /*IndexShardStorage=*/
-        llvm::make_unique<MemoryShardStorage>(Storage, CacheHits));
+    BackgroundIndex Idx(Context::empty(), "", FS, /*URISchemes=*/{"unittest"});
     Idx.enqueue(testPath("root"), Cmd);
     Idx.blockUntilIdleForTest();
   }
@@ -149,7 +152,6 @@ TEST(BackgroundIndexTest, ShardStorageTest) {
   EXPECT_EQ(Storage.size(), 2U);
   EXPECT_NE(Storage.find(testPath("root/A.h")), Storage.end());
   EXPECT_NE(Storage.find(testPath("root/A.cc")), Storage.end());
-  // B_CC is dropped as we don't collect symbols from A.h in this compilation.
 }
 
 } // namespace clangd
