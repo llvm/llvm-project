@@ -716,6 +716,27 @@ bb:
   ret void
 }
 
+; GCN-LABEL: {{^}}v_test_umed3_i16_pat_1:
+; GFX9: v_med3_u16 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+define amdgpu_kernel void @v_test_umed3_i16_pat_1(i16 addrspace(1)* %arg, i16 addrspace(1)* %out, i16 addrspace(1)* %a.ptr) #1 {
+bb:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep0 = getelementptr inbounds i16, i16 addrspace(1)* %a.ptr, i32 %tid
+  %gep1 = getelementptr inbounds i16, i16 addrspace(1)* %gep0, i32 3
+  %gep2 = getelementptr inbounds i16, i16 addrspace(1)* %gep0, i32 8
+  %out.gep = getelementptr inbounds i16, i16 addrspace(1)* %out, i32 %tid
+  %x = load i16, i16 addrspace(1)* %gep0
+  %y = load i16, i16 addrspace(1)* %gep1
+  %z = load i16, i16 addrspace(1)* %gep2
+
+  %tmp0 = call i16 @umin16(i16 %x, i16 %y)
+  %tmp1 = call i16 @umax16(i16 %x, i16 %y)
+  %tmp2 = call i16 @umax16(i16 %tmp0, i16 %z)
+  %tmp3 = call i16 @umin16(i16 %tmp1, i16 %tmp2)
+  store i16 %tmp3, i16 addrspace(1)* %out.gep
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind readnone alwaysinline }

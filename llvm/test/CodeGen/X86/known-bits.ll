@@ -37,17 +37,17 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X32-NEXT:  .LBB0_1: # %CF
 ; X32-NEXT:    # =>This Loop Header: Depth=1
 ; X32-NEXT:    # Child Loop BB0_2 Depth 2
-; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    divl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
-; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    divl (%esp) # 4-byte Folded Reload
-; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    movl %edi, %eax
-; X32-NEXT:    divl %esi
 ; X32-NEXT:    xorl %edx, %edx
+; X32-NEXT:    divl %esi
 ; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    divl %ebp
 ; X32-NEXT:    .p2align 4, 0x90
 ; X32-NEXT:  .LBB0_2: # %CF237
@@ -87,17 +87,17 @@ define void @knownbits_zext_in_reg(i8*) nounwind {
 ; X64-NEXT:  .LBB0_1: # %CF
 ; X64-NEXT:    # =>This Loop Header: Depth=1
 ; X64-NEXT:    # Child Loop BB0_2 Depth 2
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %r8d, %eax
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %r9d
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %r10d, %eax
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %r11d
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    divl %ebx
 ; X64-NEXT:    xorl %edx, %edx
+; X64-NEXT:    divl %ebx
 ; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %ebp
 ; X64-NEXT:    .p2align 4, 0x90
 ; X64-NEXT:  .LBB0_2: # %CF237

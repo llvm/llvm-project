@@ -85,6 +85,9 @@ public:
   /// Target-specific flags for this Candidate's MBB.
   unsigned Flags = 0x0;
 
+  /// True if initLRU has been called on this Candidate.
+  bool LRUWasSet = false;
+
   /// Return the number of instructions in this Candidate.
   unsigned getLength() const { return Len; }
 
@@ -141,6 +144,10 @@ public:
   void initLRU(const TargetRegisterInfo &TRI) {
     assert(MBB->getParent()->getRegInfo().tracksLiveness() &&
            "Candidate's Machine Function must track liveness");
+    // Only initialize once.
+    if (LRUWasSet)
+      return;
+    LRUWasSet = true;
     LRU.init(TRI);
     LRU.addLiveOuts(*MBB);
 

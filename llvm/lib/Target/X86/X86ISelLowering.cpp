@@ -849,15 +849,29 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // scalars) and extend in-register to a legal 128-bit vector type. For sext
     // loads these must work with a single scalar load.
     for (MVT VT : MVT::integer_vector_valuetypes()) {
-      setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v4i8, Custom);
-      setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v4i16, Custom);
-      setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v8i8, Custom);
+      if (!ExperimentalVectorWideningLegalization) {
+        // We don't want narrow result types here when widening.
+        setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v4i8, Custom);
+        setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v4i16, Custom);
+        setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v8i8, Custom);
+      }
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2i8, Custom);
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2i16, Custom);
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v2i32, Custom);
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v4i8, Custom);
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v4i16, Custom);
       setLoadExtAction(ISD::EXTLOAD, VT, MVT::v8i8, Custom);
+    }
+
+    if (ExperimentalVectorWideningLegalization) {
+      // Explicitly code the list so we don't use narrow result types.
+      setLoadExtAction(ISD::SEXTLOAD, MVT::v4i32, MVT::v4i8,  Custom);
+      setLoadExtAction(ISD::SEXTLOAD, MVT::v4i32, MVT::v4i16, Custom);
+      setLoadExtAction(ISD::SEXTLOAD, MVT::v4i64, MVT::v4i8,  Custom);
+      setLoadExtAction(ISD::SEXTLOAD, MVT::v4i64, MVT::v4i16, Custom);
+      setLoadExtAction(ISD::SEXTLOAD, MVT::v8i16, MVT::v8i8,  Custom);
+      setLoadExtAction(ISD::SEXTLOAD, MVT::v8i32, MVT::v8i8,  Custom);
+      setLoadExtAction(ISD::SEXTLOAD, MVT::v8i64, MVT::v8i8,  Custom);
     }
 
     for (auto VT : { MVT::v2f64, MVT::v2i64 }) {
@@ -905,7 +919,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // 64-bit targets and two 32-bit loads on a 32-bit target. Similar for
     // store.
     setOperationAction(ISD::LOAD,               MVT::v2f32, Custom);
+    setOperationAction(ISD::LOAD,               MVT::v2i32, Custom);
+    setOperationAction(ISD::LOAD,               MVT::v4i16, Custom);
+    setOperationAction(ISD::LOAD,               MVT::v8i8,  Custom);
     setOperationAction(ISD::STORE,              MVT::v2f32, Custom);
+    setOperationAction(ISD::STORE,              MVT::v2i32, Custom);
+    setOperationAction(ISD::STORE,              MVT::v4i16, Custom);
+    setOperationAction(ISD::STORE,              MVT::v8i8,  Custom);
 
     setOperationAction(ISD::BITCAST,            MVT::v2i32, Custom);
     setOperationAction(ISD::BITCAST,            MVT::v4i16, Custom);
@@ -916,6 +936,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, MVT::v2i64, Custom);
     setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, MVT::v4i32, Custom);
     setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, MVT::v8i16, Custom);
+
+    if (ExperimentalVectorWideningLegalization) {
+      setOperationAction(ISD::TRUNCATE, MVT::v2i8,  Custom);
+      setOperationAction(ISD::TRUNCATE, MVT::v2i16, Custom);
+      setOperationAction(ISD::TRUNCATE, MVT::v2i32, Custom);
+      setOperationAction(ISD::TRUNCATE, MVT::v4i8,  Custom);
+      setOperationAction(ISD::TRUNCATE, MVT::v4i16, Custom);
+      setOperationAction(ISD::TRUNCATE, MVT::v8i8,  Custom);
+    }
 
     // In the customized shift lowering, the legal v4i32/v2i64 cases
     // in AVX2 will be recognized.
@@ -973,17 +1002,22 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Legal);
     }
 
-    for (MVT VT : MVT::integer_vector_valuetypes()) {
-      setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v2i8, Custom);
-      setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v2i16, Custom);
-      setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v2i32, Custom);
+    if (!ExperimentalVectorWideningLegalization) {
+      // Avoid narrow result types when widening. The legal types are listed
+      // in the next loop.
+      for (MVT VT : MVT::integer_vector_valuetypes()) {
+        setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v2i8, Custom);
+        setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v2i16, Custom);
+        setLoadExtAction(ISD::SEXTLOAD, VT, MVT::v2i32, Custom);
+      }
     }
 
     // SSE41 also has vector sign/zero extending loads, PMOV[SZ]X
     for (auto LoadExtOp : { ISD::SEXTLOAD, ISD::ZEXTLOAD }) {
       setLoadExtAction(LoadExtOp, MVT::v8i16, MVT::v8i8,  Legal);
       setLoadExtAction(LoadExtOp, MVT::v4i32, MVT::v4i8,  Legal);
-      setLoadExtAction(LoadExtOp, MVT::v2i32, MVT::v2i8,  Legal);
+      if (!ExperimentalVectorWideningLegalization)
+        setLoadExtAction(LoadExtOp, MVT::v2i32, MVT::v2i8,  Legal);
       setLoadExtAction(LoadExtOp, MVT::v2i64, MVT::v2i8,  Legal);
       setLoadExtAction(LoadExtOp, MVT::v4i32, MVT::v4i16, Legal);
       setLoadExtAction(LoadExtOp, MVT::v2i64, MVT::v2i16, Legal);
@@ -17892,6 +17926,10 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
   assert(VT.getVectorNumElements() == InVT.getVectorNumElements() &&
          "Invalid TRUNCATE operation");
 
+  // If called by the legalizer just return.
+  if (!DAG.getTargetLoweringInfo().isTypeLegal(InVT))
+    return SDValue();
+
   if (VT.getVectorElementType() == MVT::i1)
     return LowerTruncateVecI1(Op, DAG, Subtarget);
 
@@ -20073,14 +20111,23 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
   if (St->isTruncatingStore())
     return SDValue();
 
-  assert(StoredVal.getValueType() == MVT::v2f32 && "Unexpected VT");
+  MVT StoreVT = StoredVal.getSimpleValueType();
+  assert(StoreVT.isVector() && StoreVT.getSizeInBits() == 64 &&
+         "Unexpected VT");
+  if (DAG.getTargetLoweringInfo().getTypeAction(*DAG.getContext(), StoreVT) !=
+        TargetLowering::TypeWidenVector)
+    return SDValue();
 
-  // Widen the vector, cast to a v2x64 type, extract the single 64-bit
-  // element and store it.
-  StoredVal = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v4f32, StoredVal,
-                          DAG.getUNDEF(MVT::v2f32));
-  StoredVal = DAG.getBitcast(MVT::v2f64, StoredVal);
-  StoredVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::f64, StoredVal,
+  // Widen the vector, cast to a v2x64 type, extract the single 64-bit element
+  // and store it.
+  MVT WideVT = MVT::getVectorVT(StoreVT.getVectorElementType(),
+                                StoreVT.getVectorNumElements() * 2);
+  StoredVal = DAG.getNode(ISD::CONCAT_VECTORS, dl, WideVT, StoredVal,
+                          DAG.getUNDEF(StoreVT));
+  MVT StVT = Subtarget.is64Bit() && StoreVT.isInteger() ? MVT::i64 : MVT::f64;
+  MVT CastVT = MVT::getVectorVT(StVT, 2);
+  StoredVal = DAG.getBitcast(CastVT, StoredVal);
+  StoredVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, StVT, StoredVal,
                           DAG.getIntPtrConstant(0, dl));
 
   return DAG.getStore(St->getChain(), dl, StoredVal, St->getBasePtr(),
@@ -26166,6 +26213,57 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(V);
     return;
   }
+  case ISD::TRUNCATE: {
+    MVT VT = N->getSimpleValueType(0);
+    if (getTypeAction(*DAG.getContext(), VT) != TypeWidenVector)
+      return;
+
+    // The generic legalizer will try to widen the input type to the same
+    // number of elements as the widened result type. But this isn't always
+    // the best thing so do some custom legalization to avoid some cases.
+    MVT WidenVT = getTypeToTransformTo(*DAG.getContext(), VT).getSimpleVT();
+    SDValue In = N->getOperand(0);
+    EVT InVT = In.getValueType();
+
+    unsigned InBits = InVT.getSizeInBits();
+    if (128 % InBits == 0) {
+      // 128 bit and smaller inputs should avoid truncate all together and
+      // just use a build_vector that will become a shuffle.
+      // TODO: Widen and use a shuffle directly?
+      MVT InEltVT = InVT.getSimpleVT().getVectorElementType();
+      EVT EltVT = VT.getVectorElementType();
+      unsigned WidenNumElts = WidenVT.getVectorNumElements();
+      SmallVector<SDValue, 16> Ops(WidenNumElts, DAG.getUNDEF(EltVT));
+      // Use the original element count so we don't do more scalar opts than
+      // necessary.
+      unsigned MinElts = VT.getVectorNumElements();
+      for (unsigned i=0; i < MinElts; ++i) {
+        SDValue Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, InEltVT, In,
+                                  DAG.getIntPtrConstant(i, dl));
+        Ops[i] = DAG.getNode(ISD::TRUNCATE, dl, EltVT, Val);
+      }
+      Results.push_back(DAG.getBuildVector(WidenVT, dl, Ops));
+      return;
+    }
+    // With AVX512 there are some cases that can use a target specific
+    // truncate node to go from 256/512 to less than 128 with zeros in the
+    // upper elements of the 128 bit result.
+    if (Subtarget.hasAVX512() && isTypeLegal(InVT)) {
+      // We can use VTRUNC directly if for 256 bits with VLX or for any 512.
+      if ((InBits == 256 && Subtarget.hasVLX()) || InBits == 512) {
+        Results.push_back(DAG.getNode(X86ISD::VTRUNC, dl, WidenVT, In));
+        return;
+      }
+      // There's one case we can widen to 512 bits and use VTRUNC.
+      if (InVT == MVT::v4i64 && VT == MVT::v4i8 && isTypeLegal(MVT::v8i64)) {
+        In = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8i64, In,
+                         DAG.getUNDEF(MVT::v4i64));
+        Results.push_back(DAG.getNode(X86ISD::VTRUNC, dl, WidenVT, In));
+        return;
+      }
+    }
+    return;
+  }
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT: {
     bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT;
@@ -26567,20 +26665,27 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     break;
   }
   case ISD::LOAD: {
-    // Use an f64 load and a scalar_to_vector for v2f32 loads. This avoids
-    // scalarizing in 32-bit mode. In 64-bit mode this avoids a int->fp cast
-    // since type legalization will try to use an i64 load.
-    assert(N->getValueType(0) == MVT::v2f32 && "Unexpected VT");
+    // Use an f64/i64 load and a scalar_to_vector for v2f32/v2i32 loads. This
+    // avoids scalarizing in 32-bit mode. In 64-bit mode this avoids a int->fp
+    // cast since type legalization will try to use an i64 load.
+    MVT VT = N->getSimpleValueType(0);
+    assert(VT.isVector() && VT.getSizeInBits() == 64 && "Unexpected VT");
+    if (getTypeAction(*DAG.getContext(), VT) != TypeWidenVector)
+      return;
     if (!ISD::isNON_EXTLoad(N))
       return;
     auto *Ld = cast<LoadSDNode>(N);
-    SDValue Res = DAG.getLoad(MVT::f64, dl, Ld->getChain(), Ld->getBasePtr(),
+    MVT LdVT = Subtarget.is64Bit() && VT.isInteger() ? MVT::i64 : MVT::f64;
+    SDValue Res = DAG.getLoad(LdVT, dl, Ld->getChain(), Ld->getBasePtr(),
                               Ld->getPointerInfo(),
                               Ld->getAlignment(),
                               Ld->getMemOperand()->getFlags());
     SDValue Chain = Res.getValue(1);
-    Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2f64, Res);
-    Res = DAG.getBitcast(MVT::v4f32, Res);
+    MVT WideVT = MVT::getVectorVT(LdVT, 2);
+    Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, WideVT, Res);
+    MVT CastVT = MVT::getVectorVT(VT.getVectorElementType(),
+                                  VT.getVectorNumElements() * 2);
+    Res = DAG.getBitcast(CastVT, Res);
     Results.push_back(Res);
     Results.push_back(Chain);
     return;

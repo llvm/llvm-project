@@ -15,11 +15,11 @@ define void @e() nounwind {
 ; CHECK-NEXT:    subl $528, %esp # encoding: [0x81,0xec,0x10,0x02,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x210
 ; CHECK-NEXT:    leal {{[0-9]+}}(%rsp), %ebx # encoding: [0x8d,0x9c,0x24,0x08,0x01,0x00,0x00]
+; CHECK-NEXT:    movl %ebx, %edi # encoding: [0x89,0xdf]
 ; CHECK-NEXT:    movl $c, %esi # encoding: [0xbe,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: c, kind: FK_Data_4
 ; CHECK-NEXT:    movl $260, %edx # encoding: [0xba,0x04,0x01,0x00,0x00]
 ; CHECK-NEXT:    # imm = 0x104
-; CHECK-NEXT:    movl %ebx, %edi # encoding: [0x89,0xdf]
 ; CHECK-NEXT:    callq memcpy # encoding: [0xe8,A,A,A,A]
 ; CHECK-NEXT:    # fixup A - offset: 1, value: memcpy-4, kind: FK_PCRel_4
 ; CHECK-NEXT:    movl $32, %ecx # encoding: [0xb9,0x20,0x00,0x00,0x00]

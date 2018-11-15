@@ -3168,19 +3168,15 @@ define <2 x double> @sitofp_load_2i16_to_2f64(<2 x i16> *%a) {
 ;
 ; SSE41-LABEL: sitofp_load_2i16_to_2f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movswl 2(%rdi), %eax
-; SSE41-NEXT:    movswl (%rdi), %ecx
-; SSE41-NEXT:    movd %ecx, %xmm0
-; SSE41-NEXT:    pinsrd $1, %eax, %xmm0
+; SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-NEXT:    pmovsxwd %xmm0, %xmm0
 ; SSE41-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: sitofp_load_2i16_to_2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movswl 2(%rdi), %eax
-; AVX-NEXT:    movswl (%rdi), %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm0
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vpmovsxwd %xmm0, %xmm0
 ; AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %ld = load <2 x i16>, <2 x i16> *%a
@@ -3201,19 +3197,17 @@ define <2 x double> @sitofp_load_2i8_to_2f64(<2 x i8> *%a) {
 ;
 ; SSE41-LABEL: sitofp_load_2i8_to_2f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movsbl 1(%rdi), %eax
-; SSE41-NEXT:    movsbl (%rdi), %ecx
-; SSE41-NEXT:    movd %ecx, %xmm0
-; SSE41-NEXT:    pinsrd $1, %eax, %xmm0
+; SSE41-NEXT:    movzwl (%rdi), %eax
+; SSE41-NEXT:    movd %eax, %xmm0
+; SSE41-NEXT:    pmovsxbd %xmm0, %xmm0
 ; SSE41-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: sitofp_load_2i8_to_2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movsbl 1(%rdi), %eax
-; AVX-NEXT:    movsbl (%rdi), %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm0
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX-NEXT:    movzwl (%rdi), %eax
+; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovsxbd %xmm0, %xmm0
 ; AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %ld = load <2 x i8>, <2 x i8> *%a
@@ -3606,19 +3600,17 @@ define <2 x double> @uitofp_load_2i8_to_2f64(<2 x i8> *%a) {
 ;
 ; SSE41-LABEL: uitofp_load_2i8_to_2f64:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movzbl 1(%rdi), %eax
-; SSE41-NEXT:    movzbl (%rdi), %ecx
-; SSE41-NEXT:    movd %ecx, %xmm0
-; SSE41-NEXT:    pinsrd $1, %eax, %xmm0
+; SSE41-NEXT:    movzwl (%rdi), %eax
+; SSE41-NEXT:    movd %eax, %xmm0
+; SSE41-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; SSE41-NEXT:    cvtdq2pd %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: uitofp_load_2i8_to_2f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movzbl 1(%rdi), %eax
-; AVX-NEXT:    movzbl (%rdi), %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm0
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX-NEXT:    movzwl (%rdi), %eax
+; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %ld = load <2 x i8>, <2 x i8> *%a
