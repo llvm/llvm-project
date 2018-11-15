@@ -37,10 +37,10 @@ int main()
     typedef std::pointer_to_binary_function<int, int, int> PBF;
 
     static_assert(
-        (std::is_same<PUF, decltype(std::ptr_fun<int, int>(identity))>::value),
+        (std::is_same<PUF, decltype((std::ptr_fun<int, int>(identity)))>::value),
         "");
     static_assert(
-        (std::is_same<PBF, decltype(std::ptr_fun<int, int, int>(sum))>::value),
+        (std::is_same<PBF, decltype((std::ptr_fun<int, int, int>(sum)))>::value),
         "");
 
     assert((std::ptr_fun<int, int>(identity)(4) == 4));
@@ -54,9 +54,9 @@ int main()
     typedef std::const_mem_fun_ref_t<int, Foo> CMFR;
 
     static_assert(
-        (std::is_same<MFR, decltype(std::mem_fun_ref(&Foo::zero))>::value), "");
-    static_assert((std::is_same<CMFR, decltype(std::mem_fun_ref(
-                                          &Foo::zero_const))>::value),
+        (std::is_same<MFR, decltype((std::mem_fun_ref(&Foo::zero)))>::value), "");
+    static_assert((std::is_same<CMFR, decltype((std::mem_fun_ref(
+                                          &Foo::zero_const)))>::value),
                   "");
 
     assert((std::mem_fun_ref(&Foo::zero)(f) == 0));
