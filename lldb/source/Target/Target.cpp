@@ -627,7 +627,8 @@ BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
                                       bool resolve_indirect_symbols) {
   BreakpointSP bp_sp;
   if (filter_sp && resolver_sp) {
-    bp_sp.reset(new Breakpoint(*this, filter_sp, resolver_sp, request_hardware,
+    const bool hardware = request_hardware || GetRequireHardwareBreakpoints();
+    bp_sp.reset(new Breakpoint(*this, filter_sp, resolver_sp, hardware,
                                resolve_indirect_symbols));
     resolver_sp->SetBreakpoint(bp_sp.get());
     AddBreakpoint(bp_sp, internal);
@@ -3135,6 +3136,7 @@ void Target::StopHook::GetDescription(Stream *s,
 // class TargetProperties
 //--------------------------------------------------------------
 
+// clang-format off
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
     {eNoDynamicValues, "no-dynamic-values",
      "Don't calculate the dynamic type of values"},
@@ -3362,7 +3364,10 @@ static constexpr PropertyDefinition g_properties[] = {
      nullptr, {}, "If true, LLDB will show variables that are meant to "
                   "support the operation of a language's runtime support."},
     {"non-stop-mode", OptionValue::eTypeBoolean, false, 0, nullptr, {},
-     "Disable lock-step debugging, instead control threads independently."}};
+     "Disable lock-step debugging, instead control threads independently."},
+    {"require-hardware-breakpoint", OptionValue::eTypeBoolean, false, 0,
+     nullptr, {}, "Require all breakpoints to be hardware breakpoints."}};
+// clang-format on
 
 enum {
   ePropertyDefaultArch,
@@ -3407,7 +3412,8 @@ enum {
   ePropertyTrapHandlerNames,
   ePropertyDisplayRuntimeSupportValues,
   ePropertyNonStopModeEnabled,
-  ePropertyExperimental
+  ePropertyRequireHardwareBreakpoints,
+  ePropertyExperimental,
 };
 
 class TargetOptionValueProperties : public OptionValueProperties {
@@ -4003,6 +4009,17 @@ void TargetProperties::SetProcessLaunchInfo(
   SetDetachOnError(launch_info.GetFlags().Test(lldb::eLaunchFlagDetachOnError));
   SetDisableASLR(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR));
   SetDisableSTDIO(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableSTDIO));
+}
+
+bool TargetProperties::GetRequireHardwareBreakpoints() const {
+  const uint32_t idx = ePropertyRequireHardwareBreakpoints;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_properties[idx].default_uint_value != 0);
+}
+
+void TargetProperties::SetRequireHardwareBreakpoints(bool b) {
+  const uint32_t idx = ePropertyRequireHardwareBreakpoints;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 
 void TargetProperties::Arg0ValueChangedCallback(void *target_property_ptr,

@@ -59,6 +59,7 @@ protected:
 private:
   std::string m_class_name;
   StructuredData::ObjectSP m_implementation_sp;
+  bool m_did_push;
 
   DISALLOW_COPY_AND_ASSIGN(ThreadPlanPython);
 };

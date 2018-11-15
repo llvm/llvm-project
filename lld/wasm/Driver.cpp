@@ -369,6 +369,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   errorHandler().ErrorLimit = args::getInteger(Args, OPT_error_limit, 20);
 
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
+  Config->CompressRelocations = Args.hasArg(OPT_compress_relocations);
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
   Config->DisableVerify = Args.hasArg(OPT_disable_verify);
   Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
@@ -391,13 +392,14 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->MergeDataSegments =
       Args.hasFlag(OPT_merge_data_segments, OPT_no_merge_data_segments,
                    !Config->Relocatable);
+  Config->Pie = Args.hasFlag(OPT_pie, OPT_no_pie, false);
   Config->PrintGcSections =
       Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
   Config->SaveTemps = Args.hasArg(OPT_save_temps);
   Config->SearchPaths = args::getStrings(Args, OPT_L);
+  Config->Shared = Args.hasArg(OPT_shared);
   Config->StripAll = Args.hasArg(OPT_strip_all);
   Config->StripDebug = Args.hasArg(OPT_strip_debug);
-  Config->CompressRelocations = Args.hasArg(OPT_compress_relocations);
   Config->StackFirst = Args.hasArg(OPT_stack_first);
   Config->ThinLTOCacheDir = Args.getLastArgValue(OPT_thinlto_cache_dir);
   Config->ThinLTOCachePolicy = CHECK(
@@ -432,6 +434,9 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     return;
   }
 
+  if (Config->Pie && Config->Shared)
+    error("-shared and -pie may not be used together");
+
   if (Config->OutputFile.empty())
     error("no output file specified");
 
@@ -447,7 +452,20 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
       error("-r -and --compress-relocations may not be used together");
     if (Args.hasArg(OPT_undefined))
       error("-r -and --undefined may not be used together");
+    if (Config->Pie)
+      error("-r and -pie may not be used together");
   }
+
+  Config->Pic = Config->Pie || Config->Shared;
+
+  if (Config->Pic) {
+    if (Config->ExportTable)
+      error("-shared/-pie is incompatible with --export-table");
+    Config->ImportTable = true;
+  }
+
+  if (Config->Shared)
+    Config->ExportDynamic = true;
 
   Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
@@ -474,6 +492,28 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol(
         "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
     WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end", 0);
+
+    if (Config->Pic) {
+      // For PIC code, we import two global variables (__memory_base and
+      // __table_base) from the environment and use these as the offset at
+      // which to load our static data and function table.
+      // See: https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
+      static llvm::wasm::WasmGlobalType GlobalTypeI32 = {WASM_TYPE_I32, false};
+
+      WasmSym::MemoryBase = Symtab->addUndefinedGlobal(
+          "__memory_base", WASM_SYMBOL_VISIBILITY_HIDDEN, nullptr,
+          &GlobalTypeI32);
+      Config->AllowUndefinedSymbols.insert(WasmSym::MemoryBase->getName());
+      WasmSym::MemoryBase->IsUsedInRegularObj = true;
+      WasmSym::MemoryBase->markLive();
+
+      WasmSym::TableBase = Symtab->addUndefinedGlobal(
+          "__table_base", WASM_SYMBOL_VISIBILITY_HIDDEN, nullptr,
+          &GlobalTypeI32);
+      Config->AllowUndefinedSymbols.insert(WasmSym::TableBase->getName());
+      WasmSym::TableBase->IsUsedInRegularObj = true;
+      WasmSym::TableBase->markLive();
+    }
 
     // These two synthetic symbols exist purely for the embedder so we always
     // want to export them.
@@ -511,7 +551,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // Add synthetic dummies for weak undefined functions.
     handleWeakUndefines();
 
-    if (!Config->Entry.empty()) {
+    if (!Config->Shared && !Config->Entry.empty()) {
       EntrySym = handleUndefined(Config->Entry);
       if (EntrySym && EntrySym->isDefined())
         EntrySym->ForceExport = true;
