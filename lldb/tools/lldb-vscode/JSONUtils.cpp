@@ -23,6 +23,14 @@
 
 namespace lldb_vscode {
 
+void EmplaceSafeString(llvm::json::Object &obj, llvm::StringRef key,
+                       llvm::StringRef str) {
+  if (LLVM_LIKELY(llvm::json::isUTF8(str)))
+    obj.try_emplace(key, str.str());
+  else
+    obj.try_emplace(key, llvm::json::fixUTF8(str));
+}
+
 llvm::StringRef GetAsString(const llvm::json::Value &value) {
   if (auto s = value.getAsString())
     return *s;
@@ -124,11 +132,11 @@ std::vector<std::string> GetStrings(const llvm::json::Object *obj,
 
 void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
                     llvm::StringRef key) {
-  
+
   llvm::StringRef value = v.GetValue();
   llvm::StringRef summary = v.GetSummary();
   llvm::StringRef type_name = v.GetType().GetDisplayTypeName();
-  
+
   std::string result;
   llvm::raw_string_ostream strm(result);
   if (!value.empty()) {
@@ -144,7 +152,7 @@ void SetValueForKey(lldb::SBValue &v, llvm::json::Object &object,
       strm << " @ " << llvm::format_hex(address, 0);
   }
   strm.flush();
-  object.try_emplace(key, result);
+  EmplaceSafeString(object, key, result);
 }
 
 void FillResponse(const llvm::json::Object &request,
@@ -153,7 +161,7 @@ void FillResponse(const llvm::json::Object &request,
   // to true by default.
   response.try_emplace("type", "response");
   response.try_emplace("seq", (int64_t)0);
-  response.try_emplace("command", GetString(request, "command"));
+  EmplaceSafeString(response, "command", GetString(request, "command"));
   const int64_t seq = GetSigned(request, "seq", 0);
   response.try_emplace("request_seq", seq);
   response.try_emplace("success", true);
@@ -223,7 +231,7 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
                               int64_t variablesReference,
                               int64_t namedVariables, bool expensive) {
   llvm::json::Object object;
-  object.try_emplace("name", name.str());
+  EmplaceSafeString(object, "name", name.str());
   object.try_emplace("variablesReference", variablesReference);
   object.try_emplace("expensive", expensive);
   object.try_emplace("namedVariables", namedVariables);
@@ -357,7 +365,7 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
   llvm::json::Object event;
   event.try_emplace("seq", 0);
   event.try_emplace("type", "event");
-  event.try_emplace("event", event_name);
+  EmplaceSafeString(event, "event", event_name);
   return event;
 }
 
@@ -388,8 +396,8 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
 llvm::json::Value
 CreateExceptionBreakpointFilter(const ExceptionBreakpoint &bp) {
   llvm::json::Object object;
-  object.try_emplace("filter", bp.filter);
-  object.try_emplace("label", bp.label);
+  EmplaceSafeString(object, "filter", bp.filter);
+  EmplaceSafeString(object, "label", bp.label);
   object.try_emplace("default", bp.default_value);
   return llvm::json::Value(std::move(object));
 }
@@ -467,11 +475,11 @@ llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry) {
   if (file.IsValid()) {
     const char *name = file.GetFilename();
     if (name)
-      object.try_emplace("name", name);
+      EmplaceSafeString(object, "name", name);
     char path[PATH_MAX] = "";
     file.GetPath(path, sizeof(path));
     if (path[0]) {
-      object.try_emplace("path", std::string(path));
+      EmplaceSafeString(object, "path", std::string(path));
     }
   }
   return llvm::json::Value(std::move(object));
@@ -517,7 +525,7 @@ llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
   }
   const auto num_insts = insts.GetSize();
   if (low_pc != LLDB_INVALID_ADDRESS && num_insts > 0) {
-    object.try_emplace("name", frame.GetFunctionName());
+    EmplaceSafeString(object, "name", frame.GetFunctionName());
     SourceReference source;
     llvm::raw_string_ostream src_strm(source.content);
     std::string line;
@@ -540,8 +548,8 @@ llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
       line.clear();
       llvm::raw_string_ostream line_strm(line);
       line_strm << llvm::formatv("{0:X+}: <{1}> {2} {3,12} {4}", inst_addr,
-                                 inst_offset, llvm::fmt_repeat(' ', spaces),
-                                 m, o);
+                                 inst_offset, llvm::fmt_repeat(' ', spaces), m,
+                                 o);
 
       // If there is a comment append it starting at column 60 or after one
       // space past the last char
@@ -626,7 +634,7 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   llvm::json::Object object;
   int64_t frame_id = MakeVSCodeFrameID(frame);
   object.try_emplace("id", frame_id);
-  object.try_emplace("name", frame.GetFunctionName());
+  EmplaceSafeString(object, "name", frame.GetFunctionName());
   int64_t disasm_line = 0;
   object.try_emplace("source", CreateSource(frame, disasm_line));
 
@@ -670,9 +678,9 @@ llvm::json::Value CreateThread(lldb::SBThread &thread) {
     std::string thread_with_name(thread_str);
     thread_with_name += ' ';
     thread_with_name += name;
-    object.try_emplace("name", thread_with_name);
+    EmplaceSafeString(object, "name", thread_with_name);
   } else {
-    object.try_emplace("name", std::string(thread_str));
+    EmplaceSafeString(object, "name", std::string(thread_str));
   }
   return llvm::json::Value(std::move(object));
 }
@@ -749,7 +757,7 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
     ExceptionBreakpoint *exc_bp = g_vsc.GetExceptionBPFromStopReason(thread);
     if (exc_bp) {
       body.try_emplace("reason", "exception");
-      body.try_emplace("description", exc_bp->label);
+      EmplaceSafeString(body, "description", exc_bp->label);
     } else {
       body.try_emplace("reason", "breakpoint");
     }
@@ -782,7 +790,7 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
   if (ObjectContainsKey(body, "description")) {
     char description[1024];
     if (thread.GetStopDescription(description, sizeof(description))) {
-      body.try_emplace("description", std::string(description));
+      EmplaceSafeString(body, "description", std::string(description));
     }
   }
   if (tid == g_vsc.focus_tid) {
@@ -862,12 +870,12 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
                                  int64_t varID, bool format_hex) {
   llvm::json::Object object;
   auto name = v.GetName();
-  object.try_emplace("name", name ? name : "<null>");
+  EmplaceSafeString(object, "name", name ? name : "<null>");
   if (format_hex)
     v.SetFormat(lldb::eFormatHex);
   SetValueForKey(v, object, "value");
   auto type_cstr = v.GetType().GetDisplayTypeName();
-  object.try_emplace("type", type_cstr ? type_cstr : NO_TYPENAME);
+  EmplaceSafeString(object, "type", type_cstr ? type_cstr : NO_TYPENAME);
   if (varID != INT64_MAX)
     object.try_emplace("id", varID);
   if (v.MightHaveChildren())
@@ -878,7 +886,7 @@ llvm::json::Value CreateVariable(lldb::SBValue v, int64_t variablesReference,
   v.GetExpressionPath(evaluateStream);
   const char *evaluateName = evaluateStream.GetData();
   if (evaluateName && evaluateName[0])
-    object.try_emplace("evaluateName", std::string(evaluateName));
+    EmplaceSafeString(object, "evaluateName", std::string(evaluateName));
   return llvm::json::Value(std::move(object));
 }
 
