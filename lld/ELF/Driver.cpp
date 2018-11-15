@@ -275,7 +275,7 @@ static void initLLVM() {
 
 // Some command line options or some combinations of them are not allowed.
 // This function checks for such errors.
-static void checkOptions(opt::InputArgList &Args) {
+static void checkOptions() {
   // The MIPS ABI as of 2016 does not support the GNU-style symbol lookup
   // table which is a relatively new feature.
   if (Config->EMachine == EM_MIPS && Config->GnuHash)
@@ -429,7 +429,7 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
 
   inferMachineType();
   setConfigs(Args);
-  checkOptions(Args);
+  checkOptions();
   if (errorCount())
     return;
 

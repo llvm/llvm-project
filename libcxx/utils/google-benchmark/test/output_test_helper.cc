@@ -1,8 +1,11 @@
+#include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <sstream>
+#include <streambuf>
 
 #include "../src/benchmark_api_internal.h"
 #include "../src/check.h"  // NOTE: check.h is for internal use only!
@@ -41,9 +44,11 @@ SubMap& GetSubstitutions() {
       {"%hrfloat", "[0-9]*[.]?[0-9]+([eE][-+][0-9]+)?[kMGTPEZYmunpfazy]?"},
       {"%int", "[ ]*[0-9]+"},
       {" %s ", "[ ]+"},
-      {"%time", "[ ]*[0-9]{1,6} ns"},
-      {"%console_report", "[ ]*[0-9]{1,6} ns [ ]*[0-9]{1,6} ns [ ]*[0-9]+"},
-      {"%console_us_report", "[ ]*[0-9] us [ ]*[0-9] us [ ]*[0-9]+"},
+      {"%time", "[ ]*[0-9]+ ns"},
+      {"%console_report", "[ ]*[0-9]+ ns [ ]*[0-9]+ ns [ ]*[0-9]+"},
+      {"%console_time_only_report", "[ ]*[0-9]+ ns [ ]*[0-9]+ ns"},
+      {"%console_us_report", "[ ]*[0-9]+ us [ ]*[0-9]+ us [ ]*[0-9]+"},
+      {"%console_us_time_only_report", "[ ]*[0-9]+ us [ ]*[0-9]+ us"},
       {"%csv_header",
        "name,iterations,real_time,cpu_time,time_unit,bytes_per_second,"
        "items_per_second,label,error_occurred,error_message"},
@@ -422,4 +427,38 @@ void RunOutputTests(int argc, char* argv[]) {
   // would use == but gcc spits a warning
   CHECK(std::strcmp(csv.name, "CSVReporter") == 0);
   internal::GetResultsChecker().CheckResults(csv.out_stream);
+}
+
+int SubstrCnt(const std::string& haystack, const std::string& pat) {
+  if (pat.length() == 0) return 0;
+  int count = 0;
+  for (size_t offset = haystack.find(pat); offset != std::string::npos;
+       offset = haystack.find(pat, offset + pat.length()))
+    ++count;
+  return count;
+}
+
+std::string GetFileReporterOutput(int argc, char* argv[]) {
+  std::vector<char*> new_argv(argv, argv + argc);
+  assert(static_cast<decltype(new_argv)::size_type>(argc) == new_argv.size());
+
+  std::string tmp_file_name = std::tmpnam(nullptr);
+  std::cout << "Will be using this as the tmp file: " << tmp_file_name << '\n';
+
+  std::string tmp = "--benchmark_out=";
+  tmp += tmp_file_name;
+  new_argv.emplace_back(const_cast<char*>(tmp.c_str()));
+
+  argc = int(new_argv.size());
+
+  benchmark::Initialize(&argc, new_argv.data());
+  benchmark::RunSpecifiedBenchmarks();
+
+  // Read the output back from the file, and delete the file.
+  std::ifstream tmp_stream(tmp_file_name);
+  std::string output = std::string((std::istreambuf_iterator<char>(tmp_stream)),
+                                   std::istreambuf_iterator<char>());
+  std::remove(tmp_file_name.c_str());
+
+  return output;
 }
