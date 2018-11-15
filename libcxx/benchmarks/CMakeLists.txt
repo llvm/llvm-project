@@ -18,11 +18,14 @@ if (DEFINED LIBCXX_CXX_ABI_LIBRARY_PATH)
           -L${LIBCXX_CXX_ABI_LIBRARY_PATH}
           -Wl,-rpath,${LIBCXX_CXX_ABI_LIBRARY_PATH})
 endif()
+if (LIBCXX_NEEDS_SITE_CONFIG)
+  list(APPEND BENCHMARK_LIBCXX_COMPILE_FLAGS -include "${LIBCXX_BINARY_DIR}/__config_site")
+endif()
 split_list(BENCHMARK_LIBCXX_COMPILE_FLAGS)
 
 ExternalProject_Add(google-benchmark-libcxx
         EXCLUDE_FROM_ALL ON
-        DEPENDS cxx
+        DEPENDS cxx cxx-headers
         PREFIX benchmark-libcxx
         SOURCE_DIR ${LIBCXX_SOURCE_DIR}/utils/google-benchmark
         INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/benchmark-libcxx
@@ -91,6 +94,11 @@ set(BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS
     ${SANITIZER_FLAGS}
     -Wno-user-defined-literals
 )
+if (LIBCXX_NEEDS_SITE_CONFIG)
+  list(APPEND BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS
+      -include "${LIBCXX_BINARY_DIR}/__config_site")
+endif()
+
 set(BENCHMARK_TEST_LIBCXX_LINK_FLAGS
     -nodefaultlibs
     -L${BENCHMARK_LIBCXX_INSTALL}/lib/
@@ -116,7 +124,7 @@ macro(add_benchmark_test name source_file)
   set(libcxx_target ${name}_libcxx)
   list(APPEND libcxx_benchmark_targets ${libcxx_target})
   add_executable(${libcxx_target} EXCLUDE_FROM_ALL ${source_file})
-  add_dependencies(${libcxx_target} cxx google-benchmark-libcxx)
+  add_dependencies(${libcxx_target} cxx cxx-headers google-benchmark-libcxx)
   add_dependencies(cxx-benchmarks ${libcxx_target})
   if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(${libcxx_target} cxx_shared)

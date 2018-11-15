@@ -28,6 +28,8 @@ DefinedData *WasmSym::DsoHandle;
 DefinedData *WasmSym::DataEnd;
 DefinedData *WasmSym::HeapBase;
 DefinedGlobal *WasmSym::StackPointer;
+Symbol *WasmSym::TableBase;
+Symbol *WasmSym::MemoryBase;
 
 WasmSymbolType Symbol::getWasmType() const {
   if (isa<FunctionSymbol>(this))

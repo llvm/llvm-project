@@ -29,6 +29,8 @@ Missing features
 There are several key features that are not yet implement in the WebAssembly
 ports:
 
+- Support for building shared libraries via ``-shared`` is still as work in
+  progress.
 - COMDAT support.  This means that support for C++ is still very limited.
 - Function stripping.  Currently there is no support for ``--gc-sections`` so
   functions and data from a given object will linked as a unit.
