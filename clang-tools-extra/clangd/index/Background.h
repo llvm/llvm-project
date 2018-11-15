@@ -30,30 +30,44 @@ namespace clangd {
 
 // Handles storage and retrieval of index shards.
 class BackgroundIndexStorage {
+private:
+  static std::function<std::shared_ptr<BackgroundIndexStorage>(llvm::StringRef)>
+      Factory;
+
 public:
+  using FileDigest = decltype(llvm::SHA1::hash({}));
+
   // Stores given shard associationg with ShardIdentifier, which can be
   // retrieved later on with the same identifier.
-  virtual llvm::Error storeShard(llvm::StringRef ShardIdentifier,
-                                 IndexFileOut Shard) const = 0;
+  virtual bool storeShard(llvm::StringRef ShardIdentifier,
+                          IndexFileOut Shard) const = 0;
 
-  static std::unique_ptr<BackgroundIndexStorage>
-  createDiskStorage(llvm::StringRef CDBDirectory);
+  // Retrieves the shard if found, also returns hash for the source file that
+  // generated this shard.
+  virtual llvm::Expected<IndexFileIn>
+  retrieveShard(llvm::StringRef ShardIdentifier) const = 0;
+
+  template <typename T> static void setStorageFactory(T Factory) {
+    BackgroundIndexStorage::Factory = Factory;
+  }
+
+  static std::shared_ptr<BackgroundIndexStorage>
+  getForDirectory(llvm::StringRef Directory) {
+    if (!Factory)
+      return nullptr;
+    return Factory(Directory);
+  }
 };
 
 // Builds an in-memory index by by running the static indexer action over
 // all commands in a compilation database. Indexing happens in the background.
-// Takes a factory function to create IndexStorage units for each compilation
-// database. Those databases are identified by directory they are found.
 // FIXME: it should also persist its state on disk for fast start.
 // FIXME: it should watch for changes to files on disk.
 class BackgroundIndex : public SwapIndex {
 public:
-  using IndexStorageFactory =
-      std::function<std::unique_ptr<BackgroundIndexStorage>(llvm::StringRef)>;
   // FIXME: resource-dir injection should be hoisted somewhere common.
   BackgroundIndex(Context BackgroundContext, llvm::StringRef ResourceDir,
                   const FileSystemProvider &, ArrayRef<std::string> URISchemes,
-                  IndexStorageFactory IndexStorageCreator = nullptr,
                   size_t ThreadPoolSize = llvm::hardware_concurrency());
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
@@ -79,6 +93,10 @@ private:
   void update(llvm::StringRef MainFile, SymbolSlab Symbols, RefSlab Refs,
               const llvm::StringMap<FileDigest> &FilesToUpdate,
               BackgroundIndexStorage *IndexStorage);
+  void loadShard(BackgroundIndexStorage *IndexStorage,
+                 const tooling::CompileCommand &Cmd);
+  void loadShards(BackgroundIndexStorage *IndexStorage,
+                  const std::vector<tooling::CompileCommand> &Cmds);
 
   // configuration
   std::string ResourceDir;
@@ -94,17 +112,11 @@ private:
   llvm::StringMap<FileDigest> IndexedFileDigests; // Key is absolute file path.
   std::mutex DigestsMu;
 
-  // index storage
-  BackgroundIndexStorage *getIndexStorage(llvm::StringRef CDBDirectory);
-  // Maps CDB Directory to index storage.
-  llvm::StringMap<std::unique_ptr<BackgroundIndexStorage>> IndexStorageMap;
-  IndexStorageFactory IndexStorageCreator;
-
   // queue management
   using Task = std::function<void()>;
   void run(); // Main loop executed by Thread. Runs tasks from Queue.
   void enqueueLocked(tooling::CompileCommand Cmd,
-                     BackgroundIndexStorage *IndexStorage);
+                     std::shared_ptr<BackgroundIndexStorage> IndexStorage);
   std::mutex QueueMu;
   unsigned NumActiveTasks = 0; // Only idle when queue is empty *and* no tasks.
   std::condition_variable QueueCV;
