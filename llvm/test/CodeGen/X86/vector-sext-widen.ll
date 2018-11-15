@@ -5062,29 +5062,26 @@ define <2 x i32> @sext_2i8_to_2i32(<2 x i8>* %addr) {
 ;
 ; SSE41-LABEL: sext_2i8_to_2i32:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movsbl 1(%rdi), %eax
-; SSE41-NEXT:    movsbl (%rdi), %ecx
-; SSE41-NEXT:    movd %ecx, %xmm0
-; SSE41-NEXT:    pinsrd $1, %eax, %xmm0
+; SSE41-NEXT:    movzwl (%rdi), %eax
+; SSE41-NEXT:    movd %eax, %xmm0
+; SSE41-NEXT:    pmovsxbd %xmm0, %xmm0
 ; SSE41-NEXT:    paddd %xmm0, %xmm0
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: sext_2i8_to_2i32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movsbl 1(%rdi), %eax
-; AVX-NEXT:    movsbl (%rdi), %ecx
-; AVX-NEXT:    vmovd %ecx, %xmm0
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; AVX-NEXT:    movzwl (%rdi), %eax
+; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpmovsxbd %xmm0, %xmm0
 ; AVX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: sext_2i8_to_2i32:
 ; X32-SSE41:       # %bb.0:
 ; X32-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-SSE41-NEXT:    movsbl 1(%eax), %ecx
-; X32-SSE41-NEXT:    movsbl (%eax), %eax
+; X32-SSE41-NEXT:    movzwl (%eax), %eax
 ; X32-SSE41-NEXT:    movd %eax, %xmm0
-; X32-SSE41-NEXT:    pinsrd $1, %ecx, %xmm0
+; X32-SSE41-NEXT:    pmovsxbd %xmm0, %xmm0
 ; X32-SSE41-NEXT:    paddd %xmm0, %xmm0
 ; X32-SSE41-NEXT:    retl
   %x = load <2 x i8>, <2 x i8>* %addr, align 1

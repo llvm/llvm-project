@@ -1650,20 +1650,33 @@ class FP16Med3Pat<ValueType vt,
   (med3Inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2, DSTCLAMP.NONE)
 >;
 
-class Int16Med3Pat<Instruction med3Inst,
+multiclass Int16Med3Pat<Instruction med3Inst,
+                   SDPatternOperator min,
                    SDPatternOperator max,
                    SDPatternOperator max_oneuse,
                    SDPatternOperator min_oneuse,
-                   ValueType vt = i32> : GCNPat<
+                   ValueType vt = i16> {
+  // This matches 16 permutations of
+  // max(min(x, y), min(max(x, y), z))
+  def : GCNPat <
   (max (min_oneuse vt:$src0, vt:$src1),
        (min_oneuse (max_oneuse vt:$src0, vt:$src1), vt:$src2)),
   (med3Inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1, SRCMODS.NONE, $src2, DSTCLAMP.NONE)
 >;
 
+  // This matches 16 permutations of
+  // min(max(a, b), max(min(a, b), c))
+  def : GCNPat <
+  (min (max_oneuse vt:$src0, vt:$src1),
+      (max_oneuse (min_oneuse vt:$src0, vt:$src1), vt:$src2)),
+  (med3Inst SRCMODS.NONE, $src0, SRCMODS.NONE, $src1, SRCMODS.NONE, $src2, DSTCLAMP.NONE)
+>;
+}
+
 def : FPMed3Pat<f32, V_MED3_F32>;
 
 let OtherPredicates = [isGFX9] in {
 def : FP16Med3Pat<f16, V_MED3_F16>;
-def : Int16Med3Pat<V_MED3_I16, smax, smax_oneuse, smin_oneuse, i16>;
-def : Int16Med3Pat<V_MED3_U16, umax, umax_oneuse, umin_oneuse, i16>;
+defm : Int16Med3Pat<V_MED3_I16, smin, smax, smax_oneuse, smin_oneuse>;
+defm : Int16Med3Pat<V_MED3_U16, umin, umax, umax_oneuse, umin_oneuse>;
 } // End Predicates = [isGFX9]

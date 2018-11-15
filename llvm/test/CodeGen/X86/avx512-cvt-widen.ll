@@ -1645,9 +1645,8 @@ define <2 x double> @sbto2f64(<2 x double> %a) {
 ; NOVL:       # %bb.0:
 ; NOVL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
-; NOVL-NEXT:    vpmovqd %zmm0, %ymm0
+; NOVL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; NOVL-NEXT:    vcvtdq2pd %xmm0, %xmm0
-; NOVL-NEXT:    vzeroupper
 ; NOVL-NEXT:    retq
 ;
 ; VLDQ-LABEL: sbto2f64:

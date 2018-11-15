@@ -1493,7 +1493,7 @@ def MOV64rr : RI<0x89, MRMDestReg, (outs GR64:$dst), (ins GR64:$src),
                  "mov{q}\t{$src, $dst|$dst, $src}", []>;
 }
 
-let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
+let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
 def MOV8ri  : Ii8 <0xB0, AddRegFrm, (outs GR8 :$dst), (ins i8imm :$src),
                    "mov{b}\t{$src, $dst|$dst, $src}",
                    [(set GR8:$dst, imm:$src)]>;
@@ -1507,7 +1507,7 @@ def MOV64ri32 : RIi32S<0xC7, MRM0r, (outs GR64:$dst), (ins i64i32imm:$src),
                        "mov{q}\t{$src, $dst|$dst, $src}",
                        [(set GR64:$dst, i64immSExt32:$src)]>;
 }
-let isReMaterializable = 1 in {
+let isReMaterializable = 1, isMoveImm = 1 in {
 def MOV64ri : RIi64<0xB8, AddRegFrm, (outs GR64:$dst), (ins i64imm:$src),
                     "movabs{q}\t{$src, $dst|$dst, $src}",
                     [(set GR64:$dst, relocImm:$src)]>;

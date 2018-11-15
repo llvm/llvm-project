@@ -2249,23 +2249,23 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X86-AVX1-NEXT:    divl %ecx
 ; X86-AVX1-NEXT:    movl %edx, %ebp
 ; X86-AVX1-NEXT:    vpextrd $3, %xmm0, %eax
-; X86-AVX1-NEXT:    xorl %edx, %edx
 ; X86-AVX1-NEXT:    vpextrd $3, %xmm1, %ecx
+; X86-AVX1-NEXT:    xorl %edx, %edx
 ; X86-AVX1-NEXT:    divl %ecx
 ; X86-AVX1-NEXT:    movl %edx, %ebx
-; X86-AVX1-NEXT:    xorl %edx, %edx
 ; X86-AVX1-NEXT:    vpextrd $2, %xmm0, %eax
 ; X86-AVX1-NEXT:    vpextrd $2, %xmm1, %esi
+; X86-AVX1-NEXT:    xorl %edx, %edx
 ; X86-AVX1-NEXT:    divl %esi
 ; X86-AVX1-NEXT:    movl %edx, %esi
-; X86-AVX1-NEXT:    xorl %edx, %edx
 ; X86-AVX1-NEXT:    vpextrd $1, %xmm0, %eax
 ; X86-AVX1-NEXT:    vpextrd $1, %xmm1, %edi
+; X86-AVX1-NEXT:    xorl %edx, %edx
 ; X86-AVX1-NEXT:    divl %edi
 ; X86-AVX1-NEXT:    movl %edx, %edi
-; X86-AVX1-NEXT:    xorl %edx, %edx
 ; X86-AVX1-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX1-NEXT:    vmovd %xmm1, %ecx
+; X86-AVX1-NEXT:    xorl %edx, %edx
 ; X86-AVX1-NEXT:    divl %ecx
 ; X86-AVX1-NEXT:    vmovd %edx, %xmm0
 ; X86-AVX1-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0

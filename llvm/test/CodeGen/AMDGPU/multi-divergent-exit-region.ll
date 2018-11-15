@@ -60,11 +60,11 @@
 
 ; GCN-LABEL: {{^}}multi_divergent_region_exit_ret_ret:
 
-; GCN:      s_mov_b64           [[EXIT1:s\[[0-9]+:[0-9]+\]]], 0
-; GCN:      v_cmp_lt_i32_e32    vcc, 1,
-; GCN:      s_mov_b64           [[EXIT0:s\[[0-9]+:[0-9]+\]]], 0
-; GCN:      s_and_saveexec_b64
-; GCN:      s_xor_b64
+; GCN-DAG:  s_mov_b64           [[EXIT1:s\[[0-9]+:[0-9]+\]]], 0
+; GCN-DAG:  v_cmp_lt_i32_e32    vcc, 1,
+; GCN-DAG:  s_mov_b64           [[EXIT0:s\[[0-9]+:[0-9]+\]]], 0
+; GCN-DAG:  s_and_saveexec_b64
+; GCN-DAG:  s_xor_b64
 
 ; GCN: ; %LeafBlock1
 ; GCN-NEXT: s_mov_b64           [[EXIT0]], exec
@@ -92,8 +92,8 @@
 ; GCN-NEXT: s_xor_b64
 
 ; GCN: ; %exit1
-; GCN:      ds_write_b32
-; GCN:      s_andn2_b64         [[EXIT0]], [[EXIT0]], exec
+; GCN-DAG:  ds_write_b32
+; GCN-DAG:  s_andn2_b64         [[EXIT0]], [[EXIT0]], exec
 
 ; GCN: ; %Flow5
 ; GCN-NEXT: s_or_b64            exec, exec,
