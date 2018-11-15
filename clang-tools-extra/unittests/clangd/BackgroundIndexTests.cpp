@@ -78,5 +78,79 @@ TEST(BackgroundIndexTest, IndexTwoFiles) {
                        FileURI("unittest:///root/B.cc")}));
 }
 
+TEST(BackgroundIndexTest, ShardStorageTest) {
+  class MemoryShardStorage : public ShardStorage {
+    mutable std::mutex StorageMu;
+    llvm::StringMap<std::string> &Storage;
+    size_t& CacheHits;
+
+  public:
+    MemoryShardStorage(llvm::StringMap<std::string> &Storage, size_t &CacheHits)
+        : Storage(Storage), CacheHits(CacheHits) {}
+
+    bool storeShard(llvm::StringRef ShardIdentifier, IndexFileOut Shard) const {
+      std::lock_guard<std::mutex> Lock(StorageMu);
+      std::string &str = Storage[ShardIdentifier];
+      llvm::raw_string_ostream OS(str);
+      OS << Shard;
+      OS.flush();
+      return true;
+    }
+    llvm::Expected<IndexFileIn> retrieveShard(llvm::StringRef ShardIdentifier,
+                                              FileDigest Hash) const {
+      std::lock_guard<std::mutex> Lock(StorageMu);
+      if (Storage.find(ShardIdentifier) == Storage.end())
+        return llvm::make_error<llvm::StringError>(
+            "Shard not found.", llvm::inconvertibleErrorCode());
+      auto IndexFile = readIndexFile(Storage[ShardIdentifier]);
+      if(!IndexFile)
+        return IndexFile;
+      CacheHits++;
+      return IndexFile;
+    }
+    bool initialize(llvm::StringRef Directory) { return true; }
+  };
+  MockFSProvider FS;
+  FS.Files[testPath("root/A.h")] = R"cpp(
+      void common();
+      void f_b();
+      class A_CC {};
+      )cpp";
+  FS.Files[testPath("root/A.cc")] =
+      "#include \"A.h\"\nvoid g() { (void)common; }";
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = testPath("root/A.cc");
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", testPath("root/A.cc")};
+  {
+    BackgroundIndex Idx(
+        Context::empty(), "", FS, /*URISchemes=*/{"unittest"},
+        /*IndexShardStorage=*/
+        llvm::make_unique<MemoryShardStorage>(Storage, CacheHits));
+    Idx.enqueue(testPath("root"), Cmd);
+    Idx.blockUntilIdleForTest();
+  }
+  EXPECT_EQ(CacheHits, 0U);
+  EXPECT_EQ(Storage.size(), 2U);
+  EXPECT_NE(Storage.find(testPath("root/A.h")), Storage.end());
+  EXPECT_NE(Storage.find(testPath("root/A.cc")), Storage.end());
+
+  {
+    BackgroundIndex Idx(
+        Context::empty(), "", FS, /*URISchemes=*/{"unittest"},
+        /*IndexShardStorage=*/
+        llvm::make_unique<MemoryShardStorage>(Storage, CacheHits));
+    Idx.enqueue(testPath("root"), Cmd);
+    Idx.blockUntilIdleForTest();
+  }
+  EXPECT_EQ(CacheHits, 1U);
+  EXPECT_EQ(Storage.size(), 2U);
+  EXPECT_NE(Storage.find(testPath("root/A.h")), Storage.end());
+  EXPECT_NE(Storage.find(testPath("root/A.cc")), Storage.end());
+  // B_CC is dropped as we don't collect symbols from A.h in this compilation.
+}
+
 } // namespace clangd
 } // namespace clang
