@@ -28,35 +28,15 @@
 namespace clang {
 namespace clangd {
 
-// Handles storage and retrieval of index shards.
-class BackgroundIndexStorage {
-private:
-  static std::function<std::shared_ptr<BackgroundIndexStorage>(llvm::StringRef)>
-      Factory;
-
+// Base class for Shard Storage operations. See DiskShardStorage for more info.
+class ShardStorage {
 public:
   using FileDigest = decltype(llvm::SHA1::hash({}));
-
-  // Stores given shard associationg with ShardIdentifier, which can be
-  // retrieved later on with the same identifier.
   virtual bool storeShard(llvm::StringRef ShardIdentifier,
                           IndexFileOut Shard) const = 0;
-
-  // Retrieves the shard if found, also returns hash for the source file that
-  // generated this shard.
   virtual llvm::Expected<IndexFileIn>
-  retrieveShard(llvm::StringRef ShardIdentifier) const = 0;
-
-  template <typename T> static void setStorageFactory(T Factory) {
-    BackgroundIndexStorage::Factory = Factory;
-  }
-
-  static std::shared_ptr<BackgroundIndexStorage>
-  getForDirectory(llvm::StringRef Directory) {
-    if (!Factory)
-      return nullptr;
-    return Factory(Directory);
-  }
+  retrieveShard(llvm::StringRef ShardIdentifier, FileDigest Hash) const = 0;
+  virtual bool initialize(llvm::StringRef Directory) = 0;
 };
 
 // Builds an in-memory index by by running the static indexer action over
@@ -68,6 +48,7 @@ public:
   // FIXME: resource-dir injection should be hoisted somewhere common.
   BackgroundIndex(Context BackgroundContext, llvm::StringRef ResourceDir,
                   const FileSystemProvider &, ArrayRef<std::string> URISchemes,
+                  std::unique_ptr<ShardStorage> IndexShardStorage = nullptr,
                   size_t ThreadPoolSize = llvm::hardware_concurrency());
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
@@ -91,22 +72,17 @@ public:
 private:
   /// Given index results from a TU, only update files in \p FilesToUpdate.
   void update(llvm::StringRef MainFile, SymbolSlab Symbols, RefSlab Refs,
-              const llvm::StringMap<FileDigest> &FilesToUpdate,
-              BackgroundIndexStorage *IndexStorage);
-  void loadShard(BackgroundIndexStorage *IndexStorage,
-                 const tooling::CompileCommand &Cmd);
-  void loadShards(BackgroundIndexStorage *IndexStorage,
-                  const std::vector<tooling::CompileCommand> &Cmds);
+              const llvm::StringMap<FileDigest> &FilesToUpdate);
 
   // configuration
   std::string ResourceDir;
   const FileSystemProvider &FSProvider;
   Context BackgroundContext;
   std::vector<std::string> URISchemes;
+  std::unique_ptr<ShardStorage> IndexShardStorage;
 
   // index state
-  llvm::Error index(tooling::CompileCommand,
-                    BackgroundIndexStorage *IndexStorage);
+  llvm::Error index(tooling::CompileCommand);
 
   FileSymbols IndexedSymbols;
   llvm::StringMap<FileDigest> IndexedFileDigests; // Key is absolute file path.
@@ -115,14 +91,37 @@ private:
   // queue management
   using Task = std::function<void()>;
   void run(); // Main loop executed by Thread. Runs tasks from Queue.
-  void enqueueLocked(tooling::CompileCommand Cmd,
-                     std::shared_ptr<BackgroundIndexStorage> IndexStorage);
+  void enqueueLocked(tooling::CompileCommand Cmd);
   std::mutex QueueMu;
   unsigned NumActiveTasks = 0; // Only idle when queue is empty *and* no tasks.
   std::condition_variable QueueCV;
   bool ShouldStop = false;
   std::deque<Task> Queue;
   std::vector<std::thread> ThreadPool; // FIXME: Abstract this away.
+};
+
+// Handles storage and retrieval of index shards into disk. Requires Initialize
+// to be called before storing or retrieval. Creates a directory called
+// ".clangd-index/" under the path provided during initialize. This class is
+// thread-safe.
+class DiskShardStorage : public ShardStorage {
+  mutable std::mutex DiskShardRootMu;
+  llvm::SmallString<128> DiskShardRoot;
+  bool Initialized;
+
+public:
+  // Retrieves the shard if found and contents are consistent with the provided
+  // Hash.
+  llvm::Expected<IndexFileIn> retrieveShard(llvm::StringRef ShardIdentifier,
+                                            FileDigest Hash) const;
+
+  // Stores given shard with name ShardIdentifier under initialized directory.
+  bool storeShard(llvm::StringRef ShardIdentifier, IndexFileOut Shard) const;
+
+  // Initializes DiskShardRoot to (Directory + ".clangd-index/") which is the
+  // base directory for all shard files. After the initialization succeeds all
+  // subsequent calls or no-op.
+  bool initialize(llvm::StringRef Directory);
 };
 
 } // namespace clangd
