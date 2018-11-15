@@ -510,6 +510,5 @@ bool PDBASTParser::AddEnumValue(CompilerType enum_type,
   uint32_t byte_size = m_ast.getASTContext()->getTypeSize(
       ClangUtil::GetQualType(underlying_type));
   return m_ast.AddEnumerationValueToEnumerationType(
-      enum_type.GetOpaqueQualType(), underlying_type, decl, name.c_str(),
-      raw_value, byte_size * 8);
+      enum_type, decl, name.c_str(), raw_value, byte_size * 8);
 }
