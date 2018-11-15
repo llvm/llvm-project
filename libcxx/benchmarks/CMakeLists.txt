@@ -118,9 +118,20 @@ split_list(BENCHMARK_TEST_LIBCXX_LINK_FLAGS)
 split_list(BENCHMARK_TEST_NATIVE_COMPILE_FLAGS)
 split_list(BENCHMARK_TEST_NATIVE_LINK_FLAGS)
 
+if (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++")
+  find_library(LIBSTDCXX_FILESYSTEM_TEST stdc++fs
+        PATHS ${LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN}
+        PATH_SUFFIXES lib lib64
+        DOC "The libstdc++ filesystem library used by the benchmarks"
+    )
+    if (NOT "${LIBSTDCXX_FILESYSTEM_TEST}" STREQUAL "LIBSTDCXX_FILESYSTEM_TEST-NOTFOUND")
+      set(LIBSTDCXX_FILESYSTEM_LIB "stdc++fs")
+    endif()
+endif()
+
 set(libcxx_benchmark_targets)
 
-macro(add_benchmark_test name source_file)
+function(add_benchmark_test name source_file)
   set(libcxx_target ${name}_libcxx)
   list(APPEND libcxx_benchmark_targets ${libcxx_target})
   add_executable(${libcxx_target} EXCLUDE_FROM_ALL ${source_file})
@@ -148,13 +159,17 @@ macro(add_benchmark_test name source_file)
           COMPILE_FLAGS "${BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS}"
           LINK_FLAGS "${BENCHMARK_TEST_LIBCXX_LINK_FLAGS}")
   if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
+    if (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++" AND NOT DEFINED LIBSTDCXX_FILESYSTEM_LIB
+        AND "${name}" STREQUAL "filesystem")
+      return()
+    endif()
     set(native_target ${name}_native)
     add_executable(${native_target} EXCLUDE_FROM_ALL ${source_file})
     add_dependencies(${native_target} google-benchmark-native
                                       google-benchmark-libcxx)
     target_link_libraries(${native_target} -lbenchmark)
     if (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++")
-      target_link_libraries(${native_target} -lstdc++fs)
+      target_link_libraries(${native_target} ${LIBSTDCXX_FILESYSTEM_LIB})
     elseif (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libc++")
       target_link_libraries(${native_target} -lc++fs -lc++experimental)
     endif()
@@ -170,7 +185,7 @@ macro(add_benchmark_test name source_file)
           COMPILE_FLAGS "${BENCHMARK_TEST_NATIVE_COMPILE_FLAGS}"
           LINK_FLAGS "${BENCHMARK_TEST_NATIVE_LINK_FLAGS}")
   endif()
-endmacro()
+endfunction()
 
 
 #==============================================================================
