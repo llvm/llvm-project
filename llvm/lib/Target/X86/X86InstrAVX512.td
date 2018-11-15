@@ -9528,7 +9528,7 @@ multiclass WriteShuffle256_BD<bits<8> opc, string OpcodeStr,
                          EVEX_CD8<8, CD8VQ>, T8PD, EVEX_V128, VEX_WIG;
 
     defm Z256:  WriteShuffle256_common<opc, OpcodeStr, sched, v8i32x_info,
-                   v16i8x_info, i64mem, LdFrag, OpNode>,
+                   v16i8x_info, i64mem, LdFrag, InVecNode>,
                          EVEX_CD8<8, CD8VQ>, T8PD, EVEX_V256, VEX_WIG;
   }
   let Predicates = [HasAVX512] in {
@@ -9547,12 +9547,12 @@ multiclass WriteShuffle256_BQ<bits<8> opc, string OpcodeStr,
                      EVEX_CD8<8, CD8VO>, T8PD, EVEX_V128, VEX_WIG;
 
     defm Z256:  WriteShuffle256_common<opc, OpcodeStr, sched, v4i64x_info,
-                   v16i8x_info, i32mem, LdFrag, OpNode>,
+                   v16i8x_info, i32mem, LdFrag, InVecNode>,
                      EVEX_CD8<8, CD8VO>, T8PD, EVEX_V256, VEX_WIG;
   }
   let Predicates = [HasAVX512] in {
     defm Z   :  WriteShuffle256_common<opc, OpcodeStr, sched, v8i64_info,
-                   v16i8x_info, i64mem, LdFrag, OpNode>,
+                   v16i8x_info, i64mem, LdFrag, InVecNode>,
                      EVEX_CD8<8, CD8VO>, T8PD, EVEX_V512, VEX_WIG;
   }
 }
@@ -9585,7 +9585,7 @@ multiclass WriteShuffle256_WQ<bits<8> opc, string OpcodeStr,
                      EVEX_CD8<16, CD8VQ>, T8PD, EVEX_V128, VEX_WIG;
 
     defm Z256:  WriteShuffle256_common<opc, OpcodeStr, sched, v4i64x_info,
-                   v8i16x_info, i64mem, LdFrag, OpNode>,
+                   v8i16x_info, i64mem, LdFrag, InVecNode>,
                      EVEX_CD8<16, CD8VQ>, T8PD, EVEX_V256, VEX_WIG;
   }
   let Predicates = [HasAVX512] in {
@@ -9615,23 +9615,107 @@ multiclass WriteShuffle256_DQ<bits<8> opc, string OpcodeStr,
   }
 }
 
-defm VPMOVZXBW : WriteShuffle256_BW<0x30, "vpmovzxbw", X86vzext, zext_invec, "z", WriteShuffle256>;
-defm VPMOVZXBD : WriteShuffle256_BD<0x31, "vpmovzxbd", X86vzext, zext_invec, "z", WriteShuffle256>;
-defm VPMOVZXBQ : WriteShuffle256_BQ<0x32, "vpmovzxbq", X86vzext, zext_invec, "z", WriteShuffle256>;
-defm VPMOVZXWD : WriteShuffle256_WD<0x33, "vpmovzxwd", X86vzext, zext_invec, "z", WriteShuffle256>;
-defm VPMOVZXWQ : WriteShuffle256_WQ<0x34, "vpmovzxwq", X86vzext, zext_invec, "z", WriteShuffle256>;
-defm VPMOVZXDQ : WriteShuffle256_DQ<0x35, "vpmovzxdq", X86vzext, zext_invec, "z", WriteShuffle256>;
+defm VPMOVZXBW : WriteShuffle256_BW<0x30, "vpmovzxbw", zext, zext_invec, "z", WriteShuffle256>;
+defm VPMOVZXBD : WriteShuffle256_BD<0x31, "vpmovzxbd", zext, zext_invec, "z", WriteShuffle256>;
+defm VPMOVZXBQ : WriteShuffle256_BQ<0x32, "vpmovzxbq", zext, zext_invec, "z", WriteShuffle256>;
+defm VPMOVZXWD : WriteShuffle256_WD<0x33, "vpmovzxwd", zext, zext_invec, "z", WriteShuffle256>;
+defm VPMOVZXWQ : WriteShuffle256_WQ<0x34, "vpmovzxwq", zext, zext_invec, "z", WriteShuffle256>;
+defm VPMOVZXDQ : WriteShuffle256_DQ<0x35, "vpmovzxdq", zext, zext_invec, "z", WriteShuffle256>;
 
-defm VPMOVSXBW: WriteShuffle256_BW<0x20, "vpmovsxbw", X86vsext, sext_invec, "s", WriteShuffle256>;
-defm VPMOVSXBD: WriteShuffle256_BD<0x21, "vpmovsxbd", X86vsext, sext_invec, "s", WriteShuffle256>;
-defm VPMOVSXBQ: WriteShuffle256_BQ<0x22, "vpmovsxbq", X86vsext, sext_invec, "s", WriteShuffle256>;
-defm VPMOVSXWD: WriteShuffle256_WD<0x23, "vpmovsxwd", X86vsext, sext_invec, "s", WriteShuffle256>;
-defm VPMOVSXWQ: WriteShuffle256_WQ<0x24, "vpmovsxwq", X86vsext, sext_invec, "s", WriteShuffle256>;
-defm VPMOVSXDQ: WriteShuffle256_DQ<0x25, "vpmovsxdq", X86vsext, sext_invec, "s", WriteShuffle256>;
+defm VPMOVSXBW: WriteShuffle256_BW<0x20, "vpmovsxbw", sext, sext_invec, "s", WriteShuffle256>;
+defm VPMOVSXBD: WriteShuffle256_BD<0x21, "vpmovsxbd", sext, sext_invec, "s", WriteShuffle256>;
+defm VPMOVSXBQ: WriteShuffle256_BQ<0x22, "vpmovsxbq", sext, sext_invec, "s", WriteShuffle256>;
+defm VPMOVSXWD: WriteShuffle256_WD<0x23, "vpmovsxwd", sext, sext_invec, "s", WriteShuffle256>;
+defm VPMOVSXWQ: WriteShuffle256_WQ<0x24, "vpmovsxwq", sext, sext_invec, "s", WriteShuffle256>;
+defm VPMOVSXDQ: WriteShuffle256_DQ<0x25, "vpmovsxdq", sext, sext_invec, "s", WriteShuffle256>;
+
+
+// Patterns that we also need any extend versions of. aext_vector_inreg
+// is currently legalized to zext_vector_inreg.
+multiclass AVX512_pmovx_patterns_base<string OpcPrefix, SDNode ExtOp> {
+  // 256-bit patterns
+  let Predicates = [HasVLX, HasBWI] in {
+    def : Pat<(v16i16 (ExtOp (loadv16i8 addr:$src))),
+              (!cast<I>(OpcPrefix#BWZ256rm) addr:$src)>;
+    def : Pat<(v16i16 (ExtOp (v16i8 (vzmovl_v2i64 addr:$src)))),
+              (!cast<I>(OpcPrefix#BWZ256rm) addr:$src)>;
+    def : Pat<(v16i16 (ExtOp (v16i8 (vzload_v2i64 addr:$src)))),
+              (!cast<I>(OpcPrefix#BWZ256rm) addr:$src)>;
+  }
+
+  let Predicates = [HasVLX] in {
+    def : Pat<(v8i32 (ExtOp (loadv8i16 addr:$src))),
+              (!cast<I>(OpcPrefix#WDZ256rm) addr:$src)>;
+    def : Pat<(v8i32 (ExtOp (v8i16 (vzmovl_v2i64 addr:$src)))),
+              (!cast<I>(OpcPrefix#WDZ256rm) addr:$src)>;
+    def : Pat<(v8i32 (ExtOp (v8i16 (vzload_v2i64 addr:$src)))),
+              (!cast<I>(OpcPrefix#WDZ256rm) addr:$src)>;
+
+    def : Pat<(v4i64 (ExtOp (loadv4i32 addr:$src))),
+              (!cast<I>(OpcPrefix#DQZ256rm) addr:$src)>;
+    def : Pat<(v4i64 (ExtOp (v4i32 (vzmovl_v2i64 addr:$src)))),
+              (!cast<I>(OpcPrefix#DQZ256rm) addr:$src)>;
+    def : Pat<(v4i64 (ExtOp (v4i32 (vzload_v2i64 addr:$src)))),
+              (!cast<I>(OpcPrefix#DQZ256rm) addr:$src)>;
+  }
+
+  // 512-bit patterns
+  let Predicates = [HasBWI] in {
+    def : Pat<(v32i16 (ExtOp (loadv32i8 addr:$src))),
+              (!cast<I>(OpcPrefix#BWZrm) addr:$src)>;
+  }
+  let Predicates = [HasAVX512] in {
+    def : Pat<(v16i32 (ExtOp (loadv16i8 addr:$src))),
+              (!cast<I>(OpcPrefix#BDZrm) addr:$src)>;
+    def : Pat<(v16i32 (ExtOp (loadv16i16 addr:$src))),
+              (!cast<I>(OpcPrefix#WDZrm) addr:$src)>;
+
+    def : Pat<(v8i64 (ExtOp (loadv8i16 addr:$src))),
+              (!cast<I>(OpcPrefix#WQZrm) addr:$src)>;
+
+    def : Pat<(v8i64 (ExtOp (loadv8i32 addr:$src))),
+              (!cast<I>(OpcPrefix#DQZrm) addr:$src)>;
+  }
+}
+
+multiclass AVX512_pmovx_patterns_aext<string OpcPrefix, SDNode ExtOp> :
+    AVX512_pmovx_patterns_base<OpcPrefix, ExtOp> {
+  let Predicates = [HasVLX, HasBWI] in {
+    def : Pat<(v16i16 (ExtOp (v16i8 VR128X:$src))),
+              (!cast<I>(OpcPrefix#BWZ256rr) VR128X:$src)>;
+  }
+
+  let Predicates = [HasVLX] in {
+    def : Pat<(v8i32 (ExtOp (v8i16 VR128X:$src))),
+              (!cast<I>(OpcPrefix#WDZ256rr) VR128X:$src)>;
+
+    def : Pat<(v4i64 (ExtOp (v4i32 VR128X:$src))),
+              (!cast<I>(OpcPrefix#DQZ256rr) VR128X:$src)>;
+  }
+
+  // 512-bit patterns
+  let Predicates = [HasBWI] in {
+    def : Pat<(v32i16 (ExtOp (v32i8 VR256X:$src))),
+              (!cast<I>(OpcPrefix#BWZrr) VR256X:$src)>;
+  }
+  let Predicates = [HasAVX512] in {
+    def : Pat<(v16i32 (ExtOp (v16i8 VR128X:$src))),
+              (!cast<I>(OpcPrefix#BDZrr) VR128X:$src)>;
+    def : Pat<(v16i32 (ExtOp (v16i16 VR256X:$src))),
+              (!cast<I>(OpcPrefix#WDZrr) VR256X:$src)>;
+
+    def : Pat<(v8i64 (ExtOp (v8i16 VR128X:$src))),
+              (!cast<I>(OpcPrefix#WQZrr) VR128X:$src)>;
+
+    def : Pat<(v8i64 (ExtOp (v8i32 VR256X:$src))),
+              (!cast<I>(OpcPrefix#DQZrr) VR256X:$src)>;
+  }
+}
 
 
 multiclass AVX512_pmovx_patterns<string OpcPrefix, SDNode ExtOp,
-                                 SDNode InVecOp> {
+                                 SDNode InVecOp> :
+    AVX512_pmovx_patterns_base<OpcPrefix, ExtOp> {
   // 128-bit patterns
   let Predicates = [HasVLX, HasBWI] in {
   def : Pat<(v8i16 (InVecOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
@@ -9695,84 +9779,58 @@ multiclass AVX512_pmovx_patterns<string OpcPrefix, SDNode ExtOp,
   def : Pat<(v2i64 (InVecOp (loadv4i32 addr:$src))),
             (!cast<I>(OpcPrefix#DQZ128rm) addr:$src)>;
   }
-  // 256-bit patterns
-  let Predicates = [HasVLX, HasBWI] in {
-  def : Pat<(v16i16 (ExtOp (loadv16i8 addr:$src))),
-            (!cast<I>(OpcPrefix#BWZ256rm) addr:$src)>;
-  def : Pat<(v16i16 (ExtOp (v16i8 (vzmovl_v2i64 addr:$src)))),
-            (!cast<I>(OpcPrefix#BWZ256rm) addr:$src)>;
-  def : Pat<(v16i16 (ExtOp (v16i8 (vzload_v2i64 addr:$src)))),
-            (!cast<I>(OpcPrefix#BWZ256rm) addr:$src)>;
-  }
   let Predicates = [HasVLX] in {
-  def : Pat<(v8i32 (ExtOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
+  def : Pat<(v8i32 (InVecOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (!cast<I>(OpcPrefix#BDZ256rm) addr:$src)>;
-  def : Pat<(v8i32 (ExtOp (v16i8 (vzmovl_v2i64 addr:$src)))),
+  def : Pat<(v8i32 (InVecOp (v16i8 (vzmovl_v2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#BDZ256rm) addr:$src)>;
-  def : Pat<(v8i32 (ExtOp (v16i8 (vzload_v2i64 addr:$src)))),
+  def : Pat<(v8i32 (InVecOp (v16i8 (vzload_v2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#BDZ256rm) addr:$src)>;
-  def : Pat<(v8i32 (ExtOp (loadv16i8 addr:$src))),
+  def : Pat<(v8i32 (InVecOp (loadv16i8 addr:$src))),
             (!cast<I>(OpcPrefix#BDZ256rm) addr:$src)>;
 
-  def : Pat<(v4i64 (ExtOp (bc_v16i8 (v4i32 (scalar_to_vector (loadi32 addr:$src)))))),
+  def : Pat<(v4i64 (InVecOp (bc_v16i8 (v4i32 (scalar_to_vector (loadi32 addr:$src)))))),
             (!cast<I>(OpcPrefix#BQZ256rm) addr:$src)>;
-  def : Pat<(v4i64 (ExtOp (v16i8 (vzmovl_v4i32 addr:$src)))),
+  def : Pat<(v4i64 (InVecOp (v16i8 (vzmovl_v4i32 addr:$src)))),
             (!cast<I>(OpcPrefix#BQZ256rm) addr:$src)>;
-  def : Pat<(v4i64 (ExtOp (v16i8 (vzload_v2i64 addr:$src)))),
+  def : Pat<(v4i64 (InVecOp (v16i8 (vzload_v2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#BQZ256rm) addr:$src)>;
-  def : Pat<(v4i64 (ExtOp (loadv16i8 addr:$src))),
+  def : Pat<(v4i64 (InVecOp (loadv16i8 addr:$src))),
             (!cast<I>(OpcPrefix#BQZ256rm) addr:$src)>;
 
-  def : Pat<(v8i32 (ExtOp (loadv8i16 addr:$src))),
-            (!cast<I>(OpcPrefix#WDZ256rm) addr:$src)>;
-  def : Pat<(v8i32 (ExtOp (v8i16 (vzmovl_v2i64 addr:$src)))),
-            (!cast<I>(OpcPrefix#WDZ256rm) addr:$src)>;
-  def : Pat<(v8i32 (ExtOp (v8i16 (vzload_v2i64 addr:$src)))),
-            (!cast<I>(OpcPrefix#WDZ256rm) addr:$src)>;
-
-  def : Pat<(v4i64 (ExtOp (bc_v8i16 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
+  def : Pat<(v4i64 (InVecOp (bc_v8i16 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (!cast<I>(OpcPrefix#WQZ256rm) addr:$src)>;
-  def : Pat<(v4i64 (ExtOp (v8i16 (vzmovl_v2i64 addr:$src)))),
+  def : Pat<(v4i64 (InVecOp (v8i16 (vzmovl_v2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#WQZ256rm) addr:$src)>;
-  def : Pat<(v4i64 (ExtOp (v8i16 (vzload_v2i64 addr:$src)))),
+  def : Pat<(v4i64 (InVecOp (v8i16 (vzload_v2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#WQZ256rm) addr:$src)>;
-  def : Pat<(v4i64 (ExtOp (loadv8i16 addr:$src))),
+  def : Pat<(v4i64 (InVecOp (loadv8i16 addr:$src))),
             (!cast<I>(OpcPrefix#WQZ256rm) addr:$src)>;
-
-  def : Pat<(v4i64 (ExtOp (loadv4i32 addr:$src))),
-            (!cast<I>(OpcPrefix#DQZ256rm) addr:$src)>;
-  def : Pat<(v4i64 (ExtOp (v4i32 (vzmovl_v2i64 addr:$src)))),
-            (!cast<I>(OpcPrefix#DQZ256rm) addr:$src)>;
-  def : Pat<(v4i64 (ExtOp (v4i32 (vzload_v2i64 addr:$src)))),
-            (!cast<I>(OpcPrefix#DQZ256rm) addr:$src)>;
   }
   // 512-bit patterns
-  let Predicates = [HasBWI] in {
-  def : Pat<(v32i16 (ExtOp (loadv32i8 addr:$src))),
-            (!cast<I>(OpcPrefix#BWZrm) addr:$src)>;
-  }
   let Predicates = [HasAVX512] in {
-  def : Pat<(v16i32 (ExtOp (loadv16i8 addr:$src))),
-            (!cast<I>(OpcPrefix#BDZrm) addr:$src)>;
-
-  def : Pat<(v8i64 (ExtOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
+  def : Pat<(v8i64 (InVecOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (!cast<I>(OpcPrefix#BQZrm) addr:$src)>;
-  def : Pat<(v8i64 (ExtOp (loadv16i8 addr:$src))),
+  def : Pat<(v8i64 (InVecOp (loadv16i8 addr:$src))),
             (!cast<I>(OpcPrefix#BQZrm) addr:$src)>;
-
-  def : Pat<(v16i32 (ExtOp (loadv16i16 addr:$src))),
-            (!cast<I>(OpcPrefix#WDZrm) addr:$src)>;
-
-  def : Pat<(v8i64 (ExtOp (loadv8i16 addr:$src))),
-            (!cast<I>(OpcPrefix#WQZrm) addr:$src)>;
-
-  def : Pat<(v8i64 (ExtOp (loadv8i32 addr:$src))),
-            (!cast<I>(OpcPrefix#DQZrm) addr:$src)>;
   }
 }
 
-defm : AVX512_pmovx_patterns<"VPMOVSX", X86vsext, sext_invec>;
-defm : AVX512_pmovx_patterns<"VPMOVZX", X86vzext, zext_invec>;
+defm : AVX512_pmovx_patterns<"VPMOVSX", sext, sext_invec>;
+defm : AVX512_pmovx_patterns<"VPMOVZX", zext, zext_invec>;
+defm : AVX512_pmovx_patterns_aext<"VPMOVZX", anyext>;
+
+// Without BWI we can't do a trunc from v16i16 to v16i8. DAG combine can merge
+// ext+trunc aggresively making it impossible to legalize the DAG to this
+// pattern directly.
+let Predicates = [HasAVX512, NoBWI] in {
+def: Pat<(v16i8 (trunc (v16i16 VR256X:$src))),
+         (VPMOVDBZrr (v16i32 (VPMOVZXWDZrr VR256X:$src)))>;
+def: Pat<(v16i8 (trunc (bc_v16i16 (loadv4i64 addr:$src)))),
+         (VPMOVDBZrr (v16i32 (VPMOVZXWDZrm addr:$src)))>;
+def: Pat<(store (v16i8 (trunc (v16i16 VR256X:$src))), addr:$dst),
+         (VPMOVDBZmr addr:$dst, (v16i32 (VPMOVZXWDZrr VR256X:$src)))>;
+}
 
 // Without BWI we can't do a trunc from v16i16 to v16i8. DAG combine can merge
 // ext+trunc aggresively making it impossible to legalize the DAG to this

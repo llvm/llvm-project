@@ -10,13 +10,9 @@
 #ifndef liblldb_FileSpec_h_
 #define liblldb_FileSpec_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/ConstString.h"
 
 #include "llvm/ADT/StringRef.h"
@@ -24,8 +20,8 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t, uint64_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 class Stream;

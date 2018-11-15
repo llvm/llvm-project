@@ -9,15 +9,11 @@
 
 #include "ABISysV_arm.h"
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 
-// Project includes
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
@@ -1328,16 +1324,13 @@ size_t ABISysV_arm::GetRedZoneSize() const { return 0; }
 
 ABISP
 ABISysV_arm::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
-  static ABISP g_abi_sp;
   const llvm::Triple::ArchType arch_type = arch.GetTriple().getArch();
   const llvm::Triple::VendorType vendor_type = arch.GetTriple().getVendor();
 
   if (vendor_type != llvm::Triple::Apple) {
     if ((arch_type == llvm::Triple::arm) ||
         (arch_type == llvm::Triple::thumb)) {
-      if (!g_abi_sp)
-        g_abi_sp.reset(new ABISysV_arm(process_sp));
-      return g_abi_sp;
+      return ABISP(new ABISysV_arm(process_sp));
     }
   }
 

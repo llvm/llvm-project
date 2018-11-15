@@ -32,7 +32,7 @@ int main()
 
     AssertComparisons6AreNoexcept<month_day_last>();
     AssertComparisons6ReturnBool<month_day_last>();
-    
+
     static_assert( testComparisons6Values<month_day_last>(month{1}, month{1}), "");
     static_assert( testComparisons6Values<month_day_last>(month{1}, month{2}), "");
 

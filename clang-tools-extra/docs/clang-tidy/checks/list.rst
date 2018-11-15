@@ -59,6 +59,7 @@ Clang-Tidy Checks
    bugprone-swapped-arguments
    bugprone-terminating-continue
    bugprone-throw-keyword-missing
+   bugprone-too-small-loop-variable
    bugprone-undefined-memory-manipulation
    bugprone-undelegated-constructor
    bugprone-unused-raii
@@ -87,6 +88,7 @@ Clang-Tidy Checks
    cert-msc51-cpp
    cert-oop11-cpp (redirects to performance-move-constructor-init) <cert-oop11-cpp>
    cppcoreguidelines-avoid-goto
+   cppcoreguidelines-avoid-c-arrays (redirects to modernize-avoid-c-arrays) <cppcoreguidelines-avoid-c-arrays>
    cppcoreguidelines-avoid-magic-numbers (redirects to readability-magic-numbers) <cppcoreguidelines-avoid-magic-numbers>
    cppcoreguidelines-c-copy-assignment-signature (redirects to misc-unconventional-assign-operator) <cppcoreguidelines-c-copy-assignment-signature>
    cppcoreguidelines-interfaces-global-init
@@ -131,6 +133,7 @@ Clang-Tidy Checks
    google-runtime-int
    google-runtime-operator
    google-runtime-references
+   hicpp-avoid-c-arrays (redirects to modernize-avoid-c-arrays) <hicpp-avoid-c-arrays>
    hicpp-avoid-goto
    hicpp-braces-around-statements (redirects to readability-braces-around-statements) <hicpp-braces-around-statements>
    hicpp-deprecated-headers (redirects to modernize-deprecated-headers) <hicpp-deprecated-headers>
@@ -178,6 +181,7 @@ Clang-Tidy Checks
    misc-unused-parameters
    misc-unused-using-decls
    modernize-avoid-bind
+   modernize-avoid-c-arrays
    modernize-concat-nested-namespaces
    modernize-deprecated-headers
    modernize-deprecated-ios-base-aliases

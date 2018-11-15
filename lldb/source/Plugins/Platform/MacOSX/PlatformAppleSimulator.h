@@ -10,12 +10,8 @@
 #ifndef liblldb_PlatformAppleSimulator_h_
 #define liblldb_PlatformAppleSimulator_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "Plugins/Platform/MacOSX/objcxx/PlatformiOSSimulatorCoreSimulatorSupport.h"
 #include "lldb/Utility/FileSpec.h"

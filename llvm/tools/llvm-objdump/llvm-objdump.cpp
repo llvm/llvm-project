@@ -59,6 +59,7 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cctype>
@@ -337,33 +338,35 @@ SectionFilter ToolSectionFilter(llvm::object::ObjectFile const &O) {
 void llvm::error(std::error_code EC) {
   if (!EC)
     return;
-
-  errs() << ToolName << ": error reading file: " << EC.message() << ".\n";
+  WithColor::error(errs(), ToolName)
+      << "reading file: " << EC.message() << ".\n";
   errs().flush();
   exit(1);
 }
 
 LLVM_ATTRIBUTE_NORETURN void llvm::error(Twine Message) {
-  errs() << ToolName << ": " << Message << ".\n";
+  WithColor::error(errs(), ToolName) << Message << ".\n";
   errs().flush();
   exit(1);
 }
 
 void llvm::warn(StringRef Message) {
-  errs() << ToolName << ": warning: " << Message << ".\n";
+  WithColor::warning(errs(), ToolName) << Message << ".\n";
   errs().flush();
 }
 
 LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
                                                 Twine Message) {
-  errs() << ToolName << ": '" << File << "': " << Message << ".\n";
+  WithColor::error(errs(), ToolName)
+      << "'" << File << "': " << Message << ".\n";
   exit(1);
 }
 
 LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
                                                 std::error_code EC) {
   assert(EC);
-  errs() << ToolName << ": '" << File << "': " << EC.message() << ".\n";
+  WithColor::error(errs(), ToolName)
+      << "'" << File << "': " << EC.message() << ".\n";
   exit(1);
 }
 
@@ -374,7 +377,7 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
   raw_string_ostream OS(Buf);
   logAllUnhandledErrors(std::move(E), OS);
   OS.flush();
-  errs() << ToolName << ": '" << File << "': " << Buf;
+  WithColor::error(errs(), ToolName) << "'" << File << "': " << Buf;
   exit(1);
 }
 
@@ -383,7 +386,7 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef ArchiveName,
                                                 llvm::Error E,
                                                 StringRef ArchitectureName) {
   assert(E);
-  errs() << ToolName << ": ";
+  WithColor::error(errs(), ToolName);
   if (ArchiveName != "")
     errs() << ArchiveName << "(" << FileName << ")";
   else
@@ -2071,8 +2074,9 @@ static void PrintUnwindInfo(const ObjectFile *o) {
     printMachOUnwindInfo(MachO);
   else {
     // TODO: Extract DWARF dump tool to objdump.
-    errs() << "This operation is only currently supported "
-              "for COFF and MachO object files.\n";
+    WithColor::error(errs(), ToolName)
+        << "This operation is only currently supported "
+           "for COFF and MachO object files.\n";
     return;
   }
 }
@@ -2082,8 +2086,9 @@ void llvm::printExportsTrie(const ObjectFile *o) {
   if (const MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOExportsTrie(MachO);
   else {
-    errs() << "This operation is only currently supported "
-              "for Mach-O executable files.\n";
+    WithColor::error(errs(), ToolName)
+        << "This operation is only currently supported "
+           "for Mach-O executable files.\n";
     return;
   }
 }
@@ -2093,8 +2098,9 @@ void llvm::printRebaseTable(ObjectFile *o) {
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachORebaseTable(MachO);
   else {
-    errs() << "This operation is only currently supported "
-              "for Mach-O executable files.\n";
+    WithColor::error(errs(), ToolName)
+        << "This operation is only currently supported "
+           "for Mach-O executable files.\n";
     return;
   }
 }
@@ -2104,8 +2110,9 @@ void llvm::printBindTable(ObjectFile *o) {
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOBindTable(MachO);
   else {
-    errs() << "This operation is only currently supported "
-              "for Mach-O executable files.\n";
+    WithColor::error(errs(), ToolName)
+        << "This operation is only currently supported "
+           "for Mach-O executable files.\n";
     return;
   }
 }
@@ -2115,8 +2122,9 @@ void llvm::printLazyBindTable(ObjectFile *o) {
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOLazyBindTable(MachO);
   else {
-    errs() << "This operation is only currently supported "
-              "for Mach-O executable files.\n";
+    WithColor::error(errs(), ToolName)
+        << "This operation is only currently supported "
+           "for Mach-O executable files.\n";
     return;
   }
 }
@@ -2126,8 +2134,9 @@ void llvm::printWeakBindTable(ObjectFile *o) {
   if (MachOObjectFile *MachO = dyn_cast<MachOObjectFile>(o))
     printMachOWeakBindTable(MachO);
   else {
-    errs() << "This operation is only currently supported "
-              "for Mach-O executable files.\n";
+    WithColor::error(errs(), ToolName)
+        << "This operation is only currently supported "
+           "for Mach-O executable files.\n";
     return;
   }
 }
@@ -2136,10 +2145,11 @@ void llvm::printWeakBindTable(ObjectFile *o) {
 /// into llvm-bcanalyzer.
 void llvm::printRawClangAST(const ObjectFile *Obj) {
   if (outs().is_displayed()) {
-    errs() << "The -raw-clang-ast option will dump the raw binary contents of "
-              "the clang ast section.\n"
-              "Please redirect the output to a file or another program such as "
-              "llvm-bcanalyzer.\n";
+    WithColor::error(errs(), ToolName)
+        << "The -raw-clang-ast option will dump the raw binary contents of "
+           "the clang ast section.\n"
+           "Please redirect the output to a file or another program such as "
+           "llvm-bcanalyzer.\n";
     return;
   }
 
@@ -2173,8 +2183,9 @@ static void printFaultMaps(const ObjectFile *Obj) {
   } else if (isa<MachOObjectFile>(Obj)) {
     FaultMapSectionName = "__llvm_faultmaps";
   } else {
-    errs() << "This operation is only currently supported "
-              "for ELF and Mach-O executable files.\n";
+    WithColor::error(errs(), ToolName)
+        << "This operation is only currently supported "
+           "for ELF and Mach-O executable files.\n";
     return;
   }
 
@@ -2243,7 +2254,7 @@ static void printFileHeaders(const ObjectFile *o) {
 static void printArchiveChild(StringRef Filename, const Archive::Child &C) {
   Expected<sys::fs::perms> ModeOrErr = C.getAccessMode();
   if (!ModeOrErr) {
-    errs() << "ill-formed archive entry.\n";
+    WithColor::error(errs(), ToolName) << "ill-formed archive entry.\n";
     consumeError(ModeOrErr.takeError());
     return;
   }

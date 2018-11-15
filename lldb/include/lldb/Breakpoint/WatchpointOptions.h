@@ -10,13 +10,9 @@
 #ifndef liblldb_WatchpointOptions_h_
 #define liblldb_WatchpointOptions_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Utility/Baton.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/lldb-private.h"

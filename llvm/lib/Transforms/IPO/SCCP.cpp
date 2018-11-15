@@ -1,5 +1,6 @@
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
@@ -14,7 +15,7 @@ PreservedAnalyses IPSCCPPass::run(Module &M, ModuleAnalysisManager &AM) {
     DominatorTree &DT = FAM.getResult<DominatorTreeAnalysis>(F);
     return {
         make_unique<PredicateInfo>(F, DT, FAM.getResult<AssumptionAnalysis>(F)),
-        &DT};
+        &DT, FAM.getCachedResult<PostDominatorTreeAnalysis>(F)};
   };
 
   if (!runIPSCCP(M, DL, &TLI, getAnalysis))
@@ -22,6 +23,7 @@ PreservedAnalyses IPSCCPPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<PostDominatorTreeAnalysis>();
   PA.preserve<FunctionAnalysisManagerModuleProxy>();
   return PA;
 }
@@ -56,8 +58,8 @@ public:
               F, DT,
               this->getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
                   F)),
-          nullptr}; // We cannot preserve the DT with the legacy pass manager,
-                    // so so set it to nullptr.
+          nullptr,  // We cannot preserve the DT or PDT with the legacy pass
+          nullptr}; // manager, so set them to nullptr.
     };
 
     return runIPSCCP(M, DL, TLI, getAnalysis);

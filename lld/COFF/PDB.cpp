@@ -154,6 +154,10 @@ public:
   std::pair<CVIndexMap &, bool /*already there*/>
   registerPrecompiledHeaders(uint32_t Signature);
 
+  void mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
+                          std::vector<ulittle32_t *> &StringTableRefs,
+                          BinaryStreamRef SymData);
+
   /// Add the section map and section contributions to the PDB.
   void addSections(ArrayRef<OutputSection *> OutputSections,
                    ArrayRef<uint8_t> SectionTable);
@@ -1028,20 +1032,15 @@ static void addGlobalSymbol(pdb::GSIStreamBuilder &Builder, ObjFile &File,
   }
 }
 
-static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
-                               pdb::GSIStreamBuilder &GsiBuilder,
-                               const CVIndexMap &IndexMap,
-                               TypeCollection &IDTable,
-                               std::vector<ulittle32_t *> &StringTableRefs,
-                               BinaryStreamRef SymData) {
-  // FIXME: Improve error recovery by warning and skipping records when
-  // possible.
+void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
+                                   std::vector<ulittle32_t *> &StringTableRefs,
+                                   BinaryStreamRef SymData) {
   ArrayRef<uint8_t> SymsBuffer;
   cantFail(SymData.readBytes(0, SymData.getLength(), SymsBuffer));
   SmallVector<SymbolScope, 4> Scopes;
 
   auto EC = forEachCodeViewRecord<CVSymbol>(
-      SymsBuffer, [&](const CVSymbol &Sym) -> llvm::Error {
+      SymsBuffer, [&](CVSymbol Sym) -> llvm::Error {
         // Discover type index references in the record. Skip it if we don't
         // know where they are.
         SmallVector<TiReference, 32> TypeRefs;
@@ -1051,8 +1050,10 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
           return Error::success();
         }
 
-        // Copy the symbol record so we can mutate it.
+        // Copy the symbol and fix the symbol record alignment. The symbol
+        // record in the object file may not be aligned.
         MutableArrayRef<uint8_t> NewData = copySymbolForPdb(Sym, Alloc);
+        Sym = CVSymbol(Sym.kind(), NewData);
 
         // Re-map all the type index references.
         MutableArrayRef<uint8_t> Contents =
@@ -1062,32 +1063,29 @@ static void mergeSymbolRecords(BumpPtrAllocator &Alloc, ObjFile *File,
 
         // An object file may have S_xxx_ID symbols, but these get converted to
         // "real" symbols in a PDB.
-        translateIdSymbols(NewData, IDTable);
+        translateIdSymbols(NewData, getIDTable());
+        Sym = CVSymbol(symbolKind(NewData), NewData);
 
         // If this record refers to an offset in the object file's string table,
         // add that item to the global PDB string table and re-write the index.
         recordStringTableReferences(Sym.kind(), Contents, StringTableRefs);
 
-        SymbolKind NewKind = symbolKind(NewData);
-
         // Fill in "Parent" and "End" fields by maintaining a stack of scopes.
-        CVSymbol NewSym(NewKind, NewData);
-        if (symbolOpensScope(NewKind))
-          scopeStackOpen(Scopes, File->ModuleDBI->getNextSymbolOffset(),
-                         NewSym);
-        else if (symbolEndsScope(NewKind))
+        if (symbolOpensScope(Sym.kind()))
+          scopeStackOpen(Scopes, File->ModuleDBI->getNextSymbolOffset(), Sym);
+        else if (symbolEndsScope(Sym.kind()))
           scopeStackClose(Scopes, File->ModuleDBI->getNextSymbolOffset(), File);
 
         // Add the symbol to the globals stream if necessary.  Do this before
         // adding the symbol to the module since we may need to get the next
         // symbol offset, and writing to the module's symbol stream will update
         // that offset.
-        if (symbolGoesInGlobalsStream(NewSym))
-          addGlobalSymbol(GsiBuilder, *File, NewSym);
+        if (symbolGoesInGlobalsStream(Sym))
+          addGlobalSymbol(Builder.getGsiBuilder(), *File, Sym);
 
         // Add the symbol to the module.
-        if (symbolGoesInModuleStream(NewSym))
-          File->ModuleDBI->addSymbol(NewSym);
+        if (symbolGoesInModuleStream(Sym))
+          File->ModuleDBI->addSymbol(Sym);
         return Error::success();
       });
   cantFail(std::move(EC));
@@ -1181,9 +1179,8 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
       break;
     }
     case DebugSubsectionKind::Symbols: {
-      mergeSymbolRecords(Linker.Alloc, &File, Linker.Builder.getGsiBuilder(),
-                         IndexMap, Linker.getIDTable(), StringTableReferences,
-                         SS.getRecordData());
+      Linker.mergeSymbolRecords(&File, IndexMap, StringTableReferences,
+                                SS.getRecordData());
       break;
     }
     default:

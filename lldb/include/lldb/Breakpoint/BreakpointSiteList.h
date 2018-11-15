@@ -10,14 +10,10 @@
 #ifndef liblldb_BreakpointSiteList_h_
 #define liblldb_BreakpointSiteList_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <map>
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/BreakpointSite.h"
 
 namespace lldb_private {

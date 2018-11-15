@@ -112,10 +112,10 @@ vpcmpeqw  %xmm3, %xmm3, %xmm5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqw	%mm2, %mm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqb	%xmm2, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqd	%xmm2, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -     1.00    -      -      -      -      -      -      -     pcmpeqq	%xmm2, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -      -      -      -     pcmpeqq	%xmm2, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     pcmpeqw	%xmm2, %xmm2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqb	%xmm3, %xmm3, %xmm3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     1.00    -      -      -      -      -      -      -      -     vpcmpeqd	%xmm3, %xmm3, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     1.00    -      -      -      -      -      -      -      -     vpcmpeqd	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqq	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqw	%xmm3, %xmm3, %xmm3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -     0.50   0.50    -      -      -      -      -      -      -     vpcmpeqb	%xmm3, %xmm3, %xmm5

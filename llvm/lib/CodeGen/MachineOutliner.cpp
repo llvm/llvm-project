@@ -625,6 +625,9 @@ struct InstructionMapper {
   /// Inverse of \p InstructionIntegerMap.
   DenseMap<unsigned, MachineInstr *> IntegerInstructionMap;
 
+  /// Correspondence between \p MachineBasicBlocks and target-defined flags.
+  DenseMap<MachineBasicBlock *, unsigned> MBBFlagsMap;
+
   /// The vector of unsigned integers that the module is mapped to.
   std::vector<unsigned> UnsignedVec;
 
@@ -742,7 +745,15 @@ struct InstructionMapper {
   /// \param TII \p TargetInstrInfo for the function.
   void convertToUnsignedVec(MachineBasicBlock &MBB,
                             const TargetInstrInfo &TII) {
-    unsigned Flags = TII.getMachineOutlinerMBBFlags(MBB);
+    unsigned Flags = 0;
+
+    // Don't even map in this case.
+    if (!TII.isMBBSafeToOutlineFrom(MBB, Flags))
+      return;
+
+    // Store info for the MBB for later outlining.
+    MBBFlagsMap[&MBB] = Flags;
+
     MachineBasicBlock::iterator It = MBB.begin();
 
     // The number of instructions in this block that will be considered for
@@ -919,7 +930,7 @@ struct MachineOutliner : public ModulePass {
   unsigned
   buildCandidateList(std::vector<std::shared_ptr<Candidate>> &CandidateList,
                      std::vector<OutlinedFunction> &FunctionList,
-                     SuffixTree &ST, InstructionMapper &Mapper);
+                     InstructionMapper &Mapper);
 
   /// Helper function for pruneOverlaps.
   /// Removes \p C from the candidate list, and updates its \p OutlinedFunction.
@@ -1101,10 +1112,11 @@ unsigned MachineOutliner::findCandidates(
 
         MachineBasicBlock::iterator StartIt = Mapper.InstrList[StartIdx];
         MachineBasicBlock::iterator EndIt = Mapper.InstrList[EndIdx];
+        MachineBasicBlock *MBB = StartIt->getParent();
 
         CandidatesForRepeatedSeq.emplace_back(StartIdx, StringLen, StartIt,
-                                              EndIt, StartIt->getParent(),
-                                              FunctionList.size());
+                                              EndIt, MBB, FunctionList.size(),
+                                              Mapper.MBBFlagsMap[MBB]);
       }
     }
 
@@ -1122,8 +1134,9 @@ unsigned MachineOutliner::findCandidates(
     OutlinedFunction OF =
         TII->getOutliningCandidateInfo(CandidatesForRepeatedSeq);
 
-    // If we deleted every candidate, then there's nothing to outline.
-    if (OF.Candidates.empty())
+    // If we deleted too many candidates, then there's nothing worth outlining.
+    // FIXME: This should take target-specified instruction sizes into account.
+    if (OF.Candidates.size() < 2)
       continue;
 
     std::vector<unsigned> Seq;
@@ -1215,11 +1228,19 @@ void MachineOutliner::pruneOverlaps(
     if (C1.getStartIdx() > MaxCandidateLen)
       FarthestPossibleIdx = C1.getStartIdx() - MaxCandidateLen;
 
+    MachineBasicBlock *C1MBB = C1.getMBB();
+
     // Compare against the candidates in the list that start at most
     // FarthestPossibleIdx indices away from C1. There are at most
     // MaxCandidateLen of these.
     for (auto Sit = It + 1; Sit != Et; Sit++) {
       Candidate &C2 = **Sit;
+
+      // If the two candidates don't belong to the same MBB, then we're done.
+      // Because we sorted the candidates, there's no way that we'd find a
+      // candidate in C1MBB after this point.
+      if (C2.getMBB() != C1MBB)
+        break;
 
       // Is this candidate too far away to overlap?
       if (C2.getStartIdx() < FarthestPossibleIdx)
@@ -1263,8 +1284,10 @@ void MachineOutliner::pruneOverlaps(
 
 unsigned MachineOutliner::buildCandidateList(
     std::vector<std::shared_ptr<Candidate>> &CandidateList,
-    std::vector<OutlinedFunction> &FunctionList, SuffixTree &ST,
+    std::vector<OutlinedFunction> &FunctionList,
     InstructionMapper &Mapper) {
+  // Construct a suffix tree and use it to find candidates.
+  SuffixTree ST(Mapper.UnsignedVec);
 
   std::vector<unsigned> CandidateSequence; // Current outlining candidate.
   unsigned MaxCandidateLen = 0;            // Length of the longest candidate.
@@ -1628,15 +1651,12 @@ bool MachineOutliner::runOnModule(Module &M) {
 
   // Prepare instruction mappings for the suffix tree.
   populateMapper(Mapper, M, MMI);
-
-  // Construct a suffix tree, use it to find candidates, and then outline them.
-  SuffixTree ST(Mapper.UnsignedVec);
   std::vector<std::shared_ptr<Candidate>> CandidateList;
   std::vector<OutlinedFunction> FunctionList;
 
   // Find all of the outlining candidates.
   unsigned MaxCandidateLen =
-      buildCandidateList(CandidateList, FunctionList, ST, Mapper);
+      buildCandidateList(CandidateList, FunctionList, Mapper);
 
   // Remove candidates that overlap with other candidates.
   pruneOverlaps(CandidateList, FunctionList, Mapper, MaxCandidateLen);

@@ -1192,18 +1192,19 @@ private:
   bool SplitDebugInlining;
   bool DebugInfoForProfiling;
   unsigned NameTableKind;
+  bool RangesBaseAddress;
 
   DICompileUnit(LLVMContext &C, StorageType Storage, unsigned SourceLanguage,
                 bool IsOptimized, unsigned RuntimeVersion,
                 unsigned EmissionKind, uint64_t DWOId, bool SplitDebugInlining,
                 bool DebugInfoForProfiling, unsigned NameTableKind,
-                ArrayRef<Metadata *> Ops)
+                bool RangesBaseAddress, ArrayRef<Metadata *> Ops)
       : DIScope(C, DICompileUnitKind, Storage, dwarf::DW_TAG_compile_unit, Ops),
         SourceLanguage(SourceLanguage), IsOptimized(IsOptimized),
         RuntimeVersion(RuntimeVersion), EmissionKind(EmissionKind),
         DWOId(DWOId), SplitDebugInlining(SplitDebugInlining),
         DebugInfoForProfiling(DebugInfoForProfiling),
-        NameTableKind(NameTableKind) {
+        NameTableKind(NameTableKind), RangesBaseAddress(RangesBaseAddress) {
     assert(Storage != Uniqued);
   }
   ~DICompileUnit() = default;
@@ -1217,15 +1218,16 @@ private:
           DIGlobalVariableExpressionArray GlobalVariables,
           DIImportedEntityArray ImportedEntities, DIMacroNodeArray Macros,
           uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling,
-          unsigned NameTableKind, StorageType Storage,
+          unsigned NameTableKind, bool RangesBaseAddress, StorageType Storage,
           bool ShouldCreate = true) {
-    return getImpl(
-        Context, SourceLanguage, File, getCanonicalMDString(Context, Producer),
-        IsOptimized, getCanonicalMDString(Context, Flags), RuntimeVersion,
-        getCanonicalMDString(Context, SplitDebugFilename), EmissionKind,
-        EnumTypes.get(), RetainedTypes.get(), GlobalVariables.get(),
-        ImportedEntities.get(), Macros.get(), DWOId, SplitDebugInlining,
-        DebugInfoForProfiling, NameTableKind, Storage, ShouldCreate);
+    return getImpl(Context, SourceLanguage, File,
+                   getCanonicalMDString(Context, Producer), IsOptimized,
+                   getCanonicalMDString(Context, Flags), RuntimeVersion,
+                   getCanonicalMDString(Context, SplitDebugFilename),
+                   EmissionKind, EnumTypes.get(), RetainedTypes.get(),
+                   GlobalVariables.get(), ImportedEntities.get(), Macros.get(),
+                   DWOId, SplitDebugInlining, DebugInfoForProfiling,
+                   NameTableKind, RangesBaseAddress, Storage, ShouldCreate);
   }
   static DICompileUnit *
   getImpl(LLVMContext &Context, unsigned SourceLanguage, Metadata *File,
@@ -1235,16 +1237,16 @@ private:
           Metadata *GlobalVariables, Metadata *ImportedEntities,
           Metadata *Macros, uint64_t DWOId, bool SplitDebugInlining,
           bool DebugInfoForProfiling, unsigned NameTableKind,
-          StorageType Storage, bool ShouldCreate = true);
+          bool RangesBaseAddress, StorageType Storage, bool ShouldCreate = true);
 
   TempDICompileUnit cloneImpl() const {
-    return getTemporary(getContext(), getSourceLanguage(), getFile(),
-                        getProducer(), isOptimized(), getFlags(),
-                        getRuntimeVersion(), getSplitDebugFilename(),
-                        getEmissionKind(), getEnumTypes(), getRetainedTypes(),
-                        getGlobalVariables(), getImportedEntities(),
-                        getMacros(), DWOId, getSplitDebugInlining(),
-                        getDebugInfoForProfiling(), getNameTableKind());
+    return getTemporary(
+        getContext(), getSourceLanguage(), getFile(), getProducer(),
+        isOptimized(), getFlags(), getRuntimeVersion(), getSplitDebugFilename(),
+        getEmissionKind(), getEnumTypes(), getRetainedTypes(),
+        getGlobalVariables(), getImportedEntities(), getMacros(), DWOId,
+        getSplitDebugInlining(), getDebugInfoForProfiling(), getNameTableKind(),
+        getRangesBaseAddress());
   }
 
 public:
@@ -1260,11 +1262,11 @@ public:
        DIGlobalVariableExpressionArray GlobalVariables,
        DIImportedEntityArray ImportedEntities, DIMacroNodeArray Macros,
        uint64_t DWOId, bool SplitDebugInlining, bool DebugInfoForProfiling,
-       DebugNameTableKind NameTableKind),
+       DebugNameTableKind NameTableKind, bool RangesBaseAddress),
       (SourceLanguage, File, Producer, IsOptimized, Flags, RuntimeVersion,
        SplitDebugFilename, EmissionKind, EnumTypes, RetainedTypes,
        GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining,
-       DebugInfoForProfiling, (unsigned)NameTableKind))
+       DebugInfoForProfiling, (unsigned)NameTableKind, RangesBaseAddress))
   DEFINE_MDNODE_GET_DISTINCT_TEMPORARY(
       DICompileUnit,
       (unsigned SourceLanguage, Metadata *File, MDString *Producer,
@@ -1273,11 +1275,11 @@ public:
        Metadata *RetainedTypes, Metadata *GlobalVariables,
        Metadata *ImportedEntities, Metadata *Macros, uint64_t DWOId,
        bool SplitDebugInlining, bool DebugInfoForProfiling,
-       unsigned NameTableKind),
+       unsigned NameTableKind, bool RangesBaseAddress),
       (SourceLanguage, File, Producer, IsOptimized, Flags, RuntimeVersion,
        SplitDebugFilename, EmissionKind, EnumTypes, RetainedTypes,
        GlobalVariables, ImportedEntities, Macros, DWOId, SplitDebugInlining,
-       DebugInfoForProfiling, NameTableKind))
+       DebugInfoForProfiling, NameTableKind, RangesBaseAddress))
 
   TempDICompileUnit clone() const { return cloneImpl(); }
 
@@ -1294,9 +1296,14 @@ public:
   DebugNameTableKind getNameTableKind() const {
     return (DebugNameTableKind)NameTableKind;
   }
-  StringRef getProducer() const { return getStringOperand(1); }
-  StringRef getFlags() const { return getStringOperand(2); }
-  StringRef getSplitDebugFilename() const { return getStringOperand(3); }
+  bool getRangesBaseAddress() const {
+    return RangesBaseAddress; }
+  StringRef getProducer() const {
+    return getStringOperand(1); }
+  StringRef getFlags() const {
+    return getStringOperand(2); }
+  StringRef getSplitDebugFilename() const {
+    return getStringOperand(3); }
   DICompositeTypeArray getEnumTypes() const {
     return cast_or_null<MDTuple>(getRawEnumTypes());
   }

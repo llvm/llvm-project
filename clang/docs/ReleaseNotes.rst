@@ -102,6 +102,11 @@ Windows Support
   filename, a `#pragma hdrstop` inside the source marks the end of the
   precompiled code.
 
+- clang-cl has a new command-line option, ``/Zc:dllexportInlines-``, similar to
+  ``-fvisibility-inlines-hidden`` on non-Windows, that makes class-level
+  `dllexport` and `dllimport` attributes not apply to inline member functions.
+  This can significantly reduce compile and link times. See the `User's Manual
+  <UsersManual.html#the-zc-dllexportinlines-option>`_ for more info.
 - ...
 
 

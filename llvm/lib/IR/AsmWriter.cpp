@@ -1910,6 +1910,7 @@ static void writeDICompileUnit(raw_ostream &Out, const DICompileUnit *N,
   Printer.printBool("debugInfoForProfiling", N->getDebugInfoForProfiling(),
                     false);
   Printer.printNameTableKind("nameTableKind", N->getNameTableKind());
+  Printer.printBool("rangesBaseAddress", N->getRangesBaseAddress(), false);
   Out << ")";
 }
 

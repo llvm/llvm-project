@@ -91,7 +91,7 @@ else()
     include_directories(SYSTEM ${LIBXML2_INCLUDE_DIR})
     add_subdirectory(macosx/objcxx)
     set(LLDBObjCLibs lldbHostMacOSXObjCXX)
-    add_host_subdirectory(maqcosx
+    add_host_subdirectory(macosx
       macosx/Symbols.cpp
       macosx/cfcpp/CFCBundle.cpp
       macosx/cfcpp/CFCData.cpp

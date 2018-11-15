@@ -234,6 +234,46 @@ public:
   void addSymbols(ThunkSection &IS) override;
 };
 
+// A bl instruction uses a signed 24 bit offset, with an implicit 4 byte
+// alignment. This gives a possible 26 bits of 'reach'. If the call offset is
+// larger then that we need to emit a long-branch thunk. The target address
+// of the callee is stored in a table to be accessed TOC-relative. Since the
+// call must be local (a non-local call will have a PltCallStub instead) the
+// table stores the address of the callee's local entry point. For
+// position-independent code a corresponding relative dynamic relocation is
+// used.
+class PPC64LongBranchThunk : public Thunk {
+public:
+  uint32_t size() override { return 16; }
+  void writeTo(uint8_t *Buf) override;
+  void addSymbols(ThunkSection &IS) override;
+
+protected:
+  PPC64LongBranchThunk(Symbol &Dest) : Thunk(Dest) {}
+};
+
+class PPC64PILongBranchThunk final : public PPC64LongBranchThunk {
+public:
+  PPC64PILongBranchThunk(Symbol &Dest) : PPC64LongBranchThunk(Dest) {
+    assert(!Dest.IsPreemptible);
+    if (Dest.isInPPC64Branchlt())
+      return;
+
+    In.PPC64LongBranchTarget->addEntry(Dest);
+    In.RelaDyn->addReloc({Target->RelativeRel, In.PPC64LongBranchTarget,
+                          Dest.getPPC64LongBranchOffset(), true, &Dest,
+                          getPPC64GlobalEntryToLocalEntryOffset(Dest.StOther)});
+  }
+};
+
+class PPC64PDLongBranchThunk final : public PPC64LongBranchThunk {
+public:
+  PPC64PDLongBranchThunk(Symbol &Dest) : PPC64LongBranchThunk(Dest) {
+    if (!Dest.isInPPC64Branchlt())
+      In.PPC64LongBranchTarget->addEntry(Dest);
+  }
+};
+
 } // end anonymous namespace
 
 Defined *Thunk::addSymbol(StringRef Name, uint8_t Type, uint64_t Value,
@@ -573,23 +613,37 @@ InputSection *MicroMipsR6Thunk::getTargetInputSection() const {
   return dyn_cast<InputSection>(DR.Section);
 }
 
-void PPC64PltCallStub::writeTo(uint8_t *Buf) {
-  int64_t Off = Destination.getGotPltVA() - getPPC64TocBase();
-  // Need to add 0x8000 to offset to account for the low bits being signed.
-  uint16_t OffHa = (Off + 0x8000) >> 16;
-  uint16_t OffLo = Off;
+static void writePPCLoadAndBranch(uint8_t *Buf, int64_t Offset) {
+  uint16_t OffHa = (Offset + 0x8000) >> 16;
+  uint16_t OffLo = Offset & 0xffff;
 
-  write32(Buf +  0, 0xf8410018);          // std     r2,24(r1)
-  write32(Buf +  4, 0x3d820000 | OffHa);  // addis   r12,r2, X@plt@to@ha
-  write32(Buf +  8, 0xe98c0000 | OffLo);  // ld      r12,X@plt@toc@l(r12)
-  write32(Buf + 12, 0x7d8903a6);          // mtctr   r12
-  write32(Buf + 16, 0x4e800420);          // bctr
+  write32(Buf + 0, 0x3d820000 | OffHa); // addis r12, r2, OffHa
+  write32(Buf + 4, 0xe98c0000 | OffLo); // ld    r12, OffLo(r12)
+  write32(Buf + 8, 0x7d8903a6);         // mtctr r12
+  write32(Buf + 12, 0x4e800420);        // bctr
+}
+
+void PPC64PltCallStub::writeTo(uint8_t *Buf) {
+  int64_t Offset = Destination.getGotPltVA() - getPPC64TocBase();
+  // Save the TOC pointer to the save-slot reserved in the call frame.
+  write32(Buf + 0, 0xf8410018); // std     r2,24(r1)
+  writePPCLoadAndBranch(Buf + 4, Offset);
 }
 
 void PPC64PltCallStub::addSymbols(ThunkSection &IS) {
   Defined *S = addSymbol(Saver.save("__plt_" + Destination.getName()), STT_FUNC,
                          0, IS);
   S->NeedsTocRestore = true;
+}
+
+void PPC64LongBranchThunk::writeTo(uint8_t *Buf) {
+  int64_t Offset = Destination.getPPC64LongBranchTableVA() - getPPC64TocBase();
+  writePPCLoadAndBranch(Buf, Offset);
+}
+
+void PPC64LongBranchThunk::addSymbols(ThunkSection &IS) {
+  addSymbol(Saver.save("__long_branch_" + Destination.getName()), STT_FUNC, 0,
+            IS);
 }
 
 Thunk::Thunk(Symbol &D) : Destination(D), Offset(0) {}
@@ -675,9 +729,14 @@ static Thunk *addThunkMips(RelType Type, Symbol &S) {
 }
 
 static Thunk *addThunkPPC64(RelType Type, Symbol &S) {
-  if (Type == R_PPC64_REL24)
+  assert(Type == R_PPC64_REL24 && "unexpected relocation type for thunk");
+  if (S.isInPlt())
     return make<PPC64PltCallStub>(S);
-  fatal("unexpected relocation type");
+
+  if (Config->Pic)
+    return make<PPC64PILongBranchThunk>(S);
+
+  return make<PPC64PDLongBranchThunk>(S);
 }
 
 Thunk *addThunk(RelType Type, Symbol &S) {

@@ -9,10 +9,6 @@
 
 #include "lldb/Breakpoint/StoppointLocation.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 using namespace lldb;
 using namespace lldb_private;

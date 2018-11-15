@@ -7,12 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <inttypes.h>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/BreakpointSite.h"
 
 #include "lldb/Breakpoint/Breakpoint.h"

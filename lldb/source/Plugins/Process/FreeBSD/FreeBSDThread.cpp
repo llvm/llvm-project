@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <errno.h>
 #include <pthread.h>
 #include <pthread_np.h>
@@ -16,12 +15,9 @@
 #include <sys/types.h>
 #include <sys/user.h>
 
-// C++ Includes
-// Other libraries and framework includes
 #include "lldb/Target/UnixSignals.h"
 #include "lldb/Utility/State.h"
 
-// Project includes
 #include "FreeBSDThread.h"
 #include "POSIXStopInfo.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"

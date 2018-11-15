@@ -77,6 +77,8 @@ enum OperandType {
   OPERAND_SIGNATURE,
   /// type signature immediate for call_indirect.
   OPERAND_TYPEINDEX,
+  /// Event index.
+  OPERAND_EVENT,
 };
 } // end namespace WebAssembly
 
@@ -97,7 +99,8 @@ enum TOF {
   // Flags to indicate the type of the symbol being referenced
   MO_SYMBOL_FUNCTION = 0x1,
   MO_SYMBOL_GLOBAL = 0x2,
-  MO_SYMBOL_MASK = 0x3,
+  MO_SYMBOL_EVENT = 0x4,
+  MO_SYMBOL_MASK = 0x7,
 };
 } // end namespace WebAssemblyII
 

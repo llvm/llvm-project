@@ -44,7 +44,7 @@ int main()
 
     ASSERT_NOEXCEPT(                    std::declval<weekday&>() -= std::declval<days&>());
     ASSERT_SAME_TYPE(weekday&, decltype(std::declval<weekday&>() -= std::declval<days&>()));
-    
+
     static_assert(testConstexpr<weekday, days>(), "");
 
     for (unsigned i = 0; i <= 6; ++i)

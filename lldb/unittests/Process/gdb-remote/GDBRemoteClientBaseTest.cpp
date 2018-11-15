@@ -48,7 +48,8 @@ struct TestClient : public GDBRemoteClientBase {
 class GDBRemoteClientBaseTest : public GDBRemoteTest {
 public:
   void SetUp() override {
-    ASSERT_THAT_ERROR(Connect(client, server), llvm::Succeeded());
+    ASSERT_THAT_ERROR(GDBRemoteCommunication::ConnectLocally(client, server),
+                      llvm::Succeeded());
     ASSERT_EQ(TestClient::eBroadcastBitRunPacketSent,
               listener_sp->StartListeningForEvents(
                   &client, TestClient::eBroadcastBitRunPacketSent));

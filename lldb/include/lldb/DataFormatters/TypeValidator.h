@@ -11,15 +11,11 @@
 #ifndef lldb_TypeValidator_h_
 #define lldb_TypeValidator_h_
 
-// C Includes
 
-// C++ Includes
 #include <functional>
 #include <string>
 
-// Other libraries and framework includes
 
-// Project includes
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-public.h"

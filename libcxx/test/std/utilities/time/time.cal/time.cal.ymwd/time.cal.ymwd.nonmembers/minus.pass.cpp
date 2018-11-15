@@ -13,7 +13,7 @@
 
 // constexpr year_month_weekday operator-(const year_month_weekday& ymwd, const months& dm) noexcept;
 //   Returns: ymwd + (-dm).
-// 
+//
 // constexpr year_month_weekday operator-(const year_month_weekday& ymwd, const years& dy) noexcept;
 //   Returns: ymwd + (-dy).
 
@@ -70,7 +70,7 @@ int main()
     ASSERT_SAME_TYPE(year_month_weekday, decltype(std::declval<year_month_weekday>() - std::declval<years>()));
 
     static_assert(testConstexprYears(), "");
-    
+
     year_month_weekday ym{year{1234}, November, weekday_indexed{Tuesday, 1}};
     for (int i = 0; i <= 10; ++i)
     {
@@ -81,13 +81,13 @@ int main()
         assert(ym1.index()   == 1);
     }
     }
-    
+
     {  // year_month_weekday - months
     ASSERT_NOEXCEPT(                              std::declval<year_month_weekday>() - std::declval<months>());
     ASSERT_SAME_TYPE(year_month_weekday, decltype(std::declval<year_month_weekday>() - std::declval<months>()));
 
     static_assert(testConstexprMonths(), "");
-    
+
     year_month_weekday ym{year{1234}, November, weekday_indexed{Tuesday, 2}};
     for (unsigned i = 1; i <= 10; ++i)
     {

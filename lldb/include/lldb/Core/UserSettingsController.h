@@ -10,16 +10,16 @@
 #ifndef liblldb_UserSettingsController_h_
 #define liblldb_UserSettingsController_h_
 
-#include "lldb/Utility/Status.h"            // for Status
-#include "lldb/lldb-forward.h"              // for OptionValuePropertiesSP
-#include "lldb/lldb-private-enumerations.h" // for VarSetOperationType
+#include "lldb/Utility/Status.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-private-enumerations.h"
 
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "llvm/ADT/StringRef.h"
 
 #include <vector>
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
+#include <stddef.h>
+#include <stdint.h>
 
 namespace lldb_private {
 class CommandInterpreter;

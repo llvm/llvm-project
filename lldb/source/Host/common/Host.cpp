@@ -45,7 +45,6 @@
 #include <lwp.h>
 #endif
 
-// C++ Includes
 #include <csignal>
 
 #include "lldb/Host/FileSystem.h"

@@ -7,13 +7,13 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
 // template<class T, ptrdiff_t X, class U, ptrdiff_t Y>
 //   constexpr bool operator==(span<T, X> l, span<U, Y> r);
-//   
+//
 //
 // Effects: Equivalent to: return equal(l.begin(), l.end(), r.begin(), r.end());
 //
@@ -30,7 +30,7 @@ constexpr   int iArr1[] = { 0,  1,  2,  1,  2,  5,  6,  7,  8,  9};
             int iArr2[] = { 0,  1,  2,  1,  2,  5,  6,  7,  8,  9};
 constexpr float fArr1[]  = {0., 1., 2., 1., 2., 5., 6., 7., 8., 9.};
           float fArr2[]  = {0., 1., 2., 1., 2., 5., 6., 7., 8., 9.};
-         
+
 
 int main () {
 
@@ -50,15 +50,15 @@ int main () {
     static_assert( (csp0s == csp0s), "");
     static_assert( (csp0s == csp0d), "");
     static_assert( (csp0d == csp0s), "");
-    
+
     static_assert(!(csp0d == csp1d), "");
     static_assert(!(csp0s == csp1s), "");
     static_assert(!(csp0s == csp1d), "");
     static_assert(!(csp0d == csp1s), "");
-    
+
     static_assert( (csp1d == csp1s), "");
     static_assert( (csp1s == csp1d), "");
-    
+
     static_assert( (csp2d == csp3d), "");
     static_assert( (csp2s == csp3s), "");
     static_assert( (csp2d == csp3s), "");
@@ -95,15 +95,15 @@ int main () {
     assert( (sp0s == sp0s));
     assert( (sp0s == sp0d));
     assert( (sp0d == sp0s));
-    
+
     assert(!(sp0d == sp1d));
     assert(!(sp0s == sp1s));
     assert(!(sp0s == sp1d));
     assert(!(sp0d == sp1s));
-    
+
     assert( (sp1d == sp1s));
     assert( (sp1s == sp1d));
-    
+
     assert( (sp2d == sp3d));
     assert( (sp2s == sp3s));
     assert( (sp2d == sp3s));
@@ -129,15 +129,15 @@ int main () {
     assert( (csp0s == sp0s));
     assert( (csp0s == sp0d));
     assert( (csp0d == sp0s));
-    
+
     assert(!(csp0d == sp1d));
     assert(!(csp0s == sp1s));
     assert(!(csp0s == sp1d));
     assert(!(csp0d == sp1s));
-    
+
     assert( (csp1d == sp1s));
     assert( (csp1s == sp1d));
-    
+
     assert( (csp2d == sp3d));
     assert( (csp2s == sp3s));
     assert( (csp2d == sp3s));
@@ -152,7 +152,7 @@ int main () {
     assert(!(csp2s == sp4s));
     assert(!(csp2d == sp4s));
     assert(!(csp2s == sp4d));
-    
+
     assert(!(csp4d == sp2d));
     assert(!(csp4s == sp2s));
     assert(!(csp4d == sp2s));

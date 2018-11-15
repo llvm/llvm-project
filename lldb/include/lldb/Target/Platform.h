@@ -10,8 +10,6 @@
 #ifndef liblldb_Platform_h_
 #define liblldb_Platform_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <map>
 #include <memory>
@@ -19,8 +17,6 @@
 #include <string>
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Interpreter/Options.h"

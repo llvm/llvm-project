@@ -61,16 +61,16 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.54   4.46    -      -      -      -     4.99   6.01    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     4.42   4.58    -      -      -      -     4.99   6.01    -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.52   0.48    -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmulps	%ymm0, %ymm1, %ymm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     2.00   2.00    -      -      -      -     0.99   0.01    -      -      -      -      -      -      -     vpermil2pd	$16, %xmm3, %xmm5, %xmm1, %xmm2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmulps	%ymm2, %ymm3, %ymm4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm4, %ymm5, %ymm6
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmulps	%ymm6, %ymm3, %ymm4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.52   0.48    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm4, %ymm5, %ymm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.77   0.23    -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmulps	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     1.64   2.36    -      -      -      -     0.99   0.01    -      -      -      -      -      -      -     vpermil2pd	$16, %xmm3, %xmm5, %xmm1, %xmm2
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.99   0.01    -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmulps	%ymm2, %ymm3, %ymm4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.01   0.99    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm4, %ymm5, %ymm6
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.80   0.20    -      -      -      -      -     2.00    -      -      -      -      -      -      -     vmulps	%ymm6, %ymm3, %ymm4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -     0.21   0.79    -      -      -      -     2.00    -      -      -      -      -      -      -      -     vaddps	%ymm4, %ymm5, %ymm0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          012

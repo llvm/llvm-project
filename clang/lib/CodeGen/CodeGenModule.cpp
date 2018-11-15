@@ -891,11 +891,12 @@ static std::string getCPUSpecificMangling(const CodeGenModule &CGM,
 
 static void AppendCPUSpecificCPUDispatchMangling(const CodeGenModule &CGM,
                                                  const CPUSpecificAttr *Attr,
+                                                 unsigned CPUIndex,
                                                  raw_ostream &Out) {
   // cpu_specific gets the current name, dispatch gets the resolver if IFunc is
   // supported.
   if (Attr)
-    Out << getCPUSpecificMangling(CGM, Attr->getCurCPUName()->getName());
+    Out << getCPUSpecificMangling(CGM, Attr->getCPUName(CPUIndex)->getName());
   else if (CGM.getTarget().supportsIFunc())
     Out << ".resolver";
 }
@@ -963,8 +964,9 @@ static std::string getMangledNameImpl(const CodeGenModule &CGM, GlobalDecl GD,
   if (const auto *FD = dyn_cast<FunctionDecl>(ND))
     if (FD->isMultiVersion() && !OmitMultiVersionMangling) {
       if (FD->isCPUDispatchMultiVersion() || FD->isCPUSpecificMultiVersion())
-        AppendCPUSpecificCPUDispatchMangling(
-            CGM, FD->getAttr<CPUSpecificAttr>(), Out);
+        AppendCPUSpecificCPUDispatchMangling(CGM,
+                                             FD->getAttr<CPUSpecificAttr>(),
+                                             GD.getMultiVersionIndex(), Out);
       else
         AppendTargetMangling(CGM, FD->getAttr<TargetAttr>(), Out);
     }
@@ -1022,26 +1024,6 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
       if (OrigCtorType == Ctor_Base)
         CanonicalGD = GlobalDecl(CD, Ctor_Complete);
     }
-  }
-
-  const auto *FD = dyn_cast<FunctionDecl>(GD.getDecl());
-  // Since CPUSpecific can require multiple emits per decl, store the manglings
-  // separately.
-  if (FD &&
-      (FD->isCPUDispatchMultiVersion() || FD->isCPUSpecificMultiVersion())) {
-    const auto *SD = FD->getAttr<CPUSpecificAttr>();
-
-    std::pair<GlobalDecl, unsigned> SpecCanonicalGD{
-        CanonicalGD,
-        SD ? SD->ActiveArgIndex : std::numeric_limits<unsigned>::max()};
-
-    auto FoundName = CPUSpecificMangledDeclNames.find(SpecCanonicalGD);
-    if (FoundName != CPUSpecificMangledDeclNames.end())
-      return FoundName->second;
-
-    auto Result = CPUSpecificManglings.insert(
-        std::make_pair(getMangledNameImpl(*this, GD, FD), SpecCanonicalGD));
-    return CPUSpecificMangledDeclNames[SpecCanonicalGD] = Result.first->first();
   }
 
   auto FoundName = MangledDeclNames.find(CanonicalGD);
@@ -1166,12 +1148,12 @@ llvm::ConstantInt *CodeGenModule::CreateCrossDsoCfiTypeId(llvm::Metadata *MD) {
   return llvm::ConstantInt::get(Int64Ty, llvm::MD5Hash(MDS->getString()));
 }
 
-void CodeGenModule::SetLLVMFunctionAttributes(const Decl *D,
+void CodeGenModule::SetLLVMFunctionAttributes(GlobalDecl GD,
                                               const CGFunctionInfo &Info,
                                               llvm::Function *F) {
   unsigned CallingConv;
   llvm::AttributeList PAL;
-  ConstructAttributeList(F->getName(), Info, D, PAL, CallingConv, false);
+  ConstructAttributeList(F->getName(), Info, GD, PAL, CallingConv, false);
   F->setAttributes(PAL);
   F->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 }
@@ -1393,21 +1375,21 @@ void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
   }
 }
 
-bool CodeGenModule::GetCPUAndFeaturesAttributes(const Decl *D,
+bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                                 llvm::AttrBuilder &Attrs) {
   // Add target-cpu and target-features attributes to functions. If
   // we have a decl for the function and it has a target attribute then
   // parse that and add it to the feature set.
   StringRef TargetCPU = getTarget().getTargetOpts().CPU;
   std::vector<std::string> Features;
-  const auto *FD = dyn_cast_or_null<FunctionDecl>(D);
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(GD.getDecl());
   FD = FD ? FD->getMostRecentDecl() : FD;
   const auto *TD = FD ? FD->getAttr<TargetAttr>() : nullptr;
   const auto *SD = FD ? FD->getAttr<CPUSpecificAttr>() : nullptr;
   bool AddedAttr = false;
   if (TD || SD) {
     llvm::StringMap<bool> FeatureMap;
-    getFunctionFeatureMap(FeatureMap, FD);
+    getFunctionFeatureMap(FeatureMap, GD);
 
     // Produce the canonical string for this set of features.
     for (const llvm::StringMap<bool>::value_type &Entry : FeatureMap)
@@ -1463,7 +1445,7 @@ void CodeGenModule::setNonAliasAttributes(GlobalDecl GD,
           F->addFnAttr("implicit-section-name", SA->getName());
 
       llvm::AttrBuilder Attrs;
-      if (GetCPUAndFeaturesAttributes(D, Attrs)) {
+      if (GetCPUAndFeaturesAttributes(GD, Attrs)) {
         // We know that GetCPUAndFeaturesAttributes will always have the
         // newest set, since it has the newest possible FunctionDecl, so the
         // new ones should replace the old.
@@ -1486,7 +1468,7 @@ void CodeGenModule::SetInternalFunctionAttributes(GlobalDecl GD,
                                                   llvm::Function *F,
                                                   const CGFunctionInfo &FI) {
   const Decl *D = GD.getDecl();
-  SetLLVMFunctionAttributes(D, FI, F);
+  SetLLVMFunctionAttributes(GD, FI, F);
   SetLLVMFunctionAttributesForDefinition(D, F);
 
   F->setLinkage(llvm::Function::InternalLinkage);
@@ -1548,7 +1530,7 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
   const auto *FD = cast<FunctionDecl>(GD.getDecl());
 
   if (!IsIncompleteFunction) {
-    SetLLVMFunctionAttributes(FD, getTypes().arrangeGlobalDeclaration(GD), F);
+    SetLLVMFunctionAttributes(GD, getTypes().arrangeGlobalDeclaration(GD), F);
     // Setup target-specific attributes.
     if (F->isDeclaration())
       getTargetCodeGenInfo().setTargetAttributes(FD, F, *this);
@@ -2424,6 +2406,19 @@ bool CodeGenModule::shouldOpportunisticallyEmitVTables() {
   return CodeGenOpts.OptimizationLevel > 0;
 }
 
+void CodeGenModule::EmitMultiVersionFunctionDefinition(GlobalDecl GD,
+                                                       llvm::GlobalValue *GV) {
+  const auto *FD = cast<FunctionDecl>(GD.getDecl());
+
+  if (FD->isCPUSpecificMultiVersion()) {
+    auto *Spec = FD->getAttr<CPUSpecificAttr>();
+    for (unsigned I = 0; I < Spec->cpus_size(); ++I)
+      EmitGlobalFunctionDefinition(GD.getWithMultiVersionIndex(I), nullptr);
+    // Requires multiple emits.
+  } else
+    EmitGlobalFunctionDefinition(GD, GV);
+}
+
 void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
   const auto *D = cast<ValueDecl>(GD.getDecl());
 
@@ -2431,7 +2426,7 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
                                  Context.getSourceManager(),
                                  "Generating code for declaration");
 
-  if (isa<FunctionDecl>(D)) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     // At -O0, don't generate IR for functions with available_externally
     // linkage.
     if (!shouldEmitFunction(GD))
@@ -2444,6 +2439,8 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
         ABI->emitCXXStructor(CD, getFromCtorType(GD.getCtorType()));
       else if (const auto *DD = dyn_cast<CXXDestructorDecl>(Method))
         ABI->emitCXXStructor(DD, getFromDtorType(GD.getDtorType()));
+      else if (FD->isMultiVersion())
+        EmitMultiVersionFunctionDefinition(GD, GV);
       else
         EmitGlobalFunctionDefinition(GD, GV);
 
@@ -2453,6 +2450,8 @@ void CodeGenModule::EmitGlobalDefinition(GlobalDecl GD, llvm::GlobalValue *GV) {
       return;
     }
 
+    if (FD->isMultiVersion())
+      return EmitMultiVersionFunctionDefinition(GD, GV);
     return EmitGlobalFunctionDefinition(GD, GV);
   }
 
@@ -2566,13 +2565,20 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
 
   SmallVector<CodeGenFunction::MultiVersionResolverOption, 10> Options;
   const TargetInfo &Target = getTarget();
+  unsigned Index = 0;
   for (const IdentifierInfo *II : DD->cpus()) {
     // Get the name of the target function so we can look it up/create it.
     std::string MangledName = getMangledNameImpl(*this, GD, FD, true) +
                               getCPUSpecificMangling(*this, II->getName());
-    llvm::Constant *Func = GetOrCreateLLVMFunction(
-        MangledName, DeclTy, GD, /*ForVTable=*/false, /*DontDefer=*/true,
-        /*IsThunk=*/false, llvm::AttributeList(), ForDefinition);
+
+    llvm::Constant *Func = GetGlobalValue(MangledName);
+
+    if (!Func)
+      Func = GetOrCreateLLVMFunction(
+          MangledName, DeclTy, GD.getWithMultiVersionIndex(Index),
+          /*ForVTable=*/false, /*DontDefer=*/true,
+          /*IsThunk=*/false, llvm::AttributeList(), ForDefinition);
+
     llvm::SmallVector<StringRef, 32> Features;
     Target.getCPUSpecificCPUDispatchFeatures(II->getName(), Features);
     llvm::transform(Features, Features.begin(),
@@ -2582,6 +2588,7 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
           return !Target.validateCpuSupports(Feat);
         }), Features.end());
     Options.emplace_back(cast<llvm::Function>(Func), StringRef{}, Features);
+    ++Index;
   }
 
   llvm::sort(
@@ -3974,15 +3981,6 @@ void CodeGenModule::EmitGlobalFunctionDefinition(GlobalDecl GD,
     AddGlobalDtor(Fn, DA->getPriority());
   if (D->hasAttr<AnnotateAttr>())
     AddGlobalAnnotations(D, Fn);
-
-  if (D->isCPUSpecificMultiVersion()) {
-    auto *Spec = D->getAttr<CPUSpecificAttr>();
-    // If there is another specific version we need to emit, do so here.
-    if (Spec->ActiveArgIndex + 1 < Spec->cpus_size()) {
-      ++Spec->ActiveArgIndex;
-      EmitGlobalFunctionDefinition(GD, nullptr);
-    }
-  }
 }
 
 void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
@@ -5404,8 +5402,9 @@ TargetAttr::ParsedTargetAttr CodeGenModule::filterFunctionTargetAttrs(const Targ
 // Fills in the supplied string map with the set of target features for the
 // passed in function.
 void CodeGenModule::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
-                                          const FunctionDecl *FD) {
+                                          GlobalDecl GD) {
   StringRef TargetCPU = Target.getTargetOpts().CPU;
+  const FunctionDecl *FD = GD.getDecl()->getAsFunction();
   if (const auto *TD = FD->getAttr<TargetAttr>()) {
     TargetAttr::ParsedTargetAttr ParsedAttr = filterFunctionTargetAttrs(TD);
 
@@ -5427,8 +5426,8 @@ void CodeGenModule::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                           ParsedAttr.Features);
   } else if (const auto *SD = FD->getAttr<CPUSpecificAttr>()) {
     llvm::SmallVector<StringRef, 32> FeaturesTmp;
-    Target.getCPUSpecificCPUDispatchFeatures(SD->getCurCPUName()->getName(),
-                                             FeaturesTmp);
+    Target.getCPUSpecificCPUDispatchFeatures(
+        SD->getCPUName(GD.getMultiVersionIndex())->getName(), FeaturesTmp);
     std::vector<std::string> Features(FeaturesTmp.begin(), FeaturesTmp.end());
     Target.initFeatureMap(FeatureMap, getDiags(), TargetCPU, Features);
   } else {

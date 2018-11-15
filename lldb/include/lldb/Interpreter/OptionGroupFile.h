@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionGroupFile_h_
 #define liblldb_OptionGroupFile_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/Options.h"

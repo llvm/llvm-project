@@ -18,6 +18,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 #include <cstring>
@@ -44,7 +45,7 @@ static void demangle(const std::string &S) {
     outs() << ResultBuf << "\n";
     outs().flush();
   } else {
-    errs() << "Error: Invalid mangled name\n";
+    WithColor::error() << "Invalid mangled name\n";
   }
   std::free(ResultBuf);
 }

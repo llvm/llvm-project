@@ -10,11 +10,11 @@
 #ifndef LLDB_UTILITY_STATE_H
 #define LLDB_UTILITY_STATE_H
 
-#include "lldb/lldb-enumerations.h" // for StateType
-#include "llvm/ADT/StringRef.h"     // for StringRef
+#include "lldb/lldb-enumerations.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatProviders.h"
-#include "llvm/Support/raw_ostream.h" // for raw_ostream
-#include <cstdint>                    // for uint32_t
+#include "llvm/Support/raw_ostream.h"
+#include <cstdint>
 
 namespace lldb_private {
 

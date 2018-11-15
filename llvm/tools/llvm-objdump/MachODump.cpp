@@ -44,6 +44,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
@@ -166,7 +167,7 @@ static const Target *GetTarget(const MachOObjectFile *MachOObj,
   if (*ThumbTarget)
     return TheTarget;
 
-  errs() << "llvm-objdump: error: unable to get target for '";
+  WithColor::error(errs(), "llvm-objdump") << "unable to get target for '";
   if (!TheTarget)
     errs() << TripleName;
   else
@@ -483,7 +484,7 @@ static void PrintRType(const uint64_t cputype, const unsigned r_type) {
     "GOTLDP  ", "GOTLDPOF", "PTRTGOT ", "TLVLDP  ", "TLVLDPOF",
     "ADDEND  ", " 11 (?) ", " 12 (?) ", " 13 (?) ", " 14 (?) ", " 15 (?) "
   };
-  
+
   if (r_type > 0xf){
     outs() << format("%-7u", r_type) << " ";
     return;
@@ -552,7 +553,7 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
   bool previous_arm_half = false;
   bool previous_sectdiff = false;
   uint32_t sectdiff_r_type = 0;
-  
+
   for (relocation_iterator Reloc = Begin; Reloc != End; ++Reloc) {
     const DataRefImpl Rel = Reloc->getRawDataRefImpl();
     const MachO::any_relocation_info RE = O->getRelocation(Rel);
@@ -567,7 +568,7 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
                               O->getScatteredRelocationValue(RE) : 0);
     const unsigned r_symbolnum = (r_scattered ? 0 :
                                   O->getPlainRelocationSymbolNum(RE));
-    
+
     if (r_scattered && cputype != MachO::CPU_TYPE_X86_64) {
       if (verbose) {
         // scattered: address
@@ -578,20 +579,20 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
           outs() << "         ";
         else
           outs() << format("%08x ", (unsigned int)r_address);
-        
+
         // scattered: pcrel
         if (r_pcrel)
           outs() << "True  ";
         else
           outs() << "False ";
-        
+
         // scattered: length
         PrintRLength(cputype, r_type, r_length, previous_arm_half);
-        
+
         // scattered: extern & type
         outs() << "n/a    ";
         PrintRType(cputype, r_type);
-        
+
         // scattered: scattered & value
         outs() << format("True      0x%08x", (unsigned int)r_value);
         if (previous_sectdiff == false) {
@@ -639,22 +640,22 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
           outs() << "         ";
         else
           outs() << format("%08x ", (unsigned int)r_address);
-        
+
         // plain: pcrel
         if (r_pcrel)
           outs() << "True  ";
         else
           outs() << "False ";
-        
+
         // plain: length
         PrintRLength(cputype, r_type, r_length, previous_arm_half);
-        
+
         if (r_extern) {
           // plain: extern & type & scattered
           outs() << "True   ";
           PrintRType(cputype, r_type);
           outs() << "False     ";
-          
+
           // plain: symbolnum/value
           if (r_symbolnum > Symtab.nsyms)
             outs() << format("?(%d)\n", r_symbolnum);
@@ -675,7 +676,7 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
           outs() << "False  ";
           PrintRType(cputype, r_type);
           outs() << "False     ";
-          
+
           // plain: symbolnum/value
           if (cputype == MachO::CPU_TYPE_ARM &&
                    r_type == llvm::MachO::ARM_RELOC_PAIR)
@@ -1559,7 +1560,8 @@ static bool checkMachOAndArchFlags(ObjectFile *O, StringRef Filename) {
   if (none_of(ArchFlags, [&](const std::string &Name) {
         return Name == ArchFlagName;
       })) {
-    errs() << "llvm-objdump: " + Filename + ": No architecture specified.\n";
+    WithColor::error(errs(), "llvm-objdump")
+        << Filename << ": no architecture specified.\n";
     return false;
   }
   return true;
@@ -1944,8 +1946,9 @@ static bool ValidateArchFlags() {
       ArchAll = true;
     } else {
       if (!MachOObjectFile::isValidArch(ArchFlags[i])) {
-        errs() << "llvm-objdump: Unknown architecture named '" + ArchFlags[i] +
-                      "'for the -arch option\n";
+        WithColor::error(errs(), "llvm-objdump")
+            << "unknown architecture named '" + ArchFlags[i] +
+                   "'for the -arch option\n";
         return false;
       }
     }
@@ -2005,8 +2008,9 @@ void llvm::ParseInputMachO(StringRef Filename) {
     if (MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&*O))
       ProcessMachO(Filename, MachOOF);
     else
-      errs() << "llvm-objdump: '" << Filename << "': "
-             << "Object is not a Mach-O file type.\n";
+      WithColor::error(errs(), "llvm-objdump")
+          << Filename << "': "
+          << "object is not a Mach-O file type.\n";
     return;
   }
   llvm_unreachable("Input object can't be invalid at this point");
@@ -2079,8 +2083,9 @@ void llvm::ParseInputMachO(MachOUniversalBinary *UB) {
         }
       }
       if (!ArchFound) {
-        errs() << "llvm-objdump: file: " + Filename + " does not contain "
-                << "architecture: " + ArchFlags[i] + "\n";
+        WithColor::error(errs(), "llvm-objdump")
+            << "file: " + Filename + " does not contain "
+            << "architecture: " + ArchFlags[i] + "\n";
         return;
       }
     }
@@ -6184,8 +6189,9 @@ static void PrintXarFilesSummary(const char *XarFilename, xar_t xar) {
 
   ScopedXarIter xi;
   if (!xi) {
-    errs() << "Can't obtain an xar iterator for xar archive "
-           << XarFilename << "\n";
+    WithColor::error(errs(), "llvm-objdump")
+        << "can't obtain an xar iterator for xar archive " << XarFilename
+        << "\n";
     return;
   }
 
@@ -6193,8 +6199,9 @@ static void PrintXarFilesSummary(const char *XarFilename, xar_t xar) {
   for (xf = xar_file_first(xar, xi); xf; xf = xar_file_next(xi)) {
     ScopedXarIter xp;
     if(!xp){
-      errs() << "Can't obtain an xar iterator for xar archive "
-             << XarFilename << "\n";
+      WithColor::error(errs(), "llvm-objdump")
+          << "can't obtain an xar iterator for xar archive " << XarFilename
+          << "\n";
       return;
     }
     type = nullptr;
@@ -6318,7 +6325,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
   std::error_code XarEC =
       sys::fs::createTemporaryFile("llvm-objdump", "xar", FD, XarFilename);
   if (XarEC) {
-    errs() << XarEC.message() << "\n";
+    WithColor::error(errs(), "llvm-objdump") << XarEC.message() << "\n";
     return;
   }
   ToolOutputFile XarFile(XarFilename, FD);
@@ -6331,7 +6338,8 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
 
   ScopedXarFile xar(XarFilename.c_str(), READ);
   if (!xar) {
-    errs() << "Can't create temporary xar archive " << XarFilename << "\n";
+    WithColor::error(errs(), "llvm-objdump")
+        << "can't create temporary xar archive " << XarFilename << "\n";
     return;
   }
 
@@ -6339,7 +6347,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
   std::error_code TocEC =
       sys::fs::createTemporaryFile("llvm-objdump", "toc", TocFilename);
   if (TocEC) {
-    errs() << TocEC.message() << "\n";
+    WithColor::error(errs(), "llvm-objdump") << TocEC.message() << "\n";
     return;
   }
   xar_serialize(xar, TocFilename.c_str());
@@ -6356,7 +6364,7 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
     MemoryBuffer::getFileOrSTDIN(TocFilename.c_str());
   if (std::error_code EC = FileOrErr.getError()) {
-    errs() << EC.message() << "\n";
+    WithColor::error(errs(), "llvm-objdump") << EC.message() << "\n";
     return;
   }
   std::unique_ptr<MemoryBuffer> &Buffer = FileOrErr.get();
@@ -6371,8 +6379,9 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
   // TODO: Go through the xar's files.
   ScopedXarIter xi;
   if(!xi){
-    errs() << "Can't obtain an xar iterator for xar archive "
-           << XarFilename.c_str() << "\n";
+    WithColor::error(errs(), "llvm-objdump")
+        << "can't obtain an xar iterator for xar archive "
+        << XarFilename.c_str() << "\n";
     return;
   }
   for(xar_file_t xf = xar_file_first(xar, xi); xf; xf = xar_file_next(xi)){
@@ -6382,8 +6391,9 @@ static void DumpBitcodeSection(MachOObjectFile *O, const char *sect,
 
     ScopedXarIter xp;
     if(!xp){
-      errs() << "Can't obtain an xar iterator for xar archive "
-             << XarFilename.c_str() << "\n";
+      WithColor::error(errs(), "llvm-objdump")
+          << "can't obtain an xar iterator for xar archive "
+          << XarFilename.c_str() << "\n";
       return;
     }
     member_name = NULL;
@@ -6860,8 +6870,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   // IP->setCommentStream(CommentStream);
 
   if (!AsmInfo || !STI || !DisAsm || !IP) {
-    errs() << "error: couldn't initialize disassembler for target "
-           << TripleName << '\n';
+    WithColor::error(errs(), "llvm-objdump")
+        << "couldn't initialize disassembler for target " << TripleName << '\n';
     return;
   }
 
@@ -6902,8 +6912,9 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   }
 
   if (ThumbTarget && (!ThumbAsmInfo || !ThumbSTI || !ThumbDisAsm || !ThumbIP)) {
-    errs() << "error: couldn't initialize disassembler for target "
-           << ThumbTripleName << '\n';
+    WithColor::error(errs(), "llvm-objdump")
+        << "couldn't initialize disassembler for target " << ThumbTripleName
+        << '\n';
     return;
   }
 
@@ -6956,7 +6967,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
       ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
           MemoryBuffer::getFileOrSTDIN(DSYMFile);
       if (std::error_code EC = BufOrErr.getError()) {
-        errs() << "llvm-objdump: " << Filename << ": " << EC.message() << '\n';
+        WithColor::error(errs(), "llvm-objdump")
+            << Filename << ": " << EC.message() << '\n';
         return;
       }
       Expected<std::unique_ptr<MachOObjectFile>> DbgObjCheck =
@@ -7243,7 +7255,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
             outs() << format("\t.short\t0x%04x\n", opcode);
             Size = 2;
           } else{
-            errs() << "llvm-objdump: warning: invalid instruction encoding\n";
+            WithColor::warning(errs(), "llvm-objdump")
+                << "invalid instruction encoding\n";
             if (Size == 0)
               Size = 1; // skip illegible bytes
           }
@@ -7290,7 +7303,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              *(Bytes.data() + Index) & 0xff);
             InstSize = 1; // skip exactly one illegible byte and move on.
           } else {
-            errs() << "llvm-objdump: warning: invalid instruction encoding\n";
+            WithColor::warning(errs(), "llvm-objdump")
+                << "invalid instruction encoding\n";
             if (InstSize == 0)
               InstSize = 1; // skip illegible bytes
           }

@@ -7,11 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
 #include <set>
 
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallSite.h"
@@ -23,7 +20,6 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Pass.h"
 
-// Project includes
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 

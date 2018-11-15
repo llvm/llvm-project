@@ -10,12 +10,8 @@
 #ifndef liblldb_CommandObjectRegexCommand_h_
 #define liblldb_CommandObjectRegexCommand_h_
 
-// C Includes
-// C++ Includes
 #include <list>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/RegularExpression.h"

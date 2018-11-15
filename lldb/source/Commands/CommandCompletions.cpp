@@ -7,18 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <sys/stat.h>
 #if defined(__APPLE__) || defined(__linux__)
 #include <pwd.h>
 #endif
 
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSet.h"
 
-// Project includes
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"

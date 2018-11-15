@@ -10,13 +10,9 @@
 #ifndef liblldb_StringConvert_h_
 #define liblldb_StringConvert_h_
 
-// C Includes
 #include <stdint.h>
 
-// C++ Includes
 
-// Other libraries and framework includes
-// Project includes
 
 namespace lldb_private {
 

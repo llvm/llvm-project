@@ -222,6 +222,11 @@ def ext_nested_namespace_definition : ExtWarn<
 def warn_cxx14_compat_nested_namespace_definition : Warning<
   "nested namespace definition is incompatible with C++ standards before C++17">,
   InGroup<CXXPre17Compat>, DefaultIgnore;
+def ext_inline_nested_namespace_definition : ExtWarn<
+  "inline nested namespace definition is a C++2a extension">, InGroup<CXX2a>;
+def warn_cxx17_compat_inline_nested_namespace_definition : Warning<
+  "inline nested namespace definition is incompatible with C++ standards before"
+  " C++2a">, InGroup<CXXPre2aCompat>, DefaultIgnore;
 def err_inline_nested_namespace_definition : Error<
   "nested namespace definition cannot be 'inline'">;
 def err_expected_semi_after_attribute_list : Error<

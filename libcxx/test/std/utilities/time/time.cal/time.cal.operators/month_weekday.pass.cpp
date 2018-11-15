@@ -54,7 +54,7 @@ int main()
 
     constexpr weekday Tuesday = std::chrono::Tuesday;
     constexpr month February = std::chrono::February;
-    
+
     { // operator/(const month& m, const weekday_indexed& wdi) (and switched)
         ASSERT_NOEXCEPT (February/Tuesday[2]);
         ASSERT_SAME_TYPE(month_weekday, decltype(February/Tuesday[2]));
@@ -67,7 +67,7 @@ int main()
         static_assert(wdi.month()           == February,   "");
         static_assert(wdi.weekday_indexed() == Tuesday[3], "");
         }
-    
+
         for (int i = 1; i <= 12; ++i)
             for (unsigned j = 0; j <= 6; ++j)
                 for (unsigned k = 1; k <= 5; ++k)
@@ -82,7 +82,7 @@ int main()
                     assert(mwd2.weekday_indexed() == wdi);
                     assert(mwd1 == mwd2);
                 }
-    } 
+    }
 
 
     { // operator/(int m, const weekday_indexed& wdi) (and switched)
@@ -97,7 +97,7 @@ int main()
         static_assert(wdi.month()           == February,   "");
         static_assert(wdi.weekday_indexed() == Tuesday[3], "");
         }
-    
+
         for (int i = 1; i <= 12; ++i)
             for (unsigned j = 0; j <= 6; ++j)
                 for (unsigned k = 1; k <= 5; ++k)
@@ -111,5 +111,5 @@ int main()
                     assert(mwd2.weekday_indexed() == wdi);
                     assert(mwd1 == mwd2);
                 }
-    } 
+    }
 }

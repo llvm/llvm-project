@@ -718,7 +718,8 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
           (Opcode == Instruction::FPToSI || Opcode == Instruction::FPToUI))
         NeedsExtracts = false;
 
-      TotCost += getScalarizationOverhead(Dst, NeedsInserts, NeedsExtracts);
+      TotCost += getScalarizationOverhead(Src, false, NeedsExtracts);
+      TotCost += getScalarizationOverhead(Dst, NeedsInserts, false);
 
       // FIXME: VF 2 for float<->i32 is currently just as expensive as for VF 4.
       if (VF == 2 && SrcScalarBits == 32 && DstScalarBits == 32)

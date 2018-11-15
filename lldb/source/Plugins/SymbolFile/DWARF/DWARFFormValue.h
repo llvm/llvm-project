@@ -11,7 +11,7 @@
 #define SymbolFileDWARF_DWARFFormValue_h_
 
 #include "DWARFDataExtractor.h"
-#include <stddef.h> // for NULL
+#include <stddef.h>
 
 class DWARFUnit;
 class SymbolFileDWARF;

@@ -7,7 +7,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //===---------------------------------------------------------------------===//
-// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17 
+// UNSUPPORTED: c++98, c++03, c++11, c++14, c++17
 
 // <span>
 
@@ -25,9 +25,9 @@
 //  using const_iterator         = implementation-defined;
 //  using reverse_iterator       = std::reverse_iterator<iterator>;
 //  using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-// 
+//
 //  static constexpr index_type extent = Extent;
-// 
+//
 
 #include <span>
 #include <cassert>
@@ -71,7 +71,7 @@ void testSpan()
     ASSERT_SAME_TYPE(typename S::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(typename S::pointer,         ElementType *);
     ASSERT_SAME_TYPE(typename S::reference,       ElementType &);
-    
+
     static_assert(S::extent == Size); // check that it exists
 
     testIterator<S, typename S::iterator>();

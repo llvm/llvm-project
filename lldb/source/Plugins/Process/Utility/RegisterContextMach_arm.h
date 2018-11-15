@@ -10,11 +10,7 @@
 #ifndef liblldb_RegisterContextMach_arm_h_
 #define liblldb_RegisterContextMach_arm_h_
 
-// C Includes
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "RegisterContextDarwin_arm.h"
 
 class RegisterContextMach_arm : public RegisterContextDarwin_arm {

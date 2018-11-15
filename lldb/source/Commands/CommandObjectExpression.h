@@ -10,10 +10,6 @@
 #ifndef liblldb_CommandObjectExpression_h_
 #define liblldb_CommandObjectExpression_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"

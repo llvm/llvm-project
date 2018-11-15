@@ -9,11 +9,7 @@
 
 #include "LibCxx.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/ScopeExit.h"
-// Project includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/ValueObject.h"

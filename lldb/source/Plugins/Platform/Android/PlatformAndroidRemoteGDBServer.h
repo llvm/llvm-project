@@ -10,13 +10,9 @@
 #ifndef liblldb_PlatformAndroidRemoteGDBServer_h_
 #define liblldb_PlatformAndroidRemoteGDBServer_h_
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <utility>
 
-// Other libraries and framework includes
-// Project includes
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
 
 #include "llvm/ADT/Optional.h"

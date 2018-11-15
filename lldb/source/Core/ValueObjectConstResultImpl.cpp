@@ -9,19 +9,19 @@
 
 #include "lldb/Core/ValueObjectConstResultImpl.h"
 
-#include "lldb/Core/Value.h"       // for Value, Value::Val...
-#include "lldb/Core/ValueObject.h" // for ValueObject
+#include "lldb/Core/Value.h"
+#include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectConstResultCast.h"
 #include "lldb/Core/ValueObjectConstResultChild.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Utility/DataBufferHeap.h" // for DataBufferHeap
-#include "lldb/Utility/Endian.h"         // for InlHostByteOrder
-#include "lldb/Utility/Scalar.h"         // for Scalar
-#include "lldb/Utility/SharingPtr.h"     // for SharingPtr
+#include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/Endian.h"
+#include "lldb/Utility/Scalar.h"
+#include "lldb/Utility/SharingPtr.h"
 
-#include <string> // for string
+#include <string>
 
 namespace lldb_private {
 class DataExtractor;

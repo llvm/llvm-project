@@ -48,7 +48,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeTypedef.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolTypeUDT.h"
 
-#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h" // For IsCPPMangledName
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/Language/CPlusPlus/MSVCUndecoratedNameParser.h"
 #include "Plugins/SymbolFile/NativePDB/SymbolFileNativePDB.h"
 

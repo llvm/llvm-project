@@ -40,7 +40,7 @@ int main()
 
     ASSERT_SAME_TYPE(weekday , decltype(  std::declval<weekday&>()++));
     ASSERT_SAME_TYPE(weekday&, decltype(++std::declval<weekday&>()  ));
-    
+
     static_assert(testConstexpr<weekday>(), "");
 
     for (unsigned i = 0; i <= 6; ++i)

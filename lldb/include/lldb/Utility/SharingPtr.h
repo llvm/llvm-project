@@ -10,8 +10,6 @@
 #ifndef utility_SharingPtr_h_
 #define utility_SharingPtr_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 
 // Microsoft Visual C++ currently does not enable std::atomic to work in CLR
@@ -25,8 +23,6 @@
 
 #include <stddef.h>
 
-// Other libraries and framework includes
-// Project includes
 
 //#define ENABLE_SP_LOGGING 1 // DON'T CHECK THIS LINE IN UNLESS COMMENTED OUT
 #if defined(ENABLE_SP_LOGGING)

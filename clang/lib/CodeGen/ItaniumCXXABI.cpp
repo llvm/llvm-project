@@ -1562,9 +1562,8 @@ void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
       Type != Dtor_Base && DD->isVirtual())
     Callee = CGF.BuildAppleKextVirtualDestructorCall(DD, Type, DD->getParent());
   else
-    Callee =
-      CGCallee::forDirect(CGM.getAddrOfCXXStructor(DD, getFromDtorType(Type)),
-                          DD);
+    Callee = CGCallee::forDirect(
+        CGM.getAddrOfCXXStructor(DD, getFromDtorType(Type)), GD);
 
   CGF.EmitCXXMemberOrOperatorCall(DD, Callee, ReturnValueSlot(),
                                   This.getPointer(), VTT, VTTTy,
@@ -1750,7 +1749,7 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
     VFunc = VFuncLoad;
   }
 
-  CGCallee Callee(MethodDecl->getCanonicalDecl(), VFunc);
+  CGCallee Callee(GD, VFunc);
   return Callee;
 }
 
@@ -2420,7 +2419,7 @@ ItaniumCXXABI::getOrCreateThreadLocalWrapper(const VarDecl *VD,
       llvm::Function::Create(FnTy, getThreadLocalWrapperLinkage(VD, CGM),
                              WrapperName.str(), &CGM.getModule());
 
-  CGM.SetLLVMFunctionAttributes(nullptr, FI, Wrapper);
+  CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI, Wrapper);
 
   if (VD->hasDefinition())
     CGM.SetLLVMFunctionAttributesForDefinition(nullptr, Wrapper);
@@ -2527,7 +2526,8 @@ void ItaniumCXXABI::EmitThreadLocalInitFuncs(
                                     llvm::GlobalVariable::ExternalWeakLinkage,
                                     InitFnName.str(), &CGM.getModule());
       const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
-      CGM.SetLLVMFunctionAttributes(nullptr, FI, cast<llvm::Function>(Init));
+      CGM.SetLLVMFunctionAttributes(GlobalDecl(), FI,
+                                    cast<llvm::Function>(Init));
     }
 
     if (Init) {

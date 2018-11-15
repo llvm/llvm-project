@@ -11,11 +11,7 @@
 #ifndef liblldb_BreakpointResolverFileRegex_h_
 #define liblldb_BreakpointResolverFileRegex_h_
 
-// C Includes
-// C++ Includes
 #include <set>
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Utility/ConstString.h"
 

@@ -165,7 +165,8 @@ raw_ostream &operator<<(raw_ostream &OS, const Ref &R) {
 void RefSlab::Builder::insert(const SymbolID &ID, const Ref &S) {
   auto &M = Refs[ID];
   M.push_back(S);
-  M.back().Location.FileURI = UniqueStrings.save(M.back().Location.FileURI);
+  M.back().Location.FileURI =
+      UniqueStrings.save(M.back().Location.FileURI).data();
 }
 
 RefSlab RefSlab::Builder::build() && {
@@ -207,7 +208,7 @@ bool fromJSON(const json::Value &Parameters, FuzzyFindRequest &Request) {
   int64_t Limit;
   bool OK =
       O && O.map("Query", Request.Query) && O.map("Scopes", Request.Scopes) &&
-      O.map("Limit", Limit) &&
+      O.map("AnyScope", Request.AnyScope) && O.map("Limit", Limit) &&
       O.map("RestrictForCodeCompletion", Request.RestrictForCodeCompletion) &&
       O.map("ProximityPaths", Request.ProximityPaths);
   if (OK && Limit <= std::numeric_limits<uint32_t>::max())
@@ -219,6 +220,7 @@ json::Value toJSON(const FuzzyFindRequest &Request) {
   return json::Object{
       {"Query", Request.Query},
       {"Scopes", json::Array{Request.Scopes}},
+      {"AnyScope", Request.AnyScope},
       {"Limit", Request.Limit},
       {"RestrictForCodeCompletion", Request.RestrictForCodeCompletion},
       {"ProximityPaths", json::Array{Request.ProximityPaths}},

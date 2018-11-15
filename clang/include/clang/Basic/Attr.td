@@ -723,6 +723,7 @@ def Availability : InheritableAttr {
              .Case("macos_app_extension", "macOS (App Extension)")
              .Case("tvos_app_extension", "tvOS (App Extension)")
              .Case("watchos_app_extension", "watchOS (App Extension)")
+             .Case("swift", "Swift")
              .Default(llvm::StringRef());
 }
 static llvm::StringRef getPlatformNameSourceSpelling(llvm::StringRef Platform) {
@@ -863,10 +864,8 @@ def CPUSpecific : InheritableAttr {
   let Subjects = SubjectList<[Function]>;
   let Documentation = [CPUSpecificCPUDispatchDocs];
   let AdditionalMembers = [{
-    unsigned ActiveArgIndex = 0;
-
-    IdentifierInfo *getCurCPUName() const {
-      return *(cpus_begin() + ActiveArgIndex);
+    IdentifierInfo *getCPUName(unsigned Index) const {
+      return *(cpus_begin() + Index);
     }
   }];
 }

@@ -10,10 +10,6 @@
 #ifndef liblldb_CommandObjectHelp_h_
 #define liblldb_CommandObjectHelp_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/Options.h"

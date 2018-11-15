@@ -1839,8 +1839,8 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
     if (GnuStyle) {
       dwarf::PubIndexEntryDescriptor Desc = computeIndexValue(TheU, Entity);
       Asm->OutStreamer->AddComment(
-          Twine("Kind: ") + dwarf::GDBIndexEntryKindString(Desc.Kind) + ", " +
-          dwarf::GDBIndexEntryLinkageString(Desc.Linkage));
+          Twine("Attributes: ") + dwarf::GDBIndexEntryKindString(Desc.Kind) +
+          ", " + dwarf::GDBIndexEntryLinkageString(Desc.Linkage));
       Asm->emitInt8(Desc.toBits());
     }
 
@@ -2287,7 +2287,7 @@ static void emitRangeList(DwarfDebug &DD, AsmPrinter *Asm,
     // contributions.
     auto *Base = CUBase;
     if (!Base && (P.second.size() > 1 || DwarfVersion < 5) &&
-        (UseDwarfRangesBaseAddressSpecifier || DwarfVersion >= 5)) {
+        (CU.getCUNode()->getRangesBaseAddress() || DwarfVersion >= 5)) {
       BaseIsSet = true;
       // FIXME/use care: This may not be a useful base address if it's not
       // the lowest address/range in this object.
@@ -2609,10 +2609,13 @@ void DwarfDebug::addDwarfTypeUnitType(DwarfCompileUnit &CU,
   NewTU.setTypeSignature(Signature);
   Ins.first->second = Signature;
 
-  if (useSplitDwarf())
-    // FIXME: v5 split type units belong in .debug_info.dwo.
-    NewTU.setSection(Asm->getObjFileLowering().getDwarfTypesDWOSection());
-  else {
+  if (useSplitDwarf()) {
+    MCSection *Section =
+        getDwarfVersion() <= 4
+            ? Asm->getObjFileLowering().getDwarfTypesDWOSection()
+            : Asm->getObjFileLowering().getDwarfInfoDWOSection();
+    NewTU.setSection(Section);
+  } else {
     MCSection *Section =
         getDwarfVersion() <= 4
             ? Asm->getObjFileLowering().getDwarfTypesSection(Signature)

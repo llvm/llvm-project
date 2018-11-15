@@ -11,14 +11,10 @@
 #ifndef liblldb_ThreadSafeDenseMap_h_
 #define liblldb_ThreadSafeDenseMap_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
 #include "llvm/ADT/DenseMap.h"
 
-// Project includes
 
 namespace lldb_private {
 

@@ -10,10 +10,6 @@
 #ifndef liblldb_BreakpointResolverScripted_h_
 #define liblldb_BreakpointResolverScripted_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-forward.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Core/ModuleSpec.h"

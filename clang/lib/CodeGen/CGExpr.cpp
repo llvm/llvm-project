@@ -4375,7 +4375,7 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, const FunctionDecl *FD) {
   }
 
   llvm::Constant *calleePtr = EmitFunctionDeclPointer(CGF.CGM, FD);
-  return CGCallee::forDirect(calleePtr, FD);
+  return CGCallee::forDirect(calleePtr, GlobalDecl(FD));
 }
 
 CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
@@ -4419,8 +4419,13 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
     calleePtr = EmitLValue(E).getPointer();
   }
   assert(functionType->isFunctionType());
-  CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(),
-                          E->getReferencedDeclOfCallee());
+
+  GlobalDecl GD;
+  if (const auto *VD =
+          dyn_cast_or_null<VarDecl>(E->getReferencedDeclOfCallee()))
+    GD = GlobalDecl(VD);
+
+  CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
   CGCallee callee(calleeInfo, calleePtr);
   return callee;
 }
@@ -4605,7 +4610,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType, const CGCallee &OrigCallee
   assert(CalleeType->isFunctionPointerType() &&
          "Call must have function pointer type!");
 
-  const Decl *TargetDecl = OrigCallee.getAbstractInfo().getCalleeDecl();
+  const Decl *TargetDecl =
+      OrigCallee.getAbstractInfo().getCalleeDecl().getDecl();
 
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
     // We can only guarantee that a function is called from the correct

@@ -7,10 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 
 #include "SystemInitializerFull.h"
 
@@ -1053,6 +1049,17 @@ const char *SBDebugger::GetPrompt() const {
 void SBDebugger::SetPrompt(const char *prompt) {
   if (m_opaque_sp)
     m_opaque_sp->SetPrompt(llvm::StringRef::withNullAsEmpty(prompt));
+}
+
+const char *SBDebugger::GetReproducerPath() const {
+  return (m_opaque_sp
+              ? ConstString(m_opaque_sp->GetReproducerPath()).GetCString()
+              : nullptr);
+}
+
+void SBDebugger::SetReproducerPath(const char *p) {
+  if (m_opaque_sp)
+    m_opaque_sp->SetReproducerPath(llvm::StringRef::withNullAsEmpty(p));
 }
 
 ScriptLanguage SBDebugger::GetScriptLanguage() const {

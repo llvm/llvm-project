@@ -7,12 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/StringSwitch.h"
 
-// Project includes
 #include "RenderScriptRuntime.h"
 #include "RenderScriptScriptGroup.h"
 

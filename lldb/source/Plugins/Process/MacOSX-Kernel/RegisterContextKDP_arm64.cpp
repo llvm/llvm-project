@@ -10,10 +10,6 @@
 
 #include "RegisterContextKDP_arm64.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "ProcessKDP.h"
 #include "ThreadKDP.h"
 

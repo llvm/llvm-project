@@ -11,13 +11,9 @@
 #ifndef liblldb_UtilityFunction_h_
 #define liblldb_UtilityFunction_h_
 
-// C Includes
-// C++ Includes
 #include <memory>
 #include <string>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Expression/Expression.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private.h"

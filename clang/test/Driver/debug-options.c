@@ -165,6 +165,10 @@
 // RUN: %clang -### -c -gsplit-dwarf %s 2>&1 | FileCheck -check-prefix=GPUB %s
 // RUN: %clang -### -c -gsplit-dwarf -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
+// RUN: %clang -### -c -fdebug-ranges-base-address %s 2>&1 | FileCheck -check-prefix=RNGBSE %s
+// RUN: %clang -### -c %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
+// RUN: %clang -### -c -fdebug-ranges-base-address -fno-debug-ranges-base-address %s 2>&1 | FileCheck -check-prefix=NORNGBSE %s
+//
 // RUN: %clang -### -c -glldb %s 2>&1 | FileCheck -check-prefix=GPUB %s
 // RUN: %clang -### -c -glldb -gno-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 //
@@ -281,6 +285,9 @@
 // NOPUB-NOT: -gpubnames
 //
 // PUB: -gpubnames
+//
+// RNGBSE: -fdebug-ranges-base-address
+// NORNGBSE-NOT: -fdebug-ranges-base-address
 //
 // GARANGE: -generate-arange-section
 //

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -34,6 +35,34 @@ static_assert(std::is_same<typename AdaptedIter::pointer, Shadow<2>>::value,
               "");
 static_assert(std::is_same<typename AdaptedIter::reference, Shadow<3>>::value,
               "");
+
+// Ensure that pointe{e,r}_iterator adaptors correctly forward the category of
+// the underlying iterator.
+
+using RandomAccessIter = SmallVectorImpl<int*>::iterator;
+using BidiIter = ilist<int*>::iterator;
+
+template<class T>
+using pointee_iterator_defaulted = pointee_iterator<T>;
+template<class T>
+using pointer_iterator_defaulted = pointer_iterator<T>;
+
+// Ensures that an iterator and its adaptation have the same iterator_category.
+template<template<typename> class A, typename It>
+using IsAdaptedIterCategorySame =
+  std::is_same<typename std::iterator_traits<It>::iterator_category,
+               typename std::iterator_traits<A<It>>::iterator_category>;
+
+// pointeE_iterator
+static_assert(IsAdaptedIterCategorySame<pointee_iterator_defaulted,
+                                        RandomAccessIter>::value, "");
+static_assert(IsAdaptedIterCategorySame<pointee_iterator_defaulted,
+                                        BidiIter>::value, "");
+// pointeR_iterator
+static_assert(IsAdaptedIterCategorySame<pointer_iterator_defaulted,
+                                        RandomAccessIter>::value, "");
+static_assert(IsAdaptedIterCategorySame<pointer_iterator_defaulted,
+                                        BidiIter>::value, "");
 
 TEST(PointeeIteratorTest, Basic) {
   int arr[4] = {1, 2, 3, 4};

@@ -22,6 +22,8 @@ public:
 
   virtual void emitDirectiveOptionRVC();
   virtual void emitDirectiveOptionNoRVC();
+  virtual void emitDirectiveOptionRelax();
+  virtual void emitDirectiveOptionNoRelax();
 };
 }
 #endif

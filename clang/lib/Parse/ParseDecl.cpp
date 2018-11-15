@@ -1001,6 +1001,21 @@ void Parser::ParseAvailabilityAttribute(IdentifierInfo &Availability,
       continue;
     }
 
+    if (Keyword == Ident_deprecated && Platform->Ident &&
+        Platform->Ident->isStr("swift")) {
+      // For swift, we deprecate for all versions.
+      if (Changes[Deprecated].KeywordLoc.isValid()) {
+        Diag(KeywordLoc, diag::err_availability_redundant)
+          << Keyword
+          << SourceRange(Changes[Deprecated].KeywordLoc);
+      }
+
+      Changes[Deprecated].KeywordLoc = KeywordLoc;
+      // Use a fake version here.
+      Changes[Deprecated].Version = VersionTuple(1);
+      continue;
+    }
+
     if (Tok.isNot(tok::equal)) {
       Diag(Tok, diag::err_expected_after) << Keyword << tok::equal;
       SkipUntil(tok::r_paren, StopAtSemi);

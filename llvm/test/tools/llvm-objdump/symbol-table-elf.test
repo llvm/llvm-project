@@ -1,6 +1,8 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objdump --syms %t | FileCheck %s
-# RUN: llvm-objdump -t     %t | FileCheck %s
+# RUN: llvm-objdump --syms %t > %t1
+# RUN: llvm-objdump -t     %t > %t2
+# RUN: cmp %t1 %t2
+# RUN: FileCheck %s --input-file=%t1
 
 # CHECK:      SYMBOL TABLE:
 # CHECK-NEXT: 0000000000000000         *UND*     00000000

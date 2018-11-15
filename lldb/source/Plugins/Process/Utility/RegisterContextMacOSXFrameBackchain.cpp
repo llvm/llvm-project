@@ -9,16 +9,12 @@
 
 #include "RegisterContextMacOSXFrameBackchain.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
-// Project includes
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
 using namespace lldb;

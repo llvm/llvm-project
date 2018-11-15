@@ -30,7 +30,7 @@ int main()
     using weekday_last = std::chrono::weekday_last;
 
     ASSERT_NOEXCEPT(weekday_last{weekday{}});
-    
+
     constexpr weekday_last wdl0{weekday{}};
     static_assert( wdl0.weekday() == weekday{}, "");
     static_assert( wdl0.ok(),                   "");
@@ -38,7 +38,7 @@ int main()
     constexpr weekday_last wdl1 {weekday{1}};
     static_assert( wdl1.weekday() == weekday{1}, "");
     static_assert( wdl1.ok(),                    "");
-    
+
     for (unsigned i = 0; i <= 255; ++i)
     {
         weekday_last wdl{weekday{i}};

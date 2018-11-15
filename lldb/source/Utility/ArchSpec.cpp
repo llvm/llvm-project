@@ -11,15 +11,15 @@
 
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/NameMatches.h"
-#include "lldb/Utility/Stream.h" // for Stream
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
-#include "lldb/lldb-defines.h" // for LLDB_INVALID_C...
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Twine.h" // for Twine
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/BinaryFormat/MachO.h" // for CPUType::CPU_T...
-#include "llvm/Support/Compiler.h"   // for LLVM_FALLTHROUGH
+#include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Host.h"
 
 using namespace lldb;

@@ -9,10 +9,6 @@
 
 #include "lldb/Breakpoint/BreakpointList.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/Target.h"
 
 using namespace lldb;

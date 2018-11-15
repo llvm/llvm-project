@@ -10,10 +10,10 @@
 #ifndef liblldb_Timer_h_
 #define liblldb_Timer_h_
 
-#include "lldb/lldb-defines.h" // for DISALLOW_COPY_AND_ASSIGN
+#include "lldb/lldb-defines.h"
 #include "llvm/Support/Chrono.h"
 #include <atomic>
-#include <stdint.h> // for uint32_t
+#include <stdint.h>
 
 namespace lldb_private {
 class Stream;

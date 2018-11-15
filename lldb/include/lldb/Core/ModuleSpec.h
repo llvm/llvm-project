@@ -10,7 +10,6 @@
 #ifndef liblldb_ModuleSpec_h_
 #define liblldb_ModuleSpec_h_
 
-// Project includes
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -18,11 +17,8 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UUID.h"
 
-// Other libraries and framework includes
 #include "llvm/Support/Chrono.h"
 
-// C Includes
-// C++ Includes
 #include <mutex>
 #include <vector>
 

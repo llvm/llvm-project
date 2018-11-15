@@ -443,6 +443,7 @@ private:
   void visitBitCastInst(BitCastInst &I);
   void visitAddrSpaceCastInst(AddrSpaceCastInst &I);
   void visitPHINode(PHINode &PN);
+  void visitUnaryOperator(UnaryOperator &U);
   void visitBinaryOperator(BinaryOperator &B);
   void visitICmpInst(ICmpInst &IC);
   void visitFCmpInst(FCmpInst &FC);
@@ -2988,6 +2989,28 @@ void Verifier::visitInvokeInst(InvokeInst &II) {
       &II);
 
   visitTerminator(II);
+}
+
+/// visitUnaryOperator - Check the argument to the unary operator.
+///
+void Verifier::visitUnaryOperator(UnaryOperator &U) {
+  Assert(U.getType() == U.getOperand(0)->getType(), 
+         "Unary operators must have same type for"
+         "operands and result!",
+         &U);
+
+  switch (U.getOpcode()) {
+  // Check that floating-point arithmetic operators are only used with
+  // floating-point operands.
+  case Instruction::FNeg:
+    Assert(U.getType()->isFPOrFPVectorTy(),
+           "FNeg operator only works with float types!", &U);
+    break;
+  default:
+    llvm_unreachable("Unknown UnaryOperator opcode!");
+  }
+
+  visitInstruction(U);
 }
 
 /// visitBinaryOperator - Check that both arguments to the binary operator are

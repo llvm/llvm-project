@@ -10,12 +10,8 @@
 #ifndef liblldb_ObjectFilePECOFF_h_
 #define liblldb_ObjectFilePECOFF_h_
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Symbol/ObjectFile.h"
 
 class ObjectFilePECOFF : public lldb_private::ObjectFile {

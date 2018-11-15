@@ -12,10 +12,7 @@
 #include "NativeRegisterContextLinux_arm.h"
 #include "NativeRegisterContextLinux_arm64.h"
 
-// C Includes
-// C++ Includes
 
-// Other libraries and framework includes
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"

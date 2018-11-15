@@ -16,17 +16,17 @@
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
-#include "lldb/lldb-defines.h"  // for DISALLOW_COPY_AND_ASSIGN
-#include "lldb/lldb-forward.h"  // for IOHandlerSP, StreamFileSP
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-forward.h"
+#include "llvm/ADT/StringRef.h"
 
 #include <memory>
 #include <mutex>
 #include <string>
 #include <vector>
 
-#include <stdint.h> // for uint32_t
-#include <stdio.h>  // for FILE
+#include <stdint.h>
+#include <stdio.h>
 
 namespace lldb_private {
 class Debugger;

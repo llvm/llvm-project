@@ -8,18 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Section.h"
-#include "lldb/Core/Address.h" // for Address
+#include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/FileSpec.h" // for FileSpec
-#include "lldb/Utility/Stream.h"   // for Stream
-#include "lldb/Utility/VMRange.h"  // for VMRange
+#include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Stream.h"
+#include "lldb/Utility/VMRange.h"
 
-#include <inttypes.h> // for PRIx64
-#include <limits>     // for numeric_limits
-#include <utility>    // for distance
+#include <inttypes.h>
+#include <limits>
+#include <utility>
 
 namespace lldb_private {
 class DataExtractor;
@@ -61,6 +61,8 @@ const char *Section::GetTypeAsCString() const {
     return "objc-cfstrings";
   case eSectionTypeDWARFDebugAbbrev:
     return "dwarf-abbrev";
+  case eSectionTypeDWARFDebugAbbrevDwo:
+    return "dwarf-abbrev-dwo";
   case eSectionTypeDWARFDebugAddr:
     return "dwarf-addr";
   case eSectionTypeDWARFDebugAranges:
@@ -71,6 +73,8 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-frame";
   case eSectionTypeDWARFDebugInfo:
     return "dwarf-info";
+  case eSectionTypeDWARFDebugInfoDwo:
+    return "dwarf-info-dwo";
   case eSectionTypeDWARFDebugLine:
     return "dwarf-line";
   case eSectionTypeDWARFDebugLineStr:
@@ -93,8 +97,12 @@ const char *Section::GetTypeAsCString() const {
     return "dwarf-rnglists";
   case eSectionTypeDWARFDebugStr:
     return "dwarf-str";
+  case eSectionTypeDWARFDebugStrDwo:
+    return "dwarf-str-dwo";
   case eSectionTypeDWARFDebugStrOffsets:
     return "dwarf-str-offsets";
+  case eSectionTypeDWARFDebugStrOffsetsDwo:
+    return "dwarf-str-offsets-dwo";
   case eSectionTypeDWARFDebugTypes:
     return "dwarf-types";
   case eSectionTypeDWARFDebugNames:

@@ -10,8 +10,6 @@
 #ifndef SymbolFileDWARF_SymbolFileDWARF_h_
 #define SymbolFileDWARF_SymbolFileDWARF_h_
 
-// C Includes
-// C++ Includes
 #include <list>
 #include <map>
 #include <mutex>
@@ -19,7 +17,6 @@
 #include <unordered_map>
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Threading.h"
 
@@ -35,7 +32,6 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 
-// Project includes
 #include "DWARFDataExtractor.h"
 #include "DWARFDefines.h"
 #include "DWARFIndex.h"
@@ -237,11 +233,11 @@ public:
 
   uint32_t GetPluginVersion() override;
 
-  const lldb_private::DWARFDataExtractor &get_debug_abbrev_data();
-  const lldb_private::DWARFDataExtractor &get_debug_addr_data();
+  virtual const lldb_private::DWARFDataExtractor &get_debug_abbrev_data();
+  virtual const lldb_private::DWARFDataExtractor &get_debug_addr_data();
   const lldb_private::DWARFDataExtractor &get_debug_aranges_data();
   const lldb_private::DWARFDataExtractor &get_debug_frame_data();
-  const lldb_private::DWARFDataExtractor &get_debug_info_data();
+  virtual const lldb_private::DWARFDataExtractor &get_debug_info_data();
   const lldb_private::DWARFDataExtractor &get_debug_line_data();
   const lldb_private::DWARFDataExtractor &get_debug_line_str_data();
   const lldb_private::DWARFDataExtractor &get_debug_macro_data();
@@ -249,8 +245,8 @@ public:
   const lldb_private::DWARFDataExtractor &get_debug_loclists_data();
   const lldb_private::DWARFDataExtractor &get_debug_ranges_data();
   const lldb_private::DWARFDataExtractor &get_debug_rnglists_data();
-  const lldb_private::DWARFDataExtractor &get_debug_str_data();
-  const lldb_private::DWARFDataExtractor &get_debug_str_offsets_data();
+  virtual const lldb_private::DWARFDataExtractor &get_debug_str_data();
+  virtual const lldb_private::DWARFDataExtractor &get_debug_str_offsets_data();
   const lldb_private::DWARFDataExtractor &get_debug_types_data();
   const lldb_private::DWARFDataExtractor &get_apple_names_data();
   const lldb_private::DWARFDataExtractor &get_apple_types_data();

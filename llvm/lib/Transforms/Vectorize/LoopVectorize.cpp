@@ -976,7 +976,7 @@ public:
 
   /// Save vectorization decision \p W and \p Cost taken by the cost model for
   /// interleaving group \p Grp and vector width \p VF.
-  void setWideningDecision(const InterleaveGroup *Grp, unsigned VF,
+  void setWideningDecision(const InterleaveGroup<Instruction> *Grp, unsigned VF,
                            InstWidening W, unsigned Cost) {
     assert(VF >= 2 && "Expected VF >=2");
     /// Broadcast this decicion to all instructions inside the group.
@@ -1131,7 +1131,8 @@ public:
   }
 
   /// Get the interleaved access group that \p Instr belongs to.
-  const InterleaveGroup *getInterleavedAccessGroup(Instruction *Instr) {
+  const InterleaveGroup<Instruction> *
+  getInterleavedAccessGroup(Instruction *Instr) {
     return InterleaveInfo.getInterleaveGroup(Instr);
   }
 
@@ -1994,7 +1995,8 @@ static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
 void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr,
                                                    VectorParts *BlockInMask) {
-  const InterleaveGroup *Group = Cost->getInterleavedAccessGroup(Instr);
+  const InterleaveGroup<Instruction> *Group =
+      Cost->getInterleavedAccessGroup(Instr);
   assert(Group && "Fail to get an interleaved access group.");
 
   // Skip if current instruction is not the insert position.
@@ -5826,9 +5828,10 @@ unsigned LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     auto *Phi = cast<PHINode>(I);
 
     // First-order recurrences are replaced by vector shuffles inside the loop.
+    // NOTE: Don't use ToVectorTy as SK_ExtractSubvector expects a vector type.
     if (VF > 1 && Legal->isFirstOrderRecurrence(Phi))
       return TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
-                                VectorTy, VF - 1, ToVectorTy(RetTy, 1));
+                                VectorTy, VF - 1, VectorType::get(RetTy, 1));
 
     // Phi nodes in non-header blocks (not inductions, reductions, etc.) are
     // converted into select instructions. We require N - 1 selects per phi
@@ -6376,7 +6379,7 @@ VPValue *VPRecipeBuilder::createBlockInMask(BasicBlock *BB, VPlanPtr &Plan) {
 VPInterleaveRecipe *VPRecipeBuilder::tryToInterleaveMemory(Instruction *I,
                                                            VFRange &Range,
                                                            VPlanPtr &Plan) {
-  const InterleaveGroup *IG = CM.getInterleavedAccessGroup(I);
+  const InterleaveGroup<Instruction> *IG = CM.getInterleavedAccessGroup(I);
   if (!IG)
     return nullptr;
 
@@ -6792,7 +6795,8 @@ LoopVectorizationPlanner::buildVPlanWithVPRecipes(
 
       // I is a member of an InterleaveGroup for Range.Start. If it's an adjunct
       // member of the IG, do not construct any Recipe for it.
-      const InterleaveGroup *IG = CM.getInterleavedAccessGroup(Instr);
+      const InterleaveGroup<Instruction> *IG =
+          CM.getInterleavedAccessGroup(Instr);
       if (IG && Instr != IG->getInsertPos() &&
           Range.Start >= 2 && // Query is illegal for VF == 1
           CM.getWideningDecision(Instr, Range.Start) ==

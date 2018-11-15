@@ -11,11 +11,7 @@
 #ifndef lldb_ValueObjectPrinter_h_
 #define lldb_ValueObjectPrinter_h_
 
-// C Includes
-// C++ Includes
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
 

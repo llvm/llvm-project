@@ -374,23 +374,28 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
 
   // Get LC_UUID and LC_BUILD_VERSION.
   MachO::uuid_command UUIDCmd;
-  MachO::build_version_command BuildVersionCmd;
+  SmallVector<MachO::build_version_command, 2> BuildVersionCmd;
   memset(&UUIDCmd, 0, sizeof(UUIDCmd));
-  memset(&BuildVersionCmd, 0, sizeof(BuildVersionCmd));
   for (auto &LCI : InputBinary.load_commands()) {
     switch (LCI.C.cmd) {
     case MachO::LC_UUID:
+      if (UUIDCmd.cmd)
+        return error("Binary contains more than one UUID");
       UUIDCmd = InputBinary.getUuidCommand(LCI);
       ++NumLoadCommands;
-      LoadCommandSize += sizeof(MachO::uuid_command);
+      LoadCommandSize += sizeof(UUIDCmd);
       break;
-    case MachO::LC_BUILD_VERSION:
-      BuildVersionCmd = InputBinary.getBuildVersionLoadCommand(LCI);
+   case MachO::LC_BUILD_VERSION: {
+      MachO::build_version_command Cmd;
+      memset(&Cmd, 0, sizeof(Cmd));
+      Cmd = InputBinary.getBuildVersionLoadCommand(LCI);
       ++NumLoadCommands;
-      LoadCommandSize += sizeof(MachO::build_version_command);
+      LoadCommandSize += sizeof(Cmd);
       // LLDB doesn't care about the build tools for now.
-      BuildVersionCmd.ntools = 0;
+      Cmd.ntools = 0;
+      BuildVersionCmd.push_back(Cmd);
       break;
+    }
     default:
       break;
     }
@@ -463,13 +468,13 @@ bool generateDsymCompanion(const DebugMap &DM, MCStreamer &MS,
     OutFile.write(reinterpret_cast<const char *>(UUIDCmd.uuid), 16);
     assert(OutFile.tell() == HeaderSize + sizeof(UUIDCmd));
   }
-  if (BuildVersionCmd.cmd != 0) {
-    Writer.W.write<uint32_t>(BuildVersionCmd.cmd);
-    Writer.W.write<uint32_t>(sizeof(BuildVersionCmd));
-    Writer.W.write<uint32_t>(BuildVersionCmd.platform);
-    Writer.W.write<uint32_t>(BuildVersionCmd.minos);
-    Writer.W.write<uint32_t>(BuildVersionCmd.sdk);
-    Writer.W.write<uint32_t>(BuildVersionCmd.ntools);
+  for (auto Cmd : BuildVersionCmd) {
+    Writer.W.write<uint32_t>(Cmd.cmd);
+    Writer.W.write<uint32_t>(sizeof(Cmd));
+    Writer.W.write<uint32_t>(Cmd.platform);
+    Writer.W.write<uint32_t>(Cmd.minos);
+    Writer.W.write<uint32_t>(Cmd.sdk);
+    Writer.W.write<uint32_t>(Cmd.ntools);
   }
 
   assert(SymtabCmd.cmd && "No symbol table.");

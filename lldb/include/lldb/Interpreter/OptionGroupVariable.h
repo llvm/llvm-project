@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionGroupVariable_h_
 #define liblldb_OptionGroupVariable_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Interpreter/Options.h"
 

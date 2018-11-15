@@ -22,6 +22,7 @@
 #include "../misc/NewDeleteOverloadsCheck.h"
 #include "../misc/StaticAssertCheck.h"
 #include "../bugprone/UndelegatedConstructorCheck.h"
+#include "../modernize/AvoidCArraysCheck.h"
 #include "../modernize/DeprecatedHeadersCheck.h"
 #include "../modernize/UseAutoCheck.h"
 #include "../modernize/UseEmplaceCheck.h"
@@ -48,6 +49,8 @@ namespace hicpp {
 class HICPPModule : public ClangTidyModule {
 public:
   void addCheckFactories(ClangTidyCheckFactories &CheckFactories) override {
+    CheckFactories.registerCheck<modernize::AvoidCArraysCheck>(
+        "hicpp-avoid-c-arrays");
     CheckFactories.registerCheck<cppcoreguidelines::AvoidGotoCheck>(
         "hicpp-avoid-goto");
     CheckFactories.registerCheck<readability::BracesAroundStatementsCheck>(

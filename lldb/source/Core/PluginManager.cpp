@@ -13,28 +13,28 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
-#include "lldb/Utility/ConstString.h" // for ConstString
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
-#include "lldb/Utility/StringList.h" // for StringList
+#include "lldb/Utility/StringList.h"
 
 #if defined(_WIN32)
-#include "lldb/Host/windows/PosixApi.h" // for PATH_MAX
+#include "lldb/Host/windows/PosixApi.h"
 #endif
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/FileSystem.h"  // for file_type, file_...
-#include "llvm/Support/raw_ostream.h" // for fs
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 
-#include <map>    // for map<>::const_ite...
-#include <memory> // for shared_ptr
+#include <map>
+#include <memory>
 #include <mutex>
 #include <string>
-#include <utility> // for pair
+#include <utility>
 #include <vector>
 
-#include <assert.h> // for assert
+#include <assert.h>
 
 namespace lldb_private {
 class CommandInterpreter;
@@ -286,7 +286,10 @@ struct ArchitectureInstance {
 
 typedef std::vector<ArchitectureInstance> ArchitectureInstances;
 
-static std::mutex g_architecture_mutex;
+static std::mutex &GetArchitectureMutex() {
+    static std::mutex g_architecture_mutex;
+    return g_architecture_mutex;
+}
 
 static ArchitectureInstances &GetArchitectureInstances() {
   static ArchitectureInstances g_instances;
@@ -296,13 +299,13 @@ static ArchitectureInstances &GetArchitectureInstances() {
 void PluginManager::RegisterPlugin(const ConstString &name,
                                    llvm::StringRef description,
                                    ArchitectureCreateInstance create_callback) {
-  std::lock_guard<std::mutex> guard(g_architecture_mutex);
+  std::lock_guard<std::mutex> guard(GetArchitectureMutex());
   GetArchitectureInstances().push_back({name, description, create_callback});
 }
 
 void PluginManager::UnregisterPlugin(
     ArchitectureCreateInstance create_callback) {
-  std::lock_guard<std::mutex> guard(g_architecture_mutex);
+  std::lock_guard<std::mutex> guard(GetArchitectureMutex());
   auto &instances = GetArchitectureInstances();
 
   for (auto pos = instances.begin(), end = instances.end(); pos != end; ++pos) {
@@ -316,7 +319,7 @@ void PluginManager::UnregisterPlugin(
 
 std::unique_ptr<Architecture>
 PluginManager::CreateArchitectureInstance(const ArchSpec &arch) {
-  std::lock_guard<std::mutex> guard(g_architecture_mutex);
+  std::lock_guard<std::mutex> guard(GetArchitectureMutex());
   for (const auto &instances : GetArchitectureInstances()) {
     if (auto plugin_up = instances.create_callback(arch))
       return plugin_up;

@@ -20,8 +20,8 @@
 //     constexpr chrono::month        month() const noexcept;
 //     constexpr chrono::weekday_last weekday_last()  const noexcept;
 //     constexpr bool                 ok()    const noexcept;
-    
-             
+
+
 #include <chrono>
 #include <type_traits>
 #include <cassert>
@@ -39,7 +39,7 @@ int main()
     constexpr weekday Tuesday = std::chrono::Tuesday;
 
     ASSERT_NOEXCEPT(month_weekday_last{January, weekday_last{Tuesday}});
-    
+
 //  bad month
     constexpr month_weekday_last mwdl1{month{}, weekday_last{Tuesday}};
     static_assert( mwdl1.month() == month{},                      "");

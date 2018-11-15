@@ -11,10 +11,6 @@
 #ifndef liblldb_RegisterContextMach_x86_64_h_
 #define liblldb_RegisterContextMach_x86_64_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "RegisterContextDarwin_x86_64.h"
 
 class RegisterContextMach_x86_64 : public RegisterContextDarwin_x86_64 {

@@ -13,7 +13,7 @@
 
 // constexpr year_month operator/(const year& y, const month& m) noexcept;
 //   Returns: {y, m}.
-// 
+//
 // constexpr year_month operator/(const year& y, int m) noexcept;
 //   Returns: y / month(m).
 
@@ -56,7 +56,7 @@ int main()
 
         static_assert((year{2018}/2).year()  == year{2018}, "");
         static_assert((year{2018}/2).month() == month{2},   "");
-        
+
         for (int i = 1000; i <= 1030; ++i)
             for (unsigned j = 1; j <= 12; ++j)
             {
@@ -64,5 +64,5 @@ int main()
                 assert(static_cast<int>(ym.year())       == i);
                 assert(static_cast<unsigned>(ym.month()) == j);
             }
-    } 
+    }
 }

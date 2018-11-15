@@ -9,14 +9,11 @@
 
 #include "PlatformDarwin.h"
 
-// C Includes
 #include <string.h>
 
-// C++ Includes
 #include <algorithm>
 #include <mutex>
 
-// Project includes
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointSite.h"
 #include "lldb/Core/Debugger.h"
@@ -42,7 +39,7 @@
 #include "llvm/Support/VersionTuple.h"
 
 #if defined(__APPLE__)
-#include <TargetConditionals.h> // for TARGET_OS_TV, TARGET_OS_WATCH
+#include <TargetConditionals.h>
 #endif
 
 using namespace lldb;

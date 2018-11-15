@@ -2801,6 +2801,15 @@ static bool isVectorReductionOp(const User *I) {
   return ReduxExtracted;
 }
 
+void SelectionDAGBuilder::visitUnary(const User &I, unsigned Opcode) {
+  SDNodeFlags Flags;
+
+  SDValue Op = getValue(I.getOperand(0));
+  SDValue UnNodeValue = DAG.getNode(Opcode, getCurSDLoc(), Op.getValueType(),
+                                    Op, Flags);
+  setValue(&I, UnNodeValue);
+}
+
 void SelectionDAGBuilder::visitBinary(const User &I, unsigned Opcode) {
   SDNodeFlags Flags;
   if (auto *OFBinOp = dyn_cast<OverflowingBinaryOperator>(&I)) {

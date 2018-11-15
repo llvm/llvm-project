@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionGroupBoolean_h_
 #define liblldb_OptionGroupBoolean_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/OptionValueBoolean.h"
 #include "lldb/Interpreter/Options.h"
 

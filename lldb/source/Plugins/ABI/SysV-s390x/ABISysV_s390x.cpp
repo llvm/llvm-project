@@ -9,13 +9,9 @@
 
 #include "ABISysV_s390x.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 
-// Project includes
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Value.h"
@@ -206,11 +202,8 @@ size_t ABISysV_s390x::GetRedZoneSize() const { return 0; }
 
 ABISP
 ABISysV_s390x::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
-  static ABISP g_abi_sp;
   if (arch.GetTriple().getArch() == llvm::Triple::systemz) {
-    if (!g_abi_sp)
-      g_abi_sp.reset(new ABISysV_s390x(process_sp));
-    return g_abi_sp;
+    return ABISP(new ABISysV_s390x(process_sp));
   }
   return ABISP();
 }

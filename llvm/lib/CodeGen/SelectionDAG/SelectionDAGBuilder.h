@@ -854,6 +854,9 @@ private:
   void visitInvoke(const InvokeInst &I);
   void visitResume(const ResumeInst &I);
 
+  void visitUnary(const User &I, unsigned Opcode);
+  void visitFNeg(const User &I) { visitUnary(I, ISD::FNEG); }
+
   void visitBinary(const User &I, unsigned Opcode);
   void visitShift(const User &I, unsigned Opcode);
   void visitAdd(const User &I)  { visitBinary(I, ISD::ADD); }

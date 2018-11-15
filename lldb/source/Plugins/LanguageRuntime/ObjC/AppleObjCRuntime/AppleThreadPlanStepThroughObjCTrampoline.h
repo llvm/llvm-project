@@ -10,10 +10,6 @@
 #ifndef lldb_AppleThreadPlanStepThroughObjCTrampoline_h_
 #define lldb_AppleThreadPlanStepThroughObjCTrampoline_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "AppleObjCTrampolineHandler.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Target/ThreadPlan.h"

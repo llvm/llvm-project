@@ -11,8 +11,6 @@
 #include "RegisterContextDarwin_arm64.h"
 #include "RegisterContextDarwinConstants.h"
 
-// C++ Includes
-// Other libraries and framework includes
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -32,7 +30,6 @@
 #define LLVM_EXTENSION
 #endif
 
-// Project includes
 #include "Utility/ARM64_DWARF_Registers.h"
 
 using namespace lldb;

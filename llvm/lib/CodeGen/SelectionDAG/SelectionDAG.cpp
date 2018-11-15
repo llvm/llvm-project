@@ -4168,9 +4168,8 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::ZERO_EXTEND_VECTOR_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
     assert(VT.isVector() && "This DAG node is restricted to vector types.");
-    assert(VT.getSizeInBits() == Operand.getValueSizeInBits() &&
-           "The sizes of the input and result must match in order to perform the "
-           "extend in-register.");
+    assert(Operand.getValueType().bitsLE(VT) &&
+           "The input must be the same size or smaller than the result.");
     assert(VT.getVectorNumElements() <
              Operand.getValueType().getVectorNumElements() &&
            "The destination vector type must have fewer lanes than the input.");

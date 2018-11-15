@@ -11,9 +11,6 @@
 #include "PlatformKalimba.h"
 #include "lldb/Host/Config.h"
 
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"

@@ -147,8 +147,14 @@ ResourceRef ResourceManager::selectPipe(uint64_t ResourceID) {
 
 void ResourceManager::use(const ResourceRef &RR) {
   // Mark the sub-resource referenced by RR as used.
-  ResourceState &RS = *Resources[getResourceStateIndex(RR.first)];
+  unsigned RSID = getResourceStateIndex(RR.first);
+  ResourceState &RS = *Resources[RSID];
   RS.markSubResourceAsUsed(RR.second);
+  // Remember to update the resource strategy for non-group resources with
+  // multiple units.
+  if (RS.getNumUnits() > 1)
+    Strategies[RSID]->used(RR.second);
+
   // If there are still available units in RR.first,
   // then we are done.
   if (RS.isReady())

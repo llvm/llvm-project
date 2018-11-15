@@ -10,10 +10,6 @@
 #ifndef liblldb_AddressSanitizerRuntime_h_
 #define liblldb_AddressSanitizerRuntime_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Target/InstrumentationRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/StructuredData.h"

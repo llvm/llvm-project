@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionValueFileSpecList_h_
 #define liblldb_OptionValueFileSpecList_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/FileSpecList.h"
 #include "lldb/Interpreter/OptionValue.h"
 

@@ -52,7 +52,7 @@ std::vector<Token> generateSearchTokens(const Symbol &Sym) {
   std::vector<Token> Result = generateIdentifierTrigrams(Sym.Name);
   Result.emplace_back(Token::Kind::Scope, Sym.Scope);
   // Skip token generation for symbols with unknown declaration location.
-  if (!Sym.CanonicalDeclaration.FileURI.empty())
+  if (!StringRef(Sym.CanonicalDeclaration.FileURI).empty())
     for (const auto &ProximityURI :
          generateProximityURIs(Sym.CanonicalDeclaration.FileURI))
       Result.emplace_back(Token::Kind::ProximityURI, ProximityURI);

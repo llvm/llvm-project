@@ -12,7 +12,7 @@
 
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/Type.h" // for TypeImpl
+#include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/ConstString.h"
@@ -20,26 +20,26 @@
 #include "lldb/Utility/SharedCluster.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UserID.h"
-#include "lldb/lldb-defines.h"              // for LLDB_INVALID...
-#include "lldb/lldb-enumerations.h"         // for DynamicValue...
-#include "lldb/lldb-forward.h"              // for ValueObjectSP
-#include "lldb/lldb-private-enumerations.h" // for AddressType
-#include "lldb/lldb-types.h"                // for addr_t, offs...
+#include "lldb/lldb-defines.h"
+#include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
+#include "lldb/lldb-private-enumerations.h"
+#include "lldb/lldb-types.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h" // for StringRef
+#include "llvm/ADT/StringRef.h"
 
 #include <functional>
 #include <initializer_list>
 #include <map>
-#include <mutex>   // for recursive_mutex
-#include <string>  // for string
-#include <utility> // for pair
+#include <mutex>
+#include <string>
+#include <utility>
 
-#include <stddef.h> // for size_t
-#include <stdint.h> // for uint32_t
+#include <stddef.h>
+#include <stdint.h>
 namespace lldb_private {
 class Declaration;
 }
@@ -634,9 +634,6 @@ public:
 
   virtual void SetLiveAddress(lldb::addr_t addr = LLDB_INVALID_ADDRESS,
                               AddressType address_type = eAddressTypeLoad) {}
-
-  // Find the address of the C++ vtable pointer
-  virtual lldb::addr_t GetCPPVTableAddress(AddressType &address_type);
 
   virtual lldb::ValueObjectSP Cast(const CompilerType &compiler_type);
 

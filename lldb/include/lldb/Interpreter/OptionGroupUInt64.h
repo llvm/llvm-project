@@ -10,10 +10,6 @@
 #ifndef liblldb_OptionGroupUInt64_h_
 #define liblldb_OptionGroupUInt64_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Interpreter/Options.h"
 

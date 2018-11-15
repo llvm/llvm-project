@@ -10,15 +10,11 @@
 #ifndef liblldb_ClangExternalASTSourceCallbacks_h_
 #define liblldb_ClangExternalASTSourceCallbacks_h_
 
-// C Includes
 #include <stdint.h>
 
-// C++ Includes
-// Other libraries and framework includes
 #include "clang/AST/CharUnits.h"
 #include "llvm/ADT/DenseMap.h"
 
-// Project includes
 #include "lldb/Core/ClangForward.h"
 #include "lldb/Symbol/ClangExternalASTSourceCommon.h"
 #include "lldb/Symbol/CompilerType.h"

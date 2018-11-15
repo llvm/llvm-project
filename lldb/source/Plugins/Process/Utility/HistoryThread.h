@@ -10,12 +10,8 @@
 #ifndef liblldb_HistoryThread_h_
 #define liblldb_HistoryThread_h_
 
-// C Includes
-// C++ Includes
 #include <mutex>
 
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/Broadcaster.h"
 #include "lldb/Core/Event.h"
 #include "lldb/Core/UserSettingsController.h"

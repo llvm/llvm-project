@@ -10,10 +10,6 @@
 #ifndef liblldb_CommandObjectVersion_h_
 #define liblldb_CommandObjectVersion_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Interpreter/CommandObject.h"
 
 namespace lldb_private {

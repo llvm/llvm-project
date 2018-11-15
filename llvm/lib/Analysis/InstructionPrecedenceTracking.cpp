@@ -142,3 +142,8 @@ bool ImplicitControlFlowTracking::isSpecialInstruction(
   }
   return true;
 }
+
+bool MemoryWriteTracking::isSpecialInstruction(
+    const Instruction *Insn) const {
+  return Insn->mayWriteToMemory();
+}

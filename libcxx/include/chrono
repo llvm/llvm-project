@@ -33,9 +33,9 @@ template <class Rep>
 struct duration_values
 {
 public:
-    static constexpr Rep zero();
-    static constexpr Rep max();
-    static constexpr Rep min();
+    static constexpr Rep zero(); // noexcept in C++20
+    static constexpr Rep max();  // noexcept in C++20
+    static constexpr Rep min();  // noexcept in C++20
 };
 
 // duration
@@ -92,9 +92,9 @@ public:
 
     // special values
 
-    static constexpr duration zero();
-    static constexpr duration min();
-    static constexpr duration max();
+    static constexpr duration zero(); // noexcept in C++20
+    static constexpr duration min();  // noexcept in C++20
+    static constexpr duration max();  // noexcept in C++20
 };
 
 typedef duration<long long,         nano> nanoseconds;
@@ -134,8 +134,8 @@ public:
 
     // special values
 
-    static constexpr time_point min();
-    static constexpr time_point max();
+    static constexpr time_point min();  // noexcept in C++20
+    static constexpr time_point max();  // noexcept in C++20
 };
 
 } // chrono
@@ -924,9 +924,9 @@ template <class _Rep>
 struct _LIBCPP_TEMPLATE_VIS duration_values
 {
 public:
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR _Rep zero() {return _Rep(0);}
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR _Rep max()  {return numeric_limits<_Rep>::max();}
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR _Rep min()  {return numeric_limits<_Rep>::lowest();}
+    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR _Rep zero() _NOEXCEPT {return _Rep(0);}
+    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR _Rep max()  _NOEXCEPT {return numeric_limits<_Rep>::max();}
+    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR _Rep min()  _NOEXCEPT {return numeric_limits<_Rep>::lowest();}
 };
 
 #if _LIBCPP_STD_VER > 14
@@ -1081,9 +1081,9 @@ public:
 
     // special values
 
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR duration zero() {return duration(duration_values<rep>::zero());}
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR duration min()  {return duration(duration_values<rep>::min());}
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR duration max()  {return duration(duration_values<rep>::max());}
+    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR duration zero() _NOEXCEPT {return duration(duration_values<rep>::zero());}
+    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR duration min()  _NOEXCEPT {return duration(duration_values<rep>::min());}
+    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR duration max()  _NOEXCEPT {return duration(duration_values<rep>::max());}
 };
 
 typedef duration<long long,         nano> nanoseconds;
@@ -1369,8 +1369,8 @@ public:
 
     // special values
 
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR time_point min() {return time_point(duration::min());}
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR time_point max() {return time_point(duration::max());}
+    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR time_point min() _NOEXCEPT {return time_point(duration::min());}
+    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR time_point max() _NOEXCEPT {return time_point(duration::max());}
 };
 
 } // chrono

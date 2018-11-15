@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// C Includes
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -19,7 +18,6 @@
 #include <unistd.h>
 #endif
 
-// C++ Includes
 
 #include "Acceptor.h"
 #include "LLDBServerUtilities.h"

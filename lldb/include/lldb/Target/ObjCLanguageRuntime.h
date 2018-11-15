@@ -10,17 +10,13 @@
 #ifndef liblldb_ObjCLanguageRuntime_h_
 #define liblldb_ObjCLanguageRuntime_h_
 
-// C Includes
-// C++ Includes
 #include <functional>
 #include <map>
 #include <memory>
 #include <unordered_set>
 
-// Other libraries and framework includes
 #include "llvm/Support/Casting.h"
 
-// Project includes
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Symbol/CompilerType.h"

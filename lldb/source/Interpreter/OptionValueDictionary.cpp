@@ -9,11 +9,7 @@
 
 #include "lldb/Interpreter/OptionValueDictionary.h"
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
 #include "llvm/ADT/StringRef.h"
-// Project includes
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Interpreter/OptionValueString.h"
 #include "lldb/Utility/Args.h"

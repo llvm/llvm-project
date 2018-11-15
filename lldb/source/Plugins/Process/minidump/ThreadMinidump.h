@@ -10,14 +10,10 @@
 #ifndef liblldb_ThreadMinidump_h_
 #define liblldb_ThreadMinidump_h_
 
-// Project includes
 #include "MinidumpTypes.h"
 
-// Other libraries and framework includes
 #include "lldb/Target/Thread.h"
 
-// C Includes
-// C++ Includes
 
 namespace lldb_private {
 

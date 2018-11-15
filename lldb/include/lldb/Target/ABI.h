@@ -10,10 +10,6 @@
 #ifndef liblldb_ABI_h_
 #define liblldb_ABI_h_
 
-// C Includes
-// C++ Includes
-// Other libraries and framework includes
-// Project includes
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Utility/Status.h"

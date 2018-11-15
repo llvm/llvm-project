@@ -9,11 +9,8 @@
 
 #include "ABIMacOSX_arm64.h"
 
-// C Includes
-// C++ Includes
 #include <vector>
 
-// Other libraries and framework includes
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
 
@@ -1667,15 +1664,12 @@ size_t ABIMacOSX_arm64::GetRedZoneSize() const { return 128; }
 
 ABISP
 ABIMacOSX_arm64::CreateInstance(ProcessSP process_sp, const ArchSpec &arch) {
-  static ABISP g_abi_sp;
   const llvm::Triple::ArchType arch_type = arch.GetTriple().getArch();
   const llvm::Triple::VendorType vendor_type = arch.GetTriple().getVendor();
 
   if (vendor_type == llvm::Triple::Apple) {
     if (arch_type == llvm::Triple::aarch64) {
-      if (!g_abi_sp)
-        g_abi_sp.reset(new ABIMacOSX_arm64(process_sp));
-      return g_abi_sp;
+      return ABISP(new ABIMacOSX_arm64(process_sp));
     }
   }
 

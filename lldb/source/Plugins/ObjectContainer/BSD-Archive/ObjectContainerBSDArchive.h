@@ -16,11 +16,8 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 
-// Other libraries and framework includes
 #include "llvm/Support/Chrono.h"
 
-// C Includes
-// C++ Includes
 #include <map>
 #include <memory>
 #include <mutex>

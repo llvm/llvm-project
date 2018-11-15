@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Project includes
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_x86_64.h"
 #include "Plugins/Process/minidump/MinidumpParser.h"

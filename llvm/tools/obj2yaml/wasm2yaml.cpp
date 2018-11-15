@@ -107,6 +107,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
         break;
       case wasm::WASM_SYMBOL_TYPE_FUNCTION:
       case wasm::WASM_SYMBOL_TYPE_GLOBAL:
+      case wasm::WASM_SYMBOL_TYPE_EVENT:
         Info.ElementIndex = Symbol.ElementIndex;
         break;
       case wasm::WASM_SYMBOL_TYPE_SECTION:
@@ -182,6 +183,10 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
           Im.GlobalImport.Type = Import.Global.Type;
           Im.GlobalImport.Mutable = Import.Global.Mutable;
           break;
+        case wasm::WASM_EXTERNAL_EVENT:
+          Im.EventImport.Attribute = Import.Event.Attribute;
+          Im.EventImport.SigIndex = Import.Event.SigIndex;
+          break;
         case wasm::WASM_EXTERNAL_TABLE:
           Im.TableImport = make_table(Import.Table);
           break;
@@ -229,6 +234,18 @@ ErrorOr<WasmYAML::Object *> WasmDumper::dump() {
         GlobalSec->Globals.push_back(G);
       }
       S = std::move(GlobalSec);
+      break;
+    }
+    case wasm::WASM_SEC_EVENT: {
+      auto EventSec = make_unique<WasmYAML::EventSection>();
+      for (auto &Event : Obj.events()) {
+        WasmYAML::Event E;
+        E.Index = Event.Index;
+        E.Attribute = Event.Type.Attribute;
+        E.SigIndex = Event.Type.SigIndex;
+        EventSec->Events.push_back(E);
+      }
+      S = std::move(EventSec);
       break;
     }
     case wasm::WASM_SEC_START: {
