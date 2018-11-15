@@ -24,10 +24,10 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SHA1.h"
+#include <memory>
+#include <queue>
 #include <random>
 #include <string>
-#include <queue>
-#include <memory>
 
 using namespace llvm;
 namespace clang {
