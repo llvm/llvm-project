@@ -507,8 +507,16 @@ void SimplifyBooleanExprCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 ChainedConditionalAssignment);
 }
 
+// This is a silly hack to let us run a RecursiveASTVisitor on the Context.
+// We want to match exactly one node in the AST, doesn't matter which.
+AST_MATCHER_P(Decl, matchOnce, bool *, Matched) {
+  if (*Matched)
+    return false;
+  return *Matched = true;
+}
+
 void SimplifyBooleanExprCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(translationUnitDecl().bind("top"), this);
+  Finder->addMatcher(matchOnce(&MatchedOnce), this);
 
   matchBoolCondition(Finder, true, ConditionThenStmtId);
   matchBoolCondition(Finder, false, ConditionElseStmtId);
@@ -556,8 +564,10 @@ void SimplifyBooleanExprCheck::check(const MatchFinder::MatchResult &Result) {
   else if (const auto *Compound =
                Result.Nodes.getNodeAs<CompoundStmt>(CompoundNotBoolId))
     replaceCompoundReturnWithCondition(Result, Compound, true);
-  else if (const auto TU = Result.Nodes.getNodeAs<Decl>("top"))
-    Visitor(this, Result).TraverseDecl(const_cast<Decl*>(TU));
+  else { // MatchOnce matcher
+    assert(MatchedOnce);
+    Visitor(this, Result).TraverseAST(*Result.Context);
+  }
 }
 
 void SimplifyBooleanExprCheck::issueDiag(

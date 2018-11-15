@@ -28,7 +28,7 @@ source_filename = "test/CodeGen/X86/misched-code-difference-with-debug.ll"
 declare i32 @test_function(%class.C*, i8 signext, i8 signext, i8 signext, ...)
 ; CHECK-LABEL: test_without_debug
 ; CHECK: movl [[A:%[a-z]+]], [[B:%[a-z]+]]
-; CHECK-NEXT: movl [[A]], [[C:%[a-z]+]]
+; CHECK: movl [[A]], [[C:%[a-z]+]]
 
 define void @test_without_debug() {
 entry:
@@ -42,7 +42,7 @@ entry:
 }
 ; CHECK-LABEL: test_with_debug
 ; CHECK: movl [[A]], [[B]]
-; CHECK-NEXT: movl [[A]], [[C]]
+; CHECK: movl [[A]], [[C]]
 
 define void @test_with_debug() !dbg !17 {
 entry:

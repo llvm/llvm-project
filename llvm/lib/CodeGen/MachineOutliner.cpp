@@ -1123,7 +1123,7 @@ unsigned MachineOutliner::findCandidates(
     // We've found something we might want to outline.
     // Create an OutlinedFunction to store it and check if it'd be beneficial
     // to outline.
-    if (CandidatesForRepeatedSeq.empty())
+    if (CandidatesForRepeatedSeq.size() < 2)
       continue;
 
     // Arbitrarily choose a TII from the first candidate.

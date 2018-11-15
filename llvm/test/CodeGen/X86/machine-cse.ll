@@ -63,8 +63,8 @@ define void @commute(i32 %test_case, i32 %scale) nounwind ssp {
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    imull %edi, %esi
 ; CHECK-NEXT:    leal (%rsi,%rsi,2), %esi
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    # kill: def $edi killed $edi killed $rdi
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq printf
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    .p2align 4, 0x90

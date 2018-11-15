@@ -33,7 +33,7 @@ cl::opt<std::string> IndexPath("index-path", cl::desc("Path to the index"),
 
 static const std::string Overview = R"(
 This is an **experimental** interactive tool to process user-provided search
-queries over given symbol collection obtained via global-symbol-builder. The
+queries over given symbol collection obtained via clangd-indexer. The
 tool can be used to evaluate search quality of existing index implementations
 and manually construct non-trivial test cases.
 
@@ -58,6 +58,10 @@ std::vector<SymbolID> getSymbolIDsFromIndex(StringRef QualifiedName,
   auto Names = splitQualifiedName(QualifiedName);
   if (IsGlobalScope || !Names.first.empty())
     Request.Scopes = {Names.first};
+  else
+    // QualifiedName refers to a symbol in global scope (e.g. "GlobalSymbol"),
+    // add the global scope to the request.
+    Request.Scopes = {""};
 
   Request.Query = Names.second;
   std::vector<SymbolID> SymIDs;

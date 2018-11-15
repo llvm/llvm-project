@@ -226,17 +226,17 @@
     # CHECK: f64x2.ge # encoding: [0xfd,0x4b]
     f64x2.ge
 
-    # CHECK: v128.and # encoding: [0xfd,0x4c]
+    # CHECK: v128.not # encoding: [0xfd,0x4c]
+    v128.not
+
+    # CHECK: v128.and # encoding: [0xfd,0x4d]
     v128.and
 
-    # CHECK: v128.or # encoding: [0xfd,0x4d]
+    # CHECK: v128.or # encoding: [0xfd,0x4e]
     v128.or
 
-    # CHECK: v128.xor # encoding: [0xfd,0x4e]
+    # CHECK: v128.xor # encoding: [0xfd,0x4f]
     v128.xor
-
-    # CHECK: v128.not # encoding: [0xfd,0x4f]
-    v128.not
 
     # CHECK: v128.bitselect # encoding: [0xfd,0x50]
     v128.bitselect

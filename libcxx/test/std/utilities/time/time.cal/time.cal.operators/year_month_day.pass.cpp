@@ -51,7 +51,6 @@ int main()
     using year_month     = std::chrono::year_month;
     using month_day      = std::chrono::month_day;
     using year_month_day = std::chrono::year_month_day;
-    using weekday        = std::chrono::weekday;
 
     constexpr month February = std::chrono::February;
     constexpr year_month Feb2018{year{2018}, February};

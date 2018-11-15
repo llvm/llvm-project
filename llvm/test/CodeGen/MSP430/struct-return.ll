@@ -9,14 +9,14 @@ target triple = "msp430---elf"
 
 define %s @fred() #0 {
 ; CHECK-LABEL: fred:
-; CHECK: mov.w	#2314, 14(r12)
-; CHECK: mov.w	#2828, 12(r12)
-; CHECK: mov.w	#3342, 10(r12)
-; CHECK: mov.w	#3840, 8(r12)
-; CHECK: mov.w	#258, 6(r12)
-; CHECK: mov.w	#772, 4(r12)
-; CHECK: mov.w	#1286, 2(r12)
-; CHECK: mov.w	#1800, 0(r12)
+; CHECK: mov	#2314, 14(r12)
+; CHECK: mov	#2828, 12(r12)
+; CHECK: mov	#3342, 10(r12)
+; CHECK: mov	#3840, 8(r12)
+; CHECK: mov	#258, 6(r12)
+; CHECK: mov	#772, 4(r12)
+; CHECK: mov	#1286, 2(r12)
+; CHECK: mov	#1800, 0(r12)
   ret %s {i64 72623859790382856, i64 651345242494996224} 
 }
 

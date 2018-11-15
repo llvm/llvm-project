@@ -310,6 +310,14 @@ struct WasmSym {
   // __dso_handle
   // Symbol used in calls to __cxa_atexit to determine current DLL
   static DefinedData *DsoHandle;
+
+  // __table_base
+  // Used in PIC code for offset of indirect function table
+  static Symbol *TableBase;
+
+  // __memory_base
+  // Used in PIC code for offset of global data
+  static Symbol *MemoryBase;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived

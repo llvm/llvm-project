@@ -13,6 +13,11 @@
 namespace clang {
 namespace codegenoptions {
 
+enum DebugInfoFormat {
+  DIF_DWARF,
+  DIF_CodeView,
+};
+
 enum DebugInfoKind {
   NoDebugInfo,         /// Don't generate debug info.
   LocTrackingOnly,     /// Emit location information but do not generate

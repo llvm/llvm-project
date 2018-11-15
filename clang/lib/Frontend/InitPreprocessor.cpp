@@ -558,15 +558,15 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
   if (LangOpts.RelaxedTemplateTemplateArgs)
     Builder.defineMacro("__cpp_template_template_args", "201611L");
 
+  // C++20 features.
+  if (LangOpts.Char8)
+    Builder.defineMacro("__cpp_char8_t", "201811L");
+
   // TS features.
   if (LangOpts.ConceptsTS)
     Builder.defineMacro("__cpp_experimental_concepts", "1L");
   if (LangOpts.CoroutinesTS)
     Builder.defineMacro("__cpp_coroutines", "201703L");
-
-  // Potential future breaking changes.
-  if (LangOpts.Char8)
-    Builder.defineMacro("__cpp_char8_t", "201803L");
 }
 
 static void InitializePredefinedMacros(const TargetInfo &TI,

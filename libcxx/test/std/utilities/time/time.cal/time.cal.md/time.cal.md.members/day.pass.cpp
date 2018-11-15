@@ -23,7 +23,6 @@
 int main()
 {
     using day       = std::chrono::day;
-    using month     = std::chrono::month;
     using month_day = std::chrono::month_day;
 
     ASSERT_NOEXCEPT(               std::declval<const month_day>().day());

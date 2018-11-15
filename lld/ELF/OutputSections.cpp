@@ -25,6 +25,7 @@
 using namespace llvm;
 using namespace llvm::dwarf;
 using namespace llvm::object;
+using namespace llvm::support::endian;
 using namespace llvm::ELF;
 
 using namespace lld;
@@ -170,11 +171,12 @@ void OutputSection::sort(llvm::function_ref<int(InputSectionBase *S)> Order) {
 
 // Fill [Buf, Buf + Size) with Filler.
 // This is used for linker script "=fillexp" command.
-static void fill(uint8_t *Buf, size_t Size, uint32_t Filler) {
+static void fill(uint8_t *Buf, size_t Size,
+                 const std::array<uint8_t, 4> &Filler) {
   size_t I = 0;
   for (; I + 4 < Size; I += 4)
-    memcpy(Buf + I, &Filler, 4);
-  memcpy(Buf + I, &Filler, Size - I);
+    memcpy(Buf + I, Filler.data(), 4);
+  memcpy(Buf + I, Filler.data(), Size - I);
 }
 
 // Compress section contents if this section contains debug info.
@@ -235,8 +237,9 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
 
   // Write leading padding.
   std::vector<InputSection *> Sections = getInputSections(this);
-  uint32_t Filler = getFiller();
-  if (Filler)
+  std::array<uint8_t, 4> Filler = getFiller();
+  bool NonZeroFiller = read32(Filler.data()) != 0;
+  if (NonZeroFiller)
     fill(Buf, Sections.empty() ? Size : Sections[0]->OutSecOff, Filler);
 
   parallelForEachN(0, Sections.size(), [&](size_t I) {
@@ -244,7 +247,7 @@ template <class ELFT> void OutputSection::writeTo(uint8_t *Buf) {
     IS->writeTo<ELFT>(Buf);
 
     // Fill gaps between sections.
-    if (Filler) {
+    if (NonZeroFiller) {
       uint8_t *Start = Buf + IS->OutSecOff + IS->getSize();
       uint8_t *End;
       if (I + 1 == Sections.size())
@@ -405,12 +408,12 @@ void OutputSection::sortInitFini() {
   sort([](InputSectionBase *S) { return getPriority(S->Name); });
 }
 
-uint32_t OutputSection::getFiller() {
+std::array<uint8_t, 4> OutputSection::getFiller() {
   if (Filler)
     return *Filler;
   if (Flags & SHF_EXECINSTR)
     return Target->TrapInstr;
-  return 0;
+  return {0, 0, 0, 0};
 }
 
 template void OutputSection::writeHeaderTo<ELF32LE>(ELF32LE::Shdr *Shdr);

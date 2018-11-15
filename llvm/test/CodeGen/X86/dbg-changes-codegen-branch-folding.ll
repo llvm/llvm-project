@@ -7,9 +7,9 @@
 ; CHECK:      callq   _Z3fooPcjPKc
 ; CHECK:      callq   _Z3fooPcjPKc
 ; CHECK:      movq    %rsp, %rdi
-; CHECK:      movl    $4, %esi
 ; CHECK:      testl   {{%[a-z]+}}, {{%[a-z]+}}
 ; CHECK:      je     .LBB0_4
+; CHECK:      movl    $4, %esi
 
 ; Regenerate test with this command: 
 ;   clang++ -emit-llvm -S -O2 -g

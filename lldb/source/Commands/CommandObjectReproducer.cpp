@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/Reproducer.h"
 
+#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionGroupBoolean.h"
@@ -40,8 +41,7 @@ protected:
       return false;
     }
 
-    auto &r = repro::Reproducer::Instance();
-    if (auto e = r.SetGenerateReproducer(true)) {
+    if (auto e = m_interpreter.GetDebugger().SetReproducerCapture(true)) {
       AppendErrorToResult(std::move(e), result);
       return false;
     }
@@ -68,8 +68,7 @@ protected:
       return false;
     }
 
-    auto &r = repro::Reproducer::Instance();
-    if (auto e = r.SetGenerateReproducer(false)) {
+    if (auto e = m_interpreter.GetDebugger().SetReproducerCapture(false)) {
       AppendErrorToResult(std::move(e), result);
       return false;
     }
@@ -114,10 +113,8 @@ protected:
 class CommandObjectReproducerReplay : public CommandObjectParsed {
 public:
   CommandObjectReproducerReplay(CommandInterpreter &interpreter)
-      : CommandObjectParsed(interpreter, "reproducer capture",
-                            "Enable or disable gathering of information needed "
-                            "to generate a reproducer.",
-                            nullptr) {
+      : CommandObjectParsed(interpreter, "reproducer replay",
+                            "Replay a reproducer.", nullptr) {
     CommandArgumentEntry arg1;
     CommandArgumentData path_arg;
 

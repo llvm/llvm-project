@@ -9,7 +9,7 @@
 ; are not converted from f16 to f32.
 ; GCN-LABEL: {{^}}dotproduct_f16
 ; GFX900: v_fma_legacy_f16
-; GCN900: v_fma_legacy_f16
+; GFX900: v_fma_legacy_f16
 
 ; GFX906: v_mul_f16_e32
 ; GFX906: v_mul_f16_e32
@@ -45,7 +45,7 @@ entry:
 ; and the vectors are of type <2 x half>
 ; GCN-LABEL: {{^}}dotproduct_f16_f32
 ; GFX900: v_mad_mix_f32
-; GCN900: v_mad_mix_f32
+; GFX900: v_mad_mix_f32
 
 ; GFX906: v_mad_f32
 ; GFX906: v_mac_f32_e32
@@ -85,7 +85,7 @@ entry:
 ; and the vectors are of type <2 x half>
 ; GCN-LABEL: {{^}}dotproduct_diffvecorder
 ; GFX900: v_mad_mix_f32
-; GCN900: v_mad_mix_f32
+; GFX900: v_mad_mix_f32
 
 ; GFX906: v_mad_f32
 ; GFX906: v_mac_f32_e32
@@ -159,7 +159,7 @@ entry:
 
 ; GCN-LABEL: {{^}}NotAdotproduct
 ; GFX900: v_mad_mix_f32
-; GCN900: v_mad_mix_f32
+; GFX900: v_mad_mix_f32
 
 ; GFX906: v_mad_f32
 ; GFX906: v_mac_f32_e32
@@ -196,7 +196,7 @@ entry:
 
 ; GCN-LABEL: {{^}}Diff_Idx_NotAdotproduct
 ; GFX900: v_mad_mix_f32
-; GCN900: v_mad_mix_f32
+; GFX900: v_mad_mix_f32
 
 ; GFX906: v_mad_f32
 ; GFX906: v_mac_f32_e32

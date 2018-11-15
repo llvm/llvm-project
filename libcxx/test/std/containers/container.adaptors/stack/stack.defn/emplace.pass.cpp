@@ -42,9 +42,9 @@ int main()
     test_return_type<std::stack<int> > ();
     test_return_type<std::stack<int, std::vector<int> > > ();
 
-    typedef Emplaceable T;
     std::stack<Emplaceable> q;
 #if TEST_STD_VER > 14
+    typedef Emplaceable T;
     T& r1 = q.emplace(1, 2.5);
     assert(&r1 == &q.top());
     T& r2 = q.emplace(2, 3.5);

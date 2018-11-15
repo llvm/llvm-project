@@ -996,7 +996,7 @@ as the draft C++2a standard evolves.
     <tr>
       <td><tt>char8_t</tt></td>
       <td><a href="http://wg21.link/p0482r6">P0482R6</a></td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 7 <a href="#p0482">(11)</a></td>
     </tr>
     <tr>
       <td>Immediate functions (<tt>consteval</tt>)</td>
@@ -1014,6 +1014,12 @@ as the draft C++2a standard evolves.
       <td class="svn" align="center">SVN</td>
     </tr>
 </table>
+
+<p>
+<span id="p0482">(11): Prior to Clang 8, this feature is not enabled by
+<tt>-std=c++2a</tt>, but can be enabled with <tt>-fchar8_t</tt>.
+</span>
+</p>
 </details>
 
 <h2 id="dr">Defect reports</h2>

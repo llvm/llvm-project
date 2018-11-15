@@ -57,15 +57,13 @@ define void @update(i64* %dst_i, i64* %src_i, i32 %n) nounwind {
 ; WIDE-NEXT:    movl %edx, {{[0-9]+}}(%esp)
 ; WIDE-NEXT:    addl {{[0-9]+}}(%esp), %ecx
 ; WIDE-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
-; WIDE-NEXT:    movd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; WIDE-NEXT:    pinsrd $1, 4(%ecx,%eax,8), %xmm3
+; WIDE-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
 ; WIDE-NEXT:    psubb %xmm0, %xmm3
 ; WIDE-NEXT:    psrlw $2, %xmm3
 ; WIDE-NEXT:    pand %xmm1, %xmm3
 ; WIDE-NEXT:    pxor %xmm2, %xmm3
 ; WIDE-NEXT:    psubb %xmm2, %xmm3
-; WIDE-NEXT:    pextrd $1, %xmm3, 4(%edx,%eax,8)
-; WIDE-NEXT:    movd %xmm3, (%edx,%eax,8)
+; WIDE-NEXT:    movq %xmm3, (%edx,%eax,8)
 ; WIDE-NEXT:    incl (%esp)
 ; WIDE-NEXT:  .LBB0_1: # %forcond
 ; WIDE-NEXT:    # =>This Inner Loop Header: Depth=1

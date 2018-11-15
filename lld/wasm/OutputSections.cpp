@@ -136,9 +136,18 @@ DataSection::DataSection(ArrayRef<OutputSegment *> Segments)
   for (OutputSegment *Segment : Segments) {
     raw_string_ostream OS(Segment->Header);
     writeUleb128(OS, 0, "memory index");
-    writeUleb128(OS, WASM_OPCODE_I32_CONST, "opcode:i32const");
-    writeSleb128(OS, Segment->StartVA, "memory offset");
-    writeUleb128(OS, WASM_OPCODE_END, "opcode:end");
+    WasmInitExpr InitExpr;
+    if (Config->Pic) {
+      assert(Segments.size() <= 1 &&
+             "Currenly only a single data segment is supported in PIC mode");
+      InitExpr.Opcode = WASM_OPCODE_GET_GLOBAL;
+      InitExpr.Value.Global =
+          cast<GlobalSymbol>(WasmSym::MemoryBase)->getGlobalIndex();
+    } else {
+      InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+      InitExpr.Value.Int32 = Segment->StartVA;
+    }
+    writeInitExpr(OS, InitExpr);
     writeUleb128(OS, Segment->Size, "segment size");
     OS.flush();
 

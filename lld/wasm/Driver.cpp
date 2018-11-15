@@ -325,6 +325,96 @@ static void handleWeakUndefines() {
   }
 }
 
+// Some Config members do not directly correspond to any particular
+// command line options, but computed based on other Config values.
+// This function initialize such members. See Config.h for the details
+// of these values.
+static void setConfigs(opt::InputArgList &Args) {
+  Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
+  Config->CompressRelocations = Args.hasArg(OPT_compress_relocations);
+  Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
+  Config->DisableVerify = Args.hasArg(OPT_disable_verify);
+  Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
+  Config->ExportAll = Args.hasArg(OPT_export_all);
+  Config->ExportDynamic = Args.hasFlag(OPT_export_dynamic,
+      OPT_no_export_dynamic, false);
+  Config->ExportTable = Args.hasArg(OPT_export_table);
+  errorHandler().FatalWarnings =
+      Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
+  Config->ImportMemory = Args.hasArg(OPT_import_memory);
+  Config->SharedMemory = Args.hasArg(OPT_shared_memory);
+  Config->ImportTable = Args.hasArg(OPT_import_table);
+  Config->LTOO = args::getInteger(Args, OPT_lto_O, 2);
+  Config->LTOPartitions = args::getInteger(Args, OPT_lto_partitions, 1);
+  Config->Optimize = args::getInteger(Args, OPT_O, 0);
+  Config->OutputFile = Args.getLastArgValue(OPT_o);
+  Config->Relocatable = Args.hasArg(OPT_relocatable);
+  Config->GcSections =
+      Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !Config->Relocatable);
+  Config->MergeDataSegments =
+      Args.hasFlag(OPT_merge_data_segments, OPT_no_merge_data_segments,
+                   !Config->Relocatable);
+  Config->Pie = Args.hasFlag(OPT_pie, OPT_no_pie, false);
+  Config->PrintGcSections =
+      Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
+  Config->SaveTemps = Args.hasArg(OPT_save_temps);
+  Config->SearchPaths = args::getStrings(Args, OPT_L);
+  Config->Shared = Args.hasArg(OPT_shared);
+  Config->StripAll = Args.hasArg(OPT_strip_all);
+  Config->StripDebug = Args.hasArg(OPT_strip_debug);
+  Config->StackFirst = Args.hasArg(OPT_stack_first);
+  Config->ThinLTOCacheDir = Args.getLastArgValue(OPT_thinlto_cache_dir);
+  Config->ThinLTOCachePolicy = CHECK(
+      parseCachePruningPolicy(Args.getLastArgValue(OPT_thinlto_cache_policy)),
+      "--thinlto-cache-policy: invalid cache policy");
+  Config->ThinLTOJobs = args::getInteger(Args, OPT_thinlto_jobs, -1u);
+  errorHandler().Verbose = Args.hasArg(OPT_verbose);
+  ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
+
+  Config->InitialMemory = args::getInteger(Args, OPT_initial_memory, 0);
+  Config->GlobalBase = args::getInteger(Args, OPT_global_base, 1024);
+  Config->MaxMemory = args::getInteger(Args, OPT_max_memory, 0);
+  Config->ZStackSize =
+      args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
+}
+
+// Some command line options or some combinations of them are not allowed.
+// This function checks for such errors.
+static void checkOptions(opt::InputArgList &Args) {
+  if (!Config->StripDebug && !Config->StripAll && Config->CompressRelocations)
+    error("--compress-relocations is incompatible with output debug"
+          " information. Please pass --strip-debug or --strip-all");
+
+  if (Config->LTOO > 3)
+    error("invalid optimization level for LTO: " + Twine(Config->LTOO));
+  if (Config->LTOPartitions == 0)
+    error("--lto-partitions: number of threads must be > 0");
+  if (Config->ThinLTOJobs == 0)
+    error("--thinlto-jobs: number of threads must be > 0");
+
+  if (Config->Pie && Config->Shared)
+    error("-shared and -pie may not be used together");
+
+  if (Config->OutputFile.empty())
+    error("no output file specified");
+
+  if (Config->ImportTable && Config->ExportTable)
+    error("--import-table and --export-table may not be used together");
+
+  if (Config->Relocatable) {
+    if (!Config->Entry.empty())
+      error("entry point specified for relocatable output file");
+    if (Config->GcSections)
+      error("-r and --gc-sections may not be used together");
+    if (Config->CompressRelocations)
+      error("-r -and --compress-relocations may not be used together");
+    if (Args.hasArg(OPT_undefined))
+      error("-r -and --undefined may not be used together");
+    if (Config->Pie)
+      error("-r and -pie may not be used together");
+  }
+}
+
 // Force Sym to be entered in the output. Used for -u or equivalent.
 static Symbol *handleUndefined(StringRef Name) {
   Symbol *Sym = Symtab->find(Name);
@@ -368,61 +458,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
 
   errorHandler().ErrorLimit = args::getInteger(Args, OPT_error_limit, 20);
 
-  Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
-  Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
-  Config->DisableVerify = Args.hasArg(OPT_disable_verify);
-  Config->Entry = getEntry(Args, Args.hasArg(OPT_relocatable) ? "" : "_start");
-  Config->ExportAll = Args.hasArg(OPT_export_all);
-  Config->ExportDynamic = Args.hasFlag(OPT_export_dynamic,
-      OPT_no_export_dynamic, false);
-  Config->ExportTable = Args.hasArg(OPT_export_table);
-  errorHandler().FatalWarnings =
-      Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
-  Config->ImportMemory = Args.hasArg(OPT_import_memory);
-  Config->SharedMemory = Args.hasArg(OPT_shared_memory);
-  Config->ImportTable = Args.hasArg(OPT_import_table);
-  Config->LTOO = args::getInteger(Args, OPT_lto_O, 2);
-  Config->LTOPartitions = args::getInteger(Args, OPT_lto_partitions, 1);
-  Config->Optimize = args::getInteger(Args, OPT_O, 0);
-  Config->OutputFile = Args.getLastArgValue(OPT_o);
-  Config->Relocatable = Args.hasArg(OPT_relocatable);
-  Config->GcSections =
-      Args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !Config->Relocatable);
-  Config->MergeDataSegments =
-      Args.hasFlag(OPT_merge_data_segments, OPT_no_merge_data_segments,
-                   !Config->Relocatable);
-  Config->PrintGcSections =
-      Args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
-  Config->SaveTemps = Args.hasArg(OPT_save_temps);
-  Config->SearchPaths = args::getStrings(Args, OPT_L);
-  Config->StripAll = Args.hasArg(OPT_strip_all);
-  Config->StripDebug = Args.hasArg(OPT_strip_debug);
-  Config->CompressRelocations = Args.hasArg(OPT_compress_relocations);
-  Config->StackFirst = Args.hasArg(OPT_stack_first);
-  Config->ThinLTOCacheDir = Args.getLastArgValue(OPT_thinlto_cache_dir);
-  Config->ThinLTOCachePolicy = CHECK(
-      parseCachePruningPolicy(Args.getLastArgValue(OPT_thinlto_cache_policy)),
-      "--thinlto-cache-policy: invalid cache policy");
-  Config->ThinLTOJobs = args::getInteger(Args, OPT_thinlto_jobs, -1u);
-  errorHandler().Verbose = Args.hasArg(OPT_verbose);
-  ThreadsEnabled = Args.hasFlag(OPT_threads, OPT_no_threads, true);
-
-  Config->InitialMemory = args::getInteger(Args, OPT_initial_memory, 0);
-  Config->GlobalBase = args::getInteger(Args, OPT_global_base, 1024);
-  Config->MaxMemory = args::getInteger(Args, OPT_max_memory, 0);
-  Config->ZStackSize =
-      args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
-
-  if (!Config->StripDebug && !Config->StripAll && Config->CompressRelocations)
-    error("--compress-relocations is incompatible with output debug"
-          " information. Please pass --strip-debug or --strip-all");
-
-  if (Config->LTOO > 3)
-    error("invalid optimization level for LTO: " + Twine(Config->LTOO));
-  if (Config->LTOPartitions == 0)
-    error("--lto-partitions: number of threads must be > 0");
-  if (Config->ThinLTOJobs == 0)
-    error("--thinlto-jobs: number of threads must be > 0");
+  setConfigs(Args);
+  checkOptions(Args);
 
   if (auto *Arg = Args.getLastArg(OPT_allow_undefined_file))
     readImportFile(Arg->getValue());
@@ -432,22 +469,16 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     return;
   }
 
-  if (Config->OutputFile.empty())
-    error("no output file specified");
+  Config->Pic = Config->Pie || Config->Shared;
 
-  if (Config->ImportTable && Config->ExportTable)
-    error("--import-table and --export-table may not be used together");
-
-  if (Config->Relocatable) {
-    if (!Config->Entry.empty())
-      error("entry point specified for relocatable output file");
-    if (Config->GcSections)
-      error("-r and --gc-sections may not be used together");
-    if (Config->CompressRelocations)
-      error("-r -and --compress-relocations may not be used together");
-    if (Args.hasArg(OPT_undefined))
-      error("-r -and --undefined may not be used together");
+  if (Config->Pic) {
+    if (Config->ExportTable)
+      error("-shared/-pie is incompatible with --export-table");
+    Config->ImportTable = true;
   }
+
+  if (Config->Shared)
+    Config->ExportDynamic = true;
 
   Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
@@ -474,6 +505,28 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol(
         "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
     WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end", 0);
+
+    if (Config->Pic) {
+      // For PIC code, we import two global variables (__memory_base and
+      // __table_base) from the environment and use these as the offset at
+      // which to load our static data and function table.
+      // See: https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
+      static llvm::wasm::WasmGlobalType GlobalTypeI32 = {WASM_TYPE_I32, false};
+
+      WasmSym::MemoryBase = Symtab->addUndefinedGlobal(
+          "__memory_base", WASM_SYMBOL_VISIBILITY_HIDDEN, nullptr,
+          &GlobalTypeI32);
+      Config->AllowUndefinedSymbols.insert(WasmSym::MemoryBase->getName());
+      WasmSym::MemoryBase->IsUsedInRegularObj = true;
+      WasmSym::MemoryBase->markLive();
+
+      WasmSym::TableBase = Symtab->addUndefinedGlobal(
+          "__table_base", WASM_SYMBOL_VISIBILITY_HIDDEN, nullptr,
+          &GlobalTypeI32);
+      Config->AllowUndefinedSymbols.insert(WasmSym::TableBase->getName());
+      WasmSym::TableBase->IsUsedInRegularObj = true;
+      WasmSym::TableBase->markLive();
+    }
 
     // These two synthetic symbols exist purely for the embedder so we always
     // want to export them.
@@ -511,7 +564,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     // Add synthetic dummies for weak undefined functions.
     handleWeakUndefines();
 
-    if (!Config->Entry.empty()) {
+    if (!Config->Shared && !Config->Entry.empty()) {
       EntrySym = handleUndefined(Config->Entry);
       if (EntrySym && EntrySym->isDefined())
         EntrySym->ForceExport = true;

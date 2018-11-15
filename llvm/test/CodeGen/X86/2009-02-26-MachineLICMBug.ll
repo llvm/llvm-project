@@ -40,9 +40,9 @@ define %struct.__vv* @t(%struct.Key* %desc, i64 %p) nounwind ssp {
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    callq _xxGetOffsetForCode
+; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    callq _xxCalculateMidType
 ; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    jne LBB0_1

@@ -28,7 +28,6 @@ class ExprCommandCallUserDefinedFunction(TestBase):
             'main.cpp',
             '// Please test these expressions while stopped at this line:')
 
-    @expectedFlakeyDsym("llvm.org/pr20274")
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24489: Name lookup not working correctly on Windows")
