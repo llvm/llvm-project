@@ -48,54 +48,49 @@ static Optional<BackgroundIndex::FileDigest> digestFile(const SourceManager &SM,
   return digest(Content);
 }
 
-llvm::SmallString<128>
-getShardPathFromFilePath(llvm::SmallString<128> ShardRoot,
-                         llvm::StringRef FilePath) {
-  sys::path::append(ShardRoot, sys::path::filename(FilePath) +
-                                   toHex(digest(FilePath)) + ".idx");
-  return ShardRoot;
+std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
+                                     llvm::StringRef FilePath) {
+  llvm::SmallString<128> ShardRootSS(ShardRoot);
+  sys::path::append(ShardRootSS, sys::path::filename(FilePath) +
+                                     toHex(digest(FilePath)) + ".idx");
+  return ShardRoot.str();
 }
 
 // Uses disk as a storage for index shards. Creates a directory called
-// ".clangd-index/" under the path provided during initialize.
-// Note: Requires initialize to be called before storing or retrieval.
+// ".clangd-index/" under the path provided during construction.
 // This class is thread-safe.
 class DiskBackedIndexStorage : public BackgroundIndexStorage {
-  llvm::SmallString<128> DiskShardRoot;
+  std::string DiskShardRoot;
 
 public:
-  llvm::Expected<IndexFileIn>
-  retrieveShard(llvm::StringRef ShardIdentifier) const override {
-    auto ShardPath = getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
+  llvm::Expected<IndexFileIn> loadShard(llvm::StringRef ShardIdentifier) const {
+    const std::string ShardPath =
+        getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
     auto Buffer = MemoryBuffer::getFile(ShardPath);
     if (!Buffer) {
-      elog("Couldn't retrieve {0}: {1}", ShardPath,
-           Buffer.getError().message());
+      elog("Couldn't load {0}: {1}", ShardPath, Buffer.getError().message());
       return llvm::make_error<llvm::StringError>(Buffer.getError());
     }
-    // FIXME: Change readIndexFile to also look at Hash of the source that
-    // generated index and skip if there is a mismatch.
     return readIndexFile(Buffer->get()->getBuffer());
   }
 
-  bool storeShard(llvm::StringRef ShardIdentifier,
-                  IndexFileOut Shard) const override {
+  llvm::Error storeShard(llvm::StringRef ShardIdentifier,
+                         IndexFileOut Shard) const override {
     auto ShardPath = getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
     std::error_code EC;
     llvm::raw_fd_ostream OS(ShardPath, EC);
-    if (EC) {
-      elog("Failed to open {0} for writing: {1}", ShardPath, EC.message());
-      return false;
-    }
+    if (EC)
+      return errorCodeToError(EC);
     OS << Shard;
-    return true;
+    return llvm::Error::success();
   }
 
-  // Initializes DiskShardRoot to (Directory + ".clangd-index/") which is the
-  // base directory for all shard files. After the initialization succeeds all
-  // subsequent calls are no-op.
-  DiskBackedIndexStorage(llvm::StringRef Directory) : DiskShardRoot(Directory) {
-    sys::path::append(DiskShardRoot, ".clangd-index/");
+  // Sets DiskShardRoot to (Directory + ".clangd-index/") which is the base
+  // directory for all shard files.
+  DiskBackedIndexStorage(llvm::StringRef Directory) {
+    llvm::SmallString<128> CDBDirectory(Directory);
+    sys::path::append(CDBDirectory, ".clangd-index/");
+    DiskShardRoot = CDBDirectory.str();
     if (!llvm::sys::fs::exists(DiskShardRoot)) {
       std::error_code OK;
       std::error_code EC = llvm::sys::fs::create_directory(DiskShardRoot);
@@ -106,7 +101,7 @@ public:
   }
 };
 
-SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
+std::string getAbsoluteFilePath(const tooling::CompileCommand &Cmd) {
   SmallString<128> AbsolutePath;
   if (sys::path::is_absolute(Cmd.Filename)) {
     AbsolutePath = Cmd.Filename;
@@ -114,7 +109,7 @@ SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
     AbsolutePath = Cmd.Directory;
     sys::path::append(AbsolutePath, Cmd.Filename);
   }
-  return AbsolutePath;
+  return AbsolutePath.str();
 }
 
 } // namespace
@@ -123,10 +118,12 @@ BackgroundIndex::BackgroundIndex(Context BackgroundContext,
                                  StringRef ResourceDir,
                                  const FileSystemProvider &FSProvider,
                                  ArrayRef<std::string> URISchemes,
+                                 IndexStorageFactory IndexStorageCreator,
                                  size_t ThreadPoolSize)
     : SwapIndex(make_unique<MemIndex>()), ResourceDir(ResourceDir),
       FSProvider(FSProvider), BackgroundContext(std::move(BackgroundContext)),
-      URISchemes(URISchemes) {
+      URISchemes(URISchemes),
+      IndexStorageCreator(std::move(IndexStorageCreator)) {
   assert(ThreadPoolSize > 0 && "Thread pool size can't be zero.");
   while (ThreadPoolSize--) {
     ThreadPool.emplace_back([this] { run(); });
@@ -185,45 +182,14 @@ void BackgroundIndex::blockUntilIdleForTest() {
 
 void BackgroundIndex::enqueue(StringRef Directory,
                               tooling::CompileCommand Cmd) {
-  auto IndexStorage = BackgroundIndexStorage::getForDirectory(Directory);
-  if (IndexStorage)
-    loadShard(IndexStorage.get(), Cmd);
-  else
+  BackgroundIndexStorage *IndexStorage = getIndexStorage(Directory);
+  if (!IndexStorage)
     elog("No index storage for: {0}", Directory);
   {
     std::lock_guard<std::mutex> Lock(QueueMu);
-    enqueueLocked(std::move(Cmd), std::move(IndexStorage));
+    enqueueLocked(std::move(Cmd), IndexStorage);
   }
   QueueCV.notify_all();
-}
-
-void BackgroundIndex::loadShard(BackgroundIndexStorage *IndexStorage,
-                                const tooling::CompileCommand &Cmd) {
-  assert(IndexStorage && "No index storage to load from?");
-  auto AbsolutePath = getAbsolutePath(Cmd);
-  auto Shard = IndexStorage->retrieveShard(AbsolutePath);
-  if (Shard) {
-    // FIXME: Updated hashes once we have them in serialized format.
-    // IndexedFileDigests[AbsolutePath] = Hash;
-    IndexedSymbols.update(AbsolutePath,
-                          make_unique<SymbolSlab>(std::move(*Shard->Symbols)),
-                          make_unique<RefSlab>(std::move(*Shard->Refs)));
-
-    vlog("Loaded {0} from storage", AbsolutePath);
-  }
-}
-
-void BackgroundIndex::loadShards(
-    BackgroundIndexStorage *IndexStorage,
-    const std::vector<tooling::CompileCommand> &Cmds) {
-  assert(IndexStorage && "No index storage to load from?");
-  for (const auto &Cmd : Cmds)
-    loadShard(IndexStorage, Cmd);
-  // FIXME: Maybe we should get rid of this one once we start building index
-  // periodically? Especially if we also offload this task onto the queue.
-  vlog("Rebuilding automatic index");
-  reset(IndexedSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge,
-                                  URISchemes));
 }
 
 void BackgroundIndex::enqueueAll(StringRef Directory,
@@ -232,10 +198,8 @@ void BackgroundIndex::enqueueAll(StringRef Directory,
   // FIXME: this function may be slow. Perhaps enqueue a task to re-read the CDB
   // from disk and enqueue the commands asynchronously?
   auto Cmds = CDB.getAllCompileCommands();
-  auto IndexStorage = BackgroundIndexStorage::getForDirectory(Directory);
-  if (IndexStorage)
-    loadShards(IndexStorage.get(), Cmds);
-  else
+  BackgroundIndexStorage *IndexStorage = getIndexStorage(Directory);
+  if (!IndexStorage)
     elog("No index storage for: {0}", Directory);
   SPAN_ATTACH(Tracer, "commands", int64_t(Cmds.size()));
   std::mt19937 Generator(std::random_device{}());
@@ -249,18 +213,16 @@ void BackgroundIndex::enqueueAll(StringRef Directory,
   QueueCV.notify_all();
 }
 
-void BackgroundIndex::enqueueLocked(
-    tooling::CompileCommand Cmd,
-    std::shared_ptr<BackgroundIndexStorage> IndexStorage) {
+void BackgroundIndex::enqueueLocked(tooling::CompileCommand Cmd,
+                                    BackgroundIndexStorage *IndexStorage) {
   Queue.push_back(Bind(
-      [this](tooling::CompileCommand Cmd,
-             std::shared_ptr<BackgroundIndexStorage> IndexStorage) {
+      [this, IndexStorage](tooling::CompileCommand Cmd) {
         std::string Filename = Cmd.Filename;
         Cmd.CommandLine.push_back("-resource-dir=" + ResourceDir);
-        if (auto Error = index(std::move(Cmd), IndexStorage.get()))
+        if (auto Error = index(std::move(Cmd), IndexStorage))
           log("Indexing {0} failed: {1}", Filename, std::move(Error));
       },
-      std::move(Cmd), std::move(IndexStorage)));
+      std::move(Cmd)));
 }
 
 // Resolves URI to file paths with cache.
@@ -356,7 +318,8 @@ void BackgroundIndex::update(StringRef MainFile, SymbolSlab Symbols,
       IndexFileOut Shard;
       Shard.Symbols = SS.get();
       Shard.Refs = RS.get();
-      IndexStorage->storeShard(Path, Shard);
+      if (auto Error = IndexStorage->storeShard(Path, Shard))
+        elog("Failed to store shard for {0}: {1}", Path, std::move(Error));
     }
 
     std::lock_guard<std::mutex> Lock(DigestsMu);
@@ -404,7 +367,7 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
                              BackgroundIndexStorage *IndexStorage) {
   trace::Span Tracer("BackgroundIndex");
   SPAN_ATTACH(Tracer, "file", Cmd.Filename);
-  SmallString<128> AbsolutePath = getAbsolutePath(Cmd);
+  const std::string AbsolutePath = getAbsoluteFilePath(Cmd);
 
   auto FS = FSProvider.getFileSystem();
   auto Buf = FS->getBufferForFile(AbsolutePath);
@@ -486,8 +449,18 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
   return Error::success();
 }
 
-std::function<std::shared_ptr<BackgroundIndexStorage>(llvm::StringRef)>
-    BackgroundIndexStorage::Factory = nullptr;
+BackgroundIndexStorage *
+BackgroundIndex::getIndexStorage(llvm::StringRef CDBDirectory) {
+  if (!IndexStorageCreator)
+    return nullptr;
+  auto IndexStorageIt = IndexStorageMap.find(CDBDirectory);
+  if (IndexStorageIt == IndexStorageMap.end())
+    IndexStorageIt =
+        IndexStorageMap
+            .insert({CDBDirectory, IndexStorageCreator(CDBDirectory)})
+            .first;
+  return IndexStorageIt->second.get();
+}
 
 } // namespace clangd
 } // namespace clang
