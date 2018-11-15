@@ -41,27 +41,27 @@
 ; CHECK:       <GLOBALVAL_SUMMARY_BLOCK
 ; Function main contains call to func, as well as address reference to func:
 ; op0=main op4=func op5=func
-; CHECK-DAG:    <PERMODULE {{.*}} op0=11 op1=0 {{.*}} op4=1 op5=0 op6=2 op7=2/>
+; CHECK-DAG:    <PERMODULE {{.*}} op0=11 op1=0 {{.*}} op4=1 op5=2 op6=2/>
 ; Function W contains a call to func3 as well as a reference to globalvar:
 ; op0=W op4=globalvar op5=func3
-; CHECK-DAG:    <PERMODULE {{.*}} op0=6 op1=5 {{.*}} op4=1 op5=0 op6=1 op7=5/>
+; CHECK-DAG:    <PERMODULE {{.*}} op0=6 op1=5 {{.*}} op4=1 op5=1 op6=5/>
 ; Function X contains call to foo, as well as address reference to foo
 ; which is in the same instruction as the call:
 ; op0=X op4=foo op5=foo
-; CHECK-DAG:    <PERMODULE {{.*}} op0=7 op1=1 {{.*}} op4=1 op5=0 op6=4 op7=4/>
+; CHECK-DAG:    <PERMODULE {{.*}} op0=7 op1=1 {{.*}} op4=1 op5=4 op6=4/>
 ; Function Y contains call to func2, and ensures we don't incorrectly add
 ; a reference to it when reached while earlier analyzing the phi using its
 ; return value:
 ; op0=Y op4=func2
-; CHECK-DAG:    <PERMODULE {{.*}} op0=8 op1=72 {{.*}} op4=0 op5=0 op6=3/>
+; CHECK-DAG:    <PERMODULE {{.*}} op0=8 op1=72 {{.*}} op4=0 op5=3/>
 ; Function Z contains call to func2, and ensures we don't incorrectly add
 ; a reference to it when reached while analyzing subsequent use of its return
 ; value:
 ; op0=Z op4=func2
-; CHECK-DAG:    <PERMODULE {{.*}} op0=9 op1=3 {{.*}} op4=0 op5=0 op6=3/>
+; CHECK-DAG:    <PERMODULE {{.*}} op0=9 op1=3 {{.*}} op4=0 op5=3/>
 ; Variable bar initialization contains address reference to func:
 ; op0=bar op2=func
-; CHECK-DAG:    <PERMODULE_GLOBALVAR_INIT_REFS {{.*}} op0=0 op1=0 op2=1 op3=2/>
+; CHECK-DAG:    <PERMODULE_GLOBALVAR_INIT_REFS {{.*}} op0=0 op1=0 op2=2/>
 ; CHECK:  </GLOBALVAL_SUMMARY_BLOCK>
 
 ; CHECK: <STRTAB_BLOCK

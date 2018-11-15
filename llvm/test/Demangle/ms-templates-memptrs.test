@@ -12,7 +12,7 @@
 ; CHECK: void __cdecl CallMethod<struct M, {[thunk]: __thiscall M::`vcall'{0, {flat}}, 0}>(struct M &)
 
 ??$CallMethod@UM@@$H?f@1@QAEXXZA@@@YAXAAUM@@@Z
-; CHECK: void __cdecl CallMethod<struct M, {void __thiscall M::f(void), 0}>(struct M &)
+; CHECK: void __cdecl CallMethod<struct M, {public: void __thiscall M::f(void), 0}>(struct M &)
 
 ??$CallMethod@UO@@$H??_91@$BA@AE3@@YAXAAUO@@@Z
 ; CHECK: void __cdecl CallMethod<struct O, {[thunk]: __thiscall O::`vcall'{0, {flat}}, 4}>(struct O &)
@@ -24,7 +24,7 @@
 ; CHECK: void __cdecl CallMethod<struct S, &[thunk]: __thiscall S::`vcall'{0, {flat}}>(struct S &)
 
 ??$CallMethod@US@@$1?f@1@QAEXXZ@@YAXAAUS@@@Z
-; CHECK: void __cdecl CallMethod<struct S, &void __thiscall S::f(void)>(struct S &)
+; CHECK: void __cdecl CallMethod<struct S, &public: void __thiscall S::f(void)>(struct S &)
 
 ??$CallMethod@UU@@$0A@@@YAXAAUU@@@Z
 ; CHECK: void __cdecl CallMethod<struct U, 0>(struct U &)
@@ -33,7 +33,7 @@
 ; CHECK: void __cdecl CallMethod<struct U, {[thunk]: __thiscall U::`vcall'{0, {flat}}, 0, 0, 0}>(struct U &)
 
 ??$CallMethod@UU@@$J?f@1@QAEXXZA@A@A@@@YAXAAUU@@@Z
-; CHECK: void __cdecl CallMethod<struct U, {void __thiscall U::f(void), 0, 0, 0}>(struct U &)
+; CHECK: void __cdecl CallMethod<struct U, {public: void __thiscall U::f(void), 0, 0, 0}>(struct U &)
 
 ??$CallMethod@UV@@$0A@@@YAXAAUV@@@Z
 ; CHECK: void __cdecl CallMethod<struct V, 0>(struct V &)
@@ -42,7 +42,7 @@
 ; CHECK: void __cdecl CallMethod<struct V, {[thunk]: __thiscall V::`vcall'{0, {flat}}, 0, 0}>(struct V &)
 
 ??$CallMethod@UV@@$I?f@1@QAEXXZA@A@@@YAXAAUV@@@Z
-; CHECK: void __cdecl CallMethod<struct V, {void __thiscall V::f(void), 0, 0}>(struct V &)
+; CHECK: void __cdecl CallMethod<struct V, {public: void __thiscall V::f(void), 0, 0}>(struct V &)
 
 ??$ReadField@UA@@$0?0@@YAHAAUA@@@Z
 ; CHECK: int __cdecl ReadField<struct A, -1>(struct A &)

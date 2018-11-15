@@ -166,6 +166,8 @@ public:
 
     ZArg, // MS extension
 
+    VArg, // OpenCL vectors
+
     // Objective-C specific specifiers.
     ObjCObjArg, // '@'
     ObjCBeg = ObjCObjArg,

@@ -90,16 +90,23 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
     Function *NewF = nullptr;
     for (Use &U : F.uses()) {
       LLVM_DEBUG(dbgs() << "prototype-less use: " << F.getName() << "\n");
-      if (BitCastOperator *BC = dyn_cast<BitCastOperator>(U.getUser())) {
-        FunctionType *DestType =
-            cast<FunctionType>(BC->getDestTy()->getPointerElementType());
-
-        // Create a new function with the correct type
-        NewType = DestType;
-        NewF = Function::Create(NewType, F.getLinkage(), F.getName());
-        NewF->setAttributes(F.getAttributes());
-        NewF->removeFnAttr("no-prototype");
-        break;
+      if (auto *BC = dyn_cast<BitCastOperator>(U.getUser())) {
+        if (auto *DestType = dyn_cast<FunctionType>(
+                BC->getDestTy()->getPointerElementType())) {
+          if (!NewType) {
+            // Create a new function with the correct type
+            NewType = DestType;
+            NewF = Function::Create(NewType, F.getLinkage(), F.getName());
+            NewF->setAttributes(F.getAttributes());
+            NewF->removeFnAttr("no-prototype");
+          } else {
+            if (NewType != DestType) {
+              report_fatal_error("Prototypeless function used with "
+                                 "conflicting signatures: " +
+                                 F.getName());
+            }
+          }
+        }
       }
     }
 
@@ -110,27 +117,37 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
       continue;
     }
 
-    for (Use &U : F.uses()) {
-      if (BitCastOperator *BC = dyn_cast<BitCastOperator>(U.getUser())) {
-        FunctionType *DestType =
-            cast<FunctionType>(BC->getDestTy()->getPointerElementType());
-        if (NewType != DestType) {
-          report_fatal_error(
-              "Prototypeless function used with conflicting signatures: " +
-              F.getName());
-        }
-        BC->replaceAllUsesWith(NewF);
-        Replacements.emplace_back(&F, NewF);
-      } else {
-        dbgs() << *U.getUser()->getType() << "\n";
+    SmallVector<Instruction *, 4> DeadInsts;
+
+    for (Use &US : F.uses()) {
+      User *U = US.getUser();
+      if (auto *BC = dyn_cast<BitCastOperator>(U)) {
+        if (auto *Inst = dyn_cast<BitCastInst>(U)) {
+          // Replace with a new bitcast
+          IRBuilder<> Builder(Inst);
+          Value *NewCast = Builder.CreatePointerCast(NewF, BC->getDestTy());
+          Inst->replaceAllUsesWith(NewCast);
+          DeadInsts.push_back(Inst);
+        } else if (auto *Const = dyn_cast<ConstantExpr>(U)) {
+          Constant *NewConst =
+              ConstantExpr::getPointerCast(NewF, BC->getDestTy());
+          Const->replaceAllUsesWith(NewConst);
+        } else {
+          dbgs() << *U->getType() << "\n";
 #ifndef NDEBUG
-        U.getUser()->dump();
+          U->dump();
 #endif
-        report_fatal_error(
-            "unexpected use of prototypeless function: " + F.getName() + "\n");
+          report_fatal_error("unexpected use of prototypeless function: " +
+                             F.getName() + "\n");
+        }
       }
     }
+
+    for (auto I : DeadInsts)
+      I->eraseFromParent();
+    Replacements.emplace_back(&F, NewF);
   }
+
 
   // Finally replace the old function declarations with the new ones
   for (auto &Pair : Replacements) {

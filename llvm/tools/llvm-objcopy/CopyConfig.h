@@ -57,7 +57,7 @@ struct CopyConfig {
   // Repeated options
   std::vector<StringRef> AddSection;
   std::vector<StringRef> DumpSection;
-  std::vector<StringRef> Keep;
+  std::vector<StringRef> KeepSection;
   std::vector<StringRef> OnlyKeep;
   std::vector<StringRef> SymbolsToGlobalize;
   std::vector<StringRef> SymbolsToKeep;

@@ -13,13 +13,13 @@
 
 // constexpr year_month_weekday_last operator+(const year_month_weekday_last& ymwdl, const months& dm) noexcept;
 //   Returns: (ymwdl.year() / ymwdl.month() + dm) / ymwdl.weekday_last().
-// 
+//
 // constexpr year_month_weekday_last operator+(const months& dm, const year_month_weekday_last& ymwdl) noexcept;
 //   Returns: ymwdl + dm.
-// 
+//
 // constexpr year_month_weekday_last operator+(const year_month_weekday_last& ymwdl, const years& dy) noexcept;
 //   Returns: {ymwdl.year()+dy, ymwdl.month(), ymwdl.weekday_last()}.
-// 
+//
 // constexpr year_month_weekday_last operator+(const years& dy, const year_month_weekday_last& ymwdl) noexcept;
 //   Returns: ymwdl + dy.
 
@@ -93,7 +93,7 @@ int main()
 
     ASSERT_SAME_TYPE(year_month_weekday_last, decltype(std::declval<year_month_weekday_last>() + std::declval<years>()));
     ASSERT_SAME_TYPE(year_month_weekday_last, decltype(std::declval<years>() + std::declval<year_month_weekday_last>()));
-    
+
     static_assert(testConstexprYears (year_month_weekday_last{year{1}, January, weekday_last{Tuesday}}), "");
 
     year_month_weekday_last ym{year{1234}, std::chrono::January, weekday_last{Tuesday}};

@@ -389,8 +389,7 @@ unsigned TargetTransformInfo::getMaxInterleaveFactor(unsigned VF) const {
 }
 
 TargetTransformInfo::OperandValueKind
-TargetTransformInfo::getOperandInfo(Value *V,
-                                    OperandValueProperties &OpProps) const {
+TargetTransformInfo::getOperandInfo(Value *V, OperandValueProperties &OpProps) {
   OperandValueKind OpInfo = OK_AnyValue;
   OpProps = OP_None;
 

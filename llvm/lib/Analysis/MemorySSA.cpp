@@ -2199,12 +2199,13 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
     return StartingAccess->getOptimized();
 
   const Instruction *I = StartingAccess->getMemoryInst();
-  UpwardsMemoryQuery Q(I, StartingAccess);
   // We can't sanely do anything with a fence, since they conservatively clobber
   // all memory, and have no locations to get pointers from to try to
   // disambiguate.
-  if (!Q.IsCall && I->isFenceLike())
+  if (!ImmutableCallSite(I) && I->isFenceLike())
     return StartingAccess;
+
+  UpwardsMemoryQuery Q(I, StartingAccess);
 
   if (isUseTriviallyOptimizableToLiveOnEntry(*MSSA->AA, I)) {
     MemoryAccess *LiveOnEntry = MSSA->getLiveOnEntryDef();

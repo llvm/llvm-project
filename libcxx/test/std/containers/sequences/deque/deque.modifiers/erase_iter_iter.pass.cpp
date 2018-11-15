@@ -34,7 +34,7 @@ struct Throws {
 
     static bool sThrows;
     };
-         
+
 bool Throws::sThrows = false;
 #endif
 

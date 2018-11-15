@@ -20,10 +20,6 @@ class GDBRemoteTest : public testing::Test {
 public:
   static void SetUpTestCase();
   static void TearDownTestCase();
-
-protected:
-  llvm::Error Connect(GDBRemoteCommunication &client,
-                      GDBRemoteCommunication &server);
 };
 
 struct MockServer : public GDBRemoteCommunicationServer {

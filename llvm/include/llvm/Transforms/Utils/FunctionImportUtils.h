@@ -113,6 +113,7 @@ public:
 bool renameModuleForThinLTO(
     Module &M, const ModuleSummaryIndex &Index,
     SetVector<GlobalValue *> *GlobalsToImport = nullptr);
+
 } // End llvm namespace
 
 #endif

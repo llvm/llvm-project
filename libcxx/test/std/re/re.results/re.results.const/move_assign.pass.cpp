@@ -26,7 +26,7 @@ test(const Allocator& a)
     typedef std::match_results<const CharT*, Allocator> SM;
     SM m0(a);
     SM m1;
-    
+
     m1 = std::move(m0);
     assert(m1.size()          == 0);
     assert(m1.str()           == std::basic_string<CharT>());

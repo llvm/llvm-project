@@ -491,7 +491,8 @@ private:
         CU->getSplitDebugFilename(), DICompileUnit::LineTablesOnly, EnumTypes,
         RetainedTypes, GlobalVariables, ImportedEntities, CU->getMacros(),
         CU->getDWOId(), CU->getSplitDebugInlining(),
-        CU->getDebugInfoForProfiling(), CU->getNameTableKind());
+        CU->getDebugInfoForProfiling(), CU->getNameTableKind(),
+        CU->getRangesBaseAddress());
   }
 
   DILocation *getReplacementMDLocation(DILocation *MLD) {

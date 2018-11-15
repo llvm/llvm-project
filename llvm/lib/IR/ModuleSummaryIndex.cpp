@@ -30,17 +30,6 @@ bool ValueInfo::isDSOLocal() const {
                       });
 }
 
-// Gets the number of immutable refs in RefEdgeList
-unsigned FunctionSummary::immutableRefCount() const {
-  // Here we take advantage of having all readonly references
-  // located in the end of the RefEdgeList.
-  auto Refs = refs();
-  unsigned ImmutableRefCnt = 0;
-  for (int I = Refs.size() - 1; I >= 0 && Refs[I].isReadOnly(); --I)
-    ImmutableRefCnt++;
-  return ImmutableRefCnt;
-}
-
 // Collect for the given module the list of function it defines
 // (GUID -> Summary).
 void ModuleSummaryIndex::collectDefinedFunctionsForModule(
@@ -95,73 +84,6 @@ bool ModuleSummaryIndex::isGUIDLive(GlobalValue::GUID GUID) const {
   return false;
 }
 
-static void propagateConstantsToRefs(GlobalValueSummary *S) {
-  // If reference is not readonly then referenced summary is not
-  // readonly either. Note that:
-  // - All references from GlobalVarSummary are conservatively considered as
-  //   not readonly. Tracking them properly requires more complex analysis
-  //   then we have now.
-  //
-  // - AliasSummary objects have no refs at all so this function is a no-op
-  //   for them.
-  for (auto &VI : S->refs()) {
-    if (VI.isReadOnly()) {
-      // We only mark refs as readonly when computing function summaries on
-      // analysis phase.
-      assert(isa<FunctionSummary>(S));
-      continue;
-    }
-    for (auto &Ref : VI.getSummaryList())
-      // If references to alias is not readonly then aliasee is not readonly
-      if (auto *GVS = dyn_cast<GlobalVarSummary>(Ref->getBaseObject()))
-        GVS->setReadOnly(false);
-  }
-}
-
-// Do the constant propagation in combined index.
-// The goal of constant propagation is internalization of readonly
-// variables. To determine which variables are readonly and which
-// are not we take following steps:
-// - During analysis we speculatively assign readonly attribute to
-//   all variables which can be internalized. When computing function
-//   summary we also assign readonly attribute to a reference if
-//   function doesn't modify referenced variable.
-//
-// - After computing dead symbols in combined index we do the constant
-//   propagation. During this step we clear readonly attribute from
-//   all variables which:
-//   a. are dead, preserved or can't be imported
-//   b. referenced by any global variable initializer
-//   c. referenced by a function and reference is not readonly
-//
-// Internalization itself happens in the backend after import is finished
-// See internalizeImmutableGVs.
-void ModuleSummaryIndex::propagateConstants(
-    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
-  for (auto &P : *this)
-    for (auto &S : P.second.SummaryList) {
-      if (!isGlobalValueLive(S.get()))
-        // We don't examine references from dead objects
-        continue;
-
-      // Global variable can't be marked read only if it is not eligible
-      // to import since we need to ensure that all external references
-      // get a local (imported) copy. It also can't be marked read only
-      // if it or any alias (since alias points to the same memory) are
-      // preserved or notEligibleToImport, since either of those means
-      // there could be writes that are not visible (because preserved
-      // means it could have external to DSO writes, and notEligibleToImport
-      // means it could have writes via inline assembly leading it to be
-      // in the @llvm.*used).
-      if (auto *GVS = dyn_cast<GlobalVarSummary>(S->getBaseObject()))
-        // Here we intentionally pass S.get() not GVS, because S could be
-        // an alias.
-        if (!canImportGlobalVar(S.get()) || GUIDPreservedSymbols.count(P.first))
-          GVS->setReadOnly(false);
-      propagateConstantsToRefs(S.get());
-    }
-}
-
 // TODO: write a graphviz dumper for SCCs (see ModuleSummaryIndex::exportToDot)
 // then delete this function and update its tests
 LLVM_DUMP_METHOD
@@ -186,7 +108,6 @@ namespace {
 struct Attributes {
   void add(const Twine &Name, const Twine &Value,
            const Twine &Comment = Twine());
-  void addComment(const Twine &Comment);
   std::string getAsString() const;
 
   std::vector<std::string> Attrs;
@@ -208,10 +129,6 @@ void Attributes::add(const Twine &Name, const Twine &Value,
   A += Value.str();
   A += "\"";
   Attrs.push_back(A);
-  addComment(Comment);
-}
-
-void Attributes::addComment(const Twine &Comment) {
   if (!Comment.isTriviallyEmpty()) {
     if (Comments.empty())
       Comments = " // ";
@@ -320,12 +237,6 @@ static void defineExternalNode(raw_ostream &OS, const char *Pfx,
   OS << "\"]; // defined externally\n";
 }
 
-static bool hasReadOnlyFlag(const GlobalValueSummary *S) {
-  if (auto *GVS = dyn_cast<GlobalVarSummary>(S))
-    return GVS->isReadOnly();
-  return false;
-}
-
 void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
   std::vector<Edge> CrossModuleEdges;
   DenseMap<GlobalValue::GUID, std::vector<uint64_t>> NodeMap;
@@ -341,17 +252,13 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
   };
 
   auto DrawEdge = [&](const char *Pfx, uint64_t SrcMod, GlobalValue::GUID SrcId,
-                      uint64_t DstMod, GlobalValue::GUID DstId,
-                      int TypeOrHotness) {
-    // 0 - alias
-    // 1 - reference
-    // 2 - constant reference
-    // Other value: (hotness - 3).
-    TypeOrHotness += 3;
+                      uint64_t DstMod, GlobalValue::GUID DstId, int TypeOrHotness) {
+    // 0 corresponds to alias edge, 1 to ref edge, 2 to call with unknown
+    // hotness, ...
+    TypeOrHotness += 2;
     static const char *EdgeAttrs[] = {
         " [style=dotted]; // alias",
         " [style=dashed]; // ref",
-        " [style=dashed,color=forestgreen]; // const-ref",
         " // call (hotness : Unknown)",
         " [color=blue]; // call (hotness : Cold)",
         " // call (hotness : None)",
@@ -394,8 +301,6 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
         A.add("shape", "box");
       } else {
         A.add("shape", "Mrecord", "variable");
-        if (Flags.Live && hasReadOnlyFlag(SummaryIt.second))
-          A.addComment("immutable");
       }
 
       auto VI = getValueInfo(SummaryIt.first);
@@ -413,7 +318,7 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
     for (auto &SummaryIt : GVSMap) {
       auto *GVS = SummaryIt.second;
       for (auto &R : GVS->refs())
-        Draw(SummaryIt.first, R.getGUID(), R.isReadOnly() ? -1 : -2);
+        Draw(SummaryIt.first, R.getGUID(), -1);
 
       if (auto *AS = dyn_cast_or_null<AliasSummary>(SummaryIt.second)) {
         GlobalValue::GUID AliaseeId;
@@ -426,7 +331,7 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
             AliaseeId = AliaseeOrigId;
         }
 
-        Draw(SummaryIt.first, AliaseeId, -3);
+        Draw(SummaryIt.first, AliaseeId, -2);
         continue;
       }
 

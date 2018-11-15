@@ -523,6 +523,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::ZERO_EXTEND);
   setTargetDAGCombine(ISD::SIGN_EXTEND);
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
+  setTargetDAGCombine(ISD::LOAD);
   setTargetDAGCombine(ISD::STORE);
   setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
   setTargetDAGCombine(ISD::FP_ROUND);
@@ -5368,6 +5369,46 @@ SDValue SystemZTargetLowering::combineMERGE(
   return SDValue();
 }
 
+SDValue SystemZTargetLowering::combineLOAD(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT LdVT = N->getValueType(0);
+  if (LdVT.isVector() || LdVT.isInteger())
+    return SDValue();
+  // Transform a scalar load that is REPLICATEd as well as having other
+  // use(s) to the form where the other use(s) use the first element of the
+  // REPLICATE instead of the load. Otherwise instruction selection will not
+  // produce a VLREP. Avoid extracting to a GPR, so only do this for floating
+  // point loads.
+
+  SDValue Replicate;
+  SmallVector<SDNode*, 8> OtherUses;
+  for (SDNode::use_iterator UI = N->use_begin(), UE = N->use_end();
+       UI != UE; ++UI) {
+    if (UI->getOpcode() == SystemZISD::REPLICATE) {
+      if (Replicate)
+        return SDValue(); // Should never happen
+      Replicate = SDValue(*UI, 0);
+    }
+    else if (UI.getUse().getResNo() == 0)
+      OtherUses.push_back(*UI);
+  }
+  if (!Replicate || OtherUses.empty())
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Extract0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, LdVT,
+                              Replicate, DAG.getConstant(0, DL, MVT::i32));
+  // Update uses of the loaded Value while preserving old chains.
+  for (SDNode *U : OtherUses) {
+    SmallVector<SDValue, 8> Ops;
+    for (SDValue Op : U->ops())
+      Ops.push_back((Op.getNode() == N && Op.getResNo() == 0) ? Extract0 : Op);
+    DAG.UpdateNodeOperands(U, Ops);
+  }
+  return SDValue(N, 0);
+}
+
 SDValue SystemZTargetLowering::combineSTORE(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -5699,6 +5740,7 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SIGN_EXTEND_INREG:  return combineSIGN_EXTEND_INREG(N, DCI);
   case SystemZISD::MERGE_HIGH:
   case SystemZISD::MERGE_LOW:   return combineMERGE(N, DCI);
+  case ISD::LOAD:               return combineLOAD(N, DCI);
   case ISD::STORE:              return combineSTORE(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT: return combineEXTRACT_VECTOR_ELT(N, DCI);
   case SystemZISD::JOIN_DWORDS: return combineJOIN_DWORDS(N, DCI);

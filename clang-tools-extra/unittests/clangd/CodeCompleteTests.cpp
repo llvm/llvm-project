@@ -67,6 +67,7 @@ MATCHER(InsertInclude, "") {
 }
 MATCHER_P(SnippetSuffix, Text, "") { return arg.SnippetSuffix == Text; }
 MATCHER_P(Origin, OriginSet, "") { return arg.Origin == OriginSet; }
+MATCHER_P(Signature, S, "") { return arg.Signature == S; }
 
 // Shorthand for Contains(Named(Name)).
 Matcher<const std::vector<CodeCompletion> &> Has(std::string Name) {
@@ -105,7 +106,8 @@ CodeCompleteResult completions(ClangdServer &Server, StringRef TestCode,
 
 CodeCompleteResult completions(ClangdServer &Server, StringRef Text,
                                std::vector<Symbol> IndexSymbols = {},
-                               clangd::CodeCompleteOptions Opts = {}) {
+                               clangd::CodeCompleteOptions Opts = {},
+                               PathRef FilePath = "foo.cpp") {
   std::unique_ptr<SymbolIndex> OverrideIndex;
   if (!IndexSymbols.empty()) {
     assert(!Opts.Index && "both Index and IndexSymbols given!");
@@ -113,7 +115,7 @@ CodeCompleteResult completions(ClangdServer &Server, StringRef Text,
     Opts.Index = OverrideIndex.get();
   }
 
-  auto File = testPath("foo.cpp");
+  auto File = testPath(FilePath);
   Annotations Test(Text);
   runAddDocument(Server, File, Test.code());
   auto CompletionList =
@@ -125,12 +127,14 @@ CodeCompleteResult completions(ClangdServer &Server, StringRef Text,
 // If IndexSymbols is non-empty, an index will be built and passed to opts.
 CodeCompleteResult completions(StringRef Text,
                                std::vector<Symbol> IndexSymbols = {},
-                               clangd::CodeCompleteOptions Opts = {}) {
+                               clangd::CodeCompleteOptions Opts = {},
+                               PathRef FilePath = "foo.cpp") {
   MockFSProvider FS;
   MockCompilationDatabase CDB;
   IgnoreDiagnostics DiagConsumer;
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
-  return completions(Server, Text, std::move(IndexSymbols), std::move(Opts));
+  return completions(Server, Text, std::move(IndexSymbols), std::move(Opts),
+                     FilePath);
 }
 
 std::string replace(StringRef Haystack, StringRef Needle, StringRef Repl) {
@@ -2204,6 +2208,84 @@ TEST(CompletionTest, NoCompletionsForNewNames) {
                              {cls("naber"), cls("nx::naber")}, Opts);
   EXPECT_THAT(Results.Completions, UnorderedElementsAre());
 }
+
+TEST(CompletionTest, ObjectiveCMethodNoArguments) {
+  auto Results = completions(R"objc(
+      @interface Foo
+      @property(nonatomic, setter=setXToIgnoreComplete:) int value;
+      @end
+      Foo *foo = [Foo new]; int y = [foo v^]
+    )objc",
+    /*IndexSymbols=*/{},
+    /*Opts=*/{},
+    "Foo.m");
+
+  auto C = Results.Completions;
+  EXPECT_THAT(C, ElementsAre(Named("value")));
+  EXPECT_THAT(C, ElementsAre(Kind(CompletionItemKind::Method)));
+  EXPECT_THAT(C, ElementsAre(ReturnType("int")));
+  EXPECT_THAT(C, ElementsAre(Signature("")));
+  EXPECT_THAT(C, ElementsAre(SnippetSuffix("")));
+}
+
+TEST(CompletionTest, ObjectiveCMethodOneArgument) {
+  auto Results = completions(R"objc(
+      @interface Foo
+      - (int)valueForCharacter:(char)c;
+      @end
+      Foo *foo = [Foo new]; int y = [foo v^]
+    )objc",
+    /*IndexSymbols=*/{},
+    /*Opts=*/{},
+    "Foo.m");
+
+  auto C = Results.Completions;
+  EXPECT_THAT(C, ElementsAre(Named("valueForCharacter:")));
+  EXPECT_THAT(C, ElementsAre(Kind(CompletionItemKind::Method)));
+  EXPECT_THAT(C, ElementsAre(ReturnType("int")));
+  EXPECT_THAT(C, ElementsAre(Signature("(char)")));
+  EXPECT_THAT(C, ElementsAre(SnippetSuffix("${1:(char)}")));
+}
+
+TEST(CompletionTest, ObjectiveCMethodTwoArgumentsFromBeginning) {
+  auto Results = completions(R"objc(
+      @interface Foo
+      + (id)fooWithValue:(int)value fooey:(unsigned int)fooey;
+      @end
+      id val = [Foo foo^]
+    )objc",
+    /*IndexSymbols=*/{},
+    /*Opts=*/{},
+    "Foo.m");
+
+  auto C = Results.Completions;
+  EXPECT_THAT(C, ElementsAre(Named("fooWithValue:")));
+  EXPECT_THAT(C, ElementsAre(Kind(CompletionItemKind::Method)));
+  EXPECT_THAT(C, ElementsAre(ReturnType("id")));
+  EXPECT_THAT(C, ElementsAre(Signature("(int) fooey:(unsigned int)")));
+  EXPECT_THAT(C,
+      ElementsAre(SnippetSuffix("${1:(int)} fooey:${2:(unsigned int)}")));
+}
+
+TEST(CompletionTest, ObjectiveCMethodTwoArgumentsFromMiddle) {
+  auto Results = completions(R"objc(
+      @interface Foo
+      + (id)fooWithValue:(int)value fooey:(unsigned int)fooey;
+      @end
+      id val = [Foo fooWithValue:10 f^]
+    )objc",
+    /*IndexSymbols=*/{},
+    /*Opts=*/{},
+    "Foo.m");
+
+  auto C = Results.Completions;
+  EXPECT_THAT(C, ElementsAre(Named("fooey:")));
+  EXPECT_THAT(C, ElementsAre(Kind(CompletionItemKind::Method)));
+  EXPECT_THAT(C, ElementsAre(ReturnType("id")));
+  EXPECT_THAT(C, ElementsAre(Signature("(unsigned int)")));
+  EXPECT_THAT(C, ElementsAre(SnippetSuffix("${1:(unsigned int)}")));
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

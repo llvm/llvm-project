@@ -195,21 +195,21 @@ template <class Length>
 struct StringMove {
   static void run(benchmark::State& state) {
     // Keep two object locations and move construct back and forth.
-    std::aligned_storage<sizeof(std::string)>::type Storage[2];
+    std::aligned_storage<sizeof(std::string), alignof(std::string)>::type Storage[2];
     using S = std::string;
-    S* Data = reinterpret_cast<S*>(Storage);
     size_t I = 0;
-    new (static_cast<void*>(Data)) std::string(makeString(Length()));
+    S *newS = new (static_cast<void*>(Storage)) std::string(makeString(Length()));
     for (auto _ : state) {
       // Switch locations.
       I ^= 1;
       benchmark::DoNotOptimize(Storage);
       // Move construct into the new location,
-      new (static_cast<void*>(Storage + I)) S(std::move(Data[I ^ 1]));
+      S *tmpS = new (static_cast<void*>(Storage + I)) S(std::move(*newS));
       // then destroy the old one.
-      Data[I ^ 1].~S();
+      newS->~S();
+      newS = tmpS;
     }
-    Data[I].~S();
+    newS->~S();
   }
 
   static std::string name() { return "BM_StringMove" + Length::name(); }

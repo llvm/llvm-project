@@ -378,6 +378,9 @@ protected:
     unsigned HasFoundDecl : 1;
     unsigned HadMultipleCandidates : 1;
     unsigned RefersToEnclosingVariableOrCapture : 1;
+
+    /// The location of the declaration name itself.
+    SourceLocation Loc;
   };
 
   class CastExprBitfields {

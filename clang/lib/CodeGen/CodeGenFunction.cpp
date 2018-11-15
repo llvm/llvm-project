@@ -2291,7 +2291,7 @@ static bool hasRequiredFeatures(const SmallVectorImpl<StringRef> &ReqFeatures,
   // Now build up the set of caller features and verify that all the required
   // features are there.
   llvm::StringMap<bool> CallerFeatureMap;
-  CGM.getFunctionFeatureMap(CallerFeatureMap, FD);
+  CGM.getFunctionFeatureMap(CallerFeatureMap, GlobalDecl().getWithDecl(FD));
 
   // If we have at least one of the features in the feature list return
   // true, otherwise return false.

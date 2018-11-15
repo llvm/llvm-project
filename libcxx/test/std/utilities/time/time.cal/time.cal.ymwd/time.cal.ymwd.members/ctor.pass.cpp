@@ -45,7 +45,7 @@ int main()
 
     ASSERT_NOEXCEPT(year_month_weekday{});
     ASSERT_NOEXCEPT(year_month_weekday{year{1}, month{1}, weekday_indexed{Tuesday, 1}});
-    
+
     constexpr year_month_weekday ym0{};
     static_assert( ym0.year()            == year{},            "");
     static_assert( ym0.month()           == month{},           "");

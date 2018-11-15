@@ -1038,61 +1038,60 @@ class DeclRefExpr final
       private llvm::TrailingObjects<DeclRefExpr, NestedNameSpecifierLoc,
                                     NamedDecl *, ASTTemplateKWAndArgsInfo,
                                     TemplateArgumentLoc> {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+  friend TrailingObjects;
+
   /// The declaration that we are referencing.
   ValueDecl *D;
-
-  /// The location of the declaration name itself.
-  SourceLocation Loc;
 
   /// Provides source/type location info for the declaration name
   /// embedded in D.
   DeclarationNameLoc DNLoc;
 
   size_t numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
-    return hasQualifier() ? 1 : 0;
+    return hasQualifier();
   }
 
   size_t numTrailingObjects(OverloadToken<NamedDecl *>) const {
-    return hasFoundDecl() ? 1 : 0;
+    return hasFoundDecl();
   }
 
   size_t numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
-    return hasTemplateKWAndArgsInfo() ? 1 : 0;
+    return hasTemplateKWAndArgsInfo();
   }
 
   /// Test whether there is a distinct FoundDecl attached to the end of
   /// this DRE.
   bool hasFoundDecl() const { return DeclRefExprBits.HasFoundDecl; }
 
-  DeclRefExpr(const ASTContext &Ctx,
-              NestedNameSpecifierLoc QualifierLoc,
-              SourceLocation TemplateKWLoc,
-              ValueDecl *D, bool RefersToEnlosingVariableOrCapture,
-              const DeclarationNameInfo &NameInfo,
-              NamedDecl *FoundD,
-              const TemplateArgumentListInfo *TemplateArgs,
-              QualType T, ExprValueKind VK);
+  DeclRefExpr(const ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
+              SourceLocation TemplateKWLoc, ValueDecl *D,
+              bool RefersToEnlosingVariableOrCapture,
+              const DeclarationNameInfo &NameInfo, NamedDecl *FoundD,
+              const TemplateArgumentListInfo *TemplateArgs, QualType T,
+              ExprValueKind VK);
 
   /// Construct an empty declaration reference expression.
-  explicit DeclRefExpr(EmptyShell Empty)
-    : Expr(DeclRefExprClass, Empty) { }
+  explicit DeclRefExpr(EmptyShell Empty) : Expr(DeclRefExprClass, Empty) {}
 
   /// Computes the type- and value-dependence flags for this
   /// declaration reference expression.
-  void computeDependence(const ASTContext &C);
+  void computeDependence(const ASTContext &Ctx);
 
 public:
   DeclRefExpr(ValueDecl *D, bool RefersToEnclosingVariableOrCapture, QualType T,
               ExprValueKind VK, SourceLocation L,
               const DeclarationNameLoc &LocInfo = DeclarationNameLoc())
-    : Expr(DeclRefExprClass, T, VK, OK_Ordinary, false, false, false, false),
-      D(D), Loc(L), DNLoc(LocInfo) {
-    DeclRefExprBits.HasQualifier = 0;
-    DeclRefExprBits.HasTemplateKWAndArgsInfo = 0;
-    DeclRefExprBits.HasFoundDecl = 0;
-    DeclRefExprBits.HadMultipleCandidates = 0;
+      : Expr(DeclRefExprClass, T, VK, OK_Ordinary, false, false, false, false),
+        D(D), DNLoc(LocInfo) {
+    DeclRefExprBits.HasQualifier = false;
+    DeclRefExprBits.HasTemplateKWAndArgsInfo = false;
+    DeclRefExprBits.HasFoundDecl = false;
+    DeclRefExprBits.HadMultipleCandidates = false;
     DeclRefExprBits.RefersToEnclosingVariableOrCapture =
         RefersToEnclosingVariableOrCapture;
+    DeclRefExprBits.Loc = L;
     computeDependence(D->getASTContext());
   }
 
@@ -1112,8 +1111,7 @@ public:
          const TemplateArgumentListInfo *TemplateArgs = nullptr);
 
   /// Construct an empty declaration reference expression.
-  static DeclRefExpr *CreateEmpty(const ASTContext &Context,
-                                  bool HasQualifier,
+  static DeclRefExpr *CreateEmpty(const ASTContext &Context, bool HasQualifier,
                                   bool HasFoundDecl,
                                   bool HasTemplateKWAndArgsInfo,
                                   unsigned NumTemplateArgs);
@@ -1123,11 +1121,11 @@ public:
   void setDecl(ValueDecl *NewD) { D = NewD; }
 
   DeclarationNameInfo getNameInfo() const {
-    return DeclarationNameInfo(getDecl()->getDeclName(), Loc, DNLoc);
+    return DeclarationNameInfo(getDecl()->getDeclName(), getLocation(), DNLoc);
   }
 
-  SourceLocation getLocation() const { return Loc; }
-  void setLocation(SourceLocation L) { Loc = L; }
+  SourceLocation getLocation() const { return DeclRefExprBits.Loc; }
+  void setLocation(SourceLocation L) { DeclRefExprBits.Loc = L; }
   SourceLocation getBeginLoc() const LLVM_READONLY;
   SourceLocation getEndLoc() const LLVM_READONLY;
 
@@ -1172,21 +1170,24 @@ public:
   /// Retrieve the location of the template keyword preceding
   /// this name, if any.
   SourceLocation getTemplateKeywordLoc() const {
-    if (!hasTemplateKWAndArgsInfo()) return SourceLocation();
+    if (!hasTemplateKWAndArgsInfo())
+      return SourceLocation();
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->TemplateKWLoc;
   }
 
   /// Retrieve the location of the left angle bracket starting the
   /// explicit template argument list following the name, if any.
   SourceLocation getLAngleLoc() const {
-    if (!hasTemplateKWAndArgsInfo()) return SourceLocation();
+    if (!hasTemplateKWAndArgsInfo())
+      return SourceLocation();
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->LAngleLoc;
   }
 
   /// Retrieve the location of the right angle bracket ending the
   /// explicit template argument list following the name, if any.
   SourceLocation getRAngleLoc() const {
-    if (!hasTemplateKWAndArgsInfo()) return SourceLocation();
+    if (!hasTemplateKWAndArgsInfo())
+      return SourceLocation();
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->RAngleLoc;
   }
 
@@ -1211,7 +1212,6 @@ public:
   const TemplateArgumentLoc *getTemplateArgs() const {
     if (!hasExplicitTemplateArgs())
       return nullptr;
-
     return getTrailingObjects<TemplateArgumentLoc>();
   }
 
@@ -1220,7 +1220,6 @@ public:
   unsigned getNumTemplateArgs() const {
     if (!hasExplicitTemplateArgs())
       return 0;
-
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
   }
 
@@ -1258,10 +1257,6 @@ public:
   const_child_range children() const {
     return const_child_range(const_child_iterator(), const_child_iterator());
   }
-
-  friend TrailingObjects;
-  friend class ASTStmtReader;
-  friend class ASTStmtWriter;
 };
 
 /// Used by IntegerLiteral/FloatingLiteral to store the numeric without

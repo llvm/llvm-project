@@ -51,7 +51,8 @@ defm remove_section : Eq<"remove-section", "Remove <section>">,
                       MetaVarName<"section">;
 def R : JoinedOrSeparate<["-"], "R">, Alias<remove_section>;
 
-defm keep : Eq<"keep", "Keep <section>">, MetaVarName<"section">;
+defm keep_section : Eq<"keep-section", "Keep <section>">,
+                    MetaVarName<"section">;
 defm keep_symbol : Eq<"keep-symbol", "Do not remove symbol <symbol>">,
                    MetaVarName<"symbol">;
 def K : JoinedOrSeparate<["-"], "K">, Alias<keep_symbol>;

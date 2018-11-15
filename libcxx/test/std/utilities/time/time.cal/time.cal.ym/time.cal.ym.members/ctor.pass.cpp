@@ -34,7 +34,7 @@ int main()
 
     ASSERT_NOEXCEPT(year_month{});
     ASSERT_NOEXCEPT(year_month{year{1}, month{1}});
-    
+
     constexpr year_month ym0{};
     static_assert( ym0.year()  == year{},  "");
     static_assert( ym0.month() == month{}, "");

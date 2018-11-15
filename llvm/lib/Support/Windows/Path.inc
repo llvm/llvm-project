@@ -1253,6 +1253,17 @@ static void expandTildeExpr(SmallVectorImpl<char> &Path) {
   Path.insert(Path.begin() + 1, HomeDir.begin() + 1, HomeDir.end());
 }
 
+void expand_tilde(const Twine &path, SmallVectorImpl<char> &dest) {
+  dest.clear();
+  if (path.isTriviallyEmpty())
+    return;
+
+  path.toVector(dest);
+  expandTildeExpr(dest);
+
+  return;
+}
+
 std::error_code real_path(const Twine &path, SmallVectorImpl<char> &dest,
                           bool expand_tilde) {
   dest.clear();

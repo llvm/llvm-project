@@ -17,7 +17,7 @@ T euclidian_addition(T rhs, T lhs)
 {
     const T modulus = maxValue - minValue + 1;
     T ret = rhs + lhs;
-    if (ret > maxValue) 
+    if (ret > maxValue)
         ret -= modulus;
     return ret;
 }
@@ -31,10 +31,9 @@ T euclidian_subtraction(T lhs, T rhs)
 {
     const T modulus = maxValue - minValue + 1;
     T ret = lhs - rhs;
-    if (ret < minValue) 
+    if (ret < minValue)
         ret += modulus;
     if (ret > maxValue)     // this can happen if T is unsigned
         ret += modulus;
     return ret;
 }
-

@@ -1990,6 +1990,20 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       return I;
     break;
 
+  case Intrinsic::fshl:
+  case Intrinsic::fshr: {
+    // The shift amount (operand 2) of a funnel shift is modulo the bitwidth,
+    // so only the low bits of the shift amount are demanded if the bitwidth is
+    // a power-of-2.
+    unsigned BitWidth = II->getType()->getScalarSizeInBits();
+    if (!isPowerOf2_32(BitWidth))
+      break;
+    APInt Op2Demanded = APInt::getLowBitsSet(BitWidth, Log2_32_Ceil(BitWidth));
+    KnownBits Op2Known(BitWidth);
+    if (SimplifyDemandedBits(II, 2, Op2Demanded, Op2Known))
+      return &CI;
+    break;
+  }
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::umul_with_overflow:

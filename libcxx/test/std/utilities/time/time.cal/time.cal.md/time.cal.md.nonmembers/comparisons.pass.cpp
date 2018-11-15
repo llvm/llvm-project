@@ -15,9 +15,9 @@
 //   Returns: x.month() == y.month() && x.day() == y.day().
 //
 // constexpr bool operator< (const month_day& x, const month_day& y) noexcept;
-//   Returns: 
-//      If x.month() < y.month() returns true. 
-//      Otherwise, if x.month() > y.month() returns false. 
+//   Returns:
+//      If x.month() < y.month() returns true.
+//      Otherwise, if x.month() > y.month() returns false.
 //      Otherwise, returns x.day() < y.day().
 
 #include <chrono>
@@ -35,19 +35,19 @@ int main()
 
     AssertComparisons6AreNoexcept<month_day>();
     AssertComparisons6ReturnBool<month_day>();
-    
+
     static_assert( testComparisons6(
-        month_day{std::chrono::January, day{1}}, 
+        month_day{std::chrono::January, day{1}},
         month_day{std::chrono::January, day{1}},
         true, false), "");
-    
+
     static_assert( testComparisons6(
-        month_day{std::chrono::January, day{1}}, 
+        month_day{std::chrono::January, day{1}},
         month_day{std::chrono::January, day{2}},
         false, true), "");
 
     static_assert( testComparisons6(
-        month_day{std::chrono::January,  day{1}}, 
+        month_day{std::chrono::January,  day{1}},
         month_day{std::chrono::February, day{1}},
         false, true), "");
 
@@ -55,16 +55,16 @@ int main()
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
             assert((testComparisons6(
-                month_day{month{i}, day{1}}, 
-                month_day{month{j}, day{1}}, 
+                month_day{month{i}, day{1}},
+                month_day{month{j}, day{1}},
                 i == j, i < j )));
-    
+
 //  same month, different days
     for (unsigned i = 1; i < 31; ++i)
         for (unsigned j = 1; j < 31; ++j)
             assert((testComparisons6(
-                month_day{month{2}, day{i}}, 
-                month_day{month{2}, day{j}}, 
+                month_day{month{2}, day{i}},
+                month_day{month{2}, day{j}},
                 i == j, i < j )));
 
 }

@@ -612,9 +612,18 @@ int X86TTIImpl::getArithmeticInstrCost(
   };
 
   // Look for XOP lowering tricks.
-  if (ST->hasXOP())
-    if (const auto *Entry = CostTableLookup(XOPShiftCostTable, ISD, LT.second))
+  if (ST->hasXOP()) {
+    // If the right shift is constant then we'll fold the negation so
+    // it's as cheap as a left shift.
+    int ShiftISD = ISD;
+    if ((ShiftISD == ISD::SRL || ShiftISD == ISD::SRA) &&
+        (Op2Info == TargetTransformInfo::OK_UniformConstantValue ||
+         Op2Info == TargetTransformInfo::OK_NonUniformConstantValue))
+      ShiftISD = ISD::SHL;
+    if (const auto *Entry =
+            CostTableLookup(XOPShiftCostTable, ShiftISD, LT.second))
       return LT.first * Entry->Cost;
+  }
 
   static const CostTblEntry SSE2UniformShiftCostTable[] = {
     // Uniform splats are cheaper for the following instructions.
@@ -1969,7 +1978,7 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::ROTR,       MVT::v8i32,   1 },
     { ISD::ROTR,       MVT::v4i32,   1 }
   };
-  // XOP: ROTL = VPROT(X,Y), ROTR = VPROT(SUB(0,X),Y)
+  // XOP: ROTL = VPROT(X,Y), ROTR = VPROT(X,SUB(0,Y))
   static const CostTblEntry XOPCostTbl[] = {
     { ISD::ROTL,       MVT::v4i64,   4 },
     { ISD::ROTL,       MVT::v8i32,   4 },

@@ -20,7 +20,7 @@
 int main()
 {
     using month = std::chrono::month;
-    
+
     static_assert(std::is_trivially_copyable_v<month>, "");
     static_assert(std::is_standard_layout_v<month>, "");
 }

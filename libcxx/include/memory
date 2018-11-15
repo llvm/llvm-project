@@ -43,7 +43,7 @@ struct pointer_traits<T*>
 
     template <class U> using rebind = U*;
 
-    static pointer pointer_to(<details>) noexcept;
+    static pointer pointer_to(<details>) noexcept; // constexpr in C++20
 };
 
 template <class T> constexpr T* to_address(T* p) noexcept; // C++20
@@ -984,7 +984,7 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits<_Tp*>
 private:
     struct __nat {};
 public:
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
     static pointer pointer_to(typename conditional<is_void<element_type>::value,
                                       __nat, element_type>::type& __r) _NOEXCEPT
         {return _VSTD::addressof(__r);}

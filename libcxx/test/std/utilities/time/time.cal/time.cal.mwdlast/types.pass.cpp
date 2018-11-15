@@ -21,7 +21,7 @@
 int main()
 {
     using month_weekday_last = std::chrono::month_weekday_last;
-    
+
     static_assert(std::is_trivially_copyable_v<month_weekday_last>, "");
     static_assert(std::is_standard_layout_v<month_weekday_last>, "");
 }

@@ -8025,7 +8025,7 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
 
     switch(Opc) {
     default:
-      return SDValue();
+      break;
       // TODO: Support other binary operations.
     case ISD::FADD:
     case ISD::FSUB:
@@ -8051,11 +8051,33 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
     }
   }
 
-  if (!DCI.isBeforeLegalize())
-    return SDValue();
-
   unsigned VecSize = VecVT.getSizeInBits();
   unsigned EltSize = EltVT.getSizeInBits();
+
+  // EXTRACT_VECTOR_ELT (<n x e>, var-idx) => n x select (e, const-idx)
+  // This elminates non-constant index and subsequent movrel or scratch access.
+  // Sub-dword vectors of size 2 dword or less have better implementation.
+  // Vectors of size bigger than 8 dwords would yield too many v_cndmask_b32
+  // instructions.
+  if (VecSize <= 256 && (VecSize > 64 || EltSize >= 32) &&
+      !isa<ConstantSDNode>(N->getOperand(1))) {
+    SDLoc SL(N);
+    SDValue Idx = N->getOperand(1);
+    EVT IdxVT = Idx.getValueType();
+    SDValue V;
+    for (unsigned I = 0, E = VecVT.getVectorNumElements(); I < E; ++I) {
+      SDValue IC = DAG.getConstant(I, SL, IdxVT);
+      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT, Vec, IC);
+      if (I == 0)
+        V = Elt;
+      else
+        V = DAG.getSelectCC(SL, Idx, IC, Elt, V, ISD::SETEQ);
+    }
+    return V;
+  }
+
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
 
   // Try to turn sub-dword accesses of vectors into accesses of the same 32-bit
   // elements. This exposes more load reduction opportunities by replacing

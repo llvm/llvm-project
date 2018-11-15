@@ -18,15 +18,15 @@
 // constexpr year_month_day_last
 //   operator/(const year& y, const month_day_last& mdl) noexcept;
 // Returns: {y, mdl}.
-// 
+//
 // constexpr year_month_day_last
 //   operator/(int y, const month_day_last& mdl) noexcept;
 // Returns: year(y) / mdl.
-// 
+//
 // constexpr year_month_day_last
 //   operator/(const month_day_last& mdl, const year& y) noexcept;
 // Returns: y / mdl.
-// 
+//
 // constexpr year_month_day_last
 //   operator/(const month_day_last& mdl, int y) noexcept;
 // Returns: year(y) / mdl.
@@ -53,10 +53,10 @@ int main()
 
     constexpr month February = std::chrono::February;
     constexpr std::chrono::last_spec last = std::chrono::last;
-    
+
     { // operator/(const year_month& ym, last_spec)
         constexpr year_month Feb2018{year{2018}, February};
-        
+
         ASSERT_NOEXCEPT (                              Feb2018/last);
         ASSERT_SAME_TYPE(year_month_day_last, decltype(Feb2018/last));
 
@@ -66,7 +66,7 @@ int main()
         for (int i = 1000; i < 1010; ++i)
             for (unsigned j = 1; j <= 12; ++j)
             {
-                year y{i};                
+                year y{i};
                 month m{j};
                 year_month_day_last ymdl = year_month{y,m}/last;
                 assert(ymdl.year()  == y);
@@ -85,11 +85,11 @@ int main()
         static_assert((year{2018}/month_day_last{February}).year()  == year{2018}, "");
         static_assert((month_day_last{February}/year{2018}).month() == February,   "");
         static_assert((month_day_last{February}/year{2018}).year()  == year{2018}, "");
-    
+
         for (int i = 1000; i < 1010; ++i)
             for (unsigned j = 1; j <= 12; ++j)
             {
-                year y{i};                
+                year y{i};
                 month m{j};
                 year_month_day_last ymdl1 = y/month_day_last{m};
                 year_month_day_last ymdl2 = month_day_last{m}/y;
@@ -99,7 +99,7 @@ int main()
                 assert(ymdl1.year()  == y);
                 assert(ymdl1 == ymdl2);
             }
-    } 
+    }
 
     { // operator/(int y, const month_day_last& mdl) (and switched)
         ASSERT_NOEXCEPT (                              2018/month_day_last{February});
@@ -111,11 +111,11 @@ int main()
         static_assert((2018/month_day_last{February}).year()  == year{2018}, "");
         static_assert((month_day_last{February}/2018).month() == February,   "");
         static_assert((month_day_last{February}/2018).year()  == year{2018}, "");
-    
+
         for (int i = 1000; i < 1010; ++i)
             for (unsigned j = 1; j <= 12; ++j)
             {
-                year y{i};                
+                year y{i};
                 month m{j};
                 year_month_day_last ymdl1 = i/month_day_last{m};
                 year_month_day_last ymdl2 = month_day_last{m}/i;
@@ -125,5 +125,5 @@ int main()
                 assert(ymdl1.year()  == y);
                 assert(ymdl1 == ymdl2);
             }
-    } 
+    }
 }

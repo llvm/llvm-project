@@ -322,7 +322,7 @@ boring you can instead use a counted check "``CHECK-COUNT-<num>:``", where
 just use "``<PREFIX>-COUNT-<num>:``" for the same effect.
 Here is a simple example:
 
-.. code-block:: llvm
+.. code-block:: text
 
    Loop at depth 1
    Loop at depth 1

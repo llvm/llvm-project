@@ -1,5 +1,10 @@
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers | FileCheck %s
 
+; Usually MIPS hosts uses a legacy (non IEEE 754-2008) encoding for NaNs.
+; Tests like `nan_f32` failed in attempt to compare hard-coded IEEE 754-2008
+; NaN value and a legacy NaN value provided by a system.
+; XFAIL: mips-, mipsel-, mips64-, mips64el-
+
 ; Test that basic immediates assemble as expected.
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"

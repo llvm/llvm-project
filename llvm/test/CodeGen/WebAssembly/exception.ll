@@ -13,7 +13,7 @@ declare void @llvm.wasm.throw(i32, i8*)
 
 ; CHECK-LABEL: test_throw:
 ; CHECK-NEXT: i32.const $push0=, 0
-; CHECK-NEXT: throw 0, $pop0
+; CHECK-NEXT: throw __cpp_exception@EVENT, $pop0
 define void @test_throw() {
   call void @llvm.wasm.throw(i32 0, i8* null)
   ret void
@@ -259,3 +259,6 @@ declare void @__cxa_rethrow()
 declare void @__clang_call_terminate(i8*)
 declare void @_ZSt9terminatev()
 declare %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* returned)
+
+; CHECK: __cpp_exception:
+; CHECK: .eventtype  __cpp_exception, void, i32
