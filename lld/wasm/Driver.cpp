@@ -325,49 +325,11 @@ static void handleWeakUndefines() {
   }
 }
 
-// Force Sym to be entered in the output. Used for -u or equivalent.
-static Symbol *handleUndefined(StringRef Name) {
-  Symbol *Sym = Symtab->find(Name);
-  if (!Sym)
-    return nullptr;
-
-  // Since symbol S may not be used inside the program, LTO may
-  // eliminate it. Mark the symbol as "used" to prevent it.
-  Sym->IsUsedInRegularObj = true;
-
-  if (auto *LazySym = dyn_cast<LazySymbol>(Sym))
-    LazySym->fetch();
-
-  return Sym;
-}
-
-void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
-  WasmOptTable Parser;
-  opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
-
-  // Handle --help
-  if (Args.hasArg(OPT_help)) {
-    Parser.PrintHelp(outs(),
-                     (std::string(ArgsArr[0]) + " [options] file...").c_str(),
-                     "LLVM Linker", false);
-    return;
-  }
-
-  // Handle --version
-  if (Args.hasArg(OPT_version) || Args.hasArg(OPT_v)) {
-    outs() << getLLDVersion() << "\n";
-    return;
-  }
-
-  // Parse and evaluate -mllvm options.
-  std::vector<const char *> V;
-  V.push_back("wasm-ld (LLVM option parsing)");
-  for (auto *Arg : Args.filtered(OPT_mllvm))
-    V.push_back(Arg->getValue());
-  cl::ParseCommandLineOptions(V.size(), V.data());
-
-  errorHandler().ErrorLimit = args::getInteger(Args, OPT_error_limit, 20);
-
+// Some Config members do not directly correspond to any particular
+// command line options, but computed based on other Config values.
+// This function initialize such members. See Config.h for the details
+// of these values.
+static void setConfigs(opt::InputArgList &Args) {
   Config->AllowUndefined = Args.hasArg(OPT_allow_undefined);
   Config->CompressRelocations = Args.hasArg(OPT_compress_relocations);
   Config->Demangle = Args.hasFlag(OPT_demangle, OPT_no_demangle, true);
@@ -414,7 +376,11 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   Config->MaxMemory = args::getInteger(Args, OPT_max_memory, 0);
   Config->ZStackSize =
       args::getZOptionValue(Args, OPT_z, "stack-size", WasmPageSize);
+}
 
+// Some command line options or some combinations of them are not allowed.
+// This function checks for such errors.
+static void checkOptions(opt::InputArgList &Args) {
   if (!Config->StripDebug && !Config->StripAll && Config->CompressRelocations)
     error("--compress-relocations is incompatible with output debug"
           " information. Please pass --strip-debug or --strip-all");
@@ -425,14 +391,6 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     error("--lto-partitions: number of threads must be > 0");
   if (Config->ThinLTOJobs == 0)
     error("--thinlto-jobs: number of threads must be > 0");
-
-  if (auto *Arg = Args.getLastArg(OPT_allow_undefined_file))
-    readImportFile(Arg->getValue());
-
-  if (!Args.hasArg(OPT_INPUT)) {
-    error("no input files");
-    return;
-  }
 
   if (Config->Pie && Config->Shared)
     error("-shared and -pie may not be used together");
@@ -455,6 +413,126 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
     if (Config->Pie)
       error("-r and -pie may not be used together");
   }
+}
+
+// Force Sym to be entered in the output. Used for -u or equivalent.
+static Symbol *handleUndefined(StringRef Name) {
+  Symbol *Sym = Symtab->find(Name);
+  if (!Sym)
+    return nullptr;
+
+  // Since symbol S may not be used inside the program, LTO may
+  // eliminate it. Mark the symbol as "used" to prevent it.
+  Sym->IsUsedInRegularObj = true;
+
+  if (auto *LazySym = dyn_cast<LazySymbol>(Sym))
+    LazySym->fetch();
+
+  return Sym;
+}
+
+static UndefinedGlobal *
+createUndefinedGlobal(StringRef Name, llvm::wasm::WasmGlobalType *Type) {
+  auto *Sym =
+      cast<UndefinedGlobal>(Symtab->addUndefinedGlobal(Name, 0, nullptr, Type));
+  Config->AllowUndefinedSymbols.insert(Sym->getName());
+  Sym->IsUsedInRegularObj = true;
+  return Sym;
+}
+
+// Create ABI-defined synthetic symbols
+static void createSyntheticSymbols() {
+  static WasmSignature NullSignature = {{}, {}};
+  static llvm::wasm::WasmGlobalType GlobalTypeI32 = {WASM_TYPE_I32, false};
+  static llvm::wasm::WasmGlobalType MutableGlobalTypeI32 = {WASM_TYPE_I32,
+                                                            true};
+
+  WasmSym::CallCtors = Symtab->addSyntheticFunction(
+      "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
+      make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
+
+  // The __stack_pointer is imported in the shared library case, and exported
+  // in the non-shared (executable) case.
+  if (Config->Shared) {
+    WasmSym::StackPointer =
+        createUndefinedGlobal("__stack_pointer", &MutableGlobalTypeI32);
+  } else {
+    llvm::wasm::WasmGlobal Global;
+    Global.Type = {WASM_TYPE_I32, true};
+    Global.InitExpr.Value.Int32 = 0;
+    Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+    Global.SymbolName = "__stack_pointer";
+    InputGlobal *StackPointer = make<InputGlobal>(Global, nullptr);
+    StackPointer->Live = true;
+    // For non-PIC code
+    // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN when the mutable global
+    // spec proposal is implemented in all major browsers.
+    // See: https://github.com/WebAssembly/mutable-global
+    WasmSym::StackPointer = Symtab->addSyntheticGlobal(
+        "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, StackPointer);
+    WasmSym::HeapBase = Symtab->addSyntheticDataSymbol("__heap_base", 0);
+    WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end", 0);
+
+    // These two synthetic symbols exist purely for the embedder so we always
+    // want to export them.
+    WasmSym::HeapBase->ForceExport = true;
+    WasmSym::DataEnd->ForceExport = true;
+  }
+
+  if (Config->Pic) {
+    // For PIC code, we import two global variables (__memory_base and
+    // __table_base) from the environment and use these as the offset at
+    // which to load our static data and function table.
+    // See:
+    // https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
+    WasmSym::MemoryBase =
+        createUndefinedGlobal("__memory_base", &GlobalTypeI32);
+    WasmSym::TableBase = createUndefinedGlobal("__table_base", &GlobalTypeI32);
+    WasmSym::MemoryBase->markLive();
+    WasmSym::TableBase->markLive();
+  }
+
+  WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol(
+      "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
+}
+
+void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
+  WasmOptTable Parser;
+  opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
+
+  // Handle --help
+  if (Args.hasArg(OPT_help)) {
+    Parser.PrintHelp(outs(),
+                     (std::string(ArgsArr[0]) + " [options] file...").c_str(),
+                     "LLVM Linker", false);
+    return;
+  }
+
+  // Handle --version
+  if (Args.hasArg(OPT_version) || Args.hasArg(OPT_v)) {
+    outs() << getLLDVersion() << "\n";
+    return;
+  }
+
+  // Parse and evaluate -mllvm options.
+  std::vector<const char *> V;
+  V.push_back("wasm-ld (LLVM option parsing)");
+  for (auto *Arg : Args.filtered(OPT_mllvm))
+    V.push_back(Arg->getValue());
+  cl::ParseCommandLineOptions(V.size(), V.data());
+
+  errorHandler().ErrorLimit = args::getInteger(Args, OPT_error_limit, 20);
+
+  setConfigs(Args);
+  checkOptions(Args);
+
+  if (auto *Arg = Args.getLastArg(OPT_allow_undefined_file))
+    readImportFile(Arg->getValue());
+
+  if (!Args.hasArg(OPT_INPUT)) {
+    error("no input files");
+    return;
+  }
 
   Config->Pic = Config->Pie || Config->Shared;
 
@@ -467,59 +545,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Config->Shared)
     Config->ExportDynamic = true;
 
-  Symbol *EntrySym = nullptr;
-  if (!Config->Relocatable) {
-    llvm::wasm::WasmGlobal Global;
-    Global.Type = {WASM_TYPE_I32, true};
-    Global.InitExpr.Value.Int32 = 0;
-    Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    Global.SymbolName = "__stack_pointer";
-    InputGlobal *StackPointer = make<InputGlobal>(Global, nullptr);
-    StackPointer->Live = true;
-
-    static WasmSignature NullSignature = {{}, {}};
-
-    // Add synthetic symbols before any others
-    WasmSym::CallCtors = Symtab->addSyntheticFunction(
-        "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
-    // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN when the mutable global
-    // spec proposal is implemented in all major browsers.
-    // See: https://github.com/WebAssembly/mutable-global
-    WasmSym::StackPointer = Symtab->addSyntheticGlobal(
-        "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, StackPointer);
-    WasmSym::HeapBase = Symtab->addSyntheticDataSymbol("__heap_base", 0);
-    WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol(
-        "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
-    WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end", 0);
-
-    if (Config->Pic) {
-      // For PIC code, we import two global variables (__memory_base and
-      // __table_base) from the environment and use these as the offset at
-      // which to load our static data and function table.
-      // See: https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
-      static llvm::wasm::WasmGlobalType GlobalTypeI32 = {WASM_TYPE_I32, false};
-
-      WasmSym::MemoryBase = Symtab->addUndefinedGlobal(
-          "__memory_base", WASM_SYMBOL_VISIBILITY_HIDDEN, nullptr,
-          &GlobalTypeI32);
-      Config->AllowUndefinedSymbols.insert(WasmSym::MemoryBase->getName());
-      WasmSym::MemoryBase->IsUsedInRegularObj = true;
-      WasmSym::MemoryBase->markLive();
-
-      WasmSym::TableBase = Symtab->addUndefinedGlobal(
-          "__table_base", WASM_SYMBOL_VISIBILITY_HIDDEN, nullptr,
-          &GlobalTypeI32);
-      Config->AllowUndefinedSymbols.insert(WasmSym::TableBase->getName());
-      WasmSym::TableBase->IsUsedInRegularObj = true;
-      WasmSym::TableBase->markLive();
-    }
-
-    // These two synthetic symbols exist purely for the embedder so we always
-    // want to export them.
-    WasmSym::HeapBase->ForceExport = true;
-    WasmSym::DataEnd->ForceExport = true;
-  }
+  if (!Config->Relocatable)
+    createSyntheticSymbols();
 
   createFiles(Args);
   if (errorCount())
@@ -547,6 +574,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
             Arg->getValue());
   }
 
+  Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
     // Add synthetic dummies for weak undefined functions.
     handleWeakUndefines();

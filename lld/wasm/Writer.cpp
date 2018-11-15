@@ -332,8 +332,7 @@ void Writer::createElemSection() {
   WasmInitExpr InitExpr;
   if (Config->Pic) {
     InitExpr.Opcode = WASM_OPCODE_GET_GLOBAL;
-    InitExpr.Value.Global =
-        cast<GlobalSymbol>(WasmSym::TableBase)->getGlobalIndex();
+    InitExpr.Value.Global = WasmSym::TableBase->getGlobalIndex();
   } else {
     InitExpr.Opcode = WASM_OPCODE_I32_CONST;
     InitExpr.Value.Int32 = TableBase;
@@ -632,7 +631,8 @@ void Writer::layoutMemory() {
     log("mem: stack size  = " + Twine(Config->ZStackSize));
     log("mem: stack base  = " + Twine(MemoryPtr));
     MemoryPtr += Config->ZStackSize;
-    WasmSym::StackPointer->Global->Global.InitExpr.Value.Int32 = MemoryPtr;
+    auto *SP = cast<DefinedGlobal>(WasmSym::StackPointer);
+    SP->Global->Global.InitExpr.Value.Int32 = MemoryPtr;
     log("mem: stack top   = " + Twine(MemoryPtr));
   };
 
@@ -665,6 +665,11 @@ void Writer::layoutMemory() {
     WasmSym::DataEnd->setVirtualAddress(MemoryPtr);
 
   log("mem: static data = " + Twine(MemoryPtr - DataStart));
+
+  if (Config->Shared) {
+    MemSize = MemoryPtr;
+    return;
+  }
 
   if (!Config->StackFirst)
     PlaceStack();
