@@ -43,6 +43,9 @@ struct PdbCompilandId {
 };
 
 struct PdbCompilandSymId {
+  PdbCompilandSymId() = default;
+  PdbCompilandSymId(uint16_t modi, uint32_t offset)
+      : modi(modi), offset(offset) {}
   // 0-based index of module in PDB
   uint16_t modi = 0;
 
@@ -53,6 +56,10 @@ struct PdbCompilandSymId {
 };
 
 struct PdbGlobalSymId {
+  PdbGlobalSymId() = default;
+  PdbGlobalSymId(uint32_t offset, bool is_public)
+      : offset(offset), is_public(is_public) {}
+
   // Offset of symbol's record in globals or publics stream.
   uint32_t offset = 0;
 
@@ -62,6 +69,10 @@ struct PdbGlobalSymId {
 };
 
 struct PdbTypeSymId {
+  PdbTypeSymId() = default;
+  PdbTypeSymId(llvm::codeview::TypeIndex index, bool is_ipi = false)
+      : index(index), is_ipi(is_ipi) {}
+
   // The index of the of the type in the TPI or IPI stream.
   llvm::codeview::TypeIndex index;
 

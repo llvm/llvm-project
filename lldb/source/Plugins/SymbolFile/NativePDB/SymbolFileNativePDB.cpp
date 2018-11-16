@@ -729,7 +729,7 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   Type *func_type = nullptr;
 
   // FIXME: Resolve types and mangled names.
-  PdbTypeSymId sig_id{TypeIndex::None(), false};
+  PdbTypeSymId sig_id(TypeIndex::None(), false);
   Mangled mangled(getSymbolName(sym_record));
   FunctionSP func_sp = std::make_shared<Function>(
       sc.comp_unit, toOpaqueUid(func_id), toOpaqueUid(sig_id), mangled,
@@ -830,7 +830,7 @@ lldb::TypeSP SymbolFileNativePDB::CreatePointerType(
 }
 
 lldb::TypeSP SymbolFileNativePDB::CreateSimpleType(TypeIndex ti) {
-  uint64_t uid = toOpaqueUid(PdbTypeSymId{ti, false});
+  uint64_t uid = toOpaqueUid(PdbTypeSymId(ti, false));
   if (ti == TypeIndex::NullptrT()) {
     CompilerType ct = m_clang->GetBasicType(eBasicTypeNullPtr);
     Declaration decl;
@@ -1163,7 +1163,7 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbTypeSymId type_id) {
     if (!expected_full_ti)
       llvm::consumeError(expected_full_ti.takeError());
     else if (*expected_full_ti != type_id.index) {
-      full_decl_uid = PdbTypeSymId{*expected_full_ti, false};
+      full_decl_uid = PdbTypeSymId(*expected_full_ti, false);
 
       // It's possible that a lookup would occur for the full decl causing it
       // to be cached, then a second lookup would occur for the forward decl.
@@ -1197,7 +1197,6 @@ TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbTypeSymId type_id) {
         m_clang->GetAsTagDecl(result->GetForwardCompilerType());
     lldbassert(record_decl);
 
-    TypeIndex ti(type_id.index);
     m_uid_to_decl[best_uid] = record_decl;
     m_decl_to_status[record_decl] =
         DeclStatus(best_uid, Type::eResolveStateForward);
@@ -1343,7 +1342,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   }
 
   Declaration decl;
-  PdbTypeSymId tid{ti, false};
+  PdbTypeSymId tid(ti, false);
   SymbolFileTypeSP type_sp =
       std::make_shared<SymbolFileType>(*this, toOpaqueUid(tid));
   Variable::RangeList ranges;
@@ -1371,7 +1370,7 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
   llvm::cantFail(SymbolDeserializer::deserializeAs<ConstantSym>(cvs, constant));
   std::string global_name("::");
   global_name += constant.Name;
-  PdbTypeSymId tid{constant.Type, false};
+  PdbTypeSymId tid(constant.Type, false);
   SymbolFileTypeSP type_sp =
       std::make_shared<SymbolFileType>(*this, toOpaqueUid(tid));
 
@@ -1399,7 +1398,7 @@ SymbolFileNativePDB::GetOrCreateGlobalVariable(PdbGlobalSymId var_id) {
 }
 
 lldb::TypeSP SymbolFileNativePDB::GetOrCreateType(TypeIndex ti) {
-  return GetOrCreateType(PdbTypeSymId{ti, false});
+  return GetOrCreateType(PdbTypeSymId(ti, false));
 }
 
 FunctionSP SymbolFileNativePDB::GetOrCreateFunction(PdbCompilandSymId func_id,
@@ -1680,7 +1679,7 @@ uint32_t SymbolFileNativePDB::FindGlobalVariables(
     case SymbolKind::S_GTHREAD32:
     case SymbolKind::S_LTHREAD32:
     case SymbolKind::S_CONSTANT: {
-      PdbGlobalSymId global{result.first, false};
+      PdbGlobalSymId global(result.first, false);
       var = GetOrCreateGlobalVariable(global);
       variables.AddVariable(var);
       break;
@@ -1719,7 +1718,7 @@ uint32_t SymbolFileNativePDB::FindFunctions(
 
     sc.comp_unit = GetOrCreateCompileUnit(cci).get();
     sc.module_sp = sc.comp_unit->GetModule();
-    PdbCompilandSymId func_id{proc.modi(), proc.SymOffset};
+    PdbCompilandSymId func_id(proc.modi(), proc.SymOffset);
     sc.function = GetOrCreateFunction(func_id, sc).get();
 
     sc_list.Append(sc);
@@ -1856,7 +1855,7 @@ bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
       lldbassert(!IsForwardRefUdt(cvt));
       unmodified_type = *expected_full_ti;
     }
-    type_id = PdbTypeSymId{unmodified_type, false};
+    type_id = PdbTypeSymId(unmodified_type, false);
   }
   TypeIndex field_list_ti = GetFieldListIndex(cvt);
   CVType field_list_cvt = m_index->tpi().getType(field_list_ti);

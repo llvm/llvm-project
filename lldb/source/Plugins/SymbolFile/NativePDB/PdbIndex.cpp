@@ -134,7 +134,7 @@ void PdbIndex::BuildAddrToSymbolMap(CompilandIndexItem &cci) {
     // We need to add 4 here to adjust for the codeview debug magic
     // at the beginning of the debug info stream.
     uint32_t sym_offset = iter.offset() + 4;
-    PdbCompilandSymId cu_sym_id{modi, sym_offset};
+    PdbCompilandSymId cu_sym_id(modi, sym_offset);
 
     // If the debug info is incorrect, we could have multiple symbols with the
     // same address.  So use try_emplace instead of insert, and the first one
