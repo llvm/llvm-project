@@ -672,8 +672,7 @@ Optional<QualType> getDeducedType(ParsedAST &AST,
     return {};
 
   DeducedTypeVisitor V(SourceLocationBeg);
-  for (Decl *D : AST.getLocalTopLevelDecls())
-    V.TraverseDecl(D);
+  V.TraverseAST(AST.getASTContext());
   return V.getDeducedType();
 }
 
