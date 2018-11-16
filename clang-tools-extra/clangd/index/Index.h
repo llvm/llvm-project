@@ -116,8 +116,7 @@ public:
 
   // The stored hash is truncated to RawSize bytes.
   // This trades off memory against the number of symbols we can handle.
-  // FIXME: can we reduce this further to 8 bytes?
-  constexpr static size_t RawSize = 16;
+  constexpr static size_t RawSize = 8;
   llvm::StringRef raw() const {
     return StringRef(reinterpret_cast<const char *>(HashValue.data()), RawSize);
   }
