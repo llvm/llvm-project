@@ -7715,7 +7715,8 @@ bool LLParser::ParseVariableSummary(std::string Name, GlobalValue::GUID GUID,
   if (ParseToken(lltok::rparen, "expected ')' here"))
     return true;
 
-  auto GS = llvm::make_unique<GlobalVarSummary>(GVFlags, std::move(Refs));
+  auto GS = llvm::make_unique<GlobalVarSummary>(
+      GVFlags, GlobalVarSummary::GVarFlags(), std::move(Refs));
 
   GS->setModulePath(ModulePath);
 

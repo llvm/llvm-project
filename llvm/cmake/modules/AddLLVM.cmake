@@ -580,7 +580,7 @@ function(llvm_add_library name)
 
   if(ARG_SHARED OR ARG_MODULE)
     llvm_externalize_debuginfo(${name})
-    llvm_codesign(${name})
+    llvm_codesign(TARGET ${name})
   endif()
 endfunction()
 
@@ -708,7 +708,12 @@ endmacro(add_llvm_loadable_module name)
 
 
 macro(add_llvm_executable name)
-  cmake_parse_arguments(ARG "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH" "" "DEPENDS" ${ARGN})
+  cmake_parse_arguments(ARG
+    "DISABLE_LLVM_LINK_LLVM_DYLIB;IGNORE_EXTERNALIZE_DEBUGINFO;NO_INSTALL_RPATH"
+    "ENTITLEMENTS"
+    "DEPENDS"
+    ${ARGN})
+
   llvm_process_sources( ALL_FILES ${ARG_UNPARSED_ARGUMENTS} )
 
   list(APPEND LLVM_COMMON_DEPENDS ${ARG_DEPENDS})
@@ -787,7 +792,7 @@ macro(add_llvm_executable name)
     target_link_libraries(${name} PRIVATE ${LLVM_PTHREAD_LIB})
   endif()
 
-  llvm_codesign(${name})
+  llvm_codesign(TARGET ${name} ENTITLEMENTS ${ARG_ENTITLEMENTS})
 endmacro(add_llvm_executable name)
 
 function(export_executable_symbols target)
@@ -1626,7 +1631,14 @@ function(llvm_externalize_debuginfo name)
   endif()
 endfunction()
 
-function(llvm_codesign name)
+# Usage: llvm_codesign(TARGET name [ENTITLEMENTS file])
+#
+# Code-sign the given TARGET with the global LLVM_CODESIGNING_IDENTITY or skip
+# if undefined. Customize capabilities by passing a file path to ENTITLEMENTS.
+#
+function(llvm_codesign)
+  cmake_parse_arguments(ARG "" "TARGET;ENTITLEMENTS" "" ${ARGN})
+
   if(NOT LLVM_CODESIGNING_IDENTITY)
     return()
   endif()
@@ -1642,12 +1654,16 @@ function(llvm_codesign name)
         OUTPUT_VARIABLE CMAKE_CODESIGN_ALLOCATE
       )
     endif()
+    if(DEFINED ARG_ENTITLEMENTS)
+      set(PASS_ENTITLEMENTS --entitlements ${ARG_ENTITLEMENTS})
+    endif()
+
     add_custom_command(
-      TARGET ${name} POST_BUILD
+      TARGET ${ARG_TARGET} POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E
               env CODESIGN_ALLOCATE=${CMAKE_CODESIGN_ALLOCATE}
               ${CMAKE_CODESIGN} -s ${LLVM_CODESIGNING_IDENTITY}
-              $<TARGET_FILE:${name}>
+              ${PASS_ENTITLEMENTS} $<TARGET_FILE:${ARG_TARGET}>
     )
   endif()
 endfunction()

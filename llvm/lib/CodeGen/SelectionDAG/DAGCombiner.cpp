@@ -528,7 +528,7 @@ namespace {
                            EVT &MemVT, unsigned ShAmt = 0);
 
     /// Used by BackwardsPropagateMask to find suitable loads.
-    bool SearchForAndLoads(SDNode *N, SmallPtrSetImpl<LoadSDNode*> &Loads,
+    bool SearchForAndLoads(SDNode *N, SmallVectorImpl<LoadSDNode*> &Loads,
                            SmallPtrSetImpl<SDNode*> &NodesWithConsts,
                            ConstantSDNode *Mask, SDNode *&NodeToMask);
     /// Attempt to propagate a given AND node back to load leaves so that they
@@ -4213,7 +4213,7 @@ bool DAGCombiner::isLegalNarrowLdSt(LSBaseSDNode *LDST,
 }
 
 bool DAGCombiner::SearchForAndLoads(SDNode *N,
-                                    SmallPtrSetImpl<LoadSDNode*> &Loads,
+                                    SmallVectorImpl<LoadSDNode*> &Loads,
                                     SmallPtrSetImpl<SDNode*> &NodesWithConsts,
                                     ConstantSDNode *Mask,
                                     SDNode *&NodeToMask) {
@@ -4250,7 +4250,7 @@ bool DAGCombiner::SearchForAndLoads(SDNode *N,
 
         // Use LE to convert equal sized loads to zext.
         if (ExtVT.bitsLE(Load->getMemoryVT()))
-          Loads.insert(Load);
+          Loads.push_back(Load);
 
         continue;
       }
@@ -4315,7 +4315,7 @@ bool DAGCombiner::BackwardsPropagateMask(SDNode *N, SelectionDAG &DAG) {
   if (isa<LoadSDNode>(N->getOperand(0)))
     return false;
 
-  SmallPtrSet<LoadSDNode*, 8> Loads;
+  SmallVector<LoadSDNode*, 8> Loads;
   SmallPtrSet<SDNode*, 2> NodesWithConsts;
   SDNode *FixupNode = nullptr;
   if (SearchForAndLoads(N, Loads, NodesWithConsts, Mask, FixupNode)) {

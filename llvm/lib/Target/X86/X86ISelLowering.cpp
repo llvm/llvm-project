@@ -6627,8 +6627,7 @@ static bool resolveTargetShuffleInputs(SDValue Op,
       return false;
 
   resolveTargetShuffleInputsAndMask(Inputs, Mask);
-  // TODO - Add support for more than 2 inputs.
-  return Inputs.size() <= 2;
+  return true;
 }
 
 /// Returns the scalar element that will make up the ith
@@ -31005,7 +31004,10 @@ static SDValue combineX86ShufflesRecursively(
   if (!resolveTargetShuffleInputs(Op, OpInputs, OpMask, DAG))
     return SDValue();
 
-  assert(OpInputs.size() <= 2 && "Too many shuffle inputs");
+  // TODO - Add support for more than 2 inputs.
+  if (2 < OpInputs.size())
+    return SDValue();
+
   SDValue Input0 = (OpInputs.size() > 0 ? OpInputs[0] : SDValue());
   SDValue Input1 = (OpInputs.size() > 1 ? OpInputs[1] : SDValue());
 
