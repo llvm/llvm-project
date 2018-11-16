@@ -32,6 +32,8 @@ namespace clangd {
 // operations can be called from multiple-threads concurrently.
 class BackgroundIndexStorage {
 public:
+  virtual ~BackgroundIndexStorage() = default;
+
   // Shards of the index are stored and retrieved independently, keyed by shard
   // identifier - in practice this is a source file name
   virtual llvm::Error storeShard(llvm::StringRef ShardIdentifier,
