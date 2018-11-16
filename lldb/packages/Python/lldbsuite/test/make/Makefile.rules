@@ -51,6 +51,17 @@ ifeq "$(OS)" ""
 endif
 
 #----------------------------------------------------------------------
+# If OS is Windows, force SHELL to be cmd
+#
+# Some versions of make on Windows will search for other shells such as
+# C:\cygwin\bin\sh.exe. This shell fails for numerous different reasons
+# so default to using cmd.exe.
+#----------------------------------------------------------------------
+ifeq "$(OS)" "Windows_NT"
+	SHELL = $(WINDIR)\system32\cmd.exe
+endif
+
+#----------------------------------------------------------------------
 # If TRIPLE is not defined try to set the ARCH, CC, CFLAGS, and more
 # from the triple alone
 #----------------------------------------------------------------------
@@ -514,7 +525,7 @@ EXE = $(DYLIB_FILENAME)
 endif
 else
 $(EXE) : $(OBJECTS) $(ARCHIVE_NAME)
-	$(LD) $(OBJECTS) $(LDFLAGS) $(ARCHIVE_NAME) -o "$(EXE)"
+	"$(LD)" $(OBJECTS) $(LDFLAGS) $(ARCHIVE_NAME) -o "$(EXE)"
 ifneq "$(CODESIGN)" ""
 	$(CODESIGN) -s - "$(EXE)"
 endif
@@ -571,7 +582,7 @@ ifneq "$(DS)" ""
 endif
 endif
 else
-	$(LD) $(DYLIB_OBJECTS) $(LDFLAGS) -shared -o "$(DYLIB_FILENAME)"
+	"$(LD)" $(DYLIB_OBJECTS) $(LDFLAGS) -shared -o "$(DYLIB_FILENAME)"
 ifeq "$(SPLIT_DEBUG_SYMBOLS)" "YES"
 	$(OBJCOPY) --only-keep-debug "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME).debug"
 	$(OBJCOPY) --strip-debug --add-gnu-debuglink="$(DYLIB_FILENAME).debug" "$(DYLIB_FILENAME)" "$(DYLIB_FILENAME)"

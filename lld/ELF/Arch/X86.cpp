@@ -60,7 +60,7 @@ X86::X86() {
   PltEntrySize = 16;
   PltHeaderSize = 16;
   TlsGdRelaxSkip = 2;
-  TrapInstr = 0xcccccccc; // 0xcc = INT3
+  TrapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3
 
   // Align to the non-PAE large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.

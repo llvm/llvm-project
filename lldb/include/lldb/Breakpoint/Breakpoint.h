@@ -499,6 +499,14 @@ public:
   size_t GetNumResolvedLocations() const;
 
   //------------------------------------------------------------------
+  /// Return whether this breakpoint has any resolved locations.
+  ///
+  /// @return
+  ///     True if GetNumResolvedLocations > 0
+  //------------------------------------------------------------------
+  bool HasResolvedLocations() const;
+
+  //------------------------------------------------------------------
   /// Return the number of breakpoint locations.
   ///
   /// @return

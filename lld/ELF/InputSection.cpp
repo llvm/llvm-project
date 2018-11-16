@@ -668,11 +668,11 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_MIPS_TLSLD:
     return In.MipsGot->getVA() + In.MipsGot->getTlsIndexOffset(File) -
            In.MipsGot->getGp(File);
-  case R_PAGE_PC: {
+  case R_AARCH64_PAGE_PC: {
     uint64_t Val = Sym.isUndefWeak() ? A : Sym.getVA(A);
     return getAArch64Page(Val) - getAArch64Page(P);
   }
-  case R_PLT_PAGE_PC: {
+  case R_AARCH64_PLT_PAGE_PC: {
     uint64_t Val = Sym.isUndefWeak() ? A : Sym.getPltVA() + A;
     return getAArch64Page(Val) - getAArch64Page(P);
   }
@@ -743,7 +743,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     return Sym.getSize() + A;
   case R_TLSDESC:
     return In.Got->getGlobalDynAddr(Sym) + A;
-  case R_TLSDESC_PAGE:
+  case R_AARCH64_TLSDESC_PAGE:
     return getAArch64Page(In.Got->getGlobalDynAddr(Sym) + A) -
            getAArch64Page(P);
   case R_TLSGD_GOT:

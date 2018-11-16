@@ -1252,17 +1252,17 @@ define x86_regcallcc %struct.complex @test_argMultiRet(float, double, i32, i8, i
 ; WIN64-LABEL: test_argMultiRet:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    vaddsd __real@{{.*}}(%rip), %xmm1, %xmm1
+; WIN64-NEXT:    movl $999, %edx # imm = 0x3E7
 ; WIN64-NEXT:    movl $4, %eax
 ; WIN64-NEXT:    movb $7, %cl
-; WIN64-NEXT:    movl $999, %edx # imm = 0x3E7
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX64-LABEL: test_argMultiRet:
 ; LINUXOSX64:       # %bb.0:
 ; LINUXOSX64-NEXT:    vaddsd {{.*}}(%rip), %xmm1, %xmm1
+; LINUXOSX64-NEXT:    movl $999, %edx # imm = 0x3E7
 ; LINUXOSX64-NEXT:    movl $4, %eax
 ; LINUXOSX64-NEXT:    movb $7, %cl
-; LINUXOSX64-NEXT:    movl $999, %edx # imm = 0x3E7
 ; LINUXOSX64-NEXT:    retq
   %6 = fadd double %1, 5.000000e+00
   %7 = insertvalue %struct.complex undef, float %0, 0

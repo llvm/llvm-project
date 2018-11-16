@@ -581,7 +581,8 @@ public:
   }
 
   bool hasCodeObjectV3() const {
-    return CodeObjectV3;
+    // FIXME: Need to add code object v3 support for mesa and pal.
+    return isAmdHsaOS() ? CodeObjectV3 : false;
   }
 
   bool hasUnalignedBufferAccess() const {

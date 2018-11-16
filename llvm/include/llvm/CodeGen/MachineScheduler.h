@@ -794,7 +794,7 @@ public:
   /// Represent the type of SchedCandidate found within a single queue.
   /// pickNodeBidirectional depends on these listed by decreasing priority.
   enum CandReason : uint8_t {
-    NoCand, Only1, PhysRegCopy, RegExcess, RegCritical, Stall, Cluster, Weak,
+    NoCand, Only1, PhysReg, RegExcess, RegCritical, Stall, Cluster, Weak,
     RegMax, ResourceReduce, ResourceDemand, BotHeightReduce, BotPathReduce,
     TopDepthReduce, TopPathReduce, NextDefUse, NodeOrder};
 
@@ -928,7 +928,7 @@ bool tryPressure(const PressureChange &TryP,
                  const TargetRegisterInfo *TRI,
                  const MachineFunction &MF);
 unsigned getWeakLeft(const SUnit *SU, bool isTop);
-int biasPhysRegCopy(const SUnit *SU, bool isTop);
+int biasPhysReg(const SUnit *SU, bool isTop);
 
 /// GenericScheduler shrinks the unscheduled zone using heuristics to balance
 /// the schedule.
@@ -1006,7 +1006,7 @@ protected:
                          const RegPressureTracker &RPTracker,
                          SchedCandidate &Candidate);
 
-  void reschedulePhysRegCopies(SUnit *SU, bool isTop);
+  void reschedulePhysReg(SUnit *SU, bool isTop);
 };
 
 /// PostGenericScheduler - Interface to the scheduling algorithm used by

@@ -30,8 +30,8 @@ define i32 @main() #0 {
 ; SMALL-PIC-NEXT:    .cfi_def_cfa_offset 432
 ; SMALL-PIC-NEXT:    movl $0, {{[0-9]+}}(%rsp)
 ; SMALL-PIC-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; SMALL-PIC-NEXT:    xorl %esi, %esi
 ; SMALL-PIC-NEXT:    movl $400, %edx # imm = 0x190
+; SMALL-PIC-NEXT:    xorl %esi, %esi
 ; SMALL-PIC-NEXT:    callq memset@PLT
 ; SMALL-PIC-NEXT:    xorl %eax, %eax
 ; SMALL-PIC-NEXT:    addq $424, %rsp # imm = 0x1A8
@@ -44,8 +44,8 @@ define i32 @main() #0 {
 ; MEDIUM-PIC-NEXT:    .cfi_def_cfa_offset 432
 ; MEDIUM-PIC-NEXT:    movl $0, {{[0-9]+}}(%rsp)
 ; MEDIUM-PIC-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
-; MEDIUM-PIC-NEXT:    xorl %esi, %esi
 ; MEDIUM-PIC-NEXT:    movl $400, %edx # imm = 0x190
+; MEDIUM-PIC-NEXT:    xorl %esi, %esi
 ; MEDIUM-PIC-NEXT:    callq memset@PLT
 ; MEDIUM-PIC-NEXT:    xorl %eax, %eax
 ; MEDIUM-PIC-NEXT:    addq $424, %rsp # imm = 0x1A8
@@ -57,14 +57,14 @@ define i32 @main() #0 {
 ; LARGE-PIC-NEXT:    subq $424, %rsp # imm = 0x1A8
 ; LARGE-PIC-NEXT:    .cfi_def_cfa_offset 432
 ; LARGE-PIC-NEXT:  .L0$pb:
-; LARGE-PIC-NEXT:    leaq .L0$pb(%rip), %rax
+; LARGE-PIC-NEXT:    leaq .L0${{.*}}(%rip), %rax
 ; LARGE-PIC-NEXT:    movabsq $_GLOBAL_OFFSET_TABLE_-.L0$pb, %rcx
 ; LARGE-PIC-NEXT:    addq %rax, %rcx
 ; LARGE-PIC-NEXT:    movl $0, {{[0-9]+}}(%rsp)
 ; LARGE-PIC-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; LARGE-PIC-NEXT:    movabsq $memset@GOT, %rax
-; LARGE-PIC-NEXT:    xorl %esi, %esi
 ; LARGE-PIC-NEXT:    movl $400, %edx # imm = 0x190
+; LARGE-PIC-NEXT:    xorl %esi, %esi
 ; LARGE-PIC-NEXT:    callq *(%rcx,%rax)
 ; LARGE-PIC-NEXT:    xorl %eax, %eax
 ; LARGE-PIC-NEXT:    addq $424, %rsp # imm = 0x1A8

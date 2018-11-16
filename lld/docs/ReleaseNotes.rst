@@ -65,3 +65,11 @@ MachO Improvements
 ------------------
 
 * Item 1.
+
+WebAssembly Improvements
+------------------------
+
+* Add initial support for creating shared libraries (-shared).
+  Note: The shared library format is still under active development and may
+  undergo significant changes in future versions.
+  See: https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md

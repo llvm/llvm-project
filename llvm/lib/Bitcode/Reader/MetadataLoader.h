@@ -65,8 +65,6 @@ public:
   /// necessary.
   Metadata *getMetadataFwdRefOrLoad(unsigned Idx);
 
-  MDNode *getMDNodeFwdRefOrNull(unsigned Idx);
-
   /// Return the DISubprogram metadata for a Function if any, null otherwise.
   DISubprogram *lookupSubprogramForFunction(Function *F);
 

@@ -147,7 +147,6 @@ void test_hash_enabled(InputKey const& key) {
 #endif
 
   // Hashable requirements
-  using CKey = ConvertibleTo<Key>;
   static_assert(can_hash<Hash(Key&)>(), "");
   static_assert(can_hash<Hash(Key const&)>(), "");
   static_assert(can_hash<Hash(Key&&)>(), "");
@@ -187,7 +186,6 @@ void test_hash_disabled() {
     >::value, "");
 
   // Hashable requirements
-  using CKey = ConvertibleTo<Key>;
   static_assert(!can_hash<Hash(Key&)>(), "");
   static_assert(!can_hash<Hash(Key const&)>(), "");
   static_assert(!can_hash<Hash(Key&&)>(), "");

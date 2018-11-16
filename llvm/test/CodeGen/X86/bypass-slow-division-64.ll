@@ -17,8 +17,8 @@ define i64 @Test_get_quotient(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    idivq %rsi
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %esi
 ; CHECK-NEXT:    # kill: def $eax killed $eax def $rax
 ; CHECK-NEXT:    retq
@@ -40,8 +40,8 @@ define i64 @Test_get_remainder(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_1:
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %esi
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    retq
@@ -63,8 +63,8 @@ define i64 @Test_get_quotient_and_remainder(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB2_1:
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %esi
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
 ; CHECK-NEXT:    # kill: def $eax killed $eax def $rax

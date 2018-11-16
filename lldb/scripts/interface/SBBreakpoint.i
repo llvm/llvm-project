@@ -251,6 +251,9 @@ public:
     static uint32_t
     GetNumBreakpointLocationsFromEvent (const lldb::SBEvent &event_sp);
     
+    bool
+    IsHardware ();
+
     %pythoncode %{
         
         class locations_access(object):

@@ -32,7 +32,6 @@ TEST_SUITE(directory_iterator_increment_tests)
 
 TEST_CASE(test_increment_signatures)
 {
-    using D = directory_iterator;
     directory_iterator d; ((void)d);
     std::error_code ec; ((void)ec);
 

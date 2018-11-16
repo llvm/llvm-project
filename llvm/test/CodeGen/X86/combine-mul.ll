@@ -304,7 +304,7 @@ define <16 x i8> @PR35579(<16 x i8> %x) {
 ;
 ; AVX-LABEL: PR35579:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovsxbw %xmm0, %ymm0
+; AVX-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
 ; AVX-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm0
 ; AVX-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>

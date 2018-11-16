@@ -364,7 +364,7 @@ define amdgpu_kernel void @lds_atomic_add_noret_i64(i64 addrspace(3)* %ptr) noun
 ; GFX89-DAG: s_load_dword [[PTR:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0x24
 ; GCN-DAG: v_mov_b32_e32 v[[LOVDATA:[0-9]+]], 9
 ; GCN-DAG: v_mov_b32_e32 v[[HIVDATA:[0-9]+]], 0
-; GCN: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
+; GCN-DAG: v_mov_b32_e32 [[VPTR:v[0-9]+]], [[PTR]]
 ; GCN: ds_add_u64 {{v[0-9]+}}, v{{\[}}[[LOVDATA]]:[[HIVDATA]]{{\]}} offset:32
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_add_noret_i64_offset(i64 addrspace(3)* %ptr) nounwind {

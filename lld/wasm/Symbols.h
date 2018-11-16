@@ -291,7 +291,7 @@ struct WasmSym {
   // __stack_pointer
   // Global that holds the address of the top of the explicit value stack in
   // linear memory.
-  static DefinedGlobal *StackPointer;
+  static GlobalSymbol *StackPointer;
 
   // __data_end
   // Symbol marking the end of the data and bss.
@@ -310,6 +310,14 @@ struct WasmSym {
   // __dso_handle
   // Symbol used in calls to __cxa_atexit to determine current DLL
   static DefinedData *DsoHandle;
+
+  // __table_base
+  // Used in PIC code for offset of indirect function table
+  static UndefinedGlobal *TableBase;
+
+  // __memory_base
+  // Used in PIC code for offset of global data
+  static UndefinedGlobal *MemoryBase;
 };
 
 // A buffer class that is large enough to hold any Symbol-derived

@@ -676,13 +676,13 @@ private:
       //  c) there is a bug in the AST, and the node is not reachable
       // Usually the traversal scope is the whole AST, which precludes b.
       // Bugs are common enough that it's worthwhile asserting when we can.
-      assert(Node.get<TranslationUnitDecl>() ||
-             /* Traversal scope is limited if none of the bounds are the TU */
-             llvm::none_of(ActiveASTContext->getTraversalScope(),
-                           [](Decl *D) {
-                             return D->getKind() == Decl::TranslationUnit;
-                           }) &&
-                 "Found node that is not in the complete parent map!");
+      assert((Node.get<TranslationUnitDecl>() ||
+              /* Traversal scope is limited if none of the bounds are the TU */
+              llvm::none_of(ActiveASTContext->getTraversalScope(),
+                            [](Decl *D) {
+                              return D->getKind() == Decl::TranslationUnit;
+                            })) &&
+             "Found node that is not in the complete parent map!");
       return false;
     }
     if (Parents.size() == 1) {

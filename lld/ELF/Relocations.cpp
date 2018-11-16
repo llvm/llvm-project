@@ -174,7 +174,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   if (Config->EMachine == EM_MIPS)
     return handleMipsTlsRelocation(Type, Sym, C, Offset, Addend, Expr);
 
-  if (isRelExprOneOf<R_TLSDESC, R_TLSDESC_PAGE, R_TLSDESC_CALL>(Expr) &&
+  if (isRelExprOneOf<R_TLSDESC, R_AARCH64_TLSDESC_PAGE, R_TLSDESC_CALL>(Expr) &&
       Config->Shared) {
     if (In.Got->addDynTlsEntry(Sym)) {
       uint64_t Off = In.Got->getGlobalDynOffset(Sym);
@@ -230,8 +230,8 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     return 1;
   }
 
-  if (isRelExprOneOf<R_TLSDESC, R_TLSDESC_PAGE, R_TLSDESC_CALL, R_TLSGD_GOT,
-                     R_TLSGD_GOT_FROM_END, R_TLSGD_PC>(Expr)) {
+  if (isRelExprOneOf<R_TLSDESC, R_AARCH64_TLSDESC_PAGE, R_TLSDESC_CALL,
+                     R_TLSGD_GOT, R_TLSGD_GOT_FROM_END, R_TLSGD_PC>(Expr)) {
     if (Config->Shared) {
       if (In.Got->addDynTlsEntry(Sym)) {
         uint64_t Off = In.Got->getGlobalDynOffset(Sym);
@@ -324,7 +324,8 @@ static bool isAbsoluteValue(const Symbol &Sym) {
 
 // Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr Expr) {
-  return isRelExprOneOf<R_PLT_PC, R_PPC_CALL_PLT, R_PLT, R_PLT_PAGE_PC>(Expr);
+  return isRelExprOneOf<R_PLT_PC, R_PPC_CALL_PLT, R_PLT, R_AARCH64_PLT_PAGE_PC>(
+      Expr);
 }
 
 // Returns true if Expr refers a GOT entry. Note that this function
@@ -340,7 +341,7 @@ static bool needsGot(RelExpr Expr) {
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr Expr) {
   return isRelExprOneOf<R_PC, R_GOTREL, R_GOTREL_FROM_END, R_MIPS_GOTREL,
-                        R_PPC_CALL, R_PPC_CALL_PLT, R_PAGE_PC,
+                        R_PPC_CALL, R_PPC_CALL_PLT, R_AARCH64_PAGE_PC,
                         R_RELAX_GOT_PC>(Expr);
 }
 
@@ -362,8 +363,8 @@ static bool isStaticLinkTimeConstant(RelExpr E, RelType Type, const Symbol &Sym,
                      R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTONLY_PC,
                      R_GOTONLY_PC_FROM_END, R_PLT_PC, R_TLSGD_GOT,
                      R_TLSGD_GOT_FROM_END, R_TLSGD_PC, R_PPC_CALL_PLT,
-                     R_TLSDESC_CALL, R_TLSDESC_PAGE, R_HINT, R_TLSLD_HINT,
-                     R_TLSIE_HINT>(E))
+                     R_TLSDESC_CALL, R_AARCH64_TLSDESC_PAGE, R_HINT,
+                     R_TLSLD_HINT, R_TLSIE_HINT>(E))
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -414,8 +415,8 @@ static RelExpr toPlt(RelExpr Expr) {
     return R_PPC_CALL_PLT;
   case R_PC:
     return R_PLT_PC;
-  case R_PAGE_PC:
-    return R_PLT_PAGE_PC;
+  case R_AARCH64_PAGE_PC:
+    return R_AARCH64_PLT_PAGE_PC;
   case R_ABS:
     return R_PLT;
   default:

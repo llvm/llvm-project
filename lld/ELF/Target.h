@@ -14,6 +14,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Support/MathExtras.h"
+#include <array>
 
 namespace lld {
 std::string toString(elf::RelType Type);
@@ -121,7 +122,7 @@ public:
 
   // A 4-byte field corresponding to one or more trap instructions, used to pad
   // executable OutputSections.
-  uint32_t TrapInstr = 0;
+  std::array<uint8_t, 4> TrapInstr;
 
   // If a target needs to rewrite calls to __morestack to instead call
   // __morestack_non_split when a split-stack enabled caller calls a

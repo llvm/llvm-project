@@ -538,10 +538,10 @@ define void @test_basic_eh(i32 %a, i32* %ptr1, i32* %ptr2) speculative_load_hard
 ; X64-NEXT:    cmovneq %r15, %rcx
 ; X64-NEXT:    movl %ebp, (%rax)
 ; X64-NEXT:  .Ltmp0:
-; X64-NEXT:    xorl %esi, %esi
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    shlq $47, %rcx
 ; X64-NEXT:    movq %rax, %rdi
+; X64-NEXT:    xorl %esi, %esi
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    orq %rcx, %rsp
 ; X64-NEXT:    callq __cxa_throw
 ; X64-NEXT:  .Lslh_ret_addr5:
@@ -612,9 +612,9 @@ define void @test_basic_eh(i32 %a, i32* %ptr1, i32* %ptr2) speculative_load_hard
 ; X64-LFENCE-NEXT:    callq __cxa_allocate_exception
 ; X64-LFENCE-NEXT:    movl %ebp, (%rax)
 ; X64-LFENCE-NEXT:  .Ltmp0:
+; X64-LFENCE-NEXT:    movq %rax, %rdi
 ; X64-LFENCE-NEXT:    xorl %esi, %esi
 ; X64-LFENCE-NEXT:    xorl %edx, %edx
-; X64-LFENCE-NEXT:    movq %rax, %rdi
 ; X64-LFENCE-NEXT:    callq __cxa_throw
 ; X64-LFENCE-NEXT:  .Ltmp1:
 ; X64-LFENCE-NEXT:  .LBB4_2: # %exit
