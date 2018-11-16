@@ -261,7 +261,11 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   }
 
   if (!m_die_array.empty()) {
-    lldbassert(!m_first_die || m_first_die == m_die_array.front());
+    if (m_first_die) {
+      // Only needed for the assertion.
+      m_first_die.SetEmptyChildren(m_die_array.front().GetEmptyChildren());
+      lldbassert(m_first_die == m_die_array.front());
+    }
     m_first_die = m_die_array.front();
   }
 
