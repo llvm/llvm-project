@@ -433,24 +433,6 @@ static bool IsClassRecord(TypeLeafKind kind) {
   }
 }
 
-static PDB_SymType GetPdbSymType(TpiStream &tpi, TypeIndex ti) {
-  if (ti.isSimple()) {
-    if (ti.getSimpleMode() == SimpleTypeMode::Direct)
-      return PDB_SymType::BuiltinType;
-    return PDB_SymType::PointerType;
-  }
-
-  CVType cvt = tpi.getType(ti);
-  TypeLeafKind kind = cvt.kind();
-  if (kind != LF_MODIFIER)
-    return CVTypeToPDBType(kind);
-
-  // If this is an LF_MODIFIER, look through it to get the kind that it
-  // modifies.  Note that it's not possible to have an LF_MODIFIER that
-  // modifies another LF_MODIFIER, although this would handle that anyway.
-  return GetPdbSymType(tpi, LookThroughModifierRecord(cvt));
-}
-
 static bool IsCVarArgsFunction(llvm::ArrayRef<TypeIndex> args) {
   if (args.empty())
     return false;
