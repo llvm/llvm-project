@@ -111,7 +111,7 @@ ValueObjectSP LibcxxVariantGetNthHead(ValueObjectSP &impl_sp, uint64_t index) {
   }
 
   return current_level->GetChildMemberWithName(ConstString("__head"), true);
-};
+}
 } // namespace
 
 namespace lldb_private {
