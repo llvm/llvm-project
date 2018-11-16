@@ -5101,11 +5101,13 @@ enum MachineOutlinerClass {
 
 enum MachineOutlinerMBBFlags {
   LRUnavailableSomewhere = 0x2,
-  HasCalls = 0x4
+  HasCalls = 0x4,
+  UnsafeRegsDead = 0x8
 };
 
 unsigned
 AArch64InstrInfo::findRegisterToSaveLRTo(const outliner::Candidate &C) const {
+  assert(C.LRUWasSet && "LRU wasn't set?");
   MachineFunction *MF = C.getMF();
   const AArch64RegisterInfo *ARI = static_cast<const AArch64RegisterInfo *>(
       MF->getSubtarget().getRegisterInfo());
@@ -5141,9 +5143,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // Compute liveness information for each candidate, and set FlagsSetInAll.
   const TargetRegisterInfo &TRI = getRegisterInfo();
   std::for_each(RepeatedSequenceLocs.begin(), RepeatedSequenceLocs.end(),
-                [&TRI, &FlagsSetInAll](outliner::Candidate &C) {
+                [&FlagsSetInAll](outliner::Candidate &C) {
                   FlagsSetInAll &= C.Flags;
-                  C.initLRU(TRI);
                 });
 
   // According to the AArch64 Procedure Call Standard, the following are
@@ -5157,23 +5158,31 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // of these registers is live into/across it. Thus, we need to delete
   // those
   // candidates.
-  auto CantGuaranteeValueAcrossCall = [](outliner::Candidate &C) {
+  auto CantGuaranteeValueAcrossCall = [&TRI](outliner::Candidate &C) {
+    // If the unsafe registers in this block are all dead, then we don't need
+    // to compute liveness here.
+    if (C.Flags & UnsafeRegsDead)
+      return false;
+    C.initLRU(TRI);
     LiveRegUnits LRU = C.LRU;
     return (!LRU.available(AArch64::W16) || !LRU.available(AArch64::W17) ||
             !LRU.available(AArch64::NZCV));
   };
 
-  // Erase every candidate that violates the restrictions above. (It could be
-  // true that we have viable candidates, so it's not worth bailing out in
-  // the case that, say, 1 out of 20 candidates violate the restructions.)
-  RepeatedSequenceLocs.erase(std::remove_if(RepeatedSequenceLocs.begin(),
-                                            RepeatedSequenceLocs.end(),
-                                            CantGuaranteeValueAcrossCall),
-                             RepeatedSequenceLocs.end());
+  // Are there any candidates where those registers are live?
+  if (!(FlagsSetInAll & UnsafeRegsDead)) {
+    // Erase every candidate that violates the restrictions above. (It could be
+    // true that we have viable candidates, so it's not worth bailing out in
+    // the case that, say, 1 out of 20 candidates violate the restructions.)
+    RepeatedSequenceLocs.erase(std::remove_if(RepeatedSequenceLocs.begin(),
+                                              RepeatedSequenceLocs.end(),
+                                              CantGuaranteeValueAcrossCall),
+                               RepeatedSequenceLocs.end());
 
-  // If the sequence doesn't have enough candidates left, then we're done.
-  if (RepeatedSequenceLocs.size() < 2)
-    return outliner::OutlinedFunction();
+    // If the sequence doesn't have enough candidates left, then we're done.
+    if (RepeatedSequenceLocs.size() < 2)
+      return outliner::OutlinedFunction();
+  }
 
   // At this point, we have only "safe" candidates to outline. Figure out
   // frame + call instruction information.
@@ -5216,7 +5225,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // to (or exit from) some candidate.
   else if (std::all_of(RepeatedSequenceLocs.begin(),
                        RepeatedSequenceLocs.end(),
-                       [](outliner::Candidate &C) {
+                       [&TRI](outliner::Candidate &C) {
+                         C.initLRU(TRI);
                          return C.LRU.available(AArch64::LR);
                          })) {
     FrameID = MachineOutlinerNoLRSave;
@@ -5227,7 +5237,8 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   // LR is live, so we need to save it. Decide whether it should be saved to
   // the stack, or if it can be saved to a register.
   else {
-    if (all_of(RepeatedSequenceLocs, [this](outliner::Candidate &C) {
+    if (all_of(RepeatedSequenceLocs, [this, &TRI](outliner::Candidate &C) {
+          C.initLRU(TRI);
           return findRegisterToSaveLRTo(C);
         })) {
       // Every candidate has an available callee-saved register for the save.
@@ -5310,6 +5321,11 @@ bool AArch64InstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
   bool W16AvailableInBlock = LRU.available(AArch64::W16);
   bool W17AvailableInBlock = LRU.available(AArch64::W17);
   bool NZCVAvailableInBlock = LRU.available(AArch64::NZCV);
+
+  // If all of these are dead (and not live out), we know we don't have to check
+  // them later.
+  if (W16AvailableInBlock && W17AvailableInBlock && NZCVAvailableInBlock)
+    Flags |= MachineOutlinerMBBFlags::UnsafeRegsDead;
 
   // Now, add the live outs to the set.
   LRU.addLiveOuts(MBB);

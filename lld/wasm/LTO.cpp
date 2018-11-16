@@ -57,6 +57,13 @@ static std::unique_ptr<lto::LTO> createLTO() {
   C.OptLevel = Config->LTOO;
   C.MAttrs = GetMAttrs();
 
+  if (Config->Relocatable)
+    C.RelocModel = None;
+  else if (Config->Pic)
+    C.RelocModel = Reloc::PIC_;
+  else
+    C.RelocModel = Reloc::Static;
+
   if (Config->SaveTemps)
     checkError(C.addSaveTemps(Config->OutputFile.str() + ".",
                               /*UseInputModulePath*/ true));

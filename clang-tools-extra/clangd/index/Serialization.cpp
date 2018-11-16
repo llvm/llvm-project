@@ -239,7 +239,7 @@ void writeLocation(const SymbolLocation &Loc, const StringTableOut &Strings,
 
 SymbolLocation readLocation(Reader &Data, ArrayRef<StringRef> Strings) {
   SymbolLocation Loc;
-  Loc.FileURI = Data.consumeString(Strings);
+  Loc.FileURI = Data.consumeString(Strings).data();
   for (auto *Endpoint : {&Loc.Start, &Loc.End}) {
     Endpoint->setLine(Data.consumeVar());
     Endpoint->setColumn(Data.consumeVar());
@@ -409,8 +409,11 @@ void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
   if (Data.Refs) {
     for (const auto &Sym : *Data.Refs) {
       Refs.emplace_back(Sym);
-      for (auto &Ref : Refs.back().second)
-        Strings.intern(Ref.Location.FileURI);
+      for (auto &Ref : Refs.back().second) {
+        StringRef File = Ref.Location.FileURI;
+        Strings.intern(File);
+        Ref.Location.FileURI = File.data();
+      }
     }
   }
 

@@ -338,6 +338,12 @@ void VPInstruction::print(raw_ostream &O) const {
   case VPInstruction::ICmpULE:
     O << "icmp ule";
     break;
+  case VPInstruction::SLPLoad:
+    O << "combined load";
+    break;
+  case VPInstruction::SLPStore:
+    O << "combined store";
+    break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }
@@ -680,6 +686,13 @@ void VPWidenMemoryInstructionRecipe::print(raw_ostream &O,
 }
 
 template void DomTreeBuilder::Calculate<VPDominatorTree>(VPDominatorTree &DT);
+
+void VPValue::replaceAllUsesWith(VPValue *New) {
+  for (VPUser *User : users())
+    for (unsigned I = 0, E = User->getNumOperands(); I < E; ++I)
+      if (User->getOperand(I) == this)
+        User->setOperand(I, New);
+}
 
 void VPInterleavedAccessInfo::visitRegion(VPRegionBlock *Region,
                                           Old2NewTy &Old2New,

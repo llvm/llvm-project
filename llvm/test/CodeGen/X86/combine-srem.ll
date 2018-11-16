@@ -399,8 +399,8 @@ define i32 @ossfuzz6883() {
 ; CHECK-NEXT:    cltd
 ; CHECK-NEXT:    idivl %esi
 ; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divl %esi
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq

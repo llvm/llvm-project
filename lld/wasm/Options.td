@@ -17,7 +17,7 @@ multiclass B<string name, string help1, string help2> {
   def no_ # NAME: Flag<["--", "-"], "no-" # name>, HelpText<help2>;
 }
 
-// The follow flags are shared with the ELF linker
+// The following flags are shared with the ELF linker
 def color_diagnostics: F<"color-diagnostics">,
   HelpText<"Use colors in diagnostics">;
 
@@ -75,11 +75,17 @@ def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
 
 def O: JoinedOrSeparate<["-"], "O">, HelpText<"Optimize output file size">;
 
+defm pie: B<"pie",
+    "Create a position independent executable",
+    "Do not create a position independent executable (default)">;
+
 defm print_gc_sections: B<"print-gc-sections",
     "List removed unused sections",
     "Do not list removed unused sections">;
 
 def relocatable: F<"relocatable">, HelpText<"Create relocatable object file">;
+
+def shared: F<"shared">, HelpText<"Build a shared object">;
 
 def strip_all: F<"strip-all">, HelpText<"Strip all symbols">;
 

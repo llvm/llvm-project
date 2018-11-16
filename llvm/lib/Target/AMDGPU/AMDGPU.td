@@ -465,34 +465,41 @@ def FeatureISAVersion6_0_0 : SubtargetFeatureISAVersion <6,0,0,
   [FeatureSouthernIslands,
    FeatureFastFMAF32,
    HalfRate64Ops,
-   FeatureLDSBankCount32]>;
+   FeatureLDSBankCount32,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion6_0_1 : SubtargetFeatureISAVersion <6,0,1,
   [FeatureSouthernIslands,
-   FeatureLDSBankCount32]>;
+   FeatureLDSBankCount32,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_0 : SubtargetFeatureISAVersion <7,0,0,
   [FeatureSeaIslands,
-   FeatureLDSBankCount32]>;
+   FeatureLDSBankCount32,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_1 : SubtargetFeatureISAVersion <7,0,1,
   [FeatureSeaIslands,
    HalfRate64Ops,
    FeatureLDSBankCount32,
-   FeatureFastFMAF32]>;
+   FeatureFastFMAF32,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_2 : SubtargetFeatureISAVersion <7,0,2,
   [FeatureSeaIslands,
    FeatureLDSBankCount16,
-   FeatureFastFMAF32]>;
+   FeatureFastFMAF32,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_3 : SubtargetFeatureISAVersion <7,0,3,
   [FeatureSeaIslands,
-   FeatureLDSBankCount16]>;
+   FeatureLDSBankCount16,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion7_0_4 : SubtargetFeatureISAVersion <7,0,4,
   [FeatureSeaIslands,
-   FeatureLDSBankCount32]>;
+   FeatureLDSBankCount32,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion8_0_1 : SubtargetFeatureISAVersion <8,0,1,
   [FeatureVolcanicIslands,
@@ -500,39 +507,46 @@ def FeatureISAVersion8_0_1 : SubtargetFeatureISAVersion <8,0,1,
    HalfRate64Ops,
    FeatureLDSBankCount32,
    FeatureXNACK,
-   FeatureUnpackedD16VMem]>;
+   FeatureUnpackedD16VMem,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion8_0_2 : SubtargetFeatureISAVersion <8,0,2,
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
    FeatureSGPRInitBug,
-   FeatureUnpackedD16VMem]>;
+   FeatureUnpackedD16VMem,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion8_0_3 : SubtargetFeatureISAVersion <8,0,3,
   [FeatureVolcanicIslands,
    FeatureLDSBankCount32,
-   FeatureUnpackedD16VMem]>;
+   FeatureUnpackedD16VMem,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion8_1_0 : SubtargetFeatureISAVersion <8,1,0,
   [FeatureVolcanicIslands,
    FeatureLDSBankCount16,
-   FeatureXNACK]>;
+   FeatureXNACK,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion9_0_0 : SubtargetFeatureISAVersion <9,0,0,
   [FeatureGFX9,
    FeatureMadMixInsts,
-   FeatureLDSBankCount32]>;
+   FeatureLDSBankCount32,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion9_0_2 : SubtargetFeatureISAVersion <9,0,2,
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
-   FeatureXNACK]>;
+   FeatureXNACK,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion9_0_4 : SubtargetFeatureISAVersion <9,0,4,
   [FeatureGFX9,
    FeatureLDSBankCount32,
-   FeatureFmaMixInsts]>;
+   FeatureFmaMixInsts,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion9_0_6 : SubtargetFeatureISAVersion <9,0,6,
   [FeatureGFX9,
@@ -540,13 +554,15 @@ def FeatureISAVersion9_0_6 : SubtargetFeatureISAVersion <9,0,6,
    FeatureFmaMixInsts,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureSRAMECC]>;
+   FeatureSRAMECC,
+   FeatureCodeObjectV3]>;
 
 def FeatureISAVersion9_0_9 : SubtargetFeatureISAVersion <9,0,9,
   [FeatureGFX9,
    FeatureMadMixInsts,
    FeatureLDSBankCount32,
-   FeatureXNACK]>;
+   FeatureXNACK,
+   FeatureCodeObjectV3]>;
 
 //===----------------------------------------------------------------------===//
 // Debugger related subtarget features.

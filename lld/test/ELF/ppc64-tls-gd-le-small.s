@@ -2,13 +2,13 @@
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le-unknown-linux %s -o %t.o
 # RUN: llvm-objdump -d -r %t.o | FileCheck --check-prefix=CHECK-INPUT %s
-# RUN: ld.lld  --defsym __tls_get_addr=0x1001000 %t.o -o %t
+# RUN: ld.lld  --defsym __tls_get_addr=0x10001000 %t.o -o %t
 # RUN: llvm-objdump -d %t | FileCheck --check-prefix=CHECK-DIS %s
 # RUN: llvm-readelf -relocations %t | FileCheck --check-prefix=DYN-RELOCS %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64-unknown-linux %s -o %t.o
 # RUN: llvm-objdump -d -r %t.o | FileCheck --check-prefix=CHECK-INPUT %s
-# RUN: ld.lld  --defsym __tls_get_addr=0x1001000 %t.o -o %t
+# RUN: ld.lld  --defsym __tls_get_addr=0x10001000 %t.o -o %t
 # RUN: llvm-objdump -d %t | FileCheck --check-prefix=CHECK-DIS %s
 # RUN: llvm-readelf -relocations %t | FileCheck --check-prefix=DYN-RELOCS %s
 

@@ -245,8 +245,8 @@ define void @ui16(i16 %x, i16 %y, i16* %p, i16* %q) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdx, %r8
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divw %si
 ; X64-NEXT:    movw %ax, (%r8)
 ; X64-NEXT:    movw %dx, (%rcx)

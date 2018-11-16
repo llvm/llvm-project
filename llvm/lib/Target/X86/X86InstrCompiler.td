@@ -143,7 +143,7 @@ def WIN_ALLOCA_64 : I<0, Pseudo, (outs), (ins GR64:$size),
 // These instructions XOR the frame pointer into a GPR. They are used in some
 // stack protection schemes. These are post-RA pseudos because we only know the
 // frame register after register allocation.
-let Constraints = "$src = $dst", isPseudo = 1, Defs = [EFLAGS] in {
+let Constraints = "$src = $dst", isMoveImm = 1, isPseudo = 1, Defs = [EFLAGS] in {
   def XOR32_FP : I<0, Pseudo, (outs GR32:$dst), (ins GR32:$src),
                   "xorl\t$$FP, $src", []>,
                   Requires<[NotLP64]>, Sched<[WriteALU]>;
@@ -270,7 +270,7 @@ def MORESTACK_RET_RESTORE_R10 : I<0, Pseudo, (outs), (ins), "", []>;
 // Alias instruction mapping movr0 to xor.
 // FIXME: remove when we can teach regalloc that xor reg, reg is ok.
 let Defs = [EFLAGS], isReMaterializable = 1, isAsCheapAsAMove = 1,
-    isPseudo = 1, AddedComplexity = 10 in
+    isPseudo = 1, isMoveImm = 1, AddedComplexity = 10 in
 def MOV32r0  : I<0, Pseudo, (outs GR32:$dst), (ins), "",
                  [(set GR32:$dst, 0)]>, Sched<[WriteZero]>;
 

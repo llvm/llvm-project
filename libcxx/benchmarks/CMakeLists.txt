@@ -18,11 +18,14 @@ if (DEFINED LIBCXX_CXX_ABI_LIBRARY_PATH)
           -L${LIBCXX_CXX_ABI_LIBRARY_PATH}
           -Wl,-rpath,${LIBCXX_CXX_ABI_LIBRARY_PATH})
 endif()
+if (LIBCXX_NEEDS_SITE_CONFIG)
+  list(APPEND BENCHMARK_LIBCXX_COMPILE_FLAGS -include "${LIBCXX_BINARY_DIR}/__config_site")
+endif()
 split_list(BENCHMARK_LIBCXX_COMPILE_FLAGS)
 
 ExternalProject_Add(google-benchmark-libcxx
         EXCLUDE_FROM_ALL ON
-        DEPENDS cxx
+        DEPENDS cxx cxx-headers
         PREFIX benchmark-libcxx
         SOURCE_DIR ${LIBCXX_SOURCE_DIR}/utils/google-benchmark
         INSTALL_DIR ${CMAKE_CURRENT_BINARY_DIR}/benchmark-libcxx
@@ -91,6 +94,11 @@ set(BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS
     ${SANITIZER_FLAGS}
     -Wno-user-defined-literals
 )
+if (LIBCXX_NEEDS_SITE_CONFIG)
+  list(APPEND BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS
+      -include "${LIBCXX_BINARY_DIR}/__config_site")
+endif()
+
 set(BENCHMARK_TEST_LIBCXX_LINK_FLAGS
     -nodefaultlibs
     -L${BENCHMARK_LIBCXX_INSTALL}/lib/
@@ -110,13 +118,24 @@ split_list(BENCHMARK_TEST_LIBCXX_LINK_FLAGS)
 split_list(BENCHMARK_TEST_NATIVE_COMPILE_FLAGS)
 split_list(BENCHMARK_TEST_NATIVE_LINK_FLAGS)
 
+if (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++")
+  find_library(LIBSTDCXX_FILESYSTEM_TEST stdc++fs
+        PATHS ${LIBCXX_BENCHMARK_NATIVE_GCC_TOOLCHAIN}
+        PATH_SUFFIXES lib lib64
+        DOC "The libstdc++ filesystem library used by the benchmarks"
+    )
+    if (NOT "${LIBSTDCXX_FILESYSTEM_TEST}" STREQUAL "LIBSTDCXX_FILESYSTEM_TEST-NOTFOUND")
+      set(LIBSTDCXX_FILESYSTEM_LIB "stdc++fs")
+    endif()
+endif()
+
 set(libcxx_benchmark_targets)
 
-macro(add_benchmark_test name source_file)
+function(add_benchmark_test name source_file)
   set(libcxx_target ${name}_libcxx)
   list(APPEND libcxx_benchmark_targets ${libcxx_target})
   add_executable(${libcxx_target} EXCLUDE_FROM_ALL ${source_file})
-  add_dependencies(${libcxx_target} cxx google-benchmark-libcxx)
+  add_dependencies(${libcxx_target} cxx cxx-headers google-benchmark-libcxx)
   add_dependencies(cxx-benchmarks ${libcxx_target})
   if (LIBCXX_ENABLE_SHARED)
     target_link_libraries(${libcxx_target} cxx_shared)
@@ -140,13 +159,17 @@ macro(add_benchmark_test name source_file)
           COMPILE_FLAGS "${BENCHMARK_TEST_LIBCXX_COMPILE_FLAGS}"
           LINK_FLAGS "${BENCHMARK_TEST_LIBCXX_LINK_FLAGS}")
   if (LIBCXX_BENCHMARK_NATIVE_STDLIB)
+    if (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++" AND NOT DEFINED LIBSTDCXX_FILESYSTEM_LIB
+        AND "${name}" STREQUAL "filesystem")
+      return()
+    endif()
     set(native_target ${name}_native)
     add_executable(${native_target} EXCLUDE_FROM_ALL ${source_file})
     add_dependencies(${native_target} google-benchmark-native
                                       google-benchmark-libcxx)
     target_link_libraries(${native_target} -lbenchmark)
     if (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libstdc++")
-      target_link_libraries(${native_target} -lstdc++fs)
+      target_link_libraries(${native_target} ${LIBSTDCXX_FILESYSTEM_LIB})
     elseif (LIBCXX_BENCHMARK_NATIVE_STDLIB STREQUAL "libc++")
       target_link_libraries(${native_target} -lc++fs -lc++experimental)
     endif()
@@ -162,7 +185,7 @@ macro(add_benchmark_test name source_file)
           COMPILE_FLAGS "${BENCHMARK_TEST_NATIVE_COMPILE_FLAGS}"
           LINK_FLAGS "${BENCHMARK_TEST_NATIVE_LINK_FLAGS}")
   endif()
-endmacro()
+endfunction()
 
 
 #==============================================================================
@@ -180,15 +203,22 @@ foreach(test_path ${BENCHMARK_TESTS})
   add_benchmark_test(${test_name} ${test_file})
 endforeach()
 
+if (LIBCXX_INCLUDE_TESTS)
+  include(AddLLVM)
 
-add_custom_target(cxx-benchmark-unittests)
-foreach(libcxx_tg ${libcxx_benchmark_targets})
-  message("Adding test ${libcxx_tg}")
-  # Add a target that runs the benchmark for the smallest possible time, simply so we get test
-  # and sanitizer coverage on the targets.
-  add_custom_target(${libcxx_tg}_test
-          COMMAND ${libcxx_tg} --benchmark_min_time=0.01
-          COMMENT "Running test ${libcxx_tg}"
-          )
-  add_dependencies(cxx-benchmark-unittests ${libcxx_tg}_test)
-endforeach()
+  if (NOT DEFINED LIBCXX_TEST_DEPS)
+    message(FATAL_ERROR "Expected LIBCXX_TEST_DEPS to be defined")
+  endif()
+
+  configure_lit_site_cfg(
+          ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+          ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)
+
+  set(BENCHMARK_LIT_ARGS "--show-all --show-xfail --show-unsupported ${LIT_ARGS_DEFAULT}")
+
+  add_lit_target(check-cxx-benchmarks
+          "Running libcxx benchmarks tests"
+          ${CMAKE_CURRENT_BINARY_DIR}
+          DEPENDS cxx-benchmarks ${LIBCXX_TEST_DEPS}
+          ARGS ${BENCHMARK_LIT_ARGS})
+endif()

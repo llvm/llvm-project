@@ -106,9 +106,9 @@ int main(void) {
 // CHECK-DAG:  call void @_ZN2C1C2EDF16_(%class.C1* %{{.*}}, half %{{.*}})
 
   S1<_Float16> s1 = { 132.f16 };
-// CHECK-DAG: @_ZZ4mainE2s1 = private unnamed_addr constant %struct.S1 { half 0xH5820 }, align 2
+// CHECK-DAG: @__const.main.s1 = private unnamed_addr constant %struct.S1 { half 0xH5820 }, align 2
 // CHECK-DAG:  [[S1:%[0-9]+]] = bitcast %struct.S1* %{{.*}} to i8*
-// CHECK-DAG: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 [[S1]], i8* align 2 bitcast (%struct.S1* @_ZZ4mainE2s1 to i8*), i64 2, i1 false)
+// CHECK-DAG: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 2 [[S1]], i8* align 2 bitcast (%struct.S1* @__const.main.s1 to i8*), i64 2, i1 false)
 
   _Float16 f4l = func1n(f1l)  + func1f(f2l) + c1.func1c(f3l) + c1.func2c(f1l) +
     func1t(f1l) + s1.mem2 - f1n + f2n;
@@ -123,7 +123,7 @@ int main(void) {
 // CHECK-DAG:  store half [[INC]], half* %{{.*}}, align 2
 
   _Float16 arr1l[] = { -1.f16, -0.f16, -11.f16 };
-// CHECK-DAG: @_ZZ4mainE5arr1l = private unnamed_addr constant [3 x half] [half 0xHBC00, half 0xH8000, half 0xHC980], align 2
+// CHECK-DAG: @__const.main.arr1l = private unnamed_addr constant [3 x half] [half 0xHBC00, half 0xH8000, half 0xHC980], align 2
 
   float cvtf = f2n;
 //CHECK-DAG: [[H2F:%[a-z0-9]+]] = fpext half {{%[0-9]+}} to float

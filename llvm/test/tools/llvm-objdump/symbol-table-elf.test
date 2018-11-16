@@ -47,3 +47,4 @@ Symbols:
        Type:     STT_OBJECT
        Section:  .text
        Value:    0x1008
+

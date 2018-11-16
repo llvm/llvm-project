@@ -129,6 +129,8 @@ public:
   static uint32_t
   GetNumBreakpointLocationsFromEvent(const lldb::SBEvent &event_sp);
 
+  bool IsHardware() const;
+
   // Can only be called from a ScriptedBreakpointResolver...
   SBError
   AddLocation(SBAddress &address);

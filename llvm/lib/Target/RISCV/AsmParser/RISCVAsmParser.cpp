@@ -12,6 +12,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "MCTargetDesc/RISCVTargetStreamer.h"
 #include "Utils/RISCVBaseInfo.h"
+#include "Utils/RISCVMatInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAssembler.h"
@@ -1348,80 +1349,23 @@ void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
 
 void RISCVAsmParser::emitLoadImm(unsigned DestReg, int64_t Value,
                                  MCStreamer &Out) {
-  if (isInt<32>(Value)) {
-    // Emits the MC instructions for loading a 32-bit constant into a register.
-    //
-    // Depending on the active bits in the immediate Value v, the following
-    // instruction sequences are emitted:
-    //
-    // v == 0                        : ADDI(W)
-    // v[0,12) != 0 && v[12,32) == 0 : ADDI(W)
-    // v[0,12) == 0 && v[12,32) != 0 : LUI
-    // v[0,32) != 0                  : LUI+ADDI(W)
-    //
-    int64_t Hi20 = ((Value + 0x800) >> 12) & 0xFFFFF;
-    int64_t Lo12 = SignExtend64<12>(Value);
-    unsigned SrcReg = RISCV::X0;
+  RISCVMatInt::InstSeq Seq;
+  RISCVMatInt::generateInstSeq(Value, isRV64(), Seq);
 
-    if (Hi20) {
-      emitToStreamer(Out,
-                     MCInstBuilder(RISCV::LUI).addReg(DestReg).addImm(Hi20));
-      SrcReg = DestReg;
+  unsigned SrcReg = RISCV::X0;
+  for (RISCVMatInt::Inst &Inst : Seq) {
+    if (Inst.Opc == RISCV::LUI) {
+      emitToStreamer(
+          Out, MCInstBuilder(RISCV::LUI).addReg(DestReg).addImm(Inst.Imm));
+    } else {
+      emitToStreamer(
+          Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addImm(
+                   Inst.Imm));
     }
 
-    if (Lo12 || Hi20 == 0) {
-      unsigned AddiOpcode =
-          STI->hasFeature(RISCV::Feature64Bit) ? RISCV::ADDIW : RISCV::ADDI;
-      emitToStreamer(Out, MCInstBuilder(AddiOpcode)
-                              .addReg(DestReg)
-                              .addReg(SrcReg)
-                              .addImm(Lo12));
-    }
-    return;
+    // Only the first instruction has X0 as its source.
+    SrcReg = DestReg;
   }
-  assert(STI->hasFeature(RISCV::Feature64Bit) &&
-         "Target must be 64-bit to support a >32-bit constant");
-
-  // In the worst case, for a full 64-bit constant, a sequence of 8 instructions
-  // (i.e., LUI+ADDIW+SLLI+ADDI+SLLI+ADDI+SLLI+ADDI) has to be emmitted. Note
-  // that the first two instructions (LUI+ADDIW) can contribute up to 32 bits
-  // while the following ADDI instructions contribute up to 12 bits each.
-  //
-  // On the first glance, implementing this seems to be possible by simply
-  // emitting the most significant 32 bits (LUI+ADDIW) followed by as many left
-  // shift (SLLI) and immediate additions (ADDI) as needed. However, due to the
-  // fact that ADDI performs a sign extended addition, doing it like that would
-  // only be possible when at most 11 bits of the ADDI instructions are used.
-  // Using all 12 bits of the ADDI instructions, like done by GAS, actually
-  // requires that the constant is processed starting with the least significant
-  // bit.
-  //
-  // In the following, constants are processed from LSB to MSB but instruction
-  // emission is performed from MSB to LSB by recursively calling
-  // emitLoadImm. In each recursion, first the lowest 12 bits are removed
-  // from the constant and the optimal shift amount, which can be greater than
-  // 12 bits if the constant is sparse, is determined. Then, the shifted
-  // remaining constant is processed recursively and gets emitted as soon as it
-  // fits into 32 bits. The emission of the shifts and additions is subsequently
-  // performed when the recursion returns.
-  //
-  int64_t Lo12 = SignExtend64<12>(Value);
-  int64_t Hi52 = (Value + 0x800) >> 12;
-  int ShiftAmount = 12 + findFirstSet((uint64_t)Hi52);
-  Hi52 = SignExtend64(Hi52 >> (ShiftAmount - 12), 64 - ShiftAmount);
-
-  emitLoadImm(DestReg, Hi52, Out);
-
-  emitToStreamer(Out, MCInstBuilder(RISCV::SLLI)
-                          .addReg(DestReg)
-                          .addReg(DestReg)
-                          .addImm(ShiftAmount));
-
-  if (Lo12)
-    emitToStreamer(Out, MCInstBuilder(RISCV::ADDI)
-                            .addReg(DestReg)
-                            .addReg(DestReg)
-                            .addImm(Lo12));
 }
 
 void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,

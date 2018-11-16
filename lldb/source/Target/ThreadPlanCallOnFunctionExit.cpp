@@ -27,17 +27,18 @@ void ThreadPlanCallOnFunctionExit::DidPush() {
   // completes.
 
   // Set stop vote to eVoteNo.
+  Status status;
   m_step_out_threadplan_sp = GetThread().QueueThreadPlanForStepOut(
       false,             // abort other plans
       nullptr,           // addr_context
       true,              // first instruction
       true,              // stop other threads
       eVoteNo,           // do not say "we're stopping"
-      eVoteNoOpinion,    // don't care about
-                         // run state broadcasting
+      eVoteNoOpinion,    // don't care about run state broadcasting
       0,                 // frame_idx
+      status,            // status
       eLazyBoolCalculate // avoid code w/o debinfo
-      );
+  );
 }
 
 // -------------------------------------------------------------------------

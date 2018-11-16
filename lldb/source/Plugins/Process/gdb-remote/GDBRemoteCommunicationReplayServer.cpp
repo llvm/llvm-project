@@ -190,15 +190,15 @@ thread_result_t GDBRemoteCommunicationReplayServer::AsyncThread(void *arg) {
         case eBroadcastBitAsyncContinue:
           ReceivePacket(*server, done);
           if (done)
-            return nullptr;
+            return {};
           break;
         case eBroadcastBitAsyncThreadShouldExit:
         default:
-          return nullptr;
+          return {};
         }
       }
     }
   }
 
-  return nullptr;
+  return {};
 }

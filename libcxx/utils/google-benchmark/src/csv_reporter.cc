@@ -49,6 +49,8 @@ void CSVReporter::ReportRuns(const std::vector<Run>& reports) {
     // save the names of all the user counters
     for (const auto& run : reports) {
       for (const auto& cnt : run.counters) {
+        if (cnt.first == "bytes_per_second" || cnt.first == "items_per_second")
+          continue;
         user_counter_names_.insert(cnt.first);
       }
     }
@@ -69,6 +71,8 @@ void CSVReporter::ReportRuns(const std::vector<Run>& reports) {
     // check that all the current counters are saved in the name set
     for (const auto& run : reports) {
       for (const auto& cnt : run.counters) {
+        if (cnt.first == "bytes_per_second" || cnt.first == "items_per_second")
+          continue;
         CHECK(user_counter_names_.find(cnt.first) != user_counter_names_.end())
             << "All counters must be present in each run. "
             << "Counter named \"" << cnt.first
@@ -88,7 +92,7 @@ void CSVReporter::PrintRunData(const Run& run) {
 
   // Field with embedded double-quote characters must be doubled and the field
   // delimited with double-quotes.
-  std::string name = run.benchmark_name;
+  std::string name = run.benchmark_name();
   ReplaceAll(&name, "\"", "\"\"");
   Out << '"' << name << "\",";
   if (run.error_occurred) {
@@ -117,12 +121,12 @@ void CSVReporter::PrintRunData(const Run& run) {
   }
   Out << ",";
 
-  if (run.bytes_per_second > 0.0) {
-    Out << run.bytes_per_second;
+  if (run.counters.find("bytes_per_second") != run.counters.end()) {
+    Out << run.counters.at("bytes_per_second");
   }
   Out << ",";
-  if (run.items_per_second > 0.0) {
-    Out << run.items_per_second;
+  if (run.counters.find("items_per_second") != run.counters.end()) {
+    Out << run.counters.at("items_per_second");
   }
   Out << ",";
   if (!run.report_label.empty()) {

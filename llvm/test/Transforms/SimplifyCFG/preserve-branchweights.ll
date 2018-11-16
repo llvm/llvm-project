@@ -5,9 +5,20 @@ declare void @helper(i32)
 
 define void @test1(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_NOT:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[A_NOT]], [[C]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[Z:%.*]], label [[Y:%.*]], !prof !0
+; CHECK:       Y:
+; CHECK-NEXT:    call void @helper(i32 0)
+; CHECK-NEXT:    ret void
+; CHECK:       Z:
+; CHECK-NEXT:    call void @helper(i32 1)
+; CHECK-NEXT:    ret void
+;
 entry:
   br i1 %a, label %Y, label %X, !prof !0
-; CHECK: br i1 %or.cond, label %Z, label %Y, !prof !0
 
 X:
   %c = or i1 %b, false
@@ -26,11 +37,20 @@ Z:
 
 define void @fake_weights(i1 %a, i1 %b) {
 ; CHECK-LABEL: @fake_weights(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_NOT:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[A_NOT]], [[C]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[Z:%.*]], label [[Y:%.*]], !prof !1
+; CHECK:       Y:
+; CHECK-NEXT:    call void @helper(i32 0)
+; CHECK-NEXT:    ret void
+; CHECK:       Z:
+; CHECK-NEXT:    call void @helper(i32 1)
+; CHECK-NEXT:    ret void
+;
 entry:
   br i1 %a, label %Y, label %X, !prof !12
-; CHECK:        %or.cond = and i1 %a.not, %c
-; CHECK-NEXT:   br i1 %or.cond, label %Z, label %Y, !prof !1
-; CHECK:      Y:
 X:
   %c = or i1 %b, false
   br i1 %c, label %Z, label %Y, !prof !1
@@ -46,10 +66,19 @@ Z:
 
 define void @test2(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[A:%.*]], [[C]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[Z:%.*]], label [[Y:%.*]], !prof !2
+; CHECK:       Y:
+; CHECK-NEXT:    call void @helper(i32 0)
+; CHECK-NEXT:    ret void
+; CHECK:       Z:
+; CHECK-NEXT:    call void @helper(i32 1)
+; CHECK-NEXT:    ret void
+;
 entry:
   br i1 %a, label %X, label %Y, !prof !1
-; CHECK: br i1 %or.cond, label %Z, label %Y, !prof !2
-; CHECK-NOT: !prof
 
 X:
   %c = or i1 %b, false
@@ -66,7 +95,17 @@ Z:
 
 define void @test3(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test3(
-; CHECK: br i1 %or.cond, label %Z, label %Y, !prof !1
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[A:%.*]], [[C]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[Z:%.*]], label [[Y:%.*]], !prof !1
+; CHECK:       Y:
+; CHECK-NEXT:    call void @helper(i32 0)
+; CHECK-NEXT:    ret void
+; CHECK:       Z:
+; CHECK-NEXT:    call void @helper(i32 1)
+; CHECK-NEXT:    ret void
+;
 entry:
   br i1 %a, label %X, label %Y, !prof !1
 
@@ -85,7 +124,17 @@ Z:
 
 define void @test4(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test4(
-; CHECK: br i1 %or.cond, label %Z, label %Y, !prof !1
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
+; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[A:%.*]], [[C]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[Z:%.*]], label [[Y:%.*]], !prof !1
+; CHECK:       Y:
+; CHECK-NEXT:    call void @helper(i32 0)
+; CHECK-NEXT:    ret void
+; CHECK:       Z:
+; CHECK-NEXT:    call void @helper(i32 1)
+; CHECK-NEXT:    ret void
+;
 entry:
   br i1 %a, label %X, label %Y
 
@@ -104,17 +153,30 @@ Z:
 
 ;; test5 - The case where it jumps to the default target will be removed.
 define void @test5(i32 %M, i32 %N) nounwind uwtable {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[N:%.*]], label [[SW2:%.*]] [
+; CHECK-NEXT:    i32 3, label [[SW_BB1:%.*]]
+; CHECK-NEXT:    i32 2, label [[SW_BB:%.*]]
+; CHECK-NEXT:    ], !prof !3
+; CHECK:       sw.bb:
+; CHECK-NEXT:    call void @helper(i32 0)
+; CHECK-NEXT:    br label [[SW_EPILOG:%.*]]
+; CHECK:       sw.bb1:
+; CHECK-NEXT:    call void @helper(i32 1)
+; CHECK-NEXT:    br label [[SW_EPILOG]]
+; CHECK:       sw2:
+; CHECK-NEXT:    call void @helper(i32 2)
+; CHECK-NEXT:    br label [[SW_EPILOG]]
+; CHECK:       sw.epilog:
+; CHECK-NEXT:    ret void
+;
 entry:
   switch i32 %N, label %sw2 [
-    i32 1, label %sw2
-    i32 2, label %sw.bb
-    i32 3, label %sw.bb1
+  i32 1, label %sw2
+  i32 2, label %sw.bb
+  i32 3, label %sw.bb1
   ], !prof !3
-; CHECK-LABEL: @test5(
-; CHECK: switch i32 %N, label %sw2 [
-; CHECK: i32 3, label %sw.bb1
-; CHECK: i32 2, label %sw.bb
-; CHECK: ], !prof !3
 
 sw.bb:
   call void @helper(i32 0)
@@ -136,18 +198,31 @@ sw.epilog:
 ;; Then the second switch will be converted to a branch, finally, the first
 ;; switch and the branch will be merged into a single switch.
 define void @test6(i32 %M, i32 %N) nounwind uwtable {
+; CHECK-LABEL: @test6(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[N:%.*]], label [[SW_EPILOG:%.*]] [
+; CHECK-NEXT:    i32 3, label [[SW_BB1:%.*]]
+; CHECK-NEXT:    i32 2, label [[SW_BB:%.*]]
+; CHECK-NEXT:    i32 4, label [[SW_BB5:%.*]]
+; CHECK-NEXT:    ], !prof !4
+; CHECK:       sw.bb:
+; CHECK-NEXT:    call void @helper(i32 0)
+; CHECK-NEXT:    br label [[SW_EPILOG]]
+; CHECK:       sw.bb1:
+; CHECK-NEXT:    call void @helper(i32 1)
+; CHECK-NEXT:    br label [[SW_EPILOG]]
+; CHECK:       sw.bb5:
+; CHECK-NEXT:    call void @helper(i32 3)
+; CHECK-NEXT:    br label [[SW_EPILOG]]
+; CHECK:       sw.epilog:
+; CHECK-NEXT:    ret void
+;
 entry:
   switch i32 %N, label %sw2 [
-    i32 1, label %sw2
-    i32 2, label %sw.bb
-    i32 3, label %sw.bb1
+  i32 1, label %sw2
+  i32 2, label %sw.bb
+  i32 3, label %sw.bb1
   ], !prof !4
-; CHECK-LABEL: @test6(
-; CHECK: switch i32 %N, label %sw.epilog
-; CHECK: i32 3, label %sw.bb1
-; CHECK: i32 2, label %sw.bb
-; CHECK: i32 4, label %sw.bb5
-; CHECK: ], !prof !4
 
 sw.bb:
   call void @helper(i32 0)
@@ -161,8 +236,8 @@ sw2:
 ;; Here "case 2" is invalidated since the default case of the first switch
 ;; does not include "case 2".
   switch i32 %N, label %sw.epilog [
-    i32 2, label %sw.bb4
-    i32 4, label %sw.bb5
+  i32 2, label %sw.bb4
+  i32 4, label %sw.bb5
   ], !prof !5
 
 sw.bb4:
@@ -180,9 +255,19 @@ sw.epilog:
 ;; This test is based on test1 but swapped the targets of the second branch.
 define void @test1_swap(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test1_swap(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[A:%.*]], [[C]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[Y:%.*]], label [[Z:%.*]], !prof !5
+; CHECK:       Y:
+; CHECK-NEXT:    call void @helper(i32 0)
+; CHECK-NEXT:    ret void
+; CHECK:       Z:
+; CHECK-NEXT:    call void @helper(i32 1)
+; CHECK-NEXT:    ret void
+;
 entry:
   br i1 %a, label %Y, label %X, !prof !0
-; CHECK: br i1 %or.cond, label %Y, label %Z, !prof !5
 
 X:
   %c = or i1 %b, false
@@ -199,10 +284,20 @@ Z:
 
 define void @test7(i1 %a, i1 %b) {
 ; CHECK-LABEL: @test7(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[B:%.*]], false
+; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[A:%.*]], [[C]]
+; CHECK-NEXT:    br i1 [[BRMERGE]], label [[Y:%.*]], label [[Z:%.*]], !prof !6
+; CHECK:       Y:
+; CHECK-NEXT:    call void @helper(i32 0)
+; CHECK-NEXT:    ret void
+; CHECK:       Z:
+; CHECK-NEXT:    call void @helper(i32 1)
+; CHECK-NEXT:    ret void
+;
 entry:
   %c = or i1 %b, false
   br i1 %a, label %Y, label %X, !prof !0
-; CHECK: br i1 %brmerge, label %Y, label %Z, !prof !6
 
 X:
   br i1 %c, label %Y, label %Z, !prof !6
@@ -219,114 +314,150 @@ Z:
 ; Test basic folding to a conditional branch.
 define void @test8(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: @test8(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LT:%.*]] = icmp slt i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    br i1 [[LT]], label [[A:%.*]], label [[B:%.*]], !prof !7
+; CHECK:       a:
+; CHECK-NEXT:    call void @helper(i32 0) #1
+; CHECK-NEXT:    ret void
+; CHECK:       b:
+; CHECK-NEXT:    call void @helper(i32 1) #1
+; CHECK-NEXT:    ret void
+;
 entry:
-    %lt = icmp slt i64 %x, %y
-; CHECK: br i1 %lt, label %a, label %b, !prof !7
-    %qux = select i1 %lt, i32 0, i32 2
-    switch i32 %qux, label %bees [
-        i32 0, label %a
-        i32 1, label %b
-        i32 2, label %b
-    ], !prof !7
+  %lt = icmp slt i64 %x, %y
+  %qux = select i1 %lt, i32 0, i32 2
+  switch i32 %qux, label %bees [
+  i32 0, label %a
+  i32 1, label %b
+  i32 2, label %b
+  ], !prof !7
 a:
-    call void @helper(i32 0) nounwind
-    ret void
+  call void @helper(i32 0) nounwind
+  ret void
 b:
-    call void @helper(i32 1) nounwind
-    ret void
+  call void @helper(i32 1) nounwind
+  ret void
 bees:
-    call void @helper(i32 2) nounwind
-    ret void
+  call void @helper(i32 2) nounwind
+  ret void
 }
 
 ; Test edge splitting when the default target has icmp and unconditinal
 ; branch
 define i1 @test9(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: @test9(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    switch i32 [[X:%.*]], label [[BEES:%.*]] [
+; CHECK-NEXT:    i32 0, label [[A:%.*]]
+; CHECK-NEXT:    i32 1, label [[END:%.*]]
+; CHECK-NEXT:    i32 2, label [[END]]
+; CHECK-NEXT:    i32 92, label [[END]]
+; CHECK-NEXT:    ], !prof !8
+; CHECK:       a:
+; CHECK-NEXT:    call void @helper(i32 0) #1
+; CHECK-NEXT:    [[RETA:%.*]] = icmp slt i32 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[RETA]]
+; CHECK:       bees:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[RET:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ false, [[BEES]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    call void @helper(i32 2) #1
+; CHECK-NEXT:    ret i1 [[RET]]
+;
 entry:
-    switch i32 %x, label %bees [
-        i32 0, label %a
-        i32 1, label %end
-        i32 2, label %end
-    ], !prof !7
-; CHECK: switch i32 %x, label %bees [
-; CHECK: i32 0, label %a
-; CHECK: i32 1, label %end
-; CHECK: i32 2, label %end
-; CHECK: i32 92, label %end
-; CHECK: ], !prof !8
+  switch i32 %x, label %bees [
+  i32 0, label %a
+  i32 1, label %end
+  i32 2, label %end
+  ], !prof !7
 
 a:
-    call void @helper(i32 0) nounwind
-    %reta = icmp slt i32 %x, %y
-    ret i1 %reta
+  call void @helper(i32 0) nounwind
+  %reta = icmp slt i32 %x, %y
+  ret i1 %reta
 
 bees:
-    %tmp = icmp eq i32 %x, 92
-    br label %end
+  %tmp = icmp eq i32 %x, 92
+  br label %end
 
 end:
-; CHECK: end:
-; CHECK: %ret = phi i1 [ true, %entry ], [ false, %bees ], [ true, %entry ], [ true, %entry ]
-    %ret = phi i1 [ true, %entry ], [%tmp, %bees], [true, %entry]
-    call void @helper(i32 2) nounwind
-    ret i1 %ret
+  %ret = phi i1 [ true, %entry ], [%tmp, %bees], [true, %entry]
+  call void @helper(i32 2) nounwind
+  ret i1 %ret
 }
 
 define void @test10(i32 %x) nounwind readnone ssp noredzone {
+; CHECK-LABEL: @test10(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X_OFF:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i32 [[X_OFF]], 3
+; CHECK-NEXT:    br i1 [[SWITCH]], label [[LOR_END:%.*]], label [[LOR_RHS:%.*]], !prof !9
+; CHECK:       lor.rhs:
+; CHECK-NEXT:    call void @helper(i32 1) #1
+; CHECK-NEXT:    ret void
+; CHECK:       lor.end:
+; CHECK-NEXT:    call void @helper(i32 0) #1
+; CHECK-NEXT:    ret void
+;
 entry:
- switch i32 %x, label %lor.rhs [
-   i32 2, label %lor.end
-   i32 1, label %lor.end
-   i32 3, label %lor.end
- ], !prof !7
+  switch i32 %x, label %lor.rhs [
+  i32 2, label %lor.end
+  i32 1, label %lor.end
+  i32 3, label %lor.end
+  ], !prof !7
 
 lor.rhs:
- call void @helper(i32 1) nounwind
- ret void
+  call void @helper(i32 1) nounwind
+  ret void
 
 lor.end:
- call void @helper(i32 0) nounwind
- ret void
+  call void @helper(i32 0) nounwind
+  ret void
 
-; CHECK-LABEL: @test10(
-; CHECK: %x.off = add i32 %x, -1
-; CHECK: %switch = icmp ult i32 %x.off, 3
-; CHECK: br i1 %switch, label %lor.end, label %lor.rhs, !prof !9
 }
 
 ; Remove dead cases from the switch.
 define void @test11(i32 %x) nounwind {
+; CHECK-LABEL: @test11(
+; CHECK-NEXT:    [[I:%.*]] = shl i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[I]], 24
+; CHECK-NEXT:    br i1 [[COND]], label [[C:%.*]], label [[A:%.*]], !prof !10
+; CHECK:       a:
+; CHECK-NEXT:    call void @helper(i32 0) #1
+; CHECK-NEXT:    ret void
+; CHECK:       c:
+; CHECK-NEXT:    call void @helper(i32 2) #1
+; CHECK-NEXT:    ret void
+;
   %i = shl i32 %x, 1
   switch i32 %i, label %a [
-    i32 21, label %b
-    i32 24, label %c
+  i32 21, label %b
+  i32 24, label %c
   ], !prof !8
-; CHECK-LABEL: @test11(
-; CHECK: %cond = icmp eq i32 %i, 24
-; CHECK: br i1 %cond, label %c, label %a, !prof !10
 
 a:
- call void @helper(i32 0) nounwind
- ret void
+  call void @helper(i32 0) nounwind
+  ret void
 b:
- call void @helper(i32 1) nounwind
- ret void
+  call void @helper(i32 1) nounwind
+  ret void
 c:
- call void @helper(i32 2) nounwind
- ret void
+  call void @helper(i32 2) nounwind
+  ret void
 }
 
 ;; test12 - Don't crash if the whole switch is removed
 define void @test12(i32 %M, i32 %N) nounwind uwtable {
+; CHECK-LABEL: @test12(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @helper(i32 0)
+; CHECK-NEXT:    ret void
+;
 entry:
   switch i32 %N, label %sw.bb [
-    i32 1, label %sw.bb
+  i32 1, label %sw.bb
   ], !prof !9
-; CHECK-LABEL: @test12(
-; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @helper
-; CHECK-NEXT: ret void
 
 sw.bb:
   call void @helper(i32 0)
@@ -339,26 +470,27 @@ sw.epilog:
 ;; If every case is dead, make sure they are all removed. This used to
 ;; crash trying to merge the metadata.
 define void @test13(i32 %x) nounwind {
+; CHECK-LABEL: @test13(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @helper(i32 0) #1
+; CHECK-NEXT:    ret void
+;
 entry:
   %i = shl i32 %x, 1
   switch i32 %i, label %a [
-    i32 21, label %b
-    i32 25, label %c
+  i32 21, label %b
+  i32 25, label %c
   ], !prof !8
-; CHECK-LABEL: @test13(
-; CHECK-NEXT: entry:
-; CHECK-NEXT: call void @helper
-; CHECK-NEXT: ret void
 
 a:
- call void @helper(i32 0) nounwind
- ret void
+  call void @helper(i32 0) nounwind
+  ret void
 b:
- call void @helper(i32 1) nounwind
- ret void
+  call void @helper(i32 1) nounwind
+  ret void
 c:
- call void @helper(i32 2) nounwind
- ret void
+  call void @helper(i32 2) nounwind
+  ret void
 }
 
 ;; When folding branches to common destination, the updated branch weights
@@ -366,8 +498,24 @@ c:
 ;; weights until they can fit into uint32.
 @max_regno = common global i32 0, align 4
 define void @test14(i32* %old, i32 %final) {
-; CHECK-LABEL: @test14
-; CHECK: br i1 %or.cond, label %for.exit, label %for.inc, !prof !11
+; CHECK-LABEL: @test14(
+; CHECK-NEXT:  for.cond:
+; CHECK-NEXT:    br label [[FOR_COND2:%.*]]
+; CHECK:       for.cond2:
+; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[INC19:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_COND:%.*]] ]
+; CHECK-NEXT:    [[BIT_0:%.*]] = phi i32 [ [[SHL:%.*]], [[FOR_INC]] ], [ 1, [[FOR_COND]] ]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[BIT_0]], 0
+; CHECK-NEXT:    [[V3:%.*]] = load i32, i32* @max_regno, align 4
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[I_1]], [[V3]]
+; CHECK-NEXT:    [[OR_COND:%.*]] = or i1 [[TOBOOL]], [[CMP4]]
+; CHECK-NEXT:    br i1 [[OR_COND]], label [[FOR_EXIT:%.*]], label [[FOR_INC]], !prof !11
+; CHECK:       for.inc:
+; CHECK-NEXT:    [[SHL]] = shl i32 [[BIT_0]], 1
+; CHECK-NEXT:    [[INC19]] = add nsw i32 [[I_1]], 1
+; CHECK-NEXT:    br label [[FOR_COND2]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret void
+;
 for.cond:
   br label %for.cond2
 for.cond2:
@@ -392,7 +540,7 @@ for.exit:
 define i32 @HoistThenElseCodeToIf(i32 %n) {
 ; CHECK-LABEL: @HoistThenElseCodeToIf(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 %n, 0
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[N:%.*]], 0
 ; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[TOBOOL]], i32 1, i32 234, !prof !12
 ; CHECK-NEXT:    ret i32 [[DOT]]
 ;
@@ -416,8 +564,8 @@ return:
 define i32 @SimplifyCondBranchToCondBranch(i1 %cmpa, i1 %cmpb) {
 ; CHECK-LABEL: @SimplifyCondBranchToCondBranch(
 ; CHECK-NEXT:  block1:
-; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 %cmpa, %cmpb
-; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 %cmpa, i32 0, i32 2, !prof !13
+; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMPA:%.*]], [[CMPB:%.*]]
+; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[CMPA]], i32 0, i32 2, !prof !13
 ; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !14
 ; CHECK-NEXT:    ret i32 [[OUTVAL]]
 ;
@@ -441,8 +589,8 @@ exit:
 define i32 @SimplifyCondBranchToCondBranchSwap(i1 %cmpa, i1 %cmpb) {
 ; CHECK-LABEL: @SimplifyCondBranchToCondBranchSwap(
 ; CHECK-NEXT:  block1:
-; CHECK-NEXT:    [[CMPA_NOT:%.*]] = xor i1 %cmpa, true
-; CHECK-NEXT:    [[CMPB_NOT:%.*]] = xor i1 %cmpb, true
+; CHECK-NEXT:    [[CMPA_NOT:%.*]] = xor i1 [[CMPA:%.*]], true
+; CHECK-NEXT:    [[CMPB_NOT:%.*]] = xor i1 [[CMPB:%.*]], true
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMPA_NOT]], [[CMPB_NOT]]
 ; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[CMPA_NOT]], i32 0, i32 2, !prof !15
 ; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !16
@@ -466,8 +614,8 @@ exit:
 define i32 @SimplifyCondBranchToCondBranchSwapMissingWeight(i1 %cmpa, i1 %cmpb) {
 ; CHECK-LABEL: @SimplifyCondBranchToCondBranchSwapMissingWeight(
 ; CHECK-NEXT:  block1:
-; CHECK-NEXT:    [[CMPA_NOT:%.*]] = xor i1 %cmpa, true 
-; CHECK-NEXT:    [[CMPB_NOT:%.*]] = xor i1 %cmpb, true
+; CHECK-NEXT:    [[CMPA_NOT:%.*]] = xor i1 [[CMPA:%.*]], true
+; CHECK-NEXT:    [[CMPB_NOT:%.*]] = xor i1 [[CMPB:%.*]], true
 ; CHECK-NEXT:    [[BRMERGE:%.*]] = or i1 [[CMPA_NOT]], [[CMPB_NOT]]
 ; CHECK-NEXT:    [[DOTMUX:%.*]] = select i1 [[CMPA_NOT]], i32 0, i32 2, !prof !17
 ; CHECK-NEXT:    [[OUTVAL:%.*]] = select i1 [[BRMERGE]], i32 [[DOTMUX]], i32 1, !prof !18

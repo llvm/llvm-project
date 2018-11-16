@@ -7,9 +7,9 @@ declare i8* @memset(i8*, i32, i64)
 define void @unxlate_dev_mem_ptr(i64 %phis, i8* %addr) nounwind {
   %pte.addr.i = alloca %struct.kmem_cache_order_objects*
   %call8 = call i8* @memset(i8* bitcast ([512 x %struct.kmem_cache_order_objects]* @bm_pte to i8*), i32 0, i64 4096)
-; CHECK: movq    $bm_pte, %rdi
+; CHECK:      movl    $4096, %edx
+; CHECK-NEXT: movq    $bm_pte, %rdi
 ; CHECK-NEXT: xorl    %esi, %esi
-; CHECK-NEXT: movl    $4096, %edx
 ; CHECK-NEXT: callq   memset
   ret void
 }

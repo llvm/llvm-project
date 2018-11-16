@@ -313,6 +313,18 @@ Error WasmObjectFile::parseSection(WasmSection &Sec) {
   }
 }
 
+Error WasmObjectFile::parseDylinkSection(ReadContext &Ctx) {
+  // See https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
+  DylinkInfo.MemorySize = readVaruint32(Ctx);
+  DylinkInfo.MemoryAlignment = readVaruint32(Ctx);
+  DylinkInfo.TableSize = readVaruint32(Ctx);
+  DylinkInfo.TableAlignment = readVaruint32(Ctx);
+  if (Ctx.Ptr != Ctx.End)
+    return make_error<GenericBinaryError>("dylink section ended prematurely",
+                                          object_error::parse_failed);
+  return Error::success();
+}
+
 Error WasmObjectFile::parseNameSection(ReadContext &Ctx) {
   llvm::DenseSet<uint64_t> Seen;
   if (Functions.size() != FunctionTypes.size()) {
@@ -721,7 +733,10 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
 }
 
 Error WasmObjectFile::parseCustomSection(WasmSection &Sec, ReadContext &Ctx) {
-  if (Sec.Name == "name") {
+  if (Sec.Name == "dylink") {
+    if (Error Err = parseDylinkSection(Ctx))
+      return Err;
+  } else if (Sec.Name == "name") {
     if (Error Err = parseNameSection(Ctx))
       return Err;
   } else if (Sec.Name == "linking") {

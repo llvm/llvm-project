@@ -8268,7 +8268,8 @@ bool InitializationSequence::Diagnose(Sema &S,
     break;
   case FK_UTF8StringIntoPlainChar:
     S.Diag(Kind.getLocation(),
-           diag::err_array_init_utf8_string_into_char);
+           diag::err_array_init_utf8_string_into_char)
+      << S.getLangOpts().CPlusPlus2a;
     break;
   case FK_ArrayTypeMismatch:
   case FK_NonConstantArrayInit:

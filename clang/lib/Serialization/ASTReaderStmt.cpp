@@ -595,22 +595,35 @@ void ASTStmtReader::VisitImaginaryLiteral(ImaginaryLiteral *E) {
 
 void ASTStmtReader::VisitStringLiteral(StringLiteral *E) {
   VisitExpr(E);
-  unsigned Len = Record.readInt();
-  assert(Record.peekInt() == E->getNumConcatenated() &&
+
+  // NumConcatenated, Length and CharByteWidth are set by the empty
+  // ctor since they are needed to allocate storage for the trailing objects.
+  unsigned NumConcatenated = Record.readInt();
+  unsigned Length = Record.readInt();
+  unsigned CharByteWidth = Record.readInt();
+  assert((NumConcatenated == E->getNumConcatenated()) &&
          "Wrong number of concatenated tokens!");
-  Record.skipInts(1);
-  auto kind = static_cast<StringLiteral::StringKind>(Record.readInt());
-  bool isPascal = Record.readInt();
+  assert((Length == E->getLength()) && "Wrong Length!");
+  assert((CharByteWidth == E->getCharByteWidth()) && "Wrong character width!");
+  E->StringLiteralBits.Kind = Record.readInt();
+  E->StringLiteralBits.IsPascal = Record.readInt();
 
-  // Read string data
-  auto B = &Record.peekInt();
-  SmallString<16> Str(B, B + Len);
-  E->setString(Record.getContext(), Str, kind, isPascal);
-  Record.skipInts(Len);
+  // The character width is originally computed via mapCharByteWidth.
+  // Check that the deserialized character width is consistant with the result
+  // of calling mapCharByteWidth.
+  assert((CharByteWidth ==
+          StringLiteral::mapCharByteWidth(Record.getContext().getTargetInfo(),
+                                          E->getKind())) &&
+         "Wrong character width!");
 
-  // Read source locations
-  for (unsigned I = 0, N = E->getNumConcatenated(); I != N; ++I)
+  // Deserialize the trailing array of SourceLocation.
+  for (unsigned I = 0; I < NumConcatenated; ++I)
     E->setStrTokenLoc(I, ReadSourceLocation());
+
+  // Deserialize the trailing array of char holding the string data.
+  char *StrData = E->getStrDataAsChar();
+  for (unsigned I = 0; I < Length * CharByteWidth; ++I)
+    StrData[I] = Record.readInt();
 }
 
 void ASTStmtReader::VisitCharacterLiteral(CharacterLiteral *E) {
@@ -2423,8 +2436,11 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
 
     case EXPR_STRING_LITERAL:
-      S = StringLiteral::CreateEmpty(Context,
-                                     Record[ASTStmtReader::NumExprFields + 1]);
+      S = StringLiteral::CreateEmpty(
+          Context,
+          /* NumConcatenated=*/Record[ASTStmtReader::NumExprFields + 0],
+          /* Length=*/Record[ASTStmtReader::NumExprFields + 1],
+          /* CharByteWidth=*/Record[ASTStmtReader::NumExprFields + 2]);
       break;
 
     case EXPR_CHARACTER_LITERAL:

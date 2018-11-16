@@ -20,8 +20,10 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
@@ -128,9 +130,26 @@ struct NormalizedPosition {
   YPosition P;
 };
 
+struct NormalizedFileURI {
+  NormalizedFileURI(IO &) {}
+  NormalizedFileURI(IO &, const char *FileURI) { URI = FileURI; }
+
+  const char *denormalize(IO &IO) {
+    assert(IO.getContext() &&
+           "Expecting an UniqueStringSaver to allocate data");
+    return static_cast<llvm::UniqueStringSaver *>(IO.getContext())
+        ->save(URI)
+        .data();
+  }
+
+  std::string URI;
+};
+
 template <> struct MappingTraits<SymbolLocation> {
   static void mapping(IO &IO, SymbolLocation &Value) {
-    IO.mapRequired("FileURI", Value.FileURI);
+    MappingNormalization<NormalizedFileURI, const char *> NFile(IO,
+                                                                Value.FileURI);
+    IO.mapRequired("FileURI", NFile->URI);
     MappingNormalization<NormalizedPosition, SymbolLocation::Position> NStart(
         IO, Value.Start);
     IO.mapRequired("Start", NStart->P);
@@ -292,7 +311,9 @@ void writeYAML(const IndexFileOut &O, raw_ostream &OS) {
 Expected<IndexFileIn> readYAML(StringRef Data) {
   SymbolSlab::Builder Symbols;
   RefSlab::Builder Refs;
-  yaml::Input Yin(Data);
+  BumpPtrAllocator Arena; // store the underlying data of Position::FileURI.
+  UniqueStringSaver Strings(Arena);
+  yaml::Input Yin(Data, &Strings);
   do {
     VariantEntry Variant;
     Yin >> Variant;

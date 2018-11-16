@@ -399,6 +399,13 @@ TargetTransformInfo::getOperandInfo(Value *V, OperandValueProperties &OpProps) {
     return OK_UniformConstantValue;
   }
 
+  // A broadcast shuffle creates a uniform value.
+  // TODO: Add support for non-zero index broadcasts.
+  // TODO: Add support for different source vector width.
+  if (auto *ShuffleInst = dyn_cast<ShuffleVectorInst>(V))
+    if (ShuffleInst->isZeroEltSplat())
+      OpInfo = OK_UniformValue;
+
   const Value *Splat = getSplatValue(V);
 
   // Check for a splat of a constant or for a non uniform vector of constants

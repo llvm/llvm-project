@@ -77,7 +77,7 @@ static const int SectorSize = 512;
 static const int DOSStubSize = sizeof(dos_header) + sizeof(DOSProgram);
 static_assert(DOSStubSize % 8 == 0, "DOSStub size must be multiple of 8");
 
-static const int NumberfOfDataDirectory = 16;
+static const int NumberOfDataDirectory = 16;
 
 namespace {
 
@@ -1033,7 +1033,7 @@ void Writer::readRelocTargets() {
 // file offsets.
 void Writer::assignAddresses() {
   SizeOfHeaders = DOSStubSize + sizeof(PEMagic) + sizeof(coff_file_header) +
-                  sizeof(data_directory) * NumberfOfDataDirectory +
+                  sizeof(data_directory) * NumberOfDataDirectory +
                   sizeof(coff_section) * OutputSections.size();
   SizeOfHeaders +=
       Config->is64() ? sizeof(pe32plus_header) : sizeof(pe32_header);
@@ -1108,7 +1108,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   if (!Config->Relocatable)
     COFF->Characteristics |= IMAGE_FILE_RELOCS_STRIPPED;
   COFF->SizeOfOptionalHeader =
-      sizeof(PEHeaderTy) + sizeof(data_directory) * NumberfOfDataDirectory;
+      sizeof(PEHeaderTy) + sizeof(data_directory) * NumberOfDataDirectory;
 
   // Write PE header
   auto *PE = reinterpret_cast<PEHeaderTy *>(Buf);
@@ -1166,7 +1166,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_NO_SEH;
   if (Config->TerminalServerAware)
     PE->DLLCharacteristics |= IMAGE_DLL_CHARACTERISTICS_TERMINAL_SERVER_AWARE;
-  PE->NumberOfRvaAndSize = NumberfOfDataDirectory;
+  PE->NumberOfRvaAndSize = NumberOfDataDirectory;
   if (TextSec->getVirtualSize()) {
     PE->BaseOfCode = TextSec->getRVA();
     PE->SizeOfCode = TextSec->getRawSize();
@@ -1175,7 +1175,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
 
   // Write data directory
   auto *Dir = reinterpret_cast<data_directory *>(Buf);
-  Buf += sizeof(*Dir) * NumberfOfDataDirectory;
+  Buf += sizeof(*Dir) * NumberOfDataDirectory;
   if (!Config->Exports.empty()) {
     Dir[EXPORT_TABLE].RelativeVirtualAddress = Edata.getRVA();
     Dir[EXPORT_TABLE].Size = Edata.getSize();

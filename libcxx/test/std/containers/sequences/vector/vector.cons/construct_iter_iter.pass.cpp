@@ -121,7 +121,6 @@ void test_ctor_under_alloc() {
   int arr2[] = {1, 101, 42};
   {
     using C = TCT::vector<>;
-    using T = typename C::value_type;
     using It = forward_iterator<int*>;
     {
       ExpectConstructGuard<int&> G(1);
@@ -134,7 +133,6 @@ void test_ctor_under_alloc() {
   }
   {
     using C = TCT::vector<>;
-    using T = typename C::value_type;
     using It = input_iterator<int*>;
     {
       ExpectConstructGuard<int&> G(1);

@@ -113,8 +113,9 @@ Symbol mergeSymbol(const Symbol &L, const Symbol &R) {
   bool PreferR = R.Definition && !L.Definition;
   // Merge include headers only if both have definitions or both have no
   // definition; otherwise, only accumulate references of common includes.
+  assert(L.Definition.FileURI && R.Definition.FileURI);
   bool MergeIncludes =
-      L.Definition.FileURI.empty() == R.Definition.FileURI.empty();
+      bool(*L.Definition.FileURI) == bool(*R.Definition.FileURI);
   Symbol S = PreferR ? R : L;        // The target symbol we're merging into.
   const Symbol &O = PreferR ? L : R; // The "other" less-preferred symbol.
 

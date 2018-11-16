@@ -52,8 +52,8 @@ define void @foo(i64 %x) nounwind {
 ; X64-NEXT:    idivq %rcx
 ; X64-NEXT:    jmp .LBB0_3
 ; X64-NEXT:  .LBB0_1:
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    divl %ecx
 ; X64-NEXT:    # kill: def $eax killed $eax def $rax
 ; X64-NEXT:  .LBB0_3:

@@ -23,6 +23,7 @@
 //   void merge(multiset<Key, C2, Allocator>&& source);
 
 #include <set>
+#include <cassert>
 #include "test_macros.h"
 #include "Counter.h"
 

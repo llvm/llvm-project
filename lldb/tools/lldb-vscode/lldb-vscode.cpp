@@ -289,7 +289,7 @@ void SendProcessEvent(LaunchMethod launch_method) {
   exe_fspec.GetPath(exe_path, sizeof(exe_path));
   llvm::json::Object event(CreateEventObject("process"));
   llvm::json::Object body;
-  body.try_emplace("name", std::string(exe_path));
+  EmplaceSafeString(body, "name", std::string(exe_path));
   const auto pid = g_vsc.target.GetProcess().GetProcessID();
   body.try_emplace("systemProcessId", (int64_t)pid);
   body.try_emplace("isLocalProcess", true);
@@ -539,7 +539,7 @@ void request_attach(const llvm::json::Object &request) {
     g_vsc.target.AddModule(program.data(), target_triple, uuid_cstr, symfile);
     if (error.Fail()) {
       response.try_emplace("success", false);
-      response.try_emplace("message", std::string(error.GetCString()));
+      EmplaceSafeString(response, "message", std::string(error.GetCString()));
       g_vsc.SendJSON(llvm::json::Value(std::move(response)));
       return;
     }
@@ -591,7 +591,7 @@ void request_attach(const llvm::json::Object &request) {
 
   if (error.Fail()) {
     response.try_emplace("success", false);
-    response.try_emplace("message", std::string(error.GetCString()));
+    EmplaceSafeString(response, "message", std::string(error.GetCString()));
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
   if (error.Success()) {
@@ -813,8 +813,8 @@ void request_exceptionInfo(const llvm::json::Object &request) {
     else if (stopReason == lldb::eStopReasonBreakpoint) {
       ExceptionBreakpoint *exc_bp = g_vsc.GetExceptionBPFromStopReason(thread);
       if (exc_bp) {
-        body.try_emplace("exceptionId", exc_bp->filter);
-        body.try_emplace("description", exc_bp->label);
+        EmplaceSafeString(body, "exceptionId", exc_bp->filter);
+        EmplaceSafeString(body, "description", exc_bp->label);
       } else {
         body.try_emplace("exceptionId", "exception");
       }
@@ -824,7 +824,7 @@ void request_exceptionInfo(const llvm::json::Object &request) {
     if (!ObjectContainsKey(body, "description")) {
       char description[1024];
       if (thread.GetStopDescription(description, sizeof(description))) {
-        body.try_emplace("description", std::string(description));
+        EmplaceSafeString(body, "description", std::string(description));
       }
     }
     body.try_emplace("breakMode", "always");
@@ -951,9 +951,9 @@ void request_evaluate(const llvm::json::Object &request) {
   const auto expression = GetString(arguments, "expression");
 
   if (!expression.empty() && expression[0] == '`') {
-    body.try_emplace("result",
-                     RunLLDBCommands(llvm::StringRef(),
-                                     {expression.substr(1)}));
+    auto result = RunLLDBCommands(llvm::StringRef(),
+                                     {expression.substr(1)});
+    EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
     // Always try to get the answer from the local variables if possible. If
@@ -968,13 +968,13 @@ void request_evaluate(const llvm::json::Object &request) {
       response.try_emplace("success", false);
       const char *error_cstr = value.GetError().GetCString();
       if (error_cstr && error_cstr[0])
-        response.try_emplace("message", std::string(error_cstr));
+        EmplaceSafeString(response, "message", std::string(error_cstr));
       else
-        response.try_emplace("message", "evaluate failed");
+        EmplaceSafeString(response, "message", "evaluate failed");
     } else {
       SetValueForKey(value, body, "result");
       auto value_typename = value.GetType().GetDisplayTypeName();
-      body.try_emplace("type", value_typename ? value_typename : NO_TYPENAME);
+      EmplaceSafeString(body, "type", value_typename ? value_typename : NO_TYPENAME);
       if (value.MightHaveChildren()) {
         auto variablesReference = VARIDX_TO_VARREF(g_vsc.variables.GetSize());
         g_vsc.variables.Append(value);
@@ -1241,7 +1241,7 @@ void request_launch(const llvm::json::Object &request) {
     g_vsc.target.AddModule(program.data(), target_triple, uuid_cstr, symfile);
     if (error.Fail()) {
       response.try_emplace("success", false);
-      response.try_emplace("message", std::string(error.GetCString()));
+      EmplaceSafeString(response, "message", std::string(error.GetCString()));
       g_vsc.SendJSON(llvm::json::Value(std::move(response)));
     }
   }
@@ -1279,7 +1279,7 @@ void request_launch(const llvm::json::Object &request) {
   g_vsc.target.Launch(g_vsc.launch_info, error);
   if (error.Fail()) {
     response.try_emplace("success", false);
-    response.try_emplace("message", std::string(error.GetCString()));
+    EmplaceSafeString(response, "message", std::string(error.GetCString()));
   }
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 
@@ -1945,7 +1945,7 @@ void request_source(const llvm::json::Object &request) {
   auto sourceReference = GetSigned(source, "sourceReference", -1);
   auto pos = g_vsc.source_map.find((lldb::addr_t)sourceReference);
   if (pos != g_vsc.source_map.end()) {
-    body.try_emplace("content", pos->second.content);
+    EmplaceSafeString(body, "content", pos->second.content);
   } else {
     response.try_emplace("success", false);
   }
@@ -2406,10 +2406,10 @@ void request_setVariable(const llvm::json::Object &request) {
     bool success = variable.SetValueFromCString(value.data(), error);
     if (success) {
       SetValueForKey(variable, body, "value");
-      body.try_emplace("type", variable.GetType().GetDisplayTypeName());
+      EmplaceSafeString(body, "type", variable.GetType().GetDisplayTypeName());
       body.try_emplace("variablesReference", newVariablesReference);
     } else {
-      body.try_emplace("message", std::string(error.GetCString()));
+      EmplaceSafeString(body, "message", std::string(error.GetCString()));
     }
     response.try_emplace("success", success);
   }

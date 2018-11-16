@@ -225,7 +225,7 @@ Optional<SymbolLocation> getTokenLocation(SourceLocation TokLoc,
     return None;
   FileURIStorage = std::move(*U);
   SymbolLocation Result;
-  Result.FileURI = FileURIStorage;
+  Result.FileURI = FileURIStorage.c_str();
   auto Range = getTokenRange(TokLoc, SM, LangOpts);
   Result.Start = Range.first;
   Result.End = Range.second;
@@ -524,7 +524,7 @@ void SymbolCollector::finish() {
             Ref R;
             R.Location.Start = Range.first;
             R.Location.End = Range.second;
-            R.Location.FileURI = *FileURI;
+            R.Location.FileURI = FileURI->c_str();
             R.Kind = toRefKind(LocAndRole.second);
             Refs.insert(*ID, R);
           }

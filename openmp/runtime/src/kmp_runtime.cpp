@@ -2649,6 +2649,8 @@ void __kmp_set_num_threads(int new_nth, int gtid) {
 
   KMP_COUNT_VALUE(OMP_set_numthreads, new_nth);
   thread = __kmp_threads[gtid];
+  if (thread->th.th_current_task->td_icvs.nproc == new_nth)
+    return; // nothing to do
 
   __kmp_save_internal_controls(thread);
 

@@ -316,6 +316,15 @@ libc++ Feature Options
   Build the libc++ benchmark tests and the Google Benchmark library needed
   to support them.
 
+.. option:: LIBCXX_BENCHMARK_TEST_ARGS:STRING
+
+  **Default**: ``--benchmark_min_time=0.01``
+
+  A semicolon list of arguments to pass when running the libc++ benchmarks using the
+  ``check-cxx-benchmarks`` rule. By default we run the benchmarks for a very short amount of time,
+  since the primary use of ``check-cxx-benchmarks`` is to get test and sanitizer coverage, not to
+  get accurate measurements.
+
 .. option:: LIBCXX_BENCHMARK_NATIVE_STDLIB:STRING
 
   **Default**:: ``""``
