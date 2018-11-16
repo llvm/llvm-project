@@ -379,7 +379,9 @@ The following options allow building libc++ for a different ABI version.
 
   .. warning::
     When providing a custom namespace, it's the users responsibility to ensure the name won't cause
-    conflicts with other names defined by libc++, both now and in the future.
+    conflicts with other names defined by libc++, both now and in the future. In particular, inline
+    namespaces of the form ``__[0-9]+`` are strictly reserved by libc++ and may not be used by users.
+    Doing otherwise could cause conflicts and hinder libc++ ABI evolution.
 
 .. option:: LIBCXX_ABI_DEFINES:STRING
 
