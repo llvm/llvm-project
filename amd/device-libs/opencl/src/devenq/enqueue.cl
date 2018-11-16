@@ -4,6 +4,12 @@
 #define LSIZE_LIMIT 65536U
 #define LOCAL_ALIGN 4
 
+struct rtinfo {
+    ulong kernel_object;
+    uint private_segment_size;
+    uint group_segment_size;
+};
+
 static inline void
 copy_captured_context(__global void * restrict d, void * restrict s, uint size, uint align)
 {
@@ -191,8 +197,7 @@ __enqueue_kernel_basic(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, v
     implicit[4] = (size_t)get_vqueue();
     implicit[5] = (size_t)aw;
 
-    // The invoke member points at a pointer to the kernel code
-    __global amd_kernel_code_t *kcode = (__global amd_kernel_code_t *)(*(__global size_t *)block);
+    const __global struct rtinfo *rti = (const __global struct rtinfo *)block;
 
     __global AmdAqlWrap *me = get_aql_wrap();
 
@@ -209,9 +214,9 @@ __enqueue_kernel_basic(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, v
     aw->aql.grid_size_x = (uint)r.globalWorkSize[0];
     aw->aql.grid_size_y = (uint)r.globalWorkSize[1];
     aw->aql.grid_size_z = (uint)r.globalWorkSize[2];
-    aw->aql.private_segment_size = kcode->workitem_private_segment_byte_size;
-    aw->aql.group_segment_size = 0;
-    aw->aql.kernel_object = (ulong)kcode;
+    aw->aql.private_segment_size = rti->private_segment_size;
+    aw->aql.group_segment_size = rti->group_segment_size;
+    aw->aql.kernel_object = rti->kernel_object;
     aw->aql.completion_signal.handle = 0;
 
     atomic_fetch_add_explicit((__global atomic_uint *)&me->child_counter, (uint)1, memory_order_relaxed, memory_scope_device);
@@ -266,8 +271,7 @@ __enqueue_kernel_basic_events(queue_t q, kernel_enqueue_flags_t f, const ndrange
     implicit[4] = (size_t)get_vqueue();
     implicit[5] = (size_t)aw;
 
-    // The invoke member points at a pointer to the kernel code
-    __global amd_kernel_code_t *kcode = (__global amd_kernel_code_t *)(*(__global size_t *)block);
+    const __global struct rtinfo *rti = (const __global struct rtinfo *)block;
 
     __global AmdAqlWrap *me = get_aql_wrap();
 
@@ -286,9 +290,9 @@ __enqueue_kernel_basic_events(queue_t q, kernel_enqueue_flags_t f, const ndrange
     aw->aql.grid_size_x = (uint)r.globalWorkSize[0];
     aw->aql.grid_size_y = (uint)r.globalWorkSize[1];
     aw->aql.grid_size_z = (uint)r.globalWorkSize[2];
-    aw->aql.private_segment_size = kcode->workitem_private_segment_byte_size;
-    aw->aql.group_segment_size = 0;
-    aw->aql.kernel_object = (ulong)kcode;
+    aw->aql.private_segment_size = rti->private_segment_size;
+    aw->aql.group_segment_size = rti->group_segment_size;
+    aw->aql.kernel_object = rti->kernel_object;
     aw->aql.completion_signal.handle = 0;
 
     atomic_fetch_add_explicit((__global atomic_uint *)&me->child_counter, (uint)1, memory_order_relaxed, memory_scope_device);
@@ -302,15 +306,14 @@ __enqueue_kernel_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r,
     uint csize = ((uint *)capture)[0];
     uint calign = ((uint *)capture)[1];
 
-    __global amd_kernel_code_t *kcode = (__global amd_kernel_code_t *)(*(__global size_t *)block);
-    uint lo0 = kcode->workgroup_group_segment_byte_size;
-    uint lo = lo0;
+    const __global struct rtinfo *rti = (const __global struct rtinfo *)block;
+    uint lo = rti->group_segment_size;
     for (uint il=0; il<nl; ++il)
         lo = align_up(lo, LOCAL_ALIGN) + (uint)ll[il];
 
     __global AmdVQueueHeader *vq = __builtin_astype(q, __global AmdVQueueHeader *);
 
-    if (lo - lo0 > LSIZE_LIMIT ||
+    if (lo > LSIZE_LIMIT ||
         align_up(csize, sizeof(uint)) + align_up(nl*sizeof(uint), sizeof(size_t)) + NUM_IMPLICIT_ARGS*sizeof(size_t) > vq->arg_size ||
         mul24(mul24((uint)r.localWorkSize[0], (uint)r.localWorkSize[1]), (uint)r.localWorkSize[2]) > CL_DEVICE_MAX_WORK_GROUP_SIZE)
         return CLK_ENQUEUE_FAILURE;
@@ -327,7 +330,7 @@ __enqueue_kernel_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r,
     copy_captured_context(aw->aql.kernarg_address, capture, csize, calign);
 
     __global uint *la = (__global uint *)((__global char *)aw->aql.kernarg_address + align_up(csize, sizeof(uint)));
-    lo = lo0;
+    lo = rti->group_segment_size;
     for (uint il=0; il<nl; ++il)
         lo = (la[il] = align_up(lo, LOCAL_ALIGN)) + (uint)ll[il];
 
@@ -354,9 +357,9 @@ __enqueue_kernel_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r,
     aw->aql.grid_size_x = (uint)r.globalWorkSize[0];
     aw->aql.grid_size_y = (uint)r.globalWorkSize[1];
     aw->aql.grid_size_z = (uint)r.globalWorkSize[2];
-    aw->aql.private_segment_size = kcode->workitem_private_segment_byte_size;
-    aw->aql.group_segment_size = lo - lo0;
-    aw->aql.kernel_object = (ulong)kcode;
+    aw->aql.private_segment_size = rti->private_segment_size;
+    aw->aql.group_segment_size = lo;
+    aw->aql.kernel_object = rti->kernel_object;
     aw->aql.completion_signal.handle = 0;
 
     atomic_fetch_add_explicit((__global atomic_uint *)&me->child_counter, (uint)1, memory_order_relaxed, memory_scope_device);
@@ -371,16 +374,14 @@ __enqueue_kernel_events_varargs(queue_t q, kernel_enqueue_flags_t f, const ndran
     uint csize = ((uint *)capture)[0];
     uint calign = ((uint *)capture)[1];
 
-    __global amd_kernel_code_t *kcode = (__global amd_kernel_code_t *)(*(__global size_t *)block);
-
-    uint lo0 = kcode->workgroup_group_segment_byte_size;
-    uint lo = lo0;
+    const __global struct rtinfo *rti = (const __global struct rtinfo *)block;
+    uint lo = rti->group_segment_size;
     for (uint il=0; il<nl; ++il)
         lo = align_up(lo, LOCAL_ALIGN) + (uint)ll[il];
 
     __global AmdVQueueHeader *vq = __builtin_astype(q, __global AmdVQueueHeader *);
 
-    if (lo - lo0 > LSIZE_LIMIT ||
+    if (lo > LSIZE_LIMIT ||
         nwl > vq->wait_size ||
         align_up(csize, sizeof(uint)) + align_up(nl*sizeof(uint), sizeof(size_t)) + NUM_IMPLICIT_ARGS*sizeof(size_t) > vq->arg_size ||
         mul24(mul24((uint)r.localWorkSize[0], (uint)r.localWorkSize[1]), (uint)r.localWorkSize[2]) > CL_DEVICE_MAX_WORK_GROUP_SIZE)
@@ -416,7 +417,7 @@ __enqueue_kernel_events_varargs(queue_t q, kernel_enqueue_flags_t f, const ndran
     copy_captured_context(aw->aql.kernarg_address, capture, csize, calign);
 
     __global uint *la = (__global uint *)((__global char *)aw->aql.kernarg_address + align_up(csize, sizeof(uint)));
-    lo = lo0;
+    lo = rti->group_segment_size;
     for (uint il=0; il<nl; ++il)
         lo = (la[il] = align_up(lo, LOCAL_ALIGN)) + (uint)ll[il];
 
@@ -445,9 +446,9 @@ __enqueue_kernel_events_varargs(queue_t q, kernel_enqueue_flags_t f, const ndran
     aw->aql.grid_size_x = (uint)r.globalWorkSize[0];
     aw->aql.grid_size_y = (uint)r.globalWorkSize[1];
     aw->aql.grid_size_z = (uint)r.globalWorkSize[2];
-    aw->aql.private_segment_size = kcode->workitem_private_segment_byte_size;
-    aw->aql.group_segment_size = lo - lo0;
-    aw->aql.kernel_object = (ulong)kcode;
+    aw->aql.private_segment_size = rti->private_segment_size;
+    aw->aql.group_segment_size = lo;
+    aw->aql.kernel_object = rti->kernel_object;
     aw->aql.completion_signal.handle = 0;
 
     atomic_fetch_add_explicit((__global atomic_uint *)&me->child_counter, (uint)1, memory_order_relaxed, memory_scope_device);
