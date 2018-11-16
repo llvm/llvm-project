@@ -176,6 +176,16 @@ public:
   /// Return whether this visitor should traverse post-order.
   bool shouldTraversePostOrder() const { return false; }
 
+  /// Recursively visits an entire AST, starting from the top-level Decls
+  /// in the AST traversal scope (by default, the TranslationUnitDecl).
+  /// \returns false if visitation was terminated early.
+  bool TraverseAST(ASTContext &AST) {
+    for (Decl *D : AST.getTraversalScope())
+      if (!getDerived().TraverseDecl(D))
+        return false;
+    return true;
+  }
+
   /// Recursively visit a statement or expression, by
   /// dispatching to Traverse*() based on the argument's dynamic type.
   ///

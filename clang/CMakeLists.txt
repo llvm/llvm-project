@@ -599,8 +599,8 @@ if (CLANG_ENABLE_BOOTSTRAP)
       if(NOT BOOTSTRAP_LLVM_ENABLE_LLD AND LLVM_BINUTILS_INCDIR)
         add_dependencies(clang-bootstrap-deps LLVMgold)
       endif()
-      set(LTO_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar)
-      set(LTO_RANLIB -DCMAKE_RANLIB=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ranlib)
+      set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar)
+      set(${CLANG_STAGE}_RANLIB -DCMAKE_RANLIB=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ranlib)
     endif()
   endif()
 
@@ -665,6 +665,26 @@ if (CLANG_ENABLE_BOOTSTRAP)
     -DCMAKE_C_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/${C_COMPILER}
     -DCMAKE_ASM_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/${C_COMPILER}
     -DCMAKE_ASM_COMPILER_ID=Clang)
+
+  if(BOOTSTRAP_CMAKE_SYSTEM_NAME)
+    set(${CLANG_STAGE}_CONFIG -DLLVM_CONFIG_PATH=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-config)
+    set(${CLANG_STAGE}_TABLEGEN
+      -DLLVM_TABLEGEN=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-tblgen
+      -DCLANG_TABLEGEN=${LLVM_RUNTIME_OUTPUT_INTDIR}/clang-tblgen)
+    if(BOOTSTRAP_CMAKE_SYSTEM_NAME STREQUAL "Linux")
+      if(BOOTSTRAP_LLVM_ENABLE_LLD)
+        set(${CLANG_STAGE}_LINKER -DCMAKE_LINKER=${LLVM_RUNTIME_OUTPUT_INTDIR}/ld.lld)
+      endif()
+      if(NOT BOOTSTRAP_LLVM_ENABLE_LTO)
+        add_dependencies(clang-bootstrap-deps llvm-ar llvm-ranlib)
+        set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar)
+        set(${CLANG_STAGE}_RANLIB -DCMAKE_RANLIB=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ranlib)
+      endif()
+      add_dependencies(clang-bootstrap-deps llvm-objcopy llvm-strip)
+      set(${CLANG_STAGE}_OBJCOPY -DCMAKE_OBJCOPY=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-objcopy)
+      set(${CLANG_STAGE}_STRIP -DCMAKE_STRIP=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-strip)
+    endif()
+  endif()
 
   if(BOOTSTRAP_LLVM_BUILD_INSTRUMENTED)
     add_dependencies(clang-bootstrap-deps llvm-profdata)
@@ -734,7 +754,14 @@ if (CLANG_ENABLE_BOOTSTRAP)
                 ${PASSTHROUGH_VARIABLES}
                  -DCLANG_STAGE=${NEXT_CLANG_STAGE}
                 ${COMPILER_OPTIONS}
-                ${LTO_LIBRARY} ${LTO_AR} ${LTO_RANLIB} ${verbose} ${PGO_OPT}
+                ${${CLANG_STAGE}_CONFIG}
+                ${${CLANG_STAGE}_TABLEGEN}
+                ${LTO_LIBRARY} ${verbose} ${PGO_OPT}
+                ${${CLANG_STAGE}_LINKER}
+                ${${CLANG_STAGE}_AR}
+                ${${CLANG_STAGE}_RANLIB}
+                ${${CLANG_STAGE}_OBJCOPY}
+                ${${CLANG_STAGE}_STRIP}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
     USES_TERMINAL_CONFIGURE 1
