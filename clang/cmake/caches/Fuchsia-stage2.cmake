@@ -33,7 +33,7 @@ if(APPLE)
   list(APPEND RUNTIME_TARGETS "default")
 endif()
 
-foreach(target i386-linux-gnu;x86_64-linux-gnu;arm-linux-gnueabi;aarch64-linux-gnu)
+foreach(target aarch64-linux-gnu;armv7-linux-gnueabihf;i386-linux-gnu;x86_64-linux-gnu)
   if(LINUX_${target}_SYSROOT)
     # Set the per-target builtins options.
     list(APPEND BUILTIN_TARGETS "${target}")

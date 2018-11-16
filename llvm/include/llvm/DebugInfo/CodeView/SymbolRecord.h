@@ -400,6 +400,7 @@ public:
   uint16_t Module;
   StringRef Name;
 
+  uint16_t modi() const { return Module - 1; }
   uint32_t RecordOffset;
 };
 

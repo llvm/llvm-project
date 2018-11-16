@@ -1778,7 +1778,7 @@ TEST_F(VFSFromYAMLTest, DirectoryIterationErrorInVFSLayer) {
 
 TEST_F(VFSFromYAMLTest, GetRealPath) {
   IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
-  Lower->addDirectory("/dir/");
+  Lower->addDirectory("//dir/");
   Lower->addRegularFile("/foo");
   Lower->addSymlink("/link");
   IntrusiveRefCntPtr<vfs::FileSystem> FS = getFromYAMLString(
@@ -1786,7 +1786,7 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
       "  'roots': [\n"
       "{\n"
       "  'type': 'directory',\n"
-      "  'name': '/root/',\n"
+      "  'name': '//root/',\n"
       "  'contents': [ {\n"
       "                  'type': 'file',\n"
       "                  'name': 'bar',\n"
@@ -1796,7 +1796,7 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
       "},\n"
       "{\n"
       "  'type': 'directory',\n"
-      "  'name': '/dir/',\n"
+      "  'name': '//dir/',\n"
       "  'contents': []\n"
       "}\n"
       "]\n"
@@ -1810,12 +1810,12 @@ TEST_F(VFSFromYAMLTest, GetRealPath) {
   EXPECT_EQ(RealPath.str(), "/foo");
 
   // File present in YAML pointing to symlink in underlying file system.
-  EXPECT_FALSE(FS->getRealPath("/root/bar", RealPath));
+  EXPECT_FALSE(FS->getRealPath("//root/bar", RealPath));
   EXPECT_EQ(RealPath.str(), "/symlink");
 
   // Directories should fall back to the underlying file system is possible.
-  EXPECT_FALSE(FS->getRealPath("/dir/", RealPath));
-  EXPECT_EQ(RealPath.str(), "/dir/");
+  EXPECT_FALSE(FS->getRealPath("//dir/", RealPath));
+  EXPECT_EQ(RealPath.str(), "//dir/");
 
   // Try a non-existing file.
   EXPECT_EQ(FS->getRealPath("/non_existing", RealPath),
