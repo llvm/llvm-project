@@ -25,6 +25,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -566,6 +567,14 @@ bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   case Mips::fixup_MICROMIPS_TLS_TPREL_LO16:
     return true;
   }
+}
+
+bool MipsAsmBackend::isMicroMips(const MCSymbol *Sym) const {
+  if (const auto *ElfSym = dyn_cast<const MCSymbolELF>(Sym)) {
+    if (ElfSym->getOther() & ELF::STO_MIPS_MICROMIPS)
+      return true;
+  }
+  return false;
 }
 
 MCAsmBackend *llvm::createMipsAsmBackend(const Target &T,
