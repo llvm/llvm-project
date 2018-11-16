@@ -676,6 +676,7 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
   bool abort_other_plans = false;
   StackFrameSP frame_sp(thread->GetStackFrameAtIndex(0));
 
+  Status new_plan_status;
   ThreadPlanSP new_plan_sp;
   if (frame_sp) {
     if (frame_sp->HasDebugInformation()) {
@@ -683,10 +684,10 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
       SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
       new_plan_sp = thread->QueueThreadPlanForStepOverRange(
           abort_other_plans, sc.line_entry, sc, stop_other_threads,
-          avoid_no_debug);
+          new_plan_status, avoid_no_debug);
     } else {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          true, abort_other_plans, stop_other_threads);
+          true, abort_other_plans, stop_other_threads, new_plan_status);
     }
   }
   error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
@@ -726,6 +727,7 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
   Thread *thread = exe_ctx.GetThreadPtr();
   StackFrameSP frame_sp(thread->GetStackFrameAtIndex(0));
   ThreadPlanSP new_plan_sp;
+  Status new_plan_status;
 
   if (frame_sp && frame_sp->HasDebugInformation()) {
     SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
@@ -743,13 +745,17 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
         eLazyBoolCalculate;
     new_plan_sp = thread->QueueThreadPlanForStepInRange(
         abort_other_plans, range, sc, target_name, stop_other_threads,
-        step_in_avoids_code_without_debug_info,
+        new_plan_status, step_in_avoids_code_without_debug_info,
         step_out_avoids_code_without_debug_info);
   } else {
     new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-        false, abort_other_plans, stop_other_threads);
+        false, abort_other_plans, stop_other_threads, new_plan_status);
   }
-  error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+
+  if (new_plan_status.Success())
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+  else
+    error.SetErrorString(new_plan_status.AsCString());
 }
 
 void SBThread::StepOut() {
@@ -778,11 +784,15 @@ void SBThread::StepOut(SBError &error) {
   Thread *thread = exe_ctx.GetThreadPtr();
 
   const LazyBool avoid_no_debug = eLazyBoolCalculate;
+  Status new_plan_status;
   ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepOut(
       abort_other_plans, NULL, false, stop_other_threads, eVoteYes,
-      eVoteNoOpinion, 0, avoid_no_debug));
+      eVoteNoOpinion, 0, new_plan_status, avoid_no_debug));
 
-  error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+  if (new_plan_status.Success())
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+  else
+    error.SetErrorString(new_plan_status.AsCString());
 }
 
 void SBThread::StepOutOfFrame(SBFrame &sb_frame) {
@@ -831,11 +841,15 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
     return;
   }
 
+  Status new_plan_status;
   ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepOut(
       abort_other_plans, NULL, false, stop_other_threads, eVoteYes,
-      eVoteNoOpinion, frame_sp->GetFrameIndex()));
+      eVoteNoOpinion, frame_sp->GetFrameIndex(), new_plan_status));
 
-  error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+  if (new_plan_status.Success())
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+  else
+    error.SetErrorString(new_plan_status.AsCString());
 }
 
 void SBThread::StepInstruction(bool step_over) {
@@ -859,10 +873,14 @@ void SBThread::StepInstruction(bool step_over, SBError &error) {
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
-  ThreadPlanSP new_plan_sp(
-      thread->QueueThreadPlanForStepSingleInstruction(step_over, true, true));
+  Status new_plan_status;
+  ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepSingleInstruction(
+      step_over, true, true, new_plan_status));
 
-  error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+  if (new_plan_status.Success())
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+  else
+    error.SetErrorString(new_plan_status.AsCString());
 }
 
 void SBThread::RunToAddress(lldb::addr_t addr) {
@@ -892,10 +910,14 @@ void SBThread::RunToAddress(lldb::addr_t addr, SBError &error) {
 
   Thread *thread = exe_ctx.GetThreadPtr();
 
+  Status new_plan_status;
   ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForRunToAddress(
-      abort_other_plans, target_addr, stop_other_threads));
+      abort_other_plans, target_addr, stop_other_threads, new_plan_status));
 
-  error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+  if (new_plan_status.Success())
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+  else
+    error.SetErrorString(new_plan_status.AsCString());
 }
 
 SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
@@ -1007,12 +1029,16 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
       } else
         sb_error.SetErrorString("step until target not in current function");
     } else {
+      Status new_plan_status;
       ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepUntil(
           abort_other_plans, &step_over_until_addrs[0],
           step_over_until_addrs.size(), stop_other_threads,
-          frame_sp->GetFrameIndex()));
+          frame_sp->GetFrameIndex(), new_plan_status));
 
-      sb_error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+      if (new_plan_status.Success())
+        sb_error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+      else
+        sb_error.SetErrorString(new_plan_status.AsCString());
     }
   } else {
     sb_error.SetErrorString("this SBThread object is invalid");
@@ -1027,7 +1053,7 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name) {
 SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
                                               bool resume_immediately) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_API));
-  SBError sb_error;
+  SBError error;
 
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
@@ -1038,37 +1064,29 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
   }
 
   if (!exe_ctx.HasThreadScope()) {
-    sb_error.SetErrorString("this SBThread object is invalid");
-    return sb_error;
+    error.SetErrorString("this SBThread object is invalid");
+    return error;
   }
 
   Thread *thread = exe_ctx.GetThreadPtr();
-  ThreadPlanSP thread_plan_sp =
-      thread->QueueThreadPlanForStepScripted(false, script_class_name, false);
+  Status new_plan_status;
+  ThreadPlanSP new_plan_sp = thread->QueueThreadPlanForStepScripted(
+      false, script_class_name, false, new_plan_status);
 
-  if (!thread_plan_sp) {
-    sb_error.SetErrorStringWithFormat(
-        "Error queueing thread plan for class: %s", script_class_name);
-    return sb_error;
+  if (new_plan_status.Fail()) {
+    error.SetErrorString(new_plan_status.AsCString());
+    return error;
   }
 
-  if (!resume_immediately) {
-    return sb_error;
-  }
+  if (!resume_immediately)
+    return error;
 
-  if (thread_plan_sp)
-    sb_error = ResumeNewPlan(exe_ctx, thread_plan_sp.get());
-  else {
-    sb_error.SetErrorStringWithFormat(
-        "Error resuming thread plan for class: %s.", script_class_name);
-    if (log)
-      log->Printf("SBThread(%p)::StepUsingScriptedThreadPlan: Error queuing "
-                  "thread plan for class: %s",
-                  static_cast<void *>(exe_ctx.GetThreadPtr()),
-                  script_class_name);
-  }
+  if (new_plan_status.Success())
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+  else
+    error.SetErrorString(new_plan_status.AsCString());
 
-  return sb_error;
+  return error;
 }
 
 SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {

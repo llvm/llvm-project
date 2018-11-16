@@ -256,7 +256,7 @@ void VSCode::SendOutput(OutputType o, const llvm::StringRef output) {
     break;
   }
   body.try_emplace("category", category);
-  body.try_emplace("output", output.str());
+  EmplaceSafeString(body, "output", output.str());
   event.try_emplace("body", std::move(body));
   SendJSON(llvm::json::Value(std::move(event)));
 }

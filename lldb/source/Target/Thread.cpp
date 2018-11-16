@@ -262,6 +262,7 @@ Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
                 static_cast<void *>(this), GetID());
 
   CheckInWithManager();
+
   QueueFundamentalPlan(true);
 }
 
@@ -395,13 +396,14 @@ lldb::StopInfoSP Thread::GetStopInfo() {
       m_stop_info_sp ->IsValid() &&
       m_stop_info_stop_id == stop_id;
   bool have_valid_completed_plan = completed_plan_sp && completed_plan_sp->PlanSucceeded();
+  bool plan_failed = completed_plan_sp && !completed_plan_sp->PlanSucceeded();
   bool plan_overrides_trace =
     have_valid_stop_info && have_valid_completed_plan
     && (m_stop_info_sp->GetStopReason() == eStopReasonTrace);
 
-  if (have_valid_stop_info && !plan_overrides_trace) {
+  if (have_valid_stop_info && !plan_overrides_trace && !plan_failed) {
     return m_stop_info_sp;
-  } else if (have_valid_completed_plan) {
+  } else if (completed_plan_sp) {
     bool is_swift_error_value;
     lldb::ValueObjectSP return_value_sp =
         GetReturnValueObject(&is_swift_error_value);
@@ -1184,12 +1186,34 @@ ThreadPlan *Thread::GetPreviousPlan(ThreadPlan *current_plan) {
   return nullptr;
 }
 
-void Thread::QueueThreadPlan(ThreadPlanSP &thread_plan_sp,
-                             bool abort_other_plans) {
+Status Thread::QueueThreadPlan(ThreadPlanSP &thread_plan_sp,
+                               bool abort_other_plans) {
+  Status status;
+  StreamString s;
+  if (!thread_plan_sp->ValidatePlan(&s)) {
+    DiscardThreadPlansUpToPlan(thread_plan_sp);
+    thread_plan_sp.reset();
+    status.SetErrorString(s.GetString());
+    return status;
+  }
+
   if (abort_other_plans)
     DiscardThreadPlans(true);
 
   PushPlan(thread_plan_sp);
+
+  // This seems a little funny, but I don't want to have to split up the
+  // constructor and the DidPush in the scripted plan, that seems annoying.
+  // That means the constructor has to be in DidPush. So I have to validate the
+  // plan AFTER pushing it, and then take it off again...
+  if (!thread_plan_sp->ValidatePlan(&s)) {
+    DiscardThreadPlansUpToPlan(thread_plan_sp);
+    thread_plan_sp.reset();
+    status.SetErrorString(s.GetString());
+    return status;
+  }
+
+  return status;
 }
 
 void Thread::EnableTracer(bool value, bool single_stepping) {
@@ -1354,23 +1378,24 @@ ThreadPlanSP Thread::QueueFundamentalPlan(bool abort_other_plans) {
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepSingleInstruction(
-    bool step_over, bool abort_other_plans, bool stop_other_threads) {
+    bool step_over, bool abort_other_plans, bool stop_other_threads,
+    Status &status) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepInstruction(
       *this, step_over, stop_other_threads, eVoteNoOpinion, eVoteNoOpinion));
-  QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
     bool abort_other_plans, const AddressRange &range,
     const SymbolContext &addr_context, lldb::RunMode stop_other_threads,
-    LazyBool step_out_avoids_code_withoug_debug_info) {
+    Status &status, LazyBool step_out_avoids_code_withoug_debug_info) {
   ThreadPlanSP thread_plan_sp;
   thread_plan_sp.reset(new ThreadPlanStepOverRange(
       *this, range, addr_context, stop_other_threads,
       step_out_avoids_code_withoug_debug_info));
 
-  QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }
 
@@ -1379,17 +1404,17 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
 ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
     bool abort_other_plans, const LineEntry &line_entry,
     const SymbolContext &addr_context, lldb::RunMode stop_other_threads,
-    LazyBool step_out_avoids_code_withoug_debug_info) {
+    Status &status, LazyBool step_out_avoids_code_withoug_debug_info) {
   return QueueThreadPlanForStepOverRange(
       abort_other_plans, line_entry.GetSameLineContiguousAddressRange(),
-      addr_context, stop_other_threads,
+      addr_context, stop_other_threads, status,
       step_out_avoids_code_withoug_debug_info);
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     bool abort_other_plans, const AddressRange &range,
     const SymbolContext &addr_context, const char *step_in_target,
-    lldb::RunMode stop_other_threads,
+    lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
   ThreadPlanSP thread_plan_sp(
@@ -1402,14 +1427,14 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
   if (step_in_target)
     plan->SetStepInTarget(step_in_target);
 
-  QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepInRangeNoShouldStop(
     bool abort_other_plans, const AddressRange &range,
     const SymbolContext &addr_context, const char *step_in_target,
-    lldb::RunMode stop_other_threads,
+    lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
   ThreadPlanSP thread_plan_sp(
@@ -1421,10 +1446,10 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRangeNoShouldStop(
 
   if (step_in_target)
     plan->SetStepInTarget(step_in_target);
-    
+
   plan->ClearShouldStopHereCallbacks();
 
-  QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }
 
@@ -1432,12 +1457,12 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRangeNoShouldStop(
 ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     bool abort_other_plans, const LineEntry &line_entry,
     const SymbolContext &addr_context, const char *step_in_target,
-    lldb::RunMode stop_other_threads,
+    lldb::RunMode stop_other_threads, Status &status,
     LazyBool step_in_avoids_code_without_debug_info,
     LazyBool step_out_avoids_code_without_debug_info) {
   return QueueThreadPlanForStepInRange(
       abort_other_plans, line_entry.GetSameLineContiguousAddressRange(),
-      addr_context, step_in_target, stop_other_threads,
+      addr_context, step_in_target, stop_other_threads, status,
       step_in_avoids_code_without_debug_info,
       step_out_avoids_code_without_debug_info);
 }
@@ -1445,23 +1470,19 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
 ThreadPlanSP Thread::QueueThreadPlanForStepOut(
     bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
     bool stop_other_threads, Vote stop_vote, Vote run_vote, uint32_t frame_idx,
-    LazyBool step_out_avoids_code_without_debug_info) {
+    Status &status, LazyBool step_out_avoids_code_without_debug_info) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepOut(
       *this, addr_context, first_insn, stop_other_threads, stop_vote, run_vote,
       frame_idx, step_out_avoids_code_without_debug_info));
 
-  if (thread_plan_sp->ValidatePlan(nullptr)) {
-    QueueThreadPlan(thread_plan_sp, abort_other_plans);
-    return thread_plan_sp;
-  } else {
-    return ThreadPlanSP();
-  }
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  return thread_plan_sp;
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepOutNoShouldStop(
     bool abort_other_plans, SymbolContext *addr_context, bool first_insn,
     bool stop_other_threads, Vote stop_vote, Vote run_vote, uint32_t frame_idx,
-    bool continue_to_next_branch) {
+    Status &status, bool continue_to_next_branch) {
   const bool calculate_return_value =
       false; // No need to calculate the return value here.
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepOut(
@@ -1472,59 +1493,51 @@ ThreadPlanSP Thread::QueueThreadPlanForStepOutNoShouldStop(
       static_cast<ThreadPlanStepOut *>(thread_plan_sp.get());
   new_plan->ClearShouldStopHereCallbacks();
 
-  if (thread_plan_sp->ValidatePlan(nullptr)) {
-    QueueThreadPlan(thread_plan_sp, abort_other_plans);
-    return thread_plan_sp;
-  } else {
-    return ThreadPlanSP();
-  }
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  return thread_plan_sp;
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForStepThrough(StackID &return_stack_id,
                                                    bool abort_other_plans,
-                                                   bool stop_other_threads) {
+                                                   bool stop_other_threads,
+                                                   Status &status) {
   ThreadPlanSP thread_plan_sp(
       new ThreadPlanStepThrough(*this, return_stack_id, stop_other_threads));
   if (!thread_plan_sp || !thread_plan_sp->ValidatePlan(nullptr))
     return ThreadPlanSP();
 
-  QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }
 
 ThreadPlanSP Thread::QueueThreadPlanForRunToAddress(bool abort_other_plans,
                                                     Address &target_addr,
-                                                    bool stop_other_threads) {
+                                                    bool stop_other_threads,
+                                                    Status &status) {
   ThreadPlanSP thread_plan_sp(
       new ThreadPlanRunToAddress(*this, target_addr, stop_other_threads));
-  QueueThreadPlan(thread_plan_sp, abort_other_plans);
+
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }
 
-ThreadPlanSP Thread::QueueThreadPlanForStepUntil(bool abort_other_plans,
-                                                 lldb::addr_t *address_list,
-                                                 size_t num_addresses,
-                                                 bool stop_other_threads,
-                                                 uint32_t frame_idx) {
+ThreadPlanSP Thread::QueueThreadPlanForStepUntil(
+    bool abort_other_plans, lldb::addr_t *address_list, size_t num_addresses,
+    bool stop_other_threads, uint32_t frame_idx, Status &status) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanStepUntil(
       *this, address_list, num_addresses, stop_other_threads, frame_idx));
-  QueueThreadPlan(thread_plan_sp, abort_other_plans);
+
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }
 
 lldb::ThreadPlanSP Thread::QueueThreadPlanForStepScripted(
-    bool abort_other_plans, const char *class_name, bool stop_other_threads) {
+    bool abort_other_plans, const char *class_name, bool stop_other_threads,
+    Status &status) {
   ThreadPlanSP thread_plan_sp(new ThreadPlanPython(*this, class_name));
-  QueueThreadPlan(thread_plan_sp, abort_other_plans);
-  // This seems a little funny, but I don't want to have to split up the
-  // constructor and the DidPush in the scripted plan, that seems annoying.
-  // That means the constructor has to be in DidPush. So I have to validate the
-  // plan AFTER pushing it, and then take it off again...
-  if (!thread_plan_sp->ValidatePlan(nullptr)) {
-    DiscardThreadPlansUpToPlan(thread_plan_sp);
-    return ThreadPlanSP();
-  } else
-    return thread_plan_sp;
+
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  return thread_plan_sp;
 }
 
 uint32_t Thread::GetIndexID() const { return m_index_id; }
@@ -2143,12 +2156,12 @@ Status Thread::StepIn(bool source_step,
     if (source_step && frame_sp && frame_sp->HasDebugInformation()) {
       SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
       new_plan_sp = QueueThreadPlanForStepInRange(
-          abort_other_plans, sc.line_entry, sc, nullptr, run_mode,
+          abort_other_plans, sc.line_entry, sc, nullptr, run_mode, error,
           step_in_avoids_code_without_debug_info,
           step_out_avoids_code_without_debug_info);
     } else {
       new_plan_sp = QueueThreadPlanForStepSingleInstruction(
-          false, abort_other_plans, run_mode);
+          false, abort_other_plans, run_mode, error);
     }
 
     new_plan_sp->SetIsMasterPlan(true);
@@ -2177,11 +2190,11 @@ Status Thread::StepOver(bool source_step,
     if (source_step && frame_sp && frame_sp->HasDebugInformation()) {
       SymbolContext sc(frame_sp->GetSymbolContext(eSymbolContextEverything));
       new_plan_sp = QueueThreadPlanForStepOverRange(
-          abort_other_plans, sc.line_entry, sc, run_mode,
+          abort_other_plans, sc.line_entry, sc, run_mode, error,
           step_out_avoids_code_without_debug_info);
     } else {
       new_plan_sp = QueueThreadPlanForStepSingleInstruction(
-          true, abort_other_plans, run_mode);
+          true, abort_other_plans, run_mode, error);
     }
 
     new_plan_sp->SetIsMasterPlan(true);
@@ -2206,7 +2219,7 @@ Status Thread::StepOut() {
 
     ThreadPlanSP new_plan_sp(QueueThreadPlanForStepOut(
         abort_other_plans, nullptr, first_instruction, stop_other_threads,
-        eVoteYes, eVoteNoOpinion, 0));
+        eVoteYes, eVoteNoOpinion, 0, error));
 
     new_plan_sp->SetIsMasterPlan(true);
     new_plan_sp->SetOkayToDiscard(false);

@@ -35,7 +35,7 @@ class StepScriptedTestCase(TestBase):
         self.assertEqual("foo", frame.GetFunctionName())
 
         err = thread.StepUsingScriptedThreadPlan(name)
-        self.assertTrue(err.Success(), "Failed to step out")
+        self.assertTrue(err.Success(), err.GetCString())
 
         frame = thread.GetFrameAtIndex(0)
         self.assertEqual("main", frame.GetFunctionName())

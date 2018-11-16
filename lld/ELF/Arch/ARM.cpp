@@ -61,7 +61,7 @@ ARM::ARM() {
   GotPltEntrySize = 4;
   PltEntrySize = 16;
   PltHeaderSize = 32;
-  TrapInstr = 0xd4d4d4d4;
+  TrapInstr = {0xd4, 0xd4, 0xd4, 0xd4};
   NeedsThunks = true;
 }
 
@@ -196,10 +196,10 @@ void ARM::writePltHeader(uint8_t *Buf) const {
   write32le(Buf + 4, PltData[1] | ((Offset >> 20) & 0xff));
   write32le(Buf + 8, PltData[2] | ((Offset >> 12) & 0xff));
   write32le(Buf + 12, PltData[3] | (Offset & 0xfff));
-  write32le(Buf + 16, TrapInstr); // Pad to 32-byte boundary
-  write32le(Buf + 20, TrapInstr);
-  write32le(Buf + 24, TrapInstr);
-  write32le(Buf + 28, TrapInstr);
+  memcpy(Buf + 16, TrapInstr.data(), 4); // Pad to 32-byte boundary
+  memcpy(Buf + 20, TrapInstr.data(), 4);
+  memcpy(Buf + 24, TrapInstr.data(), 4);
+  memcpy(Buf + 28, TrapInstr.data(), 4);
 }
 
 void ARM::addPltHeaderSymbols(InputSection &IS) const {
@@ -248,7 +248,7 @@ void ARM::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
   write32le(Buf + 0, PltData[0] | ((Offset >> 20) & 0xff));
   write32le(Buf + 4, PltData[1] | ((Offset >> 12) & 0xff));
   write32le(Buf + 8, PltData[2] | (Offset & 0xfff));
-  write32le(Buf + 12, TrapInstr); // Pad to 16-byte boundary
+  memcpy(Buf + 12, TrapInstr.data(), 4); // Pad to 16-byte boundary
 }
 
 void ARM::addPltSymbols(InputSection &IS, uint64_t Off) const {

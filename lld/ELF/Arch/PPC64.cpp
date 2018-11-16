@@ -113,6 +113,7 @@ public:
   void writeGotHeader(uint8_t *Buf) const override;
   bool needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                   uint64_t BranchAddr, const Symbol &S) const override;
+  bool inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const override;
   RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
                           RelExpr Expr) const override;
   void relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const override;
@@ -229,8 +230,7 @@ PPC64::PPC64() {
   // use 0x10000000 as the starting address.
   DefaultImageBase = 0x10000000;
 
-  TrapInstr =
-      (Config->IsLE == sys::IsLittleEndianHost) ? 0x7fe00008 : 0x0800e07f;
+  write32(TrapInstr.data(), 0x7fe00008);
 }
 
 static uint32_t getEFlags(InputFile *File) {
@@ -709,9 +709,28 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
 
 bool PPC64::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                        uint64_t BranchAddr, const Symbol &S) const {
-  // If a function is in the plt it needs to be called through
-  // a call stub.
-  return Type == R_PPC64_REL24 && S.isInPlt();
+  // The only call relocation we currently support is the REL24 type.
+  if (Type != R_PPC64_REL24)
+    return false;
+
+  // If a function is in the Plt it needs to be called with a call-stub.
+  if (S.isInPlt())
+    return true;
+
+  // If a symbol is a weak undefined and we are compiling an executable
+  // it doesn't need a range-extending thunk since it can't be called.
+  if (S.isUndefWeak() && !Config->Shared)
+    return false;
+
+  // If the offset exceeds the range of the branch type then it will need
+  // a range-extending thunk.
+  return !inBranchRange(Type, BranchAddr, S.getVA());
+}
+
+bool PPC64::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {
+  assert(Type == R_PPC64_REL24 && "Unexpected relocation type used in branch");
+  int64_t Offset = Dst - Src;
+  return isInt<26>(Offset);
 }
 
 RelExpr PPC64::adjustRelaxExpr(RelType Type, const uint8_t *Data,

@@ -853,6 +853,10 @@ size_t Breakpoint::GetNumResolvedLocations() const {
   return m_locations.GetNumResolvedLocations();
 }
 
+bool Breakpoint::HasResolvedLocations() const {
+  return GetNumResolvedLocations() > 0;
+}
+
 size_t Breakpoint::GetNumLocations() const { return m_locations.GetSize(); }
 
 bool Breakpoint::AddName(llvm::StringRef new_name) {

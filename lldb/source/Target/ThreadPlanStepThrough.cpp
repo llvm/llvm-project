@@ -58,7 +58,10 @@ ThreadPlanStepThrough::ThreadPlanStepThrough(Thread &thread,
               ->GetTarget()
               .CreateBreakpoint(m_backstop_addr, true, false)
               .get();
+
       if (return_bp != nullptr) {
+        if (return_bp->IsHardware() && !return_bp->HasResolvedLocations())
+          m_could_not_resolve_hw_bp = true;
         return_bp->SetThreadID(m_thread.GetID());
         m_backstop_bkpt_id = return_bp->GetID();
         return_bp->SetBreakpointKind("step-through-backstop");
@@ -142,7 +145,26 @@ void ThreadPlanStepThrough::GetDescription(Stream *s,
 }
 
 bool ThreadPlanStepThrough::ValidatePlan(Stream *error) {
-  return m_sub_plan_sp.get() != nullptr;
+  if (m_could_not_resolve_hw_bp) {
+    if (error)
+      error->PutCString(
+          "Could not create hardware breakpoint for thread plan.");
+    return false;
+  }
+
+  if (m_backstop_bkpt_id == LLDB_INVALID_BREAK_ID) {
+    if (error)
+      error->PutCString("Could not create backstop breakpoint.");
+    return false;
+  }
+
+  if (!m_sub_plan_sp.get()) {
+    if (error)
+      error->PutCString("Does not have a subplan.");
+    return false;
+  }
+
+  return true;
 }
 
 bool ThreadPlanStepThrough::DoPlanExplainsStop(Event *event_ptr) {
@@ -218,6 +240,7 @@ void ThreadPlanStepThrough::ClearBackstopBreakpoint() {
   if (m_backstop_bkpt_id != LLDB_INVALID_BREAK_ID) {
     m_thread.GetProcess()->GetTarget().RemoveBreakpointByID(m_backstop_bkpt_id);
     m_backstop_bkpt_id = LLDB_INVALID_BREAK_ID;
+    m_could_not_resolve_hw_bp = false;
   }
 }
 

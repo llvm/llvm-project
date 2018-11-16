@@ -135,7 +135,10 @@ ThreadPlanStepOut::ThreadPlanStepOut(
     Breakpoint *return_bp = m_thread.CalculateTarget()
                                 ->CreateBreakpoint(m_return_addr, true, false)
                                 .get();
+
     if (return_bp != nullptr) {
+      if (return_bp->IsHardware() && !return_bp->HasResolvedLocations())
+        m_could_not_resolve_hw_bp = true;
       return_bp->SetThreadID(m_thread.GetID());
       m_return_bp_id = return_bp->GetID();
       return_bp->SetBreakpointKind("step-out");
@@ -264,14 +267,24 @@ void ThreadPlanStepOut::GetDescription(Stream *s,
 bool ThreadPlanStepOut::ValidatePlan(Stream *error) {
   if (m_step_out_to_inline_plan_sp)
     return m_step_out_to_inline_plan_sp->ValidatePlan(error);
-  else if (m_step_through_inline_plan_sp)
+
+  if (m_step_through_inline_plan_sp)
     return m_step_through_inline_plan_sp->ValidatePlan(error);
-  else if (m_return_bp_id == LLDB_INVALID_BREAK_ID) {
+
+  if (m_could_not_resolve_hw_bp) {
+    if (error)
+      error->PutCString(
+          "Could not create hardware breakpoint for thread plan.");
+    return false;
+  }
+
+  if (m_return_bp_id == LLDB_INVALID_BREAK_ID) {
     if (error)
       error->PutCString("Could not create return address breakpoint.");
     return false;
-  } else
-    return true;
+  }
+
+  return true;
 }
 
 bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
@@ -319,7 +332,7 @@ bool ThreadPlanStepOut::DoPlanExplainsStop(Event *event_ptr) {
 
         if (done) {
           CalculateReturnValue();
-          if (InvokeShouldStopHereCallback(eFrameCompareOlder)) {
+          if (InvokeShouldStopHereCallback(eFrameCompareOlder, m_status)) {
             SetPlanComplete();
           }
         }
@@ -381,17 +394,17 @@ bool ThreadPlanStepOut::ShouldStop(Event *event_ptr) {
 
   if (done) {
     CalculateReturnValue();
-    if (InvokeShouldStopHereCallback(eFrameCompareOlder)) {
+    if (InvokeShouldStopHereCallback(eFrameCompareOlder, m_status)) {
       SetPlanComplete();
     } else {
       m_step_out_further_plan_sp =
-          QueueStepOutFromHerePlan(m_flags, eFrameCompareOlder);
+          QueueStepOutFromHerePlan(m_flags, eFrameCompareOlder, m_status);
       if (m_step_out_further_plan_sp->GetKind() == eKindStepOut)
       {
         // If we are planning to step out further, then the frame we are going
         // to step out to is about to go away, so we need to reset the frame
         // we are stepping out to to the one our step out plan is aiming for.
-        ThreadPlanStepOut *as_step_out 
+        ThreadPlanStepOut *as_step_out
           = static_cast<ThreadPlanStepOut *>(m_step_out_further_plan_sp.get());
         m_step_out_to_id = as_step_out->m_step_out_to_id;
       }
@@ -538,7 +551,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
       StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
       if (!frame_sp)
           return;
-      
+
       m_swift_error_return =
             swift_runtime->GetErrorReturnLocationAfterReturn(frame_sp);
     }
