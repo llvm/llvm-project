@@ -24,26 +24,23 @@ using namespace lldb_private::npdb;
 
 using Error = llvm::Error;
 
-UdtRecordCompleter::UdtRecordCompleter(PdbSymUid uid, CompilerType &derived_ct,
+UdtRecordCompleter::UdtRecordCompleter(PdbTypeSymId id,
+                                       CompilerType &derived_ct,
                                        clang::TagDecl &tag_decl,
                                        SymbolFileNativePDB &symbol_file)
-    : m_uid(uid), m_derived_ct(derived_ct), m_tag_decl(tag_decl),
+    : m_id(id), m_derived_ct(derived_ct), m_tag_decl(tag_decl),
       m_symbol_file(symbol_file) {
   TpiStream &tpi = symbol_file.m_index->tpi();
-  TypeIndex ti(uid.asTypeSym().index);
-  CVType cvt = tpi.getType(ti);
+  CVType cvt = tpi.getType(m_id.index);
   switch (cvt.kind()) {
   case LF_ENUM:
-    lldbassert(uid.tag() == PDB_SymType::Enum);
     llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, m_cvr.er));
     break;
   case LF_UNION:
-    lldbassert(uid.tag() == PDB_SymType::UDT);
     llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, m_cvr.ur));
     break;
   case LF_CLASS:
   case LF_STRUCTURE:
-    lldbassert(uid.tag() == PDB_SymType::UDT);
     llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, m_cvr.cr));
     break;
   default:
@@ -171,7 +168,6 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
 
   Declaration decl;
   llvm::StringRef name = DropNameScope(enumerator.getName());
-  lldbassert(m_uid.tag() == PDB_SymType::Enum);
   TypeSP underlying_type =
       m_symbol_file.GetOrCreateType(m_cvr.er.getUnderlyingType());
 

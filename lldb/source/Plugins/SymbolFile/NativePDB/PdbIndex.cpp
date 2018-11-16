@@ -122,7 +122,7 @@ void PdbIndex::ParseSectionContribs() {
 void PdbIndex::BuildAddrToSymbolMap(CompilandIndexItem &cci) {
   lldbassert(cci.m_symbols_by_va.empty() &&
              "Addr to symbol map is already built!");
-  uint16_t modi = cci.m_uid.asCompiland().modi;
+  uint16_t modi = cci.m_id.modi;
   const CVSymbolArray &syms = cci.m_debug_stream.getSymbolArray();
   for (auto iter = syms.begin(); iter != syms.end(); ++iter) {
     if (!SymbolHasAddress(*iter))
@@ -134,14 +134,13 @@ void PdbIndex::BuildAddrToSymbolMap(CompilandIndexItem &cci) {
     // We need to add 4 here to adjust for the codeview debug magic
     // at the beginning of the debug info stream.
     uint32_t sym_offset = iter.offset() + 4;
-    PdbSymUid cu_sym_uid =
-        PdbSymUid::makeCuSymId(CVSymToPDBSym(iter->kind()), modi, sym_offset);
+    PdbCompilandSymId cu_sym_id{modi, sym_offset};
 
     // If the debug info is incorrect, we could have multiple symbols with the
     // same address.  So use try_emplace instead of insert, and the first one
     // will win.
     auto insert_result =
-        cci.m_symbols_by_va.insert(std::make_pair(va, cu_sym_uid));
+        cci.m_symbols_by_va.insert(std::make_pair(va, PdbSymUid(cu_sym_id)));
     (void)insert_result;
 
     // The odds of an error in some function such as GetSegmentAndOffset or
@@ -180,7 +179,7 @@ std::vector<SymbolAndUid> PdbIndex::FindSymbolsByVa(lldb::addr_t va) {
   auto ub = cci.m_symbols_by_va.upper_bound(va);
 
   for (auto iter = cci.m_symbols_by_va.begin(); iter != ub; ++iter) {
-    const PdbCuSymId &cu_sym_id = iter->second.asCuSym();
+    PdbCompilandSymId cu_sym_id = iter->second.asCompilandSym();
     CVSymbol sym = ReadSymbolRecord(cu_sym_id);
 
     SegmentOffsetLength sol;
@@ -198,11 +197,10 @@ std::vector<SymbolAndUid> PdbIndex::FindSymbolsByVa(lldb::addr_t va) {
   return result;
 }
 
-CVSymbol PdbIndex::ReadSymbolRecord(PdbCuSymId cu_sym) const {
+CVSymbol PdbIndex::ReadSymbolRecord(PdbCompilandSymId cu_sym) const {
   // We need to subtract 4 here to adjust for the codeview debug magic
   // at the beginning of the debug info stream.
-  PdbSymUid cuid = PdbSymUid::makeCompilandId(cu_sym.modi);
-  const CompilandIndexItem *cci = compilands().GetCompiland(cuid);
+  const CompilandIndexItem *cci = compilands().GetCompiland(cu_sym.modi);
   auto iter = cci->m_debug_stream.getSymbolArray().at(cu_sym.offset - 4);
   lldbassert(iter != cci->m_debug_stream.getSymbolArray().end());
   return *iter;

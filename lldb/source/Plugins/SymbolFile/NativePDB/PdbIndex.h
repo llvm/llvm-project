@@ -149,7 +149,7 @@ public:
 
   std::vector<SymbolAndUid> FindSymbolsByVa(lldb::addr_t va);
 
-  llvm::codeview::CVSymbol ReadSymbolRecord(PdbCuSymId cu_sym) const;
+  llvm::codeview::CVSymbol ReadSymbolRecord(PdbCompilandSymId cu_sym) const;
 
   llvm::Optional<uint16_t> GetModuleIndexForAddr(uint16_t segment,
                                                  uint32_t offset) const;
