@@ -1,84 +1,25 @@
 # Benchmark Tools
 
-## compare_bench.py
-
-The `compare_bench.py` utility which can be used to compare the result of benchmarks.
-The program is invoked like:
-
-``` bash
-$ compare_bench.py <old-benchmark> <new-benchmark> [benchmark options]...
-```
-
-Where `<old-benchmark>` and `<new-benchmark>` either specify a benchmark executable file, or a JSON output file. The type of the input file is automatically detected. If a benchmark executable is specified then the benchmark is run to obtain the results. Otherwise the results are simply loaded from the output file.
-
-`[benchmark options]` will be passed to the benchmarks invocations. They can be anything that binary accepts, be it either normal `--benchmark_*` parameters, or some custom parameters your binary takes.
-
-The sample output using the JSON test files under `Inputs/` gives:
-
-``` bash
-$ ./compare_bench.py ./gbench/Inputs/test1_run1.json ./gbench/Inputs/test1_run2.json
-Comparing ./gbench/Inputs/test1_run1.json to ./gbench/Inputs/test1_run2.json
-Benchmark                        Time             CPU      Time Old      Time New       CPU Old       CPU New
--------------------------------------------------------------------------------------------------------------
-BM_SameTimes                  +0.0000         +0.0000            10            10            10            10
-BM_2xFaster                   -0.5000         -0.5000            50            25            50            25
-BM_2xSlower                   +1.0000         +1.0000            50           100            50           100
-BM_1PercentFaster             -0.0100         -0.0100           100            99           100            99
-BM_1PercentSlower             +0.0100         +0.0100           100           101           100           101
-BM_10PercentFaster            -0.1000         -0.1000           100            90           100            90
-BM_10PercentSlower            +0.1000         +0.1000           100           110           100           110
-BM_100xSlower                +99.0000        +99.0000           100         10000           100         10000
-BM_100xFaster                 -0.9900         -0.9900         10000           100         10000           100
-BM_10PercentCPUToTime         +0.1000         -0.1000           100           110           100            90
-BM_ThirdFaster                -0.3333         -0.3334           100            67           100            67
-BM_BadTimeUnit                -0.9000         +0.2000             0             0             0             1
-```
-
-As you can note, the values in `Time` and `CPU` columns are calculated as `(new - old) / |old|`.
-
-When a benchmark executable is run, the raw output from the benchmark is printed in real time to stdout. The sample output using `benchmark/basic_test` for both arguments looks like:
-
-```
-./compare_bench.py  test/basic_test test/basic_test  --benchmark_filter=BM_empty.*
-RUNNING: test/basic_test --benchmark_filter=BM_empty.* --benchmark_out=/tmp/tmpN7LF3a
-Run on (8 X 4000 MHz CPU s)
-2017-11-07 23:28:36
----------------------------------------------------------------------
-Benchmark                              Time           CPU Iterations
----------------------------------------------------------------------
-BM_empty                               4 ns          4 ns  170178757
-BM_empty/threads:8                     1 ns          7 ns  103868920
-BM_empty_stop_start                    0 ns          0 ns 1000000000
-BM_empty_stop_start/threads:8          0 ns          0 ns 1403031720
-RUNNING: /test/basic_test --benchmark_filter=BM_empty.* --benchmark_out=/tmp/tmplvrIp8
-Run on (8 X 4000 MHz CPU s)
-2017-11-07 23:28:38
----------------------------------------------------------------------
-Benchmark                              Time           CPU Iterations
----------------------------------------------------------------------
-BM_empty                               4 ns          4 ns  169534855
-BM_empty/threads:8                     1 ns          7 ns  104188776
-BM_empty_stop_start                    0 ns          0 ns 1000000000
-BM_empty_stop_start/threads:8          0 ns          0 ns 1404159424
-Comparing ../build/test/basic_test to ../build/test/basic_test
-Benchmark                                Time             CPU      Time Old      Time New       CPU Old       CPU New
----------------------------------------------------------------------------------------------------------------------
-BM_empty                              -0.0048         -0.0049             4             4             4             4
-BM_empty/threads:8                    -0.0123         -0.0054             1             1             7             7
-BM_empty_stop_start                   -0.0000         -0.0000             0             0             0             0
-BM_empty_stop_start/threads:8         -0.0029         +0.0001             0             0             0             0
-
-```
-
-As you can note, the values in `Time` and `CPU` columns are calculated as `(new - old) / |old|`.
-Obviously this example doesn't give any useful output, but it's intended to show the output format when 'compare_bench.py' needs to run benchmarks.
-
 ## compare.py
 
 The `compare.py` can be used to compare the result of benchmarks.
+
+**NOTE**: the utility relies on the scipy package which can be installed using [these instructions](https://www.scipy.org/install.html).
+
+### Displaying aggregates only
+
+The switch `-a` / `--display_aggregates_only` can be used to control the
+displayment of the normal iterations vs the aggregates. When passed, it will
+be passthrough to the benchmark binaries to be run, and will be accounted for
+in the tool itself; only the aggregates will be displayed, but not normal runs.
+It only affects the display, the separate runs will still be used to calculate
+the U test.
+
+### Modes of operation
+
 There are three modes of operation:
 
-1. Just compare two benchmarks, what `compare_bench.py` did.
+1. Just compare two benchmarks
 The program is invoked like:
 
 ``` bash
@@ -240,3 +181,19 @@ Benchmark                               Time             CPU      Time Old      
 ```
 This is a mix of the previous two modes, two (potentially different) benchmark binaries are run, and a different filter is applied to each one.
 As you can note, the values in `Time` and `CPU` columns are calculated as `(new - old) / |old|`.
+
+### U test
+
+If there is a sufficient repetition count of the benchmarks, the tool can do
+a [U Test](https://en.wikipedia.org/wiki/Mann%E2%80%93Whitney_U_test), of the
+null hypothesis that it is equally likely that a randomly selected value from
+one sample will be less than or greater than a randomly selected value from a
+second sample.
+
+If the calculated p-value is below this value is lower than the significance
+level alpha, then the result is said to be statistically significant and the
+null hypothesis is rejected. Which in other words means that the two benchmarks
+aren't identical.
+
+**WARNING**: requires **LARGE** (no less than 9) number of repetitions to be
+meaningful!

@@ -16,7 +16,24 @@
 #include "VSCodeForward.h"
 
 namespace lldb_vscode {
-  
+
+//------------------------------------------------------------------
+/// Emplace a StringRef in a json::Object after enusring that the
+/// string is valid UTF8. If not, first call llvm::json::fixUTF8
+/// before emplacing.
+///
+/// @param[in] obj
+///     A JSON object that we will attempt to emplace the value in
+///
+/// @param[in] key
+///     The key to use when emplacing the value
+///
+/// @param[in] str
+///     The string to emplace
+//------------------------------------------------------------------
+void EmplaceSafeString(llvm::json::Object &obj, llvm::StringRef key,
+                       llvm::StringRef str);
+
 //------------------------------------------------------------------
 /// Extract simple values as a string.
 ///

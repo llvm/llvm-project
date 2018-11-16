@@ -35,7 +35,7 @@ AMDGPURegisterBankInfo::AMDGPURegisterBankInfo(const TargetRegisterInfo &TRI)
     : AMDGPUGenRegisterBankInfo(),
       TRI(static_cast<const SIRegisterInfo*>(&TRI)) {
 
-  // HACK: Until this is fully tablegen'd
+  // HACK: Until this is fully tablegen'd.
   static bool AlreadyInit = false;
   if (AlreadyInit)
     return;

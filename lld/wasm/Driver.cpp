@@ -431,6 +431,71 @@ static Symbol *handleUndefined(StringRef Name) {
   return Sym;
 }
 
+static UndefinedGlobal *
+createUndefinedGlobal(StringRef Name, llvm::wasm::WasmGlobalType *Type) {
+  auto *Sym =
+      cast<UndefinedGlobal>(Symtab->addUndefinedGlobal(Name, 0, nullptr, Type));
+  Config->AllowUndefinedSymbols.insert(Sym->getName());
+  Sym->IsUsedInRegularObj = true;
+  return Sym;
+}
+
+// Create ABI-defined synthetic symbols
+static void createSyntheticSymbols() {
+  static WasmSignature NullSignature = {{}, {}};
+  static llvm::wasm::WasmGlobalType GlobalTypeI32 = {WASM_TYPE_I32, false};
+  static llvm::wasm::WasmGlobalType MutableGlobalTypeI32 = {WASM_TYPE_I32,
+                                                            true};
+
+  WasmSym::CallCtors = Symtab->addSyntheticFunction(
+      "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
+      make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
+
+  // The __stack_pointer is imported in the shared library case, and exported
+  // in the non-shared (executable) case.
+  if (Config->Shared) {
+    WasmSym::StackPointer =
+        createUndefinedGlobal("__stack_pointer", &MutableGlobalTypeI32);
+  } else {
+    llvm::wasm::WasmGlobal Global;
+    Global.Type = {WASM_TYPE_I32, true};
+    Global.InitExpr.Value.Int32 = 0;
+    Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+    Global.SymbolName = "__stack_pointer";
+    InputGlobal *StackPointer = make<InputGlobal>(Global, nullptr);
+    StackPointer->Live = true;
+    // For non-PIC code
+    // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN when the mutable global
+    // spec proposal is implemented in all major browsers.
+    // See: https://github.com/WebAssembly/mutable-global
+    WasmSym::StackPointer = Symtab->addSyntheticGlobal(
+        "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, StackPointer);
+    WasmSym::HeapBase = Symtab->addSyntheticDataSymbol("__heap_base", 0);
+    WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end", 0);
+
+    // These two synthetic symbols exist purely for the embedder so we always
+    // want to export them.
+    WasmSym::HeapBase->ForceExport = true;
+    WasmSym::DataEnd->ForceExport = true;
+  }
+
+  if (Config->Pic) {
+    // For PIC code, we import two global variables (__memory_base and
+    // __table_base) from the environment and use these as the offset at
+    // which to load our static data and function table.
+    // See:
+    // https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
+    WasmSym::MemoryBase =
+        createUndefinedGlobal("__memory_base", &GlobalTypeI32);
+    WasmSym::TableBase = createUndefinedGlobal("__table_base", &GlobalTypeI32);
+    WasmSym::MemoryBase->markLive();
+    WasmSym::TableBase->markLive();
+  }
+
+  WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol(
+      "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
+}
+
 void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   WasmOptTable Parser;
   opt::InputArgList Args = Parser.parse(ArgsArr.slice(1));
@@ -480,59 +545,8 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
   if (Config->Shared)
     Config->ExportDynamic = true;
 
-  Symbol *EntrySym = nullptr;
-  if (!Config->Relocatable) {
-    llvm::wasm::WasmGlobal Global;
-    Global.Type = {WASM_TYPE_I32, true};
-    Global.InitExpr.Value.Int32 = 0;
-    Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    Global.SymbolName = "__stack_pointer";
-    InputGlobal *StackPointer = make<InputGlobal>(Global, nullptr);
-    StackPointer->Live = true;
-
-    static WasmSignature NullSignature = {{}, {}};
-
-    // Add synthetic symbols before any others
-    WasmSym::CallCtors = Symtab->addSyntheticFunction(
-        "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
-        make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
-    // TODO(sbc): Remove WASM_SYMBOL_VISIBILITY_HIDDEN when the mutable global
-    // spec proposal is implemented in all major browsers.
-    // See: https://github.com/WebAssembly/mutable-global
-    WasmSym::StackPointer = Symtab->addSyntheticGlobal(
-        "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, StackPointer);
-    WasmSym::HeapBase = Symtab->addSyntheticDataSymbol("__heap_base", 0);
-    WasmSym::DsoHandle = Symtab->addSyntheticDataSymbol(
-        "__dso_handle", WASM_SYMBOL_VISIBILITY_HIDDEN);
-    WasmSym::DataEnd = Symtab->addSyntheticDataSymbol("__data_end", 0);
-
-    if (Config->Pic) {
-      // For PIC code, we import two global variables (__memory_base and
-      // __table_base) from the environment and use these as the offset at
-      // which to load our static data and function table.
-      // See: https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
-      static llvm::wasm::WasmGlobalType GlobalTypeI32 = {WASM_TYPE_I32, false};
-
-      WasmSym::MemoryBase = Symtab->addUndefinedGlobal(
-          "__memory_base", WASM_SYMBOL_VISIBILITY_HIDDEN, nullptr,
-          &GlobalTypeI32);
-      Config->AllowUndefinedSymbols.insert(WasmSym::MemoryBase->getName());
-      WasmSym::MemoryBase->IsUsedInRegularObj = true;
-      WasmSym::MemoryBase->markLive();
-
-      WasmSym::TableBase = Symtab->addUndefinedGlobal(
-          "__table_base", WASM_SYMBOL_VISIBILITY_HIDDEN, nullptr,
-          &GlobalTypeI32);
-      Config->AllowUndefinedSymbols.insert(WasmSym::TableBase->getName());
-      WasmSym::TableBase->IsUsedInRegularObj = true;
-      WasmSym::TableBase->markLive();
-    }
-
-    // These two synthetic symbols exist purely for the embedder so we always
-    // want to export them.
-    WasmSym::HeapBase->ForceExport = true;
-    WasmSym::DataEnd->ForceExport = true;
-  }
+  if (!Config->Relocatable)
+    createSyntheticSymbols();
 
   createFiles(Args);
   if (errorCount())
@@ -560,6 +574,7 @@ void LinkerDriver::link(ArrayRef<const char *> ArgsArr) {
             Arg->getValue());
   }
 
+  Symbol *EntrySym = nullptr;
   if (!Config->Relocatable) {
     // Add synthetic dummies for weak undefined functions.
     handleWeakUndefines();

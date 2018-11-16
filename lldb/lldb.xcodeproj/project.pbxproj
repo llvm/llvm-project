@@ -254,7 +254,7 @@
 		49CA96FD1E6AACC900C03FEE /* DataBufferLLVM.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49CA96E71E6AAC6600C03FEE /* DataBufferLLVM.cpp */; };
 		49CA96FE1E6AACC900C03FEE /* DataEncoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49CA96E81E6AAC6600C03FEE /* DataEncoder.cpp */; };
 		49CA96FF1E6AACC900C03FEE /* DataExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49CA96E91E6AAC6600C03FEE /* DataExtractor.cpp */; };
-		23CB15391D66DA9300EDDDE1 /* DataExtractorTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23CB14E81D66CC0E00EDDDE1 /* DataExtractorTest.cpp */; };
+		AFA1B62C219E0ED900A8AB7E /* DataExtractorTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFA1B62B219E0ED900A8AB7E /* DataExtractorTest.cpp */; };
 		94CB255C16B069770059775D /* DataVisualization.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94CB255816B069770059775D /* DataVisualization.cpp */; };
 		23D4007E1C210201000C3885 /* DebugMacros.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E77CDB1C20F2F2007192AD /* DebugMacros.cpp */; };
 		AF116BEF20CF234B0071093F /* DebugNamesDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF116BED20CF234B0071093F /* DebugNamesDWARFIndex.cpp */; };
@@ -1745,7 +1745,7 @@
 		49CA96F31E6AAC8E00C03FEE /* DataEncoder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DataEncoder.h; path = include/lldb/Utility/DataEncoder.h; sourceTree = "<group>"; };
 		49CA96E91E6AAC6600C03FEE /* DataExtractor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DataExtractor.cpp; path = source/Utility/DataExtractor.cpp; sourceTree = "<group>"; };
 		49CA96F41E6AAC8E00C03FEE /* DataExtractor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DataExtractor.h; path = include/lldb/Utility/DataExtractor.h; sourceTree = "<group>"; };
-		23CB14E81D66CC0E00EDDDE1 /* DataExtractorTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DataExtractorTest.cpp; sourceTree = "<group>"; };
+		AFA1B62B219E0ED900A8AB7E /* DataExtractorTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DataExtractorTest.cpp; sourceTree = "<group>"; };
 		94CB255816B069770059775D /* DataVisualization.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DataVisualization.cpp; path = source/DataFormatters/DataVisualization.cpp; sourceTree = "<group>"; };
 		94CB256016B069800059775D /* DataVisualization.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = DataVisualization.h; path = include/lldb/DataFormatters/DataVisualization.h; sourceTree = "<group>"; };
 		3FDFED1E19BA6D55009756A7 /* Debug.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = Debug.h; path = include/lldb/Host/Debug.h; sourceTree = "<group>"; };
@@ -3558,6 +3558,7 @@
 				7F94D7172040A13A006EE3EA /* CleanUpTest.cpp */,
 				23E2E5161D903689006F38BB /* ArchSpecTest.cpp */,
 				9A3D43C81F3150D200EB767C /* ConstStringTest.cpp */,
+				AFA1B62B219E0ED900A8AB7E /* DataExtractorTest.cpp */,
 				23CB14FD1D66CD2400EDDDE1 /* FileSpecTest.cpp */,
 				8C3BD99F1EF5D1B50016C343 /* JSONTest.cpp */,
 				9A3D43C71F3150D200EB767C /* LogTest.cpp */,
@@ -3721,7 +3722,6 @@
 			children = (
 				23CB14E61D66CC0E00EDDDE1 /* BroadcasterTest.cpp */,
 				23CB14E71D66CC0E00EDDDE1 /* CMakeLists.txt */,
-				23CB14E81D66CC0E00EDDDE1 /* DataExtractorTest.cpp */,
 				58A080B12112AB2200D5580F /* HighlighterTest.cpp */,
 				9A3D43E31F3237D500EB767C /* ListenerTest.cpp */,
 				4F29D3CD21010F84003B549A /* MangledTest.cpp */,
@@ -7544,6 +7544,7 @@
 				58A080B32112AB2900D5580F /* HighlighterTest.cpp in Sources */,
 				9A2057081F3B819100F6C293 /* MemoryRegionInfoTest.cpp in Sources */,
 				9A20572D1F3B8E6600F6C293 /* TestCompletion.cpp in Sources */,
+				AFA1B62C219E0ED900A8AB7E /* DataExtractorTest.cpp in Sources */,
 				4C719399207D23E300FDF430 /* TestOptionArgParser.cpp in Sources */,
 				23CB15371D66DA9300EDDDE1 /* PythonTestSuite.cpp in Sources */,
 				23E2E5321D903832006F38BB /* BreakpointIDTest.cpp in Sources */,
@@ -7551,7 +7552,6 @@
 				58EAC73F2106A07B0029571E /* StreamTeeTest.cpp in Sources */,
 				23CB15381D66DA9300EDDDE1 /* PythonExceptionStateTests.cpp in Sources */,
 				9A3D43D81F3151C400EB767C /* NameMatchesTest.cpp in Sources */,
-				23CB15391D66DA9300EDDDE1 /* DataExtractorTest.cpp in Sources */,
 				4CEC86A4204738C5009B37B1 /* TestArm64InstEmulation.cpp in Sources */,
 				9A3D43ED1F3237F900EB767C /* StateTest.cpp in Sources */,
 				23CB153A1D66DA9300EDDDE1 /* GDBRemoteClientBaseTest.cpp in Sources */,

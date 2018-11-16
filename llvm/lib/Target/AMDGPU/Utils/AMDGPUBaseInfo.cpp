@@ -159,7 +159,8 @@ void streamIsaVersion(const MCSubtargetInfo *STI, raw_ostream &Stream) {
 }
 
 bool hasCodeObjectV3(const MCSubtargetInfo *STI) {
-  return STI->getFeatureBits().test(FeatureCodeObjectV3);
+  return STI->getTargetTriple().getOS() == Triple::AMDHSA &&
+             STI->getFeatureBits().test(FeatureCodeObjectV3);
 }
 
 unsigned getWavefrontSize(const MCSubtargetInfo *STI) {
@@ -754,6 +755,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::VS_64RegClassID:
   case AMDGPU::SReg_64RegClassID:
   case AMDGPU::VReg_64RegClassID:
+  case AMDGPU::SReg_64_XEXECRegClassID:
     return 64;
   case AMDGPU::VReg_96RegClassID:
     return 96;

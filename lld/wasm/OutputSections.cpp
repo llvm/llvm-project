@@ -141,8 +141,7 @@ DataSection::DataSection(ArrayRef<OutputSegment *> Segments)
       assert(Segments.size() <= 1 &&
              "Currenly only a single data segment is supported in PIC mode");
       InitExpr.Opcode = WASM_OPCODE_GET_GLOBAL;
-      InitExpr.Value.Global =
-          cast<GlobalSymbol>(WasmSym::MemoryBase)->getGlobalIndex();
+      InitExpr.Value.Global = WasmSym::MemoryBase->getGlobalIndex();
     } else {
       InitExpr.Opcode = WASM_OPCODE_I32_CONST;
       InitExpr.Value.Int32 = Segment->StartVA;

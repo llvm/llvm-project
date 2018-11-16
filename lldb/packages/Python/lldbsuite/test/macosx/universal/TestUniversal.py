@@ -11,9 +11,13 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+def haswellOrLater():
+    features = subprocess.check_output(["sysctl", "machdep.cpu"])
+    return "AVX2" in features.split()
 
 class UniversalTestCase(TestBase):
 
+    NO_DEBUG_INFO_TESTCASE = True
     mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
@@ -24,8 +28,8 @@ class UniversalTestCase(TestBase):
 
     @add_test_categories(['pyapi'])
     @skipUnlessDarwin
-    @unittest2.skipUnless(hasattr(os, "uname") and os.uname()[4] in [
-                          'i386', 'x86_64'], "requires i386 or x86_64")
+    @unittest2.skipUnless(hasattr(os, "uname") and os.uname()[4] in
+                          ['x86_64'], "requires x86_64")
     @skipIfDarwinEmbedded # this test file assumes we're targetting an x86 system
     def test_sbdebugger_create_target_with_file_and_target_triple(self):
         """Test the SBDebugger.CreateTargetWithFileAndTargetTriple() API."""
@@ -37,8 +41,9 @@ class UniversalTestCase(TestBase):
 
         # Create a target by the debugger.
         target = self.dbg.CreateTargetWithFileAndTargetTriple(
-            exe, "i386-apple-macosx")
+            exe, "x86_64-apple-macosx")
         self.assertTrue(target, VALID_TARGET)
+        self.expect("image list -A -b", substrs=["x86_64 testit"])
 
         # Now launch the process, and do not stop at entry point.
         process = target.LaunchSimple(
@@ -46,13 +51,16 @@ class UniversalTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
 
     @skipUnlessDarwin
-    @unittest2.skipUnless(hasattr(os, "uname") and os.uname()[4] in [
-                          'i386', 'x86_64'], "requires i386 or x86_64")
+    @unittest2.skipUnless(hasattr(os, "uname") and os.uname()[4] in
+                          ['x86_64'], "requires x86_64")
     @skipIfDarwinEmbedded # this test file assumes we're targetting an x86 system
     def test_process_launch_for_universal(self):
         """Test process launch of a universal binary."""
         from lldbsuite.test.lldbutil import print_registers
 
+        if not haswellOrLater():
+            return
+        
         # Invoke the default build rule.
         self.build()
 
@@ -62,69 +70,54 @@ class UniversalTestCase(TestBase):
         # By default, x86_64 is assumed if no architecture is specified.
         self.expect("file " + exe, CURRENT_EXECUTABLE_SET,
                     startstr="Current executable set to ",
+                    substrs=["testit' (x86_64h)."])
+
+        # Break inside the main.
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
+
+        # We should be able to launch the x86_64h executable.
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        # Check whether we have a x86_64h process launched.
+        target = self.dbg.GetSelectedTarget()
+        process = target.GetProcess()
+        self.expect("image list -A -b", substrs=["x86_64h testit"])
+        self.runCmd("continue")
+
+        # Now specify x86_64 as the architecture for "testit".
+        self.expect("file -a x86_64 " + exe, CURRENT_EXECUTABLE_SET,
+                    startstr="Current executable set to ",
                     substrs=["testit' (x86_64)."])
 
         # Break inside the main.
         lldbutil.run_break_set_by_file_and_line(
             self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
 
-        # We should be able to launch the x86_64 executable.
+        # We should be able to launch the x86_64 executable as well.
         self.runCmd("run", RUN_SUCCEEDED)
 
-        # Check whether we have a 64-bit process launched.
-        target = self.dbg.GetSelectedTarget()
-        process = target.GetProcess()
-        self.assertTrue(target and process and
-                        self.invoke(process, 'GetAddressByteSize') == 8,
-                        "64-bit process launched")
-
-        frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
-        registers = print_registers(frame, string_buffer=True)
-        self.expect(registers, exe=False,
-                    substrs=['Name: rax'])
-
-        self.runCmd("continue")
-
-        # Now specify i386 as the architecture for "testit".
-        self.expect("file -a i386 " + exe, CURRENT_EXECUTABLE_SET,
-                    startstr="Current executable set to ",
-                    substrs=["testit' (i386)."])
-
-        # Break inside the main.
-        lldbutil.run_break_set_by_file_and_line(
-            self, "main.c", self.line, num_expected_locations=1, loc_exact=True)
-
-        # We should be able to launch the i386 executable as well.
-        self.runCmd("run", RUN_SUCCEEDED)
-
-        # Check whether we have a 32-bit process launched.
-        target = self.dbg.GetSelectedTarget()
-        process = target.GetProcess()
-        self.assertTrue(target and process,
-                        "32-bit process launched")
-
-        pointerSize = self.invoke(process, 'GetAddressByteSize')
-        self.assertTrue(
-            pointerSize == 4,
-            "AddressByteSize of 32-bit process should be 4, got %d instead." %
-            pointerSize)
-
-        frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
-        registers = print_registers(frame, string_buffer=True)
-        self.expect(registers, exe=False,
-                    substrs=['Name: eax'])
-
+        # Check whether we have a x86_64 process launched.
+        
+        # FIXME: This wrong. We are expecting x86_64, but spawning a
+        # new process currently doesn't allow specifying a *sub*-architecture.
+        # <rdar://problem/46101466>
+        self.expect("image list -A -b", substrs=["x86_64h testit"])
         self.runCmd("continue")
 
     @skipUnlessDarwin
-    @unittest2.skipUnless(hasattr(os, "uname") and os.uname()[4] in [
-                          'i386', 'x86_64'], "requires i386 or x86_64")
+    @unittest2.skipUnless(hasattr(os, "uname") and os.uname()[4] in
+                          ['x86_64'], "requires x86_64")
     @skipIfDarwinEmbedded # this test file assumes we're targetting an x86 system
     def test_process_attach_with_wrong_arch(self):
-        """Test that when we attach to a binary from the wrong fork of a universal binary, we fix up the ABI correctly."""
-        # Now keep the architecture at 32 bit, but switch the binary we launch to
-        # 64 bit, and make sure on attach we switch to the correct
-        # architecture.
+        """Test that when we attach to a binary from the wrong fork of
+            a universal binary, we fix up the ABI correctly."""
+        if not haswellOrLater():
+            return
+
+        # Now keep the architecture at x86_64, but switch the binary
+        # we launch to x86_64h, and make sure on attach we switch to
+        # the correct architecture.
 
         # Invoke the default build rule.
         self.build()
@@ -134,10 +127,9 @@ class UniversalTestCase(TestBase):
 
         # Create a target by the debugger.
         target = self.dbg.CreateTargetWithFileAndTargetTriple(
-            exe, "i386-apple-macosx")
+            exe, "x86_64-apple-macosx")
         self.assertTrue(target, VALID_TARGET)
-        pointer_size = target.GetAddressByteSize()
-        self.assertTrue(pointer_size == 4, "Initially we were 32 bit.")
+        self.expect("image list -A -b", substrs=["x86_64 testit"])
 
         bkpt = target.BreakpointCreateBySourceRegex(
             "sleep", lldb.SBFileSpec("main.c"))
@@ -155,14 +147,14 @@ class UniversalTestCase(TestBase):
             empty_listener, popen.pid, error)
         self.assertTrue(error.Success(), "Attached to process.")
 
-        pointer_size = target.GetAddressByteSize()
-        self.assertTrue(pointer_size == 8, "We switched to 64 bit.")
+        self.expect("image list -A -b", substrs=["x86_64h testit"])
 
-        # It may seem odd that I am checking the number of frames, but the bug that
-        # motivated this test was that we eventually fixed the architecture, but we
-        # left the ABI set to the original value.  In that case, if you asked the
-        # process for its architecture, it would look right, but since the ABI was
-        # wrong, backtracing failed.
+        # It may seem odd to check the number of frames, but the bug
+        # that motivated this test was that we eventually fixed the
+        # architecture, but we left the ABI set to the original value.
+        # In that case, if you asked the process for its architecture,
+        # it would look right, but since the ABI was wrong,
+        # backtracing failed.
 
         threads = lldbutil.continue_to_breakpoint(process, bkpt)
         self.assertTrue(len(threads) == 1)

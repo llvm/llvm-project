@@ -68,7 +68,7 @@ extern "C" void LLVMInitializeWebAssemblyDisassembler() {
                                          createWebAssemblyDisassembler);
 }
 
-static uint8_t nextByte(ArrayRef<uint8_t> Bytes, uint64_t &Size) {
+static int nextByte(ArrayRef<uint8_t> Bytes, uint64_t &Size) {
   if (Size >= Bytes.size())
     return -1;
   auto V = Bytes[Size];
@@ -121,7 +121,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     raw_ostream & /*OS*/, raw_ostream &CS) const {
   CommentStream = &CS;
   Size = 0;
-  auto Opc = nextByte(Bytes, Size);
+  int Opc = nextByte(Bytes, Size);
   if (Opc < 0)
     return MCDisassembler::Fail;
   const auto *WasmInst = &InstructionTable0[Opc];

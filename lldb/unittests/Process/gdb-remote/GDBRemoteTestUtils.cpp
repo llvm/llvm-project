@@ -9,6 +9,11 @@
 
 #include "GDBRemoteTestUtils.h"
 
+#if defined(_MSC_VER)
+#include "lldb/Host/windows/windows.h"
+#include <WinSock2.h>
+#endif
+
 namespace lldb_private {
 namespace process_gdb_remote {
 

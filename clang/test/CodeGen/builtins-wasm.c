@@ -77,7 +77,7 @@ int atomic_wait_i64(long long *addr, long long expected, long long timeout) {
   // WEBASSEMBLY64: call i32 @llvm.wasm.atomic.wait.i64(i64* %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
 }
 
-unsigned int atomic_notify(int *addr, int count) {
+unsigned int atomic_notify(int *addr, unsigned int count) {
   return __builtin_wasm_atomic_notify(addr, count);
   // WEBASSEMBLY32: call i32 @llvm.wasm.atomic.notify(i32* %{{.*}}, i32 %{{.*}})
   // WEBASSEMBLY64: call i32 @llvm.wasm.atomic.notify(i32* %{{.*}}, i32 %{{.*}})

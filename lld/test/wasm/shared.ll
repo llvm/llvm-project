@@ -9,6 +9,8 @@ target triple = "wasm32-unknown-unknown"
 
 define default void @foo() {
 entry:
+  ; To ensure we use __stack_pointer
+  %ptr = alloca i32
   %0 = load i32, i32* @used_data, align 4
   %1 = load void ()*, void ()** @indirect_func, align 4
   call void %1()
@@ -39,6 +41,11 @@ entry:
 ; CHECK-NEXT:             Initial:         0x00000001
 ; CHECK-NEXT:             Maximum:         0x00000001
 ; CHECK-NEXT:       - Module:          env
+; CHECK-NEXT:         Field:           __stack_pointer
+; CHECK-NEXT:         Kind:            GLOBAL
+; CHECK-NEXT:         GlobalType:      I32
+; CHECK-NEXT:         GlobalMutable:   true
+; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __memory_base
 ; CHECK-NEXT:         Kind:            GLOBAL
 ; CHECK-NEXT:         GlobalType:      I32
@@ -55,7 +62,7 @@ entry:
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          GET_GLOBAL
-; CHECK-NEXT:           Index:           1
+; CHECK-NEXT:           Index:           2
 ; CHECK-NEXT:         Functions:       [ 1 ]
 
 ; check the data segment initialized with __memory_base global as offset
@@ -66,5 +73,5 @@ entry:
 ; CHECK-NEXT:         MemoryIndex:     0
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          GET_GLOBAL
-; CHECK-NEXT:           Index:           0
+; CHECK-NEXT:           Index:           1
 ; CHECK-NEXT:         Content:         '00000000'
