@@ -127,6 +127,6 @@ endif ()
 add_dependencies(check-lldb check-lldb-lit)
 
 add_custom_target(lldb-test-depends DEPENDS ${LLDB_TEST_DEPENDS})
-# This will add LLDB's test dependencies to the depenednecies for check-all and
+# This will add LLDB's test dependencies to the dependencies for check-all and
 # include them in the test-depends target.
 set_property(GLOBAL APPEND PROPERTY LLVM_LIT_DEPENDS ${ARG_DEPENDS})

@@ -33,7 +33,6 @@ BUILDDIR := $(shell pwd)
 THIS_FILE_DIR := $(shell dirname $(lastword $(MAKEFILE_LIST)))/
 LLDB_BASE_DIR := $(THIS_FILE_DIR)../../../../../
 
-
 #----------------------------------------------------------------------
 # If OS is not defined, use 'uname -s' to determine the OS name.
 #
@@ -253,7 +252,16 @@ ifeq "$(MAKE_DWO)" "YES"
 	CFLAGS += -gsplit-dwarf
 endif
 
+# Use a shared module cache when building in the default test build directory.
+ifeq "$(findstring lldb-test-build.noindex, $(BUILDDIR))" ""
 CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/module-cache
+else
+CLANG_MODULE_CACHE_DIR := $(shell echo "$(BUILDDIR)" | sed 's/lldb-test-build.noindex.*/lldb-test-build.noindex\/module-cache-clang/')
+endif
+
+ifeq "$(CLANG_MODULE_CACHE_DIR)" ""
+$(error failed to set the shared clang module cache dir)
+endif
 
 MANDATORY_MODULE_BUILD_CFLAGS := -fmodules -gmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)
 
