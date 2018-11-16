@@ -79,7 +79,7 @@ RelExpr AArch64::getRelExpr(RelType Type, const Symbol &S,
                             const uint8_t *Loc) const {
   switch (Type) {
   case R_AARCH64_TLSDESC_ADR_PAGE21:
-    return R_TLSDESC_PAGE;
+    return R_AARCH64_TLSDESC_PAGE;
   case R_AARCH64_TLSDESC_LD64_LO12:
   case R_AARCH64_TLSDESC_ADD_LO12:
     return R_TLSDESC;
@@ -105,7 +105,7 @@ RelExpr AArch64::getRelExpr(RelType Type, const Symbol &S,
   case R_AARCH64_LD_PREL_LO19:
     return R_PC;
   case R_AARCH64_ADR_PREL_PG_HI21:
-    return R_PAGE_PC;
+    return R_AARCH64_PAGE_PC;
   case R_AARCH64_LD64_GOT_LO12_NC:
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
     return R_GOT;

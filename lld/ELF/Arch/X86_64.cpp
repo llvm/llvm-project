@@ -67,7 +67,7 @@ template <class ELFT> X86_64<ELFT>::X86_64() {
   PltEntrySize = 16;
   PltHeaderSize = 16;
   TlsGdRelaxSkip = 2;
-  TrapInstr = 0xcccccccc; // 0xcc = INT3
+  TrapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3
 
   // Align to the large page size (known as a superpage or huge page).
   // FreeBSD automatically promotes large, superpage-aligned allocations.

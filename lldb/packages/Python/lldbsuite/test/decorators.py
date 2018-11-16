@@ -458,12 +458,6 @@ def expectedFlakey(expected_fn, bugnumber=None):
         return expectedFailure_impl
 
 
-def expectedFlakeyDsym(bugnumber=None):
-    def fn(self):
-        return self.getDebugInfo() == "dwarf"
-    return expectedFlakey(fn, bugnumber)
-
-
 def expectedFlakeyOS(oslist, bugnumber=None, compilers=None):
     def fn(self):
         return (self.getPlatform() in oslist and

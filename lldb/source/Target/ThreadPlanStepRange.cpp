@@ -57,7 +57,15 @@ void ThreadPlanStepRange::DidPush() {
   SetNextBranchBreakpoint();
 }
 
-bool ThreadPlanStepRange::ValidatePlan(Stream *error) { return true; }
+bool ThreadPlanStepRange::ValidatePlan(Stream *error) {
+  if (m_could_not_resolve_hw_bp) {
+    if (error)
+      error->PutCString(
+          "Could not create hardware breakpoint for thread plan.");
+    return false;
+  }
+  return true;
+}
 
 Vote ThreadPlanStepRange::ShouldReportStop(Event *event_ptr) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
@@ -281,6 +289,7 @@ void ThreadPlanStepRange::ClearNextBranchBreakpoint() {
                   m_next_branch_bp_sp->GetID());
     GetTarget().RemoveBreakpointByID(m_next_branch_bp_sp->GetID());
     m_next_branch_bp_sp.reset();
+    m_could_not_resolve_hw_bp = false;
   }
 }
 
@@ -331,6 +340,11 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
       m_next_branch_bp_sp =
           GetTarget().CreateBreakpoint(run_to_address, is_internal, false);
       if (m_next_branch_bp_sp) {
+
+        if (m_next_branch_bp_sp->IsHardware() &&
+            !m_next_branch_bp_sp->HasResolvedLocations())
+          m_could_not_resolve_hw_bp = true;
+
         if (log) {
           lldb::break_id_t bp_site_id = LLDB_INVALID_BREAK_ID;
           BreakpointLocationSP bp_loc =
@@ -347,8 +361,10 @@ bool ThreadPlanStepRange::SetNextBranchBreakpoint() {
                       run_to_address.GetLoadAddress(
                           &m_thread.GetProcess()->GetTarget()));
         }
+
         m_next_branch_bp_sp->SetThreadID(m_thread.GetID());
         m_next_branch_bp_sp->SetBreakpointKind("next-branch-location");
+
         return true;
       } else
         return false;
