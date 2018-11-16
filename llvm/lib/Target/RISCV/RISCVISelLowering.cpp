@@ -114,7 +114,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   // TODO: add proper support for the various FMA variants
   // (FMADD.S, FMSUB.S, FNMSUB.S, FNMADD.S).
   ISD::NodeType FPOpToExtend[] = {
-      ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FMA};
+      ISD::FSIN, ISD::FCOS, ISD::FSINCOS, ISD::FPOW, ISD::FMA, ISD::FREM};
 
   if (Subtarget.hasStdExtF()) {
     setOperationAction(ISD::FMINNUM, MVT::f32, Legal);

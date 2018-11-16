@@ -161,6 +161,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeSILowerI1CopiesPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
+  initializeSIFixupVectorISelPass(*PR);
   initializeSIFoldOperandsPass(*PR);
   initializeSIPeepholeSDWAPass(*PR);
   initializeSIShrinkInstructionsPass(*PR);
@@ -813,6 +814,7 @@ bool GCNPassConfig::addInstSelector() {
   AMDGPUPassConfig::addInstSelector();
   addPass(&SIFixSGPRCopiesID);
   addPass(createSILowerI1CopiesPass());
+  addPass(createSIFixupVectorISelPass());
   return false;
 }
 

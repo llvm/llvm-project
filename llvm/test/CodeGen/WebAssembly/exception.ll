@@ -1,5 +1,5 @@
 ; RUN: not llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -exception-model=wasm
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling | FileCheck -allow-deprecated-dag-overlap %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs | FileCheck -allow-deprecated-dag-overlap %s
 ; RUN: llc < %s -disable-wasm-fallthrough-return-opt -wasm-keep-registers -exception-model=wasm -mattr=+exception-handling
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
@@ -12,10 +12,11 @@ target triple = "wasm32-unknown-unknown"
 declare void @llvm.wasm.throw(i32, i8*)
 
 ; CHECK-LABEL: test_throw:
-; CHECK-NEXT: i32.const $push0=, 0
+; CHECK:      get_local $push0=, 0
 ; CHECK-NEXT: throw __cpp_exception@EVENT, $pop0
-define void @test_throw() {
-  call void @llvm.wasm.throw(i32 0, i8* null)
+; CHECK-NOT:  unreachable
+define void @test_throw(i8* %p) {
+  call void @llvm.wasm.throw(i32 0, i8* %p)
   ret void
 }
 
