@@ -64,6 +64,24 @@ add_clang_library(clangDaemon
   clangLex
   clangSema
   clangSerialization
+  clangTidy
+  clangTidyAndroidModule
+  clangTidyAbseilModule
+  clangTidyBoostModule
+  clangTidyBugproneModule
+  clangTidyCERTModule
+  clangTidyCppCoreGuidelinesModule
+  clangTidyFuchsiaModule
+  clangTidyGoogleModule
+  clangTidyHICPPModule
+  clangTidyLLVMModule
+  clangTidyMiscModule
+  clangTidyModernizeModule
+  clangTidyObjCModule
+  clangTidyPerformanceModule
+  clangTidyPortabilityModule
+  clangTidyReadabilityModule
+  clangTidyZirconModule
   clangTooling
   clangToolingCore
   clangToolingInclusions
