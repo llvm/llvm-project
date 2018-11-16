@@ -93,7 +93,7 @@ define i16 @bitwrr(i16 %a, i16 %b) nounwind {
 	ret i16 %t3
 }
 ; CHECK-LABEL: bitwrr:
-; CHECK: bit.w	r13, r12
+; CHECK: bit	r13, r12
 
 define i16 @bitwri(i16 %a) nounwind {
 	%t1 = and i16 %a, 4080
@@ -102,7 +102,7 @@ define i16 @bitwri(i16 %a) nounwind {
 	ret i16 %t3
 }
 ; CHECK-LABEL: bitwri:
-; CHECK: bit.w	#4080, r12
+; CHECK: bit	#4080, r12
 
 define i16 @bitwir(i16 %a) nounwind {
 	%t1 = and i16 4080, %a
@@ -111,7 +111,7 @@ define i16 @bitwir(i16 %a) nounwind {
 	ret i16 %t3
 }
 ; CHECK-LABEL: bitwir:
-; CHECK: bit.w	#4080, r12
+; CHECK: bit	#4080, r12
 
 define i16 @bitwmi() nounwind {
 	%t1 = load i16, i16* @foo16
@@ -121,7 +121,7 @@ define i16 @bitwmi() nounwind {
 	ret i16 %t4
 }
 ; CHECK-LABEL: bitwmi:
-; CHECK: bit.w	#4080, &foo16
+; CHECK: bit	#4080, &foo16
 
 define i16 @bitwim() nounwind {
 	%t1 = load i16, i16* @foo16
@@ -131,7 +131,7 @@ define i16 @bitwim() nounwind {
 	ret i16 %t4
 }
 ; CHECK-LABEL: bitwim:
-; CHECK: bit.w	#4080, &foo16
+; CHECK: bit	#4080, &foo16
 
 define i16 @bitwrm(i16 %a) nounwind {
 	%t1 = load i16, i16* @foo16
@@ -141,7 +141,7 @@ define i16 @bitwrm(i16 %a) nounwind {
 	ret i16 %t4
 }
 ; CHECK-LABEL: bitwrm:
-; CHECK: bit.w	&foo16, r12
+; CHECK: bit	&foo16, r12
 
 define i16 @bitwmr(i16 %a) nounwind {
 	%t1 = load i16, i16* @foo16
@@ -151,7 +151,7 @@ define i16 @bitwmr(i16 %a) nounwind {
 	ret i16 %t4
 }
 ; CHECK-LABEL: bitwmr:
-; CHECK: bit.w	r12, &foo16
+; CHECK: bit	r12, &foo16
 
 define i16 @bitwmm() nounwind {
 	%t1 = load i16, i16* @foo16
@@ -162,5 +162,5 @@ define i16 @bitwmm() nounwind {
 	ret i16 %t5
 }
 ; CHECK-LABEL: bitwmm:
-; CHECK: bit.w	&bar16, &foo16
+; CHECK: bit	&bar16, &foo16
 

@@ -163,13 +163,13 @@ using GlobalValueSummaryMapTy =
 /// Struct that holds a reference to a particular GUID in a global value
 /// summary.
 struct ValueInfo {
-  PointerIntPair<const GlobalValueSummaryMapTy::value_type *, 1, bool>
-      RefAndFlag;
+  PointerIntPair<const GlobalValueSummaryMapTy::value_type *, 2, int>
+      RefAndFlags;
 
   ValueInfo() = default;
   ValueInfo(bool HaveGVs, const GlobalValueSummaryMapTy::value_type *R) {
-    RefAndFlag.setPointer(R);
-    RefAndFlag.setInt(HaveGVs);
+    RefAndFlags.setPointer(R);
+    RefAndFlags.setInt(HaveGVs);
   }
 
   operator bool() const { return getRef(); }
@@ -189,10 +189,12 @@ struct ValueInfo {
                      : getRef()->second.U.Name;
   }
 
-  bool haveGVs() const { return RefAndFlag.getInt(); }
+  bool haveGVs() const { return RefAndFlags.getInt() & 0x1; }
+  bool isReadOnly() const { return RefAndFlags.getInt() & 0x2; }
+  void setReadOnly() { RefAndFlags.setInt(RefAndFlags.getInt() | 0x2); }
 
   const GlobalValueSummaryMapTy::value_type *getRef() const {
-    return RefAndFlag.getPointer();
+    return RefAndFlags.getPointer();
   }
 
   bool isDSOLocal() const;
@@ -543,6 +545,8 @@ public:
           std::move(TypeTestAssumeConstVCalls),
           std::move(TypeCheckedLoadConstVCalls)});
   }
+  // Gets the number of immutable refs in RefEdgeList
+  unsigned immutableRefCount() const;
 
   /// Check if this is a function summary.
   static bool classof(const GlobalValueSummary *GVS) {
@@ -652,19 +656,30 @@ template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
 /// Global variable summary information to aid decisions and
 /// implementation of importing.
 ///
-/// Currently this doesn't add anything to the base \p GlobalValueSummary,
-/// but is a placeholder as additional info may be added to the summary
-/// for variables.
+/// Global variable summary has extra flag, telling if it is
+/// modified during the program run or not. This affects ThinLTO
+/// internalization
 class GlobalVarSummary : public GlobalValueSummary {
-
 public:
-  GlobalVarSummary(GVFlags Flags, std::vector<ValueInfo> Refs)
-      : GlobalValueSummary(GlobalVarKind, Flags, std::move(Refs)) {}
+  struct GVarFlags {
+    GVarFlags(bool ReadOnly = false) : ReadOnly(ReadOnly) {}
+
+    unsigned ReadOnly : 1;
+  } VarFlags;
+
+  GlobalVarSummary(GVFlags Flags, GVarFlags VarFlags,
+                   std::vector<ValueInfo> Refs)
+      : GlobalValueSummary(GlobalVarKind, Flags, std::move(Refs)),
+        VarFlags(VarFlags) {}
 
   /// Check if this is a global variable summary.
   static bool classof(const GlobalValueSummary *GVS) {
     return GVS->getSummaryKind() == GlobalVarKind;
   }
+
+  GVarFlags varflags() const { return VarFlags; }
+  void setReadOnly(bool RO) { VarFlags.ReadOnly = RO; }
+  bool isReadOnly() const { return VarFlags.ReadOnly; }
 };
 
 struct TypeTestResolution {
@@ -1135,6 +1150,9 @@ public:
 
   /// Print out strongly connected components for debugging.
   void dumpSCCs(raw_ostream &OS);
+
+  /// Analyze index and detect unmodified globals
+  void propagateConstants(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
 };
 
 /// GraphTraits definition to build SCC for the index
@@ -1184,6 +1202,14 @@ struct GraphTraits<ModuleSummaryIndex *> : public GraphTraits<ValueInfo> {
   }
 };
 
+static inline bool canImportGlobalVar(GlobalValueSummary *S) {
+  assert(isa<GlobalVarSummary>(S->getBaseObject()));
+
+  // We don't import GV with references, because it can result
+  // in promotion of local variables in the source module.
+  return !GlobalValue::isInterposableLinkage(S->linkage()) &&
+         !S->notEligibleToImport() && S->refs().empty();
+}
 } // end namespace llvm
 
 #endif // LLVM_IR_MODULESUMMARYINDEX_H

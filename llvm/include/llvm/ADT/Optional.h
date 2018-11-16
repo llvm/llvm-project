@@ -108,24 +108,6 @@ template <typename T, bool IsPodLike> struct OptionalStorage {
   }
 };
 
-#if !defined(__GNUC__) || defined(__clang__) // GCC up to GCC7 miscompiles this.
-/// Storage for trivially copyable types only.
-template <typename T> struct OptionalStorage<T, true> {
-  AlignedCharArrayUnion<T> storage;
-  bool hasVal = false;
-
-  OptionalStorage() = default;
-
-  OptionalStorage(const T &y) : hasVal(true) { new (storage.buffer) T(y); }
-  OptionalStorage &operator=(const T &y) {
-    *reinterpret_cast<T *>(storage.buffer) = y;
-    hasVal = true;
-    return *this;
-  }
-
-  void reset() { hasVal = false; }
-};
-#endif
 } // namespace optional_detail
 
 template <typename T> class Optional {

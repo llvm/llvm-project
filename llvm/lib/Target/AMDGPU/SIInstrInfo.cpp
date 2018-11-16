@@ -1632,7 +1632,34 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                                 SmallVectorImpl<MachineOperand> &Cond,
                                 bool AllowModify) const {
   MachineBasicBlock::iterator I = MBB.getFirstTerminator();
-  if (I == MBB.end())
+  auto E = MBB.end();
+  if (I == E)
+    return false;
+
+  // Skip over the instructions that are artificially terminators for special
+  // exec management.
+  while (I != E && !I->isBranch() && !I->isReturn() &&
+         I->getOpcode() != AMDGPU::SI_MASK_BRANCH) {
+    switch (I->getOpcode()) {
+    case AMDGPU::SI_MASK_BRANCH:
+    case AMDGPU::S_MOV_B64_term:
+    case AMDGPU::S_XOR_B64_term:
+    case AMDGPU::S_ANDN2_B64_term:
+      break;
+    case AMDGPU::SI_IF:
+    case AMDGPU::SI_ELSE:
+    case AMDGPU::SI_KILL_I1_TERMINATOR:
+    case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
+      // FIXME: It's messy that these need to be considered here at all.
+      return true;
+    default:
+      llvm_unreachable("unexpected non-branch terminator inst");
+    }
+
+    ++I;
+  }
+
+  if (I == E)
     return false;
 
   if (I->getOpcode() != AMDGPU::SI_MASK_BRANCH)

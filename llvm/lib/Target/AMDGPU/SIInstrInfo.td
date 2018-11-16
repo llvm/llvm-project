@@ -2017,6 +2017,15 @@ def getAtomicNoRetOp : InstrMapping {
   let ValueCols = [["0"]];
 }
 
+// Maps a GLOBAL to its SADDR form.
+def getGlobalSaddrOp : InstrMapping {
+  let FilterClass = "GlobalSaddrTable";
+  let RowFields = ["SaddrOp"];
+  let ColFields = ["IsSaddr"];
+  let KeyCol = ["0"];
+  let ValueCols = [["1"]];
+}
+
 include "SIInstructions.td"
 
 include "DSInstructions.td"
