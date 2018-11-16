@@ -137,6 +137,12 @@ void dontwarn5() {
   U8 = S + 10;
 }
 
+char dontwarn6(long long x) {
+  long long y = 42;
+  y += x;
+  return y == 42;
+}
+
 
 // C library functions, handled via apiModeling.StdCLibraryFunctions
 
@@ -154,7 +160,7 @@ typedef struct FILE {} FILE; int getc(FILE *stream);
 # define EOF (-1)
 char reply_string[8192];
 FILE *cin;
-extern int dostuff (void);
+extern int dostuff(void);
 int libraryFunction2() {
   int c, n;
   int dig;
@@ -179,3 +185,26 @@ int libraryFunction2() {
   }
 }
 
+double floating_point(long long a, int b) {
+  if (a > 1LL << 55) {
+    double r = a; // expected-warning {{Loss of precision}}
+    return r;
+  } else if (b > 1 << 25) {
+    float f = b; // expected-warning {{Loss of precision}}
+    return f;
+  }
+  return 137;
+}
+
+double floating_point2() {
+  int a = 1 << 24;
+  long long b = 1LL << 53;
+  float f = a; // no-warning
+  double d = b; // no-warning
+  return d - f;
+}
+
+int floating_point_3(unsigned long long a) {
+  double b = a; // no-warning
+  return 42;
+}

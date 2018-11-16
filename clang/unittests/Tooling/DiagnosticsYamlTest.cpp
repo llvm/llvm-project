@@ -82,7 +82,7 @@ TEST(DiagnosticsYamlTest, serializesDiagnostics) {
             "    Message:         'message #3'\n"
             "    FileOffset:      72\n"
             "    FilePath:        'path/to/source2.cpp'\n"
-            "    Replacements:    \n"
+            "    Replacements:    []\n"
             "...\n",
             YamlContentStream.str());
 }
@@ -113,7 +113,7 @@ TEST(DiagnosticsYamlTest, deserializesDiagnostics) {
                             "    Message:         'message #3'\n"
                             "    FileOffset:      98\n"
                             "    FilePath:        path/to/source.cpp\n"
-                            "    Replacements:    \n"
+                            "    Replacements:    []\n"
                             "...\n";
   TranslationUnitDiagnostics TUDActual;
   yaml::Input YAML(YamlContent);

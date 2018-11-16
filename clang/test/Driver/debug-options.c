@@ -64,6 +64,14 @@
 // RUN: %clang -### -c -g %s -target x86_64-pc-freebsd10.0 2>&1 \
 // RUN:             | FileCheck -check-prefix=G_GDB %s
 
+// Windows.
+// RUN: %clang -### -c -g %s -target x86_64-w64-windows-gnu 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_GDB %s
+// RUN: %clang -### -c -g %s -target x86_64-windows-msvc 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_NOTUNING %s
+// RUN: %clang_cl -### -c -Z7 -target x86_64-windows-msvc -- %s 2>&1 \
+// RUN:             | FileCheck -check-prefix=G_NOTUNING %s
+
 // On the PS4, -g defaults to -gno-column-info, and we always generate the
 // arange section.
 // RUN: %clang -### -c %s -target x86_64-scei-ps4 2>&1 \
@@ -204,7 +212,7 @@
 // RUN: %clang -### -gmodules -gline-tables-only %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=GLTO_ONLY %s
 //
-// RUN: %clang -### -gmodules -gline-directives-only %s 2>&1 \
+// RUN: %clang -### -target %itanium_abi_triple -gmodules -gline-directives-only %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=GLIO_ONLY %s
 //
 // G: "-cc1"
@@ -259,6 +267,9 @@
 // G_LLDB: "-debugger-tuning=lldb"
 // G_SCE:  "-debugger-tuning=sce"
 //
+// G_NOTUNING: "-cc1"
+// G_NOTUNING-NOT: "-debugger-tuning="
+//
 // This tests asserts that "-gline-tables-only" "-g0" disables debug info.
 // GLTO_NO: "-cc1"
 // GLTO_NO-NOT: -debug-info-kind=
@@ -301,7 +312,8 @@
 //
 // NOCI-NOT: "-dwarf-column-info"
 //
-// GEXTREFS: "-dwarf-ext-refs" "-fmodule-format=obj" "-debug-info-kind={{standalone|limited}}"
+// GEXTREFS: "-dwarf-ext-refs" "-fmodule-format=obj"
+// GEXTREFS: "-debug-info-kind={{standalone|limited}}"
 
 // RUN: not %clang -cc1 -debug-info-kind=watkind 2>&1 | FileCheck -check-prefix=BADSTRING1 %s
 // BADSTRING1: error: invalid value 'watkind' in '-debug-info-kind=watkind'
