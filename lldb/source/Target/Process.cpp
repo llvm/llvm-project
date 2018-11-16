@@ -2054,7 +2054,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &owner,
           owner->SetBreakpointSite(bp_site_sp);
           return m_breakpoint_site_list.Add(bp_site_sp);
         } else {
-          if (show_error) {
+          if (show_error || use_hardware) {
             // Report error for setting breakpoint...
             GetTarget().GetDebugger().GetErrorFile()->Printf(
                 "warning: failed to set breakpoint site at 0x%" PRIx64

@@ -222,6 +222,10 @@ public:
 
   bool GetUseModernTypeLookup() const;
 
+  void SetRequireHardwareBreakpoints(bool b);
+
+  bool GetRequireHardwareBreakpoints() const;
+
 private:
   //------------------------------------------------------------------
   // Callbacks for m_launch_info.

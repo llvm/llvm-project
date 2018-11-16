@@ -720,14 +720,18 @@ protected:
                 StopInfoSP stored_stop_info_sp = thread_sp->GetStopInfo();
                 assert(stored_stop_info_sp.get() == this);
 
+                Status new_plan_status;
                 ThreadPlanSP new_plan_sp(
                     thread_sp->QueueThreadPlanForStepSingleInstruction(
-                        false,  // step-over
-                        false,  // abort_other_plans
-                        true)); // stop_other_threads
-                new_plan_sp->SetIsMasterPlan(true);
-                new_plan_sp->SetOkayToDiscard(false);
-                new_plan_sp->SetPrivate(true);
+                        false, // step-over
+                        false, // abort_other_plans
+                        true,  // stop_other_threads
+                        new_plan_status));
+                if (new_plan_sp && new_plan_status.Success()) {
+                  new_plan_sp->SetIsMasterPlan(true);
+                  new_plan_sp->SetOkayToDiscard(false);
+                  new_plan_sp->SetPrivate(true);
+                }
                 process_sp->GetThreadList().SetSelectedThreadByID(
                     thread_sp->GetID());
                 process_sp->ResumeSynchronous(nullptr);
