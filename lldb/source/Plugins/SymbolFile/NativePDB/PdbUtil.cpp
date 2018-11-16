@@ -8,9 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "PdbUtil.h"
+#include "PdbSymUid.h"
 
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
+#include "llvm/DebugInfo/PDB/Native/TpiStream.h"
 
 #include "lldb/Utility/LLDBAssert.h"
 
@@ -350,6 +352,19 @@ bool lldb_private::npdb::IsTagRecord(llvm::codeview::CVType cvt) {
   default:
     return false;
   }
+}
+
+bool lldb_private::npdb::IsForwardRefUdt(const PdbTypeSymId &id,
+                                         TpiStream &tpi) {
+  if (id.is_ipi || id.index.isSimple())
+    return false;
+  return IsForwardRefUdt(tpi.getType(id.index));
+}
+
+bool lldb_private::npdb::IsTagRecord(const PdbTypeSymId &id, TpiStream &tpi) {
+  if (id.is_ipi || id.index.isSimple())
+    return false;
+  return IsTagRecord(tpi.getType(id.index));
 }
 
 lldb::AccessType

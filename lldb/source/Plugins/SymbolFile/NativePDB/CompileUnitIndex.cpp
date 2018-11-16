@@ -108,26 +108,19 @@ static void ParseExtendedInfo(PdbIndex &index, CompilandIndexItem &item) {
 }
 
 CompilandIndexItem::CompilandIndexItem(
-    PdbSymUid uid, llvm::pdb::ModuleDebugStreamRef debug_stream,
+    PdbCompilandId id, llvm::pdb::ModuleDebugStreamRef debug_stream,
     llvm::pdb::DbiModuleDescriptor descriptor)
-    : m_uid(uid), m_debug_stream(std::move(debug_stream)),
+    : m_id(id), m_debug_stream(std::move(debug_stream)),
       m_module_descriptor(std::move(descriptor)) {}
 
 CompilandIndexItem &CompileUnitIndex::GetOrCreateCompiland(uint16_t modi) {
-  PdbSymUid uid = PdbSymUid::makeCompilandId(modi);
-  return GetOrCreateCompiland(uid);
-}
-
-CompilandIndexItem &
-CompileUnitIndex::GetOrCreateCompiland(PdbSymUid compiland_uid) {
-  auto result = m_comp_units.try_emplace(compiland_uid.toOpaqueId(), nullptr);
+  auto result = m_comp_units.try_emplace(modi, nullptr);
   if (!result.second)
     return *result.first->second;
 
   // Find the module list and load its debug information stream and cache it
   // since we need to use it for almost all interesting operations.
   const DbiModuleList &modules = m_index.dbi().modules();
-  uint16_t modi = compiland_uid.asCompiland().modi;
   llvm::pdb::DbiModuleDescriptor descriptor = modules.getModuleDescriptor(modi);
   uint16_t stream = descriptor.getModuleStreamIndex();
   std::unique_ptr<llvm::msf::MappedBlockStream> stream_data =
@@ -139,7 +132,7 @@ CompileUnitIndex::GetOrCreateCompiland(PdbSymUid compiland_uid) {
   std::unique_ptr<CompilandIndexItem> &cci = result.first->second;
 
   cci = llvm::make_unique<CompilandIndexItem>(
-      compiland_uid, std::move(debug_stream), std::move(descriptor));
+      PdbCompilandId{modi}, std::move(debug_stream), std::move(descriptor));
   ParseExtendedInfo(m_index, *cci);
 
   cci->m_strings.initialize(debug_stream.getSubsectionsArray());
@@ -172,23 +165,14 @@ CompileUnitIndex::GetOrCreateCompiland(PdbSymUid compiland_uid) {
 }
 
 const CompilandIndexItem *CompileUnitIndex::GetCompiland(uint16_t modi) const {
-  return GetCompiland(PdbSymUid::makeCompilandId(modi));
-}
-
-const CompilandIndexItem *
-CompileUnitIndex::GetCompiland(PdbSymUid compiland_uid) const {
-  auto iter = m_comp_units.find(compiland_uid.toOpaqueId());
+  auto iter = m_comp_units.find(modi);
   if (iter == m_comp_units.end())
     return nullptr;
   return iter->second.get();
 }
 
 CompilandIndexItem *CompileUnitIndex::GetCompiland(uint16_t modi) {
-  return GetCompiland(PdbSymUid::makeCompilandId(modi));
-}
-
-CompilandIndexItem *CompileUnitIndex::GetCompiland(PdbSymUid compiland_uid) {
-  auto iter = m_comp_units.find(compiland_uid.toOpaqueId());
+  auto iter = m_comp_units.find(modi);
   if (iter == m_comp_units.end())
     return nullptr;
   return iter->second.get();

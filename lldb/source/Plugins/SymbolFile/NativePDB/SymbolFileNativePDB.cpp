@@ -707,16 +707,12 @@ uint32_t SymbolFileNativePDB::GetNumCompileUnits() {
   return count;
 }
 
-lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbSymUid func_uid,
+lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
                                                      const SymbolContext &sc) {
-  lldbassert(func_uid.tag() == PDB_SymType::Function);
-
-  PdbSymUid cuid = PdbSymUid::makeCompilandId(func_uid.asCuSym().modi);
-
-  const CompilandIndexItem *cci = m_index->compilands().GetCompiland(cuid);
+  const CompilandIndexItem *cci =
+      m_index->compilands().GetCompiland(func_id.modi);
   lldbassert(cci);
-  CVSymbol sym_record =
-      cci->m_debug_stream.readSymbolAtOffset(func_uid.asCuSym().offset);
+  CVSymbol sym_record = cci->m_debug_stream.readSymbolAtOffset(func_id.offset);
 
   lldbassert(sym_record.kind() == S_LPROC32 || sym_record.kind() == S_GPROC32);
   SegmentOffsetLength sol = GetSegmentOffsetAndLength(sym_record);
@@ -733,11 +729,10 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbSymUid func_uid,
   Type *func_type = nullptr;
 
   // FIXME: Resolve types and mangled names.
-  PdbSymUid sig_uid =
-      PdbSymUid::makeTypeSymId(PDB_SymType::FunctionSig, TypeIndex{0}, false);
+  PdbTypeSymId sig_id{TypeIndex::None(), false};
   Mangled mangled(getSymbolName(sym_record));
   FunctionSP func_sp = std::make_shared<Function>(
-      sc.comp_unit, func_uid.toOpaqueId(), sig_uid.toOpaqueId(), mangled,
+      sc.comp_unit, toOpaqueUid(func_id), toOpaqueUid(sig_id), mangled,
       func_type, func_range);
 
   sc.comp_unit->AddFunction(func_sp);
@@ -760,15 +755,14 @@ SymbolFileNativePDB::CreateCompileUnit(const CompilandIndexItem &cci) {
 
   CompUnitSP cu_sp =
       std::make_shared<CompileUnit>(m_obj_file->GetModule(), nullptr, fs,
-                                    cci.m_uid.toOpaqueId(), lang, optimized);
+                                    toOpaqueUid(cci.m_id), lang, optimized);
 
-  const PdbCompilandId &cuid = cci.m_uid.asCompiland();
-  m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(cuid.modi,
-                                                                    cu_sp);
+  m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
+      cci.m_id.modi, cu_sp);
   return cu_sp;
 }
 
-lldb::TypeSP SymbolFileNativePDB::CreateModifierType(PdbSymUid type_uid,
+lldb::TypeSP SymbolFileNativePDB::CreateModifierType(PdbTypeSymId type_id,
                                                      const ModifierRecord &mr) {
   TpiStream &stream = m_index->tpi();
 
@@ -784,14 +778,14 @@ lldb::TypeSP SymbolFileNativePDB::CreateModifierType(PdbSymUid type_uid,
   else
     name = computeTypeName(stream.typeCollection(), mr.ModifiedType);
   Declaration decl;
-  return std::make_shared<Type>(type_uid.toOpaqueId(), m_clang->GetSymbolFile(),
+  return std::make_shared<Type>(toOpaqueUid(type_id), m_clang->GetSymbolFile(),
                                 ConstString(name), t->GetByteSize(), nullptr,
                                 LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
                                 ct, Type::eResolveStateFull);
 }
 
 lldb::TypeSP SymbolFileNativePDB::CreatePointerType(
-    PdbSymUid type_uid, const llvm::codeview::PointerRecord &pr) {
+    PdbTypeSymId type_id, const llvm::codeview::PointerRecord &pr) {
   TypeSP pointee = GetOrCreateType(pr.ReferentType);
   if (!pointee)
     return nullptr;
@@ -807,7 +801,7 @@ lldb::TypeSP SymbolFileNativePDB::CreatePointerType(
         class_type->GetLayoutCompilerType(), pointee_ct);
 
     return std::make_shared<Type>(
-        type_uid.toOpaqueId(), m_clang->GetSymbolFile(), ConstString(),
+        toOpaqueUid(type_id), m_clang->GetSymbolFile(), ConstString(),
         pr.getSize(), nullptr, LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
         Type::eResolveStateFull);
   }
@@ -829,27 +823,23 @@ lldb::TypeSP SymbolFileNativePDB::CreatePointerType(
   if ((pr.getOptions() & PointerOptions::Restrict) != PointerOptions::None)
     pointer_ct = pointer_ct.AddRestrictModifier();
 
-  return std::make_shared<Type>(type_uid.toOpaqueId(), m_clang->GetSymbolFile(),
+  return std::make_shared<Type>(toOpaqueUid(type_id), m_clang->GetSymbolFile(),
                                 ConstString(), pr.getSize(), nullptr,
                                 LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
                                 pointer_ct, Type::eResolveStateFull);
 }
 
 lldb::TypeSP SymbolFileNativePDB::CreateSimpleType(TypeIndex ti) {
+  uint64_t uid = toOpaqueUid(PdbTypeSymId{ti, false});
   if (ti == TypeIndex::NullptrT()) {
-    PdbSymUid uid =
-        PdbSymUid::makeTypeSymId(PDB_SymType::BuiltinType, ti, false);
     CompilerType ct = m_clang->GetBasicType(eBasicTypeNullPtr);
     Declaration decl;
-    return std::make_shared<Type>(uid.toOpaqueId(), this,
-                                  ConstString("std::nullptr_t"), 0, nullptr,
-                                  LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
-                                  ct, Type::eResolveStateFull);
+    return std::make_shared<Type>(
+        uid, this, ConstString("std::nullptr_t"), 0, nullptr, LLDB_INVALID_UID,
+        Type::eEncodingIsUID, decl, ct, Type::eResolveStateFull);
   }
 
   if (ti.getSimpleMode() != SimpleTypeMode::Direct) {
-    PdbSymUid uid =
-        PdbSymUid::makeTypeSymId(PDB_SymType::PointerType, ti, false);
     TypeSP direct_sp = GetOrCreateType(ti.makeDirect());
     CompilerType ct = direct_sp->GetFullCompilerType();
     ct = ct.GetPointerType();
@@ -867,13 +857,12 @@ lldb::TypeSP SymbolFileNativePDB::CreateSimpleType(TypeIndex ti) {
       return nullptr;
     }
     Declaration decl;
-    return std::make_shared<Type>(uid.toOpaqueId(), m_clang->GetSymbolFile(),
-                                  ConstString(), pointer_size, nullptr,
-                                  LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
-                                  ct, Type::eResolveStateFull);
+    return std::make_shared<Type>(uid, m_clang->GetSymbolFile(), ConstString(),
+                                  pointer_size, nullptr, LLDB_INVALID_UID,
+                                  Type::eEncodingIsUID, decl, ct,
+                                  Type::eResolveStateFull);
   }
 
-  PdbSymUid uid = PdbSymUid::makeTypeSymId(PDB_SymType::BuiltinType, ti, false);
   if (ti.getSimpleKind() == SimpleTypeKind::NotTranslated)
     return nullptr;
 
@@ -886,7 +875,7 @@ lldb::TypeSP SymbolFileNativePDB::CreateSimpleType(TypeIndex ti) {
   llvm::StringRef type_name = GetSimpleTypeName(ti.getSimpleKind());
 
   Declaration decl;
-  return std::make_shared<Type>(uid.toOpaqueId(), m_clang->GetSymbolFile(),
+  return std::make_shared<Type>(uid, m_clang->GetSymbolFile(),
                                 ConstString(type_name), size, nullptr,
                                 LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
                                 ct, Type::eResolveStateFull);
@@ -965,20 +954,18 @@ SymbolFileNativePDB::CreateDeclInfoForType(const TagRecord &record,
 }
 
 lldb::TypeSP SymbolFileNativePDB::CreateClassStructUnion(
-    PdbSymUid type_uid, const llvm::codeview::TagRecord &record, size_t size,
+    PdbTypeSymId type_id, const llvm::codeview::TagRecord &record, size_t size,
     clang::TagTypeKind ttk, clang::MSInheritanceAttr::Spelling inheritance) {
 
-  const PdbTypeSymId &tid = type_uid.asTypeSym();
-  TypeIndex ti(tid.index);
   clang::DeclContext *decl_context = nullptr;
   std::string uname;
-  std::tie(decl_context, uname) = CreateDeclInfoForType(record, ti);
+  std::tie(decl_context, uname) = CreateDeclInfoForType(record, type_id.index);
 
   lldb::AccessType access =
       (ttk == clang::TTK_Class) ? lldb::eAccessPrivate : lldb::eAccessPublic;
 
   ClangASTMetadata metadata;
-  metadata.SetUserID(type_uid.toOpaqueId());
+  metadata.SetUserID(toOpaqueUid(type_id));
   metadata.SetIsDynamicCXXType(false);
 
   CompilerType ct =
@@ -1004,35 +991,33 @@ lldb::TypeSP SymbolFileNativePDB::CreateClassStructUnion(
 
   // FIXME: Search IPI stream for LF_UDT_MOD_SRC_LINE.
   Declaration decl;
-  return std::make_shared<Type>(type_uid.toOpaqueId(), m_clang->GetSymbolFile(),
+  return std::make_shared<Type>(toOpaqueUid(type_id), m_clang->GetSymbolFile(),
                                 ConstString(uname), size, nullptr,
                                 LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
                                 ct, Type::eResolveStateForward);
 }
 
-lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbSymUid type_uid,
+lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbTypeSymId type_id,
                                                 const ClassRecord &cr) {
   clang::TagTypeKind ttk = TranslateUdtKind(cr);
 
   clang::MSInheritanceAttr::Spelling inheritance =
       GetMSInheritance(m_index->tpi().typeCollection(), cr);
-  return CreateClassStructUnion(type_uid, cr, cr.getSize(), ttk, inheritance);
+  return CreateClassStructUnion(type_id, cr, cr.getSize(), ttk, inheritance);
 }
 
-lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbSymUid type_uid,
+lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbTypeSymId type_id,
                                                 const UnionRecord &ur) {
   return CreateClassStructUnion(
-      type_uid, ur, ur.getSize(), clang::TTK_Union,
+      type_id, ur, ur.getSize(), clang::TTK_Union,
       clang::MSInheritanceAttr::Spelling::Keyword_single_inheritance);
 }
 
-lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbSymUid type_uid,
+lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbTypeSymId type_id,
                                                 const EnumRecord &er) {
-  const PdbTypeSymId &tid = type_uid.asTypeSym();
-  TypeIndex ti(tid.index);
   clang::DeclContext *decl_context = nullptr;
   std::string uname;
-  std::tie(decl_context, uname) = CreateDeclInfoForType(er, ti);
+  std::tie(decl_context, uname) = CreateDeclInfoForType(er, type_id.index);
 
   Declaration decl;
   TypeSP underlying_type = GetOrCreateType(er.UnderlyingType);
@@ -1046,13 +1031,13 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbSymUid type_uid,
   // We're just going to forward resolve this for now.  We'll complete
   // it only if the user requests.
   return std::make_shared<lldb_private::Type>(
-      type_uid.toOpaqueId(), m_clang->GetSymbolFile(), ConstString(uname),
+      toOpaqueUid(type_id), m_clang->GetSymbolFile(), ConstString(uname),
       underlying_type->GetByteSize(), nullptr, LLDB_INVALID_UID,
       lldb_private::Type::eEncodingIsUID, decl, enum_ct,
       lldb_private::Type::eResolveStateForward);
 }
 
-TypeSP SymbolFileNativePDB::CreateArrayType(PdbSymUid type_uid,
+TypeSP SymbolFileNativePDB::CreateArrayType(PdbTypeSymId type_id,
                                             const ArrayRecord &ar) {
   TypeSP element_type = GetOrCreateType(ar.ElementType);
   uint64_t element_count = ar.Size / element_type->GetByteSize();
@@ -1064,14 +1049,14 @@ TypeSP SymbolFileNativePDB::CreateArrayType(PdbSymUid type_uid,
 
   Declaration decl;
   TypeSP array_sp = std::make_shared<lldb_private::Type>(
-      type_uid.toOpaqueId(), m_clang->GetSymbolFile(), ConstString(), ar.Size,
+      toOpaqueUid(type_id), m_clang->GetSymbolFile(), ConstString(), ar.Size,
       nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
       array_ct, lldb_private::Type::eResolveStateFull);
   array_sp->SetEncodingType(element_type.get());
   return array_sp;
 }
 
-TypeSP SymbolFileNativePDB::CreateProcedureType(PdbSymUid type_uid,
+TypeSP SymbolFileNativePDB::CreateProcedureType(PdbTypeSymId type_id,
                                                 const ProcedureRecord &pr) {
   TpiStream &stream = m_index->tpi();
   CVType args_cvt = stream.getType(pr.ArgumentList);
@@ -1109,138 +1094,126 @@ TypeSP SymbolFileNativePDB::CreateProcedureType(PdbSymUid type_uid,
 
   Declaration decl;
   return std::make_shared<lldb_private::Type>(
-      type_uid.toOpaqueId(), this, ConstString(), 0, nullptr, LLDB_INVALID_UID,
+      toOpaqueUid(type_id), this, ConstString(), 0, nullptr, LLDB_INVALID_UID,
       lldb_private::Type::eEncodingIsUID, decl, func_sig_ast_type,
       lldb_private::Type::eResolveStateFull);
 }
 
-TypeSP SymbolFileNativePDB::CreateType(PdbSymUid type_uid) {
-  const PdbTypeSymId &tsid = type_uid.asTypeSym();
-  TypeIndex index(tsid.index);
+TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id) {
+  if (type_id.index.isSimple())
+    return CreateSimpleType(type_id.index);
 
-  if (index.getIndex() < TypeIndex::FirstNonSimpleIndex)
-    return CreateSimpleType(index);
-
-  TpiStream &stream = tsid.is_ipi ? m_index->ipi() : m_index->tpi();
-  CVType cvt = stream.getType(index);
+  TpiStream &stream = type_id.is_ipi ? m_index->ipi() : m_index->tpi();
+  CVType cvt = stream.getType(type_id.index);
 
   if (cvt.kind() == LF_MODIFIER) {
     ModifierRecord modifier;
     llvm::cantFail(
         TypeDeserializer::deserializeAs<ModifierRecord>(cvt, modifier));
-    return CreateModifierType(type_uid, modifier);
+    return CreateModifierType(type_id, modifier);
   }
 
   if (cvt.kind() == LF_POINTER) {
     PointerRecord pointer;
     llvm::cantFail(
         TypeDeserializer::deserializeAs<PointerRecord>(cvt, pointer));
-    return CreatePointerType(type_uid, pointer);
+    return CreatePointerType(type_id, pointer);
   }
 
   if (IsClassRecord(cvt.kind())) {
     ClassRecord cr;
     llvm::cantFail(TypeDeserializer::deserializeAs<ClassRecord>(cvt, cr));
-    return CreateTagType(type_uid, cr);
+    return CreateTagType(type_id, cr);
   }
 
   if (cvt.kind() == LF_ENUM) {
     EnumRecord er;
     llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, er));
-    return CreateTagType(type_uid, er);
+    return CreateTagType(type_id, er);
   }
 
   if (cvt.kind() == LF_UNION) {
     UnionRecord ur;
     llvm::cantFail(TypeDeserializer::deserializeAs<UnionRecord>(cvt, ur));
-    return CreateTagType(type_uid, ur);
+    return CreateTagType(type_id, ur);
   }
 
   if (cvt.kind() == LF_ARRAY) {
     ArrayRecord ar;
     llvm::cantFail(TypeDeserializer::deserializeAs<ArrayRecord>(cvt, ar));
-    return CreateArrayType(type_uid, ar);
+    return CreateArrayType(type_id, ar);
   }
 
   if (cvt.kind() == LF_PROCEDURE) {
     ProcedureRecord pr;
     llvm::cantFail(TypeDeserializer::deserializeAs<ProcedureRecord>(cvt, pr));
-    return CreateProcedureType(type_uid, pr);
+    return CreateProcedureType(type_id, pr);
   }
 
   return nullptr;
 }
 
-TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbSymUid type_uid) {
+TypeSP SymbolFileNativePDB::CreateAndCacheType(PdbTypeSymId type_id) {
   // If they search for a UDT which is a forward ref, try and resolve the full
   // decl and just map the forward ref uid to the full decl record.
-  llvm::Optional<PdbSymUid> full_decl_uid;
-  if (type_uid.tag() == PDB_SymType::UDT ||
-      type_uid.tag() == PDB_SymType::Enum) {
-    const PdbTypeSymId &type_id = type_uid.asTypeSym();
-    TypeIndex ti(type_id.index);
-    lldbassert(!ti.isSimple());
-    CVType cvt = m_index->tpi().getType(ti);
+  llvm::Optional<PdbTypeSymId> full_decl_uid;
+  if (IsForwardRefUdt(type_id, m_index->tpi())) {
+    auto expected_full_ti =
+        m_index->tpi().findFullDeclForForwardRef(type_id.index);
+    if (!expected_full_ti)
+      llvm::consumeError(expected_full_ti.takeError());
+    else if (*expected_full_ti != type_id.index) {
+      full_decl_uid = PdbTypeSymId{*expected_full_ti, false};
 
-    if (IsForwardRefUdt(cvt)) {
-      auto expected_full_ti = m_index->tpi().findFullDeclForForwardRef(ti);
-      if (!expected_full_ti)
-        llvm::consumeError(expected_full_ti.takeError());
-      else if (*expected_full_ti != ti) {
-        full_decl_uid = PdbSymUid::makeTypeSymId(
-            type_uid.tag(), *expected_full_ti, type_id.is_ipi);
-
-        // It's possible that a lookup would occur for the full decl causing it
-        // to be cached, then a second lookup would occur for the forward decl.
-        // We don't want to create a second full decl, so make sure the full
-        // decl hasn't already been cached.
-        auto full_iter = m_types.find(full_decl_uid->toOpaqueId());
-        if (full_iter != m_types.end()) {
-          TypeSP result = full_iter->second;
-          // Map the forward decl to the TypeSP for the full decl so we can take
-          // the fast path next time.
-          m_types[type_uid.toOpaqueId()] = result;
-          return result;
-        }
+      // It's possible that a lookup would occur for the full decl causing it
+      // to be cached, then a second lookup would occur for the forward decl.
+      // We don't want to create a second full decl, so make sure the full
+      // decl hasn't already been cached.
+      auto full_iter = m_types.find(toOpaqueUid(*full_decl_uid));
+      if (full_iter != m_types.end()) {
+        TypeSP result = full_iter->second;
+        // Map the forward decl to the TypeSP for the full decl so we can take
+        // the fast path next time.
+        m_types[toOpaqueUid(type_id)] = result;
+        return result;
       }
     }
   }
 
-  PdbSymUid best_uid = full_decl_uid ? *full_decl_uid : type_uid;
-  TypeSP result = CreateType(best_uid);
+  PdbTypeSymId best_decl_id = full_decl_uid ? *full_decl_uid : type_id;
+  TypeSP result = CreateType(best_decl_id);
   if (!result)
     return nullptr;
-  m_types[best_uid.toOpaqueId()] = result;
+
+  uint64_t best_uid = toOpaqueUid(best_decl_id);
+  m_types[best_uid] = result;
   // If we had both a forward decl and a full decl, make both point to the new
   // type.
   if (full_decl_uid)
-    m_types[type_uid.toOpaqueId()] = result;
+    m_types[toOpaqueUid(type_id)] = result;
 
-  const PdbTypeSymId &type_id = best_uid.asTypeSym();
-  if (best_uid.tag() == PDB_SymType::UDT ||
-      best_uid.tag() == PDB_SymType::Enum) {
+  if (IsTagRecord(best_decl_id, m_index->tpi())) {
     clang::TagDecl *record_decl =
         m_clang->GetAsTagDecl(result->GetForwardCompilerType());
     lldbassert(record_decl);
 
     TypeIndex ti(type_id.index);
-    m_uid_to_decl[best_uid.toOpaqueId()] = record_decl;
+    m_uid_to_decl[best_uid] = record_decl;
     m_decl_to_status[record_decl] =
-        DeclStatus(best_uid.toOpaqueId(), Type::eResolveStateForward);
+        DeclStatus(best_uid, Type::eResolveStateForward);
   }
   return result;
 }
 
-TypeSP SymbolFileNativePDB::GetOrCreateType(PdbSymUid type_uid) {
-  lldbassert(PdbSymUid::isTypeSym(type_uid.tag()));
+TypeSP SymbolFileNativePDB::GetOrCreateType(PdbTypeSymId type_id) {
   // We can't use try_emplace / overwrite here because the process of creating
   // a type could create nested types, which could invalidate iterators.  So
   // we have to do a 2-phase lookup / insert.
-  auto iter = m_types.find(type_uid.toOpaqueId());
+  auto iter = m_types.find(toOpaqueUid(type_id));
   if (iter != m_types.end())
     return iter->second;
 
-  return CreateAndCacheType(type_uid);
+  return CreateAndCacheType(type_id);
 }
 
 static DWARFExpression
@@ -1315,12 +1288,10 @@ static DWARFExpression MakeGlobalLocationExpression(uint16_t section,
   return result;
 }
 
-VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbSymUid var_uid) {
-  const PdbCuSymId &cu_sym = var_uid.asCuSym();
-  lldbassert(cu_sym.global);
-  CVSymbol sym = m_index->symrecords().readRecord(cu_sym.offset);
+VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
+  CVSymbol sym = m_index->symrecords().readRecord(var_id.offset);
   if (sym.kind() == S_CONSTANT)
-    return CreateConstantSymbol(var_uid, sym);
+    return CreateConstantSymbol(var_id, sym);
 
   lldb::ValueType scope = eValueTypeInvalid;
   TypeIndex ti;
@@ -1367,16 +1338,14 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbSymUid var_uid) {
   CompUnitSP comp_unit;
   llvm::Optional<uint16_t> modi = m_index->GetModuleIndexForVa(addr);
   if (modi) {
-    PdbSymUid cuid = PdbSymUid::makeCompilandId(*modi);
-    CompilandIndexItem &cci = m_index->compilands().GetOrCreateCompiland(cuid);
+    CompilandIndexItem &cci = m_index->compilands().GetOrCreateCompiland(*modi);
     comp_unit = GetOrCreateCompileUnit(cci);
   }
 
   Declaration decl;
-  PDB_SymType pdbst = GetPdbSymType(m_index->tpi(), ti);
-  PdbSymUid tuid = PdbSymUid::makeTypeSymId(pdbst, ti, false);
+  PdbTypeSymId tid{ti, false};
   SymbolFileTypeSP type_sp =
-      std::make_shared<SymbolFileType>(*this, tuid.toOpaqueId());
+      std::make_shared<SymbolFileType>(*this, toOpaqueUid(tid));
   Variable::RangeList ranges;
 
   DWARFExpression location = MakeGlobalLocationExpression(
@@ -1385,7 +1354,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbSymUid var_uid) {
   std::string global_name("::");
   global_name += name;
   VariableSP var_sp = std::make_shared<Variable>(
-      var_uid.toOpaqueId(), name.str().c_str(), global_name.c_str(), type_sp,
+      toOpaqueUid(var_id), name.str().c_str(), global_name.c_str(), type_sp,
       scope, comp_unit.get(), ranges, &decl, location, is_external, false,
       false);
   var_sp->SetLocationIsConstantValueData(false);
@@ -1394,7 +1363,7 @@ VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbSymUid var_uid) {
 }
 
 lldb::VariableSP
-SymbolFileNativePDB::CreateConstantSymbol(PdbSymUid var_uid,
+SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
                                           const CVSymbol &cvs) {
   TpiStream &tpi = m_index->tpi();
   ConstantSym constant(cvs.kind());
@@ -1402,10 +1371,9 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbSymUid var_uid,
   llvm::cantFail(SymbolDeserializer::deserializeAs<ConstantSym>(cvs, constant));
   std::string global_name("::");
   global_name += constant.Name;
-  PDB_SymType pdbst = GetPdbSymType(tpi, constant.Type);
-  PdbSymUid tuid = PdbSymUid::makeTypeSymId(pdbst, constant.Type, false);
+  PdbTypeSymId tid{constant.Type, false};
   SymbolFileTypeSP type_sp =
-      std::make_shared<SymbolFileType>(*this, tuid.toOpaqueId());
+      std::make_shared<SymbolFileType>(*this, toOpaqueUid(tid));
 
   Declaration decl;
   Variable::RangeList ranges;
@@ -1414,37 +1382,31 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbSymUid var_uid,
       MakeConstantLocationExpression(constant.Type, tpi, constant, module);
 
   VariableSP var_sp = std::make_shared<Variable>(
-      var_uid.toOpaqueId(), constant.Name.str().c_str(), global_name.c_str(),
+      toOpaqueUid(var_id), constant.Name.str().c_str(), global_name.c_str(),
       type_sp, eValueTypeVariableGlobal, module.get(), ranges, &decl, location,
       false, false, false);
   var_sp->SetLocationIsConstantValueData(true);
   return var_sp;
 }
 
-VariableSP SymbolFileNativePDB::GetOrCreateGlobalVariable(PdbSymUid var_uid) {
-  lldbassert(var_uid.isGlobalVariable());
-
-  auto emplace_result =
-      m_global_vars.try_emplace(var_uid.toOpaqueId(), nullptr);
+VariableSP
+SymbolFileNativePDB::GetOrCreateGlobalVariable(PdbGlobalSymId var_id) {
+  auto emplace_result = m_global_vars.try_emplace(toOpaqueUid(var_id), nullptr);
   if (emplace_result.second)
-    emplace_result.first->second = CreateGlobalVariable(var_uid);
+    emplace_result.first->second = CreateGlobalVariable(var_id);
 
   return emplace_result.first->second;
 }
 
-lldb::TypeSP
-SymbolFileNativePDB::GetOrCreateType(llvm::codeview::TypeIndex ti) {
-  PDB_SymType pdbst = GetPdbSymType(m_index->tpi(), ti);
-  PdbSymUid tuid = PdbSymUid::makeTypeSymId(pdbst, ti, false);
-  return GetOrCreateType(tuid);
+lldb::TypeSP SymbolFileNativePDB::GetOrCreateType(TypeIndex ti) {
+  return GetOrCreateType(PdbTypeSymId{ti, false});
 }
 
-FunctionSP SymbolFileNativePDB::GetOrCreateFunction(PdbSymUid func_uid,
+FunctionSP SymbolFileNativePDB::GetOrCreateFunction(PdbCompilandSymId func_id,
                                                     const SymbolContext &sc) {
-  lldbassert(func_uid.tag() == PDB_SymType::Function);
-  auto emplace_result = m_functions.try_emplace(func_uid.toOpaqueId(), nullptr);
+  auto emplace_result = m_functions.try_emplace(toOpaqueUid(func_id), nullptr);
   if (emplace_result.second)
-    emplace_result.first->second = CreateFunction(func_uid, sc);
+    emplace_result.first->second = CreateFunction(func_id, sc);
 
   lldbassert(emplace_result.first->second);
   return emplace_result.first->second;
@@ -1452,8 +1414,9 @@ FunctionSP SymbolFileNativePDB::GetOrCreateFunction(PdbSymUid func_uid,
 
 CompUnitSP
 SymbolFileNativePDB::GetOrCreateCompileUnit(const CompilandIndexItem &cci) {
+
   auto emplace_result =
-      m_compilands.try_emplace(cci.m_uid.toOpaqueId(), nullptr);
+      m_compilands.try_emplace(toOpaqueUid(cci.m_id), nullptr);
   if (emplace_result.second)
     emplace_result.first->second = CreateCompileUnit(cci);
 
@@ -1479,10 +1442,11 @@ SymbolFileNativePDB::ParseCompileUnitLanguage(const SymbolContext &sc) {
   // safe to assume that `sc.comp_unit` is valid?
   if (!sc.comp_unit)
     return lldb::eLanguageTypeUnknown;
-  PdbSymUid uid = PdbSymUid::fromOpaqueId(sc.comp_unit->GetID());
-  lldbassert(uid.tag() == PDB_SymType::Compiland);
+  PdbSymUid uid(sc.comp_unit->GetID());
+  lldbassert(uid.kind() == PdbSymUidKind::Compiland);
 
-  CompilandIndexItem *item = m_index->compilands().GetCompiland(uid);
+  CompilandIndexItem *item =
+      m_index->compilands().GetCompiland(uid.asCompiland().modi);
   lldbassert(item);
   if (!item->m_compile_opts)
     return lldb::eLanguageTypeUnknown;
@@ -1514,8 +1478,7 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
     llvm::Optional<uint16_t> modi = m_index->GetModuleIndexForVa(file_addr);
     if (!modi)
       return 0;
-    PdbSymUid cuid = PdbSymUid::makeCompilandId(*modi);
-    CompilandIndexItem *cci = m_index->compilands().GetCompiland(cuid);
+    CompilandIndexItem *cci = m_index->compilands().GetCompiland(*modi);
     if (!cci)
       return 0;
 
@@ -1527,9 +1490,13 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
     lldbassert(sc.comp_unit);
     std::vector<SymbolAndUid> matches = m_index->FindSymbolsByVa(file_addr);
     for (const auto &match : matches) {
-      if (match.uid.tag() != PDB_SymType::Function)
+      if (match.uid.kind() != PdbSymUidKind::CompilandSym)
         continue;
-      sc.function = GetOrCreateFunction(match.uid, sc).get();
+      PdbCompilandSymId csid = match.uid.asCompilandSym();
+      CVSymbol cvs = m_index->ReadSymbolRecord(csid);
+      if (CVSymToPDBSym(cvs.kind()) != PDB_SymType::Function)
+        continue;
+      sc.function = GetOrCreateFunction(csid, sc).get();
     }
     resolved_flags |= eSymbolContextFunction;
   }
@@ -1587,9 +1554,10 @@ bool SymbolFileNativePDB::ParseCompileUnitLineTable(const SymbolContext &sc) {
   // function.  In the future it would be nice if it could set the sc.m_function
   // member, and we could only get the line info for the function in question.
   lldbassert(sc.comp_unit);
-  PdbSymUid cu_id = PdbSymUid::fromOpaqueId(sc.comp_unit->GetID());
-  lldbassert(cu_id.isCompiland());
-  CompilandIndexItem *cci = m_index->compilands().GetCompiland(cu_id);
+  PdbSymUid cu_id(sc.comp_unit->GetID());
+  lldbassert(cu_id.kind() == PdbSymUidKind::Compiland);
+  CompilandIndexItem *cci =
+      m_index->compilands().GetCompiland(cu_id.asCompiland().modi);
   lldbassert(cci);
   auto line_table = llvm::make_unique<LineTable>(sc.comp_unit);
 
@@ -1664,10 +1632,10 @@ bool SymbolFileNativePDB::ParseCompileUnitSupportFiles(
     const SymbolContext &sc, FileSpecList &support_files) {
   lldbassert(sc.comp_unit);
 
-  PdbSymUid comp_uid = PdbSymUid::fromOpaqueId(sc.comp_unit->GetID());
-  lldbassert(comp_uid.tag() == PDB_SymType::Compiland);
-
-  const CompilandIndexItem *cci = m_index->compilands().GetCompiland(comp_uid);
+  PdbSymUid cu_id(sc.comp_unit->GetID());
+  lldbassert(cu_id.kind() == PdbSymUidKind::Compiland);
+  CompilandIndexItem *cci =
+      m_index->compilands().GetCompiland(cu_id.asCompiland().modi);
   lldbassert(cci);
 
   for (llvm::StringRef f : cci->m_file_list) {
@@ -1712,8 +1680,8 @@ uint32_t SymbolFileNativePDB::FindGlobalVariables(
     case SymbolKind::S_GTHREAD32:
     case SymbolKind::S_LTHREAD32:
     case SymbolKind::S_CONSTANT: {
-      PdbSymUid uid = PdbSymUid::makeGlobalVariableUid(result.first);
-      var = GetOrCreateGlobalVariable(uid);
+      PdbGlobalSymId global{result.first, false};
+      var = GetOrCreateGlobalVariable(global);
       variables.AddVariable(var);
       break;
     }
@@ -1745,14 +1713,14 @@ uint32_t SymbolFileNativePDB::FindFunctions(
     if (!IsValidRecord(proc))
       continue;
 
-    PdbSymUid cuid = PdbSymUid::makeCompilandId(proc);
-    CompilandIndexItem &cci = m_index->compilands().GetOrCreateCompiland(cuid);
+    CompilandIndexItem &cci =
+        m_index->compilands().GetOrCreateCompiland(proc.modi());
     SymbolContext sc;
 
     sc.comp_unit = GetOrCreateCompileUnit(cci).get();
     sc.module_sp = sc.comp_unit->GetModule();
-    PdbSymUid func_uid = PdbSymUid::makeCuSymId(proc);
-    sc.function = GetOrCreateFunction(func_uid, sc).get();
+    PdbCompilandSymId func_id{proc.modi(), proc.SymOffset};
+    sc.function = GetOrCreateFunction(func_id, sc).get();
 
     sc_list.Append(sc);
   }
@@ -1823,14 +1791,13 @@ Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
   if (iter != m_types.end())
     return &*iter->second;
 
-  PdbSymUid uid = PdbSymUid::fromOpaqueId(type_uid);
-  lldbassert(uid.isTypeSym(uid.tag()));
-  const PdbTypeSymId &type_id = uid.asTypeSym();
-  TypeIndex ti(type_id.index);
-  if (ti.isNoneType())
+  PdbSymUid uid(type_uid);
+  lldbassert(uid.kind() == PdbSymUidKind::Type);
+  PdbTypeSymId type_id = uid.asTypeSym();
+  if (type_id.index.isNoneType())
     return nullptr;
 
-  TypeSP type_sp = CreateAndCacheType(uid);
+  TypeSP type_sp = CreateAndCacheType(type_id);
   return &*type_sp;
 }
 
@@ -1853,10 +1820,9 @@ bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
   if (status.status == Type::eResolveStateFull)
     return true;
 
-  PdbSymUid uid = PdbSymUid::fromOpaqueId(status.uid);
-  lldbassert(uid.tag() == PDB_SymType::UDT || uid.tag() == PDB_SymType::Enum);
+  PdbTypeSymId type_id = PdbSymUid(status.uid).asTypeSym();
 
-  const PdbTypeSymId &type_id = uid.asTypeSym();
+  lldbassert(IsTagRecord(type_id, m_index->tpi()));
 
   ClangASTContext::SetHasExternalStorage(compiler_type.GetOpaqueQualType(),
                                          false);
@@ -1870,7 +1836,7 @@ bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
   if (IsForwardRefUdt(cvt))
     return false;
 
-  auto types_iter = m_types.find(uid.toOpaqueId());
+  auto types_iter = m_types.find(status.uid);
   lldbassert(types_iter != m_types.end());
 
   if (cvt.kind() == LF_MODIFIER) {
@@ -1890,7 +1856,7 @@ bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
       lldbassert(!IsForwardRefUdt(cvt));
       unmodified_type = *expected_full_ti;
     }
-    uid = PdbSymUid::makeTypeSymId(uid.tag(), unmodified_type, false);
+    type_id = PdbTypeSymId{unmodified_type, false};
   }
   TypeIndex field_list_ti = GetFieldListIndex(cvt);
   CVType field_list_cvt = m_index->tpi().getType(field_list_ti);
@@ -1899,7 +1865,7 @@ bool SymbolFileNativePDB::CompleteType(CompilerType &compiler_type) {
 
   // Visit all members of this class, then perform any finalization necessary
   // to complete the class.
-  UdtRecordCompleter completer(uid, compiler_type, *tag_decl, *this);
+  UdtRecordCompleter completer(type_id, compiler_type, *tag_decl, *this);
   auto error =
       llvm::codeview::visitMemberRecordStream(field_list_cvt.data(), completer);
   completer.complete();

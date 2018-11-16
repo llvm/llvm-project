@@ -28,188 +28,81 @@
 namespace lldb_private {
 namespace npdb {
 
-// **important** - All concrete id types must have the 1-byte tag field at
-// the beginning so that the types are all layout-compatible with each
-// other, which is necessary in order to be able to safely access the tag
-// member through any union member.
-struct PdbCompilandId {
-  uint64_t tag : 8;   // PDB_SymType::Compiland
-  uint64_t modi : 16; // 0-based index of module in PDB
-  uint64_t unused : 32;
+enum class PdbSymUidKind : uint8_t {
+  Compiland,
+  CompilandSym,
+  PublicSym,
+  GlobalSym,
+  Type,
+  FieldListMember
 };
-struct PdbCuSymId {
-  uint64_t tag : 8; // PDB_SymType::Data, Function, Block, etc.
-  uint64_t
-      offset : 30;     // Offset of symbol's record in module stream.  This is
-                       // offset by 4 from the CVSymbolArray's notion of offset
-                       // due to the debug magic at the beginning of the stream.
-  uint64_t global : 1; // True if this is from the globals stream.
-  uint64_t unused : 1;
-  uint64_t modi : 16; // For non-global, this is the 0-based index of module.
+
+struct PdbCompilandId {
+  // 0-based index of module in PDB
+  uint16_t modi;
+};
+
+struct PdbCompilandSymId {
+  // 0-based index of module in PDB
+  uint16_t modi = 0;
+
+  // Offset of symbol's record in module stream.  This is
+  // offset by 4 from the CVSymbolArray's notion of offset
+  // due to the debug magic at the beginning of the stream.
+  uint32_t offset = 0;
+};
+
+struct PdbGlobalSymId {
+  // Offset of symbol's record in globals or publics stream.
+  uint32_t offset = 0;
+
+  // True if this symbol is in the public stream, false if it's in the globals
+  // stream.
+  bool is_public = false;
 };
 
 struct PdbTypeSymId {
-  uint64_t tag : 8;    // PDB_SymType::FunctionSig, Enum, PointerType, etc.
-  uint64_t is_ipi : 8; // 1 if this value is from the IPI stream, 0 for TPI.
-  uint64_t unused : 16;
-  uint64_t index : 32; // codeview::TypeIndex
+  // The index of the of the type in the TPI or IPI stream.
+  llvm::codeview::TypeIndex index;
+
+  // True if this symbol comes from the IPI stream, false if it's from the TPI
+  // stream.
+  bool is_ipi = false;
 };
 
-static_assert(sizeof(PdbCompilandId) == 8, "invalid uid size");
-static_assert(sizeof(PdbCuSymId) == 8, "invalid uid size");
-static_assert(std::is_standard_layout<PdbCompilandId>::value,
-              "type is not standard layout!");
-static_assert(std::is_standard_layout<PdbCuSymId>::value,
-              "type is not standard layout!");
+struct PdbFieldListMemberId {
+  // The TypeIndex of the LF_FIELDLIST record.
+  llvm::codeview::TypeIndex index;
+
+  // The offset from the beginning of the LF_FIELDLIST record to this record.
+  uint16_t offset = 0;
+};
 
 class PdbSymUid {
-  union {
-    PdbCompilandId comp_id;
-    PdbCuSymId cu_sym;
-    PdbTypeSymId type_sym;
-  } m_uid;
-
-  PdbSymUid() { ::memset(&m_uid, 0, sizeof(m_uid)); }
+  uint64_t m_repr = 0;
 
 public:
-  static bool isTypeSym(llvm::pdb::PDB_SymType tag) {
-    switch (tag) {
-    case llvm::pdb::PDB_SymType::ArrayType:
-    case llvm::pdb::PDB_SymType::BaseClass:
-    case llvm::pdb::PDB_SymType::BaseInterface:
-    case llvm::pdb::PDB_SymType::BuiltinType:
-    case llvm::pdb::PDB_SymType::CustomType:
-    case llvm::pdb::PDB_SymType::Enum:
-    case llvm::pdb::PDB_SymType::FunctionArg:
-    case llvm::pdb::PDB_SymType::FunctionSig:
-    case llvm::pdb::PDB_SymType::Typedef:
-    case llvm::pdb::PDB_SymType::VectorType:
-    case llvm::pdb::PDB_SymType::VTableShape:
-    case llvm::pdb::PDB_SymType::PointerType:
-    case llvm::pdb::PDB_SymType::UDT:
-      return true;
-    default:
-      return false;
-    }
-  }
+  PdbSymUid(uint64_t repr) : m_repr(repr) {}
+  PdbSymUid(const PdbCompilandId &cid);
+  PdbSymUid(const PdbCompilandSymId &csid);
+  PdbSymUid(const PdbGlobalSymId &gsid);
+  PdbSymUid(const PdbTypeSymId &tsid);
+  PdbSymUid(const PdbFieldListMemberId &flmid);
 
-  static bool isCuSym(llvm::pdb::PDB_SymType tag) {
-    switch (tag) {
-    case llvm::pdb::PDB_SymType::Block:
-    case llvm::pdb::PDB_SymType::Callee:
-    case llvm::pdb::PDB_SymType::Caller:
-    case llvm::pdb::PDB_SymType::CallSite:
-    case llvm::pdb::PDB_SymType::CoffGroup:
-    case llvm::pdb::PDB_SymType::CompilandDetails:
-    case llvm::pdb::PDB_SymType::CompilandEnv:
-    case llvm::pdb::PDB_SymType::Custom:
-    case llvm::pdb::PDB_SymType::Data:
-    case llvm::pdb::PDB_SymType::Function:
-    case llvm::pdb::PDB_SymType::Inlinee:
-    case llvm::pdb::PDB_SymType::InlineSite:
-    case llvm::pdb::PDB_SymType::Label:
-    case llvm::pdb::PDB_SymType::Thunk:
-      return true;
-    default:
-      return false;
-    }
-  }
+  uint64_t toOpaqueId() const { return m_repr; }
 
-  static PdbSymUid makeCuSymId(llvm::codeview::ProcRefSym sym) {
-    return makeCuSymId(llvm::pdb::PDB_SymType::Function, sym.Module - 1,
-                       sym.SymOffset);
-  }
+  PdbSymUidKind kind() const;
 
-  static PdbSymUid makeCuSymId(llvm::pdb::PDB_SymType type, uint16_t modi,
-                               uint32_t offset) {
-    lldbassert(isCuSym(type));
-
-    PdbSymUid uid;
-    uid.m_uid.cu_sym.modi = modi;
-    uid.m_uid.cu_sym.offset = offset;
-    uid.m_uid.cu_sym.global = false;
-    uid.m_uid.cu_sym.tag = static_cast<uint8_t>(type);
-    return uid;
-  }
-
-  static PdbSymUid makeGlobalVariableUid(uint32_t offset) {
-    PdbSymUid uid = {};
-    uid.m_uid.cu_sym.modi = 0;
-    uid.m_uid.cu_sym.offset = offset;
-    uid.m_uid.cu_sym.global = 1;
-    uid.m_uid.cu_sym.unused = 0;
-    uid.m_uid.cu_sym.tag = static_cast<uint8_t>(llvm::pdb::PDB_SymType::Data);
-    return uid;
-  }
-
-  static PdbSymUid makeCompilandId(llvm::codeview::ProcRefSym sym) {
-    // S_PROCREF symbols are 1-based
-    lldbassert(sym.Module > 0);
-    return makeCompilandId(sym.Module - 1);
-  }
-
-  static PdbSymUid makeCompilandId(uint16_t modi) {
-    PdbSymUid uid;
-    uid.m_uid.comp_id.modi = modi;
-    uid.m_uid.cu_sym.tag =
-        static_cast<uint8_t>(llvm::pdb::PDB_SymType::Compiland);
-    return uid;
-  }
-
-  static PdbSymUid makeTypeSymId(llvm::pdb::PDB_SymType type,
-                                 llvm::codeview::TypeIndex index, bool is_ipi) {
-    lldbassert(isTypeSym(type));
-
-    PdbSymUid uid;
-    uid.m_uid.type_sym.tag = static_cast<uint8_t>(type);
-    uid.m_uid.type_sym.index = index.getIndex();
-    uid.m_uid.type_sym.is_ipi = static_cast<uint8_t>(is_ipi);
-    return uid;
-  }
-
-  static PdbSymUid fromOpaqueId(uint64_t value) {
-    PdbSymUid result;
-    ::memcpy(&result.m_uid, &value, sizeof(value));
-    return result;
-  }
-
-  uint64_t toOpaqueId() const {
-    uint64_t result;
-    ::memcpy(&result, &m_uid, sizeof(m_uid));
-    return result;
-  }
-
-  bool isPubSym() const {
-    return tag() == llvm::pdb::PDB_SymType::PublicSymbol;
-  }
-  bool isCompiland() const {
-    return tag() == llvm::pdb::PDB_SymType::Compiland;
-  }
-  bool isGlobalVariable() const {
-    if (tag() != llvm::pdb::PDB_SymType::Data)
-      return false;
-    return static_cast<bool>(asCuSym().global);
-  }
-
-  llvm::pdb::PDB_SymType tag() const {
-    return static_cast<llvm::pdb::PDB_SymType>(m_uid.comp_id.tag);
-  }
-
-  const PdbCompilandId &asCompiland() const {
-    lldbassert(tag() == llvm::pdb::PDB_SymType::Compiland);
-    return m_uid.comp_id;
-  }
-
-  const PdbCuSymId &asCuSym() const {
-    lldbassert(isCuSym(tag()));
-    return m_uid.cu_sym;
-  }
-
-  const PdbTypeSymId &asTypeSym() const {
-    lldbassert(isTypeSym(tag()));
-    return m_uid.type_sym;
-  }
+  PdbCompilandId asCompiland() const;
+  PdbCompilandSymId asCompilandSym() const;
+  PdbGlobalSymId asGlobalSym() const;
+  PdbTypeSymId asTypeSym() const;
+  PdbFieldListMemberId asFieldListMember() const;
 };
+
+template <typename T> uint64_t toOpaqueUid(const T &cid) {
+  return PdbSymUid(cid).toOpaqueId();
+}
 
 struct SymbolAndUid {
   llvm::codeview::CVSymbol sym;
