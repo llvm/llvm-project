@@ -319,7 +319,7 @@ entry:
 
 ; GCN-LABEL: {{^}}nontemporal_global_1:
 ; GFX8:  flat_load_dword v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}] glc slc{{$}}
-; GFX9:  global_load_dword v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], off glc slc{{$}}
+; GFX9:  global_load_dword v{{[0-9]+}}, v[{{[0-9]+}}:{{[0-9]+}}], s[{{[0-9]+}}:{{[0-9]+}}] glc slc{{$}}
 define amdgpu_kernel void @nontemporal_global_1(
     i32 addrspace(1)* %in, i32* %out) {
 entry:

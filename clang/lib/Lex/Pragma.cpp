@@ -1130,10 +1130,6 @@ struct PragmaDebugHandler : public PragmaHandler {
   }
 
   void HandleCaptured(Preprocessor &PP) {
-    // Skip if emitting preprocessed output.
-    if (PP.isPreprocessedOutput())
-      return;
-
     Token Tok;
     PP.LexUnexpandedToken(Tok);
 

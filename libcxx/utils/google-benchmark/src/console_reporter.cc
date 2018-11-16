@@ -106,25 +106,13 @@ void ConsoleReporter::PrintRunData(const Run& result) {
   auto name_color =
       (result.report_big_o || result.report_rms) ? COLOR_BLUE : COLOR_GREEN;
   printer(Out, name_color, "%-*s ", name_field_width_,
-          result.benchmark_name.c_str());
+          result.benchmark_name().c_str());
 
   if (result.error_occurred) {
     printer(Out, COLOR_RED, "ERROR OCCURRED: \'%s\'",
             result.error_message.c_str());
     printer(Out, COLOR_DEFAULT, "\n");
     return;
-  }
-  // Format bytes per second
-  std::string rate;
-  if (result.bytes_per_second > 0) {
-    rate = StrCat(" ", HumanReadableNumber(result.bytes_per_second), "B/s");
-  }
-
-  // Format items per second
-  std::string items;
-  if (result.items_per_second > 0) {
-    items =
-        StrCat(" ", HumanReadableNumber(result.items_per_second), " items/s");
   }
 
   const double real_time = result.GetAdjustedRealTime();
@@ -150,7 +138,7 @@ void ConsoleReporter::PrintRunData(const Run& result) {
   for (auto& c : result.counters) {
     const std::size_t cNameLen = std::max(std::string::size_type(10),
                                           c.first.length());
-    auto const& s = HumanReadableNumber(c.second.value, 1000);
+    auto const& s = HumanReadableNumber(c.second.value, c.second.oneK);
     if (output_options_ & OO_Tabular) {
       if (c.second.flags & Counter::kIsRate) {
         printer(Out, COLOR_DEFAULT, " %*s/s", cNameLen - 2, s.c_str());
@@ -162,14 +150,6 @@ void ConsoleReporter::PrintRunData(const Run& result) {
       printer(Out, COLOR_DEFAULT, " %s=%s%s", c.first.c_str(), s.c_str(),
               unit);
     }
-  }
-
-  if (!rate.empty()) {
-    printer(Out, COLOR_DEFAULT, " %*s", 13, rate.c_str());
-  }
-
-  if (!items.empty()) {
-    printer(Out, COLOR_DEFAULT, " %*s", 18, items.c_str());
   }
 
   if (!result.report_label.empty()) {

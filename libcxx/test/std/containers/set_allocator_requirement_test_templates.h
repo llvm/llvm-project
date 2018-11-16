@@ -32,8 +32,6 @@ template <class Container>
 void testSetInsert()
 {
   typedef typename Container::value_type ValueTp;
-  typedef Container C;
-  typedef std::pair<typename C::iterator, bool> R;
   ConstructController* cc = getConstructController();
   cc->reset();
   {
@@ -146,8 +144,6 @@ template <class Container>
 void testSetEmplace()
 {
   typedef typename Container::value_type ValueTp;
-  typedef Container C;
-  typedef std::pair<typename C::iterator, bool> R;
   ConstructController* cc = getConstructController();
   cc->reset();
   {
@@ -209,7 +205,6 @@ template <class Container>
 void testSetEmplaceHint()
 {
   typedef typename Container::value_type ValueTp;
-
   typedef Container C;
   typedef typename C::iterator It;
   ConstructController* cc = getConstructController();
@@ -289,7 +284,6 @@ template <class Container>
 void testMultisetInsert()
 {
   typedef typename Container::value_type ValueTp;
-  typedef Container C;
   ConstructController* cc = getConstructController();
   cc->reset();
   {
@@ -356,8 +350,6 @@ template <class Container>
 void testMultisetEmplace()
 {
   typedef typename Container::value_type ValueTp;
-  typedef Container C;
-  typedef std::pair<typename C::iterator, bool> R;
   ConstructController* cc = getConstructController();
   cc->reset();
   {

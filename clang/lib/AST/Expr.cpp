@@ -887,66 +887,105 @@ double FloatingLiteral::getValueAsApproximateDouble() const {
   return V.convertToDouble();
 }
 
-int StringLiteral::mapCharByteWidth(TargetInfo const &target,StringKind k) {
-  int CharByteWidth = 0;
-  switch(k) {
-    case Ascii:
-    case UTF8:
-      CharByteWidth = target.getCharWidth();
-      break;
-    case Wide:
-      CharByteWidth = target.getWCharWidth();
-      break;
-    case UTF16:
-      CharByteWidth = target.getChar16Width();
-      break;
-    case UTF32:
-      CharByteWidth = target.getChar32Width();
-      break;
+unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
+                                         StringKind SK) {
+  unsigned CharByteWidth = 0;
+  switch (SK) {
+  case Ascii:
+  case UTF8:
+    CharByteWidth = Target.getCharWidth();
+    break;
+  case Wide:
+    CharByteWidth = Target.getWCharWidth();
+    break;
+  case UTF16:
+    CharByteWidth = Target.getChar16Width();
+    break;
+  case UTF32:
+    CharByteWidth = Target.getChar32Width();
+    break;
   }
   assert((CharByteWidth & 7) == 0 && "Assumes character size is byte multiple");
   CharByteWidth /= 8;
-  assert((CharByteWidth==1 || CharByteWidth==2 || CharByteWidth==4)
-         && "character byte widths supported are 1, 2, and 4 only");
+  assert((CharByteWidth == 1 || CharByteWidth == 2 || CharByteWidth == 4) &&
+         "The only supported character byte widths are 1,2 and 4!");
   return CharByteWidth;
 }
 
-StringLiteral *StringLiteral::Create(const ASTContext &C, StringRef Str,
-                                     StringKind Kind, bool Pascal, QualType Ty,
-                                     const SourceLocation *Loc,
-                                     unsigned NumStrs) {
-  assert(C.getAsConstantArrayType(Ty) &&
+StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
+                             StringKind Kind, bool Pascal, QualType Ty,
+                             const SourceLocation *Loc,
+                             unsigned NumConcatenated)
+    : Expr(StringLiteralClass, Ty, VK_LValue, OK_Ordinary, false, false, false,
+           false) {
+  assert(Ctx.getAsConstantArrayType(Ty) &&
          "StringLiteral must be of constant array type!");
+  unsigned CharByteWidth = mapCharByteWidth(Ctx.getTargetInfo(), Kind);
+  unsigned ByteLength = Str.size();
+  assert((ByteLength % CharByteWidth == 0) &&
+         "The size of the data must be a multiple of CharByteWidth!");
 
-  // Allocate enough space for the StringLiteral plus an array of locations for
-  // any concatenated string tokens.
-  void *Mem =
-      C.Allocate(sizeof(StringLiteral) + sizeof(SourceLocation) * (NumStrs - 1),
-                 alignof(StringLiteral));
-  StringLiteral *SL = new (Mem) StringLiteral(Ty);
+  // Avoid the expensive division. The compiler should be able to figure it
+  // out by itself. However as of clang 7, even with the appropriate
+  // llvm_unreachable added just here, it is not able to do so.
+  unsigned Length;
+  switch (CharByteWidth) {
+  case 1:
+    Length = ByteLength;
+    break;
+  case 2:
+    Length = ByteLength / 2;
+    break;
+  case 4:
+    Length = ByteLength / 4;
+    break;
+  default:
+    llvm_unreachable("Unsupported character width!");
+  }
 
-  // OPTIMIZE: could allocate this appended to the StringLiteral.
-  SL->setString(C,Str,Kind,Pascal);
+  StringLiteralBits.Kind = Kind;
+  StringLiteralBits.CharByteWidth = CharByteWidth;
+  StringLiteralBits.IsPascal = Pascal;
+  StringLiteralBits.NumConcatenated = NumConcatenated;
+  *getTrailingObjects<unsigned>() = Length;
 
-  SL->TokLocs[0] = Loc[0];
-  SL->NumConcatenated = NumStrs;
+  // Initialize the trailing array of SourceLocation.
+  // This is safe since SourceLocation is POD-like.
+  std::memcpy(getTrailingObjects<SourceLocation>(), Loc,
+              NumConcatenated * sizeof(SourceLocation));
 
-  if (NumStrs != 1)
-    memcpy(&SL->TokLocs[1], Loc+1, sizeof(SourceLocation)*(NumStrs-1));
-  return SL;
+  // Initialize the trailing array of char holding the string data.
+  std::memcpy(getTrailingObjects<char>(), Str.data(), ByteLength);
 }
 
-StringLiteral *StringLiteral::CreateEmpty(const ASTContext &C,
-                                          unsigned NumStrs) {
-  void *Mem =
-      C.Allocate(sizeof(StringLiteral) + sizeof(SourceLocation) * (NumStrs - 1),
-                 alignof(StringLiteral));
-  StringLiteral *SL =
-      new (Mem) StringLiteral(C.adjustStringLiteralBaseType(QualType()));
-  SL->CharByteWidth = 0;
-  SL->Length = 0;
-  SL->NumConcatenated = NumStrs;
-  return SL;
+StringLiteral::StringLiteral(EmptyShell Empty, unsigned NumConcatenated,
+                             unsigned Length, unsigned CharByteWidth)
+    : Expr(StringLiteralClass, Empty) {
+  StringLiteralBits.CharByteWidth = CharByteWidth;
+  StringLiteralBits.NumConcatenated = NumConcatenated;
+  *getTrailingObjects<unsigned>() = Length;
+}
+
+StringLiteral *StringLiteral::Create(const ASTContext &Ctx, StringRef Str,
+                                     StringKind Kind, bool Pascal, QualType Ty,
+                                     const SourceLocation *Loc,
+                                     unsigned NumConcatenated) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<unsigned, SourceLocation, char>(
+                               1, NumConcatenated, Str.size()),
+                           alignof(StringLiteral));
+  return new (Mem)
+      StringLiteral(Ctx, Str, Kind, Pascal, Ty, Loc, NumConcatenated);
+}
+
+StringLiteral *StringLiteral::CreateEmpty(const ASTContext &Ctx,
+                                          unsigned NumConcatenated,
+                                          unsigned Length,
+                                          unsigned CharByteWidth) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<unsigned, SourceLocation, char>(
+                               1, NumConcatenated, Length * CharByteWidth),
+                           alignof(StringLiteral));
+  return new (Mem)
+      StringLiteral(EmptyShell(), NumConcatenated, Length, CharByteWidth);
 }
 
 void StringLiteral::outputString(raw_ostream &OS) const {
@@ -1045,42 +1084,6 @@ void StringLiteral::outputString(raw_ostream &OS) const {
   OS << '"';
 }
 
-void StringLiteral::setString(const ASTContext &C, StringRef Str,
-                              StringKind Kind, bool IsPascal) {
-  //FIXME: we assume that the string data comes from a target that uses the same
-  // code unit size and endianness for the type of string.
-  this->Kind = Kind;
-  this->IsPascal = IsPascal;
-
-  CharByteWidth = mapCharByteWidth(C.getTargetInfo(),Kind);
-  assert((Str.size()%CharByteWidth == 0)
-         && "size of data must be multiple of CharByteWidth");
-  Length = Str.size()/CharByteWidth;
-
-  switch(CharByteWidth) {
-    case 1: {
-      char *AStrData = new (C) char[Length];
-      std::memcpy(AStrData,Str.data(),Length*sizeof(*AStrData));
-      StrData.asChar = AStrData;
-      break;
-    }
-    case 2: {
-      uint16_t *AStrData = new (C) uint16_t[Length];
-      std::memcpy(AStrData,Str.data(),Length*sizeof(*AStrData));
-      StrData.asUInt16 = AStrData;
-      break;
-    }
-    case 4: {
-      uint32_t *AStrData = new (C) uint32_t[Length];
-      std::memcpy(AStrData,Str.data(),Length*sizeof(*AStrData));
-      StrData.asUInt32 = AStrData;
-      break;
-    }
-    default:
-      llvm_unreachable("unsupported CharByteWidth");
-  }
-}
-
 /// getLocationOfByte - Return a source location that points to the specified
 /// byte of this string literal.
 ///
@@ -1102,7 +1105,8 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
                                  const LangOptions &Features,
                                  const TargetInfo &Target, unsigned *StartToken,
                                  unsigned *StartTokenByteOffset) const {
-  assert((Kind == StringLiteral::Ascii || Kind == StringLiteral::UTF8) &&
+  assert((getKind() == StringLiteral::Ascii ||
+          getKind() == StringLiteral::UTF8) &&
          "Only narrow string literals are currently supported");
 
   // Loop over all of the tokens in this string until we find the one that
@@ -1169,8 +1173,6 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
     ByteNo -= TokNumBytes;
   }
 }
-
-
 
 /// getOpcodeStr - Turn an Opcode enum value into the punctuation char it
 /// corresponds to, e.g. "sizeof" or "[pre]++".
@@ -1528,7 +1530,7 @@ MemberExpr *MemberExpr::Create(
              QualifierLoc.getNestedNameSpecifier()->isInstantiationDependent())
       E->setInstantiationDependent(true);
 
-    E->HasQualifierOrFoundDecl = true;
+    E->MemberExprBits.HasQualifierOrFoundDecl = true;
 
     MemberExprNameQualifier *NQ =
         E->getTrailingObjects<MemberExprNameQualifier>();
@@ -1536,7 +1538,8 @@ MemberExpr *MemberExpr::Create(
     NQ->FoundDecl = founddecl;
   }
 
-  E->HasTemplateKWAndArgsInfo = (targs || TemplateKWLoc.isValid());
+  E->MemberExprBits.HasTemplateKWAndArgsInfo =
+      (targs || TemplateKWLoc.isValid());
 
   if (targs) {
     bool Dependent = false;

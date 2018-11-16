@@ -2,6 +2,7 @@ add_llvm_library(LLVMBinaryFormat
   Dwarf.cpp
   Magic.cpp
   MsgPackReader.cpp
+  MsgPackTypes.cpp
   MsgPackWriter.cpp
   Wasm.cpp
 

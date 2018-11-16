@@ -31,7 +31,7 @@ using namespace lldb_private;
 ThreadPlanPython::ThreadPlanPython(Thread &thread, const char *class_name)
     : ThreadPlan(ThreadPlan::eKindPython, "Python based Thread Plan", thread,
                  eVoteNoOpinion, eVoteNoOpinion),
-      m_class_name(class_name) {
+      m_class_name(class_name), m_did_push(false) {
   SetIsMasterPlan(true);
   SetOkayToDiscard(true);
   SetPrivate(false);
@@ -43,20 +43,22 @@ ThreadPlanPython::~ThreadPlanPython() {
 }
 
 bool ThreadPlanPython::ValidatePlan(Stream *error) {
-  // I have to postpone setting up the implementation till after the constructor
-  // because I need to call
-  // shared_from_this, which you can't do in the constructor.  So I'll do it
-  // here.
-  if (m_implementation_sp)
+  if (!m_did_push)
     return true;
-  else
+
+  if (!m_implementation_sp) {
+    if (error)
+      error->Printf("Python thread plan does not have an implementation");
     return false;
+  }
+
+  return true;
 }
 
 void ThreadPlanPython::DidPush() {
   // We set up the script side in DidPush, so that it can push other plans in
   // the constructor, and doesn't have to care about the details of DidPush.
-
+  m_did_push = true;
   if (!m_class_name.empty()) {
     ScriptInterpreter *script_interp = m_thread.GetProcess()
                                            ->GetTarget()

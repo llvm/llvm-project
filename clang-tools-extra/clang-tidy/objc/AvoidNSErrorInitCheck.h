@@ -16,7 +16,7 @@ namespace clang {
 namespace tidy {
 namespace objc {
 
-/// Finds usages of [NSSError init]. It is not the proper way of creating
+/// Finds usages of -[NSError init]. It is not the proper way of creating
 /// NSError. errorWithDomain:code:userInfo: should be used instead.
 ///
 /// For the user-facing documentation see:

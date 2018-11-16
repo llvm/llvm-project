@@ -14868,7 +14868,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.trap() noreturn nounwind
+      declare void @llvm.trap() cold noreturn nounwind
 
 Overview:
 """""""""

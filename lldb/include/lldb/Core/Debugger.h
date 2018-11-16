@@ -266,6 +266,8 @@ public:
   void SetReproducerPath(llvm::StringRef p);
   void SetReproducerPath(const char *) = delete;
 
+  llvm::Error SetReproducerCapture(bool b);
+
   bool GetUseExternalEditor() const;
 
   bool SetUseExternalEditor(bool use_external_editor_p);

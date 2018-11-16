@@ -650,10 +650,6 @@ public:
     return MetadataList.getMetadataFwdRef(ID);
   }
 
-  MDNode *getMDNodeFwdRefOrNull(unsigned Idx) {
-    return MetadataList.getMDNodeFwdRefOrNull(Idx);
-  }
-
   DISubprogram *lookupSubprogramForFunction(Function *F) {
     return FunctionsWithSPs.lookup(F);
   }
@@ -772,7 +768,7 @@ MetadataLoader::MetadataLoaderImpl::lazyLoadModuleMetadataBlock() {
           // It is acknowledged by 'TODO: Inherit from Metadata' in the
           // NamedMDNode class definition.
           MDNode *MD = MetadataList.getMDNodeFwdRefOrNull(Record[i]);
-          assert(MD && "Invalid record");
+          assert(MD && "Invalid metadata: expect fwd ref to MDNode");
           NMD->addOperand(MD);
         }
         break;
@@ -1049,7 +1045,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     for (unsigned i = 0; i != Size; ++i) {
       MDNode *MD = MetadataList.getMDNodeFwdRefOrNull(Record[i]);
       if (!MD)
-        return error("Invalid record");
+        return error("Invalid named metadata: expect fwd ref to MDNode");
       NMD->addOperand(MD);
     }
     break;
@@ -1834,7 +1830,7 @@ Error MetadataLoader::MetadataLoaderImpl::parseGlobalObjectAttachment(
       return error("Invalid ID");
     MDNode *MD = MetadataList.getMDNodeFwdRefOrNull(Record[I + 1]);
     if (!MD)
-      return error("Invalid metadata attachment");
+      return error("Invalid metadata attachment: expect fwd ref to MDNode");
     GO.addMetadata(K->second, *MD);
   }
   return Error::success();
@@ -2002,10 +1998,6 @@ bool MetadataLoader::hasFwdRefs() const { return Pimpl->hasFwdRefs(); }
 /// necessary.
 Metadata *MetadataLoader::getMetadataFwdRefOrLoad(unsigned Idx) {
   return Pimpl->getMetadataFwdRefOrLoad(Idx);
-}
-
-MDNode *MetadataLoader::getMDNodeFwdRefOrNull(unsigned Idx) {
-  return Pimpl->getMDNodeFwdRefOrNull(Idx);
 }
 
 DISubprogram *MetadataLoader::lookupSubprogramForFunction(Function *F) {

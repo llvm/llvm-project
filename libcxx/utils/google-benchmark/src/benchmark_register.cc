@@ -78,7 +78,7 @@ class BenchmarkFamilies {
   // Extract the list of benchmark instances that match the specified
   // regular expression.
   bool FindBenchmarks(std::string re,
-                      std::vector<Benchmark::Instance>* benchmarks,
+                      std::vector<BenchmarkInstance>* benchmarks,
                       std::ostream* Err);
 
  private:
@@ -107,7 +107,7 @@ void BenchmarkFamilies::ClearBenchmarks() {
 }
 
 bool BenchmarkFamilies::FindBenchmarks(
-    std::string spec, std::vector<Benchmark::Instance>* benchmarks,
+    std::string spec, std::vector<BenchmarkInstance>* benchmarks,
     std::ostream* ErrStream) {
   CHECK(ErrStream);
   auto& Err = *ErrStream;
@@ -152,10 +152,10 @@ bool BenchmarkFamilies::FindBenchmarks(
 
     for (auto const& args : family->args_) {
       for (int num_threads : *thread_counts) {
-        Benchmark::Instance instance;
+        BenchmarkInstance instance;
         instance.name = family->name_;
         instance.benchmark = family.get();
-        instance.report_mode = family->report_mode_;
+        instance.aggregation_report_mode = family->aggregation_report_mode_;
         instance.arg = args;
         instance.time_unit = family->time_unit_;
         instance.range_multiplier = family->range_multiplier_;
@@ -225,7 +225,7 @@ Benchmark* RegisterBenchmarkInternal(Benchmark* bench) {
 // FIXME: This function is a hack so that benchmark.cc can access
 // `BenchmarkFamilies`
 bool FindBenchmarksInternal(const std::string& re,
-                            std::vector<Benchmark::Instance>* benchmarks,
+                            std::vector<BenchmarkInstance>* benchmarks,
                             std::ostream* Err) {
   return BenchmarkFamilies::GetInstance()->FindBenchmarks(re, benchmarks, Err);
 }
@@ -236,7 +236,7 @@ bool FindBenchmarksInternal(const std::string& re,
 
 Benchmark::Benchmark(const char* name)
     : name_(name),
-      report_mode_(RM_Unspecified),
+      aggregation_report_mode_(ARM_Unspecified),
       time_unit_(kNanosecond),
       range_multiplier_(kRangeMultiplier),
       min_time_(0),
@@ -369,7 +369,23 @@ Benchmark* Benchmark::Repetitions(int n) {
 }
 
 Benchmark* Benchmark::ReportAggregatesOnly(bool value) {
-  report_mode_ = value ? RM_ReportAggregatesOnly : RM_Default;
+  aggregation_report_mode_ = value ? ARM_ReportAggregatesOnly : ARM_Default;
+  return this;
+}
+
+Benchmark* Benchmark::DisplayAggregatesOnly(bool value) {
+  // If we were called, the report mode is no longer 'unspecified', in any case.
+  aggregation_report_mode_ = static_cast<AggregationReportMode>(
+      aggregation_report_mode_ | ARM_Default);
+
+  if (value) {
+    aggregation_report_mode_ = static_cast<AggregationReportMode>(
+        aggregation_report_mode_ | ARM_DisplayReportAggregatesOnly);
+  } else {
+    aggregation_report_mode_ = static_cast<AggregationReportMode>(
+        aggregation_report_mode_ & ~ARM_DisplayReportAggregatesOnly);
+  }
+
   return this;
 }
 

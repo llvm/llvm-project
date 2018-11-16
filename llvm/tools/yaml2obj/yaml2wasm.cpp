@@ -45,6 +45,7 @@ private:
   int writeSectionContent(raw_ostream &OS, WasmYAML::DataSection &Section);
 
   // Custom section types
+  int writeSectionContent(raw_ostream &OS, WasmYAML::DylinkSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::NameSection &Section);
   int writeSectionContent(raw_ostream &OS, WasmYAML::LinkingSection &Section);
   WasmYAML::Object &Obj;
@@ -131,6 +132,16 @@ public:
 
   raw_ostream &GetStream() { return StringStream; }
 };
+
+int WasmWriter::writeSectionContent(raw_ostream &OS,
+                                    WasmYAML::DylinkSection &Section) {
+  writeStringRef(Section.Name, OS);
+  encodeULEB128(Section.MemorySize, OS);
+  encodeULEB128(Section.MemoryAlignment, OS);
+  encodeULEB128(Section.TableSize, OS);
+  encodeULEB128(Section.TableAlignment, OS);
+  return 0;
+}
 
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::LinkingSection &Section) {
@@ -241,7 +252,10 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
 
 int WasmWriter::writeSectionContent(raw_ostream &OS,
                                     WasmYAML::CustomSection &Section) {
-  if (auto S = dyn_cast<WasmYAML::NameSection>(&Section)) {
+  if (auto S = dyn_cast<WasmYAML::DylinkSection>(&Section)) {
+    if (auto Err = writeSectionContent(OS, *S))
+      return Err;
+  } else if (auto S = dyn_cast<WasmYAML::NameSection>(&Section)) {
     if (auto Err = writeSectionContent(OS, *S))
       return Err;
   } else if (auto S = dyn_cast<WasmYAML::LinkingSection>(&Section)) {

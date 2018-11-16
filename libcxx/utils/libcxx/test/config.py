@@ -931,9 +931,6 @@ class Configuration(object):
         self.cxx.addWarningFlagIfSupported('-Wunused-variable')
         self.cxx.addWarningFlagIfSupported('-Wunused-parameter')
         self.cxx.addWarningFlagIfSupported('-Wunreachable-code')
-        # FIXME: Enable the two warnings below.
-        # self.cxx.addWarningFlagIfSupported('-Wno-conversion')
-        self.cxx.addWarningFlagIfSupported('-Wno-unused-local-typedef')
         std = self.get_lit_conf('std', None)
         if std in ['c++98', 'c++03']:
             # The '#define static_assert' provided by libc++ in C++03 mode

@@ -23,6 +23,7 @@
 //   void merge(unordered_multiset<key_type, H2, P2, allocator_type>&& source);
 
 #include <unordered_set>
+#include <cassert>
 #include "test_macros.h"
 #include "Counter.h"
 
@@ -39,9 +40,6 @@ struct throw_hasher
     bool& should_throw_;
 
     throw_hasher(bool& should_throw) : should_throw_(should_throw) {}
-
-    typedef size_t result_type;
-    typedef T argument_type;
 
     size_t operator()(const T& p) const
     {
@@ -98,8 +96,6 @@ int main()
     struct hasher
     {
         hasher() = default;
-        typedef Counter<int> argument_type;
-        typedef size_t result_type;
         size_t operator()(const Counter<int>& p) const { return std::hash<Counter<int>>()(p); }
     };
     {

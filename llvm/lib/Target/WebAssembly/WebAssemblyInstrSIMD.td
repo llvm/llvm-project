@@ -559,16 +559,16 @@ multiclass SIMDUnary<ValueType vec_t, string vec, SDNode node, string name,
                         vec#"."#name#"\t$dst, $vec", vec#"."#name, simdop>;
 }
 
-// Bitwise logic: v128.and / v128.or / v128.xor
-let isCommutable = 1 in {
-defm AND : SIMDBitwise<and, "and", 76>;
-defm OR : SIMDBitwise<or, "or", 77>;
-defm XOR : SIMDBitwise<xor, "xor", 78>;
-} // isCommutable = 1
-
 // Bitwise logic: v128.not
 foreach vec_t = [v16i8, v8i16, v4i32, v2i64] in
-defm NOT: SIMDUnary<vec_t, "v128", vnot, "not", 79>;
+defm NOT: SIMDUnary<vec_t, "v128", vnot, "not", 76>;
+
+// Bitwise logic: v128.and / v128.or / v128.xor
+let isCommutable = 1 in {
+defm AND : SIMDBitwise<and, "and", 77>;
+defm OR : SIMDBitwise<or, "or", 78>;
+defm XOR : SIMDBitwise<xor, "xor", 79>;
+} // isCommutable = 1
 
 // Bitwise select: v128.bitselect
 foreach vec_t = [v16i8, v8i16, v4i32, v2i64, v4f32, v2f64] in

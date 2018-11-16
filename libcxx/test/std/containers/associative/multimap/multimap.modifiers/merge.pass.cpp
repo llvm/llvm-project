@@ -23,6 +23,7 @@
 //   void merge(multimap<key_type, value_type, C2, allocator_type>&& source);
 
 #include <map>
+#include <cassert>
 #include "test_macros.h"
 #include "Counter.h"
 

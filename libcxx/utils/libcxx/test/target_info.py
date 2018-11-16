@@ -15,6 +15,8 @@ import re
 import subprocess
 import sys
 
+from libcxx.util import executeCommand
+
 class DefaultTargetInfo(object):
     def __init__(self, full_config):
         self.full_config = full_config
@@ -127,14 +129,13 @@ class DarwinLocalTI(DefaultTargetInfo):
             cmd = ['xcrun', '--sdk', name, '--show-sdk-path']
         else:
             cmd = ['xcrun', '--show-sdk-path']
-        try:
-            out = subprocess.check_output(cmd).strip()
-            res = 0
-        except OSError:
-            res = -1
-        if res == 0 and out:
-            sdk_path = out
+        out, err, exit_code = executeCommand(cmd)
+        if exit_code != 0:
+            self.full_config.lit_config.warning("Could not determine macOS SDK path! stderr was " + err)
+        if exit_code == 0 and out:
+            sdk_path = out.strip()
             self.full_config.lit_config.note('using SDKROOT: %r' % sdk_path)
+            assert isinstance(sdk_path, str)
             flags += ["-isysroot", sdk_path]
 
     def add_cxx_link_flags(self, flags):

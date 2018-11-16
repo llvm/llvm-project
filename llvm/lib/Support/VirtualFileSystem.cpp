@@ -1164,14 +1164,14 @@ private:
   /// Looks up the path <tt>[Start, End)</tt> in \p From, possibly
   /// recursing into the contents of \p From if it is a directory.
   ErrorOr<Entry *> lookupPath(sys::path::const_iterator Start,
-                              sys::path::const_iterator End, Entry *From);
+                              sys::path::const_iterator End, Entry *From) const;
 
   /// Get the status of a given an \c Entry.
   ErrorOr<Status> status(const Twine &Path, Entry *E);
 
 public:
   /// Looks up \p Path in \c Roots.
-  ErrorOr<Entry *> lookupPath(const Twine &Path);
+  ErrorOr<Entry *> lookupPath(const Twine &Path) const;
 
   /// Parses \p Buffer, which is expected to be in YAML format and
   /// returns a virtual file system representing its contents.
@@ -1182,6 +1182,9 @@ public:
 
   ErrorOr<Status> status(const Twine &Path) override;
   ErrorOr<std::unique_ptr<File>> openFileForRead(const Twine &Path) override;
+
+  std::error_code getRealPath(const Twine &Path,
+                              SmallVectorImpl<char> &Output) const override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
     return ExternalFS->getCurrentWorkingDirectory();
@@ -1726,7 +1729,7 @@ RedirectingFileSystem::create(std::unique_ptr<MemoryBuffer> Buffer,
   return FS.release();
 }
 
-ErrorOr<Entry *> RedirectingFileSystem::lookupPath(const Twine &Path_) {
+ErrorOr<Entry *> RedirectingFileSystem::lookupPath(const Twine &Path_) const {
   SmallString<256> Path;
   Path_.toVector(Path);
 
@@ -1757,7 +1760,8 @@ ErrorOr<Entry *> RedirectingFileSystem::lookupPath(const Twine &Path_) {
 
 ErrorOr<Entry *>
 RedirectingFileSystem::lookupPath(sys::path::const_iterator Start,
-                                  sys::path::const_iterator End, Entry *From) {
+                                  sys::path::const_iterator End,
+                                  Entry *From) const {
 #ifndef _WIN32
   assert(!isTraversalComponent(*Start) &&
          !isTraversalComponent(From->getName()) &&
@@ -1888,6 +1892,27 @@ RedirectingFileSystem::openFileForRead(const Twine &Path) {
                                      *ExternalStatus);
   return std::unique_ptr<File>(
       llvm::make_unique<FileWithFixedStatus>(std::move(*Result), S));
+}
+
+std::error_code
+RedirectingFileSystem::getRealPath(const Twine &Path,
+                                   SmallVectorImpl<char> &Output) const {
+  ErrorOr<Entry *> Result = lookupPath(Path);
+  if (!Result) {
+    if (IsFallthrough &&
+        Result.getError() == llvm::errc::no_such_file_or_directory) {
+      return ExternalFS->getRealPath(Path, Output);
+    }
+    return Result.getError();
+  }
+
+  if (auto *F = dyn_cast<RedirectingFileEntry>(*Result)) {
+    return ExternalFS->getRealPath(F->getExternalContentsPath(), Output);
+  }
+  // Even if there is a directory entry, fall back to ExternalFS if allowed,
+  // because directories don't have a single external contents path.
+  return IsFallthrough ? ExternalFS->getRealPath(Path, Output)
+                       : llvm::errc::invalid_argument;
 }
 
 IntrusiveRefCntPtr<FileSystem>

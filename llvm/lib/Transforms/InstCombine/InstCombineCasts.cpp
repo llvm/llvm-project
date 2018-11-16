@@ -498,6 +498,13 @@ Instruction *InstCombiner::narrowRotate(TruncInst &Trunc) {
           shouldChangeType(Trunc.getSrcTy(), Trunc.getType())) &&
          "Don't narrow to an illegal scalar type");
 
+  // Bail out on strange types. It is possible to handle some of these patterns
+  // even with non-power-of-2 sizes, but it is not a likely scenario.
+  Type *DestTy = Trunc.getType();
+  unsigned NarrowWidth = DestTy->getScalarSizeInBits();
+  if (!isPowerOf2_32(NarrowWidth))
+    return nullptr;
+
   // First, find an or'd pair of opposite shifts with the same shifted operand:
   // trunc (or (lshr ShVal, ShAmt0), (shl ShVal, ShAmt1))
   Value *Or0, *Or1;
@@ -538,8 +545,6 @@ Instruction *InstCombiner::narrowRotate(TruncInst &Trunc) {
     return nullptr;
   };
 
-  Type *DestTy = Trunc.getType();
-  unsigned NarrowWidth = DestTy->getScalarSizeInBits();
   Value *ShAmt = matchShiftAmount(ShAmt0, ShAmt1, NarrowWidth);
   bool SubIsOnLHS = false;
   if (!ShAmt) {

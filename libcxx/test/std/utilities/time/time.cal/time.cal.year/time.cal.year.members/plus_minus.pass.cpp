@@ -32,7 +32,6 @@ constexpr bool testConstexpr()
 int main()
 {
     using year  = std::chrono::year;
-    using years = std::chrono::years;
 
     ASSERT_NOEXCEPT(+std::declval<year>());
     ASSERT_NOEXCEPT(-std::declval<year>());

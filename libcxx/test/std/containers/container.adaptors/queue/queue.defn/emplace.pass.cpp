@@ -43,9 +43,9 @@ int main()
     test_return_type<std::queue<int> > ();
     test_return_type<std::queue<int, std::list<int> > > ();
 
-    typedef Emplaceable T;
     std::queue<Emplaceable> q;
 #if TEST_STD_VER > 14
+    typedef Emplaceable T;
     T& r1 = q.emplace(1, 2.5);
     assert(&r1 == &q.back());
     T& r2 = q.emplace(2, 3.5);

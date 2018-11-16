@@ -237,12 +237,12 @@ define <3 x i64> @test_ulong_div(<3 x i64> %num, <3 x i64> %div) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq %rcx
 ; CHECK-NEXT:    movq %rax, %rcx
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq %r8
 ; CHECK-NEXT:    movq %rax, %rsi
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movq %r10, %rax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq %r9
 ; CHECK-NEXT:    movq %rax, %rdi
 ; CHECK-NEXT:    movq %rcx, %rax
@@ -372,22 +372,22 @@ define <5 x i64> @test_ulong_rem(<5 x i64> %num, <5 x i64> %rem) {
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, %xmm0
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, %xmm1
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movq %r8, %rax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, %xmm0
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movq %rcx, %rax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, %xmm2
 ; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    movq %r9, %rax
+; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    divq {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, 32(%rdi)
 ; CHECK-NEXT:    movdqa %xmm2, 16(%rdi)

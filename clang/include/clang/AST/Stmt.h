@@ -312,7 +312,7 @@ protected:
     unsigned InstantiationDependent : 1;
     unsigned ContainsUnexpandedParameterPack : 1;
   };
-  enum { NumExprBits = 17 };
+  enum { NumExprBits = NumStmtBits + 9 };
 
   class PredefinedExprBitfields {
     friend class ASTStmtReader;
@@ -366,12 +366,45 @@ protected:
     unsigned IsExact : 1;
   };
 
+  class StringLiteralBitfields {
+    friend class ASTStmtReader;
+    friend class StringLiteral;
+
+    unsigned : NumExprBits;
+
+    /// The kind of this string literal.
+    /// One of the enumeration values of StringLiteral::StringKind.
+    unsigned Kind : 3;
+
+    /// The width of a single character in bytes. Only values of 1, 2,
+    /// and 4 bytes are supported. StringLiteral::mapCharByteWidth maps
+    /// the target + string kind to the appropriate CharByteWidth.
+    unsigned CharByteWidth : 3;
+
+    unsigned IsPascal : 1;
+
+    /// The number of concatenated token this string is made of.
+    /// This is the number of trailing SourceLocation.
+    unsigned NumConcatenated;
+  };
+
   class CharacterLiteralBitfields {
     friend class CharacterLiteral;
 
     unsigned : NumExprBits;
 
     unsigned Kind : 3;
+  };
+
+  class UnaryOperatorBitfields {
+    friend class UnaryOperator;
+
+    unsigned : NumExprBits;
+
+    unsigned Opc : 5;
+    unsigned CanOverflow : 1;
+
+    SourceLocation Loc;
   };
 
   class UnaryExprOrTypeTraitExprBitfields {
@@ -391,6 +424,35 @@ protected:
     unsigned NumPreArgs : 1;
   };
 
+  class MemberExprBitfields {
+    friend class MemberExpr;
+
+    unsigned : NumExprBits;
+
+    /// IsArrow - True if this is "X->F", false if this is "X.F".
+    unsigned IsArrow : 1;
+
+    /// True if this member expression used a nested-name-specifier to
+    /// refer to the member, e.g., "x->Base::f", or found its member via
+    /// a using declaration.  When true, a MemberExprNameQualifier
+    /// structure is allocated immediately after the MemberExpr.
+    unsigned HasQualifierOrFoundDecl : 1;
+
+    /// True if this member expression specified a template keyword
+    /// and/or a template argument list explicitly, e.g., x->f<int>,
+    /// x->template f, x->template f<int>.
+    /// When true, an ASTTemplateKWAndArgsInfo structure and its
+    /// TemplateArguments (if any) are present.
+    unsigned HasTemplateKWAndArgsInfo : 1;
+
+    /// True if this member expression refers to a method that
+    /// was resolved from an overloaded set having size greater than 1.
+    unsigned HadMultipleCandidates : 1;
+
+    /// This is the location of the -> or . in the expression.
+    SourceLocation OperatorLoc;
+  };
+
   class CastExprBitfields {
     friend class CastExpr;
     friend class ImplicitCastExpr;
@@ -400,6 +462,20 @@ protected:
     unsigned Kind : 6;
     unsigned PartOfExplicitCast : 1; // Only set for ImplicitCastExpr.
     unsigned BasePathIsEmpty : 1;
+  };
+
+  class BinaryOperatorBitfields {
+    friend class BinaryOperator;
+
+    unsigned : NumExprBits;
+
+    unsigned Opc : 6;
+
+    /// This is only meaningful for operations on floating point
+    /// types and 0 otherwise.
+    unsigned FPFeatures : 3;
+
+    SourceLocation OpLoc;
   };
 
   class InitListExprBitfields {
@@ -512,10 +588,14 @@ protected:
     PredefinedExprBitfields PredefinedExprBits;
     DeclRefExprBitfields DeclRefExprBits;
     FloatingLiteralBitfields FloatingLiteralBits;
+    StringLiteralBitfields StringLiteralBits;
     CharacterLiteralBitfields CharacterLiteralBits;
+    UnaryOperatorBitfields UnaryOperatorBits;
     UnaryExprOrTypeTraitExprBitfields UnaryExprOrTypeTraitExprBits;
     CallExprBitfields CallExprBits;
+    MemberExprBitfields MemberExprBits;
     CastExprBitfields CastExprBits;
+    BinaryOperatorBitfields BinaryOperatorBits;
     InitListExprBitfields InitListExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
 

@@ -43,7 +43,6 @@
 int main()
 {
     using year_month         = std::chrono::year_month;
-    using month_weekday      = std::chrono::month_weekday;
     using year               = std::chrono::year;
     using month              = std::chrono::month;
     using weekday            = std::chrono::weekday;

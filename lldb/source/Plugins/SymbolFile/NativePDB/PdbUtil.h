@@ -19,8 +19,16 @@
 #include <tuple>
 #include <utility>
 
+namespace llvm {
+namespace pdb {
+class TpiStream;
+}
+} // namespace llvm
+
 namespace lldb_private {
 namespace npdb {
+
+struct PdbTypeSymId;
 
 struct CVTagRecord {
   enum Kind { Class, Struct, Union, Enum };
@@ -100,6 +108,9 @@ inline bool IsValidRecord(const llvm::codeview::ProcRefSym &sym) {
 
 bool IsForwardRefUdt(llvm::codeview::CVType cvt);
 bool IsTagRecord(llvm::codeview::CVType cvt);
+
+bool IsForwardRefUdt(const PdbTypeSymId &id, llvm::pdb::TpiStream &tpi);
+bool IsTagRecord(const PdbTypeSymId &id, llvm::pdb::TpiStream &tpi);
 
 lldb::AccessType TranslateMemberAccess(llvm::codeview::MemberAccess access);
 llvm::codeview::TypeIndex GetFieldListIndex(llvm::codeview::CVType cvt);

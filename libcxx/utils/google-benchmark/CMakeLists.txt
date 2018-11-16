@@ -16,7 +16,11 @@ option(BENCHMARK_ENABLE_TESTING "Enable testing of the benchmark library." ON)
 option(BENCHMARK_ENABLE_EXCEPTIONS "Enable the use of exceptions in the benchmark library." ON)
 option(BENCHMARK_ENABLE_LTO "Enable link time optimisation of the benchmark library." OFF)
 option(BENCHMARK_USE_LIBCXX "Build and test using libc++ as the standard library." OFF)
-option(BENCHMARK_BUILD_32_BITS "Build a 32 bit version of the library." OFF)
+if(NOT MSVC)
+  option(BENCHMARK_BUILD_32_BITS "Build a 32 bit version of the library." OFF)
+else()
+  set(BENCHMARK_BUILD_32_BITS OFF CACHE BOOL "Build a 32 bit version of the library - unsupported when using MSVC)" FORCE)
+endif()
 option(BENCHMARK_ENABLE_INSTALL "Enable installation of benchmark. (Projects embedding benchmark may want to turn this OFF.)" ON)
 
 # Allow unmet dependencies to be met using CMake's ExternalProject mechanics, which
@@ -75,7 +79,7 @@ get_git_version(GIT_VERSION)
 
 # Tell the user what versions we are using
 string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" VERSION ${GIT_VERSION})
-message("-- Version: ${VERSION}")
+message(STATUS "Version: ${VERSION}")
 
 # The version of the libraries
 set(GENERIC_LIB_VERSION ${VERSION})
@@ -90,7 +94,7 @@ if (BENCHMARK_BUILD_32_BITS)
   add_required_cxx_compiler_flag(-m32)
 endif()
 
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+if (MSVC)
   # Turn compiler warnings up to 11
   string(REGEX REPLACE "[-/]W[1-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
@@ -99,6 +103,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   if (NOT BENCHMARK_ENABLE_EXCEPTIONS)
     add_cxx_compiler_flag(-EHs-)
     add_cxx_compiler_flag(-EHa-)
+    add_definitions(-D_HAS_EXCEPTIONS=0)
   endif()
   # Link time optimisation
   if (BENCHMARK_ENABLE_LTO)
@@ -163,7 +168,7 @@ else()
   endif()
   # ICC17u2: overloaded virtual function "benchmark::Fixture::SetUp" is only partially overridden
   # (because of deprecated overload)
-  add_cxx_compiler_flag(-wd654)  
+  add_cxx_compiler_flag(-wd654)
   add_cxx_compiler_flag(-Wthread-safety)
   if (HAVE_CXX_FLAG_WTHREAD_SAFETY)
     cxx_feature_check(THREAD_SAFETY_ATTRIBUTES)
@@ -189,7 +194,7 @@ else()
       if (GCC_RANLIB)
         set(CMAKE_RANLIB ${GCC_RANLIB})
       endif()
-    elseif("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+    elseif("${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
       include(llvm-toolchain)
     endif()
   endif()
@@ -214,12 +219,12 @@ else()
 endif()
 
 if (BENCHMARK_USE_LIBCXX)
-  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     add_cxx_compiler_flag(-stdlib=libc++)
   elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR
           "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     add_cxx_compiler_flag(-nostdinc++)
-    message("libc++ header path must be manually specified using CMAKE_CXX_FLAGS")
+    message(WARNING "libc++ header path must be manually specified using CMAKE_CXX_FLAGS")
     # Adding -nodefaultlibs directly to CMAKE_<TYPE>_LINKER_FLAGS will break
     # configuration checks such as 'find_package(Threads)'
     list(APPEND BENCHMARK_CXX_LINKER_FLAGS -nodefaultlibs)
