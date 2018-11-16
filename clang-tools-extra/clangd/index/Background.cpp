@@ -43,7 +43,7 @@ BackgroundIndex::BackgroundIndex(
       URISchemes(URISchemes),
       IndexStorageFactory(std::move(IndexStorageFactory)) {
   assert(ThreadPoolSize > 0 && "Thread pool size can't be zero.");
-  assert(IndexStorageFactory && "Storage factory can not be null!");
+  assert(this->IndexStorageFactory && "Storage factory can not be null!");
   while (ThreadPoolSize--) {
     ThreadPool.emplace_back([this] { run(); });
     // Set priority to low, since background indexing is a long running task we
