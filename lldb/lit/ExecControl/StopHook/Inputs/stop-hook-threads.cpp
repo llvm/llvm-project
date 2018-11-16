@@ -14,7 +14,7 @@
 #include <thread>
 
 std::default_random_engine g_random_engine{std::random_device{}()};
-std::uniform_int_distribution<> g_distribution{0, 3000000};
+std::uniform_int_distribution<> g_distribution{0, 3000};
 
 uint32_t g_val = 0;
 
@@ -42,14 +42,14 @@ thread_func (uint32_t thread_index)
 
     uint32_t count = 0;
     uint32_t val;
-    while (count++ < 15)
+    while (count++ < 4)
     {
-        // random micro second sleep from zero to 3 seconds
+        // random micro second sleep from zero to .3 seconds
         int usec = g_distribution(g_random_engine);
         printf ("%s (thread = %u) doing a usleep (%d)...\n", __FUNCTION__, thread_index, usec);
-        std::this_thread::sleep_for(std::chrono::microseconds{usec});
+        std::this_thread::sleep_for(std::chrono::microseconds{usec}); // Set break point at this line
 
-        if (count < 7)
+        if (count < 2)
             val = access_pool ();
         else
             val = access_pool (true);
@@ -64,7 +64,6 @@ int main (int argc, char const *argv[])
 {
     std::thread threads[3];
 
-    printf ("Before turning all three threads loose...\n"); // Set break point at this line, and add a stop-hook.
     // Create 3 threads
     for (auto &thread : threads)
         thread = std::thread{thread_func, std::distance(threads, &thread)};
