@@ -3175,8 +3175,7 @@ bool NewGVN::singleReachablePHIPath(
   auto FilteredPhiArgs =
       make_filter_range(MP->operands(), ReachableOperandPred);
   SmallVector<const Value *, 32> OperandList;
-  std::copy(FilteredPhiArgs.begin(), FilteredPhiArgs.end(),
-            std::back_inserter(OperandList));
+  llvm::copy(FilteredPhiArgs, std::back_inserter(OperandList));
   bool Okay = is_splat(OperandList);
   if (Okay)
     return singleReachablePHIPath(Visited, cast<MemoryAccess>(OperandList[0]),

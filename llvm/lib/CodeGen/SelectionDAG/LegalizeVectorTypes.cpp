@@ -2831,6 +2831,8 @@ SDValue DAGTypeLegalizer::WidenVecRes_Convert(SDNode *N) {
       // If both input and result vector types are of same width, extend
       // operations should be done with SIGN/ZERO_EXTEND_VECTOR_INREG, which
       // accepts fewer elements in the result than in the input.
+      if (Opcode == ISD::ANY_EXTEND)
+        return DAG.getNode(ISD::ANY_EXTEND_VECTOR_INREG, DL, WidenVT, InOp);
       if (Opcode == ISD::SIGN_EXTEND)
         return DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, DL, WidenVT, InOp);
       if (Opcode == ISD::ZERO_EXTEND)

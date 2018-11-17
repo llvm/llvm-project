@@ -590,10 +590,12 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
     const DebugLoc &DL, const TargetInstrInfo *TII, int CSStackSizeInc,
     bool NeedsWinCFI, bool InProlog = true) {
   // Ignore instructions that do not operate on SP, i.e. shadow call stack
-  // instructions.
+  // instructions and associated CFI instruction.
   while (MBBI->getOpcode() == AArch64::STRXpost ||
-         MBBI->getOpcode() == AArch64::LDRXpre) {
-    assert(MBBI->getOperand(0).getReg() != AArch64::SP);
+         MBBI->getOpcode() == AArch64::LDRXpre ||
+         MBBI->getOpcode() == AArch64::CFI_INSTRUCTION) {
+    if (MBBI->getOpcode() != AArch64::CFI_INSTRUCTION)
+      assert(MBBI->getOperand(0).getReg() != AArch64::SP);
     ++MBBI;
   }
   unsigned NewOpc;
@@ -690,9 +692,11 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
   unsigned Opc = MI.getOpcode();
 
   // Ignore instructions that do not operate on SP, i.e. shadow call stack
-  // instructions.
-  if (Opc == AArch64::STRXpost || Opc == AArch64::LDRXpre) {
-    assert(MI.getOperand(0).getReg() != AArch64::SP);
+  // instructions and associated CFI instruction.
+  if (Opc == AArch64::STRXpost || Opc == AArch64::LDRXpre ||
+      Opc == AArch64::CFI_INSTRUCTION) {
+    if (Opc != AArch64::CFI_INSTRUCTION)
+      assert(MI.getOperand(0).getReg() != AArch64::SP);
     return;
   }
 
@@ -1728,6 +1732,21 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
     if (NeedsWinCFI)
       BuildMI(MBB, MI, DL, TII.get(AArch64::SEH_Nop))
           .setMIFlag(MachineInstr::FrameSetup);
+
+    // Emit a CFI instruction that causes 8 to be subtracted from the value of
+    // x18 when unwinding past this frame.
+    static const char CFIInst[] = {
+        dwarf::DW_CFA_val_expression,
+        18, // register
+        2,  // length
+        static_cast<char>(dwarf::DW_OP_breg18),
+        static_cast<char>(-8) & 0x7f, // addend (sleb128)
+    };
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::createEscape(nullptr, CFIInst));
+    BuildMI(MBB, MI, DL, TII.get(AArch64::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex)
+        .setMIFlag(MachineInstr::FrameSetup);
 
     // This instruction also makes x18 live-in to the entry block.
     MBB.addLiveIn(AArch64::X18);

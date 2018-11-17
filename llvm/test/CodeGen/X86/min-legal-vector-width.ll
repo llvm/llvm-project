@@ -646,3 +646,67 @@ define <16 x i16> @test_16f32tosb_512(<16 x float>* %ptr, <16 x i16> %passthru) 
   %select = select <16 x i1> %mask, <16 x i16> %passthru, <16 x i16> zeroinitializer
   ret <16 x i16> %select
 }
+
+define void @mul256(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vector-width"="256" {
+; CHECK-LABEL: mul256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmullw %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpmovwb %ymm0, %xmm0
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmullw %ymm1, %ymm2, %ymm1
+; CHECK-NEXT:    vpmovwb %ymm1, %xmm1
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmullw %ymm1, %ymm2, %ymm1
+; CHECK-NEXT:    vpmovwb %ymm1, %xmm1
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
+; CHECK-NEXT:    vpmovwb %ymm2, %xmm2
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; CHECK-NEXT:    vmovdqa %ymm1, 32(%rdx)
+; CHECK-NEXT:    vmovdqa %ymm0, (%rdx)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %d = load <64 x i8>, <64 x i8>* %a
+  %e = load <64 x i8>, <64 x i8>* %b
+  %f = mul <64 x i8> %d, %e
+  store <64 x i8> %f, <64 x i8>* %c
+  ret void
+}
+
+define void @mul512(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vector-width"="512" {
+; CHECK-LABEL: mul512:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmullw %ymm0, %ymm1, %ymm0
+; CHECK-NEXT:    vpmovwb %ymm0, %xmm0
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmullw %ymm1, %ymm2, %ymm1
+; CHECK-NEXT:    vpmovwb %ymm1, %xmm1
+; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmullw %ymm1, %ymm2, %ymm1
+; CHECK-NEXT:    vpmovwb %ymm1, %xmm1
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm2 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmovzxbw {{.*#+}} ymm3 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero,mem[8],zero,mem[9],zero,mem[10],zero,mem[11],zero,mem[12],zero,mem[13],zero,mem[14],zero,mem[15],zero
+; CHECK-NEXT:    vpmullw %ymm2, %ymm3, %ymm2
+; CHECK-NEXT:    vpmovwb %ymm2, %xmm2
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; CHECK-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; CHECK-NEXT:    vmovdqa64 %zmm0, (%rdx)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %d = load <64 x i8>, <64 x i8>* %a
+  %e = load <64 x i8>, <64 x i8>* %b
+  %f = mul <64 x i8> %d, %e
+  store <64 x i8> %f, <64 x i8>* %c
+  ret void
+}

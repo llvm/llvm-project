@@ -258,16 +258,13 @@ class Shift_right<bits<2> funct2, string OpcodeStr, RegisterClass cls,
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class CS_ALU<bits<2> funct2, string OpcodeStr, RegisterClass cls,
-             bit RV64only>
-    : RVInst16CS<0b100, 0b01, (outs cls:$rd_wb), (ins cls:$rd, cls:$rs2),
+class CS_ALU<bits<6> funct6, bits<2> funct2, string OpcodeStr,
+             RegisterClass cls>
+    : RVInst16CA<funct6, funct2, 0b01, (outs cls:$rd_wb), (ins cls:$rd, cls:$rs2),
                  OpcodeStr, "$rd, $rs2"> {
   bits<3> rd;
   let Constraints = "$rd = $rd_wb";
-  let Inst{12} = RV64only;
-  let Inst{11-10} = 0b11;
   let Inst{9-7} = rd;
-  let Inst{6-5} = funct2;
 }
 
 //===----------------------------------------------------------------------===//
@@ -411,14 +408,14 @@ def C_ANDI : RVInst16CB<0b100, 0b01, (outs GPRC:$rs1_wb), (ins GPRC:$rs1, simm6:
   let Inst{6-2} = imm{4-0};
 }
 
-def C_SUB  : CS_ALU<0b00, "c.sub", GPRC, 0>;
-def C_XOR  : CS_ALU<0b01, "c.xor", GPRC, 0>;
-def C_OR   : CS_ALU<0b10, "c.or" , GPRC, 0>;
-def C_AND  : CS_ALU<0b11, "c.and", GPRC, 0>;
+def C_SUB  : CS_ALU<0b100011, 0b00, "c.sub", GPRC>;
+def C_XOR  : CS_ALU<0b100011, 0b01, "c.xor", GPRC>;
+def C_OR   : CS_ALU<0b100011, 0b10, "c.or" , GPRC>;
+def C_AND  : CS_ALU<0b100011, 0b11, "c.and", GPRC>;
 
 let Predicates = [HasStdExtC, IsRV64] in {
-def C_SUBW : CS_ALU<0b00, "c.subw", GPRC, 1>;
-def C_ADDW : CS_ALU<0b01, "c.addw", GPRC, 1>;
+def C_SUBW : CS_ALU<0b100111, 0b00, "c.subw", GPRC>;
+def C_ADDW : CS_ALU<0b100111, 0b01, "c.addw", GPRC>;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in

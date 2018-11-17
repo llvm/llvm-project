@@ -298,7 +298,7 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      const GVSummaryMapTy &DefinedFunctions,
+      const GVSummaryMapTy &DefinedGVSummaries,
       const DenseSet<GlobalValue::GUID> &PreservedSymbols, unsigned OptLevel,
       bool Freestanding, const TargetMachineBuilder &TMBuilder) {
     if (CachePath.empty())
@@ -368,6 +368,10 @@ public:
     for (auto &Entry : ImportList) {
       auto ModHash = Index.getModuleHash(Entry.first());
       Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
+      for (auto Guid : Entry.second)
+        if (auto *GVS = dyn_cast<GlobalVarSummary>(
+                Index.getGlobalValueSummary(Guid, false)))
+          AddUnsigned(GVS->isReadOnly());
     }
 
     // Include the hash for the resolved ODR.
@@ -380,10 +384,14 @@ public:
 
     // Include the hash for the preserved symbols.
     for (auto &Entry : PreservedSymbols) {
-      if (DefinedFunctions.count(Entry))
+      if (DefinedGVSummaries.count(Entry))
         Hasher.update(
             ArrayRef<uint8_t>((const uint8_t *)&Entry, sizeof(GlobalValue::GUID)));
     }
+
+    for (auto &Entry : DefinedGVSummaries)
+      if (auto *GVS = dyn_cast<GlobalVarSummary>(Entry.second))
+        AddUnsigned(GVS->isReadOnly());
 
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
@@ -646,7 +654,8 @@ static void computeDeadSymbolsInIndex(
   auto isPrevailing = [&](GlobalValue::GUID G) {
     return PrevailingType::Unknown;
   };
-  computeDeadSymbols(Index, GUIDPreservedSymbols, isPrevailing);
+  computeDeadSymbolsWithConstProp(Index, GUIDPreservedSymbols, isPrevailing,
+                                  /* ImportEnabled = */ true);
 }
 
 /**
@@ -983,13 +992,13 @@ void ThinLTOCodeGenerator::run() {
         auto ModuleIdentifier = ModuleBuffer.getBufferIdentifier();
         auto &ExportList = ExportLists[ModuleIdentifier];
 
-        auto &DefinedFunctions = ModuleToDefinedGVSummaries[ModuleIdentifier];
+        auto &DefinedGVSummaries = ModuleToDefinedGVSummaries[ModuleIdentifier];
 
         // The module may be cached, this helps handling it.
         ModuleCacheEntry CacheEntry(CacheOptions.Path, *Index, ModuleIdentifier,
                                     ImportLists[ModuleIdentifier], ExportList,
                                     ResolvedODR[ModuleIdentifier],
-                                    DefinedFunctions, GUIDPreservedSymbols,
+                                    DefinedGVSummaries, GUIDPreservedSymbols,
                                     OptLevel, Freestanding, TMBuilder);
         auto CacheEntryPath = CacheEntry.getEntryPath();
 

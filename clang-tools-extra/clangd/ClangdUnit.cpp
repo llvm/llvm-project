@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ClangdUnit.h"
+#include "../clang-tidy/ClangTidyDiagnosticConsumer.h"
+#include "../clang-tidy/ClangTidyModuleRegistry.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
 #include "Logger.h"
@@ -151,6 +153,40 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
     return None;
   }
 
+  // Set up ClangTidy. Must happen after BeginSourceFile() so ASTContext exists.
+  // Clang-tidy has some limitiations to ensure reasonable performance:
+  //  - checks don't see all preprocessor events in the preamble
+  //  - matchers run only over the main-file top-level decls (and can't see
+  //    ancestors outside this scope).
+  // In practice almost all checks work well without modifications.
+  std::vector<std::unique_ptr<tidy::ClangTidyCheck>> CTChecks;
+  ast_matchers::MatchFinder CTFinder;
+  llvm::Optional<tidy::ClangTidyContext> CTContext;
+  {
+    trace::Span Tracer("ClangTidyInit");
+    tidy::ClangTidyCheckFactories CTFactories;
+    for (const auto &E : tidy::ClangTidyModuleRegistry::entries())
+      E.instantiate()->addCheckFactories(CTFactories);
+    auto CTOpts = tidy::ClangTidyOptions::getDefaults();
+    // FIXME: this needs to be configurable, and we need to support .clang-tidy
+    // files and other options providers.
+    // These checks exercise the matcher- and preprocessor-based hooks.
+    CTOpts.Checks =
+        "bugprone-sizeof-expression,bugprone-macro-repeated-side-effects";
+    CTContext.emplace(llvm::make_unique<tidy::DefaultOptionsProvider>(
+        tidy::ClangTidyGlobalOptions(), CTOpts));
+    CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
+    CTContext->setASTContext(&Clang->getASTContext());
+    CTContext->setCurrentFile(MainInput.getFile());
+    CTFactories.createChecks(CTContext.getPointer(), CTChecks);
+    for (const auto &Check : CTChecks) {
+      // FIXME: the PP callbacks skip the entire preamble.
+      // Checks that want to see #includes in the main file do not see them.
+      Check->registerPPCallbacks(*Clang);
+      Check->registerMatchers(&CTFinder);
+    }
+  }
+
   // Copy over the includes from the preamble, then combine with the
   // non-preamble includes below.
   auto Includes = Preamble ? Preamble->Includes : IncludeStructure{};
@@ -160,13 +196,26 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   if (!Action->Execute())
     log("Execute() failed when building AST for {0}", MainInput.getFile());
 
+  std::vector<Decl *> ParsedDecls = Action->takeTopLevelDecls();
+  // AST traversals should exclude the preamble, to avoid performance cliffs.
+  Clang->getASTContext().setTraversalScope(ParsedDecls);
+  {
+    // Run the AST-dependent part of the clang-tidy checks.
+    // (The preprocessor part ran already, via PPCallbacks).
+    trace::Span Tracer("ClangTidyMatch");
+    CTFinder.matchAST(Clang->getASTContext());
+  }
+
   // UnitDiagsConsumer is local, we can not store it in CompilerInstance that
   // has a longer lifetime.
   Clang->getDiagnostics().setClient(new IgnoreDiagnostics);
   // CompilerInstance won't run this callback, do it directly.
   ASTDiags.EndSourceFile();
+  // XXX: This is messy: clang-tidy checks flush some diagnostics at EOF.
+  // However Action->EndSourceFile() would destroy the ASTContext!
+  // So just inform the preprocessor of EOF, while keeping everything alive.
+  Clang->getPreprocessor().EndSourceFile();
 
-  std::vector<Decl *> ParsedDecls = Action->takeTopLevelDecls();
   std::vector<Diag> Diags = ASTDiags.take();
   // Add diagnostics from the preamble, if any.
   if (Preamble)
@@ -182,7 +231,12 @@ ParsedAST &ParsedAST::operator=(ParsedAST &&Other) = default;
 
 ParsedAST::~ParsedAST() {
   if (Action) {
-    Action->EndSourceFile();
+    // We already notified the PP of end-of-file earlier, so detach it first.
+    // We must keep it alive until after EndSourceFile(), Sema relies on this.
+    auto PP = Clang->getPreprocessorPtr(); // Keep PP alive for now.
+    Clang->setPreprocessor(nullptr);       // Detach so we don't send EOF again.
+    Action->EndSourceFile();               // Destroy ASTContext and Sema.
+    // Now Sema is gone, it's safe for PP to go out of scope.
   }
 }
 
@@ -416,4 +470,29 @@ SourceLocation getBeginningOfIdentifier(ParsedAST &Unit, const Position &Pos,
 }
 
 } // namespace clangd
+namespace tidy {
+// Force the linker to link in Clang-tidy modules.
+#define LINK_TIDY_MODULE(X)                                                    \
+  extern volatile int X##ModuleAnchorSource;                                   \
+  static int LLVM_ATTRIBUTE_UNUSED X##ModuleAnchorDestination =                \
+      X##ModuleAnchorSource
+LINK_TIDY_MODULE(CERT);
+LINK_TIDY_MODULE(Abseil);
+LINK_TIDY_MODULE(Boost);
+LINK_TIDY_MODULE(Bugprone);
+LINK_TIDY_MODULE(LLVM);
+LINK_TIDY_MODULE(CppCoreGuidelines);
+LINK_TIDY_MODULE(Fuchsia);
+LINK_TIDY_MODULE(Google);
+LINK_TIDY_MODULE(Android);
+LINK_TIDY_MODULE(Misc);
+LINK_TIDY_MODULE(Modernize);
+LINK_TIDY_MODULE(Performance);
+LINK_TIDY_MODULE(Portability);
+LINK_TIDY_MODULE(Readability);
+LINK_TIDY_MODULE(ObjC);
+LINK_TIDY_MODULE(HICPP);
+LINK_TIDY_MODULE(Zircon);
+#undef LINK_TIDY_MODULE
+} // namespace tidy
 } // namespace clang

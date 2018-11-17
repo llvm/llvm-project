@@ -1634,13 +1634,18 @@ bool CastExpr::CastConsistency() const {
     assert(getSubExpr()->getType()->isFunctionType());
     goto CheckNoBasePath;
 
-  case CK_AddressSpaceConversion:
-    assert(getType()->isPointerType() || getType()->isBlockPointerType());
-    assert(getSubExpr()->getType()->isPointerType() ||
-           getSubExpr()->getType()->isBlockPointerType());
-    assert(getType()->getPointeeType().getAddressSpace() !=
-           getSubExpr()->getType()->getPointeeType().getAddressSpace());
-    LLVM_FALLTHROUGH;
+  case CK_AddressSpaceConversion: {
+    auto Ty = getType();
+    auto SETy = getSubExpr()->getType();
+    assert(getValueKindForType(Ty) == Expr::getValueKindForType(SETy));
+    if (!isGLValue())
+      Ty = Ty->getPointeeType();
+    if (!isGLValue())
+      SETy = SETy->getPointeeType();
+    assert(!Ty.isNull() && !SETy.isNull() &&
+           Ty.getAddressSpace() != SETy.getAddressSpace());
+    goto CheckNoBasePath;
+  }
   // These should not have an inheritance path.
   case CK_Dynamic:
   case CK_ToUnion:

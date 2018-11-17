@@ -62,6 +62,9 @@ STATISTIC(NumBranches, "Number of branches unswitched");
 STATISTIC(NumSwitches, "Number of switches unswitched");
 STATISTIC(NumGuards, "Number of guards turned into branches for unswitching");
 STATISTIC(NumTrivial, "Number of unswitches that are trivial");
+STATISTIC(
+    NumCostMultiplierSkipped,
+    "Number of unswitch candidates that had their cost multiplier skipped");
 
 static cl::opt<bool> EnableNonTrivialUnswitch(
     "enable-nontrivial-unswitch", cl::init(false), cl::Hidden,
@@ -72,6 +75,17 @@ static cl::opt<int>
     UnswitchThreshold("unswitch-threshold", cl::init(50), cl::Hidden,
                       cl::desc("The cost threshold for unswitching a loop."));
 
+static cl::opt<bool> EnableUnswitchCostMultiplier(
+    "enable-unswitch-cost-multiplier", cl::init(true), cl::Hidden,
+    cl::desc("Enable unswitch cost multiplier that prohibits exponential "
+             "explosion in nontrivial unswitch."));
+static cl::opt<int> UnswitchSiblingsToplevelDiv(
+    "unswitch-siblings-toplevel-div", cl::init(2), cl::Hidden,
+    cl::desc("Toplevel siblings divisor for cost multiplier."));
+static cl::opt<int> UnswitchNumInitialUnscaledCandidates(
+    "unswitch-num-initial-unscaled-candidates", cl::init(8), cl::Hidden,
+    cl::desc("Number of unswitch candidates that are ignored when calculating "
+             "cost multiplier."));
 static cl::opt<bool> UnswitchGuards(
     "simple-loop-unswitch-guards", cl::init(true), cl::Hidden,
     cl::desc("If enabled, simple loop unswitching will also consider "
@@ -2260,6 +2274,91 @@ turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
   return CheckBI;
 }
 
+/// Cost multiplier is a way to limit potentially exponential behavior
+/// of loop-unswitch. Cost is multipied in proportion of 2^number of unswitch
+/// candidates available. Also accounting for the number of "sibling" loops with
+/// the idea to account for previous unswitches that already happened on this
+/// cluster of loops. There was an attempt to keep this formula simple,
+/// just enough to limit the worst case behavior. Even if it is not that simple
+/// now it is still not an attempt to provide a detailed heuristic size
+/// prediction.
+///
+/// TODO: Make a proper accounting of "explosion" effect for all kinds of
+/// unswitch candidates, making adequate predictions instead of wild guesses.
+/// That requires knowing not just the number of "remaining" candidates but
+/// also costs of unswitching for each of these candidates.
+static int calculateUnswitchCostMultiplier(
+    Instruction &TI, Loop &L, LoopInfo &LI, DominatorTree &DT,
+    ArrayRef<std::pair<Instruction *, TinyPtrVector<Value *>>>
+        UnswitchCandidates) {
+
+  // Guards and other exiting conditions do not contribute to exponential
+  // explosion as soon as they dominate the latch (otherwise there might be
+  // another path to the latch remaining that does not allow to eliminate the
+  // loop copy on unswitch).
+  BasicBlock *Latch = L.getLoopLatch();
+  BasicBlock *CondBlock = TI.getParent();
+  if (DT.dominates(CondBlock, Latch) &&
+      (isGuard(&TI) ||
+       llvm::count_if(successors(&TI), [&L](BasicBlock *SuccBB) {
+         return L.contains(SuccBB);
+       }) <= 1)) {
+    NumCostMultiplierSkipped++;
+    return 1;
+  }
+
+  auto *ParentL = L.getParentLoop();
+  int SiblingsCount = (ParentL ? ParentL->getSubLoopsVector().size()
+                               : std::distance(LI.begin(), LI.end()));
+  // Count amount of clones that all the candidates might cause during
+  // unswitching. Branch/guard counts as 1, switch counts as log2 of its cases.
+  int UnswitchedClones = 0;
+  for (auto Candidate : UnswitchCandidates) {
+    Instruction *CI = Candidate.first;
+    BasicBlock *CondBlock = CI->getParent();
+    bool SkipExitingSuccessors = DT.dominates(CondBlock, Latch);
+    if (isGuard(CI)) {
+      if (!SkipExitingSuccessors)
+        UnswitchedClones++;
+      continue;
+    }
+    int NonExitingSuccessors = llvm::count_if(
+        successors(CondBlock), [SkipExitingSuccessors, &L](BasicBlock *SuccBB) {
+          return !SkipExitingSuccessors || L.contains(SuccBB);
+        });
+    UnswitchedClones += Log2_32(NonExitingSuccessors);
+  }
+
+  // Ignore up to the "unscaled candidates" number of unswitch candidates
+  // when calculating the power-of-two scaling of the cost. The main idea
+  // with this control is to allow a small number of unswitches to happen
+  // and rely more on siblings multiplier (see below) when the number
+  // of candidates is small.
+  unsigned ClonesPower =
+      std::max(UnswitchedClones - (int)UnswitchNumInitialUnscaledCandidates, 0);
+
+  // Allowing top-level loops to spread a bit more than nested ones.
+  int SiblingsMultiplier =
+      std::max((ParentL ? SiblingsCount
+                        : SiblingsCount / (int)UnswitchSiblingsToplevelDiv),
+               1);
+  // Compute the cost multiplier in a way that won't overflow by saturating
+  // at an upper bound.
+  int CostMultiplier;
+  if (ClonesPower > Log2_32(UnswitchThreshold) ||
+      SiblingsMultiplier > UnswitchThreshold)
+    CostMultiplier = UnswitchThreshold;
+  else
+    CostMultiplier = std::min(SiblingsMultiplier * (1 << ClonesPower),
+                              (int)UnswitchThreshold);
+
+  LLVM_DEBUG(dbgs() << "  Computed multiplier  " << CostMultiplier
+                    << " (siblings " << SiblingsMultiplier << " * clones "
+                    << (1 << ClonesPower) << ")"
+                    << " for unswitch candidate: " << TI << "\n");
+  return CostMultiplier;
+}
+
 static bool
 unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
                       AssumptionCache &AC, TargetTransformInfo &TTI,
@@ -2473,8 +2572,23 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
     int CandidateCost = ComputeUnswitchedCost(
         TI, /*FullUnswitch*/ !BI || (Invariants.size() == 1 &&
                                      Invariants[0] == BI->getCondition()));
-    LLVM_DEBUG(dbgs() << "  Computed cost of " << CandidateCost
-                      << " for unswitch candidate: " << TI << "\n");
+    // Calculate cost multiplier which is a tool to limit potentially
+    // exponential behavior of loop-unswitch.
+    if (EnableUnswitchCostMultiplier) {
+      int CostMultiplier =
+          calculateUnswitchCostMultiplier(TI, L, LI, DT, UnswitchCandidates);
+      assert(
+          (CostMultiplier > 0 && CostMultiplier <= UnswitchThreshold) &&
+          "cost multiplier needs to be in the range of 1..UnswitchThreshold");
+      CandidateCost *= CostMultiplier;
+      LLVM_DEBUG(dbgs() << "  Computed cost of " << CandidateCost
+                        << " (multiplier: " << CostMultiplier << ")"
+                        << " for unswitch candidate: " << TI << "\n");
+    } else {
+      LLVM_DEBUG(dbgs() << "  Computed cost of " << CandidateCost
+                        << " for unswitch candidate: " << TI << "\n");
+    }
+
     if (!BestUnswitchTI || CandidateCost < BestUnswitchCost) {
       BestUnswitchTI = &TI;
       BestUnswitchCost = CandidateCost;

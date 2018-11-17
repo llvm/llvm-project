@@ -118,6 +118,19 @@ class RVInst16CS<bits<3> funct3, bits<2> opcode, dag outs, dag ins,
   let Inst{1-0} = opcode;
 }
 
+class RVInst16CA<bits<6> funct6, bits<2> funct2, bits<2> opcode, dag outs,
+                 dag ins, string opcodestr, string argstr>
+    : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatCA> {
+  bits<3> rs2;
+  bits<3> rs1;
+
+  let Inst{15-10} = funct6;
+  let Inst{9-7} = rs1;
+  let Inst{6-5} = funct2;
+  let Inst{4-2} = rs2;
+  let Inst{1-0} = opcode;
+}
+
 class RVInst16CB<bits<3> funct3, bits<2> opcode, dag outs, dag ins,
                  string opcodestr, string argstr>
     : RVInst16<outs, ins, opcodestr, argstr, [], InstFormatCB> {

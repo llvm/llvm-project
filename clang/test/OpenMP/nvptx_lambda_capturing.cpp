@@ -20,15 +20,17 @@
 // HOST-DAG: = private unnamed_addr constant [3 x i64] [i64 547, i64 673, i64 562949953422096]
 // HOST-DAG: = private unnamed_addr constant [3 x i64] [i64 4, i64 8, i64 8]
 // HOST-DAG: = private unnamed_addr constant [3 x i64] [i64 547, i64 673, i64 562949953422096]
+// HOST-DAG: = private unnamed_addr constant [2 x i64] [i64 8, i64 8]
+// HOST-DAG: = private unnamed_addr constant [2 x i64] [i64 673, i64 281474976711440]
 // CHECK-DAG: [[S:%.+]] = type { i32 }
 // CHECK-DAG: [[CAP1:%.+]] = type { [[S]]* }
 // CHECK-DAG: [[CAP2:%.+]] = type { i32*, i32*, i32*, i32**, i32* }
 
-// CLASS: define internal void @__omp_offloading_{{.*}}_{{.*}}foo{{.*}}_l63_worker()
-// CLASS: define weak void @__omp_offloading_{{.*}}_{{.*}}foo{{.*}}_l63([[S]]* {{%.+}}, [[CAP1]]* dereferenceable(8) {{%.+}})
+// CLASS: define internal void @__omp_offloading_{{.*}}_{{.*}}foo{{.*}}_l72_worker()
+// CLASS: define weak void @__omp_offloading_{{.*}}_{{.*}}foo{{.*}}_l72([[S]]* {{%.+}}, [[CAP1]]* dereferenceable(8) {{%.+}})
 // CLASS-NOT: getelementptr
 // CLASS: br i1 %
-// CLASS: call void @__omp_offloading_{{.*}}_{{.*}}foo{{.*}}_l63_worker()
+// CLASS: call void @__omp_offloading_{{.*}}_{{.*}}foo{{.*}}_l72_worker()
 // CLASS: br label %
 // CLASS: br i1 %
 // CLASS: call void @__kmpc_kernel_init(
@@ -41,7 +43,7 @@
 // CLASS: call i32 [[LAMBDA1:@.+foo.+]]([[CAP1]]* [[L]])
 // CLASS: ret void
 
-// CLASS: define weak void @__omp_offloading_{{.+}}foo{{.+}}_l65([[S]]* %{{.+}}, [[CAP1]]* dereferenceable(8) %{{.+}})
+// CLASS: define weak void @__omp_offloading_{{.+}}foo{{.+}}_l74([[S]]* %{{.+}}, [[CAP1]]* dereferenceable(8) %{{.+}})
 // CLASS-NOT: getelementptr
 // CLASS: call void [[PARALLEL:@.+]](i32* %{{.+}}, i32* %{{.+}}, [[S]]* %{{.+}}, [[CAP1]]* %{{.+}})
 // CLASS: ret void
@@ -56,6 +58,13 @@
 // CLASS: call i32 [[LAMBDA1]]([[CAP1]]* [[L]])
 // CLASS: ret void
 
+template <typename T>
+int foo(const T &t) {
+  #pragma omp target parallel
+  t();
+  return 0;
+}
+
 struct S {
   int a = 15;
   int foo() {
@@ -64,15 +73,15 @@ struct S {
     L();
 #pragma omp target parallel
     L();
-    return a;
+    return a + ::foo(L);
   }
 } s;
 
-// FUN: define internal void @__omp_offloading_{{.+}}_main_l125_worker()
-// FUN: define weak void @__omp_offloading_{{.+}}_main_l125(i32* dereferenceable(4) %{{.+}}, i32* dereferenceable(4) %{{.+}}, i32* %{{.+}}, i32* dereferenceable(4) %{{.+}}, [[CAP2]]* dereferenceable(40) %{{.+}}, i64 %{{.+}})
+// FUN: define internal void @__omp_offloading_{{.+}}_main_l134_worker()
+// FUN: define weak void @__omp_offloading_{{.+}}_main_l134(i32* dereferenceable(4) %{{.+}}, i32* dereferenceable(4) %{{.+}}, i32* %{{.+}}, i32* dereferenceable(4) %{{.+}}, [[CAP2]]* dereferenceable(40) %{{.+}}, i64 %{{.+}})
 // FUN-NOT: getelementptr
 // FUN: br i1 %
-// FUN: call void @__omp_offloading_{{.*}}_{{.*}}main{{.*}}_l125_worker()
+// FUN: call void @__omp_offloading_{{.*}}_{{.*}}main{{.*}}_l134_worker()
 // FUN: br label %
 // FUN: br i1 %
 // FUN: call void @__kmpc_kernel_init(
@@ -93,7 +102,7 @@ struct S {
 // FUN: call i64 [[LAMBDA2:@.+main.+]]([[CAP2]]* [[L]])
 // FUN: ret void
 
-// FUN: define weak void @__omp_offloading_{{.+}}_main_l127(i32* dereferenceable(4) %{{.+}}, i32* dereferenceable(4) %{{.+}} i32* dereferenceable(4) %{{.+}}, i32* %{{.+}}, i32* dereferenceable(4) %{{.+}}, [[CAP2]]* dereferenceable(40) %{{.+}})
+// FUN: define weak void @__omp_offloading_{{.+}}_main_l136(i32* dereferenceable(4) %{{.+}}, i32* dereferenceable(4) %{{.+}} i32* dereferenceable(4) %{{.+}}, i32* %{{.+}}, i32* dereferenceable(4) %{{.+}}, [[CAP2]]* dereferenceable(40) %{{.+}})
 // FUN-NOT: getelementptr
 // FUN: call void [[PARALLEL:@.+]](i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, i32* %{{.+}}, [[CAP2]]* %{{.+}})
 // FUN: ret void

@@ -1685,7 +1685,7 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
   // SDNode doesn't have access to it.  This memory will be "leaked" when
   // the node is deallocated, but recovered when the NodeAllocator is released.
   int *MaskAlloc = OperandAllocator.Allocate<int>(NElts);
-  std::copy(MaskVec.begin(), MaskVec.end(), MaskAlloc);
+  llvm::copy(MaskVec, MaskAlloc);
 
   auto *N = newSDNode<ShuffleVectorSDNode>(VT, dl.getIROrder(),
                                            dl.getDebugLoc(), MaskAlloc);
@@ -7039,7 +7039,7 @@ SDVTList SelectionDAG::getVTList(ArrayRef<EVT> VTs) {
   SDVTListNode *Result = VTListMap.FindNodeOrInsertPos(ID, IP);
   if (!Result) {
     EVT *Array = Allocator.Allocate<EVT>(NumVTs);
-    std::copy(VTs.begin(), VTs.end(), Array);
+    llvm::copy(VTs, Array);
     Result = new (Allocator) SDVTListNode(ID.Intern(Allocator), Array, NumVTs);
     VTListMap.InsertNode(Result, IP);
   }
@@ -7185,7 +7185,7 @@ void SelectionDAG::setNodeMemRefs(MachineSDNode *N,
 
   MachineMemOperand **MemRefsBuffer =
       Allocator.template Allocate<MachineMemOperand *>(NewMemRefs.size());
-  std::copy(NewMemRefs.begin(), NewMemRefs.end(), MemRefsBuffer);
+  llvm::copy(NewMemRefs, MemRefsBuffer);
   N->MemRefs = MemRefsBuffer;
   N->NumMemRefs = static_cast<int>(NewMemRefs.size());
 }

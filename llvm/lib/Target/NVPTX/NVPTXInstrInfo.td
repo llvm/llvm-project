@@ -1318,9 +1318,6 @@ def ROTR64reg_sw :
 
 // Create SDNodes so they can be used in the DAG code, e.g.
 // NVPTXISelLowering (LowerShiftLeftParts and LowerShiftRightParts)
-def SDTIntShiftDOp :
-  SDTypeProfile<1, 3, [SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>,
-                       SDTCisInt<0>, SDTCisInt<3>]>;
 def FUN_SHFL_CLAMP : SDNode<"NVPTXISD::FUN_SHFL_CLAMP", SDTIntShiftDOp, []>;
 def FUN_SHFR_CLAMP : SDNode<"NVPTXISD::FUN_SHFR_CLAMP", SDTIntShiftDOp, []>;
 

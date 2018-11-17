@@ -78,6 +78,7 @@
 #define ctime_r __ctime_r50
 #define devname __devname50
 #define getitimer __getitimer50
+#define getmntinfo __getmntinfo13
 #define getpwent __getpwent50
 #define getpwnam __getpwnam50
 #define getpwnam_r __getpwnam_r50
@@ -7264,6 +7265,39 @@ INTERCEPTOR(struct __sanitizer_netent *, getnetbyaddr, u32 net, int type) {
 #define INIT_NETENT
 #endif
 
+#if SANITIZER_INTERCEPT_GETMNTINFO
+INTERCEPTOR(int, getmntinfo, void **mntbufp, int flags) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, getmntinfo, mntbufp, flags);
+  int cnt = REAL(getmntinfo)(mntbufp, flags);
+  if (cnt > 0 && mntbufp) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, mntbufp, sizeof(void *));
+    if (*mntbufp)
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *mntbufp, cnt * struct_statvfs_sz);
+  }
+  return cnt;
+}
+#define INIT_GETMNTINFO COMMON_INTERCEPT_FUNCTION(getmntinfo)
+#else
+#define INIT_GETMNTINFO
+#endif
+
+#if SANITIZER_INTERCEPT_MI_VECTOR_HASH
+INTERCEPTOR(void, mi_vector_hash, const void *key, SIZE_T len, u32 seed,
+            u32 hashes[3]) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, mi_vector_hash, key, len, seed, hashes);
+  if (key)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, key, len);
+  REAL(mi_vector_hash)(key, len, seed, hashes);
+  if (hashes)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, hashes, sizeof(hashes[0]) * 3);
+}
+#define INIT_MI_VECTOR_HASH COMMON_INTERCEPT_FUNCTION(mi_vector_hash)
+#else
+#define INIT_MI_VECTOR_HASH
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -7517,6 +7551,8 @@ static void InitializeCommonInterceptors() {
   INIT_TTYENT;
   INIT_PROTOENT;
   INIT_NETENT;
+  INIT_GETMNTINFO;
+  INIT_MI_VECTOR_HASH;
 
   INIT___PRINTF_CHK;
 }

@@ -1,0 +1,71 @@
+# RUN: %cc %p/Inputs/stop-hook.c -g -o %t
+# Test setting stop-hook per-function
+# RUN: %lldb -b -s %s -O 'target create %t' -O 'target stop-hook add -n b -o "expr ptr"' \
+# RUN:      | FileCheck --check-prefix=CHECK --check-prefix=CHECK-FUNC %s
+# Test setting stop-hook per-line range
+# RUN: %lldb -b -s %s -O 'target create %t' -O 'target stop-hook add -f stop-hook.c -l 30 -e 34 -o "expr ptr"'  | FileCheck %s
+# Test setting stop-hook with multi-line expression
+# RUN: %lldb -b -s %s -O 'target create %t' -O 'target stop-hook add -f stop-hook.c -l 30 -e 34' -O 'expr ptr' -O DONE | FileCheck %s
+
+break set -f stop-hook.c -p "// Set breakpoint here to test target stop-hook"
+break set -f stop-hook.c -p "// Another breakpoint which is outside of the stop-hook range"
+target stop-hook list
+
+# CHECK: Hook: 1
+# CHECK-NEXT:  State: enabled
+# CHECK-NEXT:  Specifier:
+# CHECK-FUNC-NEXT:    Function: b.
+# CHECK-NEXT:  Commands: 
+# CHECK-NEXT:    expr ptr
+
+target stop-hook disable
+
+target stop-hook list
+# CHECK: Hook: 1
+# CHECK-NEXT:  State: disabled
+# CHECK-NEXT:  Specifier:
+# CHECK-FUNC-NEXT:    Function: b.
+# CHECK-NEXT:  Commands: 
+# CHECK-NEXT:    expr ptr
+
+target stop-hook enable
+
+target stop-hook list
+# CHECK: Hook: 1
+# CHECK-NEXT:  State: enabled
+# CHECK-NEXT:  Specifier:
+# CHECK-FUNC-NEXT:    Function: b.
+# CHECK-NEXT:  Commands: 
+# CHECK-NEXT:    expr ptr
+
+run
+# Stopping inside of the stop hook range
+# CHECK: (lldb) run
+# CHECK-NEXT: (void *) $0 = 0x
+
+thread step-over
+# Stepping inside of the stop hook range
+# CHECK: (lldb) thread step-over
+# CHECK-NEXT: (void *) $1 = 0x
+# CHECK: ->{{.*}} // We should stop here after stepping.
+
+process continue
+# Stopping outside of the stop hook range
+# CHECK: (lldb) process continue
+# CHECK-NOT: (void *)
+# CHECK: ->{{.*}} // Another breakpoint which is outside of the stop-hook range.
+
+thread step-over
+# Stepping inside of the stop hook range
+# CHECK: (lldb) thread step-over
+# CHECK-NOT: (void *)
+
+settings set auto-confirm true
+target stop-hook delete
+
+target stop-hook list
+# CHECK: (lldb) target stop-hook list
+# CHECK-NOT: Hook: 1
+# CHECK: No stop hooks
+# CHECK-NOT: Hook: 1
+
