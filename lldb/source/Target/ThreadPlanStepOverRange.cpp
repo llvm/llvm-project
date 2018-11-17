@@ -51,10 +51,18 @@ ThreadPlanStepOverRange::~ThreadPlanStepOverRange() = default;
 
 void ThreadPlanStepOverRange::GetDescription(Stream *s,
                                              lldb::DescriptionLevel level) {
+  auto PrintFailureIfAny = [&]() {
+    if (m_status.Success())
+      return;
+    s->Printf(" failed (%s)", m_status.AsCString());
+  };
+
   if (level == lldb::eDescriptionLevelBrief) {
     s->Printf("step over");
+    PrintFailureIfAny();
     return;
   }
+
   s->Printf("Stepping over");
   bool printed_line_info = false;
   if (m_addr_context.line_entry.IsValid()) {
@@ -67,6 +75,8 @@ void ThreadPlanStepOverRange::GetDescription(Stream *s,
     s->Printf(" using ranges: ");
     DumpRanges(s);
   }
+
+  PrintFailureIfAny();
 
   s->PutChar('.');
 }
@@ -151,8 +161,8 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
     // because the trampoline confused the backtracer. As below, we step
     // through first, and then try to figure out how to get back out again.
 
-    new_plan_sp =
-        m_thread.QueueThreadPlanForStepThrough(m_stack_id, false, stop_others);
+    new_plan_sp = m_thread.QueueThreadPlanForStepThrough(m_stack_id, false,
+                                                         stop_others, m_status);
 
     if (new_plan_sp && log)
       log->Printf(
@@ -173,11 +183,11 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
       if (IsEquivalentContext(older_context)) {
         new_plan_sp = m_thread.QueueThreadPlanForStepOutNoShouldStop(
             false, nullptr, true, stop_others, eVoteNo, eVoteNoOpinion, 0,
-            true);
+            m_status, true);
         break;
       } else {
-        new_plan_sp = m_thread.QueueThreadPlanForStepThrough(m_stack_id, false,
-                                                             stop_others);
+        new_plan_sp = m_thread.QueueThreadPlanForStepThrough(
+            m_stack_id, false, stop_others, m_status);
         // If we found a way through, then we should stop recursing.
         if (new_plan_sp)
           break;
@@ -196,8 +206,8 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
       // we are in a stub then it's likely going to be hard to get out from
       // here.  It is probably easiest to step into the stub, and then it will
       // be straight-forward to step out.
-      new_plan_sp = m_thread.QueueThreadPlanForStepThrough(m_stack_id, false,
-                                                           stop_others);
+      new_plan_sp = m_thread.QueueThreadPlanForStepThrough(
+          m_stack_id, false, stop_others, m_status);
     } else {
       // The current clang (at least through 424) doesn't always get the
       // address range for the DW_TAG_inlined_subroutines right, so that when
@@ -287,8 +297,8 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
                               cur_pc);
 
                       new_plan_sp = m_thread.QueueThreadPlanForStepOverRange(
-                          abort_other_plans, step_range, sc,
-                          stop_other_threads);
+                          abort_other_plans, step_range, sc, stop_other_threads,
+                          m_status);
                       break;
                     }
                     look_ahead_step++;
@@ -309,7 +319,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
   // If we haven't figured out something to do yet, then ask the ShouldStopHere
   // callback:
   if (!new_plan_sp) {
-    new_plan_sp = CheckShouldStopHereAndQueueStepOut(frame_order);
+    new_plan_sp = CheckShouldStopHereAndQueueStepOut(frame_order, m_status);
   }
 
   if (!new_plan_sp)
@@ -323,7 +333,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
   if (!new_plan_sp) {
     // For efficiencies sake, we know we're done here so we don't have to do
     // this calculation again in MischiefManaged.
-    SetPlanComplete();
+    SetPlanComplete(m_status.Success());
     return true;
   } else
     return false;

@@ -57,7 +57,10 @@ ThreadPlanStepUntil::ThreadPlanStepUntil(Thread &thread,
       m_return_addr = return_frame_sp->GetStackID().GetPC();
       Breakpoint *return_bp =
           target_sp->CreateBreakpoint(m_return_addr, true, false).get();
+
       if (return_bp != nullptr) {
+        if (return_bp->IsHardware() && !return_bp->HasResolvedLocations())
+          m_could_not_resolve_hw_bp = true;
         return_bp->SetThreadID(thread_id);
         m_return_bp_id = return_bp->GetID();
         return_bp->SetBreakpointKind("until-return-backstop");
@@ -97,6 +100,7 @@ void ThreadPlanStepUntil::Clear() {
     }
   }
   m_until_points.clear();
+  m_could_not_resolve_hw_bp = false;
 }
 
 void ThreadPlanStepUntil::GetDescription(Stream *s,
@@ -127,9 +131,16 @@ void ThreadPlanStepUntil::GetDescription(Stream *s,
 }
 
 bool ThreadPlanStepUntil::ValidatePlan(Stream *error) {
-  if (m_return_bp_id == LLDB_INVALID_BREAK_ID)
+  if (m_could_not_resolve_hw_bp) {
+    if (error)
+      error->PutCString(
+          "Could not create hardware breakpoint for thread plan.");
     return false;
-  else {
+  } else if (m_return_bp_id == LLDB_INVALID_BREAK_ID) {
+    if (error)
+      error->PutCString("Could not create return breakpoint.");
+    return false;
+  } else {
     until_collection::iterator pos, end = m_until_points.end();
     for (pos = m_until_points.begin(); pos != end; pos++) {
       if (!LLDB_BREAK_ID_IS_VALID((*pos).second))

@@ -186,8 +186,8 @@ AddressResolverName::SearchCallback(SearchFilter &filter,
   return Searcher::eCallbackReturnContinue;
 }
 
-Searcher::Depth AddressResolverName::GetDepth() {
-  return Searcher::eDepthModule;
+lldb::SearchDepth AddressResolverName::GetDepth() {
+  return lldb::eSearchDepthModule;
 }
 
 void AddressResolverName::GetDescription(Stream *s) {

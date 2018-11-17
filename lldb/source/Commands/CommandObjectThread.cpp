@@ -654,6 +654,7 @@ protected:
       bool_stop_other_threads = true;
 
     ThreadPlanSP new_plan_sp;
+    Status new_plan_status;
 
     if (m_step_type == eStepTypeInto) {
       StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
@@ -703,7 +704,7 @@ protected:
             abort_other_plans, range,
             frame->GetSymbolContext(eSymbolContextEverything),
             m_options.m_step_in_target.c_str(), stop_other_threads,
-            m_options.m_step_in_avoid_no_debug,
+            new_plan_status, m_options.m_step_in_avoid_no_debug,
             m_options.m_step_out_avoid_no_debug);
 
         if (new_plan_sp && !m_options.m_avoid_regexp.empty()) {
@@ -713,7 +714,7 @@ protected:
         }
       } else
         new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-            false, abort_other_plans, bool_stop_other_threads);
+            false, abort_other_plans, bool_stop_other_threads, new_plan_status);
     } else if (m_step_type == eStepTypeOver) {
       StackFrame *frame = thread->GetStackFrameAtIndex(0).get();
 
@@ -722,25 +723,26 @@ protected:
             abort_other_plans,
             frame->GetSymbolContext(eSymbolContextEverything).line_entry,
             frame->GetSymbolContext(eSymbolContextEverything),
-            stop_other_threads, m_options.m_step_out_avoid_no_debug);
+            stop_other_threads, new_plan_status,
+            m_options.m_step_out_avoid_no_debug);
       else
         new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-            true, abort_other_plans, bool_stop_other_threads);
+            true, abort_other_plans, bool_stop_other_threads, new_plan_status);
     } else if (m_step_type == eStepTypeTrace) {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          false, abort_other_plans, bool_stop_other_threads);
+          false, abort_other_plans, bool_stop_other_threads, new_plan_status);
     } else if (m_step_type == eStepTypeTraceOver) {
       new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-          true, abort_other_plans, bool_stop_other_threads);
+          true, abort_other_plans, bool_stop_other_threads, new_plan_status);
     } else if (m_step_type == eStepTypeOut) {
       new_plan_sp = thread->QueueThreadPlanForStepOut(
           abort_other_plans, nullptr, false, bool_stop_other_threads, eVoteYes,
-          eVoteNoOpinion, thread->GetSelectedFrameIndex(),
+          eVoteNoOpinion, thread->GetSelectedFrameIndex(), new_plan_status,
           m_options.m_step_out_avoid_no_debug);
     } else if (m_step_type == eStepTypeScripted) {
       new_plan_sp = thread->QueueThreadPlanForStepScripted(
           abort_other_plans, m_options.m_class_name.c_str(),
-          bool_stop_other_threads);
+          bool_stop_other_threads, new_plan_status);
     } else {
       result.AppendError("step type is not supported");
       result.SetStatus(eReturnStatusFailed);
@@ -798,7 +800,7 @@ protected:
         result.SetStatus(eReturnStatusSuccessContinuingNoResult);
       }
     } else {
-      result.AppendError("Couldn't find thread plan to implement step type.");
+      result.SetError(new_plan_status);
       result.SetStatus(eReturnStatusFailed);
     }
     return result.Succeeded();
@@ -1194,6 +1196,7 @@ protected:
       }
 
       ThreadPlanSP new_plan_sp;
+      Status new_plan_status;
 
       if (frame->HasDebugInformation()) {
         // Finally we got here...  Translate the given line number to a bunch
@@ -1274,13 +1277,19 @@ protected:
 
         new_plan_sp = thread->QueueThreadPlanForStepUntil(
             abort_other_plans, &address_list.front(), address_list.size(),
-            m_options.m_stop_others, m_options.m_frame_idx);
-        // User level plans should be master plans so they can be interrupted
-        // (e.g. by hitting a breakpoint) and other plans executed by the user
-        // (stepping around the breakpoint) and then a "continue" will resume
-        // the original plan.
-        new_plan_sp->SetIsMasterPlan(true);
-        new_plan_sp->SetOkayToDiscard(false);
+            m_options.m_stop_others, m_options.m_frame_idx, new_plan_status);
+        if (new_plan_sp) {
+          // User level plans should be master plans so they can be interrupted
+          // (e.g. by hitting a breakpoint) and other plans executed by the
+          // user (stepping around the breakpoint) and then a "continue" will
+          // resume the original plan.
+          new_plan_sp->SetIsMasterPlan(true);
+          new_plan_sp->SetOkayToDiscard(false);
+        } else {
+          result.SetError(new_plan_status);
+          result.SetStatus(eReturnStatusFailed);
+          return false;
+        }
       } else {
         result.AppendErrorWithFormat(
             "Frame index %u of thread %u has no debug information.\n",

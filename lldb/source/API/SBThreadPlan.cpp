@@ -143,6 +143,12 @@ bool SBThreadPlan::IsValid() {
 SBThreadPlan
 SBThreadPlan::QueueThreadPlanForStepOverRange(SBAddress &sb_start_address,
                                               lldb::addr_t size) {
+  SBError error;
+  return QueueThreadPlanForStepOverRange(sb_start_address, size, error);
+}
+
+SBThreadPlan SBThreadPlan::QueueThreadPlanForStepOverRange(
+    SBAddress &sb_start_address, lldb::addr_t size, SBError &error) {
   if (m_opaque_sp) {
     Address *start_address = sb_start_address.get();
     if (!start_address) {
@@ -152,9 +158,16 @@ SBThreadPlan::QueueThreadPlanForStepOverRange(SBAddress &sb_start_address,
     AddressRange range(*start_address, size);
     SymbolContext sc;
     start_address->CalculateSymbolContext(&sc);
-    return SBThreadPlan(
-        m_opaque_sp->GetThread().QueueThreadPlanForStepOverRange(
-            false, range, sc, eAllThreads));
+    Status plan_status;
+
+    SBThreadPlan plan =
+        SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepOverRange(
+            false, range, sc, eAllThreads, plan_status));
+
+    if (plan_status.Fail())
+      error.SetErrorString(plan_status.AsCString());
+
+    return plan;
   } else {
     return SBThreadPlan();
   }
@@ -163,6 +176,13 @@ SBThreadPlan::QueueThreadPlanForStepOverRange(SBAddress &sb_start_address,
 SBThreadPlan
 SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
                                             lldb::addr_t size) {
+  SBError error;
+  return QueueThreadPlanForStepInRange(sb_start_address, size, error);
+}
+
+SBThreadPlan
+SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
+                                            lldb::addr_t size, SBError &error) {
   if (m_opaque_sp) {
     Address *start_address = sb_start_address.get();
     if (!start_address) {
@@ -172,8 +192,16 @@ SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
     AddressRange range(*start_address, size);
     SymbolContext sc;
     start_address->CalculateSymbolContext(&sc);
-    return SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepInRange(
-        false, range, sc, NULL, eAllThreads));
+
+    Status plan_status;
+    SBThreadPlan plan =
+        SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepInRange(
+            false, range, sc, NULL, eAllThreads, plan_status));
+
+    if (plan_status.Fail())
+      error.SetErrorString(plan_status.AsCString());
+
+    return plan;
   } else {
     return SBThreadPlan();
   }
@@ -182,13 +210,28 @@ SBThreadPlan::QueueThreadPlanForStepInRange(SBAddress &sb_start_address,
 SBThreadPlan
 SBThreadPlan::QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
                                         bool first_insn) {
+  SBError error;
+  return QueueThreadPlanForStepOut(frame_idx_to_step_to, first_insn, error);
+}
+
+SBThreadPlan
+SBThreadPlan::QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
+                                        bool first_insn, SBError &error) {
   if (m_opaque_sp) {
     SymbolContext sc;
     sc = m_opaque_sp->GetThread().GetStackFrameAtIndex(0)->GetSymbolContext(
         lldb::eSymbolContextEverything);
-    return SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepOut(
-        false, &sc, first_insn, false, eVoteYes, eVoteNoOpinion,
-        frame_idx_to_step_to));
+
+    Status plan_status;
+    SBThreadPlan plan =
+        SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForStepOut(
+            false, &sc, first_insn, false, eVoteYes, eVoteNoOpinion,
+            frame_idx_to_step_to, plan_status));
+
+    if (plan_status.Fail())
+      error.SetErrorString(plan_status.AsCString());
+
+    return plan;
   } else {
     return SBThreadPlan();
   }
@@ -196,13 +239,26 @@ SBThreadPlan::QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
 
 SBThreadPlan
 SBThreadPlan::QueueThreadPlanForRunToAddress(SBAddress sb_address) {
+  SBError error;
+  return QueueThreadPlanForRunToAddress(sb_address, error);
+}
+
+SBThreadPlan SBThreadPlan::QueueThreadPlanForRunToAddress(SBAddress sb_address,
+                                                          SBError &error) {
   if (m_opaque_sp) {
     Address *address = sb_address.get();
     if (!address)
       return SBThreadPlan();
 
-    return SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForRunToAddress(
-        false, *address, false));
+    Status plan_status;
+    SBThreadPlan plan =
+        SBThreadPlan(m_opaque_sp->GetThread().QueueThreadPlanForRunToAddress(
+            false, *address, false, plan_status));
+
+    if (plan_status.Fail())
+      error.SetErrorString(plan_status.AsCString());
+
+    return plan;
   } else {
     return SBThreadPlan();
   }

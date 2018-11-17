@@ -2608,9 +2608,7 @@ size_t DWARFASTParserClang::ParseChildEnumerators(
 
         if (name && name[0] && got_value) {
           m_ast.AddEnumerationValueToEnumerationType(
-              clang_type.GetOpaqueQualType(),
-              m_ast.GetEnumerationIntegerType(clang_type.GetOpaqueQualType()),
-              decl, name, enum_value, enumerator_byte_size * 8);
+              clang_type, decl, name, enum_value, enumerator_byte_size * 8);
           ++enumerators_added;
         }
       }

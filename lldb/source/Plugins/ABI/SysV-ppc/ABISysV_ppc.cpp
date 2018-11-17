@@ -224,11 +224,8 @@ size_t ABISysV_ppc::GetRedZoneSize() const { return 224; }
 
 ABISP
 ABISysV_ppc::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
-  static ABISP g_abi_sp;
   if (arch.GetTriple().getArch() == llvm::Triple::ppc) {
-    if (!g_abi_sp)
-      g_abi_sp.reset(new ABISysV_ppc(process_sp));
-    return g_abi_sp;
+     return ABISP(new ABISysV_ppc(process_sp));
   }
   return ABISP();
 }

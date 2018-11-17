@@ -45,10 +45,9 @@ protected:
 
 private:
   friend lldb::ThreadPlanSP
-
   Thread::QueueThreadPlanForStepThrough(StackID &return_stack_id,
                                         bool abort_other_plans,
-                                        bool stop_others);
+                                        bool stop_others, Status &status);
 
   void ClearBackstopBreakpoint();
 

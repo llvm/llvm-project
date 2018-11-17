@@ -256,6 +256,17 @@ enum ExpressionResults {
   eExpressionStoppedForDebug
 };
 
+enum SearchDepth {
+    eSearchDepthInvalid = 0,
+    eSearchDepthTarget,
+    eSearchDepthModule,
+    eSearchDepthCompUnit,
+    eSearchDepthFunction,
+    eSearchDepthBlock,
+    eSearchDepthAddress,
+    kLastSearchDepthKind = eSearchDepthAddress
+};
+
 //----------------------------------------------------------------------
 // Connection Status Types
 //----------------------------------------------------------------------

@@ -79,14 +79,24 @@ public:
   // plans...
   SBThreadPlan QueueThreadPlanForStepOverRange(SBAddress &start_address,
                                                lldb::addr_t range_size);
+  SBThreadPlan QueueThreadPlanForStepOverRange(SBAddress &start_address,
+                                               lldb::addr_t range_size,
+                                               SBError &error);
 
   SBThreadPlan QueueThreadPlanForStepInRange(SBAddress &start_address,
                                              lldb::addr_t range_size);
+  SBThreadPlan QueueThreadPlanForStepInRange(SBAddress &start_address,
+                                             lldb::addr_t range_size,
+                                             SBError &error);
 
   SBThreadPlan QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
                                          bool first_insn = false);
+  SBThreadPlan QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
+                                         bool first_insn, SBError &error);
 
   SBThreadPlan QueueThreadPlanForRunToAddress(SBAddress address);
+  SBThreadPlan QueueThreadPlanForRunToAddress(SBAddress address,
+                                              SBError &error);
 
 #ifndef SWIG
   lldb_private::ThreadPlan *get();

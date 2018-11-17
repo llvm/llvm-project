@@ -23,6 +23,7 @@
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
 #include "lldb/Breakpoint/BreakpointResolverFileRegex.h"
 #include "lldb/Breakpoint/BreakpointResolverName.h"
+#include "lldb/Breakpoint/BreakpointResolverScripted.h"
 #include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Event.h"
@@ -30,9 +31,11 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/SearchFilter.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/State.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/REPL.h"
@@ -599,13 +602,56 @@ Target::CreateExceptionBreakpoint(enum lldb::LanguageType language,
   return exc_bkpt_sp;
 }
 
+lldb::BreakpointSP
+Target::CreateScriptedBreakpoint(const llvm::StringRef class_name,
+                                 const FileSpecList *containingModules,
+                                 const FileSpecList *containingSourceFiles,
+                                 bool internal,
+                                 bool request_hardware,
+                                 StructuredData::ObjectSP extra_args_sp,
+                                 Status *creation_error)
+{
+  SearchFilterSP filter_sp;
+  
+  lldb::SearchDepth depth = lldb::eSearchDepthTarget;
+  bool has_files = containingSourceFiles && containingSourceFiles->GetSize() > 0;
+  bool has_modules = containingModules && containingModules->GetSize() > 0;
+  
+  if (has_files && has_modules) {
+    filter_sp = GetSearchFilterForModuleAndCUList(
+      containingModules, containingSourceFiles);
+  } else if (has_files) {
+    filter_sp = GetSearchFilterForModuleAndCUList(
+      nullptr, containingSourceFiles);
+  } else if (has_modules) {
+    filter_sp = GetSearchFilterForModuleList(containingModules);
+  } else {
+    filter_sp.reset(new SearchFilterForUnconstrainedSearches(shared_from_this()));
+  }
+  
+  StructuredDataImpl *extra_args_impl = new StructuredDataImpl();
+  if (extra_args_sp)
+    extra_args_impl->SetObjectSP(extra_args_sp);
+  
+  BreakpointResolverSP resolver_sp(new 
+                                   BreakpointResolverScripted(nullptr, class_name,
+                                   depth,
+                                   extra_args_impl,
+                                   *GetDebugger().GetCommandInterpreter()
+                                       .GetScriptInterpreter()));
+  return CreateBreakpoint(filter_sp, resolver_sp, internal, false, true);
+
+}
+
+
 BreakpointSP Target::CreateBreakpoint(SearchFilterSP &filter_sp,
                                       BreakpointResolverSP &resolver_sp,
                                       bool internal, bool request_hardware,
                                       bool resolve_indirect_symbols) {
   BreakpointSP bp_sp;
   if (filter_sp && resolver_sp) {
-    bp_sp.reset(new Breakpoint(*this, filter_sp, resolver_sp, request_hardware,
+    const bool hardware = request_hardware || GetRequireHardwareBreakpoints();
+    bp_sp.reset(new Breakpoint(*this, filter_sp, resolver_sp, hardware,
                                resolve_indirect_symbols));
     resolver_sp->SetBreakpoint(bp_sp.get());
     AddBreakpoint(bp_sp, internal);
@@ -746,10 +792,16 @@ bool Target::ProcessIsValid() {
   return (m_process_sp && m_process_sp->IsAlive());
 }
 
-static bool CheckIfWatchpointsExhausted(Target *target, Status &error) {
+static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
   uint32_t num_supported_hardware_watchpoints;
   Status rc = target->GetProcessSP()->GetWatchpointSupportInfo(
       num_supported_hardware_watchpoints);
+
+  // If unable to determine the # of watchpoints available,
+  // assume they are supported.
+  if (rc.Fail())
+    return true;
+
   if (num_supported_hardware_watchpoints == 0) {
     error.SetErrorStringWithFormat(
         "Target supports (%u) hardware watchpoint slots.\n",
@@ -788,7 +840,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
     error.SetErrorStringWithFormat("invalid watchpoint type: %d", kind);
   }
 
-  if (!CheckIfWatchpointsExhausted(this, error))
+  if (!CheckIfWatchpointsSupported(this, error))
     return wp_sp;
 
   // Currently we only support one watchpoint per address, with total number of
@@ -3597,6 +3649,7 @@ void Target::StopHook::GetDescription(Stream *s,
 // class TargetProperties
 //--------------------------------------------------------------
 
+// clang-format off
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
     {eNoDynamicValues, "no-dynamic-values",
      "Don't calculate the dynamic type of values"},
@@ -3835,7 +3888,10 @@ static constexpr PropertyDefinition g_properties[] = {
      nullptr, {}, "If true, LLDB will show variables that are meant to "
                   "support the operation of a language's runtime support."},
     {"non-stop-mode", OptionValue::eTypeBoolean, false, 0, nullptr, {},
-     "Disable lock-step debugging, instead control threads independently."}};
+     "Disable lock-step debugging, instead control threads independently."},
+    {"require-hardware-breakpoint", OptionValue::eTypeBoolean, false, 0,
+     nullptr, {}, "Require all breakpoints to be hardware breakpoints."}};
+// clang-format on
 
 enum {
   ePropertyDefaultArch,
@@ -3884,7 +3940,8 @@ enum {
   ePropertySDKPath,
   ePropertyDisplayRuntimeSupportValues,
   ePropertyNonStopModeEnabled,
-  ePropertyExperimental
+  ePropertyRequireHardwareBreakpoints,
+  ePropertyExperimental,
 };
 
 class TargetOptionValueProperties : public OptionValueProperties {
@@ -4532,6 +4589,17 @@ void TargetProperties::SetProcessLaunchInfo(
   SetDetachOnError(launch_info.GetFlags().Test(lldb::eLaunchFlagDetachOnError));
   SetDisableASLR(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR));
   SetDisableSTDIO(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableSTDIO));
+}
+
+bool TargetProperties::GetRequireHardwareBreakpoints() const {
+  const uint32_t idx = ePropertyRequireHardwareBreakpoints;
+  return m_collection_sp->GetPropertyAtIndexAsBoolean(
+      nullptr, idx, g_properties[idx].default_uint_value != 0);
+}
+
+void TargetProperties::SetRequireHardwareBreakpoints(bool b) {
+  const uint32_t idx = ePropertyRequireHardwareBreakpoints;
+  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 
 void TargetProperties::Arg0ValueChangedCallback(void *target_property_ptr,

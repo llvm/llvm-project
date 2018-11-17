@@ -22,6 +22,8 @@ public:
   SBStructuredData(const lldb::SBStructuredData &rhs);
 
   SBStructuredData(const lldb::EventSP &event_sp);
+  
+  SBStructuredData(lldb_private::StructuredDataImpl *impl);
 
   ~SBStructuredData();
 
@@ -41,7 +43,7 @@ public:
   /// Return the type of data in this data structure
   //------------------------------------------------------------------
   lldb::StructuredDataType GetType() const;
-
+  
   //------------------------------------------------------------------
   /// Return the size (i.e. number of elements) in this data structure
   /// if it is an array or dictionary type. For other types, 0 will be
@@ -49,6 +51,12 @@ public:
   //------------------------------------------------------------------
   size_t GetSize() const;
 
+  //------------------------------------------------------------------
+  /// Fill keys with the keys in this object and return true if this data
+  /// structure is a dictionary.  Returns false otherwise.
+  //------------------------------------------------------------------
+   bool GetKeys(lldb::SBStringList &keys) const;
+  
   //------------------------------------------------------------------
   /// Return the value corresponding to a key if this data structure
   /// is a dictionary type.

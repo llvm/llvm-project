@@ -117,8 +117,16 @@ void ThreadPlanStepInRange::SetupAvoidNoDebug(
 
 void ThreadPlanStepInRange::GetDescription(Stream *s,
                                            lldb::DescriptionLevel level) {
+
+  auto PrintFailureIfAny = [&]() {
+    if (m_status.Success())
+      return;
+    s->Printf(" failed (%s)", m_status.AsCString());
+  };
+
   if (level == lldb::eDescriptionLevelBrief) {
     s->Printf("step in");
+    PrintFailureIfAny();
     return;
   }
 
@@ -138,6 +146,8 @@ void ThreadPlanStepInRange::GetDescription(Stream *s,
     s->Printf(" using ranges:");
     DumpRanges(s);
   }
+
+  PrintFailureIfAny();
 
   s->PutChar('.');
 }
@@ -171,7 +181,8 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
     // ShouldStopHere plan, and otherwise we're done.
     // FIXME - This can be both a step in and a step out.  Probably should
     // record which in the m_virtual_step.
-    m_sub_plan_sp = CheckShouldStopHereAndQueueStepOut(eFrameCompareYounger);
+    m_sub_plan_sp =
+        CheckShouldStopHereAndQueueStepOut(eFrameCompareYounger, m_status);
   } else {
     // Stepping through should be done running other threads in general, since
     // we're setting a breakpoint and continuing.  So only stop others if we
@@ -190,11 +201,12 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
       // I'm going to make the assumption that you wouldn't RETURN to a
       // trampoline.  So if we are in a trampoline we think the frame is older
       // because the trampoline confused the backtracer.
-      m_sub_plan_sp = m_thread.QueueThreadPlanForStepThrough(m_stack_id, false,
-                                                             stop_others);
+      m_sub_plan_sp = m_thread.QueueThreadPlanForStepThrough(
+          m_stack_id, false, stop_others, m_status);
       if (!m_sub_plan_sp) {
         // Otherwise check the ShouldStopHere for step out:
-        m_sub_plan_sp = CheckShouldStopHereAndQueueStepOut(frame_order);
+        m_sub_plan_sp =
+            CheckShouldStopHereAndQueueStepOut(frame_order, m_status);
         if (log) {
           if (m_sub_plan_sp)
             log->Printf("ShouldStopHere found plan to step out of this frame.");
@@ -232,8 +244,8 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
     // We may have set the plan up above in the FrameIsOlder section:
 
     if (!m_sub_plan_sp)
-      m_sub_plan_sp = m_thread.QueueThreadPlanForStepThrough(m_stack_id, false,
-                                                             stop_others);
+      m_sub_plan_sp = m_thread.QueueThreadPlanForStepThrough(
+          m_stack_id, false, stop_others, m_status);
 
     if (log) {
       if (m_sub_plan_sp)
@@ -245,7 +257,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
     // If not, give the "should_stop" callback a chance to push a plan to get
     // us out of here. But only do that if we actually have stepped in.
     if (!m_sub_plan_sp && frame_order == eFrameCompareYounger)
-      m_sub_plan_sp = CheckShouldStopHereAndQueueStepOut(frame_order);
+      m_sub_plan_sp = CheckShouldStopHereAndQueueStepOut(frame_order, m_status);
 
     // If we've stepped in and we are going to stop here, check to see if we
     // were asked to run past the prologue, and if so do that.
@@ -293,7 +305,7 @@ bool ThreadPlanStepInRange::ShouldStop(Event *event_ptr) {
             log->Printf("Pushing past prologue ");
 
           m_sub_plan_sp = m_thread.QueueThreadPlanForRunToAddress(
-              false, func_start_address, true);
+              false, func_start_address, true, m_status);
         }
       }
     }
@@ -462,13 +474,13 @@ bool ThreadPlanStepInRange::FrameMatchesAvoidCriteria() {
 
 bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
     ThreadPlan *current_plan, Flags &flags, FrameComparison operation,
-    void *baton) {
+    Status &status, void *baton) {
   bool should_stop_here = true;
 
   // First see if the ThreadPlanShouldStopHere default implementation thinks we
   // should get out of here:
   should_stop_here = ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
-      current_plan, flags, operation, baton);
+      current_plan, flags, operation, status, baton);
   if (!should_stop_here)
     return false;
 

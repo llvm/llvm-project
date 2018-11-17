@@ -173,8 +173,8 @@ BreakpointResolverAddress::SearchCallback(SearchFilter &filter,
   return Searcher::eCallbackReturnStop;
 }
 
-Searcher::Depth BreakpointResolverAddress::GetDepth() {
-  return Searcher::eDepthTarget;
+lldb::SearchDepth BreakpointResolverAddress::GetDepth() {
+  return lldb::eSearchDepthTarget;
 }
 
 void BreakpointResolverAddress::GetDescription(Stream *s) {
