@@ -1684,6 +1684,10 @@ class SBBreakpoint(_object):
 
     if _newclass:GetNumBreakpointLocationsFromEvent = staticmethod(GetNumBreakpointLocationsFromEvent)
     __swig_getmethods__["GetNumBreakpointLocationsFromEvent"] = lambda x: GetNumBreakpointLocationsFromEvent
+    def IsHardware(self):
+        """IsHardware(self) -> bool"""
+        return _lldb.SBBreakpoint_IsHardware(self)
+
     class locations_access(object):
         '''A helper object that will lazily hand out locations for a breakpoint when supplied an index.'''
         def __init__(self, sbbreakpoint):

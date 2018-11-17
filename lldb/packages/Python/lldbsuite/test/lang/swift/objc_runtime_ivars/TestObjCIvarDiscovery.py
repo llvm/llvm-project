@@ -21,41 +21,26 @@ import os.path
 import commands
 import re
 import unittest2
-
-
-def execute_command(command):
-    # print '%% %s' % (command)
-    (exit_status, output) = commands.getstatusoutput(command)
-    # if output:
-    #     print output
-    # print 'status = %u' % (exit_status)
-    return exit_status
-
+import shutil
 
 class TestObjCIVarDiscovery(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @decorators.skipUnlessDarwin
-    @decorators.expectedFailureAll(bugnumber="rdar://19135721")
-    def test_nodbg(self):
-        if self.getArchitecture() == 'x86_64':
-            execute_command("make exec_nodbg")
-            self.do_test(False)
-        else:
-            self.skipTest("This test requires x86_64 as the architecture "
-                          "for the inferior")
+    NO_DEBUG_INFO_TESTCASE = True
 
     @decorators.skipUnlessDarwin
-    @decorators.expectedFailureAll(
-        bugnumber="Cannot find complete type from dSYM")
+    @decorators.expectedFailureAll(bugnumber="rdar://45929100")
+    def test_nodbg(self):
+        self.build()
+        shutil.rmtree(self.getBuildArtifact("aTestFramework.framework.dSYM"))
+        self.do_test(False)
+
+    @decorators.skipUnlessDarwin
+    @decorators.expectedFailureAll(bugnumber="rdar://45929100")
     def test_dbg(self):
-        if self.getArchitecture() == 'x86_64':
-            execute_command("make exec")
-            self.do_test(True)
-        else:
-            self.skipTest(
-                "This test requires x86_64 as the architecture for the inferior")
+        self.build()
+        self.do_test(True)
 
     def prepare_value(self, value):
         value.SetPreferDynamicValue(lldb.eDynamicCanRunTarget)
@@ -64,17 +49,12 @@ class TestObjCIVarDiscovery(TestBase):
 
     def do_test(self, dbg):
         """Test that we can correctly see ivars from the Objective-C runtime"""
-        exe_name = "main"
+        exe_name = "a.out"
         src_main = lldb.SBFileSpec("main.swift")
         exe = self.getBuildArtifact(exe_name)
 
         if dbg:
             self.runCmd("type category disable runtime-synthetics")
-
-        def cleanup():
-            execute_command("make cleanup")
-            self.runCmd("type category enable runtime-synthetics")
-        self.addTearDownHook(cleanup)
 
         # Create the target
         target = self.dbg.CreateTarget(exe)
@@ -120,17 +100,15 @@ class TestObjCIVarDiscovery(TestBase):
         m_pair_A = m_pair.GetChildMemberWithName("A")
         m_pair_B = m_pair.GetChildMemberWithName("B")
 
-        self.assertTrue(m_pair_A.GetValueAsUnsigned() == 1, "m_pair.A != 1")
-        self.assertTrue(m_pair_B.GetValueAsUnsigned() == 2, "m_pair.B != 2")
+        self.assertEqual(m_pair_A.GetValueAsUnsigned(), 1)
+        self.assertEqual(m_pair_B.GetValueAsUnsigned(), 2)
 
         m_derived = self.prepare_value(
             myclass.GetChildMemberWithName("m_base"))
 
         m_derivedX = m_derived.GetChildMemberWithName("m_DerivedX")
 
-        self.assertTrue(
-            m_derivedX.GetValueAsUnsigned() == 1,
-            "m_DerivedX != 1")
+        self.assertEqual(m_derivedX.GetValueAsUnsigned(), 1)
 
         m_numbers = self.prepare_value(
             myclass.GetChildMemberWithName("m_myclass_numbers"))
