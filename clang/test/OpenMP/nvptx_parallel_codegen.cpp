@@ -72,7 +72,7 @@ int bar(int n){
 }
 
 // CHECK: [[MEM_TY:%.+]] = type { [4 x i8] }
-// CHECK-DAG: [[SHARED_GLOBAL_RD:@.+]] = weak addrspace(3) global [[MEM_TY]] zeroinitializer
+// CHECK-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
 // CHECK-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
 // CHECK-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 4
 // CHECK-DAG: [[KERNEL_SHARED:@.+]] = internal unnamed_addr constant i16 1

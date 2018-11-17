@@ -605,6 +605,7 @@ public:
   // Handle auto return types:
   //- auto foo() {}
   //- auto& foo() {}
+  //- auto foo() -> int {}
   //- auto foo() -> decltype(1+1) {}
   //- operator auto() const { return 10; }
   bool VisitFunctionDecl(FunctionDecl *D) {
@@ -624,12 +625,13 @@ public:
     const AutoType *AT = D->getReturnType()->getContainedAutoType();
     if (AT && !AT->getDeducedType().isNull()) {
       DeducedType = AT->getDeducedType();
-    } else {
+    } else if (auto DT = dyn_cast<DecltypeType>(D->getReturnType())) {
       // auto in a trailing return type just points to a DecltypeType and
       // getContainedAutoType does not unwrap it.
-      const DecltypeType *DT = dyn_cast<DecltypeType>(D->getReturnType());
       if (!DT->getUnderlyingType().isNull())
         DeducedType = DT->getUnderlyingType();
+    } else if (!D->getReturnType().isNull()) {
+      DeducedType = D->getReturnType();
     }
     return true;
   }
@@ -672,8 +674,7 @@ Optional<QualType> getDeducedType(ParsedAST &AST,
     return {};
 
   DeducedTypeVisitor V(SourceLocationBeg);
-  for (Decl *D : AST.getLocalTopLevelDecls())
-    V.TraverseDecl(D);
+  V.TraverseAST(AST.getASTContext());
   return V.getDeducedType();
 }
 

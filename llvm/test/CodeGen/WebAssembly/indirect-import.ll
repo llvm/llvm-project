@@ -9,7 +9,7 @@ target triple = "wasm32"
 %struct.big = type { float, double, i32 }
 
 ; Function Attrs: nounwind
-; CHECK: bar:
+; CHECK-LABEL: bar:
 define hidden i32 @bar() #0 {
 entry:
   %fd = alloca float (double)*, align 4
@@ -18,6 +18,7 @@ entry:
   %ijidf = alloca i32 (i64, i32, double, float)*, align 4
   %vs = alloca void (%struct.big*)*, align 4
   %s = alloca void (%struct.big*)*, align 4
+  %i128ret = alloca i128 (i64)*, align 8
 
 ; CHECK-DAG: i32.const       {{.+}}=, extern_fd@FUNCTION
 ; CHECK-DAG: i32.const       {{.+}}=, extern_vj@FUNCTION
@@ -42,6 +43,12 @@ entry:
   store void (%struct.big*)* @extern_sret, void (%struct.big*)** %s, align 4
   %3 = load float (double)*, float (double)** %fd, align 4
   %4 = ptrtoint float (double)* %3 to i32
+
+; CHECK: i32.const       {{.+}}=, extern_i128ret@FUNCTION
+  store i128 (i64)* @extern_i128ret, i128 (i64)** %i128ret, align 8
+  %5 = load i128 (i64)*, i128 (i64)** %i128ret, align 8
+  %6 = call i128 %5(i64 1)
+
   ret i32 %4
 }
 

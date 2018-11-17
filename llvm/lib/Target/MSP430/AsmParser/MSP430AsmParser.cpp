@@ -51,6 +51,7 @@ class MSP430AsmParser : public MCTargetAsmParser {
                         SMLoc NameLoc, OperandVector &Operands) override;
 
   bool ParseDirective(AsmToken DirectiveID) override;
+  bool ParseDirectiveRefSym(AsmToken DirectiveID);
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
@@ -407,6 +408,16 @@ bool MSP430AsmParser::ParseInstruction(ParseInstructionInfo &Info,
   return false;
 }
 
+bool MSP430AsmParser::ParseDirectiveRefSym(AsmToken DirectiveID) {
+    StringRef Name;
+    if (getParser().parseIdentifier(Name))
+      return TokError("expected identifier in directive");
+
+    MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+    getStreamer().EmitSymbolAttribute(Sym, MCSA_Global);
+    return false;
+}
+
 bool MSP430AsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
   if (IDVal.lower() == ".long") {
@@ -415,6 +426,8 @@ bool MSP430AsmParser::ParseDirective(AsmToken DirectiveID) {
     ParseLiteralValues(2, DirectiveID.getLoc());
   } else if (IDVal.lower() == ".byte") {
     ParseLiteralValues(1, DirectiveID.getLoc());
+  } else if (IDVal.lower() == ".refsym") {
+    return ParseDirectiveRefSym(DirectiveID);
   }
   return true;
 }

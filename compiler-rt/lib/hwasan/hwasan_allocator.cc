@@ -31,11 +31,36 @@ static atomic_uint8_t hwasan_allocator_tagging_enabled;
 static const tag_t kFallbackAllocTag = 0xBB;
 static const tag_t kFallbackFreeTag = 0xBC;
 
+enum RightAlignMode {
+  kRightAlignNever,
+  kRightAlignSometimes,
+  kRightAlignAlways
+};
+
+// These two variables are initialized from flags()->malloc_align_right
+// in HwasanAllocatorInit and are never changed afterwards.
+static RightAlignMode right_align_mode = kRightAlignNever;
+static bool right_align_8 = false;
+
+// Initialized in HwasanAllocatorInit, an never changed.
+static ALIGNED(16) u8 tail_magic[kShadowAlignment];
+
 bool HwasanChunkView::IsAllocated() const {
   return metadata_ && metadata_->alloc_context_id && metadata_->requested_size;
 }
 
+// Aligns the 'addr' right to the granule boundary.
+static uptr AlignRight(uptr addr, uptr requested_size) {
+  uptr tail_size = requested_size % kShadowAlignment;
+  if (!tail_size) return addr;
+  if (right_align_8)
+    return tail_size > 8 ? addr : addr + 8;
+  return addr + kShadowAlignment - tail_size;
+}
+
 uptr HwasanChunkView::Beg() const {
+  if (metadata_ && metadata_->right_aligned)
+    return AlignRight(block_, metadata_->requested_size);
   return block_;
 }
 uptr HwasanChunkView::End() const {
@@ -65,6 +90,31 @@ void HwasanAllocatorInit() {
                        !flags()->disable_allocator_tagging);
   SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
   allocator.Init(common_flags()->allocator_release_to_os_interval_ms);
+  switch (flags()->malloc_align_right) {
+    case 0: break;
+    case 1:
+      right_align_mode = kRightAlignSometimes;
+      right_align_8 = false;
+      break;
+    case 2:
+      right_align_mode = kRightAlignAlways;
+      right_align_8 = false;
+      break;
+    case 8:
+      right_align_mode = kRightAlignSometimes;
+      right_align_8 = true;
+      break;
+    case 9:
+      right_align_mode = kRightAlignAlways;
+      right_align_8 = true;
+      break;
+    default:
+      Report("ERROR: unsupported value of malloc_align_right flag: %d\n",
+             flags()->malloc_align_right);
+      Die();
+  }
+  for (uptr i = 0; i < kShadowAlignment; i++)
+    tail_magic[i] = GetCurrentThread()->GenerateRandomTag();
 }
 
 void AllocatorSwallowThreadLocalCache(AllocatorCache *cache) {
@@ -110,18 +160,32 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
       reinterpret_cast<Metadata *>(allocator.GetMetaData(allocated));
   meta->requested_size = static_cast<u32>(orig_size);
   meta->alloc_context_id = StackDepotPut(*stack);
+  meta->right_aligned = false;
   if (zeroise) {
     internal_memset(allocated, 0, size);
   } else if (flags()->max_malloc_fill_size > 0) {
     uptr fill_size = Min(size, (uptr)flags()->max_malloc_fill_size);
     internal_memset(allocated, flags()->malloc_fill_byte, fill_size);
   }
+  if (!right_align_mode)
+    internal_memcpy(reinterpret_cast<u8 *>(allocated) + orig_size, tail_magic,
+                    size - orig_size);
 
   void *user_ptr = allocated;
   if (flags()->tag_in_malloc &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
     user_ptr = (void *)TagMemoryAligned(
         (uptr)user_ptr, size, t ? t->GenerateRandomTag() : kFallbackAllocTag);
+
+  if ((orig_size % kShadowAlignment) && (alignment <= kShadowAlignment) &&
+      right_align_mode) {
+    uptr as_uptr = reinterpret_cast<uptr>(user_ptr);
+    if (right_align_mode == kRightAlignAlways ||
+        GetTagFromPointer(as_uptr) & 1) {  // use a tag bit as a random bit.
+      user_ptr = reinterpret_cast<void *>(AlignRight(as_uptr, orig_size));
+      meta->right_aligned = 1;
+    }
+  }
 
   HWASAN_MALLOC_HOOK(user_ptr, size);
   return user_ptr;
@@ -143,33 +207,49 @@ void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
     ReportInvalidFree(stack, reinterpret_cast<uptr>(tagged_ptr));
 
   void *untagged_ptr = UntagPtr(tagged_ptr);
+  void *aligned_ptr = reinterpret_cast<void *>(
+      RoundDownTo(reinterpret_cast<uptr>(untagged_ptr), kShadowAlignment));
   Metadata *meta =
-      reinterpret_cast<Metadata *>(allocator.GetMetaData(untagged_ptr));
+      reinterpret_cast<Metadata *>(allocator.GetMetaData(aligned_ptr));
   uptr orig_size = meta->requested_size;
   u32 free_context_id = StackDepotPut(*stack);
   u32 alloc_context_id = meta->alloc_context_id;
+
+  // Check tail magic.
+  uptr tagged_size = TaggedSize(orig_size);
+  if (flags()->free_checks_tail_magic && !right_align_mode && orig_size) {
+    uptr tail_size = tagged_size - orig_size;
+    CHECK_LT(tail_size, kShadowAlignment);
+    void *tail_beg = reinterpret_cast<void *>(
+        reinterpret_cast<uptr>(aligned_ptr) + orig_size);
+    if (tail_size && internal_memcmp(tail_beg, tail_magic, tail_size))
+      ReportTailOverwritten(stack, reinterpret_cast<uptr>(tagged_ptr),
+                            orig_size, tail_size, tail_magic);
+  }
+
   meta->requested_size = 0;
   meta->alloc_context_id = 0;
   // This memory will not be reused by anyone else, so we are free to keep it
   // poisoned.
   Thread *t = GetCurrentThread();
   if (flags()->max_free_fill_size > 0) {
-    uptr fill_size = Min(orig_size, (uptr)flags()->max_free_fill_size);
-    internal_memset(untagged_ptr, flags()->free_fill_byte, fill_size);
+    uptr fill_size =
+        Min(TaggedSize(orig_size), (uptr)flags()->max_free_fill_size);
+    internal_memset(aligned_ptr, flags()->free_fill_byte, fill_size);
   }
   if (flags()->tag_in_free &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled))
-    TagMemoryAligned((uptr)untagged_ptr, TaggedSize(orig_size),
+    TagMemoryAligned(reinterpret_cast<uptr>(aligned_ptr), TaggedSize(orig_size),
                      t ? t->GenerateRandomTag() : kFallbackFreeTag);
   if (t) {
-    allocator.Deallocate(t->allocator_cache(), untagged_ptr);
+    allocator.Deallocate(t->allocator_cache(), aligned_ptr);
     if (auto *ha = t->heap_allocations())
       ha->push({reinterpret_cast<uptr>(tagged_ptr), alloc_context_id,
                 free_context_id, static_cast<u32>(orig_size)});
   } else {
     SpinMutexLock l(&fallback_mutex);
     AllocatorCache *cache = &fallback_allocator_cache;
-    allocator.Deallocate(cache, untagged_ptr);
+    allocator.Deallocate(cache, aligned_ptr);
   }
 }
 
@@ -213,8 +293,14 @@ static uptr AllocationSize(const void *tagged_ptr) {
   const void *untagged_ptr = UntagPtr(tagged_ptr);
   if (!untagged_ptr) return 0;
   const void *beg = allocator.GetBlockBegin(untagged_ptr);
-  if (beg != untagged_ptr) return 0;
   Metadata *b = (Metadata *)allocator.GetMetaData(untagged_ptr);
+  if (b->right_aligned) {
+    if (beg != reinterpret_cast<void *>(RoundDownTo(
+                   reinterpret_cast<uptr>(untagged_ptr), kShadowAlignment)))
+      return 0;
+  } else {
+    if (beg != untagged_ptr) return 0;
+  }
   return b->requested_size;
 }
 

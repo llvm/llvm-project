@@ -4,8 +4,8 @@ import os
 import sys
 import re
 import platform
+import shutil
 import subprocess
-
 
 import lit.util
 import lit.formats
@@ -124,3 +124,14 @@ llvm_config.feature_config(
      ('--build-mode', {'DEBUG': 'debug'}),
      ('--targets-built', calculate_arch_features)
      ])
+
+# Clean the module caches in the test build directory.  This is
+# necessary in an incremental build whenever clang changes underneath,
+# so doing it once per lit.py invocation is close enough.
+
+for i in ['module-cache-clang', 'module-cache-lldb']:
+    cachedir = os.path.join(config.lldb_libs_dir, '..',
+                            'lldb-test-build.noindex', i)
+    if os.path.isdir(cachedir):
+        print("Deleting module cache at %s."%cachedir)
+        shutil.rmtree(cachedir)

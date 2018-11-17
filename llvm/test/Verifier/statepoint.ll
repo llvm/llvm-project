@@ -4,6 +4,7 @@ declare void @use(...)
 declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
 declare i64 addrspace(1)* @llvm.experimental.gc.relocate.p1i64(token, i32, i32)
 declare token @llvm.experimental.gc.statepoint.p0f_isVoidf(i64, i32, void ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidp0s_structsf(i64, i32, void (%struct*)*, i32, i32, ...)
 declare i32 @"personality_function"()
 
 ;; Basic usage
@@ -78,4 +79,21 @@ exceptional_return:
   %obj.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %landing_pad, i32 12, i32 12)
   %obj1.relocated1 = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %landing_pad, i32 12, i32 12)
   ret i8 addrspace(1)* %obj1.relocated1
+}
+
+; Test for statepoint with sret attribute.
+; This should be allowed as long as the wrapped function is not vararg.
+%struct = type { i64, i64, i64 }
+
+declare void @fn_sret(%struct* sret)
+
+define void @test_sret() gc "statepoint-example" {
+  %x = alloca %struct
+  %statepoint_token = call token (i64, i32, void (%struct*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp0s_structsf(i64 0, i32 0, void (%struct*)* @fn_sret, i32 1, i32 0, %struct* sret %x, i32 0, i32 0)
+  ret void
+  ; CHECK-LABEL: test_sret
+  ; CHECK: alloca
+  ; CHECK: statepoint
+  ; CHECK-SAME: sret
+  ; CHECK: ret
 }

@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 }
 
 // CHECK: [[MEM_TY:%.+]] = type { [84 x i8] }
-// CHECK-DAG: [[SHARED_GLOBAL_RD:@.+]] = weak addrspace(3) global [[MEM_TY]] zeroinitializer
+// CHECK-DAG: [[SHARED_GLOBAL_RD:@.+]] = common addrspace(3) global [[MEM_TY]] zeroinitializer
 // CHECK-DAG: [[KERNEL_PTR:@.+]] = internal addrspace(3) global i8* null
 // CHECK-DAG: [[KERNEL_SIZE:@.+]] = internal unnamed_addr constant i{{64|32}} 84
 // CHECK-DAG: @__omp_offloading_{{.*}}_main_l17_exec_mode = weak constant i8 1

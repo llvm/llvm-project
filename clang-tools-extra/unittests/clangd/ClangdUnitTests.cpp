@@ -24,6 +24,7 @@ using testing::ElementsAre;
 using testing::Field;
 using testing::IsEmpty;
 using testing::Pair;
+using testing::UnorderedElementsAre;
 
 testing::Matcher<const Diag &> WithFix(testing::Matcher<Fix> FixMatcher) {
   return Field(&Diag::Fixes, ElementsAre(FixMatcher));
@@ -126,6 +127,30 @@ TEST(DiagnosticsTest, FlagsMatter) {
       ElementsAre(AllOf(
           Diag(Test.range(), "return type of 'main' is not 'int'"),
           WithFix(Fix(Test.range(), "int", "change return type to 'int'")))));
+}
+
+TEST(DiagnosticsTest, ClangTidy) {
+  Annotations Test(R"cpp(
+    #define $macrodef[[SQUARE]](X) (X)*(X)
+    int main() {
+      return [[sizeof]](sizeof(int));
+      int y = 4;
+      return SQUARE($macroarg[[++]]y);
+    }
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(
+          Diag(Test.range(), "suspicious usage of 'sizeof(sizeof(...))' "
+                             "[bugprone-sizeof-expression]"),
+          AllOf(
+              Diag(Test.range("macroarg"),
+                   "side effects in the 1st macro argument 'X' are repeated in "
+                   "macro expansion [bugprone-macro-repeated-side-effects]"),
+              WithNote(Diag(Test.range("macrodef"),
+                            "macro 'SQUARE' defined here "
+                            "[bugprone-macro-repeated-side-effects]")))));
 }
 
 TEST(DiagnosticsTest, Preprocessor) {

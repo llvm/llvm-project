@@ -26,7 +26,7 @@ bb:
   %tmp113 = sub i8 %tmp106, 0
   %tmp114 = add i8 %tmp113, -72
   %tmp141 = icmp ne i32 %tmp67, -1263900958
-  %tmp142 = select i1 %tmp141, i8 %tmp114, i8 undef
+  %tmp142 = select i1 %tmp141, i8 %tmp114, i8 1
   %tmp143 = xor i8 %tmp142, 81
   %tmp144 = zext i8 %tmp143 to i32
   %tmp145 = add i32 %tmp144, 2062143348

@@ -476,7 +476,7 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
         kill(MI);
 
         if (ExecBranchStack.empty()) {
-          if (skipIfDead(MI, *NextBB)) {
+          if (NextBB != BE && skipIfDead(MI, *NextBB)) {
             HaveSkipBlock = true;
             NextBB = std::next(BI);
             BE = MF.end();

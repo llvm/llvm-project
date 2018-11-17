@@ -205,7 +205,7 @@ define i8* @call_memcpy(i8* %p, i8* nocapture readonly %q, i32 %n) {
 ; CHECK-NEXT: .skip       8
 ; CHECK-NEXT: .size       array, 8
 ; CHECK: .type       pointer_to_array,@object
-; CHECK-NEXT: .section    .data.rel.ro.pointer_to_array,
+; CHECK-NEXT: .section    .rodata.pointer_to_array,
 ; CHECK-NEXT: .globl      pointer_to_array
 ; CHECK-NEXT: .p2align      2
 ; CHECK-NEXT: pointer_to_array:
