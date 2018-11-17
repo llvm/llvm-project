@@ -54,6 +54,9 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   BumpPtrAllocator Allocator;
   codeview::GlobalTypeTableBuilder TypeTable;
 
+  /// Whether to emit type record hashes into .debug$H.
+  bool EmitDebugGlobalHashes = false;
+
   /// The codeview CPU type used by the translation unit.
   codeview::CPUType TheCPU;
 

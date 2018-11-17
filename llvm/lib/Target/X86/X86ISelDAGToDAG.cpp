@@ -2858,10 +2858,28 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   // I.e. 0b000000011'00000001 means  (x >> 0b1) & 0b11
 
   // Shift NBits left by 8 bits, thus producing 'control'.
+  // This makes the low 8 bits to be zero.
   SDValue C8 = CurDAG->getConstant(8, DL, MVT::i8);
   SDValue Control = CurDAG->getNode(ISD::SHL, DL, NVT, NBits, C8);
   insertDAGNode(*CurDAG, OrigNBits, Control);
-  // NOTE: could also try to extract  start  from  (x >> start)
+
+  // If the 'X' is *logically* shifted, we can fold that shift into 'control'.
+  if (X.getOpcode() == ISD::SRL) {
+    SDValue ShiftAmt = X.getOperand(1);
+    X = X.getOperand(0);
+
+    assert(ShiftAmt.getValueType() == MVT::i8 &&
+           "Expected shift amount to be i8");
+
+    // Now, *zero*-extend the shift amount. The bits 8...15 *must* be zero!
+    SDValue OrigShiftAmt = ShiftAmt;
+    ShiftAmt = CurDAG->getNode(ISD::ZERO_EXTEND, DL, NVT, ShiftAmt);
+    insertDAGNode(*CurDAG, OrigShiftAmt, ShiftAmt);
+
+    // And now 'or' these low 8 bits of shift amount into the 'control'.
+    Control = CurDAG->getNode(ISD::OR, DL, NVT, Control, ShiftAmt);
+    insertDAGNode(*CurDAG, OrigNBits, Control);
+  }
 
   // And finally, form the BEXTR itself.
   SDValue Extract = CurDAG->getNode(X86ISD::BEXTR, DL, NVT, X, Control);

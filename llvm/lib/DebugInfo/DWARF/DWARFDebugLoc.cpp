@@ -124,7 +124,7 @@ DWARFDebugLoc::parseOneLocationList(DWARFDataExtractor Data, unsigned *Offset) {
     StringRef str = Data.getData().substr(*Offset, Bytes);
     *Offset += Bytes;
     E.Loc.reserve(str.size());
-    std::copy(str.begin(), str.end(), std::back_inserter(E.Loc));
+    llvm::copy(str, std::back_inserter(E.Loc));
     LL.Entries.push_back(std::move(E));
   }
 }
@@ -189,7 +189,7 @@ DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, unsigned *Offset,
       StringRef str = Data.getData().substr(*Offset, Bytes);
       *Offset += Bytes;
       E.Loc.resize(str.size());
-      std::copy(str.begin(), str.end(), E.Loc.begin());
+      llvm::copy(str, E.Loc.begin());
     }
 
     LL.Entries.push_back(std::move(E));
@@ -235,14 +235,14 @@ void DWARFDebugLoclists::LocationList::dump(raw_ostream &OS, uint64_t BaseAddr,
     case dwarf::DW_LLE_start_length:
       OS << '\n';
       OS.indent(Indent);
-      OS << format("[0x%*.*" PRIx64 ", 0x%*.*x): ", AddressSize * 2,
+      OS << format("[0x%*.*" PRIx64 ", 0x%*.*" PRIx64 "): ", AddressSize * 2,
                    AddressSize * 2, E.Value0, AddressSize * 2, AddressSize * 2,
                    E.Value0 + E.Value1);
       break;
     case dwarf::DW_LLE_offset_pair:
       OS << '\n';
       OS.indent(Indent);
-      OS << format("[0x%*.*" PRIx64 ", 0x%*.*x): ", AddressSize * 2,
+      OS << format("[0x%*.*" PRIx64 ", 0x%*.*" PRIx64 "): ", AddressSize * 2,
                    AddressSize * 2, BaseAddr + E.Value0, AddressSize * 2,
                    AddressSize * 2, BaseAddr + E.Value1);
       break;

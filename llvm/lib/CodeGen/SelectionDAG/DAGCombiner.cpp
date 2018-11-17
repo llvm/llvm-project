@@ -7240,6 +7240,12 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   if (N1 == N2)
     return N1;
 
+  // fold (select, C, X, undef) -> X
+  if (N2.isUndef())
+    return N1;
+  if (N1.isUndef())
+    return N2;
+
   if (const ConstantSDNode *N0C = dyn_cast<const ConstantSDNode>(N0)) {
     // fold (select true, X, Y) -> X
     // fold (select false, X, Y) -> Y

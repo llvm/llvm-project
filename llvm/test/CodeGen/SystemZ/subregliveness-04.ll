@@ -20,7 +20,7 @@ bb3:                                              ; preds = %bb15, %bb
 
 bb5:                                              ; preds = %bb3
   %tmp6 = or i1 %tmp2, false
-  %tmp7 = select i1 %tmp6, i32 0, i32 undef
+  %tmp7 = select i1 %tmp6, i32 0, i32 100
   %tmp8 = ashr i32 %tmp1, %tmp7
   %tmp9 = zext i32 %tmp8 to i64
   %tmp10 = shl i64 %tmp9, 48

@@ -1,0 +1,10 @@
+declare_args() {
+  # Whether to build with debug information and without optimizations.
+  is_debug = false
+}
+
+# args that depend on other args must live in a later declare_args() block.
+declare_args() {
+  # Whether to enable assertions.
+  llvm_enable_assertions = true
+}

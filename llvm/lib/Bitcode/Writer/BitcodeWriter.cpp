@@ -4026,7 +4026,7 @@ void ModuleBitcodeWriter::writeModuleHash(size_t BlockStartPos) {
 
     if (ModHash)
       // Save the written hash value.
-      std::copy(std::begin(Vals), std::end(Vals), std::begin(*ModHash));
+      llvm::copy(Vals, std::begin(*ModHash));
   }
 }
 

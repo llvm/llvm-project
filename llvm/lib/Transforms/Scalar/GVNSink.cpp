@@ -258,14 +258,14 @@ public:
   /// Create a PHI from an array of incoming values and incoming blocks.
   template <typename VArray, typename BArray>
   ModelledPHI(const VArray &V, const BArray &B) {
-    std::copy(V.begin(), V.end(), std::back_inserter(Values));
-    std::copy(B.begin(), B.end(), std::back_inserter(Blocks));
+    llvm::copy(V, std::back_inserter(Values));
+    llvm::copy(B, std::back_inserter(Blocks));
   }
 
   /// Create a PHI from [I[OpNum] for I in Insts].
   template <typename BArray>
   ModelledPHI(ArrayRef<Instruction *> Insts, unsigned OpNum, const BArray &B) {
-    std::copy(B.begin(), B.end(), std::back_inserter(Blocks));
+    llvm::copy(B, std::back_inserter(Blocks));
     for (auto *I : Insts)
       Values.push_back(I->getOperand(OpNum));
   }
