@@ -1,0 +1,18 @@
+declare_args() {
+  # Whether to use goma (https://chromium.googlesource.com/infra/goma/client/)
+  use_goma = false
+
+  # Set this to a clang build directory. If set, that clang is used as compiler.
+  # goma only works with compiler binaries it knows about, so useful both for
+  # using a goma-approved compiler and for compiling clang with a locally-built
+  # clang in a different build directory.
+  # On Windows, setting this also causes lld-link to be used as linker.
+  # Example value: getenv("HOME") + "/src/llvm-build/Release+Asserts"
+  clang_base_path = ""
+}
+
+declare_args() {
+  # Set if the host compiler is clang.  On by default on Mac or if
+  # clang_base_path is set.
+  is_clang = host_os == "mac" || clang_base_path != ""
+}

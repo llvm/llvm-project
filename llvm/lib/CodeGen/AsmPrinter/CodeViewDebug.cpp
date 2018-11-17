@@ -92,9 +92,6 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-static cl::opt<bool> EmitDebugGlobalHashes("emit-codeview-ghash-section",
-                                           cl::ReallyHidden, cl::init(false));
-
 static CPUType mapArchToCVCPUType(Triple::ArchType Type) {
   switch (Type) {
   case Triple::ArchType::x86:
@@ -125,6 +122,11 @@ CodeViewDebug::CodeViewDebug(AsmPrinter *AP)
 
   TheCPU =
       mapArchToCVCPUType(Triple(MMI->getModule()->getTargetTriple()).getArch());
+
+  // Check if we should emit type record hashes.
+  ConstantInt *GH = mdconst::extract_or_null<ConstantInt>(
+      MMI->getModule()->getModuleFlag("CodeViewGHash"));
+  EmitDebugGlobalHashes = GH && !GH->isZero();
 }
 
 StringRef CodeViewDebug::getFullFilepath(const DIFile *File) {
