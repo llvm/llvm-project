@@ -3,7 +3,7 @@
 
 // Test that we can display S_CONSTANT records.
 
-// RUN: llvm-mc -filetype=obj %p/Inputs/s_constant.s > %t.obj
+// RUN: llvm-mc -filetype=obj -triple=x86_64-pc-win32 %p/Inputs/s_constant.s > %t.obj
 // RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb -- %t.obj
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb -f %t.exe -s \
 // RUN:     %p/Inputs/s_constant.lldbinit | FileCheck %s
