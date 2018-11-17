@@ -38,6 +38,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
@@ -2132,7 +2133,7 @@ CompilerInstance::lookupMissingImports(StringRef Name,
 
   return false;
 }
-void CompilerInstance::resetAndLeakSema() { BuryPointer(takeSema()); }
+void CompilerInstance::resetAndLeakSema() { llvm::BuryPointer(takeSema()); }
 
 void CompilerInstance::setExternalSemaSource(
     IntrusiveRefCntPtr<ExternalSemaSource> ESS) {

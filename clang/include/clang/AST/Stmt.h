@@ -535,6 +535,39 @@ protected:
     SourceLocation Loc;
   };
 
+  class CXXThrowExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXThrowExpr;
+
+    unsigned : NumExprBits;
+
+    /// Whether the thrown variable (if any) is in scope.
+    unsigned IsThrownVariableInScope : 1;
+
+    /// The location of the "throw".
+    SourceLocation ThrowLoc;
+  };
+
+  class CXXDefaultArgExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXDefaultArgExpr;
+
+    unsigned : NumExprBits;
+
+    /// The location where the default argument expression was used.
+    SourceLocation Loc;
+  };
+
+  class CXXDefaultInitExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXDefaultInitExpr;
+
+    unsigned : NumExprBits;
+
+    /// The location where the default initializer expression was used.
+    SourceLocation Loc;
+  };
+
   class TypeTraitExprBitfields {
     friend class ASTStmtReader;
     friend class ASTStmtWriter;
@@ -636,6 +669,9 @@ protected:
     CXXBoolLiteralExprBitfields CXXBoolLiteralExprBits;
     CXXNullPtrLiteralExprBitfields CXXNullPtrLiteralExprBits;
     CXXThisExprBitfields CXXThisExprBits;
+    CXXThrowExprBitfields CXXThrowExprBits;
+    CXXDefaultArgExprBitfields CXXDefaultArgExprBits;
+    CXXDefaultInitExprBitfields CXXDefaultInitExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;
     ExprWithCleanupsBitfields ExprWithCleanupsBits;
 
