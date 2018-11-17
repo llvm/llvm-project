@@ -2,10 +2,10 @@ LEVEL = ../../../make
 
 EXE=main
 SWIFT_SOURCES=main.swift
-LINKFLAGS=-L$(shell pwd) -I$(shell pwd) -lmod3 -lmod4
+LINKFLAGS=-L$(shell pwd) -I$(shell pwd) -lmod5 -lmod4
 SWIFTFLAGS=-g -Onone $(LINKFLAGS) -Xfrontend -serialize-debugging-options
 
-all: libmod3.dylib libmod4.dylib main
+all: libmod5.dylib libmod4.dylib main
 
 include $(LEVEL)/Makefile.rules
 
@@ -15,7 +15,7 @@ MACOSX_DEPLOYMENT_TARGET ?= 10.10
 SWIFT_TRIPLE ?= -target x86_64-apple-macosx$(MACOSX_DEPLOYMENT_TARGET)
 SDK_PATH ?= $(shell xcrun --show-sdk-path --sdk macosx)
 
-MOD3_FLAGS = -swift-version 3
+MOD5_FLAGS = -swift-version 5
 MOD4_FLAGS = -swift-version 4
 
 libmod%.dylib: mod%.swift

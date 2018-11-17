@@ -494,7 +494,7 @@ protected:
 private:
   using NativeReflectionContext = swift::reflection::ReflectionContext<
       swift::External<swift::RuntimeTarget<sizeof(uintptr_t)>>>;
-  NativeReflectionContext *reflection_ctx;
+  std::unique_ptr<NativeReflectionContext> reflection_ctx;
 
   DISALLOW_COPY_AND_ASSIGN(SwiftLanguageRuntime);
 };

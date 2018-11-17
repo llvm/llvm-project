@@ -9,11 +9,11 @@
 // See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-import mod3
+import mod5
 import mod4
 
 func main() {
-  print(f3() + f4())
+  print(f5() + f4())
 }
 
 main()

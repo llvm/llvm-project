@@ -46,10 +46,10 @@ class TestSwiftVersion(TestBase):
         exe_path = self.getBuildArtifact(exe_name)
 
         tests = [
-          { 'file' : "mod3.swift",
-            'source_regex' : "break 3",
-            'expr' : "S3().i",
-            'substr' : "3" },
+          { 'file' : "mod5.swift",
+            'source_regex' : "break 5",
+            'expr' : "S5().i",
+            'substr' : "5" },
           { 'file' : "mod4.swift",
             'source_regex' : "break 4",
             'expr' : "S4().i",

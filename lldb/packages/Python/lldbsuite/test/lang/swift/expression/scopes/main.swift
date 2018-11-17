@@ -57,7 +57,7 @@ class A
     {
         get
         {
-            return input.characters.count  // In string subscript getter
+            return input.count  // In string subscript getter
         }
 
         set (new_value)
@@ -75,7 +75,7 @@ class A
 
     init (_ input: String)
     {
-        in_class_a = input.characters.count
+        in_class_a = input.count
         also_in_a = in_class_a + 1
         print ("In string init.")
     }
