@@ -11,9 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCV.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
+#include "RISCV.h"
 #include "RISCVTargetMachine.h"
+#include "Utils/RISCVMatInt.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/Debug.h"
@@ -63,6 +64,27 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
   doPeepholeLoadStoreADDI();
 }
 
+static SDNode *selectImm(SelectionDAG *CurDAG, const SDLoc &DL, int64_t Imm,
+                         MVT XLenVT) {
+  RISCVMatInt::InstSeq Seq;
+  RISCVMatInt::generateInstSeq(Imm, XLenVT == MVT::i64, Seq);
+
+  SDNode *Result;
+  SDValue SrcReg = CurDAG->getRegister(RISCV::X0, XLenVT);
+  for (RISCVMatInt::Inst &Inst : Seq) {
+    SDValue SDImm = CurDAG->getTargetConstant(Inst.Imm, DL, XLenVT);
+    if (Inst.Opc == RISCV::LUI)
+      Result = CurDAG->getMachineNode(RISCV::LUI, DL, XLenVT, SDImm);
+    else
+      Result = CurDAG->getMachineNode(Inst.Opc, DL, XLenVT, SrcReg, SDImm);
+
+    // Only the first instruction has X0 as its source.
+    SrcReg = SDValue(Result, 0);
+  }
+
+  return Result;
+}
+
 void RISCVDAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we have already selected.
   if (Node->isMachineOpcode()) {
@@ -85,6 +107,11 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       SDValue New = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), SDLoc(Node),
                                            RISCV::X0, XLenVT);
       ReplaceNode(Node, New.getNode());
+      return;
+    }
+    int64_t Imm = ConstNode->getSExtValue();
+    if (XLenVT == MVT::i64) {
+      ReplaceNode(Node, selectImm(CurDAG, SDLoc(Node), Imm, XLenVT));
       return;
     }
     break;

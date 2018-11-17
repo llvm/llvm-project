@@ -82,8 +82,12 @@ extern "C" void LLVMInitializeWebAssemblyTarget() {
 //===----------------------------------------------------------------------===//
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
-    return Reloc::PIC_;
+  if (!RM.hasValue()) {
+    // Default to static relocation model.  This should always be more optimial
+    // than PIC since the static linker can determine all global addresses and
+    // assume direct function calls.
+    return Reloc::Static;
+  }
   return *RM;
 }
 

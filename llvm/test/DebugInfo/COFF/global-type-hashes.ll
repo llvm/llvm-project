@@ -1,7 +1,6 @@
-; RUN: llc -filetype=obj -emit-codeview-ghash-section < %s > %t.obj
+; RUN: llc -filetype=obj < %s > %t.obj
 ; RUN: obj2yaml %t.obj | FileCheck %s --check-prefix=YAML
-; RUN: llc -filetype=asm -emit-codeview-ghash-section < %s \
-; RUN:   | FileCheck %s --check-prefix=ASM
+; RUN: llc -filetype=asm < %s | FileCheck %s --check-prefix=ASM
 
 ; C++ source to regenerate:
 ; $ cat t.cpp
@@ -96,14 +95,16 @@ attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3, !4, !5, !6, !100}
 !llvm.ident = !{!7}
+
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 6.0.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
 !1 = !DIFile(filename: "<stdin>", directory: "D:\5Csrc\5Cllvmbuild\5Cclang\5CDebug\5Cx86", checksumkind: CSK_MD5, checksum: "6279449503d9075c38e615e8387667c3")
 !2 = !{}
 !3 = !{i32 1, !"NumRegisterParameters", i32 0}
 !4 = !{i32 2, !"CodeView", i32 1}
+!100 = !{i32 2, !"CodeViewGHash", i32 1}
 !5 = !{i32 2, !"Debug Info Version", i32 3}
 !6 = !{i32 1, !"wchar_size", i32 2}
 !7 = !{!"clang version 6.0.0 "}

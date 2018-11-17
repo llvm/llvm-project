@@ -9631,6 +9631,10 @@ public:
                                        AssignmentAction Action,
                                        CheckedConversionKind CCK);
 
+  ExprResult PerformQualificationConversion(
+      Expr *E, QualType Ty, ExprValueKind VK = VK_RValue,
+      CheckedConversionKind CCK = CCK_ImplicitConversion);
+
   /// the following "Check" methods will return a valid/converted QualType
   /// or a null QualType (indicating an error diagnostic was issued).
 

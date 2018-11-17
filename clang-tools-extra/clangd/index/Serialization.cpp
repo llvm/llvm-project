@@ -300,7 +300,7 @@ Symbol readSymbol(Reader &Data, ArrayRef<StringRef> Strings) {
 
 // REFS ENCODING
 // A refs section has data grouped by Symbol. Each symbol has:
-//  - SymbolID: 16 bytes
+//  - SymbolID: 8 bytes
 //  - NumRefs: varint
 //  - Ref[NumRefs]
 // Fields of Ref are encoded in turn, see implementation.
@@ -338,7 +338,7 @@ std::pair<SymbolID, std::vector<Ref>> readRefs(Reader &Data,
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 6;
+constexpr static uint32_t Version = 7;
 
 Expected<IndexFileIn> readRIFF(StringRef Data) {
   auto RIFF = riff::readFile(Data);

@@ -502,6 +502,39 @@ protected:
 
   //===--- C++ Expression bitfields classes ---===//
 
+  class CXXBoolLiteralExprBitfields {
+    friend class CXXBoolLiteralExpr;
+
+    unsigned : NumExprBits;
+
+    /// The value of the boolean literal.
+    unsigned Value : 1;
+
+    /// The location of the boolean literal.
+    SourceLocation Loc;
+  };
+
+  class CXXNullPtrLiteralExprBitfields {
+    friend class CXXNullPtrLiteralExpr;
+
+    unsigned : NumExprBits;
+
+    /// The location of the null pointer literal.
+    SourceLocation Loc;
+  };
+
+  class CXXThisExprBitfields {
+    friend class CXXThisExpr;
+
+    unsigned : NumExprBits;
+
+    /// Whether this is an implicit "this".
+    unsigned IsImplicit : 1;
+
+    /// The location of the "this".
+    SourceLocation Loc;
+  };
+
   class TypeTraitExprBitfields {
     friend class ASTStmtReader;
     friend class ASTStmtWriter;
@@ -600,6 +633,9 @@ protected:
     PseudoObjectExprBitfields PseudoObjectExprBits;
 
     // C++ Expressions
+    CXXBoolLiteralExprBitfields CXXBoolLiteralExprBits;
+    CXXNullPtrLiteralExprBitfields CXXNullPtrLiteralExprBits;
+    CXXThisExprBitfields CXXThisExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;
     ExprWithCleanupsBitfields ExprWithCleanupsBits;
 

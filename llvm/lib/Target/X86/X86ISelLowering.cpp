@@ -793,6 +793,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::MUL,                MVT::v2i8,  Custom);
     setOperationAction(ISD::MUL,                MVT::v2i16, Custom);
     setOperationAction(ISD::MUL,                MVT::v2i32, Custom);
+    setOperationAction(ISD::MUL,                MVT::v4i8,  Custom);
+    setOperationAction(ISD::MUL,                MVT::v4i16, Custom);
+    setOperationAction(ISD::MUL,                MVT::v8i8,  Custom);
 
     setOperationAction(ISD::MUL,                MVT::v16i8, Custom);
     setOperationAction(ISD::MUL,                MVT::v4i32, Custom);
@@ -6624,8 +6627,7 @@ static bool resolveTargetShuffleInputs(SDValue Op,
       return false;
 
   resolveTargetShuffleInputsAndMask(Inputs, Mask);
-  // TODO - Add support for more than 2 inputs.
-  return Inputs.size() <= 2;
+  return true;
 }
 
 /// Returns the scalar element that will make up the ith
@@ -26115,8 +26117,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     llvm_unreachable("Do not know how to custom type legalize this operation!");
   case ISD::MUL: {
     EVT VT = N->getValueType(0);
-    assert(VT.isVector() && VT.getVectorNumElements() == 2 && "Unexpected VT");
-    if (getTypeAction(*DAG.getContext(), VT) == TypePromoteInteger) {
+    assert(VT.isVector() && "Unexpected VT");
+    if (getTypeAction(*DAG.getContext(), VT) == TypePromoteInteger &&
+        VT.getVectorNumElements() == 2) {
       // Promote to a pattern that will be turned into PMULUDQ.
       SDValue N0 = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v2i64,
                                N->getOperand(0));
@@ -26128,6 +26131,20 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
                        DAG.getConstant(0xffffffff, dl, MVT::v2i64));
       SDValue Mul = DAG.getNode(ISD::MUL, dl, MVT::v2i64, N0, N1);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, VT, Mul));
+    } else if (getTypeAction(*DAG.getContext(), VT) == TypeWidenVector &&
+               VT.getVectorElementType() == MVT::i8) {
+      // Pre-promote these to vXi16 to avoid op legalization thinking all 16
+      // elements are needed.
+      MVT MulVT = MVT::getVectorVT(MVT::i16, VT.getVectorNumElements());
+      SDValue Op0 = DAG.getNode(ISD::ANY_EXTEND, dl, MulVT, N->getOperand(0));
+      SDValue Op1 = DAG.getNode(ISD::ANY_EXTEND, dl, MulVT, N->getOperand(1));
+      SDValue Res = DAG.getNode(ISD::MUL, dl, MulVT, Op0, Op1);
+      Res = DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
+      unsigned NumConcats = 16 / VT.getVectorNumElements();
+      SmallVector<SDValue, 8> ConcatOps(NumConcats, DAG.getUNDEF(VT));
+      ConcatOps[0] = Res;
+      Res = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v16i8, ConcatOps);
+      Results.push_back(Res);
     }
     return;
   }
@@ -30987,7 +31004,10 @@ static SDValue combineX86ShufflesRecursively(
   if (!resolveTargetShuffleInputs(Op, OpInputs, OpMask, DAG))
     return SDValue();
 
-  assert(OpInputs.size() <= 2 && "Too many shuffle inputs");
+  // TODO - Add support for more than 2 inputs.
+  if (2 < OpInputs.size())
+    return SDValue();
+
   SDValue Input0 = (OpInputs.size() > 0 ? OpInputs[0] : SDValue());
   SDValue Input1 = (OpInputs.size() > 1 ? OpInputs[1] : SDValue());
 

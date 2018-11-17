@@ -1000,6 +1000,11 @@ static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags) {
   return RawFlags;
 }
 
+static uint64_t getEncodedGVarFlags(GlobalVarSummary::GVarFlags Flags) {
+  uint64_t RawFlags = Flags.ReadOnly;
+  return RawFlags;
+}
+
 static unsigned getEncodedVisibility(const GlobalValue &GV) {
   switch (GV.getVisibility()) {
   case GlobalValue::DefaultVisibility:   return 0;
@@ -3539,6 +3544,7 @@ void ModuleBitcodeWriterBase::writePerModuleFunctionSummaryRecord(
   NameVals.push_back(FS->instCount());
   NameVals.push_back(getEncodedFFlags(FS->fflags()));
   NameVals.push_back(FS->refs().size());
+  NameVals.push_back(FS->immutableRefCount());
 
   for (auto &RI : FS->refs())
     NameVals.push_back(VE.getValueID(RI.getValue()));
@@ -3580,6 +3586,7 @@ void ModuleBitcodeWriterBase::writeModuleLevelReferences(
   NameVals.push_back(VE.getValueID(&V));
   GlobalVarSummary *VS = cast<GlobalVarSummary>(Summary);
   NameVals.push_back(getEncodedGVSummaryFlags(VS->flags()));
+  NameVals.push_back(getEncodedGVarFlags(VS->varflags()));
 
   unsigned SizeBeforeRefs = NameVals.size();
   for (auto &RI : VS->refs())
@@ -3596,7 +3603,7 @@ void ModuleBitcodeWriterBase::writeModuleLevelReferences(
 // Current version for the summary.
 // This is bumped whenever we introduce changes in the way some record are
 // interpreted, like flags for instance.
-static const uint64_t INDEX_VERSION = 4;
+static const uint64_t INDEX_VERSION = 5;
 
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.
@@ -3631,6 +3638,7 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // fflags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // immutablerefcnt
   // numrefs x valueid, n x (valueid, hotness)
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
@@ -3647,6 +3655,7 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // fflags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // immutablerefcnt
   // numrefs x valueid, n x (valueid [, rel_block_freq])
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
@@ -3741,6 +3750,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // fflags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // immutablerefcnt
   // numrefs x valueid, n x (valueid)
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
@@ -3755,6 +3765,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // fflags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // immutablerefcnt
   // numrefs x valueid, n x (valueid, hotness)
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));
@@ -3827,6 +3838,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       NameVals.push_back(*ValueId);
       NameVals.push_back(Index.getModuleId(VS->modulePath()));
       NameVals.push_back(getEncodedGVSummaryFlags(VS->flags()));
+      NameVals.push_back(getEncodedGVarFlags(VS->varflags()));
       for (auto &RI : VS->refs()) {
         auto RefValueId = getValueId(RI.getGUID());
         if (!RefValueId)
@@ -3852,17 +3864,21 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.push_back(FS->instCount());
     NameVals.push_back(getEncodedFFlags(FS->fflags()));
     // Fill in below
-    NameVals.push_back(0);
+    NameVals.push_back(0); // numrefs
+    NameVals.push_back(0); // immutablerefcnt
 
-    unsigned Count = 0;
+    unsigned Count = 0, ImmutableRefCnt = 0;
     for (auto &RI : FS->refs()) {
       auto RefValueId = getValueId(RI.getGUID());
       if (!RefValueId)
         continue;
       NameVals.push_back(*RefValueId);
+      if (RI.isReadOnly())
+        ImmutableRefCnt++;
       Count++;
     }
     NameVals[5] = Count;
+    NameVals[6] = ImmutableRefCnt;
 
     bool HasProfileData = false;
     for (auto &EI : FS->calls()) {

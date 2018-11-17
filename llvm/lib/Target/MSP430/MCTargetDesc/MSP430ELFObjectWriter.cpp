@@ -34,7 +34,7 @@ protected:
     // Translate fixup kind to ELF relocation type.
     switch ((unsigned)Fixup.getKind()) {
     case FK_Data_1:                   return ELF::R_MSP430_8;
-    case FK_Data_2:                   return ELF::R_MSP430_16;
+    case FK_Data_2:                   return ELF::R_MSP430_16_BYTE;
     case FK_Data_4:                   return ELF::R_MSP430_32;
     case MSP430::fixup_32:            return ELF::R_MSP430_32;
     case MSP430::fixup_10_pcrel:      return ELF::R_MSP430_10_PCREL;
