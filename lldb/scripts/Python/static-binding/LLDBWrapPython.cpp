@@ -8848,6 +8848,32 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_SBBreakpoint_IsHardware(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  lldb::SBBreakpoint *arg1 = (lldb::SBBreakpoint *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  bool result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:SBBreakpoint_IsHardware",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_lldb__SBBreakpoint, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "SBBreakpoint_IsHardware" "', argument " "1"" of type '" "lldb::SBBreakpoint *""'"); 
+  }
+  arg1 = reinterpret_cast< lldb::SBBreakpoint * >(argp1);
+  {
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;
+    result = (bool)(arg1)->IsHardware();
+    SWIG_PYTHON_THREAD_END_ALLOW;
+  }
+  resultobj = SWIG_From_bool(static_cast< bool >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_SBBreakpoint___str__(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   lldb::SBBreakpoint *arg1 = (lldb::SBBreakpoint *) 0 ;
@@ -76161,6 +76187,7 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"SBBreakpoint_GetBreakpointFromEvent", _wrap_SBBreakpoint_GetBreakpointFromEvent, METH_VARARGS, (char *)"SBBreakpoint_GetBreakpointFromEvent(SBEvent event) -> SBBreakpoint"},
 	 { (char *)"SBBreakpoint_GetBreakpointLocationAtIndexFromEvent", _wrap_SBBreakpoint_GetBreakpointLocationAtIndexFromEvent, METH_VARARGS, (char *)"SBBreakpoint_GetBreakpointLocationAtIndexFromEvent(SBEvent event, uint32_t loc_idx) -> SBBreakpointLocation"},
 	 { (char *)"SBBreakpoint_GetNumBreakpointLocationsFromEvent", _wrap_SBBreakpoint_GetNumBreakpointLocationsFromEvent, METH_VARARGS, (char *)"SBBreakpoint_GetNumBreakpointLocationsFromEvent(SBEvent event_sp) -> uint32_t"},
+	 { (char *)"SBBreakpoint_IsHardware", _wrap_SBBreakpoint_IsHardware, METH_VARARGS, (char *)"SBBreakpoint_IsHardware(SBBreakpoint self) -> bool"},
 	 { (char *)"SBBreakpoint___str__", _wrap_SBBreakpoint___str__, METH_VARARGS, (char *)"SBBreakpoint___str__(SBBreakpoint self) -> PyObject"},
 	 { (char *)"SBBreakpoint_swigregister", SBBreakpoint_swigregister, METH_VARARGS, NULL},
 	 { (char *)"new_SBBreakpointList", _wrap_new_SBBreakpointList, METH_VARARGS, (char *)"new_SBBreakpointList(SBTarget target) -> SBBreakpointList"},
