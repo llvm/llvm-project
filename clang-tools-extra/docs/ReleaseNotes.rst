@@ -123,6 +123,12 @@ Improvements to clang-tidy
   Finds macro usage that is considered problematic because better language
   constructs exist for the task.
 
+- New :doc:`google-objc-function-naming
+  <clang-tidy/checks/google-objc-function-naming>` check.
+
+  Checks that function names in function declarations comply with the naming
+  conventions described in the Google Objective-C Style Guide.
+
 - New :doc:`misc-non-private-member-variables-in-classes
   <clang-tidy/checks/misc-non-private-member-variables-in-classes>` check.
 
