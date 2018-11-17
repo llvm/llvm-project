@@ -58,33 +58,22 @@ using lldb_private::formatters::swift::DictionaryConfig;
 using lldb_private::formatters::swift::SetConfig;
 
 void SwiftLanguage::Initialize() {
-  static ConstString g_NSStringClass1(SwiftLanguageRuntime::GetCurrentMangledName("__NSContiguousString"));
-  static ConstString g_NSStringClass2(SwiftLanguageRuntime::GetCurrentMangledName("_TtCSs20__NSContiguousString"));
-  static ConstString g_NSStringClass3Old("_TtCs20__NSContiguousString");
-  static ConstString g_NSStringClass3(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs20__NSContiguousString"));
+  static ConstString g_SwiftSharedStringClass(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs20_SharedStringStorage"));
+  static ConstString g_SwiftStringStorageClass(
+      SwiftLanguageRuntime::GetCurrentMangledName("_TtCs14_StringStorage"));
   static ConstString g_NSArrayClass1Old("_TtCs22__SwiftDeferredNSArray");
   static ConstString g_NSArrayClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray"));
-
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Swift Language",
                                 CreateInstance);
 
   lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
       .emplace(
-          g_NSStringClass1,
-          lldb_private::formatters::swift::NSContiguousString_SummaryProvider);
+          g_SwiftSharedStringClass,
+          lldb_private::formatters::swift::SwiftSharedString_SummaryProvider);
   lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
       .emplace(
-          g_NSStringClass2,
-          lldb_private::formatters::swift::NSContiguousString_SummaryProvider);
-  lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
-      .emplace(
-          g_NSStringClass3,
-          lldb_private::formatters::swift::NSContiguousString_SummaryProvider);
-  lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
-      .emplace(
-          g_NSStringClass3Old,
-          lldb_private::formatters::swift::NSContiguousString_SummaryProvider);
-
+          g_SwiftStringStorageClass,
+          lldb_private::formatters::swift::SwiftStringStorage_SummaryProvider);
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries()
       .emplace(g_NSArrayClass1,
                lldb_private::formatters::swift::Array_SummaryProvider);
@@ -98,21 +87,16 @@ void SwiftLanguage::Initialize() {
 
 void SwiftLanguage::Terminate() {
   // FIXME: Duplicating this list from Initialize seems error-prone.
-  static ConstString g_NSStringClass1(SwiftLanguageRuntime::GetCurrentMangledName("__NSContiguousString"));
-  static ConstString g_NSStringClass2(SwiftLanguageRuntime::GetCurrentMangledName("_TtCSs20__NSContiguousString"));
-  static ConstString g_NSStringClass3Old("_TtCs20__NSContiguousString");
-  static ConstString g_NSStringClass3(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs20__NSContiguousString"));
+  static ConstString g_SwiftSharedStringClass(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs20_SharedStringStorage"));
+  static ConstString g_SwiftStringStorageClass(
+      SwiftLanguageRuntime::GetCurrentMangledName("_TtCs14_StringStorage"));
   static ConstString g_NSArrayClass1Old("_TtCs22__SwiftDeferredNSArray");
   static ConstString g_NSArrayClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray"));
 
   lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
-      .erase(g_NSStringClass1);
+      .erase(g_SwiftSharedStringClass);
   lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
-      .erase(g_NSStringClass2);
-  lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
-      .erase(g_NSStringClass3);
-  lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
-      .erase(g_NSStringClass3Old);
+      .erase(g_SwiftStringStorageClass);
 
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries().erase(
       g_NSArrayClass1);
@@ -443,14 +427,9 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   // NSContiguousString* - do not skip pointers here
   AddCXXSummary(
       swift_category_sp,
-      lldb_private::formatters::swift::NSContiguousString_SummaryProvider,
-      "NSContiguousString summary provider", ConstString("__NSContiguousString"),
-      summary_flags);
-  AddCXXSummary(
-      swift_category_sp,
-      lldb_private::formatters::swift::NSContiguousString_SummaryProvider,
-      "NSContiguousString summary provider",
-      ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs20__NSContiguousString")), summary_flags);
+      lldb_private::formatters::swift::SwiftSharedString_SummaryProvider,
+      "SharedStringStorage summary provider",
+      ConstString(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs20_SharedStringStorage")), summary_flags);
   summary_flags.SetSkipPointers(true);
   AddCXXSummary(swift_category_sp,
                 lldb_private::formatters::swift::BuiltinObjC_SummaryProvider,
