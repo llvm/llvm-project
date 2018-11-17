@@ -1473,21 +1473,21 @@ void ASTStmtReader::VisitCXXThisExpr(CXXThisExpr *E) {
 
 void ASTStmtReader::VisitCXXThrowExpr(CXXThrowExpr *E) {
   VisitExpr(E);
-  E->ThrowLoc = ReadSourceLocation();
-  E->Op = Record.readSubExpr();
-  E->IsThrownVariableInScope = Record.readInt();
+  E->CXXThrowExprBits.ThrowLoc = ReadSourceLocation();
+  E->Operand = Record.readSubExpr();
+  E->CXXThrowExprBits.IsThrownVariableInScope = Record.readInt();
 }
 
 void ASTStmtReader::VisitCXXDefaultArgExpr(CXXDefaultArgExpr *E) {
   VisitExpr(E);
   E->Param = ReadDeclAs<ParmVarDecl>();
-  E->Loc = ReadSourceLocation();
+  E->CXXDefaultArgExprBits.Loc = ReadSourceLocation();
 }
 
 void ASTStmtReader::VisitCXXDefaultInitExpr(CXXDefaultInitExpr *E) {
   VisitExpr(E);
   E->Field = ReadDeclAs<FieldDecl>();
-  E->Loc = ReadSourceLocation();
+  E->CXXDefaultInitExprBits.Loc = ReadSourceLocation();
 }
 
 void ASTStmtReader::VisitCXXBindTemporaryExpr(CXXBindTemporaryExpr *E) {

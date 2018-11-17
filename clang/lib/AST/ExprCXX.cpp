@@ -749,14 +749,15 @@ const IdentifierInfo *UserDefinedLiteral::getUDSuffix() const {
   return cast<FunctionDecl>(getCalleeDecl())->getLiteralIdentifier();
 }
 
-CXXDefaultInitExpr::CXXDefaultInitExpr(const ASTContext &C, SourceLocation Loc,
-                                       FieldDecl *Field, QualType T)
-    : Expr(CXXDefaultInitExprClass, T.getNonLValueExprType(C),
-           T->isLValueReferenceType() ? VK_LValue : T->isRValueReferenceType()
+CXXDefaultInitExpr::CXXDefaultInitExpr(const ASTContext &Ctx, SourceLocation Loc,
+                                       FieldDecl *Field, QualType Ty)
+    : Expr(CXXDefaultInitExprClass, Ty.getNonLValueExprType(Ctx),
+           Ty->isLValueReferenceType() ? VK_LValue : Ty->isRValueReferenceType()
                                                         ? VK_XValue
                                                         : VK_RValue,
            /*FIXME*/ OK_Ordinary, false, false, false, false),
-      Field(Field), Loc(Loc) {
+      Field(Field) {
+  CXXDefaultInitExprBits.Loc = Loc;
   assert(Field->hasInClassInitializer());
 }
 
