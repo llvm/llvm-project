@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple=i686-pc-windows-msvc -debug-info-kind=limited -gcodeview -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=i686-pc-windows-msvc -debug-info-kind=limited -gcodeview -gcodeview-ghash -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,GHASH
 
 // Tests that certain miscellaneous features work in the MS ABI.
 
@@ -45,3 +46,6 @@ Foo::Nested n;
 // CHECK-NEXT: ![[dummy:[0-9]+]] = !DISubroutineType(types: ![[Signature:[0-9]+]])
 // CHECK: ![[Signature]] = !{null, ![[BasicInt:[0-9]+]], ![[BasicInt]]}
 // CHECK: ![[BasicInt]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+
+// CHECK: !{{[0-9]+}} = !{i32 2, !"CodeView", i32 1}
+// GHASH: !{{[0-9]+}} = !{i32 2, !"CodeViewGHash", i32 1}

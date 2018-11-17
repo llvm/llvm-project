@@ -4271,10 +4271,24 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_Qualification: {
     // The qualification keeps the category of the inner expression, unless the
     // target type isn't a reference.
-    ExprValueKind VK = ToType->isReferenceType() ?
-                                  From->getValueKind() : VK_RValue;
-    From = ImpCastExprToType(From, ToType.getNonLValueExprType(Context),
-                             CK_NoOp, VK, /*BasePath=*/nullptr, CCK).get();
+    ExprValueKind VK =
+        ToType->isReferenceType() ? From->getValueKind() : VK_RValue;
+
+    CastKind CK = CK_NoOp;
+
+    if (ToType->isReferenceType() &&
+        ToType->getPointeeType().getAddressSpace() !=
+            From->getType().getAddressSpace())
+      CK = CK_AddressSpaceConversion;
+
+    if (ToType->isPointerType() &&
+        ToType->getPointeeType().getAddressSpace() !=
+            From->getType()->getPointeeType().getAddressSpace())
+      CK = CK_AddressSpaceConversion;
+
+    From = ImpCastExprToType(From, ToType.getNonLValueExprType(Context), CK, VK,
+                             /*BasePath=*/nullptr, CCK)
+               .get();
 
     if (SCS.DeprecatedStringLiteralToCharPtr &&
         !getLangOpts().WritableStrings) {
