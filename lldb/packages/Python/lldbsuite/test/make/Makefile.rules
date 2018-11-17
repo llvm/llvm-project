@@ -252,8 +252,18 @@ ifeq "$(MAKE_DWO)" "YES"
 	CFLAGS += -gsplit-dwarf
 endif
 
+ifeq "$(HOST_OS)" "Windows_NT"
+	JOIN_CMD = &
+	QUOTE = "
+	FIXUP_SYNTAX_HIGHLIGHTING_IN_MY_EDITOR = "
+else
+	JOIN_CMD = ;
+	QUOTE = '
+	FIXUP_SYNTAX_HIGHLIGHTING_IN_MY_EDITOR = '
+endif
+
 # Use a shared module cache when building in the default test build directory.
-CLANG_MODULE_CACHE_DIR := $(shell echo "$(BUILDDIR)" | sed 's/lldb-test-build.noindex.*/lldb-test-build.noindex\/module-cache-clang/')
+CLANG_MODULE_CACHE_DIR := $(shell echo "$(BUILDDIR)" | sed $(QUOTE)s,lldb-test-build.noindex.*,lldb-test-build.noindex\/module-cache-clang,$(QUOTE))
 
 ifeq "$(findstring lldb-test-build.noindex, $(BUILDDIR))" ""
 CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/module-cache
@@ -623,14 +633,6 @@ endif
 # the compiler -MM option. The -M option will list all system headers,
 # and the -MM option will list all non-system dependencies.
 #----------------------------------------------------------------------
-ifeq "$(HOST_OS)" "Windows_NT"
-	JOIN_CMD = &
-	QUOTE = "
-else
-	JOIN_CMD = ;
-	QUOTE = '
-endif
-
 %.d: %.c
 	@rm -f $@ $(JOIN_CMD) \
 	$(CC) -M $(CFLAGS) $< > $@.tmp && \

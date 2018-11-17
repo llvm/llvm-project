@@ -323,6 +323,66 @@ void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
   ReportErrorSummary(bug_type, stack);
 }
 
+void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
+                           uptr tail_size, const u8 *expected) {
+  ScopedReport R(flags()->halt_on_error);
+  Decorator d;
+  uptr untagged_addr = UntagAddr(tagged_addr);
+  Printf("%s", d.Error());
+  const char *bug_type = "alocation-tail-overwritten";
+  Report("ERROR: %s: %s; heap object [%p,%p) of size %zd\n", SanitizerToolName,
+         bug_type, untagged_addr, untagged_addr + orig_size, orig_size);
+  Printf("\n%s", d.Default());
+  stack->Print();
+  HwasanChunkView chunk = FindHeapChunkByAddress(untagged_addr);
+  if (chunk.Beg()) {
+    Printf("%s", d.Allocation());
+    Printf("allocated here:\n");
+    Printf("%s", d.Default());
+    GetStackTraceFromId(chunk.GetAllocStackId()).Print();
+  }
+
+  InternalScopedString s(GetPageSizeCached() * 8);
+  CHECK_GT(tail_size, 0U);
+  CHECK_LT(tail_size, kShadowAlignment);
+  u8 *tail = reinterpret_cast<u8*>(untagged_addr + orig_size);
+  s.append("Tail contains: ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++)
+    s.append(".. ");
+  for (uptr i = 0; i < tail_size; i++)
+    s.append("%02x ", tail[i]);
+  s.append("\n");
+  s.append("Expected:      ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++)
+    s.append(".. ");
+  for (uptr i = 0; i < tail_size; i++)
+    s.append("%02x ", expected[i]);
+  s.append("\n");
+  s.append("               ");
+  for (uptr i = 0; i < kShadowAlignment - tail_size; i++)
+    s.append("   ");
+  for (uptr i = 0; i < tail_size; i++)
+    s.append("%s ", expected[i] != tail[i] ? "^^" : "  ");
+
+  s.append("\nThis error occurs when a buffer overflow overwrites memory\n"
+    "to the right of a heap object, but within the %zd-byte granule, e.g.\n"
+    "   char *x = new char[20];\n"
+    "   x[25] = 42;\n"
+    "By default %s does not detect such bugs at the time of write,\n"
+    "but can detect them at the time of free/delete.\n"
+    "To disable this feature set HWASAN_OPTIONS=free_checks_tail_magic=0;\n"
+    "To enable checking at the time of access, set "
+    "HWASAN_OPTIONS=malloc_align_right to non-zero\n\n",
+    kShadowAlignment, SanitizerToolName);
+  Printf("%s", s.data());
+  GetCurrentThread()->Announce();
+
+  tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
+  PrintTagsAroundAddr(tag_ptr);
+
+  ReportErrorSummary(bug_type, stack);
+}
+
 void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
                        bool is_store, bool fatal) {
   ScopedReport R(fatal);
