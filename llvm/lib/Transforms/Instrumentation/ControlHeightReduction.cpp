@@ -1416,7 +1416,7 @@ bool CHRScopeSorter(CHRScope *Scope1, CHRScope *Scope2) {
 void CHR::sortScopes(SmallVectorImpl<CHRScope *> &Input,
                      SmallVectorImpl<CHRScope *> &Output) {
   Output.resize(Input.size());
-  std::copy(Input.begin(), Input.end(), Output.begin());
+  llvm::copy(Input, Output.begin());
   std::stable_sort(Output.begin(), Output.end(), CHRScopeSorter);
 }
 

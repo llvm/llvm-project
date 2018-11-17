@@ -431,6 +431,10 @@ private:
   /// Shared pointer for the global memory in the global memory buffer used for
   /// the given kernel.
   llvm::GlobalVariable *KernelStaticGlobalized = nullptr;
+  /// Pair of the Non-SPMD team and all reductions variables in this team
+  /// region.
+  std::pair<const Decl *, llvm::SmallVector<const ValueDecl *, 4>>
+      TeamAndReductions;
 };
 
 } // CodeGen namespace.

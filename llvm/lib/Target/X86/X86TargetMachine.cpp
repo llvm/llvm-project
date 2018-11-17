@@ -57,7 +57,7 @@ static cl::opt<bool> EnableMachineCombinerPass("x86-machine-combiner",
 static cl::opt<bool> EnableCondBrFoldingPass("x86-condbr-folding",
                                cl::desc("Enable the conditional branch "
                                         "folding pass"),
-                               cl::init(true), cl::Hidden);
+                               cl::init(false), cl::Hidden);
 
 extern "C" void LLVMInitializeX86Target() {
   // Register the target.

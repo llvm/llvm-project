@@ -10,14 +10,11 @@ target triple = "wasm32-unknown-unknown"
 %BigStruct = type { double, double, double, double, double, double, double, double, double, double, double, i8, i8, i8 }
 %EmptyStruct = type { }
 
-%BigArray = type { [33 x i8] }
-
 declare void @ext_func(%SmallStruct*)
 declare void @ext_func_empty(%EmptyStruct* byval)
 declare void @ext_byval_func(%SmallStruct* byval)
 declare void @ext_byval_func_align8(%SmallStruct* byval align 8)
 declare void @ext_byval_func_alignedstruct(%AlignedStruct* byval)
-declare void @ext_byval_func_bigarray(%BigArray* byval)
 declare void @ext_byval_func_empty(%EmptyStruct* byval)
 
 ; CHECK-LABEL: byval_arg

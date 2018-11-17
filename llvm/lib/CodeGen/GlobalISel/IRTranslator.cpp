@@ -215,7 +215,7 @@ ArrayRef<unsigned> IRTranslator::getOrCreateVRegs(const Value &Val) {
     unsigned Idx = 0;
     while (auto Elt = C.getAggregateElement(Idx++)) {
       auto EltRegs = getOrCreateVRegs(*Elt);
-      std::copy(EltRegs.begin(), EltRegs.end(), std::back_inserter(*VRegs));
+      llvm::copy(EltRegs, std::back_inserter(*VRegs));
     }
   } else {
     assert(SplitTys.size() == 1 && "unexpectedly split LLT");
