@@ -865,3 +865,44 @@ void fReferenceTest5() {
   ReferenceTest4::RecordType c, d{37, 38};
   ReferenceTest4(d, c);
 }
+
+//===----------------------------------------------------------------------===//
+// Tests for objects containing multiple references to the same object.
+//===----------------------------------------------------------------------===//
+
+struct IntMultipleReferenceToSameObjectTest {
+  int *iptr; // expected-note{{uninitialized pointee 'this->iptr'}}
+  int &iref; // no-note, pointee of this->iref was already reported
+
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  IntMultipleReferenceToSameObjectTest(int *i) : iptr(i), iref(*i) {} // expected-warning{{1 uninitialized field}}
+};
+
+void fIntMultipleReferenceToSameObjectTest() {
+  int a;
+  IntMultipleReferenceToSameObjectTest Test(&a);
+}
+
+struct IntReferenceWrapper1 {
+  int &a; // expected-note{{uninitialized pointee 'this->a'}}
+
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  IntReferenceWrapper1(int &a) : a(a) {} // expected-warning{{1 uninitialized field}}
+};
+
+struct IntReferenceWrapper2 {
+  int &a; // no-note, pointee of this->a was already reported
+
+  int dontGetFilteredByNonPedanticMode = 0;
+
+  IntReferenceWrapper2(int &a) : a(a) {} // no-warning
+};
+
+void fMultipleObjectsReferencingTheSameObjectTest() {
+  int a;
+
+  IntReferenceWrapper1 T1(a);
+  IntReferenceWrapper2 T2(a);
+}

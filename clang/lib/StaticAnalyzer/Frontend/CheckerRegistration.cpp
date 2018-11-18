@@ -17,7 +17,6 @@
 #include "clang/StaticAnalyzer/Checkers/ClangCheckers.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/CheckerOptInfo.h"
 #include "clang/StaticAnalyzer/Core/CheckerRegistry.h"
 #include "clang/StaticAnalyzer/Frontend/FrontendActions.h"
 #include "llvm/ADT/SmallVector.h"
@@ -102,16 +101,6 @@ void ClangCheckerRegistry::warnIncompatible(DiagnosticsEngine *diags,
       << pluginAPIVersion;
 }
 
-static SmallVector<CheckerOptInfo, 8>
-getCheckerOptList(const AnalyzerOptions &opts) {
-  SmallVector<CheckerOptInfo, 8> checkerOpts;
-  for (unsigned i = 0, e = opts.CheckersControlList.size(); i != e; ++i) {
-    const std::pair<std::string, bool> &opt = opts.CheckersControlList[i];
-    checkerOpts.push_back(CheckerOptInfo(opt.first, opt.second));
-  }
-  return checkerOpts;
-}
-
 std::unique_ptr<CheckerManager> ento::createCheckerManager(
     ASTContext &context,
     AnalyzerOptions &opts,
@@ -120,25 +109,14 @@ std::unique_ptr<CheckerManager> ento::createCheckerManager(
     DiagnosticsEngine &diags) {
   auto checkerMgr = llvm::make_unique<CheckerManager>(context, opts);
 
-  SmallVector<CheckerOptInfo, 8> checkerOpts = getCheckerOptList(opts);
-
   ClangCheckerRegistry allCheckers(plugins, &diags);
 
   for (const auto &Fn : checkerRegistrationFns)
     Fn(allCheckers);
 
-  allCheckers.initializeManager(*checkerMgr, checkerOpts);
+  allCheckers.initializeManager(*checkerMgr, opts, diags);
   allCheckers.validateCheckerOptions(opts, diags);
   checkerMgr->finishedCheckerRegistration();
-
-  for (unsigned i = 0, e = checkerOpts.size(); i != e; ++i) {
-    if (checkerOpts[i].isUnclaimed()) {
-      diags.Report(diag::err_unknown_analyzer_checker)
-          << checkerOpts[i].getName();
-      diags.Report(diag::note_suggest_disabling_all_checkers);
-    }
-
-  }
 
   return checkerMgr;
 }
@@ -155,8 +133,7 @@ void ento::printEnabledCheckerList(raw_ostream &out,
                                    const AnalyzerOptions &opts) {
   out << "OVERVIEW: Clang Static Analyzer Enabled Checkers List\n\n";
 
-  SmallVector<CheckerOptInfo, 8> checkerOpts = getCheckerOptList(opts);
-  ClangCheckerRegistry(plugins).printList(out, checkerOpts);
+  ClangCheckerRegistry(plugins).printList(out, opts);
 }
 
 void ento::printAnalyzerConfigList(raw_ostream &out) {

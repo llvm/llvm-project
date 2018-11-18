@@ -2,12 +2,12 @@
 
 %umul.ty = type { i32, i1 }
 
-define i32 @test1(i32 %a) nounwind {
+define i32 @test1(i32 %a, i1 %x) nounwind {
 ; CHECK: test1:
 ; CHECK: muldi3
   %tmp0 = tail call %umul.ty @llvm.umul.with.overflow.i32(i32 %a, i32 37)
   %tmp1 = extractvalue %umul.ty %tmp0, 0
-  %tmp2 = select i1 undef, i32 -1, i32 %tmp1
+  %tmp2 = select i1 %x, i32 -1, i32 %tmp1
   ret i32 %tmp2
 }
 
