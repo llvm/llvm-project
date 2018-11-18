@@ -15422,6 +15422,11 @@ static SDValue lowerV64I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
           lowerVectorShuffleWithUNPCK(DL, MVT::v64i8, Mask, V1, V2, DAG))
     return V;
 
+  // Use dedicated pack instructions for masks that match their pattern.
+  if (SDValue V = lowerVectorShuffleWithPACK(DL, MVT::v64i8, Mask, V1, V2, DAG,
+                                             Subtarget))
+    return V;
+
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v64i8, V1, V2, Mask,
                                                 Zeroable, Subtarget, DAG))
@@ -33645,7 +33650,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
   // Since SKX these selects have a proper lowering.
   if (Subtarget.hasAVX512() && !Subtarget.hasBWI() && CondVT.isVector() &&
       CondVT.getVectorElementType() == MVT::i1 &&
-      VT.getVectorNumElements() > 4 &&
+      (ExperimentalVectorWideningLegalization ||
+       VT.getVectorNumElements() > 4) &&
       (VT.getVectorElementType() == MVT::i8 ||
        VT.getVectorElementType() == MVT::i16)) {
     Cond = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, Cond);
@@ -34673,6 +34679,16 @@ static SDValue combineMulToPMADDWD(SDNode *N, SelectionDAG &DAG,
 
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  // If we are zero extending two steps without SSE4.1, its better to reduce
+  // the vmul width instead.
+  if (!Subtarget.hasSSE41() &&
+      (N0.getOpcode() == ISD::ZERO_EXTEND &&
+       N0.getOperand(0).getScalarValueSizeInBits() <= 8) &&
+      (N1.getOpcode() == ISD::ZERO_EXTEND &&
+       N1.getOperand(0).getScalarValueSizeInBits() <= 8))
+    return SDValue();
+
   APInt Mask17 = APInt::getHighBitsSet(32, 17);
   if (!DAG.MaskedValueIsZero(N1, Mask17) ||
       !DAG.MaskedValueIsZero(N0, Mask17))
@@ -35400,8 +35416,8 @@ static SDValue combineANDXORWithAllOnesIntoANDNP(SDNode *N, SelectionDAG &DAG) {
 // some of the transition sequences.
 // Even with AVX-512 this is still useful for removing casts around logical
 // operations on vXi1 mask types.
-static SDValue WidenMaskArithmetic(SDNode *N, SelectionDAG &DAG,
-                                   const X86Subtarget &Subtarget) {
+static SDValue PromoteMaskArithmetic(SDNode *N, SelectionDAG &DAG,
+                                     const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   assert(VT.isVector() && "Expected vector type");
 
@@ -38847,7 +38863,7 @@ static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
     return V;
 
   if (VT.isVector())
-    if (SDValue R = WidenMaskArithmetic(N, DAG, Subtarget))
+    if (SDValue R = PromoteMaskArithmetic(N, DAG, Subtarget))
       return R;
 
   if (SDValue NewAdd = promoteExtBeforeAdd(N, DAG, Subtarget))
@@ -39018,7 +39034,7 @@ static SDValue combineZext(SDNode *N, SelectionDAG &DAG,
     return V;
 
   if (VT.isVector())
-    if (SDValue R = WidenMaskArithmetic(N, DAG, Subtarget))
+    if (SDValue R = PromoteMaskArithmetic(N, DAG, Subtarget))
       return R;
 
   if (SDValue NewAdd = promoteExtBeforeAdd(N, DAG, Subtarget))
@@ -39171,7 +39187,9 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   // NOTE: The element count check is to ignore operand types that need to
   // go through type promotion to a 128-bit vector.
   if (Subtarget.hasAVX512() && !Subtarget.hasBWI() && VT.isVector() &&
-      VT.getVectorElementType() == MVT::i1 && VT.getVectorNumElements() > 4 &&
+      VT.getVectorElementType() == MVT::i1 &&
+      (ExperimentalVectorWideningLegalization ||
+       VT.getVectorNumElements() > 4) &&
       (OpVT.getVectorElementType() == MVT::i8 ||
        OpVT.getVectorElementType() == MVT::i16)) {
     SDValue Setcc = DAG.getNode(ISD::SETCC, DL, OpVT, LHS, RHS,

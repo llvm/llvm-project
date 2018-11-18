@@ -1,5 +1,11 @@
 ; RUN: opt -S -correlated-propagation < %s | FileCheck %s
 
+; Check that debug locations are preserved. For more info see:
+;   https://llvm.org/docs/SourceLevelDebugging.html#fixing-errors
+; RUN: opt < %s -enable-debugify -correlated-propagation -S 2>&1 | \
+; RUN:   FileCheck %s -check-prefix=DEBUG
+; DEBUG: CheckModuleDebugify: PASS
+
 declare { i32, i1 } @llvm.sadd.with.overflow.i32(i32, i32)
 
 declare { i32, i1 } @llvm.ssub.with.overflow.i32(i32, i32)
