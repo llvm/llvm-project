@@ -430,23 +430,21 @@ static bool willNotOverflow(IntrinsicInst *II, LazyValueInfo *LVI) {
 }
 
 static void processOverflowIntrinsic(IntrinsicInst *II) {
+  IRBuilder<> B(II);
   Value *NewOp = nullptr;
   switch (II->getIntrinsicID()) {
   default:
     llvm_unreachable("Unexpected instruction.");
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
-    NewOp = BinaryOperator::CreateAdd(II->getOperand(0), II->getOperand(1),
-                                      II->getName(), II);
+    NewOp = B.CreateAdd(II->getOperand(0), II->getOperand(1), II->getName());
     break;
   case Intrinsic::usub_with_overflow:
   case Intrinsic::ssub_with_overflow:
-    NewOp = BinaryOperator::CreateSub(II->getOperand(0), II->getOperand(1),
-                                      II->getName(), II);
+    NewOp = B.CreateSub(II->getOperand(0), II->getOperand(1), II->getName());
     break;
   }
   ++NumOverflows;
-  IRBuilder<> B(II);
   Value *NewI = B.CreateInsertValue(UndefValue::get(II->getType()), NewOp, 0);
   NewI = B.CreateInsertValue(NewI, ConstantInt::getFalse(II->getContext()), 1);
   II->replaceAllUsesWith(NewI);
@@ -528,17 +526,17 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
     return false;
 
   ++NumUDivs;
+  IRBuilder<> B{Instr};
   auto *TruncTy = Type::getIntNTy(Instr->getContext(), NewWidth);
-  auto *LHS = CastInst::Create(Instruction::Trunc, Instr->getOperand(0), TruncTy,
-                               Instr->getName() + ".lhs.trunc", Instr);
-  auto *RHS = CastInst::Create(Instruction::Trunc, Instr->getOperand(1), TruncTy,
-                               Instr->getName() + ".rhs.trunc", Instr);
-  auto *BO =
-      BinaryOperator::Create(Instr->getOpcode(), LHS, RHS, Instr->getName(), Instr);
-  auto *Zext = CastInst::Create(Instruction::ZExt, BO, Instr->getType(),
-                                Instr->getName() + ".zext", Instr);
-  if (BO->getOpcode() == Instruction::UDiv)
-    BO->setIsExact(Instr->isExact());
+  auto *LHS = B.CreateTruncOrBitCast(Instr->getOperand(0), TruncTy,
+                                     Instr->getName() + ".lhs.trunc");
+  auto *RHS = B.CreateTruncOrBitCast(Instr->getOperand(1), TruncTy,
+                                     Instr->getName() + ".rhs.trunc");
+  auto *BO = B.CreateBinOp(Instr->getOpcode(), LHS, RHS, Instr->getName());
+  auto *Zext = B.CreateZExt(BO, Instr->getType(), Instr->getName() + ".zext");
+  if (auto *BinOp = dyn_cast<BinaryOperator>(BO))
+    if (BinOp->getOpcode() == Instruction::UDiv)
+      BinOp->setIsExact(Instr->isExact());
 
   Instr->replaceAllUsesWith(Zext);
   Instr->eraseFromParent();
@@ -552,6 +550,7 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
   ++NumSRems;
   auto *BO = BinaryOperator::CreateURem(SDI->getOperand(0), SDI->getOperand(1),
                                         SDI->getName(), SDI);
+  BO->setDebugLoc(SDI->getDebugLoc());
   SDI->replaceAllUsesWith(BO);
   SDI->eraseFromParent();
 
@@ -573,6 +572,7 @@ static bool processSDiv(BinaryOperator *SDI, LazyValueInfo *LVI) {
   ++NumSDivs;
   auto *BO = BinaryOperator::CreateUDiv(SDI->getOperand(0), SDI->getOperand(1),
                                         SDI->getName(), SDI);
+  BO->setDebugLoc(SDI->getDebugLoc());
   BO->setIsExact(SDI->isExact());
   SDI->replaceAllUsesWith(BO);
   SDI->eraseFromParent();
@@ -595,6 +595,7 @@ static bool processAShr(BinaryOperator *SDI, LazyValueInfo *LVI) {
   ++NumAShrs;
   auto *BO = BinaryOperator::CreateLShr(SDI->getOperand(0), SDI->getOperand(1),
                                         SDI->getName(), SDI);
+  BO->setDebugLoc(SDI->getDebugLoc());
   BO->setIsExact(SDI->isExact());
   SDI->replaceAllUsesWith(BO);
   SDI->eraseFromParent();

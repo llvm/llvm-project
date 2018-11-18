@@ -1,5 +1,11 @@
 ; RUN: opt < %s -correlated-propagation -S | FileCheck %s
 
+; Check that debug locations are preserved. For more info see:
+;   https://llvm.org/docs/SourceLevelDebugging.html#fixing-errors
+; RUN: opt < %s -enable-debugify -correlated-propagation -S 2>&1 | \
+; RUN:   FileCheck %s -check-prefix=DEBUG
+; DEBUG: CheckModuleDebugify: PASS
+
 ; CHECK-LABEL: @test_nop
 define void @test_nop(i32 %n) {
 ; CHECK udiv i32 %n, 100

@@ -14,10 +14,16 @@
 
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
+
+#define DEBUG_TYPE "module-summary-index"
+
+STATISTIC(ReadOnlyLiveGVars,
+          "Number of live global variables marked read only");
 
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary({});
@@ -160,6 +166,13 @@ void ModuleSummaryIndex::propagateConstants(
           GVS->setReadOnly(false);
       propagateConstantsToRefs(S.get());
     }
+  if (llvm::AreStatisticsEnabled())
+    for (auto &P : *this)
+      if (P.second.SummaryList.size())
+        if (auto *GVS = dyn_cast<GlobalVarSummary>(
+                P.second.SummaryList[0]->getBaseObject()))
+          if (isGlobalValueLive(GVS) && GVS->isReadOnly())
+            ReadOnlyLiveGVars++;
 }
 
 // TODO: write a graphviz dumper for SCCs (see ModuleSummaryIndex::exportToDot)
