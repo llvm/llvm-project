@@ -6,6 +6,7 @@ Clang-Tidy Checks
 .. toctree::
    abseil-duration-division
    abseil-duration-factory-float
+   abseil-duration-factory-scale
    abseil-faster-strsplit-delimiter
    abseil-no-internal-dependencies
    abseil-no-namespace
