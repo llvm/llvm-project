@@ -15422,6 +15422,11 @@ static SDValue lowerV64I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
           lowerVectorShuffleWithUNPCK(DL, MVT::v64i8, Mask, V1, V2, DAG))
     return V;
 
+  // Use dedicated pack instructions for masks that match their pattern.
+  if (SDValue V = lowerVectorShuffleWithPACK(DL, MVT::v64i8, Mask, V1, V2, DAG,
+                                             Subtarget))
+    return V;
+
   // Try to use shift instructions.
   if (SDValue Shift = lowerVectorShuffleAsShift(DL, MVT::v64i8, V1, V2, Mask,
                                                 Zeroable, Subtarget, DAG))

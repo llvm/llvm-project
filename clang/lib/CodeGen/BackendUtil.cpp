@@ -527,6 +527,8 @@ static Optional<GCOVOptions> getGCOVOptions(const CodeGenOptions &CodeGenOpts) {
   Options.UseCfgChecksum = CodeGenOpts.CoverageExtraChecksum;
   Options.NoRedZone = CodeGenOpts.DisableRedZone;
   Options.FunctionNamesInData = !CodeGenOpts.CoverageNoFunctionNamesInData;
+  Options.Filter = CodeGenOpts.ProfileFilterFiles;
+  Options.Exclude = CodeGenOpts.ProfileExcludeFiles;
   Options.ExitBlockBeforeBody = CodeGenOpts.CoverageExitBlockBeforeBody;
   return Options;
 }

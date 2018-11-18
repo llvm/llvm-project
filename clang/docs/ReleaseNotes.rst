@@ -64,6 +64,12 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+- ``-fprofile-filter-files=[regexes]`` and ``-fprofile-exclude-files=[regexes]``.
+
+  Clang has now options to filter or exclude some files when
+  instrumenting for gcov-based profiling.
+  See the :doc:`UsersManual` for details.
+
 - ...
 
 Deprecated Compiler Flags
