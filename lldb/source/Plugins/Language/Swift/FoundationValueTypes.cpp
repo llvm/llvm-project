@@ -13,6 +13,8 @@
 #include "FoundationValueTypes.h"
 #include "ObjCRuntimeSyntheticProvider.h"
 
+#include "llvm/ADT/STLExtras.h"
+
 #include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/ClangASTContext.h"
@@ -282,7 +284,8 @@ class URLComponentsSyntheticChildrenFrontEnd
     : public SyntheticChildrenFrontEnd {
 public:
   URLComponentsSyntheticChildrenFrontEnd(lldb::ValueObjectSP valobj_sp)
-      : SyntheticChildrenFrontEnd(*valobj_sp), m_synth_up(nullptr)
+      : SyntheticChildrenFrontEnd(*valobj_sp), m_synth_frontend_up(),
+        m_synth_backend_up()
 #define COMPONENT(Name, PrettyName, ID) , m_##Name(nullptr)
 #include "URLComponents.def"
   {
@@ -320,7 +323,8 @@ public:
   static ConstString g__##Name = ConstString("_" #Name);
 #include "URLComponents.def"
 
-    m_synth_up.reset();
+    m_synth_frontend_up.reset();
+    m_synth_backend_up.reset();
 
 #define COMPONENT(Name, PrettyName, ID) m_##Name = nullptr;
 #include "URLComponents.def"
@@ -342,19 +346,19 @@ public:
     if (!class_descriptor_sp)
       return false;
 
-    m_synth_up = ObjCRuntimeSyntheticProvider(SyntheticChildren::Flags(),
-                                              class_descriptor_sp)
-                     .GetFrontEnd(*underlying_sp);
-    if (!m_synth_up)
+    m_synth_backend_up = llvm::make_unique<ObjCRuntimeSyntheticProvider>(
+        SyntheticChildren::Flags(), class_descriptor_sp);
+    m_synth_frontend_up = m_synth_backend_up->GetFrontEnd(*underlying_sp);
+    if (!m_synth_frontend_up)
       return false;
     else
-      m_synth_up->Update();
+      m_synth_frontend_up->Update();
 
 #define COMPONENT(Name, PrettyName, ID)                                        \
-  m_##Name =                                                                   \
-      m_synth_up                                                               \
-          ->GetChildAtIndex(m_synth_up->GetIndexOfChildWithName(g__##Name))    \
-          .get();                                                              \
+  m_##Name = m_synth_frontend_up                                               \
+                 ->GetChildAtIndex(                                            \
+                     m_synth_frontend_up->GetIndexOfChildWithName(g__##Name))  \
+                 .get();                                                       \
   if (m_##Name)                                                                \
     m_##Name->SetName(GetNameFor##Name());
 #include "URLComponents.def"
@@ -382,7 +386,8 @@ private:
   }
 #include "URLComponents.def"
 
-  SyntheticChildrenFrontEnd::AutoPointer m_synth_up;
+  SyntheticChildrenFrontEnd::AutoPointer m_synth_frontend_up;
+  std::unique_ptr<ObjCRuntimeSyntheticProvider> m_synth_backend_up;
 #define COMPONENT(Name, PrettyName, ID) ValueObject *m_##Name;
 #include "URLComponents.def"
 
