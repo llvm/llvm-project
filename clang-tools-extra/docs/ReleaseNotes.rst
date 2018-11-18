@@ -81,6 +81,12 @@ Improvements to clang-tidy
   ``absl::Duration`` factory functions are called when the more-efficient
   integer versions could be used instead.
 
+- New :doc:`abseil-duration-factory-scale
+  <clang-tidy/checks/abseil-duration-factory-scale>` check.
+
+  Checks for cases where arguments to ``absl::Duration`` factory functions are
+  scaled internally and could be changed to a different factory function.
+
 - New :doc:`abseil-faster-strsplit-delimiter
   <clang-tidy/checks/abseil-faster-strsplit-delimiter>` check.
 

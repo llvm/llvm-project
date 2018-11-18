@@ -4,6 +4,7 @@ add_clang_library(clangTidyAbseilModule
   AbseilTidyModule.cpp
   DurationDivisionCheck.cpp
   DurationFactoryFloatCheck.cpp
+  DurationFactoryScaleCheck.cpp
   FasterStrsplitDelimiterCheck.cpp
   NoInternalDependenciesCheck.cpp
   NoNamespaceCheck.cpp
