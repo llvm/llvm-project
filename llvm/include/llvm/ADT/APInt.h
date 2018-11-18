@@ -1395,7 +1395,7 @@ public:
   ///
   /// Set the given bit to 1 whose position is given as "bitPosition".
   void setBit(unsigned BitPosition) {
-    assert(BitPosition <= BitWidth && "BitPosition out of range");
+    assert(BitPosition < BitWidth && "BitPosition out of range");
     WordType Mask = maskBit(BitPosition);
     if (isSingleWord())
       U.VAL |= Mask;
@@ -1454,7 +1454,7 @@ public:
   ///
   /// Set the given bit to 0 whose position is given as "bitPosition".
   void clearBit(unsigned BitPosition) {
-    assert(BitPosition <= BitWidth && "BitPosition out of range");
+    assert(BitPosition < BitWidth && "BitPosition out of range");
     WordType Mask = ~maskBit(BitPosition);
     if (isSingleWord())
       U.VAL &= Mask;
