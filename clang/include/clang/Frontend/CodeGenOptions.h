@@ -129,6 +129,12 @@ public:
   /// The filename with path we use for coverage notes files.
   std::string CoverageNotesFile;
 
+  /// Regexes separated by a semi-colon to filter the files to instrument.
+  std::string ProfileFilterFiles;
+
+  /// Regexes separated by a semi-colon to filter the files to not instrument.
+  std::string ProfileExcludeFiles;
+
   /// The version string to put into coverage files.
   char CoverageVersion[4];
 
