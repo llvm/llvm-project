@@ -5435,13 +5435,14 @@ define <8 x float> @uitofp_load_8i8_to_8f32(<8 x i8> *%a) {
 define void @aggregate_sitofp_8i16_to_8f32(%Arguments* nocapture readonly %a0) {
 ; SSE2-LABEL: aggregate_sitofp_8i16_to_8f32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq 24(%rdi), %rax
-; SSE2-NEXT:    movdqu 8(%rdi), %xmm0
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSE2-NEXT:    psrad $16, %xmm1
-; SSE2-NEXT:    cvtdq2ps %xmm1, %xmm1
-; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    psrad $16, %xmm0
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    psrad $16, %xmm1
+; SSE2-NEXT:    movq 24(%rdi), %rax
+; SSE2-NEXT:    cvtdq2ps %xmm1, %xmm1
 ; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; SSE2-NEXT:    movaps %xmm0, 16(%rax)
 ; SSE2-NEXT:    movaps %xmm1, (%rax)
@@ -5450,14 +5451,12 @@ define void @aggregate_sitofp_8i16_to_8f32(%Arguments* nocapture readonly %a0) {
 ; SSE41-LABEL: aggregate_sitofp_8i16_to_8f32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq 24(%rdi), %rax
-; SSE41-NEXT:    movdqu 8(%rdi), %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; SSE41-NEXT:    pmovsxwd %xmm1, %xmm1
+; SSE41-NEXT:    pmovsxwd 16(%rdi), %xmm0
+; SSE41-NEXT:    pmovsxwd 8(%rdi), %xmm1
 ; SSE41-NEXT:    cvtdq2ps %xmm1, %xmm1
-; SSE41-NEXT:    pmovsxwd %xmm0, %xmm0
 ; SSE41-NEXT:    cvtdq2ps %xmm0, %xmm0
-; SSE41-NEXT:    movaps %xmm0, (%rax)
-; SSE41-NEXT:    movaps %xmm1, 16(%rax)
+; SSE41-NEXT:    movaps %xmm0, 16(%rax)
+; SSE41-NEXT:    movaps %xmm1, (%rax)
 ; SSE41-NEXT:    retq
 ;
 ; AVX1-LABEL: aggregate_sitofp_8i16_to_8f32:

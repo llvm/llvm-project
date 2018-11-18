@@ -11,11 +11,9 @@
 define <16 x i8> @testv16i16_trunc_v16i8(<16 x i16> %x) {
 ; AVX256NOBW-LABEL: testv16i16_trunc_v16i8:
 ; AVX256NOBW:       # %bb.0:
+; AVX256NOBW-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; AVX256NOBW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX256NOBW-NEXT:    vmovdqa {{.*#+}} xmm2 = <0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u>
-; AVX256NOBW-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
-; AVX256NOBW-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
-; AVX256NOBW-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX256NOBW-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX256NOBW-NEXT:    vzeroupper
 ; AVX256NOBW-NEXT:    retq
 ;
