@@ -61,6 +61,22 @@ ifeq "$(OS)" "Windows_NT"
 endif
 
 #----------------------------------------------------------------------
+# If the OS is Windows use double-quotes in commands
+#
+# For other operating systems, single-quotes work fine, but on Windows
+# we strictly required double-quotes
+#----------------------------------------------------------------------
+ifeq "$(HOST_OS)" "Windows_NT"
+	JOIN_CMD = &
+	QUOTE = "
+	FIXUP_SYNTAX_HIGHLIGHTING_IN_MY_EDITOR = "
+else
+	JOIN_CMD = ;
+	QUOTE = '
+	FIXUP_SYNTAX_HIGHLIGHTING_IN_MY_EDITOR = '
+endif
+
+#----------------------------------------------------------------------
 # If TRIPLE is not defined try to set the ARCH, CC, CFLAGS, and more
 # from the triple alone
 #----------------------------------------------------------------------
@@ -74,8 +90,8 @@ ifneq "$(TRIPLE)" ""
 	TRIPLE_VERSION =$(word 2, $(triple_os_and_version))
 	ifeq "$(TRIPLE_VENDOR)" "apple"
 		ifeq "$(TRIPLE_OS)" "ios"
-		    CODESIGN := codesign
-		    ifeq "$(SDKROOT)" ""
+			CODESIGN := codesign
+			ifeq "$(SDKROOT)" ""
 				# Set SDKROOT if it wasn't set
 				ifneq (,$(findstring arm,$(ARCH)))
 					SDKROOT = $(shell xcrun --sdk iphoneos --show-sdk-path)
@@ -253,12 +269,7 @@ ifeq "$(MAKE_DWO)" "YES"
 endif
 
 # Use a shared module cache when building in the default test build directory.
-ifeq "$(OS)" "Windows_NT"
-CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/module-cache
-else
-# FIXME: Get sed to work on Windows here.
-CLANG_MODULE_CACHE_DIR := $(shell echo "$(BUILDDIR)" | sed 's/lldb-test-build.noindex.*/lldb-test-build.noindex\/module-cache-clang/')
-endif
+CLANG_MODULE_CACHE_DIR := $(shell echo "$(BUILDDIR)" | sed $(QUOTE)s/lldb-test-build.noindex.*/lldb-test-build.noindex\/module-cache-clang/$(QUOTE))
 
 ifeq "$(findstring lldb-test-build.noindex, $(BUILDDIR))" ""
 CLANG_MODULE_CACHE_DIR := $(BUILDDIR)/module-cache
@@ -343,7 +354,7 @@ ifneq "$(OS)" "Darwin"
 endif
 
 ifdef PIE
-    LDFLAGS += -pie
+	LDFLAGS += -pie
 endif
 
 #----------------------------------------------------------------------
@@ -408,17 +419,17 @@ ifneq "$(strip $(DYLIB_OBJC_SOURCES))" ""
 endif
 
 ifneq "$(strip $(DYLIB_CXX_SOURCES))" ""
-    DYLIB_OBJECTS +=$(strip $(DYLIB_CXX_SOURCES:.cpp=.o))
-    CXX = $(call cxx_compiler,$(CC))
-    LD = $(call cxx_linker,$(CC))
+	DYLIB_OBJECTS +=$(strip $(DYLIB_CXX_SOURCES:.cpp=.o))
+	CXX = $(call cxx_compiler,$(CC))
+	LD = $(call cxx_linker,$(CC))
 endif
 
 #----------------------------------------------------------------------
 # Check if we have a precompiled header
 #----------------------------------------------------------------------
 ifneq "$(strip $(PCH_CXX_SOURCE))" ""
-    PCH_OUTPUT = $(PCH_CXX_SOURCE:.h=.h.pch)
-    PCHFLAGS = -include $(PCH_CXX_SOURCE)
+	PCH_OUTPUT = $(PCH_CXX_SOURCE:.h=.h.pch)
+	PCHFLAGS = -include $(PCH_CXX_SOURCE)
 endif
 
 #----------------------------------------------------------------------
@@ -500,21 +511,21 @@ ifneq "$(strip $(CXX_SOURCES) $(OBJCXX_SOURCES))" ""
 ifneq "$(filter g++,$(CXX))" ""
 	CXXVERSION = $(shell $(CXX) -dumpversion | cut -b 1-3)
 	ifeq "$(CXXVERSION)" "4.6"
-                # GCC 4.6 cannot handle -std=c++11, so replace it with -std=c++0x
-                # instead. FIXME: remove once GCC version is upgraded.
+		# GCC 4.6 cannot handle -std=c++11, so replace it with -std=c++0x
+		# instead. FIXME: remove once GCC version is upgraded.
 		override CXXFLAGS := $(subst -std=c++11,-std=c++0x,$(CXXFLAGS))
 	endif
 endif
 endif
 
 ifeq ($(findstring clang, $(CXX)), clang)
-  CXXFLAGS += --driver-mode=g++
+	CXXFLAGS += --driver-mode=g++
 endif
 
 ifneq "$(CXX)" ""
-  ifeq ($(findstring clang, $(LD)), clang)
-    LDFLAGS += --driver-mode=g++
-  endif
+	ifeq ($(findstring clang, $(LD)), clang)
+		LDFLAGS += --driver-mode=g++
+	endif
 endif
 
 #----------------------------------------------------------------------
@@ -628,16 +639,6 @@ endif
 # the compiler -MM option. The -M option will list all system headers,
 # and the -MM option will list all non-system dependencies.
 #----------------------------------------------------------------------
-ifeq "$(HOST_OS)" "Windows_NT"
-	JOIN_CMD = &
-	QUOTE = "
-	FIXUP_SYNTAX_HIGHLIGHTING_IN_MY_EDITOR = "
-else
-	JOIN_CMD = ;
-	QUOTE = '
-	FIXUP_SYNTAX_HIGHLIGHTING_IN_MY_EDITOR = '
-endif
-
 %.d: %.c
 	@rm -f $@ $(JOIN_CMD) \
 	$(CC) -M $(CFLAGS) $< > $@.tmp && \
