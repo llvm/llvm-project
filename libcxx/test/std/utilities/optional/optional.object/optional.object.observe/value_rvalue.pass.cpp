@@ -10,12 +10,13 @@
 // UNSUPPORTED: c++98, c++03, c++11, c++14
 // <optional>
 
-// XFAIL: with_system_cxx_lib=macosx10.12
-// XFAIL: with_system_cxx_lib=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9
-// XFAIL: with_system_cxx_lib=macosx10.7
-// XFAIL: with_system_cxx_lib=macosx10.8
+// XFAIL: availability=macosx10.13
+// XFAIL: availability=macosx10.12
+// XFAIL: availability=macosx10.11
+// XFAIL: availability=macosx10.10
+// XFAIL: availability=macosx10.9
+// XFAIL: availability=macosx10.8
+// XFAIL: availability=macosx10.7
 
 // constexpr T& optional<T>::value() &&;
 
