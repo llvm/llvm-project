@@ -90,6 +90,10 @@ static MCTargetStreamer *createAsmTargetStreamer(MCStreamer &S,
   return new WebAssemblyTargetAsmStreamer(S, OS);
 }
 
+static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {
+  return new WebAssemblyTargetNullStreamer(S);
+}
+
 // Force static initialization.
 extern "C" void LLVMInitializeWebAssemblyTargetMC() {
   for (Target *T :
@@ -120,6 +124,8 @@ extern "C" void LLVMInitializeWebAssemblyTargetMC() {
                                                  createObjectTargetStreamer);
     // Register the asm target streamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T, createAsmTargetStreamer);
+    // Register the null target streamer.
+    TargetRegistry::RegisterNullTargetStreamer(*T, createNullTargetStreamer);
   }
 }
 

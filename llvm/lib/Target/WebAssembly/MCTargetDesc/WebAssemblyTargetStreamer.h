@@ -88,6 +88,23 @@ public:
   void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) override;
 };
 
+/// This part is for null output
+class WebAssemblyTargetNullStreamer final : public WebAssemblyTargetStreamer {
+public:
+  explicit WebAssemblyTargetNullStreamer(MCStreamer &S)
+      : WebAssemblyTargetStreamer(S) {}
+
+  void emitParam(MCSymbol *Symbol, ArrayRef<MVT> Types) override {}
+  void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override {}
+  void emitLocal(ArrayRef<MVT> Types) override {}
+  void emitEndFunc() override {}
+  void emitIndirectFunctionType(MCSymbolWasm *Symbol) override {}
+  void emitIndIdx(const MCExpr *Value) override {}
+  void emitGlobalType(MCSymbolWasm *Sym) override {}
+  void emitEventType(MCSymbolWasm *Sym) override {}
+  void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) override {}
+};
+
 } // end namespace llvm
 
 #endif

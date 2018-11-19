@@ -41,6 +41,316 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-simplifycfg"
 
+STATISTIC(NumTerminatorsFolded,
+          "Number of terminators folded to unconditional branches");
+
+/// If \p BB is a switch or a conditional branch, but only one of its successors
+/// can be reached from this block in runtime, return this successor. Otherwise,
+/// return nullptr.
+static BasicBlock *getOnlyLiveSuccessor(BasicBlock *BB) {
+  Instruction *TI = BB->getTerminator();
+  if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
+    if (BI->isUnconditional())
+      return nullptr;
+    if (BI->getSuccessor(0) == BI->getSuccessor(1))
+      return BI->getSuccessor(0);
+    ConstantInt *Cond = dyn_cast<ConstantInt>(BI->getCondition());
+    if (!Cond)
+      return nullptr;
+    return Cond->isZero() ? BI->getSuccessor(1) : BI->getSuccessor(0);
+  }
+
+  if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
+    auto *CI = dyn_cast<ConstantInt>(SI->getCondition());
+    if (!CI)
+      return nullptr;
+    for (auto Case : SI->cases())
+      if (Case.getCaseValue() == CI)
+        return Case.getCaseSuccessor();
+    return SI->getDefaultDest();
+  }
+
+  return nullptr;
+}
+
+/// Helper class that can turn branches and switches with constant conditions
+/// into unconditional branches.
+class ConstantTerminatorFoldingImpl {
+private:
+  Loop &L;
+  LoopInfo &LI;
+  DominatorTree &DT;
+
+  // Whether or not the current loop will still exist after terminator constant
+  // folding will be done. In theory, there are two ways how it can happen:
+  // 1. Loop's latch(es) become unreachable from loop header;
+  // 2. Loop's header becomes unreachable from method entry.
+  // In practice, the second situation is impossible because we only modify the
+  // current loop and its preheader and do not affect preheader's reachibility
+  // from any other block. So this variable set to true means that loop's latch
+  // has become unreachable from loop header.
+  bool DeleteCurrentLoop = false;
+
+  // The blocks of the original loop that will still be reachable from entry
+  // after the constant folding.
+  SmallPtrSet<BasicBlock *, 8> LiveLoopBlocks;
+  // The blocks of the original loop that will become unreachable from entry
+  // after the constant folding.
+  SmallPtrSet<BasicBlock *, 8> DeadLoopBlocks;
+  // The exits of the original loop that will still be reachable from entry
+  // after the constant folding.
+  SmallPtrSet<BasicBlock *, 8> LiveExitBlocks;
+  // The exits of the original loop that will become unreachable from entry
+  // after the constant folding.
+  SmallPtrSet<BasicBlock *, 8> DeadExitBlocks;
+  // The blocks that will still be a part of the current loop after folding.
+  SmallPtrSet<BasicBlock *, 8> BlocksInLoopAfterFolding;
+  // The blocks that have terminators with constant condition that can be
+  // folded. Note: fold candidates should be in L but not in any of its
+  // subloops to avoid complex LI updates.
+  SmallVector<BasicBlock *, 8> FoldCandidates;
+
+  void dump() const {
+    dbgs() << "Constant terminator folding for loop " << L << "\n";
+    dbgs() << "After terminator constant-folding, the loop will";
+    if (!DeleteCurrentLoop)
+      dbgs() << " not";
+    dbgs() << " be destroyed\n";
+    dbgs() << "Blocks in which we can constant-fold terminator:\n";
+    for (const BasicBlock *BB : FoldCandidates)
+      dbgs() << "\t" << BB->getName() << "\n";
+    auto PrintOutSet = [&](const char *Message,
+                           const SmallPtrSetImpl<BasicBlock *> &S) {
+      dbgs() << Message << "\n";
+      for (const BasicBlock *BB : S)
+        dbgs() << "\t" << BB->getName() << "\n";
+    };
+    PrintOutSet("Live blocks from the original loop:", LiveLoopBlocks);
+    PrintOutSet("Dead blocks from the original loop:", DeadLoopBlocks);
+    PrintOutSet("Live exit blocks:", LiveExitBlocks);
+    PrintOutSet("Dead exit blocks:", DeadExitBlocks);
+    if (!DeleteCurrentLoop)
+      PrintOutSet("The following blocks will still be part of the loop:",
+                  BlocksInLoopAfterFolding);
+  }
+
+  /// Fill all information about status of blocks and exits of the current loop
+  /// if constant folding of all branches will be done.
+  void analyze() {
+    LoopBlocksDFS DFS(&L);
+    DFS.perform(&LI);
+    assert(DFS.isComplete() && "DFS is expected to be finished");
+
+    // Collect live and dead loop blocks and exits.
+    SmallPtrSet<BasicBlock *, 8> ExitBlocks;
+    LiveLoopBlocks.insert(L.getHeader());
+    for (auto I = DFS.beginRPO(), E = DFS.endRPO(); I != E; ++I) {
+      BasicBlock *BB = *I;
+
+      // If a loop block wasn't marked as live so far, then it's dead.
+      if (!LiveLoopBlocks.count(BB)) {
+        DeadLoopBlocks.insert(BB);
+        continue;
+      }
+
+      BasicBlock *TheOnlySucc = getOnlyLiveSuccessor(BB);
+
+      // If a block has only one live successor, it's a candidate on constant
+      // folding. Only handle blocks from current loop: branches in child loops
+      // are skipped because if they can be folded, they should be folded during
+      // the processing of child loops.
+      if (TheOnlySucc && LI.getLoopFor(BB) == &L)
+        FoldCandidates.push_back(BB);
+
+      // Handle successors.
+      auto ProcessSuccessor = [&](BasicBlock *Succ, bool IsLive) {
+        if (!L.contains(Succ)) {
+          if (IsLive)
+            LiveExitBlocks.insert(Succ);
+          ExitBlocks.insert(Succ);
+        } else if (IsLive)
+          LiveLoopBlocks.insert(Succ);
+      };
+      for (BasicBlock *Succ : successors(BB))
+        ProcessSuccessor(Succ, !TheOnlySucc || TheOnlySucc == Succ);
+    }
+
+    // Sanity check: amount of dead and live loop blocks should match the total
+    // number of blocks in loop.
+    assert(L.getNumBlocks() == LiveLoopBlocks.size() + DeadLoopBlocks.size() &&
+           "Malformed block sets?");
+
+    // Now, all exit blocks that are not marked as live are dead.
+    for (auto *ExitBlock : ExitBlocks)
+      if (!LiveExitBlocks.count(ExitBlock))
+        DeadExitBlocks.insert(ExitBlock);
+
+    // Whether or not the edge From->To will still be present in graph after the
+    // folding.
+    auto IsEdgeLive = [&](BasicBlock *From, BasicBlock *To) {
+      if (!LiveLoopBlocks.count(From))
+        return false;
+      BasicBlock *TheOnlySucc = getOnlyLiveSuccessor(From);
+      return !TheOnlySucc || TheOnlySucc == To;
+    };
+
+    // The loop will not be destroyed if its latch is live.
+    DeleteCurrentLoop = !IsEdgeLive(L.getLoopLatch(), L.getHeader());
+
+    // If we are going to delete the current loop completely, no extra analysis
+    // is needed.
+    if (DeleteCurrentLoop)
+      return;
+
+    // Otherwise, we should check which blocks will still be a part of the
+    // current loop after the transform.
+    BlocksInLoopAfterFolding.insert(L.getLoopLatch());
+    // If the loop is live, then we should compute what blocks are still in
+    // loop after all branch folding has been done. A block is in loop if
+    // it has a live edge to another block that is in the loop; by definition,
+    // latch is in the loop.
+    auto BlockIsInLoop = [&](BasicBlock *BB) {
+      return any_of(successors(BB), [&](BasicBlock *Succ) {
+        return BlocksInLoopAfterFolding.count(Succ) && IsEdgeLive(BB, Succ);
+      });
+    };
+    for (auto I = DFS.beginPostorder(), E = DFS.endPostorder(); I != E; ++I) {
+      BasicBlock *BB = *I;
+      if (BlockIsInLoop(BB))
+        BlocksInLoopAfterFolding.insert(BB);
+    }
+
+    // Sanity check: header must be in loop.
+    assert(BlocksInLoopAfterFolding.count(L.getHeader()) &&
+           "Header not in loop?");
+  }
+
+  /// Constant-fold terminators of blocks acculumated in FoldCandidates into the
+  /// unconditional branches.
+  void foldTerminators() {
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+
+    for (BasicBlock *BB : FoldCandidates) {
+      assert(LI.getLoopFor(BB) == &L && "Should be a loop block!");
+      BasicBlock *TheOnlySucc = getOnlyLiveSuccessor(BB);
+      assert(TheOnlySucc && "Should have one live successor!");
+
+      LLVM_DEBUG(dbgs() << "Replacing terminator of " << BB->getName()
+                        << " with an unconditional branch to the block "
+                        << TheOnlySucc->getName() << "\n");
+
+      SmallPtrSet<BasicBlock *, 2> DeadSuccessors;
+      // Remove all BB's successors except for the live one.
+      for (auto *Succ : successors(BB))
+        if (Succ != TheOnlySucc)
+          DeadSuccessors.insert(Succ);
+
+      IRBuilder<> Builder(BB->getContext());
+      Instruction *Term = BB->getTerminator();
+      Builder.SetInsertPoint(Term);
+      Builder.CreateBr(TheOnlySucc);
+      Term->eraseFromParent();
+
+      for (auto *DeadSucc : DeadSuccessors)
+        DTU.deleteEdge(BB, DeadSucc);
+
+      ++NumTerminatorsFolded;
+    }
+  }
+
+public:
+  ConstantTerminatorFoldingImpl(Loop &L, LoopInfo &LI, DominatorTree &DT)
+      : L(L), LI(LI), DT(DT) {}
+  bool run() {
+    assert(L.getLoopLatch() && "Should be single latch!");
+
+    // Collect all available information about status of blocks after constant
+    // folding.
+    analyze();
+
+    LLVM_DEBUG(dbgs() << "In function " << L.getHeader()->getParent()->getName()
+                      << ": ");
+
+    // Nothing to constant-fold.
+    if (FoldCandidates.empty()) {
+      LLVM_DEBUG(
+          dbgs() << "No constant terminator folding candidates found in loop "
+                 << L.getHeader()->getName() << "\n");
+      return false;
+    }
+
+    // TODO: Support deletion of the current loop.
+    if (DeleteCurrentLoop) {
+      LLVM_DEBUG(
+          dbgs()
+          << "Give up constant terminator folding in loop "
+          << L.getHeader()->getName()
+          << ": we don't currently support deletion of the current loop.\n");
+      return false;
+    }
+
+    // TODO: Support deletion of dead loop blocks.
+    if (!DeadLoopBlocks.empty()) {
+      LLVM_DEBUG(dbgs() << "Give up constant terminator folding in loop "
+                        << L.getHeader()->getName()
+                        << ": we don't currently"
+                           " support deletion of dead in-loop blocks.\n");
+      return false;
+    }
+
+    // TODO: Support dead loop exits.
+    if (!DeadExitBlocks.empty()) {
+      LLVM_DEBUG(dbgs() << "Give up constant terminator folding in loop "
+                        << L.getHeader()->getName()
+                        << ": we don't currently support dead loop exits.\n");
+      return false;
+    }
+
+    // TODO: Support blocks that are not dead, but also not in loop after the
+    // folding.
+    if (BlocksInLoopAfterFolding.size() != L.getNumBlocks()) {
+      LLVM_DEBUG(
+          dbgs() << "Give up constant terminator folding in loop "
+                 << L.getHeader()->getName()
+                 << ": we don't currently"
+                    " support blocks that are not dead, but will stop "
+                    "being a part of the loop after constant-folding.\n");
+      return false;
+    }
+
+    // Dump analysis results.
+    LLVM_DEBUG(dump());
+
+    LLVM_DEBUG(dbgs() << "Constant-folding " << FoldCandidates.size()
+                      << " terminators in loop " << L.getHeader()->getName()
+                      << "\n");
+
+    // Make the actual transforms.
+    foldTerminators();
+
+#ifndef NDEBUG
+    // Make sure that we have preserved all data structures after the transform.
+    DT.verify();
+    assert(DT.isReachableFromEntry(L.getHeader()));
+    LI.verify(DT);
+#endif
+
+    return true;
+  }
+};
+
+/// Turn branches and switches with known constant conditions into unconditional
+/// branches.
+static bool constantFoldTerminators(Loop &L, DominatorTree &DT, LoopInfo &LI) {
+  // To keep things simple, only process loops with single latch. We
+  // canonicalize most loops to this form. We can support multi-latch if needed.
+  if (!L.getLoopLatch())
+    return false;
+
+  ConstantTerminatorFoldingImpl BranchFolder(L, LI, DT);
+  return BranchFolder.run();
+}
+
 static bool mergeBlocksIntoPredecessors(Loop &L, DominatorTree &DT,
                                         LoopInfo &LI, MemorySSAUpdater *MSSAU) {
   bool Changed = false;
@@ -72,6 +382,9 @@ static bool mergeBlocksIntoPredecessors(Loop &L, DominatorTree &DT,
 static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
                             ScalarEvolution &SE, MemorySSAUpdater *MSSAU) {
   bool Changed = false;
+
+  // Constant-fold terminators with known constant conditions.
+  Changed |= constantFoldTerminators(L, DT, LI);
 
   // Eliminate unconditional branches by merging blocks into their predecessors.
   Changed |= mergeBlocksIntoPredecessors(L, DT, LI, MSSAU);

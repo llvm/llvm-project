@@ -416,7 +416,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   OptSize = F.optForSize();
 
   ProfileSummaryInfo *PSI =
-      getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   if (ProfileGuidedSectionPrefix) {
     if (PSI->isFunctionHotInCallGraph(&F, *BFI))
       F.setSectionPrefix(".hot");
@@ -2798,7 +2798,7 @@ bool PhiNodeSetIterator::operator==(const PhiNodeSetIterator &RHS) const {
 }
 
 bool PhiNodeSetIterator::operator!=(const PhiNodeSetIterator &RHS) const {
-  return CurrentIndex != RHS.CurrentIndex;
+  return !((*this) == RHS);
 }
 
 /// Keep track of simplification of Phi nodes.

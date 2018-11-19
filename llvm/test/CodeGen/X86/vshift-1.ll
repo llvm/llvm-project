@@ -29,7 +29,6 @@ define void @shift1b(<2 x i64> %val, <2 x i64>* %dst, i64 %amt) nounwind {
 ; X32:       # %bb.0: # %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; X32-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; X32-NEXT:    psllq %xmm1, %xmm0
 ; X32-NEXT:    movdqa %xmm0, (%eax)
 ; X32-NEXT:    retl

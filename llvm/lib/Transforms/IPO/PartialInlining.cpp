@@ -359,7 +359,7 @@ struct PartialInlinerLegacyPass : public ModulePass {
     TargetTransformInfoWrapperPass *TTIWP =
         &getAnalysis<TargetTransformInfoWrapperPass>();
     ProfileSummaryInfo *PSI =
-        getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+        &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
 
     std::function<AssumptionCache &(Function &)> GetAssumptionCache =
         [&ACT](Function &F) -> AssumptionCache & {
@@ -468,7 +468,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(Function *F,
     // Only consider regions with predecessor blocks that are considered
     // not-cold (default: part of the top 99.99% of all block counters)
     // AND greater than our minimum block execution count (default: 100).
-    if (PSI->isColdBB(thisBB, BFI) ||
+    if (PSI->isColdBlock(thisBB, BFI) ||
         BBProfileCount(thisBB) < MinBlockCounterExecution)
       continue;
     for (auto SI = succ_begin(thisBB); SI != succ_end(thisBB); ++SI) {
