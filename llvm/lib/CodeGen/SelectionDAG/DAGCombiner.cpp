@@ -7236,21 +7236,24 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   EVT VT0 = N0.getValueType();
   SDLoc DL(N);
 
-  // fold (select C, X, X) -> X
-  if (N1 == N2)
-    return N1;
-
-  // fold (select, C, X, undef) -> X
-  if (N2.isUndef())
-    return N1;
+  // select undef, N1, N2 --> N1 (if it's a constant), otherwise N2
+  if (N0.isUndef())
+    return isa<ConstantSDNode>(N1) ? N1 : N2;
+  // select, ?, undef, N2 --> N2
   if (N1.isUndef())
     return N2;
+  // select, ?, N1, undef --> N1
+  if (N2.isUndef())
+    return N1;
 
-  if (const ConstantSDNode *N0C = dyn_cast<const ConstantSDNode>(N0)) {
-    // fold (select true, X, Y) -> X
-    // fold (select false, X, Y) -> Y
-    return !N0C->isNullValue() ? N1 : N2;
-  }
+  // fold (select true, X, Y) -> X
+  // fold (select false, X, Y) -> Y
+  if (auto *N0C = dyn_cast<const ConstantSDNode>(N0))
+    return N0C->isNullValue() ? N2 : N1;
+
+  // select ?, N1, N1 --> N1
+  if (N1 == N2)
+    return N1;
 
   // fold (select X, X, Y) -> (or X, Y)
   // fold (select X, 1, Y) -> (or C, Y)

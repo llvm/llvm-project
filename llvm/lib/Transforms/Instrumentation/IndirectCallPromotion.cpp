@@ -427,7 +427,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI,
 
 bool PGOIndirectCallPromotionLegacyPass::runOnModule(Module &M) {
   ProfileSummaryInfo *PSI =
-      getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
 
   // Command-line option has the priority for InLTO.
   return promoteIndirectCalls(M, PSI, InLTO | ICPLTOMode,

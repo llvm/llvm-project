@@ -2040,7 +2040,7 @@ bool ControlHeightReductionLegacyPass::runOnFunction(Function &F) {
       getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   ProfileSummaryInfo &PSI =
-      *getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+      getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   RegionInfo &RI = getAnalysis<RegionInfoPass>().getRegionInfo();
   std::unique_ptr<OptimizationRemarkEmitter> OwnedORE =
       llvm::make_unique<OptimizationRemarkEmitter>(&F);
