@@ -246,6 +246,7 @@ void BackgroundIndex::update(StringRef MainFile, SymbolSlab Symbols,
       IndexFileOut Shard;
       Shard.Symbols = SS.get();
       Shard.Refs = RS.get();
+      Shard.Digest = &Hash;
       if (auto Error = IndexStorage->storeShard(Path, Shard))
         elog("Failed to write background-index shard for file {0}: {1}", Path,
              std::move(Error));

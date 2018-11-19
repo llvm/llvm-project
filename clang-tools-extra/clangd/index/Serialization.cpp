@@ -363,6 +363,13 @@ Expected<IndexFileIn> readRIFF(StringRef Data) {
     return Strings.takeError();
 
   IndexFileIn Result;
+  if (Chunks.count("hash")) {
+    Reader Hash(Chunks.lookup("hash"));
+    llvm::StringRef Digest = Hash.consume(20);
+    Result.Digest.emplace();
+    std::copy(Digest.bytes_begin(), Digest.bytes_end(), Result.Digest->begin());
+  }
+
   if (Chunks.count("symb")) {
     Reader SymbolReader(Chunks.lookup("symb"));
     SymbolSlab::Builder Symbols;
@@ -398,6 +405,12 @@ void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
     write32(Version, MetaOS);
   }
   RIFF.Chunks.push_back({riff::fourCC("meta"), Meta});
+
+  if (Data.Digest) {
+    llvm::StringRef Hash(reinterpret_cast<const char *>(Data.Digest->data()),
+                         Data.Digest->size());
+    RIFF.Chunks.push_back({riff::fourCC("hash"), Hash});
+  }
 
   StringTableOut Strings;
   std::vector<Symbol> Symbols;

@@ -9,6 +9,7 @@
 
 #include "index/Index.h"
 #include "index/Serialization.h"
+#include "llvm/Support/SHA1.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -162,6 +163,33 @@ TEST(SerializationTest, BinaryConversions) {
 
   auto In2 = readIndexFile(Serialized);
   ASSERT_TRUE(bool(In2)) << In.takeError();
+  ASSERT_TRUE(In2->Symbols);
+  ASSERT_TRUE(In2->Refs);
+
+  // Assert the YAML serializations match, for nice comparisons and diffs.
+  EXPECT_THAT(YAMLFromSymbols(*In2->Symbols),
+              UnorderedElementsAreArray(YAMLFromSymbols(*In->Symbols)));
+  EXPECT_THAT(YAMLFromRefs(*In2->Refs),
+              UnorderedElementsAreArray(YAMLFromRefs(*In->Refs)));
+}
+
+TEST(SerializationTest, HashTest) {
+  auto In = readIndexFile(YAML);
+  EXPECT_TRUE(bool(In)) << In.takeError();
+
+  std::string TestContent("TESTCONTENT");
+  auto Digest =
+      llvm::SHA1::hash({reinterpret_cast<const uint8_t *>(TestContent.data()),
+                        TestContent.size()});
+  // Write to binary format, and parse again.
+  IndexFileOut Out(*In);
+  Out.Format = IndexFileFormat::RIFF;
+  Out.Digest = &Digest;
+  std::string Serialized = to_string(Out);
+
+  auto In2 = readIndexFile(Serialized);
+  ASSERT_TRUE(bool(In2)) << In.takeError();
+  ASSERT_EQ(In2->Digest, Digest);
   ASSERT_TRUE(In2->Symbols);
   ASSERT_TRUE(In2->Refs);
 

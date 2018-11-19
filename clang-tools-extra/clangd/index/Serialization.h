@@ -39,6 +39,8 @@ enum class IndexFileFormat {
 struct IndexFileIn {
   llvm::Optional<SymbolSlab> Symbols;
   llvm::Optional<RefSlab> Refs;
+  // Digest of the source file that generated the contents.
+  llvm::Optional<std::array<uint8_t, 20>> Digest;
 };
 // Parse an index file. The input must be a RIFF or YAML file.
 llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef);
@@ -47,6 +49,8 @@ llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef);
 struct IndexFileOut {
   const SymbolSlab *Symbols = nullptr;
   const RefSlab *Refs = nullptr;
+  // Digest of the source file that generated the contents.
+  const std::array<uint8_t, 20> *Digest = nullptr;
   // TODO: Support serializing Dex posting lists.
   IndexFileFormat Format = IndexFileFormat::RIFF;
 
