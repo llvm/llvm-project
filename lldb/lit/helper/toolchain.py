@@ -1,4 +1,4 @@
-ï»¿import os
+import os
 import platform
 import subprocess
 import sys
@@ -42,12 +42,14 @@ def _use_msvc_substitutions(config):
     # If running from a Visual Studio Command prompt (e.g. vcvars), this will
     # detect the include and lib paths, and find cl.exe and link.exe and create
     # substitutions for each of them that explicitly specify /I and /L paths
-    cl = '"' + lit.util.which('cl') + '"'
-    link = '"' + lit.util.which('link') + '"'
+    cl = lit.util.which('cl')
+    link = lit.util.which('link')
 
     if not cl or not link:
         return
 
+    cl = '"' + cl + '"'
+    link = '"' + link + '"'
     includes = os.getenv('INCLUDE', '').split(';')
     libs = os.getenv('LIB', '').split(';')
 

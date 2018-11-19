@@ -13,6 +13,8 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>       // for std::max_align_t
+
 #include "test_macros.h"
 
 // std::array is explicitly allowed to be initialized with A a = { init-list };.
