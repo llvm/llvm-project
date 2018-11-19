@@ -356,6 +356,11 @@ public:
   void adjustTargetSpecificDataForLambdas(
       CodeGenFunction &CGF, const OMPExecutableDirective &D) const override;
 
+  /// Perform check on requires decl to ensure that target architecture
+  /// supports unified addressing
+  void checkArchForUnifiedAddressing(CodeGenModule &CGM,
+                                     const OMPRequiresDecl *D) const override;
+
 private:
   /// Track the execution mode when codegening directives within a target
   /// region. The appropriate mode (SPMD/NON-SPMD) is set on entry to the

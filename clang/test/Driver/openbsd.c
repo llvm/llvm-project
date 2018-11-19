@@ -112,3 +112,8 @@
 // RUN:   | FileCheck -check-prefix=CHECK-ARM-FLOAT-ABI %s
 // CHECK-ARM-FLOAT-ABI-NOT: "-target-feature" "+soft-float"
 // CHECK-ARM-FLOAT-ABI: "-target-feature" "+soft-float-abi"
+
+// Check PowerPC for Secure PLT
+// RUN: %clang -target powerpc-unknown-openbsd -### -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-POWERPC-SECUREPLT %s
+// CHECK-POWERPC-SECUREPLT: "-target-feature" "+secure-plt"

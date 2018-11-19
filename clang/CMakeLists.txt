@@ -410,7 +410,7 @@ option(CLANG_ENABLE_STATIC_ANALYZER "Build static analyzer." ON)
 
 set(CLANG_ANALYZER_Z3_INSTALL_DIR "" CACHE STRING "Install directory of the Z3 solver.")
 
-find_package(Z3 4.7.1 EXACT)
+find_package(Z3 4.7.1)
 
 if (CLANG_ANALYZER_Z3_INSTALL_DIR)
   if (NOT Z3_FOUND)

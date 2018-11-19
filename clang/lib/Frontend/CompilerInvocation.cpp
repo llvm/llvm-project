@@ -829,6 +829,10 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
     Opts.CoverageExtraChecksum = Args.hasArg(OPT_coverage_cfg_checksum);
     Opts.CoverageNoFunctionNamesInData =
         Args.hasArg(OPT_coverage_no_function_names_in_data);
+    Opts.ProfileFilterFiles =
+        Args.getLastArgValue(OPT_fprofile_filter_files_EQ);
+    Opts.ProfileExcludeFiles =
+        Args.getLastArgValue(OPT_fprofile_exclude_files_EQ);
     Opts.CoverageExitBlockBeforeBody =
         Args.hasArg(OPT_coverage_exit_block_before_body);
     if (Args.hasArg(OPT_coverage_version_EQ)) {
@@ -3361,21 +3365,6 @@ uint64_t getLastArgUInt64Value(const ArgList &Args, OptSpecifier Id,
                                uint64_t Default,
                                DiagnosticsEngine *Diags) {
   return getLastArgIntValueImpl<uint64_t>(Args, Id, Default, Diags);
-}
-
-void BuryPointer(const void *Ptr) {
-  // This function may be called only a small fixed amount of times per each
-  // invocation, otherwise we do actually have a leak which we want to report.
-  // If this function is called more than kGraveYardMaxSize times, the pointers
-  // will not be properly buried and a leak detector will report a leak, which
-  // is what we want in such case.
-  static const size_t kGraveYardMaxSize = 16;
-  LLVM_ATTRIBUTE_UNUSED static const void *GraveYard[kGraveYardMaxSize];
-  static std::atomic<unsigned> GraveYardSize;
-  unsigned Idx = GraveYardSize++;
-  if (Idx >= kGraveYardMaxSize)
-    return;
-  GraveYard[Idx] = Ptr;
 }
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>

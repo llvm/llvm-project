@@ -64,6 +64,12 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+- ``-fprofile-filter-files=[regexes]`` and ``-fprofile-exclude-files=[regexes]``.
+
+  Clang has now options to filter or exclude some files when
+  instrumenting for gcov-based profiling.
+  See the :doc:`UsersManual` for details.
+
 - ...
 
 Deprecated Compiler Flags
@@ -227,6 +233,9 @@ Undefined Behavior Sanitizer (UBSan)
   but the ``-fsanitize=implicit-integer-sign-change`` check
   is enabled by ``-fsanitize=integer``.
   (as is ``-fsanitize=implicit-integer-truncation`` check)
+
+* The Implicit Conversion Sanitizer (``-fsanitize=implicit-conversion``) has
+  learned to sanitize compound assignment operators.
 
 Core Analysis Improvements
 ==========================

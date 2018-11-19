@@ -7241,7 +7241,7 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
       (T->isVoidType() && !IsPointee))
     return;
 
-  LangAS ImpAddr;
+  LangAS ImpAddr = LangAS::Default;
   // Put OpenCL automatic variable in private address space.
   // OpenCL v1.2 s6.5:
   // The default address space name for arguments to a function in a
@@ -7263,7 +7263,9 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
     if (IsPointee) {
       ImpAddr = LangAS::opencl_generic;
     } else {
-      if (D.getContext() == DeclaratorContext::FileContext) {
+      if (D.getContext() == DeclaratorContext::TemplateArgContext) {
+        // Do not deduce address space for non-pointee type in template args
+      } else if (D.getContext() == DeclaratorContext::FileContext) {
         ImpAddr = LangAS::opencl_global;
       } else {
         if (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||

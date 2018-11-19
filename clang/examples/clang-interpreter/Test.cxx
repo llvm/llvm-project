@@ -21,7 +21,7 @@ static void ThrowerAnError(const char* Name) {
 int main(int argc, const char** argv) {
   for (int I = 0; I < argc; ++I)
    printf("arg[%d]='%s'\n", I, argv[I]);
-  
+
   try {
     ThrowerAnError("In JIT");
   } catch (const std::exception& E) {

@@ -222,6 +222,33 @@ TEST_F(FileManagerTest, getFileReturnsNULLForNonexistentFile) {
   EXPECT_EQ(nullptr, file);
 }
 
+// When calling getFile(OpenFile=false); getFile(OpenFile=true) the file is
+// opened for the second call.
+TEST_F(FileManagerTest, getFileDefersOpen) {
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(
+      new llvm::vfs::InMemoryFileSystem());
+  FS->addFile("/tmp/test", 0, llvm::MemoryBuffer::getMemBufferCopy("test"));
+  FS->addFile("/tmp/testv", 0, llvm::MemoryBuffer::getMemBufferCopy("testv"));
+  FileManager manager(options, FS);
+
+  const FileEntry *file = manager.getFile("/tmp/test", /*OpenFile=*/false);
+  ASSERT_TRUE(file != nullptr);
+  ASSERT_TRUE(file->isValid());
+  // "real path name" reveals whether the file was actually opened.
+  EXPECT_EQ("", file->tryGetRealPathName());
+
+  file = manager.getFile("/tmp/test", /*OpenFile=*/true);
+  ASSERT_TRUE(file != nullptr);
+  ASSERT_TRUE(file->isValid());
+  EXPECT_EQ("/tmp/test", file->tryGetRealPathName());
+
+  // However we should never try to open a file previously opened as virtual.
+  ASSERT_TRUE(manager.getVirtualFile("/tmp/testv", 5, 0));
+  ASSERT_TRUE(manager.getFile("/tmp/testv", /*OpenFile=*/false));
+  file = manager.getFile("/tmp/testv", /*OpenFile=*/true);
+  EXPECT_EQ("", file->tryGetRealPathName());
+}
+
 // The following tests apply to Unix-like system only.
 
 #ifndef _WIN32
