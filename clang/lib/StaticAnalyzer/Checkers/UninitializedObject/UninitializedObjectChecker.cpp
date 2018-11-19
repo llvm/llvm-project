@@ -28,9 +28,14 @@
 using namespace clang;
 using namespace clang::ento;
 
+/// We'll mark fields (and pointee of fields) that are confirmed to be
+/// uninitialized as already analyzed.
+REGISTER_SET_WITH_PROGRAMSTATE(AnalyzedRegions, const MemRegion *)
+
 namespace {
 
-class UninitializedObjectChecker : public Checker<check::EndFunction> {
+class UninitializedObjectChecker
+    : public Checker<check::EndFunction, check::DeadSymbols> {
   std::unique_ptr<BuiltinBug> BT_uninitField;
 
 public:
@@ -39,7 +44,9 @@ public:
 
   UninitializedObjectChecker()
       : BT_uninitField(new BuiltinBug(this, "Uninitialized fields")) {}
+
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
+  void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;
 };
 
 /// A basic field type, that is not a pointer or a reference, it's dynamic and
@@ -140,14 +147,20 @@ void UninitializedObjectChecker::checkEndFunction(
 
   FindUninitializedFields F(Context.getState(), R, Opts);
 
-  const UninitFieldMap &UninitFields = F.getUninitFields();
+  std::pair<ProgramStateRef, const UninitFieldMap &> UninitInfo =
+      F.getResults();
 
-  if (UninitFields.empty())
+  ProgramStateRef UpdatedState = UninitInfo.first;
+  const UninitFieldMap &UninitFields = UninitInfo.second;
+
+  if (UninitFields.empty()) {
+    Context.addTransition(UpdatedState);
     return;
+  }
 
   // There are uninitialized fields in the record.
 
-  ExplodedNode *Node = Context.generateNonFatalErrorNode(Context.getState());
+  ExplodedNode *Node = Context.generateNonFatalErrorNode(UpdatedState);
   if (!Node)
     return;
 
@@ -188,6 +201,15 @@ void UninitializedObjectChecker::checkEndFunction(
   Context.emitReport(std::move(Report));
 }
 
+void UninitializedObjectChecker::checkDeadSymbols(SymbolReaper &SR,
+                                                  CheckerContext &C) const {
+  ProgramStateRef State = C.getState();
+  for (const MemRegion *R : State->get<AnalyzedRegions>()) {
+    if (!SR.isLiveRegion(R))
+      State = State->remove<AnalyzedRegions>(R);
+  }
+}
+
 //===----------------------------------------------------------------------===//
 //                   Methods for FindUninitializedFields.
 //===----------------------------------------------------------------------===//
@@ -205,17 +227,34 @@ FindUninitializedFields::FindUninitializedFields(
     UninitFields.clear();
 }
 
-bool FindUninitializedFields::addFieldToUninits(FieldChainInfo Chain) {
+bool FindUninitializedFields::addFieldToUninits(FieldChainInfo Chain,
+                                                const MemRegion *PointeeR) {
+  const FieldRegion *FR = Chain.getUninitRegion();
+
+  assert((PointeeR || !isDereferencableType(FR->getDecl()->getType())) &&
+         "One must also pass the pointee region as a parameter for "
+         "dereferencable fields!");
+
+  if (State->contains<AnalyzedRegions>(FR))
+    return false;
+
+  if (PointeeR) {
+    if (State->contains<AnalyzedRegions>(PointeeR)) {
+      return false;
+    }
+    State = State->add<AnalyzedRegions>(PointeeR);
+  }
+
+  State = State->add<AnalyzedRegions>(FR);
+
   if (State->getStateManager().getContext().getSourceManager().isInSystemHeader(
-          Chain.getUninitRegion()->getDecl()->getLocation()))
+          FR->getDecl()->getLocation()))
     return false;
 
   UninitFieldMap::mapped_type NoteMsgBuf;
   llvm::raw_svector_ostream OS(NoteMsgBuf);
   Chain.printNoteMsg(OS);
-  return UninitFields
-      .insert(std::make_pair(Chain.getUninitRegion(), std::move(NoteMsgBuf)))
-      .second;
+  return UninitFields.insert({FR, std::move(NoteMsgBuf)}).second;
 }
 
 bool FindUninitializedFields::isNonUnionUninit(const TypedValueRegion *R,

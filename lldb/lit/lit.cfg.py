@@ -11,6 +11,7 @@ from lit.llvm import llvm_config
 from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
+site.addsitedir(os.path.dirname(__file__))
 from helper import toolchain
 
 # name: The name of this test suite.

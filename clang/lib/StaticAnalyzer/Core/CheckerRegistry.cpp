@@ -12,7 +12,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/CheckerOptInfo.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -29,6 +28,41 @@ using namespace ento;
 static const char PackageSeparator = '.';
 
 using CheckerInfoSet = llvm::SetVector<const CheckerRegistry::CheckerInfo *>;
+
+namespace {
+/// Represents a request to include or exclude a checker or package from a
+/// specific analysis run.
+///
+/// \sa CheckerRegistry::initializeManager
+class CheckerOptInfo {
+  StringRef Name;
+  bool Enable;
+  bool Claimed;
+
+public:
+  CheckerOptInfo(StringRef name, bool enable)
+    : Name(name), Enable(enable), Claimed(false) { }
+
+  StringRef getName() const { return Name; }
+  bool isEnabled() const { return Enable; }
+  bool isDisabled() const { return !isEnabled(); }
+
+  bool isClaimed() const { return Claimed; }
+  bool isUnclaimed() const { return !isClaimed(); }
+  void claim() { Claimed = true; }
+};
+
+} // end of anonymous namespace
+
+static SmallVector<CheckerOptInfo, 8>
+getCheckerOptList(const AnalyzerOptions &opts) {
+  SmallVector<CheckerOptInfo, 8> checkerOpts;
+  for (unsigned i = 0, e = opts.CheckersControlList.size(); i != e; ++i) {
+    const std::pair<std::string, bool> &opt = opts.CheckersControlList[i];
+    checkerOpts.push_back(CheckerOptInfo(opt.first, opt.second));
+  }
+  return checkerOpts;
+}
 
 static bool checkerNameLT(const CheckerRegistry::CheckerInfo &a,
                           const CheckerRegistry::CheckerInfo &b) {
@@ -52,6 +86,7 @@ static bool isInPackage(const CheckerRegistry::CheckerInfo &checker,
   return false;
 }
 
+/// Collects the checkers for the supplied \p opt option into \p collected.
 static void collectCheckers(const CheckerRegistry::CheckerInfoList &checkers,
                             const llvm::StringMap<size_t> &packageSizes,
                             CheckerOptInfo &opt, CheckerInfoSet &collected) {
@@ -101,19 +136,30 @@ void CheckerRegistry::addChecker(InitializationFunction fn, StringRef name,
 }
 
 void CheckerRegistry::initializeManager(CheckerManager &checkerMgr,
-                                  SmallVectorImpl<CheckerOptInfo> &opts) const {
+                                        const AnalyzerOptions &Opts,
+                                        DiagnosticsEngine &diags) const {
   // Sort checkers for efficient collection.
   llvm::sort(Checkers, checkerNameLT);
 
+  llvm::SmallVector<CheckerOptInfo, 8> checkerOpts = getCheckerOptList(Opts);
   // Collect checkers enabled by the options.
   CheckerInfoSet enabledCheckers;
-  for (auto &i : opts)
+  for (auto &i : checkerOpts)
     collectCheckers(Checkers, Packages, i, enabledCheckers);
 
   // Initialize the CheckerManager with all enabled checkers.
   for (const auto *i :enabledCheckers) {
     checkerMgr.setCurrentCheckName(CheckName(i->FullName));
     i->Initialize(checkerMgr);
+  }
+
+  for (unsigned i = 0, e = checkerOpts.size(); i != e; ++i) {
+    if (checkerOpts[i].isUnclaimed()) {
+      diags.Report(diag::err_unknown_analyzer_checker)
+          << checkerOpts[i].getName();
+      diags.Report(diag::note_suggest_disabling_all_checkers);
+    }
+
   }
 }
 
@@ -176,13 +222,14 @@ void CheckerRegistry::printHelp(raw_ostream &out,
   }
 }
 
-void CheckerRegistry::printList(
-    raw_ostream &out, SmallVectorImpl<CheckerOptInfo> &opts) const {
+void CheckerRegistry::printList(raw_ostream &out,
+                                const AnalyzerOptions &opts) const {
   llvm::sort(Checkers, checkerNameLT);
 
+  llvm::SmallVector<CheckerOptInfo, 8> checkerOpts = getCheckerOptList(opts);
   // Collect checkers enabled by the options.
   CheckerInfoSet enabledCheckers;
-  for (auto &i : opts)
+  for (auto &i : checkerOpts)
     collectCheckers(Checkers, Packages, i, enabledCheckers);
 
   for (const auto *i : enabledCheckers)

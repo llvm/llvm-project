@@ -43,6 +43,10 @@ llvm_config.use_default_substitutions()
 
 llvm_config.use_clang()
 
+config.substitutions.append(
+    ('%src_include_dir', config.clang_src_dir + '/include'))
+
+
 # Propagate path to symbolizer for ASan/MSan.
 llvm_config.with_system_environment(
     ['ASAN_SYMBOLIZER_PATH', 'MSAN_SYMBOLIZER_PATH'])

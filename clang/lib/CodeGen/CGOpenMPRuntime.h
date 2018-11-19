@@ -1553,6 +1553,11 @@ public:
   virtual void
   adjustTargetSpecificDataForLambdas(CodeGenFunction &CGF,
                                      const OMPExecutableDirective &D) const;
+
+  /// Perform check on requires decl to ensure that target architecture
+  /// supports unified addressing
+  virtual void checkArchForUnifiedAddressing(CodeGenModule &CGM,
+                                             const OMPRequiresDecl *D) const {}
 };
 
 /// Class supports emissionof SIMD-only code.
