@@ -1,5 +1,5 @@
 REQUIRES: system-windows, lld
-RUN: clang-cl -m32 /Zi /GS- /c %S/Inputs/CallingConventionsTest.cpp /o %t.obj
+RUN: %clang_cl -m32 /Zi /GS- /c %S/Inputs/CallingConventionsTest.cpp /o %t.obj
 RUN: lld-link /debug:full /nodefaultlib /entry:main %t.obj /out:%t.exe
 RUN: lldb-test symbols -dump-ast %t.exe | FileCheck %s
 

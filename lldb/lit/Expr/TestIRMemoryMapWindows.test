@@ -1,6 +1,6 @@
 # REQUIRES: system-windows
 
-# RUN: clang-cl /Zi %p/Inputs/call-function.cpp -o %t
+# RUN: %clang_cl /Zi %p/Inputs/call-function.cpp -o %t
 
 # RUN: lldb-test ir-memory-map %t %S/Inputs/ir-memory-map-basic
 # RUN: lldb-test ir-memory-map -host-only %t %S/Inputs/ir-memory-map-basic

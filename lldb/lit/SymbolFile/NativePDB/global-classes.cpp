@@ -2,9 +2,9 @@
 // REQUIRES: lld
 
 // Test that we can display tag types.
-// RUN: clang-cl /Z7 /GS- /GR- /c -Xclang -fkeep-static-consts /Fo%t.obj -- %s
+// RUN: %clang_cl /Z7 /GS- /GR- /c -Xclang -fkeep-static-consts /Fo%t.obj -- %s
 // RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb -- %t.obj
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb -f %t.exe -s \
+// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/globals-classes.lldbinit | FileCheck %s
 
 enum class EnumType : unsigned {

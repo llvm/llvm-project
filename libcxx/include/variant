@@ -219,7 +219,7 @@ _LIBCPP_PUSH_MACROS
 
 namespace std { // explicitly not using versioning namespace
 
-class _LIBCPP_EXCEPTION_ABI bad_variant_access : public exception {
+class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS bad_variant_access : public exception {
 public:
   virtual const char* what() const _NOEXCEPT;
 };
@@ -232,6 +232,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 _LIBCPP_NORETURN
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 void __throw_bad_variant_access() {
 #ifndef _LIBCPP_NO_EXCEPTIONS
         throw bad_variant_access();
@@ -1321,6 +1322,7 @@ constexpr bool holds_alternative(const variant<_Types...>& __v) noexcept {
 
 template <size_t _Ip, class _Vp>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr auto&& __generic_get(_Vp&& __v) {
   using __variant_detail::__access::__variant;
   if (!__holds_alternative<_Ip>(__v)) {
@@ -1331,6 +1333,7 @@ constexpr auto&& __generic_get(_Vp&& __v) {
 
 template <size_t _Ip, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr variant_alternative_t<_Ip, variant<_Types...>>& get(
     variant<_Types...>& __v) {
   static_assert(_Ip < sizeof...(_Types));
@@ -1340,6 +1343,7 @@ constexpr variant_alternative_t<_Ip, variant<_Types...>>& get(
 
 template <size_t _Ip, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr variant_alternative_t<_Ip, variant<_Types...>>&& get(
     variant<_Types...>&& __v) {
   static_assert(_Ip < sizeof...(_Types));
@@ -1349,6 +1353,7 @@ constexpr variant_alternative_t<_Ip, variant<_Types...>>&& get(
 
 template <size_t _Ip, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr const variant_alternative_t<_Ip, variant<_Types...>>& get(
     const variant<_Types...>& __v) {
   static_assert(_Ip < sizeof...(_Types));
@@ -1358,6 +1363,7 @@ constexpr const variant_alternative_t<_Ip, variant<_Types...>>& get(
 
 template <size_t _Ip, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr const variant_alternative_t<_Ip, variant<_Types...>>&& get(
     const variant<_Types...>&& __v) {
   static_assert(_Ip < sizeof...(_Types));
@@ -1367,6 +1373,7 @@ constexpr const variant_alternative_t<_Ip, variant<_Types...>>&& get(
 
 template <class _Tp, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr _Tp& get(variant<_Types...>& __v) {
   static_assert(!is_void_v<_Tp>);
   return _VSTD::get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
@@ -1374,6 +1381,7 @@ constexpr _Tp& get(variant<_Types...>& __v) {
 
 template <class _Tp, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr _Tp&& get(variant<_Types...>&& __v) {
   static_assert(!is_void_v<_Tp>);
   return _VSTD::get<__find_exactly_one_t<_Tp, _Types...>::value>(
@@ -1382,6 +1390,7 @@ constexpr _Tp&& get(variant<_Types...>&& __v) {
 
 template <class _Tp, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr const _Tp& get(const variant<_Types...>& __v) {
   static_assert(!is_void_v<_Tp>);
   return _VSTD::get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
@@ -1389,6 +1398,7 @@ constexpr const _Tp& get(const variant<_Types...>& __v) {
 
 template <class _Tp, class... _Types>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr const _Tp&& get(const variant<_Types...>&& __v) {
   static_assert(!is_void_v<_Tp>);
   return _VSTD::get<__find_exactly_one_t<_Tp, _Types...>::value>(
@@ -1521,6 +1531,7 @@ constexpr bool operator>=(const variant<_Types...>& __lhs,
 
 template <class _Visitor, class... _Vs>
 inline _LIBCPP_INLINE_VISIBILITY
+_LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 constexpr decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
   using __variant_detail::__visitation::__variant;
   bool __results[] = {__vs.valueless_by_exception()...};
