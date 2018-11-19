@@ -365,8 +365,8 @@ Expected<IndexFileIn> readRIFF(StringRef Data) {
   IndexFileIn Result;
   if (Chunks.count("hash")) {
     Reader Hash(Chunks.lookup("hash"));
-    llvm::StringRef Digest = Hash.consume(20);
     Result.Digest.emplace();
+    llvm::StringRef Digest = Hash.consume(Result.Digest->size());
     std::copy(Digest.bytes_begin(), Digest.bytes_end(), Result.Digest->begin());
   }
 
