@@ -11,8 +11,8 @@
 
 // reference_wrapper
 
-// Test that reference wrapper meets the requirements of TriviallyCopyable,
-// CopyConstructible and CopyAssignable.
+// Test that reference wrapper meets the requirements of CopyConstructible and
+// CopyAssignable, and TriviallyCopyable (starting in C++14).
 
 // Test fails due to use of is_trivially_* trait.
 // XFAIL: gcc-4.9
@@ -48,8 +48,9 @@ void test()
     typedef std::reference_wrapper<T> Wrap;
     static_assert(std::is_copy_constructible<Wrap>::value, "");
     static_assert(std::is_copy_assignable<Wrap>::value, "");
-    // Extension up for standardization: See N4151.
+#if TEST_STD_VER >= 14
     static_assert(std::is_trivially_copyable<Wrap>::value, "");
+#endif
 }
 
 int main()
