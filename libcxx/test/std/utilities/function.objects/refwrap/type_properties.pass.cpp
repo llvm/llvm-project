@@ -15,7 +15,7 @@
 // CopyAssignable, and TriviallyCopyable (starting in C++14).
 
 // Test fails due to use of is_trivially_* trait.
-// XFAIL: gcc-4.9
+// XFAIL: gcc-4.9 && c++14
 
 #include <functional>
 #include <type_traits>
