@@ -606,7 +606,7 @@ ModuleSummaryIndexWrapperPass::ModuleSummaryIndexWrapperPass()
 }
 
 bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
-  auto &PSI = *getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   Index.emplace(buildModuleSummaryIndex(
       M,
       [this](const Function &F) {
@@ -614,7 +614,7 @@ bool ModuleSummaryIndexWrapperPass::runOnModule(Module &M) {
                          *const_cast<Function *>(&F))
                      .getBFI());
       },
-      &PSI));
+      PSI));
   return false;
 }
 
