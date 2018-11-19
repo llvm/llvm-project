@@ -8742,6 +8742,7 @@
 				947A1D641616476B0017C8D1 /* CommandObjectPlugin.cpp in Sources */,
 				2666ADC81B3CB675001FAFD3 /* HexagonDYLDRendezvous.cpp in Sources */,
 				26A375811D59462700D6CBDB /* SelectHelper.cpp in Sources */,
+                                AFD966BA217140B6006714AC /* PdbIndex.cpp in Sources */,
 				262ED0081631FA3A00879631 /* OptionGroupString.cpp in Sources */,
 				94094C6B163B6F840083A547 /* ValueObjectCast.cpp in Sources */,
 				AF9107EF168570D200DBCD3C /* RegisterContextDarwin_arm64.cpp in Sources */,
