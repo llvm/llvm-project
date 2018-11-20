@@ -1,10 +1,10 @@
-; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=sandybridge %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
-; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=ivybridge %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
-; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=haswell %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
-; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=broadwell %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
-; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=skylake %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
-; RUN: llc -mtriple=x86_64-linux-gnu -mcpu=skx %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
-; RUN: llc -mtriple=x86_64-linux-gnu %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=NOTMERGE
+; RUN: llc -x86-condbr-folding=true -mtriple=x86_64-linux-gnu -mcpu=sandybridge %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
+; RUN: llc -x86-condbr-folding=true -mtriple=x86_64-linux-gnu -mcpu=ivybridge %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
+; RUN: llc -x86-condbr-folding=true -mtriple=x86_64-linux-gnu -mcpu=haswell %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
+; RUN: llc -x86-condbr-folding=true -mtriple=x86_64-linux-gnu -mcpu=broadwell %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
+; RUN: llc -x86-condbr-folding=true -mtriple=x86_64-linux-gnu -mcpu=skylake %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
+; RUN: llc -x86-condbr-folding=true -mtriple=x86_64-linux-gnu -mcpu=skx %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=MERGE
+; RUN: llc -x86-condbr-folding=true -mtriple=x86_64-linux-gnu %s -o - -verify-machineinstrs | FileCheck %s --check-prefix=NOTMERGE
 
 @v1 = common dso_local local_unnamed_addr global i32 0, align 4
 @v2 = common dso_local local_unnamed_addr global i32 0, align 4

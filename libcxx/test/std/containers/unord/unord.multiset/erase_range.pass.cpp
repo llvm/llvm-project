@@ -17,6 +17,7 @@
 
 #include <unordered_set>
 #include <cassert>
+#include <iterator>
 
 #include "min_allocator.h"
 

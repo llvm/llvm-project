@@ -124,7 +124,7 @@ DWARFDebugLoc::parseOneLocationList(DWARFDataExtractor Data, unsigned *Offset) {
     StringRef str = Data.getData().substr(*Offset, Bytes);
     *Offset += Bytes;
     E.Loc.reserve(str.size());
-    std::copy(str.begin(), str.end(), std::back_inserter(E.Loc));
+    llvm::copy(str, std::back_inserter(E.Loc));
     LL.Entries.push_back(std::move(E));
   }
 }
@@ -189,7 +189,7 @@ DWARFDebugLoclists::parseOneLocationList(DataExtractor Data, unsigned *Offset,
       StringRef str = Data.getData().substr(*Offset, Bytes);
       *Offset += Bytes;
       E.Loc.resize(str.size());
-      std::copy(str.begin(), str.end(), E.Loc.begin());
+      llvm::copy(str, E.Loc.begin());
     }
 
     LL.Entries.push_back(std::move(E));

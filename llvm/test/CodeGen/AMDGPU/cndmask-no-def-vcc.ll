@@ -32,7 +32,6 @@ bb2:
 
 ; GCN-LABEL: {{^}}preserve_condition_undef_flag:
 ; GCN-NOT: vcc
-; GCN: v_cndmask_b32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}, vcc
 define amdgpu_kernel void @preserve_condition_undef_flag(float %arg, i32 %arg1, float %arg2) {
 bb0:
   %tmp = icmp sgt i32 %arg1, 4
@@ -40,7 +39,7 @@ bb0:
   %tmp4 = select i1 %undef, float %arg, float 1.000000e+00
   %tmp5 = fcmp ogt float %arg2, 0.000000e+00
   %tmp6 = fcmp olt float %arg2, 1.000000e+00
-  %tmp7 = fcmp olt float %arg, %tmp4
+  %tmp7 = fcmp olt float %arg, undef
   %tmp8 = and i1 %tmp5, %tmp6
   %tmp9 = and i1 %tmp8, %tmp7
   br i1 %tmp9, label %bb1, label %bb2

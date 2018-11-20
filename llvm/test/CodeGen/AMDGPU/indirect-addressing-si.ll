@@ -182,15 +182,16 @@ entry:
 ; GCN-DAG: v_mov_b32_e32 v[[ELT1:[0-9]+]], 2.0
 ; GCN-DAG: v_mov_b32_e32 v[[ELT2:[0-9]+]], 0x40400000
 ; GCN-DAG: v_mov_b32_e32 v[[ELT3:[0-9]+]], 4.0
-; GCN-DAG: v_mov_b32_e32 v[[INS:[0-9]+]], 0x40a00000
+; GCN-DAG: v_mov_b32_e32 v[[ELT15:[0-9]+]], 0x41800000
+; GCN-DAG: v_mov_b32_e32 v[[INS:[0-9]+]], 0x41880000
 
 ; MOVREL: v_movreld_b32_e32 v[[ELT1]], v[[INS]]
 ; MOVREL: buffer_store_dwordx4 v{{\[}}[[ELT0]]:[[ELT3]]{{\]}}
-define amdgpu_kernel void @insert_w_offset(<4 x float> addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @insert_w_offset(<16 x float> addrspace(1)* %out, i32 %in) {
 entry:
-  %0 = add i32 %in, 1
-  %1 = insertelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, float 5.0, i32 %0
-  store <4 x float> %1, <4 x float> addrspace(1)* %out
+  %add = add i32 %in, 1
+  %ins = insertelement <16 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0>, float 17.0, i32 %add
+  store <16 x float> %ins, <16 x float> addrspace(1)* %out
   ret void
 }
 
@@ -205,27 +206,27 @@ entry:
 ; IDXMODE-NEXT: s_set_gpr_idx_off
 
 ; GCN: buffer_store_dwordx4 v{{\[}}[[ELT0]]:
-define amdgpu_kernel void @insert_wo_offset(<4 x float> addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @insert_wo_offset(<16 x float> addrspace(1)* %out, i32 %in) {
 entry:
-  %0 = insertelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, float 5.0, i32 %in
-  store <4 x float> %0, <4 x float> addrspace(1)* %out
+  %ins = insertelement <16 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0>, float 17.0, i32 %in
+  store <16 x float> %ins, <16 x float> addrspace(1)* %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}insert_neg_offset_sgpr:
 ; The offset depends on the register that holds the first element of the vector.
 ; MOVREL: s_add_i32 m0, s{{[0-9]+}}, 0xfffffe{{[0-9a-z]+}}
-; MOVREL: v_movreld_b32_e32 v0, 5
+; MOVREL: v_movreld_b32_e32 v0, 16
 
 ; IDXMODE: s_addk_i32 [[ADD_IDX:s[0-9]+]], 0xfe00{{$}}
 ; IDXMODE: s_set_gpr_idx_on [[ADD_IDX]], dst
-; IDXMODE-NEXT: v_mov_b32_e32 v0, 5
+; IDXMODE-NEXT: v_mov_b32_e32 v0, 16
 ; IDXMODE-NEXT: s_set_gpr_idx_off
-define amdgpu_kernel void @insert_neg_offset_sgpr(i32 addrspace(1)* %in, <4 x i32> addrspace(1)* %out, i32 %offset) {
+define amdgpu_kernel void @insert_neg_offset_sgpr(i32 addrspace(1)* %in, <16 x i32> addrspace(1)* %out, i32 %offset) {
 entry:
   %index = add i32 %offset, -512
-  %value = insertelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 5, i32 %index
-  store <4 x i32> %value, <4 x i32> addrspace(1)* %out
+  %value = insertelement <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>, i32 16, i32 %index
+  store <16 x i32> %value, <16 x i32> addrspace(1)* %out
   ret void
 }
 
@@ -241,11 +242,11 @@ entry:
 ; IDXMODE: s_set_gpr_idx_on [[ADD_IDX]], dst
 ; IDXMODE-NEXT: v_mov_b32_e32 v0, 5
 ; IDXMODE-NEXT: s_set_gpr_idx_off
-define amdgpu_kernel void @insert_neg_offset_sgpr_loadreg(i32 addrspace(1)* %in, <4 x i32> addrspace(1)* %out, <4 x i32> %vec, i32 %offset) {
+define amdgpu_kernel void @insert_neg_offset_sgpr_loadreg(i32 addrspace(1)* %in, <16 x i32> addrspace(1)* %out, <16 x i32> %vec, i32 %offset) {
 entry:
   %index = add i32 %offset, -512
-  %value = insertelement <4 x i32> %vec, i32 5, i32 %index
-  store <4 x i32> %value, <4 x i32> addrspace(1)* %out
+  %value = insertelement <16 x i32> %vec, i32 5, i32 %index
+  store <16 x i32> %value, <16 x i32> addrspace(1)* %out
   ret void
 }
 
@@ -256,6 +257,18 @@ entry:
 ; GCN-DAG: v_mov_b32_e32 [[VEC_ELT1:v[0-9]+]], 2{{$}}
 ; GCN-DAG: v_mov_b32_e32 [[VEC_ELT2:v[0-9]+]], 3{{$}}
 ; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 4{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 5{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 6{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 7{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 8{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 9{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 10{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 11{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 12{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 13{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 14{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 15{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 16{{$}}
 
 ; GCN: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
 ; GCN: [[LOOPBB:BB[0-9]+_[0-9]+]]:
@@ -263,23 +276,23 @@ entry:
 ; GCN: s_and_saveexec_b64 vcc, vcc
 
 ; MOVREL: s_add_i32 m0, [[READLANE]], 0xfffffe00
-; MOVREL: v_movreld_b32_e32 [[VEC_ELT0]], 5
+; MOVREL: v_movreld_b32_e32 [[VEC_ELT0]], 33
 
 ; IDXMODE: s_addk_i32 [[ADD_IDX:s[0-9]+]], 0xfe00{{$}}
 ; IDXMODE: s_set_gpr_idx_on [[ADD_IDX]], dst
-; IDXMODE: v_mov_b32_e32 v{{[0-9]+}}, 5
+; IDXMODE: v_mov_b32_e32 v{{[0-9]+}}, 33
 ; IDXMODE: s_set_gpr_idx_off
 
 ; GCN: s_cbranch_execnz [[LOOPBB]]
 ; GCN: s_mov_b64 exec, [[SAVEEXEC]]
 
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @insert_neg_offset_vgpr(i32 addrspace(1)* %in, <4 x i32> addrspace(1)* %out) {
+define amdgpu_kernel void @insert_neg_offset_vgpr(i32 addrspace(1)* %in, <16 x i32> addrspace(1)* %out) {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1
   %index = add i32 %id, -512
-  %value = insertelement <4 x i32> <i32 1, i32 2, i32 3, i32 4>, i32 5, i32 %index
-  store <4 x i32> %value, <4 x i32> addrspace(1)* %out
+  %value = insertelement <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>, i32 33, i32 %index
+  store <16 x i32> %value, <16 x i32> addrspace(1)* %out
   ret void
 }
 
@@ -289,6 +302,18 @@ entry:
 ; GCN-DAG: v_mov_b32_e32 [[VEC_ELT1:v[0-9]+]], 2{{$}}
 ; GCN-DAG: v_mov_b32_e32 [[VEC_ELT2:v[0-9]+]], 3{{$}}
 ; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 4{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 5{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 6{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 7{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 8{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 9{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 10{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 11{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 12{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 13{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 14{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 15{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 16{{$}}
 ; GCN-DAG: v_mov_b32_e32 [[VAL:v[0-9]+]], 0x1f4{{$}}
 
 ; GCN: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
@@ -305,12 +330,12 @@ entry:
 ; IDXMODE: s_set_gpr_idx_off
 
 ; GCN: s_cbranch_execnz
-define amdgpu_kernel void @insert_neg_inline_offset_vgpr(i32 addrspace(1)* %in, <4 x i32> addrspace(1)* %out) {
+define amdgpu_kernel void @insert_neg_inline_offset_vgpr(i32 addrspace(1)* %in, <16 x i32> addrspace(1)* %out) {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1
   %index = add i32 %id, -16
-  %value = insertelement <4 x i32> <i32 1, i32 2, i32 3, i32 4>, i32 500, i32 %index
-  store <4 x i32> %value, <4 x i32> addrspace(1)* %out
+  %value = insertelement <16 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16>, i32 500, i32 %index
+  store <16 x i32> %value, <16 x i32> addrspace(1)* %out
   ret void
 }
 
@@ -428,10 +453,10 @@ bb7:                                              ; preds = %bb4, %bb1
 ; GCN: s_load_dword [[ARG:s[0-9]+]]
 
 ; MOVREL: v_mov_b32_e32 v{{[0-9]+}}, 0x41900000
-; MOVREL: v_mov_b32_e32 v{{[0-9]+}}, 0x41b0cccd
 ; MOVREL: s_waitcnt
 ; MOVREL: s_add_i32 m0, [[ARG]], -16
 ; MOVREL: v_movreld_b32_e32 v{{[0-9]+}}, 4.0
+; MOVREL: v_mov_b32_e32 v{{[0-9]+}}, 0x41b0cccd
 ; MOVREL: v_movreld_b32_e32 v{{[0-9]+}}, -4.0
 ; MOVREL: s_mov_b32 m0, -1
 
@@ -453,13 +478,13 @@ bb7:                                              ; preds = %bb4, %bb1
 define amdgpu_kernel void @multi_same_block(i32 %arg) #0 {
 bb:
   %tmp1 = add i32 %arg, -16
-  %tmp2 = insertelement <6 x float> <float 1.700000e+01, float 1.800000e+01, float 1.900000e+01, float 2.000000e+01, float 2.100000e+01, float 2.200000e+01>, float 4.000000e+00, i32 %tmp1
+  %tmp2 = insertelement <9 x float> <float 1.700000e+01, float 1.800000e+01, float 1.900000e+01, float 2.000000e+01, float 2.100000e+01, float 2.200000e+01, float 2.300000e+01, float 2.400000e+01, float 2.500000e+01>, float 4.000000e+00, i32 %tmp1
   %tmp3 = add i32 %arg, -16
-  %tmp4 = insertelement <6 x float> <float 0x40311999A0000000, float 0x40321999A0000000, float 0x40331999A0000000, float 0x40341999A0000000, float 0x40351999A0000000, float 0x40361999A0000000>, float -4.0, i32 %tmp3
-  %tmp5 = bitcast <6 x float> %tmp2 to <6 x i32>
-  %tmp6 = extractelement <6 x i32> %tmp5, i32 1
-  %tmp7 = bitcast <6 x float> %tmp4 to <6 x i32>
-  %tmp8 = extractelement <6 x i32> %tmp7, i32 5
+  %tmp4 = insertelement <9 x float> <float 0x40311999A0000000, float 0x40321999A0000000, float 0x40331999A0000000, float 0x40341999A0000000, float 0x40351999A0000000, float 0x40361999A0000000, float 0x40371999A0000000, float 0x40381999A0000000, float 0x40391999A0000000>, float -4.0, i32 %tmp3
+  %tmp5 = bitcast <9 x float> %tmp2 to <9 x i32>
+  %tmp6 = extractelement <9 x i32> %tmp5, i32 1
+  %tmp7 = bitcast <9 x float> %tmp4 to <9 x i32>
+  %tmp8 = extractelement <9 x i32> %tmp7, i32 5
   store volatile i32 %tmp6, i32 addrspace(3)* undef, align 4
   store volatile i32 %tmp8, i32 addrspace(3)* undef, align 4
   ret void
@@ -531,7 +556,7 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}insertelement_v4f32_or_index:
+; GCN-LABEL: {{^}}insertelement_v16f32_or_index:
 ; GCN: s_load_dword [[IDX_IN:s[0-9]+]]
 ; GCN: s_lshl_b32 [[IDX_SHL:s[0-9]+]], [[IDX_IN]]
 ; GCN-NOT: [[IDX_SHL]]
@@ -542,11 +567,11 @@ entry:
 ; IDXMODE: s_set_gpr_idx_on [[IDX_SHL]], dst
 ; IDXMODE: v_mov_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 ; IDXMODE: s_set_gpr_idx_off
-define amdgpu_kernel void @insertelement_v4f32_or_index(<4 x float> addrspace(1)* %out, <4 x float> %a, i32 %idx.in) nounwind {
+define amdgpu_kernel void @insertelement_v16f32_or_index(<16 x float> addrspace(1)* %out, <16 x float> %a, i32 %idx.in) nounwind {
   %idx.shl = shl i32 %idx.in, 2
   %idx = or i32 %idx.shl, 1
-  %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 %idx
-  store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
+  %vecins = insertelement <16 x float> %a, float 5.000000e+00, i32 %idx
+  store <16 x float> %vecins, <16 x float> addrspace(1)* %out, align 64
   ret void
 }
 
@@ -581,9 +606,9 @@ bb2:                                              ; preds = %bb4, %bb
 
 bb4:                                              ; preds = %bb2
   %vgpr = load volatile i32, i32 addrspace(1)* undef
-  %tmp5 = insertelement <8 x i32> undef, i32 undef, i32 %vgpr
-  %tmp6 = insertelement <8 x i32> %tmp5, i32 %arg1, i32 %vgpr
-  %tmp7 = extractelement <8 x i32> %tmp6, i32 0
+  %tmp5 = insertelement <16 x i32> undef, i32 undef, i32 %vgpr
+  %tmp6 = insertelement <16 x i32> %tmp5, i32 %arg1, i32 %vgpr
+  %tmp7 = extractelement <16 x i32> %tmp6, i32 0
   br label %bb2
 
 bb8:                                              ; preds = %bb2

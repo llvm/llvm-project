@@ -20,6 +20,7 @@
 #include <unordered_set>
 #include <cassert>
 #include <cfloat>
+#include <cmath>
 #include <cstddef>
 
 #include "../../../test_compare.h"

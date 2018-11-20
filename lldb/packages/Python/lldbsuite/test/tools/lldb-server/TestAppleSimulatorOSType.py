@@ -19,7 +19,13 @@ class TestAppleSimulatorOSType(gdbremote_testcase.GdbRemoteTestCaseBase):
         sim_devices = json.loads(sim_devices_str)['devices']
         # Find an available simulator for the requested platform
         deviceUDID = None
-        for (runtime,devices) in sim_devices.items():
+        for simulator in sim_devices:
+            if isinstance(simulator,dict):
+                runtime = simulator['name']
+                devices = simulator['devices']
+            else:
+                runtime = simulator
+                devices = sim_devices[simulator]
             if not platform in runtime.lower():
                 continue
             for device in devices:

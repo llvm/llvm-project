@@ -604,4 +604,39 @@ entry:
   ret i64 %1
 }
 
+@i = external global i32, align 2
+
+define i32 @srll() #0 {
+entry:
+; CHECK-LABEL: srll:
+; CHECK: call #__mspabi_srll
+  %0 = load volatile i32, i32* @g_i32, align 2
+  %1 = load volatile i32, i32* @i, align 2
+  %shr = lshr i32 %0, %1
+
+  ret i32 %shr
+}
+
+define i32 @sral() #0 {
+entry:
+; CHECK-LABEL: sral:
+; CHECK: call #__mspabi_sral
+  %0 = load volatile i32, i32* @g_i32, align 2
+  %1 = load volatile i32, i32* @i, align 2
+  %shr = ashr i32 %0, %1
+
+  ret i32 %shr
+}
+
+define i32 @slll() #0 {
+entry:
+; CHECK-LABEL: slll:
+; CHECK: call #__mspabi_slll
+  %0 = load volatile i32, i32* @g_i32, align 2
+  %1 = load volatile i32, i32* @i, align 2
+  %shr = shl i32 %0, %1
+
+  ret i32 %shr
+}
+
 attributes #0 = { nounwind }

@@ -49,6 +49,7 @@ dup U
 dup2 U
 environ U
 execv U
+execve U
 exit U
 fclose U
 fflush U
@@ -65,6 +66,7 @@ getcwd U
 getenv U
 getpagesize U
 getpid U
+getrlimit U
 gettimeofday U
 ioctl U
 isalpha U
@@ -101,6 +103,7 @@ rand U
 readlink U
 realloc U
 remove U
+setrlimit U
 setvbuf U
 sigfillset U
 sigprocmask U

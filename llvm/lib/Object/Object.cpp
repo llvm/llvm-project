@@ -229,7 +229,7 @@ const char *LLVMGetRelocationTypeName(LLVMRelocationIteratorRef RI) {
   SmallVector<char, 0> ret;
   (*unwrap(RI))->getTypeName(ret);
   char *str = static_cast<char*>(safe_malloc(ret.size()));
-  std::copy(ret.begin(), ret.end(), str);
+  llvm::copy(ret, str);
   return str;
 }
 

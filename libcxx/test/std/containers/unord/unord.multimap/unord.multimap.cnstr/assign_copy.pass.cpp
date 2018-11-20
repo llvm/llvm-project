@@ -19,6 +19,8 @@
 #include <string>
 #include <cassert>
 #include <cfloat>
+#include <cmath>
+#include <algorithm>
 #include <cstddef>
 
 #include "test_macros.h"

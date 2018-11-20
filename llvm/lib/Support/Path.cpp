@@ -533,7 +533,7 @@ void replace_path_prefix(SmallVectorImpl<char> &Path,
 
   // If prefixes have the same size we can simply copy the new one over.
   if (OldPrefix.size() == NewPrefix.size()) {
-    std::copy(NewPrefix.begin(), NewPrefix.end(), Path.begin());
+    llvm::copy(NewPrefix, Path.begin());
     return;
   }
 

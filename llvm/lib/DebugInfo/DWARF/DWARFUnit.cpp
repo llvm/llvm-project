@@ -66,9 +66,11 @@ void DWARFUnitVector::addUnitsImpl(
   DWARFDataExtractor Data(Obj, Section, LE, 0);
   // Lazy initialization of Parser, now that we have all section info.
   if (!Parser) {
-    Parser = [=, &Context, &Obj, &Section, &SOS, &LS](
-                 uint32_t Offset, DWARFSectionKind SectionKind,
-                 const DWARFSection *CurSection) -> std::unique_ptr<DWARFUnit> {
+    Parser = [=, &Context, &Obj, &Section, &SOS,
+              &LS](uint32_t Offset, DWARFSectionKind SectionKind,
+                   const DWARFSection *CurSection,
+                   const DWARFUnitIndex::Entry *IndexEntry)
+        -> std::unique_ptr<DWARFUnit> {
       const DWARFSection &InfoSection = CurSection ? *CurSection : Section;
       DWARFDataExtractor Data(Obj, InfoSection, LE, 0);
       if (!Data.isValidOffset(Offset))
@@ -77,7 +79,8 @@ void DWARFUnitVector::addUnitsImpl(
       if (IsDWO)
         Index = &getDWARFUnitIndex(Context, SectionKind);
       DWARFUnitHeader Header;
-      if (!Header.extract(Context, Data, &Offset, SectionKind, Index))
+      if (!Header.extract(Context, Data, &Offset, SectionKind, Index,
+                          IndexEntry))
         return nullptr;
       std::unique_ptr<DWARFUnit> U;
       if (Header.isTypeUnit())
@@ -106,7 +109,7 @@ void DWARFUnitVector::addUnitsImpl(
       ++I;
       continue;
     }
-    auto U = Parser(Offset, SectionKind, &Section);
+    auto U = Parser(Offset, SectionKind, &Section, nullptr);
     // If parsing failed, we're done with this section.
     if (!U)
       break;
@@ -156,7 +159,7 @@ DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
   if (!Parser)
     return nullptr;
 
-  auto U = Parser(Offset, DW_SECT_INFO, nullptr);
+  auto U = Parser(Offset, DW_SECT_INFO, nullptr, &E);
   if (!U)
     U = nullptr;
 
@@ -233,9 +236,12 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
                               const DWARFDataExtractor &debug_info,
                               uint32_t *offset_ptr,
                               DWARFSectionKind SectionKind,
-                              const DWARFUnitIndex *Index) {
+                              const DWARFUnitIndex *Index,
+                              const DWARFUnitIndex::Entry *Entry) {
   Offset = *offset_ptr;
-  IndexEntry = Index ? Index->getFromOffset(*offset_ptr) : nullptr;
+  IndexEntry = Entry;
+  if (!IndexEntry && Index)
+    IndexEntry = Index->getFromOffset(*offset_ptr);
   Length = debug_info.getU32(offset_ptr);
   // FIXME: Support DWARF64.
   unsigned SizeOfLength = 4;

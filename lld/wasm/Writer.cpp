@@ -891,7 +891,8 @@ void Writer::calculateTypes() {
 }
 
 void Writer::assignIndexes() {
-  uint32_t FunctionIndex = NumImportedFunctions + InputFunctions.size();
+  assert(InputFunctions.empty());
+  uint32_t FunctionIndex = NumImportedFunctions;
   auto AddDefinedFunction = [&](InputFunction *Func) {
     if (!Func->Live)
       return;
@@ -940,7 +941,8 @@ void Writer::assignIndexes() {
       HandleRelocs(P);
   }
 
-  uint32_t GlobalIndex = NumImportedGlobals + InputGlobals.size();
+  assert(InputGlobals.empty());
+  uint32_t GlobalIndex = NumImportedGlobals;
   auto AddDefinedGlobal = [&](InputGlobal *Global) {
     if (Global->Live) {
       LLVM_DEBUG(dbgs() << "AddDefinedGlobal: " << GlobalIndex << "\n");

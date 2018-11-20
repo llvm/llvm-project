@@ -21,7 +21,7 @@ b0:
   %v7 = tail call i32 @llvm.hexagon.A2.subh.l16.sat.ll(i32 %v6, i32 16)
   %v8 = trunc i32 %v7 to i16
   %v9 = icmp sgt i16 %v8, -1
-  %v10 = select i1 %v9, i16 0, i16 undef
+  %v10 = select i1 %v9, i16 0, i16 1
   ret i16 %v10
 }
 

@@ -391,9 +391,9 @@ protected:
                                                               "/file/dir"),
                                           "CloneFunc", false, "", 0);
 
-    auto *Subprogram =
-        DBuilder.createFunction(CU, "f", "f", File, 4, FuncType, true, true, 3,
-                                DINode::FlagZero, false);
+    auto *Subprogram = DBuilder.createFunction(
+        CU, "f", "f", File, 4, FuncType, 3, DINode::FlagZero,
+        DISubprogram::SPFlagLocalToUnit | DISubprogram::SPFlagDefinition);
     OldFunc->setSubprogram(Subprogram);
 
     // Function body
@@ -421,9 +421,9 @@ protected:
     auto *StructType = DICompositeType::getDistinct(
         C, dwarf::DW_TAG_structure_type, "some_struct", nullptr, 0, nullptr,
         nullptr, 32, 32, 0, DINode::FlagZero, nullptr, 0, nullptr, nullptr);
-    auto *InlinedSP =
-        DBuilder.createFunction(CU, "inlined", "inlined", File, 8, FuncType,
-                                true, true, 9, DINode::FlagZero, false);
+    auto *InlinedSP = DBuilder.createFunction(
+        CU, "inlined", "inlined", File, 8, FuncType, 9, DINode::FlagZero,
+        DISubprogram::SPFlagLocalToUnit | DISubprogram::SPFlagDefinition);
     auto *InlinedVar =
         DBuilder.createAutoVariable(InlinedSP, "inlined", File, 5, StructType, true);
     auto *Scope = DBuilder.createLexicalBlock(
@@ -606,9 +606,9 @@ protected:
                                                               "/file/dir"),
                                           "CloneModule", false, "", 0);
     // Function DI
-    auto *Subprogram =
-        DBuilder.createFunction(CU, "f", "f", File, 4, DFuncType, true, true, 3,
-                                DINode::FlagZero, false);
+    auto *Subprogram = DBuilder.createFunction(
+        CU, "f", "f", File, 4, DFuncType, 3, DINode::FlagZero,
+        DISubprogram::SPFlagLocalToUnit | DISubprogram::SPFlagDefinition);
     F->setSubprogram(Subprogram);
 
     // Create and assign DIGlobalVariableExpression to gv

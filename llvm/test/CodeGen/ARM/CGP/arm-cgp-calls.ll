@@ -200,11 +200,23 @@ exit:
   ret i1 %retval
 }
 
+; CHECK-LABEL: promote_arg_pass_to_call
+; CHECK-NOT: uxt
+define i16 @promote_arg_pass_to_call(i16 zeroext %arg1, i16 zeroext %arg2) {
+  %conv = add nuw i16 %arg1, 15
+  %mul = mul nuw nsw i16 %conv, 3
+  %cmp = icmp ult i16 %mul, %arg2
+  %trunc = trunc i16 %arg1 to i8
+  %res = call zeroext i16 @dummy4(i1 %cmp, i8 %trunc, i16 %arg1)
+  ret i16 %res
+}
+
 
 declare i32 @assert(...)
 declare i8 @dummy_i8(i8)
 declare i8 @dummy2(i8*, i8, i8)
 declare i16 @dummy3(i16)
+declare i16 @dummy4(i1, i8, i16)
 
 declare dso_local i32 @e(...) local_unnamed_addr #1
 declare dso_local zeroext i16 @f(...) local_unnamed_addr #1

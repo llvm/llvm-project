@@ -6790,6 +6790,55 @@ Semantics:
 
 The '``unreachable``' instruction has no defined semantics.
 
+.. _unaryops:
+
+Unary Operations
+-----------------
+
+Unary operators require a single operand, execute an operation on
+it, and produce a single value. The operand might represent multiple
+data, as is the case with the :ref:`vector <t_vector>` data type. The
+result value has the same type as its operand.
+
+.. _i_fneg:
+
+'``fneg``' Instruction
+^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      <result> = fneg [fast-math flags]* <ty> <op1>   ; yields ty:result
+
+Overview:
+"""""""""
+
+The '``fneg``' instruction returns the negation of its operand.
+
+Arguments:
+""""""""""
+
+The argument to the '``fneg``' instruction must be a
+:ref:`floating-point <t_floating>` or :ref:`vector <t_vector>` of
+floating-point values. 
+
+Semantics:
+""""""""""
+
+The value produced is a copy of the operand with its sign bit flipped.
+This instruction can also take any number of :ref:`fast-math
+flags <fastmath>`, which are optimization hints to enable otherwise
+unsafe floating-point optimizations:
+
+Example:
+""""""""
+
+.. code-block:: text
+
+      <result> = fneg float %val          ; yields float:result = -%var
+
 .. _binaryops:
 
 Binary Operations
@@ -6964,9 +7013,6 @@ Overview:
 """""""""
 
 The '``fsub``' instruction returns the difference of its two operands.
-
-Note that the '``fsub``' instruction is used to represent the '``fneg``'
-instruction present in most other intermediate representations.
 
 Arguments:
 """"""""""

@@ -265,13 +265,13 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 define i64 @pr30249() {
 ; X86-LABEL: pr30249:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl $2, %eax
+; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr30249:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl $2, %eax
+; X64-NEXT:    movl $1, %eax
 ; X64-NEXT:    retq
   %v = select i1 undef , i64 1, i64 2
   ret i64 %v

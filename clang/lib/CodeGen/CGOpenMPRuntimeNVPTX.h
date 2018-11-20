@@ -356,6 +356,11 @@ public:
   void adjustTargetSpecificDataForLambdas(
       CodeGenFunction &CGF, const OMPExecutableDirective &D) const override;
 
+  /// Perform check on requires decl to ensure that target architecture
+  /// supports unified addressing
+  void checkArchForUnifiedAddressing(CodeGenModule &CGM,
+                                     const OMPRequiresDecl *D) const override;
+
 private:
   /// Track the execution mode when codegening directives within a target
   /// region. The appropriate mode (SPMD/NON-SPMD) is set on entry to the
@@ -431,6 +436,10 @@ private:
   /// Shared pointer for the global memory in the global memory buffer used for
   /// the given kernel.
   llvm::GlobalVariable *KernelStaticGlobalized = nullptr;
+  /// Pair of the Non-SPMD team and all reductions variables in this team
+  /// region.
+  std::pair<const Decl *, llvm::SmallVector<const ValueDecl *, 4>>
+      TeamAndReductions;
 };
 
 } // CodeGen namespace.

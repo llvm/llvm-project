@@ -435,7 +435,7 @@ MachineFunction::createMIExtraInfo(ArrayRef<MachineMemOperand *> MMOs,
 
 const char *MachineFunction::createExternalSymbolName(StringRef Name) {
   char *Dest = Allocator.Allocate<char>(Name.size() + 1);
-  std::copy(Name.begin(), Name.end(), Dest);
+  llvm::copy(Name, Dest);
   Dest[Name.size()] = 0;
   return Dest;
 }

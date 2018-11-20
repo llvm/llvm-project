@@ -1533,7 +1533,10 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) {
       bool SavedForceCaptureByReferenceInTargetExecutable =
           DSAStack->isForceCaptureByReferenceInTargetExecutable();
       DSAStack->setForceCaptureByReferenceInTargetExecutable(/*V=*/true);
-      if (RD->isLambda())
+      if (RD->isLambda()) {
+        llvm::DenseMap<const VarDecl *, FieldDecl *> Captures;
+        FieldDecl *ThisCapture;
+        RD->getCaptureFields(Captures, ThisCapture);
         for (const LambdaCapture &LC : RD->captures()) {
           if (LC.getCaptureKind() == LCK_ByRef) {
             VarDecl *VD = LC.getCapturedVar();
@@ -1552,9 +1555,13 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D) {
                        OpenMPClauseKind) { return true; }))
               MarkVariableReferenced(LC.getLocation(), LC.getCapturedVar());
           } else if (LC.getCaptureKind() == LCK_This) {
-            CheckCXXThisCapture(LC.getLocation());
+            QualType ThisTy = getCurrentThisType();
+            if (!ThisTy.isNull() &&
+                Context.typesAreCompatible(ThisTy, ThisCapture->getType()))
+              CheckCXXThisCapture(LC.getLocation());
           }
         }
+      }
       DSAStack->setForceCaptureByReferenceInTargetExecutable(
           SavedForceCaptureByReferenceInTargetExecutable);
     }

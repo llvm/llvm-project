@@ -2,9 +2,9 @@
 // REQUIRES: lld
 
 // Test that we can display function signatures with class types.
-// RUN: clang-cl /Z7 /GS- /GR- /c -fstandalone-debug -Xclang -fkeep-static-consts /Fo%t.obj -- %s
+// RUN: %clang_cl /Z7 /GS- /GR- /c -fstandalone-debug -Xclang -fkeep-static-consts /Fo%t.obj -- %s
 // RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb -- %t.obj
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb -f %t.exe -s \
+// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/function-types-classes.lldbinit | FileCheck %s
 
 // This is just some unimportant helpers needed so that we can get reference and

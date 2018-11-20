@@ -26,6 +26,7 @@
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
+#include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -949,7 +950,7 @@ void FrontendAction::EndSourceFile() {
   if (DisableFree) {
     CI.resetAndLeakSema();
     CI.resetAndLeakASTContext();
-    BuryPointer(CI.takeASTConsumer().get());
+    llvm::BuryPointer(CI.takeASTConsumer().get());
   } else {
     CI.setSema(nullptr);
     CI.setASTContext(nullptr);
@@ -974,7 +975,7 @@ void FrontendAction::EndSourceFile() {
       CI.resetAndLeakPreprocessor();
       CI.resetAndLeakSourceManager();
       CI.resetAndLeakFileManager();
-      BuryPointer(CurrentASTUnit.release());
+      llvm::BuryPointer(std::move(CurrentASTUnit));
     } else {
       CI.setPreprocessor(nullptr);
       CI.setSourceManager(nullptr);

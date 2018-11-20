@@ -117,11 +117,8 @@ define <2 x i8> @cvt_v2f32_v2i8(<2 x float> %src) {
 ;
 ; CHECK-WIDE-LABEL: cvt_v2f32_v2i8:
 ; CHECK-WIDE:       ## %bb.0:
-; CHECK-WIDE-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-WIDE-NEXT:    vcvttss2si %xmm1, %eax
-; CHECK-WIDE-NEXT:    vcvttss2si %xmm0, %ecx
-; CHECK-WIDE-NEXT:    vmovd %ecx, %xmm0
-; CHECK-WIDE-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; CHECK-WIDE-NEXT:    vcvttps2dq %xmm0, %xmm0
+; CHECK-WIDE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; CHECK-WIDE-NEXT:    retl
   %res = fptosi <2 x float> %src to <2 x i8>
   ret <2 x i8> %res
@@ -136,11 +133,8 @@ define <2 x i16> @cvt_v2f32_v2i16(<2 x float> %src) {
 ;
 ; CHECK-WIDE-LABEL: cvt_v2f32_v2i16:
 ; CHECK-WIDE:       ## %bb.0:
-; CHECK-WIDE-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-WIDE-NEXT:    vcvttps2dq %ymm0, %ymm0
-; CHECK-WIDE-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-WIDE-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
-; CHECK-WIDE-NEXT:    vzeroupper
+; CHECK-WIDE-NEXT:    vcvttps2dq %xmm0, %xmm0
+; CHECK-WIDE-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; CHECK-WIDE-NEXT:    retl
   %res = fptosi <2 x float> %src to <2 x i16>
   ret <2 x i16> %res
@@ -170,11 +164,8 @@ define <2 x i8> @cvt_v2f32_v2u8(<2 x float> %src) {
 ;
 ; CHECK-WIDE-LABEL: cvt_v2f32_v2u8:
 ; CHECK-WIDE:       ## %bb.0:
-; CHECK-WIDE-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; CHECK-WIDE-NEXT:    vcvttss2si %xmm1, %eax
-; CHECK-WIDE-NEXT:    vcvttss2si %xmm0, %ecx
-; CHECK-WIDE-NEXT:    vmovd %ecx, %xmm0
-; CHECK-WIDE-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0
+; CHECK-WIDE-NEXT:    vcvttps2dq %xmm0, %xmm0
+; CHECK-WIDE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; CHECK-WIDE-NEXT:    retl
   %res = fptoui <2 x float> %src to <2 x i8>
   ret <2 x i8> %res
@@ -189,11 +180,8 @@ define <2 x i16> @cvt_v2f32_v2u16(<2 x float> %src) {
 ;
 ; CHECK-WIDE-LABEL: cvt_v2f32_v2u16:
 ; CHECK-WIDE:       ## %bb.0:
-; CHECK-WIDE-NEXT:    ## kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-WIDE-NEXT:    vcvttps2dq %ymm0, %ymm0
-; CHECK-WIDE-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-WIDE-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
-; CHECK-WIDE-NEXT:    vzeroupper
+; CHECK-WIDE-NEXT:    vcvttps2dq %xmm0, %xmm0
+; CHECK-WIDE-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
 ; CHECK-WIDE-NEXT:    retl
   %res = fptoui <2 x float> %src to <2 x i16>
   ret <2 x i16> %res

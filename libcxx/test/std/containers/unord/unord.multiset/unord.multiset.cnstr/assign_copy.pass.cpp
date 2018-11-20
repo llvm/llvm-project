@@ -16,8 +16,10 @@
 // unordered_multiset& operator=(const unordered_multiset& u);
 
 #include <unordered_set>
+#include <algorithm>
 #include <cassert>
 #include <cfloat>
+#include <cmath>
 #include <cstddef>
 
 #include "test_macros.h"

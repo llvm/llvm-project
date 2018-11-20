@@ -502,33 +502,21 @@ define <8 x i16> @f64to8us(<8 x double> %f) {
 }
 
 define <8 x i8> @f64to8uc(<8 x double> %f) {
-; ALL-LABEL: f64to8uc:
-; ALL:       # %bb.0:
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; ALL-NEXT:    vcvttsd2si %xmm1, %eax
-; ALL-NEXT:    vcvttsd2si %xmm0, %ecx
-; ALL-NEXT:    vmovd %ecx, %xmm1
-; ALL-NEXT:    vpinsrb $1, %eax, %xmm1, %xmm1
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm2
-; ALL-NEXT:    vcvttsd2si %xmm2, %eax
-; ALL-NEXT:    vpinsrb $2, %eax, %xmm1, %xmm1
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm2[1,0]
-; ALL-NEXT:    vcvttsd2si %xmm2, %eax
-; ALL-NEXT:    vpinsrb $3, %eax, %xmm1, %xmm1
-; ALL-NEXT:    vextractf32x4 $2, %zmm0, %xmm2
-; ALL-NEXT:    vcvttsd2si %xmm2, %eax
-; ALL-NEXT:    vpinsrb $4, %eax, %xmm1, %xmm1
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm2[1,0]
-; ALL-NEXT:    vcvttsd2si %xmm2, %eax
-; ALL-NEXT:    vpinsrb $5, %eax, %xmm1, %xmm1
-; ALL-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
-; ALL-NEXT:    vcvttsd2si %xmm0, %eax
-; ALL-NEXT:    vpinsrb $6, %eax, %xmm1, %xmm1
-; ALL-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
-; ALL-NEXT:    vcvttsd2si %xmm0, %eax
-; ALL-NEXT:    vpinsrb $7, %eax, %xmm1, %xmm0
-; ALL-NEXT:    vzeroupper
-; ALL-NEXT:    retq
+; NOVL-LABEL: f64to8uc:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    vcvttpd2dq %zmm0, %ymm0
+; NOVL-NEXT:    vpmovdw %zmm0, %ymm0
+; NOVL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    retq
+;
+; VL-LABEL: f64to8uc:
+; VL:       # %bb.0:
+; VL-NEXT:    vcvttpd2dq %zmm0, %ymm0
+; VL-NEXT:    vpmovdw %ymm0, %xmm0
+; VL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; VL-NEXT:    vzeroupper
+; VL-NEXT:    retq
   %res = fptoui <8 x double> %f to <8 x i8>
   ret <8 x i8> %res
 }

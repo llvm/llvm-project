@@ -1914,6 +1914,7 @@ void llvm::PrintSectionHeaders(const ObjectFile *Obj) {
                      (unsigned)Section.getIndex(), Name.str().c_str(), Size,
                      Address, Type.c_str());
   }
+  outs() << "\n";
 }
 
 void llvm::PrintSectionContents(const ObjectFile *Obj) {

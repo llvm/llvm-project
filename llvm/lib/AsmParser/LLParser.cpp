@@ -4549,13 +4549,13 @@ bool LLParser::ParseDISubprogram(MDNode *&Result, bool IsDistinct) {
     return Lex.Error(
         Loc,
         "missing 'distinct', required for !DISubprogram when 'isDefinition'");
-
+  DISubprogram::DISPFlags SPFlags = DISubprogram::toSPFlags(
+      isLocal.Val, isDefinition.Val, isOptimized.Val, virtuality.Val);
   Result = GET_OR_DISTINCT(
       DISubprogram,
       (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,
-       type.Val, isLocal.Val, isDefinition.Val, scopeLine.Val,
-       containingType.Val, virtuality.Val, virtualIndex.Val, thisAdjustment.Val,
-       flags.Val, isOptimized.Val, unit.Val, templateParams.Val,
+       type.Val, scopeLine.Val, containingType.Val, virtualIndex.Val,
+       thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
        declaration.Val, retainedNodes.Val, thrownTypes.Val));
   return false;
 }

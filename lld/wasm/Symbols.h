@@ -245,8 +245,6 @@ protected:
                const WasmGlobalType *GlobalType)
       : Symbol(Name, K, Flags, F), GlobalType(GlobalType) {}
 
-  // Explicit function type, needed for undefined or synthetic functions only.
-  // For regular defined globals this information comes from the InputChunk.
   const WasmGlobalType *GlobalType;
   uint32_t GlobalIndex = INVALID_INDEX;
 };
@@ -338,7 +336,7 @@ template <typename T, typename... ArgT>
 T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
   static_assert(std::is_trivially_destructible<T>(),
                 "Symbol types must be trivially destructible");
-  static_assert(sizeof(T) <= sizeof(SymbolUnion), "Symbol too small");
+  static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&

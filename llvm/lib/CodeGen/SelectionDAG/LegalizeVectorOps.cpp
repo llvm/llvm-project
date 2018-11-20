@@ -244,7 +244,11 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         if (SDValue Lowered = TLI.LowerOperation(Result, DAG)) {
           assert(Lowered->getNumValues() == Op->getNumValues() &&
                  "Unexpected number of results");
-          Changed = Lowered != Result;
+          if (Lowered != Result) {
+            // Make sure the new code is also legal.
+            Lowered = LegalizeOp(Lowered);
+            Changed = true;
+          }
           return TranslateLegalizeResults(Op, Lowered);
         }
         LLVM_FALLTHROUGH;
@@ -266,7 +270,11 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
         return TranslateLegalizeResults(Op, Result);
       case TargetLowering::Custom: {
         SDValue Lowered = TLI.LowerOperation(Result, DAG);
-        Changed = Lowered != Result;
+        if (Lowered != Result) {
+          // Make sure the new code is also legal.
+          Lowered = LegalizeOp(Lowered);
+          Changed = true;
+        }
         return TranslateLegalizeResults(Op, Lowered);
       }
       case TargetLowering::Expand:

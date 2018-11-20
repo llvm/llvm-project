@@ -67,7 +67,7 @@ enum FileCheckKind {
 
 class FileCheckType {
   FileCheckKind Kind;
-  int Count; //< optional Count for some checks
+  int Count; ///< optional Count for some checks
 
 public:
   FileCheckType(FileCheckKind Kind = CheckNone) : Kind(Kind), Count(1) {}

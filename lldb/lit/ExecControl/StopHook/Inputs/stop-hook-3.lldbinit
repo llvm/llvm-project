@@ -1,0 +1,3 @@
+target stop-hook add -f stop-hook.c -l 30 -e 34
+expr ptr
+DONE

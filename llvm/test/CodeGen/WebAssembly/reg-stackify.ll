@@ -100,8 +100,7 @@ define i32 @no_sink_readonly_call(i32 %x, i32 %y, i32* %p) {
 ; rearranged to make the stack contiguous.
 
 ; CHECK-LABEL: stack_uses:
-; CHECK: .param i32, i32, i32, i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK: .functype stack_uses (i32, i32, i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: block   {{$}}
 ; CHECK-NEXT: i32.const   $push[[L13:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: i32.lt_s    $push[[L0:[0-9]+]]=, $0, $pop[[L13]]{{$}}
@@ -124,8 +123,7 @@ define i32 @no_sink_readonly_call(i32 %x, i32 %y, i32* %p) {
 ; CHECK-NEXT: i32.const   $push14=, 1{{$}}
 ; CHECK-NEXT: return      $pop14{{$}}
 ; NOREGS-LABEL: stack_uses:
-; NOREGS: .param i32, i32, i32, i32{{$}}
-; NOREGS-NEXT: .result i32{{$}}
+; NOREGS: .functype stack_uses (i32, i32, i32, i32) -> (i32){{$}}
 ; NOREGS-NEXT: block {{$}}
 ; NOREGS-NEXT: get_local 0{{$}}
 ; NOREGS-NEXT: i32.const   1{{$}}
@@ -171,7 +169,7 @@ false:
 ; be trivially stackified. However, it can be stackified with a tee_local.
 
 ; CHECK-LABEL: multiple_uses:
-; CHECK: .param       i32, i32, i32{{$}}
+; CHECK: .functype multiple_uses (i32, i32, i32) -> (){{$}}
 ; CHECK-NEXT: block   {{$}}
 ; CHECK-NEXT: i32.load    $push[[NUM0:[0-9]+]]=, 0($2){{$}}
 ; CHECK-NEXT: tee_local   $push[[NUM1:[0-9]+]]=, $3=, $pop[[NUM0]]{{$}}
@@ -184,7 +182,7 @@ false:
 ; CHECK-NEXT: end_block{{$}}
 ; CHECK-NEXT: return{{$}}
 ; NOREGS-LABEL: multiple_uses:
-; NOREGS: .param       i32, i32, i32{{$}}
+; NOREGS: .functype multiple_uses (i32, i32, i32) -> (){{$}}
 ; NOREGS: .local i32{{$}}
 ; NOREGS-NEXT: block {{$}}
 ; NOREGS-NEXT: get_local   2{{$}}
@@ -230,12 +228,12 @@ return:
 
 ; CHECK:      side_effects:
 ; CHECK:      store
-; CHECK-NEXT: call
+; CHECK:      call
 ; CHECK:      store
 ; CHECK-NEXT: call
 ; NOREGS:      side_effects:
 ; NOREGS:      store
-; NOREGS-NEXT: call
+; NOREGS:      call
 ; NOREGS:      store
 ; NOREGS-NEXT: call
 declare void @evoke_side_effects()
@@ -253,8 +251,7 @@ entry:
 ; tree order.
 
 ; CHECK-LABEL: div_tree:
-; CHECK: .param i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32{{$}}
-; CHECK-NEXT: .result     i32{{$}}
+; CHECK: .functype div_tree (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: i32.div_s   $push[[L0:[0-9]+]]=, $0, $1{{$}}
 ; CHECK-NEXT: i32.div_s   $push[[L1:[0-9]+]]=, $2, $3{{$}}
 ; CHECK-NEXT: i32.div_s   $push[[L2:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
@@ -272,8 +269,7 @@ entry:
 ; CHECK-NEXT: i32.div_s   $push[[L14:[0-9]+]]=, $pop[[L6]], $pop[[L13]]{{$}}
 ; CHECK-NEXT: return      $pop[[L14]]{{$}}
 ; NOREGS-LABEL: div_tree:
-; NOREGS: .param i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32{{$}}
-; NOREGS-NEXT: .result     i32{{$}}
+; NOREGS: .functype div_tree (i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (i32){{$}}
 ; NOREGS-NEXT: get_local 0{{$}}
 ; NOREGS-NEXT: get_local 1{{$}}
 ; NOREGS-NEXT: i32.div_s{{$}}
@@ -329,14 +325,14 @@ entry:
 ; A simple multiple-use case.
 
 ; CHECK-LABEL: simple_multiple_use:
-; CHECK:  .param      i32, i32{{$}}
+; CHECK:       .functype simple_multiple_use (i32, i32) -> (){{$}}
 ; CHECK-NEXT:  i32.mul     $push[[NUM0:[0-9]+]]=, $1, $0{{$}}
 ; CHECK-NEXT:  tee_local   $push[[NUM1:[0-9]+]]=, $[[NUM2:[0-9]+]]=, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT:  call        use_a@FUNCTION, $pop[[NUM1]]{{$}}
 ; CHECK-NEXT:  call        use_b@FUNCTION, $[[NUM2]]{{$}}
 ; CHECK-NEXT:  return{{$}}
 ; NOREGS-LABEL: simple_multiple_use:
-; NOREGS:  .param      i32, i32{{$}}
+; NOREGS:       .functype simple_multiple_use (i32, i32) -> (){{$}}
 ; NOREGS-NEXT:  get_local 1{{$}}
 ; NOREGS-NEXT:  get_local 0{{$}}
 ; NOREGS-NEXT:  i32.mul
@@ -357,13 +353,13 @@ define void @simple_multiple_use(i32 %x, i32 %y) {
 ; Multiple uses of the same value in one instruction.
 
 ; CHECK-LABEL: multiple_uses_in_same_insn:
-; CHECK:  .param      i32, i32{{$}}
+; CHECK:       .functype multiple_uses_in_same_insn (i32, i32) -> (){{$}}
 ; CHECK-NEXT:  i32.mul     $push[[NUM0:[0-9]+]]=, $1, $0{{$}}
 ; CHECK-NEXT:  tee_local   $push[[NUM1:[0-9]+]]=, $[[NUM2:[0-9]+]]=, $pop[[NUM0]]{{$}}
 ; CHECK-NEXT:  call        use_2@FUNCTION, $pop[[NUM1]], $[[NUM2]]{{$}}
 ; CHECK-NEXT:  return{{$}}
 ; NOREGS-LABEL: multiple_uses_in_same_insn:
-; NOREGS:  .param      i32, i32{{$}}
+; NOREGS:       .functype multiple_uses_in_same_insn (i32, i32) -> (){{$}}
 ; NOREGS-NEXT:  get_local 1{{$}}
 ; NOREGS-NEXT:  get_local 0{{$}}
 ; NOREGS-NEXT:  i32.mul
@@ -381,8 +377,7 @@ define void @multiple_uses_in_same_insn(i32 %x, i32 %y) {
 ; Commute operands to achieve better stackifying.
 
 ; CHECK-LABEL: commute:
-; CHECK-NOT: param
-; CHECK:  .result     i32{{$}}
+; CHECK:  .functype commute () -> (i32){{$}}
 ; CHECK-NEXT:  i32.call    $push0=, red@FUNCTION{{$}}
 ; CHECK-NEXT:  i32.call    $push1=, green@FUNCTION{{$}}
 ; CHECK-NEXT:  i32.add     $push2=, $pop0, $pop1{{$}}
@@ -390,8 +385,7 @@ define void @multiple_uses_in_same_insn(i32 %x, i32 %y) {
 ; CHECK-NEXT:  i32.add     $push4=, $pop2, $pop3{{$}}
 ; CHECK-NEXT:  return      $pop4{{$}}
 ; NOREGS-LABEL: commute:
-; NOREGS-NOT: param
-; NOREGS:  .result     i32{{$}}
+; NOREGS:  .functype commute () -> (i32){{$}}
 ; NOREGS-NEXT:  i32.call    red@FUNCTION{{$}}
 ; NOREGS-NEXT:  i32.call    green@FUNCTION{{$}}
 ; NOREGS-NEXT:  i32.add {{$}}
@@ -578,11 +572,11 @@ define i32 @store_past_invar_load(i32 %a, i32* %p1, i32* dereferenceable(4) %p2)
 }
 
 ; CHECK-LABEL: ignore_dbg_value:
-; CHECK-NEXT: .Lfunc_begin
-; CHECK-NEXT: unreachable
+; CHECK:      .Lfunc_begin
+; CHECK:       unreachable
 ; NOREGS-LABEL: ignore_dbg_value:
-; NOREGS-NEXT: .Lfunc_begin
-; NOREGS-NEXT: unreachable
+; NOREGS:      .Lfunc_begin
+; NOREGS:       unreachable
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 define void @ignore_dbg_value() {
   call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !7, metadata !9), !dbg !10

@@ -14,10 +14,16 @@
 
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
+
+#define DEBUG_TYPE "module-summary-index"
+
+STATISTIC(ReadOnlyLiveGVars,
+          "Number of live global variables marked read only");
 
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary({});
@@ -130,7 +136,7 @@ static void propagateConstantsToRefs(GlobalValueSummary *S) {
 // - After computing dead symbols in combined index we do the constant
 //   propagation. During this step we clear readonly attribute from
 //   all variables which:
-//   a. are dead, preserved or can't be imported
+//   a. are preserved or can't be imported
 //   b. referenced by any global variable initializer
 //   c. referenced by a function and reference is not readonly
 //
@@ -160,6 +166,13 @@ void ModuleSummaryIndex::propagateConstants(
           GVS->setReadOnly(false);
       propagateConstantsToRefs(S.get());
     }
+  if (llvm::AreStatisticsEnabled())
+    for (auto &P : *this)
+      if (P.second.SummaryList.size())
+        if (auto *GVS = dyn_cast<GlobalVarSummary>(
+                P.second.SummaryList[0]->getBaseObject()))
+          if (isGlobalValueLive(GVS) && GVS->isReadOnly())
+            ReadOnlyLiveGVars++;
 }
 
 // TODO: write a graphviz dumper for SCCs (see ModuleSummaryIndex::exportToDot)

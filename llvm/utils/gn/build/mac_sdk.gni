@@ -1,0 +1,4 @@
+# Location of the mac sdk.
+# If that's not fixed, might want to shell out to xcrun at gn time to
+# retrieve this, but for now this seems to do the trick.
+mac_sdk_path = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk"

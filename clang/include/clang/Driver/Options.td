@@ -768,6 +768,12 @@ def fno_profile_instr_use : Flag<["-"], "fno-profile-instr-use">,
     HelpText<"Disable using instrumentation data for profile-guided optimization">;
 def fno_profile_use : Flag<["-"], "fno-profile-use">,
     Alias<fno_profile_instr_use>;
+def fprofile_filter_files_EQ : Joined<["-"], "fprofile-filter-files=">,
+    Group<f_Group>, Flags<[CC1Option, CoreOption]>,
+    HelpText<"Instrument only functions from files where names match any regex separated by a semi-colon">;
+def fprofile_exclude_files_EQ : Joined<["-"], "fprofile-exclude-files=">,
+    Group<f_Group>, Flags<[CC1Option, CoreOption]>,
+    HelpText<"Instrument only functions from files where names don't match all the regexes separated by a semi-colon">;
 
 def faddrsig : Flag<["-"], "faddrsig">, Group<f_Group>, Flags<[CoreOption, CC1Option]>,
   HelpText<"Emit an address-significance table">;

@@ -836,6 +836,14 @@ TEST(Hover, All) {
           "",
       },
       {
+          R"cpp(// simple trailing return type
+            ^auto main() -> int {
+              return 0;
+            }
+          )cpp",
+          "int",
+      },
+      {
           R"cpp(// auto function return with trailing type
             struct Bar {};
             ^auto test() -> decltype(Bar()) {

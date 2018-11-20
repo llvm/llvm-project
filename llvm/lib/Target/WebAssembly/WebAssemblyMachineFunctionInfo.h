@@ -129,6 +129,9 @@ void ComputeSignatureVTs(const FunctionType *Ty, const Function &F,
                          const TargetMachine &TM, SmallVectorImpl<MVT> &Params,
                          SmallVectorImpl<MVT> &Results);
 
+void ValTypesFromMVTs(const ArrayRef<MVT> &In,
+                      SmallVectorImpl<wasm::ValType> &Out);
+
 std::unique_ptr<wasm::WasmSignature>
 SignatureFromMVTs(const SmallVectorImpl<MVT> &Results,
                   const SmallVectorImpl<MVT> &Params);

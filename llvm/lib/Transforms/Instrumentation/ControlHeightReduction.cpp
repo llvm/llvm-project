@@ -1416,7 +1416,7 @@ bool CHRScopeSorter(CHRScope *Scope1, CHRScope *Scope2) {
 void CHR::sortScopes(SmallVectorImpl<CHRScope *> &Input,
                      SmallVectorImpl<CHRScope *> &Output) {
   Output.resize(Input.size());
-  std::copy(Input.begin(), Input.end(), Output.begin());
+  llvm::copy(Input, Output.begin());
   std::stable_sort(Output.begin(), Output.end(), CHRScopeSorter);
 }
 
@@ -2040,7 +2040,7 @@ bool ControlHeightReductionLegacyPass::runOnFunction(Function &F) {
       getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   ProfileSummaryInfo &PSI =
-      *getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+      getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   RegionInfo &RI = getAnalysis<RegionInfoPass>().getRegionInfo();
   std::unique_ptr<OptimizationRemarkEmitter> OwnedORE =
       llvm::make_unique<OptimizationRemarkEmitter>(&F);

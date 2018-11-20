@@ -29,7 +29,8 @@
 namespace __hwasan {
 
 struct Metadata {
-  u32 requested_size;  // sizes are < 4G.
+  u32 requested_size : 31;  // sizes are < 2G.
+  u32 right_aligned  : 1;
   u32 alloc_context_id;
 };
 

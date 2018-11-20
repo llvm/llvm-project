@@ -9,8 +9,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: sext_inreg_v16i8:
 ; NO-SIMD128-NOT: i8x16
-; SIMD128-NEXT: .param v128{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype sext_inreg_v16i8 (v128) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[T0:[0-9]+]]=, 7{{$}}
 ; SIMD128-NEXT: i8x16.shl $push[[T1:[0-9]+]]=, $0, $pop[[T0]]{{$}}
 ; SIMD128-NEXT: i32.const $push[[T2:[0-9]+]]=, 7{{$}}
@@ -23,8 +22,7 @@ define <16 x i8> @sext_inreg_v16i8(<16 x i1> %x) {
 
 ; CHECK-LABEL: sext_inreg_v8i16:
 ; NO-SIMD128-NOT: i16x8
-; SIMD128-NEXT: .param v128{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype sext_inreg_v8i16 (v128) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[T0:[0-9]+]]=, 15{{$}}
 ; SIMD128-NEXT: i16x8.shl $push[[T1:[0-9]+]]=, $0, $pop[[T0]]{{$}}
 ; SIMD128-NEXT: i32.const $push[[T2:[0-9]+]]=, 15{{$}}
@@ -37,8 +35,7 @@ define <8 x i16> @sext_inreg_v8i16(<8 x i1> %x) {
 
 ; CHECK-LABEL: sext_inreg_v4i32:
 ; NO-SIMD128-NOT: i32x4
-; SIMD128-NEXT: .param v128{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype sext_inreg_v4i32 (v128) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[T0:[0-9]+]]=, 31{{$}}
 ; SIMD128-NEXT: i32x4.shl $push[[T1:[0-9]+]]=, $0, $pop[[T0]]{{$}}
 ; SIMD128-NEXT: i32.const $push[[T2:[0-9]+]]=, 31{{$}}
@@ -52,8 +49,7 @@ define <4 x i32> @sext_inreg_v4i32(<4 x i1> %x) {
 ; CHECK-LABEL: sext_inreg_v2i64:
 ; NO-SIMD128-NOT: i64x2
 ; SDIM128-VM-NOT: i64x2
-; SIMD128-NEXT: .param v128{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype sext_inreg_v2i64 (v128) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[T0:[0-9]+]]=, 63{{$}}
 ; SIMD128-NEXT: i64x2.shl $push[[T1:[0-9]+]]=, $0, $pop[[T0]]{{$}}
 ; SIMD128-NEXT: i32.const $push[[T2:[0-9]+]]=, 63{{$}}

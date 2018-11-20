@@ -72,7 +72,8 @@ public:
   /// Parse a unit header from \p debug_info starting at \p offset_ptr.
   bool extract(DWARFContext &Context, const DWARFDataExtractor &debug_info,
                uint32_t *offset_ptr, DWARFSectionKind Kind = DW_SECT_INFO,
-               const DWARFUnitIndex *Index = nullptr);
+               const DWARFUnitIndex *Index = nullptr,
+               const DWARFUnitIndex::Entry *Entry = nullptr);
   uint32_t getOffset() const { return Offset; }
   const dwarf::FormParams &getFormParams() const { return FormParams; }
   uint16_t getVersion() const { return FormParams.Version; }
@@ -108,7 +109,8 @@ const DWARFUnitIndex &getDWARFUnitIndex(DWARFContext &Context,
 /// .debug_info and .debug_types, or from .debug_info.dwo and .debug_types.dwo.
 class DWARFUnitVector final : public SmallVector<std::unique_ptr<DWARFUnit>, 1> {
   std::function<std::unique_ptr<DWARFUnit>(uint32_t, DWARFSectionKind,
-                                           const DWARFSection *)>
+                                           const DWARFSection *,
+                                           const DWARFUnitIndex::Entry *)>
       Parser;
   int NumInfoUnits = -1;
 

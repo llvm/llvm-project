@@ -59,6 +59,7 @@ add_llvm_library(LLVMSupport
   BinaryStreamWriter.cpp
   BlockFrequency.cpp
   BranchProbability.cpp
+  BuryPointer.cpp
   CachePruning.cpp
   circular_raw_ostream.cpp
   Chrono.cpp

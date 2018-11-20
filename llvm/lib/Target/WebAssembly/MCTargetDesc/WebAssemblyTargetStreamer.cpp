@@ -39,43 +39,19 @@ WebAssemblyTargetAsmStreamer::WebAssemblyTargetAsmStreamer(
 WebAssemblyTargetWasmStreamer::WebAssemblyTargetWasmStreamer(MCStreamer &S)
     : WebAssemblyTargetStreamer(S) {}
 
-static void PrintTypes(formatted_raw_ostream &OS, ArrayRef<MVT> Types) {
+static void PrintTypes(formatted_raw_ostream &OS, ArrayRef<wasm::ValType> Types) {
   bool First = true;
-  for (MVT Type : Types) {
+  for (auto Type : Types) {
     if (First)
       First = false;
     else
       OS << ", ";
-    OS << WebAssembly::TypeToString(WebAssembly::toValType(Type));
+    OS << WebAssembly::TypeToString(Type);
   }
   OS << '\n';
 }
 
-void WebAssemblyTargetAsmStreamer::emitParam(MCSymbol *Symbol,
-                                             ArrayRef<MVT> Types) {
-  if (!Types.empty()) {
-    OS << "\t.param  \t";
-
-    // FIXME: Currently this applies to the "current" function; it may
-    // be cleaner to specify an explicit symbol as part of the directive.
-
-    PrintTypes(OS, Types);
-  }
-}
-
-void WebAssemblyTargetAsmStreamer::emitResult(MCSymbol *Symbol,
-                                              ArrayRef<MVT> Types) {
-  if (!Types.empty()) {
-    OS << "\t.result \t";
-
-    // FIXME: Currently this applies to the "current" function; it may
-    // be cleaner to specify an explicit symbol as part of the directive.
-
-    PrintTypes(OS, Types);
-  }
-}
-
-void WebAssemblyTargetAsmStreamer::emitLocal(ArrayRef<MVT> Types) {
+void WebAssemblyTargetAsmStreamer::emitLocal(ArrayRef<wasm::ValType> Types) {
   if (!Types.empty()) {
     OS << "\t.local  \t";
     PrintTypes(OS, Types);
@@ -84,19 +60,20 @@ void WebAssemblyTargetAsmStreamer::emitLocal(ArrayRef<MVT> Types) {
 
 void WebAssemblyTargetAsmStreamer::emitEndFunc() { OS << "\t.endfunc\n"; }
 
-void WebAssemblyTargetAsmStreamer::emitIndirectFunctionType(
-    MCSymbolWasm *Symbol) {
-  OS << "\t.functype\t" << Symbol->getName();
-  if (Symbol->getSignature()->Returns.empty())
-    OS << ", void";
-  else {
-    assert(Symbol->getSignature()->Returns.size() == 1);
-    OS << ", "
-       << WebAssembly::TypeToString(Symbol->getSignature()->Returns.front());
+void WebAssemblyTargetAsmStreamer::emitFunctionType(MCSymbolWasm *Symbol) {
+  OS << "\t.functype\t" << Symbol->getName() << " (";
+  auto &Params = Symbol->getSignature()->Params;
+  for (auto &Ty : Params) {
+    if (&Ty != &Params[0]) OS << ", ";
+    OS << WebAssembly::TypeToString(Ty);
   }
-  for (auto Ty : Symbol->getSignature()->Params)
-    OS << ", " << WebAssembly::TypeToString(Ty);
-  OS << '\n';
+  OS << ") -> (";
+  auto &Returns = Symbol->getSignature()->Returns;
+  for (auto &Ty : Returns) {
+    if (&Ty != &Returns[0]) OS << ", ";
+    OS << WebAssembly::TypeToString(Ty);
+  }
+  OS << ")\n";
 }
 
 void WebAssemblyTargetAsmStreamer::emitGlobalType(MCSymbolWasm *Sym) {
@@ -131,19 +108,9 @@ void WebAssemblyTargetAsmStreamer::emitIndIdx(const MCExpr *Value) {
   OS << "\t.indidx  \t" << *Value << '\n';
 }
 
-void WebAssemblyTargetWasmStreamer::emitParam(MCSymbol *Symbol,
-                                              ArrayRef<MVT> Types) {
-  // The Symbol already has its signature
-}
-
-void WebAssemblyTargetWasmStreamer::emitResult(MCSymbol *Symbol,
-                                               ArrayRef<MVT> Types) {
-  // The Symbol already has its signature
-}
-
-void WebAssemblyTargetWasmStreamer::emitLocal(ArrayRef<MVT> Types) {
-  SmallVector<std::pair<MVT, uint32_t>, 4> Grouped;
-  for (MVT Type : Types) {
+void WebAssemblyTargetWasmStreamer::emitLocal(ArrayRef<wasm::ValType> Types) {
+  SmallVector<std::pair<wasm::ValType, uint32_t>, 4> Grouped;
+  for (auto Type : Types) {
     if (Grouped.empty() || Grouped.back().first != Type)
       Grouped.push_back(std::make_pair(Type, 1));
     else
@@ -153,7 +120,7 @@ void WebAssemblyTargetWasmStreamer::emitLocal(ArrayRef<MVT> Types) {
   Streamer.EmitULEB128IntValue(Grouped.size());
   for (auto Pair : Grouped) {
     Streamer.EmitULEB128IntValue(Pair.second);
-    emitValueType(WebAssembly::toValType(Pair.first));
+    emitValueType(Pair.first);
   }
 }
 
@@ -165,8 +132,7 @@ void WebAssemblyTargetWasmStreamer::emitIndIdx(const MCExpr *Value) {
   llvm_unreachable(".indidx encoding not yet implemented");
 }
 
-void WebAssemblyTargetWasmStreamer::emitIndirectFunctionType(
-    MCSymbolWasm *Symbol) {
+void WebAssemblyTargetWasmStreamer::emitFunctionType(MCSymbolWasm *Symbol) {
   // Symbol already has its arguments and result set.
   Symbol->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
 }

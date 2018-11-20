@@ -1,0 +1,16 @@
+# FIXME: Once it's possible to add files to the root directory of the
+# monorepo, move this file to there.  Until then, you need to pass
+# `--dotfile=llvm/utils/gn/.gn --root=.` to the `gn gen` command.
+
+buildconfig = "//llvm/utils/gn/build/BUILDCONFIG.gn"
+
+# Disallow all calls to exec_script. We should be very conservative about
+# whitelisting things here.
+exec_script_whitelist = []
+
+# The normal GN setup is to have BUILD.gn files in-tree and a root BUILD.gn
+# file.  Since LLVM's GN build is unofficial, set secondary_source to tell GN
+# that e.g. llvm/lib/Demangle/BUILD.gn is found at
+# llvm/utils/gn/secondary/llvm/lib/Demangle/BUILD.gn and that the root BUILD.gn
+# file is at llvm/utils/gn/secondary/BUILD.gn
+secondary_source = "//llvm/utils/gn/secondary/"

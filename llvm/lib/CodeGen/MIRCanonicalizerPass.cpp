@@ -677,8 +677,7 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
 
   std::vector<MachineInstr *> Candidates = populateCandidates(MBB);
   std::vector<MachineInstr *> VisitedMIs;
-  std::copy(Candidates.begin(), Candidates.end(),
-            std::back_inserter(VisitedMIs));
+  llvm::copy(Candidates, std::back_inserter(VisitedMIs));
 
   std::vector<TypedVReg> VRegs;
   for (auto candidate : Candidates) {

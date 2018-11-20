@@ -12,8 +12,7 @@ target triple = "wasm32-unknown-unknown"
 ; ==============================================================================
 ; CHECK-LABEL: load_v16i8:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v16i8 (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @load_v16i8(<16 x i8>* %p) {
@@ -23,8 +22,7 @@ define <16 x i8> @load_v16i8(<16 x i8>* %p) {
 
 ; CHECK-LABEL: load_v16i8_with_folded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v16i8_with_folded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @load_v16i8_with_folded_offset(<16 x i8>* %p) {
@@ -37,8 +35,7 @@ define <16 x i8> @load_v16i8_with_folded_offset(<16 x i8>* %p) {
 
 ; CHECK-LABEL: load_v16i8_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v16i8_with_folded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @load_v16i8_with_folded_gep_offset(<16 x i8>* %p) {
@@ -49,8 +46,7 @@ define <16 x i8> @load_v16i8_with_folded_gep_offset(<16 x i8>* %p) {
 
 ; CHECK-LABEL: load_v16i8_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v16i8_with_unfolded_gep_negative_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -63,8 +59,7 @@ define <16 x i8> @load_v16i8_with_unfolded_gep_negative_offset(<16 x i8>* %p) {
 
 ; CHECK-LABEL: load_v16i8_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v16i8_with_unfolded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -79,8 +74,7 @@ define <16 x i8> @load_v16i8_with_unfolded_offset(<16 x i8>* %p) {
 
 ; CHECK-LABEL: load_v16i8_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v16i8_with_unfolded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -93,7 +87,7 @@ define <16 x i8> @load_v16i8_with_unfolded_gep_offset(<16 x i8>* %p) {
 
 ; CHECK-LABEL: load_v16i8_from_numeric_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v16i8_from_numeric_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 32($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -105,7 +99,7 @@ define <16 x i8> @load_v16i8_from_numeric_address() {
 
 ; CHECK-LABEL: load_v16i8_from_global_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v16i8_from_global_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, gv_v16i8($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -117,7 +111,7 @@ define <16 x i8> @load_v16i8_from_global_address() {
 
 ; CHECK-LABEL: store_v16i8:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v16i8 (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 0($1), $0{{$}}
 define void @store_v16i8(<16 x i8> %v, <16 x i8>* %p) {
   store <16 x i8> %v , <16 x i8>* %p
@@ -126,7 +120,7 @@ define void @store_v16i8(<16 x i8> %v, <16 x i8>* %p) {
 
 ; CHECK-LABEL: store_v16i8_with_folded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v16i8_with_folded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v16i8_with_folded_offset(<16 x i8> %v, <16 x i8>* %p) {
   %q = ptrtoint <16 x i8>* %p to i32
@@ -138,7 +132,7 @@ define void @store_v16i8_with_folded_offset(<16 x i8> %v, <16 x i8>* %p) {
 
 ; CHECK-LABEL: store_v16i8_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v16i8_with_folded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v16i8_with_folded_gep_offset(<16 x i8> %v, <16 x i8>* %p) {
   %s = getelementptr inbounds <16 x i8>, <16 x i8>* %p, i32 1
@@ -148,7 +142,7 @@ define void @store_v16i8_with_folded_gep_offset(<16 x i8> %v, <16 x i8>* %p) {
 
 ; CHECK-LABEL: store_v16i8_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v16i8_with_unfolded_gep_negative_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -160,7 +154,7 @@ define void @store_v16i8_with_unfolded_gep_negative_offset(<16 x i8> %v, <16 x i
 
 ; CHECK-LABEL: store_v16i8_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v16i8_with_unfolded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -172,7 +166,7 @@ define void @store_v16i8_with_unfolded_offset(<16 x i8> %v, <16 x i8>* %p) {
 
 ; CHECK-LABEL: store_v16i8_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v16i8_with_unfolded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -184,7 +178,7 @@ define void @store_v16i8_with_unfolded_gep_offset(<16 x i8> %v, <16 x i8>* %p) {
 
 ; CHECK-LABEL: store_v16i8_to_numeric_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v16i8_to_numeric_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[R:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store 32($pop[[R]]), $0{{$}}
 define void @store_v16i8_to_numeric_address(<16 x i8> %v) {
@@ -195,7 +189,7 @@ define void @store_v16i8_to_numeric_address(<16 x i8> %v) {
 
 ; CHECK-LABEL: store_v16i8_to_global_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v16i8_to_global_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[R:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store gv_v16i8($pop[[R]]), $0{{$}}
 define void @store_v16i8_to_global_address(<16 x i8> %v) {
@@ -208,8 +202,7 @@ define void @store_v16i8_to_global_address(<16 x i8> %v) {
 ; ==============================================================================
 ; CHECK-LABEL: load_v8i16:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v8i16 (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @load_v8i16(<8 x i16>* %p) {
@@ -219,8 +212,7 @@ define <8 x i16> @load_v8i16(<8 x i16>* %p) {
 
 ; CHECK-LABEL: load_v8i16_with_folded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v8i16_with_folded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @load_v8i16_with_folded_offset(<8 x i16>* %p) {
@@ -233,8 +225,7 @@ define <8 x i16> @load_v8i16_with_folded_offset(<8 x i16>* %p) {
 
 ; CHECK-LABEL: load_v8i16_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v8i16_with_folded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @load_v8i16_with_folded_gep_offset(<8 x i16>* %p) {
@@ -245,8 +236,7 @@ define <8 x i16> @load_v8i16_with_folded_gep_offset(<8 x i16>* %p) {
 
 ; CHECK-LABEL: load_v8i16_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v8i16_with_unfolded_gep_negative_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -259,8 +249,7 @@ define <8 x i16> @load_v8i16_with_unfolded_gep_negative_offset(<8 x i16>* %p) {
 
 ; CHECK-LABEL: load_v8i16_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v8i16_with_unfolded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[L0:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -275,8 +264,7 @@ define <8 x i16> @load_v8i16_with_unfolded_offset(<8 x i16>* %p) {
 
 ; CHECK-LABEL: load_v8i16_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v8i16_with_unfolded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -289,7 +277,7 @@ define <8 x i16> @load_v8i16_with_unfolded_gep_offset(<8 x i16>* %p) {
 
 ; CHECK-LABEL: load_v8i16_from_numeric_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v8i16_from_numeric_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 32($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -301,7 +289,7 @@ define <8 x i16> @load_v8i16_from_numeric_address() {
 
 ; CHECK-LABEL: load_v8i16_from_global_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v8i16_from_global_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, gv_v8i16($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -313,7 +301,7 @@ define <8 x i16> @load_v8i16_from_global_address() {
 
 ; CHECK-LABEL: store_v8i16:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v8i16 (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 0($1), $0{{$}}
 define void @store_v8i16(<8 x i16> %v, <8 x i16>* %p) {
   store <8 x i16> %v , <8 x i16>* %p
@@ -322,7 +310,7 @@ define void @store_v8i16(<8 x i16> %v, <8 x i16>* %p) {
 
 ; CHECK-LABEL: store_v8i16_with_folded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v8i16_with_folded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v8i16_with_folded_offset(<8 x i16> %v, <8 x i16>* %p) {
   %q = ptrtoint <8 x i16>* %p to i32
@@ -334,7 +322,7 @@ define void @store_v8i16_with_folded_offset(<8 x i16> %v, <8 x i16>* %p) {
 
 ; CHECK-LABEL: store_v8i16_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v8i16_with_folded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v8i16_with_folded_gep_offset(<8 x i16> %v, <8 x i16>* %p) {
   %s = getelementptr inbounds <8 x i16>, <8 x i16>* %p, i32 1
@@ -344,7 +332,7 @@ define void @store_v8i16_with_folded_gep_offset(<8 x i16> %v, <8 x i16>* %p) {
 
 ; CHECK-LABEL: store_v8i16_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v8i16_with_unfolded_gep_negative_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -356,7 +344,7 @@ define void @store_v8i16_with_unfolded_gep_negative_offset(<8 x i16> %v, <8 x i1
 
 ; CHECK-LABEL: store_v8i16_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v8i16_with_unfolded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -368,7 +356,7 @@ define void @store_v8i16_with_unfolded_offset(<8 x i16> %v, <8 x i16>* %p) {
 
 ; CHECK-LABEL: store_v8i16_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v8i16_with_unfolded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -380,7 +368,7 @@ define void @store_v8i16_with_unfolded_gep_offset(<8 x i16> %v, <8 x i16>* %p) {
 
 ; CHECK-LABEL: store_v8i16_to_numeric_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v8i16_to_numeric_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store 32($pop[[L0]]), $0{{$}}
 define void @store_v8i16_to_numeric_address(<8 x i16> %v) {
@@ -391,7 +379,7 @@ define void @store_v8i16_to_numeric_address(<8 x i16> %v) {
 
 ; CHECK-LABEL: store_v8i16_to_global_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v8i16_to_global_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[R:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store gv_v8i16($pop[[R]]), $0{{$}}
 define void @store_v8i16_to_global_address(<8 x i16> %v) {
@@ -404,8 +392,7 @@ define void @store_v8i16_to_global_address(<8 x i16> %v) {
 ; ==============================================================================
 ; CHECK-LABEL: load_v4i32:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4i32 (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @load_v4i32(<4 x i32>* %p) {
@@ -415,8 +402,7 @@ define <4 x i32> @load_v4i32(<4 x i32>* %p) {
 
 ; CHECK-LABEL: load_v4i32_with_folded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4i32_with_folded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @load_v4i32_with_folded_offset(<4 x i32>* %p) {
@@ -429,8 +415,7 @@ define <4 x i32> @load_v4i32_with_folded_offset(<4 x i32>* %p) {
 
 ; CHECK-LABEL: load_v4i32_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4i32_with_folded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @load_v4i32_with_folded_gep_offset(<4 x i32>* %p) {
@@ -441,8 +426,7 @@ define <4 x i32> @load_v4i32_with_folded_gep_offset(<4 x i32>* %p) {
 
 ; CHECK-LABEL: load_v4i32_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4i32_with_unfolded_gep_negative_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -455,8 +439,7 @@ define <4 x i32> @load_v4i32_with_unfolded_gep_negative_offset(<4 x i32>* %p) {
 
 ; CHECK-LABEL: load_v4i32_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4i32_with_unfolded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -471,8 +454,7 @@ define <4 x i32> @load_v4i32_with_unfolded_offset(<4 x i32>* %p) {
 
 ; CHECK-LABEL: load_v4i32_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4i32_with_unfolded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -485,7 +467,7 @@ define <4 x i32> @load_v4i32_with_unfolded_gep_offset(<4 x i32>* %p) {
 
 ; CHECK-LABEL: load_v4i32_from_numeric_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4i32_from_numeric_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 32($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -497,7 +479,7 @@ define <4 x i32> @load_v4i32_from_numeric_address() {
 
 ; CHECK-LABEL: load_v4i32_from_global_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4i32_from_global_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, gv_v4i32($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -509,7 +491,7 @@ define <4 x i32> @load_v4i32_from_global_address() {
 
 ; CHECK-LABEL: store_v4i32:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4i32 (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 0($1), $0{{$}}
 define void @store_v4i32(<4 x i32> %v, <4 x i32>* %p) {
   store <4 x i32> %v , <4 x i32>* %p
@@ -518,7 +500,7 @@ define void @store_v4i32(<4 x i32> %v, <4 x i32>* %p) {
 
 ; CHECK-LABEL: store_v4i32_with_folded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4i32_with_folded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v4i32_with_folded_offset(<4 x i32> %v, <4 x i32>* %p) {
   %q = ptrtoint <4 x i32>* %p to i32
@@ -530,7 +512,7 @@ define void @store_v4i32_with_folded_offset(<4 x i32> %v, <4 x i32>* %p) {
 
 ; CHECK-LABEL: store_v4i32_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4i32_with_folded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v4i32_with_folded_gep_offset(<4 x i32> %v, <4 x i32>* %p) {
   %s = getelementptr inbounds <4 x i32>, <4 x i32>* %p, i32 1
@@ -540,7 +522,7 @@ define void @store_v4i32_with_folded_gep_offset(<4 x i32> %v, <4 x i32>* %p) {
 
 ; CHECK-LABEL: store_v4i32_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4i32_with_unfolded_gep_negative_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -552,7 +534,7 @@ define void @store_v4i32_with_unfolded_gep_negative_offset(<4 x i32> %v, <4 x i3
 
 ; CHECK-LABEL: store_v4i32_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4i32_with_unfolded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -564,7 +546,7 @@ define void @store_v4i32_with_unfolded_offset(<4 x i32> %v, <4 x i32>* %p) {
 
 ; CHECK-LABEL: store_v4i32_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4i32_with_unfolded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -576,7 +558,7 @@ define void @store_v4i32_with_unfolded_gep_offset(<4 x i32> %v, <4 x i32>* %p) {
 
 ; CHECK-LABEL: store_v4i32_to_numeric_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v4i32_to_numeric_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store 32($pop[[L0]]), $0{{$}}
 define void @store_v4i32_to_numeric_address(<4 x i32> %v) {
@@ -587,7 +569,7 @@ define void @store_v4i32_to_numeric_address(<4 x i32> %v) {
 
 ; CHECK-LABEL: store_v4i32_to_global_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v4i32_to_global_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[R:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store gv_v4i32($pop[[R]]), $0{{$}}
 define void @store_v4i32_to_global_address(<4 x i32> %v) {
@@ -601,8 +583,7 @@ define void @store_v4i32_to_global_address(<4 x i32> %v) {
 ; CHECK-LABEL: load_v2i64:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2i64 (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_v2i64(<2 x i64>* %p) {
@@ -613,8 +594,7 @@ define <2 x i64> @load_v2i64(<2 x i64>* %p) {
 ; CHECK-LABEL: load_v2i64_with_folded_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2i64_with_folded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_v2i64_with_folded_offset(<2 x i64>* %p) {
@@ -628,8 +608,7 @@ define <2 x i64> @load_v2i64_with_folded_offset(<2 x i64>* %p) {
 ; CHECK-LABEL: load_v2i64_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2i64_with_folded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_v2i64_with_folded_gep_offset(<2 x i64>* %p) {
@@ -641,8 +620,7 @@ define <2 x i64> @load_v2i64_with_folded_gep_offset(<2 x i64>* %p) {
 ; CHECK-LABEL: load_v2i64_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2i64_with_unfolded_gep_negative_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -656,8 +634,7 @@ define <2 x i64> @load_v2i64_with_unfolded_gep_negative_offset(<2 x i64>* %p) {
 ; CHECK-LABEL: load_v2i64_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2i64_with_unfolded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -673,8 +650,7 @@ define <2 x i64> @load_v2i64_with_unfolded_offset(<2 x i64>* %p) {
 ; CHECK-LABEL: load_v2i64_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2i64_with_unfolded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -688,7 +664,7 @@ define <2 x i64> @load_v2i64_with_unfolded_gep_offset(<2 x i64>* %p) {
 ; CHECK-LABEL: load_v2i64_from_numeric_address:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2i64_from_numeric_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 32($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -701,7 +677,7 @@ define <2 x i64> @load_v2i64_from_numeric_address() {
 ; CHECK-LABEL: load_v2i64_from_global_address:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2i64_from_global_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, gv_v2i64($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -714,7 +690,7 @@ define <2 x i64> @load_v2i64_from_global_address() {
 ; CHECK-LABEL: store_v2i64:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2i64 (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 0($1), $0{{$}}
 define void @store_v2i64(<2 x i64> %v, <2 x i64>* %p) {
   store <2 x i64> %v , <2 x i64>* %p
@@ -724,7 +700,7 @@ define void @store_v2i64(<2 x i64> %v, <2 x i64>* %p) {
 ; CHECK-LABEL: store_v2i64_with_folded_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2i64_with_folded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v2i64_with_folded_offset(<2 x i64> %v, <2 x i64>* %p) {
   %q = ptrtoint <2 x i64>* %p to i32
@@ -737,7 +713,7 @@ define void @store_v2i64_with_folded_offset(<2 x i64> %v, <2 x i64>* %p) {
 ; CHECK-LABEL: store_v2i64_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2i64_with_folded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v2i64_with_folded_gep_offset(<2 x i64> %v, <2 x i64>* %p) {
   %s = getelementptr inbounds <2 x i64>, <2 x i64>* %p, i32 1
@@ -748,7 +724,7 @@ define void @store_v2i64_with_folded_gep_offset(<2 x i64> %v, <2 x i64>* %p) {
 ; CHECK-LABEL: store_v2i64_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2i64_with_unfolded_gep_negative_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -761,7 +737,7 @@ define void @store_v2i64_with_unfolded_gep_negative_offset(<2 x i64> %v, <2 x i6
 ; CHECK-LABEL: store_v2i64_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2i64_with_unfolded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -774,7 +750,7 @@ define void @store_v2i64_with_unfolded_offset(<2 x i64> %v, <2 x i64>* %p) {
 ; CHECK-LABEL: store_v2i64_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2i64_with_unfolded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -787,7 +763,7 @@ define void @store_v2i64_with_unfolded_gep_offset(<2 x i64> %v, <2 x i64>* %p) {
 ; CHECK-LABEL: store_v2i64_to_numeric_address:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v2i64_to_numeric_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store 32($pop[[L0]]), $0{{$}}
 define void @store_v2i64_to_numeric_address(<2 x i64> %v) {
@@ -799,7 +775,7 @@ define void @store_v2i64_to_numeric_address(<2 x i64> %v) {
 ; CHECK-LABEL: store_v2i64_to_global_address:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v2i64_to_global_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[R:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store gv_v2i64($pop[[R]]), $0{{$}}
 define void @store_v2i64_to_global_address(<2 x i64> %v) {
@@ -812,8 +788,7 @@ define void @store_v2i64_to_global_address(<2 x i64> %v) {
 ; ==============================================================================
 ; CHECK-LABEL: load_v4f32:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4f32 (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @load_v4f32(<4 x float>* %p) {
@@ -823,8 +798,7 @@ define <4 x float> @load_v4f32(<4 x float>* %p) {
 
 ; CHECK-LABEL: load_v4f32_with_folded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4f32_with_folded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @load_v4f32_with_folded_offset(<4 x float>* %p) {
@@ -837,8 +811,7 @@ define <4 x float> @load_v4f32_with_folded_offset(<4 x float>* %p) {
 
 ; CHECK-LABEL: load_v4f32_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4f32_with_folded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @load_v4f32_with_folded_gep_offset(<4 x float>* %p) {
@@ -849,8 +822,7 @@ define <4 x float> @load_v4f32_with_folded_gep_offset(<4 x float>* %p) {
 
 ; CHECK-LABEL: load_v4f32_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4f32_with_unfolded_gep_negative_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -863,8 +835,7 @@ define <4 x float> @load_v4f32_with_unfolded_gep_negative_offset(<4 x float>* %p
 
 ; CHECK-LABEL: load_v4f32_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4f32_with_unfolded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -879,8 +850,7 @@ define <4 x float> @load_v4f32_with_unfolded_offset(<4 x float>* %p) {
 
 ; CHECK-LABEL: load_v4f32_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4f32_with_unfolded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -893,7 +863,7 @@ define <4 x float> @load_v4f32_with_unfolded_gep_offset(<4 x float>* %p) {
 
 ; CHECK-LABEL: load_v4f32_from_numeric_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4f32_from_numeric_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 32($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -905,7 +875,7 @@ define <4 x float> @load_v4f32_from_numeric_address() {
 
 ; CHECK-LABEL: load_v4f32_from_global_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v4f32_from_global_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, gv_v4f32($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -917,7 +887,7 @@ define <4 x float> @load_v4f32_from_global_address() {
 
 ; CHECK-LABEL: store_v4f32:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4f32 (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 0($1), $0{{$}}
 define void @store_v4f32(<4 x float> %v, <4 x float>* %p) {
   store <4 x float> %v , <4 x float>* %p
@@ -926,7 +896,7 @@ define void @store_v4f32(<4 x float> %v, <4 x float>* %p) {
 
 ; CHECK-LABEL: store_v4f32_with_folded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4f32_with_folded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v4f32_with_folded_offset(<4 x float> %v, <4 x float>* %p) {
   %q = ptrtoint <4 x float>* %p to i32
@@ -938,7 +908,7 @@ define void @store_v4f32_with_folded_offset(<4 x float> %v, <4 x float>* %p) {
 
 ; CHECK-LABEL: store_v4f32_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4f32_with_folded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v4f32_with_folded_gep_offset(<4 x float> %v, <4 x float>* %p) {
   %s = getelementptr inbounds <4 x float>, <4 x float>* %p, i32 1
@@ -948,7 +918,7 @@ define void @store_v4f32_with_folded_gep_offset(<4 x float> %v, <4 x float>* %p)
 
 ; CHECK-LABEL: store_v4f32_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4f32_with_unfolded_gep_negative_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -960,7 +930,7 @@ define void @store_v4f32_with_unfolded_gep_negative_offset(<4 x float> %v, <4 x 
 
 ; CHECK-LABEL: store_v4f32_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4f32_with_unfolded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -972,7 +942,7 @@ define void @store_v4f32_with_unfolded_offset(<4 x float> %v, <4 x float>* %p) {
 
 ; CHECK-LABEL: store_v4f32_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v4f32_with_unfolded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -984,7 +954,7 @@ define void @store_v4f32_with_unfolded_gep_offset(<4 x float> %v, <4 x float>* %
 
 ; CHECK-LABEL: store_v4f32_to_numeric_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v4f32_to_numeric_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store 32($pop[[L0]]), $0{{$}}
 define void @store_v4f32_to_numeric_address(<4 x float> %v) {
@@ -995,7 +965,7 @@ define void @store_v4f32_to_numeric_address(<4 x float> %v) {
 
 ; CHECK-LABEL: store_v4f32_to_global_address:
 ; NO-SIMD128-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v4f32_to_global_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[R:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store gv_v4f32($pop[[R]]), $0{{$}}
 define void @store_v4f32_to_global_address(<4 x float> %v) {
@@ -1009,8 +979,7 @@ define void @store_v4f32_to_global_address(<4 x float> %v) {
 ; CHECK-LABEL: load_v2f64:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2f64 (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @load_v2f64(<2 x double>* %p) {
@@ -1021,8 +990,7 @@ define <2 x double> @load_v2f64(<2 x double>* %p) {
 ; CHECK-LABEL: load_v2f64_with_folded_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2f64_with_folded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @load_v2f64_with_folded_offset(<2 x double>* %p) {
@@ -1036,8 +1004,7 @@ define <2 x double> @load_v2f64_with_folded_offset(<2 x double>* %p) {
 ; CHECK-LABEL: load_v2f64_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2f64_with_folded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 16($0){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @load_v2f64_with_folded_gep_offset(<2 x double>* %p) {
@@ -1049,8 +1016,7 @@ define <2 x double> @load_v2f64_with_folded_gep_offset(<2 x double>* %p) {
 ; CHECK-LABEL: load_v2f64_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2f64_with_unfolded_gep_negative_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -1064,8 +1030,7 @@ define <2 x double> @load_v2f64_with_unfolded_gep_negative_offset(<2 x double>* 
 ; CHECK-LABEL: load_v2f64_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2f64_with_unfolded_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -1081,8 +1046,7 @@ define <2 x double> @load_v2f64_with_unfolded_offset(<2 x double>* %p) {
 ; CHECK-LABEL: load_v2f64_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param i32{{$}}
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2f64_with_unfolded_gep_offset (i32) -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[L1:[0-9]+]]=, $0, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 0($pop[[L1]]){{$}}
@@ -1096,7 +1060,7 @@ define <2 x double> @load_v2f64_with_unfolded_gep_offset(<2 x double>* %p) {
 ; CHECK-LABEL: load_v2f64_from_numeric_address:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2f64_from_numeric_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, 32($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1109,7 +1073,7 @@ define <2 x double> @load_v2f64_from_numeric_address() {
 ; CHECK-LABEL: load_v2f64_from_global_address:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .result v128{{$}}
+; SIMD128-NEXT: .functype load_v2f64_from_global_address () -> (v128){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.load $push[[R:[0-9]+]]=, gv_v2f64($pop[[L0]]){{$}}
 ; SIMD128-NEXT: return $pop[[R]]{{$}}
@@ -1122,7 +1086,7 @@ define <2 x double> @load_v2f64_from_global_address() {
 ; CHECK-LABEL: store_v2f64:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2f64 (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 0($1), $0{{$}}
 define void @store_v2f64(<2 x double> %v, <2 x double>* %p) {
   store <2 x double> %v , <2 x double>* %p
@@ -1132,7 +1096,7 @@ define void @store_v2f64(<2 x double> %v, <2 x double>* %p) {
 ; CHECK-LABEL: store_v2f64_with_folded_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2f64_with_folded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v2f64_with_folded_offset(<2 x double> %v, <2 x double>* %p) {
   %q = ptrtoint <2 x double>* %p to i32
@@ -1145,7 +1109,7 @@ define void @store_v2f64_with_folded_offset(<2 x double> %v, <2 x double>* %p) {
 ; CHECK-LABEL: store_v2f64_with_folded_gep_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2f64_with_folded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: v128.store 16($1), $0{{$}}
 define void @store_v2f64_with_folded_gep_offset(<2 x double> %v, <2 x double>* %p) {
   %s = getelementptr inbounds <2 x double>, <2 x double>* %p, i32 1
@@ -1156,7 +1120,7 @@ define void @store_v2f64_with_folded_gep_offset(<2 x double> %v, <2 x double>* %
 ; CHECK-LABEL: store_v2f64_with_unfolded_gep_negative_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2f64_with_unfolded_gep_negative_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -1169,7 +1133,7 @@ define void @store_v2f64_with_unfolded_gep_negative_offset(<2 x double> %v, <2 x
 ; CHECK-LABEL: store_v2f64_with_unfolded_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2f64_with_unfolded_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, -16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -1182,7 +1146,7 @@ define void @store_v2f64_with_unfolded_offset(<2 x double> %v, <2 x double>* %p)
 ; CHECK-LABEL: store_v2f64_with_unfolded_gep_offset:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128, i32{{$}}
+; SIMD128-NEXT: .functype store_v2f64_with_unfolded_gep_offset (v128, i32) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 16{{$}}
 ; SIMD128-NEXT: i32.add $push[[R:[0-9]+]]=, $1, $pop[[L0]]{{$}}
 ; SIMD128-NEXT: v128.store 0($pop[[R]]), $0{{$}}
@@ -1195,7 +1159,7 @@ define void @store_v2f64_with_unfolded_gep_offset(<2 x double> %v, <2 x double>*
 ; CHECK-LABEL: store_v2f64_to_numeric_address:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v2f64_to_numeric_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[L0:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store 32($pop[[L0]]), $0{{$}}
 define void @store_v2f64_to_numeric_address(<2 x double> %v) {
@@ -1207,7 +1171,7 @@ define void @store_v2f64_to_numeric_address(<2 x double> %v) {
 ; CHECK-LABEL: store_v2f64_to_global_address:
 ; NO-SIMD128-NOT: v128
 ; SIMD128-VM-NOT: v128
-; SIMD128-NEXT: .param v128{{$}}
+; SIMD128-NEXT: .functype store_v2f64_to_global_address (v128) -> (){{$}}
 ; SIMD128-NEXT: i32.const $push[[R:[0-9]+]]=, 0{{$}}
 ; SIMD128-NEXT: v128.store gv_v2f64($pop[[R]]), $0{{$}}
 define void @store_v2f64_to_global_address(<2 x double> %v) {

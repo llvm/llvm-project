@@ -571,6 +571,7 @@
 		268900EE13353E6F00698AC0 /* PathMappingList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 495BBACB119A0DBE00418BEA /* PathMappingList.cpp */; };
 		2668A2EE20AF417D00D94111 /* PathMappingListTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */; };
 		AFD966BA217140B6006714AC /* PdbIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B6217140B6006714AC /* PdbIndex.cpp */; };
+		AF0F459E219FA1C800C1E612 /* PdbSymUid.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF0F459D219FA1C800C1E612 /* PdbSymUid.cpp */; };
 		AFD966B9217140B6006714AC /* PdbUtil.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFD966B5217140B6006714AC /* PdbUtil.cpp */; };
 		25420ED21A649D88009ADBCB /* PipeBase.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 25420ED11A649D88009ADBCB /* PipeBase.cpp */; };
 		2377C2F819E613C100737875 /* PipePosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2377C2F719E613C100737875 /* PipePosix.cpp */; };
@@ -2383,6 +2384,7 @@
 		2668A2ED20AF417D00D94111 /* PathMappingListTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PathMappingListTest.cpp; path = Target/PathMappingListTest.cpp; sourceTree = "<group>"; };
 		AFD966B6217140B6006714AC /* PdbIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbIndex.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbIndex.cpp; sourceTree = SOURCE_ROOT; };
 		AFD966BF217140C8006714AC /* PdbIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PdbIndex.h; path = source/Plugins/SymbolFile/NativePDB/PdbIndex.h; sourceTree = SOURCE_ROOT; };
+		AF0F459D219FA1C800C1E612 /* PdbSymUid.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbSymUid.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbSymUid.cpp; sourceTree = SOURCE_ROOT; };
 		AFD966BC217140C8006714AC /* PdbSymUid.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PdbSymUid.h; path = source/Plugins/SymbolFile/NativePDB/PdbSymUid.h; sourceTree = SOURCE_ROOT; };
 		AFD966B5217140B6006714AC /* PdbUtil.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PdbUtil.cpp; path = source/Plugins/SymbolFile/NativePDB/PdbUtil.cpp; sourceTree = SOURCE_ROOT; };
 		AFD966BE217140C8006714AC /* PdbUtil.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = PdbUtil.h; path = source/Plugins/SymbolFile/NativePDB/PdbUtil.h; sourceTree = SOURCE_ROOT; };
@@ -6771,6 +6773,7 @@
 				AFD966BD217140C8006714AC /* CompileUnitIndex.h */,
 				AFD966B6217140B6006714AC /* PdbIndex.cpp */,
 				AFD966BF217140C8006714AC /* PdbIndex.h */,
+				AF0F459D219FA1C800C1E612 /* PdbSymUid.cpp */,
 				AFD966BC217140C8006714AC /* PdbSymUid.h */,
 				AFD966B5217140B6006714AC /* PdbUtil.cpp */,
 				AFD966BE217140C8006714AC /* PdbUtil.h */,
@@ -7822,6 +7825,7 @@
 				266E829D1B8E542C008FCA06 /* DWARFAttribute.cpp in Sources */,
 				26764C9E1E48F51E008D3573 /* Stream.cpp in Sources */,
 				2689004613353E0400698AC0 /* ModuleList.cpp in Sources */,
+				AF0F459E219FA1C800C1E612 /* PdbSymUid.cpp in Sources */,
 				2689004713353E0400698AC0 /* PluginManager.cpp in Sources */,
 				AFF81FAF20D1CC400010F95E /* HostThreadMacOSX.mm in Sources */,
 				AF0C112818580CD800C4C45B /* QueueItem.cpp in Sources */,

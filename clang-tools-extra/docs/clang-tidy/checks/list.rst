@@ -6,6 +6,7 @@ Clang-Tidy Checks
 .. toctree::
    abseil-duration-division
    abseil-duration-factory-float
+   abseil-duration-factory-scale
    abseil-faster-strsplit-delimiter
    abseil-no-internal-dependencies
    abseil-no-namespace
@@ -124,6 +125,7 @@ Clang-Tidy Checks
    google-explicit-constructor
    google-global-names-in-headers
    google-objc-avoid-throwing-exception
+   google-objc-function-naming
    google-objc-global-variable-declaration
    google-readability-braces-around-statements (redirects to readability-braces-around-statements) <google-readability-braces-around-statements>
    google-readability-casting

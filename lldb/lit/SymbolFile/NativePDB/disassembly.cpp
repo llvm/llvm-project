@@ -2,9 +2,9 @@
 // REQUIRES: lld
 
 // Test that we can show disassembly and source.
-// RUN: clang-cl -m64 /Z7 /GS- /GR- /c /Fo%t.obj -- %s
+// RUN: %clang_cl -m64 /Z7 /GS- /GR- /c /Fo%t.obj -- %s
 // RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb -- %t.obj
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb -f %t.exe -s \
+// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/disassembly.lldbinit | FileCheck %s
 
 // Some context lines before

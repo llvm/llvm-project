@@ -18,6 +18,7 @@
 #include "DefaultArgumentsCheck.h"
 #include "ExplicitConstructorCheck.h"
 #include "ExplicitMakePairCheck.h"
+#include "FunctionNamingCheck.h"
 #include "GlobalNamesInHeadersCheck.h"
 #include "GlobalVariableDeclarationCheck.h"
 #include "IntegerTypesCheck.h"
@@ -50,6 +51,8 @@ class GoogleModule : public ClangTidyModule {
         "google-global-names-in-headers");
     CheckFactories.registerCheck<objc::AvoidThrowingObjCExceptionCheck>(
         "google-objc-avoid-throwing-exception");
+    CheckFactories.registerCheck<objc::FunctionNamingCheck>(
+        "google-objc-function-naming");
     CheckFactories.registerCheck<objc::GlobalVariableDeclarationCheck>(
         "google-objc-global-variable-declaration");
     CheckFactories.registerCheck<runtime::IntegerTypesCheck>(
