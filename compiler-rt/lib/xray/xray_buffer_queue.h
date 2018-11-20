@@ -32,10 +32,11 @@ namespace __xray {
 class BufferQueue {
 public:
   /// ControlBlock represents the memory layout of how we interpret the backing
-  /// store for all buffers managed by a BufferQueue instance. The ControlBlock
-  /// has the reference count as the first member, sized according to
-  /// platform-specific cache-line size. We never use the Buffer member of the
-  /// union, which is only there for compiler-supported alignment and sizing.
+  /// store for all buffers and extents managed by a BufferQueue instance. The
+  /// ControlBlock has the reference count as the first member, sized according
+  /// to platform-specific cache-line size. We never use the Buffer member of
+  /// the union, which is only there for compiler-supported alignment and
+  /// sizing.
   ///
   /// This ensures that the `Data` member will be placed at least kCacheLineSize
   /// bytes from the beginning of the structure.
@@ -52,7 +53,7 @@ public:
   };
 
   struct Buffer {
-    atomic_uint64_t Extents{0};
+    atomic_uint64_t *Extents = nullptr;
     uint64_t Generation{0};
     void *Data = nullptr;
     size_t Size = 0;
@@ -60,6 +61,7 @@ public:
   private:
     friend class BufferQueue;
     ControlBlock *BackingStore = nullptr;
+    ControlBlock *ExtentsBackingStore = nullptr;
     size_t Count = 0;
   };
 
@@ -141,6 +143,9 @@ private:
 
   // The collocated ControlBlock and buffer storage.
   ControlBlock *BackingStore;
+
+  // The collocated ControlBlock and extents storage.
+  ControlBlock *ExtentsBackingStore;
 
   // A dynamically allocated array of BufferRep instances.
   BufferRep *Buffers;

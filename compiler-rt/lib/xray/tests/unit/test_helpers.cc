@@ -82,7 +82,7 @@ std::string serialize(BufferQueue &Buffers, int32_t Version) {
   Serialized.append(reinterpret_cast<const char *>(&HeaderStorage),
                     sizeof(XRayFileHeader));
   Buffers.apply([&](const BufferQueue::Buffer &B) {
-    auto Size = atomic_load_relaxed(&B.Extents);
+    auto Size = atomic_load_relaxed(B.Extents);
     auto Extents =
         createMetadataRecord<MetadataRecord::RecordKinds::BufferExtents>(Size);
     Serialized.append(reinterpret_cast<const char *>(&Extents),

@@ -7298,6 +7298,21 @@ INTERCEPTOR(void, mi_vector_hash, const void *key, SIZE_T len, u32 seed,
 #define INIT_MI_VECTOR_HASH
 #endif
 
+#if SANITIZER_INTERCEPT_SETVBUF
+INTERCEPTOR(int, setvbuf, __sanitizer_FILE *stream, char *buf, int mode,
+  SIZE_T size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, setvbuf, stream, buf, mode, size);
+  int ret = REAL(setvbuf)(stream, buf, mode, size);
+  if (buf)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, size);
+  return ret;
+}
+#define INIT_SETVBUF COMMON_INTERCEPT_FUNCTION(setvbuf)
+#else
+#define INIT_SETVBUF
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -7553,6 +7568,7 @@ static void InitializeCommonInterceptors() {
   INIT_NETENT;
   INIT_GETMNTINFO;
   INIT_MI_VECTOR_HASH;
+  INIT_SETVBUF;
 
   INIT___PRINTF_CHK;
 }
