@@ -840,7 +840,8 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
 
   case Backend_EmitBC:
     if (LangOpts.SYCLIsDevice) {
-      PerModulePasses.add(createASFixerPass());
+      if (!getenv("ENABLE_INFER_AS"))
+        PerModulePasses.add(createASFixerPass());
       PerModulePasses.add(createDeadCodeEliminationPass());
     }
     if (CodeGenOpts.PrepareForThinLTO && !CodeGenOpts.DisableLLVMPasses) {
@@ -1188,7 +1189,8 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
 
   case Backend_EmitBC:
     if (LangOpts.SYCLIsDevice) {
-      CodeGenPasses.add(createASFixerPass());
+      if (!getenv("ENABLE_INFER_AS"))
+        CodeGenPasses.add(createASFixerPass());
       CodeGenPasses.add(createDeadCodeEliminationPass());
     }
     if (CodeGenOpts.PrepareForThinLTO && !CodeGenOpts.DisableLLVMPasses) {
