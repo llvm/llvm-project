@@ -11,6 +11,12 @@ include(LLDBStandalone)
 include(LLDBConfig)
 include(AddLLDB)
 
+option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
+if(LLDB_CODESIGN_IDENTITY)
+  # In the future we may use LLVM_CODESIGNING_IDENTITY directly.
+  set(LLVM_CODESIGNING_IDENTITY ${LLDB_CODESIGN_IDENTITY})
+endif()
+
 # Define the LLDB_CONFIGURATION_xxx matching the build type
 if( uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
   add_definitions( -DLLDB_CONFIGURATION_DEBUG )
