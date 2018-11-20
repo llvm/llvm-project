@@ -23,6 +23,7 @@ add_extra_unittest(ClangdTests
   FileIndexTests.cpp
   FindSymbolsTests.cpp
   FSTests.cpp
+  FunctionTests.cpp
   FuzzyMatchTests.cpp
   GlobalCompilationDatabaseTests.cpp
   HeadersTests.cpp

@@ -49,17 +49,17 @@ DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
   return None;
 }
 
-tooling::CompilationDatabase *
+std::pair<tooling::CompilationDatabase *, /*Cached*/ bool>
 DirectoryBasedGlobalCompilationDatabase::getCDBInDirLocked(PathRef Dir) const {
   // FIXME(ibiryukov): Invalidate cached compilation databases on changes
   auto CachedIt = CompilationDatabases.find(Dir);
   if (CachedIt != CompilationDatabases.end())
-    return CachedIt->second.get();
+    return {CachedIt->second.get(), true};
   std::string Error = "";
   auto CDB = tooling::CompilationDatabase::loadFromDirectory(Dir, Error);
   auto Result = CDB.get();
   CompilationDatabases.insert(std::make_pair(Dir, std::move(CDB)));
-  return Result;
+  return {Result, false};
 }
 
 tooling::CompilationDatabase *
@@ -69,14 +69,29 @@ DirectoryBasedGlobalCompilationDatabase::getCDBForFile(PathRef File) const {
           path::is_absolute(File, path::Style::windows)) &&
          "path must be absolute");
 
+  tooling::CompilationDatabase *CDB = nullptr;
+  bool Cached = false;
   std::lock_guard<std::mutex> Lock(Mutex);
-  if (CompileCommandsDir)
-    return getCDBInDirLocked(*CompileCommandsDir);
-  for (auto Path = path::parent_path(File); !Path.empty();
-       Path = path::parent_path(Path))
-    if (auto CDB = getCDBInDirLocked(Path))
-      return CDB;
-  return nullptr;
+  if (CompileCommandsDir) {
+    std::tie(CDB, Cached) = getCDBInDirLocked(*CompileCommandsDir);
+  } else {
+    for (auto Path = path::parent_path(File); !CDB && !Path.empty();
+         Path = path::parent_path(Path)) {
+      std::tie(CDB, Cached) = getCDBInDirLocked(Path);
+    }
+  }
+  if (CDB && !Cached)
+    OnCommandChanged.broadcast(CDB->getAllFiles());
+  return CDB;
+}
+
+OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
+                       std::vector<std::string> FallbackFlags)
+    : Base(Base), FallbackFlags(std::move(FallbackFlags)) {
+  if (Base)
+    BaseChanged = Base->watch([this](const std::vector<std::string> Changes) {
+      OnCommandChanged.broadcast(Changes);
+    });
 }
 
 Optional<tooling::CompileCommand>
@@ -101,11 +116,14 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
 
 void OverlayCDB::setCompileCommand(
     PathRef File, llvm::Optional<tooling::CompileCommand> Cmd) {
-  std::unique_lock<std::mutex> Lock(Mutex);
-  if (Cmd)
-    Commands[File] = std::move(*Cmd);
-  else
-    Commands.erase(File);
+  {
+    std::unique_lock<std::mutex> Lock(Mutex);
+    if (Cmd)
+      Commands[File] = std::move(*Cmd);
+    else
+      Commands.erase(File);
+  }
+  OnCommandChanged.broadcast({File});
 }
 
 } // namespace clangd
