@@ -196,9 +196,9 @@ static inline void reportRangeError(uint8_t *Loc, RelType Type, const Twine &V,
     Hint = "; consider recompiling with -fdebug-types-section to reduce size "
            "of debug sections";
 
-  error(ErrPlace.Loc + "relocation " + lld::toString(Type) +
-        " out of range: " + V.str() + " is not in [" + Twine(Min).str() + ", " +
-        Twine(Max).str() + "]" + Hint);
+  errorOrWarn(ErrPlace.Loc + "relocation " + lld::toString(Type) +
+              " out of range: " + V.str() + " is not in [" + Twine(Min).str() +
+              ", " + Twine(Max).str() + "]" + Hint);
 }
 
 // Make sure that V can be represented as an N bit signed integer.
