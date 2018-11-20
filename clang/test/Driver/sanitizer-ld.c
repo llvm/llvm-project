@@ -588,7 +588,7 @@
 // RUN: %clang -fsanitize=shadow-call-stack %s -### -o %t.o 2>&1 \
 // RUN:     -fsanitize=safe-stack -target x86_64-unknown-linux -fuse-ld=ld \
 // RUN:   | FileCheck --check-prefix=CHECK-SHADOWCALLSTACK-SAFESTACK %s
-// CHECK-SHADOWCALLSTACK-SAFESTACK: error: invalid argument '-fsanitize=shadow-call-stack' not allowed with '-fsanitize=safe-stack'
+// CHECK-SHADOWCALLSTACK-SAFESTACK-NOT: error:
 
 // RUN: %clang -fsanitize=cfi -fsanitize-stats %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-unknown-linux -fuse-ld=ld \

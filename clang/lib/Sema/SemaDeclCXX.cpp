@@ -13864,6 +13864,8 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
     ExprResult Converted = PerformContextuallyConvertToBool(AssertExpr);
     if (Converted.isInvalid())
       Failed = true;
+    else
+      Converted = ConstantExpr::Create(Context, Converted.get());
 
     llvm::APSInt Cond;
     if (!Failed && VerifyIntegerConstantExpression(Converted.get(), &Cond,
