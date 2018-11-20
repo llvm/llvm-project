@@ -1614,102 +1614,106 @@ class DISubprogram : public DILocalScope {
   /// negative.
   int ThisAdjustment;
 
-  // Virtuality can only assume three values, so we can pack
-  // in 2 bits (none/pure/pure_virtual).
-  unsigned Virtuality : 2;
+public:
+  /// Debug info subprogram flags.
+  enum DISPFlags : uint32_t {
+#define HANDLE_DISP_FLAG(ID, NAME) SPFlag##NAME = ID,
+#define DISP_FLAG_LARGEST_NEEDED
+#include "llvm/IR/DebugInfoFlags.def"
+    SPFlagVirtuality = SPFlagNonvirtual | SPFlagVirtual | SPFlagPureVirtual,
+    LLVM_MARK_AS_BITMASK_ENUM(SPFlagLargest)
+  };
+  // Helper for converting old bitfields to new flags word.
+  static DISPFlags toSPFlags(bool IsLocalToUnit, bool IsDefinition,
+                             bool IsOptimized,
+                             unsigned Virtuality = SPFlagNonvirtual) {
+    // We're assuming virtuality is the low-order field.
+    static_assert(
+        int(SPFlagVirtual) == int(dwarf::DW_VIRTUALITY_virtual) &&
+            int(SPFlagPureVirtual) == int(dwarf::DW_VIRTUALITY_pure_virtual),
+        "Virtuality constant mismatch");
+    return static_cast<DISPFlags>(
+        (Virtuality & SPFlagVirtuality) |
+        (IsLocalToUnit ? SPFlagLocalToUnit : SPFlagZero) |
+        (IsDefinition ? SPFlagDefinition : SPFlagZero) |
+        (IsOptimized ? SPFlagOptimized : SPFlagZero));
+  }
 
-  // These are boolean flags so one bit is enough.
-  // MSVC starts a new container field every time the base
-  // type changes so we can't use 'bool' to ensure these bits
-  // are packed.
-  unsigned IsLocalToUnit : 1;
-  unsigned IsDefinition : 1;
-  unsigned IsOptimized : 1;
-
-  unsigned Padding : 3;
-
+private:
   DIFlags Flags;
+  DISPFlags SPFlags;
 
   DISubprogram(LLVMContext &C, StorageType Storage, unsigned Line,
-               unsigned ScopeLine, unsigned Virtuality, unsigned VirtualIndex,
-               int ThisAdjustment, DIFlags Flags, bool IsLocalToUnit,
-               bool IsDefinition, bool IsOptimized, ArrayRef<Metadata *> Ops)
+               unsigned ScopeLine, unsigned VirtualIndex, int ThisAdjustment,
+               DIFlags Flags, DISPFlags SPFlags, ArrayRef<Metadata *> Ops)
       : DILocalScope(C, DISubprogramKind, Storage, dwarf::DW_TAG_subprogram,
                      Ops),
         Line(Line), ScopeLine(ScopeLine), VirtualIndex(VirtualIndex),
-        ThisAdjustment(ThisAdjustment), Virtuality(Virtuality),
-        IsLocalToUnit(IsLocalToUnit), IsDefinition(IsDefinition),
-        IsOptimized(IsOptimized), Flags(Flags) {
+        ThisAdjustment(ThisAdjustment), Flags(Flags), SPFlags(SPFlags) {
     static_assert(dwarf::DW_VIRTUALITY_max < 4, "Virtuality out of range");
-    assert(Virtuality < 4 && "Virtuality out of range");
   }
   ~DISubprogram() = default;
 
   static DISubprogram *
   getImpl(LLVMContext &Context, DIScopeRef Scope, StringRef Name,
           StringRef LinkageName, DIFile *File, unsigned Line,
-          DISubroutineType *Type, bool IsLocalToUnit, bool IsDefinition,
-          unsigned ScopeLine, DITypeRef ContainingType, unsigned Virtuality,
+          DISubroutineType *Type, unsigned ScopeLine, DITypeRef ContainingType,
           unsigned VirtualIndex, int ThisAdjustment, DIFlags Flags,
-          bool IsOptimized, DICompileUnit *Unit,
+          DISPFlags SPFlags, DICompileUnit *Unit,
           DITemplateParameterArray TemplateParams, DISubprogram *Declaration,
           DINodeArray RetainedNodes, DITypeArray ThrownTypes,
           StorageType Storage, bool ShouldCreate = true) {
     return getImpl(Context, Scope, getCanonicalMDString(Context, Name),
                    getCanonicalMDString(Context, LinkageName), File, Line, Type,
-                   IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
-                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
-                   Unit, TemplateParams.get(), Declaration, RetainedNodes.get(),
-                   ThrownTypes.get(), Storage, ShouldCreate);
+                   ScopeLine, ContainingType, VirtualIndex, ThisAdjustment,
+                   Flags, SPFlags, Unit, TemplateParams.get(), Declaration,
+                   RetainedNodes.get(), ThrownTypes.get(), Storage,
+                   ShouldCreate);
   }
-  static DISubprogram *
-  getImpl(LLVMContext &Context, Metadata *Scope, MDString *Name,
-          MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
-          bool IsLocalToUnit, bool IsDefinition, unsigned ScopeLine,
-          Metadata *ContainingType, unsigned Virtuality, unsigned VirtualIndex,
-          int ThisAdjustment, DIFlags Flags, bool IsOptimized, Metadata *Unit,
-          Metadata *TemplateParams, Metadata *Declaration, Metadata *RetainedNodes,
-          Metadata *ThrownTypes, StorageType Storage, bool ShouldCreate = true);
+  static DISubprogram *getImpl(LLVMContext &Context, Metadata *Scope,
+                               MDString *Name, MDString *LinkageName,
+                               Metadata *File, unsigned Line, Metadata *Type,
+                               unsigned ScopeLine, Metadata *ContainingType,
+                               unsigned VirtualIndex, int ThisAdjustment,
+                               DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
+                               Metadata *TemplateParams, Metadata *Declaration,
+                               Metadata *RetainedNodes, Metadata *ThrownTypes,
+                               StorageType Storage, bool ShouldCreate = true);
 
   TempDISubprogram cloneImpl() const {
     return getTemporary(getContext(), getScope(), getName(), getLinkageName(),
-                        getFile(), getLine(), getType(), isLocalToUnit(),
-                        isDefinition(), getScopeLine(), getContainingType(),
-                        getVirtuality(), getVirtualIndex(), getThisAdjustment(),
-                        getFlags(), isOptimized(), getUnit(),
-                        getTemplateParams(), getDeclaration(), getRetainedNodes(),
-                        getThrownTypes());
+                        getFile(), getLine(), getType(), getScopeLine(),
+                        getContainingType(), getVirtualIndex(),
+                        getThisAdjustment(), getFlags(), getSPFlags(),
+                        getUnit(), getTemplateParams(), getDeclaration(),
+                        getRetainedNodes(), getThrownTypes());
   }
 
 public:
-  DEFINE_MDNODE_GET(DISubprogram,
-                    (DIScopeRef Scope, StringRef Name, StringRef LinkageName,
-                     DIFile *File, unsigned Line, DISubroutineType *Type,
-                     bool IsLocalToUnit, bool IsDefinition, unsigned ScopeLine,
-                     DITypeRef ContainingType, unsigned Virtuality,
-                     unsigned VirtualIndex, int ThisAdjustment, DIFlags Flags,
-                     bool IsOptimized, DICompileUnit *Unit,
-                     DITemplateParameterArray TemplateParams = nullptr,
-                     DISubprogram *Declaration = nullptr,
-                     DINodeArray RetainedNodes = nullptr,
-                     DITypeArray ThrownTypes = nullptr),
-                    (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
-                     IsDefinition, ScopeLine, ContainingType, Virtuality,
-                     VirtualIndex, ThisAdjustment, Flags, IsOptimized, Unit,
-                     TemplateParams, Declaration, RetainedNodes, ThrownTypes))
+  DEFINE_MDNODE_GET(
+      DISubprogram,
+      (DIScopeRef Scope, StringRef Name, StringRef LinkageName, DIFile *File,
+       unsigned Line, DISubroutineType *Type, unsigned ScopeLine,
+       DITypeRef ContainingType, unsigned VirtualIndex, int ThisAdjustment,
+       DIFlags Flags, DISPFlags SPFlags, DICompileUnit *Unit,
+       DITemplateParameterArray TemplateParams = nullptr,
+       DISubprogram *Declaration = nullptr, DINodeArray RetainedNodes = nullptr,
+       DITypeArray ThrownTypes = nullptr),
+      (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
+       VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
+       Declaration, RetainedNodes, ThrownTypes))
+
   DEFINE_MDNODE_GET(
       DISubprogram,
       (Metadata * Scope, MDString *Name, MDString *LinkageName, Metadata *File,
-       unsigned Line, Metadata *Type, bool IsLocalToUnit, bool IsDefinition,
-       unsigned ScopeLine, Metadata *ContainingType, unsigned Virtuality,
-       unsigned VirtualIndex, int ThisAdjustment, DIFlags Flags,
-       bool IsOptimized, Metadata *Unit, Metadata *TemplateParams = nullptr,
-       Metadata *Declaration = nullptr, Metadata *RetainedNodes = nullptr,
-       Metadata *ThrownTypes = nullptr),
-      (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit, IsDefinition,
-       ScopeLine, ContainingType, Virtuality, VirtualIndex, ThisAdjustment,
-       Flags, IsOptimized, Unit, TemplateParams, Declaration, RetainedNodes,
-       ThrownTypes))
+       unsigned Line, Metadata *Type, unsigned ScopeLine,
+       Metadata *ContainingType, unsigned VirtualIndex, int ThisAdjustment,
+       DIFlags Flags, DISPFlags SPFlags, Metadata *Unit,
+       Metadata *TemplateParams = nullptr, Metadata *Declaration = nullptr,
+       Metadata *RetainedNodes = nullptr, Metadata *ThrownTypes = nullptr),
+      (Scope, Name, LinkageName, File, Line, Type, ScopeLine, ContainingType,
+       VirtualIndex, ThisAdjustment, Flags, SPFlags, Unit, TemplateParams,
+       Declaration, RetainedNodes, ThrownTypes))
 
   TempDISubprogram clone() const { return cloneImpl(); }
 
@@ -1722,14 +1726,15 @@ public:
 
 public:
   unsigned getLine() const { return Line; }
-  unsigned getVirtuality() const { return Virtuality; }
+  unsigned getVirtuality() const { return getSPFlags() & SPFlagVirtuality; }
   unsigned getVirtualIndex() const { return VirtualIndex; }
   int getThisAdjustment() const { return ThisAdjustment; }
   unsigned getScopeLine() const { return ScopeLine; }
   DIFlags getFlags() const { return Flags; }
-  bool isLocalToUnit() const { return IsLocalToUnit; }
-  bool isDefinition() const { return IsDefinition; }
-  bool isOptimized() const { return IsOptimized; }
+  DISPFlags getSPFlags() const { return SPFlags; }
+  bool isLocalToUnit() const { return getSPFlags() & SPFlagLocalToUnit; }
+  bool isDefinition() const { return getSPFlags() & SPFlagDefinition; }
+  bool isOptimized() const { return getSPFlags() & SPFlagOptimized; }
 
   bool isArtificial() const { return getFlags() & FlagArtificial; }
   bool isPrivate() const {

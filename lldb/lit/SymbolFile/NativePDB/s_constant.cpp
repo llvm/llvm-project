@@ -5,7 +5,7 @@
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-win32 %p/Inputs/s_constant.s > %t.obj
 // RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb -- %t.obj
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb -f %t.exe -s \
+// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/s_constant.lldbinit | FileCheck %s
 
 // clang-cl cannot generate S_CONSTANT records, but we need to test that we can

@@ -309,7 +309,7 @@ define void @frameaddress_0() {
 ; Test __builtin_frame_address(1).
 
 ; CHECK-LABEL: frameaddress_1:
-; CHECK-NEXT: i32.const $push0=, 0{{$}}
+; CHECK:      i32.const $push0=, 0{{$}}
 ; CHECK-NEXT: call use_i8_star@FUNCTION, $pop0{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @frameaddress_1() {

@@ -53,7 +53,8 @@ template <class T> void deallocate(T *B) XRAY_NEVER_INSTRUMENT {
   internal_munmap(B, RoundedSize);
 }
 
-template <class T = uint8_t> T *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
+template <class T = unsigned char>
+T *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
   uptr RoundedSize = RoundUpTo(S * sizeof(T), GetPageSizeCached());
   uptr B = internal_mmap(NULL, RoundedSize, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -111,8 +112,8 @@ template <size_t N> struct Allocator {
 
 private:
   const size_t MaxMemory{0};
-  uint8_t *BackingStore = nullptr;
-  uint8_t *AlignedNextBlock = nullptr;
+  unsigned char *BackingStore = nullptr;
+  unsigned char *AlignedNextBlock = nullptr;
   size_t AllocatedBlocks = 0;
   SpinMutex Mutex{};
 
@@ -141,7 +142,7 @@ private:
         return nullptr;
       }
 
-      AlignedNextBlock = reinterpret_cast<uint8_t *>(AlignedNextBlockNum);
+      AlignedNextBlock = reinterpret_cast<unsigned char *>(AlignedNextBlockNum);
 
       // Assert that AlignedNextBlock is cache-line aligned.
       DCHECK_EQ(reinterpret_cast<uintptr_t>(AlignedNextBlock) % kCacheLineSize,
@@ -154,15 +155,15 @@ private:
     // Align the pointer we'd like to return to an appropriate alignment, then
     // advance the pointer from where to start allocations.
     void *Result = AlignedNextBlock;
-    AlignedNextBlock = reinterpret_cast<uint8_t *>(
-        reinterpret_cast<uint8_t *>(AlignedNextBlock) + N);
+    AlignedNextBlock = reinterpret_cast<unsigned char *>(
+        reinterpret_cast<unsigned char *>(AlignedNextBlock) + N);
     ++AllocatedBlocks;
     return Result;
   }
 
 public:
   explicit Allocator(size_t M) XRAY_NEVER_INSTRUMENT
-      : MaxMemory(nearest_boundary(M, kCacheLineSize)) {}
+      : MaxMemory(RoundUpTo(M, kCacheLineSize)) {}
 
   Block Allocate() XRAY_NEVER_INSTRUMENT { return {Alloc()}; }
 

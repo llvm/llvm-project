@@ -30,7 +30,6 @@
 ; CHECK:   Pointer (0x1001) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: A (0x1000)
-; CHECK:     PointerAttributes: 0x1000C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -72,7 +71,6 @@
 ; CHECK:   Pointer (0x1005) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: B (0x1004)
-; CHECK:     PointerAttributes: 0x1000C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0

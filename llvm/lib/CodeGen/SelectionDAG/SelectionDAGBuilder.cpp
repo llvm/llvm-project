@@ -823,7 +823,7 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
       // If the source register was virtual and if we know something about it,
       // add an assert node.
       if (!TargetRegisterInfo::isVirtualRegister(Regs[Part+i]) ||
-          !RegisterVT.isInteger() || RegisterVT.isVector())
+          !RegisterVT.isInteger())
         continue;
 
       const FunctionLoweringInfo::LiveOutInfo *LOI =
@@ -831,7 +831,7 @@ SDValue RegsForValue::getCopyFromRegs(SelectionDAG &DAG,
       if (!LOI)
         continue;
 
-      unsigned RegSize = RegisterVT.getSizeInBits();
+      unsigned RegSize = RegisterVT.getScalarSizeInBits();
       unsigned NumSignBits = LOI->NumSignBits;
       unsigned NumZeroBits = LOI->Known.countMinLeadingZeros();
 

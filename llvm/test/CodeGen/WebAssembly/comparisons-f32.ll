@@ -7,8 +7,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: ord_f32:
-; CHECK-NEXT: .param f32, f32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ord_f32 (f32, f32) -> (i32){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: f32.eq $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
@@ -24,8 +23,7 @@ define i32 @ord_f32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: uno_f32:
-; CHECK-NEXT: .param f32, f32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype uno_f32 (f32, f32) -> (i32){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: f32.ne $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
@@ -41,8 +39,7 @@ define i32 @uno_f32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: oeq_f32:
-; CHECK-NEXT: .param f32, f32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype oeq_f32 (f32, f32) -> (i32){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: f32.eq $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
@@ -102,8 +99,7 @@ define i32 @oge_f32(float %x, float %y) {
 ; These simply rely on SDAG's Expand cond code action.
 
 ; CHECK-LABEL: ueq_f32:
-; CHECK-NEXT: .param f32, f32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ueq_f32 (f32, f32) -> (i32){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: f32.eq $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
@@ -123,8 +119,7 @@ define i32 @ueq_f32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: one_f32:
-; CHECK-NEXT: .param f32, f32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype one_f32 (f32, f32) -> (i32){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: f32.ne $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
@@ -144,8 +139,7 @@ define i32 @one_f32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: ult_f32:
-; CHECK-NEXT: .param f32, f32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ult_f32 (f32, f32) -> (i32){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: f32.ge $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
@@ -159,8 +153,7 @@ define i32 @ult_f32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: ule_f32:
-; CHECK-NEXT: .param f32, f32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ule_f32 (f32, f32) -> (i32){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: f32.gt $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
@@ -174,8 +167,7 @@ define i32 @ule_f32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: ugt_f32:
-; CHECK-NEXT: .param f32, f32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype ugt_f32 (f32, f32) -> (i32){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: f32.le $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}
@@ -189,8 +181,7 @@ define i32 @ugt_f32(float %x, float %y) {
 }
 
 ; CHECK-LABEL: uge_f32:
-; CHECK-NEXT: .param f32, f32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype uge_f32 (f32, f32) -> (i32){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: f32.lt $push[[NUM0:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}

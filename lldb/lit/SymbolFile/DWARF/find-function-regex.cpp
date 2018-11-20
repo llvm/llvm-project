@@ -1,13 +1,13 @@
 // REQUIRES: lld
 
-// RUN: clang %s -g -c -o %t.o --target=x86_64-pc-linux -mllvm -accel-tables=Disable
+// RUN: %clang %s -g -c -o %t.o --target=x86_64-pc-linux -mllvm -accel-tables=Disable
 // RUN: ld.lld %t.o -o %t
 // RUN: lldb-test symbols --name=f.o --regex --find=function %t | FileCheck %s
 //
-// RUN: clang %s -g -c -o %t --target=x86_64-apple-macosx
+// RUN: %clang %s -g -c -o %t --target=x86_64-apple-macosx
 // RUN: lldb-test symbols --name=f.o --regex --find=function %t | FileCheck %s
 
-// RUN: clang %s -g -c -o %t.o --target=x86_64-pc-linux -mllvm -accel-tables=Dwarf
+// RUN: %clang %s -g -c -o %t.o --target=x86_64-pc-linux -mllvm -accel-tables=Dwarf
 // RUN: ld.lld %t.o -o %t
 // RUN: lldb-test symbols --name=f.o --regex --find=function %t | FileCheck %s
 

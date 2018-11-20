@@ -64,7 +64,7 @@ template <size_t Version = 5> class FDRController {
     First = true;
     UndoableFunctionEnters = 0;
     UndoableTailExits = 0;
-    atomic_store(&B.Extents, 0, memory_order_release);
+    atomic_store(B.Extents, 0, memory_order_release);
     return true;
   }
 
@@ -123,7 +123,7 @@ template <size_t Version = 5> class FDRController {
     if (First) {
       First = false;
       W.resetRecord();
-      atomic_store(&B.Extents, 0, memory_order_release);
+      atomic_store(B.Extents, 0, memory_order_release);
       return setupNewBuffer();
     }
 

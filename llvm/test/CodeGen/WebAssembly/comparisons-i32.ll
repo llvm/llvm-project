@@ -7,8 +7,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: eq_i32:
-; CHECK-NEXT: .param i32, i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype eq_i32 (i32, i32) -> (i32){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: i32.eq $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}

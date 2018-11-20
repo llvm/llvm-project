@@ -23,7 +23,6 @@
 #include <sys/mman.h>
 
 using namespace __xray;
-using namespace __sanitizer;
 
 namespace {
 
@@ -53,6 +52,18 @@ void incRefCount(BufferQueue::ControlBlock *C) {
   atomic_fetch_add(&C->RefCount, 1, memory_order_acq_rel);
 }
 
+// We use a struct to ensure that we are allocating one atomic_uint64_t per
+// cache line. This allows us to not worry about false-sharing among atomic
+// objects being updated (constantly) by different threads.
+struct ExtentsPadded {
+  union {
+    atomic_uint64_t Extents;
+    unsigned char Storage[kCacheLineSize];
+  };
+};
+
+constexpr size_t kExtentsSize = sizeof(ExtentsPadded);
+
 } // namespace
 
 BufferQueue::ErrorCode BufferQueue::init(size_t BS, size_t BC) {
@@ -71,11 +82,23 @@ BufferQueue::ErrorCode BufferQueue::init(size_t BS, size_t BC) {
   if (BackingStore == nullptr)
     return BufferQueue::ErrorCode::NotEnoughMemory;
 
-  auto CleanupBackingStore = __sanitizer::at_scope_exit([&, this] {
+  auto CleanupBackingStore = at_scope_exit([&, this] {
     if (Success)
       return;
     deallocControlBlock(BackingStore, BufferSize, BufferCount);
     BackingStore = nullptr;
+  });
+
+  // Initialize enough atomic_uint64_t instances, each
+  ExtentsBackingStore = allocControlBlock(kExtentsSize, BufferCount);
+  if (ExtentsBackingStore == nullptr)
+    return BufferQueue::ErrorCode::NotEnoughMemory;
+
+  auto CleanupExtentsBackingStore = at_scope_exit([&, this] {
+    if (Success)
+      return;
+    deallocControlBlock(ExtentsBackingStore, kExtentsSize, BufferCount);
+    ExtentsBackingStore = nullptr;
   });
 
   Buffers = initArray<BufferRep>(BufferCount);
@@ -89,6 +112,7 @@ BufferQueue::ErrorCode BufferQueue::init(size_t BS, size_t BC) {
   // First, we initialize the refcount in the ControlBlock, which we treat as
   // being at the start of the BackingStore pointer.
   atomic_store(&BackingStore->RefCount, 1, memory_order_release);
+  atomic_store(&ExtentsBackingStore->RefCount, 1, memory_order_release);
 
   // Then we initialise the individual buffers that sub-divide the whole backing
   // store. Each buffer will start at the `Data` member of the ControlBlock, and
@@ -96,11 +120,15 @@ BufferQueue::ErrorCode BufferQueue::init(size_t BS, size_t BC) {
   for (size_t i = 0; i < BufferCount; ++i) {
     auto &T = Buffers[i];
     auto &Buf = T.Buff;
-    atomic_store(&Buf.Extents, 0, memory_order_release);
+    auto *E = reinterpret_cast<ExtentsPadded *>(&ExtentsBackingStore->Data +
+                                                (kExtentsSize * i));
+    Buf.Extents = &E->Extents;
+    atomic_store(Buf.Extents, 0, memory_order_release);
     Buf.Generation = generation();
     Buf.Data = &BackingStore->Data + (BufferSize * i);
     Buf.Size = BufferSize;
     Buf.BackingStore = BackingStore;
+    Buf.ExtentsBackingStore = ExtentsBackingStore;
     Buf.Count = BufferCount;
     T.Used = false;
   }
@@ -120,6 +148,7 @@ BufferQueue::BufferQueue(size_t B, size_t N,
       Mutex(),
       Finalizing{1},
       BackingStore(nullptr),
+      ExtentsBackingStore(nullptr),
       Buffers(nullptr),
       Next(Buffers),
       First(Buffers),
@@ -144,6 +173,7 @@ BufferQueue::ErrorCode BufferQueue::getBuffer(Buffer &Buf) {
   }
 
   incRefCount(BackingStore);
+  incRefCount(ExtentsBackingStore);
   Buf = B->Buff;
   Buf.Generation = generation();
   B->Used = true;
@@ -159,6 +189,7 @@ BufferQueue::ErrorCode BufferQueue::releaseBuffer(Buffer &Buf) {
     if (Buf.Generation != generation() || LiveBuffers == 0) {
       Buf = {};
       decRefCount(Buf.BackingStore, Buf.Size, Buf.Count);
+      decRefCount(Buf.ExtentsBackingStore, kExtentsSize, Buf.Count);
       return BufferQueue::ErrorCode::Ok;
     }
 
@@ -176,8 +207,8 @@ BufferQueue::ErrorCode BufferQueue::releaseBuffer(Buffer &Buf) {
   B->Buff = Buf;
   B->Used = true;
   decRefCount(Buf.BackingStore, Buf.Size, Buf.Count);
-  atomic_store(&B->Buff.Extents,
-               atomic_load(&Buf.Extents, memory_order_acquire),
+  decRefCount(Buf.ExtentsBackingStore, kExtentsSize, Buf.Count);
+  atomic_store(B->Buff.Extents, atomic_load(Buf.Extents, memory_order_acquire),
                memory_order_release);
   Buf = {};
   return ErrorCode::Ok;
@@ -194,7 +225,9 @@ void BufferQueue::cleanupBuffers() {
     B->~BufferRep();
   deallocateBuffer(Buffers, BufferCount);
   decRefCount(BackingStore, BufferSize, BufferCount);
+  decRefCount(ExtentsBackingStore, kExtentsSize, BufferCount);
   BackingStore = nullptr;
+  ExtentsBackingStore = nullptr;
   Buffers = nullptr;
   BufferCount = 0;
   BufferSize = 0;

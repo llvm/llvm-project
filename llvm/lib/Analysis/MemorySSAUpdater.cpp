@@ -1022,7 +1022,7 @@ void MemorySSAUpdater::wireOldPredecessorsToNewImmediatePredecessor(
   MemoryPhi *Phi = MSSA->getMemoryAccess(Old);
   if (!Phi)
     return;
-  if (pred_size(Old) == 1) {
+  if (Old->hasNPredecessors(1)) {
     assert(pred_size(New) == Preds.size() &&
            "Should have moved all predecessors.");
     MSSA->moveTo(Phi, New, MemorySSA::Beginning);

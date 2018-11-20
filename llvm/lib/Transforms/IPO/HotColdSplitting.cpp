@@ -266,7 +266,7 @@ static BlockSequence getLargestColdRegion(Function &F, ProfileSummaryInfo &PSI,
     if (!mayExtractBlock(BB))
       continue;
     bool Cold =
-        PSI.isColdBB(&BB, BFI) || (EnableStaticAnalyis && unlikelyExecuted(BB));
+        PSI.isColdBlock(&BB, BFI) || (EnableStaticAnalyis && unlikelyExecuted(BB));
     if (!Cold)
       continue;
 
@@ -465,7 +465,7 @@ bool HotColdSplittingLegacyPass::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
   ProfileSummaryInfo *PSI =
-      getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   auto GTTI = [this](Function &F) -> TargetTransformInfo & {
     return this->getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
   };

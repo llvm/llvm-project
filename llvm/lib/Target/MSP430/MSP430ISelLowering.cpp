@@ -950,9 +950,19 @@ SDValue MSP430TargetLowering::LowerShifts(SDValue Op,
   uint64_t ShiftAmount = cast<ConstantSDNode>(N->getOperand(1))->getZExtValue();
 
   // Expand the stuff into sequence of shifts.
-  // FIXME: for some shift amounts this might be done better!
-  // E.g.: foo >> (8 + N) => sxt(swpb(foo)) >> N
   SDValue Victim = N->getOperand(0);
+
+  if ((Opc == ISD::SRA || Opc == ISD::SRL) && ShiftAmount >= 8) {
+    // foo >> (8 + N) => sxt(swpb(foo)) >> N
+    assert(VT == MVT::i16 && "Can not shift i8 by 8 and more");
+    Victim = DAG.getNode(ISD::BSWAP, dl, VT, Victim);
+    if (Opc == ISD::SRA)
+      Victim = DAG.getNode(ISD::SIGN_EXTEND_INREG, dl, VT, Victim,
+                           DAG.getValueType(MVT::i8));
+    else
+      Victim = DAG.getZeroExtendInReg(Victim, dl, MVT::i8);
+    ShiftAmount -= 8;
+  }
 
   if (Opc == ISD::SRL && ShiftAmount) {
     // Emit a special goodness here:

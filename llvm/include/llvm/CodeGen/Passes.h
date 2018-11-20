@@ -379,6 +379,11 @@ namespace llvm {
   ///
   FunctionPass *createInterleavedAccessPass();
 
+  /// InterleavedLoadCombines Pass - This pass identifies interleaved loads and
+  /// combines them into wide loads detectable by InterleavedAccessPass
+  ///
+  FunctionPass *createInterleavedLoadCombinePass();
+
   /// LowerEmuTLS - This pass generates __emutls_[vt].xyz variables for all
   /// TLS variables for the emulated TLS model.
   ///

@@ -1405,6 +1405,40 @@ auto apply_tuple(F &&f, Tuple &&t) -> decltype(detail::apply_tuple_impl(
                                   Indices{});
 }
 
+/// Return true if the sequence [Begin, End) has exactly N items. Runs in O(N)
+/// time. Not meant for use with random-access iterators.
+template <typename IterTy>
+bool hasNItems(
+    IterTy &&Begin, IterTy &&End, unsigned N,
+    typename std::enable_if<
+        !std::is_same<
+            typename std::iterator_traits<typename std::remove_reference<
+                decltype(Begin)>::type>::iterator_category,
+            std::random_access_iterator_tag>::value,
+        void>::type * = nullptr) {
+  for (; N; --N, ++Begin)
+    if (Begin == End)
+      return false; // Too few.
+  return Begin == End;
+}
+
+/// Return true if the sequence [Begin, End) has N or more items. Runs in O(N)
+/// time. Not meant for use with random-access iterators.
+template <typename IterTy>
+bool hasNItemsOrMore(
+    IterTy &&Begin, IterTy &&End, unsigned N,
+    typename std::enable_if<
+        !std::is_same<
+            typename std::iterator_traits<typename std::remove_reference<
+                decltype(Begin)>::type>::iterator_category,
+            std::random_access_iterator_tag>::value,
+        void>::type * = nullptr) {
+  for (; N; --N, ++Begin)
+    if (Begin == End)
+      return false; // Too few.
+  return true;
+}
+
 } // end namespace llvm
 
 #endif // LLVM_ADT_STLEXTRAS_H

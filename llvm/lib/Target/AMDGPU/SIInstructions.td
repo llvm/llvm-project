@@ -1537,15 +1537,15 @@ def : GCNPat <
 } // End SubtargetPredicate = HasVOP3PInsts
 
 
-// def : GCNPat <
-//   (v2f16 (scalar_to_vector f16:$src0)),
-//   (COPY $src0)
-// >;
+def : GCNPat <
+  (v2f16 (scalar_to_vector f16:$src0)),
+  (COPY $src0)
+>;
 
-// def : GCNPat <
-//   (v2i16 (scalar_to_vector i16:$src0)),
-//   (COPY $src0)
-// >;
+def : GCNPat <
+  (v2i16 (scalar_to_vector i16:$src0)),
+  (COPY $src0)
+>;
 
 def : GCNPat <
   (v4i16 (scalar_to_vector i16:$src0)),

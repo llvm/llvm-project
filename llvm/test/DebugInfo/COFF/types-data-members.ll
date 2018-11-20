@@ -247,7 +247,6 @@
 ; CHECK:   Pointer (0x1012) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: const int (0x1004)
-; CHECK:     PointerAttributes: 0x1000C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -263,7 +262,6 @@
 ; CHECK:   Pointer (0x1014) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: <vftable 1 methods> (0x1013)
-; CHECK:     PointerAttributes: 0x1000C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -362,7 +360,6 @@
 ; CHECK:   Pointer (0x101C) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: DerivedClass (0x1011)
-; CHECK:     PointerAttributes: 0x1000C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0

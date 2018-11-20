@@ -52,7 +52,6 @@
 ; CHECK:   Pointer (0x1001) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: const volatile int (0x1000)
-; CHECK:     PointerAttributes: 0x1100C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -99,7 +98,6 @@
 ; CHECK:   Pointer (0x1006) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: int (0x74)
-; CHECK:     PointerAttributes: 0x1100C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -112,7 +110,6 @@
 ; CHECK:   Pointer (0x1007) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: float (0x40)
-; CHECK:     PointerAttributes: 0x1100C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -125,7 +122,6 @@
 ; CHECK:   Pointer (0x1008) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: int (0x74)
-; CHECK:     PointerAttributes: 0x1120C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -170,7 +166,6 @@
 ; CHECK:   Pointer (0x100E) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: const int (0x100D)
-; CHECK:     PointerAttributes: 0x1000C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -183,7 +178,6 @@
 ; CHECK:   Pointer (0x100F) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: int (0x74)
-; CHECK:     PointerAttributes: 0x1102C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: LValueReference (0x1)
 ; CHECK:     IsFlat: 0
@@ -252,7 +246,6 @@
 ; CHECK:   Pointer (0x1017) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: h::Foo (0x1016)
-; CHECK:     PointerAttributes: 0x1000C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
@@ -313,7 +306,6 @@
 ; CHECK:   Pointer (0x101D) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: int (0x74)
-; CHECK:     PointerAttributes: 0x904C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: PointerToDataMember (0x2)
 ; CHECK:     IsFlat: 0
@@ -328,7 +320,6 @@
 ; CHECK:   Pointer (0x101E) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:     PointeeType: int h::Foo::(int) (0x1019)
-; CHECK:     PointerAttributes: 0x1006C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: PointerToMemberFunction (0x3)
 ; CHECK:     IsFlat: 0

@@ -1889,65 +1889,67 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     break;
   }
 
-  // Legalize the type.
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
-  MVT MTy = LT.second;
+  if (ISD != ISD::DELETED_NODE) {
+    // Legalize the type.
+    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    MVT MTy = LT.second;
 
-  // Attempt to lookup cost.
-  if (ST->isGLM())
-    if (const auto *Entry = CostTableLookup(GLMCostTbl, ISD, MTy))
+    // Attempt to lookup cost.
+    if (ST->isGLM())
+      if (const auto *Entry = CostTableLookup(GLMCostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->isSLM())
+      if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->hasCDI())
+      if (const auto *Entry = CostTableLookup(AVX512CDCostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->hasBWI())
+      if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->hasAVX512())
+      if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->hasXOP())
+      if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->hasAVX2())
+      if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->hasAVX())
+      if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->hasSSE42())
+      if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->hasSSSE3())
+      if (const auto *Entry = CostTableLookup(SSSE3CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->hasSSE2())
+      if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->hasSSE1())
+      if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->is64Bit())
+      if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
       return LT.first * Entry->Cost;
-
-  if (ST->isSLM())
-    if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->hasCDI())
-    if (const auto *Entry = CostTableLookup(AVX512CDCostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->hasBWI())
-    if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->hasAVX512())
-    if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->hasXOP())
-    if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->hasAVX2())
-    if (const auto *Entry = CostTableLookup(AVX2CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->hasAVX())
-    if (const auto *Entry = CostTableLookup(AVX1CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->hasSSE42())
-    if (const auto *Entry = CostTableLookup(SSE42CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->hasSSSE3())
-    if (const auto *Entry = CostTableLookup(SSSE3CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->hasSSE2())
-    if (const auto *Entry = CostTableLookup(SSE2CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->hasSSE1())
-    if (const auto *Entry = CostTableLookup(SSE1CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->is64Bit())
-    if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
-    return LT.first * Entry->Cost;
+  }
 
   return BaseT::getIntrinsicInstrCost(IID, RetTy, Tys, FMF, ScalarizationCostPassed);
 }
@@ -2022,25 +2024,27 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     break;
   }
 
-  // Legalize the type.
-  std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
-  MVT MTy = LT.second;
+  if (ISD != ISD::DELETED_NODE) {
+    // Legalize the type.
+    std::pair<int, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
+    MVT MTy = LT.second;
 
-  // Attempt to lookup cost.
-  if (ST->hasAVX512())
-    if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
+    // Attempt to lookup cost.
+    if (ST->hasAVX512())
+      if (const auto *Entry = CostTableLookup(AVX512CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->hasXOP())
+      if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (ST->is64Bit())
+      if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
+        return LT.first * Entry->Cost;
+
+    if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
       return LT.first * Entry->Cost;
-
-  if (ST->hasXOP())
-    if (const auto *Entry = CostTableLookup(XOPCostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (ST->is64Bit())
-    if (const auto *Entry = CostTableLookup(X64CostTbl, ISD, MTy))
-      return LT.first * Entry->Cost;
-
-  if (const auto *Entry = CostTableLookup(X86CostTbl, ISD, MTy))
-    return LT.first * Entry->Cost;
+  }
 
   return BaseT::getIntrinsicInstrCost(IID, RetTy, Args, FMF, VF);
 }
