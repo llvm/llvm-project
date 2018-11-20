@@ -10,7 +10,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-
+@skipIfWindows # Windows deals differently with shared libs.
 class TargetDependentsTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
