@@ -43,7 +43,10 @@ struct Inclusion {
   Range R;             // Inclusion range.
   std::string Written; // Inclusion name as written e.g. <vector>.
   Path Resolved;       // Resolved path of included file. Empty if not resolved.
+  unsigned HashOffset = 0; // Byte offset from start of file to #.
+  SrcMgr::CharacteristicKind FileKind = SrcMgr::C_User;
 };
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Inclusion&);
 
 // Information captured about the inclusion graph in a translation unit.
 // This includes detailed information about the direct #includes, and summary

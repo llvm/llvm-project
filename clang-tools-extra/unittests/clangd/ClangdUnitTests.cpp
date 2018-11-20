@@ -131,19 +131,28 @@ TEST(DiagnosticsTest, FlagsMatter) {
 
 TEST(DiagnosticsTest, ClangTidy) {
   Annotations Test(R"cpp(
+    #include $deprecated[["assert.h"]]
+
     #define $macrodef[[SQUARE]](X) (X)*(X)
     int main() {
-      return [[sizeof]](sizeof(int));
+      return $doubled[[sizeof]](sizeof(int));
       int y = 4;
       return SQUARE($macroarg[[++]]y);
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
+  TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       UnorderedElementsAre(
-          Diag(Test.range(), "suspicious usage of 'sizeof(sizeof(...))' "
-                             "[bugprone-sizeof-expression]"),
+          AllOf(Diag(Test.range("deprecated"),
+                     "inclusion of deprecated C++ header 'assert.h'; consider "
+                     "using 'cassert' instead [modernize-deprecated-headers]"),
+                WithFix(Fix(Test.range("deprecated"), "<cassert>",
+                            "change '\"assert.h\"' to '<cassert>'"))),
+          Diag(Test.range("doubled"),
+               "suspicious usage of 'sizeof(sizeof(...))' "
+               "[bugprone-sizeof-expression]"),
           AllOf(
               Diag(Test.range("macroarg"),
                    "side effects in the 1st macro argument 'X' are repeated in "
