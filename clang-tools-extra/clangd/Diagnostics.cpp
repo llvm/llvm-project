@@ -190,8 +190,11 @@ std::string noteMessage(const Diag &Main, const DiagBase &Note) {
 } // namespace
 
 raw_ostream &operator<<(raw_ostream &OS, const DiagBase &D) {
+  OS << "[";
   if (!D.InsideMainFile)
-    OS << "[in " << D.File << "] ";
+    OS << D.File << ":";
+  OS << D.Range.start << "-" << D.Range.end << "] ";
+
   return OS << D.Message;
 }
 
