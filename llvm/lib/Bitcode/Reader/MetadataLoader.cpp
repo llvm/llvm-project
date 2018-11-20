@@ -1420,6 +1420,9 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     bool HasFn = Offset && !HasUnit;
     bool HasThisAdj = Record.size() >= 20;
     bool HasThrownTypes = Record.size() >= 21;
+    DISubprogram::DISPFlags SPFlags = DISubprogram::toSPFlags(
+        /*IsLocalToUnit=*/Record[7], /*IsDefinition=*/Record[8],
+        /*IsOptimized=*/Record[14], /*Virtuality=*/Record[11]);
     DISubprogram *SP = GET_OR_DISTINCT(
         DISubprogram,
         (Context,
@@ -1429,15 +1432,12 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          getMDOrNull(Record[4]),                            // file
          Record[5],                                         // line
          getMDOrNull(Record[6]),                            // type
-         Record[7],                                         // isLocal
-         Record[8],                                         // isDefinition
          Record[9],                                         // scopeLine
          getDITypeRefOrNull(Record[10]),                    // containingType
-         Record[11],                                        // virtuality
          Record[12],                                        // virtualIndex
          HasThisAdj ? Record[19] : 0,                       // thisAdjustment
          static_cast<DINode::DIFlags>(Record[13]),          // flags
-         Record[14],                                        // isOptimized
+         SPFlags,                                           // SPFlags
          HasUnit ? CUorFn : nullptr,                        // unit
          getMDOrNull(Record[15 + Offset]),                  // templateParams
          getMDOrNull(Record[16 + Offset]),                  // declaration

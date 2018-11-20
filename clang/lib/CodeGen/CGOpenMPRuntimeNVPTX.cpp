@@ -4547,6 +4547,74 @@ void CGOpenMPRuntimeNVPTX::adjustTargetSpecificDataForLambdas(
   }
 }
 
+// Get current CudaArch and ignore any unknown values
+static CudaArch getCudaArch(CodeGenModule &CGM) {
+  if (!CGM.getTarget().hasFeature("ptx"))
+    return CudaArch::UNKNOWN;
+  llvm::StringMap<bool> Features;
+  CGM.getTarget().initFeatureMap(Features, CGM.getDiags(),
+                                 CGM.getTarget().getTargetOpts().CPU,
+                                 CGM.getTarget().getTargetOpts().Features);
+  for (const auto &Feature : Features) {
+    if (Feature.getValue()) {
+      CudaArch Arch = StringToCudaArch(Feature.getKey());
+      if (Arch != CudaArch::UNKNOWN)
+        return Arch;
+    }
+  }
+  return CudaArch::UNKNOWN;
+}
+
+/// Check to see if target architecture supports unified addressing which is
+/// a restriction for OpenMP requires clause "unified_shared_memory".
+void CGOpenMPRuntimeNVPTX::checkArchForUnifiedAddressing(
+    CodeGenModule &CGM, const OMPRequiresDecl *D) const {
+  for (const OMPClause *Clause : D->clauselists()) {
+    if (Clause->getClauseKind() == OMPC_unified_shared_memory) {
+      switch (getCudaArch(CGM)) {
+      case CudaArch::SM_20:
+      case CudaArch::SM_21:
+      case CudaArch::SM_30:
+      case CudaArch::SM_32:
+      case CudaArch::SM_35:
+      case CudaArch::SM_37:
+      case CudaArch::SM_50:
+      case CudaArch::SM_52:
+      case CudaArch::SM_53:
+      case CudaArch::SM_60:
+      case CudaArch::SM_61:
+      case CudaArch::SM_62:
+        CGM.Error(Clause->getBeginLoc(),
+                  "Target architecture does not support unified addressing");
+        return;
+      case CudaArch::SM_70:
+      case CudaArch::SM_72:
+      case CudaArch::SM_75:
+      case CudaArch::GFX600:
+      case CudaArch::GFX601:
+      case CudaArch::GFX700:
+      case CudaArch::GFX701:
+      case CudaArch::GFX702:
+      case CudaArch::GFX703:
+      case CudaArch::GFX704:
+      case CudaArch::GFX801:
+      case CudaArch::GFX802:
+      case CudaArch::GFX803:
+      case CudaArch::GFX810:
+      case CudaArch::GFX900:
+      case CudaArch::GFX902:
+      case CudaArch::GFX904:
+      case CudaArch::GFX906:
+      case CudaArch::GFX909:
+      case CudaArch::UNKNOWN:
+        break;
+      case CudaArch::LAST:
+        llvm_unreachable("Unexpected Cuda arch.");
+      }
+    }
+  }
+}
+
 /// Get number of SMs and number of blocks per SM.
 static std::pair<unsigned, unsigned> getSMsBlocksPerSM(CodeGenModule &CGM) {
   std::pair<unsigned, unsigned> Data;
@@ -4556,55 +4624,45 @@ static std::pair<unsigned, unsigned> getSMsBlocksPerSM(CodeGenModule &CGM) {
     Data.second = CGM.getLangOpts().OpenMPCUDABlocksPerSM;
   if (Data.first && Data.second)
     return Data;
-  if (CGM.getTarget().hasFeature("ptx")) {
-    llvm::StringMap<bool> Features;
-    CGM.getTarget().initFeatureMap(Features, CGM.getDiags(),
-                                   CGM.getTarget().getTargetOpts().CPU,
-                                   CGM.getTarget().getTargetOpts().Features);
-    for (const auto &Feature : Features) {
-      if (Feature.getValue()) {
-        switch (StringToCudaArch(Feature.getKey())) {
-        case CudaArch::SM_20:
-        case CudaArch::SM_21:
-        case CudaArch::SM_30:
-        case CudaArch::SM_32:
-        case CudaArch::SM_35:
-        case CudaArch::SM_37:
-        case CudaArch::SM_50:
-        case CudaArch::SM_52:
-        case CudaArch::SM_53:
-          return {16, 16};
-        case CudaArch::SM_60:
-        case CudaArch::SM_61:
-        case CudaArch::SM_62:
-          return {56, 32};
-        case CudaArch::SM_70:
-        case CudaArch::SM_72:
-        case CudaArch::SM_75:
-          return {84, 32};
-        case CudaArch::GFX600:
-        case CudaArch::GFX601:
-        case CudaArch::GFX700:
-        case CudaArch::GFX701:
-        case CudaArch::GFX702:
-        case CudaArch::GFX703:
-        case CudaArch::GFX704:
-        case CudaArch::GFX801:
-        case CudaArch::GFX802:
-        case CudaArch::GFX803:
-        case CudaArch::GFX810:
-        case CudaArch::GFX900:
-        case CudaArch::GFX902:
-        case CudaArch::GFX904:
-        case CudaArch::GFX906:
-        case CudaArch::GFX909:
-        case CudaArch::UNKNOWN:
-          break;
-        case CudaArch::LAST:
-          llvm_unreachable("Unexpected Cuda arch.");
-        }
-      }
-    }
+  switch (getCudaArch(CGM)) {
+  case CudaArch::SM_20:
+  case CudaArch::SM_21:
+  case CudaArch::SM_30:
+  case CudaArch::SM_32:
+  case CudaArch::SM_35:
+  case CudaArch::SM_37:
+  case CudaArch::SM_50:
+  case CudaArch::SM_52:
+  case CudaArch::SM_53:
+    return {16, 16};
+  case CudaArch::SM_60:
+  case CudaArch::SM_61:
+  case CudaArch::SM_62:
+    return {56, 32};
+  case CudaArch::SM_70:
+  case CudaArch::SM_72:
+  case CudaArch::SM_75:
+    return {84, 32};
+  case CudaArch::GFX600:
+  case CudaArch::GFX601:
+  case CudaArch::GFX700:
+  case CudaArch::GFX701:
+  case CudaArch::GFX702:
+  case CudaArch::GFX703:
+  case CudaArch::GFX704:
+  case CudaArch::GFX801:
+  case CudaArch::GFX802:
+  case CudaArch::GFX803:
+  case CudaArch::GFX810:
+  case CudaArch::GFX900:
+  case CudaArch::GFX902:
+  case CudaArch::GFX904:
+  case CudaArch::GFX906:
+  case CudaArch::GFX909:
+  case CudaArch::UNKNOWN:
+    break;
+  case CudaArch::LAST:
+    llvm_unreachable("Unexpected Cuda arch.");
   }
   llvm_unreachable("Unexpected NVPTX target without ptx feature.");
 }

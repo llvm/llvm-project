@@ -12,6 +12,14 @@
 
 // <variant>
 
+// XFAIL: availability_markup=macosx10.13
+// XFAIL: availability_markup=macosx10.12
+// XFAIL: availability_markup=macosx10.11
+// XFAIL: availability_markup=macosx10.10
+// XFAIL: availability_markup=macosx10.9
+// XFAIL: availability_markup=macosx10.8
+// XFAIL: availability_markup=macosx10.7
+
 // template <class ...Types> class variant;
 
 // template <class Tp, class Up, class ...Args>

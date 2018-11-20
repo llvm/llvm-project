@@ -376,12 +376,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 KernelAddress | Efficiency),
       std::make_pair(SafeStack, Address | HWAddress | Leak | Thread | Memory |
                                     KernelAddress | Efficiency),
-      std::make_pair(ShadowCallStack, Address | HWAddress | Leak | Thread |
-                                          Memory | KernelAddress | Efficiency |
-                                          SafeStack),
       std::make_pair(KernelHWAddress, Address | HWAddress | Leak | Thread |
                                           Memory | KernelAddress | Efficiency |
-                                          SafeStack | ShadowCallStack),
+                                          SafeStack),
       std::make_pair(KernelMemory, Address | HWAddress | Leak | Thread |
                                        Memory | KernelAddress | Efficiency |
                                        Scudo | SafeStack)};

@@ -181,7 +181,7 @@ define i64 @load_i64_with_unfolded_gep_offset(i64* %p) {
 ; Basic store.
 
 ; CHECK-LABEL: store_i32_no_offset:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype store_i32_no_offset (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_i32_no_offset(i32 *%p, i32 %v) {
@@ -252,7 +252,7 @@ define void @store_i32_with_unfolded_gep_offset(i32* %p) {
 ; When storing from a fixed address, materialize a zero.
 
 ; CHECK-LABEL: store_i32_to_numeric_address:
-; CHECK-NEXT: i32.const $push0=, 0{{$}}
+; CHECK:      i32.const $push0=, 0{{$}}
 ; CHECK-NEXT: i32.const $push1=, 0{{$}}
 ; CHECK-NEXT: i32.atomic.store 42($pop0), $pop1{{$}}
 define void @store_i32_to_numeric_address() {
@@ -277,7 +277,7 @@ define void @store_i32_to_global_address() {
 ; Basic store.
 
 ; CHECK-LABEL: store_i64_no_offset:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype store_i64_no_offset (i32, i64) -> (){{$}}
 ; CHECK-NEXT: i64.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_i64_no_offset(i64 *%p, i64 %v) {
@@ -663,7 +663,7 @@ define void @store_i8_i64_with_folded_or_offset(i32 %x, i64 %v) {
 ; Basic RMW.
 
 ; CHECK-LABEL: rmw_add_i32_no_offset:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype rmw_add_i32_no_offset (i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.add $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @rmw_add_i32_no_offset(i32* %p, i32 %v) {
@@ -757,7 +757,7 @@ define i32 @rmw_add_i32_from_global_address(i32 %v) {
 ; Basic RMW.
 
 ; CHECK-LABEL: rmw_add_i64_no_offset:
-; CHECK-NEXT: .param i32, i64{{$}}
+; CHECK-NEXT: .functype rmw_add_i64_no_offset (i32, i64) -> (i64){{$}}
 ; CHECK: i64.atomic.rmw.add $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @rmw_add_i64_no_offset(i64* %p, i64 %v) {
@@ -1078,7 +1078,7 @@ define i8 @rmw_add_i8_i32_retvalue(i8 *%p, i32 %v) {
 ; Basic RMW.
 
 ; CHECK-LABEL: cmpxchg_i32_no_offset:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype cmpxchg_i32_no_offset (i32, i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_i32_no_offset(i32* %p, i32 %exp, i32 %new) {
@@ -1180,7 +1180,7 @@ define i32 @cmpxchg_i32_from_global_address(i32 %exp, i32 %new) {
 ; Basic RMW.
 
 ; CHECK-LABEL: cmpxchg_i64_no_offset:
-; CHECK-NEXT: .param i32, i64, i64{{$}}
+; CHECK-NEXT: .functype cmpxchg_i64_no_offset (i32, i64, i64) -> (i64){{$}}
 ; CHECK: i64.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i64 @cmpxchg_i64_no_offset(i64* %p, i64 %exp, i64 %new) {

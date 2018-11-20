@@ -86,7 +86,7 @@ class FDRLogWriter {
     // read the bytes in the buffer will see the writes committed before the
     // extents are updated.
     atomic_thread_fence(memory_order_release);
-    atomic_fetch_add(&Buffer.Extents, sizeof(T), memory_order_acq_rel);
+    atomic_fetch_add(Buffer.Extents, sizeof(T), memory_order_acq_rel);
   }
 
 public:
@@ -116,7 +116,7 @@ public:
     // read the bytes in the buffer will see the writes committed before the
     // extents are updated.
     atomic_thread_fence(memory_order_release);
-    atomic_fetch_add(&Buffer.Extents, Size, memory_order_acq_rel);
+    atomic_fetch_add(Buffer.Extents, Size, memory_order_acq_rel);
     return Size;
   }
 
@@ -160,7 +160,7 @@ public:
     // read the bytes in the buffer will see the writes committed before the
     // extents are updated.
     atomic_thread_fence(memory_order_release);
-    atomic_fetch_add(&Buffer.Extents, sizeof(R) + sizeof(A),
+    atomic_fetch_add(Buffer.Extents, sizeof(R) + sizeof(A),
                      memory_order_acq_rel);
     return true;
   }
@@ -185,7 +185,7 @@ public:
     // read the bytes in the buffer will see the writes committed before the
     // extents are updated.
     atomic_thread_fence(memory_order_release);
-    atomic_fetch_add(&Buffer.Extents, sizeof(R) + EventSize,
+    atomic_fetch_add(Buffer.Extents, sizeof(R) + EventSize,
                      memory_order_acq_rel);
     return true;
   }
@@ -208,7 +208,7 @@ public:
     // read the bytes in the buffer will see the writes committed before the
     // extents are updated.
     atomic_thread_fence(memory_order_release);
-    atomic_fetch_add(&Buffer.Extents, EventSize, memory_order_acq_rel);
+    atomic_fetch_add(Buffer.Extents, EventSize, memory_order_acq_rel);
     return true;
   }
 
@@ -216,13 +216,13 @@ public:
 
   void resetRecord() {
     NextRecord = reinterpret_cast<char *>(Buffer.Data);
-    atomic_store(&Buffer.Extents, 0, memory_order_release);
+    atomic_store(Buffer.Extents, 0, memory_order_release);
   }
 
   void undoWrites(size_t B) {
     DCHECK_GE(NextRecord - B, reinterpret_cast<char *>(Buffer.Data));
     NextRecord -= B;
-    atomic_fetch_sub(&Buffer.Extents, B, memory_order_acq_rel);
+    atomic_fetch_sub(Buffer.Extents, B, memory_order_acq_rel);
   }
 
 }; // namespace __xray

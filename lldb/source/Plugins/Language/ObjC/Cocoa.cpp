@@ -770,7 +770,6 @@ typedef union {
 } TaggedDoubleBits;
 
 static uint64_t decodeExponent(uint64_t exp) {
-  int64_t exp7 = exp;
   // Tagged exponent field is 7-bit signed. Sign-extend the value to 64 bits
   // before performing arithmetic.
   return llvm::SignExtend64<7>(exp) + TAGGED_DATE_EXPONENT_BIAS;

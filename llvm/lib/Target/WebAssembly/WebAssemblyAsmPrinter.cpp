@@ -104,7 +104,7 @@ void WebAssemblyAsmPrinter::EmitEndOfAsmFile(Module &M) {
       // infer the type from a call). With object files it applies to all
       // imports. so fix the names and the tests, or rethink how import
       // delcarations work in asm files.
-      getTargetStreamer()->emitIndirectFunctionType(Sym);
+      getTargetStreamer()->emitFunctionType(Sym);
 
       if (TM.getTargetTriple().isOSBinFormatWasm() &&
           F.hasFnAttribute("wasm-import-module")) {
@@ -166,7 +166,7 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
   addSignature(std::move(Signature));
 
   // FIXME: clean up how params and results are emitted (use signatures)
-  getTargetStreamer()->emitParam(CurrentFnSym, ParamVTs);
+  getTargetStreamer()->emitFunctionType(WasmSym);
 
   // Emit the function index.
   if (MDNode *Idx = F.getMetadata("wasm.index")) {
@@ -176,8 +176,9 @@ void WebAssemblyAsmPrinter::EmitFunctionBodyStart() {
         cast<ConstantAsMetadata>(Idx->getOperand(0))->getValue()));
   }
 
-  getTargetStreamer()->emitResult(CurrentFnSym, ResultVTs);
-  getTargetStreamer()->emitLocal(MFI->getLocals());
+  SmallVector<wasm::ValType, 16> Locals;
+  ValTypesFromMVTs(MFI->getLocals(), Locals);
+  getTargetStreamer()->emitLocal(Locals);
 
   AsmPrinter::EmitFunctionBodyStart();
 }

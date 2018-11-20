@@ -332,6 +332,13 @@ public:
         : TreatBooleanAsSigned(false),
           EmitImplicitIntegerTruncationChecks(false),
           EmitImplicitIntegerSignChangeChecks(false) {}
+
+    ScalarConversionOpts(clang::SanitizerSet SanOpts)
+        : TreatBooleanAsSigned(false),
+          EmitImplicitIntegerTruncationChecks(
+              SanOpts.hasOneOf(SanitizerKind::ImplicitIntegerTruncation)),
+          EmitImplicitIntegerSignChangeChecks(
+              SanOpts.has(SanitizerKind::ImplicitIntegerSignChange)) {}
   };
   Value *
   EmitScalarConversion(Value *Src, QualType SrcTy, QualType DstTy,
@@ -2191,13 +2198,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_IntegralCast: {
     ScalarConversionOpts Opts;
     if (auto *ICE = dyn_cast<ImplicitCastExpr>(CE)) {
-      if (CGF.SanOpts.hasOneOf(SanitizerKind::ImplicitConversion) &&
-          !ICE->isPartOfExplicitCast()) {
-        Opts.EmitImplicitIntegerTruncationChecks =
-            CGF.SanOpts.hasOneOf(SanitizerKind::ImplicitIntegerTruncation);
-        Opts.EmitImplicitIntegerSignChangeChecks =
-            CGF.SanOpts.has(SanitizerKind::ImplicitIntegerSignChange);
-      }
+      if (!ICE->isPartOfExplicitCast())
+        Opts = ScalarConversionOpts(CGF.SanOpts);
     }
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc(), Opts);
@@ -2866,9 +2868,10 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   // Expand the binary operator.
   Result = (this->*Func)(OpInfo);
 
-  // Convert the result back to the LHS type.
-  Result =
-      EmitScalarConversion(Result, E->getComputationResultType(), LHSTy, Loc);
+  // Convert the result back to the LHS type,
+  // potentially with Implicit Conversion sanitizer check.
+  Result = EmitScalarConversion(Result, E->getComputationResultType(), LHSTy,
+                                Loc, ScalarConversionOpts(CGF.SanOpts));
 
   if (atomicPHI) {
     llvm::BasicBlock *opBB = Builder.GetInsertBlock();

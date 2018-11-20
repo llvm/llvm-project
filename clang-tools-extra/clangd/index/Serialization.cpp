@@ -331,6 +331,7 @@ std::pair<SymbolID, std::vector<Ref>> readRefs(Reader &Data,
 // A file is a RIFF chunk with type 'CdIx'.
 // It contains the sections:
 //   - meta: version number
+//   - srcs: checksum of the source file
 //   - stri: string table
 //   - symb: symbols
 //   - refs: references to symbols
@@ -363,6 +364,13 @@ Expected<IndexFileIn> readRIFF(StringRef Data) {
     return Strings.takeError();
 
   IndexFileIn Result;
+  if (Chunks.count("srcs")) {
+    Reader Hash(Chunks.lookup("srcs"));
+    Result.Digest.emplace();
+    llvm::StringRef Digest = Hash.consume(Result.Digest->size());
+    std::copy(Digest.bytes_begin(), Digest.bytes_end(), Result.Digest->begin());
+  }
+
   if (Chunks.count("symb")) {
     Reader SymbolReader(Chunks.lookup("symb"));
     SymbolSlab::Builder Symbols;
@@ -398,6 +406,12 @@ void writeRIFF(const IndexFileOut &Data, raw_ostream &OS) {
     write32(Version, MetaOS);
   }
   RIFF.Chunks.push_back({riff::fourCC("meta"), Meta});
+
+  if (Data.Digest) {
+    llvm::StringRef Hash(reinterpret_cast<const char *>(Data.Digest->data()),
+                         Data.Digest->size());
+    RIFF.Chunks.push_back({riff::fourCC("srcs"), Hash});
+  }
 
   StringTableOut Strings;
   std::vector<Symbol> Symbols;

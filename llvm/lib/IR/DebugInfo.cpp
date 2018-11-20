@@ -438,11 +438,10 @@ private:
     auto distinctMDSubprogram = [&]() {
       return DISubprogram::getDistinct(
           MDS->getContext(), FileAndScope, MDS->getName(), LinkageName,
-          FileAndScope, MDS->getLine(), Type, MDS->isLocalToUnit(),
-          MDS->isDefinition(), MDS->getScopeLine(), ContainingType,
-          MDS->getVirtuality(), MDS->getVirtualIndex(),
-          MDS->getThisAdjustment(), MDS->getFlags(), MDS->isOptimized(), Unit,
-          TemplateParams, Declaration, Variables);
+          FileAndScope, MDS->getLine(), Type, MDS->getScopeLine(),
+          ContainingType, MDS->getVirtualIndex(), MDS->getThisAdjustment(),
+          MDS->getFlags(), MDS->getSPFlags(), Unit, TemplateParams, Declaration,
+          Variables);
     };
 
     if (MDS->isDistinct())
@@ -450,11 +449,9 @@ private:
 
     auto *NewMDS = DISubprogram::get(
         MDS->getContext(), FileAndScope, MDS->getName(), LinkageName,
-        FileAndScope, MDS->getLine(), Type, MDS->isLocalToUnit(),
-        MDS->isDefinition(), MDS->getScopeLine(), ContainingType,
-        MDS->getVirtuality(), MDS->getVirtualIndex(), MDS->getThisAdjustment(),
-        MDS->getFlags(), MDS->isOptimized(), Unit, TemplateParams, Declaration,
-        Variables);
+        FileAndScope, MDS->getLine(), Type, MDS->getScopeLine(), ContainingType,
+        MDS->getVirtualIndex(), MDS->getThisAdjustment(), MDS->getFlags(),
+        MDS->getSPFlags(), Unit, TemplateParams, Declaration, Variables);
 
     StringRef OldLinkageName = MDS->getLinkageName();
 
@@ -720,6 +717,11 @@ static LLVMDIFlags map_to_llvmDIFlags(DINode::DIFlags Flags) {
   return static_cast<LLVMDIFlags>(Flags);
 }
 
+static DISubprogram::DISPFlags
+pack_into_DISPFlags(bool IsLocalToUnit, bool IsDefinition, bool IsOptimized) {
+  return DISubprogram::toSPFlags(IsLocalToUnit, IsDefinition, IsOptimized);
+}
+
 unsigned LLVMDebugMetadataVersion() {
   return DEBUG_METADATA_VERSION;
 }
@@ -803,9 +805,10 @@ LLVMMetadataRef LLVMDIBuilderCreateFunction(
     unsigned ScopeLine, LLVMDIFlags Flags, LLVMBool IsOptimized) {
   return wrap(unwrap(Builder)->createFunction(
       unwrapDI<DIScope>(Scope), {Name, NameLen}, {LinkageName, LinkageNameLen},
-      unwrapDI<DIFile>(File), LineNo, unwrapDI<DISubroutineType>(Ty),
-      IsLocalToUnit, IsDefinition, ScopeLine, map_from_llvmDIFlags(Flags),
-      IsOptimized, nullptr, nullptr, nullptr));
+      unwrapDI<DIFile>(File), LineNo, unwrapDI<DISubroutineType>(Ty), ScopeLine,
+      map_from_llvmDIFlags(Flags),
+      pack_into_DISPFlags(IsLocalToUnit, IsDefinition, IsOptimized), nullptr,
+      nullptr, nullptr));
 }
 
 

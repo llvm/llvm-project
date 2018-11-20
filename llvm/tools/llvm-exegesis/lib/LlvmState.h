@@ -40,7 +40,8 @@ public:
   LLVMState(const std::string &CpuName);
 
   LLVMState(const std::string &Triple,
-            const std::string &CpuName); // For tests.
+            const std::string &CpuName,
+            const std::string &Features = ""); // For tests.
 
   const llvm::TargetMachine &getTargetMachine() const { return *TargetMachine; }
   std::unique_ptr<llvm::LLVMTargetMachine> createTargetMachine() const;

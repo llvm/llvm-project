@@ -31,16 +31,12 @@ class WebAssemblyTargetStreamer : public MCTargetStreamer {
 public:
   explicit WebAssemblyTargetStreamer(MCStreamer &S);
 
-  /// .param
-  virtual void emitParam(MCSymbol *Symbol, ArrayRef<MVT> Types) = 0;
-  /// .result
-  virtual void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) = 0;
   /// .local
-  virtual void emitLocal(ArrayRef<MVT> Types) = 0;
+  virtual void emitLocal(ArrayRef<wasm::ValType> Types) = 0;
   /// .endfunc
   virtual void emitEndFunc() = 0;
   /// .functype
-  virtual void emitIndirectFunctionType(MCSymbolWasm *Symbol) = 0;
+  virtual void emitFunctionType(MCSymbolWasm *Symbol) = 0;
   /// .indidx
   virtual void emitIndIdx(const MCExpr *Value) = 0;
   /// .globaltype
@@ -61,11 +57,9 @@ class WebAssemblyTargetAsmStreamer final : public WebAssemblyTargetStreamer {
 public:
   WebAssemblyTargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);
 
-  void emitParam(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
-  void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
-  void emitLocal(ArrayRef<MVT> Types) override;
+  void emitLocal(ArrayRef<wasm::ValType> Types) override;
   void emitEndFunc() override;
-  void emitIndirectFunctionType(MCSymbolWasm *Symbol) override;
+  void emitFunctionType(MCSymbolWasm *Symbol) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalType(MCSymbolWasm *Sym) override;
   void emitEventType(MCSymbolWasm *Sym) override;
@@ -77,11 +71,9 @@ class WebAssemblyTargetWasmStreamer final : public WebAssemblyTargetStreamer {
 public:
   explicit WebAssemblyTargetWasmStreamer(MCStreamer &S);
 
-  void emitParam(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
-  void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override;
-  void emitLocal(ArrayRef<MVT> Types) override;
+  void emitLocal(ArrayRef<wasm::ValType> Types) override;
   void emitEndFunc() override;
-  void emitIndirectFunctionType(MCSymbolWasm *Symbol) override;
+  void emitFunctionType(MCSymbolWasm *Symbol) override;
   void emitIndIdx(const MCExpr *Value) override;
   void emitGlobalType(MCSymbolWasm *Sym) override;
   void emitEventType(MCSymbolWasm *Sym) override;
@@ -94,15 +86,13 @@ public:
   explicit WebAssemblyTargetNullStreamer(MCStreamer &S)
       : WebAssemblyTargetStreamer(S) {}
 
-  void emitParam(MCSymbol *Symbol, ArrayRef<MVT> Types) override {}
-  void emitResult(MCSymbol *Symbol, ArrayRef<MVT> Types) override {}
-  void emitLocal(ArrayRef<MVT> Types) override {}
+  void emitLocal(ArrayRef<wasm::ValType>) override {}
   void emitEndFunc() override {}
-  void emitIndirectFunctionType(MCSymbolWasm *Symbol) override {}
-  void emitIndIdx(const MCExpr *Value) override {}
-  void emitGlobalType(MCSymbolWasm *Sym) override {}
-  void emitEventType(MCSymbolWasm *Sym) override {}
-  void emitImportModule(MCSymbolWasm *Sym, StringRef ModuleName) override {}
+  void emitFunctionType(MCSymbolWasm *) override {}
+  void emitIndIdx(const MCExpr *) override {}
+  void emitGlobalType(MCSymbolWasm *) override {}
+  void emitEventType(MCSymbolWasm *) override {}
+  void emitImportModule(MCSymbolWasm *, StringRef) override {}
 };
 
 } // end namespace llvm

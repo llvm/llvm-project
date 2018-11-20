@@ -19,7 +19,7 @@ declare void @ext_byval_func_empty(%EmptyStruct* byval)
 
 ; CHECK-LABEL: byval_arg
 define void @byval_arg(%SmallStruct* %ptr) {
- ; CHECK: .param i32
+ ; CHECK: .functype byval_arg (i32) -> ()
  ; Subtract 16 from SP (SP is 16-byte aligned)
  ; CHECK-NEXT: get_global $push[[L2:.+]]=, __stack_pointer@GLOBAL
  ; CHECK-NEXT: i32.const $push[[L3:.+]]=, 16
@@ -45,7 +45,7 @@ define void @byval_arg(%SmallStruct* %ptr) {
 
 ; CHECK-LABEL: byval_arg_align8
 define void @byval_arg_align8(%SmallStruct* %ptr) {
- ; CHECK: .param i32
+ ; CHECK: .functype byval_arg_align8 (i32) -> ()
  ; Don't check the entire SP sequence, just enough to get the alignment.
  ; CHECK: i32.const $push[[L1:.+]]=, 16
  ; CHECK-NEXT: i32.sub $push[[L11:.+]]=, {{.+}}, $pop[[L1]]
@@ -64,7 +64,7 @@ define void @byval_arg_align8(%SmallStruct* %ptr) {
 
 ; CHECK-LABEL: byval_arg_double
 define void @byval_arg_double(%AlignedStruct* %ptr) {
- ; CHECK: .param i32
+ ; CHECK: .functype byval_arg_double (i32) -> ()
  ; Subtract 16 from SP (SP is 16-byte aligned)
  ; CHECK: i32.const $push[[L1:.+]]=, 16
  ; CHECK-NEXT: i32.sub $push[[L14:.+]]=, {{.+}}, $pop[[L1]]
@@ -82,7 +82,7 @@ define void @byval_arg_double(%AlignedStruct* %ptr) {
 
 ; CHECK-LABEL: byval_param
 define void @byval_param(%SmallStruct* byval align 32 %ptr) {
- ; CHECK: .param i32
+ ; CHECK: .functype byval_param (i32) -> ()
  ; %ptr is just a pointer to a struct, so pass it directly through
  ; CHECK: call ext_func@FUNCTION, $0
  call void @ext_func(%SmallStruct* %ptr)
@@ -91,7 +91,7 @@ define void @byval_param(%SmallStruct* byval align 32 %ptr) {
 
 ; CHECK-LABEL: byval_empty_caller
 define void @byval_empty_caller(%EmptyStruct* %ptr) {
- ; CHECK: .param i32
+ ; CHECK: .functype byval_empty_caller (i32) -> ()
  ; CHECK: call ext_byval_func_empty@FUNCTION, $0
  call void @ext_byval_func_empty(%EmptyStruct* byval %ptr)
  ret void
@@ -99,7 +99,7 @@ define void @byval_empty_caller(%EmptyStruct* %ptr) {
 
 ; CHECK-LABEL: byval_empty_callee
 define void @byval_empty_callee(%EmptyStruct* byval %ptr) {
- ; CHECK: .param i32
+ ; CHECK: .functype byval_empty_callee (i32) -> ()
  ; CHECK: call ext_func_empty@FUNCTION, $0
  call void @ext_func_empty(%EmptyStruct* %ptr)
  ret void

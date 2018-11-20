@@ -33,9 +33,27 @@ TEST(AllocatorTest, Allocate) {
 TEST(AllocatorTest, OverAllocate) {
   Allocator<sizeof(TestData)> A(sizeof(TestData));
   auto B1 = A.Allocate();
-  (void)B1;
+  ASSERT_NE(B1.Data, nullptr);
   auto B2 = A.Allocate();
   ASSERT_EQ(B2.Data, nullptr);
+}
+
+struct OddSizedData {
+  s64 A;
+  s32 B;
+};
+
+TEST(AllocatorTest, AllocateBoundaries) {
+  Allocator<sizeof(OddSizedData)> A(GetPageSizeCached());
+
+  // Keep allocating until we hit a nullptr block.
+  unsigned C = 0;
+  auto Expected =
+      GetPageSizeCached() / RoundUpTo(sizeof(OddSizedData), kCacheLineSize);
+  for (auto B = A.Allocate(); B.Data != nullptr; B = A.Allocate(), ++C)
+    ;
+
+  ASSERT_EQ(C, Expected);
 }
 
 } // namespace

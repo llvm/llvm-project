@@ -664,34 +664,22 @@ define <16 x i8> @var_rotate_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 define <2 x i64> @splatvar_rotate_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; SSE-LABEL: splatvar_rotate_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,1,0,1]
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [64,64]
-; SSE-NEXT:    psubq %xmm2, %xmm3
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    psllq %xmm1, %xmm2
-; SSE-NEXT:    psrlq %xmm3, %xmm0
-; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [64,64]
+; SSE-NEXT:    psubq %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    psllq %xmm1, %xmm3
+; SSE-NEXT:    psrlq %xmm2, %xmm0
+; SSE-NEXT:    por %xmm3, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: splatvar_rotate_v2i64:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[0,1,0,1]
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [64,64]
-; AVX1-NEXT:    vpsubq %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpsllq %xmm1, %xmm0, %xmm1
-; AVX1-NEXT:    vpsrlq %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: splatvar_rotate_v2i64:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastq %xmm1, %xmm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [64,64]
-; AVX2-NEXT:    vpsubq %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vpsllq %xmm1, %xmm0, %xmm1
-; AVX2-NEXT:    vpsrlq %xmm2, %xmm0, %xmm0
-; AVX2-NEXT:    vpor %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: splatvar_rotate_v2i64:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm2 = [64,64]
+; AVX-NEXT:    vpsubq %xmm1, %xmm2, %xmm2
+; AVX-NEXT:    vpsllq %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vpsrlq %xmm2, %xmm0, %xmm0
+; AVX-NEXT:    vpor %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    retq
 ;
 ; AVX512F-LABEL: splatvar_rotate_v2i64:
 ; AVX512F:       # %bb.0:

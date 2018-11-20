@@ -237,6 +237,12 @@ public:
                  static_cast<const BasicBlock *>(this)->getUniquePredecessor());
   }
 
+  /// Return true if this block has exactly N predecessors.
+  bool hasNPredecessors(unsigned N) const;
+
+  /// Return true if this block has N predecessors or more.
+  bool hasNPredecessorsOrMore(unsigned N) const;
+
   /// Return the successor of this block if it has a single successor.
   /// Otherwise return a null pointer.
   ///

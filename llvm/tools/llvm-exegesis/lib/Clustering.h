@@ -90,14 +90,21 @@ public:
 
   // Returns true if the given point is within a distance Epsilon of each other.
   bool isNeighbour(const std::vector<BenchmarkMeasure> &P,
-                   const std::vector<BenchmarkMeasure> &Q) const;
+                   const std::vector<BenchmarkMeasure> &Q) const {
+    double DistanceSquared = 0.0;
+    for (size_t I = 0, E = P.size(); I < E; ++I) {
+      const auto Diff = P[I].PerInstructionValue - Q[I].PerInstructionValue;
+      DistanceSquared += Diff * Diff;
+    }
+    return DistanceSquared <= EpsilonSquared_;
+  }
 
 private:
   InstructionBenchmarkClustering(
       const std::vector<InstructionBenchmark> &Points, double EpsilonSquared);
   llvm::Error validateAndSetup();
   void dbScan(size_t MinPts);
-  std::vector<size_t> rangeQuery(size_t Q) const;
+  void rangeQuery(size_t Q, std::vector<size_t> &Scratchpad) const;
 
   const std::vector<InstructionBenchmark> &Points_;
   const double EpsilonSquared_;

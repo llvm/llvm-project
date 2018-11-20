@@ -1,6 +1,6 @@
 # UNSUPPORTED: windows, darwin
 #
-# RUN: %cc -o %t %p/inputs/main.c -g
+# RUN: %clang -o %t %p/inputs/main.c -g
 # RUN: %python %p/inputs/target-select-so-path.py "%debugserver" "%lldbmi %t" %s
 
 # Test that -target-select command can hook up a path
