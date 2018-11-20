@@ -39,36 +39,6 @@
 #include "amd_comgr.h"
 #include "common.h"
 
-void zero_e_machine(amd_comgr_data_t data) {
-  size_t size;
-  char *bytes = NULL;
-  amd_comgr_status_t status;
-
-  status = amd_comgr_get_data(data, &size, bytes);
-  checkError(status, "amd_comgr_get_data");
-
-  bytes = malloc(size);
-
-  status = amd_comgr_get_data(data, &size, bytes);
-  checkError(status, "amd_comgr_get_data");
-
-  // Zero out the e_machine field of the ELF Ehdr to trick Comgr into
-  // inspecting the old NT_AMDGPU_HSA_ISA note instead of the new EFlags.
-  //
-  // struct ELF64_Ehdr {
-  //   unsigned char e_ident[16]; //  16
-  //   uint16_t e_type;           // + 2
-  //   uint16_t e_machine;
-  //   ...
-  // }
-  *(uint16_t *)(bytes + 18) = 0;
-
-  status = amd_comgr_set_data(data, size, bytes);
-  checkError(status, "amd_comgr_get_data");
-
-  free(bytes);
-}
-
 void test_isa_name(amd_comgr_data_t data, const char *expected_isa_name) {
   size_t expected_size = strlen(expected_isa_name) + 1;
 
@@ -104,7 +74,8 @@ void test_isa_name(amd_comgr_data_t data, const char *expected_isa_name) {
   free(isa_name);
 }
 
-void compile_and_test_isa_name(const char *expected_isa_name) {
+void compile_and_test_isa_name(const char *expected_isa_name,
+                               const char *options) {
   char *bufSource;
   size_t sizeSource;
   amd_comgr_data_t dataSource, dataReloc, dataExec;
@@ -134,7 +105,7 @@ void compile_and_test_isa_name(const char *expected_isa_name) {
   checkError(status, "amd_comgr_action_info_set_language");
   status = amd_comgr_action_info_set_isa_name(dataAction, expected_isa_name);
   checkError(status, "amd_comgr_action_info_set_isa_name");
-  status = amd_comgr_action_info_set_options(dataAction, "");
+  status = amd_comgr_action_info_set_options(dataAction, options);
   checkError(status, "amd_comgr_action_info_set_options");
 
   status = amd_comgr_create_data_set(&dataSetBC);
@@ -172,12 +143,6 @@ void compile_and_test_isa_name(const char *expected_isa_name) {
   test_isa_name(dataReloc, expected_isa_name);
   test_isa_name(dataExec, expected_isa_name);
 
-  zero_e_machine(dataReloc);
-  zero_e_machine(dataExec);
-
-  test_isa_name(dataReloc, expected_isa_name);
-  test_isa_name(dataExec, expected_isa_name);
-
   status = amd_comgr_release_data(dataSource);
   checkError(status, "amd_comgr_release_data");
   status = amd_comgr_release_data(dataReloc);
@@ -211,6 +176,9 @@ int main(int argc, char *argv[]) {
     status = amd_comgr_get_isa_name(i, &isa_name);
     checkError(status, "amd_comgr_get_isa_name");
 
-    compile_and_test_isa_name(isa_name);
+    // Test object code v2.
+    compile_and_test_isa_name(isa_name, "-mno-code-object-v3");
+    // Test object code v3.
+    compile_and_test_isa_name(isa_name, "-mcode-object-v3");
   }
 }
