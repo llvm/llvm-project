@@ -314,7 +314,7 @@ __enqueue_kernel_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r,
     __global AmdVQueueHeader *vq = __builtin_astype(q, __global AmdVQueueHeader *);
 
     if (lo > LSIZE_LIMIT ||
-        align_up(csize, sizeof(uint)) + align_up(nl*sizeof(uint), sizeof(size_t)) + NUM_IMPLICIT_ARGS*sizeof(size_t) > vq->arg_size ||
+        align_up(align_up(csize, sizeof(uint)) + nl*sizeof(uint), sizeof(size_t)) + NUM_IMPLICIT_ARGS*sizeof(size_t) > vq->arg_size ||
         mul24(mul24((uint)r.localWorkSize[0], (uint)r.localWorkSize[1]), (uint)r.localWorkSize[2]) > CL_DEVICE_MAX_WORK_GROUP_SIZE)
         return CLK_ENQUEUE_FAILURE;
 
@@ -334,7 +334,8 @@ __enqueue_kernel_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r,
     for (uint il=0; il<nl; ++il)
         lo = (la[il] = align_up(lo, LOCAL_ALIGN)) + (uint)ll[il];
 
-    __global size_t *implicit = (__global size_t *)((__global char *)la + align_up(nl * sizeof(uint), sizeof(size_t)));
+    __global size_t *implicit = (__global size_t *)((__global char *)aw->aql.kernarg_address +
+            align_up(align_up(csize, sizeof(uint)) + nl*sizeof(uint), sizeof(size_t)));
     implicit[0] = r.globalWorkOffset[0];
     implicit[1] = r.globalWorkOffset[1];
     implicit[2] = r.globalWorkOffset[2];
@@ -383,7 +384,7 @@ __enqueue_kernel_events_varargs(queue_t q, kernel_enqueue_flags_t f, const ndran
 
     if (lo > LSIZE_LIMIT ||
         nwl > vq->wait_size ||
-        align_up(csize, sizeof(uint)) + align_up(nl*sizeof(uint), sizeof(size_t)) + NUM_IMPLICIT_ARGS*sizeof(size_t) > vq->arg_size ||
+        align_up(align_up(csize, sizeof(uint)) + nl*sizeof(uint), sizeof(size_t)) + NUM_IMPLICIT_ARGS*sizeof(size_t) > vq->arg_size ||
         mul24(mul24((uint)r.localWorkSize[0], (uint)r.localWorkSize[1]), (uint)r.localWorkSize[2]) > CL_DEVICE_MAX_WORK_GROUP_SIZE)
         return CLK_ENQUEUE_FAILURE;
 
@@ -421,7 +422,8 @@ __enqueue_kernel_events_varargs(queue_t q, kernel_enqueue_flags_t f, const ndran
     for (uint il=0; il<nl; ++il)
         lo = (la[il] = align_up(lo, LOCAL_ALIGN)) + (uint)ll[il];
 
-    __global size_t *implicit = (__global size_t *)((__global char *)la + align_up(nl * sizeof(uint), sizeof(size_t)));
+    __global size_t *implicit = (__global size_t *)((__global char *)aw->aql.kernarg_address +
+            align_up(align_up(csize, sizeof(uint)) + nl*sizeof(uint), sizeof(size_t)));
     implicit[0] = r.globalWorkOffset[0];
     implicit[1] = r.globalWorkOffset[1];
     implicit[2] = r.globalWorkOffset[2];
