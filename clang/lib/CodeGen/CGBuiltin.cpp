@@ -1926,6 +1926,26 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateright64:
     return emitRotate(E, true);
 
+  case Builtin::BI__builtin_constant_p: {
+    llvm::Type *ResultType = ConvertType(E->getType());
+    if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+      // At -O0, we don't perform inlining, so we don't need to delay the
+      // processing.
+      return RValue::get(ConstantInt::get(ResultType, 0));
+    if (auto *DRE = dyn_cast<DeclRefExpr>(E->getArg(0)->IgnoreImplicit())) {
+      auto DREType = DRE->getType();
+      if (DREType->isAggregateType() || DREType->isFunctionType())
+        return RValue::get(ConstantInt::get(ResultType, 0));
+    }
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+
+    Value *F = CGM.getIntrinsic(Intrinsic::is_constant, ArgType);
+    Value *Result = Builder.CreateCall(F, ArgValue);
+    if (Result->getType() != ResultType)
+      Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/true);
+    return RValue::get(Result);
+  }
   case Builtin::BI__builtin_object_size: {
     unsigned Type =
         E->getArg(1)->EvaluateKnownConstInt(getContext()).getZExtValue();

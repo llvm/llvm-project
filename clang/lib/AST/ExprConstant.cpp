@@ -45,6 +45,7 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <functional>
@@ -721,6 +722,10 @@ namespace {
     /// Whether or not we're currently speculatively evaluating.
     bool IsSpeculativelyEvaluating;
 
+    /// Whether or not we're in a context where the front end requires a
+    /// constant value.
+    bool InConstantContext;
+
     enum EvaluationMode {
       /// Evaluate as a constant expression. Stop if we find that the expression
       /// is not a constant expression.
@@ -782,7 +787,7 @@ namespace {
         EvaluatingDecl((const ValueDecl *)nullptr),
         EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
         HasFoldFailureDiagnostic(false), IsSpeculativelyEvaluating(false),
-        EvalMode(Mode) {}
+        InConstantContext(false), EvalMode(Mode) {}
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value) {
       EvaluatingDecl = Base;
@@ -7348,6 +7353,8 @@ public:
   //                            Visitor Methods
   //===--------------------------------------------------------------------===//
 
+  bool VisitConstantExpr(const ConstantExpr *E);
+
   bool VisitIntegerLiteral(const IntegerLiteral *E) {
     return Success(E->getValue(), E);
   }
@@ -8088,6 +8095,11 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
   return true;
 }
 
+bool IntExprEvaluator::VisitConstantExpr(const ConstantExpr *E) {
+  llvm::SaveAndRestore<bool> InConstantContext(Info.InConstantContext, true);
+  return ExprEvaluatorBaseTy::VisitConstantExpr(E);
+}
+
 bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
   if (unsigned BuiltinOp = E->getBuiltinCallee())
     return VisitBuiltinCallExpr(E, BuiltinOp);
@@ -8175,8 +8187,20 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Val.countLeadingZeros(), E);
   }
 
-  case Builtin::BI__builtin_constant_p:
-    return Success(EvaluateBuiltinConstantP(Info.Ctx, E->getArg(0)), E);
+  case Builtin::BI__builtin_constant_p: {
+    auto Arg = E->getArg(0);
+    if (EvaluateBuiltinConstantP(Info.Ctx, Arg))
+      return Success(true, E);
+    auto ArgTy = Arg->IgnoreImplicit()->getType();
+    if (!Info.InConstantContext && !Arg->HasSideEffects(Info.Ctx) &&
+        !ArgTy->isAggregateType() && !ArgTy->isPointerType()) {
+      // We can delay calculation of __builtin_constant_p until after
+      // inlining. Note: This diagnostic won't be shown to the user.
+      Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
+      return false;
+    }
+    return Success(false, E);
+  }
 
   case Builtin::BI__builtin_ctz:
   case Builtin::BI__builtin_ctzl:
@@ -10746,6 +10770,14 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
   return false;
 }
 
+static bool EvaluateAsRValue(const Expr *E, Expr::EvalResult &Result,
+                             const ASTContext &Ctx, EvalInfo &Info) {
+  bool IsConst;
+  if (FastEvaluateAsRValue(E, Result, Ctx, IsConst))
+    return IsConst;
+
+  return EvaluateAsRValue(Info, E, Result.Val);
+}
 
 /// EvaluateAsRValue - Return true if this is a constant which we can fold using
 /// any crazy technique (that has nothing to do with language standards) that
@@ -10753,12 +10785,8 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
 /// in Result. If this expression is a glvalue, an lvalue-to-rvalue conversion
 /// will be applied to the result.
 bool Expr::EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx) const {
-  bool IsConst;
-  if (FastEvaluateAsRValue(this, Result, Ctx, IsConst))
-    return IsConst;
-
   EvalInfo Info(Ctx, Result, EvalInfo::EM_IgnoreSideEffects);
-  return ::EvaluateAsRValue(Info, this, Result.Val);
+  return ::EvaluateAsRValue(this, Result, Ctx, Info);
 }
 
 bool Expr::EvaluateAsBooleanCondition(bool &Result,
@@ -10878,35 +10906,40 @@ bool Expr::isEvaluatable(const ASTContext &Ctx, SideEffectsKind SEK) const {
 
 APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx,
                     SmallVectorImpl<PartialDiagnosticAt> *Diag) const {
-  EvalResult EvalResult;
-  EvalResult.Diag = Diag;
-  bool Result = EvaluateAsRValue(EvalResult, Ctx);
+  EvalResult EVResult;
+  EVResult.Diag = Diag;
+  EvalInfo Info(Ctx, EVResult, EvalInfo::EM_IgnoreSideEffects);
+  Info.InConstantContext = true;
+
+  bool Result = ::EvaluateAsRValue(this, EVResult, Ctx, Info);
   (void)Result;
   assert(Result && "Could not evaluate expression");
-  assert(EvalResult.Val.isInt() && "Expression did not evaluate to integer");
+  assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
 
-  return EvalResult.Val.getInt();
+  return EVResult.Val.getInt();
 }
 
 APSInt Expr::EvaluateKnownConstIntCheckOverflow(
     const ASTContext &Ctx, SmallVectorImpl<PartialDiagnosticAt> *Diag) const {
-  EvalResult EvalResult;
-  EvalResult.Diag = Diag;
-  EvalInfo Info(Ctx, EvalResult, EvalInfo::EM_EvaluateForOverflow);
-  bool Result = ::EvaluateAsRValue(Info, this, EvalResult.Val);
+  EvalResult EVResult;
+  EVResult.Diag = Diag;
+  EvalInfo Info(Ctx, EVResult, EvalInfo::EM_EvaluateForOverflow);
+  Info.InConstantContext = true;
+
+  bool Result = ::EvaluateAsRValue(Info, this, EVResult.Val);
   (void)Result;
   assert(Result && "Could not evaluate expression");
-  assert(EvalResult.Val.isInt() && "Expression did not evaluate to integer");
+  assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
 
-  return EvalResult.Val.getInt();
+  return EVResult.Val.getInt();
 }
 
 void Expr::EvaluateForOverflow(const ASTContext &Ctx) const {
   bool IsConst;
-  EvalResult EvalResult;
-  if (!FastEvaluateAsRValue(this, EvalResult, Ctx, IsConst)) {
-    EvalInfo Info(Ctx, EvalResult, EvalInfo::EM_EvaluateForOverflow);
-    (void)::EvaluateAsRValue(Info, this, EvalResult.Val);
+  EvalResult EVResult;
+  if (!FastEvaluateAsRValue(this, EVResult, Ctx, IsConst)) {
+    EvalInfo Info(Ctx, EVResult, EvalInfo::EM_EvaluateForOverflow);
+    (void)::EvaluateAsRValue(Info, this, EVResult.Val);
   }
 }
 
@@ -10959,7 +10992,11 @@ static ICEDiag Worst(ICEDiag A, ICEDiag B) { return A.Kind >= B.Kind ? A : B; }
 
 static ICEDiag CheckEvalInICE(const Expr* E, const ASTContext &Ctx) {
   Expr::EvalResult EVResult;
-  if (!E->EvaluateAsRValue(EVResult, Ctx) || EVResult.HasSideEffects ||
+  Expr::EvalStatus Status;
+  EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpression);
+
+  Info.InConstantContext = true;
+  if (!::EvaluateAsRValue(E, EVResult, Ctx, Info) || EVResult.HasSideEffects ||
       !EVResult.Val.isInt())
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 

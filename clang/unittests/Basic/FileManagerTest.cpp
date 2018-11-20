@@ -240,7 +240,11 @@ TEST_F(FileManagerTest, getFileDefersOpen) {
   file = manager.getFile("/tmp/test", /*OpenFile=*/true);
   ASSERT_TRUE(file != nullptr);
   ASSERT_TRUE(file->isValid());
+#ifdef _WIN32
+  EXPECT_EQ("/tmp\\test", file->tryGetRealPathName());
+#else
   EXPECT_EQ("/tmp/test", file->tryGetRealPathName());
+#endif
 
   // However we should never try to open a file previously opened as virtual.
   ASSERT_TRUE(manager.getVirtualFile("/tmp/testv", 5, 0));
