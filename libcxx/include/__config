@@ -1143,6 +1143,7 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
       defined(__Fuchsia__) || \
       defined(__NetBSD__) || \
       defined(__linux__) || \
+      defined(__GNU__) || \
       defined(__APPLE__) || \
       defined(__CloudABI__) || \
       defined(__sun__) || \
