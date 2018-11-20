@@ -361,7 +361,6 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, TypeServer2Record &TS) {
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
   printTypeIndex("PointeeType", Ptr.getReferentType());
-  W->printHex("PointerAttributes", uint32_t(Ptr.getOptions()));
   W->printEnum("PtrType", unsigned(Ptr.getPointerKind()),
                makeArrayRef(PtrKindNames));
   W->printEnum("PtrMode", unsigned(Ptr.getMode()), makeArrayRef(PtrModeNames));

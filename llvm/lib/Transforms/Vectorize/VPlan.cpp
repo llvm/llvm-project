@@ -468,7 +468,7 @@ void VPlan::updateDominatorTree(DominatorTree *DT, BasicBlock *LoopPreHeaderBB,
            "One successor of a basic block does not lead to the other.");
     assert(InterimSucc->getSinglePredecessor() &&
            "Interim successor has more than one predecessor.");
-    assert(pred_size(PostDomSucc) == 2 &&
+    assert(PostDomSucc->hasNPredecessors(2) &&
            "PostDom successor has more than two predecessors.");
     DT->addNewBlock(InterimSucc, BB);
     DT->addNewBlock(PostDomSucc, BB);

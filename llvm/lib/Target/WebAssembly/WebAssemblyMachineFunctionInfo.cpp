@@ -64,13 +64,17 @@ void llvm::ComputeSignatureVTs(const FunctionType *Ty, const Function &F,
     Params.push_back(PtrVT);
 }
 
+void llvm::ValTypesFromMVTs(const ArrayRef<MVT> &In,
+                            SmallVectorImpl<wasm::ValType> &Out) {
+  for (MVT Ty : In)
+    Out.push_back(WebAssembly::toValType(Ty));
+}
+
 std::unique_ptr<wasm::WasmSignature>
 llvm::SignatureFromMVTs(const SmallVectorImpl<MVT> &Results,
                         const SmallVectorImpl<MVT> &Params) {
   auto Sig = make_unique<wasm::WasmSignature>();
-  for (MVT Ty : Results)
-    Sig->Returns.push_back(WebAssembly::toValType(Ty));
-  for (MVT Ty : Params)
-    Sig->Params.push_back(WebAssembly::toValType(Ty));
+  ValTypesFromMVTs(Results, Sig->Returns);
+  ValTypesFromMVTs(Params, Sig->Params);
   return Sig;
 }

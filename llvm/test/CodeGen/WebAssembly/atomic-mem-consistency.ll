@@ -53,7 +53,7 @@ define i32 @load_i32_seq_cst(i32 *%p) {
 ; The 'acquire' and 'acq_rel' orderings aren’t valid on store instructions.
 
 ; CHECK-LABEL: store_i32_unordered:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype store_i32_unordered (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_i32_unordered(i32 *%p, i32 %v) {
@@ -62,7 +62,7 @@ define void @store_i32_unordered(i32 *%p, i32 %v) {
 }
 
 ; CHECK-LABEL: store_i32_monotonic:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype store_i32_monotonic (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_i32_monotonic(i32 *%p, i32 %v) {
@@ -71,7 +71,7 @@ define void @store_i32_monotonic(i32 *%p, i32 %v) {
 }
 
 ; CHECK-LABEL: store_i32_release:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype store_i32_release (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_i32_release(i32 *%p, i32 %v) {
@@ -80,7 +80,7 @@ define void @store_i32_release(i32 *%p, i32 %v) {
 }
 
 ; CHECK-LABEL: store_i32_seq_cst:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype store_i32_seq_cst (i32, i32) -> (){{$}}
 ; CHECK-NEXT: i32.atomic.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_i32_seq_cst(i32 *%p, i32 %v) {
@@ -96,7 +96,7 @@ define void @store_i32_seq_cst(i32 *%p, i32 %v) {
 ; The 'unordered' ordering is not valid on atomicrmw instructions.
 
 ; CHECK-LABEL: add_i32_monotonic:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype add_i32_monotonic (i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.add $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @add_i32_monotonic(i32* %p, i32 %v) {
@@ -105,7 +105,7 @@ define i32 @add_i32_monotonic(i32* %p, i32 %v) {
 }
 
 ; CHECK-LABEL: add_i32_acquire:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype add_i32_acquire (i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.add $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @add_i32_acquire(i32* %p, i32 %v) {
@@ -114,7 +114,7 @@ define i32 @add_i32_acquire(i32* %p, i32 %v) {
 }
 
 ; CHECK-LABEL: add_i32_release:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype add_i32_release (i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.add $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @add_i32_release(i32* %p, i32 %v) {
@@ -123,7 +123,7 @@ define i32 @add_i32_release(i32* %p, i32 %v) {
 }
 
 ; CHECK-LABEL: add_i32_acq_rel:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype add_i32_acq_rel (i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.add $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @add_i32_acq_rel(i32* %p, i32 %v) {
@@ -132,7 +132,7 @@ define i32 @add_i32_acq_rel(i32* %p, i32 %v) {
 }
 
 ; CHECK-LABEL: add_i32_seq_cst:
-; CHECK-NEXT: .param i32, i32{{$}}
+; CHECK-NEXT: .functype add_i32_seq_cst (i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.add $push0=, 0($0), $1{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @add_i32_seq_cst(i32* %p, i32 %v) {
@@ -147,7 +147,7 @@ define i32 @add_i32_seq_cst(i32* %p, i32 %v) {
 ; that on success, and the failure ordering cannot be either release or acq_rel.
 
 ; CHECK-LABEL: cmpxchg_i32_monotonic_monotonic:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype cmpxchg_i32_monotonic_monotonic (i32, i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_i32_monotonic_monotonic(i32* %p, i32 %exp, i32 %new) {
@@ -157,7 +157,7 @@ define i32 @cmpxchg_i32_monotonic_monotonic(i32* %p, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i32_acquire_monotonic:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype cmpxchg_i32_acquire_monotonic (i32, i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_i32_acquire_monotonic(i32* %p, i32 %exp, i32 %new) {
@@ -167,7 +167,7 @@ define i32 @cmpxchg_i32_acquire_monotonic(i32* %p, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i32_release_monotonic:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype cmpxchg_i32_release_monotonic (i32, i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_i32_release_monotonic(i32* %p, i32 %exp, i32 %new) {
@@ -177,7 +177,7 @@ define i32 @cmpxchg_i32_release_monotonic(i32* %p, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i32_acq_rel_monotonic:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype cmpxchg_i32_acq_rel_monotonic (i32, i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_i32_acq_rel_monotonic(i32* %p, i32 %exp, i32 %new) {
@@ -187,7 +187,7 @@ define i32 @cmpxchg_i32_acq_rel_monotonic(i32* %p, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i32_seq_cst_monotonic:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype cmpxchg_i32_seq_cst_monotonic (i32, i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_i32_seq_cst_monotonic(i32* %p, i32 %exp, i32 %new) {
@@ -197,7 +197,7 @@ define i32 @cmpxchg_i32_seq_cst_monotonic(i32* %p, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i32_acquire_acquire:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype cmpxchg_i32_acquire_acquire (i32, i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_i32_acquire_acquire(i32* %p, i32 %exp, i32 %new) {
@@ -207,7 +207,7 @@ define i32 @cmpxchg_i32_acquire_acquire(i32* %p, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i32_release_acquire:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype cmpxchg_i32_release_acquire (i32, i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_i32_release_acquire(i32* %p, i32 %exp, i32 %new) {
@@ -217,7 +217,7 @@ define i32 @cmpxchg_i32_release_acquire(i32* %p, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i32_acq_rel_acquire:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype cmpxchg_i32_acq_rel_acquire (i32, i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_i32_acq_rel_acquire(i32* %p, i32 %exp, i32 %new) {
@@ -227,7 +227,7 @@ define i32 @cmpxchg_i32_acq_rel_acquire(i32* %p, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i32_seq_cst_acquire:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype cmpxchg_i32_seq_cst_acquire (i32, i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_i32_seq_cst_acquire(i32* %p, i32 %exp, i32 %new) {
@@ -237,7 +237,7 @@ define i32 @cmpxchg_i32_seq_cst_acquire(i32* %p, i32 %exp, i32 %new) {
 }
 
 ; CHECK-LABEL: cmpxchg_i32_seq_cst_seq_cst:
-; CHECK-NEXT: .param i32, i32, i32{{$}}
+; CHECK-NEXT: .functype cmpxchg_i32_seq_cst_seq_cst (i32, i32, i32) -> (i32){{$}}
 ; CHECK: i32.atomic.rmw.cmpxchg $push0=, 0($0), $1, $2{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 define i32 @cmpxchg_i32_seq_cst_seq_cst(i32* %p, i32 %exp, i32 %new) {

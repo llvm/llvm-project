@@ -242,8 +242,10 @@ private:
       SmallPtrSet<BasicBlock *, 2> DeadSuccessors;
       // Remove all BB's successors except for the live one.
       for (auto *Succ : successors(BB))
-        if (Succ != TheOnlySucc)
+        if (Succ != TheOnlySucc) {
           DeadSuccessors.insert(Succ);
+          Succ->removePredecessor(BB);
+        }
 
       IRBuilder<> Builder(BB->getContext());
       Instruction *Term = BB->getTerminator();

@@ -22,15 +22,16 @@
 namespace llvm {
 namespace exegesis {
 
-LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName) {
+LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName,
+                     const std::string &Features) {
   std::string Error;
   const llvm::Target *const TheTarget =
       llvm::TargetRegistry::lookupTarget(Triple, Error);
   assert(TheTarget && "unknown target for host");
   const llvm::TargetOptions Options;
-  TargetMachine.reset(static_cast<llvm::LLVMTargetMachine *>(
-      TheTarget->createTargetMachine(Triple, CpuName, /*Features*/ "", Options,
-                                     llvm::Reloc::Model::Static)));
+  TargetMachine.reset(
+      static_cast<llvm::LLVMTargetMachine *>(TheTarget->createTargetMachine(
+          Triple, CpuName, Features, Options, llvm::Reloc::Model::Static)));
   TheExegesisTarget = ExegesisTarget::lookup(TargetMachine->getTargetTriple());
   if (!TheExegesisTarget) {
     llvm::errs() << "no exegesis target for " << Triple << ", using default\n";
@@ -45,8 +46,8 @@ LLVMState::LLVMState(const std::string &Triple, const std::string &CpuName) {
 
 LLVMState::LLVMState(const std::string &CpuName)
     : LLVMState(llvm::sys::getProcessTriple(),
-                CpuName.empty() ? llvm::sys::getHostCPUName().str() : CpuName) {
-}
+                CpuName.empty() ? llvm::sys::getHostCPUName().str() : CpuName,
+                "") {}
 
 std::unique_ptr<llvm::LLVMTargetMachine>
 LLVMState::createTargetMachine() const {

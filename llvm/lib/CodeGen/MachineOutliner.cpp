@@ -924,7 +924,7 @@ struct MachineOutliner : public ModulePass {
   /// \param[out] CandidateList Filled with outlining candidates for the module.
   /// \param[out] FunctionList Filled with functions corresponding to each type
   /// of \p Candidate.
-  /// \param ST The suffix tree for the module.
+  /// \param Mapper Contains the instruction mappings for the module.
   ///
   /// \returns The length of the longest candidate found. 0 if there are none.
   unsigned
@@ -1395,9 +1395,10 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
         Unit /* File */,
         0 /* Line 0 is reserved for compiler-generated code. */,
         DB.createSubroutineType(DB.getOrCreateTypeArray(None)), /* void type */
-        false, true, 0, /* Line 0 is reserved for compiler-generated code. */
+        0, /* Line 0 is reserved for compiler-generated code. */
         DINode::DIFlags::FlagArtificial /* Compiler-generated code. */,
-        true /* Outlined code is optimized code by definition. */);
+        /* Outlined code is optimized code by definition. */
+        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
 
     // Don't add any new variables to the subprogram.
     DB.finalizeSubprogram(OutlinedSP);

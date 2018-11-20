@@ -564,10 +564,10 @@ public:
   /// Print the information about the memory accesses in the loop.
   void print(raw_ostream &OS, unsigned Depth = 0) const;
 
-  /// If the loop has multiple stores to an invariant address, then
-  /// return true, else return false.
-  bool hasMultipleStoresToLoopInvariantAddress() const {
-    return HasMultipleStoresToLoopInvariantAddress;
+  /// If the loop has memory dependence involving an invariant address, i.e. two
+  /// stores or a store and a load, then return true, else return false.
+  bool hasDependenceInvolvingLoopInvariantAddress() const {
+    return HasDependenceInvolvingLoopInvariantAddress;
   }
 
   /// Used to add runtime SCEV checks. Simplifies SCEV expressions and converts
@@ -620,8 +620,8 @@ private:
   /// Cache the result of analyzeLoop.
   bool CanVecMem;
 
-  /// Indicator that there are multiple stores to a uniform address.
-  bool HasMultipleStoresToLoopInvariantAddress;
+  /// Indicator that there are non vectorizable stores to a uniform address.
+  bool HasDependenceInvolvingLoopInvariantAddress;
 
   /// The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.

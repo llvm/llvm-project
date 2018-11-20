@@ -419,8 +419,10 @@ void AArch64PassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 
   // Match interleaved memory accesses to ldN/stN intrinsics.
-  if (TM->getOptLevel() != CodeGenOpt::None)
+  if (TM->getOptLevel() != CodeGenOpt::None) {
+    addPass(createInterleavedLoadCombinePass());
     addPass(createInterleavedAccessPass());
+  }
 
   if (TM->getOptLevel() == CodeGenOpt::Aggressive && EnableGEPOpt) {
     // Call SeparateConstOffsetFromGEP pass to extract constants within indices

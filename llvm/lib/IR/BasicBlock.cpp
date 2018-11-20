@@ -260,6 +260,14 @@ const BasicBlock *BasicBlock::getUniquePredecessor() const {
   return PredBB;
 }
 
+bool BasicBlock::hasNPredecessors(unsigned N) const {
+  return hasNItems(pred_begin(this), pred_end(this), N);
+}
+
+bool BasicBlock::hasNPredecessorsOrMore(unsigned N) const {
+  return hasNItemsOrMore(pred_begin(this), pred_end(this), N);
+}
+
 const BasicBlock *BasicBlock::getSingleSuccessor() const {
   succ_const_iterator SI = succ_begin(this), E = succ_end(this);
   if (SI == E) return nullptr; // no successors

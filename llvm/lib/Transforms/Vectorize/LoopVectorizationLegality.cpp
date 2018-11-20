@@ -817,15 +817,14 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   if (!LAI->canVectorizeMemory())
     return false;
 
-  if (LAI->hasMultipleStoresToLoopInvariantAddress()) {
+  if (LAI->hasDependenceInvolvingLoopInvariantAddress()) {
     ORE->emit(createMissedAnalysis("CantVectorizeStoreToLoopInvariantAddress")
-              << "multiple writes to a loop invariant address could not "
+              << "write to a loop invariant address could not "
                  "be vectorized");
     LLVM_DEBUG(
-        dbgs() << "LV: We don't allow multiple stores to a uniform address\n");
+        dbgs() << "LV: Non vectorizable stores to a uniform address\n");
     return false;
   }
-
   Requirements->addRuntimePointerChecks(LAI->getNumRuntimePointerChecks());
   PSE.addPredicate(LAI->getPSE().getUnionPredicate());
 

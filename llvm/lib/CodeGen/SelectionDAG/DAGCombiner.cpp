@@ -3565,18 +3565,16 @@ SDValue DAGCombiner::SimplifyNodeWithTwoResults(SDNode *N, unsigned LoOp,
                                                 unsigned HiOp) {
   // If the high half is not needed, just compute the low half.
   bool HiExists = N->hasAnyUseOfValue(1);
-  if (!HiExists &&
-      (!LegalOperations ||
-       TLI.isOperationLegalOrCustom(LoOp, N->getValueType(0)))) {
+  if (!HiExists && (!LegalOperations ||
+                    TLI.isOperationLegalOrCustom(LoOp, N->getValueType(0)))) {
     SDValue Res = DAG.getNode(LoOp, SDLoc(N), N->getValueType(0), N->ops());
     return CombineTo(N, Res, Res);
   }
 
   // If the low half is not needed, just compute the high half.
   bool LoExists = N->hasAnyUseOfValue(0);
-  if (!LoExists &&
-      (!LegalOperations ||
-       TLI.isOperationLegal(HiOp, N->getValueType(1)))) {
+  if (!LoExists && (!LegalOperations ||
+                    TLI.isOperationLegalOrCustom(HiOp, N->getValueType(1)))) {
     SDValue Res = DAG.getNode(HiOp, SDLoc(N), N->getValueType(1), N->ops());
     return CombineTo(N, Res, Res);
   }
@@ -3592,7 +3590,7 @@ SDValue DAGCombiner::SimplifyNodeWithTwoResults(SDNode *N, unsigned LoOp,
     SDValue LoOpt = combine(Lo.getNode());
     if (LoOpt.getNode() && LoOpt.getNode() != Lo.getNode() &&
         (!LegalOperations ||
-         TLI.isOperationLegal(LoOpt.getOpcode(), LoOpt.getValueType())))
+         TLI.isOperationLegalOrCustom(LoOpt.getOpcode(), LoOpt.getValueType())))
       return CombineTo(N, LoOpt, LoOpt);
   }
 
@@ -3602,7 +3600,7 @@ SDValue DAGCombiner::SimplifyNodeWithTwoResults(SDNode *N, unsigned LoOp,
     SDValue HiOpt = combine(Hi.getNode());
     if (HiOpt.getNode() && HiOpt != Hi &&
         (!LegalOperations ||
-         TLI.isOperationLegal(HiOpt.getOpcode(), HiOpt.getValueType())))
+         TLI.isOperationLegalOrCustom(HiOpt.getOpcode(), HiOpt.getValueType())))
       return CombineTo(N, HiOpt, HiOpt);
   }
 
@@ -6041,8 +6039,9 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   }
 
   // fold (xor undef, undef) -> 0. This is a common idiom (misuse).
+  SDLoc DL(N);
   if (N0.isUndef() && N1.isUndef())
-    return DAG.getConstant(0, SDLoc(N), VT);
+    return DAG.getConstant(0, DL, VT);
   // fold (xor x, undef) -> undef
   if (N0.isUndef())
     return N0;
@@ -6052,11 +6051,11 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   ConstantSDNode *N0C = getAsNonOpaqueConstant(N0);
   ConstantSDNode *N1C = getAsNonOpaqueConstant(N1);
   if (N0C && N1C)
-    return DAG.FoldConstantArithmetic(ISD::XOR, SDLoc(N), VT, N0C, N1C);
+    return DAG.FoldConstantArithmetic(ISD::XOR, DL, VT, N0C, N1C);
   // canonicalize constant to RHS
   if (DAG.isConstantIntBuildVectorOrConstantInt(N0) &&
      !DAG.isConstantIntBuildVectorOrConstantInt(N1))
-    return DAG.getNode(ISD::XOR, SDLoc(N), VT, N1, N0);
+    return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
   // fold (xor x, 0) -> x
   if (isNullConstant(N1))
     return N0;
@@ -6065,19 +6064,18 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     return NewSel;
 
   // reassociate xor
-  if (SDValue RXOR = ReassociateOps(ISD::XOR, SDLoc(N), N0, N1, N->getFlags()))
+  if (SDValue RXOR = ReassociateOps(ISD::XOR, DL, N0, N1, N->getFlags()))
     return RXOR;
 
   // fold !(x cc y) -> (x !cc y)
+  unsigned N0Opcode = N0.getOpcode();
   SDValue LHS, RHS, CC;
   if (TLI.isConstTrueVal(N1.getNode()) && isSetCCEquivalent(N0, LHS, RHS, CC)) {
-    bool isInt = LHS.getValueType().isInteger();
     ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
-                                               isInt);
-
+                                               LHS.getValueType().isInteger());
     if (!LegalOperations ||
         TLI.isCondCodeLegal(NotCC, LHS.getSimpleValueType())) {
-      switch (N0.getOpcode()) {
+      switch (N0Opcode) {
       default:
         llvm_unreachable("Unhandled SetCC Equivalent!");
       case ISD::SETCC:
@@ -6090,54 +6088,52 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   }
 
   // fold (not (zext (setcc x, y))) -> (zext (not (setcc x, y)))
-  if (isOneConstant(N1) && N0.getOpcode() == ISD::ZERO_EXTEND &&
-      N0.getNode()->hasOneUse() &&
+  if (isOneConstant(N1) && N0Opcode == ISD::ZERO_EXTEND && N0.hasOneUse() &&
       isSetCCEquivalent(N0.getOperand(0), LHS, RHS, CC)){
     SDValue V = N0.getOperand(0);
-    SDLoc DL(N0);
-    V = DAG.getNode(ISD::XOR, DL, V.getValueType(), V,
-                    DAG.getConstant(1, DL, V.getValueType()));
+    SDLoc DL0(N0);
+    V = DAG.getNode(ISD::XOR, DL0, V.getValueType(), V,
+                    DAG.getConstant(1, DL0, V.getValueType()));
     AddToWorklist(V.getNode());
-    return DAG.getNode(ISD::ZERO_EXTEND, SDLoc(N), VT, V);
+    return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, V);
   }
 
   // fold (not (or x, y)) -> (and (not x), (not y)) iff x or y are setcc
   if (isOneConstant(N1) && VT == MVT::i1 && N0.hasOneUse() &&
-      (N0.getOpcode() == ISD::OR || N0.getOpcode() == ISD::AND)) {
+      (N0Opcode == ISD::OR || N0Opcode == ISD::AND)) {
     SDValue LHS = N0.getOperand(0), RHS = N0.getOperand(1);
     if (isOneUseSetCC(RHS) || isOneUseSetCC(LHS)) {
-      unsigned NewOpcode = N0.getOpcode() == ISD::AND ? ISD::OR : ISD::AND;
+      unsigned NewOpcode = N0Opcode == ISD::AND ? ISD::OR : ISD::AND;
       LHS = DAG.getNode(ISD::XOR, SDLoc(LHS), VT, LHS, N1); // LHS = ~LHS
       RHS = DAG.getNode(ISD::XOR, SDLoc(RHS), VT, RHS, N1); // RHS = ~RHS
       AddToWorklist(LHS.getNode()); AddToWorklist(RHS.getNode());
-      return DAG.getNode(NewOpcode, SDLoc(N), VT, LHS, RHS);
+      return DAG.getNode(NewOpcode, DL, VT, LHS, RHS);
     }
   }
   // fold (not (or x, y)) -> (and (not x), (not y)) iff x or y are constants
   if (isAllOnesConstant(N1) && N0.hasOneUse() &&
-      (N0.getOpcode() == ISD::OR || N0.getOpcode() == ISD::AND)) {
+      (N0Opcode == ISD::OR || N0Opcode == ISD::AND)) {
     SDValue LHS = N0.getOperand(0), RHS = N0.getOperand(1);
     if (isa<ConstantSDNode>(RHS) || isa<ConstantSDNode>(LHS)) {
-      unsigned NewOpcode = N0.getOpcode() == ISD::AND ? ISD::OR : ISD::AND;
+      unsigned NewOpcode = N0Opcode == ISD::AND ? ISD::OR : ISD::AND;
       LHS = DAG.getNode(ISD::XOR, SDLoc(LHS), VT, LHS, N1); // LHS = ~LHS
       RHS = DAG.getNode(ISD::XOR, SDLoc(RHS), VT, RHS, N1); // RHS = ~RHS
       AddToWorklist(LHS.getNode()); AddToWorklist(RHS.getNode());
-      return DAG.getNode(NewOpcode, SDLoc(N), VT, LHS, RHS);
+      return DAG.getNode(NewOpcode, DL, VT, LHS, RHS);
     }
   }
   // fold (xor (and x, y), y) -> (and (not x), y)
-  if (N0.getOpcode() == ISD::AND && N0.getNode()->hasOneUse() &&
-      N0->getOperand(1) == N1) {
-    SDValue X = N0->getOperand(0);
+  if (N0Opcode == ISD::AND && N0.hasOneUse() && N0->getOperand(1) == N1) {
+    SDValue X = N0.getOperand(0);
     SDValue NotX = DAG.getNOT(SDLoc(X), X, VT);
     AddToWorklist(NotX.getNode());
-    return DAG.getNode(ISD::AND, SDLoc(N), VT, NotX, N1);
+    return DAG.getNode(ISD::AND, DL, VT, NotX, N1);
   }
 
   // fold Y = sra (X, size(X)-1); xor (add (X, Y), Y) -> (abs X)
   if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
-    SDValue A = N0.getOpcode() == ISD::ADD ? N0 : N1;
-    SDValue S = N0.getOpcode() == ISD::SRA ? N0 : N1;
+    SDValue A = N0Opcode == ISD::ADD ? N0 : N1;
+    SDValue S = N0Opcode == ISD::SRA ? N0 : N1;
     if (A.getOpcode() == ISD::ADD && S.getOpcode() == ISD::SRA) {
       SDValue A0 = A.getOperand(0), A1 = A.getOperand(1);
       SDValue S0 = S.getOperand(0);
@@ -6145,14 +6141,14 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
         unsigned OpSizeInBits = VT.getScalarSizeInBits();
         if (ConstantSDNode *C = isConstOrConstSplat(S.getOperand(1)))
           if (C->getAPIntValue() == (OpSizeInBits - 1))
-            return DAG.getNode(ISD::ABS, SDLoc(N), VT, S0);
+            return DAG.getNode(ISD::ABS, DL, VT, S0);
       }
     }
   }
 
   // fold (xor x, x) -> 0
   if (N0 == N1)
-    return tryFoldToZero(SDLoc(N), TLI, VT, DAG, LegalOperations);
+    return tryFoldToZero(DL, TLI, VT, DAG, LegalOperations);
 
   // fold (xor (shl 1, x), -1) -> (rotl ~1, x)
   // Here is a concrete example of this equivalence:
@@ -6172,15 +6168,14 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   //   consistent result.
   // - Pushing the zero left requires shifting one bits in from the right.
   // A rotate left of ~1 is a nice way of achieving the desired result.
-  if (TLI.isOperationLegalOrCustom(ISD::ROTL, VT) && N0.getOpcode() == ISD::SHL
-      && isAllOnesConstant(N1) && isOneConstant(N0.getOperand(0))) {
-    SDLoc DL(N);
+  if (TLI.isOperationLegalOrCustom(ISD::ROTL, VT) && N0Opcode == ISD::SHL &&
+      isAllOnesConstant(N1) && isOneConstant(N0.getOperand(0))) {
     return DAG.getNode(ISD::ROTL, DL, VT, DAG.getConstant(~1, DL, VT),
                        N0.getOperand(1));
   }
 
   // Simplify: xor (op x...), (op y...)  -> (op (xor x, y))
-  if (N0.getOpcode() == N1.getOpcode())
+  if (N0Opcode == N1.getOpcode())
     if (SDValue Tmp = SimplifyBinOpWithSameOpcodeHands(N))
       return Tmp;
 
@@ -7236,24 +7231,8 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   EVT VT0 = N0.getValueType();
   SDLoc DL(N);
 
-  // select undef, N1, N2 --> N1 (if it's a constant), otherwise N2
-  if (N0.isUndef())
-    return isa<ConstantSDNode>(N1) ? N1 : N2;
-  // select, ?, undef, N2 --> N2
-  if (N1.isUndef())
-    return N2;
-  // select, ?, N1, undef --> N1
-  if (N2.isUndef())
-    return N1;
-
-  // fold (select true, X, Y) -> X
-  // fold (select false, X, Y) -> Y
-  if (auto *N0C = dyn_cast<const ConstantSDNode>(N0))
-    return N0C->isNullValue() ? N2 : N1;
-
-  // select ?, N1, N1 --> N1
-  if (N1 == N2)
-    return N1;
+  if (SDValue V = DAG.simplifySelect(N0, N1, N2))
+    return V;
 
   // fold (select X, X, Y) -> (or X, Y)
   // fold (select X, 1, Y) -> (or C, Y)
@@ -7832,9 +7811,8 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
   SDValue N2 = N->getOperand(2);
   SDLoc DL(N);
 
-  // fold (vselect C, X, X) -> X
-  if (N1 == N2)
-    return N1;
+  if (SDValue V = DAG.simplifySelect(N0, N1, N2))
+    return V;
 
   // Canonicalize integer abs.
   // vselect (setg[te] X,  0),  X, -X ->

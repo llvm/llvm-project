@@ -1889,7 +1889,8 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
     // No architecture flags were specified so if this contains a slice that
     // matches the host architecture dump only that.
     if (!ArchAll) {
-      StringRef HostArchName = MachOObjectFile::getHostArch().getArchName();
+      Triple HostTriple = MachOObjectFile::getHostArch();
+      StringRef HostArchName = HostTriple.getArchName();
       for (MachOUniversalBinary::object_iterator I = UB->begin_objects(),
                                                  E = UB->end_objects();
            I != E; ++I) {

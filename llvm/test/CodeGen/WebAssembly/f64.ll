@@ -16,8 +16,7 @@ declare double @llvm.rint.f64(double)
 declare double @llvm.fma.f64(double, double, double)
 
 ; CHECK-LABEL: fadd64:
-; CHECK-NEXT: .param f64, f64{{$}}
-; CHECK-NEXT: .result f64{{$}}
+; CHECK-NEXT: .functype fadd64 (f64, f64) -> (f64){{$}}
 ; CHECK-NEXT: get_local $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: get_local $push[[L1:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: f64.add $push[[LR:[0-9]+]]=, $pop[[L0]], $pop[[L1]]{{$}}

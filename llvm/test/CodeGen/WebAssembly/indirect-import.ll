@@ -70,10 +70,10 @@ attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="fa
 attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 
-; CHECK: .functype       extern_fd, f32, f64
-; CHECK: .functype       extern_vj, void, i64
-; CHECK: .functype       extern_v, void
-; CHECK: .functype       extern_ijidf, i32, i64, i32, f64, f32
-; CHECK: .functype       extern_struct, void, i32
-; CHECK: .functype       extern_sret, void, i32
-; CHECK: .functype       extern_i128ret, void, i32, i64
+; CHECK: .functype extern_fd (f64) -> (f32)
+; CHECK: .functype extern_vj (i64) -> ()
+; CHECK: .functype extern_v () -> ()
+; CHECK: .functype extern_ijidf  (i64, i32, f64, f32) -> (i32)
+; CHECK: .functype extern_struct (i32) -> ()
+; CHECK: .functype extern_sret (i32) -> ()
+; CHECK: .functype extern_i128ret (i32, i64) -> ()

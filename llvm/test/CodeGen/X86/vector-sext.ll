@@ -53,20 +53,20 @@ entry:
 define <16 x i16> @sext_16i8_to_16i16(<16 x i8> %A) nounwind uwtable readnone ssp {
 ; SSE2-LABEL: sext_16i8_to_16i16:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    psraw $8, %xmm0
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; SSE2-NEXT:    psraw $8, %xmm2
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
 ; SSE2-NEXT:    psraw $8, %xmm1
+; SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: sext_16i8_to_16i16:
 ; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    movdqa %xmm0, %xmm1
-; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSSE3-NEXT:    psraw $8, %xmm0
-; SSSE3-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; SSSE3-NEXT:    psraw $8, %xmm2
+; SSSE3-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
 ; SSSE3-NEXT:    psraw $8, %xmm1
+; SSSE3-NEXT:    movdqa %xmm2, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: sext_16i8_to_16i16:
@@ -97,11 +97,11 @@ define <16 x i16> @sext_16i8_to_16i16(<16 x i8> %A) nounwind uwtable readnone ss
 ;
 ; X32-SSE2-LABEL: sext_16i8_to_16i16:
 ; X32-SSE2:       # %bb.0: # %entry
-; X32-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X32-SSE2-NEXT:    psraw $8, %xmm0
-; X32-SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; X32-SSE2-NEXT:    psraw $8, %xmm2
+; X32-SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
 ; X32-SSE2-NEXT:    psraw $8, %xmm1
+; X32-SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; X32-SSE2-NEXT:    retl
 ;
 ; X32-SSE41-LABEL: sext_16i8_to_16i16:
@@ -119,32 +119,30 @@ entry:
 define <32 x i16> @sext_32i8_to_32i16(<32 x i8> %A) nounwind uwtable readnone ssp {
 ; SSE2-LABEL: sext_32i8_to_32i16:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    psraw $8, %xmm0
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE2-NEXT:    psraw $8, %xmm1
-; SSE2-NEXT:    movdqa %xmm3, %xmm2
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3],xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3],xmm4[4],xmm0[4],xmm4[5],xmm0[5],xmm4[6],xmm0[6],xmm4[7],xmm0[7]
+; SSE2-NEXT:    psraw $8, %xmm4
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm0[8],xmm5[9],xmm0[9],xmm5[10],xmm0[10],xmm5[11],xmm0[11],xmm5[12],xmm0[12],xmm5[13],xmm0[13],xmm5[14],xmm0[14],xmm5[15],xmm0[15]
+; SSE2-NEXT:    psraw $8, %xmm5
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
 ; SSE2-NEXT:    psraw $8, %xmm2
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm1[8],xmm3[9],xmm1[9],xmm3[10],xmm1[10],xmm3[11],xmm1[11],xmm3[12],xmm1[12],xmm3[13],xmm1[13],xmm3[14],xmm1[14],xmm3[15],xmm1[15]
 ; SSE2-NEXT:    psraw $8, %xmm3
+; SSE2-NEXT:    movdqa %xmm4, %xmm0
+; SSE2-NEXT:    movdqa %xmm5, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: sext_32i8_to_32i16:
 ; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    movdqa %xmm1, %xmm3
-; SSSE3-NEXT:    movdqa %xmm0, %xmm1
-; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSSE3-NEXT:    psraw $8, %xmm0
-; SSSE3-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSSE3-NEXT:    psraw $8, %xmm1
-; SSSE3-NEXT:    movdqa %xmm3, %xmm2
-; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3],xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
+; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3],xmm4[4],xmm0[4],xmm4[5],xmm0[5],xmm4[6],xmm0[6],xmm4[7],xmm0[7]
+; SSSE3-NEXT:    psraw $8, %xmm4
+; SSSE3-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm0[8],xmm5[9],xmm0[9],xmm5[10],xmm0[10],xmm5[11],xmm0[11],xmm5[12],xmm0[12],xmm5[13],xmm0[13],xmm5[14],xmm0[14],xmm5[15],xmm0[15]
+; SSSE3-NEXT:    psraw $8, %xmm5
+; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
 ; SSSE3-NEXT:    psraw $8, %xmm2
-; SSSE3-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; SSSE3-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm1[8],xmm3[9],xmm1[9],xmm3[10],xmm1[10],xmm3[11],xmm1[11],xmm3[12],xmm1[12],xmm3[13],xmm1[13],xmm3[14],xmm1[14],xmm3[15],xmm1[15]
 ; SSSE3-NEXT:    psraw $8, %xmm3
+; SSSE3-NEXT:    movdqa %xmm4, %xmm0
+; SSSE3-NEXT:    movdqa %xmm5, %xmm1
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: sext_32i8_to_32i16:
@@ -196,17 +194,16 @@ define <32 x i16> @sext_32i8_to_32i16(<32 x i8> %A) nounwind uwtable readnone ss
 ;
 ; X32-SSE2-LABEL: sext_32i8_to_32i16:
 ; X32-SSE2:       # %bb.0: # %entry
-; X32-SSE2-NEXT:    movdqa %xmm1, %xmm3
-; X32-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X32-SSE2-NEXT:    psraw $8, %xmm0
-; X32-SSE2-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; X32-SSE2-NEXT:    psraw $8, %xmm1
-; X32-SSE2-NEXT:    movdqa %xmm3, %xmm2
-; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3],xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3],xmm4[4],xmm0[4],xmm4[5],xmm0[5],xmm4[6],xmm0[6],xmm4[7],xmm0[7]
+; X32-SSE2-NEXT:    psraw $8, %xmm4
+; X32-SSE2-NEXT:    punpckhbw {{.*#+}} xmm5 = xmm5[8],xmm0[8],xmm5[9],xmm0[9],xmm5[10],xmm0[10],xmm5[11],xmm0[11],xmm5[12],xmm0[12],xmm5[13],xmm0[13],xmm5[14],xmm0[14],xmm5[15],xmm0[15]
+; X32-SSE2-NEXT:    psraw $8, %xmm5
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
 ; X32-SSE2-NEXT:    psraw $8, %xmm2
-; X32-SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; X32-SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm1[8],xmm3[9],xmm1[9],xmm3[10],xmm1[10],xmm3[11],xmm1[11],xmm3[12],xmm1[12],xmm3[13],xmm1[13],xmm3[14],xmm1[14],xmm3[15],xmm1[15]
 ; X32-SSE2-NEXT:    psraw $8, %xmm3
+; X32-SSE2-NEXT:    movdqa %xmm4, %xmm0
+; X32-SSE2-NEXT:    movdqa %xmm5, %xmm1
 ; X32-SSE2-NEXT:    retl
 ;
 ; X32-SSE41-LABEL: sext_32i8_to_32i16:
@@ -270,9 +267,10 @@ entry:
 define <8 x i32> @sext_16i8_to_8i32(<16 x i8> %A) nounwind uwtable readnone ssp {
 ; SSE2-LABEL: sext_16i8_to_8i32:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; SSE2-NEXT:    psrad $24, %xmm2
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; SSE2-NEXT:    psrad $24, %xmm1
 ; SSE2-NEXT:    movdqa %xmm2, %xmm0
@@ -280,12 +278,12 @@ define <8 x i32> @sext_16i8_to_8i32(<16 x i8> %A) nounwind uwtable readnone ssp 
 ;
 ; SSSE3-LABEL: sext_16i8_to_8i32:
 ; SSSE3:       # %bb.0: # %entry
+; SSSE3-NEXT:    movdqa %xmm0, %xmm1
 ; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
-; SSSE3-NEXT:    psrad $24, %xmm2
-; SSSE3-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSSE3-NEXT:    psrad $24, %xmm0
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[u,u,4,4,u,u,5,5,u,u,6,6,u,u,7,7]
 ; SSSE3-NEXT:    psrad $24, %xmm1
-; SSSE3-NEXT:    movdqa %xmm2, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: sext_16i8_to_8i32:
@@ -316,9 +314,10 @@ define <8 x i32> @sext_16i8_to_8i32(<16 x i8> %A) nounwind uwtable readnone ssp 
 ;
 ; X32-SSE2-LABEL: sext_16i8_to_8i32:
 ; X32-SSE2:       # %bb.0: # %entry
-; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; X32-SSE2-NEXT:    psrad $24, %xmm2
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X32-SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; X32-SSE2-NEXT:    psrad $24, %xmm1
 ; X32-SSE2-NEXT:    movdqa %xmm2, %xmm0
@@ -340,15 +339,17 @@ entry:
 define <16 x i32> @sext_16i8_to_16i32(<16 x i8> %A) nounwind uwtable readnone ssp {
 ; SSE2-LABEL: sext_16i8_to_16i32:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
 ; SSE2-NEXT:    psrad $24, %xmm4
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    psrad $24, %xmm1
-; SSE2-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm0[8],xmm2[9],xmm0[9],xmm2[10],xmm0[10],xmm2[11],xmm0[11],xmm2[12],xmm0[12],xmm2[13],xmm0[13],xmm2[14],xmm0[14],xmm2[15],xmm0[15]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    psrad $24, %xmm2
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
 ; SSE2-NEXT:    psrad $24, %xmm3
 ; SSE2-NEXT:    movdqa %xmm4, %xmm0
@@ -356,18 +357,18 @@ define <16 x i32> @sext_16i8_to_16i32(<16 x i8> %A) nounwind uwtable readnone ss
 ;
 ; SSSE3-LABEL: sext_16i8_to_16i32:
 ; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    movdqa %xmm0, %xmm1
-; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
-; SSSE3-NEXT:    psrad $24, %xmm4
-; SSSE3-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
-; SSSE3-NEXT:    psrad $24, %xmm1
-; SSSE3-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSSE3-NEXT:    movdqa %xmm0, %xmm3
+; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSSE3-NEXT:    psrad $24, %xmm0
+; SSSE3-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm3[8],xmm1[9],xmm3[9],xmm1[10],xmm3[10],xmm1[11],xmm3[11],xmm1[12],xmm3[12],xmm1[13],xmm3[13],xmm1[14],xmm3[14],xmm1[15],xmm3[15]
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; SSSE3-NEXT:    psrad $24, %xmm2
-; SSSE3-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; SSSE3-NEXT:    movdqa %xmm3, %xmm1
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[u,u,4,4,u,u,5,5,u,u,6,6,u,u,7,7]
+; SSSE3-NEXT:    psrad $24, %xmm1
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm3 = xmm3[u,u,12,12,u,u,13,13,u,u,14,14,u,u,15,15]
 ; SSSE3-NEXT:    psrad $24, %xmm3
-; SSSE3-NEXT:    movdqa %xmm4, %xmm0
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: sext_16i8_to_16i32:
@@ -411,15 +412,17 @@ define <16 x i32> @sext_16i8_to_16i32(<16 x i8> %A) nounwind uwtable readnone ss
 ;
 ; X32-SSE2-LABEL: sext_16i8_to_16i32:
 ; X32-SSE2:       # %bb.0: # %entry
-; X32-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
 ; X32-SSE2-NEXT:    psrad $24, %xmm4
+; X32-SSE2-NEXT:    movdqa %xmm0, %xmm1
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; X32-SSE2-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4,4,5,5,6,6,7,7]
 ; X32-SSE2-NEXT:    psrad $24, %xmm1
-; X32-SSE2-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
-; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; X32-SSE2-NEXT:    punpckhbw {{.*#+}} xmm2 = xmm2[8],xmm0[8],xmm2[9],xmm0[9],xmm2[10],xmm0[10],xmm2[11],xmm0[11],xmm2[12],xmm0[12],xmm2[13],xmm0[13],xmm2[14],xmm0[14],xmm2[15],xmm0[15]
+; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3]
 ; X32-SSE2-NEXT:    psrad $24, %xmm2
+; X32-SSE2-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
 ; X32-SSE2-NEXT:    punpckhwd {{.*#+}} xmm3 = xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
 ; X32-SSE2-NEXT:    psrad $24, %xmm3
 ; X32-SSE2-NEXT:    movdqa %xmm4, %xmm0
@@ -495,13 +498,14 @@ entry:
 define <4 x i64> @sext_16i8_to_4i64(<16 x i8> %A) nounwind uwtable readnone ssp {
 ; SSE2-LABEL: sext_16i8_to_4i64:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpgtd %xmm2, %xmm1
 ; SSE2-NEXT:    psrad $24, %xmm2
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm3
@@ -512,19 +516,18 @@ define <4 x i64> @sext_16i8_to_4i64(<16 x i8> %A) nounwind uwtable readnone ssp 
 ;
 ; SSSE3-LABEL: sext_16i8_to_4i64:
 ; SSSE3:       # %bb.0: # %entry
+; SSSE3-NEXT:    movdqa %xmm0, %xmm1
 ; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; SSSE3-NEXT:    pxor %xmm2, %xmm2
 ; SSSE3-NEXT:    pxor %xmm3, %xmm3
-; SSSE3-NEXT:    pxor %xmm1, %xmm1
-; SSSE3-NEXT:    pcmpgtd %xmm2, %xmm1
-; SSSE3-NEXT:    psrad $24, %xmm2
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSSE3-NEXT:    pcmpgtd %xmm1, %xmm3
+; SSSE3-NEXT:    pcmpgtd %xmm0, %xmm3
+; SSSE3-NEXT:    psrad $24, %xmm0
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[u,u,2,2,u,u,3,3,u,u,2,2,u,u,3,3]
+; SSSE3-NEXT:    pcmpgtd %xmm1, %xmm2
 ; SSSE3-NEXT:    psrad $24, %xmm1
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; SSSE3-NEXT:    movdqa %xmm2, %xmm0
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: sext_16i8_to_4i64:
@@ -555,13 +558,14 @@ define <4 x i64> @sext_16i8_to_4i64(<16 x i8> %A) nounwind uwtable readnone ssp 
 ;
 ; X32-SSE2-LABEL: sext_16i8_to_4i64:
 ; X32-SSE2:       # %bb.0: # %entry
-; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; X32-SSE2-NEXT:    pxor %xmm3, %xmm3
 ; X32-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; X32-SSE2-NEXT:    pcmpgtd %xmm2, %xmm1
 ; X32-SSE2-NEXT:    psrad $24, %xmm2
 ; X32-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; X32-SSE2-NEXT:    pcmpgtd %xmm1, %xmm3
@@ -587,26 +591,28 @@ define <8 x i64> @sext_16i8_to_8i64(<16 x i8> %A) nounwind uwtable readnone ssp 
 ; SSE2-LABEL: sext_16i8_to_8i64:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,2,3]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
 ; SSE2-NEXT:    psrad $24, %xmm0
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,2,3]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
 ; SSE2-NEXT:    psrad $24, %xmm1
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3],xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-NEXT:    pcmpgtd %xmm2, %xmm5
 ; SSE2-NEXT:    psrad $24, %xmm2
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,2,3]
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pcmpgtd %xmm3, %xmm4
@@ -616,32 +622,31 @@ define <8 x i64> @sext_16i8_to_8i64(<16 x i8> %A) nounwind uwtable readnone ssp 
 ;
 ; SSSE3-LABEL: sext_16i8_to_8i64:
 ; SSSE3:       # %bb.0: # %entry
-; SSSE3-NEXT:    movdqa %xmm0, %xmm1
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = <u,u,2,2,u,u,3,3,u,u,2,2,u,u,3,3>
+; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1],xmm4[2],xmm0[2],xmm4[3],xmm0[3],xmm4[4],xmm0[4],xmm4[5],xmm0[5],xmm4[6],xmm0[6],xmm4[7],xmm0[7]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,2,3]
-; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SSSE3-NEXT:    pxor %xmm4, %xmm4
-; SSSE3-NEXT:    pxor %xmm2, %xmm2
-; SSSE3-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSSE3-NEXT:    psrad $24, %xmm0
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
-; SSSE3-NEXT:    pxor %xmm2, %xmm2
-; SSSE3-NEXT:    pcmpgtd %xmm1, %xmm2
-; SSSE3-NEXT:    psrad $24, %xmm1
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; SSSE3-NEXT:    movdqa %xmm0, %xmm1
+; SSSE3-NEXT:    pshufb %xmm2, %xmm1
 ; SSSE3-NEXT:    pxor %xmm5, %xmm5
+; SSSE3-NEXT:    pxor %xmm0, %xmm0
+; SSSE3-NEXT:    pcmpgtd %xmm1, %xmm0
+; SSSE3-NEXT:    psrad $24, %xmm1
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3]
+; SSSE3-NEXT:    pxor %xmm4, %xmm4
+; SSSE3-NEXT:    pcmpgtd %xmm0, %xmm4
+; SSSE3-NEXT:    psrad $24, %xmm0
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1]
+; SSSE3-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1],xmm4[2],xmm3[2],xmm4[3],xmm3[3],xmm4[4],xmm3[4],xmm4[5],xmm3[5],xmm4[6],xmm3[6],xmm4[7],xmm3[7]
+; SSSE3-NEXT:    pshufb %xmm2, %xmm3
+; SSSE3-NEXT:    pxor %xmm2, %xmm2
+; SSSE3-NEXT:    pcmpgtd %xmm3, %xmm2
+; SSSE3-NEXT:    psrad $24, %xmm3
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
+; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
 ; SSSE3-NEXT:    pcmpgtd %xmm2, %xmm5
 ; SSSE3-NEXT:    psrad $24, %xmm2
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,2,3]
-; SSSE3-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0,0,1,1,2,2,3,3]
-; SSSE3-NEXT:    pcmpgtd %xmm3, %xmm4
-; SSSE3-NEXT:    psrad $24, %xmm3
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: sext_16i8_to_8i64:
@@ -687,26 +692,28 @@ define <8 x i64> @sext_16i8_to_8i64(<16 x i8> %A) nounwind uwtable readnone ssp 
 ; X32-SSE2-LABEL: sext_16i8_to_8i64:
 ; X32-SSE2:       # %bb.0: # %entry
 ; X32-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,2,3]
-; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
 ; X32-SSE2-NEXT:    pxor %xmm4, %xmm4
 ; X32-SSE2-NEXT:    pxor %xmm2, %xmm2
 ; X32-SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
 ; X32-SSE2-NEXT:    psrad $24, %xmm0
 ; X32-SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,2,3]
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,2,3]
 ; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0,0,1,1,2,2,3,3]
 ; X32-SSE2-NEXT:    pxor %xmm2, %xmm2
 ; X32-SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
 ; X32-SSE2-NEXT:    psrad $24, %xmm1
 ; X32-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3],xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
+; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3]
 ; X32-SSE2-NEXT:    pxor %xmm5, %xmm5
 ; X32-SSE2-NEXT:    pcmpgtd %xmm2, %xmm5
 ; X32-SSE2-NEXT:    psrad $24, %xmm2
 ; X32-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1]
+; X32-SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X32-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,2,3]
 ; X32-SSE2-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0,0,1,1,2,2,3,3]
 ; X32-SSE2-NEXT:    pcmpgtd %xmm3, %xmm4
@@ -3841,7 +3848,7 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; SSE41-NEXT:    psllw $15, %xmm0
 ; SSE41-NEXT:    psraw $15, %xmm0
-; SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
 ; SSE41-NEXT:    psllw $15, %xmm1
 ; SSE41-NEXT:    psraw $15, %xmm1
 ; SSE41-NEXT:    retq
@@ -4209,7 +4216,7 @@ define <16 x i16> @load_sext_16i1_to_16i16(<16 x i1> *%ptr) {
 ; X32-SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; X32-SSE41-NEXT:    psllw $15, %xmm0
 ; X32-SSE41-NEXT:    psraw $15, %xmm0
-; X32-SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; X32-SSE41-NEXT:    punpckhbw {{.*#+}} xmm1 = xmm1[8],xmm0[8],xmm1[9],xmm0[9],xmm1[10],xmm0[10],xmm1[11],xmm0[11],xmm1[12],xmm0[12],xmm1[13],xmm0[13],xmm1[14],xmm0[14],xmm1[15],xmm0[15]
 ; X32-SSE41-NEXT:    psllw $15, %xmm1
 ; X32-SSE41-NEXT:    psraw $15, %xmm1
 ; X32-SSE41-NEXT:    retl

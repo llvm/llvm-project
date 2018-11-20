@@ -27,7 +27,10 @@ define amdgpu_kernel void @extract_insert_same_dynelt_v4i32(i32 addrspace(1)* %o
 
 ; GCN-LABEL: {{^}}extract_insert_different_dynelt_v4i32:
 ; GCN: buffer_load_dwordx4
-; GCN: v_movreld_b32
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32
+; GCN: v_cndmask_b32
 ; GCN: v_cndmask_b32
 ; GCN: v_cndmask_b32
 ; GCN: v_cndmask_b32

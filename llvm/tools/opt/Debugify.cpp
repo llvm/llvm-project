@@ -96,11 +96,12 @@ bool applyDebugifyMetadata(Module &M,
       continue;
 
     auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray(None));
-    bool IsLocalToUnit = F.hasPrivateLinkage() || F.hasInternalLinkage();
-    auto SP =
-        DIB.createFunction(CU, F.getName(), F.getName(), File, NextLine, SPType,
-                           IsLocalToUnit, /*isDefinition=*/true, NextLine,
-                           DINode::FlagZero, /*isOptimized=*/true);
+    DISubprogram::DISPFlags SPFlags =
+        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized;
+    if (F.hasPrivateLinkage() || F.hasInternalLinkage())
+      SPFlags |= DISubprogram::SPFlagLocalToUnit;
+    auto SP = DIB.createFunction(CU, F.getName(), F.getName(), File, NextLine,
+                                 SPType, NextLine, DINode::FlagZero, SPFlags);
     F.setSubprogram(SP);
     for (BasicBlock &BB : F) {
       // Attach debug locations.

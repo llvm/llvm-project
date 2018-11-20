@@ -612,15 +612,12 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
   Metadata *File;
   unsigned Line;
   Metadata *Type;
-  bool IsLocalToUnit;
-  bool IsDefinition;
   unsigned ScopeLine;
   Metadata *ContainingType;
-  unsigned Virtuality;
   unsigned VirtualIndex;
   int ThisAdjustment;
   unsigned Flags;
-  bool IsOptimized;
+  unsigned SPFlags;
   Metadata *Unit;
   Metadata *TemplateParams;
   Metadata *Declaration;
@@ -629,45 +626,39 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
 
   MDNodeKeyImpl(Metadata *Scope, MDString *Name, MDString *LinkageName,
                 Metadata *File, unsigned Line, Metadata *Type,
-                bool IsLocalToUnit, bool IsDefinition, unsigned ScopeLine,
-                Metadata *ContainingType, unsigned Virtuality,
+                unsigned ScopeLine, Metadata *ContainingType,
                 unsigned VirtualIndex, int ThisAdjustment, unsigned Flags,
-                bool IsOptimized, Metadata *Unit, Metadata *TemplateParams,
+                unsigned SPFlags, Metadata *Unit, Metadata *TemplateParams,
                 Metadata *Declaration, Metadata *RetainedNodes,
                 Metadata *ThrownTypes)
       : Scope(Scope), Name(Name), LinkageName(LinkageName), File(File),
-        Line(Line), Type(Type), IsLocalToUnit(IsLocalToUnit),
-        IsDefinition(IsDefinition), ScopeLine(ScopeLine),
-        ContainingType(ContainingType), Virtuality(Virtuality),
-        VirtualIndex(VirtualIndex), ThisAdjustment(ThisAdjustment),
-        Flags(Flags), IsOptimized(IsOptimized), Unit(Unit),
-        TemplateParams(TemplateParams), Declaration(Declaration),
+        Line(Line), Type(Type), ScopeLine(ScopeLine),
+        ContainingType(ContainingType), VirtualIndex(VirtualIndex),
+        ThisAdjustment(ThisAdjustment), Flags(Flags), SPFlags(SPFlags),
+        Unit(Unit), TemplateParams(TemplateParams), Declaration(Declaration),
         RetainedNodes(RetainedNodes), ThrownTypes(ThrownTypes) {}
   MDNodeKeyImpl(const DISubprogram *N)
       : Scope(N->getRawScope()), Name(N->getRawName()),
         LinkageName(N->getRawLinkageName()), File(N->getRawFile()),
-        Line(N->getLine()), Type(N->getRawType()),
-        IsLocalToUnit(N->isLocalToUnit()), IsDefinition(N->isDefinition()),
-        ScopeLine(N->getScopeLine()), ContainingType(N->getRawContainingType()),
-        Virtuality(N->getVirtuality()), VirtualIndex(N->getVirtualIndex()),
+        Line(N->getLine()), Type(N->getRawType()), ScopeLine(N->getScopeLine()),
+        ContainingType(N->getRawContainingType()),
+        VirtualIndex(N->getVirtualIndex()),
         ThisAdjustment(N->getThisAdjustment()), Flags(N->getFlags()),
-        IsOptimized(N->isOptimized()), Unit(N->getRawUnit()),
+        SPFlags(N->getSPFlags()), Unit(N->getRawUnit()),
         TemplateParams(N->getRawTemplateParams()),
-        Declaration(N->getRawDeclaration()), RetainedNodes(N->getRawRetainedNodes()),
+        Declaration(N->getRawDeclaration()),
+        RetainedNodes(N->getRawRetainedNodes()),
         ThrownTypes(N->getRawThrownTypes()) {}
 
   bool isKeyOf(const DISubprogram *RHS) const {
     return Scope == RHS->getRawScope() && Name == RHS->getRawName() &&
            LinkageName == RHS->getRawLinkageName() &&
            File == RHS->getRawFile() && Line == RHS->getLine() &&
-           Type == RHS->getRawType() && IsLocalToUnit == RHS->isLocalToUnit() &&
-           IsDefinition == RHS->isDefinition() &&
-           ScopeLine == RHS->getScopeLine() &&
+           Type == RHS->getRawType() && ScopeLine == RHS->getScopeLine() &&
            ContainingType == RHS->getRawContainingType() &&
-           Virtuality == RHS->getVirtuality() &&
            VirtualIndex == RHS->getVirtualIndex() &&
            ThisAdjustment == RHS->getThisAdjustment() &&
-           Flags == RHS->getFlags() && IsOptimized == RHS->isOptimized() &&
+           Flags == RHS->getFlags() && SPFlags == RHS->getSPFlags() &&
            Unit == RHS->getUnit() &&
            TemplateParams == RHS->getRawTemplateParams() &&
            Declaration == RHS->getRawDeclaration() &&
@@ -675,11 +666,13 @@ template <> struct MDNodeKeyImpl<DISubprogram> {
            ThrownTypes == RHS->getRawThrownTypes();
   }
 
+  bool isDefinition() const { return SPFlags & DISubprogram::SPFlagDefinition; }
+
   unsigned getHashValue() const {
     // If this is a declaration inside an ODR type, only hash the type and the
     // name.  Otherwise the hash will be stronger than
     // MDNodeSubsetEqualImpl::isDeclarationOfODRMember().
-    if (!IsDefinition && LinkageName)
+    if (!isDefinition() && LinkageName)
       if (auto *CT = dyn_cast_or_null<DICompositeType>(Scope))
         if (CT->getRawIdentifier())
           return hash_combine(LinkageName, Scope);
@@ -696,7 +689,7 @@ template <> struct MDNodeSubsetEqualImpl<DISubprogram> {
   using KeyTy = MDNodeKeyImpl<DISubprogram>;
 
   static bool isSubsetEqual(const KeyTy &LHS, const DISubprogram *RHS) {
-    return isDeclarationOfODRMember(LHS.IsDefinition, LHS.Scope,
+    return isDeclarationOfODRMember(LHS.isDefinition(), LHS.Scope,
                                     LHS.LinkageName, LHS.TemplateParams, RHS);
   }
 

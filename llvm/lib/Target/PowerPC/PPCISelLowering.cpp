@@ -12604,9 +12604,10 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         (Op1VT == MVT::i32 || Op1VT == MVT::i16 ||
          (Subtarget.hasLDBRX() && Subtarget.isPPC64() && Op1VT == MVT::i64))) {
 
-      // STBRX can only handle simple types.
+      // STBRX can only handle simple types and it makes no sense to store less
+      // two bytes in byte-reversed order.
       EVT mVT = cast<StoreSDNode>(N)->getMemoryVT();
-      if (mVT.isExtended())
+      if (mVT.isExtended() || mVT.getSizeInBits() < 16)
         break;
 
       SDValue BSwapOp = N->getOperand(1).getOperand(0);

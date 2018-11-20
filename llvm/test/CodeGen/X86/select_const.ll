@@ -503,3 +503,12 @@ define i64 @opaque_constant(i1 %cond, i64 %x) {
   ret i64 %add
 }
 
+define float @select_undef_fp(float %x) {
+; CHECK-LABEL: select_undef_fp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    retq
+  %f = select i1 undef, float 4.0, float %x
+  ret float %f
+}
+

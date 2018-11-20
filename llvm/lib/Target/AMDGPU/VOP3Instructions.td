@@ -438,13 +438,20 @@ def V_DIV_FIXUP_F16_gfx9 : VOP3Inst <"v_div_fixup_f16_gfx9",
   let Predicates = [Has16BitInsts, isGFX9];
 }
 
+def V_FMA_F16 : VOP3Inst <"v_fma_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fma> {
+  let Predicates = [Has16BitInsts, isVIOnly];
+}
+def V_FMA_F16_gfx9 : VOP3Inst <"v_fma_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, fma> {
+  let renamedInGFX9 = 1;
+  let Predicates = [Has16BitInsts, isGFX9];
+}
+
 let SubtargetPredicate = Has16BitInsts, isCommutable = 1 in {
 
 let renamedInGFX9 = 1 in {
 def V_MAD_F16 : VOP3Inst <"v_mad_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fmad>;
 def V_MAD_U16 : VOP3Inst <"v_mad_u16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
 def V_MAD_I16 : VOP3Inst <"v_mad_i16", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_CLAMP>>;
-def V_FMA_F16 : VOP3Inst <"v_fma_f16", VOP3_Profile<VOP_F16_F16_F16_F16>, fma>;
 def V_INTERP_P2_F16 : VOP3Interp <"v_interp_p2_f16", VOP3_INTERP16<[f16, f32, i32, f32]>>;
 }
 
@@ -452,7 +459,6 @@ let SubtargetPredicate = isGFX9 in {
 def V_MAD_F16_gfx9   : VOP3Inst <"v_mad_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
 def V_MAD_U16_gfx9   : VOP3Inst <"v_mad_u16_gfx9", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>>;
 def V_MAD_I16_gfx9   : VOP3Inst <"v_mad_i16_gfx9", VOP3_Profile<VOP_I16_I16_I16_I16, VOP3_OPSEL>>;
-def V_FMA_F16_gfx9   : VOP3Inst <"v_fma_f16_gfx9", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>>;
 def V_INTERP_P2_F16_gfx9 : VOP3Interp <"v_interp_p2_f16_gfx9", VOP3_INTERP16<[f16, f32, i32, f32]>>;
 } // End SubtargetPredicate = isGFX9
 

@@ -324,8 +324,8 @@ private:
   uint32_t getRelocationIndexValue(const WasmRelocationEntry &RelEntry);
   uint32_t getFunctionType(const MCSymbolWasm &Symbol);
   uint32_t getEventType(const MCSymbolWasm &Symbol);
-  uint32_t registerFunctionType(const MCSymbolWasm &Symbol);
-  uint32_t registerEventType(const MCSymbolWasm &Symbol);
+  void registerFunctionType(const MCSymbolWasm &Symbol);
+  void registerEventType(const MCSymbolWasm &Symbol);
 };
 
 } // end anonymous namespace
@@ -1078,7 +1078,7 @@ uint32_t WasmObjectWriter::getEventType(const MCSymbolWasm &Symbol) {
   return TypeIndices[&Symbol];
 }
 
-uint32_t WasmObjectWriter::registerFunctionType(const MCSymbolWasm &Symbol) {
+void WasmObjectWriter::registerFunctionType(const MCSymbolWasm &Symbol) {
   assert(Symbol.isFunction());
 
   WasmSignature S;
@@ -1096,10 +1096,9 @@ uint32_t WasmObjectWriter::registerFunctionType(const MCSymbolWasm &Symbol) {
   LLVM_DEBUG(dbgs() << "registerFunctionType: " << Symbol
                     << " new:" << Pair.second << "\n");
   LLVM_DEBUG(dbgs() << "  -> type index: " << Pair.first->second << "\n");
-  return Pair.first->second;
 }
 
-uint32_t WasmObjectWriter::registerEventType(const MCSymbolWasm &Symbol) {
+void WasmObjectWriter::registerEventType(const MCSymbolWasm &Symbol) {
   assert(Symbol.isEvent());
 
   // TODO Currently we don't generate imported exceptions, but if we do, we
@@ -1118,7 +1117,6 @@ uint32_t WasmObjectWriter::registerEventType(const MCSymbolWasm &Symbol) {
   LLVM_DEBUG(dbgs() << "registerEventType: " << Symbol << " new:" << Pair.second
                     << "\n");
   LLVM_DEBUG(dbgs() << "  -> type index: " << Pair.first->second << "\n");
-  return Pair.first->second;
 }
 
 static bool isInSymtab(const MCSymbolWasm &Sym) {

@@ -14,14 +14,14 @@
 ; The LAA with the new PM is a loop pass so we go from inner to outer loops.
 
 ; OLDPM: for.cond1.preheader:
-; OLDPM:   Multiple stores to invariant address were not found in loop.
+; OLDPM:   Non vectorizable stores to invariant address were not found in loop.
 ; OLDPM: for.body3:
-; OLDPM:   Multiple stores to invariant address were found in loop.
+; OLDPM:   Non vectorizable stores to invariant address were found in loop.
 
 ; NEWPM: for.body3:
-; NEWPM:   Multiple stores to invariant address were found in loop.
+; NEWPM:   Non vectorizable stores to invariant address were found in loop.
 ; NEWPM: for.cond1.preheader:
-; NEWPM:   Multiple stores to invariant address were not found in loop.
+; NEWPM:   Non vectorizable stores to invariant address were not found in loop.
 
 define i32 @foo(i32* nocapture %var1, i32* nocapture readonly %var2, i32 %itr) #0 {
 entry:
