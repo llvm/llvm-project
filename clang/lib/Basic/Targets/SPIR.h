@@ -38,6 +38,23 @@ static const unsigned SPIRAddrSpaceMap[] = {
     4, // sycl_generic
 };
 
+static const unsigned SYCLAddrSpaceMap[] = {
+    4, // Default
+    1, // opencl_global
+    3, // opencl_local
+    2, // opencl_constant
+    0, // opencl_private
+    4, // opencl_generic
+    0, // cuda_device
+    0, // cuda_constant
+    0, // cuda_shared
+    1, // sycl_global
+    3, // sycl_local
+    2, // sycl_constant
+    0, // sycl_private
+    4, // sycl_generic
+};
+
 class LLVM_LIBRARY_VISIBILITY SPIRTargetInfo : public TargetInfo {
 public:
   SPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -45,7 +62,12 @@ public:
     TLSSupported = false;
     VLASupported = false;
     LongWidth = LongAlign = 64;
-    AddrSpaceMap = &SPIRAddrSpaceMap;
+    if (Triple.getEnvironment() == llvm::Triple::SYCLDevice &&
+        getenv("ENABLE_INFER_AS")) {
+      AddrSpaceMap = &SYCLAddrSpaceMap;
+    } else {
+      AddrSpaceMap = &SPIRAddrSpaceMap;
+    }
     UseAddrSpaceMapMangling = true;
     HasLegalHalfType = true;
     HasFloat16 = true;

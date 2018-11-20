@@ -4278,6 +4278,22 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   if (!CallArgs.getCleanupsToDeactivate().empty())
     deactivateArgCleanupsBeforeCall(*this, CallArgs);
 
+  // Addrspace cast to generic if necessary
+  if (getenv("ENABLE_INFER_AS")) {
+    for (unsigned i = 0; i < IRFuncTy->getNumParams(); ++i) {
+      if (auto *PtrTy = dyn_cast<llvm::PointerType>(IRCallArgs[i]->getType())) {
+        auto *ExpectedPtrType =
+            cast<llvm::PointerType>(IRFuncTy->getParamType(i));
+        unsigned ValueAS = PtrTy->getAddressSpace();
+        unsigned ExpectedAS = ExpectedPtrType->getAddressSpace();
+        if (ValueAS != ExpectedAS) {
+          IRCallArgs[i] = Builder.CreatePointerBitCastOrAddrSpaceCast(
+              IRCallArgs[i], ExpectedPtrType);
+        }
+      }
+    }
+  }
+
   // Assert that the arguments we computed match up.  The IR verifier
   // will catch this, but this is a common enough source of problems
   // during IRGen changes that it's way better for debugging to catch

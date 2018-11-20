@@ -316,7 +316,7 @@ Address CodeGenFunction::GetAddressOfBaseClass(
       EmitTypeCheck(TCK_Upcast, Loc, Value.getPointer(),
                     DerivedTy, DerivedAlign, SkippedChecks);
     }
-    return Builder.CreateBitCast(Value, BasePtrTy);
+    return Builder.CreatePointerBitCastOrAddrSpaceCast(Value, BasePtrTy);
   }
 
   llvm::BasicBlock *origBB = nullptr;
