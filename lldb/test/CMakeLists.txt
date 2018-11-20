@@ -87,6 +87,12 @@ if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows|Darwin")
     --env ARCHIVER=${CMAKE_AR} --env OBJCOPY=${CMAKE_OBJCOPY})
 endif()
 
+if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")
+  if (NOT EXISTS "${LLDB_LIT_TOOLS_DIR}")
+    message(WARNING "LLDB_LIT_TOOLS_DIR ${LLDB_LIT_TOOLS_DIR} does not exist.")
+  endif()
+endif()
+
 if(CMAKE_HOST_APPLE)
   list(APPEND LLDB_TEST_COMMON_ARGS --server ${DEBUGSERVER_PATH})
 endif()

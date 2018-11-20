@@ -48,11 +48,11 @@ define <16 x i8> @testv16i1_sext_v16i8(<8 x i32>* %p, <8 x i32>* %q) {
 ; AVX256-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX256-NEXT:    vmovdqa32 %ymm0, %ymm1 {%k2} {z}
 ; AVX256-NEXT:    vpmovdw %ymm1, %xmm1
-; AVX256-NEXT:    vpacksswb %xmm0, %xmm1, %xmm1
+; AVX256-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; AVX256-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; AVX256-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX256-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX256-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; AVX256-NEXT:    vpsrlw $8, %xmm0, %xmm0
+; AVX256-NEXT:    vpackuswb %xmm1, %xmm0, %xmm0
 ; AVX256-NEXT:    vzeroupper
 ; AVX256-NEXT:    retq
 ;

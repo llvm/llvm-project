@@ -172,3 +172,15 @@ if.end:
 exit:
   ret i16 %unrelated
 }
+
+; CHECK-COMMON-LABEL: promote_arg_return
+; CHECK-COMMON-NOT: uxt
+; CHECK-COMMON: strb
+define i16 @promote_arg_return(i16 zeroext %arg1, i16 zeroext %arg2, i8* %res) {
+  %add = add nuw i16 %arg1, 15
+  %mul = mul nuw nsw i16 %add, 3
+  %cmp = icmp ult i16 %mul, %arg2
+  %conv = zext i1 %cmp to i8
+  store i8 %conv, i8* %res
+  ret i16 %arg1
+}

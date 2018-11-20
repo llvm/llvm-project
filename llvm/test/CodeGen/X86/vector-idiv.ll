@@ -24,19 +24,19 @@ define <4 x i32> @PR20355(<4 x i32> %a) nounwind {
 ; SSE2-LABEL: PR20355:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [1431655766,1431655766,1431655766,1431655766]
-; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm3
+; SSE2-NEXT:    pmuludq %xmm1, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[1,3,2,3]
 ; SSE2-NEXT:    pmuludq %xmm1, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pmuludq %xmm1, %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,3,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
-; SSE2-NEXT:    psrad $31, %xmm0
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    psubd %xmm0, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,3,2,3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1]
+; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    psubd %xmm3, %xmm4
+; SSE2-NEXT:    movdqa %xmm4, %xmm0
 ; SSE2-NEXT:    psrld $31, %xmm0
-; SSE2-NEXT:    paddd %xmm2, %xmm0
+; SSE2-NEXT:    paddd %xmm4, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: PR20355:

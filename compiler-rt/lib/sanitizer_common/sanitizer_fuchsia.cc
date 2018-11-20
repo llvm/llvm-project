@@ -120,8 +120,8 @@ void BlockingMutex::Lock() {
   if (atomic_exchange(m, MtxLocked, memory_order_acquire) == MtxUnlocked)
     return;
   while (atomic_exchange(m, MtxSleeping, memory_order_acquire) != MtxUnlocked) {
-    zx_status_t status = _zx_futex_wait(reinterpret_cast<zx_futex_t *>(m),
-                                        MtxSleeping, ZX_TIME_INFINITE);
+    zx_status_t status = _zx_futex_wait_deprecated(
+        reinterpret_cast<zx_futex_t *>(m), MtxSleeping, ZX_TIME_INFINITE);
     if (status != ZX_ERR_BAD_STATE)  // Normal race.
       CHECK_EQ(status, ZX_OK);
   }

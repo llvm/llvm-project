@@ -182,6 +182,7 @@ void initializeInstrProfilingLegacyPassPass(PassRegistry&);
 void initializeInstructionCombiningPassPass(PassRegistry&);
 void initializeInstructionSelectPass(PassRegistry&);
 void initializeInterleavedAccessPass(PassRegistry&);
+void initializeInterleavedLoadCombinePass(PassRegistry &);
 void initializeInternalizeLegacyPassPass(PassRegistry&);
 void initializeIntervalPartitionPass(PassRegistry&);
 void initializeJumpThreadingPass(PassRegistry&);

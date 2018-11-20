@@ -9,7 +9,7 @@ target triple = "s390x-ibm-linux"
 @g_65 = external global i32, align 4
 
 ; Function Attrs: nounwind
-define void @main() #0 {
+define void @main(i1 %x) #0 {
 bb:
   br label %bb1
 
@@ -25,7 +25,7 @@ bb1:                                              ; preds = %bb
   br i1 undef, label %bb12, label %bb9
 
 bb9:                                              ; preds = %bb1
-  %tmp10 = select i1 undef, i64 0, i64 %tmp2
+  %tmp10 = select i1 %x, i64 0, i64 %tmp2
   %tmp11 = add nsw i64 %tmp10, %tmp8
   br label %bb12
 

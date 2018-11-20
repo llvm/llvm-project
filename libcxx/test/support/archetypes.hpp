@@ -314,7 +314,7 @@ constexpr bool operator!=(Tp const& L, Tp const& R) noexcept {
   return L.value != R.value;
 }
 
-} // end namespace ValueTypes
+} // end namespace ConstexprTestTypes
 
 
 //============================================================================//
@@ -337,7 +337,7 @@ constexpr bool operator!=(Tp const& L, Tp const& R) noexcept {
   return L.value != R.value;
 }
 
-} // end namespace ValueTypes
+} // end namespace ExplicitConstexprTestTypes
 
 
 //============================================================================//
@@ -359,7 +359,7 @@ constexpr bool operator!=(Tp const& L, Tp const& R) noexcept {
   return L.value != R.value;
 }
 
-} // end namespace TrivialValueTypes
+} // end namespace TrivialTestTypes
 
 //============================================================================//
 //

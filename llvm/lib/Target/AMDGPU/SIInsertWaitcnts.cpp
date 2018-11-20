@@ -178,14 +178,14 @@ public:
     }
   }
 
-  int32_t getScoreLB(InstCounterType T) {
+  int32_t getScoreLB(InstCounterType T) const {
     assert(T < NUM_INST_CNTS);
     if (T >= NUM_INST_CNTS)
       return 0;
     return ScoreLBs[T];
   }
 
-  int32_t getScoreUB(InstCounterType T) {
+  int32_t getScoreUB(InstCounterType T) const {
     assert(T < NUM_INST_CNTS);
     if (T >= NUM_INST_CNTS)
       return 0;
@@ -268,7 +268,7 @@ public:
     return EventUBs[W];
   }
 
-  bool counterOutOfOrder(InstCounterType T);
+  bool counterOutOfOrder(InstCounterType T) const;
   unsigned int updateByWait(InstCounterType T, int ScoreToWait);
   void updateByEvent(const SIInstrInfo *TII, const SIRegisterInfo *TRI,
                      const MachineRegisterInfo *MRI, WaitEventType E,
@@ -755,7 +755,7 @@ unsigned int BlockWaitcntBrackets::updateByWait(InstCounterType T,
 
 // Where there are multiple types of event in the bracket of a counter,
 // the decrement may go out of order.
-bool BlockWaitcntBrackets::counterOutOfOrder(InstCounterType T) {
+bool BlockWaitcntBrackets::counterOutOfOrder(InstCounterType T) const {
   switch (T) {
   case VM_CNT:
     return false;

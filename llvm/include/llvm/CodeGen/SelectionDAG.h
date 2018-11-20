@@ -929,40 +929,41 @@ public:
                           Type *SizeTy, unsigned ElemSz, bool isTailCall,
                           MachinePointerInfo DstPtrInfo);
 
-  /// Helper function to make it easier to build SetCC's if you just
-  /// have an ISD::CondCode instead of an SDValue.
-  ///
+  /// Helper function to make it easier to build SetCC's if you just have an
+  /// ISD::CondCode instead of an SDValue.
   SDValue getSetCC(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
                    ISD::CondCode Cond) {
     assert(LHS.getValueType().isVector() == RHS.getValueType().isVector() &&
-      "Cannot compare scalars to vectors");
+           "Cannot compare scalars to vectors");
     assert(LHS.getValueType().isVector() == VT.isVector() &&
-      "Cannot compare scalars to vectors");
+           "Cannot compare scalars to vectors");
     assert(Cond != ISD::SETCC_INVALID &&
-        "Cannot create a setCC of an invalid node.");
+           "Cannot create a setCC of an invalid node.");
     return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond));
   }
 
-  /// Helper function to make it easier to build Select's if you just
-  /// have operands and don't want to check for vector.
+  /// Helper function to make it easier to build Select's if you just have
+  /// operands and don't want to check for vector.
   SDValue getSelect(const SDLoc &DL, EVT VT, SDValue Cond, SDValue LHS,
                     SDValue RHS) {
     assert(LHS.getValueType() == RHS.getValueType() &&
            "Cannot use select on differing types");
     assert(VT.isVector() == LHS.getValueType().isVector() &&
            "Cannot mix vectors and scalars");
-    return getNode(Cond.getValueType().isVector() ? ISD::VSELECT : ISD::SELECT, DL, VT,
-                   Cond, LHS, RHS);
+    auto Opcode = Cond.getValueType().isVector() ? ISD::VSELECT : ISD::SELECT;
+    return getNode(Opcode, DL, VT, Cond, LHS, RHS);
   }
 
-  /// Helper function to make it easier to build SelectCC's if you
-  /// just have an ISD::CondCode instead of an SDValue.
-  ///
+  /// Helper function to make it easier to build SelectCC's if you just have an
+  /// ISD::CondCode instead of an SDValue.
   SDValue getSelectCC(const SDLoc &DL, SDValue LHS, SDValue RHS, SDValue True,
                       SDValue False, ISD::CondCode Cond) {
-    return getNode(ISD::SELECT_CC, DL, True.getValueType(),
-                   LHS, RHS, True, False, getCondCode(Cond));
+    return getNode(ISD::SELECT_CC, DL, True.getValueType(), LHS, RHS, True,
+                   False, getCondCode(Cond));
   }
+
+  /// Try to simplify a select/vselect into 1 of its operands or a constant.
+  SDValue simplifySelect(SDValue Cond, SDValue TVal, SDValue FVal);
 
   /// VAArg produces a result and token chain, and takes a pointer
   /// and a source value as input.

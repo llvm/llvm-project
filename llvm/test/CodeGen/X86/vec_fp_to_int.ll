@@ -2387,8 +2387,8 @@ define <2 x i8> @fptosi_2f32_to_2i8(<2 x float> %a) {
 ; SSE-LABEL: fptosi_2f32_to_2i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpgtd %xmm0, %xmm1
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE-NEXT:    retq
 ;
@@ -2430,8 +2430,8 @@ define <2 x i16> @fptosi_2f32_to_2i16(<2 x float> %a) {
 ; SSE-LABEL: fptosi_2f32_to_2i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psrad $31, %xmm1
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpgtd %xmm0, %xmm1
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE-NEXT:    retq
 ;
@@ -2557,9 +2557,9 @@ define <2 x i8> @fptosi_2f64_to_2i8(<2 x double> %a) {
 ; SSE-LABEL: fptosi_2f64_to_2i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
-; SSE-NEXT:    movapd %xmm0, %xmm1
-; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpgtd %xmm0, %xmm1
+; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE-NEXT:    retq
 ;
 ; VEX-LABEL: fptosi_2f64_to_2i8:
@@ -2600,9 +2600,9 @@ define <2 x i16> @fptosi_2f64_to_2i16(<2 x double> %a) {
 ; SSE-LABEL: fptosi_2f64_to_2i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
-; SSE-NEXT:    movapd %xmm0, %xmm1
-; SSE-NEXT:    psrad $31, %xmm1
-; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE-NEXT:    pxor %xmm1, %xmm1
+; SSE-NEXT:    pcmpgtd %xmm0, %xmm1
+; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
 ; SSE-NEXT:    retq
 ;
 ; VEX-LABEL: fptosi_2f64_to_2i16:

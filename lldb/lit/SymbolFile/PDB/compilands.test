@@ -1,5 +1,6 @@
-REQUIRES: system-windows
-RUN: clang-cl /Z7 %S/Inputs/CompilandsTest.cpp /o %T/CompilandsTest.cpp.exe
+REQUIRES: system-windows, msvc
+RUN: %clang_cl /Z7 /c %S/Inputs/CompilandsTest.cpp /o %T/CompilandsTest.cpp.obj
+RUN: %msvc_link /debug:full /nodefaultlib /entry:main %T/CompilandsTest.cpp.obj /out:%T/CompilandsTest.cpp.exe
 RUN: lldb-test symbols %T/CompilandsTest.cpp.exe | FileCheck %s
 
 ; Link default libraries

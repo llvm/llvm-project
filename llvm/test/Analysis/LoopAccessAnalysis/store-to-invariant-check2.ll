@@ -10,8 +10,8 @@
 ;    }
 ;  }
 
-; CHECK: Multiple stores to invariant address were not found in loop.
-; CHECK-NOT: Multiple stores to invariant address were found in loop.
+; CHECK: Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NOT: Non vectorizable stores to invariant address were found in loop.
 
 
 define i32 @foo(i32* nocapture readonly %var1, i32* nocapture %var2, i32 %itr) #0 {

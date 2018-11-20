@@ -7,8 +7,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: foo:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype foo (i32) -> (i32){{$}}
 ; CHECK-NEXT: #APP{{$}}
 ; CHECK-NEXT: # 0 = aaa(0){{$}}
 ; CHECK-NEXT: #NO_APP{{$}}
@@ -21,7 +20,7 @@ entry:
 }
 
 ; CHECK-LABEL: imm:
-; CHECK-NEXT: .result i32{{$}}
+; CHECK-NEXT: .functype imm () -> (i32){{$}}
 ; CHECK-NEXT: .local i32{{$}}
 ; CHECK-NEXT: #APP{{$}}
 ; CHECK-NEXT: # 0 = ccc(42){{$}}
@@ -35,8 +34,7 @@ entry:
 }
 
 ; CHECK-LABEL: foo_i64:
-; CHECK-NEXT: .param i64{{$}}
-; CHECK-NEXT: .result i64{{$}}
+; CHECK-NEXT: .functype foo_i64 (i64) -> (i64){{$}}
 ; CHECK-NEXT: #APP{{$}}
 ; CHECK-NEXT: # 0 = aaa(0){{$}}
 ; CHECK-NEXT: #NO_APP{{$}}

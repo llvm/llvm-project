@@ -679,6 +679,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
   setTargetDAGCombine(ISD::ZERO_EXTEND);
   setTargetDAGCombine(ISD::EXTRACT_VECTOR_ELT);
+  setTargetDAGCombine(ISD::INSERT_VECTOR_ELT);
 
   // All memory operations. Some folding on the pointer operand is done to help
   // matching the constant offsets in the addressing modes.
@@ -8114,6 +8115,42 @@ SDValue SITargetLowering::performExtractVectorEltCombine(
   return SDValue();
 }
 
+SDValue
+SITargetLowering::performInsertVectorEltCombine(SDNode *N,
+                                                DAGCombinerInfo &DCI) const {
+  SDValue Vec = N->getOperand(0);
+  SDValue Idx = N->getOperand(2);
+  EVT VecVT = Vec.getValueType();
+  EVT EltVT = VecVT.getVectorElementType();
+  unsigned VecSize = VecVT.getSizeInBits();
+  unsigned EltSize = EltVT.getSizeInBits();
+
+  // INSERT_VECTOR_ELT (<n x e>, var-idx)
+  // => BUILD_VECTOR n x select (e, const-idx)
+  // This elminates non-constant index and subsequent movrel or scratch access.
+  // Sub-dword vectors of size 2 dword or less have better implementation.
+  // Vectors of size bigger than 8 dwords would yield too many v_cndmask_b32
+  // instructions.
+  if (isa<ConstantSDNode>(Idx) ||
+      VecSize > 256 || (VecSize <= 64 && EltSize < 32))
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc SL(N);
+  SDValue Ins = N->getOperand(1);
+  EVT IdxVT = Idx.getValueType();
+
+  SmallVector<SDValue, 16> Ops;
+  for (unsigned I = 0, E = VecVT.getVectorNumElements(); I < E; ++I) {
+    SDValue IC = DAG.getConstant(I, SL, IdxVT);
+    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT, Vec, IC);
+    SDValue V = DAG.getSelectCC(SL, Idx, IC, Ins, Elt, ISD::SETEQ);
+    Ops.push_back(V);
+  }
+
+  return DAG.getBuildVector(VecVT, SL, Ops);
+}
+
 unsigned SITargetLowering::getFusedOpcode(const SelectionDAG &DAG,
                                           const SDNode *N0,
                                           const SDNode *N1) const {
@@ -8722,6 +8759,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::EXTRACT_VECTOR_ELT:
     return performExtractVectorEltCombine(N, DCI);
+  case ISD::INSERT_VECTOR_ELT:
+    return performInsertVectorEltCombine(N, DCI);
   }
   return AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
 }

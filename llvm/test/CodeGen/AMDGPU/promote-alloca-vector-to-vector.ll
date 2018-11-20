@@ -1,11 +1,11 @@
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX8 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 ; RUN: opt -S -mtriple=amdgcn-- -data-layout=A5 -mcpu=fiji -amdgpu-promote-alloca < %s | FileCheck -check-prefix=OPT %s
 
 ; GCN-LABEL: {{^}}float4_alloca_store4:
 ; OPT-LABEL: define amdgpu_kernel void @float4_alloca_store4
 
-; GFX-NOT: buffer_
+; GCN-NOT: buffer_
 ; GCN: v_cndmask_b32
 ; GCN: v_cndmask_b32
 ; GCN: v_cndmask_b32_e32 [[RES:v[0-9]+]], 4.0,
@@ -36,11 +36,15 @@ entry:
 ; GCN-LABEL: {{^}}float4_alloca_load4:
 ; OPT-LABEL: define amdgpu_kernel void @float4_alloca_load4
 
-; GFX-NOT: buffer_
-; GCN:  v_readfirstlane_b32
-; GFX8: v_movreld_b32
-; GFX9: s_set_gpr_idx_on
-; GFX9: s_set_gpr_idx_off
+; GCN-NOT: v_movrel
+; GCN-NOT: buffer_
+; GCN-NOT: v_cmp_
+; GCN-NOT: v_cndmask_
+; GCN:     v_mov_b32_e32 [[ONE:v[0-9]+]], 1.0
+; GCN:     v_mov_b32_e32 v{{[0-9]+}}, [[ONE]]
+; GCN:     v_mov_b32_e32 v{{[0-9]+}}, [[ONE]]
+; GCN:     v_mov_b32_e32 v{{[0-9]+}}, [[ONE]]
+; GCN:     store_dwordx4 v[{{[0-9:]+}}],
 
 ; OPT: %gep = getelementptr inbounds <4 x float>, <4 x float> addrspace(5)* %alloca, i32 0, i32 %sel2
 ; OPT: %0 = load <4 x float>, <4 x float> addrspace(5)* %alloca
@@ -68,7 +72,7 @@ entry:
 ; GCN-LABEL: {{^}}half4_alloca_store4:
 ; OPT-LABEL: define amdgpu_kernel void @half4_alloca_store4
 
-; GFX-NOT: buffer_
+; GCN-NOT: buffer_
 ; GCN-DAG: s_mov_b32 s[[SH:[0-9]+]], 0x44004200
 ; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0x40003c00
 ; GCN:     v_lshrrev_b64 v[{{[0-9:]+}}], v{{[0-9]+}}, s{{\[}}[[SL]]:[[SH]]]
@@ -98,7 +102,7 @@ entry:
 ; GCN-LABEL: {{^}}half4_alloca_load4:
 ; OPT-LABEL: define amdgpu_kernel void @half4_alloca_load4
 
-; GFX-NOT: buffer_
+; GCN-NOT: buffer_
 ; GCN-DAG: s_mov_b32 s[[SH:[0-9]+]], 0
 ; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0xffff
 
@@ -128,7 +132,7 @@ entry:
 ; GCN-LABEL: {{^}}short4_alloca_store4:
 ; OPT-LABEL: define amdgpu_kernel void @short4_alloca_store4
 
-; GFX-NOT: buffer_
+; GCN-NOT: buffer_
 ; GCN-DAG: s_mov_b32 s[[SH:[0-9]+]], 0x40003
 ; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0x20001
 ; GCN:     v_lshrrev_b64 v[{{[0-9:]+}}], v{{[0-9]+}}, s{{\[}}[[SL]]:[[SH]]]
@@ -158,7 +162,7 @@ entry:
 ; GCN-LABEL: {{^}}short4_alloca_load4:
 ; OPT-LABEL: define amdgpu_kernel void @short4_alloca_load4
 
-; GFX-NOT: buffer_
+; GCN-NOT: buffer_
 ; GCN-DAG: s_mov_b32 s[[SH:[0-9]+]], 0
 ; GCN-DAG: s_mov_b32 s[[SL:[0-9]+]], 0xffff
 

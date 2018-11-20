@@ -234,6 +234,9 @@ Undefined Behavior Sanitizer (UBSan)
   is enabled by ``-fsanitize=integer``.
   (as is ``-fsanitize=implicit-integer-truncation`` check)
 
+* The Implicit Conversion Sanitizer (``-fsanitize=implicit-conversion``) has
+  learned to sanitize compound assignment operators.
+
 Core Analysis Improvements
 ==========================
 

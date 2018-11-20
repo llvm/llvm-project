@@ -136,7 +136,7 @@ static void propagateConstantsToRefs(GlobalValueSummary *S) {
 // - After computing dead symbols in combined index we do the constant
 //   propagation. During this step we clear readonly attribute from
 //   all variables which:
-//   a. are dead, preserved or can't be imported
+//   a. are preserved or can't be imported
 //   b. referenced by any global variable initializer
 //   c. referenced by a function and reference is not readonly
 //

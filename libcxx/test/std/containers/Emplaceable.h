@@ -10,7 +10,7 @@
 #ifndef EMPLACEABLE_H
 #define EMPLACEABLE_H
 
-#include <utility>
+#include <functional>
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 11

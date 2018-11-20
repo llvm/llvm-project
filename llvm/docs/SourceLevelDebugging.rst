@@ -1661,4 +1661,4 @@ are correctly pointing to the ``[[C]]`` and ``[[D]]`` variables.
    for a ``DILocation`` to have a specific line number, and someone later adds
    an instruction before the one we check the test will fail. In the cases this
    can't be avoided (say, if a test wouldn't be precise enough), moving the
-   test to it's own file is preferred.
+   test to its own file is preferred.

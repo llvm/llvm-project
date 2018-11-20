@@ -2345,6 +2345,19 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     }
     break;
   }
+  case ISD::SCALAR_TO_VECTOR: {
+    // We know about scalar_to_vector as much as we know about it source,
+    // which becomes the first element of otherwise unknown vector.
+    if (DemandedElts != 1)
+      break;
+
+    SDValue N0 = Op.getOperand(0);
+    Known = computeKnownBits(N0, DemandedElts, Depth + 1);
+    if (N0.getValueSizeInBits() != BitWidth)
+      Known = Known.trunc(BitWidth);
+
+    break;
+  }
   case ISD::BITCAST: {
     SDValue N0 = Op.getOperand(0);
     EVT SubVT = N0.getValueType();
@@ -5078,13 +5091,9 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   }
   case ISD::SELECT:
-    if (ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1)) {
-     if (N1C->getZExtValue())
-       return N2;             // select true, X, Y -> X
-     return N3;             // select false, X, Y -> Y
-    }
-
-    if (N2 == N3) return N2;   // select C, X, X -> X
+  case ISD::VSELECT:
+    if (SDValue V = simplifySelect(N1, N2, N3))
+      return V;
     break;
   case ISD::VECTOR_SHUFFLE:
     llvm_unreachable("should use getVectorShuffle constructor!");
@@ -6782,6 +6791,36 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT VT, const SDLoc &dl,
   SDValue V(N, 0);
   NewSDValueDbgMsg(V, "Creating new node: ", this);
   return V;
+}
+
+SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
+  // select undef, T, F --> T (if T is a constant), otherwise F
+  // select, ?, undef, F --> F
+  // select, ?, T, undef --> T
+  if (Cond.isUndef())
+    return isConstantValueOfAnyType(T) ? T : F;
+  if (T.isUndef())
+    return F;
+  if (F.isUndef())
+    return T;
+
+  // select true, T, F --> T
+  // select false, T, F --> F
+  if (auto *CondC = dyn_cast<ConstantSDNode>(Cond))
+    return CondC->isNullValue() ? F : T;
+
+  // TODO: This should simplify VSELECT with constant condition using something
+  // like this (but check boolean contents to be complete?):
+  //  if (ISD::isBuildVectorAllOnes(Cond.getNode()))
+  //    return T;
+  //  if (ISD::isBuildVectorAllZeros(Cond.getNode()))
+  //    return F;
+
+  // select ?, T, T --> T
+  if (T == F)
+    return T;
+
+  return SDValue();
 }
 
 SDValue SelectionDAG::getVAArg(EVT VT, const SDLoc &dl, SDValue Chain,

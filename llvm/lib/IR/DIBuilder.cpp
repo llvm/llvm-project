@@ -751,18 +751,18 @@ static DISubprogram *getSubprogram(bool IsDistinct, Ts &&... Args) {
 
 DISubprogram *DIBuilder::createFunction(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
-    unsigned LineNo, DISubroutineType *Ty, bool isLocalToUnit,
-    bool isDefinition, unsigned ScopeLine, DINode::DIFlags Flags,
-    bool isOptimized, DITemplateParameterArray TParams, DISubprogram *Decl,
+    unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
+    DINode::DIFlags Flags, DISubprogram::DISPFlags SPFlags,
+    DITemplateParameterArray TParams, DISubprogram *Decl,
     DITypeArray ThrownTypes) {
+  bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
   auto *Node = getSubprogram(
-      /* IsDistinct = */ isDefinition, VMContext,
-      getNonCompileUnitScope(Context), Name, LinkageName, File, LineNo, Ty,
-      isLocalToUnit, isDefinition, ScopeLine, nullptr, 0, 0, 0, Flags,
-      isOptimized, isDefinition ? CUNode : nullptr, TParams, Decl,
+      /*IsDistinct=*/IsDefinition, VMContext, getNonCompileUnitScope(Context),
+      Name, LinkageName, File, LineNo, Ty, ScopeLine, nullptr, 0, 0, Flags,
+      SPFlags, IsDefinition ? CUNode : nullptr, TParams, Decl,
       MDTuple::getTemporary(VMContext, None).release(), ThrownTypes);
 
-  if (isDefinition)
+  if (IsDefinition)
     AllSubprograms.push_back(Node);
   trackIfUnresolved(Node);
   return Node;
@@ -770,35 +770,37 @@ DISubprogram *DIBuilder::createFunction(
 
 DISubprogram *DIBuilder::createTempFunctionFwdDecl(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *File,
-    unsigned LineNo, DISubroutineType *Ty, bool isLocalToUnit,
-    bool isDefinition, unsigned ScopeLine, DINode::DIFlags Flags,
-    bool isOptimized, DITemplateParameterArray TParams, DISubprogram *Decl,
+    unsigned LineNo, DISubroutineType *Ty, unsigned ScopeLine,
+    DINode::DIFlags Flags, DISubprogram::DISPFlags SPFlags,
+    DITemplateParameterArray TParams, DISubprogram *Decl,
     DITypeArray ThrownTypes) {
-  return DISubprogram::getTemporary(
-             VMContext, getNonCompileUnitScope(Context), Name, LinkageName,
-             File, LineNo, Ty, isLocalToUnit, isDefinition, ScopeLine, nullptr,
-             0, 0, 0, Flags, isOptimized, isDefinition ? CUNode : nullptr,
-             TParams, Decl, nullptr, ThrownTypes)
+  bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
+  return DISubprogram::getTemporary(VMContext, getNonCompileUnitScope(Context),
+                                    Name, LinkageName, File, LineNo, Ty,
+                                    ScopeLine, nullptr, 0, 0, Flags, SPFlags,
+                                    IsDefinition ? CUNode : nullptr, TParams,
+                                    Decl, nullptr, ThrownTypes)
       .release();
 }
 
 DISubprogram *DIBuilder::createMethod(
     DIScope *Context, StringRef Name, StringRef LinkageName, DIFile *F,
-    unsigned LineNo, DISubroutineType *Ty, bool isLocalToUnit,
-    bool isDefinition, unsigned VK, unsigned VIndex, int ThisAdjustment,
-    DIType *VTableHolder, DINode::DIFlags Flags, bool isOptimized,
-    DITemplateParameterArray TParams, DITypeArray ThrownTypes) {
+    unsigned LineNo, DISubroutineType *Ty, unsigned VIndex, int ThisAdjustment,
+    DIType *VTableHolder, DINode::DIFlags Flags,
+    DISubprogram::DISPFlags SPFlags, DITemplateParameterArray TParams,
+    DITypeArray ThrownTypes) {
   assert(getNonCompileUnitScope(Context) &&
          "Methods should have both a Context and a context that isn't "
          "the compile unit.");
   // FIXME: Do we want to use different scope/lines?
+  bool IsDefinition = SPFlags & DISubprogram::SPFlagDefinition;
   auto *SP = getSubprogram(
-      /* IsDistinct = */ isDefinition, VMContext, cast<DIScope>(Context), Name,
-      LinkageName, F, LineNo, Ty, isLocalToUnit, isDefinition, LineNo,
-      VTableHolder, VK, VIndex, ThisAdjustment, Flags, isOptimized,
-      isDefinition ? CUNode : nullptr, TParams, nullptr, nullptr, ThrownTypes);
+      /*IsDistinct=*/IsDefinition, VMContext, cast<DIScope>(Context), Name,
+      LinkageName, F, LineNo, Ty, LineNo, VTableHolder, VIndex, ThisAdjustment,
+      Flags, SPFlags, IsDefinition ? CUNode : nullptr, TParams, nullptr,
+      nullptr, ThrownTypes);
 
-  if (isDefinition)
+  if (IsDefinition)
     AllSubprograms.push_back(SP);
   trackIfUnresolved(SP);
   return SP;

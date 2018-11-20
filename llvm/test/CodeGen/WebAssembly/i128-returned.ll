@@ -14,7 +14,6 @@ define i128 @foo(i128) {
 }
 
 ; CHECK-LABEL: foo:
-; CHECK-NEXT: .param  	i32, i64, i64
-; CHECK-NOT:  .result
+; CHECK-NEXT: .functype foo (i32, i64, i64) -> ()
 
-; CHECK: .functype	bar, void, i32, i64, i64
+; CHECK: .functype bar (i32, i64, i64) -> ()
