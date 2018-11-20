@@ -7,8 +7,8 @@
 ; GCN: ; return
 define amdgpu_ps float @main(i32 inreg %arg) #0 {
 main_body:
-  %tmp24 = insertelement <2 x float> undef, float 0.000000e+00, i32 %arg
-  %tmp25 = extractelement <2 x float> %tmp24, i32 1
+  %tmp24 = insertelement <16 x float> undef, float 0.000000e+00, i32 %arg
+  %tmp25 = extractelement <16 x float> %tmp24, i32 1
   ret float %tmp25
 }
 

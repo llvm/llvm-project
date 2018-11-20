@@ -627,7 +627,6 @@ AsmToken AsmLexer::LexToken() {
     return AsmToken(AsmToken::EndOfStatement, StringRef(TokStart, 1));
   case ':': return AsmToken(AsmToken::Colon, StringRef(TokStart, 1));
   case '+': return AsmToken(AsmToken::Plus, StringRef(TokStart, 1));
-  case '-': return AsmToken(AsmToken::Minus, StringRef(TokStart, 1));
   case '~': return AsmToken(AsmToken::Tilde, StringRef(TokStart, 1));
   case '(': return AsmToken(AsmToken::LParen, StringRef(TokStart, 1));
   case ')': return AsmToken(AsmToken::RParen, StringRef(TokStart, 1));
@@ -646,6 +645,12 @@ AsmToken AsmLexer::LexToken() {
       return AsmToken(AsmToken::EqualEqual, StringRef(TokStart, 2));
     }
     return AsmToken(AsmToken::Equal, StringRef(TokStart, 1));
+  case '-':
+    if (*CurPtr == '>') {
+      ++CurPtr;
+      return AsmToken(AsmToken::MinusGreater, StringRef(TokStart, 2));
+    }
+    return AsmToken(AsmToken::Minus, StringRef(TokStart, 1));
   case '|':
     if (*CurPtr == '|') {
       ++CurPtr;

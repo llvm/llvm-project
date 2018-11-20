@@ -4154,24 +4154,32 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
                            !isOperationLegalOrCustomOrPromote(ISD::XOR, SrcVT)))
     return false;
 
+  // If the maximum float value is smaller then the signed integer range,
+  // the destination signmask can't be represented by the float, so we can
+  // just use FP_TO_SINT directly.
+  const fltSemantics &APFSem = DAG.EVTToAPFloatSemantics(SrcVT);
+  APFloat APF(APFSem, APInt::getNullValue(SrcVT.getScalarSizeInBits()));
+  APInt SignMask = APInt::getSignMask(DstVT.getScalarSizeInBits());
+  if (APFloat::opOverflow &
+      APF.convertFromAPInt(SignMask, false, APFloat::rmNearestTiesToEven)) {
+    Result = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Src);
+    return true;
+  }
+
   // Expand based on maximum range of FP_TO_SINT:
   // True = fp_to_sint(Src)
   // False = 0x8000000000000000 + fp_to_sint(Src - 0x8000000000000000)
   // Result = select (Src < 0x8000000000000000), True, False
-  APFloat apf(DAG.EVTToAPFloatSemantics(SrcVT),
-              APInt::getNullValue(SrcVT.getScalarSizeInBits()));
-  APInt x = APInt::getSignMask(DstVT.getScalarSizeInBits());
-  (void)apf.convertFromAPInt(x, false, APFloat::rmNearestTiesToEven);
+  SDValue Cst = DAG.getConstantFP(APF, dl, SrcVT);
+  SDValue Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT);
 
-  SDValue Tmp1 = DAG.getConstantFP(apf, dl, SrcVT);
-  SDValue Tmp2 = DAG.getSetCC(dl, SetCCVT, Src, Tmp1, ISD::SETLT);
   SDValue True = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Src);
   // TODO: Should any fast-math-flags be set for the FSUB?
   SDValue False = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT,
-                              DAG.getNode(ISD::FSUB, dl, SrcVT, Src, Tmp1));
-  False =
-      DAG.getNode(ISD::XOR, dl, DstVT, False, DAG.getConstant(x, dl, DstVT));
-  Result = DAG.getSelect(dl, DstVT, Tmp2, True, False);
+                              DAG.getNode(ISD::FSUB, dl, SrcVT, Src, Cst));
+  False = DAG.getNode(ISD::XOR, dl, DstVT, False,
+                      DAG.getConstant(SignMask, dl, DstVT));
+  Result = DAG.getSelect(dl, DstVT, Sel, True, False);
   return true;
 }
 

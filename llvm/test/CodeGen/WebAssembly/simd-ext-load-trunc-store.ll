@@ -7,8 +7,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
 
 ; CHECK-LABEL: load_ext_2xi32:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_ext_2xi32 (i32) -> (v128){{$}}
 ; CHECK-NEXT: i64.load32_u $push[[L0:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: i64x2.splat $push[[L1:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: i64.load32_u $push[[L2:[0-9]+]]=, 4($0){{$}}
@@ -20,8 +19,7 @@ define <2 x i32> @load_ext_2xi32(<2 x i32>* %p) {
 }
 
 ; CHECK-LABEL: load_zext_2xi32:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_zext_2xi32 (i32) -> (v128){{$}}
 ; CHECK-NEXT: i64.load32_u $push[[L0:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: i64x2.splat $push[[L1:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: i64.load32_u $push[[L2:[0-9]+]]=, 4($0){{$}}
@@ -34,8 +32,7 @@ define <2 x i64> @load_zext_2xi32(<2 x i32>* %p) {
 }
 
 ; CHECK-LABEL: load_sext_2xi32:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_sext_2xi32 (i32) -> (v128){{$}}
 ; CHECK-NEXT: i64.load32_s $push[[L0:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: i64x2.splat $push[[L1:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: i64.load32_s $push[[L2:[0-9]+]]=, 4($0){{$}}
@@ -48,7 +45,7 @@ define <2 x i64> @load_sext_2xi32(<2 x i32>* %p) {
 }
 
 ; CHECK-LABEL: store_trunc_2xi32:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_trunc_2xi32 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: i64x2.extract_lane $push[[L0:[0-9]+]]=, $1, 1
 ; CHECK-NEXT: i64.store32 4($0), $pop[[L0]]
 ; CHECK-NEXT: i64x2.extract_lane $push[[L1:[0-9]+]]=, $1, 0

@@ -10,8 +10,7 @@ target triple = "wasm32-unknown-unknown"
 ; ==============================================================================
 
 ; CHECK-LABEL: load_v16i8_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v16i8_a1 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @load_v16i8_a1(<16 x i8> *%p) {
@@ -20,8 +19,7 @@ define <16 x i8> @load_v16i8_a1(<16 x i8> *%p) {
 }
 
 ; CHECK-LABEL: load_v16i8_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v16i8_a4 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @load_v16i8_a4(<16 x i8> *%p) {
@@ -32,8 +30,7 @@ define <16 x i8> @load_v16i8_a4(<16 x i8> *%p) {
 ; 16 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: load_v16i8_a16:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v16i8_a16 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @load_v16i8_a16(<16 x i8> *%p) {
@@ -44,8 +41,7 @@ define <16 x i8> @load_v16i8_a16(<16 x i8> *%p) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: load_v16i8_a32:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v16i8_a32 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <16 x i8> @load_v16i8_a32(<16 x i8> *%p) {
@@ -54,7 +50,7 @@ define <16 x i8> @load_v16i8_a32(<16 x i8> *%p) {
 }
 
 ; CHECK-LABEL: store_v16i8_a1:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v16i8_a1 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v16i8_a1(<16 x i8> *%p, <16 x i8> %v) {
@@ -63,7 +59,7 @@ define void @store_v16i8_a1(<16 x i8> *%p, <16 x i8> %v) {
 }
 
 ; CHECK-LABEL: store_v16i8_a4:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v16i8_a4 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=2, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v16i8_a4(<16 x i8> *%p, <16 x i8> %v) {
@@ -74,7 +70,7 @@ define void @store_v16i8_a4(<16 x i8> *%p, <16 x i8> %v) {
 ; 16 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: store_v16i8_a16:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v16i8_a16 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v16i8_a16(<16 x i8> *%p, <16 x i8> %v) {
@@ -85,7 +81,7 @@ define void @store_v16i8_a16(<16 x i8> *%p, <16 x i8> %v) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: store_v16i8_a32:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v16i8_a32 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v16i8_a32(<16 x i8> *%p, <16 x i8> %v) {
@@ -98,8 +94,7 @@ define void @store_v16i8_a32(<16 x i8> *%p, <16 x i8> %v) {
 ; ==============================================================================
 
 ; CHECK-LABEL: load_v8i16_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v8i16_a1 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @load_v8i16_a1(<8 x i16> *%p) {
@@ -108,8 +103,7 @@ define <8 x i16> @load_v8i16_a1(<8 x i16> *%p) {
 }
 
 ; CHECK-LABEL: load_v8i16_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v8i16_a4 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @load_v8i16_a4(<8 x i16> *%p) {
@@ -120,8 +114,7 @@ define <8 x i16> @load_v8i16_a4(<8 x i16> *%p) {
 ; 8 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: load_v8i16_a16:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v8i16_a16 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @load_v8i16_a16(<8 x i16> *%p) {
@@ -132,8 +125,7 @@ define <8 x i16> @load_v8i16_a16(<8 x i16> *%p) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: load_v8i16_a32:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v8i16_a32 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <8 x i16> @load_v8i16_a32(<8 x i16> *%p) {
@@ -142,7 +134,7 @@ define <8 x i16> @load_v8i16_a32(<8 x i16> *%p) {
 }
 
 ; CHECK-LABEL: store_v8i16_a1:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v8i16_a1 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v8i16_a1(<8 x i16> *%p, <8 x i16> %v) {
@@ -151,7 +143,7 @@ define void @store_v8i16_a1(<8 x i16> *%p, <8 x i16> %v) {
 }
 
 ; CHECK-LABEL: store_v8i16_a4:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v8i16_a4 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=2, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v8i16_a4(<8 x i16> *%p, <8 x i16> %v) {
@@ -162,7 +154,7 @@ define void @store_v8i16_a4(<8 x i16> *%p, <8 x i16> %v) {
 ; 16 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: store_v8i16_a16:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v8i16_a16 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v8i16_a16(<8 x i16> *%p, <8 x i16> %v) {
@@ -173,7 +165,7 @@ define void @store_v8i16_a16(<8 x i16> *%p, <8 x i16> %v) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: store_v8i16_a32:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v8i16_a32 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v8i16_a32(<8 x i16> *%p, <8 x i16> %v) {
@@ -186,8 +178,7 @@ define void @store_v8i16_a32(<8 x i16> *%p, <8 x i16> %v) {
 ; ==============================================================================
 
 ; CHECK-LABEL: load_v4i32_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v4i32_a1 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @load_v4i32_a1(<4 x i32> *%p) {
@@ -196,8 +187,7 @@ define <4 x i32> @load_v4i32_a1(<4 x i32> *%p) {
 }
 
 ; CHECK-LABEL: load_v4i32_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v4i32_a4 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @load_v4i32_a4(<4 x i32> *%p) {
@@ -208,8 +198,7 @@ define <4 x i32> @load_v4i32_a4(<4 x i32> *%p) {
 ; 4 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: load_v4i32_a16:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v4i32_a16 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @load_v4i32_a16(<4 x i32> *%p) {
@@ -220,8 +209,7 @@ define <4 x i32> @load_v4i32_a16(<4 x i32> *%p) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: load_v4i32_a32:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v4i32_a32 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x i32> @load_v4i32_a32(<4 x i32> *%p) {
@@ -230,7 +218,7 @@ define <4 x i32> @load_v4i32_a32(<4 x i32> *%p) {
 }
 
 ; CHECK-LABEL: store_v4i32_a1:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v4i32_a1 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v4i32_a1(<4 x i32> *%p, <4 x i32> %v) {
@@ -239,7 +227,7 @@ define void @store_v4i32_a1(<4 x i32> *%p, <4 x i32> %v) {
 }
 
 ; CHECK-LABEL: store_v4i32_a4:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v4i32_a4 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=2, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v4i32_a4(<4 x i32> *%p, <4 x i32> %v) {
@@ -250,7 +238,7 @@ define void @store_v4i32_a4(<4 x i32> *%p, <4 x i32> %v) {
 ; 16 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: store_v4i32_a16:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v4i32_a16 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v4i32_a16(<4 x i32> *%p, <4 x i32> %v) {
@@ -261,7 +249,7 @@ define void @store_v4i32_a16(<4 x i32> *%p, <4 x i32> %v) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: store_v4i32_a32:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v4i32_a32 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v4i32_a32(<4 x i32> *%p, <4 x i32> %v) {
@@ -274,8 +262,7 @@ define void @store_v4i32_a32(<4 x i32> *%p, <4 x i32> %v) {
 ; ==============================================================================
 
 ; CHECK-LABEL: load_v2i64_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v2i64_a1 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_v2i64_a1(<2 x i64> *%p) {
@@ -284,8 +271,7 @@ define <2 x i64> @load_v2i64_a1(<2 x i64> *%p) {
 }
 
 ; CHECK-LABEL: load_v2i64_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v2i64_a4 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_v2i64_a4(<2 x i64> *%p) {
@@ -296,8 +282,7 @@ define <2 x i64> @load_v2i64_a4(<2 x i64> *%p) {
 ; 2 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: load_v2i64_a16:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v2i64_a16 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_v2i64_a16(<2 x i64> *%p) {
@@ -308,8 +293,7 @@ define <2 x i64> @load_v2i64_a16(<2 x i64> *%p) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: load_v2i64_a32:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v2i64_a32 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x i64> @load_v2i64_a32(<2 x i64> *%p) {
@@ -318,7 +302,7 @@ define <2 x i64> @load_v2i64_a32(<2 x i64> *%p) {
 }
 
 ; CHECK-LABEL: store_v2i64_a1:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v2i64_a1 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v2i64_a1(<2 x i64> *%p, <2 x i64> %v) {
@@ -327,7 +311,7 @@ define void @store_v2i64_a1(<2 x i64> *%p, <2 x i64> %v) {
 }
 
 ; CHECK-LABEL: store_v2i64_a4:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v2i64_a4 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=2, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v2i64_a4(<2 x i64> *%p, <2 x i64> %v) {
@@ -338,7 +322,7 @@ define void @store_v2i64_a4(<2 x i64> *%p, <2 x i64> %v) {
 ; 16 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: store_v2i64_a16:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v2i64_a16 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v2i64_a16(<2 x i64> *%p, <2 x i64> %v) {
@@ -349,7 +333,7 @@ define void @store_v2i64_a16(<2 x i64> *%p, <2 x i64> %v) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: store_v2i64_a32:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v2i64_a32 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v2i64_a32(<2 x i64> *%p, <2 x i64> %v) {
@@ -362,8 +346,7 @@ define void @store_v2i64_a32(<2 x i64> *%p, <2 x i64> %v) {
 ; ==============================================================================
 
 ; CHECK-LABEL: load_v4f32_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v4f32_a1 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @load_v4f32_a1(<4 x float> *%p) {
@@ -372,8 +355,7 @@ define <4 x float> @load_v4f32_a1(<4 x float> *%p) {
 }
 
 ; CHECK-LABEL: load_v4f32_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v4f32_a4 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @load_v4f32_a4(<4 x float> *%p) {
@@ -384,8 +366,7 @@ define <4 x float> @load_v4f32_a4(<4 x float> *%p) {
 ; 4 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: load_v4f32_a16:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v4f32_a16 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @load_v4f32_a16(<4 x float> *%p) {
@@ -396,8 +377,7 @@ define <4 x float> @load_v4f32_a16(<4 x float> *%p) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: load_v4f32_a32:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v4f32_a32 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <4 x float> @load_v4f32_a32(<4 x float> *%p) {
@@ -406,7 +386,7 @@ define <4 x float> @load_v4f32_a32(<4 x float> *%p) {
 }
 
 ; CHECK-LABEL: store_v4f32_a1:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v4f32_a1 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v4f32_a1(<4 x float> *%p, <4 x float> %v) {
@@ -415,7 +395,7 @@ define void @store_v4f32_a1(<4 x float> *%p, <4 x float> %v) {
 }
 
 ; CHECK-LABEL: store_v4f32_a4:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v4f32_a4 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=2, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v4f32_a4(<4 x float> *%p, <4 x float> %v) {
@@ -426,7 +406,7 @@ define void @store_v4f32_a4(<4 x float> *%p, <4 x float> %v) {
 ; 16 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: store_v4f32_a16:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v4f32_a16 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v4f32_a16(<4 x float> *%p, <4 x float> %v) {
@@ -437,7 +417,7 @@ define void @store_v4f32_a16(<4 x float> *%p, <4 x float> %v) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: store_v4f32_a32:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v4f32_a32 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v4f32_a32(<4 x float> *%p, <4 x float> %v) {
@@ -450,8 +430,7 @@ define void @store_v4f32_a32(<4 x float> *%p, <4 x float> %v) {
 ; ==============================================================================
 
 ; CHECK-LABEL: load_v2f64_a1:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v2f64_a1 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=0{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @load_v2f64_a1(<2 x double> *%p) {
@@ -460,8 +439,7 @@ define <2 x double> @load_v2f64_a1(<2 x double> *%p) {
 }
 
 ; CHECK-LABEL: load_v2f64_a4:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v2f64_a4 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0):p2align=2{{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @load_v2f64_a4(<2 x double> *%p) {
@@ -472,8 +450,7 @@ define <2 x double> @load_v2f64_a4(<2 x double> *%p) {
 ; 2 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: load_v2f64_a16:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v2f64_a16 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @load_v2f64_a16(<2 x double> *%p) {
@@ -484,8 +461,7 @@ define <2 x double> @load_v2f64_a16(<2 x double> *%p) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: load_v2f64_a32:
-; CHECK-NEXT: .param i32{{$}}
-; CHECK-NEXT: .result v128{{$}}
+; CHECK-NEXT: .functype load_v2f64_a32 (i32) -> (v128){{$}}
 ; CHECK-NEXT: v128.load $push[[R:[0-9]+]]=, 0($0){{$}}
 ; CHECK-NEXT: return $pop[[R]]{{$}}
 define <2 x double> @load_v2f64_a32(<2 x double> *%p) {
@@ -494,7 +470,7 @@ define <2 x double> @load_v2f64_a32(<2 x double> *%p) {
 }
 
 ; CHECK-LABEL: store_v2f64_a1:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v2f64_a1 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=0, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v2f64_a1(<2 x double> *%p, <2 x double> %v) {
@@ -503,7 +479,7 @@ define void @store_v2f64_a1(<2 x double> *%p, <2 x double> %v) {
 }
 
 ; CHECK-LABEL: store_v2f64_a4:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v2f64_a4 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0):p2align=2, $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v2f64_a4(<2 x double> *%p, <2 x double> %v) {
@@ -514,7 +490,7 @@ define void @store_v2f64_a4(<2 x double> *%p, <2 x double> %v) {
 ; 16 is the default alignment for v128 so no attribute is needed.
 
 ; CHECK-LABEL: store_v2f64_a16:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v2f64_a16 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v2f64_a16(<2 x double> *%p, <2 x double> %v) {
@@ -525,7 +501,7 @@ define void @store_v2f64_a16(<2 x double> *%p, <2 x double> %v) {
 ; 32 is greater than the default alignment so it is ignored.
 
 ; CHECK-LABEL: store_v2f64_a32:
-; CHECK-NEXT: .param i32, v128{{$}}
+; CHECK-NEXT: .functype store_v2f64_a32 (i32, v128) -> (){{$}}
 ; CHECK-NEXT: v128.store 0($0), $1{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @store_v2f64_a32(<2 x double> *%p, <2 x double> %v) {

@@ -39,6 +39,7 @@ add_llvm_library(LLVMCodeGen
   InlineSpiller.cpp
   InterferenceCache.cpp
   InterleavedAccessPass.cpp
+  InterleavedLoadCombinePass.cpp
   IntrinsicLowering.cpp
   LatencyPriorityQueue.cpp
   LazyMachineBlockFrequencyInfo.cpp

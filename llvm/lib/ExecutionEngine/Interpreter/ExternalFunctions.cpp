@@ -227,7 +227,8 @@ static bool ffiInvoke(RawFunc Fn, Function *F, ArrayRef<GenericValue> ArgVals,
   Type *RetTy = FTy->getReturnType();
   ffi_type *rtype = ffiTypeFor(RetTy);
 
-  if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, NumArgs, rtype, &args[0]) == FFI_OK) {
+  if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, NumArgs, rtype, args.data()) ==
+      FFI_OK) {
     SmallVector<uint8_t, 128> ret;
     if (RetTy->getTypeID() != Type::VoidTyID)
       ret.resize(TD.getTypeStoreSize(RetTy));

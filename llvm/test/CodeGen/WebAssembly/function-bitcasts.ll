@@ -17,7 +17,7 @@ declare void @foo2()
 declare void @foo3()
 
 ; CHECK-LABEL: test:
-; CHECK-NEXT: call        .Lhas_i32_arg_bitcast.2@FUNCTION{{$}}
+; CHECK:      call        .Lhas_i32_arg_bitcast.2@FUNCTION{{$}}
 ; CHECK-NEXT: call        .Lhas_i32_arg_bitcast.2@FUNCTION{{$}}
 ; CHECK-NEXT: call        .Lhas_i32_ret_bitcast@FUNCTION{{$}}
 ; CHECK-NEXT: i32.call     $drop=, has_i32_ret@FUNCTION
@@ -96,7 +96,7 @@ define void @test_varargs() {
 @global_func = hidden local_unnamed_addr global void ()* null
 
 ; CHECK-LABEL: test_store:
-; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, 0{{$}}
+; CHECK:      i32.const   $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i32.const   $push[[L1:[0-9]+]]=, has_i32_ret@FUNCTION{{$}}
 ; CHECK-NEXT: i32.store   global_func($pop[[L0]]), $pop[[L1]]{{$}}
 define void @test_store() {
@@ -106,7 +106,7 @@ define void @test_store() {
 }
 
 ; CHECK-LABEL: test_load:
-; CHECK-NEXT: result      i32{{$}}
+; CHECK-NEXT: .functype test_load () -> (i32){{$}}
 ; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i32.load    $push[[L1:[0-9]+]]=, global_func($pop[[L0]]){{$}}
 ; CHECK-NEXT: i32.call_indirect $push{{[0-9]+}}=, $pop[[L1]]{{$}}
@@ -121,7 +121,7 @@ define i32 @test_load() {
 declare void @call_func(i32 ()*)
 
 ; CHECK-LABEL: test_argument:
-; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, has_i32_ret@FUNCTION{{$}}
+; CHECK:      i32.const   $push[[L0:[0-9]+]]=, has_i32_ret@FUNCTION{{$}}
 ; CHECK-NEXT: call        call_func@FUNCTION, $pop[[L0]]{{$}}
 ; CHECK-NEXT: i32.const   $push[[L1:[0-9]+]]=, has_i32_arg@FUNCTION{{$}}
 ; CHECK-NEXT: call        call_func@FUNCTION, $pop[[L1]]{{$}}
@@ -166,21 +166,21 @@ end:
 }
 
 ; CHECK-LABEL: .Lhas_i32_arg_bitcast:
-; CHECK-NEXT: .param      i32, i32
+; CHECK-NEXT: .functype .Lhas_i32_arg_bitcast (i32, i32) -> ()
 ; CHECK-NEXT: call        has_i32_arg@FUNCTION, $1{{$}}
 ; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lhas_i32_arg_bitcast.1:
-; CHECK-NEXT: .param      i32, i32
+; CHECK-NEXT: .functype .Lhas_i32_arg_bitcast.1 (i32, i32) -> ()
 ; CHECK-NEXT: call        has_i32_arg@FUNCTION, $0{{$}}
 ; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lhas_i32_arg_bitcast.2:
-; CHECK-NEXT: call        has_i32_arg@FUNCTION, $0{{$}}
+; CHECK:      call        has_i32_arg@FUNCTION, $0{{$}}
 ; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lhas_i32_ret_bitcast:
-; CHECK-NEXT: call        $drop=, has_i32_ret@FUNCTION{{$}}
+; CHECK:      call        $drop=, has_i32_ret@FUNCTION{{$}}
 ; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lvararg_bitcast:
@@ -192,12 +192,12 @@ end:
 ; CHECK: end_function
 
 ; CHECK-LABEL: .Lfoo0_bitcast:
-; CHECK-NEXT: .param      i32
+; CHECK-NEXT: .functype .Lfoo0_bitcast (i32) -> ()
 ; CHECK-NEXT: call        foo0@FUNCTION{{$}}
 ; CHECK-NEXT: end_function
 
 ; CHECK-LABEL: .Lfoo1_bitcast:
-; CHECK-NEXT: .result     i32
+; CHECK-NEXT: .functype .Lfoo1_bitcast () -> (i32)
 ; CHECK-NEXT: call        foo1@FUNCTION{{$}}
 ; CHECK-NEXT: copy_local  $push0=, $0
 ; CHECK-NEXT: end_function

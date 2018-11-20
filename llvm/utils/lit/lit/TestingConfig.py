@@ -100,7 +100,6 @@ class TestingConfig:
             litConfig.fatal(
                 'unable to parse config file %r, traceback: %s' % (
                     path, traceback.format_exc()))
-
         self.finish(litConfig)
 
     def __init__(self, parent, name, suffixes, test_format,

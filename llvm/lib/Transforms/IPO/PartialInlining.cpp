@@ -403,7 +403,7 @@ PartialInlinerImpl::computeOutliningColdRegionsInfo(Function *F,
 
   auto IsSingleEntry = [](SmallVectorImpl<BasicBlock *> &BlockList) {
     BasicBlock *Dom = BlockList.front();
-    return BlockList.size() > 1 && pred_size(Dom) == 1;
+    return BlockList.size() > 1 && Dom->hasNPredecessors(1);
   };
 
   auto IsSingleExit =

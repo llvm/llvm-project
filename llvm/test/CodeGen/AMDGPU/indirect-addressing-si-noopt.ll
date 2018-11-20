@@ -9,11 +9,14 @@
 ; CHECK: s_load_dword [[IN:s[0-9]+]]
 ; CHECK: s_mov_b32 m0, [[IN]]
 ; CHECK: v_movreld_b32_e32 v[[ELT0:[0-9]+]]
-; CHECK-NEXT: buffer_store_dwordx4 v{{\[}}[[ELT0]]:
-define amdgpu_kernel void @insert_wo_offset(<4 x float> addrspace(1)* %out, i32 %in) {
+; CHECK: buffer_store_dwordx4
+; CHECK: buffer_store_dwordx4
+; CHECK: buffer_store_dwordx4
+; CHECK: buffer_store_dwordx4
+define amdgpu_kernel void @insert_wo_offset(<16 x float> addrspace(1)* %out, i32 %in) {
 entry:
-  %ins = insertelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, float 5.0, i32 %in
-  store <4 x float> %ins, <4 x float> addrspace(1)* %out
+  %ins = insertelement <16 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0>, float 17.0, i32 %in
+  store <16 x float> %ins, <16 x float> addrspace(1)* %out
   ret void
 }
 
