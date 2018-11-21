@@ -16,7 +16,44 @@ New entries should be added directly below the "Version" header.
 Version 8.0
 -----------
 
-* r345260 - Making libc++ build under -fvisibility=hidden
+* rXXXXXX - Making libc++ build under -fvisibility=hidden on Linux
+
+  The change marks several function templates as hidden. This removes symbols
+  from the shared library, but this is not an ABI break because it's impossible
+  for programs linking against libc++.so to actually depend on that symbol.
+  The reason is that the symbol is exported from the shared library through
+  an implicit instantiation present in the shared object itself only. Furthermore,
+  if a user's shared object was implicitly instantiating one of these functions,
+  marking that symbol as hidden would not be an ABI break for them because none
+  of their users could actually be using the symbol in their dylib (because
+  it's an implicit instantiation).
+
+  x86_64-linux-gnu
+  ----------------
+  Symbol removed: _ZNSt3__125__num_get_signed_integralIlEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__125__num_get_signed_integralIxEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__127__num_get_unsigned_integralIjEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__127__num_get_unsigned_integralImEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__127__num_get_unsigned_integralItEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__127__num_get_unsigned_integralIyEET_PKcS3_Rji
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIaaEEPaEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIccEEPcEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIddEEPdEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIffEEPfEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIhhEEPhEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIiiEEPiEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIjjEEPjEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIllEEPlEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessImmEEPmEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIssEEPsEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIttEEPtEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIwwEEPwEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIxxEEPxEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIyyEEPyEEjT0_S5_S5_S5_S5_T_
+  Symbol removed: _ZNSt3__1plIcNS_11char_traitsIcEENS_9allocatorIcEEEENS_12basic_stringIT_T0_T1_EERKS9_PKS6_
+  Symbol removed: _ZSt18make_exception_ptrINSt3__112future_errorEESt13exception_ptrT_
+
+* r345260 - Making libc++ build under -fvisibility=hidden on Mac OS
 
   The change marks __thread_specific_ptr<__thread_struct>::__at_thread_exit(void*)
   with hidden visibility. This removes a symbol from the shared libraries,
