@@ -338,4 +338,15 @@ ThreadContextBase *ThreadRegistry::QuarantinePop() {
   return tctx;
 }
 
+void ThreadRegistry::SetThreadUserId(u32 tid, uptr user_id) {
+  BlockingMutexLock l(&mtx_);
+  CHECK_LT(tid, n_contexts_);
+  ThreadContextBase *tctx = threads_[tid];
+  CHECK_NE(tctx, 0);
+  CHECK_NE(tctx->status, ThreadStatusInvalid);
+  CHECK_NE(tctx->status, ThreadStatusDead);
+  CHECK_EQ(tctx->user_id, 0);
+  tctx->user_id = user_id;
+}
+
 }  // namespace __sanitizer
