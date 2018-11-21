@@ -559,11 +559,11 @@ void ASTStmtWriter::VisitParenExpr(ParenExpr *E) {
 
 void ASTStmtWriter::VisitParenListExpr(ParenListExpr *E) {
   VisitExpr(E);
-  Record.push_back(E->NumExprs);
-  for (unsigned i=0; i != E->NumExprs; ++i)
-    Record.AddStmt(E->Exprs[i]);
-  Record.AddSourceLocation(E->LParenLoc);
-  Record.AddSourceLocation(E->RParenLoc);
+  Record.push_back(E->getNumExprs());
+  for (auto *SubStmt : E->exprs())
+    Record.AddStmt(SubStmt);
+  Record.AddSourceLocation(E->getLParenLoc());
+  Record.AddSourceLocation(E->getRParenLoc());
   Code = serialization::EXPR_PAREN_LIST;
 }
 

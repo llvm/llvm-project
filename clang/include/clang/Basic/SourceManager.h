@@ -1024,13 +1024,14 @@ public:
 
   /// Set the number of FileIDs (files and macros) that were created
   /// during preprocessing of \p FID, including it.
-  void setNumCreatedFIDsForFileID(FileID FID, unsigned NumFIDs) const {
+  void setNumCreatedFIDsForFileID(FileID FID, unsigned NumFIDs,
+                                  bool Force = false) const {
     bool Invalid = false;
     const SrcMgr::SLocEntry &Entry = getSLocEntry(FID, &Invalid);
     if (Invalid || !Entry.isFile())
       return;
 
-    assert(Entry.getFile().NumCreatedFIDs == 0 && "Already set!");
+    assert((Force || Entry.getFile().NumCreatedFIDs == 0) && "Already set!");
     const_cast<SrcMgr::FileInfo &>(Entry.getFile()).NumCreatedFIDs = NumFIDs;
   }
 

@@ -930,6 +930,34 @@ void Parser::ParseCompoundStatementLeadingPragmas() {
 
 }
 
+/// Consume any extra semi-colons resulting in null statements,
+/// returning true if any tok::semi were consumed.
+bool Parser::ConsumeNullStmt(StmtVector &Stmts) {
+  if (!Tok.is(tok::semi))
+    return false;
+
+  SourceLocation StartLoc = Tok.getLocation();
+  SourceLocation EndLoc;
+
+  while (Tok.is(tok::semi) && !Tok.hasLeadingEmptyMacro() &&
+         Tok.getLocation().isValid() && !Tok.getLocation().isMacroID()) {
+    EndLoc = Tok.getLocation();
+
+    // Don't just ConsumeToken() this tok::semi, do store it in AST.
+    StmtResult R = ParseStatementOrDeclaration(Stmts, ACK_Any);
+    if (R.isUsable())
+      Stmts.push_back(R.get());
+  }
+
+  // Did not consume any extra semi.
+  if (EndLoc.isInvalid())
+    return false;
+
+  Diag(StartLoc, diag::warn_null_statement)
+      << FixItHint::CreateRemoval(SourceRange(StartLoc, EndLoc));
+  return true;
+}
+
 /// ParseCompoundStatementBody - Parse a sequence of statements and invoke the
 /// ActOnCompoundStmt action.  This expects the '{' to be the current token, and
 /// consume the '}' at the end of the block.  It does not manipulate the scope
@@ -991,6 +1019,9 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
       HandlePragmaUnused();
       continue;
     }
+
+    if (ConsumeNullStmt(Stmts))
+      continue;
 
     StmtResult R;
     if (Tok.isNot(tok::kw___extension__)) {
@@ -1588,10 +1619,15 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
   ParsedAttributesWithRange attrs(AttrFactory);
   MaybeParseCXX11Attributes(attrs);
 
+  SourceLocation EmptyInitStmtSemiLoc;
+
   // Parse the first part of the for specifier.
   if (Tok.is(tok::semi)) {  // for (;
     ProhibitAttributes(attrs);
     // no first part, eat the ';'.
+    SourceLocation SemiLoc = Tok.getLocation();
+    if (!Tok.hasLeadingEmptyMacro() && !SemiLoc.isMacroID())
+      EmptyInitStmtSemiLoc = SemiLoc;
     ConsumeToken();
   } else if (getLangOpts().CPlusPlus && Tok.is(tok::identifier) &&
              isForRangeIdentifier()) {
@@ -1723,6 +1759,11 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
                    : diag::ext_for_range_init_stmt)
               << (FirstPart.get() ? FirstPart.get()->getSourceRange()
                                   : SourceRange());
+          if (EmptyInitStmtSemiLoc.isValid()) {
+            Diag(EmptyInitStmtSemiLoc, diag::warn_empty_init_statement)
+                << /*for-loop*/ 2
+                << FixItHint::CreateRemoval(EmptyInitStmtSemiLoc);
+          }
         }
       } else {
         ExprResult SecondExpr = ParseExpression();
