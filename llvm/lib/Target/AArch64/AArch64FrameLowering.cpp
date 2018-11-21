@@ -1739,7 +1739,7 @@ bool AArch64FrameLowering::spillCalleeSavedRegisters(
         dwarf::DW_CFA_val_expression,
         18, // register
         2,  // length
-        static_cast<char>(dwarf::DW_OP_breg18),
+        static_cast<char>(unsigned(dwarf::DW_OP_breg18)),
         static_cast<char>(-8) & 0x7f, // addend (sleb128)
     };
     unsigned CFIIndex =

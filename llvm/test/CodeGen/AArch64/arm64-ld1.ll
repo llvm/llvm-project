@@ -915,7 +915,9 @@ entry:
 ; CHECK: ld1r_2s_from_dup
 ; CHECK: ld1r.2s { [[ARG1:v[0-9]+]] }, [x0]
 ; CHECK-NEXT: ld1r.2s { [[ARG2:v[0-9]+]] }, [x1]
-; CHECK-NEXT: usubl.8h v[[RESREGNUM:[0-9]+]], [[ARG1]], [[ARG2]]
+; CHECK-NEXT: ushll.8h [[ARG1]], [[ARG1]], #0
+; CHECK-NEXT: ushll.8h [[ARG2]], [[ARG2]], #0
+; CHECK-NEXT: sub.4h v[[RESREGNUM:[0-9]+]], [[ARG1]], [[ARG2]]
 ; CHECK-NEXT: str d[[RESREGNUM]], [x2]
 ; CHECK-NEXT: ret
   %tmp = bitcast i8* %a to i32*

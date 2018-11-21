@@ -141,3 +141,180 @@ define <2 x i31> @fshl_set_but_not_demanded_vec(<2 x i31> %x, <2 x i31> %y, <2 x
   ret <2 x i31> %r
 }
 
+; Simplify one undef operand and constant shift amount.
+
+define i32 @fshl_op0_undef(i32 %x) {
+; CHECK-LABEL: @fshl_op0_undef(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 undef, i32 [[X:%.*]], i32 7)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 undef, i32 %x, i32 7)
+  ret i32 %r
+}
+
+define i33 @fshr_op0_undef(i33 %x) {
+; CHECK-LABEL: @fshr_op0_undef(
+; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshr.i33(i33 undef, i33 [[X:%.*]], i33 7)
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %r = call i33 @llvm.fshr.i33(i33 undef, i33 %x, i33 7)
+  ret i33 %r
+}
+
+define i32 @fshl_op1_undef(i32 %x) {
+; CHECK-LABEL: @fshl_op1_undef(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 undef, i32 7)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 undef, i32 7)
+  ret i32 %r
+}
+
+define i33 @fshr_op1_undef(i33 %x) {
+; CHECK-LABEL: @fshr_op1_undef(
+; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshr.i33(i33 [[X:%.*]], i33 undef, i33 7)
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %r = call i33 @llvm.fshr.i33(i33 %x, i33 undef, i33 7)
+  ret i33 %r
+}
+
+; Only demand bits from one of the operands.
+
+define i32 @fshl_only_op0_demanded(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshl_only_op0_demanded(
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 7)
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[Z]], 128
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %z = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 7)
+  %r = and i32 %z, 128
+  ret i32 %r
+}
+
+define i32 @fshl_only_op1_demanded(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshl_only_op1_demanded(
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 7)
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[Z]], 63
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %z = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 7)
+  %r = and i32 %z, 63
+  ret i32 %r
+}
+
+define i33 @fshr_only_op0_demanded(i33 %x, i33 %y) {
+; CHECK-LABEL: @fshr_only_op0_demanded(
+; CHECK-NEXT:    [[Z:%.*]] = call i33 @llvm.fshr.i33(i33 [[X:%.*]], i33 [[Y:%.*]], i33 7)
+; CHECK-NEXT:    [[R:%.*]] = and i33 [[Z]], 12392
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %z = call i33 @llvm.fshr.i33(i33 %x, i33 %y, i33 7)
+  %r = and i33 %z, 12392
+  ret i33 %r
+}
+
+define i33 @fshr_only_op1_demanded(i33 %x, i33 %y) {
+; CHECK-LABEL: @fshr_only_op1_demanded(
+; CHECK-NEXT:    [[Z:%.*]] = call i33 @llvm.fshr.i33(i33 [[X:%.*]], i33 [[Y:%.*]], i33 7)
+; CHECK-NEXT:    [[R:%.*]] = lshr i33 [[Z]], 30
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %z = call i33 @llvm.fshr.i33(i33 %x, i33 %y, i33 7)
+  %r = lshr i33 %z, 30
+  ret i33 %r
+}
+
+; Demand bits from both operands -- cannot simplify.
+
+define i32 @fshl_both_ops_demanded(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshl_both_ops_demanded(
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 7)
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[Z]], 192
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %z = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 7)
+  %r = and i32 %z, 192
+  ret i32 %r
+}
+
+define i33 @fshr_both_ops_demanded(i33 %x, i33 %y) {
+; CHECK-LABEL: @fshr_both_ops_demanded(
+; CHECK-NEXT:    [[Z:%.*]] = call i33 @llvm.fshr.i33(i33 [[X:%.*]], i33 [[Y:%.*]], i33 26)
+; CHECK-NEXT:    [[R:%.*]] = and i33 [[Z]], 192
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %z = call i33 @llvm.fshr.i33(i33 %x, i33 %y, i33 26)
+  %r = and i33 %z, 192
+  ret i33 %r
+}
+
+; Both operands are demanded, but there are known bits.
+
+define i32 @fshl_known_bits(i32 %x, i32 %y) {
+; CHECK-LABEL: @fshl_known_bits(
+; CHECK-NEXT:    [[X2:%.*]] = or i32 [[X:%.*]], 1
+; CHECK-NEXT:    [[Y2:%.*]] = lshr i32 [[Y:%.*]], 1
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.fshl.i32(i32 [[X2]], i32 [[Y2]], i32 7)
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[Z]], 192
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %x2 = or i32 %x, 1   ; lo bit set
+  %y2 = lshr i32 %y, 1 ; hi bit clear
+  %z = call i32 @llvm.fshl.i32(i32 %x2, i32 %y2, i32 7)
+  %r = and i32 %z, 192
+  ret i32 %r
+}
+
+define i33 @fshr_known_bits(i33 %x, i33 %y) {
+; CHECK-LABEL: @fshr_known_bits(
+; CHECK-NEXT:    [[X2:%.*]] = or i33 [[X:%.*]], 1
+; CHECK-NEXT:    [[Y2:%.*]] = lshr i33 [[Y:%.*]], 1
+; CHECK-NEXT:    [[Z:%.*]] = call i33 @llvm.fshr.i33(i33 [[X2]], i33 [[Y2]], i33 26)
+; CHECK-NEXT:    [[R:%.*]] = and i33 [[Z]], 192
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %x2 = or i33 %x, 1 ; lo bit set
+  %y2 = lshr i33 %y, 1 ; hi bit set
+  %z = call i33 @llvm.fshr.i33(i33 %x2, i33 %y2, i33 26)
+  %r = and i33 %z, 192
+  ret i33 %r
+}
+
+; This case fails to simplify due to multiple uses.
+
+define i33 @fshr_multi_use(i33 %a) {
+; CHECK-LABEL: @fshr_multi_use(
+; CHECK-NEXT:    [[B:%.*]] = tail call i33 @llvm.fshr.i33(i33 [[A:%.*]], i33 [[A]], i33 1)
+; CHECK-NEXT:    [[C:%.*]] = lshr i33 [[B]], 23
+; CHECK-NEXT:    [[D:%.*]] = xor i33 [[C]], [[B]]
+; CHECK-NEXT:    [[E:%.*]] = and i33 [[D]], 31
+; CHECK-NEXT:    ret i33 [[E]]
+;
+  %b = tail call i33 @llvm.fshr.i33(i33 %a, i33 %a, i33 1)
+  %c = lshr i33 %b, 23
+  %d = xor i33 %c, %b
+  %e = and i33 %d, 31
+  ret i33 %e
+}
+
+; This demonstrates the same simplification working if the fshr intrinsic
+; is expanded into shifts and or.
+
+define i33 @expanded_fshr_multi_use(i33 %a) {
+; CHECK-LABEL: @expanded_fshr_multi_use(
+; CHECK-NEXT:    [[TMP:%.*]] = lshr i33 [[A:%.*]], 1
+; CHECK-NEXT:    [[C:%.*]] = lshr i33 [[A]], 24
+; CHECK-NEXT:    [[D:%.*]] = xor i33 [[C]], [[TMP]]
+; CHECK-NEXT:    [[E:%.*]] = and i33 [[D]], 31
+; CHECK-NEXT:    ret i33 [[E]]
+;
+  %tmp = lshr i33 %a, 1
+  %tmp2 = shl i33 %a, 32
+  %b = or i33 %tmp, %tmp2
+  %c = lshr i33 %b, 23
+  %d = xor i33 %c, %b
+  %e = and i33 %d, 31
+  ret i33 %e
+}
+

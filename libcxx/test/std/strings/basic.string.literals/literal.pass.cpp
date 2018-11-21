@@ -13,12 +13,17 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     using namespace std::literals::string_literals;
 
     static_assert ( std::is_same<decltype(   "Hi"s), std::string>::value, "" );
+//	This is changed by P0482 to return a std::u8string
+#if TEST_STD_VER <= 17
     static_assert ( std::is_same<decltype( u8"Hi"s), std::string>::value, "" );
+#endif
     static_assert ( std::is_same<decltype(  L"Hi"s), std::wstring>::value, "" );
     static_assert ( std::is_same<decltype(  u"Hi"s), std::u16string>::value, "" );
     static_assert ( std::is_same<decltype(  U"Hi"s), std::u32string>::value, "" );
@@ -29,19 +34,28 @@ int main()
     std::u32string Ufoo;
 
     foo  =   ""s;     assert( foo.size() == 0);
+//	This is changed by P0482 to return a std::u8string
+#if TEST_STD_VER <= 17
     foo  = u8""s;     assert( foo.size() == 0);
+#endif
     Lfoo =  L""s;     assert(Lfoo.size() == 0);
     ufoo =  u""s;     assert(ufoo.size() == 0);
     Ufoo =  U""s;     assert(Ufoo.size() == 0);
 
     foo  =   " "s;     assert( foo.size() == 1);
+//	This is changed by P0482 to return a std::u8string
+#if TEST_STD_VER <= 17
     foo  = u8" "s;     assert( foo.size() == 1);
+#endif
     Lfoo =  L" "s;     assert(Lfoo.size() == 1);
     ufoo =  u" "s;     assert(ufoo.size() == 1);
     Ufoo =  U" "s;     assert(Ufoo.size() == 1);
 
     foo  =   "ABC"s;     assert( foo ==   "ABC");   assert( foo == std::string   (  "ABC"));
+//	This is changed by P0482 to return a std::u8string
+#if TEST_STD_VER <= 17
     foo  = u8"ABC"s;     assert( foo == u8"ABC");   assert( foo == std::string   (u8"ABC"));
+#endif
     Lfoo =  L"ABC"s;     assert(Lfoo ==  L"ABC");   assert(Lfoo == std::wstring  ( L"ABC"));
     ufoo =  u"ABC"s;     assert(ufoo ==  u"ABC");   assert(ufoo == std::u16string( u"ABC"));
     Ufoo =  U"ABC"s;     assert(Ufoo ==  U"ABC");   assert(Ufoo == std::u32string( U"ABC"));

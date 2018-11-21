@@ -58,6 +58,10 @@ struct I {
   I(G);
 };
 
+struct J {
+  J(E e, int);
+};
+
 namespace {
 class Foo {};
 } // namespace
@@ -371,6 +375,34 @@ void initialization(int T, Base b) {
   PI1.reset(new I(G({1, 2, 3})));
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
   // CHECK-FIXES: PI1 = std::make_unique<I>(G({1, 2, 3}));
+
+  std::unique_ptr<J> PJ1 = std::unique_ptr<J>(new J({1, 2}, 1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<J> PJ1 = std::unique_ptr<J>(new J({1, 2}, 1));
+  PJ1.reset(new J({1, 2}, 1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PJ1.reset(new J({1, 2}, 1));
+
+  std::unique_ptr<J> PJ2 = std::unique_ptr<J>(new J(E{1, 2}, 1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<J> PJ2 = std::make_unique<J>(E{1, 2}, 1);
+  PJ2.reset(new J(E{1, 2}, 1));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES: PJ2 = std::make_unique<J>(E{1, 2}, 1);
+
+  std::unique_ptr<J> PJ3 = std::unique_ptr<J>(new J{ {1, 2}, 1 });
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<J> PJ3 = std::unique_ptr<J>(new J{ {1, 2}, 1 });
+  PJ3.reset(new J{ {1, 2}, 1 });
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES:  PJ3.reset(new J{ {1, 2}, 1 });
+
+  std::unique_ptr<J> PJ4 = std::unique_ptr<J>(new J{E{1, 2}, 1});
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use std::make_unique instead
+  // CHECK-FIXES: std::unique_ptr<J> PJ4 = std::make_unique<J>(E{1, 2}, 1);
+  PJ4.reset(new J{E{1, 2}, 1});
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
+  // CHECK-FIXES:  PJ4 = std::make_unique<J>(E{1, 2}, 1);
 
   std::unique_ptr<Foo> FF = std::unique_ptr<Foo>(new Foo());
   // CHECK-MESSAGES: :[[@LINE-1]]:29: warning:

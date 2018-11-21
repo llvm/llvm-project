@@ -24,11 +24,11 @@ systems. For example::
 
     // Define availability macros.
     #if defined(_LIBCPP_USE_AVAILABILITY_APPLE)
-    #define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS __attribute__((unavailable))
+    # define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS __attribute__((unavailable))
     #else  if defined(_LIBCPP_USE_AVAILABILITY_SOME_OTHER_VENDOR)
-    #define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS __attribute__((unavailable))
-	#else
-    #define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
+    # define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS __attribute__((unavailable))
+    #else
+    # define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
     #endif
 
 When the library is updated by the platform vendor, the markup can be updated.
@@ -43,9 +43,9 @@ For example::
 In the source code, the macro can be added on a class if the full class requires
 type info from the library for example::
 
-	_LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
-	class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS bad_optional_access
-	    : public std::logic_error {
+    _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL
+    class _LIBCPP_EXCEPTION_ABI _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS bad_optional_access
+      : public std::logic_error {
 
 or on a particular symbol:
 
@@ -70,7 +70,7 @@ availability.
 Tests can be marked as XFAIL based on multiple features made available by lit:
 
 
-* if either `use_system_cxx_lib` or  `with_availability` is passed to lit,
+* if either `use_system_cxx_lib` or `with_availability` is passed to lit,
   assuming `--param=platform=macosx10.8` is passed as well the following
   features will be available:
 
@@ -81,7 +81,7 @@ Tests can be marked as XFAIL based on multiple features made available by lit:
   - availability=x86_64-apple-macosx10.8
   - availability=macosx10.8
 
-  This feature is used to XFAIL a test that *is* using a class of a method marked
+  This feature is used to XFAIL a test that *is* using a class or a method marked
   as unavailable *and* that is expected to *fail* if deployed on an older system.
 
 * if `use_system_cxx_lib` is passed to lit, the following features will also
@@ -94,9 +94,9 @@ Tests can be marked as XFAIL based on multiple features made available by lit:
   - with_system_cxx_lib=x86_64-apple-macosx10.8
   - with_system_cxx_lib=macosx10.8
 
-  This feature is used to XFAIL a test that is *not* using a class of a method
+  This feature is used to XFAIL a test that is *not* using a class or a method
   marked as unavailable *but* that is expected to fail if deployed on an older
-  system. For example if we know that it exhibits a but in the libc on a
+  system. For example if we know that it exhibits a bug in the libc on a
   particular system version.
 
 * if `with_availability` is passed to lit, the following features will also
@@ -109,6 +109,6 @@ Tests can be marked as XFAIL based on multiple features made available by lit:
   - availability_markup=x86_64-apple-macosx10.8
   - availability_markup=macosx10.8
 
-  This feature is used to XFAIL a test that *is* using a class of a method
+  This feature is used to XFAIL a test that *is* using a class or a method
   marked as unavailable *but* that is expected to *pass* if deployed on an older
   system. For example if it is using a symbol in a statically evaluated context.

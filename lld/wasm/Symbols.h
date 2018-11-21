@@ -16,8 +16,6 @@
 #include "llvm/Object/Wasm.h"
 
 using llvm::object::Archive;
-using llvm::object::WasmSymbol;
-using llvm::wasm::WasmGlobal;
 using llvm::wasm::WasmGlobalType;
 using llvm::wasm::WasmSignature;
 using llvm::wasm::WasmSymbolType;

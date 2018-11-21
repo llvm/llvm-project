@@ -32,8 +32,6 @@ void test_setbuffer() {
 }
 
 void test_setlinebuf() {
-  char buf[BUFSIZ];
-
   setlinebuf(stdout);
 
   print_something();

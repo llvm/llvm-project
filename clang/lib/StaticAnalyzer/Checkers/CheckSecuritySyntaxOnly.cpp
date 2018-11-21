@@ -597,9 +597,10 @@ void WalkAST::checkCall_mkstemp(const CallExpr *CE, const FunctionDecl *FD) {
   unsigned suffix = 0;
   if (ArgSuffix.second >= 0) {
     const Expr *suffixEx = CE->getArg((unsigned)ArgSuffix.second);
-    llvm::APSInt Result;
-    if (!suffixEx->EvaluateAsInt(Result, BR.getContext()))
+    Expr::EvalResult EVResult;
+    if (!suffixEx->EvaluateAsInt(EVResult, BR.getContext()))
       return;
+    llvm::APSInt Result = EVResult.Val.getInt();
     // FIXME: Issue a warning.
     if (Result.isNegative())
       return;

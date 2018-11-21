@@ -350,8 +350,7 @@ define <4 x i32> @fptoui_2f64_to_4i32(<2 x double> %a) {
 ; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX1-NEXT:    vmovapd {{.*#+}} ymm1 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
 ; AVX1-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX1-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; AVX1-NEXT:    vpackssdw %xmm0, %xmm2, %xmm2
 ; AVX1-NEXT:    vcvttpd2dq %ymm0, %xmm3
 ; AVX1-NEXT:    vsubpd %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vcvttpd2dq %ymm0, %xmm0
@@ -366,8 +365,7 @@ define <4 x i32> @fptoui_2f64_to_4i32(<2 x double> %a) {
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [2.147483648E+9,2.147483648E+9,2.147483648E+9,2.147483648E+9]
 ; AVX2-NEXT:    vcmpltpd %ymm1, %ymm0, %ymm2
-; AVX2-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpackssdw %xmm0, %xmm2, %xmm2
 ; AVX2-NEXT:    vsubpd %ymm1, %ymm0, %ymm1
 ; AVX2-NEXT:    vcvttpd2dq %ymm1, %xmm1
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm3 = [2147483648,2147483648,2147483648,2147483648]

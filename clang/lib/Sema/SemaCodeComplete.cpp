@@ -3958,7 +3958,8 @@ static void AddObjCProperties(
     const CodeCompletionContext &CCContext, ObjCContainerDecl *Container,
     bool AllowCategories, bool AllowNullaryMethods, DeclContext *CurContext,
     AddedPropertiesSet &AddedProperties, ResultBuilder &Results,
-    bool IsBaseExprStatement = false, bool IsClassProperty = false) {
+    bool IsBaseExprStatement = false, bool IsClassProperty = false,
+    bool InOriginalClass = true) {
   typedef CodeCompletionResult Result;
 
   // Retrieve the definition.
@@ -3973,8 +3974,10 @@ static void AddObjCProperties(
     // expressions.
     if (!P->getType().getTypePtr()->isBlockPointerType() ||
         !IsBaseExprStatement) {
-      Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
-                             CurContext);
+      Result R = Result(P, Results.getBasePriority(P), nullptr);
+      if (!InOriginalClass)
+        setInBaseClass(R);
+      Results.MaybeAddResult(R, CurContext);
       return;
     }
 
@@ -3985,8 +3988,10 @@ static void AddObjCProperties(
     findTypeLocationForBlockDecl(P->getTypeSourceInfo(), BlockLoc,
                                  BlockProtoLoc);
     if (!BlockLoc) {
-      Results.MaybeAddResult(Result(P, Results.getBasePriority(P), nullptr),
-                             CurContext);
+      Result R = Result(P, Results.getBasePriority(P), nullptr);
+      if (!InOriginalClass)
+        setInBaseClass(R);
+      Results.MaybeAddResult(R, CurContext);
       return;
     }
 
@@ -3997,9 +4002,10 @@ static void AddObjCProperties(
     AddObjCBlockCall(Container->getASTContext(),
                      getCompletionPrintingPolicy(Results.getSema()), Builder, P,
                      BlockLoc, BlockProtoLoc);
-    Results.MaybeAddResult(
-        Result(Builder.TakeString(), P, Results.getBasePriority(P)),
-        CurContext);
+    Result R = Result(Builder.TakeString(), P, Results.getBasePriority(P));
+    if (!InOriginalClass)
+      setInBaseClass(R);
+    Results.MaybeAddResult(R, CurContext);
 
     // Provide additional block setter completion iff the base expression is a
     // statement and the block property is mutable.
@@ -4025,13 +4031,15 @@ static void AddObjCProperties(
       // otherwise the setter completion should show up before the default
       // property completion, as we normally want to use the result of the
       // call.
-      Results.MaybeAddResult(
+      Result R =
           Result(Builder.TakeString(), P,
                  Results.getBasePriority(P) +
                      (BlockLoc.getTypePtr()->getReturnType()->isVoidType()
                           ? CCD_BlockPropertySetter
-                          : -CCD_BlockPropertySetter)),
-          CurContext);
+                          : -CCD_BlockPropertySetter));
+      if (!InOriginalClass)
+        setInBaseClass(R);
+      Results.MaybeAddResult(R, CurContext);
     }
   };
 
@@ -4059,10 +4067,11 @@ static void AddObjCProperties(
       AddResultTypeChunk(Context, Policy, M, CCContext.getBaseType(), Builder);
       Builder.AddTypedTextChunk(
           Results.getAllocator().CopyString(Name->getName()));
-      Results.MaybeAddResult(
-          Result(Builder.TakeString(), M,
-                 CCP_MemberDeclaration + CCD_MethodAsProperty),
-          CurContext);
+      Result R = Result(Builder.TakeString(), M,
+                        CCP_MemberDeclaration + CCD_MethodAsProperty);
+      if (!InOriginalClass)
+        setInBaseClass(R);
+      Results.MaybeAddResult(R, CurContext);
     };
 
     if (IsClassProperty) {
@@ -4088,34 +4097,39 @@ static void AddObjCProperties(
     for (auto *P : Protocol->protocols())
       AddObjCProperties(CCContext, P, AllowCategories, AllowNullaryMethods,
                         CurContext, AddedProperties, Results,
-                        IsBaseExprStatement, IsClassProperty);
+                        IsBaseExprStatement, IsClassProperty,
+                        /*InOriginalClass*/false);
   } else if (ObjCInterfaceDecl *IFace = dyn_cast<ObjCInterfaceDecl>(Container)){
     if (AllowCategories) {
       // Look through categories.
       for (auto *Cat : IFace->known_categories())
         AddObjCProperties(CCContext, Cat, AllowCategories, AllowNullaryMethods,
                           CurContext, AddedProperties, Results,
-                          IsBaseExprStatement, IsClassProperty);
+                          IsBaseExprStatement, IsClassProperty,
+                          InOriginalClass);
     }
 
     // Look through protocols.
     for (auto *I : IFace->all_referenced_protocols())
       AddObjCProperties(CCContext, I, AllowCategories, AllowNullaryMethods,
                         CurContext, AddedProperties, Results,
-                        IsBaseExprStatement, IsClassProperty);
+                        IsBaseExprStatement, IsClassProperty,
+                        /*InOriginalClass*/false);
 
     // Look in the superclass.
     if (IFace->getSuperClass())
       AddObjCProperties(CCContext, IFace->getSuperClass(), AllowCategories,
                         AllowNullaryMethods, CurContext, AddedProperties,
-                        Results, IsBaseExprStatement, IsClassProperty);
+                        Results, IsBaseExprStatement, IsClassProperty,
+                        /*InOriginalClass*/false);
   } else if (const ObjCCategoryDecl *Category
                                     = dyn_cast<ObjCCategoryDecl>(Container)) {
     // Look through protocols.
     for (auto *P : Category->protocols())
       AddObjCProperties(CCContext, P, AllowCategories, AllowNullaryMethods,
                         CurContext, AddedProperties, Results,
-                        IsBaseExprStatement, IsClassProperty);
+                        IsBaseExprStatement, IsClassProperty,
+                        /*InOriginalClass*/false);
   }
 }
 
@@ -4249,7 +4263,8 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
       for (auto *I : BaseType->getAs<ObjCObjectPointerType>()->quals())
         AddObjCProperties(CCContext, I, true, /*AllowNullaryMethods=*/true,
                           CurContext, AddedProperties, Results,
-                          IsBaseExprStatement);
+                          IsBaseExprStatement, /*IsClassProperty*/false,
+                          /*InOriginalClass*/false);
     } else if ((IsArrow && BaseType->isObjCObjectPointerType()) ||
                (!IsArrow && BaseType->isObjCObjectType())) {
       // Objective-C instance variable access.

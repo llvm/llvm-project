@@ -93,11 +93,11 @@ if (NOT "${LLDB_LIT_TOOLS_DIR}" STREQUAL "")
   endif()
 endif()
 
-if(CMAKE_HOST_APPLE)
+if(CMAKE_HOST_APPLE AND DEBUGSERVER_PATH)
   list(APPEND LLDB_TEST_COMMON_ARGS --server ${DEBUGSERVER_PATH})
 endif()
 
-if(SKIP_DEBUGSERVER)
+if(SKIP_TEST_DEBUGSERVER)
   list(APPEND LLDB_TEST_COMMON_ARGS --out-of-tree-debugserver)
 endif()
 

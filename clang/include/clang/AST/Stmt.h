@@ -416,6 +416,14 @@ protected:
     unsigned IsType : 1; // true if operand is a type, false if an expression.
   };
 
+  class ArraySubscriptExprBitfields {
+    friend class ArraySubscriptExpr;
+
+    unsigned : NumExprBits;
+
+    SourceLocation RBracketLoc;
+  };
+
   class CallExprBitfields {
     friend class CallExpr;
 
@@ -486,6 +494,16 @@ protected:
     /// Whether this initializer list originally had a GNU array-range
     /// designator in it. This is a temporary marker used by CodeGen.
     unsigned HadArrayRangeDesignator : 1;
+  };
+
+  class ParenListExprBitfields {
+    friend class ASTStmtReader;
+    friend class ParenListExpr;
+
+    unsigned : NumExprBits;
+
+    /// The number of expressions in the paren list.
+    unsigned NumExprs;
   };
 
   class PseudoObjectExprBitfields {
@@ -658,11 +676,13 @@ protected:
     CharacterLiteralBitfields CharacterLiteralBits;
     UnaryOperatorBitfields UnaryOperatorBits;
     UnaryExprOrTypeTraitExprBitfields UnaryExprOrTypeTraitExprBits;
+    ArraySubscriptExprBitfields ArraySubscriptExprBits;
     CallExprBitfields CallExprBits;
     MemberExprBitfields MemberExprBits;
     CastExprBitfields CastExprBits;
     BinaryOperatorBitfields BinaryOperatorBits;
     InitListExprBitfields InitListExprBits;
+    ParenListExprBitfields ParenListExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
 
     // C++ Expressions

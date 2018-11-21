@@ -2522,9 +2522,9 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
       Count = CAT->getSize().getZExtValue();
     else if (const auto *VAT = dyn_cast<VariableArrayType>(Ty)) {
       if (Expr *Size = VAT->getSizeExpr()) {
-        llvm::APSInt V;
-        if (Size->EvaluateAsInt(V, CGM.getContext()))
-          Count = V.getExtValue();
+        Expr::EvalResult Result;
+        if (Size->EvaluateAsInt(Result, CGM.getContext()))
+          Count = Result.Val.getInt().getExtValue();
       }
     }
 

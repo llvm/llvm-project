@@ -19,6 +19,6 @@ int getFoo(id object) {
 }
 
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:17:25 %s -o - | FileCheck %s
-// CHECK: bar : [#int#]bar
-// CHECK: foo : [#int#]foo
+// CHECK: bar (InBase) : [#int#]bar
+// CHECK: foo (InBase) : [#int#]foo
 // CHECK-NOT: foobar
