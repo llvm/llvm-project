@@ -727,7 +727,7 @@ locale::id
 num_get<_CharT, _InputIterator>::id;
 
 template <class _Tp>
-_Tp
+_LIBCPP_HIDDEN _Tp
 __num_get_signed_integral(const char* __a, const char* __a_end,
                           ios_base::iostate& __err, int __base)
 {
@@ -762,7 +762,7 @@ __num_get_signed_integral(const char* __a, const char* __a_end,
 }
 
 template <class _Tp>
-_Tp
+_LIBCPP_HIDDEN _Tp
 __num_get_unsigned_integral(const char* __a, const char* __a_end,
                             ios_base::iostate& __err, int __base)
 {

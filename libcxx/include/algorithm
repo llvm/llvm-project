@@ -3611,6 +3611,7 @@ __sort4(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
 // stable, 4-10 compares, 0-9 swaps
 
 template <class _Compare, class _ForwardIterator>
+_LIBCPP_HIDDEN
 unsigned
 __sort5(_ForwardIterator __x1, _ForwardIterator __x2, _ForwardIterator __x3,
             _ForwardIterator __x4, _ForwardIterator __x5, _Compare __c)
