@@ -16,7 +16,7 @@ New entries should be added directly below the "Version" header.
 Version 8.0
 -----------
 
-* rXXXXXX - Making libc++ build under -fvisibility=hidden on Linux
+* r347395 - Making libc++ build under -fvisibility=hidden on Linux
 
   The change marks several function templates as hidden. This removes symbols
   from the shared library, but this is not an ABI break because it's impossible
