@@ -141,7 +141,7 @@ static amd_comgr_status_t getElfMetadataRoot(const ELFObjectFile<ELFT> *Obj,
         Note.getType() == ELF::NT_AMD_AMDGPU_HSA_METADATA) {
       metap->node = YAML::Load(DescString);
       return true;
-    } else if ((Note.getName() == "AMDGPU" &&
+    } else if (((Note.getName() == "AMD" || Note.getName() == "AMDGPU") &&
                 Note.getType() == PAL_METADATA_NOTE_TYPE) ||
                (Note.getName() == "AMDGPU" &&
                 Note.getType() == ELF::NT_AMDGPU_METADATA)) {
