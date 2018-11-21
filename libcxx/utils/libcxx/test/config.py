@@ -446,7 +446,7 @@ class Configuration(object):
         # Run a compile test for the -fsized-deallocation flag. This is needed
         # in test/std/language.support/support.dynamic/new.delete
         if self.cxx.hasCompileFlag('-fsized-deallocation'):
-            self.config.available_features.add('fsized-deallocation')
+            self.config.available_features.add('-fsized-deallocation')
 
         if self.cxx.hasCompileFlag('-faligned-allocation'):
             self.config.available_features.add('-faligned-allocation')
