@@ -1773,7 +1773,13 @@ Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
     //   if (; true);
     if (InitStmt && Tok.is(tok::semi)) {
       WarnOnInit();
-      SourceLocation SemiLoc = ConsumeToken();
+      SourceLocation SemiLoc = Tok.getLocation();
+      if (!Tok.hasLeadingEmptyMacro() && !SemiLoc.isMacroID()) {
+        Diag(SemiLoc, diag::warn_empty_init_statement)
+            << (CK == Sema::ConditionKind::Switch)
+            << FixItHint::CreateRemoval(SemiLoc);
+      }
+      ConsumeToken();
       *InitStmt = Actions.ActOnNullStmt(SemiLoc);
       return ParseCXXCondition(nullptr, Loc, CK);
     }

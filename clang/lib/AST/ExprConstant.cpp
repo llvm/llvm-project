@@ -5630,8 +5630,10 @@ static bool getBytesReturnedByAllocSizeCall(const ASTContext &Ctx,
     return false;
 
   auto EvaluateAsSizeT = [&](const Expr *E, APSInt &Into) {
-    if (!E->EvaluateAsInt(Into, Ctx, Expr::SE_AllowSideEffects))
+    Expr::EvalResult ExprResult;
+    if (!E->EvaluateAsInt(ExprResult, Ctx, Expr::SE_AllowSideEffects))
       return false;
+    Into = ExprResult.Val.getInt();
     if (Into.isNegative() || !Into.isIntN(BitsInSizeT))
       return false;
     Into = Into.zextOrSelf(BitsInSizeT);
@@ -10770,6 +10772,12 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
   return false;
 }
 
+static bool hasUnacceptableSideEffect(Expr::EvalStatus &Result,
+                                      Expr::SideEffectsKind SEK) {
+  return (SEK < Expr::SE_AllowSideEffects && Result.HasSideEffects) ||
+         (SEK < Expr::SE_AllowUndefinedBehavior && Result.HasUndefinedBehavior);
+}
+
 static bool EvaluateAsRValue(const Expr *E, Expr::EvalResult &Result,
                              const ASTContext &Ctx, EvalInfo &Info) {
   bool IsConst;
@@ -10777,6 +10785,21 @@ static bool EvaluateAsRValue(const Expr *E, Expr::EvalResult &Result,
     return IsConst;
 
   return EvaluateAsRValue(Info, E, Result.Val);
+}
+
+static bool EvaluateAsInt(const Expr *E, Expr::EvalResult &ExprResult,
+                          const ASTContext &Ctx,
+                          Expr::SideEffectsKind AllowSideEffects,
+                          EvalInfo &Info) {
+  if (!E->getType()->isIntegralOrEnumerationType())
+    return false;
+
+  if (!::EvaluateAsRValue(E, ExprResult, Ctx, Info) ||
+      !ExprResult.Val.isInt() ||
+      hasUnacceptableSideEffect(ExprResult, AllowSideEffects))
+    return false;
+
+  return true;
 }
 
 /// EvaluateAsRValue - Return true if this is a constant which we can fold using
@@ -10796,24 +10819,10 @@ bool Expr::EvaluateAsBooleanCondition(bool &Result,
          HandleConversionToBool(Scratch.Val, Result);
 }
 
-static bool hasUnacceptableSideEffect(Expr::EvalStatus &Result,
-                                      Expr::SideEffectsKind SEK) {
-  return (SEK < Expr::SE_AllowSideEffects && Result.HasSideEffects) ||
-         (SEK < Expr::SE_AllowUndefinedBehavior && Result.HasUndefinedBehavior);
-}
-
-bool Expr::EvaluateAsInt(APSInt &Result, const ASTContext &Ctx,
+bool Expr::EvaluateAsInt(EvalResult &Result, const ASTContext &Ctx,
                          SideEffectsKind AllowSideEffects) const {
-  if (!getType()->isIntegralOrEnumerationType())
-    return false;
-
-  EvalResult ExprResult;
-  if (!EvaluateAsRValue(ExprResult, Ctx) || !ExprResult.Val.isInt() ||
-      hasUnacceptableSideEffect(ExprResult, AllowSideEffects))
-    return false;
-
-  Result = ExprResult.Val.getInt();
-  return true;
+  EvalInfo Info(Ctx, Result, EvalInfo::EM_IgnoreSideEffects);
+  return ::EvaluateAsInt(this, Result, Ctx, AllowSideEffects, Info);
 }
 
 bool Expr::EvaluateAsFloat(APFloat &Result, const ASTContext &Ctx,
@@ -11434,12 +11443,20 @@ bool Expr::isIntegerConstantExpr(llvm::APSInt &Value, const ASTContext &Ctx,
 
   if (!isIntegerConstantExpr(Ctx, Loc))
     return false;
+
   // The only possible side-effects here are due to UB discovered in the
   // evaluation (for instance, INT_MAX + 1). In such a case, we are still
   // required to treat the expression as an ICE, so we produce the folded
   // value.
-  if (!EvaluateAsInt(Value, Ctx, SE_AllowSideEffects))
+  EvalResult ExprResult;
+  Expr::EvalStatus Status;
+  EvalInfo Info(Ctx, Status, EvalInfo::EM_IgnoreSideEffects);
+  Info.InConstantContext = true;
+
+  if (!::EvaluateAsInt(this, ExprResult, Ctx, SE_AllowSideEffects, Info))
     llvm_unreachable("ICE cannot be evaluated!");
+
+  Value = ExprResult.Val.getInt();
   return true;
 }
 

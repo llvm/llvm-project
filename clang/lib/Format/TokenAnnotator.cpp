@@ -3113,8 +3113,21 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
     // Don't wrap between ":" and "!" of a strict prop init ("field!: type;").
     if (Left.is(tok::exclaim) && Right.is(tok::colon))
       return false;
-    if (Right.is(Keywords.kw_is))
-      return false;
+    // Look for is type annotations like:
+    // function f(): a is B { ... }
+    // Do not break before is in these cases.
+    if (Right.is(Keywords.kw_is)) {
+      const FormatToken* Next = Right.getNextNonComment();
+      // If `is` is followed by a colon, it's likely that it's a dict key, so
+      // ignore it for this check.
+      // For example this is common in Polymer:
+      // Polymer({
+      //   is: 'name',
+      //   ...
+      // });
+      if (!Next || !Next->is(tok::colon))
+        return false;
+    }
     if (Left.is(Keywords.kw_in))
       return Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None;
     if (Right.is(Keywords.kw_in))

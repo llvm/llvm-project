@@ -565,8 +565,8 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
 
   // Create an initialization sequence for the promise type using the
   // constructor arguments, wrapped in a parenthesized list expression.
-  Expr *PLE = new (Context) ParenListExpr(Context, FD->getLocation(),
-                                          CtorArgExprs, FD->getLocation());
+  Expr *PLE = ParenListExpr::Create(Context, FD->getLocation(),
+                                    CtorArgExprs, FD->getLocation());
   InitializedEntity Entity = InitializedEntity::InitializeVariable(VD);
   InitializationKind Kind = InitializationKind::CreateForInit(
       VD->getLocation(), /*DirectInit=*/true, PLE);
