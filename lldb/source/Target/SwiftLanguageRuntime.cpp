@@ -961,11 +961,6 @@ bool SwiftLanguageRuntime::MethodName::ExtractFunctionBasenameFromMangled(
 
 void SwiftLanguageRuntime::MethodName::Parse() {
   if (!m_parsed && m_full) {
-    //        ConstString mangled;
-    //        m_full.GetMangledCounterpart(mangled);
-    //        printf ("\n   parsing = '%s'\n", m_full.GetCString());
-    //        if (mangled)
-    //            printf ("   mangled = '%s'\n", mangled.GetCString());
     m_parse_error = false;
     m_parsed = true;
     llvm::StringRef full(m_full.GetCString());
