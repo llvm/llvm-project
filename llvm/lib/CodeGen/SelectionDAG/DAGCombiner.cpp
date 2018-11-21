@@ -16640,18 +16640,23 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
 
   // If extraction is cheap, we don't need to look at the binop operands
   // for concat ops. The narrow binop alone makes this transform profitable.
-  // TODO: We're not dealing with the bitcasted pattern here. That limitation
-  // should be lifted.
-  if (Extract->getOperand(0) == BinOp && BinOp.hasOneUse() &&
-      TLI.isExtractSubvectorCheap(NarrowBVT, WideBVT, ExtractIndex)) {
+  // We can't just reuse the original extract index operand because we may have
+  // bitcasted.
+  unsigned ConcatOpNum = ExtractIndex / NumElems;
+  unsigned ExtBOIdx = ConcatOpNum * NarrowBVT.getVectorNumElements();
+  EVT ExtBOIdxVT = Extract->getOperand(1).getValueType();
+  if (TLI.isExtractSubvectorCheap(NarrowBVT, WideBVT, ExtBOIdx) &&
+      BinOp.hasOneUse() && Extract->getOperand(0)->hasOneUse()) {
     // extract (binop B0, B1), N --> binop (extract B0, N), (extract B1, N)
     SDLoc DL(Extract);
+    SDValue NewExtIndex = DAG.getConstant(ExtBOIdx, DL, ExtBOIdxVT);
     SDValue X = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowBVT,
-                            BinOp.getOperand(0), Extract->getOperand(1));
+                            BinOp.getOperand(0), NewExtIndex);
     SDValue Y = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowBVT,
-                            BinOp.getOperand(1), Extract->getOperand(1));
-    return DAG.getNode(BOpcode, DL, NarrowBVT, X, Y,
-                       BinOp.getNode()->getFlags());
+                            BinOp.getOperand(1), NewExtIndex);
+    SDValue NarrowBinOp = DAG.getNode(BOpcode, DL, NarrowBVT, X, Y,
+                                      BinOp.getNode()->getFlags());
+    return DAG.getBitcast(VT, NarrowBinOp);
   }
 
   // Only handle the case where we are doubling and then halving. A larger ratio
@@ -16680,11 +16685,7 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
     return SDValue();
 
   // If one of the binop operands was not the result of a concat, we must
-  // extract a half-sized operand for our new narrow binop. We can't just reuse
-  // the original extract index operand because we may have bitcasted.
-  unsigned ConcatOpNum = ExtractIndex / NumElems;
-  unsigned ExtBOIdx = ConcatOpNum * NarrowBVT.getVectorNumElements();
-  EVT ExtBOIdxVT = Extract->getOperand(1).getValueType();
+  // extract a half-sized operand for our new narrow binop.
   SDLoc DL(Extract);
 
   // extract (binop (concat X1, X2), (concat Y1, Y2)), N --> binop XN, YN
@@ -17721,6 +17722,10 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
 
     return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(N), VT, Ops);
   }
+
+  // Simplify source operands based on insertion.
+  if (SimplifyDemandedVectorElts(SDValue(N, 0)))
+    return SDValue(N, 0);
 
   return SDValue();
 }

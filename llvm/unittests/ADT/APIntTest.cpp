@@ -1176,6 +1176,30 @@ TEST(APIntTest, fromString) {
   EXPECT_EQ(APInt(32, uint64_t(-72LL)), APInt(32, "-20", 36));
 }
 
+TEST(APIntTest, SaturatingMath) {
+  APInt AP_10 = APInt(8, 10);
+  APInt AP_100 = APInt(8, 100);
+  APInt AP_200 = APInt(8, 200);
+
+  EXPECT_EQ(APInt(8, 200), AP_100.uadd_sat(AP_100));
+  EXPECT_EQ(APInt(8, 255), AP_100.uadd_sat(AP_200));
+  EXPECT_EQ(APInt(8, 255), APInt(8, 255).uadd_sat(APInt(8, 255)));
+
+  EXPECT_EQ(APInt(8, 110), AP_10.sadd_sat(AP_100));
+  EXPECT_EQ(APInt(8, 127), AP_100.sadd_sat(AP_100));
+  EXPECT_EQ(APInt(8, -128), (-AP_100).sadd_sat(-AP_100));
+  EXPECT_EQ(APInt(8, -128), APInt(8, -128).sadd_sat(APInt(8, -128)));
+
+  EXPECT_EQ(APInt(8, 90), AP_100.usub_sat(AP_10));
+  EXPECT_EQ(APInt(8, 0), AP_100.usub_sat(AP_200));
+  EXPECT_EQ(APInt(8, 0), APInt(8, 0).usub_sat(APInt(8, 255)));
+
+  EXPECT_EQ(APInt(8, -90), AP_10.ssub_sat(AP_100));
+  EXPECT_EQ(APInt(8, 127), AP_100.ssub_sat(-AP_100));
+  EXPECT_EQ(APInt(8, -128), (-AP_100).ssub_sat(AP_100));
+  EXPECT_EQ(APInt(8, -128), APInt(8, -128).ssub_sat(APInt(8, 127)));
+}
+
 TEST(APIntTest, FromArray) {
   EXPECT_EQ(APInt(32, uint64_t(1)), APInt(32, ArrayRef<uint64_t>(1)));
 }

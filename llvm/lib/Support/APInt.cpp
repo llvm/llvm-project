@@ -1947,7 +1947,43 @@ APInt APInt::ushl_ov(const APInt &ShAmt, bool &Overflow) const {
   return *this << ShAmt;
 }
 
+APInt APInt::sadd_sat(const APInt &RHS) const {
+  bool Overflow;
+  APInt Res = sadd_ov(RHS, Overflow);
+  if (!Overflow)
+    return Res;
 
+  return isNegative() ? APInt::getSignedMinValue(BitWidth)
+                      : APInt::getSignedMaxValue(BitWidth);
+}
+
+APInt APInt::uadd_sat(const APInt &RHS) const {
+  bool Overflow;
+  APInt Res = uadd_ov(RHS, Overflow);
+  if (!Overflow)
+    return Res;
+
+  return APInt::getMaxValue(BitWidth);
+}
+
+APInt APInt::ssub_sat(const APInt &RHS) const {
+  bool Overflow;
+  APInt Res = ssub_ov(RHS, Overflow);
+  if (!Overflow)
+    return Res;
+
+  return isNegative() ? APInt::getSignedMinValue(BitWidth)
+                      : APInt::getSignedMaxValue(BitWidth);
+}
+
+APInt APInt::usub_sat(const APInt &RHS) const {
+  bool Overflow;
+  APInt Res = usub_ov(RHS, Overflow);
+  if (!Overflow)
+    return Res;
+
+  return APInt(BitWidth, 0);
+}
 
 
 void APInt::fromString(unsigned numbits, StringRef str, uint8_t radix) {

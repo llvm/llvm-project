@@ -249,7 +249,7 @@
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
-; CHECK:     IsConst: 0
+; CHECK:     IsConst: 1
 ; CHECK:     IsVolatile: 0
 ; CHECK:     IsUnaligned: 0
 ; CHECK:     IsRestrict: 0
@@ -266,7 +266,7 @@
 ; CHECK:     TypeLeafKind: LF_MFUNCTION (0x1009)
 ; CHECK:     ReturnType: int (0x74)
 ; CHECK:     ClassType: h::Foo (0x1016)
-; CHECK:     ThisType: h::Foo* (0x1017)
+; CHECK:     ThisType: h::Foo* const (0x1017)
 ; CHECK:     CallingConvention: NearC (0x0)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
@@ -337,16 +337,28 @@
 ; CHECK:     FunctionType: int h::Foo::(int) (0x1019)
 ; CHECK:     Name: func
 ; CHECK:   }
-; CHECK:   Modifier (0x1020) {
+; CHECK:   Pointer (0x1020) {
+; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
+; CHECK:     PointeeType: h::Foo (0x1016)
+; CHECK:     PtrType: Near64 (0xC)
+; CHECK:     PtrMode: Pointer (0x0)
+; CHECK:     IsFlat: 0
+; CHECK:     IsConst: 0
+; CHECK:     IsVolatile: 0
+; CHECK:     IsUnaligned: 0
+; CHECK:     IsRestrict: 0
+; CHECK:     SizeOf: 8
+; CHECK:   }
+; CHECK:   Modifier (0x1021) {
 ; CHECK:     TypeLeafKind: LF_MODIFIER (0x1001)
 ; CHECK:     ModifiedType: char (0x70)
 ; CHECK:     Modifiers [ (0x1)
 ; CHECK:       Const (0x1)
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   Array (0x1021) {
+; CHECK:   Array (0x1022) {
 ; CHECK:     TypeLeafKind: LF_ARRAY (0x1503)
-; CHECK:     ElementType: const char (0x1020)
+; CHECK:     ElementType: const char (0x1021)
 ; CHECK:     IndexType: unsigned __int64 (0x23)
 ; CHECK:     SizeOf: 4
 ; CHECK:     Name:

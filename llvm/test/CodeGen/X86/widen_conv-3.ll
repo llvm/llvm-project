@@ -50,14 +50,13 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X86-SSE2-NEXT:    movdqa %xmm0, (%esp)
 ; X86-SSE2-NEXT:    movl (%esp), %edx
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE2-NEXT:    shll $8, %esi
 ; X86-SSE2-NEXT:    shll $8, %edx
-; X86-SSE2-NEXT:    movd %edx, %xmm0
-; X86-SSE2-NEXT:    pinsrw $1, %esi, %xmm0
+; X86-SSE2-NEXT:    pinsrw $1, %edx, %xmm0
+; X86-SSE2-NEXT:    shll $8, %esi
+; X86-SSE2-NEXT:    pinsrw $3, %esi, %xmm0
 ; X86-SSE2-NEXT:    movzbl 2(%ecx), %ecx
 ; X86-SSE2-NEXT:    shll $8, %ecx
-; X86-SSE2-NEXT:    pinsrw $2, %ecx, %xmm0
-; X86-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; X86-SSE2-NEXT:    pinsrw $5, %ecx, %xmm0
 ; X86-SSE2-NEXT:    psrad $24, %xmm0
 ; X86-SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X86-SSE2-NEXT:    movss %xmm0, (%eax)
@@ -99,14 +98,13 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X64-SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
 ; X64-SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
-; X64-SSE2-NEXT:    shll $8, %ecx
 ; X64-SSE2-NEXT:    shll $8, %eax
-; X64-SSE2-NEXT:    movd %eax, %xmm0
-; X64-SSE2-NEXT:    pinsrw $1, %ecx, %xmm0
+; X64-SSE2-NEXT:    pinsrw $1, %eax, %xmm0
+; X64-SSE2-NEXT:    shll $8, %ecx
+; X64-SSE2-NEXT:    pinsrw $3, %ecx, %xmm0
 ; X64-SSE2-NEXT:    movzbl 2(%rsi), %eax
 ; X64-SSE2-NEXT:    shll $8, %eax
-; X64-SSE2-NEXT:    pinsrw $2, %eax, %xmm0
-; X64-SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3]
+; X64-SSE2-NEXT:    pinsrw $5, %eax, %xmm0
 ; X64-SSE2-NEXT:    psrad $24, %xmm0
 ; X64-SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-SSE2-NEXT:    movlps %xmm0, (%rdi)

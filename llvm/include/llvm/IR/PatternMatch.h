@@ -215,6 +215,7 @@ template <typename Predicate> struct cst_pred_ty : public Predicate {
         // Non-splat vector constant: check each element for a match.
         unsigned NumElts = V->getType()->getVectorNumElements();
         assert(NumElts != 0 && "Constant vector with no elements?");
+        bool HasNonUndefElements = false;
         for (unsigned i = 0; i != NumElts; ++i) {
           Constant *Elt = C->getAggregateElement(i);
           if (!Elt)
@@ -224,8 +225,9 @@ template <typename Predicate> struct cst_pred_ty : public Predicate {
           auto *CI = dyn_cast<ConstantInt>(Elt);
           if (!CI || !this->isValue(CI->getValue()))
             return false;
+          HasNonUndefElements = true;
         }
-        return true;
+        return HasNonUndefElements;
       }
     }
     return false;
@@ -272,6 +274,7 @@ template <typename Predicate> struct cstfp_pred_ty : public Predicate {
         // Non-splat vector constant: check each element for a match.
         unsigned NumElts = V->getType()->getVectorNumElements();
         assert(NumElts != 0 && "Constant vector with no elements?");
+        bool HasNonUndefElements = false;
         for (unsigned i = 0; i != NumElts; ++i) {
           Constant *Elt = C->getAggregateElement(i);
           if (!Elt)
@@ -281,8 +284,9 @@ template <typename Predicate> struct cstfp_pred_ty : public Predicate {
           auto *CF = dyn_cast<ConstantFP>(Elt);
           if (!CF || !this->isValue(CF->getValueAPF()))
             return false;
+          HasNonUndefElements = true;
         }
-        return true;
+        return HasNonUndefElements;
       }
     }
     return false;

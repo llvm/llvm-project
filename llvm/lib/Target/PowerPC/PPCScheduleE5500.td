@@ -206,12 +206,6 @@ def PPCE5500Itineraries : ProcessorItineraries<
                                   InstrStage<1, [E5500_LSU_0]>],
                                  [7, 2], // Latency = 3, Repeat rate = 1
                                  [NoBypass, E5500_GPR_Bypass]>,
-  InstrItinData<IIC_LdStStoreUpd,[InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
-                                  InstrStage<1, [E5500_SFX0, E5500_SFX1], 0>,
-                                  InstrStage<1, [E5500_LSU_0]>],
-                                 [7, 2], // Latency = 3, Repeat rate = 1
-                                 [NoBypass, E5500_GPR_Bypass],
-                                 2>, // 2 micro-ops
   InstrItinData<IIC_LdStICBI,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
                                   InstrStage<1, [E5500_LSU_0]>],
                                  [7, 2], // Latency = 3, Repeat rate = 1
@@ -281,13 +275,13 @@ def PPCE5500Itineraries : ProcessorItineraries<
                                   InstrStage<1, [E5500_LSU_0]>],
                                  [7, 2], // Latency = 3, Repeat rate = 1
                                  [NoBypass, E5500_GPR_Bypass]>,
-  InstrItinData<IIC_LdStSTDU,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
+  InstrItinData<IIC_LdStSTU,     [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
                                   InstrStage<1, [E5500_SFX0, E5500_SFX1], 0>,
                                   InstrStage<1, [E5500_LSU_0]>],
                                  [7, 2], // Latency = 3, Repeat rate = 1
                                  [NoBypass, E5500_GPR_Bypass],
                                  2>, // 2 micro-ops
-  InstrItinData<IIC_LdStSTDUX,   [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
+  InstrItinData<IIC_LdStSTUX,    [InstrStage<1, [E5500_DIS0, E5500_DIS1], 0>,
                                   InstrStage<1, [E5500_SFX0, E5500_SFX1], 0>,
                                   InstrStage<1, [E5500_LSU_0]>],
                                  [7, 2], // Latency = 3, Repeat rate = 1
