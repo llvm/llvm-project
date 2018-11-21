@@ -1105,6 +1105,12 @@ public:
   APInt sshl_ov(const APInt &Amt, bool &Overflow) const;
   APInt ushl_ov(const APInt &Amt, bool &Overflow) const;
 
+  // Operations that saturate
+  APInt sadd_sat(const APInt &RHS) const;
+  APInt uadd_sat(const APInt &RHS) const;
+  APInt ssub_sat(const APInt &RHS) const;
+  APInt usub_sat(const APInt &RHS) const;
+
   /// Array-indexing support.
   ///
   /// \returns the bit value at bitPosition

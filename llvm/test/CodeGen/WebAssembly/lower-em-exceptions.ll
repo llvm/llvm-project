@@ -7,7 +7,6 @@ target triple = "wasm32-unknown-unknown"
 @_ZTIc = external constant i8*
 ; CHECK-DAG: __THREW__ = external global i32
 ; CHECK-DAG: __threwValue = external global i32
-; CHECK-DAG: __tempRet0 = external global i32
 
 ; Test invoke instruction with clauses (try-catch block)
 define void @clause() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -36,7 +35,7 @@ lpad:                                             ; preds = %entry
 ; CHECK: lpad:
 ; CHECK-NEXT: %[[FMC:.*]] = call i8* @__cxa_find_matching_catch_4(i8* bitcast (i8** @_ZTIi to i8*), i8* null)
 ; CHECK-NEXT: %[[IVI1:.*]] = insertvalue { i8*, i32 } undef, i8* %[[FMC]], 0
-; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = load i32, i32* @__tempRet0
+; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = call i32 @getTempRet0()
 ; CHECK-NEXT: %[[IVI2:.*]] = insertvalue { i8*, i32 } %[[IVI1]], i32 %[[TEMPRET0_VAL]], 1
 ; CHECK-NEXT: extractvalue { i8*, i32 } %[[IVI2]], 0
 ; CHECK-NEXT: %[[CDR:.*]] = extractvalue { i8*, i32 } %[[IVI2]], 1
@@ -91,7 +90,7 @@ lpad:                                             ; preds = %entry
 ; CHECK: lpad:
 ; CHECK-NEXT: %[[FMC:.*]] = call i8* @__cxa_find_matching_catch_4(i8* bitcast (i8** @_ZTIi to i8*), i8* bitcast (i8** @_ZTIc to i8*))
 ; CHECK-NEXT: %[[IVI1:.*]] = insertvalue { i8*, i32 } undef, i8* %[[FMC]], 0
-; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = load i32, i32* @__tempRet0
+; CHECK-NEXT: %[[TEMPRET0_VAL:.*]] = call i32 @getTempRet0()
 ; CHECK-NEXT: %[[IVI2:.*]] = insertvalue { i8*, i32 } %[[IVI1]], i32 %[[TEMPRET0_VAL]], 1
 ; CHECK-NEXT: extractvalue { i8*, i32 } %[[IVI2]], 0
 ; CHECK-NEXT: extractvalue { i8*, i32 } %[[IVI2]], 1
@@ -168,6 +167,8 @@ declare void @__cxa_end_catch()
 declare void @__cxa_call_unexpected(i8*)
 
 ; JS glue functions and invoke wrappers declaration
+; CHECK-DAG: declare i32 @getTempRet0()
+; CHECK-DAG: declare void @setTempRet0(i32)
 ; CHECK-DAG: declare void @__resumeException(i8*)
 ; CHECK-DAG: declare void @__invoke_void_i32(void (i32)*, i32)
 ; CHECK-DAG: declare i8* @__cxa_find_matching_catch_4(i8*, i8*)

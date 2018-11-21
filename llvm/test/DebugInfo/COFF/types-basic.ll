@@ -106,7 +106,7 @@
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: Pointer (0x0)
 ; CHECK:     IsFlat: 0
-; CHECK:     IsConst: 0
+; CHECK:     IsConst: 1
 ; CHECK:     IsVolatile: 0
 ; CHECK:     IsUnaligned: 0
 ; CHECK:   }
@@ -120,7 +120,7 @@
 ; CHECK:     TypeLeafKind: LF_MFUNCTION (0x1009)
 ; CHECK:     ReturnType: void (0x3)
 ; CHECK:     ClassType: A (0x1005)
-; CHECK:     ThisType: A* (0x1007)
+; CHECK:     ThisType: A* const (0x1007)
 ; CHECK:     CallingConvention: NearC (0x0)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]

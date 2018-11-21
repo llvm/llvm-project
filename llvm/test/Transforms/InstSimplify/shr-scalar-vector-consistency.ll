@@ -16,7 +16,7 @@ define i32 @test_scalar(i32 %a, i1 %b) {
 
 define <2 x i32> @test_vector(<2 x i32> %a, <2 x i1> %b) {
 ; CHECK-LABEL: @test_vector(
-; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x i32> undef
 ;
   %c = sext <2 x i1> %b to <2 x i32>
   %d = ashr <2 x i32> undef, %c

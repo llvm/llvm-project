@@ -323,12 +323,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // to speed up scalar BSWAP64.
   // CTPOP or CTTZ were introduced in P8/P9 respectively
   setOperationAction(ISD::BSWAP, MVT::i32  , Expand);
-  if (Subtarget.isISA3_0()) {
+  if (Subtarget.hasP9Vector())
     setOperationAction(ISD::BSWAP, MVT::i64  , Custom);
+  else
+    setOperationAction(ISD::BSWAP, MVT::i64  , Expand);
+  if (Subtarget.isISA3_0()) {
     setOperationAction(ISD::CTTZ , MVT::i32  , Legal);
     setOperationAction(ISD::CTTZ , MVT::i64  , Legal);
   } else {
-    setOperationAction(ISD::BSWAP, MVT::i64  , Expand);
     setOperationAction(ISD::CTTZ , MVT::i32  , Expand);
     setOperationAction(ISD::CTTZ , MVT::i64  , Expand);
   }

@@ -1399,6 +1399,10 @@ bool llvm::canConstantFoldCallTo(ImmutableCallSite CS, const Function *F) {
   case Intrinsic::usub_with_overflow:
   case Intrinsic::smul_with_overflow:
   case Intrinsic::umul_with_overflow:
+  case Intrinsic::sadd_sat:
+  case Intrinsic::uadd_sat:
+  case Intrinsic::ssub_sat:
+  case Intrinsic::usub_sat:
   case Intrinsic::convert_from_fp16:
   case Intrinsic::convert_to_fp16:
   case Intrinsic::bitreverse:
@@ -2019,6 +2023,14 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
           };
           return ConstantStruct::get(cast<StructType>(Ty), Ops);
         }
+        case Intrinsic::uadd_sat:
+          return ConstantInt::get(Ty, Op1->getValue().uadd_sat(Op2->getValue()));
+        case Intrinsic::sadd_sat:
+          return ConstantInt::get(Ty, Op1->getValue().sadd_sat(Op2->getValue()));
+        case Intrinsic::usub_sat:
+          return ConstantInt::get(Ty, Op1->getValue().usub_sat(Op2->getValue()));
+        case Intrinsic::ssub_sat:
+          return ConstantInt::get(Ty, Op1->getValue().ssub_sat(Op2->getValue()));
         case Intrinsic::cttz:
           if (Op2->isOne() && Op1->isZero()) // cttz(0, 1) is undef.
             return UndefValue::get(Ty);

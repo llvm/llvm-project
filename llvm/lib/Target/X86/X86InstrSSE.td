@@ -5202,12 +5202,12 @@ defm BQ : SS41I_pmovx_rm<0x22, "bq", i16mem, i32mem, NoVLX>;
 // Any_extend_vector_inreg is currently legalized to zero_extend_vector_inreg.
 multiclass SS41I_pmovx_avx2_patterns_base<string OpcPrefix, SDNode ExtOp> {
   // Register-Register patterns
-  let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
+  let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
     def : Pat<(v16i16 (ExtOp (v16i8 VR128:$src))),
               (!cast<I>(OpcPrefix#BWYrr) VR128:$src)>;
   }
 
-  let Predicates = [HasAVX, NoVLX] in {
+  let Predicates = [HasAVX2, NoVLX] in {
     def : Pat<(v8i32 (ExtOp (v8i16 VR128:$src))),
               (!cast<I>(OpcPrefix#WDYrr) VR128:$src)>;
 
@@ -5216,7 +5216,7 @@ multiclass SS41I_pmovx_avx2_patterns_base<string OpcPrefix, SDNode ExtOp> {
   }
 
   // AVX2 Register-Memory patterns
-  let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
+  let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
     def : Pat<(v16i16 (ExtOp (loadv16i8 addr:$src))),
               (!cast<I>(OpcPrefix#BWYrm) addr:$src)>;
     def : Pat<(v16i16 (ExtOp (v16i8 (vzmovl_v2i64 addr:$src)))),
@@ -5225,7 +5225,7 @@ multiclass SS41I_pmovx_avx2_patterns_base<string OpcPrefix, SDNode ExtOp> {
               (!cast<I>(OpcPrefix#BWYrm) addr:$src)>;
   }
 
-  let Predicates = [HasAVX, NoVLX] in {
+  let Predicates = [HasAVX2, NoVLX] in {
     def : Pat<(v8i32 (ExtOp (loadv8i16 addr:$src))),
               (!cast<I>(OpcPrefix#WDYrm) addr:$src)>;
     def : Pat<(v8i32 (ExtOp (v8i16 (vzmovl_v2i64 addr:$src)))),
@@ -5248,7 +5248,7 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy,
     SS41I_pmovx_avx2_patterns_base<OpcPrefix, ExtOp> {
 
   // Register-Register patterns
-  let Predicates = [HasAVX, NoVLX] in {
+  let Predicates = [HasAVX2, NoVLX] in {
   def : Pat<(v8i32 (InVecOp (v16i8 VR128:$src))),
             (!cast<I>(OpcPrefix#BDYrr) VR128:$src)>;
   def : Pat<(v4i64 (InVecOp (v16i8 VR128:$src))),
@@ -5259,11 +5259,11 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy,
   }
 
   // Simple Register-Memory patterns
-  let Predicates = [HasAVX, NoVLX_Or_NoBWI] in {
+  let Predicates = [HasAVX2, NoVLX_Or_NoBWI] in {
   def : Pat<(v16i16 (!cast<PatFrag>(ExtTy#"extloadvi8") addr:$src)),
             (!cast<I>(OpcPrefix#BWYrm) addr:$src)>;
   }
-  let Predicates = [HasAVX, NoVLX] in {
+  let Predicates = [HasAVX2, NoVLX] in {
   def : Pat<(v8i32 (!cast<PatFrag>(ExtTy#"extloadvi8") addr:$src)),
             (!cast<I>(OpcPrefix#BDYrm) addr:$src)>;
   def : Pat<(v4i64 (!cast<PatFrag>(ExtTy#"extloadvi8") addr:$src)),
@@ -5279,7 +5279,7 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy,
   }
 
   // AVX2 Register-Memory patterns
-  let Predicates = [HasAVX, NoVLX] in {
+  let Predicates = [HasAVX2, NoVLX] in {
   def : Pat<(v8i32 (InVecOp (bc_v16i8 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (!cast<I>(OpcPrefix#BDYrm) addr:$src)>;
   def : Pat<(v8i32 (InVecOp (v16i8 (vzmovl_v2i64 addr:$src)))),

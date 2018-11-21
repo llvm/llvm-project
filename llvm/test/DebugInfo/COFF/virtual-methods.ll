@@ -25,7 +25,7 @@
 ; CHECK-NEXT:   TypeLeafKind: LF_MFUNCTION (0x1009)
 ; CHECK-NEXT:   ReturnType: int (0x74)
 ; CHECK-NEXT:   ClassType: A ({{.*}})
-; CHECK-NEXT:   ThisType: A* ({{.*}})
+; CHECK-NEXT:   ThisType: A* const ({{.*}})
 ; CHECK-NEXT:   CallingConvention: NearC (0x0)
 ; CHECK-NEXT:   FunctionOptions [ (0x0)
 ; CHECK-NEXT:   ]
@@ -39,7 +39,7 @@
 ; CHECK-NEXT:   TypeLeafKind: LF_MFUNCTION (0x1009)
 ; CHECK-NEXT:   ReturnType: int (0x74)
 ; CHECK-NEXT:   ClassType: B ({{.*}})
-; CHECK-NEXT:   ThisType: B* ({{.*}})
+; CHECK-NEXT:   ThisType: B* const ({{.*}})
 ; CHECK-NEXT:   CallingConvention: NearC (0x0)
 ; CHECK-NEXT:   FunctionOptions [ (0x0)
 ; CHECK-NEXT:   ]
@@ -53,7 +53,7 @@
 ; CHECK-NEXT:   TypeLeafKind: LF_MFUNCTION (0x1009)
 ; CHECK-NEXT:   ReturnType: int (0x74)
 ; CHECK-NEXT:   ClassType: C ({{.*}})
-; CHECK-NEXT:   ThisType: C* ({{.*}})
+; CHECK-NEXT:   ThisType: C* const ({{.*}})
 ; CHECK-NEXT:   CallingConvention: NearC (0x0)
 ; CHECK-NEXT:   FunctionOptions [ (0x0)
 ; CHECK-NEXT:   ]
@@ -77,7 +77,7 @@
 ; CHECK-NEXT:   TypeLeafKind: LF_MFUNCTION (0x1009)
 ; CHECK-NEXT:   ReturnType: int (0x74)
 ; CHECK-NEXT:   ClassType: D ({{.*}})
-; CHECK-NEXT:   ThisType: D* ({{.*}})
+; CHECK-NEXT:   ThisType: D* const ({{.*}})
 ; CHECK-NEXT:   CallingConvention: NearC (0x0)
 ; CHECK-NEXT:   FunctionOptions [ (0x0)
 ; CHECK-NEXT:   ]
