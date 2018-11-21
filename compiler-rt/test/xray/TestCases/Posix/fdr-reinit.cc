@@ -3,6 +3,7 @@
 // RUN: XRAY_OPTIONS="verbosity=1" %run %t
 // RUN: rm xray-log.fdr-reinit* || true
 #include "xray/xray_log_interface.h"
+#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <thread>

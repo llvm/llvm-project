@@ -313,7 +313,7 @@ define <4 x float> @combine_vpbroadcast_pshufb_as_vpbroadcastss128(<4 x float> %
 define <8 x float> @combine_vpbroadcast_permd_as_vpbroadcastss256(<4 x float> %a) {
 ; CHECK-LABEL: combine_vpbroadcast_permd_as_vpbroadcastss256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastss %xmm0, %ymm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vbroadcastss %xmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <4 x float> %a, <4 x float> undef, <8 x i32> zeroinitializer
@@ -324,7 +324,7 @@ define <8 x float> @combine_vpbroadcast_permd_as_vpbroadcastss256(<4 x float> %a
 define <4 x double> @combine_vpbroadcast_permd_as_vpbroadcastsd256(<2 x double> %a) {
 ; CHECK-LABEL: combine_vpbroadcast_permd_as_vpbroadcastsd256:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vbroadcastsd %xmm0, %ymm0
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <2 x double> %a, <2 x double> undef, <4 x i32> zeroinitializer

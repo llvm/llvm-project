@@ -220,6 +220,20 @@
 // CHECK-ASAN-MYRIAD-NOT: "-lc"
 // CHECK-ASAN-MYRIAD: libclang_rt.asan-sparcel.a"
 
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target i386-unknown-linux -fuse-ld=ld -fsanitize=address -static \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-ASAN-LINUX-STATIC %s
+//
+// CHECK-ASAN-LINUX-STATIC: "--push-state"
+// CHECK-ASAN-LINUX-STATIC: "--no-as-needed"
+// CHECK-ASAN-LINUX-STATIC: "-lpthread"
+// CHECK-ASAN-LINUX-STATIC: "-lrt"
+// CHECK-ASAN-LINUX-STATIC: "-lm"
+// CHECK-ASAN-LINUX-STATIC: "-ldl"
+// CHECK-ASAN-LINUX-STATIC: "--pop-state"
+
 // RUN: %clangxx -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target x86_64-unknown-linux -fuse-ld=ld -stdlib=platform -lstdc++ \
 // RUN:     -fsanitize=thread \

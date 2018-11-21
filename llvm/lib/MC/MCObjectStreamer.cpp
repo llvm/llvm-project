@@ -59,6 +59,27 @@ void MCObjectStreamer::flushPendingLabels(MCFragment *F, uint64_t FOffset) {
   PendingLabels.clear();
 }
 
+// When fixup's offset is a forward declared label, e.g.:
+//
+//   .reloc 1f, R_MIPS_JALR, foo
+// 1: nop
+//
+// postpone adding it to Fixups vector until the label is defined and its offset
+// is known.
+void MCObjectStreamer::resolvePendingFixups() {
+  for (PendingMCFixup &PendingFixup : PendingFixups) {
+    if (!PendingFixup.Sym || PendingFixup.Sym->isUndefined ()) {
+      getContext().reportError(PendingFixup.Fixup.getLoc(),
+                               "unresolved relocation offset");
+      continue;
+    }
+    flushPendingLabels(PendingFixup.DF, PendingFixup.DF->getContents().size());
+    PendingFixup.Fixup.setOffset(PendingFixup.Sym->getOffset());
+    PendingFixup.DF->getFixups().push_back(PendingFixup.Fixup);
+  }
+  PendingFixups.clear();
+}
+
 // As a compile-time optimization, avoid allocating and evaluating an MCExpr
 // tree for (Hi - Lo) when Hi and Lo are offsets into the same fragment.
 static Optional<uint64_t>
@@ -603,16 +624,6 @@ void MCObjectStreamer::EmitGPRel64Value(const MCExpr *Value) {
 bool MCObjectStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
                                           const MCExpr *Expr, SMLoc Loc,
                                           const MCSubtargetInfo &STI) {
-  int64_t OffsetValue;
-  if (!Offset.evaluateAsAbsolute(OffsetValue))
-    llvm_unreachable("Offset is not absolute");
-
-  if (OffsetValue < 0)
-    llvm_unreachable("Offset is negative");
-
-  MCDataFragment *DF = getOrCreateDataFragment(&STI);
-  flushPendingLabels(DF, DF->getContents().size());
-
   Optional<MCFixupKind> MaybeKind = Assembler->getBackend().getFixupKind(Name);
   if (!MaybeKind.hasValue())
     return true;
@@ -622,7 +633,30 @@ bool MCObjectStreamer::EmitRelocDirective(const MCExpr &Offset, StringRef Name,
   if (Expr == nullptr)
     Expr =
         MCSymbolRefExpr::create(getContext().createTempSymbol(), getContext());
-  DF->getFixups().push_back(MCFixup::create(OffsetValue, Expr, Kind, Loc));
+
+  MCDataFragment *DF = getOrCreateDataFragment(&STI);
+  flushPendingLabels(DF, DF->getContents().size());
+
+  int64_t OffsetValue;
+  if (Offset.evaluateAsAbsolute(OffsetValue)) {
+    if (OffsetValue < 0)
+      llvm_unreachable(".reloc offset is negative");
+    DF->getFixups().push_back(MCFixup::create(OffsetValue, Expr, Kind, Loc));
+    return false;
+  }
+
+  if (Offset.getKind() != llvm::MCExpr::SymbolRef)
+    llvm_unreachable(".reloc offset is not absolute nor a label");
+
+  const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(Offset);
+  if (SRE.getSymbol().isDefined()) {
+    DF->getFixups().push_back(MCFixup::create(SRE.getSymbol().getOffset(),
+                                              Expr, Kind, Loc));
+    return false;
+  }
+
+  PendingFixups.emplace_back(&SRE.getSymbol(), DF,
+                                         MCFixup::create(-1, Expr, Kind, Loc));
   return false;
 }
 
@@ -689,5 +723,6 @@ void MCObjectStreamer::FinishImpl() {
   MCDwarfLineTable::Emit(this, getAssembler().getDWARFLinetableParams());
 
   flushPendingLabels();
+  resolvePendingFixups();
   getAssembler().Finish();
 }

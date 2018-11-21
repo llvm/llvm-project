@@ -122,6 +122,7 @@ class ThreadRegistry {
   void JoinThread(u32 tid, void *arg);
   void FinishThread(u32 tid);
   void StartThread(u32 tid, tid_t os_id, bool workerthread, void *arg);
+  void SetThreadUserId(u32 tid, uptr user_id);
 
  private:
   const ThreadContextFactory context_factory_;

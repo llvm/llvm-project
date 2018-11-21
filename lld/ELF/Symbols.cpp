@@ -144,8 +144,11 @@ uint64_t Symbol::getPPC64LongBranchOffset() const {
 }
 
 uint64_t Symbol::getPltVA() const {
-  if (this->IsInIplt)
+  if (this->IsInIplt) {
+    if (Config->ZRetpolineplt)
+      return In.Iplt->getVA() + Target->getPltEntryOffset(PltIndex);
     return In.Iplt->getVA() + PltIndex * Target->PltEntrySize;
+  }
   return In.Plt->getVA() + Target->getPltEntryOffset(PltIndex);
 }
 

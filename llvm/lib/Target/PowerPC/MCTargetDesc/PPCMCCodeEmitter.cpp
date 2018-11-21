@@ -111,36 +111,10 @@ public:
 
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
-                         const MCSubtargetInfo &STI) const override {
-    verifyInstructionPredicates(MI,
-                                computeAvailableFeatures(STI.getFeatureBits()));
+                         const MCSubtargetInfo &STI) const override;
 
-    unsigned Opcode = MI.getOpcode();
-    const MCInstrDesc &Desc = MCII.get(Opcode);
-
-    uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-
-    // Output the constant in big/little endian byte order.
-    unsigned Size = Desc.getSize();
-    support::endianness E = IsLittleEndian ? support::little : support::big;
-    switch (Size) {
-    case 0:
-      break;
-    case 4:
-      support::endian::write<uint32_t>(OS, Bits, E);
-      break;
-    case 8:
-      // If we emit a pair of instructions, the first one is
-      // always in the top 32 bits, even on little-endian.
-      support::endian::write<uint32_t>(OS, Bits >> 32, E);
-      support::endian::write<uint32_t>(OS, Bits, E);
-      break;
-    default:
-      llvm_unreachable("Invalid instruction size");
-    }
-
-    ++MCNumEmitted;  // Keep track of the # of mi's emitted.
-  }
+  // Get the number of bytes used to encode the given MCInst.
+  unsigned getInstSizeInBytes(const MCInst &MI) const;
 
 private:
   uint64_t computeAvailableFeatures(const FeatureBitset &FB) const;
@@ -394,6 +368,43 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   assert(MO.isImm() &&
          "Relocation required in an instruction that we cannot encode!");
   return MO.getImm();
+}
+
+void PPCMCCodeEmitter::encodeInstruction(
+    const MCInst &MI, raw_ostream &OS, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
+  verifyInstructionPredicates(MI,
+                              computeAvailableFeatures(STI.getFeatureBits()));
+
+  uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
+
+  // Output the constant in big/little endian byte order.
+  unsigned Size = getInstSizeInBytes(MI);
+  support::endianness E = IsLittleEndian ? support::little : support::big;
+  switch (Size) {
+  case 0:
+    break;
+  case 4:
+    support::endian::write<uint32_t>(OS, Bits, E);
+    break;
+  case 8:
+    // If we emit a pair of instructions, the first one is
+    // always in the top 32 bits, even on little-endian.
+    support::endian::write<uint32_t>(OS, Bits >> 32, E);
+    support::endian::write<uint32_t>(OS, Bits, E);
+    break;
+  default:
+    llvm_unreachable("Invalid instruction size");
+  }
+
+  ++MCNumEmitted; // Keep track of the # of mi's emitted.
+}
+
+// Get the number of bytes used to encode the given MCInst.
+unsigned PPCMCCodeEmitter::getInstSizeInBytes(const MCInst &MI) const {
+  unsigned Opcode = MI.getOpcode();
+  const MCInstrDesc &Desc = MCII.get(Opcode);
+  return Desc.getSize();
 }
 
 #define ENABLE_INSTR_PREDICATE_VERIFIER

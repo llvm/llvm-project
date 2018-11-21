@@ -2775,6 +2775,11 @@ private:
   DeclGroupPtrTy ParseOMPDeclareSimdClauses(DeclGroupPtrTy Ptr,
                                             CachedTokens &Toks,
                                             SourceLocation Loc);
+  /// Parse clauses for '#pragma omp declare target'.
+  DeclGroupPtrTy ParseOMPDeclareTargetClauses();
+  /// Parse '#pragma omp end declare target'.
+  void ParseOMPEndDeclareTargetDirective(OpenMPDirectiveKind DKind,
+                                         SourceLocation Loc);
   /// Parses declarative OpenMP directives.
   DeclGroupPtrTy ParseOpenMPDeclarativeDirectiveWithExtDecl(
       AccessSpecifier &AS, ParsedAttributesWithRange &Attrs,

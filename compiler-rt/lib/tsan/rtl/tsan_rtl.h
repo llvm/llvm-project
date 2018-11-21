@@ -772,6 +772,7 @@ void ThreadFinalize(ThreadState *thr);
 void ThreadSetName(ThreadState *thr, const char *name);
 int ThreadCount(ThreadState *thr);
 void ProcessPendingSignals(ThreadState *thr);
+void ThreadNotJoined(ThreadState *thr, uptr pc, int tid, uptr uid);
 
 Processor *ProcCreate();
 void ProcDestroy(Processor *proc);
