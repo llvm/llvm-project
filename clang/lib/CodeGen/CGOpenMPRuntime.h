@@ -282,12 +282,21 @@ protected:
                               bool AtCurrentPoint = false);
   void clearLocThreadIdInsertPt(CodeGenFunction &CGF);
 
+  /// Check if the default location must be constant.
+  /// Default is false to support OMPT/OMPD.
+  virtual bool isDefaultLocationConstant() const { return false; }
+
+  /// Returns additional flags that can be stored in reserved_2 field of the
+  /// default location.
+  virtual unsigned getDefaultLocationReserved2Flags() const { return 0; }
+
 private:
   /// Default const ident_t object used for initialization of all other
   /// ident_t objects.
   llvm::Constant *DefaultOpenMPPSource = nullptr;
+  using FlagsTy = std::pair<unsigned, unsigned>;
   /// Map of flags and corresponding default locations.
-  typedef llvm::DenseMap<unsigned, llvm::Value *> OpenMPDefaultLocMapTy;
+  using OpenMPDefaultLocMapTy = llvm::DenseMap<FlagsTy, llvm::Value *>;
   OpenMPDefaultLocMapTy OpenMPDefaultLocMap;
   Address getOrCreateDefaultLocation(unsigned Flags);
 

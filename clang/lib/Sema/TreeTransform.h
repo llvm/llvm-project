@@ -6770,6 +6770,9 @@ TreeTransform<Derived>::TransformDoStmt(DoStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformForStmt(ForStmt *S) {
+  if (getSema().getLangOpts().OpenMP)
+    getSema().startOpenMPLoop();
+
   // Transform the initialization statement
   StmtResult Init = getDerived().TransformStmt(S->getInit());
   if (Init.isInvalid())

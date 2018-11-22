@@ -147,6 +147,7 @@ set(LLVM_TOOLCHAIN_TOOLS
   llvm-size
   llvm-strip
   llvm-symbolizer
+  llvm-xray
   opt
   sancov
   CACHE STRING "")
