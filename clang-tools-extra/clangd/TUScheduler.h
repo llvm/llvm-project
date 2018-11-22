@@ -108,7 +108,8 @@ public:
               llvm::unique_function<void(std::vector<Diag>)> OnUpdated);
 
   /// Remove \p File from the list of tracked files and schedule removal of its
-  /// resources.
+  /// resources. Pending diagnostics for closed files may not be delivered, even
+  /// if requested with WantDiags::Auto or WantDiags::Yes.
   void remove(PathRef File);
 
   /// Schedule an async task with no dependencies.

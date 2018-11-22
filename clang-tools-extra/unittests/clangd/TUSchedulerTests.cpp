@@ -124,6 +124,8 @@ TEST_F(TUSchedulerTests, WantDiagnostics) {
     S.update(Path, getInputs(Path, "auto (produces)"), WantDiagnostics::Auto,
              [&](std::vector<Diag> Diags) { ++CallbackCount; });
     Ready.notify();
+
+    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   }
   EXPECT_EQ(2, CallbackCount);
 }
@@ -147,6 +149,8 @@ TEST_F(TUSchedulerTests, Debounce) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
     S.update(Path, getInputs(Path, "auto (shut down)"), WantDiagnostics::Auto,
              [&](std::vector<Diag> Diags) { ++CallbackCount; });
+
+    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   }
   EXPECT_EQ(2, CallbackCount);
 }
@@ -267,6 +271,8 @@ TEST_F(TUSchedulerTests, Cancellation) {
     Update("U3");
     Read("R3")();
     Proceed.notify();
+
+    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   }
   EXPECT_THAT(DiagsSeen, ElementsAre("U2", "U3"))
       << "U1 and all dependent reads were cancelled. "
@@ -373,6 +379,7 @@ TEST_F(TUSchedulerTests, ManyUpdates) {
         }
       }
     }
+    ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   } // TUScheduler destructor waits for all operations to finish.
 
   std::lock_guard<std::mutex> Lock(Mut);

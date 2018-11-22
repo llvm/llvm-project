@@ -125,7 +125,8 @@ public:
                    WantDiagnostics WD = WantDiagnostics::Auto);
 
   /// Remove \p File from list of tracked files, schedule a request to free
-  /// resources associated with it.
+  /// resources associated with it. Pending diagnostics for closed files may not
+  /// be delivered, even if requested with WantDiags::Auto or WantDiags::Yes.
   void removeDocument(PathRef File);
 
   /// Run code completion for \p File at \p Pos.
@@ -222,19 +223,11 @@ private:
   formatCode(llvm::StringRef Code, PathRef File,
              ArrayRef<tooling::Range> Ranges);
 
-  typedef uint64_t DocVersion;
-
-  void consumeDiagnostics(PathRef File, DocVersion Version,
-                          std::vector<Diag> Diags);
-
   tooling::CompileCommand getCompileCommand(PathRef File);
 
   const GlobalCompilationDatabase &CDB;
   DiagnosticsConsumer &DiagConsumer;
   const FileSystemProvider &FSProvider;
-
-  /// Used to synchronize diagnostic responses for added and removed files.
-  llvm::StringMap<DocVersion> InternalVersion;
 
   Path ResourceDir;
   // The index used to look up symbols. This could be:
@@ -255,12 +248,6 @@ private:
 
   llvm::Optional<std::string> WorkspaceRoot;
   std::shared_ptr<PCHContainerOperations> PCHs;
-  /// Used to serialize diagnostic callbacks.
-  /// FIXME(ibiryukov): get rid of an extra map and put all version counters
-  /// into CppFile.
-  std::mutex DiagnosticsMutex;
-  /// Maps from a filename to the latest version of reported diagnostics.
-  llvm::StringMap<DocVersion> ReportedDiagnosticVersions;
   // WorkScheduler has to be the last member, because its destructor has to be
   // called before all other members to stop the worker thread that references
   // ClangdServer.
