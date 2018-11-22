@@ -266,6 +266,8 @@ const uptr sig_dfl = (uptr)SIG_DFL;
 const uptr sig_err = (uptr)SIG_ERR;
 const uptr sa_siginfo = (uptr)SA_SIGINFO;
 
+const unsigned long __sanitizer_bufsiz = BUFSIZ;
+
 int ptrace_pt_io = PT_IO;
 int ptrace_pt_lwpinfo = PT_LWPINFO;
 int ptrace_pt_set_event_mask = PT_SET_EVENT_MASK;
