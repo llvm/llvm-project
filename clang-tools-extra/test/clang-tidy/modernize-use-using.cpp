@@ -162,3 +162,24 @@ typedef unsigned Map[lol];
 typedef void (*fun_type)();
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
 // CHECK-FIXES: using fun_type = void (*)();
+
+namespace template_instantiations {
+template <typename T>
+class C {
+ protected:
+  typedef C<T> super;
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef'
+  // CHECK-FIXES: using super = C<T>;
+  virtual void f();
+
+public:
+  virtual ~C();
+};
+
+class D : public C<D> {
+  void f() override { super::f(); }
+};
+class E : public C<E> {
+  void f() override { super::f(); }
+};
+}
