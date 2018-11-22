@@ -818,6 +818,6 @@ PreservedAnalyses ScalarizerPass::run(Function &F, FunctionAnalysisManager &AM) 
   unsigned ParallelLoopAccessMDKind =
       M.getContext().getMDKindID("llvm.mem.parallel_loop_access");
   ScalarizerVisitor Impl(ParallelLoopAccessMDKind);
-  (void)Impl.visit(F);
-  return PreservedAnalyses::none();
+  bool Changed = Impl.visit(F);
+  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

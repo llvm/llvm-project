@@ -8,7 +8,7 @@
 # performance has not regressed by running the following benchmarks before and
 # after the breaking change to verify that the values in this file are safe to
 # update:
-# ./projects/compiler-rt/lib/tsan/tests/rtl/TsanRtlTest
+# ./projects/compiler-rt/lib/tsan/tests/rtl/TsanRtlTest-x86_64-Test
 #   --gtest_also_run_disabled_tests --gtest_filter=DISABLED_BENCH.Mop*
 
 set -u

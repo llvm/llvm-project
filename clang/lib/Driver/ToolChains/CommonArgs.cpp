@@ -598,7 +598,6 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
                                      ArgStringList &CmdArgs) {
   // Force linking against the system libraries sanitizers depends on
   // (see PR15823 why this is necessary).
-  CmdArgs.push_back("--push-state");
   CmdArgs.push_back("--no-as-needed");
   // There's no libpthread or librt on RTEMS & Android.
   if (TC.getTriple().getOS() != llvm::Triple::RTEMS &&
@@ -618,7 +617,6 @@ void tools::linkSanitizerRuntimeDeps(const ToolChain &TC,
   if (TC.getTriple().getOS() == llvm::Triple::NetBSD ||
       TC.getTriple().getOS() == llvm::Triple::FreeBSD)
     CmdArgs.push_back("-lexecinfo");
-  CmdArgs.push_back("--pop-state");
 }
 
 static void

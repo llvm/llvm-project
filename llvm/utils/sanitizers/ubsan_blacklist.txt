@@ -10,3 +10,7 @@ src:*bits/stl_tree.h
 # data() on an empty vector: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=59829
 src:*bits/stl_iterator.h
 src:*bits/stl_vector.h
+
+# libstdc++ 8.0.1 casts an under-aligned pointer to type type_info:
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=85930
+src:*bits/shared_ptr_base.h

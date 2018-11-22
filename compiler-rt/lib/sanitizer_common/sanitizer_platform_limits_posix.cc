@@ -501,6 +501,8 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_sioc_vif_req_sz = sizeof(struct sioc_vif_req);
 #endif
 
+  const unsigned long __sanitizer_bufsiz = BUFSIZ;
+
   const unsigned IOCTL_NOT_PRESENT = 0;
 
   unsigned IOCTL_FIOASYNC = FIOASYNC;
