@@ -133,19 +133,17 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 
 void ClangdServer::addDocument(PathRef File, StringRef Contents,
                                WantDiagnostics WantDiags) {
-  DocVersion Version = ++InternalVersion[File];
   ParseInputs Inputs = {getCompileCommand(File), FSProvider.getFileSystem(),
                         Contents.str()};
-
   Path FileStr = File.str();
   WorkScheduler.update(File, std::move(Inputs), WantDiags,
-                       [this, FileStr, Version](std::vector<Diag> Diags) {
-                         consumeDiagnostics(FileStr, Version, std::move(Diags));
+                       [this, FileStr](std::vector<Diag> Diags) {
+                         DiagConsumer.onDiagnosticsReady(FileStr,
+                                                         std::move(Diags));
                        });
 }
 
 void ClangdServer::removeDocument(PathRef File) {
-  ++InternalVersion[File];
   WorkScheduler.remove(File);
 }
 
@@ -442,24 +440,6 @@ void ClangdServer::findHover(PathRef File, Position Pos,
   };
 
   WorkScheduler.runWithAST("Hover", File, Bind(Action, std::move(CB)));
-}
-
-void ClangdServer::consumeDiagnostics(PathRef File, DocVersion Version,
-                                      std::vector<Diag> Diags) {
-  // We need to serialize access to resulting diagnostics to avoid calling
-  // `onDiagnosticsReady` in the wrong order.
-  std::lock_guard<std::mutex> DiagsLock(DiagnosticsMutex);
-  DocVersion &LastReportedDiagsVersion = ReportedDiagnosticVersions[File];
-
-  // FIXME(ibiryukov): get rid of '<' comparison here. In the current
-  // implementation diagnostics will not be reported after version counters'
-  // overflow. This should not happen in practice, since DocVersion is a
-  // 64-bit unsigned integer.
-  if (Version < LastReportedDiagsVersion)
-    return;
-  LastReportedDiagsVersion = Version;
-
-  DiagConsumer.onDiagnosticsReady(File, std::move(Diags));
 }
 
 tooling::CompileCommand ClangdServer::getCompileCommand(PathRef File) {
