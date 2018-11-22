@@ -401,6 +401,10 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_MICROMIPS_HIGHER;
   case Mips::fixup_MICROMIPS_HIGHEST:
     return ELF::R_MICROMIPS_HIGHEST;
+  case Mips::fixup_Mips_JALR:
+    return ELF::R_MIPS_JALR;
+  case Mips::fixup_MICROMIPS_JALR:
+    return ELF::R_MICROMIPS_JALR;
   }
 
   llvm_unreachable("invalid fixup kind!");

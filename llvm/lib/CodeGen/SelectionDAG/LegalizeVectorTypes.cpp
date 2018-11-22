@@ -2723,7 +2723,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_StrictFP(SDNode *N) {
   // The Chain is the first operand.
   InOps.push_back(N->getOperand(0));
 
-  // Now process the remaining operands. 
+  // Now process the remaining operands.
   for (unsigned i = 1; i < NumOpers; ++i) {
     SDValue Oper = N->getOperand(i);
 

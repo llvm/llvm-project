@@ -19632,7 +19632,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       // of 3 logic instructions for size savings and potentially speed.
       // Unfortunately, there is no scalar form of VBLENDV.
 
-      // If either operand is a constant, don't try this. We can expect to
+      // If either operand is a +0.0 constant, don't try this. We can expect to
       // optimize away at least one of the logic instructions later in that
       // case, so that sequence would be faster than a variable blend.
 
@@ -19640,13 +19640,10 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       // uses XMM0 as the selection register. That may need just as many
       // instructions as the AND/ANDN/OR sequence due to register moves, so
       // don't bother.
-
-      if (Subtarget.hasAVX() &&
-          !isa<ConstantFPSDNode>(Op1) && !isa<ConstantFPSDNode>(Op2)) {
-
+      if (Subtarget.hasAVX() && !isNullFPConstant(Op1) &&
+          !isNullFPConstant(Op2)) {
         // Convert to vectors, do a VSELECT, and convert back to scalar.
         // All of the conversions should be optimized away.
-
         MVT VecVT = VT == MVT::f32 ? MVT::v4f32 : MVT::v2f64;
         SDValue VOp1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Op1);
         SDValue VOp2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VecVT, Op2);
@@ -32257,6 +32254,13 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     MVT SrcVT = Src.getSimpleValueType();
     if (!SrcVT.isVector())
       return false;
+    // Don't bother broadcasting if we just need the 0'th element.
+    if (DemandedElts == 1) {
+      if(Src.getValueType() != VT)
+        Src = widenSubVector(VT.getSimpleVT(), Src, false, Subtarget, TLO.DAG,
+                             SDLoc(Op));
+      return TLO.CombineTo(Op, Src);
+    }
     APInt SrcUndef, SrcZero;
     APInt SrcElts = APInt::getOneBitSet(SrcVT.getVectorNumElements(), 0);
     if (SimplifyDemandedVectorElts(Src, SrcElts, SrcUndef, SrcZero, TLO,

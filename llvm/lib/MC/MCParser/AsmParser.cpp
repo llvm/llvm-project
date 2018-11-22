@@ -2938,20 +2938,20 @@ bool AsmParser::parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated) {
 bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
   const MCExpr *Offset;
   const MCExpr *Expr = nullptr;
-
-  SMLoc OffsetLoc = Lexer.getTok().getLoc();
   int64_t OffsetValue;
-  // We can only deal with constant expressions at the moment.
+  SMLoc OffsetLoc = Lexer.getTok().getLoc();
 
   if (parseExpression(Offset))
     return true;
 
-  if (check(!Offset->evaluateAsAbsolute(OffsetValue,
-                                        getStreamer().getAssemblerPtr()),
-            OffsetLoc, "expression is not a constant value") ||
-      check(OffsetValue < 0, OffsetLoc, "expression is negative") ||
-      parseToken(AsmToken::Comma, "expected comma") ||
-      check(getTok().isNot(AsmToken::Identifier), "expected relocation name"))
+  if ((Offset->evaluateAsAbsolute(OffsetValue,
+                                  getStreamer().getAssemblerPtr()) &&
+       check(OffsetValue < 0, OffsetLoc, "expression is negative")) ||
+      (check(Offset->getKind() != llvm::MCExpr::Constant &&
+             Offset->getKind() != llvm::MCExpr::SymbolRef,
+             OffsetLoc, "expected non-negative number or a label")) ||
+      (parseToken(AsmToken::Comma, "expected comma") ||
+       check(getTok().isNot(AsmToken::Identifier), "expected relocation name")))
     return true;
 
   SMLoc NameLoc = Lexer.getTok().getLoc();
