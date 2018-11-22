@@ -71,6 +71,17 @@ set(CLANGD_TEST_DEPS
   clangd-indexer
   dexp
   )
+
+# Add lit test dependencies.
+set(LLVM_UTILS_DEPS
+  FileCheck count not
+)
+foreach(dep ${LLVM_UTILS_DEPS})
+  if(TARGET ${dep})
+    list(APPEND CLANGD_TEST_DEPS ${dep})
+  endif()
+endforeach()
+
 foreach(clangd_dep ${CLANGD_TEST_DEPS})
   list(APPEND CLANG_TOOLS_TEST_DEPS
        ${clangd_dep})
