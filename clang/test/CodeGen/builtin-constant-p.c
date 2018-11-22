@@ -128,3 +128,29 @@ int test13() {
   // CHECK: ret i32 1
   return __builtin_constant_p(&test10 != 0);
 }
+
+typedef unsigned long uintptr_t;
+#define assign(p, v) ({ \
+  uintptr_t _r_a_p__v = (uintptr_t)(v);                           \
+  if (__builtin_constant_p(v) && _r_a_p__v == (uintptr_t)0) {     \
+    union {                                                       \
+      uintptr_t __val;                                            \
+      char __c[1];                                                \
+    } __u = {                                                     \
+      .__val = (uintptr_t)_r_a_p__v                               \
+    };                                                            \
+    *(volatile unsigned int*)&p = *(unsigned int*)(__u.__c);      \
+    __u.__val;                                                    \
+  }                                                               \
+  _r_a_p__v;                                                      \
+})
+
+typedef void fn_p(void);
+extern fn_p *dest_p;
+
+static void src_fn(void) {
+}
+
+void test14() {
+  assign(dest_p, src_fn);
+}
