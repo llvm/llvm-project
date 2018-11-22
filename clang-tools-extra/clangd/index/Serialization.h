@@ -70,7 +70,6 @@ std::string toYAML(const std::pair<SymbolID, ArrayRef<Ref>> &);
 // Build an in-memory static index from an index file.
 // The size should be relatively small, so data can be managed in memory.
 std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef Filename,
-                                       llvm::ArrayRef<std::string> URISchemes,
                                        bool UseDex = true);
 
 } // namespace clangd

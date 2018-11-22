@@ -44,7 +44,6 @@ ClangdServer::Options optsForTests() {
   auto ServerOpts = ClangdServer::optsForTest();
   ServerOpts.WorkspaceRoot = testRoot();
   ServerOpts.BuildDynamicSymbolIndex = true;
-  ServerOpts.URISchemes = {"unittest", "file"};
   return ServerOpts;
 }
 

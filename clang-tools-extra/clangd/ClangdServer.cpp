@@ -106,8 +106,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       ResourceDir(Opts.ResourceDir ? *Opts.ResourceDir
                                    : getStandardResourceDir()),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
-                     ? new FileIndex(Opts.URISchemes,
-                                     Opts.HeavyweightDynamicSymbolIndex)
+                     ? new FileIndex(Opts.HeavyweightDynamicSymbolIndex)
                      : nullptr),
       WorkspaceRoot(Opts.WorkspaceRoot),
       PCHs(std::make_shared<PCHContainerOperations>()),
