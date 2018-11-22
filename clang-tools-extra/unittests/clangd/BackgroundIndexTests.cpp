@@ -80,7 +80,7 @@ TEST(BackgroundIndexTest, IndexTwoFiles) {
   llvm::StringMap<std::string> Storage;
   size_t CacheHits = 0;
   MemoryShardStorage MSS(Storage, CacheHits);
-  BackgroundIndex Idx(Context::empty(), "", FS, /*URISchemes=*/{"unittest"},
+  BackgroundIndex Idx(Context::empty(), "", FS,
                       [&](llvm::StringRef) { return &MSS; });
 
   tooling::CompileCommand Cmd;
@@ -136,7 +136,7 @@ TEST(BackgroundIndexTest, ShardStorageWriteTest) {
   Cmd.CommandLine = {"clang++", testPath("root/A.cc")};
   // Check nothing is loaded from Storage, but A.cc and A.h has been stored.
   {
-    BackgroundIndex Idx(Context::empty(), "", FS, /*URISchemes=*/{"unittest"},
+    BackgroundIndex Idx(Context::empty(), "", FS,
                         [&](llvm::StringRef) { return &MSS; });
     Idx.enqueue(testPath("root"), Cmd);
     Idx.blockUntilIdleForTest();

@@ -36,11 +36,10 @@ namespace clangd {
 
 BackgroundIndex::BackgroundIndex(
     Context BackgroundContext, StringRef ResourceDir,
-    const FileSystemProvider &FSProvider, ArrayRef<std::string> URISchemes,
+    const FileSystemProvider &FSProvider,
     BackgroundIndexStorage::Factory IndexStorageFactory, size_t ThreadPoolSize)
     : SwapIndex(make_unique<MemIndex>()), ResourceDir(ResourceDir),
       FSProvider(FSProvider), BackgroundContext(std::move(BackgroundContext)),
-      URISchemes(URISchemes),
       IndexStorageFactory(std::move(IndexStorageFactory)) {
   assert(ThreadPoolSize > 0 && "Thread pool size can't be zero.");
   assert(this->IndexStorageFactory && "Storage factory can not be null!");
@@ -341,7 +340,6 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
                              "Couldn't build compiler instance");
 
   SymbolCollector::Options IndexOpts;
-  IndexOpts.URISchemes = URISchemes;
   StringMap<FileDigest> FilesToUpdate;
   IndexOpts.FileFilter = createFileFilter(DigestsSnapshot, FilesToUpdate);
   SymbolSlab Symbols;
@@ -379,8 +377,7 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
   // FIXME: this should rebuild once-in-a-while, not after every file.
   //       At that point we should use Dex, too.
   vlog("Rebuilding automatic index");
-  reset(IndexedSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge,
-                                  URISchemes));
+  reset(IndexedSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge));
 
   return Error::success();
 }

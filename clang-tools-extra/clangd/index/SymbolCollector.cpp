@@ -83,16 +83,7 @@ Optional<std::string> toURI(const SourceManager &SM, StringRef Path,
   }
 
   sys::path::remove_dots(AbsolutePath, /*remove_dot_dot=*/true);
-
-  std::string ErrMsg;
-  for (const auto &Scheme : Opts.URISchemes) {
-    auto U = URI::create(AbsolutePath, Scheme);
-    if (U)
-      return U->toString();
-    ErrMsg += toString(U.takeError()) + "\n";
-  }
-  log("Failed to create an URI for file {0}: {1}", AbsolutePath, ErrMsg);
-  return None;
+  return URI::create(AbsolutePath).toString();
 }
 
 // All proto generated headers should start with this line.

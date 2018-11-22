@@ -23,43 +23,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-/// \brief Supports a test URI scheme with relaxed constraints for lit tests.
-/// The path in a test URI will be combined with a platform-specific fake
-/// directory to form an absolute path. For example, test:///a.cpp is resolved
-/// C:\clangd-test\a.cpp on Windows and /clangd-test/a.cpp on Unix.
-class TestScheme : public URIScheme {
-public:
-  Expected<std::string> getAbsolutePath(StringRef /*Authority*/, StringRef Body,
-                                        StringRef /*HintPath*/) const override {
-    using namespace llvm::sys;
-    // Still require "/" in body to mimic file scheme, as we want lengths of an
-    // equivalent URI in both schemes to be the same.
-    if (!Body.startswith("/"))
-      return make_error<StringError>(
-          "Expect URI body to be an absolute path starting with '/': " + Body,
-          inconvertibleErrorCode());
-    Body = Body.ltrim('/');
-#ifdef _WIN32
-    constexpr char TestDir[] = "C:\\clangd-test";
-#else
-    constexpr char TestDir[] = "/clangd-test";
-#endif
-    SmallVector<char, 16> Path(Body.begin(), Body.end());
-    path::native(Path);
-    auto Err = fs::make_absolute(TestDir, Path);
-    if (Err)
-      llvm_unreachable("Failed to make absolute path in test scheme.");
-    return std::string(Path.begin(), Path.end());
-  }
-
-  Expected<URI> uriFromAbsolutePath(StringRef AbsolutePath) const override {
-    llvm_unreachable("Clangd must never create a test URI.");
-  }
-};
-
-static URISchemeRegistry::Add<TestScheme>
-    X("test", "Test scheme for clangd lit tests.");
-
 SymbolKindBitset defaultSymbolKinds() {
   SymbolKindBitset Defaults;
   for (size_t I = SymbolKindMin; I <= static_cast<size_t>(SymbolKind::Array);

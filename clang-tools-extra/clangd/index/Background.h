@@ -63,7 +63,7 @@ class BackgroundIndex : public SwapIndex {
 public:
   // FIXME: resource-dir injection should be hoisted somewhere common.
   BackgroundIndex(Context BackgroundContext, llvm::StringRef ResourceDir,
-                  const FileSystemProvider &, ArrayRef<std::string> URISchemes,
+                  const FileSystemProvider &,
                   BackgroundIndexStorage::Factory IndexStorageFactory,
                   size_t ThreadPoolSize = llvm::hardware_concurrency());
   ~BackgroundIndex(); // Blocks while the current task finishes.
@@ -95,7 +95,6 @@ private:
   std::string ResourceDir;
   const FileSystemProvider &FSProvider;
   Context BackgroundContext;
-  std::vector<std::string> URISchemes;
 
   // index state
   llvm::Error index(tooling::CompileCommand,
