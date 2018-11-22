@@ -376,5 +376,85 @@ void parallel_for(float *a, const int n) {
 // TERM_DEBUG-DAG: [[DBG_LOC_START]] = !DILocation(line: [[@LINE-4]],
 // TERM_DEBUG-DAG: [[DBG_LOC_END]] = !DILocation(line: [[@LINE-18]],
 
+// CHECK-LABEL: increment
+int increment () {
+// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]])
+  #pragma omp for
+// Determine UB = min(UB, GlobalUB)
+// CHECK: call void @__kmpc_for_static_init_4([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID]], i32 34, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
+// CHECK-NEXT: [[UB:%.+]] = load i32, i32* [[OMP_UB]]
+// CHECK-NEXT: [[UBCMP:%.+]] = icmp sgt i32 [[UB]], 4
+// CHECK-NEXT: br i1 [[UBCMP]], label [[UB_TRUE:%[^,]+]], label [[UB_FALSE:%[^,]+]]
+// CHECK: [[UBRESULT:%.+]] = phi i32 [ 4, [[UB_TRUE]] ], [ [[UBVAL:%[^,]+]], [[UB_FALSE]] ]
+// CHECK-NEXT: store i32 [[UBRESULT]], i32* [[OMP_UB]]
+// CHECK-NEXT: [[LB:%.+]] = load i32, i32* [[OMP_LB]]
+// CHECK-NEXT: store i32 [[LB]], i32* [[OMP_IV:[^,]+]]
+// CHECK-NEXT: br label %[[LOOP1_HEAD:.+]]
+
+// Loop header
+// CHECK: [[LOOP1_HEAD]]
+// CHECK: [[IV:%.+]] = load i32, i32* [[OMP_IV]]
+// CHECK-NEXT: [[UB:%.+]] = load i32, i32* [[OMP_UB]]
+// CHECK-NEXT: [[CMP:%.+]] = icmp sle i32 [[IV]], [[UB]]
+// CHECK-NEXT: br i1 [[CMP]], label %[[LOOP1_BODY:[^,]+]], label %[[LOOP1_END:[^,]+]]
+
+  for (int i = 0 ; i != 5; ++i)
+// Start of body: calculate i from IV:
+// CHECK: [[LOOP1_BODY]]
+// CHECK: [[IV1_1:%.+]] = load i32, i32* [[OMP_IV]]
+// CHECK-NEXT: [[CALC_I_1:%.+]] = mul nsw i32 [[IV1_1]], 1
+// CHECK-NEXT: [[CALC_I_2:%.+]] = add nsw i32 0, [[CALC_I_1]]
+// CHECK-NEXT: store i32 [[CALC_I_2]], i32* [[LC_I:.+]]
+// CHECK: [[IV1_2:%.+]] = load i32, i32* [[OMP_IV]]{{.*}}
+// CHECK-NEXT: [[ADD1_2:%.+]] = add nsw i32 [[IV1_2]], 1
+// CHECK-NEXT: store i32 [[ADD1_2]], i32* [[OMP_IV]]
+// CHECK-NEXT: br label %[[LOOP1_HEAD]]
+    ;
+// CHECK: [[LOOP1_END]]
+// CHECK: call void @__kmpc_for_static_fini([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID]])
+// CHECK: __kmpc_barrier
+  return 0;
+// CHECK: ret i32 0
+}
+
+// CHECK-LABEL: decrement_nowait
+int decrement_nowait () {
+// CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:[@%].+]])
+  #pragma omp for nowait
+// Determine UB = min(UB, GlobalUB)
+// CHECK: call void @__kmpc_for_static_init_4([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID]], i32 34, i32* [[IS_LAST:%[^,]+]], i32* [[OMP_LB:%[^,]+]], i32* [[OMP_UB:%[^,]+]], i32* [[OMP_ST:%[^,]+]], i32 1, i32 1)
+// CHECK-NEXT: [[UB:%.+]] = load i32, i32* [[OMP_UB]]
+// CHECK-NEXT: [[UBCMP:%.+]] = icmp sgt i32 [[UB]], 4
+// CHECK-NEXT: br i1 [[UBCMP]], label [[UB_TRUE:%[^,]+]], label [[UB_FALSE:%[^,]+]]
+// CHECK: [[UBRESULT:%.+]] = phi i32 [ 4, [[UB_TRUE]] ], [ [[UBVAL:%[^,]+]], [[UB_FALSE]] ]
+// CHECK-NEXT: store i32 [[UBRESULT]], i32* [[OMP_UB]]
+// CHECK-NEXT: [[LB:%.+]] = load i32, i32* [[OMP_LB]]
+// CHECK-NEXT: store i32 [[LB]], i32* [[OMP_IV:[^,]+]]
+// CHECK-NEXT: br label %[[LOOP1_HEAD:.+]]
+
+// Loop header
+// CHECK: [[LOOP1_HEAD]]
+// CHECK: [[IV:%.+]] = load i32, i32* [[OMP_IV]]
+// CHECK-NEXT: [[UB:%.+]] = load i32, i32* [[OMP_UB]]
+// CHECK-NEXT: [[CMP:%.+]] = icmp sle i32 [[IV]], [[UB]]
+// CHECK-NEXT: br i1 [[CMP]], label %[[LOOP1_BODY:[^,]+]], label %[[LOOP1_END:[^,]+]]
+  for (int j = 5 ; j != 0; --j)
+// Start of body: calculate i from IV:
+// CHECK: [[LOOP1_BODY]]
+// CHECK: [[IV2_1:%.+]] = load i32, i32* [[OMP_IV]]
+// CHECK-NEXT: [[CALC_II_1:%.+]] = mul nsw i32 [[IV2_1]], 1
+// CHECK-NEXT: [[CALC_II_2:%.+]] = sub nsw i32 5, [[CALC_II_1]]
+// CHECK-NEXT: store i32 [[CALC_II_2]], i32* [[LC_I:.+]]
+// CHECK: [[IV2_2:%.+]] = load i32, i32* [[OMP_IV]]{{.*}}
+// CHECK-NEXT: [[ADD2_2:%.+]] = add nsw i32 [[IV2_2]], 1
+// CHECK-NEXT: store i32 [[ADD2_2]], i32* [[OMP_IV]]
+// CHECK-NEXT: br label %[[LOOP1_HEAD]]
+    ;
+// CHECK: [[LOOP1_END]]
+// CHECK: call void @__kmpc_for_static_fini([[IDENT_T_TY]]* [[LOOP_LOC]], i32 [[GTID]])
+// CHECK-NOT: __kmpc_barrier
+  return 0;
+// CHECK: ret i32 0
+}
 #endif // HEADER
 
