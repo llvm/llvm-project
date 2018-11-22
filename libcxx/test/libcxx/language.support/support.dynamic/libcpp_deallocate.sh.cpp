@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test libc++'s implementation of align_val_t, and the relevent new/delete
+// test libc++'s implementation of align_val_t, and the relevant new/delete
 // overloads in all dialects when -faligned-allocation is present.
 
 // Libc++ defers to the underlying MSVC library to provide the new/delete
