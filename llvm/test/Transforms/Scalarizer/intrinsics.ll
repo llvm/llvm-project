@@ -1,4 +1,5 @@
 ; RUN: opt -S -scalarizer %s | FileCheck %s
+; RUN: opt -S -passes='function(scalarizer)' %s | FileCheck %s
 
 ; Unary fp
 declare <2 x float> @llvm.sqrt.v2f32(<2 x float>)

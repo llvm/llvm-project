@@ -1361,7 +1361,9 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
         if (C->isOpaque())
           return false;
     }
-    return TLO.CombineTo(Op, TLO.DAG.getConstant(Known.One, dl, VT));
+    // TODO: Handle float bits as well.
+    if (VT.isInteger())
+      return TLO.CombineTo(Op, TLO.DAG.getConstant(Known.One, dl, VT));
   }
 
   return false;

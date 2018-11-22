@@ -152,12 +152,30 @@ define i32 @fshl_op0_undef(i32 %x) {
   ret i32 %r
 }
 
+define i32 @fshl_op0_zero(i32 %x) {
+; CHECK-LABEL: @fshl_op0_zero(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 0, i32 [[X:%.*]], i32 7)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 0, i32 %x, i32 7)
+  ret i32 %r
+}
+
 define i33 @fshr_op0_undef(i33 %x) {
 ; CHECK-LABEL: @fshr_op0_undef(
 ; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshr.i33(i33 undef, i33 [[X:%.*]], i33 7)
 ; CHECK-NEXT:    ret i33 [[R]]
 ;
   %r = call i33 @llvm.fshr.i33(i33 undef, i33 %x, i33 7)
+  ret i33 %r
+}
+
+define i33 @fshr_op0_zero(i33 %x) {
+; CHECK-LABEL: @fshr_op0_zero(
+; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshr.i33(i33 0, i33 [[X:%.*]], i33 7)
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %r = call i33 @llvm.fshr.i33(i33 0, i33 %x, i33 7)
   ret i33 %r
 }
 
@@ -170,12 +188,30 @@ define i32 @fshl_op1_undef(i32 %x) {
   ret i32 %r
 }
 
+define i32 @fshl_op1_zero(i32 %x) {
+; CHECK-LABEL: @fshl_op1_zero(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 0, i32 7)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 0, i32 7)
+  ret i32 %r
+}
+
 define i33 @fshr_op1_undef(i33 %x) {
 ; CHECK-LABEL: @fshr_op1_undef(
 ; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshr.i33(i33 [[X:%.*]], i33 undef, i33 7)
 ; CHECK-NEXT:    ret i33 [[R]]
 ;
   %r = call i33 @llvm.fshr.i33(i33 %x, i33 undef, i33 7)
+  ret i33 %r
+}
+
+define i33 @fshr_op1_zero(i33 %x) {
+; CHECK-LABEL: @fshr_op1_zero(
+; CHECK-NEXT:    [[R:%.*]] = call i33 @llvm.fshr.i33(i33 [[X:%.*]], i33 0, i33 7)
+; CHECK-NEXT:    ret i33 [[R]]
+;
+  %r = call i33 @llvm.fshr.i33(i33 %x, i33 0, i33 7)
   ret i33 %r
 }
 

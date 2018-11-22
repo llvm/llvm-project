@@ -142,7 +142,6 @@ private:
     assert(DFS.isComplete() && "DFS is expected to be finished");
 
     // Collect live and dead loop blocks and exits.
-    SmallPtrSet<BasicBlock *, 8> ExitBlocks;
     LiveLoopBlocks.insert(L.getHeader());
     for (auto I = DFS.beginRPO(), E = DFS.endRPO(); I != E; ++I) {
       BasicBlock *BB = *I;
@@ -163,16 +162,13 @@ private:
         FoldCandidates.push_back(BB);
 
       // Handle successors.
-      auto ProcessSuccessor = [&](BasicBlock *Succ, bool IsLive) {
-        if (!L.contains(Succ)) {
-          if (IsLive)
-            LiveExitBlocks.insert(Succ);
-          ExitBlocks.insert(Succ);
-        } else if (IsLive)
-          LiveLoopBlocks.insert(Succ);
-      };
       for (BasicBlock *Succ : successors(BB))
-        ProcessSuccessor(Succ, !TheOnlySucc || TheOnlySucc == Succ);
+        if (!TheOnlySucc || TheOnlySucc == Succ) {
+          if (L.contains(Succ))
+            LiveLoopBlocks.insert(Succ);
+          else
+            LiveExitBlocks.insert(Succ);
+        }
     }
 
     // Sanity check: amount of dead and live loop blocks should match the total
@@ -181,6 +177,8 @@ private:
            "Malformed block sets?");
 
     // Now, all exit blocks that are not marked as live are dead.
+    SmallVector<BasicBlock *, 8> ExitBlocks;
+    L.getExitBlocks(ExitBlocks);
     for (auto *ExitBlock : ExitBlocks)
       if (!LiveExitBlocks.count(ExitBlock))
         DeadExitBlocks.insert(ExitBlock);
