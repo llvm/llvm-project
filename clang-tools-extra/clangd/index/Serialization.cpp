@@ -488,9 +488,7 @@ Expected<IndexFileIn> readIndexFile(StringRef Data) {
   }
 }
 
-std::unique_ptr<SymbolIndex> loadIndex(StringRef SymbolFilename,
-                                       ArrayRef<std::string> URISchemes,
-                                       bool UseDex) {
+std::unique_ptr<SymbolIndex> loadIndex(StringRef SymbolFilename, bool UseDex) {
   trace::Span OverallTracer("LoadIndex");
   auto Buffer = MemoryBuffer::getFile(SymbolFilename);
   if (!Buffer) {
@@ -517,9 +515,8 @@ std::unique_ptr<SymbolIndex> loadIndex(StringRef SymbolFilename,
   size_t NumRefs = Refs.numRefs();
 
   trace::Span Tracer("BuildIndex");
-  auto Index =
-      UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs), URISchemes)
-             : MemIndex::build(std::move(Symbols), std::move(Refs));
+  auto Index = UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs))
+                      : MemIndex::build(std::move(Symbols), std::move(Refs));
   vlog("Loaded {0} from {1} with estimated memory usage {2} bytes\n"
        "  - number of symbols: {3}\n"
        "  - number of refs: {4}\n",

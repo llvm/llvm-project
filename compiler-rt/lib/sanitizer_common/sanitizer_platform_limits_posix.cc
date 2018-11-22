@@ -101,6 +101,7 @@
 # include <net/ethernet.h>
 # include <net/ppp_defs.h>
 # include <glob.h>
+# include <stdio.h>
 # include <term.h>
 
 #define _KERNEL  // to declare 'shminfo' structure

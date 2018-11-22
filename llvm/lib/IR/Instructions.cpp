@@ -65,10 +65,7 @@ AllocaInst::getAllocationSizeInBits(const DataLayout &DL) const {
 //===----------------------------------------------------------------------===//
 
 User::op_iterator CallSite::getCallee() const {
-  Instruction *II(getInstruction());
-  return isCall()
-    ? cast<CallInst>(II)->op_end() - 1 // Skip Callee
-    : cast<InvokeInst>(II)->op_end() - 3; // Skip BB, BB, Callee
+  return cast<CallBase>(getInstruction())->op_end() - 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -254,6 +251,82 @@ void LandingPadInst::addClause(Constant *Val) {
 }
 
 //===----------------------------------------------------------------------===//
+//                        CallBase Implementation
+//===----------------------------------------------------------------------===//
+
+Value *CallBase::getReturnedArgOperand() const {
+  unsigned Index;
+
+  if (Attrs.hasAttrSomewhere(Attribute::Returned, &Index) && Index)
+    return getArgOperand(Index - AttributeList::FirstArgIndex);
+  if (const Function *F = getCalledFunction())
+    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index) &&
+        Index)
+      return getArgOperand(Index - AttributeList::FirstArgIndex);
+
+  return nullptr;
+}
+
+bool CallBase::hasRetAttr(Attribute::AttrKind Kind) const {
+  if (Attrs.hasAttribute(AttributeList::ReturnIndex, Kind))
+    return true;
+
+  // Look at the callee, if available.
+  if (const Function *F = getCalledFunction())
+    return F->getAttributes().hasAttribute(AttributeList::ReturnIndex, Kind);
+  return false;
+}
+
+/// Determine whether the argument or parameter has the given attribute.
+bool CallBase::paramHasAttr(unsigned ArgNo, Attribute::AttrKind Kind) const {
+  assert(ArgNo < getNumArgOperands() && "Param index out of bounds!");
+
+  if (Attrs.hasParamAttribute(ArgNo, Kind))
+    return true;
+  if (const Function *F = getCalledFunction())
+    return F->getAttributes().hasParamAttribute(ArgNo, Kind);
+  return false;
+}
+
+bool CallBase::hasFnAttrOnCalledFunction(Attribute::AttrKind Kind) const {
+  if (const Function *F = getCalledFunction())
+    return F->getAttributes().hasAttribute(AttributeList::FunctionIndex, Kind);
+  return false;
+}
+
+bool CallBase::hasFnAttrOnCalledFunction(StringRef Kind) const {
+  if (const Function *F = getCalledFunction())
+    return F->getAttributes().hasAttribute(AttributeList::FunctionIndex, Kind);
+  return false;
+}
+
+CallBase::op_iterator
+CallBase::populateBundleOperandInfos(ArrayRef<OperandBundleDef> Bundles,
+                                     const unsigned BeginIndex) {
+  auto It = op_begin() + BeginIndex;
+  for (auto &B : Bundles)
+    It = std::copy(B.input_begin(), B.input_end(), It);
+
+  auto *ContextImpl = getContext().pImpl;
+  auto BI = Bundles.begin();
+  unsigned CurrentIndex = BeginIndex;
+
+  for (auto &BOI : bundle_op_infos()) {
+    assert(BI != Bundles.end() && "Incorrect allocation?");
+
+    BOI.Tag = ContextImpl->getOrInsertBundleTag(BI->getTag());
+    BOI.Begin = CurrentIndex;
+    BOI.End = CurrentIndex + BI->input_size();
+    CurrentIndex = BOI.End;
+    BI++;
+  }
+
+  assert(BI == Bundles.end() && "Incorrect allocation?");
+
+  return It;
+}
+
+//===----------------------------------------------------------------------===//
 //                        CallInst Implementation
 //===----------------------------------------------------------------------===//
 
@@ -262,7 +335,7 @@ void CallInst::init(FunctionType *FTy, Value *Func, ArrayRef<Value *> Args,
   this->FTy = FTy;
   assert(getNumOperands() == Args.size() + CountBundleInputs(Bundles) + 1 &&
          "NumOperands not set up?");
-  Op<-1>() = Func;
+  setCalledOperand(Func);
 
 #ifndef NDEBUG
   assert((Args.size() == FTy->getNumParams() ||
@@ -288,7 +361,7 @@ void CallInst::init(Value *Func, const Twine &NameStr) {
   FTy =
       cast<FunctionType>(cast<PointerType>(Func->getType())->getElementType());
   assert(getNumOperands() == 1 && "NumOperands not set up?");
-  Op<-1>() = Func;
+  setCalledOperand(Func);
 
   assert(FTy->getNumParams() == 0 && "Calling a function with bad signature");
 
@@ -296,31 +369,27 @@ void CallInst::init(Value *Func, const Twine &NameStr) {
 }
 
 CallInst::CallInst(Value *Func, const Twine &Name, Instruction *InsertBefore)
-    : CallBase<CallInst>(
-          cast<FunctionType>(
-              cast<PointerType>(Func->getType())->getElementType())
-              ->getReturnType(),
-          Instruction::Call,
-          OperandTraits<CallBase<CallInst>>::op_end(this) - 1, 1,
-          InsertBefore) {
+    : CallBase(cast<FunctionType>(
+                   cast<PointerType>(Func->getType())->getElementType())
+                   ->getReturnType(),
+               Instruction::Call, OperandTraits<CallBase>::op_end(this) - 1, 1,
+               InsertBefore) {
   init(Func, Name);
 }
 
 CallInst::CallInst(Value *Func, const Twine &Name, BasicBlock *InsertAtEnd)
-    : CallBase<CallInst>(
-          cast<FunctionType>(
-              cast<PointerType>(Func->getType())->getElementType())
-              ->getReturnType(),
-          Instruction::Call,
-          OperandTraits<CallBase<CallInst>>::op_end(this) - 1, 1, InsertAtEnd) {
+    : CallBase(cast<FunctionType>(
+                   cast<PointerType>(Func->getType())->getElementType())
+                   ->getReturnType(),
+               Instruction::Call, OperandTraits<CallBase>::op_end(this) - 1, 1,
+               InsertAtEnd) {
   init(Func, Name);
 }
 
 CallInst::CallInst(const CallInst &CI)
-    : CallBase<CallInst>(CI.Attrs, CI.FTy, CI.getType(), Instruction::Call,
-                         OperandTraits<CallBase<CallInst>>::op_end(this) -
-                             CI.getNumOperands(),
-                         CI.getNumOperands()) {
+    : CallBase(CI.Attrs, CI.FTy, CI.getType(), Instruction::Call,
+               OperandTraits<CallBase>::op_end(this) - CI.getNumOperands(),
+               CI.getNumOperands()) {
   setTailCallKind(CI.getTailCallKind());
   setCallingConv(CI.getCallingConv());
 
@@ -560,11 +629,12 @@ void InvokeInst::init(FunctionType *FTy, Value *Fn, BasicBlock *IfNormal,
                       const Twine &NameStr) {
   this->FTy = FTy;
 
-  assert(getNumOperands() == 3 + Args.size() + CountBundleInputs(Bundles) &&
+  assert((int)getNumOperands() ==
+             ComputeNumOperands(Args.size(), CountBundleInputs(Bundles)) &&
          "NumOperands not set up?");
-  Op<-3>() = Fn;
-  Op<-2>() = IfNormal;
-  Op<-1>() = IfException;
+  setNormalDest(IfNormal);
+  setUnwindDest(IfException);
+  setCalledOperand(Fn);
 
 #ifndef NDEBUG
   assert(((Args.size() == FTy->getNumParams()) ||
@@ -587,10 +657,9 @@ void InvokeInst::init(FunctionType *FTy, Value *Fn, BasicBlock *IfNormal,
 }
 
 InvokeInst::InvokeInst(const InvokeInst &II)
-    : CallBase<InvokeInst>(II.Attrs, II.FTy, II.getType(), Instruction::Invoke,
-                           OperandTraits<CallBase<InvokeInst>>::op_end(this) -
-                               II.getNumOperands(),
-                           II.getNumOperands()) {
+    : CallBase(II.Attrs, II.FTy, II.getType(), Instruction::Invoke,
+               OperandTraits<CallBase>::op_end(this) - II.getNumOperands(),
+               II.getNumOperands()) {
   setCallingConv(II.getCallingConv());
   std::copy(II.op_begin(), II.op_end(), op_begin());
   std::copy(II.bundle_op_info_begin(), II.bundle_op_info_end(),

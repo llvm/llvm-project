@@ -136,31 +136,38 @@ bool LSUnit::isReady(const InstRef &IR) const {
 }
 
 void LSUnit::onInstructionExecuted(const InstRef &IR) {
+  const InstrDesc &Desc = IR.getInstruction()->getDesc();
   const unsigned Index = IR.getSourceIndex();
-  std::set<unsigned>::iterator it = LoadQueue.find(Index);
-  if (it != LoadQueue.end()) {
-    LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
-                      << " has been removed from the load queue.\n");
-    LoadQueue.erase(it);
+  bool IsALoad = Desc.MayLoad;
+  bool IsAStore = Desc.MayStore;
+
+  if (IsALoad) {
+    if (LoadQueue.erase(Index)) {
+      LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
+                        << " has been removed from the load queue.\n");
+    }
+    if (!LoadBarriers.empty() && Index == *LoadBarriers.begin()) {
+      LLVM_DEBUG(
+          dbgs() << "[LSUnit]: Instruction idx=" << Index
+                 << " has been removed from the set of load barriers.\n");
+      LoadBarriers.erase(Index);
+    }
   }
 
-  it = StoreQueue.find(Index);
-  if (it != StoreQueue.end()) {
-    LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
-                      << " has been removed from the store queue.\n");
-    StoreQueue.erase(it);
-  }
+  if (IsAStore) {
+    if (StoreQueue.erase(Index)) {
+      LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
+                        << " has been removed from the store queue.\n");
+    }
 
-  if (!StoreBarriers.empty() && Index == *StoreBarriers.begin()) {
-    LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
-                      << " has been removed from the set of store barriers.\n");
-    StoreBarriers.erase(StoreBarriers.begin());
-  }
-  if (!LoadBarriers.empty() && Index == *LoadBarriers.begin()) {
-    LLVM_DEBUG(dbgs() << "[LSUnit]: Instruction idx=" << Index
-                      << " has been removed from the set of load barriers.\n");
-    LoadBarriers.erase(LoadBarriers.begin());
+    if (!StoreBarriers.empty() && Index == *StoreBarriers.begin()) {
+      LLVM_DEBUG(
+          dbgs() << "[LSUnit]: Instruction idx=" << Index
+                 << " has been removed from the set of store barriers.\n");
+      StoreBarriers.erase(Index);
+    }
   }
 }
+
 } // namespace mca
 } // namespace llvm

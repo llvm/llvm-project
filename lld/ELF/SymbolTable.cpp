@@ -459,9 +459,9 @@ static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
   error(Msg);
 }
 
-Symbol *SymbolTable::addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
-                                uint64_t Value, uint64_t Size, uint8_t Binding,
-                                SectionBase *Section, InputFile *File) {
+Defined *SymbolTable::addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
+                                 uint64_t Value, uint64_t Size, uint8_t Binding,
+                                 SectionBase *Section, InputFile *File) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, getVisibility(StOther),
@@ -474,7 +474,7 @@ Symbol *SymbolTable::addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
   else if (Cmp == 0)
     reportDuplicate(S, File, dyn_cast_or_null<InputSectionBase>(Section),
                     Value);
-  return S;
+  return cast<Defined>(S);
 }
 
 template <typename ELFT>

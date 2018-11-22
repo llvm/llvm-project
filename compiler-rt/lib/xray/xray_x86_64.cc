@@ -1,6 +1,8 @@
 #include "cpuid.h"
 #include "sanitizer_common/sanitizer_common.h"
+#if !SANITIZER_FUCHSIA
 #include "sanitizer_common/sanitizer_posix.h"
+#endif
 #include "xray_defs.h"
 #include "xray_interface_internal.h"
 
@@ -11,6 +13,8 @@
 #include <machine/cpu.h>
 #endif
 #include <sys/sysctl.h>
+#elif SANITIZER_FUCHSIA
+#include <zircon/syscalls.h>
 #endif
 
 #include <atomic>
@@ -104,7 +108,7 @@ uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
 
     return 0;
 }
-#else
+#elif !SANITIZER_FUCHSIA
 uint64_t getTSCFrequency() XRAY_NEVER_INSTRUMENT {
     /* Not supported */
     return 0;
@@ -321,6 +325,7 @@ bool patchTypedEvent(const bool Enable, const uint32_t FuncId,
   return false;
 }
 
+#if !SANITIZER_FUCHSIA
 // We determine whether the CPU we're running on has the correct features we
 // need. In x86_64 this will be rdtscp support.
 bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT {
@@ -343,5 +348,6 @@ bool probeRequiredCPUFeatures() XRAY_NEVER_INSTRUMENT {
   }
   return true;
 }
+#endif
 
 } // namespace __xray

@@ -1943,7 +1943,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *F = CGM.getIntrinsic(Intrinsic::is_constant, ConvertType(ArgType));
     Value *Result = Builder.CreateCall(F, ArgValue);
     if (Result->getType() != ResultType)
-      Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/true);
+      Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/false);
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_object_size: {
