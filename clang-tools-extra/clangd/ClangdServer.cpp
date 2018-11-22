@@ -65,26 +65,32 @@ public:
 
   Optional<Expected<tooling::AtomicChanges>> Result;
 };
-} // namespace
 
-// Returns callbacks that can be used to update the FileIndex with new ASTs.
-static std::unique_ptr<ParsingCallbacks>
-makeUpdateCallbacks(FileIndex *FIndex) {
-  struct CB : public ParsingCallbacks {
-    CB(FileIndex *FIndex) : FIndex(FIndex) {}
-    FileIndex *FIndex;
+// Update the FileIndex with new ASTs and plumb the diagnostics responses.
+struct UpdateIndexCallbacks : public ParsingCallbacks {
+  UpdateIndexCallbacks(FileIndex *FIndex, DiagnosticsConsumer &DiagConsumer)
+      : FIndex(FIndex), DiagConsumer(DiagConsumer) {}
 
-    void onPreambleAST(PathRef Path, ASTContext &Ctx,
-                       std::shared_ptr<clang::Preprocessor> PP) override {
+  void onPreambleAST(PathRef Path, ASTContext &Ctx,
+                     std::shared_ptr<clang::Preprocessor> PP) override {
+    if (FIndex)
       FIndex->updatePreamble(Path, Ctx, std::move(PP));
-    }
+  }
 
-    void onMainAST(PathRef Path, ParsedAST &AST) override {
+  void onMainAST(PathRef Path, ParsedAST &AST) override {
+    if (FIndex)
       FIndex->updateMain(Path, AST);
-    }
-  };
-  return llvm::make_unique<CB>(FIndex);
-}
+  }
+
+  void onDiagnostics(PathRef File, std::vector<Diag> Diags) override {
+    DiagConsumer.onDiagnosticsReady(File, std::move(Diags));
+  }
+
+private:
+  FileIndex *FIndex;
+  DiagnosticsConsumer &DiagConsumer;
+};
+} // namespace
 
 ClangdServer::Options ClangdServer::optsForTest() {
   ClangdServer::Options Opts;
@@ -98,7 +104,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                            const FileSystemProvider &FSProvider,
                            DiagnosticsConsumer &DiagConsumer,
                            const Options &Opts)
-    : CDB(CDB), DiagConsumer(DiagConsumer), FSProvider(FSProvider),
+    : CDB(CDB), FSProvider(FSProvider),
       ResourceDir(Opts.ResourceDir ? *Opts.ResourceDir
                                    : getStandardResourceDir()),
       DynamicIdx(Opts.BuildDynamicSymbolIndex
@@ -112,8 +118,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       // FIXME(ioeric): this can be slow and we may be able to index on less
       // critical paths.
       WorkScheduler(Opts.AsyncThreadsCount, Opts.StorePreamblesInMemory,
-                    DynamicIdx ? makeUpdateCallbacks(DynamicIdx.get())
-                               : nullptr,
+                    llvm::make_unique<UpdateIndexCallbacks>(DynamicIdx.get(),
+                                                            DiagConsumer),
                     Opts.UpdateDebounce, Opts.RetentionPolicy) {
   if (DynamicIdx && Opts.StaticIndex) {
     MergedIdx =
@@ -129,14 +135,10 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 
 void ClangdServer::addDocument(PathRef File, StringRef Contents,
                                WantDiagnostics WantDiags) {
-  ParseInputs Inputs = {getCompileCommand(File), FSProvider.getFileSystem(),
-                        Contents.str()};
-  Path FileStr = File.str();
-  WorkScheduler.update(File, std::move(Inputs), WantDiags,
-                       [this, FileStr](std::vector<Diag> Diags) {
-                         DiagConsumer.onDiagnosticsReady(FileStr,
-                                                         std::move(Diags));
-                       });
+  WorkScheduler.update(File,
+                       ParseInputs{getCompileCommand(File),
+                                   FSProvider.getFileSystem(), Contents.str()},
+                       WantDiags);
 }
 
 void ClangdServer::removeDocument(PathRef File) {

@@ -72,6 +72,9 @@ public:
   /// in this callback (obtained via ParsedAST::getLocalTopLevelDecls) to obtain
   /// optimal performance.
   virtual void onMainAST(PathRef Path, ParsedAST &AST) {}
+
+  /// Called whenever the diagnostics for \p File are produced.
+  virtual void onDiagnostics(PathRef File, std::vector<Diag> Diags) {}
 };
 
 /// Handles running tasks for ClangdServer and managing the resources (e.g.,
@@ -103,9 +106,7 @@ public:
   /// If diagnostics are requested (Yes), and the context is cancelled before
   /// they are prepared, they may be skipped if eventual-consistency permits it
   /// (i.e. WantDiagnostics is downgraded to Auto).
-  /// FIXME(ibiryukov): remove the callback from this function.
-  void update(PathRef File, ParseInputs Inputs, WantDiagnostics WD,
-              llvm::unique_function<void(std::vector<Diag>)> OnUpdated);
+  void update(PathRef File, ParseInputs Inputs, WantDiagnostics WD);
 
   /// Remove \p File from the list of tracked files and schedule removal of its
   /// resources. Pending diagnostics for closed files may not be delivered, even

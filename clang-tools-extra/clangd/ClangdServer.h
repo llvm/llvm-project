@@ -226,7 +226,6 @@ private:
   tooling::CompileCommand getCompileCommand(PathRef File);
 
   const GlobalCompilationDatabase &CDB;
-  DiagnosticsConsumer &DiagConsumer;
   const FileSystemProvider &FSProvider;
 
   Path ResourceDir;
