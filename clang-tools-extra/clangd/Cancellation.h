@@ -79,7 +79,7 @@ std::pair<Context, Canceler> cancelableTask();
 /// True if the current context is within a cancelable task which was cancelled.
 /// Always false if there is no active cancelable task.
 /// This isn't free (context lookup) - don't call it in a tight loop.
-bool isCancelled();
+bool isCancelled(const Context &Ctx = Context::current());
 
 /// Conventional error when no result is returned due to cancellation.
 class CancelledError : public llvm::ErrorInfo<CancelledError> {
