@@ -43,6 +43,7 @@
 //   immediately.
 
 #include "TUScheduler.h"
+#include "Cancellation.h"
 #include "Logger.h"
 #include "Trace.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -432,6 +433,8 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags,
 void ASTWorker::runWithAST(
     StringRef Name, unique_function<void(Expected<InputsAndAST>)> Action) {
   auto Task = [=](decltype(Action) Action) {
+    if (isCancelled())
+      return Action(make_error<CancelledError>());
     Optional<std::unique_ptr<ParsedAST>> AST = IdleASTs.take(this);
     if (!AST) {
       std::unique_ptr<CompilerInvocation> Invocation =
@@ -588,6 +591,26 @@ void ASTWorker::run() {
 Deadline ASTWorker::scheduleLocked() {
   if (Requests.empty())
     return Deadline::infinity(); // Wait for new requests.
+  // Handle cancelled requests first so the rest of the scheduler doesn't.
+  for (auto I = Requests.begin(), E = Requests.end(); I != E; ++I) {
+    if (!isCancelled(I->Ctx)) {
+      // Cancellations after the first read don't affect current scheduling.
+      if (I->UpdateType == None)
+        break;
+      continue;
+    }
+    // Cancelled reads are moved to the front of the queue and run immediately.
+    if (I->UpdateType == None) {
+      Request R = std::move(*I);
+      Requests.erase(I);
+      Requests.push_front(std::move(R));
+      return Deadline::zero();
+    }
+    // Cancelled updates are downgraded to auto-diagnostics, and may be elided.
+    if (I->UpdateType == WantDiagnostics::Yes)
+      I->UpdateType = WantDiagnostics::Auto;
+  }
+
   while (shouldSkipHeadLocked())
     Requests.pop_front();
   assert(!Requests.empty() && "skipped the whole queue");

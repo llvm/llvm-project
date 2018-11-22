@@ -209,6 +209,75 @@ TEST_F(TUSchedulerTests, PreambleConsistency) {
   EXPECT_EQ(2, CallbackCount);
 }
 
+TEST_F(TUSchedulerTests, Cancellation) {
+  // We have the following update/read sequence
+  //   U0
+  //   U1(WantDiags=Yes) <-- cancelled
+  //    R1               <-- cancelled
+  //   U2(WantDiags=Yes) <-- cancelled
+  //    R2A              <-- cancelled
+  //    R2B
+  //   U3(WantDiags=Yes)
+  //    R3               <-- cancelled
+  std::vector<std::string> DiagsSeen, ReadsSeen, ReadsCanceled;
+  {
+    TUScheduler S(
+        getDefaultAsyncThreadsCount(), /*StorePreamblesInMemory=*/true,
+        /*ASTCallbacks=*/nullptr,
+        /*UpdateDebounce=*/std::chrono::steady_clock::duration::zero(),
+        ASTRetentionPolicy());
+    auto Path = testPath("foo.cpp");
+    // Helper to schedule a named update and return a function to cancel it.
+    auto Update = [&](std::string ID) -> Canceler {
+      auto T = cancelableTask();
+      WithContext C(std::move(T.first));
+      S.update(Path, getInputs(Path, "//" + ID), WantDiagnostics::Yes,
+               [&, ID](std::vector<Diag> Diags) { DiagsSeen.push_back(ID); });
+      return std::move(T.second);
+    };
+    // Helper to schedule a named read and return a function to cancel it.
+    auto Read = [&](std::string ID) -> Canceler {
+      auto T = cancelableTask();
+      WithContext C(std::move(T.first));
+      S.runWithAST(ID, Path, [&, ID](llvm::Expected<InputsAndAST> E) {
+        if (auto Err = E.takeError()) {
+          if (Err.isA<CancelledError>()) {
+            ReadsCanceled.push_back(ID);
+            consumeError(std::move(Err));
+          } else {
+            ADD_FAILURE() << "Non-cancelled error for " << ID << ": "
+                          << llvm::toString(std::move(Err));
+          }
+        } else {
+          ReadsSeen.push_back(ID);
+        }
+      });
+      return std::move(T.second);
+    };
+
+    Notification Proceed; // Ensure we schedule everything.
+    S.update(Path, getInputs(Path, ""), WantDiagnostics::Yes,
+             [&](std::vector<Diag> Diags) { Proceed.wait(); });
+    // The second parens indicate cancellation, where present.
+    Update("U1")();
+    Read("R1")();
+    Update("U2")();
+    Read("R2A")();
+    Read("R2B");
+    Update("U3");
+    Read("R3")();
+    Proceed.notify();
+  }
+  EXPECT_THAT(DiagsSeen, ElementsAre("U2", "U3"))
+      << "U1 and all dependent reads were cancelled. "
+         "U2 has a dependent read R2A. "
+         "U3 was not cancelled.";
+  EXPECT_THAT(ReadsSeen, ElementsAre("R2B"))
+      << "All reads other than R2B were cancelled";
+  EXPECT_THAT(ReadsCanceled, ElementsAre("R1", "R2A", "R3"))
+      << "All reads other than R2B were cancelled";
+}
+
 TEST_F(TUSchedulerTests, ManyUpdates) {
   const int FilesCount = 3;
   const int UpdatesPerFile = 10;
