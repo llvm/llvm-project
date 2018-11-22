@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Context.h"
+#include "Matchers.h"
 #include "TUScheduler.h"
 #include "TestFS.h"
 #include "gmock/gmock.h"
@@ -29,9 +30,6 @@ using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
 
 void ignoreUpdate(Optional<std::vector<Diag>>) {}
-void ignoreError(Error Err) {
-  handleAllErrors(std::move(Err), [](const ErrorInfoBase &) {});
-}
 
 class TUSchedulerTests : public ::testing::Test {
 protected:
@@ -61,15 +59,11 @@ TEST_F(TUSchedulerTests, MissingFiles) {
 
   // Assert each operation for missing file is an error (even if it's available
   // in VFS).
-  S.runWithAST("", Missing, [&](Expected<InputsAndAST> AST) {
-    ASSERT_FALSE(bool(AST));
-    ignoreError(AST.takeError());
-  });
-  S.runWithPreamble("", Missing, TUScheduler::Stale,
-                    [&](Expected<InputsAndPreamble> Preamble) {
-                      ASSERT_FALSE(bool(Preamble));
-                      ignoreError(Preamble.takeError());
-                    });
+  S.runWithAST("", Missing,
+               [&](Expected<InputsAndAST> AST) { EXPECT_ERROR(AST); });
+  S.runWithPreamble(
+      "", Missing, TUScheduler::Stale,
+      [&](Expected<InputsAndPreamble> Preamble) { EXPECT_ERROR(Preamble); });
   // remove() shouldn't crash on missing files.
   S.remove(Missing);
 
@@ -83,14 +77,12 @@ TEST_F(TUSchedulerTests, MissingFiles) {
   S.remove(Added);
 
   // Assert that all operations fail after removing the file.
-  S.runWithAST("", Added, [&](Expected<InputsAndAST> AST) {
-    ASSERT_FALSE(bool(AST));
-    ignoreError(AST.takeError());
-  });
+  S.runWithAST("", Added,
+               [&](Expected<InputsAndAST> AST) { EXPECT_ERROR(AST); });
   S.runWithPreamble("", Added, TUScheduler::Stale,
                     [&](Expected<InputsAndPreamble> Preamble) {
                       ASSERT_FALSE(bool(Preamble));
-                      ignoreError(Preamble.takeError());
+                      llvm::consumeError(Preamble.takeError());
                     });
   // remove() shouldn't crash on missing files.
   S.remove(Added);

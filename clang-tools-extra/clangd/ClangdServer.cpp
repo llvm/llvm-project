@@ -39,10 +39,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-void ignoreError(Error Err) {
-  handleAllErrors(std::move(Err), [](const ErrorInfoBase &) {});
-}
-
 std::string getStandardResourceDir() {
   static int Dummy; // Just an address in this process.
   return CompilerInvocation::GetResourcesPath("clangd", (void *)&Dummy);
@@ -312,7 +308,7 @@ void ClangdServer::dumpAST(PathRef File,
                            unique_function<void(std::string)> Callback) {
   auto Action = [](decltype(Callback) Callback, Expected<InputsAndAST> InpAST) {
     if (!InpAST) {
-      ignoreError(InpAST.takeError());
+      llvm::consumeError(InpAST.takeError());
       return Callback("<no-ast>");
     }
     std::string Result;
