@@ -101,6 +101,7 @@
 # include <net/ethernet.h>
 # include <net/ppp_defs.h>
 # include <glob.h>
+# include <stdio.h>
 # include <term.h>
 
 #define _KERNEL  // to declare 'shminfo' structure
@@ -500,6 +501,8 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_sioc_sg_req_sz = sizeof(struct sioc_sg_req);
   unsigned struct_sioc_vif_req_sz = sizeof(struct sioc_vif_req);
 #endif
+
+  const unsigned long __sanitizer_bufsiz = BUFSIZ;
 
   const unsigned IOCTL_NOT_PRESENT = 0;
 

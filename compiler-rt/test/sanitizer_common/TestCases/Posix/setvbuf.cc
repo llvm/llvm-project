@@ -1,10 +1,16 @@
 // RUN: %clangxx -O0 -g %s -o %t && %run %t 2>&1 | FileCheck %s
 
+// UNSUPPORTED: solaris
+
 #include <stdio.h>
 
 void print_something() {
   for (size_t i = 0; i < 10 * BUFSIZ; i++)
     printf("Hello world %zu\n", i);
+}
+
+void print_one_byte(char *buf) {
+  printf("First byte is %c\n", buf[0]);
 }
 
 void test_setbuf() {
@@ -17,6 +23,8 @@ void test_setbuf() {
   setbuf(stdout, buf);
 
   print_something();
+
+  print_one_byte(buf);
 }
 
 void test_setbuffer() {
@@ -29,6 +37,8 @@ void test_setbuffer() {
   setbuffer(stdout, buf, BUFSIZ);
 
   print_something();
+
+  print_one_byte(buf);
 }
 
 void test_setlinebuf() {
@@ -48,9 +58,13 @@ void test_setvbuf() {
 
   print_something();
 
+  print_one_byte(buf);
+
   setvbuf(stdout, buf, _IOFBF, BUFSIZ);
 
   print_something();
+
+  print_one_byte(buf);
 }
 
 int main(void) {
