@@ -221,6 +221,7 @@ TEST_F(TUSchedulerTests, Cancellation) {
   //    R3               <-- cancelled
   std::vector<std::string> DiagsSeen, ReadsSeen, ReadsCanceled;
   {
+    Notification Proceed; // Ensure we schedule everything.
     TUScheduler S(
         getDefaultAsyncThreadsCount(), /*StorePreamblesInMemory=*/true,
         /*ASTCallbacks=*/nullptr,
@@ -255,7 +256,6 @@ TEST_F(TUSchedulerTests, Cancellation) {
       return std::move(T.second);
     };
 
-    Notification Proceed; // Ensure we schedule everything.
     S.update(Path, getInputs(Path, ""), WantDiagnostics::Yes,
              [&](std::vector<Diag> Diags) { Proceed.wait(); });
     // The second parens indicate cancellation, where present.
