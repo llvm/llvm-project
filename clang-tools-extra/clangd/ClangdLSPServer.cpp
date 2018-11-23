@@ -23,6 +23,14 @@ namespace clang {
 namespace clangd {
 namespace {
 
+void adjustSymbolKinds(llvm::MutableArrayRef<DocumentSymbol> Syms,
+                       SymbolKindBitset Kinds) {
+  for (auto &S : Syms) {
+    S.kind = adjustKindToCapability(S.kind, Kinds);
+    adjustSymbolKinds(S.children, Kinds);
+  }
+}
+
 SymbolKindBitset defaultSymbolKinds() {
   SymbolKindBitset Defaults;
   for (size_t I = SymbolKindMin; I <= static_cast<size_t>(SymbolKind::Array);
@@ -284,6 +292,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (Params.capabilities.CompletionItemKinds)
     SupportedCompletionItemKinds |= *Params.capabilities.CompletionItemKinds;
   SupportsCodeAction = Params.capabilities.CodeActionStructure;
+  SupportsHierarchicalDocumentSymbol =
+      Params.capabilities.HierarchicalDocumentSymbol;
 
   Reply(json::Object{
       {{"capabilities",
@@ -501,19 +511,48 @@ void ClangdLSPServer::onDocumentFormatting(
     Reply(ReplacementsOrError.takeError());
 }
 
-void ClangdLSPServer::onDocumentSymbol(
-    const DocumentSymbolParams &Params,
-    Callback<std::vector<SymbolInformation>> Reply) {
+/// The functions constructs a flattened view of the DocumentSymbol hierarchy.
+/// Used by the clients that do not support the hierarchical view.
+static std::vector<SymbolInformation>
+flattenSymbolHierarchy(llvm::ArrayRef<DocumentSymbol> Symbols,
+                       const URIForFile &FileURI) {
+
+  std::vector<SymbolInformation> Results;
+  std::function<void(const DocumentSymbol &, StringRef)> Process =
+      [&](const DocumentSymbol &S, Optional<StringRef> ParentName) {
+        SymbolInformation SI;
+        SI.containerName = ParentName ? "" : *ParentName;
+        SI.name = S.name;
+        SI.kind = S.kind;
+        SI.location.range = S.range;
+        SI.location.uri = FileURI;
+
+        Results.push_back(std::move(SI));
+        std::string FullName =
+            !ParentName ? S.name : (ParentName->str() + "::" + S.name);
+        for (auto &C : S.children)
+          Process(C, /*ParentName=*/FullName);
+      };
+  for (auto &S : Symbols)
+    Process(S, /*ParentName=*/"");
+  return Results;
+}
+
+void ClangdLSPServer::onDocumentSymbol(const DocumentSymbolParams &Params,
+                                       Callback<json::Value> Reply) {
+  URIForFile FileURI = Params.textDocument.uri;
   Server->documentSymbols(
       Params.textDocument.uri.file(),
       Bind(
-          [this](decltype(Reply) Reply,
-                 Expected<std::vector<SymbolInformation>> Items) {
+          [this, FileURI](decltype(Reply) Reply,
+                          Expected<std::vector<DocumentSymbol>> Items) {
             if (!Items)
               return Reply(Items.takeError());
-            for (auto &Sym : *Items)
-              Sym.kind = adjustKindToCapability(Sym.kind, SupportedSymbolKinds);
-            Reply(std::move(*Items));
+            adjustSymbolKinds(*Items, SupportedSymbolKinds);
+            if (SupportsHierarchicalDocumentSymbol)
+              return Reply(std::move(*Items));
+            else
+              return Reply(flattenSymbolHierarchy(*Items, FileURI));
           },
           std::move(Reply)));
 }

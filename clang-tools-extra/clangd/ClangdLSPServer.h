@@ -66,8 +66,11 @@ private:
                                  Callback<std::vector<TextEdit>>);
   void onDocumentFormatting(const DocumentFormattingParams &,
                             Callback<std::vector<TextEdit>>);
+  // The results are serialized 'vector<DocumentSymbol>' if
+  // SupportsHierarchicalDocumentSymbol is true and 'vector<SymbolInformation>'
+  // otherwise.
   void onDocumentSymbol(const DocumentSymbolParams &,
-                        Callback<std::vector<SymbolInformation>>);
+                        Callback<llvm::json::Value>);
   void onCodeAction(const CodeActionParams &, Callback<llvm::json::Value>);
   void onCompletion(const TextDocumentPositionParams &,
                     Callback<CompletionList>);
@@ -128,6 +131,8 @@ private:
   CompletionItemKindBitset SupportedCompletionItemKinds;
   // Whether the client supports CodeAction response objects.
   bool SupportsCodeAction = false;
+  /// From capabilities of textDocument/documentSymbol.
+  bool SupportsHierarchicalDocumentSymbol = false;
 
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;

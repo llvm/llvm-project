@@ -120,9 +120,9 @@ runWorkspaceSymbols(ClangdServer &Server, StringRef Query, int Limit) {
   return std::move(*Result);
 }
 
-Expected<std::vector<SymbolInformation>>
-runDocumentSymbols(ClangdServer &Server, PathRef File) {
-  Optional<Expected<std::vector<SymbolInformation>>> Result;
+Expected<std::vector<DocumentSymbol>> runDocumentSymbols(ClangdServer &Server,
+                                                         PathRef File) {
+  Optional<Expected<std::vector<DocumentSymbol>>> Result;
   Server.documentSymbols(File, capture(Result));
   return std::move(*Result);
 }
