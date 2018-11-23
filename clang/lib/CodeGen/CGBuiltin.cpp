@@ -1935,7 +1935,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     const Expr *Arg = E->getArg(0);
     QualType ArgType = Arg->getType();
-    if (!hasScalarEvaluationKind(ArgType))
+    if (!hasScalarEvaluationKind(ArgType) || ArgType->isFunctionType())
       // We can only reason about scalar types.
       return RValue::get(ConstantInt::get(ResultType, 0));
 
