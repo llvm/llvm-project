@@ -150,6 +150,9 @@ struct Range {
   }
 
   bool contains(Position Pos) const { return start <= Pos && Pos < end; }
+  bool contains(Range Rng) const {
+    return start <= Rng.start && Rng.end <= end;
+  }
 };
 bool fromJSON(const llvm::json::Value &, Range &);
 llvm::json::Value toJSON(const Range &);
@@ -330,6 +333,9 @@ struct ClientCapabilities {
   /// Client supports snippets as insert text.
   /// textDocument.completion.completionItem.snippetSupport
   bool CompletionSnippets = false;
+
+  /// Client supports hierarchical document symbols.
+  bool HierarchicalDocumentSymbol = false;
 
   /// The supported set of CompletionItemKinds for textDocument/completion.
   /// textDocument.completion.completionItemKind.valueSet
@@ -654,6 +660,39 @@ struct CodeAction {
   llvm::Optional<Command> command;
 };
 llvm::json::Value toJSON(const CodeAction &);
+
+/// Represents programming constructs like variables, classes, interfaces etc.
+/// that appear in a document. Document symbols can be hierarchical and they
+/// have two ranges: one that encloses its definition and one that points to its
+/// most interesting range, e.g. the range of an identifier.
+struct DocumentSymbol {
+  /// The name of this symbol.
+  std::string name;
+
+  /// More detail for this symbol, e.g the signature of a function.
+  std::string detail;
+
+  /// The kind of this symbol.
+  SymbolKind kind;
+
+  /// Indicates if this symbol is deprecated.
+  bool deprecated;
+
+  /// The range enclosing this symbol not including leading/trailing whitespace
+  /// but everything else like comments. This information is typically used to
+  /// determine if the clients cursor is inside the symbol to reveal in the
+  /// symbol in the UI.
+  Range range;
+
+  /// The range that should be selected and revealed when this symbol is being
+  /// picked, e.g the name of a function. Must be contained by the `range`.
+  Range selectionRange;
+
+  /// Children of this symbol, e.g. properties of a class.
+  std::vector<DocumentSymbol> children;
+};
+llvm::raw_ostream &operator<<(llvm::raw_ostream &O, const DocumentSymbol &S);
+llvm::json::Value toJSON(const DocumentSymbol &S);
 
 /// Represents information about programming constructs like variables, classes,
 /// interfaces etc.
