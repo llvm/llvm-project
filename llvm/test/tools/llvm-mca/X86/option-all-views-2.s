@@ -63,6 +63,10 @@ add %eax, %eax
 # ALL-NEXT:         0,           3  (2.9%)
 # ALL-NEXT:         1,           100  (97.1%)
 
+# ALL:             Total ROB Entries:                64
+# ALL-NEXT:        Max Used ROB Entries:             22  ( 34.4% )
+# ALL-NEXT:        Average Used ROB Entries per cy:  17  ( 26.6% )
+
 # ALL:             Register File statistics:
 # ALL-NEXT:        Total number of mappings created:    200
 # ALL-NEXT:        Max number of mappings used:         44

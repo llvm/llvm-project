@@ -41,6 +41,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "loop-simplifycfg"
 
+static cl::opt<bool> EnableTermFolding("enable-loop-simplifycfg-term-folding",
+                                       cl::init(false));
+
 STATISTIC(NumTerminatorsFolded,
           "Number of terminators folded to unconditional branches");
 
@@ -249,7 +252,10 @@ private:
       for (auto *Succ : successors(BB))
         if (Succ != TheOnlySucc) {
           DeadSuccessors.insert(Succ);
-          Succ->removePredecessor(BB);
+          // If our successor lies in a different loop, we don't want to remove
+          // the one-input Phi because it is a LCSSA Phi.
+          bool PreserveLCSSAPhi = !L.contains(Succ);
+          Succ->removePredecessor(BB, PreserveLCSSAPhi);
         }
 
       IRBuilder<> Builder(BB->getContext());
@@ -349,6 +355,9 @@ public:
 /// Turn branches and switches with known constant conditions into unconditional
 /// branches.
 static bool constantFoldTerminators(Loop &L, DominatorTree &DT, LoopInfo &LI) {
+  if (!EnableTermFolding)
+    return false;
+
   // To keep things simple, only process loops with single latch. We
   // canonicalize most loops to this form. We can support multi-latch if needed.
   if (!L.getLoopLatch())

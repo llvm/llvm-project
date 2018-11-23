@@ -470,10 +470,10 @@ void ClangdServer::workspaceSymbols(
           std::move(CB)));
 }
 
-void ClangdServer::documentSymbols(
-    StringRef File, Callback<std::vector<SymbolInformation>> CB) {
-  auto Action = [](Callback<std::vector<SymbolInformation>> CB,
-                   Expected<InputsAndAST> InpAST) {
+void ClangdServer::documentSymbols(StringRef File,
+                                   Callback<std::vector<DocumentSymbol>> CB) {
+  auto Action = [](Callback<std::vector<DocumentSymbol>> CB,
+                   llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     CB(clangd::getDocumentSymbols(InpAST->AST));

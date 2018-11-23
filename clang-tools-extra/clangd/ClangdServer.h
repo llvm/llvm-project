@@ -167,7 +167,7 @@ public:
 
   /// Retrieve the symbols within the specified file.
   void documentSymbols(StringRef File,
-                       Callback<std::vector<SymbolInformation>> CB);
+                       Callback<std::vector<DocumentSymbol>> CB);
 
   /// Retrieve locations for symbol references.
   void findReferences(PathRef File, Position Pos,

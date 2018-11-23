@@ -62,6 +62,10 @@ add %eax, %eax
 # FULLREPORT-NEXT:  0,           3  (2.9%)
 # FULLREPORT-NEXT:  1,           100  (97.1%)
 
+# FULLREPORT:      Total ROB Entries:                64
+# FULLREPORT-NEXT: Max Used ROB Entries:             22  ( 34.4% )
+# FULLREPORT-NEXT: Average Used ROB Entries per cy:  17  ( 26.6% )
+
 # FULLREPORT:      Register File statistics:
 # FULLREPORT-NEXT: Total number of mappings created:    200
 # FULLREPORT-NEXT: Max number of mappings used:         44
