@@ -8,8 +8,8 @@ define i32 @shrink_xor_constant1(i32 %x) {
 ; ALL-LABEL: shrink_xor_constant1:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    movl %edi, %eax
+; ALL-NEXT:    notl %eax
 ; ALL-NEXT:    shrl $31, %eax
-; ALL-NEXT:    xorl $1, %eax
 ; ALL-NEXT:    retq
   %sh = lshr i32 %x, 31
   %not = xor i32 %sh, -1
@@ -35,8 +35,8 @@ define i8 @shrink_xor_constant2(i8 %x) {
 ; ALL-LABEL: shrink_xor_constant2:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    movl %edi, %eax
+; ALL-NEXT:    notb %al
 ; ALL-NEXT:    shlb $5, %al
-; ALL-NEXT:    xorb $-32, %al
 ; ALL-NEXT:    # kill: def $al killed $al killed $eax
 ; ALL-NEXT:    retq
   %sh = shl i8 %x, 5

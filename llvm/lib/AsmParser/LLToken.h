@@ -418,6 +418,7 @@ enum Kind {
   kw_info,
   kw_byte,
   kw_bit,
+  kw_varFlags,
 
   // Unsigned Valued tokens (UIntVal).
   GlobalID,   // @42

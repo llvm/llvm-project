@@ -4,9 +4,8 @@
 define i32 @PR39657(i8* %p, i64 %x) {
 ; CHECK-LABEL: PR39657:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl x8, x1, #2
-; CHECK-NEXT:    eor x8, x8, #0xfffffffffffffffc
-; CHECK-NEXT:    ldr w0, [x0, x8]
+; CHECK-NEXT:    mvn x8, x1
+; CHECK-NEXT:    ldr w0, [x0, x8, lsl #2]
 ; CHECK-NEXT:    ret
   %sh = shl i64 %x, 2
   %mul = xor i64 %sh, -4
