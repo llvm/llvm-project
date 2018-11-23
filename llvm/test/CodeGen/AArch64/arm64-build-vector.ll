@@ -53,3 +53,25 @@ define void @widen_f16_build_vector(half* %addr) {
   store <2 x half> <half 0xH33EE, half 0xH33EE>, <2 x half>* %1, align 2
   ret void
 }
+
+; Check that a single element vector is constructed with a mov
+define <1 x i64> @single_element_vector_i64(<1 x i64> %arg) {
+; CHECK-LABEL: single_element_vector_i64
+; CHECK: orr w[[GREG:[0-9]+]], wzr, #0x1
+; CHECK: fmov d[[DREG:[0-9]+]], x[[GREG]]
+; CHECK: add d0, d0, d[[DREG]]
+; CHECK: ret
+entry:
+  %add = add <1 x i64> %arg, <i64 1>
+  ret <1 x i64> %add
+}
+
+define <1 x double> @single_element_vector_double(<1 x double> %arg) {
+; CHECK-LABEL: single_element_vector_double
+; CHECK: fmov d[[DREG:[0-9]+]], #1.00000000
+; CHECK: fadd d0, d0, d[[DREG]]
+; CHECK: ret
+entry:
+  %add = fadd <1 x double> %arg, <double 1.0>
+  ret <1 x double> %add
+}

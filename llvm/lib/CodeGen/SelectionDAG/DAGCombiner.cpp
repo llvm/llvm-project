@@ -6133,6 +6133,23 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
     return DAG.getNode(ISD::AND, DL, VT, NotX, N1);
   }
 
+  if ((N0Opcode == ISD::SRL || N0Opcode == ISD::SHL) && N0.hasOneUse()) {
+    ConstantSDNode *XorC = isConstOrConstSplat(N1);
+    ConstantSDNode *ShiftC = isConstOrConstSplat(N0.getOperand(1));
+    if (XorC && ShiftC) {
+      APInt Ones = APInt::getAllOnesValue(VT.getScalarSizeInBits());
+      Ones = N0Opcode == ISD::SHL ? Ones.shl(ShiftC->getZExtValue())
+                                  : Ones.lshr(ShiftC->getZExtValue());
+      if (XorC->getAPIntValue() == Ones) {
+        // If the xor constant is a shifted -1, do a 'not' before the shift:
+        // xor (X << ShiftC), XorC --> (not X) << ShiftC
+        // xor (X >> ShiftC), XorC --> (not X) >> ShiftC
+        SDValue Not = DAG.getNOT(DL, N0.getOperand(0), VT);
+        return DAG.getNode(N0Opcode, DL, VT, Not, N0.getOperand(1));
+      }
+    }
+  }
+
   // fold Y = sra (X, size(X)-1); xor (add (X, Y), Y) -> (abs X)
   if (TLI.isOperationLegalOrCustom(ISD::ABS, VT)) {
     SDValue A = N0Opcode == ISD::ADD ? N0 : N1;
@@ -6196,6 +6213,10 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
 /// Handle transforms common to the three shifts, when the shift amount is a
 /// constant.
 SDValue DAGCombiner::visitShiftByConstant(SDNode *N, ConstantSDNode *Amt) {
+  // Do not turn a 'not' into a regular xor.
+  if (isBitwiseNot(N->getOperand(0)))
+    return SDValue();
+
   SDNode *LHS = N->getOperand(0).getNode();
   if (!LHS->hasOneUse()) return SDValue();
 

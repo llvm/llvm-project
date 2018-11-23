@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=thumbv6t2-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6T2
 ; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6T2
 ; RUN: llc -mtriple=thumbv7m-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V4
-; RUN: llc -mtriple=thumbv7em-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-V6T2
+; RUN: llc -mtriple=thumbv7em-eabi %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=CHECK-THUMBV6T2
 
 define i32 @Test0(i32 %a, i32 %b, i32 %c) nounwind readnone ssp {
 entry:

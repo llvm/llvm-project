@@ -493,18 +493,18 @@ define %struct.ref_s* @test12(%struct.ref_s* %op, i64 %osbot, i64 %intval) {
 ;
 ; X64-LIN-LABEL: test12:
 ; X64-LIN:       # %bb.0:
-; X64-LIN-NEXT:    xorq $-1, %rdx
-; X64-LIN-NEXT:    shlq $32, %rdx
-; X64-LIN-NEXT:    sarq $28, %rdx
-; X64-LIN-NEXT:    leaq (%rdx,%rdi), %rax
+; X64-LIN-NEXT:    notl %edx
+; X64-LIN-NEXT:    movslq %edx, %rax
+; X64-LIN-NEXT:    shlq $4, %rax
+; X64-LIN-NEXT:    addq %rdi, %rax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: test12:
 ; X64-WIN:       # %bb.0:
-; X64-WIN-NEXT:    xorq $-1, %r8
-; X64-WIN-NEXT:    shlq $32, %r8
-; X64-WIN-NEXT:    sarq $28, %r8
-; X64-WIN-NEXT:    leaq (%r8,%rcx), %rax
+; X64-WIN-NEXT:    notl %r8d
+; X64-WIN-NEXT:    movslq %r8d, %rax
+; X64-WIN-NEXT:    shlq $4, %rax
+; X64-WIN-NEXT:    addq %rcx, %rax
 ; X64-WIN-NEXT:    retq
   %neg = shl i64 %intval, 32
   %sext = xor i64 %neg, -4294967296
@@ -518,23 +518,20 @@ define i32 @PR39657(i8* %p, i64 %x) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    shll $2, %ecx
-; X32-NEXT:    xorl $-4, %ecx
-; X32-NEXT:    movl (%eax,%ecx), %eax
+; X32-NEXT:    notl %ecx
+; X32-NEXT:    movl (%eax,%ecx,4), %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LIN-LABEL: PR39657:
 ; X64-LIN:       # %bb.0:
-; X64-LIN-NEXT:    shlq $2, %rsi
-; X64-LIN-NEXT:    xorq $-4, %rsi
-; X64-LIN-NEXT:    movl (%rdi,%rsi), %eax
+; X64-LIN-NEXT:    notq %rsi
+; X64-LIN-NEXT:    movl (%rdi,%rsi,4), %eax
 ; X64-LIN-NEXT:    retq
 ;
 ; X64-WIN-LABEL: PR39657:
 ; X64-WIN:       # %bb.0:
-; X64-WIN-NEXT:    shlq $2, %rdx
-; X64-WIN-NEXT:    xorq $-4, %rdx
-; X64-WIN-NEXT:    movl (%rcx,%rdx), %eax
+; X64-WIN-NEXT:    notq %rdx
+; X64-WIN-NEXT:    movl (%rcx,%rdx,4), %eax
 ; X64-WIN-NEXT:    retq
   %sh = shl i64 %x, 2
   %mul = xor i64 %sh, -4

@@ -4349,6 +4349,12 @@ def DUPv8i16lane : SIMDDup16FromElement<1, ".8h", v8i16, V128>;
 def DUPv8i8lane  : SIMDDup8FromElement <0, ".8b", v8i8, V64>;
 def DUPv16i8lane : SIMDDup8FromElement <1, ".16b", v16i8, V128>;
 
+// DUP from a 64-bit register to a 64-bit register is just a copy
+def : Pat<(v1i64 (AArch64dup (i64 GPR64:$Rn))),
+          (COPY_TO_REGCLASS GPR64:$Rn, FPR64)>;
+def : Pat<(v1f64 (AArch64dup (f64 FPR64:$Rn))),
+          (COPY_TO_REGCLASS FPR64:$Rn, FPR64)>;
+
 def : Pat<(v2f32 (AArch64dup (f32 FPR32:$Rn))),
           (v2f32 (DUPv2i32lane
             (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), FPR32:$Rn, ssub),
