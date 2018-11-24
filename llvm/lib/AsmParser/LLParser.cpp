@@ -7972,7 +7972,7 @@ bool LLParser::ParseOptionalRefs(std::vector<ValueInfo> &Refs) {
 
   // Sort value contexts so that ones with readonly ValueInfo are at the end
   // of VContexts vector. This is needed to match immutableRefCount() behavior.
-  llvm::sort(VContexts, [](ValueContext &VC1, ValueContext &VC2) {
+  llvm::sort(VContexts, [](const ValueContext &VC1, const ValueContext &VC2) {
     return VC1.VI.isReadOnly() < VC2.VI.isReadOnly();
   });
 

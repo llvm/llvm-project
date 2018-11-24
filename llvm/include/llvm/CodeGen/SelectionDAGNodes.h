@@ -1613,6 +1613,11 @@ ConstantSDNode *isConstOrConstSplat(SDValue N, bool AllowUndefs = false);
 /// Returns the SDNode if it is a constant splat BuildVector or constant float.
 ConstantFPSDNode *isConstOrConstSplatFP(SDValue N, bool AllowUndefs = false);
 
+/// Determines if it is a constant null integer or a splatted vector of a
+/// constant null integer (with no undefs).
+/// Build vector implicit truncation is not an issue for null values.
+bool isNullOrNullSplat(SDValue V);
+
 class GlobalAddressSDNode : public SDNode {
   friend class SelectionDAG;
 

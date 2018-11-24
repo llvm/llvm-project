@@ -60,3 +60,7 @@
 # CHECK-NEXT:  1,           9  (40.9%)
 # CHECK-NEXT:  3,           1  (4.5%)
 # CHECK-NEXT:  4,           1  (4.5%)
+
+# CHECK:      Total ROB Entries:                128
+# CHECK-NEXT: Max Used ROB Entries:             16  ( 12.5% )
+# CHECK-NEXT: Average Used ROB Entries per cy:  9  ( 7.0% )

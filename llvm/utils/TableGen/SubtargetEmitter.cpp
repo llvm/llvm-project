@@ -1504,9 +1504,9 @@ void collectVariantClasses(const CodeGenSchedModels &SchedModels,
       continue;
 
     if (OnlyExpandMCInstPredicates) {
-      // Ignore this variant scheduling class if transitions don't uses any
+      // Ignore this variant scheduling class no transitions use any meaningful
       // MCSchedPredicate definitions.
-      if (!all_of(SC.Transitions, [](const CodeGenSchedTransition &T) {
+      if (!any_of(SC.Transitions, [](const CodeGenSchedTransition &T) {
             return hasMCSchedPredicates(T);
           }))
         continue;
@@ -1560,6 +1560,7 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
     PE.setExpandForMC(OnlyExpandMCInstPredicates);
     for (unsigned PI : ProcIndices) {
       OS << "    ";
+
       // Emit a guard on the processor ID.
       if (PI != 0) {
         OS << (OnlyExpandMCInstPredicates
@@ -1573,11 +1574,23 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
       for (const CodeGenSchedTransition &T : SC.Transitions) {
         if (PI != 0 && !count(T.ProcIndices, PI))
           continue;
+
+        // Emit only transitions based on MCSchedPredicate, if it's the case.
+        // At least the transition specified by NoSchedPred is emitted,
+        // which becomes the default transition for those variants otherwise
+        // not based on MCSchedPredicate.
+        // FIXME: preferably, llvm-mca should instead assume a reasonable
+        // default when a variant transition is not based on MCSchedPredicate
+        // for a given processor.
+        if (OnlyExpandMCInstPredicates && !hasMCSchedPredicates(T))
+          continue;
+
         PE.setIndentLevel(3);
         emitPredicates(T, SchedModels.getSchedClass(T.ToClassIdx), PE, OS);
       }
 
       OS << "    }\n";
+
       if (PI == 0)
         break;
     }

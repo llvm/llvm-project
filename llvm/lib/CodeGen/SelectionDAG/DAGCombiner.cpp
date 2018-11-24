@@ -911,16 +911,6 @@ static bool isConstantOrConstantVector(SDValue N, bool NoOpaques = false) {
   return true;
 }
 
-// Determines if it is a constant null integer or a splatted vector of a
-// constant null integer (with no undefs).
-// Build vector implicit truncation is not an issue for null values.
-static bool isNullConstantOrNullSplatConstant(SDValue N) {
-  // TODO: may want to use peekThroughBitcast() here.
-  if (ConstantSDNode *Splat = isConstOrConstSplat(N))
-    return Splat->isNullValue();
-  return false;
-}
-
 // Determines if it is a constant integer of one or a splatted vector of a
 // constant integer of one (with no undefs).
 // Do not permit build vector implicit truncation.
@@ -1922,9 +1912,9 @@ SDValue DAGCombiner::foldBinOpIntoSelect(SDNode *BO) {
   // or X, (select Cond, -1, 0) --> select Cond, -1, X
   auto BinOpcode = BO->getOpcode();
   bool CanFoldNonConst = (BinOpcode == ISD::AND || BinOpcode == ISD::OR) &&
-                         (isNullConstantOrNullSplatConstant(CT) ||
+                         (isNullOrNullSplat(CT) ||
                           isAllOnesConstantOrAllOnesSplatConstant(CT)) &&
-                         (isNullConstantOrNullSplatConstant(CF) ||
+                         (isNullOrNullSplat(CF) ||
                           isAllOnesConstantOrAllOnesSplatConstant(CF));
 
   SDValue CBO = BO->getOperand(SelOpNo ^ 1);
@@ -2123,13 +2113,11 @@ SDValue DAGCombiner::visitADD(SDNode *N) {
     return RADD;
 
   // fold ((0-A) + B) -> B-A
-  if (N0.getOpcode() == ISD::SUB &&
-      isNullConstantOrNullSplatConstant(N0.getOperand(0)))
+  if (N0.getOpcode() == ISD::SUB && isNullOrNullSplat(N0.getOperand(0)))
     return DAG.getNode(ISD::SUB, DL, VT, N1, N0.getOperand(1));
 
   // fold (A + (0-B)) -> A-B
-  if (N1.getOpcode() == ISD::SUB &&
-      isNullConstantOrNullSplatConstant(N1.getOperand(0)))
+  if (N1.getOpcode() == ISD::SUB && isNullOrNullSplat(N1.getOperand(0)))
     return DAG.getNode(ISD::SUB, DL, VT, N0, N1.getOperand(1));
 
   // fold (A+(B-A)) -> B
@@ -2244,7 +2232,7 @@ SDValue DAGCombiner::visitADDLike(SDValue N0, SDValue N1, SDNode *LocReference) 
 
   // fold (add x, shl(0 - y, n)) -> sub(x, shl(y, n))
   if (N1.getOpcode() == ISD::SHL && N1.getOperand(0).getOpcode() == ISD::SUB &&
-      isNullConstantOrNullSplatConstant(N1.getOperand(0).getOperand(0)))
+      isNullOrNullSplat(N1.getOperand(0).getOperand(0)))
     return DAG.getNode(ISD::SUB, DL, VT, N0,
                        DAG.getNode(ISD::SHL, DL, VT,
                                    N1.getOperand(0).getOperand(1),
@@ -2594,7 +2582,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
                        DAG.getConstant(-N1C->getAPIntValue(), DL, VT));
   }
 
-  if (isNullConstantOrNullSplatConstant(N0)) {
+  if (isNullOrNullSplat(N0)) {
     unsigned BitWidth = VT.getScalarSizeInBits();
     // Right-shifting everything out but the sign bit followed by negation is
     // the same as flipping arithmetic/logical shift type without the negation:
@@ -2629,8 +2617,7 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     return DAG.getNode(ISD::XOR, DL, VT, N1, N0);
 
   // fold (A - (0-B)) -> A+B
-  if (N1.getOpcode() == ISD::SUB &&
-      isNullConstantOrNullSplatConstant(N1.getOperand(0)))
+  if (N1.getOpcode() == ISD::SUB && isNullOrNullSplat(N1.getOperand(0)))
     return DAG.getNode(ISD::ADD, DL, VT, N0, N1.getOperand(1));
 
   // fold A-(A-B) -> B
@@ -2684,14 +2671,14 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
   // fold (X - (-Y * Z)) -> (X + (Y * Z))
   if (N1.getOpcode() == ISD::MUL && N1.hasOneUse()) {
     if (N1.getOperand(0).getOpcode() == ISD::SUB &&
-        isNullConstantOrNullSplatConstant(N1.getOperand(0).getOperand(0))) {
+        isNullOrNullSplat(N1.getOperand(0).getOperand(0))) {
       SDValue Mul = DAG.getNode(ISD::MUL, DL, VT,
                                 N1.getOperand(0).getOperand(1),
                                 N1.getOperand(1));
       return DAG.getNode(ISD::ADD, DL, VT, N0, Mul);
     }
     if (N1.getOperand(1).getOpcode() == ISD::SUB &&
-        isNullConstantOrNullSplatConstant(N1.getOperand(1).getOperand(0))) {
+        isNullOrNullSplat(N1.getOperand(1).getOperand(0))) {
       SDValue Mul = DAG.getNode(ISD::MUL, DL, VT,
                                 N1.getOperand(0),
                                 N1.getOperand(1).getOperand(1));
@@ -3911,7 +3898,7 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
   ISD::CondCode CC1 = cast<CondCodeSDNode>(N1CC)->get();
   bool IsInteger = OpVT.isInteger();
   if (LR == RR && CC0 == CC1 && IsInteger) {
-    bool IsZero = isNullConstantOrNullSplatConstant(LR);
+    bool IsZero = isNullOrNullSplat(LR);
     bool IsNeg1 = isAllOnesConstantOrAllOnesSplatConstant(LR);
 
     // All bits clear?
@@ -4661,7 +4648,7 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
   // Note: the SimplifyDemandedBits fold below can make an information-losing
   // transform, and then we have no way to find this better fold.
   if (N1C && N1C->isOne() && N0.getOpcode() == ISD::SUB) {
-    if (isNullConstantOrNullSplatConstant(N0.getOperand(0))) {
+    if (isNullOrNullSplat(N0.getOperand(0))) {
       SDValue SubRHS = N0.getOperand(1);
       if (SubRHS.getOpcode() == ISD::ZERO_EXTEND &&
           SubRHS.getOperand(0).getScalarValueSizeInBits() == 1)
@@ -6322,7 +6309,7 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
   unsigned Bitsize = VT.getScalarSizeInBits();
 
   // fold (rot x, 0) -> x
-  if (isNullConstantOrNullSplatConstant(N1))
+  if (isNullOrNullSplat(N1))
     return N0;
 
   // fold (rot x, c) -> (rot x, c % BitSize)
@@ -6367,6 +6354,9 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
 SDValue DAGCombiner::visitSHL(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  if (SDValue V = DAG.simplifyShift(N0, N1))
+    return V;
+
   EVT VT = N0.getValueType();
   unsigned OpSizeInBits = VT.getScalarSizeInBits();
 
@@ -6401,22 +6391,6 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
   ConstantSDNode *N0C = getAsNonOpaqueConstant(N0);
   if (N0C && N1C && !N1C->isOpaque())
     return DAG.FoldConstantArithmetic(ISD::SHL, SDLoc(N), VT, N0C, N1C);
-  // fold (shl 0, x) -> 0
-  if (isNullConstantOrNullSplatConstant(N0))
-    return N0;
-  // fold (shl x, c >= size(x)) -> undef
-  // NOTE: ALL vector elements must be too big to avoid partial UNDEFs.
-  auto MatchShiftTooBig = [OpSizeInBits](ConstantSDNode *Val) {
-    return Val->getAPIntValue().uge(OpSizeInBits);
-  };
-  if (ISD::matchUnaryPredicate(N1, MatchShiftTooBig))
-    return DAG.getUNDEF(VT);
-  // fold (shl x, 0) -> x
-  if (N1C && N1C->isNullValue())
-    return N0;
-  // fold (shl undef, x) -> 0
-  if (N0.isUndef())
-    return DAG.getConstant(0, SDLoc(N), VT);
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
@@ -6606,6 +6580,9 @@ SDValue DAGCombiner::visitSHL(SDNode *N) {
 SDValue DAGCombiner::visitSRA(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  if (SDValue V = DAG.simplifyShift(N0, N1))
+    return V;
+
   EVT VT = N0.getValueType();
   unsigned OpSizeInBits = VT.getScalarSizeInBits();
 
@@ -6626,16 +6603,6 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   ConstantSDNode *N0C = getAsNonOpaqueConstant(N0);
   if (N0C && N1C && !N1C->isOpaque())
     return DAG.FoldConstantArithmetic(ISD::SRA, SDLoc(N), VT, N0C, N1C);
-  // fold (sra x, c >= size(x)) -> undef
-  // NOTE: ALL vector elements must be too big to avoid partial UNDEFs.
-  auto MatchShiftTooBig = [OpSizeInBits](ConstantSDNode *Val) {
-    return Val->getAPIntValue().uge(OpSizeInBits);
-  };
-  if (ISD::matchUnaryPredicate(N1, MatchShiftTooBig))
-    return DAG.getUNDEF(VT);
-  // fold (sra x, 0) -> x
-  if (N1C && N1C->isNullValue())
-    return N0;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
@@ -6772,6 +6739,9 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
 SDValue DAGCombiner::visitSRL(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+  if (SDValue V = DAG.simplifyShift(N0, N1))
+    return V;
+
   EVT VT = N0.getValueType();
   unsigned OpSizeInBits = VT.getScalarSizeInBits();
 
@@ -6786,19 +6756,6 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   ConstantSDNode *N0C = getAsNonOpaqueConstant(N0);
   if (N0C && N1C && !N1C->isOpaque())
     return DAG.FoldConstantArithmetic(ISD::SRL, SDLoc(N), VT, N0C, N1C);
-  // fold (srl 0, x) -> 0
-  if (isNullConstantOrNullSplatConstant(N0))
-    return N0;
-  // fold (srl x, c >= size(x)) -> undef
-  // NOTE: ALL vector elements must be too big to avoid partial UNDEFs.
-  auto MatchShiftTooBig = [OpSizeInBits](ConstantSDNode *Val) {
-    return Val->getAPIntValue().uge(OpSizeInBits);
-  };
-  if (ISD::matchUnaryPredicate(N1, MatchShiftTooBig))
-    return DAG.getUNDEF(VT);
-  // fold (srl x, 0) -> x
-  if (N1C && N1C->isNullValue())
-    return N0;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
@@ -7890,7 +7847,7 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     // TODO: This should be extended to handle any constant.
     // TODO: This could be extended to handle non-loading patterns, but that
     //       requires thorough testing to avoid regressions.
-    if (isNullConstantOrNullSplatConstant(RHS)) {
+    if (isNullOrNullSplat(RHS)) {
       EVT NarrowVT = LHS.getValueType();
       EVT WideVT = N1.getValueType().changeVectorElementTypeToInteger();
       EVT SetCCVT = getSetCCResultType(LHS.getValueType());
@@ -8710,9 +8667,9 @@ static bool isTruncateOf(SelectionDAG &DAG, SDValue N, SDValue &Op,
   SDValue Op1 = N->getOperand(1);
   assert(Op0.getValueType() == Op1.getValueType());
 
-  if (isNullConstantOrNullSplatConstant(Op0))
+  if (isNullOrNullSplat(Op0))
     Op = Op1;
-  else if (isNullConstantOrNullSplatConstant(Op1))
+  else if (isNullOrNullSplat(Op1))
     Op = Op0;
   else
     return false;

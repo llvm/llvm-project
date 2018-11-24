@@ -472,7 +472,7 @@ int main(int argc, char **argv) {
       Printer.addView(llvm::make_unique<mca::SchedulerStatistics>(*STI));
 
     if (PrintRetireStats)
-      Printer.addView(llvm::make_unique<mca::RetireControlUnitStatistics>());
+      Printer.addView(llvm::make_unique<mca::RetireControlUnitStatistics>(SM));
 
     if (PrintRegisterFileStats)
       Printer.addView(llvm::make_unique<mca::RegisterFileStatistics>(*STI));

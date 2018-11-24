@@ -52,8 +52,8 @@ class InstrBuilder {
   InstrBuilder(const InstrBuilder &) = delete;
   InstrBuilder &operator=(const InstrBuilder &) = delete;
 
-  Error populateWrites(InstrDesc &ID, const MCInst &MCI, unsigned SchedClassID);
-  Error populateReads(InstrDesc &ID, const MCInst &MCI, unsigned SchedClassID);
+  void populateWrites(InstrDesc &ID, const MCInst &MCI, unsigned SchedClassID);
+  void populateReads(InstrDesc &ID, const MCInst &MCI, unsigned SchedClassID);
   Error verifyInstrDesc(const InstrDesc &ID, const MCInst &MCI) const;
 
 public:
