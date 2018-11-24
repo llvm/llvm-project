@@ -86,13 +86,13 @@ void edit::fillInMissingSwitchEnumCases(
     }
     const auto *CS = cast<CaseStmt>(Case);
     if (const auto *LHS = CS->getLHS()) {
-      llvm::APSInt Value;
-      if (!LHS->EvaluateAsInt(Value, Context))
+      Expr::EvalResult Result;
+      if (!LHS->EvaluateAsInt(Result, Context))
         continue;
       // Only allow constant that fix into 64 bits.
-      if (Value.getMinSignedBits() > 64)
+      if (Result.Val.getInt().getMinSignedBits() > 64)
         continue;
-      CoveredEnumCases[Value.getSExtValue()] =
+      CoveredEnumCases[Result.Val.getInt().getSExtValue()] =
           CaseInfo{Case, NextCase, CaseIndex};
       // The cases in the switch are ordered back to front, so the last
       //  case is actually the first enum case in the switch.
