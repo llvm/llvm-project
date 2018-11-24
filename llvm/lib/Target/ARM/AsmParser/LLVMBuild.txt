@@ -19,5 +19,5 @@
 type = Library
 name = ARMAsmParser
 parent = ARM
-required_libraries = ARMDesc ARMInfo MC MCParser Support ARMUtils
+required_libraries = ARMDesc ARMInfo ARMAsmPrinter MC MCParser Support ARMUtils
 add_to_library_groups = ARM

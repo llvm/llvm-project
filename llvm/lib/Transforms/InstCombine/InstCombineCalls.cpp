@@ -1992,6 +1992,29 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
 
   case Intrinsic::fshl:
   case Intrinsic::fshr: {
+    const APInt *SA;
+    if (match(II->getArgOperand(2), m_APInt(SA))) {
+      Value *Op0 = II->getArgOperand(0), *Op1 = II->getArgOperand(1);
+      unsigned BitWidth = SA->getBitWidth();
+      uint64_t ShiftAmt = SA->urem(BitWidth);
+      assert(ShiftAmt != 0 && "SimplifyCall should have handled zero shift");
+      // Normalize to funnel shift left.
+      if (II->getIntrinsicID() == Intrinsic::fshr)
+        ShiftAmt = BitWidth - ShiftAmt;
+
+      // fshl(X, 0, C) -> shl X, C
+      // fshl(X, undef, C) -> shl X, C
+      if (match(Op1, m_Zero()) || match(Op1, m_Undef()))
+        return BinaryOperator::CreateShl(
+            Op0, ConstantInt::get(II->getType(), ShiftAmt));
+
+      // fshl(0, X, C) -> lshr X, (BW-C)
+      // fshl(undef, X, C) -> lshr X, (BW-C)
+      if (match(Op0, m_Zero()) || match(Op0, m_Undef()))
+        return BinaryOperator::CreateLShr(
+            Op1, ConstantInt::get(II->getType(), BitWidth - ShiftAmt));
+    }
+
     // The shift amount (operand 2) of a funnel shift is modulo the bitwidth,
     // so only the low bits of the shift amount are demanded if the bitwidth is
     // a power-of-2.

@@ -1067,7 +1067,7 @@ define zeroext i1 @extend(i32 %bit, i64 %bits) {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    btl %eax, %ecx
+; X86-NEXT:    btl %ecx, %eax
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    retl
 ;
