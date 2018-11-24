@@ -230,8 +230,6 @@ private:
 };
 
 namespace {
-using MPTaskListTy = DenseMap<const Spindle *, SmallPtrSet<const Task *, 2>>;
-
 // Simple enum to track different types of races.  Each race type is a 2-bit
 // value, where a 1 bit indicates a write access.
 enum RaceType {
@@ -1040,90 +1038,6 @@ static bool shouldInstrumentReadWriteFromAddress(const Module *M, Value *Addr) {
 
   return true;
 }
-
-// Structure to record the set of child tasks that might be in parallel with
-// this spindle.
-struct MaybeParallelTasks {
-  MPTaskListTy TaskList;
-
-  // This method is called once per spindle during an initial DFS traversal of
-  // the spindle graph.
-  bool markDefiningSpindle(const Spindle *S) {
-    LLVM_DEBUG(dbgs() << "markDefiningSpindle @ " << *S << "\n");
-    switch (S->getType()) {
-      // Emplace empty task lists for Entry, Detach, and Sync spindles.
-    case Spindle::SPType::Entry:
-    case Spindle::SPType::Detach:
-      TaskList.try_emplace(S);
-      return true;
-    case Spindle::SPType::Sync:
-      return false;
-    case Spindle::SPType::Phi:
-      {
-        // At task-continuation Phi's, initialize the task list with the
-        // detached task that reattaches to this continuation.
-        if (S->isTaskContinuation()) {
-          LLVM_DEBUG(dbgs() << "TaskCont spindle " << *S << "\n");
-          bool Complete = true;
-          for (const Spindle *Pred : predecessors(S)) {
-            LLVM_DEBUG(dbgs() << "pred spindle " << *Pred << "\n");
-            if (S->predInDifferentTask(Pred))
-              TaskList[S].insert(Pred->getParentTask());
-            // If we have a Phi predecessor of this spindle, we'll want to
-            // re-evaluate it.
-            if (Pred->isPhi())
-              Complete = false;
-          }
-          LLVM_DEBUG({
-              for (const Task *MPT : TaskList[S])
-                dbgs() << "Added MPT " << MPT->getEntry()->getName() << "\n";
-            });
-          return Complete;
-        }
-        return false;
-      }
-    }
-    return false;
-  }
-
-  // This method is called once per unevaluated spindle in an inverse-post-order
-  // walk of the spindle graph.
-  bool evaluate(const Spindle *S, unsigned EvalNum) {
-    LLVM_DEBUG(dbgs() << "evaluate @ " << *S << "\n");
-    if (!TaskList.count(S))
-      TaskList.try_emplace(S);
-
-    bool Complete = true;
-    for (const Spindle::SpindleEdge &PredEdge : S->in_edges()) {
-      const Spindle *Pred = PredEdge.first;
-      const BasicBlock *Inc = PredEdge.second;
-
-      // If the incoming edge is a sync edge, get the associated sync region.
-      const Value *SyncRegSynced = nullptr;
-      if (const SyncInst *SI = dyn_cast<SyncInst>(Inc->getTerminator()))
-        SyncRegSynced = SI->getSyncRegion();
-
-      // Iterate through the tasks in the task list for Pred.
-      for (const Task *MP : TaskList[Pred]) {
-        // Filter out any tasks that are synced by the sync region.
-        if (const DetachInst *DI = MP->getDetach())
-          if (SyncRegSynced == DI->getSyncRegion())
-            continue;
-        // Insert the task into this spindle's task list.  If this task is a new
-        // addition, then we haven't yet reached the fixed point of this
-        // analysis.
-        if (TaskList[S].insert(MP).second)
-          Complete = false;
-      }
-    }
-    LLVM_DEBUG({
-        dbgs() << "New MPT list for " << *S << "(Complete? " << Complete << ")\n";
-        for (const Task *MP : TaskList[S])
-          dbgs() << "\t" << MP->getEntry()->getName() << "\n";
-      });
-    return Complete;
-  }
-};
 
 // Get the general memory accesses for the instruction \p I, and stores those
 // accesses into \p AccI.  Returns true if general memory accesses could be

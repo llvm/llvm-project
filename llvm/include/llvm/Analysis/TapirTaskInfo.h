@@ -1001,11 +1001,12 @@ public:
         SmallPtrSet<Spindle *, 8> LocalVisited(IPOVisited);
         while (!ToProcess.empty()) {
           Spindle *Curr = ToProcess.pop_back_val();
-          for (Spindle *S : inverse_post_order_ext(Curr, LocalVisited))
+          for (Spindle *S : inverse_post_order_ext(Curr, LocalVisited)) {
             if (!State.evaluate(S, EvalNum))
               ToReprocess.push_back(S);
             else
               IPOVisited.insert(S);
+          }
         }
         ToProcess.append(ToReprocess.begin(), ToReprocess.end());
         ToReprocess.clear();
@@ -1094,6 +1095,58 @@ public:
     S->addBlock(B);
     BBMap[&B] = S;
   }
+};
+
+// Structure to record the synced state of each spindle.
+struct IsSyncedState {
+  enum class SyncInfo {
+    Unsynced = 0,
+    Synced = 1,
+    TaskEntry = 2,
+    NoUnsync = Synced | TaskEntry,
+    Incomplete = 4,
+  };
+
+  static inline bool isUnsynced(const SyncInfo SyncI) {
+    return (static_cast<int>(SyncI) & static_cast<int>(SyncInfo::NoUnsync)) ==
+      static_cast<int>(SyncInfo::Unsynced);
+  }
+  static inline bool isSynced(const SyncInfo SyncI) {
+    return !isUnsynced(SyncI);
+  }
+  static inline bool isIncomplete(const SyncInfo SyncI) {
+    return (static_cast<int>(SyncI) & static_cast<int>(SyncInfo::Incomplete)) ==
+      static_cast<int>(SyncInfo::Incomplete);
+  }
+  static inline SyncInfo setUnsynced(const SyncInfo SyncI) {
+    // Once a sync state is set to unsynced, it's complete.
+    return SyncInfo(static_cast<int>(SyncI) &
+                    static_cast<int>(SyncInfo::Unsynced));
+  }
+  static inline SyncInfo setIncomplete(const SyncInfo SyncI) {
+    return SyncInfo(static_cast<int>(SyncI) |
+                    static_cast<int>(SyncInfo::Incomplete));
+  }
+  static inline SyncInfo setComplete(const SyncInfo SyncI) {
+    return SyncInfo(static_cast<int>(SyncI) &
+                    ~static_cast<int>(SyncInfo::Incomplete));
+  }
+
+  DenseMap<const Spindle *, SyncInfo> SyncedState;
+
+  bool markDefiningSpindle(const Spindle *S);
+  bool evaluate(const Spindle *S, unsigned EvalNum);
+};
+
+using MPTaskListTy = DenseMap<const Spindle *, SmallPtrSet<const Task *, 2>>;
+
+// Structure to record the set of child tasks that might be in parallel with
+// this spindle.
+struct MaybeParallelTasks {
+  MPTaskListTy TaskList;
+
+  bool markDefiningSpindle(const Spindle *S);
+  bool evaluate(const Spindle *S, unsigned EvalNum);
 };
 
 /// \brief Analysis pass that exposes the \c TaskInfo for a function.
