@@ -58,3 +58,7 @@
 # CHECK-NEXT: [# retired], [# cycles]
 # CHECK-NEXT:  0,           23  (74.2%)
 # CHECK-NEXT:  2,           8  (25.8%)
+
+# CHECK:      Total ROB Entries:                64
+# CHECK-NEXT: Max Used ROB Entries:             16  ( 25.0% )
+# CHECK-NEXT: Average Used ROB Entries per cy:  11  ( 17.2% )

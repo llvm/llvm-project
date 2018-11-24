@@ -373,6 +373,10 @@ class SchedPredicate<code pred> : SchedPredicateBase {
   SchedMachineModel SchedModel = ?;
   code Predicate = pred;
 }
+
+// Define a predicate to be typically used as the default case in a
+// SchedVariant.  It the SchedVariant does not use any other predicate based on
+// MCSchedPredicate, this is the default scheduling case used by llvm-mca.
 def NoSchedPred : MCSchedPredicate<TruePred>;
 
 // Associate a predicate with a list of SchedReadWrites. By default,
