@@ -74,6 +74,20 @@
                     "description": "Names a file that clangd should log a performance trace to, in chrome trace-viewer JSON format."
                 }
             }
-        }
+        },
+        "commands": [
+            {
+                "command": "clangd-vscode.switchheadersource",
+                "title": "Switch between Source/Header"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "clangd-vscode.switchheadersource",
+                "key": "Alt+o",
+                "mac": "Alt+cmd+o",
+                "when": "editorTextFocus"
+            }
+        ]
     }
 }
