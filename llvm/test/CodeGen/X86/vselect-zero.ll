@@ -129,9 +129,9 @@ define double @fsel_nonzero_constants(double %x, double %y) {
 ; AVX-LABEL: fsel_nonzero_constants:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    andl $1, %eax
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
 ; AVX-NEXT:    retq
   %cond = fcmp oeq double %x, %y
   %r = select i1 %cond, double 12.0, double 42.0

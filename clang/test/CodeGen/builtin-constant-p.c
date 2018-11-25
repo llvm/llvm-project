@@ -10,6 +10,9 @@ inline int bcp(int x) {
 
 struct foo { int x, y; };
 
+int y;
+struct foo f = (struct foo){ __builtin_constant_p(y), 42 };
+
 struct foo test0(int expr) {
   // CHECK: define i64 @test0(i32 %expr)
   // CHECK: call i1 @llvm.is.constant.i32(i32 %expr)

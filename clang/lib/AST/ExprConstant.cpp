@@ -10807,8 +10807,10 @@ static bool EvaluateAsInt(const Expr *E, Expr::EvalResult &ExprResult,
 /// we want to.  If this function returns true, it returns the folded constant
 /// in Result. If this expression is a glvalue, an lvalue-to-rvalue conversion
 /// will be applied to the result.
-bool Expr::EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx) const {
+bool Expr::EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
+                            bool InConstantContext) const {
   EvalInfo Info(Ctx, Result, EvalInfo::EM_IgnoreSideEffects);
+  Info.InConstantContext = InConstantContext;
   return ::EvaluateAsRValue(this, Result, Ctx, Info);
 }
 
@@ -10909,7 +10911,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
 /// constant folded, but discard the result.
 bool Expr::isEvaluatable(const ASTContext &Ctx, SideEffectsKind SEK) const {
   EvalResult Result;
-  return EvaluateAsRValue(Result, Ctx) &&
+  return EvaluateAsRValue(Result, Ctx, /* in constant context */ true) &&
          !hasUnacceptableSideEffect(Result, SEK);
 }
 

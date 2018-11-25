@@ -20,11 +20,11 @@ void BoolPointerImplicitConversionCheck::registerMatchers(MatchFinder *Finder) {
   // condition. Filter negations.
   Finder->addMatcher(
       ifStmt(hasCondition(findAll(implicitCastExpr(
-                 allOf(unless(hasParent(unaryOperator(hasOperatorName("!")))),
-                       hasSourceExpression(expr(
-                           hasType(pointerType(pointee(booleanType()))),
-                           ignoringParenImpCasts(declRefExpr().bind("expr")))),
-                       hasCastKind(CK_PointerToBoolean))))),
+                 unless(hasParent(unaryOperator(hasOperatorName("!")))),
+                 hasSourceExpression(
+                     expr(hasType(pointerType(pointee(booleanType()))),
+                          ignoringParenImpCasts(declRefExpr().bind("expr")))),
+                 hasCastKind(CK_PointerToBoolean)))),
              unless(isInTemplateInstantiation()))
           .bind("if"),
       this);

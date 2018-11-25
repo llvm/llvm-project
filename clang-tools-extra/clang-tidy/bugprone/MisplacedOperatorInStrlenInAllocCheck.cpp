@@ -29,17 +29,17 @@ void MisplacedOperatorInStrlenInAllocCheck::registerMatchers(
   const auto BadUse =
       callExpr(callee(StrLenFunc),
                hasAnyArgument(ignoringImpCasts(
-                   binaryOperator(allOf(hasOperatorName("+"),
-                                        hasRHS(ignoringParenImpCasts(
-                                            integerLiteral(equals(1))))))
+                   binaryOperator(
+                       hasOperatorName("+"),
+                       hasRHS(ignoringParenImpCasts(integerLiteral(equals(1)))))
                        .bind("BinOp"))))
           .bind("StrLen");
 
   const auto BadArg = anyOf(
-      allOf(hasDescendant(BadUse),
-            unless(binaryOperator(allOf(
+      allOf(unless(binaryOperator(
                 hasOperatorName("+"), hasLHS(BadUse),
-                hasRHS(ignoringParenImpCasts(integerLiteral(equals(1)))))))),
+                hasRHS(ignoringParenImpCasts(integerLiteral(equals(1)))))),
+            hasDescendant(BadUse)),
       BadUse);
 
   const auto Alloc0Func =
