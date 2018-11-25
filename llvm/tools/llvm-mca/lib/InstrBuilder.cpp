@@ -29,7 +29,8 @@ InstrBuilder::InstrBuilder(const llvm::MCSubtargetInfo &sti,
                            const llvm::MCInstrInfo &mcii,
                            const llvm::MCRegisterInfo &mri,
                            const llvm::MCInstrAnalysis &mcia)
-    : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia) {
+    : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia), FirstCallInst(true),
+      FirstReturnInst(true) {
   computeProcResourceMasks(STI.getSchedModel(), ProcResourceMasks);
 }
 
@@ -455,17 +456,19 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   std::unique_ptr<InstrDesc> ID = llvm::make_unique<InstrDesc>();
   ID->NumMicroOps = SCDesc.NumMicroOps;
 
-  if (MCDesc.isCall()) {
+  if (MCDesc.isCall() && FirstCallInst) {
     // We don't correctly model calls.
     WithColor::warning() << "found a call in the input assembly sequence.\n";
     WithColor::note() << "call instructions are not correctly modeled. "
                       << "Assume a latency of 100cy.\n";
+    FirstCallInst = false;
   }
 
-  if (MCDesc.isReturn()) {
+  if (MCDesc.isReturn() && FirstReturnInst) {
     WithColor::warning() << "found a return instruction in the input"
                          << " assembly sequence.\n";
     WithColor::note() << "program counter updates are ignored.\n";
+    FirstReturnInst = false;
   }
 
   ID->MayLoad = MCDesc.mayLoad();

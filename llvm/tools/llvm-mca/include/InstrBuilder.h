@@ -46,6 +46,9 @@ class InstrBuilder {
   DenseMap<unsigned short, std::unique_ptr<const InstrDesc>> Descriptors;
   DenseMap<const MCInst *, std::unique_ptr<const InstrDesc>> VariantDescriptors;
 
+  bool FirstCallInst;
+  bool FirstReturnInst;
+
   Expected<const InstrDesc &> createInstrDescImpl(const MCInst &MCI);
   Expected<const InstrDesc &> getOrCreateInstrDesc(const MCInst &MCI);
 
@@ -60,7 +63,11 @@ public:
   InstrBuilder(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
                const MCRegisterInfo &RI, const MCInstrAnalysis &IA);
 
-  void clear() { VariantDescriptors.shrink_and_clear(); }
+  void clear() {
+    VariantDescriptors.shrink_and_clear();
+    FirstCallInst = true;
+    FirstReturnInst = true;
+  }
 
   Expected<std::unique_ptr<Instruction>> createInstruction(const MCInst &MCI);
 };
