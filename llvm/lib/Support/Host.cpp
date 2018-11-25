@@ -903,11 +903,11 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
 
   auto setFeature = [&](unsigned F) {
     if (F < 32)
-      Features |= 1 << F;
+      Features |= 1U << (F & 0x1f);
     else if (F < 64)
-      Features2 |= 1 << (F - 32);
+      Features2 |= 1U << ((F - 32) & 0x1f);
     else if (F < 96)
-      Features3 |= 1 << (F - 64);
+      Features3 |= 1U << ((F - 64) & 0x1f);
     else
       llvm_unreachable("Unexpected FeatureBit");
   };

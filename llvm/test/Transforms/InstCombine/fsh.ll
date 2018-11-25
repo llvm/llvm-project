@@ -255,7 +255,7 @@ define <2 x i32> @fshr_op1_zero_vec(<2 x i32> %x) {
 
 define i32 @fshl_only_op0_demanded(i32 %x, i32 %y) {
 ; CHECK-LABEL: @fshl_only_op0_demanded(
-; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 7)
+; CHECK-NEXT:    [[Z:%.*]] = shl i32 [[X:%.*]], 7
 ; CHECK-NEXT:    [[R:%.*]] = and i32 [[Z]], 128
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -266,7 +266,7 @@ define i32 @fshl_only_op0_demanded(i32 %x, i32 %y) {
 
 define i32 @fshl_only_op1_demanded(i32 %x, i32 %y) {
 ; CHECK-LABEL: @fshl_only_op1_demanded(
-; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[Y:%.*]], i32 7)
+; CHECK-NEXT:    [[Z:%.*]] = lshr i32 [[Y:%.*]], 25
 ; CHECK-NEXT:    [[R:%.*]] = and i32 [[Z]], 63
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -275,9 +275,9 @@ define i32 @fshl_only_op1_demanded(i32 %x, i32 %y) {
   ret i32 %r
 }
 
-define i33 @fshr_only_op0_demanded(i33 %x, i33 %y) {
-; CHECK-LABEL: @fshr_only_op0_demanded(
-; CHECK-NEXT:    [[Z:%.*]] = call i33 @llvm.fshr.i33(i33 [[X:%.*]], i33 [[Y:%.*]], i33 7)
+define i33 @fshr_only_op1_demanded(i33 %x, i33 %y) {
+; CHECK-LABEL: @fshr_only_op1_demanded(
+; CHECK-NEXT:    [[Z:%.*]] = lshr i33 [[Y:%.*]], 7
 ; CHECK-NEXT:    [[R:%.*]] = and i33 [[Z]], 12392
 ; CHECK-NEXT:    ret i33 [[R]]
 ;
@@ -286,15 +286,38 @@ define i33 @fshr_only_op0_demanded(i33 %x, i33 %y) {
   ret i33 %r
 }
 
-define i33 @fshr_only_op1_demanded(i33 %x, i33 %y) {
-; CHECK-LABEL: @fshr_only_op1_demanded(
-; CHECK-NEXT:    [[Z:%.*]] = call i33 @llvm.fshr.i33(i33 [[X:%.*]], i33 [[Y:%.*]], i33 7)
-; CHECK-NEXT:    [[R:%.*]] = lshr i33 [[Z]], 30
+define i33 @fshr_only_op0_demanded(i33 %x, i33 %y) {
+; CHECK-LABEL: @fshr_only_op0_demanded(
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i33 [[X:%.*]], 4
+; CHECK-NEXT:    [[R:%.*]] = and i33 [[TMP1]], 7
 ; CHECK-NEXT:    ret i33 [[R]]
 ;
   %z = call i33 @llvm.fshr.i33(i33 %x, i33 %y, i33 7)
   %r = lshr i33 %z, 30
   ret i33 %r
+}
+
+define <2 x i31> @fshl_only_op1_demanded_vec_splat(<2 x i31> %x, <2 x i31> %y) {
+; CHECK-LABEL: @fshl_only_op1_demanded_vec_splat(
+; CHECK-NEXT:    [[Z:%.*]] = lshr <2 x i31> [[Y:%.*]], <i31 24, i31 24>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i31> [[Z]], <i31 63, i31 31>
+; CHECK-NEXT:    ret <2 x i31> [[R]]
+;
+  %z = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> %y, <2 x i31> <i31 7, i31 7>)
+  %r = and <2 x i31> %z, <i31 63, i31 31>
+  ret <2 x i31> %r
+}
+
+; The shift modulo bitwidth is the same for all vector elements, but this is not simplified yet.
+define <2 x i31> @fshl_only_op1_demanded_vec_nonsplat(<2 x i31> %x, <2 x i31> %y) {
+; CHECK-LABEL: @fshl_only_op1_demanded_vec_nonsplat(
+; CHECK-NEXT:    [[Z:%.*]] = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> [[X:%.*]], <2 x i31> [[Y:%.*]], <2 x i31> <i31 7, i31 38>)
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i31> [[Z]], <i31 63, i31 31>
+; CHECK-NEXT:    ret <2 x i31> [[R]]
+;
+  %z = call <2 x i31> @llvm.fshl.v2i31(<2 x i31> %x, <2 x i31> %y, <2 x i31> <i31 7, i31 38>)
+  %r = and <2 x i31> %z, <i31 63, i31 31>
+  ret <2 x i31> %r
 }
 
 ; Demand bits from both operands -- cannot simplify.
@@ -325,11 +348,7 @@ define i33 @fshr_both_ops_demanded(i33 %x, i33 %y) {
 
 define i32 @fshl_known_bits(i32 %x, i32 %y) {
 ; CHECK-LABEL: @fshl_known_bits(
-; CHECK-NEXT:    [[X2:%.*]] = or i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[Y2:%.*]] = lshr i32 [[Y:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = call i32 @llvm.fshl.i32(i32 [[X2]], i32 [[Y2]], i32 7)
-; CHECK-NEXT:    [[R:%.*]] = and i32 [[Z]], 192
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 128
 ;
   %x2 = or i32 %x, 1   ; lo bit set
   %y2 = lshr i32 %y, 1 ; hi bit clear
@@ -340,11 +359,7 @@ define i32 @fshl_known_bits(i32 %x, i32 %y) {
 
 define i33 @fshr_known_bits(i33 %x, i33 %y) {
 ; CHECK-LABEL: @fshr_known_bits(
-; CHECK-NEXT:    [[X2:%.*]] = or i33 [[X:%.*]], 1
-; CHECK-NEXT:    [[Y2:%.*]] = lshr i33 [[Y:%.*]], 1
-; CHECK-NEXT:    [[Z:%.*]] = call i33 @llvm.fshr.i33(i33 [[X2]], i33 [[Y2]], i33 26)
-; CHECK-NEXT:    [[R:%.*]] = and i33 [[Z]], 192
-; CHECK-NEXT:    ret i33 [[R]]
+; CHECK-NEXT:    ret i33 128
 ;
   %x2 = or i33 %x, 1 ; lo bit set
   %y2 = lshr i33 %y, 1 ; hi bit set
