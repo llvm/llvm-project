@@ -79,11 +79,11 @@ void UnnecessaryValueParamCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
   const auto ExpensiveValueParamDecl = parmVarDecl(
-      hasType(qualType(allOf(
+      hasType(qualType(
           hasCanonicalType(matchers::isExpensiveToCopy()),
           unless(anyOf(hasCanonicalType(referenceType()),
                        hasDeclaration(namedDecl(
-                           matchers::matchesAnyListedName(AllowedTypes)))))))),
+                           matchers::matchesAnyListedName(AllowedTypes))))))),
       decl().bind("param"));
   Finder->addMatcher(
       functionDecl(hasBody(stmt()), isDefinition(), unless(isImplicit()),

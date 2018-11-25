@@ -162,7 +162,7 @@ StatementMatcher makeIteratorLoopMatcher() {
   // reference then the return type is tagged with DerefByValueResultName.
   internal::Matcher<VarDecl> TestDerefReturnsByValue =
       hasType(hasUnqualifiedDesugaredType(
-          recordType(hasDeclaration(cxxRecordDecl(hasMethod(allOf(
+          recordType(hasDeclaration(cxxRecordDecl(hasMethod(cxxMethodDecl(
               hasOverloadedOperatorName("*"),
               anyOf(
                   // Tag the return type if it's by value.
