@@ -34,9 +34,9 @@ void TrailingReturnCheck::registerMatchers(MatchFinder *Finder) {
   // using decltype specifiers and lambda with otherwise unutterable
   // return types.
   Finder->addMatcher(
-      functionDecl(allOf(hasTrailingReturn(),
-                         unless(anyOf(returns(decltypeType()),
-                                      hasParent(cxxRecordDecl(isLambda()))))))
+      functionDecl(hasTrailingReturn(),
+                   unless(anyOf(returns(decltypeType()),
+                                hasParent(cxxRecordDecl(isLambda())))))
           .bind("decl"),
       this);
 }

@@ -196,11 +196,11 @@ void UppercaseLiteralSuffixCheck::registerMatchers(MatchFinder *Finder) {
   // E.g. i32 suffix still results in 'BuiltinType::Kind::Int'.
   // And such an info is not stored in the *Literal itself.
   Finder->addMatcher(
-      stmt(allOf(eachOf(integerLiteral().bind(IntegerLiteralCheck::Name),
-                        floatLiteral().bind(FloatingLiteralCheck::Name)),
-                 unless(anyOf(hasParent(userDefinedLiteral()),
-                              hasAncestor(isImplicit()),
-                              hasAncestor(substNonTypeTemplateParmExpr()))))),
+      stmt(eachOf(integerLiteral().bind(IntegerLiteralCheck::Name),
+                  floatLiteral().bind(FloatingLiteralCheck::Name)),
+           unless(anyOf(hasParent(userDefinedLiteral()),
+                        hasAncestor(isImplicit()),
+                        hasAncestor(substNonTypeTemplateParmExpr())))),
       this);
 }
 

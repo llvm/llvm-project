@@ -26,7 +26,7 @@ void MultiwayPathsCoveredCheck::storeOptions(
 void MultiwayPathsCoveredCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       switchStmt(
-          hasCondition(allOf(
+          hasCondition(expr(
               // Match on switch statements that have either a bit-field or
               // an integer condition. The ordering in 'anyOf()' is
               // important because the last condition is the most general.
@@ -43,10 +43,9 @@ void MultiwayPathsCoveredCheck::registerMatchers(MatchFinder *Finder) {
 
   // This option is noisy, therefore matching is configurable.
   if (WarnOnMissingElse) {
-    Finder->addMatcher(
-        ifStmt(allOf(hasParent(ifStmt()), unless(hasElse(anything()))))
-            .bind("else-if"),
-        this);
+    Finder->addMatcher(ifStmt(hasParent(ifStmt()), unless(hasElse(anything())))
+                           .bind("else-if"),
+                       this);
   }
 }
 
