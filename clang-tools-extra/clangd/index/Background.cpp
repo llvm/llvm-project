@@ -99,9 +99,11 @@ void BackgroundIndex::run() {
   }
 }
 
-void BackgroundIndex::blockUntilIdleForTest() {
+bool BackgroundIndex::blockUntilIdleForTest(
+    llvm::Optional<double> TimeoutSeconds) {
   std::unique_lock<std::mutex> Lock(QueueMu);
-  QueueCV.wait(Lock, [&] { return Queue.empty() && NumActiveTasks == 0; });
+  return wait(Lock, QueueCV, timeoutSeconds(TimeoutSeconds),
+              [&] { return Queue.empty() && NumActiveTasks == 0; });
 }
 
 void BackgroundIndex::enqueue(const std::vector<std::string> &ChangedFiles) {

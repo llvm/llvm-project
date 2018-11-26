@@ -90,7 +90,7 @@ TEST(BackgroundIndexTest, IndexTwoFiles) {
   Cmd.CommandLine = {"clang++", "-DA=1", testPath("root/A.cc")};
   CDB.setCompileCommand(testPath("root"), Cmd);
 
-  Idx.blockUntilIdleForTest();
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
   EXPECT_THAT(
       runFuzzyFind(Idx, ""),
       UnorderedElementsAre(Named("common"), Named("A_CC"),
@@ -100,7 +100,7 @@ TEST(BackgroundIndexTest, IndexTwoFiles) {
   Cmd.CommandLine = {"clang++", Cmd.Filename};
   CDB.setCompileCommand(testPath("root"), Cmd);
 
-  Idx.blockUntilIdleForTest();
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
   // B_CC is dropped as we don't collect symbols from A.h in this compilation.
   EXPECT_THAT(runFuzzyFind(Idx, ""),
               UnorderedElementsAre(Named("common"), Named("A_CC"),
@@ -141,7 +141,7 @@ TEST(BackgroundIndexTest, ShardStorageWriteTest) {
     BackgroundIndex Idx(Context::empty(), "", FS, CDB,
                         [&](llvm::StringRef) { return &MSS; });
     CDB.setCompileCommand(testPath("root"), Cmd);
-    Idx.blockUntilIdleForTest();
+    ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
   EXPECT_EQ(CacheHits, 0U);
   EXPECT_EQ(Storage.size(), 2U);

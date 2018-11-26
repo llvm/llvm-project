@@ -164,6 +164,12 @@ static cl::opt<Path> IndexFile(
         "eventually. Don't rely on it."),
     cl::init(""), cl::Hidden);
 
+static cl::opt<bool> EnableBackgroundIndex(
+    "background-index",
+    cl::desc("Index project code in the background and persist index on disk. "
+             "Experimental"),
+    cl::init(false), cl::Hidden);
+
 enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
 static cl::opt<CompileArgsFrom> CompileArgsFrom(
     "compile_args_from", cl::desc("The source of compile commands"),
@@ -344,6 +350,7 @@ int main(int argc, char *argv[]) {
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = EnableIndex;
   Opts.HeavyweightDynamicSymbolIndex = UseDex;
+  Opts.BackgroundIndex = EnableBackgroundIndex;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
   if (EnableIndex && !IndexFile.empty()) {

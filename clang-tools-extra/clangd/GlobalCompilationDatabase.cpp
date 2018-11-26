@@ -87,6 +87,8 @@ DirectoryBasedGlobalCompilationDatabase::getCDBForFile(
         Project->SourceRoot = Path;
     }
   }
+  // FIXME: getAllFiles() may return relative paths, we need absolute paths.
+  // Hopefully the fix is to change JSONCompilationDatabase and the interface.
   if (CDB && !Cached)
     OnCommandChanged.broadcast(CDB->getAllFiles());
   return CDB;
@@ -112,7 +114,7 @@ OverlayCDB::getCompileCommand(PathRef File, ProjectInfo *Project) const {
       return It->second;
     }
   }
-  return Base ? Base->getCompileCommand(File) : None;
+  return Base ? Base->getCompileCommand(File, Project) : None;
 }
 
 tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
