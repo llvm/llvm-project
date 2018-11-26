@@ -26,6 +26,7 @@
 #include "llvm/Support/SHA1.h"
 
 #include <memory>
+#include <numeric>
 #include <queue>
 #include <random>
 #include <string>
