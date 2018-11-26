@@ -9,6 +9,12 @@
 # RUN: llvm-readobj -t -s %t2 | FileCheck %s
 # RUN: llvm-objdump -d -print-imm-hex %t2 | FileCheck %s --check-prefix=USE
 
+## Check we are reporting the error correctly and don't crash
+## when handling the second --defsym.
+# RUN: not ld.lld -o %t2 %t.o --defsym ERR+ \
+#        --defsym foo2=foo1 2>&1 | FileCheck %s --check-prefix=ERR
+# ERR: error: -defsym: syntax error: ERR+
+
 # CHECK:      Symbol {
 # CHECK:        Name: foo1
 # CHECK-NEXT:   Value: 0x123

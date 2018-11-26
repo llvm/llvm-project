@@ -120,6 +120,9 @@ void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (New->getNumPlacementArgs() != 0)
     return;
+  // Skip when this is a new-expression with `auto`, e.g. new auto(1)
+  if (New->getType()->getPointeeType()->getContainedAutoType())
+    return;
 
   // Be conservative for cases where we construct an array without any
   // initalization.
