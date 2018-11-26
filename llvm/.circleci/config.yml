@@ -13,12 +13,9 @@ jobs:
             git clone git@github.com:wsmoses/Tapir-Clang.git tools/clang
             git clone git@github.com:wsmoses/Tapir-Polly.git tools/polly
             git clone git@github.com:wsmoses/Tapir-compiler-rt.git projects/compiler-rt
-            git clone https://github.com/llvm-mirror/lld.git tools/lld
             cd tools/clang
             git checkout xla
             cd ../polly
-            git checkout release_70
-            cd ../lld
             git checkout release_70
             cd ../../projects/compiler-rt
             git checkout xla
@@ -28,7 +25,7 @@ jobs:
           command: |
             mkdir build
             cd build
-            cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=host -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 1"
+            CC='clang' CXX='clang++' cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=host -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_USE_LINKER=lld -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 1"
       - run:
           name: make
           command: |
@@ -51,7 +48,7 @@ jobs:
             cd build
             cmake -DCMAKE_C_COMPILER=$HOME/project/build/bin/clang -DCMAKE_CXX_COMPILER=$HOME/project/build/bin/clang++ ..
             make -j2
-  
+
   "build-1604":
     resource_class: xlarge
     docker:
@@ -77,7 +74,7 @@ jobs:
           command: |
             mkdir build
             cd build
-            cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=host -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_USE_LINKER=gold -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 1"
+            CC='clang' CXX='clang++' cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=host -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_USE_LINKER=lld -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 1"
       - run:
           name: make
           command: |
@@ -126,7 +123,7 @@ jobs:
           command: |
             mkdir build
             cd build
-            cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=host -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_USE_LINKER=gold -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=1 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 1"
+            CC='clang' CXX='clang++' cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_TARGETS_TO_BUILD=host -DLLVM_BUILD_TESTS=ON -DLLVM_ENABLE_ASSERTIONS=ON -DLLVM_ENABLE_LTO=OFF -DLLVM_USE_LINKER=lld -DLLVM_PARALLEL_COMPILE_JOBS=2 -DLLVM_PARALLEL_LINK_JOBS=2 -DLLVM_BINUTILS_INCDIR=/usr/include -DLLVM_LIT_ARGS="-sv -j 1"
       - run:
           name: make
           command: |
