@@ -59,6 +59,7 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
   case CC_X86Pascal: return llvm::CallingConv::C;
   // TODO: Add support for __vectorcall to LLVM.
   case CC_X86VectorCall: return llvm::CallingConv::X86_VectorCall;
+  case CC_AArch64VectorCall: return llvm::CallingConv::AArch64_VectorCall;
   case CC_SpirFunction: return llvm::CallingConv::SPIR_FUNC;
   case CC_OpenCLKernel: return CGM.getTargetCodeGenInfo().getOpenCLKernelCallingConv();
   case CC_PreserveMost: return llvm::CallingConv::PreserveMost;
@@ -213,6 +214,9 @@ static CallingConv getCallingConventionForDecl(const Decl *D, bool IsWindows) {
 
   if (PcsAttr *PCS = D->getAttr<PcsAttr>())
     return (PCS->getPCS() == PcsAttr::AAPCS ? CC_AAPCS : CC_AAPCS_VFP);
+
+  if (D->hasAttr<AArch64VectorPcsAttr>())
+    return CC_AArch64VectorCall;
 
   if (D->hasAttr<IntelOclBiccAttr>())
     return CC_IntelOclBicc;

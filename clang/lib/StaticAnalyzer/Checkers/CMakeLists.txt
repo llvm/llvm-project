@@ -34,6 +34,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   DivZeroChecker.cpp
   DynamicTypePropagation.cpp
   DynamicTypeChecker.cpp
+  EnumCastOutOfRangeChecker.cpp
   ExprInspectionChecker.cpp
   FixedAddressChecker.cpp
   GCDAntipatternChecker.cpp

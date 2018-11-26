@@ -1742,6 +1742,31 @@ similar to ``stdcall`` on x86. Valid parameter values are "aapcs" and
   }];
 }
 
+def AArch64VectorPcsDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+On AArch64 targets, this attribute changes the calling convention of a
+function to preserve additional floating-point and Advanced SIMD registers
+relative to the default calling convention used for AArch64.
+
+This means it is more efficient to call such functions from code that performs
+extensive floating-point and vector calculations, because fewer live SIMD and FP
+registers need to be saved. This property makes it well-suited for e.g.
+floating-point or vector math library functions, which are typically leaf
+functions that require a small number of registers.
+
+However, using this attribute also means that it is more expensive to call
+a function that adheres to the default calling convention from within such
+a function. Therefore, it is recommended that this attribute is only used
+for leaf functions.
+
+For more information, see the documentation for `aarch64_vector_pcs`_ on
+the Arm Developer website.
+
+.. _`aarch64_vector_pcs`: https://developer.arm.com/products/software-development-tools/hpc/arm-compiler-for-hpc/vector-function-abi
+  }];
+}
+
 def RegparmDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{

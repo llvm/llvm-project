@@ -1105,6 +1105,17 @@ bool clang::index::generateUSRForMacro(StringRef MacroName, SourceLocation Loc,
   return false;
 }
 
+bool clang::index::generateUSRForType(QualType T, ASTContext &Ctx,
+                                      SmallVectorImpl<char> &Buf) {
+  if (T.isNull())
+    return true;
+  T = T.getCanonicalType();
+
+  USRGenerator UG(&Ctx, Buf);
+  UG.VisitType(T);
+  return UG.ignoreResults();
+}
+
 bool clang::index::generateFullUSRForModule(const Module *Mod,
                                             raw_ostream &OS) {
   if (!Mod->Parent)

@@ -51,6 +51,8 @@ int __attribute__((pcs("aapcs"))) pcs5(void); // expected-warning {{calling conv
 int __attribute__((pcs("aapcs-vfp"))) pcs6(void); // expected-warning {{calling convention 'pcs' ignored for this target}}
 int __attribute__((pcs("foo"))) pcs7(void); // expected-error {{invalid PCS type}}
 
+int __attribute__((aarch64_vector_pcs)) aavpcs(void); // expected-warning {{calling convention 'aarch64_vector_pcs' ignored for this target}}
+
 // PR6361
 void ctest3();
 void __attribute__((cdecl)) ctest3() {}
