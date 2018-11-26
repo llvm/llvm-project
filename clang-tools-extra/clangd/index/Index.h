@@ -494,6 +494,8 @@ struct FuzzyFindRequest {
   /// Paths should be absolute.
   std::vector<std::string> ProximityPaths;
 
+  // FIXME(ibiryukov): add expected type to the request.
+
   bool operator==(const FuzzyFindRequest &Req) const {
     return std::tie(Query, Scopes, Limit, RestrictForCodeCompletion,
                     ProximityPaths) ==

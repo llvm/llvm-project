@@ -28,6 +28,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_QUALITY_H
 
+#include "ExpectedTypes.h"
 #include "FileDistance.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -121,6 +122,13 @@ struct SymbolRelevanceSignals {
 
   // Whether symbol is an instance member of a class.
   bool IsInstanceMember = false;
+
+  // Whether clang provided a preferred type in the completion context.
+  bool HadContextType = false;
+  // Whether a source completion item or a symbol had a type information.
+  bool HadSymbolType = false;
+  // Whether the item matches the type expected in the completion context.
+  bool TypeMatchesPreferred = false;
 
   void merge(const CodeCompletionResult &SemaResult);
   void merge(const Symbol &IndexResult);
