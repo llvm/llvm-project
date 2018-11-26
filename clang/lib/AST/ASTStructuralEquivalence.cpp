@@ -1016,7 +1016,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     return false;
 
   // Compare the definitions of these two records. If either or both are
-  // incomplete, we assume that they are equivalent.
+  // incomplete (i.e. it is a forward decl), we assume that they are
+  // equivalent.
   D1 = D1->getDefinition();
   D2 = D2->getDefinition();
   if (!D1 || !D2)
@@ -1030,6 +1031,11 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (Context.EqKind == StructuralEquivalenceKind::Minimal)
     if (D1->hasExternalLexicalStorage() || D2->hasExternalLexicalStorage())
       return true;
+
+  // If one definition is currently being defined, we do not compare for
+  // equality and we assume that the decls are equal.
+  if (D1->isBeingDefined() || D2->isBeingDefined())
+    return true;
 
   if (auto *D1CXX = dyn_cast<CXXRecordDecl>(D1)) {
     if (auto *D2CXX = dyn_cast<CXXRecordDecl>(D2)) {

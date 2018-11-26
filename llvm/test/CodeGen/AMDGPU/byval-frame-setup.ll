@@ -48,8 +48,8 @@ entry:
 
 ; GCN: v_readlane_b32
 ; GCN-NOT: v_readlane_b32 s32
-; GCN: buffer_load_dword v32,
-; GCN: buffer_load_dword v33,
+; GCN-DAG: buffer_load_dword v32,
+; GCN-DAG: buffer_load_dword v33,
 ; GCN: s_sub_u32 s32, s32, 0xc00{{$}}
 ; GCN: s_setpc_b64
 define void  @void_func_byval_struct_non_leaf(%struct.ByValStruct addrspace(5)* byval noalias nocapture align 4 %arg0, %struct.ByValStruct addrspace(5)* byval noalias nocapture align 4 %arg1) #1 {

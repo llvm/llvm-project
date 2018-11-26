@@ -159,7 +159,9 @@ TEST(DiagnosticsTest, ClangTidy) {
                    "macro expansion [bugprone-macro-repeated-side-effects]"),
               WithNote(Diag(Test.range("macrodef"),
                             "macro 'SQUARE' defined here "
-                            "[bugprone-macro-repeated-side-effects]")))));
+                            "[bugprone-macro-repeated-side-effects]"))),
+          Diag(Test.range("macroarg"),
+               "multiple unsequenced modifications to 'y'")));
 }
 
 TEST(DiagnosticsTest, Preprocessor) {
@@ -179,6 +181,27 @@ TEST(DiagnosticsTest, Preprocessor) {
   EXPECT_THAT(
       TestTU::withCode(Test.code()).build().getDiagnostics(),
       ElementsAre(Diag(Test.range(), "use of undeclared identifier 'b'")));
+}
+
+TEST(DiagnosticsTest, InsideMacros) {
+  Annotations Test(R"cpp(
+    #define TEN 10
+    #define RET(x) return x + 10
+
+    int* foo() {
+      RET($foo[[0]]);
+    }
+    int* bar() {
+      return $bar[[TEN]];
+    }
+    )cpp");
+  EXPECT_THAT(TestTU::withCode(Test.code()).build().getDiagnostics(),
+              ElementsAre(Diag(Test.range("foo"),
+                               "cannot initialize return object of type "
+                               "'int *' with an rvalue of type 'int'"),
+                          Diag(Test.range("bar"),
+                               "cannot initialize return object of type "
+                               "'int *' with an rvalue of type 'int'")));
 }
 
 TEST(DiagnosticsTest, ToLSP) {

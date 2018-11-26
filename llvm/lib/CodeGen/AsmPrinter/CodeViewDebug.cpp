@@ -2460,10 +2460,6 @@ CodeViewDebug::getTypeIndexForThisPtr(DITypeRef TypeRef,
   // so that the TypeIndex for the this pointer can be shared with the type
   // index for other pointers to this class type.  If there is a ref qualifier
   // then we lookup the pointer using the subroutine as the parent type.
-  const DIType *ParentTy = nullptr;
-  if (Options != PointerOptions::None)
-    ParentTy = SubroutineTy;
-
   auto I = TypeIndices.find({Ty, SubroutineTy});
   if (I != TypeIndices.end())
     return I->second;

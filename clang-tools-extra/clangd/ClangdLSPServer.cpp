@@ -337,6 +337,17 @@ void ClangdLSPServer::onShutdown(const ShutdownParams &Params,
   Reply(nullptr);
 }
 
+// sync is a clangd extension: it blocks until all background work completes.
+// It blocks the calling thread, so no messages are processed until it returns!
+void ClangdLSPServer::onSync(const NoParams &Params,
+                             Callback<std::nullptr_t> Reply) {
+  if (Server->blockUntilIdleForTest(/*TimeoutSeconds=*/60))
+    Reply(nullptr);
+  else
+    Reply(createStringError(llvm::inconvertibleErrorCode(),
+                            "Not idle after a minute"));
+}
+
 void ClangdLSPServer::onDocumentDidOpen(
     const DidOpenTextDocumentParams &Params) {
   PathRef File = Params.textDocument.uri.file();
@@ -701,6 +712,7 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   // clang-format off
   MsgHandler->bind("initialize", &ClangdLSPServer::onInitialize);
   MsgHandler->bind("shutdown", &ClangdLSPServer::onShutdown);
+  MsgHandler->bind("sync", &ClangdLSPServer::onSync);
   MsgHandler->bind("textDocument/rangeFormatting", &ClangdLSPServer::onDocumentRangeFormatting);
   MsgHandler->bind("textDocument/onTypeFormatting", &ClangdLSPServer::onDocumentOnTypeFormatting);
   MsgHandler->bind("textDocument/formatting", &ClangdLSPServer::onDocumentFormatting);

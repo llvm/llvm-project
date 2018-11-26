@@ -587,6 +587,13 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   if (!Include.empty())
     S.IncludeHeaders.emplace_back(Include, 1);
 
+  llvm::Optional<OpaqueType> TypeStorage;
+  if (S.Flags & Symbol::IndexedForCodeCompletion) {
+    TypeStorage = OpaqueType::fromCompletionResult(*ASTCtx, SymbolCompletion);
+    if (TypeStorage)
+      S.Type = TypeStorage->raw();
+  }
+
   S.Origin = Opts.Origin;
   if (ND.getAvailability() == AR_Deprecated)
     S.Flags |= Symbol::Deprecated;

@@ -271,6 +271,8 @@ void ScriptParser::readLinkerScript() {
 }
 
 void ScriptParser::readDefsym(StringRef Name) {
+  if (errorCount())
+    return;
   Expr E = readExpr();
   if (!atEOF())
     setError("EOF expected, but got " + next());

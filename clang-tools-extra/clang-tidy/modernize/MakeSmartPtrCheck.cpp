@@ -120,6 +120,9 @@ void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (New->getNumPlacementArgs() != 0)
     return;
+  // Skip when this is a new-expression with `auto`, e.g. new auto(1)
+  if (New->getType()->getPointeeType()->getContainedAutoType())
+    return;
 
   // Be conservative for cases where we construct an array without any
   // initalization.
@@ -387,6 +390,19 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
       //   smart_ptr<Pair>(new Pair{first, second});
       // Has to be replaced with:
       //   smart_ptr<Pair>(Pair{first, second});
+      //
+      // The fix (std::make_unique) needs to see copy/move constructor of
+      // Pair. If we found any invisible or deleted copy/move constructor, we
+      // stop generating fixes -- as the C++ rule is complicated and we are less
+      // certain about the correct fixes.
+      if (const CXXRecordDecl *RD = New->getType()->getPointeeCXXRecordDecl()) {
+        if (llvm::find_if(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
+              return Ctor->isCopyOrMoveConstructor() &&
+                     (Ctor->isDeleted() || Ctor->getAccess() == AS_private);
+            }) != RD->ctor_end()) {
+          return false;
+        }
+      }
       InitRange = SourceRange(
           New->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
           New->getInitializer()->getSourceRange().getEnd());

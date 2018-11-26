@@ -455,11 +455,11 @@ json::Value toJSON(const CodeAction &CA) {
   return std::move(CodeAction);
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &O, const DocumentSymbol &S) {
+raw_ostream &operator<<(raw_ostream &O, const DocumentSymbol &S) {
   return O << S.name << " - " << toJSON(S);
 }
 
-llvm::json::Value toJSON(const DocumentSymbol &S) {
+json::Value toJSON(const DocumentSymbol &S) {
   json::Object Result{{"name", S.name},
                       {"kind", static_cast<int>(S.kind)},
                       {"range", S.range},
@@ -471,7 +471,8 @@ llvm::json::Value toJSON(const DocumentSymbol &S) {
     Result["children"] = S.children;
   if (S.deprecated)
     Result["deprecated"] = true;
-  return Result;
+  // Older gcc cannot compile 'return Result', even though it is legal.
+  return json::Value(std::move(Result));
 }
 
 json::Value toJSON(const WorkspaceEdit &WE) {

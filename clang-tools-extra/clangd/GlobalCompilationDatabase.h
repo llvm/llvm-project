@@ -28,14 +28,21 @@ namespace clangd {
 
 class Logger;
 
+struct ProjectInfo {
+  // The directory in which the compilation database was discovered.
+  // Empty if directory-based compilation database discovery was not used.
+  std::string SourceRoot;
+};
+
 /// Provides compilation arguments used for parsing C and C++ files.
 class GlobalCompilationDatabase {
 public:
   virtual ~GlobalCompilationDatabase() = default;
 
   /// If there are any known-good commands for building this file, returns one.
+  /// If the ProjectInfo pointer is set, it will also be populated.
   virtual llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File) const = 0;
+  getCompileCommand(PathRef File, ProjectInfo * = nullptr) const = 0;
 
   /// Makes a guess at how to build a file.
   /// The default implementation just runs clang on the file.
@@ -65,10 +72,11 @@ public:
   /// Scans File's parents looking for compilation databases.
   /// Any extra flags will be added.
   llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File) const override;
+  getCompileCommand(PathRef File, ProjectInfo * = nullptr) const override;
 
 private:
-  tooling::CompilationDatabase *getCDBForFile(PathRef File) const;
+  tooling::CompilationDatabase *getCDBForFile(PathRef File,
+                                              ProjectInfo *) const;
   std::pair<tooling::CompilationDatabase *, /*Cached*/ bool>
   getCDBInDirLocked(PathRef File) const;
 
@@ -93,7 +101,7 @@ public:
              std::vector<std::string> FallbackFlags = {});
 
   llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File) const override;
+  getCompileCommand(PathRef File, ProjectInfo * = nullptr) const override;
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
   /// Sets or clears the compilation command for a particular file.

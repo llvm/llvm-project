@@ -1638,51 +1638,51 @@ res_vsll = vec_slo(vsll, vsc);
 // CHECK-LE: @llvm.ppc.altivec.vsro
 
 res_vsll = vec_xl(sll, asll);
-// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
-// CHECK-LE: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
+// CHECK-LE: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
 
 res_vull = vec_xl(sll, aull);
-// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
-// CHECK-LE: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
+// CHECK-LE: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
 
 res_vd = vec_xl(sll, ad);
-// CHECK: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 16
-// CHECK-LE: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 1
+// CHECK-LE: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 1
 
 vec_xst(vsll, sll, asll);
-// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
-// CHECK-LE: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
+// CHECK-LE: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
 
 vec_xst(vull, sll, aull);
-// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
-// CHECK-LE: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
+// CHECK-LE: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
 
 vec_xst(vd, sll, ad);
-// CHECK: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 16
-// CHECK-LE: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 1
+// CHECK-LE: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 1
 
 res_vsll = vec_xl_be(sll, asll);
-// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
 // CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(i8* %{{[0-9]+}})
 
 res_vull = vec_xl_be(sll, aull);
-// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x i64>, <2 x i64>* %{{[0-9]+}}, align 1
 // CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(i8* %{{[0-9]+}})
 
 res_vd = vec_xl_be(sll, ad);
-// CHECK: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 16
+// CHECK: load <2 x double>, <2 x double>* %{{[0-9]+}}, align 1
 // CHECK-LE: call <2 x double> @llvm.ppc.vsx.lxvd2x.be(i8* %{{[0-9]+}})
 
 vec_xst_be(vsll, sll, asll);
-// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
 // CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, i8* %{{[0-9]+}})
 
 vec_xst_be(vull, sll, aull);
-// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x i64> %{{[0-9]+}}, <2 x i64>* %{{[0-9]+}}, align 1
 // CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, i8* %{{[0-9]+}})
 
 vec_xst_be(vd, sll, ad);
-// CHECK: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 16
+// CHECK: store <2 x double> %{{[0-9]+}}, <2 x double>* %{{[0-9]+}}, align 1
 // CHECK-LE: call void @llvm.ppc.vsx.stxvd2x.be(<2 x double> %{{[0-9]+}}, i8* %{{[0-9]+}})
 
   res_vf = vec_neg(vf);

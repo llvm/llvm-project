@@ -19,6 +19,7 @@
 #include "clang/Config/config.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace clang::ast_matchers;
@@ -328,6 +329,7 @@ getVfsOverlayFromFile(const std::string &OverlayFile) {
 }
 
 static int clangTidyMain(int argc, const char **argv) {
+  llvm::sys::PrintStackTraceOnErrorSignal(argv[0]);
   CommonOptionsParser OptionsParser(argc, argv, ClangTidyCategory,
                                     cl::ZeroOrMore);
   llvm::IntrusiveRefCntPtr<vfs::FileSystem> BaseFS(

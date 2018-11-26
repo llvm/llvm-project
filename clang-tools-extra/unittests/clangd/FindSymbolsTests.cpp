@@ -478,7 +478,7 @@ TEST_F(DocumentSymbolsTest, Unnamed) {
 }
 
 TEST_F(DocumentSymbolsTest, InHeaderFile) {
-  addFile("bar.h", R"cpp(
+  addFile(testPath("bar.h"), R"cpp(
       int foo() {
       }
       )cpp");
@@ -488,7 +488,7 @@ TEST_F(DocumentSymbolsTest, InHeaderFile) {
       int test() {
       }
       )cpp");
-  addFile("foo.cpp", R"cpp(
+  addFile(testPath("foo.cpp"), R"cpp(
       #include "foo.h"
       )cpp");
   EXPECT_THAT(getSymbols(FilePath), ElementsAre(WithName("test")));

@@ -41,9 +41,12 @@ class OverlayCDBTest : public ::testing::Test {
   class BaseCDB : public GlobalCompilationDatabase {
   public:
     Optional<tooling::CompileCommand>
-    getCompileCommand(StringRef File) const override {
-      if (File == testPath("foo.cc"))
+    getCompileCommand(StringRef File, ProjectInfo *Project) const override {
+      if (File == testPath("foo.cc")) {
+        if (Project)
+          Project->SourceRoot = testRoot();
         return cmd(File, "-DA=1");
+      }
       return None;
     }
 
