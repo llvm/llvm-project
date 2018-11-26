@@ -277,6 +277,13 @@ public:
   }
 };
 
+// Explicit instantiations for cilksan.
+template<>
+void (*DisjointSet_t<SPBagInterface *>::dtor_callback)(DisjointSet_t *);
+
+template<>
+DisjointSet_t<SPBagInterface *> *DisjointSet_t<SPBagInterface *>::free_list;
+
 #if CILKSAN_DEBUG
 template<>
 long DisjointSet_t<SPBagInterface *>::debug_count;

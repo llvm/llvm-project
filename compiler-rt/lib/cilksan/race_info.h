@@ -385,7 +385,7 @@ public:
 
   ~RaceInfo_t() {}
 
-  bool is_equivalent_race(const struct RaceInfo_t& other) const {
+  bool is_equivalent_race(const RaceInfo_t& other) const {
     /*
     if( (type == other.type &&
          first_inst == other.first_inst && second_inst == other.second_inst) ||

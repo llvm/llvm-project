@@ -315,7 +315,7 @@ void Static_Dictionary::erase(uint64_t key, size_t size) {
     if (__builtin_expect((lru_list.head &&
                           lru_list.head->page->page_id == page_id), 1)) {
       page = lru_list.head->page;
-    } else if (page = lru_list.find_after_head(page_id)) {
+    } else if ((page = lru_list.find_after_head(page_id))) {
     } else {
       auto found_page = page_table.find(page_id);
       if (found_page != page_table.end()) {
