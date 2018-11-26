@@ -587,9 +587,11 @@ const Symbol *SymbolCollector::addDeclaration(const NamedDecl &ND,
   if (!Include.empty())
     S.IncludeHeaders.emplace_back(Include, 1);
 
+  llvm::Optional<OpaqueType> TypeStorage;
   if (S.Flags & Symbol::IndexedForCodeCompletion) {
-    if (auto T = OpaqueType::fromCompletionResult(*ASTCtx, SymbolCompletion))
-      S.Type = T->raw();
+    TypeStorage = OpaqueType::fromCompletionResult(*ASTCtx, SymbolCompletion);
+    if (TypeStorage)
+      S.Type = TypeStorage->raw();
   }
 
   S.Origin = Opts.Origin;
