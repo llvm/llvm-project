@@ -119,6 +119,9 @@ private:
 
   void forEachClass(llvm::function_ref<void(size_t, size_t)> Fn);
 
+  template <class RelTy>
+  void combineRelocHashes(InputSection *IS, ArrayRef<RelTy> Rels);
+
   std::vector<InputSection *> Sections;
 
   // We repeat the main loop while `Repeat` is true.
@@ -423,6 +426,22 @@ void ICF<ELFT>::forEachClass(llvm::function_ref<void(size_t, size_t)> Fn) {
   ++Cnt;
 }
 
+// Combine the hashes of the sections referenced by the given section into its
+// hash.
+template <class ELFT>
+template <class RelTy>
+void ICF<ELFT>::combineRelocHashes(InputSection *IS, ArrayRef<RelTy> Rels) {
+  uint32_t Hash = IS->Class[1];
+  for (RelTy Rel : Rels) {
+    Symbol &S = IS->template getFile<ELFT>()->getRelocTargetSym(Rel);
+    if (auto *D = dyn_cast<Defined>(&S))
+      if (auto *RelSec = dyn_cast_or_null<InputSection>(D->Section))
+        Hash ^= RelSec->Class[1];
+  }
+  // Set MSB to 1 to avoid collisions with non-hash IDs.
+  IS->Class[0] = Hash | (1U << 31);
+}
+
 static void print(const Twine &S) {
   if (Config->PrintIcfSections)
     message(S);
@@ -438,8 +457,14 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // Initially, we use hash values to partition sections.
   parallelForEach(Sections, [&](InputSection *S) {
-    // Set MSB to 1 to avoid collisions with non-hash IDs.
-    S->Class[0] = xxHash64(S->data()) | (1U << 31);
+    S->Class[1] = xxHash64(S->data());
+  });
+
+  parallelForEach(Sections, [&](InputSection *S) {
+    if (S->AreRelocsRela)
+      combineRelocHashes(S, S->template relas<ELFT>());
+    else
+      combineRelocHashes(S, S->template rels<ELFT>());
   });
 
   // From now on, sections in Sections vector are ordered so that sections
