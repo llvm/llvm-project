@@ -38,11 +38,13 @@ DirectoryBasedGlobalCompilationDatabase::
     ~DirectoryBasedGlobalCompilationDatabase() = default;
 
 Optional<tooling::CompileCommand>
-DirectoryBasedGlobalCompilationDatabase::getCompileCommand(PathRef File) const {
-  if (auto CDB = getCDBForFile(File)) {
+DirectoryBasedGlobalCompilationDatabase::getCompileCommand(
+    PathRef File, ProjectInfo *Project) const {
+  if (auto CDB = getCDBForFile(File, Project)) {
     auto Candidates = CDB->getCompileCommands(File);
-    if (!Candidates.empty())
+    if (!Candidates.empty()) {
       return std::move(Candidates.front());
+    }
   } else {
     log("Failed to find compilation database for {0}", File);
   }
@@ -63,7 +65,8 @@ DirectoryBasedGlobalCompilationDatabase::getCDBInDirLocked(PathRef Dir) const {
 }
 
 tooling::CompilationDatabase *
-DirectoryBasedGlobalCompilationDatabase::getCDBForFile(PathRef File) const {
+DirectoryBasedGlobalCompilationDatabase::getCDBForFile(
+    PathRef File, ProjectInfo *Project) const {
   namespace path = sys::path;
   assert((path::is_absolute(File, path::Style::posix) ||
           path::is_absolute(File, path::Style::windows)) &&
@@ -74,10 +77,14 @@ DirectoryBasedGlobalCompilationDatabase::getCDBForFile(PathRef File) const {
   std::lock_guard<std::mutex> Lock(Mutex);
   if (CompileCommandsDir) {
     std::tie(CDB, Cached) = getCDBInDirLocked(*CompileCommandsDir);
+    if (Project && CDB)
+      Project->SourceRoot = *CompileCommandsDir;
   } else {
     for (auto Path = path::parent_path(File); !CDB && !Path.empty();
          Path = path::parent_path(Path)) {
       std::tie(CDB, Cached) = getCDBInDirLocked(Path);
+      if (Project && CDB)
+        Project->SourceRoot = Path;
     }
   }
   if (CDB && !Cached)
@@ -95,12 +102,15 @@ OverlayCDB::OverlayCDB(const GlobalCompilationDatabase *Base,
 }
 
 Optional<tooling::CompileCommand>
-OverlayCDB::getCompileCommand(PathRef File) const {
+OverlayCDB::getCompileCommand(PathRef File, ProjectInfo *Project) const {
   {
     std::lock_guard<std::mutex> Lock(Mutex);
     auto It = Commands.find(File);
-    if (It != Commands.end())
+    if (It != Commands.end()) {
+      if (Project)
+        Project->SourceRoot = "";
       return It->second;
+    }
   }
   return Base ? Base->getCompileCommand(File) : None;
 }

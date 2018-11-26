@@ -12,6 +12,7 @@
 
 #include "Context.h"
 #include "FSProvider.h"
+#include "GlobalCompilationDatabase.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
 #include "index/Serialization.h"
@@ -64,17 +65,16 @@ public:
   // FIXME: resource-dir injection should be hoisted somewhere common.
   BackgroundIndex(Context BackgroundContext, llvm::StringRef ResourceDir,
                   const FileSystemProvider &,
+                  const GlobalCompilationDatabase &CDB,
                   BackgroundIndexStorage::Factory IndexStorageFactory,
                   size_t ThreadPoolSize = llvm::hardware_concurrency());
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
-  // Enqueue a translation unit for indexing.
+  // Enqueue translation units for indexing.
   // The indexing happens in a background thread, so the symbols will be
   // available sometime later.
-  void enqueue(llvm::StringRef Directory, tooling::CompileCommand);
-  // Index all TUs described in the compilation database.
-  void enqueueAll(llvm::StringRef Directory,
-                  const tooling::CompilationDatabase &);
+  void enqueue(const std::vector<std::string> &ChangedFiles);
+  void enqueue(const std::string &File);
 
   // Cause background threads to stop after ther current task, any remaining
   // tasks will be discarded.
@@ -94,6 +94,7 @@ private:
   // configuration
   std::string ResourceDir;
   const FileSystemProvider &FSProvider;
+  const GlobalCompilationDatabase &CDB;
   Context BackgroundContext;
 
   // index state
@@ -109,6 +110,7 @@ private:
   // queue management
   using Task = std::function<void()>;
   void run(); // Main loop executed by Thread. Runs tasks from Queue.
+  void enqueueTask(Task T);
   void enqueueLocked(tooling::CompileCommand Cmd,
                      BackgroundIndexStorage *IndexStorage);
   std::mutex QueueMu;
@@ -117,6 +119,7 @@ private:
   bool ShouldStop = false;
   std::deque<Task> Queue;
   std::vector<std::thread> ThreadPool; // FIXME: Abstract this away.
+  GlobalCompilationDatabase::CommandChanged::Subscription CommandsChanged;
 };
 
 } // namespace clangd
