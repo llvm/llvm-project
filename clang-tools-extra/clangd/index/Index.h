@@ -10,6 +10,7 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 
+#include "ExpectedTypes.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseMap.h"
@@ -242,6 +243,10 @@ struct Symbol {
   /// e.g. return type of a function, or type of a variable.
   llvm::StringRef ReturnType;
 
+  /// Raw representation of the OpaqueType of the symbol, used for scoring
+  /// purposes.
+  llvm::StringRef Type;
+
   struct IncludeHeaderWithReferences {
     IncludeHeaderWithReferences() = default;
 
@@ -300,6 +305,7 @@ template <typename Callback> void visitStrings(Symbol &S, const Callback &CB) {
   CB(S.CompletionSnippetSuffix);
   CB(S.Documentation);
   CB(S.ReturnType);
+  CB(S.Type);
   auto RawCharPointerCB = [&CB](const char *&P) {
     llvm::StringRef S(P);
     CB(S);
