@@ -998,7 +998,7 @@ public:
   };
 
   /// \brief Cleanup to ensure parent stack frame is synced.
-  struct ImplicitSyncCleanup : public EHScopeStack::Cleanup {
+  struct ImplicitSyncCleanup final : public EHScopeStack::Cleanup {
     llvm::Instruction *SyncRegion;
   public:
     ImplicitSyncCleanup(llvm::Instruction *SyncRegion = nullptr)
