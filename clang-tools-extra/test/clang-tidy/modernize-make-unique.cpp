@@ -341,6 +341,9 @@ void initialization(int T, Base b) {
   // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use std::make_unique instead
   // CHECK-FIXES: PE1 = std::make_unique<E>();
 
+  // No warnings for `auto` new expression.
+  PE1.reset(new auto(E()));
+
   //============================================================================
   //  NOTE: For initlializer-list constructors, the check only gives warnings,
   //  and no fixes are generated.
