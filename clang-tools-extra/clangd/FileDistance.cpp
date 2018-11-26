@@ -196,11 +196,11 @@ static FileDistance createScopeFileDistance(ArrayRef<std::string> QueryScopes) {
     // symbols in it, and there is pattern where using-namespace is used in
     // place of enclosing namespaces (e.g. in implementation files).
     if (S == Preferred)
-      Param.Cost = S == "" ? 2 : 0;
+      Param.Cost = S == "" ? 4 : 0;
     else if (Preferred.startswith(S) && !S.empty())
       continue; // just rely on up-traversals.
     else
-      Param.Cost = S == "" ? 5 : 2;
+      Param.Cost = S == "" ? 6 : 2;
     auto Path = scopeToPath(S);
     // The global namespace is not 'near' its children.
     Param.MaxUpTraversals = std::max(Path.second - 1, 0);
