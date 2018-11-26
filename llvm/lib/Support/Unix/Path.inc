@@ -229,11 +229,11 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
 }
 
 TimePoint<> basic_file_status::getLastAccessedTime() const {
-  return toTimePoint(fs_st_atime);
+  return toTimePoint(fs_st_atime, fs_st_atime_nsec);
 }
 
 TimePoint<> basic_file_status::getLastModificationTime() const {
-  return toTimePoint(fs_st_mtime);
+  return toTimePoint(fs_st_mtime, fs_st_mtime_nsec);
 }
 
 UniqueID file_status::getUniqueID() const {
@@ -591,11 +591,22 @@ static std::error_code fillStatus(int StatRet, const struct stat &Status,
     return EC;
   }
 
+  uint32_t atime_nsec, mtime_nsec;
+#if defined(HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC)
+  atime_nsec = Status.st_atimespec.tv_nsec;
+  mtime_nsec = Status.st_mtimespec.tv_nsec;
+#elif defined(HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC)
+  atime_nsec = Status.st_atim.tv_nsec;
+  mtime_nsec = Status.st_mtim.tv_nsec;
+#else
+  atime_nsec = mtime_nsec = 0;
+#endif
+
   perms Perms = static_cast<perms>(Status.st_mode) & all_perms;
   Result = file_status(typeForMode(Status.st_mode), Perms, Status.st_dev,
-                       Status.st_nlink, Status.st_ino, Status.st_atime,
-                       Status.st_mtime, Status.st_uid, Status.st_gid,
-                       Status.st_size);
+                       Status.st_nlink, Status.st_ino,
+                       Status.st_atime, atime_nsec, Status.st_mtime, mtime_nsec,
+                       Status.st_uid, Status.st_gid, Status.st_size);
 
   return std::error_code();
 }
