@@ -14,12 +14,21 @@
 // definitions, which does not yet provide aligned allocation
 // XFAIL: LIBCXX-WINDOWS-FIXME
 
-// XFAIL: with_system_cxx_lib=macosx10.12 || availability=macosx10.12
-// XFAIL: with_system_cxx_lib=macosx10.11 || availability=macosx10.11
-// XFAIL: with_system_cxx_lib=macosx10.10 || availability=macosx10.10
-// XFAIL: with_system_cxx_lib=macosx10.9 || availability=macosx10.9
-// XFAIL: with_system_cxx_lib=macosx10.8 || availability=macosx10.8
-// XFAIL: with_system_cxx_lib=macosx10.7 || availability=macosx10.7
+// Clang 10 (and older) will trigger an availability error when the deployment
+// target does not support aligned allocation, even if we pass `-faligned-allocation`.
+// XFAIL: apple-clang-10 && availability=macosx10.12
+
+// The dylib shipped with macosx10.12 does not contain the aligned allocation
+// functions, so trying to force using those with -faligned-allocation results
+// in a link error.
+// XFAIL: with_system_cxx_lib=macosx10.12
+
+// The test will fail on deployment targets that do not support sized deallocation.
+// XFAIL: availability=macosx10.11
+// XFAIL: availability=macosx10.10
+// XFAIL: availability=macosx10.9
+// XFAIL: availability=macosx10.8
+// XFAIL: availability=macosx10.7
 
 // XFAIL: sanitizer-new-delete, ubsan
 
