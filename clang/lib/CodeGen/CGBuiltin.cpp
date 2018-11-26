@@ -1820,46 +1820,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                      "cast");
     return RValue::get(Result);
   }
-  case Builtin::BI_rotr8:
-  case Builtin::BI_rotr16:
-  case Builtin::BI_rotr:
-  case Builtin::BI_lrotr:
-  case Builtin::BI_rotr64: {
-    Value *Val = EmitScalarExpr(E->getArg(0));
-    Value *Shift = EmitScalarExpr(E->getArg(1));
-
-    llvm::Type *ArgType = Val->getType();
-    Shift = Builder.CreateIntCast(Shift, ArgType, false);
-    unsigned ArgWidth = ArgType->getIntegerBitWidth();
-    Value *Mask = llvm::ConstantInt::get(ArgType, ArgWidth - 1);
-
-    Value *RightShiftAmt = Builder.CreateAnd(Shift, Mask);
-    Value *RightShifted = Builder.CreateLShr(Val, RightShiftAmt);
-    Value *LeftShiftAmt = Builder.CreateAnd(Builder.CreateNeg(Shift), Mask);
-    Value *LeftShifted = Builder.CreateShl(Val, LeftShiftAmt);
-    Value *Result = Builder.CreateOr(LeftShifted, RightShifted);
-    return RValue::get(Result);
-  }
-  case Builtin::BI_rotl8:
-  case Builtin::BI_rotl16:
-  case Builtin::BI_rotl:
-  case Builtin::BI_lrotl:
-  case Builtin::BI_rotl64: {
-    Value *Val = EmitScalarExpr(E->getArg(0));
-    Value *Shift = EmitScalarExpr(E->getArg(1));
-
-    llvm::Type *ArgType = Val->getType();
-    Shift = Builder.CreateIntCast(Shift, ArgType, false);
-    unsigned ArgWidth = ArgType->getIntegerBitWidth();
-    Value *Mask = llvm::ConstantInt::get(ArgType, ArgWidth - 1);
-
-    Value *LeftShiftAmt = Builder.CreateAnd(Shift, Mask);
-    Value *LeftShifted = Builder.CreateShl(Val, LeftShiftAmt);
-    Value *RightShiftAmt = Builder.CreateAnd(Builder.CreateNeg(Shift), Mask);
-    Value *RightShifted = Builder.CreateLShr(Val, RightShiftAmt);
-    Value *Result = Builder.CreateOr(LeftShifted, RightShifted);
-    return RValue::get(Result);
-  }
   case Builtin::BI__builtin_unpredictable: {
     // Always return the argument of __builtin_unpredictable. LLVM does not
     // handle this builtin. Metadata for this builtin should be added directly
@@ -1918,12 +1878,22 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
     return emitRotate(E, false);
 
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI_rotr8: // Microsoft variants of rotate right
+  case Builtin::BI_rotr16:
+  case Builtin::BI_rotr:
+  case Builtin::BI_lrotr:
+  case Builtin::BI_rotr64:
     return emitRotate(E, true);
 
   case Builtin::BI__builtin_constant_p: {

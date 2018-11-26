@@ -3725,6 +3725,45 @@ TEST_P(ImportFunctionTemplateSpecializations, DefinitionThenPrototype) {
   EXPECT_EQ(To1->getPreviousDecl(), To0);
 }
 
+TEST_P(ASTImporterTestBase,
+    ImportShouldNotReportFalseODRErrorWhenRecordIsBeingDefined) {
+  {
+    Decl *FromTU = getTuDecl(
+        R"(
+            template <typename T>
+            struct B;
+            )",
+        Lang_CXX, "input0.cc");
+    auto *FromD = FirstDeclMatcher<ClassTemplateDecl>().match(
+        FromTU, classTemplateDecl(hasName("B")));
+
+    Import(FromD, Lang_CXX);
+  }
+
+  {
+    Decl *FromTU = getTuDecl(
+        R"(
+            template <typename T>
+            struct B {
+              void f();
+              B* b;
+            };
+            )",
+        Lang_CXX, "input1.cc");
+    FunctionDecl *FromD = FirstDeclMatcher<FunctionDecl>().match(
+        FromTU, functionDecl(hasName("f")));
+    Import(FromD, Lang_CXX);
+    auto *FromCTD = FirstDeclMatcher<ClassTemplateDecl>().match(
+        FromTU, classTemplateDecl(hasName("B")));
+    auto *ToCTD = cast<ClassTemplateDecl>(Import(FromCTD, Lang_CXX));
+    EXPECT_TRUE(ToCTD->isThisDeclarationADefinition());
+
+    // We expect no (ODR) warning during the import.
+    auto *ToTU = ToAST->getASTContext().getTranslationUnitDecl();
+    EXPECT_EQ(0u, ToTU->getASTContext().getDiagnostics().getNumWarnings());
+  }
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, DeclContextTest,
                         ::testing::Values(ArgVector()), );
 

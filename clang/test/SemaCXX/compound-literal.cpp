@@ -37,9 +37,10 @@ namespace brace_initializers {
   POD p = (POD){1, 2};
   // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'brace_initializers::POD'
   // CHECK: CompoundLiteralExpr {{.*}} 'brace_initializers::POD'
-  // CHECK-NEXT: ConstantExpr {{.*}} 'brace_initializers::POD'
   // CHECK-NEXT: InitListExpr {{.*}} 'brace_initializers::POD'
+  // CHECK-NEXT: ConstantExpr {{.*}}
   // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
+  // CHECK-NEXT: ConstantExpr {{.*}}
   // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
   void test() {

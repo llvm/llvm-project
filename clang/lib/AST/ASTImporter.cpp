@@ -1740,8 +1740,9 @@ Error ASTNodeImporter::ImportDefinition(
     return Err;
 
   // Add base classes.
-  if (auto *ToCXX = dyn_cast<CXXRecordDecl>(To)) {
-    auto *FromCXX = cast<CXXRecordDecl>(From);
+  auto *ToCXX = dyn_cast<CXXRecordDecl>(To);
+  auto *FromCXX = dyn_cast<CXXRecordDecl>(From);
+  if (ToCXX && FromCXX && ToCXX->dataPtr() && FromCXX->dataPtr()) {
 
     struct CXXRecordDecl::DefinitionData &ToData = ToCXX->data();
     struct CXXRecordDecl::DefinitionData &FromData = FromCXX->data();

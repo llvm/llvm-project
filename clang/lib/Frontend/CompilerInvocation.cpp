@@ -120,25 +120,25 @@ CompilerInvocationBase::~CompilerInvocationBase() = default;
 
 static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
                                      DiagnosticsEngine &Diags) {
-  unsigned DefaultOpt = 0;
+  unsigned DefaultOpt = llvm::CodeGenOpt::None;
   if (IK.getLanguage() == InputKind::OpenCL && !Args.hasArg(OPT_cl_opt_disable))
-    DefaultOpt = 2;
+    DefaultOpt = llvm::CodeGenOpt::Default;
 
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O0))
-      return 0;
+      return llvm::CodeGenOpt::None;
 
     if (A->getOption().matches(options::OPT_Ofast))
-      return 3;
+      return llvm::CodeGenOpt::Aggressive;
 
     assert(A->getOption().matches(options::OPT_O));
 
     StringRef S(A->getValue());
     if (S == "s" || S == "z" || S.empty())
-      return 2;
+      return llvm::CodeGenOpt::Default;
 
     if (S == "g")
-      return 1;
+      return llvm::CodeGenOpt::Less;
 
     return getLastArgIntValue(Args, OPT_O, DefaultOpt, Diags);
   }
