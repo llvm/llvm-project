@@ -81,7 +81,8 @@ public:
   void stop();
 
   // Wait until the queue is empty, to allow deterministic testing.
-  void blockUntilIdleForTest();
+  LLVM_NODISCARD bool
+  blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10);
 
   using FileDigest = decltype(llvm::SHA1::hash({}));
 

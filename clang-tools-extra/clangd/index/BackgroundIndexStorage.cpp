@@ -30,7 +30,7 @@ std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
   llvm::sys::path::append(ShardRootSS, llvm::sys::path::filename(FilePath) +
                                            "." + llvm::toHex(digest(FilePath)) +
                                            ".idx");
-  return ShardRoot.str();
+  return ShardRootSS.str();
 }
 
 // Uses disk as a storage for index shards. Creates a directory called
@@ -101,6 +101,9 @@ public:
 // Creates and owns IndexStorages for multiple CDBs.
 class DiskBackedIndexStorageManager {
 public:
+  DiskBackedIndexStorageManager()
+      : IndexStorageMapMu(llvm::make_unique<std::mutex>()) {}
+
   // Creates or fetches to storage from cache for the specified CDB.
   BackgroundIndexStorage *operator()(llvm::StringRef CDBDirectory) {
     std::lock_guard<std::mutex> Lock(*IndexStorageMapMu);

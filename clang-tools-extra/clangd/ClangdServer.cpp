@@ -121,16 +121,25 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                     llvm::make_unique<UpdateIndexCallbacks>(DynamicIdx.get(),
                                                             DiagConsumer),
                     Opts.UpdateDebounce, Opts.RetentionPolicy) {
-  if (DynamicIdx && Opts.StaticIndex) {
-    MergedIdx =
-        llvm::make_unique<MergedIndex>(DynamicIdx.get(), Opts.StaticIndex);
-    Index = MergedIdx.get();
-  } else if (DynamicIdx)
-    Index = DynamicIdx.get();
-  else if (Opts.StaticIndex)
-    Index = Opts.StaticIndex;
-  else
-    Index = nullptr;
+  // Adds an index to the stack, at higher priority than existing indexes.
+  auto AddIndex = [&](SymbolIndex *Idx) {
+    if (this->Index != nullptr) {
+      MergedIdx.push_back(llvm::make_unique<MergedIndex>(Idx, this->Index));
+      this->Index = MergedIdx.back().get();
+    } else {
+      this->Index = Idx;
+    }
+  };
+  if (Opts.StaticIndex)
+    AddIndex(Opts.StaticIndex);
+  if (Opts.BackgroundIndex) {
+    BackgroundIdx = llvm::make_unique<BackgroundIndex>(
+        Context::current().clone(), ResourceDir, FSProvider, CDB,
+        BackgroundIndexStorage::createDiskBackedStorageFactory());
+    AddIndex(BackgroundIdx.get());
+  }
+  if (DynamicIdx)
+    AddIndex(DynamicIdx.get());
 }
 
 void ClangdServer::addDocument(PathRef File, StringRef Contents,
@@ -501,7 +510,9 @@ ClangdServer::getUsedBytesPerFile() const {
 
 LLVM_NODISCARD bool
 ClangdServer::blockUntilIdleForTest(Optional<double> TimeoutSeconds) {
-  return WorkScheduler.blockUntilIdle(timeoutSeconds(TimeoutSeconds));
+  return WorkScheduler.blockUntilIdle(timeoutSeconds(TimeoutSeconds)) &&
+         (!BackgroundIdx ||
+          BackgroundIdx->blockUntilIdleForTest(TimeoutSeconds));
 }
 
 } // namespace clangd

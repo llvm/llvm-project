@@ -18,6 +18,7 @@
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
 #include "TUScheduler.h"
+#include "index/Background.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -78,6 +79,9 @@ public:
     /// Use a heavier and faster in-memory index implementation.
     /// FIXME: we should make this true if it isn't too slow to build!.
     bool HeavyweightDynamicSymbolIndex = false;
+    /// If true, ClangdServer automatically indexes files in the current project
+    /// on background threads. The index is stored in the project root.
+    bool BackgroundIndex = false;
 
     /// If set, use this index to augment code completion results.
     SymbolIndex *StaticIndex = nullptr;
@@ -234,11 +238,13 @@ private:
   //   - the dynamic index owned by ClangdServer (DynamicIdx)
   //   - the static index passed to the constructor
   //   - a merged view of a static and dynamic index (MergedIndex)
-  const SymbolIndex *Index;
+  const SymbolIndex *Index = nullptr;
   // If present, an index of symbols in open files. Read via *Index.
   std::unique_ptr<FileIndex> DynamicIdx;
-  // If present, storage for the merged static/dynamic index. Read via *Index.
-  std::unique_ptr<SymbolIndex> MergedIdx;
+  // If present, the new "auto-index" maintained in background threads.
+  std::unique_ptr<BackgroundIndex> BackgroundIdx;
+  // Storage for merged views of the various indexes.
+  std::vector<std::unique_ptr<SymbolIndex>> MergedIdx;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>
