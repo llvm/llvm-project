@@ -1444,8 +1444,7 @@ public:
                                                0, Ty);
     ArithCost += (NumReduxLevels - LongVectorCount) *
                  ConcreteTTI->getArithmeticInstrCost(Opcode, Ty);
-    return ShuffleCost + ArithCost +
-           ConcreteTTI->getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
+    return ShuffleCost + ArithCost + getScalarizationOverhead(Ty, false, true);
   }
 
   /// Try to calculate op costs for min/max reduction operations.
@@ -1503,8 +1502,8 @@ public:
     // Need 3 extractelement instructions for scalarization + an additional
     // scalar select instruction.
     return ShuffleCost + MinMaxCost +
-           3 * ConcreteTTI->getVectorInstrCost(Instruction::ExtractElement, Ty,
-                                               0) +
+           3 * getScalarizationOverhead(Ty, /*Insert=*/false,
+                                        /*Extract=*/true) +
            ConcreteTTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
                                            ScalarCondTy, nullptr);
   }

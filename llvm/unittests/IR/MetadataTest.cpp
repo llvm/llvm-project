@@ -147,11 +147,9 @@ TEST_F(MDStringTest, CreateSame) {
 
 // Test that MDString prints out the string we fed it.
 TEST_F(MDStringTest, PrintingSimple) {
-  char *str = new char[13];
-  strncpy(str, "testing 1 2 3", 13);
-  MDString *s = MDString::get(Context, StringRef(str, 13));
-  strncpy(str, "aaaaaaaaaaaaa", 13);
-  delete[] str;
+  char str[14] = "testing 1 2 3";
+  MDString *s = MDString::get(Context, StringRef(&str[0], 13));
+  strncpy(str, "aaaaaaaaaaaaa", 14);
 
   std::string Str;
   raw_string_ostream oss(Str);

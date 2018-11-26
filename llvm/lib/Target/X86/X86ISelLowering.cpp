@@ -4767,6 +4767,14 @@ bool X86TargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
   return true;
 }
 
+bool X86TargetLowering::reduceSelectOfFPConstantLoads(bool IsFPSetCC) const {
+  // If we are using XMM registers in the ABI and the condition of the select is
+  // a floating-point compare and we have blendv or conditional move, then it is
+  // cheaper to select instead of doing a cross-register move and creating a
+  // load that depends on the compare result.
+  return !IsFPSetCC || !Subtarget.isTarget64BitLP64() || !Subtarget.hasAVX();
+}
+
 bool X86TargetLowering::convertSelectOfConstantsToMath(EVT VT) const {
   // TODO: It might be a win to ease or lift this restriction, but the generic
   // folds in DAGCombiner conflict with vector folds for an AVX512 target.

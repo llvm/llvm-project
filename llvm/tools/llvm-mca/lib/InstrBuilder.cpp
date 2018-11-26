@@ -190,14 +190,6 @@ static void computeMaxLatency(InstrDesc &ID, const MCInstrDesc &MCDesc,
 }
 
 static Error verifyOperands(const MCInstrDesc &MCDesc, const MCInst &MCI) {
-  // Variadic opcodes are not correctly supported.
-  if (MCDesc.isVariadic()) {
-    if (MCI.getNumOperands() - MCDesc.getNumOperands()) {
-      return make_error<InstructionError<MCInst>>(
-          "Don't know how to process this variadic opcode.", MCI);
-    }
-  }
-
   // Count register definitions, and skip non register operands in the process.
   unsigned I, E;
   unsigned NumExplicitDefs = MCDesc.getNumDefs();
@@ -281,7 +273,8 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
   if (MCDesc.hasOptionalDef())
     TotalDefs++;
 
-  ID.Writes.resize(TotalDefs);
+  unsigned NumVariadicOps = MCI.getNumOperands() - MCDesc.getNumOperands();
+  ID.Writes.resize(TotalDefs + NumVariadicOps);
   // Iterate over the operands list, and skip non-register operands.
   // The first NumExplictDefs register operands are expected to be register
   // definitions.
@@ -358,6 +351,41 @@ void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
              << ", WriteResourceID=" << Write.SClassOrWriteResourceID << '\n';
     });
   }
+
+  if (!NumVariadicOps)
+    return;
+
+  // FIXME: if an instruction opcode is flagged 'mayStore', and it has no
+  // "unmodeledSideEffects', then this logic optimistically assumes that any
+  // extra register operands in the variadic sequence is not a register
+  // definition.
+  //
+  // Otherwise, we conservatively assume that any register operand from the
+  // variadic sequence is both a register read and a register write.
+  bool AssumeUsesOnly = MCDesc.mayStore() && !MCDesc.mayLoad() &&
+                        !MCDesc.hasUnmodeledSideEffects();
+  CurrentDef = NumExplicitDefs + NumImplicitDefs + MCDesc.hasOptionalDef();
+  for (unsigned I = 0, OpIndex = MCDesc.getNumOperands();
+       I < NumVariadicOps && !AssumeUsesOnly; ++I, ++OpIndex) {
+    const MCOperand &Op = MCI.getOperand(OpIndex);
+    if (!Op.isReg())
+      continue;
+
+    WriteDescriptor &Write = ID.Writes[CurrentDef];
+    Write.OpIndex = OpIndex;
+    // Assign a default latency for this write.
+    Write.Latency = ID.MaxLatency;
+    Write.SClassOrWriteResourceID = 0;
+    Write.IsOptionalDef = false;
+    ++CurrentDef;
+    LLVM_DEBUG({
+      dbgs() << "\t\t[Def][V] OpIdx=" << Write.OpIndex
+             << ", Latency=" << Write.Latency
+             << ", WriteResourceID=" << Write.SClassOrWriteResourceID << '\n';
+    });
+  }
+
+  ID.Writes.resize(CurrentDef);
 }
 
 void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
@@ -368,14 +396,21 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
   // Remove the optional definition.
   if (MCDesc.hasOptionalDef())
     --NumExplicitUses;
-  unsigned TotalUses = NumExplicitUses + NumImplicitUses;
-
+  unsigned NumVariadicOps = MCI.getNumOperands() - MCDesc.getNumOperands();
+  unsigned TotalUses = NumExplicitUses + NumImplicitUses + NumVariadicOps;
   ID.Reads.resize(TotalUses);
-  for (unsigned I = 0; I < NumExplicitUses; ++I) {
-    ReadDescriptor &Read = ID.Reads[I];
-    Read.OpIndex = MCDesc.getNumDefs() + I;
+  unsigned CurrentUse = 0;
+  for (unsigned I = 0, OpIndex = MCDesc.getNumDefs(); I < NumExplicitUses;
+       ++I, ++OpIndex) {
+    const MCOperand &Op = MCI.getOperand(OpIndex);
+    if (!Op.isReg())
+      continue;
+
+    ReadDescriptor &Read = ID.Reads[CurrentUse];
+    Read.OpIndex = OpIndex;
     Read.UseIndex = I;
     Read.SchedClassID = SchedClassID;
+    ++CurrentUse;
     LLVM_DEBUG(dbgs() << "\t\t[Use]    OpIdx=" << Read.OpIndex
                       << ", UseIndex=" << Read.UseIndex << '\n');
   }
@@ -383,7 +418,7 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
   // For the purpose of ReadAdvance, implicit uses come directly after explicit
   // uses. The "UseIndex" must be updated according to that implicit layout.
   for (unsigned I = 0; I < NumImplicitUses; ++I) {
-    ReadDescriptor &Read = ID.Reads[NumExplicitUses + I];
+    ReadDescriptor &Read = ID.Reads[CurrentUse + I];
     Read.OpIndex = ~I;
     Read.UseIndex = NumExplicitUses + I;
     Read.RegisterID = MCDesc.getImplicitUses()[I];
@@ -392,6 +427,32 @@ void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
                       << ", UseIndex=" << Read.UseIndex << ", RegisterID="
                       << MRI.getName(Read.RegisterID) << '\n');
   }
+
+  CurrentUse += NumImplicitUses;
+
+  // FIXME: If an instruction opcode is marked as 'mayLoad', and it has no
+  // "unmodeledSideEffects", then this logic optimistically assumes that any
+  // extra register operands in the variadic sequence are not register
+  // definition.
+
+  bool AssumeDefsOnly = !MCDesc.mayStore() && MCDesc.mayLoad() &&
+                        !MCDesc.hasUnmodeledSideEffects();
+  for (unsigned I = 0, OpIndex = MCDesc.getNumOperands();
+       I < NumVariadicOps && !AssumeDefsOnly; ++I, ++OpIndex) {
+    const MCOperand &Op = MCI.getOperand(OpIndex);
+    if (!Op.isReg())
+      continue;
+
+    ReadDescriptor &Read = ID.Reads[CurrentUse];
+    Read.OpIndex = OpIndex;
+    Read.UseIndex = NumExplicitUses + NumImplicitUses + I;
+    Read.SchedClassID = SchedClassID;
+    ++CurrentUse;
+    LLVM_DEBUG(dbgs() << "\t\t[Use][V] OpIdx=" << Read.OpIndex
+                      << ", UseIndex=" << Read.UseIndex << '\n');
+  }
+
+  ID.Reads.resize(CurrentUse);
 }
 
 Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
@@ -431,10 +492,11 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   // Then obtain the scheduling class information from the instruction.
   unsigned SchedClassID = MCDesc.getSchedClass();
-  unsigned CPUID = SM.getProcessorID();
+  bool IsVariant = SM.getSchedClassDesc(SchedClassID)->isVariant();
 
   // Try to solve variant scheduling classes.
-  if (SchedClassID) {
+  if (IsVariant) {
+    unsigned CPUID = SM.getProcessorID();
     while (SchedClassID && SM.getSchedClassDesc(SchedClassID)->isVariant())
       SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, CPUID);
 
@@ -493,7 +555,8 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   // Now add the new descriptor.
   SchedClassID = MCDesc.getSchedClass();
-  if (!SM.getSchedClassDesc(SchedClassID)->isVariant()) {
+  bool IsVariadic = MCDesc.isVariadic();
+  if (!IsVariadic && !IsVariant) {
     Descriptors[MCI.getOpcode()] = std::move(ID);
     return *Descriptors[MCI.getOpcode()];
   }
