@@ -1227,7 +1227,7 @@ struct LoopSpawningTI : public FunctionPass {
     initializeLoopSpawningTIPass(*PassRegistry::getPassRegistry());
   }
 
-  bool runOnFunction(Function &F) {
+  bool runOnFunction(Function &F) override {
     if (skipFunction(F))
       return false;
 

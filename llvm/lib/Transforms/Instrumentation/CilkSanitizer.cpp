@@ -561,7 +561,7 @@ struct CilkSanitizerLegacyPass : public ModulePass {
     return "CilkSanitizer";
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnModule(Module &M);
+  bool runOnModule(Module &M) override;
 };
 } // namespace
 

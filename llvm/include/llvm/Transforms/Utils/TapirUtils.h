@@ -154,7 +154,6 @@ public:
     case TapirLoopHints::ST_DAC:
       return "Use divide-and-conquer";
     case TapirLoopHints::ST_END:
-    default:
       return "Unknown";
     }
   }

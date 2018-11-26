@@ -221,6 +221,8 @@ class CsiProperty {
 public:
   CsiProperty() {}
 
+  virtual ~CsiProperty() {}
+
   /// Return the coerced type of a property.
   ///
   /// TODO: Right now, this function simply returns a 64-bit integer.  Although
@@ -623,6 +625,8 @@ public:
       : M(M), DL(M.getDataLayout()), CG(CG), GetDomTree(GetDomTree),
         Options(Options)
   {}
+
+  virtual ~CSIImpl() {}
 
   bool run();
 
