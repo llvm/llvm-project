@@ -35,6 +35,7 @@ add_extra_unittest(ClangdTests
   SerializationTests.cpp
   SourceCodeTests.cpp
   SymbolCollectorTests.cpp
+  SymbolInfoTests.cpp
   SyncAPI.cpp
   TUSchedulerTests.cpp
   TestFS.cpp
