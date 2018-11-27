@@ -65,16 +65,16 @@ static unsigned getMaxCalculationWidth(const ASTContext &Context,
     if (Bop->getOpcode() == BO_Add)
       return std::max(LHSWidth, RHSWidth) + 1;
     if (Bop->getOpcode() == BO_Rem) {
-      Expr::EvalResult Result;
-      if (Bop->getRHS()->EvaluateAsInt(Result, Context))
-        return Result.Val.getInt().getActiveBits();
+      llvm::APSInt Val;
+      if (Bop->getRHS()->EvaluateAsInt(Val, Context))
+        return Val.getActiveBits();
     } else if (Bop->getOpcode() == BO_Shl) {
-      Expr::EvalResult Result;
-      if (Bop->getRHS()->EvaluateAsInt(Result, Context)) {
+      llvm::APSInt Bits;
+      if (Bop->getRHS()->EvaluateAsInt(Bits, Context)) {
         // We don't handle negative values and large values well. It is assumed
         // that compiler warnings are written for such values so the user will
         // fix that.
-        return LHSWidth + Result.Val.getInt().getExtValue();
+        return LHSWidth + Bits.getExtValue();
       }
 
       // Unknown bitcount, assume there is truncation.
