@@ -64,22 +64,15 @@ Optional<FileSystem> &FileSystem::InstanceImpl() {
 }
 
 sys::TimePoint<>
-FileSystem::GetModificationTime(const FileSpec &file_spec,
-                                bool nanosecond_precision) const {
-  return GetModificationTime(file_spec.GetPath(), nanosecond_precision);
+FileSystem::GetModificationTime(const FileSpec &file_spec) const {
+  return GetModificationTime(file_spec.GetPath());
 }
 
-sys::TimePoint<>
-FileSystem::GetModificationTime(const Twine &path,
-                                bool nanosecond_precision) const {
+sys::TimePoint<> FileSystem::GetModificationTime(const Twine &path) const {
   ErrorOr<vfs::Status> status = m_fs->status(path);
   if (!status)
     return sys::TimePoint<>();
-  if (nanosecond_precision)
-    return status->getLastModificationTime();
-  else
-    return std::chrono::time_point_cast<std::chrono::seconds>(
-        status->getLastModificationTime());
+  return status->getLastModificationTime();
 }
 
 uint64_t FileSystem::GetByteSize(const FileSpec &file_spec) const {
