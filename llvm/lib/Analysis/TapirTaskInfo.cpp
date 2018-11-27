@@ -30,7 +30,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/TapirUtils.h"
 #include <algorithm>
 
 using namespace llvm;
@@ -755,6 +754,18 @@ bool TaskInfo::invalidate(Function &F, const PreservedAnalyses &PA,
   auto PAC = PA.getChecker<TaskAnalysis>();
   return !(PAC.preserved() || PAC.preservedSet<AllAnalysesOn<Function>>() ||
            PAC.preservedSet<CFGAnalyses>());
+}
+
+/// Returns true if the given instruction performs a detached rethrow, false
+/// otherwise.
+static bool isDetachedRethrow(const Instruction *I,
+                              const Value *SyncRegion = nullptr) {
+  if (const InvokeInst *II = dyn_cast<InvokeInst>(I))
+    if (const Function *Called = II->getCalledFunction())
+      if (Intrinsic::detached_rethrow == Called->getIntrinsicID())
+        if (!SyncRegion || (SyncRegion == II->getArgOperand(0)))
+          return true;
+  return false;
 }
 
 /// Print spindle with all the BBs inside it.

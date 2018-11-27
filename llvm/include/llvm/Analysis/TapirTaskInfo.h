@@ -1149,7 +1149,7 @@ struct MaybeParallelTasks {
   bool evaluate(const Spindle *S, unsigned EvalNum);
 };
 
-/// \brief Analysis pass that exposes the \c TaskInfo for a function.
+/// Analysis pass that exposes the \c TaskInfo for a function.
 class TaskAnalysis : public AnalysisInfoMixin<TaskAnalysis> {
   friend AnalysisInfoMixin<TaskAnalysis>;
   static AnalysisKey Key;
@@ -1160,7 +1160,7 @@ public:
   TaskInfo run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Printer pass for the \c TaskAnalysis results.
+/// Printer pass for the \c TaskAnalysis results.
 class TaskPrinterPass : public PassInfoMixin<TaskPrinterPass> {
   raw_ostream &OS;
 
@@ -1169,12 +1169,12 @@ public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief Verifier pass for the \c TaskAnalysis results.
+/// Verifier pass for the \c TaskAnalysis results.
 struct TaskVerifierPass : public PassInfoMixin<TaskVerifierPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
-/// \brief The legacy pass manager's analysis pass to compute task information.
+/// The legacy pass manager's analysis pass to compute task information.
 class TaskInfoWrapperPass : public FunctionPass {
   TaskInfo TI;
 
@@ -1188,7 +1188,7 @@ public:
   TaskInfo &getTaskInfo() { return TI; }
   const TaskInfo &getTaskInfo() const { return TI; }
 
-  /// \brief Calculate the natural task information for a given function.
+  /// Calculate the natural task information for a given function.
   bool runOnFunction(Function &F) override;
 
   void verifyAnalysis() const override;
