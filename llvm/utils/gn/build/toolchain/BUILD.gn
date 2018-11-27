@@ -50,7 +50,8 @@ toolchain("unix") {
     } else {
       # Remove the output file first so that ar doesn't try to modify the
       # existing file.
-      command = "rm -f {{output}} && ar rcsDT {{arflags}} -o {{output}} {{inputs}}"
+      command =
+          "rm -f {{output}} && ar rcsDT {{arflags}} -o {{output}} {{inputs}}"
     }
     description = "AR {{output}}"
     outputs = [

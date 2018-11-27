@@ -432,13 +432,13 @@ StackSafetyDataFlowAnalysis::StackSafetyDataFlowAnalysis(
     : PointerSize(M.getDataLayout().getPointerSizeInBits()),
       UnknownRange(PointerSize, true) {
   // Without ThinLTO, run the local analysis for every function in the TU and
-  // then run the DFA and annotate allocas
+  // then run the DFA.
   for (auto &F : M.functions())
     if (!F.isDeclaration())
       Functions.emplace(&F, FI(F));
   for (auto &A : M.aliases())
     if (isa<Function>(A.getBaseObject()))
-      Functions.emplace(&A, &A);
+      Functions.emplace(&A, StackSafetyInfo::FunctionInfo(&A));
 }
 
 ConstantRange
@@ -462,9 +462,8 @@ bool StackSafetyDataFlowAnalysis::updateOneUse(UseInfo &US,
                                                bool UpdateToFullSet) {
   bool Changed = false;
   for (auto &CS : US.Calls) {
-    // FIXME: this doesn't build.
-    //    assert(!CS.Range.isEmptySet() &&
-    //       "Param range can't be empty-set, invalid access range");
+    assert(!CS.Offset.isEmptySet() &&
+           "Param range can't be empty-set, invalid offset range");
 
     ConstantRange CalleeRange = getArgumentAccessRange(CS.Callee, CS.ParamNo);
     CalleeRange = CalleeRange.add(CS.Offset);

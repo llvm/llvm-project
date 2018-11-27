@@ -42,7 +42,7 @@ using namespace llvm;
 #define DEBUG_TYPE "loop-simplifycfg"
 
 static cl::opt<bool> EnableTermFolding("enable-loop-simplifycfg-term-folding",
-                                       cl::init(false));
+                                       cl::init(true));
 
 STATISTIC(NumTerminatorsFolded,
           "Number of terminators folded to unconditional branches");
@@ -249,6 +249,7 @@ private:
 
       SmallPtrSet<BasicBlock *, 2> DeadSuccessors;
       // Remove all BB's successors except for the live one.
+      unsigned TheOnlySuccDuplicates = 0;
       for (auto *Succ : successors(BB))
         if (Succ != TheOnlySucc) {
           DeadSuccessors.insert(Succ);
@@ -256,7 +257,16 @@ private:
           // the one-input Phi because it is a LCSSA Phi.
           bool PreserveLCSSAPhi = !L.contains(Succ);
           Succ->removePredecessor(BB, PreserveLCSSAPhi);
-        }
+        } else
+          ++TheOnlySuccDuplicates;
+
+      assert(TheOnlySuccDuplicates > 0 && "Should be!");
+      // If TheOnlySucc was BB's successor more than once, after transform it
+      // will be its successor only once. Remove redundant inputs from
+      // TheOnlySucc's Phis.
+      bool PreserveLCSSAPhi = !L.contains(TheOnlySucc);
+      for (unsigned Dup = 1; Dup < TheOnlySuccDuplicates; ++Dup)
+        TheOnlySucc->removePredecessor(BB, PreserveLCSSAPhi);
 
       IRBuilder<> Builder(BB->getContext());
       Instruction *Term = BB->getTerminator();
