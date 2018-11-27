@@ -2776,6 +2776,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /arch:<value>           Set architecture for code generation
       /Brepro-                Emit an object file which cannot be reproduced over time
       /Brepro                 Emit an object file which can be reproduced over time
+      /clang:<arg>            Pass <arg> to the clang driver
       /C                      Don't discard comments when preprocessing
       /c                      Compile only
       /d1PP                   Retain macro definitions in /E mode
@@ -3010,6 +3011,17 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -v                      Show commands to run and use verbose output
       -W<warning>             Enable the specified warning
       -Xclang <arg>           Pass <arg> to the clang compiler
+
+The /clang: Option
+^^^^^^^^^^^^^^^^^^
+
+When clang-cl is run with a set of ``/clang:<arg>`` options, it will gather all
+of the ``<arg>`` arguments and process them as if they were passed to the clang
+driver. This mechanism allows you to pass flags that are not exposed in the
+clang-cl options or flags that have a different meaning when passed to the clang
+driver. Regardless of where they appear in the command line, the ``/clang:``
+arguments are treated as if they were passed at the end of the clang-cl command
+line.
 
 The /fallback Option
 ^^^^^^^^^^^^^^^^^^^^
