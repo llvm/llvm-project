@@ -12,14 +12,18 @@
 
 #include "Platform.h"
 
-#include <set>
-#include <string>
-#include <vector>
-
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBError.h"
+
+#include "llvm/Option/Arg.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/Option.h"
+
+#include <set>
+#include <string>
+#include <vector>
 
 class Driver : public lldb::SBBroadcaster {
 public:
@@ -38,8 +42,8 @@ public:
   /// @return The exit code that the process should return.
   int MainLoop();
 
-  lldb::SBError ParseArgs(int argc, const char *argv[], FILE *out_fh,
-                          bool &do_exit);
+  lldb::SBError ProcessArgs(const llvm::opt::InputArgList &args, FILE *out_fh,
+                            bool &do_exit);
 
   const char *GetFilename() const;
 
@@ -61,13 +65,13 @@ public:
 
     void Clear();
 
-    void AddInitialCommand(const char *command, CommandPlacement placement,
+    void AddInitialCommand(std::string command, CommandPlacement placement,
                            bool is_file, lldb::SBError &error);
 
     struct InitialCmdEntry {
-      InitialCmdEntry(const char *in_contents, bool in_is_file,
+      InitialCmdEntry(std::string contents, bool in_is_file,
                       bool is_cwd_lldbinit_file_read, bool in_quiet = false)
-          : contents(in_contents), is_file(in_is_file),
+          : contents(std::move(contents)), is_file(in_is_file),
             is_cwd_lldbinit_file_read(is_cwd_lldbinit_file_read),
             source_quietly(in_quiet) {}
 
@@ -89,7 +93,6 @@ public:
     bool m_source_quietly;
     bool m_print_version;
     bool m_print_python_path;
-    bool m_print_help;
     bool m_wait_for;
     bool m_repl;
     lldb::LanguageType m_repl_lang;

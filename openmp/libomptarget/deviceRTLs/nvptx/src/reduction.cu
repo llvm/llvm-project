@@ -430,3 +430,21 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_simple_generic(
                                    /*isSPMDExecutionMode=*/false,
                                    /*isRuntimeUninitialized=*/true);
 }
+
+EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_simple(kmp_Ident *loc,
+                                                       int32_t global_tid,
+                                                       kmp_CriticalName *crit) {
+  if (checkSPMDMode(loc) && GetThreadIdInBlock() != 0)
+    return 0;
+  // The master thread of the team actually does the reduction.
+  while (atomicCAS((uint32_t *)crit, 0, 1))
+    ;
+  return 1;
+}
+
+EXTERN void
+__kmpc_nvptx_teams_end_reduce_nowait_simple(kmp_Ident *loc, int32_t global_tid,
+                                            kmp_CriticalName *crit) {
+  (void)atomicExch((uint32_t *)crit, 0);
+}
+
