@@ -368,7 +368,9 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, FILE *out_fh,
     auto optarg = arg->getValue();
     SBFileSpec file(optarg);
     if (file.Exists()) {
-      m_debugger.SetReproducerPath(optarg);
+      SBError repro_error = m_debugger.ReplayReproducer(optarg);
+      if (repro_error.Fail())
+        return repro_error;
     } else {
       error.SetErrorStringWithFormat("file specified in --reproducer "
                                      "(-z) option doesn't exist: '%s'",

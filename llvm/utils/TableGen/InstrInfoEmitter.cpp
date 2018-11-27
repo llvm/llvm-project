@@ -358,8 +358,8 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
   if (TIIPredicates.empty())
     return;
 
-  OS << "#ifdef GET_GENINSTRINFO_MC_DECL\n";
-  OS << "#undef GET_GENINSTRINFO_MC_DECL\n\n";
+  OS << "#ifdef GET_INSTRINFO_MC_HELPER_DECLS\n";
+  OS << "#undef GET_INSTRINFO_MC_HELPER_DECLS\n\n";
 
   OS << "namespace llvm {\n";
   OS << "class MCInst;\n\n";
@@ -374,10 +374,10 @@ void InstrInfoEmitter::emitMCIIHelperMethods(raw_ostream &OS,
   OS << "\n} // end " << TargetName << "_MC namespace\n";
   OS << "} // end llvm namespace\n\n";
 
-  OS << "#endif // GET_GENINSTRINFO_MC_DECL\n\n";
+  OS << "#endif // GET_INSTRINFO_MC_HELPER_DECLS\n\n";
 
-  OS << "#ifdef GET_GENINSTRINFO_MC_HELPERS\n";
-  OS << "#undef GET_GENINSTRINFO_MC_HELPERS\n\n";
+  OS << "#ifdef GET_INSTRINFO_MC_HELPERS\n";
+  OS << "#undef GET_INSTRINFO_MC_HELPERS\n\n";
 
   OS << "namespace llvm {\n";
   OS << "namespace " << TargetName << "_MC {\n\n";
@@ -533,13 +533,13 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
   OS << "#endif // GET_INSTRINFO_HEADER\n\n";
 
-  OS << "#ifdef GET_TII_HELPER_DECLS\n";
-  OS << "#undef GET_TII_HELPER_DECLS\n";
+  OS << "#ifdef GET_INSTRINFO_HELPER_DECLS\n";
+  OS << "#undef GET_INSTRINFO_HELPER_DECLS\n";
   emitTIIHelperMethods(OS, TargetName, /* ExpandDefintion = */false);
-  OS << "#endif // GET_TII_HELPER_DECLS\n\n";
+  OS << "#endif // GET_INSTRINFO_HELPER_DECLS\n\n";
 
-  OS << "#ifdef GET_TII_HELPERS\n";
-  OS << "#undef GET_TII_HELPERS\n";
+  OS << "#ifdef GET_INSTRINFO_HELPERS\n";
+  OS << "#undef GET_INSTRINFO_HELPERS\n";
   emitTIIHelperMethods(OS, TargetName, /* ExpandDefintion = */true);
   OS << "#endif // GET_TTI_HELPERS\n\n";
 

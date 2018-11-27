@@ -1643,19 +1643,15 @@ example:
 ``speculative_load_hardening``
     This attribute indicates that
     `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
-    should be enabled for the function body. This is a best-effort attempt to
-    mitigate all known speculative execution information leak vulnerabilities
-    that are based on the fundamental principles of modern processors'
-    speculative execution. These vulnerabilities are classified as "Spectre
-    variant #1" vulnerabilities typically. Notably, this does not attempt to
-    mitigate any vulnerabilities where the speculative execution and/or
-    prediction devices of specific processors can be *completely* undermined
-    (such as "Branch Target Injection", a.k.a, "Spectre variant #2"). Instead,
-    this is a target-independent request to harden against the completely
-    generic risk posed by speculative execution to incorrectly load secret data,
-    making it available to some micro-architectural side-channel for information
-    leak. For a processor without any speculative execution or predictors, this
-    is expected to be a no-op.
+    should be enabled for the function body.
+
+    Speculative Load Hardening is a best-effort mitigation against
+    information leak attacks that make use of control flow
+    miss-speculation - specifically miss-speculation of whether a branch
+    is taken or not. Typically vulnerabilities enabling such attacks are
+    classified as "Spectre variant #1". Notably, this does not attempt to
+    mitigate against miss-speculation of branch target, classified as
+    "Spectre variant #2" vulnerabilities.
 
     When inlining, the attribute is sticky. Inlining a function that carries
     this attribute will cause the caller to gain the attribute. This is intended

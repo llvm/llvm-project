@@ -5639,5 +5639,5 @@ bool AArch64InstrInfo::shouldOutlineFromFunctionByDefault(
   return MF.getFunction().optForMinSize();
 }
 
-#define GET_TII_HELPERS
+#define GET_INSTRINFO_HELPERS
 #include "AArch64GenInstrInfo.inc"

@@ -258,7 +258,7 @@ public:
   /// on Windows.
   static bool isSEHInstruction(const MachineInstr &MI);
 
-#define GET_TII_HELPER_DECLS
+#define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
 private:

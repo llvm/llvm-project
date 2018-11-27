@@ -12,7 +12,7 @@
 
 #include "lldb/Utility/FileSpec.h"
 
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -38,12 +38,12 @@ struct ProviderInfo {
 /// i.e. in the constructor.
 ///
 /// Different components will implement different providers.
-class Provider {
+class ProviderBase {
 public:
-  virtual ~Provider() = default;
+  virtual ~ProviderBase() = default;
 
-  const ProviderInfo &GetInfo() { return m_info; }
-  const FileSpec &GetDirectory() { return m_directory; }
+  const ProviderInfo &GetInfo() const { return m_info; }
+  const FileSpec &GetRoot() const { return m_root; }
 
   /// The Keep method is called when it is decided that we need to keep the
   /// data in order to provide a reproducer.
@@ -53,15 +53,33 @@ public:
   /// keep any information and will not generate a reproducer.
   virtual void Discard(){};
 
+  // Returns the class ID for this type.
+  static const void *ClassID() { return &ID; }
+
+  // Returns the class ID for the dynamic type of this Provider instance.
+  virtual const void *DynamicClassID() const = 0;
+
 protected:
-  Provider(const FileSpec &directory) : m_directory(directory) {}
+  ProviderBase(const FileSpec &root) : m_root(root) {}
 
   /// Every provider keeps track of its own files.
   ProviderInfo m_info;
-
 private:
   /// Every provider knows where to dump its potential files.
-  FileSpec m_directory;
+  FileSpec m_root;
+
+  virtual void anchor();
+  static char ID;
+};
+
+template <typename ThisProviderT> class Provider : public ProviderBase {
+public:
+  static const void *ClassID() { return &ThisProviderT::ID; }
+
+  const void *DynamicClassID() const override { return &ThisProviderT::ID; }
+
+protected:
+  using ProviderBase::ProviderBase; // Inherit constructor.
 };
 
 /// The generator is responsible for the logic needed to generate a
@@ -69,7 +87,7 @@ private:
 /// is necessary for reproducing  a failure.
 class Generator final {
 public:
-  Generator();
+  Generator(const FileSpec &root);
   ~Generator();
 
   /// Method to indicate we want to keep the reproducer. If reproducer
@@ -81,31 +99,44 @@ public:
   /// might need to clean up files already written to disk.
   void Discard();
 
-  /// Providers are registered at creating time.
-  template <typename T> T &CreateProvider() {
-    std::unique_ptr<T> provider = llvm::make_unique<T>(m_directory);
-    return static_cast<T &>(Register(std::move(provider)));
+  /// Create and register a new provider.
+  template <typename T> T *Create() {
+    std::unique_ptr<ProviderBase> provider = llvm::make_unique<T>(m_root);
+    return static_cast<T *>(Register(std::move(provider)));
   }
 
-  void ChangeDirectory(const FileSpec &directory);
-  const FileSpec &GetDirectory() const;
+  /// Get an existing provider.
+  template <typename T> T *Get() {
+    auto it = m_providers.find(T::ClassID());
+    if (it == m_providers.end())
+      return nullptr;
+    return static_cast<T *>(it->second.get());
+  }
+
+  /// Get a provider if it exists, otherwise create it.
+  template <typename T> T &GetOrCreate() {
+    auto *provider = Get<T>();
+    if (provider)
+      return *provider;
+    return *Create<T>();
+  }
+
+  const FileSpec &GetRoot() const;
 
 private:
   friend Reproducer;
 
-  void SetEnabled(bool enabled) { m_enabled = enabled; }
-  Provider &Register(std::unique_ptr<Provider> provider);
-  void AddProviderToIndex(const ProviderInfo &provider_info);
+  ProviderBase *Register(std::unique_ptr<ProviderBase> provider);
 
-  std::vector<std::unique_ptr<Provider>> m_providers;
+  /// Builds and index with provider info.
+  void AddProvidersToIndex();
+
+  /// Map of provider IDs to provider instances.
+  llvm::DenseMap<const void *, std::unique_ptr<ProviderBase>> m_providers;
   std::mutex m_providers_mutex;
 
   /// The reproducer root directory.
-  FileSpec m_directory;
-
-  /// Flag for controlling whether we generate a reproducer when Keep is
-  /// called.
-  bool m_enabled;
+  FileSpec m_root;
 
   /// Flag to ensure that we never call both keep and discard.
   bool m_done;
@@ -113,16 +144,16 @@ private:
 
 class Loader final {
 public:
-  Loader();
+  Loader(const FileSpec &root);
 
   llvm::Optional<ProviderInfo> GetProviderInfo(llvm::StringRef name);
-  llvm::Error LoadIndex(const FileSpec &directory);
+  llvm::Error LoadIndex();
 
-  const FileSpec &GetDirectory() { return m_directory; }
+  const FileSpec &GetRoot() const { return m_root; }
 
 private:
   llvm::StringMap<ProviderInfo> m_provider_info;
-  FileSpec m_directory;
+  FileSpec m_root;
   bool m_loaded;
 };
 
@@ -139,18 +170,14 @@ public:
   const Generator *GetGenerator() const;
   const Loader *GetLoader() const;
 
-  llvm::Error SetGenerateReproducer(bool value);
-  llvm::Error SetReplayReproducer(bool value);
+  llvm::Error SetCapture(llvm::Optional<FileSpec> root);
+  llvm::Error SetReplay(llvm::Optional<FileSpec> root);
 
-  llvm::Error SetReproducerPath(const FileSpec &path);
   FileSpec GetReproducerPath() const;
 
 private:
-  Generator m_generator;
-  Loader m_loader;
-
-  bool m_generate_reproducer = false;
-  bool m_replay_reproducer = false;
+  llvm::Optional<Generator> m_generator;
+  llvm::Optional<Loader> m_loader;
 
   mutable std::mutex m_mutex;
 };
