@@ -1164,6 +1164,9 @@ int clang_Cursor_getNumArguments(CXCursor C) {
     if (const CallExpr *CE = dyn_cast<CallExpr>(E)) {
       return CE->getNumArgs();
     }
+    if (const CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(E)) {
+      return CE->getNumArgs();
+    }
   }
 
   return -1;
@@ -1186,6 +1189,13 @@ CXCursor clang_Cursor_getArgument(CXCursor C, unsigned i) {
   if (clang_isExpression(C.kind)) {
     const Expr *E = cxcursor::getCursorExpr(C);
     if (const CallExpr *CE = dyn_cast<CallExpr>(E)) {
+      if (i < CE->getNumArgs()) {
+        return cxcursor::MakeCXCursor(CE->getArg(i),
+                                      getCursorDecl(C),
+                                      cxcursor::getCursorTU(C));
+      }
+    }
+    if (const CXXConstructExpr *CE = dyn_cast<CXXConstructExpr>(E)) {
       if (i < CE->getNumArgs()) {
         return cxcursor::MakeCXCursor(CE->getArg(i),
                                       getCursorDecl(C),

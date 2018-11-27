@@ -1717,9 +1717,8 @@ Value *ScalarExprEmitter::VisitMemberExpr(MemberExpr *E) {
     CGF.EmitIgnoredExpr(E->getBase());
     return CGF.emitScalarConstant(Constant, E);
   } else {
-    Expr::EvalResult Result;
-    if (E->EvaluateAsInt(Result, CGF.getContext(), Expr::SE_AllowSideEffects)) {
-      llvm::APSInt Value = Result.Val.getInt();
+    llvm::APSInt Value;
+    if (E->EvaluateAsInt(Value, CGF.getContext(), Expr::SE_AllowSideEffects)) {
       CGF.EmitIgnoredExpr(E->getBase());
       return Builder.getInt(Value);
     }
@@ -2598,11 +2597,9 @@ Value *ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *E) {
 
 Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
   // Try folding the offsetof to a constant.
-  Expr::EvalResult EVResult;
-  if (E->EvaluateAsInt(EVResult, CGF.getContext())) {
-    llvm::APSInt Value = EVResult.Val.getInt();
+  llvm::APSInt Value;
+  if (E->EvaluateAsInt(Value, CGF.getContext()))
     return Builder.getInt(Value);
-  }
 
   // Loop over the components of the offsetof to compute the value.
   unsigned n = E->getNumComponents();

@@ -2311,9 +2311,16 @@ ASTNodeImporter::VisitTypedefNameDecl(TypedefNameDecl *D, bool IsAlias) {
       if (!FoundDecl->isInIdentifierNamespace(IDNS))
         continue;
       if (auto *FoundTypedef = dyn_cast<TypedefNameDecl>(FoundDecl)) {
-        if (Importer.IsStructurallyEquivalent(
-                D->getUnderlyingType(), FoundTypedef->getUnderlyingType()))
+        QualType FromUT = D->getUnderlyingType();
+        QualType FoundUT = FoundTypedef->getUnderlyingType();
+        if (Importer.IsStructurallyEquivalent(FromUT, FoundUT)) {
+          // If the "From" context has a complete underlying type but we
+          // already have a complete underlying type then return with that.
+          if (!FromUT->isIncompleteType() && !FoundUT->isIncompleteType())
             return Importer.MapImported(D, FoundTypedef);
+        }
+        // FIXME Handle redecl chain.
+        break;
       }
 
       ConflictingDecls.push_back(FoundDecl);
@@ -6381,7 +6388,7 @@ ExpectedStmt ASTNodeImporter::VisitConstantExpr(ConstantExpr *E) {
   Expr *ToSubExpr;
   std::tie(ToSubExpr) = *Imp;
 
-  return ConstantExpr::Create(Importer.getToContext(), ToSubExpr);
+  return new (Importer.getToContext()) ConstantExpr(ToSubExpr);
 }
 
 ExpectedStmt ASTNodeImporter::VisitParenExpr(ParenExpr *E) {

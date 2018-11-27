@@ -324,8 +324,8 @@ static bool isAbsoluteValue(const Symbol &Sym) {
 
 // Returns true if Expr refers a PLT entry.
 static bool needsPlt(RelExpr Expr) {
-  return isRelExprOneOf<R_PLT_PC, R_PPC_CALL_PLT, R_PLT, R_AARCH64_PLT_PAGE_PC>(
-      Expr);
+  return isRelExprOneOf<R_PLT_PC, R_PPC_CALL_PLT, R_PLT, R_AARCH64_PLT_PAGE_PC,
+                        R_GOT_PLT, R_AARCH64_GOT_PAGE_PC_PLT>(Expr);
 }
 
 // Returns true if Expr refers a GOT entry. Note that this function
@@ -334,7 +334,8 @@ static bool needsPlt(RelExpr Expr) {
 static bool needsGot(RelExpr Expr) {
   return isRelExprOneOf<R_GOT, R_GOT_OFF, R_HEXAGON_GOT, R_MIPS_GOT_LOCAL_PAGE,
                         R_MIPS_GOT_OFF, R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC,
-                        R_GOT_PC, R_GOT_FROM_END>(Expr);
+                        R_AARCH64_GOT_PAGE_PC_PLT, R_GOT_PC, R_GOT_FROM_END,
+                        R_GOT_PLT>(Expr);
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
@@ -417,8 +418,12 @@ static RelExpr toPlt(RelExpr Expr) {
     return R_PLT_PC;
   case R_AARCH64_PAGE_PC:
     return R_AARCH64_PLT_PAGE_PC;
+  case R_AARCH64_GOT_PAGE_PC:
+    return R_AARCH64_GOT_PAGE_PC_PLT;
   case R_ABS:
     return R_PLT;
+  case R_GOT:
+    return R_GOT_PLT;
   default:
     return Expr;
   }
@@ -746,7 +751,14 @@ static void addPltEntry(PltSection *Plt, GotPltSection *GotPlt,
 template <class ELFT> static void addGotEntry(Symbol &Sym) {
   In.Got->addEntry(Sym);
 
-  RelExpr Expr = Sym.isTls() ? R_TLS : R_ABS;
+  RelExpr Expr;
+  if (Sym.isTls())
+    Expr = R_TLS;
+  else if (Sym.isGnuIFunc())
+    Expr = R_PLT;
+  else
+    Expr = R_ABS;
+
   uint64_t Off = Sym.getGotOffset();
 
   // If a GOT slot value can be calculated at link-time, which is now,

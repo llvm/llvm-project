@@ -16,12 +16,21 @@
 #include "Protocol.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/Support/SHA1.h"
 
 namespace clang {
 class SourceManager;
 
 namespace clangd {
+
+// We tend to generate digests for source codes in a lot of different places.
+// This represents the type for those digests to prevent us hard coding details
+// of hashing function at every place that needs to store this information.
+using FileDigest = decltype(llvm::SHA1::hash({}));
+FileDigest digest(StringRef Content);
+Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID);
 
 // Counts the number of UTF-16 code units needed to represent a string (LSP
 // specifies string lengths in UTF-16 code units).

@@ -2162,9 +2162,6 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   // conversion operator's type, and are resolved in the enclosing <encoding>.
   PODSmallVector<ForwardTemplateReference *, 4> ForwardTemplateRefs;
 
-  void (*TypeCallback)(void *, const char *) = nullptr;
-  void *TypeCallbackContext = nullptr;
-
   bool TryToParseTemplateArgs = true;
   bool PermitForwardTemplateReferences = false;
   bool ParsingLambdaParams = false;
@@ -3457,9 +3454,6 @@ Node *AbstractManglingParser<Derived, Alloc>::parseQualifiedType() {
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parseType() {
   Node *Result = nullptr;
-
-  if (TypeCallback != nullptr)
-    TypeCallback(TypeCallbackContext, First);
 
   switch (look()) {
   //             ::= <qualified-type>

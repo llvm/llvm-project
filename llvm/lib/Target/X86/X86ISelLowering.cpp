@@ -24549,10 +24549,10 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       // For SRA we need to unpack each byte to the higher byte of a i16 vector
       // so we can correctly sign extend. We don't care what happens to the
       // lower byte.
-      SDValue ALo = DAG.getNode(X86ISD::UNPCKL, dl, VT, DAG.getUNDEF(VT), Amt);
-      SDValue AHi = DAG.getNode(X86ISD::UNPCKH, dl, VT, DAG.getUNDEF(VT), Amt);
-      SDValue RLo = DAG.getNode(X86ISD::UNPCKL, dl, VT, DAG.getUNDEF(VT), R);
-      SDValue RHi = DAG.getNode(X86ISD::UNPCKH, dl, VT, DAG.getUNDEF(VT), R);
+      SDValue ALo = getUnpackl(DAG, dl, VT, DAG.getUNDEF(VT), Amt);
+      SDValue AHi = getUnpackh(DAG, dl, VT, DAG.getUNDEF(VT), Amt);
+      SDValue RLo = getUnpackl(DAG, dl, VT, DAG.getUNDEF(VT), R);
+      SDValue RHi = getUnpackh(DAG, dl, VT, DAG.getUNDEF(VT), R);
       ALo = DAG.getBitcast(ExtVT, ALo);
       AHi = DAG.getBitcast(ExtVT, AHi);
       RLo = DAG.getBitcast(ExtVT, RLo);
@@ -24595,10 +24595,10 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
   if (Subtarget.hasInt256() && !Subtarget.hasXOP() && VT == MVT::v16i16) {
     MVT ExtVT = MVT::v8i32;
     SDValue Z = DAG.getConstant(0, dl, VT);
-    SDValue ALo = DAG.getNode(X86ISD::UNPCKL, dl, VT, Amt, Z);
-    SDValue AHi = DAG.getNode(X86ISD::UNPCKH, dl, VT, Amt, Z);
-    SDValue RLo = DAG.getNode(X86ISD::UNPCKL, dl, VT, Z, R);
-    SDValue RHi = DAG.getNode(X86ISD::UNPCKH, dl, VT, Z, R);
+    SDValue ALo = getUnpackl(DAG, dl, VT, Amt, Z);
+    SDValue AHi = getUnpackh(DAG, dl, VT, Amt, Z);
+    SDValue RLo = getUnpackl(DAG, dl, VT, Z, R);
+    SDValue RHi = getUnpackh(DAG, dl, VT, Z, R);
     ALo = DAG.getBitcast(ExtVT, ALo);
     AHi = DAG.getBitcast(ExtVT, AHi);
     RLo = DAG.getBitcast(ExtVT, RLo);

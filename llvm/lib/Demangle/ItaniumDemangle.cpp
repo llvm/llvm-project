@@ -356,15 +356,6 @@ char *llvm::itaniumDemangle(const char *MangledName, char *Buf,
   return InternalStatus == demangle_success ? Buf : nullptr;
 }
 
-bool llvm::itaniumFindTypesInMangledName(const char *MangledName, void *Ctx,
-                                         void (*Callback)(void *,
-                                                          const char *)) {
-  Demangler Parser(MangledName, MangledName + std::strlen(MangledName));
-  Parser.TypeCallback = Callback;
-  Parser.TypeCallbackContext = Ctx;
-  return Parser.parse() == nullptr;
-}
-
 ItaniumPartialDemangler::ItaniumPartialDemangler()
     : RootNode(nullptr), Context(new Demangler{nullptr, nullptr}) {}
 

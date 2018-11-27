@@ -1019,7 +1019,7 @@ void Linux::addProfileRTLibs(const llvm::opt::ArgList &Args,
 
   // Add linker option -u__llvm_runtime_variable to cause runtime
   // initialization module to be linked in.
-  if (!Args.hasArg(options::OPT_coverage))
+  if ((!Args.hasArg(options::OPT_coverage)) && (!Args.hasArg(options::OPT_ftest_coverage)))
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
   ToolChain::addProfileRTLibs(Args, CmdArgs);

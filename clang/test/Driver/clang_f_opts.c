@@ -85,6 +85,10 @@
 // CHECK-PROFILE-DIR-UNUSED-NOT: "-coverage-data-file" "abc
 // CHECK-PROFILE-DIR-NEITHER-NOT: argument unused
 
+// RUN: %clang -### -fprofile-arcs -ftest-coverage %s 2>&1 | FileCheck -check-prefix=CHECK-u %s
+// RUN: %clang -### --coverage %s 2>&1 | FileCheck -check-prefix=CHECK-u %s
+// CHECK-u-NOT: "-u{{.*}}"
+
 // RUN: %clang -### -S -fprofile-generate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE-LLVM %s
 // RUN: %clang -### -S -fprofile-instr-generate %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE %s
 // RUN: %clang -### -S -fprofile-generate=/some/dir %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE-DIR %s

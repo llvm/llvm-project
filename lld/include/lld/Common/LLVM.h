@@ -23,6 +23,7 @@
 
 namespace llvm {
   // ADT's.
+  class raw_ostream;
   class Error;
   class StringRef;
   class Twine;
@@ -31,19 +32,8 @@ namespace llvm {
   template<typename T> class ArrayRef;
   template<unsigned InternalLen> class SmallString;
   template<typename T, unsigned N> class SmallVector;
-  template<typename T> class SmallVectorImpl;
-
-  template<typename T>
-  struct SaveAndRestore;
-
-  template<typename T>
-  class ErrorOr;
-
-  template<typename T>
-  class Expected;
-
-  class raw_ostream;
-  // TODO: DenseMap, ...
+  template<typename T> class ErrorOr;
+  template<typename T> class Expected;
 
   namespace object {
     class WasmObjectFile;
@@ -70,6 +60,7 @@ namespace lld {
   using llvm::cast_or_null;
 
   // ADT's.
+  using llvm::raw_ostream;
   using llvm::Error;
   using llvm::StringRef;
   using llvm::Twine;
@@ -78,12 +69,8 @@ namespace lld {
   using llvm::ArrayRef;
   using llvm::SmallString;
   using llvm::SmallVector;
-  using llvm::SmallVectorImpl;
-  using llvm::SaveAndRestore;
   using llvm::ErrorOr;
   using llvm::Expected;
-
-  using llvm::raw_ostream;
 
   using llvm::object::WasmObjectFile;
   using llvm::object::WasmSection;

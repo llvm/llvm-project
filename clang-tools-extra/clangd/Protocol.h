@@ -25,6 +25,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROTOCOL_H
 
 #include "URI.h"
+#include "index/SymbolID.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <bitset>
@@ -711,6 +712,26 @@ struct SymbolInformation {
 };
 llvm::json::Value toJSON(const SymbolInformation &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolInformation &);
+
+/// Represents information about identifier.
+/// This is returned from textDocument/symbolInfo, which is a clangd extension.
+struct SymbolDetails {
+  std::string name;
+
+  std::string containerName;
+
+  /// Unified Symbol Resolution identifier
+  /// This is an opaque string uniquely identifying a symbol.
+  /// Unlike SymbolID, it is variable-length and somewhat human-readable.
+  /// It is a common representation across several clang tools.
+  /// (See USRGeneration.h)
+  std::string USR;
+
+  llvm::Optional<SymbolID> ID;
+};
+llvm::json::Value toJSON(const SymbolDetails &);
+llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolDetails &);
+bool operator==(const SymbolDetails &, const SymbolDetails &);
 
 /// The parameters of a Workspace Symbol Request.
 struct WorkspaceSymbolParams {
