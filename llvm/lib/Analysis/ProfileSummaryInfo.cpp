@@ -139,7 +139,7 @@ bool ProfileSummaryInfo::isFunctionHotInCallGraph(const Function *F,
       return true;
   }
   for (const auto &BB : *F)
-    if (isHotBB(&BB, &BFI))
+    if (isHotBlock(&BB, &BFI))
       return true;
   return false;
 }
@@ -168,7 +168,7 @@ bool ProfileSummaryInfo::isFunctionColdInCallGraph(const Function *F,
       return false;
   }
   for (const auto &BB : *F)
-    if (!isColdBB(&BB, &BFI))
+    if (!isColdBlock(&BB, &BFI))
       return false;
   return true;
 }
@@ -235,14 +235,14 @@ uint64_t ProfileSummaryInfo::getOrCompColdCountThreshold() {
   return ColdCountThreshold && ColdCountThreshold.getValue();
 }
 
-bool ProfileSummaryInfo::isHotBB(const BasicBlock *B, BlockFrequencyInfo *BFI) {
-  auto Count = BFI->getBlockProfileCount(B);
+bool ProfileSummaryInfo::isHotBlock(const BasicBlock *BB, BlockFrequencyInfo *BFI) {
+  auto Count = BFI->getBlockProfileCount(BB);
   return Count && isHotCount(*Count);
 }
 
-bool ProfileSummaryInfo::isColdBB(const BasicBlock *B,
+bool ProfileSummaryInfo::isColdBlock(const BasicBlock *BB,
                                   BlockFrequencyInfo *BFI) {
-  auto Count = BFI->getBlockProfileCount(B);
+  auto Count = BFI->getBlockProfileCount(BB);
   return Count && isColdCount(*Count);
 }
 
