@@ -5,13 +5,13 @@
 
 # CHECK:      Iterations:        100
 # CHECK-NEXT: Instructions:      100
-# CHECK-NEXT: Total Cycles:      53
+# CHECK-NEXT: Total Cycles:      104
 # CHECK-NEXT: Total uOps:        100
 
 # CHECK:      Dispatch Width:    3
-# CHECK-NEXT: uOps Per Cycle:    1.89
-# CHECK-NEXT: IPC:               1.89
-# CHECK-NEXT: Block RThroughput: 0.5
+# CHECK-NEXT: uOps Per Cycle:    0.96
+# CHECK-NEXT: IPC:               0.96
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -22,4 +22,4 @@
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     0.50                        add	x0, x1, x2, lsl #3
+# CHECK-NEXT:  1      2     1.00                        add	x0, x1, x2, lsl #3

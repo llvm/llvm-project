@@ -963,7 +963,7 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                        const TargetRegisterClass *RC,
                                        const TargetRegisterInfo *TRI) const {
   MachineFunction *MF = MBB.getParent();
-  const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
+  SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
   DebugLoc DL = MBB.findDebugLoc(MI);
   unsigned Align = FrameInfo.getObjectAlignment(FrameIndex);
@@ -977,6 +977,8 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
     PtrInfo, MachineMemOperand::MOLoad, Size, Align);
 
   if (RI.isSGPRClass(RC)) {
+    MFI->setHasSpilledSGPRs();
+
     // FIXME: Maybe this should not include a memoperand because it will be
     // lowered to non-memory instructions.
     const MCInstrDesc &OpDesc = get(getSGPRSpillRestoreOpcode(SpillSize));

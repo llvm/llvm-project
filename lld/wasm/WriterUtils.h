@@ -13,9 +13,6 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Object/Wasm.h"
-#include "llvm/Support/raw_ostream.h"
-
-using llvm::raw_ostream;
 
 namespace lld {
 namespace wasm {

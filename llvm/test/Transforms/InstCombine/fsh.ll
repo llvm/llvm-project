@@ -405,3 +405,26 @@ define i33 @expanded_fshr_multi_use(i33 %a) {
   ret i33 %e
 }
 
+declare i16 @llvm.fshl.i16(i16, i16, i16)
+declare i16 @llvm.fshr.i16(i16, i16, i16)
+
+; Special-case: rotate a 16-bit value left/right by 8-bits is bswap.
+
+define i16 @fshl_bswap(i16 %x) {
+; CHECK-LABEL: @fshl_bswap(
+; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.fshl.i16(i16 [[X:%.*]], i16 [[X]], i16 8)
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %r = call i16 @llvm.fshl.i16(i16 %x, i16 %x, i16 8)
+  ret i16 %r
+}
+
+define i16 @fshr_bswap(i16 %x) {
+; CHECK-LABEL: @fshr_bswap(
+; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.fshr.i16(i16 [[X:%.*]], i16 [[X]], i16 8)
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %r = call i16 @llvm.fshr.i16(i16 %x, i16 %x, i16 8)
+  ret i16 %r
+}
+

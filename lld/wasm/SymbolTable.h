@@ -13,12 +13,9 @@
 #include "InputFiles.h"
 #include "LTO.h"
 #include "Symbols.h"
+#include "lld/Common/LLVM.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/Support/raw_ostream.h"
-
-using llvm::wasm::WasmGlobalType;
-using llvm::wasm::WasmSignature;
 
 namespace lld {
 namespace wasm {
@@ -66,7 +63,7 @@ public:
   Symbol *addUndefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
                              const WasmGlobalType *Type);
 
-  void addLazy(ArchiveFile *F, const Archive::Symbol *Sym);
+  void addLazy(ArchiveFile *F, const llvm::object::Archive::Symbol *Sym);
 
   bool addComdat(StringRef Name);
 

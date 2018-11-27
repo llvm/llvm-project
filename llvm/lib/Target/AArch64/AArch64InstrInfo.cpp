@@ -1740,71 +1740,6 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   return true;
 }
 
-/// Return true if this is this instruction has a non-zero immediate
-bool AArch64InstrInfo::hasShiftedReg(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    break;
-  case AArch64::ADDSWrs:
-  case AArch64::ADDSXrs:
-  case AArch64::ADDWrs:
-  case AArch64::ADDXrs:
-  case AArch64::ANDSWrs:
-  case AArch64::ANDSXrs:
-  case AArch64::ANDWrs:
-  case AArch64::ANDXrs:
-  case AArch64::BICSWrs:
-  case AArch64::BICSXrs:
-  case AArch64::BICWrs:
-  case AArch64::BICXrs:
-  case AArch64::EONWrs:
-  case AArch64::EONXrs:
-  case AArch64::EORWrs:
-  case AArch64::EORXrs:
-  case AArch64::ORNWrs:
-  case AArch64::ORNXrs:
-  case AArch64::ORRWrs:
-  case AArch64::ORRXrs:
-  case AArch64::SUBSWrs:
-  case AArch64::SUBSXrs:
-  case AArch64::SUBWrs:
-  case AArch64::SUBXrs:
-    if (MI.getOperand(3).isImm()) {
-      unsigned val = MI.getOperand(3).getImm();
-      return (val != 0);
-    }
-    break;
-  }
-  return false;
-}
-
-/// Return true if this is this instruction has a non-zero immediate
-bool AArch64InstrInfo::hasExtendedReg(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    break;
-  case AArch64::ADDSWrx:
-  case AArch64::ADDSXrx:
-  case AArch64::ADDSXrx64:
-  case AArch64::ADDWrx:
-  case AArch64::ADDXrx:
-  case AArch64::ADDXrx64:
-  case AArch64::SUBSWrx:
-  case AArch64::SUBSXrx:
-  case AArch64::SUBSXrx64:
-  case AArch64::SUBWrx:
-  case AArch64::SUBXrx:
-  case AArch64::SUBXrx64:
-    if (MI.getOperand(3).isImm()) {
-      unsigned val = MI.getOperand(3).getImm();
-      return (val != 0);
-    }
-    break;
-  }
-
-  return false;
-}
-
 // Return true if this instruction simply sets its single destination register
 // to zero. This is equivalent to a register rename of the zero-register.
 bool AArch64InstrInfo::isGPRZero(const MachineInstr &MI) {
@@ -1925,67 +1860,6 @@ unsigned AArch64InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     break;
   }
   return 0;
-}
-
-/// Return true if this is load/store scales or extends its register offset.
-/// This refers to scaling a dynamic index as opposed to scaled immediates.
-/// MI should be a memory op that allows scaled addressing.
-bool AArch64InstrInfo::isScaledAddr(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    break;
-  case AArch64::LDRBBroW:
-  case AArch64::LDRBroW:
-  case AArch64::LDRDroW:
-  case AArch64::LDRHHroW:
-  case AArch64::LDRHroW:
-  case AArch64::LDRQroW:
-  case AArch64::LDRSBWroW:
-  case AArch64::LDRSBXroW:
-  case AArch64::LDRSHWroW:
-  case AArch64::LDRSHXroW:
-  case AArch64::LDRSWroW:
-  case AArch64::LDRSroW:
-  case AArch64::LDRWroW:
-  case AArch64::LDRXroW:
-  case AArch64::STRBBroW:
-  case AArch64::STRBroW:
-  case AArch64::STRDroW:
-  case AArch64::STRHHroW:
-  case AArch64::STRHroW:
-  case AArch64::STRQroW:
-  case AArch64::STRSroW:
-  case AArch64::STRWroW:
-  case AArch64::STRXroW:
-  case AArch64::LDRBBroX:
-  case AArch64::LDRBroX:
-  case AArch64::LDRDroX:
-  case AArch64::LDRHHroX:
-  case AArch64::LDRHroX:
-  case AArch64::LDRQroX:
-  case AArch64::LDRSBWroX:
-  case AArch64::LDRSBXroX:
-  case AArch64::LDRSHWroX:
-  case AArch64::LDRSHXroX:
-  case AArch64::LDRSWroX:
-  case AArch64::LDRSroX:
-  case AArch64::LDRWroX:
-  case AArch64::LDRXroX:
-  case AArch64::STRBBroX:
-  case AArch64::STRBroX:
-  case AArch64::STRDroX:
-  case AArch64::STRHHroX:
-  case AArch64::STRHroX:
-  case AArch64::STRQroX:
-  case AArch64::STRSroX:
-  case AArch64::STRWroX:
-  case AArch64::STRXroX:
-
-    unsigned Val = MI.getOperand(3).getImm();
-    AArch64_AM::ShiftExtendType ExtType = AArch64_AM::getMemExtendType(Val);
-    return (ExtType != AArch64_AM::UXTX) || AArch64_AM::getMemDoShift(Val);
-  }
-  return false;
 }
 
 /// Check all MachineMemOperands for a hint to suppress pairing.
@@ -5764,3 +5638,6 @@ bool AArch64InstrInfo::shouldOutlineFromFunctionByDefault(
   MachineFunction &MF) const {
   return MF.getFunction().optForMinSize();
 }
+
+#define GET_TII_HELPERS
+#include "AArch64GenInstrInfo.inc"

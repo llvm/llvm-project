@@ -56,6 +56,8 @@ private:
 
   ExecutionMode getExecutionMode() const;
 
+  bool requiresFullRuntime() const { return RequiresFullRuntime; }
+
   /// Emit the worker function for the current target region.
   void emitWorkerFunction(WorkerFunctionState &WST);
 
@@ -377,6 +379,9 @@ private:
   /// target region and used by containing directives such as 'parallel'
   /// to emit optimized code.
   ExecutionMode CurrentExecutionMode = EM_Unknown;
+
+  /// Check if the full runtime is required (default - yes).
+  bool RequiresFullRuntime = true;
 
   /// true if we're emitting the code for the target region and next parallel
   /// region is L0 for sure.

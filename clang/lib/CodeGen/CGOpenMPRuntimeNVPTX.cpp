@@ -148,19 +148,35 @@ public:
 /// a target region. The appropriate mode (SPMD|NON-SPMD) is set on entry
 /// to the target region and used by containing directives such as 'parallel'
 /// to emit optimized code.
-class ExecutionModeRAII {
+class ExecutionRuntimeModesRAII {
 private:
-  CGOpenMPRuntimeNVPTX::ExecutionMode SavedMode;
-  CGOpenMPRuntimeNVPTX::ExecutionMode &Mode;
+  CGOpenMPRuntimeNVPTX::ExecutionMode SavedExecMode =
+      CGOpenMPRuntimeNVPTX::EM_Unknown;
+  CGOpenMPRuntimeNVPTX::ExecutionMode &ExecMode;
+  bool SavedRuntimeMode = false;
+  bool *RuntimeMode = nullptr;
 
 public:
-  ExecutionModeRAII(CGOpenMPRuntimeNVPTX::ExecutionMode &Mode, bool IsSPMD)
-      : Mode(Mode) {
-    SavedMode = Mode;
-    Mode = IsSPMD ? CGOpenMPRuntimeNVPTX::EM_SPMD
-                  : CGOpenMPRuntimeNVPTX::EM_NonSPMD;
+  /// Constructor for Non-SPMD mode.
+  ExecutionRuntimeModesRAII(CGOpenMPRuntimeNVPTX::ExecutionMode &ExecMode)
+      : ExecMode(ExecMode) {
+    SavedExecMode = ExecMode;
+    ExecMode = CGOpenMPRuntimeNVPTX::EM_NonSPMD;
   }
-  ~ExecutionModeRAII() { Mode = SavedMode; }
+  /// Constructor for SPMD mode.
+  ExecutionRuntimeModesRAII(CGOpenMPRuntimeNVPTX::ExecutionMode &ExecMode,
+                            bool &RuntimeMode, bool FullRuntimeMode)
+      : ExecMode(ExecMode), RuntimeMode(&RuntimeMode) {
+    SavedExecMode = ExecMode;
+    SavedRuntimeMode = RuntimeMode;
+    ExecMode = CGOpenMPRuntimeNVPTX::EM_SPMD;
+    RuntimeMode = FullRuntimeMode;
+  }
+  ~ExecutionRuntimeModesRAII() {
+    ExecMode = SavedExecMode;
+    if (RuntimeMode)
+      *RuntimeMode = SavedRuntimeMode;
+  }
 };
 
 /// GPU Configuration:  This information can be derived from cuda registers,
@@ -1187,7 +1203,7 @@ void CGOpenMPRuntimeNVPTX::emitNonSPMDKernel(const OMPExecutableDirective &D,
                                              llvm::Constant *&OutlinedFnID,
                                              bool IsOffloadEntry,
                                              const RegionCodeGenTy &CodeGen) {
-  ExecutionModeRAII ModeRAII(CurrentExecutionMode, /*IsSPMD=*/false);
+  ExecutionRuntimeModesRAII ModeRAII(CurrentExecutionMode);
   EntryFunctionState EST;
   WorkerFunctionState WST(CGM, D.getBeginLoc());
   Work.clear();
@@ -1319,7 +1335,10 @@ void CGOpenMPRuntimeNVPTX::emitSPMDKernel(const OMPExecutableDirective &D,
                                           llvm::Constant *&OutlinedFnID,
                                           bool IsOffloadEntry,
                                           const RegionCodeGenTy &CodeGen) {
-  ExecutionModeRAII ModeRAII(CurrentExecutionMode, /*IsSPMD=*/true);
+  ExecutionRuntimeModesRAII ModeRAII(
+      CurrentExecutionMode, RequiresFullRuntime,
+      CGM.getLangOpts().OpenMPCUDAForceFullRuntime ||
+          !supportsLightweightRuntime(CGM.getContext(), D));
   EntryFunctionState EST;
 
   // Emit target region as a standalone region.
@@ -1370,9 +1389,6 @@ void CGOpenMPRuntimeNVPTX::emitSPMDEntryHeader(
   llvm::BasicBlock *ExecuteBB = CGF.createBasicBlock(".execute");
   EST.ExitBB = CGF.createBasicBlock(".exit");
 
-  // Initialize the OMP state in the runtime; called by all active threads.
-  bool RequiresFullRuntime = CGM.getLangOpts().OpenMPCUDAForceFullRuntime ||
-                             !supportsLightweightRuntime(CGF.getContext(), D);
   llvm::Value *Args[] = {getThreadLimit(CGF, /*IsInSPMDExecutionMode=*/true),
                          /*RequiresOMPRuntime=*/
                          Bld.getInt16(RequiresFullRuntime ? 1 : 0),
@@ -1919,7 +1935,18 @@ static const ModeFlagsTy UndefinedMode =
 } // anonymous namespace
 
 unsigned CGOpenMPRuntimeNVPTX::getDefaultLocationReserved2Flags() const {
-  return UndefinedMode;
+  switch (getExecutionMode()) {
+  case EM_SPMD:
+    if (requiresFullRuntime())
+      return KMP_IDENT_SPMD_MODE & (~KMP_IDENT_SIMPLE_RT_MODE);
+    return KMP_IDENT_SPMD_MODE | KMP_IDENT_SIMPLE_RT_MODE;
+  case EM_NonSPMD:
+    assert(requiresFullRuntime() && "Expected full runtime.");
+    return (~KMP_IDENT_SPMD_MODE) & (~KMP_IDENT_SIMPLE_RT_MODE);
+  case EM_Unknown:
+    return UndefinedMode;
+  }
+  llvm_unreachable("Unknown flags are requested.");
 }
 
 CGOpenMPRuntimeNVPTX::CGOpenMPRuntimeNVPTX(CodeGenModule &CGM)

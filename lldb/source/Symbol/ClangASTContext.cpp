@@ -119,7 +119,9 @@ ClangASTContextSupportsLanguage(lldb::LanguageType language) {
          language == eLanguageTypeRust ||
          language == eLanguageTypeExtRenderScript ||
          // Use Clang for D until there is a proper language plugin for it
-         language == eLanguageTypeD;
+         language == eLanguageTypeD ||
+         // Open Dylan compiler debug info is designed to be Clang-compatible
+         language == eLanguageTypeDylan;
 }
 
 // Checks whether m1 is an overload of m2 (as opposed to an override). This is

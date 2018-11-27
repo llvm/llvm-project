@@ -302,6 +302,7 @@ For API clients and LLVM developers.
    PDB/index
    CFIVerify
    SpeculativeLoadHardening
+   StackSafetyAnalysis
 
 :doc:`WritingAnLLVMPass`
    Information on how to write LLVM transformations and analyses.
@@ -437,6 +438,10 @@ For API clients and LLVM developers.
 
 :doc:`SpeculativeLoadHardening`
   A description of the Speculative Load Hardening mitigation for Spectre v1.
+
+:doc:`StackSafetyAnalysis`
+  This document describes the design of the stack safety analysis of local
+  variables.
 
 Development Process Documentation
 =================================

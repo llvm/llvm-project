@@ -1304,6 +1304,25 @@ static void addSymbolToRVASet(SymbolRVASet &RVASet, Defined *S) {
   RVASet.insert({C, Off});
 }
 
+// Given a symbol, add it to the GFIDs table if it is a live, defined, function
+// symbol in an executable section.
+static void maybeAddAddressTakenFunction(SymbolRVASet &AddressTakenSyms,
+                                         Symbol *S) {
+  auto *D = dyn_cast_or_null<DefinedCOFF>(S);
+
+  // Ignore undefined symbols and references to non-functions (e.g. globals and
+  // labels).
+  if (!D ||
+      D->getCOFFSymbol().getComplexType() != COFF::IMAGE_SYM_DTYPE_FUNCTION)
+    return;
+
+  // Mark the symbol as address taken if it's in an executable section.
+  Chunk *RefChunk = D->getChunk();
+  OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
+  if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
+    addSymbolToRVASet(AddressTakenSyms, D);
+}
+
 // Visit all relocations from all section contributions of this object file and
 // mark the relocation target as address-taken.
 static void markSymbolsWithRelocations(ObjFile *File,
@@ -1322,17 +1341,7 @@ static void markSymbolsWithRelocations(ObjFile *File,
         continue;
 
       Symbol *Ref = SC->File->getSymbol(Reloc.SymbolTableIndex);
-      if (auto *D = dyn_cast_or_null<DefinedCOFF>(Ref)) {
-        if (D->getCOFFSymbol().getComplexType() != COFF::IMAGE_SYM_DTYPE_FUNCTION)
-          // Ignore relocations against non-functions (e.g. labels).
-          continue;
-
-        // Mark the symbol if it's in an executable section.
-        Chunk *RefChunk = D->getChunk();
-        OutputSection *OS = RefChunk ? RefChunk->getOutputSection() : nullptr;
-        if (OS && OS->Header.Characteristics & IMAGE_SCN_MEM_EXECUTE)
-          addSymbolToRVASet(UsedSymbols, D);
-      }
+      maybeAddAddressTakenFunction(UsedSymbols, Ref);
     }
   }
 }
@@ -1359,7 +1368,11 @@ void Writer::createGuardCFTables() {
 
   // Mark the image entry as address-taken.
   if (Config->Entry)
-    addSymbolToRVASet(AddressTakenSyms, cast<Defined>(Config->Entry));
+    maybeAddAddressTakenFunction(AddressTakenSyms, Config->Entry);
+
+  // Mark exported symbols in executable sections as address-taken.
+  for (Export &E : Config->Exports)
+    maybeAddAddressTakenFunction(AddressTakenSyms, E.Sym);
 
   // Ensure sections referenced in the gfid table are 16-byte aligned.
   for (const ChunkAndOffset &C : AddressTakenSyms)
