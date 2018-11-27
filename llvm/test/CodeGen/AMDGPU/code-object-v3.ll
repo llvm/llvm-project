@@ -42,6 +42,7 @@
 ; OSABI-AMDHSA-ASM-NOT: .hsa_code_object_version
 ; OSABI-AMDHSA-ASM-NOT: .hsa_code_object_isa
 ; OSABI-AMDHSA-ASM-NOT: .amd_amdgpu_isa
+; OSABI-AMDHSA-ASM-NOT: .amd_amdgpu_hsa_metadata
 ; OSABI-AMDHSA-ASM-NOT: .amd_amdgpu_pal_metadata
 
 ; OSABI-AMDHSA-ELF: Section Headers
