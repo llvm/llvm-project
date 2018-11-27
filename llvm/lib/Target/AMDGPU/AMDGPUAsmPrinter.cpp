@@ -101,12 +101,10 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
   : AsmPrinter(TM, std::move(Streamer)) {
     if (IsaInfo::hasCodeObjectV3(getSTI()))
-      HSAMetadataStream = new MetadataStreamerV3();
+      HSAMetadataStream.reset(new MetadataStreamerV3());
     else
-      HSAMetadataStream = new MetadataStreamerV2();
+      HSAMetadataStream.reset(new MetadataStreamerV2());
 }
-
-AMDGPUAsmPrinter::~AMDGPUAsmPrinter() { delete HSAMetadataStream; }
 
 StringRef AMDGPUAsmPrinter::getPassName() const {
   return "AMDGPU Assembly Printer";
