@@ -129,8 +129,6 @@ TEST_F(BackgroundIndexTest, ShardStorageWriteTest) {
       )cpp";
   std::string A_CC = "#include \"A.h\"\nvoid g() { (void)common; }";
   FS.Files[testPath("root/A.cc")] = A_CC;
-  auto Digest = llvm::SHA1::hash(
-      {reinterpret_cast<const uint8_t *>(A_CC.data()), A_CC.size()});
 
   llvm::StringMap<std::string> Storage;
   size_t CacheHits = 0;
@@ -165,7 +163,6 @@ TEST_F(BackgroundIndexTest, ShardStorageWriteTest) {
   EXPECT_NE(ShardSource, nullptr);
   EXPECT_THAT(*ShardSource->Symbols, UnorderedElementsAre());
   EXPECT_THAT(*ShardSource->Refs, RefsAre({FileURI("unittest:///root/A.cc")}));
-  EXPECT_EQ(*ShardSource->Digest, Digest);
 }
 
 } // namespace clangd
