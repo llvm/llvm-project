@@ -51,6 +51,7 @@ public:
   void setObjFileName(StringRef Name);
   void setFirstSectionContrib(const SectionContrib &SC);
   void addSymbol(codeview::CVSymbol Symbol);
+  void addSymbolsInBulk(ArrayRef<uint8_t> BulkSymbols);
 
   void
   addDebugSubsection(std::shared_ptr<codeview::DebugSubsection> Subsection);
@@ -91,7 +92,7 @@ private:
   std::string ModuleName;
   std::string ObjFileName;
   std::vector<std::string> SourceFiles;
-  std::vector<codeview::CVSymbol> Symbols;
+  std::vector<ArrayRef<uint8_t>> Symbols;
 
   std::vector<std::unique_ptr<codeview::DebugSubsectionRecordBuilder>>
       C13Builders;

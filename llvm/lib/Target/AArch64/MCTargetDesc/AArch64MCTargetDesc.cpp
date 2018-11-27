@@ -32,7 +32,7 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
-#define GET_GENINSTRINFO_MC_HELPERS
+#define GET_INSTRINFO_MC_HELPERS
 #include "AArch64GenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC

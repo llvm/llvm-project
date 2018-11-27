@@ -204,7 +204,7 @@ void PredicateExpander::expandOpcodeSwitchCase(raw_ostream &OS,
   for (const Record *Opcode : Opcodes) {
     OS.indent(getIndentLevel() * 2);
     OS << "case " << Opcode->getValueAsString("Namespace")
-       << "::" << Opcode->getName() << " :\n";
+       << "::" << Opcode->getName() << ":\n";
   }
 
   increaseIndentLevel();
@@ -227,7 +227,7 @@ void PredicateExpander::expandOpcodeSwitchStatement(raw_ostream &OS,
 
   // Expand the default case.
   SS.indent(getIndentLevel() * 2);
-  SS << "default :\n";
+  SS << "default:\n";
 
   increaseIndentLevel();
   SS.indent(getIndentLevel() * 2);

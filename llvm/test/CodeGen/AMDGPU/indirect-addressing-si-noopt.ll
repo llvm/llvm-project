@@ -29,17 +29,15 @@ entry:
 ; CHECK: s_cbranch_scc1 [[BB4:BB[0-9]+_[0-9]+]]
 
 ; CHECK: buffer_load_dwordx4
-; CHECK: v_cndmask_b32_e64
-; CHECK: v_cndmask_b32_e64
-; CHECK: v_cndmask_b32_e64
+; CHECK: s_mov_b32 m0,
+; CHECK: v_movrels_b32_e32
 
 ; CHECK: s_branch [[ENDBB:BB[0-9]+_[0-9]+]]
 
 ; CHECK: [[BB4]]:
 ; CHECK: buffer_load_dwordx4
-; CHECK: v_cndmask_b32_e64
-; CHECK: v_cndmask_b32_e64
-; CHECK: v_cndmask_b32_e64
+; CHECK: s_mov_b32 m0,
+; CHECK: v_movrels_b32_e32
 
 ; CHECK: [[ENDBB]]:
 ; CHECK: buffer_store_dword
