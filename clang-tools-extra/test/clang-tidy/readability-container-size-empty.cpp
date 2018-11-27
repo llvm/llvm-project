@@ -113,12 +113,12 @@ int main() {
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
   // CHECK-FIXES: {{^  }}if (intSet.empty()){{$}}
-  // CHECK-MESSAGES: :32:8: note: method 'set<int>'::empty() defined here
+  // CHECK-MESSAGES: :32:8: note: method 'set'::empty() defined here
   if (intSet == std::set<int>())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness
   // CHECK-FIXES: {{^  }}if (intSet.empty()){{$}}
-  // CHECK-MESSAGES: :32:8: note: method 'set<int>'::empty() defined here
+  // CHECK-MESSAGES: :32:8: note: method 'set'::empty() defined here
   if (s_func() == "")
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
@@ -407,6 +407,7 @@ template <typename T> void f() {
   if (v.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
+  // CHECK-MESSAGES: :9:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: {{^  }}if (!v.empty()){{$}}
   if (v == std::vector<T>())
     ;
@@ -415,20 +416,24 @@ template <typename T> void f() {
   // CHECK-FIXES-NEXT: ;
   CHECKSIZE(v);
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :9:8: note: method 'vector'::empty() defined here
   // CHECK-FIXES: CHECKSIZE(v);
 
   TemplatedContainer<T> templated_container;
   if (templated_container.size())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :44:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: {{^  }}if (!templated_container.empty()){{$}}
   if (templated_container != TemplatedContainer<T>())
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :44:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: {{^  }}if (!templated_container.empty()){{$}}
   // CHECK-FIXES-NEXT: ;
   CHECKSIZE(templated_container);
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
+  // CHECK-MESSAGES: :44:8: note: method 'TemplatedContainer'::empty() defined here
   // CHECK-FIXES: CHECKSIZE(templated_container);
 }
 
