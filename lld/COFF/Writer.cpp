@@ -1557,8 +1557,25 @@ void Writer::writeBuildId() {
       Buffer->getBufferSize());
 
   uint32_t Timestamp = Config->Timestamp;
+  uint64_t Hash = 0;
+  bool GenerateSyntheticBuildId =
+      Config->MinGW && Config->Debug && Config->PDBPath.empty();
+
+  if (Config->Repro || GenerateSyntheticBuildId)
+    Hash = xxHash64(OutputFileData);
+
   if (Config->Repro)
-    Timestamp = static_cast<uint32_t>(xxHash64(OutputFileData));
+    Timestamp = static_cast<uint32_t>(Hash);
+
+  if (GenerateSyntheticBuildId) {
+    // For MinGW builds without a PDB file, we still generate a build id
+    // to allow associating a crash dump to the executable.
+    BuildId->BuildId->PDB70.CVSignature = OMF::Signature::PDB70;
+    BuildId->BuildId->PDB70.Age = 1;
+    memcpy(BuildId->BuildId->PDB70.Signature, &Hash, 8);
+    // xxhash only gives us 8 bytes, so put some fixed data in the other half.
+    memcpy(&BuildId->BuildId->PDB70.Signature[8], "LLD PDB.", 8);
+  }
 
   if (DebugDirectory)
     DebugDirectory->setTimeDateStamp(Timestamp);
