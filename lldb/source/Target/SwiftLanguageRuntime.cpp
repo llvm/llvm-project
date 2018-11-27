@@ -1358,9 +1358,13 @@ bool SwiftLanguageRuntime::MetadataPromise::IsStaticallyDetermined() {
   llvm_unreachable("Unknown metadata kind");
 }
 
-static inline swift::Type GetSwiftType(const CompilerType &type) {
-  return swift::Type(
-      reinterpret_cast<swift::TypeBase *>(type.GetOpaqueQualType()));
+static swift::Type GetCanonicalSwiftType(const CompilerType &type) {
+  return reinterpret_cast<swift::TypeBase *>(
+      type.GetCanonicalType().GetOpaqueQualType());
+}
+
+static swift::Type GetSwiftType(const CompilerType &type) {
+  return reinterpret_cast<swift::TypeBase *>(type.GetOpaqueQualType());
 }
 
 SwiftLanguageRuntime::MetadataPromiseSP
@@ -1438,8 +1442,7 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
         member_name.AsCString());
 
   // Check whether we've already cached this offset.
-  auto *swift_type = reinterpret_cast<swift::TypeBase *>(
-      instance_type.GetCanonicalType().GetOpaqueQualType());
+  auto *swift_type = GetCanonicalSwiftType(instance_type).getPointer();
   auto key = std::make_tuple(swift_type, member_name.GetCString());
   auto it = m_member_offsets.find(key);
   if (it != m_member_offsets.end())
@@ -1480,9 +1483,7 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
                 "[MemberVariableOffsetResolver] resolved non-class type = %s",
                 bound.GetTypeName().AsCString());
 
-          swift_type = reinterpret_cast<swift::TypeBase *>(
-              bound.GetCanonicalType().GetOpaqueQualType());
-
+          swift_type = GetCanonicalSwiftType(bound).getPointer();
           auto key = std::make_tuple(swift_type, member_name.GetCString());
           auto it = m_member_offsets.find(key);
           if (it != m_member_offsets.end())
