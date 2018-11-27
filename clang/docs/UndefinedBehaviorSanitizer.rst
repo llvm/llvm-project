@@ -288,7 +288,7 @@ There are several limitations:
 Supported Platforms
 ===================
 
-UndefinedBehaviorSanitizer is supported on the following OS:
+UndefinedBehaviorSanitizer is supported on the following operating systems:
 
 * Android
 * Linux
@@ -296,6 +296,11 @@ UndefinedBehaviorSanitizer is supported on the following OS:
 * FreeBSD
 * OpenBSD
 * OS X 10.6 onwards
+* Windows
+
+The runtime library is relatively portable and platform independent. If the OS
+you need is not listed above, UndefinedBehaviorSanitizer may already work for
+it, or could be made to work with a minor porting effort.
 
 Current Status
 ==============
@@ -318,6 +323,7 @@ Example
 -------
 
 For a file called ``/code/library/file.cpp``, here is what would be emitted:
+
 * Default (No flag, or ``-fsanitize-undefined-strip-path-components=0``): ``/code/library/file.cpp``
 * ``-fsanitize-undefined-strip-path-components=1``: ``code/library/file.cpp``
 * ``-fsanitize-undefined-strip-path-components=2``: ``library/file.cpp``

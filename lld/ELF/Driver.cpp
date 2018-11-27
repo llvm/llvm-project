@@ -350,8 +350,8 @@ static bool isKnownZFlag(StringRef S) {
          S == "execstack" || S == "global" || S == "hazardplt" ||
          S == "initfirst" || S == "interpose" ||
          S == "keep-text-section-prefix" || S == "lazy" || S == "muldefs" ||
-         S == "nocombreloc" || S == "nocopyreloc" || S == "nodelete" ||
-         S == "nodlopen" || S == "noexecstack" ||
+         S == "nocombreloc" || S == "nocopyreloc" || S == "nodefaultlib" ||
+         S == "nodelete" || S == "nodlopen" || S == "noexecstack" ||
          S == "nokeep-text-section-prefix" || S == "norelro" || S == "notext" ||
          S == "now" || S == "origin" || S == "relro" || S == "retpolineplt" ||
          S == "rodynamic" || S == "text" || S == "wxneeded" ||
@@ -876,6 +876,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->ZInterpose = hasZOption(Args, "interpose");
   Config->ZKeepTextSectionPrefix = getZFlag(
       Args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
+  Config->ZNodefaultlib = hasZOption(Args, "nodefaultlib");
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNodlopen = hasZOption(Args, "nodlopen");
   Config->ZNow = getZFlag(Args, "now", "lazy", false);

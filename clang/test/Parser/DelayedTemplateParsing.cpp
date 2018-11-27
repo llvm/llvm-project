@@ -181,20 +181,3 @@ static void h() {
 }
 
 }
-
-struct PR38460 {
-  template <typename>
-  struct T {
-    static void foo() {
-      struct U {
-        void dummy() {
-          use_delayed_identifier();
-        }
-      };
-    }
-  };
-};
-void use_delayed_identifier();
-void trigger_PR38460() {
-  PR38460::T<int>::foo();
-}
