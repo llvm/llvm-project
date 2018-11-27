@@ -31,6 +31,7 @@
 #define DEBUG_TYPE "lld"
 
 using namespace llvm;
+using namespace llvm::object;
 using namespace llvm::sys;
 using namespace llvm::wasm;
 

@@ -16,8 +16,6 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/Wasm.h"
 
-using llvm::wasm::WasmGlobal;
-
 namespace lld {
 namespace wasm {
 

@@ -1791,8 +1791,6 @@ void CodeGenModule::ConstructDefaultFnAttrList(StringRef Name, bool HasOptnone,
     if (CodeGenOpts.Backchain)
       FuncAttrs.addAttribute("backchain");
 
-    // FIXME: The interaction of this attribute with the SLH command line flag
-    // has not been determined.
     if (CodeGenOpts.SpeculativeLoadHardening)
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
   }
@@ -1856,8 +1854,6 @@ void CodeGenModule::ConstructAttributeList(
       FuncAttrs.addAttribute(llvm::Attribute::NoDuplicate);
     if (TargetDecl->hasAttr<ConvergentAttr>())
       FuncAttrs.addAttribute(llvm::Attribute::Convergent);
-    if (TargetDecl->hasAttr<SpeculativeLoadHardeningAttr>())
-      FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
 
     if (const FunctionDecl *Fn = dyn_cast<FunctionDecl>(TargetDecl)) {
       AddAttributesFromFunctionProtoType(

@@ -1382,7 +1382,7 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
   SmallVector<ParseScope*, 4> TemplateParamScopeStack;
 
   // Get the list of DeclContexts to reenter.
-  SmallVector<DeclContext*, 4> DeclContextsToReenter;
+  SmallVector<DeclContext *, 4> DeclContextsToReenter;
   DeclContext *DD = FunD;
   while (DD && !DD->isTranslationUnit()) {
     DeclContextsToReenter.push_back(DD);
@@ -1398,7 +1398,12 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
     unsigned NumParamLists =
       Actions.ActOnReenterTemplateScope(getCurScope(), cast<Decl>(*II));
     CurTemplateDepthTracker.addDepth(NumParamLists);
-    if (*II != FunD) {
+    // If we find a class in a class, we need to push the context of the
+    // outermost class to match up with how we would parse a regular C++ class
+    // inline method.
+    if (*II != FunD &&
+        !(isa<CXXRecordDecl>(*II) && isa<CXXRecordDecl>(Actions.CurContext) &&
+          Actions.CurContext == (*II)->getLexicalParent())) {
       TemplateParamScopeStack.push_back(new ParseScope(this, Scope::DeclScope));
       Actions.PushDeclContext(Actions.getCurScope(), *II);
     }
