@@ -15,13 +15,10 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Wasm.h"
 
-using llvm::object::Archive;
-using llvm::wasm::WasmGlobalType;
-using llvm::wasm::WasmSignature;
-using llvm::wasm::WasmSymbolType;
-
 namespace lld {
 namespace wasm {
+
+using llvm::wasm::WasmSymbolType;
 
 class InputFile;
 class InputChunk;
@@ -272,14 +269,15 @@ public:
 
 class LazySymbol : public Symbol {
 public:
-  LazySymbol(StringRef Name, InputFile *File, const Archive::Symbol &Sym)
+  LazySymbol(StringRef Name, InputFile *File,
+             const llvm::object::Archive::Symbol &Sym)
       : Symbol(Name, LazyKind, 0, File), ArchiveSymbol(Sym) {}
 
   static bool classof(const Symbol *S) { return S->kind() == LazyKind; }
   void fetch();
 
 private:
-  Archive::Symbol ArchiveSymbol;
+  llvm::object::Archive::Symbol ArchiveSymbol;
 };
 
 // linker-generated symbols

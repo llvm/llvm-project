@@ -20,18 +20,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
 
-using llvm::object::Archive;
-using llvm::object::WasmObjectFile;
-using llvm::object::WasmSection;
-using llvm::object::WasmSymbol;
-using llvm::wasm::WasmRelocation;
-
-namespace llvm {
-namespace lto {
-class InputFile;
-}
-} // namespace llvm
-
 namespace lld {
 namespace wasm {
 
@@ -81,12 +69,12 @@ public:
   explicit ArchiveFile(MemoryBufferRef M) : InputFile(ArchiveKind, M) {}
   static bool classof(const InputFile *F) { return F->kind() == ArchiveKind; }
 
-  void addMember(const Archive::Symbol *Sym);
+  void addMember(const llvm::object::Archive::Symbol *Sym);
 
   void parse() override;
 
 private:
-  std::unique_ptr<Archive> File;
+  std::unique_ptr<llvm::object::Archive> File;
   llvm::DenseSet<uint64_t> Seen;
 };
 
