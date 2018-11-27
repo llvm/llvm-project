@@ -262,8 +262,18 @@ void ICF::run(ArrayRef<Chunk *> Vec) {
 
   // Initially, we use hash values to partition sections.
   for_each(parallel::par, Chunks.begin(), Chunks.end(), [&](SectionChunk *SC) {
+    SC->Class[1] = xxHash64(SC->getContents());
+  });
+
+  // Combine the hashes of the sections referenced by each section into its
+  // hash.
+  for_each(parallel::par, Chunks.begin(), Chunks.end(), [&](SectionChunk *SC) {
+    uint32_t Hash = SC->Class[1];
+    for (Symbol *B : SC->symbols())
+      if (auto *Sym = dyn_cast_or_null<DefinedRegular>(B))
+        Hash ^= Sym->getChunk()->Class[1];
     // Set MSB to 1 to avoid collisions with non-hash classs.
-    SC->Class[0] = xxHash64(SC->getContents()) | (1 << 31);
+    SC->Class[0] = Hash | (1U << 31);
   });
 
   // From now on, sections in Chunks are ordered so that sections in

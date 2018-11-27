@@ -24,7 +24,8 @@ UseUsingCheck::UseUsingCheck(StringRef Name, ClangTidyContext *Context)
 void UseUsingCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus11)
     return;
-  Finder->addMatcher(typedefDecl().bind("typedef"), this);
+  Finder->addMatcher(typedefDecl(unless(isInstantiated())).bind("typedef"),
+                     this);
 }
 
 // Checks if 'typedef' keyword can be removed - we do it only if

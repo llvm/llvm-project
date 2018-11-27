@@ -19,7 +19,9 @@
 #include <fcntl.h>
 #include <pthread.h>
 #include <sys/stat.h>
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD || SANITIZER_OPENBSD || SANITIZER_MAC
 #include <sys/syscall.h>
+#endif
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>

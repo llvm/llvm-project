@@ -545,7 +545,7 @@ static uint64_t getARMStaticBase(const Symbol &Sym) {
 //
 // This function returns the R_RISCV_PCREL_HI20 relocation from
 // R_RISCV_PCREL_LO12's symbol and addend.
-Relocation *lld::elf::getRISCVPCRelHi20(const Symbol *Sym, uint64_t Addend) {
+static Relocation *getRISCVPCRelHi20(const Symbol *Sym, uint64_t Addend) {
   const Defined *D = cast<Defined>(Sym);
   InputSection *IS = cast<InputSection>(D->Section);
 
@@ -677,11 +677,10 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     return getAArch64Page(Val) - getAArch64Page(P);
   }
   case R_RISCV_PC_INDIRECT: {
-    const Relocation *HiRel = getRISCVPCRelHi20(&Sym, A);
-    if (!HiRel)
-      return 0;
-    return getRelocTargetVA(File, HiRel->Type, HiRel->Addend, Sym.getVA(),
-                            *HiRel->Sym, HiRel->Expr);
+    if (const Relocation *HiRel = getRISCVPCRelHi20(&Sym, A))
+      return getRelocTargetVA(File, HiRel->Type, HiRel->Addend, Sym.getVA(),
+                              *HiRel->Sym, HiRel->Expr);
+    return 0;
   }
   case R_PC: {
     uint64_t Dest;

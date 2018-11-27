@@ -48,10 +48,6 @@ public:
     /// with symbols' paths to get absolute paths. This must be an absolute
     /// path.
     std::string FallbackDir;
-    /// Specifies URI schemes that can be used to generate URIs for file paths
-    /// in symbols. The list of schemes will be tried in order until a working
-    /// scheme is found. If no scheme works, symbol location will be dropped.
-    std::vector<std::string> URISchemes = {"file"};
     bool CollectIncludePath = false;
     /// If set, this is used to map symbol #include path to a potentially
     /// different #include path.

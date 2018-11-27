@@ -4,8 +4,8 @@
 define void @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[T1:%.*]] = tail call <4 x float> @blam()
-; CHECK-NEXT:    [[T23:%.*]] = fsub fast <4 x float> undef, [[T1]]
-; CHECK-NEXT:    [[T24:%.*]] = fadd fast <4 x float> [[T23]], undef
+; CHECK-NEXT:    [[T1_NEG:%.*]] = fsub fast <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[T1]]
+; CHECK-NEXT:    [[T24:%.*]] = fadd fast <4 x float> [[T1_NEG]], undef
 ; CHECK-NEXT:    tail call void @wombat(<4 x float> [[T24]])
 ; CHECK-NEXT:    ret void
 ;

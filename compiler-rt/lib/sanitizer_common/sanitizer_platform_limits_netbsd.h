@@ -460,6 +460,8 @@ struct __sanitizer_ttyent {
   char *ty_class;
 };
 
+extern const unsigned long __sanitizer_bufsiz;
+
 #define IOC_NRBITS 8
 #define IOC_TYPEBITS 8
 #define IOC_SIZEBITS 14

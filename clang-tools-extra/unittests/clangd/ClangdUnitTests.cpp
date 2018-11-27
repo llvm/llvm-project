@@ -131,26 +131,37 @@ TEST(DiagnosticsTest, FlagsMatter) {
 
 TEST(DiagnosticsTest, ClangTidy) {
   Annotations Test(R"cpp(
+    #include $deprecated[["assert.h"]]
+
     #define $macrodef[[SQUARE]](X) (X)*(X)
     int main() {
-      return [[sizeof]](sizeof(int));
+      return $doubled[[sizeof]](sizeof(int));
       int y = 4;
       return SQUARE($macroarg[[++]]y);
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
+  TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       UnorderedElementsAre(
-          Diag(Test.range(), "suspicious usage of 'sizeof(sizeof(...))' "
-                             "[bugprone-sizeof-expression]"),
+          AllOf(Diag(Test.range("deprecated"),
+                     "inclusion of deprecated C++ header 'assert.h'; consider "
+                     "using 'cassert' instead [modernize-deprecated-headers]"),
+                WithFix(Fix(Test.range("deprecated"), "<cassert>",
+                            "change '\"assert.h\"' to '<cassert>'"))),
+          Diag(Test.range("doubled"),
+               "suspicious usage of 'sizeof(sizeof(...))' "
+               "[bugprone-sizeof-expression]"),
           AllOf(
               Diag(Test.range("macroarg"),
                    "side effects in the 1st macro argument 'X' are repeated in "
                    "macro expansion [bugprone-macro-repeated-side-effects]"),
               WithNote(Diag(Test.range("macrodef"),
                             "macro 'SQUARE' defined here "
-                            "[bugprone-macro-repeated-side-effects]")))));
+                            "[bugprone-macro-repeated-side-effects]"))),
+          Diag(Test.range("macroarg"),
+               "multiple unsequenced modifications to 'y'")));
 }
 
 TEST(DiagnosticsTest, Preprocessor) {
@@ -170,6 +181,27 @@ TEST(DiagnosticsTest, Preprocessor) {
   EXPECT_THAT(
       TestTU::withCode(Test.code()).build().getDiagnostics(),
       ElementsAre(Diag(Test.range(), "use of undeclared identifier 'b'")));
+}
+
+TEST(DiagnosticsTest, InsideMacros) {
+  Annotations Test(R"cpp(
+    #define TEN 10
+    #define RET(x) return x + 10
+
+    int* foo() {
+      RET($foo[[0]]);
+    }
+    int* bar() {
+      return $bar[[TEN]];
+    }
+    )cpp");
+  EXPECT_THAT(TestTU::withCode(Test.code()).build().getDiagnostics(),
+              ElementsAre(Diag(Test.range("foo"),
+                               "cannot initialize return object of type "
+                               "'int *' with an rvalue of type 'int'"),
+                          Diag(Test.range("bar"),
+                               "cannot initialize return object of type "
+                               "'int *' with an rvalue of type 'int'")));
 }
 
 TEST(DiagnosticsTest, ToLSP) {

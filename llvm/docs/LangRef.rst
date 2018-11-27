@@ -12576,6 +12576,206 @@ Examples:
       %obit = extractvalue {i32, i1} %res, 1
       br i1 %obit, label %overflow, label %normal
 
+Saturation Arithmetic Intrinsics
+---------------------------------
+
+Saturation arithmetic is a version of arithmetic in which operations are
+limited to a fixed range between a minimum and maximum value. If the result of
+an operation is greater than the maximum value, the result is set (or
+"clamped") to this maximum. If it is below the minimum, it is clamped to this
+minimum.
+
+
+'``llvm.sadd.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.sadd.sat``
+on any integer bit width or vectors of integers.
+
+::
+
+      declare i16 @llvm.sadd.sat.i16(i16 %a, i16 %b)
+      declare i32 @llvm.sadd.sat.i32(i32 %a, i32 %b)
+      declare i64 @llvm.sadd.sat.i64(i64 %a, i64 %b)
+      declare <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview
+"""""""""
+
+The '``llvm.sadd.sat``' family of intrinsic functions perform signed
+saturation addition on the 2 arguments.
+
+Arguments
+""""""""""
+
+The arguments (%a and %b) and the result may be of integer types of any bit
+width, but they must have the same bit width. ``%a`` and ``%b`` are the two
+values that will undergo signed addition.
+
+Semantics:
+""""""""""
+
+The maximum value this operation can clamp to is the largest signed value
+representable by the bit width of the arguments. The minimum value is the
+smallest signed value representable by this bit width.
+
+
+Examples
+"""""""""
+
+.. code-block:: llvm
+
+      %res = call i4 @llvm.sadd.sat.i4(i4 1, i4 2)  ; %res = 3
+      %res = call i4 @llvm.sadd.sat.i4(i4 5, i4 6)  ; %res = 7
+      %res = call i4 @llvm.sadd.sat.i4(i4 -4, i4 2)  ; %res = -2
+      %res = call i4 @llvm.sadd.sat.i4(i4 -4, i4 -5)  ; %res = -8
+
+
+'``llvm.uadd.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.uadd.sat``
+on any integer bit width or vectors of integers.
+
+::
+
+      declare i16 @llvm.uadd.sat.i16(i16 %a, i16 %b)
+      declare i32 @llvm.uadd.sat.i32(i32 %a, i32 %b)
+      declare i64 @llvm.uadd.sat.i64(i64 %a, i64 %b)
+      declare <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview
+"""""""""
+
+The '``llvm.uadd.sat``' family of intrinsic functions perform unsigned
+saturation addition on the 2 arguments.
+
+Arguments
+""""""""""
+
+The arguments (%a and %b) and the result may be of integer types of any bit
+width, but they must have the same bit width. ``%a`` and ``%b`` are the two
+values that will undergo unsigned addition.
+
+Semantics:
+""""""""""
+
+The maximum value this operation can clamp to is the largest unsigned value
+representable by the bit width of the arguments. Because this is an unsigned
+operation, the result will never saturate towards zero.
+
+
+Examples
+"""""""""
+
+.. code-block:: llvm
+
+      %res = call i4 @llvm.uadd.sat.i4(i4 1, i4 2)  ; %res = 3
+      %res = call i4 @llvm.uadd.sat.i4(i4 5, i4 6)  ; %res = 11
+      %res = call i4 @llvm.uadd.sat.i4(i4 8, i4 8)  ; %res = 15
+
+
+'``llvm.ssub.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.ssub.sat``
+on any integer bit width or vectors of integers.
+
+::
+
+      declare i16 @llvm.ssub.sat.i16(i16 %a, i16 %b)
+      declare i32 @llvm.ssub.sat.i32(i32 %a, i32 %b)
+      declare i64 @llvm.ssub.sat.i64(i64 %a, i64 %b)
+      declare <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview
+"""""""""
+
+The '``llvm.ssub.sat``' family of intrinsic functions perform signed
+saturation subtraction on the 2 arguments.
+
+Arguments
+""""""""""
+
+The arguments (%a and %b) and the result may be of integer types of any bit
+width, but they must have the same bit width. ``%a`` and ``%b`` are the two
+values that will undergo signed subtraction.
+
+Semantics:
+""""""""""
+
+The maximum value this operation can clamp to is the largest signed value
+representable by the bit width of the arguments. The minimum value is the
+smallest signed value representable by this bit width.
+
+
+Examples
+"""""""""
+
+.. code-block:: llvm
+
+      %res = call i4 @llvm.ssub.sat.i4(i4 2, i4 1)  ; %res = 1
+      %res = call i4 @llvm.ssub.sat.i4(i4 2, i4 6)  ; %res = -4
+      %res = call i4 @llvm.ssub.sat.i4(i4 -4, i4 5)  ; %res = -8
+      %res = call i4 @llvm.ssub.sat.i4(i4 4, i4 -5)  ; %res = 7
+
+
+'``llvm.usub.sat.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.usub.sat``
+on any integer bit width or vectors of integers.
+
+::
+
+      declare i16 @llvm.usub.sat.i16(i16 %a, i16 %b)
+      declare i32 @llvm.usub.sat.i32(i32 %a, i32 %b)
+      declare i64 @llvm.usub.sat.i64(i64 %a, i64 %b)
+      declare <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %a, <4 x i32> %b)
+
+Overview
+"""""""""
+
+The '``llvm.usub.sat``' family of intrinsic functions perform unsigned
+saturation subtraction on the 2 arguments.
+
+Arguments
+""""""""""
+
+The arguments (%a and %b) and the result may be of integer types of any bit
+width, but they must have the same bit width. ``%a`` and ``%b`` are the two
+values that will undergo unsigned subtraction.
+
+Semantics:
+""""""""""
+
+The minimum value this operation can clamp to is 0, which is the smallest
+unsigned value representable by the bit width of the unsigned arguments.
+Because this is an unsigned operation, the result will never saturate towards
+the largest possible value representable by this bit width.
+
+
+Examples
+"""""""""
+
+.. code-block:: llvm
+
+      %res = call i4 @llvm.usub.sat.i4(i4 2, i4 1)  ; %res = 1
+      %res = call i4 @llvm.usub.sat.i4(i4 2, i4 6)  ; %res = 0
+
+
 Specialised Arithmetic Intrinsics
 ---------------------------------
 

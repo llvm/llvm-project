@@ -9,6 +9,11 @@
 #define HEADER
 
 // CHECK-NOT: @__omp_offloading_{{.+}}_exec_mode = weak constant i8 1
+// CHECK-DAG: private unnamed_addr constant %struct.ident_t { i32 0, i32 2050, i32 2, i32 0, i8* getelementptr inbounds
+// CHECK-DAG: private unnamed_addr constant %struct.ident_t { i32 0, i32 514, i32 2, i32 0, i8* getelementptr inbounds
+// CHECK-DAG: private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 2, i32 0, i8* getelementptr inbounds
+// CHECK-DAG: private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 2, i32 0, i8* getelementptr inbounds
+// CHECK-NOT: @__omp_offloading_{{.+}}_exec_mode = weak constant i8 1
 
 void foo() {
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)

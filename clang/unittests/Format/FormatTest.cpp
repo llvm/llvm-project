@@ -12762,6 +12762,30 @@ TEST_F(FormatTest, GuessedLanguageWithInlineAsmClobbers) {
                                                "     : [d] \"=rm\" (d)\n"
                                                "       [e] \"rm\" (*e));\n"
                                                "}"));
+  EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo.h",
+                                               "void f() {\n"
+                                               "  _asm (\"mov %[e], %[d]\"\n"
+                                               "     : [d] \"=rm\" (d)\n"
+                                               "       [e] \"rm\" (*e));\n"
+                                               "}"));
+  EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo.h",
+                                               "void f() {\n"
+                                               "  __asm (\"mov %[e], %[d]\"\n"
+                                               "     : [d] \"=rm\" (d)\n"
+                                               "       [e] \"rm\" (*e));\n"
+                                               "}"));
+  EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo.h",
+                                               "void f() {\n"
+                                               "  __asm__ (\"mov %[e], %[d]\"\n"
+                                               "     : [d] \"=rm\" (d)\n"
+                                               "       [e] \"rm\" (*e));\n"
+                                               "}"));
+  EXPECT_EQ(FormatStyle::LK_Cpp, guessLanguage("foo.h",
+                                               "void f() {\n"
+                                               "  asm (\"mov %[e], %[d]\"\n"
+                                               "     : [d] \"=rm\" (d),\n"
+                                               "       [e] \"rm\" (*e));\n"
+                                               "}"));
   EXPECT_EQ(FormatStyle::LK_Cpp,
             guessLanguage("foo.h", "void f() {\n"
                                    "  asm volatile (\"mov %[e], %[d]\"\n"

@@ -1,0 +1,21 @@
+# We need to splice paths into file:// URIs for this test.
+# UNSUPPORTED: win32
+
+# Use a copy of inputs, as we'll mutate it (as will the background index).
+# RUN: rm -rf %t
+# RUN: cp -r %S/Inputs/background-index %t
+# Need to embed the correct temp path in the actual JSON-RPC requests.
+# RUN: sed -i -e "s|DIRECTORY|%t|" %t/*
+
+# We're editing bar.cpp, which includes foo.h.
+# foo() is declared in foo.h and defined in foo.cpp.
+# The background index should allow us to go-to-definition on foo().
+# RUN: clangd -background-index -lit-test < %t/definition.jsonrpc | FileCheck %t/definition.jsonrpc
+
+# Test that the index is writing files in the expected location.
+# RUN: ls %t/.clangd-index/foo.cpp.*.idx
+
+# Test the index is read from disk: delete code and restart clangd.
+# FIXME: This test currently fails as we don't read the index yet.
+# RUN: rm %t/foo.cpp
+# RUN: clangd -background-index -lit-test < %t/definition.jsonrpc | not FileCheck %t/definition.jsonrpc

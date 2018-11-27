@@ -307,7 +307,7 @@ class Configuration(object):
         elif self.use_system_cxx_lib == 'false':
             self.use_system_cxx_lib = False
         elif self.use_system_cxx_lib:
-            assert os.path.isdir(self.use_system_cxx_lib)
+            assert os.path.isdir(self.use_system_cxx_lib), "the specified use_system_cxx_lib parameter (%s) is not a valid directory" % self.use_system_cxx_lib
         self.lit_config.note(
             "inferred use_system_cxx_lib as: %r" % self.use_system_cxx_lib)
 
@@ -446,7 +446,7 @@ class Configuration(object):
         # Run a compile test for the -fsized-deallocation flag. This is needed
         # in test/std/language.support/support.dynamic/new.delete
         if self.cxx.hasCompileFlag('-fsized-deallocation'):
-            self.config.available_features.add('fsized-deallocation')
+            self.config.available_features.add('-fsized-deallocation')
 
         if self.cxx.hasCompileFlag('-faligned-allocation'):
             self.config.available_features.add('-faligned-allocation')

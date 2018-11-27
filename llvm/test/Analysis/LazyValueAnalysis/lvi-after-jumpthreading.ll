@@ -72,7 +72,7 @@ loop:
   %cnd1 = icmp sge i32 %iv, 0
   %cnd2 = icmp sgt i32 %iv2, 0
 ; CHECK:       %cnd2 = icmp sgt i32 %iv2, 0
-; CHECK:         ; LatticeVal for: '  %cnd = and i1 %cnd1, %cnd2' in BB: '%loop' is: overdefined
+; CHECK:         ; LatticeVal for: '  %cnd = and i1 %cnd1, %cnd2' in BB: '%loop' is: constantrange<-1, -1>
 ; CHECK-DAG:     ; LatticeVal for: '  %cnd = and i1 %cnd1, %cnd2' in BB: '%backedge' is: constantrange<-1, 0>
 ; CHECK-DAG:     ; LatticeVal for: '  %cnd = and i1 %cnd1, %cnd2' in BB: '%exit' is: overdefined
 ; CHECK-NEXT:  %cnd = and i1 %cnd1, %cnd2
@@ -92,7 +92,7 @@ backedge:
 ; CHECK-NEXT:    ; LatticeVal for: '  %cont2 = icmp sgt i32 %iv2.next, 0' in BB: '%backedge' is: overdefined
 ; CHECK-NEXT:  %cont2 = icmp sgt i32 %iv2.next, 0
   %cont2 = icmp sgt i32 %iv2.next, 0
-; CHECK-NEXT:    ; LatticeVal for: '  %cont = and i1 %cont1, %cont2' in BB: '%backedge' is: overdefined
+; CHECK-NEXT:    ; LatticeVal for: '  %cont = and i1 %cont1, %cont2' in BB: '%backedge' is: constantrange<-1, -1>
 ; CHECK-NEXT:  %cont = and i1 %cont1, %cont2
   %cont = and i1 %cont1, %cont2
   br i1 %cont, label %loop, label %exit

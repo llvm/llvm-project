@@ -24,6 +24,7 @@
 #include "CodeCompletionStrings.h"
 #include "Compiler.h"
 #include "Diagnostics.h"
+#include "ExpectedTypes.h"
 #include "FileDistance.h"
 #include "FuzzyMatch.h"
 #include "Headers.h"
@@ -1225,6 +1226,7 @@ class CodeCompleteFlow {
   std::vector<std::string> QueryScopes; // Initialized once Sema runs.
   // Initialized once QueryScopes is initialized, if there are scopes.
   Optional<ScopeDistance> ScopeProximity;
+  llvm::Optional<OpaqueType> PreferredType; // Initialized once Sema runs.
   // Whether to query symbols from any scope. Initialized once Sema runs.
   bool AllScopes = false;
   // Include-insertion and proximity scoring rely on the include structure.
@@ -1302,9 +1304,12 @@ public:
       Inserter.reset(); // Make sure this doesn't out-live Clang.
       SPAN_ATTACH(Tracer, "sema_completion_kind",
                   getCompletionKindString(Recorder->CCContext.getKind()));
-      log("Code complete: sema context {0}, query scopes [{1}] (AnyScope={2})",
+      log("Code complete: sema context {0}, query scopes [{1}] (AnyScope={2}), "
+          "expected type {3}",
           getCompletionKindString(Recorder->CCContext.getKind()),
-          join(QueryScopes.begin(), QueryScopes.end(), ","), AllScopes);
+          join(QueryScopes.begin(), QueryScopes.end(), ","), AllScopes,
+          PreferredType ? Recorder->CCContext.getPreferredType().getAsString()
+                        : "<none>");
     });
 
     Recorder = RecorderOwner.get();
@@ -1354,6 +1359,9 @@ private:
         getQueryScopes(Recorder->CCContext, *Recorder->CCSema, Opts);
     if (!QueryScopes.empty())
       ScopeProximity.emplace(QueryScopes);
+    PreferredType =
+        OpaqueType::fromType(Recorder->CCSema->getASTContext(),
+                             Recorder->CCContext.getPreferredType());
     // Sema provides the needed context to query the index.
     // FIXME: in addition to querying for extra/overlapping symbols, we should
     //        explicitly request symbols corresponding to Sema results.
@@ -1492,6 +1500,8 @@ private:
     Relevance.FileProximityMatch = FileProximity.getPointer();
     if (ScopeProximity)
       Relevance.ScopeProximityMatch = ScopeProximity.getPointer();
+    if (PreferredType)
+      Relevance.HadContextType = true;
 
     auto &First = Bundle.front();
     if (auto FuzzyScore = fuzzyScore(First))
@@ -1506,10 +1516,24 @@ private:
         Relevance.merge(*Candidate.IndexResult);
         Origin |= Candidate.IndexResult->Origin;
         FromIndex = true;
+        if (!Candidate.IndexResult->Type.empty())
+          Relevance.HadSymbolType |= true;
+        if (PreferredType &&
+            PreferredType->raw() == Candidate.IndexResult->Type) {
+          Relevance.TypeMatchesPreferred = true;
+        }
       }
       if (Candidate.SemaResult) {
         Quality.merge(*Candidate.SemaResult);
         Relevance.merge(*Candidate.SemaResult);
+        if (PreferredType) {
+          if (auto CompletionType = OpaqueType::fromCompletionResult(
+                  Recorder->CCSema->getASTContext(), *Candidate.SemaResult)) {
+            Relevance.HadSymbolType |= true;
+            if (PreferredType == CompletionType)
+              Relevance.TypeMatchesPreferred = true;
+          }
+        }
         Origin |= SymbolOrigin::AST;
       }
     }

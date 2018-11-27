@@ -53,6 +53,7 @@ required_libraries = AsmPrinter
                      Core
                      GlobalISel
                      MC
+                     Nios2AsmPrinter
                      Nios2Desc
                      Nios2Info
                      SelectionDAG

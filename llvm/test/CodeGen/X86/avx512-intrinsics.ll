@@ -3354,8 +3354,8 @@ declare <2 x double> @llvm.x86.avx512.mask.getexp.sd(<2 x double>, <2 x double>,
 define <2 x double> @test_getexp_sd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, i8 %mask) {
 ; CHECK-LABEL: test_getexp_sd:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vgetexpsd %xmm1, %xmm0, %xmm3
 ; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vgetexpsd %xmm1, %xmm0, %xmm3
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm4
 ; CHECK-NEXT:    vgetexpsd %xmm1, %xmm0, %xmm4 {%k1}
 ; CHECK-NEXT:    vgetexpsd {sae}, %xmm1, %xmm0, %xmm5 {%k1} {z}
@@ -3393,11 +3393,11 @@ define i8@test_int_x86_avx512_mask_cmp_sd(<2 x double> %x0, <2 x double> %x1, i8
 define i8@test_int_x86_avx512_mask_cmp_sd_all(<2 x double> %x0, <2 x double> %x1, i8 %x3, i32 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_cmp_sd_all:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vcmplesd %xmm1, %xmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %ecx
 ; CHECK-NEXT:    vcmpunordsd {sae}, %xmm1, %xmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %edx
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vcmpneqsd %xmm1, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %esi
 ; CHECK-NEXT:    vcmpnltsd {sae}, %xmm1, %xmm0, %k0 {%k1}
@@ -3438,11 +3438,11 @@ define i8@test_int_x86_avx512_mask_cmp_ss(<4 x float> %x0, <4 x float> %x1, i8 %
 define i8@test_int_x86_avx512_mask_cmp_ss_all(<4 x float> %x0, <4 x float> %x1, i8 %x3, i32 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_cmp_ss_all:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vcmpless %xmm1, %xmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %ecx
 ; CHECK-NEXT:    vcmpunordss {sae}, %xmm1, %xmm0, %k0
 ; CHECK-NEXT:    kmovw %k0, %edx
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vcmpneqss %xmm1, %xmm0, %k0 {%k1}
 ; CHECK-NEXT:    kmovw %k0, %esi
 ; CHECK-NEXT:    vcmpnltss {sae}, %xmm1, %xmm0, %k0 {%k1}
@@ -3500,8 +3500,8 @@ declare <2 x double> @llvm.x86.avx512.mask.getmant.sd(<2 x double>, <2 x double>
 define <2 x double>@test_int_x86_avx512_mask_getmant_sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_getmant_sd:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vgetmantsd $11, %xmm1, %xmm0, %xmm3
 ; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vgetmantsd $11, %xmm1, %xmm0, %xmm3
 ; CHECK-NEXT:    vmovapd %xmm2, %xmm4
 ; CHECK-NEXT:    vgetmantsd $11, %xmm1, %xmm0, %xmm4 {%k1}
 ; CHECK-NEXT:    vgetmantsd $11, %xmm1, %xmm0, %xmm5 {%k1} {z}
@@ -3525,8 +3525,8 @@ declare <4 x float> @llvm.x86.avx512.mask.getmant.ss(<4 x float>, <4 x float>, i
 define <4 x float>@test_int_x86_avx512_mask_getmant_ss(<4 x float> %x0, <4 x float> %x1, <4 x float> %x2, i8 %x3) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_getmant_ss:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    vgetmantss $11, %xmm1, %xmm0, %xmm3
 ; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vgetmantss $11, %xmm1, %xmm0, %xmm3
 ; CHECK-NEXT:    vgetmantss $11, %xmm1, %xmm0, %xmm2 {%k1}
 ; CHECK-NEXT:    vgetmantss $11, %xmm1, %xmm0, %xmm4 {%k1} {z}
 ; CHECK-NEXT:    vaddps %xmm4, %xmm2, %xmm2
@@ -4220,9 +4220,9 @@ declare <4 x float> @llvm.x86.avx512.maskz.fixupimm.ss(<4 x float>, <4 x float>,
 define <4 x float>@test_int_x86_avx512_maskz_fixupimm_ss(<4 x float> %x0, <4 x float> %x1, <4 x i32> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_maskz_fixupimm_ss:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovaps %xmm0, %xmm3
 ; CHECK-NEXT:    vfixupimmss $5, %xmm2, %xmm1, %xmm3
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovaps %xmm0, %xmm4
 ; CHECK-NEXT:    vfixupimmss $5, %xmm2, %xmm1, %xmm4 {%k1} {z}
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
@@ -4299,9 +4299,9 @@ declare <2 x double> @llvm.x86.avx512.mask.fixupimm.sd(<2 x double>, <2 x double
 define <2 x double>@test_int_x86_avx512_mask_fixupimm_sd(<2 x double> %x0, <2 x double> %x1, <2 x i64> %x2, i8 %x4) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fixupimm_sd:
 ; CHECK:       ## %bb.0:
+; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovapd %xmm0, %xmm3
 ; CHECK-NEXT:    vfixupimmsd $5, %xmm2, %xmm1, %xmm3
-; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovapd %xmm0, %xmm4
 ; CHECK-NEXT:    vfixupimmsd $5, %xmm2, %xmm1, %xmm4 {%k1}
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2

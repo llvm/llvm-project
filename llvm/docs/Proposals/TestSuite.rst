@@ -259,6 +259,10 @@ https://github.com/darktable-org/rawspeed
 Its test dataset is 756 MB in size, which is too large to be included
 into the test-suite repository.
 
+C++ Performance Benchmarks
+--------------------------
+https://gitlab.com/chriscox/CppPerformanceBenchmarks
+
 Generic Algorithms
 ==================
 

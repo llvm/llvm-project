@@ -264,6 +264,7 @@ void writeSymbol(const Symbol &Sym, const StringTableOut &Strings,
   writeVar(Strings.index(Sym.CompletionSnippetSuffix), OS);
   writeVar(Strings.index(Sym.Documentation), OS);
   writeVar(Strings.index(Sym.ReturnType), OS);
+  writeVar(Strings.index(Sym.Type), OS);
 
   auto WriteInclude = [&](const Symbol::IncludeHeaderWithReferences &Include) {
     writeVar(Strings.index(Include.IncludeHeader), OS);
@@ -290,6 +291,7 @@ Symbol readSymbol(Reader &Data, ArrayRef<StringRef> Strings) {
   Sym.CompletionSnippetSuffix = Data.consumeString(Strings);
   Sym.Documentation = Data.consumeString(Strings);
   Sym.ReturnType = Data.consumeString(Strings);
+  Sym.Type = Data.consumeString(Strings);
   Sym.IncludeHeaders.resize(Data.consumeVar());
   for (auto &I : Sym.IncludeHeaders) {
     I.IncludeHeader = Data.consumeString(Strings);
@@ -339,7 +341,7 @@ std::pair<SymbolID, std::vector<Ref>> readRefs(Reader &Data,
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 7;
+constexpr static uint32_t Version = 8;
 
 Expected<IndexFileIn> readRIFF(StringRef Data) {
   auto RIFF = riff::readFile(Data);
@@ -488,9 +490,7 @@ Expected<IndexFileIn> readIndexFile(StringRef Data) {
   }
 }
 
-std::unique_ptr<SymbolIndex> loadIndex(StringRef SymbolFilename,
-                                       ArrayRef<std::string> URISchemes,
-                                       bool UseDex) {
+std::unique_ptr<SymbolIndex> loadIndex(StringRef SymbolFilename, bool UseDex) {
   trace::Span OverallTracer("LoadIndex");
   auto Buffer = MemoryBuffer::getFile(SymbolFilename);
   if (!Buffer) {
@@ -517,9 +517,8 @@ std::unique_ptr<SymbolIndex> loadIndex(StringRef SymbolFilename,
   size_t NumRefs = Refs.numRefs();
 
   trace::Span Tracer("BuildIndex");
-  auto Index =
-      UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs), URISchemes)
-             : MemIndex::build(std::move(Symbols), std::move(Refs));
+  auto Index = UseDex ? dex::Dex::build(std::move(Symbols), std::move(Refs))
+                      : MemIndex::build(std::move(Symbols), std::move(Refs));
   vlog("Loaded {0} from {1} with estimated memory usage {2} bytes\n"
        "  - number of symbols: {3}\n"
        "  - number of refs: {4}\n",

@@ -24,8 +24,8 @@ std::pair<Context, Canceler> cancelableTask() {
   };
 }
 
-bool isCancelled() {
-  if (auto *Flag = Context::current().get(FlagKey))
+bool isCancelled(const Context &Ctx) {
+  if (auto *Flag = Ctx.get(FlagKey))
     return **Flag;
   return false; // Not in scope of a task.
 }

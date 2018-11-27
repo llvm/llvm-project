@@ -3,7 +3,7 @@
 ; rdar://6949835
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-a8 -regalloc=basic | FileCheck %s -check-prefix=BASIC -check-prefix=CHECK -check-prefix=NORMAL
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=cortex-a8 -regalloc=greedy | FileCheck %s -check-prefix=GREEDY -check-prefix=CHECK -check-prefix=NORMAL
-; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=swift | FileCheck %s -check-prefix=SWIFT -check-prefix=CHECK -check-prefix=NORMAL
+; RUN: llc < %s -mtriple=thumbv7-apple-ios -mcpu=swift | FileCheck %s -check-prefix=CHECK -check-prefix=NORMAL
 
 ; RUN: llc < %s -mtriple=thumbv7-apple-ios -arm-assume-misaligned-load-store | FileCheck %s -check-prefix=CHECK -check-prefix=CONSERVATIVE
 

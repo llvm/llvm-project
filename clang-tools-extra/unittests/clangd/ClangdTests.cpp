@@ -748,7 +748,8 @@ int d;
         BlockingRequests[RequestIndex]();
       }
     }
-  } // Wait for ClangdServer to shutdown before proceeding.
+    ASSERT_TRUE(Server.blockUntilIdleForTest());
+  }
 
   // Check some invariants about the state of the program.
   std::vector<FileStat> Stats = DiagConsumer.takeFileStats();

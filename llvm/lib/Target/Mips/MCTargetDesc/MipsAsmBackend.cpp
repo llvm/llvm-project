@@ -339,6 +339,8 @@ Optional<MCFixupKind> MipsAsmBackend::getFixupKind(StringRef Name) const {
             (MCFixupKind)Mips::fixup_MICROMIPS_TLS_TPREL_HI16)
       .Case("R_MICROMIPS_TLS_TPREL_LO16",
             (MCFixupKind)Mips::fixup_MICROMIPS_TLS_TPREL_LO16)
+      .Case("R_MIPS_JALR", (MCFixupKind)Mips::fixup_Mips_JALR)
+      .Case("R_MICROMIPS_JALR", (MCFixupKind)Mips::fixup_MICROMIPS_JALR)
       .Default(MCAsmBackend::getFixupKind(Name));
 }
 
@@ -417,7 +419,9 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_MICROMIPS_TLS_TPREL_HI16",  0,     16,   0 },
     { "fixup_MICROMIPS_TLS_TPREL_LO16",  0,     16,   0 },
     { "fixup_Mips_SUB",                  0,     64,   0 },
-    { "fixup_MICROMIPS_SUB",             0,     64,   0 }
+    { "fixup_MICROMIPS_SUB",             0,     64,   0 },
+    { "fixup_Mips_JALR",                 0,     32,   0 },
+    { "fixup_MICROMIPS_JALR",            0,     32,   0 }
   };
   static_assert(array_lengthof(LittleEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS little endian fixup kinds added!");
@@ -495,7 +499,9 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_MICROMIPS_TLS_TPREL_HI16",  16,     16,   0 },
     { "fixup_MICROMIPS_TLS_TPREL_LO16",  16,     16,   0 },
     { "fixup_Mips_SUB",                   0,     64,   0 },
-    { "fixup_MICROMIPS_SUB",              0,     64,   0 }
+    { "fixup_MICROMIPS_SUB",              0,     64,   0 },
+    { "fixup_Mips_JALR",                  0,     32,   0 },
+    { "fixup_MICROMIPS_JALR",             0,     32,   0 }
   };
   static_assert(array_lengthof(BigEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS big endian fixup kinds added!");
@@ -553,6 +559,7 @@ bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   case Mips::fixup_Mips_TLSLDM:
   case Mips::fixup_Mips_TPREL_HI:
   case Mips::fixup_Mips_TPREL_LO:
+  case Mips::fixup_Mips_JALR:
   case Mips::fixup_MICROMIPS_CALL16:
   case Mips::fixup_MICROMIPS_GOT_DISP:
   case Mips::fixup_MICROMIPS_GOT_PAGE:
@@ -565,6 +572,7 @@ bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   case Mips::fixup_MICROMIPS_TLS_LDM:
   case Mips::fixup_MICROMIPS_TLS_TPREL_HI16:
   case Mips::fixup_MICROMIPS_TLS_TPREL_LO16:
+  case Mips::fixup_MICROMIPS_JALR:
     return true;
   }
 }

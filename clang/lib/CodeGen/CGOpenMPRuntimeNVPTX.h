@@ -180,6 +180,16 @@ protected:
     return "__omp_outlined__";
   }
 
+  /// Check if the default location must be constant.
+  /// Constant for NVPTX for better optimization.
+  bool isDefaultLocationConstant() const override { return true; }
+
+  /// Returns additional flags that can be stored in reserved_2 field of the
+  /// default location.
+  /// For NVPTX target contains data about SPMD/Non-SPMD execution mode +
+  /// Full/Lightweight runtime mode. Used for better optimization.
+  unsigned getDefaultLocationReserved2Flags() const override;
+
 public:
   explicit CGOpenMPRuntimeNVPTX(CodeGenModule &CGM);
   void clear() override;

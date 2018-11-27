@@ -119,6 +119,105 @@ private:
   SourceManager *SourceMgr = nullptr;
 };
 
+// When using a preamble, only preprocessor events outside its bounds are seen.
+// This is almost what we want: replaying transitive preprocessing wastes time.
+// However this confuses clang-tidy checks: they don't see any #includes!
+// So we replay the *non-transitive* #includes that appear in the main-file.
+// It would be nice to replay other events (macro definitions, ifdefs etc) but
+// this addresses the most common cases fairly cheaply.
+class ReplayPreamble : private PPCallbacks {
+public:
+  // Attach preprocessor hooks such that preamble events will be injected at
+  // the appropriate time.
+  // Events will be delivered to the *currently registered* PP callbacks.
+  static void attach(const IncludeStructure &Includes,
+                     CompilerInstance &Clang) {
+    auto &PP = Clang.getPreprocessor();
+    auto *ExistingCallbacks = PP.getPPCallbacks();
+    PP.addPPCallbacks(std::unique_ptr<PPCallbacks>(
+        new ReplayPreamble(Includes, ExistingCallbacks,
+                           Clang.getSourceManager(), PP, Clang.getLangOpts())));
+    // We're relying on the fact that addPPCallbacks keeps the old PPCallbacks
+    // around, creating a chaining wrapper. Guard against other implementations.
+    assert(PP.getPPCallbacks() != ExistingCallbacks &&
+           "Expected chaining implementation");
+  }
+
+private:
+  ReplayPreamble(const IncludeStructure &Includes, PPCallbacks *Delegate,
+                 const SourceManager &SM, Preprocessor &PP,
+                 const LangOptions &LangOpts)
+      : Includes(Includes), Delegate(Delegate), SM(SM), PP(PP),
+        LangOpts(LangOpts) {}
+
+  // In a normal compile, the preamble traverses the following structure:
+  //
+  // mainfile.cpp
+  //   <built-in>
+  //     ... macro definitions like __cplusplus ...
+  //     <command-line>
+  //       ... macro definitions for args like -Dfoo=bar ...
+  //   "header1.h"
+  //     ... header file contents ...
+  //   "header2.h"
+  //     ... header file contents ...
+  //   ... main file contents ...
+  //
+  // When using a preamble, the "header1" and "header2" subtrees get skipped.
+  // We insert them right after the built-in header, which still appears.
+  void FileChanged(SourceLocation Loc, FileChangeReason Reason,
+                   SrcMgr::CharacteristicKind Kind, FileID PrevFID) override {
+    // It'd be nice if there was a better way to identify built-in headers...
+    if (Reason == FileChangeReason::ExitFile &&
+        SM.getBuffer(PrevFID)->getBufferIdentifier() == "<built-in>")
+      replay();
+  }
+
+  void replay() {
+    for (const auto &Inc : Includes.MainFileIncludes) {
+      const FileEntry *File = nullptr;
+      if (Inc.Resolved != "")
+        File = SM.getFileManager().getFile(Inc.Resolved);
+
+      StringRef WrittenFilename =
+          StringRef(Inc.Written).drop_front().drop_back();
+      bool Angled = StringRef(Inc.Written).startswith("<");
+
+      // Re-lex the #include directive to find its interesting parts.
+      StringRef Src = SM.getBufferData(SM.getMainFileID());
+      Lexer RawLexer(SM.getLocForStartOfFile(SM.getMainFileID()), LangOpts,
+                     Src.begin(), Src.begin() + Inc.HashOffset, Src.end());
+      Token HashTok, IncludeTok, FilenameTok;
+      RawLexer.LexFromRawLexer(HashTok);
+      assert(HashTok.getKind() == tok::hash);
+      RawLexer.setParsingPreprocessorDirective(true);
+      RawLexer.LexFromRawLexer(IncludeTok);
+      IdentifierInfo *II = PP.getIdentifierInfo(IncludeTok.getRawIdentifier());
+      IncludeTok.setIdentifierInfo(II);
+      IncludeTok.setKind(II->getTokenID());
+      RawLexer.LexIncludeFilename(FilenameTok);
+
+      Delegate->InclusionDirective(
+          HashTok.getLocation(), IncludeTok, WrittenFilename, Angled,
+          CharSourceRange::getCharRange(FilenameTok.getLocation(),
+                                        FilenameTok.getEndLoc()),
+          File, "SearchPath", "RelPath", /*Imported=*/nullptr, Inc.FileKind);
+      if (File)
+        Delegate->FileSkipped(*File, FilenameTok, Inc.FileKind);
+      else {
+        SmallString<1> UnusedRecovery;
+        Delegate->FileNotFound(WrittenFilename, UnusedRecovery);
+      }
+    }
+  }
+
+  const IncludeStructure &Includes;
+  PPCallbacks *Delegate;
+  const SourceManager &SM;
+  Preprocessor &PP;
+  const LangOptions &LangOpts;
+};
+
 } // namespace
 
 void dumpAST(ParsedAST &AST, raw_ostream &OS) {
@@ -171,8 +270,9 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
     // FIXME: this needs to be configurable, and we need to support .clang-tidy
     // files and other options providers.
     // These checks exercise the matcher- and preprocessor-based hooks.
-    CTOpts.Checks =
-        "bugprone-sizeof-expression,bugprone-macro-repeated-side-effects";
+    CTOpts.Checks = "bugprone-sizeof-expression,"
+                    "bugprone-macro-repeated-side-effects,"
+                    "modernize-deprecated-headers";
     CTContext.emplace(llvm::make_unique<tidy::DefaultOptionsProvider>(
         tidy::ClangTidyGlobalOptions(), CTOpts));
     CTContext->setDiagnosticsEngine(&Clang->getDiagnostics());
@@ -190,6 +290,12 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   // Copy over the includes from the preamble, then combine with the
   // non-preamble includes below.
   auto Includes = Preamble ? Preamble->Includes : IncludeStructure{};
+  // Replay the preamble includes so that clang-tidy checks can see them.
+  if (Preamble)
+    ReplayPreamble::attach(Includes, *Clang);
+  // Important: collectIncludeStructure is registered *after* ReplayPreamble!
+  // Otherwise we would collect the replayed includes again...
+  // (We can't *just* use the replayed includes, they don't have Resolved path).
   Clang->getPreprocessor().addPPCallbacks(
       collectIncludeStructureCallback(Clang->getSourceManager(), &Includes));
 

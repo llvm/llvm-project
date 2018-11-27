@@ -23,42 +23,13 @@ namespace clang {
 namespace clangd {
 namespace {
 
-/// \brief Supports a test URI scheme with relaxed constraints for lit tests.
-/// The path in a test URI will be combined with a platform-specific fake
-/// directory to form an absolute path. For example, test:///a.cpp is resolved
-/// C:\clangd-test\a.cpp on Windows and /clangd-test/a.cpp on Unix.
-class TestScheme : public URIScheme {
-public:
-  Expected<std::string> getAbsolutePath(StringRef /*Authority*/, StringRef Body,
-                                        StringRef /*HintPath*/) const override {
-    using namespace llvm::sys;
-    // Still require "/" in body to mimic file scheme, as we want lengths of an
-    // equivalent URI in both schemes to be the same.
-    if (!Body.startswith("/"))
-      return make_error<StringError>(
-          "Expect URI body to be an absolute path starting with '/': " + Body,
-          inconvertibleErrorCode());
-    Body = Body.ltrim('/');
-#ifdef _WIN32
-    constexpr char TestDir[] = "C:\\clangd-test";
-#else
-    constexpr char TestDir[] = "/clangd-test";
-#endif
-    SmallVector<char, 16> Path(Body.begin(), Body.end());
-    path::native(Path);
-    auto Err = fs::make_absolute(TestDir, Path);
-    if (Err)
-      llvm_unreachable("Failed to make absolute path in test scheme.");
-    return std::string(Path.begin(), Path.end());
+void adjustSymbolKinds(llvm::MutableArrayRef<DocumentSymbol> Syms,
+                       SymbolKindBitset Kinds) {
+  for (auto &S : Syms) {
+    S.kind = adjustKindToCapability(S.kind, Kinds);
+    adjustSymbolKinds(S.children, Kinds);
   }
-
-  Expected<URI> uriFromAbsolutePath(StringRef AbsolutePath) const override {
-    llvm_unreachable("Clangd must never create a test URI.");
-  }
-};
-
-static URISchemeRegistry::Add<TestScheme>
-    X("test", "Test scheme for clangd lit tests.");
+}
 
 SymbolKindBitset defaultSymbolKinds() {
   SymbolKindBitset Defaults;
@@ -321,6 +292,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (Params.capabilities.CompletionItemKinds)
     SupportedCompletionItemKinds |= *Params.capabilities.CompletionItemKinds;
   SupportsCodeAction = Params.capabilities.CodeActionStructure;
+  SupportsHierarchicalDocumentSymbol =
+      Params.capabilities.HierarchicalDocumentSymbol;
 
   Reply(json::Object{
       {{"capabilities",
@@ -362,6 +335,17 @@ void ClangdLSPServer::onShutdown(const ShutdownParams &Params,
   // Do essentially nothing, just say we're ready to exit.
   ShutdownRequestReceived = true;
   Reply(nullptr);
+}
+
+// sync is a clangd extension: it blocks until all background work completes.
+// It blocks the calling thread, so no messages are processed until it returns!
+void ClangdLSPServer::onSync(const NoParams &Params,
+                             Callback<std::nullptr_t> Reply) {
+  if (Server->blockUntilIdleForTest(/*TimeoutSeconds=*/60))
+    Reply(nullptr);
+  else
+    Reply(createStringError(llvm::inconvertibleErrorCode(),
+                            "Not idle after a minute"));
 }
 
 void ClangdLSPServer::onDocumentDidOpen(
@@ -538,19 +522,48 @@ void ClangdLSPServer::onDocumentFormatting(
     Reply(ReplacementsOrError.takeError());
 }
 
-void ClangdLSPServer::onDocumentSymbol(
-    const DocumentSymbolParams &Params,
-    Callback<std::vector<SymbolInformation>> Reply) {
+/// The functions constructs a flattened view of the DocumentSymbol hierarchy.
+/// Used by the clients that do not support the hierarchical view.
+static std::vector<SymbolInformation>
+flattenSymbolHierarchy(llvm::ArrayRef<DocumentSymbol> Symbols,
+                       const URIForFile &FileURI) {
+
+  std::vector<SymbolInformation> Results;
+  std::function<void(const DocumentSymbol &, StringRef)> Process =
+      [&](const DocumentSymbol &S, Optional<StringRef> ParentName) {
+        SymbolInformation SI;
+        SI.containerName = ParentName ? "" : *ParentName;
+        SI.name = S.name;
+        SI.kind = S.kind;
+        SI.location.range = S.range;
+        SI.location.uri = FileURI;
+
+        Results.push_back(std::move(SI));
+        std::string FullName =
+            !ParentName ? S.name : (ParentName->str() + "::" + S.name);
+        for (auto &C : S.children)
+          Process(C, /*ParentName=*/FullName);
+      };
+  for (auto &S : Symbols)
+    Process(S, /*ParentName=*/"");
+  return Results;
+}
+
+void ClangdLSPServer::onDocumentSymbol(const DocumentSymbolParams &Params,
+                                       Callback<json::Value> Reply) {
+  URIForFile FileURI = Params.textDocument.uri;
   Server->documentSymbols(
       Params.textDocument.uri.file(),
       Bind(
-          [this](decltype(Reply) Reply,
-                 Expected<std::vector<SymbolInformation>> Items) {
+          [this, FileURI](decltype(Reply) Reply,
+                          Expected<std::vector<DocumentSymbol>> Items) {
             if (!Items)
               return Reply(Items.takeError());
-            for (auto &Sym : *Items)
-              Sym.kind = adjustKindToCapability(Sym.kind, SupportedSymbolKinds);
-            Reply(std::move(*Items));
+            adjustSymbolKinds(*Items, SupportedSymbolKinds);
+            if (SupportsHierarchicalDocumentSymbol)
+              return Reply(std::move(*Items));
+            else
+              return Reply(flattenSymbolHierarchy(*Items, FileURI));
           },
           std::move(Reply)));
 }
@@ -699,6 +712,7 @@ ClangdLSPServer::ClangdLSPServer(class Transport &Transp,
   // clang-format off
   MsgHandler->bind("initialize", &ClangdLSPServer::onInitialize);
   MsgHandler->bind("shutdown", &ClangdLSPServer::onShutdown);
+  MsgHandler->bind("sync", &ClangdLSPServer::onSync);
   MsgHandler->bind("textDocument/rangeFormatting", &ClangdLSPServer::onDocumentRangeFormatting);
   MsgHandler->bind("textDocument/onTypeFormatting", &ClangdLSPServer::onDocumentOnTypeFormatting);
   MsgHandler->bind("textDocument/formatting", &ClangdLSPServer::onDocumentFormatting);

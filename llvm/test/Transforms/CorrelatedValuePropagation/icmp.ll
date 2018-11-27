@@ -61,4 +61,104 @@ bb_false:
   unreachable
 }
 
+; Make sure binary operator transfer functions are run when RHS is non-constant
+; CHECK-LABEL: @test3
+define i1 @test3(i32 %x, i32 %y) #0 {
+entry:
+  %cmp1 = icmp ult i32 %x, 10
+  br i1 %cmp1, label %cont1, label %out
+
+cont1:
+  %cmp2 = icmp ult i32 %y, 10
+  br i1 %cmp2, label %cont2, label %out
+
+cont2:
+  %add = add i32 %x, %y
+  br label %cont3
+
+cont3:
+  %cmp3 = icmp ult i32 %add, 25
+  br label %out
+
+out:
+  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont3 ]
+; CHECK: ret i1 true
+  ret i1 %ret
+}
+
+; Same as previous but make sure nobody gets over-zealous
+; CHECK-LABEL: @test4
+define i1 @test4(i32 %x, i32 %y) #0 {
+entry:
+  %cmp1 = icmp ult i32 %x, 10
+  br i1 %cmp1, label %cont1, label %out
+
+cont1:
+  %cmp2 = icmp ult i32 %y, 10
+  br i1 %cmp2, label %cont2, label %out
+
+cont2:
+  %add = add i32 %x, %y
+  br label %cont3
+
+cont3:
+  %cmp3 = icmp ult i32 %add, 15
+  br label %out
+
+out:
+  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont3 ]
+; CHECK-NOT: ret i1 true
+  ret i1 %ret
+}
+
+; Make sure binary operator transfer functions are run when RHS is non-constant
+; CHECK-LABEL: @test5
+define i1 @test5(i32 %x, i32 %y) #0 {
+entry:
+  %cmp1 = icmp ult i32 %x, 5
+  br i1 %cmp1, label %cont1, label %out
+
+cont1:
+  %cmp2 = icmp ult i32 %y, 5
+  br i1 %cmp2, label %cont2, label %out
+
+cont2:
+  %shifted = shl i32 %x, %y
+  br label %cont3
+
+cont3:
+  %cmp3 = icmp ult i32 %shifted, 65536
+  br label %out
+
+out:
+  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont3 ]
+; CHECK: ret i1 true
+  ret i1 %ret
+}
+
+; Same as previous but make sure nobody gets over-zealous
+; CHECK-LABEL: @test6
+define i1 @test6(i32 %x, i32 %y) #0 {
+entry:
+  %cmp1 = icmp ult i32 %x, 5
+  br i1 %cmp1, label %cont1, label %out
+
+cont1:
+  %cmp2 = icmp ult i32 %y, 15
+  br i1 %cmp2, label %cont2, label %out
+
+cont2:
+  %shifted = shl i32 %x, %y
+  br label %cont3
+
+cont3:
+  %cmp3 = icmp ult i32 %shifted, 65536
+  br label %out
+
+out:
+  %ret = phi i1 [ true, %entry], [ true, %cont1 ], [ %cmp3, %cont3 ]
+; CHECK-NOT: ret i1 true
+  ret i1 %ret
+}
+
 attributes #4 = { noreturn }

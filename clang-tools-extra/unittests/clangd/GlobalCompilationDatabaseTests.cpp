@@ -41,9 +41,12 @@ class OverlayCDBTest : public ::testing::Test {
   class BaseCDB : public GlobalCompilationDatabase {
   public:
     Optional<tooling::CompileCommand>
-    getCompileCommand(StringRef File) const override {
-      if (File == testPath("foo.cc"))
+    getCompileCommand(StringRef File, ProjectInfo *Project) const override {
+      if (File == testPath("foo.cc")) {
+        if (Project)
+          Project->SourceRoot = testRoot();
         return cmd(File, "-DA=1");
+      }
       return None;
     }
 
@@ -86,6 +89,23 @@ TEST_F(OverlayCDBTest, NoBase) {
 
   EXPECT_THAT(CDB.getFallbackCommand(testPath("foo.cc")).CommandLine,
               ElementsAre("clang", testPath("foo.cc"), "-DA=6"));
+}
+
+TEST_F(OverlayCDBTest, Watch) {
+  OverlayCDB Inner(nullptr);
+  OverlayCDB Outer(&Inner);
+
+  std::vector<std::vector<std::string>> Changes;
+  auto Sub = Outer.watch([&](const std::vector<std::string> &ChangedFiles) {
+    Changes.push_back(ChangedFiles);
+  });
+
+  Inner.setCompileCommand("A.cpp", tooling::CompileCommand());
+  Outer.setCompileCommand("B.cpp", tooling::CompileCommand());
+  Inner.setCompileCommand("A.cpp", llvm::None);
+  Outer.setCompileCommand("C.cpp", llvm::None);
+  EXPECT_THAT(Changes, ElementsAre(ElementsAre("A.cpp"), ElementsAre("B.cpp"),
+                                   ElementsAre("A.cpp"), ElementsAre("C.cpp")));
 }
 
 } // namespace

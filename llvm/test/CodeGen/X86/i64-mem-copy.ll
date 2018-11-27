@@ -90,8 +90,9 @@ define void @store_i64_from_vector256(<16 x i16> %x, <16 x i16> %y, i64* %i) {
 ; X32AVX-LABEL: store_i64_from_vector256:
 ; X32AVX:       # %bb.0:
 ; X32AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32AVX-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
+; X32AVX-NEXT:    vextracti128 $1, %ymm1, %xmm1
 ; X32AVX-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; X32AVX-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
 ; X32AVX-NEXT:    vmovq %xmm0, (%eax)
 ; X32AVX-NEXT:    vzeroupper
 ; X32AVX-NEXT:    retl

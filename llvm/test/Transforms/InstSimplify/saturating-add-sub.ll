@@ -16,8 +16,7 @@ declare <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8>, <2 x i8>)
 
 define i8 @uadd_scalar_0(i8 %a) {
 ; CHECK-LABEL: @uadd_scalar_0(
-; CHECK-NEXT:    [[X1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 0)
-; CHECK-NEXT:    ret i8 [[X1]]
+; CHECK-NEXT:    ret i8 [[A:%.*]]
 ;
   %x1 = call i8 @llvm.uadd.sat.i8(i8 %a, i8 0)
   ret i8 %x1
@@ -25,8 +24,7 @@ define i8 @uadd_scalar_0(i8 %a) {
 
 define <2 x i8> @uadd_vector_0(<2 x i8> %a) {
 ; CHECK-LABEL: @uadd_vector_0(
-; CHECK-NEXT:    [[X1V:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> zeroinitializer)
-; CHECK-NEXT:    ret <2 x i8> [[X1V]]
+; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
 ;
   %x1v = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> zeroinitializer)
   ret <2 x i8> %x1v
@@ -34,8 +32,7 @@ define <2 x i8> @uadd_vector_0(<2 x i8> %a) {
 
 define i3 @uadd_scalar_0_commute(i3 %a) {
 ; CHECK-LABEL: @uadd_scalar_0_commute(
-; CHECK-NEXT:    [[X2:%.*]] = call i3 @llvm.uadd.sat.i3(i3 0, i3 [[A:%.*]])
-; CHECK-NEXT:    ret i3 [[X2]]
+; CHECK-NEXT:    ret i3 [[A:%.*]]
 ;
   %x2 = call i3 @llvm.uadd.sat.i3(i3 0, i3 %a)
   ret i3 %x2
@@ -43,8 +40,7 @@ define i3 @uadd_scalar_0_commute(i3 %a) {
 
 define <2 x i8> @uadd_vector_0_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @uadd_vector_0_commute(
-; CHECK-NEXT:    [[X2V:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 0, i8 undef>, <2 x i8> [[A:%.*]])
-; CHECK-NEXT:    ret <2 x i8> [[X2V]]
+; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
 ;
   %x2v = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 0, i8 undef>, <2 x i8> %a)
   ret <2 x i8> %x2v
@@ -52,8 +48,7 @@ define <2 x i8> @uadd_vector_0_commute(<2 x i8> %a) {
 
 define i8 @uadd_scalar_maxval(i8 %a) {
 ; CHECK-LABEL: @uadd_scalar_maxval(
-; CHECK-NEXT:    [[X3:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 -1)
-; CHECK-NEXT:    ret i8 [[X3]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %x3 = call i8 @llvm.uadd.sat.i8(i8 %a, i8 255)
   ret i8 %x3
@@ -61,8 +56,7 @@ define i8 @uadd_scalar_maxval(i8 %a) {
 
 define <2 x i9> @uadd_vector_maxval(<2 x i9> %a) {
 ; CHECK-LABEL: @uadd_vector_maxval(
-; CHECK-NEXT:    [[X3V:%.*]] = call <2 x i9> @llvm.uadd.sat.v2i9(<2 x i9> [[A:%.*]], <2 x i9> <i9 -1, i9 -1>)
-; CHECK-NEXT:    ret <2 x i9> [[X3V]]
+; CHECK-NEXT:    ret <2 x i9> <i9 -1, i9 -1>
 ;
   %x3v = call <2 x i9> @llvm.uadd.sat.v2i9(<2 x i9> %a, <2 x i9> <i9 511, i9 511>)
   ret <2 x i9> %x3v
@@ -70,8 +64,7 @@ define <2 x i9> @uadd_vector_maxval(<2 x i9> %a) {
 
 define i3 @uadd_scalar_maxval_commute(i3 %a) {
 ; CHECK-LABEL: @uadd_scalar_maxval_commute(
-; CHECK-NEXT:    [[X4:%.*]] = call i3 @llvm.uadd.sat.i3(i3 -1, i3 [[A:%.*]])
-; CHECK-NEXT:    ret i3 [[X4]]
+; CHECK-NEXT:    ret i3 -1
 ;
   %x4 = call i3 @llvm.uadd.sat.i3(i3 7, i3 %a)
   ret i3 %x4
@@ -79,8 +72,7 @@ define i3 @uadd_scalar_maxval_commute(i3 %a) {
 
 define <2 x i8> @uadd_vector_maxval_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @uadd_vector_maxval_commute(
-; CHECK-NEXT:    [[X4V:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 -1, i8 -1>, <2 x i8> [[A:%.*]])
-; CHECK-NEXT:    ret <2 x i8> [[X4V]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
   %x4v = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 255, i8 255>, <2 x i8> %a)
   ret <2 x i8> %x4v
@@ -88,8 +80,7 @@ define <2 x i8> @uadd_vector_maxval_commute(<2 x i8> %a) {
 
 define i8 @uadd_scalar_undef(i8 %a) {
 ; CHECK-LABEL: @uadd_scalar_undef(
-; CHECK-NEXT:    [[X5:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 undef)
-; CHECK-NEXT:    ret i8 [[X5]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %x5 = call i8 @llvm.uadd.sat.i8(i8 %a, i8 undef)
   ret i8 %x5
@@ -97,8 +88,7 @@ define i8 @uadd_scalar_undef(i8 %a) {
 
 define <2 x i8> @uadd_vector_undef(<2 x i8> %a) {
 ; CHECK-LABEL: @uadd_vector_undef(
-; CHECK-NEXT:    [[X5V:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> undef)
-; CHECK-NEXT:    ret <2 x i8> [[X5V]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
   %x5v = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 undef, i8 undef>)
   ret <2 x i8> %x5v
@@ -106,8 +96,7 @@ define <2 x i8> @uadd_vector_undef(<2 x i8> %a) {
 
 define i8 @uadd_scalar_undef_commute(i8 %a) {
 ; CHECK-LABEL: @uadd_scalar_undef_commute(
-; CHECK-NEXT:    [[X6:%.*]] = call i8 @llvm.uadd.sat.i8(i8 undef, i8 [[A:%.*]])
-; CHECK-NEXT:    ret i8 [[X6]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %x6 = call i8 @llvm.uadd.sat.i8(i8 undef, i8 %a)
   ret i8 %x6
@@ -115,8 +104,7 @@ define i8 @uadd_scalar_undef_commute(i8 %a) {
 
 define <2 x i8> @uadd_vector_undef_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @uadd_vector_undef_commute(
-; CHECK-NEXT:    [[X5V:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> undef, <2 x i8> [[A:%.*]])
-; CHECK-NEXT:    ret <2 x i8> [[X5V]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
   %x5v = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> undef, <2 x i8> %a)
   ret <2 x i8> %x5v
@@ -124,8 +112,7 @@ define <2 x i8> @uadd_vector_undef_commute(<2 x i8> %a) {
 
 define i8 @sadd_scalar_0(i8 %a) {
 ; CHECK-LABEL: @sadd_scalar_0(
-; CHECK-NEXT:    [[Y1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 0)
-; CHECK-NEXT:    ret i8 [[Y1]]
+; CHECK-NEXT:    ret i8 [[A:%.*]]
 ;
   %y1 = call i8 @llvm.sadd.sat.i8(i8 %a, i8 0)
   ret i8 %y1
@@ -133,8 +120,7 @@ define i8 @sadd_scalar_0(i8 %a) {
 
 define <2 x i8> @sadd_vector_0(<2 x i8> %a) {
 ; CHECK-LABEL: @sadd_vector_0(
-; CHECK-NEXT:    [[Y1V:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 undef, i8 0>)
-; CHECK-NEXT:    ret <2 x i8> [[Y1V]]
+; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
 ;
   %y1v = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 undef, i8 0>)
   ret <2 x i8> %y1v
@@ -142,8 +128,7 @@ define <2 x i8> @sadd_vector_0(<2 x i8> %a) {
 
 define i8 @sadd_scalar_0_commute(i8 %a) {
 ; CHECK-LABEL: @sadd_scalar_0_commute(
-; CHECK-NEXT:    [[Y2:%.*]] = call i8 @llvm.sadd.sat.i8(i8 0, i8 [[A:%.*]])
-; CHECK-NEXT:    ret i8 [[Y2]]
+; CHECK-NEXT:    ret i8 [[A:%.*]]
 ;
   %y2 = call i8 @llvm.sadd.sat.i8(i8 0, i8 %a)
   ret i8 %y2
@@ -151,8 +136,7 @@ define i8 @sadd_scalar_0_commute(i8 %a) {
 
 define <2 x i8> @sadd_vector_0_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @sadd_vector_0_commute(
-; CHECK-NEXT:    [[Y2V:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> zeroinitializer, <2 x i8> [[A:%.*]])
-; CHECK-NEXT:    ret <2 x i8> [[Y2V]]
+; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
 ;
   %y2v = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> zeroinitializer, <2 x i8> %a)
   ret <2 x i8> %y2v
@@ -196,8 +180,7 @@ define <2 x i8> @sadd_vector_maxval_commute(<2 x i8> %a) {
 
 define i8 @sadd_scalar_undef(i8 %a) {
 ; CHECK-LABEL: @sadd_scalar_undef(
-; CHECK-NEXT:    [[Y5:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 undef)
-; CHECK-NEXT:    ret i8 [[Y5]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %y5 = call i8 @llvm.sadd.sat.i8(i8 %a, i8 undef)
   ret i8 %y5
@@ -205,8 +188,7 @@ define i8 @sadd_scalar_undef(i8 %a) {
 
 define <2 x i8> @sadd_vector_undef(<2 x i8> %a) {
 ; CHECK-LABEL: @sadd_vector_undef(
-; CHECK-NEXT:    [[Y5V:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> undef)
-; CHECK-NEXT:    ret <2 x i8> [[Y5V]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
   %y5v = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %a, <2 x i8> undef)
   ret <2 x i8> %y5v
@@ -214,8 +196,7 @@ define <2 x i8> @sadd_vector_undef(<2 x i8> %a) {
 
 define i8 @sadd_scalar_undef_commute(i8 %a) {
 ; CHECK-LABEL: @sadd_scalar_undef_commute(
-; CHECK-NEXT:    [[Y6:%.*]] = call i8 @llvm.sadd.sat.i8(i8 undef, i8 [[A:%.*]])
-; CHECK-NEXT:    ret i8 [[Y6]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %y6 = call i8 @llvm.sadd.sat.i8(i8 undef, i8 %a)
   ret i8 %y6
@@ -223,8 +204,7 @@ define i8 @sadd_scalar_undef_commute(i8 %a) {
 
 define <2 x i8> @sadd_vector_undef_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @sadd_vector_undef_commute(
-; CHECK-NEXT:    [[Y6V:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> undef, <2 x i8> [[A:%.*]])
-; CHECK-NEXT:    ret <2 x i8> [[Y6V]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
   %y6v = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> undef, <2 x i8> %a)
   ret <2 x i8> %y6v
@@ -232,8 +212,7 @@ define <2 x i8> @sadd_vector_undef_commute(<2 x i8> %a) {
 
 define i8 @usub_scalar_0(i8 %a) {
 ; CHECK-LABEL: @usub_scalar_0(
-; CHECK-NEXT:    [[X1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 0)
-; CHECK-NEXT:    ret i8 [[X1]]
+; CHECK-NEXT:    ret i8 [[A:%.*]]
 ;
   %x1 = call i8 @llvm.usub.sat.i8(i8 %a, i8 0)
   ret i8 %x1
@@ -241,8 +220,7 @@ define i8 @usub_scalar_0(i8 %a) {
 
 define <2 x i8> @usub_vector_0(<2 x i8> %a) {
 ; CHECK-LABEL: @usub_vector_0(
-; CHECK-NEXT:    [[X1V:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> zeroinitializer)
-; CHECK-NEXT:    ret <2 x i8> [[X1V]]
+; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
 ;
   %x1v = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 0, i8 0>)
   ret <2 x i8> %x1v
@@ -250,8 +228,7 @@ define <2 x i8> @usub_vector_0(<2 x i8> %a) {
 
 define i8 @usub_scalar_0_commute(i8 %a) {
 ; CHECK-LABEL: @usub_scalar_0_commute(
-; CHECK-NEXT:    [[X2:%.*]] = call i8 @llvm.usub.sat.i8(i8 0, i8 [[A:%.*]])
-; CHECK-NEXT:    ret i8 [[X2]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x2 = call i8 @llvm.usub.sat.i8(i8 0, i8 %a)
   ret i8 %x2
@@ -259,8 +236,7 @@ define i8 @usub_scalar_0_commute(i8 %a) {
 
 define <2 x i8> @usub_vector_0_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @usub_vector_0_commute(
-; CHECK-NEXT:    [[X2V:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> zeroinitializer, <2 x i8> [[A:%.*]])
-; CHECK-NEXT:    ret <2 x i8> [[X2V]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %x2v = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> <i8 0, i8 0>, <2 x i8> %a)
   ret <2 x i8> %x2v
@@ -268,8 +244,7 @@ define <2 x i8> @usub_vector_0_commute(<2 x i8> %a) {
 
 define i8 @usub_scalar_maxval(i8 %a) {
 ; CHECK-LABEL: @usub_scalar_maxval(
-; CHECK-NEXT:    [[X3:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 -1)
-; CHECK-NEXT:    ret i8 [[X3]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x3 = call i8 @llvm.usub.sat.i8(i8 %a, i8 255)
   ret i8 %x3
@@ -277,8 +252,7 @@ define i8 @usub_scalar_maxval(i8 %a) {
 
 define <2 x i8> @usub_vector_maxval(<2 x i8> %a) {
 ; CHECK-LABEL: @usub_vector_maxval(
-; CHECK-NEXT:    [[X3V:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 -1, i8 -1>)
-; CHECK-NEXT:    ret <2 x i8> [[X3V]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %x3v = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 255, i8 255>)
   ret <2 x i8> %x3v
@@ -286,8 +260,7 @@ define <2 x i8> @usub_vector_maxval(<2 x i8> %a) {
 
 define i8 @usub_scalar_undef(i8 %a) {
 ; CHECK-LABEL: @usub_scalar_undef(
-; CHECK-NEXT:    [[X4:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 undef)
-; CHECK-NEXT:    ret i8 [[X4]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x4 = call i8 @llvm.usub.sat.i8(i8 %a, i8 undef)
   ret i8 %x4
@@ -295,17 +268,15 @@ define i8 @usub_scalar_undef(i8 %a) {
 
 define <2 x i8> @usub_vector_undef(<2 x i8> %a) {
 ; CHECK-LABEL: @usub_vector_undef(
-; CHECK-NEXT:    [[X4V:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 0, i8 undef>)
-; CHECK-NEXT:    ret <2 x i8> [[X4V]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
-  %x4v = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 0, i8 undef>)
+  %x4v = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 undef, i8 undef>)
   ret <2 x i8> %x4v
 }
 
 define i8 @usub_scalar_undef_commute(i8 %a) {
 ; CHECK-LABEL: @usub_scalar_undef_commute(
-; CHECK-NEXT:    [[X5:%.*]] = call i8 @llvm.usub.sat.i8(i8 undef, i8 [[A:%.*]])
-; CHECK-NEXT:    ret i8 [[X5]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x5 = call i8 @llvm.usub.sat.i8(i8 undef, i8 %a)
   ret i8 %x5
@@ -313,17 +284,15 @@ define i8 @usub_scalar_undef_commute(i8 %a) {
 
 define <2 x i8> @usub_vector_undef_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @usub_vector_undef_commute(
-; CHECK-NEXT:    [[X5V:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> undef)
-; CHECK-NEXT:    ret <2 x i8> [[X5V]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
-  %x5v = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 undef, i8 undef>)
+  %x5v = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> <i8 undef, i8 undef>, <2 x i8> %a)
   ret <2 x i8> %x5v
 }
 
 define i8 @usub_scalar_same(i8 %a) {
 ; CHECK-LABEL: @usub_scalar_same(
-; CHECK-NEXT:    [[X6:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 [[A]])
-; CHECK-NEXT:    ret i8 [[X6]]
+; CHECK-NEXT:    ret i8 0
 ;
   %x6 = call i8 @llvm.usub.sat.i8(i8 %a, i8 %a)
   ret i8 %x6
@@ -331,8 +300,7 @@ define i8 @usub_scalar_same(i8 %a) {
 
 define <2 x i8> @usub_vector_same(<2 x i8> %a) {
 ; CHECK-LABEL: @usub_vector_same(
-; CHECK-NEXT:    [[X6V:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> [[A]])
-; CHECK-NEXT:    ret <2 x i8> [[X6V]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %x6v = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a, <2 x i8> %a)
   ret <2 x i8> %x6v
@@ -340,8 +308,7 @@ define <2 x i8> @usub_vector_same(<2 x i8> %a) {
 
 define i8 @ssub_scalar_0(i8 %a) {
 ; CHECK-LABEL: @ssub_scalar_0(
-; CHECK-NEXT:    [[Y1:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A:%.*]], i8 0)
-; CHECK-NEXT:    ret i8 [[Y1]]
+; CHECK-NEXT:    ret i8 [[A:%.*]]
 ;
   %y1 = call i8 @llvm.ssub.sat.i8(i8 %a, i8 0)
   ret i8 %y1
@@ -349,8 +316,7 @@ define i8 @ssub_scalar_0(i8 %a) {
 
 define <2 x i8> @ssub_vector_0(<2 x i8> %a) {
 ; CHECK-LABEL: @ssub_vector_0(
-; CHECK-NEXT:    [[Y1V:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> zeroinitializer)
-; CHECK-NEXT:    ret <2 x i8> [[Y1V]]
+; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
 ;
   %y1v = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 0, i8 0>)
   ret <2 x i8> %y1v
@@ -394,8 +360,7 @@ define <2 x i8> @ssub_vector_maxval(<2 x i8> %a) {
 
 define i8 @ssub_scalar_undef(i8 %a) {
 ; CHECK-LABEL: @ssub_scalar_undef(
-; CHECK-NEXT:    [[Y4:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A:%.*]], i8 undef)
-; CHECK-NEXT:    ret i8 [[Y4]]
+; CHECK-NEXT:    ret i8 0
 ;
   %y4 = call i8 @llvm.ssub.sat.i8(i8 %a, i8 undef)
   ret i8 %y4
@@ -403,8 +368,7 @@ define i8 @ssub_scalar_undef(i8 %a) {
 
 define <2 x i8> @ssub_vector_undef(<2 x i8> %a) {
 ; CHECK-LABEL: @ssub_vector_undef(
-; CHECK-NEXT:    [[Y4V:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> undef)
-; CHECK-NEXT:    ret <2 x i8> [[Y4V]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %y4v = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %a, <2 x i8> undef)
   ret <2 x i8> %y4v
@@ -412,8 +376,7 @@ define <2 x i8> @ssub_vector_undef(<2 x i8> %a) {
 
 define i8 @ssub_scalar_undef_commute(i8 %a) {
 ; CHECK-LABEL: @ssub_scalar_undef_commute(
-; CHECK-NEXT:    [[Y5:%.*]] = call i8 @llvm.ssub.sat.i8(i8 undef, i8 [[A:%.*]])
-; CHECK-NEXT:    ret i8 [[Y5]]
+; CHECK-NEXT:    ret i8 0
 ;
   %y5 = call i8 @llvm.ssub.sat.i8(i8 undef, i8 %a)
   ret i8 %y5
@@ -421,8 +384,7 @@ define i8 @ssub_scalar_undef_commute(i8 %a) {
 
 define <2 x i8> @ssub_vector_undef_commute(<2 x i8> %a) {
 ; CHECK-LABEL: @ssub_vector_undef_commute(
-; CHECK-NEXT:    [[Y5V:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> undef, <2 x i8> [[A:%.*]])
-; CHECK-NEXT:    ret <2 x i8> [[Y5V]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %y5v = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> <i8 undef, i8 undef>, <2 x i8> %a)
   ret <2 x i8> %y5v
@@ -430,8 +392,7 @@ define <2 x i8> @ssub_vector_undef_commute(<2 x i8> %a) {
 
 define i8 @ssub_scalar_same(i8 %a) {
 ; CHECK-LABEL: @ssub_scalar_same(
-; CHECK-NEXT:    [[Y6:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A:%.*]], i8 [[A]])
-; CHECK-NEXT:    ret i8 [[Y6]]
+; CHECK-NEXT:    ret i8 0
 ;
   %y6 = call i8 @llvm.ssub.sat.i8(i8 %a, i8 %a)
   ret i8 %y6
@@ -439,8 +400,7 @@ define i8 @ssub_scalar_same(i8 %a) {
 
 define <2 x i8> @ssub_vector_same(<2 x i8> %a) {
 ; CHECK-LABEL: @ssub_vector_same(
-; CHECK-NEXT:    [[Y6V:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> [[A]])
-; CHECK-NEXT:    ret <2 x i8> [[Y6V]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %y6v = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %a, <2 x i8> %a)
   ret <2 x i8> %y6v

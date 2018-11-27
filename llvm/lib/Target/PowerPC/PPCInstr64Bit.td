@@ -1222,30 +1222,30 @@ def STDBRX: XForm_8_memOp<31, 660, (outs), (ins g8rc:$rS, memrr:$dst),
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 def STBU8 : DForm_1<39, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$rS, memri:$dst),
-                   "stbu $rS, $dst", IIC_LdStStoreUpd, []>,
+                   "stbu $rS, $dst", IIC_LdStSTU, []>,
                    RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
 def STHU8 : DForm_1<45, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$rS, memri:$dst),
-                   "sthu $rS, $dst", IIC_LdStStoreUpd, []>,
+                   "sthu $rS, $dst", IIC_LdStSTU, []>,
                    RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
 def STWU8 : DForm_1<37, (outs ptr_rc_nor0:$ea_res), (ins g8rc:$rS, memri:$dst),
-                   "stwu $rS, $dst", IIC_LdStStoreUpd, []>,
+                   "stwu $rS, $dst", IIC_LdStSTU, []>,
                    RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
 
 def STBUX8: XForm_8_memOp<31, 247, (outs ptr_rc_nor0:$ea_res),
                           (ins g8rc:$rS, memrr:$dst),
-                          "stbux $rS, $dst", IIC_LdStStoreUpd, []>,
+                          "stbux $rS, $dst", IIC_LdStSTUX, []>,
                           RegConstraint<"$dst.ptrreg = $ea_res">,
                           NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 def STHUX8: XForm_8_memOp<31, 439, (outs ptr_rc_nor0:$ea_res),
                           (ins g8rc:$rS, memrr:$dst),
-                          "sthux $rS, $dst", IIC_LdStStoreUpd, []>,
+                          "sthux $rS, $dst", IIC_LdStSTUX, []>,
                           RegConstraint<"$dst.ptrreg = $ea_res">,
                           NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 def STWUX8: XForm_8_memOp<31, 183, (outs ptr_rc_nor0:$ea_res),
                           (ins g8rc:$rS, memrr:$dst),
-                          "stwux $rS, $dst", IIC_LdStStoreUpd, []>,
+                          "stwux $rS, $dst", IIC_LdStSTUX, []>,
                           RegConstraint<"$dst.ptrreg = $ea_res">,
                           NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
@@ -1253,13 +1253,13 @@ def STWUX8: XForm_8_memOp<31, 183, (outs ptr_rc_nor0:$ea_res),
 
 def STDU : DSForm_1<62, 1, (outs ptr_rc_nor0:$ea_res),
                    (ins g8rc:$rS, memrix:$dst),
-                   "stdu $rS, $dst", IIC_LdStSTDU, []>,
+                   "stdu $rS, $dst", IIC_LdStSTU, []>,
                    RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">,
                    isPPC64;
 
 def STDUX : XForm_8_memOp<31, 181, (outs ptr_rc_nor0:$ea_res),
                           (ins g8rc:$rS, memrr:$dst),
-                          "stdux $rS, $dst", IIC_LdStSTDUX, []>,
+                          "stdux $rS, $dst", IIC_LdStSTUX, []>,
                           RegConstraint<"$dst.ptrreg = $ea_res">,
                           NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked, isPPC64;

@@ -1902,6 +1902,26 @@ void CGOpenMPRuntimeNVPTX::emitTargetOutlinedFunction(
   setPropertyExecutionMode(CGM, OutlinedFn->getName(), Mode);
 }
 
+namespace {
+LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+/// Enum for accesseing the reserved_2 field of the ident_t struct.
+enum ModeFlagsTy : unsigned {
+  /// Bit set to 1 when in SPMD mode.
+  KMP_IDENT_SPMD_MODE = 0x01,
+  /// Bit set to 1 when a simplified runtime is used.
+  KMP_IDENT_SIMPLE_RT_MODE = 0x02,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/KMP_IDENT_SIMPLE_RT_MODE)
+};
+
+/// Special mode Undefined. Is the combination of Non-SPMD mode + SimpleRuntime.
+static const ModeFlagsTy UndefinedMode =
+    (~KMP_IDENT_SPMD_MODE) & KMP_IDENT_SIMPLE_RT_MODE;
+} // anonymous namespace
+
+unsigned CGOpenMPRuntimeNVPTX::getDefaultLocationReserved2Flags() const {
+  return UndefinedMode;
+}
+
 CGOpenMPRuntimeNVPTX::CGOpenMPRuntimeNVPTX(CodeGenModule &CGM)
     : CGOpenMPRuntime(CGM, "_", "$") {
   if (!CGM.getLangOpts().OpenMPIsDevice)

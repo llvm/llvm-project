@@ -187,7 +187,7 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; YAML:       - Kind:            LF_POINTER
 ; YAML:         Pointer:
 ; YAML:           ReferentType:    4100
-; YAML:           Attrs:           32778
+; YAML:           Attrs:           33802
 ; YAML:       - Kind:            LF_ARGLIST
 ; YAML:         ArgList:
 ; YAML:           ArgIndices:      [ 116, 116 ]
@@ -281,17 +281,21 @@ attributes #2 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-ma
 ; YAML:         - DF04AA3125BBC50E
 ; YAML:         - 95CEBA304A2C4493
 ; YAML:         - C324F82D24D22283
-; YAML:         - 74698BE366891D3D
+; YAML:         - BB039258F2425BCF
 ; YAML:         - DDE23757322DB7C3
-; YAML:         - 1692305447C3D360
+; YAML:         - C935E8E1F016CC27
 ; YAML:         - D341E2F9BE57A1C7
-; YAML:         - 243F76AED6D8FB79
-; YAML:         - C75E2FD5D79D363D
-; YAML:         - 30FB9353B361B4B8
+; YAML:         - DD327744BE6783A4
+; YAML:         - 479521BB013A4AEC
+; YAML:         - 7820AAA31FC8CC67
 ; YAML:         - 0634944401BCC520
-; YAML:         - DF0B7BE0B5AD5B4F
-; YAML:         - 0916E74F3860DA92
-; YAML:         - 17D3CDC3384402DD
+; YAML:         - F380373F5DE8E9A3
+; YAML:         - 2ADB463E9E726E20
+; YAML:         - 74698BE366891D3D
+; YAML:         - 4470750F2E319329
+; YAML:         - 0FB556FD1FAB66D7
+; YAML:         - 5970EFB4874D0F3F
+; YAML:         - EDB1D74C120CF44A
 ; ...
 
 

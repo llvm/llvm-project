@@ -668,8 +668,8 @@ define <2 x double>@test_int_x86_avx512_mask_range_sd(<2 x double> %x0, <2 x dou
 ; X86-AVX512DQ-LABEL: test_int_x86_avx512_mask_range_sd:
 ; X86-AVX512DQ:       # %bb.0:
 ; X86-AVX512DQ-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X86-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x51,0xd1,0x04]
+; X86-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X86-AVX512DQ-NEXT:    vrangesd $4, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x18,0x51,0xc1,0x04]
 ; X86-AVX512DQ-NEXT:    vaddpd %xmm0, %xmm2, %xmm0 # encoding: [0xc5,0xe9,0x58,0xc0]
 ; X86-AVX512DQ-NEXT:    vaddpd %xmm0, %xmm3, %xmm0 # encoding: [0xc5,0xe1,0x58,0xc0]
@@ -678,8 +678,8 @@ define <2 x double>@test_int_x86_avx512_mask_range_sd(<2 x double> %x0, <2 x dou
 ; X86-AVX512DQVL-LABEL: test_int_x86_avx512_mask_range_sd:
 ; X86-AVX512DQVL:       # %bb.0:
 ; X86-AVX512DQVL-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
-; X86-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X86-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x51,0xd1,0x04]
+; X86-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X86-AVX512DQVL-NEXT:    vrangesd $4, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x18,0x51,0xc1,0x04]
 ; X86-AVX512DQVL-NEXT:    vaddpd %xmm0, %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0x58,0xc0]
 ; X86-AVX512DQVL-NEXT:    vaddpd %xmm0, %xmm3, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xe1,0x58,0xc0]
@@ -687,8 +687,8 @@ define <2 x double>@test_int_x86_avx512_mask_range_sd(<2 x double> %x0, <2 x dou
 ;
 ; X64-AVX512DQ-LABEL: test_int_x86_avx512_mask_range_sd:
 ; X64-AVX512DQ:       # %bb.0:
-; X64-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X64-AVX512DQ-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X64-AVX512DQ-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x51,0xd1,0x04]
 ; X64-AVX512DQ-NEXT:    vrangesd $4, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x18,0x51,0xc1,0x04]
 ; X64-AVX512DQ-NEXT:    vaddpd %xmm0, %xmm2, %xmm0 # encoding: [0xc5,0xe9,0x58,0xc0]
@@ -697,8 +697,8 @@ define <2 x double>@test_int_x86_avx512_mask_range_sd(<2 x double> %x0, <2 x dou
 ;
 ; X64-AVX512DQVL-LABEL: test_int_x86_avx512_mask_range_sd:
 ; X64-AVX512DQVL:       # %bb.0:
-; X64-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X64-AVX512DQVL-NEXT:    kmovw %edi, %k1 # encoding: [0xc5,0xf8,0x92,0xcf]
+; X64-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm3 # encoding: [0x62,0xf3,0xfd,0x08,0x51,0xd9,0x04]
 ; X64-AVX512DQVL-NEXT:    vrangesd $4, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x51,0xd1,0x04]
 ; X64-AVX512DQVL-NEXT:    vrangesd $4, {sae}, %xmm1, %xmm0, %xmm0 # encoding: [0x62,0xf3,0xfd,0x18,0x51,0xc1,0x04]
 ; X64-AVX512DQVL-NEXT:    vaddpd %xmm0, %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xe9,0x58,0xc0]
@@ -752,8 +752,8 @@ declare i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double>, i32, i8)
 define i8 @test_int_x86_avx512_mask_fpclass_sd(<2 x double> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_sd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclasssd $2, %xmm0, %k1 # encoding: [0x62,0xf3,0xfd,0x08,0x67,0xc8,0x02]
-; CHECK-NEXT:    vfpclasssd $4, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x67,0xc0,0x04]
+; CHECK-NEXT:    vfpclasssd $4, %xmm0, %k1 # encoding: [0x62,0xf3,0xfd,0x08,0x67,0xc8,0x04]
+; CHECK-NEXT:    vfpclasssd $2, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0xfd,0x09,0x67,0xc0,0x02]
 ; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
@@ -787,8 +787,8 @@ declare i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float>, i32, i8)
 define i8 @test_int_x86_avx512_mask_fpclass_ss(<4 x float> %x0) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_fpclass_ss:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclassss $2, %xmm0, %k1 # encoding: [0x62,0xf3,0x7d,0x08,0x67,0xc8,0x02]
-; CHECK-NEXT:    vfpclassss $4, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x09,0x67,0xc0,0x04]
+; CHECK-NEXT:    vfpclassss $4, %xmm0, %k1 # encoding: [0x62,0xf3,0x7d,0x08,0x67,0xc8,0x04]
+; CHECK-NEXT:    vfpclassss $2, %xmm0, %k0 {%k1} # encoding: [0x62,0xf3,0x7d,0x09,0x67,0xc0,0x02]
 ; CHECK-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]

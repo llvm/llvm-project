@@ -195,12 +195,15 @@ Expected<URI> URI::create(StringRef AbsolutePath, StringRef Scheme) {
   return S->get()->uriFromAbsolutePath(AbsolutePath);
 }
 
-Expected<URI> URI::create(StringRef AbsolutePath,
-                          const std::vector<std::string> &Schemes) {
+URI URI::create(StringRef AbsolutePath) {
   if (!sys::path::is_absolute(AbsolutePath))
-    return make_string_error("Not a valid absolute path: " + AbsolutePath);
-  for (const auto &Scheme : Schemes) {
-    auto URI = URI::create(AbsolutePath, Scheme);
+    llvm_unreachable(
+        ("Not a valid absolute path: " + AbsolutePath).str().c_str());
+  for (auto &Entry : URISchemeRegistry::entries()) {
+    if (Entry.getName() == "file")
+      continue;
+
+    auto URI = Entry.instantiate()->uriFromAbsolutePath(AbsolutePath);
     // For some paths, conversion to different URI schemes is impossible. These
     // should be just skipped.
     if (!URI) {
@@ -208,10 +211,10 @@ Expected<URI> URI::create(StringRef AbsolutePath,
       consumeError(URI.takeError());
       continue;
     }
-    return URI;
+    return std::move(*URI);
   }
-  return make_string_error("Couldn't convert " + AbsolutePath +
-                           " to any given scheme: " + join(Schemes, ", "));
+  // Fallback to file: scheme which should work for any paths.
+  return URI::createFile(AbsolutePath);
 }
 
 URI URI::createFile(StringRef AbsolutePath) {

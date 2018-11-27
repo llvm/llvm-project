@@ -588,12 +588,12 @@ define <16 x i16> @test_16f32toub_256(<16 x float>* %ptr, <16 x i16> %passthru) 
 ; CHECK-LABEL: test_16f32toub_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq (%rdi), %ymm1
-; CHECK-NEXT:    vpmovdw %ymm1, %xmm1
-; CHECK-NEXT:    vcvttps2dq 32(%rdi), %ymm2
-; CHECK-NEXT:    vpmovdw %ymm2, %xmm2
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; CHECK-NEXT:    vpsllw $15, %ymm1, %ymm1
-; CHECK-NEXT:    vpmovw2m %ymm1, %k1
+; CHECK-NEXT:    vpslld $31, %ymm1, %ymm1
+; CHECK-NEXT:    vpmovd2m %ymm1, %k0
+; CHECK-NEXT:    vcvttps2dq 32(%rdi), %ymm1
+; CHECK-NEXT:    vpslld $31, %ymm1, %ymm1
+; CHECK-NEXT:    vpmovd2m %ymm1, %k1
+; CHECK-NEXT:    kunpckbw %k0, %k1, %k1
 ; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = load <16 x float>, <16 x float>* %ptr
@@ -620,12 +620,10 @@ define <16 x i16> @test_16f32tosb_256(<16 x float>* %ptr, <16 x i16> %passthru) 
 ; CHECK-LABEL: test_16f32tosb_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq (%rdi), %ymm1
-; CHECK-NEXT:    vpmovdw %ymm1, %xmm1
-; CHECK-NEXT:    vcvttps2dq 32(%rdi), %ymm2
-; CHECK-NEXT:    vpmovdw %ymm2, %xmm2
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; CHECK-NEXT:    vpsllw $15, %ymm1, %ymm1
-; CHECK-NEXT:    vpmovw2m %ymm1, %k1
+; CHECK-NEXT:    vpmovd2m %ymm1, %k0
+; CHECK-NEXT:    vcvttps2dq 32(%rdi), %ymm1
+; CHECK-NEXT:    vpmovd2m %ymm1, %k1
+; CHECK-NEXT:    kunpckbw %k0, %k1, %k1
 ; CHECK-NEXT:    vmovdqu16 %ymm0, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = load <16 x float>, <16 x float>* %ptr

@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -221,6 +222,11 @@ bool fromJSON(const json::Value &Params, ClientCapabilities &R) {
     if (auto *CodeAction = TextDocument->getObject("codeAction")) {
       if (CodeAction->getObject("codeActionLiteralSupport"))
         R.CodeActionStructure = true;
+    }
+    if (auto *DocumentSymbol = TextDocument->getObject("documentSymbol")) {
+      if (auto HierarchicalSupport =
+              DocumentSymbol->getBoolean("hierarchicalDocumentSymbolSupport"))
+        R.HierarchicalDocumentSymbol = *HierarchicalSupport;
     }
   }
   if (auto *Workspace = O->getObject("workspace")) {
@@ -447,6 +453,26 @@ json::Value toJSON(const CodeAction &CA) {
   if (CA.command)
     CodeAction["command"] = *CA.command;
   return std::move(CodeAction);
+}
+
+raw_ostream &operator<<(raw_ostream &O, const DocumentSymbol &S) {
+  return O << S.name << " - " << toJSON(S);
+}
+
+json::Value toJSON(const DocumentSymbol &S) {
+  json::Object Result{{"name", S.name},
+                      {"kind", static_cast<int>(S.kind)},
+                      {"range", S.range},
+                      {"selectionRange", S.selectionRange}};
+
+  if (!S.detail.empty())
+    Result["detail"] = S.detail;
+  if (!S.children.empty())
+    Result["children"] = S.children;
+  if (S.deprecated)
+    Result["deprecated"] = true;
+  // Older gcc cannot compile 'return Result', even though it is legal.
+  return json::Value(std::move(Result));
 }
 
 json::Value toJSON(const WorkspaceEdit &WE) {

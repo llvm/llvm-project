@@ -1467,7 +1467,9 @@ createConstantGlobalStructAndAddToParent(CodeGenModule &CGM, QualType Ty,
 
 Address CGOpenMPRuntime::getOrCreateDefaultLocation(unsigned Flags) {
   CharUnits Align = CGM.getContext().getTypeAlignInChars(IdentQTy);
-  llvm::Value *Entry = OpenMPDefaultLocMap.lookup(Flags);
+  unsigned Reserved2Flags = getDefaultLocationReserved2Flags();
+  FlagsTy FlagsKey(Flags, Reserved2Flags);
+  llvm::Value *Entry = OpenMPDefaultLocMap.lookup(FlagsKey);
   if (!Entry) {
     if (!DefaultOpenMPPSource) {
       // Initialize default location for psource field of ident_t structure of
@@ -1480,18 +1482,18 @@ Address CGOpenMPRuntime::getOrCreateDefaultLocation(unsigned Flags) {
           llvm::ConstantExpr::getBitCast(DefaultOpenMPPSource, CGM.Int8PtrTy);
     }
 
-    llvm::Constant *Data[] = {llvm::ConstantInt::getNullValue(CGM.Int32Ty),
-                              llvm::ConstantInt::get(CGM.Int32Ty, Flags),
-                              llvm::ConstantInt::getNullValue(CGM.Int32Ty),
-                              llvm::ConstantInt::getNullValue(CGM.Int32Ty),
-                              DefaultOpenMPPSource};
+    llvm::Constant *Data[] = {
+        llvm::ConstantInt::getNullValue(CGM.Int32Ty),
+        llvm::ConstantInt::get(CGM.Int32Ty, Flags),
+        llvm::ConstantInt::get(CGM.Int32Ty, Reserved2Flags),
+        llvm::ConstantInt::getNullValue(CGM.Int32Ty), DefaultOpenMPPSource};
     llvm::GlobalValue *DefaultOpenMPLocation =
-        createGlobalStruct(CGM, IdentQTy, /*IsConstant=*/false, Data, "",
+        createGlobalStruct(CGM, IdentQTy, isDefaultLocationConstant(), Data, "",
                            llvm::GlobalValue::PrivateLinkage);
     DefaultOpenMPLocation->setUnnamedAddr(
         llvm::GlobalValue::UnnamedAddr::Global);
 
-    OpenMPDefaultLocMap[Flags] = Entry = DefaultOpenMPLocation;
+    OpenMPDefaultLocMap[FlagsKey] = Entry = DefaultOpenMPLocation;
   }
   return Address(Entry, Align);
 }
@@ -6795,10 +6797,11 @@ private:
     }
 
     // Check if the length evaluates to 1.
-    llvm::APSInt ConstLength;
-    if (!Length->EvaluateAsInt(ConstLength, CGF.getContext()))
+    Expr::EvalResult Result;
+    if (!Length->EvaluateAsInt(Result, CGF.getContext()))
       return true; // Can have more that size 1.
 
+    llvm::APSInt ConstLength = Result.Val.getInt();
     return ConstLength.getSExtValue() != 1;
   }
 
@@ -9162,8 +9165,8 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
         ParamAttrTy &ParamAttr = ParamAttrs[Pos];
         ParamAttr.Kind = Linear;
         if (*SI) {
-          if (!(*SI)->EvaluateAsInt(ParamAttr.StrideOrArg, C,
-                                    Expr::SE_AllowSideEffects)) {
+          Expr::EvalResult Result;
+          if (!(*SI)->EvaluateAsInt(Result, C, Expr::SE_AllowSideEffects)) {
             if (const auto *DRE =
                     cast<DeclRefExpr>((*SI)->IgnoreParenImpCasts())) {
               if (const auto *StridePVD = cast<ParmVarDecl>(DRE->getDecl())) {
@@ -9172,6 +9175,8 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
                     ParamPositions[StridePVD->getCanonicalDecl()]);
               }
             }
+          } else {
+            ParamAttr.StrideOrArg = Result.Val.getInt();
           }
         }
         ++SI;

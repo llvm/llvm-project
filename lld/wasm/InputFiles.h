@@ -24,10 +24,7 @@ using llvm::object::Archive;
 using llvm::object::WasmObjectFile;
 using llvm::object::WasmSection;
 using llvm::object::WasmSymbol;
-using llvm::wasm::WasmGlobal;
-using llvm::wasm::WasmImport;
 using llvm::wasm::WasmRelocation;
-using llvm::wasm::WasmSignature;
 
 namespace llvm {
 namespace lto {

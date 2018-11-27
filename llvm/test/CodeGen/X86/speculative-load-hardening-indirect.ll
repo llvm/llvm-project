@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -data-sections | FileCheck %s --check-prefix=X64
 ; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39451.
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -relocation-model pic -data-sections -verify-machineinstrs=0 | FileCheck %s --check-prefix=X64-PIC
-; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -data-sections -mattr=+retpoline -verify-machineinstrs=0 | FileCheck %s --check-prefix=X64-RETPOLINE
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -x86-speculative-load-hardening -data-sections -mattr=+retpoline | FileCheck %s --check-prefix=X64-RETPOLINE
 ;
 ; FIXME: Add support for 32-bit.
 

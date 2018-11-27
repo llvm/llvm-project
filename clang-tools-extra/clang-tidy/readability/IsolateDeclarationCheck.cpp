@@ -26,11 +26,10 @@ AST_MATCHER(DeclStmt, onlyDeclaresVariables) {
 } // namespace
 
 void IsolateDeclarationCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      declStmt(allOf(onlyDeclaresVariables(), unless(isSingleDecl()),
-                     hasParent(compoundStmt())))
-          .bind("decl_stmt"),
-      this);
+  Finder->addMatcher(declStmt(onlyDeclaresVariables(), unless(isSingleDecl()),
+                              hasParent(compoundStmt()))
+                         .bind("decl_stmt"),
+                     this);
 }
 
 static SourceLocation findStartOfIndirection(SourceLocation Start,

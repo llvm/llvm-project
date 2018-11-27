@@ -525,26 +525,20 @@ static void MatchParallelMACSequences(Reduction &R,
     if (!I)
       return false;
 
-    Value *MulOp0, *MulOp1;
-
     switch (I->getOpcode()) {
     case Instruction::Add:
       if (Match(I->getOperand(0)) || (Match(I->getOperand(1))))
         return true;
       break;
-    case Instruction::Mul:
-      if (match (I, (m_Mul(m_Value(MulOp0), m_Value(MulOp1))))) {
+    case Instruction::Mul: {
+      Value *MulOp0 = I->getOperand(0);
+      Value *MulOp1 = I->getOperand(1);
+      if (isa<SExtInst>(MulOp0) && isa<SExtInst>(MulOp1))
         AddMACCandidate(Candidates, I, MulOp0, MulOp1);
-        return false;
-      }
-      break;
+      return false;
+    }
     case Instruction::SExt:
-      if (match (I, (m_SExt(m_Mul(m_Value(MulOp0), m_Value(MulOp1)))))) {
-        Instruction *Mul = cast<Instruction>(I->getOperand(0));
-        AddMACCandidate(Candidates, Mul, MulOp0, MulOp1);
-        return false;
-      }
-      break;
+      return Match(I->getOperand(0));
     }
     return false;
   };

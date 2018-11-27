@@ -109,6 +109,22 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL}).legalFor({s32});
 
+  if (ST.hasV5TOps()) {
+    getActionDefinitionsBuilder(G_CTLZ)
+        .legalFor({s32})
+        .clampScalar(0, s32, s32);
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+        .lowerFor({s32})
+        .clampScalar(0, s32, s32);
+  } else {
+    getActionDefinitionsBuilder(G_CTLZ_ZERO_UNDEF)
+        .libcallFor({s32})
+        .clampScalar(0, s32, s32);
+    getActionDefinitionsBuilder(G_CTLZ)
+        .lowerFor({s32})
+        .clampScalar(0, s32, s32);
+  }
+
   getActionDefinitionsBuilder(G_GEP).legalFor({{p0, s32}});
 
   getActionDefinitionsBuilder(G_SELECT).legalForCartesianProduct({s32, p0},

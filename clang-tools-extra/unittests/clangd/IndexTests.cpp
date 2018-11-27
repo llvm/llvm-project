@@ -253,8 +253,8 @@ TEST(MergeTest, PreferSymbolWithDefn) {
 }
 
 TEST(MergeIndexTest, Refs) {
-  FileIndex Dyn({"unittest"});
-  FileIndex StaticIndex({"unittest"});
+  FileIndex Dyn;
+  FileIndex StaticIndex;
   MergedIndex Merge(&Dyn, &StaticIndex);
 
   const char *HeaderCode = "class Foo;";

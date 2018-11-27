@@ -152,7 +152,7 @@ void update(FileIndex &M, StringRef Basename, StringRef Code) {
 }
 
 TEST(FileIndexTest, CustomizedURIScheme) {
-  FileIndex M({"unittest"});
+  FileIndex M;
   update(M, "f", "class string {};");
 
   EXPECT_THAT(runFuzzyFind(M, ""), ElementsAre(DeclURI("unittest:///f.h")));
@@ -302,7 +302,7 @@ TEST(FileIndexTest, Refs) {
   RefsRequest Request;
   Request.IDs = {Foo.ID};
 
-  FileIndex Index(/*URISchemes*/ {"unittest"});
+  FileIndex Index;
   // Add test.cc
   TestTU Test;
   Test.HeaderCode = HeaderCode;

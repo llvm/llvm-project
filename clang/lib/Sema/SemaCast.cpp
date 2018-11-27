@@ -2554,8 +2554,9 @@ void CastOperation::CheckCStyleCast() {
 
     // OpenCL v2.0 s6.13.10 - Allow casts from '0' to event_t type.
     if (Self.getLangOpts().OpenCL && DestType->isEventT()) {
-      llvm::APSInt CastInt;
-      if (SrcExpr.get()->EvaluateAsInt(CastInt, Self.Context)) {
+      Expr::EvalResult Result;
+      if (SrcExpr.get()->EvaluateAsInt(Result, Self.Context)) {
+        llvm::APSInt CastInt = Result.Val.getInt();
         if (0 == CastInt) {
           Kind = CK_ZeroToOCLOpaqueType;
           return;

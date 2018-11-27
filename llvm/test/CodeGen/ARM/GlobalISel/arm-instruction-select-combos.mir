@@ -42,6 +42,9 @@
 
   define void @test_vfnmss() #4 { ret void }
 
+  define void @test_bfc() #2 { ret void }
+  define void @test_no_bfc_bad_mask() #2 { ret void }
+
   attributes #0 = { "target-features"="+v6" }
   attributes #1 = { "target-features"="-v6" }
   attributes #2 = { "target-features"="+v6t2" }
@@ -1141,4 +1144,58 @@ body:             |
 
     BX_RET 14, $noreg, implicit $s0
     ; CHECK: BX_RET 14, $noreg, implicit $s0
+...
+---
+name:            test_bfc
+# CHECK-LABEL: name: test_bfc
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    %1(s32) = G_CONSTANT i32 -65529 ; 0xFFFF0007
+    %2(s32) = G_AND %0, %1
+    ; CHECK: [[RS:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK: [[RD:%[0-9]+]]:gpr = BFC [[RS]], -65529, 14, $noreg
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[RD]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_no_bfc_bad_mask
+# CHECK-LABEL: name: test_no_bfc_bad_mask
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+  - { id: 2, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(s32) = COPY $r0
+    %1(s32) = G_CONSTANT i32 6 ; 0x00000006
+    %2(s32) = G_AND %0, %1
+    ; CHECK: [[RS:%[0-9]+]]:gpr = COPY $r0
+    ; CHECK-NOT: BFC
+
+    $r0 = COPY %2(s32)
+    ; CHECK: $r0 = COPY [[RD]]
+
+    BX_RET 14, $noreg, implicit $r0
+    ; CHECK: BX_RET 14, $noreg, implicit $r0
 ...
