@@ -12,6 +12,12 @@ function getConfig<T>(option: string, defaultValue?: any): T {
     return config.get<T>(option, defaultValue);
 }
 
+namespace SwitchSourceHeaderRequest {
+export const type =
+    new vscodelc.RequestType<vscodelc.TextDocumentIdentifier, string|undefined,
+                             void, void>('textDocument/switchSourceHeader');
+}
+
 /**
  *  this method is called when your extension is activate
  *  your extension is activated the very first time the command is executed
@@ -51,8 +57,25 @@ export function activate(context: vscode.ExtensionContext) {
         }
     };
 
-    const clangdClient = new vscodelc.LanguageClient('Clang Language Server', serverOptions, clientOptions);
-    console.log('Clang Language Server is now active!');
-
-    const disposable = clangdClient.start();
+  const clangdClient = new vscodelc.LanguageClient('Clang Language Server', serverOptions, clientOptions);
+  console.log('Clang Language Server is now active!');
+  context.subscriptions.push(clangdClient.start());
+  context.subscriptions.push(vscode.commands.registerCommand(
+      'clangd-vscode.switchheadersource', async () => {
+        const uri =
+            vscode.Uri.file(vscode.window.activeTextEditor.document.fileName);
+        if (!uri) {
+          return;
+        }
+        const docIdentifier =
+            vscodelc.TextDocumentIdentifier.create(uri.toString());
+        const sourceUri = await clangdClient.sendRequest(
+            SwitchSourceHeaderRequest.type, docIdentifier);
+        if (!sourceUri) {
+          return;
+        }
+        const doc = await vscode.workspace.openTextDocument(
+            vscode.Uri.parse(sourceUri));
+        vscode.window.showTextDocument(doc);
+      }));
 }

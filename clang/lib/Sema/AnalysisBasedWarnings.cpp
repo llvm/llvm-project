@@ -1309,11 +1309,10 @@ static bool isInLoop(const ASTContext &Ctx, const ParentMap &PM,
     case Stmt::ObjCForCollectionStmtClass:
       return true;
     case Stmt::DoStmtClass: {
-      const Expr *Cond = cast<DoStmt>(S)->getCond();
-      llvm::APSInt Val;
-      if (!Cond->EvaluateAsInt(Val, Ctx))
+      Expr::EvalResult Result;
+      if (!cast<DoStmt>(S)->getCond()->EvaluateAsInt(Result, Ctx))
         return true;
-      return Val.getBoolValue();
+      return Result.Val.getInt().getBoolValue();
     }
     default:
       break;

@@ -462,12 +462,12 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
   unsigned Features2 = 0;
   unsigned EAX, EBX;
 
-#define setFeature(F)              \
-  do {                             \
-    if (F < 32)                    \
-      Features |= 1 << F;          \
-    else if (F < 64)               \
-      Features2 |= 1 << (F - 32);  \
+#define setFeature(F)                       \
+  do {                                      \
+    if (F < 32)                             \
+      Features |= 1U << (F & 0x1f);         \
+    else if (F < 64)                        \
+      Features2 |= 1U << ((F - 32) & 0x1f); \
   } while (0)
 
   if ((EDX >> 15) & 1)

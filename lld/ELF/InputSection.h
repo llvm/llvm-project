@@ -362,7 +362,6 @@ private:
 // The list of all input sections.
 extern std::vector<InputSectionBase *> InputSections;
 
-Relocation *getRISCVPCRelHi20(const Symbol *Sym, const uint64_t Addend);
 } // namespace elf
 
 std::string toString(const elf::InputSectionBase *);

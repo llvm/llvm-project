@@ -1047,3 +1047,29 @@ int SystemZTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   // Cost of load/store operations and the permutations needed.
   return NumVectorMemOps + NumPermutes;
 }
+
+static int getVectorIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy) {
+  if (RetTy->isVectorTy() && ID == Intrinsic::bswap)
+    return getNumVectorRegs(RetTy); // VPERM
+  return -1;
+}
+
+int SystemZTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+                                          ArrayRef<Value *> Args,
+                                          FastMathFlags FMF, unsigned VF) {
+  int Cost = getVectorIntrinsicInstrCost(ID, RetTy);
+  if (Cost != -1)
+    return Cost;
+  return BaseT::getIntrinsicInstrCost(ID, RetTy, Args, FMF, VF);
+}
+
+int SystemZTTIImpl::getIntrinsicInstrCost(Intrinsic::ID ID, Type *RetTy,
+                                          ArrayRef<Type *> Tys,
+                                          FastMathFlags FMF,
+                                          unsigned ScalarizationCostPassed) {
+  int Cost = getVectorIntrinsicInstrCost(ID, RetTy);
+  if (Cost != -1)
+    return Cost;
+  return BaseT::getIntrinsicInstrCost(ID, RetTy, Tys,
+                                      FMF, ScalarizationCostPassed);
+}

@@ -358,7 +358,9 @@ enum class PointerOptions : uint32_t {
   Const = 0x00000400,
   Unaligned = 0x00000800,
   Restrict = 0x00001000,
-  WinRTSmartPointer = 0x00080000
+  WinRTSmartPointer = 0x00080000,
+  LValueRefThisPointer = 0x00100000,
+  RValueRefThisPointer = 0x00200000
 };
 CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(PointerOptions)
 

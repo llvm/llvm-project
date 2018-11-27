@@ -420,7 +420,8 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
       FileSpec oso_file(oso_path);
       ConstString oso_object;
       if (FileSystem::Instance().Exists(oso_file)) {
-        auto oso_mod_time = FileSystem::Instance().GetModificationTime(oso_file);
+        auto oso_mod_time = FileSystem::Instance().GetModificationTime(
+            oso_file, /*nanosecond_precision=*/false);
         if (oso_mod_time != comp_unit_info->oso_mod_time) {
           obj_file->GetModule()->ReportError(
               "debug map object file '%s' has changed (actual time is "

@@ -1659,7 +1659,7 @@ def err_member_function_call_bad_type : Error<
 def warn_call_to_pure_virtual_member_function_from_ctor_dtor : Warning<
   "call to pure virtual member function %0 has undefined behavior; "
   "overrides of %0 in subclasses are not available in the "
-  "%select{constructor|destructor}1 of %2">;
+  "%select{constructor|destructor}1 of %2">, InGroup<PureVirtualCallFromCtorDtor>;
 
 def select_special_member_kind : TextSubstitution<
   "%select{default constructor|copy constructor|move constructor|"

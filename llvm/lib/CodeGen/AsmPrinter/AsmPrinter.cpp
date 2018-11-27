@@ -54,6 +54,7 @@
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -2977,11 +2978,6 @@ GCMetadataPrinter *AsmPrinter::GetOrCreateGCPrinter(GCStrategy &S) {
   if (!S.usesMetadata())
     return nullptr;
 
-  assert(!S.useStatepoints() && "statepoints do not currently support custom"
-         " stackmap formats, please see the documentation for a description of"
-         " the default format.  If you really need a custom serialized format,"
-         " please file a bug");
-
   gcp_map_type &GCMap = getGCMap(GCMetadataPrinters);
   gcp_map_type::iterator GCPI = GCMap.find(&S);
   if (GCPI != GCMap.end())
@@ -3000,6 +2996,27 @@ GCMetadataPrinter *AsmPrinter::GetOrCreateGCPrinter(GCStrategy &S) {
     }
 
   report_fatal_error("no GCMetadataPrinter registered for GC: " + Twine(Name));
+}
+
+void AsmPrinter::emitStackMaps(StackMaps &SM) {
+  GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
+  assert(MI && "AsmPrinter didn't require GCModuleInfo?");
+  bool NeedsDefault = false;
+  if (MI->begin() == MI->end())
+    // No GC strategy, use the default format.
+    NeedsDefault = true;
+  else
+    for (auto &I : *MI) {
+      if (GCMetadataPrinter *MP = GetOrCreateGCPrinter(*I))
+        if (MP->emitStackMaps(SM, *this))
+          continue;
+      // The strategy doesn't have printer or doesn't emit custom stack maps.
+      // Use the default format.
+      NeedsDefault = true;
+    }
+
+  if (NeedsDefault)
+    SM.serializeToStackMapSection();
 }
 
 /// Pin vtable to this file.

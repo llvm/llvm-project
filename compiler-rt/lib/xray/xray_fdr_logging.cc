@@ -20,7 +20,6 @@
 #include <limits>
 #include <memory>
 #include <pthread.h>
-#include <sys/syscall.h>
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>

@@ -72,6 +72,9 @@ public:
   /// in this callback (obtained via ParsedAST::getLocalTopLevelDecls) to obtain
   /// optimal performance.
   virtual void onMainAST(PathRef Path, ParsedAST &AST) {}
+
+  /// Called whenever the diagnostics for \p File are produced.
+  virtual void onDiagnostics(PathRef File, std::vector<Diag> Diags) {}
 };
 
 /// Handles running tasks for ClangdServer and managing the resources (e.g.,
@@ -100,12 +103,14 @@ public:
 
   /// Schedule an update for \p File. Adds \p File to a list of tracked files if
   /// \p File was not part of it before.
-  /// FIXME(ibiryukov): remove the callback from this function.
-  void update(PathRef File, ParseInputs Inputs, WantDiagnostics WD,
-              llvm::unique_function<void(std::vector<Diag>)> OnUpdated);
+  /// If diagnostics are requested (Yes), and the context is cancelled before
+  /// they are prepared, they may be skipped if eventual-consistency permits it
+  /// (i.e. WantDiagnostics is downgraded to Auto).
+  void update(PathRef File, ParseInputs Inputs, WantDiagnostics WD);
 
   /// Remove \p File from the list of tracked files and schedule removal of its
-  /// resources.
+  /// resources. Pending diagnostics for closed files may not be delivered, even
+  /// if requested with WantDiags::Auto or WantDiags::Yes.
   void remove(PathRef File);
 
   /// Schedule an async task with no dependencies.
@@ -117,6 +122,8 @@ public:
   /// \p Action is executed.
   /// If an error occurs during processing, it is forwarded to the \p Action
   /// callback.
+  /// If the context is cancelled before the AST is ready, the callback will
+  /// receive a CancelledError.
   void runWithAST(llvm::StringRef Name, PathRef File,
                   Callback<InputsAndAST> Action);
 
@@ -140,6 +147,8 @@ public:
   /// If there's no preamble yet (because the file was just opened), we'll wait
   /// for it to build. The result may be null if it fails to build or is empty.
   /// If an error occurs, it is forwarded to the \p Action callback.
+  /// Context cancellation is ignored and should be handled by the Action.
+  /// (In practice, the Action is almost always executed immediately).
   void runWithPreamble(llvm::StringRef Name, PathRef File,
                        PreambleConsistency Consistency,
                        Callback<InputsAndPreamble> Action);

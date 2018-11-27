@@ -228,6 +228,16 @@ void InitializeLibIgnore() {
   libignore()->OnLibraryLoaded(0);
 }
 
+// The following two hooks can be used by for cooperative scheduling when
+// locking.
+#ifdef TSAN_EXTERNAL_HOOKS
+void OnPotentiallyBlockingRegionBegin();
+void OnPotentiallyBlockingRegionEnd();
+#else
+SANITIZER_WEAK_CXX_DEFAULT_IMPL void OnPotentiallyBlockingRegionBegin() {}
+SANITIZER_WEAK_CXX_DEFAULT_IMPL void OnPotentiallyBlockingRegionEnd() {}
+#endif
+
 }  // namespace __tsan
 
 static ThreadSignalContext *SigCtx(ThreadState *thr) {
@@ -866,6 +876,8 @@ TSAN_INTERCEPTOR(int, posix_memalign, void **memptr, uptr align, uptr sz) {
 // Used in thread-safe function static initialization.
 STDCXX_INTERCEPTOR(int, __cxa_guard_acquire, atomic_uint32_t *g) {
   SCOPED_INTERCEPTOR_RAW(__cxa_guard_acquire, g);
+  OnPotentiallyBlockingRegionBegin();
+  auto on_exit = at_scope_exit(&OnPotentiallyBlockingRegionEnd);
   for (;;) {
     u32 cmp = atomic_load(g, memory_order_acquire);
     if (cmp == 0) {
@@ -1043,6 +1055,35 @@ TSAN_INTERCEPTOR(int, pthread_detach, void *th) {
   }
   return res;
 }
+
+#if SANITIZER_LINUX
+TSAN_INTERCEPTOR(int, pthread_tryjoin_np, void *th, void **ret) {
+  SCOPED_TSAN_INTERCEPTOR(pthread_tryjoin_np, th, ret);
+  int tid = ThreadTid(thr, pc, (uptr)th);
+  ThreadIgnoreBegin(thr, pc);
+  int res = REAL(pthread_tryjoin_np)(th, ret);
+  ThreadIgnoreEnd(thr, pc);
+  if (res == 0)
+    ThreadJoin(thr, pc, tid);
+  else
+    ThreadNotJoined(thr, pc, tid, (uptr)th);
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
+                 const struct timespec *abstime) {
+  SCOPED_TSAN_INTERCEPTOR(pthread_timedjoin_np, th, ret, abstime);
+  int tid = ThreadTid(thr, pc, (uptr)th);
+  ThreadIgnoreBegin(thr, pc);
+  int res = BLOCK_REAL(pthread_timedjoin_np)(th, ret, abstime);
+  ThreadIgnoreEnd(thr, pc);
+  if (res == 0)
+    ThreadJoin(thr, pc, tid);
+  else
+    ThreadNotJoined(thr, pc, tid, (uptr)th);
+  return res;
+}
+#endif
 
 // Problem:
 // NPTL implementation of pthread_cond has 2 versions (2.2.5 and 2.3.2).
@@ -2640,6 +2681,10 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_create);
   TSAN_INTERCEPT(pthread_join);
   TSAN_INTERCEPT(pthread_detach);
+  #if SANITIZER_LINUX
+  TSAN_INTERCEPT(pthread_tryjoin_np);
+  TSAN_INTERCEPT(pthread_timedjoin_np);
+  #endif
 
   TSAN_INTERCEPT_VER(pthread_cond_init, PTHREAD_ABI_BASE);
   TSAN_INTERCEPT_VER(pthread_cond_signal, PTHREAD_ABI_BASE);

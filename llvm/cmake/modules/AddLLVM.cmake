@@ -1374,16 +1374,6 @@ function(add_lit_target target comment)
     message(STATUS "${target} does nothing.")
   endif()
 
-  # Add lit test dependencies.
-  set(llvm_utils_deps
-    FileCheck count not
-  )
-  foreach(dep ${llvm_utils_deps})
-    if (TARGET ${dep})
-      add_dependencies(${target} ${dep})
-    endif()
-  endforeach()
-
   if (ARG_DEPENDS)
     add_dependencies(${target} ${ARG_DEPENDS})
   endif()

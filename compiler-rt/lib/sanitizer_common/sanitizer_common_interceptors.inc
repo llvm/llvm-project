@@ -7306,9 +7306,44 @@ INTERCEPTOR(int, setvbuf, __sanitizer_FILE *stream, char *buf, int mode,
   int ret = REAL(setvbuf)(stream, buf, mode, size);
   if (buf)
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, size);
+  if (stream)
+      unpoison_file(stream);
   return ret;
 }
-#define INIT_SETVBUF COMMON_INTERCEPT_FUNCTION(setvbuf)
+
+INTERCEPTOR(void, setbuf, __sanitizer_FILE *stream, char *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, setbuf, stream, buf);
+  REAL(setbuf)(stream, buf);
+  if (buf) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer_bufsiz);
+  }
+  if (stream)
+      unpoison_file(stream);
+}
+
+INTERCEPTOR(void, setbuffer, __sanitizer_FILE *stream, char *buf, int mode) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, setbuffer, stream, buf, mode);
+  REAL(setbuffer)(stream, buf, mode);
+  if (buf) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, buf, __sanitizer_bufsiz);
+  }
+  if (stream)
+    unpoison_file(stream);
+}
+
+INTERCEPTOR(void, setlinebuf, __sanitizer_FILE *stream) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, setlinebuf, stream);
+  REAL(setlinebuf)(stream);
+  if (stream)
+    unpoison_file(stream);
+}
+#define INIT_SETVBUF COMMON_INTERCEPT_FUNCTION(setvbuf); \
+    COMMON_INTERCEPT_FUNCTION(setbuf); \
+    COMMON_INTERCEPT_FUNCTION(setbuffer); \
+    COMMON_INTERCEPT_FUNCTION(setlinebuf)
 #else
 #define INIT_SETVBUF
 #endif

@@ -23,22 +23,21 @@ void ExceptionBaseclassCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       cxxThrowExpr(
-          allOf(
-              unless(has(expr(anyOf(isTypeDependent(), isValueDependent())))),
-              // The thrown value is not derived from 'std::exception'.
-              has(expr(unless(hasType(
-                  qualType(hasCanonicalType(hasDeclaration(cxxRecordDecl(
-                      isSameOrDerivedFrom(hasName("::std::exception")))))))))),
-              // This condition is always true, but will bind to the
-              // template value if the thrown type is templated.
-              anyOf(has(expr(hasType(
-                        substTemplateTypeParmType().bind("templ_type")))),
-                    anything()),
-              // Bind to the declaration of the type of the value that
-              // is thrown. 'anything()' is necessary to always suceed
-              // in the 'eachOf' because builtin types are not
-              // 'namedDecl'.
-              eachOf(has(expr(hasType(namedDecl().bind("decl")))), anything())))
+          unless(has(expr(anyOf(isTypeDependent(), isValueDependent())))),
+          // The thrown value is not derived from 'std::exception'.
+          has(expr(unless(
+              hasType(qualType(hasCanonicalType(hasDeclaration(cxxRecordDecl(
+                  isSameOrDerivedFrom(hasName("::std::exception")))))))))),
+          // This condition is always true, but will bind to the
+          // template value if the thrown type is templated.
+          anyOf(has(expr(
+                    hasType(substTemplateTypeParmType().bind("templ_type")))),
+                anything()),
+          // Bind to the declaration of the type of the value that
+          // is thrown. 'anything()' is necessary to always suceed
+          // in the 'eachOf' because builtin types are not
+          // 'namedDecl'.
+          eachOf(has(expr(hasType(namedDecl().bind("decl")))), anything()))
           .bind("bad_throw"),
       this);
 }

@@ -26,8 +26,6 @@
 #endif
 
 #include <memory>
-#include <set>
-#include <vector>
 
 namespace llvm {
 namespace mca {
@@ -123,8 +121,10 @@ class WriteState {
   // that we don't break the WAW, and the two writes can be merged together.
   const WriteState *DependentWrite;
 
-  // Number of writes that are in a WAW dependency with this write.
-  unsigned NumWriteUsers;
+  // A partial write that is in a false dependency with this write.
+  WriteState *PartialWrite;
+
+  unsigned DependentWriteCyclesLeft;
 
   // A list of dependent reads. Users is a set of dependent
   // reads. A dependent read is added to the set only if CyclesLeft
@@ -132,14 +132,15 @@ class WriteState {
   // gets notified with the actual CyclesLeft.
 
   // The 'second' element of a pair is a "ReadAdvance" number of cycles.
-  std::set<std::pair<ReadState *, int>> Users;
+  SmallVector<std::pair<ReadState *, int>, 4> Users;
 
 public:
   WriteState(const WriteDescriptor &Desc, unsigned RegID,
              bool clearsSuperRegs = false, bool writesZero = false)
       : WD(&Desc), CyclesLeft(UNKNOWN_CYCLES), RegisterID(RegID),
         PRFID(0), ClearsSuperRegs(clearsSuperRegs), WritesZero(writesZero),
-        IsEliminated(false), DependentWrite(nullptr), NumWriteUsers(0U) {}
+        IsEliminated(false), DependentWrite(nullptr), PartialWrite(nullptr),
+        DependentWriteCyclesLeft(0) {}
 
   WriteState(const WriteState &Other) = default;
   WriteState &operator=(const WriteState &Other) = default;
@@ -151,8 +152,17 @@ public:
   unsigned getLatency() const { return WD->Latency; }
 
   void addUser(ReadState *Use, int ReadAdvance);
+  void addUser(WriteState *Use);
 
-  unsigned getNumUsers() const { return Users.size() + NumWriteUsers; }
+  unsigned getDependentWriteCyclesLeft() const { return DependentWriteCyclesLeft; }
+
+  unsigned getNumUsers() const {
+    unsigned NumUsers = Users.size();
+    if (PartialWrite)
+      ++NumUsers;
+    return NumUsers;
+  }
+
   bool clearsSuperRegisters() const { return ClearsSuperRegs; }
   bool isWriteZero() const { return WritesZero; }
   bool isEliminated() const { return IsEliminated; }
@@ -161,10 +171,12 @@ public:
   }
 
   const WriteState *getDependentWrite() const { return DependentWrite; }
-  void setDependentWrite(WriteState *Other) {
-    DependentWrite = Other;
-    ++Other->NumWriteUsers;
+  void setDependentWrite(WriteState *Other) { DependentWrite = Other; }
+  void writeStartEvent(unsigned Cycles) {
+    DependentWriteCyclesLeft = Cycles;
+    DependentWrite = nullptr;
   }
+
   void setWriteZero() { WritesZero = true; }
   void setEliminated() {
     assert(Users.empty() && "Write is in an inconsistent state.");
@@ -305,15 +317,16 @@ struct ResourceUsage {
 
 /// An instruction descriptor
 struct InstrDesc {
-  std::vector<WriteDescriptor> Writes; // Implicit writes are at the end.
-  std::vector<ReadDescriptor> Reads;   // Implicit reads are at the end.
+  SmallVector<WriteDescriptor, 4> Writes; // Implicit writes are at the end.
+  SmallVector<ReadDescriptor, 4> Reads;   // Implicit reads are at the end.
 
   // For every resource used by an instruction of this kind, this vector
   // reports the number of "consumed cycles".
-  std::vector<std::pair<uint64_t, ResourceUsage>> Resources;
+  SmallVector<std::pair<uint64_t, ResourceUsage>, 4> Resources;
 
   // A list of buffered resources consumed by this instruction.
-  std::vector<uint64_t> Buffers;
+  SmallVector<uint64_t, 4> Buffers;
+
   unsigned MaxLatency;
   // Number of MicroOps for this instruction.
   unsigned NumMicroOps;

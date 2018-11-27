@@ -1,0 +1,12 @@
+if (host_os == "linux") {
+  llvm_host_triple = "x86_64-unknown-linux-gnu"
+} else if (host_os == "mac") {
+  llvm_host_triple = "x86_64-apple-darwin"
+} else if (host_os == "win") {
+  llvm_host_triple = "x86_64-pc-windows"
+}
+
+declare_args() {
+  # The default target triple.
+  llvm_target_triple = llvm_host_triple
+}

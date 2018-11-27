@@ -83,11 +83,16 @@ static cl::opt<Logger::Level> LogLevel(
                clEnumValN(Logger::Debug, "verbose", "Low level details")),
     cl::init(Logger::Info));
 
-static cl::opt<bool> Test(
-    "lit-test",
-    cl::desc(
-        "Abbreviation for -input-style=delimited -pretty -run-synchronously. "
-        "Intended to simplify lit tests."),
+static cl::opt<bool>
+    Test("lit-test",
+         cl::desc("Abbreviation for -input-style=delimited -pretty "
+                  "-run-synchronously -enable-test-scheme. "
+                  "Intended to simplify lit tests."),
+         cl::init(false), cl::Hidden);
+
+static cl::opt<bool> EnableTestScheme(
+    "enable-test-uri-scheme",
+    cl::desc("Enable 'test:' URI scheme. Only use in lit tests."),
     cl::init(false), cl::Hidden);
 
 enum PCHStorageFlag { Disk, Memory };
@@ -159,6 +164,12 @@ static cl::opt<Path> IndexFile(
         "eventually. Don't rely on it."),
     cl::init(""), cl::Hidden);
 
+static cl::opt<bool> EnableBackgroundIndex(
+    "background-index",
+    cl::desc("Index project code in the background and persist index on disk. "
+             "Experimental"),
+    cl::init(false), cl::Hidden);
+
 enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
 static cl::opt<CompileArgsFrom> CompileArgsFrom(
     "compile_args_from", cl::desc("The source of compile commands"),
@@ -177,6 +188,55 @@ static cl::opt<bool> EnableFunctionArgSnippets(
              "placeholders for method parameters."),
     cl::init(clangd::CodeCompleteOptions().EnableFunctionArgSnippets));
 
+namespace {
+
+/// \brief Supports a test URI scheme with relaxed constraints for lit tests.
+/// The path in a test URI will be combined with a platform-specific fake
+/// directory to form an absolute path. For example, test:///a.cpp is resolved
+/// C:\clangd-test\a.cpp on Windows and /clangd-test/a.cpp on Unix.
+class TestScheme : public URIScheme {
+public:
+  Expected<std::string> getAbsolutePath(StringRef /*Authority*/, StringRef Body,
+                                        StringRef /*HintPath*/) const override {
+    using namespace llvm::sys;
+    // Still require "/" in body to mimic file scheme, as we want lengths of an
+    // equivalent URI in both schemes to be the same.
+    if (!Body.startswith("/"))
+      return make_error<StringError>(
+          "Expect URI body to be an absolute path starting with '/': " + Body,
+          inconvertibleErrorCode());
+    Body = Body.ltrim('/');
+    SmallVector<char, 16> Path(Body.begin(), Body.end());
+    path::native(Path);
+    auto Err = fs::make_absolute(TestScheme::TestDir, Path);
+    if (Err)
+      llvm_unreachable("Failed to make absolute path in test scheme.");
+    return std::string(Path.begin(), Path.end());
+  }
+
+  Expected<URI> uriFromAbsolutePath(StringRef AbsolutePath) const override {
+    StringRef Body = AbsolutePath;
+    if (!Body.consume_front(TestScheme::TestDir)) {
+      return make_error<StringError>("Path " + AbsolutePath +
+                                         " doesn't start with root " + TestDir,
+                                     inconvertibleErrorCode());
+    }
+
+    return URI("test", /*Authority=*/"", sys::path::convert_to_slash(Body));
+  }
+
+private:
+  const static char TestDir[];
+};
+
+#ifdef _WIN32
+const char TestScheme::TestDir[] = "C:\\clangd-test";
+#else
+const char TestScheme::TestDir[] = "/clangd-test";
+#endif
+
+}
+
 int main(int argc, char *argv[]) {
   sys::PrintStackTraceOnErrorSignal(argv[0]);
   cl::SetVersionPrinter([](raw_ostream &OS) {
@@ -194,6 +254,10 @@ int main(int argc, char *argv[]) {
     RunSynchronously = true;
     InputStyle = JSONStreamStyle::Delimited;
     PrettyPrint = true;
+  }
+  if (Test || EnableTestScheme) {
+    static URISchemeRegistry::Add<TestScheme> X(
+        "test", "Test scheme for clangd lit tests.");
   }
 
   if (!RunSynchronously && WorkerThreadsCount == 0) {
@@ -286,14 +350,15 @@ int main(int argc, char *argv[]) {
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = EnableIndex;
   Opts.HeavyweightDynamicSymbolIndex = UseDex;
+  Opts.BackgroundIndex = EnableBackgroundIndex;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
   if (EnableIndex && !IndexFile.empty()) {
     // Load the index asynchronously. Meanwhile SwapIndex returns no results.
     SwapIndex *Placeholder;
     StaticIdx.reset(Placeholder = new SwapIndex(llvm::make_unique<MemIndex>()));
-    AsyncIndexLoad = runAsync<void>([Placeholder, &Opts] {
-      if (auto Idx = loadIndex(IndexFile, Opts.URISchemes, /*UseDex=*/true))
+    AsyncIndexLoad = runAsync<void>([Placeholder] {
+      if (auto Idx = loadIndex(IndexFile, /*UseDex=*/true))
         Placeholder->reset(std::move(Idx));
     });
     if (RunSynchronously)

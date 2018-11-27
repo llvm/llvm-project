@@ -197,6 +197,7 @@ template <> struct MappingTraits<Symbol> {
     IO.mapOptional("CompletionSnippetSuffix", Sym.CompletionSnippetSuffix);
     IO.mapOptional("Documentation", Sym.Documentation);
     IO.mapOptional("ReturnType", Sym.ReturnType);
+    IO.mapOptional("Type", Sym.Type);
     IO.mapOptional("IncludeHeaders", Sym.IncludeHeaders);
   }
 };

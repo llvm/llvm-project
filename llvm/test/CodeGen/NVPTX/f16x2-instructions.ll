@@ -823,10 +823,8 @@ define <2 x half> @test_uitofp_2xi32(<2 x i32> %a) #0 {
 
 ; CHECK-LABEL: test_uitofp_2xi64(
 ; CHECK:      ld.param.v2.u64 {[[A0:%rd[0-9]+]], [[A1:%rd[0-9]+]]}, [test_uitofp_2xi64_param_0];
-; CHECK-DAG:  cvt.rn.f32.u64  [[F0:%f[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.rn.f32.u64  [[F1:%f[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[F0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[F1]];
+; CHECK-DAG:  cvt.rn.f16.u64  [[R0:%h[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.rn.f16.u64  [[R1:%h[0-9]+]], [[A1]];
 ; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;
@@ -849,10 +847,8 @@ define <2 x half> @test_sitofp_2xi32(<2 x i32> %a) #0 {
 
 ; CHECK-LABEL: test_sitofp_2xi64(
 ; CHECK:      ld.param.v2.u64 {[[A0:%rd[0-9]+]], [[A1:%rd[0-9]+]]}, [test_sitofp_2xi64_param_0];
-; CHECK-DAG:  cvt.rn.f32.s64  [[F0:%f[0-9]+]], [[A0]];
-; CHECK-DAG:  cvt.rn.f32.s64  [[F1:%f[0-9]+]], [[A1]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R0:%h[0-9]+]], [[F0]];
-; CHECK-DAG:  cvt.rn.f16.f32  [[R1:%h[0-9]+]], [[F1]];
+; CHECK-DAG:  cvt.rn.f16.s64  [[R0:%h[0-9]+]], [[A0]];
+; CHECK-DAG:  cvt.rn.f16.s64  [[R1:%h[0-9]+]], [[A1]];
 ; CHECK:      mov.b32         [[R:%hh[0-9]+]], {[[R0]], [[R1]]}
 ; CHECK:      st.param.b32    [func_retval0+0], [[R]];
 ; CHECK:      ret;

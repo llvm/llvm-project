@@ -1171,26 +1171,26 @@ void SCCPSolver::visitCallSite(CallSite CS) {
       if (!PI)
         return;
 
+      Value *CopyOf = I->getOperand(0);
       auto *PBranch = dyn_cast<PredicateBranch>(getPredicateInfoFor(I));
       if (!PBranch) {
-        mergeInValue(ValueState[I], I, getValueState(PI->OriginalOp));
+        mergeInValue(ValueState[I], I, getValueState(CopyOf));
         return;
       }
 
-      Value *CopyOf = I->getOperand(0);
       Value *Cond = PBranch->Condition;
 
       // Everything below relies on the condition being a comparison.
       auto *Cmp = dyn_cast<CmpInst>(Cond);
       if (!Cmp) {
-        mergeInValue(ValueState[I], I, getValueState(PI->OriginalOp));
+        mergeInValue(ValueState[I], I, getValueState(CopyOf));
         return;
       }
 
       Value *CmpOp0 = Cmp->getOperand(0);
       Value *CmpOp1 = Cmp->getOperand(1);
       if (CopyOf != CmpOp0 && CopyOf != CmpOp1) {
-        mergeInValue(ValueState[I], I, getValueState(PI->OriginalOp));
+        mergeInValue(ValueState[I], I, getValueState(CopyOf));
         return;
       }
 
@@ -1217,7 +1217,7 @@ void SCCPSolver::visitCallSite(CallSite CS) {
         return;
       }
 
-      return (void)mergeInValue(IV, I, getValueState(PBranch->OriginalOp));
+      return (void)mergeInValue(IV, I, getValueState(CopyOf));
     }
   }
 

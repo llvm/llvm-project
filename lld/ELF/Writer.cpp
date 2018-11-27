@@ -172,15 +172,14 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
   Symbol *S = Symtab->find(Name);
   if (!S || S->isDefined())
     return nullptr;
-  Symbol *Sym = Symtab->addDefined(Name, StOther, STT_NOTYPE, Val,
-                                   /*Size=*/0, Binding, Sec,
-                                   /*File=*/nullptr);
-  return cast<Defined>(Sym);
+  return Symtab->addDefined(Name, StOther, STT_NOTYPE, Val,
+                            /*Size=*/0, Binding, Sec,
+                            /*File=*/nullptr);
 }
 
 static Defined *addAbsolute(StringRef Name) {
-  return cast<Defined>(Symtab->addDefined(Name, STV_HIDDEN, STT_NOTYPE, 0, 0,
-                                          STB_GLOBAL, nullptr, nullptr));
+  return Symtab->addDefined(Name, STV_HIDDEN, STT_NOTYPE, 0, 0, STB_GLOBAL,
+                            nullptr, nullptr);
 }
 
 // The linker is expected to define some symbols depending on

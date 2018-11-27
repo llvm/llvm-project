@@ -17,7 +17,6 @@
 
 using namespace llvm;
 using namespace llvm::wasm;
-using namespace lld::wasm;
 
 namespace lld {
 

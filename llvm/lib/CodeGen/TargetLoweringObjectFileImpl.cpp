@@ -1317,10 +1317,11 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
       MCSymbol *Sym = TM.getSymbol(ComdatGV);
       StringRef COMDATSymName = Sym->getName();
 
-      // Append "$symbol" to the section name when targetting mingw. The ld.bfd
+      // Append "$symbol" to the section name *before* IR-level mangling is
+      // applied when targetting mingw. This is what GCC does, and the ld.bfd
       // COFF linker will not properly handle comdats otherwise.
       if (getTargetTriple().isWindowsGNUEnvironment())
-        raw_svector_ostream(Name) << '$' << COMDATSymName;
+        raw_svector_ostream(Name) << '$' << ComdatGV->getName();
 
       return getContext().getCOFFSection(Name, Characteristics, Kind,
                                          COMDATSymName, Selection, UniqueID);

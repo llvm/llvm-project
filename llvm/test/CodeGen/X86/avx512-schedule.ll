@@ -1148,9 +1148,10 @@ define float @test5(float %p) #0 {
 ; GENERIC-NEXT:  # %bb.2: # %return
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ; GENERIC-NEXT:  .LBB67_1: # %if.end
-; GENERIC-NEXT:    seta %al # sched: [2:1.00]
-; GENERIC-NEXT:    movzbl %al, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    vcmpltss %xmm0, %xmm1, %k1 # sched: [3:1.00]
+; GENERIC-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [6:0.50]
 ; GENERIC-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [6:0.50]
+; GENERIC-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1} # sched: [1:1.00]
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
 ;
 ; SKX-LABEL: test5:
@@ -1162,9 +1163,10 @@ define float @test5(float %p) #0 {
 ; SKX-NEXT:  # %bb.2: # %return
 ; SKX-NEXT:    retq # sched: [7:1.00]
 ; SKX-NEXT:  .LBB67_1: # %if.end
-; SKX-NEXT:    seta %al # sched: [2:1.00]
-; SKX-NEXT:    movzbl %al, %eax # sched: [1:0.25]
+; SKX-NEXT:    vcmpltss %xmm0, %xmm1, %k1 # sched: [3:1.00]
+; SKX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero sched: [5:0.50]
 ; SKX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero sched: [5:0.50]
+; SKX-NEXT:    vmovss %xmm1, %xmm0, %xmm0 {%k1} # sched: [1:1.00]
 ; SKX-NEXT:    retq # sched: [7:1.00]
 entry:
   %cmp = fcmp oeq float %p, 0.000000e+00

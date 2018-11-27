@@ -185,11 +185,11 @@ void RegisterFile::addRegisterWrite(WriteRef Write,
       // register is allocated.
       ShouldAllocatePhysRegs = false;
 
-      if (OtherWrite.getWriteState() &&
-          (OtherWrite.getSourceIndex() != Write.getSourceIndex())) {
+      WriteState *OtherWS = OtherWrite.getWriteState();
+      if (OtherWS && (OtherWrite.getSourceIndex() != Write.getSourceIndex())) {
         // This partial write has a false dependency on RenameAs.
         assert(!IsEliminated && "Unexpected partial update!");
-        WS.setDependentWrite(OtherWrite.getWriteState());
+        OtherWS->addUser(&WS);
       }
     }
   }

@@ -869,19 +869,19 @@ int main(int argc, char **argv) {
   if (RadixShort.getNumOccurrences())
     Radix = RadixShort.getValue();
 
-  for (unsigned i = 0; i < ArchFlags.size(); ++i) {
-    if (ArchFlags[i] == "all") {
+  for (StringRef Arch : ArchFlags) {
+    if (Arch == "all") {
       ArchAll = true;
     } else {
-      if (!MachOObjectFile::isValidArch(ArchFlags[i])) {
+      if (!MachOObjectFile::isValidArch(Arch)) {
         outs() << ToolName << ": for the -arch option: Unknown architecture "
-               << "named '" << ArchFlags[i] << "'";
+               << "named '" << Arch << "'";
         return 1;
       }
     }
   }
 
-  if (InputFilenames.size() == 0)
+  if (InputFilenames.empty())
     InputFilenames.push_back("a.out");
 
   MoreThanOneFile = InputFilenames.size() > 1;

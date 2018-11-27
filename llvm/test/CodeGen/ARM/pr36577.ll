@@ -9,12 +9,11 @@
 
 ; CHECK-LABEL: pr36577
 ; CHECK: ldrh r0, [r0]
-; CHECK: bic r0, r1, r0, lsr #5
-; CHECK: mvn r1, #7
-; CHECK: orr r0, r0, r1
+; CHECK: mvn	r0, r0, lsr #7
+; CHECK: orr r0, r1, r0, lsl #2
 ; CHECK-T2: ldrh r0, [r0]
-; CHECK-T2: bic.w r0, r1, r0, lsr #5
-; CHECK-T2: orn r0, r0, #7
+; CHECK-T2: mvn.w	r0, r0, lsr #7
+; CHECK-T2: orr.w	r0, r1, r0, lsl #2
 define dso_local arm_aapcscc i32** @pr36577() {
 entry:
   %0 = load i16, i16* @a, align 2

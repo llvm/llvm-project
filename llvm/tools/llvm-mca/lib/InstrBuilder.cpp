@@ -29,7 +29,8 @@ InstrBuilder::InstrBuilder(const llvm::MCSubtargetInfo &sti,
                            const llvm::MCInstrInfo &mcii,
                            const llvm::MCRegisterInfo &mri,
                            const llvm::MCInstrAnalysis &mcia)
-    : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia) {
+    : STI(sti), MCII(mcii), MRI(mri), MCIA(mcia), FirstCallInst(true),
+      FirstReturnInst(true) {
   computeProcResourceMasks(STI.getSchedModel(), ProcResourceMasks);
 }
 
@@ -188,33 +189,92 @@ static void computeMaxLatency(InstrDesc &ID, const MCInstrDesc &MCDesc,
   ID.MaxLatency = Latency < 0 ? 100U : static_cast<unsigned>(Latency);
 }
 
-Error InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
-                                   unsigned SchedClassID) {
+static Error verifyOperands(const MCInstrDesc &MCDesc, const MCInst &MCI) {
+  // Count register definitions, and skip non register operands in the process.
+  unsigned I, E;
+  unsigned NumExplicitDefs = MCDesc.getNumDefs();
+  for (I = 0, E = MCI.getNumOperands(); NumExplicitDefs && I < E; ++I) {
+    const MCOperand &Op = MCI.getOperand(I);
+    if (Op.isReg())
+      --NumExplicitDefs;
+  }
+
+  if (NumExplicitDefs) {
+    return make_error<InstructionError<MCInst>>(
+        "Expected more register operand definitions.", MCI);
+  }
+
+  if (MCDesc.hasOptionalDef()) {
+    // Always assume that the optional definition is the last operand.
+    const MCOperand &Op = MCI.getOperand(MCDesc.getNumOperands() - 1);
+    if (I == MCI.getNumOperands() || !Op.isReg()) {
+      std::string Message =
+          "expected a register operand for an optional definition. Instruction "
+          "has not been correctly analyzed.";
+      return make_error<InstructionError<MCInst>>(Message, MCI);
+    }
+  }
+
+  return ErrorSuccess();
+}
+
+void InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
+                                  unsigned SchedClassID) {
   const MCInstrDesc &MCDesc = MCII.get(MCI.getOpcode());
   const MCSchedModel &SM = STI.getSchedModel();
   const MCSchedClassDesc &SCDesc = *SM.getSchedClassDesc(SchedClassID);
 
-  // These are for now the (strong) assumptions made by this algorithm:
-  //  * The number of explicit and implicit register definitions in a MCInst
-  //    matches the number of explicit and implicit definitions according to
-  //    the opcode descriptor (MCInstrDesc).
-  //  * Register definitions take precedence over register uses in the operands
-  //    list.
-  //  * If an opcode specifies an optional definition, then the optional
-  //    definition is always the last operand in the sequence, and it can be
-  //    set to zero (i.e. "no register").
+  // Assumptions made by this algorithm:
+  //  1. The number of explicit and implicit register definitions in a MCInst
+  //     matches the number of explicit and implicit definitions according to
+  //     the opcode descriptor (MCInstrDesc).
+  //  2. Uses start at index #(MCDesc.getNumDefs()).
+  //  3. There can only be a single optional register definition, an it is
+  //     always the last operand of the sequence (excluding extra operands
+  //     contributed by variadic opcodes).
   //
   // These assumptions work quite well for most out-of-order in-tree targets
   // like x86. This is mainly because the vast majority of instructions is
   // expanded to MCInst using a straightforward lowering logic that preserves
   // the ordering of the operands.
+  //
+  // About assumption 1.
+  // The algorithm allows non-register operands between register operand
+  // definitions. This helps to handle some special ARM instructions with
+  // implicit operand increment (-mtriple=armv7):
+  //
+  // vld1.32  {d18, d19}, [r1]!  @ <MCInst #1463 VLD1q32wb_fixed
+  //                             @  <MCOperand Reg:59>
+  //                             @  <MCOperand Imm:0>     (!!)
+  //                             @  <MCOperand Reg:67>
+  //                             @  <MCOperand Imm:0>
+  //                             @  <MCOperand Imm:14>
+  //                             @  <MCOperand Reg:0>>
+  //
+  // MCDesc reports:
+  //  6 explicit operands.
+  //  1 optional definition
+  //  2 explicit definitions (!!)
+  //
+  // The presence of an 'Imm' operand between the two register definitions
+  // breaks the assumption that "register definitions are always at the
+  // beginning of the operand sequence".
+  //
+  // To workaround this issue, this algorithm ignores (i.e. skips) any
+  // non-register operands between register definitions.  The optional
+  // definition is still at index #(NumOperands-1).
+  //
+  // According to assumption 2. register reads start at #(NumExplicitDefs-1).
+  // That means, register R1 from the example is both read and written.
   unsigned NumExplicitDefs = MCDesc.getNumDefs();
   unsigned NumImplicitDefs = MCDesc.getNumImplicitDefs();
   unsigned NumWriteLatencyEntries = SCDesc.NumWriteLatencyEntries;
   unsigned TotalDefs = NumExplicitDefs + NumImplicitDefs;
   if (MCDesc.hasOptionalDef())
     TotalDefs++;
-  ID.Writes.resize(TotalDefs);
+
+  unsigned NumVariadicOps = MCI.getNumOperands() - MCDesc.getNumOperands();
+  ID.Writes.resize(TotalDefs + NumVariadicOps);
   // Iterate over the operands list, and skip non-register operands.
   // The first NumExplictDefs register operands are expected to be register
   // definitions.
@@ -241,19 +301,15 @@ Error InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
     }
     Write.IsOptionalDef = false;
     LLVM_DEBUG({
-      dbgs() << "\t\t[Def] OpIdx=" << Write.OpIndex
+      dbgs() << "\t\t[Def]    OpIdx=" << Write.OpIndex
              << ", Latency=" << Write.Latency
              << ", WriteResourceID=" << Write.SClassOrWriteResourceID << '\n';
     });
     CurrentDef++;
   }
 
-  if (CurrentDef != NumExplicitDefs) {
-    return make_error<InstructionError<MCInst>>(
-        "Expected more register operand definitions.", MCI);
-  }
-
-  CurrentDef = 0;
+  assert(CurrentDef == NumExplicitDefs &&
+         "Expected more register operand definitions.");
   for (CurrentDef = 0; CurrentDef < NumImplicitDefs; ++CurrentDef) {
     unsigned Index = NumExplicitDefs + CurrentDef;
     WriteDescriptor &Write = ID.Writes[Index];
@@ -275,7 +331,7 @@ Error InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
     Write.IsOptionalDef = false;
     assert(Write.RegisterID != 0 && "Expected a valid phys register!");
     LLVM_DEBUG({
-      dbgs() << "\t\t[Def] OpIdx=" << Write.OpIndex
+      dbgs() << "\t\t[Def][I] OpIdx=" << ~Write.OpIndex
              << ", PhysReg=" << MRI.getName(Write.RegisterID)
              << ", Latency=" << Write.Latency
              << ", WriteResourceID=" << Write.SClassOrWriteResourceID << '\n';
@@ -283,75 +339,120 @@ Error InstrBuilder::populateWrites(InstrDesc &ID, const MCInst &MCI,
   }
 
   if (MCDesc.hasOptionalDef()) {
-    // Always assume that the optional definition is the last operand of the
-    // MCInst sequence.
-    const MCOperand &Op = MCI.getOperand(MCI.getNumOperands() - 1);
-    if (i == MCI.getNumOperands() || !Op.isReg()) {
-      std::string Message =
-          "expected a register operand for an optional definition. Instruction "
-          "has not been correctly analyzed.";
-      return make_error<InstructionError<MCInst>>(Message, MCI);
-    }
-
-    WriteDescriptor &Write = ID.Writes[TotalDefs - 1];
-    Write.OpIndex = MCI.getNumOperands() - 1;
+    WriteDescriptor &Write = ID.Writes[NumExplicitDefs + NumImplicitDefs];
+    Write.OpIndex = MCDesc.getNumOperands() - 1;
     // Assign a default latency for this write.
     Write.Latency = ID.MaxLatency;
     Write.SClassOrWriteResourceID = 0;
     Write.IsOptionalDef = true;
+    LLVM_DEBUG({
+      dbgs() << "\t\t[Def][O] OpIdx=" << Write.OpIndex
+             << ", Latency=" << Write.Latency
+             << ", WriteResourceID=" << Write.SClassOrWriteResourceID << '\n';
+    });
   }
 
-  return ErrorSuccess();
+  if (!NumVariadicOps)
+    return;
+
+  // FIXME: if an instruction opcode is flagged 'mayStore', and it has no
+  // "unmodeledSideEffects', then this logic optimistically assumes that any
+  // extra register operands in the variadic sequence is not a register
+  // definition.
+  //
+  // Otherwise, we conservatively assume that any register operand from the
+  // variadic sequence is both a register read and a register write.
+  bool AssumeUsesOnly = MCDesc.mayStore() && !MCDesc.mayLoad() &&
+                        !MCDesc.hasUnmodeledSideEffects();
+  CurrentDef = NumExplicitDefs + NumImplicitDefs + MCDesc.hasOptionalDef();
+  for (unsigned I = 0, OpIndex = MCDesc.getNumOperands();
+       I < NumVariadicOps && !AssumeUsesOnly; ++I, ++OpIndex) {
+    const MCOperand &Op = MCI.getOperand(OpIndex);
+    if (!Op.isReg())
+      continue;
+
+    WriteDescriptor &Write = ID.Writes[CurrentDef];
+    Write.OpIndex = OpIndex;
+    // Assign a default latency for this write.
+    Write.Latency = ID.MaxLatency;
+    Write.SClassOrWriteResourceID = 0;
+    Write.IsOptionalDef = false;
+    ++CurrentDef;
+    LLVM_DEBUG({
+      dbgs() << "\t\t[Def][V] OpIdx=" << Write.OpIndex
+             << ", Latency=" << Write.Latency
+             << ", WriteResourceID=" << Write.SClassOrWriteResourceID << '\n';
+    });
+  }
+
+  ID.Writes.resize(CurrentDef);
 }
 
-Error InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
-                                  unsigned SchedClassID) {
+void InstrBuilder::populateReads(InstrDesc &ID, const MCInst &MCI,
+                                 unsigned SchedClassID) {
   const MCInstrDesc &MCDesc = MCII.get(MCI.getOpcode());
-  unsigned NumExplicitDefs = MCDesc.getNumDefs();
-
-  // Skip explicit definitions.
-  unsigned i = 0;
-  for (; i < MCI.getNumOperands() && NumExplicitDefs; ++i) {
-    const MCOperand &Op = MCI.getOperand(i);
-    if (Op.isReg())
-      NumExplicitDefs--;
-  }
-
-  if (NumExplicitDefs) {
-    return make_error<InstructionError<MCInst>>(
-        "Expected more register operand definitions.", MCI);
-  }
-
-  unsigned NumExplicitUses = MCI.getNumOperands() - i;
+  unsigned NumExplicitUses = MCDesc.getNumOperands() - MCDesc.getNumDefs();
   unsigned NumImplicitUses = MCDesc.getNumImplicitUses();
-  if (MCDesc.hasOptionalDef()) {
-    assert(NumExplicitUses);
-    NumExplicitUses--;
-  }
-  unsigned TotalUses = NumExplicitUses + NumImplicitUses;
-  if (!TotalUses)
-    return ErrorSuccess();
-
+  // Remove the optional definition.
+  if (MCDesc.hasOptionalDef())
+    --NumExplicitUses;
+  unsigned NumVariadicOps = MCI.getNumOperands() - MCDesc.getNumOperands();
+  unsigned TotalUses = NumExplicitUses + NumImplicitUses + NumVariadicOps;
   ID.Reads.resize(TotalUses);
-  for (unsigned CurrentUse = 0; CurrentUse < NumExplicitUses; ++CurrentUse) {
+  unsigned CurrentUse = 0;
+  for (unsigned I = 0, OpIndex = MCDesc.getNumDefs(); I < NumExplicitUses;
+       ++I, ++OpIndex) {
+    const MCOperand &Op = MCI.getOperand(OpIndex);
+    if (!Op.isReg())
+      continue;
+
     ReadDescriptor &Read = ID.Reads[CurrentUse];
-    Read.OpIndex = i + CurrentUse;
-    Read.UseIndex = CurrentUse;
+    Read.OpIndex = OpIndex;
+    Read.UseIndex = I;
     Read.SchedClassID = SchedClassID;
-    LLVM_DEBUG(dbgs() << "\t\t[Use] OpIdx=" << Read.OpIndex
+    ++CurrentUse;
+    LLVM_DEBUG(dbgs() << "\t\t[Use]    OpIdx=" << Read.OpIndex
                       << ", UseIndex=" << Read.UseIndex << '\n');
   }
 
-  for (unsigned CurrentUse = 0; CurrentUse < NumImplicitUses; ++CurrentUse) {
-    ReadDescriptor &Read = ID.Reads[NumExplicitUses + CurrentUse];
-    Read.OpIndex = ~CurrentUse;
-    Read.UseIndex = NumExplicitUses + CurrentUse;
-    Read.RegisterID = MCDesc.getImplicitUses()[CurrentUse];
+  // For the purpose of ReadAdvance, implicit uses come directly after explicit
+  // uses. The "UseIndex" must be updated according to that implicit layout.
+  for (unsigned I = 0; I < NumImplicitUses; ++I) {
+    ReadDescriptor &Read = ID.Reads[CurrentUse + I];
+    Read.OpIndex = ~I;
+    Read.UseIndex = NumExplicitUses + I;
+    Read.RegisterID = MCDesc.getImplicitUses()[I];
     Read.SchedClassID = SchedClassID;
-    LLVM_DEBUG(dbgs() << "\t\t[Use] OpIdx=" << Read.OpIndex << ", RegisterID="
+    LLVM_DEBUG(dbgs() << "\t\t[Use][I] OpIdx=" << ~Read.OpIndex
+                      << ", UseIndex=" << Read.UseIndex << ", RegisterID="
                       << MRI.getName(Read.RegisterID) << '\n');
   }
-  return ErrorSuccess();
+
+  CurrentUse += NumImplicitUses;
+
+  // FIXME: If an instruction opcode is marked as 'mayLoad', and it has no
+  // "unmodeledSideEffects", then this logic optimistically assumes that any
+  // extra register operands in the variadic sequence are not register
+  // definition.
+
+  bool AssumeDefsOnly = !MCDesc.mayStore() && MCDesc.mayLoad() &&
+                        !MCDesc.hasUnmodeledSideEffects();
+  for (unsigned I = 0, OpIndex = MCDesc.getNumOperands();
+       I < NumVariadicOps && !AssumeDefsOnly; ++I, ++OpIndex) {
+    const MCOperand &Op = MCI.getOperand(OpIndex);
+    if (!Op.isReg())
+      continue;
+
+    ReadDescriptor &Read = ID.Reads[CurrentUse];
+    Read.OpIndex = OpIndex;
+    Read.UseIndex = NumExplicitUses + NumImplicitUses + I;
+    Read.SchedClassID = SchedClassID;
+    ++CurrentUse;
+    LLVM_DEBUG(dbgs() << "\t\t[Use][V] OpIdx=" << Read.OpIndex
+                      << ", UseIndex=" << Read.UseIndex << '\n');
+  }
+
+  ID.Reads.resize(CurrentUse);
 }
 
 Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
@@ -391,10 +492,11 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   // Then obtain the scheduling class information from the instruction.
   unsigned SchedClassID = MCDesc.getSchedClass();
-  unsigned CPUID = SM.getProcessorID();
+  bool IsVariant = SM.getSchedClassDesc(SchedClassID)->isVariant();
 
   // Try to solve variant scheduling classes.
-  if (SchedClassID) {
+  if (IsVariant) {
+    unsigned CPUID = SM.getProcessorID();
     while (SchedClassID && SM.getSchedClassDesc(SchedClassID)->isVariant())
       SchedClassID = STI.resolveVariantSchedClass(SchedClassID, &MCI, CPUID);
 
@@ -416,17 +518,19 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
   std::unique_ptr<InstrDesc> ID = llvm::make_unique<InstrDesc>();
   ID->NumMicroOps = SCDesc.NumMicroOps;
 
-  if (MCDesc.isCall()) {
+  if (MCDesc.isCall() && FirstCallInst) {
     // We don't correctly model calls.
     WithColor::warning() << "found a call in the input assembly sequence.\n";
     WithColor::note() << "call instructions are not correctly modeled. "
                       << "Assume a latency of 100cy.\n";
+    FirstCallInst = false;
   }
 
-  if (MCDesc.isReturn()) {
+  if (MCDesc.isReturn() && FirstReturnInst) {
     WithColor::warning() << "found a return instruction in the input"
                          << " assembly sequence.\n";
     WithColor::note() << "program counter updates are ignored.\n";
+    FirstReturnInst = false;
   }
 
   ID->MayLoad = MCDesc.mayLoad();
@@ -435,10 +539,12 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   initializeUsedResources(*ID, SCDesc, STI, ProcResourceMasks);
   computeMaxLatency(*ID, MCDesc, SCDesc, STI);
-  if (auto Err = populateWrites(*ID, MCI, SchedClassID))
+
+  if (Error Err = verifyOperands(MCDesc, MCI))
     return std::move(Err);
-  if (auto Err = populateReads(*ID, MCI, SchedClassID))
-    return std::move(Err);
+
+  populateWrites(*ID, MCI, SchedClassID);
+  populateReads(*ID, MCI, SchedClassID);
 
   LLVM_DEBUG(dbgs() << "\t\tMaxLatency=" << ID->MaxLatency << '\n');
   LLVM_DEBUG(dbgs() << "\t\tNumMicroOps=" << ID->NumMicroOps << '\n');
@@ -449,7 +555,8 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI) {
 
   // Now add the new descriptor.
   SchedClassID = MCDesc.getSchedClass();
-  if (!SM.getSchedClassDesc(SchedClassID)->isVariant()) {
+  bool IsVariadic = MCDesc.isVariadic();
+  if (!IsVariadic && !IsVariant) {
     Descriptors[MCI.getOpcode()] = std::move(ID);
     return *Descriptors[MCI.getOpcode()];
   }
@@ -556,9 +663,9 @@ InstrBuilder::createInstruction(const MCInst &MCI) {
     }
 
     assert(RegID && "Expected a valid register ID!");
-    NewIS->getDefs().emplace_back(
-        WD, RegID, /* ClearsSuperRegs */ WriteMask[WriteIndex],
-        /* WritesZero */ IsZeroIdiom);
+    NewIS->getDefs().emplace_back(WD, RegID,
+                                  /* ClearsSuperRegs */ WriteMask[WriteIndex],
+                                  /* WritesZero */ IsZeroIdiom);
     ++WriteIndex;
   }
 

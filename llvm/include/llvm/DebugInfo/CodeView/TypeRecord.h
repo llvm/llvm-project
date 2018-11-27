@@ -264,14 +264,18 @@ public:
 // LF_POINTER
 class PointerRecord : public TypeRecord {
 public:
+  // ---------------------------XXXXX
   static const uint32_t PointerKindShift = 0;
   static const uint32_t PointerKindMask = 0x1F;
 
+  // ------------------------XXX-----
   static const uint32_t PointerModeShift = 5;
   static const uint32_t PointerModeMask = 0x07;
 
-  static const uint32_t PointerOptionMask = 0xFF;
+  // ----------XXX------XXXXX--------
+  static const uint32_t PointerOptionMask = 0x381f00;
 
+  // -------------XXXXXX------------
   static const uint32_t PointerSizeShift = 13;
   static const uint32_t PointerSizeMask = 0xFF;
 
@@ -305,7 +309,7 @@ public:
   }
 
   PointerOptions getOptions() const {
-    return static_cast<PointerOptions>(Attrs);
+    return static_cast<PointerOptions>(Attrs & PointerOptionMask);
   }
 
   uint8_t getSize() const {
@@ -332,6 +336,14 @@ public:
 
   bool isRestrict() const {
     return !!(Attrs & uint32_t(PointerOptions::Restrict));
+  }
+
+  bool isLValueReferenceThisPtr() const {
+    return !!(Attrs & uint32_t(PointerOptions::LValueRefThisPointer));
+  }
+
+  bool isRValueReferenceThisPtr() const {
+    return !!(Attrs & uint32_t(PointerOptions::RValueRefThisPointer));
   }
 
   TypeIndex ReferentType;

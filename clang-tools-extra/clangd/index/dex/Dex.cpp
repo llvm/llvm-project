@@ -25,12 +25,10 @@ namespace clang {
 namespace clangd {
 namespace dex {
 
-std::unique_ptr<SymbolIndex> Dex::build(SymbolSlab Symbols, RefSlab Refs,
-                                        ArrayRef<std::string> URISchemes) {
+std::unique_ptr<SymbolIndex> Dex::build(SymbolSlab Symbols, RefSlab Refs) {
   auto Size = Symbols.bytes() + Refs.bytes();
   auto Data = std::make_pair(std::move(Symbols), std::move(Refs));
-  return llvm::make_unique<Dex>(Data.first, Data.second, std::move(Data), Size,
-                                std::move(URISchemes));
+  return llvm::make_unique<Dex>(Data.first, Data.second, std::move(Data), Size);
 }
 
 namespace {
@@ -62,24 +60,18 @@ std::vector<Token> generateSearchTokens(const Symbol &Sym) {
 }
 
 // Constructs BOOST iterators for Path Proximities.
-std::unique_ptr<Iterator> createFileProximityIterator(
-    ArrayRef<std::string> ProximityPaths, ArrayRef<std::string> URISchemes,
-    const DenseMap<Token, PostingList> &InvertedIndex, const Corpus &Corpus) {
+std::unique_ptr<Iterator>
+createFileProximityIterator(ArrayRef<std::string> ProximityPaths,
+                            const DenseMap<Token, PostingList> &InvertedIndex,
+                            const Corpus &Corpus) {
   std::vector<std::unique_ptr<Iterator>> BoostingIterators;
   // Deduplicate parent URIs extracted from the ProximityPaths.
   StringSet<> ParentURIs;
   StringMap<SourceParams> Sources;
   for (const auto &Path : ProximityPaths) {
     Sources[Path] = SourceParams();
-    auto PathURI = URI::create(Path, URISchemes);
-    if (!PathURI) {
-      elog("Given ProximityPath {0} is can not be converted to any known URI "
-           "scheme. fuzzyFind request will ignore it.",
-           Path);
-      consumeError(PathURI.takeError());
-      continue;
-    }
-    const auto PathProximityURIs = generateProximityURIs(PathURI->toString());
+    auto PathURI = URI::create(Path);
+    const auto PathProximityURIs = generateProximityURIs(PathURI.toString());
     for (const auto &ProximityURI : PathProximityURIs)
       ParentURIs.insert(ProximityURI);
   }
@@ -184,8 +176,8 @@ bool Dex::fuzzyFind(const FuzzyFindRequest &Req,
   Criteria.push_back(Corpus.unionOf(move(ScopeIterators)));
 
   // Add proximity paths boosting (all symbols, some boosted).
-  Criteria.push_back(createFileProximityIterator(Req.ProximityPaths, URISchemes,
-                                                 InvertedIndex, Corpus));
+  Criteria.push_back(
+      createFileProximityIterator(Req.ProximityPaths, InvertedIndex, Corpus));
 
   if (Req.RestrictForCodeCompletion)
     Criteria.push_back(iterator(RestrictedForCodeCompletion));

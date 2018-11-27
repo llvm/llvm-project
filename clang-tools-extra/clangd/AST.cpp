@@ -11,9 +11,12 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Index/USRGeneration.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
 namespace clang {
@@ -59,6 +62,46 @@ std::string printQualifiedName(const NamedDecl &ND) {
   OS.flush();
   assert(!StringRef(QName).startswith("::"));
   return QName;
+}
+
+static const TemplateArgumentList *
+getTemplateSpecializationArgs(const NamedDecl &ND) {
+  if (auto *Func = llvm::dyn_cast<FunctionDecl>(&ND))
+    return Func->getTemplateSpecializationArgs();
+  if (auto *Cls = llvm::dyn_cast<ClassTemplateSpecializationDecl>(&ND))
+    return &Cls->getTemplateInstantiationArgs();
+  if (auto *Var = llvm::dyn_cast<VarTemplateSpecializationDecl>(&ND))
+    return &Var->getTemplateInstantiationArgs();
+  return nullptr;
+}
+
+std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
+  std::string Name;
+  llvm::raw_string_ostream Out(Name);
+  PrintingPolicy PP(Ctx.getLangOpts());
+  // Handle 'using namespace'. They all have the same name - <using-directive>.
+  if (auto *UD = llvm::dyn_cast<UsingDirectiveDecl>(&ND)) {
+    Out << "using namespace ";
+    if (auto *Qual = UD->getQualifier())
+      Qual->print(Out, PP);
+    UD->getNominatedNamespaceAsWritten()->printName(Out);
+    return Out.str();
+  }
+  ND.getDeclName().print(Out, PP);
+  if (!Out.str().empty()) {
+    // FIXME(ibiryukov): do not show args not explicitly written by the user.
+    if (auto *ArgList = getTemplateSpecializationArgs(ND))
+      printTemplateArgumentList(Out, ArgList->asArray(), PP);
+    return Out.str();
+  }
+  // The name was empty, so present an anonymous entity.
+  if (isa<NamespaceDecl>(ND))
+    return "(anonymous namespace)";
+  if (auto *Cls = llvm::dyn_cast<RecordDecl>(&ND))
+    return ("(anonymous " + Cls->getKindName() + ")").str();
+  if (isa<EnumDecl>(ND))
+    return "(anonymous enum)";
+  return "(anonymous)";
 }
 
 std::string printNamespaceScope(const DeclContext &DC) {

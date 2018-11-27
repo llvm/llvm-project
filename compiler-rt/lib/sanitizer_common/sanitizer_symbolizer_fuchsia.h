@@ -35,6 +35,9 @@ constexpr const char *kFormatData = "{{{data:%p}}}";
 // One frame in a backtrace (printed on a line by itself).
 constexpr const char *kFormatFrame = "{{{bt:%u:%p}}}";
 
+// Dump trigger element.
+#define FORMAT_DUMPFILE "{{{dumpfile:%s:%s}}}"
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_SYMBOLIZER_FUCHSIA_H

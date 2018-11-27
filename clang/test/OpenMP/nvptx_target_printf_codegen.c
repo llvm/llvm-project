@@ -6,8 +6,11 @@
 // expected-no-diagnostics
 extern int printf(const char *, ...);
 
+// CHECK-DAG: private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds
+
 // Check a simple call to printf end-to-end.
-// CHECK: [[SIMPLE_PRINTF_TY:%[a-zA-Z0-9_]+]] = type { i32, i64, double }
+// CHECK-DAG: [[SIMPLE_PRINTF_TY:%[a-zA-Z0-9_]+]] = type { i32, i64, double }
+// CHECK-NOT: private unnamed_addr constant %struct.ident_t { i32 0, i32 2, {{1|2|3}}
 int CheckSimple() {
     // CHECK: define {{.*}}void [[T1:@__omp_offloading_.+CheckSimple.+]]_worker()
 #pragma omp target

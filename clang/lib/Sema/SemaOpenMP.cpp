@@ -1275,10 +1275,16 @@ bool DSAStackTy::hasExplicitDSA(
     return false;
   std::advance(StartI, Level);
   auto I = StartI->SharingMap.find(D);
-  return (I != StartI->SharingMap.end()) &&
+  if ((I != StartI->SharingMap.end()) &&
          I->getSecond().RefExpr.getPointer() &&
          CPred(I->getSecond().Attributes) &&
-         (!NotLastprivate || !I->getSecond().RefExpr.getInt());
+         (!NotLastprivate || !I->getSecond().RefExpr.getInt()))
+    return true;
+  // Check predetermined rules for the loop control variables.
+  auto LI = StartI->LCVMap.find(D);
+  if (LI != StartI->LCVMap.end())
+    return CPred(OMPC_private);
+  return false;
 }
 
 bool DSAStackTy::hasExplicitDirective(
@@ -3905,7 +3911,8 @@ class OpenMPIterationSpaceChecker {
   ///   Var <= UB
   ///   UB  >  Var
   ///   UB  >= Var
-  bool TestIsLessOp = false;
+  /// This will have no value when the condition is !=
+  llvm::Optional<bool> TestIsLessOp;
   /// This flag is true when condition is strict ( < or > ).
   bool TestIsStrictOp = false;
   /// This flag is true when step is subtracted on each iteration.
@@ -3971,8 +3978,8 @@ private:
   /// Helper to set loop counter variable and its initializer.
   bool setLCDeclAndLB(ValueDecl *NewLCDecl, Expr *NewDeclRefExpr, Expr *NewLB);
   /// Helper to set upper bound.
-  bool setUB(Expr *NewUB, bool LessOp, bool StrictOp, SourceRange SR,
-             SourceLocation SL);
+  bool setUB(Expr *NewUB, llvm::Optional<bool> LessOp, bool StrictOp,
+             SourceRange SR, SourceLocation SL);
   /// Helper to set loop increment.
   bool setStep(Expr *NewStep, bool Subtract);
 };
@@ -4007,15 +4014,17 @@ bool OpenMPIterationSpaceChecker::setLCDeclAndLB(ValueDecl *NewLCDecl,
   return false;
 }
 
-bool OpenMPIterationSpaceChecker::setUB(Expr *NewUB, bool LessOp, bool StrictOp,
-                                        SourceRange SR, SourceLocation SL) {
+bool OpenMPIterationSpaceChecker::setUB(Expr *NewUB, llvm::Optional<bool> LessOp,
+                                        bool StrictOp, SourceRange SR,
+                                        SourceLocation SL) {
   // State consistency checking to ensure correct usage.
   assert(LCDecl != nullptr && LB != nullptr && UB == nullptr &&
          Step == nullptr && !TestIsLessOp && !TestIsStrictOp);
   if (!NewUB)
     return true;
   UB = NewUB;
-  TestIsLessOp = LessOp;
+  if (LessOp)
+    TestIsLessOp = LessOp;
   TestIsStrictOp = StrictOp;
   ConditionSrcRange = SR;
   ConditionLoc = SL;
@@ -4055,18 +4064,23 @@ bool OpenMPIterationSpaceChecker::setStep(Expr *NewStep, bool Subtract) {
     bool IsConstPos =
         IsConstant && Result.isSigned() && (Subtract == Result.isNegative());
     bool IsConstZero = IsConstant && !Result.getBoolValue();
+
+    // != with increment is treated as <; != with decrement is treated as >
+    if (!TestIsLessOp.hasValue())
+      TestIsLessOp = IsConstPos || (IsUnsigned && !Subtract);
     if (UB && (IsConstZero ||
-               (TestIsLessOp ? (IsConstNeg || (IsUnsigned && Subtract))
-                             : (IsConstPos || (IsUnsigned && !Subtract))))) {
+               (TestIsLessOp.getValue() ? 
+                  (IsConstNeg || (IsUnsigned && Subtract)) :
+                  (IsConstPos || (IsUnsigned && !Subtract))))) {
       SemaRef.Diag(NewStep->getExprLoc(),
                    diag::err_omp_loop_incr_not_compatible)
-          << LCDecl << TestIsLessOp << NewStep->getSourceRange();
+          << LCDecl << TestIsLessOp.getValue() << NewStep->getSourceRange();
       SemaRef.Diag(ConditionLoc,
                    diag::note_omp_loop_cond_requres_compatible_incr)
-          << TestIsLessOp << ConditionSrcRange;
+          << TestIsLessOp.getValue() << ConditionSrcRange;
       return true;
     }
-    if (TestIsLessOp == Subtract) {
+    if (TestIsLessOp.getValue() == Subtract) {
       NewStep =
           SemaRef.CreateBuiltinUnaryOp(NewStep->getExprLoc(), UO_Minus, NewStep)
               .get();
@@ -4207,7 +4221,12 @@ bool OpenMPIterationSpaceChecker::checkAndSetCond(Expr *S) {
                      (BO->getOpcode() == BO_GT || BO->getOpcode() == BO_GE),
                      (BO->getOpcode() == BO_LT || BO->getOpcode() == BO_GT),
                      BO->getSourceRange(), BO->getOperatorLoc());
-    }
+    } else if (BO->getOpcode() == BO_NE)
+        return setUB(getInitLCDecl(BO->getLHS()) == LCDecl ?
+                       BO->getRHS() : BO->getLHS(),
+                     /*LessOp=*/llvm::None,
+                     /*StrictOp=*/true,
+                     BO->getSourceRange(), BO->getOperatorLoc());
   } else if (auto *CE = dyn_cast<CXXOperatorCallExpr>(S)) {
     if (CE->getNumArgs() == 2) {
       auto Op = CE->getOperator();
@@ -4224,6 +4243,14 @@ bool OpenMPIterationSpaceChecker::checkAndSetCond(Expr *S) {
           return setUB(CE->getArg(0), Op == OO_Greater || Op == OO_GreaterEqual,
                        Op == OO_Less || Op == OO_Greater, CE->getSourceRange(),
                        CE->getOperatorLoc());
+        break;
+      case OO_ExclaimEqual: 
+        return setUB(getInitLCDecl(CE->getArg(0)) == LCDecl ?
+                     CE->getArg(1) : CE->getArg(0),
+                     /*LessOp=*/llvm::None,
+                     /*StrictOp=*/true,
+                     CE->getSourceRange(),
+                     CE->getOperatorLoc());
         break;
       default:
         break;
@@ -4373,8 +4400,8 @@ Expr *OpenMPIterationSpaceChecker::buildNumIterations(
   if (VarType->isIntegerType() || VarType->isPointerType() ||
       SemaRef.getLangOpts().CPlusPlus) {
     // Upper - Lower
-    Expr *UBExpr = TestIsLessOp ? UB : LB;
-    Expr *LBExpr = TestIsLessOp ? LB : UB;
+    Expr *UBExpr = TestIsLessOp.getValue() ? UB : LB;
+    Expr *LBExpr = TestIsLessOp.getValue() ? LB : UB;
     Expr *Upper = tryBuildCapture(SemaRef, UBExpr, Captures).get();
     Expr *Lower = tryBuildCapture(SemaRef, LBExpr, Captures).get();
     if (!Upper || !Lower)
@@ -4475,8 +4502,9 @@ Expr *OpenMPIterationSpaceChecker::buildPreCond(
 
   ExprResult CondExpr =
       SemaRef.BuildBinOp(S, DefaultLoc,
-                         TestIsLessOp ? (TestIsStrictOp ? BO_LT : BO_LE)
-                                      : (TestIsStrictOp ? BO_GT : BO_GE),
+                         TestIsLessOp.getValue() ? 
+                           (TestIsStrictOp ? BO_LT : BO_LE) :
+                           (TestIsStrictOp ? BO_GT : BO_GE),
                          NewLB.get(), NewUB.get());
   if (CondExpr.isUsable()) {
     if (!SemaRef.Context.hasSameUnqualifiedType(CondExpr.get()->getType(),
@@ -4554,9 +4582,9 @@ Expr *OpenMPIterationSpaceChecker::buildOrderedLoopData(
       SemaRef.getLangOpts().CPlusPlus) {
     // Upper - Lower
     Expr *Upper =
-        TestIsLessOp ? Cnt : tryBuildCapture(SemaRef, UB, Captures).get();
+        TestIsLessOp.getValue() ? Cnt : tryBuildCapture(SemaRef, UB, Captures).get();
     Expr *Lower =
-        TestIsLessOp ? tryBuildCapture(SemaRef, LB, Captures).get() : Cnt;
+        TestIsLessOp.getValue() ? tryBuildCapture(SemaRef, LB, Captures).get() : Cnt;
     if (!Upper || !Lower)
       return nullptr;
 
@@ -5020,15 +5048,16 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
   unsigned NestedLoopCount = 1;
   if (CollapseLoopCountExpr) {
     // Found 'collapse' clause - calculate collapse number.
-    llvm::APSInt Result;
+    Expr::EvalResult Result;
     if (CollapseLoopCountExpr->EvaluateAsInt(Result, SemaRef.getASTContext()))
-      NestedLoopCount = Result.getLimitedValue();
+      NestedLoopCount = Result.Val.getInt().getLimitedValue();
   }
   unsigned OrderedLoopCount = 1;
   if (OrderedLoopCountExpr) {
     // Found 'ordered' clause - calculate collapse number.
-    llvm::APSInt Result;
-    if (OrderedLoopCountExpr->EvaluateAsInt(Result, SemaRef.getASTContext())) {
+    Expr::EvalResult EVResult;
+    if (OrderedLoopCountExpr->EvaluateAsInt(EVResult, SemaRef.getASTContext())) {
+      llvm::APSInt Result = EVResult.Val.getInt();
       if (Result.getLimitedValue() < NestedLoopCount) {
         SemaRef.Diag(OrderedLoopCountExpr->getExprLoc(),
                      diag::err_omp_wrong_ordered_loop_count)
@@ -5624,7 +5653,6 @@ static bool checkSimdlenSafelenSpecified(Sema &S,
   }
 
   if (Simdlen && Safelen) {
-    llvm::APSInt SimdlenRes, SafelenRes;
     const Expr *SimdlenLength = Simdlen->getSimdlen();
     const Expr *SafelenLength = Safelen->getSafelen();
     if (SimdlenLength->isValueDependent() || SimdlenLength->isTypeDependent() ||
@@ -5635,8 +5663,11 @@ static bool checkSimdlenSafelenSpecified(Sema &S,
         SafelenLength->isInstantiationDependent() ||
         SafelenLength->containsUnexpandedParameterPack())
       return false;
-    SimdlenLength->EvaluateAsInt(SimdlenRes, S.Context);
-    SafelenLength->EvaluateAsInt(SafelenRes, S.Context);
+    Expr::EvalResult SimdlenResult, SafelenResult;
+    SimdlenLength->EvaluateAsInt(SimdlenResult, S.Context);
+    SafelenLength->EvaluateAsInt(SafelenResult, S.Context);
+    llvm::APSInt SimdlenRes = SimdlenResult.Val.getInt();
+    llvm::APSInt SafelenRes = SafelenResult.Val.getInt();
     // OpenMP 4.5 [2.8.1, simd Construct, Restrictions]
     // If both simdlen and safelen clauses are specified, the value of the
     // simdlen parameter must be less than or equal to the value of the safelen
@@ -10641,10 +10672,11 @@ static bool checkOMPArraySectionConstantForReduction(
     SingleElement = true;
     ArraySizes.push_back(llvm::APSInt::get(1));
   } else {
-    llvm::APSInt ConstantLengthValue;
-    if (!Length->EvaluateAsInt(ConstantLengthValue, Context))
+    Expr::EvalResult Result;
+    if (!Length->EvaluateAsInt(Result, Context))
       return false;
 
+    llvm::APSInt ConstantLengthValue = Result.Val.getInt();
     SingleElement = (ConstantLengthValue.getSExtValue() == 1);
     ArraySizes.push_back(ConstantLengthValue);
   }
@@ -10665,9 +10697,12 @@ static bool checkOMPArraySectionConstantForReduction(
       // This is an array subscript which has implicit length 1!
       ArraySizes.push_back(llvm::APSInt::get(1));
     } else {
-      llvm::APSInt ConstantLengthValue;
-      if (!Length->EvaluateAsInt(ConstantLengthValue, Context) ||
-          ConstantLengthValue.getSExtValue() != 1)
+      Expr::EvalResult Result;
+      if (!Length->EvaluateAsInt(Result, Context))
+        return false;
+
+      llvm::APSInt ConstantLengthValue = Result.Val.getInt();
+      if (ConstantLengthValue.getSExtValue() != 1)
         return false;
 
       ArraySizes.push_back(ConstantLengthValue);
@@ -12190,9 +12225,11 @@ static bool checkArrayExpressionDoesNotReferToWholeSize(Sema &SemaRef,
   // If there is a lower bound that does not evaluates to zero, we are not
   // covering the whole dimension.
   if (LowerBound) {
-    llvm::APSInt ConstLowerBound;
-    if (!LowerBound->EvaluateAsInt(ConstLowerBound, SemaRef.getASTContext()))
+    Expr::EvalResult Result;
+    if (!LowerBound->EvaluateAsInt(Result, SemaRef.getASTContext()))
       return false; // Can't get the integer value as a constant.
+
+    llvm::APSInt ConstLowerBound = Result.Val.getInt();
     if (ConstLowerBound.getSExtValue())
       return true;
   }
@@ -12212,10 +12249,11 @@ static bool checkArrayExpressionDoesNotReferToWholeSize(Sema &SemaRef,
   if (!CATy)
     return false;
 
-  llvm::APSInt ConstLength;
-  if (!Length->EvaluateAsInt(ConstLength, SemaRef.getASTContext()))
+  Expr::EvalResult Result;
+  if (!Length->EvaluateAsInt(Result, SemaRef.getASTContext()))
     return false; // Can't get the integer value as a constant.
 
+  llvm::APSInt ConstLength = Result.Val.getInt();
   return CATy->getSize().getSExtValue() != ConstLength.getSExtValue();
 }
 
@@ -12246,10 +12284,11 @@ static bool checkArrayExpressionDoesNotReferToUnitySize(Sema &SemaRef,
   }
 
   // Check if the length evaluates to 1.
-  llvm::APSInt ConstLength;
-  if (!Length->EvaluateAsInt(ConstLength, SemaRef.getASTContext()))
+  Expr::EvalResult Result;
+  if (!Length->EvaluateAsInt(Result, SemaRef.getASTContext()))
     return false; // Can't get the integer value as a constant.
 
+  llvm::APSInt ConstLength = Result.Val.getInt();
   return ConstLength.getSExtValue() != 1;
 }
 

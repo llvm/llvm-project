@@ -76,9 +76,9 @@ def use_support_substitutions(config):
             res = -1
         if res == 0 and out:
             sdk_path = lit.util.to_string(out)
-            lit_config.note('using SDKROOT: %r' % sdk_path)
+            llvm_config.lit_config.note('using SDKROOT: %r' % sdk_path)
             flags = ['-isysroot', sdk_path]
-    elif platform.system() in ['OpenBSD']:
+    elif platform.system() in ['OpenBSD', 'Linux']:
         flags = ['-pthread']
 
 

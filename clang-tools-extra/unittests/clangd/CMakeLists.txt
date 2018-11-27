@@ -19,10 +19,12 @@ add_extra_unittest(ClangdTests
   ContextTests.cpp
   DexTests.cpp
   DraftStoreTests.cpp
+  ExpectedTypeTest.cpp
   FileDistanceTests.cpp
   FileIndexTests.cpp
   FindSymbolsTests.cpp
   FSTests.cpp
+  FunctionTests.cpp
   FuzzyMatchTests.cpp
   GlobalCompilationDatabaseTests.cpp
   HeadersTests.cpp

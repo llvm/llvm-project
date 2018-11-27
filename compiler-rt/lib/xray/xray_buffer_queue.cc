@@ -16,7 +16,9 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
+#if !SANITIZER_FUCHSIA
 #include "sanitizer_common/sanitizer_posix.h"
+#endif
 #include "xray_allocator.h"
 #include "xray_defs.h"
 #include <memory>

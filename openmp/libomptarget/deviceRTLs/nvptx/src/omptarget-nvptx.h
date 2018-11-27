@@ -251,7 +251,6 @@ public:
   INLINE omptarget_nvptx_WorkDescr &WorkDescr() {
     return workDescrForActiveParallel;
   }
-  INLINE omp_lock_t *CriticalLock() { return &criticalLock; }
   INLINE uint64_t *getLastprivateIterBuffer() { return &lastprivateIterBuffer; }
 
   // init
@@ -303,7 +302,6 @@ private:
       levelZeroTaskDescr; // icv for team master initial thread
   omptarget_nvptx_WorkDescr
       workDescrForActiveParallel; // one, ONLY for the active par
-  omp_lock_t criticalLock;
   uint64_t lastprivateIterBuffer;
 
   __align__(16)

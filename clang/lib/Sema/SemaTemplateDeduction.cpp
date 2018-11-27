@@ -178,6 +178,8 @@ getDeducedParameterFromExpr(TemplateDeductionInfo &Info, Expr *E) {
   while (true) {
     if (ImplicitCastExpr *IC = dyn_cast<ImplicitCastExpr>(E))
       E = IC->getSubExpr();
+    else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E))
+      E = CE->getSubExpr();
     else if (SubstNonTypeTemplateParmExpr *Subst =
                dyn_cast<SubstNonTypeTemplateParmExpr>(E))
       E = Subst->getReplacement();
@@ -5225,6 +5227,8 @@ MarkUsedTemplateParameters(ASTContext &Ctx,
   while (true) {
     if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(E))
       E = ICE->getSubExpr();
+    else if (const ConstantExpr *CE = dyn_cast<ConstantExpr>(E))
+      E = CE->getSubExpr();
     else if (const SubstNonTypeTemplateParmExpr *Subst =
                dyn_cast<SubstNonTypeTemplateParmExpr>(E))
       E = Subst->getReplacement();

@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Matchers.h"
 #include "TestFS.h"
 #include "URI.h"
 #include "gmock/gmock.h"
@@ -77,16 +78,9 @@ TEST(URITest, Create) {
 }
 
 TEST(URITest, FailedCreate) {
-  auto Fail = [](Expected<URI> U) {
-    if (!U) {
-      consumeError(U.takeError());
-      return true;
-    }
-    return false;
-  };
-  EXPECT_TRUE(Fail(URI::create("/x/y/z", "no")));
+  EXPECT_ERROR(URI::create("/x/y/z", "no"));
   // Path has to be absolute.
-  EXPECT_TRUE(Fail(URI::create("x/y/z", "file")));
+  EXPECT_ERROR(URI::create("x/y/z", "file"));
 }
 
 TEST(URITest, Parse) {
@@ -120,21 +114,12 @@ TEST(URITest, Parse) {
 }
 
 TEST(URITest, ParseFailed) {
-  auto FailedParse = [](StringRef U) {
-    auto URI = URI::parse(U);
-    if (!URI) {
-      consumeError(URI.takeError());
-      return true;
-    }
-    return false;
-  };
-
   // Expect ':' in URI.
-  EXPECT_TRUE(FailedParse("file//x/y/z"));
+  EXPECT_ERROR(URI::parse("file//x/y/z"));
   // Empty.
-  EXPECT_TRUE(FailedParse(""));
-  EXPECT_TRUE(FailedParse(":/a/b/c"));
-  EXPECT_TRUE(FailedParse("\"/a/b/c\" IWYU pragma: abc"));
+  EXPECT_ERROR(URI::parse(""));
+  EXPECT_ERROR(URI::parse(":/a/b/c"));
+  EXPECT_ERROR(URI::parse("\"/a/b/c\" IWYU pragma: abc"));
 }
 
 TEST(URITest, Resolve) {

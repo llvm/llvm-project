@@ -61,10 +61,10 @@ cl::opt<bool> EnableLTOInternalization(
     "enable-lto-internalization", cl::init(true), cl::Hidden,
     cl::desc("Enable global value internalization in LTO"));
 
-// Returns a unique hash for the Module considering the current list of
+// Computes a unique hash for the Module considering the current list of
 // export/import and other global analysis results.
 // The hash is produced in \p Key.
-static void computeCacheKey(
+void llvm::computeLTOCacheKey(
     SmallString<40> &Key, const Config &Conf, const ModuleSummaryIndex &Index,
     StringRef ModuleID, const FunctionImporter::ImportMapTy &ImportList,
     const FunctionImporter::ExportSetTy &ExportList,
@@ -132,6 +132,7 @@ static void computeCacheKey(
   AddUnsigned(Conf.CGFileType);
   AddUnsigned(Conf.OptLevel);
   AddUnsigned(Conf.UseNewPM);
+  AddUnsigned(Conf.Freestanding);
   AddString(Conf.OptPipeline);
   AddString(Conf.AAPipeline);
   AddString(Conf.OverrideTriple);
@@ -983,9 +984,9 @@ public:
 
     SmallString<40> Key;
     // The module may be cached, this helps handling it.
-    computeCacheKey(Key, Conf, CombinedIndex, ModuleID, ImportList, ExportList,
-                    ResolvedODR, DefinedGlobals, CfiFunctionDefs,
-                    CfiFunctionDecls);
+    computeLTOCacheKey(Key, Conf, CombinedIndex, ModuleID, ImportList,
+                       ExportList, ResolvedODR, DefinedGlobals, CfiFunctionDefs,
+                       CfiFunctionDecls);
     if (AddStreamFn CacheAddStream = Cache(Task, Key))
       return RunThinBackend(CacheAddStream);
 

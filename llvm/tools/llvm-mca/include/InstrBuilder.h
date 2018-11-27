@@ -46,21 +46,28 @@ class InstrBuilder {
   DenseMap<unsigned short, std::unique_ptr<const InstrDesc>> Descriptors;
   DenseMap<const MCInst *, std::unique_ptr<const InstrDesc>> VariantDescriptors;
 
+  bool FirstCallInst;
+  bool FirstReturnInst;
+
   Expected<const InstrDesc &> createInstrDescImpl(const MCInst &MCI);
   Expected<const InstrDesc &> getOrCreateInstrDesc(const MCInst &MCI);
 
   InstrBuilder(const InstrBuilder &) = delete;
   InstrBuilder &operator=(const InstrBuilder &) = delete;
 
-  Error populateWrites(InstrDesc &ID, const MCInst &MCI, unsigned SchedClassID);
-  Error populateReads(InstrDesc &ID, const MCInst &MCI, unsigned SchedClassID);
+  void populateWrites(InstrDesc &ID, const MCInst &MCI, unsigned SchedClassID);
+  void populateReads(InstrDesc &ID, const MCInst &MCI, unsigned SchedClassID);
   Error verifyInstrDesc(const InstrDesc &ID, const MCInst &MCI) const;
 
 public:
   InstrBuilder(const MCSubtargetInfo &STI, const MCInstrInfo &MCII,
                const MCRegisterInfo &RI, const MCInstrAnalysis &IA);
 
-  void clear() { VariantDescriptors.shrink_and_clear(); }
+  void clear() {
+    VariantDescriptors.shrink_and_clear();
+    FirstCallInst = true;
+    FirstReturnInst = true;
+  }
 
   Expected<std::unique_ptr<Instruction>> createInstruction(const MCInst &MCI);
 };

@@ -1820,46 +1820,6 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                      "cast");
     return RValue::get(Result);
   }
-  case Builtin::BI_rotr8:
-  case Builtin::BI_rotr16:
-  case Builtin::BI_rotr:
-  case Builtin::BI_lrotr:
-  case Builtin::BI_rotr64: {
-    Value *Val = EmitScalarExpr(E->getArg(0));
-    Value *Shift = EmitScalarExpr(E->getArg(1));
-
-    llvm::Type *ArgType = Val->getType();
-    Shift = Builder.CreateIntCast(Shift, ArgType, false);
-    unsigned ArgWidth = ArgType->getIntegerBitWidth();
-    Value *Mask = llvm::ConstantInt::get(ArgType, ArgWidth - 1);
-
-    Value *RightShiftAmt = Builder.CreateAnd(Shift, Mask);
-    Value *RightShifted = Builder.CreateLShr(Val, RightShiftAmt);
-    Value *LeftShiftAmt = Builder.CreateAnd(Builder.CreateNeg(Shift), Mask);
-    Value *LeftShifted = Builder.CreateShl(Val, LeftShiftAmt);
-    Value *Result = Builder.CreateOr(LeftShifted, RightShifted);
-    return RValue::get(Result);
-  }
-  case Builtin::BI_rotl8:
-  case Builtin::BI_rotl16:
-  case Builtin::BI_rotl:
-  case Builtin::BI_lrotl:
-  case Builtin::BI_rotl64: {
-    Value *Val = EmitScalarExpr(E->getArg(0));
-    Value *Shift = EmitScalarExpr(E->getArg(1));
-
-    llvm::Type *ArgType = Val->getType();
-    Shift = Builder.CreateIntCast(Shift, ArgType, false);
-    unsigned ArgWidth = ArgType->getIntegerBitWidth();
-    Value *Mask = llvm::ConstantInt::get(ArgType, ArgWidth - 1);
-
-    Value *LeftShiftAmt = Builder.CreateAnd(Shift, Mask);
-    Value *LeftShifted = Builder.CreateShl(Val, LeftShiftAmt);
-    Value *RightShiftAmt = Builder.CreateAnd(Builder.CreateNeg(Shift), Mask);
-    Value *RightShifted = Builder.CreateLShr(Val, RightShiftAmt);
-    Value *Result = Builder.CreateOr(LeftShifted, RightShifted);
-    return RValue::get(Result);
-  }
   case Builtin::BI__builtin_unpredictable: {
     // Always return the argument of __builtin_unpredictable. LLVM does not
     // handle this builtin. Metadata for this builtin should be added directly
@@ -1918,14 +1878,44 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
     return emitRotate(E, false);
 
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI_rotr8: // Microsoft variants of rotate right
+  case Builtin::BI_rotr16:
+  case Builtin::BI_rotr:
+  case Builtin::BI_lrotr:
+  case Builtin::BI_rotr64:
     return emitRotate(E, true);
 
+  case Builtin::BI__builtin_constant_p: {
+    llvm::Type *ResultType = ConvertType(E->getType());
+    if (CGM.getCodeGenOpts().OptimizationLevel == 0)
+      // At -O0, we don't perform inlining, so we don't need to delay the
+      // processing.
+      return RValue::get(ConstantInt::get(ResultType, 0));
+
+    const Expr *Arg = E->getArg(0);
+    QualType ArgType = Arg->getType();
+    if (!hasScalarEvaluationKind(ArgType) || ArgType->isFunctionType())
+      // We can only reason about scalar types.
+      return RValue::get(ConstantInt::get(ResultType, 0));
+
+    Value *ArgValue = EmitScalarExpr(Arg);
+    Value *F = CGM.getIntrinsic(Intrinsic::is_constant, ConvertType(ArgType));
+    Value *Result = Builder.CreateCall(F, ArgValue);
+    if (Result->getType() != ResultType)
+      Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/false);
+    return RValue::get(Result);
+  }
   case Builtin::BI__builtin_object_size: {
     unsigned Type =
         E->getArg(1)->EvaluateKnownConstInt(getContext()).getZExtValue();
@@ -2190,10 +2180,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin___memcpy_chk: {
     // fold __builtin_memcpy_chk(x, y, cst1, cst2) to memcpy iff cst1<=cst2.
-    llvm::APSInt Size, DstSize;
-    if (!E->getArg(2)->EvaluateAsInt(Size, CGM.getContext()) ||
-        !E->getArg(3)->EvaluateAsInt(DstSize, CGM.getContext()))
+    Expr::EvalResult SizeResult, DstSizeResult;
+    if (!E->getArg(2)->EvaluateAsInt(SizeResult, CGM.getContext()) ||
+        !E->getArg(3)->EvaluateAsInt(DstSizeResult, CGM.getContext()))
       break;
+    llvm::APSInt Size = SizeResult.Val.getInt();
+    llvm::APSInt DstSize = DstSizeResult.Val.getInt();
     if (Size.ugt(DstSize))
       break;
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
@@ -2214,10 +2206,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin___memmove_chk: {
     // fold __builtin_memmove_chk(x, y, cst1, cst2) to memmove iff cst1<=cst2.
-    llvm::APSInt Size, DstSize;
-    if (!E->getArg(2)->EvaluateAsInt(Size, CGM.getContext()) ||
-        !E->getArg(3)->EvaluateAsInt(DstSize, CGM.getContext()))
+    Expr::EvalResult SizeResult, DstSizeResult;
+    if (!E->getArg(2)->EvaluateAsInt(SizeResult, CGM.getContext()) ||
+        !E->getArg(3)->EvaluateAsInt(DstSizeResult, CGM.getContext()))
       break;
+    llvm::APSInt Size = SizeResult.Val.getInt();
+    llvm::APSInt DstSize = DstSizeResult.Val.getInt();
     if (Size.ugt(DstSize))
       break;
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
@@ -2252,10 +2246,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   case Builtin::BI__builtin___memset_chk: {
     // fold __builtin_memset_chk(x, y, cst1, cst2) to memset iff cst1<=cst2.
-    llvm::APSInt Size, DstSize;
-    if (!E->getArg(2)->EvaluateAsInt(Size, CGM.getContext()) ||
-        !E->getArg(3)->EvaluateAsInt(DstSize, CGM.getContext()))
+    Expr::EvalResult SizeResult, DstSizeResult;
+    if (!E->getArg(2)->EvaluateAsInt(SizeResult, CGM.getContext()) ||
+        !E->getArg(3)->EvaluateAsInt(DstSizeResult, CGM.getContext()))
       break;
+    llvm::APSInt Size = SizeResult.Val.getInt();
+    llvm::APSInt DstSize = DstSizeResult.Val.getInt();
     if (Size.ugt(DstSize))
       break;
     Address Dest = EmitPointerWithAlignment(E->getArg(0));
@@ -5769,10 +5765,11 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     llvm::FunctionType *FTy =
         llvm::FunctionType::get(VoidTy, /*Variadic=*/false);
 
-    APSInt Value;
-    if (!E->getArg(0)->EvaluateAsInt(Value, CGM.getContext()))
+    Expr::EvalResult Result;
+    if (!E->getArg(0)->EvaluateAsInt(Result, CGM.getContext()))
       llvm_unreachable("Sema will ensure that the parameter is constant");
 
+    llvm::APSInt Value = Result.Val.getInt();
     uint64_t ZExtValue = Value.zextOrTrunc(IsThumb ? 16 : 32).getZExtValue();
 
     llvm::InlineAsm *Emit =
@@ -6875,10 +6872,11 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == AArch64::BI__getReg) {
-    APSInt Value;
-    if (!E->getArg(0)->EvaluateAsInt(Value, CGM.getContext()))
+    Expr::EvalResult Result;
+    if (!E->getArg(0)->EvaluateAsInt(Result, CGM.getContext()))
       llvm_unreachable("Sema will ensure that the parameter is constant");
 
+    llvm::APSInt Value = Result.Val.getInt();
     LLVMContext &Context = CGM.getLLVMContext();
     std::string Reg = Value == 31 ? "sp" : "x" + Value.toString(10);
 
