@@ -1,3 +1,5 @@
+// REQUIRES: riscv-registered-target
+
 // RUN: %clang -target riscv32-unknown-elf -march=rv32i -### %s \
 // RUN: -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang -target riscv32-unknown-elf -march=rv32im -### %s \
