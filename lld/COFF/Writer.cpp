@@ -173,6 +173,7 @@ private:
   void createExportTable();
   void mergeSections();
   void readRelocTargets();
+  void removeUnusedSections();
   void assignAddresses();
   void finalizeAddresses();
   void removeEmptySections();
@@ -500,6 +501,7 @@ void Writer::run() {
   createExportTable();
   mergeSections();
   readRelocTargets();
+  removeUnusedSections();
   finalizeAddresses();
   removeEmptySections();
   setSectionPermissions();
@@ -880,6 +882,21 @@ void Writer::createExportTable() {
     return;
   for (Chunk *C : Edata.Chunks)
     EdataSec->addChunk(C);
+}
+
+void Writer::removeUnusedSections() {
+  // Remove sections that we can be sure won't get content, to avoid
+  // allocating space for their section headers.
+  auto IsUnused = [this](OutputSection *S) {
+    if (S == RelocSec)
+      return false; // This section is populated later.
+    // MergeChunks have zero size at this point, as their size is finalized
+    // later. Only remove sections that have no Chunks at all.
+    return S->Chunks.empty();
+  };
+  OutputSections.erase(
+      std::remove_if(OutputSections.begin(), OutputSections.end(), IsUnused),
+      OutputSections.end());
 }
 
 // The Windows loader doesn't seem to like empty sections,
