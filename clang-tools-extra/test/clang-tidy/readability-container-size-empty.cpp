@@ -105,10 +105,10 @@ int main() {
   std::string str;
   std::string str2;
   std::wstring wstr;
-  str.size() + 0;
-  str.size() - 0;
-  0 + str.size();
-  0 - str.size();
+  (void)(str.size() + 0);
+  (void)(str.size() - 0);
+  (void)(0 + str.size());
+  (void)(0 - str.size());
   if (intSet.size() == 0)
     ;
   // CHECK-MESSAGES: :[[@LINE-2]]:7: warning: the 'empty' method should be used to check for emptiness instead of 'size' [readability-container-size-empty]
@@ -399,8 +399,8 @@ int main() {
   // CHECK-FIXES: {{^  }}if (derived.empty()){{$}}
 }
 
-#define CHECKSIZE(x) if (x.size())
-// CHECK-FIXES: #define CHECKSIZE(x) if (x.size())
+#define CHECKSIZE(x) if (x.size()) {}
+// CHECK-FIXES: #define CHECKSIZE(x) if (x.size()) {}
 
 template <typename T> void f() {
   std::vector<T> v;
@@ -415,7 +415,7 @@ template <typename T> void f() {
   // CHECK-FIXES-NEXT: ;
   CHECKSIZE(v);
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: CHECKSIZE(v);
+  // CHECK-FIXES: CHECKSIZE(v);
 
   TemplatedContainer<T> templated_container;
   if (templated_container.size())
@@ -429,7 +429,7 @@ template <typename T> void f() {
   // CHECK-FIXES-NEXT: ;
   CHECKSIZE(templated_container);
   // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: the 'empty' method should be used
-  // CHECK-MESSAGES: CHECKSIZE(templated_container);
+  // CHECK-FIXES: CHECKSIZE(templated_container);
 }
 
 void g() {
