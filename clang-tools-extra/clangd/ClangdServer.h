@@ -202,6 +202,11 @@ public:
   /// Called when an event occurs for a watched file in the workspace.
   void onFileEvent(const DidChangeWatchedFilesParams &Params);
 
+  /// Get symbol info for given position.
+  /// Clangd extension - not part of official LSP.
+  void symbolInfo(PathRef File, Position Pos,
+                  Callback<std::vector<SymbolDetails>> CB);
+
   /// Returns estimated memory usage for each of the currently open files.
   /// The order of results is unspecified.
   /// Overall memory usage of clangd may be significantly more than reported
