@@ -6905,6 +6905,25 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   } break;
 
   case swift::TypeKind::Tuple: {
+    // Dynamic type resolution may actually change(!) the layout of a Tuple, so
+    // we need to get the offset from the static (but archetype-bound) version.
+    auto static_value = valobj->GetStaticValue();
+    auto static_type = static_value->GetCompilerType();
+    auto static_swift_type = GetCanonicalSwiftType(static_type);
+    if (static_swift_type->getKind() == swift::TypeKind::Tuple)
+      swift_can_type = static_swift_type;
+    if (swift_can_type->hasTypeParameter()) {
+      if (!exe_ctx)
+        return {};
+      auto *exe_scope = exe_ctx->GetBestExecutionContextScope();
+      auto *frame = exe_scope->CalculateStackFrame().get();
+      auto *runtime = exe_scope->CalculateProcess()->GetSwiftLanguageRuntime();
+      if (!frame || !runtime)
+        return {};
+      auto bound = runtime->DoArchetypeBindingForType(*frame, static_type);
+      swift_can_type = GetCanonicalSwiftType(bound);
+    }
+
     auto tuple_type = cast<swift::TupleType>(swift_can_type);
     if (idx >= tuple_type->getNumElements()) break;
 
