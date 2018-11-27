@@ -7,5 +7,4 @@ func f<T>(_ Pat : T) -> T {
   return Pat //%self.expect("frame var -d run-target -- Pat", substrs=['(a.MyErr) Pat = Patatino'])
 }
 
-let patatino = f(MyErr.Patatino as Error)
-print(patatino)
+f(MyErr.Patatino as Error)
