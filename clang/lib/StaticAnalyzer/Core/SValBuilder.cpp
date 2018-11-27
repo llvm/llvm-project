@@ -362,9 +362,9 @@ Optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
       return None;
 
     ASTContext &Ctx = getContext();
-    Expr::EvalResult Result;
+    llvm::APSInt Result;
     if (E->EvaluateAsInt(Result, Ctx))
-      return makeIntVal(Result.Val.getInt());
+      return makeIntVal(Result);
 
     if (Loc::isLocType(E->getType()))
       if (E->isNullPointerConstant(Ctx, Expr::NPC_ValueDependentIsNotNull))

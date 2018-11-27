@@ -2321,11 +2321,9 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
         Chunk = EmitScalarConversion(Chunk, ChunkExpr->getType(),
                                      S.getIterationVariable()->getType(),
                                      S.getBeginLoc());
-        Expr::EvalResult Result;
-        if (ChunkExpr->EvaluateAsInt(Result, getContext())) {
-          llvm::APSInt EvaluatedChunk = Result.Val.getInt();
+        llvm::APSInt EvaluatedChunk;
+        if (ChunkExpr->EvaluateAsInt(EvaluatedChunk, getContext()))
           HasChunkSizeOne = (EvaluatedChunk.getLimitedValue() == 1);
-        }
       }
       const unsigned IVSize = getContext().getTypeSize(IVExpr->getType());
       const bool IVSigned = IVExpr->getType()->hasSignedIntegerRepresentation();
