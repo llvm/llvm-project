@@ -31,7 +31,7 @@ int32_t __gpu_block_reduce() {
 }
 
 EXTERN
-int32_t __kmpc_reduce_gpu(kmp_Indent *loc, int32_t global_tid, int32_t num_vars,
+int32_t __kmpc_reduce_gpu(kmp_Ident *loc, int32_t global_tid, int32_t num_vars,
                           size_t reduce_size, void *reduce_data,
                           void *reduce_array_size, kmp_ReductFctPtr *reductFct,
                           kmp_CriticalName *lck) {
@@ -40,7 +40,8 @@ int32_t __kmpc_reduce_gpu(kmp_Indent *loc, int32_t global_tid, int32_t num_vars,
   int numthread;
   if (currTaskDescr->IsParallelConstruct()) {
     numthread =
-        GetNumberOfOmpThreads(threadId, isSPMDMode(), isRuntimeUninitialized());
+        GetNumberOfOmpThreads(threadId, checkSPMDMode(loc),
+                              checkRuntimeUninitialized(loc));
   } else {
     numthread = GetNumberOfOmpTeams();
   }
@@ -55,12 +56,12 @@ int32_t __kmpc_reduce_gpu(kmp_Indent *loc, int32_t global_tid, int32_t num_vars,
 }
 
 EXTERN
-int32_t __kmpc_reduce_combined(kmp_Indent *loc) {
+int32_t __kmpc_reduce_combined(kmp_Ident *loc) {
   return threadIdx.x == 0 ? 2 : 0;
 }
 
 EXTERN
-int32_t __kmpc_reduce_simd(kmp_Indent *loc) {
+int32_t __kmpc_reduce_simd(kmp_Ident *loc) {
   return (threadIdx.x % 32 == 0) ? 1 : 0;
 }
 

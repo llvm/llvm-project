@@ -760,9 +760,11 @@ static bool remapTypeIndex(TypeIndex &TI, ArrayRef<TypeIndex> TypeIndexMap) {
 }
 
 static void remapTypesInSymbolRecord(ObjFile *File, SymbolKind SymKind,
-                                     MutableArrayRef<uint8_t> Contents,
+                                     MutableArrayRef<uint8_t> RecordBytes,
                                      const CVIndexMap &IndexMap,
                                      ArrayRef<TiReference> TypeRefs) {
+  MutableArrayRef<uint8_t> Contents =
+      RecordBytes.drop_front(sizeof(RecordPrefix));
   for (const TiReference &Ref : TypeRefs) {
     unsigned ByteSize = Ref.Count * sizeof(TypeIndex);
     if (Contents.size() < Ref.Offset + ByteSize)
@@ -808,7 +810,7 @@ recordStringTableReferences(SymbolKind Kind, MutableArrayRef<uint8_t> Contents,
   switch (Kind) {
   case SymbolKind::S_FILESTATIC:
     // FileStaticSym::ModFileOffset
-    recordStringTableReferenceAtOffset(Contents, 4, StrTableRefs);
+    recordStringTableReferenceAtOffset(Contents, 8, StrTableRefs);
     break;
   case SymbolKind::S_DEFRANGE:
   case SymbolKind::S_DEFRANGE_SUBFIELD:
@@ -873,21 +875,22 @@ static void translateIdSymbols(MutableArrayRef<uint8_t> &RecordData,
 
 /// Copy the symbol record. In a PDB, symbol records must be 4 byte aligned.
 /// The object file may not be aligned.
-static MutableArrayRef<uint8_t> copySymbolForPdb(const CVSymbol &Sym,
-                                                 BumpPtrAllocator &Alloc) {
+static MutableArrayRef<uint8_t>
+copyAndAlignSymbol(const CVSymbol &Sym, MutableArrayRef<uint8_t> &AlignedMem) {
   size_t Size = alignTo(Sym.length(), alignOf(CodeViewContainer::Pdb));
   assert(Size >= 4 && "record too short");
   assert(Size <= MaxRecordLength && "record too long");
-  void *Mem = Alloc.Allocate(Size, 4);
+  assert(AlignedMem.size() >= Size && "didn't preallocate enough");
 
   // Copy the symbol record and zero out any padding bytes.
-  MutableArrayRef<uint8_t> NewData(reinterpret_cast<uint8_t *>(Mem), Size);
+  MutableArrayRef<uint8_t> NewData = AlignedMem.take_front(Size);
+  AlignedMem = AlignedMem.drop_front(Size);
   memcpy(NewData.data(), Sym.data().data(), Sym.length());
   memset(NewData.data() + Sym.length(), 0, Size - Sym.length());
 
   // Update the record prefix length. It should point to the beginning of the
   // next record.
-  auto *Prefix = reinterpret_cast<RecordPrefix *>(Mem);
+  auto *Prefix = reinterpret_cast<RecordPrefix *>(NewData.data());
   Prefix->RecordLen = Size - 2;
   return NewData;
 }
@@ -1001,8 +1004,8 @@ static bool symbolGoesInGlobalsStream(const CVSymbol &Sym) {
   }
 }
 
-static void addGlobalSymbol(pdb::GSIStreamBuilder &Builder, ObjFile &File,
-                            const CVSymbol &Sym) {
+static void addGlobalSymbol(pdb::GSIStreamBuilder &Builder, uint16_t ModIndex,
+                            unsigned SymOffset, const CVSymbol &Sym) {
   switch (Sym.kind()) {
   case SymbolKind::S_CONSTANT:
   case SymbolKind::S_UDT:
@@ -1018,12 +1021,12 @@ static void addGlobalSymbol(pdb::GSIStreamBuilder &Builder, ObjFile &File,
     if (Sym.kind() == SymbolKind::S_LPROC32)
       K = SymbolRecordKind::LocalProcRef;
     ProcRefSym PS(K);
-    PS.Module = static_cast<uint16_t>(File.ModuleDBI->getModuleIndex());
+    PS.Module = ModIndex;
     // For some reason, MSVC seems to add one to this value.
     ++PS.Module;
     PS.Name = getSymbolName(Sym);
     PS.SumName = 0;
-    PS.SymOffset = File.ModuleDBI->getNextSymbolOffset();
+    PS.SymOffset = SymOffset;
     Builder.addGlobalSymbol(PS);
     break;
   }
@@ -1039,8 +1042,53 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
   cantFail(SymData.readBytes(0, SymData.getLength(), SymsBuffer));
   SmallVector<SymbolScope, 4> Scopes;
 
+  // Iterate every symbol to check if any need to be realigned, and if so, how
+  // much space we need to allocate for them.
+  bool NeedsRealignment = false;
+  unsigned RealignedSize = 0;
   auto EC = forEachCodeViewRecord<CVSymbol>(
       SymsBuffer, [&](CVSymbol Sym) -> llvm::Error {
+        RealignedSize += alignTo(Sym.length(), alignOf(CodeViewContainer::Pdb));
+        NeedsRealignment |= RealignedSize != Sym.length();
+        return Error::success();
+      });
+
+  // If any of the symbol record lengths was corrupt, ignore them all, warn
+  // about it, and move on.
+  if (EC) {
+    warn("corrupt symbol records in " + File->getName());
+    consumeError(std::move(EC));
+    return;
+  }
+
+  // If any symbol needed realignment, allocate enough contiguous memory for
+  // them all. Typically symbol subsections are small enough that this will not
+  // cause fragmentation.
+  MutableArrayRef<uint8_t> AlignedSymbolMem;
+  if (NeedsRealignment) {
+    void *AlignedData =
+        Alloc.Allocate(RealignedSize, alignOf(CodeViewContainer::Pdb));
+    AlignedSymbolMem = makeMutableArrayRef(
+        reinterpret_cast<uint8_t *>(AlignedData), RealignedSize);
+  }
+
+  // Iterate again, this time doing the real work.
+  unsigned CurSymOffset = File->ModuleDBI->getNextSymbolOffset();
+  ArrayRef<uint8_t> BulkSymbols;
+  cantFail(forEachCodeViewRecord<CVSymbol>(
+      SymsBuffer, [&](CVSymbol Sym) -> llvm::Error {
+        // Align the record if required.
+        MutableArrayRef<uint8_t> RecordBytes;
+        if (NeedsRealignment) {
+          RecordBytes = copyAndAlignSymbol(Sym, AlignedSymbolMem);
+          Sym = CVSymbol(Sym.kind(), RecordBytes);
+        } else {
+          // Otherwise, we can actually mutate the symbol directly, since we
+          // copied it to apply relocations.
+          RecordBytes = makeMutableArrayRef(
+              const_cast<uint8_t *>(Sym.data().data()), Sym.length());
+        }
+
         // Discover type index references in the record. Skip it if we don't
         // know where they are.
         SmallVector<TiReference, 32> TypeRefs;
@@ -1050,45 +1098,51 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
           return Error::success();
         }
 
-        // Copy the symbol and fix the symbol record alignment. The symbol
-        // record in the object file may not be aligned.
-        MutableArrayRef<uint8_t> NewData = copySymbolForPdb(Sym, Alloc);
-        Sym = CVSymbol(Sym.kind(), NewData);
-
         // Re-map all the type index references.
-        MutableArrayRef<uint8_t> Contents =
-            NewData.drop_front(sizeof(RecordPrefix));
-        remapTypesInSymbolRecord(File, Sym.kind(), Contents, IndexMap,
+        remapTypesInSymbolRecord(File, Sym.kind(), RecordBytes, IndexMap,
                                  TypeRefs);
 
         // An object file may have S_xxx_ID symbols, but these get converted to
         // "real" symbols in a PDB.
-        translateIdSymbols(NewData, getIDTable());
-        Sym = CVSymbol(symbolKind(NewData), NewData);
+        translateIdSymbols(RecordBytes, getIDTable());
+        Sym = CVSymbol(symbolKind(RecordBytes), RecordBytes);
 
         // If this record refers to an offset in the object file's string table,
         // add that item to the global PDB string table and re-write the index.
-        recordStringTableReferences(Sym.kind(), Contents, StringTableRefs);
+        recordStringTableReferences(Sym.kind(), RecordBytes, StringTableRefs);
 
         // Fill in "Parent" and "End" fields by maintaining a stack of scopes.
         if (symbolOpensScope(Sym.kind()))
-          scopeStackOpen(Scopes, File->ModuleDBI->getNextSymbolOffset(), Sym);
+          scopeStackOpen(Scopes, CurSymOffset, Sym);
         else if (symbolEndsScope(Sym.kind()))
-          scopeStackClose(Scopes, File->ModuleDBI->getNextSymbolOffset(), File);
+          scopeStackClose(Scopes, CurSymOffset, File);
 
         // Add the symbol to the globals stream if necessary.  Do this before
         // adding the symbol to the module since we may need to get the next
         // symbol offset, and writing to the module's symbol stream will update
         // that offset.
         if (symbolGoesInGlobalsStream(Sym))
-          addGlobalSymbol(Builder.getGsiBuilder(), *File, Sym);
+          addGlobalSymbol(Builder.getGsiBuilder(),
+                          File->ModuleDBI->getModuleIndex(), CurSymOffset, Sym);
 
-        // Add the symbol to the module.
-        if (symbolGoesInModuleStream(Sym))
-          File->ModuleDBI->addSymbol(Sym);
+        if (symbolGoesInModuleStream(Sym)) {
+          // Add symbols to the module in bulk. If this symbol is contiguous
+          // with the previous run of symbols to add, combine the ranges. If
+          // not, close the previous range of symbols and start a new one.
+          if (Sym.data().data() == BulkSymbols.end()) {
+            BulkSymbols = makeArrayRef(BulkSymbols.data(),
+                                       BulkSymbols.size() + Sym.length());
+          } else {
+            File->ModuleDBI->addSymbolsInBulk(BulkSymbols);
+            BulkSymbols = RecordBytes;
+          }
+          CurSymOffset += Sym.length();
+        }
         return Error::success();
-      });
-  cantFail(std::move(EC));
+      }));
+
+  // Add any remaining symbols we've accumulated.
+  File->ModuleDBI->addSymbolsInBulk(BulkSymbols);
 }
 
 // Allocate memory for a .debug$S / .debug$F section and relocate it.
