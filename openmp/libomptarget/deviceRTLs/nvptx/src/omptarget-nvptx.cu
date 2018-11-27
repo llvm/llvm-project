@@ -162,12 +162,16 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
   }
 }
 
-EXTERN void __kmpc_spmd_kernel_deinit() {
+EXTERN __attribute__((deprecated)) void __kmpc_spmd_kernel_deinit() {
+  __kmpc_spmd_kernel_deinit_v2(isRuntimeInitialized());
+}
+
+EXTERN void __kmpc_spmd_kernel_deinit_v2(int16_t RequiresOMPRuntime) {
   // We're not going to pop the task descr stack of each thread since
   // there are no more parallel regions in SPMD mode.
   __syncthreads();
   int threadId = GetThreadIdInBlock();
-  if (isRuntimeUninitialized()) {
+  if (!RequiresOMPRuntime) {
     if (threadId == 0) {
       // Enqueue omp state object for use by another team.
       int slot = usedSlotIdx;

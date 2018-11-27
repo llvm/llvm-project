@@ -87,10 +87,9 @@ void Callback::run(const MatchFinder::MatchResult &Result) {
         MacroIndicatesWeShouldSkipTheCheck = true;
     }
     if (!MacroIndicatesWeShouldSkipTheCheck) {
-      Expr::EvalResult EVResult;
+      llvm::APSInt Result;
       if (CheckIfNull->IgnoreParenCasts()->EvaluateAsInt(
-              EVResult, ACtx, Expr::SE_AllowSideEffects)) {
-        llvm::APSInt Result = EVResult.Val.getInt();
+              Result, ACtx, Expr::SE_AllowSideEffects)) {
         if (Result == 0) {
           if (!C->Pedantic)
             return;

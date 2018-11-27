@@ -181,3 +181,33 @@ static void h() {
 }
 
 }
+
+struct PR38460 {
+  template <typename>
+  struct T {
+    static void foo() {
+      struct U {
+        void dummy() {
+          use_delayed_identifier();
+        }
+      };
+    }
+  };
+};
+void use_delayed_identifier();
+void trigger_PR38460() {
+  PR38460::T<int>::foo();
+}
+
+template <typename> struct PR38460_2 {
+  struct p {
+    struct G {
+      bool operator()(int) {}
+    };
+  };
+  static void as() {
+    typename p::G g;
+    g(0);
+  }
+};
+template struct PR38460_2<int>;

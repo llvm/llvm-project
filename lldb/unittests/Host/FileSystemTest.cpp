@@ -225,7 +225,11 @@ TEST(FileSystemTest, MakeAbsolute) {
     SmallString<16> foo(foo_relative);
     auto EC = fs.MakeAbsolute(foo);
     EXPECT_FALSE(EC);
+#ifdef _WIN32
+    EXPECT_TRUE(foo.equals("\\\\foo"));
+#else
     EXPECT_TRUE(foo.equals("/foo"));
+#endif
   }
 
   {
@@ -243,7 +247,11 @@ TEST(FileSystemTest, Resolve) {
     StringRef foo_relative = "foo";
     SmallString<16> foo(foo_relative);
     fs.Resolve(foo);
+#ifdef _WIN32
+    EXPECT_TRUE(foo.equals("\\\\foo"));
+#else
     EXPECT_TRUE(foo.equals("/foo"));
+#endif
   }
 
   {
