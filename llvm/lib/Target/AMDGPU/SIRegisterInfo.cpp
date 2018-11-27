@@ -901,7 +901,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
         .addImm(0)                        // glc
         .addMemOperand(MMO);
 
-      if (NumSubRegs > 1)
+      if (NumSubRegs > 1 && i == 0)
         MIB.addReg(SuperReg, RegState::ImplicitDefine);
 
       continue;
@@ -915,7 +915,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
         .addReg(Spill.VGPR)
         .addImm(Spill.Lane);
 
-      if (NumSubRegs > 1)
+      if (NumSubRegs > 1 && i == 0)
         MIB.addReg(SuperReg, RegState::ImplicitDefine);
     } else {
       if (OnlyToVGPR)

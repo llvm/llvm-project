@@ -1,0 +1,177 @@
+# RUN: llc -mtriple arm-linux-gnueabi -mattr=+v5t -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,CLZ
+# RUN: llc -mtriple arm-linux-gnueabi -mattr=-v5t -run-pass=legalizer %s -o - | FileCheck %s -check-prefixes=CHECK,LIBCALLS
+--- |
+  define void @test_ctlz_s32() { ret void }
+  define void @test_ctlz_zero_undef_s32() { ret void }
+
+  ; same as above but with extensions
+  define void @test_ctlz_s16() { ret void }
+  define void @test_ctlz_zero_undef_s8() { ret void }
+...
+---
+name:            test_ctlz_s32
+# CHECK-LABEL: name: test_ctlz_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY $r0
+    %0(s32) = COPY $r0
+
+    ; CLZ: [[R:%[0-9]+]]:_(s32) = G_CTLZ [[X]]
+    ; LIBCALLS-NOT: G_CTLZ
+    ; LIBCALLS: ADJCALLSTACKDOWN
+    ; LIBCALLS: $r0 = COPY [[X]]
+    ; LIBCALLS: BL &__clzsi2, {{.*}}, implicit $r0, implicit-def $r0
+    ; LIBCALLS: [[COUNT:%[0-9]+]]:_(s32) = COPY $r0
+    ; LIBCALLS: ADJCALLSTACKUP
+    ; LIBCALLS-NOT: G_CTLZ
+    ; LIBCALLS: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; LIBCALLS: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; LIBCALLS: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[X]](s32), [[ZERO]]
+    ; LIBCALLS: [[R:%[0-9]+]]:_(s32) = G_SELECT [[CMP]](s1), [[BITS]], [[COUNT]]
+    ; LIBCALLS-NOT: G_CTLZ
+    %1(s32) = G_CTLZ %0
+
+    ; CHECK: $r0 = COPY [[R]]
+    $r0 = COPY %1(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_ctlz_zero_undef_s32
+# CHECK-LABEL: name: test_ctlz_zero_undef_s32
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY $r0
+    %0(s32) = COPY $r0
+
+    ; CLZ: [[R:%[0-9]+]]:_(s32) = G_CTLZ [[X]]
+    ; LIBCALLS-NOT: G_CTLZ
+    ; LIBCALLS: ADJCALLSTACKDOWN
+    ; LIBCALLS: $r0 = COPY [[X]]
+    ; LIBCALLS: BL &__clzsi2, {{.*}}, implicit $r0, implicit-def $r0
+    ; LIBCALLS: [[R:%[0-9]+]]:_(s32) = COPY $r0
+    ; LIBCALLS: ADJCALLSTACKUP
+    ; LIBCALLS-NOT: G_CTLZ
+    %1(s32) = G_CTLZ_ZERO_UNDEF %0
+
+    ; CHECK: $r0 = COPY [[R]]
+    $r0 = COPY %1(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_ctlz_s16
+# CHECK-LABEL: name: test_ctlz_s16
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK: [[BITMASK:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK: [[XAGAIN:%[0-9]+]]:_(s32) = COPY [[X]]
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[XAGAIN]], [[BITMASK]]
+    %0(s32) = COPY $r0
+    %1(s16) = G_TRUNC %0(s32)
+
+    ; Check that the operation is performed for 32 bits
+    ; CLZ: [[COUNT:%[0-9]+]]:_(s32) = G_CTLZ [[X32]]
+    ; LIBCALLS-NOT: G_CTLZ
+    ; LIBCALLS: ADJCALLSTACKDOWN
+    ; LIBCALLS: $r0 = COPY [[X32]]
+    ; LIBCALLS: BL &__clzsi2, {{.*}}, implicit $r0, implicit-def $r0
+    ; LIBCALLS: [[UNDEFCOUNT:%[0-9]+]]:_(s32) = COPY $r0
+    ; LIBCALLS: ADJCALLSTACKUP
+    ; LIBCALLS-NOT: G_CTLZ
+    ; LIBCALLS: [[ZERO:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; LIBCALLS: [[BITS:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
+    ; LIBCALLS: [[CMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), {{%[0-9]+}}(s32), [[ZERO]]
+    ; LIBCALLS: [[COUNT:%[0-9]+]]:_(s32) = G_SELECT [[CMP]](s1), [[BITS]], [[UNDEFCOUNT]]
+    ; LIBCALLS-NOT: G_CTLZ
+    ; CHECK: [[BITDIFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[R32:%[0-9]+]]:_(s32) = G_SUB [[COUNT]], [[BITDIFF]]
+    %2(s16) = G_CTLZ %1
+
+    ; CHECK: [[BITDIFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK: [[RAGAIN:%[0-9]+]]:_(s32) = COPY [[R32]]
+    ; CHECK: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[RAGAIN]], [[BITDIFF]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]
+    ; CHECK: $r0 = COPY [[R]]
+    %3(s32) = G_SEXT %2(s16)
+    $r0 = COPY %3(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_ctlz_zero_undef_s8
+# CHECK-LABEL: name: test_ctlz_zero_undef_s8
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; CHECK: [[X:%[0-9]+]]:_(s32) = COPY $r0
+    ; CHECK: [[BITMASK:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK: [[XAGAIN:%[0-9]+]]:_(s32) = COPY [[X]]
+    ; CHECK: [[X32:%[0-9]+]]:_(s32) = G_AND [[XAGAIN]], [[BITMASK]]
+    %0(s32) = COPY $r0
+    %1(s8) = G_TRUNC %0(s32)
+
+    ; Check that the operation is performed for 32 bits
+    ; CLZ: [[COUNT:%[0-9]+]]:_(s32) = G_CTLZ
+    ; CLZ-NOT: G_CTLZ_ZERO_UNDEF
+    ; LIBCALLS-NOT: G_CTLZ
+    ; LIBCALLS: ADJCALLSTACKDOWN
+    ; LIBCALLS: $r0 = COPY [[X32]]
+    ; LIBCALLS: BL &__clzsi2, {{.*}}, implicit $r0, implicit-def $r0
+    ; LIBCALLS: [[COUNT:%[0-9]+]]:_(s32) = COPY $r0
+    ; LIBCALLS: ADJCALLSTACKUP
+    ; LIBCALLS-NOT: G_CTLZ
+    ; CHECK: [[BITDIFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[R32:%[0-9]+]]:_(s32) = G_SUB [[COUNT]], [[BITDIFF]]
+    %2(s8) = G_CTLZ_ZERO_UNDEF %1
+
+    ; CHECK: [[BITDIFF:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
+    ; CHECK: [[RAGAIN:%[0-9]+]]:_(s32) = COPY [[R32]]
+    ; CHECK: [[SHIFTEDR:%[0-9]+]]:_(s32) = G_SHL [[RAGAIN]], [[BITDIFF]]
+    ; CHECK: [[R:%[0-9]+]]:_(s32) = G_ASHR [[SHIFTEDR]], [[BITDIFF]]
+    ; CHECK: $r0 = COPY [[R]]
+    %3(s32) = G_SEXT %2(s8)
+    $r0 = COPY %3(s32)
+    BX_RET 14, $noreg, implicit $r0
+...

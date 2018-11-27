@@ -1837,6 +1837,17 @@ Instruction *InstCombiner::visitVACopyInst(VACopyInst &I) {
   return nullptr;
 }
 
+static Instruction *canonicalizeConstantArg0ToArg1(CallInst &Call) {
+  assert(Call.getNumArgOperands() > 1 && "Need at least 2 args to swap");
+  Value *Arg0 = Call.getArgOperand(0), *Arg1 = Call.getArgOperand(1);
+  if (isa<Constant>(Arg0) && !isa<Constant>(Arg1)) {
+    Call.setArgOperand(0, Arg1);
+    Call.setArgOperand(1, Arg0);
+    return &Call;
+  }
+  return nullptr;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallSite to do the heavy
 /// lifting.
@@ -2031,14 +2042,8 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::umul_with_overflow:
   case Intrinsic::smul_with_overflow:
-    if (isa<Constant>(II->getArgOperand(0)) &&
-        !isa<Constant>(II->getArgOperand(1))) {
-      // Canonicalize constants into the RHS.
-      Value *LHS = II->getArgOperand(0);
-      II->setArgOperand(0, II->getArgOperand(1));
-      II->setArgOperand(1, LHS);
-      return II;
-    }
+    if (Instruction *I = canonicalizeConstantArg0ToArg1(CI))
+      return I;
     LLVM_FALLTHROUGH;
 
   case Intrinsic::usub_with_overflow:
@@ -2060,15 +2065,10 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
   case Intrinsic::maxnum:
   case Intrinsic::minimum:
   case Intrinsic::maximum: {
+    if (Instruction *I = canonicalizeConstantArg0ToArg1(CI))
+      return I;
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
-    // Canonicalize constants to the RHS.
-    if (isa<ConstantFP>(Arg0) && !isa<ConstantFP>(Arg1)) {
-      II->setArgOperand(0, Arg1);
-      II->setArgOperand(1, Arg0);
-      return II;
-    }
-
     Intrinsic::ID IID = II->getIntrinsicID();
     Value *X, *Y;
     if (match(Arg0, m_FNeg(m_Value(X))) && match(Arg1, m_FNeg(m_Value(Y))) &&
@@ -2148,17 +2148,12 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     LLVM_FALLTHROUGH;
   }
   case Intrinsic::fma: {
-    Value *Src0 = II->getArgOperand(0);
-    Value *Src1 = II->getArgOperand(1);
-
-    // Canonicalize constant multiply operand to Src1.
-    if (isa<Constant>(Src0) && !isa<Constant>(Src1)) {
-      II->setArgOperand(0, Src1);
-      II->setArgOperand(1, Src0);
-      std::swap(Src0, Src1);
-    }
+    if (Instruction *I = canonicalizeConstantArg0ToArg1(CI))
+      return I;
 
     // fma fneg(x), fneg(y), z -> fma x, y, z
+    Value *Src0 = II->getArgOperand(0);
+    Value *Src1 = II->getArgOperand(1);
     Value *X, *Y;
     if (match(Src0, m_FNeg(m_Value(X))) && match(Src1, m_FNeg(m_Value(Y)))) {
       II->setArgOperand(0, X);

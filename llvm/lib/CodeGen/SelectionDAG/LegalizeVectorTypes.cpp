@@ -1694,13 +1694,6 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     case ISD::VSELECT:
       Res = SplitVecOp_VSELECT(N, OpNo);
       break;
-    case ISD::FP_TO_SINT:
-    case ISD::FP_TO_UINT:
-      if (N->getValueType(0).bitsLT(N->getOperand(0).getValueType()))
-        Res = SplitVecOp_TruncateHelper(N);
-      else
-        Res = SplitVecOp_UnaryOp(N);
-      break;
     case ISD::SINT_TO_FP:
     case ISD::UINT_TO_FP:
       if (N->getValueType(0).bitsLT(N->getOperand(0).getValueType()))
@@ -1708,6 +1701,8 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
       else
         Res = SplitVecOp_UnaryOp(N);
       break;
+    case ISD::FP_TO_SINT:
+    case ISD::FP_TO_UINT:
     case ISD::CTTZ:
     case ISD::CTLZ:
     case ISD::CTPOP:

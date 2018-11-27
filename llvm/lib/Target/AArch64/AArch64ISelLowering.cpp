@@ -7845,7 +7845,7 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
   Cmp = DAG.getSExtOrTrunc(Cmp, dl, Op.getValueType());
 
   if (ShouldInvert)
-    return Cmp = DAG.getNOT(dl, Cmp, Cmp.getValueType());
+    Cmp = DAG.getNOT(dl, Cmp, Cmp.getValueType());
 
   return Cmp;
 }

@@ -56,8 +56,12 @@ public:
 
   /// Returns the modification time of the given file.
   /// @{
-  llvm::sys::TimePoint<> GetModificationTime(const FileSpec &file_spec) const;
-  llvm::sys::TimePoint<> GetModificationTime(const llvm::Twine &path) const;
+  llvm::sys::TimePoint<>
+  GetModificationTime(const FileSpec &file_spec,
+                      bool nanosecond_precision = true) const;
+  llvm::sys::TimePoint<>
+  GetModificationTime(const llvm::Twine &path,
+                      bool nanosecond_precision = true) const;
   /// @}
 
   /// Returns the on-disk size of the given file in bytes.
