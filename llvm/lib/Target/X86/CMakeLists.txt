@@ -30,6 +30,7 @@ set(sources
   X86CmovConversion.cpp
   X86CondBrFolding.cpp
   X86DomainReassignment.cpp
+  X86DiscriminateMemOps.cpp
   X86ExpandPseudo.cpp
   X86FastISel.cpp
   X86FixupBWInsts.cpp
@@ -44,6 +45,7 @@ set(sources
   X86ISelLowering.cpp
   X86IndirectBranchTracking.cpp
   X86InterleavedAccess.cpp
+  X86InsertPrefetch.cpp
   X86InstrFMA3Info.cpp
   X86InstrFoldTables.cpp
   X86InstrInfo.cpp

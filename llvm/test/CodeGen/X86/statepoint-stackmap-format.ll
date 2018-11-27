@@ -71,8 +71,34 @@ entry:
   ret i1 %call1
 }
 
+; This test checks that when SP is changed in the function
+; (e.g. passing arguments on stack), the stack map entry
+; takes this adjustment into account.
+declare void @many_arg(i64, i64, i64, i64, i64, i64, i64, i64)
+
+define i32 @test_spadj(i32 addrspace(1)* %p) gc "statepoint-example" {
+  ; CHECK-LABEL: test_spadj
+  ; CHECK: movq %rdi, (%rsp)
+  ; CHECK: xorl %edi, %edi
+  ; CHECK: xorl %esi, %esi
+  ; CHECK: xorl %edx, %edx
+  ; CHECK: xorl %ecx, %ecx
+  ; CHECK: xorl %r8d, %r8d
+  ; CHECK: xorl %r9d, %r9d
+  ; CHECK: pushq $0
+  ; CHECK: pushq $0
+  ; CHECK: callq many_arg
+  ; CHECK: addq $16, %rsp
+  ; CHECK: movq (%rsp)
+  %statepoint_token = call token (i64, i32, void (i64, i64, i64, i64, i64, i64, i64, i64)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidi64i64i64i64i64i64i64i64f(i64 0, i32 0, void (i64, i64, i64, i64, i64, i64, i64, i64)* @many_arg, i32 8, i32 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0, i32 0, i32 addrspace(1)* %p)
+  %p.relocated = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %statepoint_token, i32 15, i32 15) ; (%p, %p)
+  %ld = load i32, i32 addrspace(1)* %p.relocated
+  ret i32 %ld
+}
+
 
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0f_isVoidi64i64i64i64i64i64i64i64f(i64, i32, void (i64, i64, i64, i64, i64, i64, i64, i64)*, i32, i32, ...)
 declare i1 @llvm.experimental.gc.result.i1(token)
 declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) #3
 
@@ -83,11 +109,11 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 ; CHECK-NEXT:   .byte 0
 ; CHECK-NEXT:   .short 0
 ; Num Functions
-; CHECK-NEXT:   .long 3
+; CHECK-NEXT:   .long 4
 ; Num LargeConstants
 ; CHECK-NEXT:   .long 0
 ; Num Callsites
-; CHECK-NEXT:   .long 3
+; CHECK-NEXT:   .long 4
 
 ; Functions and stack size
 ; CHECK-NEXT:   .quad test
@@ -97,6 +123,9 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 ; CHECK-NEXT:   .quad 40
 ; CHECK-NEXT:   .quad 1
 ; CHECK-NEXT:   .quad test_id
+; CHECK-NEXT:   .quad 8
+; CHECK-NEXT:   .quad 1
+; CHECK-NEXT:   .quad test_spadj
 ; CHECK-NEXT:   .quad 8
 ; CHECK-NEXT:   .quad 1
 
@@ -322,6 +351,71 @@ declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32) 
 ; CHECK: .short	0
 ; CHECK-NEXT:   .short  0
 ; CHECK: .long	0
+
+; No padding or LiveOuts
+; CHECK: .short	0
+; CHECK: .short	0
+; CHECK: .p2align	3
+
+;
+; test_spadj
+
+; Statepoint ID
+; CHECK-NEXT: .quad	0
+
+; Instruction Offset
+; CHECK-NEXT: .long	.Ltmp3-test_spadj
+
+; Reserved:
+; CHECK: .short	0
+
+; NumLocations:
+; CHECK: .short	5
+
+; StkMapRecord[0]:
+; SmallConstant(0):
+; CHECK: .byte	4
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
+; CHECK: .short	0
+; CHECK-NEXT:   .short  0
+; CHECK: .long	0
+
+; StkMapRecord[1]:
+; SmallConstant(0):
+; CHECK: .byte	4
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
+; CHECK: .short	0
+; CHECK-NEXT:   .short  0
+; CHECK: .long	0
+
+; StkMapRecord[2]:
+; SmallConstant(0):
+; CHECK: .byte	4
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
+; CHECK: .short	0
+; CHECK-NEXT:   .short  0
+; CHECK: .long	0
+
+; StkMapRecord[3]:
+; Indirect Spill Slot [RSP+16]
+; CHECK: .byte	3
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
+; CHECK: .short	7
+; CHECK-NEXT:   .short  0
+; CHECK: .long	16
+
+; StkMapRecord[4]:
+; Indirect Spill Slot [RSP+16]
+; CHECK: .byte	3
+; CHECK-NEXT:   .byte   0
+; CHECK: .short 8
+; CHECK: .short	7
+; CHECK-NEXT:   .short  0
+; CHECK: .long	16
 
 ; No padding or LiveOuts
 ; CHECK: .short	0

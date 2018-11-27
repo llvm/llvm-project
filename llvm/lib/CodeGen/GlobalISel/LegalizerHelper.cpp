@@ -93,6 +93,9 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
   case TargetOpcode::G_UREM:
     assert(Size == 32 && "Unsupported size");
     return RTLIB::UREM_I32;
+  case TargetOpcode::G_CTLZ_ZERO_UNDEF:
+    assert(Size == 32 && "Unsupported size");
+    return RTLIB::CTLZ_I32;
   case TargetOpcode::G_FADD:
     assert((Size == 32 || Size == 64) && "Unsupported size");
     return Size == 64 ? RTLIB::ADD_F64 : RTLIB::ADD_F32;
@@ -189,7 +192,8 @@ LegalizerHelper::libcall(MachineInstr &MI) {
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_SREM:
-  case TargetOpcode::G_UREM: {
+  case TargetOpcode::G_UREM:
+  case TargetOpcode::G_CTLZ_ZERO_UNDEF: {
     Type *HLTy = Type::getInt32Ty(Ctx);
     auto Status = simpleLibcall(MI, MIRBuilder, Size, HLTy);
     if (Status != Legalized)
@@ -675,7 +679,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
                                 MIRBuilder.buildConstant(WideTy, SizeDiff));
     }
     auto &TII = *MI.getMF()->getSubtarget().getInstrInfo();
-    // Make the original instruction a trunc now, and update it's source.
+    // Make the original instruction a trunc now, and update its source.
     MI.setDesc(TII.get(TargetOpcode::G_TRUNC));
     MI.getOperand(1).setReg(MIBNewOp->getOperand(0).getReg());
     MIRBuilder.recordInsertion(&MI);
@@ -1108,9 +1112,9 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   unsigned Opc = MI.getOpcode();
   auto &TII = *MI.getMF()->getSubtarget().getInstrInfo();
-  auto isLegalOrCustom = [this](const LegalityQuery &Q) {
+  auto isSupported = [this](const LegalityQuery &Q) {
     auto QAction = LI.getAction(Q).Action;
-    return QAction == Legal || QAction == Custom;
+    return QAction == Legal || QAction == Libcall || QAction == Custom;
   };
   switch (Opc) {
   default:
@@ -1124,9 +1128,8 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   case TargetOpcode::G_CTLZ: {
     unsigned SrcReg = MI.getOperand(1).getReg();
     unsigned Len = Ty.getSizeInBits();
-    if (isLegalOrCustom({TargetOpcode::G_CTLZ_ZERO_UNDEF, {Ty}})) {
-      // If CTLZ_ZERO_UNDEF is legal or custom, emit that and a select with
-      // zero.
+    if (isSupported({TargetOpcode::G_CTLZ_ZERO_UNDEF, {Ty}})) {
+      // If CTLZ_ZERO_UNDEF is supported, emit that and a select for zero.
       auto MIBCtlzZU =
           MIRBuilder.buildInstr(TargetOpcode::G_CTLZ_ZERO_UNDEF, Ty, SrcReg);
       auto MIBZero = MIRBuilder.buildConstant(Ty, 0);
@@ -1173,7 +1176,7 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   case TargetOpcode::G_CTTZ: {
     unsigned SrcReg = MI.getOperand(1).getReg();
     unsigned Len = Ty.getSizeInBits();
-    if (isLegalOrCustom({TargetOpcode::G_CTTZ_ZERO_UNDEF, {Ty}})) {
+    if (isSupported({TargetOpcode::G_CTTZ_ZERO_UNDEF, {Ty}})) {
       // If CTTZ_ZERO_UNDEF is legal or custom, emit that and a select with
       // zero.
       auto MIBCttzZU =
@@ -1197,8 +1200,8 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     auto MIBTmp = MIRBuilder.buildInstr(
         TargetOpcode::G_AND, Ty, MIBNot,
         MIRBuilder.buildInstr(TargetOpcode::G_ADD, Ty, SrcReg, MIBCstNeg1));
-    if (!isLegalOrCustom({TargetOpcode::G_CTPOP, {Ty}}) &&
-        isLegalOrCustom({TargetOpcode::G_CTLZ, {Ty}})) {
+    if (!isSupported({TargetOpcode::G_CTPOP, {Ty}}) &&
+        isSupported({TargetOpcode::G_CTLZ, {Ty}})) {
       auto MIBCstLen = MIRBuilder.buildConstant(Ty, Len);
       MIRBuilder.buildInstr(
           TargetOpcode::G_SUB, MI.getOperand(0).getReg(),

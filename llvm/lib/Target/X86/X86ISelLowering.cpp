@@ -909,6 +909,14 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FP_TO_UINT,         MVT::v2i16, Custom);
     setOperationAction(ISD::FP_TO_UINT,         MVT::v4i16, Custom);
 
+    // By marking FP_TO_SINT v8i16 as Custom, will trick type legalization into
+    // promoting v8i8 FP_TO_UINT into FP_TO_SINT. When the v8i16 FP_TO_SINT is
+    // split again based on the input type, this will cause an AssertSExt i16 to
+    // be emitted instead of an AssertZExt. This will allow packssdw followed by
+    // packuswb to be used to truncate to v8i8. This is necessary since packusdw
+    // isn't available until sse4.1.
+    setOperationAction(ISD::FP_TO_SINT,         MVT::v8i16, Custom);
+
     setOperationAction(ISD::SINT_TO_FP,         MVT::v4i32, Legal);
     setOperationAction(ISD::SINT_TO_FP,         MVT::v2i32, Custom);
 
@@ -26458,11 +26466,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       unsigned NewEltWidth = std::min(128 / VT.getVectorNumElements(), 32U);
       MVT PromoteVT = MVT::getVectorVT(MVT::getIntegerVT(NewEltWidth),
                                        VT.getVectorNumElements());
-      unsigned Opc = N->getOpcode();
-      if (PromoteVT == MVT::v2i32 || PromoteVT == MVT::v4i32)
-        Opc = ISD::FP_TO_SINT;
-
-      SDValue Res = DAG.getNode(Opc, dl, PromoteVT, Src);
+      SDValue Res = DAG.getNode(ISD::FP_TO_SINT, dl, PromoteVT, Src);
 
       // Preserve what we know about the size of the original result. Except
       // when the result is v2i32 since we can't widen the assert.
@@ -41060,10 +41064,6 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
-/// Return true if the target has native support for the specified value type
-/// and it is 'desirable' to use the type for the given node type. e.g. On x86
-/// i16 is legal, but undesirable since i16 instruction encodings are longer and
-/// some i16 instructions are slow.
 bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   if (!isTypeLegal(VT))
     return false;
@@ -41072,26 +41072,37 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   if (Opc == ISD::SHL && VT.isVector() && VT.getVectorElementType() == MVT::i8)
     return false;
 
-  if (VT != MVT::i16)
-    return true;
-
-  switch (Opc) {
-  default:
-    return true;
-  case ISD::LOAD:
-  case ISD::SIGN_EXTEND:
-  case ISD::ZERO_EXTEND:
-  case ISD::ANY_EXTEND:
-  case ISD::SHL:
-  case ISD::SRL:
-  case ISD::SUB:
-  case ISD::ADD:
-  case ISD::MUL:
-  case ISD::AND:
-  case ISD::OR:
-  case ISD::XOR:
+  // 8-bit multiply is probably not much cheaper than 32-bit multiply, and
+  // we have specializations to turn 32-bit multiply into LEA or other ops.
+  // Also, see the comment in "IsDesirableToPromoteOp" - where we additionally
+  // check for a constant operand to the multiply.
+  if (Opc == ISD::MUL && VT == MVT::i8)
     return false;
+
+  // i16 instruction encodings are longer and some i16 instructions are slow,
+  // so those are not desirable.
+  if (VT == MVT::i16) {
+    switch (Opc) {
+    default:
+      break;
+    case ISD::LOAD:
+    case ISD::SIGN_EXTEND:
+    case ISD::ZERO_EXTEND:
+    case ISD::ANY_EXTEND:
+    case ISD::SHL:
+    case ISD::SRL:
+    case ISD::SUB:
+    case ISD::ADD:
+    case ISD::MUL:
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+      return false;
+    }
   }
+
+  // Any legal type not explicitly accounted for above here is desirable.
+  return true;
 }
 
 SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl,
@@ -41110,12 +41121,16 @@ SDValue X86TargetLowering::expandIndirectJTBranch(const SDLoc& dl,
   return TargetLowering::expandIndirectJTBranch(dl, Value, Addr, DAG);
 }
 
-/// This method query the target whether it is beneficial for dag combiner to
-/// promote the specified node. If true, it should return the desired promotion
-/// type by reference.
 bool X86TargetLowering::IsDesirableToPromoteOp(SDValue Op, EVT &PVT) const {
   EVT VT = Op.getValueType();
-  if (VT != MVT::i16)
+  bool Is8BitMulByConstant = VT == MVT::i8 && Op.getOpcode() == ISD::MUL &&
+                             isa<ConstantSDNode>(Op.getOperand(1));
+
+  // i16 is legal, but undesirable since i16 instruction encodings are longer
+  // and some i16 instructions are slow.
+  // 8-bit multiply-by-constant can usually be expanded to something cheaper
+  // using LEA and/or other ALU ops.
+  if (VT != MVT::i16 && !Is8BitMulByConstant)
     return false;
 
   auto IsFoldableRMW = [](SDValue Load, SDValue Op) {

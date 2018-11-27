@@ -27,6 +27,8 @@
   define void @test_inttoptr_s32() { ret void }
   define void @test_ptrtoint_s32() { ret void }
 
+  define void @test_ctlz_s32() #3 { ret void }
+
   @a_global = global float 1.0
   define void @test_globals() { ret void }
 
@@ -83,6 +85,7 @@
   attributes #0 = { "target-features"="+vfp2"}
   attributes #1 = { "target-features"="+hwdiv-arm" }
   attributes #2 = { "target-features"="+vfp4"}
+  attributes #3 = { "target-features"="+v5t"}
 ...
 ---
 name:            test_add_s32
@@ -557,6 +560,25 @@ body:             |
   bb.0:
     %0(p0) = COPY $r0
     %1(s32) = G_PTRTOINT %0(p0)
+    $r0 = COPY %1(s32)
+    BX_RET 14, $noreg, implicit $r0
+...
+---
+name:            test_ctlz_s32
+# CHECK-LABEL: name: test_ctlz_s32
+legalized:       true
+regBankSelected: false
+selected:        false
+# CHECK: registers:
+# CHECK: - { id: 0, class: gprb, preferred-register: '' }
+# CHECK: - { id: 1, class: gprb, preferred-register: '' }
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+body:             |
+  bb.0:
+    %0(s32) = COPY $r0
+    %1(s32) = G_CTLZ %0(s32)
     $r0 = COPY %1(s32)
     BX_RET 14, $noreg, implicit $r0
 ...
