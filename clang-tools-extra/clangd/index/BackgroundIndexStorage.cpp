@@ -30,7 +30,7 @@ std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
   llvm::sys::path::append(ShardRootSS, llvm::sys::path::filename(FilePath) +
                                            "." + llvm::toHex(digest(FilePath)) +
                                            ".idx");
-  return ShardRoot.str();
+  return ShardRootSS.str();
 }
 
 // Uses disk as a storage for index shards. Creates a directory called
@@ -81,15 +81,35 @@ public:
   }
 };
 
+// Doesn't persist index shards anywhere (used when the CDB dir is unknown).
+// We could consider indexing into ~/.clangd/ or so instead.
+class NullStorage : public BackgroundIndexStorage {
+public:
+  std::unique_ptr<IndexFileIn>
+  loadShard(llvm::StringRef ShardIdentifier) const override {
+    return nullptr;
+  }
+
+  llvm::Error storeShard(llvm::StringRef ShardIdentifier,
+                         IndexFileOut Shard) const override {
+    vlog("Couldn't find project for {0}, indexing in-memory only",
+         ShardIdentifier);
+    return llvm::Error::success();
+  }
+};
+
 // Creates and owns IndexStorages for multiple CDBs.
 class DiskBackedIndexStorageManager {
 public:
+  DiskBackedIndexStorageManager()
+      : IndexStorageMapMu(llvm::make_unique<std::mutex>()) {}
+
   // Creates or fetches to storage from cache for the specified CDB.
   BackgroundIndexStorage *operator()(llvm::StringRef CDBDirectory) {
     std::lock_guard<std::mutex> Lock(*IndexStorageMapMu);
     auto &IndexStorage = IndexStorageMap[CDBDirectory];
     if (!IndexStorage)
-      IndexStorage = llvm::make_unique<DiskBackedIndexStorage>(CDBDirectory);
+      IndexStorage = create(CDBDirectory);
     return IndexStorage.get();
   }
 
@@ -97,6 +117,12 @@ public:
   BackgroundIndexStorage *createStorage(llvm::StringRef CDBDirectory);
 
 private:
+  std::unique_ptr<BackgroundIndexStorage> create(llvm::StringRef CDBDirectory) {
+    if (CDBDirectory.empty())
+      return llvm::make_unique<NullStorage>();
+    return llvm::make_unique<DiskBackedIndexStorage>(CDBDirectory);
+  }
+
   llvm::StringMap<std::unique_ptr<BackgroundIndexStorage>> IndexStorageMap;
   std::unique_ptr<std::mutex> IndexStorageMapMu;
 };

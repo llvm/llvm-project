@@ -20,7 +20,6 @@
 #include <limits>
 #include <memory>
 #include <pthread.h>
-#include <sys/syscall.h>
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
@@ -250,7 +249,7 @@ XRayBuffer fdrIterator(const XRayBuffer B) {
   // fence ordering to ensure that writes we expect to have been completed
   // before the fence are fully committed before we read the extents.
   atomic_thread_fence(memory_order_acquire);
-  auto BufferSize = atomic_load(&It->Extents, memory_order_acquire);
+  auto BufferSize = atomic_load(It->Extents, memory_order_acquire);
   SerializedBufferSize = BufferSize + sizeof(MetadataRecord);
   CurrentBuffer = allocateBuffer(SerializedBufferSize);
   if (CurrentBuffer == nullptr)
@@ -364,7 +363,7 @@ XRayLogFlushStatus fdrLoggingFlush() XRAY_NEVER_INSTRUMENT {
     // still use a Metadata record, but fill in the extents instead for the
     // data.
     MetadataRecord ExtentsRecord;
-    auto BufferExtents = atomic_load(&B.Extents, memory_order_acquire);
+    auto BufferExtents = atomic_load(B.Extents, memory_order_acquire);
     DCHECK(BufferExtents <= B.Size);
     ExtentsRecord.Type = uint8_t(RecordType::Metadata);
     ExtentsRecord.RecordKind =

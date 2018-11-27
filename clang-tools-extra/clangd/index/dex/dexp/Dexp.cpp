@@ -257,7 +257,7 @@ struct {
 };
 
 std::unique_ptr<SymbolIndex> openIndex(StringRef Index) {
-  return loadIndex(Index, /*URISchemes=*/{}, /*UseDex=*/true);
+  return loadIndex(Index, /*UseDex=*/true);
 }
 
 } // namespace

@@ -57,6 +57,7 @@ private:
   // Calls have signature void(const Params&, Callback<Response>).
   void onInitialize(const InitializeParams &, Callback<llvm::json::Value>);
   void onShutdown(const ShutdownParams &, Callback<std::nullptr_t>);
+  void onSync(const NoParams &, Callback<std::nullptr_t>);
   void onDocumentDidOpen(const DidOpenTextDocumentParams &);
   void onDocumentDidChange(const DidChangeTextDocumentParams &);
   void onDocumentDidClose(const DidCloseTextDocumentParams &);
@@ -66,8 +67,11 @@ private:
                                  Callback<std::vector<TextEdit>>);
   void onDocumentFormatting(const DocumentFormattingParams &,
                             Callback<std::vector<TextEdit>>);
+  // The results are serialized 'vector<DocumentSymbol>' if
+  // SupportsHierarchicalDocumentSymbol is true and 'vector<SymbolInformation>'
+  // otherwise.
   void onDocumentSymbol(const DocumentSymbolParams &,
-                        Callback<std::vector<SymbolInformation>>);
+                        Callback<llvm::json::Value>);
   void onCodeAction(const CodeActionParams &, Callback<llvm::json::Value>);
   void onCompletion(const TextDocumentPositionParams &,
                     Callback<CompletionList>);
@@ -128,6 +132,8 @@ private:
   CompletionItemKindBitset SupportedCompletionItemKinds;
   // Whether the client supports CodeAction response objects.
   bool SupportsCodeAction = false;
+  /// From capabilities of textDocument/documentSymbol.
+  bool SupportsHierarchicalDocumentSymbol = false;
 
   // Store of the current versions of the open documents.
   DraftStore DraftMgr;

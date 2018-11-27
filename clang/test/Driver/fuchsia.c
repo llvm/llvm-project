@@ -149,6 +149,26 @@
 // CHECK-SCUDO-SHARED: "-fsanitize=safe-stack,scudo"
 // CHECK-SCUDO-SHARED: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.scudo.so"
 
+// RUN: %clang %s -### --target=x86_64-fuchsia \
+// RUN:     -fxray-instrument -fxray-modes=xray-basic \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-XRAY-X86
+// CHECK-XRAY-X86: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-XRAY-X86: "-fxray-instrument"
+// CHECK-XRAY-X86: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.xray.a"
+// CHECK-XRAY-X86: "[[RESOURCE_DIR]]{{/|\\\\}}x86_64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.xray-basic.a"
+
+// RUN: %clang %s -### --target=aarch64-fuchsia \
+// RUN:     -fxray-instrument -fxray-modes=xray-basic \
+// RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -fuse-ld=lld 2>&1 \
+// RUN:     | FileCheck %s -check-prefix=CHECK-XRAY-AARCH64
+// CHECK-XRAY-AARCH64: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-XRAY-AARCH64: "-fxray-instrument"
+// CHECK-XRAY-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.xray.a"
+// CHECK-XRAY-AARCH64: "[[RESOURCE_DIR]]{{/|\\\\}}aarch64-fuchsia{{/|\\\\}}lib{{/|\\\\}}libclang_rt.xray-basic.a"
+
 // RUN: %clang %s -### --target=aarch64-fuchsia \
 // RUN:     -O3 -flto -mcpu=cortex-a53 2>&1 \
 // RUN:     -fuse-ld=lld \

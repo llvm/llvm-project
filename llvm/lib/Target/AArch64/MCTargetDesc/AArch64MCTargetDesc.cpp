@@ -16,6 +16,7 @@
 #include "AArch64MCAsmInfo.h"
 #include "AArch64WinCOFFStreamer.h"
 #include "InstPrinter/AArch64InstPrinter.h"
+#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -31,6 +32,7 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
+#define GET_GENINSTRINFO_MC_HELPERS
 #include "AArch64GenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC

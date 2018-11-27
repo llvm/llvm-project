@@ -3922,6 +3922,10 @@ void Verifier::visitInstruction(Instruction &I) {
     }
   }
 
+  // Get a pointer to the call base of the instruction if it is some form of
+  // call.
+  const CallBase *CBI = dyn_cast<CallBase>(&I);
+
   for (unsigned i = 0, e = I.getNumOperands(); i != e; ++i) {
     Assert(I.getOperand(i) != nullptr, "Instruction has null operand!", &I);
 
@@ -3934,10 +3938,9 @@ void Verifier::visitInstruction(Instruction &I) {
     if (Function *F = dyn_cast<Function>(I.getOperand(i))) {
       // Check to make sure that the "address of" an intrinsic function is never
       // taken.
-      Assert(
-          !F->isIntrinsic() ||
-              i == (isa<CallInst>(I) ? e - 1 : isa<InvokeInst>(I) ? e - 3 : 0),
-          "Cannot take the address of an intrinsic!", &I);
+      Assert(!F->isIntrinsic() ||
+                 (CBI && &CBI->getCalledOperandUse() == &I.getOperandUse(i)),
+             "Cannot take the address of an intrinsic!", &I);
       Assert(
           !F->isIntrinsic() || isa<CallInst>(I) ||
               F->getIntrinsicID() == Intrinsic::donothing ||
@@ -3963,8 +3966,7 @@ void Verifier::visitInstruction(Instruction &I) {
     } else if (isa<Instruction>(I.getOperand(i))) {
       verifyDominatesUse(I, i);
     } else if (isa<InlineAsm>(I.getOperand(i))) {
-      Assert((i + 1 == e && isa<CallInst>(I)) ||
-                 (i + 3 == e && isa<InvokeInst>(I)),
+      Assert(CBI && &CBI->getCalledOperandUse() == &I.getOperandUse(i),
              "Cannot take the address of an inline asm!", &I);
     } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(I.getOperand(i))) {
       if (CE->getType()->isPtrOrPtrVectorTy() ||

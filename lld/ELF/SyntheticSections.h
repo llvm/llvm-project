@@ -170,7 +170,9 @@ private:
 class BssSection final : public SyntheticSection {
 public:
   BssSection(StringRef Name, uint64_t Size, uint32_t Alignment);
-  void writeTo(uint8_t *) override {}
+  void writeTo(uint8_t *) override {
+    llvm_unreachable("unexpected writeTo() call for SHT_NOBITS section");
+  }
   bool empty() const override { return getSize() == 0; }
   size_t getSize() const override { return Size; }
 

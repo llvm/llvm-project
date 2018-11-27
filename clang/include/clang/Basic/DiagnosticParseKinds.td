@@ -53,6 +53,10 @@ def ext_extra_semi_cxx11 : Extension<
 def warn_extra_semi_after_mem_fn_def : Warning<
   "extra ';' after member function definition">,
   InGroup<ExtraSemi>, DefaultIgnore;
+def warn_null_statement : Warning<
+  "empty expression statement has no effect; "
+  "remove unnecessary ';' to silence this warning">,
+  InGroup<ExtraSemiStmt>, DefaultIgnore;
 
 def ext_thread_before : Extension<"'__thread' before '%0'">;
 def ext_keyword_as_ident : ExtWarn<
@@ -554,6 +558,9 @@ def ext_for_range_init_stmt : ExtWarn<
 def warn_cxx17_compat_for_range_init_stmt : Warning<
   "range-based for loop initialization statements are incompatible with "
   "C++ standards before C++2a">, DefaultIgnore, InGroup<CXXPre2aCompat>;
+def warn_empty_init_statement : Warning<
+  "empty initialization statement of '%select{if|switch|range-based for}0' "
+  "has no effect">, InGroup<EmptyInitStatement>, DefaultIgnore;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;

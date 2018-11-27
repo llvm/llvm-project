@@ -65,8 +65,7 @@ public:
   // The index keeps the symbols alive.
   std::unique_ptr<SymbolIndex>
   buildIndex(IndexType,
-             DuplicateHandling DuplicateHandle = DuplicateHandling::PickOne,
-             ArrayRef<std::string> URISchemes = {});
+             DuplicateHandling DuplicateHandle = DuplicateHandling::PickOne);
 
 private:
   mutable std::mutex Mutex;
@@ -81,9 +80,7 @@ private:
 /// FIXME: Expose an interface to remove files that are closed.
 class FileIndex : public MergedIndex {
 public:
-  /// If URISchemes is empty, the default schemes in SymbolCollector will be
-  /// used.
-  FileIndex(std::vector<std::string> URISchemes = {}, bool UseDex = true);
+  FileIndex(bool UseDex = true);
 
   /// Update preamble symbols of file \p Path with all declarations in \p AST
   /// and macros in \p PP.
@@ -96,7 +93,6 @@ public:
 
 private:
   bool UseDex; // FIXME: this should be always on.
-  std::vector<std::string> URISchemes;
 
   // Contains information from each file's preamble only.
   // These are large, but update fairly infrequently (preambles are stable).
@@ -125,15 +121,12 @@ private:
 /// Retrieves symbols and refs of local top level decls in \p AST (i.e.
 /// `AST.getLocalTopLevelDecls()`).
 /// Exposed to assist in unit tests.
-/// If URISchemes is empty, the default schemes in SymbolCollector will be used.
-std::pair<SymbolSlab, RefSlab>
-indexMainDecls(ParsedAST &AST, llvm::ArrayRef<std::string> URISchemes = {});
+std::pair<SymbolSlab, RefSlab> indexMainDecls(ParsedAST &AST);
 
 /// Idex declarations from \p AST and macros from \p PP that are declared in
 /// included headers.
-/// If URISchemes is empty, the default schemes in SymbolCollector will be used.
-SymbolSlab indexHeaderSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-                              llvm::ArrayRef<std::string> URISchemes = {});
+SymbolSlab indexHeaderSymbols(ASTContext &AST,
+                              std::shared_ptr<Preprocessor> PP);
 
 } // namespace clangd
 } // namespace clang

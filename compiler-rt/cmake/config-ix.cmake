@@ -121,10 +121,12 @@ check_library_exists(pthread pthread_create "" COMPILER_RT_HAS_LIBPTHREAD)
 
 # Look for terminfo library, used in unittests that depend on LLVMSupport.
 if(LLVM_ENABLE_TERMINFO)
-  foreach(library tinfo terminfo curses ncurses ncursesw)
+  foreach(library terminfo tinfo curses ncurses ncursesw)
+    string(TOUPPER ${library} library_suffix)
     check_library_exists(
-      ${library} setupterm "" COMPILER_RT_HAS_TERMINFO)
-    if(COMPILER_RT_HAS_TERMINFO)
+      ${library} setupterm "" COMPILER_RT_HAS_TERMINFO_${library_suffix})
+    if(COMPILER_RT_HAS_TERMINFO_${library_suffix})
+      set(COMPILER_RT_HAS_TERMINFO TRUE)
       set(COMPILER_RT_TERMINFO_LIB "${library}")
       break()
     endif()
@@ -639,7 +641,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND XRAY_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD|OpenBSD")
+    OS_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD|OpenBSD|Fuchsia")
   set(COMPILER_RT_HAS_XRAY TRUE)
 else()
   set(COMPILER_RT_HAS_XRAY FALSE)

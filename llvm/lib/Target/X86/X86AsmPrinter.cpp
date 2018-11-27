@@ -674,7 +674,7 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
     emitNonLazyStubs(MMI, *OutStreamer);
 
     // Emit stack and fault map information.
-    SM.serializeToStackMapSection();
+    emitStackMaps(SM);
     FM.serializeToFaultMapSection();
 
     // This flag tells the linker that no global symbols contain code that fall
@@ -695,12 +695,12 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
   }
 
   if (TT.isOSBinFormatCOFF()) {
-    SM.serializeToStackMapSection();
+    emitStackMaps(SM);
     return;
   }
 
   if (TT.isOSBinFormatELF()) {
-    SM.serializeToStackMapSection();
+    emitStackMaps(SM);
     FM.serializeToFaultMapSection();
     return;
   }

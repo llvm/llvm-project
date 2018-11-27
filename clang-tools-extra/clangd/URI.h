@@ -45,10 +45,9 @@ public:
   static llvm::Expected<URI> create(llvm::StringRef AbsolutePath,
                                     llvm::StringRef Scheme);
 
-  // Similar to above except this uses the first scheme in \p Schemes that
-  // works.
-  static llvm::Expected<URI> create(llvm::StringRef AbsolutePath,
-                                    const std::vector<std::string> &Schemes);
+  // Similar to above except this picks a registered scheme that works. If none
+  // works, this falls back to "file" scheme.
+  static URI create(llvm::StringRef AbsolutePath);
 
   /// This creates a file:// URI for \p AbsolutePath. The path must be absolute.
   static URI createFile(llvm::StringRef AbsolutePath);

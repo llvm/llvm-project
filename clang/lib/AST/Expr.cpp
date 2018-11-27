@@ -2594,8 +2594,8 @@ Expr *Expr::IgnoreParenCasts() {
       E = NTTP->getReplacement();
       continue;
     }
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
-      E = CE->getSubExpr();
+    if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
+      E = FE->getSubExpr();
       continue;
     }
     return E;
@@ -2619,8 +2619,8 @@ Expr *Expr::IgnoreCasts() {
       E = NTTP->getReplacement();
       continue;
     }
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
-      E = CE->getSubExpr();
+    if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
+      E = FE->getSubExpr();
       continue;
     }
     return E;
@@ -2648,8 +2648,8 @@ Expr *Expr::IgnoreParenLValueCasts() {
                                   = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
       E = NTTP->getReplacement();
       continue;
-    } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
-      E = CE->getSubExpr();
+    } else if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
+      E = FE->getSubExpr();
       continue;
     }
     break;
@@ -2920,6 +2920,12 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     break;
   }
+  case ConstantExprClass: {
+    // FIXME: We should be able to return "true" here, but it can lead to extra
+    // error messages. E.g. in Sema/array-init.c.
+    const Expr *Exp = cast<ConstantExpr>(this)->getSubExpr();
+    return Exp->isConstantInitializer(Ctx, false, Culprit);
+  }
   case CompoundLiteralExprClass: {
     // This handles gcc's extension that allows global initializers like
     // "struct x {int x;} x = (struct x) {};".
@@ -2959,8 +2965,8 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
           const Expr *Elt = ILE->getInit(ElementNo++);
           if (Field->isBitField()) {
             // Bitfields have to evaluate to an integer.
-            llvm::APSInt ResultTmp;
-            if (!Elt->EvaluateAsInt(ResultTmp, Ctx)) {
+            EvalResult Result;
+            if (!Elt->EvaluateAsInt(Result, Ctx)) {
               if (Culprit)
                 *Culprit = Elt;
               return false;
@@ -4004,25 +4010,46 @@ SourceLocation DesignatedInitUpdateExpr::getEndLoc() const {
   return getBase()->getEndLoc();
 }
 
-ParenListExpr::ParenListExpr(const ASTContext& C, SourceLocation lparenloc,
-                             ArrayRef<Expr*> exprs,
-                             SourceLocation rparenloc)
-  : Expr(ParenListExprClass, QualType(), VK_RValue, OK_Ordinary,
-         false, false, false, false),
-    NumExprs(exprs.size()), LParenLoc(lparenloc), RParenLoc(rparenloc) {
-  Exprs = new (C) Stmt*[exprs.size()];
-  for (unsigned i = 0; i != exprs.size(); ++i) {
-    if (exprs[i]->isTypeDependent())
+ParenListExpr::ParenListExpr(SourceLocation LParenLoc, ArrayRef<Expr *> Exprs,
+                             SourceLocation RParenLoc)
+    : Expr(ParenListExprClass, QualType(), VK_RValue, OK_Ordinary, false, false,
+           false, false),
+      LParenLoc(LParenLoc), RParenLoc(RParenLoc) {
+  ParenListExprBits.NumExprs = Exprs.size();
+
+  for (unsigned I = 0, N = Exprs.size(); I != N; ++I) {
+    if (Exprs[I]->isTypeDependent())
       ExprBits.TypeDependent = true;
-    if (exprs[i]->isValueDependent())
+    if (Exprs[I]->isValueDependent())
       ExprBits.ValueDependent = true;
-    if (exprs[i]->isInstantiationDependent())
+    if (Exprs[I]->isInstantiationDependent())
       ExprBits.InstantiationDependent = true;
-    if (exprs[i]->containsUnexpandedParameterPack())
+    if (Exprs[I]->containsUnexpandedParameterPack())
       ExprBits.ContainsUnexpandedParameterPack = true;
 
-    Exprs[i] = exprs[i];
+    getTrailingObjects<Stmt *>()[I] = Exprs[I];
   }
+}
+
+ParenListExpr::ParenListExpr(EmptyShell Empty, unsigned NumExprs)
+    : Expr(ParenListExprClass, Empty) {
+  ParenListExprBits.NumExprs = NumExprs;
+}
+
+ParenListExpr *ParenListExpr::Create(const ASTContext &Ctx,
+                                     SourceLocation LParenLoc,
+                                     ArrayRef<Expr *> Exprs,
+                                     SourceLocation RParenLoc) {
+  void *Mem = Ctx.Allocate(totalSizeToAlloc<Stmt *>(Exprs.size()),
+                           alignof(ParenListExpr));
+  return new (Mem) ParenListExpr(LParenLoc, Exprs, RParenLoc);
+}
+
+ParenListExpr *ParenListExpr::CreateEmpty(const ASTContext &Ctx,
+                                          unsigned NumExprs) {
+  void *Mem =
+      Ctx.Allocate(totalSizeToAlloc<Stmt *>(NumExprs), alignof(ParenListExpr));
+  return new (Mem) ParenListExpr(EmptyShell(), NumExprs);
 }
 
 const OpaqueValueExpr *OpaqueValueExpr::findInCopyConstruct(const Expr *e) {

@@ -4912,6 +4912,40 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
     if (match(Op0, m_Undef()) || match(Op1, m_Undef()))
       return Constant::getNullValue(ReturnType);
     break;
+  case Intrinsic::uadd_sat:
+    // sat(MAX + X) -> MAX
+    // sat(X + MAX) -> MAX
+    if (match(Op0, m_AllOnes()) || match(Op1, m_AllOnes()))
+      return Constant::getAllOnesValue(ReturnType);
+    LLVM_FALLTHROUGH;
+  case Intrinsic::sadd_sat:
+    // sat(X + undef) -> -1
+    // sat(undef + X) -> -1
+    // For unsigned: Assume undef is MAX, thus we saturate to MAX (-1).
+    // For signed: Assume undef is ~X, in which case X + ~X = -1.
+    if (match(Op0, m_Undef()) || match(Op1, m_Undef()))
+      return Constant::getAllOnesValue(ReturnType);
+
+    // X + 0 -> X
+    if (match(Op1, m_Zero()))
+      return Op0;
+    // 0 + X -> X
+    if (match(Op0, m_Zero()))
+      return Op1;
+    break;
+  case Intrinsic::usub_sat:
+    // sat(0 - X) -> 0, sat(X - MAX) -> 0
+    if (match(Op0, m_Zero()) || match(Op1, m_AllOnes()))
+      return Constant::getNullValue(ReturnType);
+    LLVM_FALLTHROUGH;
+  case Intrinsic::ssub_sat:
+    // X - X -> 0, X - undef -> 0, undef - X -> 0
+    if (Op0 == Op1 || match(Op0, m_Undef()) || match(Op1, m_Undef()))
+      return Constant::getNullValue(ReturnType);
+    // X - 0 -> X
+    if (match(Op1, m_Zero()))
+      return Op0;
+    break;
   case Intrinsic::load_relative:
     if (auto *C0 = dyn_cast<Constant>(Op0))
       if (auto *C1 = dyn_cast<Constant>(Op1))
@@ -5008,7 +5042,16 @@ static Value *simplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
   }
   case Intrinsic::fshl:
   case Intrinsic::fshr: {
-    Value *ShAmtArg = ArgBegin[2];
+    Value *Op0 = ArgBegin[0], *Op1 = ArgBegin[1], *ShAmtArg = ArgBegin[2];
+
+    // If both operands are undef, the result is undef.
+    if (match(Op0, m_Undef()) && match(Op1, m_Undef()))
+      return UndefValue::get(F->getReturnType());
+
+    // If shift amount is undef, assume it is zero.
+    if (match(ShAmtArg, m_Undef()))
+      return ArgBegin[IID == Intrinsic::fshl ? 0 : 1];
+
     const APInt *ShAmtC;
     if (match(ShAmtArg, m_APInt(ShAmtC))) {
       // If there's effectively no shift, return the 1st arg or 2nd arg.

@@ -44,6 +44,21 @@ namespace llvm {
 
   class raw_ostream;
   // TODO: DenseMap, ...
+
+  namespace object {
+    class WasmObjectFile;
+    struct WasmSection;
+    struct WasmSegment;
+    class WasmSymbol;
+  }
+
+  namespace wasm {
+    struct WasmFunction;
+    struct WasmGlobal;
+    struct WasmGlobalType;
+    struct WasmRelocation;
+    struct WasmSignature;
+  }
 }
 
 namespace lld {
@@ -69,6 +84,16 @@ namespace lld {
   using llvm::Expected;
 
   using llvm::raw_ostream;
+
+  using llvm::object::WasmObjectFile;
+  using llvm::object::WasmSection;
+  using llvm::object::WasmSegment;
+  using llvm::object::WasmSymbol;
+  using llvm::wasm::WasmFunction;
+  using llvm::wasm::WasmGlobal;
+  using llvm::wasm::WasmGlobalType;
+  using llvm::wasm::WasmRelocation;
+  using llvm::wasm::WasmSignature;
 } // end namespace lld.
 
 namespace std {

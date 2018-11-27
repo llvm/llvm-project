@@ -1,4 +1,5 @@
 ; RUN: opt %s -scalarizer -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes='function(scalarizer,verify)' -S -o - | FileCheck %s
 
 define void @f3() local_unnamed_addr {
 bb1:

@@ -516,6 +516,10 @@ sections.
    1,           102  (16.7%)
    2,           399  (65.4%)
 
+  Total ROB Entries:                64
+  Max Used ROB Entries:             35  ( 54.7% )
+  Average Used ROB Entries per cy:  32  ( 50.0% )
+
 
   Register File statistics:
   Total number of mappings created:    900

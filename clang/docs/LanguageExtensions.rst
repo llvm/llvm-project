@@ -112,18 +112,22 @@ of ``cxx_rvalue_references``.
 ``__has_cpp_attribute``
 -----------------------
 
-This function-like macro takes a single argument that is the name of a
-C++11-style attribute. The argument can either be a single identifier, or a
-scoped identifier. If the attribute is supported, a nonzero value is returned.
-If the attribute is a standards-based attribute, this macro returns a nonzero
-value based on the year and month in which the attribute was voted into the
-working draft. If the attribute is not supported by the current compliation
-target, this macro evaluates to 0.  It can be used like this:
+This function-like macro is available in C++2a by default, and is provided as an
+extension in earlier language standards. It takes a single argument that is the
+name of a double-square-bracket-style attribute. The argument can either be a
+single identifier or a scoped identifier. If the attribute is supported, a
+nonzero value is returned. If the attribute is a standards-based attribute, this
+macro returns a nonzero value based on the year and month in which the attribute
+was voted into the working draft. See `WG21 SD-6
+<https://isocpp.org/std/standing-documents/sd-6-sg10-feature-test-recommendations>`_
+for the list of values returned for standards-based attributes. If the attribute
+is not supported by the current compliation target, this macro evaluates to 0.
+It can be used like this:
 
 .. code-block:: c++
 
-  #ifndef __has_cpp_attribute         // Optional of course.
-    #define __has_cpp_attribute(x) 0  // Compatibility with non-clang compilers.
+  #ifndef __has_cpp_attribute         // For backwards compatibility
+    #define __has_cpp_attribute(x) 0
   #endif
 
   ...
@@ -134,10 +138,11 @@ target, this macro evaluates to 0.  It can be used like this:
   #endif
   ...
 
-The attribute identifier (but not scope) can also be specified with a preceding
-and following ``__`` (double underscore) to avoid interference from a macro with
-the same name.  For instance, ``gnu::__const__`` can be used instead of
-``gnu::const``.
+The attribute scope tokens ``clang`` and ``_Clang`` are interchangeable, as are
+the attribute scope tokens ``gnu`` and ``__gnu__``. Attribute tokens in either
+of these namespaces can be specified with a preceding and following ``__``
+(double underscore) to avoid interference from a macro with the same name. For
+instance, ``gnu::__const__`` can be used instead of ``gnu::const``.
 
 ``__has_c_attribute``
 ---------------------
@@ -162,11 +167,11 @@ current compilation target, this macro evaluates to 0. It can be used like this:
   #endif
   ...
 
-The attribute identifier (but not scope) can also be specified with a preceding
-and following ``__`` (double underscore) to avoid interference from a macro with
-the same name.  For instance, ``gnu::__const__`` can be used instead of
-``gnu::const``.
-
+The attribute scope tokens ``clang`` and ``_Clang`` are interchangeable, as are
+the attribute scope tokens ``gnu`` and ``__gnu__``. Attribute tokens in either
+of these namespaces can be specified with a preceding and following ``__``
+(double underscore) to avoid interference from a macro with the same name. For
+instance, ``gnu::__const__`` can be used instead of ``gnu::const``.
 
 ``__has_attribute``
 -------------------

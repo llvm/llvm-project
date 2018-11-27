@@ -404,23 +404,21 @@ EXTERN int omp_get_max_task_priority(void) {
 #define SET 1
 
 EXTERN void omp_init_lock(omp_lock_t *lock) {
-  *lock = UNSET;
+  omp_unset_lock(lock);
   PRINT0(LD_IO, "call omp_init_lock()\n");
 }
 
 EXTERN void omp_destroy_lock(omp_lock_t *lock) {
+  omp_unset_lock(lock);
   PRINT0(LD_IO, "call omp_destroy_lock()\n");
 }
 
 EXTERN void omp_set_lock(omp_lock_t *lock) {
   // int atomicCAS(int* address, int compare, int val);
   // (old == compare ? val : old)
-  int compare = UNSET;
-  int val = SET;
 
   // TODO: not sure spinning is a good idea here..
-  while (atomicCAS(lock, compare, val) != UNSET) {
-
+  while (atomicCAS(lock, UNSET, SET) != UNSET) {
     clock_t start = clock();
     clock_t now;
     for (;;) {
@@ -436,9 +434,7 @@ EXTERN void omp_set_lock(omp_lock_t *lock) {
 }
 
 EXTERN void omp_unset_lock(omp_lock_t *lock) {
-  int compare = SET;
-  int val = UNSET;
-  int old = atomicCAS(lock, compare, val);
+  (void)atomicExch(lock, UNSET);
 
   PRINT0(LD_IO, "call omp_unset_lock()\n");
 }
@@ -446,10 +442,7 @@ EXTERN void omp_unset_lock(omp_lock_t *lock) {
 EXTERN int omp_test_lock(omp_lock_t *lock) {
   // int atomicCAS(int* address, int compare, int val);
   // (old == compare ? val : old)
-  int compare = UNSET;
-  int val = SET;
-
-  int ret = atomicCAS(lock, compare, val);
+  int ret = atomicAdd(lock, 0);
 
   PRINT(LD_IO, "call omp_test_lock() return %d\n", ret);
 

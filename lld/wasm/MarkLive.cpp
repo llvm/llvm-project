@@ -30,8 +30,6 @@
 
 using namespace llvm;
 using namespace llvm::wasm;
-using namespace lld;
-using namespace lld::wasm;
 
 void lld::wasm::markLive() {
   if (!Config->GcSections)

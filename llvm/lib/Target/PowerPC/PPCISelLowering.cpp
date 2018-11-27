@@ -323,12 +323,14 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // to speed up scalar BSWAP64.
   // CTPOP or CTTZ were introduced in P8/P9 respectively
   setOperationAction(ISD::BSWAP, MVT::i32  , Expand);
-  if (Subtarget.isISA3_0()) {
+  if (Subtarget.hasP9Vector())
     setOperationAction(ISD::BSWAP, MVT::i64  , Custom);
+  else
+    setOperationAction(ISD::BSWAP, MVT::i64  , Expand);
+  if (Subtarget.isISA3_0()) {
     setOperationAction(ISD::CTTZ , MVT::i32  , Legal);
     setOperationAction(ISD::CTTZ , MVT::i64  , Legal);
   } else {
-    setOperationAction(ISD::BSWAP, MVT::i64  , Expand);
     setOperationAction(ISD::CTTZ , MVT::i32  , Expand);
     setOperationAction(ISD::CTTZ , MVT::i64  , Expand);
   }
@@ -12604,9 +12606,10 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         (Op1VT == MVT::i32 || Op1VT == MVT::i16 ||
          (Subtarget.hasLDBRX() && Subtarget.isPPC64() && Op1VT == MVT::i64))) {
 
-      // STBRX can only handle simple types.
+      // STBRX can only handle simple types and it makes no sense to store less
+      // two bytes in byte-reversed order.
       EVT mVT = cast<StoreSDNode>(N)->getMemoryVT();
-      if (mVT.isExtended())
+      if (mVT.isExtended() || mVT.getSizeInBits() < 16)
         break;
 
       SDValue BSwapOp = N->getOperand(1).getOperand(0);

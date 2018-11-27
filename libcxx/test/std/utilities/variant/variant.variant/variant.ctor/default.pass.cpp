@@ -32,7 +32,7 @@
 #include "variant_test_helpers.hpp"
 
 struct NonDefaultConstructible {
-  NonDefaultConstructible(int) {}
+  constexpr NonDefaultConstructible(int) {}
 };
 
 struct NotNoexcept {
@@ -99,6 +99,11 @@ void test_default_ctor_basic() {
     assert(std::get<0>(v) == 0);
   }
   {
+    std::variant<int, NonDefaultConstructible> v;
+    assert(v.index() == 0);
+    assert(std::get<0>(v) == 0);
+  }
+  {
     using V = std::variant<int, long>;
     constexpr V v;
     static_assert(v.index() == 0, "");
@@ -106,6 +111,12 @@ void test_default_ctor_basic() {
   }
   {
     using V = std::variant<int, long>;
+    constexpr V v;
+    static_assert(v.index() == 0, "");
+    static_assert(std::get<0>(v) == 0, "");
+  }
+  {
+    using V = std::variant<int, NonDefaultConstructible>;
     constexpr V v;
     static_assert(v.index() == 0, "");
     static_assert(std::get<0>(v) == 0, "");

@@ -2821,7 +2821,7 @@ void AssemblyWriter::printAliasSummary(const AliasSummary *AS) {
 }
 
 void AssemblyWriter::printGlobalVarSummary(const GlobalVarSummary *GS) {
-  // Nothing for now
+  Out << ", varFlags: (readonly: " << GS->VarFlags.ReadOnly << ")";
 }
 
 static std::string getLinkageName(GlobalValue::LinkageTypes LT) {
@@ -3015,6 +3015,8 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
     FieldSeparator FS;
     for (auto &Ref : RefList) {
       Out << FS;
+      if (Ref.isReadOnly())
+        Out << "readonly ";
       Out << "^" << Machine.getGUIDSlot(Ref.getGUID());
     }
     Out << ")";

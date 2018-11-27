@@ -267,14 +267,14 @@ def P8Itineraries : ProcessorItineraries<
                                    InstrStage<1, [P8_LU1, P8_LU2,
                                                   P8_LSU1, P8_LSU2]>]
                                   [1, 1, 1]>,
-  InstrItinData<IIC_LdStSTDU    , [InstrStage<1, [P8_DU1], 0>,
+  InstrItinData<IIC_LdStSTU     , [InstrStage<1, [P8_DU1], 0>,
                                    InstrStage<1, [P8_DU2], 0>,
                                    InstrStage<1, [P8_LU1, P8_LU2,
                                                   P8_LSU1, P8_LSU2], 0>,
                                    InstrStage<1, [P8_FXU1, P8_FXU2]>],
                                   [2, 1, 1, 1]>,
   // First+last
-  InstrItinData<IIC_LdStSTDUX   , [InstrStage<1, [P8_DU1], 0>,
+  InstrItinData<IIC_LdStSTUX    , [InstrStage<1, [P8_DU1], 0>,
                                    InstrStage<1, [P8_DU2], 0>,
                                    InstrStage<1, [P8_DU3], 0>,
                                    InstrStage<1, [P8_DU4], 0>,

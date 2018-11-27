@@ -1785,6 +1785,11 @@ def Pcs : DeclOrTypeAttr {
   let Documentation = [PcsDocs];
 }
 
+def AArch64VectorPcs: DeclOrTypeAttr {
+  let Spellings = [Clang<"aarch64_vector_pcs">];
+  let Documentation = [AArch64VectorPcsDocs];
+}
+
 def Pure : InheritableAttr {
   let Spellings = [GCC<"pure">];
   let Documentation = [Undocumented];
@@ -3085,4 +3090,10 @@ def AlwaysDestroy : InheritableAttr {
   let Spellings = [Clang<"always_destroy", 0>];
   let Subjects = SubjectList<[Var]>;
   let Documentation = [AlwaysDestroyDocs];
+}
+
+def SpeculativeLoadHardening : InheritableAttr {
+  let Spellings = [Clang<"speculative_load_hardening">];
+  let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
+  let Documentation = [SpeculativeLoadHardeningDocs];
 }

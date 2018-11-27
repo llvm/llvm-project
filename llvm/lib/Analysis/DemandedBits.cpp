@@ -142,6 +142,27 @@ void DemandedBits::determineLiveOperandBits(
                  std::min(BitWidth, Known.countMaxTrailingZeros()+1));
         }
         break;
+      case Intrinsic::fshl:
+      case Intrinsic::fshr:
+        if (OperandNo == 2) {
+          // Shift amount is modulo the bitwidth. For powers of two we have
+          // SA % BW == SA & (BW - 1).
+          if (isPowerOf2_32(BitWidth))
+            AB = BitWidth - 1;
+        } else if (auto *SA = dyn_cast<ConstantInt>(II->getOperand(2))) {
+          // TODO: Support vectors.
+          // Normalize to funnel shift left. APInt shifts of BitWidth are well-
+          // defined, so no need to special-case zero shifts here.
+          uint64_t ShiftAmt = SA->getValue().urem(BitWidth);
+          if (II->getIntrinsicID() == Intrinsic::fshr)
+            ShiftAmt = BitWidth - ShiftAmt;
+
+          if (OperandNo == 0)
+            AB = AOut.lshr(ShiftAmt);
+          else if (OperandNo == 1)
+            AB = AOut.shl(BitWidth - ShiftAmt);
+        }
+        break;
       }
     break;
   case Instruction::Add:

@@ -2016,13 +2016,13 @@ def STFD : DForm_1<54, (outs), (ins f8rc:$rS, memri:$dst),
 // Unindexed (r+i) Stores with Update (preinc).
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
 def STBU  : DForm_1<39, (outs ptr_rc_nor0:$ea_res), (ins gprc:$rS, memri:$dst),
-                    "stbu $rS, $dst", IIC_LdStStoreUpd, []>,
+                    "stbu $rS, $dst", IIC_LdStSTU, []>,
                     RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
 def STHU  : DForm_1<45, (outs ptr_rc_nor0:$ea_res), (ins gprc:$rS, memri:$dst),
-                    "sthu $rS, $dst", IIC_LdStStoreUpd, []>,
+                    "sthu $rS, $dst", IIC_LdStSTU, []>,
                     RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
 def STWU  : DForm_1<37, (outs ptr_rc_nor0:$ea_res), (ins gprc:$rS, memri:$dst),
-                    "stwu $rS, $dst", IIC_LdStStoreUpd, []>,
+                    "stwu $rS, $dst", IIC_LdStSTU, []>,
                     RegConstraint<"$dst.reg = $ea_res">, NoEncode<"$ea_res">;
 let Predicates = [HasFPU] in {
 def STFSU : DForm_1<53, (outs ptr_rc_nor0:$ea_res), (ins f4rc:$rS, memri:$dst),
@@ -2090,19 +2090,19 @@ def STFDX : XForm_28_memOp<31, 727, (outs), (ins f8rc:$frS, memrr:$dst),
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
 def STBUX : XForm_8_memOp<31, 247, (outs ptr_rc_nor0:$ea_res),
                           (ins gprc:$rS, memrr:$dst),
-                          "stbux $rS, $dst", IIC_LdStStoreUpd, []>,
+                          "stbux $rS, $dst", IIC_LdStSTUX, []>,
                           RegConstraint<"$dst.ptrreg = $ea_res">,
                           NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 def STHUX : XForm_8_memOp<31, 439, (outs ptr_rc_nor0:$ea_res),
                           (ins gprc:$rS, memrr:$dst),
-                          "sthux $rS, $dst", IIC_LdStStoreUpd, []>,
+                          "sthux $rS, $dst", IIC_LdStSTUX, []>,
                           RegConstraint<"$dst.ptrreg = $ea_res">,
                           NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;
 def STWUX : XForm_8_memOp<31, 183, (outs ptr_rc_nor0:$ea_res),
                           (ins gprc:$rS, memrr:$dst),
-                          "stwux $rS, $dst", IIC_LdStStoreUpd, []>,
+                          "stwux $rS, $dst", IIC_LdStSTUX, []>,
                           RegConstraint<"$dst.ptrreg = $ea_res">,
                           NoEncode<"$ea_res">,
                           PPC970_DGroup_Cracked;

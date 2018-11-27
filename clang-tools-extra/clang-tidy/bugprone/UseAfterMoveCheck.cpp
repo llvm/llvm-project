@@ -298,7 +298,7 @@ void UseAfterMoveFinder::getReinits(
                declStmt(hasDescendant(equalsNode(MovedVariable))),
                // clear() and assign() on standard containers.
                cxxMemberCallExpr(
-                   on(allOf(DeclRefMatcher, StandardContainerTypeMatcher)),
+                   on(expr(DeclRefMatcher, StandardContainerTypeMatcher)),
                    // To keep the matcher simple, we check for assign() calls
                    // on all standard containers, even though only vector,
                    // deque, forward_list and list have assign(). If assign()
@@ -307,7 +307,7 @@ void UseAfterMoveFinder::getReinits(
                    callee(cxxMethodDecl(hasAnyName("clear", "assign")))),
                // reset() on standard smart pointers.
                cxxMemberCallExpr(
-                   on(allOf(DeclRefMatcher, StandardSmartPointerTypeMatcher)),
+                   on(expr(DeclRefMatcher, StandardSmartPointerTypeMatcher)),
                    callee(cxxMethodDecl(hasName("reset")))),
                // Methods that have the [[clang::reinitializes]] attribute.
                cxxMemberCallExpr(

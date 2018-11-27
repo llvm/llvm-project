@@ -42,6 +42,11 @@ std::string printQualifiedName(const NamedDecl &ND);
 /// Returns the first enclosing namespace scope starting from \p DC.
 std::string printNamespaceScope(const DeclContext &DC);
 
+/// Prints unqualified name of the decl for the purpose of displaying it to the
+/// user. Anonymous decls return names of the form "(anonymous {kind})", e.g.
+/// "(anonymous struct)" or "(anonymous namespace)".
+std::string printName(const ASTContext &Ctx, const NamedDecl &ND);
+
 /// Gets the symbol ID for a declaration, if possible.
 llvm::Optional<SymbolID> getSymbolID(const Decl *D);
 

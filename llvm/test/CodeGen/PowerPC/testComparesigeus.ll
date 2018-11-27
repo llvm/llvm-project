@@ -15,8 +15,8 @@ entry:
   ret i32 %conv2
 ; CHECK-LABEL: test_igeus:
 ; CHECK: sub [[REG1:r[0-9]+]], r3, r4
-; CHECK-NEXT: rldicl [[REG2:r[0-9]+]], [[REG2]], 1, 63
-; CHECK-NEXT: xori r3, [[REG2]], 1
+; CHECK-NEXT: not [[REG2:r[0-9]+]], [[REG1]]
+; CHECK-NEXT: rldicl r3, [[REG2]], 1, 63
 ; CHECK: blr
 }
 
@@ -64,8 +64,8 @@ entry:
   ret void
 ; CHECK_LABEL: test_igeus_store:
 ; CHECK: sub [[REG1:r[0-9]+]], r3, r4
-; CHECK: rldicl [[REG2:r[0-9]+]], [[REG2]], 1, 63
-; CHECK: xori {{r[0-9]+}}, [[REG2]], 1
+; CHECK: not [[REG2:r[0-9]+]], [[REG1]]
+; CHECK-NEXT: rldicl r3, [[REG2]], 1, 63
 ; CHECK: blr
 }
 

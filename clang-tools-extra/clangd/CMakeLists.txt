@@ -19,6 +19,7 @@ add_clang_library(clangDaemon
   Context.cpp
   Diagnostics.cpp
   DraftStore.cpp
+  ExpectedTypes.cpp
   FindSymbols.cpp
   FileDistance.cpp
   FS.cpp

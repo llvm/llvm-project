@@ -491,12 +491,12 @@ void SimplifyBooleanExprCheck::matchCompoundIfReturnsBool(MatchFinder *Finder,
                                                           bool Value,
                                                           StringRef Id) {
   Finder->addMatcher(
-      compoundStmt(allOf(hasAnySubstatement(ifStmt(hasThen(returnsBool(Value)),
-                                                   unless(hasElse(stmt())))),
-                         hasAnySubstatement(
-                             returnStmt(has(ignoringParenImpCasts(
+      compoundStmt(
+          hasAnySubstatement(
+              ifStmt(hasThen(returnsBool(Value)), unless(hasElse(stmt())))),
+          hasAnySubstatement(returnStmt(has(ignoringParenImpCasts(
                                             cxxBoolLiteral(equals(!Value)))))
-                                 .bind(CompoundReturnId))))
+                                 .bind(CompoundReturnId)))
           .bind(Id),
       this);
 }

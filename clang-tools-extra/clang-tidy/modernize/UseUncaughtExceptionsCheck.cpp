@@ -30,24 +30,22 @@ void UseUncaughtExceptionsCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   // DeclRefExpr: warning, no fix-it.
-  Finder->addMatcher(declRefExpr(allOf(to(functionDecl(hasName(MatchText))),
-                                       unless(callExpr())))
-                         .bind("decl_ref_expr"),
-                     this);
+  Finder->addMatcher(
+      declRefExpr(to(functionDecl(hasName(MatchText))), unless(callExpr()))
+          .bind("decl_ref_expr"),
+      this);
 
   // CallExpr: warning, fix-it.
-  Finder->addMatcher(
-      callExpr(allOf(hasDeclaration(functionDecl(hasName(MatchText))),
-                     unless(hasAncestor(initListExpr()))))
-          .bind("call_expr"),
-      this);
+  Finder->addMatcher(callExpr(hasDeclaration(functionDecl(hasName(MatchText))),
+                              unless(hasAncestor(initListExpr())))
+                         .bind("call_expr"),
+                     this);
   // CallExpr in initialisation list: warning, fix-it with avoiding narrowing
   // conversions.
-  Finder->addMatcher(
-      callExpr(allOf(hasAncestor(initListExpr()),
-                     hasDeclaration(functionDecl(hasName(MatchText)))))
-          .bind("init_call_expr"),
-      this);
+  Finder->addMatcher(callExpr(hasAncestor(initListExpr()),
+                              hasDeclaration(functionDecl(hasName(MatchText))))
+                         .bind("init_call_expr"),
+                     this);
 }
 
 void UseUncaughtExceptionsCheck::check(const MatchFinder::MatchResult &Result) {

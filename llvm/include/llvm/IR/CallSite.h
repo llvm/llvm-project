@@ -656,10 +656,7 @@ public:
 
 private:
   IterTy getCallee() const {
-    if (isCall()) // Skip Callee
-      return cast<CallInst>(getInstruction())->op_end() - 1;
-    else // Skip BB, BB, Callee
-      return cast<InvokeInst>(getInstruction())->op_end() - 3;
+    return cast<CallBase>(getInstruction())->op_end() - 1;
   }
 };
 

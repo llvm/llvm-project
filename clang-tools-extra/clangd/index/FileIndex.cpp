@@ -30,8 +30,7 @@ namespace clangd {
 
 static std::pair<SymbolSlab, RefSlab>
 indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-             ArrayRef<Decl *> DeclsToIndex, bool IsIndexMainAST,
-             ArrayRef<std::string> URISchemes) {
+             ArrayRef<Decl *> DeclsToIndex, bool IsIndexMainAST) {
   SymbolCollector::Options CollectorOpts;
   // FIXME(ioeric): we might also want to collect include headers. We would need
   // to make sure all includes are canonicalized (with CanonicalIncludes), which
@@ -41,8 +40,6 @@ indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   CollectorOpts.CollectIncludePath = false;
   CollectorOpts.CountReferences = false;
   CollectorOpts.Origin = SymbolOrigin::Dynamic;
-  if (!URISchemes.empty())
-    CollectorOpts.URISchemes = URISchemes;
 
   index::IndexingOptions IndexOpts;
   // We only need declarations, because we don't count references.
@@ -75,20 +72,19 @@ indexSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
   return {std::move(Syms), std::move(Refs)};
 }
 
-std::pair<SymbolSlab, RefSlab>
-indexMainDecls(ParsedAST &AST, ArrayRef<std::string> URISchemes) {
+std::pair<SymbolSlab, RefSlab> indexMainDecls(ParsedAST &AST) {
   return indexSymbols(AST.getASTContext(), AST.getPreprocessorPtr(),
                       AST.getLocalTopLevelDecls(),
-                      /*IsIndexMainAST=*/true, URISchemes);
+                      /*IsIndexMainAST=*/true);
 }
 
-SymbolSlab indexHeaderSymbols(ASTContext &AST, std::shared_ptr<Preprocessor> PP,
-                              ArrayRef<std::string> URISchemes) {
+SymbolSlab indexHeaderSymbols(ASTContext &AST,
+                              std::shared_ptr<Preprocessor> PP) {
   std::vector<Decl *> DeclsToIndex(
       AST.getTranslationUnitDecl()->decls().begin(),
       AST.getTranslationUnitDecl()->decls().end());
   return indexSymbols(AST, std::move(PP), DeclsToIndex,
-                      /*IsIndexMainAST=*/false, URISchemes)
+                      /*IsIndexMainAST=*/false)
       .first;
 }
 
@@ -106,8 +102,7 @@ void FileSymbols::update(PathRef Path, std::unique_ptr<SymbolSlab> Symbols,
 }
 
 std::unique_ptr<SymbolIndex>
-FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
-                        ArrayRef<std::string> URISchemes) {
+FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle) {
   std::vector<std::shared_ptr<SymbolSlab>> SymbolSlabs;
   std::vector<std::shared_ptr<RefSlab>> RefSlabs;
   {
@@ -191,35 +186,34 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
         make_pointee_range(AllSymbols), std::move(AllRefs),
         std::make_tuple(std::move(SymbolSlabs), std::move(RefSlabs),
                         std::move(RefsStorage), std::move(SymsStorage)),
-        StorageSize, std::move(URISchemes));
+        StorageSize);
   }
   llvm_unreachable("Unknown clangd::IndexType");
 }
 
-FileIndex::FileIndex(std::vector<std::string> URISchemes, bool UseDex)
+FileIndex::FileIndex(bool UseDex)
     : MergedIndex(&MainFileIndex, &PreambleIndex), UseDex(UseDex),
-      URISchemes(std::move(URISchemes)),
       PreambleIndex(llvm::make_unique<MemIndex>()),
       MainFileIndex(llvm::make_unique<MemIndex>()) {}
 
 void FileIndex::updatePreamble(PathRef Path, ASTContext &AST,
                                std::shared_ptr<Preprocessor> PP) {
-  auto Symbols = indexHeaderSymbols(AST, std::move(PP), URISchemes);
+  auto Symbols = indexHeaderSymbols(AST, std::move(PP));
   PreambleSymbols.update(Path,
                          llvm::make_unique<SymbolSlab>(std::move(Symbols)),
                          llvm::make_unique<RefSlab>());
   PreambleIndex.reset(
       PreambleSymbols.buildIndex(UseDex ? IndexType::Heavy : IndexType::Light,
-                                 DuplicateHandling::PickOne, URISchemes));
+                                 DuplicateHandling::PickOne));
 }
 
 void FileIndex::updateMain(PathRef Path, ParsedAST &AST) {
-  auto Contents = indexMainDecls(AST, URISchemes);
+  auto Contents = indexMainDecls(AST);
   MainFileSymbols.update(
       Path, llvm::make_unique<SymbolSlab>(std::move(Contents.first)),
       llvm::make_unique<RefSlab>(std::move(Contents.second)));
-  MainFileIndex.reset(MainFileSymbols.buildIndex(
-      IndexType::Light, DuplicateHandling::PickOne, URISchemes));
+  MainFileIndex.reset(
+      MainFileSymbols.buildIndex(IndexType::Light, DuplicateHandling::PickOne));
 }
 
 } // namespace clangd

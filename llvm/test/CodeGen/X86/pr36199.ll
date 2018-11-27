@@ -4,7 +4,7 @@
 define void @foo(<16 x float> %x) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vaddps %zmm0, %zmm0, %zmm0
+; CHECK-NEXT:    vaddps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; CHECK-NEXT:    vmovups %zmm0, (%rax)

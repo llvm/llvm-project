@@ -269,6 +269,14 @@ public:
     return true;
   }
 
+  /// Return true if it is profitable to convert a select of FP constants into
+  /// a constant pool load whose address depends on the select condition. The
+  /// parameter may be used to differentiate a select with FP compare from
+  /// integer compare.
+  virtual bool reduceSelectOfFPConstantLoads(bool IsFPSetCC) const {
+    return true;
+  }
+
   /// Return true if multiple condition registers are available.
   bool hasMultipleConditionRegisters() const {
     return HasMultipleConditionRegisters;

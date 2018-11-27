@@ -1039,11 +1039,13 @@ private:
     if (!areExprTypesCompatible(Expr1, Expr2))
       return {};
 
-    llvm::APSInt L1, L2;
-
-    if (!Expr1->EvaluateAsInt(L1, *Context) ||
-        !Expr2->EvaluateAsInt(L2, *Context))
+    Expr::EvalResult L1Result, L2Result;
+    if (!Expr1->EvaluateAsInt(L1Result, *Context) ||
+        !Expr2->EvaluateAsInt(L2Result, *Context))
       return {};
+
+    llvm::APSInt L1 = L1Result.Val.getInt();
+    llvm::APSInt L2 = L2Result.Val.getInt();
 
     // Can't compare signed with unsigned or with different bit width.
     if (L1.isSigned() != L2.isSigned() || L1.getBitWidth() != L2.getBitWidth())
@@ -1134,13 +1136,16 @@ private:
           case BO_And: {
             // If either operand is zero, we know the value
             // must be false.
-            llvm::APSInt IntVal;
-            if (Bop->getLHS()->EvaluateAsInt(IntVal, *Context)) {
+            Expr::EvalResult LHSResult;
+            if (Bop->getLHS()->EvaluateAsInt(LHSResult, *Context)) {
+              llvm::APSInt IntVal = LHSResult.Val.getInt();
               if (!IntVal.getBoolValue()) {
                 return TryResult(false);
               }
             }
-            if (Bop->getRHS()->EvaluateAsInt(IntVal, *Context)) {
+            Expr::EvalResult RHSResult;
+            if (Bop->getRHS()->EvaluateAsInt(RHSResult, *Context)) {
+              llvm::APSInt IntVal = RHSResult.Val.getInt();
               if (!IntVal.getBoolValue()) {
                 return TryResult(false);
               }

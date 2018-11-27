@@ -1122,3 +1122,11 @@ constexpr E e2 = E{0};
 static_assert(e2.x != e2.y, "");
 
 } // namespace IndirectFields
+
+constexpr bool __constant_string_p(const char *__s) {
+  while (__builtin_constant_p(*__s) && *__s)
+    __s++;
+  return __builtin_constant_p(*__s);
+}
+
+constexpr bool n = __constant_string_p("a");

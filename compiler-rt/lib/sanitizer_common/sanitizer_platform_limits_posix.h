@@ -1073,6 +1073,8 @@ struct __sanitizer_cookie_io_functions_t {
   extern unsigned struct_unimapinit_sz;
 #endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
+  extern const unsigned long __sanitizer_bufsiz;
+
 #if (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
   extern unsigned struct_audio_buf_info_sz;
   extern unsigned struct_ppp_stats_sz;

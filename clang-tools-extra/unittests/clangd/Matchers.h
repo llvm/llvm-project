@@ -125,9 +125,7 @@ PolySubsequenceMatcher<Args...> HasSubsequence(Args &&... M) {
                     << ::testing::PrintToString(*ComputedValue);               \
       break;                                                                   \
     }                                                                          \
-    handleAllErrors(ComputedValue.takeError(),                                 \
-                    [](const llvm::ErrorInfoBase &) {});                       \
-                                                                               \
+    llvm::consumeError(ComputedValue.takeError());                             \
   } while (false)
 
 } // namespace clangd

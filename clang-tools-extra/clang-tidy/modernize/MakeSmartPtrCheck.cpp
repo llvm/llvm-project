@@ -120,6 +120,9 @@ void MakeSmartPtrCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (New->getNumPlacementArgs() != 0)
     return;
+  // Skip when this is a new-expression with `auto`, e.g. new auto(1)
+  if (New->getType()->getPointeeType()->getContainedAutoType())
+    return;
 
   // Be conservative for cases where we construct an array without any
   // initalization.
@@ -280,7 +283,27 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
                                          SM, getLangOpts())
                         .str();
   }
-
+  // Returns true if the given constructor expression has any braced-init-list
+  // argument, e.g.
+  //   Foo({1, 2}, 1) => true
+  //   Foo(Bar{1, 2}) => true
+  //   Foo(1) => false
+  //   Foo{1} => false
+  auto HasListIntializedArgument = [](const CXXConstructExpr *CE) {
+    for (const auto *Arg : CE->arguments()) {
+      if (isa<CXXStdInitializerListExpr>(Arg) || isa<InitListExpr>(Arg))
+        return true;
+      // Check whether we implicitly construct a class from a
+      // std::initializer_list.
+      if (const auto *ImplicitCE =
+              dyn_cast<CXXConstructExpr>(Arg->IgnoreImplicit())) {
+        if (ImplicitCE->isStdInitListInitialization())
+          return true;
+      }
+      return false;
+    }
+    return false;
+  };
   switch (New->getInitializationStyle()) {
   case CXXNewExpr::NoInit: {
     if (ArraySizeExpr.empty()) {
@@ -300,32 +323,20 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     // std::make_smart_ptr, we need to specify the type explicitly in the fixes:
     //   struct S { S(std::initializer_list<int>, int); };
     //   struct S2 { S2(std::vector<int>); };
+    //   struct S3 { S3(S2, int); };
     //   smart_ptr<S>(new S({1, 2, 3}, 1));  // C++98 call-style initialization
     //   smart_ptr<S>(new S({}, 1));
     //   smart_ptr<S2>(new S2({1})); // implicit conversion:
     //                               //   std::initializer_list => std::vector
+    //   smart_ptr<S3>(new S3({1, 2}, 3));
     // The above samples have to be replaced with:
     //   std::make_smart_ptr<S>(std::initializer_list<int>({1, 2, 3}), 1);
     //   std::make_smart_ptr<S>(std::initializer_list<int>({}), 1);
     //   std::make_smart_ptr<S2>(std::vector<int>({1}));
+    //   std::make_smart_ptr<S3>(S2{1, 2}, 3);
     if (const auto *CE = New->getConstructExpr()) {
-      for (const auto *Arg : CE->arguments()) {
-        if (isa<CXXStdInitializerListExpr>(Arg)) {
-          return false;
-        }
-        // Check whether we construct a class from a std::initializer_list.
-        // If so, we won't generate the fixes.
-        auto IsStdInitListInitConstructExpr = [](const Expr* E) {
-          assert(E);
-          if (const auto *ImplicitCE = dyn_cast<CXXConstructExpr>(E)) {
-            if (ImplicitCE->isStdInitListInitialization())
-              return true;
-          }
-          return false;
-        };
-        if (IsStdInitListInitConstructExpr(Arg->IgnoreImplicit()))
-          return false;
-      }
+      if (HasListIntializedArgument(CE))
+        return false;
     }
     if (ArraySizeExpr.empty()) {
       SourceRange InitRange = New->getDirectInitRange();
@@ -346,16 +357,20 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     // Range of the substring that we do not want to remove.
     SourceRange InitRange;
     if (const auto *NewConstruct = New->getConstructExpr()) {
-      if (NewConstruct->isStdInitListInitialization()) {
+      if (NewConstruct->isStdInitListInitialization() ||
+          HasListIntializedArgument(NewConstruct)) {
         // FIXME: Add fixes for direct initialization with the initializer-list
         // constructor. Similar to the above CallInit case, the type has to be
         // specified explicitly in the fixes.
         //   struct S { S(std::initializer_list<int>); };
+        //   struct S2 { S2(S, int); };
         //   smart_ptr<S>(new S{1, 2, 3});  // C++11 direct list-initialization
         //   smart_ptr<S>(new S{});  // use initializer-list consturctor
+        //   smart_ptr<S2>()new S2{ {1,2}, 3 }; // have a list-initialized arg
         // The above cases have to be replaced with:
         //   std::make_smart_ptr<S>(std::initializer_list<int>({1, 2, 3}));
         //   std::make_smart_ptr<S>(std::initializer_list<int>({}));
+        //   std::make_smart_ptr<S2>(S{1, 2}, 3);
         return false;
       } else {
         // Direct initialization with ordinary constructors.
@@ -375,6 +390,19 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
       //   smart_ptr<Pair>(new Pair{first, second});
       // Has to be replaced with:
       //   smart_ptr<Pair>(Pair{first, second});
+      //
+      // The fix (std::make_unique) needs to see copy/move constructor of
+      // Pair. If we found any invisible or deleted copy/move constructor, we
+      // stop generating fixes -- as the C++ rule is complicated and we are less
+      // certain about the correct fixes.
+      if (const CXXRecordDecl *RD = New->getType()->getPointeeCXXRecordDecl()) {
+        if (llvm::find_if(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
+              return Ctor->isCopyOrMoveConstructor() &&
+                     (Ctor->isDeleted() || Ctor->getAccess() == AS_private);
+            }) != RD->ctor_end()) {
+          return false;
+        }
+      }
       InitRange = SourceRange(
           New->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
           New->getInitializer()->getSourceRange().getEnd());

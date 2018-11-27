@@ -206,7 +206,7 @@ class LibcxxTestFormat(object):
                 cmd, out, err, rc = self.executor.run(exec_path, [exec_path],
                                                       local_cwd, data_files,
                                                       env)
-                report = "Compiled With: %s\n" % compile_cmd
+                report = "Compiled With: '%s'\n" % ' '.join(compile_cmd)
                 report += libcxx.util.makeReport(cmd, out, err, rc)
                 if rc == 0:
                     res = lit.Test.PASS if retry_count == 0 else lit.Test.FLAKYPASS

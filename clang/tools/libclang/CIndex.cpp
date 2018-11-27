@@ -6940,7 +6940,7 @@ AnnotateTokensWorker::DetermineChildActions(CXCursor Cursor) const {
     if (const ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(Callee)) {
       const Expr *SubExpr = ICE->getSubExpr();
       if (const DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
-        const Decl *parentDecl = getCursorParentDecl(Cursor);
+        const Decl *parentDecl = getCursorDecl(Cursor);
         CXTranslationUnit TU = clang_Cursor_getTranslationUnit(Cursor);
 
         // Visit the DeclRefExpr as last.
@@ -7163,7 +7163,7 @@ AnnotateTokensWorker::Visit(CXCursor cursor, CXCursor parent) {
   //  MyCXXClass foo; // Make sure we don't annotate 'foo' as a CallExpr cursor.
   if (clang_isExpression(cursorK) && MoreTokens()) {
     const Expr *E = getCursorExpr(cursor);
-    if (const Decl *D = getCursorParentDecl(cursor)) {
+    if (const Decl *D = getCursorDecl(cursor)) {
       const unsigned I = NextToken();
       if (E->getBeginLoc().isValid() && D->getLocation().isValid() &&
           E->getBeginLoc() == D->getLocation() &&
@@ -8938,16 +8938,3 @@ cxindex::Logger::~Logger() {
     OS << "--------------------------------------------------\n";
   }
 }
-
-#ifdef CLANG_TOOL_EXTRA_BUILD
-// This anchor is used to force the linker to link the clang-tidy plugin.
-extern volatile int ClangTidyPluginAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED ClangTidyPluginAnchorDestination =
-    ClangTidyPluginAnchorSource;
-
-// This anchor is used to force the linker to link the clang-include-fixer
-// plugin.
-extern volatile int ClangIncludeFixerPluginAnchorSource;
-static int LLVM_ATTRIBUTE_UNUSED ClangIncludeFixerPluginAnchorDestination =
-    ClangIncludeFixerPluginAnchorSource;
-#endif

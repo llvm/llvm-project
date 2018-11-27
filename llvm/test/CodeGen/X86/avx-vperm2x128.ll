@@ -210,8 +210,8 @@ define <16 x i16> @shuffle_v16i16_4501(<16 x i16> %a, <16 x i16> %b) nounwind uw
 ;
 ; AVX2-LABEL: shuffle_v16i16_4501:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
-; AVX2-NEXT:    vpsubw %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpsubw %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 entry:

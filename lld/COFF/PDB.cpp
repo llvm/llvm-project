@@ -1210,7 +1210,7 @@ void DebugSHandler::finish() {
   // Rewrite string table indices in the Fpo Data and symbol records to refer to
   // the global PDB string table instead of the object file string table.
   for (DebugFrameDataSubsectionRef &FDS : NewFpoFrames) {
-    const uint32_t *Reloc = FDS.getRelocPtr();
+    const ulittle32_t *Reloc = FDS.getRelocPtr();
     for (codeview::FrameData FD : FDS) {
       FD.RvaStart += *Reloc;
       FD.FrameFunc =

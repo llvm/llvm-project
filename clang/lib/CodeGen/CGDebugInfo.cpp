@@ -1102,6 +1102,7 @@ static unsigned getDwarfCC(CallingConv CC) {
   case CC_X86_64SysV:
     return llvm::dwarf::DW_CC_LLVM_X86_64SysV;
   case CC_AAPCS:
+  case CC_AArch64VectorCall:
     return llvm::dwarf::DW_CC_LLVM_AAPCS;
   case CC_AAPCS_VFP:
     return llvm::dwarf::DW_CC_LLVM_AAPCS_VFP;
@@ -2522,9 +2523,9 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
       Count = CAT->getSize().getZExtValue();
     else if (const auto *VAT = dyn_cast<VariableArrayType>(Ty)) {
       if (Expr *Size = VAT->getSizeExpr()) {
-        llvm::APSInt V;
-        if (Size->EvaluateAsInt(V, CGM.getContext()))
-          Count = V.getExtValue();
+        Expr::EvalResult Result;
+        if (Size->EvaluateAsInt(Result, CGM.getContext()))
+          Count = Result.Val.getInt().getExtValue();
       }
     }
 

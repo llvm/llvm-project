@@ -9,15 +9,40 @@
 #define HEADER
 
 // CHECK-NOT: @__omp_offloading_{{.+}}_exec_mode = weak constant i8 1
+// CHECK-DAG: [[DISTR_LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2050, i32 3, i32 0, i8* getelementptr inbounds
+// CHECK-DAG: [[FOR_LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 514, i32 3, i32 0, i8* getelementptr inbounds
+// CHECK-DAG: [[LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 3, i32 0, i8* getelementptr inbounds
+// CHECK-DAG: [[DISTR_FULL:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2050, i32 1, i32 0, i8* getelementptr inbounds
+// CHECK-DAG: [[FULL:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 1, i32 0, i8* getelementptr inbounds
+// CHECK-DAG: [[BAR_LIGHT:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 3, i32 0, i8* getelementptr inbounds
+// CHECK-DAG: [[BAR_FULL:@.+]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 66, i32 1, i32 0, i8* getelementptr inbounds
+// CHECK-NOT: @__omp_offloading_{{.+}}_exec_mode = weak constant i8 1
 
 void foo() {
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 #pragma omp target teams distribute parallel for simd
   for (int i = 0; i < 10; ++i)
     ;
@@ -41,12 +66,29 @@ void foo() {
     ;
 int a;
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 #pragma omp target teams distribute parallel for lastprivate(a)
   for (int i = 0; i < 10; ++i)
     a = i;
@@ -69,12 +111,29 @@ int a;
   for (int i = 0; i < 10; ++i)
     ;
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 #pragma omp target teams
    {
      int b;
@@ -115,12 +174,29 @@ int a;
   for (int i = 0; i < 10; ++i)
     ;
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 #pragma omp target teams
 #pragma omp distribute parallel for
   for (int i = 0; i < 10; ++i)
@@ -150,12 +226,29 @@ int a;
   for (int i = 0; i < 10; ++i)
     ;
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[DISTR_LIGHT]]
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[DISTR_FULL]]
+// CHECK-DAG: [[FULL]]
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for
@@ -192,12 +285,22 @@ int a;
   for (int i = 0; i < 10; ++i)
     ;
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
 #pragma omp target parallel for
   for (int i = 0; i < 10; ++i)
     ;
@@ -220,12 +323,29 @@ int a;
   for (int i = 0; i < 10; ++i)
     ;
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
+// CHECK-DAG: [[BAR_LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
+// CHECK-DAG: [[BAR_LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
+// CHECK-DAG: [[BAR_LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
+// CHECK-DAG: [[BAR_FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
+// CHECK-DAG: [[BAR_FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
+// CHECK-DAG: [[BAR_FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
+// CHECK-DAG: [[BAR_FULL]]
 #pragma omp target parallel
 #pragma omp for simd
   for (int i = 0; i < 10; ++i)
@@ -255,12 +375,28 @@ int a;
   for (int i = 0; i < 10; ++i)
     ;
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
+// CHECK-DAG: [[BAR_FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
+// CHECK-DAG: [[BAR_LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
+// CHECK-DAG: [[BAR_LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
+// CHECK-DAG: [[BAR_FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
+// CHECK-DAG: [[BAR_FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
+// CHECK-DAG: [[BAR_FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
+// CHECK-DAG: [[BAR_FULL]]
 #pragma omp target
 #pragma omp parallel
 #pragma omp for simd ordered
@@ -297,12 +433,22 @@ int a;
   for (int i = 0; i < 10; ++i)
     ;
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 0, i16 0)
+// CHECK-DAG: [[FOR_LIGHT]]
+// CHECK-DAG: [[LIGHT]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
 // CHECK: call void @__kmpc_spmd_kernel_init(i32 {{.+}}, i16 1, i16 {{.+}})
+// CHECK-DAG: [[FULL]]
 #pragma omp target
 #pragma omp parallel for
   for (int i = 0; i < 10; ++i)

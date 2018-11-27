@@ -39,8 +39,8 @@ entry:
 define signext i32 @test_igesll_z(i64 %a) {
 ; CHECK-LABEL: test_igesll_z:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    not r3, r3
 ; CHECK-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-NEXT:    xori r3, r3, 1
 ; CHECK-NEXT:    blr
 entry:
   %cmp = icmp sgt i64 %a, -1

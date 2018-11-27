@@ -19,7 +19,13 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_mutex.h"
+#if SANITIZER_FUCHSIA
+#include <zircon/process.h>
+#include <zircon/syscalls.h>
+#include <zircon/status.h>
+#else
 #include "sanitizer_common/sanitizer_posix.h"
+#endif
 #include "xray_defs.h"
 #include "xray_utils.h"
 #include <cstddef>
@@ -33,6 +39,28 @@ namespace __xray {
 // mmap'ed memory to back the allocators.
 template <class T> T *allocate() XRAY_NEVER_INSTRUMENT {
   uptr RoundedSize = RoundUpTo(sizeof(T), GetPageSizeCached());
+#if SANITIZER_FUCHSIA
+  zx_handle_t Vmo;
+  zx_status_t Status = _zx_vmo_create(RoundedSize, 0, &Vmo);
+  if (Status != ZX_OK) {
+    if (Verbosity())
+      Report("XRay Profiling: Failed to create VMO of size %zu: %s\n",
+             sizeof(T), _zx_status_get_string(Status));
+    return nullptr;
+  }
+  uintptr_t B;
+  Status =
+    _zx_vmar_map(_zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
+                 Vmo, 0, sizeof(T), &B);
+  _zx_handle_close(Vmo);
+  if (Status != ZX_OK) {
+    if (Verbosity())
+      Report("XRay Profiling: Failed to map VMAR of size %zu: %s\n",
+             sizeof(T), _zx_status_get_string(Status));
+    return nullptr;
+  }
+  return reinterpret_cast<T *>(B);
+#else
   uptr B = internal_mmap(NULL, RoundedSize, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   int ErrNo;
@@ -43,6 +71,7 @@ template <class T> T *allocate() XRAY_NEVER_INSTRUMENT {
           RoundedSize, B);
     return nullptr;
   }
+#endif
   return reinterpret_cast<T *>(B);
 }
 
@@ -50,11 +79,38 @@ template <class T> void deallocate(T *B) XRAY_NEVER_INSTRUMENT {
   if (B == nullptr)
     return;
   uptr RoundedSize = RoundUpTo(sizeof(T), GetPageSizeCached());
+#if SANITIZER_FUCHSIA
+  _zx_vmar_unmap(_zx_vmar_root_self(),
+                 reinterpret_cast<uintptr_t>(B), RoundedSize);
+#else
   internal_munmap(B, RoundedSize);
+#endif
 }
 
-template <class T = uint8_t> T *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
+template <class T = unsigned char>
+T *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
   uptr RoundedSize = RoundUpTo(S * sizeof(T), GetPageSizeCached());
+#if SANITIZER_FUCHSIA
+  zx_handle_t Vmo;
+  zx_status_t Status = _zx_vmo_create(RoundedSize, 0, &Vmo);
+  if (Status != ZX_OK) {
+    if (Verbosity())
+      Report("XRay Profiling: Failed to create VMO of size %zu: %s\n",
+             S, _zx_status_get_string(Status));
+    return nullptr;
+  }
+  uintptr_t B;
+  Status =
+    _zx_vmar_map(_zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
+                 Vmo, 0, S, &B);
+  _zx_handle_close(Vmo);
+  if (Status != ZX_OK) {
+    if (Verbosity())
+      Report("XRay Profiling: Failed to map VMAR of size %zu: %s\n",
+             S, _zx_status_get_string(Status));
+    return nullptr;
+  }
+#else
   uptr B = internal_mmap(NULL, RoundedSize, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
   int ErrNo;
@@ -65,6 +121,7 @@ template <class T = uint8_t> T *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
           RoundedSize, B);
     return nullptr;
   }
+#endif
   return reinterpret_cast<T *>(B);
 }
 
@@ -72,7 +129,11 @@ template <class T> void deallocateBuffer(T *B, size_t S) XRAY_NEVER_INSTRUMENT {
   if (B == nullptr)
     return;
   uptr RoundedSize = RoundUpTo(S * sizeof(T), GetPageSizeCached());
+#if SANITIZER_FUCHSIA
+  _zx_vmar_unmap(_zx_vmar_root_self(), reinterpret_cast<uintptr_t>(B), RoundedSize);
+#else
   internal_munmap(B, RoundedSize);
+#endif
 }
 
 template <class T, class... U>
@@ -111,8 +172,8 @@ template <size_t N> struct Allocator {
 
 private:
   const size_t MaxMemory{0};
-  uint8_t *BackingStore = nullptr;
-  uint8_t *AlignedNextBlock = nullptr;
+  unsigned char *BackingStore = nullptr;
+  unsigned char *AlignedNextBlock = nullptr;
   size_t AllocatedBlocks = 0;
   SpinMutex Mutex{};
 
@@ -141,7 +202,7 @@ private:
         return nullptr;
       }
 
-      AlignedNextBlock = reinterpret_cast<uint8_t *>(AlignedNextBlockNum);
+      AlignedNextBlock = reinterpret_cast<unsigned char *>(AlignedNextBlockNum);
 
       // Assert that AlignedNextBlock is cache-line aligned.
       DCHECK_EQ(reinterpret_cast<uintptr_t>(AlignedNextBlock) % kCacheLineSize,
@@ -154,15 +215,15 @@ private:
     // Align the pointer we'd like to return to an appropriate alignment, then
     // advance the pointer from where to start allocations.
     void *Result = AlignedNextBlock;
-    AlignedNextBlock = reinterpret_cast<uint8_t *>(
-        reinterpret_cast<uint8_t *>(AlignedNextBlock) + N);
+    AlignedNextBlock = reinterpret_cast<unsigned char *>(
+        reinterpret_cast<unsigned char *>(AlignedNextBlock) + N);
     ++AllocatedBlocks;
     return Result;
   }
 
 public:
   explicit Allocator(size_t M) XRAY_NEVER_INSTRUMENT
-      : MaxMemory(nearest_boundary(M, kCacheLineSize)) {}
+      : MaxMemory(RoundUpTo(M, kCacheLineSize)) {}
 
   Block Allocate() XRAY_NEVER_INSTRUMENT { return {Alloc()}; }
 
