@@ -56,7 +56,12 @@ public:
   }
 };
 
-TEST(BackgroundIndexTest, IndexTwoFiles) {
+class BackgroundIndexTest : public ::testing::Test {
+protected:
+  BackgroundIndexTest() { preventThreadStarvationInTests(); }
+};
+
+TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   MockFSProvider FS;
   // a.h yields different symbols when included by A.cc vs B.cc.
   FS.Files[testPath("root/A.h")] = R"cpp(
@@ -115,7 +120,7 @@ TEST(BackgroundIndexTest, IndexTwoFiles) {
                        FileURI("unittest:///root/B.cc")}));
 }
 
-TEST(BackgroundIndexTest, ShardStorageWriteTest) {
+TEST_F(BackgroundIndexTest, ShardStorageWriteTest) {
   MockFSProvider FS;
   FS.Files[testPath("root/A.h")] = R"cpp(
       void common();

@@ -122,6 +122,10 @@ enum class ThreadPriority {
   Normal = 1,
 };
 void setThreadPriority(std::thread &T, ThreadPriority Priority);
+// Avoid the use of scheduler policies that may starve low-priority threads.
+// This prevents tests from timing out on loaded systems.
+// Affects subsequent setThreadPriority() calls.
+void preventThreadStarvationInTests();
 
 } // namespace clangd
 } // namespace clang
