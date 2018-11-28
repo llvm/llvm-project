@@ -386,7 +386,7 @@ void IdentifierResolver::updatingIdentifier(IdentifierInfo &II) {
     PP.getExternalSource()->updateOutOfDateIdentifier(II);
 
   if (II.isFromAST())
-    II.setFETokenInfoChangedSinceDeserialization();
+    II.setChangedSinceDeserialization();
 }
 
 //===----------------------------------------------------------------------===//
