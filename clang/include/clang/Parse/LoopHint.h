@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_SEMA_LOOPHINT_H
-#define LLVM_CLANG_SEMA_LOOPHINT_H
+#ifndef LLVM_CLANG_PARSE_LOOPHINT_H
+#define LLVM_CLANG_PARSE_LOOPHINT_H
 
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/SourceLocation.h"
@@ -42,4 +42,4 @@ struct LoopHint {
 
 } // end namespace clang
 
-#endif // LLVM_CLANG_SEMA_LOOPHINT_H
+#endif // LLVM_CLANG_PARSE_LOOPHINT_H
