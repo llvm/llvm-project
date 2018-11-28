@@ -76,10 +76,9 @@ getELFObjectFileBase(DataObject *DataP) {
 /// @returns @c AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT If all notes are
 /// processed without @p ProcessNote returning @c true, otherwise
 /// AMD_COMGR_STATUS_SUCCESS.
-template <class ELFT>
-static amd_comgr_status_t
-processElfNotes(const ELFObjectFile<ELFT> *Obj,
-                function_ref<bool(const Elf_Note<ELFT> &Note)> ProcessNote) {
+template <class ELFT, typename F>
+static amd_comgr_status_t processElfNotes(const ELFObjectFile<ELFT> *Obj,
+                                          F ProcessNote) {
   const ELFFile<ELFT> *ELFFile = Obj->getELFFile();
 
   bool Found = false;
