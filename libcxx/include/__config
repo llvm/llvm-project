@@ -1281,6 +1281,16 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
 #define _LIBCPP_HAS_NO_COROUTINES
 #endif
 
+#ifndef _LIBCPP_CXX03_LANG
+# define _LIBCPP_ALIGNOF(_Tp) alignof(_Tp)
+#elif defined(_LIBCPP_COMPILER_CLANG)
+# define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
+#else
+// This definition is potentially buggy, but it's only taken with GCC in C++03,
+// which we barely support anyway. See llvm.org/PR39713
+# define _LIBCPP_ALIGNOF(_Tp) __alignof(_Tp)
+#endif
+
 // FIXME: Correct this macro when either (A) a feature test macro for the
 // spaceship operator is provided, or (B) a compiler provides a complete
 // implementation.
