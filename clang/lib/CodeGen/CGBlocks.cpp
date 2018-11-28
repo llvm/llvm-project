@@ -1945,16 +1945,16 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
 
   ASTContext &C = getContext();
 
+  QualType ReturnTy = C.VoidTy;
+
   FunctionArgList args;
-  ImplicitParamDecl DstDecl(getContext(), C.VoidPtrTy,
-                            ImplicitParamDecl::Other);
+  ImplicitParamDecl DstDecl(C, C.VoidPtrTy, ImplicitParamDecl::Other);
   args.push_back(&DstDecl);
-  ImplicitParamDecl SrcDecl(getContext(), C.VoidPtrTy,
-                            ImplicitParamDecl::Other);
+  ImplicitParamDecl SrcDecl(C, C.VoidPtrTy, ImplicitParamDecl::Other);
   args.push_back(&SrcDecl);
 
   const CGFunctionInfo &FI =
-    CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, args);
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
 
   // FIXME: it would be nice if these were mergeable with things with
   // identical semantics.
@@ -1964,20 +1964,20 @@ CodeGenFunction::GenerateCopyHelperFunction(const CGBlockInfo &blockInfo) {
     llvm::Function::Create(LTy, llvm::GlobalValue::LinkOnceODRLinkage,
                            FuncName, &CGM.getModule());
 
-  IdentifierInfo *II
-    = &CGM.getContext().Idents.get(FuncName);
+  IdentifierInfo *II = &C.Idents.get(FuncName);
 
-  FunctionDecl *FD = FunctionDecl::Create(C,
-                                          C.getTranslationUnitDecl(),
-                                          SourceLocation(),
-                                          SourceLocation(), II, C.VoidTy,
-                                          nullptr, SC_Static,
-                                          false,
-                                          false);
+  SmallVector<QualType, 2> ArgTys;
+  ArgTys.push_back(C.VoidPtrTy);
+  ArgTys.push_back(C.VoidPtrTy);
+  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, {});
+
+  FunctionDecl *FD = FunctionDecl::Create(
+      C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
+      FunctionTy, nullptr, SC_Static, false, false);
 
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
-  StartFunction(FD, C.VoidTy, Fn, FI, args);
+  StartFunction(FD, ReturnTy, Fn, FI, args);
   ApplyDebugLocation NL{*this, blockInfo.getBlockExpr()->getLocStart()};
   llvm::Type *structPtrTy = blockInfo.StructureType->getPointerTo();
 
@@ -2138,13 +2138,14 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
 
   ASTContext &C = getContext();
 
+  QualType ReturnTy = C.VoidTy;
+
   FunctionArgList args;
-  ImplicitParamDecl SrcDecl(getContext(), C.VoidPtrTy,
-                            ImplicitParamDecl::Other);
+  ImplicitParamDecl SrcDecl(C, C.VoidPtrTy, ImplicitParamDecl::Other);
   args.push_back(&SrcDecl);
 
   const CGFunctionInfo &FI =
-    CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, args);
+      CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
 
   // FIXME: We'd like to put these into a mergable by content, with
   // internal linkage.
@@ -2154,18 +2155,19 @@ CodeGenFunction::GenerateDestroyHelperFunction(const CGBlockInfo &blockInfo) {
     llvm::Function::Create(LTy, llvm::GlobalValue::LinkOnceODRLinkage,
                            FuncName, &CGM.getModule());
 
-  IdentifierInfo *II
-    = &CGM.getContext().Idents.get(FuncName);
+  IdentifierInfo *II = &C.Idents.get(FuncName);
 
-  FunctionDecl *FD = FunctionDecl::Create(C, C.getTranslationUnitDecl(),
-                                          SourceLocation(),
-                                          SourceLocation(), II, C.VoidTy,
-                                          nullptr, SC_Static,
-                                          false, false);
+  SmallVector<QualType, 1> ArgTys;
+  ArgTys.push_back(C.VoidPtrTy);
+  QualType FunctionTy = C.getFunctionType(ReturnTy, ArgTys, {});
+
+  FunctionDecl *FD = FunctionDecl::Create(
+      C, C.getTranslationUnitDecl(), SourceLocation(), SourceLocation(), II,
+      FunctionTy, nullptr, SC_Static, false, false);
 
   setBlockHelperAttributesVisibility(blockInfo.CapturesNonExternalType, Fn, FI,
                                      CGM);
-  StartFunction(FD, C.VoidTy, Fn, FI, args);
+  StartFunction(FD, ReturnTy, Fn, FI, args);
   markAsIgnoreThreadCheckingAtRuntime(Fn);
 
   ApplyDebugLocation NL{*this, blockInfo.getBlockExpr()->getLocStart()};
@@ -2384,19 +2386,17 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
                         BlockByrefHelpers &generator) {
   ASTContext &Context = CGF.getContext();
 
-  QualType R = Context.VoidTy;
+  QualType ReturnTy = Context.VoidTy;
 
   FunctionArgList args;
-  ImplicitParamDecl Dst(CGF.getContext(), Context.VoidPtrTy,
-                        ImplicitParamDecl::Other);
+  ImplicitParamDecl Dst(Context, Context.VoidPtrTy, ImplicitParamDecl::Other);
   args.push_back(&Dst);
 
-  ImplicitParamDecl Src(CGF.getContext(), Context.VoidPtrTy,
-                        ImplicitParamDecl::Other);
+  ImplicitParamDecl Src(Context, Context.VoidPtrTy, ImplicitParamDecl::Other);
   args.push_back(&Src);
 
   const CGFunctionInfo &FI =
-    CGF.CGM.getTypes().arrangeBuiltinFunctionDeclaration(R, args);
+      CGF.CGM.getTypes().arrangeBuiltinFunctionDeclaration(ReturnTy, args);
 
   llvm::FunctionType *LTy = CGF.CGM.getTypes().GetFunctionType(FI);
 
@@ -2409,16 +2409,18 @@ generateByrefCopyHelper(CodeGenFunction &CGF, const BlockByrefInfo &byrefInfo,
   IdentifierInfo *II
     = &Context.Idents.get("__Block_byref_object_copy_");
 
-  FunctionDecl *FD = FunctionDecl::Create(Context,
-                                          Context.getTranslationUnitDecl(),
-                                          SourceLocation(),
-                                          SourceLocation(), II, R, nullptr,
-                                          SC_Static,
-                                          false, false);
+  SmallVector<QualType, 2> ArgTys;
+  ArgTys.push_back(Context.VoidPtrTy);
+  ArgTys.push_back(Context.VoidPtrTy);
+  QualType FunctionTy = Context.getFunctionType(ReturnTy, ArgTys, {});
+
+  FunctionDecl *FD = FunctionDecl::Create(
+      Context, Context.getTranslationUnitDecl(), SourceLocation(),
+      SourceLocation(), II, FunctionTy, nullptr, SC_Static, false, false);
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
-  CGF.StartFunction(FD, R, Fn, FI, args);
+  CGF.StartFunction(FD, ReturnTy, Fn, FI, args);
 
   if (generator.needsCopy()) {
     llvm::Type *byrefPtrType = byrefInfo.Type->getPointerTo(0);
@@ -2483,12 +2485,13 @@ generateByrefDisposeHelper(CodeGenFunction &CGF,
   IdentifierInfo *II
     = &Context.Idents.get("__Block_byref_object_dispose_");
 
-  FunctionDecl *FD = FunctionDecl::Create(Context,
-                                          Context.getTranslationUnitDecl(),
-                                          SourceLocation(),
-                                          SourceLocation(), II, R, nullptr,
-                                          SC_Static,
-                                          false, false);
+  SmallVector<QualType, 1> ArgTys;
+  ArgTys.push_back(Context.VoidPtrTy);
+  QualType FunctionTy = Context.getFunctionType(R, ArgTys, {});
+
+  FunctionDecl *FD = FunctionDecl::Create(
+      Context, Context.getTranslationUnitDecl(), SourceLocation(),
+      SourceLocation(), II, FunctionTy, nullptr, SC_Static, false, false);
 
   CGF.CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
