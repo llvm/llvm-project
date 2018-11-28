@@ -8231,8 +8231,9 @@ bool SwiftASTContext::PerformAutoImport(SwiftASTContext &swift_ast_context,
     }
     // Finally get the hand-loaded modules from the
     // SwiftPersistentExpressionState and load them into this context:
-    if (!persistent_expression_state->RunOverHandLoadedModules(load_one_module))
-      return false;
+    for (ConstString name : persistent_expression_state->GetHandLoadedModules())
+      if (!load_one_module(name))
+        return false;
   }
   source_file.addImports(additional_imports);
   return true;
