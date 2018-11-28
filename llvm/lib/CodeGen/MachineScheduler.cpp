@@ -1489,8 +1489,20 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
         : SU(su), BaseOp(Op), Offset(ofs) {}
 
     bool operator<(const MemOpInfo &RHS) const {
-      return std::make_tuple(BaseOp->getReg(), Offset, SU->NodeNum) <
-             std::make_tuple(RHS.BaseOp->getReg(), RHS.Offset, RHS.SU->NodeNum);
+      if (BaseOp->getType() != RHS.BaseOp->getType())
+        return BaseOp->getType() < RHS.BaseOp->getType();
+
+      if (BaseOp->isReg())
+        return std::make_tuple(BaseOp->getReg(), Offset, SU->NodeNum) <
+               std::make_tuple(RHS.BaseOp->getReg(), RHS.Offset,
+                               RHS.SU->NodeNum);
+      if (BaseOp->isFI())
+        return std::make_tuple(BaseOp->getIndex(), Offset, SU->NodeNum) <
+               std::make_tuple(RHS.BaseOp->getIndex(), RHS.Offset,
+                               RHS.SU->NodeNum);
+
+      llvm_unreachable("MemOpClusterMutation only supports register or frame "
+                       "index bases.");
     }
   };
 
