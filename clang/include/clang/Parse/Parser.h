@@ -22,7 +22,6 @@
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
-#include "clang/Sema/LoopHint.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
@@ -38,6 +37,7 @@ namespace clang {
   class CorrectionCandidateCallback;
   class DeclGroupRef;
   class DiagnosticBuilder;
+  struct LoopHint;
   class Parser;
   class ParsingDeclRAIIObject;
   class ParsingDeclSpec;

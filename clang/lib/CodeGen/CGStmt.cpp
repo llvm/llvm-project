@@ -19,7 +19,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Sema/LoopHint.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallSite.h"
