@@ -6092,7 +6092,10 @@ PerformConstructorInitialization(Sema &S,
     TypeSourceInfo *TSInfo = Entity.getTypeSourceInfo();
     if (!TSInfo)
       TSInfo = S.Context.getTrivialTypeSourceInfo(Entity.getType(), Loc);
-    SourceRange ParenOrBraceRange = Kind.getParenOrBraceRange();
+    SourceRange ParenOrBraceRange =
+        (Kind.getKind() == InitializationKind::IK_DirectList)
+        ? SourceRange(LBraceLoc, RBraceLoc)
+        : Kind.getParenOrBraceRange();
 
     if (auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(
             Step.Function.FoundDecl.getDecl())) {
