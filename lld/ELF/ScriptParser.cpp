@@ -388,36 +388,36 @@ void ScriptParser::readOutputArch() {
 std::tuple<ELFKind, uint16_t, bool> ScriptParser::readBfdName() {
   StringRef S = unquote(next());
   if (S == "elf32-i386")
-    return {ELF32LEKind, EM_386, false};
+    return std::make_tuple(ELF32LEKind, EM_386, false);
   if (S == "elf32-iamcu")
-    return {ELF32LEKind, EM_IAMCU, false};
+    return std::make_tuple(ELF32LEKind, EM_IAMCU, false);
   if (S == "elf32-littlearm")
-    return {ELF32LEKind, EM_ARM, false};
+    return std::make_tuple(ELF32LEKind, EM_ARM, false);
   if (S == "elf32-x86-64")
-    return {ELF32LEKind, EM_X86_64, false};
+    return std::make_tuple(ELF32LEKind, EM_X86_64, false);
   if (S == "elf64-littleaarch64")
-    return {ELF64LEKind, EM_AARCH64, false};
+    return std::make_tuple(ELF64LEKind, EM_AARCH64, false);
   if (S == "elf64-powerpc")
-    return {ELF64BEKind, EM_PPC64, false};
+    return std::make_tuple(ELF64BEKind, EM_PPC64, false);
   if (S == "elf64-powerpcle")
-    return {ELF64LEKind, EM_PPC64, false};
+    return std::make_tuple(ELF64LEKind, EM_PPC64, false);
   if (S == "elf64-x86-64")
-    return {ELF64LEKind, EM_X86_64, false};
+    return std::make_tuple(ELF64LEKind, EM_X86_64, false);
   if (S == "elf32-tradbigmips")
-    return {ELF32BEKind, EM_MIPS, false};
+    return std::make_tuple(ELF32BEKind, EM_MIPS, false);
   if (S == "elf32-ntradbigmips")
-    return {ELF32BEKind, EM_MIPS, true};
+    return std::make_tuple(ELF32BEKind, EM_MIPS, true);
   if (S == "elf32-tradlittlemips")
-    return {ELF32LEKind, EM_MIPS, false};
+    return std::make_tuple(ELF32LEKind, EM_MIPS, false);
   if (S == "elf32-ntradlittlemips")
-    return {ELF32LEKind, EM_MIPS, true};
+    return std::make_tuple(ELF32LEKind, EM_MIPS, true);
   if (S == "elf64-tradbigmips")
-    return {ELF64BEKind, EM_MIPS, false};
+    return std::make_tuple(ELF64BEKind, EM_MIPS, false);
   if (S == "elf64-tradlittlemips")
-    return {ELF64LEKind, EM_MIPS, false};
+    return std::make_tuple(ELF64LEKind, EM_MIPS, false);
 
   setError("unknown output format name: " + S);
-  return {ELFNoneKind, EM_NONE, false};
+  return std::make_tuple(ELFNoneKind, EM_NONE, false);
 }
 
 // Parse OUTPUT_FORMAT(bfdname) or OUTPUT_FORMAT(bfdname, big, little).
