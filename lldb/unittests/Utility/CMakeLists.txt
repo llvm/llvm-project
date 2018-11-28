@@ -15,6 +15,7 @@ add_lldb_unittest(UtilityTests
   NameMatchesTest.cpp
   PredicateTest.cpp
   RegisterValueTest.cpp
+  ReproducerTest.cpp
   ScalarTest.cpp
   StateTest.cpp
   StatusTest.cpp

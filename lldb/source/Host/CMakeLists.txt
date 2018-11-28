@@ -155,7 +155,7 @@ if (HAVE_LIBDL)
   list(APPEND EXTRA_LIBS ${CMAKE_DL_LIBS})
 endif()
 if (NOT LLDB_DISABLE_LIBEDIT)
-  list(APPEND EXTRA_LIBS edit)
+  list(APPEND EXTRA_LIBS ${libedit_LIBRARIES})
 endif()
 
 add_lldb_library(lldbHost

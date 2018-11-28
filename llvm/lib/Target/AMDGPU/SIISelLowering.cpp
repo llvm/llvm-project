@@ -8637,6 +8637,9 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
 
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
+  if (getTargetMachine().getOptLevel() == CodeGenOpt::None)
+    return SDValue();
+
   switch (N->getOpcode()) {
   default:
     return AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
@@ -8662,12 +8665,8 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UMAX:
   case ISD::UMIN:
   case AMDGPUISD::FMIN_LEGACY:
-  case AMDGPUISD::FMAX_LEGACY: {
-    if (//DCI.getDAGCombineLevel() >= AfterLegalizeDAG &&
-        getTargetMachine().getOptLevel() > CodeGenOpt::None)
-      return performMinMaxCombine(N, DCI);
-    break;
-  }
+  case AMDGPUISD::FMAX_LEGACY:
+    return performMinMaxCombine(N, DCI);
   case ISD::FMA:
     return performFMACombine(N, DCI);
   case ISD::LOAD: {

@@ -227,5 +227,17 @@ bool IsRangeConsecutive(const Range &Left, const Range &Right) {
          Left.end.character == Right.start.character;
 }
 
+FileDigest digest(StringRef Content) {
+  return llvm::SHA1::hash({(const uint8_t *)Content.data(), Content.size()});
+}
+
+Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID) {
+  bool Invalid = false;
+  StringRef Content = SM.getBufferData(FID, &Invalid);
+  if (Invalid)
+    return None;
+  return digest(Content);
+}
+
 } // namespace clangd
 } // namespace clang

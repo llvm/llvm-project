@@ -31,7 +31,7 @@ int32_t __gpu_block_reduce() {
 }
 
 EXTERN
-int32_t __kmpc_reduce_gpu(kmp_Indent *loc, int32_t global_tid, int32_t num_vars,
+int32_t __kmpc_reduce_gpu(kmp_Ident *loc, int32_t global_tid, int32_t num_vars,
                           size_t reduce_size, void *reduce_data,
                           void *reduce_array_size, kmp_ReductFctPtr *reductFct,
                           kmp_CriticalName *lck) {
@@ -40,7 +40,8 @@ int32_t __kmpc_reduce_gpu(kmp_Indent *loc, int32_t global_tid, int32_t num_vars,
   int numthread;
   if (currTaskDescr->IsParallelConstruct()) {
     numthread =
-        GetNumberOfOmpThreads(threadId, isSPMDMode(), isRuntimeUninitialized());
+        GetNumberOfOmpThreads(threadId, checkSPMDMode(loc),
+                              checkRuntimeUninitialized(loc));
   } else {
     numthread = GetNumberOfOmpTeams();
   }
@@ -55,12 +56,12 @@ int32_t __kmpc_reduce_gpu(kmp_Indent *loc, int32_t global_tid, int32_t num_vars,
 }
 
 EXTERN
-int32_t __kmpc_reduce_combined(kmp_Indent *loc) {
+int32_t __kmpc_reduce_combined(kmp_Ident *loc) {
   return threadIdx.x == 0 ? 2 : 0;
 }
 
 EXTERN
-int32_t __kmpc_reduce_simd(kmp_Indent *loc) {
+int32_t __kmpc_reduce_simd(kmp_Ident *loc) {
   return (threadIdx.x % 32 == 0) ? 1 : 0;
 }
 
@@ -429,3 +430,21 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_simple_generic(
                                    /*isSPMDExecutionMode=*/false,
                                    /*isRuntimeUninitialized=*/true);
 }
+
+EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_simple(kmp_Ident *loc,
+                                                       int32_t global_tid,
+                                                       kmp_CriticalName *crit) {
+  if (checkSPMDMode(loc) && GetThreadIdInBlock() != 0)
+    return 0;
+  // The master thread of the team actually does the reduction.
+  while (atomicCAS((uint32_t *)crit, 0, 1))
+    ;
+  return 1;
+}
+
+EXTERN void
+__kmpc_nvptx_teams_end_reduce_nowait_simple(kmp_Ident *loc, int32_t global_tid,
+                                            kmp_CriticalName *crit) {
+  (void)atomicExch((uint32_t *)crit, 0);
+}
+

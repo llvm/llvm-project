@@ -5575,12 +5575,10 @@ static QualType TryToFixInvalidVariablyModifiedType(QualType T,
   if (VLATy->getElementType()->isVariablyModifiedType())
     return QualType();
 
-  Expr::EvalResult Result;
+  llvm::APSInt Res;
   if (!VLATy->getSizeExpr() ||
-      !VLATy->getSizeExpr()->EvaluateAsInt(Result, Context))
+      !VLATy->getSizeExpr()->EvaluateAsInt(Res, Context))
     return QualType();
-
-  llvm::APSInt Res = Result.Val.getInt();
 
   // Check whether the array size is negative.
   if (Res.isSigned() && Res.isNegative()) {

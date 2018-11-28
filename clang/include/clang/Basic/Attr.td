@@ -3091,3 +3091,9 @@ def AlwaysDestroy : InheritableAttr {
   let Subjects = SubjectList<[Var]>;
   let Documentation = [AlwaysDestroyDocs];
 }
+
+def SpeculativeLoadHardening : InheritableAttr {
+  let Spellings = [Clang<"speculative_load_hardening">];
+  let Subjects = SubjectList<[Function, ObjCMethod], ErrorDiag>;
+  let Documentation = [SpeculativeLoadHardeningDocs];
+}

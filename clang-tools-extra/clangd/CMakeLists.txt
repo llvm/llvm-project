@@ -46,6 +46,7 @@ add_clang_library(clangDaemon
   index/IndexAction.cpp
   index/MemIndex.cpp
   index/Merge.cpp
+  index/SymbolID.cpp
   index/Serialization.cpp
   index/SymbolCollector.cpp
   index/YAMLSerialization.cpp

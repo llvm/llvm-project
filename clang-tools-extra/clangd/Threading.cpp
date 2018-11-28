@@ -3,6 +3,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Threading.h"
+#include <atomic>
 #include <thread>
 #ifdef __USE_POSIX
 #include <pthread.h>
@@ -100,6 +101,8 @@ void wait(std::unique_lock<std::mutex> &Lock, std::condition_variable &CV,
   CV.wait_until(Lock, D.time());
 }
 
+static std::atomic<bool> AvoidThreadStarvation = {false};
+
 void setThreadPriority(std::thread &T, ThreadPriority Priority) {
   // Some *really* old glibcs are missing SCHED_IDLE.
 #if defined(__linux__) && defined(SCHED_IDLE)
@@ -107,9 +110,13 @@ void setThreadPriority(std::thread &T, ThreadPriority Priority) {
   priority.sched_priority = 0;
   pthread_setschedparam(
       T.native_handle(),
-      Priority == ThreadPriority::Low ? SCHED_IDLE : SCHED_OTHER, &priority);
+      Priority == ThreadPriority::Low && !AvoidThreadStarvation ? SCHED_IDLE
+                                                                : SCHED_OTHER,
+      &priority);
 #endif
 }
+
+void preventThreadStarvationInTests() { AvoidThreadStarvation = true; }
 
 } // namespace clangd
 } // namespace clang

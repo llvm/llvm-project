@@ -102,6 +102,7 @@ X86_CPU_SUBTYPE_COMPAT("icelake-server", INTEL_COREI7_ICELAKE_SERVER, "icelake-s
 // Entries below this are not in libgcc/compiler-rt.
 X86_CPU_SUBTYPE       ("core2",          INTEL_CORE2_65)
 X86_CPU_SUBTYPE       ("penryn",         INTEL_CORE2_45)
+X86_CPU_SUBTYPE       ("cascadelake",    INTEL_COREI7_CASCADELAKE)
 X86_CPU_SUBTYPE       ("k6",             AMDPENTIUM_K6)
 X86_CPU_SUBTYPE       ("k6-2",           AMDPENTIUM_K62)
 X86_CPU_SUBTYPE       ("k6-3",           AMDPENTIUM_K63)

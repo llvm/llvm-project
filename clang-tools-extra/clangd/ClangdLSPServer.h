@@ -92,6 +92,8 @@ private:
   void onHover(const TextDocumentPositionParams &,
                Callback<llvm::Optional<Hover>>);
   void onChangeConfiguration(const DidChangeConfigurationParams &);
+  void onSymbolInfo(const TextDocumentPositionParams &,
+                    Callback<std::vector<SymbolDetails>>);
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 

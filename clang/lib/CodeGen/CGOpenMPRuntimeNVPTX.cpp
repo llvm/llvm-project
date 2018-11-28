@@ -62,22 +62,12 @@ enum OpenMPRTLFunctionNVPTX {
   /// lane_offset, int16_t shortCircuit),
   /// void (*kmp_InterWarpCopyFctPtr)(void* src, int32_t warp_num));
   OMPRTL_NVPTX__kmpc_parallel_reduce_nowait,
-  /// Call to __kmpc_nvptx_simd_reduce_nowait(kmp_int32
-  /// global_tid, kmp_int32 num_vars, size_t reduce_size, void* reduce_data,
-  /// void (*kmp_ShuffleReductFctPtr)(void *rhsData, int16_t lane_id, int16_t
-  /// lane_offset, int16_t shortCircuit),
-  /// void (*kmp_InterWarpCopyFctPtr)(void* src, int32_t warp_num));
-  OMPRTL_NVPTX__kmpc_simd_reduce_nowait,
-  /// Call to __kmpc_nvptx_teams_reduce_nowait(int32_t global_tid,
-  /// int32_t num_vars, size_t reduce_size, void *reduce_data,
-  /// void (*kmp_ShuffleReductFctPtr)(void *rhs, int16_t lane_id, int16_t
-  /// lane_offset, int16_t shortCircuit),
-  /// void (*kmp_InterWarpCopyFctPtr)(void* src, int32_t warp_num),
-  /// void (*kmp_CopyToScratchpadFctPtr)(void *reduce_data, void * scratchpad,
-  /// int32_t index, int32_t width),
-  /// void (*kmp_LoadReduceFctPtr)(void *reduce_data, void * scratchpad, int32_t
-  /// index, int32_t width, int32_t reduce))
-  OMPRTL_NVPTX__kmpc_teams_reduce_nowait,
+  /// Call to __kmpc_nvptx_teams_reduce_nowait_simple(ident_t *loc, kmp_int32
+  /// global_tid, kmp_critical_name *lck)
+  OMPRTL_NVPTX__kmpc_nvptx_teams_reduce_nowait_simple,
+  /// Call to __kmpc_nvptx_teams_end_reduce_nowait_simple(ident_t *loc,
+  /// kmp_int32 global_tid, kmp_critical_name *lck)
+  OMPRTL_NVPTX__kmpc_nvptx_teams_end_reduce_nowait_simple,
   /// Call to __kmpc_nvptx_end_reduce_nowait(int32_t global_tid);
   OMPRTL_NVPTX__kmpc_end_reduce_nowait,
   /// Call to void __kmpc_data_sharing_init_stack();
@@ -1703,76 +1693,6 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
         FnTy, /*Name=*/"__kmpc_nvptx_parallel_reduce_nowait");
     break;
   }
-  case OMPRTL_NVPTX__kmpc_simd_reduce_nowait: {
-    // Build int32_t kmpc_nvptx_simd_reduce_nowait(kmp_int32 global_tid,
-    // kmp_int32 num_vars, size_t reduce_size, void* reduce_data,
-    // void (*kmp_ShuffleReductFctPtr)(void *rhsData, int16_t lane_id, int16_t
-    // lane_offset, int16_t Algorithm Version),
-    // void (*kmp_InterWarpCopyFctPtr)(void* src, int warp_num));
-    llvm::Type *ShuffleReduceTypeParams[] = {CGM.VoidPtrTy, CGM.Int16Ty,
-                                             CGM.Int16Ty, CGM.Int16Ty};
-    auto *ShuffleReduceFnTy =
-        llvm::FunctionType::get(CGM.VoidTy, ShuffleReduceTypeParams,
-                                /*isVarArg=*/false);
-    llvm::Type *InterWarpCopyTypeParams[] = {CGM.VoidPtrTy, CGM.Int32Ty};
-    auto *InterWarpCopyFnTy =
-        llvm::FunctionType::get(CGM.VoidTy, InterWarpCopyTypeParams,
-                                /*isVarArg=*/false);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty,
-                                CGM.Int32Ty,
-                                CGM.SizeTy,
-                                CGM.VoidPtrTy,
-                                ShuffleReduceFnTy->getPointerTo(),
-                                InterWarpCopyFnTy->getPointerTo()};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(
-        FnTy, /*Name=*/"__kmpc_nvptx_simd_reduce_nowait");
-    break;
-  }
-  case OMPRTL_NVPTX__kmpc_teams_reduce_nowait: {
-    // Build int32_t __kmpc_nvptx_teams_reduce_nowait(int32_t global_tid,
-    // int32_t num_vars, size_t reduce_size, void *reduce_data,
-    // void (*kmp_ShuffleReductFctPtr)(void *rhsData, int16_t lane_id, int16_t
-    // lane_offset, int16_t shortCircuit),
-    // void (*kmp_InterWarpCopyFctPtr)(void* src, int32_t warp_num),
-    // void (*kmp_CopyToScratchpadFctPtr)(void *reduce_data, void * scratchpad,
-    // int32_t index, int32_t width),
-    // void (*kmp_LoadReduceFctPtr)(void *reduce_data, void * scratchpad,
-    // int32_t index, int32_t width, int32_t reduce))
-    llvm::Type *ShuffleReduceTypeParams[] = {CGM.VoidPtrTy, CGM.Int16Ty,
-                                             CGM.Int16Ty, CGM.Int16Ty};
-    auto *ShuffleReduceFnTy =
-        llvm::FunctionType::get(CGM.VoidTy, ShuffleReduceTypeParams,
-                                /*isVarArg=*/false);
-    llvm::Type *InterWarpCopyTypeParams[] = {CGM.VoidPtrTy, CGM.Int32Ty};
-    auto *InterWarpCopyFnTy =
-        llvm::FunctionType::get(CGM.VoidTy, InterWarpCopyTypeParams,
-                                /*isVarArg=*/false);
-    llvm::Type *CopyToScratchpadTypeParams[] = {CGM.VoidPtrTy, CGM.VoidPtrTy,
-                                                CGM.Int32Ty, CGM.Int32Ty};
-    auto *CopyToScratchpadFnTy =
-        llvm::FunctionType::get(CGM.VoidTy, CopyToScratchpadTypeParams,
-                                /*isVarArg=*/false);
-    llvm::Type *LoadReduceTypeParams[] = {
-        CGM.VoidPtrTy, CGM.VoidPtrTy, CGM.Int32Ty, CGM.Int32Ty, CGM.Int32Ty};
-    auto *LoadReduceFnTy =
-        llvm::FunctionType::get(CGM.VoidTy, LoadReduceTypeParams,
-                                /*isVarArg=*/false);
-    llvm::Type *TypeParams[] = {CGM.Int32Ty,
-                                CGM.Int32Ty,
-                                CGM.SizeTy,
-                                CGM.VoidPtrTy,
-                                ShuffleReduceFnTy->getPointerTo(),
-                                InterWarpCopyFnTy->getPointerTo(),
-                                CopyToScratchpadFnTy->getPointerTo(),
-                                LoadReduceFnTy->getPointerTo()};
-    auto *FnTy =
-        llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg=*/false);
-    RTLFn = CGM.CreateRuntimeFunction(
-        FnTy, /*Name=*/"__kmpc_nvptx_teams_reduce_nowait");
-    break;
-  }
   case OMPRTL_NVPTX__kmpc_end_reduce_nowait: {
     // Build __kmpc_end_reduce_nowait(kmp_int32 global_tid);
     llvm::Type *TypeParams[] = {CGM.Int32Ty};
@@ -1780,6 +1700,30 @@ CGOpenMPRuntimeNVPTX::createNVPTXRuntimeFunction(unsigned Function) {
         llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
     RTLFn = CGM.CreateRuntimeFunction(
         FnTy, /*Name=*/"__kmpc_nvptx_end_reduce_nowait");
+    break;
+  }
+  case OMPRTL_NVPTX__kmpc_nvptx_teams_reduce_nowait_simple: {
+    // Build __kmpc_nvptx_teams_reduce_nowait_simple(ident_t *loc, kmp_int32
+    // global_tid, kmp_critical_name *lck)
+    llvm::Type *TypeParams[] = {
+        getIdentTyPointerTy(), CGM.Int32Ty,
+        llvm::PointerType::getUnqual(getKmpCriticalNameTy())};
+    auto *FnTy =
+        llvm::FunctionType::get(CGM.Int32Ty, TypeParams, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(
+        FnTy, /*Name=*/"__kmpc_nvptx_teams_reduce_nowait_simple");
+    break;
+  }
+  case OMPRTL_NVPTX__kmpc_nvptx_teams_end_reduce_nowait_simple: {
+    // Build __kmpc_nvptx_teams_end_reduce_nowait_simple(ident_t *loc, kmp_int32
+    // global_tid, kmp_critical_name *lck)
+    llvm::Type *TypeParams[] = {
+        getIdentTyPointerTy(), CGM.Int32Ty,
+        llvm::PointerType::getUnqual(getKmpCriticalNameTy())};
+    auto *FnTy =
+        llvm::FunctionType::get(CGM.VoidTy, TypeParams, /*isVarArg=*/false);
+    RTLFn = CGM.CreateRuntimeFunction(
+        FnTy, /*Name=*/"__kmpc_nvptx_teams_end_reduce_nowait_simple");
     break;
   }
   case OMPRTL_NVPTX__kmpc_data_sharing_init_stack: {
@@ -3126,222 +3070,6 @@ static void emitReductionListCopy(
   }
 }
 
-/// This function emits a helper that loads data from the scratchpad array
-/// and (optionally) reduces it with the input operand.
-///
-///  load_and_reduce(local, scratchpad, index, width, should_reduce)
-///  reduce_data remote;
-///  for elem in remote:
-///    remote.elem = Scratchpad[elem_id][index]
-///  if (should_reduce)
-///    local = local @ remote
-///  else
-///    local = remote
-static llvm::Value *emitReduceScratchpadFunction(
-    CodeGenModule &CGM, ArrayRef<const Expr *> Privates,
-    QualType ReductionArrayTy, llvm::Value *ReduceFn, SourceLocation Loc) {
-  ASTContext &C = CGM.getContext();
-  QualType Int32Ty = C.getIntTypeForBitwidth(32, /*Signed=*/1);
-
-  // Destination of the copy.
-  ImplicitParamDecl ReduceListArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                  C.VoidPtrTy, ImplicitParamDecl::Other);
-  // Base address of the scratchpad array, with each element storing a
-  // Reduce list per team.
-  ImplicitParamDecl ScratchPadArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                  C.VoidPtrTy, ImplicitParamDecl::Other);
-  // A source index into the scratchpad array.
-  ImplicitParamDecl IndexArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, Int32Ty,
-                             ImplicitParamDecl::Other);
-  // Row width of an element in the scratchpad array, typically
-  // the number of teams.
-  ImplicitParamDecl WidthArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, Int32Ty,
-                             ImplicitParamDecl::Other);
-  // If should_reduce == 1, then it's load AND reduce,
-  // If should_reduce == 0 (or otherwise), then it only loads (+ copy).
-  // The latter case is used for initialization.
-  ImplicitParamDecl ShouldReduceArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                    Int32Ty, ImplicitParamDecl::Other);
-
-  FunctionArgList Args;
-  Args.push_back(&ReduceListArg);
-  Args.push_back(&ScratchPadArg);
-  Args.push_back(&IndexArg);
-  Args.push_back(&WidthArg);
-  Args.push_back(&ShouldReduceArg);
-
-  const CGFunctionInfo &CGFI =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
-  auto *Fn = llvm::Function::Create(
-      CGM.getTypes().GetFunctionType(CGFI), llvm::GlobalValue::InternalLinkage,
-      "_omp_reduction_load_and_reduce", &CGM.getModule());
-  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
-  Fn->setDoesNotRecurse();
-  CodeGenFunction CGF(CGM);
-  CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
-
-  CGBuilderTy &Bld = CGF.Builder;
-
-  // Get local Reduce list pointer.
-  Address AddrReduceListArg = CGF.GetAddrOfLocalVar(&ReduceListArg);
-  Address ReduceListAddr(
-      Bld.CreatePointerBitCastOrAddrSpaceCast(
-          CGF.EmitLoadOfScalar(AddrReduceListArg, /*Volatile=*/false,
-                               C.VoidPtrTy, Loc),
-          CGF.ConvertTypeForMem(ReductionArrayTy)->getPointerTo()),
-      CGF.getPointerAlign());
-
-  Address AddrScratchPadArg = CGF.GetAddrOfLocalVar(&ScratchPadArg);
-  llvm::Value *ScratchPadBase = CGF.EmitLoadOfScalar(
-      AddrScratchPadArg, /*Volatile=*/false, C.VoidPtrTy, Loc);
-
-  Address AddrIndexArg = CGF.GetAddrOfLocalVar(&IndexArg);
-  llvm::Value *IndexVal = Bld.CreateIntCast(
-      CGF.EmitLoadOfScalar(AddrIndexArg, /*Volatile=*/false, Int32Ty, Loc),
-      CGM.SizeTy, /*isSigned=*/true);
-
-  Address AddrWidthArg = CGF.GetAddrOfLocalVar(&WidthArg);
-  llvm::Value *WidthVal = Bld.CreateIntCast(
-      CGF.EmitLoadOfScalar(AddrWidthArg, /*Volatile=*/false, Int32Ty, Loc),
-      CGM.SizeTy, /*isSigned=*/true);
-
-  Address AddrShouldReduceArg = CGF.GetAddrOfLocalVar(&ShouldReduceArg);
-  llvm::Value *ShouldReduceVal = CGF.EmitLoadOfScalar(
-      AddrShouldReduceArg, /*Volatile=*/false, Int32Ty, Loc);
-
-  // The absolute ptr address to the base addr of the next element to copy.
-  llvm::Value *CumulativeElemBasePtr =
-      Bld.CreatePtrToInt(ScratchPadBase, CGM.SizeTy);
-  Address SrcDataAddr(CumulativeElemBasePtr, CGF.getPointerAlign());
-
-  // Create a Remote Reduce list to store the elements read from the
-  // scratchpad array.
-  Address RemoteReduceList =
-      CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.remote_red_list");
-
-  // Assemble remote Reduce list from scratchpad array.
-  emitReductionListCopy(ScratchpadToThread, CGF, ReductionArrayTy, Privates,
-                        SrcDataAddr, RemoteReduceList,
-                        {/*RemoteLaneOffset=*/nullptr,
-                         /*ScratchpadIndex=*/IndexVal,
-                         /*ScratchpadWidth=*/WidthVal});
-
-  llvm::BasicBlock *ThenBB = CGF.createBasicBlock("then");
-  llvm::BasicBlock *ElseBB = CGF.createBasicBlock("else");
-  llvm::BasicBlock *MergeBB = CGF.createBasicBlock("ifcont");
-
-  llvm::Value *CondReduce = Bld.CreateIsNotNull(ShouldReduceVal);
-  Bld.CreateCondBr(CondReduce, ThenBB, ElseBB);
-
-  CGF.EmitBlock(ThenBB);
-  // We should reduce with the local Reduce list.
-  // reduce_function(LocalReduceList, RemoteReduceList)
-  llvm::Value *LocalDataPtr = Bld.CreatePointerBitCastOrAddrSpaceCast(
-      ReduceListAddr.getPointer(), CGF.VoidPtrTy);
-  llvm::Value *RemoteDataPtr = Bld.CreatePointerBitCastOrAddrSpaceCast(
-      RemoteReduceList.getPointer(), CGF.VoidPtrTy);
-  CGM.getOpenMPRuntime().emitOutlinedFunctionCall(
-      CGF, Loc, ReduceFn, {LocalDataPtr, RemoteDataPtr});
-  Bld.CreateBr(MergeBB);
-
-  CGF.EmitBlock(ElseBB);
-  // No reduction; just copy:
-  // Local Reduce list = Remote Reduce list.
-  emitReductionListCopy(ThreadCopy, CGF, ReductionArrayTy, Privates,
-                        RemoteReduceList, ReduceListAddr);
-  Bld.CreateBr(MergeBB);
-
-  CGF.EmitBlock(MergeBB);
-
-  CGF.FinishFunction();
-  return Fn;
-}
-
-/// This function emits a helper that stores reduced data from the team
-/// master to a scratchpad array in global memory.
-///
-///  for elem in Reduce List:
-///    scratchpad[elem_id][index] = elem
-///
-static llvm::Value *emitCopyToScratchpad(CodeGenModule &CGM,
-                                         ArrayRef<const Expr *> Privates,
-                                         QualType ReductionArrayTy,
-                                         SourceLocation Loc) {
-
-  ASTContext &C = CGM.getContext();
-  QualType Int32Ty = C.getIntTypeForBitwidth(32, /*Signed=*/1);
-
-  // Source of the copy.
-  ImplicitParamDecl ReduceListArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                  C.VoidPtrTy, ImplicitParamDecl::Other);
-  // Base address of the scratchpad array, with each element storing a
-  // Reduce list per team.
-  ImplicitParamDecl ScratchPadArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr,
-                                  C.VoidPtrTy, ImplicitParamDecl::Other);
-  // A destination index into the scratchpad array, typically the team
-  // identifier.
-  ImplicitParamDecl IndexArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, Int32Ty,
-                             ImplicitParamDecl::Other);
-  // Row width of an element in the scratchpad array, typically
-  // the number of teams.
-  ImplicitParamDecl WidthArg(C, /*DC=*/nullptr, Loc, /*Id=*/nullptr, Int32Ty,
-                             ImplicitParamDecl::Other);
-
-  FunctionArgList Args;
-  Args.push_back(&ReduceListArg);
-  Args.push_back(&ScratchPadArg);
-  Args.push_back(&IndexArg);
-  Args.push_back(&WidthArg);
-
-  const CGFunctionInfo &CGFI =
-      CGM.getTypes().arrangeBuiltinFunctionDeclaration(C.VoidTy, Args);
-  auto *Fn = llvm::Function::Create(
-      CGM.getTypes().GetFunctionType(CGFI), llvm::GlobalValue::InternalLinkage,
-      "_omp_reduction_copy_to_scratchpad", &CGM.getModule());
-  CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, CGFI);
-  Fn->setDoesNotRecurse();
-  CodeGenFunction CGF(CGM);
-  CGF.StartFunction(GlobalDecl(), C.VoidTy, Fn, CGFI, Args, Loc, Loc);
-
-  CGBuilderTy &Bld = CGF.Builder;
-
-  Address AddrReduceListArg = CGF.GetAddrOfLocalVar(&ReduceListArg);
-  Address SrcDataAddr(
-      Bld.CreatePointerBitCastOrAddrSpaceCast(
-          CGF.EmitLoadOfScalar(AddrReduceListArg, /*Volatile=*/false,
-                               C.VoidPtrTy, Loc),
-          CGF.ConvertTypeForMem(ReductionArrayTy)->getPointerTo()),
-      CGF.getPointerAlign());
-
-  Address AddrScratchPadArg = CGF.GetAddrOfLocalVar(&ScratchPadArg);
-  llvm::Value *ScratchPadBase = CGF.EmitLoadOfScalar(
-      AddrScratchPadArg, /*Volatile=*/false, C.VoidPtrTy, Loc);
-
-  Address AddrIndexArg = CGF.GetAddrOfLocalVar(&IndexArg);
-  llvm::Value *IndexVal = Bld.CreateIntCast(
-      CGF.EmitLoadOfScalar(AddrIndexArg, /*Volatile=*/false, Int32Ty, Loc),
-      CGF.SizeTy, /*isSigned=*/true);
-
-  Address AddrWidthArg = CGF.GetAddrOfLocalVar(&WidthArg);
-  llvm::Value *WidthVal = Bld.CreateIntCast(
-      CGF.EmitLoadOfScalar(AddrWidthArg, /*Volatile=*/false, Int32Ty, Loc),
-      CGF.SizeTy, /*isSigned=*/true);
-
-  // The absolute ptr address to the base addr of the next element to copy.
-  llvm::Value *CumulativeElemBasePtr =
-      Bld.CreatePtrToInt(ScratchPadBase, CGM.SizeTy);
-  Address DestDataAddr(CumulativeElemBasePtr, CGF.getPointerAlign());
-
-  emitReductionListCopy(ThreadToScratchpad, CGF, ReductionArrayTy, Privates,
-                        SrcDataAddr, DestDataAddr,
-                        {/*RemoteLaneOffset=*/nullptr,
-                         /*ScratchpadIndex=*/IndexVal,
-                         /*ScratchpadWidth=*/WidthVal});
-
-  CGF.FinishFunction();
-  return Fn;
-}
-
 /// This function emits a helper that gathers Reduce lists from the first
 /// lane of every active warp to lanes in the first warp.
 ///
@@ -4061,65 +3789,65 @@ void CGOpenMPRuntimeNVPTX::emitReduction(
 
   assert((TeamsReduction || ParallelReduction) &&
          "Invalid reduction selection in emitReduction.");
-  ASTContext &C = CGM.getContext();
 
-  // 1. Build a list of reduction variables.
-  // void *RedList[<n>] = {<ReductionVars>[0], ..., <ReductionVars>[<n>-1]};
-  auto Size = RHSExprs.size();
-  for (const Expr *E : Privates) {
-    if (E->getType()->isVariablyModifiedType())
-      // Reserve place for array size.
-      ++Size;
-  }
-  llvm::APInt ArraySize(/*unsigned int numBits=*/32, Size);
-  QualType ReductionArrayTy =
-      C.getConstantArrayType(C.VoidPtrTy, ArraySize, ArrayType::Normal,
-                             /*IndexTypeQuals=*/0);
-  Address ReductionList =
-      CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.red_list");
-  auto IPriv = Privates.begin();
-  unsigned Idx = 0;
-  for (unsigned I = 0, E = RHSExprs.size(); I < E; ++I, ++IPriv, ++Idx) {
-    Address Elem = CGF.Builder.CreateConstArrayGEP(ReductionList, Idx,
-                                                   CGF.getPointerSize());
-    CGF.Builder.CreateStore(
-        CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-            CGF.EmitLValue(RHSExprs[I]).getPointer(), CGF.VoidPtrTy),
-        Elem);
-    if ((*IPriv)->getType()->isVariablyModifiedType()) {
-      // Store array size.
-      ++Idx;
-      Elem = CGF.Builder.CreateConstArrayGEP(ReductionList, Idx,
-                                             CGF.getPointerSize());
-      llvm::Value *Size = CGF.Builder.CreateIntCast(
-          CGF.getVLASize(
-                 CGF.getContext().getAsVariableArrayType((*IPriv)->getType()))
-              .NumElts,
-          CGF.SizeTy, /*isSigned=*/false);
-      CGF.Builder.CreateStore(CGF.Builder.CreateIntToPtr(Size, CGF.VoidPtrTy),
-                              Elem);
-    }
-  }
-
-  // 2. Emit reduce_func().
-  llvm::Value *ReductionFn = emitReductionFunction(
-      CGM, Loc, CGF.ConvertTypeForMem(ReductionArrayTy)->getPointerTo(),
-      Privates, LHSExprs, RHSExprs, ReductionOps);
-
-  // 4. Build res = __kmpc_reduce{_nowait}(<gtid>, <n>, sizeof(RedList),
+  // Build res = __kmpc_reduce{_nowait}(<gtid>, <n>, sizeof(RedList),
   // RedList, shuffle_reduce_func, interwarp_copy_func);
+  // or
+  // Build res = __kmpc_reduce_teams_nowait_simple(<loc>, <gtid>, <lck>);
   llvm::Value *ThreadId = getThreadID(CGF, Loc);
-  llvm::Value *ReductionArrayTySize = CGF.getTypeSize(ReductionArrayTy);
-  llvm::Value *RL = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-      ReductionList.getPointer(), CGF.VoidPtrTy);
-
-  llvm::Value *ShuffleAndReduceFn = emitShuffleAndReduceFunction(
-      CGM, Privates, ReductionArrayTy, ReductionFn, Loc);
-  llvm::Value *InterWarpCopyFn =
-      emitInterWarpCopyFunction(CGM, Privates, ReductionArrayTy, Loc);
 
   llvm::Value *Res;
   if (ParallelReduction) {
+    ASTContext &C = CGM.getContext();
+    // 1. Build a list of reduction variables.
+    // void *RedList[<n>] = {<ReductionVars>[0], ..., <ReductionVars>[<n>-1]};
+    auto Size = RHSExprs.size();
+    for (const Expr *E : Privates) {
+      if (E->getType()->isVariablyModifiedType())
+        // Reserve place for array size.
+        ++Size;
+    }
+    llvm::APInt ArraySize(/*unsigned int numBits=*/32, Size);
+    QualType ReductionArrayTy =
+        C.getConstantArrayType(C.VoidPtrTy, ArraySize, ArrayType::Normal,
+                               /*IndexTypeQuals=*/0);
+    Address ReductionList =
+        CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.red_list");
+    auto IPriv = Privates.begin();
+    unsigned Idx = 0;
+    for (unsigned I = 0, E = RHSExprs.size(); I < E; ++I, ++IPriv, ++Idx) {
+      Address Elem = CGF.Builder.CreateConstArrayGEP(ReductionList, Idx,
+                                                     CGF.getPointerSize());
+      CGF.Builder.CreateStore(
+          CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+              CGF.EmitLValue(RHSExprs[I]).getPointer(), CGF.VoidPtrTy),
+          Elem);
+      if ((*IPriv)->getType()->isVariablyModifiedType()) {
+        // Store array size.
+        ++Idx;
+        Elem = CGF.Builder.CreateConstArrayGEP(ReductionList, Idx,
+                                               CGF.getPointerSize());
+        llvm::Value *Size = CGF.Builder.CreateIntCast(
+            CGF.getVLASize(
+                   CGF.getContext().getAsVariableArrayType((*IPriv)->getType()))
+                .NumElts,
+            CGF.SizeTy, /*isSigned=*/false);
+        CGF.Builder.CreateStore(CGF.Builder.CreateIntToPtr(Size, CGF.VoidPtrTy),
+                                Elem);
+      }
+    }
+
+    llvm::Value *ReductionArrayTySize = CGF.getTypeSize(ReductionArrayTy);
+    llvm::Value *RL = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+        ReductionList.getPointer(), CGF.VoidPtrTy);
+    llvm::Value *ReductionFn = emitReductionFunction(
+        CGM, Loc, CGF.ConvertTypeForMem(ReductionArrayTy)->getPointerTo(),
+        Privates, LHSExprs, RHSExprs, ReductionOps);
+    llvm::Value *ShuffleAndReduceFn = emitShuffleAndReduceFunction(
+        CGM, Privates, ReductionArrayTy, ReductionFn, Loc);
+    llvm::Value *InterWarpCopyFn =
+        emitInterWarpCopyFunction(CGM, Privates, ReductionArrayTy, Loc);
+
     llvm::Value *Args[] = {ThreadId,
                            CGF.Builder.getInt32(RHSExprs.size()),
                            ReductionArrayTySize,
@@ -4132,21 +3860,13 @@ void CGOpenMPRuntimeNVPTX::emitReduction(
         Args);
   } else {
     assert(TeamsReduction && "expected teams reduction.");
-    llvm::Value *ScratchPadCopyFn =
-        emitCopyToScratchpad(CGM, Privates, ReductionArrayTy, Loc);
-    llvm::Value *LoadAndReduceFn = emitReduceScratchpadFunction(
-        CGM, Privates, ReductionArrayTy, ReductionFn, Loc);
-
-    llvm::Value *Args[] = {ThreadId,
-                           CGF.Builder.getInt32(RHSExprs.size()),
-                           ReductionArrayTySize,
-                           RL,
-                           ShuffleAndReduceFn,
-                           InterWarpCopyFn,
-                           ScratchPadCopyFn,
-                           LoadAndReduceFn};
+    llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
+    std::string Name = getName({"reduction"});
+    llvm::Value *Lock = getCriticalRegionLock(Name);
+    llvm::Value *Args[] = {RTLoc, ThreadId, Lock};
     Res = CGF.EmitRuntimeCall(
-        createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_teams_reduce_nowait),
+        createNVPTXRuntimeFunction(
+            OMPRTL_NVPTX__kmpc_nvptx_teams_reduce_nowait_simple),
         Args);
   }
 
@@ -4164,7 +3884,6 @@ void CGOpenMPRuntimeNVPTX::emitReduction(
   CGF.EmitBlock(ThenBB);
 
   // Add emission of __kmpc_end_reduce{_nowait}(<gtid>);
-  llvm::Value *EndArgs[] = {ThreadId};
   auto &&CodeGen = [Privates, LHSExprs, RHSExprs, ReductionOps,
                     this](CodeGenFunction &CGF, PrePostActionTy &Action) {
     auto IPriv = Privates.begin();
@@ -4178,13 +3897,30 @@ void CGOpenMPRuntimeNVPTX::emitReduction(
       ++IRHS;
     }
   };
-  RegionCodeGenTy RCG(CodeGen);
-  NVPTXActionTy Action(
-      nullptr, llvm::None,
-      createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_end_reduce_nowait),
-      EndArgs);
-  RCG.setAction(Action);
-  RCG(CGF);
+  if (ParallelReduction) {
+    llvm::Value *EndArgs[] = {ThreadId};
+    RegionCodeGenTy RCG(CodeGen);
+    NVPTXActionTy Action(
+        nullptr, llvm::None,
+        createNVPTXRuntimeFunction(OMPRTL_NVPTX__kmpc_end_reduce_nowait),
+        EndArgs);
+    RCG.setAction(Action);
+    RCG(CGF);
+  } else {
+    assert(TeamsReduction && "expected teams reduction.");
+    llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
+    std::string Name = getName({"reduction"});
+    llvm::Value *Lock = getCriticalRegionLock(Name);
+    llvm::Value *EndArgs[] = {RTLoc, ThreadId, Lock};
+    RegionCodeGenTy RCG(CodeGen);
+    NVPTXActionTy Action(
+        nullptr, llvm::None,
+        createNVPTXRuntimeFunction(
+            OMPRTL_NVPTX__kmpc_nvptx_teams_end_reduce_nowait_simple),
+        EndArgs);
+    RCG.setAction(Action);
+    RCG(CGF);
+  }
   // There is no need to emit line number for unconditional branch.
   (void)ApplyDebugLocation::CreateEmpty(CGF);
   CGF.EmitBlock(ExitBB, /*IsFinished=*/true);

@@ -3629,3 +3629,27 @@ GNU inline semantics are the default behavior with ``-std=gnu89``,
 ``-std=c89``, ``-std=c94``, or ``-fgnu89-inline``.
   }];
 }
+
+def SpeculativeLoadHardeningDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+  This attribute can be applied to a function declaration in order to indicate
+  that `Speculative Load Hardening <https://llvm.org/docs/SpeculativeLoadHardening.html>`_
+  should be enabled for the function body. This can also be applied to a method
+  in Objective C.
+
+  Speculative Load Hardening is a best-effort mitigation against
+  information leak attacks that make use of control flow
+  miss-speculation - specifically miss-speculation of whether a branch
+  is taken or not. Typically vulnerabilities enabling such attacks are
+  classified as "Spectre variant #1". Notably, this does not attempt to
+  mitigate against miss-speculation of branch target, classified as
+  "Spectre variant #2" vulnerabilities.
+
+  When inlining, the attribute is sticky. Inlining a function that
+  carries this attribute will cause the caller to gain the
+  attribute. This is intended to provide a maximally conservative model
+  where the code in a function annotated with this attribute will always
+  (even after inlining) end up hardened.
+  }];
+}

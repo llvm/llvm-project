@@ -945,11 +945,8 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
     llvm::APSInt ConstantCondValue;
     bool HasConstantCond = false;
     if (!HasDependentValue && !TheDefaultStmt) {
-      Expr::EvalResult Result;
-      HasConstantCond = CondExpr->EvaluateAsInt(Result, Context,
+      HasConstantCond = CondExpr->EvaluateAsInt(ConstantCondValue, Context,
                                                 Expr::SE_AllowSideEffects);
-      if (Result.Val.isInt())
-        ConstantCondValue = Result.Val.getInt();
       assert(!HasConstantCond ||
              (ConstantCondValue.getBitWidth() == CondWidth &&
               ConstantCondValue.isSigned() == CondIsSigned));

@@ -1,3 +1,7 @@
+set(LLVM_TARGET_DEFINITIONS Options.td)
+tablegen(LLVM Options.inc -gen-opt-parser-defs)
+add_public_tablegen_target(LLDBOptionsTableGen)
+
 if ((CMAKE_SYSTEM_NAME MATCHES "Windows") OR
     (CMAKE_SYSTEM_NAME MATCHES "NetBSD" ))
   # These targets do not have getopt support, so they rely on the one provided by
@@ -17,6 +21,7 @@ add_lldb_tool(lldb
     ${host_lib}
 
   LINK_COMPONENTS
+    Option
     Support
   )
 
@@ -24,4 +29,8 @@ if ( CMAKE_SYSTEM_NAME MATCHES "Windows" )
   add_definitions( -DIMPORT_LIBLLDB )
 endif()
 
-add_dependencies(lldb ${LLDB_SUITE_TARGET})
+add_dependencies(lldb
+  ${LLDB_SUITE_TARGET}
+  LLDBOptionsTableGen
+  ${tablegen_deps}
+)

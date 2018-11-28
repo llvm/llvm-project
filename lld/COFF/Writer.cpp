@@ -173,6 +173,7 @@ private:
   void createExportTable();
   void mergeSections();
   void readRelocTargets();
+  void removeUnusedSections();
   void assignAddresses();
   void finalizeAddresses();
   void removeEmptySections();
@@ -500,6 +501,7 @@ void Writer::run() {
   createExportTable();
   mergeSections();
   readRelocTargets();
+  removeUnusedSections();
   finalizeAddresses();
   removeEmptySections();
   setSectionPermissions();
@@ -880,6 +882,21 @@ void Writer::createExportTable() {
     return;
   for (Chunk *C : Edata.Chunks)
     EdataSec->addChunk(C);
+}
+
+void Writer::removeUnusedSections() {
+  // Remove sections that we can be sure won't get content, to avoid
+  // allocating space for their section headers.
+  auto IsUnused = [this](OutputSection *S) {
+    if (S == RelocSec)
+      return false; // This section is populated later.
+    // MergeChunks have zero size at this point, as their size is finalized
+    // later. Only remove sections that have no Chunks at all.
+    return S->Chunks.empty();
+  };
+  OutputSections.erase(
+      std::remove_if(OutputSections.begin(), OutputSections.end(), IsUnused),
+      OutputSections.end());
 }
 
 // The Windows loader doesn't seem to like empty sections,
@@ -1557,8 +1574,25 @@ void Writer::writeBuildId() {
       Buffer->getBufferSize());
 
   uint32_t Timestamp = Config->Timestamp;
+  uint64_t Hash = 0;
+  bool GenerateSyntheticBuildId =
+      Config->MinGW && Config->Debug && Config->PDBPath.empty();
+
+  if (Config->Repro || GenerateSyntheticBuildId)
+    Hash = xxHash64(OutputFileData);
+
   if (Config->Repro)
-    Timestamp = static_cast<uint32_t>(xxHash64(OutputFileData));
+    Timestamp = static_cast<uint32_t>(Hash);
+
+  if (GenerateSyntheticBuildId) {
+    // For MinGW builds without a PDB file, we still generate a build id
+    // to allow associating a crash dump to the executable.
+    BuildId->BuildId->PDB70.CVSignature = OMF::Signature::PDB70;
+    BuildId->BuildId->PDB70.Age = 1;
+    memcpy(BuildId->BuildId->PDB70.Signature, &Hash, 8);
+    // xxhash only gives us 8 bytes, so put some fixed data in the other half.
+    memcpy(&BuildId->BuildId->PDB70.Signature[8], "LLD PDB.", 8);
+  }
 
   if (DebugDirectory)
     DebugDirectory->setTimeDateStamp(Timestamp);

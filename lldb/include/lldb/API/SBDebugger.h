@@ -228,7 +228,7 @@ public:
 
   const char *GetReproducerPath() const;
 
-  void SetReproducerPath(const char *reproducer);
+  lldb::SBError ReplayReproducer(const char *path);
 
   lldb::ScriptLanguage GetScriptLanguage() const;
 
