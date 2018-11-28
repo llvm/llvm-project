@@ -109,7 +109,7 @@ def get_dev_null():
 
 
 def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True,
-          ignore_errors=False, force_binary_stdin=False):
+          ignore_errors=False, text=True):
     log_verbose('Running in %s: %s' % (cwd, ' '.join(cmd)))
 
     err_pipe = subprocess.PIPE
@@ -117,28 +117,24 @@ def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True,
         # Silence errors if requested.
         err_pipe = get_dev_null()
 
-    if force_binary_stdin and stdin:
-        stdin = stdin.encode('utf-8')
-
     start = time.time()
-    text = not force_binary_stdin
     p = subprocess.Popen(cmd, cwd=cwd, stdout=subprocess.PIPE, stderr=err_pipe,
-                         stdin=subprocess.PIPE, universal_newlines=text)
+                         stdin=subprocess.PIPE,
+                         universal_newlines=text)
     stdout, stderr = p.communicate(input=stdin)
     elapsed = time.time() - start
 
     log_verbose('Command took %0.1fs' % elapsed)
-
-    if not text:
-        stdout = stdout.decode('utf-8')
-        stderr = stderr.decode('utf-8')
 
     if p.returncode == 0 or ignore_errors:
         if stderr and not ignore_errors:
             eprint('`%s` printed to stderr:' % ' '.join(cmd))
             eprint(stderr.rstrip())
         if strip:
-            stdout = stdout.rstrip('\r\n')
+            if text:
+                stdout = stdout.rstrip('\r\n')
+            else:
+                stdout = stdout.rstrip(b'\r\n')
         if VERBOSE:
             for l in stdout.splitlines():
                 log_verbose("STDOUT: %s" % l)
@@ -153,13 +149,11 @@ def shell(cmd, strip=True, cwd=None, stdin=None, die_on_failure=True,
 
 
 def git(*cmd, **kwargs):
-    return shell(['git'] + list(cmd), kwargs.get('strip', True))
+    return shell(['git'] + list(cmd), **kwargs)
 
 
 def svn(cwd, *cmd, **kwargs):
-    # TODO: Better way to do default arg when we have *cmd?
-    return shell(['svn'] + list(cmd), cwd=cwd, stdin=kwargs.get('stdin', None),
-                 ignore_errors=kwargs.get('ignore_errors', None))
+    return shell(['svn'] + list(cmd), cwd=cwd, **kwargs)
 
 def program_exists(cmd):
     if sys.platform == 'win32' and not cmd.endswith('.exe'):
@@ -212,7 +206,7 @@ def svn_init(svn_root):
     if not os.path.exists(svn_root):
         log('Creating svn staging directory: (%s)' % (svn_root))
         os.makedirs(svn_root)
-        svn(svn_root, 'checkout', '--depth=immediates',
+        svn(svn_root, 'checkout', '--depth=empty',
             'https://llvm.org/svn/llvm-project/', '.')
         log("svn staging area ready in '%s'" % svn_root)
     if not os.path.isdir(svn_root):
@@ -260,14 +254,6 @@ def fix_eol_style_native(rev, svn_sr_path, files):
         # just the diff, and not a mass line ending change.
         shell(['dos2unix'] + crlf_files, ignore_errors=True, cwd=svn_sr_path)
 
-def get_all_parent_dirs(name):
-    parts = []
-    head, tail = os.path.split(name)
-    while head:
-        parts.append(head)
-        head, tail = os.path.split(head)
-    return parts
-
 def split_subrepo(f):
     # Given a path, splits it into (subproject, rest-of-path). If the path is
     # not in a subproject, returns ('', full-path).
@@ -300,34 +286,31 @@ def svn_push_one_rev(svn_repo, rev, dry_run):
     for sr, files in iteritems(subrepo_files):
         svn_sr_path = GIT_TO_SVN_DIR[sr]
         for f in files:
-            svn_dirs_to_update.update(
-                get_all_parent_dirs(os.path.join(svn_sr_path, f)))
-
-    # Sort by length to ensure that the parent directories are passed to svn
-    # before child directories.
-    sorted_dirs_to_update = sorted(svn_dirs_to_update, key=len)
+            svn_dirs_to_update.add(
+                os.path.dirname(os.path.join(svn_sr_path, f)))
 
     # SVN update only in the affected directories.
-    svn(svn_repo, 'update', '--depth=immediates', *sorted_dirs_to_update)
+    svn(svn_repo, 'update', '--depth=immediates', '--parents',
+        *svn_dirs_to_update)
 
     for sr, files in iteritems(subrepo_files):
         svn_sr_path = os.path.join(svn_repo, GIT_TO_SVN_DIR[sr])
         if os.name == 'nt':
             fix_eol_style_native(rev, svn_sr_path, files)
+        # We use text=False (and pass '--binary') so that we can get an exact
+        # diff that can be passed as-is to 'git apply' without any line ending,
+        # encoding, or other mangling.
         diff = git('show', '--binary', rev, '--',
                    *(os.path.join(sr, f) for f in files),
-                   strip=False)
+                   strip=False, text=False)
         # git is the only thing that can handle its own patches...
-        log_verbose('Apply patch: %s' % diff)
         if sr == '':
             prefix_strip = '-p1'
         else:
             prefix_strip = '-p2'
         try:
-            # If we allow python to apply the diff in text mode, it will
-            # silently convert \n to \r\n which git doesn't like.
             shell(['git', 'apply', prefix_strip, '-'], cwd=svn_sr_path,
-                  stdin=diff, die_on_failure=False, force_binary_stdin=True)
+                  stdin=diff, die_on_failure=False, text=False)
         except RuntimeError as e:
             eprint("Patch doesn't apply: maybe you should try `git pull -r` "
                    "first?")

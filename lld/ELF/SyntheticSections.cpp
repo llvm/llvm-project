@@ -1255,6 +1255,18 @@ void DynamicSection<ELFT>::addSym(int32_t Tag, Symbol *Sym) {
   Entries.push_back({Tag, [=] { return Sym->getVA(); }});
 }
 
+// A Linker script may assign the RELA relocation sections to the same
+// output section. When this occurs we cannot just use the OutputSection
+// Size. Moreover the [DT_JMPREL, DT_JMPREL + DT_PLTRELSZ) is permitted to
+// overlap with the [DT_RELA, DT_RELA + DT_RELASZ).
+static uint64_t addPltRelSz() {
+  size_t Size = In.RelaPlt->getSize();
+  if (In.RelaIplt->getParent() == In.RelaPlt->getParent() &&
+      In.RelaIplt->Name == In.RelaPlt->Name)
+    Size += In.RelaIplt->getSize();
+  return Size;
+}
+
 // Add remaining entries to complete .dynamic contents.
 template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   // Set DT_FLAGS and DT_FLAGS_1.
@@ -1335,7 +1347,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   // .rel[a].plt section.
   if (In.RelaPlt->getParent()->Live) {
     addInSec(DT_JMPREL, In.RelaPlt);
-    addSize(DT_PLTRELSZ, In.RelaPlt->getParent());
+    Entries.push_back({DT_PLTRELSZ, addPltRelSz});
     switch (Config->EMachine) {
     case EM_MIPS:
       addInSec(DT_MIPS_PLTGOT, In.GotPlt);

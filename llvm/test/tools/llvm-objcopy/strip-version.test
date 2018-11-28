@@ -1,4 +1,6 @@
 # RUN: llvm-strip -version | FileCheck %s
 # RUN: llvm-strip --version | FileCheck %s
+# RUN: llvm-strip -V | FileCheck %s
 
-# CHECK: {{ version }}
+# CHECK-DAG: {{ version }}
+# CHECK-DAG: GNU strip
