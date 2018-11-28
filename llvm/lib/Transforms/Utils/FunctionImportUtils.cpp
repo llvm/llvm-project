@@ -124,7 +124,6 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     return SGV->getLinkage();
 
   switch (SGV->getLinkage()) {
-  case GlobalValue::LinkOnceAnyLinkage:
   case GlobalValue::LinkOnceODRLinkage:
   case GlobalValue::ExternalLinkage:
     // External and linkonce definitions are converted to available_externally
@@ -144,11 +143,13 @@ FunctionImportGlobalProcessing::getLinkage(const GlobalValue *SGV,
     // An imported available_externally declaration stays that way.
     return SGV->getLinkage();
 
+  case GlobalValue::LinkOnceAnyLinkage:
   case GlobalValue::WeakAnyLinkage:
-    // Can't import weak_any definitions correctly, or we might change the
-    // program semantics, since the linker will pick the first weak_any
-    // definition and importing would change the order they are seen by the
-    // linker. The module linking caller needs to enforce this.
+    // Can't import linkonce_any/weak_any definitions correctly, or we might
+    // change the program semantics, since the linker will pick the first
+    // linkonce_any/weak_any definition and importing would change the order
+    // they are seen by the linker. The module linking caller needs to enforce
+    // this.
     assert(!doImportAsDefinition(SGV));
     // If imported as a declaration, it becomes external_weak.
     return SGV->getLinkage();

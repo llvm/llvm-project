@@ -265,9 +265,10 @@ static bool isStride64(unsigned Opc) {
   }
 }
 
-bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
-                                        int64_t &Offset,
-                                        const TargetRegisterInfo *TRI) const {
+bool SIInstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
+                                          MachineOperand *&BaseOp,
+                                          int64_t &Offset,
+                                          const TargetRegisterInfo *TRI) const {
   unsigned Opc = LdSt.getOpcode();
 
   if (isDS(LdSt)) {
@@ -275,11 +276,10 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
         getNamedOperand(LdSt, AMDGPU::OpName::offset);
     if (OffsetImm) {
       // Normal, single offset LDS instruction.
-      const MachineOperand *AddrReg =
-          getNamedOperand(LdSt, AMDGPU::OpName::addr);
-
-      BaseReg = AddrReg->getReg();
+      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::addr);
       Offset = OffsetImm->getImm();
+      assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
+                                "operands of type register.");
       return true;
     }
 
@@ -310,10 +310,10 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
       if (isStride64(Opc))
         EltSize *= 64;
 
-      const MachineOperand *AddrReg =
-          getNamedOperand(LdSt, AMDGPU::OpName::addr);
-      BaseReg = AddrReg->getReg();
+      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::addr);
       Offset = EltSize * Offset0;
+      assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
+                                "operands of type register.");
       return true;
     }
 
@@ -325,19 +325,20 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
     if (SOffset && SOffset->isReg())
       return false;
 
-    const MachineOperand *AddrReg =
-        getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    MachineOperand *AddrReg = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
     if (!AddrReg)
       return false;
 
     const MachineOperand *OffsetImm =
         getNamedOperand(LdSt, AMDGPU::OpName::offset);
-    BaseReg = AddrReg->getReg();
+    BaseOp = AddrReg;
     Offset = OffsetImm->getImm();
 
     if (SOffset) // soffset can be an inline immediate.
       Offset += SOffset->getImm();
 
+    assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
+                              "operands of type register.");
     return true;
   }
 
@@ -347,36 +348,46 @@ bool SIInstrInfo::getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
     if (!OffsetImm)
       return false;
 
-    const MachineOperand *SBaseReg =
-        getNamedOperand(LdSt, AMDGPU::OpName::sbase);
-    BaseReg = SBaseReg->getReg();
+    MachineOperand *SBaseReg = getNamedOperand(LdSt, AMDGPU::OpName::sbase);
+    BaseOp = SBaseReg;
     Offset = OffsetImm->getImm();
+    assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
+                              "operands of type register.");
     return true;
   }
 
   if (isFLAT(LdSt)) {
-    const MachineOperand *VAddr = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
+    MachineOperand *VAddr = getNamedOperand(LdSt, AMDGPU::OpName::vaddr);
     if (VAddr) {
       // Can't analyze 2 offsets.
       if (getNamedOperand(LdSt, AMDGPU::OpName::saddr))
         return false;
 
-      BaseReg = VAddr->getReg();
+      BaseOp = VAddr;
     } else {
       // scratch instructions have either vaddr or saddr.
-      BaseReg = getNamedOperand(LdSt, AMDGPU::OpName::saddr)->getReg();
+      BaseOp = getNamedOperand(LdSt, AMDGPU::OpName::saddr);
     }
 
     Offset = getNamedOperand(LdSt, AMDGPU::OpName::offset)->getImm();
+    assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
+                              "operands of type register.");
     return true;
   }
 
   return false;
 }
 
-static bool memOpsHaveSameBasePtr(const MachineInstr &MI1, unsigned BaseReg1,
-                                  const MachineInstr &MI2, unsigned BaseReg2) {
-  if (BaseReg1 == BaseReg2)
+static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
+                                  const MachineOperand &BaseOp1,
+                                  const MachineInstr &MI2,
+                                  const MachineOperand &BaseOp2) {
+  // Support only base operands with base registers.
+  // Note: this could be extended to support FI operands.
+  if (!BaseOp1.isReg() || !BaseOp2.isReg())
+    return false;
+
+  if (BaseOp1.isIdenticalTo(BaseOp2))
     return true;
 
   if (!MI1.hasOneMemOperand() || !MI2.hasOneMemOperand())
@@ -402,12 +413,13 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1, unsigned BaseReg1,
   return Base1 == Base2;
 }
 
-bool SIInstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
-                                      unsigned BaseReg1,
-                                      MachineInstr &SecondLdSt,
-                                      unsigned BaseReg2,
+bool SIInstrInfo::shouldClusterMemOps(MachineOperand &BaseOp1,
+                                      MachineOperand &BaseOp2,
                                       unsigned NumLoads) const {
-  if (!memOpsHaveSameBasePtr(FirstLdSt, BaseReg1, SecondLdSt, BaseReg2))
+  MachineInstr &FirstLdSt = *BaseOp1.getParent();
+  MachineInstr &SecondLdSt = *BaseOp2.getParent();
+
+  if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOp1, SecondLdSt, BaseOp2))
     return false;
 
   const MachineOperand *FirstDst = nullptr;
@@ -2162,11 +2174,13 @@ static bool offsetsDoNotOverlap(int WidthA, int OffsetA,
 
 bool SIInstrInfo::checkInstOffsetsDoNotOverlap(MachineInstr &MIa,
                                                MachineInstr &MIb) const {
-  unsigned BaseReg0, BaseReg1;
+  MachineOperand *BaseOp0, *BaseOp1;
   int64_t Offset0, Offset1;
 
-  if (getMemOpBaseRegImmOfs(MIa, BaseReg0, Offset0, &RI) &&
-      getMemOpBaseRegImmOfs(MIb, BaseReg1, Offset1, &RI)) {
+  if (getMemOperandWithOffset(MIa, BaseOp0, Offset0, &RI) &&
+      getMemOperandWithOffset(MIb, BaseOp1, Offset1, &RI)) {
+    if (!BaseOp0->isIdenticalTo(*BaseOp1))
+      return false;
 
     if (!MIa.hasOneMemOperand() || !MIb.hasOneMemOperand()) {
       // FIXME: Handle ds_read2 / ds_write2.
@@ -2174,8 +2188,7 @@ bool SIInstrInfo::checkInstOffsetsDoNotOverlap(MachineInstr &MIa,
     }
     unsigned Width0 = (*MIa.memoperands_begin())->getSize();
     unsigned Width1 = (*MIb.memoperands_begin())->getSize();
-    if (BaseReg0 == BaseReg1 &&
-        offsetsDoNotOverlap(Width0, Offset0, Width1, Offset1)) {
+    if (offsetsDoNotOverlap(Width0, Offset0, Width1, Offset1)) {
       return true;
     }
   }

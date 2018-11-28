@@ -7766,11 +7766,13 @@ public:
 
 namespace {
 inline llvm::APSInt getConstexprInt(const Expr *E, const ASTContext &Ctx) {
-  llvm::APSInt r{32, 0};
+  clang::Expr::EvalResult r;
+  APValue Val(llvm::APSInt(32));
+  r.Val = Val;
   if (E)
     E->EvaluateAsInt(r, Ctx);
 
-  return r;
+  return r.Val.getInt();
 }
 } // namespace
 

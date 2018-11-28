@@ -2594,8 +2594,8 @@ Expr *Expr::IgnoreParenCasts() {
       E = NTTP->getReplacement();
       continue;
     }
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
-      E = CE->getSubExpr();
+    if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
+      E = FE->getSubExpr();
       continue;
     }
     return E;
@@ -2619,8 +2619,8 @@ Expr *Expr::IgnoreCasts() {
       E = NTTP->getReplacement();
       continue;
     }
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
-      E = CE->getSubExpr();
+    if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
+      E = FE->getSubExpr();
       continue;
     }
     return E;
@@ -2648,8 +2648,8 @@ Expr *Expr::IgnoreParenLValueCasts() {
                                   = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
       E = NTTP->getReplacement();
       continue;
-    } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
-      E = CE->getSubExpr();
+    } else if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
+      E = FE->getSubExpr();
       continue;
     }
     break;
@@ -2920,6 +2920,12 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     break;
   }
+  case ConstantExprClass: {
+    // FIXME: We should be able to return "true" here, but it can lead to extra
+    // error messages. E.g. in Sema/array-init.c.
+    const Expr *Exp = cast<ConstantExpr>(this)->getSubExpr();
+    return Exp->isConstantInitializer(Ctx, false, Culprit);
+  }
   case CompoundLiteralExprClass: {
     // This handles gcc's extension that allows global initializers like
     // "struct x {int x;} x = (struct x) {};".
@@ -2959,8 +2965,8 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
           const Expr *Elt = ILE->getInit(ElementNo++);
           if (Field->isBitField()) {
             // Bitfields have to evaluate to an integer.
-            llvm::APSInt ResultTmp;
-            if (!Elt->EvaluateAsInt(ResultTmp, Ctx)) {
+            EvalResult Result;
+            if (!Elt->EvaluateAsInt(Result, Ctx)) {
               if (Culprit)
                 *Culprit = Elt;
               return false;
@@ -3441,20 +3447,20 @@ Expr::isNullPointerConstant(ASTContext &Ctx,
       // Check that it is a cast to void*.
       if (const PointerType *PT = CE->getType()->getAs<PointerType>()) {
         QualType Pointee = PT->getPointeeType();
+        Qualifiers Qs = Pointee.getQualifiers();
         // Only (void*)0 or equivalent are treated as nullptr. If pointee type
         // has non-default address space it is not treated as nullptr.
         // (__generic void*)0 in OpenCL 2.0 should not be treated as nullptr
         // since it cannot be assigned to a pointer to constant address space.
-        bool PointeeHasDefaultAS =
-            Pointee.getAddressSpace() == LangAS::Default ||
-            (Ctx.getLangOpts().OpenCLVersion >= 200 &&
+        if ((Ctx.getLangOpts().OpenCLVersion >= 200 &&
              Pointee.getAddressSpace() == LangAS::opencl_generic) ||
             (Ctx.getLangOpts().OpenCL &&
              Ctx.getLangOpts().OpenCLVersion < 200 &&
-             Pointee.getAddressSpace() == LangAS::opencl_private);
+             Pointee.getAddressSpace() == LangAS::opencl_private))
+          Qs.removeAddressSpace();
 
-        if (PointeeHasDefaultAS && Pointee->isVoidType() && // to void*
-            CE->getSubExpr()->getType()->isIntegerType())   // from int.
+        if (Pointee->isVoidType() && Qs.empty() && // to void*
+            CE->getSubExpr()->getType()->isIntegerType()) // from int
           return CE->getSubExpr()->isNullPointerConstant(Ctx, NPC);
       }
     }

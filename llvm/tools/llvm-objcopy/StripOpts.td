@@ -64,3 +64,4 @@ def x : Flag<["-"], "x">, Alias<discard_all>;
 
 def version : Flag<["-", "--"], "version">,
               HelpText<"Print the version and exit.">;
+def V : Flag<["-"], "V">, Alias<version>;

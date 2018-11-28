@@ -135,9 +135,9 @@ private:
     bool isIntZeroExpr(const Expr *E) const {
       if (!E->getType()->isIntegralOrEnumerationType())
         return false;
-      llvm::APSInt Result;
+      Expr::EvalResult Result;
       if (E->EvaluateAsInt(Result, Context))
-        return Result == 0;
+        return Result.Val.getInt() == 0;
       return false;
     }
 
@@ -191,8 +191,11 @@ private:
       if (const BinaryOperator *BOp = dyn_cast<BinaryOperator>(rhse)) {
         if (BOp->getOpcode() == BO_Div) {
           const Expr *denom = BOp->getRHS()->IgnoreParenImpCasts();
-          if (denom->EvaluateAsInt(denomVal, Context))
+          Expr::EvalResult Result;
+          if (denom->EvaluateAsInt(Result, Context)) {
+            denomVal = Result.Val.getInt();
             denomKnown = true;
+          }
           const Expr *numerator = BOp->getLHS()->IgnoreParenImpCasts();
           if (numerator->isEvaluatable(Context))
             numeratorKnown = true;

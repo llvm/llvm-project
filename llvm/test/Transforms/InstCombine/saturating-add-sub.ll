@@ -13,7 +13,7 @@ declare <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8>, <2 x i8>)
 ; Constant uadd argument is canonicalized to the right.
 define i8 @test_scalar_uadd_canonical(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_canonical(
-; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.uadd.sat.i8(i8 10, i8 [[A:%.*]])
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 10)
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
   %x = call i8 @llvm.uadd.sat.i8(i8 10, i8 %a)
@@ -22,7 +22,7 @@ define i8 @test_scalar_uadd_canonical(i8 %a) {
 
 define <2 x i8> @test_vector_uadd_canonical(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_uadd_canonical(
-; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 10, i8 20>, <2 x i8> [[A:%.*]])
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 20>)
 ; CHECK-NEXT:    ret <2 x i8> [[X]]
 ;
   %x = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> <i8 10, i8 20>, <2 x i8> %a)
@@ -32,7 +32,7 @@ define <2 x i8> @test_vector_uadd_canonical(<2 x i8> %a) {
 ; Constant sadd argument is canonicalized to the right.
 define i8 @test_scalar_sadd_canonical(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_canonical(
-; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.sadd.sat.i8(i8 -10, i8 [[A:%.*]])
+; CHECK-NEXT:    [[X:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 -10)
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
   %x = call i8 @llvm.sadd.sat.i8(i8 -10, i8 %a)
@@ -41,7 +41,7 @@ define i8 @test_scalar_sadd_canonical(i8 %a) {
 
 define <2 x i8> @test_vector_sadd_canonical(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_sadd_canonical(
-; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 10, i8 -20>, <2 x i8> [[A:%.*]])
+; CHECK-NEXT:    [[X:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 -20>)
 ; CHECK-NEXT:    ret <2 x i8> [[X]]
 ;
   %x = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 10, i8 -20>, <2 x i8> %a)
@@ -51,9 +51,8 @@ define <2 x i8> @test_vector_sadd_canonical(<2 x i8> %a) {
 ; Can combine uadds with constant operands.
 define i8 @test_scalar_uadd_combine(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_combine(
-; CHECK-NEXT:    [[X1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    [[X2:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[X1]], i8 20)
-; CHECK-NEXT:    ret i8 [[X2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 30)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %x1 = call i8 @llvm.uadd.sat.i8(i8 %a, i8 10)
   %x2 = call i8 @llvm.uadd.sat.i8(i8 %x1, i8 20)
@@ -62,9 +61,8 @@ define i8 @test_scalar_uadd_combine(i8 %a) {
 
 define <2 x i8> @test_vector_uadd_combine(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_uadd_combine(
-; CHECK-NEXT:    [[X1:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 10>)
-; CHECK-NEXT:    [[X2:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[X1]], <2 x i8> <i8 20, i8 20>)
-; CHECK-NEXT:    ret <2 x i8> [[X2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 30, i8 30>)
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
 ;
   %x1 = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 10, i8 10>)
   %x2 = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %x1, <2 x i8> <i8 20, i8 20>)
@@ -86,9 +84,7 @@ define <2 x i8> @test_vector_uadd_combine_non_splat(<2 x i8> %a) {
 ; Can combine uadds even if they overflow.
 define i8 @test_scalar_uadd_overflow(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_overflow(
-; CHECK-NEXT:    [[Y1:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A:%.*]], i8 100)
-; CHECK-NEXT:    [[Y2:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[Y1]], i8 -56)
-; CHECK-NEXT:    ret i8 [[Y2]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %y1 = call i8 @llvm.uadd.sat.i8(i8 %a, i8 100)
   %y2 = call i8 @llvm.uadd.sat.i8(i8 %y1, i8 200)
@@ -97,9 +93,7 @@ define i8 @test_scalar_uadd_overflow(i8 %a) {
 
 define <2 x i8> @test_vector_uadd_overflow(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_uadd_overflow(
-; CHECK-NEXT:    [[Y1:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 100, i8 100>)
-; CHECK-NEXT:    [[Y2:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[Y1]], <2 x i8> <i8 -56, i8 -56>)
-; CHECK-NEXT:    ret <2 x i8> [[Y2]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
   %y1 = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 100, i8 100>)
   %y2 = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %y1, <2 x i8> <i8 200, i8 200>)
@@ -109,9 +103,8 @@ define <2 x i8> @test_vector_uadd_overflow(<2 x i8> %a) {
 ; Can combine sadds if sign matches.
 define i8 @test_scalar_sadd_both_positive(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_both_positive(
-; CHECK-NEXT:    [[Z1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    [[Z2:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[Z1]], i8 20)
-; CHECK-NEXT:    ret i8 [[Z2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 30)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %z1 = call i8 @llvm.sadd.sat.i8(i8 %a, i8 10)
   %z2 = call i8 @llvm.sadd.sat.i8(i8 %z1, i8 20)
@@ -120,9 +113,8 @@ define i8 @test_scalar_sadd_both_positive(i8 %a) {
 
 define <2 x i8> @test_vector_sadd_both_positive(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_sadd_both_positive(
-; CHECK-NEXT:    [[Z1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 10>)
-; CHECK-NEXT:    [[Z2:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[Z1]], <2 x i8> <i8 20, i8 20>)
-; CHECK-NEXT:    ret <2 x i8> [[Z2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 30, i8 30>)
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
 ;
   %z1 = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 10, i8 10>)
   %z2 = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %z1, <2 x i8> <i8 20, i8 20>)
@@ -131,9 +123,8 @@ define <2 x i8> @test_vector_sadd_both_positive(<2 x i8> %a) {
 
 define i8 @test_scalar_sadd_both_negative(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_both_negative(
-; CHECK-NEXT:    [[U1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 -10)
-; CHECK-NEXT:    [[U2:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[U1]], i8 -20)
-; CHECK-NEXT:    ret i8 [[U2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 -30)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %u1 = call i8 @llvm.sadd.sat.i8(i8 %a, i8 -10)
   %u2 = call i8 @llvm.sadd.sat.i8(i8 %u1, i8 -20)
@@ -142,9 +133,8 @@ define i8 @test_scalar_sadd_both_negative(i8 %a) {
 
 define <2 x i8> @test_vector_sadd_both_negative(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_sadd_both_negative(
-; CHECK-NEXT:    [[U1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 -10, i8 -10>)
-; CHECK-NEXT:    [[U2:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[U1]], <2 x i8> <i8 -20, i8 -20>)
-; CHECK-NEXT:    ret <2 x i8> [[U2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 -30, i8 -30>)
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
 ;
   %u1 = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 -10, i8 -10>)
   %u2 = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %u1, <2 x i8> <i8 -20, i8 -20>)
@@ -178,9 +168,7 @@ define i8 @test_scalar_sadd_overflow(i8 %a) {
 ; neg uadd neg always overflows.
 define i8 @test_scalar_uadd_neg_neg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_neg_neg(
-; CHECK-NEXT:    [[A_NEG:%.*]] = or i8 [[A:%.*]], -128
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A_NEG]], i8 -10)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 -1
 ;
   %a_neg = or i8 %a, -128
   %r = call i8 @llvm.uadd.sat.i8(i8 %a_neg, i8 -10)
@@ -189,9 +177,7 @@ define i8 @test_scalar_uadd_neg_neg(i8 %a) {
 
 define <2 x i8> @test_vector_uadd_neg_neg(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_uadd_neg_neg(
-; CHECK-NEXT:    [[A_NEG:%.*]] = or <2 x i8> [[A:%.*]], <i8 -128, i8 -128>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A_NEG]], <2 x i8> <i8 -10, i8 -20>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> <i8 -1, i8 -1>
 ;
   %a_neg = or <2 x i8> %a, <i8 -128, i8 -128>
   %r = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> %a_neg, <2 x i8> <i8 -10, i8 -20>)
@@ -202,7 +188,7 @@ define <2 x i8> @test_vector_uadd_neg_neg(<2 x i8> %a) {
 define i8 @test_scalar_uadd_nneg_nneg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_uadd_nneg_nneg(
 ; CHECK-NEXT:    [[A_NNEG:%.*]] = and i8 [[A:%.*]], 127
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[A_NNEG]], i8 10)
+; CHECK-NEXT:    [[R:%.*]] = add nuw i8 [[A_NNEG]], 10
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a_nneg = and i8 %a, 127
@@ -213,7 +199,7 @@ define i8 @test_scalar_uadd_nneg_nneg(i8 %a) {
 define <2 x i8> @test_vector_uadd_nneg_nneg(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_uadd_nneg_nneg(
 ; CHECK-NEXT:    [[A_NNEG:%.*]] = and <2 x i8> [[A:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[A_NNEG]], <2 x i8> <i8 10, i8 20>)
+; CHECK-NEXT:    [[R:%.*]] = add nuw <2 x i8> [[A_NNEG]], <i8 10, i8 20>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a_nneg = and <2 x i8> %a, <i8 127, i8 127>
@@ -248,7 +234,7 @@ define <2 x i8> @test_vector_uadd_neg_nneg(<2 x i8> %a) {
 define i8 @test_scalar_sadd_neg_nneg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_neg_nneg(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = or i8 [[A:%.*]], -128
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A_NEG]], i8 10)
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A_NEG]], 10
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a_neg = or i8 %a, -128
@@ -259,7 +245,7 @@ define i8 @test_scalar_sadd_neg_nneg(i8 %a) {
 define <2 x i8> @test_vector_sadd_neg_nneg(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_sadd_neg_nneg(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = or <2 x i8> [[A:%.*]], <i8 -128, i8 -128>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A_NEG]], <2 x i8> <i8 10, i8 20>)
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[A_NEG]], <i8 10, i8 20>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a_neg = or <2 x i8> %a, <i8 -128, i8 -128>
@@ -271,7 +257,7 @@ define <2 x i8> @test_vector_sadd_neg_nneg(<2 x i8> %a) {
 define i8 @test_scalar_sadd_nneg_neg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_nneg_neg(
 ; CHECK-NEXT:    [[A_NNEG:%.*]] = and i8 [[A:%.*]], 127
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A_NNEG]], i8 -10)
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A_NNEG]], -10
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a_nneg = and i8 %a, 127
@@ -282,7 +268,7 @@ define i8 @test_scalar_sadd_nneg_neg(i8 %a) {
 define <2 x i8> @test_vector_sadd_nneg_neg(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_sadd_nneg_neg(
 ; CHECK-NEXT:    [[A_NNEG:%.*]] = and <2 x i8> [[A:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A_NNEG]], <2 x i8> <i8 -10, i8 -20>)
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[A_NNEG]], <i8 -10, i8 -20>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a_nneg = and <2 x i8> %a, <i8 127, i8 127>
@@ -335,8 +321,8 @@ define i8 @test_scalar_usub_canonical(i8 %a) {
 ; Canonicalize ssub to sadd.
 define i8 @test_scalar_ssub_canonical(i8 %a) {
 ; CHECK-LABEL: @test_scalar_ssub_canonical(
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 -10)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %r = call i8 @llvm.ssub.sat.i8(i8 %a, i8 10)
   ret i8 %r
@@ -344,8 +330,8 @@ define i8 @test_scalar_ssub_canonical(i8 %a) {
 
 define <2 x i8> @test_vector_ssub_canonical(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_ssub_canonical(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 10>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 -10, i8 -10>)
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
 ;
   %r = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 10, i8 10>)
   ret <2 x i8> %r
@@ -383,9 +369,8 @@ define <2 x i8> @test_vector_ssub_canonical_min(<2 x i8> %a) {
 ; Can combine usubs with constant operands.
 define i8 @test_scalar_usub_combine(i8 %a) {
 ; CHECK-LABEL: @test_scalar_usub_combine(
-; CHECK-NEXT:    [[X1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    [[X2:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[X1]], i8 20)
-; CHECK-NEXT:    ret i8 [[X2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 30)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %x1 = call i8 @llvm.usub.sat.i8(i8 %a, i8 10)
   %x2 = call i8 @llvm.usub.sat.i8(i8 %x1, i8 20)
@@ -394,9 +379,8 @@ define i8 @test_scalar_usub_combine(i8 %a) {
 
 define <2 x i8> @test_vector_usub_combine(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_combine(
-; CHECK-NEXT:    [[X1:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 10>)
-; CHECK-NEXT:    [[X2:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[X1]], <2 x i8> <i8 20, i8 20>)
-; CHECK-NEXT:    ret <2 x i8> [[X2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 30, i8 30>)
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
 ;
   %x1 = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 10, i8 10>)
   %x2 = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %x1, <2 x i8> <i8 20, i8 20>)
@@ -418,9 +402,7 @@ define <2 x i8> @test_vector_usub_combine_non_splat(<2 x i8> %a) {
 ; Can combine usubs even if they overflow.
 define i8 @test_scalar_usub_overflow(i8 %a) {
 ; CHECK-LABEL: @test_scalar_usub_overflow(
-; CHECK-NEXT:    [[Y1:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A:%.*]], i8 100)
-; CHECK-NEXT:    [[Y2:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[Y1]], i8 -56)
-; CHECK-NEXT:    ret i8 [[Y2]]
+; CHECK-NEXT:    ret i8 0
 ;
   %y1 = call i8 @llvm.usub.sat.i8(i8 %a, i8 100)
   %y2 = call i8 @llvm.usub.sat.i8(i8 %y1, i8 200)
@@ -429,9 +411,7 @@ define i8 @test_scalar_usub_overflow(i8 %a) {
 
 define <2 x i8> @test_vector_usub_overflow(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_overflow(
-; CHECK-NEXT:    [[Y1:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 100, i8 100>)
-; CHECK-NEXT:    [[Y2:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[Y1]], <2 x i8> <i8 -56, i8 -56>)
-; CHECK-NEXT:    ret <2 x i8> [[Y2]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %y1 = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 100, i8 100>)
   %y2 = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %y1, <2 x i8> <i8 200, i8 200>)
@@ -441,9 +421,8 @@ define <2 x i8> @test_vector_usub_overflow(<2 x i8> %a) {
 ; Can combine ssubs if sign matches.
 define i8 @test_scalar_ssub_both_positive(i8 %a) {
 ; CHECK-LABEL: @test_scalar_ssub_both_positive(
-; CHECK-NEXT:    [[Z1:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    [[Z2:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[Z1]], i8 20)
-; CHECK-NEXT:    ret i8 [[Z2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 -30)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %z1 = call i8 @llvm.ssub.sat.i8(i8 %a, i8 10)
   %z2 = call i8 @llvm.ssub.sat.i8(i8 %z1, i8 20)
@@ -452,9 +431,8 @@ define i8 @test_scalar_ssub_both_positive(i8 %a) {
 
 define <2 x i8> @test_vector_ssub_both_positive(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_ssub_both_positive(
-; CHECK-NEXT:    [[Z1:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 10>)
-; CHECK-NEXT:    [[Z2:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[Z1]], <2 x i8> <i8 20, i8 20>)
-; CHECK-NEXT:    ret <2 x i8> [[Z2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 -30, i8 -30>)
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
 ;
   %z1 = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 10, i8 10>)
   %z2 = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %z1, <2 x i8> <i8 20, i8 20>)
@@ -463,9 +441,8 @@ define <2 x i8> @test_vector_ssub_both_positive(<2 x i8> %a) {
 
 define i8 @test_scalar_ssub_both_negative(i8 %a) {
 ; CHECK-LABEL: @test_scalar_ssub_both_negative(
-; CHECK-NEXT:    [[U1:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A:%.*]], i8 -10)
-; CHECK-NEXT:    [[U2:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[U1]], i8 -20)
-; CHECK-NEXT:    ret i8 [[U2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 30)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %u1 = call i8 @llvm.ssub.sat.i8(i8 %a, i8 -10)
   %u2 = call i8 @llvm.ssub.sat.i8(i8 %u1, i8 -20)
@@ -474,9 +451,8 @@ define i8 @test_scalar_ssub_both_negative(i8 %a) {
 
 define <2 x i8> @test_vector_ssub_both_negative(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_ssub_both_negative(
-; CHECK-NEXT:    [[U1:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 -10, i8 -10>)
-; CHECK-NEXT:    [[U2:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[U1]], <2 x i8> <i8 -20, i8 -20>)
-; CHECK-NEXT:    ret <2 x i8> [[U2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 30, i8 30>)
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
 ;
   %u1 = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 -10, i8 -10>)
   %u2 = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %u1, <2 x i8> <i8 -20, i8 -20>)
@@ -486,9 +462,9 @@ define <2 x i8> @test_vector_ssub_both_negative(<2 x i8> %a) {
 ; Can't combine ssubs if constants have different sign.
 define i8 @test_scalar_ssub_different_sign(i8 %a) {
 ; CHECK-LABEL: @test_scalar_ssub_different_sign(
-; CHECK-NEXT:    [[V1:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A:%.*]], i8 10)
-; CHECK-NEXT:    [[V2:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[V1]], i8 -20)
-; CHECK-NEXT:    ret i8 [[V2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 -10)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[TMP1]], i8 20)
+; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %v1 = call i8 @llvm.ssub.sat.i8(i8 %a, i8 10)
   %v2 = call i8 @llvm.ssub.sat.i8(i8 %v1, i8 -20)
@@ -498,9 +474,8 @@ define i8 @test_scalar_ssub_different_sign(i8 %a) {
 ; Can combine sadd and ssub with appropriate signs.
 define i8 @test_scalar_sadd_ssub(i8 %a) {
 ; CHECK-LABEL: @test_scalar_sadd_ssub(
-; CHECK-NEXT:    [[V1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 10, i8 [[A:%.*]])
-; CHECK-NEXT:    [[V2:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[V1]], i8 -20)
-; CHECK-NEXT:    ret i8 [[V2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 30)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %v1 = call i8 @llvm.sadd.sat.i8(i8 10, i8 %a)
   %v2 = call i8 @llvm.ssub.sat.i8(i8 %v1, i8 -20)
@@ -509,9 +484,8 @@ define i8 @test_scalar_sadd_ssub(i8 %a) {
 
 define <2 x i8> @test_vector_sadd_ssub(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_sadd_ssub(
-; CHECK-NEXT:    [[V1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 -10, i8 -10>, <2 x i8> [[A:%.*]])
-; CHECK-NEXT:    [[V2:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[V1]], <2 x i8> <i8 20, i8 20>)
-; CHECK-NEXT:    ret <2 x i8> [[V2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 -30, i8 -30>)
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
 ;
   %v1 = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> <i8 -10, i8 -10>, <2 x i8> %a)
   %v2 = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %v1, <2 x i8> <i8 20, i8 20>)
@@ -521,9 +495,9 @@ define <2 x i8> @test_vector_sadd_ssub(<2 x i8> %a) {
 ; Can't combine ssubs if they overflow.
 define i8 @test_scalar_ssub_overflow(i8 %a) {
 ; CHECK-LABEL: @test_scalar_ssub_overflow(
-; CHECK-NEXT:    [[W1:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A:%.*]], i8 100)
-; CHECK-NEXT:    [[W2:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[W1]], i8 100)
-; CHECK-NEXT:    ret i8 [[W2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A:%.*]], i8 -100)
+; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[TMP1]], i8 -100)
+; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
   %w1 = call i8 @llvm.ssub.sat.i8(i8 %a, i8 100)
   %w2 = call i8 @llvm.ssub.sat.i8(i8 %w1, i8 100)
@@ -533,9 +507,7 @@ define i8 @test_scalar_ssub_overflow(i8 %a) {
 ; nneg usub neg always overflows.
 define i8 @test_scalar_usub_nneg_neg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_usub_nneg_neg(
-; CHECK-NEXT:    [[A_NNEG:%.*]] = and i8 [[A:%.*]], 127
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A_NNEG]], i8 -10)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    ret i8 0
 ;
   %a_nneg = and i8 %a, 127
   %r = call i8 @llvm.usub.sat.i8(i8 %a_nneg, i8 -10)
@@ -544,9 +516,7 @@ define i8 @test_scalar_usub_nneg_neg(i8 %a) {
 
 define <2 x i8> @test_vector_usub_nneg_neg(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_nneg_neg(
-; CHECK-NEXT:    [[A_NNEG:%.*]] = and <2 x i8> [[A:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A_NNEG]], <2 x i8> <i8 -10, i8 -20>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
 ;
   %a_nneg = and <2 x i8> %a, <i8 127, i8 127>
   %r = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> %a_nneg, <2 x i8> <i8 -10, i8 -20>)
@@ -557,7 +527,7 @@ define <2 x i8> @test_vector_usub_nneg_neg(<2 x i8> %a) {
 define i8 @test_scalar_usub_neg_nneg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_usub_neg_nneg(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = or i8 [[A:%.*]], -128
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[A_NEG]], i8 10)
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[A_NEG]], -10
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a_neg = or i8 %a, -128
@@ -568,7 +538,7 @@ define i8 @test_scalar_usub_neg_nneg(i8 %a) {
 define <2 x i8> @test_vector_usub_neg_nneg(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_usub_neg_nneg(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = or <2 x i8> [[A:%.*]], <i8 -128, i8 -128>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[A_NEG]], <2 x i8> <i8 10, i8 20>)
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[A_NEG]], <i8 -10, i8 -20>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a_neg = or <2 x i8> %a, <i8 -128, i8 -128>
@@ -603,7 +573,7 @@ define <2 x i8> @test_vector_usub_nneg_nneg(<2 x i8> %a) {
 define i8 @test_scalar_ssub_neg_neg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_ssub_neg_neg(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = or i8 [[A:%.*]], -128
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A_NEG]], i8 -10)
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A_NEG]], 10
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a_neg = or i8 %a, -128
@@ -614,7 +584,7 @@ define i8 @test_scalar_ssub_neg_neg(i8 %a) {
 define <2 x i8> @test_vector_ssub_neg_neg(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_ssub_neg_neg(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = or <2 x i8> [[A:%.*]], <i8 -128, i8 -128>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[A_NEG]], <2 x i8> <i8 -10, i8 -20>)
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[A_NEG]], <i8 10, i8 20>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a_neg = or <2 x i8> %a, <i8 -128, i8 -128>
@@ -626,7 +596,7 @@ define <2 x i8> @test_vector_ssub_neg_neg(<2 x i8> %a) {
 define i8 @test_scalar_ssub_nneg_nneg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_ssub_nneg_nneg(
 ; CHECK-NEXT:    [[A_NNEG:%.*]] = and i8 [[A:%.*]], 127
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A_NNEG]], i8 10)
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A_NNEG]], -10
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %a_nneg = and i8 %a, 127
@@ -637,7 +607,7 @@ define i8 @test_scalar_ssub_nneg_nneg(i8 %a) {
 define <2 x i8> @test_vector_ssub_nneg_nneg(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_ssub_nneg_nneg(
 ; CHECK-NEXT:    [[A_NNEG:%.*]] = and <2 x i8> [[A:%.*]], <i8 127, i8 127>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[A_NNEG]], <2 x i8> <i8 10, i8 20>)
+; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[A_NNEG]], <i8 -10, i8 -20>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a_nneg = and <2 x i8> %a, <i8 127, i8 127>
@@ -649,8 +619,8 @@ define <2 x i8> @test_vector_ssub_nneg_nneg(<2 x i8> %a) {
 define i8 @test_scalar_ssub_neg_nneg(i8 %a) {
 ; CHECK-LABEL: @test_scalar_ssub_neg_nneg(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = or i8 [[A:%.*]], -128
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ssub.sat.i8(i8 [[A_NEG]], i8 10)
-; CHECK-NEXT:    ret i8 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[A_NEG]], i8 -10)
+; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
   %a_neg = or i8 %a, -128
   %r = call i8 @llvm.ssub.sat.i8(i8 %a_neg, i8 10)

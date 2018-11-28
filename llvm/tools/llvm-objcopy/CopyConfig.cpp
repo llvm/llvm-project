@@ -226,6 +226,7 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
   }
 
   if (InputArgs.hasArg(OBJCOPY_version)) {
+    outs() << "llvm-objcopy, compatible with GNU objcopy\n";
     cl::PrintVersionMessage();
     exit(0);
   }
@@ -383,6 +384,7 @@ DriverConfig parseStripOptions(ArrayRef<const char *> ArgsArr) {
   }
 
   if (InputArgs.hasArg(STRIP_version)) {
+    outs() << "llvm-strip, compatible with GNU strip\n";
     cl::PrintVersionMessage();
     exit(0);
   }
