@@ -325,7 +325,7 @@ static float scopeBoost(ScopeDistance &Distance,
   auto D = Distance.distance(*SymbolScope);
   if (D == FileDistance::Unreachable)
     return 0.6f;
-  return std::max(0.6, 2.0 * std::pow(0.6, D / 2.0));
+  return std::max(0.65, 2.0 * std::pow(0.6, D / 2.0));
 }
 
 float SymbolRelevanceSignals::evaluate() const {
