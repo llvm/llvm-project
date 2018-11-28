@@ -146,9 +146,6 @@ public:
   typedef std::map<const char *, SILVariableInfo> SILVariableMap;
 
 private:
-  bool PerformAutoImport(swift::SourceFile &source_file, bool user_imports,
-                         Status &error);
-
   /// The expression to be parsed.
   Expression &m_expr;
   /// The triple to use when compiling.
