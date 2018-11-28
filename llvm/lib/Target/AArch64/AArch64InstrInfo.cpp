@@ -1078,7 +1078,7 @@ bool AArch64InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
 bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
     MachineInstr &MIa, MachineInstr &MIb, AliasAnalysis *AA) const {
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  unsigned BaseRegA = 0, BaseRegB = 0;
+  MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
   unsigned WidthA = 0, WidthB = 0;
 
@@ -1089,14 +1089,14 @@ bool AArch64InstrInfo::areMemAccessesTriviallyDisjoint(
       MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
-  // Retrieve the base register, offset from the base register and width. Width
+  // Retrieve the base register, offset from the base and width. Width
   // is the size of memory that is being loaded/stored (e.g. 1, 2, 4, 8).  If
   // base registers are identical, and the offset of a lower memory access +
   // the width doesn't overlap the offset of a higher memory access,
   // then the memory accesses are different.
-  if (getMemOpBaseRegImmOfsWidth(MIa, BaseRegA, OffsetA, WidthA, TRI) &&
-      getMemOpBaseRegImmOfsWidth(MIb, BaseRegB, OffsetB, WidthB, TRI)) {
-    if (BaseRegA == BaseRegB) {
+  if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
+      getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
+    if (BaseOpA->isIdenticalTo(*BaseOpB)) {
       int LowOffset = OffsetA < OffsetB ? OffsetA : OffsetB;
       int HighOffset = OffsetA < OffsetB ? OffsetB : OffsetA;
       int LowWidth = (LowOffset == OffsetA) ? WidthA : WidthB;
@@ -2075,10 +2075,13 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(MachineInstr &MI) const {
 
   // Can't merge/pair if the instruction modifies the base register.
   // e.g., ldr x0, [x0]
-  unsigned BaseReg = MI.getOperand(1).getReg();
-  const TargetRegisterInfo *TRI = &getRegisterInfo();
-  if (MI.modifiesRegister(BaseReg, TRI))
-    return false;
+  // This case will never occur with an FI base.
+  if (MI.getOperand(1).isReg()) {
+    unsigned BaseReg = MI.getOperand(1).getReg();
+    const TargetRegisterInfo *TRI = &getRegisterInfo();
+    if (MI.modifiesRegister(BaseReg, TRI))
+      return false;
+  }
 
   // Check if this load/store has a hint to avoid pair formation.
   // MachineMemOperands hints are set by the AArch64StorePairSuppress pass.
@@ -2101,16 +2104,17 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(MachineInstr &MI) const {
   return true;
 }
 
-bool AArch64InstrInfo::getMemOpBaseRegImmOfs(
-    MachineInstr &LdSt, unsigned &BaseReg, int64_t &Offset,
-    const TargetRegisterInfo *TRI) const {
+bool AArch64InstrInfo::getMemOperandWithOffset(MachineInstr &LdSt,
+                                          MachineOperand *&BaseOp,
+                                          int64_t &Offset,
+                                          const TargetRegisterInfo *TRI) const {
   unsigned Width;
-  return getMemOpBaseRegImmOfsWidth(LdSt, BaseReg, Offset, Width, TRI);
+  return getMemOperandWithOffsetWidth(LdSt, BaseOp, Offset, Width, TRI);
 }
 
-bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
-    MachineInstr &LdSt, unsigned &BaseReg, int64_t &Offset, unsigned &Width,
-    const TargetRegisterInfo *TRI) const {
+bool AArch64InstrInfo::getMemOperandWithOffsetWidth(
+    MachineInstr &LdSt, MachineOperand *&BaseOp, int64_t &Offset,
+    unsigned &Width, const TargetRegisterInfo *TRI) const {
   assert(LdSt.mayLoadOrStore() && "Expected a memory operation.");
   // Handle only loads/stores with base register followed by immediate offset.
   if (LdSt.getNumExplicitOperands() == 3) {
@@ -2138,13 +2142,18 @@ bool AArch64InstrInfo::getMemOpBaseRegImmOfsWidth(
   // multiplied by the scaling factor. Unscaled instructions have scaling factor
   // set to 1.
   if (LdSt.getNumExplicitOperands() == 3) {
-    BaseReg = LdSt.getOperand(1).getReg();
+    BaseOp = &LdSt.getOperand(1);
     Offset = LdSt.getOperand(2).getImm() * Scale;
   } else {
     assert(LdSt.getNumExplicitOperands() == 4 && "invalid number of operands");
-    BaseReg = LdSt.getOperand(2).getReg();
+    BaseOp = &LdSt.getOperand(2);
     Offset = LdSt.getOperand(3).getImm() * Scale;
   }
+
+  assert(
+      BaseOp->isReg() &&
+      "getMemOperandWithOffset only supports base operands of type register.");
+
   return true;
 }
 
@@ -2355,13 +2364,19 @@ static bool canPairLdStOpc(unsigned FirstOpc, unsigned SecondOpc) {
 
 /// Detect opportunities for ldp/stp formation.
 ///
-/// Only called for LdSt for which getMemOpBaseRegImmOfs returns true.
-bool AArch64InstrInfo::shouldClusterMemOps(MachineInstr &FirstLdSt,
-                                           unsigned BaseReg1,
-                                           MachineInstr &SecondLdSt,
-                                           unsigned BaseReg2,
+/// Only called for LdSt for which getMemOperandWithOffset returns true.
+bool AArch64InstrInfo::shouldClusterMemOps(MachineOperand &BaseOp1,
+                                           MachineOperand &BaseOp2,
                                            unsigned NumLoads) const {
-  if (BaseReg1 != BaseReg2)
+  MachineInstr &FirstLdSt = *BaseOp1.getParent();
+  MachineInstr &SecondLdSt = *BaseOp2.getParent();
+  if (BaseOp1.getType() != BaseOp2.getType())
+    return false;
+
+  assert(BaseOp1.isReg() && "Only base registers are supported.");
+
+  // Check for base regs.
+  if (BaseOp1.isReg() && BaseOp1.getReg() != BaseOp2.getReg())
     return false;
 
   // Only cluster up to a single pair.
@@ -5326,19 +5341,20 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
     // At this point, we have a stack instruction that we might need to fix
     // up. We'll handle it if it's a load or store.
     if (MI.mayLoadOrStore()) {
-      unsigned Base;  // Filled with the base regiser of MI.
+      MachineOperand *Base; // Filled with the base operand of MI.
       int64_t Offset; // Filled with the offset of MI.
-      unsigned DummyWidth;
 
-      // Does it allow us to offset the base register and is the base SP?
-      if (!getMemOpBaseRegImmOfsWidth(MI, Base, Offset, DummyWidth, &RI) ||
-          Base != AArch64::SP)
+      // Does it allow us to offset the base operand and is the base the
+      // register SP?
+      if (!getMemOperandWithOffset(MI, Base, Offset, &RI) ||
+          !Base->isReg() || Base->getReg() != AArch64::SP)
         return outliner::InstrType::Illegal;
 
       // Find the minimum/maximum offset for this instruction and check if
       // fixing it up would be in range.
       int64_t MinOffset, MaxOffset; // Unscaled offsets for the instruction.
       unsigned Scale;               // The scale to multiply the offsets by.
+      unsigned DummyWidth;
       getMemOpInfo(MI.getOpcode(), Scale, DummyWidth, MinOffset, MaxOffset);
 
       // TODO: We should really test what happens if an instruction overflows.
@@ -5363,13 +5379,14 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
 
 void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
   for (MachineInstr &MI : MBB) {
-    unsigned Base, Width;
+    MachineOperand *Base;
+    unsigned Width;
     int64_t Offset;
 
     // Is this a load or store with an immediate offset with SP as the base?
     if (!MI.mayLoadOrStore() ||
-        !getMemOpBaseRegImmOfsWidth(MI, Base, Offset, Width, &RI) ||
-        Base != AArch64::SP)
+        !getMemOperandWithOffsetWidth(MI, Base, Offset, Width, &RI) ||
+        (Base->isReg() && Base->getReg() != AArch64::SP))
       continue;
 
     // It is, so we have to fix it up.
