@@ -137,6 +137,28 @@ TEST(URITest, Resolve) {
             testPath("a"));
 }
 
+std::string resolvePathOrDie(StringRef AbsPath, StringRef HintPath = "") {
+  auto Path = URI::resolvePath(AbsPath, HintPath);
+  if (!Path)
+    llvm_unreachable(toString(Path.takeError()).c_str());
+  return *Path;
+}
+
+TEST(URITest, ResolvePath) {
+  StringRef FilePath =
+#ifdef _WIN32
+      "c:\\x\\y\\z";
+#else
+      "/a/b/c";
+#endif
+  EXPECT_EQ(resolvePathOrDie(FilePath), FilePath);
+  EXPECT_EQ(resolvePathOrDie(testPath("x"), testPath("hint")), testPath("x"));
+  // HintPath is not in testRoot(); resolution fails.
+  auto Resolve = URI::resolvePath(testPath("x"), FilePath);
+  EXPECT_FALSE(Resolve);
+  llvm::consumeError(Resolve.takeError());
+}
+
 TEST(URITest, Platform) {
   auto Path = testPath("x");
   auto U = URI::create(Path, "file");
