@@ -327,6 +327,11 @@
           integer (kind=omp_integer_kind) omp_get_initial_device
         end function omp_get_initial_device
 
+        function omp_get_device_num() bind(c)
+          import
+          integer (kind=omp_integer_kind) omp_get_device_num
+        end function omp_get_device_num
+
         subroutine omp_init_lock(svar) bind(c)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_init_lock
@@ -623,7 +628,9 @@
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_default_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_set_default_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_is_initial_device
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_initial_device
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_devices
+!DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_device_num
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_num_teams
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_get_team_num
 !DIR$ ATTRIBUTES OFFLOAD:MIC :: omp_init_lock
@@ -696,7 +703,9 @@
 !$omp declare target(omp_get_default_device )
 !$omp declare target(omp_set_default_device )
 !$omp declare target(omp_is_initial_device )
+!$omp declare target(omp_get_initial_device )
 !$omp declare target(omp_get_num_devices )
+!$omp declare target(omp_get_device_num )
 !$omp declare target(omp_get_num_teams )
 !$omp declare target(omp_get_team_num )
 !$omp declare target(omp_init_lock )
