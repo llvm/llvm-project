@@ -53,6 +53,7 @@ define i32 @trunc_vXi16() {
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i16>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i16>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i16>
+; SSE2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i32 = trunc <2 x i32> undef to <2 x i16>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i32 = trunc <4 x i32> undef to <4 x i16>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8i32 = trunc <8 x i32> undef to <8 x i16>
 ; SSE2-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i16>
@@ -62,6 +63,7 @@ define i32 @trunc_vXi16() {
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i16>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i16>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i16>
+; SSSE3-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i32 = trunc <2 x i32> undef to <2 x i16>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4i32 = trunc <4 x i32> undef to <4 x i16>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8i32 = trunc <8 x i32> undef to <8 x i16>
 ; SSSE3-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i16>
@@ -71,6 +73,7 @@ define i32 @trunc_vXi16() {
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i16>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i16>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i16>
+; SSE42-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i32 = trunc <2 x i32> undef to <2 x i16>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = trunc <4 x i32> undef to <4 x i16>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i32 = trunc <8 x i32> undef to <8 x i16>
 ; SSE42-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i16>
@@ -80,6 +83,7 @@ define i32 @trunc_vXi16() {
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i16>
+; AVX1-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i32 = trunc <2 x i32> undef to <2 x i16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = trunc <4 x i32> undef to <4 x i16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8i32 = trunc <8 x i32> undef to <8 x i16>
 ; AVX1-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i16>
@@ -89,6 +93,7 @@ define i32 @trunc_vXi16() {
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i16>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i16>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i16>
+; AVX2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i32 = trunc <2 x i32> undef to <2 x i16>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = trunc <4 x i32> undef to <4 x i16>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i32 = trunc <8 x i32> undef to <8 x i16>
 ; AVX2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i16>
@@ -98,6 +103,7 @@ define i32 @trunc_vXi16() {
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i16>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i16>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i16>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i32 = trunc <2 x i32> undef to <2 x i16>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = trunc <4 x i32> undef to <4 x i16>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V8i32 = trunc <8 x i32> undef to <8 x i16>
 ; AVX512-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i16>
@@ -107,6 +113,7 @@ define i32 @trunc_vXi16() {
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i16>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i32 = trunc <2 x i32> undef to <2 x i16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i32 = trunc <4 x i32> undef to <4 x i16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %V8i32 = trunc <8 x i32> undef to <8 x i16>
 ; BTVER2-NEXT:  Cost Model: Found an estimated cost of 6 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i16>
@@ -115,6 +122,7 @@ define i32 @trunc_vXi16() {
   %V2i64 = trunc <2 x i64> undef to <2 x i16>
   %V4i64 = trunc <4 x i64> undef to <4 x i16>
   %V8i64 = trunc <8 x i64> undef to <8 x i16>
+  %V2i32 = trunc <2 x i32> undef to <2 x i16>
   %V4i32 = trunc <4 x i32> undef to <4 x i16>
   %V8i32 = trunc <8 x i32> undef to <8 x i16>
   %V16i32 = trunc <16 x i32> undef to <16 x i16>
@@ -256,6 +264,96 @@ define i32 @trunc_vXi8() {
   %V8i16 = trunc <8 x i16> undef to <8 x i8>
   %V16i16 = trunc <16 x i16> undef to <16 x i8>
   %V32i16 = trunc <32 x i16> undef to <32 x i8>
+
+  ret i32 undef
+}
+
+define i32 @trunc_vXi1() {
+; SSE-LABEL: 'trunc_vXi1'
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i32 = trunc <2 x i32> undef to <2 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4i32 = trunc <4 x i32> undef to <4 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V8i32 = trunc <8 x i32> undef to <8 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i16 = trunc <2 x i16> undef to <2 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4i16 = trunc <4 x i16> undef to <4 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i16 = trunc <8 x i16> undef to <8 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V16i16 = trunc <16 x i16> undef to <16 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V32i16 = trunc <32 x i16> undef to <32 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V32i8 = trunc <32 x i8> undef to <32 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V64i8 = trunc <64 x i8> undef to <64 x i1>
+; SSE-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX-LABEL: 'trunc_vXi1'
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i32 = trunc <2 x i32> undef to <2 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4i32 = trunc <4 x i32> undef to <4 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i32 = trunc <8 x i32> undef to <8 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i16 = trunc <2 x i16> undef to <2 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4i16 = trunc <4 x i16> undef to <4 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i16 = trunc <8 x i16> undef to <8 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V16i16 = trunc <16 x i16> undef to <16 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32i16 = trunc <32 x i16> undef to <32 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V32i8 = trunc <32 x i8> undef to <32 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V64i8 = trunc <64 x i8> undef to <64 x i1>
+; AVX-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; AVX512-LABEL: 'trunc_vXi1'
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i32 = trunc <2 x i32> undef to <2 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4i32 = trunc <4 x i32> undef to <4 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i32 = trunc <8 x i32> undef to <8 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i16 = trunc <2 x i16> undef to <2 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4i16 = trunc <4 x i16> undef to <4 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i16 = trunc <8 x i16> undef to <8 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V16i16 = trunc <16 x i16> undef to <16 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V32i16 = trunc <32 x i16> undef to <32 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V32i8 = trunc <32 x i8> undef to <32 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V64i8 = trunc <64 x i8> undef to <64 x i1>
+; AVX512-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+; BTVER2-LABEL: 'trunc_vXi1'
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i64 = trunc <2 x i64> undef to <2 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4i64 = trunc <4 x i64> undef to <4 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i64 = trunc <8 x i64> undef to <8 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i32 = trunc <2 x i32> undef to <2 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4i32 = trunc <4 x i32> undef to <4 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i32 = trunc <8 x i32> undef to <8 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V16i32 = trunc <16 x i32> undef to <16 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V2i16 = trunc <2 x i16> undef to <2 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V4i16 = trunc <4 x i16> undef to <4 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V8i16 = trunc <8 x i16> undef to <8 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V16i16 = trunc <16 x i16> undef to <16 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %V32i16 = trunc <32 x i16> undef to <32 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V32i8 = trunc <32 x i8> undef to <32 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V64i8 = trunc <64 x i8> undef to <64 x i1>
+; BTVER2-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret i32 undef
+;
+  %V2i64 = trunc <2 x i64> undef to <2 x i1>
+  %V4i64 = trunc <4 x i64> undef to <4 x i1>
+  %V8i64 = trunc <8 x i64> undef to <8 x i1>
+
+  %V2i32 = trunc <2 x i32> undef to <2 x i1>
+  %V4i32 = trunc <4 x i32> undef to <4 x i1>
+  %V8i32 = trunc <8 x i32> undef to <8 x i1>
+  %V16i32 = trunc <16 x i32> undef to <16 x i1>
+
+  %V2i16 = trunc <2 x i16> undef to <2 x i1>
+  %V4i16 = trunc <4 x i16> undef to <4 x i1>
+  %V8i16 = trunc <8 x i16> undef to <8 x i1>
+  %V16i16 = trunc <16 x i16> undef to <16 x i1>
+  %V32i16 = trunc <32 x i16> undef to <32 x i1>
+
+  %V32i8 = trunc <32 x i8> undef to <32 x i1>
+  %V64i8 = trunc <64 x i8> undef to <64 x i1>
 
   ret i32 undef
 }

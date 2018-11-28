@@ -11,6 +11,7 @@
 #include "ClangdUnit.h"
 #include "Compiler.h"
 #include "Logger.h"
+#include "SourceCode.h"
 #include "Threading.h"
 #include "Trace.h"
 #include "URI.h"
@@ -149,19 +150,6 @@ void BackgroundIndex::enqueueTask(Task T) {
   QueueCV.notify_all();
 }
 
-static BackgroundIndex::FileDigest digest(StringRef Content) {
-  return SHA1::hash({(const uint8_t *)Content.data(), Content.size()});
-}
-
-static Optional<BackgroundIndex::FileDigest> digestFile(const SourceManager &SM,
-                                                        FileID FID) {
-  bool Invalid = false;
-  StringRef Content = SM.getBufferData(FID, &Invalid);
-  if (Invalid)
-    return None;
-  return digest(Content);
-}
-
 // Resolves URI to file paths with cache.
 class URIToFileCache {
 public:
@@ -193,8 +181,7 @@ private:
 };
 
 /// Given index results from a TU, only update files in \p FilesToUpdate.
-void BackgroundIndex::update(StringRef MainFile, SymbolSlab Symbols,
-                             RefSlab Refs,
+void BackgroundIndex::update(StringRef MainFile, IndexFileIn Index,
                              const StringMap<FileDigest> &FilesToUpdate,
                              BackgroundIndexStorage *IndexStorage) {
   // Partition symbols/references into files.
@@ -204,7 +191,7 @@ void BackgroundIndex::update(StringRef MainFile, SymbolSlab Symbols,
   };
   StringMap<File> Files;
   URIToFileCache URICache(MainFile);
-  for (const auto &Sym : Symbols) {
+  for (const auto &Sym : *Index.Symbols) {
     if (Sym.CanonicalDeclaration) {
       auto DeclPath = URICache.resolve(Sym.CanonicalDeclaration.FileURI);
       if (FilesToUpdate.count(DeclPath) != 0)
@@ -222,7 +209,7 @@ void BackgroundIndex::update(StringRef MainFile, SymbolSlab Symbols,
     }
   }
   DenseMap<const Ref *, SymbolID> RefToIDs;
-  for (const auto &SymRefs : Refs) {
+  for (const auto &SymRefs : *Index.Refs) {
     for (const auto &R : SymRefs.second) {
       auto Path = URICache.resolve(R.Location.FileURI);
       if (FilesToUpdate.count(Path) != 0) {
@@ -250,12 +237,11 @@ void BackgroundIndex::update(StringRef MainFile, SymbolSlab Symbols,
     auto Hash = FilesToUpdate.lookup(Path);
     // We need to store shards before updating the index, since the latter
     // consumes slabs.
-    // FIXME: Store Hash in the Shard.
     if (IndexStorage) {
       IndexFileOut Shard;
       Shard.Symbols = SS.get();
       Shard.Refs = RS.get();
-      Shard.Digest = &Hash;
+
       if (auto Error = IndexStorage->storeShard(Path, Shard))
         elog("Failed to write background-index shard for file {0}: {1}", Path,
              std::move(Error));
@@ -275,8 +261,8 @@ void BackgroundIndex::update(StringRef MainFile, SymbolSlab Symbols,
 // \p FileDigests contains file digests for the current indexed files, and all
 // changed files will be added to \p FilesToUpdate.
 decltype(SymbolCollector::Options::FileFilter) createFileFilter(
-    const llvm::StringMap<BackgroundIndex::FileDigest> &FileDigests,
-    llvm::StringMap<BackgroundIndex::FileDigest> &FilesToUpdate) {
+    const llvm::StringMap<FileDigest> &FileDigests,
+    llvm::StringMap<FileDigest> &FilesToUpdate) {
   return [&FileDigests, &FilesToUpdate](const SourceManager &SM, FileID FID) {
     StringRef Path;
     if (const auto *F = SM.getFileEntryForID(FID))
@@ -375,8 +361,11 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
       Symbols.size(), Refs.numRefs());
   SPAN_ATTACH(Tracer, "symbols", int(Symbols.size()));
   SPAN_ATTACH(Tracer, "refs", int(Refs.numRefs()));
-  update(AbsolutePath, std::move(Symbols), std::move(Refs), FilesToUpdate,
-         IndexStorage);
+  IndexFileIn Index;
+  Index.Symbols = std::move(Symbols);
+  Index.Refs = std::move(Refs);
+
+  update(AbsolutePath, std::move(Index), FilesToUpdate, IndexStorage);
   {
     // Make sure hash for the main file is always updated even if there is no
     // index data in it.

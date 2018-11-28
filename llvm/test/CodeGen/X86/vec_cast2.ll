@@ -245,7 +245,7 @@ define <8 x i8> @cvt_v8f32_v8u8(<8 x float> %src) {
 ; CHECK-WIDE:       ## %bb.0:
 ; CHECK-WIDE-NEXT:    vcvttps2dq %ymm0, %ymm0
 ; CHECK-WIDE-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; CHECK-WIDE-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
+; CHECK-WIDE-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; CHECK-WIDE-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
 ; CHECK-WIDE-NEXT:    vzeroupper
 ; CHECK-WIDE-NEXT:    retl

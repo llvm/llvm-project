@@ -298,8 +298,7 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      const GVSummaryMapTy &DefinedGVSummaries,
-      const DenseSet<GlobalValue::GUID> &PreservedSymbols, unsigned OptLevel,
+      const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
       bool Freestanding, const TargetMachineBuilder &TMBuilder) {
     if (CachePath.empty())
       return;
@@ -308,95 +307,26 @@ public:
       // The module does not have an entry, it can't have a hash at all
       return;
 
-    // Compute the unique hash for this entry
-    // This is based on the current compiler version, the module itself, the
-    // export list, the hash for every single module in the import list, the
-    // list of ResolvedODR for the module, and the list of preserved symbols.
-
-    // Include the hash for the current module
-    auto ModHash = Index.getModuleHash(ModuleID);
-
-    if (all_of(ModHash, [](uint32_t V) { return V == 0; }))
+    if (all_of(Index.getModuleHash(ModuleID),
+               [](uint32_t V) { return V == 0; }))
       // No hash entry, no caching!
       return;
 
-    SHA1 Hasher;
-
-    // Include the parts of the LTO configuration that affect code generation.
-    auto AddString = [&](StringRef Str) {
-      Hasher.update(Str);
-      Hasher.update(ArrayRef<uint8_t>{0});
-    };
-    auto AddUnsigned = [&](unsigned I) {
-      uint8_t Data[4];
-      Data[0] = I;
-      Data[1] = I >> 8;
-      Data[2] = I >> 16;
-      Data[3] = I >> 24;
-      Hasher.update(ArrayRef<uint8_t>{Data, 4});
-    };
-
-    // Start with the compiler revision
-    Hasher.update(LLVM_VERSION_STRING);
-#ifdef LLVM_REVISION
-    Hasher.update(LLVM_REVISION);
-#endif
-
-    // Hash the optimization level and the target machine settings.
-    AddString(TMBuilder.MCpu);
-    // FIXME: Hash more of Options. For now all clients initialize Options from
-    // command-line flags (which is unsupported in production), but may set
-    // RelaxELFRelocations. The clang driver can also pass FunctionSections,
-    // DataSections and DebuggerTuning via command line flags.
-    AddUnsigned(TMBuilder.Options.RelaxELFRelocations);
-    AddUnsigned(TMBuilder.Options.FunctionSections);
-    AddUnsigned(TMBuilder.Options.DataSections);
-    AddUnsigned((unsigned)TMBuilder.Options.DebuggerTuning);
-    AddString(TMBuilder.MAttr);
-    if (TMBuilder.RelocModel)
-      AddUnsigned(*TMBuilder.RelocModel);
-    AddUnsigned(TMBuilder.CGOptLevel);
-    AddUnsigned(OptLevel);
-    AddUnsigned(Freestanding);
-
-    Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
-    for (auto F : ExportList)
-      // The export list can impact the internalization, be conservative here
-      Hasher.update(ArrayRef<uint8_t>((uint8_t *)&F, sizeof(F)));
-
-    // Include the hash for every module we import functions from
-    for (auto &Entry : ImportList) {
-      auto ModHash = Index.getModuleHash(Entry.first());
-      Hasher.update(ArrayRef<uint8_t>((uint8_t *)&ModHash[0], sizeof(ModHash)));
-      for (auto Guid : Entry.second)
-        if (auto *GVS = dyn_cast<GlobalVarSummary>(
-                Index.getGlobalValueSummary(Guid, false)))
-          AddUnsigned(GVS->isReadOnly());
-    }
-
-    // Include the hash for the resolved ODR.
-    for (auto &Entry : ResolvedODR) {
-      Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&Entry.first,
-                                      sizeof(GlobalValue::GUID)));
-      Hasher.update(ArrayRef<uint8_t>((const uint8_t *)&Entry.second,
-                                      sizeof(GlobalValue::LinkageTypes)));
-    }
-
-    // Include the hash for the preserved symbols.
-    for (auto &Entry : PreservedSymbols) {
-      if (DefinedGVSummaries.count(Entry))
-        Hasher.update(
-            ArrayRef<uint8_t>((const uint8_t *)&Entry, sizeof(GlobalValue::GUID)));
-    }
-
-    for (auto &Entry : DefinedGVSummaries)
-      if (auto *GVS = dyn_cast<GlobalVarSummary>(Entry.second))
-        AddUnsigned(GVS->isReadOnly());
+    llvm::lto::Config Conf;
+    Conf.OptLevel = OptLevel;
+    Conf.Options = TMBuilder.Options;
+    Conf.CPU = TMBuilder.MCpu;
+    Conf.MAttrs.push_back(TMBuilder.MAttr);
+    Conf.RelocModel = TMBuilder.RelocModel;
+    Conf.CGOptLevel = TMBuilder.CGOptLevel;
+    Conf.Freestanding = Freestanding;
+    SmallString<40> Key;
+    computeLTOCacheKey(Key, Conf, Index, ModuleID, ImportList, ExportList,
+                       ResolvedODR, DefinedGVSummaries);
 
     // This choice of file name allows the cache to be pruned (see pruneCache()
     // in include/llvm/Support/CachePruning.h).
-    sys::path::append(EntryPath, CachePath,
-                      "llvmcache-" + toHex(Hasher.result()));
+    sys::path::append(EntryPath, CachePath, "llvmcache-" + Key);
   }
 
   // Access the path to this entry in the cache.
@@ -998,8 +928,8 @@ void ThinLTOCodeGenerator::run() {
         ModuleCacheEntry CacheEntry(CacheOptions.Path, *Index, ModuleIdentifier,
                                     ImportLists[ModuleIdentifier], ExportList,
                                     ResolvedODR[ModuleIdentifier],
-                                    DefinedGVSummaries, GUIDPreservedSymbols,
-                                    OptLevel, Freestanding, TMBuilder);
+                                    DefinedGVSummaries, OptLevel, Freestanding,
+                                    TMBuilder);
         auto CacheEntryPath = CacheEntry.getEntryPath();
 
         {

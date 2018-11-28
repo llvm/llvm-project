@@ -2244,9 +2244,16 @@ static bool isAllocSiteRemovable(Instruction *AI,
 }
 
 Instruction *InstCombiner::visitAllocSite(Instruction &MI) {
-  // If we have a malloc call which is only used in any amount of comparisons
-  // to null and free calls, delete the calls and replace the comparisons with
-  // true or false as appropriate.
+  // If we have a malloc call which is only used in any amount of comparisons to
+  // null and free calls, delete the calls and replace the comparisons with true
+  // or false as appropriate.
+
+  // This is based on the principle that we can substitute our own allocation
+  // function (which will never return null) rather than knowledge of the
+  // specific function being called. In some sense this can change the permitted
+  // outputs of a program (when we convert a malloc to an alloca, the fact that
+  // the allocation is now on the stack is potentially visible, for example),
+  // but we believe in a permissible manner.
   SmallVector<WeakTrackingVH, 64> Users;
 
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls

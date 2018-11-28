@@ -78,9 +78,9 @@ for the `gen` command. The full GN reference is also `available online
 GN has an autoformatter: `git ls-files '*.gn' '*.gni' | xargs -n 1 gn format`
 after making GN build changes is your friend.
 
-To not put `BUILD.gn` into the main tree, they are all below `utils/gn/tree`.
-For example, the build file for `llvm/lib/Support` is in
-`utils/gn/tree/llvm/lib/Support`.
+To not put `BUILD.gn` into the main tree, they are all below
+`utils/gn/secondary`.  For example, the build file for `llvm/lib/Support` is in
+`utils/gn/secondary/llvm/lib/Support`.
 
 .. _Philosophy:
 

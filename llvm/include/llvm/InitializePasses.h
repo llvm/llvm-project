@@ -372,6 +372,8 @@ void initializeSpillPlacementPass(PassRegistry&);
 void initializeStackColoringPass(PassRegistry&);
 void initializeStackMapLivenessPass(PassRegistry&);
 void initializeStackProtectorPass(PassRegistry&);
+void initializeStackSafetyGlobalInfoWrapperPassPass(PassRegistry &);
+void initializeStackSafetyInfoWrapperPassPass(PassRegistry &);
 void initializeStackSlotColoringPass(PassRegistry&);
 void initializeStraightLineStrengthReducePass(PassRegistry&);
 void initializeStripDeadDebugInfoPass(PassRegistry&);

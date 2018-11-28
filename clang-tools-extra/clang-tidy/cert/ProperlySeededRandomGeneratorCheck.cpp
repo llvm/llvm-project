@@ -101,8 +101,8 @@ void ProperlySeededRandomGeneratorCheck::checkSeed(
     return;
   }
 
-  Expr::EvalResult EVResult;
-  if (Func->getArg(0)->EvaluateAsInt(EVResult, *Result.Context)) {
+  llvm::APSInt Value;
+  if (Func->getArg(0)->EvaluateAsInt(Value, *Result.Context)) {
     diag(Func->getExprLoc(),
          "random number generator seeded with a constant value will generate a "
          "predictable sequence of values");

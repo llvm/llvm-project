@@ -1,6 +1,7 @@
 group("default") {
   deps = [
-    "//llvm/lib/Demangle",
+    "//llvm/utils/TableGen:llvm-tblgen",
+    "//llvm/tools/llvm-undname",
   ]
 }
 

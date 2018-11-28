@@ -31,7 +31,7 @@
 #include "omptarget-nvptx.h"
 
 EXTERN kmp_TaskDescr *__kmpc_omp_task_alloc(
-    kmp_Indent *loc,     // unused
+    kmp_Ident *loc,     // unused
     uint32_t global_tid, // unused
     int32_t flag, // unused (because in our impl, all are immediately exec
     size_t sizeOfTaskInclPrivate, size_t sizeOfSharedTable,
@@ -68,20 +68,20 @@ EXTERN kmp_TaskDescr *__kmpc_omp_task_alloc(
   return newKmpTaskDescr;
 }
 
-EXTERN int32_t __kmpc_omp_task(kmp_Indent *loc, uint32_t global_tid,
+EXTERN int32_t __kmpc_omp_task(kmp_Ident *loc, uint32_t global_tid,
                                kmp_TaskDescr *newKmpTaskDescr) {
   return __kmpc_omp_task_with_deps(loc, global_tid, newKmpTaskDescr, 0, 0, 0,
                                    0);
 }
 
-EXTERN int32_t __kmpc_omp_task_with_deps(kmp_Indent *loc, uint32_t global_tid,
+EXTERN int32_t __kmpc_omp_task_with_deps(kmp_Ident *loc, uint32_t global_tid,
                                          kmp_TaskDescr *newKmpTaskDescr,
                                          int32_t depNum, void *depList,
                                          int32_t noAliasDepNum,
                                          void *noAliasDepList) {
   PRINT(LD_IO, "call to __kmpc_omp_task_with_deps(task 0x%llx)\n",
         P64(newKmpTaskDescr));
-  ASSERT0(LT_FUSSY, isRuntimeInitialized(), "Runtime must be initialized.");
+  ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc), "Runtime must be initialized.");
   // 1. get explict task descr from kmp task descr
   omptarget_nvptx_ExplicitTaskDescr *newExplicitTaskDescr =
       (omptarget_nvptx_ExplicitTaskDescr *)SUB_BYTES(
@@ -114,11 +114,11 @@ EXTERN int32_t __kmpc_omp_task_with_deps(kmp_Indent *loc, uint32_t global_tid,
   return 0;
 }
 
-EXTERN void __kmpc_omp_task_begin_if0(kmp_Indent *loc, uint32_t global_tid,
+EXTERN void __kmpc_omp_task_begin_if0(kmp_Ident *loc, uint32_t global_tid,
                                       kmp_TaskDescr *newKmpTaskDescr) {
   PRINT(LD_IO, "call to __kmpc_omp_task_begin_if0(task 0x%llx)\n",
         P64(newKmpTaskDescr));
-  ASSERT0(LT_FUSSY, isRuntimeInitialized(), "Runtime must be initialized.");
+  ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc), "Runtime must be initialized.");
   // 1. get explict task descr from kmp task descr
   omptarget_nvptx_ExplicitTaskDescr *newExplicitTaskDescr =
       (omptarget_nvptx_ExplicitTaskDescr *)SUB_BYTES(
@@ -139,11 +139,11 @@ EXTERN void __kmpc_omp_task_begin_if0(kmp_Indent *loc, uint32_t global_tid,
   // 4 & 5 ... done in complete
 }
 
-EXTERN void __kmpc_omp_task_complete_if0(kmp_Indent *loc, uint32_t global_tid,
+EXTERN void __kmpc_omp_task_complete_if0(kmp_Ident *loc, uint32_t global_tid,
                                          kmp_TaskDescr *newKmpTaskDescr) {
   PRINT(LD_IO, "call to __kmpc_omp_task_complete_if0(task 0x%llx)\n",
         P64(newKmpTaskDescr));
-  ASSERT0(LT_FUSSY, isRuntimeInitialized(), "Runtime must be initialized.");
+  ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc), "Runtime must be initialized.");
   // 1. get explict task descr from kmp task descr
   omptarget_nvptx_ExplicitTaskDescr *newExplicitTaskDescr =
       (omptarget_nvptx_ExplicitTaskDescr *)SUB_BYTES(
@@ -164,37 +164,37 @@ EXTERN void __kmpc_omp_task_complete_if0(kmp_Indent *loc, uint32_t global_tid,
   SafeFree(newExplicitTaskDescr, "explicit task descriptor");
 }
 
-EXTERN void __kmpc_omp_wait_deps(kmp_Indent *loc, uint32_t global_tid,
+EXTERN void __kmpc_omp_wait_deps(kmp_Ident *loc, uint32_t global_tid,
                                  int32_t depNum, void *depList,
                                  int32_t noAliasDepNum, void *noAliasDepList) {
   PRINT0(LD_IO, "call to __kmpc_omp_wait_deps(..)\n");
   // nothing to do as all our tasks are executed as final
 }
 
-EXTERN void __kmpc_taskgroup(kmp_Indent *loc, uint32_t global_tid) {
+EXTERN void __kmpc_taskgroup(kmp_Ident *loc, uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_taskgroup(..)\n");
   // nothing to do as all our tasks are executed as final
 }
 
-EXTERN void __kmpc_end_taskgroup(kmp_Indent *loc, uint32_t global_tid) {
+EXTERN void __kmpc_end_taskgroup(kmp_Ident *loc, uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_end_taskgroup(..)\n");
   // nothing to do as all our tasks are executed as final
 }
 
-EXTERN int32_t __kmpc_omp_taskyield(kmp_Indent *loc, uint32_t global_tid,
+EXTERN int32_t __kmpc_omp_taskyield(kmp_Ident *loc, uint32_t global_tid,
                                     int end_part) {
   PRINT0(LD_IO, "call to __kmpc_taskyield()\n");
   // do nothing: tasks are executed immediately, no yielding allowed
   return 0;
 }
 
-EXTERN int32_t __kmpc_omp_taskwait(kmp_Indent *loc, uint32_t global_tid) {
+EXTERN int32_t __kmpc_omp_taskwait(kmp_Ident *loc, uint32_t global_tid) {
   PRINT0(LD_IO, "call to __kmpc_taskwait()\n");
   // nothing to do as all our tasks are executed as final
   return 0;
 }
 
-EXTERN void __kmpc_taskloop(kmp_Indent *loc, uint32_t global_tid,
+EXTERN void __kmpc_taskloop(kmp_Ident *loc, uint32_t global_tid,
                             kmp_TaskDescr *newKmpTaskDescr, int if_val,
                             uint64_t *lb, uint64_t *ub, int64_t st, int nogroup,
                             int32_t sched, uint64_t grainsize, void *task_dup) {

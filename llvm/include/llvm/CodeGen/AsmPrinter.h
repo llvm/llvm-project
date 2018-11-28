@@ -71,6 +71,7 @@ class MCTargetOptions;
 class MDNode;
 class Module;
 class raw_ostream;
+class StackMaps;
 class TargetLoweringObjectFile;
 class TargetMachine;
 
@@ -364,6 +365,9 @@ public:
   /// eligible for PC relative GOT entry conversion, in such cases we need to
   /// emit the proxies we previously omitted in EmitGlobalVariable.
   void emitGlobalGOTEquivs();
+
+  /// Emit the stack maps.
+  void emitStackMaps(StackMaps &SM);
 
   //===------------------------------------------------------------------===//
   // Overridable Hooks

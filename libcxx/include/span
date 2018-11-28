@@ -23,20 +23,6 @@ inline constexpr ptrdiff_t dynamic_extent = -1;
 template <class ElementType, ptrdiff_t Extent = dynamic_extent>
     class span;
 
-// [span.comparison], span comparison operators
-template <class T, ptrdiff_t X, class U, ptrdiff_t Y>
-    constexpr bool operator==(span<T, X> l, span<U, Y> r);
-template <class T, ptrdiff_t X, class U, ptrdiff_t Y>
-    constexpr bool operator!=(span<T, X> l, span<U, Y> r);
-template <class T, ptrdiff_t X, class U, ptrdiff_t Y>
-    constexpr bool operator<(span<T, X> l, span<U, Y> r);
-template <class T, ptrdiff_t X, class U, ptrdiff_t Y>
-    constexpr bool operator<=(span<T, X> l, span<U, Y> r);
-template <class T, ptrdiff_t X, class U, ptrdiff_t Y>
-    constexpr bool operator>(span<T, X> l, span<U, Y> r);
-template <class T, ptrdiff_t X, class U, ptrdiff_t Y>
-    constexpr bool operator>=(span<T, X> l, span<U, Y> r);
-
 // [span.objectrep], views of object representation
 template <class ElementType, ptrdiff_t Extent>
     span<const byte, ((Extent == dynamic_extent) ? dynamic_extent :
@@ -538,36 +524,6 @@ private:
     pointer    __data;
     index_type __size;
 };
-
-template <class _Tp1, ptrdiff_t _Extent1, class _Tp2, ptrdiff_t _Extent2>
-    constexpr bool
-    operator==(const span<_Tp1, _Extent1>& __lhs, const span<_Tp2, _Extent2>& __rhs)
-    { return equal(__lhs.begin(), __lhs.end(), __rhs.begin(), __rhs.end()); }
-
-template <class _Tp1, ptrdiff_t _Extent1, class _Tp2, ptrdiff_t _Extent2>
-    constexpr bool
-    operator!=(const span<_Tp1, _Extent1>& __lhs, const span<_Tp2, _Extent2>& __rhs)
-    { return !(__rhs == __lhs); }
-
-template <class _Tp1, ptrdiff_t _Extent1, class _Tp2, ptrdiff_t _Extent2>
-    constexpr bool
-    operator< (const span<_Tp1, _Extent1>& __lhs, const span<_Tp2, _Extent2>& __rhs)
-    { return lexicographical_compare (__lhs.begin(), __lhs.end(), __rhs.begin(), __rhs.end()); }
-
-template <class _Tp1, ptrdiff_t _Extent1, class _Tp2, ptrdiff_t _Extent2>
-    constexpr bool
-    operator<=(const span<_Tp1, _Extent1>& __lhs, const span<_Tp2, _Extent2>& __rhs)
-    { return !(__rhs < __lhs); }
-
-template <class _Tp1, ptrdiff_t _Extent1, class _Tp2, ptrdiff_t _Extent2>
-    constexpr bool
-    operator> (const span<_Tp1, _Extent1>& __lhs, const span<_Tp2, _Extent2>& __rhs)
-    { return __rhs < __lhs; }
-
-template <class _Tp1, ptrdiff_t _Extent1, class _Tp2, ptrdiff_t _Extent2>
-    constexpr bool
-    operator>=(const span<_Tp1, _Extent1>& __lhs, const span<_Tp2, _Extent2>& __rhs)
-    { return !(__lhs < __rhs); }
 
 //  as_bytes & as_writeable_bytes
 template <class _Tp, ptrdiff_t _Extent>

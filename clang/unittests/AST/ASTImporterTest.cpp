@@ -3764,6 +3764,38 @@ TEST_P(ASTImporterTestBase,
   }
 }
 
+TEST_P(ASTImporterTestBase, ImportingTypedefShouldImportTheCompleteType) {
+  // We already have an incomplete underlying type in the "To" context.
+  auto Code =
+      R"(
+      template <typename T>
+      struct S {
+        void foo();
+      };
+      using U = S<int>;
+      )";
+  Decl *ToTU = getToTuDecl(Code, Lang_CXX11);
+  auto *ToD = FirstDeclMatcher<TypedefNameDecl>().match(ToTU,
+      typedefNameDecl(hasName("U")));
+  ASSERT_TRUE(ToD->getUnderlyingType()->isIncompleteType());
+
+  // The "From" context has the same typedef, but the underlying type is
+  // complete this time.
+  Decl *FromTU = getTuDecl(std::string(Code) +
+      R"(
+      void foo(U* u) {
+        u->foo();
+      }
+      )", Lang_CXX11);
+  auto *FromD = FirstDeclMatcher<TypedefNameDecl>().match(FromTU,
+      typedefNameDecl(hasName("U")));
+  ASSERT_FALSE(FromD->getUnderlyingType()->isIncompleteType());
+
+  // The imported type should be complete.
+  auto *ImportedD = cast<TypedefNameDecl>(Import(FromD, Lang_CXX11));
+  EXPECT_FALSE(ImportedD->getUnderlyingType()->isIncompleteType());
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, DeclContextTest,
                         ::testing::Values(ArgVector()), );
 

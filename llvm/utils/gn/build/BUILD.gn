@@ -1,7 +1,6 @@
 import("//llvm/utils/gn/build/buildflags.gni")
 import("//llvm/utils/gn/build/mac_sdk.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
-import("//llvm/utils/gn/build/enable_threads.gni")
 
 config("compiler_defaults") {
   # FIXME: Don't define this globally here.
@@ -138,16 +137,5 @@ config("clang_code") {
 config("warn_covered_switch_default") {
   if (is_clang) {
     cflags = [ "-Wcovered-switch-default" ]
-  }
-}
-
-config("pthread_config") {
-  visibility = [ ":pthread" ]
-  libs = [ "pthread" ]
-}
-
-group("pthread") {
-  if (llvm_enable_threads && host_os != "win") {
-    public_configs = [ ":pthread_config" ]
   }
 }

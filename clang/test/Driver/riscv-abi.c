@@ -1,3 +1,5 @@
+// REQUIRES: riscv-registered-target
+
 // RUN: %clang -target riscv32-unknown-elf %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ILP32 %s
 // RUN: %clang -target riscv32-unknown-elf %s -### -o %t.o -mabi=ilp32 2>&1 \

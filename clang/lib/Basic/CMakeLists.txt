@@ -71,6 +71,7 @@ add_clang_library(clangBasic
   Targets.cpp
   Targets/AArch64.cpp
   Targets/AMDGPU.cpp
+  Targets/ARC.cpp
   Targets/ARM.cpp
   Targets/AVR.cpp
   Targets/BPF.cpp

@@ -1744,11 +1744,7 @@ public:
   void Initialize() {
     ::setlocale(LC_ALL, "");
     ::setlocale(LC_CTYPE, "");
-#if 0
-            ::initscr();
-#else
     m_screen = ::newterm(nullptr, m_out, m_in);
-#endif
     ::start_color();
     ::curs_set(0);
     ::noecho();

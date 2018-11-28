@@ -2594,8 +2594,8 @@ Expr *Expr::IgnoreParenCasts() {
       E = NTTP->getReplacement();
       continue;
     }
-    if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
-      E = FE->getSubExpr();
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
+      E = CE->getSubExpr();
       continue;
     }
     return E;
@@ -2619,8 +2619,8 @@ Expr *Expr::IgnoreCasts() {
       E = NTTP->getReplacement();
       continue;
     }
-    if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
-      E = FE->getSubExpr();
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
+      E = CE->getSubExpr();
       continue;
     }
     return E;
@@ -2648,8 +2648,8 @@ Expr *Expr::IgnoreParenLValueCasts() {
                                   = dyn_cast<SubstNonTypeTemplateParmExpr>(E)) {
       E = NTTP->getReplacement();
       continue;
-    } else if (FullExpr *FE = dyn_cast<FullExpr>(E)) {
-      E = FE->getSubExpr();
+    } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(E)) {
+      E = CE->getSubExpr();
       continue;
     }
     break;
@@ -2920,12 +2920,6 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
 
     break;
   }
-  case ConstantExprClass: {
-    // FIXME: We should be able to return "true" here, but it can lead to extra
-    // error messages. E.g. in Sema/array-init.c.
-    const Expr *Exp = cast<ConstantExpr>(this)->getSubExpr();
-    return Exp->isConstantInitializer(Ctx, false, Culprit);
-  }
   case CompoundLiteralExprClass: {
     // This handles gcc's extension that allows global initializers like
     // "struct x {int x;} x = (struct x) {};".
@@ -2965,8 +2959,8 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
           const Expr *Elt = ILE->getInit(ElementNo++);
           if (Field->isBitField()) {
             // Bitfields have to evaluate to an integer.
-            EvalResult Result;
-            if (!Elt->EvaluateAsInt(Result, Ctx)) {
+            llvm::APSInt ResultTmp;
+            if (!Elt->EvaluateAsInt(ResultTmp, Ctx)) {
               if (Culprit)
                 *Culprit = Elt;
               return false;
