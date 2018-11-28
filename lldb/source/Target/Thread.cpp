@@ -25,6 +25,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
@@ -2199,3 +2200,18 @@ Status Thread::StepOut() {
   }
   return error;
 }
+
+ValueObjectSP Thread::GetCurrentException() {
+  StackFrameSP frame_sp(GetStackFrameAtIndex(0));
+  if (!frame_sp) return ValueObjectSP();
+
+  RecognizedStackFrameSP recognized_frame(frame_sp->GetRecognizedFrame());
+  if (!recognized_frame) return ValueObjectSP();
+
+  return recognized_frame->GetExceptionObject();
+}
+
+/* TODO(kubamracek)
+ThreadSP Thread::GetCurrentExceptionBacktrace() {
+  return ThreadSP();
+}*/

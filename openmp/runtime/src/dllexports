@@ -509,9 +509,7 @@ kmp_set_warnings_off                        780
     omp_is_initial_device                   869
     omp_set_default_device                  879
     omp_get_default_device                  880
-    %ifdef stub
-        omp_get_num_devices                 881
-    %endif
+    omp_get_num_devices                     881
 %endif # OMP_40
 
 # OpenMP 45
@@ -526,8 +524,8 @@ kmp_set_warnings_off                        780
     omp_get_place_num                       876
     omp_get_partition_num_places            877
     omp_get_partition_place_nums            878
+    omp_get_initial_device                  882
     %ifdef stub
-        omp_get_initial_device              882
         omp_target_alloc                    883
         omp_target_free                     884
         omp_target_is_present               885
@@ -546,6 +544,7 @@ kmp_set_disp_num_buffers                    890
     omp_get_default_allocator               893
     omp_alloc                               894
     omp_free                                895
+    omp_get_device_num                      896
 
     OMP_NULL_ALLOCATOR                     DATA
     omp_default_mem_alloc                  DATA

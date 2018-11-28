@@ -455,11 +455,17 @@ lldb::SearchFilterSP AppleObjCRuntime::CreateExceptionSearchFilter() {
 
   if (target.GetArchitecture().GetTriple().getVendor() == llvm::Triple::Apple) {
     FileSpecList filter_modules;
-    filter_modules.Append(FileSpec("libobjc.A.dylib"));
+    filter_modules.Append(std::get<0>(GetExceptionThrowLocation()));
     return target.GetSearchFilterForModuleList(&filter_modules);
   } else {
     return LanguageRuntime::CreateExceptionSearchFilter();
   }
+}
+
+std::tuple<FileSpec, ConstString>
+AppleObjCRuntime::GetExceptionThrowLocation() {
+  return std::make_tuple(
+      FileSpec("libobjc.A.dylib"), ConstString("objc_exception_throw"));
 }
 
 void AppleObjCRuntime::ReadObjCLibraryIfNeeded(const ModuleList &module_list) {
