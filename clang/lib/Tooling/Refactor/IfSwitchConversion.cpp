@@ -130,12 +130,12 @@ static bool isConditionValid(const Expr *E, ASTContext &Context,
     return false;
 
   // RHS must be a constant and unique.
-  Expr::EvalResult Result;
-  if (!RHS->EvaluateAsInt(Result, Context))
+  llvm::APSInt Value;
+  if (!RHS->EvaluateAsInt(Value, Context))
     return false;
   // Only allow constant that fix into 64 bits.
-  if (Result.Val.getInt().getMinSignedBits() > 64 ||
-      !RHSValues.insert(Result.Val.getInt().getExtValue()).second)
+  if (Value.getMinSignedBits() > 64 ||
+      !RHSValues.insert(Value.getExtValue()).second)
     return false;
 
   // LHS must be identical to the other LHS expressions.
