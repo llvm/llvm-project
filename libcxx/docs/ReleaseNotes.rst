@@ -48,3 +48,7 @@ API Changes
   linking translation units built with different versions of libc++'s headers
   together may lead to ODR violations and ABI issues. On the flipside, code
   size improvements should be expected for everyone not defining the macro.
+- Starting with LLVM 8.0.0, std::dynarray has been removed from the library.
+  std::dynarray was a feature proposed for C++14 that was pulled from the
+  Standard at the last minute and was never standardized. Since there are no
+  plans to standardize this facility it is being removed.

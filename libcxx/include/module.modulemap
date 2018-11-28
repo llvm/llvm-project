@@ -524,10 +524,6 @@ module std [system] {
       header "experimental/deque"
       export *
     }
-    module dynarray {
-      header "experimental/dynarray"
-      export *
-    }
     module filesystem {
       header "experimental/filesystem"
       export *
