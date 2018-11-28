@@ -659,13 +659,13 @@ public:
   size_t getSize() const override;
   bool empty() const override { return Entries.empty(); }
   void addSymbols();
-
   template <class ELFT> void addEntry(Symbol &Sym);
+
+  size_t HeaderSize;
 
 private:
   unsigned getPltRelocOff() const;
   std::vector<std::pair<const Symbol *, unsigned>> Entries;
-  size_t HeaderSize;
   bool IsIplt;
 };
 

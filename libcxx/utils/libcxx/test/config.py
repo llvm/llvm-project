@@ -338,9 +338,6 @@ class Configuration(object):
 
     def configure_use_clang_verify(self):
         '''If set, run clang with -verify on failing tests.'''
-        if self.with_availability:
-            self.use_clang_verify = False
-            return
         self.use_clang_verify = self.get_lit_bool('use_clang_verify')
         if self.use_clang_verify is None:
             # NOTE: We do not test for the -verify flag directly because

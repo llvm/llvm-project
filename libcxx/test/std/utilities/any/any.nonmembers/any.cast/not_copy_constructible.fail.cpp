@@ -40,6 +40,10 @@ struct no_move {
   no_move(no_move const&) {}
 };
 
+// On platforms that do not support any_cast, an additional availability error
+// is triggered by these tests.
+// expected-error@not_copy_constructible.fail.cpp:* 0+ {{call to unavailable function 'any_cast': introduced in macOS 10.14}}
+
 int main() {
     any a;
     // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be an lvalue reference or a CopyConstructible type"}}

@@ -3257,9 +3257,9 @@ static unsigned getLoadStoreRegOpcode(unsigned Reg,
   }
 }
 
-bool X86InstrInfo::getMemOpBaseRegImmOfs(MachineInstr &MemOp, unsigned &BaseReg,
-                                         int64_t &Offset,
-                                         const TargetRegisterInfo *TRI) const {
+bool X86InstrInfo::getMemOperandWithOffset(
+    MachineInstr &MemOp, MachineOperand *&BaseOp, int64_t &Offset,
+    const TargetRegisterInfo *TRI) const {
   const MCInstrDesc &Desc = MemOp.getDesc();
   int MemRefBegin = X86II::getMemoryOperandNo(Desc.TSFlags);
   if (MemRefBegin < 0)
@@ -3267,11 +3267,10 @@ bool X86InstrInfo::getMemOpBaseRegImmOfs(MachineInstr &MemOp, unsigned &BaseReg,
 
   MemRefBegin += X86II::getOperandBias(Desc);
 
-  MachineOperand &BaseMO = MemOp.getOperand(MemRefBegin + X86::AddrBaseReg);
-  if (!BaseMO.isReg()) // Can be an MO_FrameIndex
+  BaseOp = &MemOp.getOperand(MemRefBegin + X86::AddrBaseReg);
+  if (!BaseOp->isReg()) // Can be an MO_FrameIndex
     return false;
 
-  BaseReg = BaseMO.getReg();
   if (MemOp.getOperand(MemRefBegin + X86::AddrScaleAmt).getImm() != 1)
     return false;
 
@@ -3287,6 +3286,8 @@ bool X86InstrInfo::getMemOpBaseRegImmOfs(MachineInstr &MemOp, unsigned &BaseReg,
 
   Offset = DispMO.getImm();
 
+  assert(BaseOp->isReg() && "getMemOperandWithOffset only supports base "
+                            "operands of type register.");
   return true;
 }
 

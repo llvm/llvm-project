@@ -19,7 +19,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/TargetInfo.h"
-#include "clang/Sema/LoopHint.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallSite.h"
@@ -1822,9 +1821,9 @@ llvm::Value* CodeGenFunction::EmitAsmInput(
   // If this can't be a register or memory, i.e., has to be a constant
   // (immediate or symbolic), try to emit it as such.
   if (!Info.allowsRegister() && !Info.allowsMemory()) {
-    llvm::APSInt Result;
+    Expr::EvalResult Result;
     if (InputExpr->EvaluateAsInt(Result, getContext()))
-      return llvm::ConstantInt::get(getLLVMContext(), Result);
+      return llvm::ConstantInt::get(getLLVMContext(), Result.Val.getInt());
     assert(!Info.requiresImmediateConstant() &&
            "Required-immediate inlineasm arg isn't constant?");
   }

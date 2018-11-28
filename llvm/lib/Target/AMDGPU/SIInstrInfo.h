@@ -164,12 +164,11 @@ public:
                                int64_t &Offset1,
                                int64_t &Offset2) const override;
 
-  bool getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
-                             int64_t &Offset,
-                             const TargetRegisterInfo *TRI) const final;
+  bool getMemOperandWithOffset(MachineInstr &LdSt, MachineOperand *&BaseOp,
+                               int64_t &Offset,
+                               const TargetRegisterInfo *TRI) const final;
 
-  bool shouldClusterMemOps(MachineInstr &FirstLdSt, unsigned BaseReg1,
-                           MachineInstr &SecondLdSt, unsigned BaseReg2,
+  bool shouldClusterMemOps(MachineOperand &BaseOp1, MachineOperand &BaseOp2,
                            unsigned NumLoads) const override;
 
   bool shouldScheduleLoadsNear(SDNode *Load0, SDNode *Load1, int64_t Offset0,

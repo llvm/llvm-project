@@ -8050,8 +8050,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
           break;
         }
 
-        llvm::APSInt Result;
-        Init->EvaluateAsInt(Result, S.Context);
+        Expr::EvalResult EVResult;
+        Init->EvaluateAsInt(EVResult, S.Context);
+        llvm::APSInt Result = EVResult.Val.getInt();
         const uint64_t SamplerValue = Result.getLimitedValue();
         // 32-bit value of sampler's initializer is interpreted as
         // bit-field with the following structure:

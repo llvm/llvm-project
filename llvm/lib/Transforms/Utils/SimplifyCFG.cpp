@@ -1375,7 +1375,7 @@ HoistTerminator:
   // As the parent basic block terminator is a branch instruction which is
   // removed at the end of the current transformation, use its previous
   // non-debug instruction, as the reference insertion point, which will
-  // provide the debug location for the instruction being hoisted. For BBs
+  // provide the debug location for generated select instructions. For BBs
   // with only debug instructions, use an empty debug location.
   Instruction *InsertPt =
       BIParent->getTerminator()->getPrevNonDebugInstruction();
@@ -1389,15 +1389,16 @@ HoistTerminator:
     NT->takeName(I1);
   }
 
-  // The instruction NT being hoisted, is the terminator for the true branch,
-  // with debug location (DILocation) within that branch. We can't retain
-  // its original debug location value, otherwise 'select' instructions that
-  // are created from any PHI nodes, will take its debug location, giving
-  // the impression that those 'select' instructions are in the true branch,
-  // causing incorrect stepping, affecting the debug experience.
-  NT->setDebugLoc(InsertPt ? InsertPt->getDebugLoc() : DebugLoc());
+  // Ensure terminator gets a debug location, even an unknown one, in case
+  // it involves inlinable calls.
+  NT->applyMergedLocation(I1->getDebugLoc(), I2->getDebugLoc());
 
   IRBuilder<NoFolder> Builder(NT);
+  // If an earlier instruction in this BB had a location, adopt it, otherwise
+  // clear debug locations.
+  Builder.SetCurrentDebugLocation(InsertPt ? InsertPt->getDebugLoc()
+                                           : DebugLoc());
+
   // Hoisting one of the terminators from our successor is a great thing.
   // Unfortunately, the successors of the if/else blocks may have PHI nodes in
   // them.  If they do, all PHI entries for BB1/BB2 must agree for all PHI

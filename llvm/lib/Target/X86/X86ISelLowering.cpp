@@ -35465,6 +35465,17 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
       return N00;
   }
 
+  // Fold (VSRAI (VSRAI X, C1), C2) --> (VSRAI X, (C1 + C2)) with (C1 + C2)
+  // clamped to (NumBitsPerElt - 1).
+  if (Opcode == X86ISD::VSRAI && N0.getOpcode() == X86ISD::VSRAI) {
+    unsigned ShiftVal2 = cast<ConstantSDNode>(N0.getOperand(1))->getZExtValue();
+    unsigned NewShiftVal = ShiftVal + ShiftVal2;
+    if (NewShiftVal >= NumBitsPerElt)
+      NewShiftVal = NumBitsPerElt - 1;
+    return DAG.getNode(X86ISD::VSRAI, SDLoc(N), VT, N0.getOperand(0),
+                       DAG.getConstant(NewShiftVal, SDLoc(N), MVT::i8));
+  }
+
   // We can decode 'whole byte' logical bit shifts as shuffles.
   if (LogicalShift && (ShiftVal % 8) == 0) {
     SDValue Op(N, 0);

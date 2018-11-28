@@ -37,6 +37,10 @@ class IgnoreDiagnostics : public DiagnosticsConsumer {
                           std::vector<Diag> Diagnostics) override {}
 };
 
+MATCHER_P2(FileRange, File, Range, "") {
+  return Location{URIForFile::canonicalize(File, testRoot()), Range} == arg;
+}
+
 // Extracts ranges from an annotated example, and constructs a matcher for a
 // highlight set. Ranges should be named $read/$write as appropriate.
 Matcher<const std::vector<DocumentHighlight> &>
@@ -396,22 +400,22 @@ int [[bar_not_preamble]];
   auto Locations =
       runFindDefinitions(Server, FooCpp, SourceAnnotations.point("p1"));
   EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
-  EXPECT_THAT(*Locations, ElementsAre(Location{URIForFile{FooCpp},
-                                               SourceAnnotations.range()}));
+  EXPECT_THAT(*Locations,
+              ElementsAre(FileRange(FooCpp, SourceAnnotations.range())));
 
   // Go to a definition in header_in_preamble.h.
   Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("p2"));
   EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
   EXPECT_THAT(*Locations,
-              ElementsAre(Location{URIForFile{HeaderInPreambleH},
-                                   HeaderInPreambleAnnotations.range()}));
+              ElementsAre(FileRange(HeaderInPreambleH,
+                                    HeaderInPreambleAnnotations.range())));
 
   // Go to a definition in header_not_in_preamble.h.
   Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("p3"));
   EXPECT_TRUE(bool(Locations)) << "findDefinitions returned an error";
   EXPECT_THAT(*Locations,
-              ElementsAre(Location{URIForFile{HeaderNotInPreambleH},
-                                   HeaderNotInPreambleAnnotations.range()}));
+              ElementsAre(FileRange(HeaderNotInPreambleH,
+                                    HeaderNotInPreambleAnnotations.range())));
 }
 
 TEST(Hover, All) {
@@ -1047,7 +1051,6 @@ TEST(GoToInclude, All) {
   Annotations SourceAnnotations(SourceContents);
   FS.Files[FooCpp] = SourceAnnotations.code();
   auto FooH = testPath("foo.h");
-  auto FooHUri = URIForFile{FooH};
 
   const char *HeaderContents = R"cpp([[]]#pragma once
                                      int a;
@@ -1063,24 +1066,24 @@ TEST(GoToInclude, All) {
       runFindDefinitions(Server, FooCpp, SourceAnnotations.point());
   ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
   EXPECT_THAT(*Locations,
-              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
+              ElementsAre(FileRange(FooH, HeaderAnnotations.range())));
 
   // Test include in preamble, last char.
   Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("2"));
   ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
   EXPECT_THAT(*Locations,
-              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
+              ElementsAre(FileRange(FooH, HeaderAnnotations.range())));
 
   Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("3"));
   ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
   EXPECT_THAT(*Locations,
-              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
+              ElementsAre(FileRange(FooH, HeaderAnnotations.range())));
 
   // Test include outside of preamble.
   Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("6"));
   ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
   EXPECT_THAT(*Locations,
-              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
+              ElementsAre(FileRange(FooH, HeaderAnnotations.range())));
 
   // Test a few positions that do not result in Locations.
   Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("4"));
@@ -1090,12 +1093,12 @@ TEST(GoToInclude, All) {
   Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("5"));
   ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
   EXPECT_THAT(*Locations,
-              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
+              ElementsAre(FileRange(FooH, HeaderAnnotations.range())));
 
   Locations = runFindDefinitions(Server, FooCpp, SourceAnnotations.point("7"));
   ASSERT_TRUE(bool(Locations)) << "findDefinitions returned an error";
   EXPECT_THAT(*Locations,
-              ElementsAre(Location{FooHUri, HeaderAnnotations.range()}));
+              ElementsAre(FileRange(FooH, HeaderAnnotations.range())));
 }
 
 TEST(GoToDefinition, WithPreamble) {
@@ -1107,7 +1110,6 @@ TEST(GoToDefinition, WithPreamble) {
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
 
   auto FooCpp = testPath("foo.cpp");
-  auto FooCppUri = URIForFile{FooCpp};
   // The trigger locations must be the same.
   Annotations FooWithHeader(R"cpp(#include "fo^o.h")cpp");
   Annotations FooWithoutHeader(R"cpp(double    [[fo^o]]();)cpp");
@@ -1115,7 +1117,6 @@ TEST(GoToDefinition, WithPreamble) {
   FS.Files[FooCpp] = FooWithHeader.code();
 
   auto FooH = testPath("foo.h");
-  auto FooHUri = URIForFile{FooH};
   Annotations FooHeader(R"cpp([[]])cpp");
   FS.Files[FooH] = FooHeader.code();
 
@@ -1123,7 +1124,7 @@ TEST(GoToDefinition, WithPreamble) {
   // GoToDefinition goes to a #include file: the result comes from the preamble.
   EXPECT_THAT(
       cantFail(runFindDefinitions(Server, FooCpp, FooWithHeader.point())),
-      ElementsAre(Location{FooHUri, FooHeader.range()}));
+      ElementsAre(FileRange(FooH, FooHeader.range())));
 
   // Only preamble is built, and no AST is built in this request.
   Server.addDocument(FooCpp, FooWithoutHeader.code(), WantDiagnostics::No);
@@ -1131,7 +1132,7 @@ TEST(GoToDefinition, WithPreamble) {
   // stale one.
   EXPECT_THAT(
       cantFail(runFindDefinitions(Server, FooCpp, FooWithoutHeader.point())),
-      ElementsAre(Location{FooCppUri, FooWithoutHeader.range()}));
+      ElementsAre(FileRange(FooCpp, FooWithoutHeader.range())));
 
   // Reset test environment.
   runAddDocument(Server, FooCpp, FooWithHeader.code());
@@ -1140,7 +1141,7 @@ TEST(GoToDefinition, WithPreamble) {
   // Use the AST being built in above request.
   EXPECT_THAT(
       cantFail(runFindDefinitions(Server, FooCpp, FooWithoutHeader.point())),
-      ElementsAre(Location{FooCppUri, FooWithoutHeader.range()}));
+      ElementsAre(FileRange(FooCpp, FooWithoutHeader.range())));
 }
 
 TEST(FindReferences, WithinAST) {
