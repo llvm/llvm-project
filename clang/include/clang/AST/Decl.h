@@ -1894,7 +1894,9 @@ protected:
         InstantiationIsPending(false), UsesSEHTry(false), HasSkippedBody(false),
         WillHaveBody(false), IsMultiVersion(false),
         IsCopyDeductionCandidate(false), HasODRHash(false), ODRHash(0),
-        EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {}
+        EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {
+    assert(T.isNull() || T->isFunctionType());
+  }
 
   using redeclarable_base = Redeclarable<FunctionDecl>;
 
