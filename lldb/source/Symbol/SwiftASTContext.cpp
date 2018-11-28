@@ -8051,3 +8051,189 @@ void lldb_private::printASTValidationInfo(
   for (StringRef ExtraOpt : ext_ast_info.getExtraClangImporterOptions())
     LLDB_LOG(log, "  -- {0}", ExtraOpt);
 }
+
+static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
+  s.PutCString("kind = ");
+
+  switch (file_unit->getKind()) {
+  default: { s.PutCString("<unknown>"); }
+  case swift::FileUnitKind::Source: {
+    s.PutCString("Source, ");
+    if (swift::SourceFile *source_file =
+            llvm::dyn_cast<swift::SourceFile>(file_unit)) {
+      s.Printf("filename = '%s', ", source_file->getFilename().str().c_str());
+      s.PutCString("source file kind = ");
+      switch (source_file->Kind) {
+      case swift::SourceFileKind::Library:
+        s.PutCString("Library");
+      case swift::SourceFileKind::Main:
+        s.PutCString("Main");
+      case swift::SourceFileKind::REPL:
+        s.PutCString("REPL");
+      case swift::SourceFileKind::SIL:
+        s.PutCString("SIL");
+      }
+    }
+  } break;
+  case swift::FileUnitKind::Builtin: {
+    s.PutCString("Builtin");
+  } break;
+  case swift::FileUnitKind::SerializedAST:
+  case swift::FileUnitKind::ClangModule: {
+    if (file_unit->getKind() == swift::FileUnitKind::SerializedAST)
+      s.PutCString("Serialized Swift AST, ");
+    else
+      s.PutCString("Clang module, ");
+    swift::LoadedFile *loaded_file = llvm::cast<swift::LoadedFile>(file_unit);
+    s.Printf("filename = '%s'", loaded_file->getFilename().str().c_str());
+  } break;
+  };
+}
+
+// Gets the full module name from the module passed in.
+
+static void GetNameFromModule(swift::ModuleDecl *module, std::string &result) {
+  result.clear();
+  if (module) {
+    const char *name = module->getName().get();
+    if (!name)
+      return;
+    result.append(name);
+    const clang::Module *clang_module = module->findUnderlyingClangModule();
+
+    // At present, there doesn't seem to be any way to get the full module path
+    // from the Swift side.
+    if (!clang_module)
+      return;
+
+    for (const clang::Module *cur_module = clang_module->Parent; cur_module;
+         cur_module = cur_module->Parent) {
+      if (!cur_module->Name.empty()) {
+        result.insert(0, 1, '.');
+        result.insert(0, cur_module->Name);
+      }
+    }
+  }
+}
+
+bool SwiftASTContext::PerformAutoImport(SwiftASTContext &swift_ast_context,
+                                        SymbolContext &sc,
+                                        ExecutionContextScope &exe_scope,
+                                        lldb::StackFrameWP &stack_frame_wp,
+                                        swift::SourceFile &source_file,
+                                        bool user_imports, Status &error) {
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  const std::vector<ConstString> *cu_modules = nullptr;
+
+  CompileUnit *compile_unit = sc.comp_unit;
+
+  if (compile_unit && compile_unit->GetLanguage() == lldb::eLanguageTypeSwift)
+    cu_modules = &compile_unit->GetImportedModules();
+
+  llvm::SmallVector<swift::SourceFile::ImportedModuleDesc, 2>
+      additional_imports;
+
+  std::set<ConstString> loaded_modules;
+
+  auto load_one_module = [&](const ConstString &module_name) {
+    error.Clear();
+    if (loaded_modules.count(module_name))
+      return true;
+
+    if (log)
+      log->Printf("[PerformAutoImport] Importing module %s",
+                  module_name.AsCString());
+
+    loaded_modules.insert(module_name);
+
+    swift::ModuleDecl *swift_module = nullptr;
+    lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
+
+    if (module_name == ConstString(swift_ast_context.GetClangImporter()
+                                       ->getImportedHeaderModule()
+                                       ->getName()
+                                       .str()))
+      swift_module =
+          swift_ast_context.GetClangImporter()->getImportedHeaderModule();
+    else if (this_frame_sp) {
+      lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
+      if (process_sp)
+        swift_module = swift_ast_context.FindAndLoadModule(
+            module_name, *process_sp.get(), error);
+    } else
+      swift_module = swift_ast_context.GetModule(module_name, error);
+
+    if (!swift_module || !error.Success() ||
+        swift_ast_context.HasFatalErrors()) {
+      if (log)
+        log->Printf("[PerformAutoImport] Couldn't import module %s: %s",
+                    module_name.AsCString(), error.AsCString());
+
+      if (!swift_module || swift_ast_context.HasFatalErrors()) {
+        return false;
+      }
+    }
+
+    if (log) {
+      log->Printf("Importing %s with source files:", module_name.AsCString());
+
+      for (swift::FileUnit *file_unit : swift_module->getFiles()) {
+        StreamString ss;
+        DescribeFileUnit(ss, file_unit);
+        log->Printf("  %s", ss.GetData());
+      }
+    }
+
+    additional_imports.push_back(swift::SourceFile::ImportedModuleDesc(
+        std::make_pair(swift::ModuleDecl::AccessPathTy(), swift_module),
+        swift::SourceFile::ImportOptions()));
+    return true;
+  };
+
+  if (!user_imports) {
+    if (!load_one_module(ConstString("Swift")))
+      return false;
+
+    if (cu_modules) {
+      for (const ConstString &module_name : *cu_modules) {
+        if (!load_one_module(module_name))
+          return false;
+      }
+    }
+  } else {
+    llvm::SmallVector<swift::ModuleDecl::ImportedModule, 2> parsed_imports;
+
+    source_file.getImportedModules(parsed_imports,
+                                   swift::ModuleDecl::ImportFilter::All);
+
+    auto *persistent_expression_state =
+        sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
+
+    for (auto module_pair : parsed_imports) {
+      swift::ModuleDecl *module = module_pair.second;
+      if (module) {
+        std::string module_name;
+        GetNameFromModule(module, module_name);
+        if (!module_name.empty()) {
+          ConstString module_const_str(module_name);
+          if (log)
+            log->Printf("[PerformAutoImport] Performing auto import on found "
+                        "module: %s.\n",
+                        module_name.c_str());
+          if (!load_one_module(module_const_str))
+            return false;
+
+          // How do we tell we are in REPL or playground mode?
+          persistent_expression_state->AddHandLoadedModule(module_const_str);
+        }
+      }
+    }
+    // Finally get the hand-loaded modules from the
+    // SwiftPersistentExpressionState and load them into this context:
+    if (!persistent_expression_state->RunOverHandLoadedModules(load_one_module))
+      return false;
+  }
+  source_file.addImports(additional_imports);
+  return true;
+}
