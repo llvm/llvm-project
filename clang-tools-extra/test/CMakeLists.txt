@@ -72,10 +72,6 @@ set(CLANGD_TEST_DEPS
   dexp
   )
 
-if (LLVM_INCLUDE_BENCHMARKS)
-  list(APPEND CLANGD_TEST_DEPS IndexBenchmark)
-endif()
-
 # Add lit test dependencies.
 set(LLVM_UTILS_DEPS
   FileCheck count not
