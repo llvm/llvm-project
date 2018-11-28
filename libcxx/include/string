@@ -956,9 +956,11 @@ public:
     void resize(size_type __n, value_type __c);
     _LIBCPP_INLINE_VISIBILITY void resize(size_type __n) {resize(__n, value_type());}
 
+    void reserve(size_type __res_arg);
     _LIBCPP_INLINE_VISIBILITY void __resize_default_init(size_type __n);
 
-    void reserve(size_type __res_arg = 0);
+    _LIBCPP_INLINE_VISIBILITY
+    void reserve() _NOEXCEPT {reserve(0);}
     _LIBCPP_INLINE_VISIBILITY
     void shrink_to_fit() _NOEXCEPT {reserve();}
     _LIBCPP_INLINE_VISIBILITY
