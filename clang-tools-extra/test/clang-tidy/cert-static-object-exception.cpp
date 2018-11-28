@@ -1,7 +1,7 @@
 // RUN: clang-tidy %s -checks="-*,cert-err58-cpp" -- -std=c++11 -target x86_64-pc-linux-gnu \
 // RUN:   | FileCheck %s -check-prefix=CHECK-EXCEPTIONS \
 // RUN:   -implicit-check-not="{{warning|error}}:"
-// RUN: clang-tidy %s -checks="-*,cert-err58-cpp" -- -fno-exceptions -std=c++11 -target x86_64-pc-linux-gnu \
+// RUN: clang-tidy %s -checks="-*,cert-err58-cpp" -- -DNONEXCEPTIONS -fno-exceptions -std=c++11 -target x86_64-pc-linux-gnu \
 // RUN:   | FileCheck %s -allow-empty -check-prefix=CHECK-NONEXCEPTIONS \
 // RUN:   -implicit-check-not="{{warning|error}}:"
 
@@ -223,3 +223,16 @@ W Statics::w;
 // CHECK-EXCEPTIONS: :[[@LINE-1]]:12: warning: initialization of 'w' with static storage duration may throw an exception that cannot be caught
 // CHECK-EXCEPTIONS: 29:3: note: possibly throwing constructor declared here
 // CHECK-NONEXCEPTIONS-NOT: warning:
+
+#ifndef NONEXCEPTIONS
+namespace pr35457 {
+constexpr int foo(int x) { if (x <= 0) throw 12; return x; }
+
+constexpr int bar = foo(1); // OK
+// CHECK-EXCEPTIONS-NOT: warning: initialization of 'bar' with static storage
+int baz = foo(0); // Not OK; throws at runtime when exceptions are enabled.
+// CHECK-EXCEPTIONS: :[[@LINE-1]]:5: warning: initialization of 'baz' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
+// CHECK-EXCEPTIONS: :[[@LINE-6]]:15: note: possibly throwing function declared here
+} // namespace pr35457
+#endif // NONEXCEPTIONS
+
