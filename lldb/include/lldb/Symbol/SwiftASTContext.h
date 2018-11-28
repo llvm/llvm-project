@@ -767,6 +767,13 @@ public:
 
   void SetCachedType(const ConstString &mangled, const lldb::TypeSP &type_sp);
 
+  static bool PerformAutoImport(SwiftASTContext &swift_ast_context,
+                                SymbolContext &sc,
+                                ExecutionContextScope &exe_scope,
+                                lldb::StackFrameWP &stack_frame_wp,
+                                swift::SourceFile &source_file,
+                                bool user_imports, Status &error);
+
 protected:
   // This map uses the string value of ConstStrings as the key, and the TypeBase
   // * as the value. Since the ConstString strings are uniqued, we can use
