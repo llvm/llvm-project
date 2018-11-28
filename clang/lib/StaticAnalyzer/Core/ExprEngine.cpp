@@ -1283,6 +1283,9 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
 
     case Expr::ConstantExprClass:
+      // Handled due to it being a wrapper class.
+      break;
+
     case Stmt::ExprWithCleanupsClass:
       // Handled due to fully linearised CFG.
       break;

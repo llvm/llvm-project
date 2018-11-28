@@ -119,9 +119,6 @@ private:
 
   void forEachClass(llvm::function_ref<void(size_t, size_t)> Fn);
 
-  template <class RelTy>
-  void combineRelocHashes(InputSection *IS, ArrayRef<RelTy> Rels);
-
   std::vector<InputSection *> Sections;
 
   // We repeat the main loop while `Repeat` is true.
@@ -428,9 +425,8 @@ void ICF<ELFT>::forEachClass(llvm::function_ref<void(size_t, size_t)> Fn) {
 
 // Combine the hashes of the sections referenced by the given section into its
 // hash.
-template <class ELFT>
-template <class RelTy>
-void ICF<ELFT>::combineRelocHashes(InputSection *IS, ArrayRef<RelTy> Rels) {
+template <class ELFT, class RelTy>
+static void combineRelocHashes(InputSection *IS, ArrayRef<RelTy> Rels) {
   uint32_t Hash = IS->Class[1];
   for (RelTy Rel : Rels) {
     Symbol &S = IS->template getFile<ELFT>()->getRelocTargetSym(Rel);
@@ -462,9 +458,9 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   parallelForEach(Sections, [&](InputSection *S) {
     if (S->AreRelocsRela)
-      combineRelocHashes(S, S->template relas<ELFT>());
+      combineRelocHashes<ELFT>(S, S->template relas<ELFT>());
     else
-      combineRelocHashes(S, S->template rels<ELFT>());
+      combineRelocHashes<ELFT>(S, S->template rels<ELFT>());
   });
 
   // From now on, sections in Sections vector are ordered so that sections

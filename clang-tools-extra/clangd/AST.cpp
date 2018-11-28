@@ -95,11 +95,11 @@ std::string printName(const ASTContext &Ctx, const NamedDecl &ND) {
     return Out.str();
   }
   // The name was empty, so present an anonymous entity.
-  if (llvm::dyn_cast<NamespaceDecl>(&ND))
+  if (isa<NamespaceDecl>(ND))
     return "(anonymous namespace)";
   if (auto *Cls = llvm::dyn_cast<RecordDecl>(&ND))
     return ("(anonymous " + Cls->getKindName() + ")").str();
-  if (llvm::dyn_cast<EnumDecl>(&ND))
+  if (isa<EnumDecl>(ND))
     return "(anonymous enum)";
   return "(anonymous)";
 }

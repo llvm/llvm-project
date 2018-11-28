@@ -13,6 +13,7 @@ function(find_compiler_rt_library name variable)
       OUTPUT_VARIABLE LIBRARY_FILE
   )
   string(STRIP "${LIBRARY_FILE}" LIBRARY_FILE)
+  file(TO_CMAKE_PATH "${LIBRARY_FILE}" LIBRARY_FILE)
   string(REPLACE "builtins" "${name}" LIBRARY_FILE "${LIBRARY_FILE}")
   if (NOT HAD_ERROR AND EXISTS "${LIBRARY_FILE}")
     message(STATUS "Found compiler-rt ${name} library: ${LIBRARY_FILE}")

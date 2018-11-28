@@ -2234,6 +2234,10 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     T = Context.getConstantArrayType(T, ConstVal, ASM, Quals);
   }
 
+  if (ArraySize && !CurContext->isFunctionOrMethod())
+    // A file-scoped array must have a constant array size.
+    ArraySize = new (Context) ConstantExpr(ArraySize);
+
   // OpenCL v1.2 s6.9.d: variable length arrays are not supported.
   if (getLangOpts().OpenCL && T->isVariableArrayType()) {
     Diag(Loc, diag::err_opencl_vla);

@@ -48,6 +48,20 @@ struct Inclusion {
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Inclusion&);
 
+// Contains information about one file in the build grpah and its direct
+// dependencies. Doesn't own the strings it references (IncludeGraph is
+// self-contained).
+struct IncludeGraphNode {
+  // True if current file is a main file rather than a header.
+  bool IsTU;
+  llvm::StringRef URI;
+  FileDigest Digest;
+  std::vector<llvm::StringRef> DirectIncludes;
+};
+// FileURI and FileInclusions are references to keys of the map containing
+// them.
+using IncludeGraph = llvm::StringMap<IncludeGraphNode>;
+
 // Information captured about the inclusion graph in a translation unit.
 // This includes detailed information about the direct #includes, and summary
 // information about all transitive includes.

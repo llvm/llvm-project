@@ -154,6 +154,10 @@ PROC_WITH_FEAT(SkylakeClient, "skylake", PROC_64_BIT, FEATURE_AVX2)
 PROC_WITH_FEAT(SkylakeServer, "skylake-avx512", PROC_64_BIT, FEATURE_AVX512F)
 PROC_ALIAS(SkylakeServer, "skx")
 
+/// \name Cascadelake Server
+/// Cascadelake Server microarchitecture based processors.
+PROC_WITH_FEAT(Cascadelake, "cascadelake", PROC_64_BIT, FEATURE_AVX512VNNI)
+
 /// \name Cannonlake Client
 /// Cannonlake client microarchitecture based processors.
 PROC_WITH_FEAT(Cannonlake, "cannonlake", PROC_64_BIT, FEATURE_AVX512VBMI)
