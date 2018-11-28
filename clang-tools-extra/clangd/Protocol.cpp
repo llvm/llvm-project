@@ -453,7 +453,8 @@ llvm::json::Value toJSON(const SymbolDetails &P) {
   if (P.ID.hasValue())
     result["id"] = P.ID.getValue().str();
 
-  return result;
+  // Older clang cannot compile 'return Result', even though it is legal.
+  return json::Value(std::move(result));
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &O, const SymbolDetails &S) {
