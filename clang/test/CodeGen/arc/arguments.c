@@ -124,12 +124,12 @@ void st2(s16 a, s16 b) {}
 
 // Use 8-byte struct 3 times, gets 8 registers, 1 byval struct argument.
 void st3(s16 a, s16 b, s16 c) {}
-// CHECK: define void @st3(i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg %a.coerce2, i32 inreg %a.coerce3, i32 inreg %b.coerce0, i32 inreg %b.coerce1, i32 inreg %b.coerce2, i32 inreg %b.coerce3, i32 %c.coerce0, i32 %c.coerce1, i32 %c.coerce2, i32 %c.coerce3)
+// CHECK: define void @st3(i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg %a.coerce2, i32 inreg %a.coerce3, i32 inreg %b.coerce0, i32 inreg %b.coerce1, i32 inreg %b.coerce2, i32 inreg %b.coerce3, { i32, i32, i32, i32 } %c.coerce)
 
 // 1 sret + 1 i32 + 2*(i32 coerce) + 4*(i32 coerce) + 1 byval
 s16 st4(int x, s8 a, s16 b, s16 c) { return b; }
-// CHECK: define void @st4(%struct.s16* noalias sret %agg.result, i32 inreg %x, i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg %b.coerce0, i32 inreg %b.coerce1, i32 inreg %b.coerce2, i32 inreg %b.coerce3, i32 %c.coerce0, i32 %c.coerce1, i32 %c.coerce2, i32 %c.coerce3)
+// CHECK: define void @st4(%struct.s16* noalias sret %agg.result, i32 inreg %x, i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg %b.coerce0, i32 inreg %b.coerce1, i32 inreg %b.coerce2, i32 inreg %b.coerce3, { i32, i32, i32, i32 } %c.coerce)
 
 // 1 sret + 2*(i32 coerce) + 4*(i32 coerce) + 4*(i32 coerce)
 s16 st5(s8 a, s16 b, s16 c) { return b; }
-// CHECK: define void @st5(%struct.s16* noalias sret %agg.result, i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg %b.coerce0, i32 inreg %b.coerce1, i32 inreg %b.coerce2, i32 inreg %b.coerce3, i32 %c.coerce0, i32 %c.coerce1, i32 %c.coerce2, i32 %c.coerce3)
+// CHECK: define void @st5(%struct.s16* noalias sret %agg.result, i32 inreg %a.coerce0, i32 inreg %a.coerce1, i32 inreg %b.coerce0, i32 inreg %b.coerce1, i32 inreg %b.coerce2, i32 inreg %b.coerce3, { i32, i32, i32, i32 } %c.coerce)

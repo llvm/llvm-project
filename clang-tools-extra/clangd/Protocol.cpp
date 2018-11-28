@@ -30,29 +30,44 @@ namespace clangd {
 
 char LSPError::ID;
 
-URIForFile::URIForFile(std::string AbsPath) {
+URIForFile URIForFile::canonicalize(StringRef AbsPath, StringRef TUPath) {
   assert(sys::path::is_absolute(AbsPath) && "the path is relative");
-  File = std::move(AbsPath);
+  auto Resolved = URI::resolvePath(AbsPath, TUPath);
+  if (!Resolved) {
+    elog("URIForFile: failed to resolve path {0} with TU path {1}: "
+         "{2}.\nUsing unresolved path.",
+         AbsPath, TUPath, Resolved.takeError());
+    return URIForFile(AbsPath);
+  }
+  return URIForFile(std::move(*Resolved));
+}
+
+Expected<URIForFile> URIForFile::fromURI(const URI &U, StringRef HintPath) {
+  auto Resolved = URI::resolve(U, HintPath);
+  if (!Resolved)
+    return Resolved.takeError();
+  return URIForFile(std::move(*Resolved));
 }
 
 bool fromJSON(const json::Value &E, URIForFile &R) {
   if (auto S = E.getAsString()) {
-    auto U = URI::parse(*S);
-    if (!U) {
-      elog("Failed to parse URI {0}: {1}", *S, U.takeError());
+    auto Parsed = URI::parse(*S);
+    if (!Parsed) {
+      elog("Failed to parse URI {0}: {1}", *S, Parsed.takeError());
       return false;
     }
-    if (U->scheme() != "file" && U->scheme() != "test") {
+    if (Parsed->scheme() != "file" && Parsed->scheme() != "test") {
       elog("Clangd only supports 'file' URI scheme for workspace files: {0}",
            *S);
       return false;
     }
-    auto Path = URI::resolve(*U);
-    if (!Path) {
-      log("{0}", Path.takeError());
+    // "file" and "test" schemes do not require hint path.
+    auto U = URIForFile::fromURI(*Parsed, /*HintPath=*/"");
+    if (!U) {
+      elog("{0}", U.takeError());
       return false;
     }
-    R = URIForFile(*Path);
+    R = std::move(*U);
     return true;
   }
   return false;
@@ -453,7 +468,8 @@ llvm::json::Value toJSON(const SymbolDetails &P) {
   if (P.ID.hasValue())
     result["id"] = P.ID.getValue().str();
 
-  return result;
+  // Older clang cannot compile 'return Result', even though it is legal.
+  return json::Value(std::move(result));
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &O, const SymbolDetails &S) {

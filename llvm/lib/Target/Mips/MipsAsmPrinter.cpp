@@ -1204,8 +1204,7 @@ void MipsAsmPrinter::PrintDebugValueComment(const MachineInstr *MI,
 
 // Emit .dtprelword or .dtpreldword directive
 // and value for debug thread local expression.
-void MipsAsmPrinter::EmitDebugThreadLocal(const MCExpr *Value,
-                                          unsigned Size) const {
+void MipsAsmPrinter::EmitDebugValue(const MCExpr *Value, unsigned Size) const {
   switch (Size) {
   case 4:
     OutStreamer->EmitDTPRel32Value(Value);

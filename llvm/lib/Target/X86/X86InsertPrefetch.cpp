@@ -76,6 +76,19 @@ ErrorOr<PrefetchHints> getPrefetchHints(const FunctionSamples *TopSamples,
   return std::error_code();
 }
 
+// The prefetch instruction can't take memory operands involving vector
+// registers.
+bool IsMemOpCompatibleWithPrefetch(const MachineInstr &MI, int Op) {
+  unsigned BaseReg = MI.getOperand(Op + X86::AddrBaseReg).getReg();
+  unsigned IndexReg = MI.getOperand(Op + X86::AddrIndexReg).getReg();
+  return (BaseReg == 0 ||
+          X86MCRegisterClasses[X86::GR64RegClassID].contains(BaseReg) ||
+          X86MCRegisterClasses[X86::GR32RegClassID].contains(BaseReg)) &&
+         (IndexReg == 0 ||
+          X86MCRegisterClasses[X86::GR64RegClassID].contains(IndexReg) ||
+          X86MCRegisterClasses[X86::GR32RegClassID].contains(IndexReg));
+}
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -182,6 +195,11 @@ bool X86InsertPrefetch::runOnMachineFunction(MachineFunction &MF) {
       int Offset = X86II::getMemoryOperandNo(Current->getDesc().TSFlags);
       if (Offset < 0)
         continue;
+      unsigned Bias = X86II::getOperandBias(Current->getDesc());
+      int MemOpOffset = Offset + Bias;
+      // FIXME(mtrofin): ORE message when the recommendation cannot be taken.
+      if (!IsMemOpCompatibleWithPrefetch(*Current, MemOpOffset))
+        continue;
       Prefetches.clear();
       if (!findPrefetchInfo(Samples, *Current, Prefetches))
         continue;
@@ -195,8 +213,6 @@ bool X86InsertPrefetch::runOnMachineFunction(MachineFunction &MF) {
         MachineInstr *PFetch =
             MF.CreateMachineInstr(Desc, Current->getDebugLoc(), true);
         MachineInstrBuilder MIB(MF, PFetch);
-        unsigned Bias = X86II::getOperandBias(Current->getDesc());
-        int MemOpOffset = Offset + Bias;
 
         assert(X86::AddrBaseReg == 0 && X86::AddrScaleAmt == 1 &&
                X86::AddrIndexReg == 2 && X86::AddrDisp == 3 &&

@@ -1,4 +1,4 @@
-; RUN: llc < %s -prefetch-hints-file=%S/insert-prefetch-nomemop.afdo | FileCheck %s
+; RUN: llc < %s -prefetch-hints-file=%S/insert-prefetch-invalid-instr.afdo | FileCheck %s
 ; ModuleID = 'prefetch.cc'
 source_filename = "prefetch.cc"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -42,5 +42,5 @@ attributes #2 = { argmemonly nounwind }
 ;CHECK-LABEL: main:
 ;CHECK:       # %bb.0:
 ;CHECK:       prefetchnta 291
-;CHECK:       prefetchnta 42(%rax,%ymm0)
-;CHECK-NEXT:  vgatherpf1dpd (%rax,%ymm0) {%k1}
+;CHECK-NOT:   prefetchnta 42(%rax,%ymm0)
+;CHECK:       vgatherpf1dpd (%rax,%ymm0) {%k1}

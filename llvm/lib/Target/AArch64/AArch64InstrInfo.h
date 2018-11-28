@@ -97,13 +97,13 @@ public:
   /// Hint that pairing the given load or store is unprofitable.
   static void suppressLdStPair(MachineInstr &MI);
 
-  bool getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
-                             int64_t &Offset,
-                             const TargetRegisterInfo *TRI) const override;
+  bool getMemOperandWithOffset(MachineInstr &MI, MachineOperand *&BaseOp,
+                               int64_t &Offset,
+                               const TargetRegisterInfo *TRI) const override;
 
-  bool getMemOpBaseRegImmOfsWidth(MachineInstr &LdSt, unsigned &BaseReg,
-                                  int64_t &Offset, unsigned &Width,
-                                  const TargetRegisterInfo *TRI) const;
+  bool getMemOperandWithOffsetWidth(MachineInstr &MI, MachineOperand *&BaseOp,
+                                    int64_t &Offset, unsigned &Width,
+                                    const TargetRegisterInfo *TRI) const;
 
   /// Return the immediate offset of the base register in a load/store \p LdSt.
   MachineOperand &getMemOpBaseRegImmOfsOffsetOperand(MachineInstr &LdSt) const;
@@ -115,8 +115,7 @@ public:
   bool getMemOpInfo(unsigned Opcode, unsigned &Scale, unsigned &Width,
                     int64_t &MinOffset, int64_t &MaxOffset) const;
 
-  bool shouldClusterMemOps(MachineInstr &FirstLdSt, unsigned BaseReg1,
-                           MachineInstr &SecondLdSt, unsigned BaseReg2,
+  bool shouldClusterMemOps(MachineOperand &BaseOp1, MachineOperand &BaseOp2,
                            unsigned NumLoads) const override;
 
   void copyPhysRegTuple(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
@@ -258,7 +257,7 @@ public:
   /// on Windows.
   static bool isSEHInstruction(const MachineInstr &MI);
 
-#define GET_TII_HELPER_DECLS
+#define GET_INSTRINFO_HELPER_DECLS
 #include "AArch64GenInstrInfo.inc"
 
 private:

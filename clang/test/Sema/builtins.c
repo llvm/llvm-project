@@ -122,6 +122,14 @@ int test16() {
          __builtin_constant_p(1, 2); // expected-error {{too many arguments}}
 }
 
+// __builtin_constant_p cannot resolve non-constants as a file scoped array.
+int expr;
+char y[__builtin_constant_p(expr) ? -1 : 1]; // no warning, the builtin is false.
+
+// no warning, the builtin is false.
+struct foo { int a; };
+struct foo x = (struct foo) { __builtin_constant_p(42) ? 37 : 927 };
+
 const int test17_n = 0;
 const char test17_c[] = {1, 2, 3, 0};
 const char test17_d[] = {1, 2, 3, 4};
@@ -161,6 +169,7 @@ void test17() {
   F(&test17_d);
   F((struct Aggregate){0, 1});
   F((IntVector){0, 1, 2, 3});
+  F(test17);
 
   // Ensure that a technique used in glibc is handled correctly.
 #define OPT(...) (__builtin_constant_p(__VA_ARGS__) && strlen(__VA_ARGS__) < 4)

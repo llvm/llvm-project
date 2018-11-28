@@ -835,8 +835,17 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     switch (Opcode) {
     case Instruction::ICmp: {
       unsigned Cost = 1;
-      if (ValTy->isIntegerTy() && ValTy->getScalarSizeInBits() <= 16)
+      if (ValTy->isIntegerTy() && ValTy->getScalarSizeInBits() <= 16) {
+        if (I != nullptr) {
+          // Single instruction for comparison of memory with a small immediate.
+          if (const LoadInst* Ld = dyn_cast<LoadInst>(I->getOperand(0))) {
+            const Instruction *FoldedValue = nullptr;
+            if (isFoldableLoad(Ld, FoldedValue))
+              return Cost;
+          }
+        }
         Cost += 2; // extend both operands
+      }
       return Cost;
     }
     case Instruction::Select:
@@ -899,17 +908,26 @@ isFoldableLoad(const LoadInst *Ld, const Instruction *&FoldedValue) {
        UserI->getOpcode() == Instruction::UDiv) &&
       UserI->getOperand(1) != FoldedValue)
     return false; // Not commutative, only RHS foldable.
+  // LoadOrTruncBits holds the number of effectively loaded bits, but 0 if an
+  // extension was made of the load.
+  unsigned LoadOrTruncBits =
+      ((SExtBits || ZExtBits) ? 0 : (TruncBits ? TruncBits : LoadedBits));
   switch (UserI->getOpcode()) {
   case Instruction::Add: // SE: 16->32, 16/32->64, z14:16->64. ZE: 32->64
   case Instruction::Sub:
+  case Instruction::ICmp:
     if (LoadedBits == 32 && ZExtBits == 64)
       return true;
     LLVM_FALLTHROUGH;
   case Instruction::Mul: // SE: 16->32, 32->64, z14:16->64
-    if (LoadedBits == 16 &&
-        (SExtBits == 32 ||
-         (SExtBits == 64 && ST->hasMiscellaneousExtensions2())))
-      return true;
+    if (UserI->getOpcode() != Instruction::ICmp) {
+      if (LoadedBits == 16 &&
+          (SExtBits == 32 ||
+           (SExtBits == 64 && ST->hasMiscellaneousExtensions2())))
+        return true;
+      if (LoadOrTruncBits == 16)
+        return true;
+    }
     LLVM_FALLTHROUGH;
   case Instruction::SDiv:// SE: 32->64
     if (LoadedBits == 32 && SExtBits == 64)
@@ -919,7 +937,6 @@ isFoldableLoad(const LoadInst *Ld, const Instruction *&FoldedValue) {
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
-  case Instruction::ICmp:
     // This also makes sense for float operations, but disabled for now due
     // to regressions.
     // case Instruction::FCmp:
@@ -929,13 +946,24 @@ isFoldableLoad(const LoadInst *Ld, const Instruction *&FoldedValue) {
     // case Instruction::FDiv:
 
     // All possible extensions of memory checked above.
-    if (SExtBits || ZExtBits)
-      return false;
 
-    unsigned LoadOrTruncBits = (TruncBits ? TruncBits : LoadedBits);
+    // Comparison between memory and immediate.
+    if (UserI->getOpcode() == Instruction::ICmp)
+      if (ConstantInt *CI = dyn_cast<ConstantInt>(UserI->getOperand(1)))
+        if (isUInt<16>(CI->getZExtValue()))
+          return true;
     return (LoadOrTruncBits == 32 || LoadOrTruncBits == 64);
     break;
   }
+  return false;
+}
+
+static bool isBswapIntrinsicCall(const Value *V) {
+  if (const Instruction *I = dyn_cast<Instruction>(V))
+    if (auto *CI = dyn_cast<CallInst>(I))
+      if (auto *F = CI->getCalledFunction())
+        if (F->getIntrinsicID() == Intrinsic::bswap)
+          return true;
   return false;
 }
 
@@ -974,6 +1002,22 @@ int SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 
   unsigned NumOps =
     (Src->isVectorTy() ? getNumVectorRegs(Src) : getNumberOfParts(Src));
+
+  // Store/Load reversed saves one instruction.
+  if (!Src->isVectorTy() && NumOps == 1 && I != nullptr) {
+    if (Opcode == Instruction::Load && I->hasOneUse()) {
+      const Instruction *LdUser = cast<Instruction>(*I->user_begin());
+      // In case of load -> bswap -> store, return normal cost for the load.
+      if (isBswapIntrinsicCall(LdUser) &&
+          (!LdUser->hasOneUse() || !isa<StoreInst>(*LdUser->user_begin())))
+        return 0;
+    }
+    else if (const StoreInst *SI = dyn_cast<StoreInst>(I)) {
+      const Value *StoredVal = SI->getValueOperand();
+      if (StoredVal->hasOneUse() && isBswapIntrinsicCall(StoredVal))
+        return 0;
+    }
+  }
 
   if (Src->getScalarSizeInBits() == 128)
     // 128 bit scalars are held in a pair of two 64 bit registers.

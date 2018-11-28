@@ -810,8 +810,9 @@ void ExprEngine::
 VisitOffsetOfExpr(const OffsetOfExpr *OOE,
                   ExplodedNode *Pred, ExplodedNodeSet &Dst) {
   StmtNodeBuilder B(Pred, Dst, *currBldrCtx);
-  APSInt IV;
-  if (OOE->EvaluateAsInt(IV, getContext())) {
+  Expr::EvalResult Result;
+  if (OOE->EvaluateAsInt(Result, getContext())) {
+    APSInt IV = Result.Val.getInt();
     assert(IV.getBitWidth() == getContext().getTypeSize(OOE->getType()));
     assert(OOE->getType()->isBuiltinType());
     assert(OOE->getType()->getAs<BuiltinType>()->isInteger());
