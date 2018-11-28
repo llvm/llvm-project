@@ -553,6 +553,15 @@ struct CounterCoverageMappingBuilder
     completeDeferred(Count, DeferredEndLoc);
   }
 
+  size_t locationDepth(SourceLocation Loc) {
+    size_t Depth = 0;
+    while (Loc.isValid()) {
+      Loc = getIncludeOrExpansionLoc(Loc);
+      Depth++;
+    }
+    return Depth;
+  }
+
   /// Pop regions from the stack into the function's list of regions.
   ///
   /// Adds all regions from \c ParentIndex to the top of the stack to the
@@ -567,19 +576,41 @@ struct CounterCoverageMappingBuilder
         SourceLocation EndLoc = Region.hasEndLoc()
                                     ? Region.getEndLoc()
                                     : RegionStack[ParentIndex].getEndLoc();
+        size_t StartDepth = locationDepth(StartLoc);
+        size_t EndDepth = locationDepth(EndLoc);
         while (!SM.isWrittenInSameFile(StartLoc, EndLoc)) {
-          // The region ends in a nested file or macro expansion. Create a
-          // separate region for each expansion.
-          SourceLocation NestedLoc = getStartOfFileOrMacro(EndLoc);
-          assert(SM.isWrittenInSameFile(NestedLoc, EndLoc));
+          bool UnnestStart = StartDepth >= EndDepth;
+          bool UnnestEnd = EndDepth >= StartDepth;
+          if (UnnestEnd) {
+            // The region ends in a nested file or macro expansion. Create a
+            // separate region for each expansion.
+            SourceLocation NestedLoc = getStartOfFileOrMacro(EndLoc);
+            assert(SM.isWrittenInSameFile(NestedLoc, EndLoc));
 
-          if (!isRegionAlreadyAdded(NestedLoc, EndLoc))
-            SourceRegions.emplace_back(Region.getCounter(), NestedLoc, EndLoc);
+            if (!isRegionAlreadyAdded(NestedLoc, EndLoc))
+              SourceRegions.emplace_back(Region.getCounter(), NestedLoc, EndLoc);
 
-          EndLoc = getPreciseTokenLocEnd(getIncludeOrExpansionLoc(EndLoc));
-          if (EndLoc.isInvalid())
-            llvm::report_fatal_error("File exit not handled before popRegions");
+            EndLoc = getPreciseTokenLocEnd(getIncludeOrExpansionLoc(EndLoc));
+            if (EndLoc.isInvalid())
+              llvm::report_fatal_error("File exit not handled before popRegions");
+            EndDepth--;
+          }
+          if (UnnestStart) {
+            // The region begins in a nested file or macro expansion. Create a
+            // separate region for each expansion.
+            SourceLocation NestedLoc = getEndOfFileOrMacro(StartLoc);
+            assert(SM.isWrittenInSameFile(StartLoc, NestedLoc));
+
+            if (!isRegionAlreadyAdded(StartLoc, NestedLoc))
+              SourceRegions.emplace_back(Region.getCounter(), StartLoc, NestedLoc);
+
+            StartLoc = getIncludeOrExpansionLoc(StartLoc);
+            if (StartLoc.isInvalid())
+              llvm::report_fatal_error("File exit not handled before popRegions");
+            StartDepth--;
+          }
         }
+        Region.setStartLoc(StartLoc);
         Region.setEndLoc(EndLoc);
 
         MostRecentLocation = EndLoc;
