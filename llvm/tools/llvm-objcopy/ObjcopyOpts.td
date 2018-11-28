@@ -165,3 +165,4 @@ defm prefix_symbols
 
 def version : Flag<["-", "--"], "version">,
               HelpText<"Print the version and exit.">;
+def V : Flag<["-"], "V">, Alias<version>;
