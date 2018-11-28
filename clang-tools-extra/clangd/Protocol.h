@@ -67,9 +67,25 @@ public:
   }
 };
 
+// URI in "file" scheme for a file.
 struct URIForFile {
   URIForFile() = default;
-  explicit URIForFile(std::string AbsPath);
+
+  /// Canonicalizes \p AbsPath via URI.
+  ///
+  /// File paths in URIForFile can come from index or local AST. Path from
+  /// index goes through URI transformation, and the final path is resolved by
+  /// URI scheme and could potentially be different from the original path.
+  /// Hence, we do the same transformation for all paths.
+  ///
+  /// Files can be referred to by several paths (e.g. in the presence of links).
+  /// Which one we prefer may depend on where we're coming from. \p TUPath is a
+  /// hint, and should usually be the main entrypoint file we're processing.
+  static URIForFile canonicalize(llvm::StringRef AbsPath,
+                                 llvm::StringRef TUPath);
+
+  static llvm::Expected<URIForFile> fromURI(const URI &U,
+                                            llvm::StringRef HintPath);
 
   /// Retrieves absolute path to the file.
   llvm::StringRef file() const { return File; }
@@ -90,6 +106,8 @@ struct URIForFile {
   }
 
 private:
+  explicit URIForFile(std::string &&File) : File(std::move(File)) {}
+
   std::string File;
 };
 

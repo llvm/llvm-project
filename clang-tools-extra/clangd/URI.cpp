@@ -31,10 +31,10 @@ inline Error make_string_error(const Twine &Message) {
 
 /// \brief This manages file paths in the file system. All paths in the scheme
 /// are absolute (with leading '/').
+/// Note that this scheme is hardcoded into the library and not registered in
+/// registry.
 class FileSystemScheme : public URIScheme {
 public:
-  static const char *Scheme;
-
   Expected<std::string> getAbsolutePath(StringRef /*Authority*/, StringRef Body,
                                         StringRef /*HintPath*/) const override {
     if (!Body.startswith("/"))
@@ -57,17 +57,14 @@ public:
     if (AbsolutePath.size() > 1 && AbsolutePath[1] == ':')
       Body = "/";
     Body += path::convert_to_slash(AbsolutePath);
-    return URI(Scheme, /*Authority=*/"", Body);
+    return URI("file", /*Authority=*/"", Body);
   }
 };
 
-const char *FileSystemScheme::Scheme = "file";
-
-static URISchemeRegistry::Add<FileSystemScheme>
-    X(FileSystemScheme::Scheme,
-      "URI scheme for absolute paths in the file system.");
-
 Expected<std::unique_ptr<URIScheme>> findSchemeByName(StringRef Scheme) {
+  if (Scheme == "file")
+    return make_unique<FileSystemScheme>();
+
   for (auto I = URISchemeRegistry::begin(), E = URISchemeRegistry::end();
        I != E; ++I) {
     if (I->getName() != Scheme)
@@ -200,9 +197,6 @@ URI URI::create(StringRef AbsolutePath) {
     llvm_unreachable(
         ("Not a valid absolute path: " + AbsolutePath).str().c_str());
   for (auto &Entry : URISchemeRegistry::entries()) {
-    if (Entry.getName() == "file")
-      continue;
-
     auto URI = Entry.instantiate()->uriFromAbsolutePath(AbsolutePath);
     // For some paths, conversion to different URI schemes is impossible. These
     // should be just skipped.
@@ -218,7 +212,7 @@ URI URI::create(StringRef AbsolutePath) {
 }
 
 URI URI::createFile(StringRef AbsolutePath) {
-  auto U = create(AbsolutePath, "file");
+  auto U = FileSystemScheme().uriFromAbsolutePath(AbsolutePath);
   if (!U)
     llvm_unreachable(llvm::toString(U.takeError()).c_str());
   return std::move(*U);
@@ -229,6 +223,25 @@ Expected<std::string> URI::resolve(const URI &Uri, StringRef HintPath) {
   if (!S)
     return S.takeError();
   return S->get()->getAbsolutePath(Uri.Authority, Uri.Body, HintPath);
+}
+
+Expected<std::string> URI::resolvePath(StringRef AbsPath, StringRef HintPath) {
+  if (!sys::path::is_absolute(AbsPath))
+    llvm_unreachable(("Not a valid absolute path: " + AbsPath).str().c_str());
+  for (auto &Entry : URISchemeRegistry::entries()) {
+    auto S =  Entry.instantiate();
+    auto U = S->uriFromAbsolutePath(AbsPath);
+    // For some paths, conversion to different URI schemes is impossible. These
+    // should be just skipped.
+    if (!U) {
+      // Ignore the error.
+      consumeError(U.takeError());
+      continue;
+    }
+    return S->getAbsolutePath(U->Authority, U->Body, HintPath);
+  }
+  // Fallback to file: scheme which doesn't do any canonicalization.
+  return AbsPath;
 }
 
 Expected<std::string> URI::includeSpelling(const URI &Uri) {

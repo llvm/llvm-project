@@ -775,7 +775,7 @@ std::vector<Fix> ClangdLSPServer::getFixes(StringRef File,
 
 void ClangdLSPServer::onDiagnosticsReady(PathRef File,
                                          std::vector<Diag> Diagnostics) {
-  URIForFile URI(File);
+  auto URI = URIForFile::canonicalize(File, /*TUPath=*/File);
   std::vector<Diagnostic> LSPDiagnostics;
   DiagnosticToReplacementMap LocalFixIts; // Temporary storage
   for (auto &Diag : Diagnostics) {

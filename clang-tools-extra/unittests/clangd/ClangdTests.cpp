@@ -34,6 +34,8 @@ using namespace llvm;
 namespace clang {
 namespace clangd {
 
+namespace {
+
 using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::Field;
@@ -42,7 +44,9 @@ using ::testing::IsEmpty;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
-namespace {
+MATCHER_P2(FileRange, File, Range, "") {
+  return Location{URIForFile::canonicalize(File, testRoot()), Range} == arg;
+}
 
 bool diagsContainErrors(const std::vector<Diag> &Diagnostics) {
   for (auto D : Diagnostics) {
@@ -457,8 +461,8 @@ int hello;
 
   auto Locations = runFindDefinitions(Server, FooCpp, FooSource.point());
   EXPECT_TRUE(bool(Locations));
-  EXPECT_THAT(*Locations, ElementsAre(Location{URIForFile{FooCpp},
-                                               FooSource.range("one")}));
+  EXPECT_THAT(*Locations,
+              ElementsAre(FileRange(FooCpp, FooSource.range("one"))));
 
   // Undefine MACRO, close baz.cpp.
   CDB.ExtraClangFlags.clear();
@@ -473,8 +477,8 @@ int hello;
 
   Locations = runFindDefinitions(Server, FooCpp, FooSource.point());
   EXPECT_TRUE(bool(Locations));
-  EXPECT_THAT(*Locations, ElementsAre(Location{URIForFile{FooCpp},
-                                               FooSource.range("two")}));
+  EXPECT_THAT(*Locations, ElementsAre(FileRange(FooCpp,
+                                                FooSource.range("two"))));
 }
 
 TEST_F(ClangdVFSTest, MemoryUsage) {
