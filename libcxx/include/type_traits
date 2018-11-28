@@ -1649,7 +1649,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool has_unique_object_representations_v
 // alignment_of
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS alignment_of
-    : public integral_constant<size_t, _LIBCPP_ALIGNOF(_Tp)> {};
+    : public integral_constant<size_t, __alignof__(_Tp)> {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
@@ -1812,8 +1812,8 @@ struct __static_max<_I0, _I1, _In...>
 template <size_t _Len, class _Type0, class ..._Types>
 struct aligned_union
 {
-    static const size_t alignment_value = __static_max<_LIBCPP_ALIGNOF(_Type0),
-                                                       _LIBCPP_ALIGNOF(_Types)...>::value;
+    static const size_t alignment_value = __static_max<__alignof__(_Type0),
+                                                       __alignof__(_Types)...>::value;
     static const size_t __len = __static_max<_Len, sizeof(_Type0),
                                              sizeof(_Types)...>::value;
     typedef typename aligned_storage<__len, alignment_value>::type type;
