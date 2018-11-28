@@ -157,7 +157,8 @@ static const ProcessKDPPropertiesSP &GetGlobalPluginProperties() {
   return g_settings_sp;
 }
 
-class ProcessGDBRemoteProvider : public repro::Provider {
+class ProcessGDBRemoteProvider
+    : public repro::Provider<ProcessGDBRemoteProvider> {
 public:
   ProcessGDBRemoteProvider(const FileSpec &directory) : Provider(directory) {
     m_info.name = "gdb-remote";
@@ -166,7 +167,7 @@ public:
 
   raw_ostream *GetHistoryStream() {
     FileSpec history_file =
-        GetDirectory().CopyByAppendingPathComponent("gdb-remote.yaml");
+        GetRoot().CopyByAppendingPathComponent("gdb-remote.yaml");
 
     std::error_code EC;
     m_stream_up = llvm::make_unique<raw_fd_ostream>(history_file.GetPath(), EC,
@@ -182,10 +183,14 @@ public:
 
   void Discard() override { m_callback(); }
 
+  static char ID;
+
 private:
   std::function<void()> m_callback;
   std::unique_ptr<raw_fd_ostream> m_stream_up;
 };
+
+char ProcessGDBRemoteProvider::ID = 0;
 
 } // namespace
 
@@ -297,10 +302,9 @@ ProcessGDBRemote::ProcessGDBRemote(lldb::TargetSP target_sp,
   m_async_broadcaster.SetEventName(eBroadcastBitAsyncThreadDidExit,
                                    "async thread did exit");
 
-  repro::Generator *generator = repro::Reproducer::Instance().GetGenerator();
-  if (generator) {
+  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
     ProcessGDBRemoteProvider &provider =
-        generator->CreateProvider<ProcessGDBRemoteProvider>();
+        g->GetOrCreate<ProcessGDBRemoteProvider>();
     // Set the history stream to the stream owned by the provider.
     m_gdb_comm.SetHistoryStream(provider.GetHistoryStream());
     // Make sure to clear the stream again when we're finished.
@@ -3436,8 +3440,8 @@ Status ProcessGDBRemote::ConnectToReplayServer(repro::Loader *loader) {
     return Status("Provider for  gdb-remote contains no files.");
 
   // Construct replay history path.
-  FileSpec history_file(loader->GetDirectory());
-  history_file.AppendPathComponent(provider_info->files.front());
+  FileSpec history_file = loader->GetRoot().CopyByAppendingPathComponent(
+      provider_info->files.front());
 
   // Enable replay mode.
   m_replay_mode = true;

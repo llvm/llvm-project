@@ -834,42 +834,41 @@ bool PartialInlinerImpl::shouldPartialInline(
 int PartialInlinerImpl::computeBBInlineCost(BasicBlock *BB) {
   int InlineCost = 0;
   const DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
-  for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I) {
-    if (isa<DbgInfoIntrinsic>(I))
-      continue;
-
-    switch (I->getOpcode()) {
+  for (Instruction &I : BB->instructionsWithoutDebug()) {
+    // Skip free instructions.
+    switch (I.getOpcode()) {
     case Instruction::BitCast:
     case Instruction::PtrToInt:
     case Instruction::IntToPtr:
     case Instruction::Alloca:
+    case Instruction::PHI:
       continue;
     case Instruction::GetElementPtr:
-      if (cast<GetElementPtrInst>(I)->hasAllZeroIndices())
+      if (cast<GetElementPtrInst>(&I)->hasAllZeroIndices())
         continue;
       break;
     default:
       break;
     }
 
-    IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(I);
+    IntrinsicInst *IntrInst = dyn_cast<IntrinsicInst>(&I);
     if (IntrInst) {
       if (IntrInst->getIntrinsicID() == Intrinsic::lifetime_start ||
           IntrInst->getIntrinsicID() == Intrinsic::lifetime_end)
         continue;
     }
 
-    if (CallInst *CI = dyn_cast<CallInst>(I)) {
+    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
       InlineCost += getCallsiteCost(CallSite(CI), DL);
       continue;
     }
 
-    if (InvokeInst *II = dyn_cast<InvokeInst>(I)) {
+    if (InvokeInst *II = dyn_cast<InvokeInst>(&I)) {
       InlineCost += getCallsiteCost(CallSite(II), DL);
       continue;
     }
 
-    if (SwitchInst *SI = dyn_cast<SwitchInst>(I)) {
+    if (SwitchInst *SI = dyn_cast<SwitchInst>(&I)) {
       InlineCost += (SI->getNumCases() + 1) * InlineConstants::InstrCost;
       continue;
     }

@@ -6373,6 +6373,9 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_Section:
     handleSectionAttr(S, D, AL);
     break;
+  case ParsedAttr::AT_SpeculativeLoadHardening:
+    handleSimpleAttribute<SpeculativeLoadHardeningAttr>(S, D, AL);
+    break;
   case ParsedAttr::AT_CodeSeg:
     handleCodeSegAttr(S, D, AL);
     break;

@@ -1867,7 +1867,6 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
                   getOpenMPSimpleClauseType(Kind, PP.getSpelling(Tok)))
             : OMPC_MAP_unknown;
     Data.DepLinMapLoc = Tok.getLocation();
-    bool ColonExpected = false;
 
     if (IsMapClauseModifierToken(Tok)) {
       if (PP.LookAhead(0).is(tok::colon)) {
@@ -1935,8 +1934,6 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 
     if (Tok.is(tok::colon))
       Data.ColonLoc = ConsumeToken();
-    else if (ColonExpected)
-      Diag(Tok, diag::warn_pragma_expected_colon) << "map type";
   }
 
   bool IsComma =

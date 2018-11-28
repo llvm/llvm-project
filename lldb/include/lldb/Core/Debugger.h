@@ -263,8 +263,8 @@ public:
 
   llvm::StringRef GetReproducerPath() const;
 
-  void SetReproducerPath(llvm::StringRef p);
-  void SetReproducerPath(const char *) = delete;
+  llvm::Error SetReproducerReplay(llvm::StringRef p);
+  llvm::Error SetReproducerReplay(const char *) = delete;
 
   llvm::Error SetReproducerCapture(bool b);
 

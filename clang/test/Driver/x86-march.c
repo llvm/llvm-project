@@ -48,6 +48,10 @@
 // RUN:   | FileCheck %s -check-prefix=skx
 // skx: "-target-cpu" "skx"
 //
+// RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=cascadelake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=cascadelake
+// cascadelake: "-target-cpu" "cascadelake"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=knl 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=knl
 // knl: "-target-cpu" "knl"

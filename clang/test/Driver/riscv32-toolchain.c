@@ -1,3 +1,5 @@
+// REQUIRES: riscv-registered-target
+
 // A basic clang -cc1 command-line, and simple environment check.
 
 // RUN: %clang %s -### -no-canonical-prefixes -target riscv32 2>&1 | FileCheck -check-prefix=CC1 %s

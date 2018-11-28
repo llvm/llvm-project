@@ -16,6 +16,7 @@
 
 #include "Targets/AArch64.h"
 #include "Targets/AMDGPU.h"
+#include "Targets/ARC.h"
 #include "Targets/ARM.h"
 #include "Targets/AVR.h"
 #include "Targets/BPF.h"
@@ -123,6 +124,9 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
   switch (Triple.getArch()) {
   default:
     return nullptr;
+
+  case llvm::Triple::arc:
+    return new ARCTargetInfo(Triple, Opts);
 
   case llvm::Triple::xcore:
     return new XCoreTargetInfo(Triple, Opts);
