@@ -115,11 +115,7 @@
 #   define TEST_THROW_SPEC(...) throw(__VA_ARGS__)
 # endif
 #else
-#if defined(TEST_COMPILER_CLANG)
-# define TEST_ALIGNOF(...) _Alignof(__VA_ARGS__)
-#else
-# define TEST_ALIGNOF(...) __alignof(__VA_ARGS__)
-#endif
+#define TEST_ALIGNOF(...) __alignof(__VA_ARGS__)
 #define TEST_ALIGNAS(...) __attribute__((__aligned__(__VA_ARGS__)))
 #define TEST_CONSTEXPR
 #define TEST_CONSTEXPR_CXX14
