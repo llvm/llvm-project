@@ -9,8 +9,6 @@
 
 #include <limits>
 
-#include "test_macros.h"
-
 /*
 <limits>:
     numeric_limits
@@ -100,14 +98,6 @@ int main()
     TEST_NUMERIC_LIMITS(const wchar_t)
     TEST_NUMERIC_LIMITS(volatile wchar_t)
     TEST_NUMERIC_LIMITS(const volatile wchar_t)
-
-#if TEST_STD_VER > 17
-    // char8_t
-    TEST_NUMERIC_LIMITS(char8_t)
-    TEST_NUMERIC_LIMITS(const char8_t)
-    TEST_NUMERIC_LIMITS(volatile char8_t)
-    TEST_NUMERIC_LIMITS(const volatile char8_t)
-#endif
 
     // char16_t
     TEST_NUMERIC_LIMITS(char16_t)

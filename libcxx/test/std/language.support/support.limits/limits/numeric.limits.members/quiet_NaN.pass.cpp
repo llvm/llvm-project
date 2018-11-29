@@ -16,8 +16,6 @@
 #include <type_traits>
 #include <cassert>
 
-#include "test_macros.h"
-
 template <class T>
 void
 test_imp(std::true_type)
@@ -53,9 +51,6 @@ int main()
     test<signed char>();
     test<unsigned char>();
     test<wchar_t>();
-#if TEST_STD_VER > 17
-    test<char8_t>();
-#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<char16_t>();
     test<char32_t>();

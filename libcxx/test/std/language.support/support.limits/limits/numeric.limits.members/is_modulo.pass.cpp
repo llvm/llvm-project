@@ -13,8 +13,6 @@
 
 #include <limits>
 
-#include "test_macros.h"
-
 template <class T, bool expected>
 void
 test()
@@ -32,9 +30,6 @@ int main()
     test<signed char, false>();
     test<unsigned char, true>();
 //    test<wchar_t, false>(); // don't know
-#if TEST_STD_VER > 17
-    test<char8_t, true>();
-#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<char16_t, true>();
     test<char32_t, true>();
