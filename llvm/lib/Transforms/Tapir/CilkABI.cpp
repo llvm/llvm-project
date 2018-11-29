@@ -1490,6 +1490,10 @@ void CilkABI::processSubTaskCall(TaskOutlineInfo &TOI, DominatorTree &DT) {
   SetJmpRes = B.CreateICmpEQ(SetJmpRes,
                              ConstantInt::get(SetJmpRes->getType(), 0));
   B.CreateCondBr(SetJmpRes, CallBlock, CallCont);
+  // Add DetBlock as a predecessor for all Phi nodes in CallCont.  These Phi
+  // nodes receive the same value from DetBlock as from CallBlock.
+  for (PHINode &Phi : CallCont->phis())
+    Phi.addIncoming(Phi.getIncomingValueForBlock(CallBlock), DetBlock);
   SetJmpPt->eraseFromParent();
 }
 
