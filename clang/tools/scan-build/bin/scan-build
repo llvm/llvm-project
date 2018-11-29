@@ -1192,7 +1192,7 @@ OPTIONS:
 
    By default, the exit status of scan-build is the same as the executed build
    command. Specifying this option causes the exit status of scan-build to be 1
-   if it found potential bugs and 0 otherwise.
+   if it found potential bugs and the exit status of the build itself otherwise.
 
  --use-cc [compiler path]
  --use-cc=[compiler path]
@@ -1878,7 +1878,7 @@ if (defined $Options{OutputFormat}) {
 
     if ($Options{ExitStatusFoundBugs}) {
       exit 1 if ($NumBugs > 0);
-      exit 0;
+      exit $ExitStatus;
     }
   }
 }
