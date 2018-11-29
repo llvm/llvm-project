@@ -542,6 +542,40 @@ DILocalScope *DILocalScope::getNonLexicalBlockFileScope() const {
   return const_cast<DILocalScope *>(this);
 }
 
+DISubprogram::DISPFlags DISubprogram::getFlag(StringRef Flag) {
+  return StringSwitch<DISPFlags>(Flag)
+#define HANDLE_DISP_FLAG(ID, NAME) .Case("DISPFlag" #NAME, SPFlag##NAME)
+#include "llvm/IR/DebugInfoFlags.def"
+      .Default(SPFlagZero);
+}
+
+StringRef DISubprogram::getFlagString(DISPFlags Flag) {
+  switch (Flag) {
+  case SPFlagVirtuality: // Appease a warning.
+    return "";
+#define HANDLE_DISP_FLAG(ID, NAME)                                             \
+  case SPFlag##NAME:                                                           \
+    return "DISPFlag" #NAME;
+#include "llvm/IR/DebugInfoFlags.def"
+  }
+  return "";
+}
+
+DISubprogram::DISPFlags
+DISubprogram::splitFlags(DISPFlags Flags,
+                         SmallVectorImpl<DISPFlags> &SplitFlags) {
+  // Multi-bit fields can require special handling. In our case, however, the
+  // only multi-bit field is virtuality, and all its values happen to be
+  // single-bit values, so the right behavior just falls out.
+#define HANDLE_DISP_FLAG(ID, NAME)                                             \
+  if (DISPFlags Bit = Flags & SPFlag##NAME) {                                  \
+    SplitFlags.push_back(Bit);                                                 \
+    Flags &= ~Bit;                                                             \
+  }
+#include "llvm/IR/DebugInfoFlags.def"
+  return Flags;
+}
+
 DISubprogram *DISubprogram::getImpl(
     LLVMContext &Context, Metadata *Scope, MDString *Name,
     MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,

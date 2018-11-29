@@ -266,19 +266,26 @@ for.end:                                          ; preds = %for.body
 ; variant/invariant values being stored to invariant address.
 ; test checks that the last element of the phi is extracted and scalar stored
 ; into the uniform address within the loop.
-; Since the condition and the phi is loop invariant, they are LICM'ed after
+; Since the condition and the phi is loop invariant, they are LICM'ed before
 ; vectorization.
 ; CHECK-LABEL: inv_val_store_to_inv_address_conditional_inv
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B1:%.*]] = bitcast i32* [[B:%.*]] to i8*
+; CHECK-NEXT:    [[A4:%.*]] = bitcast i32* [[A:%.*]] to i8*
 ; CHECK-NEXT:    [[NTRUNC:%.*]] = trunc i64 [[N:%.*]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[NTRUNC]], [[K:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[COND_STORE_LICM:.*]], label %[[COND_STORE_K_LICM:.*]]
+; CHECK:       [[COND_STORE_LICM]]:
+; CHECK-NEXT:    br label %[[LATCH_LICM:.*]]
+; CHECK:       [[COND_STORE_K_LICM]]:
+; CHECK-NEXT:    br label %[[LATCH_LICM]]
+; CHECK:       [[LATCH_LICM]]:
+; CHECK-NEXT:    [[STOREVAL:%.*]] = phi i32 [ [[NTRUNC]], %[[COND_STORE_LICM]] ], [ [[K]], %[[COND_STORE_K_LICM]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp sgt i64 [[N]], 1
 ; CHECK-NEXT:    [[SMAX:%.*]] = select i1 [[TMP0]], i64 [[N]], i64 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[SMAX]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[A4:%.*]] = bitcast i32* [[A:%.*]] to i8*
-; CHECK-NEXT:    [[B1:%.*]] = bitcast i32* [[B:%.*]] to i8*
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i64 [[N]], 1
 ; CHECK-NEXT:    [[SMAX2:%.*]] = select i1 [[TMP1]], i64 [[N]], i64 1
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i32, i32* [[B]], i64 [[SMAX2]]
@@ -291,17 +298,13 @@ for.end:                                          ; preds = %for.body
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[SMAX]], 9223372036854775804
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <4 x i32> undef, i32 [[NTRUNC]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT5]], <4 x i32> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i1> undef, i1 [[CMP]], i32 3
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> undef, i32 [[K]], i32 3
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> [[BROADCAST_SPLAT6]], <4 x i32> [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[PREDPHI]], i32 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, i32* [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32* [[TMP6]] to <4 x i32>*
 ; CHECK-NEXT:    store <4 x i32> [[BROADCAST_SPLAT6]], <4 x i32>* [[TMP7]], align 4
-; CHECK-NEXT:    store i32 [[TMP5]], i32* [[A]], align 4
+; CHECK-NEXT:    store i32 [[STOREVAL]], i32* [[A]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]]
@@ -321,7 +324,6 @@ for.end:                                          ; preds = %for.body
 ; CHECK:       cond_store_k:
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[STOREVAL:%.*]] = phi i32 [ [[NTRUNC]], [[COND_STORE]] ], [ [[K]], [[COND_STORE_K]] ]
 ; CHECK-NEXT:    store i32 [[STOREVAL]], i32* [[A]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]

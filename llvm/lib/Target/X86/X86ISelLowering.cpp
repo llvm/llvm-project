@@ -23901,7 +23901,7 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
         Ex = DAG.getVectorShuffle(ExVT, dl, Upper, Lower,
                                   {9, 1, 11, 3, 13, 5, 15, 7});
     } else {
-      // SRA upper i32, SHL whole i64 and select lower i32.
+      // SRA upper i32, SRL whole i64 and select lower i32.
       SDValue Upper = getTargetVShiftByConstNode(X86ISD::VSRAI, dl, ExVT, Ex,
                                                  ShiftAmt, DAG);
       SDValue Lower =
@@ -33674,9 +33674,14 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
                              const X86Subtarget &Subtarget) {
   SDLoc DL(N);
   SDValue Cond = N->getOperand(0);
-  // Get the LHS/RHS of the select.
   SDValue LHS = N->getOperand(1);
   SDValue RHS = N->getOperand(2);
+
+  // Try simplification again because we use this function to optimize
+  // SHRUNKBLEND nodes that are not handled by the generic combiner.
+  if (SDValue V = DAG.simplifySelect(Cond, LHS, RHS))
+    return V;
+
   EVT VT = LHS.getValueType();
   EVT CondVT = Cond.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -35463,6 +35468,17 @@ static SDValue combineVectorShiftImm(SDNode *N, SelectionDAG &DAG,
     unsigned NumSignBits = DAG.ComputeNumSignBits(N00);
     if (ShiftVal < NumSignBits)
       return N00;
+  }
+
+  // Fold (VSRAI (VSRAI X, C1), C2) --> (VSRAI X, (C1 + C2)) with (C1 + C2)
+  // clamped to (NumBitsPerElt - 1).
+  if (Opcode == X86ISD::VSRAI && N0.getOpcode() == X86ISD::VSRAI) {
+    unsigned ShiftVal2 = cast<ConstantSDNode>(N0.getOperand(1))->getZExtValue();
+    unsigned NewShiftVal = ShiftVal + ShiftVal2;
+    if (NewShiftVal >= NumBitsPerElt)
+      NewShiftVal = NumBitsPerElt - 1;
+    return DAG.getNode(X86ISD::VSRAI, SDLoc(N), VT, N0.getOperand(0),
+                       DAG.getConstant(NewShiftVal, SDLoc(N), MVT::i8));
   }
 
   // We can decode 'whole byte' logical bit shifts as shuffles.

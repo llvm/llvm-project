@@ -716,9 +716,12 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
       !PredBB->getTerminator()->getMetadata(LLVMContext::MD_make_implicit))
     return false;
 
-  unsigned BaseReg;
+  MachineOperand *BaseOp;
   int64_t Offset;
-  if (!TII->getMemOpBaseRegImmOfs(MI, BaseReg, Offset, TRI))
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
+    return false;
+
+  if (!BaseOp->isReg())
     return false;
 
   if (!(MI.mayLoad() && !MI.isPredicable()))
@@ -731,7 +734,7 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
   return MBP.LHS.isReg() && MBP.RHS.isImm() && MBP.RHS.getImm() == 0 &&
          (MBP.Predicate == MachineBranchPredicate::PRED_NE ||
           MBP.Predicate == MachineBranchPredicate::PRED_EQ) &&
-         MBP.LHS.getReg() == BaseReg;
+         MBP.LHS.getReg() == BaseOp->getReg();
 }
 
 /// Sink an instruction and its associated debug instructions. If the debug

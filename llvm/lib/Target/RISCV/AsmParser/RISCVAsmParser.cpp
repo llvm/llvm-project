@@ -14,6 +14,7 @@
 #include "Utils/RISCVBaseInfo.h"
 #include "Utils/RISCVMatInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
@@ -42,6 +43,8 @@ namespace {
 struct RISCVOperand;
 
 class RISCVAsmParser : public MCTargetAsmParser {
+  SmallVector<FeatureBitset, 4> FeatureBitStack;
+
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
   bool isRV64() const { return getSTI().hasFeature(RISCV::Feature64Bit); }
 
@@ -118,6 +121,20 @@ class RISCVAsmParser : public MCTargetAsmParser {
     }
   }
 
+  void pushFeatureBits() {
+    FeatureBitStack.push_back(getSTI().getFeatureBits());
+  }
+
+  bool popFeatureBits() {
+    if (FeatureBitStack.empty())
+      return true;
+
+    FeatureBitset FeatureBits = FeatureBitStack.pop_back_val();
+    copySTI().setFeatureBits(FeatureBits);
+    setAvailableFeatures(ComputeAvailableFeatures(FeatureBits));
+
+    return false;
+  }
 public:
   enum RISCVMatchResultTy {
     Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
@@ -1285,6 +1302,33 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
   StringRef Option = Tok.getIdentifier();
 
+  if (Option == "push") {
+    getTargetStreamer().emitDirectiveOptionPush();
+
+    Parser.Lex();
+    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
+      return Error(Parser.getTok().getLoc(),
+                   "unexpected token, expected end of statement");
+
+    pushFeatureBits();
+    return false;
+  }
+
+  if (Option == "pop") {
+    SMLoc StartLoc = Parser.getTok().getLoc();
+    getTargetStreamer().emitDirectiveOptionPop();
+
+    Parser.Lex();
+    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
+      return Error(Parser.getTok().getLoc(),
+                   "unexpected token, expected end of statement");
+
+    if (popFeatureBits())
+      return Error(StartLoc, ".option pop with no .option push");
+
+    return false;
+  }
+
   if (Option == "rvc") {
     getTargetStreamer().emitDirectiveOptionRVC();
 
@@ -1335,7 +1379,8 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
   // Unknown option.
   Warning(Parser.getTok().getLoc(),
-          "unknown option, expected 'rvc', 'norvc', 'relax' or 'norelax'");
+          "unknown option, expected 'push', 'pop', 'rvc', 'norvc', 'relax' or "
+          "'norelax'");
   Parser.eatToEndOfStatement();
   return false;
 }

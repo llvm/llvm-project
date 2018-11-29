@@ -2061,6 +2061,95 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
 
+  case Intrinsic::uadd_sat:
+  case Intrinsic::sadd_sat:
+    if (Instruction *I = canonicalizeConstantArg0ToArg1(CI))
+      return I;
+    LLVM_FALLTHROUGH;
+  case Intrinsic::usub_sat:
+  case Intrinsic::ssub_sat: {
+    Value *Arg0 = II->getArgOperand(0);
+    Value *Arg1 = II->getArgOperand(1);
+    Intrinsic::ID IID = II->getIntrinsicID();
+
+    // Make use of known overflow information.
+    OverflowResult OR;
+    switch (IID) {
+    default:
+      llvm_unreachable("Unexpected intrinsic!");
+    case Intrinsic::uadd_sat:
+      OR = computeOverflowForUnsignedAdd(Arg0, Arg1, II);
+      if (OR == OverflowResult::NeverOverflows)
+        return BinaryOperator::CreateNUWAdd(Arg0, Arg1);
+      if (OR == OverflowResult::AlwaysOverflows)
+        return replaceInstUsesWith(*II,
+                                   ConstantInt::getAllOnesValue(II->getType()));
+      break;
+    case Intrinsic::usub_sat:
+      OR = computeOverflowForUnsignedSub(Arg0, Arg1, II);
+      if (OR == OverflowResult::NeverOverflows)
+        return BinaryOperator::CreateNUWSub(Arg0, Arg1);
+      if (OR == OverflowResult::AlwaysOverflows)
+        return replaceInstUsesWith(*II,
+                                   ConstantInt::getNullValue(II->getType()));
+      break;
+    case Intrinsic::sadd_sat:
+      if (willNotOverflowSignedAdd(Arg0, Arg1, *II))
+        return BinaryOperator::CreateNSWAdd(Arg0, Arg1);
+      break;
+    case Intrinsic::ssub_sat:
+      if (willNotOverflowSignedSub(Arg0, Arg1, *II))
+        return BinaryOperator::CreateNSWSub(Arg0, Arg1);
+      break;
+    }
+
+    // ssub.sat(X, C) -> sadd.sat(X, -C) if C != MIN
+    // TODO: Support non-splat C.
+    const APInt *C;
+    if (IID == Intrinsic::ssub_sat && match(Arg1, m_APInt(C)) &&
+        !C->isMinSignedValue()) {
+      Value *NegVal = ConstantInt::get(II->getType(), -*C);
+      return replaceInstUsesWith(
+          *II, Builder.CreateBinaryIntrinsic(
+              Intrinsic::sadd_sat, Arg0, NegVal));
+    }
+
+    // sat(sat(X + Val2) + Val) -> sat(X + (Val+Val2))
+    // sat(sat(X - Val2) - Val) -> sat(X - (Val+Val2))
+    // if Val and Val2 have the same sign
+    if (auto *Other = dyn_cast<IntrinsicInst>(Arg0)) {
+      Value *X;
+      const APInt *Val, *Val2;
+      APInt NewVal;
+      bool IsUnsigned =
+          IID == Intrinsic::uadd_sat || IID == Intrinsic::usub_sat;
+      if (Other->getIntrinsicID() == II->getIntrinsicID() &&
+          match(Arg1, m_APInt(Val)) &&
+          match(Other->getArgOperand(0), m_Value(X)) &&
+          match(Other->getArgOperand(1), m_APInt(Val2))) {
+        if (IsUnsigned)
+          NewVal = Val->uadd_sat(*Val2);
+        else if (Val->isNonNegative() == Val2->isNonNegative()) {
+          bool Overflow;
+          NewVal = Val->sadd_ov(*Val2, Overflow);
+          if (Overflow) {
+            // Both adds together may add more than SignedMaxValue
+            // without saturating the final result.
+            break;
+          }
+        } else {
+          // Cannot fold saturated addition with different signs.
+          break;
+        }
+
+        return replaceInstUsesWith(
+            *II, Builder.CreateBinaryIntrinsic(
+                     IID, X, ConstantInt::get(II->getType(), NewVal)));
+      }
+    }
+    break;
+  }
+
   case Intrinsic::minnum:
   case Intrinsic::maxnum:
   case Intrinsic::minimum:

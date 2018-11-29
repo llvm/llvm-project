@@ -307,8 +307,11 @@ void DWARFUnit::ExtractDIEsEndCheck(lldb::offset_t offset) const {
 
 // m_die_array_mutex must be already held as read/write.
 void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
-  SetAddrBase(
-      cu_die.GetAttributeValueAsUnsigned(m_dwarf, this, DW_AT_addr_base, 0));
+  dw_addr_t addr_base = cu_die.GetAttributeValueAsUnsigned(
+      m_dwarf, this, DW_AT_addr_base, LLDB_INVALID_ADDRESS);
+  if (addr_base != LLDB_INVALID_ADDRESS)
+    SetAddrBase(addr_base);
+
   SetRangesBase(cu_die.GetAttributeValueAsUnsigned(m_dwarf, this,
                                                    DW_AT_rnglists_base, 0));
 
@@ -342,8 +345,15 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
 
   m_dwo_symbol_file = std::move(dwo_symbol_file);
 
-  dw_addr_t addr_base =
-      cu_die.GetAttributeValueAsUnsigned(m_dwarf, this, DW_AT_GNU_addr_base, 0);
+  // Here for DWO CU we want to use the address base set in the skeleton unit
+  // (DW_AT_addr_base) if it is available and use the DW_AT_GNU_addr_base
+  // otherwise. We do that because pre-DWARF v5 could use the DW_AT_GNU_*
+  // attributes which were applicable to the DWO units. The corresponding
+  // DW_AT_* attributes standardized in DWARF v5 are also applicable to the main
+  // unit in contrast.
+  if (addr_base == LLDB_INVALID_ADDRESS)
+    addr_base = cu_die.GetAttributeValueAsUnsigned(m_dwarf, this,
+                                                   DW_AT_GNU_addr_base, 0);
   dwo_cu->SetAddrBase(addr_base);
 
   dw_addr_t ranges_base = cu_die.GetAttributeValueAsUnsigned(
