@@ -76,7 +76,7 @@
 #endif
 
 #define AMD_COMGR_INTERFACE_VERSION_MAJOR 1
-#define AMD_COMGR_INTERFACE_VERSION_MINOR 0
+#define AMD_COMGR_INTERFACE_VERSION_MINOR 1
 
 #ifdef __cplusplus
 extern "C" {
