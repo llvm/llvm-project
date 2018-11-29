@@ -2896,8 +2896,7 @@ public:
 
 /// A helper class for combining addressing modes.
 class AddressingModeCombiner {
-  typedef std::pair<Value *, BasicBlock *> ValueInBB;
-  typedef DenseMap<ValueInBB, Value *> FoldAddrToValueMapping;
+  typedef DenseMap<Value *, Value *> FoldAddrToValueMapping;
   typedef std::pair<PHINode *, PHINode *> PHIPair;
 
 private:
@@ -2917,10 +2916,10 @@ private:
   const SimplifyQuery &SQ;
 
   /// Original Address.
-  ValueInBB Original;
+  Value *Original;
 
 public:
-  AddressingModeCombiner(const SimplifyQuery &_SQ, ValueInBB OriginalValue)
+  AddressingModeCombiner(const SimplifyQuery &_SQ, Value *OriginalValue)
       : CommonType(nullptr), SQ(_SQ), Original(OriginalValue) {}
 
   /// Get the combined AddrMode
@@ -3016,46 +3015,40 @@ public:
   }
 
 private:
-  /// Initialize Map with anchor values. For address seen in some BB
+  /// Initialize Map with anchor values. For address seen
   /// we set the value of different field saw in this address.
-  /// If address is not an instruction than basic block is set to null.
   /// At the same time we find a common type for different field we will
   /// use to create new Phi/Select nodes. Keep it in CommonType field.
   /// Return false if there is no common type found.
   bool initializeMap(FoldAddrToValueMapping &Map) {
     // Keep track of keys where the value is null. We will need to replace it
     // with constant null when we know the common type.
-    SmallVector<ValueInBB, 2> NullValue;
+    SmallVector<Value *, 2> NullValue;
     Type *IntPtrTy = SQ.DL.getIntPtrType(AddrModes[0].OriginalValue->getType());
     for (auto &AM : AddrModes) {
-      BasicBlock *BB = nullptr;
-      if (Instruction *I = dyn_cast<Instruction>(AM.OriginalValue))
-        BB = I->getParent();
-
       Value *DV = AM.GetFieldAsValue(DifferentField, IntPtrTy);
       if (DV) {
         auto *Type = DV->getType();
         if (CommonType && CommonType != Type)
           return false;
         CommonType = Type;
-        Map[{ AM.OriginalValue, BB }] = DV;
+        Map[AM.OriginalValue] = DV;
       } else {
-        NullValue.push_back({ AM.OriginalValue, BB });
+        NullValue.push_back(AM.OriginalValue);
       }
     }
     assert(CommonType && "At least one non-null value must be!");
-    for (auto VIBB : NullValue)
-      Map[VIBB] = Constant::getNullValue(CommonType);
+    for (auto *V : NullValue)
+      Map[V] = Constant::getNullValue(CommonType);
     return true;
   }
 
-  /// We have mapping between value A and basic block where value A
-  /// seen to other value B where B was a field in addressing mode represented
-  /// by A. Also we have an original value C representing an address in some
-  /// basic block. Traversing from C through phi and selects we ended up with
-  /// A's in a map. This utility function tries to find a value V which is a
-  /// field in addressing mode C and traversing through phi nodes and selects
-  /// we will end up in corresponded values B in a map.
+  /// We have mapping between value A and other value B where B was a field in
+  /// addressing mode represented by A. Also we have an original value C
+  /// representing an address we start with. Traversing from C through phi and
+  /// selects we ended up with A's in a map. This utility function tries to find
+  /// a value V which is a field in addressing mode C and traversing through phi
+  /// nodes and selects we will end up in corresponded values B in a map.
   /// The utility will create a new Phi/Selects if needed.
   // The simple example looks as follows:
   // BB1:
@@ -3068,22 +3061,24 @@ private:
   //   p = phi [p1, BB1], [p2, BB2]
   //   v = load p
   // Map is
-  //   <p1, BB1> -> b1
-  //   <p2, BB2> -> b2
+  //   p1 -> b1
+  //   p2 -> b2
   // Request is
-  //   <p, BB3> -> ?
-  // The function tries to find or build phi [b1, BB1], [b2, BB2] in BB3
+  //   p -> ?
+  // The function tries to find or build phi [b1, BB1], [b2, BB2] in BB3.
   Value *findCommon(FoldAddrToValueMapping &Map) {
     // Tracks the simplification of newly created phi nodes. The reason we use
     // this mapping is because we will add new created Phi nodes in AddrToBase.
     // Simplification of Phi nodes is recursive, so some Phi node may
-    // be simplified after we added it to AddrToBase.
+    // be simplified after we added it to AddrToBase. In reality this
+    // simplification is possible only if original phi/selects were not
+    // simplified yet.
     // Using this mapping we can find the current value in AddrToBase.
     SimplificationTracker ST(SQ);
 
     // First step, DFS to create PHI nodes for all intermediate blocks.
     // Also fill traverse order for the second step.
-    SmallVector<ValueInBB, 32> TraverseOrder;
+    SmallVector<Value *, 32> TraverseOrder;
     InsertPlaceholders(Map, TraverseOrder, ST);
 
     // Second Step, fill new nodes by merged values and simplify if possible.
@@ -3206,125 +3201,82 @@ private:
     }
     return true;
   }
-  /// Fill the placeholder with values from predecessors and simplify it.
+  /// Fill the placeholders with values from predecessors and simplify them.
   void FillPlaceholders(FoldAddrToValueMapping &Map,
-                        SmallVectorImpl<ValueInBB> &TraverseOrder,
+                        SmallVectorImpl<Value *> &TraverseOrder,
                         SimplificationTracker &ST) {
     while (!TraverseOrder.empty()) {
-      auto Current = TraverseOrder.pop_back_val();
+      Value *Current = TraverseOrder.pop_back_val();
       assert(Map.find(Current) != Map.end() && "No node to fill!!!");
-      Value *CurrentValue = Current.first;
-      BasicBlock *CurrentBlock = Current.second;
       Value *V = Map[Current];
 
       if (SelectInst *Select = dyn_cast<SelectInst>(V)) {
         // CurrentValue also must be Select.
-        auto *CurrentSelect = cast<SelectInst>(CurrentValue);
+        auto *CurrentSelect = cast<SelectInst>(Current);
         auto *TrueValue = CurrentSelect->getTrueValue();
-        ValueInBB TrueItem = { TrueValue, isa<Instruction>(TrueValue)
-                                              ? CurrentBlock
-                                              : nullptr };
-        assert(Map.find(TrueItem) != Map.end() && "No True Value!");
-        Select->setTrueValue(ST.Get(Map[TrueItem]));
+        assert(Map.find(TrueValue) != Map.end() && "No True Value!");
+        Select->setTrueValue(ST.Get(Map[TrueValue]));
         auto *FalseValue = CurrentSelect->getFalseValue();
-        ValueInBB FalseItem = { FalseValue, isa<Instruction>(FalseValue)
-                                                ? CurrentBlock
-                                                : nullptr };
-        assert(Map.find(FalseItem) != Map.end() && "No False Value!");
-        Select->setFalseValue(ST.Get(Map[FalseItem]));
+        assert(Map.find(FalseValue) != Map.end() && "No False Value!");
+        Select->setFalseValue(ST.Get(Map[FalseValue]));
       } else {
         // Must be a Phi node then.
         PHINode *PHI = cast<PHINode>(V);
+        auto *CurrentPhi = dyn_cast<PHINode>(Current);
         // Fill the Phi node with values from predecessors.
-        bool IsDefinedInThisBB =
-            cast<Instruction>(CurrentValue)->getParent() == CurrentBlock;
-        auto *CurrentPhi = dyn_cast<PHINode>(CurrentValue);
-        for (auto B : predecessors(CurrentBlock)) {
-          Value *PV = IsDefinedInThisBB
-                          ? CurrentPhi->getIncomingValueForBlock(B)
-                          : CurrentValue;
-          ValueInBB item = { PV, isa<Instruction>(PV) ? B : nullptr };
-          assert(Map.find(item) != Map.end() && "No predecessor Value!");
-          PHI->addIncoming(ST.Get(Map[item]), B);
+        for (auto B : predecessors(PHI->getParent())) {
+          Value *PV = CurrentPhi->getIncomingValueForBlock(B);
+          assert(Map.find(PV) != Map.end() && "No predecessor Value!");
+          PHI->addIncoming(ST.Get(Map[PV]), B);
         }
       }
-      // Simplify if possible.
       Map[Current] = ST.Simplify(V);
     }
   }
 
-  /// Starting from value recursively iterates over predecessors up to known
-  /// ending values represented in a map. For each traversed block inserts
-  /// a placeholder Phi or Select.
+  /// Starting from original value recursively iterates over def-use chain up to
+  /// known ending values represented in a map. For each traversed phi/select
+  /// inserts a placeholder Phi or Select.
   /// Reports all new created Phi/Select nodes by adding them to set.
-  /// Also reports and order in what basic blocks have been traversed.
+  /// Also reports and order in what values have been traversed.
   void InsertPlaceholders(FoldAddrToValueMapping &Map,
-                          SmallVectorImpl<ValueInBB> &TraverseOrder,
+                          SmallVectorImpl<Value *> &TraverseOrder,
                           SimplificationTracker &ST) {
-    SmallVector<ValueInBB, 32> Worklist;
-    assert((isa<PHINode>(Original.first) || isa<SelectInst>(Original.first)) &&
+    SmallVector<Value *, 32> Worklist;
+    assert((isa<PHINode>(Original) || isa<SelectInst>(Original)) &&
            "Address must be a Phi or Select node");
     auto *Dummy = UndefValue::get(CommonType);
     Worklist.push_back(Original);
     while (!Worklist.empty()) {
-      auto Current = Worklist.pop_back_val();
-      // If value is not an instruction it is something global, constant,
-      // parameter and we can say that this value is observable in any block.
-      // Set block to null to denote it.
-      // Also please take into account that it is how we build anchors.
-      if (!isa<Instruction>(Current.first))
-        Current.second = nullptr;
+      Value *Current = Worklist.pop_back_val();
       // if it is already visited or it is an ending value then skip it.
       if (Map.find(Current) != Map.end())
         continue;
       TraverseOrder.push_back(Current);
 
-      Value *CurrentValue = Current.first;
-      BasicBlock *CurrentBlock = Current.second;
       // CurrentValue must be a Phi node or select. All others must be covered
       // by anchors.
-      Instruction *CurrentI = cast<Instruction>(CurrentValue);
-      bool IsDefinedInThisBB = CurrentI->getParent() == CurrentBlock;
-
-      unsigned PredCount = pred_size(CurrentBlock);
-      // if Current Value is not defined in this basic block we are interested
-      // in values in predecessors.
-      if (!IsDefinedInThisBB) {
-        assert(PredCount && "Unreachable block?!");
-        PHINode *PHI = PHINode::Create(CommonType, PredCount, "sunk_phi",
-                                       &CurrentBlock->front());
-        Map[Current] = PHI;
-        ST.insertNewPhi(PHI);
-        // Add all predecessors in work list.
-        for (auto B : predecessors(CurrentBlock))
-          Worklist.push_back({ CurrentValue, B });
-        continue;
-      }
-      // Value is defined in this basic block.
-      if (SelectInst *OrigSelect = dyn_cast<SelectInst>(CurrentI)) {
+      if (SelectInst *CurrentSelect = dyn_cast<SelectInst>(Current)) {
         // Is it OK to get metadata from OrigSelect?!
         // Create a Select placeholder with dummy value.
-        SelectInst *Select =
-            SelectInst::Create(OrigSelect->getCondition(), Dummy, Dummy,
-                               OrigSelect->getName(), OrigSelect, OrigSelect);
+        SelectInst *Select = SelectInst::Create(
+            CurrentSelect->getCondition(), Dummy, Dummy,
+            CurrentSelect->getName(), CurrentSelect, CurrentSelect);
         Map[Current] = Select;
         ST.insertNewSelect(Select);
-        // We are interested in True and False value in this basic block.
-        Worklist.push_back({ OrigSelect->getTrueValue(), CurrentBlock });
-        Worklist.push_back({ OrigSelect->getFalseValue(), CurrentBlock });
+        // We are interested in True and False values.
+        Worklist.push_back(CurrentSelect->getTrueValue());
+        Worklist.push_back(CurrentSelect->getFalseValue());
       } else {
         // It must be a Phi node then.
-        auto *CurrentPhi = cast<PHINode>(CurrentI);
-        // Create new Phi node for merge of bases.
-        assert(PredCount && "Unreachable block?!");
-        PHINode *PHI = PHINode::Create(CommonType, PredCount, "sunk_phi",
-                                       &CurrentBlock->front());
+        PHINode *CurrentPhi = cast<PHINode>(Current);
+        unsigned PredCount = CurrentPhi->getNumIncomingValues();
+        PHINode *PHI =
+            PHINode::Create(CommonType, PredCount, "sunk_phi", CurrentPhi);
         Map[Current] = PHI;
         ST.insertNewPhi(PHI);
-
-        // Add all predecessors in work list.
-        for (auto B : predecessors(CurrentBlock))
-          Worklist.push_back({ CurrentPhi->getIncomingValueForBlock(B), B });
+        for (Value *P : CurrentPhi->incoming_values())
+          Worklist.push_back(P);
       }
     }
   }
@@ -4543,7 +4495,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
   bool PhiOrSelectSeen = false;
   SmallVector<Instruction*, 16> AddrModeInsts;
   const SimplifyQuery SQ(*DL, TLInfo);
-  AddressingModeCombiner AddrModes(SQ, { Addr, MemoryInst->getParent() });
+  AddressingModeCombiner AddrModes(SQ, Addr);
   TypePromotionTransaction TPT(RemovedInsts);
   TypePromotionTransaction::ConstRestorationPt LastKnownGood =
       TPT.getRestorationPoint();

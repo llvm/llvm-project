@@ -210,7 +210,7 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
 /// TODO: Write a new FunctionPass AliasAnalysis so that it can keep
 /// a cache. Then we can move the code from BasicAliasAnalysis into
 /// that path, and remove this threshold.
-static int const Threshold = 20;
+static unsigned const Threshold = 20;
 
 void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker) {
   assert(V->getType()->isPointerTy() && "Capture is for pointers only!");
@@ -218,7 +218,7 @@ void llvm::PointerMayBeCaptured(const Value *V, CaptureTracker *Tracker) {
   SmallSet<const Use *, Threshold> Visited;
 
   auto AddUses = [&](const Value *V) {
-    int Count = 0;
+    unsigned Count = 0;
     for (const Use &U : V->uses()) {
       // If there are lots of uses, conservatively say that the value
       // is captured to avoid taking too much compile time.

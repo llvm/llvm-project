@@ -4001,13 +4001,11 @@ OverflowResult llvm::computeOverflowForUnsignedAdd(
 
     if (LHSKnown.isNegative() && RHSKnown.isNegative()) {
       // The sign bit is set in both cases: this MUST overflow.
-      // Create a simple add instruction, and insert it into the struct.
       return OverflowResult::AlwaysOverflows;
     }
 
     if (LHSKnown.isNonNegative() && RHSKnown.isNonNegative()) {
       // The sign bit is clear in both cases: this CANNOT overflow.
-      // Create a simple add instruction, and insert it into the struct.
       return OverflowResult::NeverOverflows;
     }
   }
@@ -4124,11 +4122,18 @@ OverflowResult llvm::computeOverflowForUnsignedSub(const Value *LHS,
                                                    AssumptionCache *AC,
                                                    const Instruction *CxtI,
                                                    const DominatorTree *DT) {
-  // If the LHS is negative and the RHS is non-negative, no unsigned wrap.
   KnownBits LHSKnown = computeKnownBits(LHS, DL, /*Depth=*/0, AC, CxtI, DT);
-  KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
-  if (LHSKnown.isNegative() && RHSKnown.isNonNegative())
-    return OverflowResult::NeverOverflows;
+  if (LHSKnown.isNonNegative() || LHSKnown.isNegative()) {
+    KnownBits RHSKnown = computeKnownBits(RHS, DL, /*Depth=*/0, AC, CxtI, DT);
+
+    // If the LHS is negative and the RHS is non-negative, no unsigned wrap.
+    if (LHSKnown.isNegative() && RHSKnown.isNonNegative())
+      return OverflowResult::NeverOverflows;
+
+    // If the LHS is non-negative and the RHS negative, we always wrap.
+    if (LHSKnown.isNonNegative() && RHSKnown.isNegative())
+      return OverflowResult::AlwaysOverflows;
+  }
 
   return OverflowResult::MayOverflow;
 }
