@@ -18,10 +18,16 @@
 // target does not support aligned allocation, even if we pass `-faligned-allocation`.
 // XFAIL: apple-clang-10 && availability=macosx10.12
 
-// The dylib shipped with macosx10.12 does not contain the aligned allocation
+// The dylibs shipped before macosx10.14 do not contain the aligned allocation
 // functions, so trying to force using those with -faligned-allocation results
 // in a link error.
+// XFAIL: with_system_cxx_lib=macosx10.13
 // XFAIL: with_system_cxx_lib=macosx10.12
+// XFAIL: with_system_cxx_lib=macosx10.11
+// XFAIL: with_system_cxx_lib=macosx10.10
+// XFAIL: with_system_cxx_lib=macosx10.9
+// XFAIL: with_system_cxx_lib=macosx10.8
+// XFAIL: with_system_cxx_lib=macosx10.7
 
 // The test will fail on deployment targets that do not support sized deallocation.
 // XFAIL: availability=macosx10.11
