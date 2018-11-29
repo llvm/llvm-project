@@ -8116,6 +8116,60 @@ static void GetNameFromModule(swift::ModuleDecl *module, std::string &result) {
   }
 }
 
+bool SwiftASTContext::LoadOneModule(
+    const ConstString &module_name, SwiftASTContext &swift_ast_context,
+    lldb::StackFrameWP &stack_frame_wp,
+    llvm::SmallVectorImpl<swift::SourceFile::ImportedModuleDesc>
+        &additional_imports,
+    Status &error) {
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  error.Clear();
+  if (log)
+    log->Printf("[PerformAutoImport] Importing module %s",
+                module_name.AsCString());
+  swift::ModuleDecl *swift_module = nullptr;
+  lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
+
+  if (module_name == ConstString(swift_ast_context.GetClangImporter()
+                                     ->getImportedHeaderModule()
+                                     ->getName()
+                                     .str()))
+    swift_module =
+        swift_ast_context.GetClangImporter()->getImportedHeaderModule();
+  else if (this_frame_sp) {
+    lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
+    if (process_sp)
+      swift_module = swift_ast_context.FindAndLoadModule(
+          module_name, *process_sp.get(), error);
+  } else
+    swift_module = swift_ast_context.GetModule(module_name, error);
+
+  if (!swift_module || !error.Success() || swift_ast_context.HasFatalErrors()) {
+    if (log)
+      log->Printf("[PerformAutoImport] Couldn't import module %s: %s",
+                  module_name.AsCString(), error.AsCString());
+
+    if (!swift_module || swift_ast_context.HasFatalErrors()) {
+      return false;
+    }
+  }
+
+  if (log) {
+    log->Printf("Importing %s with source files:", module_name.AsCString());
+
+    for (swift::FileUnit *file_unit : swift_module->getFiles()) {
+      StreamString ss;
+      DescribeFileUnit(ss, file_unit);
+      log->Printf("  %s", ss.GetData());
+    }
+  }
+
+  additional_imports.push_back(swift::SourceFile::ImportedModuleDesc(
+      std::make_pair(swift::ModuleDecl::AccessPathTy(), swift_module),
+      swift::SourceFile::ImportOptions()));
+  return true;
+}
+
 bool SwiftASTContext::PerformAutoImport(SwiftASTContext &swift_ast_context,
                                         SymbolContext &sc,
                                         ExecutionContextScope &exe_scope,
@@ -8134,70 +8188,15 @@ bool SwiftASTContext::PerformAutoImport(SwiftASTContext &swift_ast_context,
   llvm::SmallVector<swift::SourceFile::ImportedModuleDesc, 2>
       additional_imports;
 
-  std::set<ConstString> loaded_modules;
-
-  auto load_one_module = [&](const ConstString &module_name) {
-    error.Clear();
-    if (loaded_modules.count(module_name))
-      return true;
-
-    if (log)
-      log->Printf("[PerformAutoImport] Importing module %s",
-                  module_name.AsCString());
-
-    loaded_modules.insert(module_name);
-
-    swift::ModuleDecl *swift_module = nullptr;
-    lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
-
-    if (module_name == ConstString(swift_ast_context.GetClangImporter()
-                                       ->getImportedHeaderModule()
-                                       ->getName()
-                                       .str()))
-      swift_module =
-          swift_ast_context.GetClangImporter()->getImportedHeaderModule();
-    else if (this_frame_sp) {
-      lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
-      if (process_sp)
-        swift_module = swift_ast_context.FindAndLoadModule(
-            module_name, *process_sp.get(), error);
-    } else
-      swift_module = swift_ast_context.GetModule(module_name, error);
-
-    if (!swift_module || !error.Success() ||
-        swift_ast_context.HasFatalErrors()) {
-      if (log)
-        log->Printf("[PerformAutoImport] Couldn't import module %s: %s",
-                    module_name.AsCString(), error.AsCString());
-
-      if (!swift_module || swift_ast_context.HasFatalErrors()) {
-        return false;
-      }
-    }
-
-    if (log) {
-      log->Printf("Importing %s with source files:", module_name.AsCString());
-
-      for (swift::FileUnit *file_unit : swift_module->getFiles()) {
-        StreamString ss;
-        DescribeFileUnit(ss, file_unit);
-        log->Printf("  %s", ss.GetData());
-      }
-    }
-
-    additional_imports.push_back(swift::SourceFile::ImportedModuleDesc(
-        std::make_pair(swift::ModuleDecl::AccessPathTy(), swift_module),
-        swift::SourceFile::ImportOptions()));
-    return true;
-  };
-
   if (!user_imports) {
-    if (!load_one_module(ConstString("Swift")))
+    if (!LoadOneModule(ConstString("Swift"), swift_ast_context, stack_frame_wp,
+                       additional_imports, error))
       return false;
 
     if (cu_modules) {
       for (const ConstString &module_name : *cu_modules) {
-        if (!load_one_module(module_name))
+        if (!LoadOneModule(module_name, swift_ast_context, stack_frame_wp,
+                           additional_imports, error))
           return false;
       }
     }
@@ -8221,7 +8220,8 @@ bool SwiftASTContext::PerformAutoImport(SwiftASTContext &swift_ast_context,
             log->Printf("[PerformAutoImport] Performing auto import on found "
                         "module: %s.\n",
                         module_name.c_str());
-          if (!load_one_module(module_const_str))
+          if (!LoadOneModule(module_const_str, swift_ast_context,
+                             stack_frame_wp, additional_imports, error))
             return false;
 
           // How do we tell we are in REPL or playground mode?
@@ -8232,7 +8232,8 @@ bool SwiftASTContext::PerformAutoImport(SwiftASTContext &swift_ast_context,
     // Finally get the hand-loaded modules from the
     // SwiftPersistentExpressionState and load them into this context:
     for (ConstString name : persistent_expression_state->GetHandLoadedModules())
-      if (!load_one_module(name))
+      if (!LoadOneModule(name, swift_ast_context, stack_frame_wp,
+                         additional_imports, error))
         return false;
   }
   source_file.addImports(additional_imports);
