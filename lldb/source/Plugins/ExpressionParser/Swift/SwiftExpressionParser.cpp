@@ -1369,8 +1369,8 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
   }
 
   Status auto_import_error;
-  if (!SwiftASTContext::PerformAutoImport(*swift_ast_context, sc, exe_scope,
-                                          stack_frame_wp, *source_file, false,
+  if (!SwiftASTContext::PerformAutoImport(*swift_ast_context, sc,
+                                          stack_frame_wp, *source_file,
                                           auto_import_error))
     return make_error<ModuleImportError>(llvm::Twine("in auto-import:\n") +
                                          auto_import_error.AsCString());
@@ -1442,10 +1442,10 @@ ParseAndImport(SwiftASTContext *swift_ast_context, Expression &expr,
         IRExecutionUnit::GetLLVMGlobalContextMutex());
 
     Status auto_import_error;
-    if (!SwiftASTContext::PerformAutoImport(*swift_ast_context, sc, exe_scope,
-                                            stack_frame_wp, *source_file, true,
+    if (!SwiftASTContext::PerformUserImport(*swift_ast_context, sc, exe_scope,
+                                            stack_frame_wp, *source_file,
                                             auto_import_error)) {
-      return make_error<ModuleImportError>(llvm::Twine("in auto-import:\n") +
+      return make_error<ModuleImportError>(llvm::Twine("in user-import:\n") +
                                            auto_import_error.AsCString());
     }
   }
