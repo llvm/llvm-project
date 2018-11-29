@@ -499,6 +499,8 @@ TargetInfo *AllocateTarget(const llvm::Triple &Triple,
       return new NaClTargetInfo<X86_32TargetInfo>(Triple, Opts);
     case llvm::Triple::ELFIAMCU:
       return new MCUX86_32TargetInfo(Triple, Opts);
+    case llvm::Triple::Hurd:
+      return new HurdTargetInfo<X86_32TargetInfo>(Triple, Opts);
     default:
       return new X86_32TargetInfo(Triple, Opts);
     }
