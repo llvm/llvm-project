@@ -92,6 +92,22 @@ namespace  {
   // Indents ( `, -. | )
   static const TerminalColor IndentColor = { raw_ostream::BLUE, false };
 
+  class ColorScope {
+    raw_ostream &OS;
+    const bool ShowColors;
+
+  public:
+    ColorScope(raw_ostream &OS, bool ShowColors, TerminalColor Color)
+        : OS(OS), ShowColors(ShowColors) {
+      if (ShowColors)
+        OS.changeColor(Color.Color, Color.Bold);
+    }
+    ~ColorScope() {
+      if (ShowColors)
+        OS.resetColor();
+    }
+  };
+
   class ASTDumper
       : public ConstDeclVisitor<ASTDumper>, public ConstStmtVisitor<ASTDumper>,
         public ConstCommentVisitor<ASTDumper>, public TypeVisitor<ASTDumper> {
@@ -126,7 +142,7 @@ namespace  {
     /// The \c FullComment parent of the comment being dumped.
     const FullComment *FC = nullptr;
 
-    bool ShowColors;
+    const bool ShowColors;
 
     /// Dump a child of the current node.
     template<typename Fn> void dumpChild(Fn doDumpChild) {
@@ -161,7 +177,7 @@ namespace  {
         // Note that the first level gets no prefix.
         {
           OS << '\n';
-          ColorScope Color(*this, IndentColor);
+          ColorScope Color(OS, ShowColors, IndentColor);
           OS << Prefix << (isLastChild ? '`' : '|') << '-';
           this->Prefix.push_back(isLastChild ? ' ' : '|');
           this->Prefix.push_back(' ');
@@ -192,20 +208,6 @@ namespace  {
       }
       FirstChild = false;
     }
-
-    class ColorScope {
-      ASTDumper &Dumper;
-    public:
-      ColorScope(ASTDumper &Dumper, TerminalColor Color)
-        : Dumper(Dumper) {
-        if (Dumper.ShowColors)
-          Dumper.OS.changeColor(Color.Color, Color.Bold);
-      }
-      ~ColorScope() {
-        if (Dumper.ShowColors)
-          Dumper.OS.resetColor();
-      }
-    };
 
   public:
     ASTDumper(raw_ostream &OS, const CommandTraits *Traits,
@@ -607,7 +609,7 @@ namespace  {
 //===----------------------------------------------------------------------===//
 
 void ASTDumper::dumpPointer(const void *Ptr) {
-  ColorScope Color(*this, AddressColor);
+  ColorScope Color(OS, ShowColors, AddressColor);
   OS << ' ' << Ptr;
 }
 
@@ -615,7 +617,7 @@ void ASTDumper::dumpLocation(SourceLocation Loc) {
   if (!SM)
     return;
 
-  ColorScope Color(*this, LocationColor);
+  ColorScope Color(OS, ShowColors, LocationColor);
   SourceLocation SpellingLoc = SM->getSpellingLoc(Loc);
 
   // The general format we print out is filename:line:col, but we drop pieces
@@ -659,7 +661,7 @@ void ASTDumper::dumpSourceRange(SourceRange R) {
 }
 
 void ASTDumper::dumpBareType(QualType T, bool Desugar) {
-  ColorScope Color(*this, TypeColor);
+  ColorScope Color(OS, ShowColors, TypeColor);
 
   SplitQualType T_split = T.split();
   OS << "'" << QualType::getAsString(T_split, PrintPolicy) << "'";
@@ -695,13 +697,13 @@ void ASTDumper::dumpTypeAsChild(QualType T) {
 void ASTDumper::dumpTypeAsChild(const Type *T) {
   dumpChild([=] {
     if (!T) {
-      ColorScope Color(*this, NullColor);
+      ColorScope Color(OS, ShowColors, NullColor);
       OS << "<<<NULL>>>";
       return;
     }
     if (const LocInfoType *LIT = llvm::dyn_cast<LocInfoType>(T)) {
       {
-        ColorScope Color(*this, TypeColor);
+        ColorScope Color(OS, ShowColors, TypeColor);
         OS << "LocInfo Type";
       }
       dumpPointer(T);
@@ -710,7 +712,7 @@ void ASTDumper::dumpTypeAsChild(const Type *T) {
     }
 
     {
-      ColorScope Color(*this, TypeColor);
+      ColorScope Color(OS, ShowColors, TypeColor);
       OS << T->getTypeClassName() << "Type";
     }
     dumpPointer(T);
@@ -741,19 +743,19 @@ void ASTDumper::dumpTypeAsChild(const Type *T) {
 
 void ASTDumper::dumpBareDeclRef(const Decl *D) {
   if (!D) {
-    ColorScope Color(*this, NullColor);
+    ColorScope Color(OS, ShowColors, NullColor);
     OS << "<<<NULL>>>";
     return;
   }
 
   {
-    ColorScope Color(*this, DeclKindNameColor);
+    ColorScope Color(OS, ShowColors, DeclKindNameColor);
     OS << D->getDeclKindName();
   }
   dumpPointer(D);
 
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
-    ColorScope Color(*this, DeclNameColor);
+    ColorScope Color(OS, ShowColors, DeclNameColor);
     OS << " '" << ND->getDeclName() << '\'';
   }
 
@@ -774,7 +776,7 @@ void ASTDumper::dumpDeclRef(const Decl *D, const char *Label) {
 
 void ASTDumper::dumpName(const NamedDecl *ND) {
   if (ND->getDeclName()) {
-    ColorScope Color(*this, DeclNameColor);
+    ColorScope Color(OS, ShowColors, DeclNameColor);
     OS << ' ' << ND->getNameAsString();
   }
 }
@@ -796,8 +798,8 @@ void ASTDumper::dumpDeclContext(const DeclContext *DC) {
     dumpDecl(D);
 
   if (DC->hasExternalLexicalStorage()) {
-    dumpChild([=]{
-      ColorScope Color(*this, UndeserializedColor);
+    dumpChild([=] {
+      ColorScope Color(OS, ShowColors, UndeserializedColor);
       OS << "<undeserialized declarations>";
     });
   }
@@ -826,7 +828,7 @@ void ASTDumper::dumpLookups(const DeclContext *DC, bool DumpDecls) {
       dumpChild([=] {
         OS << "DeclarationName ";
         {
-          ColorScope Color(*this, DeclNameColor);
+          ColorScope Color(OS, ShowColors, DeclNameColor);
           OS << '\'' << Name << '\'';
         }
 
@@ -855,7 +857,7 @@ void ASTDumper::dumpLookups(const DeclContext *DC, bool DumpDecls) {
 
     if (HasUndeserializedLookups) {
       dumpChild([=] {
-        ColorScope Color(*this, UndeserializedColor);
+        ColorScope Color(OS, ShowColors, UndeserializedColor);
         OS << "<undeserialized lookups>";
       });
     }
@@ -865,7 +867,7 @@ void ASTDumper::dumpLookups(const DeclContext *DC, bool DumpDecls) {
 void ASTDumper::dumpAttr(const Attr *A) {
   dumpChild([=] {
     {
-      ColorScope Color(*this, AttrColor);
+      ColorScope Color(OS, ShowColors, AttrColor);
 
       switch (A->getKind()) {
 #define ATTR(X) case attr::X: OS << #X; break;
@@ -1038,13 +1040,13 @@ void ASTDumper::dumpObjCTypeParamList(const ObjCTypeParamList *typeParams) {
 void ASTDumper::dumpDecl(const Decl *D) {
   dumpChild([=] {
     if (!D) {
-      ColorScope Color(*this, NullColor);
+      ColorScope Color(OS, ShowColors, NullColor);
       OS << "<<<NULL>>>";
       return;
     }
 
     {
-      ColorScope Color(*this, DeclKindNameColor);
+      ColorScope Color(OS, ShowColors, DeclKindNameColor);
       OS << D->getDeclKindName() << "Decl";
     }
     dumpPointer(D);
@@ -1349,12 +1351,12 @@ void ASTDumper::VisitOMPRequiresDecl(const OMPRequiresDecl *D) {
   for (auto *C : D->clauselists()) {
     dumpChild([=] {
       if (!C) {
-        ColorScope Color(*this, NullColor);
+        ColorScope Color(OS, ShowColors, NullColor);
         OS << "<<<NULL>>> OMPClause";
         return;
       }
       {
-        ColorScope Color(*this, AttrColor);
+        ColorScope Color(OS, ShowColors, AttrColor);
         StringRef ClauseName(getOpenMPClauseName(C->getClauseKind()));
         OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
            << ClauseName.drop_front() << "Clause";
@@ -1412,7 +1414,7 @@ void ASTDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
   dumpChild([=] {
     {
-      ColorScope Color(*this, DeclKindNameColor);
+      ColorScope Color(OS, ShowColors, DeclKindNameColor);
       OS << "DefinitionData";
     }
 #define FLAG(fn, name) if (D->fn()) OS << " " #name;
@@ -1440,7 +1442,7 @@ void ASTDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     dumpChild([=] {
       {
-        ColorScope Color(*this, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
         OS << "DefaultConstructor";
       }
       FLAG(hasDefaultConstructor, exists);
@@ -1454,7 +1456,7 @@ void ASTDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     dumpChild([=] {
       {
-        ColorScope Color(*this, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
         OS << "CopyConstructor";
       }
       FLAG(hasSimpleCopyConstructor, simple);
@@ -1472,7 +1474,7 @@ void ASTDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     dumpChild([=] {
       {
-        ColorScope Color(*this, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
         OS << "MoveConstructor";
       }
       FLAG(hasMoveConstructor, exists);
@@ -1489,7 +1491,7 @@ void ASTDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     dumpChild([=] {
       {
-        ColorScope Color(*this, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
         OS << "CopyAssignment";
       }
       FLAG(hasTrivialCopyAssignment, trivial);
@@ -1503,7 +1505,7 @@ void ASTDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     dumpChild([=] {
       {
-        ColorScope Color(*this, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
         OS << "MoveAssignment";
       }
       FLAG(hasMoveAssignment, exists);
@@ -1517,7 +1519,7 @@ void ASTDumper::VisitCXXRecordDecl(const CXXRecordDecl *D) {
 
     dumpChild([=] {
       {
-        ColorScope Color(*this, DeclKindNameColor);
+        ColorScope Color(OS, ShowColors, DeclKindNameColor);
         OS << "Destructor";
       }
       FLAG(hasSimpleDestructor, simple);
@@ -1979,7 +1981,7 @@ void ASTDumper::VisitBlockDecl(const BlockDecl *D) {
 void ASTDumper::dumpStmt(const Stmt *S) {
   dumpChild([=] {
     if (!S) {
-      ColorScope Color(*this, NullColor);
+      ColorScope Color(OS, ShowColors, NullColor);
       OS << "<<<NULL>>>";
       return;
     }
@@ -2003,7 +2005,7 @@ void ASTDumper::dumpStmt(const Stmt *S) {
 
 void ASTDumper::VisitStmt(const Stmt *Node) {
   {
-    ColorScope Color(*this, StmtColor);
+    ColorScope Color(OS, ShowColors, StmtColor);
     OS << Node->getStmtClassName();
   }
   dumpPointer(Node);
@@ -2087,12 +2089,12 @@ void ASTDumper::VisitOMPExecutableDirective(
   for (auto *C : Node->clauses()) {
     dumpChild([=] {
       if (!C) {
-        ColorScope Color(*this, NullColor);
+        ColorScope Color(OS, ShowColors, NullColor);
         OS << "<<<NULL>>> OMPClause";
         return;
       }
       {
-        ColorScope Color(*this, AttrColor);
+        ColorScope Color(OS, ShowColors, AttrColor);
         StringRef ClauseName(getOpenMPClauseName(C->getClauseKind()));
         OS << "OMP" << ClauseName.substr(/*Start=*/0, /*N=*/1).upper()
            << ClauseName.drop_front() << "Clause";
@@ -2116,7 +2118,7 @@ void ASTDumper::VisitExpr(const Expr *Node) {
   dumpType(Node->getType());
 
   {
-    ColorScope Color(*this, ValueKindColor);
+    ColorScope Color(OS, ShowColors, ValueKindColor);
     switch (Node->getValueKind()) {
     case VK_RValue:
       break;
@@ -2130,7 +2132,7 @@ void ASTDumper::VisitExpr(const Expr *Node) {
   }
 
   {
-    ColorScope Color(*this, ObjectKindColor);
+    ColorScope Color(OS, ShowColors, ObjectKindColor);
     switch (Node->getObjectKind()) {
     case OK_Ordinary:
       break;
@@ -2179,7 +2181,7 @@ void ASTDumper::VisitCastExpr(const CastExpr *Node) {
   VisitExpr(Node);
   OS << " <";
   {
-    ColorScope Color(*this, CastColor);
+    ColorScope Color(OS, ShowColors, CastColor);
     OS << Node->getCastKindName();
   }
   dumpBasePath(OS, Node);
@@ -2223,7 +2225,7 @@ void ASTDumper::VisitObjCIvarRefExpr(const ObjCIvarRefExpr *Node) {
   VisitExpr(Node);
 
   {
-    ColorScope Color(*this, DeclKindNameColor);
+    ColorScope Color(OS, ShowColors, DeclKindNameColor);
     OS << " " << Node->getDecl()->getDeclKindName() << "Decl";
   }
   OS << "='" << *Node->getDecl() << "'";
@@ -2239,7 +2241,7 @@ void ASTDumper::VisitPredefinedExpr(const PredefinedExpr *Node) {
 
 void ASTDumper::VisitCharacterLiteral(const CharacterLiteral *Node) {
   VisitExpr(Node);
-  ColorScope Color(*this, ValueColor);
+  ColorScope Color(OS, ShowColors, ValueColor);
   OS << " " << Node->getValue();
 }
 
@@ -2247,26 +2249,26 @@ void ASTDumper::VisitIntegerLiteral(const IntegerLiteral *Node) {
   VisitExpr(Node);
 
   bool isSigned = Node->getType()->isSignedIntegerType();
-  ColorScope Color(*this, ValueColor);
+  ColorScope Color(OS, ShowColors, ValueColor);
   OS << " " << Node->getValue().toString(10, isSigned);
 }
 
 void ASTDumper::VisitFixedPointLiteral(const FixedPointLiteral *Node) {
   VisitExpr(Node);
 
-  ColorScope Color(*this, ValueColor);
+  ColorScope Color(OS, ShowColors, ValueColor);
   OS << " " << Node->getValueAsString(/*Radix=*/10);
 }
 
 void ASTDumper::VisitFloatingLiteral(const FloatingLiteral *Node) {
   VisitExpr(Node);
-  ColorScope Color(*this, ValueColor);
+  ColorScope Color(OS, ShowColors, ValueColor);
   OS << " " << Node->getValueAsApproximateDouble();
 }
 
 void ASTDumper::VisitStringLiteral(const StringLiteral *Str) {
   VisitExpr(Str);
-  ColorScope Color(*this, ValueColor);
+  ColorScope Color(OS, ShowColors, ValueColor);
   OS << " ";
   Str->outputString(OS);
 }
@@ -2659,13 +2661,13 @@ void ASTDumper::dumpFullComment(const FullComment *C) {
 void ASTDumper::dumpComment(const Comment *C) {
   dumpChild([=] {
     if (!C) {
-      ColorScope Color(*this, NullColor);
+      ColorScope Color(OS, ShowColors, NullColor);
       OS << "<<<NULL>>>";
       return;
     }
 
     {
-      ColorScope Color(*this, CommentColor);
+      ColorScope Color(OS, ShowColors, CommentColor);
       OS << C->getCommentKindName();
     }
     dumpPointer(C);
