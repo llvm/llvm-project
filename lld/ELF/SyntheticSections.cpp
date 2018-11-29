@@ -2434,16 +2434,17 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &Obj,
   std::vector<GdbIndexSection::NameAttrEntry> Ret;
   for (const DWARFSection *Pub : {&PubNames, &PubTypes}) {
     DWARFDebugPubTable Table(Obj, *Pub, Config->IsLE, true);
-    uint32_t I = 0;
     for (const DWARFDebugPubTable::Set &Set : Table.getData()) {
       // The value written into the constant pool is Kind << 24 | CuIndex. As we
       // don't know how many compilation units precede this object to compute
       // CuIndex, we compute (Kind << 24 | CuIndexInThisObject) instead, and add
       // the number of preceding compilation units later.
-      //
-      // We assume both CUs[*].CuOff and Set.Offset are increasing.
-      while (I < CUs.size() && CUs[I].CuOffset < Set.Offset)
-        ++I;
+      uint32_t I =
+          lower_bound(CUs, Set.Offset,
+                      [](GdbIndexSection::CuEntry CU, uint32_t Offset) {
+                        return CU.CuOffset < Offset;
+                      }) -
+          CUs.begin();
       for (const DWARFDebugPubTable::Entry &Ent : Set.Entries)
         Ret.push_back({{Ent.Name, computeGdbHash(Ent.Name)},
                        (Ent.Descriptor.toBits() << 24) | I});
