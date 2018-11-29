@@ -247,12 +247,15 @@ static void SemaBuiltinMemChkCall(Sema &S, FunctionDecl *FDecl,
   const Expr *SizeArg = TheCall->getArg(SizeIdx);
   const Expr *DstSizeArg = TheCall->getArg(DstSizeIdx);
 
-  llvm::APSInt Size, DstSize;
+  Expr::EvalResult SizeResult, DstSizeResult;
 
   // find out if both sizes are known at compile time
-  if (!SizeArg->EvaluateAsInt(Size, S.Context) ||
-      !DstSizeArg->EvaluateAsInt(DstSize, S.Context))
+  if (!SizeArg->EvaluateAsInt(SizeResult, S.Context) ||
+      !DstSizeArg->EvaluateAsInt(DstSizeResult, S.Context))
     return;
+
+  llvm::APSInt Size = SizeResult.Val.getInt();
+  llvm::APSInt DstSize = DstSizeResult.Val.getInt();
 
   if (Size.ule(DstSize))
     return;
@@ -6481,13 +6484,12 @@ checkFormatStringExpr(Sema &S, const Expr *E, ArrayRef<const Expr *> Args,
     return SLCT_NotALiteral;
   }
   case Stmt::BinaryOperatorClass: {
-    llvm::APSInt LResult;
-    llvm::APSInt RResult;
-
     const BinaryOperator *BinOp = cast<BinaryOperator>(E);
 
     // A string literal + an int offset is still a string literal.
     if (BinOp->isAdditiveOp()) {
+      Expr::EvalResult LResult, RResult;
+
       bool LIsInt = BinOp->getLHS()->EvaluateAsInt(LResult, S.Context);
       bool RIsInt = BinOp->getRHS()->EvaluateAsInt(RResult, S.Context);
 
@@ -6496,12 +6498,12 @@ checkFormatStringExpr(Sema &S, const Expr *E, ArrayRef<const Expr *> Args,
 
         if (LIsInt) {
           if (BinOpKind == BO_Add) {
-            sumOffsets(Offset, LResult, BinOpKind, RIsInt);
+            sumOffsets(Offset, LResult.Val.getInt(), BinOpKind, RIsInt);
             E = BinOp->getRHS();
             goto tryAgain;
           }
         } else {
-          sumOffsets(Offset, RResult, BinOpKind, RIsInt);
+          sumOffsets(Offset, RResult.Val.getInt(), BinOpKind, RIsInt);
           E = BinOp->getLHS();
           goto tryAgain;
         }
@@ -6514,9 +6516,10 @@ checkFormatStringExpr(Sema &S, const Expr *E, ArrayRef<const Expr *> Args,
     const UnaryOperator *UnaOp = cast<UnaryOperator>(E);
     auto ASE = dyn_cast<ArraySubscriptExpr>(UnaOp->getSubExpr());
     if (UnaOp->getOpcode() == UO_AddrOf && ASE) {
-      llvm::APSInt IndexResult;
+      Expr::EvalResult IndexResult;
       if (ASE->getRHS()->EvaluateAsInt(IndexResult, S.Context)) {
-        sumOffsets(Offset, IndexResult, BO_Add, /*RHS is int*/ true);
+        sumOffsets(Offset, IndexResult.Val.getInt(), BO_Add,
+                   /*RHS is int*/ true);
         E = ASE->getBase();
         goto tryAgain;
       }
@@ -10261,8 +10264,8 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
   Expr *OriginalInit = Init->IgnoreParenImpCasts();
   unsigned FieldWidth = Bitfield->getBitWidthValue(S.Context);
 
-  llvm::APSInt Value;
-  if (!OriginalInit->EvaluateAsInt(Value, S.Context,
+  Expr::EvalResult Result;
+  if (!OriginalInit->EvaluateAsInt(Result, S.Context,
                                    Expr::SE_AllowSideEffects)) {
     // The RHS is not constant.  If the RHS has an enum type, make sure the
     // bitfield is wide enough to hold all the values of the enum without
@@ -10317,6 +10320,8 @@ static bool AnalyzeBitFieldAssignment(Sema &S, FieldDecl *Bitfield, Expr *Init,
 
     return false;
   }
+
+  llvm::APSInt Value = Result.Val.getInt();
 
   unsigned OriginalWidth = Value.getBitWidth();
 
@@ -10930,8 +10935,11 @@ CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
   if (SourceRange.Width > TargetRange.Width) {
     // If the source is a constant, use a default-on diagnostic.
     // TODO: this should happen for bitfield stores, too.
-    llvm::APSInt Value(32);
-    if (E->EvaluateAsInt(Value, S.Context, Expr::SE_AllowSideEffects)) {
+    Expr::EvalResult Result;
+    if (E->EvaluateAsInt(Result, S.Context, Expr::SE_AllowSideEffects)) {
+      llvm::APSInt Value(32);
+      Value = Result.Val.getInt();
+
       if (S.SourceMgr.isInSystemMacro(CC))
         return;
 
@@ -10975,9 +10983,10 @@ CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
     // source value is exactly the width of the target type, which will
     // cause a negative value to be stored.
 
-    llvm::APSInt Value;
-    if (E->EvaluateAsInt(Value, S.Context, Expr::SE_AllowSideEffects) &&
+    Expr::EvalResult Result;
+    if (E->EvaluateAsInt(Result, S.Context, Expr::SE_AllowSideEffects) &&
         !S.SourceMgr.isInSystemMacro(CC)) {
+      llvm::APSInt Value = Result.Val.getInt();
       if (isSameWidthConstantConversion(S, E, T, CC)) {
         std::string PrettySourceValue = Value.toString(10);
         std::string PrettyTargetValue = PrettyPrintInRange(Value, TargetRange);
@@ -12264,9 +12273,11 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
   if (!ArrayTy)
     return;
 
-  llvm::APSInt index;
-  if (!IndexExpr->EvaluateAsInt(index, Context, Expr::SE_AllowSideEffects))
+  Expr::EvalResult Result;
+  if (!IndexExpr->EvaluateAsInt(Result, Context, Expr::SE_AllowSideEffects))
     return;
+
+  llvm::APSInt index = Result.Val.getInt();
   if (IndexNegated)
     index = -index;
 

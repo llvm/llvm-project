@@ -10,4 +10,4 @@ namespace A {
 // CHECK: define internal i32 @_ZN1AL1aEi({{.*}} !dbg [[DBG:![0-9]+]]
 // CHECK: [[DBG]] = distinct !DISubprogram(name: "a", linkageName: "_ZN1AL1aEi",
 // CHECK-SAME:          line: 4
-// CHECK-SAME:          isDefinition: true
+// CHECK-SAME:          DISPFlagDefinition

@@ -13863,6 +13863,8 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
     ExprResult Converted = PerformContextuallyConvertToBool(AssertExpr);
     if (Converted.isInvalid())
       Failed = true;
+    else
+      Converted = ConstantExpr::Create(Context, Converted.get());
 
     llvm::APSInt Cond;
     if (!Failed && VerifyIntegerConstantExpression(Converted.get(), &Cond,
@@ -14969,8 +14971,11 @@ void Sema::MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
   // region.
   if (LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
       !isInOpenMPDeclareTargetContext() &&
-      !isInOpenMPTargetExecutionDirective())
+      !isInOpenMPTargetExecutionDirective()) {
+    if (!DefinitionRequired)
+      MarkVirtualMembersReferenced(Loc, Class);
     return;
+  }
 
   // Try to insert this class into the map.
   LoadExternalVTableUses();

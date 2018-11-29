@@ -260,6 +260,7 @@ void InitHeaderSearch::AddDefaultCIncludePaths(const llvm::Triple &triple,
 
   switch (os) {
   case llvm::Triple::Linux:
+  case llvm::Triple::Hurd:
   case llvm::Triple::Solaris:
     llvm_unreachable("Include management is handled in the driver.");
 
@@ -412,6 +413,7 @@ void InitHeaderSearch::AddDefaultCPlusPlusIncludePaths(
 
   switch (os) {
   case llvm::Triple::Linux:
+  case llvm::Triple::Hurd:
   case llvm::Triple::Solaris:
     llvm_unreachable("Include management is handled in the driver.");
     break;
@@ -460,6 +462,7 @@ void InitHeaderSearch::AddDefaultIncludePaths(const LangOptions &Lang,
     break; // Everything else continues to use this routine's logic.
 
   case llvm::Triple::Linux:
+  case llvm::Triple::Hurd:
   case llvm::Triple::Solaris:
     return;
 

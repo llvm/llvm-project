@@ -56,7 +56,7 @@ typedef signed char BOOL;
 
 // CHECK: ![[TESTNOSIDEEFFECT:.*]] = distinct !DISubprogram(name: "-[AppDelegate testNoSideEffect:]"
 // CHECK-SAME:                                              line: [[@LINE+2]]
-// CHECK-SAME:                                              isLocal: true, isDefinition: true
+// CHECK-SAME:                                              DISPFlagLocalToUnit | DISPFlagDefinition
 - (int)testNoSideEffect:(NSString *)foo {
   int x = 1;
   return 1; // Return expression
