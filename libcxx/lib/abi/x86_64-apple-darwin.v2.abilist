@@ -8,8 +8,6 @@
 {'type': 'I', 'is_defined': True, 'name': '__ZNKSt13bad_exception4whatEv'}
 {'type': 'U', 'is_defined': False, 'name': '__ZNKSt13runtime_error4whatEv'}
 {'type': 'I', 'is_defined': True, 'name': '__ZNKSt13runtime_error4whatEv'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNKSt16bad_array_length4whatEv'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNKSt16bad_array_length4whatEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt16nested_exception14rethrow_nestedEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt18bad_variant_access4whatEv'}
 {'type': 'FUNC', 'is_defined': True, 'name': '__ZNKSt19bad_optional_access4whatEv'}
@@ -530,16 +528,6 @@
 {'type': 'I', 'is_defined': True, 'name': '__ZNSt15underflow_errorD1Ev'}
 {'type': 'U', 'is_defined': False, 'name': '__ZNSt15underflow_errorD2Ev'}
 {'type': 'I', 'is_defined': True, 'name': '__ZNSt15underflow_errorD2Ev'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNSt16bad_array_lengthC1Ev'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNSt16bad_array_lengthC1Ev'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNSt16bad_array_lengthC2Ev'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNSt16bad_array_lengthC2Ev'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNSt16bad_array_lengthD0Ev'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNSt16bad_array_lengthD0Ev'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNSt16bad_array_lengthD1Ev'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNSt16bad_array_lengthD1Ev'}
-{'type': 'U', 'is_defined': False, 'name': '__ZNSt16bad_array_lengthD2Ev'}
-{'type': 'I', 'is_defined': True, 'name': '__ZNSt16bad_array_lengthD2Ev'}
 {'type': 'U', 'is_defined': False, 'name': '__ZNSt16invalid_argumentD0Ev'}
 {'type': 'I', 'is_defined': True, 'name': '__ZNSt16invalid_argumentD0Ev'}
 {'type': 'U', 'is_defined': False, 'name': '__ZNSt16invalid_argumentD1Ev'}
@@ -1721,8 +1709,6 @@
 {'type': 'I', 'is_defined': True, 'name': '__ZTISt14overflow_error'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTISt15underflow_error'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTISt15underflow_error'}
-{'type': 'U', 'is_defined': False, 'name': '__ZTISt16bad_array_length'}
-{'type': 'I', 'is_defined': True, 'name': '__ZTISt16bad_array_length'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTISt16invalid_argument'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTISt16invalid_argument'}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTISt16nested_exception', 'size': 0}
@@ -2013,8 +1999,6 @@
 {'type': 'I', 'is_defined': True, 'name': '__ZTSSt14overflow_error'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTSSt15underflow_error'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTSSt15underflow_error'}
-{'type': 'U', 'is_defined': False, 'name': '__ZTSSt16bad_array_length'}
-{'type': 'I', 'is_defined': True, 'name': '__ZTSSt16bad_array_length'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTSSt16invalid_argument'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTSSt16invalid_argument'}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTSSt16nested_exception', 'size': 0}
@@ -2206,8 +2190,6 @@
 {'type': 'I', 'is_defined': True, 'name': '__ZTVSt14overflow_error'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTVSt15underflow_error'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTVSt15underflow_error'}
-{'type': 'U', 'is_defined': False, 'name': '__ZTVSt16bad_array_length'}
-{'type': 'I', 'is_defined': True, 'name': '__ZTVSt16bad_array_length'}
 {'type': 'U', 'is_defined': False, 'name': '__ZTVSt16invalid_argument'}
 {'type': 'I', 'is_defined': True, 'name': '__ZTVSt16invalid_argument'}
 {'type': 'OBJECT', 'is_defined': True, 'name': '__ZTVSt16nested_exception', 'size': 0}

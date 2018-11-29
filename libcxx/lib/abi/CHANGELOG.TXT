@@ -16,6 +16,35 @@ New entries should be added directly below the "Version" header.
 Version 8.0
 -----------
 
+* rXXXXX - Remove std::bad_array_length
+
+  The change removes the definition of std::bad_array_length (which never made
+  it into the standard) from the headers and the dylib. This is technically an
+  ABI break because the symbols are shipped starting with mac OSX 10.13, however
+  users couldn't be relying on the functionality because it is marked as being
+  unavailable using Clang's availability attribute.
+
+  x86_64-apple-darwin16.0
+  -----------------------
+  Symbol removed: __ZNKSt16bad_array_length4whatEv
+  Symbol removed: __ZNKSt16bad_array_length4whatEv
+  Symbol removed: __ZNSt16bad_array_lengthC1Ev
+  Symbol removed: __ZNSt16bad_array_lengthC1Ev
+  Symbol removed: __ZNSt16bad_array_lengthC2Ev
+  Symbol removed: __ZNSt16bad_array_lengthC2Ev
+  Symbol removed: __ZNSt16bad_array_lengthD0Ev
+  Symbol removed: __ZNSt16bad_array_lengthD0Ev
+  Symbol removed: __ZNSt16bad_array_lengthD1Ev
+  Symbol removed: __ZNSt16bad_array_lengthD1Ev
+  Symbol removed: __ZNSt16bad_array_lengthD2Ev
+  Symbol removed: __ZNSt16bad_array_lengthD2Ev
+  Symbol removed: __ZTISt16bad_array_length
+  Symbol removed: __ZTISt16bad_array_length
+  Symbol removed: __ZTSSt16bad_array_length
+  Symbol removed: __ZTSSt16bad_array_length
+  Symbol removed: __ZTVSt16bad_array_length
+  Symbol removed: __ZTVSt16bad_array_length
+
 * r347395 - Making libc++ build under -fvisibility=hidden on Linux
 
   The change marks several function templates as hidden. This removes symbols
