@@ -631,13 +631,6 @@ void CGRecordLowering::determinePacked(bool NVBaseType) {
   // non-virtual sub-object and an unpacked complete object or vise versa.
   if (NVSize % NVAlignment)
     Packed = true;
-
-  // ToDo: This is a workaround for PyTorch lambda function kernels.
-  // Without this workaround some PyTorch lambda function kernels will hang.
-  // Remove this workaround after the proper fix is in place.
-  if (Context.getLangOpts().HIP)
-    Packed = false;
-
   // Update the alignment of the sentinel.
   if (!Packed)
     Members.back().Data = getIntNType(Context.toBits(Alignment));
