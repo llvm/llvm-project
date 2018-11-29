@@ -305,6 +305,31 @@ void DWARFUnit::ExtractDIEsEndCheck(lldb::offset_t offset) const {
   }
 }
 
+// This is used when a split dwarf is enabled.
+// A skeleton compilation unit may contain the DW_AT_str_offsets_base attribute
+// that points to the first string offset of the CU contribution to the
+// .debug_str_offsets. At the same time, the corresponding split debug unit also
+// may use DW_FORM_strx* forms pointing to its own .debug_str_offsets.dwo and
+// for that case, we should find the offset (skip the section header).
+static void SetDwoStrOffsetsBase(DWARFUnit *dwo_cu) {
+  lldb::offset_t baseOffset = 0;
+
+  const DWARFDataExtractor &strOffsets =
+      dwo_cu->GetSymbolFileDWARF()->get_debug_str_offsets_data();
+  uint64_t length = strOffsets.GetU32(&baseOffset);
+  if (length == 0xffffffff)
+    length = strOffsets.GetU64(&baseOffset);
+
+  // Check version.
+  if (strOffsets.GetU16(&baseOffset) < 5)
+    return;
+
+  // Skip padding.
+  baseOffset += 2;
+
+  dwo_cu->SetStrOffsetsBase(baseOffset);
+}
+
 // m_die_array_mutex must be already held as read/write.
 void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   dw_addr_t addr_base = cu_die.GetAttributeValueAsUnsigned(
@@ -312,8 +337,13 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   if (addr_base != LLDB_INVALID_ADDRESS)
     SetAddrBase(addr_base);
 
-  SetRangesBase(cu_die.GetAttributeValueAsUnsigned(m_dwarf, this,
-                                                   DW_AT_rnglists_base, 0));
+  dw_addr_t ranges_base = cu_die.GetAttributeValueAsUnsigned(
+      m_dwarf, this, DW_AT_rnglists_base, LLDB_INVALID_ADDRESS);
+  if (ranges_base != LLDB_INVALID_ADDRESS)
+    SetRangesBase(ranges_base);
+
+  SetStrOffsetsBase(cu_die.GetAttributeValueAsUnsigned(
+      m_dwarf, this, DW_AT_str_offsets_base, 0));
 
   uint64_t base_addr = cu_die.GetAttributeValueAsAddress(
       m_dwarf, this, DW_AT_low_pc, LLDB_INVALID_ADDRESS);
@@ -356,11 +386,14 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
                                                    DW_AT_GNU_addr_base, 0);
   dwo_cu->SetAddrBase(addr_base);
 
-  dw_addr_t ranges_base = cu_die.GetAttributeValueAsUnsigned(
-      m_dwarf, this, DW_AT_GNU_ranges_base, 0);
+  if (ranges_base == LLDB_INVALID_ADDRESS)
+    ranges_base = cu_die.GetAttributeValueAsUnsigned(m_dwarf, this,
+                                                     DW_AT_GNU_ranges_base, 0);
   dwo_cu->SetRangesBase(ranges_base);
 
   dwo_cu->SetBaseObjOffset(m_offset);
+
+  SetDwoStrOffsetsBase(dwo_cu);
 }
 
 DWARFDIE DWARFUnit::LookupAddress(const dw_addr_t address) {
@@ -426,6 +459,10 @@ void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {
 
 void DWARFUnit::SetBaseObjOffset(dw_offset_t base_obj_offset) {
   m_base_obj_offset = base_obj_offset;
+}
+
+void DWARFUnit::SetStrOffsetsBase(dw_offset_t str_offsets_base) {
+  m_str_offsets_base = str_offsets_base;
 }
 
 // It may be called only with m_die_array_mutex held R/W.
