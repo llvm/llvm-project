@@ -258,6 +258,32 @@ std::pair<int, int> getIntegerPairAttribute(const Function &F,
                                             std::pair<int, int> Default,
                                             bool OnlyFirstRequired = false);
 
+/// Represents the counter values to wait for in an s_waitcnt instruction.
+///
+/// Large values (including the maximum possible integer) can be used to
+/// represent "don't care" waits.
+struct Waitcnt {
+  unsigned VmCnt = ~0u;
+  unsigned ExpCnt = ~0u;
+  unsigned LgkmCnt = ~0u;
+
+  Waitcnt() {}
+  Waitcnt(unsigned VmCnt, unsigned ExpCnt, unsigned LgkmCnt)
+      : VmCnt(VmCnt), ExpCnt(ExpCnt), LgkmCnt(LgkmCnt) {}
+
+  static Waitcnt allZero() { return Waitcnt(0, 0, 0); }
+
+  bool dominates(const Waitcnt &Other) const {
+    return VmCnt <= Other.VmCnt && ExpCnt <= Other.ExpCnt &&
+           LgkmCnt <= Other.LgkmCnt;
+  }
+
+  Waitcnt combined(const Waitcnt &Other) const {
+    return Waitcnt(std::min(VmCnt, Other.VmCnt), std::min(ExpCnt, Other.ExpCnt),
+                   std::min(LgkmCnt, Other.LgkmCnt));
+  }
+};
+
 /// \returns Vmcnt bit mask for given isa \p Version.
 unsigned getVmcntBitMask(const IsaVersion &Version);
 
@@ -291,6 +317,8 @@ unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt);
 void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt,
                    unsigned &Vmcnt, unsigned &Expcnt, unsigned &Lgkmcnt);
 
+Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded);
+
 /// \returns \p Waitcnt with encoded \p Vmcnt for given isa \p Version.
 unsigned encodeVmcnt(const IsaVersion &Version, unsigned Waitcnt,
                      unsigned Vmcnt);
@@ -317,6 +345,8 @@ unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
 /// isa \p Version.
 unsigned encodeWaitcnt(const IsaVersion &Version,
                        unsigned Vmcnt, unsigned Expcnt, unsigned Lgkmcnt);
+
+unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded);
 
 unsigned getInitialPSInputAddr(const Function &F);
 

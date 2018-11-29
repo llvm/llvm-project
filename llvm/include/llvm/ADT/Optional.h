@@ -29,7 +29,7 @@ namespace llvm {
 
 namespace optional_detail {
 /// Storage for any type.
-template <typename T, bool IsPodLike> struct OptionalStorage {
+template <typename T, bool = isPodLike<T>::value> struct OptionalStorage {
   AlignedCharArrayUnion<T> storage;
   bool hasVal = false;
 
@@ -129,7 +129,7 @@ template <typename T> struct OptionalStorage<T, true> {
 } // namespace optional_detail
 
 template <typename T> class Optional {
-  optional_detail::OptionalStorage<T, isPodLike<T>::value> Storage;
+  optional_detail::OptionalStorage<T> Storage;
 
 public:
   using value_type = T;

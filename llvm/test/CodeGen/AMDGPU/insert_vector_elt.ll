@@ -266,8 +266,7 @@ define amdgpu_kernel void @dynamic_insertelement_v2i8(<2 x i8> addrspace(1)* %ou
 ; VI: v_mov_b32_e32 [[V_LOAD:v[0-9]+]], [[LOAD]]
 ; VI: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 3
 ; VI: s_lshl_b32 [[SHIFTED_MASK:s[0-9]+]], 0xffff, [[SCALED_IDX]]
-; VI: s_not_b32 [[NOT_MASK:s[0-9]+]], [[SHIFTED_MASK]]
-; VI: s_and_b32 [[AND_NOT_MASK:s[0-9]+]], [[NOT_MASK]], [[LOAD]]
+; VI: s_andn2_b32 [[AND_NOT_MASK:s[0-9]+]], [[LOAD]],  [[SHIFTED_MASK]]
 ; VI: v_bfi_b32 [[BFI:v[0-9]+]], [[SHIFTED_MASK]], 5, [[V_LOAD]]
 ; VI: s_lshr_b32 [[HI2:s[0-9]+]], [[AND_NOT_MASK]], 16
 
@@ -306,8 +305,7 @@ define amdgpu_kernel void @dynamic_insertelement_v4i8(<4 x i8> addrspace(1)* %ou
 ; VI-DAG: s_lshl_b32 [[SCALED_IDX:s[0-9]+]], [[IDX]], 3
 ; VI-DAG: s_mov_b32 s[[MASK_LO:[0-9]+]], 0xffff
 ; VI: s_lshl_b64 s{{\[}}[[MASK_SHIFT_LO:[0-9]+]]:[[MASK_SHIFT_HI:[0-9]+]]{{\]}}, s{{\[}}[[MASK_LO]]:[[MASK_HI]]{{\]}}, [[SCALED_IDX]]
-; VI: s_not_b64 [[NOT_MASK:s\[[0-9]+:[0-9]+\]]], s{{\[}}[[MASK_SHIFT_LO]]:[[MASK_SHIFT_HI]]{{\]}}
-; VI: s_and_b64 [[AND:s\[[0-9]+:[0-9]+\]]], [[NOT_MASK]], [[VEC]]
+; VI: s_andn2_b64 [[AND:s\[[0-9]+:[0-9]+\]]], [[VEC]], s{{\[}}[[MASK_SHIFT_LO]]:[[MASK_SHIFT_HI]]{{\]}}
 ; VI: s_and_b32 s[[INS:[0-9]+]], s[[MASK_SHIFT_LO]], 5
 ; VI: s_or_b64 s{{\[}}[[RESULT0:[0-9]+]]:[[RESULT1:[0-9]+]]{{\]}}, s{{\[}}[[INS]]:[[MASK_HI]]{{\]}}, [[AND]]
 ; VI: v_mov_b32_e32 v[[V_RESULT0:[0-9]+]], s[[RESULT0]]

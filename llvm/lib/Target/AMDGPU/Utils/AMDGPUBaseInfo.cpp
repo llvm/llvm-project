@@ -522,6 +522,14 @@ void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt,
   Lgkmcnt = decodeLgkmcnt(Version, Waitcnt);
 }
 
+Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded) {
+  Waitcnt Decoded;
+  Decoded.VmCnt = decodeVmcnt(Version, Encoded);
+  Decoded.ExpCnt = decodeExpcnt(Version, Encoded);
+  Decoded.LgkmCnt = decodeLgkmcnt(Version, Encoded);
+  return Decoded;
+}
+
 unsigned encodeVmcnt(const IsaVersion &Version, unsigned Waitcnt,
                      unsigned Vmcnt) {
   Waitcnt =
@@ -550,6 +558,10 @@ unsigned encodeWaitcnt(const IsaVersion &Version,
   Waitcnt = encodeExpcnt(Version, Waitcnt, Expcnt);
   Waitcnt = encodeLgkmcnt(Version, Waitcnt, Lgkmcnt);
   return Waitcnt;
+}
+
+unsigned encodeWaitcnt(const IsaVersion &Version, const Waitcnt &Decoded) {
+  return encodeWaitcnt(Version, Decoded.VmCnt, Decoded.ExpCnt, Decoded.LgkmCnt);
 }
 
 unsigned getInitialPSInputAddr(const Function &F) {

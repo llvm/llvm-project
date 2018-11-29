@@ -257,6 +257,12 @@ endif
 CFLAGS += -I$(SRCDIR) -include $(THIS_FILE_DIR)test_common.h -I$(THIS_FILE_DIR)
 CFLAGS += $(NO_LIMIT_DEBUG_INFO_FLAGS) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)
 
+# If the OS is Windows, we need to pass -gdwarf to clang, otherwise it will build
+# with codeview by default but all the tests rely on dwarf.
+ifeq "$(OS)" "Windows_NT"
+	CFLAGS += -gdwarf
+endif
+
 # Use this one if you want to build one part of the result without debug information:
 ifeq "$(OS)" "Darwin"
 	CFLAGS_NO_DEBUG = -O0 $(ARCHFLAG) $(ARCH) $(FRAMEWORK_INCLUDES) $(ARCH_CFLAGS) $(CFLAGS_EXTRAS)

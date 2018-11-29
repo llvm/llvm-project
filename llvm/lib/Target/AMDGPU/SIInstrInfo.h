@@ -89,6 +89,14 @@ private:
   void lowerScalarXnor(SetVectorType &Worklist,
                        MachineInstr &Inst) const;
 
+  void splitScalarNotBinop(SetVectorType &Worklist,
+                           MachineInstr &Inst,
+                           unsigned Opcode) const;
+
+  void splitScalarBinOpN2(SetVectorType &Worklist,
+                          MachineInstr &Inst,
+                          unsigned Opcode) const;
+
   void splitScalar64BitUnaryOp(SetVectorType &Worklist,
                                MachineInstr &Inst, unsigned Opcode) const;
 

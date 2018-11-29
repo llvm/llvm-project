@@ -201,6 +201,9 @@ public:
   bool getO0WantsFastISel() { return O0WantsFastISel; }
   void setO0WantsFastISel(bool Enable) { O0WantsFastISel = Enable; }
   void setGlobalISel(bool Enable) { Options.EnableGlobalISel = Enable; }
+  void setGlobalISelAbort(GlobalISelAbortMode Mode) {
+    Options.GlobalISelAbort = Mode;
+  }
   void setMachineOutliner(bool Enable) {
     Options.EnableMachineOutliner = Enable;
   }

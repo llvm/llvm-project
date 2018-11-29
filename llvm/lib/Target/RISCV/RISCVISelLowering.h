@@ -126,6 +126,13 @@ private:
   virtual Value *emitMaskedAtomicRMWIntrinsic(
       IRBuilder<> &Builder, AtomicRMWInst *AI, Value *AlignedAddr, Value *Incr,
       Value *Mask, Value *ShiftAmt, AtomicOrdering Ord) const override;
+  TargetLowering::AtomicExpansionKind
+  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CI) const override;
+  virtual Value *
+  emitMaskedAtomicCmpXchgIntrinsic(IRBuilder<> &Builder, AtomicCmpXchgInst *CI,
+                                   Value *AlignedAddr, Value *CmpVal,
+                                   Value *NewVal, Value *Mask,
+                                   AtomicOrdering Ord) const override;
 };
 }
 

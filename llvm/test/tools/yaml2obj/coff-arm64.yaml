@@ -1,7 +1,12 @@
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-readobj -file-headers %t | FileCheck %s
+# RUN: obj2yaml %t | FileCheck %s --check-prefix=ROUNDTRIP
 
 # CHECK: OptionalHeaderSize: 240
+
+# ROUNDTRIP: VirtualAddress:  4096
+# ROUNDTRIP: VirtualAddress:  8192
+# ROUNDTRIP: VirtualAddress:  12288
 
 --- !COFF
 OptionalHeader:  
@@ -72,17 +77,17 @@ header:
 sections:        
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
-    VirtualAddress:  1073745920
+    VirtualAddress:  4096
     VirtualSize:     4
     SectionData:     C0035FD6
   - Name:            .rdata
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
-    VirtualAddress:  1073750016
+    VirtualAddress:  8192
     VirtualSize:     12
     SectionData:     0100400800000000E4E3E3E3
   - Name:            .pdata
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
-    VirtualAddress:  1073754112
+    VirtualAddress:  12288
     VirtualSize:     8
     SectionData:     '0010000000200000'
 symbols:         []

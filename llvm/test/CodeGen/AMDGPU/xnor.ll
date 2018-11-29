@@ -61,8 +61,8 @@ entry:
 
 ; GCN-LABEL: {{^}}vector_xnor_i32_one_use
 ; GCN-NOT: s_xnor_b32
-; GCN: v_xor_b32
 ; GCN: v_not_b32
+; GCN: v_xor_b32
 ; GCN-DL: v_xnor_b32
 define i32 @vector_xnor_i32_one_use(i32 %a, i32 %b) {
 entry:
@@ -73,10 +73,10 @@ entry:
 
 ; GCN-LABEL: {{^}}vector_xnor_i64_one_use
 ; GCN-NOT: s_xnor_b64
-; GCN: v_xor_b32
+; GCN: v_not_b32
 ; GCN: v_xor_b32
 ; GCN: v_not_b32
-; GCN: v_not_b32
+; GCN: v_xor_b32
 ; GCN-DL: v_xnor_b32
 ; GCN-DL: v_xnor_b32
 define i64 @vector_xnor_i64_one_use(i64 %a, i64 %b) {
@@ -85,3 +85,30 @@ entry:
   %r = xor i64 %xor, -1
   ret i64 %r
 }
+
+; GCN-LABEL: {{^}}xnor_s_v_i32_one_use
+; GCN-NOT: s_xnor_b32
+; GCN: s_not_b32
+; GCN: v_xor_b32
+define amdgpu_kernel void @xnor_s_v_i32_one_use(i32 addrspace(1)* %out, i32 %s) {
+  %v = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %xor = xor i32 %s, %v
+  %d = xor i32 %xor, -1
+  store i32 %d, i32 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}xnor_v_s_i32_one_use
+; GCN-NOT: s_xnor_b32
+; GCN: s_not_b32
+; GCN: v_xor_b32
+define amdgpu_kernel void @xnor_v_s_i32_one_use(i32 addrspace(1)* %out, i32 %s) {
+  %v = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %xor = xor i32 %v, %s
+  %d = xor i32 %xor, -1
+  store i32 %d, i32 addrspace(1)* %out
+  ret void
+}
+
+; Function Attrs: nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() #0
