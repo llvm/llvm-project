@@ -962,41 +962,62 @@ static MacroNameAndArgs getMacroNameAndArgs(SourceLocation ExpanLoc,
   //   CALL_FN(someFunctionName(param1, param2))
   // we will find tok::l_paren, tok::r_paren, and tok::comma that do not divide
   // actual macro arguments, or do not represent the macro argument's closing
-  // parentheses, so we'll count how many parentheses aren't closed yet.
+  // parantheses, so we'll count how many parantheses aren't closed yet.
+  // If ParanthesesDepth
+  //   * = 0, then there are no more arguments to lex.
+  //   * = 1, then if we find a tok::comma, we can start lexing the next arg.
+  //   * > 1, then tok::comma is a part of the current arg.
   int ParenthesesDepth = 1;
+
+  // If we encounter __VA_ARGS__, we will lex until the closing tok::r_paren,
+  // even if we lex a tok::comma and ParanthesesDepth == 1.
+  const IdentifierInfo *__VA_ARGS__II = PP.getIdentifierInfo("__VA_ARGS__");
 
   for (const IdentifierInfo *UnexpArgII : MacroArgs) {
     MacroArgMap::mapped_type ExpandedArgTokens;
 
-    // Lex the first token of the next macro parameter.
-    RawLexer.LexFromRawLexer(TheTok);
+    // One could also simply not supply a single argument to __VA_ARGS__ -- this
+    // results in a preprocessor warning, but is not an error:
+    //   #define VARIADIC(ptr, ...) \
+    //     someVariadicTemplateFunction(__VA_ARGS__)
+    //
+    //   int *ptr;
+    //   VARIADIC(ptr); // Note that there are no commas, this isn't just an
+    //                  // empty parameter -- there are no parameters for '...'.
+    // In any other case, ParenthesesDepth mustn't be 0 here.
+    if (ParenthesesDepth != 0) {
 
-    while (TheTok.isNot(tok::comma) || ParenthesesDepth != 1) {
-      assert(TheTok.isNot(tok::eof) &&
-             "EOF encountered while looking for expanded macro args!");
-
-      if (TheTok.is(tok::l_paren))
-        ++ParenthesesDepth;
-
-      if (TheTok.is(tok::r_paren))
-        --ParenthesesDepth;
-
-      if (ParenthesesDepth == 0)
-        break;
-
-      if (TheTok.is(tok::raw_identifier))
-        PP.LookUpIdentifierInfo(TheTok);
-
-      ExpandedArgTokens.push_back(TheTok);
+      // Lex the first token of the next macro parameter.
       RawLexer.LexFromRawLexer(TheTok);
+
+      while (!(ParenthesesDepth == 1 &&
+              (UnexpArgII == __VA_ARGS__II ? false : TheTok.is(tok::comma)))) {
+        assert(TheTok.isNot(tok::eof) &&
+               "EOF encountered while looking for expanded macro args!");
+
+        if (TheTok.is(tok::l_paren))
+          ++ParenthesesDepth;
+
+        if (TheTok.is(tok::r_paren))
+          --ParenthesesDepth;
+
+        if (ParenthesesDepth == 0)
+          break;
+
+        if (TheTok.is(tok::raw_identifier))
+          PP.LookUpIdentifierInfo(TheTok);
+
+        ExpandedArgTokens.push_back(TheTok);
+        RawLexer.LexFromRawLexer(TheTok);
+      }
+    } else {
+      assert(UnexpArgII == __VA_ARGS__II);
     }
 
     Args.emplace(UnexpArgII, std::move(ExpandedArgTokens));
   }
 
-  // TODO: The condition really should be TheTok.is(tok::r_paren), but variadic
-  // macro arguments are not handled yet.
-  assert(TheTok.isOneOf(tok::r_paren, tok::comma) &&
+  assert(TheTok.is(tok::r_paren) &&
          "Expanded macro argument acquisition failed! After the end of the loop"
          " this token should be ')'!");
 
