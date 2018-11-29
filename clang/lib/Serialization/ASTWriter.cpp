@@ -5022,12 +5022,15 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   WriteFPPragmaOptions(SemaRef.getFPOptions());
   WriteOpenCLExtensions(SemaRef);
   WriteOpenCLExtensionTypes(SemaRef);
-  WriteOpenCLExtensionDecls(SemaRef);
   WriteCUDAPragmas(SemaRef);
 
   // If we're emitting a module, write out the submodule information.
   if (WritingModule)
     WriteSubmodules(WritingModule);
+
+  // We need to have information about submodules to correctly deserialize
+  // decls from OpenCLExtensionDecls block
+  WriteOpenCLExtensionDecls(SemaRef);
 
   Stream.EmitRecord(SPECIAL_TYPES, SpecialTypes);
 
