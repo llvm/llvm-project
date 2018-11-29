@@ -172,6 +172,7 @@ private:
   ParseOptionType parseVersionStmt();
   ParseOptionType parseCaptionStmt();
   ParseOptionType parseClassStmt();
+  ParseOptionType parseExStyleStmt();
   ParseOptionType parseFontStmt(OptStmtType DialogType);
   ParseOptionType parseStyleStmt();
 

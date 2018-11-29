@@ -647,18 +647,17 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
-; SSE2-NEXT:    movl $255, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    movl $171, %eax
-; SSE2-NEXT:    movd %eax, %xmm3
-; SSE2-NEXT:    pand %xmm1, %xmm3
-; SSE2-NEXT:    pmullw %xmm2, %xmm3
-; SSE2-NEXT:    psrlw $8, %xmm3
-; SSE2-NEXT:    pmullw {{.*}}(%rip), %xmm3
-; SSE2-NEXT:    psrlw $8, %xmm3
-; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    pmullw %xmm2, %xmm1
+; SSE2-NEXT:    psrlw $8, %xmm1
+; SSE2-NEXT:    pmullw {{.*}}(%rip), %xmm1
+; SSE2-NEXT:    psrlw $8, %xmm1
+; SSE2-NEXT:    movl $255, %eax
+; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
-; SSE2-NEXT:    por %xmm3, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: combine_vec_udiv_nonuniform4:
@@ -670,12 +669,9 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; SSE41-NEXT:    pmullw %xmm0, %xmm2
 ; SSE41-NEXT:    psrlw $8, %xmm2
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
-; SSE41-NEXT:    psllw $8, %xmm0
-; SSE41-NEXT:    pxor %xmm3, %xmm3
-; SSE41-NEXT:    packuswb %xmm3, %xmm2
-; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero,xmm2[2],zero,xmm2[3],zero,xmm2[4],zero,xmm2[5],zero,xmm2[6],zero,xmm2[7],zero
-; SSE41-NEXT:    psllw $1, %xmm2
-; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0],xmm0[1,2,3,4,5,6,7]
+; SSE41-NEXT:    psllw $1, %xmm0
+; SSE41-NEXT:    psllw $8, %xmm2
+; SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm0[0],xmm2[1,2,3,4,5,6,7]
 ; SSE41-NEXT:    psrlw $8, %xmm2
 ; SSE41-NEXT:    packuswb %xmm0, %xmm2
 ; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
@@ -690,12 +686,9 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; AVX1-NEXT:    vpmullw %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
-; AVX1-NEXT:    vpsllw $8, %xmm1, %xmm2
-; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpackuswb %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; AVX1-NEXT:    vpsllw $1, %xmm1, %xmm1
-; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
+; AVX1-NEXT:    vpsllw $1, %xmm1, %xmm2
+; AVX1-NEXT:    vpsllw $8, %xmm1, %xmm1
+; AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0],xmm1[1,2,3,4,5,6,7]
 ; AVX1-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackuswb %xmm0, %xmm1, %xmm1
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
@@ -725,13 +718,10 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; XOP-NEXT:    movl $171, %eax
 ; XOP-NEXT:    vmovd %eax, %xmm1
 ; XOP-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; XOP-NEXT:    vpmullw %xmm1, %xmm2, %xmm2
-; XOP-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[2,3,0,1]
-; XOP-NEXT:    vpmovzxbw {{.*#+}} xmm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero
-; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,0,1]
-; XOP-NEXT:    vpmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
-; XOP-NEXT:    vpmullw %xmm1, %xmm3, %xmm1
-; XOP-NEXT:    vpperm {{.*#+}} xmm1 = xmm2[1,3,5,7,9,11,13,15],xmm1[1,3,5,7,9,11,13,15]
+; XOP-NEXT:    vpmullw %xmm1, %xmm2, %xmm1
+; XOP-NEXT:    vpsrlw $8, %xmm1, %xmm1
+; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
+; XOP-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
 ; XOP-NEXT:    movl $249, %eax
 ; XOP-NEXT:    vmovd %eax, %xmm2
 ; XOP-NEXT:    vpshlb %xmm2, %xmm1, %xmm1

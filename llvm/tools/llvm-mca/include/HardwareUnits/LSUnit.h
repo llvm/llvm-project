@@ -18,6 +18,7 @@
 
 #include "HardwareUnits/HardwareUnit.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/MC/MCSchedule.h"
 
 namespace llvm {
 namespace mca {
@@ -99,6 +100,44 @@ class LSUnit : public HardwareUnit {
   // If true, loads will never alias with stores. This is the default.
   bool NoAlias;
 
+  // When a `MayLoad` instruction is dispatched to the schedulers for execution,
+  // the LSUnit reserves an entry in the `LoadQueue` for it.
+  //
+  // LoadQueue keeps track of all the loads that are in-flight. A load
+  // instruction is eventually removed from the LoadQueue when it reaches
+  // completion stage. That means, a load leaves the queue whe it is 'executed',
+  // and its value can be forwarded on the data path to outside units.
+  //
+  // This class doesn't know about the latency of a load instruction. So, it
+  // conservatively/pessimistically assumes that the latency of a load opcode
+  // matches the instruction latency. 
+  //
+  // FIXME: In the absence of cache misses (i.e. L1I/L1D/iTLB/dTLB hits/misses),
+  // and load/store conflicts, the latency of a load is determined by the depth
+  // of the load pipeline. So, we could use field `LoadLatency` in the
+  // MCSchedModel to model that latency.
+  // Field `LoadLatency` often matches the so-called 'load-to-use' latency from
+  // L1D, and it usually already accounts for any extra latency due to data
+  // forwarding.
+  // When doing throughput analysis, `LoadLatency` is likely to
+  // be a better predictor of load latency than instruction latency. This is
+  // particularly true when simulating code with temporal/spatial locality of
+  // memory accesses.
+  // Using `LoadLatency` (instead of the instruction latency) is also expected
+  // to improve the load queue allocation for long latency instructions with
+  // folded memory operands (See PR39829).
+  //
+  // FIXME: On some processors, load/store operations are split into multiple
+  // uOps. For example, X86 AMD Jaguar natively supports 128-bit data types, but
+  // not 256-bit data types. So, a 256-bit load is effectively split into two
+  // 128-bit loads, and each split load consumes one 'LoadQueue' entry. For
+  // simplicity, this class optimistically assumes that a load instruction only
+  // consumes one entry in the LoadQueue.  Similarly, store instructions only
+  // consume a single entry in the StoreQueue.
+  // In future, we should reassess the quality of this design, and consider
+  // alternative approaches that let instructions specify the number of
+  // load/store queue entries which they consume at dispatch stage (See
+  // PR39830).
   SmallSet<unsigned, 16> LoadQueue;
   SmallSet<unsigned, 16> StoreQueue;
 
@@ -122,8 +161,8 @@ class LSUnit : public HardwareUnit {
   bool isLQFull() const { return LQ_Size != 0 && LoadQueue.size() == LQ_Size; }
 
 public:
-  LSUnit(unsigned LQ = 0, unsigned SQ = 0, bool AssumeNoAlias = false)
-      : LQ_Size(LQ), SQ_Size(SQ), NoAlias(AssumeNoAlias) {}
+  LSUnit(const MCSchedModel &SM, unsigned LQ = 0, unsigned SQ = 0,
+         bool AssumeNoAlias = false);
 
 #ifndef NDEBUG
   void dump() const;
@@ -149,6 +188,15 @@ public:
   // 5. A load has to wait until an older load barrier is fully executed.
   // 6. A store has to wait until an older store barrier is fully executed.
   virtual bool isReady(const InstRef &IR) const;
+
+  // Load and store instructions are tracked by their corresponding queues from
+  // dispatch until the "instruction executed" event.
+  // Only when a load instruction reaches the 'Executed' stage, its value
+  // becomes available to the users. At that point, the load no longer needs to
+  // be tracked by the load queue.
+  // FIXME: For simplicity, we optimistically assume a similar behavior for
+  // store instructions.  In practice, store operation don't tend to leave the
+  // store queue until they reach the 'Retired' stage (See PR39830).
   void onInstructionExecuted(const InstRef &IR);
 };
 

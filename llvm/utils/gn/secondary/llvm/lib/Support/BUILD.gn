@@ -39,6 +39,7 @@ static_library("Support") {
     "BinaryStreamWriter.cpp",
     "BlockFrequency.cpp",
     "BranchProbability.cpp",
+    "BuryPointer.cpp",
     "COM.cpp",
     "CachePruning.cpp",
     "Chrono.cpp",

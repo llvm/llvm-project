@@ -51,6 +51,18 @@ public:
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
+
+    // aext([asz]ext x) -> [asz]ext x
+    unsigned ExtSrc;
+    MachineInstr *ExtMI;
+    if (mi_match(SrcReg, MRI,
+                 m_all_of(m_MInstr(ExtMI), m_any_of(m_GAnyExt(m_Reg(ExtSrc)),
+                                                    m_GSExt(m_Reg(ExtSrc)),
+                                                    m_GZExt(m_Reg(ExtSrc)))))) {
+      Builder.buildInstr(ExtMI->getOpcode(), DstReg, ExtSrc);
+      markInstAndDefDead(MI, *ExtMI, DeadInsts);
+      return true;
+    }
     return tryFoldImplicitDef(MI, DeadInsts);
   }
 

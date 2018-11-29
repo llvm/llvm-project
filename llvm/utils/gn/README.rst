@@ -82,6 +82,24 @@ To not put `BUILD.gn` into the main tree, they are all below
 `utils/gn/secondary`.  For example, the build file for `llvm/lib/Support` is in
 `utils/gn/secondary/llvm/lib/Support`.
 
+.. _Syncing GN files from CMake files:
+
+Syncing GN files from CMake files
+=================================
+
+Sometimes after pulling in the latest changes, the GN build doesn't work.
+Most of the time this is due to someone adding a file to CMakeLists.txt file.
+Run `llvm/utils/gn/build/sync_source_lists_from_cmake.py` to print a report
+of which files need to be added to or removed from `BUILD.gn` files to
+match the corresponding `CMakeLists.txt`. You have to manually read the output
+of the script and implement its suggestions.
+
+If new `CMakeLists.txt` files have been added, you have to manually create
+a new corresponding `BUILD.gn` file below `llvm/utils/gn/secondary/`.
+
+If the dependencies in a `CMakeLists.txt` file have been changed, you have to
+manually analyze and fix.
+
 .. _Philosophy:
 
 Philosophy

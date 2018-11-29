@@ -151,12 +151,12 @@ static cl::opt<bool>
 
 static cl::opt<unsigned>
     LoadQueueSize("lqueue",
-                  cl::desc("Size of the load queue (unbound by default)"),
+                  cl::desc("Size of the load queue"),
                   cl::cat(ToolOptions), cl::init(0));
 
 static cl::opt<unsigned>
     StoreQueueSize("squeue",
-                   cl::desc("Size of the store queue (unbound by default)"),
+                   cl::desc("Size of the store queue"),
                    cl::cat(ToolOptions), cl::init(0));
 
 static cl::opt<bool>

@@ -551,7 +551,8 @@ DISubprogram::DISPFlags DISubprogram::getFlag(StringRef Flag) {
 
 StringRef DISubprogram::getFlagString(DISPFlags Flag) {
   switch (Flag) {
-  case SPFlagVirtuality: // Appease a warning.
+  // Appease a warning.
+  case SPFlagVirtuality:
     return "";
 #define HANDLE_DISP_FLAG(ID, NAME)                                             \
   case SPFlag##NAME:                                                           \

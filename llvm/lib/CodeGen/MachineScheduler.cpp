@@ -41,6 +41,7 @@
 #include "llvm/CodeGen/ScheduleDFS.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -1497,10 +1498,23 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
         return std::make_tuple(BaseOp->getReg(), Offset, SU->NodeNum) <
                std::make_tuple(RHS.BaseOp->getReg(), RHS.Offset,
                                RHS.SU->NodeNum);
-      if (BaseOp->isFI())
-        return std::make_tuple(BaseOp->getIndex(), Offset, SU->NodeNum) <
-               std::make_tuple(RHS.BaseOp->getIndex(), RHS.Offset,
-                               RHS.SU->NodeNum);
+      if (BaseOp->isFI()) {
+        const MachineFunction &MF =
+            *BaseOp->getParent()->getParent()->getParent();
+        const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
+        bool StackGrowsDown = TFI.getStackGrowthDirection() ==
+                              TargetFrameLowering::StackGrowsDown;
+        // Can't use tuple comparison here since we might need to use a
+        // different order when the stack grows down.
+        if (BaseOp->getIndex() != RHS.BaseOp->getIndex())
+          return StackGrowsDown ? BaseOp->getIndex() > RHS.BaseOp->getIndex()
+                                : BaseOp->getIndex() < RHS.BaseOp->getIndex();
+
+        if (Offset != RHS.Offset)
+          return StackGrowsDown ? Offset > RHS.Offset : Offset < RHS.Offset;
+
+        return SU->NodeNum < RHS.SU->NodeNum;
+      }
 
       llvm_unreachable("MemOpClusterMutation only supports register or frame "
                        "index bases.");

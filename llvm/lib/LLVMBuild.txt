@@ -42,7 +42,6 @@ subdirectories =
  TableGen
  Target
  Testing
- TextAPI
  ToolDrivers
  Transforms
  WindowsManifest
