@@ -25,6 +25,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PROTOCOL_H
 
 #include "URI.h"
+#include "index/SymbolID.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <bitset>
