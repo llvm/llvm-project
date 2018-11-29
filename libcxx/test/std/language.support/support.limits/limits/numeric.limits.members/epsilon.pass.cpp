@@ -15,8 +15,6 @@
 #include <cfloat>
 #include <cassert>
 
-#include "test_macros.h"
-
 template <class T>
 void
 test(T expected)
@@ -34,9 +32,6 @@ int main()
     test<signed char>(0);
     test<unsigned char>(0);
     test<wchar_t>(0);
-#if TEST_STD_VER > 17
-    test<char8_t>(0);
-#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<char16_t>(0);
     test<char32_t>(0);

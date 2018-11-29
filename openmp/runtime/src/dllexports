@@ -405,6 +405,7 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_task_reduction_get_th_data   269
 # USED FOR 4.5 __kmpc_critical_with_hint    270
         __kmpc_get_target_offload           271
+	__kmpc_omp_reg_task_with_affinity   272
     %endif
 %endif
 

@@ -14,8 +14,6 @@
 #include <limits>
 #include <cfloat>
 
-#include "test_macros.h"
-
 template <class T, int expected>
 void
 test()
@@ -33,9 +31,6 @@ int main()
     test<signed char, 2>();
     test<unsigned char, 2>();
     test<wchar_t, 2>();
-#if TEST_STD_VER > 17
-    test<char8_t, 2>();
-#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<char16_t, 2>();
     test<char32_t, 2>();
