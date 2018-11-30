@@ -23,6 +23,9 @@ struct OSObject {
   static OSObject *getObject();
   static OSObject *GetObject();
 
+
+  static void * operator new(unsigned long size);
+
   static const OSMetaClass * const metaClass;
 };
 
@@ -61,6 +64,18 @@ struct OtherStruct {
 struct OSMetaClassBase {
   static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
 };
+
+unsigned int check_leak_explicit_new() {
+  OSArray *arr = new OSArray; // expected-note{{Operator new returns an OSObject of type struct OSArray * with a +1 retain count}}
+  return arr->getCount(); // expected-note{{Object leaked: allocated object of type struct OSArray * is not referenced later in this execution path and has a retain count of +1}}
+                          // expected-warning@-1{{Potential leak of an object of type struct OSArray *}}
+}
+
+unsigned int check_leak_factory() {
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to function 'OSArray::withCapacity' returns an OSObject of type struct OSArray * with a +1 retain count}}
+  return arr->getCount(); // expected-note{{Object leaked: object allocated and stored into 'arr' is not referenced later in this execution path and has a retain count of +1}}
+                          // expected-warning@-1{{Potential leak of an object stored into 'arr'}}
+}
 
 void check_get_object() {
   OSObject::getObject();

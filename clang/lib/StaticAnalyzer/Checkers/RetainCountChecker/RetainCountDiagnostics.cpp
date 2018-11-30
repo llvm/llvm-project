@@ -137,6 +137,8 @@ static void generateDiagnosticsForCallLike(
     } else {
       os << "function call";
     }
+  } else if (const auto *NE = dyn_cast<CXXNewExpr>(S)){
+    os << "Operator new";
   } else {
     assert(isa<ObjCMessageExpr>(S));
     CallEventManager &Mgr = CurrSt->getStateManager().getCallEventManager();
