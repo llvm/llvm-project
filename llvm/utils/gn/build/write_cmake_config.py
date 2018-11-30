@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Processes a foo.h.cmake file and writes foo.h.
 
 Takes a list of KEY=VALUE pairs (where VALUE can be empty).

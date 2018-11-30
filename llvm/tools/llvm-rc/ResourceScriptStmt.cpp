@@ -283,5 +283,9 @@ raw_ostream &StyleStmt::log(raw_ostream &OS) const {
   return OS << "Style: " << Value << "\n";
 }
 
+raw_ostream &ExStyleStmt::log(raw_ostream &OS) const {
+  return OS << "ExStyle: " << Value << "\n";
+}
+
 } // namespace rc
 } // namespace llvm

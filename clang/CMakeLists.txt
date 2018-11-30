@@ -103,6 +103,7 @@ if( CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR )
   option(LLVM_FORCE_USE_OLD_HOST_TOOLCHAIN
     "Set to ON to force using an old, unsupported host toolchain." OFF)
   option(CLANG_ENABLE_BOOTSTRAP "Generate the clang bootstrap target" OFF)
+  option(LLVM_ENABLE_LIBXML2 "Use libxml2 if available." ON)
 
   include(AddLLVM)
   include(TableGen)
@@ -198,13 +199,15 @@ endif()
 # we can include cmake files from this directory.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules")
 
-# Don't look for libxml if we're using MSan, since uninstrumented third party
-# code may call MSan interceptors like strlen, leading to false positives.
-if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
-  set (LIBXML2_FOUND 0)
-  find_package(LibXml2 2.5.3 QUIET)
-  if (LIBXML2_FOUND)
-    set(CLANG_HAVE_LIBXML 1)
+if(LLVM_ENABLE_LIBXML2)
+  # Don't look for libxml if we're using MSan, since uninstrumented third party
+  # code may call MSan interceptors like strlen, leading to false positives.
+  if(NOT LLVM_USE_SANITIZER MATCHES "Memory.*")
+    set (LIBXML2_FOUND 0)
+    find_package(LibXml2 2.5.3 QUIET)
+    if (LIBXML2_FOUND)
+      set(CLANG_HAVE_LIBXML 1)
+    endif()
   endif()
 endif()
 

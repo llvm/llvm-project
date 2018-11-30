@@ -98,6 +98,7 @@ int bar(int n){
   // CHECK: define {{.*}}void [[T2:@__omp_offloading_.+template.+l43]](
   //
   // CHECK: {{call|invoke}} void [[T2]]_worker()
+
   //
   // CHECK: call void @__kmpc_kernel_init(
   //
@@ -176,7 +177,7 @@ int bar(int n){
   //
   // CHECK: [[EXIT]]
   // call void @__kmpc_restore_team_static_memory(i16 1)
-  // CHECK: call void @__kmpc_spmd_kernel_deinit(
+  // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
 
   // CHECK: define internal void [[OUTLINED]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i32* dereferenceable{{.+}}, i16* dereferenceable{{.+}})
   //
@@ -286,7 +287,6 @@ int bar(int n){
   // CHECK: [[MAXV:%.+]] = phi i16 [ [[MAX1]], %[[DO_MAX]] ], [ [[MAX2]], %[[MAX_ELSE]] ]
   // CHECK: store i16 [[MAXV]], i16* [[VAR2_LHS]],
   // CHECK: ret void
-
   //
   // Shuffle and reduce function
   // CHECK: define internal void [[PAR_SHUFFLE_REDUCE_FN]](i8*, i16 {{.*}}, i16 {{.*}}, i16 {{.*}})

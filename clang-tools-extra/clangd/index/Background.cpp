@@ -342,7 +342,8 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
   RefSlab Refs;
   auto Action = createStaticIndexingAction(
       IndexOpts, [&](SymbolSlab S) { Symbols = std::move(S); },
-      [&](RefSlab R) { Refs = std::move(R); });
+      [&](RefSlab R) { Refs = std::move(R); },
+      /*IncludeGraphCallback=*/nullptr);
 
   // We're going to run clang here, and it could potentially crash.
   // We could use CrashRecoveryContext to try to make indexing crashes nonfatal,

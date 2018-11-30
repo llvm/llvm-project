@@ -3643,6 +3643,8 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
       auto &Locs = ExternallyUsedValues[Scalar];
       ExternallyUsedValues.insert({Ex, Locs});
       ExternallyUsedValues.erase(Scalar);
+      // Required to update internally referenced instructions.
+      Scalar->replaceAllUsesWith(Ex);
       continue;
     }
 

@@ -2021,24 +2021,6 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     }
   }
 
-  // See if we can determine the result of this select based on a dominating
-  // condition.
-  BasicBlock *Parent = SI.getParent();
-  if (BasicBlock *Dom = Parent->getSinglePredecessor()) {
-    auto *PBI = dyn_cast_or_null<BranchInst>(Dom->getTerminator());
-    if (PBI && PBI->isConditional() &&
-        PBI->getSuccessor(0) != PBI->getSuccessor(1) &&
-        (PBI->getSuccessor(0) == Parent || PBI->getSuccessor(1) == Parent)) {
-      bool CondIsTrue = PBI->getSuccessor(0) == Parent;
-      Optional<bool> Implication = isImpliedCondition(
-          PBI->getCondition(), SI.getCondition(), DL, CondIsTrue);
-      if (Implication) {
-        Value *V = *Implication ? TrueVal : FalseVal;
-        return replaceInstUsesWith(SI, V);
-      }
-    }
-  }
-
   // If we can compute the condition, there's no need for a select.
   // Like the above fold, we are attempting to reduce compile-time cost by
   // putting this fold here with limitations rather than in InstSimplify.

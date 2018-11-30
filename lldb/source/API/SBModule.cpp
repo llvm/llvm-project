@@ -591,3 +591,14 @@ lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
   }
   return sb_addr;
 }
+
+lldb::SBAddress SBModule::GetObjectFileEntryPointAddress() const {
+  lldb::SBAddress sb_addr;
+  ModuleSP module_sp(GetSP());
+  if (module_sp) {
+    ObjectFile *objfile_ptr = module_sp->GetObjectFile();
+    if (objfile_ptr)
+      sb_addr.ref() = objfile_ptr->GetEntryPointAddress();
+  }
+  return sb_addr;
+}

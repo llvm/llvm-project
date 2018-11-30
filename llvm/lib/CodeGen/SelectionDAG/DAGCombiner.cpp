@@ -9722,6 +9722,28 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
 
+  // Narrow a suitable binary operation with a constant operand by moving it
+  // ahead of the truncate. This is limited to pre-legalization because targets
+  // may prefer a wider type during later combines and invert this transform.
+  switch (N0.getOpcode()) {
+  // TODO: Add case for ADD - that will likely require a change in logic here
+  // or target-specific changes to avoid regressions.
+  case ISD::SUB:
+  case ISD::MUL:
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR:
+    // TODO: This should allow vector constants/types too.
+    if (!LegalOperations && N0.hasOneUse() &&
+        (isa<ConstantSDNode>(N0.getOperand(0)) ||
+         isa<ConstantSDNode>(N0.getOperand(1)))) {
+      SDLoc DL(N);
+      SDValue NarrowL = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
+      SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
+      return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
+    }
+  }
+
   return SDValue();
 }
 

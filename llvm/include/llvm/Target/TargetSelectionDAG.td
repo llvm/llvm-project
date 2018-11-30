@@ -630,6 +630,15 @@ class PatFrags<dag ops, list<dag> frags, code pred = [{}],
   code ImmediateCode = [{}];
   SDNodeXForm OperandTransform = xform;
 
+  // When this is set, the PredicateCode may refer to a constant Operands
+  // vector which contains the captured nodes of the DAG, in the order listed
+  // by the Operands field above.
+  //
+  // This is useful when Fragments involves associative / commutative
+  // operators: a single piece of code can easily refer to all operands even
+  // when re-associated / commuted variants of the fragment are matched.
+  bit PredicateCodeUsesOperands = 0;
+
   // Define a few pre-packaged predicates. This helps GlobalISel import
   // existing rules from SelectionDAG for many common cases.
   // They will be tested prior to the code in pred and must not be used in

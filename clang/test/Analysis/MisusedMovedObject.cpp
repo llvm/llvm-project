@@ -688,3 +688,25 @@ void reportSuperClass() {
   c.foo();             // expected-warning {{Method call on a 'moved-from' object 'c'}} expected-note {{Method call on a 'moved-from' object 'c'}}
   C c2 = c;            // no-warning
 }
+
+struct Empty {};
+
+Empty inlinedCall() {
+  // Used to warn because region 'e' failed to be cleaned up because no symbols
+  // have ever died during the analysis and the checkDeadSymbols callback
+  // was skipped entirely.
+  Empty e{};
+  return e; // no-warning
+}
+
+void checkInlinedCallZombies() {
+  while (true)
+    inlinedCall();
+}
+
+void checkLoopZombies() {
+  while (true) {
+    Empty e{};
+    Empty f = std::move(e); // no-warning
+  }
+}

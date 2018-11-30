@@ -8,8 +8,8 @@
 // CHECK: !dbg ![[DBG:.*]]
 // CHECK: !DISubprogram(linkageName: "_GLOBAL__sub_I_globalinit_loc.cpp"
 // CHECK-NOT:           line:
-// CHECK-SAME:          isLocal: true
-// CHECK-SAME:          isDefinition: true
+// CHECK-SAME:          DISPFlagLocalToUnit
+// CHECK-SAME:          DISPFlagDefinition
 // CHECK: ![[DBG]] = !DILocation(line: 0,
 # 99 "someheader.h"
 class A {

@@ -90,7 +90,7 @@ void C::c() {}
 // CHECK: [[LEX2]] = distinct !DILexicalBlock(scope: [[LEX1:![0-9]+]], file: [[FOOCPP]],
 // CHECK: [[LEX1]] = distinct !DILexicalBlock(scope: [[FUNC:![0-9]+]], file: [[FOOCPP]],
 
-// CHECK: [[FUNC:![0-9]+]] = distinct !DISubprogram(name: "func",{{.*}} isDefinition: true
+// CHECK: [[FUNC:![0-9]+]] = distinct !DISubprogram(name: "func",{{.*}} DISPFlagDefinition
 // CHECK: [[M5]] = !DIImportedEntity(tag: DW_TAG_imported_module, scope: [[FUNC]], entity: [[CTXT:![0-9]+]],
 // CHECK: [[M6]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[FOO:![0-9]+]], file: [[FOOCPP]], line: 27)
 // CHECK: [[FOO]] = !DICompositeType(tag: DW_TAG_structure_type, name: "foo",
@@ -103,7 +103,7 @@ void C::c() {}
 
 // CHECK: [[M8]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[F1:![0-9]+]]
 // CHECK: [[F1:![0-9]+]] = distinct !DISubprogram(name: "f1",{{.*}} line: 4
-// CHECK-SAME:                           isDefinition: true
+// CHECK-SAME:                           DISPFlagDefinition
 // CHECK: [[M9]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[I]]
 // CHECK: [[M10]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[BAZ:![0-9]+]]
 // CHECK: [[BAZ]] = !DIDerivedType(tag: DW_TAG_typedef, name: "baz", scope: [[NS]], file: [[FOOCPP]],
@@ -117,9 +117,9 @@ void C::c() {}
 // CHECK-SAME:                          scope: [[NS]], file: [[FOOCPP]], line: 9
 // CHECK: [[M15]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[VAR_FWD:![0-9]+]]
 // CHECK: [[M16]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[FUNC]], entity: [[FUNC_FWD:![0-9]+]]
-// CHECK: [[FUNC_FWD]] = distinct !DISubprogram(name: "func_fwd",{{.*}} line: 53,{{.*}} isDefinition: true
+// CHECK: [[FUNC_FWD]] = distinct !DISubprogram(name: "func_fwd",{{.*}} line: 53,{{.*}} DISPFlagDefinition
 // CHECK: [[M17]] = !DIImportedEntity(tag: DW_TAG_imported_declaration, scope: [[CTXT]], entity: [[I]]
-// CHECK: distinct !DISubprogram(name: "c",{{.*}}, scope: ![[C:[0-9]+]],{{.*}}, line: 60,{{.*}} isDefinition: true
+// CHECK: distinct !DISubprogram(name: "c",{{.*}}, scope: ![[C:[0-9]+]],{{.*}}, line: 60,{{.*}} DISPFlagDefinition
 // CHECK: ![[C]] = !DINamespace(name: "C",
 
 // CHECK-GMLT: [[CU:![0-9]+]] = distinct !DICompileUnit(

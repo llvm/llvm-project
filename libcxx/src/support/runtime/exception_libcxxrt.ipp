@@ -23,19 +23,4 @@ const char* bad_exception::what() const _NOEXCEPT
   return "std::bad_exception";
 }
 
-
-bad_array_length::bad_array_length() _NOEXCEPT
-{
-}
-
-bad_array_length::~bad_array_length() _NOEXCEPT
-{
-}
-
-const char*
-bad_array_length::what() const _NOEXCEPT
-{
-    return "bad_array_length";
-}
-
 } // namespace std

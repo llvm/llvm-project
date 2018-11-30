@@ -4108,25 +4108,6 @@ defm : Neon_mul_widen_patterns<AArch64smull, SMULLv8i8_v8i16,
 defm : Neon_mul_widen_patterns<AArch64umull, UMULLv8i8_v8i16,
   UMULLv4i16_v4i32, UMULLv2i32_v2i64>;
 
-// Patterns for smull2/umull2.
-multiclass Neon_mul_high_patterns<SDPatternOperator opnode,
-  Instruction INST8B, Instruction INST4H, Instruction INST2S> {
-  def : Pat<(v8i16 (opnode (extract_high_v16i8 V128:$Rn),
-                           (extract_high_v16i8 V128:$Rm))),
-             (INST8B V128:$Rn, V128:$Rm)>;
-  def : Pat<(v4i32 (opnode (extract_high_v8i16 V128:$Rn),
-                           (extract_high_v8i16 V128:$Rm))),
-             (INST4H V128:$Rn, V128:$Rm)>;
-  def : Pat<(v2i64 (opnode (extract_high_v4i32 V128:$Rn),
-                           (extract_high_v4i32 V128:$Rm))),
-             (INST2S V128:$Rn, V128:$Rm)>;
-}
-
-defm : Neon_mul_high_patterns<AArch64smull, SMULLv16i8_v8i16,
-  SMULLv8i16_v4i32, SMULLv4i32_v2i64>;
-defm : Neon_mul_high_patterns<AArch64umull, UMULLv16i8_v8i16,
-  UMULLv8i16_v4i32, UMULLv4i32_v2i64>;
-
 // Additional patterns for SMLAL/SMLSL and UMLAL/UMLSL
 multiclass Neon_mulacc_widen_patterns<SDPatternOperator opnode,
   Instruction INST8B, Instruction INST4H, Instruction INST2S> {
@@ -5989,6 +5970,41 @@ def : Pat<(i32 (trunc GPR64sp:$src)),
 
 // __builtin_trap() uses the BRK instruction on AArch64.
 def : Pat<(trap), (BRK 1)>;
+
+// Multiply high patterns which multiply the lower subvector using smull/umull
+// and the upper subvector with smull2/umull2. Then shuffle the high the high
+// part of both results together.
+def : Pat<(v16i8 (mulhs V128:$Rn, V128:$Rm)),
+          (UZP2v16i8
+           (SMULLv8i8_v8i16 (EXTRACT_SUBREG V128:$Rn, dsub),
+                            (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (SMULLv16i8_v8i16 V128:$Rn, V128:$Rm))>;
+def : Pat<(v8i16 (mulhs V128:$Rn, V128:$Rm)),
+          (UZP2v8i16
+           (SMULLv4i16_v4i32 (EXTRACT_SUBREG V128:$Rn, dsub),
+                             (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (SMULLv8i16_v4i32 V128:$Rn, V128:$Rm))>;
+def : Pat<(v4i32 (mulhs V128:$Rn, V128:$Rm)),
+          (UZP2v4i32
+           (SMULLv2i32_v2i64 (EXTRACT_SUBREG V128:$Rn, dsub),
+                             (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (SMULLv4i32_v2i64 V128:$Rn, V128:$Rm))>;
+
+def : Pat<(v16i8 (mulhu V128:$Rn, V128:$Rm)),
+          (UZP2v16i8
+           (UMULLv8i8_v8i16 (EXTRACT_SUBREG V128:$Rn, dsub),
+                            (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (UMULLv16i8_v8i16 V128:$Rn, V128:$Rm))>;
+def : Pat<(v8i16 (mulhu V128:$Rn, V128:$Rm)),
+          (UZP2v8i16
+           (UMULLv4i16_v4i32 (EXTRACT_SUBREG V128:$Rn, dsub),
+                             (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (UMULLv8i16_v4i32 V128:$Rn, V128:$Rm))>;
+def : Pat<(v4i32 (mulhu V128:$Rn, V128:$Rm)),
+          (UZP2v4i32
+           (UMULLv2i32_v2i64 (EXTRACT_SUBREG V128:$Rn, dsub),
+                             (EXTRACT_SUBREG V128:$Rm, dsub)),
+           (UMULLv4i32_v2i64 V128:$Rn, V128:$Rm))>;
 
 // Conversions within AdvSIMD types in the same register size are free.
 // But because we need a consistent lane ordering, in big endian many

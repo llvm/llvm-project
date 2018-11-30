@@ -96,7 +96,7 @@
 
 
 #define FOREACH_KMP_MUTEX_IMPL(macro)                                                \
-    macro (ompt_mutex_impl_unknown, 0)     /* unknown implementation */              \
+    macro (ompt_mutex_impl_none, 0)        /* unknown implementation */              \
     macro (kmp_mutex_impl_spin, 1)         /* based on spin */                       \
     macro (kmp_mutex_impl_queuing, 2)      /* based on some fair policy */           \
     macro (kmp_mutex_impl_speculative, 3)  /* based on HW-supported speculation */

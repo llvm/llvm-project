@@ -33,7 +33,7 @@ define i8 @sub_zext_cmp_mask_narrower_result(i32 %x) {
 ; CHECK-LABEL: sub_zext_cmp_mask_narrower_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    orb $46, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
@@ -77,7 +77,7 @@ define i8 @add_zext_cmp_mask_narrower_result(i32 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_narrower_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    xorb $43, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
@@ -159,7 +159,7 @@ define i8 @low_bit_select_constants_bigger_true_narrower_result(i16 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_narrower_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    xorb $41, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq

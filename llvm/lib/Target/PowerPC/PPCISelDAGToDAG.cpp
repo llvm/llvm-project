@@ -4832,6 +4832,15 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       case PPC::PRED_NE: Opc = PPC::CRXOR;  Swap = false; break;
       }
 
+      // A signed comparison of i1 values produces the opposite result to an
+      // unsigned one if the condition code includes less-than or greater-than.
+      // This is because 1 is the most negative signed i1 number and the most
+      // positive unsigned i1 number. The CR-logical operations used for such
+      // comparisons are non-commutative so for signed comparisons vs. unsigned
+      // ones, the input operands just need to be swapped.
+      if (ISD::isSignedIntSetCC(CC))
+        Swap = !Swap;
+
       SDValue BitComp(CurDAG->getMachineNode(Opc, dl, MVT::i1,
                                              N->getOperand(Swap ? 3 : 2),
                                              N->getOperand(Swap ? 2 : 3)), 0);

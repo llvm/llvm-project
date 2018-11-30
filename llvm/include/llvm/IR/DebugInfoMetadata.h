@@ -1620,9 +1620,21 @@ public:
 #define HANDLE_DISP_FLAG(ID, NAME) SPFlag##NAME = ID,
 #define DISP_FLAG_LARGEST_NEEDED
 #include "llvm/IR/DebugInfoFlags.def"
-    SPFlagVirtuality = SPFlagNonvirtual | SPFlagVirtual | SPFlagPureVirtual,
+    SPFlagNonvirtual = SPFlagZero,
+    SPFlagVirtuality = SPFlagVirtual | SPFlagPureVirtual,
     LLVM_MARK_AS_BITMASK_ENUM(SPFlagLargest)
   };
+
+  static DISPFlags getFlag(StringRef Flag);
+  static StringRef getFlagString(DISPFlags Flag);
+
+  /// Split up a flags bitfield for easier printing.
+  ///
+  /// Split \c Flags into \c SplitFlags, a vector of its components.  Returns
+  /// any remaining (unrecognized) bits.
+  static DISPFlags splitFlags(DISPFlags Flags,
+                              SmallVectorImpl<DISPFlags> &SplitFlags);
+
   // Helper for converting old bitfields to new flags word.
   static DISPFlags toSPFlags(bool IsLocalToUnit, bool IsDefinition,
                              bool IsOptimized,

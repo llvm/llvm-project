@@ -461,8 +461,24 @@ atomic constructs. Here are some lowerings it can do:
 * atomic rmw -> loop with cmpxchg or load-linked/store-conditional
   by overriding ``expandAtomicRMWInIR()``
 * expansion to __atomic_* libcalls for unsupported sizes.
+* part-word atomicrmw/cmpxchg -> target-specific intrinsic by overriding
+  ``shouldExpandAtomicRMWInIR``, ``emitMaskedAtomicRMWIntrinsic``,
+  ``shouldExpandAtomicCmpXchgInIR``, and ``emitMaskedAtomicCmpXchgIntrinsic``.
 
-For an example of all of these, look at the ARM backend.
+For an example of these look at the ARM (first five lowerings) or RISC-V (last
+lowering) backend.
+
+AtomicExpandPass supports two strategies for lowering atomicrmw/cmpxchg to
+load-linked/store-conditional (LL/SC) loops. The first expands the LL/SC loop
+in IR, calling target lowering hooks to emit intrinsics for the LL and SC
+operations. However, many architectures have strict requirements for LL/SC
+loops to ensure forward progress, such as restrictions on the number and type
+of instructions in the loop. It isn't possible to enforce these restrictions
+when the loop is expanded in LLVM IR, and so affected targets may prefer to
+expand to LL/SC loops at a very late stage (i.e. after register allocation).
+AtomicExpandPass can help support lowering of part-word atomicrmw or cmpxchg
+using this strategy by producing IR for any shifting and masking that can be
+performed outside of the LL/SC loop.
 
 Libcalls: __atomic_*
 ====================

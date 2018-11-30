@@ -1454,6 +1454,32 @@ static codeview::CPUType toCodeViewMachine(COFF::MachineTypes Machine) {
   }
 }
 
+// Mimic MSVC which surrounds arguments containing whitespace with quotes.
+// Double double-quotes are handled, so that the resulting string can be
+// executed again on the cmd-line.
+static std::string quote(ArrayRef<StringRef> Args) {
+  std::string R;
+  R.reserve(256);
+  for (StringRef A : Args) {
+    if (!R.empty())
+      R.push_back(' ');
+    bool HasWS = A.find(' ') != StringRef::npos;
+    bool HasQ = A.find('"') != StringRef::npos;
+    if (HasWS || HasQ)
+      R.push_back('"');
+    if (HasQ) {
+      SmallVector<StringRef, 4> S;
+      A.split(S, '"');
+      R.append(join(S, "\"\""));
+    } else {
+      R.append(A);
+    }
+    if (HasWS || HasQ)
+      R.push_back('"');
+  }
+  return R;
+}
+
 static void addCommonLinkerModuleSymbols(StringRef Path,
                                          pdb::DbiModuleDescriptorBuilder &Mod,
                                          BumpPtrAllocator &Allocator) {
@@ -1489,7 +1515,7 @@ static void addCommonLinkerModuleSymbols(StringRef Path,
   CS.setLanguage(SourceLanguage::Link);
 
   ArrayRef<StringRef> Args = makeArrayRef(Config->Argv).drop_front();
-  std::string ArgStr = llvm::join(Args, " ");
+  std::string ArgStr = quote(Args);
   EBS.Fields.push_back("cwd");
   SmallString<64> cwd;
   if (Config->PDBSourcePath.empty()) 

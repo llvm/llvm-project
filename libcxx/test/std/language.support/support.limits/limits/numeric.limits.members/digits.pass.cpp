@@ -14,6 +14,8 @@
 #include <limits>
 #include <cfloat>
 
+#include "test_macros.h"
+
 template <class T, int expected>
 void
 test()
@@ -31,6 +33,9 @@ int main()
     test<signed char, 7>();
     test<unsigned char, 8>();
     test<wchar_t, std::numeric_limits<wchar_t>::is_signed ? sizeof(wchar_t)*8-1 : sizeof(wchar_t)*8>();
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
+    test<char8_t, 8>();
+#endif
 #ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
     test<char16_t, 16>();
     test<char32_t, 32>();

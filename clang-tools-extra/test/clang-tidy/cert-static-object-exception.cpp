@@ -260,4 +260,16 @@ auto Okay4 = []{ U u; return u.getBadLambda(); }();
 auto NotOkay3 = []() noexcept { U u; return u.getBadLambda(); }()(); // Because the lambda returned and called is not noexcept
 // CHECK-EXCEPTIONS: :[[@LINE-1]]:6: warning: initialization of 'NotOkay3' with static storage duration may throw an exception that cannot be caught [cert-err58-cpp]
 // CHECK-EXCEPTIONS: :[[@LINE-6]]:12: note: possibly throwing function declared here
+
+#ifndef NONEXCEPTIONS
+struct Bad {
+  Bad() {
+    throw 12;
+  }
+};
+
+static auto NotOkay4 = [bad = Bad{}](){};
+// FIXME: the above should be diagnosed because the capture init can trigger
+// an exception when constructing the Bad object.
+#endif // NONEXCEPTIONS
 }

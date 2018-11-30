@@ -198,7 +198,7 @@ public:
     auto &CZFactory = State->get_context<ConstraintSMT>();
 
     for (auto I = CZ.begin(), E = CZ.end(); I != E; ++I) {
-      if (SymReaper.maybeDead(I->first))
+      if (SymReaper.isDead(I->first))
         CZ = CZFactory.remove(CZ, *I);
     }
 

@@ -559,3 +559,54 @@ define <2 x i64> @shrunkblend_nonvselectuse(<2 x i1> %cond, <2 x i64> %a, <2 x i
   ret <2 x i64> %z
 }
 
+; This turns into a SHRUNKBLEND with SSE4 or later, and via
+; late shuffle magic, both sides of the blend are the same
+; value. If that is not simplified before isel, it can fail
+; to match (crash).
+
+define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
+; SSE2-LABEL: simplify_select:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
+; SSE2-NEXT:    psllq $63, %xmm0
+; SSE2-NEXT:    psrad $31, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    movq %rdi, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,1,0,1]
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm1[0]
+; SSE2-NEXT:    pand %xmm0, %xmm2
+; SSE2-NEXT:    pandn %xmm3, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: simplify_select:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
+; SSE41-NEXT:    movq %rdi, %xmm0
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: simplify_select:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    # kill: def $edi killed $edi def $rdi
+; AVX1-NEXT:    vmovq %rdi, %xmm0
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: simplify_select:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    # kill: def $edi killed $edi def $rdi
+; AVX2-NEXT:    vmovq %rdi, %xmm0
+; AVX2-NEXT:    vpbroadcastq %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %a = insertelement <2 x i32> <i32 0, i32 undef>, i32 %x, i32 1
+  %b = insertelement <2 x i32> <i32 undef, i32 0>, i32 %x, i32 0
+  %y = or <2 x i32> %a, %b
+  %p16 = extractelement <2 x i32> %y, i32 1
+  %p17 = insertelement <2 x i32> undef, i32 %p16, i32 0
+  %p18 = insertelement <2 x i32> %p17, i32 %x, i32 1
+  %r = select <2 x i1> %z, <2 x i32> %y, <2 x i32> %p18
+  ret <2 x i32> %r
+}
+

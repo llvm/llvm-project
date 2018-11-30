@@ -514,6 +514,11 @@ Error ResourceFileWriter::visitCharacteristicsStmt(
   return Error::success();
 }
 
+Error ResourceFileWriter::visitExStyleStmt(const ExStyleStmt *Stmt) {
+  ObjectData.ExStyle = Stmt->Value;
+  return Error::success();
+}
+
 Error ResourceFileWriter::visitFontStmt(const FontStmt *Stmt) {
   RETURN_IF_ERROR(checkNumberFits<uint16_t>(Stmt->Size, "Font size"));
   RETURN_IF_ERROR(checkNumberFits<uint16_t>(Stmt->Weight, "Font weight"));
@@ -1065,6 +1070,7 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
     UsedStyle |= StyleCaptionFlag;
 
   const uint16_t DialogExMagic = 0xFFFF;
+  uint32_t ExStyle = ObjectData.ExStyle.getValueOr(0);
 
   // Write DIALOG(EX) header prefix. These are pretty different.
   if (!Res->IsExtended) {
@@ -1083,7 +1089,7 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
       ulittle32_t Style;
       ulittle32_t ExtStyle;
     } Prefix{ulittle32_t(UsedStyle),
-             ulittle32_t(0)}; // As of now, we don't keep EXSTYLE.
+             ulittle32_t(ExStyle)};
 
     writeObject(Prefix);
   } else {
@@ -1094,7 +1100,7 @@ Error ResourceFileWriter::writeDialogBody(const RCResource *Base) {
       ulittle32_t ExtStyle;
       ulittle32_t Style;
     } Prefix{ulittle16_t(1), ulittle16_t(DialogExMagic),
-             ulittle32_t(Res->HelpID), ulittle32_t(0), ulittle32_t(UsedStyle)};
+             ulittle32_t(Res->HelpID), ulittle32_t(ExStyle), ulittle32_t(UsedStyle)};
 
     writeObject(Prefix);
   }

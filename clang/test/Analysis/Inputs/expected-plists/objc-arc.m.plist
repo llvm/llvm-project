@@ -1727,12 +1727,12 @@
      </dict>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object is not referenced later in this execution path and has a retain count of +1</string>
+     <string>Object leaked: allocated object of type CFStringRef is not referenced later in this execution path and has a retain count of +1</string>
      <key>message</key>
-     <string>Object leaked: allocated object is not referenced later in this execution path and has a retain count of +1</string>
+     <string>Object leaked: allocated object of type CFStringRef is not referenced later in this execution path and has a retain count of +1</string>
     </dict>
    </array>
-   <key>description</key><string>Potential leak of an object</string>
+   <key>description</key><string>Potential leak of an object of type CFStringRef</string>
    <key>category</key><string>Memory (Core Foundation/Objective-C)</string>
    <key>type</key><string>Leak</string>
    <key>check_name</key><string>osx.cocoa.RetainCount</string>

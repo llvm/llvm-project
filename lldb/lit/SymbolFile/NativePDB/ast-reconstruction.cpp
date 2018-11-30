@@ -92,11 +92,11 @@ Anonymous<A::B::C<int>>::D AnonABCVoidD;
 // CHECK: (TrivialE) TE = TE_A
 // CHECK: (A::B::C<int>) ABCInt = (ABCMember = 0)
 // CHECK: (A::B::C<float>) ABCFloat = (ABCMember = 0)
-// CHECK: (A::B::C<void>) ABCVoid = (ABCSpecializationMember = 0x0000000000000000)
+// CHECK: (A::B::C<void>) ABCVoid = (ABCSpecializationMember = 0x{{0+}})
 // CHECK: (A::C<0>) AC0 = {}
 // CHECK: (A::C<-1>) ACNeg1 = {}
-// CHECK: (A::C<0>::D) AC0D = (ACDMember = 0, CPtr = 0x0000000000000000)
-// CHECK: (A::C<-1>::D) ACNeg1D = (ACDMember = 0, CPtr = 0x0000000000000000)
+// CHECK: (A::C<0>::D) AC0D = (ACDMember = 0, CPtr = 0x{{0+}})
+// CHECK: (A::C<-1>::D) ACNeg1D = (ACDMember = 0, CPtr = 0x{{0+}})
 // CHECK: (A::D) AD = {}
 // CHECK: (A::D::E) ADE = (ADDMember = 0)
 // CHECK: Dumping clang ast for 1 modules.

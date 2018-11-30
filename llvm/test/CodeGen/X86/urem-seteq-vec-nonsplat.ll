@@ -629,12 +629,12 @@ define <4 x i32> @test_urem_both(<4 x i32> %X) nounwind readnone {
 ;
 ; CHECK-AVX1-LABEL: test_urem_both:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vmovddup {{.*#+}} xmm1 = [-9.255967385052751E+61,-9.255967385052751E+61]
-; CHECK-AVX1-NEXT:    # xmm1 = mem[0,0]
+; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,3435973837]
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
 ; CHECK-AVX1-NEXT:    vpmuludq %xmm1, %xmm0, %xmm1
 ; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
-; CHECK-AVX1-NEXT:    vpmuludq {{.*}}(%rip), %xmm2, %xmm2
 ; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; CHECK-AVX1-NEXT:    vpsrld $2, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
@@ -645,7 +645,7 @@ define <4 x i32> @test_urem_both(<4 x i32> %X) nounwind readnone {
 ;
 ; CHECK-AVX2-LABEL: test_urem_both:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [14757395262689946283,14757395262689946283]
+; CHECK-AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,3435973837]
 ; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; CHECK-AVX2-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
@@ -661,7 +661,7 @@ define <4 x i32> @test_urem_both(<4 x i32> %X) nounwind readnone {
 ;
 ; CHECK-AVX512VL-LABEL: test_urem_both:
 ; CHECK-AVX512VL:       # %bb.0:
-; CHECK-AVX512VL-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [14757395262689946283,14757395262689946283]
+; CHECK-AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [2863311531,3435973837,2863311531,3435973837]
 ; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; CHECK-AVX512VL-NEXT:    vpmuludq %xmm2, %xmm3, %xmm2
