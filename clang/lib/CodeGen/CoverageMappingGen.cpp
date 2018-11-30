@@ -552,6 +552,15 @@ struct CounterCoverageMappingBuilder
     completeDeferred(Count, DeferredEndLoc);
   }
 
+  size_t locationDepth(SourceLocation Loc) {
+    size_t Depth = 0;
+    while (Loc.isValid()) {
+      Loc = getIncludeOrExpansionLoc(Loc);
+      Depth++;
+    }
+    return Depth;
+  }
+
   /// Pop regions from the stack into the function's list of regions.
   ///
   /// Adds all regions from \c ParentIndex to the top of the stack to the
@@ -566,19 +575,41 @@ struct CounterCoverageMappingBuilder
         SourceLocation EndLoc = Region.hasEndLoc()
                                     ? Region.getEndLoc()
                                     : RegionStack[ParentIndex].getEndLoc();
+        size_t StartDepth = locationDepth(StartLoc);
+        size_t EndDepth = locationDepth(EndLoc);
         while (!SM.isWrittenInSameFile(StartLoc, EndLoc)) {
-          // The region ends in a nested file or macro expansion. Create a
-          // separate region for each expansion.
-          SourceLocation NestedLoc = getStartOfFileOrMacro(EndLoc);
-          assert(SM.isWrittenInSameFile(NestedLoc, EndLoc));
+          bool UnnestStart = StartDepth >= EndDepth;
+          bool UnnestEnd = EndDepth >= StartDepth;
+          if (UnnestEnd) {
+            // The region ends in a nested file or macro expansion. Create a
+            // separate region for each expansion.
+            SourceLocation NestedLoc = getStartOfFileOrMacro(EndLoc);
+            assert(SM.isWrittenInSameFile(NestedLoc, EndLoc));
 
-          if (!isRegionAlreadyAdded(NestedLoc, EndLoc))
-            SourceRegions.emplace_back(Region.getCounter(), NestedLoc, EndLoc);
+            if (!isRegionAlreadyAdded(NestedLoc, EndLoc))
+              SourceRegions.emplace_back(Region.getCounter(), NestedLoc, EndLoc);
 
-          EndLoc = getPreciseTokenLocEnd(getIncludeOrExpansionLoc(EndLoc));
-          if (EndLoc.isInvalid())
-            llvm::report_fatal_error("File exit not handled before popRegions");
+            EndLoc = getPreciseTokenLocEnd(getIncludeOrExpansionLoc(EndLoc));
+            if (EndLoc.isInvalid())
+              llvm::report_fatal_error("File exit not handled before popRegions");
+            EndDepth--;
+          }
+          if (UnnestStart) {
+            // The region begins in a nested file or macro expansion. Create a
+            // separate region for each expansion.
+            SourceLocation NestedLoc = getEndOfFileOrMacro(StartLoc);
+            assert(SM.isWrittenInSameFile(StartLoc, NestedLoc));
+
+            if (!isRegionAlreadyAdded(StartLoc, NestedLoc))
+              SourceRegions.emplace_back(Region.getCounter(), StartLoc, NestedLoc);
+
+            StartLoc = getIncludeOrExpansionLoc(StartLoc);
+            if (StartLoc.isInvalid())
+              llvm::report_fatal_error("File exit not handled before popRegions");
+            StartDepth--;
+          }
         }
+        Region.setStartLoc(StartLoc);
         Region.setEndLoc(EndLoc);
 
         MostRecentLocation = EndLoc;
@@ -625,12 +656,15 @@ struct CounterCoverageMappingBuilder
     return RegionStack.back();
   }
 
-  /// Propagate counts through the children of \c S.
-  Counter propagateCounts(Counter TopCount, const Stmt *S) {
+  /// Propagate counts through the children of \p S if \p VisitChildren is true.
+  /// Otherwise, only emit a count for \p S itself.
+  Counter propagateCounts(Counter TopCount, const Stmt *S,
+                          bool VisitChildren = true) {
     SourceLocation StartLoc = getStart(S);
     SourceLocation EndLoc = getEnd(S);
     size_t Index = pushRegion(TopCount, StartLoc, EndLoc);
-    Visit(S);
+    if (VisitChildren)
+      Visit(S);
     Counter ExitCount = getRegion().getCounter();
     popRegions(Index);
 
@@ -843,7 +877,16 @@ struct CounterCoverageMappingBuilder
     if (Body && SM.isInSystemHeader(SM.getSpellingLoc(getStart(Body))))
       return;
 
-    propagateCounts(getRegionCounter(Body), Body);
+    // Do not visit the artificial children nodes of defaulted methods. The
+    // lexer may not be able to report back precise token end locations for
+    // these children nodes (llvm.org/PR39822), and moreover users will not be
+    // able to see coverage for them.
+    bool Defaulted = false;
+    if (auto *Method = dyn_cast<CXXMethodDecl>(D))
+      Defaulted = Method->isDefaulted();
+
+    propagateCounts(getRegionCounter(Body), Body,
+                    /*VisitChildren=*/!Defaulted);
     assert(RegionStack.empty() && "Regions entered but never exited");
 
     // Discard the last uncompleted deferred region in a decl, if one exists.
