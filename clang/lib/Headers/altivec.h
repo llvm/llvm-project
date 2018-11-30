@@ -16353,67 +16353,82 @@ vec_revb(vector unsigned __int128 __a) {
 
 /* vec_xl */
 
+typedef vector signed char unaligned_vec_schar __attribute__((aligned(1)));
+typedef vector unsigned char unaligned_vec_uchar __attribute__((aligned(1)));
+typedef vector signed short unaligned_vec_sshort __attribute__((aligned(1)));
+typedef vector unsigned short unaligned_vec_ushort __attribute__((aligned(1)));
+typedef vector signed int unaligned_vec_sint __attribute__((aligned(1)));
+typedef vector unsigned int unaligned_vec_uint __attribute__((aligned(1)));
+typedef vector float unaligned_vec_float __attribute__((aligned(1)));
+
 static inline __ATTRS_o_ai vector signed char vec_xl(signed long long __offset,
                                                      signed char *__ptr) {
-  return *(vector signed char *)(__ptr + __offset);
+  return *(unaligned_vec_schar *)(__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai vector unsigned char
 vec_xl(signed long long __offset, unsigned char *__ptr) {
-  return *(vector unsigned char *)(__ptr + __offset);
+  return *(unaligned_vec_uchar*)(__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai vector signed short vec_xl(signed long long __offset,
                                                       signed short *__ptr) {
-  return *(vector signed short *)(__ptr + __offset);
+  return *(unaligned_vec_sshort *)(__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai vector unsigned short
 vec_xl(signed long long __offset, unsigned short *__ptr) {
-  return *(vector unsigned short *)(__ptr + __offset);
+  return *(unaligned_vec_ushort *)(__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai vector signed int vec_xl(signed long long __offset,
                                                     signed int *__ptr) {
-  return *(vector signed int *)(__ptr + __offset);
+  return *(unaligned_vec_sint *)(__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai vector unsigned int vec_xl(signed long long __offset,
                                                       unsigned int *__ptr) {
-  return *(vector unsigned int *)(__ptr + __offset);
+  return *(unaligned_vec_uint *)(__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai vector float vec_xl(signed long long __offset,
                                                float *__ptr) {
-  return *(vector float *)(__ptr + __offset);
+  return *(unaligned_vec_float *)(__ptr + __offset);
 }
 
 #ifdef __VSX__
+typedef vector signed long long unaligned_vec_sll __attribute__((aligned(1)));
+typedef vector unsigned long long unaligned_vec_ull __attribute__((aligned(1)));
+typedef vector double unaligned_vec_double __attribute__((aligned(1)));
+
 static inline __ATTRS_o_ai vector signed long long
 vec_xl(signed long long __offset, signed long long *__ptr) {
-  return *(vector signed long long *)(__ptr + __offset);
+  return *(unaligned_vec_sll *)(__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai vector unsigned long long
 vec_xl(signed long long __offset, unsigned long long *__ptr) {
-  return *(vector unsigned long long *)(__ptr + __offset);
+  return *(unaligned_vec_ull *)(__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai vector double vec_xl(signed long long __offset,
                                                 double *__ptr) {
-  return *(vector double *)(__ptr + __offset);
+  return *(unaligned_vec_double *)(__ptr + __offset);
 }
 #endif
 
 #if defined(__POWER8_VECTOR__) && defined(__powerpc64__)
+typedef vector signed __int128 unaligned_vec_si128 __attribute__((aligned(1)));
+typedef vector unsigned __int128 unaligned_vec_ui128
+    __attribute__((aligned(1)));
 static inline __ATTRS_o_ai vector signed __int128
 vec_xl(signed long long __offset, signed __int128 *__ptr) {
-  return *(vector signed __int128 *)(__ptr + __offset);
+  return *(unaligned_vec_si128 *)(__ptr + __offset);
 }
 
 static inline __ATTRS_o_ai vector unsigned __int128
 vec_xl(signed long long __offset, unsigned __int128 *__ptr) {
-  return *(vector unsigned __int128 *)(__ptr + __offset);
+  return *(unaligned_vec_ui128 *)(__ptr + __offset);
 }
 #endif
 
@@ -16498,62 +16513,62 @@ vec_xl_be(signed long long  __offset, unsigned __int128 *__ptr) {
 static inline __ATTRS_o_ai void vec_xst(vector signed char __vec,
                                         signed long long __offset,
                                         signed char *__ptr) {
-  *(vector signed char *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_schar *)(__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void vec_xst(vector unsigned char __vec,
                                         signed long long __offset,
                                         unsigned char *__ptr) {
-  *(vector unsigned char *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_uchar *)(__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void vec_xst(vector signed short __vec,
                                         signed long long __offset,
                                         signed short *__ptr) {
-  *(vector signed short *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_sshort *)(__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void vec_xst(vector unsigned short __vec,
                                         signed long long __offset,
                                         unsigned short *__ptr) {
-  *(vector unsigned short *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_ushort *)(__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void vec_xst(vector signed int __vec,
                                         signed long long __offset,
                                         signed int *__ptr) {
-  *(vector signed int *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_sint *)(__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void vec_xst(vector unsigned int __vec,
                                         signed long long __offset,
                                         unsigned int *__ptr) {
-  *(vector unsigned int *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_uint *)(__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void vec_xst(vector float __vec,
                                         signed long long __offset,
                                         float *__ptr) {
-  *(vector float *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_float *)(__ptr + __offset) = __vec;
 }
 
 #ifdef __VSX__
 static inline __ATTRS_o_ai void vec_xst(vector signed long long __vec,
                                         signed long long __offset,
                                         signed long long *__ptr) {
-  *(vector signed long long *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_sll *)(__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void vec_xst(vector unsigned long long __vec,
                                         signed long long __offset,
                                         unsigned long long *__ptr) {
-  *(vector unsigned long long *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_ull *)(__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void vec_xst(vector double __vec,
                                         signed long long __offset,
                                         double *__ptr) {
-  *(vector double *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_double *)(__ptr + __offset) = __vec;
 }
 #endif
 
@@ -16561,13 +16576,13 @@ static inline __ATTRS_o_ai void vec_xst(vector double __vec,
 static inline __ATTRS_o_ai void vec_xst(vector signed __int128 __vec,
                                         signed long long __offset,
                                         signed __int128 *__ptr) {
-  *(vector signed __int128 *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_si128 *)(__ptr + __offset) = __vec;
 }
 
 static inline __ATTRS_o_ai void vec_xst(vector unsigned __int128 __vec,
                                         signed long long __offset,
                                         unsigned __int128 *__ptr) {
-  *(vector unsigned __int128 *)(__ptr + __offset) = __vec;
+  *(unaligned_vec_ui128 *)(__ptr + __offset) = __vec;
 }
 #endif
 
