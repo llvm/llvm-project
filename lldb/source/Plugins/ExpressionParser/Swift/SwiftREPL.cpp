@@ -537,8 +537,6 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
   // our own copy of the AST and using this separate AST for completion.
   //----------------------------------------------------------------------
   Status error;
-#define USE_SEPARATE_AST_FOR_COMPLETION
-#if defined(USE_SEPARATE_AST_FOR_COMPLETION)
   if (!m_swift_ast_sp) {
     SwiftASTContext *target_swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(
         m_target.GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift));
@@ -546,9 +544,6 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
       m_swift_ast_sp.reset(new SwiftASTContext(*target_swift_ast));
   }
   SwiftASTContext *swift_ast = m_swift_ast_sp.get();
-#else
-  SwiftASTContext *swift_ast = m_target.GetScratchSwiftASTContext(error);
-#endif
 
   if (swift_ast) {
     swift::ASTContext *ast = swift_ast->GetASTContext();

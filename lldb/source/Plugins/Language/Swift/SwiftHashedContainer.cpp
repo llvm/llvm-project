@@ -24,6 +24,9 @@
 #include "Plugins/Language/ObjC/NSDictionary.h"
 
 #include "swift/AST/ASTContext.h"
+#include "swift/AST/Types.h"
+#include "swift/Remote/RemoteAddress.h"
+#include "swift/RemoteAST/RemoteAST.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <algorithm>
@@ -440,14 +443,36 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
   if (!key_type)
     return;
 
+  m_process = m_storage->GetProcessSP().get();
+  if (!m_process)
+    return;
+
   if (value_type) {
     m_value_stride = value_type.GetByteStride();
     if (SwiftASTContext *swift_ast =
             llvm::dyn_cast_or_null<SwiftASTContext>(key_type.GetTypeSystem())) {
+      auto scratch_ctx_reader = nativeStorage_sp->GetScratchSwiftASTContext();
+      auto scratch_ctx = scratch_ctx_reader.get();
+      if (!scratch_ctx)
+        return;
+      auto *runtime = m_process->GetSwiftLanguageRuntime();
+      if (!runtime)
+        return;
       std::vector<SwiftASTContext::TupleElement> tuple_elements{
           {g_key, key_type}, {g_value, value_type}};
       m_element_type = swift_ast->CreateTupleType(tuple_elements);
+      auto *swift_type = reinterpret_cast<::swift::TypeBase *>(
+          m_element_type.GetCanonicalType().GetOpaqueQualType());
       m_key_stride_padded = m_element_type.GetByteStride() - m_value_stride;
+      uint64_t offset = m_key_stride_padded;
+      if (llvm::isa<::swift::TupleType>(swift_type)) {
+        auto &remote_ast = runtime->GetRemoteASTContext(*scratch_ctx);
+        ::swift::remote::RemoteAddress optmeta(nullptr);
+        ::swift::remoteAST::Result<uint64_t> result =
+            remote_ast.getOffsetOfMember(swift_type, optmeta, "1");
+        if (result)
+          m_key_stride_padded = result.getValue();
+      }
     }
   } else {
     m_element_type = key_type;
@@ -456,9 +481,6 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
   if (!m_element_type)
     return;
 
-  m_process = m_storage->GetProcessSP().get();
-  if (!m_process)
-    return;
 
   m_ptr_size = m_process->GetAddressByteSize();
 
