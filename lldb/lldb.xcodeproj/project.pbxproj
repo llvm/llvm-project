@@ -9972,6 +9972,7 @@
 					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
 					"-lLLVMOption",
 					"-lLLVMSupport",
+					"-lLLVMDemangle",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"$(inherited)",
@@ -9981,6 +9982,7 @@
 					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
 					"-lLLVMOption",
 					"-lLLVMSupport",
+					"-lLLVMDemangle",
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path/../../Library/PrivateFrameworks",
 					"-Wl,-rpath,@loader_path/../../../SharedFrameworks",
@@ -10588,6 +10590,7 @@
 					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
 					"-lLLVMOption",
 					"-lLLVMSupport",
+					"-lLLVMDemangle",
 				);
 				PRODUCT_NAME = lldb;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include ${LLDB_BUILD_DIR}/include";
@@ -10745,6 +10748,7 @@
 					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
 					"-lLLVMOption",
 					"-lLLVMSupport",
+					"-lLLVMDemangle",
 				);
 				PRODUCT_NAME = lldb;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
