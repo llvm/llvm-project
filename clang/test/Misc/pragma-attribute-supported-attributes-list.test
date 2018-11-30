@@ -2,8 +2,7 @@
 
 // The number of supported attributes should never go down!
 
-// Swift has 7 additional attributes
-// CHECK: #pragma clang attribute supports 80 attributes:
+// CHECK: #pragma clang attribute supports 133 attributes:
 // CHECK-NEXT: AMDGPUFlatWorkGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumSGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumVGPR (SubjectMatchRule_function)
@@ -52,8 +51,8 @@
 // CHECK-NEXT: NoThrow (SubjectMatchRule_function)
 // CHECK-NEXT: NotTailCalled (SubjectMatchRule_function)
 // CHECK-NEXT: OSConsumed (SubjectMatchRule_variable_is_parameter)
-// CHECK-NEXT: OSReturnsNotRetained (SubjectMatchRule_function, SubjectMatchRule_objc_method)
-// CHECK-NEXT: OSReturnsRetained (SubjectMatchRule_function, SubjectMatchRule_objc_method)
+// CHECK-NEXT: OSReturnsNotRetained (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property)
+// CHECK-NEXT: OSReturnsRetained (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property)
 // CHECK-NEXT: ObjCBoxable (SubjectMatchRule_record)
 // CHECK-NEXT: ObjCMethodFamily (SubjectMatchRule_objc_method)
 // CHECK-NEXT: ObjCRequiresSuper (SubjectMatchRule_objc_method)
