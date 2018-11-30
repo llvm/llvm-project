@@ -37,6 +37,8 @@ namespace lldb_private {
 /// 0-based counter for naming result variables.
 //----------------------------------------------------------------------
 class SwiftPersistentExpressionState : public PersistentExpressionState {
+  typedef std::set<lldb_private::ConstString> HandLoadedModuleSet;
+
 public:
   class SwiftDeclMap {
   public:
@@ -111,15 +113,8 @@ public:
     m_hand_loaded_modules.insert(module_name);
   }
 
-  using HandLoadedModuleCallback = std::function<bool(const ConstString)>;
-
-  bool RunOverHandLoadedModules(HandLoadedModuleCallback callback) {
-    for (ConstString name : m_hand_loaded_modules) {
-      if (!callback(name))
-        return false;
-    }
-    return true;
-  }
+  /// This returns the list of hand-loaded modules.
+  HandLoadedModuleSet GetHandLoadedModules() { return m_hand_loaded_modules; }
 
 private:
   uint32_t m_next_persistent_variable_id; ///< The counter used by
@@ -131,7 +126,6 @@ private:
   SwiftDeclMap m_swift_persistent_decls; ///< The persistent functions declared
                                          ///by the user.
 
-  typedef std::set<lldb_private::ConstString> HandLoadedModuleSet;
   HandLoadedModuleSet m_hand_loaded_modules; ///< These are the names of modules
                                              ///that we have loaded by
   ///< hand into the Contexts we make for parsing.

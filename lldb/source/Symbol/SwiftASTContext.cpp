@@ -6944,6 +6944,25 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   } break;
 
   case swift::TypeKind::Tuple: {
+    // Dynamic type resolution may actually change(!) the layout of a Tuple, so
+    // we need to get the offset from the static (but archetype-bound) version.
+    auto static_value = valobj->GetStaticValue();
+    auto static_type = static_value->GetCompilerType();
+    auto static_swift_type = GetCanonicalSwiftType(static_type);
+    if (static_swift_type->getKind() == swift::TypeKind::Tuple)
+      swift_can_type = static_swift_type;
+    if (swift_can_type->hasTypeParameter()) {
+      if (!exe_ctx)
+        return {};
+      auto *exe_scope = exe_ctx->GetBestExecutionContextScope();
+      auto *frame = exe_scope->CalculateStackFrame().get();
+      auto *runtime = exe_scope->CalculateProcess()->GetSwiftLanguageRuntime();
+      if (!frame || !runtime)
+        return {};
+      auto bound = runtime->DoArchetypeBindingForType(*frame, static_type);
+      swift_can_type = GetCanonicalSwiftType(bound);
+    }
+
     auto tuple_type = cast<swift::TupleType>(swift_can_type);
     if (idx >= tuple_type->getNumElements()) break;
 
@@ -8079,4 +8098,197 @@ void lldb_private::printASTValidationInfo(
            module_buf.size(), ext_ast_info.getSDKPath());
   for (StringRef ExtraOpt : ext_ast_info.getExtraClangImporterOptions())
     LLDB_LOG(log, "  -- {0}", ExtraOpt);
+}
+
+static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
+  s.PutCString("kind = ");
+
+  switch (file_unit->getKind()) {
+  default: { s.PutCString("<unknown>"); }
+  case swift::FileUnitKind::Source: {
+    s.PutCString("Source, ");
+    if (swift::SourceFile *source_file =
+            llvm::dyn_cast<swift::SourceFile>(file_unit)) {
+      s.Printf("filename = '%s', ", source_file->getFilename().str().c_str());
+      s.PutCString("source file kind = ");
+      switch (source_file->Kind) {
+      case swift::SourceFileKind::Library:
+        s.PutCString("Library");
+      case swift::SourceFileKind::Main:
+        s.PutCString("Main");
+      case swift::SourceFileKind::REPL:
+        s.PutCString("REPL");
+      case swift::SourceFileKind::SIL:
+        s.PutCString("SIL");
+      }
+    }
+  } break;
+  case swift::FileUnitKind::Builtin: {
+    s.PutCString("Builtin");
+  } break;
+  case swift::FileUnitKind::SerializedAST:
+  case swift::FileUnitKind::ClangModule: {
+    if (file_unit->getKind() == swift::FileUnitKind::SerializedAST)
+      s.PutCString("Serialized Swift AST, ");
+    else
+      s.PutCString("Clang module, ");
+    swift::LoadedFile *loaded_file = llvm::cast<swift::LoadedFile>(file_unit);
+    s.Printf("filename = '%s'", loaded_file->getFilename().str().c_str());
+  } break;
+  };
+}
+
+// Gets the full module name from the module passed in.
+
+static void GetNameFromModule(swift::ModuleDecl *module, std::string &result) {
+  result.clear();
+  if (module) {
+    const char *name = module->getName().get();
+    if (!name)
+      return;
+    result.append(name);
+    const clang::Module *clang_module = module->findUnderlyingClangModule();
+
+    // At present, there doesn't seem to be any way to get the full module path
+    // from the Swift side.
+    if (!clang_module)
+      return;
+
+    for (const clang::Module *cur_module = clang_module->Parent; cur_module;
+         cur_module = cur_module->Parent) {
+      if (!cur_module->Name.empty()) {
+        result.insert(0, 1, '.');
+        result.insert(0, cur_module->Name);
+      }
+    }
+  }
+}
+
+bool SwiftASTContext::LoadOneModule(
+    const ConstString &module_name, SwiftASTContext &swift_ast_context,
+    lldb::StackFrameWP &stack_frame_wp,
+    llvm::SmallVectorImpl<swift::SourceFile::ImportedModuleDesc>
+        &additional_imports,
+    Status &error) {
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  error.Clear();
+  if (log)
+    log->Printf("[LoadOneModule] Importing module %s", module_name.AsCString());
+  swift::ModuleDecl *swift_module = nullptr;
+  lldb::StackFrameSP this_frame_sp(stack_frame_wp.lock());
+
+  if (module_name == ConstString(swift_ast_context.GetClangImporter()
+                                     ->getImportedHeaderModule()
+                                     ->getName()
+                                     .str()))
+    swift_module =
+        swift_ast_context.GetClangImporter()->getImportedHeaderModule();
+  else if (this_frame_sp) {
+    lldb::ProcessSP process_sp(this_frame_sp->CalculateProcess());
+    if (process_sp)
+      swift_module = swift_ast_context.FindAndLoadModule(
+          module_name, *process_sp.get(), error);
+  } else
+    swift_module = swift_ast_context.GetModule(module_name, error);
+
+  if (!swift_module || !error.Success() || swift_ast_context.HasFatalErrors()) {
+    if (log)
+      log->Printf("[LoadOneModule] Couldn't import module %s: %s",
+                  module_name.AsCString(), error.AsCString());
+
+    if (!swift_module || swift_ast_context.HasFatalErrors()) {
+      return false;
+    }
+  }
+
+  if (log) {
+    log->Printf("Importing %s with source files:", module_name.AsCString());
+
+    for (swift::FileUnit *file_unit : swift_module->getFiles()) {
+      StreamString ss;
+      DescribeFileUnit(ss, file_unit);
+      log->Printf("  %s", ss.GetData());
+    }
+  }
+
+  additional_imports.push_back(swift::SourceFile::ImportedModuleDesc(
+      std::make_pair(swift::ModuleDecl::AccessPathTy(), swift_module),
+      swift::SourceFile::ImportOptions()));
+  return true;
+}
+
+bool SwiftASTContext::PerformUserImport(SwiftASTContext &swift_ast_context,
+                                        SymbolContext &sc,
+                                        ExecutionContextScope &exe_scope,
+                                        lldb::StackFrameWP &stack_frame_wp,
+                                        swift::SourceFile &source_file,
+                                        Status &error) {
+  Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+
+  llvm::SmallVector<swift::SourceFile::ImportedModuleDesc, 2>
+      additional_imports;
+
+  llvm::SmallVector<swift::ModuleDecl::ImportedModule, 2> parsed_imports;
+
+  source_file.getImportedModules(parsed_imports,
+                                 swift::ModuleDecl::ImportFilter::All);
+
+  auto *persistent_expression_state =
+      sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
+
+  for (auto module_pair : parsed_imports) {
+    swift::ModuleDecl *module = module_pair.second;
+    if (module) {
+      std::string module_name;
+      GetNameFromModule(module, module_name);
+      if (!module_name.empty()) {
+        ConstString module_const_str(module_name);
+        if (log)
+          log->Printf("[PerformUserImport] Performing auto import on found "
+                      "module: %s.\n",
+                      module_name.c_str());
+        if (!LoadOneModule(module_const_str, swift_ast_context, stack_frame_wp,
+                           additional_imports, error))
+          return false;
+
+        // How do we tell we are in REPL or playground mode?
+        persistent_expression_state->AddHandLoadedModule(module_const_str);
+      }
+    }
+  }
+  // Finally get the hand-loaded modules from the
+  // SwiftPersistentExpressionState and load them into this context:
+  for (ConstString name : persistent_expression_state->GetHandLoadedModules())
+    if (!LoadOneModule(name, swift_ast_context, stack_frame_wp,
+                       additional_imports, error))
+      return false;
+
+  source_file.addImports(additional_imports);
+  return true;
+}
+
+bool SwiftASTContext::PerformAutoImport(SwiftASTContext &swift_ast_context,
+                                        SymbolContext &sc,
+                                        lldb::StackFrameWP &stack_frame_wp,
+                                        swift::SourceFile &source_file,
+                                        Status &error) {
+  llvm::SmallVector<swift::SourceFile::ImportedModuleDesc, 2>
+      additional_imports;
+
+    if (!LoadOneModule(ConstString("Swift"), swift_ast_context, stack_frame_wp,
+                       additional_imports, error))
+      return false;
+    const std::vector<ConstString> *cu_modules = nullptr;
+    CompileUnit *compile_unit = sc.comp_unit;
+    if (compile_unit && compile_unit->GetLanguage() == lldb::eLanguageTypeSwift)
+      cu_modules = &compile_unit->GetImportedModules();
+    if (cu_modules) {
+      for (const ConstString &module_name : *cu_modules) {
+        if (!LoadOneModule(module_name, swift_ast_context, stack_frame_wp,
+                           additional_imports, error))
+          return false;
+      }
+    }
+  source_file.addImports(additional_imports);
+  return true;
 }

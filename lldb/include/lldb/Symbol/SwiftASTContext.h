@@ -29,6 +29,8 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Threading.h"
 
+#include "swift/AST/Module.h"
+
 #include <map>
 #include <set>
 
@@ -768,6 +770,25 @@ public:
   lldb::TypeSP GetCachedType(const ConstString &mangled);
 
   void SetCachedType(const ConstString &mangled, const lldb::TypeSP &type_sp);
+
+  static bool
+  LoadOneModule(const ConstString &module_name,
+                SwiftASTContext &swift_ast_context,
+                lldb::StackFrameWP &stack_frame_wp,
+                llvm::SmallVectorImpl<swift::SourceFile::ImportedModuleDesc>
+                    &additional_imports,
+                Status &error);
+
+  static bool PerformUserImport(SwiftASTContext &swift_ast_context,
+                                SymbolContext &sc,
+                                ExecutionContextScope &exe_scope,
+                                lldb::StackFrameWP &stack_frame_wp,
+                                swift::SourceFile &source_file, Status &error);
+
+  static bool PerformAutoImport(SwiftASTContext &swift_ast_context,
+                                SymbolContext &sc,
+                                lldb::StackFrameWP &stack_frame_wp,
+                                swift::SourceFile &source_file, Status &error);
 
 protected:
   // This map uses the string value of ConstStrings as the key, and the TypeBase

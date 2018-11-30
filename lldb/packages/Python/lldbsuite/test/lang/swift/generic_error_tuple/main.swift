@@ -1,4 +1,4 @@
-class MyErr : Error {
+class PayloadErr : Error {
   var x : Int
 
   init(_ x : Int) {
@@ -6,24 +6,28 @@ class MyErr : Error {
   }
 }
 
-class MyOtherErr : MyErr {}
+class MyOtherErr : PayloadErr {}
+
+enum CErr : Error {
+  case Topolino
+  case Paperino
+}
+
+func g<T, U>(_ tuple : (T, U)) -> T {
+  return tuple.0 //%self.expect("frame var -d run-target -- tuple",
+                 //%            substrs=['(a.CErr, Int)', 'Topolino', '42'])
+}
 
 func h<U, V>(_ tuple : (U, V)) -> (U, V) {
   return tuple //%self.expect("frame var -d run-target -- tuple", 
-               //%             substrs=['(a.MyErr, a.MyErr) tuple',
+               //%             substrs=['(a.PayloadErr, a.MyOtherErr) tuple',
                //%                      '0 =', '(x = 23)',
-               //%                      'a.MyErr = {', 'x = 42'])
+               //%                      'a.PayloadErr = {', 'x = 42'])
                //%self.expect("expr -d run-target -- tuple",
-               //%             substrs=['(a.MyErr, a.MyErr) $R',
+               //%             substrs=['(a.PayloadErr, a.PayloadErr) $R',
                //%                      '0 =', '(x = 23)',
-               //%                      'a.MyErr = {', 'x = 42'])
+               //%                      'a.PayloadErr = {', 'x = 42'])
 }
 
-func main() -> Int {
-  let foo : MyErr = MyErr(23)
-  let goo : MyErr = MyOtherErr(42)
-  h((foo, goo))
-  return 0
-}
-
-let _ = main()
+g((CErr.Topolino as Error, 42))
+h((PayloadErr(23), MyOtherErr(42) as PayloadErr))

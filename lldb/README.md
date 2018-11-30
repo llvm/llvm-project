@@ -3,9 +3,10 @@
 
 || **Status** |
 |---|---|
-|**macOS**         |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-osx/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-osx)|
+|**macOS**         |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-osx-cmake/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-osx)|
+|**Ubuntu 14.04** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-14_04/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-14_04)|
 |**Ubuntu 16.04** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-16_04/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-16_04)|
-|**Ubuntu 16.10** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-16_10/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-16_10)|
+|**Ubuntu 18.04** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-18_04/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-18_04)|
 
 **Welcome to the Swift Debugger and REPL!**
 

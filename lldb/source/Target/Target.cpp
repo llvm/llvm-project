@@ -1662,15 +1662,25 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
-    // if there's no SwiftASTContext, clearing it doesn't really matter
-    const bool create_on_demand = false;
-    Status error;
-    // There is no point in notifying the per-module SwiftASTContexts,
-    // but do notify the global scratch context.
-    auto swift_ast_ctx =
-        GetScratchSwiftASTContext(error, nullptr, create_on_demand);
-    if (swift_ast_ctx)
+
+    // Notify all the ASTContext(s).
+    auto notify_callback = [&](TypeSystem *type_system) {
+      auto *swift_ast_ctx =
+          llvm::dyn_cast_or_null<SwiftASTContext>(type_system);
+      if (!swift_ast_ctx)
+        return true;
       swift_ast_ctx->ModulesDidLoad(module_list);
+      return true;
+    };
+    m_scratch_type_system_map.ForEach(notify_callback);
+
+    // This is a DenseMap, but we're fine iterating over it because
+    // it doens't matter in which order we notify the ASTContext(s).
+    for (auto &language : m_scratch_typesystem_for_module) {
+      TypeSystemSP type_system = language.second;
+      notify_callback(type_system.get());
+    }
+
     module_list.ClearModuleDependentCaches();
     BroadcastEvent(eBroadcastBitModulesLoaded,
                    new TargetEventData(this->shared_from_this(), module_list));

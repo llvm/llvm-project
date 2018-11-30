@@ -61,7 +61,6 @@ void SwiftLanguage::Initialize() {
   static ConstString g_SwiftSharedStringClass(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs20_SharedStringStorage"));
   static ConstString g_SwiftStringStorageClass(
       SwiftLanguageRuntime::GetCurrentMangledName("_TtCs14_StringStorage"));
-  static ConstString g_NSArrayClass1Old("_TtCs22__SwiftDeferredNSArray");
   static ConstString g_NSArrayClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray"));
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Swift Language",
                                 CreateInstance);
@@ -77,9 +76,6 @@ void SwiftLanguage::Initialize() {
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries()
       .emplace(g_NSArrayClass1,
                lldb_private::formatters::swift::Array_SummaryProvider);
-  lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries()
-      .emplace(g_NSArrayClass1Old,
-               lldb_private::formatters::swift::Array_SummaryProvider);
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSynthetics()
       .emplace(g_NSArrayClass1,
                lldb_private::formatters::swift::ArraySyntheticFrontEndCreator);
@@ -90,7 +86,6 @@ void SwiftLanguage::Terminate() {
   static ConstString g_SwiftSharedStringClass(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs20_SharedStringStorage"));
   static ConstString g_SwiftStringStorageClass(
       SwiftLanguageRuntime::GetCurrentMangledName("_TtCs14_StringStorage"));
-  static ConstString g_NSArrayClass1Old("_TtCs22__SwiftDeferredNSArray");
   static ConstString g_NSArrayClass1(SwiftLanguageRuntime::GetCurrentMangledName("_TtCs22__SwiftDeferredNSArray"));
 
   lldb_private::formatters::NSString_Additionals::GetAdditionalSummaries()
@@ -100,8 +95,6 @@ void SwiftLanguage::Terminate() {
 
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries().erase(
       g_NSArrayClass1);
-  lldb_private::formatters::NSArray_Additionals::GetAdditionalSummaries().erase(
-      g_NSArrayClass1Old);
   lldb_private::formatters::NSArray_Additionals::GetAdditionalSynthetics()
       .erase(g_NSArrayClass1);
 
