@@ -113,6 +113,121 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
   return true;
 }
 
+static void generateDiagnosticsForCallLike(
+  ProgramStateRef CurrSt,
+  const LocationContext *LCtx,
+  const RefVal &CurrV,
+  SymbolRef &Sym,
+  const Stmt *S,
+  llvm::raw_string_ostream &os) {
+  if (const CallExpr *CE = dyn_cast<CallExpr>(S)) {
+    // Get the name of the callee (if it is available)
+    // from the tracked SVal.
+    SVal X = CurrSt->getSValAsScalarOrLoc(CE->getCallee(), LCtx);
+    const FunctionDecl *FD = X.getAsFunctionDecl();
+
+    // If failed, try to get it from AST.
+    if (!FD)
+      FD = dyn_cast<FunctionDecl>(CE->getCalleeDecl());
+
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(CE->getCalleeDecl())) {
+      os << "Call to method '" << MD->getQualifiedNameAsString() << '\'';
+    } else if (FD) {
+      os << "Call to function '" << FD->getQualifiedNameAsString() << '\'';
+    } else {
+      os << "function call";
+    }
+  } else {
+    assert(isa<ObjCMessageExpr>(S));
+    CallEventManager &Mgr = CurrSt->getStateManager().getCallEventManager();
+    CallEventRef<ObjCMethodCall> Call =
+        Mgr.getObjCMethodCall(cast<ObjCMessageExpr>(S), CurrSt, LCtx);
+
+    switch (Call->getMessageKind()) {
+    case OCM_Message:
+      os << "Method";
+      break;
+    case OCM_PropertyAccess:
+      os << "Property";
+      break;
+    case OCM_Subscript:
+      os << "Subscript";
+      break;
+    }
+  }
+
+  if (CurrV.getObjKind() == RetEffect::CF) {
+    os << " returns a Core Foundation object of type "
+       << Sym->getType().getAsString() << " with a ";
+  } else if (CurrV.getObjKind() == RetEffect::OS) {
+    os << " returns an OSObject of type " << getPrettyTypeName(Sym->getType())
+       << " with a ";
+  } else if (CurrV.getObjKind() == RetEffect::Generalized) {
+    os << " returns an object of type " << Sym->getType().getAsString()
+       << " with a ";
+  } else {
+    assert(CurrV.getObjKind() == RetEffect::ObjC);
+    QualType T = Sym->getType();
+    if (!isa<ObjCObjectPointerType>(T)) {
+      os << " returns an Objective-C object with a ";
+    } else {
+      const ObjCObjectPointerType *PT = cast<ObjCObjectPointerType>(T);
+      os << " returns an instance of " << PT->getPointeeType().getAsString()
+         << " with a ";
+    }
+  }
+
+  if (CurrV.isOwned()) {
+    os << "+1 retain count";
+  } else {
+    assert(CurrV.isNotOwned());
+    os << "+0 retain count";
+  }
+}
+
+namespace clang {
+namespace ento {
+namespace retaincountchecker {
+
+class CFRefReportVisitor : public BugReporterVisitor {
+protected:
+  SymbolRef Sym;
+  const SummaryLogTy &SummaryLog;
+
+public:
+  CFRefReportVisitor(SymbolRef sym, const SummaryLogTy &log)
+      : Sym(sym), SummaryLog(log) {}
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    static int x = 0;
+    ID.AddPointer(&x);
+    ID.AddPointer(Sym);
+  }
+
+  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                 BugReporterContext &BRC,
+                                                 BugReport &BR) override;
+
+  std::shared_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
+                                                  const ExplodedNode *N,
+                                                  BugReport &BR) override;
+};
+
+class CFRefLeakReportVisitor : public CFRefReportVisitor {
+public:
+  CFRefLeakReportVisitor(SymbolRef sym,
+                         const SummaryLogTy &log)
+     : CFRefReportVisitor(sym, log) {}
+
+  std::shared_ptr<PathDiagnosticPiece> getEndPath(BugReporterContext &BRC,
+                                                  const ExplodedNode *N,
+                                                  BugReport &BR) override;
+};
+
+} // end namespace retaincountchecker
+} // end namespace ento
+} // end namespace clang
+
 std::shared_ptr<PathDiagnosticPiece>
 CFRefReportVisitor::VisitNode(const ExplodedNode *N,
                               BugReporterContext &BRC, BugReport &BR) {
@@ -122,7 +237,8 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
     return nullptr;
 
   // Check if the type state has changed.
-  ProgramStateRef PrevSt = N->getFirstPred()->getState();
+  const ExplodedNode *PrevNode = N->getFirstPred();
+  ProgramStateRef PrevSt = PrevNode->getState();
   ProgramStateRef CurrSt = N->getState();
   const LocationContext *LCtx = N->getLocationContext();
 
@@ -172,69 +288,7 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
     } else if (isa<ObjCIvarRefExpr>(S)) {
       os << "Object loaded from instance variable";
     } else {
-      if (const CallExpr *CE = dyn_cast<CallExpr>(S)) {
-        // Get the name of the callee (if it is available)
-        // from the tracked SVal.
-        SVal X = CurrSt->getSValAsScalarOrLoc(CE->getCallee(), LCtx);
-        const FunctionDecl *FD = X.getAsFunctionDecl();
-
-        // If failed, try to get it from AST.
-        if (!FD)
-          FD = dyn_cast<FunctionDecl>(CE->getCalleeDecl());
-
-        if (const auto *MD = dyn_cast<CXXMethodDecl>(CE->getCalleeDecl())) {
-          os << "Call to method '" << MD->getQualifiedNameAsString() << '\'';
-        } else if (FD) {
-          os << "Call to function '" << FD->getQualifiedNameAsString() << '\'';
-        } else {
-          os << "function call";
-        }
-      } else {
-        assert(isa<ObjCMessageExpr>(S));
-        CallEventManager &Mgr = CurrSt->getStateManager().getCallEventManager();
-        CallEventRef<ObjCMethodCall> Call
-          = Mgr.getObjCMethodCall(cast<ObjCMessageExpr>(S), CurrSt, LCtx);
-
-        switch (Call->getMessageKind()) {
-        case OCM_Message:
-          os << "Method";
-          break;
-        case OCM_PropertyAccess:
-          os << "Property";
-          break;
-        case OCM_Subscript:
-          os << "Subscript";
-          break;
-        }
-      }
-
-      if (CurrV.getObjKind() == RetEffect::CF) {
-        os << " returns a Core Foundation object of type "
-           << Sym->getType().getAsString() << " with a ";
-      } else if (CurrV.getObjKind() == RetEffect::OS) {
-        os << " returns an OSObject of type "
-           << getPrettyTypeName(Sym->getType()) << " with a ";
-      } else if (CurrV.getObjKind() == RetEffect::Generalized) {
-        os << " returns an object of type " << Sym->getType().getAsString()
-           << " with a ";
-      } else {
-        assert (CurrV.getObjKind() == RetEffect::ObjC);
-        QualType T = Sym->getType();
-        if (!isa<ObjCObjectPointerType>(T)) {
-          os << " returns an Objective-C object with a ";
-        } else {
-          const ObjCObjectPointerType *PT = cast<ObjCObjectPointerType>(T);
-          os << " returns an instance of "
-             << PT->getPointeeType().getAsString() << " with a ";
-        }
-      }
-
-      if (CurrV.isOwned()) {
-        os << "+1 retain count";
-      } else {
-        assert (CurrV.isNotOwned());
-        os << "+0 retain count";
-      }
+      generateDiagnosticsForCallLike(CurrSt, LCtx, CurrV, Sym, S, os);
     }
 
     PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
@@ -498,6 +552,22 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   }
 
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
+}
+
+CFRefReport::CFRefReport(CFRefBug &D, const LangOptions &LOpts,
+                         const SummaryLogTy &Log, ExplodedNode *n,
+                         SymbolRef sym, bool registerVisitor)
+    : BugReport(D, D.getDescription(), n), Sym(sym) {
+  if (registerVisitor)
+    addVisitor(llvm::make_unique<CFRefReportVisitor>(sym, Log));
+}
+
+CFRefReport::CFRefReport(CFRefBug &D, const LangOptions &LOpts,
+                         const SummaryLogTy &Log, ExplodedNode *n,
+                         SymbolRef sym, StringRef endText)
+    : BugReport(D, D.getDescription(), endText, n) {
+
+  addVisitor(llvm::make_unique<CFRefReportVisitor>(sym, Log));
 }
 
 void CFRefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
