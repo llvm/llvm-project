@@ -676,6 +676,21 @@ public:
     return false;
   }
 
+  /// Returns either the representative subtask of this task that encloses basic
+  /// block B or the this task itself if no subtask encloses B.  This task must
+  /// enclose B.
+  ///
+  /// These representatives are useful for studying series-parallel
+  /// relationships between basic blocks in a function when those basic blocks
+  /// might appear in nested subtasks.
+  const Task *getSubTaskEnclosing(const BasicBlock *BB) const {
+    assert(encloses(BB) && "Task does not enclose given BasicBlock");
+    for (Task *SubT : subtasks())
+      if (SubT->encloses(BB))
+        return SubT;
+    return this;
+  }
+
   /// True if terminator in the block can branch to another block that is
   /// outside of the current task.
   bool isTaskExiting(const BasicBlock *BB) const {
@@ -833,6 +848,58 @@ template<> struct GraphTraits<UnderTask<const Spindle *>> :
   }
 };
 
+// Structure to record the synced state of each spindle.
+struct IsSyncedState {
+  enum class SyncInfo {
+    Unsynced = 0,
+    Synced = 1,
+    TaskEntry = 2,
+    NoUnsync = Synced | TaskEntry,
+    Incomplete = 4,
+  };
+
+  static inline bool isUnsynced(const SyncInfo SyncI) {
+    return (static_cast<int>(SyncI) & static_cast<int>(SyncInfo::NoUnsync)) ==
+      static_cast<int>(SyncInfo::Unsynced);
+  }
+  static inline bool isSynced(const SyncInfo SyncI) {
+    return !isUnsynced(SyncI);
+  }
+  static inline bool isIncomplete(const SyncInfo SyncI) {
+    return (static_cast<int>(SyncI) & static_cast<int>(SyncInfo::Incomplete)) ==
+      static_cast<int>(SyncInfo::Incomplete);
+  }
+  static inline SyncInfo setUnsynced(const SyncInfo SyncI) {
+    // Once a sync state is set to unsynced, it's complete.
+    return SyncInfo(static_cast<int>(SyncI) &
+                    static_cast<int>(SyncInfo::Unsynced));
+  }
+  static inline SyncInfo setIncomplete(const SyncInfo SyncI) {
+    return SyncInfo(static_cast<int>(SyncI) |
+                    static_cast<int>(SyncInfo::Incomplete));
+  }
+  static inline SyncInfo setComplete(const SyncInfo SyncI) {
+    return SyncInfo(static_cast<int>(SyncI) &
+                    ~static_cast<int>(SyncInfo::Incomplete));
+  }
+
+  DenseMap<const Spindle *, SyncInfo> SyncedState;
+
+  bool markDefiningSpindle(const Spindle *S);
+  bool evaluate(const Spindle *S, unsigned EvalNum);
+};
+
+using MPTaskListTy = DenseMap<const Spindle *, SmallPtrSet<const Task *, 2>>;
+
+// Structure to record the set of child tasks that might be in parallel with
+// this spindle.
+struct MaybeParallelTasks {
+  MPTaskListTy TaskList;
+
+  bool markDefiningSpindle(const Spindle *S);
+  bool evaluate(const Spindle *S, unsigned EvalNum);
+};
+
 //===----------------------------------------------------------------------===//
 /// This class builds and contains all of the top-level task structures in the
 /// specified function.
@@ -842,8 +909,13 @@ class TaskInfo {
   DenseMap<const BasicBlock *, Spindle *> BBMap;
   // SpindleMap - Mapping of spindles to the innermost task they occur in
   DenseMap<const Spindle *, Task *> SpindleMap;
-
+  // Pointer to the root task for the function.  All tasks detached within this
+  // function body are descendants of this root task.
   Task *RootTask = nullptr;
+
+  // Cache storing maybe-parallel-task state.  This cache is initialized lazily
+  // by calls to the mayHappenInParallel method.
+  mutable std::unique_ptr<MaybeParallelTasks> MPTasks;
 
   BumpPtrAllocator TaskAllocator;
 
@@ -858,6 +930,7 @@ public:
       : BBMap(std::move(Arg.BBMap)),
         SpindleMap(std::move(Arg.SpindleMap)),
         RootTask(std::move(Arg.RootTask)),
+        MPTasks(std::move(Arg.MPTasks)),
         TaskAllocator(std::move(Arg.TaskAllocator)) {
     Arg.RootTask = nullptr;
   }
@@ -867,6 +940,7 @@ public:
     if (RootTask)
       RootTask->~Task();
     RootTask = std::move(RHS.RootTask);
+    MPTasks = std::move(RHS.MPTasks);
     TaskAllocator = std::move(RHS.TaskAllocator);
     RHS.RootTask = nullptr;
     return *this;
@@ -878,6 +952,10 @@ public:
     if (RootTask)
       RootTask->~Task();
     RootTask = nullptr;
+    if (MPTasks) {
+      MPTasks->TaskList.clear();
+      MPTasks.release();
+    }
     TaskAllocator.Reset();
   }
 
@@ -944,24 +1022,24 @@ public:
     return getRootTask()->DomTree.dominates(T1->getEntry(), T2->getEntry());
   }
 
-  /// Return true if specified task encloses the specified basic block.
+  /// Return true if task T encloses basic block BB.
   bool encloses(const Task *T, const BasicBlock *BB) const {
     if (!T) return false;
     return T->encloses(BB);
   }
 
-  /// Return true if the specified instruction is in this task.
+  /// Return true if the task T encloses instruction Inst.
   bool encloses(const Task *T, const Instruction *Inst) const {
     return encloses(T, Inst->getParent());
   }
 
-  /// Return the task nesting level of the specified block. A depth of 0 means
-  /// the block is in the root task.
+  /// Return the task nesting level of basic block BB. A depth of 0 means the
+  /// block is in the root task.
   unsigned getTaskDepth(const BasicBlock *BB) const {
     return getTaskFor(BB)->getTaskDepth();
   }
 
-  /// True if the block is a task entry block
+  /// True if basic block BB is a task entry block
   bool isTaskEntry(const BasicBlock *BB) const {
     return getTaskFor(BB)->getEntry() == BB;
   }
@@ -1017,6 +1095,43 @@ public:
 
   /// Check if a alloca AI is promotable based on task structure.
   bool isAllocaParallelPromotable(const AllocaInst *AI) const;
+
+  /// Check if the two basic blocks B1 and B2 may execute in parallel.
+  bool mayHappenInParallel(const BasicBlock *B1, const BasicBlock *B2) const {
+    // Common case: No blocks execute in parallel in a serial function.
+    if (isSerial())
+      return false;
+
+    // if (getTaskFor(B1) == getTaskFor(B2))
+    //   return false;
+
+    // If necessary, compute which tasks may execute in parallel.
+    if (!MPTasks) {
+      MPTasks.reset(new MaybeParallelTasks());
+      evaluateParallelState<MaybeParallelTasks>(*MPTasks);
+    }
+
+    // Get the task Encl that encloses both basic blocks.
+    const Task *Encl = getEnclosingTask(B1, B2);
+
+    // For each basic block, get the representative subtask of Encl that
+    // encloses that basic block.
+    const Task *B1Task = Encl->getSubTaskEnclosing(B1);
+    const Task *B2Task = Encl->getSubTaskEnclosing(B2);
+
+    // Translate these representative tasks into spindles.
+    const Spindle *B1Spindle = getSpindleFor(B1);
+    const Spindle *B2Spindle = getSpindleFor(B2);
+    if (B1Task != Encl)
+      B1Spindle = getSpindleFor(B1Task->getDetach()->getParent());
+    if (B2Task != Encl)
+      B2Spindle = getSpindleFor(B2Task->getDetach()->getParent());
+
+    // Evaluate the maybe-parallel task lists for the two representative
+    // spindles to determine if the blocks may execute in parallel.
+    return MPTasks->TaskList[B1Spindle].count(B2Task) ||
+      MPTasks->TaskList[B2Spindle].count(B1Task);
+  }
 
   /// Create the task forest using a stable algorithm.
   void analyze(Function &F, DominatorTree &DomTree);
@@ -1095,58 +1210,6 @@ public:
     S->addBlock(B);
     BBMap[&B] = S;
   }
-};
-
-// Structure to record the synced state of each spindle.
-struct IsSyncedState {
-  enum class SyncInfo {
-    Unsynced = 0,
-    Synced = 1,
-    TaskEntry = 2,
-    NoUnsync = Synced | TaskEntry,
-    Incomplete = 4,
-  };
-
-  static inline bool isUnsynced(const SyncInfo SyncI) {
-    return (static_cast<int>(SyncI) & static_cast<int>(SyncInfo::NoUnsync)) ==
-      static_cast<int>(SyncInfo::Unsynced);
-  }
-  static inline bool isSynced(const SyncInfo SyncI) {
-    return !isUnsynced(SyncI);
-  }
-  static inline bool isIncomplete(const SyncInfo SyncI) {
-    return (static_cast<int>(SyncI) & static_cast<int>(SyncInfo::Incomplete)) ==
-      static_cast<int>(SyncInfo::Incomplete);
-  }
-  static inline SyncInfo setUnsynced(const SyncInfo SyncI) {
-    // Once a sync state is set to unsynced, it's complete.
-    return SyncInfo(static_cast<int>(SyncI) &
-                    static_cast<int>(SyncInfo::Unsynced));
-  }
-  static inline SyncInfo setIncomplete(const SyncInfo SyncI) {
-    return SyncInfo(static_cast<int>(SyncI) |
-                    static_cast<int>(SyncInfo::Incomplete));
-  }
-  static inline SyncInfo setComplete(const SyncInfo SyncI) {
-    return SyncInfo(static_cast<int>(SyncI) &
-                    ~static_cast<int>(SyncInfo::Incomplete));
-  }
-
-  DenseMap<const Spindle *, SyncInfo> SyncedState;
-
-  bool markDefiningSpindle(const Spindle *S);
-  bool evaluate(const Spindle *S, unsigned EvalNum);
-};
-
-using MPTaskListTy = DenseMap<const Spindle *, SmallPtrSet<const Task *, 2>>;
-
-// Structure to record the set of child tasks that might be in parallel with
-// this spindle.
-struct MaybeParallelTasks {
-  MPTaskListTy TaskList;
-
-  bool markDefiningSpindle(const Spindle *S);
-  bool evaluate(const Spindle *S, unsigned EvalNum);
 };
 
 /// Analysis pass that exposes the \c TaskInfo for a function.
