@@ -35,7 +35,7 @@ int main() {
     }
 
     // ompt_enumerate_mutex_impls()
-    int impl = ompt_mutex_impl_unknown;
+    int impl = ompt_mutex_impl_none;
     const char *impl_name;
     steps = 0;
     while (ompt_enumerate_mutex_impls(impl, &impl, &impl_name) &&

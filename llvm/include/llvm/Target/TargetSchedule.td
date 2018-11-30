@@ -561,3 +561,13 @@ class RetireControlUnit<int bufferSize, int retirePerCycle> {
   int MaxRetirePerCycle = retirePerCycle;
   SchedMachineModel SchedModel = ?;
 }
+
+// Base class for Load/StoreQueue.  It is used to identify processor resources
+// which describe load/store queues in the LS unit.
+class MemoryQueue<ProcResource PR> {
+  ProcResource QueueDescriptor = PR;
+  SchedMachineModel SchedModel = ?;
+}
+
+class LoadQueue<ProcResource LDQueue> : MemoryQueue<LDQueue>;
+class StoreQueue<ProcResource STQueue> : MemoryQueue<STQueue>;

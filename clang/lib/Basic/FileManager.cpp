@@ -293,16 +293,8 @@ const FileEntry *FileManager::getFile(StringRef Filename, bool openFile,
   // If we opened the file for the first time, record the resulting info.
   // Do this even if the cache entry was valid, maybe we didn't previously open.
   if (F && !UFE.File) {
-    if (auto PathName = F->getName()) {
-      llvm::SmallString<128> AbsPath(*PathName);
-      // This is not the same as `VFS::getRealPath()`, which resolves symlinks
-      // but can be very expensive on real file systems.
-      // FIXME: the semantic of RealPathName is unclear, and the name might be
-      // misleading. We need to clean up the interface here.
-      makeAbsolutePath(AbsPath);
-      llvm::sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
-      UFE.RealPathName = AbsPath.str();
-    }
+    if (auto PathName = F->getName())
+      fillRealPathName(&UFE, *PathName);
     UFE.File = std::move(F);
     assert(!UFE.DeferredOpen && "we just opened it!");
   }
@@ -395,6 +387,7 @@ FileManager::getVirtualFile(StringRef Filename, off_t Size,
     UFE->UniqueID = Data.UniqueID;
     UFE->IsNamedPipe = Data.IsNamedPipe;
     UFE->InPCH = Data.InPCH;
+    fillRealPathName(UFE, Data.Name);
   }
 
   if (!UFE) {
@@ -436,6 +429,17 @@ bool FileManager::makeAbsolutePath(SmallVectorImpl<char> &Path) const {
   }
 
   return Changed;
+}
+
+void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
+  llvm::SmallString<128> AbsPath(FileName);
+  // This is not the same as `VFS::getRealPath()`, which resolves symlinks
+  // but can be very expensive on real file systems.
+  // FIXME: the semantic of RealPathName is unclear, and the name might be
+  // misleading. We need to clean up the interface here.
+  makeAbsolutePath(AbsPath);
+  llvm::sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
+  UFE->RealPathName = AbsPath.str();
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>

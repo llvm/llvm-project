@@ -85,7 +85,7 @@ public:
 /// transition (i.e. from state IS_READY, to state IS_EXECUTING). An Instruction
 /// leaves the IssuedSet when it reaches the write-back stage.
 class Scheduler : public HardwareUnit {
-  LSUnit *LSU;
+  LSUnit &LSU;
 
   // Instruction selection strategy for this Scheduler.
   std::unique_ptr<SchedulerStrategy> Strategy;
@@ -117,16 +117,15 @@ class Scheduler : public HardwareUnit {
   void promoteToReadySet(SmallVectorImpl<InstRef> &Ready);
 
 public:
-  Scheduler(const MCSchedModel &Model, LSUnit *Lsu)
-      : LSU(Lsu), Resources(make_unique<ResourceManager>(Model)) {
-    initializeStrategy(nullptr);
-  }
-  Scheduler(const MCSchedModel &Model, LSUnit *Lsu,
+  Scheduler(const MCSchedModel &Model, LSUnit &Lsu)
+      : Scheduler(Model, Lsu, nullptr) {}
+
+  Scheduler(const MCSchedModel &Model, LSUnit &Lsu,
             std::unique_ptr<SchedulerStrategy> SelectStrategy)
-      : LSU(Lsu), Resources(make_unique<ResourceManager>(Model)) {
-    initializeStrategy(std::move(SelectStrategy));
-  }
-  Scheduler(std::unique_ptr<ResourceManager> RM, LSUnit *Lsu,
+      : Scheduler(make_unique<ResourceManager>(Model), Lsu,
+                  std::move(SelectStrategy)) {}
+
+  Scheduler(std::unique_ptr<ResourceManager> RM, LSUnit &Lsu,
             std::unique_ptr<SchedulerStrategy> SelectStrategy)
       : LSU(Lsu), Resources(std::move(RM)) {
     initializeStrategy(std::move(SelectStrategy));

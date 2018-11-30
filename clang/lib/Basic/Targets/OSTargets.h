@@ -270,6 +270,29 @@ public:
   }
 };
 
+// Hurd target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY HurdTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    // Hurd defines; list based off of gcc output.
+    DefineStd(Builder, "unix", Opts);
+    Builder.defineMacro("__GNU__");
+    Builder.defineMacro("__gnu_hurd__");
+    Builder.defineMacro("__MACH__");
+    Builder.defineMacro("__GLIBC__");
+    Builder.defineMacro("__ELF__");
+    if (Opts.POSIXThreads)
+      Builder.defineMacro("_REENTRANT");
+    if (Opts.CPlusPlus)
+      Builder.defineMacro("_GNU_SOURCE");
+  }
+public:
+  HurdTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {}
+};
+
 // Minix Target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY MinixTargetInfo : public OSTargetInfo<Target> {

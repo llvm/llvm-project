@@ -35,9 +35,9 @@ Context::createDefaultPipeline(const PipelineOptions &Opts, InstrBuilder &IB,
   // Create the hardware units defining the backend.
   auto RCU = llvm::make_unique<RetireControlUnit>(SM);
   auto PRF = llvm::make_unique<RegisterFile>(SM, MRI, Opts.RegisterFileSize);
-  auto LSU = llvm::make_unique<LSUnit>(Opts.LoadQueueSize, Opts.StoreQueueSize,
-                                       Opts.AssumeNoAlias);
-  auto HWS = llvm::make_unique<Scheduler>(SM, LSU.get());
+  auto LSU = llvm::make_unique<LSUnit>(SM, Opts.LoadQueueSize,
+                                       Opts.StoreQueueSize, Opts.AssumeNoAlias);
+  auto HWS = llvm::make_unique<Scheduler>(SM, *LSU);
 
   // Create the pipeline stages.
   auto Fetch = llvm::make_unique<EntryStage>(SrcMgr);

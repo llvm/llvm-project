@@ -180,6 +180,30 @@ void B<T>::virtual_foo() {
   {}
 }
 
+struct A {
+  virtual void emitted() {}
+};
+
+template <typename T>
+struct C : public A {
+  virtual void emitted();
+};
+
+template <typename T>
+void C<T>::emitted() {
+#pragma omp target
+  {}
+}
+
+int main() {
+  A *X = new C<int>();
+  X->emitted();
+  return 0;
+}
+
+// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}virtual_foo{{.*}}_l[[@LINE-25]]()
+// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}emitted{{.*}}_l[[@LINE-11]]()
+
 // CHECK-DAG: declare extern_weak signext i32 @__create()
 
 // CHECK-NOT: define {{.*}}{{baz1|baz4|maini1|Base|virtual_}}

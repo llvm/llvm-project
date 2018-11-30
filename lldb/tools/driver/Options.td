@@ -170,9 +170,10 @@ def: Flag<["-"], "h">,
   Alias<help>,
   HelpText<"Alias for --help">;
 
-def core: F<"core">,
-  HelpText<"Tells the debugger to use the full path to <core> as the core file.">;
-def: Flag<["-"], "c">,
+def core: Separate<["--", "-"], "core">,
+  MetaVarName<"<filename>">,
+  HelpText<"Tells the debugger to use the full path to <filename> as the core file.">;
+def: Separate<["-"], "c">,
   Alias<core>,
   HelpText<"Alias for --core">;
 

@@ -228,8 +228,8 @@ define i64 @var_shift_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-NEXT:    movl %edi, %ebp
 ; X86-NEXT:    xorl %edi, %edi
 ; X86-NEXT:  .LBB3_2:
-; X86-NEXT:    movl $64, %ecx
-; X86-NEXT:    subl %ebx, %ecx
+; X86-NEXT:    movb $64, %cl
+; X86-NEXT:    subb %bl, %cl
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    shrl %cl, %esi
 ; X86-NEXT:    shrdl %cl, %edx, (%esp) # 4-byte Folded Spill

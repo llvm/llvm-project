@@ -45,10 +45,6 @@ public:
   virtual void addPltHeaderSymbols(InputSection &IS) const {}
   virtual void addPltSymbols(InputSection &IS, uint64_t Off) const {}
 
-  unsigned getPltEntryOffset(unsigned Index) const {
-    return Index * PltEntrySize + PltHeaderSize;
-  }
-
   // Returns true if a relocation only uses the low bits of a value such that
   // all those bits are in the same page. For example, if the relocation
   // only uses the low 12 bits in a system with 4k pages. If this is true, the
@@ -199,6 +195,10 @@ static inline void reportRangeError(uint8_t *Loc, RelType Type, const Twine &V,
   errorOrWarn(ErrPlace.Loc + "relocation " + lld::toString(Type) +
               " out of range: " + V.str() + " is not in [" + Twine(Min).str() +
               ", " + Twine(Max).str() + "]" + Hint);
+}
+
+inline unsigned getPltEntryOffset(unsigned Idx) {
+  return Target->PltHeaderSize + Target->PltEntrySize * Idx;
 }
 
 // Make sure that V can be represented as an N bit signed integer.

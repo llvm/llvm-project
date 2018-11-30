@@ -505,9 +505,14 @@ class VOP_DPPe<VOPProfile P> : Enc64 {
   let Inst{63-60} = row_mask;
 }
 
-class VOP_DPP <string OpName, VOPProfile P> :
-  InstSI <P.OutsDPP, P.InsDPP, OpName#P.AsmDPP, []>,
-  VOP_DPPe<P> {
+class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
+  InstSI <P.OutsDPP, P.InsDPP, OpName#P.AsmDPP, pattern>,
+  VOP <OpName>,
+  SIMCInstr <OpName#"_dpp", SIEncodingFamily.NONE>,
+  MnemonicAlias <OpName#"_dpp", OpName> {
+
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
 
   let mayLoad = 0;
   let mayStore = 0;
@@ -517,6 +522,11 @@ class VOP_DPP <string OpName, VOPProfile P> :
   let VALU = 1;
   let DPP = 1;
   let Size = 8;
+  let Uses = [EXEC];
+  let isConvergent = 1;
+
+  string Mnemonic = OpName;
+  string AsmOperands = P.AsmDPP;
 
   let AsmMatchConverter = !if(!eq(P.HasModifiers,1), "cvtDPP", "");
   let SubtargetPredicate = HasDPP;
@@ -526,6 +536,36 @@ class VOP_DPP <string OpName, VOPProfile P> :
   let Constraints = !if(P.NumSrcArgs, "$old = $vdst", "");
   let DisableEncoding = !if(P.NumSrcArgs, "$old", "");
   let DecoderNamespace = "DPP";
+
+  VOPProfile Pfl = P;
+}
+
+class VOP_DPP_Real <VOP_DPP_Pseudo ps, int EncodingFamily> :
+  InstSI <ps.OutOperandList, ps.InOperandList, ps.Mnemonic # ps.AsmOperands, []>,
+  SIMCInstr <ps.PseudoInstr, EncodingFamily> {
+
+  let isPseudo = 0;
+  let isCodeGenOnly = 0;
+
+  let Defs = ps.Defs;
+  let Uses = ps.Uses;
+  let SchedRW = ps.SchedRW;
+  let hasSideEffects = ps.hasSideEffects;
+
+  let Constraints     = ps.Constraints;
+  let DisableEncoding = ps.DisableEncoding;
+
+  // Copy relevant pseudo op flags
+  let isConvergent         = ps.isConvergent;
+  let SubtargetPredicate   = ps.SubtargetPredicate;
+  let AssemblerPredicate   = ps.AssemblerPredicate;
+  let AsmMatchConverter    = ps.AsmMatchConverter;
+  let AsmVariantName       = ps.AsmVariantName;
+  let UseNamedOperandTable = ps.UseNamedOperandTable;
+  let DecoderNamespace     = ps.DecoderNamespace;
+  let Constraints          = ps.Constraints;
+  let DisableEncoding      = ps.DisableEncoding;
+  let TSFlags              = ps.TSFlags;
 }
 
 class getNumNodeArgs<SDPatternOperator Op> {

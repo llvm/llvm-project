@@ -104,6 +104,10 @@ public:
   void closeFile() const {
     File.reset(); // rely on destructor to close File
   }
+
+  // Only for use in tests to see if deferred opens are happening, rather than
+  // relying on RealPathName being empty.
+  bool isOpenForTests() const { return File != nullptr; }
 };
 
 struct FileData;
@@ -172,6 +176,9 @@ class FileManager : public RefCountedBase<FileManager> {
   /// Add all ancestors of the given path (pointing to either a file
   /// or a directory) as virtual directories.
   void addAncestorsAsVirtualDirs(StringRef Path);
+
+  /// Fills the RealPathName in file entry.
+  void fillRealPathName(FileEntry *UFE, llvm::StringRef FileName);
 
 public:
   FileManager(const FileSystemOptions &FileSystemOpts,

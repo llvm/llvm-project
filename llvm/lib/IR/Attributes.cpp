@@ -1685,28 +1685,32 @@ adjustCallerStackProbeSize(Function &Caller, const Function &Callee) {
 }
 
 /// If the inlined function defines a min legal vector width, then ensure
-/// the calling function has the same or larger min legal vector width. This
-/// function is called after the inlining decision has been made so we have to
-/// merge the attribute this way. Heuristics that would use
+/// the calling function has the same or larger min legal vector width. If the
+/// caller has the attribute, but the callee doesn't, we need to remove the
+/// attribute from the caller since we can't make any guarantees about the
+/// caller's requirements.
+/// This function is called after the inlining decision has been made so we have
+/// to merge the attribute this way. Heuristics that would use
 /// min-legal-vector-width to determine inline compatibility would need to be
 /// handled as part of inline cost analysis.
 static void
 adjustMinLegalVectorWidth(Function &Caller, const Function &Callee) {
-  if (Callee.hasFnAttribute("min-legal-vector-width")) {
-    uint64_t CalleeVectorWidth;
-    Callee.getFnAttribute("min-legal-vector-width")
-          .getValueAsString()
-          .getAsInteger(0, CalleeVectorWidth);
-    if (Caller.hasFnAttribute("min-legal-vector-width")) {
+  if (Caller.hasFnAttribute("min-legal-vector-width")) {
+    if (Callee.hasFnAttribute("min-legal-vector-width")) {
       uint64_t CallerVectorWidth;
       Caller.getFnAttribute("min-legal-vector-width")
             .getValueAsString()
             .getAsInteger(0, CallerVectorWidth);
-      if (CallerVectorWidth < CalleeVectorWidth) {
+      uint64_t CalleeVectorWidth;
+      Callee.getFnAttribute("min-legal-vector-width")
+            .getValueAsString()
+            .getAsInteger(0, CalleeVectorWidth);
+      if (CallerVectorWidth < CalleeVectorWidth)
         Caller.addFnAttr(Callee.getFnAttribute("min-legal-vector-width"));
-      }
     } else {
-      Caller.addFnAttr(Callee.getFnAttribute("min-legal-vector-width"));
+      // If the callee doesn't have the attribute then we don't know anything
+      // and must drop the attribute from the caller.
+      Caller.removeFnAttr("min-legal-vector-width");
     }
   }
 }

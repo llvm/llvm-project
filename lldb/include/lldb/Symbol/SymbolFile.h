@@ -233,6 +233,8 @@ public:
     return {};
   }
 
+  virtual void AddSymbols(Symtab &symtab) {}
+
   //------------------------------------------------------------------
   /// Notify the SymbolFile that the file addresses in the Sections
   /// for this module have been changed.

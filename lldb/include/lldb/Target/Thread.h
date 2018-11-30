@@ -1253,6 +1253,11 @@ public:
   //----------------------------------------------------------------------
   virtual uint64_t GetExtendedBacktraceToken() { return LLDB_INVALID_ADDRESS; }
 
+  lldb::ValueObjectSP GetCurrentException();
+
+  // TODO(kubamracek): Extract backtrace from ValueObjectSP into ThreadSP
+  // lldb::ThreadSP GetCurrentExceptionBacktrace();
+
 protected:
   friend class ThreadPlan;
   friend class ThreadList;

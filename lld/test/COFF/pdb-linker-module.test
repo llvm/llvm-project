@@ -1,5 +1,5 @@
 RUN: echo "/nodefaultlib" > %t.rsp
-RUN: lld-link /debug /pdb:%t.pdb @%t.rsp /entry:main %S/Inputs/pdb-diff.obj
+RUN: lld-link /debug /pdb:%t.pdb @%t.rsp /entry:"1 "'"'hello'"'" 2" /manifestuac:"level='asInvoker' uiAccess='false'" %S/Inputs/pdb-diff.obj /force
 RUN: llvm-pdbutil dump -modules %t.pdb | FileCheck --check-prefix=MODS %s
 RUN: llvm-pdbutil dump -symbols %t.pdb | FileCheck --check-prefix=SYMS %s
 
@@ -22,4 +22,4 @@ SYMS-NEXT: - {{.*}}lld-link
 SYMS-NEXT: - pdb
 SYMS-NEXT: - {{.*}}pdb-linker-module{{.*}}pdb
 SYMS-NEXT: - cmd
-SYMS-NEXT: - /debug /pdb:{{.*}}pdb-linker-module{{.*}}pdb /nodefaultlib /entry:main {{.*}}pdb-diff.obj
+SYMS-NEXT: - /debug /pdb:{{.*}}pdb-linker-module{{.*}}pdb /nodefaultlib "/entry:1 ""hello"" 2" "/manifestuac:level='asInvoker' uiAccess='false'" {{.*}}pdb-diff.obj

@@ -26,4 +26,4 @@ B::B() : Forward(WithDtor()) {}
 // CHECK-SAME: !dbg ![[INL:[0-9]+]]
 
 // CHECK: ![[INL]] = !DILocation(line: 10, scope: ![[SP:[0-9]+]], inlinedAt:
-// CHECK: ![[SP]] = distinct !DISubprogram(name: "Base", {{.*}}isDefinition: true
+// CHECK: ![[SP]] = distinct !DISubprogram(name: "Base", {{.*}} DISPFlagDefinition

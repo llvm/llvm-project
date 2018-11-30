@@ -260,12 +260,12 @@ public:
   public:
     virtual ~BindingsHandler();
 
+    /// \return whether the iteration should continue.
     virtual bool HandleBinding(StoreManager& SMgr, Store store,
                                const MemRegion *region, SVal val) = 0;
   };
 
-  class FindUniqueBinding :
-  public BindingsHandler {
+  class FindUniqueBinding : public BindingsHandler {
     SymbolRef Sym;
     const MemRegion* Binding = nullptr;
     bool First = true;

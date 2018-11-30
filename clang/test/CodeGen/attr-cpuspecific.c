@@ -23,7 +23,10 @@ void NotCalled(void){}
 // LINUX: define void @NotCalled.S() #[[S]]
 // WINDOWS: define dso_local void @NotCalled.S() #[[S:[0-9]+]]
 
-// Done before any of the implementations.
+// Done before any of the implementations.  Also has an undecorated forward
+// declaration.
+void TwoVersions(void);
+
 ATTR(cpu_dispatch(ivybridge, knl))
 void TwoVersions(void);
 // LINUX: define void ()* @TwoVersions.resolver()

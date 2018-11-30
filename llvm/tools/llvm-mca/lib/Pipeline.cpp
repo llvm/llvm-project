@@ -35,18 +35,18 @@ bool Pipeline::hasWorkToProcess() {
   });
 }
 
-Error Pipeline::run() {
+Expected<unsigned> Pipeline::run() {
   assert(!Stages.empty() && "Unexpected empty pipeline found!");
 
   do {
     notifyCycleBegin();
     if (Error Err = runCycle())
-      return Err;
+      return std::move(Err);
     notifyCycleEnd();
     ++Cycles;
   } while (hasWorkToProcess());
 
-  return ErrorSuccess();
+  return Cycles;
 }
 
 Error Pipeline::runCycle() {

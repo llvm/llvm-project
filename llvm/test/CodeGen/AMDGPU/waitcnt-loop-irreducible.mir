@@ -1,0 +1,47 @@
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-insert-waitcnts -o - %s | FileCheck -check-prefixes=GCN %s
+
+# GCN-LABEL: name: irreducible_loop{{$}}
+# GCN: S_LOAD_DWORDX4_IMM
+# GCN: S_WAITCNT 127{{$}}
+# GCN: S_BUFFER_LOAD_DWORD_IMM
+# GCN: S_WAITCNT 127{{$}}
+# GCN: S_CMP_GE_I32
+--- |
+
+  define amdgpu_ps void @irreducible_loop() {
+  main:
+    ret void
+  }
+
+...
+---
+name:            irreducible_loop
+body:             |
+  bb.0:
+    successors: %bb.3, %bb.2
+
+    S_CBRANCH_VCCZ %bb.2, implicit $vcc
+    S_BRANCH %bb.3
+
+  bb.1:
+    successors: %bb.3, %bb.2
+
+    S_CBRANCH_VCCNZ %bb.3, implicit $vcc
+
+  bb.2:
+    successors: %bb.3
+
+    renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr0_sgpr1, 0, 0
+    renamable $sgpr3 = S_BUFFER_LOAD_DWORD_IMM killed renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0
+
+  bb.3:
+    successors: %bb.1, %bb.4
+
+    S_CMP_GE_I32 renamable $sgpr2, renamable $sgpr3, implicit-def $scc
+    S_CBRANCH_SCC0 %bb.1, implicit killed $scc
+
+  bb.4:
+
+    S_ENDPGM
+
+...

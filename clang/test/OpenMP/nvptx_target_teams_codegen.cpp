@@ -234,7 +234,7 @@ int bar(int n){
 // CHECK: call void [[L0:@.+]](i32* %{{.+}}, i32* %{{.+}}, i16* %{{.*}})
 // CHECK-NOT: call void @__kmpc_end_serialized_parallel(
 // CHECK-NOT: call void @__kmpc_data_sharing_pop_stack(
-// CHECK: call void @__kmpc_spmd_kernel_deinit()
+// CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
 // CHECK: ret
 
 // CHECK: define internal void [[L0]](i32* noalias %{{.+}}, i32* noalias %{{.+}}, i16* dereferenceable
