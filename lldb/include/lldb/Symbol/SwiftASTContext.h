@@ -105,9 +105,7 @@ public:
     return ts->getKind() == TypeSystem::eKindSwift;
   }
 
-  //------------------------------------------------------------------
-  // Provide a global LLVMContext
-  //------------------------------------------------------------------
+  /// Provide the global LLVMContext.
   static llvm::LLVMContext &GetGlobalLLVMContext();
 
   //------------------------------------------------------------------
