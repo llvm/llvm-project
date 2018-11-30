@@ -232,8 +232,7 @@ int32_t nvptx_parallel_reduce_nowait(int32_t global_tid, int32_t num_vars,
 
   // Get the OMP thread Id. This is different from BlockThreadId in the case of
   // an L2 parallel region.
-  return GetOmpThreadId(BlockThreadId, isSPMDExecutionMode,
-                        isRuntimeUninitialized) == 0;
+  return global_tid == 0;
 #endif // __CUDA_ARCH__ >= 700
 }
 
