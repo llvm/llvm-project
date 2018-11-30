@@ -42,7 +42,7 @@ using namespace llvm;
 #define DEBUG_TYPE "loop-simplifycfg"
 
 static cl::opt<bool> EnableTermFolding("enable-loop-simplifycfg-term-folding",
-                                       cl::init(false));
+                                       cl::init(true));
 
 STATISTIC(NumTerminatorsFolded,
           "Number of terminators folded to unconditional branches");
@@ -83,6 +83,7 @@ private:
   Loop &L;
   LoopInfo &LI;
   DominatorTree &DT;
+  MemorySSAUpdater *MSSAU;
 
   // Whether or not the current loop will still exist after terminator constant
   // folding will be done. In theory, there are two ways how it can happen:
@@ -257,6 +258,8 @@ private:
           // the one-input Phi because it is a LCSSA Phi.
           bool PreserveLCSSAPhi = !L.contains(Succ);
           Succ->removePredecessor(BB, PreserveLCSSAPhi);
+          if (MSSAU)
+            MSSAU->removeEdge(BB, Succ);
         } else
           ++TheOnlySuccDuplicates;
 
@@ -267,6 +270,8 @@ private:
       bool PreserveLCSSAPhi = !L.contains(TheOnlySucc);
       for (unsigned Dup = 1; Dup < TheOnlySuccDuplicates; ++Dup)
         TheOnlySucc->removePredecessor(BB, PreserveLCSSAPhi);
+      if (MSSAU && TheOnlySuccDuplicates > 1)
+        MSSAU->removeDuplicatePhiEdgesBetween(BB, TheOnlySucc);
 
       IRBuilder<> Builder(BB->getContext());
       Instruction *Term = BB->getTerminator();
@@ -282,8 +287,9 @@ private:
   }
 
 public:
-  ConstantTerminatorFoldingImpl(Loop &L, LoopInfo &LI, DominatorTree &DT)
-      : L(L), LI(LI), DT(DT) {}
+  ConstantTerminatorFoldingImpl(Loop &L, LoopInfo &LI, DominatorTree &DT,
+                                MemorySSAUpdater *MSSAU)
+      : L(L), LI(LI), DT(DT), MSSAU(MSSAU) {}
   bool run() {
     assert(L.getLoopLatch() && "Should be single latch!");
 
@@ -364,7 +370,8 @@ public:
 
 /// Turn branches and switches with known constant conditions into unconditional
 /// branches.
-static bool constantFoldTerminators(Loop &L, DominatorTree &DT, LoopInfo &LI) {
+static bool constantFoldTerminators(Loop &L, DominatorTree &DT, LoopInfo &LI,
+                                    MemorySSAUpdater *MSSAU) {
   if (!EnableTermFolding)
     return false;
 
@@ -373,7 +380,7 @@ static bool constantFoldTerminators(Loop &L, DominatorTree &DT, LoopInfo &LI) {
   if (!L.getLoopLatch())
     return false;
 
-  ConstantTerminatorFoldingImpl BranchFolder(L, LI, DT);
+  ConstantTerminatorFoldingImpl BranchFolder(L, LI, DT, MSSAU);
   return BranchFolder.run();
 }
 
@@ -410,7 +417,7 @@ static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
   bool Changed = false;
 
   // Constant-fold terminators with known constant conditions.
-  Changed |= constantFoldTerminators(L, DT, LI);
+  Changed |= constantFoldTerminators(L, DT, LI, MSSAU);
 
   // Eliminate unconditional branches by merging blocks into their predecessors.
   Changed |= mergeBlocksIntoPredecessors(L, DT, LI, MSSAU);
