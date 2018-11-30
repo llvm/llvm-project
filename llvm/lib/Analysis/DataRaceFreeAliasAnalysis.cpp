@@ -14,7 +14,7 @@
 
 #include "llvm/Analysis/DataRaceFreeAliasAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/TapirTaskInfo.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -27,29 +27,7 @@ using namespace llvm;
 
 ModRefInfo DRFAAResult::getModRefInfo(ImmutableCallSite CS1,
                                       ImmutableCallSite CS2) {
-  if (TI.isSerial())
-    return AAResultBase::getModRefInfo(CS1, CS2);
-
-  if (TI.getTaskFor(CS1.getParent()) == TI.getTaskFor(CS2.getParent()))
-    return AAResultBase::getModRefInfo(CS1, CS2);
-
-  const Task *Enclosing = TI.getEnclosingTask(CS1.getParent(), CS2.getParent());
-  const Task *CS1Task = Enclosing, *CS2Task = Enclosing;
-  const Spindle *CS1Spindle = TI.getSpindleFor(CS1.getParent());
-  const Spindle *CS2Spindle = TI.getSpindleFor(CS2.getParent());
-  for (const Task *SubT : Enclosing->subtasks()) {
-    if (SubT->encloses(CS1.getParent()))
-      CS1Task = SubT;
-    if (SubT->encloses(CS2.getParent()))
-      CS2Task = SubT;
-  }
-  if (CS1Task != Enclosing)
-    CS1Spindle = TI.getSpindleFor(CS1Task->getDetach()->getParent());
-  if (CS2Task != Enclosing)
-    CS2Spindle = TI.getSpindleFor(CS2Task->getDetach()->getParent());
-
-  if (MPTasks.TaskList[CS1Spindle].count(CS2Task) ||
-      MPTasks.TaskList[CS2Spindle].count(CS1Task))
+  if (TI.mayHappenInParallel(CS1.getParent(), CS2.getParent()))
     return ModRefInfo::NoModRef;
 
   return AAResultBase::getModRefInfo(CS1, CS2);

@@ -16,12 +16,11 @@
 #define LLVM_ANALYSIS_DATARACEFREEALIASANALYSIS_H
 
 #include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/TapirTaskInfo.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
+
+class TaskInfo;
 
 /// A simple alias analysis implementation that implements the assumption that
 /// the Tapir program is data-race free.  This analysis uses TaskInfo to
@@ -31,28 +30,16 @@ namespace llvm {
 /// they do not alias.
 class DRFAAResult : public AAResultBase<DRFAAResult> {
   TaskInfo &TI;
-  MaybeParallelTasks MPTasks;
 
 public:
-  explicit DRFAAResult(TaskInfo &TI) : AAResultBase(), TI(TI) {
-    getMaybeParallelTasks();
-  }
-  DRFAAResult(DRFAAResult &&Arg) : AAResultBase(std::move(Arg)), TI(Arg.TI) {
-    getMaybeParallelTasks();
-  }
+  explicit DRFAAResult(TaskInfo &TI) : AAResultBase(), TI(TI) {}
+  DRFAAResult(DRFAAResult &&Arg) : AAResultBase(std::move(Arg)), TI(Arg.TI) {}
 
   ModRefInfo getModRefInfo(ImmutableCallSite CS, const MemoryLocation &Loc) {
     return AAResultBase::getModRefInfo(CS, Loc);
   }
 
   ModRefInfo getModRefInfo(ImmutableCallSite CS1, ImmutableCallSite CS2);
-
-private:
-  void getMaybeParallelTasks() {
-    MPTasks.TaskList.clear();
-    // Evaluate the tasks that might be in parallel with each spindle.
-    TI.evaluateParallelState<MaybeParallelTasks>(MPTasks);
-  }
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
