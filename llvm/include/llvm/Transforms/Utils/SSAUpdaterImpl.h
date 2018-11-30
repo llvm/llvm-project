@@ -357,10 +357,9 @@ public:
       BBInfo *Info = *I;
 
       if (Info->DefBB != Info) {
-        // Record the available value at join nodes to speed up subsequent
-        // uses of this SSAUpdater for the same value.
-        if (Info->NumPreds > 1)
-          (*AvailableVals)[Info->BB] = Info->DefBB->AvailableVal;
+        // Record the available value to speed up subsequent uses of this
+        // SSAUpdater for the same value.
+        (*AvailableVals)[Info->BB] = Info->DefBB->AvailableVal;
         continue;
       }
 

@@ -64,6 +64,11 @@ bool SSAUpdater::HasValueForBlock(BasicBlock *BB) const {
   return getAvailableVals(AV).count(BB);
 }
 
+Value *SSAUpdater::FindValueForBlock(BasicBlock *BB) const {
+  AvailableValsTy::iterator AVI = getAvailableVals(AV).find(BB);
+  return (AVI != getAvailableVals(AV).end()) ? AVI->second : nullptr;
+}
+
 void SSAUpdater::AddAvailableValue(BasicBlock *BB, Value *V) {
   assert(ProtoType && "Need to initialize SSAUpdater");
   assert(ProtoType == V->getType() &&
