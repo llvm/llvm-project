@@ -11,9 +11,8 @@ declare { i32, i1 } @llvm.usub.with.overflow.i32(i32, i32) #0
 define void @draw_llvm_vs_variant0() {
 ; CHECK-LABEL: draw_llvm_vs_variant0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    ldx r3, 0, r3
-; CHECK-NEXT:    mtvsrd f0, r3
-; CHECK-NEXT:    xxswapd v2, vs0
+; CHECK-NEXT:    lfd f0, 0(r3)
+; CHECK-NEXT:    xxpermdi v2, f0, f0, 2
 ; CHECK-NEXT:    vmrglh v2, v2, v2
 ; CHECK-NEXT:    vextsh2w v2, v2
 ; CHECK-NEXT:    xvcvsxwsp vs0, v2

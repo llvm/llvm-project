@@ -8454,17 +8454,6 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     if (V2.isUndef() && PPC::isSplatShuffleMask(SVOp, 4)) {
       int SplatIdx = PPC::getVSPLTImmediate(SVOp, 4, DAG);
 
-      // If the source for the shuffle is a scalar_to_vector that came from a
-      // 32-bit load, it will have used LXVWSX so we don't need to splat again.
-      if (Subtarget.hasP9Vector() &&
-          ((isLittleEndian && SplatIdx == 3) ||
-           (!isLittleEndian && SplatIdx == 0))) {
-        SDValue Src = V1.getOperand(0);
-        if (Src.getOpcode() == ISD::SCALAR_TO_VECTOR &&
-            Src.getOperand(0).getOpcode() == ISD::LOAD &&
-            Src.getOperand(0).hasOneUse())
-          return V1;
-      }
       SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, V1);
       SDValue Splat = DAG.getNode(PPCISD::XXSPLT, dl, MVT::v4i32, Conv,
                                   DAG.getConstant(SplatIdx, dl, MVT::i32));

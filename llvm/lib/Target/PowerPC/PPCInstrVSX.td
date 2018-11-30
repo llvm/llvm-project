@@ -877,6 +877,12 @@ let Uses = [RM] in {
                        "xxsldwi $XT, $XA, $XB, $SHW", IIC_VecPerm,
                        [(set v4i32:$XT, (PPCvecshl v4i32:$XA, v4i32:$XB,
                                                   imm32SExt16:$SHW))]>;
+
+  let isCodeGenOnly = 1 in
+  def XXSLDWIs : XX3Form_2s<60, 2,
+                       (outs vsrc:$XT), (ins vsfrc:$XA, u2imm:$SHW),
+                       "xxsldwi $XT, $XA, $XA, $SHW", IIC_VecPerm, []>;
+
   def XXSPLTW : XX2Form_2<60, 164,
                        (outs vsrc:$XT), (ins vsrc:$XB, u2imm:$UIM),
                        "xxspltw $XT, $XB, $UIM", IIC_VecPerm,
@@ -886,6 +892,7 @@ let Uses = [RM] in {
   def XXSPLTWs : XX2Form_2<60, 164,
                        (outs vsrc:$XT), (ins vfrc:$XB, u2imm:$UIM),
                        "xxspltw $XT, $XB, $UIM", IIC_VecPerm, []>;
+
 } // hasSideEffects
 } // UseVSXReg = 1
 
@@ -1466,8 +1473,6 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
                    (f64 (PPCmtvsra (i64 (vector_extract v2i64:$S, 1)))))),
             (f32 (XSCVUXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
   }
-  def : Pat<(v4i32 (scalar_to_vector ScalarLoads.Li32)),
-            (v4i32 (XXSPLTWs (LIWAX xoaddr:$src), 1))>;
 
   // Instructions for converting float to i64 feeding a store.
   let Predicates = [NoP9Vector] in {
@@ -3050,13 +3055,47 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
             (STXVX $rS, xoaddr:$dst)>;
   def : Pat<(int_ppc_vsx_stxvd2x v2f64:$rS, xoaddr:$dst),
             (STXVX $rS, xoaddr:$dst)>;
-  def : Pat<(v4i32 (scalar_to_vector (i32 (load xoaddr:$src)))),
-            (v4i32 (LXVWSX xoaddr:$src))>;
-  def : Pat<(v4f32 (scalar_to_vector (f32 (load xoaddr:$src)))),
-            (v4f32 (LXVWSX xoaddr:$src))>;
-  def : Pat<(v4f32 (scalar_to_vector
-                     (f32 (fpround (f64 (extloadf32 xoaddr:$src)))))),
-            (v4f32 (LXVWSX xoaddr:$src))>;
+
+  let AddedComplexity = 400 in {
+    // LIWAX - This instruction is used for sign extending i32 -> i64.
+    // LIWZX - This instruction will be emitted for i32, f32, and when
+    //         zero-extending i32 to i64 (zext i32 -> i64).
+    let Predicates = [IsLittleEndian] in {
+
+      def : Pat<(v2i64 (scalar_to_vector (i64 (sextloadi32 xoaddr:$src)))),
+                (v2i64 (XXPERMDIs
+                (COPY_TO_REGCLASS (LIWAX xoaddr:$src), VSRC), 2))>;
+
+      def : Pat<(v2i64 (scalar_to_vector (i64 (zextloadi32 xoaddr:$src)))),
+                (v2i64 (XXPERMDIs
+                (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSRC), 2))>;
+
+      def : Pat<(v4i32 (scalar_to_vector (i32 (load xoaddr:$src)))),
+                (v4i32 (XXPERMDIs
+                (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSRC), 2))>;
+
+      def : Pat<(v4f32 (scalar_to_vector (f32 (load xoaddr:$src)))),
+                (v4f32 (XXPERMDIs
+                (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSRC), 2))>;
+    }
+
+    let Predicates = [IsBigEndian] in {
+      def : Pat<(v2i64 (scalar_to_vector (i64 (sextloadi32 xoaddr:$src)))),
+                (v2i64 (COPY_TO_REGCLASS (LIWAX xoaddr:$src), VSRC))>;
+
+      def : Pat<(v2i64 (scalar_to_vector (i64 (zextloadi32 xoaddr:$src)))),
+                (v2i64 (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSRC))>;
+
+      def : Pat<(v4i32 (scalar_to_vector (i32 (load xoaddr:$src)))),
+                (v4i32 (XXSLDWIs
+                (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSRC), 1))>;
+
+      def : Pat<(v4f32 (scalar_to_vector (f32 (load xoaddr:$src)))),
+                (v4f32 (XXSLDWIs
+                (COPY_TO_REGCLASS (LIWZX xoaddr:$src), VSRC), 1))>;
+    }
+
+  }
 
   // Build vectors from i8 loads
   def : Pat<(v16i8 (scalar_to_vector ScalarLoads.Li8)),
@@ -3217,6 +3256,39 @@ let AddedComplexity = 400, Predicates = [HasP9Vector] in {
             (COPY_TO_REGCLASS (DFLOADf32 ixaddr:$src), VSFRC)>;
   def : Pat<(f32 (fpround (f64 (extloadf32 ixaddr:$src)))),
             (f32 (DFLOADf32 ixaddr:$src))>;
+
+
+  let AddedComplexity = 400 in {
+  // The following pseudoinstructions are used to ensure the utilization
+  // of all 64 VSX registers.
+    let Predicates = [IsLittleEndian, HasP9Vector] in {
+      def : Pat<(v2i64 (scalar_to_vector (i64 (load ixaddr:$src)))),
+                (v2i64 (XXPERMDIs
+                (COPY_TO_REGCLASS (DFLOADf64 ixaddr:$src), VSRC), 2))>;
+      def : Pat<(v2i64 (scalar_to_vector (i64 (load xaddr:$src)))),
+                (v2i64 (XXPERMDIs
+		(COPY_TO_REGCLASS (XFLOADf64 xaddr:$src), VSRC), 2))>;
+
+      def : Pat<(v2f64 (scalar_to_vector (f64 (load ixaddr:$src)))),
+                (v2f64 (XXPERMDIs
+                (COPY_TO_REGCLASS (DFLOADf64 ixaddr:$src), VSRC), 2))>;
+      def : Pat<(v2f64 (scalar_to_vector (f64 (load xaddr:$src)))),
+                (v2f64 (XXPERMDIs
+                (COPY_TO_REGCLASS (XFLOADf64 xaddr:$src), VSRC), 2))>;
+    }
+
+    let Predicates = [IsBigEndian, HasP9Vector] in {
+      def : Pat<(v2i64 (scalar_to_vector (i64 (load ixaddr:$src)))),
+                (v2i64 (COPY_TO_REGCLASS (DFLOADf64 ixaddr:$src), VSRC))>;
+      def : Pat<(v2i64 (scalar_to_vector (i64 (load xaddr:$src)))),
+                (v2i64 (COPY_TO_REGCLASS (XFLOADf64 xaddr:$src), VSRC))>;
+
+      def : Pat<(v2f64 (scalar_to_vector (f64 (load ixaddr:$src)))),
+                (v2f64 (COPY_TO_REGCLASS (DFLOADf64 ixaddr:$src), VSRC))>;
+      def : Pat<(v2f64 (scalar_to_vector (f64 (load xaddr:$src)))),
+                (v2f64 (COPY_TO_REGCLASS (XFLOADf64 xaddr:$src), VSRC))>;
+    }
+  }
 
   let Predicates = [IsBigEndian, HasP9Vector] in {
 
@@ -3932,3 +4004,4 @@ let AddedComplexity = 400 in {
               (v4i32 (VEXTSH2W $A))>;
   }
 }
+
