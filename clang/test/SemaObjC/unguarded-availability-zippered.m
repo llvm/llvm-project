@@ -1,11 +1,8 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.14 -darwin-target-variant-triple x86_64-apple-ios12-macabi -fblocks -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-ios12-macabi -darwin-target-variant-triple x86_64-apple-macos10.14 -fblocks -fsyntax-only -verify -D INVERTED %s
+
 
 // XFAIL: *
-#ifdef NO_WARNING
-  // expected-no-diagnostics
-#endif
-
-
 #define AVAILABLE_PREV_MAC __attribute__((availability(macos, introduced = 10.13)))
 #define AVAILABLE_CURRENT_MAC __attribute__((availability(macos, introduced = 10.14)))
 #define AVAILABLE_NEXT_MAC __attribute__((availability(macos, introduced = 10.15)))
@@ -29,8 +26,13 @@ void macOSNextAvailableiOSNotAvailable() AVAILABLE_NEXT_MAC __attribute__((avail
 void test() {
   bothPreviouslyAvailable();
   bothCurrentlyAvailable();
-  bothWillBeAvailable(); // expected-warning {{'bothWillBeAvailable' is only available on macOS 10.15 and iOS (on macOS) 13 or newer}}
-  // expected-note@-1{{enclose 'bothWillBeAvailable' in an @available check to silence this warning}}
+  bothWillBeAvailable(); // expected-note{{enclose 'bothWillBeAvailable' in an @available check to silence this warning}}
+#ifndef INVERTED
+  // expected-warning@-2 {{'bothWillBeAvailable' is only available on macOS 10.15 and iOS (on macOS) 13 or newer}}
+#else
+  // expected-warning@-4 {{'bothWillBeAvailable' is only available on iOS (on macOS) 13 and macOS 10.15 or newer}}
+#endif
+  
   
   macOSCurrentlyAvailable(); // expected-warning {{'macOSCurrentlyAvailable' is only available on iOS (on macOS) 13 or newer}}
   // expected-note@-1 {{enclose 'macOSCurrentlyAvailable' in an @available check to silence this warning}}
@@ -41,8 +43,12 @@ void test() {
     bothWillBeAvailable(); // expected-warning {{'bothWillBeAvailable' is only available on macOS 10.15 or newer}}
   // expected-note@-1 {{enclose}}
   if (@available(ios 12, *))
-    bothWillBeAvailable(); // expected-warning {{'bothWillBeAvailable' is only available on macOS 10.15 and iOS (on macOS) 13 or newer}}
-  // expected-note@-1 {{enclose}}
+    bothWillBeAvailable(); // expected-note {{enclose}}
+#ifndef INVERTED
+  // expected-warning@-2 {{'bothWillBeAvailable' is only available on macOS 10.15 and iOS (on macOS) 13 or newer}}
+#else
+  // expected-warning@-4 {{'bothWillBeAvailable' is only available on iOS (on macOS) 13 and macOS 10.15 or newer}}
+#endif
   if (@available(macos 10.15, *))
     bothWillBeAvailable(); // expected-warning {{'bothWillBeAvailable' is only available on iOS (on macOS) 13 or newer}}
   // expected-note@-1 {{enclose}}

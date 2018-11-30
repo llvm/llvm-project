@@ -80,8 +80,18 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
   } else {
     OsVersion = Triple.getOSVersion();
     PlatformName = llvm::Triple::getOSTypeName(Triple.getOS());
-    if (PlatformName == "ios" && Triple.isMacCatalystEnvironment())
+    if (PlatformName == "ios" && Triple.isMacCatalystEnvironment()) {
       PlatformName = "maccatalyst";
+      if (!TargetVariantTriple.empty()) {
+        llvm::Triple TVT(TargetVariantTriple);
+        if (TVT.isMacOSX()) {
+          TargetVariantPlatformName = "macos";
+          VersionTuple VariantVersion;
+          TVT.getMacOSXVersion(VariantVersion);
+          TargetVariantPlatformMinVersion = VariantVersion;
+        }
+      }
+    }
   }
 
   // If -target arch-pc-win32-macho option specified, we're

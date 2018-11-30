@@ -4094,7 +4094,9 @@ CodeGenFunction::EmitBuiltinAvailable(const VersionTuple &Version,
   llvm::Value *VariantCheck = nullptr;
   if (!VariantArgs.empty()) {
     VariantCheck = EmitNounwindRuntimeCall(
-        CGM.IsTargetVariantOSVersionAtLeastFn, VariantArgs);
+        UseTargetVariantCheck ? CGM.IsOSVersionAtLeastFn
+                              : CGM.IsTargetVariantOSVersionAtLeastFn,
+        VariantArgs);
   }
   llvm::Value *IsNativeCheck = nullptr;
   if (CGM.getTarget().hasTargetVariantPlatform()) {
@@ -4105,6 +4107,11 @@ CodeGenFunction::EmitBuiltinAvailable(const VersionTuple &Version,
       Check = llvm::ConstantInt::get(Int32Ty, 1);
     if (!VariantCheck)
       VariantCheck = llvm::ConstantInt::get(Int32Ty, 1);
+    // When macOS is the target variant, we should swap the check and the
+    // variant check to ensure that our condition which always checks if the
+    // process is macOS still works.
+    if (UseTargetVariantCheck)
+      std::swap(Check, VariantCheck);
     Check = Builder.CreateSelect(IsNativeCheck, Check, VariantCheck);
   }
 
