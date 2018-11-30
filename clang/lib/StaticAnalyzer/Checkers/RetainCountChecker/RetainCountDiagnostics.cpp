@@ -526,7 +526,8 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
       os << "that is annotated as CF_RETURNS_NOT_RETAINED";
     } else if (D->hasAttr<NSReturnsNotRetainedAttr>()) {
       os << "that is annotated as NS_RETURNS_NOT_RETAINED";
-      // TODO: once the patch is ready, insert a case for OS_RETURNS_NOT_RETAINED
+    } else if (D->hasAttr<OSReturnsNotRetainedAttr>()) {
+      os << "that is annotated as OS_RETURNS_NOT_RETAINED";
     } else {
       if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
         if (BRC.getASTContext().getLangOpts().ObjCAutoRefCount) {

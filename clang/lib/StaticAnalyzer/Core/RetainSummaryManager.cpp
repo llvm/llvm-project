@@ -664,15 +664,21 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
     return None;
   }
 
-  if (D->hasAttr<CFReturnsRetainedAttr>())
+  if (D->hasAttr<CFReturnsRetainedAttr>()) {
     return RetEffect::MakeOwned(RetEffect::CF);
-  else if (hasRCAnnotation(D, "rc_ownership_returns_retained"))
+  } else if (D->hasAttr<OSReturnsRetainedAttr>()) {
+    return RetEffect::MakeOwned(RetEffect::OS);
+  } else if (hasRCAnnotation(D, "rc_ownership_returns_retained")) {
     return RetEffect::MakeOwned(RetEffect::Generalized);
+  }
 
-  if (D->hasAttr<CFReturnsNotRetainedAttr>())
+  if (D->hasAttr<CFReturnsNotRetainedAttr>()) {
     return RetEffect::MakeNotOwned(RetEffect::CF);
-  else if (hasRCAnnotation(D, "rc_ownership_returns_not_retained"))
+  } else if (D->hasAttr<OSReturnsNotRetainedAttr>()) {
+    return RetEffect::MakeNotOwned(RetEffect::OS);
+  } else if (hasRCAnnotation(D, "rc_ownership_returns_not_retained")) {
     return RetEffect::MakeNotOwned(RetEffect::Generalized);
+  }
 
   return None;
 }
@@ -688,15 +694,16 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
 
   // Effects on the parameters.
   unsigned parm_idx = 0;
-  for (FunctionDecl::param_const_iterator pi = FD->param_begin(),
+  for (auto pi = FD->param_begin(),
          pe = FD->param_end(); pi != pe; ++pi, ++parm_idx) {
     const ParmVarDecl *pd = *pi;
-    if (pd->hasAttr<NSConsumedAttr>())
+    if (pd->hasAttr<NSConsumedAttr>()) {
       Template->addArg(AF, parm_idx, DecRefMsg);
-    else if (pd->hasAttr<CFConsumedAttr>() ||
-             hasRCAnnotation(pd, "rc_ownership_consumed"))
+    } else if (pd->hasAttr<CFConsumedAttr>() ||
+             pd->hasAttr<OSConsumedAttr>() ||
+             hasRCAnnotation(pd, "rc_ownership_consumed")) {
       Template->addArg(AF, parm_idx, DecRef);
-    else if (pd->hasAttr<CFReturnsRetainedAttr>() ||
+    } else if (pd->hasAttr<CFReturnsRetainedAttr>() ||
              hasRCAnnotation(pd, "rc_ownership_returns_retained")) {
       QualType PointeeTy = pd->getType()->getPointeeType();
       if (!PointeeTy.isNull())
@@ -734,9 +741,9 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
          pi=MD->param_begin(), pe=MD->param_end();
        pi != pe; ++pi, ++parm_idx) {
     const ParmVarDecl *pd = *pi;
-    if (pd->hasAttr<NSConsumedAttr>())
+    if (pd->hasAttr<NSConsumedAttr>()) {
       Template->addArg(AF, parm_idx, DecRefMsg);
-    else if (pd->hasAttr<CFConsumedAttr>()) {
+    } else if (pd->hasAttr<CFConsumedAttr>() || pd->hasAttr<OSConsumedAttr>()) {
       Template->addArg(AF, parm_idx, DecRef);
     } else if (pd->hasAttr<CFReturnsRetainedAttr>()) {
       QualType PointeeTy = pd->getType()->getPointeeType();

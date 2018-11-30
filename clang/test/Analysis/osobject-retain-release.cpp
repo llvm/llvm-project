@@ -2,9 +2,9 @@
 
 struct OSMetaClass;
 
-#define OS_CONSUME __attribute__((annotate("rc_ownership_consumed")))
-#define OS_RETURNS_RETAINED __attribute__((annotate("rc_ownership_returns_retained")))
-#define OS_RETURNS_NOT_RETAINED __attribute__((annotate("rc_ownership_returns_not_retained")))
+#define OS_CONSUME __attribute__((os_consumed))
+#define OS_RETURNS_RETAINED __attribute__((os_returns_retained))
+#define OS_RETURNS_NOT_RETAINED __attribute__((os_returns_not_retained))
 
 #define OSTypeID(type)   (type::metaClass)
 
