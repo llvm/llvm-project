@@ -173,10 +173,19 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
       os << "Object loaded from instance variable";
     } else {
       if (const CallExpr *CE = dyn_cast<CallExpr>(S)) {
-        // Get the name of the callee (if it is available).
+        // Get the name of the callee (if it is available)
+        // from the tracked SVal.
         SVal X = CurrSt->getSValAsScalarOrLoc(CE->getCallee(), LCtx);
-        if (const FunctionDecl *FD = X.getAsFunctionDecl()) {
-          os << "Call to function '" << *FD << '\'';
+        const FunctionDecl *FD = X.getAsFunctionDecl();
+
+        // If failed, try to get it from AST.
+        if (!FD)
+          FD = dyn_cast<FunctionDecl>(CE->getCalleeDecl());
+
+        if (const auto *MD = dyn_cast<CXXMethodDecl>(CE->getCalleeDecl())) {
+          os << "Call to method '" << MD->getQualifiedNameAsString() << '\'';
+        } else if (FD) {
+          os << "Call to function '" << FD->getQualifiedNameAsString() << '\'';
         } else {
           os << "function call";
         }
