@@ -200,6 +200,7 @@ public:
   unsigned ShowCheckerHelp : 1;
   unsigned ShowEnabledCheckerList : 1;
   unsigned ShowConfigOptionsList : 1;
+  unsigned ShouldEmitErrorsOnInvalidConfigValue : 1;
   unsigned AnalyzeAll : 1;
   unsigned AnalyzerDisplayProgress : 1;
   unsigned AnalyzeNestedBlocks : 1;
@@ -222,6 +223,7 @@ public:
   /// The mode of function selection used during inlining.
   AnalysisInliningMode InliningMode = NoRedundancy;
 
+  // Create a field for each -analyzer-config option.
 #define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
                                              SHALLOW_VAL, DEEP_VAL)            \
   ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL)
@@ -233,13 +235,39 @@ public:
 #undef ANALYZER_OPTION
 #undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 
+  // Create an array of all -analyzer-config command line options. Sort it in
+  // the constructor.
+  std::vector<StringRef> AnalyzerConfigCmdFlags = {
+#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
+                                             SHALLOW_VAL, DEEP_VAL)            \
+  ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL)
+
+#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
+    CMDFLAG,
+
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
+#undef ANALYZER_OPTION
+#undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
+  };
+
+  bool isUnknownAnalyzerConfig(StringRef Name) const {
+
+    assert(std::is_sorted(AnalyzerConfigCmdFlags.begin(),
+                          AnalyzerConfigCmdFlags.end()));
+
+    return !std::binary_search(AnalyzerConfigCmdFlags.begin(),
+                               AnalyzerConfigCmdFlags.end(), Name);
+  }
+
   AnalyzerOptions()
       : DisableAllChecks(false), ShowCheckerHelp(false),
         ShowEnabledCheckerList(false), ShowConfigOptionsList(false),
         AnalyzeAll(false), AnalyzerDisplayProgress(false),
         AnalyzeNestedBlocks(false), eagerlyAssumeBinOpBifurcation(false),
         TrimGraph(false), visualizeExplodedGraphWithGraphViz(false),
-        UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false) {}
+        UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false) {
+    llvm::sort(AnalyzerConfigCmdFlags);
+  }
 
   /// Interprets an option's string value as a boolean. The "true" string is
   /// interpreted as true and the "false" string is interpreted as false.
