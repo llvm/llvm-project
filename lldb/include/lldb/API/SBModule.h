@@ -309,6 +309,7 @@ public:
   lldb::SBFileSpec GetSymbolFileSpec() const;
 
   lldb::SBAddress GetObjectFileHeaderAddress() const;
+  lldb::SBAddress GetObjectFileEntryPointAddress() const;
 
   lldb::SBError IsTypeSystemCompatible(lldb::LanguageType language);
 

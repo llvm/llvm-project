@@ -1,6 +1,6 @@
-REQUIRES: system-windows
-RUN: clang-cl -m32 /Z7 /c /GS- %S/Inputs/SimpleTypesTest.cpp /o %T/SimpleTypesTest.cpp.typedefs.obj
-RUN: link %T/SimpleTypesTest.cpp.typedefs.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/SimpleTypesTest.cpp.typedefs.exe
+REQUIRES: system-windows, msvc
+RUN: %clang_cl -m32 /Z7 /c /GS- %S/Inputs/SimpleTypesTest.cpp /o %T/SimpleTypesTest.cpp.typedefs.obj
+RUN: %msvc_link %T/SimpleTypesTest.cpp.typedefs.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/SimpleTypesTest.cpp.typedefs.exe
 RUN: lldb-test symbols %T/SimpleTypesTest.cpp.typedefs.exe | FileCheck %s
 
 ; Generate 32-bit target

@@ -1,5 +1,6 @@
-REQUIRES: system-windows
-RUN: clang-cl /Zi %S/Inputs/VariablesLocationsTest.cpp /o %t.exe
+REQUIRES: system-windows, msvc
+RUN: %clang_cl /Zi %S/Inputs/VariablesLocationsTest.cpp /c /o %t.obj
+RUN: %msvc_link /debug:full %t.obj /out:%t.exe
 RUN: %lldb -b -s %S/Inputs/VariablesLocationsTest.script -- %t.exe | FileCheck %s
 
 CHECK: g_var = 2222

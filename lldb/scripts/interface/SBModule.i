@@ -335,6 +335,9 @@ public:
     lldb::SBError
     IsTypeSystemCompatible (lldb::LanguageType language);
 
+    lldb::SBAddress
+    GetObjectFileEntryPointAddress() const;
+
     bool
     operator == (const lldb::SBModule &rhs) const;
              

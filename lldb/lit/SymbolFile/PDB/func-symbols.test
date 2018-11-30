@@ -1,7 +1,7 @@
-REQUIRES: system-windows
-RUN: clang-cl -m32 /Z7 /c /GS- %S/Inputs/FuncSymbolsTestMain.cpp /o %T/FuncSymbolsTestMain.cpp.obj
-RUN: clang-cl -m32 /Z7 /c /GS- %S/Inputs/FuncSymbols.cpp /o %T/FuncSymbols.cpp.obj
-RUN: link %T/FuncSymbolsTestMain.cpp.obj %T/FuncSymbols.cpp.obj /DEBUG /nodefaultlib /Entry:main /OUT:%T/FuncSymbolsTest.exe
+REQUIRES: system-windows, msvc
+RUN: %clang_cl -m32 /Z7 /c /GS- %S/Inputs/FuncSymbolsTestMain.cpp /o %T/FuncSymbolsTestMain.cpp.obj
+RUN: %clang_cl -m32 /Z7 /c /GS- %S/Inputs/FuncSymbols.cpp /o %T/FuncSymbols.cpp.obj
+RUN: %msvc_link %T/FuncSymbolsTestMain.cpp.obj %T/FuncSymbols.cpp.obj /DEBUG /nodefaultlib /Entry:main /OUT:%T/FuncSymbolsTest.exe
 RUN: lldb-test symbols %T/FuncSymbolsTest.exe | FileCheck --check-prefix=CHECK-ONE %s
 RUN: lldb-test symbols %T/FuncSymbolsTest.exe | FileCheck --check-prefix=CHECK-TWO %s
 

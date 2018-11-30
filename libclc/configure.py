@@ -86,6 +86,7 @@ llvm_cxxflags = llvm_config(['--cxxflags']) + ' -fno-exceptions -fno-rtti ' + \
 llvm_libdir = llvm_config(['--libdir'])
 
 llvm_clang = os.path.join(llvm_bindir, 'clang')
+llvm_as = os.path.join(llvm_bindir, 'llvm-as')
 llvm_link = os.path.join(llvm_bindir, 'llvm-link')
 llvm_opt = os.path.join(llvm_bindir, 'opt')
 
@@ -133,8 +134,7 @@ if not targets:
 
 b = metabuild.from_name(options.g)
 
-b.rule("LLVM_AS", "%s -o $out $in" % os.path.join(llvm_bindir, "llvm-as"),
-       'LLVM-AS $out')
+b.rule("LLVM_AS", "%s -o $out $in" % llvm_as, 'LLVM-AS $out')
 b.rule("LLVM_LINK", command = llvm_link + " -o $out $in",
        description = 'LLVM-LINK $out')
 b.rule("OPT", command = llvm_opt + " -O3 -o $out $in",
@@ -213,6 +213,8 @@ for target in targets:
       clang_bc_flags += ' -mcpu=' + device['gpu']
     clang_bc_rule = "CLANG_CL_BC_" + target + "_" + device['gpu']
     c_compiler_rule(b, clang_bc_rule, "LLVM-CC", llvm_clang, clang_bc_flags)
+    as_bc_rule = "LLVM_AS_BC_" + target + "_" + device['gpu']
+    b.rule(as_bc_rule, "%s -E -P %s -x cl $in -o - | %s -o $out" % (llvm_clang, clang_bc_flags, llvm_as), 'LLVM-AS $out')
 
     objects = []
     sources_seen = set()
@@ -265,7 +267,7 @@ for target in targets:
           src_file = os.path.join(src_path, src)
           ext = os.path.splitext(src)[1]
           if ext == '.ll':
-            b.build(obj, 'LLVM_AS', src_file)
+            b.build(obj, as_bc_rule, src_file)
           else:
             b.build(obj, clang_bc_rule, src_file)
 

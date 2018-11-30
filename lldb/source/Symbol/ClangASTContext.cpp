@@ -120,7 +120,9 @@ ClangASTContextSupportsLanguage(lldb::LanguageType language) {
          language == eLanguageTypeRust ||
          language == eLanguageTypeExtRenderScript ||
          // Use Clang for D until there is a proper language plugin for it
-         language == eLanguageTypeD;
+         language == eLanguageTypeD ||
+         // Open Dylan compiler debug info is designed to be Clang-compatible
+         language == eLanguageTypeDylan;
 }
 
 // Checks whether m1 is an overload of m2 (as opposed to an override). This is
@@ -6045,10 +6047,10 @@ GetObjCFieldAtIndex(clang::ASTContext *ast,
 
             if (is_bitfield && ast) {
               clang::Expr *bitfield_bit_size_expr = ivar_pos->getBitWidth();
-              llvm::APSInt bitfield_apsint;
+              clang::Expr::EvalResult result;
               if (bitfield_bit_size_expr &&
-                  bitfield_bit_size_expr->EvaluateAsInt(bitfield_apsint,
-                                                        *ast)) {
+                  bitfield_bit_size_expr->EvaluateAsInt(result, *ast)) {
+                llvm::APSInt bitfield_apsint = result.Val.getInt();
                 *bitfield_bit_size_ptr = bitfield_apsint.getLimitedValue();
               }
             }
@@ -6105,10 +6107,11 @@ CompilerType ClangASTContext::GetFieldAtIndex(lldb::opaque_compiler_type_t type,
 
             if (is_bitfield) {
               clang::Expr *bitfield_bit_size_expr = field->getBitWidth();
-              llvm::APSInt bitfield_apsint;
+              clang::Expr::EvalResult result;
               if (bitfield_bit_size_expr &&
-                  bitfield_bit_size_expr->EvaluateAsInt(bitfield_apsint,
+                  bitfield_bit_size_expr->EvaluateAsInt(result,
                                                         *getASTContext())) {
+                llvm::APSInt bitfield_apsint = result.Val.getInt();
                 *bitfield_bit_size_ptr = bitfield_apsint.getLimitedValue();
               }
             }

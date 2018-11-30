@@ -1,6 +1,6 @@
-REQUIRES: system-windows
-RUN: clang-cl -m32 /Z7 /c /GS- %S/Inputs/PointerTypeTest.cpp /o %T/PointerTypeTest.cpp.obj
-RUN: link %T/PointerTypeTest.cpp.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/PointerTypeTest.cpp.exe
+REQUIRES: system-windows, msvc
+RUN: %clang_cl -m32 /Z7 /c /GS- %S/Inputs/PointerTypeTest.cpp /o %T/PointerTypeTest.cpp.obj
+RUN: %msvc_link %T/PointerTypeTest.cpp.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/PointerTypeTest.cpp.exe
 RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck %s
 RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck --check-prefix=MAIN-ST-F %s
 RUN: lldb-test symbols %T/PointerTypeTest.cpp.exe | FileCheck --check-prefix=MAIN-ST %s

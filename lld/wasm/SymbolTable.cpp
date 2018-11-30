@@ -20,6 +20,7 @@
 
 using namespace llvm;
 using namespace llvm::wasm;
+using namespace llvm::object;
 using namespace lld;
 using namespace lld::wasm;
 
@@ -97,6 +98,8 @@ static void reportTypeError(const Symbol *Existing, const InputFile *File,
         " in " + toString(File));
 }
 
+// Check the type of new symbol matches that of the symbol is replacing.
+// For functions this can also involve verifying that the signatures match.
 static void checkFunctionType(Symbol *Existing, const InputFile *File,
                               const WasmSignature *NewSig) {
   auto ExistingFunction = dyn_cast<FunctionSymbol>(Existing);
@@ -121,8 +124,6 @@ static void checkFunctionType(Symbol *Existing, const InputFile *File,
          toString(*NewSig) + " in " + toString(File));
 }
 
-// Check the type of new symbol matches that of the symbol is replacing.
-// For functions this can also involve verifying that the signatures match.
 static void checkGlobalType(const Symbol *Existing, const InputFile *File,
                             const WasmGlobalType *NewType) {
   if (!isa<GlobalSymbol>(Existing)) {

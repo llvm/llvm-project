@@ -2,9 +2,9 @@
 // REQUIRES: lld
 
 // Test various interesting cases for AST reconstruction.
-// RUN: clang-cl /Z7 /GS- /GR- /std:c++latest -Xclang -fkeep-static-consts /c /Fo%t.obj -- %s
+// RUN: %clang_cl /Z7 /GS- /GR- /std:c++latest -Xclang -fkeep-static-consts /c /Fo%t.obj -- %s
 // RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb -- %t.obj
-// RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb -f %t.exe -s \
+// RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/bitfields.lldbinit 2>&1 | FileCheck %s
 
 // Test trivial versions of each tag type.

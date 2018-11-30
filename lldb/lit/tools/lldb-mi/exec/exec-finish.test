@@ -1,7 +1,7 @@
 # XFAIL: system-windows
 # -> llvm.org/pr24452
 #
-# RUN: %cc -o %t %p/inputs/main.c -g
+# RUN: %clang -o %t %p/inputs/main.c -g
 # RUN: %lldbmi %t < %s | FileCheck %s
 
 # Test lldb-mi -exec-finish command.
