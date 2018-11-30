@@ -143,7 +143,7 @@ void test_static_var_local(void) {
 // NOOPT: store i8 addrspace(5)* null, i8 addrspace(5)* addrspace(5)* %sp3, align 4
 // NOOPT: store i8 addrspace(5)* null, i8 addrspace(5)* addrspace(5)* %sp4, align 4
 // NOOPT: %[[SS1:.*]] = bitcast %struct.StructTy1 addrspace(5)* %SS1 to i8 addrspace(5)*
-// NOOPT: call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 8 %[[SS1]], i8 addrspace(4)* align 8 bitcast (%struct.StructTy1 addrspace(4)* @test_func_scope_var_private.SS1 to i8 addrspace(4)*), i64 32, i1 false)
+// NOOPT: call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 8 %[[SS1]], i8 addrspace(4)* align 8 bitcast (%struct.StructTy1 addrspace(4)* @__const.test_func_scope_var_private.SS1 to i8 addrspace(4)*), i64 32, i1 false)
 // NOOPT: %[[SS2:.*]] = bitcast %struct.StructTy2 addrspace(5)* %SS2 to i8 addrspace(5)*
 // NOOPT: call void @llvm.memset.p5i8.i64(i8 addrspace(5)* align 8 %[[SS2]], i8 0, i64 24, i1 false)
 void test_func_scope_var_private(void) {
@@ -163,7 +163,7 @@ void test_func_scope_var_private(void) {
 // NOOPT: store i8 addrspace(3)* null, i8 addrspace(3)* addrspace(5)* %sp3, align 4
 // NOOPT: store i8 addrspace(3)* null, i8 addrspace(3)* addrspace(5)* %sp4, align 4
 // NOOPT: %[[SS1:.*]] = bitcast %struct.StructTy1 addrspace(5)* %SS1 to i8 addrspace(5)*
-// NOOPT: call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 8 %[[SS1]], i8 addrspace(4)* align 8 bitcast (%struct.StructTy1 addrspace(4)* @test_func_scope_var_local.SS1 to i8 addrspace(4)*), i64 32, i1 false)
+// NOOPT: call void @llvm.memcpy.p5i8.p4i8.i64(i8 addrspace(5)* align 8 %[[SS1]], i8 addrspace(4)* align 8 bitcast (%struct.StructTy1 addrspace(4)* @__const.test_func_scope_var_local.SS1 to i8 addrspace(4)*), i64 32, i1 false)
 // NOOPT: %[[SS2:.*]] = bitcast %struct.StructTy2 addrspace(5)* %SS2 to i8 addrspace(5)*
 // NOOPT: call void @llvm.memset.p5i8.i64(i8 addrspace(5)* align 8 %[[SS2]], i8 0, i64 24, i1 false)
 void test_func_scope_var_local(void) {

@@ -3,55 +3,55 @@
 #include "Inputs/stdio.h"
 #include <stdint.h>
 
-// CHECK: @unit1.a = private unnamed_addr constant %struct.U1A { i16 12 }, align 2
+// CHECK: @__const.unit1.a = private unnamed_addr constant %struct.U1A { i16 12 }, align 2
 // CHECK-NEXT: [[STRUCT_STR_U1:@[0-9]+]] = private unnamed_addr constant [14 x i8] c"struct U1A {\0A\00"
 // CHECK-NEXT: [[FIELD_U1:@[0-9]+]] = private unnamed_addr constant [11 x i8] c"short a : \00"
 // CHECK-NEXT: [[FORMAT_U1:@[0-9]+]] = private unnamed_addr constant [5 x i8] c"%hd\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U1:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit2.a = private unnamed_addr constant %struct.U2A { i16 12 }, align 2
+// CHECK: @__const.unit2.a = private unnamed_addr constant %struct.U2A { i16 12 }, align 2
 // CHECK-NEXT: [[STRUCT_STR_U2:@[0-9]+]] = private unnamed_addr constant [14 x i8] c"struct U2A {\0A\00"
 // CHECK-NEXT: [[FIELD_U2:@[0-9]+]] = private unnamed_addr constant [20 x i8] c"unsigned short a : \00"
 // CHECK-NEXT: [[FORMAT_U2:@[0-9]+]] = private unnamed_addr constant [5 x i8] c"%hu\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U2:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit3.a = private unnamed_addr constant %struct.U3A { i32 12 }, align 4
+// CHECK: @__const.unit3.a = private unnamed_addr constant %struct.U3A { i32 12 }, align 4
 // CHECK-NEXT: [[STRUCT_STR_U3:@[0-9]+]] = private unnamed_addr constant [14 x i8] c"struct U3A {\0A\00"
 // CHECK-NEXT: [[FIELD_U3:@[0-9]+]] = private unnamed_addr constant [9 x i8] c"int a : \00"
 // CHECK-NEXT: [[FORMAT_U3:@[0-9]+]] = private unnamed_addr constant [4 x i8] c"%d\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U3:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit4.a = private unnamed_addr constant %struct.U4A { i32 12 }, align 4
+// CHECK: @__const.unit4.a = private unnamed_addr constant %struct.U4A { i32 12 }, align 4
 // CHECK-NEXT: [[STRUCT_STR_U4:@[0-9]+]] = private unnamed_addr constant [14 x i8] c"struct U4A {\0A\00"
 // CHECK-NEXT: [[FIELD_U4:@[0-9]+]] = private unnamed_addr constant [18 x i8] c"unsigned int a : \00"
 // CHECK-NEXT: [[FORMAT_U4:@[0-9]+]] = private unnamed_addr constant [4 x i8] c"%u\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U4:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit5.a = private unnamed_addr constant %struct.U5A { i64 12 }, align 8
+// CHECK: @__const.unit5.a = private unnamed_addr constant %struct.U5A { i64 12 }, align 8
 // CHECK-NEXT: [[STRUCT_STR_U5:@[0-9]+]] = private unnamed_addr constant [14 x i8] c"struct U5A {\0A\00"
 // CHECK-NEXT: [[FIELD_U5:@[0-9]+]] = private unnamed_addr constant [10 x i8] c"long a : \00"
 // CHECK-NEXT: [[FORMAT_U5:@[0-9]+]] = private unnamed_addr constant [5 x i8] c"%ld\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U5:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit6.a = private unnamed_addr constant %struct.U6A { i64 12 }, align 8
+// CHECK: @__const.unit6.a = private unnamed_addr constant %struct.U6A { i64 12 }, align 8
 // CHECK-NEXT: [[STRUCT_STR_U6:@[0-9]+]] = private unnamed_addr constant [14 x i8] c"struct U6A {\0A\00"
 // CHECK-NEXT: [[FIELD_U6:@[0-9]+]] = private unnamed_addr constant [19 x i8] c"unsigned long a : \00"
 // CHECK-NEXT: [[FORMAT_U6:@[0-9]+]] = private unnamed_addr constant [5 x i8] c"%lu\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U6:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit7.a = private unnamed_addr constant %struct.U7A { i64 12 }, align 8
+// CHECK: @__const.unit7.a = private unnamed_addr constant %struct.U7A { i64 12 }, align 8
 // CHECK-NEXT: [[STRUCT_STR_U7:@[0-9]+]] = private unnamed_addr constant [14 x i8] c"struct U7A {\0A\00"
 // CHECK-NEXT: [[FIELD_U7:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"long long a : \00"
 // CHECK-NEXT: [[FORMAT_U7:@[0-9]+]] = private unnamed_addr constant [6 x i8] c"%lld\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U7:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit8.a = private unnamed_addr constant %struct.U8A { i64 12 }, align 8
+// CHECK: @__const.unit8.a = private unnamed_addr constant %struct.U8A { i64 12 }, align 8
 // CHECK-NEXT: [[STRUCT_STR_U8:@[0-9]+]] = private unnamed_addr constant [14 x i8] c"struct U8A {\0A\00"
 // CHECK-NEXT: [[FIELD_U8:@[0-9]+]] = private unnamed_addr constant [24 x i8] c"unsigned long long a : \00"
 // CHECK-NEXT: [[FORMAT_U8:@[0-9]+]] = private unnamed_addr constant [6 x i8] c"%llu\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U8:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit9.a = private unnamed_addr constant %struct.U9A { i8 97 }, align 1
+// CHECK: @__const.unit9.a = private unnamed_addr constant %struct.U9A { i8 97 }, align 1
 // CHECK-NEXT: [[STRUCT_STR_U9:@[0-9]+]] = private unnamed_addr constant [14 x i8] c"struct U9A {\0A\00"
 // CHECK-NEXT: [[FIELD_U9:@[0-9]+]] = private unnamed_addr constant [10 x i8] c"char a : \00"
 // CHECK-NEXT: [[FORMAT_U9:@[0-9]+]] = private unnamed_addr constant [4 x i8] c"%c\0A\00"
@@ -59,55 +59,55 @@
 
 // CHECK: @.str = private unnamed_addr constant [4 x i8] c"LSE\00", align 1
 
-// CHECK: @unit10.a = private unnamed_addr constant %struct.U10A { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0) }, align 8
+// CHECK: @__const.unit10.a = private unnamed_addr constant %struct.U10A { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0) }, align 8
 // CHECK-NEXT: [[STRUCT_STR_U10:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U10A {\0A\00"
 // CHECK-NEXT: [[FIELD_U10:@[0-9]+]] = private unnamed_addr constant [12 x i8] c"char * a : \00"
 // CHECK-NEXT: [[FORMAT_U10:@[0-9]+]] = private unnamed_addr constant [4 x i8] c"%s\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U10:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit11.a = private unnamed_addr constant %struct.U11A { i8* inttoptr (i64 305419896 to i8*) }, align 8
+// CHECK: @__const.unit11.a = private unnamed_addr constant %struct.U11A { i8* inttoptr (i64 305419896 to i8*) }, align 8
 // CHECK-NEXT: [[STRUCT_STR_U11:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U11A {\0A\00"
 // CHECK-NEXT: [[FIELD_U11:@[0-9]+]] = private unnamed_addr constant [12 x i8] c"void * a : \00"
 // CHECK-NEXT: [[FORMAT_U11:@[0-9]+]] = private unnamed_addr constant [4 x i8] c"%p\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U11:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit12.a = private unnamed_addr constant %struct.U12A { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0) }, align 8
+// CHECK: @__const.unit12.a = private unnamed_addr constant %struct.U12A { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0) }, align 8
 // CHECK-NEXT: [[STRUCT_STR_U12:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U12A {\0A\00"
 // CHECK-NEXT: [[FIELD_U12:@[0-9]+]] = private unnamed_addr constant [18 x i8] c"const char * a : \00"
 // CHECK-NEXT: [[FORMAT_U12:@[0-9]+]] = private unnamed_addr constant [4 x i8] c"%s\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U12:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit13.a = private unnamed_addr constant %struct.U13A { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0) }, align 8
+// CHECK: @__const.unit13.a = private unnamed_addr constant %struct.U13A { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0) }, align 8
 // CHECK-NEXT: [[STRUCT_STR_U13:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U13A {\0A\00"
 // CHECK-NEXT: [[FIELD_U13:@[0-9]+]] = private unnamed_addr constant [20 x i8] c"const charstar a : \00"
 // CHECK-NEXT: [[FORMAT_U13:@[0-9]+]] = private unnamed_addr constant [4 x i8] c"%s\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U13:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit14.a = private unnamed_addr constant %struct.U14A { double 0x3FF1F9ACFFA7EB6C }, align 8
+// CHECK: @__const.unit14.a = private unnamed_addr constant %struct.U14A { double 0x3FF1F9ACFFA7EB6C }, align 8
 // CHECK-NEXT: [[STRUCT_STR_U14:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U14A {\0A\00"
 // CHECK-NEXT: [[FIELD_U14:@[0-9]+]] = private unnamed_addr constant [12 x i8] c"double a : \00"
 // CHECK-NEXT: [[FORMAT_U14:@[0-9]+]] = private unnamed_addr constant [4 x i8] c"%f\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U14:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit15.a = private unnamed_addr constant %struct.U15A { [3 x i32] [i32 1, i32 2, i32 3] }, align 4
+// CHECK: @__const.unit15.a = private unnamed_addr constant %struct.U15A { [3 x i32] [i32 1, i32 2, i32 3] }, align 4
 // CHECK-NEXT: [[STRUCT_STR_U15:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U15A {\0A\00"
 // CHECK-NEXT: [[FIELD_U15:@[0-9]+]] = private unnamed_addr constant [13 x i8] c"int [3] a : \00"
 // CHECK-NEXT: [[FORMAT_U15:@[0-9]+]] = private unnamed_addr constant [4 x i8] c"%p\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U15:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit16.a = private unnamed_addr constant %struct.U16A { i8 12 }, align 1
+// CHECK: @__const.unit16.a = private unnamed_addr constant %struct.U16A { i8 12 }, align 1
 // CHECK-NEXT: [[STRUCT_STR_U16:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U16A {\0A\00"
 // CHECK-NEXT: [[FIELD_U16:@[0-9]+]] = private unnamed_addr constant [13 x i8] c"uint8_t a : \00"
 // CHECK-NEXT: [[FORMAT_U16:@[0-9]+]] = private unnamed_addr constant [6 x i8] c"%hhu\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U16:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit17.a = private unnamed_addr constant %struct.U17A { i8 12 }, align 1
+// CHECK: @__const.unit17.a = private unnamed_addr constant %struct.U17A { i8 12 }, align 1
 // CHECK-NEXT: [[STRUCT_STR_U17:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U17A {\0A\00"
 // CHECK-NEXT: [[FIELD_U17:@[0-9]+]] = private unnamed_addr constant [12 x i8] c"int8_t a : \00"
 // CHECK-NEXT: [[FORMAT_U17:@[0-9]+]] = private unnamed_addr constant [6 x i8] c"%hhd\0A\00"
 // CHECK-NEXT: [[END_STRUCT_U17:@[0-9]+]] = private unnamed_addr constant [3 x i8] c"}\0A\00"
 
-// CHECK: @unit18.a = private unnamed_addr constant %struct.U18A { x86_fp80 0xK3FFF8FCD67FD3F5B6000 }, align 16
+// CHECK: @__const.unit18.a = private unnamed_addr constant %struct.U18A { x86_fp80 0xK3FFF8FCD67FD3F5B6000 }, align 16
 // CHECK-NEXT: [[STRUCT_STR_U18:@[0-9]+]] = private unnamed_addr constant [15 x i8] c"struct U18A {\0A\00"
 // CHECK-NEXT: [[FIELD_U18:@[0-9]+]] = private unnamed_addr constant [17 x i8] c"long double a : \00"
 // CHECK-NEXT: [[FORMAT_U18:@[0-9]+]] = private unnamed_addr constant [5 x i8] c"%Lf\0A\00"
