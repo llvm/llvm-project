@@ -1013,7 +1013,7 @@ IRExecutionUnit::MemoryManager::getSymbolAddress(const std::string &Name) {
           Name.c_str());
 
     m_parent.ReportSymbolLookupError(name_cs);
-    return 0;
+    return 0xbad0bad0;
   } else {
     if (log)
       log->Printf("IRExecutionUnit::getSymbolAddress(Name=\"%s\") = %" PRIx64,

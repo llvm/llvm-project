@@ -361,7 +361,14 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   const FileEntry *file = manager.getVirtualFile("/tmp/test", 123, 1);
   ASSERT_TRUE(file != nullptr);
   ASSERT_TRUE(file->isValid());
-  EXPECT_EQ(file->tryGetRealPathName(), "/tmp/test");
+  SmallString<64> ExpectedResult;
+#ifdef _WIN32
+  ExpectedResult = "C:";
+#else
+  ExpectedResult = "/";
+#endif
+  llvm::sys::path::append(ExpectedResult, "tmp", "test");
+  EXPECT_EQ(file->tryGetRealPathName(), ExpectedResult);
 }
 
 } // anonymous namespace
