@@ -20,6 +20,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include <string>
 #include <utility>
 #include <vector>
@@ -170,6 +171,7 @@ public:
   std::vector<std::pair<std::string, bool>> CheckersControlList;
 
   /// A key-value table of use-specified configuration values.
+  // TODO: This shouldn't be public.
   ConfigTable Config;
   AnalysisStores AnalysisStoreOpt = RegionStoreModel;
   AnalysisConstraints AnalysisConstraintsOpt = RangeConstraintsModel;
@@ -198,6 +200,7 @@ public:
   unsigned ShowCheckerHelp : 1;
   unsigned ShowEnabledCheckerList : 1;
   unsigned ShowConfigOptionsList : 1;
+  unsigned ShouldEmitErrorsOnInvalidConfigValue : 1;
   unsigned AnalyzeAll : 1;
   unsigned AnalyzerDisplayProgress : 1;
   unsigned AnalyzeNestedBlocks : 1;
@@ -220,40 +223,51 @@ public:
   /// The mode of function selection used during inlining.
   AnalysisInliningMode InliningMode = NoRedundancy;
 
-private:
-
-#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
-  Optional<TYPE> NAME;
+  // Create a field for each -analyzer-config option.
 #define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
                                              SHALLOW_VAL, DEEP_VAL)            \
-  Optional<TYPE> NAME;
+  ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL)
+
+#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
+  TYPE NAME;
+
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
 #undef ANALYZER_OPTION
 #undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 
-  /// Query an option's string value.
-  ///
-  /// If an option value is not provided, returns the given \p DefaultVal.
-  /// @param [in] OptionName Name for option to retrieve.
-  /// @param [in] DefaultVal Default value returned if no such option was
-  /// specified.
-  StringRef getStringOption(StringRef OptionName, StringRef DefaultVal);
+  // Create an array of all -analyzer-config command line options. Sort it in
+  // the constructor.
+  std::vector<StringRef> AnalyzerConfigCmdFlags = {
+#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
+                                             SHALLOW_VAL, DEEP_VAL)            \
+  ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL)
 
-  void initOption(Optional<StringRef> &V, StringRef Name,
-                                          StringRef DefaultVal);
+#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
+    CMDFLAG,
 
-  void initOption(Optional<bool> &V, StringRef Name, bool DefaultVal);
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
+#undef ANALYZER_OPTION
+#undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
+  };
 
-  void initOption(Optional<unsigned> &V, StringRef Name,
-                                         unsigned DefaultVal);
-public:
+  bool isUnknownAnalyzerConfig(StringRef Name) const {
+
+    assert(std::is_sorted(AnalyzerConfigCmdFlags.begin(),
+                          AnalyzerConfigCmdFlags.end()));
+
+    return !std::binary_search(AnalyzerConfigCmdFlags.begin(),
+                               AnalyzerConfigCmdFlags.end(), Name);
+  }
+
   AnalyzerOptions()
       : DisableAllChecks(false), ShowCheckerHelp(false),
         ShowEnabledCheckerList(false), ShowConfigOptionsList(false),
         AnalyzeAll(false), AnalyzerDisplayProgress(false),
         AnalyzeNestedBlocks(false), eagerlyAssumeBinOpBifurcation(false),
         TrimGraph(false), visualizeExplodedGraphWithGraphViz(false),
-        UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false) {}
+        UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false) {
+    llvm::sort(AnalyzerConfigCmdFlags);
+  }
 
   /// Interprets an option's string value as a boolean. The "true" string is
   /// interpreted as true and the "false" string is interpreted as false.
@@ -308,42 +322,15 @@ public:
                               const ento::CheckerBase *C,
                               bool SearchInParents = false) const;
 
-#define ANALYZER_OPTION_GEN_FN(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL,  \
-                               CREATE_FN)                               \
-  TYPE CREATE_FN() {                                                    \
-    initOption(NAME, CMDFLAG, DEFAULT_VAL);                             \
-    return NAME.getValue();                                             \
-  }
-
-#define ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE(                    \
-    TYPE, NAME, CMDFLAG, DESC, SHALLOW_VAL, DEEP_VAL, CREATE_FN)        \
-  TYPE CREATE_FN() {                                                    \
-    switch (getUserMode()) {                                            \
-    case UMK_Shallow:                                                   \
-      initOption(NAME, CMDFLAG, SHALLOW_VAL);                           \
-      break;                                                            \
-    case UMK_Deep:                                                      \
-      initOption(NAME, CMDFLAG, DEEP_VAL);                              \
-      break;                                                            \
-    }                                                                   \
-                                                                        \
-    return NAME.getValue();                                             \
-  }
-
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
-
-#undef ANALYZER_OPTION_GEN_FN_DEPENDS_ON_USER_MODE
-#undef ANALYZER_OPTION_WITH_FN
-
   /// Retrieves and sets the UserMode. This is a high-level option,
   /// which is used to set other low-level options. It is not accessible
   /// outside of AnalyzerOptions.
-  UserModeKind getUserMode();
+  UserModeKind getUserMode() const;
 
-  ExplorationStrategyKind getExplorationStrategy();
+  ExplorationStrategyKind getExplorationStrategy() const;
 
   /// Returns the inter-procedural analysis mode.
-  IPAKind getIPAMode();
+  IPAKind getIPAMode() const;
 
   /// Returns the option controlling which C++ member functions will be
   /// considered for inlining.
@@ -351,12 +338,27 @@ public:
   /// This is controlled by the 'c++-inlining' config option.
   ///
   /// \sa CXXMemberInliningMode
-  bool mayInlineCXXMemberFunction(CXXInlineableMemberKind K);
-
-  StringRef getCTUDir();
+  bool mayInlineCXXMemberFunction(CXXInlineableMemberKind K) const;
 };
 
 using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;
+
+//===----------------------------------------------------------------------===//
+// We'll use AnalyzerOptions in the frontend, but we can't link the frontend
+// with clangStaticAnalyzerCore, because clangStaticAnalyzerCore depends on
+// clangFrontend.
+//
+// For this reason, implement some methods in this header file.
+//===----------------------------------------------------------------------===//
+
+inline UserModeKind AnalyzerOptions::getUserMode() const {
+  auto K = llvm::StringSwitch<llvm::Optional<UserModeKind>>(UserMode)
+    .Case("shallow", UMK_Shallow)
+    .Case("deep", UMK_Deep)
+    .Default(None);
+  assert(K.hasValue() && "User mode is invalid.");
+  return K.getValue();
+}
 
 } // namespace clang
 
