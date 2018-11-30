@@ -1,0 +1,18 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("IntrinsicEnums") {
+  visibility = [ "//llvm/lib/IR" ]
+  args = [ "-gen-intrinsic-enums" ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("IntrinsicImpl") {
+  visibility = [ "//llvm/lib/IR" ]
+  args = [ "-gen-intrinsic-impl" ]
+  td_file = "Intrinsics.td"
+}
+
+tablegen("Attributes") {
+  visibility = [ "//llvm/lib/IR" ]
+  args = [ "-gen-attrs" ]
+}

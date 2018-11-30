@@ -1042,6 +1042,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::ADDCARRY:
   case ISD::SUBCARRY: Res = PromoteIntOp_ADDSUBCARRY(N, OpNo); break;
+
+  case ISD::FRAMEADDR:
+  case ISD::RETURNADDR: Res = PromoteIntOp_FRAMERETURNADDR(N); break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1063,9 +1066,10 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
 /// shared among BR_CC, SELECT_CC, and SETCC handlers.
 void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
                                             ISD::CondCode CCCode) {
-  // We have to insert explicit sign or zero extends.  Note that we could
-  // insert sign extends for ALL conditions, but zero extend is cheaper on
-  // many machines (an AND instead of two shifts), so prefer it.
+  // We have to insert explicit sign or zero extends. Note that we could
+  // insert sign extends for ALL conditions. For those operations where either
+  // zero or sign extension would be valid, use SExtOrZExtPromotedInteger
+  // which will choose the cheapest for the target.
   switch (CCCode) {
   default: llvm_unreachable("Unknown integer comparison!");
   case ISD::SETEQ:
@@ -1086,8 +1090,8 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
       NewLHS = OpL;
       NewRHS = OpR;
     } else {
-      NewLHS = ZExtPromotedInteger(NewLHS);
-      NewRHS = ZExtPromotedInteger(NewRHS);
+      NewLHS = SExtOrZExtPromotedInteger(NewLHS);
+      NewRHS = SExtOrZExtPromotedInteger(NewRHS);
     }
     break;
   }
@@ -1095,11 +1099,8 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
   case ISD::SETUGT:
   case ISD::SETULE:
   case ISD::SETULT:
-    // ALL of these operations will work if we either sign or zero extend
-    // the operands (including the unsigned comparisons!).  Zero extend is
-    // usually a simpler/cheaper operation, so prefer it.
-    NewLHS = ZExtPromotedInteger(NewLHS);
-    NewRHS = ZExtPromotedInteger(NewRHS);
+    NewLHS = SExtOrZExtPromotedInteger(NewLHS);
+    NewRHS = SExtOrZExtPromotedInteger(NewRHS);
     break;
   case ISD::SETGE:
   case ISD::SETGT:
@@ -1401,6 +1402,12 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBCARRY(SDNode *N, unsigned OpNo) {
   }
 
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, Carry), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_FRAMERETURNADDR(SDNode *N) {
+  // Promote the RETURNADDR/FRAMEADDR argument to a supported integer width.
+  SDValue Op = ZExtPromotedInteger(N->getOperand(0));
+  return SDValue(DAG.UpdateNodeOperands(N, Op), 0);
 }
 
 //===----------------------------------------------------------------------===//

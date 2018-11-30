@@ -433,10 +433,10 @@ define void @sdiv_lhs(i32 %arg32, i64 %arg64) {
 
 ; An sdiv loaded dividend (lhs) operand is *not* foldable.
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li32 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %1 = sdiv i32 %li32, %arg32
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %1 = sdiv i32 %li32, %arg32
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li32_0 = load i32, i32* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32_1 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %2 = sdiv i32 %li32_0, %li32_1
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %2 = sdiv i32 %li32_0, %li32_1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %3 = sdiv i64 %li64, %arg64
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64_0 = load i64, i64* undef
@@ -481,12 +481,12 @@ define void @sdiv_rhs(i32 %arg32, i64 %arg64) {
 
 ; An sdiv loaded divisor (rhs) operand is foldable.
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %1 = sdiv i32 %arg32, %li32
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %1 = sdiv i32 %arg32, %li32
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li64 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %2 = sdiv i64 %arg64, %li64
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li64_2 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr = trunc i64 %li64_2 to i32
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %3 = sdiv i32 undef, %tr
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %3 = sdiv i32 undef, %tr
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32_2 = load i32, i32* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %sext_0 = sext i32 %li32_2 to i64
 ; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %4 = sdiv i64 undef, %sext_0
@@ -525,15 +525,15 @@ define void @udiv_lhs(i32 %arg32, i64 %arg64) {
 
 ; An udiv loaded dividend (lhs) operand is *not* foldable.
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li32 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %1 = udiv i32 %li32, %arg32
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %1 = udiv i32 %li32, %arg32
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li32_0 = load i32, i32* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32_1 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %2 = udiv i32 %li32_0, %li32_1
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %2 = udiv i32 %li32_0, %li32_1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64 = load i64, i64* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %3 = udiv i64 %li64, %arg64
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %3 = udiv i64 %li64, %arg64
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64_0 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li64_1 = load i64, i64* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %4 = udiv i64 %li64_0, %li64_1
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %4 = udiv i64 %li64_0, %li64_1
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64_2 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr_0 = trunc i64 %li64_2 to i32
 ; CHECK: Cost Model: Found an estimated cost of 10 for instruction:   %5 = udiv i32 %tr_0, undef
@@ -563,15 +563,15 @@ define void @udiv_rhs(i32 %arg32, i64 %arg64) {
 
 ; An udiv loaded divisor (rhs) operand is foldable.
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li32 = load i32, i32* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %1 = udiv i32 %arg32, %li32
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %1 = udiv i32 %arg32, %li32
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li64 = load i64, i64* undef
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %2 = udiv i64 %arg64, %li64
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %2 = udiv i64 %arg64, %li64
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %li64_2 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr_0 = trunc i64 %li64_2 to i32
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %3 = udiv i32 undef, %tr_0
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %3 = udiv i32 undef, %tr_0
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %li64_3 = load i64, i64* undef
 ; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   %tr_1 = trunc i64 %li64_3 to i32
-; CHECK: Cost Model: Found an estimated cost of 21 for instruction:   %4 = udiv i64 undef, %li64_3
+; CHECK: Cost Model: Found an estimated cost of 20 for instruction:   %4 = udiv i64 undef, %li64_3
 }
 
 define void @and() {

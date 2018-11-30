@@ -3146,9 +3146,8 @@ define <16 x i8> @pr38658(<16 x i8> %x) {
 ; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; XOP-NEXT:    vpmovsxbw %xmm1, %xmm1
 ; XOP-NEXT:    vpmullw {{.*}}(%rip), %xmm1, %xmm1
-; XOP-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOP-NEXT:    vpackuswb %xmm1, %xmm2, %xmm1
+; XOP-NEXT:    vpperm {{.*#+}} xmm1 = xmm2[1,3,5,7,9,11,13,15],xmm1[1,3,5,7,9,11,13,15]
 ; XOP-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    vpshab {{.*}}(%rip), %xmm0, %xmm1
 ; XOP-NEXT:    vpshlb {{.*}}(%rip), %xmm0, %xmm0

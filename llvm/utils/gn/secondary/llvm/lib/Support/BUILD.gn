@@ -25,12 +25,14 @@ static_library("Support") {
     "Windows",
   ]
   sources = [
+    "AArch64TargetParser.cpp",
     "AMDGPUMetadata.cpp",
     "APFloat.cpp",
     "APInt.cpp",
     "APSInt.cpp",
     "ARMAttributeParser.cpp",
     "ARMBuildAttrs.cpp",
+    "ARMTargetParser.cpp",
     "ARMWinEH.cpp",
     "Allocator.cpp",
     "BinaryStreamError.cpp",

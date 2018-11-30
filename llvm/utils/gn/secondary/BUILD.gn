@@ -1,7 +1,8 @@
 group("default") {
   deps = [
-    "//llvm/utils/TableGen:llvm-tblgen",
+    "//llvm/lib/IR",
     "//llvm/tools/llvm-undname",
+    "//llvm/utils/TableGen:llvm-tblgen",
   ]
 }
 

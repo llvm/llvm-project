@@ -281,6 +281,20 @@ private:
     return DAG.getZeroExtendInReg(Op, dl, OldVT.getScalarType());
   }
 
+  // Get a promoted operand and sign or zero extend it to the final size
+  // (depending on TargetLoweringInfo::isSExtCheaperThanZExt). For a given
+  // subtarget and type, the choice of sign or zero-extension will be
+  // consistent.
+  SDValue SExtOrZExtPromotedInteger(SDValue Op) {
+    EVT OldVT = Op.getValueType();
+    SDLoc DL(Op);
+    Op = GetPromotedInteger(Op);
+    if (TLI.isSExtCheaperThanZExt(OldVT, Op.getValueType()))
+      return DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, Op.getValueType(), Op,
+                         DAG.getValueType(OldVT));
+    return DAG.getZeroExtendInReg(Op, DL, OldVT.getScalarType());
+  }
+
   // Integer Result Promotion.
   void PromoteIntegerResult(SDNode *N, unsigned ResNo);
   SDValue PromoteIntRes_MERGE_VALUES(SDNode *N, unsigned ResNo);
@@ -361,6 +375,7 @@ private:
   SDValue PromoteIntOp_MSCATTER(MaskedScatterSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MGATHER(MaskedGatherSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_ADDSUBCARRY(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_FRAMERETURNADDR(SDNode *N);
 
   void PromoteSetCCOperands(SDValue &LHS,SDValue &RHS, ISD::CondCode Code);
 

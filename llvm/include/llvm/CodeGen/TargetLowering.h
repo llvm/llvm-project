@@ -2220,6 +2220,12 @@ public:
     return false;
   }
 
+  /// Return true if sign-extension from FromTy to ToTy is cheaper than
+  /// zero-extension.
+  virtual bool isSExtCheaperThanZExt(EVT FromTy, EVT ToTy) const {
+    return false;
+  }
+
   /// Return true if the target supplies and combines to a paired load
   /// two loaded values of type LoadedType next to each other in memory.
   /// RequiredAlignment gives the minimal alignment constraints that must be met
