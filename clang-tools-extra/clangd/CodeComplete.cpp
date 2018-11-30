@@ -656,6 +656,13 @@ bool contextAllowsIndex(enum CodeCompletionContext::Kind K) {
   llvm_unreachable("unknown code completion context");
 }
 
+static bool isInjectedClass(const NamedDecl &D) {
+  if (auto *R = dyn_cast_or_null<RecordDecl>(&D))
+    if (R->isInjectedClassName())
+      return true;
+  return false;
+}
+
 // Some member calls are blacklisted because they're so rarely useful.
 static bool isBlacklistedMember(const NamedDecl &D) {
   // Destructor completion is rarely useful, and works inconsistently.
@@ -663,9 +670,8 @@ static bool isBlacklistedMember(const NamedDecl &D) {
   if (D.getKind() == Decl::CXXDestructor)
     return true;
   // Injected name may be useful for A::foo(), but who writes A::A::foo()?
-  if (auto *R = dyn_cast_or_null<RecordDecl>(&D))
-    if (R->isInjectedClassName())
-      return true;
+  if (isInjectedClass(D))
+    return true;
   // Explicit calls to operators are also rare.
   auto NameKind = D.getDeclName().getNameKind();
   if (NameKind == DeclarationName::CXXOperatorName ||
@@ -743,6 +749,11 @@ struct CompletionRecorder : public CodeCompleteConsumer {
       if (Result.Declaration &&
           !Context.getBaseType().isNull() // is this a member-access context?
           && isBlacklistedMember(*Result.Declaration))
+        continue;
+      // Skip injected class name when no class scope is not explicitly set.
+      // E.g. show injected A::A in `using A::A^` but not in "A^".
+      if (Result.Declaration && !Context.getCXXScopeSpecifier().hasValue() &&
+          isInjectedClass(*Result.Declaration))
         continue;
       // We choose to never append '::' to completion results in clangd.
       Result.StartsNestedNameSpecifier = false;
