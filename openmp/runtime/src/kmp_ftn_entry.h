@@ -860,40 +860,39 @@ void FTN_STDCALL KMP_EXPAND_NAME(FTN_SET_DEFAULT_DEVICE)(int KMP_DEREF arg) {
 #endif
 }
 
-// Get number of NON-HOST devices.
-// libomptarget, if loaded, provides this function in api.cpp.
-int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void) KMP_WEAK_ATTRIBUTE;
-int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_NUM_DEVICES)(void) {
-#if KMP_MIC || KMP_OS_DARWIN || KMP_OS_WINDOWS || defined(KMP_STUB)
-  return 0;
+#if KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
+
+int FTN_STDCALL FTN_GET_NUM_DEVICES(void) { return 0; }
+
+#endif // KMP_MIC || KMP_OS_DARWIN || defined(KMP_STUB)
+
+#if !KMP_OS_LINUX
+
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_IS_INITIAL_DEVICE)(void) { return 1; }
+
 #else
-  int (*fptr)();
-  if ((*(void **)(&fptr) = dlsym(RTLD_DEFAULT, "_Offload_number_of_devices"))) {
-    return (*fptr)();
-  } else { // liboffload & libomptarget don't exist
-    return 0;
+
+// This internal function is used when the entry from the offload library
+// is not found.
+int _Offload_get_device_number(void) KMP_WEAK_ATTRIBUTE;
+
+int FTN_STDCALL KMP_EXPAND_NAME(FTN_IS_INITIAL_DEVICE)(void) {
+  if (_Offload_get_device_number) {
+    return _Offload_get_device_number() == -1;
+  } else {
+    return 1;
   }
-#endif // KMP_MIC || KMP_OS_DARWIN || KMP_OS_WINDOWS || defined(KMP_STUB)
 }
 
-// This function always returns true when called on host device.
-// Compilier/libomptarget should handle when it is called inside target region.
-int FTN_STDCALL KMP_EXPAND_NAME(FTN_IS_INITIAL_DEVICE)(void) KMP_WEAK_ATTRIBUTE;
-int FTN_STDCALL KMP_EXPAND_NAME(FTN_IS_INITIAL_DEVICE)(void) {
-  return 1; // This is the host
-}
+#endif // ! KMP_OS_LINUX
 
 #endif // OMP_40_ENABLED
 
-#if OMP_45_ENABLED
-// OpenMP 4.5 entries
+#if OMP_45_ENABLED && defined(KMP_STUB)
+// OpenMP 4.5 entries for stubs library
 
-// libomptarget, if loaded, provides this function
-int FTN_STDCALL FTN_GET_INITIAL_DEVICE(void) KMP_WEAK_ATTRIBUTE;
-int FTN_STDCALL FTN_GET_INITIAL_DEVICE(void) { return KMP_HOST_DEVICE; }
+int FTN_STDCALL FTN_GET_INITIAL_DEVICE(void) { return -1; }
 
-#if defined(KMP_STUB)
-// Entries for stubs library
 // As all *target* functions are C-only parameters always passed by value
 void *FTN_STDCALL FTN_TARGET_ALLOC(size_t size, int device_num) { return 0; }
 
@@ -924,8 +923,7 @@ int FTN_STDCALL FTN_TARGET_ASSOCIATE_PTR(void *host_ptr, void *device_ptr,
 int FTN_STDCALL FTN_TARGET_DISASSOCIATE_PTR(void *host_ptr, int device_num) {
   return -1;
 }
-#endif // defined(KMP_STUB)
-#endif // OMP_45_ENABLED
+#endif // OMP_45_ENABLED && defined(KMP_STUB)
 
 #ifdef KMP_STUB
 typedef enum { UNINIT = -1, UNLOCKED, LOCKED } kmp_stub_lock_t;
@@ -1236,14 +1234,6 @@ int FTN_STDCALL KMP_EXPAND_NAME(FTN_GET_MAX_TASK_PRIORITY)(void) {
 }
 #endif
 
-#if OMP_50_ENABLED
-// This function will be defined in libomptarget. When libomptarget is not
-// loaded, we assume we are on the host and return KMP_HOST_DEVICE.
-// Compiler/libomptarget will handle this if called inside target.
-int FTN_STDCALL FTN_GET_DEVICE_NUM(void) KMP_WEAK_ATTRIBUTE;
-int FTN_STDCALL FTN_GET_DEVICE_NUM(void) { return KMP_HOST_DEVICE; }
-#endif // OMP_50_ENABLED
-
 // GCC compatibility (versioned symbols)
 #ifdef KMP_USE_VERSION_SYMBOLS
 
@@ -1327,7 +1317,6 @@ KMP_VERSION_SYMBOL(FTN_GET_CANCELLATION, 40, "OMP_4.0");
 KMP_VERSION_SYMBOL(FTN_GET_DEFAULT_DEVICE, 40, "OMP_4.0");
 KMP_VERSION_SYMBOL(FTN_SET_DEFAULT_DEVICE, 40, "OMP_4.0");
 KMP_VERSION_SYMBOL(FTN_IS_INITIAL_DEVICE, 40, "OMP_4.0");
-KMP_VERSION_SYMBOL(FTN_GET_NUM_DEVICES, 40, "OMP_4.0");
 #endif /* OMP_40_ENABLED */
 
 #if OMP_45_ENABLED
@@ -1339,12 +1328,10 @@ KMP_VERSION_SYMBOL(FTN_GET_PLACE_PROC_IDS, 45, "OMP_4.5");
 KMP_VERSION_SYMBOL(FTN_GET_PLACE_NUM, 45, "OMP_4.5");
 KMP_VERSION_SYMBOL(FTN_GET_PARTITION_NUM_PLACES, 45, "OMP_4.5");
 KMP_VERSION_SYMBOL(FTN_GET_PARTITION_PLACE_NUMS, 45, "OMP_4.5");
-// KMP_VERSION_SYMBOL(FTN_GET_INITIAL_DEVICE, 45, "OMP_4.5");
 #endif
 
 #if OMP_50_ENABLED
 // OMP_5.0 versioned symbols
-// KMP_VERSION_SYMBOL(FTN_GET_DEVICE_NUM, 50, "OMP_5.0");
 #endif
 
 #endif // KMP_USE_VERSION_SYMBOLS
