@@ -9926,6 +9926,7 @@
 					"$(LLDB_ZLIB_LDFLAGS)",
 					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
+				"OTHER_LDFLAGS[sdk=macosx*]" = "";
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework/;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
@@ -9951,23 +9952,35 @@
 				INFOPLIST_FILE = "tools/driver/lldb-Info.plist";
 				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				OTHER_CFLAGS = (
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COMPRESSION_CFLAGS)",
+					"$(LLDB_COVERAGE_CFLAGS)",
+					"-Wimplicit-fallthrough",
+					"-fno-rtti",
+					"-fno-exceptions",
+					"-DNDEBUG",
+				);
 				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
 					"-sectcreate",
 					__TEXT,
 					__info_plist,
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path/../../../System/Library/PrivateFrameworks",
+					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-lLLVMOption",
+					"-lLLVMSupport",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"$(inherited)",
 					"-sectcreate",
 					__TEXT,
 					__info_plist,
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-lLLVMOption",
+					"-lLLVMSupport",
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path/../../Library/PrivateFrameworks",
 					"-Wl,-rpath,@loader_path/../../../SharedFrameworks",
@@ -10515,6 +10528,15 @@
 				INFOPLIST_FILE = "tools/driver/lldb-Info.plist";
 				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				OTHER_CFLAGS = (
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COMPRESSION_CFLAGS)",
+					"$(LLDB_COVERAGE_CFLAGS)",
+					"-Wimplicit-fallthrough",
+					"-fno-rtti",
+					"-fno-exceptions",
+				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-sectcreate",
@@ -10522,8 +10544,10 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-lLLVMOption",
+					"-lLLVMSupport",
+					"-lLLVMDemangle",
 				);
 				PRODUCT_NAME = lldb;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
@@ -10545,6 +10569,15 @@
 				INFOPLIST_FILE = "tools/driver/lldb-Info.plist";
 				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				OTHER_CFLAGS = (
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COMPRESSION_CFLAGS)",
+					"$(LLDB_COVERAGE_CFLAGS)",
+					"-Wimplicit-fallthrough",
+					"-fno-rtti",
+					"-fno-exceptions",
+				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-sectcreate",
@@ -10552,8 +10585,9 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-lLLVMOption",
+					"-lLLVMSupport",
 				);
 				PRODUCT_NAME = lldb;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include ${LLDB_BUILD_DIR}/include";
@@ -10692,6 +10726,15 @@
 				INFOPLIST_FILE = "tools/driver/lldb-Info.plist";
 				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				OTHER_CFLAGS = (
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COMPRESSION_CFLAGS)",
+					"$(LLDB_COVERAGE_CFLAGS)",
+					"-Wimplicit-fallthrough",
+					"-fno-rtti",
+					"-fno-exceptions",
+				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-sectcreate",
@@ -10699,8 +10742,9 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-lLLVMOption",
+					"-lLLVMSupport",
 				);
 				PRODUCT_NAME = lldb;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(SRCROOT)/source $(LLVM_SOURCE_DIR)/include $(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/include";
