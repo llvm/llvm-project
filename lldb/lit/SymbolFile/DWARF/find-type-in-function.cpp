@@ -2,7 +2,7 @@
 
 // XFAIL: *
 
-// RUN: clang %s -g -c -o %t.o --target=x86_64-pc-linux
+// RUN: %clang %s -g -c -o %t.o --target=x86_64-pc-linux
 // RUN: ld.lld %t.o -o %t
 // RUN: lldb-test symbols --name=foo --find=type %t | \
 // RUN:   FileCheck --check-prefix=NAME %s

@@ -172,15 +172,14 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
   Symbol *S = Symtab->find(Name);
   if (!S || S->isDefined())
     return nullptr;
-  Symbol *Sym = Symtab->addDefined(Name, StOther, STT_NOTYPE, Val,
-                                   /*Size=*/0, Binding, Sec,
-                                   /*File=*/nullptr);
-  return cast<Defined>(Sym);
+  return Symtab->addDefined(Name, StOther, STT_NOTYPE, Val,
+                            /*Size=*/0, Binding, Sec,
+                            /*File=*/nullptr);
 }
 
 static Defined *addAbsolute(StringRef Name) {
-  return cast<Defined>(Symtab->addDefined(Name, STV_HIDDEN, STT_NOTYPE, 0, 0,
-                                          STB_GLOBAL, nullptr, nullptr));
+  return Symtab->addDefined(Name, STV_HIDDEN, STT_NOTYPE, 0, 0, STB_GLOBAL,
+                            nullptr, nullptr);
 }
 
 // The linker is expected to define some symbols depending on
@@ -213,9 +212,20 @@ void elf::addReservedSymbols() {
   // _GLOBAL_OFFSET_TABLE_ and _SDA_BASE_ from the 32-bit ABI. It is used to
   // represent the TOC base which is offset by 0x8000 bytes from the start of
   // the .got section.
-  ElfSym::GlobalOffsetTable = addOptionalRegular(
-      (Config->EMachine == EM_PPC64) ? ".TOC." : "_GLOBAL_OFFSET_TABLE_",
-      Out::ElfHeader, Target->GotBaseSymOff);
+  // We do not allow _GLOBAL_OFFSET_TABLE_ to be defined by input objects as the
+  // correctness of some relocations depends on its value.
+  StringRef GotTableSymName =
+      (Config->EMachine == EM_PPC64) ? ".TOC." : "_GLOBAL_OFFSET_TABLE_";
+  if (Symbol *S = Symtab->find(GotTableSymName)) {
+    if (S->isDefined())
+      error(toString(S->File) + " cannot redefine linker defined symbol '" +
+            GotTableSymName + "'");
+    else
+      ElfSym::GlobalOffsetTable = Symtab->addDefined(
+          GotTableSymName, STV_HIDDEN, STT_NOTYPE, Target->GotBaseSymOff,
+          /*Size=*/0, STB_GLOBAL, Out::ElfHeader,
+          /*File=*/nullptr);
+  }
 
   // __ehdr_start is the location of ELF file headers. Note that we define
   // this symbol unconditionally even when using a linker script, which

@@ -1,0 +1,7 @@
+break set -f stop-hook-threads.cpp -p "Break here to test that the stop-hook"
+run
+target stop-hook add
+frame variable --show-globals g_val
+thread list
+continue
+DONE

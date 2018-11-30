@@ -1328,6 +1328,58 @@ void SymbolFilePDB::GetMangledNamesForFunction(
     const std::string &scope_qualified_name,
     std::vector<lldb_private::ConstString> &mangled_names) {}
 
+void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
+  std::set<lldb::addr_t> sym_addresses;
+  for (size_t i = 0; i < symtab.GetNumSymbols(); i++)
+    sym_addresses.insert(symtab.SymbolAtIndex(i)->GetFileAddress());
+
+  auto results = m_global_scope_up->findAllChildren<PDBSymbolPublicSymbol>();
+  if (!results)
+    return;
+
+  auto section_list = m_obj_file->GetSectionList();
+  if (!section_list)
+    return;
+
+  while (auto pub_symbol = results->getNext()) {
+    auto section_idx = pub_symbol->getAddressSection() - 1;
+    if (section_idx >= section_list->GetSize())
+      continue;
+
+    auto section = section_list->GetSectionAtIndex(section_idx);
+    if (!section)
+      continue;
+
+    auto offset = pub_symbol->getAddressOffset();
+
+    auto file_addr = section->GetFileAddress() + offset;
+    if (sym_addresses.find(file_addr) != sym_addresses.end())
+      continue;
+    sym_addresses.insert(file_addr);
+
+    auto size = pub_symbol->getLength();
+    symtab.AddSymbol(
+        Symbol(pub_symbol->getSymIndexId(),   // symID
+               pub_symbol->getName().c_str(), // name
+               true,                          // name_is_mangled
+               pub_symbol->isCode() ? eSymbolTypeCode : eSymbolTypeData, // type
+               true,      // external
+               false,     // is_debug
+               false,     // is_trampoline
+               false,     // is_artificial
+               section,   // section_sp
+               offset,    // value
+               size,      // size
+               size != 0, // size_is_valid
+               false,     // contains_linker_annotations
+               0          // flags
+               ));
+  }
+
+  symtab.CalculateSymbolSizes();
+  symtab.Finalize();
+}
+
 uint32_t SymbolFilePDB::FindTypes(
     const lldb_private::SymbolContext &sc,
     const lldb_private::ConstString &name,

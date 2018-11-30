@@ -2522,6 +2522,8 @@
 		260A248D15D06C4F009981B0 /* OptionValues.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = OptionValues.h; path = include/lldb/Interpreter/OptionValues.h; sourceTree = "<group>"; };
 		26BC7E8610F1B85900F91463 /* Options.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Options.cpp; path = source/Interpreter/Options.cpp; sourceTree = "<group>"; };
 		26BC7D6D10F1B77400F91463 /* Options.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Options.h; path = include/lldb/Interpreter/Options.h; sourceTree = "<group>"; };
+		DD5F951A21ADE5BD00B8265A /* Options.inc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.pascal; name = Options.inc; path = build/Debug/include/Options.inc; sourceTree = "<group>"; };
+		DD5F951B21ADE5F000B8265A /* Options.td */ = {isa = PBXFileReference; lastKnownFileType = text; name = Options.td; path = tools/driver/Options.td; sourceTree = "<group>"; };
 		4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBASTParser.cpp; path = PDB/PDBASTParser.cpp; sourceTree = "<group>"; };
 		4C562CC31CC07DDD00C52EAC /* PDBASTParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBASTParser.h; path = PDB/PDBASTParser.h; sourceTree = "<group>"; };
 		4CA0C6CA20F929C600CFE6BB /* PDBLocationToDWARFExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBLocationToDWARFExpression.cpp; path = PDB/PDBLocationToDWARFExpression.cpp; sourceTree = "<group>"; };
@@ -6042,6 +6044,8 @@
 		26F5C22510F3D956009D5894 /* Driver */ = {
 			isa = PBXGroup;
 			children = (
+				DD5F951B21ADE5F000B8265A /* Options.td */,
+				DD5F951A21ADE5BD00B8265A /* Options.inc */,
 				26F5C27210F3D9E4009D5894 /* lldb-Info.plist */,
 				26F5C27410F3D9E4009D5894 /* Driver.h */,
 				26F5C27310F3D9E4009D5894 /* Driver.cpp */,
@@ -7422,6 +7426,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 26F5C26E10F3D9C5009D5894 /* Build configuration list for PBXNativeTarget "lldb-tool" */;
 			buildPhases = (
+				DD5F951721ADD0C900B8265A /* Run Tablegen */,
 				26F5C26710F3D9A4009D5894 /* Sources */,
 				26F5C26810F3D9A4009D5894 /* Frameworks */,
 			);
@@ -7915,8 +7920,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = "/bin/sh -x";
-			shellScript = "/bin/rm -rf \"$INSTALL_ROOT/System/Library/PrivateFrameworks/LLDB.framework/Resources\" \"$INSTALL_ROOT/System/Library/PrivateFrameworks/LLDB.framework/Swift\"";
+			shellScript = "/bin/rm -rf \"$INSTALL_ROOT/System/Library/PrivateFrameworks/LLDB.framework/Resources\" \"$INSTALL_ROOT/System/Library/PrivateFrameworks/LLDB.framework/Swift\"\n";
 			showEnvVarsInLog = 0;
+		};
+		DD5F951721ADD0C900B8265A /* Run Tablegen */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				$SOURCE_DIR/tools/driver/Options.td,
+			);
+			name = "Run Tablegen";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				$BUILT_PRODUCTS_DIR/Options.inc,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p $BUILT_PRODUCTS_DIR/include\n$LLVM_BUILD_DIR/x86_64/bin/llvm-tblgen -I$LLVM_SOURCE_DIR/include -gen-opt-parser-defs $SRCROOT/tools/driver/Options.td -o $BUILT_PRODUCTS_DIR/include/Options.inc\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -13364,7 +13389,8 @@
 					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
+				"OTHER_LDFLAGS[sdk=macosx*]" = "";
+				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework/;
 				PYTHON_VERSION_MAJOR = 2;
 				PYTHON_VERSION_MINOR = 7;
 				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
@@ -13406,13 +13432,43 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
 				MTL_ENABLE_DEBUG_INFO = YES;
-				OTHER_LDFLAGS = (
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				OTHER_CFLAGS = (
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COMPRESSION_CFLAGS)",
+					"$(LLDB_COVERAGE_CFLAGS)",
+					"-Wimplicit-fallthrough",
+					"-fno-rtti",
+					"-fno-exceptions",
+					"-DNDEBUG",
+				);
+				"OTHER_LDFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
 					"-sectcreate",
 					__TEXT,
 					__info_plist,
-					"$(PROJECT_DIR)/tools/lldb-mi/lldb-Info.plist",
-					"-Wl,-rpath,@loader_path/",
+					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
+					"-Wl,-rpath,@loader_path/../../../System/Library/PrivateFrameworks",
+					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-lLLVMOption",
+					"-lLLVMSupport",
+					"-lLLVMDemangle",
+				);
+				"OTHER_LDFLAGS[sdk=macosx*]" = (
+					"$(inherited)",
+					"-sectcreate",
+					__TEXT,
+					__info_plist,
+					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-lLLVMOption",
+					"-lLLVMSupport",
+					"-lLLVMDemangle",
+					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
+					"-Wl,-rpath,@loader_path/../../Library/PrivateFrameworks",
+					"-Wl,-rpath,@loader_path/../../../SharedFrameworks",
+					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
+					"-Wl,-rpath,@loader_path/../../Library/PrivateFrameworks",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRIP_INSTALLED_PRODUCT = YES;
@@ -14343,6 +14399,16 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
 				MTL_ENABLE_DEBUG_INFO = YES;
+				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				OTHER_CFLAGS = (
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COMPRESSION_CFLAGS)",
+					"$(LLDB_COVERAGE_CFLAGS)",
+					"-Wimplicit-fallthrough",
+					"-fno-rtti",
+					"-fno-exceptions",
+				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-filelist",
@@ -14350,9 +14416,12 @@
 					"-sectcreate",
 					__TEXT,
 					__info_plist,
-					"$(PROJECT_DIR)/tools/lldb-mi/lldb-Info.plist",
-					"-Wl,-rpath,@loader_path/",
-					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
+					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
+					"-Wl,-rpath,@loader_path",
+					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-lLLVMOption",
+					"-lLLVMSupport",
+					"-lLLVMDemangle",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -14394,6 +14463,8 @@
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
 					"-flimit-debug-info",
 					"-Wparentheses",
+					"-fno-rtti",
+					"-fno-exceptions",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"$(inherited)",
@@ -14402,8 +14473,6 @@
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
 				OTHER_LDFLAGS = (
-					"-filelist",
-					"$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
@@ -14415,6 +14484,10 @@
 					Carbon,
 					"-framework",
 					Security,
+					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-lLLVMOption",
+					"-lLLVMSupport",
+					"-lLLVMDemangle",
 				);
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-filelist",
@@ -14601,6 +14674,15 @@
 				INFOPLIST_FILE = "tools/driver/lldb-Info.plist";
 				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
 				LIBRARY_SEARCH_PATHS = "$(inherited)";
+				OTHER_CFLAGS = (
+					"-Wparentheses",
+					"$(LLDB_ZLIB_CFLAGS)",
+					"$(LLDB_COMPRESSION_CFLAGS)",
+					"$(LLDB_COVERAGE_CFLAGS)",
+					"-Wimplicit-fallthrough",
+					"-fno-rtti",
+					"-fno-exceptions",
+				);
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-sectcreate",
@@ -14609,8 +14691,10 @@
 					"$(PROJECT_DIR)/tools/driver/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path",
 					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
-					"-filelist",
-					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-L$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)/lib",
+					"-lLLVMOption",
+					"-lLLVMSupport",
+					"-lLLVMDemangle",
 				);
 				PRODUCT_NAME = lldb;
 				USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/include $(LLDB_PATH_TO_LLVM_SOURCE)/include $(LLDB_PATH_TO_CLANG_SOURCE)/include $(LLDB_PATH_TO_SWIFT_SOURCE)/include $(LLDB_PATH_TO_LLVM_BUILD)/include $(LLDB_PATH_TO_LLVM_BUILD)/tools/clang/include $(LLDB_PATH_TO_SWIFT_BUILD)/include $(SRCROOT)/source";

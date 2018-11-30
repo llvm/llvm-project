@@ -45,9 +45,9 @@ public:
   Symbol *addUndefined(StringRef Name, uint8_t Binding, uint8_t StOther,
                        uint8_t Type, bool CanOmitFromDynSym, InputFile *File);
 
-  Symbol *addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
-                     uint64_t Value, uint64_t Size, uint8_t Binding,
-                     SectionBase *Section, InputFile *File);
+  Defined *addDefined(StringRef Name, uint8_t StOther, uint8_t Type,
+                      uint64_t Value, uint64_t Size, uint8_t Binding,
+                      SectionBase *Section, InputFile *File);
 
   template <class ELFT>
   void addShared(StringRef Name, SharedFile<ELFT> &F,

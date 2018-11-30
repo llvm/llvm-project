@@ -24,17 +24,8 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/LLVM.h"
 #include "llvm/Object/Wasm.h"
-
-using llvm::object::WasmSection;
-using llvm::object::WasmSegment;
-using llvm::wasm::WasmFunction;
-using llvm::wasm::WasmRelocation;
-using llvm::wasm::WasmSignature;
-
-namespace llvm {
-class raw_ostream;
-}
 
 namespace lld {
 namespace wasm {

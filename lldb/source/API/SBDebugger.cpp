@@ -1057,9 +1057,15 @@ const char *SBDebugger::GetReproducerPath() const {
               : nullptr);
 }
 
-void SBDebugger::SetReproducerPath(const char *p) {
-  if (m_opaque_sp)
-    m_opaque_sp->SetReproducerPath(llvm::StringRef::withNullAsEmpty(p));
+SBError SBDebugger::ReplayReproducer(const char *p) {
+  SBError sb_error;
+  if (m_opaque_sp) {
+    auto error =
+        m_opaque_sp->SetReproducerReplay(llvm::StringRef::withNullAsEmpty(p));
+    std::string error_str = llvm::toString(std::move(error));
+    sb_error.ref().SetErrorString(error_str);
+  }
+  return sb_error;
 }
 
 ScriptLanguage SBDebugger::GetScriptLanguage() const {

@@ -189,6 +189,7 @@ struct Configuration {
   bool ZInitfirst;
   bool ZInterpose;
   bool ZKeepTextSectionPrefix;
+  bool ZNodefaultlib;
   bool ZNodelete;
   bool ZNodlopen;
   bool ZNow;

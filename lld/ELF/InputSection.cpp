@@ -545,7 +545,7 @@ static uint64_t getARMStaticBase(const Symbol &Sym) {
 //
 // This function returns the R_RISCV_PCREL_HI20 relocation from
 // R_RISCV_PCREL_LO12's symbol and addend.
-Relocation *lld::elf::getRISCVPCRelHi20(const Symbol *Sym, uint64_t Addend) {
+static Relocation *getRISCVPCRelHi20(const Symbol *Sym, uint64_t Addend) {
   const Defined *D = cast<Defined>(Sym);
   InputSection *IS = cast<InputSection>(D->Section);
 
@@ -605,6 +605,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_ARM_SBREL:
     return Sym.getVA(A) - getARMStaticBase(Sym);
   case R_GOT:
+  case R_GOT_PLT:
   case R_RELAX_TLS_GD_TO_IE_ABS:
     return Sym.getGotVA() + A;
   case R_GOTONLY_PC:
@@ -623,6 +624,7 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
   case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     return Sym.getGotOffset() + A;
   case R_AARCH64_GOT_PAGE_PC:
+  case R_AARCH64_GOT_PAGE_PC_PLT:
   case R_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     return getAArch64Page(Sym.getGotVA() + A) - getAArch64Page(P);
   case R_GOT_PC:
@@ -677,11 +679,10 @@ static uint64_t getRelocTargetVA(const InputFile *File, RelType Type, int64_t A,
     return getAArch64Page(Val) - getAArch64Page(P);
   }
   case R_RISCV_PC_INDIRECT: {
-    const Relocation *HiRel = getRISCVPCRelHi20(&Sym, A);
-    if (!HiRel)
-      return 0;
-    return getRelocTargetVA(File, HiRel->Type, HiRel->Addend, Sym.getVA(),
-                            *HiRel->Sym, HiRel->Expr);
+    if (const Relocation *HiRel = getRISCVPCRelHi20(&Sym, A))
+      return getRelocTargetVA(File, HiRel->Type, HiRel->Addend, Sym.getVA(),
+                              *HiRel->Sym, HiRel->Expr);
+    return 0;
   }
   case R_PC: {
     uint64_t Dest;

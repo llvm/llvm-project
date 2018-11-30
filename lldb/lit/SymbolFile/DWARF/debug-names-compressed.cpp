@@ -3,7 +3,7 @@
 
 // REQUIRES: lld, zlib
 
-// RUN: clang -g -c -o %t.o --target=x86_64-pc-linux -mllvm -accel-tables=Dwarf %s
+// RUN: %clang -g -c -o %t.o --target=x86_64-pc-linux -mllvm -accel-tables=Dwarf %s
 // RUN: ld.lld %t.o -o %t --compress-debug-sections=zlib
 // RUN: lldb-test symbols --find=variable --name=foo %t | FileCheck %s
 

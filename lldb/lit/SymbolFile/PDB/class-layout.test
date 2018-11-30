@@ -1,6 +1,6 @@
-REQUIRES: system-windows
-RUN: clang-cl -m32 /Z7 /c /GS- %S/Inputs/ClassLayoutTest.cpp /o %T/ClassLayoutTest.cpp.obj
-RUN: link %T/ClassLayoutTest.cpp.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/ClassLayoutTest.cpp.exe
+REQUIRES: msvc
+RUN: %clang_cl -m32 /Z7 /c /GS- %S/Inputs/ClassLayoutTest.cpp /o %T/ClassLayoutTest.cpp.obj
+RUN: %msvc_link %T/ClassLayoutTest.cpp.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/ClassLayoutTest.cpp.exe
 RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck %s
 RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=ENUM %s
 RUN: lldb-test symbols %T/ClassLayoutTest.cpp.exe | FileCheck --check-prefix=UNION %s

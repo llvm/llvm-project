@@ -15,15 +15,10 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Wasm.h"
 
-using llvm::object::Archive;
-using llvm::object::WasmSymbol;
-using llvm::wasm::WasmGlobal;
-using llvm::wasm::WasmGlobalType;
-using llvm::wasm::WasmSignature;
-using llvm::wasm::WasmSymbolType;
-
 namespace lld {
 namespace wasm {
+
+using llvm::wasm::WasmSymbolType;
 
 class InputFile;
 class InputChunk;
@@ -245,8 +240,6 @@ protected:
                const WasmGlobalType *GlobalType)
       : Symbol(Name, K, Flags, F), GlobalType(GlobalType) {}
 
-  // Explicit function type, needed for undefined or synthetic functions only.
-  // For regular defined globals this information comes from the InputChunk.
   const WasmGlobalType *GlobalType;
   uint32_t GlobalIndex = INVALID_INDEX;
 };
@@ -276,14 +269,15 @@ public:
 
 class LazySymbol : public Symbol {
 public:
-  LazySymbol(StringRef Name, InputFile *File, const Archive::Symbol &Sym)
+  LazySymbol(StringRef Name, InputFile *File,
+             const llvm::object::Archive::Symbol &Sym)
       : Symbol(Name, LazyKind, 0, File), ArchiveSymbol(Sym) {}
 
   static bool classof(const Symbol *S) { return S->kind() == LazyKind; }
   void fetch();
 
 private:
-  Archive::Symbol ArchiveSymbol;
+  llvm::object::Archive::Symbol ArchiveSymbol;
 };
 
 // linker-generated symbols
@@ -338,7 +332,7 @@ template <typename T, typename... ArgT>
 T *replaceSymbol(Symbol *S, ArgT &&... Arg) {
   static_assert(std::is_trivially_destructible<T>(),
                 "Symbol types must be trivially destructible");
-  static_assert(sizeof(T) <= sizeof(SymbolUnion), "Symbol too small");
+  static_assert(sizeof(T) <= sizeof(SymbolUnion), "SymbolUnion too small");
   static_assert(alignof(T) <= alignof(SymbolUnion),
                 "SymbolUnion not aligned enough");
   assert(static_cast<Symbol *>(static_cast<T *>(nullptr)) == nullptr &&

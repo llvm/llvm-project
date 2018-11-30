@@ -1392,6 +1392,28 @@ kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
   return retval;
 }
 
+#if OMP_50_ENABLED
+/*!
+@ingroup TASKING
+@param loc_ref location of the original task directive
+@param gtid Global Thread ID of encountering thread
+@param new_task task thunk allocated by __kmpc_omp_task_alloc() for the ''new
+task''
+@param naffins Number of affinity items
+@param affin_list List of affinity items
+@return Returns non-zero if registering affinity information was not successful.
+ Returns 0 if registration was successful
+This entry registers the affinity information attached to a task with the task
+thunk structure kmp_taskdata_t.
+*/
+kmp_int32
+__kmpc_omp_reg_task_with_affinity(ident_t *loc_ref, kmp_int32 gtid,
+                                  kmp_task_t *new_task, kmp_int32 naffins,
+                                  kmp_task_affinity_info_t *affin_list) {
+  return 0;
+}
+#endif
+
 //  __kmp_invoke_task: invoke the specified task
 //
 // gtid: global thread ID of caller
