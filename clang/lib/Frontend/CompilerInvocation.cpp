@@ -180,6 +180,9 @@ static void addDiagnosticArgs(ArgList &Args, OptSpecifier Group,
   }
 }
 
+static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
+                                 DiagnosticsEngine &Diags);
+
 static void getAllNoBuiltinFuncValues(ArgList &Args,
                                       std::vector<std::string> &Funcs) {
   SmallVector<const char *, 8> Values;
@@ -342,6 +345,8 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
     }
   }
 
+  parseAnalyzerConfigs(Opts, Diags);
+
   llvm::raw_string_ostream os(Opts.FullCompilerInvocation);
   for (unsigned i = 0; i < Args.getNumInputArgStrings(); ++i) {
     if (i != 0)
@@ -351,6 +356,64 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
   os.flush();
 
   return Success;
+}
+
+static StringRef getStringOption(AnalyzerOptions::ConfigTable &Config,
+                                 StringRef OptionName, StringRef DefaultVal) {
+  return Config.insert({OptionName, DefaultVal}).first->second;
+}
+
+static void initOption(AnalyzerOptions::ConfigTable &Config,
+                       StringRef &OptionField, StringRef Name,
+                       StringRef DefaultVal) {
+  OptionField = getStringOption(Config, Name, DefaultVal);
+}
+
+static void initOption(AnalyzerOptions::ConfigTable &Config,
+                       bool &OptionField, StringRef Name, bool DefaultVal) {
+  // FIXME: We should emit a warning here if the value is something other than
+  // "true", "false", or the empty string (meaning the default value),
+  // but the AnalyzerOptions doesn't have access to a diagnostic engine.
+  OptionField = llvm::StringSwitch<bool>(getStringOption(Config, Name,
+                                               (DefaultVal ? "true" : "false")))
+      .Case("true", true)
+      .Case("false", false)
+      .Default(DefaultVal);
+}
+
+static void initOption(AnalyzerOptions::ConfigTable &Config,
+                       unsigned &OptionField, StringRef Name,
+                       unsigned DefaultVal) {
+  OptionField = DefaultVal;
+  bool HasFailed = getStringOption(Config, Name, std::to_string(DefaultVal))
+                     .getAsInteger(10, OptionField);
+  assert(!HasFailed && "analyzer-config option should be numeric");
+  (void)HasFailed;
+}
+
+static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
+                                 DiagnosticsEngine &Diags) {
+  // TODO: Emit warnings for incorrect options.
+  // TODO: There's no need to store the entire configtable, it'd be plenty
+  // enough tostore checker options.
+
+#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
+  initOption(AnOpts.Config, AnOpts.NAME, CMDFLAG, DEFAULT_VAL);                \
+
+#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
+                                           SHALLOW_VAL, DEEP_VAL)              \
+  switch (AnOpts.getUserMode()) {                                              \
+  case UMK_Shallow:                                                            \
+    initOption(AnOpts.Config, AnOpts.NAME, CMDFLAG, SHALLOW_VAL);              \
+    break;                                                                     \
+  case UMK_Deep:                                                               \
+    initOption(AnOpts.Config, AnOpts.NAME, CMDFLAG, DEEP_VAL);                 \
+    break;                                                                     \
+  }                                                                            \
+
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
+#undef ANALYZER_OPTION
+#undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 }
 
 static bool ParseMigratorArgs(MigratorOptions &Opts, ArgList &Args) {
