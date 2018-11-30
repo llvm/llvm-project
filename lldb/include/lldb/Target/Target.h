@@ -1168,12 +1168,8 @@ public:
     return m_scratch_typesystem_lock;
   }
 
-  /// Convenience wrapper that extracts the scope's module first.
   SwiftASTContextReader
   GetScratchSwiftASTContext(Status &error, ExecutionContextScope &exe_scope,
-                            bool create_on_demand = true);
-  SwiftASTContextReader
-  GetScratchSwiftASTContext(Status &error, Module *lldb_module,
                             bool create_on_demand = true);
 
 private:
