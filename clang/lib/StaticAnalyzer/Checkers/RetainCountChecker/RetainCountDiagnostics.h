@@ -141,12 +141,14 @@ public:
 };
 
 class CFRefReport : public BugReport {
+protected:
+  SymbolRef Sym;
 
 public:
   CFRefReport(CFRefBug &D, const LangOptions &LOpts,
               const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
               bool registerVisitor = true)
-    : BugReport(D, D.getDescription(), n) {
+    : BugReport(D, D.getDescription(), n), Sym(sym) {
     if (registerVisitor)
       addVisitor(llvm::make_unique<CFRefReportVisitor>(sym, Log));
   }
