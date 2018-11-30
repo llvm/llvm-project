@@ -719,9 +719,8 @@ define <16 x i8> @combine_vec_udiv_nonuniform4(<16 x i8> %x) {
 ; XOP-NEXT:    vmovd %eax, %xmm1
 ; XOP-NEXT:    vpmovzxbw {{.*#+}} xmm2 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
 ; XOP-NEXT:    vpmullw %xmm1, %xmm2, %xmm1
-; XOP-NEXT:    vpsrlw $8, %xmm1, %xmm1
 ; XOP-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; XOP-NEXT:    vpackuswb %xmm2, %xmm1, %xmm1
+; XOP-NEXT:    vpperm {{.*#+}} xmm1 = xmm1[1,3,5,7,9,11,13,15],xmm2[1,3,5,7,9,11,13,15]
 ; XOP-NEXT:    movl $249, %eax
 ; XOP-NEXT:    vmovd %eax, %xmm2
 ; XOP-NEXT:    vpshlb %xmm2, %xmm1, %xmm1

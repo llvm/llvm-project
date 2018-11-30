@@ -211,6 +211,9 @@ def immbottomxlenset : ImmLeaf<XLenVT, [{
     return countTrailingOnes<uint64_t>(Imm) >= 6;
   return countTrailingOnes<uint64_t>(Imm) >= 5;
 }]>;
+def immshifti32 : ImmLeaf<XLenVT, [{
+  return countTrailingOnes<uint64_t>(Imm) >= 5;
+}]>;
 
 // Addressing modes.
 // Necessary because a frameindex can't be matched directly in a pattern.
@@ -815,7 +818,7 @@ defm : LdPat<sextloadi8, LB>;
 defm : LdPat<extloadi8, LB>;
 defm : LdPat<sextloadi16, LH>;
 defm : LdPat<extloadi16, LH>;
-defm : LdPat<load, LW>;
+defm : LdPat<load, LW>, Requires<[IsRV32]>;
 defm : LdPat<zextloadi8, LBU>;
 defm : LdPat<zextloadi16, LHU>;
 
@@ -865,6 +868,67 @@ def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                               [(CallSeqEnd timm:$amt1, timm:$amt2)]>;
 } // Defs = [X2], Uses = [X2]
+
+/// RV64 patterns
+
+def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
+  return cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32;
+}]>;
+def zexti32 : PatFrags<(ops node:$src),
+                       [(and node:$src, 0xffffffff),
+                        (assertzexti32 node:$src)]>;
+
+let Predicates = [IsRV64] in {
+
+/// sext and zext
+
+def : Pat<(sext_inreg GPR:$rs1, i32), (ADDIW GPR:$rs1, 0)>;
+def : Pat<(and GPR:$rs1, 0xffffffff), (SRLI (SLLI GPR:$rs1, 32), 32)>;
+
+/// ALU operations
+
+def : Pat<(sext_inreg (add GPR:$rs1, GPR:$rs2), i32),
+          (ADDW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sext_inreg (add GPR:$rs1, simm12:$imm12), i32),
+          (ADDIW GPR:$rs1, simm12:$imm12)>;
+def : Pat<(sext_inreg (sub GPR:$rs1, GPR:$rs2), i32),
+          (SUBW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sext_inreg (shl GPR:$rs1, uimm5:$shamt), i32),
+          (SLLIW GPR:$rs1, uimm5:$shamt)>;
+// (srl (zexti32 ...), uimm5:$shamt) is matched with custom code due to the
+// need to undo manipulation of the mask value performed by DAGCombine.
+def : Pat<(sra (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
+          (SRAIW GPR:$rs1, uimm5:$shamt)>;
+
+def : Pat<(sext_inreg (shl GPR:$rs1, GPR:$rs2), i32),
+          (SLLW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sext_inreg (shl GPR:$rs1, (and GPR:$rs2, immshifti32)), i32),
+          (SLLW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(srl (zexti32 GPR:$rs1), GPR:$rs2),
+          (SRLW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(srl (zexti32 GPR:$rs1), (and GPR:$rs2, immshifti32)),
+          (SRLW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sext_inreg (srl (zexti32 GPR:$rs1), GPR:$rs2), i32),
+          (SRLW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sext_inreg (srl (zexti32 GPR:$rs1), (and GPR:$rs2, immshifti32)), i32),
+          (SRLW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sra (sext_inreg GPR:$rs1, i32), GPR:$rs2),
+          (SRAW GPR:$rs1, GPR:$rs2)>;
+def : Pat<(sra (sext_inreg GPR:$rs1, i32), (and GPR:$rs2, immshifti32)),
+          (SRAW GPR:$rs1, GPR:$rs2)>;
+
+/// Loads
+
+defm : LdPat<sextloadi32, LW>;
+defm : LdPat<extloadi32, LW>;
+defm : LdPat<zextloadi32, LWU>;
+defm : LdPat<load, LD>;
+
+/// Stores
+
+defm : StPat<truncstorei32, SW, GPR>;
+defm : StPat<store, SD, GPR>;
+} // Predicates = [IsRV64]
 
 //===----------------------------------------------------------------------===//
 // Standard extensions
