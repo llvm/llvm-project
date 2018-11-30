@@ -1,4 +1,6 @@
 ; RUN: opt -loop-reduce -S < %s | FileCheck %s
+; RUN: opt -loop-reduce -lsr-complexity-limit=2147483647 -S < %s | FileCheck %s
+
 ; Test compile time should be <1sec (no hang).
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

@@ -11,6 +11,10 @@ include "llvm/TableGen/SearchableTable.td"
 include "llvm/Target/Target.td"
 include "AMDGPUFeatures.td"
 
+class BoolToList<bit Value> {
+  list<int> ret = !if(Value, [1]<int>, []<int>);
+}
+
 //===------------------------------------------------------------===//
 // Subtarget Features (device properties)
 //===------------------------------------------------------------===//

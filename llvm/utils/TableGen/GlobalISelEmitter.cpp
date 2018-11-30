@@ -200,7 +200,8 @@ static Optional<LLTCodeGen> MVTToLLT(MVT::SimpleValueType SVT) {
 static std::string explainPredicates(const TreePatternNode *N) {
   std::string Explanation = "";
   StringRef Separator = "";
-  for (const auto &P : N->getPredicateFns()) {
+  for (const TreePredicateCall &Call : N->getPredicateCalls()) {
+    const TreePredicateFn &P = Call.Fn;
     Explanation +=
         (Separator + P.getOrigPatFragRecord()->getRecord()->getName()).str();
     Separator = ", ";
@@ -284,7 +285,9 @@ static Error isTrivialOperatorNode(const TreePatternNode *N) {
   std::string Separator = "";
 
   bool HasUnsupportedPredicate = false;
-  for (const auto &Predicate : N->getPredicateFns()) {
+  for (const TreePredicateCall &Call : N->getPredicateCalls()) {
+    const TreePredicateFn &Predicate = Call.Fn;
+
     if (Predicate.isAlwaysTrue())
       continue;
 
@@ -3117,7 +3120,8 @@ Record *GlobalISelEmitter::findNodeEquiv(Record *N) const {
 
 const CodeGenInstruction *
 GlobalISelEmitter::getEquivNode(Record &Equiv, const TreePatternNode *N) const {
-  for (const auto &Predicate : N->getPredicateFns()) {
+  for (const TreePredicateCall &Call : N->getPredicateCalls()) {
+    const TreePredicateFn &Predicate = Call.Fn;
     if (!Equiv.isValueUnset("IfSignExtend") && Predicate.isLoad() &&
         Predicate.isSignExtLoad())
       return &Target.getInstruction(Equiv.getValueAsDef("IfSignExtend"));
@@ -3186,7 +3190,8 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
                           " for result of Src pattern operator");
   }
 
-  for (const auto &Predicate : Src->getPredicateFns()) {
+  for (const TreePredicateCall &Call : Src->getPredicateCalls()) {
+    const TreePredicateFn &Predicate = Call.Fn;
     if (Predicate.isAlwaysTrue())
       continue;
 

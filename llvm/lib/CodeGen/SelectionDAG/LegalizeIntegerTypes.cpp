@@ -118,6 +118,8 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::FP_TO_FP16:  Res = PromoteIntRes_FP_TO_FP16(N); break;
 
+  case ISD::FLT_ROUNDS_: Res = PromoteIntRes_FLT_ROUNDS(N); break;
+
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
@@ -473,6 +475,13 @@ SDValue DAGTypeLegalizer::PromoteIntRes_FP_TO_FP16(SDNode *N) {
   SDLoc dl(N);
 
   return DAG.getNode(N->getOpcode(), dl, NVT, N->getOperand(0));
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_FLT_ROUNDS(SDNode *N) {
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDLoc dl(N);
+
+  return DAG.getNode(N->getOpcode(), dl, NVT);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_INT_EXTEND(SDNode *N) {
@@ -1042,6 +1051,11 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
 
   case ISD::ADDCARRY:
   case ISD::SUBCARRY: Res = PromoteIntOp_ADDSUBCARRY(N, OpNo); break;
+
+  case ISD::FRAMEADDR:
+  case ISD::RETURNADDR: Res = PromoteIntOp_FRAMERETURNADDR(N); break;
+
+  case ISD::PREFETCH: Res = PromoteIntOp_PREFETCH(N, OpNo); break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1063,9 +1077,10 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
 /// shared among BR_CC, SELECT_CC, and SETCC handlers.
 void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
                                             ISD::CondCode CCCode) {
-  // We have to insert explicit sign or zero extends.  Note that we could
-  // insert sign extends for ALL conditions, but zero extend is cheaper on
-  // many machines (an AND instead of two shifts), so prefer it.
+  // We have to insert explicit sign or zero extends. Note that we could
+  // insert sign extends for ALL conditions. For those operations where either
+  // zero or sign extension would be valid, use SExtOrZExtPromotedInteger
+  // which will choose the cheapest for the target.
   switch (CCCode) {
   default: llvm_unreachable("Unknown integer comparison!");
   case ISD::SETEQ:
@@ -1086,8 +1101,8 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
       NewLHS = OpL;
       NewRHS = OpR;
     } else {
-      NewLHS = ZExtPromotedInteger(NewLHS);
-      NewRHS = ZExtPromotedInteger(NewRHS);
+      NewLHS = SExtOrZExtPromotedInteger(NewLHS);
+      NewRHS = SExtOrZExtPromotedInteger(NewRHS);
     }
     break;
   }
@@ -1095,11 +1110,8 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
   case ISD::SETUGT:
   case ISD::SETULE:
   case ISD::SETULT:
-    // ALL of these operations will work if we either sign or zero extend
-    // the operands (including the unsigned comparisons!).  Zero extend is
-    // usually a simpler/cheaper operation, so prefer it.
-    NewLHS = ZExtPromotedInteger(NewLHS);
-    NewRHS = ZExtPromotedInteger(NewRHS);
+    NewLHS = SExtOrZExtPromotedInteger(NewLHS);
+    NewRHS = SExtOrZExtPromotedInteger(NewRHS);
     break;
   case ISD::SETGE:
   case ISD::SETGT:
@@ -1401,6 +1413,24 @@ SDValue DAGTypeLegalizer::PromoteIntOp_ADDSUBCARRY(SDNode *N, unsigned OpNo) {
   }
 
   return SDValue(DAG.UpdateNodeOperands(N, LHS, RHS, Carry), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_FRAMERETURNADDR(SDNode *N) {
+  // Promote the RETURNADDR/FRAMEADDR argument to a supported integer width.
+  SDValue Op = ZExtPromotedInteger(N->getOperand(0));
+  return SDValue(DAG.UpdateNodeOperands(N, Op), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_PREFETCH(SDNode *N, unsigned OpNo) {
+  assert(OpNo > 1 && "Don't know how to promote this operand!");
+  // Promote the rw, locality, and cache type arguments to a supported integer
+  // width.
+  SDValue Op2 = ZExtPromotedInteger(N->getOperand(2));
+  SDValue Op3 = ZExtPromotedInteger(N->getOperand(3));
+  SDValue Op4 = ZExtPromotedInteger(N->getOperand(4));
+  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), N->getOperand(1),
+                                        Op2, Op3, Op4),
+                 0);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1406,23 +1406,43 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     if (Record.size() < 18 || Record.size() > 21)
       return error("Invalid record");
 
-    IsDistinct =
-        (Record[0] & 1) || Record[8]; // All definitions should be distinct.
+    bool HasSPFlags = Record[0] & 4;
+    DISubprogram::DISPFlags SPFlags =
+        HasSPFlags
+            ? static_cast<DISubprogram::DISPFlags>(Record[9])
+            : DISubprogram::toSPFlags(
+                  /*IsLocalToUnit=*/Record[7], /*IsDefinition=*/Record[8],
+                  /*IsOptimized=*/Record[14], /*Virtuality=*/Record[11]);
+
+    // All definitions should be distinct.
+    IsDistinct = (Record[0] & 1) || (SPFlags & DISubprogram::SPFlagDefinition);
     // Version 1 has a Function as Record[15].
     // Version 2 has removed Record[15].
     // Version 3 has the Unit as Record[15].
     // Version 4 added thisAdjustment.
-    bool HasUnit = Record[0] >= 2;
-    if (HasUnit && Record.size() < 19)
+    // Version 5 repacked flags into DISPFlags, changing many element numbers.
+    bool HasUnit = Record[0] & 2;
+    if (!HasSPFlags && HasUnit && Record.size() < 19)
       return error("Invalid record");
-    Metadata *CUorFn = getMDOrNull(Record[15]);
-    unsigned Offset = Record.size() >= 19 ? 1 : 0;
-    bool HasFn = Offset && !HasUnit;
-    bool HasThisAdj = Record.size() >= 20;
-    bool HasThrownTypes = Record.size() >= 21;
-    DISubprogram::DISPFlags SPFlags = DISubprogram::toSPFlags(
-        /*IsLocalToUnit=*/Record[7], /*IsDefinition=*/Record[8],
-        /*IsOptimized=*/Record[14], /*Virtuality=*/Record[11]);
+    if (HasSPFlags && !HasUnit)
+      return error("Invalid record");
+    // Accommodate older formats.
+    bool HasFn = false;
+    bool HasThisAdj = true;
+    bool HasThrownTypes = true;
+    unsigned OffsetA = 0;
+    unsigned OffsetB = 0;
+    if (!HasSPFlags) {
+      OffsetA = 2;
+      OffsetB = 2;
+      if (Record.size() >= 19) {
+        HasFn = !HasUnit;
+        OffsetB++;
+      }
+      HasThisAdj = Record.size() >= 20;
+      HasThrownTypes = Record.size() >= 21;
+    }
+    Metadata *CUorFn = getMDOrNull(Record[12 + OffsetB]);
     DISubprogram *SP = GET_OR_DISTINCT(
         DISubprogram,
         (Context,
@@ -1432,17 +1452,18 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
          getMDOrNull(Record[4]),                            // file
          Record[5],                                         // line
          getMDOrNull(Record[6]),                            // type
-         Record[9],                                         // scopeLine
-         getDITypeRefOrNull(Record[10]),                    // containingType
-         Record[12],                                        // virtualIndex
-         HasThisAdj ? Record[19] : 0,                       // thisAdjustment
-         static_cast<DINode::DIFlags>(Record[13]),          // flags
+         Record[7 + OffsetA],                               // scopeLine
+         getDITypeRefOrNull(Record[8 + OffsetA]),           // containingType
+         Record[10 + OffsetA],                              // virtualIndex
+         HasThisAdj ? Record[16 + OffsetB] : 0,             // thisAdjustment
+         static_cast<DINode::DIFlags>(Record[11 + OffsetA]),// flags
          SPFlags,                                           // SPFlags
          HasUnit ? CUorFn : nullptr,                        // unit
-         getMDOrNull(Record[15 + Offset]),                  // templateParams
-         getMDOrNull(Record[16 + Offset]),                  // declaration
-         getMDOrNull(Record[17 + Offset]),                  // retainedNodes
-         HasThrownTypes ? getMDOrNull(Record[20]) : nullptr // thrownTypes
+         getMDOrNull(Record[13 + OffsetB]),                 // templateParams
+         getMDOrNull(Record[14 + OffsetB]),                 // declaration
+         getMDOrNull(Record[15 + OffsetB]),                 // retainedNodes
+         HasThrownTypes ? getMDOrNull(Record[17 + OffsetB])
+                        : nullptr                           // thrownTypes
          ));
     MetadataList.assignValue(SP, NextMetadataNo);
     NextMetadataNo++;

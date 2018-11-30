@@ -216,8 +216,7 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
       if (!Sym.isCommon() &&
           ((Config.LocalizeHidden &&
             (Sym.Visibility == STV_HIDDEN || Sym.Visibility == STV_INTERNAL)) ||
-           (!Config.SymbolsToLocalize.empty() &&
-            is_contained(Config.SymbolsToLocalize, Sym.Name))))
+           is_contained(Config.SymbolsToLocalize, Sym.Name)))
         Sym.Binding = STB_LOCAL;
 
       // Note: these two globalize flags have very similar names but different
@@ -235,13 +234,11 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
           Sym.getShndx() != SHN_UNDEF)
         Sym.Binding = STB_LOCAL;
 
-      if (!Config.SymbolsToGlobalize.empty() &&
-          is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
+      if (is_contained(Config.SymbolsToGlobalize, Sym.Name) &&
           Sym.getShndx() != SHN_UNDEF)
         Sym.Binding = STB_GLOBAL;
 
-      if (!Config.SymbolsToWeaken.empty() &&
-          is_contained(Config.SymbolsToWeaken, Sym.Name) &&
+      if (is_contained(Config.SymbolsToWeaken, Sym.Name) &&
           Sym.Binding == STB_GLOBAL)
         Sym.Binding = STB_WEAK;
 
@@ -266,8 +263,7 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
     }
 
     Obj.removeSymbols([&](const Symbol &Sym) {
-      if ((!Config.SymbolsToKeep.empty() &&
-           is_contained(Config.SymbolsToKeep, Sym.Name)) ||
+      if (is_contained(Config.SymbolsToKeep, Sym.Name) ||
           (Config.KeepFileSymbols && Sym.Type == STT_FILE))
         return false;
 
@@ -279,10 +275,8 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
       if (Config.StripAll || Config.StripAllGNU)
         return true;
 
-      if (!Config.SymbolsToRemove.empty() &&
-          is_contained(Config.SymbolsToRemove, Sym.Name)) {
+      if (is_contained(Config.SymbolsToRemove, Sym.Name))
         return true;
-      }
 
       if (Config.StripUnneeded && !Sym.Referenced &&
           (Sym.Binding == STB_LOCAL || Sym.getShndx() == SHN_UNDEF) &&

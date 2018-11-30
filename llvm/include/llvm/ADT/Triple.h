@@ -186,7 +186,8 @@ public:
     Contiki,
     AMDPAL,     // AMD PAL Runtime
     HermitCore, // HermitCore Unikernel/Multikernel
-    LastOSType = HermitCore
+    Hurd,       // GNU/Hurd
+    LastOSType = Hurd
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -582,9 +583,15 @@ public:
     return getOS() == Triple::KFreeBSD;
   }
 
+  /// Tests whether the OS is Hurd.
+  bool isOSHurd() const {
+    return getOS() == Triple::Hurd;
+  }
+
   /// Tests whether the OS uses glibc.
   bool isOSGlibc() const {
-    return (getOS() == Triple::Linux || getOS() == Triple::KFreeBSD) &&
+    return (getOS() == Triple::Linux || getOS() == Triple::KFreeBSD ||
+            getOS() == Triple::Hurd) &&
            !isAndroid();
   }
 

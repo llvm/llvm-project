@@ -1123,10 +1123,7 @@ static_assert(e2.x != e2.y, "");
 
 } // namespace IndirectFields
 
-constexpr bool __constant_string_p(const char *__s) {
-  while (__builtin_constant_p(*__s) && *__s)
-    __s++;
+constexpr bool indirect_builtin_constant_p(const char *__s) {
   return __builtin_constant_p(*__s);
 }
-
-constexpr bool n = __constant_string_p("a");
+constexpr bool n = indirect_builtin_constant_p("a");

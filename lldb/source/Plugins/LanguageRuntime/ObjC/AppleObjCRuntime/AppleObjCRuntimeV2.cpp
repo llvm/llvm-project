@@ -25,6 +25,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
+#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
@@ -39,10 +40,12 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ConstString.h"
@@ -373,6 +376,8 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
   }
 }
 
+static void RegisterObjCExceptionRecognizer();
+
 AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
                                        const ModuleSP &objc_module_sp)
     : AppleObjCRuntime(process), m_get_class_info_code(),
@@ -393,6 +398,7 @@ AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
   static const ConstString g_gdb_object_getClass("gdb_object_getClass");
   m_has_object_getClass = (objc_module_sp->FindFirstSymbolWithNameAndType(
                                g_gdb_object_getClass, eSymbolTypeCode) != NULL);
+  RegisterObjCExceptionRecognizer();
 }
 
 bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
@@ -799,8 +805,9 @@ AppleObjCRuntimeV2::CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp,
 
   if (throw_bp)
     resolver_sp.reset(new BreakpointResolverName(
-        bkpt, "objc_exception_throw", eFunctionNameTypeBase,
-        eLanguageTypeUnknown, Breakpoint::Exact, 0, eLazyBoolNo));
+        bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(),
+        eFunctionNameTypeBase, eLanguageTypeUnknown, Breakpoint::Exact, 0,
+        eLazyBoolNo));
   // FIXME: We don't do catch breakpoints for ObjC yet.
   // Should there be some way for the runtime to specify what it can do in this
   // regard?
@@ -2591,4 +2598,60 @@ void AppleObjCRuntimeV2::GetValuesForGlobalCFBooleans(lldb::addr_t &cf_true,
     cf_false = m_CFBoolean_values->first;
   } else
     this->AppleObjCRuntime::GetValuesForGlobalCFBooleans(cf_true, cf_false);
+}
+
+#pragma mark Frame recognizers
+
+class ObjCExceptionRecognizedStackFrame : public RecognizedStackFrame {
+ public:
+  ObjCExceptionRecognizedStackFrame(StackFrameSP frame_sp) {
+    ThreadSP thread_sp = frame_sp->GetThread();
+    ProcessSP process_sp = thread_sp->GetProcess();
+
+    const lldb::ABISP &abi = process_sp->GetABI();
+    if (!abi) return;
+
+    CompilerType voidstar = process_sp->GetTarget()
+                                .GetScratchClangASTContext()
+                                ->GetBasicType(lldb::eBasicTypeVoid)
+                                .GetPointerType();
+
+    ValueList args;
+    Value input_value;
+    input_value.SetCompilerType(voidstar);
+    args.PushValue(input_value);
+
+    if (!abi->GetArgumentValues(*thread_sp, args)) return;
+
+    addr_t exception_addr = args.GetValueAtIndex(0)->GetScalar().ULongLong();
+
+    Value value(exception_addr);
+    value.SetCompilerType(voidstar);
+    exception = ValueObjectConstResult::Create(frame_sp.get(), value,
+                                               ConstString("exception"));
+    exception = exception->GetDynamicValue(eDynamicDontRunTarget);
+  }
+
+  ValueObjectSP exception;
+
+  lldb::ValueObjectSP GetExceptionObject() override { return exception; }
+};
+
+class ObjCExceptionThrowFrameRecognizer : public StackFrameRecognizer {
+  lldb::RecognizedStackFrameSP RecognizeFrame(lldb::StackFrameSP frame) {
+    return lldb::RecognizedStackFrameSP(
+        new ObjCExceptionRecognizedStackFrame(frame));
+  };
+};
+
+static void RegisterObjCExceptionRecognizer() {
+  static llvm::once_flag g_once_flag;
+  llvm::call_once(g_once_flag, []() {
+    FileSpec module;
+    ConstString function;
+    std::tie(module, function) = AppleObjCRuntime::GetExceptionThrowLocation();
+    StackFrameRecognizerManager::AddRecognizer(
+        StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
+        module.GetFilename(), function, /*first_instruction_only*/ true);
+  });
 }

@@ -1,7 +1,7 @@
-; RUN: opt -S -licm < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
+; RUN: opt -S -licm < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
 ; RUN: opt -S -licm -licm-control-flow-hoisting=1 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
 ; RUN: opt -S -licm -licm-control-flow-hoisting=0 < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
-; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
+; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
 ; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -licm-control-flow-hoisting=1 -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-ENABLED
 ; RUN: opt -passes='require<opt-remark-emit>,loop(licm)' -licm-control-flow-hoisting=0 -S < %s | FileCheck %s -check-prefixes=CHECK,CHECK-DISABLED
 

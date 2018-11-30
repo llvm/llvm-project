@@ -7794,6 +7794,50 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   return LowerCallTo(CLI).first;
 }
 
+// This is a code size optimisation: return the original SDIV node to
+// DAGCombiner when we don't want to expand SDIV into a sequence of
+// instructions, and an empty node otherwise which will cause the
+// SDIV to be expanded in DAGCombine.
+SDValue
+ARMTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
+                                 SelectionDAG &DAG,
+                                 SmallVectorImpl<SDNode *> &Created) const {
+  // TODO: Support SREM
+  if (N->getOpcode() != ISD::SDIV)
+    return SDValue();
+
+  const auto &ST = static_cast<const ARMSubtarget&>(DAG.getSubtarget());
+  const auto &MF = DAG.getMachineFunction();
+  const bool MinSize = MF.getFunction().optForMinSize();
+  const bool HasDivide = ST.isThumb() ? ST.hasDivideInThumbMode()
+                                      : ST.hasDivideInARMMode();
+
+  // Don't touch vector types; rewriting this may lead to scalarizing
+  // the int divs.
+  if (N->getOperand(0).getValueType().isVector())
+    return SDValue();
+
+  // Bail if MinSize is not set, and also for both ARM and Thumb mode we need
+  // hwdiv support for this to be really profitable.
+  if (!(MinSize && HasDivide))
+    return SDValue();
+
+  // ARM mode is a bit simpler than Thumb: we can handle large power
+  // of 2 immediates with 1 mov instruction; no further checks required,
+  // just return the sdiv node.
+  if (!ST.isThumb())
+    return SDValue(N, 0);
+
+  // In Thumb mode, immediates larger than 128 need a wide 4-byte MOV,
+  // and thus lose the code size benefits of a MOVS that requires only 2.
+  // TargetTransformInfo and 'getIntImmCodeSizeCost' could be helpful here,
+  // but as it's doing exactly this, it's not worth the trouble to get TTI.
+  if (Divisor.sgt(128))
+    return SDValue();
+
+  return SDValue(N, 0);
+}
+
 SDValue ARMTargetLowering::LowerDIV_Windows(SDValue Op, SelectionDAG &DAG,
                                             bool Signed) const {
   assert(Op.getValueType() == MVT::i32 &&

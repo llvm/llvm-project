@@ -91,7 +91,7 @@ static cl::opt<bool>
                      cl::desc("Disable memory promotion in LICM pass"));
 
 static cl::opt<bool> ControlFlowHoisting(
-    "licm-control-flow-hoisting", cl::Hidden, cl::init(true),
+    "licm-control-flow-hoisting", cl::Hidden, cl::init(false),
     cl::desc("Enable control flow (and PHI) hoisting in LICM"));
 
 static cl::opt<uint32_t> MaxNumUsesTraversed(
@@ -821,9 +821,11 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
 
   // Now that we've finished hoisting make sure that LI and DT are still valid.
 #ifndef NDEBUG
-  assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
-         "Dominator tree verification failed");
-  LI->verify(*DT);
+  if (Changed) {
+    assert(DT->verify(DominatorTree::VerificationLevel::Fast) &&
+           "Dominator tree verification failed");
+    LI->verify(*DT);
+  }
 #endif
 
   return Changed;

@@ -151,12 +151,12 @@ static cl::opt<bool>
 
 static cl::opt<unsigned>
     LoadQueueSize("lqueue",
-                  cl::desc("Size of the load queue (unbound by default)"),
+                  cl::desc("Size of the load queue"),
                   cl::cat(ToolOptions), cl::init(0));
 
 static cl::opt<unsigned>
     StoreQueueSize("squeue",
-                   cl::desc("Size of the store queue (unbound by default)"),
+                   cl::desc("Size of the store queue"),
                    cl::cat(ToolOptions), cl::init(0));
 
 static cl::opt<bool>
@@ -240,8 +240,9 @@ static void processViewOptions() {
 // Returns true on success.
 static bool runPipeline(mca::Pipeline &P) {
   // Handle pipeline errors here.
-  if (auto Err = P.run()) {
-    WithColor::error() << toString(std::move(Err));
+  Expected<unsigned> Cycles = P.run();
+  if (!Cycles) {
+    WithColor::error() << toString(Cycles.takeError());
     return false;
   }
   return true;

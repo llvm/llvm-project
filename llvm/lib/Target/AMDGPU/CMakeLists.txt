@@ -119,6 +119,7 @@ add_llvm_target(AMDGPUCodeGen
   SIShrinkInstructions.cpp
   SIWholeQuadMode.cpp
   GCNILPSched.cpp
+  GCNDPPCombine.cpp
   )
 
 add_subdirectory(AsmParser)

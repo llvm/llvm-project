@@ -4,27 +4,34 @@
 
 target triple = "wasm32-unknown-unknown"
 
-@used_data = hidden global i32 2, align 4
+@data = hidden global i32 2, align 4
 @indirect_func = local_unnamed_addr global void ()* @foo, align 4
+@indirect_func_external = local_unnamed_addr global void ()* @func_external, align 4
 
 define default void @foo() {
 entry:
   ; To ensure we use __stack_pointer
   %ptr = alloca i32
-  %0 = load i32, i32* @used_data, align 4
-  %1 = load void ()*, void ()** @indirect_func, align 4
-  call void %1()
+  %0 = load i32, i32* @data, align 4
+  %1 = load i32, i32* @data_external, align 4
+  %2 = load void ()*, void ()** @indirect_func, align 4
+  call void %2()
   ret void
 }
+
+declare void @func_external()
+
+@data_external = external global i32
+
 
 ; check for dylink section at start
 
 ; CHECK:      Sections:
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            dylink
-; CHECK-NEXT:     MemorySize:      4
+; CHECK-NEXT:     MemorySize:      8
 ; CHECK-NEXT:     MemoryAlignment: 2
-; CHECK-NEXT:     TableSize:       1
+; CHECK-NEXT:     TableSize:       2
 ; CHECK-NEXT:     TableAlignment:  0
 
 ; check for import of __table_base and __memory_base globals
@@ -38,8 +45,8 @@ entry:
 ; CHECK-NEXT:           ElemType:        ANYFUNC
 ; CHECK-NEXT:           Limits:
 ; CHECK-NEXT:             Flags:           [ HAS_MAX ]
-; CHECK-NEXT:             Initial:         0x00000001
-; CHECK-NEXT:             Maximum:         0x00000001
+; CHECK-NEXT:             Initial:         0x00000002
+; CHECK-NEXT:             Maximum:         0x00000002
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __stack_pointer
 ; CHECK-NEXT:         Kind:            GLOBAL
@@ -63,7 +70,7 @@ entry:
 ; CHECK-NEXT:       - Offset:
 ; CHECK-NEXT:           Opcode:          GET_GLOBAL
 ; CHECK-NEXT:           Index:           2
-; CHECK-NEXT:         Functions:       [ 1 ]
+; CHECK-NEXT:         Functions:       [ 2, 0 ]
 
 ; check the data segment initialized with __memory_base global as offset
 
@@ -74,4 +81,4 @@ entry:
 ; CHECK-NEXT:         Offset:
 ; CHECK-NEXT:           Opcode:          GET_GLOBAL
 ; CHECK-NEXT:           Index:           1
-; CHECK-NEXT:         Content:         '00000000'
+; CHECK-NEXT:         Content:         '0000000001000000'

@@ -475,15 +475,16 @@ static Optional<NonLoc> tryRearrange(ProgramStateRef State,
     SingleTy = ResultTy;
     if (LSym->getType() != SingleTy)
       return None;
-    // Substracting unsigned integers is a nightmare.
-    if (!SingleTy->isSignedIntegerOrEnumerationType())
-      return None;
   } else {
     // Don't rearrange other operations.
     return None;
   }
 
   assert(!SingleTy.isNull() && "We should have figured out the type by now!");
+
+  // Rearrange signed symbolic expressions only
+  if (!SingleTy->isSignedIntegerOrEnumerationType())
+    return None;
 
   SymbolRef RSym = Rhs.getAsSymbol();
   if (!RSym || RSym->getType() != SingleTy)

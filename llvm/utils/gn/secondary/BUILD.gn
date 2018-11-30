@@ -1,7 +1,10 @@
 group("default") {
   deps = [
-    "//llvm/utils/TableGen:llvm-tblgen",
+    "//llvm/lib/Bitcode/Reader",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC/MCParser",
     "//llvm/tools/llvm-undname",
+    "//llvm/utils/TableGen:llvm-tblgen",
   ]
 }
 

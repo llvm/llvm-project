@@ -212,17 +212,17 @@ define i64 @var_shift_i64(i64 %x, i64 %y, i64 %z) nounwind {
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    andl $63, %ebx
-; X86-NEXT:    movl $64, %ecx
-; X86-NEXT:    subl %ebx, %ecx
+; X86-NEXT:    movb $64, %cl
+; X86-NEXT:    subb %bl, %cl
 ; X86-NEXT:    movl %eax, %edi
 ; X86-NEXT:    shll %cl, %edi
 ; X86-NEXT:    shldl %cl, %eax, %esi
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    je .LBB3_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %edi, %esi

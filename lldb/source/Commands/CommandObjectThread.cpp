@@ -1520,6 +1520,52 @@ public:
 };
 
 //-------------------------------------------------------------------------
+// CommandObjectThreadException
+//-------------------------------------------------------------------------
+
+class CommandObjectThreadException : public CommandObjectIterateOverThreads {
+ public:
+  CommandObjectThreadException(CommandInterpreter &interpreter)
+      : CommandObjectIterateOverThreads(
+            interpreter, "thread exception",
+            "Display the current exception object for a thread. Defaults to "
+            "the current thread.",
+            "thread exception",
+            eCommandRequiresProcess | eCommandTryTargetAPILock |
+                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused) {}
+
+  ~CommandObjectThreadException() override = default;
+
+  bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
+    ThreadSP thread_sp =
+        m_exe_ctx.GetProcessPtr()->GetThreadList().FindThreadByID(tid);
+    if (!thread_sp) {
+      result.AppendErrorWithFormat("thread no longer exists: 0x%" PRIx64 "\n",
+                                   tid);
+      result.SetStatus(eReturnStatusFailed);
+      return false;
+    }
+
+    Stream &strm = result.GetOutputStream();
+    ValueObjectSP exception_object_sp = thread_sp->GetCurrentException();
+    if (exception_object_sp) {
+      exception_object_sp->Dump(strm);
+    }
+
+    /* TODO(kubamracek)
+    ThreadSP exception_thread_sp = thread_sp->GetCurrentExceptionBacktrace();
+    if (exception_thread_sp && exception_thread_sp->IsValid()) {
+      const uint32_t num_frames_with_source = 0;
+      const bool stop_format = false;
+      exception_thread_sp->GetStatus(strm, m_options.m_start, m_options.m_count,
+                                     num_frames_with_source, stop_format);
+    }*/
+
+    return true;
+  }
+};
+
+//-------------------------------------------------------------------------
 // CommandObjectThreadReturn
 //-------------------------------------------------------------------------
 
@@ -2064,6 +2110,9 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread(
                  CommandObjectSP(new CommandObjectThreadUntil(interpreter)));
   LoadSubCommand("info",
                  CommandObjectSP(new CommandObjectThreadInfo(interpreter)));
+  LoadSubCommand(
+      "exception",
+      CommandObjectSP(new CommandObjectThreadException(interpreter)));
   LoadSubCommand("step-in",
                  CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
                      interpreter, "thread step-in",

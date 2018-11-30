@@ -42,8 +42,7 @@ public:
   /// @return The exit code that the process should return.
   int MainLoop();
 
-  lldb::SBError ProcessArgs(const llvm::opt::InputArgList &args, FILE *out_fh,
-                            bool &do_exit);
+  lldb::SBError ProcessArgs(const llvm::opt::InputArgList &args, bool &do_exit);
 
   const char *GetFilename() const;
 

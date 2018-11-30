@@ -21,11 +21,8 @@ void bar(){
   S<int> sint;
   S<int*> sintptr;
   S<__global int*> sintptrgl;
-  // FIXME: Preserve AS in TreeTransform
-  //S<__global int> sintgl;
 
   sint.foo();
   sintptr.foo();
   sintptrgl.foo();
-  //sintgl.foo();
 }

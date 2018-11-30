@@ -198,6 +198,11 @@ public:
 
   uint32_t GetExtendedBacktraceOriginatingIndexID();
 
+  SBValue GetCurrentException();
+
+  // TODO(kubamracek): Extract backtrace from SBValue into SBThread
+  // SBThread GetCurrentExceptionBacktrace();
+
   bool SafeToCallFunctions();
 
 #ifndef SWIG

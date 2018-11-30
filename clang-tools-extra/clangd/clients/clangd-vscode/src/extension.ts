@@ -54,7 +54,9 @@ export function activate(context: vscode.ExtensionContext) {
             code2Protocol: (value: vscode.Uri) => value.toString(),
             protocol2Code: (value: string) =>
                 vscode.Uri.file(realpathSync(vscode.Uri.parse(value).fsPath))
-        }
+        },
+        // Do not switch to output window when clangd returns output
+        revealOutputChannelOn: vscodelc.RevealOutputChannelOn.Never
     };
 
   const clangdClient = new vscodelc.LanguageClient('Clang Language Server', serverOptions, clientOptions);
