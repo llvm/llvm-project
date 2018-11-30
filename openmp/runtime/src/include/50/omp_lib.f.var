@@ -278,11 +278,6 @@
             integer (kind=omp_integer_kind) omp_get_initial_device
           end function omp_get_initial_device
 
-          function omp_get_device_num()
-            use omp_lib_kinds
-            integer (kind=omp_integer_kind) omp_get_device_num
-          end function omp_get_device_num
-
           subroutine omp_init_lock(svar)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_init_lock
@@ -597,9 +592,7 @@
 !dec$ attributes alias:'OMP_GET_TEAM_NUM' :: omp_get_team_num
 !dec$ attributes alias:'OMP_GET_CANCELLATION' :: omp_get_cancellation
 !dec$ attributes alias:'OMP_IS_INITIAL_DEVICE' :: omp_is_initial_device
-!dec$ attributes alias:'OMP_GET_INITIAL_DEVICE' :: omp_get_initial_device
 !dec$ attributes alias:'OMP_GET_MAX_TASK_PRIORITY' :: omp_get_max_task_priority
-!dec$ attributes alias:'OMP_GET_DEVICE_NUM' :: omp_get_device_num
 !dec$ attributes alias:'OMP_CONTROL_TOOL' :: omp_control_tool
 
 !dec$ attributes alias:'omp_init_lock' :: omp_init_lock
@@ -680,9 +673,7 @@
 !dec$ attributes alias:'_OMP_GET_TEAM_NUM' :: omp_get_team_num
 !dec$ attributes alias:'_OMP_GET_CANCELLATION' :: omp_get_cancellation
 !dec$ attributes alias:'_OMP_IS_INITIAL_DEVICE' :: omp_is_initial_device
-!dec$ attributes alias:'_OMP_GET_INITIAL_DEVICE' :: omp_get_initial_device
 !dec$ attributes alias:'_OMP_GET_MAX_TASK_PRIORTY' :: omp_get_max_task_priority
-!dec$ attributes alias:'_OMP_GET_DEVICE_NUM' :: omp_get_device_num
 !dec$ attributes alias:'_OMP_CONTROL_TOOL' :: omp_control_tool
 
 !dec$ attributes alias:'_omp_init_lock' :: omp_init_lock
@@ -766,9 +757,7 @@
 !dec$ attributes alias:'omp_get_team_num_'::omp_get_team_num
 !dec$ attributes alias:'omp_get_cancellation_'::omp_get_cancellation
 !dec$ attributes alias:'omp_is_initial_device_'::omp_is_initial_device
-!dec$ attributes alias:'omp_get_initial_device_'::omp_get_initial_device
 !dec$ attributes alias:'omp_get_max_task_priority_'::omp_get_max_task_priority
-!dec$ attributes alias:'omp_get_device_num_'::omp_get_device_num
 
 !dec$ attributes alias:'omp_init_lock_'::omp_init_lock
 !dec$ attributes alias:'omp_init_lock_with_hint_'::omp_init_lock_with_hint
@@ -844,16 +833,12 @@
 !dec$ attributes alias:'_omp_get_proc_bind_' :: omp_get_proc_bind
 !dec$ attributes alias:'_omp_get_wtime_'::omp_get_wtime
 !dec$ attributes alias:'_omp_get_wtick_'::omp_get_wtick
-!dec$ attributes alias:'_omp_get_default_device_'::omp_get_default_device
-!dec$ attributes alias:'_omp_set_default_device_'::omp_set_default_device
-!dec$ attributes alias:'_omp_get_num_devices_'::omp_get_num_devices
 !dec$ attributes alias:'_omp_get_num_teams_'::omp_get_num_teams
 !dec$ attributes alias:'_omp_get_team_num_'::omp_get_team_num
 !dec$ attributes alias:'_omp_get_cancellation_'::omp_get_cancellation
 !dec$ attributes alias:'_omp_is_initial_device_'::omp_is_initial_device
-!dec$ attributes alias:'_omp_get_initial_device_'::omp_get_initial_device
 !dec$ attributes alias:'_omp_get_max_task_priorty_'::omp_get_max_task_priority
-!dec$ attributes alias:'_omp_get_device_num_'::omp_get_device_num
+
 !dec$ attributes alias:'_omp_init_lock_'::omp_init_lock
 !dec$ attributes alias:'_omp_init_lock_with_hint_'::omp_init_lock_with_hint
 !dec$ attributes alias:'_omp_destroy_lock_'::omp_destroy_lock
@@ -901,3 +886,4 @@
 !dec$ endif
 
       end module omp_lib
+
