@@ -530,8 +530,6 @@ class RetainSummaryManager {
   /// Decrement the reference count on OS object.
   const RetainSummary *getOSSummaryReleaseRule(const FunctionDecl *FD);
 
-  /// Free the OS object.
-  const RetainSummary *getOSSummaryFreeRule(const FunctionDecl *FD);
 
   enum UnaryFuncKind { cfretain, cfrelease, cfautorelease, cfmakecollectable };
 
