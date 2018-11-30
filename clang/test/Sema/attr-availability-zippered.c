@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 "-triple" "x86_64-apple-macos10.14" -darwin-target-variant-triple x86_64-apple-ios12-macabi -fsyntax-only -verify %s
+// RUN: %clang_cc1 "-triple" x86_64-apple-ios12-macabi -darwin-target-variant-triple "x86_64-apple-macos10.14"  -fsyntax-only -verify -D INVERTED %s
 
 // XFAIL: *
 __attribute__((availability(macos, introduced=10.10, deprecated=10.14), availability(ios, introduced=9, deprecated=12)))
@@ -19,7 +20,12 @@ void bothNotDeprecated() {
 
 void checkDeprecated() {
   // The compiler may warn here if the deployment target is older than the version introduced
-  bothDeprecated();  // expected-warning {{'bothDeprecated' is deprecated: first deprecated in macOS 10.14 and first deprecated in iOS (on macOS) 12}}
+  bothDeprecated();
+#ifndef INVERTED
+  // expected-warning@-2 {{'bothDeprecated' is deprecated: first deprecated in macOS 10.14 and first deprecated in iOS (on macOS) 12}}
+#else
+  // expected-warning@-4 {{'bothDeprecated' is deprecated: first deprecated in iOS (on macOS) 12 and first deprecated in macOS 10.14}}
+#endif
   macOSDeprecated(); // expected-warning {{'macOSDeprecated' is deprecated: first deprecated in macOS 10.14}}
   iOSDeprecated();   // expected-warning {{'iOSDeprecated' is deprecated: first deprecated in iOS (on macOS) 12}}
   bothNotDeprecated();
@@ -45,12 +51,22 @@ void bothObsoleted() { // expected-note {{'bothObsoleted' has been explicitly ma
 }
 
 void checkUnavailable() {
-  bothUnavailable();  // expected-error {{'bothUnavailable' is unavailable: not available on macOS and not available on iOS (on macOS)}}
+  bothUnavailable();
+#ifndef INVERTED
+  // expected-error@-2 {{'bothUnavailable' is unavailable: not available on macOS and not available on iOS (on macOS)}}
+#else
+  // expected-error@-4 {{'bothUnavailable' is unavailable: not available on iOS (on macOS) and not available on macOS}}
+#endif
   iosUnavailable(); // expected-error {{'iosUnavailable' is unavailable: not available on iOS (on macOS)}}
   macOSUnavailable(); // expected-error {{'macOSUnavailable' is unavailable: not available on macOS}}
   bothAvailable();
   
-  bothObsoleted(); // expected-error {{'bothObsoleted' is unavailable: obsoleted in macOS 10.14 and obsoleted in iOS (on macOS) 12}}
+  bothObsoleted();
+#ifndef INVERTED
+  // expected-error@-2 {{'bothObsoleted' is unavailable: obsoleted in macOS 10.14 and obsoleted in iOS (on macOS) 12}}
+#else
+  // expected-error@-4 {{'bothObsoleted' is unavailable: obsoleted in iOS (on macOS) 12 and obsoleted in macOS 10.14}}
+#endif
 }
 
 __attribute__((availability(macos, introduced=10.10, deprecated=10.14)))
@@ -61,7 +77,12 @@ typedef struct ZipperedTypedefDifferentOffendingDecl { // expected-note {{'Zippe
 } __attribute__((availability(ios, introduced=9, deprecated=12))) ZipperedTypedefDifferentOffendingDecl_t; // expected-note {{'ZipperedTypedefDifferentOffendingDecl_t' has been explicitly marked deprecated here}}
 
 void checkZipperDiffOffendingDecl() {
-  ZipperedTypedefDifferentOffendingDecl_t tt; // expected-warning {{'ZipperedTypedefDifferentOffendingDecl_t' is deprecated: first deprecated in macOS 10.14 and first deprecated in iOS (on macOS) 12}}
+  ZipperedTypedefDifferentOffendingDecl_t tt;
+#ifndef INVERTED
+  // expected-warning@-2 {{'ZipperedTypedefDifferentOffendingDecl_t' is deprecated: first deprecated in macOS 10.14 and first deprecated in iOS (on macOS) 12}}
+#else
+  // expected-warning@-4 {{'ZipperedTypedefDifferentOffendingDecl_t' is deprecated: first deprecated in iOS (on macOS) 12 and first deprecated in macOS 10.14}}
+#endif
 }
 
 __attribute__((availability(macos, introduced=10.10, deprecated=10.14), availability(ios, unavailable)))
@@ -107,12 +128,22 @@ void checkMix() {
   macOSDeprecatedIOSGood();
   // expected-warning@-1 {{'macOSDeprecatedIOSGood' is deprecated: first deprecated in macOS 10.14}}
 
-  bothDeprecatedDiffReplacement(); // expected-warning {{'bothDeprecatedDiffReplacement' is deprecated: first deprecated in macOS 10.14 and first deprecated in iOS (on macOS) 12}}
-  
-  bothUnavailableSameReplacement(); // expected-error {{'bothUnavailableSameReplacement' is unavailable: not available on macOS and not available on iOS (on macOS)}}
-  
+  bothDeprecatedDiffReplacement();
+#ifndef INVERTED
+  // expected-warning@-2 {{'bothDeprecatedDiffReplacement' is deprecated: first deprecated in macOS 10.14 and first deprecated in iOS (on macOS) 12}}
+#else
+  // expected-warning@-4 {{'bothDeprecatedDiffReplacement' is deprecated: first deprecated in iOS (on macOS) 12 and first deprecated in macOS 10.14}}
+#endif
+
+  bothUnavailableSameReplacement();
+#ifndef INVERTED
+  // expected-error@-2 {{'bothUnavailableSameReplacement' is unavailable: not available on macOS and not available on iOS (on macOS)}}
+#else
+  // expected-error@-4 {{'bothUnavailableSameReplacement' is unavailable: not available on iOS (on macOS) and not available on macOS}}
+#endif
+
   justIosUnavailable(); // expected-error {{'justIosUnavailable' is unavailable: not available on iOS (on macOS)}}
-  
+
   justMacOSDeprecated(); // expected-warning {{'justMacOSDeprecated' is deprecated: first deprecated in macOS 10.14}}
 }
 
@@ -129,5 +160,10 @@ struct IntroducedLaterBoth { } __attribute__((availability(macos, introduced=10.
 // expected-note@-1 {{'IntroducedLaterBoth' has been explicitly marked partial here}}
 
 struct NotYetIntroduced { // expected-note {{annotate 'NotYetIntroduced' with an availability attribute to silence this warning}}
-  struct IntroducedLaterBoth x; // expected-warning {{'IntroducedLaterBoth' is only available on macOS 10.15 and iOS (on macOS) 13 or newer}}
+  struct IntroducedLaterBoth x;
+#ifndef INVERTED
+  // expected-warning@-2 {{'IntroducedLaterBoth' is only available on macOS 10.15 and iOS (on macOS) 13 or newer}}
+#else
+  // expected-warning@-4 {{'IntroducedLaterBoth' is only available on iOS (on macOS) 13 and macOS 10.15 or newer}}
+#endif
 };

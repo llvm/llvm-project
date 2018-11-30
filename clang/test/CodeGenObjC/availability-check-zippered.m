@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14 -darwin-target-variant-triple x86_64-apple-ios12-macabi -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-ios12-macabi -darwin-target-variant-triple x86_64-apple-macosx10.14 -emit-llvm -o - %s | FileCheck %s
 
 // XFAIL: *
 void use_at_available() {
@@ -11,9 +12,9 @@ void use_at_available() {
   if (@available(macos 10.15, *))
     ;
 
-  // CHECK: call i32 @__isOSVersionAtLeast(i32 10, i32 15, i32 0)
-  // CHECK-NEXT: call i32 @__isTargetVariantOSVersionAtLeast(i32 13, i32 0, i32 0)
-  // CHECK-NEXT: call i32 @__isTargetPlatformNative()
+  // CHECK-DAG: call i32 @__isOSVersionAtLeast(i32 10, i32 15, i32 0)
+  // CHECK-DAG: call i32 @__isTargetVariantOSVersionAtLeast(i32 13, i32 0, i32 0)
+  // CHECK: call i32 @__isTargetPlatformNative()
   // CHECK-NEXT: icmp ne
   // CHECK-NEXT: select i1 %{{[0-9]+}}, i32 %{{[0-9]+}}, i32 %{{[0-9]+}}
   // CHECK-NEXT: icmp ne
