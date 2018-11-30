@@ -1094,7 +1094,7 @@ void MallocChecker::processNewAllocation(const CXXNewExpr *NE,
 
 void MallocChecker::checkPostStmt(const CXXNewExpr *NE,
                                   CheckerContext &C) const {
-  if (!C.getAnalysisManager().getAnalyzerOptions().mayInlineCXXAllocator())
+  if (!C.getAnalysisManager().getAnalyzerOptions().MayInlineCXXAllocator)
     processNewAllocation(NE, C, C.getSVal(NE));
 }
 

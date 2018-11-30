@@ -363,7 +363,7 @@ TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
   ASSERT_TRUE(file->isValid());
   SmallString<64> ExpectedResult;
 #ifdef _WIN32
-  ExpectedResult = "C:";
+  ExpectedResult = "C:/";
 #else
   ExpectedResult = "/";
 #endif

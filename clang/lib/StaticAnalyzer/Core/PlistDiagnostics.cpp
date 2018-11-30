@@ -471,7 +471,7 @@ static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
 
   o << "   </array>\n";
 
-  if (!AnOpts.shouldDisplayMacroExpansions())
+  if (!AnOpts.ShouldDisplayMacroExpansions)
     return;
 
   o << "   <key>macro_expansions</key>\n"
@@ -704,7 +704,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     EmitString(o << "  ", SM.getFileEntryForID(FID)->getName()) << '\n';
   o << " </array>\n";
 
-  if (llvm::AreStatisticsEnabled() && AnOpts.shouldSerializeStats()) {
+  if (llvm::AreStatisticsEnabled() && AnOpts.ShouldSerializeStats) {
     o << " <key>statistics</key>\n";
     std::string stats;
     llvm::raw_string_ostream os(stats);
@@ -904,8 +904,6 @@ static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
       continue;
     }
 
-    // TODO: Handle tok::hash and tok::hashhash.
-
     // If control reached here, then this token isn't a macro identifier, nor an
     // unexpanded macro argument that we need to handle, print it.
     Printer.printToken(T);
@@ -1094,14 +1092,25 @@ void MacroArgMap::expandFromPrevMacro(const MacroArgMap &Super) {
 }
 
 void TokenPrinter::printToken(const Token &Tok) {
-  // If the tokens were already space separated, or if they must be to avoid
-  // them being implicitly pasted, add a space between them.
   // If this is the first token to be printed, don't print space.
-  if (PrevTok.isNot(tok::unknown) && (Tok.hasLeadingSpace() ||
-      ConcatInfo.AvoidConcat(PrevPrevTok, PrevTok, Tok)))
-    OS << ' ';
+  if (PrevTok.isNot(tok::unknown)) {
+    // If the tokens were already space separated, or if they must be to avoid
+    // them being implicitly pasted, add a space between them.
+    if(Tok.hasLeadingSpace() || ConcatInfo.AvoidConcat(PrevPrevTok, PrevTok,
+                                                       Tok)) {
+      // AvoidConcat doesn't check for ##, don't print a space around it.
+      if (PrevTok.isNot(tok::hashhash) && Tok.isNot(tok::hashhash)) {
+        OS << ' ';
+      }
+    }
+  }
 
-  OS << PP.getSpelling(Tok);
+  if (!Tok.isOneOf(tok::hash, tok::hashhash)) {
+    if (PrevTok.is(tok::hash))
+      OS << '\"' << PP.getSpelling(Tok) << '\"';
+    else
+      OS << PP.getSpelling(Tok);
+  }
 
   PrevPrevTok = PrevTok;
   PrevTok = Tok;
