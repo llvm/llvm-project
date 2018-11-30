@@ -31,7 +31,7 @@ static bool isNumericLiteralExpression(const Expr *E) {
 /// If type represents a pointer to CXXRecordDecl,
 /// and is not a typedef, return the decl name.
 /// Otherwise, return the serialization of type.
-static StringRef getPrettyTypeName(QualType QT) {
+static std::string getPrettyTypeName(QualType QT) {
   QualType PT = QT->getPointeeType();
   if (!PT.isNull() && !QT->getAs<TypedefType>())
     if (const auto *RD = PT->getAsCXXRecordDecl())
@@ -137,6 +137,8 @@ static void generateDiagnosticsForCallLike(
     } else {
       os << "function call";
     }
+  } else if (const auto *NE = dyn_cast<CXXNewExpr>(S)){
+    os << "Operator new";
   } else {
     assert(isa<ObjCMessageExpr>(S));
     CallEventManager &Mgr = CurrSt->getStateManager().getCallEventManager();
@@ -526,7 +528,8 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
       os << "that is annotated as CF_RETURNS_NOT_RETAINED";
     } else if (D->hasAttr<NSReturnsNotRetainedAttr>()) {
       os << "that is annotated as NS_RETURNS_NOT_RETAINED";
-      // TODO: once the patch is ready, insert a case for OS_RETURNS_NOT_RETAINED
+    } else if (D->hasAttr<OSReturnsNotRetainedAttr>()) {
+      os << "that is annotated as OS_RETURNS_NOT_RETAINED";
     } else {
       if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
         if (BRC.getASTContext().getLangOpts().ObjCAutoRefCount) {
