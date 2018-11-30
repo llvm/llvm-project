@@ -27,10 +27,6 @@ void f4_ifunc() {}
 void f4() __attribute__((ifunc("f4_ifunc")));
 //expected-error@-1 {{ifunc resolver function must return a pointer}}
 
-void* f5_ifunc(int i) { return 0; }
-void f5() __attribute__((ifunc("f5_ifunc")));
-//expected-error@-1 {{ifunc resolver function must have no parameters}}
-
 #else
 void f1a() __asm("f1");
 void f1a() {}
