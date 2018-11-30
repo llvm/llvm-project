@@ -2345,9 +2345,6 @@ void MallocChecker::reportLeak(SymbolRef Sym, ExplodedNode *N,
 void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
                                      CheckerContext &C) const
 {
-  if (!SymReaper.hasDeadSymbols())
-    return;
-
   ProgramStateRef state = C.getState();
   RegionStateTy RS = state->get<RegionState>();
   RegionStateTy::Factory &F = state->get_context<RegionState>();
