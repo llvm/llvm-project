@@ -418,7 +418,9 @@ EXTERN uint16_t __kmpc_parallel_level(kmp_Ident *loc, uint32_t global_tid) {
 // it's cheap to recalculate this value so we never use the result
 // of this call.
 EXTERN int32_t __kmpc_global_thread_num(kmp_Ident *loc) {
-  return GetLogicalThreadIdInBlock();
+  int tid = GetLogicalThreadIdInBlock();
+  return GetOmpThreadId(tid, checkSPMDMode(loc),
+                        checkRuntimeUninitialized(loc));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
