@@ -213,7 +213,7 @@ enable_testing()
 add_subdirectory(test)
 
 # Add packaging directives for amd_comgr
-set(CPACK_PACKAGE_NAME amd_comgr)
+set(CPACK_PACKAGE_NAME comgr)
 set(CPACK_PACKAGE_VENDOR "AMD")
 set(CPACK_PACKAGE_VERSION_MAJOR 1)
 set(CPACK_PACKAGE_VERSION_MINOR 1)
