@@ -847,6 +847,51 @@ Query for this feature with ``__has_attribute(objc_method_family)``.
   }];
 }
 
+def RetainBehaviorDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The behavior of a function with respect to reference counting for Foundation
+(Objective-C), CoreFoundation (C) and OSObject (C++) is determined by a naming
+convention (e.g. functions starting with "get" are assumed to return at
+``+0``).
+
+It can be overriden using a family of the following attributes.  In
+Objective-C, the annotation ``__attribute__((ns_returns_retained))`` applied to
+a function communicates that the object is returned at ``+1``, and the caller
+is responsible for freeing it.
+Similiarly, the annotation ``__attribute__((ns_returns_not_retained))``
+specifies that the object is returned at ``+0`` and the ownership remains with
+the callee.
+Additionally, parameters can have an annotation
+``__attribute__((ns_consumed))``, which specifies that passing an owned object
+as that parameter effectively transfers the ownership, and the caller is no
+longer responsible for it.
+These attributes affect code generation when interacting with ARC code, and
+they are used by the Clang Static Analyzer.
+
+In C programs using CoreFoundation, a similar set of attributes:
+``__attribute__((cf_returns_not_retained))``,
+``__attribute__((cf_returns_retained))`` and ``__attribute__((cf_consumed))``
+have the same respective semantics when applied to CoreFoundation objects.
+These attributes affect code generation when interacting with ARC code, and
+they are used by the Clang Static Analyzer.
+
+Finally, in C++ interacting with XNU kernel (objects inheriting from OSObject),
+the same attribute family is present:
+``__attribute__((os_returns_not_retained))``,
+``__attribute__((os_returns_retained))`` and ``__attribute__((os_consumed))``,
+with the same respective semantics.
+These attributes are also used by the Clang Static Analyzer.
+
+The family of attributes ``X_returns_X_retained`` can be added to functions,
+C++ methods, and Objective-C methods and properties.
+Attributes ``X_consumed`` can be added to parameters of methods, functions,
+and Objective-C methods.
+  }];
+}
+
+
+
 def NoDebugDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{

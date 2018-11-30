@@ -401,7 +401,6 @@ void SymbolReaper::markDependentsLive(SymbolRef sym) {
 
 void SymbolReaper::markLive(SymbolRef sym) {
   TheLiving[sym] = NotProcessed;
-  TheDead.erase(sym);
   markDependentsLive(sym);
 }
 
@@ -424,14 +423,6 @@ void SymbolReaper::markElementIndicesLive(const MemRegion *region) {
 void SymbolReaper::markInUse(SymbolRef sym) {
   if (isa<SymbolMetadata>(sym))
     MetadataInUse.insert(sym);
-}
-
-bool SymbolReaper::maybeDead(SymbolRef sym) {
-  if (isLive(sym))
-    return false;
-
-  TheDead.insert(sym);
-  return true;
 }
 
 bool SymbolReaper::isLiveRegion(const MemRegion *MR) {

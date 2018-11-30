@@ -1442,20 +1442,18 @@ void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   SmallVector<SymbolRef, 10> Leaked;
 
   // Update counts from autorelease pools
-  for (SymbolReaper::dead_iterator I = SymReaper.dead_begin(),
-       E = SymReaper.dead_end(); I != E; ++I) {
-    SymbolRef Sym = *I;
-    if (const RefVal *T = B.lookup(Sym)){
-      // Use the symbol as the tag.
-      // FIXME: This might not be as unique as we would like.
+  for (const auto &I: state->get<RefBindings>()) {
+    SymbolRef Sym = I.first;
+    if (SymReaper.isDead(Sym)) {
       static CheckerProgramPointTag Tag(this, "DeadSymbolAutorelease");
-      state = handleAutoreleaseCounts(state, Pred, &Tag, C, Sym, *T);
+      const RefVal &V = I.second;
+      state = handleAutoreleaseCounts(state, Pred, &Tag, C, Sym, V);
       if (!state)
         return;
 
       // Fetch the new reference count from the state, and use it to handle
       // this symbol.
-      state = handleSymbolDeath(state, *I, *getRefBinding(state, Sym), Leaked);
+      state = handleSymbolDeath(state, Sym, *getRefBinding(state, Sym), Leaked);
     }
   }
 

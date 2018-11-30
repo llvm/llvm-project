@@ -3,7 +3,7 @@
 // The number of supported attributes should never go down!
 
 // Swift has 5 additional attributes that are not present in upstream LLVM.
-// CHECK: #pragma clang attribute supports 135 attributes:
+// CHECK: #pragma clang attribute supports 138 attributes:
 // CHECK-NEXT: AMDGPUFlatWorkGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumSGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumVGPR (SubjectMatchRule_function)
@@ -86,6 +86,9 @@
 // CHECK-NEXT: NoThreadSafetyAnalysis (SubjectMatchRule_function)
 // CHECK-NEXT: NoThrow (SubjectMatchRule_function)
 // CHECK-NEXT: NotTailCalled (SubjectMatchRule_function)
+// CHECK-NEXT: OSConsumed (SubjectMatchRule_variable_is_parameter)
+// CHECK-NEXT: OSReturnsNotRetained (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property)
+// CHECK-NEXT: OSReturnsRetained (SubjectMatchRule_function, SubjectMatchRule_objc_method, SubjectMatchRule_objc_property)
 // CHECK-NEXT: ObjCBoxable (SubjectMatchRule_record)
 // CHECK-NEXT: ObjCBridge (SubjectMatchRule_record, SubjectMatchRule_type_alias)
 // CHECK-NEXT: ObjCBridgeMutable (SubjectMatchRule_record)
