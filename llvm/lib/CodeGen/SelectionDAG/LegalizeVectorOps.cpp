@@ -330,6 +330,8 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
+  case ISD::MULHS:
+  case ISD::MULHU:
   case ISD::SDIV:
   case ISD::UDIV:
   case ISD::SREM:

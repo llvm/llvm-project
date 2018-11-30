@@ -23,6 +23,16 @@ class ObjCExceptionsTestCase(TestBase):
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
+        lldbutil.run_to_name_breakpoint(self, "objc_exception_throw")
+
+        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
+                    substrs=['stopped', 'stop reason = breakpoint'])
+
+        self.expect('thread exception', substrs=[
+                '(NSException *) exception = ',
+                'name: "ThrownException" - reason: "SomeReason"',
+            ])
+
         lldbutil.run_to_source_breakpoint(self, "// Set break point at this line.", lldb.SBFileSpec("main.m"))
 
         self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,

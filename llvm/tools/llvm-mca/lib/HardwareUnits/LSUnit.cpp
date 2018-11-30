@@ -22,6 +22,23 @@
 namespace llvm {
 namespace mca {
 
+LSUnit::LSUnit(const MCSchedModel &SM, unsigned LQ, unsigned SQ,
+               bool AssumeNoAlias)
+    : LQ_Size(LQ), SQ_Size(SQ), NoAlias(AssumeNoAlias) {
+  if (SM.hasExtraProcessorInfo()) {
+    const MCExtraProcessorInfo &EPI = SM.getExtraProcessorInfo();
+    if (!LQ_Size && EPI.LoadQueueID) {
+      const MCProcResourceDesc &LdQDesc = *SM.getProcResource(EPI.LoadQueueID);
+      LQ_Size = LdQDesc.BufferSize;
+    }
+
+    if (!SQ_Size && EPI.StoreQueueID) {
+      const MCProcResourceDesc &StQDesc = *SM.getProcResource(EPI.StoreQueueID);
+      SQ_Size = StQDesc.BufferSize;
+    }
+  }
+}
+
 #ifndef NDEBUG
 void LSUnit::dump() const {
   dbgs() << "[LSUnit] LQ_Size = " << LQ_Size << '\n';

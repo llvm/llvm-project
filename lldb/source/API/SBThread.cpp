@@ -1484,6 +1484,21 @@ uint32_t SBThread::GetExtendedBacktraceOriginatingIndexID() {
   return LLDB_INVALID_INDEX32;
 }
 
+SBValue SBThread::GetCurrentException() {
+  ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
+  if (!thread_sp) return SBValue();
+
+  return SBValue(thread_sp->GetCurrentException());
+}
+
+/* TODO(kubamracek)
+SBThread SBThread::GetCurrentExceptionBacktrace() {
+  ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
+  if (!thread_sp) return SBThread();
+
+  return SBThread(thread_sp->GetCurrentExceptionBacktrace());
+}*/
+
 bool SBThread::SafeToCallFunctions() {
   ThreadSP thread_sp(m_opaque_sp->GetThreadSP());
   if (thread_sp)

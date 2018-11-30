@@ -36,13 +36,13 @@
 
 // NO-ATTR-NOT: FlagAllCallsDescribed
 
-// HAS-ATTR-DAG: DISubprogram(name: "declaration2", {{.*}}, isDefinition: true, {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed
-// HAS-ATTR-DAG: DISubprogram(name: "struct1", {{.*}}, isDefinition: false, {{.*}}, flags: DIFlagPrototyped
-// HAS-ATTR-DAG: DISubprogram(name: "struct1", {{.*}}, isDefinition: true, {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed
-// HAS-ATTR-DAG: DISubprogram(name: "method1", {{.*}}, isDefinition: true, {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed
-// HAS-ATTR-DAG: DISubprogram(name: "force_irgen", {{.*}}, isDefinition: true, {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed
+// HAS-ATTR-DAG: DISubprogram(name: "declaration2", {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition
+// HAS-ATTR-DAG: DISubprogram(name: "struct1", {{.*}}, flags: DIFlagPrototyped, spFlags: DISPFlagOptimized)
+// HAS-ATTR-DAG: DISubprogram(name: "struct1", {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition
+// HAS-ATTR-DAG: DISubprogram(name: "method1", {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition
+// HAS-ATTR-DAG: DISubprogram(name: "force_irgen", {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition
 
-// LINE-TABLES-ONLY: DISubprogram(name: "force_irgen", {{.*}}, isDefinition: true, {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed
+// LINE-TABLES-ONLY: DISubprogram(name: "force_irgen", {{.*}}, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition
 
 void declaration1();
 

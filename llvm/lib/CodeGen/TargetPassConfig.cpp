@@ -137,13 +137,15 @@ static cl::opt<std::string> PrintMachineInstrs(
     "print-machineinstrs", cl::ValueOptional, cl::desc("Print machine instrs"),
     cl::value_desc("pass-name"), cl::init("option-unspecified"), cl::Hidden);
 
-static cl::opt<int> EnableGlobalISelAbort(
+static cl::opt<GlobalISelAbortMode> EnableGlobalISelAbort(
     "global-isel-abort", cl::Hidden,
     cl::desc("Enable abort calls when \"global\" instruction selection "
-             "fails to lower/select an instruction: 0 disable the abort, "
-             "1 enable the abort, and "
-             "2 disable the abort but emit a diagnostic on failure"),
-    cl::init(1));
+             "fails to lower/select an instruction"),
+    cl::values(
+        clEnumValN(GlobalISelAbortMode::Disable, "0", "Disable the abort"),
+        clEnumValN(GlobalISelAbortMode::Enable, "1", "Enable the abort"),
+        clEnumValN(GlobalISelAbortMode::DisableWithDiag, "2",
+                   "Disable the abort but emit a diagnostic on failure")));
 
 // Temporary option to allow experimenting with MachineScheduler as a post-RA
 // scheduler. Targets can "properly" enable this with
@@ -383,6 +385,9 @@ TargetPassConfig::TargetPassConfig(LLVMTargetMachine &TM, PassManagerBase &pm)
 
   if (TM.Options.EnableIPRA)
     setRequiresCodeGenSCCOrder();
+
+  if (EnableGlobalISelAbort.getNumOccurrences())
+    TM.Options.GlobalISelAbort = EnableGlobalISelAbort;
 
   setStartStopPasses();
 }
@@ -721,8 +726,11 @@ bool TargetPassConfig::addCoreISelPasses() {
   // Enable FastISel with -fast-isel, but allow that to be overridden.
   TM->setO0WantsFastISel(EnableFastISelOption != cl::BOU_FALSE);
   if (EnableFastISelOption == cl::BOU_TRUE ||
-      (TM->getOptLevel() == CodeGenOpt::None && TM->getO0WantsFastISel()))
+      (TM->getOptLevel() == CodeGenOpt::None && TM->getO0WantsFastISel() &&
+       !TM->Options.EnableGlobalISel)) {
     TM->setFastISel(true);
+    TM->setGlobalISel(false);
+  }
 
   // Ask the target for an instruction selector.
   // Explicitly enabling fast-isel should override implicitly enabled
@@ -730,6 +738,7 @@ bool TargetPassConfig::addCoreISelPasses() {
   if (EnableGlobalISelOption == cl::BOU_TRUE ||
       (EnableGlobalISelOption == cl::BOU_UNSET &&
        TM->Options.EnableGlobalISel && EnableFastISelOption != cl::BOU_TRUE)) {
+    TM->setGlobalISel(true);
     TM->setFastISel(false);
 
     SaveAndRestore<bool> SavedAddingMachinePasses(AddingMachinePasses, true);
@@ -1165,14 +1174,9 @@ void TargetPassConfig::addBlockPlacement() {
 /// GlobalISel Configuration
 //===---------------------------------------------------------------------===//
 bool TargetPassConfig::isGlobalISelAbortEnabled() const {
-  if (EnableGlobalISelAbort.getNumOccurrences() > 0)
-    return EnableGlobalISelAbort == 1;
-
-  // When no abort behaviour is specified, we don't abort if the target says
-  // that GISel is enabled.
-  return !TM->Options.EnableGlobalISel;
+  return TM->Options.GlobalISelAbort == GlobalISelAbortMode::Enable;
 }
 
 bool TargetPassConfig::reportDiagnosticWhenGlobalISelFallback() const {
-  return EnableGlobalISelAbort == 2;
+  return TM->Options.GlobalISelAbort == GlobalISelAbortMode::DisableWithDiag;
 }

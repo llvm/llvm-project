@@ -26,9 +26,11 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
@@ -280,8 +282,7 @@ bool Driver::GetDebugMode() const { return m_option_data.m_debug_mode; }
 // indicating whether or not to start up the full debugger (i.e. the Command
 // Interpreter) or not.  Return FALSE if the arguments were invalid OR if the
 // user only wanted help or version information.
-SBError Driver::ProcessArgs(const opt::InputArgList &args, FILE *out_fh,
-                            bool &exiting) {
+SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   SBError error;
   ResetOptionValues();
 
@@ -306,15 +307,16 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, FILE *out_fh,
     m_option_data.m_batch = true;
   }
 
-  if (args.hasArg(OPT_core)) {
-    SBFileSpec file(optarg);
-    if (file.Exists()) {
-      m_option_data.m_core_file = optarg;
-    } else {
+  if (auto *arg = args.getLastArg(OPT_core)) {
+    auto arg_value = arg->getValue();
+    SBFileSpec file(arg_value);
+    if (!file.Exists()) {
       error.SetErrorStringWithFormat(
-          "file specified in --core (-c) option doesn't exist: '%s'", optarg);
+          "file specified in --core (-c) option doesn't exist: '%s'",
+          arg_value);
       return error;
     }
+    m_option_data.m_core_file = arg_value;
   }
 
   if (args.hasArg(OPT_editor)) {
@@ -331,33 +333,34 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, FILE *out_fh,
   }
 
   if (auto *arg = args.getLastArg(OPT_file)) {
-    auto optarg = arg->getValue();
-    SBFileSpec file(optarg);
+    auto arg_value = arg->getValue();
+    SBFileSpec file(arg_value);
     if (file.Exists()) {
-      m_option_data.m_args.push_back(optarg);
+      m_option_data.m_args.push_back(arg_value);
     } else if (file.ResolveExecutableLocation()) {
       char path[PATH_MAX];
       file.GetPath(path, sizeof(path));
       m_option_data.m_args.push_back(path);
     } else {
       error.SetErrorStringWithFormat(
-          "file specified in --file (-f) option doesn't exist: '%s'", optarg);
+          "file specified in --file (-f) option doesn't exist: '%s'",
+          arg_value);
       return error;
     }
   }
 
   if (auto *arg = args.getLastArg(OPT_arch)) {
-    auto optarg = arg->getValue();
-    if (!m_debugger.SetDefaultArchitecture(optarg)) {
+    auto arg_value = arg->getValue();
+    if (!m_debugger.SetDefaultArchitecture(arg_value)) {
       error.SetErrorStringWithFormat(
-          "invalid architecture in the -a or --arch option: '%s'", optarg);
+          "invalid architecture in the -a or --arch option: '%s'", arg_value);
       return error;
     }
   }
 
   if (auto *arg = args.getLastArg(OPT_script_language)) {
-    auto optarg = arg->getValue();
-    m_option_data.m_script_lang = m_debugger.GetScriptingLanguage(optarg);
+    auto arg_value = arg->getValue();
+    m_option_data.m_script_lang = m_debugger.GetScriptingLanguage(arg_value);
   }
 
   if (args.hasArg(OPT_no_use_colors)) {
@@ -365,16 +368,16 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, FILE *out_fh,
   }
 
   if (auto *arg = args.getLastArg(OPT_reproducer)) {
-    auto optarg = arg->getValue();
-    SBFileSpec file(optarg);
+    auto arg_value = arg->getValue();
+    SBFileSpec file(arg_value);
     if (file.Exists()) {
-      SBError repro_error = m_debugger.ReplayReproducer(optarg);
+      SBError repro_error = m_debugger.ReplayReproducer(arg_value);
       if (repro_error.Fail())
         return repro_error;
     } else {
       error.SetErrorStringWithFormat("file specified in --reproducer "
                                      "(-z) option doesn't exist: '%s'",
-                                     optarg);
+                                     arg_value);
       return error;
     }
   }
@@ -388,8 +391,8 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, FILE *out_fh,
   }
 
   if (auto *arg = args.getLastArg(OPT_attach_name)) {
-    auto optarg = arg->getValue();
-    m_option_data.m_process_name = optarg;
+    auto arg_value = arg->getValue();
+    m_option_data.m_process_name = arg_value;
   }
 
   if (args.hasArg(OPT_wait_for)) {
@@ -397,32 +400,32 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, FILE *out_fh,
   }
 
   if (auto *arg = args.getLastArg(OPT_attach_pid)) {
-    auto optarg = arg->getValue();
+    auto arg_value = arg->getValue();
     char *remainder;
-    m_option_data.m_process_pid = strtol(optarg, &remainder, 0);
-    if (remainder == optarg || *remainder != '\0') {
+    m_option_data.m_process_pid = strtol(arg_value, &remainder, 0);
+    if (remainder == arg_value || *remainder != '\0') {
       error.SetErrorStringWithFormat(
-          "Could not convert process PID: \"%s\" into a pid.", optarg);
+          "Could not convert process PID: \"%s\" into a pid.", arg_value);
       return error;
     }
   }
 
   if (auto *arg = args.getLastArg(OPT_repl_language)) {
-    auto optarg = arg->getValue();
+    auto arg_value = arg->getValue();
     m_option_data.m_repl_lang =
-        SBLanguageRuntime::GetLanguageTypeFromString(optarg);
+        SBLanguageRuntime::GetLanguageTypeFromString(arg_value);
     if (m_option_data.m_repl_lang == eLanguageTypeUnknown) {
       error.SetErrorStringWithFormat("Unrecognized language name: \"%s\"",
-                                     optarg);
+                                     arg_value);
       return error;
     }
   }
 
   if (auto *arg = args.getLastArg(OPT_repl)) {
-    auto optarg = arg->getValue();
+    auto arg_value = arg->getValue();
     m_option_data.m_repl = true;
-    if (optarg && optarg[0])
-      m_option_data.m_repl_options = optarg;
+    if (arg_value && arg_value[0])
+      m_option_data.m_repl_options = arg_value;
     else
       m_option_data.m_repl_options.clear();
   }
@@ -432,49 +435,44 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, FILE *out_fh,
   for (auto *arg : args.filtered(OPT_source_on_crash, OPT_one_line_on_crash,
                                  OPT_source, OPT_source_before_file,
                                  OPT_one_line, OPT_one_line_before_file)) {
+    auto arg_value = arg->getValue();
     if (arg->getOption().matches(OPT_source_on_crash)) {
-      auto optarg = arg->getValue();
-      m_option_data.AddInitialCommand(optarg, eCommandPlacementAfterCrash, true,
-                                      error);
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementAfterCrash,
+                                      true, error);
       if (error.Fail())
         return error;
     }
 
     if (arg->getOption().matches(OPT_one_line_on_crash)) {
-      auto optarg = arg->getValue();
-      m_option_data.AddInitialCommand(optarg, eCommandPlacementAfterCrash,
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementAfterCrash,
                                       false, error);
       if (error.Fail())
         return error;
     }
 
     if (arg->getOption().matches(OPT_source)) {
-      auto optarg = arg->getValue();
-      m_option_data.AddInitialCommand(optarg, eCommandPlacementAfterFile, true,
-                                      error);
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementAfterFile,
+                                      true, error);
       if (error.Fail())
         return error;
     }
 
     if (arg->getOption().matches(OPT_source_before_file)) {
-      auto optarg = arg->getValue();
-      m_option_data.AddInitialCommand(optarg, eCommandPlacementBeforeFile, true,
-                                      error);
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementBeforeFile,
+                                      true, error);
       if (error.Fail())
         return error;
     }
 
     if (arg->getOption().matches(OPT_one_line)) {
-      auto optarg = arg->getValue();
-      m_option_data.AddInitialCommand(optarg, eCommandPlacementAfterFile, false,
-                                      error);
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementAfterFile,
+                                      false, error);
       if (error.Fail())
         return error;
     }
 
     if (arg->getOption().matches(OPT_one_line_before_file)) {
-      auto optarg = arg->getValue();
-      m_option_data.AddInitialCommand(optarg, eCommandPlacementBeforeFile,
+      m_option_data.AddInitialCommand(arg_value, eCommandPlacementBeforeFile,
                                       false, error);
       if (error.Fail())
         return error;
@@ -497,15 +495,12 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, FILE *out_fh,
       for (auto value : arg->getValues())
         m_option_data.m_args.push_back(value);
     }
-  } else {
-    if (args.getLastArgNoClaim()) {
-      ::fprintf(out_fh,
-                "Warning: program arguments are ignored when attaching.\n");
-    }
+  } else if (args.getLastArgNoClaim()) {
+    WithColor::warning() << "program arguments are ignored when attaching.\n";
   }
 
   if (m_option_data.m_print_version) {
-    ::fprintf(out_fh, "%s\n", m_debugger.GetVersionString());
+    llvm::outs() << m_debugger.GetVersionString() << '\n';
     exiting = true;
     return error;
   }
@@ -516,11 +511,11 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, FILE *out_fh,
       char python_path[PATH_MAX];
       size_t num_chars = python_file_spec.GetPath(python_path, PATH_MAX);
       if (num_chars < PATH_MAX) {
-        ::fprintf(out_fh, "%s\n", python_path);
+        llvm::outs() << python_path << '\n';
       } else
-        ::fprintf(out_fh, "<PATH TOO LONG>\n");
+        llvm::outs() << "<PATH TOO LONG>\n";
     } else
-      ::fprintf(out_fh, "<COULD NOT FIND PATH>\n");
+      llvm::outs() << "<COULD NOT FIND PATH>\n";
     exiting = true;
     return error;
   }
@@ -544,11 +539,13 @@ static ::FILE *PrepareCommandsForSourcing(const char *commands_data,
   if (err == 0) {
     ssize_t nrwr = write(fds[WRITE], commands_data, commands_size);
     if (nrwr < 0) {
-      fprintf(stderr,
-              "error: write(%i, %p, %" PRIu64 ") failed (errno = %i) "
-              "when trying to open LLDB commands pipe\n",
-              fds[WRITE], static_cast<const void *>(commands_data),
-              static_cast<uint64_t>(commands_size), errno);
+      WithColor::error()
+          << format(
+                 "write(%i, %p, %" PRIu64
+                 ") failed (errno = %i) when trying to open LLDB commands pipe",
+                 fds[WRITE], static_cast<const void *>(commands_data),
+                 static_cast<uint64_t>(commands_size), errno)
+          << '\n';
     } else if (static_cast<size_t>(nrwr) == commands_size) {
 // Close the write end of the pipe so when we give the read end to
 // the debugger/command interpreter it will exit when it consumes all
@@ -568,15 +565,15 @@ static ::FILE *PrepareCommandsForSourcing(const char *commands_data,
                         // descriptor Hand ownership if the FILE * over to the
                         // debugger for "commands_file".
       } else {
-        fprintf(stderr,
-                "error: fdopen(%i, \"r\") failed (errno = %i) when "
-                "trying to open LLDB commands pipe\n",
-                fds[READ], errno);
+        WithColor::error() << format("fdopen(%i, \"r\") failed (errno = %i) "
+                                     "when trying to open LLDB commands pipe",
+                                     fds[READ], errno)
+                           << '\n';
       }
     }
   } else {
-    fprintf(stderr,
-            "error: can't create pipe file descriptors for LLDB commands\n");
+    WithColor::error()
+        << "can't create pipe file descriptors for LLDB commands\n";
   }
 
   return commands_file;
@@ -724,9 +721,9 @@ int Driver::MainLoop() {
     if (error.Fail()) {
       const char *error_cstr = error.GetCString();
       if (error_cstr && error_cstr[0])
-        fprintf(stderr, "error: %s\n", error_cstr);
+        WithColor::error() << error_cstr << '\n';
       else
-        fprintf(stderr, "error: %u\n", error.GetError());
+        WithColor::error() << error.GetError() << '\n';
     }
   } else {
     // Check if we have any data in the commands stream, and if so, save it to a
@@ -940,6 +937,11 @@ main(int argc, char const *argv[])
     return 0;
   }
 
+  for (auto *arg : input_args.filtered(OPT_UNKNOWN)) {
+    WithColor::warning() << "ignoring unknown option: " << arg->getSpelling()
+                         << '\n';
+  }
+
   SBDebugger::Initialize();
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
 
@@ -958,12 +960,11 @@ main(int argc, char const *argv[])
     Driver driver;
 
     bool exiting = false;
-    SBError error(driver.ProcessArgs(input_args, stdout, exiting));
+    SBError error(driver.ProcessArgs(input_args, exiting));
     if (error.Fail()) {
       exit_code = 1;
-      const char *error_cstr = error.GetCString();
-      if (error_cstr)
-        ::fprintf(stderr, "error: %s\n", error_cstr);
+      if (const char *error_cstr = error.GetCString())
+        WithColor::error() << error_cstr << '\n';
     } else if (!exiting) {
       exit_code = driver.MainLoop();
     }

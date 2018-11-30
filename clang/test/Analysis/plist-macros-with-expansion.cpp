@@ -317,9 +317,19 @@ void variadicMacroArgumentTest() {
   *ptr = 5; // expected-warning{{Dereference of null pointer}}
 }
 
-// TODO: Should correctly display the rest of the parameters.
 // CHECK: <key>name</key><string>VARIADIC_SET_TO_NULL</string>
-// CHECK-NEXT: <key>expansion</key><string>ptr = nullptr; variadicFunc( 1)</string>
+// CHECK-NEXT: <key>expansion</key><string>ptr = nullptr; variadicFunc( 1, 5, &quot;haha!&quot;)</string>
+
+void variadicMacroArgumentWithoutAnyArgumentTest() {
+  int *ptr;
+  // Not adding a single parameter to ... is silly (and also causes a
+  // preprocessor warning), but is not an excuse to crash on it.
+  VARIADIC_SET_TO_NULL(ptr);
+  *ptr = 5; // expected-warning{{Dereference of null pointer}}
+}
+
+// CHECK: <key>name</key><string>VARIADIC_SET_TO_NULL</string>
+// CHECK-NEXT: <key>expansion</key><string>ptr = nullptr; variadicFunc()</string>
 
 //===----------------------------------------------------------------------===//
 // Tests for # and ##.

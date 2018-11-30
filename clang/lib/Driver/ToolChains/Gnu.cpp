@@ -1880,7 +1880,8 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "i386-linux-gnu",       "i386-redhat-linux6E",   "i686-redhat-linux",
       "i586-redhat-linux",    "i386-redhat-linux",     "i586-suse-linux",
       "i486-slackware-linux", "i686-montavista-linux", "i586-linux-gnu",
-      "i686-linux-android"};
+      "i686-linux-android",   "i386-gnu",              "i486-gnu",
+      "i586-gnu",             "i686-gnu"};
 
   static const char *const MIPSLibDirs[] = {"/lib"};
   static const char *const MIPSTriples[] = {
@@ -2259,6 +2260,9 @@ void Generic_GCC::GCCInstallationDetector::ScanLibDirForGCCTriple(
       // FIXME: It may be worthwhile to generalize this and look for a second
       // triple.
       {"i386-linux-gnu/gcc/" + CandidateTriple.str(), "../../..",
+       (TargetArch == llvm::Triple::x86 &&
+        TargetTriple.getOS() != llvm::Triple::Solaris)},
+      {"i386-gnu/gcc/" + CandidateTriple.str(), "../../..",
        (TargetArch == llvm::Triple::x86 &&
         TargetTriple.getOS() != llvm::Triple::Solaris)}};
 

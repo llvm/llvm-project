@@ -136,6 +136,8 @@ public:
       const std::string &scope_qualified_name,
       std::vector<lldb_private::ConstString> &mangled_names) override;
 
+  void AddSymbols(lldb_private::Symtab &symtab) override;
+
   uint32_t
   FindTypes(const lldb_private::SymbolContext &sc,
             const lldb_private::ConstString &name,

@@ -656,12 +656,15 @@ struct CounterCoverageMappingBuilder
     return RegionStack.back();
   }
 
-  /// Propagate counts through the children of \c S.
-  Counter propagateCounts(Counter TopCount, const Stmt *S) {
+  /// Propagate counts through the children of \p S if \p VisitChildren is true.
+  /// Otherwise, only emit a count for \p S itself.
+  Counter propagateCounts(Counter TopCount, const Stmt *S,
+                          bool VisitChildren = true) {
     SourceLocation StartLoc = getStart(S);
     SourceLocation EndLoc = getEnd(S);
     size_t Index = pushRegion(TopCount, StartLoc, EndLoc);
-    Visit(S);
+    if (VisitChildren)
+      Visit(S);
     Counter ExitCount = getRegion().getCounter();
     popRegions(Index);
 
@@ -874,7 +877,16 @@ struct CounterCoverageMappingBuilder
     if (Body && SM.isInSystemHeader(SM.getSpellingLoc(getStart(Body))))
       return;
 
-    propagateCounts(getRegionCounter(Body), Body);
+    // Do not visit the artificial children nodes of defaulted methods. The
+    // lexer may not be able to report back precise token end locations for
+    // these children nodes (llvm.org/PR39822), and moreover users will not be
+    // able to see coverage for them.
+    bool Defaulted = false;
+    if (auto *Method = dyn_cast<CXXMethodDecl>(D))
+      Defaulted = Method->isDefaulted();
+
+    propagateCounts(getRegionCounter(Body), Body,
+                    /*VisitChildren=*/!Defaulted);
     assert(RegionStack.empty() && "Regions entered but never exited");
 
     // Discard the last uncompleted deferred region in a decl, if one exists.

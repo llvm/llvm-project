@@ -2355,7 +2355,7 @@ static bool shouldClusterFI(const MachineFrameInfo &MFI, int FI1,
   if (MFI.isFixedObjectIndex(FI1) && MFI.isFixedObjectIndex(FI2)) {
     int64_t ObjectOffset1 = MFI.getObjectOffset(FI1);
     int64_t ObjectOffset2 = MFI.getObjectOffset(FI2);
-    assert(ObjectOffset1 >= ObjectOffset2 && "Object offsets are not ordered.");
+    assert(ObjectOffset1 <= ObjectOffset2 && "Object offsets are not ordered.");
     // Get the byte-offset from the object offset.
     if (!unscaleOffset(Opcode1, Offset1) || !unscaleOffset(Opcode2, Offset2))
       return false;
@@ -2365,7 +2365,7 @@ static bool shouldClusterFI(const MachineFrameInfo &MFI, int FI1,
     if (!scaleOffset(Opcode1, ObjectOffset1) ||
         !scaleOffset(Opcode2, ObjectOffset2))
       return false;
-    return ObjectOffset2 + 1 == ObjectOffset1;
+    return ObjectOffset1 + 1 == ObjectOffset2;
   }
 
   return FI1 == FI2;
@@ -2424,15 +2424,18 @@ bool AArch64InstrInfo::shouldClusterMemOps(MachineOperand &BaseOp1,
 
   // The caller should already have ordered First/SecondLdSt by offset.
   // Note: except for non-equal frame index bases
-  assert((!BaseOp1.isIdenticalTo(BaseOp2) || Offset1 <= Offset2) &&
-         "Caller should have ordered offsets.");
-
   if (BaseOp1.isFI()) {
+    assert((!BaseOp1.isIdenticalTo(BaseOp2) || Offset1 >= Offset2) &&
+           "Caller should have ordered offsets.");
+
     const MachineFrameInfo &MFI =
         FirstLdSt.getParent()->getParent()->getFrameInfo();
     return shouldClusterFI(MFI, BaseOp1.getIndex(), Offset1, FirstOpc,
                            BaseOp2.getIndex(), Offset2, SecondOpc);
   }
+
+  assert((!BaseOp1.isIdenticalTo(BaseOp2) || Offset1 <= Offset2) &&
+         "Caller should have ordered offsets.");
 
   return Offset1 + 1 == Offset2;
 }

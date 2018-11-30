@@ -273,8 +273,8 @@ public:
   /**
    * Compute and emit the imported files for module at \p ModulePath.
    */
-  static void emitImports(StringRef ModulePath, StringRef OutputName,
-                          ModuleSummaryIndex &Index);
+  void emitImports(Module &Module, StringRef OutputName,
+                   ModuleSummaryIndex &Index);
 
   /**
    * Perform cross-module importing for the module identified by
@@ -285,8 +285,8 @@ public:
   /**
    * Compute the list of summaries needed for importing into module.
    */
-  static void gatherImportedSummariesForModule(
-      StringRef ModulePath, ModuleSummaryIndex &Index,
+  void gatherImportedSummariesForModule(
+      Module &Module, ModuleSummaryIndex &Index,
       std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
   /**

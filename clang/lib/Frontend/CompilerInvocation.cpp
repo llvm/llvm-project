@@ -3264,6 +3264,12 @@ std::string CompilerInvocation::getModuleHash() const {
     code = ext->hashExtension(code);
   }
 
+  // When compiling with -gmodules, also hash -fdebug-prefix-map as it
+  // affects the debug info in the PCM.
+  if (getCodeGenOpts().DebugTypeExtRefs)
+    for (const auto &KeyValue : getCodeGenOpts().DebugPrefixMap)
+      code = hash_combine(code, KeyValue.first, KeyValue.second);
+
   // Extend the signature with the enabled sanitizers, if at least one is
   // enabled. Sanitizers which cannot affect AST generation aren't hashed.
   SanitizerSet SanHash = LangOpts->Sanitize;

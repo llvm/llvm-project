@@ -467,9 +467,6 @@ int SystemZTTIImpl::getArithmeticInstrCost(
     if (Opcode == Instruction::FRem)
       return LIBCALL_COST;
 
-    if (Opcode == Instruction::LShr || Opcode == Instruction::AShr)
-      return (ScalarBits >= 32 ? 1 : 2 /*ext*/);
-
     // Or requires one instruction, although it has custom handling for i64.
     if (Opcode == Instruction::Or)
       return 1;
@@ -484,12 +481,8 @@ int SystemZTTIImpl::getArithmeticInstrCost(
       return (SignedDivRem ? SDivPow2Cost : 1);
     if (DivRemConst)
       return DivMulSeqCost;
-    if (SignedDivRem)
-      // sext of op(s) for narrow types
-      return DivInstrCost + (ScalarBits < 32 ? 3 : (ScalarBits == 32 ? 1 : 0));
-    if (UnsignedDivRem)
-      // Clearing of low 64 bit reg + sext of op(s) for narrow types + dl[g]r
-      return DivInstrCost + (ScalarBits < 32 ? 3 : 1);
+    if (SignedDivRem || UnsignedDivRem)
+      return DivInstrCost;
   }
 
   // Fallback to the default implementation.
@@ -779,6 +772,18 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
   return BaseT::getCastInstrCost(Opcode, Dst, Src, I);
 }
 
+// Scalar i8 / i16 operations will typically be made after first extending
+// the operands to i32.
+static unsigned getOperandsExtensionCost(const Instruction *I) {
+  unsigned ExtCost = 0;
+  for (Value *Op : I->operands())
+    // A load of i8 or i16 sign/zero extends to i32.
+    if (!isa<LoadInst>(Op) && !isa<ConstantInt>(Op))
+      ExtCost++;
+
+  return ExtCost;
+}
+
 int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
                                        Type *CondTy, const Instruction *I) {
   if (ValTy->isVectorTy()) {
@@ -835,17 +840,8 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     switch (Opcode) {
     case Instruction::ICmp: {
       unsigned Cost = 1;
-      if (ValTy->isIntegerTy() && ValTy->getScalarSizeInBits() <= 16) {
-        if (I != nullptr) {
-          // Single instruction for comparison of memory with a small immediate.
-          if (const LoadInst* Ld = dyn_cast<LoadInst>(I->getOperand(0))) {
-            const Instruction *FoldedValue = nullptr;
-            if (isFoldableLoad(Ld, FoldedValue))
-              return Cost;
-          }
-        }
-        Cost += 2; // extend both operands
-      }
+      if (ValTy->isIntegerTy() && ValTy->getScalarSizeInBits() <= 16)
+        Cost += (I != nullptr ? getOperandsExtensionCost(I) : 2);
       return Cost;
     }
     case Instruction::Select:

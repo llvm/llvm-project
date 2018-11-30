@@ -332,6 +332,9 @@ public:
     lldb::SBAddress
     GetObjectFileHeaderAddress() const;
 
+    lldb::SBAddress
+    GetObjectFileEntryPointAddress() const;
+
     bool
     operator == (const lldb::SBModule &rhs) const;
              

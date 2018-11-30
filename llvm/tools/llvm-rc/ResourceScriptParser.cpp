@@ -388,6 +388,8 @@ RCParser::parseSingleOptionalStatement(OptStmtType StmtsType) {
       return parseCaptionStmt();
     if (TypeToken->equals_lower("CLASS"))
       return parseClassStmt();
+    if (TypeToken->equals_lower("EXSTYLE"))
+      return parseExStyleStmt();
     if (TypeToken->equals_lower("FONT"))
       return parseFontStmt(StmtsType);
     if (TypeToken->equals_lower("STYLE"))
@@ -815,6 +817,11 @@ RCParser::ParseOptionType RCParser::parseFontStmt(OptStmtType DialogType) {
 RCParser::ParseOptionType RCParser::parseStyleStmt() {
   ASSIGN_OR_RETURN(Arg, readInt());
   return llvm::make_unique<StyleStmt>(*Arg);
+}
+
+RCParser::ParseOptionType RCParser::parseExStyleStmt() {
+  ASSIGN_OR_RETURN(Arg, readInt());
+  return llvm::make_unique<ExStyleStmt>(*Arg);
 }
 
 Error RCParser::getExpectedError(const Twine &Message, bool IsAlreadyRead) {

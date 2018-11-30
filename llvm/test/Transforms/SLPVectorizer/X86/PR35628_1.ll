@@ -19,12 +19,12 @@ define void @mainTest(i32* %ptr) #0  {
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i32 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul <4 x i32> [[TMP4]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 1, undef
-; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], undef
+; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], undef
-; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], undef
+; CHECK-NEXT:    [[TMP12:%.*]] = add i32 [[TMP11]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP12]], undef
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext i32 [[TMP6]] to i64
-; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP13]], undef
+; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP13]], [[TMP5]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP8]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>

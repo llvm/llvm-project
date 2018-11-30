@@ -227,7 +227,7 @@ static int Cond;
                                 // expected-note@-1 {{Method returns an instance of MyObj with a +1 retain count}}
                                 // expected-note@-2 {{Calling 'initX'}}
                                 // expected-note@-3 {{Returning from 'initX'}}
-                                // expected-note@-4 {{Object leaked: allocated object is not referenced later in this execution path and has a retain count of +1}}
+                                // expected-note@-4 {{Object leaked: allocated object of type MyObj * is not referenced later in this execution path and has a retain count of +1}}
   // initI is inlined because the allocation happens within initY
   id y = [[MyObj alloc] initY];
                                 // expected-note@-1 {{Calling 'initY'}}
@@ -235,7 +235,7 @@ static int Cond;
 
   // initZ is not inlined
   id z = [[MyObj alloc] initZ]; // expected-warning {{Potential leak of an object}}
-                                // expected-note@-1 {{Object leaked: allocated object is not referenced later in this execution path and has a retain count of +1}}
+                                // expected-note@-1 {{Object leaked: object allocated and stored into 'y' is not referenced later in this execution path and has a retain count of +1}}
 
   [x release];
   [z release];

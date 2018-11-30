@@ -106,13 +106,17 @@ bool X86DiscriminateMemOps::runOnMachineFunction(MachineFunction &MF) {
         DI = ReferenceDI;
       }
       DenseSet<unsigned> &Set = Seen[diToLocation(DI)];
-      std::pair<DenseSet<unsigned>::iterator, bool> P =
+      const std::pair<DenseSet<unsigned>::iterator, bool> TryInsert =
           Set.insert(DI->getBaseDiscriminator());
-      if (!P.second) {
+      if (!TryInsert.second) {
         DI = DI->setBaseDiscriminator(++MemOpDiscriminators[diToLocation(DI)]);
         updateDebugInfo(&MI, DI);
         Changed = true;
-        *P.first = DI->getBaseDiscriminator();
+        const std::pair<DenseSet<unsigned>::iterator, bool> MustInsert =
+            Set.insert(DI->getBaseDiscriminator());
+        (void)MustInsert; // silence warning.
+        assert(MustInsert.second &&
+               "New discriminator shouldn't be present in set");
       }
 
       // Bump the reference DI to avoid cramming discriminators on line 0.

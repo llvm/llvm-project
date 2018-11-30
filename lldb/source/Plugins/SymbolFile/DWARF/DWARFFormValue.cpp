@@ -569,22 +569,9 @@ const char *DWARFFormValue::AsCString() const {
     if (!symbol_file)
       return nullptr;
 
-    lldb::offset_t baseOffset = 0;
-    const DWARFDataExtractor &strOffsets =
-        symbol_file->get_debug_str_offsets_data();
-    uint64_t length = strOffsets.GetU32(&baseOffset);
-    if (length == 0xffffffff)
-      length = strOffsets.GetU64(&baseOffset);
-
-    // Check version.
-    if (strOffsets.GetU16(&baseOffset) < 5)
-      return nullptr;
-
-    // Skip padding.
-    baseOffset += 2;
-
     uint32_t indexSize = m_cu->IsDWARF64() ? 8 : 4;
-    lldb::offset_t offset = baseOffset + m_value.value.uval * indexSize;
+    lldb::offset_t offset =
+        m_cu->GetStrOffsetsBase() + m_value.value.uval * indexSize;
     dw_offset_t strOffset =
         symbol_file->get_debug_str_offsets_data().GetMaxU64(&offset, indexSize);
     return symbol_file->get_debug_str_data().PeekCStr(strOffset);

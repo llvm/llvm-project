@@ -265,6 +265,14 @@ def split_subrepo(f):
     else:
         return '', f
 
+def get_all_parent_dirs(name):
+    parts = []
+    head, tail = os.path.split(name)
+    while head:
+        parts.append(head)
+        head, tail = os.path.split(head)
+    return parts
+
 def svn_push_one_rev(svn_repo, rev, dry_run):
     files = git('diff-tree', '--no-commit-id', '--name-only', '-r',
                 rev).split('\n')
@@ -289,9 +297,20 @@ def svn_push_one_rev(svn_repo, rev, dry_run):
             svn_dirs_to_update.add(
                 os.path.dirname(os.path.join(svn_sr_path, f)))
 
+    # We also need to svn update any parent directories which are not yet present
+    parent_dirs = set()
+    for dir in svn_dirs_to_update:
+        parent_dirs.update(get_all_parent_dirs(dir))
+    parent_dirs = set(dir for dir in parent_dirs
+                      if not os.path.exists(os.path.join(svn_repo, dir)))
+    svn_dirs_to_update.update(parent_dirs)
+
+    # Sort by length to ensure that the parent directories are passed to svn
+    # before child directories.
+    sorted_dirs_to_update = sorted(svn_dirs_to_update, key=len)
+
     # SVN update only in the affected directories.
-    svn(svn_repo, 'update', '--depth=immediates', '--parents',
-        *svn_dirs_to_update)
+    svn(svn_repo, 'update', '--depth=files', *sorted_dirs_to_update)
 
     for sr, files in iteritems(subrepo_files):
         svn_sr_path = os.path.join(svn_repo, GIT_TO_SVN_DIR[sr])

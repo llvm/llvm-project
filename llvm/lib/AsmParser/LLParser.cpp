@@ -3749,6 +3749,10 @@ struct DIFlagField : public MDFieldImpl<DINode::DIFlags> {
   DIFlagField() : MDFieldImpl(DINode::FlagZero) {}
 };
 
+struct DISPFlagField : public MDFieldImpl<DISubprogram::DISPFlags> {
+  DISPFlagField() : MDFieldImpl(DISubprogram::SPFlagZero) {}
+};
+
 struct MDSignedField : public MDFieldImpl<int64_t> {
   int64_t Min;
   int64_t Max;
@@ -4032,6 +4036,46 @@ bool LLParser::ParseMDField(LocTy Loc, StringRef Name, DIFlagField &Result) {
   DINode::DIFlags Combined = DINode::FlagZero;
   do {
     DINode::DIFlags Val;
+    if (parseFlag(Val))
+      return true;
+    Combined |= Val;
+  } while (EatIfPresent(lltok::bar));
+
+  Result.assign(Combined);
+  return false;
+}
+
+/// DISPFlagField
+///  ::= uint32
+///  ::= DISPFlagVector
+///  ::= DISPFlagVector '|' DISPFlag* '|' uint32
+template <>
+bool LLParser::ParseMDField(LocTy Loc, StringRef Name, DISPFlagField &Result) {
+
+  // Parser for a single flag.
+  auto parseFlag = [&](DISubprogram::DISPFlags &Val) {
+    if (Lex.getKind() == lltok::APSInt && !Lex.getAPSIntVal().isSigned()) {
+      uint32_t TempVal = static_cast<uint32_t>(Val);
+      bool Res = ParseUInt32(TempVal);
+      Val = static_cast<DISubprogram::DISPFlags>(TempVal);
+      return Res;
+    }
+
+    if (Lex.getKind() != lltok::DISPFlag)
+      return TokError("expected debug info flag");
+
+    Val = DISubprogram::getFlag(Lex.getStrVal());
+    if (!Val)
+      return TokError(Twine("invalid subprogram debug info flag '") +
+                      Lex.getStrVal() + "'");
+    Lex.Lex();
+    return false;
+  };
+
+  // Parse the flags and combine them together.
+  DISubprogram::DISPFlags Combined = DISubprogram::SPFlagZero;
+  do {
+    DISubprogram::DISPFlags Val;
     if (parseFlag(Val))
       return true;
     Combined |= Val;
@@ -4517,8 +4561,8 @@ bool LLParser::ParseDICompileUnit(MDNode *&Result, bool IsDistinct) {
 ///                     isDefinition: true, scopeLine: 8, containingType: !3,
 ///                     virtuality: DW_VIRTUALTIY_pure_virtual,
 ///                     virtualIndex: 10, thisAdjustment: 4, flags: 11,
-///                     isOptimized: false, templateParams: !4, declaration: !5,
-///                     retainedNodes: !6, thrownTypes: !7)
+///                     spFlags: 10, isOptimized: false, templateParams: !4,
+///                     declaration: !5, retainedNodes: !6, thrownTypes: !7)
 bool LLParser::ParseDISubprogram(MDNode *&Result, bool IsDistinct) {
   auto Loc = Lex.getLoc();
 #define VISIT_MD_FIELDS(OPTIONAL, REQUIRED)                                    \
@@ -4536,21 +4580,26 @@ bool LLParser::ParseDISubprogram(MDNode *&Result, bool IsDistinct) {
   OPTIONAL(virtualIndex, MDUnsignedField, (0, UINT32_MAX));                    \
   OPTIONAL(thisAdjustment, MDSignedField, (0, INT32_MIN, INT32_MAX));          \
   OPTIONAL(flags, DIFlagField, );                                              \
+  OPTIONAL(spFlags, DISPFlagField, );                                          \
   OPTIONAL(isOptimized, MDBoolField, );                                        \
   OPTIONAL(unit, MDField, );                                                   \
   OPTIONAL(templateParams, MDField, );                                         \
   OPTIONAL(declaration, MDField, );                                            \
-  OPTIONAL(retainedNodes, MDField, );                                              \
+  OPTIONAL(retainedNodes, MDField, );                                          \
   OPTIONAL(thrownTypes, MDField, );
   PARSE_MD_FIELDS();
 #undef VISIT_MD_FIELDS
 
-  if (isDefinition.Val && !IsDistinct)
+  // An explicit spFlags field takes precedence over individual fields in
+  // older IR versions.
+  DISubprogram::DISPFlags SPFlags =
+      spFlags.Seen ? spFlags.Val
+                   : DISubprogram::toSPFlags(isLocal.Val, isDefinition.Val,
+                                             isOptimized.Val, virtuality.Val);
+  if ((SPFlags & DISubprogram::SPFlagDefinition) && !IsDistinct)
     return Lex.Error(
         Loc,
-        "missing 'distinct', required for !DISubprogram when 'isDefinition'");
-  DISubprogram::DISPFlags SPFlags = DISubprogram::toSPFlags(
-      isLocal.Val, isDefinition.Val, isOptimized.Val, virtuality.Val);
+        "missing 'distinct', required for !DISubprogram that is a Definition");
   Result = GET_OR_DISTINCT(
       DISubprogram,
       (Context, scope.Val, name.Val, linkageName.Val, file.Val, line.Val,

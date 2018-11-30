@@ -182,7 +182,7 @@ public:
 
 /// SmallVectorTemplateBase<isPodLike = false> - This is where we put method
 /// implementations that are designed to work with non-POD-like T's.
-template <typename T, bool isPodLike>
+template <typename T, bool = isPodLike<T>::value>
 class SmallVectorTemplateBase : public SmallVectorTemplateCommon<T> {
 protected:
   SmallVectorTemplateBase(size_t Size) : SmallVectorTemplateCommon<T>(Size) {}
@@ -320,8 +320,8 @@ public:
 /// This class consists of common code factored out of the SmallVector class to
 /// reduce code duplication based on the SmallVector 'N' template parameter.
 template <typename T>
-class SmallVectorImpl : public SmallVectorTemplateBase<T, isPodLike<T>::value> {
-  using SuperClass = SmallVectorTemplateBase<T, isPodLike<T>::value>;
+class SmallVectorImpl : public SmallVectorTemplateBase<T> {
+  using SuperClass = SmallVectorTemplateBase<T>;
 
 public:
   using iterator = typename SuperClass::iterator;

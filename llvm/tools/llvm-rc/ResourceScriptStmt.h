@@ -866,6 +866,19 @@ public:
   Error visit(Visitor *V) const override { return V->visitStyleStmt(this); }
 };
 
+// EXSTYLE optional statement.
+//
+// Ref: docs.microsoft.com/en-us/windows/desktop/menurc/exstyle-statement
+class ExStyleStmt : public OptionalStmt {
+public:
+  uint32_t Value;
+
+  ExStyleStmt(uint32_t ExStyle) : Value(ExStyle) {}
+  raw_ostream &log(raw_ostream &) const override;
+  Twine getResourceTypeName() const override { return "EXSTYLE"; }
+  Error visit(Visitor *V) const override { return V->visitExStyleStmt(this); }
+};
+
 // CLASS optional statement.
 //
 // Ref: msdn.microsoft.com/en-us/library/windows/desktop/aa380883(v=vs.85).aspx

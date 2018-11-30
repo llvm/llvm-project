@@ -181,6 +181,26 @@ csrsi 0xfff, 0x10
 # CHECK-S-OBJ: csrci sscratch, 17
 csrci 0x140, 0x11
 
+# CHECK-S-OBJ-NOALIAS: csrrwi zero, 336, 7
+# CHECK-S-OBJ: csrwi 336, 7
+csrw 0x150, 7
+# CHECK-S-OBJ-NOALIAS: csrrsi zero, 336, 7
+# CHECK-S-OBJ: csrsi 336, 7
+csrs 0x150, 7
+# CHECK-S-OBJ-NOALIAS: csrrci zero, 336, 7
+# CHECK-S-OBJ: csrci 336, 7
+csrc 0x150, 7
+
+# CHECK-S-OBJ-NOALIAS: csrrwi t0, 336, 15
+# CHECK-S-OBJ: csrrwi t0, 336, 15
+csrrw t0, 0x150, 0xf
+# CHECK-S-OBJ-NOALIAS: csrrsi t0, 4095, 16
+# CHECK-S-OBJ: csrrsi t0, 4095, 16
+csrrs t0, 0xfff, 0x10
+# CHECK-S-OBJ-NOALIAS: csrrci t0, sscratch, 17
+# CHECK-S-OBJ: csrrci t0, sscratch, 17
+csrrc t0, 0x140, 0x11
+
 # CHECK-S-OBJ-NOALIAS: sfence.vma zero, zero
 # CHECK-S-OBJ: sfence.vma
 sfence.vma

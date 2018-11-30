@@ -283,16 +283,6 @@ __ZTISt16invalid_argument
 __ZTSSt16invalid_argument
 __ZTVSt16invalid_argument
 
-__ZNKSt16bad_array_length4whatEv
-__ZNSt16bad_array_lengthC1Ev
-__ZNSt16bad_array_lengthC2Ev
-__ZNSt16bad_array_lengthD0Ev
-__ZNSt16bad_array_lengthD1Ev
-__ZNSt16bad_array_lengthD2Ev
-__ZTISt16bad_array_length
-__ZTSSt16bad_array_length
-__ZTVSt16bad_array_length
-
 __ZTSDi
 __ZTSDn
 __ZTSDs

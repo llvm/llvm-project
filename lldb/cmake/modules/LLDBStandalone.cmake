@@ -83,6 +83,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
 
   include(AddLLVM)
+  include(TableGen)
   include(HandleLLVMOptions)
   include(CheckAtomic)
 

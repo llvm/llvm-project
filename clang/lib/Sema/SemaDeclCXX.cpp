@@ -14968,8 +14968,11 @@ void Sema::MarkVTableUsed(SourceLocation Loc, CXXRecordDecl *Class,
   // region.
   if (LangOpts.OpenMP && LangOpts.OpenMPIsDevice &&
       !isInOpenMPDeclareTargetContext() &&
-      !isInOpenMPTargetExecutionDirective())
+      !isInOpenMPTargetExecutionDirective()) {
+    if (!DefinitionRequired)
+      MarkVirtualMembersReferenced(Loc, Class);
     return;
+  }
 
   // Try to insert this class into the map.
   LoadExternalVTableUses();

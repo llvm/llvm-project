@@ -326,7 +326,7 @@ TSAN_INTERCEPTOR(int, objc_sync_enter, void *obj) {
 }
 
 TSAN_INTERCEPTOR(int, objc_sync_exit, void *obj) {
-  SCOPED_TSAN_INTERCEPTOR(objc_sync_enter, obj);
+  SCOPED_TSAN_INTERCEPTOR(objc_sync_exit, obj);
   if (obj) Release(thr, pc, SyncAddressForObjCObject(obj));
   return REAL(objc_sync_exit)(obj);
 }

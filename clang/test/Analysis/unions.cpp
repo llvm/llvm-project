@@ -90,9 +90,8 @@ namespace PR17596 {
     char str[] = "abc";
     vv.s = str;
 
-    // FIXME: This is a leak of uu.s.
     uu = vv;
-  }
+  } // expected-warning{{leak}}
 
   void testIndirectInvalidation() {
     IntOrString uu;

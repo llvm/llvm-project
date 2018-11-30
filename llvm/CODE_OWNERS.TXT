@@ -222,3 +222,7 @@ D: C API, OCaml bindings
 N: Jake Ehrlich
 E: jakehehrlich@google.com
 D: llvm-objcopy (tools/llvm-objcopy)
+
+N: Martin Storsjö
+E: martin@martin.st
+D: MinGW

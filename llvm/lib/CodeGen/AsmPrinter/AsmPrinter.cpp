@@ -13,6 +13,7 @@
 
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "AsmPrinterHandler.h"
+#include "BTFDebug.h"
 #include "CodeViewDebug.h"
 #include "DwarfDebug.h"
 #include "DwarfException.h"
@@ -140,6 +141,8 @@ static const char *const CFGuardDescription = "Control Flow Guard Tables";
 static const char *const CodeViewLineTablesGroupName = "linetables";
 static const char *const CodeViewLineTablesGroupDescription =
   "CodeView Line Tables";
+static const char *const BTFGroupName = "BTF";
+static const char *const BTFGroupDescription = "BTF Emission";
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
@@ -310,6 +313,12 @@ bool AsmPrinter::doInitialization(Module &M) {
       DD->beginModule();
       Handlers.push_back(HandlerInfo(DD, DbgTimerName, DbgTimerDescription,
                                      DWARFGroupName, DWARFGroupDescription));
+    }
+    const Triple &TT = TM.getTargetTriple();
+    if (TT.getArch() == Triple::bpfel || TT.getArch() == Triple::bpfeb) {
+      Handlers.push_back(HandlerInfo(new BTFDebug(this),
+                                     DbgTimerName, DbgTimerDescription,
+                                     BTFGroupName, BTFGroupDescription));
     }
   }
 

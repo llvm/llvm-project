@@ -89,6 +89,14 @@ private:
   void lowerScalarXnor(SetVectorType &Worklist,
                        MachineInstr &Inst) const;
 
+  void splitScalarNotBinop(SetVectorType &Worklist,
+                           MachineInstr &Inst,
+                           unsigned Opcode) const;
+
+  void splitScalarBinOpN2(SetVectorType &Worklist,
+                          MachineInstr &Inst,
+                          unsigned Opcode) const;
+
   void splitScalar64BitUnaryOp(SetVectorType &Worklist,
                                MachineInstr &Inst, unsigned Opcode) const;
 
@@ -909,8 +917,35 @@ public:
   /// Return -1 if the target-specific opcode for the pseudo instruction does
   /// not exist. If Opcode is not a pseudo instruction, this is identity.
   int pseudoToMCOpcode(int Opcode) const;
-
 };
+
+/// \brief Returns true if a reg:subreg pair P has a TRC class
+inline bool isOfRegClass(const TargetInstrInfo::RegSubRegPair &P,
+                         const TargetRegisterClass &TRC,
+                         MachineRegisterInfo &MRI) {
+  auto *RC = MRI.getRegClass(P.Reg);
+  if (!P.SubReg)
+    return RC == &TRC;
+  auto *TRI = MRI.getTargetRegisterInfo();
+  return RC == TRI->getMatchingSuperRegClass(RC, &TRC, P.SubReg);
+}
+
+/// \brief Create RegSubRegPair from a register MachineOperand
+inline
+TargetInstrInfo::RegSubRegPair getRegSubRegPair(const MachineOperand &O) {
+  assert(O.isReg());
+  return TargetInstrInfo::RegSubRegPair(O.getReg(), O.getSubReg());
+}
+
+/// \brief Return the SubReg component from REG_SEQUENCE
+TargetInstrInfo::RegSubRegPair getRegSequenceSubReg(MachineInstr &MI,
+                                                    unsigned SubReg);
+
+/// \brief Return the defining instruction for a given reg:subreg pair
+/// skipping copy like instructions and subreg-manipulation pseudos.
+/// Following another subreg of a reg:subreg isn't supported.
+MachineInstr *getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
+                               MachineRegisterInfo &MRI);
 
 namespace AMDGPU {
 
@@ -922,6 +957,9 @@ namespace AMDGPU {
 
   LLVM_READONLY
   int getSDWAOp(uint16_t Opcode);
+
+  LLVM_READONLY
+  int getDPPOp32(uint16_t Opcode);
 
   LLVM_READONLY
   int getBasicFromSDWAOp(uint16_t Opcode);

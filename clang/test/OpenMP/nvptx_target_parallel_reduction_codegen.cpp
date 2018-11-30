@@ -60,7 +60,7 @@ int bar(int n){
   //
   // CHECK: [[EXECUTE]]
   // CHECK: {{call|invoke}} void [[PFN:@.+]](i32*
-  // CHECK: call void @__kmpc_spmd_kernel_deinit()
+  // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
   //
   //
   // define internal void [[PFN]](
@@ -254,7 +254,7 @@ int bar(int n){
   //
   // CHECK: [[EXECUTE]]
   // CHECK: {{call|invoke}} void [[PFN1:@.+]](i32*
-  // CHECK: call void @__kmpc_spmd_kernel_deinit()
+  // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
   //
   //
   // define internal void [[PFN1]](
@@ -527,7 +527,7 @@ int bar(int n){
   //
   // CHECK: [[EXECUTE]]
   // CHECK: {{call|invoke}} void [[PFN2:@.+]](i32*
-  // CHECK: call void @__kmpc_spmd_kernel_deinit()
+  // CHECK: call void @__kmpc_spmd_kernel_deinit_v2(i16 1)
   //
   //
   // define internal void [[PFN2]](
