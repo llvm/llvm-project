@@ -38,21 +38,20 @@ public:
 struct PrintingPolicy {
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
-    : Indentation(2), SuppressSpecifiers(false),
-      SuppressTagKeyword(LO.CPlusPlus),
-      IncludeTagDefinition(false), SuppressScope(false),
-      SuppressUnwrittenScope(false), SuppressInitializers(false),
-      ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
-      SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
-      SuppressTemplateArgsInCXXConstructors(false),
-      Bool(LO.Bool), Restrict(LO.C99),
-      Alignof(LO.CPlusPlus11), UnderscoreAlignof(LO.C11),
-      UseVoidForZeroParams(!LO.CPlusPlus),
-      TerseOutput(false), PolishForDeclaration(false),
-      Half(LO.Half), MSWChar(LO.MicrosoftExt && !LO.WChar),
-      IncludeNewlines(true), MSVCFormatting(false),
-      ConstantsAsWritten(false), SuppressImplicitBase(false),
-      FullyQualifiedName(false) { }
+      : Indentation(2), SuppressSpecifiers(false),
+        SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
+        SuppressScope(false), SuppressUnwrittenScope(false),
+        SuppressInitializers(false), ConstantArraySizeAsWritten(false),
+        AnonymousTagLocations(true), SuppressStrongLifetime(false),
+        SuppressLifetimeQualifiers(false),
+        SuppressTemplateArgsInCXXConstructors(false), Bool(LO.Bool),
+        Restrict(LO.C99), Alignof(LO.CPlusPlus11), UnderscoreAlignof(LO.C11),
+        UseVoidForZeroParams(!LO.CPlusPlus), TerseOutput(false),
+        PolishForDeclaration(false), Half(LO.Half),
+        MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
+        MSVCFormatting(false), ConstantsAsWritten(false),
+        SuppressImplicitBase(false), FullyQualifiedName(false),
+        RemapFilePaths(false) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -225,6 +224,12 @@ struct PrintingPolicy {
   /// When true, print the fully qualified name of function declarations.
   /// This is the opposite of SuppressScope and thus overrules it.
   unsigned FullyQualifiedName : 1;
+
+  /// Whether to apply -fdebug-prefix-map to any file paths.
+  unsigned RemapFilePaths : 1;
+
+  /// When RemapFilePaths is true, this function performs the action.
+  std::function<std::string(StringRef)> remapPath;
 };
 
 } // end namespace clang

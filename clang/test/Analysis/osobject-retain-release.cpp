@@ -11,6 +11,8 @@ struct OSMetaClass;
 #define OSDynamicCast(type, inst)   \
     ((type *) OSMetaClassBase::safeMetaCast((inst), OSTypeID(type)))
 
+using size_t = decltype(sizeof(int));
+
 struct OSObject {
   virtual void retain();
   virtual void release() {};
@@ -25,7 +27,7 @@ struct OSObject {
   static OSObject *GetObject();
 
 
-  static void * operator new(unsigned long size);
+  static void * operator new(size_t size);
 
   static const OSMetaClass * const metaClass;
 };

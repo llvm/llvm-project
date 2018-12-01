@@ -8199,7 +8199,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       // We can delay calculation of __builtin_constant_p until after
       // inlining. Note: This diagnostic won't be shown to the user.
       Info.FFDiag(E, diag::note_invalid_subexpr_in_const_expr);
-      return false;
     }
     return Success(false, E);
   }

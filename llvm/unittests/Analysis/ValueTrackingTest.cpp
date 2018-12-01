@@ -22,7 +22,7 @@ using namespace llvm;
 
 namespace {
 
-class MatchSelectPatternTest : public testing::Test {
+class ValueTrackingTest : public testing::Test {
 protected:
   void parseAssembly(const char *Assembly) {
     SMDiagnostic Error;
@@ -51,6 +51,13 @@ protected:
       report_fatal_error("@test must have an instruction %A");
   }
 
+  LLVMContext Context;
+  std::unique_ptr<Module> M;
+  Instruction *A;
+};
+
+class MatchSelectPatternTest : public ValueTrackingTest {
+protected:
   void expectPattern(const SelectPatternResult &P) {
     Value *LHS, *RHS;
     Instruction::CastOps CastOp;
@@ -59,10 +66,16 @@ protected:
     EXPECT_EQ(P.NaNBehavior, R.NaNBehavior);
     EXPECT_EQ(P.Ordered, R.Ordered);
   }
+};
 
-  LLVMContext Context;
-  std::unique_ptr<Module> M;
-  Instruction *A, *B;
+class ComputeKnownBitsTest : public ValueTrackingTest {
+protected:
+  void expectKnownBits(uint64_t Zero, uint64_t One) {
+    auto Known = computeKnownBits(A, M->getDataLayout());
+    ASSERT_FALSE(Known.hasConflict());
+    EXPECT_EQ(Known.One.getZExtValue(), One);
+    EXPECT_EQ(Known.Zero.getZExtValue(), Zero);
+  }
 };
 
 }
@@ -497,117 +510,61 @@ TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
   }
 }
 
-TEST(ValueTracking, ComputeNumSignBits_PR32045) {
-  StringRef Assembly = "define i32 @f(i32 %a) { "
-                       "  %val = ashr i32 %a, -1 "
-                       "  ret i32 %val "
-                       "} ";
-
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  assert(M && "Bad assembly?");
-
-  auto *F = M->getFunction("f");
-  assert(F && "Bad assembly?");
-
-  auto *RVal =
-      cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
-  EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 1u);
+TEST_F(ValueTrackingTest, ComputeNumSignBits_PR32045) {
+  parseAssembly(
+      "define i32 @test(i32 %a) {\n"
+      "  %A = ashr i32 %a, -1\n"
+      "  ret i32 %A\n"
+      "}\n");
+  EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 1u);
 }
 
 // No guarantees for canonical IR in this analysis, so this just bails out. 
-TEST(ValueTracking, ComputeNumSignBits_Shuffle) {
-  StringRef Assembly = "define <2 x i32> @f() { "
-                       "  %val = shufflevector <2 x i32> undef, <2 x i32> undef, <2 x i32> <i32 0, i32 0> "
-                       "  ret <2 x i32> %val "
-                       "} ";
-
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  assert(M && "Bad assembly?");
-
-  auto *F = M->getFunction("f");
-  assert(F && "Bad assembly?");
-
-  auto *RVal =
-      cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
-  EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 1u);
+TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle) {
+  parseAssembly(
+      "define <2 x i32> @test() {\n"
+      "  %A = shufflevector <2 x i32> undef, <2 x i32> undef, <2 x i32> <i32 0, i32 0>\n"
+      "  ret <2 x i32> %A\n"
+      "}\n");
+  EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 1u);
 }
 
 // No guarantees for canonical IR in this analysis, so a shuffle element that
 // references an undef value means this can't return any extra information. 
-TEST(ValueTracking, ComputeNumSignBits_Shuffle2) {
-  StringRef Assembly = "define <2 x i32> @f(<2 x i1> %x) { "
-                       "  %sext = sext <2 x i1> %x to <2 x i32> "
-                       "  %val = shufflevector <2 x i32> %sext, <2 x i32> undef, <2 x i32> <i32 0, i32 2> "
-                       "  ret <2 x i32> %val "
-                       "} ";
-
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  assert(M && "Bad assembly?");
-
-  auto *F = M->getFunction("f");
-  assert(F && "Bad assembly?");
-
-  auto *RVal =
-      cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
-  EXPECT_EQ(ComputeNumSignBits(RVal, M->getDataLayout()), 1u);
+TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle2) {
+  parseAssembly(
+      "define <2 x i32> @test(<2 x i1> %x) {\n"
+      "  %sext = sext <2 x i1> %x to <2 x i32>\n"
+      "  %A = shufflevector <2 x i32> %sext, <2 x i32> undef, <2 x i32> <i32 0, i32 2>\n"
+      "  ret <2 x i32> %A\n"
+      "}\n");
+  EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 1u);
 }
 
-TEST(ValueTracking, ComputeKnownBits) {
-  StringRef Assembly = "define i32 @f(i32 %a, i32 %b) { "
-                       "  %ash = mul i32 %a, 8 "
-                       "  %aad = add i32 %ash, 7 "
-                       "  %aan = and i32 %aad, 4095 "
-                       "  %bsh = shl i32 %b, 4 "
-                       "  %bad = or i32 %bsh, 6 "
-                       "  %ban = and i32 %bad, 4095 "
-                       "  %mul = mul i32 %aan, %ban "
-                       "  ret i32 %mul "
-                       "} ";
-
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  assert(M && "Bad assembly?");
-
-  auto *F = M->getFunction("f");
-  assert(F && "Bad assembly?");
-
-  auto *RVal =
-      cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
-  auto Known = computeKnownBits(RVal, M->getDataLayout());
-  ASSERT_FALSE(Known.hasConflict());
-  EXPECT_EQ(Known.One.getZExtValue(), 10u);
-  EXPECT_EQ(Known.Zero.getZExtValue(), 4278190085u);
+TEST_F(ComputeKnownBitsTest, ComputeKnownBits) {
+  parseAssembly(
+      "define i32 @test(i32 %a, i32 %b) {\n"
+      "  %ash = mul i32 %a, 8\n"
+      "  %aad = add i32 %ash, 7\n"
+      "  %aan = and i32 %aad, 4095\n"
+      "  %bsh = shl i32 %b, 4\n"
+      "  %bad = or i32 %bsh, 6\n"
+      "  %ban = and i32 %bad, 4095\n"
+      "  %A = mul i32 %aan, %ban\n"
+      "  ret i32 %A\n"
+      "}\n");
+  expectKnownBits(/*zero*/ 4278190085u, /*one*/ 10u);
 }
 
-TEST(ValueTracking, ComputeKnownMulBits) {
-  StringRef Assembly = "define i32 @f(i32 %a, i32 %b) { "
-                       "  %aa = shl i32 %a, 5 "
-                       "  %bb = shl i32 %b, 5 "
-                       "  %aaa = or i32 %aa, 24 "
-                       "  %bbb = or i32 %bb, 28 "
-                       "  %mul = mul i32 %aaa, %bbb "
-                       "  ret i32 %mul "
-                       "} ";
-
-  LLVMContext Context;
-  SMDiagnostic Error;
-  auto M = parseAssemblyString(Assembly, Error, Context);
-  assert(M && "Bad assembly?");
-
-  auto *F = M->getFunction("f");
-  assert(F && "Bad assembly?");
-
-  auto *RVal =
-      cast<ReturnInst>(F->getEntryBlock().getTerminator())->getOperand(0);
-  auto Known = computeKnownBits(RVal, M->getDataLayout());
-  ASSERT_FALSE(Known.hasConflict());
-  EXPECT_EQ(Known.One.getZExtValue(), 32u);
-  EXPECT_EQ(Known.Zero.getZExtValue(), 95u);
+TEST_F(ComputeKnownBitsTest, ComputeKnownMulBits) {
+  parseAssembly(
+      "define i32 @test(i32 %a, i32 %b) {\n"
+      "  %aa = shl i32 %a, 5\n"
+      "  %bb = shl i32 %b, 5\n"
+      "  %aaa = or i32 %aa, 24\n"
+      "  %bbb = or i32 %bb, 28\n"
+      "  %A = mul i32 %aaa, %bbb\n"
+      "  ret i32 %A\n"
+      "}\n");
+  expectKnownBits(/*zero*/ 95u, /*one*/ 32u);
 }

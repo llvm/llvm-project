@@ -1,11 +1,9 @@
 // Test the handle_abort option.
 
-// clang-format off
 // RUN: %clangxx %s -o %t
 // RUN:                              not --crash %run %t 2>&1 | FileCheck --check-prefix=CHECK0 %s
 // RUN: %env_tool_opts=handle_abort=0 not --crash %run %t 2>&1 | FileCheck --check-prefix=CHECK0 %s
 // RUN: %env_tool_opts=handle_abort=1 not         %run %t 2>&1 | FileCheck --check-prefix=CHECK1 %s
-// clang-format on
 
 #include <assert.h>
 #include <stdio.h>

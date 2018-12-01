@@ -4945,14 +4945,16 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     }
   }
 
-  // Any FP binop with an undef operand is folded to NaN. This matches the
-  // behavior of the IR optimizer.
   switch (Opcode) {
   case ISD::FADD:
   case ISD::FSUB:
   case ISD::FMUL:
   case ISD::FDIV:
   case ISD::FREM:
+    // If both operands are undef, the result is undef. If 1 operand is undef,
+    // the result is NaN. This should match the behavior of the IR optimizer.
+    if (N1.isUndef() && N2.isUndef())
+      return getUNDEF(VT);
     if (N1.isUndef() || N2.isUndef())
       return getConstantFP(APFloat::getNaN(EVTToAPFloatSemantics(VT)), DL, VT);
   }

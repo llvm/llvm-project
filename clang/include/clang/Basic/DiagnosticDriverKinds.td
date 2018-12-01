@@ -299,6 +299,9 @@ def err_analyzer_config_no_value : Error<
   "analyzer-config option '%0' has a key but no value">;
 def err_analyzer_config_multiple_values : Error<
   "analyzer-config option '%0' should contain only one '='">;
+def err_analyzer_config_invalid_input : Error<
+  "invalid input for analyzer-config option '%0', that expects %1 value">;
+def err_analyzer_config_unknown : Error<"unknown analyzer-config '%0'">;
 
 def err_drv_invalid_hvx_length : Error<
   "-mhvx-length is not supported without a -mhvx/-mhvx= flag">;

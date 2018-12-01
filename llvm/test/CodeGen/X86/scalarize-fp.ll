@@ -194,7 +194,6 @@ define <4 x double> @fadd_op1_constant_v4f64(double %x) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    addpd %xmm1, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fadd_op1_constant_v4f64:
@@ -214,7 +213,6 @@ define <4 x double> @load_fadd_op1_constant_v4f64(double* %p) nounwind {
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    addpd %xmm1, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_fadd_op1_constant_v4f64:
@@ -232,10 +230,9 @@ define <4 x double> @load_fadd_op1_constant_v4f64(double* %p) nounwind {
 define <4 x double> @fsub_op0_constant_v4f64(double %x) nounwind {
 ; SSE-LABEL: fsub_op0_constant_v4f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE-NEXT:    subpd %xmm0, %xmm2
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN]
-; SSE-NEXT:    movapd %xmm2, %xmm0
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    subpd %xmm0, %xmm1
+; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fsub_op0_constant_v4f64:
@@ -255,7 +252,6 @@ define <4 x double> @load_fsub_op0_constant_v4f64(double* %p) nounwind {
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    subpd %xmm1, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_fsub_op0_constant_v4f64:
@@ -275,7 +271,6 @@ define <4 x double> @fmul_op1_constant_v4f64(double %x) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    mulpd %xmm1, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fmul_op1_constant_v4f64:
@@ -295,7 +290,6 @@ define <4 x double> @load_fmul_op1_constant_v4f64(double* %p) nounwind {
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    mulpd %xmm1, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_fmul_op1_constant_v4f64:
@@ -315,7 +309,6 @@ define <4 x double> @fdiv_op1_constant_v4f64(double %x) nounwind {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    divpd %xmm1, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fdiv_op1_constant_v4f64:
@@ -335,7 +328,6 @@ define <4 x double> @load_fdiv_op1_constant_v4f64(double* %p) nounwind {
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    divpd %xmm1, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_fdiv_op1_constant_v4f64:
@@ -353,10 +345,9 @@ define <4 x double> @load_fdiv_op1_constant_v4f64(double* %p) nounwind {
 define <4 x double> @fdiv_op0_constant_v4f64(double %x) nounwind {
 ; SSE-LABEL: fdiv_op0_constant_v4f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
-; SSE-NEXT:    divpd %xmm0, %xmm2
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN]
-; SSE-NEXT:    movapd %xmm2, %xmm0
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    divpd %xmm0, %xmm1
+; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fdiv_op0_constant_v4f64:
@@ -376,7 +367,6 @@ define <4 x double> @load_fdiv_op0_constant_v4f64(double* %p) nounwind {
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    divpd %xmm1, %xmm0
-; SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_fdiv_op0_constant_v4f64:

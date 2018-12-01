@@ -193,7 +193,7 @@ ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
       svalBuilder(StateMgr.getSValBuilder()), ObjCNoRet(mgr.getASTContext()),
       BR(mgr, *this),
       VisitedCallees(VisitedCalleesIn), HowToInline(HowToInlineIn) {
-  unsigned TrimInterval = mgr.options.getGraphTrimInterval();
+  unsigned TrimInterval = mgr.options.GraphTrimInterval;
   if (TrimInterval != 0) {
     // Enable eager node reclaimation when constructing the ExplodedGraph.
     G.enableNodeReclamation(TrimInterval);
@@ -746,7 +746,7 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
   NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   ProgramStateRef NewState = Pred->getState();
 
-  if(AMgr.options.shouldUnrollLoops())
+  if(AMgr.options.ShouldUnrollLoops)
     NewState = processLoopEnd(S, NewState);
 
   LoopExit PP(S, Pred->getLocationContext());
@@ -878,7 +878,7 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
   // TODO: We're not evaluating allocators for all cases just yet as
   // we're not handling the return value correctly, which causes false
   // positives when the alpha.cplusplus.NewDeleteLeaks check is on.
-  if (Opts.mayInlineCXXAllocator())
+  if (Opts.MayInlineCXXAllocator)
     VisitCXXNewAllocatorCall(NE, Pred, Dst);
   else {
     NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
@@ -1093,7 +1093,7 @@ void ExprEngine::VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE,
   // This is a fallback solution in case we didn't have a construction
   // context when we were constructing the temporary. Otherwise the map should
   // have been populated there.
-  if (!getAnalysisManager().options.includeTemporaryDtorsInCFG()) {
+  if (!getAnalysisManager().options.ShouldIncludeTemporaryDtorsInCFG) {
     // In case we don't have temporary destructors in the CFG, do not mark
     // the initialization - we would otherwise never clean it up.
     Dst = PreVisit;
@@ -1454,7 +1454,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       break;
 
     case Stmt::LambdaExprClass:
-      if (AMgr.options.shouldInlineLambdas()) {
+      if (AMgr.options.ShouldInlineLambdas) {
         Bldr.takeNodes(Pred);
         VisitLambdaExpr(cast<LambdaExpr>(S), Pred, Dst);
         Bldr.addNodes(Dst);
@@ -1483,7 +1483,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
 
       Bldr.takeNodes(Pred);
 
-      if (AMgr.options.shouldEagerlyAssume() &&
+      if (AMgr.options.ShouldEagerlyAssume &&
           (B->isRelationalOp() || B->isEqualityOp())) {
         ExplodedNodeSet Tmp;
         VisitBinaryOperator(cast<BinaryOperator>(S), Pred, Tmp);
@@ -1747,7 +1747,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::UnaryOperatorClass: {
       Bldr.takeNodes(Pred);
       const auto *U = cast<UnaryOperator>(S);
-      if (AMgr.options.shouldEagerlyAssume() && (U->getOpcode() == UO_LNot)) {
+      if (AMgr.options.ShouldEagerlyAssume && (U->getOpcode() == UO_LNot)) {
         ExplodedNodeSet Tmp;
         VisitUnaryOperator(U, Pred, Tmp);
         evalEagerlyAssumeBinOpBifurcation(Dst, Tmp, U);
@@ -1848,7 +1848,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
   PrettyStackTraceLocationContext CrashInfo(Pred->getLocationContext());
   // If we reach a loop which has a known bound (and meets
   // other constraints) then consider completely unrolling it.
-  if(AMgr.options.shouldUnrollLoops()) {
+  if(AMgr.options.ShouldUnrollLoops) {
     unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
     const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminator();
     if (Term) {
@@ -1870,7 +1870,7 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
   // maximum number of times, widen the loop.
   unsigned int BlockCount = nodeBuilder.getContext().blockCount();
   if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
-      AMgr.options.shouldWidenLoops()) {
+      AMgr.options.ShouldWidenLoops) {
     const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminator();
     if (!(Term &&
           (isa<ForStmt>(Term) || isa<WhileStmt>(Term) || isa<DoStmt>(Term))))
@@ -2371,7 +2371,7 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
     const auto *DeclRefEx = dyn_cast<DeclRefExpr>(Ex);
     Optional<std::pair<SVal, QualType>> VInfo;
 
-    if (AMgr.options.shouldInlineLambdas() && DeclRefEx &&
+    if (AMgr.options.ShouldInlineLambdas && DeclRefEx &&
         DeclRefEx->refersToEnclosingVariableOrCapture() && MD &&
         MD->getParent()->isLambda()) {
       // Lookup the field of the lambda.
