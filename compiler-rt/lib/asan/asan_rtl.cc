@@ -396,6 +396,14 @@ static void AsanInitInternal() {
   // initialization steps look at flags().
   InitializeFlags();
 
+  // Stop performing init at this point if we are being loaded via
+  // dlopen() and the platform supports it.
+  if (SANITIZER_SUPPORTS_INIT_FOR_DLOPEN && UNLIKELY(HandleDlopenInit())) {
+    asan_init_is_running = false;
+    VReport(1, "AddressSanitizer init is being performed for dlopen().\n");
+    return;
+  }
+
   AsanCheckIncompatibleRT();
   AsanCheckDynamicRTPrereqs();
   AvoidCVE_2016_2143();
