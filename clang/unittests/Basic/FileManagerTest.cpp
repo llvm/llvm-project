@@ -235,22 +235,18 @@ TEST_F(FileManagerTest, getFileDefersOpen) {
   ASSERT_TRUE(file != nullptr);
   ASSERT_TRUE(file->isValid());
   // "real path name" reveals whether the file was actually opened.
-  EXPECT_EQ("", file->tryGetRealPathName());
+  EXPECT_FALSE(file->isOpenForTests());
 
   file = manager.getFile("/tmp/test", /*OpenFile=*/true);
   ASSERT_TRUE(file != nullptr);
   ASSERT_TRUE(file->isValid());
-#ifdef _WIN32
-  EXPECT_EQ("/tmp\\test", file->tryGetRealPathName());
-#else
-  EXPECT_EQ("/tmp/test", file->tryGetRealPathName());
-#endif
+  EXPECT_TRUE(file->isOpenForTests());
 
   // However we should never try to open a file previously opened as virtual.
   ASSERT_TRUE(manager.getVirtualFile("/tmp/testv", 5, 0));
   ASSERT_TRUE(manager.getFile("/tmp/testv", /*OpenFile=*/false));
   file = manager.getFile("/tmp/testv", /*OpenFile=*/true);
-  EXPECT_EQ("", file->tryGetRealPathName());
+  EXPECT_FALSE(file->isOpenForTests());
 }
 
 // The following tests apply to Unix-like system only.
@@ -351,6 +347,21 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
 
   ASSERT_TRUE(Manager.makeAbsolutePath(Path));
   EXPECT_EQ(Path, ExpectedResult);
+}
+
+// getVirtualFile should always fill the real path.
+TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
+  // Inject fake files into the file system.
+  auto statCache = llvm::make_unique<FakeStatCache>();
+  statCache->InjectDirectory("/tmp", 42);
+  statCache->InjectFile("/tmp/test", 43);
+  manager.addStatCache(std::move(statCache));
+
+  // Check for real path.
+  const FileEntry *file = manager.getVirtualFile("/tmp/test", 123, 1);
+  ASSERT_TRUE(file != nullptr);
+  ASSERT_TRUE(file->isValid());
+  EXPECT_EQ(file->tryGetRealPathName(), "/tmp/test");
 }
 
 } // anonymous namespace

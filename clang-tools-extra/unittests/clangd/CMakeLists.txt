@@ -28,6 +28,7 @@ add_extra_unittest(ClangdTests
   FuzzyMatchTests.cpp
   GlobalCompilationDatabaseTests.cpp
   HeadersTests.cpp
+  IndexActionTests.cpp
   IndexTests.cpp
   JSONTransportTests.cpp
   QualityTests.cpp

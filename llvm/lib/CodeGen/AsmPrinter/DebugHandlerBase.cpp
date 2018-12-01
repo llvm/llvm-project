@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Common functionality for different debug information format backends.
-// LLVM currently supports DWARF, CodeView and BTF.
+// LLVM currently supports DWARF and CodeView.
 //
 //===----------------------------------------------------------------------===//
 

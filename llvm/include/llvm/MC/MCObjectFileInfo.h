@@ -209,14 +209,6 @@ protected:
   MCSection *SXDataSection;
   MCSection *GFIDsSection;
 
-  /// BTF-specific sections. BTF stands for BPF Type Format which is
-  /// designed for BPF target and consumed by BPF loader and
-  /// the kernel.
-  /// @{
-  MCSection *BTFSection;
-  MCSection *BTFExtSection;
-  /// @}
-
 public:
   void InitMCObjectFileInfo(const Triple &TT, bool PIC, MCContext &ctx,
                             bool LargeCodeModel = false);
@@ -387,12 +379,6 @@ public:
   MCSection *getEHFrameSection() {
     return EHFrameSection;
   }
-
-  // BTF specific sections.
-  /// @{
-  MCSection *getBTFSection() const { return BTFSection; }
-  MCSection *getBTFExtSection() const { return BTFExtSection; }
-  /// @}
 
   enum Environment { IsMachO, IsELF, IsCOFF, IsWasm };
   Environment getObjectFileType() const { return Env; }
