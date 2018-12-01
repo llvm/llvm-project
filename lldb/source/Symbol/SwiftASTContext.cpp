@@ -90,6 +90,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Expression/DiagnosticManager.h"
+#include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/StringConvert.h"
@@ -192,8 +193,6 @@ namespace {
 }
 
 llvm::LLVMContext &SwiftASTContext::GetGlobalLLVMContext() {
-  // TODO check with Sean.  Do we really want this to be static across
-  // an LLDB managing multiple Swift processes?
   static llvm::LLVMContext s_global_context;
   return s_global_context;
 }
@@ -4446,6 +4445,9 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
             GetCompilerInvocation()
                 .getFrontendOptions()
                 .InputsAndOutputs.getPrimarySpecificPathsForAtMostOnePrimary();
+
+        std::lock_guard<std::recursive_mutex> global_context_locker(
+            IRExecutionUnit::GetLLVMGlobalContextMutex());
         m_ir_gen_module_ap.reset(new swift::irgen::IRGenModule(
             ir_generator, ir_generator.createTargetMachine(), nullptr,
             GetGlobalLLVMContext(), ir_gen_opts.ModuleName, PSPs.OutputFilename,
