@@ -2,8 +2,7 @@
 // REQUIRES: lld
 
 // Make sure we can read variables from BSS
-// RUN: %clang_cl /Z7 /GS- /GR- /c /Fo%t.obj -- %s
-// RUN: lld-link /DEBUG /nodefaultlib /entry:main /OUT:%t.exe /PDB:%t.pdb -- %t.obj
+// RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s 
 // RUN: llvm-readobj -s %t.exe | FileCheck --check-prefix=BSS %s
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
 // RUN:     %p/Inputs/globals-bss.lldbinit 2>&1 | FileCheck %s
