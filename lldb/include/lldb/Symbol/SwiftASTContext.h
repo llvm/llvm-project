@@ -105,9 +105,7 @@ public:
     return ts->getKind() == TypeSystem::eKindSwift;
   }
 
-  //------------------------------------------------------------------
-  // Provide a global LLVMContext
-  //------------------------------------------------------------------
+  /// Provide the global LLVMContext.
   static llvm::LLVMContext &GetGlobalLLVMContext();
 
   //------------------------------------------------------------------
@@ -803,6 +801,8 @@ protected:
 
   std::vector<lldb::DataBufferSP> &GetASTVectorForModule(const Module *module);
 
+  /// Data members.
+  /// @{
   std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;
   std::unique_ptr<swift::SourceManager> m_source_manager_ap;
   std::unique_ptr<swift::DiagnosticEngine> m_diagnostic_engine_ap;
@@ -859,6 +859,7 @@ protected:
 
   typedef ThreadSafeDenseMap<const char *, lldb::TypeSP> SwiftTypeMap;
   SwiftTypeMap m_swift_type_map;
+  /// @}
 
   ExtraTypeInformation GetExtraTypeInformation(void *type);
 
