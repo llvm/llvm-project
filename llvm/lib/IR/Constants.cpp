@@ -184,18 +184,15 @@ bool Constant::isNotMinSignedValue() const {
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
     return !CFP->getValueAPF().bitcastToAPInt().isMinSignedValue();
 
-  // Check for constant vectors which are splats of INT_MIN values.
-  if (const ConstantVector *CV = dyn_cast<ConstantVector>(this))
-    if (Constant *Splat = CV->getSplatValue())
-      return Splat->isNotMinSignedValue();
-
-  // Check for constant vectors which are splats of INT_MIN values.
-  if (const ConstantDataVector *CV = dyn_cast<ConstantDataVector>(this)) {
-    if (CV->isSplat()) {
-      if (CV->getElementType()->isFloatingPointTy())
-        return !CV->getElementAsAPFloat(0).bitcastToAPInt().isMinSignedValue();
-      return !CV->getElementAsAPInt(0).isMinSignedValue();
+  // Check that vectors don't contain INT_MIN
+  if (this->getType()->isVectorTy()) {
+    unsigned NumElts = this->getType()->getVectorNumElements();
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *Elt = this->getAggregateElement(i);
+      if (!Elt || !Elt->isNotMinSignedValue())
+        return false;
     }
+    return true;
   }
 
   // It *may* contain INT_MIN, we can't tell.
