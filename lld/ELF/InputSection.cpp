@@ -1212,19 +1212,6 @@ void MergeInputSection::splitIntoPieces() {
     OffsetMap[Pieces[I].InputOff] = I;
 }
 
-template <class It, class T, class Compare>
-static It fastUpperBound(It First, It Last, const T &Value, Compare Comp) {
-  size_t Size = std::distance(First, Last);
-  assert(Size != 0);
-  while (Size != 1) {
-    size_t H = Size / 2;
-    const It MI = First + H;
-    Size -= H;
-    First = Comp(Value, *MI) ? First : First + H;
-  }
-  return Comp(Value, *First) ? First : First + 1;
-}
-
 SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
   if (this->data().size() <= Offset)
     fatal(toString(this) + ": offset is outside the section");
@@ -1236,11 +1223,18 @@ SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
 
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to  do a binary search of the original section piece vector.
-  auto I = fastUpperBound(
-      Pieces.begin(), Pieces.end(), Offset,
-      [](const uint64_t &A, const SectionPiece &B) { return A < B.InputOff; });
-  --I;
-  return &*I;
+  size_t Size = Pieces.size();
+  size_t Idx = 0;
+
+  while (Size != 1) {
+    size_t H = Size / 2;
+    Size -= H;
+    if (Pieces[Idx + H].InputOff <= Offset)
+      Idx += H;
+  }
+  if (Offset < Pieces[Idx].InputOff)
+    --Idx;
+  return &Pieces[Idx];
 }
 
 // Returns the offset in an output section for a given input offset.

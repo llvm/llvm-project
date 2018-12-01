@@ -181,6 +181,11 @@ static void addDiagnosticArgs(ArgList &Args, OptSpecifier Group,
   }
 }
 
+// Parse the Static Analyzer configuration. If \p Diags is set to nullptr,
+// it won't verify the input.
+static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
+                                 DiagnosticsEngine *Diags);
+
 static void getAllNoBuiltinFuncValues(ArgList &Args,
                                       std::vector<std::string> &Funcs) {
   SmallVector<const char *, 8> Values;
@@ -281,6 +286,12 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
   Opts.ShowCheckerHelp = Args.hasArg(OPT_analyzer_checker_help);
   Opts.ShowConfigOptionsList = Args.hasArg(OPT_analyzer_config_help);
   Opts.ShowEnabledCheckerList = Args.hasArg(OPT_analyzer_list_enabled_checkers);
+  Opts.ShouldEmitErrorsOnInvalidConfigValue =
+      /* negated */!llvm::StringSwitch<bool>(
+                   Args.getLastArgValue(OPT_analyzer_config_compatibility_mode))
+        .Case("true", true)
+        .Case("false", false)
+        .Default(false);
   Opts.DisableAllChecks = Args.hasArg(OPT_analyzer_disable_all_checks);
 
   Opts.visualizeExplodedGraphWithGraphViz =
@@ -317,7 +328,7 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
 
   // Go through the analyzer configuration options.
   for (const auto *A : Args.filtered(OPT_analyzer_config)) {
-    A->claim();
+
     // We can have a list of comma separated config names, e.g:
     // '-analyzer-config key1=val1,key2=val2'
     StringRef configList = A->getValue();
@@ -339,9 +350,24 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
         Success = false;
         break;
       }
+
+      // TODO: Check checker options too, possibly in CheckerRegistry.
+      // Leave unknown non-checker configs unclaimed.
+      if (!key.contains(":") && Opts.isUnknownAnalyzerConfig(key)) {
+        if (Opts.ShouldEmitErrorsOnInvalidConfigValue)
+          Diags.Report(diag::err_analyzer_config_unknown) << key;
+        continue;
+      }
+
+      A->claim();
       Opts.Config[key] = val;
     }
   }
+
+  if (Opts.ShouldEmitErrorsOnInvalidConfigValue)
+    parseAnalyzerConfigs(Opts, &Diags);
+  else
+    parseAnalyzerConfigs(Opts, nullptr);
 
   llvm::raw_string_ostream os(Opts.FullCompilerInvocation);
   for (unsigned i = 0; i < Args.getNumInputArgStrings(); ++i) {
@@ -352,6 +378,90 @@ static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
   os.flush();
 
   return Success;
+}
+
+static StringRef getStringOption(AnalyzerOptions::ConfigTable &Config,
+                                 StringRef OptionName, StringRef DefaultVal) {
+  return Config.insert({OptionName, DefaultVal}).first->second;
+}
+
+static void initOption(AnalyzerOptions::ConfigTable &Config,
+                       DiagnosticsEngine *Diags,
+                       StringRef &OptionField, StringRef Name,
+                       StringRef DefaultVal) {
+  // String options may be known to invalid (e.g. if the expected string is a
+  // file name, but the file does not exist), those will have to be checked in
+  // parseConfigs.
+  OptionField = getStringOption(Config, Name, DefaultVal);
+}
+
+static void initOption(AnalyzerOptions::ConfigTable &Config,
+                       DiagnosticsEngine *Diags,
+                       bool &OptionField, StringRef Name, bool DefaultVal) {
+  auto PossiblyInvalidVal = llvm::StringSwitch<Optional<bool>>(
+                 getStringOption(Config, Name, (DefaultVal ? "true" : "false")))
+      .Case("true", true)
+      .Case("false", false)
+      .Default(None);
+
+  if (!PossiblyInvalidVal) {
+    if (Diags)
+      Diags->Report(diag::err_analyzer_config_invalid_input)
+        << Name << "a boolean";
+    else
+      OptionField = DefaultVal;
+  } else
+    OptionField = PossiblyInvalidVal.getValue();
+}
+
+static void initOption(AnalyzerOptions::ConfigTable &Config,
+                       DiagnosticsEngine *Diags,
+                       unsigned &OptionField, StringRef Name,
+                       unsigned DefaultVal) {
+
+  OptionField = DefaultVal;
+  bool HasFailed = getStringOption(Config, Name, std::to_string(DefaultVal))
+                     .getAsInteger(10, OptionField);
+  if (Diags && HasFailed)
+    Diags->Report(diag::err_analyzer_config_invalid_input)
+      << Name << "an unsigned";
+}
+
+static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
+                                 DiagnosticsEngine *Diags) {
+  // TODO: There's no need to store the entire configtable, it'd be plenty
+  // enough tostore checker options.
+
+#define ANALYZER_OPTION(TYPE, NAME, CMDFLAG, DESC, DEFAULT_VAL)                \
+  initOption(AnOpts.Config, Diags, AnOpts.NAME, CMDFLAG, DEFAULT_VAL);
+
+#define ANALYZER_OPTION_DEPENDS_ON_USER_MODE(TYPE, NAME, CMDFLAG, DESC,        \
+                                           SHALLOW_VAL, DEEP_VAL)              \
+  switch (AnOpts.getUserMode()) {                                              \
+  case UMK_Shallow:                                                            \
+    initOption(AnOpts.Config, Diags, AnOpts.NAME, CMDFLAG, SHALLOW_VAL);       \
+    break;                                                                     \
+  case UMK_Deep:                                                               \
+    initOption(AnOpts.Config, Diags, AnOpts.NAME, CMDFLAG, DEEP_VAL);          \
+    break;                                                                     \
+  }                                                                            \
+
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.def"
+#undef ANALYZER_OPTION
+#undef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
+
+  // At this point, AnalyzerOptions is configured. Let's validate some options.
+
+  if (!Diags)
+    return;
+
+  if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
+    Diags->Report(diag::err_analyzer_config_invalid_input)
+      << "ctu-dir" << "a filename";
+
+  if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
+    Diags->Report(diag::err_analyzer_config_invalid_input)
+      << "model-path" << "a filename";
 }
 
 static bool ParseMigratorArgs(MigratorOptions &Opts, ArgList &Args) {
