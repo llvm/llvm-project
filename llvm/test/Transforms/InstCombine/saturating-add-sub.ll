@@ -337,11 +337,10 @@ define <2 x i8> @test_vector_ssub_canonical(<2 x i8> %a) {
   ret <2 x i8> %r
 }
 
-; Canonicalization for non-splat constants is not supported yet.
 define <2 x i8> @test_vector_ssub_canonical_min_non_splat(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_ssub_canonical_min_non_splat(
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 10, i8 -10>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A:%.*]], <2 x i8> <i8 -10, i8 10>)
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
 ;
   %r = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %a, <2 x i8> <i8 10, i8 -10>)
   ret <2 x i8> %r
@@ -630,8 +629,8 @@ define i8 @test_scalar_ssub_neg_nneg(i8 %a) {
 define <2 x i8> @test_vector_ssub_neg_nneg(<2 x i8> %a) {
 ; CHECK-LABEL: @test_vector_ssub_neg_nneg(
 ; CHECK-NEXT:    [[A_NEG:%.*]] = or <2 x i8> [[A:%.*]], <i8 -128, i8 -128>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> [[A_NEG]], <2 x i8> <i8 10, i8 20>)
-; CHECK-NEXT:    ret <2 x i8> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[A_NEG]], <2 x i8> <i8 -10, i8 -20>)
+; CHECK-NEXT:    ret <2 x i8> [[TMP1]]
 ;
   %a_neg = or <2 x i8> %a, <i8 -128, i8 -128>
   %r = call <2 x i8> @llvm.ssub.sat.v2i8(<2 x i8> %a_neg, <2 x i8> <i8 10, i8 20>)
