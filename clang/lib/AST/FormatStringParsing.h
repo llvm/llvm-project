@@ -41,6 +41,10 @@ bool ParseArgPosition(FormatStringHandler &H,
                       FormatSpecifier &CS, const char *Start,
                       const char *&Beg, const char *E);
 
+bool ParseVectorModifier(FormatStringHandler &H,
+                         FormatSpecifier &FS, const char *&Beg, const char *E,
+                         const LangOptions &LO);
+
 /// Returns true if a LengthModifier was parsed and installed in the
 /// FormatSpecifier& argument, and false otherwise.
 bool ParseLengthModifier(FormatSpecifier &FS, const char *&Beg, const char *E,
