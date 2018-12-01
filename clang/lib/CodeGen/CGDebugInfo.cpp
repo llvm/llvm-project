@@ -235,6 +235,9 @@ PrintingPolicy CGDebugInfo::getPrintingPolicy() const {
   if (CGM.getCodeGenOpts().EmitCodeView)
     PP.MSVCFormatting = true;
 
+  // Apply -fdebug-prefix-map.
+  PP.RemapFilePaths = true;
+  PP.remapPath = [this](StringRef Path) { return remapDIPath(Path); };
   return PP;
 }
 
