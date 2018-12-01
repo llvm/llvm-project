@@ -69,8 +69,7 @@ private:
   typedef llvm::DenseMap<clang::CXXRecordDecl *, lldb::user_id_t>
       CXXRecordDeclToUidMap;
   typedef llvm::DenseMap<lldb::user_id_t, clang::Decl *> UidToDeclMap;
-  typedef std::set<clang::NamespaceDecl *> NamespacesSet;
-  typedef llvm::DenseMap<clang::DeclContext *, NamespacesSet>
+  typedef llvm::DenseMap<clang::DeclContext *, std::set<clang::NamespaceDecl *>>
       ParentToNamespacesMap;
   typedef llvm::DenseMap<clang::DeclContext *, lldb::user_id_t>
       DeclContextToUidMap;
@@ -110,7 +109,6 @@ private:
   CXXRecordDeclToUidMap m_forward_decl_to_uid;
   UidToDeclMap m_uid_to_decl;
   ParentToNamespacesMap m_parent_to_namespaces;
-  NamespacesSet m_namespaces;
   DeclContextToUidMap m_decl_context_to_uid;
 };
 

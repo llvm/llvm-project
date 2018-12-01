@@ -484,19 +484,11 @@ RetainSummaryManager::getSummary(const CallEvent &Call,
   const RetainSummary *Summ;
   switch (Call.getKind()) {
   case CE_Function:
-    Summ = getFunctionSummary(cast<SimpleFunctionCall>(Call).getDecl());
-    break;
   case CE_CXXMember:
-    Summ = getFunctionSummary(cast<CXXMemberCall>(Call).getDecl());
-    break;
   case CE_CXXMemberOperator:
-    Summ = getFunctionSummary(cast<CXXMemberOperatorCall>(Call).getDecl());
-    break;
   case CE_CXXConstructor:
-    Summ = getFunctionSummary(cast<CXXConstructorCall>(Call).getDecl());
-    break;
   case CE_CXXAllocator:
-    Summ = getFunctionSummary(cast<CXXAllocatorCall>(Call).getDecl());
+    Summ = getFunctionSummary(cast_or_null<FunctionDecl>(Call.getDecl()));
     break;
   case CE_Block:
   case CE_CXXDestructor:

@@ -159,7 +159,7 @@ std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
       return std::make_pair(State, FieldVal);
     }
     case ConstructionContext::NewAllocatedObjectKind: {
-      if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
+      if (AMgr.getAnalyzerOptions().MayInlineCXXAllocator) {
         const auto *NECC = cast<NewAllocatedObjectConstructionContext>(CC);
         const auto *NE = NECC->getCXXNewExpr();
         SVal V = *getObjectUnderConstruction(State, NE, LCtx);
@@ -210,7 +210,7 @@ std::pair<ProgramStateRef, SVal> ExprEngine::prepareForObjectConstruction(
       llvm_unreachable("Unhandled return value construction context!");
     }
     case ConstructionContext::ElidedTemporaryObjectKind: {
-      assert(AMgr.getAnalyzerOptions().shouldElideConstructors());
+      assert(AMgr.getAnalyzerOptions().ShouldElideConstructors);
       const auto *TCC = cast<ElidedTemporaryObjectConstructionContext>(CC);
       const CXXBindTemporaryExpr *BTE = TCC->getCXXBindTemporaryExpr();
       const MaterializeTemporaryExpr *MTE = TCC->getMaterializedTemporaryExpr();
@@ -706,7 +706,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   ProgramStateRef State = Pred->getState();
 
   // Retrieve the stored operator new() return value.
-  if (AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
+  if (AMgr.getAnalyzerOptions().MayInlineCXXAllocator) {
     symVal = *getObjectUnderConstruction(State, CNE, LCtx);
     State = finishObjectConstruction(State, CNE, LCtx);
   }
@@ -726,7 +726,7 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   CallEventRef<CXXAllocatorCall> Call =
     CEMgr.getCXXAllocatorCall(CNE, State, LCtx);
 
-  if (!AMgr.getAnalyzerOptions().mayInlineCXXAllocator()) {
+  if (!AMgr.getAnalyzerOptions().MayInlineCXXAllocator) {
     // Invalidate placement args.
     // FIXME: Once we figure out how we want allocators to work,
     // we should be using the usual pre-/(default-)eval-/post-call checks here.

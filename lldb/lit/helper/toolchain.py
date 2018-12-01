@@ -1,4 +1,5 @@
 import os
+import itertools
 import platform
 import subprocess
 import sys
@@ -19,6 +20,15 @@ def use_lldb_substitutions(config):
                        command=FindTool('lldb-mi'),
                        extra_args=['--synchronous'],
                        unresolved='ignore')
+    build_script = os.path.dirname(__file__)
+    build_script = os.path.join(build_script, 'build.py')
+    build_script_args = [build_script, 
+                        '--compiler=any', # Default to best compiler
+                        '--arch=64'] # Default to 64-bit, user can override
+    if config.lldb_lit_tools_dir:
+        build_script_args.append('--tools-dir={0}'.format(config.lldb_lit_tools_dir))
+    if config.lldb_tools_dir:
+        build_script_args.append('--tools-dir={0}'.format(config.lldb_tools_dir))
     primary_tools = [
         ToolSubst('%lldb',
                   command=FindTool('lldb'),
@@ -30,7 +40,10 @@ def use_lldb_substitutions(config):
                   command=FindTool(dsname),
                   extra_args=dsargs,
                   unresolved='ignore'),
-        'lldb-test'
+        'lldb-test',
+        ToolSubst('%build',
+                  command="'" + sys.executable + "'",
+                  extra_args=build_script_args)
         ]
 
     llvm_config.add_tool_substitutions(primary_tools,

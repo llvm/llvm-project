@@ -204,7 +204,7 @@ public:
         PP(CI.getPreprocessor()), OutDir(outdir), Opts(std::move(opts)),
         Plugins(plugins), Injector(injector), CTU(CI) {
     DigestAnalyzerOptions();
-    if (Opts->PrintStats || Opts->shouldSerializeStats()) {
+    if (Opts->PrintStats || Opts->ShouldSerializeStats) {
       AnalyzerTimers = llvm::make_unique<llvm::TimerGroup>(
           "analyzer", "Analyzer timers");
       TUTotalTimer = llvm::make_unique<llvm::Timer>(
@@ -739,7 +739,7 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
 
   // Execute the worklist algorithm.
   Eng.ExecuteWorkList(Mgr->getAnalysisDeclContextManager().getStackFrame(D),
-                      Mgr->options.getMaxNodesPerTopLevelFunction());
+                      Mgr->options.MaxNodesPerTopLevelFunction);
 
   if (!Mgr->options.DumpExplodedGraphTo.empty())
     Eng.DumpGraph(Mgr->options.TrimGraph, Mgr->options.DumpExplodedGraphTo);
