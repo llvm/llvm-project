@@ -612,7 +612,6 @@ define <16 x i8> @test_rem7_16i8(<16 x i8> %a) nounwind {
 }
 
 ; This test is just to show what an scalarized v16i8 division looks like.
-; FIXME: Fix the extract zero before inserting back into the vector.
 define <16 x i8> @test_rem_variable_16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-LABEL: test_rem_variable_16i8:
 ; SSE2:       # %bb.0:

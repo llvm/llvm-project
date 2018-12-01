@@ -211,9 +211,6 @@ def immbottomxlenset : ImmLeaf<XLenVT, [{
     return countTrailingOnes<uint64_t>(Imm) >= 6;
   return countTrailingOnes<uint64_t>(Imm) >= 5;
 }]>;
-def immshifti32 : ImmLeaf<XLenVT, [{
-  return countTrailingOnes<uint64_t>(Imm) >= 5;
-}]>;
 
 // Addressing modes.
 // Necessary because a frameindex can't be matched directly in a pattern.
@@ -890,13 +887,6 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 
 /// RV64 patterns
 
-def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
-  return cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32;
-}]>;
-def zexti32 : PatFrags<(ops node:$src),
-                       [(and node:$src, 0xffffffff),
-                        (assertzexti32 node:$src)]>;
-
 let Predicates = [IsRV64] in {
 
 /// sext and zext
@@ -919,22 +909,7 @@ def : Pat<(sext_inreg (shl GPR:$rs1, uimm5:$shamt), i32),
 def : Pat<(sra (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
           (SRAIW GPR:$rs1, uimm5:$shamt)>;
 
-def : Pat<(sext_inreg (shl GPR:$rs1, GPR:$rs2), i32),
-          (SLLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sext_inreg (shl GPR:$rs1, (and GPR:$rs2, immshifti32)), i32),
-          (SLLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(srl (zexti32 GPR:$rs1), GPR:$rs2),
-          (SRLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(srl (zexti32 GPR:$rs1), (and GPR:$rs2, immshifti32)),
-          (SRLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sext_inreg (srl (zexti32 GPR:$rs1), GPR:$rs2), i32),
-          (SRLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sext_inreg (srl (zexti32 GPR:$rs1), (and GPR:$rs2, immshifti32)), i32),
-          (SRLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sra (sext_inreg GPR:$rs1, i32), GPR:$rs2),
-          (SRAW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sra (sext_inreg GPR:$rs1, i32), (and GPR:$rs2, immshifti32)),
-          (SRAW GPR:$rs1, GPR:$rs2)>;
+// TODO: patterns for SLLW/SRLW/SRAW.
 
 /// Loads
 

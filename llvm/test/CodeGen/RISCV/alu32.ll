@@ -235,6 +235,8 @@ define i32 @xor(i32 %a, i32 %b) nounwind {
   ret i32 %1
 }
 
+; TODO: should select srlw for RV64.
+
 define i32 @srl(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: srl:
 ; RV32I:       # %bb.0:
@@ -243,11 +245,15 @@ define i32 @srl(i32 %a, i32 %b) nounwind {
 ;
 ; RV64I-LABEL: srl:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    srlw a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 32
+; RV64I-NEXT:    srli a0, a0, 32
+; RV64I-NEXT:    srl a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = lshr i32 %a, %b
   ret i32 %1
 }
+
+; TODO: should select sraw for RV64.
 
 define i32 @sra(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: sra:
@@ -257,7 +263,8 @@ define i32 @sra(i32 %a, i32 %b) nounwind {
 ;
 ; RV64I-LABEL: sra:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraw a0, a0, a1
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    sra a0, a0, a1
 ; RV64I-NEXT:    ret
   %1 = ashr i32 %a, %b
   ret i32 %1
