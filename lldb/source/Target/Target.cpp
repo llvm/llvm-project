@@ -2440,6 +2440,8 @@ ClangASTImporterSP Target::GetClangASTImporter() {
 
 SwiftASTContextReader Target::GetScratchSwiftASTContext(
     Status &error, ExecutionContextScope &exe_scope, bool create_on_demand) {
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
+
   Module *lldb_module = nullptr;
   if (m_use_scratch_typesystem_per_module)
     if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame()) {
@@ -2447,13 +2449,6 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
       lldb_module = sc.module_sp.get();
     }
 
-  return GetScratchSwiftASTContext(error, lldb_module, create_on_demand);
-}
-
-SwiftASTContextReader Target::GetScratchSwiftASTContext(Status &error,
-                                                        Module *lldb_module,
-                                                        bool create_on_demand) {
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
   auto get_or_create_fallback_context = [&]() -> SwiftASTContext * {
     if (!lldb_module || !m_use_scratch_typesystem_per_module)
       return nullptr;
