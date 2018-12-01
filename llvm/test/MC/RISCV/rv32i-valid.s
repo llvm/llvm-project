@@ -248,6 +248,9 @@ ecall
 # CHECK-ASM-AND-OBJ: ebreak
 # CHECK-ASM: encoding: [0x73,0x00,0x10,0x00]
 ebreak
+# CHECK-ASM-AND-OBJ: unimp
+# CHECK-ASM: encoding: [0x73,0x10,0x00,0xc0]
+unimp
 
 # CHECK-ASM-AND-OBJ: csrrw t0, 4095, t1
 # CHECK-ASM: encoding: [0xf3,0x12,0xf3,0xff]

@@ -211,3 +211,9 @@ add s0, s0, a5
 # CHECK-INST: c.swsp zero, 252(sp)
 # CHECK: # encoding: [0x82,0xdf]
 sw zero, 252(sp)
+
+# CHECK-BYTES: 00 00
+# CHECK-ALIAS: unimp
+# CHECK-INST: c.unimp
+# CHECK: # encoding: [0x00,0x00]
+unimp

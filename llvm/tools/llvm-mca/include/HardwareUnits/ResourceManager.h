@@ -119,8 +119,6 @@ class DefaultResourceStrategy final : public ResourceStrategy {
   /// on the overall performance of the tool.
   uint64_t RemovedFromNextInSequence;
 
-  void skipMask(uint64_t Mask);
-
 public:
   DefaultResourceStrategy(uint64_t UnitMask)
       : ResourceStrategy(), ResourceUnitMask(UnitMask),
@@ -183,6 +181,8 @@ class ResourceState {
   /// underlying units (i.e. pipelines) until the resource is released.
   bool Unavailable;
 
+  const bool IsAGroup;
+
   /// Checks for the availability of unit 'SubResMask' in the group.
   bool isSubResourceReady(uint64_t SubResMask) const {
     return ReadyMask & SubResMask;
@@ -210,7 +210,7 @@ public:
   /// `NumUnits` available units.
   bool isReady(unsigned NumUnits = 1) const;
 
-  bool isAResourceGroup() const { return countPopulation(ResourceMask) > 1; }
+  bool isAResourceGroup() const { return IsAGroup; }
 
   bool containsResource(uint64_t ID) const { return ResourceMask & ID; }
 

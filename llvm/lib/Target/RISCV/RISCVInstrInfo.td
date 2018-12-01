@@ -211,9 +211,6 @@ def immbottomxlenset : ImmLeaf<XLenVT, [{
     return countTrailingOnes<uint64_t>(Imm) >= 6;
   return countTrailingOnes<uint64_t>(Imm) >= 5;
 }]>;
-def immshifti32 : ImmLeaf<XLenVT, [{
-  return countTrailingOnes<uint64_t>(Imm) >= 5;
-}]>;
 
 // Addressing modes.
 // Necessary because a frameindex can't be matched directly in a pattern.
@@ -403,6 +400,15 @@ def EBREAK : RVInstI<0b000, OPC_SYSTEM, (outs), (ins), "ebreak", ""> {
   let rd = 0;
   let imm12 = 1;
 }
+
+// This is a de facto standard (as set by GNU binutils) 32-bit unimplemented
+// instruction (i.e., it should always trap, if your implementation has invalid
+// instruction traps).
+def UNIMP : RVInstI<0b001, OPC_SYSTEM, (outs), (ins), "unimp", ""> {
+  let rs1 = 0;
+  let rd = 0;
+  let imm12 = 0b110000000000;
+}
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 
 def CSRRW : CSR_ir<0b001, "csrrw">;
@@ -570,6 +576,16 @@ def : InstAlias<"csrc $csr, $rs", (CSRRC      X0, csr_sysreg:$csr, GPR:$rs)>;
 def : InstAlias<"csrwi $csr, $imm", (CSRRWI X0, csr_sysreg:$csr, uimm5:$imm)>;
 def : InstAlias<"csrsi $csr, $imm", (CSRRSI X0, csr_sysreg:$csr, uimm5:$imm)>;
 def : InstAlias<"csrci $csr, $imm", (CSRRCI X0, csr_sysreg:$csr, uimm5:$imm)>;
+
+let EmitPriority = 0 in {
+def : InstAlias<"csrw $csr, $imm", (CSRRWI X0, csr_sysreg:$csr, uimm5:$imm)>;
+def : InstAlias<"csrs $csr, $imm", (CSRRSI X0, csr_sysreg:$csr, uimm5:$imm)>;
+def : InstAlias<"csrc $csr, $imm", (CSRRCI X0, csr_sysreg:$csr, uimm5:$imm)>;
+
+def : InstAlias<"csrrw $rd, $csr, $imm", (CSRRWI GPR:$rd, csr_sysreg:$csr, uimm5:$imm)>;
+def : InstAlias<"csrrs $rd, $csr, $imm", (CSRRSI GPR:$rd, csr_sysreg:$csr, uimm5:$imm)>;
+def : InstAlias<"csrrc $rd, $csr, $imm", (CSRRCI GPR:$rd, csr_sysreg:$csr, uimm5:$imm)>;
+}
 
 def : InstAlias<"sfence.vma",     (SFENCE_VMA      X0, X0)>;
 def : InstAlias<"sfence.vma $rs", (SFENCE_VMA GPR:$rs, X0)>;
@@ -871,13 +887,6 @@ def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
 
 /// RV64 patterns
 
-def assertzexti32 : PatFrag<(ops node:$src), (assertzext node:$src), [{
-  return cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i32;
-}]>;
-def zexti32 : PatFrags<(ops node:$src),
-                       [(and node:$src, 0xffffffff),
-                        (assertzexti32 node:$src)]>;
-
 let Predicates = [IsRV64] in {
 
 /// sext and zext
@@ -900,22 +909,7 @@ def : Pat<(sext_inreg (shl GPR:$rs1, uimm5:$shamt), i32),
 def : Pat<(sra (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
           (SRAIW GPR:$rs1, uimm5:$shamt)>;
 
-def : Pat<(sext_inreg (shl GPR:$rs1, GPR:$rs2), i32),
-          (SLLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sext_inreg (shl GPR:$rs1, (and GPR:$rs2, immshifti32)), i32),
-          (SLLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(srl (zexti32 GPR:$rs1), GPR:$rs2),
-          (SRLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(srl (zexti32 GPR:$rs1), (and GPR:$rs2, immshifti32)),
-          (SRLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sext_inreg (srl (zexti32 GPR:$rs1), GPR:$rs2), i32),
-          (SRLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sext_inreg (srl (zexti32 GPR:$rs1), (and GPR:$rs2, immshifti32)), i32),
-          (SRLW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sra (sext_inreg GPR:$rs1, i32), GPR:$rs2),
-          (SRAW GPR:$rs1, GPR:$rs2)>;
-def : Pat<(sra (sext_inreg GPR:$rs1, i32), (and GPR:$rs2, immshifti32)),
-          (SRAW GPR:$rs1, GPR:$rs2)>;
+// TODO: patterns for SLLW/SRLW/SRAW.
 
 /// Loads
 

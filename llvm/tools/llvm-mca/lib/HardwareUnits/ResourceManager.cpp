@@ -24,21 +24,28 @@ namespace mca {
 #define DEBUG_TYPE "llvm-mca"
 ResourceStrategy::~ResourceStrategy() = default;
 
-void DefaultResourceStrategy::skipMask(uint64_t Mask) {
-  NextInSequenceMask &= (~Mask);
-  if (!NextInSequenceMask) {
-    NextInSequenceMask = ResourceUnitMask ^ RemovedFromNextInSequence;
-    RemovedFromNextInSequence = 0;
-  }
-}
-
 uint64_t DefaultResourceStrategy::select(uint64_t ReadyMask) {
   // This method assumes that ReadyMask cannot be zero.
-  uint64_t CandidateMask = PowerOf2Floor(NextInSequenceMask);
-  while (!(ReadyMask & CandidateMask)) {
-    skipMask(CandidateMask);
-    CandidateMask = PowerOf2Floor(NextInSequenceMask);
+  uint64_t CandidateMask = ReadyMask & NextInSequenceMask;
+  if (CandidateMask) {
+    CandidateMask = PowerOf2Floor(CandidateMask);
+    NextInSequenceMask &= (CandidateMask | (CandidateMask - 1));
+    return CandidateMask;
   }
+
+  NextInSequenceMask = ResourceUnitMask ^ RemovedFromNextInSequence;
+  RemovedFromNextInSequence = 0;
+  CandidateMask = ReadyMask & NextInSequenceMask;
+
+  if (CandidateMask) {
+    CandidateMask = PowerOf2Floor(CandidateMask);
+    NextInSequenceMask &= (CandidateMask | (CandidateMask - 1));
+    return CandidateMask;
+  }
+
+  NextInSequenceMask = ResourceUnitMask;
+  CandidateMask = PowerOf2Floor(ReadyMask & NextInSequenceMask);
+  NextInSequenceMask &= (CandidateMask | (CandidateMask - 1));
   return CandidateMask;
 }
 
@@ -47,14 +54,20 @@ void DefaultResourceStrategy::used(uint64_t Mask) {
     RemovedFromNextInSequence |= Mask;
     return;
   }
-  skipMask(Mask);
+ 
+  NextInSequenceMask &= (~Mask);
+  if (NextInSequenceMask)
+    return;
+
+  NextInSequenceMask = ResourceUnitMask ^ RemovedFromNextInSequence;
+  RemovedFromNextInSequence = 0;
 }
 
 ResourceState::ResourceState(const MCProcResourceDesc &Desc, unsigned Index,
                              uint64_t Mask)
     : ProcResourceDescIndex(Index), ResourceMask(Mask),
-      BufferSize(Desc.BufferSize) {
-  if (countPopulation(ResourceMask) > 1)
+      BufferSize(Desc.BufferSize), IsAGroup(countPopulation(ResourceMask)>1) {
+  if (IsAGroup)
     ResourceSizeMask = ResourceMask ^ PowerOf2Floor(ResourceMask);
   else
     ResourceSizeMask = (1ULL << Desc.NumUnits) - 1;

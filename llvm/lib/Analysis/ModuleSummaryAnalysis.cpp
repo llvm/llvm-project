@@ -256,15 +256,10 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   std::vector<const Instruction *> NonVolatileLoads;
 
   bool HasInlineAsmMaybeReferencingInternal = false;
-  bool InitsVarArgs = false;
   for (const BasicBlock &BB : F)
     for (const Instruction &I : BB) {
       if (isa<DbgInfoIntrinsic>(I))
         continue;
-      if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I)) {
-        if (II->getIntrinsicID() == Intrinsic::vastart)
-          InitsVarArgs = true;
-      }
       ++NumInsts;
       if (isNonVolatileLoad(&I)) {
         // Postpone processing of non-volatile load instructions
@@ -397,11 +392,9 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       F.hasFnAttribute(Attribute::ReadNone),
       F.hasFnAttribute(Attribute::ReadOnly),
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
-      // Inliner doesn't handle variadic functions with va_start calls.
       // FIXME: refactor this to use the same code that inliner is using.
-      InitsVarArgs ||
-          // Don't try to import functions with noinline attribute.
-          F.getAttributes().hasFnAttribute(Attribute::NoInline)};
+      // Don't try to import functions with noinline attribute.
+      F.getAttributes().hasFnAttribute(Attribute::NoInline)};
   auto FuncSummary = llvm::make_unique<FunctionSummary>(
       Flags, NumInsts, FunFlags, std::move(Refs), CallGraphEdges.takeVector(),
       TypeTests.takeVector(), TypeTestAssumeVCalls.takeVector(),

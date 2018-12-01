@@ -33,6 +33,8 @@ class LLVMConfig(object):
                                                 ['cmp.exe', 'grep.exe', 'sed.exe'])
             if path is not None:
                 self.with_environment('PATH', path, append_path=True)
+            # Many tools behave strangely if these environment variables aren't set.
+            self.with_system_environment(['SystemDrive', 'SystemRoot', 'TEMP', 'TMP'])
             self.use_lit_shell = True
 
         # Choose between lit's internal shell pipeline runner and a real shell.  If
