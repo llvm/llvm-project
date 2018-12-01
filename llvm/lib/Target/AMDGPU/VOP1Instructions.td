@@ -84,6 +84,10 @@ class VOP1_SDWA_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   let AsmMatchConverter = "cvtSdwaVOP1";
 }
 
+class VOP1_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
+  VOP_DPP_Pseudo <OpName, P, pattern> {
+}
+
 class getVOP1Pat64 <SDPatternOperator node, VOPProfile P> : LetDummies {
   list<dag> ret =
     !if(P.HasModifiers,
@@ -103,6 +107,8 @@ multiclass VOP1Inst <string opName, VOPProfile P,
   def _e32 : VOP1_Pseudo <opName, P>;
   def _e64 : VOP3_Pseudo <opName, P, getVOP1Pat64<node, P>.ret>;
   def _sdwa : VOP1_SDWA_Pseudo <opName, P>;
+  foreach _ = BoolToList<P.HasExtDPP>.ret in
+    def _dpp : VOP1_DPP_Pseudo <opName, P>;
 }
 
 // Special profile for instructions which have clamp
@@ -500,13 +506,8 @@ defm V_EXP_LEGACY_F32    : VOP1_Real_ci <0x46>;
 // VI
 //===----------------------------------------------------------------------===//
 
-class VOP1_DPP <bits<8> op, VOP1_Pseudo ps, VOPProfile P = ps.Pfl> :
-  VOP_DPP <ps.OpName, P> {
-  let Defs = ps.Defs;
-  let Uses = ps.Uses;
-  let SchedRW = ps.SchedRW;
-  let hasSideEffects = ps.hasSideEffects;
-
+class VOP1_DPPe <bits<8> op, VOP1_DPP_Pseudo ps, VOPProfile P = ps.Pfl> :
+  VOP_DPPe <P> {
   bits<8> vdst;
   let Inst{8-0}   = 0xfa; // dpp
   let Inst{16-9}  = op;
@@ -544,9 +545,10 @@ multiclass VOP1_Real_vi <bits<10> op> {
     VOP_SDWA9_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOP1_SDWA9Ae <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
-  // For now left dpp only for asm/dasm
-  // TODO: add corresponding pseudo
-  def _dpp : VOP1_DPP<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32")>;
+  foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
+    def _dpp_vi :
+      VOP_DPP_Real<!cast<VOP1_DPP_Pseudo>(NAME#"_dpp"), SIEncodingFamily.VI>,
+      VOP1_DPPe<op{7-0}, !cast<VOP1_DPP_Pseudo>(NAME#"_dpp")>;
 }
 
 defm V_NOP               : VOP1_Real_vi <0x0>;
@@ -717,9 +719,11 @@ multiclass VOP1_Real_gfx9 <bits<10> op> {
     VOP_SDWA9_Real <!cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOP1_SDWA9Ae <op{7-0}, !cast<VOP1_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
-  // For now left dpp only for asm/dasm
-  // TODO: add corresponding pseudo
-  def _dpp : VOP1_DPP<op{7-0}, !cast<VOP1_Pseudo>(NAME#"_e32")>;
+  foreach _ = BoolToList<!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExtDPP>.ret in
+    def _dpp_gfx9 :
+      VOP_DPP_Real<!cast<VOP1_DPP_Pseudo>(NAME#"_dpp"), SIEncodingFamily.GFX9>,
+      VOP1_DPPe<op{7-0}, !cast<VOP1_DPP_Pseudo>(NAME#"_dpp")>;
+
 }
 
 defm V_SCREEN_PARTITION_4SE_B32 : VOP1_Real_gfx9 <0x37>;

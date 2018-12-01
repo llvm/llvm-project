@@ -1,0 +1,38 @@
+static_library("Object") {
+  output_name = "LLVMObject"
+  deps = [
+    "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/include/llvm/Support:write_vcsrevision",
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/Bitcode/Reader",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/MC/MCParser",
+    "//llvm/lib/Support",
+  ]
+
+  sources = [
+    "Archive.cpp",
+    "ArchiveWriter.cpp",
+    "Binary.cpp",
+    "COFFImportFile.cpp",
+    "COFFModuleDefinition.cpp",
+    "COFFObjectFile.cpp",
+    "Decompressor.cpp",
+    "ELF.cpp",
+    "ELFObjectFile.cpp",
+    "Error.cpp",
+    "IRObjectFile.cpp",
+    "IRSymtab.cpp",
+    "MachOObjectFile.cpp",
+    "MachOUniversal.cpp",
+    "ModuleSymbolTable.cpp",
+    "Object.cpp",
+    "ObjectFile.cpp",
+    "RecordStreamer.cpp",
+    "SymbolSize.cpp",
+    "SymbolicFile.cpp",
+    "WasmObjectFile.cpp",
+    "WindowsResource.cpp",
+  ]
+}

@@ -93,13 +93,23 @@ SwitchTypeMatcher::~SwitchTypeMatcher() {
     delete C.second;
 }
 
-CheckPredicateMatcher::CheckPredicateMatcher(const TreePredicateFn &pred)
-  : Matcher(CheckPredicate), Pred(pred.getOrigPatFragRecord()) {}
+CheckPredicateMatcher::CheckPredicateMatcher(
+    const TreePredicateFn &pred, const SmallVectorImpl<unsigned> &Ops)
+  : Matcher(CheckPredicate), Pred(pred.getOrigPatFragRecord()),
+    Operands(Ops.begin(), Ops.end()) {}
 
 TreePredicateFn CheckPredicateMatcher::getPredicate() const {
   return TreePredicateFn(Pred);
 }
 
+unsigned CheckPredicateMatcher::getNumOperands() const {
+  return Operands.size();
+}
+
+unsigned CheckPredicateMatcher::getOperandNo(unsigned i) const {
+  assert(i < Operands.size());
+  return Operands[i];
+}
 
 
 // printImpl methods.

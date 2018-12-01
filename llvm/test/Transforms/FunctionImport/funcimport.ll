@@ -110,13 +110,13 @@ declare void @linkoncefunc2(...) #1
 ; CHECK-DAG: define available_externally void @variadic_no_va_start(...) !thinlto_src_module !0 {
 declare void @variadic_no_va_start(...)
 
-; We shouldn't import variadic functions without a va_start, since the inliner
-; cannot handle them.
-; CHECK-DAG: declare void @variadic_va_start(...)
+; We can import variadic functions with a va_start, since the inliner
+; can sometimes handle them.
+; CHECK-DAG: define available_externally void @variadic_va_start(...)
 declare void @variadic_va_start(...)
 
 ; INSTLIMDEF-DAG: Import globalfunc2
-; INSTLIMDEF-DAG: 14 function-import - Number of functions imported
+; INSTLIMDEF-DAG: 15 function-import - Number of functions imported
 ; INSTLIMDEF-DAG: 4 function-import - Number of global variables imported
 
 ; CHECK-DAG: !0 = !{!"{{.*}}/Inputs/funcimport.ll"}
@@ -156,7 +156,7 @@ declare void @variadic_va_start(...)
 ; GUID-DAG: GUID {{.*}} is linkoncefunc
 
 ; DUMP:       Module [[M1:.*]] imports from 1 module
-; DUMP-NEXT:  14 functions imported from [[M2:.*]]
+; DUMP-NEXT:  15 functions imported from [[M2:.*]]
 ; DUMP-NEXT:  4 vars imported from [[M2]]
-; DUMP:       Imported 14 functions for Module [[M1]]
+; DUMP:       Imported 15 functions for Module [[M1]]
 ; DUMP-NEXT:  Imported 4 global variables for Module [[M1]]

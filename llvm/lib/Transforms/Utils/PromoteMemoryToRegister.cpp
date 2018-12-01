@@ -751,14 +751,18 @@ void PromoteMem2Reg::run() {
     // Ok, now we know that all of the PHI nodes are missing entries for some
     // basic blocks.  Start by sorting the incoming predecessors for efficient
     // access.
-    llvm::sort(Preds);
+    auto CompareBBNumbers = [this](BasicBlock *A, BasicBlock *B) {
+      return BBNumbers.lookup(A) < BBNumbers.lookup(B);
+    };
+    llvm::sort(Preds, CompareBBNumbers);
 
     // Now we loop through all BB's which have entries in SomePHI and remove
     // them from the Preds list.
     for (unsigned i = 0, e = SomePHI->getNumIncomingValues(); i != e; ++i) {
       // Do a log(n) search of the Preds list for the entry we want.
       SmallVectorImpl<BasicBlock *>::iterator EntIt = std::lower_bound(
-          Preds.begin(), Preds.end(), SomePHI->getIncomingBlock(i));
+          Preds.begin(), Preds.end(), SomePHI->getIncomingBlock(i),
+          CompareBBNumbers);
       assert(EntIt != Preds.end() && *EntIt == SomePHI->getIncomingBlock(i) &&
              "PHI node has entry for a block which is not a predecessor!");
 

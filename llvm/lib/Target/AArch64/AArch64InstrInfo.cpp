@@ -5165,42 +5165,36 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     SetCandidateCallInfo(MachineOutlinerThunk, 4);
   }
 
-  // Make sure that LR isn't live on entry to this candidate. The only
-  // instructions that use LR that could possibly appear in a repeated sequence
-  // are calls. Therefore, we only have to check and see if LR is dead on entry
-  // to (or exit from) some candidate.
-  else if (std::all_of(RepeatedSequenceLocs.begin(),
-                       RepeatedSequenceLocs.end(),
-                       [&TRI](outliner::Candidate &C) {
-                         C.initLRU(TRI);
-                         return C.LRU.available(AArch64::LR);
-                         })) {
-    FrameID = MachineOutlinerNoLRSave;
-    NumBytesToCreateFrame = 4;
-    SetCandidateCallInfo(MachineOutlinerNoLRSave, 4);
-  }
-
-  // LR is live, so we need to save it. Decide whether it should be saved to
-  // the stack, or if it can be saved to a register.
   else {
-    if (all_of(RepeatedSequenceLocs, [this, &TRI](outliner::Candidate &C) {
-          C.initLRU(TRI);
-          return findRegisterToSaveLRTo(C);
-        })) {
-      // Every candidate has an available callee-saved register for the save.
-      // We can save LR to a register.
-      FrameID = MachineOutlinerRegSave;
-      NumBytesToCreateFrame = 4;
-      SetCandidateCallInfo(MachineOutlinerRegSave, 12);
+    // We need to decide how to emit calls + frames. We can always emit the same
+    // frame if we don't need to save to the stack. If we have to save to the
+    // stack, then we need a different frame.
+    unsigned NumNoStackSave = 0;
+
+    for (outliner::Candidate &C : RepeatedSequenceLocs) {
+      C.initLRU(TRI);
+
+      // Is LR available? If so, we don't need a save.
+      if (C.LRU.available(AArch64::LR)) {
+        C.setCallInfo(MachineOutlinerNoLRSave, 4);
+        ++NumNoStackSave;
+      }
+
+      // Is an unused register available? If so, we won't modify the stack, so
+      // we can outline with the same frame type as those that don't save LR.
+      else if (findRegisterToSaveLRTo(C)) {
+        C.setCallInfo(MachineOutlinerRegSave, 12);
+        ++NumNoStackSave;
+      }
     }
 
-    else {
-      // At least one candidate does not have an available callee-saved
-      // register. We must save LR to the stack.
-      FrameID = MachineOutlinerDefault;
-      NumBytesToCreateFrame = 4;
+    // If there are no places where we have to save LR, then note that we don't
+    // have to update the stack. Otherwise, give every candidate the default
+    // call type.
+    if (NumNoStackSave == RepeatedSequenceLocs.size())
+      FrameID = MachineOutlinerNoLRSave;
+    else
       SetCandidateCallInfo(MachineOutlinerDefault, 12);
-    }
   }
 
   // Does every candidate's MBB contain a call? If so, then we might have a call

@@ -511,14 +511,16 @@ void MachODebugMapParser::loadMainBinarySymbols(
     // Skip undefined and STAB entries.
     if ((Type == SymbolRef::ST_Debug) || (Type == SymbolRef::ST_Unknown))
       continue;
-    // The only symbols of interest are the global variables. These
-    // are the only ones that need to be queried because the address
-    // of common data won't be described in the debug map. All other
-    // addresses should be fetched for the debug map.
+    // In theory, the only symbols of interest are the global variables. These
+    // are the only ones that need to be queried because the address of common
+    // data won't be described in the debug map. All other addresses should be
+    // fetched for the debug map. In reality, by playing with 'ld -r' and
+    // export lists, you can get symbols described as N_GSYM in the debug map,
+    // but associated with a local symbol. Gather all the symbols, but prefer
+    // the global ones.
     uint8_t SymType =
         MainBinary.getSymbolTableEntry(Sym.getRawDataRefImpl()).n_type;
-    if (!(SymType & (MachO::N_EXT | MachO::N_PEXT)))
-      continue;
+    bool Extern = SymType & (MachO::N_EXT | MachO::N_PEXT);
     Expected<section_iterator> SectionOrErr = Sym.getSection();
     if (!SectionOrErr) {
       // TODO: Actually report errors helpfully.
@@ -538,7 +540,11 @@ void MachODebugMapParser::loadMainBinarySymbols(
     StringRef Name = *NameOrErr;
     if (Name.size() == 0 || Name[0] == '\0')
       continue;
-    MainBinarySymbolAddresses[Name] = Addr;
+    // Override only if the new key is global.
+    if (Extern)
+      MainBinarySymbolAddresses[Name] = Addr;
+    else
+      MainBinarySymbolAddresses.try_emplace(Name, Addr);
   }
 }
 

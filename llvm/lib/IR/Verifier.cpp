@@ -281,6 +281,9 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// Whether the current function has a DISubprogram attached to it.
   bool HasDebugInfo = false;
 
+  /// Whether source was present on the first DIFile encountered in each CU.
+  DenseMap<const DICompileUnit *, bool> HasSourceDebugInfo;
+
   /// Stores the count of how many objects were passed to llvm.localescape for a
   /// given function and the largest index passed to llvm.localrecover.
   DenseMap<Function *, std::pair<unsigned, unsigned>> FrameEscapeInfo;
@@ -519,6 +522,9 @@ private:
   /// Module-level verification that all @llvm.experimental.deoptimize
   /// declarations share the same calling convention.
   void verifyDeoptimizeCallingConvs();
+
+  /// Verify all-or-nothing property of DIFile source attribute within a CU.
+  void verifySourceDebugInfo(const DICompileUnit &U, const DIFile &F);
 };
 
 } // end anonymous namespace
@@ -1032,6 +1038,8 @@ void Verifier::visitDICompileUnit(const DICompileUnit &N) {
   AssertDI(!N.getFile()->getFilename().empty(), "invalid filename", &N,
            N.getFile());
 
+  verifySourceDebugInfo(N, *N.getFile());
+
   AssertDI((N.getEmissionKind() <= DICompileUnit::LastEmissionKind),
            "invalid emission kind", &N);
 
@@ -1109,6 +1117,8 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     AssertDI(N.isDistinct(), "subprogram definitions must be distinct", &N);
     AssertDI(Unit, "subprogram definitions must have a compile unit", &N);
     AssertDI(isa<DICompileUnit>(Unit), "invalid unit type", &N, Unit);
+    if (N.getFile())
+      verifySourceDebugInfo(*N.getUnit(), *N.getFile());
   } else {
     // Subprogram declarations (part of the type hierarchy).
     AssertDI(!Unit, "subprogram declarations must not have a compile unit", &N);
@@ -4742,6 +4752,14 @@ void Verifier::verifyDeoptimizeCallingConvs() {
            "calling convention",
            First, F);
   }
+}
+
+void Verifier::verifySourceDebugInfo(const DICompileUnit &U, const DIFile &F) {
+  bool HasSource = F.getSource().hasValue();
+  if (!HasSourceDebugInfo.count(&U))
+    HasSourceDebugInfo[&U] = HasSource;
+  AssertDI(HasSource == HasSourceDebugInfo[&U],
+           "inconsistent use of embedded source");
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,5 +1,5 @@
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,CI %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+flat-for-global < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -mattr=+load-store-opt,+flat-for-global -amdgpu-enable-global-sgpr-addr < %s | FileCheck -enable-var-scope -strict-whitespace -check-prefixes=GCN,GFX9 %s
 
 @lds = addrspace(3) global [512 x float] undef, align 4
 @lds.f64 = addrspace(3) global [512 x double] undef, align 8

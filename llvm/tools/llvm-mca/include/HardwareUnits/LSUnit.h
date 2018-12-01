@@ -24,6 +24,7 @@ namespace llvm {
 namespace mca {
 
 class InstRef;
+class Scheduler;
 
 /// A Load/Store Unit implementing a load and store queues.
 ///
@@ -110,7 +111,7 @@ class LSUnit : public HardwareUnit {
   //
   // This class doesn't know about the latency of a load instruction. So, it
   // conservatively/pessimistically assumes that the latency of a load opcode
-  // matches the instruction latency. 
+  // matches the instruction latency.
   //
   // FIXME: In the absence of cache misses (i.e. L1I/L1D/iTLB/dTLB hits/misses),
   // and load/store conflicts, the latency of a load is determined by the depth
@@ -195,7 +196,7 @@ public:
   // becomes available to the users. At that point, the load no longer needs to
   // be tracked by the load queue.
   // FIXME: For simplicity, we optimistically assume a similar behavior for
-  // store instructions.  In practice, store operation don't tend to leave the
+  // store instructions. In practice, store operations don't tend to leave the
   // store queue until they reach the 'Retired' stage (See PR39830).
   void onInstructionExecuted(const InstRef &IR);
 };

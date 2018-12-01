@@ -5275,12 +5275,14 @@ void AMDGPUAsmParser::cvtDPP(MCInst &Inst, const OperandVector &Operands) {
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
-  // All DPP instructions with at least one source operand have a fake "old"
-  // source at the beginning that's tied to the dst operand. Handle it here.
-  if (Desc.getNumOperands() >= 2)
-    Inst.addOperand(Inst.getOperand(0));
-
   for (unsigned E = Operands.size(); I != E; ++I) {
+    auto TiedTo = Desc.getOperandConstraint(Inst.getNumOperands(),
+                                            MCOI::TIED_TO);
+    if (TiedTo != -1) {
+      assert((unsigned)TiedTo < Inst.getNumOperands());
+      // handle tied old or src2 for MAC instructions
+      Inst.addOperand(Inst.getOperand(TiedTo));
+    }
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     // Add the register arguments
     if (Op.isReg() && Op.Reg.RegNo == AMDGPU::VCC) {

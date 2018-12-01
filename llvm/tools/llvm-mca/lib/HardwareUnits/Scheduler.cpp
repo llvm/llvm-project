@@ -51,7 +51,7 @@ Scheduler::Status Scheduler::isAvailable(const InstRef &IR) const {
   }
 
   // Give lower priority to LSUnit stall events.
-  switch (LSU->isAvailable(IR)) {
+  switch (LSU.isAvailable(IR)) {
   case LSUnit::LSU_LQUEUE_FULL:
     return Scheduler::SC_LOAD_QUEUE_FULL;
   case LSUnit::LSU_SQUEUE_FULL:
@@ -80,7 +80,7 @@ void Scheduler::issueInstructionImpl(
   if (IS->isExecuting())
     IssuedSet.emplace_back(IR);
   else if (IS->isExecuted())
-    LSU->onInstructionExecuted(IR);
+    LSU.onInstructionExecuted(IR);
 }
 
 // Release the buffered resources and issue the instruction.
@@ -170,7 +170,7 @@ void Scheduler::updateIssuedSet(SmallVectorImpl<InstRef> &Executed) {
     }
 
     // Instruction IR has completed execution.
-    LSU->onInstructionExecuted(IR);
+    LSU.onInstructionExecuted(IR);
     Executed.emplace_back(IR);
     ++RemovedElements;
     IR.invalidate();
@@ -213,7 +213,7 @@ void Scheduler::dispatch(const InstRef &IR) {
   // If necessary, reserve queue entries in the load-store unit (LSU).
   bool IsMemOp = Desc.MayLoad || Desc.MayStore;
   if (IsMemOp)
-    LSU->dispatch(IR);
+    LSU.dispatch(IR);
 
   if (!isReady(IR)) {
     LLVM_DEBUG(dbgs() << "[SCHEDULER] Adding #" << IR << " to the WaitSet\n");
@@ -238,7 +238,7 @@ void Scheduler::dispatch(const InstRef &IR) {
 bool Scheduler::isReady(const InstRef &IR) const {
   const InstrDesc &Desc = IR.getInstruction()->getDesc();
   bool IsMemOp = Desc.MayLoad || Desc.MayStore;
-  return IR.getInstruction()->isReady() && (!IsMemOp || LSU->isReady(IR));
+  return IR.getInstruction()->isReady() && (!IsMemOp || LSU.isReady(IR));
 }
 
 } // namespace mca
