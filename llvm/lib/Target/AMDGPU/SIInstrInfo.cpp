@@ -876,7 +876,7 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   MachineFunction *MF = MBB.getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
-  DebugLoc DL = MBB.findDebugLoc(MI);
+  const DebugLoc &DL = MBB.findDebugLoc(MI);
 
   unsigned Size = FrameInfo.getObjectSize(FrameIndex);
   unsigned Align = FrameInfo.getObjectAlignment(FrameIndex);
@@ -977,7 +977,7 @@ void SIInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   MachineFunction *MF = MBB.getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
-  DebugLoc DL = MBB.findDebugLoc(MI);
+  const DebugLoc &DL = MBB.findDebugLoc(MI);
   unsigned Align = FrameInfo.getObjectAlignment(FrameIndex);
   unsigned Size = FrameInfo.getObjectSize(FrameIndex);
   unsigned SpillSize = TRI->getSpillSize(*RC);
@@ -1032,7 +1032,7 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(
   MachineFunction *MF = MBB.getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
-  DebugLoc DL = MBB.findDebugLoc(MI);
+  const DebugLoc &DL = MBB.findDebugLoc(MI);
   unsigned WorkGroupSize = MFI->getMaxFlatWorkGroupSize();
   unsigned WavefrontSize = ST.getWavefrontSize();
 
@@ -1040,7 +1040,7 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(
   if (!MFI->hasCalculatedTID()) {
     MachineBasicBlock &Entry = MBB.getParent()->front();
     MachineBasicBlock::iterator Insert = Entry.front();
-    DebugLoc DL = Insert->getDebugLoc();
+    const DebugLoc &DL = Insert->getDebugLoc();
 
     TIDReg = RI.findUnusedRegister(MF->getRegInfo(), &AMDGPU::VGPR_32RegClass,
                                    *MF);
@@ -4162,7 +4162,10 @@ void SIInstrInfo::moveToVALU(MachineInstr &TopInst,
       continue;
 
     case AMDGPU::S_XNOR_B64:
-      splitScalar64BitBinaryOp(Worklist, Inst, AMDGPU::S_XNOR_B32, MDT);
+      if (ST.hasDLInsts())
+        splitScalar64BitBinaryOp(Worklist, Inst, AMDGPU::S_XNOR_B32, MDT);
+      else
+        splitScalar64BitXnor(Worklist, Inst, MDT);
       Inst.eraseFromParent();
       continue;
 
@@ -4753,13 +4756,55 @@ void SIInstrInfo::splitScalar64BitBinaryOp(SetVectorType &Worklist,
   addUsersToMoveToVALUWorklist(FullDestReg, MRI, Worklist);
 }
 
+void SIInstrInfo::splitScalar64BitXnor(SetVectorType &Worklist,
+                                       MachineInstr &Inst,
+                                       MachineDominatorTree *MDT) const {
+  MachineBasicBlock &MBB = *Inst.getParent();
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+
+  MachineOperand &Dest = Inst.getOperand(0);
+  MachineOperand &Src0 = Inst.getOperand(1);
+  MachineOperand &Src1 = Inst.getOperand(2);
+  const DebugLoc &DL = Inst.getDebugLoc();
+
+  MachineBasicBlock::iterator MII = Inst;
+
+  const TargetRegisterClass *DestRC = MRI.getRegClass(Dest.getReg());
+
+  unsigned Interm = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+
+  MachineOperand* Op0;
+  MachineOperand* Op1;
+
+  if (Src0.isReg() && RI.isSGPRReg(MRI, Src0.getReg())) {
+    Op0 = &Src0;
+    Op1 = &Src1;
+  } else {
+    Op0 = &Src1;
+    Op1 = &Src0;
+  }
+
+  BuildMI(MBB, MII, DL, get(AMDGPU::S_NOT_B64), Interm)
+    .add(*Op0);
+
+  unsigned NewDest = MRI.createVirtualRegister(DestRC);
+
+  MachineInstr &Xor = *BuildMI(MBB, MII, DL, get(AMDGPU::S_XOR_B64), NewDest)
+    .addReg(Interm)
+    .add(*Op1);
+
+  MRI.replaceRegWith(Dest.getReg(), NewDest);
+
+  Worklist.insert(&Xor);
+}
+
 void SIInstrInfo::splitScalar64BitBCNT(
     SetVectorType &Worklist, MachineInstr &Inst) const {
   MachineBasicBlock &MBB = *Inst.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
 
   MachineBasicBlock::iterator MII = Inst;
-  DebugLoc DL = Inst.getDebugLoc();
+  const DebugLoc &DL = Inst.getDebugLoc();
 
   MachineOperand &Dest = Inst.getOperand(0);
   MachineOperand &Src = Inst.getOperand(1);
@@ -4795,7 +4840,7 @@ void SIInstrInfo::splitScalar64BitBFE(SetVectorType &Worklist,
   MachineBasicBlock &MBB = *Inst.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
   MachineBasicBlock::iterator MII = Inst;
-  DebugLoc DL = Inst.getDebugLoc();
+  const DebugLoc &DL = Inst.getDebugLoc();
 
   MachineOperand &Dest = Inst.getOperand(0);
   uint32_t Imm = Inst.getOperand(2).getImm();

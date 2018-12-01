@@ -639,9 +639,12 @@ static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
   // is determined by DT_VERDEFNUM tag.
   unsigned VerDefsNum = 0;
   for (const typename ELFO::Elf_Dyn &Dyn : Dumper->dynamic_table()) {
-    if (Dyn.d_tag == DT_VERDEFNUM)
+    if (Dyn.d_tag == DT_VERDEFNUM) {
       VerDefsNum = Dyn.d_un.d_val;
+      break;
+    }
   }
+
   const uint8_t *SecStartAddress =
       (const uint8_t *)Obj->base() + Sec->sh_offset;
   const uint8_t *SecEndAddress = SecStartAddress + Sec->sh_size;
@@ -692,9 +695,12 @@ static void printVersionDependencySection(ELFDumper<ELFT> *Dumper,
     return;
 
   unsigned VerNeedNum = 0;
-  for (const typename ELFO::Elf_Dyn &Dyn : Dumper->dynamic_table())
-    if (Dyn.d_tag == DT_VERNEEDNUM)
+  for (const typename ELFO::Elf_Dyn &Dyn : Dumper->dynamic_table()) {
+    if (Dyn.d_tag == DT_VERNEEDNUM) {
       VerNeedNum = Dyn.d_un.d_val;
+      break;
+    }
+  }
 
   const uint8_t *SecData = (const uint8_t *)Obj->base() + Sec->sh_offset;
   const typename ELFO::Elf_Shdr *StrTab =
