@@ -730,20 +730,33 @@ ExprResult Sema::DefaultArgumentPromotion(Expr *E) {
     return ExprError();
   E = Res.get();
 
+  QualType ScalarTy = Ty;
+  unsigned NumElts = 0;
+  if (const ExtVectorType *VecTy = Ty->getAs<ExtVectorType>()) {
+    NumElts = VecTy->getNumElements();
+    ScalarTy = VecTy->getElementType();
+  }
+
   // If this is a 'float'  or '__fp16' (CVR qualified or typedef)
   // promote to double.
   // Note that default argument promotion applies only to float (and
   // half/fp16); it does not apply to _Float16.
-  const BuiltinType *BTy = Ty->getAs<BuiltinType>();
+  const BuiltinType *BTy = ScalarTy->getAs<BuiltinType>();
   if (BTy && (BTy->getKind() == BuiltinType::Half ||
               BTy->getKind() == BuiltinType::Float)) {
     if (getLangOpts().OpenCL &&
         !getOpenCLOptions().isEnabled("cl_khr_fp64")) {
-        if (BTy->getKind() == BuiltinType::Half) {
-            E = ImpCastExprToType(E, Context.FloatTy, CK_FloatingCast).get();
-        }
+      if (BTy->getKind() == BuiltinType::Half) {
+        QualType Ty = Context.FloatTy;
+        if (NumElts != 0)
+          Ty = Context.getExtVectorType(Ty, NumElts);
+        E = ImpCastExprToType(E, Ty, CK_FloatingCast).get();
+      }
     } else {
-      E = ImpCastExprToType(E, Context.DoubleTy, CK_FloatingCast).get();
+      QualType Ty = Context.DoubleTy;
+      if (NumElts != 0)
+        Ty = Context.getExtVectorType(Ty, NumElts);
+      E = ImpCastExprToType(E, Ty, CK_FloatingCast).get();
     }
   }
 

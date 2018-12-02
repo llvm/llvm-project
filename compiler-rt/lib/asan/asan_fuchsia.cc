@@ -190,6 +190,13 @@ static void ThreadExitHook(void *hook, uptr os_id) {
   AsanThread::TSDDtor(per_thread);
 }
 
+bool HandleDlopenInit() {
+  // Not supported on this platform.
+  static_assert(!SANITIZER_SUPPORTS_INIT_FOR_DLOPEN,
+                "Expected SANITIZER_SUPPORTS_INIT_FOR_DLOPEN to be false");
+  return false;
+}
+
 }  // namespace __asan
 
 // These are declared (in extern "C") by <zircon/sanitizer.h>.
