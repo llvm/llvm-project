@@ -568,3 +568,51 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownMulBits) {
       "}\n");
   expectKnownBits(/*zero*/ 95u, /*one*/ 32u);
 }
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownFshl) {
+  // fshl(....1111....0000, 00..1111........, 6)
+  // = 11....000000..11
+  parseAssembly(
+      "define i16 @test(i16 %a, i16 %b) {\n"
+      "  %aa = shl i16 %a, 4\n"
+      "  %bb = lshr i16 %b, 2\n"
+      "  %aaa = or i16 %aa, 3840\n"
+      "  %bbb = or i16 %bb, 3840\n"
+      "  %A = call i16 @llvm.fshl.i16(i16 %aaa, i16 %bbb, i16 6)\n"
+      "  ret i16 %A\n"
+      "}\n"
+      "declare i16 @llvm.fshl.i16(i16, i16, i16)\n");
+  expectKnownBits(/*zero*/ 1008u, /*one*/ 49155u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownFshr) {
+  // fshr(....1111....0000, 00..1111........, 26)
+  // = 11....000000..11
+  parseAssembly(
+      "define i16 @test(i16 %a, i16 %b) {\n"
+      "  %aa = shl i16 %a, 4\n"
+      "  %bb = lshr i16 %b, 2\n"
+      "  %aaa = or i16 %aa, 3840\n"
+      "  %bbb = or i16 %bb, 3840\n"
+      "  %A = call i16 @llvm.fshr.i16(i16 %aaa, i16 %bbb, i16 26)\n"
+      "  ret i16 %A\n"
+      "}\n"
+      "declare i16 @llvm.fshr.i16(i16, i16, i16)\n");
+  expectKnownBits(/*zero*/ 1008u, /*one*/ 49155u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownFshlZero) {
+  // fshl(....1111....0000, 00..1111........, 0)
+  // = ....1111....0000
+  parseAssembly(
+      "define i16 @test(i16 %a, i16 %b) {\n"
+      "  %aa = shl i16 %a, 4\n"
+      "  %bb = lshr i16 %b, 2\n"
+      "  %aaa = or i16 %aa, 3840\n"
+      "  %bbb = or i16 %bb, 3840\n"
+      "  %A = call i16 @llvm.fshl.i16(i16 %aaa, i16 %bbb, i16 0)\n"
+      "  ret i16 %A\n"
+      "}\n"
+      "declare i16 @llvm.fshl.i16(i16, i16, i16)\n");
+  expectKnownBits(/*zero*/ 15u, /*one*/ 3840u);
+}

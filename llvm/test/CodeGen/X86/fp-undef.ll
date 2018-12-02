@@ -508,7 +508,7 @@ define double @frem_undef_op1_fast_constant_inf(double %x) {
 define <2 x double> @fadd_undef_op1_constant_vec(<2 x double> %x) {
 ; ANY-LABEL: fadd_undef_op1_constant_vec:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN]
+; ANY-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; ANY-NEXT:    retq
   %r = fadd <2 x double> <double 42.0, double undef>, undef
   ret <2 x double> %r
@@ -517,7 +517,7 @@ define <2 x double> @fadd_undef_op1_constant_vec(<2 x double> %x) {
 define <2 x double> @fadd_undef_op0_constant_vec(<2 x double> %x) {
 ; ANY-LABEL: fadd_undef_op0_constant_vec:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN]
+; ANY-NEXT:    movaps {{.*#+}} xmm0 = <u,NaN>
 ; ANY-NEXT:    retq
   %r = fadd <2 x double> undef, <double undef, double 42.0>
   ret <2 x double> %r
@@ -526,7 +526,7 @@ define <2 x double> @fadd_undef_op0_constant_vec(<2 x double> %x) {
 define <2 x double> @fsub_undef_op1_constant_vec(<2 x double> %x) {
 ; ANY-LABEL: fsub_undef_op1_constant_vec:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN]
+; ANY-NEXT:    movaps {{.*#+}} xmm0 = <u,NaN>
 ; ANY-NEXT:    retq
   %r = fsub <2 x double> <double undef, double 42.0>, undef
   ret <2 x double> %r
@@ -535,7 +535,7 @@ define <2 x double> @fsub_undef_op1_constant_vec(<2 x double> %x) {
 define <2 x double> @fsub_undef_op0_constant_vec(<2 x double> %x) {
 ; ANY-LABEL: fsub_undef_op0_constant_vec:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN]
+; ANY-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; ANY-NEXT:    retq
   %r = fsub <2 x double> undef, <double 42.0, double undef>
   ret <2 x double> %r
@@ -544,7 +544,7 @@ define <2 x double> @fsub_undef_op0_constant_vec(<2 x double> %x) {
 define <2 x double> @fmul_undef_op1_constant_vec(<2 x double> %x) {
 ; ANY-LABEL: fmul_undef_op1_constant_vec:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN]
+; ANY-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; ANY-NEXT:    retq
   %r = fmul <2 x double> <double 42.0, double undef>, undef
   ret <2 x double> %r
@@ -553,7 +553,7 @@ define <2 x double> @fmul_undef_op1_constant_vec(<2 x double> %x) {
 define <2 x double> @fmul_undef_op0_constant_vec(<2 x double> %x) {
 ; ANY-LABEL: fmul_undef_op0_constant_vec:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN]
+; ANY-NEXT:    movaps {{.*#+}} xmm0 = <u,NaN>
 ; ANY-NEXT:    retq
   %r = fmul <2 x double> undef, <double undef, double 42.0>
   ret <2 x double> %r
@@ -562,7 +562,7 @@ define <2 x double> @fmul_undef_op0_constant_vec(<2 x double> %x) {
 define <2 x double> @fdiv_undef_op1_constant_vec(<2 x double> %x) {
 ; ANY-LABEL: fdiv_undef_op1_constant_vec:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN]
+; ANY-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; ANY-NEXT:    retq
   %r = fdiv <2 x double> <double 42.0, double undef>, undef
   ret <2 x double> %r
@@ -571,7 +571,7 @@ define <2 x double> @fdiv_undef_op1_constant_vec(<2 x double> %x) {
 define <2 x double> @fdiv_undef_op0_constant_vec(<2 x double> %x) {
 ; ANY-LABEL: fdiv_undef_op0_constant_vec:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN]
+; ANY-NEXT:    movaps {{.*#+}} xmm0 = <u,NaN>
 ; ANY-NEXT:    retq
   %r = fdiv <2 x double> undef, <double undef, double 42.0>
   ret <2 x double> %r
@@ -580,7 +580,7 @@ define <2 x double> @fdiv_undef_op0_constant_vec(<2 x double> %x) {
 define <2 x double> @frem_undef_op1_constant_vec(<2 x double> %x) {
 ; ANY-LABEL: frem_undef_op1_constant_vec:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN]
+; ANY-NEXT:    movaps {{.*#+}} xmm0 = <u,NaN>
 ; ANY-NEXT:    retq
   %r = frem <2 x double> <double undef, double 42.0>, undef
   ret <2 x double> %r
@@ -589,7 +589,7 @@ define <2 x double> @frem_undef_op1_constant_vec(<2 x double> %x) {
 define <2 x double> @frem_undef_op0_constant_vec(<2 x double> %x) {
 ; ANY-LABEL: frem_undef_op0_constant_vec:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movaps {{.*#+}} xmm0 = [NaN,NaN]
+; ANY-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; ANY-NEXT:    retq
   %r = frem <2 x double> undef, <double 42.0, double undef>
   ret <2 x double> %r
