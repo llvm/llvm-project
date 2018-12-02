@@ -4400,14 +4400,20 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
     if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(Cst2))
       return FoldSymbolOffset(Opcode, VT, GA, Cst1);
 
-  // For vectors extract each constant element into Inputs so we can constant
-  // fold them individually.
-  BuildVectorSDNode *BV1 = dyn_cast<BuildVectorSDNode>(Cst1);
-  BuildVectorSDNode *BV2 = dyn_cast<BuildVectorSDNode>(Cst2);
-  if (!BV1 || !BV2)
+  // For vectors, extract each constant element and fold them individually.
+  // Either input may be an undef value.
+  auto *BV1 = dyn_cast<BuildVectorSDNode>(Cst1);
+  if (!BV1 && !Cst1->isUndef())
+    return SDValue();
+  auto *BV2 = dyn_cast<BuildVectorSDNode>(Cst2);
+  if (!BV2 && !Cst2->isUndef())
+    return SDValue();
+  // If both operands are undef, that's handled the same way as scalars.
+  if (!BV1 && !BV2)
     return SDValue();
 
-  assert(BV1->getNumOperands() == BV2->getNumOperands() && "Out of sync!");
+  assert((!BV1 || !BV2 || BV1->getNumOperands() == BV2->getNumOperands()) &&
+         "Vector binop with different number of elements in operands?");
 
   EVT SVT = VT.getScalarType();
   EVT LegalSVT = SVT;
@@ -4417,10 +4423,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       return SDValue();
   }
   SmallVector<SDValue, 4> Outputs;
-  for (unsigned I = 0, E = BV1->getNumOperands(); I != E; ++I) {
-    SDValue V1 = BV1->getOperand(I);
-    SDValue V2 = BV2->getOperand(I);
-
+  unsigned NumOps = BV1 ? BV1->getNumOperands() : BV2->getNumOperands();
+  for (unsigned I = 0; I != NumOps; ++I) {
+    SDValue V1 = BV1 ? BV1->getOperand(I) : getUNDEF(SVT);
+    SDValue V2 = BV2 ? BV2->getOperand(I) : getUNDEF(SVT);
     if (SVT.isInteger()) {
       if (V1->getValueType(0).bitsGT(SVT))
         V1 = getNode(ISD::TRUNCATE, DL, SVT, V1);

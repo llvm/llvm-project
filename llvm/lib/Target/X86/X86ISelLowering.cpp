@@ -25226,42 +25226,27 @@ static SDValue LowerBITCAST(SDValue Op, const X86Subtarget &Subtarget,
       // This conversion needs to be expanded.
       return SDValue();
 
-    SmallVector<SDValue, 16> Elts;
     SDLoc dl(Op);
-    unsigned NumElts;
-    MVT SVT;
     if (SrcVT.isVector()) {
-      NumElts = SrcVT.getVectorNumElements();
-      SVT = SrcVT.getVectorElementType();
-
       // Widen the vector in input in the case of MVT::v2i32.
       // Example: from MVT::v2i32 to MVT::v4i32.
-      for (unsigned i = 0, e = NumElts; i != e; ++i)
-        Elts.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, SVT, Src,
-                                   DAG.getIntPtrConstant(i, dl)));
+      MVT NewVT = MVT::getVectorVT(SrcVT.getVectorElementType(),
+                                   SrcVT.getVectorNumElements() * 2);
+      Src = DAG.getNode(ISD::CONCAT_VECTORS, dl, NewVT, Src,
+                        DAG.getUNDEF(SrcVT));
     } else {
       assert(SrcVT == MVT::i64 && !Subtarget.is64Bit() &&
              "Unexpected source type in LowerBITCAST");
-      Elts.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Src,
-                                 DAG.getIntPtrConstant(0, dl)));
-      Elts.push_back(DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, Src,
-                                 DAG.getIntPtrConstant(1, dl)));
-      NumElts = 2;
-      SVT = MVT::i32;
+      Src = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v2i64, Src);
     }
-    // Explicitly mark the extra elements as Undef.
-    Elts.append(NumElts, DAG.getUNDEF(SVT));
-
-    EVT NewVT = EVT::getVectorVT(*DAG.getContext(), SVT, NumElts * 2);
-    SDValue BV = DAG.getBuildVector(NewVT, dl, Elts);
 
     MVT V2X64VT = DstVT == MVT::f64 ? MVT::v2f64 : MVT::v2i64;
-    SDValue ToV2X64 = DAG.getBitcast(V2X64VT, BV);
+    Src = DAG.getNode(ISD::BITCAST, dl, V2X64VT, Src);
 
     if (DstVT == MVT::x86mmx)
-      return DAG.getNode(X86ISD::MOVDQ2Q, dl, DstVT, ToV2X64);
+      return DAG.getNode(X86ISD::MOVDQ2Q, dl, DstVT, Src);
 
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, DstVT, ToV2X64,
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, DstVT, Src,
                        DAG.getIntPtrConstant(0, dl));
   }
 

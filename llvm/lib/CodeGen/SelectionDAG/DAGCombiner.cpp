@@ -6098,16 +6098,21 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   if ((N0Opcode == ISD::SRL || N0Opcode == ISD::SHL) && N0.hasOneUse()) {
     ConstantSDNode *XorC = isConstOrConstSplat(N1);
     ConstantSDNode *ShiftC = isConstOrConstSplat(N0.getOperand(1));
+    unsigned BitWidth = VT.getScalarSizeInBits();
     if (XorC && ShiftC) {
-      APInt Ones = APInt::getAllOnesValue(VT.getScalarSizeInBits());
-      Ones = N0Opcode == ISD::SHL ? Ones.shl(ShiftC->getZExtValue())
-                                  : Ones.lshr(ShiftC->getZExtValue());
-      if (XorC->getAPIntValue() == Ones) {
-        // If the xor constant is a shifted -1, do a 'not' before the shift:
-        // xor (X << ShiftC), XorC --> (not X) << ShiftC
-        // xor (X >> ShiftC), XorC --> (not X) >> ShiftC
-        SDValue Not = DAG.getNOT(DL, N0.getOperand(0), VT);
-        return DAG.getNode(N0Opcode, DL, VT, Not, N0.getOperand(1));
+      // Don't crash on an oversized shift. We can not guarantee that a bogus
+      // shift has been simplified to undef.
+      uint64_t ShiftAmt = ShiftC->getLimitedValue();
+      if (ShiftAmt < BitWidth) {
+        APInt Ones = APInt::getAllOnesValue(BitWidth);
+        Ones = N0Opcode == ISD::SHL ? Ones.shl(ShiftAmt) : Ones.lshr(ShiftAmt);
+        if (XorC->getAPIntValue() == Ones) {
+          // If the xor constant is a shifted -1, do a 'not' before the shift:
+          // xor (X << ShiftC), XorC --> (not X) << ShiftC
+          // xor (X >> ShiftC), XorC --> (not X) >> ShiftC
+          SDValue Not = DAG.getNOT(DL, N0.getOperand(0), VT);
+          return DAG.getNode(N0Opcode, DL, VT, Not, N0.getOperand(1));
+        }
       }
     }
   }
