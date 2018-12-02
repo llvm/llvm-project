@@ -322,6 +322,13 @@ int __asan_set_seh_filter() {
   return 0;
 }
 
+bool HandleDlopenInit() {
+  // Not supported on this platform.
+  static_assert(!SANITIZER_SUPPORTS_INIT_FOR_DLOPEN,
+                "Expected SANITIZER_SUPPORTS_INIT_FOR_DLOPEN to be false");
+  return false;
+}
+
 #if !ASAN_DYNAMIC
 // The CRT runs initializers in this order:
 // - C initializers, from XIA to XIZ

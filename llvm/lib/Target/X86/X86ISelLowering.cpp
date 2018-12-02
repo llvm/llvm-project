@@ -23706,14 +23706,17 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
   // shift the results and pack the half lane results back together.
 
   MVT ExVT = MVT::getVectorVT(MVT::i16, NumElts / 2);
-  unsigned ExSSE41 = IsSigned ? ISD::SIGN_EXTEND_VECTOR_INREG
-                              : ISD::ZERO_EXTEND_VECTOR_INREG;
 
   // Extract the lo parts and zero/sign extend to i16.
+  // Only use SSE4.1 instructions for signed v16i8 where using unpack requires
+  // shifts to sign extend. Using unpack for unsigned only requires an xor to
+  // create zeros and a copy due to tied registers contraints pre-avx. But using
+  // zero_extend_vector_inreg would require an additional pshufd for the high
+  // part.
   SDValue ALo, BLo;
-  if (VT == MVT::v16i8 && Subtarget.hasSSE41()) {
-    ALo = DAG.getNode(ExSSE41, dl, ExVT, A);
-    BLo = DAG.getNode(ExSSE41, dl, ExVT, B);
+  if (IsSigned && VT == MVT::v16i8 && Subtarget.hasSSE41()) {
+    ALo = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, ExVT, A);
+    BLo = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, ExVT, B);
   } else if (IsSigned) {
     ALo = getUnpackl(DAG, dl, VT, DAG.getUNDEF(VT), A);
     BLo = getUnpackl(DAG, dl, VT, DAG.getUNDEF(VT), B);
@@ -23730,13 +23733,13 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
 
   // Extract the hi parts and zero/sign extend to i16.
   SDValue AHi, BHi;
-  if (VT == MVT::v16i8 && Subtarget.hasSSE41()) {
+  if (IsSigned && VT == MVT::v16i8 && Subtarget.hasSSE41()) {
     const int ShufMask[] = { 8,  9, 10, 11, 12, 13, 14, 15,
                             -1, -1, -1, -1, -1, -1, -1, -1};
     AHi = DAG.getVectorShuffle(VT, dl, A, A, ShufMask);
     BHi = DAG.getVectorShuffle(VT, dl, B, B, ShufMask);
-    AHi = DAG.getNode(ExSSE41, dl, ExVT, AHi);
-    BHi = DAG.getNode(ExSSE41, dl, ExVT, BHi);
+    AHi = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, ExVT, AHi);
+    BHi = DAG.getNode(ISD::SIGN_EXTEND_VECTOR_INREG, dl, ExVT, BHi);
   } else if (IsSigned) {
     AHi = getUnpackh(DAG, dl, VT, DAG.getUNDEF(VT), A);
     BHi = getUnpackh(DAG, dl, VT, DAG.getUNDEF(VT), B);

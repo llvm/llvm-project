@@ -342,4 +342,13 @@
 #define SANITIZER_SYMBOLIZER_MARKUP 0
 #endif
 
+// Enable ability to support sanitizer initialization that is
+// compatible with the sanitizer library being loaded via
+// `dlopen()`.
+#if SANITIZER_MAC
+#define SANITIZER_SUPPORTS_INIT_FOR_DLOPEN 1
+#else
+#define SANITIZER_SUPPORTS_INIT_FOR_DLOPEN 0
+#endif
+
 #endif // SANITIZER_PLATFORM_H

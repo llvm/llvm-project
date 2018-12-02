@@ -5284,7 +5284,29 @@ bool AArch64InstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
   if (any_of(MBB, [](MachineInstr &MI) { return MI.isCall(); }))
     Flags |= MachineOutlinerMBBFlags::HasCalls;
 
-  if (!LRU.available(AArch64::LR))
+  MachineFunction *MF = MBB.getParent();
+
+  // In the event that we outline, we may have to save LR. If there is an
+  // available register in the MBB, then we'll always save LR there. Check if
+  // this is true.
+  bool CanSaveLR = false;
+  const AArch64RegisterInfo *ARI = static_cast<const AArch64RegisterInfo *>(
+      MF->getSubtarget().getRegisterInfo());
+
+  // Check if there is an available register across the sequence that we can
+  // use.
+  for (unsigned Reg : AArch64::GPR64RegClass) {
+    if (!ARI->isReservedReg(*MF, Reg) && Reg != AArch64::LR &&
+        Reg != AArch64::X16 && Reg != AArch64::X17 && LRU.available(Reg)) {
+      CanSaveLR = true;
+      break;
+    }
+  }
+
+  // Check if we have a register we can save LR to, and if LR was used
+  // somewhere. If both of those things are true, then we need to evaluate the
+  // safety of outlining stack instructions later.
+  if (!CanSaveLR && !LRU.available(AArch64::LR))
     Flags |= MachineOutlinerMBBFlags::LRUnavailableSomewhere;
 
   return true;

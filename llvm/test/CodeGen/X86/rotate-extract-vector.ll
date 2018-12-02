@@ -221,12 +221,10 @@ define <2 x i64> @no_extract_udiv(<2 x i64> %i) nounwind {
 ; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl $3, {{[0-9]+}}(%esp)
 ; X86-NEXT:    vmovd %eax, %xmm0
-; X86-NEXT:    vpinsrd $1, %edx, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    calll __udivdi3
 ; X86-NEXT:    vmovdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X86-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
-; X86-NEXT:    vpinsrd $3, %edx, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X86-NEXT:    vextractps $1, %xmm0, {{[0-9]+}}(%esp)
