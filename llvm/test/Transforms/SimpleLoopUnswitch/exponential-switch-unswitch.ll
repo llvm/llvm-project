@@ -24,7 +24,7 @@
 ; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=8 -unswitch-siblings-toplevel-div=1 \
 ; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | \
-; RUN:     sort -b | FileCheck %s --check-prefixes=LOOP-RELAX
+; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-RELAX
 ;
 ; With relaxed candidates multiplier (unscaled candidates == 8) and with relaxed
 ; siblings multiplier for top-level loops (toplevel-div == 8) we should get
@@ -33,13 +33,13 @@
 ; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=true \
 ; RUN:     -unswitch-num-initial-unscaled-candidates=8 -unswitch-siblings-toplevel-div=8 \
 ; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | \
-; RUN:     sort -b | FileCheck %s --check-prefixes=LOOP-RELAX2
+; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-RELAX2
 ;
 ; We get hundreds of copies of the loop when cost multiplier is disabled:
 ;
 ; RUN: opt < %s -enable-nontrivial-unswitch -enable-unswitch-cost-multiplier=false \
 ; RUN:     -passes='loop(unswitch),print<loops>' -disable-output 2>&1 | \
-; RUN:     sort -b | FileCheck %s --check-prefixes=LOOP-MAX
+; RUN:     sort -b -k 1 | FileCheck %s --check-prefixes=LOOP-MAX
 ;
 
 ; Single loop nest, not unswitched

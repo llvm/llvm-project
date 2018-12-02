@@ -41,13 +41,13 @@
 ; {14,+,14,+,14} -> X=0, Y=14, Z=14
 ;
 ; CHECK-LABEL: Printing analysis 'Scalar Evolution Analysis' for function 'test01'
-; CHECK: GetQuadraticEquation: analyzing quadratic addrec: {-2,+,-2,+,-2}<%loop>
-; CHECK: GetQuadraticEquation: addrec coeff bw: 4
-; CHECK: GetQuadraticEquation: equation -2x^2 + -2x + -4, coeff bw: 5, multiplied by 2
-; CHECK: SolveQuadraticAddRecExact: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving -2x^2 + -2x + -4, rw:5
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 2x^2 + 2x + -28, rw:5
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 4
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {-2,+,-2,+,-2}<%loop>
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: addrec coeff bw: 4
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: equation -2x^2 + -2x + -4, coeff bw: 5, multiplied by 2
+; CHECK: {{.*}}SolveQuadraticAddRecExact{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving -2x^2 + -2x + -4, rw:5
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 2x^2 + 2x + -28, rw:5
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 4
 ; CHECK: Loop %loop: Unpredictable backedge-taken count
 define signext i32 @test01() {
 entry:
@@ -73,25 +73,25 @@ exit:
 ; {-72,+,-36,+,1} -> X=-37, Y=-35, Z=1
 ;
 ; CHECK-LABEL: Printing analysis 'Scalar Evolution Analysis' for function 'test02':
-; CHECK: GetQuadraticEquation: analyzing quadratic addrec: {0,+,-36,+,1}<%loop>
-; CHECK: GetQuadraticEquation: addrec coeff bw: 32
-; CHECK: GetQuadraticEquation: equation 1x^2 + -73x + 0, coeff bw: 33, multiplied by 2
-; CHECK: SolveQuadraticAddRecRange: solving for signed overflow
-; CHECK: SolveQuadraticEquationWrap: solving 1x^2 + -73x + 4294967154, rw:32
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + -73x + -142, rw:32
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 75
-; CHECK: SolveQuadraticAddRecRange: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving 1x^2 + -73x + 4294967154, rw:33
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + -73x + -4294967438, rw:33
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 65573
-; CHECK: SolveQuadraticAddRecRange: solving for signed overflow
-; CHECK: SolveQuadraticEquationWrap: solving 1x^2 + -73x + -146, rw:32
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + -73x + -146, rw:32
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 75
-; CHECK: SolveQuadraticAddRecRange: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving 1x^2 + -73x + -146, rw:33
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + -73x + -146, rw:33
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 75
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {0,+,-36,+,1}<%loop>
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: addrec coeff bw: 32
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: equation 1x^2 + -73x + 0, coeff bw: 33, multiplied by 2
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for signed overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 1x^2 + -73x + 4294967154, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + -73x + -142, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 75
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 1x^2 + -73x + 4294967154, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + -73x + -4294967438, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 65573
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for signed overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 1x^2 + -73x + -146, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + -73x + -146, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 75
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 1x^2 + -73x + -146, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + -73x + -146, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 75
 ; CHECK: Loop %loop: backedge-taken count is 75
 define signext i32 @test02() {
 entry:
@@ -117,13 +117,13 @@ exit:
 ; {17,+,-1,+,2} -> X=-3, Y=20, Z=2
 ;
 ; CHECK-LABEL: Printing analysis 'Scalar Evolution Analysis' for function 'test03':
-; CHECK: GetQuadraticEquation: analyzing quadratic addrec: {1,+,-1,+,2}<%loop>
-; CHECK: GetQuadraticEquation: addrec coeff bw: 4
-; CHECK: GetQuadraticEquation: equation 2x^2 + -4x + 2, coeff bw: 5, multiplied by 2
-; CHECK: SolveQuadraticAddRecExact: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving 2x^2 + -4x + 2, rw:5
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 2x^2 + -4x + 2, rw:5
-; CHECK: SolveQuadraticEquationWrap: solution (root): 1
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {1,+,-1,+,2}<%loop>
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: addrec coeff bw: 4
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: equation 2x^2 + -4x + 2, coeff bw: 5, multiplied by 2
+; CHECK: {{.*}}SolveQuadraticAddRecExact{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 2x^2 + -4x + 2, rw:5
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 2x^2 + -4x + 2, rw:5
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (root): 1
 ; CHECK: Loop %loop: backedge-taken count is 1
 define signext i32 @test03() {
 entry:
@@ -174,32 +174,32 @@ exit:
 ;
 
 ; CHECK-LABEL: Printing analysis 'Scalar Evolution Analysis' for function 'test04':
-; CHECK: GetQuadraticEquation: analyzing quadratic addrec: {0,+,3,+,4}<%loop>
-; CHECK: GetQuadraticEquation: addrec coeff bw: 16
-; CHECK: GetQuadraticEquation: equation 4x^2 + 2x + 0, coeff bw: 17, multiplied by 2
-; CHECK: SolveQuadraticAddRecRange: solving for signed overflow
-; CHECK: SolveQuadraticEquationWrap: solving 4x^2 + 2x + 2, rw:16
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 4x^2 + 2x + -65534, rw:16
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 128
-; CHECK: SolveQuadraticAddRecRange: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving 4x^2 + 2x + 2, rw:17
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 4x^2 + 2x + -131070, rw:17
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 181
-; CHECK: SolveQuadraticAddRecRange: solving for signed overflow
-; CHECK: SolveQuadraticEquationWrap: solving 4x^2 + 2x + 2, rw:16
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 4x^2 + 2x + -65534, rw:16
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 128
-; CHECK: SolveQuadraticAddRecRange: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving 4x^2 + 2x + 2, rw:17
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 4x^2 + 2x + -131070, rw:17
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 181
-; CHECK: GetQuadraticEquation: analyzing quadratic addrec: {1,+,3,+,4}<%loop>
-; CHECK: GetQuadraticEquation: addrec coeff bw: 16
-; CHECK: GetQuadraticEquation: equation 4x^2 + 2x + 2, coeff bw: 17, multiplied by 2
-; CHECK: SolveQuadraticAddRecExact: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving 4x^2 + 2x + 2, rw:17
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 4x^2 + 2x + -131070, rw:17
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 181
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {0,+,3,+,4}<%loop>
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: addrec coeff bw: 16
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: equation 4x^2 + 2x + 0, coeff bw: 17, multiplied by 2
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for signed overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 4x^2 + 2x + 2, rw:16
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 4x^2 + 2x + -65534, rw:16
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 128
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 4x^2 + 2x + 2, rw:17
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 4x^2 + 2x + -131070, rw:17
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 181
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for signed overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 4x^2 + 2x + 2, rw:16
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 4x^2 + 2x + -65534, rw:16
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 128
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 4x^2 + 2x + 2, rw:17
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 4x^2 + 2x + -131070, rw:17
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 181
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {1,+,3,+,4}<%loop>
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: addrec coeff bw: 16
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: equation 4x^2 + 2x + 2, coeff bw: 17, multiplied by 2
+; CHECK: {{.*}}SolveQuadraticAddRecExact{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 4x^2 + 2x + 2, rw:17
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 4x^2 + 2x + -131070, rw:17
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 181
 ; CHECK: Loop %loop: Unpredictable backedge-taken count.
 define signext i32 @test04() {
 entry:
@@ -224,25 +224,25 @@ exit:
 ; A case with signed arithmetic, but unsigned comparison.
 
 ; CHECK-LABEL: Printing analysis 'Scalar Evolution Analysis' for function 'test05':
-; CHECK: GetQuadraticEquation: analyzing quadratic addrec: {0,+,-1,+,-1}<%loop>
-; CHECK: GetQuadraticEquation: addrec coeff bw: 32
-; CHECK: GetQuadraticEquation: equation -1x^2 + -1x + 0, coeff bw: 33, multiplied by 2
-; CHECK: SolveQuadraticAddRecRange: solving for signed overflow
-; CHECK: SolveQuadraticEquationWrap: solving -1x^2 + -1x + 4, rw:32
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + 1x + -4, rw:32
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 2
-; CHECK: SolveQuadraticAddRecRange: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving -1x^2 + -1x + 4, rw:33
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + 1x + -4, rw:33
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 2
-; CHECK: SolveQuadraticAddRecRange: solving for signed overflow
-; CHECK: SolveQuadraticEquationWrap: solving -1x^2 + -1x + -2, rw:32
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + 1x + -4294967294, rw:32
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 65536
-; CHECK: SolveQuadraticAddRecRange: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving -1x^2 + -1x + -2, rw:33
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + 1x + -8589934590, rw:33
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 92682
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {0,+,-1,+,-1}<%loop>
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: addrec coeff bw: 32
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: equation -1x^2 + -1x + 0, coeff bw: 33, multiplied by 2
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for signed overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving -1x^2 + -1x + 4, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + 1x + -4, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 2
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving -1x^2 + -1x + 4, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + 1x + -4, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 2
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for signed overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving -1x^2 + -1x + -2, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + 1x + -4294967294, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 65536
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving -1x^2 + -1x + -2, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + 1x + -8589934590, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 92682
 ; CHECK: Loop %loop: backedge-taken count is 2
 
 define signext i32 @test05() {
@@ -268,25 +268,25 @@ exit:
 ; A test that used to crash with one of the earlier versions of the code.
 
 ; CHECK-LABEL: Printing analysis 'Scalar Evolution Analysis' for function 'test06':
-; CHECK: GetQuadraticEquation: analyzing quadratic addrec: {0,+,-99999,+,1}<%loop>
-; CHECK: GetQuadraticEquation: addrec coeff bw: 32
-; CHECK: GetQuadraticEquation: equation 1x^2 + -199999x + 0, coeff bw: 33, multiplied by 2
-; CHECK: SolveQuadraticAddRecRange: solving for signed overflow
-; CHECK: SolveQuadraticEquationWrap: solving 1x^2 + -199999x + -4294967294, rw:32
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + -199999x + 2, rw:32
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 1
-; CHECK: SolveQuadraticAddRecRange: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving 1x^2 + -199999x + -4294967294, rw:33
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + -199999x + 4294967298, rw:33
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 24469
-; CHECK: SolveQuadraticAddRecRange: solving for signed overflow
-; CHECK: SolveQuadraticEquationWrap: solving 1x^2 + -199999x + -12, rw:32
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + -199999x + 4294967284, rw:32
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 24469
-; CHECK: SolveQuadraticAddRecRange: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving 1x^2 + -199999x + -12, rw:33
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 1x^2 + -199999x + 8589934580, rw:33
-; CHECK: SolveQuadraticEquationWrap: solution (wrap): 62450
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {0,+,-99999,+,1}<%loop>
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: addrec coeff bw: 32
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: equation 1x^2 + -199999x + 0, coeff bw: 33, multiplied by 2
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for signed overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 1x^2 + -199999x + -4294967294, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + -199999x + 2, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 1
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 1x^2 + -199999x + -4294967294, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + -199999x + 4294967298, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 24469
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for signed overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 1x^2 + -199999x + -12, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + -199999x + 4294967284, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 24469
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 1x^2 + -199999x + -12, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 1x^2 + -199999x + 8589934580, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solution (wrap): 62450
 ; CHECK: Loop %loop: backedge-taken count is 24469
 define signext i32 @test06() {
 entry:
@@ -315,32 +315,32 @@ exit:
 ; solves the equation exactly, or changes the sign of it between n and n+1.
 
 ; CHECK-LABEL: Printing analysis 'Scalar Evolution Analysis' for function 'test07':
-; CHECK: GetQuadraticEquation: analyzing quadratic addrec: {0,+,40811489,+,532052752}<%loop>
-; CHECK: GetQuadraticEquation: addrec coeff bw: 32
-; CHECK: GetQuadraticEquation: equation 532052752x^2 + -450429774x + 0, coeff bw: 33, multiplied by 2
-; CHECK: SolveQuadraticAddRecRange: solving for signed overflow
-; CHECK: SolveQuadraticEquationWrap: solving 532052752x^2 + -450429774x + 71188414, rw:32
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 532052752x^2 + -450429774x + 71188414, rw:32
-; CHECK: SolveQuadraticEquationWrap: no valid solution
-; CHECK: SolveQuadraticAddRecRange: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving 532052752x^2 + -450429774x + 71188414, rw:33
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 532052752x^2 + -450429774x + 71188414, rw:33
-; CHECK: SolveQuadraticEquationWrap: no valid solution
-; CHECK: SolveQuadraticAddRecRange: solving for signed overflow
-; CHECK: SolveQuadraticEquationWrap: solving 532052752x^2 + -450429774x + 71188414, rw:32
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 532052752x^2 + -450429774x + 71188414, rw:32
-; CHECK: SolveQuadraticEquationWrap: no valid solution
-; CHECK: SolveQuadraticAddRecRange: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving 532052752x^2 + -450429774x + 71188414, rw:33
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 532052752x^2 + -450429774x + 71188414, rw:33
-; CHECK: SolveQuadraticEquationWrap: no valid solution
-; CHECK: GetQuadraticEquation: analyzing quadratic addrec: {35594207,+,40811489,+,532052752}<%loop>
-; CHECK: GetQuadraticEquation: addrec coeff bw: 32
-; CHECK: GetQuadraticEquation: equation 532052752x^2 + -450429774x + 71188414, coeff bw: 33, multiplied by 2
-; CHECK: SolveQuadraticAddRecExact: solving for unsigned overflow
-; CHECK: SolveQuadraticEquationWrap: solving 532052752x^2 + -450429774x + 71188414, rw:33
-; CHECK: SolveQuadraticEquationWrap: updated coefficients 532052752x^2 + -450429774x + 71188414, rw:33
-; CHECK: SolveQuadraticEquationWrap: no valid solution
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {0,+,40811489,+,532052752}<%loop>
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: addrec coeff bw: 32
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: equation 532052752x^2 + -450429774x + 0, coeff bw: 33, multiplied by 2
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for signed overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 532052752x^2 + -450429774x + 71188414, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 532052752x^2 + -450429774x + 71188414, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: no valid solution
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 532052752x^2 + -450429774x + 71188414, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 532052752x^2 + -450429774x + 71188414, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: no valid solution
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for signed overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 532052752x^2 + -450429774x + 71188414, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 532052752x^2 + -450429774x + 71188414, rw:32
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: no valid solution
+; CHECK: {{.*}}SolveQuadraticAddRecRange{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 532052752x^2 + -450429774x + 71188414, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 532052752x^2 + -450429774x + 71188414, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: no valid solution
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: analyzing quadratic addrec: {35594207,+,40811489,+,532052752}<%loop>
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: addrec coeff bw: 32
+; CHECK: {{.*}}GetQuadraticEquation{{.*}}: equation 532052752x^2 + -450429774x + 71188414, coeff bw: 33, multiplied by 2
+; CHECK: {{.*}}SolveQuadraticAddRecExact{{.*}}: solving for unsigned overflow
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: solving 532052752x^2 + -450429774x + 71188414, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: updated coefficients 532052752x^2 + -450429774x + 71188414, rw:33
+; CHECK: {{.*}}SolveQuadraticEquationWrap{{.*}}: no valid solution
 ; CHECK: Loop %loop: Unpredictable backedge-taken count.
 define signext i32 @test07() {
 entry:
