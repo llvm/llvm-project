@@ -23,6 +23,7 @@ add_clang_library(clangDaemon
   FindSymbols.cpp
   FileDistance.cpp
   FS.cpp
+  FSProvider.cpp
   FuzzyMatch.cpp
   GlobalCompilationDatabase.cpp
   Headers.cpp
