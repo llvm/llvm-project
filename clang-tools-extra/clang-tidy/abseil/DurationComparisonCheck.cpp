@@ -47,8 +47,7 @@ static llvm::Optional<DurationScale> getScaleForInverse(llvm::StringRef Name) {
 static const std::pair<llvm::StringRef, llvm::StringRef> &
 getInverseForScale(DurationScale Scale) {
   static const std::unordered_map<DurationScale,
-                                  std::pair<llvm::StringRef, llvm::StringRef>,
-                                  std::hash<std::int8>>
+                                  std::pair<llvm::StringRef, llvm::StringRef>>
       InverseMap(
           {{DurationScale::Hours,
             std::make_pair("::absl::ToDoubleHours", "::absl::ToInt64Hours")},
