@@ -737,6 +737,8 @@ def is_thread_crashed(test, thread):
     elif test.getPlatform() == "linux":
         return thread.GetStopReason() == lldb.eStopReasonSignal and thread.GetStopReasonDataAtIndex(
             0) == thread.GetProcess().GetUnixSignals().GetSignalNumberFromName("SIGSEGV")
+    elif test.getPlatform() == "windows":
+        return "Exception 0xc0000005" in thread.GetStopDescription(100)
     else:
         return "invalid address" in thread.GetStopDescription(100)
 
