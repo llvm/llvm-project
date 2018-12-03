@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DurationFactoryScaleCheck.h"
+#include "DurationRewriter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/FixIt.h"
@@ -17,20 +18,6 @@ using namespace clang::ast_matchers;
 namespace clang {
 namespace tidy {
 namespace abseil {
-
-namespace {
-
-// Potential scales of our inputs.
-enum class DurationScale {
-  Hours,
-  Minutes,
-  Seconds,
-  Milliseconds,
-  Microseconds,
-  Nanoseconds,
-};
-
-} // namespace
 
 // Given the name of a duration factory function, return the appropriate
 // `DurationScale` for that factory.  If no factory can be found for
@@ -129,39 +116,14 @@ static llvm::Optional<DurationScale> GetNewScale(DurationScale OldScale,
   return llvm::None;
 }
 
-// Given a `Scale`, return the appropriate factory function call for
-// constructing a `Duration` for that scale.
-static llvm::StringRef GetFactoryForScale(DurationScale Scale) {
-  switch (Scale) {
-  case DurationScale::Hours:
-    return "absl::Hours";
-  case DurationScale::Minutes:
-    return "absl::Minutes";
-  case DurationScale::Seconds:
-    return "absl::Seconds";
-  case DurationScale::Milliseconds:
-    return "absl::Milliseconds";
-  case DurationScale::Microseconds:
-    return "absl::Microseconds";
-  case DurationScale::Nanoseconds:
-    return "absl::Nanoseconds";
-  }
-  llvm_unreachable("unknown scaling factor");
-}
-
 void DurationFactoryScaleCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
-          callee(functionDecl(
-                     hasAnyName("::absl::Nanoseconds", "::absl::Microseconds",
-                                "::absl::Milliseconds", "::absl::Seconds",
-                                "::absl::Minutes", "::absl::Hours"))
-                     .bind("call_decl")),
+          callee(functionDecl(DurationFactoryFunction()).bind("call_decl")),
           hasArgument(
               0,
               ignoringImpCasts(anyOf(
-                  integerLiteral(equals(0)).bind("zero"),
-                  floatLiteral(equals(0.0)).bind("zero"),
+                  integerLiteral(equals(0)), floatLiteral(equals(0.0)),
                   binaryOperator(hasOperatorName("*"),
                                  hasEitherOperand(ignoringImpCasts(
                                      anyOf(integerLiteral(), floatLiteral()))))
@@ -185,7 +147,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // We first handle the cases of literal zero (both float and integer).
-  if (Result.Nodes.getNodeAs<Stmt>("zero")) {
+  if (IsLiteralZero(Result, *Arg)) {
     diag(Call->getBeginLoc(),
          "use ZeroDuration() for zero-length time intervals")
         << FixItHint::CreateReplacement(Call->getSourceRange(),
@@ -244,7 +206,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
       diag(Call->getBeginLoc(), "internal duration scaling can be removed")
           << FixItHint::CreateReplacement(
                  Call->getSourceRange(),
-                 (llvm::Twine(GetFactoryForScale(*NewScale)) + "(" +
+                 (llvm::Twine(getFactoryForScale(*NewScale)) + "(" +
                   tooling::fixit::getText(*Remainder, *Result.Context) + ")")
                      .str());
     }
@@ -257,7 +219,7 @@ void DurationFactoryScaleCheck::check(const MatchFinder::MatchResult &Result) {
     diag(Call->getBeginLoc(), "internal duration scaling can be removed")
         << FixItHint::CreateReplacement(
                Call->getSourceRange(),
-               (llvm::Twine(GetFactoryForScale(*NewScale)) + "(" +
+               (llvm::Twine(getFactoryForScale(*NewScale)) + "(" +
                 tooling::fixit::getText(*Remainder, *Result.Context) + ")")
                    .str());
   }
