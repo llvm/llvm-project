@@ -18,6 +18,7 @@
 #include "index/Merge.h"
 #include "index/SymbolCollector.h"
 #include "index/SymbolYAML.h"
+#include "Logger.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Index/IndexDataConsumer.h"
@@ -133,12 +134,15 @@ SymbolSlab mergeSymbols(tooling::ToolResults *Results) {
     Arena.Reset();
     llvm::yaml::Input Yin(Value, &Arena);
     auto Sym = clang::clangd::SymbolFromYAML(Yin, Arena);
-    clang::clangd::SymbolID ID;
-    Key >> ID;
-    if (const auto *Existing = UniqueSymbols.find(ID))
-      UniqueSymbols.insert(mergeSymbol(*Existing, Sym, &Scratch));
-    else
-      UniqueSymbols.insert(Sym);
+    auto ExpectedID = clang::clangd::SymbolID::fromStr(Key);
+    if (ExpectedID) {
+      if (const auto *Existing = UniqueSymbols.find(*ExpectedID))
+        UniqueSymbols.insert(mergeSymbol(*Existing, Sym, &Scratch));
+      else
+        UniqueSymbols.insert(Sym);
+    } else {
+      clang::clangd::elog("Failed to get SymbolId::fromStr('{0}'): {1}", Key, ExpectedID.takeError());
+    }
   });
   return std::move(UniqueSymbols).build();
 }
