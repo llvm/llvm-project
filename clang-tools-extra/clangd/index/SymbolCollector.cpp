@@ -260,7 +260,7 @@ void SymbolCollector::initialize(ASTContext &Ctx) {
 }
 
 bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
-                                          ASTContext &ASTCtx,
+                                          const ASTContext &ASTCtx,
                                           const Options &Opts) {
   if (ND.isImplicit())
     return false;
