@@ -303,9 +303,8 @@ def MismatchedIteratorChecker : Checker<"MismatchedIterator">,
   HelpText<"Check for use of iterators of different containers where iterators "
            "of the same container are expected">;
 
-def MisusedMovedObjectChecker: Checker<"MisusedMovedObject">,
-     HelpText<"Method calls on a moved-from object and copying a moved-from "
-              "object will be reported">;
+def MoveChecker: Checker<"Move">,
+     HelpText<"Find use-after-move bugs in C++">;
 
 def UninitializedObjectChecker: Checker<"UninitializedObject">,
      HelpText<"Reports uninitialized fields after object construction">;
