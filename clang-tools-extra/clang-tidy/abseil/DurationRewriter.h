@@ -27,7 +27,26 @@ enum class DurationScale : std::int8_t {
   Microseconds,
   Nanoseconds,
 };
+} // namespace abseil
+} // namespace tidy
+} // namespace clang
 
+namespace std {
+template <> struct hash<::clang::tidy::abseil::DurationScale> {
+  using argument_type = ::clang::tidy::abseil::DurationScale;
+  using underlying_type = std::underlying_type<argument_type>::type;
+  using result_type = std::hash<underlying_type>::result_type;
+
+  result_type operator()(const argument_type &arg) const {
+    std::hash<underlying_type> hasher;
+    return hasher(static_cast<underlying_type>(arg));
+  }
+};
+} // namespace std
+
+namespace clang {
+namespace tidy {
+namespace abseil {
 /// Given a `Scale`, return the appropriate factory function call for
 /// constructing a `Duration` for that scale.
 llvm::StringRef getFactoryForScale(DurationScale Scale);
