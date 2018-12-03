@@ -10,11 +10,11 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_INDEX_INDEX_H
 
+#include "SymbolID.h"
 #include "clang/Index/IndexSymbol.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
 #include <array>
@@ -49,55 +49,6 @@ struct SymbolLocation {
   }
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolLocation &);
-
-// The class identifies a particular C++ symbol (class, function, method, etc).
-//
-// As USRs (Unified Symbol Resolution) could be large, especially for functions
-// with long type arguments, SymbolID is using 160-bits SHA1(USR) values to
-// guarantee the uniqueness of symbols while using a relatively small amount of
-// memory (vs storing USRs directly).
-//
-// SymbolID can be used as key in the symbol indexes to lookup the symbol.
-class SymbolID {
-public:
-  SymbolID() = default;
-  explicit SymbolID(llvm::StringRef USR);
-
-  bool operator==(const SymbolID &Sym) const {
-    return HashValue == Sym.HashValue;
-  }
-  bool operator<(const SymbolID &Sym) const {
-    return HashValue < Sym.HashValue;
-  }
-
-  // Returns a 40-bytes hex encoded string.
-  std::string str() const;
-
-private:
-  static constexpr unsigned HashByteLength = 20;
-
-  friend llvm::hash_code hash_value(const SymbolID &ID) {
-    // We already have a good hash, just return the first bytes.
-    static_assert(sizeof(size_t) <= HashByteLength, "size_t longer than SHA1!");
-    size_t Result;
-    memcpy(&Result, ID.HashValue.data(), sizeof(size_t));
-    return llvm::hash_code(Result);
-  }
-  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
-                                       const SymbolID &ID);
-  friend void operator>>(llvm::StringRef Str, SymbolID &ID);
-
-  std::array<uint8_t, HashByteLength> HashValue;
-};
-
-// Write SymbolID into the given stream. SymbolID is encoded as a 40-bytes
-// hex string.
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolID &ID);
-
-// Construct SymbolID from a hex string.
-// The HexStr is required to be a 40-bytes hex string, which is encoded from the
-// "<<" operator.
-void operator>>(llvm::StringRef HexStr, SymbolID &ID);
 
 } // namespace clangd
 } // namespace clang
