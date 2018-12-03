@@ -109,8 +109,11 @@ namespace  {
   };
 
   class ASTDumper
-      : public ConstDeclVisitor<ASTDumper>, public ConstStmtVisitor<ASTDumper>,
-        public ConstCommentVisitor<ASTDumper>, public TypeVisitor<ASTDumper> {
+      : public ConstDeclVisitor<ASTDumper>,
+        public ConstStmtVisitor<ASTDumper>,
+        public ConstCommentVisitor<ASTDumper, void, const FullComment *>,
+        public TypeVisitor<ASTDumper> {
+
     raw_ostream &OS;
     const CommandTraits *Traits;
     const SourceManager *SM;
@@ -139,9 +142,6 @@ namespace  {
     const char *LastLocFilename = "";
     unsigned LastLocLine = ~0U;
 
-    /// The \c FullComment parent of the comment being dumped.
-    const FullComment *FC = nullptr;
-
     const bool ShowColors;
 
     /// Dump a child of the current node.
@@ -161,8 +161,7 @@ namespace  {
         return;
       }
 
-      const FullComment *OrigFC = FC;
-      auto dumpWithIndent = [this, doDumpChild, OrigFC](bool isLastChild) {
+      auto dumpWithIndent = [this, doDumpChild](bool isLastChild) {
         // Print out the appropriate tree structure and work out the prefix for
         // children of this node. For instance:
         //
@@ -186,7 +185,6 @@ namespace  {
         FirstChild = true;
         unsigned Depth = Pending.size();
 
-        FC = OrigFC;
         doDumpChild();
 
         // If any children are left, they're the last at their nesting level.
@@ -537,8 +535,6 @@ namespace  {
     void VisitFloatingLiteral(const FloatingLiteral *Node);
     void VisitStringLiteral(const StringLiteral *Str);
     void VisitInitListExpr(const InitListExpr *ILE);
-    void VisitArrayInitLoopExpr(const ArrayInitLoopExpr *ILE);
-    void VisitArrayInitIndexExpr(const ArrayInitIndexExpr *ILE);
     void VisitUnaryOperator(const UnaryOperator *Node);
     void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node);
     void VisitMemberExpr(const MemberExpr *Node);
@@ -586,21 +582,30 @@ namespace  {
 
     // Comments.
     const char *getCommandName(unsigned CommandID);
-    void dumpComment(const Comment *C);
+    void dumpComment(const Comment *C, const FullComment *FC);
 
     // Inline comments.
-    void visitTextComment(const TextComment *C);
-    void visitInlineCommandComment(const InlineCommandComment *C);
-    void visitHTMLStartTagComment(const HTMLStartTagComment *C);
-    void visitHTMLEndTagComment(const HTMLEndTagComment *C);
+    void visitTextComment(const TextComment *C, const FullComment *FC);
+    void visitInlineCommandComment(const InlineCommandComment *C,
+                                   const FullComment *FC);
+    void visitHTMLStartTagComment(const HTMLStartTagComment *C,
+                                  const FullComment *FC);
+    void visitHTMLEndTagComment(const HTMLEndTagComment *C,
+                                const FullComment *FC);
 
     // Block comments.
-    void visitBlockCommandComment(const BlockCommandComment *C);
-    void visitParamCommandComment(const ParamCommandComment *C);
-    void visitTParamCommandComment(const TParamCommandComment *C);
-    void visitVerbatimBlockComment(const VerbatimBlockComment *C);
-    void visitVerbatimBlockLineComment(const VerbatimBlockLineComment *C);
-    void visitVerbatimLineComment(const VerbatimLineComment *C);
+    void visitBlockCommandComment(const BlockCommandComment *C,
+                                  const FullComment *FC);
+    void visitParamCommandComment(const ParamCommandComment *C,
+                                  const FullComment *FC);
+    void visitTParamCommandComment(const TParamCommandComment *C,
+                                   const FullComment *FC);
+    void visitVerbatimBlockComment(const VerbatimBlockComment *C,
+                                   const FullComment *FC);
+    void visitVerbatimBlockLineComment(const VerbatimBlockLineComment *C,
+                                       const FullComment *FC);
+    void visitVerbatimLineComment(const VerbatimLineComment *C,
+                                  const FullComment *FC);
   };
 }
 
@@ -2287,14 +2292,6 @@ void ASTDumper::VisitInitListExpr(const InitListExpr *ILE) {
   }
 }
 
-void ASTDumper::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *E) {
-  VisitExpr(E);
-}
-
-void ASTDumper::VisitArrayInitIndexExpr(const ArrayInitIndexExpr *E) {
-  VisitExpr(E);
-}
-
 void ASTDumper::VisitUnaryOperator(const UnaryOperator *Node) {
   VisitExpr(Node);
   OS << " " << (Node->isPostfix() ? "postfix" : "prefix")
@@ -2652,13 +2649,10 @@ const char *ASTDumper::getCommandName(unsigned CommandID) {
 void ASTDumper::dumpFullComment(const FullComment *C) {
   if (!C)
     return;
-
-  FC = C;
-  dumpComment(C);
-  FC = nullptr;
+  dumpComment(C, C);
 }
 
-void ASTDumper::dumpComment(const Comment *C) {
+void ASTDumper::dumpComment(const Comment *C, const FullComment *FC) {
   dumpChild([=] {
     if (!C) {
       ColorScope Color(OS, ShowColors, NullColor);
@@ -2672,18 +2666,19 @@ void ASTDumper::dumpComment(const Comment *C) {
     }
     dumpPointer(C);
     dumpSourceRange(C->getSourceRange());
-    ConstCommentVisitor<ASTDumper>::visit(C);
+    ConstCommentVisitor<ASTDumper, void, const FullComment *>::visit(C, FC);
     for (Comment::child_iterator I = C->child_begin(), E = C->child_end();
          I != E; ++I)
-      dumpComment(*I);
+      dumpComment(*I, FC);
   });
 }
 
-void ASTDumper::visitTextComment(const TextComment *C) {
+void ASTDumper::visitTextComment(const TextComment *C, const FullComment *) {
   OS << " Text=\"" << C->getText() << "\"";
 }
 
-void ASTDumper::visitInlineCommandComment(const InlineCommandComment *C) {
+void ASTDumper::visitInlineCommandComment(const InlineCommandComment *C,
+                                          const FullComment *) {
   OS << " Name=\"" << getCommandName(C->getCommandID()) << "\"";
   switch (C->getRenderKind()) {
   case InlineCommandComment::RenderNormal:
@@ -2704,7 +2699,8 @@ void ASTDumper::visitInlineCommandComment(const InlineCommandComment *C) {
     OS << " Arg[" << i << "]=\"" << C->getArgText(i) << "\"";
 }
 
-void ASTDumper::visitHTMLStartTagComment(const HTMLStartTagComment *C) {
+void ASTDumper::visitHTMLStartTagComment(const HTMLStartTagComment *C,
+                                         const FullComment *) {
   OS << " Name=\"" << C->getTagName() << "\"";
   if (C->getNumAttrs() != 0) {
     OS << " Attrs: ";
@@ -2717,17 +2713,20 @@ void ASTDumper::visitHTMLStartTagComment(const HTMLStartTagComment *C) {
     OS << " SelfClosing";
 }
 
-void ASTDumper::visitHTMLEndTagComment(const HTMLEndTagComment *C) {
+void ASTDumper::visitHTMLEndTagComment(const HTMLEndTagComment *C,
+                                       const FullComment *) {
   OS << " Name=\"" << C->getTagName() << "\"";
 }
 
-void ASTDumper::visitBlockCommandComment(const BlockCommandComment *C) {
+void ASTDumper::visitBlockCommandComment(const BlockCommandComment *C,
+                                         const FullComment *) {
   OS << " Name=\"" << getCommandName(C->getCommandID()) << "\"";
   for (unsigned i = 0, e = C->getNumArgs(); i != e; ++i)
     OS << " Arg[" << i << "]=\"" << C->getArgText(i) << "\"";
 }
 
-void ASTDumper::visitParamCommandComment(const ParamCommandComment *C) {
+void ASTDumper::visitParamCommandComment(const ParamCommandComment *C,
+                                         const FullComment *FC) {
   OS << " " << ParamCommandComment::getDirectionAsString(C->getDirection());
 
   if (C->isDirectionExplicit())
@@ -2746,7 +2745,8 @@ void ASTDumper::visitParamCommandComment(const ParamCommandComment *C) {
     OS << " ParamIndex=" << C->getParamIndex();
 }
 
-void ASTDumper::visitTParamCommandComment(const TParamCommandComment *C) {
+void ASTDumper::visitTParamCommandComment(const TParamCommandComment *C,
+                                          const FullComment *FC) {
   if (C->hasParamName()) {
     if (C->isPositionValid())
       OS << " Param=\"" << C->getParamName(FC) << "\"";
@@ -2765,17 +2765,19 @@ void ASTDumper::visitTParamCommandComment(const TParamCommandComment *C) {
   }
 }
 
-void ASTDumper::visitVerbatimBlockComment(const VerbatimBlockComment *C) {
+void ASTDumper::visitVerbatimBlockComment(const VerbatimBlockComment *C,
+                                          const FullComment *) {
   OS << " Name=\"" << getCommandName(C->getCommandID()) << "\""
         " CloseName=\"" << C->getCloseName() << "\"";
 }
 
-void ASTDumper::visitVerbatimBlockLineComment(
-    const VerbatimBlockLineComment *C) {
+void ASTDumper::visitVerbatimBlockLineComment(const VerbatimBlockLineComment *C,
+                                              const FullComment *) {
   OS << " Text=\"" << C->getText() << "\"";
 }
 
-void ASTDumper::visitVerbatimLineComment(const VerbatimLineComment *C) {
+void ASTDumper::visitVerbatimLineComment(const VerbatimLineComment *C,
+                                         const FullComment *) {
   OS << " Text=\"" << C->getText() << "\"";
 }
 
