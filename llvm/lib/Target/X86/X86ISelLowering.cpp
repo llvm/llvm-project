@@ -20207,7 +20207,7 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
   SDLoc dl(St);
   SDValue StoredVal = St->getValue();
 
-  // Without AVX512DQ, we need to use a scalar type for v2i1/v4i1/v8i1 loads.
+  // Without AVX512DQ, we need to use a scalar type for v2i1/v4i1/v8i1 stores.
   if (StoredVal.getValueType().isVector() &&
       StoredVal.getValueType().getVectorElementType() == MVT::i1) {
     assert(StoredVal.getValueType().getVectorNumElements() <= 8 &&
@@ -37295,6 +37295,18 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   SDLoc dl(St);
   SDValue StoredVal = St->getOperand(1);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // Convert a store of vXi1 into a store of iX and a bitcast.
+  if (!Subtarget.hasAVX512() && VT == StVT && VT.isVector() &&
+      VT.getVectorElementType() == MVT::i1) {
+
+    EVT NewVT = EVT::getIntegerVT(*DAG.getContext(), VT.getVectorNumElements());
+    StoredVal = DAG.getBitcast(NewVT, StoredVal);
+
+    return DAG.getStore(St->getChain(), dl, StoredVal, St->getBasePtr(),
+                        St->getPointerInfo(), St->getAlignment(),
+                        St->getMemOperand()->getFlags());
+  }
 
   // If this is a store of a scalar_to_vector to v1i1, just use a scalar store.
   // This will avoid a copy to k-register.

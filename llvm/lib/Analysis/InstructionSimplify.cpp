@@ -3924,42 +3924,6 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F) {
   return nullptr;
 }
 
-/// Try to determine the result of a select based on a dominating condition.
-static Value *foldSelectWithDominatingCond(Value *Cond, Value *TV, Value *FV,
-                                           const SimplifyQuery &Q) {
-  // First, make sure that we have a select in a basic block.
-  // We don't know if we are called from some incomplete state.
-  if (!Q.CxtI || !Q.CxtI->getParent())
-    return nullptr;
-
-  // TODO: This is a poor/cheap way to determine dominance. Should we use the
-  // dominator tree in the SimplifyQuery instead?
-  const BasicBlock *SelectBB = Q.CxtI->getParent();
-  const BasicBlock *PredBB = SelectBB->getSinglePredecessor();
-  if (!PredBB)
-    return nullptr;
-
-  // We need a conditional branch in the predecessor.
-  Value *PredCond;
-  BasicBlock *TrueBB, *FalseBB;
-  if (!match(PredBB->getTerminator(), m_Br(m_Value(PredCond), TrueBB, FalseBB)))
-    return nullptr;
-
-  // The branch should get simplified. Don't bother simplifying the select.
-  if (TrueBB == FalseBB)
-    return nullptr;
-
-  assert((TrueBB == SelectBB || FalseBB == SelectBB) &&
-         "Predecessor block does not point to successor?");
-
-  // Is the select condition implied by the predecessor condition?
-  bool CondIsTrue = TrueBB == SelectBB;
-  Optional<bool> Implied = isImpliedCondition(PredCond, Cond, Q.DL, CondIsTrue);
-  if (!Implied)
-    return nullptr;
-  return *Implied ? TV : FV;
-}
-
 /// Given operands for a SelectInst, see if we can fold the result.
 /// If not, this returns null.
 static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
@@ -4002,8 +3966,9 @@ static Value *SimplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   if (Value *V = foldSelectWithBinaryOp(Cond, TrueVal, FalseVal))
     return V;
 
-  if (Value *V = foldSelectWithDominatingCond(Cond, TrueVal, FalseVal, Q))
-    return V;
+  Optional<bool> Imp = isImpliedByDomCondition(Cond, Q.CxtI, Q.DL);
+  if (Imp)
+    return *Imp ? TrueVal : FalseVal;
 
   return nullptr;
 }

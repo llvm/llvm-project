@@ -5854,28 +5854,17 @@ bool SimplifyCFGOpt::SimplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder) {
   if (SimplifyBranchOnICmpChain(BI, Builder, DL))
     return true;
 
-  // If this basic block has a single dominating predecessor block and the
-  // dominating block's condition implies BI's condition, we know the direction
-  // of the BI branch.
-  if (BasicBlock *Dom = BB->getSinglePredecessor()) {
-    auto *PBI = dyn_cast_or_null<BranchInst>(Dom->getTerminator());
-    if (PBI && PBI->isConditional() &&
-        PBI->getSuccessor(0) != PBI->getSuccessor(1)) {
-      assert(PBI->getSuccessor(0) == BB || PBI->getSuccessor(1) == BB);
-      bool CondIsTrue = PBI->getSuccessor(0) == BB;
-      Optional<bool> Implication = isImpliedCondition(
-          PBI->getCondition(), BI->getCondition(), DL, CondIsTrue);
-      if (Implication) {
-        // Turn this into a branch on constant.
-        auto *OldCond = BI->getCondition();
-        ConstantInt *CI = *Implication
-                              ? ConstantInt::getTrue(BB->getContext())
-                              : ConstantInt::getFalse(BB->getContext());
-        BI->setCondition(CI);
-        RecursivelyDeleteTriviallyDeadInstructions(OldCond);
-        return requestResimplify();
-      }
-    }
+  // If this basic block has dominating predecessor blocks and the dominating
+  // blocks' conditions imply BI's condition, we know the direction of BI.
+  Optional<bool> Imp = isImpliedByDomCondition(BI->getCondition(), BI, DL);
+  if (Imp) {
+    // Turn this into a branch on constant.
+    auto *OldCond = BI->getCondition();
+    ConstantInt *TorF = *Imp ? ConstantInt::getTrue(BB->getContext())
+                             : ConstantInt::getFalse(BB->getContext());
+    BI->setCondition(TorF);
+    RecursivelyDeleteTriviallyDeadInstructions(OldCond);
+    return requestResimplify();
   }
 
   // If this basic block is ONLY a compare and a branch, and if a predecessor

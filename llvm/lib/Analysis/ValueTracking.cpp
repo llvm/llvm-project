@@ -1506,6 +1506,27 @@ static void computeKnownBitsFromOperator(const Operator *I, KnownBits &Known,
         // of bits which might be set provided by popcnt KnownOne2.
         break;
       }
+      case Intrinsic::fshr:
+      case Intrinsic::fshl: {
+        const APInt *SA;
+        if (!match(I->getOperand(2), m_APInt(SA)))
+          break;
+
+        // Normalize to funnel shift left.
+        uint64_t ShiftAmt = SA->urem(BitWidth);
+        if (II->getIntrinsicID() == Intrinsic::fshr)
+          ShiftAmt = BitWidth - ShiftAmt;
+
+        KnownBits Known3(Known);
+        computeKnownBits(I->getOperand(0), Known2, Depth + 1, Q);
+        computeKnownBits(I->getOperand(1), Known3, Depth + 1, Q);
+
+        Known.Zero =
+            Known2.Zero.shl(ShiftAmt) | Known3.Zero.lshr(BitWidth - ShiftAmt);
+        Known.One =
+            Known2.One.shl(ShiftAmt) | Known3.One.lshr(BitWidth - ShiftAmt);
+        break;
+      }
       case Intrinsic::x86_sse42_crc32_64_64:
         Known.Zero.setBitsFrom(32);
         break;
@@ -5377,4 +5398,36 @@ Optional<bool> llvm::isImpliedCondition(const Value *LHS, const Value *RHS,
       return isImpliedCondAndOr(LHSBO, RHSCmp, DL, LHSIsTrue, Depth);
   }
   return None;
+}
+
+Optional<bool> llvm::isImpliedByDomCondition(const Value *Cond,
+                                             const Instruction *ContextI,
+                                             const DataLayout &DL) {
+  assert(Cond->getType()->isIntOrIntVectorTy(1) && "Condition must be bool");
+  if (!ContextI || !ContextI->getParent())
+    return None;
+
+  // TODO: This is a poor/cheap way to determine dominance. Should we use a
+  // dominator tree (eg, from a SimplifyQuery) instead?
+  const BasicBlock *ContextBB = ContextI->getParent();
+  const BasicBlock *PredBB = ContextBB->getSinglePredecessor();
+  if (!PredBB)
+    return None;
+
+  // We need a conditional branch in the predecessor.
+  Value *PredCond;
+  BasicBlock *TrueBB, *FalseBB;
+  if (!match(PredBB->getTerminator(), m_Br(m_Value(PredCond), TrueBB, FalseBB)))
+    return None;
+
+  // The branch should get simplified. Don't bother simplifying this condition.
+  if (TrueBB == FalseBB)
+    return None;
+
+  assert((TrueBB == ContextBB || FalseBB == ContextBB) &&
+         "Predecessor block does not point to successor?");
+
+  // Is this condition implied by the predecessor condition?
+  bool CondIsTrue = TrueBB == ContextBB;
+  return isImpliedCondition(PredCond, Cond, DL, CondIsTrue);
 }

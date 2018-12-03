@@ -789,6 +789,9 @@ namespace llvm {
       return true;
     }
 
+    // Returns true if the address of the global is stored in TOC entry.
+    bool isAccessedAsGotIndirect(SDValue N) const;
+
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
     bool getTgtMemIntrinsic(IntrinsicInfo &Info,

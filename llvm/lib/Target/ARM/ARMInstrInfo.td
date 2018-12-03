@@ -3334,7 +3334,7 @@ multiclass arm_ldst_mult<string asm, string sfx, bit L_bit, bit P_bit, Format f,
 
 let hasSideEffects = 0 in {
 
-let mayLoad = 1, hasExtraDefRegAllocReq = 1 in
+let mayLoad = 1, hasExtraDefRegAllocReq = 1, variadicOpsAreDefs = 1 in
 defm LDM : arm_ldst_mult<"ldm", "", 1, 0, LdStMulFrm, IIC_iLoad_m,
                          IIC_iLoad_mu>, ComplexDeprecationPredicate<"ARMLoad">;
 
