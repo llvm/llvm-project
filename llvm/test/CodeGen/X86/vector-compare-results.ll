@@ -342,257 +342,17 @@ define <16 x i1> @test_cmp_v16i16(<16 x i16> %a0, <16 x i16> %a1) nounwind {
 }
 
 define <32 x i1> @test_cmp_v32i8(<32 x i8> %a0, <32 x i8> %a1) nounwind {
-; SSE2-LABEL: test_cmp_v32i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    pcmpgtb %xmm2, %xmm0
-; SSE2-NEXT:    pcmpgtb %xmm3, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 2(%rdi)
-; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, (%rdi)
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: test_cmp_v32i8:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    movq %rdi, %rax
-; SSE42-NEXT:    pcmpgtb %xmm2, %xmm0
-; SSE42-NEXT:    pcmpgtb %xmm3, %xmm1
-; SSE42-NEXT:    pextrb $1, %xmm1, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm1, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm1, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 2(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm0, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, (%rdi)
-; SSE42-NEXT:    retq
+; SSE-LABEL: test_cmp_v32i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    pcmpgtb %xmm2, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    pcmpgtb %xmm3, %xmm1
+; SSE-NEXT:    pmovmskb %xmm1, %edx
+; SSE-NEXT:    shll $16, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    movl %edx, (%rdi)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_cmp_v32i8:
 ; AVX1:       # %bb.0:
@@ -931,263 +691,21 @@ define <16 x i1> @test_cmp_v16i32(<16 x i32> %a0, <16 x i32> %a1) nounwind {
 }
 
 define <32 x i1> @test_cmp_v32i16(<32 x i16> %a0, <32 x i16> %a1) nounwind {
-; SSE2-LABEL: test_cmp_v32i16:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    pcmpgtw %xmm5, %xmm1
-; SSE2-NEXT:    pcmpgtw %xmm4, %xmm0
-; SSE2-NEXT:    packsswb %xmm1, %xmm0
-; SSE2-NEXT:    pcmpgtw %xmm7, %xmm3
-; SSE2-NEXT:    pcmpgtw %xmm6, %xmm2
-; SSE2-NEXT:    packsswb %xmm3, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 2(%rdi)
-; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, (%rdi)
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: test_cmp_v32i16:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    movq %rdi, %rax
-; SSE42-NEXT:    pcmpgtw %xmm5, %xmm1
-; SSE42-NEXT:    pcmpgtw %xmm4, %xmm0
-; SSE42-NEXT:    pcmpgtw %xmm7, %xmm3
-; SSE42-NEXT:    pcmpgtw %xmm6, %xmm2
-; SSE42-NEXT:    pextrb $2, %xmm2, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $6, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $10, %xmm2, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $12, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $14, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $2, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $4, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $6, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $10, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $14, %xmm3, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 2(%rdi)
-; SSE42-NEXT:    pextrb $2, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $6, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $10, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $12, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $14, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $2, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $4, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $6, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $10, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $14, %xmm1, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, (%rdi)
-; SSE42-NEXT:    retq
+; SSE-LABEL: test_cmp_v32i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    pcmpgtw %xmm5, %xmm1
+; SSE-NEXT:    pcmpgtw %xmm4, %xmm0
+; SSE-NEXT:    packsswb %xmm1, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    pcmpgtw %xmm7, %xmm3
+; SSE-NEXT:    pcmpgtw %xmm6, %xmm2
+; SSE-NEXT:    packsswb %xmm3, %xmm2
+; SSE-NEXT:    pmovmskb %xmm2, %edx
+; SSE-NEXT:    shll $16, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    movl %edx, (%rdi)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_cmp_v32i16:
 ; AVX1:       # %bb.0:
@@ -1245,757 +763,48 @@ define <32 x i1> @test_cmp_v32i16(<32 x i16> %a0, <32 x i16> %a1) nounwind {
 }
 
 define <64 x i1> @test_cmp_v64i8(<64 x i8> %a0, <64 x i8> %a1) nounwind {
-; SSE2-LABEL: test_cmp_v64i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    pcmpgtb %xmm4, %xmm0
-; SSE2-NEXT:    pcmpgtb %xmm5, %xmm1
-; SSE2-NEXT:    pcmpgtb %xmm6, %xmm2
-; SSE2-NEXT:    pcmpgtb %xmm7, %xmm3
-; SSE2-NEXT:    movdqa %xmm3, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 6(%rdi)
-; SSE2-NEXT:    movdqa %xmm2, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 4(%rdi)
-; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 2(%rdi)
-; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, (%rdi)
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: test_cmp_v64i8:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    movq %rdi, %rax
-; SSE42-NEXT:    pcmpgtb %xmm4, %xmm0
-; SSE42-NEXT:    pcmpgtb %xmm5, %xmm1
-; SSE42-NEXT:    pcmpgtb %xmm6, %xmm2
-; SSE42-NEXT:    pcmpgtb %xmm7, %xmm3
-; SSE42-NEXT:    pextrb $1, %xmm3, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm3, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm3, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 6(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm2, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm2, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm2, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 4(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm1, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm1, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm1, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 2(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm0, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, (%rdi)
-; SSE42-NEXT:    retq
+; SSE-LABEL: test_cmp_v64i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    pcmpgtb %xmm4, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    pcmpgtb %xmm5, %xmm1
+; SSE-NEXT:    pmovmskb %xmm1, %edx
+; SSE-NEXT:    shll $16, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pcmpgtb %xmm6, %xmm2
+; SSE-NEXT:    pmovmskb %xmm2, %ecx
+; SSE-NEXT:    pcmpgtb %xmm7, %xmm3
+; SSE-NEXT:    pmovmskb %xmm3, %esi
+; SSE-NEXT:    shll $16, %esi
+; SSE-NEXT:    orl %ecx, %esi
+; SSE-NEXT:    shlq $32, %rsi
+; SSE-NEXT:    orq %rdx, %rsi
+; SSE-NEXT:    movq %rsi, (%rdi)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_cmp_v64i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movq %rdi, %rax
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm5
-; AVX1-NEXT:    vpcmpgtb %xmm4, %xmm5, %xmm4
+; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm0, %xmm4
+; AVX1-NEXT:    vpmovmskb %xmm4, %ecx
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
-; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm5, %xmm2
-; AVX1-NEXT:    vpcmpgtb %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpextrb $1, %xmm1, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    vpextrb $0, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX1-NEXT:    vpextrb $2, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX1-NEXT:    vpextrb $3, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX1-NEXT:    vpextrb $4, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $4, %edx
-; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm1, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    shll $5, %ecx
-; AVX1-NEXT:    orl %edx, %ecx
-; AVX1-NEXT:    vpextrb $6, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $6, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm1, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $7, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $8, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm1, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $9, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $10, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm1, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $11, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $12, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm1, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $13, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $14, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm1, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $15, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    vpmovmskb %xmm0, %edx
 ; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $1, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $17, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $2, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $18, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $3, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $19, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $20, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $21, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $6, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $22, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $23, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $24, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $25, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $26, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $27, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $28, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $29, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $30, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm2, %esi
-; AVX1-NEXT:    shll $31, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    orl %ecx, %esi
-; AVX1-NEXT:    movl %esi, 4(%rdi)
-; AVX1-NEXT:    vpextrb $1, %xmm0, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    vpextrb $0, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX1-NEXT:    vpextrb $2, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX1-NEXT:    vpextrb $3, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX1-NEXT:    vpextrb $4, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $4, %edx
 ; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm0, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    shll $5, %ecx
-; AVX1-NEXT:    orl %edx, %ecx
-; AVX1-NEXT:    vpextrb $6, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $6, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm0, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $7, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $8, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm0, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $9, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $10, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm0, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $11, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $12, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm0, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $13, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $14, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm0, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $15, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $1, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $17, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $2, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $18, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $3, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $19, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $20, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $21, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $6, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $22, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $23, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $24, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $25, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $26, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $27, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $28, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $29, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $30, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm4, %esi
-; AVX1-NEXT:    shll $31, %esi
-; AVX1-NEXT:    orl %edx, %esi
+; AVX1-NEXT:    vpcmpgtb %xmm3, %xmm1, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %esi
+; AVX1-NEXT:    shll $16, %esi
 ; AVX1-NEXT:    orl %ecx, %esi
-; AVX1-NEXT:    movl %esi, (%rdi)
+; AVX1-NEXT:    shlq $32, %rsi
+; AVX1-NEXT:    orq %rdx, %rsi
+; AVX1-NEXT:    movq %rsi, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -2003,255 +812,12 @@ define <64 x i1> @test_cmp_v64i8(<64 x i8> %a0, <64 x i8> %a1) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq %rdi, %rax
 ; AVX2-NEXT:    vpcmpgtb %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpgtb %ymm3, %ymm1, %ymm1
-; AVX2-NEXT:    vpextrb $1, %xmm1, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    vpextrb $0, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX2-NEXT:    vpextrb $2, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX2-NEXT:    vpextrb $3, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX2-NEXT:    vpextrb $4, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $4, %edx
-; AVX2-NEXT:    orl %ecx, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm1, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    shll $5, %ecx
-; AVX2-NEXT:    orl %edx, %ecx
-; AVX2-NEXT:    vpextrb $6, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $6, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $7, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $8, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $9, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $10, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $11, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $12, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $13, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $14, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $15, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; AVX2-NEXT:    vpextrb $0, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $16, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $1, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $17, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $2, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $18, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $3, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $19, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $20, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $21, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $6, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $22, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $23, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $24, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $25, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $26, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $27, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $28, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $29, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $30, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm1, %esi
-; AVX2-NEXT:    shll $31, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    orl %ecx, %esi
-; AVX2-NEXT:    movl %esi, 4(%rdi)
-; AVX2-NEXT:    vpextrb $1, %xmm0, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    vpextrb $0, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX2-NEXT:    vpextrb $2, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX2-NEXT:    vpextrb $3, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX2-NEXT:    vpextrb $4, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $4, %edx
-; AVX2-NEXT:    orl %ecx, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm0, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    shll $5, %ecx
-; AVX2-NEXT:    orl %edx, %ecx
-; AVX2-NEXT:    vpextrb $6, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $6, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $7, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $8, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $9, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $10, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $11, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $12, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $13, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $14, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $15, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpextrb $0, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $16, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $1, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $17, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $2, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $18, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $3, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $19, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $20, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $21, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $6, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $22, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $23, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $24, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $25, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $26, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $27, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $28, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $29, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $30, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm0, %esi
-; AVX2-NEXT:    shll $31, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    orl %ecx, %esi
-; AVX2-NEXT:    movl %esi, (%rdi)
+; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
+; AVX2-NEXT:    vpcmpgtb %ymm3, %ymm1, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %edx
+; AVX2-NEXT:    shlq $32, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    movq %rdx, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -2392,300 +958,37 @@ define <16 x i1> @test_cmp_v16f64(<16 x double> %a0, <16 x double> %a1) nounwind
 }
 
 define <32 x i1> @test_cmp_v32f32(<32 x float> %a0, <32 x float> %a1) nounwind {
-; SSE2-LABEL: test_cmp_v32f32:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm9
-; SSE2-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm11
-; SSE2-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm10
-; SSE2-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm12
-; SSE2-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm8
-; SSE2-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm13
-; SSE2-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm14
-; SSE2-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm15
-; SSE2-NEXT:    cmpltps %xmm3, %xmm15
-; SSE2-NEXT:    movaps {{.*#+}} xmm3 = [255,255,255,255]
-; SSE2-NEXT:    andps %xmm3, %xmm15
-; SSE2-NEXT:    cmpltps %xmm2, %xmm14
-; SSE2-NEXT:    andps %xmm3, %xmm14
-; SSE2-NEXT:    packuswb %xmm15, %xmm14
-; SSE2-NEXT:    cmpltps %xmm1, %xmm13
-; SSE2-NEXT:    andps %xmm3, %xmm13
-; SSE2-NEXT:    cmpltps %xmm0, %xmm8
-; SSE2-NEXT:    andps %xmm3, %xmm8
-; SSE2-NEXT:    packuswb %xmm13, %xmm8
-; SSE2-NEXT:    packuswb %xmm14, %xmm8
-; SSE2-NEXT:    cmpltps %xmm7, %xmm12
-; SSE2-NEXT:    andps %xmm3, %xmm12
-; SSE2-NEXT:    cmpltps %xmm6, %xmm10
-; SSE2-NEXT:    andps %xmm3, %xmm10
-; SSE2-NEXT:    packuswb %xmm12, %xmm10
-; SSE2-NEXT:    cmpltps %xmm5, %xmm11
-; SSE2-NEXT:    andps %xmm3, %xmm11
-; SSE2-NEXT:    cmpltps %xmm4, %xmm9
-; SSE2-NEXT:    andps %xmm3, %xmm9
-; SSE2-NEXT:    packuswb %xmm11, %xmm9
-; SSE2-NEXT:    packuswb %xmm10, %xmm9
-; SSE2-NEXT:    movdqa %xmm9, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 2(%rdi)
-; SSE2-NEXT:    movdqa %xmm8, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, (%rdi)
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: test_cmp_v32f32:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    movq %rdi, %rax
-; SSE42-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm15
-; SSE42-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm14
-; SSE42-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm13
-; SSE42-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm12
-; SSE42-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm11
-; SSE42-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm10
-; SSE42-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm9
-; SSE42-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm8
-; SSE42-NEXT:    cmpltps %xmm3, %xmm8
-; SSE42-NEXT:    cmpltps %xmm2, %xmm9
-; SSE42-NEXT:    cmpltps %xmm1, %xmm10
-; SSE42-NEXT:    cmpltps %xmm0, %xmm11
-; SSE42-NEXT:    cmpltps %xmm7, %xmm12
-; SSE42-NEXT:    cmpltps %xmm6, %xmm13
-; SSE42-NEXT:    cmpltps %xmm5, %xmm14
-; SSE42-NEXT:    cmpltps %xmm4, %xmm15
-; SSE42-NEXT:    pextrb $4, %xmm15, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm15, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm15, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $12, %xmm15, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $0, %xmm14, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $4, %xmm14, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $8, %xmm14, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $12, %xmm14, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm13, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $4, %xmm13, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm13, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $12, %xmm13, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm12, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $4, %xmm12, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm12, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $12, %xmm12, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 2(%rdi)
-; SSE42-NEXT:    pextrb $4, %xmm11, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm11, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm11, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $12, %xmm11, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $0, %xmm10, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $4, %xmm10, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $8, %xmm10, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $12, %xmm10, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm9, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $4, %xmm9, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm9, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $12, %xmm9, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm8, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $4, %xmm8, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm8, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $12, %xmm8, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, (%rdi)
-; SSE42-NEXT:    retq
+; SSE-LABEL: test_cmp_v32f32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm8
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm10
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm9
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm11
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm12
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm13
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm14
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm15
+; SSE-NEXT:    cmpltps %xmm3, %xmm15
+; SSE-NEXT:    cmpltps %xmm2, %xmm14
+; SSE-NEXT:    packssdw %xmm15, %xmm14
+; SSE-NEXT:    cmpltps %xmm1, %xmm13
+; SSE-NEXT:    cmpltps %xmm0, %xmm12
+; SSE-NEXT:    packssdw %xmm13, %xmm12
+; SSE-NEXT:    packsswb %xmm14, %xmm12
+; SSE-NEXT:    pmovmskb %xmm12, %ecx
+; SSE-NEXT:    cmpltps %xmm7, %xmm11
+; SSE-NEXT:    cmpltps %xmm6, %xmm9
+; SSE-NEXT:    packssdw %xmm11, %xmm9
+; SSE-NEXT:    cmpltps %xmm5, %xmm10
+; SSE-NEXT:    cmpltps %xmm4, %xmm8
+; SSE-NEXT:    packssdw %xmm10, %xmm8
+; SSE-NEXT:    packsswb %xmm9, %xmm8
+; SSE-NEXT:    pmovmskb %xmm8, %edx
+; SSE-NEXT:    shll $16, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    movl %edx, (%rdi)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_cmp_v32f32:
 ; AVX1:       # %bb.0:
@@ -2952,284 +1255,29 @@ define <16 x i1> @test_cmp_v16i64(<16 x i64> %a0, <16 x i64> %a1) nounwind {
 }
 
 define <32 x i1> @test_cmp_v32i32(<32 x i32> %a0, <32 x i32> %a1) nounwind {
-; SSE2-LABEL: test_cmp_v32i32:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [255,255,255,255]
-; SSE2-NEXT:    pand %xmm8, %xmm3
-; SSE2-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm2
-; SSE2-NEXT:    pand %xmm8, %xmm2
-; SSE2-NEXT:    packuswb %xmm3, %xmm2
-; SSE2-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    pand %xmm8, %xmm1
-; SSE2-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    pand %xmm8, %xmm0
-; SSE2-NEXT:    packuswb %xmm1, %xmm0
-; SSE2-NEXT:    packuswb %xmm2, %xmm0
-; SSE2-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm7
-; SSE2-NEXT:    pand %xmm8, %xmm7
-; SSE2-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm6
-; SSE2-NEXT:    pand %xmm8, %xmm6
-; SSE2-NEXT:    packuswb %xmm7, %xmm6
-; SSE2-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm5
-; SSE2-NEXT:    pand %xmm8, %xmm5
-; SSE2-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm4
-; SSE2-NEXT:    pand %xmm8, %xmm4
-; SSE2-NEXT:    packuswb %xmm5, %xmm4
-; SSE2-NEXT:    packuswb %xmm6, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 2(%rdi)
-; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, (%rdi)
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: test_cmp_v32i32:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    movq %rdi, %rax
-; SSE42-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm2
-; SSE42-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm1
-; SSE42-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm7
-; SSE42-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm6
-; SSE42-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm5
-; SSE42-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm4
-; SSE42-NEXT:    pextrb $4, %xmm4, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $12, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $0, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $4, %xmm5, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $8, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $12, %xmm5, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $4, %xmm6, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $12, %xmm6, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $4, %xmm7, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $12, %xmm7, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 2(%rdi)
-; SSE42-NEXT:    pextrb $4, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $12, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $0, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $4, %xmm1, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $8, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $12, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $4, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $12, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $4, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $12, %xmm3, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, (%rdi)
-; SSE42-NEXT:    retq
+; SSE-LABEL: test_cmp_v32i32:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm2
+; SSE-NEXT:    packssdw %xmm3, %xmm2
+; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    packsswb %xmm2, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm7
+; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm6
+; SSE-NEXT:    packssdw %xmm7, %xmm6
+; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm5
+; SSE-NEXT:    pcmpgtd {{[0-9]+}}(%rsp), %xmm4
+; SSE-NEXT:    packssdw %xmm5, %xmm4
+; SSE-NEXT:    packsswb %xmm6, %xmm4
+; SSE-NEXT:    pmovmskb %xmm4, %edx
+; SSE-NEXT:    shll $16, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    movl %edx, (%rdi)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_cmp_v32i32:
 ; AVX1:       # %bb.0:
@@ -3307,1037 +1355,93 @@ define <32 x i1> @test_cmp_v32i32(<32 x i32> %a0, <32 x i32> %a1) nounwind {
 }
 
 define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
-; SSE2-LABEL: test_cmp_v64i16:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    packsswb %xmm1, %xmm0
-; SSE2-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm3
-; SSE2-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm2
-; SSE2-NEXT:    packsswb %xmm3, %xmm2
-; SSE2-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm5
-; SSE2-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm4
-; SSE2-NEXT:    packsswb %xmm5, %xmm4
-; SSE2-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm7
-; SSE2-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm6
-; SSE2-NEXT:    packsswb %xmm7, %xmm6
-; SSE2-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 6(%rdi)
-; SSE2-NEXT:    movdqa %xmm4, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 4(%rdi)
-; SSE2-NEXT:    movdqa %xmm2, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 2(%rdi)
-; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, (%rdi)
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: test_cmp_v64i16:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    movq %rdi, %rax
-; SSE42-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm1
-; SSE42-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm2
-; SSE42-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm5
-; SSE42-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm4
-; SSE42-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm7
-; SSE42-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm6
-; SSE42-NEXT:    pextrb $2, %xmm6, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $6, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $10, %xmm6, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $12, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $14, %xmm6, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $2, %xmm7, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $4, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $6, %xmm7, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $10, %xmm7, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $14, %xmm7, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 6(%rdi)
-; SSE42-NEXT:    pextrb $2, %xmm4, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $6, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $10, %xmm4, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $12, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $14, %xmm4, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $2, %xmm5, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $4, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $6, %xmm5, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $10, %xmm5, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $14, %xmm5, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 4(%rdi)
-; SSE42-NEXT:    pextrb $2, %xmm2, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $6, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $10, %xmm2, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $12, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $14, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $2, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $4, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $6, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $10, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $14, %xmm3, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 2(%rdi)
-; SSE42-NEXT:    pextrb $2, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $6, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $10, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $12, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $14, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $2, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $4, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $6, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $10, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $14, %xmm1, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, (%rdi)
-; SSE42-NEXT:    retq
+; SSE-LABEL: test_cmp_v64i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    packsswb %xmm1, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm2
+; SSE-NEXT:    packsswb %xmm3, %xmm2
+; SSE-NEXT:    pmovmskb %xmm2, %edx
+; SSE-NEXT:    shll $16, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm5
+; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm4
+; SSE-NEXT:    packsswb %xmm5, %xmm4
+; SSE-NEXT:    pmovmskb %xmm4, %ecx
+; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm7
+; SSE-NEXT:    pcmpgtw {{[0-9]+}}(%rsp), %xmm6
+; SSE-NEXT:    packsswb %xmm7, %xmm6
+; SSE-NEXT:    pmovmskb %xmm6, %esi
+; SSE-NEXT:    shll $16, %esi
+; SSE-NEXT:    orl %ecx, %esi
+; SSE-NEXT:    shlq $32, %rsi
+; SSE-NEXT:    orq %rdx, %rsi
+; SSE-NEXT:    movq %rsi, (%rdi)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_cmp_v64i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movq %rdi, %rax
-; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm8
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm9
+; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm8
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm9
 ; AVX1-NEXT:    vpcmpgtw %xmm8, %xmm9, %xmm8
-; AVX1-NEXT:    vpcmpgtw %xmm5, %xmm1, %xmm9
-; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm5
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpcmpgtw %xmm5, %xmm1, %xmm5
 ; AVX1-NEXT:    vpcmpgtw %xmm4, %xmm0, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; AVX1-NEXT:    vpcmpgtw %xmm1, %xmm4, %xmm4
-; AVX1-NEXT:    vpcmpgtw %xmm7, %xmm3, %xmm3
-; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm1
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm7
-; AVX1-NEXT:    vpcmpgtw %xmm1, %xmm7, %xmm7
-; AVX1-NEXT:    vpcmpgtw %xmm6, %xmm2, %xmm2
-; AVX1-NEXT:    vpextrb $2, %xmm2, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    vpextrb $0, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX1-NEXT:    vpextrb $4, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX1-NEXT:    vpextrb $6, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX1-NEXT:    vpextrb $8, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $4, %edx
-; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    vpextrb $10, %xmm2, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    shll $5, %ecx
-; AVX1-NEXT:    orl %edx, %ecx
-; AVX1-NEXT:    vpextrb $12, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $6, %edx
-; AVX1-NEXT:    vpextrb $14, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $7, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm7, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $8, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $2, %xmm7, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $9, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm7, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $10, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $6, %xmm7, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $11, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm7, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $12, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $10, %xmm7, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $13, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm7, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $14, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $14, %xmm7, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $15, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
+; AVX1-NEXT:    vpacksswb %xmm8, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm4
+; AVX1-NEXT:    vpcmpgtw %xmm0, %xmm4, %xmm0
+; AVX1-NEXT:    vpcmpgtw %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpacksswb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %edx
 ; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $2, %xmm3, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $17, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $18, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $6, %xmm3, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $19, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $20, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $10, %xmm3, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $21, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $22, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $14, %xmm3, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $23, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $24, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $2, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $25, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $26, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $6, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $27, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $28, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $10, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $29, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $30, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $14, %xmm4, %esi
-; AVX1-NEXT:    shll $31, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    orl %ecx, %esi
-; AVX1-NEXT:    movl %esi, 4(%rdi)
-; AVX1-NEXT:    vpextrb $2, %xmm0, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    vpextrb $0, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX1-NEXT:    vpextrb $4, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX1-NEXT:    vpextrb $6, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX1-NEXT:    vpextrb $8, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $4, %edx
 ; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    vpextrb $10, %xmm0, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    shll $5, %ecx
-; AVX1-NEXT:    orl %edx, %ecx
-; AVX1-NEXT:    vpextrb $12, %xmm0, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $6, %edx
-; AVX1-NEXT:    vpextrb $14, %xmm0, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $7, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $8, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $2, %xmm5, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $9, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $10, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $6, %xmm5, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $11, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $12, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $10, %xmm5, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $13, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $14, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $14, %xmm5, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $15, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $2, %xmm9, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $17, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $18, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $6, %xmm9, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $19, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $20, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $10, %xmm9, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $21, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $22, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $14, %xmm9, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $23, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $24, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $2, %xmm8, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $25, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $26, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $6, %xmm8, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $27, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $28, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $10, %xmm8, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $29, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $30, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $14, %xmm8, %esi
-; AVX1-NEXT:    shll $31, %esi
-; AVX1-NEXT:    orl %edx, %esi
+; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
+; AVX1-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpcmpgtw %xmm6, %xmm2, %xmm1
+; AVX1-NEXT:    vpacksswb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm1
+; AVX1-NEXT:    vpcmpgtw %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpcmpgtw %xmm7, %xmm3, %xmm1
+; AVX1-NEXT:    vpacksswb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %esi
+; AVX1-NEXT:    shll $16, %esi
 ; AVX1-NEXT:    orl %ecx, %esi
-; AVX1-NEXT:    movl %esi, (%rdi)
+; AVX1-NEXT:    shlq $32, %rsi
+; AVX1-NEXT:    orq %rdx, %rsi
+; AVX1-NEXT:    movq %rsi, (%rdi)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_cmp_v64i16:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq %rdi, %rax
-; AVX2-NEXT:    vpcmpgtw %ymm5, %ymm1, %ymm5
-; AVX2-NEXT:    vextracti128 $1, %ymm5, %xmm1
-; AVX2-NEXT:    vpcmpgtw %ymm4, %ymm0, %ymm4
-; AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm0
-; AVX2-NEXT:    vpcmpgtw %ymm7, %ymm3, %ymm7
-; AVX2-NEXT:    vextracti128 $1, %ymm7, %xmm3
-; AVX2-NEXT:    vpcmpgtw %ymm6, %ymm2, %ymm6
-; AVX2-NEXT:    vextracti128 $1, %ymm6, %xmm2
-; AVX2-NEXT:    vpextrb $2, %xmm6, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    vpextrb $0, %xmm6, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX2-NEXT:    vpextrb $4, %xmm6, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX2-NEXT:    vpextrb $6, %xmm6, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX2-NEXT:    vpextrb $8, %xmm6, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $4, %edx
-; AVX2-NEXT:    orl %ecx, %edx
-; AVX2-NEXT:    vpextrb $10, %xmm6, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    shll $5, %ecx
-; AVX2-NEXT:    orl %edx, %ecx
-; AVX2-NEXT:    vpextrb $12, %xmm6, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $6, %edx
-; AVX2-NEXT:    vpextrb $14, %xmm6, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $7, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $0, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $8, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $2, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $9, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $10, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $6, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $11, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $12, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $10, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $13, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $14, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $14, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $15, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $0, %xmm7, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $16, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $2, %xmm7, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $17, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm7, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $18, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $6, %xmm7, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $19, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm7, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $20, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $10, %xmm7, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $21, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm7, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $22, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $14, %xmm7, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $23, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $0, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $24, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $2, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $25, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $26, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $6, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $27, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $28, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $10, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $29, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $30, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $14, %xmm3, %esi
-; AVX2-NEXT:    shll $31, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    orl %ecx, %esi
-; AVX2-NEXT:    movl %esi, 4(%rdi)
-; AVX2-NEXT:    vpextrb $2, %xmm4, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    vpextrb $0, %xmm4, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX2-NEXT:    vpextrb $4, %xmm4, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX2-NEXT:    vpextrb $6, %xmm4, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX2-NEXT:    vpextrb $8, %xmm4, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $4, %edx
-; AVX2-NEXT:    orl %ecx, %edx
-; AVX2-NEXT:    vpextrb $10, %xmm4, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    shll $5, %ecx
-; AVX2-NEXT:    orl %edx, %ecx
-; AVX2-NEXT:    vpextrb $12, %xmm4, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $6, %edx
-; AVX2-NEXT:    vpextrb $14, %xmm4, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $7, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $0, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $8, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $2, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $9, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $10, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $6, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $11, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $12, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $10, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $13, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $14, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $14, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $15, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $0, %xmm5, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $16, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $2, %xmm5, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $17, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm5, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $18, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $6, %xmm5, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $19, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm5, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $20, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $10, %xmm5, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $21, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm5, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $22, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $14, %xmm5, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $23, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $0, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $24, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $2, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $25, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $26, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $6, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $27, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $28, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $10, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $29, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $30, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $14, %xmm1, %esi
-; AVX2-NEXT:    shll $31, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    orl %ecx, %esi
-; AVX2-NEXT:    movl %esi, (%rdi)
+; AVX2-NEXT:    vpcmpgtw %ymm5, %ymm1, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm5
+; AVX2-NEXT:    vpacksswb %xmm5, %xmm1, %xmm1
+; AVX2-NEXT:    vpcmpgtw %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
+; AVX2-NEXT:    vpacksswb %xmm4, %xmm0, %xmm0
+; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
+; AVX2-NEXT:    vpcmpgtw %ymm7, %ymm3, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpacksswb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpgtw %ymm6, %ymm2, %ymm1
+; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
+; AVX2-NEXT:    vpacksswb %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %edx
+; AVX2-NEXT:    shlq $32, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    movq %rdx, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -4387,1497 +1491,82 @@ define <64 x i1> @test_cmp_v64i16(<64 x i16> %a0, <64 x i16> %a1) nounwind {
 }
 
 define <128 x i1> @test_cmp_v128i8(<128 x i8> %a0, <128 x i8> %a1) nounwind {
-; SSE2-LABEL: test_cmp_v128i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    pushq %rax
-; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm2
-; SSE2-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm3
-; SSE2-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm4
-; SSE2-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm5
-; SSE2-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm6
-; SSE2-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm7
-; SSE2-NEXT:    movdqa %xmm7, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 14(%rdi)
-; SSE2-NEXT:    movdqa %xmm6, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 12(%rdi)
-; SSE2-NEXT:    movdqa %xmm5, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 10(%rdi)
-; SSE2-NEXT:    movdqa %xmm4, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 8(%rdi)
-; SSE2-NEXT:    movdqa %xmm3, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 6(%rdi)
-; SSE2-NEXT:    movdqa %xmm2, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 4(%rdi)
-; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 2(%rdi)
-; SSE2-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, (%rdi)
-; SSE2-NEXT:    popq %rcx
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: test_cmp_v128i8:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    movq %rdi, %rax
-; SSE42-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm1
-; SSE42-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm2
-; SSE42-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm4
-; SSE42-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm5
-; SSE42-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm6
-; SSE42-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm7
-; SSE42-NEXT:    pextrb $1, %xmm7, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm7, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm7, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm7, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm7, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm7, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm7, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 14(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm6, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm6, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm6, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm6, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm6, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm6, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm6, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 12(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm5, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm5, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm5, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm5, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm5, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm5, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm5, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 10(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm4, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm4, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm4, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm4, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm4, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm4, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm4, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 8(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm3, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm3, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm3, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 6(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm2, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm2, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm2, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm2, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 4(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm1, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm1, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm1, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm1, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 2(%rdi)
-; SSE42-NEXT:    pextrb $1, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $2, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $3, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $4, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $5, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $6, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $7, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $8, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $9, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $10, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $11, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $12, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $13, %xmm0, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $14, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $15, %xmm0, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, (%rdi)
-; SSE42-NEXT:    retq
+; SSE-LABEL: test_cmp_v128i8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %ecx
+; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    pmovmskb %xmm1, %edx
+; SSE-NEXT:    shll $16, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm2
+; SSE-NEXT:    pmovmskb %xmm2, %esi
+; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    pmovmskb %xmm3, %ecx
+; SSE-NEXT:    shll $16, %ecx
+; SSE-NEXT:    orl %esi, %ecx
+; SSE-NEXT:    shlq $32, %rcx
+; SSE-NEXT:    orq %rdx, %rcx
+; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm4
+; SSE-NEXT:    pmovmskb %xmm4, %edx
+; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm5
+; SSE-NEXT:    pmovmskb %xmm5, %esi
+; SSE-NEXT:    shll $16, %esi
+; SSE-NEXT:    orl %edx, %esi
+; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm6
+; SSE-NEXT:    pmovmskb %xmm6, %edx
+; SSE-NEXT:    pcmpgtb {{[0-9]+}}(%rsp), %xmm7
+; SSE-NEXT:    pmovmskb %xmm7, %edi
+; SSE-NEXT:    shll $16, %edi
+; SSE-NEXT:    orl %edx, %edi
+; SSE-NEXT:    shlq $32, %rdi
+; SSE-NEXT:    orq %rsi, %rdi
+; SSE-NEXT:    movq %rdi, 8(%rax)
+; SSE-NEXT:    movq %rcx, (%rax)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_cmp_v128i8:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    movq %rdi, %rax
-; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm8
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm9
-; AVX1-NEXT:    vpcmpgtb %xmm8, %xmm9, %xmm8
-; AVX1-NEXT:    vpcmpgtb %xmm4, %xmm0, %xmm9
-; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm4
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; AVX1-NEXT:    vpcmpgtb %xmm4, %xmm0, %xmm4
-; AVX1-NEXT:    vpcmpgtb %xmm5, %xmm1, %xmm1
+; AVX1-NEXT:    vpcmpgtb %xmm4, %xmm0, %xmm8
+; AVX1-NEXT:    vpmovmskb %xmm8, %ecx
+; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm4
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
+; AVX1-NEXT:    vpcmpgtb %xmm4, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %edx
+; AVX1-NEXT:    shll $16, %edx
+; AVX1-NEXT:    orl %ecx, %edx
+; AVX1-NEXT:    vpcmpgtb %xmm5, %xmm1, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %esi
+; AVX1-NEXT:    vextractf128 $1, %ymm5, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
+; AVX1-NEXT:    shll $16, %ecx
+; AVX1-NEXT:    orl %esi, %ecx
+; AVX1-NEXT:    shlq $32, %rcx
+; AVX1-NEXT:    orq %rdx, %rcx
+; AVX1-NEXT:    vpcmpgtb %xmm6, %xmm2, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %edx
 ; AVX1-NEXT:    vextractf128 $1, %ymm6, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm5
-; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm5, %xmm5
-; AVX1-NEXT:    vpcmpgtb %xmm6, %xmm2, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
+; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %esi
+; AVX1-NEXT:    shll $16, %esi
+; AVX1-NEXT:    orl %edx, %esi
+; AVX1-NEXT:    vpcmpgtb %xmm7, %xmm3, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %edx
 ; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm6
-; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm6, %xmm6
-; AVX1-NEXT:    vpcmpgtb %xmm7, %xmm3, %xmm3
-; AVX1-NEXT:    vpextrb $1, %xmm3, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    vpextrb $0, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX1-NEXT:    vpextrb $2, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX1-NEXT:    vpextrb $3, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX1-NEXT:    vpextrb $4, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $4, %edx
-; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm3, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    shll $5, %ecx
-; AVX1-NEXT:    orl %edx, %ecx
-; AVX1-NEXT:    vpextrb $6, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $6, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm3, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $7, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $8, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm3, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $9, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $10, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm3, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $11, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $12, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm3, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $13, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm3, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $14, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm3, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $15, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm6, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $1, %xmm6, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $17, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $2, %xmm6, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $18, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $3, %xmm6, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $19, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm6, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $20, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm6, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $21, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $6, %xmm6, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $22, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm6, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $23, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm6, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $24, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm6, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $25, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm6, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $26, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm6, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $27, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm6, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $28, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm6, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $29, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm6, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $30, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm6, %esi
-; AVX1-NEXT:    shll $31, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    orl %ecx, %esi
-; AVX1-NEXT:    movl %esi, 12(%rdi)
-; AVX1-NEXT:    vpextrb $1, %xmm2, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    vpextrb $0, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX1-NEXT:    vpextrb $2, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX1-NEXT:    vpextrb $3, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX1-NEXT:    vpextrb $4, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $4, %edx
-; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm2, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    shll $5, %ecx
-; AVX1-NEXT:    orl %edx, %ecx
-; AVX1-NEXT:    vpextrb $6, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $6, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $7, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $8, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $9, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $10, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $11, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $12, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $13, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm2, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $14, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm2, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $15, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $1, %xmm5, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $17, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $2, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $18, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $3, %xmm5, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $19, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $20, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm5, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $21, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $6, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $22, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm5, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $23, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $24, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm5, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $25, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $26, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm5, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $27, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $28, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm5, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $29, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm5, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $30, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm5, %esi
-; AVX1-NEXT:    shll $31, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    orl %ecx, %esi
-; AVX1-NEXT:    movl %esi, 8(%rdi)
-; AVX1-NEXT:    vpextrb $1, %xmm1, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    vpextrb $0, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX1-NEXT:    vpextrb $2, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX1-NEXT:    vpextrb $3, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX1-NEXT:    vpextrb $4, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $4, %edx
-; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm1, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    shll $5, %ecx
-; AVX1-NEXT:    orl %edx, %ecx
-; AVX1-NEXT:    vpextrb $6, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $6, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm1, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $7, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $8, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm1, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $9, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $10, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm1, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $11, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $12, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm1, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $13, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm1, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $14, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm1, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $15, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $1, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $17, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $2, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $18, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $3, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $19, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $20, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $21, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $6, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $22, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $23, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $24, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $25, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $26, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $27, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $28, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm4, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $29, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm4, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $30, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm4, %esi
-; AVX1-NEXT:    shll $31, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    orl %ecx, %esi
-; AVX1-NEXT:    movl %esi, 4(%rdi)
-; AVX1-NEXT:    vpextrb $1, %xmm9, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    vpextrb $0, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX1-NEXT:    vpextrb $2, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX1-NEXT:    vpextrb $3, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX1-NEXT:    vpextrb $4, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $4, %edx
-; AVX1-NEXT:    orl %ecx, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm9, %ecx
-; AVX1-NEXT:    andl $1, %ecx
-; AVX1-NEXT:    shll $5, %ecx
-; AVX1-NEXT:    orl %edx, %ecx
-; AVX1-NEXT:    vpextrb $6, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $6, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm9, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $7, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $8, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm9, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $9, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $10, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm9, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $11, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $12, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm9, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $13, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm9, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $14, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm9, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $15, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $0, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $16, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $1, %xmm8, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $17, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $2, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $18, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $3, %xmm8, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $19, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $4, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $20, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $5, %xmm8, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $21, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $6, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $22, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $7, %xmm8, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $23, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $8, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $24, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $9, %xmm8, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $25, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $10, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $26, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $11, %xmm8, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $27, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $12, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $28, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $13, %xmm8, %esi
-; AVX1-NEXT:    andl $1, %esi
-; AVX1-NEXT:    shll $29, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    vpextrb $14, %xmm8, %edx
-; AVX1-NEXT:    andl $1, %edx
-; AVX1-NEXT:    shll $30, %edx
-; AVX1-NEXT:    orl %esi, %edx
-; AVX1-NEXT:    vpextrb $15, %xmm8, %esi
-; AVX1-NEXT:    shll $31, %esi
-; AVX1-NEXT:    orl %edx, %esi
-; AVX1-NEXT:    orl %ecx, %esi
-; AVX1-NEXT:    movl %esi, (%rdi)
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm1
+; AVX1-NEXT:    vpcmpgtb %xmm0, %xmm1, %xmm0
+; AVX1-NEXT:    vpmovmskb %xmm0, %edi
+; AVX1-NEXT:    shll $16, %edi
+; AVX1-NEXT:    orl %edx, %edi
+; AVX1-NEXT:    shlq $32, %rdi
+; AVX1-NEXT:    orq %rsi, %rdi
+; AVX1-NEXT:    movq %rdi, 8(%rax)
+; AVX1-NEXT:    movq %rcx, (%rax)
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
 ;
@@ -5885,505 +1574,19 @@ define <128 x i1> @test_cmp_v128i8(<128 x i8> %a0, <128 x i8> %a1) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq %rdi, %rax
 ; AVX2-NEXT:    vpcmpgtb %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpgtb %ymm5, %ymm1, %ymm1
-; AVX2-NEXT:    vpcmpgtb %ymm6, %ymm2, %ymm2
-; AVX2-NEXT:    vpcmpgtb %ymm7, %ymm3, %ymm3
-; AVX2-NEXT:    vpextrb $1, %xmm3, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    vpextrb $0, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX2-NEXT:    vpextrb $2, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX2-NEXT:    vpextrb $3, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX2-NEXT:    vpextrb $4, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $4, %edx
-; AVX2-NEXT:    orl %ecx, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm3, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    shll $5, %ecx
-; AVX2-NEXT:    orl %edx, %ecx
-; AVX2-NEXT:    vpextrb $6, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $6, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $7, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $8, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $9, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $10, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $11, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $12, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $13, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $14, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $15, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm3
-; AVX2-NEXT:    vpextrb $0, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $16, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $1, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $17, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $2, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $18, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $3, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $19, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $20, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $21, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $6, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $22, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $23, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $24, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $25, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $26, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $27, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $28, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm3, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $29, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm3, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $30, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm3, %esi
-; AVX2-NEXT:    shll $31, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    orl %ecx, %esi
-; AVX2-NEXT:    movl %esi, 12(%rdi)
-; AVX2-NEXT:    vpextrb $1, %xmm2, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    vpextrb $0, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX2-NEXT:    vpextrb $2, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX2-NEXT:    vpextrb $3, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX2-NEXT:    vpextrb $4, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $4, %edx
-; AVX2-NEXT:    orl %ecx, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm2, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    shll $5, %ecx
-; AVX2-NEXT:    orl %edx, %ecx
-; AVX2-NEXT:    vpextrb $6, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $6, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $7, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $8, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $9, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $10, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $11, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $12, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $13, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $14, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $15, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm2
-; AVX2-NEXT:    vpextrb $0, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $16, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $1, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $17, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $2, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $18, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $3, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $19, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $20, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $21, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $6, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $22, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $23, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $24, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $25, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $26, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $27, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $28, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm2, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $29, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm2, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $30, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm2, %esi
-; AVX2-NEXT:    shll $31, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    orl %ecx, %esi
-; AVX2-NEXT:    movl %esi, 8(%rdi)
-; AVX2-NEXT:    vpextrb $1, %xmm1, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    vpextrb $0, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX2-NEXT:    vpextrb $2, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX2-NEXT:    vpextrb $3, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX2-NEXT:    vpextrb $4, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $4, %edx
-; AVX2-NEXT:    orl %ecx, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm1, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    shll $5, %ecx
-; AVX2-NEXT:    orl %edx, %ecx
-; AVX2-NEXT:    vpextrb $6, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $6, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $7, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $8, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $9, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $10, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $11, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $12, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $13, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $14, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $15, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; AVX2-NEXT:    vpextrb $0, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $16, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $1, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $17, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $2, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $18, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $3, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $19, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $20, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $21, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $6, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $22, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $23, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $24, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $25, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $26, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $27, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $28, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm1, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $29, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm1, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $30, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm1, %esi
-; AVX2-NEXT:    shll $31, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    orl %ecx, %esi
-; AVX2-NEXT:    movl %esi, 4(%rdi)
-; AVX2-NEXT:    vpextrb $1, %xmm0, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    vpextrb $0, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; AVX2-NEXT:    vpextrb $2, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; AVX2-NEXT:    vpextrb $3, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; AVX2-NEXT:    vpextrb $4, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $4, %edx
-; AVX2-NEXT:    orl %ecx, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm0, %ecx
-; AVX2-NEXT:    andl $1, %ecx
-; AVX2-NEXT:    shll $5, %ecx
-; AVX2-NEXT:    orl %edx, %ecx
-; AVX2-NEXT:    vpextrb $6, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $6, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $7, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $8, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $9, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $10, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $11, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $12, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $13, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $14, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $15, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
-; AVX2-NEXT:    vpextrb $0, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $16, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $1, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $17, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $2, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $18, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $3, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $19, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $4, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $20, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $5, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $21, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $6, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $22, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $7, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $23, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $8, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $24, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $9, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $25, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $10, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $26, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $11, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $27, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $12, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $28, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $13, %xmm0, %esi
-; AVX2-NEXT:    andl $1, %esi
-; AVX2-NEXT:    shll $29, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    vpextrb $14, %xmm0, %edx
-; AVX2-NEXT:    andl $1, %edx
-; AVX2-NEXT:    shll $30, %edx
-; AVX2-NEXT:    orl %esi, %edx
-; AVX2-NEXT:    vpextrb $15, %xmm0, %esi
-; AVX2-NEXT:    shll $31, %esi
-; AVX2-NEXT:    orl %edx, %esi
-; AVX2-NEXT:    orl %ecx, %esi
-; AVX2-NEXT:    movl %esi, (%rdi)
+; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
+; AVX2-NEXT:    vpcmpgtb %ymm5, %ymm1, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %edx
+; AVX2-NEXT:    shlq $32, %rdx
+; AVX2-NEXT:    orq %rcx, %rdx
+; AVX2-NEXT:    vpcmpgtb %ymm6, %ymm2, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
+; AVX2-NEXT:    vpcmpgtb %ymm7, %ymm3, %ymm0
+; AVX2-NEXT:    vpmovmskb %ymm0, %esi
+; AVX2-NEXT:    shlq $32, %rsi
+; AVX2-NEXT:    orq %rcx, %rsi
+; AVX2-NEXT:    movq %rsi, 8(%rdi)
+; AVX2-NEXT:    movq %rdx, (%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -6479,386 +1682,61 @@ define <128 x i1> @test_cmp_v128i8(<128 x i8> %a0, <128 x i8> %a1) nounwind {
 ;
 
 define <32 x i1> @test_cmp_v32f64(<32 x double> %a0, <32 x double> %a1) nounwind {
-; SSE2-LABEL: test_cmp_v32f64:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq %rdi, %rax
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm8
-; SSE2-NEXT:    cmpltpd %xmm1, %xmm8
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    cmpltpd %xmm0, %xmm1
-; SSE2-NEXT:    movapd {{.*#+}} xmm9 = [255,255]
-; SSE2-NEXT:    andpd %xmm9, %xmm8
-; SSE2-NEXT:    andpd %xmm9, %xmm1
-; SSE2-NEXT:    packuswb %xmm8, %xmm1
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    cmpltpd %xmm3, %xmm0
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
-; SSE2-NEXT:    cmpltpd %xmm2, %xmm3
-; SSE2-NEXT:    andpd %xmm9, %xmm0
-; SSE2-NEXT:    andpd %xmm9, %xmm3
-; SSE2-NEXT:    packuswb %xmm0, %xmm3
-; SSE2-NEXT:    packuswb %xmm1, %xmm1
-; SSE2-NEXT:    packuswb %xmm1, %xmm1
-; SSE2-NEXT:    packuswb %xmm3, %xmm3
-; SSE2-NEXT:    packuswb %xmm3, %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[1,1,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    cmpltpd %xmm7, %xmm0
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
-; SSE2-NEXT:    cmpltpd %xmm6, %xmm3
-; SSE2-NEXT:    andpd %xmm9, %xmm0
-; SSE2-NEXT:    andpd %xmm9, %xmm3
-; SSE2-NEXT:    packuswb %xmm0, %xmm3
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    cmpltpd %xmm5, %xmm0
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm6
-; SSE2-NEXT:    cmpltpd %xmm4, %xmm6
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm2
-; SSE2-NEXT:    andpd %xmm9, %xmm0
-; SSE2-NEXT:    andpd %xmm9, %xmm6
-; SSE2-NEXT:    packuswb %xmm0, %xmm6
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm5
-; SSE2-NEXT:    packuswb %xmm3, %xmm3
-; SSE2-NEXT:    packuswb %xmm3, %xmm3
-; SSE2-NEXT:    packuswb %xmm6, %xmm6
-; SSE2-NEXT:    packuswb %xmm6, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm6[0,1,2,2]
-; SSE2-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
-; SSE2-NEXT:    movsd {{.*#+}} xmm4 = xmm1[0],xmm4[1]
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    andpd %xmm9, %xmm0
-; SSE2-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm3
-; SSE2-NEXT:    andpd %xmm9, %xmm3
-; SSE2-NEXT:    packuswb %xmm0, %xmm3
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    andpd %xmm9, %xmm0
-; SSE2-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm5
-; SSE2-NEXT:    andpd %xmm9, %xmm5
-; SSE2-NEXT:    packuswb %xmm0, %xmm5
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    packuswb %xmm3, %xmm3
-; SSE2-NEXT:    packuswb %xmm3, %xmm3
-; SSE2-NEXT:    packuswb %xmm5, %xmm5
-; SSE2-NEXT:    packuswb %xmm5, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[1,1,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1]
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    andpd %xmm9, %xmm0
-; SSE2-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    andpd %xmm9, %xmm1
-; SSE2-NEXT:    packuswb %xmm0, %xmm1
-; SSE2-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    andpd %xmm9, %xmm0
-; SSE2-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm2
-; SSE2-NEXT:    andpd %xmm9, %xmm2
-; SSE2-NEXT:    packuswb %xmm0, %xmm2
-; SSE2-NEXT:    packuswb %xmm1, %xmm1
-; SSE2-NEXT:    packuswb %xmm1, %xmm1
-; SSE2-NEXT:    packuswb %xmm2, %xmm2
-; SSE2-NEXT:    packuswb %xmm2, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,1,2,2]
-; SSE2-NEXT:    punpckhdq {{.*#+}} xmm0 = xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm3[0],xmm0[1]
-; SSE2-NEXT:    movapd %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 2(%rdi)
-; SSE2-NEXT:    movapd %xmm4, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, (%rdi)
-; SSE2-NEXT:    retq
-;
-; SSE42-LABEL: test_cmp_v32f64:
-; SSE42:       # %bb.0:
-; SSE42-NEXT:    pushq %rbp
-; SSE42-NEXT:    pushq %r15
-; SSE42-NEXT:    pushq %r14
-; SSE42-NEXT:    pushq %r13
-; SSE42-NEXT:    pushq %r12
-; SSE42-NEXT:    pushq %rbx
-; SSE42-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm8
-; SSE42-NEXT:    cmpltpd %xmm7, %xmm8
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm7
-; SSE42-NEXT:    cmpltpd %xmm6, %xmm7
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm6
-; SSE42-NEXT:    cmpltpd %xmm5, %xmm6
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm5
-; SSE42-NEXT:    cmpltpd %xmm4, %xmm5
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm4
-; SSE42-NEXT:    cmpltpd %xmm3, %xmm4
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
-; SSE42-NEXT:    cmpltpd %xmm2, %xmm3
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm2
-; SSE42-NEXT:    cmpltpd %xmm1, %xmm2
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
-; SSE42-NEXT:    cmpltpd %xmm0, %xmm1
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    pextrb $8, %xmm0, %r8d
-; SSE42-NEXT:    pextrb $0, %xmm0, %r10d
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    pextrb $0, %xmm0, %ebp
-; SSE42-NEXT:    pextrb $8, %xmm0, %edi
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    pextrb $0, %xmm0, %r15d
-; SSE42-NEXT:    pextrb $8, %xmm0, %r11d
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    pextrb $0, %xmm0, %r14d
-; SSE42-NEXT:    pextrb $8, %xmm0, %r9d
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    pextrb $0, %xmm0, %edx
-; SSE42-NEXT:    pextrb $8, %xmm0, %r12d
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    pextrb $0, %xmm0, %esi
-; SSE42-NEXT:    pextrb $8, %xmm0, %ebx
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    pextrb $0, %xmm0, %ecx
-; SSE42-NEXT:    pextrb $8, %xmm0, %r13d
-; SSE42-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    andl $1, %r8d
-; SSE42-NEXT:    andl $1, %r10d
-; SSE42-NEXT:    leal (%r10,%r8,2), %eax
-; SSE42-NEXT:    andl $1, %ebp
-; SSE42-NEXT:    leal (%rax,%rbp,4), %r8d
-; SSE42-NEXT:    pextrb $0, %xmm0, %eax
-; SSE42-NEXT:    pextrb $8, %xmm0, %ebp
-; SSE42-NEXT:    andl $1, %edi
-; SSE42-NEXT:    leal (%r8,%rdi,8), %r8d
-; SSE42-NEXT:    andl $1, %r15d
-; SSE42-NEXT:    shll $4, %r15d
-; SSE42-NEXT:    orl %r8d, %r15d
-; SSE42-NEXT:    pextrb $8, %xmm1, %edi
-; SSE42-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE42-NEXT:    pextrb $0, %xmm1, %r8d
-; SSE42-NEXT:    andl $1, %r11d
-; SSE42-NEXT:    shll $5, %r11d
-; SSE42-NEXT:    orl %r15d, %r11d
-; SSE42-NEXT:    andl $1, %r14d
-; SSE42-NEXT:    shll $6, %r14d
-; SSE42-NEXT:    andl $1, %r9d
-; SSE42-NEXT:    shll $7, %r9d
-; SSE42-NEXT:    orl %r14d, %r9d
-; SSE42-NEXT:    pextrb $0, %xmm2, %r10d
-; SSE42-NEXT:    pextrb $8, %xmm2, %edi
-; SSE42-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %r9d, %edx
-; SSE42-NEXT:    andl $1, %r12d
-; SSE42-NEXT:    shll $9, %r12d
-; SSE42-NEXT:    orl %edx, %r12d
-; SSE42-NEXT:    pextrb $0, %xmm3, %edi
-; SSE42-NEXT:    pextrb $8, %xmm3, %r9d
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $10, %esi
-; SSE42-NEXT:    orl %r12d, %esi
-; SSE42-NEXT:    andl $1, %ebx
-; SSE42-NEXT:    shll $11, %ebx
-; SSE42-NEXT:    orl %esi, %ebx
-; SSE42-NEXT:    pextrb $0, %xmm4, %r15d
-; SSE42-NEXT:    pextrb $8, %xmm4, %r12d
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $12, %ecx
-; SSE42-NEXT:    orl %ebx, %ecx
-; SSE42-NEXT:    andl $1, %r13d
-; SSE42-NEXT:    shll $13, %r13d
-; SSE42-NEXT:    orl %ecx, %r13d
-; SSE42-NEXT:    pextrb $0, %xmm5, %ecx
-; SSE42-NEXT:    pextrb $8, %xmm5, %ebx
-; SSE42-NEXT:    andl $1, %eax
-; SSE42-NEXT:    shll $14, %eax
-; SSE42-NEXT:    orl %r13d, %eax
-; SSE42-NEXT:    shll $15, %ebp
-; SSE42-NEXT:    orl %eax, %ebp
-; SSE42-NEXT:    pextrb $0, %xmm6, %r13d
-; SSE42-NEXT:    pextrb $8, %xmm6, %esi
-; SSE42-NEXT:    orl %r11d, %ebp
-; SSE42-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Reload
-; SSE42-NEXT:    movw %bp, 2(%r14)
-; SSE42-NEXT:    pextrb $0, %xmm7, %r11d
-; SSE42-NEXT:    pextrb $8, %xmm7, %eax
-; SSE42-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    andl $1, %r8d
-; SSE42-NEXT:    leal (%r8,%rdx,2), %r8d
-; SSE42-NEXT:    andl $1, %r10d
-; SSE42-NEXT:    leal (%r8,%r10,4), %r8d
-; SSE42-NEXT:    pextrb $0, %xmm8, %r10d
-; SSE42-NEXT:    pextrb $8, %xmm8, %ebp
-; SSE42-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%r8,%rdx,8), %r8d
-; SSE42-NEXT:    andl $1, %edi
-; SSE42-NEXT:    shll $4, %edi
-; SSE42-NEXT:    orl %r8d, %edi
-; SSE42-NEXT:    andl $1, %r9d
-; SSE42-NEXT:    shll $5, %r9d
-; SSE42-NEXT:    orl %edi, %r9d
-; SSE42-NEXT:    andl $1, %r15d
-; SSE42-NEXT:    shll $6, %r15d
-; SSE42-NEXT:    andl $1, %r12d
-; SSE42-NEXT:    shll $7, %r12d
-; SSE42-NEXT:    orl %r15d, %r12d
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $8, %ecx
-; SSE42-NEXT:    orl %r12d, %ecx
-; SSE42-NEXT:    andl $1, %ebx
-; SSE42-NEXT:    shll $9, %ebx
-; SSE42-NEXT:    orl %ecx, %ebx
-; SSE42-NEXT:    andl $1, %r13d
-; SSE42-NEXT:    shll $10, %r13d
-; SSE42-NEXT:    orl %ebx, %r13d
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %r13d, %esi
-; SSE42-NEXT:    andl $1, %r11d
-; SSE42-NEXT:    shll $12, %r11d
-; SSE42-NEXT:    orl %esi, %r11d
-; SSE42-NEXT:    andl $1, %eax
-; SSE42-NEXT:    shll $13, %eax
-; SSE42-NEXT:    orl %r11d, %eax
-; SSE42-NEXT:    andl $1, %r10d
-; SSE42-NEXT:    shll $14, %r10d
-; SSE42-NEXT:    orl %eax, %r10d
-; SSE42-NEXT:    shll $15, %ebp
-; SSE42-NEXT:    orl %r10d, %ebp
-; SSE42-NEXT:    orl %r9d, %ebp
-; SSE42-NEXT:    movw %bp, (%r14)
-; SSE42-NEXT:    movq %r14, %rax
-; SSE42-NEXT:    popq %rbx
-; SSE42-NEXT:    popq %r12
-; SSE42-NEXT:    popq %r13
-; SSE42-NEXT:    popq %r14
-; SSE42-NEXT:    popq %r15
-; SSE42-NEXT:    popq %rbp
-; SSE42-NEXT:    retq
+; SSE-LABEL: test_cmp_v32f64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm8
+; SSE-NEXT:    cmpltpd %xmm7, %xmm8
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm7
+; SSE-NEXT:    cmpltpd %xmm6, %xmm7
+; SSE-NEXT:    packssdw %xmm8, %xmm7
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm6
+; SSE-NEXT:    cmpltpd %xmm5, %xmm6
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm5
+; SSE-NEXT:    cmpltpd %xmm4, %xmm5
+; SSE-NEXT:    packssdw %xmm6, %xmm5
+; SSE-NEXT:    packssdw %xmm7, %xmm5
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm4
+; SSE-NEXT:    cmpltpd %xmm3, %xmm4
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    cmpltpd %xmm2, %xmm3
+; SSE-NEXT:    packssdw %xmm4, %xmm3
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm2
+; SSE-NEXT:    cmpltpd %xmm1, %xmm2
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    cmpltpd %xmm0, %xmm1
+; SSE-NEXT:    packssdw %xmm2, %xmm1
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    packssdw %xmm3, %xmm1
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm2
+; SSE-NEXT:    packsswb %xmm5, %xmm1
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    pmovmskb %xmm1, %ecx
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    packssdw %xmm1, %xmm3
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm2
+; SSE-NEXT:    packssdw %xmm1, %xmm2
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    packssdw %xmm3, %xmm2
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm1
+; SSE-NEXT:    packssdw %xmm3, %xmm1
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    cmpltpd {{[0-9]+}}(%rsp), %xmm0
+; SSE-NEXT:    packssdw %xmm3, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    packsswb %xmm2, %xmm0
+; SSE-NEXT:    pmovmskb %xmm0, %edx
+; SSE-NEXT:    shll $16, %edx
+; SSE-NEXT:    orl %ecx, %edx
+; SSE-NEXT:    movl %edx, (%rdi)
+; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: test_cmp_v32f64:
 ; AVX1:       # %bb.0:
@@ -7000,507 +1878,256 @@ define <32 x i1> @test_cmp_v32i64(<32 x i64> %a0, <32 x i64> %a1) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq %rdi, %rax
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm8 = [2147483648,2147483648]
-; SSE2-NEXT:    pxor %xmm8, %xmm1
+; SSE2-NEXT:    pxor %xmm8, %xmm7
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
 ; SSE2-NEXT:    pxor %xmm8, %xmm9
-; SSE2-NEXT:    movdqa %xmm1, %xmm10
+; SSE2-NEXT:    movdqa %xmm7, %xmm10
 ; SSE2-NEXT:    pcmpgtd %xmm9, %xmm10
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm11 = xmm10[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm9
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm9[1,1,3,3]
-; SSE2-NEXT:    pand %xmm11, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm7, %xmm9
+; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm9[1,1,3,3]
+; SSE2-NEXT:    pand %xmm11, %xmm7
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm10[1,1,3,3]
-; SSE2-NEXT:    por %xmm1, %xmm9
-; SSE2-NEXT:    movdqa {{.*#+}} xmm10 = [255,255]
-; SSE2-NEXT:    pand %xmm10, %xmm9
-; SSE2-NEXT:    pxor %xmm8, %xmm0
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    pxor %xmm8, %xmm1
-; SSE2-NEXT:    movdqa %xmm0, %xmm11
-; SSE2-NEXT:    pcmpgtd %xmm1, %xmm11
-; SSE2-NEXT:    pshufd {{.*#+}} xmm12 = xmm11[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-NEXT:    pand %xmm12, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm11 = xmm11[1,1,3,3]
-; SSE2-NEXT:    por %xmm1, %xmm11
-; SSE2-NEXT:    pand %xmm10, %xmm11
-; SSE2-NEXT:    packuswb %xmm9, %xmm11
-; SSE2-NEXT:    packuswb %xmm11, %xmm11
-; SSE2-NEXT:    packuswb %xmm11, %xmm11
-; SSE2-NEXT:    pxor %xmm8, %xmm3
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    pxor %xmm8, %xmm1
-; SSE2-NEXT:    movdqa %xmm3, %xmm0
-; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm0[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-NEXT:    pand %xmm9, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pand %xmm10, %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm2
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    pxor %xmm8, %xmm1
-; SSE2-NEXT:    movdqa %xmm2, %xmm3
-; SSE2-NEXT:    pcmpgtd %xmm1, %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm3[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm2, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-NEXT:    pand %xmm9, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,1,3,3]
-; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    pand %xmm10, %xmm2
-; SSE2-NEXT:    packuswb %xmm0, %xmm2
-; SSE2-NEXT:    packuswb %xmm2, %xmm2
-; SSE2-NEXT:    packuswb %xmm2, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm11 = xmm11[0],xmm0[0],xmm11[1],xmm0[1]
-; SSE2-NEXT:    pxor %xmm8, %xmm7
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm0
-; SSE2-NEXT:    movdqa %xmm7, %xmm1
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm7, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pand %xmm10, %xmm1
+; SSE2-NEXT:    por %xmm7, %xmm9
 ; SSE2-NEXT:    pxor %xmm8, %xmm6
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm0
-; SSE2-NEXT:    movdqa %xmm6, %xmm2
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm6, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; SSE2-NEXT:    por %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm10, %xmm2
-; SSE2-NEXT:    packuswb %xmm1, %xmm2
-; SSE2-NEXT:    packuswb %xmm2, %xmm2
-; SSE2-NEXT:    packuswb %xmm2, %xmm2
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm7
+; SSE2-NEXT:    pxor %xmm8, %xmm7
+; SSE2-NEXT:    movdqa %xmm6, %xmm10
+; SSE2-NEXT:    pcmpgtd %xmm7, %xmm10
+; SSE2-NEXT:    pshufd {{.*#+}} xmm11 = xmm10[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm6, %xmm7
+; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[1,1,3,3]
+; SSE2-NEXT:    pand %xmm11, %xmm7
+; SSE2-NEXT:    pshufd {{.*#+}} xmm10 = xmm10[1,1,3,3]
+; SSE2-NEXT:    por %xmm7, %xmm10
+; SSE2-NEXT:    packssdw %xmm9, %xmm10
 ; SSE2-NEXT:    pxor %xmm8, %xmm5
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm0
-; SSE2-NEXT:    movdqa %xmm5, %xmm1
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm5, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pand %xmm3, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pand %xmm10, %xmm1
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm7
+; SSE2-NEXT:    pxor %xmm8, %xmm7
+; SSE2-NEXT:    movdqa %xmm5, %xmm6
+; SSE2-NEXT:    pcmpgtd %xmm7, %xmm6
+; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm6[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm5, %xmm7
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm7[1,1,3,3]
+; SSE2-NEXT:    pand %xmm9, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[1,1,3,3]
+; SSE2-NEXT:    por %xmm5, %xmm6
 ; SSE2-NEXT:    pxor %xmm8, %xmm4
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm0
-; SSE2-NEXT:    movdqa %xmm4, %xmm3
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm3[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm4, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE2-NEXT:    pand %xmm5, %xmm0
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm5
+; SSE2-NEXT:    pxor %xmm8, %xmm5
+; SSE2-NEXT:    movdqa %xmm4, %xmm7
+; SSE2-NEXT:    pcmpgtd %xmm5, %xmm7
+; SSE2-NEXT:    pshufd {{.*#+}} xmm9 = xmm7[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm4, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
+; SSE2-NEXT:    pand %xmm9, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm7[1,1,3,3]
+; SSE2-NEXT:    por %xmm5, %xmm4
+; SSE2-NEXT:    packssdw %xmm6, %xmm4
+; SSE2-NEXT:    packssdw %xmm10, %xmm4
+; SSE2-NEXT:    pxor %xmm8, %xmm3
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm5
+; SSE2-NEXT:    pxor %xmm8, %xmm5
+; SSE2-NEXT:    movdqa %xmm3, %xmm6
+; SSE2-NEXT:    pcmpgtd %xmm5, %xmm6
+; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm5[1,1,3,3]
+; SSE2-NEXT:    pand %xmm7, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm6[1,1,3,3]
+; SSE2-NEXT:    por %xmm3, %xmm5
+; SSE2-NEXT:    pxor %xmm8, %xmm2
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm3
+; SSE2-NEXT:    pxor %xmm8, %xmm3
+; SSE2-NEXT:    movdqa %xmm2, %xmm6
+; SSE2-NEXT:    pcmpgtd %xmm3, %xmm6
+; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm6[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE2-NEXT:    por %xmm0, %xmm3
-; SSE2-NEXT:    pand %xmm10, %xmm3
-; SSE2-NEXT:    packuswb %xmm1, %xmm3
-; SSE2-NEXT:    packuswb %xmm3, %xmm3
-; SSE2-NEXT:    packuswb %xmm3, %xmm3
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,1,2,2]
-; SSE2-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; SSE2-NEXT:    movsd {{.*#+}} xmm3 = xmm11[0],xmm3[1]
+; SSE2-NEXT:    pand %xmm7, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm6[1,1,3,3]
+; SSE2-NEXT:    por %xmm3, %xmm2
+; SSE2-NEXT:    packssdw %xmm5, %xmm2
+; SSE2-NEXT:    pxor %xmm8, %xmm1
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm3
+; SSE2-NEXT:    pxor %xmm8, %xmm3
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
+; SSE2-NEXT:    pand %xmm6, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm5[1,1,3,3]
+; SSE2-NEXT:    por %xmm1, %xmm3
+; SSE2-NEXT:    pxor %xmm8, %xmm0
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
+; SSE2-NEXT:    pxor %xmm8, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm5
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pand %xmm6, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm5[1,1,3,3]
+; SSE2-NEXT:    por %xmm0, %xmm1
+; SSE2-NEXT:    packssdw %xmm3, %xmm1
+; SSE2-NEXT:    packssdw %xmm2, %xmm1
+; SSE2-NEXT:    packsswb %xmm4, %xmm1
+; SSE2-NEXT:    pmovmskb %xmm1, %ecx
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
 ; SSE2-NEXT:    pxor %xmm8, %xmm0
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
 ; SSE2-NEXT:    pxor %xmm8, %xmm1
 ; SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[0,0,2,2]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; SSE2-NEXT:    por %xmm0, %xmm2
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
+; SSE2-NEXT:    pxor %xmm8, %xmm0
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
+; SSE2-NEXT:    pxor %xmm8, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    pand %xmm4, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,3,3]
 ; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pand %xmm10, %xmm1
+; SSE2-NEXT:    packssdw %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
 ; SSE2-NEXT:    pxor %xmm8, %xmm0
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm2
 ; SSE2-NEXT:    pxor %xmm8, %xmm2
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm4
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,3,3]
-; SSE2-NEXT:    pand %xmm5, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm4[1,1,3,3]
+; SSE2-NEXT:    pand %xmm4, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,1,3,3]
 ; SSE2-NEXT:    por %xmm0, %xmm2
-; SSE2-NEXT:    pand %xmm10, %xmm2
-; SSE2-NEXT:    packuswb %xmm1, %xmm2
-; SSE2-NEXT:    packuswb %xmm2, %xmm2
-; SSE2-NEXT:    packuswb %xmm2, %xmm2
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
 ; SSE2-NEXT:    pxor %xmm8, %xmm0
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    pxor %xmm8, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm3
+; SSE2-NEXT:    pxor %xmm8, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm4
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
-; SSE2-NEXT:    pand %xmm5, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,1,3,3]
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pand %xmm10, %xmm1
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm0
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm4
-; SSE2-NEXT:    pxor %xmm8, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm5
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm4
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
+; SSE2-NEXT:    pand %xmm5, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,3,3]
-; SSE2-NEXT:    pand %xmm6, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,3,3]
-; SSE2-NEXT:    por %xmm0, %xmm4
-; SSE2-NEXT:    pand %xmm10, %xmm4
-; SSE2-NEXT:    packuswb %xmm1, %xmm4
-; SSE2-NEXT:    packuswb %xmm4, %xmm4
-; SSE2-NEXT:    packuswb %xmm4, %xmm4
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,2,3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm0
+; SSE2-NEXT:    por %xmm3, %xmm0
+; SSE2-NEXT:    packssdw %xmm2, %xmm0
+; SSE2-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
 ; SSE2-NEXT:    pxor %xmm8, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm4
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm2
+; SSE2-NEXT:    pxor %xmm8, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[1,1,3,3]
+; SSE2-NEXT:    pand %xmm4, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,1,3,3]
+; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
+; SSE2-NEXT:    pxor %xmm8, %xmm1
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm3
+; SSE2-NEXT:    pxor %xmm8, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm4
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,3,3]
-; SSE2-NEXT:    pand %xmm5, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
+; SSE2-NEXT:    pand %xmm5, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,1,3,3]
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pand %xmm10, %xmm1
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm0
-; SSE2-NEXT:    pxor %xmm8, %xmm0
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm4
-; SSE2-NEXT:    pxor %xmm8, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm5
-; SSE2-NEXT:    pcmpgtd %xmm0, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm0, %xmm4
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
-; SSE2-NEXT:    pand %xmm6, %xmm4
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[1,1,3,3]
-; SSE2-NEXT:    por %xmm4, %xmm0
-; SSE2-NEXT:    pand %xmm10, %xmm0
-; SSE2-NEXT:    packuswb %xmm1, %xmm0
-; SSE2-NEXT:    packuswb %xmm0, %xmm0
-; SSE2-NEXT:    packuswb %xmm0, %xmm0
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    pxor %xmm8, %xmm1
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm4
-; SSE2-NEXT:    pxor %xmm8, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm5
-; SSE2-NEXT:    pcmpgtd %xmm1, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm4
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm4[1,1,3,3]
-; SSE2-NEXT:    pand %xmm6, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[1,1,3,3]
-; SSE2-NEXT:    por %xmm1, %xmm4
-; SSE2-NEXT:    pand %xmm10, %xmm4
-; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm1
-; SSE2-NEXT:    pxor %xmm8, %xmm1
+; SSE2-NEXT:    por %xmm3, %xmm1
+; SSE2-NEXT:    packssdw %xmm2, %xmm1
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm2
+; SSE2-NEXT:    pxor %xmm8, %xmm2
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm3
+; SSE2-NEXT:    pxor %xmm8, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm3
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,1,3,3]
+; SSE2-NEXT:    pand %xmm5, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,1,3,3]
+; SSE2-NEXT:    por %xmm2, %xmm3
+; SSE2-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm2
+; SSE2-NEXT:    pxor %xmm8, %xmm2
 ; SSE2-NEXT:    pxor {{[0-9]+}}(%rsp), %xmm8
-; SSE2-NEXT:    movdqa %xmm8, %xmm5
-; SSE2-NEXT:    pcmpgtd %xmm1, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm8
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm8[1,1,3,3]
-; SSE2-NEXT:    pand %xmm6, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm5[1,1,3,3]
-; SSE2-NEXT:    por %xmm1, %xmm5
-; SSE2-NEXT:    pand %xmm10, %xmm5
-; SSE2-NEXT:    packuswb %xmm4, %xmm5
-; SSE2-NEXT:    packuswb %xmm5, %xmm5
-; SSE2-NEXT:    packuswb %xmm5, %xmm5
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm5[0,1,2,2]
-; SSE2-NEXT:    punpckhdq {{.*#+}} xmm1 = xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
-; SSE2-NEXT:    movapd %xmm1, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
+; SSE2-NEXT:    movdqa %xmm8, %xmm4
+; SSE2-NEXT:    pcmpgtd %xmm2, %xmm4
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm8
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm8[1,1,3,3]
+; SSE2-NEXT:    pand %xmm5, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[1,1,3,3]
+; SSE2-NEXT:    por %xmm2, %xmm4
+; SSE2-NEXT:    packssdw %xmm3, %xmm4
+; SSE2-NEXT:    packssdw %xmm1, %xmm4
+; SSE2-NEXT:    packsswb %xmm0, %xmm4
+; SSE2-NEXT:    pmovmskb %xmm4, %edx
+; SSE2-NEXT:    shll $16, %edx
 ; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, 2(%rdi)
-; SSE2-NEXT:    movapd %xmm3, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $4, %edx
-; SSE2-NEXT:    orl %ecx, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; SSE2-NEXT:    andl $1, %ecx
-; SSE2-NEXT:    shll $5, %ecx
-; SSE2-NEXT:    orl %edx, %ecx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $6, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $7, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $8, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $9, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $10, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $11, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $12, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    andl $1, %esi
-; SSE2-NEXT:    shll $13, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %edx
-; SSE2-NEXT:    andl $1, %edx
-; SSE2-NEXT:    shll $14, %edx
-; SSE2-NEXT:    orl %esi, %edx
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %esi
-; SSE2-NEXT:    shll $15, %esi
-; SSE2-NEXT:    orl %edx, %esi
-; SSE2-NEXT:    orl %ecx, %esi
-; SSE2-NEXT:    movw %si, (%rdi)
+; SSE2-NEXT:    movl %edx, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: test_cmp_v32i64:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    movq %rdi, %rax
-; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm15
-; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm14
-; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm13
-; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm12
+; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
 ; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm11
 ; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm10
+; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm12
 ; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm9
-; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
+; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm14
+; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm13
+; SSE42-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm15
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm7
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm6
+; SSE42-NEXT:    packssdw %xmm7, %xmm6
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm5
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm4
+; SSE42-NEXT:    packssdw %xmm5, %xmm4
+; SSE42-NEXT:    packssdw %xmm6, %xmm4
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm3
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm2
+; SSE42-NEXT:    packssdw %xmm3, %xmm2
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm1
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm0
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm8
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm9
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm10
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm11
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm12
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm13
-; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm14
+; SSE42-NEXT:    packssdw %xmm1, %xmm0
+; SSE42-NEXT:    packssdw %xmm2, %xmm0
+; SSE42-NEXT:    packsswb %xmm4, %xmm0
+; SSE42-NEXT:    pmovmskb %xmm0, %ecx
 ; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm15
-; SSE42-NEXT:    pextrb $8, %xmm15, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm15, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $0, %xmm14, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm14, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $0, %xmm13, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm13
+; SSE42-NEXT:    packssdw %xmm15, %xmm13
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm14
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm9
+; SSE42-NEXT:    packssdw %xmm14, %xmm9
+; SSE42-NEXT:    packssdw %xmm13, %xmm9
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm12
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm10
+; SSE42-NEXT:    packssdw %xmm12, %xmm10
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm11
+; SSE42-NEXT:    pcmpgtq {{[0-9]+}}(%rsp), %xmm8
+; SSE42-NEXT:    packssdw %xmm11, %xmm8
+; SSE42-NEXT:    packssdw %xmm10, %xmm8
+; SSE42-NEXT:    packsswb %xmm9, %xmm8
+; SSE42-NEXT:    pmovmskb %xmm8, %edx
+; SSE42-NEXT:    shll $16, %edx
 ; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $8, %xmm13, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm12, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $8, %xmm12, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm11, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $8, %xmm11, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm10, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $8, %xmm10, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm9, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $8, %xmm9, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm8, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $8, %xmm8, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, 2(%rdi)
-; SSE42-NEXT:    pextrb $8, %xmm0, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm0, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rdx,%rcx,2), %ecx
-; SSE42-NEXT:    pextrb $0, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,4), %ecx
-; SSE42-NEXT:    pextrb $8, %xmm1, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    leal (%rcx,%rdx,8), %ecx
-; SSE42-NEXT:    pextrb $0, %xmm2, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $4, %edx
-; SSE42-NEXT:    orl %ecx, %edx
-; SSE42-NEXT:    pextrb $8, %xmm2, %ecx
-; SSE42-NEXT:    andl $1, %ecx
-; SSE42-NEXT:    shll $5, %ecx
-; SSE42-NEXT:    orl %edx, %ecx
-; SSE42-NEXT:    pextrb $0, %xmm3, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $6, %edx
-; SSE42-NEXT:    pextrb $8, %xmm3, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $7, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm4, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $8, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $8, %xmm4, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $9, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm5, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $10, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $8, %xmm5, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $11, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm6, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $12, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $8, %xmm6, %esi
-; SSE42-NEXT:    andl $1, %esi
-; SSE42-NEXT:    shll $13, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    pextrb $0, %xmm7, %edx
-; SSE42-NEXT:    andl $1, %edx
-; SSE42-NEXT:    shll $14, %edx
-; SSE42-NEXT:    orl %esi, %edx
-; SSE42-NEXT:    pextrb $8, %xmm7, %esi
-; SSE42-NEXT:    shll $15, %esi
-; SSE42-NEXT:    orl %edx, %esi
-; SSE42-NEXT:    orl %ecx, %esi
-; SSE42-NEXT:    movw %si, (%rdi)
+; SSE42-NEXT:    movl %edx, (%rdi)
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: test_cmp_v32i64:
