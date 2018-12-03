@@ -786,7 +786,7 @@ public:
   static bool PerformAutoImport(SwiftASTContext &swift_ast_context,
                                 SymbolContext &sc,
                                 lldb::StackFrameWP &stack_frame_wp,
-                                swift::SourceFile &source_file, Status &error);
+                                swift::SourceFile *source_file, Status &error);
 
 protected:
   // This map uses the string value of ConstStrings as the key, and the TypeBase
