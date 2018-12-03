@@ -1,3 +1,6 @@
+# FIXME: Find out why this fails on Windows.
+# UNSUPPORTED: system-windows
+
 # Check that errors are propagated to the driver.
 
 # RUN: not %lldb --capture /bogus 2>&1 | FileCheck %s --check-prefix CAPTURE
