@@ -382,7 +382,7 @@ def runAnalyzePreprocessed(Args, Dir, SBOutputDir, Mode):
             check_call(Command, cwd=Dir, stderr=LogFile,
                        stdout=LogFile,
                        shell=True)
-        except CalledProcessError, e:
+        except CalledProcessError as e:
             Local.stderr.write("Error: Analyzes of %s failed. "
                                "See %s for details."
                                "Error code %d.\n" % (

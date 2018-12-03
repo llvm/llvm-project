@@ -72,6 +72,7 @@ AARCH64_ARCH_EXT_NAME("sve",      AArch64::AEK_SVE,      "+sve",  "-sve")
 AARCH64_ARCH_EXT_NAME("rcpc",     AArch64::AEK_RCPC,     "+rcpc", "-rcpc")
 AARCH64_ARCH_EXT_NAME("rng",      AArch64::AEK_RAND,     "+rand",  "-rand")
 AARCH64_ARCH_EXT_NAME("memtag",   AArch64::AEK_MTE,      "+mte",   "-mte")
+AARCH64_ARCH_EXT_NAME("ssbs",     AArch64::AEK_SSBS,     "+ssbs",  "-ssbs")
 #undef AARCH64_ARCH_EXT_NAME
 
 #ifndef AARCH64_CPU_NAME

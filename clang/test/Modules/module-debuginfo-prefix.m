@@ -20,4 +20,4 @@
 @import DebugObjC;
 #endif
 
-// CHECK: !DIFile({{.*}}"/OVERRIDE/DebugObjC.h"
+// CHECK: !DIFile(filename: "/OVERRIDE/DebugObjC.h", directory: "")

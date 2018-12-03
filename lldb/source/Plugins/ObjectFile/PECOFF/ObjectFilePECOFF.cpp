@@ -817,12 +817,12 @@ lldb_private::Address ObjectFilePECOFF::GetEntryPointAddress() {
     return m_entry_point_address;
 
   SectionList *section_list = GetSectionList();
-  addr_t offset = m_coff_header_opt.entry;
+  addr_t file_addr = m_coff_header_opt.entry + m_coff_header_opt.image_base;
 
   if (!section_list)
-    m_entry_point_address.SetOffset(offset);
+    m_entry_point_address.SetOffset(file_addr);
   else
-    m_entry_point_address.ResolveAddressUsingFileSections(offset, section_list);
+    m_entry_point_address.ResolveAddressUsingFileSections(file_addr, section_list);
   return m_entry_point_address;
 }
 

@@ -1597,6 +1597,13 @@ function(llvm_externalize_debuginfo name)
     endif()
   endif()
 
+  if(LLVM_EXTERNALIZE_DEBUGINFO_OUTPUT_DIR)
+    if(APPLE)
+      set(output_name "$<TARGET_FILE_NAME:${name}>.dSYM")
+      set(output_path "-o=${LLVM_EXTERNALIZE_DEBUGINFO_OUTPUT_DIR}/${output_name}")
+    endif()
+  endif()
+
   if(APPLE)
     if(CMAKE_CXX_FLAGS MATCHES "-flto"
       OR CMAKE_CXX_FLAGS_${uppercase_CMAKE_BUILD_TYPE} MATCHES "-flto")
@@ -1609,7 +1616,7 @@ function(llvm_externalize_debuginfo name)
       set(CMAKE_DSYMUTIL xcrun dsymutil)
     endif()
     add_custom_command(TARGET ${name} POST_BUILD
-      COMMAND ${CMAKE_DSYMUTIL} $<TARGET_FILE:${name}>
+      COMMAND ${CMAKE_DSYMUTIL} ${output_path} $<TARGET_FILE:${name}>
       ${strip_command}
       )
   else()

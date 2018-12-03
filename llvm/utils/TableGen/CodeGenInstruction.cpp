@@ -370,6 +370,7 @@ CodeGenInstruction::CodeGenInstruction(Record *R)
   isConvergent = R->getValueAsBit("isConvergent");
   hasNoSchedulingInfo = R->getValueAsBit("hasNoSchedulingInfo");
   FastISelShouldIgnore = R->getValueAsBit("FastISelShouldIgnore");
+  variadicOpsAreDefs = R->getValueAsBit("variadicOpsAreDefs");
 
   bool Unset;
   mayLoad      = R->getValueAsBitOrUnset("mayLoad", Unset);

@@ -1775,7 +1775,7 @@ multiclass thumb2_ld_mult<string asm, InstrItinClass itin,
 
 let hasSideEffects = 0 in {
 
-let mayLoad = 1, hasExtraDefRegAllocReq = 1 in
+let mayLoad = 1, hasExtraDefRegAllocReq = 1, variadicOpsAreDefs = 1 in
 defm t2LDM : thumb2_ld_mult<"ldm", IIC_iLoad_m, IIC_iLoad_mu, 1>;
 
 multiclass thumb2_st_mult<string asm, InstrItinClass itin,
@@ -2093,6 +2093,12 @@ defm t2SUB  : T2I_bin_ii12rs<0b101, "sub", sub>;
 // node's second value. We can then eliminate the implicit def of CPSR.
 defm t2ADDS : T2I_bin_s_irs <IIC_iALUi, IIC_iALUr, IIC_iALUsi, ARMaddc, 1>;
 defm t2SUBS : T2I_bin_s_irs <IIC_iALUi, IIC_iALUr, IIC_iALUsi, ARMsubc>;
+
+def : T2Pat<(ARMsubs GPRnopc:$Rn, t2_so_imm:$imm),
+            (t2SUBSri $Rn, t2_so_imm:$imm)>;
+def : T2Pat<(ARMsubs GPRnopc:$Rn, rGPR:$Rm), (t2SUBSrr $Rn, $Rm)>;
+def : T2Pat<(ARMsubs GPRnopc:$Rn, t2_so_reg:$ShiftedRm),
+            (t2SUBSrs $Rn, t2_so_reg:$ShiftedRm)>;
 
 let hasPostISelHook = 1 in {
 defm t2ADC  : T2I_adde_sube_irs<0b1010, "adc", ARMadde, 1>;

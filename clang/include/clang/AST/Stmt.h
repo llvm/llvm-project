@@ -586,6 +586,31 @@ protected:
     SourceLocation Loc;
   };
 
+  class CXXDeleteExprBitfields {
+    friend class ASTStmtReader;
+    friend class CXXDeleteExpr;
+
+    unsigned : NumExprBits;
+
+    /// Is this a forced global delete, i.e. "::delete"?
+    unsigned GlobalDelete : 1;
+
+    /// Is this the array form of delete, i.e. "delete[]"?
+    unsigned ArrayForm : 1;
+
+    /// ArrayFormAsWritten can be different from ArrayForm if 'delete' is
+    /// applied to pointer-to-array type (ArrayFormAsWritten will be false
+    /// while ArrayForm will be true).
+    unsigned ArrayFormAsWritten : 1;
+
+    /// Does the usual deallocation function for the element type require
+    /// a size_t argument?
+    unsigned UsualArrayDeleteWantsSize : 1;
+
+    /// Location of the expression.
+    SourceLocation Loc;
+  };
+
   class TypeTraitExprBitfields {
     friend class ASTStmtReader;
     friend class ASTStmtWriter;
@@ -692,6 +717,7 @@ protected:
     CXXThrowExprBitfields CXXThrowExprBits;
     CXXDefaultArgExprBitfields CXXDefaultArgExprBits;
     CXXDefaultInitExprBitfields CXXDefaultInitExprBits;
+    CXXDeleteExprBitfields CXXDeleteExprBits;
     TypeTraitExprBitfields TypeTraitExprBits;
     ExprWithCleanupsBitfields ExprWithCleanupsBits;
 

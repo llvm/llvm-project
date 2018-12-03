@@ -58,7 +58,7 @@ namespace llvm {
 
   /// Return true if both predicates match sign or if at least one of them is an
   /// equality comparison (which is signless).
-  bool PredicatesFoldable(CmpInst::Predicate p1, CmpInst::Predicate p2);
+  bool predicatesFoldable(CmpInst::Predicate P1, CmpInst::Predicate P2);
 
   /// Decompose an icmp into the form ((X & Mask) pred 0) if possible. The
   /// returned predicate is either == or !=. Returns false if decomposition

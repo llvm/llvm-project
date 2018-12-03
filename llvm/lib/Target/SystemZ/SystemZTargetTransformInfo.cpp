@@ -839,6 +839,16 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
   else { // Scalar
     switch (Opcode) {
     case Instruction::ICmp: {
+      // A loaded value compared with 0 with multiple users becomes Load and
+      // Test. The load is then not foldable, so return 0 cost for the ICmp.
+      unsigned ScalarBits = ValTy->getScalarSizeInBits();
+      if (I != nullptr && ScalarBits >= 32)
+        if (LoadInst *Ld = dyn_cast<LoadInst>(I->getOperand(0)))
+          if (const ConstantInt *C = dyn_cast<ConstantInt>(I->getOperand(1)))
+            if (!Ld->hasOneUse() && Ld->getParent() == I->getParent() &&
+                C->getZExtValue() == 0)
+              return 0;
+
       unsigned Cost = 1;
       if (ValTy->isIntegerTy() && ValTy->getScalarSizeInBits() <= 16)
         Cost += (I != nullptr ? getOperandsExtensionCost(I) : 2);

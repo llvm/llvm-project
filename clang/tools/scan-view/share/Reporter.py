@@ -16,7 +16,7 @@ class ReportFailure(Exception):
 
 # Collect information about a bug.
 
-class BugReport:
+class BugReport(object):
     def __init__(self, title, description, files):
         self.title = title
         self.description = description
@@ -37,7 +37,7 @@ from email.mime.text import MIMEText
 # ReporterParameter
 #===------------------------------------------------------------------------===#
 
-class ReporterParameter:
+class ReporterParameter(object):
   def __init__(self, n):
     self.name = n
   def getName(self):
@@ -75,7 +75,7 @@ class SelectionParameter (ReporterParameter):
 # Reporters
 #===------------------------------------------------------------------------===#
 
-class EmailReporter:
+class EmailReporter(object):
     def getName(self):
         return 'Email'
 
@@ -143,7 +143,7 @@ Description: %s
 
         return "Message sent!"
 
-class BugzillaReporter:
+class BugzillaReporter(object):
     def getName(self):
         return 'Bugzilla'
     
@@ -174,7 +174,7 @@ class RadarClassificationParameter(SelectionParameter):
     else:
       return '7'
 
-class RadarReporter:
+class RadarReporter(object):
     @staticmethod
     def isAvailable():
         # FIXME: Find this .scpt better

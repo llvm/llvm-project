@@ -508,7 +508,7 @@ TEST(TargetParserTest, testARMExtension) {
 }
 
 TEST(TargetParserTest, ARMFPUVersion) {
-  for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0); 
+  for (ARM::FPUKind FK = static_cast<ARM::FPUKind>(0);
        FK <= ARM::FPUKind::FK_LAST;
        FK = static_cast<ARM::FPUKind>(static_cast<unsigned>(FK) + 1))
     if (FK == ARM::FK_LAST || ARM::getFPUName(FK) == "invalid" ||
@@ -992,7 +992,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
                               {"dotprod", "nodotprod", "+dotprod", "-dotprod"},
                               {"rcpc", "norcpc", "+rcpc", "-rcpc" },
                               {"rng", "norng", "+rand", "-rand"},
-                              {"memtag", "nomemtag", "+mte", "-mte"}};
+                              {"memtag", "nomemtag", "+mte", "-mte"},
+                              {"ssbs", "nossbs", "+ssbs", "-ssbs"}};
 
   for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]),
