@@ -37,7 +37,6 @@
 #include "index/Index.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Format/Format.h"
@@ -1645,14 +1644,24 @@ SignatureHelp signatureHelp(PathRef FileName,
 }
 
 bool isIndexedForCodeCompletion(const NamedDecl &ND, ASTContext &ASTCtx) {
-  using namespace clang::ast_matchers;
-  auto InTopLevelScope = hasDeclContext(
-      anyOf(namespaceDecl(), translationUnitDecl(), linkageSpecDecl()));
-  return !match(decl(anyOf(InTopLevelScope,
-                           hasDeclContext(
-                               enumDecl(InTopLevelScope, unless(isScoped()))))),
-                ND, ASTCtx)
-              .empty();
+  auto InTopLevelScope = [](const NamedDecl &ND) {
+    switch (ND.getDeclContext()->getDeclKind()) {
+    case Decl::TranslationUnit:
+    case Decl::Namespace:
+    case Decl::LinkageSpec:
+      return true;
+    default:
+      break;
+    };
+    return false;
+  };
+  if (InTopLevelScope(ND))
+    return true;
+
+  if (const auto *EnumDecl = dyn_cast<clang::EnumDecl>(ND.getDeclContext()))
+    return InTopLevelScope(*EnumDecl) && !EnumDecl->isScoped();
+
+  return false;
 }
 
 CompletionItem CodeCompletion::render(const CodeCompleteOptions &Opts) const {
