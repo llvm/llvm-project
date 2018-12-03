@@ -255,10 +255,13 @@ static cl::opt<bool> ClHandleICmpExact("msan-handle-icmp-exact",
 // passed into an assembly call. Note that this may cause false positives.
 // Because it's impossible to figure out the array sizes, we can only unpoison
 // the first sizeof(type) bytes for each type* pointer.
+// The instrumentation is only enabled in KMSAN builds, and only if
+// -msan-handle-asm-conservative is on. This is done because we may want to
+// quickly disable assembly instrumentation when it breaks.
 static cl::opt<bool> ClHandleAsmConservative(
     "msan-handle-asm-conservative",
     cl::desc("conservative handling of inline assembly"), cl::Hidden,
-    cl::init(false));
+    cl::init(true));
 
 // This flag controls whether we check the shadow of the address
 // operand of load or store. Such bugs are very rare, since load from
@@ -3118,7 +3121,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       // outputs as clean. Note that any side effects of the inline asm that are
       // not immediately visible in its constraints are not handled.
       if (Call->isInlineAsm()) {
-        if (ClHandleAsmConservative)
+        if (ClHandleAsmConservative && MS.CompileKernel)
           visitAsmInstruction(I);
         else
           visitInstruction(I);

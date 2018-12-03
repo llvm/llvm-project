@@ -1775,7 +1775,7 @@ multiclass thumb2_ld_mult<string asm, InstrItinClass itin,
 
 let hasSideEffects = 0 in {
 
-let mayLoad = 1, hasExtraDefRegAllocReq = 1 in
+let mayLoad = 1, hasExtraDefRegAllocReq = 1, variadicOpsAreDefs = 1 in
 defm t2LDM : thumb2_ld_mult<"ldm", IIC_iLoad_m, IIC_iLoad_mu, 1>;
 
 multiclass thumb2_st_mult<string asm, InstrItinClass itin,

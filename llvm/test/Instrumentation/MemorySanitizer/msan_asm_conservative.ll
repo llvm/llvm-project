@@ -1,6 +1,6 @@
 ; Test for handling of asm constraints in MSan instrumentation.
-; RUN: opt < %s -msan -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S | FileCheck -check-prefixes=CHECK,CHECK-NONCONS %s
-; RUN: opt < %s -msan -msan-check-access-address=0 -msan-handle-asm-conservative=1 -S | FileCheck -check-prefixes=CHECK,CHECK-CONS %s
+; RUN: opt < %s -msan -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=0 -S | FileCheck -check-prefixes=CHECK,CHECK-NONCONS %s
+; RUN: opt < %s -msan -msan-kernel=1 -msan-check-access-address=0 -msan-handle-asm-conservative=1 -S | FileCheck -check-prefixes=CHECK,CHECK-CONS %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -40,9 +40,12 @@ entry:
 
 ; CHECK-LABEL: @f_1i_1o_reg
 ; CHECK: [[IS1_F1:%.*]] = load i32, i32* @is1, align 4
-; CHECK: call void @__msan_warning_noreturn()
+; CHECK: call void @__msan_warning
 ; CHECK: call i32 asm "",{{.*}}(i32 [[IS1_F1]])
-; CHECK: store i32 0,{{.*}}ptrtoint (i32* @id1 to i64)
+; CHECK: [[PACK1_F1:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
+; CHECK: [[EXT1_F1:%.*]] = extractvalue { i8*, i32* } [[PACK1_F1]], 0
+; CHECK: [[CAST1_F1:%.*]] = bitcast i8* [[EXT1_F1]] to i32*
+; CHECK: store i32 0, i32* [[CAST1_F1]]
 
 
 ; Two input registers, two output registers:
@@ -62,11 +65,17 @@ entry:
 ; CHECK-LABEL: @f_2i_2o_reg
 ; CHECK: [[IS1_F2:%.*]] = load i32, i32* @is1, align 4
 ; CHECK: [[IS2_F2:%.*]] = load i32, i32* @is2, align 4
-; CHECK: call void @__msan_warning_noreturn()
-; CHECK: call void @__msan_warning_noreturn()
+; CHECK: call void @__msan_warning
+; CHECK: call void @__msan_warning
 ; CHECK: call { i32, i32 } asm "",{{.*}}(i32 [[IS1_F2]], i32 [[IS2_F2]])
-; CHECK: store i32 0,{{.*}}ptrtoint (i32* @id1 to i64)
-; CHECK: store i32 0,{{.*}}ptrtoint (i32* @id2 to i64)
+; CHECK: [[PACK1_F2:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
+; CHECK: [[EXT1_F2:%.*]] = extractvalue { i8*, i32* } [[PACK1_F2]], 0
+; CHECK: [[CAST1_F2:%.*]] = bitcast i8* [[EXT1_F2]] to i32*
+; CHECK: store i32 0, i32* [[CAST1_F2]]
+; CHECK: [[PACK2_F2:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
+; CHECK: [[EXT2_F2:%.*]] = extractvalue { i8*, i32* } [[PACK2_F2]], 0
+; CHECK: [[CAST2_F2:%.*]] = bitcast i8* [[EXT2_F2]] to i32*
+; CHECK: store i32 0, i32* [[CAST2_F2]]
 
 ; Input same as output, used twice:
 ;   asm("" : "=r" (id1), "=r" (id2) : "r" (id1), "r" (id2));
@@ -85,11 +94,17 @@ entry:
 ; CHECK-LABEL: @f_2i_2o_reuse2_reg
 ; CHECK: [[ID1_F3:%.*]] = load i32, i32* @id1, align 4
 ; CHECK: [[ID2_F3:%.*]] = load i32, i32* @id2, align 4
-; CHECK: call void @__msan_warning_noreturn()
-; CHECK: call void @__msan_warning_noreturn()
+; CHECK: call void @__msan_warning
+; CHECK: call void @__msan_warning
 ; CHECK: call { i32, i32 } asm "",{{.*}}(i32 [[ID1_F3]], i32 [[ID2_F3]])
-; CHECK: store i32 0,{{.*}}ptrtoint (i32* @id1 to i64)
-; CHECK: store i32 0,{{.*}}ptrtoint (i32* @id2 to i64)
+; CHECK: [[PACK1_F3:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
+; CHECK: [[EXT1_F3:%.*]] = extractvalue { i8*, i32* } [[PACK1_F3]], 0
+; CHECK: [[CAST1_F3:%.*]] = bitcast i8* [[EXT1_F3]] to i32*
+; CHECK: store i32 0, i32* [[CAST1_F3]]
+; CHECK: [[PACK2_F3:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
+; CHECK: [[EXT2_F3:%.*]] = extractvalue { i8*, i32* } [[PACK2_F3]], 0
+; CHECK: [[CAST2_F3:%.*]] = bitcast i8* [[EXT2_F3]] to i32*
+; CHECK: store i32 0, i32* [[CAST2_F3]]
 
 
 ; One of the input registers is also an output:
@@ -109,11 +124,17 @@ entry:
 ; CHECK-LABEL: @f_2i_2o_reuse1_reg
 ; CHECK: [[ID1_F4:%.*]] = load i32, i32* @id1, align 4
 ; CHECK: [[IS1_F4:%.*]] = load i32, i32* @is1, align 4
-; CHECK: call void @__msan_warning_noreturn()
-; CHECK: call void @__msan_warning_noreturn()
+; CHECK: call void @__msan_warning
+; CHECK: call void @__msan_warning
 ; CHECK: call { i32, i32 } asm "",{{.*}}(i32 [[ID1_F4]], i32 [[IS1_F4]])
-; CHECK: store i32 0,{{.*}}ptrtoint (i32* @id1 to i64)
-; CHECK: store i32 0,{{.*}}ptrtoint (i32* @id2 to i64)
+; CHECK: [[PACK1_F4:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
+; CHECK: [[EXT1_F4:%.*]] = extractvalue { i8*, i32* } [[PACK1_F4]], 0
+; CHECK: [[CAST1_F4:%.*]] = bitcast i8* [[EXT1_F4]] to i32*
+; CHECK: store i32 0, i32* [[CAST1_F4]]
+; CHECK: [[PACK2_F4:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
+; CHECK: [[EXT2_F4:%.*]] = extractvalue { i8*, i32* } [[PACK2_F4]], 0
+; CHECK: [[CAST2_F4:%.*]] = bitcast i8* [[EXT2_F4]] to i32*
+; CHECK: store i32 0, i32* [[CAST2_F4]]
 
 
 ; One input register, three output registers:
@@ -133,11 +154,20 @@ entry:
 
 ; CHECK-LABEL: @f_1i_3o_reg
 ; CHECK: [[IS1_F5:%.*]] = load i32, i32* @is1, align 4
-; CHECK: call void @__msan_warning_noreturn()
+; CHECK: call void @__msan_warning
 ; CHECK: call { i32, i32, i32 } asm "",{{.*}}(i32 [[IS1_F5]])
-; CHECK: store i32 0,{{.*}}ptrtoint (i32* @id1 to i64)
-; CHECK: store i32 0,{{.*}}ptrtoint (i32* @id2 to i64)
-; CHECK: store i32 0,{{.*}}ptrtoint (i32* @id3 to i64)
+; CHECK: [[PACK1_F5:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id1{{.*}})
+; CHECK: [[EXT1_F5:%.*]] = extractvalue { i8*, i32* } [[PACK1_F5]], 0
+; CHECK: [[CAST1_F5:%.*]] = bitcast i8* [[EXT1_F5]] to i32*
+; CHECK: store i32 0, i32* [[CAST1_F5]]
+; CHECK: [[PACK2_F5:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id2{{.*}})
+; CHECK: [[EXT2_F5:%.*]] = extractvalue { i8*, i32* } [[PACK2_F5]], 0
+; CHECK: [[CAST2_F5:%.*]] = bitcast i8* [[EXT2_F5]] to i32*
+; CHECK: store i32 0, i32* [[CAST2_F5]]
+; CHECK: [[PACK3_F5:%.*]] = call {{.*}} @__msan_metadata_ptr_for_store_4({{.*}}@id3{{.*}})
+; CHECK: [[EXT3_F5:%.*]] = extractvalue { i8*, i32* } [[PACK3_F5]], 0
+; CHECK: [[CAST3_F5:%.*]] = bitcast i8* [[EXT3_F5]] to i32*
+; CHECK: store i32 0, i32* [[CAST3_F5]]
 
 
 ; 2 input memory args, 2 output memory args:
@@ -170,7 +200,7 @@ entry:
 ; CHECK: [[IS1_F7:%.*]] = load i32, i32* @is1, align 4
 ; CHECK-CONS: call void @__msan_instrument_asm_load({{.*}}@is1{{.*}}, i64 4)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@id1{{.*}}, i64 4)
-; CHECK: call void @__msan_warning_noreturn()
+; CHECK: call void @__msan_warning
 ; CHECK: call i32 asm "", "=r,=*m,r,*m,~{dirflag},~{fpsr},~{flags}"(i32* @id1, i32 [[IS1_F7]], i32* @is1)
 
 
@@ -212,9 +242,9 @@ entry:
 ; CHECK: [[C1_F9:%.*]] = load {{.*}} @c1
 ; CHECK: [[MEMCPY_S1_F9:%.*]] = load {{.*}} @memcpy_s1
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@pair2{{.*}}, i64 8)
-; CHECK: call void @__msan_warning_noreturn()
-; CHECK: call void @__msan_warning_noreturn()
-; CHECK: call void @__msan_warning_noreturn()
+; CHECK: call void @__msan_warning
+; CHECK: call void @__msan_warning
+; CHECK: call void @__msan_warning
 ; CHECK: call { i8, i8* (i8*, i8*, i32)* } asm "", "=*r,=r,=r,r,r,r,~{dirflag},~{fpsr},~{flags}"(%struct.pair* @pair2, {{.*}}[[PAIR1_F9]], i8 [[C1_F9]], {{.*}} [[MEMCPY_S1_F9]])
 
 ; Three inputs and three outputs of different types: a pair, a char, a function pointer.

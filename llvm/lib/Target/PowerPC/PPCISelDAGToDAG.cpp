@@ -4897,9 +4897,9 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     SDValue TOCbase = N->getOperand(1);
     SDNode *Tmp = CurDAG->getMachineNode(PPC::ADDIStocHA, dl, MVT::i64,
                                          TOCbase, GA);
-
-    if (isa<JumpTableSDNode>(GA) || isa<BlockAddressSDNode>(GA) ||
-        CModel == CodeModel::Large) {
+    if (PPCLowering->isAccessedAsGotIndirect(GA)) {
+      // If it is access as got-indirect, we need an extra LD to load
+      // the address.
       SDNode *MN = CurDAG->getMachineNode(PPC::LDtocL, dl, MVT::i64, GA,
                                           SDValue(Tmp, 0));
       transferMemOperands(N, MN);
@@ -4907,18 +4907,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       return;
     }
 
-    if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(GA)) {
-      const GlobalValue *GV = G->getGlobal();
-      unsigned char GVFlags = PPCSubTarget->classifyGlobalReference(GV);
-      if (GVFlags & PPCII::MO_NLP_FLAG) {
-        SDNode *MN = CurDAG->getMachineNode(PPC::LDtocL, dl, MVT::i64, GA,
-                                            SDValue(Tmp, 0));
-        transferMemOperands(N, MN);
-        ReplaceNode(N, MN);
-        return;
-      }
-    }
-
+    // Build the address relative to the TOC-pointer..
     ReplaceNode(N, CurDAG->getMachineNode(PPC::ADDItocL, dl, MVT::i64,
                                           SDValue(Tmp, 0), GA));
     return;
