@@ -681,7 +681,7 @@ TEST_F(SymbolCollectorTest, Snippet) {
 TEST_F(SymbolCollectorTest, YAMLConversions) {
   const std::string YAML1 = R"(
 ---
-ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF856
+ID: 057557CEBF6E6B2D
 Name:   'Foo1'
 Scope:   'clang::'
 SymInfo:
@@ -703,7 +703,7 @@ Detail:
 )";
   const std::string YAML2 = R"(
 ---
-ID: 057557CEBF6E6B2DD437FBF60CC58F352D1DF858
+ID: 057557CEBF6E6B2E
 Name:   'Foo2'
 Scope:   'clang::'
 SymInfo:
