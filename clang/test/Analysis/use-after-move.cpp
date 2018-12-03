@@ -1,5 +1,17 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.cplusplus.MisusedMovedObject -std=c++11 -verify -analyzer-output=text -analyzer-config exploration_strategy=unexplored_first_queue,eagerly-assume=false %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.cplusplus.MisusedMovedObject -std=c++11 -analyzer-config exploration_strategy=dfs,eagerly-assume=false -verify -analyzer-output=text -DDFS=1 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
+// RUN:  -analyzer-config exploration_strategy=unexplored_first_queue
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
+// RUN:  -analyzer-config exploration_strategy=dfs -DDFS=1
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
+// RUN:  -analyzer-config exploration_strategy=unexplored_first_queue\
+// RUN:  -analyzer-config alpha.cplusplus.Move:Aggressive=true -DAGGRESSIVE
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
+// RUN:  -analyzer-config exploration_strategy=dfs -DDFS=1\
+// RUN:  -analyzer-config alpha.cplusplus.Move:Aggressive=true -DAGGRESSIVE
 
 namespace std {
 
@@ -31,6 +43,13 @@ void swap(T &a, T &b) {
   a = std::move(b);
   b = std::move(c);
 }
+
+template <typename T>
+class vector {
+public:
+  vector();
+  void push_back(const T &t);
+};
 
 } // namespace std
 
@@ -67,7 +86,10 @@ public:
     moveconstruct(std::move(*a));
   }
   A(const A &other) : i(other.i), d(other.d), b(other.b) {}
-  A(A &&other) : i(other.i), d(other.d), b(std::move(other.b)) { // expected-note {{'b' became 'moved-from' here}}
+  A(A &&other) : i(other.i), d(other.d), b(std::move(other.b)) {
+#ifdef AGGRESSIVE
+    // expected-note@-2{{'b' became 'moved-from' here}}
+#endif
   }
   A(A &&other, char *k) {
     moveconstruct(std::move(other));
@@ -420,26 +442,51 @@ class memberVariablesTest {
 
   void f() {
     A b;
-    b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
-    a.foo();          // expected-warning {{Method call on a 'moved-from' object}} expected-note {{Method call on a 'moved-from' object 'a'}}
+    b = std::move(a);
+    a.foo();
+#ifdef AGGRESSIVE
+    // expected-note@-3{{'a' became 'moved-from' here}}
+    // expected-warning@-3 {{Method call on a 'moved-from' object 'a'}}
+    // expected-note@-4{{Method call on a 'moved-from' object 'a'}}
+#endif
 
-    b = std::move(static_a); // expected-note {{'static_a' became 'moved-from' here}}
-    static_a.foo();          // expected-warning {{Method call on a 'moved-from' object 'static_a'}} expected-note {{Method call on a 'moved-from' object 'static_a'}}
+    b = std::move(static_a);
+    static_a.foo();
+#ifdef AGGRESSIVE
+    // expected-note@-3{{'static_a' became 'moved-from' here}}
+    // expected-warning@-3{{Method call on a 'moved-from' object 'static_a'}}
+    // expected-note@-4{{Method call on a 'moved-from' object 'static_a'}}
+#endif
   }
 };
 
 void PtrAndArrayTest() {
   A *Ptr = new A(1, 1.5);
   A Arr[10];
-  Arr[2] = std::move(*Ptr); // expected-note {{Became 'moved-from' here}}
-  (*Ptr).foo();             // expected-warning {{Method call on a 'moved-from' object}} expected-note {{Method call on a 'moved-from' object}}
+  Arr[2] = std::move(*Ptr);
+  (*Ptr).foo();
+#ifdef AGGRESSIVE
+  // expected-note@-3{{Became 'moved-from' here}}
+  // expected-warning@-3{{Method call on a 'moved-from' object}}
+  // expected-note@-4{{Method call on a 'moved-from' object}}
+#endif
 
   Ptr = &Arr[1];
-  Arr[3] = std::move(Arr[1]); // expected-note {{Became 'moved-from' here}}
-  Ptr->foo();                 // expected-warning {{Method call on a 'moved-from' object}} expected-note {{Method call on a 'moved-from' object}}
+  Arr[3] = std::move(Arr[1]);
+  Ptr->foo();
+#ifdef AGGRESSIVE
+  // expected-note@-3{{Became 'moved-from' here}}
+  // expected-warning@-3{{Method call on a 'moved-from' object}}
+  // expected-note@-4{{Method call on a 'moved-from' object}}
+#endif
 
-  Arr[3] = std::move(Arr[2]); // expected-note {{Became 'moved-from' here}}
-  Arr[2].foo();               // expected-warning {{Method call on a 'moved-from' object}} expected-note {{Method call on a 'moved-from' object}}
+  Arr[3] = std::move(Arr[2]);
+  Arr[2].foo();
+#ifdef AGGRESSIVE
+  // expected-note@-3{{Became 'moved-from' here}}
+  // expected-warning@-3{{Method call on a 'moved-from' object}}
+  // expected-note@-4{{Method call on a 'moved-from' object}}
+#endif
 
   Arr[2] = std::move(Arr[3]); // reinitialization
   Arr[2].foo();               // no-warning
@@ -645,13 +692,24 @@ struct C : public A {
 void subRegionMoveTest() {
   {
     A a;
-    B b = std::move(a.b); // expected-note {{'b' became 'moved-from' here}}
-    a.b.foo();            // expected-warning {{Method call on a 'moved-from' object 'b'}} expected-note {{Method call on a 'moved-from' object 'b'}}
+    B b = std::move(a.b);
+    a.b.foo();
+#ifdef AGGRESSIVE
+    // expected-note@-3{{'b' became 'moved-from' here}}
+    // expected-warning@-3{{Method call on a 'moved-from' object 'b'}}
+    // expected-note@-4 {{Method call on a 'moved-from' object 'b'}}
+#endif
   }
   {
     A a;
-    A a1 = std::move(a); // expected-note {{Calling move constructor for 'A'}} expected-note {{Returning from move constructor for 'A'}}
-    a.b.foo();           // expected-warning {{Method call on a 'moved-from' object 'b'}} expected-note {{Method call on a 'moved-from' object 'b'}}
+    A a1 = std::move(a);
+    a.b.foo();
+#ifdef AGGRESSIVE
+    // expected-note@-3{{Calling move constructor for 'A'}}
+    // expected-note@-4{{Returning from move constructor for 'A'}}
+    // expected-warning@-4{{Method call on a 'moved-from' object 'b'}}
+    // expected-note@-5{{Method call on a 'moved-from' object 'b'}}
+#endif
   }
   // Don't report a misuse if any SuperRegion is already reported.
   {
@@ -709,4 +767,33 @@ void checkLoopZombies() {
     Empty e{};
     Empty f = std::move(e); // no-warning
   }
+}
+
+struct MoveOnlyWithDestructor {
+  MoveOnlyWithDestructor();
+  ~MoveOnlyWithDestructor();
+  MoveOnlyWithDestructor(const MoveOnlyWithDestructor &m) = delete;
+  MoveOnlyWithDestructor(MoveOnlyWithDestructor &&m);
+};
+
+MoveOnlyWithDestructor foo() {
+  MoveOnlyWithDestructor m;
+  return m;
+}
+
+class HasSTLField {
+  std::vector<int> V;
+  void foo() {
+    // Warn even in non-aggressive mode when it comes to STL, because
+    // in STL the object is left in "valid but unspecified state" after move.
+    std::vector<int> W = std::move(V); // expected-note{{'V' became 'moved-from' here}}
+    V.push_back(123); // expected-warning{{Method call on a 'moved-from' object 'V'}}
+                      // expected-note@-1{{Method call on a 'moved-from' object 'V'}}
+  }
+};
+
+void localRValueMove(A &&a) {
+  A b = std::move(a); // expected-note{{'a' became 'moved-from' here}}
+  a.foo(); // expected-warning{{Method call on a 'moved-from' object}}
+           // expected-note@-1{{Method call on a 'moved-from' object}}
 }

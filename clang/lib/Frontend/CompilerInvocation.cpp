@@ -456,12 +456,13 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
     return;
 
   if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
-    Diags->Report(diag::err_analyzer_config_invalid_input)
-      << "ctu-dir" << "a filename";
+    Diags->Report(diag::err_analyzer_config_invalid_input) << "ctu-dir"
+                                                           << "a filename";
 
-  if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
-    Diags->Report(diag::err_analyzer_config_invalid_input)
-      << "model-path" << "a filename";
+  if (!AnOpts.ModelPath.empty() &&
+      !llvm::sys::fs::is_directory(AnOpts.ModelPath))
+    Diags->Report(diag::err_analyzer_config_invalid_input) << "model-path"
+                                                           << "a filename";
 }
 
 static bool ParseMigratorArgs(MigratorOptions &Opts, ArgList &Args) {

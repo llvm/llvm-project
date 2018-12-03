@@ -1222,14 +1222,17 @@ OverloadedOperatorKind UnaryOperator::getOverloadedOperator(Opcode Opc) {
 
 CallExpr::CallExpr(const ASTContext &C, StmtClass SC, Expr *fn,
                    ArrayRef<Expr *> preargs, ArrayRef<Expr *> args, QualType t,
-                   ExprValueKind VK, SourceLocation rparenloc)
+                   ExprValueKind VK, SourceLocation rparenloc,
+                   unsigned MinNumArgs)
     : Expr(SC, t, VK, OK_Ordinary, fn->isTypeDependent(),
            fn->isValueDependent(), fn->isInstantiationDependent(),
            fn->containsUnexpandedParameterPack()),
-      NumArgs(args.size()) {
-
+      RParenLoc(rparenloc) {
+  NumArgs = std::max<unsigned>(args.size(), MinNumArgs);
   unsigned NumPreArgs = preargs.size();
-  SubExprs = new (C) Stmt *[args.size()+PREARGS_START+NumPreArgs];
+  CallExprBits.NumPreArgs = NumPreArgs;
+
+  SubExprs = new (C) Stmt *[NumArgs + PREARGS_START + NumPreArgs];
   SubExprs[FN] = fn;
   for (unsigned i = 0; i != NumPreArgs; ++i) {
     updateDependenciesFromArg(preargs[i]);
@@ -1239,31 +1242,32 @@ CallExpr::CallExpr(const ASTContext &C, StmtClass SC, Expr *fn,
     updateDependenciesFromArg(args[i]);
     SubExprs[i+PREARGS_START+NumPreArgs] = args[i];
   }
-
-  CallExprBits.NumPreArgs = NumPreArgs;
-  RParenLoc = rparenloc;
+  for (unsigned i = args.size(); i != NumArgs; ++i) {
+    SubExprs[i + PREARGS_START + NumPreArgs] = nullptr;
+  }
 }
 
 CallExpr::CallExpr(const ASTContext &C, StmtClass SC, Expr *fn,
                    ArrayRef<Expr *> args, QualType t, ExprValueKind VK,
-                   SourceLocation rparenloc)
-    : CallExpr(C, SC, fn, ArrayRef<Expr *>(), args, t, VK, rparenloc) {}
+                   SourceLocation rparenloc, unsigned MinNumArgs)
+    : CallExpr(C, SC, fn, ArrayRef<Expr *>(), args, t, VK, rparenloc,
+               MinNumArgs) {}
 
 CallExpr::CallExpr(const ASTContext &C, Expr *fn, ArrayRef<Expr *> args,
-                   QualType t, ExprValueKind VK, SourceLocation rparenloc)
-    : CallExpr(C, CallExprClass, fn, ArrayRef<Expr *>(), args, t, VK, rparenloc) {
-}
-
-CallExpr::CallExpr(const ASTContext &C, StmtClass SC, EmptyShell Empty)
-    : CallExpr(C, SC, /*NumPreArgs=*/0, Empty) {}
+                   QualType t, ExprValueKind VK, SourceLocation rparenloc,
+                   unsigned MinNumArgs)
+    : CallExpr(C, CallExprClass, fn, ArrayRef<Expr *>(), args, t, VK,
+               rparenloc, MinNumArgs) {}
 
 CallExpr::CallExpr(const ASTContext &C, StmtClass SC, unsigned NumPreArgs,
-                   EmptyShell Empty)
-  : Expr(SC, Empty), SubExprs(nullptr), NumArgs(0) {
-  // FIXME: Why do we allocate this?
-  SubExprs = new (C) Stmt*[PREARGS_START+NumPreArgs]();
+                   unsigned NumArgs, EmptyShell Empty)
+    : Expr(SC, Empty), NumArgs(NumArgs) {
   CallExprBits.NumPreArgs = NumPreArgs;
+  SubExprs = new (C) Stmt *[NumArgs + PREARGS_START + NumPreArgs];
 }
+
+CallExpr::CallExpr(const ASTContext &C, unsigned NumArgs, EmptyShell Empty)
+    : CallExpr(C, CallExprClass, /*NumPreArgs=*/0, NumArgs, Empty) {}
 
 void CallExpr::updateDependenciesFromArg(Expr *Arg) {
   if (Arg->isTypeDependent())
@@ -1306,35 +1310,6 @@ Decl *Expr::getReferencedDeclOfCallee() {
     return ME->getMemberDecl();
 
   return nullptr;
-}
-
-/// setNumArgs - This changes the number of arguments present in this call.
-/// Any orphaned expressions are deleted by this, and any new operands are set
-/// to null.
-void CallExpr::setNumArgs(const ASTContext& C, unsigned NumArgs) {
-  // No change, just return.
-  if (NumArgs == getNumArgs()) return;
-
-  // If shrinking # arguments, just delete the extras and forgot them.
-  if (NumArgs < getNumArgs()) {
-    this->NumArgs = NumArgs;
-    return;
-  }
-
-  // Otherwise, we are growing the # arguments.  New an bigger argument array.
-  unsigned NumPreArgs = getNumPreArgs();
-  Stmt **NewSubExprs = new (C) Stmt*[NumArgs+PREARGS_START+NumPreArgs];
-  // Copy over args.
-  for (unsigned i = 0; i != getNumArgs()+PREARGS_START+NumPreArgs; ++i)
-    NewSubExprs[i] = SubExprs[i];
-  // Null out new args.
-  for (unsigned i = getNumArgs()+PREARGS_START+NumPreArgs;
-       i != NumArgs+PREARGS_START+NumPreArgs; ++i)
-    NewSubExprs[i] = nullptr;
-
-  if (SubExprs) C.Deallocate(SubExprs);
-  SubExprs = NewSubExprs;
-  this->NumArgs = NumArgs;
 }
 
 /// getBuiltinCallee - If this is a call to a builtin, return the builtin ID. If
