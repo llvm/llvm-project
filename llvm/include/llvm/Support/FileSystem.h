@@ -160,6 +160,8 @@ protected:
   #if defined(LLVM_ON_UNIX)
   time_t fs_st_atime = 0;
   time_t fs_st_mtime = 0;
+  uint32_t fs_st_atime_nsec = 0;
+  uint32_t fs_st_mtime_nsec = 0;
   uid_t fs_st_uid = 0;
   gid_t fs_st_gid = 0;
   off_t fs_st_size = 0;
@@ -180,9 +182,12 @@ public:
   explicit basic_file_status(file_type Type) : Type(Type) {}
 
   #if defined(LLVM_ON_UNIX)
-  basic_file_status(file_type Type, perms Perms, time_t ATime, time_t MTime,
+  basic_file_status(file_type Type, perms Perms, time_t ATime,
+                    uint32_t ATimeNSec, time_t MTime, uint32_t MTimeNSec,
                     uid_t UID, gid_t GID, off_t Size)
-      : fs_st_atime(ATime), fs_st_mtime(MTime), fs_st_uid(UID), fs_st_gid(GID),
+      : fs_st_atime(ATime), fs_st_mtime(MTime),
+        fs_st_atime_nsec(ATimeNSec), fs_st_mtime_nsec(MTimeNSec),
+        fs_st_uid(UID), fs_st_gid(GID),
         fs_st_size(Size), Type(Type), Perms(Perms) {}
 #elif defined(_WIN32)
   basic_file_status(file_type Type, perms Perms, uint32_t LastAccessTimeHigh,
@@ -199,7 +204,20 @@ public:
   // getters
   file_type type() const { return Type; }
   perms permissions() const { return Perms; }
+
+  /// The file access time as reported from the underlying file system.
+  ///
+  /// Also see comments on \c getLastModificationTime() related to the precision
+  /// of the returned value.
   TimePoint<> getLastAccessedTime() const;
+
+  /// The file modification time as reported from the underlying file system.
+  ///
+  /// The returned value allows for nanosecond precision but the actual
+  /// resolution is an implementation detail of the underlying file system.
+  /// There is no guarantee for what kind of resolution you can expect, the
+  /// resolution can differ across platforms and even across mountpoints on the
+  /// same machine.
   TimePoint<> getLastModificationTime() const;
 
   #if defined(LLVM_ON_UNIX)
@@ -247,8 +265,11 @@ public:
 
   #if defined(LLVM_ON_UNIX)
   file_status(file_type Type, perms Perms, dev_t Dev, nlink_t Links, ino_t Ino,
-              time_t ATime, time_t MTime, uid_t UID, gid_t GID, off_t Size)
-      : basic_file_status(Type, Perms, ATime, MTime, UID, GID, Size),
+              time_t ATime, uint32_t ATimeNSec,
+              time_t MTime, uint32_t MTimeNSec,
+              uid_t UID, gid_t GID, off_t Size)
+      : basic_file_status(Type, Perms, ATime, ATimeNSec, MTime, MTimeNSec,
+                          UID, GID, Size),
         fs_st_dev(Dev), fs_st_nlinks(Links), fs_st_ino(Ino) {}
   #elif defined(_WIN32)
   file_status(file_type Type, perms Perms, uint32_t LinkCount,
