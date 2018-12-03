@@ -957,8 +957,9 @@ ProcessWindows::OnDebugException(bool first_chance,
   }
 
   if (!first_chance) {
-    // Any second chance exception is an application crash by definition.
-    SetPrivateState(eStateCrashed);
+    // Not any second chance exception is an application crash by definition.
+    // It may be an expression evaluation crash.
+    SetPrivateState(eStateStopped);
   }
 
   ExceptionResult result = ExceptionResult::SendToApplication;
