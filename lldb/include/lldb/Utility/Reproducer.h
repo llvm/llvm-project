@@ -25,6 +25,12 @@ namespace repro {
 
 class Reproducer;
 
+enum class ReproducerMode {
+  Capture,
+  Replay,
+  Off,
+};
+
 /// Abstraction for information associated with a provider. This information
 /// is serialized into an index which is used by the loader.
 struct ProviderInfo {
@@ -159,10 +165,14 @@ private:
 
 /// The reproducer enables clients to obtain access to the Generator and
 /// Loader.
-class Reproducer final {
-
+class Reproducer {
 public:
   static Reproducer &Instance();
+  static llvm::Error Initialize(ReproducerMode mode,
+                                llvm::Optional<FileSpec> root);
+  static void Terminate();
+
+  Reproducer() = default;
 
   Generator *GetGenerator();
   Loader *GetLoader();
@@ -170,12 +180,15 @@ public:
   const Generator *GetGenerator() const;
   const Loader *GetLoader() const;
 
+  FileSpec GetReproducerPath() const;
+
+protected:
   llvm::Error SetCapture(llvm::Optional<FileSpec> root);
   llvm::Error SetReplay(llvm::Optional<FileSpec> root);
 
-  FileSpec GetReproducerPath() const;
-
 private:
+  static llvm::Optional<Reproducer> &InstanceImpl();
+
   llvm::Optional<Generator> m_generator;
   llvm::Optional<Loader> m_loader;
 

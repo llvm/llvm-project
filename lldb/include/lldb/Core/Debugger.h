@@ -263,11 +263,6 @@ public:
 
   llvm::StringRef GetReproducerPath() const;
 
-  llvm::Error SetReproducerReplay(llvm::StringRef p);
-  llvm::Error SetReproducerReplay(const char *) = delete;
-
-  llvm::Error SetReproducerCapture(bool b);
-
   bool GetUseExternalEditor() const;
 
   bool SetUseExternalEditor(bool use_external_editor_p);

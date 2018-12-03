@@ -2402,7 +2402,8 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 
 // Open a result file.
 template <class ELFT> void Writer<ELFT>::openFile() {
-  if (!Config->Is64 && FileSize > UINT32_MAX) {
+  uint64_t MaxSize = Config->Is64 ? INT64_MAX : UINT32_MAX;
+  if (MaxSize < FileSize) {
     error("output file too large: " + Twine(FileSize) + " bytes");
     return;
   }
