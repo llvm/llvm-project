@@ -75,6 +75,7 @@ private:
   void onRename(RenameParams &Parames) override;
   void onHover(TextDocumentPositionParams &Params) override;
   void onChangeConfiguration(DidChangeConfigurationParams &Params) override;
+  void onSymbolInfo(TextDocumentPositionParams &) override;
 
   std::vector<Fix> getFixes(StringRef File, const clangd::Diagnostic &D);
 

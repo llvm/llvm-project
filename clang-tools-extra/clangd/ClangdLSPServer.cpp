@@ -436,6 +436,12 @@ void ClangdLSPServer::onChangeConfiguration(
   applyConfiguration(Params.settings);
 }
 
+void ClangdLSPServer::onSymbolInfo(const TextDocumentPositionParams &Params,
+                                   Callback<std::vector<SymbolDetails>> Reply) {
+  Server->symbolInfo(Params.textDocument.uri.file(), Params.position,
+                     std::move(Reply));
+}
+
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out,
                                  const clangd::CodeCompleteOptions &CCOpts,
                                  llvm::Optional<Path> CompileCommandsDir,
