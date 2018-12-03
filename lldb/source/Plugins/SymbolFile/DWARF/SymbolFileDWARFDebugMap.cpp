@@ -425,7 +425,10 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
       FileSpec oso_file(oso_path, false);
       ConstString oso_object;
       if (oso_file.Exists()) {
-        auto oso_mod_time = FileSystem::GetModificationTime(oso_file);
+        // The modification time returned by the FS can have a higher precision
+        // than the one from the CU.
+        auto oso_mod_time = std::chrono::time_point_cast<std::chrono::seconds>(
+            FileSystem::GetModificationTime(oso_file));
         if (oso_mod_time != comp_unit_info->oso_mod_time) {
           obj_file->GetModule()->ReportError(
               "debug map object file '%s' has changed (actual time is "
