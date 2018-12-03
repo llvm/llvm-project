@@ -36,3 +36,8 @@ docs/_build
 docs/analyzer/_build
 # debug info testsuite
 test/debuginfo-tests
+
+# VS2017 and VSCode config files.
+.vscode
+.vs
+

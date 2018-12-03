@@ -235,6 +235,20 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
 
   while (true) {
     if (HasScopeSpecifier) {
+      if (Tok.is(tok::code_completion)) {
+        // Code completion for a nested-name-specifier, where the code
+        // completion token follows the '::'.
+        Actions.CodeCompleteQualifiedId(getCurScope(), SS, EnteringContext,
+                                        ObjectType.get());
+        // Include code completion token into the range of the scope otherwise
+        // when we try to annotate the scope tokens the dangling code completion
+        // token will cause assertion in
+        // Preprocessor::AnnotatePreviousCachedTokens.
+        SS.setEndLoc(Tok.getLocation());
+        cutOffParsing();
+        return true;
+      }
+
       // C++ [basic.lookup.classref]p5:
       //   If the qualified-id has the form
       //
@@ -246,19 +260,6 @@ bool Parser::ParseOptionalCXXScopeSpecifier(CXXScopeSpec &SS,
       // To implement this, we clear out the object type as soon as we've
       // seen a leading '::' or part of a nested-name-specifier.
       ObjectType = nullptr;
-
-      if (Tok.is(tok::code_completion)) {
-        // Code completion for a nested-name-specifier, where the code
-        // completion token follows the '::'.
-        Actions.CodeCompleteQualifiedId(getCurScope(), SS, EnteringContext);
-        // Include code completion token into the range of the scope otherwise
-        // when we try to annotate the scope tokens the dangling code completion
-        // token will cause assertion in
-        // Preprocessor::AnnotatePreviousCachedTokens.
-        SS.setEndLoc(Tok.getLocation());
-        cutOffParsing();
-        return true;
-      }
     }
 
     // nested-name-specifier:

@@ -17,18 +17,24 @@ void test_rewrite_includes() {
 }
 
 // CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "/var/empty{{/|\\5C}}<stdin>"
-// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "/var/empty{{[/\\]}}{{.*}}"
-// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "/var/empty{{[/\\]}}Inputs/stdio.h"
+// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "/var/empty{{[/\\]}}{{.*}}",
+// Dir should always be empty, but on Windows we can't recognize /var
+// as being an absolute path.
+// CHECK-NO-MAIN-FILE-NAME-SAME:    directory: "{{()|(.*:.*)}}")
+// CHECK-NO-MAIN-FILE-NAME: !DIFile(filename: "/var/empty{{[/\\]}}Inputs/stdio.h",
+// CHECK-NO-MAIN-FILE-NAME-SAME:    directory: "{{()|(.*:.*)}}")
 // CHECK-NO-MAIN-FILE-NAME-NOT: !DIFile(filename:
 
 // CHECK-EVIL: !DIFile(filename: "/var=empty{{[/\\]}}{{.*}}"
-// CHECK-EVIL: !DIFile(filename: "/var=empty{{[/\\]}}Inputs/stdio.h"
+// CHECK-EVIL: !DIFile(filename: "/var=empty{{[/\\]}}{{.*}}Inputs/stdio.h",
+// CHECK-EVIL-SAME:    directory: "{{()|(.*:.*)}}")
 // CHECK-EVIL-NOT: !DIFile(filename:
 
 // CHECK: !DIFile(filename: "/var/empty{{[/\\]}}{{.*}}"
-// CHECK: !DIFile(filename: "/var/empty{{[/\\]}}Inputs/stdio.h"
+// CHECK: !DIFile(filename: "/var/empty{{[/\\]}}{{.*}}Inputs/stdio.h",
+// CHECK-SAME:    directory: "{{()|(.*:.*)}}")
 // CHECK-NOT: !DIFile(filename:
 
-// CHECK-COMPILATION-DIR: !DIFile(filename: "/var/empty{{[/\\]}}{{.*}}", directory: "/var/empty")
-// CHECK-COMPILATION-DIR: !DIFile(filename: "/var/empty{{[/\\]}}Inputs/stdio.h", directory: "/var/empty")
+// CHECK-COMPILATION-DIR: !DIFile(filename: "{{.*}}", directory: "/var/empty")
+// CHECK-COMPILATION-DIR: !DIFile(filename: "{{.*}}Inputs/stdio.h", directory: "/var/empty")
 // CHECK-COMPILATION-DIR-NOT: !DIFile(filename:

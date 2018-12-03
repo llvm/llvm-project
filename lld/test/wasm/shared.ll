@@ -44,9 +44,7 @@ declare void @func_external()
 ; CHECK-NEXT:         Table:
 ; CHECK-NEXT:           ElemType:        ANYFUNC
 ; CHECK-NEXT:           Limits:
-; CHECK-NEXT:             Flags:           [ HAS_MAX ]
 ; CHECK-NEXT:             Initial:         0x00000002
-; CHECK-NEXT:             Maximum:         0x00000002
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __stack_pointer
 ; CHECK-NEXT:         Kind:            GLOBAL

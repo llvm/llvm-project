@@ -381,6 +381,9 @@ public:
   /// needsProfileRT - returns true if instrumentation profile is on.
   static bool needsProfileRT(const llvm::opt::ArgList &Args);
 
+  /// Returns true if gcov instrumentation (-fprofile-arcs or --coverage) is on.
+  static bool needsGCovInstrumentation(const llvm::opt::ArgList &Args);
+
   /// IsUnwindTablesDefault - Does this tool chain use -funwind-tables
   /// by default.
   virtual bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const;
