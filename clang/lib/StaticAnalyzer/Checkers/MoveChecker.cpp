@@ -67,17 +67,29 @@ private:
     bool STL : 1; // Is this an object of a standard type?
   };
 
+  // Obtains ObjectKind of an object. Because class declaration cannot always
+  // be easily obtained from the memory region, it is supplied separately.
   static ObjectKind classifyObject(const MemRegion *MR,
                                    const CXXRecordDecl *RD);
 
+  // Classifies the object and dumps a user-friendly description string to
+  // the stream. Return value is equivalent to classifyObject.
+  static ObjectKind explainObject(llvm::raw_ostream &OS,
+                                  const MemRegion *MR, const CXXRecordDecl *RD);
+
   class MovedBugVisitor : public BugReporterVisitor {
   public:
-    MovedBugVisitor(const MemRegion *R) : Region(R), Found(false) {}
+    MovedBugVisitor(const MemRegion *R, const CXXRecordDecl *RD)
+        : Region(R), RD(RD), Found(false) {}
 
     void Profile(llvm::FoldingSetNodeID &ID) const override {
       static int X = 0;
       ID.AddPointer(&X);
       ID.AddPointer(Region);
+      // Don't add RD because it's, in theory, uniquely determined by
+      // the region. In practice though, it's not always possible to obtain
+      // the declaration directly from the region, that's why we store it
+      // in the first place.
     }
 
     std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
@@ -87,6 +99,8 @@ private:
   private:
     // The tracked region.
     const MemRegion *Region;
+    // The class of the tracked object.
+    const CXXRecordDecl *RD;
     bool Found;
   };
 
@@ -164,23 +178,21 @@ MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
     return nullptr;
   Found = true;
 
-  std::string ObjectName;
-  if (const auto DecReg =
-          unwrapRValueReferenceIndirection(Region)->getAs<DeclRegion>()) {
-    const auto *RegionDecl = dyn_cast<NamedDecl>(DecReg->getDecl());
-    ObjectName = RegionDecl->getNameAsString();
-  }
-  std::string InfoText;
-  if (ObjectName != "")
-    InfoText = "'" + ObjectName + "' became 'moved-from' here";
+  SmallString<128> Str;
+  llvm::raw_svector_ostream OS(Str);
+
+  OS << "Object";
+  ObjectKind OK = explainObject(OS, Region, RD);
+  if (OK.STL)
+    OS << " is left in a valid but unspecified state after move";
   else
-    InfoText = "Became 'moved-from' here";
+    OS << " is moved";
 
   // Generate the extra diagnostic.
   PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
                              N->getLocationContext());
-  return std::make_shared<PathDiagnosticEventPiece>(Pos, InfoText, true);
-}
+  return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
+  }
 
 const ExplodedNode *MoveChecker::getMoveLocation(const ExplodedNode *N,
                                                  const MemRegion *Region,
@@ -205,7 +217,7 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
                                      MisuseKind MK) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     if (!BT)
-      BT.reset(new BugType(this, "Usage of a 'moved-from' object",
+      BT.reset(new BugType(this, "Use-after-move",
                            "C++ move semantics"));
 
     // Uniqueing report to the same object.
@@ -217,27 +229,29 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
           MoveStmt, C.getSourceManager(), MoveNode->getLocationContext());
 
     // Creating the error message.
-    std::string ErrorMessage;
+    llvm::SmallString<128> Str;
+    llvm::raw_svector_ostream OS(Str);
     switch(MK) {
       case MK_FunCall:
-        ErrorMessage = "Method call on a 'moved-from' object";
+        OS << "Method called on moved-from object";
+        explainObject(OS, Region, RD);
         break;
       case MK_Copy:
-        ErrorMessage = "Copying a 'moved-from' object";
+        OS << "Moved-from object";
+        explainObject(OS, Region, RD);
+        OS << " is copied";
         break;
       case MK_Move:
-        ErrorMessage = "Moving a 'moved-from' object";
+        OS << "Moved-from object";
+        explainObject(OS, Region, RD);
+        OS << " is moved";
         break;
-    }
-    if (const auto DecReg = Region->getAs<DeclRegion>()) {
-      const auto *RegionDecl = dyn_cast<NamedDecl>(DecReg->getDecl());
-      ErrorMessage += " '" + RegionDecl->getNameAsString() + "'";
     }
 
     auto R =
-        llvm::make_unique<BugReport>(*BT, ErrorMessage, N, LocUsedForUniqueing,
+        llvm::make_unique<BugReport>(*BT, OS.str(), N, LocUsedForUniqueing,
                                      MoveNode->getLocationContext()->getDecl());
-    R->addVisitor(llvm::make_unique<MovedBugVisitor>(Region));
+    R->addVisitor(llvm::make_unique<MovedBugVisitor>(Region, RD));
     C.emitReport(std::move(R));
     return N;
   }
@@ -329,8 +343,11 @@ bool MoveChecker::isStateResetMethod(const CXXMethodDecl *MethodDec) const {
       return true;
   if (MethodDec->getDeclName().isIdentifier()) {
     std::string MethodName = MethodDec->getName().lower();
+    // TODO: Some of these methods (eg., resize) are not always resetting
+    // the state, so we should consider looking at the arguments.
     if (MethodName == "reset" || MethodName == "clear" ||
-        MethodName == "destroy")
+        MethodName == "destroy" || MethodName == "resize" ||
+        MethodName == "shrink")
       return true;
   }
   return false;
@@ -362,6 +379,23 @@ MoveChecker::ObjectKind MoveChecker::classifyObject(const MemRegion *MR,
     /*STL=*/
         RD && RD->getDeclContext()->isStdNamespace()
   };
+}
+
+MoveChecker::ObjectKind MoveChecker::explainObject(llvm::raw_ostream &OS,
+                                                   const MemRegion *MR,
+                                                   const CXXRecordDecl *RD) {
+  // We may need a leading space every time we actually explain anything,
+  // and we never know if we are to explain anything until we try.
+  if (const auto DR =
+          dyn_cast_or_null<DeclRegion>(unwrapRValueReferenceIndirection(MR))) {
+    const auto *RegionDecl = cast<NamedDecl>(DR->getDecl());
+    OS << " '" << RegionDecl->getNameAsString() << "'";
+  }
+  ObjectKind OK = classifyObject(MR, RD);
+  if (OK.STL) {
+    OS << " of type '" << RD->getQualifiedNameAsString() << "'";
+  }
+  return OK;
 }
 
 void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {

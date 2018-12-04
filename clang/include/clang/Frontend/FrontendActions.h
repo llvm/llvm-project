@@ -261,11 +261,6 @@ protected:
   void ExecuteAction() override;
 };
 
-class GeneratePTHAction : public PreprocessorFrontendAction {
-protected:
-  void ExecuteAction() override;
-};
-
 class PreprocessOnlyAction : public PreprocessorFrontendAction {
 protected:
   void ExecuteAction() override;

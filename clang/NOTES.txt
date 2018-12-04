@@ -10,13 +10,6 @@ This is similar to -Eonly.
 
 //===---------------------------------------------------------------------===//
 
-Creating and using a PTH file for performance measurement (use a release build).
-
-$ clang -ccc-pch-is-pth -x objective-c-header INPUTS/Cocoa_h.m -o /tmp/tokencache
-$ clang -cc1 -token-cache /tmp/tokencache INPUTS/Cocoa_h.m
-
-//===---------------------------------------------------------------------===//
-
   C++ Template Instantiation benchmark:
      http://users.rcn.com/abrahams/instantiation_speed/index.html
 

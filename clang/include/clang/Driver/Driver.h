@@ -227,9 +227,6 @@ private:
   unsigned CheckInputsExist : 1;
 
 public:
-  /// Use lazy precompiled headers for PCH support.
-  unsigned CCCUsePCH : 1;
-
   /// Force clang to emit reproducer for driver invocation. This is enabled
   /// indirectly by setting FORCE_CLANG_DIAGNOSTICS_CRASH environment variable
   /// or when using the -gen-reproducer driver flag.

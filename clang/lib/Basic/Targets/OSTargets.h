@@ -364,7 +364,6 @@ public:
       break;
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
-    case llvm::Triple::systemz:
       this->HasFloat128 = true;
       break;
     }

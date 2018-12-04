@@ -4002,12 +4002,7 @@ void EmitTestPragmaAttributeSupportedAttributes(RecordKeeper &Records,
                                                 raw_ostream &OS) {
   PragmaClangAttributeSupport Support = getPragmaAttributeSupport(Records);
   ParsedAttrMap Attrs = getParsedAttrList(Records);
-  unsigned NumAttrs = 0;
-  for (const auto &I : Attrs) {
-    if (Support.isAttributedSupported(*I.second))
-      ++NumAttrs;
-  }
-  OS << "#pragma clang attribute supports " << NumAttrs << " attributes:\n";
+  OS << "#pragma clang attribute supports the following attributes:\n";
   for (const auto &I : Attrs) {
     if (!Support.isAttributedSupported(*I.second))
       continue;
@@ -4039,6 +4034,7 @@ void EmitTestPragmaAttributeSupportedAttributes(RecordKeeper &Records,
     }
     OS << ")\n";
   }
+  OS << "End of supported attributes.\n";
 }
 
 } // end namespace clang
