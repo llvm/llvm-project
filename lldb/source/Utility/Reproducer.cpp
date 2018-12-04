@@ -36,7 +36,7 @@ llvm::Error Reproducer::Initialize(ReproducerMode mode,
             "unable to create unique reproducer directory", ec);
       root.emplace(repro_dir);
     } else {
-      auto ec = sys::fs::create_directories(root->GetPath());
+      auto ec = sys::fs::create_directory(root->GetPath());
       if (ec)
         return make_error<StringError>("unable to create reproducer directory",
                                        ec);
