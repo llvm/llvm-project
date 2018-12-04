@@ -227,11 +227,6 @@ bool WriteToFile(fd_t fd, const void *buff, uptr buff_size, uptr *bytes_written,
   return true;
 }
 
-bool RenameFile(const char *oldpath, const char *newpath, error_t *error_p) {
-  uptr res = rename(oldpath, newpath);
-  return !internal_iserror(res, error_p);
-}
-
 void ReleaseMemoryPagesToOS(uptr beg, uptr end) {}
 void DumpProcessMap() {}
 
