@@ -761,7 +761,6 @@ define <4 x i32> @splatvar_rotate_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; SSE41-LABEL: splatvar_rotate_v4i32:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; SSE41-NEXT:    movdqa %xmm0, %xmm3
 ; SSE41-NEXT:    pslld %xmm2, %xmm3
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [32,32,32,32]
@@ -774,7 +773,6 @@ define <4 x i32> @splatvar_rotate_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX1-LABEL: splatvar_rotate_v4i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; AVX1-NEXT:    vpslld %xmm2, %xmm0, %xmm2
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [32,32,32,32]
 ; AVX1-NEXT:    vpsubd %xmm1, %xmm3, %xmm1
@@ -786,7 +784,6 @@ define <4 x i32> @splatvar_rotate_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; AVX2-LABEL: splatvar_rotate_v4i32:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
-; AVX2-NEXT:    vpbroadcastd %xmm1, %xmm1
 ; AVX2-NEXT:    vpslld %xmm2, %xmm0, %xmm2
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [32,32,32,32]
 ; AVX2-NEXT:    vpsubd %xmm1, %xmm3, %xmm1
@@ -876,8 +873,6 @@ define <8 x i16> @splatvar_rotate_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; SSE41-LABEL: splatvar_rotate_v8i16:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; SSE41-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,0,2,3,4,5,6,7]
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; SSE41-NEXT:    movdqa %xmm0, %xmm3
 ; SSE41-NEXT:    psllw %xmm2, %xmm3
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [16,16,16,16,16,16,16,16]
@@ -887,35 +882,20 @@ define <8 x i16> @splatvar_rotate_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; SSE41-NEXT:    por %xmm3, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: splatvar_rotate_v8i16:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; AVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,0,2,3,4,5,6,7]
-; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
-; AVX1-NEXT:    vpsllw %xmm2, %xmm0, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
-; AVX1-NEXT:    vpsubw %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; AVX1-NEXT:    vpsrlw %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: splatvar_rotate_v8i16:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; AVX2-NEXT:    vpbroadcastw %xmm1, %xmm1
-; AVX2-NEXT:    vpsllw %xmm2, %xmm0, %xmm2
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
-; AVX2-NEXT:    vpsubw %xmm1, %xmm3, %xmm1
-; AVX2-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; AVX2-NEXT:    vpsrlw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpor %xmm0, %xmm2, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: splatvar_rotate_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
+; AVX-NEXT:    vpsllw %xmm2, %xmm0, %xmm2
+; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
+; AVX-NEXT:    vpsubw %xmm1, %xmm3, %xmm1
+; AVX-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
+; AVX-NEXT:    vpsrlw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpor %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: splatvar_rotate_v8i16:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; AVX512-NEXT:    vpbroadcastw %xmm1, %xmm1
 ; AVX512-NEXT:    vpsllw %xmm2, %xmm0, %xmm2
 ; AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
 ; AVX512-NEXT:    vpsubw %xmm1, %xmm3, %xmm1

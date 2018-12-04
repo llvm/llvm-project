@@ -53,9 +53,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Inclusion &);
 // self-contained).
 struct IncludeGraphNode {
   // True if current file is a main file rather than a header.
-  bool IsTU;
+  bool IsTU = false;
   llvm::StringRef URI;
-  FileDigest Digest;
+  FileDigest Digest{{0}};
   std::vector<llvm::StringRef> DirectIncludes;
 };
 // FileURI and FileInclusions are references to keys of the map containing

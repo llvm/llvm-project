@@ -771,8 +771,9 @@ bool ClangASTSource::IgnoreName(const ConstString name,
   static const ConstString id_name("id");
   static const ConstString Class_name("Class");
 
-  if (name == id_name || name == Class_name)
-    return true;
+  if (m_ast_context->getLangOpts().ObjC)
+    if (name == id_name || name == Class_name)
+      return true;
 
   StringRef name_string_ref = name.GetStringRef();
 

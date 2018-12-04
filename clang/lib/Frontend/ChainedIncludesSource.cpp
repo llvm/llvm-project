@@ -129,7 +129,6 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
 
     CInvok->getPreprocessorOpts().ChainedIncludes.clear();
     CInvok->getPreprocessorOpts().ImplicitPCHInclude.clear();
-    CInvok->getPreprocessorOpts().ImplicitPTHInclude.clear();
     CInvok->getPreprocessorOpts().DisablePCHValidation = true;
     CInvok->getPreprocessorOpts().Includes.clear();
     CInvok->getPreprocessorOpts().MacroIncludes.clear();

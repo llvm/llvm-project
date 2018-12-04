@@ -7,9 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -65,6 +67,8 @@ protected:
   SmallString<128> FileBaz;
 
   void SetUp() override {
+    FileSystem::Initialize();
+
     // chdir back into the original working dir this test binary started with.
     // A previous test may have have changed the working dir.
     ASSERT_NO_ERROR(fs::set_current_path(OriginalWorkingDir));
@@ -105,7 +109,10 @@ protected:
     ASSERT_NO_ERROR(fs::current_path(OriginalWorkingDir));
   }
 
-  void TearDown() override { ASSERT_NO_ERROR(fs::remove_directories(BaseDir)); }
+  void TearDown() override {
+    ASSERT_NO_ERROR(fs::remove_directories(BaseDir));
+    FileSystem::Terminate();
+  }
 
   static bool HasEquivalentFile(const Twine &Path, const StringList &Paths) {
     for (size_t I = 0; I < Paths.GetSize(); ++I) {
@@ -140,7 +147,7 @@ protected:
 };
 
 SmallString<128> CompletionTest::OriginalWorkingDir;
-}
+} // namespace
 
 static std::vector<std::string> toVector(const StringList &SL) {
   std::vector<std::string> Result;
@@ -170,8 +177,8 @@ TEST_F(CompletionTest, DirCompletionAbsolute) {
   ASSERT_EQ(Count, Results.GetSize());
   EXPECT_TRUE(HasEquivalentFile(DirFooA, Results));
 
-  Count =
-    CommandCompletions::DiskDirectories(Twine(BaseDir) + "/.", Results, Resolver);
+  Count = CommandCompletions::DiskDirectories(Twine(BaseDir) + "/.", Results,
+                                              Resolver);
   ASSERT_EQ(0u, Count);
   ASSERT_EQ(Count, Results.GetSize());
 

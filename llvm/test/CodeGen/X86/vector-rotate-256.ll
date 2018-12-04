@@ -602,14 +602,13 @@ define <8 x i32> @splatvar_rotate_v8i32(<8 x i32> %a, <8 x i32> %b) nounwind {
 ;
 ; AVX2-LABEL: splatvar_rotate_v8i32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd %xmm1, %ymm2
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
-; AVX2-NEXT:    vpslld %xmm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
+; AVX2-NEXT:    vpslld %xmm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [32,32,32,32]
-; AVX2-NEXT:    vpsubd %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm2 = xmm2[0],zero,xmm2[1],zero
-; AVX2-NEXT:    vpsrld %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpsubd %xmm1, %xmm3, %xmm1
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
+; AVX2-NEXT:    vpsrld %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: splatvar_rotate_v8i32:
@@ -687,26 +686,24 @@ define <16 x i16> @splatvar_rotate_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind
 ;
 ; AVX2-LABEL: splatvar_rotate_v16i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastw %xmm1, %ymm2
-; AVX2-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; AVX2-NEXT:    vpsllw %xmm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
+; AVX2-NEXT:    vpsllw %xmm2, %ymm0, %ymm2
 ; AVX2-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
-; AVX2-NEXT:    vpsubw %xmm2, %xmm3, %xmm2
-; AVX2-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero
-; AVX2-NEXT:    vpsrlw %xmm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; AVX2-NEXT:    vpsubw %xmm1, %xmm3, %xmm1
+; AVX2-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
+; AVX2-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: splatvar_rotate_v16i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastw %xmm1, %ymm2
-; AVX512-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; AVX512-NEXT:    vpsllw %xmm1, %ymm0, %ymm1
+; AVX512-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
+; AVX512-NEXT:    vpsllw %xmm2, %ymm0, %ymm2
 ; AVX512-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
-; AVX512-NEXT:    vpsubw %xmm2, %xmm3, %xmm2
-; AVX512-NEXT:    vpmovzxwq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero
-; AVX512-NEXT:    vpsrlw %xmm2, %ymm0, %ymm0
-; AVX512-NEXT:    vpor %ymm0, %ymm1, %ymm0
+; AVX512-NEXT:    vpsubw %xmm1, %xmm3, %xmm1
+; AVX512-NEXT:    vpmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
+; AVX512-NEXT:    vpsrlw %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpor %ymm0, %ymm2, %ymm0
 ; AVX512-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: splatvar_rotate_v16i16:

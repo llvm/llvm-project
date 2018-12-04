@@ -61,8 +61,8 @@ GN only works in the monorepo layout.
    build directory, it can have any name, and you can have as many as you want,
    each with different build settings).
 
-#. Run e.g. `ninja -C out/gn check-lld` to build all prerequisites for and
-   run the LLD tests.
+#. Run e.g. `ninja -C out/gn llvm-undname` to build all prerequisites for and
+   including the Microsoft symbol name pretty printing tool llvm-undname.
 
 By default, you get a release build with assertions enabled that targets
 the host arch. You can set various build options by editing `out/gn/args.gn`,

@@ -34,6 +34,9 @@ public:
   FileSystem() : m_fs(llvm::vfs::getRealFileSystem()) {}
   FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs) : m_fs(fs) {}
 
+  FileSystem(const FileSystem &fs) = delete;
+  FileSystem &operator=(const FileSystem &fs) = delete;
+
   static FileSystem &Instance();
 
   static void Initialize();
@@ -53,6 +56,20 @@ public:
 
   Status Open(File &File, const FileSpec &file_spec, uint32_t options,
               uint32_t permissions = lldb::eFilePermissionsFileDefault);
+
+  /// Get a directory iterator.
+  /// @{
+  llvm::vfs::directory_iterator DirBegin(const FileSpec &file_spec,
+                                         std::error_code &ec);
+  llvm::vfs::directory_iterator DirBegin(const llvm::Twine &dir,
+                                         std::error_code &ec);
+  /// @}
+
+  /// Returns the Status object for the given file.
+  /// @{
+  llvm::ErrorOr<llvm::vfs::Status> GetStatus(const FileSpec &file_spec) const;
+  llvm::ErrorOr<llvm::vfs::Status> GetStatus(const llvm::Twine &path) const;
+  /// @}
 
   /// Returns the modification time of the given file.
   /// @{

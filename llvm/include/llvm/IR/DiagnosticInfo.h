@@ -340,7 +340,7 @@ private:
 };
 
 class DiagnosticLocation {
-  DIFile *File = nullptr;
+  StringRef Filename;
   unsigned Line = 0;
   unsigned Column = 0;
 
@@ -349,11 +349,8 @@ public:
   DiagnosticLocation(const DebugLoc &DL);
   DiagnosticLocation(const DISubprogram *SP);
 
-  bool isValid() const { return File; }
-  /// Return the full path to the file.
-  std::string getAbsolutePath() const;
-  /// Return the file name relative to the compilation directory.
-  StringRef getRelativePath() const;
+  bool isValid() const { return !Filename.empty(); }
+  StringRef getFilename() const { return Filename; }
   unsigned getLine() const { return Line; }
   unsigned getColumn() const { return Column; }
 };
@@ -378,13 +375,9 @@ public:
   const std::string getLocationStr() const;
 
   /// Return location information for this diagnostic in three parts:
-  /// the relative source file path, line number and column.
-  void getLocation(StringRef &RelativePath, unsigned &Line,
-                   unsigned &Column) const;
+  /// the source file name, line number and column.
+  void getLocation(StringRef *Filename, unsigned *Line, unsigned *Column) const;
 
-  /// Return the absolute path tot the file.
-  std::string getAbsolutePath() const;
-  
   const Function &getFunction() const { return Fn; }
   DiagnosticLocation getLocation() const { return Loc; }
 

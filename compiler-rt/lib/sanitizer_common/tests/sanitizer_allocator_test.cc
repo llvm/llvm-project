@@ -615,6 +615,22 @@ void TestCombinedAllocator() {
 
     std::shuffle(allocated.begin(), allocated.end(), r);
 
+    // Test ForEachChunk(...)
+    {
+      std::set<void *> reported_chunks;
+      auto cb = [](uptr chunk, void *arg) {
+        auto reported_chunks_ptr = reinterpret_cast<std::set<void *> *>(arg);
+        auto pair =
+            reported_chunks_ptr->insert(reinterpret_cast<void *>(chunk));
+        // Check chunk is never reported more than once.
+        ASSERT_TRUE(pair.second);
+      };
+      a->ForEachChunk(cb, reinterpret_cast<void *>(&reported_chunks));
+      for (const auto &allocated_ptr : allocated) {
+        ASSERT_NE(reported_chunks.find(allocated_ptr), reported_chunks.end());
+      }
+    }
+
     for (uptr i = 0; i < kNumAllocs; i++) {
       void *x = allocated[i];
       uptr *meta = reinterpret_cast<uptr*>(a->GetMetaData(x));

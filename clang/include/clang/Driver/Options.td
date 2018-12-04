@@ -258,10 +258,6 @@ def rsp_quoting : Joined<["--"], "rsp-quoting=">, Group<internal_driver_Group>,
 def ccc_gcc_name : Separate<["-"], "ccc-gcc-name">, InternalDriverOpt,
   HelpText<"Name for native GCC compiler">,
   MetaVarName<"<gcc-path>">;
-def ccc_pch_is_pch : Flag<["-"], "ccc-pch-is-pch">, InternalDriverOpt,
-  HelpText<"Use lazy PCH for precompiled headers">;
-def ccc_pch_is_pth : Flag<["-"], "ccc-pch-is-pth">, InternalDriverOpt,
-  HelpText<"Use pretokenized headers for precompiled headers">;
 
 class InternalDebugOpt : Group<internal_debug_Group>,
   Flags<[DriverOption, HelpHidden, CoreOption]>;
