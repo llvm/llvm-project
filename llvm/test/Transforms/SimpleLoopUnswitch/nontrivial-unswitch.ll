@@ -1,5 +1,6 @@
 ; RUN: opt -passes='loop(unswitch),verify<loops>' -enable-nontrivial-unswitch -S < %s | FileCheck %s
 ; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -S < %s | FileCheck %s
+; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -S < %s | FileCheck %s
 
 declare i32 @a()
 declare i32 @b()

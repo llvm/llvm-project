@@ -4200,20 +4200,39 @@ bool TargetLowering::expandFP_TO_UINT(SDNode *Node, SDValue &Result,
     return true;
   }
 
-  // Expand based on maximum range of FP_TO_SINT:
-  // True = fp_to_sint(Src)
-  // False = 0x8000000000000000 + fp_to_sint(Src - 0x8000000000000000)
-  // Result = select (Src < 0x8000000000000000), True, False
   SDValue Cst = DAG.getConstantFP(APF, dl, SrcVT);
   SDValue Sel = DAG.getSetCC(dl, SetCCVT, Src, Cst, ISD::SETLT);
 
-  SDValue True = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Src);
-  // TODO: Should any fast-math-flags be set for the FSUB?
-  SDValue False = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT,
-                              DAG.getNode(ISD::FSUB, dl, SrcVT, Src, Cst));
-  False = DAG.getNode(ISD::XOR, dl, DstVT, False,
-                      DAG.getConstant(SignMask, dl, DstVT));
-  Result = DAG.getSelect(dl, DstVT, Sel, True, False);
+  bool Strict = shouldUseStrictFP_TO_INT(SrcVT, DstVT, /*IsSigned*/ false);
+  if (Strict) {
+    // Expand based on maximum range of FP_TO_SINT, if the value exceeds the
+    // signmask then offset (the result of which should be fully representable).
+    // Sel = Src < 0x8000000000000000
+    // Val = select Sel, Src, Src - 0x8000000000000000
+    // Ofs = select Sel, 0, 0x8000000000000000
+    // Result = fp_to_sint(Val) ^ Ofs
+
+    // TODO: Should any fast-math-flags be set for the FSUB?
+    SDValue Val = DAG.getSelect(dl, SrcVT, Sel, Src,
+                                DAG.getNode(ISD::FSUB, dl, SrcVT, Src, Cst));
+    SDValue Ofs = DAG.getSelect(dl, DstVT, Sel, DAG.getConstant(0, dl, DstVT),
+                                DAG.getConstant(SignMask, dl, DstVT));
+    Result = DAG.getNode(ISD::XOR, dl, DstVT,
+                         DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Val), Ofs);
+  } else {
+    // Expand based on maximum range of FP_TO_SINT:
+    // True = fp_to_sint(Src)
+    // False = 0x8000000000000000 + fp_to_sint(Src - 0x8000000000000000)
+    // Result = select (Src < 0x8000000000000000), True, False
+
+    SDValue True = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT, Src);
+    // TODO: Should any fast-math-flags be set for the FSUB?
+    SDValue False = DAG.getNode(ISD::FP_TO_SINT, dl, DstVT,
+                                DAG.getNode(ISD::FSUB, dl, SrcVT, Src, Cst));
+    False = DAG.getNode(ISD::XOR, dl, DstVT, False,
+                        DAG.getConstant(SignMask, dl, DstVT));
+    Result = DAG.getSelect(dl, DstVT, Sel, True, False);
+  }
   return true;
 }
 

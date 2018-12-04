@@ -11,8 +11,10 @@
 
 // clang-format off
 
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
+#endif
 
 static DecodeStatus s4_0ImmDecoder(MCInst &MI, unsigned tmp,
     uint64_t, const void *Decoder) {
@@ -69,5 +71,9 @@ static DecodeStatus s4_2ImmDecoder(MCInst &MI, unsigned tmp,
   signedDecoder<6>(MI, tmp, Decoder);
   return MCDisassembler::Success;
 }
+
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#endif
+
 // clang-format on
