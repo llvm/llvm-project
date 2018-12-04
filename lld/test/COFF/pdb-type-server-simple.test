@@ -62,10 +62,12 @@ CHECK:            {{.*}}: `b.c`
 CHECK-LABEL:                       Global Symbols
 CHECK:       ============================================================
 CHECK-NEXT:    Records
-CHECK-NEXT:        36 | S_PROCREF [size = 20] `main`
-CHECK-NEXT:             module = 1, sum name = 0, offset = 104
-CHECK-NEXT:        56 | S_PROCREF [size = 16] `g`
-CHECK-NEXT:             module = 2, sum name = 0, offset = 104
+CHECK-NEXT:       36 | S_PROCREF [size = 20] `main`
+CHECK-NEXT:            module = 1, sum name = 0, offset = 104
+CHECK-NEXT:       68 | S_PROCREF [size = 16] `g`
+CHECK-NEXT:            module = 2, sum name = 0, offset = 104
+CHECK-NEXT:       56 | S_UDT [size = 12] `Foo`
+CHECK-NEXT:            original type = 0x1006
 
 CHECK-LABEL:                           Symbols
 CHECK: ============================================================

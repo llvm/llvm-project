@@ -7,6 +7,10 @@ else ()
   set(LLVM_BUILD_MODE "%(build_mode)s")
 endif ()
 
+if (CMAKE_SIZEOF_VOID_P EQUAL 8)
+  set(LLDB_IS_64_BITS 1)
+endif()
+
 if (NOT LLDB_TEST_USE_CUSTOM_C_COMPILER)
   string(REPLACE ${CMAKE_CFG_INTDIR} ${LLVM_BUILD_MODE} LLDB_TEST_C_COMPILER ${LLDB_TEST_C_COMPILER})
 endif ()
@@ -49,7 +53,8 @@ endif(BUILD_SHARED_LIBS)
 # the value is not canonicalized within LLVM
 llvm_canonicalize_cmake_booleans(
   LLDB_DISABLE_PYTHON
-  LLVM_ENABLE_ZLIB)
+  LLVM_ENABLE_ZLIB
+  LLDB_IS_64_BITS)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in

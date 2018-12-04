@@ -1223,18 +1223,11 @@ SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
 
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to  do a binary search of the original section piece vector.
-  size_t Size = Pieces.size();
-  size_t Idx = 0;
-
-  while (Size != 1) {
-    size_t H = Size / 2;
-    Size -= H;
-    if (Pieces[Idx + H].InputOff <= Offset)
-      Idx += H;
-  }
-  if (Offset < Pieces[Idx].InputOff)
-    --Idx;
-  return &Pieces[Idx];
+  auto It2 =
+      llvm::upper_bound(Pieces, Offset, [](uint64_t Offset, SectionPiece P) {
+        return Offset < P.InputOff;
+      });
+  return &It2[-1];
 }
 
 // Returns the offset in an output section for a given input offset.
