@@ -23,7 +23,9 @@ parser.add_argument('--arch',
                     metavar='arch',
                     dest='arch',
                     required=True,
-                    help='Specify the architecture to target.  Valid values=[32,64]')
+                    default='host',
+                    choices=['32', '64', 'host'],
+                    help='Specify the architecture to target.')
 
 parser.add_argument('--compiler',
                     metavar='compiler',
@@ -48,8 +50,15 @@ if sys.platform == 'darwin':
 parser.add_argument('--output', '-o',
                     dest='output',
                     metavar='file',
-                    required=True,
+                    required=False,
+                    default='',
                     help='Path to output file')
+
+parser.add_argument('--outdir', '-d',
+                    dest='outdir',
+                    metavar='directory',
+                    required=False,
+                    help='Directory for output files')
 
 parser.add_argument('--nodefaultlib',
                     dest='nodefaultlib',
@@ -81,9 +90,16 @@ parser.add_argument('--verbose',
                     default=False,
                     help='Print verbose output')
 
-parser.add_argument('input',
+parser.add_argument('-n', '--dry-run',
+                    dest='dry',
+                    action='store_true',
+                    default=False,
+                    help='Print the commands that would run, but dont actually run them')
+
+parser.add_argument('inputs',
                     metavar='file',
-                    help='Source file to compile / object file to link')
+                    nargs='+',
+                    help='Source file(s) to compile / object file(s) to link')
 
 
 args = parser.parse_args(args=sys.argv[1:])
@@ -128,14 +144,18 @@ def to_string(b):
     except AttributeError:
         raise TypeError('not sure how to convert %s to %s' % (type(b), str))
 
+def format_text(lines, indent_0, indent_n):
+    result = ' ' * indent_0 + lines[0]
+    for next in lines[1:]:
+        result = result + '\n{0}{1}'.format(' ' * indent_n, next)
+    return result
+
 def print_environment(env):
     for e in env:
         value = env[e]
-        split = value.split(os.pathsep)
-        print('    {0} = {1}'.format(e, split[0]))
-        prefix_width = 3 + len(e)
-        for next in split[1:]:
-            print('    {0}{1}'.format(' ' * prefix_width, next))
+        lines = value.split(os.pathsep)
+        formatted_value = format_text(lines, 0, 7 + len(e))
+        print('    {0} = {1}'.format(e, formatted_value))
 
 def find_executable(binary_name, search_paths):
     if sys.platform == 'win32':
@@ -189,9 +209,10 @@ def find_toolchain(compiler, tools_dir):
 class Builder(object):
     def __init__(self, toolchain_type, args):
         self.toolchain_type = toolchain_type
-        self.input = args.input
+        self.inputs = args.inputs
         self.arch = args.arch
         self.opt = args.opt
+        self.outdir = args.outdir
         self.compiler = args.compiler
         self.clean = args.clean
         self.output = args.output
@@ -465,15 +486,26 @@ class MsvcBuilder(Builder):
             linkenv.update(defaultenv)
         return (compileenv, linkenv)
 
-    def _ilk_file_name(self):
-        if self.mode == 'link':
-            return None
-        return os.path.splitext(self.output)[0] + '.ilk'
+    def _output_name(self, input, extension):
+        basename = os.path.basename(input)
+        basename = os.path.splitext(basename)[0] + extension
+        output = os.path.join(self.outdir, basename)
+        return os.path.normpath(output)
 
-    def _obj_file_name(self):
-        if self.mode == 'compile':
-            return self.output
-        return os.path.splitext(self.output)[0] + '.obj'
+    def _ilk_file_names(self):
+        if self.mode == 'link':
+            return []
+
+        return [self._output_name(x, '.ilk') for x in self.inputs]
+
+    def _obj_file_names(self):
+        if self.mode == 'link':
+            return self.inputs
+
+        if self.mode == 'compile' and self.output:
+            return [self.output]
+
+        return [self._output_name(x, '.obj') for x in self.inputs]
 
     def _pdb_file_name(self):
         if self.mode == 'compile':
@@ -485,7 +517,7 @@ class MsvcBuilder(Builder):
             return None
         return self.output
 
-    def _get_compilation_command(self):
+    def _get_compilation_command(self, source, obj):
         args = []
 
         args.append(self.compiler)
@@ -511,11 +543,10 @@ class MsvcBuilder(Builder):
             args.append('-fkeep-static-consts')
         args.append('/c')
 
-        args.append('/Fo' + self._obj_file_name())
-        args.append(self.input)
-        input = os.path.basename(self.input)
-        output = os.path.basename(self._obj_file_name())
-        return ('compiling {0} -> {1}'.format(input, output),
+        args.append('/Fo' + obj)
+        args.append(source)
+
+        return ('compiling', [source], obj,
                 self.compile_env,
                 args)
 
@@ -529,18 +560,17 @@ class MsvcBuilder(Builder):
             args.append('/entry:main')
         args.append('/PDB:' + self._pdb_file_name())
         args.append('/OUT:' + self._exe_file_name())
-        args.append(self._obj_file_name())
+        args.extend(self._obj_file_names())
 
-        input = os.path.basename(self._obj_file_name())
-        output = os.path.basename(self._exe_file_name())
-        return ('linking {0} -> {1}'.format(input, output),
+        return ('linking', self._obj_file_names(), self._exe_file_name(),
                 self.link_env,
                 args)
 
     def build_commands(self):
         commands = []
         if self.mode == 'compile' or self.mode == 'compile-and-link':
-            commands.append(self._get_compilation_command())
+            for input, output in zip(self.inputs, self._obj_file_names()):
+                commands.append(self._get_compilation_command(input, output))
         if self.mode == 'link' or self.mode == 'compile-and-link':
             commands.append(self._get_link_command())
         return commands
@@ -552,8 +582,8 @@ class MsvcBuilder(Builder):
 
         outputs = []
         if self.mode == 'compile' or self.mode == 'compile-and-link':
-            outputs.append(self._ilk_file_name())
-            outputs.append(self._obj_file_name())
+            outputs.extend(self._ilk_file_names())
+            outputs.extend(self._obj_file_names())
         if self.mode == 'link' or self.mode == 'compile-and-link':
             outputs.append(self._pdb_file_name())
             outputs.append(self._exe_file_name())
@@ -579,13 +609,20 @@ def indent(text, spaces):
 
 def build(commands):
     global args
-    for (status, env, child_args) in commands:
+    for (status, inputs, output, env, child_args) in commands:
         print('\n\n')
-        print(status)
+        if not args.verbose:
+            inputs = [os.path.basename(x) for x in inputs]
+            output = os.path.basename(output)
+        print(status + ' {0} -> {1}'.format('+'.join(inputs), output))
+
         if args.verbose:
             print('  Command Line: ' + ' '.join(child_args))
             print('  Env:')
             print_environment(env)
+        if args.dry:
+            continue
+
         popen = subprocess.Popen(child_args,
                                  stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
@@ -609,7 +646,8 @@ def clean(files):
         print('Cleaning {0}'.format(file))
         try:
             if os.path.exists(o):
-                os.remove(o)
+                if not args.dry:
+                    os.remove(o)
                 if args.verbose:
                     print('  The file was successfully cleaned.')
             elif args.verbose:
@@ -618,17 +656,57 @@ def clean(files):
             if args.verbose:
                 print('  The file could not be removed.')
 
+def fix_arguments(args):
+    if not args.inputs:
+        raise ValueError('No input files specified')
+
+    if args.output and args.mode == 'compile' and len(args.inputs) > 1:
+        raise ValueError('Cannot specify -o with mode=compile and multiple source files.  Use --outdir instead.')
+
+    if not args.dry:
+        args.inputs = [os.path.abspath(x) for x in args.inputs]
+
+    # If user didn't specify the outdir, use the directory of the first input.
+    if not args.outdir:
+        if args.output:
+            args.outdir = os.path.dirname(args.output)
+        else:
+            args.outdir = os.path.dirname(args.inputs[0])
+            args.outdir = os.path.abspath(args.outdir)
+        args.outdir = os.path.normpath(args.outdir)
+
+    # If user specified a non-absolute path for the output file, append the
+    # output directory to it.
+    if args.output:
+        if not os.path.isabs(args.output):
+            args.output = os.path.join(args.outdir, args.output)
+        args.output = os.path.normpath(args.output)
+
+fix_arguments(args)
+
 (toolchain_type, toolchain_path) = find_toolchain(args.compiler, args.tools_dir)
 if not toolchain_path or not toolchain_type:
     print('Unable to find toolchain {0}'.format(args.compiler))
     sys.exit(1)
 
 if args.verbose:
-    print("Script Environment:")
+    print('Script Arguments:')
+    print('  Arch: ' + args.arch)
+    print('  Compiler: ' + args.compiler)
+    print('  Outdir: ' + args.outdir)
+    print('  Output: ' + args.output)
+    print('  Nodefaultlib: ' + str(args.nodefaultlib))
+    print('  Opt: ' + args.opt)
+    print('  Mode: ' + args.mode)
+    print('  Clean: ' + str(args.clean))
+    print('  Verbose: ' + str(args.verbose))
+    print('  Dryrun: ' + str(args.dry))
+    print('  Inputs: ' + format_text(args.inputs, 0, 10))
+    print('Script Environment:')
     print_environment(os.environ)
 
 args.compiler = toolchain_path
-if not os.path.exists(args.compiler):
+if not os.path.exists(args.compiler) and not args.dry:
     raise ValueError('The toolchain {} does not exist.'.format(args.compiler))
 
 if toolchain_type == 'msvc' or toolchain_type=='clang-cl':
