@@ -613,6 +613,9 @@ getExprOpValue(const MCExpr *Expr, SmallVectorImpl<MCFixup> &Fixups,
     case MipsMCExpr::MEK_Special:
       llvm_unreachable("Unhandled fixup kind!");
       break;
+    case MipsMCExpr::MEK_DTPREL:
+      llvm_unreachable("MEK_DTPREL is used for TLS DIEExpr only");
+      break;
     case MipsMCExpr::MEK_CALL_HI16:
       FixupKind = Mips::fixup_Mips_CALL_HI16;
       break;

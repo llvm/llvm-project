@@ -40,6 +40,7 @@ subdirectories =
  ProfileData
  Support
  TableGen
+ TextAPI
  Target
  Testing
  ToolDrivers

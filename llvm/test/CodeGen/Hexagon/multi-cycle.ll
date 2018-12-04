@@ -3,10 +3,10 @@
 ; CHECK: v{{[0-9]+}}.h = vadd(v{{[0-9]+}}.h,v{{[0-9]+}}.h)
 ; CHECK: }
 ; CHECK: {
-; CHECK: v{{[0-9]+}} = valign(v{{[0-9]+}},v{{[0-9]+}},r{{[0-9]+}})
+; CHECK: v{{[0-9]+}} = valign(v{{[0-9]+}},v{{[0-9]+}},#2)
 ; CHECK: }
 ; CHECK: {
-; CHECK: v{{[0-9]+}} = valign(v{{[0-9]+}},v{{[0-9]+}},r{{[0-9]+}})
+; CHECK: v{{[0-9]+}} = valign(v{{[0-9]+}},v{{[0-9]+}},#2)
 
 target triple = "hexagon"
 

@@ -746,7 +746,7 @@ public:
               ClRecover : Recover;
           this->CompileKernel = ClEnableKasan.getNumOccurrences() > 0 ?
               ClEnableKasan : CompileKernel;
-	}
+  }
 
   bool runOnModule(Module &M) override;
   StringRef getPassName() const override { return "AddressSanitizerModule"; }
@@ -2176,8 +2176,8 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
     if (CanUsePrivateAliases && ClUsePrivateAliasForGlobals) {
       // Create local alias for NewGlobal to avoid crash on ODR between
       // instrumented and non-instrumented libraries.
-      auto *GA = GlobalAlias::create(GlobalValue::InternalLinkage,
-                                     NameForGlobal + M.getName(), NewGlobal);
+      auto *GA =
+          GlobalAlias::create(GlobalValue::PrivateLinkage, "", NewGlobal);
 
       // With local aliases, we need to provide another externally visible
       // symbol __odr_asan_XXX to detect ODR violation.

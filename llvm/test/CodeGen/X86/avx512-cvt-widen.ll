@@ -505,16 +505,14 @@ define <8 x i8> @f64to8uc(<8 x double> %f) {
 ; NOVL-LABEL: f64to8uc:
 ; NOVL:       # %bb.0:
 ; NOVL-NEXT:    vcvttpd2dq %zmm0, %ymm0
-; NOVL-NEXT:    vpmovdw %zmm0, %ymm0
-; NOVL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; NOVL-NEXT:    vpmovdb %zmm0, %xmm0
 ; NOVL-NEXT:    vzeroupper
 ; NOVL-NEXT:    retq
 ;
 ; VL-LABEL: f64to8uc:
 ; VL:       # %bb.0:
 ; VL-NEXT:    vcvttpd2dq %zmm0, %ymm0
-; VL-NEXT:    vpmovdw %ymm0, %xmm0
-; VL-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; VL-NEXT:    vpmovdb %ymm0, %xmm0
 ; VL-NEXT:    vzeroupper
 ; VL-NEXT:    retq
   %res = fptoui <8 x double> %f to <8 x i8>

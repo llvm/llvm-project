@@ -284,10 +284,7 @@ ExplodedNode * const *ExplodedNode::NodeGroup::end() const {
 }
 
 int64_t ExplodedNode::getID(ExplodedGraph *G) const {
-  Optional<int64_t> Out = G->getAllocator().identifyObject(this);
-  assert(Out && "Wrong allocator used");
-  assert(*Out % alignof(ExplodedNode) == 0 && "Wrong alignment information");
-  return *Out / alignof(ExplodedNode);
+  return G->getAllocator().identifyKnownAlignedObject<ExplodedNode>(this);
 }
 
 bool ExplodedNode::isTrivial() const {
