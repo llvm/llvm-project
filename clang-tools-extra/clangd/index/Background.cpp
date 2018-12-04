@@ -35,6 +35,58 @@
 using namespace llvm;
 namespace clang {
 namespace clangd {
+namespace {
+// Resolves URI to file paths with cache.
+class URIToFileCache {
+public:
+  URIToFileCache(llvm::StringRef HintPath) : HintPath(HintPath) {}
+
+  llvm::StringRef resolve(llvm::StringRef FileURI) {
+    auto I = URIToPathCache.try_emplace(FileURI);
+    if (I.second) {
+      auto U = URI::parse(FileURI);
+      if (!U) {
+        elog("Failed to parse URI {0}: {1}", FileURI, U.takeError());
+        assert(false && "Failed to parse URI");
+        return "";
+      }
+      auto Path = URI::resolve(*U, HintPath);
+      if (!Path) {
+        elog("Failed to resolve URI {0}: {1}", FileURI, Path.takeError());
+        assert(false && "Failed to resolve URI");
+        return "";
+      }
+      I.first->second = *Path;
+    }
+    return I.first->second;
+  }
+
+private:
+  std::string HintPath;
+  llvm::StringMap<std::string> URIToPathCache;
+};
+
+// We keep only the node "U" and its edges. Any node other than "U" will be
+// empty in the resultant graph.
+IncludeGraph getSubGraph(const URI &U, const IncludeGraph &FullGraph) {
+  IncludeGraph IG;
+
+  std::string FileURI = U.toString();
+  auto Entry = IG.try_emplace(FileURI).first;
+  auto &Node = Entry->getValue();
+  Node = FullGraph.lookup(Entry->getKey());
+  Node.URI = Entry->getKey();
+
+  // URIs inside nodes must point into the keys of the same IncludeGraph.
+  for (auto &Include : Node.DirectIncludes) {
+    auto I = IG.try_emplace(Include).first;
+    I->getValue().URI = I->getKey();
+    Include = I->getKey();
+  }
+
+  return IG;
+}
+} // namespace
 
 BackgroundIndex::BackgroundIndex(
     Context BackgroundContext, StringRef ResourceDir,
@@ -150,36 +202,6 @@ void BackgroundIndex::enqueueTask(Task T) {
   QueueCV.notify_all();
 }
 
-// Resolves URI to file paths with cache.
-class URIToFileCache {
-public:
-  URIToFileCache(llvm::StringRef HintPath) : HintPath(HintPath) {}
-
-  llvm::StringRef resolve(llvm::StringRef FileURI) {
-    auto I = URIToPathCache.try_emplace(FileURI);
-    if (I.second) {
-      auto U = URI::parse(FileURI);
-      if (!U) {
-        elog("Failed to parse URI {0}: {1}", FileURI, U.takeError());
-        assert(false && "Failed to parse URI");
-        return "";
-      }
-      auto Path = URI::resolve(*U, HintPath);
-      if (!Path) {
-        elog("Failed to resolve URI {0}: {1}", FileURI, Path.takeError());
-        assert(false && "Failed to resolve URI");
-        return "";
-      }
-      I.first->second = *Path;
-    }
-    return I.first->second;
-  }
-
-private:
-  std::string HintPath;
-  llvm::StringMap<std::string> URIToPathCache;
-};
-
 /// Given index results from a TU, only update files in \p FilesToUpdate.
 void BackgroundIndex::update(StringRef MainFile, IndexFileIn Index,
                              const StringMap<FileDigest> &FilesToUpdate,
@@ -233,6 +255,8 @@ void BackgroundIndex::update(StringRef MainFile, IndexFileIn Index,
 
     auto SS = llvm::make_unique<SymbolSlab>(std::move(Syms).build());
     auto RS = llvm::make_unique<RefSlab>(std::move(Refs).build());
+    auto IG = llvm::make_unique<IncludeGraph>(
+        getSubGraph(URI::create(Path), Index.Sources.getValue()));
 
     auto Hash = FilesToUpdate.lookup(Path);
     // We need to store shards before updating the index, since the latter
@@ -241,6 +265,7 @@ void BackgroundIndex::update(StringRef MainFile, IndexFileIn Index,
       IndexFileOut Shard;
       Shard.Symbols = SS.get();
       Shard.Refs = RS.get();
+      Shard.Sources = IG.get();
 
       if (auto Error = IndexStorage->storeShard(Path, Shard))
         elog("Failed to write background-index shard for file {0}: {1}", Path,
@@ -260,9 +285,9 @@ void BackgroundIndex::update(StringRef MainFile, IndexFileIn Index,
 // digests.
 // \p FileDigests contains file digests for the current indexed files, and all
 // changed files will be added to \p FilesToUpdate.
-decltype(SymbolCollector::Options::FileFilter) createFileFilter(
-    const llvm::StringMap<FileDigest> &FileDigests,
-    llvm::StringMap<FileDigest> &FilesToUpdate) {
+decltype(SymbolCollector::Options::FileFilter)
+createFileFilter(const llvm::StringMap<FileDigest> &FileDigests,
+                 llvm::StringMap<FileDigest> &FilesToUpdate) {
   return [&FileDigests, &FilesToUpdate](const SourceManager &SM, FileID FID) {
     StringRef Path;
     if (const auto *F = SM.getFileEntryForID(FID))
@@ -338,12 +363,11 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
   SymbolCollector::Options IndexOpts;
   StringMap<FileDigest> FilesToUpdate;
   IndexOpts.FileFilter = createFileFilter(DigestsSnapshot, FilesToUpdate);
-  SymbolSlab Symbols;
-  RefSlab Refs;
+  IndexFileIn Index;
   auto Action = createStaticIndexingAction(
-      IndexOpts, [&](SymbolSlab S) { Symbols = std::move(S); },
-      [&](RefSlab R) { Refs = std::move(R); },
-      /*IncludeGraphCallback=*/nullptr);
+      IndexOpts, [&](SymbolSlab S) { Index.Symbols = std::move(S); },
+      [&](RefSlab R) { Index.Refs = std::move(R); },
+      [&](IncludeGraph IG) { Index.Sources = std::move(IG); });
 
   // We're going to run clang here, and it could potentially crash.
   // We could use CrashRecoveryContext to try to make indexing crashes nonfatal,
@@ -358,13 +382,12 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
     return createStringError(inconvertibleErrorCode(), "Execute() failed");
   Action->EndSourceFile();
 
-  log("Indexed {0} ({1} symbols, {2} refs)", Inputs.CompileCommand.Filename,
-      Symbols.size(), Refs.numRefs());
-  SPAN_ATTACH(Tracer, "symbols", int(Symbols.size()));
-  SPAN_ATTACH(Tracer, "refs", int(Refs.numRefs()));
-  IndexFileIn Index;
-  Index.Symbols = std::move(Symbols);
-  Index.Refs = std::move(Refs);
+  log("Indexed {0} ({1} symbols, {2} refs, {3} files)",
+      Inputs.CompileCommand.Filename, Index.Symbols->size(),
+      Index.Refs->numRefs(), Index.Sources->size());
+  SPAN_ATTACH(Tracer, "symbols", int(Index.Symbols->size()));
+  SPAN_ATTACH(Tracer, "refs", int(Index.Refs->numRefs()));
+  SPAN_ATTACH(Tracer, "sources", int(Index.Sources->size()));
 
   update(AbsolutePath, std::move(Index), FilesToUpdate, IndexStorage);
   {

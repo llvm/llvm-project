@@ -11,6 +11,7 @@
 #define LLDB_SERVER_TESTS_TESTBASE_H
 
 #include "TestClient.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Testing/Support/Error.h"
@@ -20,7 +21,10 @@ namespace llgs_tests {
 
 class TestBase: public ::testing::Test {
 public:
-  static void SetUpTestCase() { lldb_private::HostInfo::Initialize(); }
+  static void SetUpTestCase() {
+    lldb_private::FileSystem::Initialize();
+    lldb_private::HostInfo::Initialize();
+  }
 
   static std::string getInferiorPath(llvm::StringRef Name) {
     llvm::SmallString<64> Path(LLDB_TEST_INFERIOR_PATH);

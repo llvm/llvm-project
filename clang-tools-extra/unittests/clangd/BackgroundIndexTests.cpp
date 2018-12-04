@@ -24,6 +24,11 @@ testing::Matcher<const RefSlab &>
 RefsAre(std::vector<testing::Matcher<Ref>> Matchers) {
   return ElementsAre(testing::Pair(_, UnorderedElementsAreArray(Matchers)));
 }
+// URI cannot be empty since it references keys in the IncludeGraph.
+MATCHER(EmptyIncludeNode, "") {
+  return !arg.IsTU && !arg.URI.empty() && arg.Digest == FileDigest{0} &&
+         arg.DirectIncludes.empty();
+}
 
 class MemoryShardStorage : public BackgroundIndexStorage {
   mutable std::mutex StorageMu;
@@ -93,7 +98,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   Cmd.Filename = testPath("root/A.cc");
   Cmd.Directory = testPath("root");
   Cmd.CommandLine = {"clang++", "-DA=1", testPath("root/A.cc")};
-  CDB.setCompileCommand(testPath("root"), Cmd);
+  CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
 
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   EXPECT_THAT(
@@ -103,7 +108,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
 
   Cmd.Filename = testPath("root/B.cc");
   Cmd.CommandLine = {"clang++", Cmd.Filename};
-  CDB.setCompileCommand(testPath("root"), Cmd);
+  CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
 
   ASSERT_TRUE(Idx.blockUntilIdleForTest());
   // B_CC is dropped as we don't collect symbols from A.h in this compilation.
@@ -143,7 +148,7 @@ TEST_F(BackgroundIndexTest, ShardStorageWriteTest) {
     OverlayCDB CDB(/*Base=*/nullptr);
     BackgroundIndex Idx(Context::empty(), "", FS, CDB,
                         [&](llvm::StringRef) { return &MSS; });
-    CDB.setCompileCommand(testPath("root"), Cmd);
+    CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
     ASSERT_TRUE(Idx.blockUntilIdleForTest());
   }
   EXPECT_EQ(CacheHits, 0U);
@@ -163,6 +168,57 @@ TEST_F(BackgroundIndexTest, ShardStorageWriteTest) {
   EXPECT_NE(ShardSource, nullptr);
   EXPECT_THAT(*ShardSource->Symbols, UnorderedElementsAre());
   EXPECT_THAT(*ShardSource->Refs, RefsAre({FileURI("unittest:///root/A.cc")}));
+}
+
+TEST_F(BackgroundIndexTest, DirectIncludesTest) {
+  MockFSProvider FS;
+  FS.Files[testPath("root/B.h")] = "";
+  FS.Files[testPath("root/A.h")] = R"cpp(
+      #include "B.h"
+      void common();
+      void f_b();
+      class A_CC {};
+      )cpp";
+  std::string A_CC = "#include \"A.h\"\nvoid g() { (void)common; }";
+  FS.Files[testPath("root/A.cc")] = A_CC;
+
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = testPath("root/A.cc");
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", testPath("root/A.cc")};
+  {
+    OverlayCDB CDB(/*Base=*/nullptr);
+    BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+                        [&](llvm::StringRef) { return &MSS; });
+    CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+    ASSERT_TRUE(Idx.blockUntilIdleForTest());
+  }
+
+  auto ShardSource = MSS.loadShard(testPath("root/A.cc"));
+  EXPECT_TRUE(ShardSource->Sources);
+  EXPECT_EQ(ShardSource->Sources->size(), 2U); // A.cc, A.h
+  EXPECT_THAT(
+      ShardSource->Sources->lookup("unittest:///root/A.cc").DirectIncludes,
+      UnorderedElementsAre("unittest:///root/A.h"));
+  EXPECT_NE(ShardSource->Sources->lookup("unittest:///root/A.cc").Digest,
+            FileDigest{0});
+  EXPECT_THAT(ShardSource->Sources->lookup("unittest:///root/A.h"),
+              EmptyIncludeNode());
+
+  auto ShardHeader = MSS.loadShard(testPath("root/A.h"));
+  EXPECT_TRUE(ShardHeader->Sources);
+  EXPECT_EQ(ShardHeader->Sources->size(), 2U); // A.h, B.h
+  EXPECT_THAT(
+      ShardHeader->Sources->lookup("unittest:///root/A.h").DirectIncludes,
+      UnorderedElementsAre("unittest:///root/B.h"));
+  EXPECT_NE(ShardHeader->Sources->lookup("unittest:///root/A.h").Digest,
+            FileDigest{0});
+  EXPECT_THAT(ShardHeader->Sources->lookup("unittest:///root/B.h"),
+              EmptyIncludeNode());
 }
 
 } // namespace clangd

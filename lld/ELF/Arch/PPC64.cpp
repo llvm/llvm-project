@@ -421,6 +421,7 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
     return R_GOTREL;
   case R_PPC64_TOC:
     return R_PPC_TOC;
+  case R_PPC64_REL14:
   case R_PPC64_REL24:
     return R_PPC_CALL_PLT;
   case R_PPC64_REL16_LO:
@@ -692,6 +693,13 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_PPC64_TOC:
     write64(Loc, Val);
     break;
+  case R_PPC64_REL14: {
+    uint32_t Mask = 0x0000FFFC;
+    checkInt(Loc, Val, 16, Type);
+    checkAlignment(Loc, Val, 4, Type);
+    write32(Loc, (read32(Loc) & ~Mask) | (Val & Mask));
+    break;
+  }
   case R_PPC64_REL24: {
     uint32_t Mask = 0x03FFFFFC;
     checkInt(Loc, Val, 26, Type);
@@ -709,8 +717,7 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
 
 bool PPC64::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
                        uint64_t BranchAddr, const Symbol &S) const {
-  // The only call relocation we currently support is the REL24 type.
-  if (Type != R_PPC64_REL24)
+  if (Type != R_PPC64_REL14 && Type != R_PPC64_REL24)
     return false;
 
   // If a function is in the Plt it needs to be called with a call-stub.
@@ -728,9 +735,13 @@ bool PPC64::needsThunk(RelExpr Expr, RelType Type, const InputFile *File,
 }
 
 bool PPC64::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {
-  assert(Type == R_PPC64_REL24 && "Unexpected relocation type used in branch");
   int64_t Offset = Dst - Src;
-  return isInt<26>(Offset);
+  if (Type == R_PPC64_REL14)
+    return isInt<16>(Offset);
+  if (Type == R_PPC64_REL24)
+    return isInt<26>(Offset);
+  llvm_unreachable("unsupported relocation type used in branch");
+  return false;
 }
 
 RelExpr PPC64::adjustRelaxExpr(RelType Type, const uint8_t *Data,

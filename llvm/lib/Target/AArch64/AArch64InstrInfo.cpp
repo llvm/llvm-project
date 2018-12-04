@@ -2382,9 +2382,8 @@ bool AArch64InstrInfo::shouldClusterMemOps(MachineOperand &BaseOp1,
   if (BaseOp1.getType() != BaseOp2.getType())
     return false;
 
-  assert(BaseOp1.isReg() ||
-         BaseOp1.isFI() &&
-             "Only base registers and frame indices are supported.");
+  assert((BaseOp1.isReg() || BaseOp1.isFI()) &&
+         "Only base registers and frame indices are supported.");
 
   // Check for both base regs and base FI.
   if (BaseOp1.isReg() && BaseOp1.getReg() != BaseOp2.getReg())

@@ -99,8 +99,6 @@ def err_fe_unable_to_interface_with_target : Error<
     "unable to interface with target machine">;
 def err_fe_unable_to_open_output : Error<
     "unable to open output file '%0': '%1'">;
-def err_fe_pth_file_has_no_source_header : Error<
-    "PTH file '%0' does not designate an original source header file for -include-pth">;
 def warn_fe_macro_contains_embedded_newline : Warning<
     "macro '%0' contains embedded newline; text after the newline is ignored">;
 def warn_fe_cc_print_header_failure : Warning<

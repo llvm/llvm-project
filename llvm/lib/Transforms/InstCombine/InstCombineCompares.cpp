@@ -1335,17 +1335,12 @@ Instruction *InstCombiner::foldICmpWithZero(ICmpInst &Cmp) {
   return nullptr;
 }
 
-// Fold icmp Pred X, C.
+/// Fold icmp Pred X, C.
+/// TODO: This code structure does not make much sense. The saturating add fold
+/// should be moved to some other helper and extended as noted below (it is also
+/// possible that code has been made unnecessary - no regression test failures).
+/// The dominating compare fold should not be limited to compare with constant.
 Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
-  CmpInst::Predicate Pred = Cmp.getPredicate();
-  Value *X = Cmp.getOperand(0);
-
-  const APInt *C;
-  if (!match(Cmp.getOperand(1), m_APInt(C)))
-    return nullptr;
-
-  Value *A = nullptr, *B = nullptr;
-
   // Match the following pattern, which is a common idiom when writing
   // overflow-safe integer arithmetic functions. The source performs an addition
   // in wider type and explicitly checks for overflow using comparisons against
@@ -1357,21 +1352,29 @@ Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
   //
   // sum = a + b
   // if (sum+128 >u 255)  ...  -> llvm.sadd.with.overflow.i8
-  {
-    ConstantInt *CI2; // I = icmp ugt (add (add A, B), CI2), CI
-    if (Pred == ICmpInst::ICMP_UGT &&
-        match(X, m_Add(m_Add(m_Value(A), m_Value(B)), m_ConstantInt(CI2))))
-      if (Instruction *Res = processUGT_ADDCST_ADD(
-              Cmp, A, B, CI2, cast<ConstantInt>(Cmp.getOperand(1)), *this))
-        return Res;
-  }
+  CmpInst::Predicate Pred = Cmp.getPredicate();
+  Value *Op0 = Cmp.getOperand(0), *Op1 = Cmp.getOperand(1);
+  Value *A, *B;
+  ConstantInt *CI, *CI2; // I = icmp ugt (add (add A, B), CI2), CI
+  if (Pred == ICmpInst::ICMP_UGT && match(Op1, m_ConstantInt(CI)) &&
+      match(Op0, m_Add(m_Add(m_Value(A), m_Value(B)), m_ConstantInt(CI2))))
+    if (Instruction *Res = processUGT_ADDCST_ADD(Cmp, A, B, CI2, CI, *this))
+      return Res;
 
-  // FIXME: Use m_APInt to allow folds for splat constants.
+  if (Instruction *I = foldICmpWithDominatingICmp(Cmp))
+    return I;
+
+  return nullptr;
+}
+
+/// Canonicalize icmp instructions based on dominating conditions.
+Instruction *InstCombiner::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
+  CmpInst::Predicate Pred = Cmp.getPredicate();
+  Value *X = Cmp.getOperand(0);
   ConstantInt *CI = dyn_cast<ConstantInt>(Cmp.getOperand(1));
   if (!CI)
     return nullptr;
 
-  // Canonicalize icmp instructions based on dominating conditions.
   BasicBlock *Parent = Cmp.getParent();
   BasicBlock *Dom = Parent->getSinglePredecessor();
   auto *BI = Dom ? dyn_cast<BranchInst>(Dom->getTerminator()) : nullptr;

@@ -76,6 +76,14 @@ const char *Stmt::getStmtClassName() const {
   return getStmtInfoTableEntry((StmtClass) StmtBits.sClass).Name;
 }
 
+// Check that no statement / expression class is polymorphic. LLVM style RTTI
+// should be used instead. If absolutely needed an exception can still be added
+// here by defining the appropriate macro (but please don't do this).
+#define STMT(CLASS, PARENT) \
+  static_assert(!std::is_polymorphic<CLASS>::value, \
+                #CLASS " should not be polymorphic!");
+#include "clang/AST/StmtNodes.inc"
+
 void Stmt::PrintStats() {
   // Ensure the table is primed.
   getStmtInfoTableEntry(Stmt::NullStmtClass);
