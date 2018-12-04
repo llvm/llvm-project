@@ -15,6 +15,8 @@
 
 namespace std {
 
+typedef __typeof(sizeof(int)) size_t;
+
 template <typename>
 struct remove_reference;
 
@@ -110,6 +112,7 @@ public:
   void reset();
   void destroy();
   void clear();
+  void resize(std::size_t);
   bool empty() const;
   bool isEmpty() const;
   operator bool() const;
@@ -400,6 +403,13 @@ void moveStateResetFunctionsTest() {
     A a;
     A b = std::move(a);
     a.clear(); // no-warning
+    a.foo();   // no-warning
+    a.b.foo(); // no-warning
+  }
+  {
+    A a;
+    A b = std::move(a);
+    a.resize(0); // no-warning
     a.foo();   // no-warning
     a.b.foo(); // no-warning
   }
