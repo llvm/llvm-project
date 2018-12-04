@@ -436,10 +436,17 @@ void ClangdLSPServer::onChangeConfiguration(
   applyConfiguration(Params.settings);
 }
 
-void ClangdLSPServer::onSymbolInfo(const TextDocumentPositionParams &Params,
-                                   Callback<std::vector<SymbolDetails>> Reply) {
-  Server->symbolInfo(Params.textDocument.uri.file(), Params.position,
-                     std::move(Reply));
+void ClangdLSPServer::onSymbolInfo(TextDocumentPositionParams &Params) {
+  Server.symbolInfo(Params.textDocument.uri.file(), Params.position,
+                    [](llvm::Expected<std::vector<SymbolDetails>> Symbols) {
+                      if (!Symbols) {
+                        replyError(ErrorCode::InternalError,
+                                   llvm::toString(Symbols.takeError()));
+                        return;
+                      }
+
+                      reply(json::Array(*Symbols));
+                    });
 }
 
 ClangdLSPServer::ClangdLSPServer(JSONOutput &Out,

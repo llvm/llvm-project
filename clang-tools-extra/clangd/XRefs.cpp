@@ -677,9 +677,9 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
 
   std::vector<SymbolDetails> Results;
 
-  for (const auto &Sym : Symbols.Decls) {
+  for (const auto &D : Symbols.Decls) {
     SymbolDetails NewSymbol;
-    if (const NamedDecl *ND = dyn_cast<NamedDecl>(Sym.D)) {
+    if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
       std::string QName = printQualifiedName(*ND);
       std::tie(NewSymbol.containerName, NewSymbol.name) =
           splitQualifiedName(QName);
@@ -691,7 +691,7 @@ std::vector<SymbolDetails> getSymbolInfo(ParsedAST &AST, Position Pos) {
       }
     }
     llvm::SmallString<32> USR;
-    if (!index::generateUSRForDecl(Sym.D, USR)) {
+    if (!index::generateUSRForDecl(D, USR)) {
       NewSymbol.USR = USR.str();
       NewSymbol.ID = SymbolID(NewSymbol.USR);
     }
