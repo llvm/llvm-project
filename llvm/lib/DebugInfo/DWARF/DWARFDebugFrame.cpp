@@ -396,7 +396,8 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       uint8_t SegmentDescriptorSize = Version < 4 ? 0 : Data.getU8(&Offset);
       uint64_t CodeAlignmentFactor = Data.getULEB128(&Offset);
       int64_t DataAlignmentFactor = Data.getSLEB128(&Offset);
-      uint64_t ReturnAddressRegister = Data.getULEB128(&Offset);
+      uint64_t ReturnAddressRegister =
+          Version == 1 ? Data.getU8(&Offset) : Data.getULEB128(&Offset);
 
       // Parse the augmentation data for EH CIEs
       StringRef AugmentationData("");

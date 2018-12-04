@@ -3052,6 +3052,28 @@ static Expr *lookThroughRangesV3Condition(Preprocessor &PP, Expr *Cond) {
   return Cond;
 }
 
+// Print a diagnostic for the failing static_assert expression. Defaults to
+// pretty-printing the expression.
+static void prettyPrintFailedBooleanCondition(llvm::raw_string_ostream &OS,
+                                              const Expr *FailedCond,
+                                              const PrintingPolicy &Policy) {
+  const auto *DR = dyn_cast<DeclRefExpr>(FailedCond);
+  if (DR && DR->getQualifier()) {
+    // If this is a qualified name, expand the template arguments in nested
+    // qualifiers.
+    DR->getQualifier()->print(OS, Policy, true);
+    // Then print the decl itself.
+    const ValueDecl *VD = DR->getDecl();
+    OS << VD->getName();
+    if (const auto *IV = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
+      // This is a template variable, print the expanded template arguments.
+      printTemplateArgumentList(OS, IV->getTemplateArgs().asArray(), Policy);
+    }
+    return;
+  }
+  FailedCond->printPretty(OS, nullptr, Policy);
+}
+
 std::pair<Expr *, std::string>
 Sema::findFailedBooleanCondition(Expr *Cond, bool AllowTopLevelCond) {
   Cond = lookThroughRangesV3Condition(PP, Cond);
@@ -3093,7 +3115,7 @@ Sema::findFailedBooleanCondition(Expr *Cond, bool AllowTopLevelCond) {
   std::string Description;
   {
     llvm::raw_string_ostream Out(Description);
-    FailedCond->printPretty(Out, nullptr, getPrintingPolicy());
+    prettyPrintFailedBooleanCondition(Out, FailedCond, getPrintingPolicy());
   }
   return { FailedCond, Description };
 }

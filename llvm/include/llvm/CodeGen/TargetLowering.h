@@ -1746,6 +1746,16 @@ public:
     return false;
   }
 
+  /// Return true if it is more correct/profitable to use strict FP_TO_INT
+  /// conversion operations - canonicalizing the FP source value instead of
+  /// converting all cases and then selecting based on value.
+  /// This may be true if the target throws exceptions for out of bounds
+  /// conversions or has fast FP CMOV.
+  virtual bool shouldUseStrictFP_TO_INT(EVT FpVT, EVT IntVT,
+                                        bool IsSigned) const {
+    return false;
+  }
+
   //===--------------------------------------------------------------------===//
   // TargetLowering Configuration Methods - These methods should be invoked by
   // the derived class constructor to configure this object for the target.

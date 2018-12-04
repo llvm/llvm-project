@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Check that we generate internal alias and odr indicator symbols for global to be protected.
 ; CHECK: @__odr_asan_gen_a = internal global i8 0, align 1
-; CHECK: @"a<stdin>" = internal alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @a
+; CHECK: @0 = private alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @a
 
 ; Function Attrs: nounwind sanitize_address uwtable
 define i32 @foo(i32 %M) #0 {

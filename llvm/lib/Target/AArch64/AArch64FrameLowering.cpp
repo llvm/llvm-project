@@ -1289,12 +1289,17 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 
   bool IsWin64 =
       Subtarget.isCallingConvWin64(MF.getFunction().getCallingConv());
-  unsigned FixedObject = IsWin64 ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
+  // Var args are accounted for in the containing function, so don't
+  // include them for funclets.
+  unsigned FixedObject =
+      (IsWin64 && !IsFunclet) ? alignTo(AFI->getVarArgsGPRSize(), 16) : 0;
 
   uint64_t AfterCSRPopSize = ArgumentPopSize;
   auto PrologueSaveSize = AFI->getCalleeSavedStackSize() + FixedObject;
-  // Var args are accounted for in the containting function, so don't
-  // include them for funclets.
+  // We cannot rely on the local stack size set in emitPrologue if the function
+  // has funclets, as funclets have different local stack size requirements, and
+  // the current value set in emitPrologue may be that of the containing
+  // function.
   if (MF.hasEHFunclets())
     AFI->setLocalStackSize(NumBytes - PrologueSaveSize);
   bool CombineSPBump = shouldCombineCSRLocalStackBump(MF, NumBytes);

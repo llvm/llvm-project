@@ -116,7 +116,9 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- ...
+- The experimental feature Pretokenized Headers (PTH) was removed in its
+  entirely from Clang. The feature did not properly work with about 1/3 of the
+  possible tokens available and was unmaintained.
 
 New Compiler Flags
 ------------------

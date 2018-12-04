@@ -65,7 +65,6 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case GenerateHeaderModule:
     return llvm::make_unique<GenerateHeaderModuleAction>();
   case GeneratePCH:            return llvm::make_unique<GeneratePCHAction>();
-  case GeneratePTH:            return llvm::make_unique<GeneratePTHAction>();
   case InitOnly:               return llvm::make_unique<InitOnlyAction>();
   case ParseSyntaxOnly:        return llvm::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return llvm::make_unique<DumpModuleInfoAction>();

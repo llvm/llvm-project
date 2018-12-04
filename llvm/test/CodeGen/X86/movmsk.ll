@@ -112,6 +112,40 @@ entry:
 }
 declare void @float_call_signbit_callee(i1 zeroext)
 
+; Known zeros
+define i32 @knownbits_v2f64(<2 x double> %x) {
+; CHECK-LABEL: knownbits_v2f64:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movmskpd %xmm0, %eax
+; CHECK-NEXT:    retq
+  %1 = tail call i32 @llvm.x86.sse2.movmsk.pd(<2 x double> %x)
+  %2 = and i32 %1, 3
+  ret i32 %2
+}
+
+; Don't demand any movmsk signbits -> zero
+define i32 @demandedbits_v16i8(<16 x i8> %x) {
+; CHECK-LABEL: demandedbits_v16i8:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %1 = tail call i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8> %x)
+  %2 = and i32 %1, 65536
+  ret i32 %2
+}
+
+; Simplify demanded vector elts
+define i32 @demandedelts_v4f32(<4 x float> %x) {
+; CHECK-LABEL: demandedelts_v4f32:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    movmskps %xmm0, %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    retq
+  %1 = shufflevector <4 x float> %x, <4 x float> undef, <4 x i32> zeroinitializer
+  %2 = tail call i32 @llvm.x86.sse.movmsk.ps(<4 x float> %1)
+  %3 = and i32 %2, 1
+  ret i32 %3
+}
 
 ; rdar://10247336
 ; movmskp{s|d} only set low 4/2 bits, high bits are known zero
@@ -145,5 +179,6 @@ entry:
   ret i32 %2
 }
 
+declare i32 @llvm.x86.sse2.pmovmskb.128(<16 x i8>) nounwind readnone
 declare i32 @llvm.x86.sse2.movmsk.pd(<2 x double>) nounwind readnone
 declare i32 @llvm.x86.sse.movmsk.ps(<4 x float>) nounwind readnone

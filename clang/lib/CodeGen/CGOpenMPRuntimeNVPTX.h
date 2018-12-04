@@ -274,6 +274,18 @@ public:
                         ArrayRef<llvm::Value *> CapturedVars,
                         const Expr *IfCond) override;
 
+  /// Emit an implicit/explicit barrier for OpenMP threads.
+  /// \param Kind Directive for which this implicit barrier call must be
+  /// generated. Must be OMPD_barrier for explicit barrier generation.
+  /// \param EmitChecks true if need to emit checks for cancellation barriers.
+  /// \param ForceSimpleCall true simple barrier call must be emitted, false if
+  /// runtime class decides which one to emit (simple or with cancellation
+  /// checks).
+  ///
+  void emitBarrierCall(CodeGenFunction &CGF, SourceLocation Loc,
+                       OpenMPDirectiveKind Kind, bool EmitChecks = true,
+                       bool ForceSimpleCall = false) override;
+
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.
   /// \param CriticalOpGen Generator for the statement associated with the given
