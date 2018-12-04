@@ -8272,7 +8272,7 @@ bool SwiftASTContext::PerformUserImport(SwiftASTContext &swift_ast_context,
 bool SwiftASTContext::PerformAutoImport(SwiftASTContext &swift_ast_context,
                                         SymbolContext &sc,
                                         lldb::StackFrameWP &stack_frame_wp,
-                                        swift::SourceFile &source_file,
+                                        swift::SourceFile *source_file,
                                         Status &error) {
   llvm::SmallVector<swift::SourceFile::ImportedModuleDesc, 2>
       additional_imports;
@@ -8291,6 +8291,9 @@ bool SwiftASTContext::PerformAutoImport(SwiftASTContext &swift_ast_context,
           return false;
       }
     }
-  source_file.addImports(additional_imports);
+  // source_file might be NULL outside of the expression parser, where
+  // we don't need to notify the source file of additional imports.
+  if (source_file)
+    source_file->addImports(additional_imports);
   return true;
 }
