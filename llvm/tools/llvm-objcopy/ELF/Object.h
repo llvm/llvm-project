@@ -254,7 +254,6 @@ private:
   };
 
   std::set<const SectionBase *, SectionCompare> Sections;
-  ArrayRef<uint8_t> Contents;
 
 public:
   uint64_t Align;
@@ -269,6 +268,7 @@ public:
 
   uint64_t OriginalOffset;
   Segment *ParentSegment = nullptr;
+  ArrayRef<uint8_t> Contents;
 
   explicit Segment(ArrayRef<uint8_t> Data) : Contents(Data) {}
   Segment() {}

@@ -80,8 +80,7 @@ public:
   SymbolCollector(Options Opts);
 
   /// Returns true is \p ND should be collected.
-  /// AST matchers require non-const ASTContext.
-  static bool shouldCollectSymbol(const NamedDecl &ND, ASTContext &ASTCtx,
+  static bool shouldCollectSymbol(const NamedDecl &ND, const ASTContext &ASTCtx,
                                   const Options &Opts);
 
   void initialize(ASTContext &Ctx) override;

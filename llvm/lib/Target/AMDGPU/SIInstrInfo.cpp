@@ -2626,6 +2626,10 @@ bool SIInstrInfo::canShrink(const MachineInstr &MI,
   if (hasModifiersSet(MI, AMDGPU::OpName::src0_modifiers))
     return false;
 
+  // Can it be shrunk to a valid 32 bit opcode?
+  if (!hasVALU32BitEncoding(MI.getOpcode()))
+    return false;
+
   // Check output modifiers
   return !hasModifiersSet(MI, AMDGPU::OpName::omod) &&
          !hasModifiersSet(MI, AMDGPU::OpName::clamp);

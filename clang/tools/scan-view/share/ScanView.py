@@ -1,5 +1,8 @@
-import BaseHTTPServer
-import SimpleHTTPServer
+try:
+    from http.server import HTTPServer, SimpleHTTPRequestHandler
+except ImportError:
+    from BaseHTTPServer import HTTPServer
+    from SimpleHTTPServer import SimpleHTTPRequestHandler
 import os
 import sys
 import urllib, urlparse
@@ -102,9 +105,9 @@ class ReporterThread(threading.Thread):
             time.sleep(3)
             if self.server.options.debug:
                 print >>sys.stderr, "%s: SERVER: submission complete."%(sys.argv[0],)
-        except Reporter.ReportFailure,e:
+        except Reporter.ReportFailure as e:
             self.status = e.value
-        except Exception,e:
+        except Exception as e:
             s = StringIO.StringIO()
             import traceback
             print >>s,'<b>Unhandled Exception</b><br><pre>'
@@ -112,9 +115,9 @@ class ReporterThread(threading.Thread):
             print >>s,'</pre>'
             self.status = s.getvalue()
 
-class ScanViewServer(BaseHTTPServer.HTTPServer):
+class ScanViewServer(HTTPServer):
     def __init__(self, address, handler, root, reporters, options):
-        BaseHTTPServer.HTTPServer.__init__(self, address, handler)
+        HTTPServer.__init__(self, address, handler)
         self.root = root
         self.reporters = reporters
         self.options = options        
@@ -163,14 +166,14 @@ class ScanViewServer(BaseHTTPServer.HTTPServer):
                 print >>sys.stderr, "%s: SERVER: waiting..." % (sys.argv[0],)
             try:
                 self.handle_request()
-            except OSError,e:
+            except OSError as e:
                 print 'OSError',e.errno
 
     def finish_request(self, request, client_address):
         if self.options.autoReload:
             import ScanView
             self.RequestHandlerClass = reload(ScanView).ScanViewRequestHandler
-        BaseHTTPServer.HTTPServer.finish_request(self, request, client_address)
+        HTTPServer.finish_request(self, request, client_address)
 
     def handle_error(self, request, client_address):
         # Ignore socket errors
@@ -179,7 +182,7 @@ class ScanViewServer(BaseHTTPServer.HTTPServer):
             if self.options.debug > 1:
                 print >>sys.stderr, "%s: SERVER: ignored socket error." % (sys.argv[0],)
             return
-        BaseHTTPServer.HTTPServer.handle_error(self, request, client_address)
+        HTTPServer.handle_error(self, request, client_address)
 
 # Borrowed from Quixote, with simplifications.
 def parse_query(qs, fields=None):
@@ -200,20 +203,20 @@ def parse_query(qs, fields=None):
             item.append(value)
     return fields
 
-class ScanViewRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+class ScanViewRequestHandler(SimpleHTTPRequestHandler):
     server_version = "ScanViewServer/" + __version__
     dynamic_mtime = time.time()
 
     def do_HEAD(self):
         try:
-            SimpleHTTPServer.SimpleHTTPRequestHandler.do_HEAD(self)
-        except Exception,e:
+            SimpleHTTPRequestHandler.do_HEAD(self)
+        except Exception as e:
             self.handle_exception(e)
             
     def do_GET(self):
         try:
-            SimpleHTTPServer.SimpleHTTPRequestHandler.do_GET(self)
-        except Exception,e:
+            SimpleHTTPRequestHandler.do_GET(self)
+        except Exception as e:
             self.handle_exception(e)
             
     def do_POST(self):
@@ -230,7 +233,7 @@ class ScanViewRequestHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
             if f:
                 self.copyfile(f, self.wfile)
                 f.close()
-        except Exception,e:
+        except Exception as e:
             self.handle_exception(e)            
 
     def log_message(self, format, *args):
@@ -422,13 +425,13 @@ Submit</h3>
         return self.send_string(res, 'text/plain')
 
     def get_report_context(self, report):
-        class Context:
+        class Context(object):
             pass
         if report is None or report == 'None':
             data = self.load_crashes()
             # Don't allow empty reports.
             if not data:
-                raise ValueError, 'No crashes detected!'
+                raise ValueError('No crashes detected!')
             c = Context()
             c.title = 'clang static analyzer failures'
 
@@ -472,7 +475,7 @@ STDERR Summary
             # Check that this is a valid report.            
             path = posixpath.join(self.server.root, 'report-%s.html' % report)
             if not posixpath.exists(path):
-                raise ValueError, 'Invalid report ID'
+                raise ValueError('Invalid report ID')
             keys = self.load_report(report)
             c = Context()
             c.title = keys.get('DESC','clang error (unrecognized')
@@ -501,7 +504,7 @@ Line: %s
         # report is None is used for crashes
         try:
             c = self.get_report_context(report)
-        except ValueError, e:
+        except ValueError as e:
             return self.send_error(400, e.message)
 
         title = c.title
@@ -544,7 +547,7 @@ Line: %s
 """%(r.getName(),display,r.getName(),options))
         reporterSelections = '\n'.join(reporterSelections)
         reporterOptionsDivs = '\n'.join(reporterOptions)
-        reportersArray = '[%s]'%(','.join([`r.getName()` for r in self.server.reporters]))
+        reportersArray = '[%s]'%(','.join([repr(r.getName()) for r in self.server.reporters]))
 
         if c.files:
             fieldSize = min(5, len(c.files))

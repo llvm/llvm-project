@@ -5149,6 +5149,60 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     return C.getMF()->getFunction().hasFnAttribute("branch-target-enforcement");
   });
 
+  // Returns true if an instructions is safe to fix up, false otherwise.
+  auto IsSafeToFixup = [this, &TRI](MachineInstr &MI) {
+    if (MI.isCall())
+      return true;
+
+    if (!MI.modifiesRegister(AArch64::SP, &TRI) &&
+        !MI.readsRegister(AArch64::SP, &TRI))
+      return true;
+
+    // Any modification of SP will break our code to save/restore LR.
+    // FIXME: We could handle some instructions which add a constant
+    // offset to SP, with a bit more work.
+    if (MI.modifiesRegister(AArch64::SP, &TRI))
+      return false;
+
+    // At this point, we have a stack instruction that we might need to
+    // fix up. We'll handle it if it's a load or store.
+    if (MI.mayLoadOrStore()) {
+      MachineOperand *Base; // Filled with the base operand of MI.
+      int64_t Offset;       // Filled with the offset of MI.
+
+      // Does it allow us to offset the base operand and is the base the
+      // register SP?
+      if (!getMemOperandWithOffset(MI, Base, Offset, &TRI) || !Base->isReg() ||
+          Base->getReg() != AArch64::SP)
+        return false;
+
+      // Find the minimum/maximum offset for this instruction and check
+      // if fixing it up would be in range.
+      int64_t MinOffset,
+          MaxOffset;  // Unscaled offsets for the instruction.
+      unsigned Scale; // The scale to multiply the offsets by.
+      unsigned DummyWidth;
+      getMemOpInfo(MI.getOpcode(), Scale, DummyWidth, MinOffset, MaxOffset);
+
+      Offset += 16; // Update the offset to what it would be if we outlined.
+      if (Offset < MinOffset * Scale || Offset > MaxOffset * Scale)
+        return false;
+
+      // It's in range, so we can outline it.
+      return true;
+    }
+
+    // FIXME: Add handling for instructions like "add x0, sp, #8".
+
+    // We can't fix it up, so don't outline it.
+    return false;
+  };
+
+  // True if it's possible to fix up each stack instruction in this sequence.
+  // Important for frames/call variants that modify the stack.
+  bool AllStackInstrsSafe = std::all_of(
+      FirstCand.front(), std::next(FirstCand.back()), IsSafeToFixup);
+
   // If the last instruction in any candidate is a terminator, then we should
   // tail call all of the candidates.
   if (RepeatedSequenceLocs[0].back()->isTerminator()) {
@@ -5169,32 +5223,58 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // We need to decide how to emit calls + frames. We can always emit the same
     // frame if we don't need to save to the stack. If we have to save to the
     // stack, then we need a different frame.
-    unsigned NumNoStackSave = 0;
+    unsigned NumBytesNoStackCalls = 0;
+    std::vector<outliner::Candidate> CandidatesWithoutStackFixups;
 
     for (outliner::Candidate &C : RepeatedSequenceLocs) {
       C.initLRU(TRI);
 
       // Is LR available? If so, we don't need a save.
       if (C.LRU.available(AArch64::LR)) {
+        NumBytesNoStackCalls += 4;
         C.setCallInfo(MachineOutlinerNoLRSave, 4);
-        ++NumNoStackSave;
+        CandidatesWithoutStackFixups.push_back(C);
       }
 
       // Is an unused register available? If so, we won't modify the stack, so
       // we can outline with the same frame type as those that don't save LR.
       else if (findRegisterToSaveLRTo(C)) {
+        NumBytesNoStackCalls += 12;
         C.setCallInfo(MachineOutlinerRegSave, 12);
-        ++NumNoStackSave;
+        CandidatesWithoutStackFixups.push_back(C);
+      }
+
+      // Is SP used in the sequence at all? If not, we don't have to modify
+      // the stack, so we are guaranteed to get the same frame.
+      else if (C.UsedInSequence.available(AArch64::SP)) {
+        NumBytesNoStackCalls += 12;
+        C.setCallInfo(MachineOutlinerDefault, 12);
+        CandidatesWithoutStackFixups.push_back(C);
+      }
+
+      // If we outline this, we need to modify the stack. Pretend we don't
+      // outline this by saving all of its bytes.
+      else {
+        NumBytesNoStackCalls += SequenceSize;
       }
     }
 
-    // If there are no places where we have to save LR, then note that we don't
-    // have to update the stack. Otherwise, give every candidate the default
-    // call type.
-    if (NumNoStackSave == RepeatedSequenceLocs.size())
+    // If there are no places where we have to save LR, then note that we
+    // don't have to update the stack. Otherwise, give every candidate the
+    // default call type, as long as it's safe to do so.
+    if (!AllStackInstrsSafe ||
+        NumBytesNoStackCalls <= RepeatedSequenceLocs.size() * 12) {
+      RepeatedSequenceLocs = CandidatesWithoutStackFixups;
       FrameID = MachineOutlinerNoLRSave;
-    else
+    } else {
       SetCandidateCallInfo(MachineOutlinerDefault, 12);
+    }
+
+    // If we dropped all of the candidates, bail out here.
+    if (RepeatedSequenceLocs.size() < 2) {
+      RepeatedSequenceLocs.clear();
+      return outliner::OutlinedFunction();
+    }
   }
 
   // Does every candidate's MBB contain a call? If so, then we might have a call
@@ -5202,9 +5282,10 @@ AArch64InstrInfo::getOutliningCandidateInfo(
   if (FlagsSetInAll & MachineOutlinerMBBFlags::HasCalls) {
     // Check if the range contains a call. These require a save + restore of the
     // link register.
+    bool ModStackToSaveLR = false;
     if (std::any_of(FirstCand.front(), FirstCand.back(),
                     [](const MachineInstr &MI) { return MI.isCall(); }))
-      NumBytesToCreateFrame += 8; // Save + restore the link register.
+      ModStackToSaveLR = true;
 
     // Handle the last instruction separately. If this is a tail call, then the
     // last instruction is a call. We don't want to save + restore in this case.
@@ -5213,7 +5294,18 @@ AArch64InstrInfo::getOutliningCandidateInfo(
     // well.
     else if (FrameID != MachineOutlinerThunk &&
              FrameID != MachineOutlinerTailCall && FirstCand.back()->isCall())
+      ModStackToSaveLR = true;
+
+    if (ModStackToSaveLR) {
+      // We can't fix up the stack. Bail out.
+      if (!AllStackInstrsSafe) {
+        RepeatedSequenceLocs.clear();
+        return outliner::OutlinedFunction();
+      }
+
+      // Save + restore LR.
       NumBytesToCreateFrame += 8;
+    }
   }
 
   return outliner::OutlinedFunction(RepeatedSequenceLocs, SequenceSize,
@@ -5431,97 +5523,6 @@ AArch64InstrInfo::getOutliningType(MachineBasicBlock::iterator &MIT,
   if (MI.readsRegister(AArch64::W30, &getRegisterInfo()) ||
       MI.modifiesRegister(AArch64::W30, &getRegisterInfo()))
     return outliner::InstrType::Illegal;
-
-  // Does this use the stack?
-  if (MI.modifiesRegister(AArch64::SP, &RI) ||
-      MI.readsRegister(AArch64::SP, &RI)) {
-    // True if there is no chance that any outlined candidate from this range
-    // could require stack fixups. That is, both
-    // * LR is available in the range (No save/restore around call)
-    // * The range doesn't include calls (No save/restore in outlined frame)
-    // are true.
-    // FIXME: This is very restrictive; the flags check the whole block,
-    // not just the bit we will try to outline.
-    bool MightNeedStackFixUp =
-        (Flags & (MachineOutlinerMBBFlags::LRUnavailableSomewhere |
-                  MachineOutlinerMBBFlags::HasCalls));
-
-    // If this instruction is in a range where it *never* needs to be fixed
-    // up, then we can *always* outline it. This is true even if it's not
-    // possible to fix that instruction up.
-    //
-    // Why? Consider two equivalent instructions I1, I2 where both I1 and I2
-    // use SP. Suppose that I1 sits within a range that definitely doesn't
-    // need stack fixups, while I2 sits in a range that does.
-    //
-    // First, I1 can be outlined as long as we *never* fix up the stack in
-    // any sequence containing it. I1 is already a safe instruction in the
-    // original program, so as long as we don't modify it we're good to go.
-    // So this leaves us with showing that outlining I2 won't break our
-    // program.
-    //
-    // Suppose I1 and I2 belong to equivalent candidate sequences. When we
-    // look at I2, we need to see if it can be fixed up. Suppose I2, (and
-    // thus I1) cannot be fixed up. Then I2 will be assigned an unique
-    // integer label; thus, I2 cannot belong to any candidate sequence (a
-    // contradiction). Suppose I2 can be fixed up. Then I1 can be fixed up
-    // as well, so we're good. Thus, I1 is always safe to outline.
-    //
-    // This gives us two things: first off, it buys us some more instructions
-    // for our search space by deeming stack instructions illegal only when
-    // they can't be fixed up AND we might have to fix them up. Second off,
-    // This allows us to catch tricky instructions like, say,
-    // %xi = ADDXri %sp, n, 0. We can't safely outline these since they might
-    // be paired with later SUBXris, which might *not* end up being outlined.
-    // If we mess with the stack to save something, then an ADDXri messes with
-    // it *after*, then we aren't going to restore the right something from
-    // the stack if we don't outline the corresponding SUBXri first. ADDXris and
-    // SUBXris are extremely common in prologue/epilogue code, so supporting
-    // them in the outliner can be a pretty big win!
-    if (!MightNeedStackFixUp)
-      return outliner::InstrType::Legal;
-
-    // Any modification of SP will break our code to save/restore LR.
-    // FIXME: We could handle some instructions which add a constant offset to
-    // SP, with a bit more work.
-    if (MI.modifiesRegister(AArch64::SP, &RI))
-      return outliner::InstrType::Illegal;
-
-    // At this point, we have a stack instruction that we might need to fix
-    // up. We'll handle it if it's a load or store.
-    if (MI.mayLoadOrStore()) {
-      MachineOperand *Base; // Filled with the base operand of MI.
-      int64_t Offset; // Filled with the offset of MI.
-
-      // Does it allow us to offset the base operand and is the base the
-      // register SP?
-      if (!getMemOperandWithOffset(MI, Base, Offset, &RI) ||
-          !Base->isReg() || Base->getReg() != AArch64::SP)
-        return outliner::InstrType::Illegal;
-
-      // Find the minimum/maximum offset for this instruction and check if
-      // fixing it up would be in range.
-      int64_t MinOffset, MaxOffset; // Unscaled offsets for the instruction.
-      unsigned Scale;               // The scale to multiply the offsets by.
-      unsigned DummyWidth;
-      getMemOpInfo(MI.getOpcode(), Scale, DummyWidth, MinOffset, MaxOffset);
-
-      // TODO: We should really test what happens if an instruction overflows.
-      // This is tricky to test with IR tests, but when the outliner is moved
-      // to a MIR test, it really ought to be checked.
-      Offset += 16; // Update the offset to what it would be if we outlined.
-      if (Offset < MinOffset * Scale || Offset > MaxOffset * Scale)
-        return outliner::InstrType::Illegal;
-
-      // It's in range, so we can outline it.
-      return outliner::InstrType::Legal;
-    }
-
-    // FIXME: Add handling for instructions like "add x0, sp, #8".
-
-    // We can't fix it up, so don't outline it.
-    return outliner::InstrType::Illegal;
-  }
 
   return outliner::InstrType::Legal;
 }

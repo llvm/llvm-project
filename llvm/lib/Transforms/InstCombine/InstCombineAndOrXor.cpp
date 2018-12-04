@@ -1033,7 +1033,7 @@ Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   ICmpInst::Predicate PredL = LHS->getPredicate(), PredR = RHS->getPredicate();
 
   // (icmp1 A, B) & (icmp2 A, B) --> (icmp3 A, B)
-  if (PredicatesFoldable(PredL, PredR)) {
+  if (predicatesFoldable(PredL, PredR)) {
     if (LHS->getOperand(0) == RHS->getOperand(1) &&
         LHS->getOperand(1) == RHS->getOperand(0))
       LHS->swapOperands();
@@ -1131,7 +1131,7 @@ Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     return nullptr;
 
   // We can't fold (ugt x, C) & (sgt x, C2).
-  if (!PredicatesFoldable(PredL, PredR))
+  if (!predicatesFoldable(PredL, PredR))
     return nullptr;
 
   // Ensure that the larger constant is on the RHS.
@@ -1976,7 +1976,7 @@ Value *InstCombiner::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   }
 
   // (icmp1 A, B) | (icmp2 A, B) --> (icmp3 A, B)
-  if (PredicatesFoldable(PredL, PredR)) {
+  if (predicatesFoldable(PredL, PredR)) {
     if (LHS->getOperand(0) == RHS->getOperand(1) &&
         LHS->getOperand(1) == RHS->getOperand(0))
       LHS->swapOperands();
@@ -2066,7 +2066,7 @@ Value *InstCombiner::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     return nullptr;
 
   // We can't fold (ugt x, C) | (sgt x, C2).
-  if (!PredicatesFoldable(PredL, PredR))
+  if (!predicatesFoldable(PredL, PredR))
     return nullptr;
 
   // Ensure that the larger constant is on the RHS.
@@ -2462,7 +2462,7 @@ static Instruction *foldXorToXor(BinaryOperator &I,
 }
 
 Value *InstCombiner::foldXorOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
-  if (PredicatesFoldable(LHS->getPredicate(), RHS->getPredicate())) {
+  if (predicatesFoldable(LHS->getPredicate(), RHS->getPredicate())) {
     if (LHS->getOperand(0) == RHS->getOperand(1) &&
         LHS->getOperand(1) == RHS->getOperand(0))
       LHS->swapOperands();

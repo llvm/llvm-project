@@ -32,10 +32,18 @@ public:
   static char ID;
 };
 
+class DummyReproducer : public Reproducer {
+public:
+  DummyReproducer() : Reproducer(){};
+
+  using Reproducer::SetCapture;
+  using Reproducer::SetReplay;
+};
+
 char DummyProvider::ID = 0;
 
 TEST(ReproducerTest, SetCapture) {
-  Reproducer reproducer;
+  DummyReproducer reproducer;
 
   // Initially both generator and loader are unset.
   EXPECT_EQ(nullptr, reproducer.GetGenerator());
@@ -59,7 +67,7 @@ TEST(ReproducerTest, SetCapture) {
 }
 
 TEST(ReproducerTest, SetReplay) {
-  Reproducer reproducer;
+  DummyReproducer reproducer;
 
   // Initially both generator and loader are unset.
   EXPECT_EQ(nullptr, reproducer.GetGenerator());
@@ -80,7 +88,7 @@ TEST(ReproducerTest, SetReplay) {
 }
 
 TEST(GeneratorTest, Create) {
-  Reproducer reproducer;
+  DummyReproducer reproducer;
 
   EXPECT_THAT_ERROR(reproducer.SetCapture(FileSpec("/bogus/path")),
                     Succeeded());
@@ -95,7 +103,7 @@ TEST(GeneratorTest, Create) {
 }
 
 TEST(GeneratorTest, Get) {
-  Reproducer reproducer;
+  DummyReproducer reproducer;
 
   EXPECT_THAT_ERROR(reproducer.SetCapture(FileSpec("/bogus/path")),
                     Succeeded());
@@ -109,7 +117,7 @@ TEST(GeneratorTest, Get) {
 }
 
 TEST(GeneratorTest, GetOrCreate) {
-  Reproducer reproducer;
+  DummyReproducer reproducer;
 
   EXPECT_THAT_ERROR(reproducer.SetCapture(FileSpec("/bogus/path")),
                     Succeeded());

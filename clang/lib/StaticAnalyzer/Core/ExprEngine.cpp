@@ -138,9 +138,17 @@ public:
   const ConstructionContextItem &getItem() const { return Impl.first; }
   const LocationContext *getLocationContext() const { return Impl.second; }
 
+  ASTContext &getASTContext() const {
+    return getLocationContext()->getDecl()->getASTContext();
+  }
+
   void print(llvm::raw_ostream &OS, PrinterHelper *Helper, PrintingPolicy &PP) {
-    OS << '(' << getLocationContext() << ',' << getAnyASTNodePtr() << ','
-       << getItem().getKindAsString();
+    OS << "(LC" << getLocationContext()->getID() << ',';
+    if (const Stmt *S = getItem().getStmtOrNull())
+      OS << 'S' << S->getID(getASTContext());
+    else
+      OS << 'I' << getItem().getCXXCtorInitializer()->getID(getASTContext());
+    OS << ',' << getItem().getKindAsString();
     if (getItem().getKind() == ConstructionContextItem::ArgumentKind)
       OS << " #" << getItem().getIndex();
     OS << ") ";

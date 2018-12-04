@@ -456,12 +456,13 @@ static void parseAnalyzerConfigs(AnalyzerOptions &AnOpts,
     return;
 
   if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
-    Diags->Report(diag::err_analyzer_config_invalid_input)
-      << "ctu-dir" << "a filename";
+    Diags->Report(diag::err_analyzer_config_invalid_input) << "ctu-dir"
+                                                           << "a filename";
 
-  if (!AnOpts.CTUDir.empty() && !llvm::sys::fs::is_directory(AnOpts.CTUDir))
-    Diags->Report(diag::err_analyzer_config_invalid_input)
-      << "model-path" << "a filename";
+  if (!AnOpts.ModelPath.empty() &&
+      !llvm::sys::fs::is_directory(AnOpts.ModelPath))
+    Diags->Report(diag::err_analyzer_config_invalid_input) << "model-path"
+                                                           << "a filename";
 }
 
 static bool ParseMigratorArgs(MigratorOptions &Opts, ArgList &Args) {
@@ -2485,6 +2486,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
 
   if (Args.hasArg(OPT_fvisibility_inlines_hidden))
     Opts.InlineVisibilityHidden = 1;
+
+  if (Args.hasArg(OPT_fvisibility_global_new_delete_hidden))
+    Opts.GlobalAllocationFunctionVisibilityHidden = 1;
 
   if (Args.hasArg(OPT_ftrapv)) {
     Opts.setSignedOverflowBehavior(LangOptions::SOB_Trapping);

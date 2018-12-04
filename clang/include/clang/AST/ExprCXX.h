@@ -98,8 +98,10 @@ public:
     Range = getSourceRangeImpl();
   }
 
-  explicit CXXOperatorCallExpr(ASTContext& C, EmptyShell Empty)
-      : CallExpr(C, CXXOperatorCallExprClass, Empty) {}
+  explicit CXXOperatorCallExpr(ASTContext &C, unsigned NumArgs,
+                               EmptyShell Empty)
+      : CallExpr(C, CXXOperatorCallExprClass, /*NumPreArgs=*/0, NumArgs,
+                 Empty) {}
 
   /// Returns the kind of overloaded operator that this
   /// expression refers to.
@@ -163,12 +165,13 @@ public:
 /// the object argument).
 class CXXMemberCallExpr : public CallExpr {
 public:
-  CXXMemberCallExpr(ASTContext &C, Expr *fn, ArrayRef<Expr*> args,
-                    QualType t, ExprValueKind VK, SourceLocation RP)
-      : CallExpr(C, CXXMemberCallExprClass, fn, args, t, VK, RP) {}
+  CXXMemberCallExpr(ASTContext &C, Expr *fn, ArrayRef<Expr *> args, QualType t,
+                    ExprValueKind VK, SourceLocation RP,
+                    unsigned MinNumArgs = 0)
+      : CallExpr(C, CXXMemberCallExprClass, fn, args, t, VK, RP, MinNumArgs) {}
 
-  CXXMemberCallExpr(ASTContext &C, EmptyShell Empty)
-      : CallExpr(C, CXXMemberCallExprClass, Empty) {}
+  CXXMemberCallExpr(ASTContext &C, unsigned NumArgs, EmptyShell Empty)
+      : CallExpr(C, CXXMemberCallExprClass, /*NumPreArgs=*/0, NumArgs, Empty) {}
 
   /// Retrieves the implicit object argument for the member call.
   ///
@@ -206,12 +209,14 @@ private:
 
 public:
   CUDAKernelCallExpr(ASTContext &C, Expr *fn, CallExpr *Config,
-                     ArrayRef<Expr*> args, QualType t, ExprValueKind VK,
-                     SourceLocation RP)
-      : CallExpr(C, CUDAKernelCallExprClass, fn, Config, args, t, VK, RP) {}
+                     ArrayRef<Expr *> args, QualType t, ExprValueKind VK,
+                     SourceLocation RP, unsigned MinNumArgs = 0)
+      : CallExpr(C, CUDAKernelCallExprClass, fn, Config, args, t, VK, RP,
+                 MinNumArgs) {}
 
-  CUDAKernelCallExpr(ASTContext &C, EmptyShell Empty)
-      : CallExpr(C, CUDAKernelCallExprClass, END_PREARG, Empty) {}
+  CUDAKernelCallExpr(ASTContext &C, unsigned NumArgs, EmptyShell Empty)
+      : CallExpr(C, CUDAKernelCallExprClass, /*NumPreArgs=*/END_PREARG, NumArgs,
+                 Empty) {}
 
   const CallExpr *getConfig() const {
     return cast_or_null<CallExpr>(getPreArg(CONFIG));
@@ -488,8 +493,10 @@ public:
       : CallExpr(C, UserDefinedLiteralClass, Fn, Args, T, VK, LitEndLoc),
         UDSuffixLoc(SuffixLoc) {}
 
-  explicit UserDefinedLiteral(const ASTContext &C, EmptyShell Empty)
-      : CallExpr(C, UserDefinedLiteralClass, Empty) {}
+  explicit UserDefinedLiteral(const ASTContext &C, unsigned NumArgs,
+                              EmptyShell Empty)
+      : CallExpr(C, UserDefinedLiteralClass, /*NumPreArgs=*/0, NumArgs,
+                 Empty) {}
 
   /// The kind of literal operator which is invoked.
   enum LiteralOperatorKind {
@@ -2086,55 +2093,43 @@ public:
 /// Represents a \c delete expression for memory deallocation and
 /// destructor calls, e.g. "delete[] pArray".
 class CXXDeleteExpr : public Expr {
+  friend class ASTStmtReader;
+
   /// Points to the operator delete overload that is used. Could be a member.
   FunctionDecl *OperatorDelete = nullptr;
 
   /// The pointer expression to be deleted.
   Stmt *Argument = nullptr;
 
-  /// Location of the expression.
-  SourceLocation Loc;
-
-  /// Is this a forced global delete, i.e. "::delete"?
-  bool GlobalDelete : 1;
-
-  /// Is this the array form of delete, i.e. "delete[]"?
-  bool ArrayForm : 1;
-
-  /// ArrayFormAsWritten can be different from ArrayForm if 'delete' is applied
-  /// to pointer-to-array type (ArrayFormAsWritten will be false while ArrayForm
-  /// will be true).
-  bool ArrayFormAsWritten : 1;
-
-  /// Does the usual deallocation function for the element type require
-  /// a size_t argument?
-  bool UsualArrayDeleteWantsSize : 1;
-
 public:
-  friend class ASTStmtReader;
+  CXXDeleteExpr(QualType Ty, bool GlobalDelete, bool ArrayForm,
+                bool ArrayFormAsWritten, bool UsualArrayDeleteWantsSize,
+                FunctionDecl *OperatorDelete, Expr *Arg, SourceLocation Loc)
+      : Expr(CXXDeleteExprClass, Ty, VK_RValue, OK_Ordinary, false, false,
+             Arg->isInstantiationDependent(),
+             Arg->containsUnexpandedParameterPack()),
+        OperatorDelete(OperatorDelete), Argument(Arg) {
+    CXXDeleteExprBits.GlobalDelete = GlobalDelete;
+    CXXDeleteExprBits.ArrayForm = ArrayForm;
+    CXXDeleteExprBits.ArrayFormAsWritten = ArrayFormAsWritten;
+    CXXDeleteExprBits.UsualArrayDeleteWantsSize = UsualArrayDeleteWantsSize;
+    CXXDeleteExprBits.Loc = Loc;
+  }
 
-  CXXDeleteExpr(QualType ty, bool globalDelete, bool arrayForm,
-                bool arrayFormAsWritten, bool usualArrayDeleteWantsSize,
-                FunctionDecl *operatorDelete, Expr *arg, SourceLocation loc)
-      : Expr(CXXDeleteExprClass, ty, VK_RValue, OK_Ordinary, false, false,
-             arg->isInstantiationDependent(),
-             arg->containsUnexpandedParameterPack()),
-        OperatorDelete(operatorDelete), Argument(arg), Loc(loc),
-        GlobalDelete(globalDelete),
-        ArrayForm(arrayForm), ArrayFormAsWritten(arrayFormAsWritten),
-        UsualArrayDeleteWantsSize(usualArrayDeleteWantsSize) {}
   explicit CXXDeleteExpr(EmptyShell Shell) : Expr(CXXDeleteExprClass, Shell) {}
 
-  bool isGlobalDelete() const { return GlobalDelete; }
-  bool isArrayForm() const { return ArrayForm; }
-  bool isArrayFormAsWritten() const { return ArrayFormAsWritten; }
+  bool isGlobalDelete() const { return CXXDeleteExprBits.GlobalDelete; }
+  bool isArrayForm() const { return CXXDeleteExprBits.ArrayForm; }
+  bool isArrayFormAsWritten() const {
+    return CXXDeleteExprBits.ArrayFormAsWritten;
+  }
 
   /// Answers whether the usual array deallocation function for the
   /// allocated type expects the size of the allocation as a
   /// parameter.  This can be true even if the actual deallocation
   /// function that we're using doesn't want a size.
   bool doesUsualArrayDeleteWantSize() const {
-    return UsualArrayDeleteWantsSize;
+    return CXXDeleteExprBits.UsualArrayDeleteWantsSize;
   }
 
   FunctionDecl *getOperatorDelete() const { return OperatorDelete; }
@@ -2148,7 +2143,7 @@ public:
   /// be a pointer, return an invalid type.
   QualType getDestroyedType() const;
 
-  SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
+  SourceLocation getBeginLoc() const { return CXXDeleteExprBits.Loc; }
   SourceLocation getEndLoc() const LLVM_READONLY {
     return Argument->getEndLoc();
   }
@@ -2158,7 +2153,7 @@ public:
   }
 
   // Iterators
-  child_range children() { return child_range(&Argument, &Argument+1); }
+  child_range children() { return child_range(&Argument, &Argument + 1); }
 };
 
 /// Stores the type being destroyed by a pseudo-destructor expression.

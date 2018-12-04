@@ -12,7 +12,7 @@ import os
 clang = sys.argv[1]
 none_opts = 0.3
 
-class Decl:
+class Decl(object):
   def __init__(self, text, depends=[], provides=[], conflicts=[]):
     self.text = text
     self.depends = depends
@@ -39,7 +39,7 @@ decls = [
   Decl('X %(name)s;\n', depends=['X']),
 ]
 
-class FS:
+class FS(object):
   def __init__(self):
     self.fs = {}
     self.prevfs = {}
@@ -62,7 +62,7 @@ class FS:
 
 fs = FS()
 
-class CodeModel:
+class CodeModel(object):
   def __init__(self):
     self.source = ''
     self.modules = {}

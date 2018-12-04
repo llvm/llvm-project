@@ -616,32 +616,37 @@ swap(pair<_T1, _T2>& __x, pair<_T1, _T2>& __y)
     __x.swap(__y);
 }
 
+template <class _Tp>
+struct __unwrap_reference { typedef _Tp type; };
+
+template <class _Tp>
+struct __unwrap_reference<reference_wrapper<_Tp> > { typedef _Tp& type; };
+
+#if _LIBCPP_STD_VER > 17
+template <class _Tp>
+struct unwrap_reference : __unwrap_reference<_Tp> { };
+
+template <class _Tp>
+struct unwrap_ref_decay : unwrap_reference<typename decay<_Tp>::type> { };
+#endif // > C++17
+
+template <class _Tp>
+struct __unwrap_ref_decay
+#if _LIBCPP_STD_VER > 17
+    : unwrap_ref_decay<_Tp>
+#else
+    : __unwrap_reference<typename decay<_Tp>::type>
+#endif
+{ };
+
 #ifndef _LIBCPP_CXX03_LANG
-
-template <class _Tp>
-struct __make_pair_return_impl
-{
-    typedef _Tp type;
-};
-
-template <class _Tp>
-struct __make_pair_return_impl<reference_wrapper<_Tp>>
-{
-    typedef _Tp& type;
-};
-
-template <class _Tp>
-struct __make_pair_return
-{
-    typedef typename __make_pair_return_impl<typename decay<_Tp>::type>::type type;
-};
 
 template <class _T1, class _T2>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-pair<typename __make_pair_return<_T1>::type, typename __make_pair_return<_T2>::type>
+pair<typename __unwrap_ref_decay<_T1>::type, typename __unwrap_ref_decay<_T2>::type>
 make_pair(_T1&& __t1, _T2&& __t2)
 {
-    return pair<typename __make_pair_return<_T1>::type, typename __make_pair_return<_T2>::type>
+    return pair<typename __unwrap_ref_decay<_T1>::type, typename __unwrap_ref_decay<_T2>::type>
                (_VSTD::forward<_T1>(__t1), _VSTD::forward<_T2>(__t2));
 }
 

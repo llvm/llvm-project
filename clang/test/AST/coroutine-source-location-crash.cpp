@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 %s -std=c++14 -fcoroutines-ts \
 // RUN:    -fsyntax-only -ast-dump | FileCheck %s
-#include "../SemaCXX/Inputs/std-coroutine.h"
+#include "Inputs/std-coroutine.h"
 
 using namespace std::experimental;
 

@@ -111,8 +111,10 @@ SystemInitializerTest::SystemInitializerTest() {}
 
 SystemInitializerTest::~SystemInitializerTest() {}
 
-void SystemInitializerTest::Initialize() {
-  SystemInitializerCommon::Initialize();
+llvm::Error
+SystemInitializerTest::Initialize(const InitializerOptions &options) {
+  if (auto e = SystemInitializerCommon::Initialize(options))
+    return e;
 
   ObjectFileELF::Initialize();
   ObjectFileMachO::Initialize();
@@ -231,6 +233,8 @@ void SystemInitializerTest::Initialize() {
   // AFTER PluginManager::Initialize is called.
 
   Debugger::SettingsInitialize();
+
+  return llvm::Error::success();
 }
 
 void SystemInitializerTest::Terminate() {

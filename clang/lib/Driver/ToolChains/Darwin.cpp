@@ -1034,11 +1034,17 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
   // runtime, automatically export symbols necessary to implement some of the
   // runtime's functionality.
   if (hasExportSymbolDirective(Args)) {
-    addExportedSymbol(CmdArgs, "___llvm_profile_filename");
-    addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
-    addExportedSymbol(CmdArgs, "_lprofCurFilename");
+    if (needsGCovInstrumentation(Args)) {
+      addExportedSymbol(CmdArgs, "___gcov_flush");
+      addExportedSymbol(CmdArgs, "_flush_fn_list");
+      addExportedSymbol(CmdArgs, "_writeout_fn_list");
+    } else {
+      addExportedSymbol(CmdArgs, "___llvm_profile_filename");
+      addExportedSymbol(CmdArgs, "___llvm_profile_raw_version");
+      addExportedSymbol(CmdArgs, "_lprofCurFilename");
+      addExportedSymbol(CmdArgs, "_lprofMergeValueProfData");
+    }
     addExportedSymbol(CmdArgs, "_lprofDirMode");
-    addExportedSymbol(CmdArgs, "_lprofMergeValueProfData");
   }
 }
 

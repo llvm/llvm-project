@@ -921,6 +921,26 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
         decl_context, name.c_str(), type->GetForwardCompilerType(), storage,
         func->hasInlineAttribute());
 
+    std::vector<clang::ParmVarDecl *> params;
+    if (std::unique_ptr<PDBSymbolTypeFunctionSig> sig = func->getSignature()) {
+      if (std::unique_ptr<ConcreteSymbolEnumerator<PDBSymbolTypeFunctionArg>>
+              arg_enum = sig->findAllChildren<PDBSymbolTypeFunctionArg>()) {
+        while (std::unique_ptr<PDBSymbolTypeFunctionArg> arg =
+                   arg_enum->getNext()) {
+          Type *arg_type = symbol_file->ResolveTypeUID(arg->getTypeId());
+          if (!arg_type)
+            continue;
+
+          clang::ParmVarDecl *param = m_ast.CreateParameterDeclaration(
+              nullptr, arg_type->GetForwardCompilerType(), clang::SC_None);
+          if (param)
+            params.push_back(param);
+        }
+      }
+    }
+    if (params.size())
+      m_ast.SetFunctionParameters(decl, params.data(), params.size());
+
     m_uid_to_decl[sym_id] = decl;
 
     return decl;
@@ -1030,6 +1050,7 @@ clang::DeclContext *PDBASTParser::GetDeclContextContainingSymbol(
                                               curr_context);
 
       m_parent_to_namespaces[curr_context].insert(namespace_decl);
+      m_namespaces.insert(namespace_decl);
 
       curr_context = namespace_decl;
     }
@@ -1065,18 +1086,23 @@ void PDBASTParser::ParseDeclsForDeclContext(
 clang::NamespaceDecl *
 PDBASTParser::FindNamespaceDecl(const clang::DeclContext *parent,
                                 llvm::StringRef name) {
-  if (!parent)
-    parent = m_ast.GetTranslationUnitDecl();
+  NamespacesSet *set;
+  if (parent) {
+    auto pit = m_parent_to_namespaces.find(parent);
+    if (pit == m_parent_to_namespaces.end())
+      return nullptr;
 
-  auto it = m_parent_to_namespaces.find(parent);
-  if (it == m_parent_to_namespaces.end())
-    return nullptr;
+    set = &pit->second;
+  } else {
+    set = &m_namespaces;
+  }
+  assert(set);
 
-  for (auto namespace_decl : it->second)
+  for (clang::NamespaceDecl *namespace_decl : *set)
     if (namespace_decl->getName().equals(name))
       return namespace_decl;
 
-  for (auto namespace_decl : it->second)
+  for (clang::NamespaceDecl *namespace_decl : *set)
     if (namespace_decl->isAnonymousNamespace())
       return FindNamespaceDecl(namespace_decl, name);
 

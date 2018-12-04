@@ -2653,27 +2653,29 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
       DeclContext(DK), redeclarable_base(C), ODRHash(0),
       EndRangeLoc(NameInfo.getEndLoc()), DNLoc(NameInfo.getInfo()) {
   assert(T.isNull() || T->isFunctionType());
-  setStorageClass(S);
-  setInlineSpecified(isInlineSpecified);
-  setExplicitSpecified(false);
-  setVirtualAsWritten(false);
-  setPure(false);
-  setHasInheritedPrototype(false);
-  setHasWrittenPrototype(true);
-  setDeletedAsWritten(false);
-  setTrivial(false);
-  setTrivialForCall(false);
-  setDefaulted(false);
-  setExplicitlyDefaulted(false);
-  setHasImplicitReturnZero(false);
-  setLateTemplateParsed(false);
-  setConstexpr(isConstexprSpecified);
-  setInstantiationIsPending(false);
-  setUsesSEHTry(false);
-  setHasSkippedBody(false);
-  setWillHaveBody(false);
-  setIsMultiVersion(false);
-  setHasODRHash(false);
+  FunctionDeclBits.SClass = S;
+  FunctionDeclBits.IsInline = isInlineSpecified;
+  FunctionDeclBits.IsInlineSpecified = isInlineSpecified;
+  FunctionDeclBits.IsExplicitSpecified = false;
+  FunctionDeclBits.IsVirtualAsWritten = false;
+  FunctionDeclBits.IsPure = false;
+  FunctionDeclBits.HasInheritedPrototype = false;
+  FunctionDeclBits.HasWrittenPrototype = true;
+  FunctionDeclBits.IsDeleted = false;
+  FunctionDeclBits.IsTrivial = false;
+  FunctionDeclBits.IsTrivialForCall = false;
+  FunctionDeclBits.IsDefaulted = false;
+  FunctionDeclBits.IsExplicitlyDefaulted = false;
+  FunctionDeclBits.HasImplicitReturnZero = false;
+  FunctionDeclBits.IsLateTemplateParsed = false;
+  FunctionDeclBits.IsConstexpr = isConstexprSpecified;
+  FunctionDeclBits.InstantiationIsPending = false;
+  FunctionDeclBits.UsesSEHTry = false;
+  FunctionDeclBits.HasSkippedBody = false;
+  FunctionDeclBits.WillHaveBody = false;
+  FunctionDeclBits.IsMultiVersion = false;
+  FunctionDeclBits.IsCopyDeductionCandidate = false;
+  FunctionDeclBits.HasODRHash = false;
 }
 
 void FunctionDecl::getNameForDiagnostic(

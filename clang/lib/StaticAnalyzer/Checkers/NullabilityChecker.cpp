@@ -329,8 +329,8 @@ NullabilityChecker::NullabilityBugVisitor::VisitNode(const ExplodedNode *N,
                                                     nullptr);
 }
 
-/// Returns true when the value stored at the given location is null
-/// and the passed in type is nonnnull.
+/// Returns true when the value stored at the given location has been
+/// constrained to null after being passed through an object of nonnnull type.
 static bool checkValueAtLValForInvariantViolation(ProgramStateRef State,
                                                   SVal LV, QualType T) {
   if (getNullabilityAnnotation(T) != Nullability::Nonnull)
@@ -340,9 +340,14 @@ static bool checkValueAtLValForInvariantViolation(ProgramStateRef State,
   if (!RegionVal)
     return false;
 
-  auto StoredVal =
-  State->getSVal(RegionVal->getRegion()).getAs<DefinedOrUnknownSVal>();
-  if (!StoredVal)
+  // If the value was constrained to null *after* it was passed through that
+  // location, it could not have been a concrete pointer *when* it was passed.
+  // In that case we would have handled the situation when the value was
+  // bound to that location, by emitting (or not emitting) a report.
+  // Therefore we are only interested in symbolic regions that can be either
+  // null or non-null depending on the value of their respective symbol.
+  auto StoredVal = State->getSVal(*RegionVal).getAs<loc::MemRegionVal>();
+  if (!StoredVal || !isa<SymbolicRegion>(StoredVal->getRegion()))
     return false;
 
   if (getNullConstraint(*StoredVal, State) == NullConstraint::IsNull)
@@ -1170,10 +1175,15 @@ void NullabilityChecker::printState(raw_ostream &Out, ProgramStateRef State,
 
   NullabilityMapTy B = State->get<NullabilityMap>();
 
+  if (State->get<InvariantViolated>())
+    Out << Sep << NL
+        << "Nullability invariant was violated, warnings suppressed." << NL;
+
   if (B.isEmpty())
     return;
 
-  Out << Sep << NL;
+  if (!State->get<InvariantViolated>())
+    Out << Sep << NL;
 
   for (NullabilityMapTy::iterator I = B.begin(), E = B.end(); I != E; ++I) {
     Out << I->first << " : ";
