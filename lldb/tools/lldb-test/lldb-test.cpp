@@ -934,8 +934,13 @@ int main(int argc, const char *argv[]) {
   cl::ParseCommandLineOptions(argc, argv, "LLDB Testing Utility\n");
 
   SystemLifetimeManager DebuggerLifetime;
-  DebuggerLifetime.Initialize(llvm::make_unique<SystemInitializerTest>(),
-                              nullptr);
+  if (auto e = DebuggerLifetime.Initialize(
+          llvm::make_unique<SystemInitializerTest>(), {}, nullptr)) {
+    WithColor::error() << "initialization failed: " << toString(std::move(e))
+                       << '\n';
+    return 1;
+  }
+
   CleanUp TerminateDebugger([&] { DebuggerLifetime.Terminate(); });
 
   auto Dbg = lldb_private::Debugger::CreateInstance();
