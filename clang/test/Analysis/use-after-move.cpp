@@ -15,6 +15,8 @@
 
 namespace std {
 
+typedef __typeof(sizeof(int)) size_t;
+
 template <typename>
 struct remove_reference;
 
@@ -88,7 +90,7 @@ public:
   A(const A &other) : i(other.i), d(other.d), b(other.b) {}
   A(A &&other) : i(other.i), d(other.d), b(std::move(other.b)) {
 #ifdef AGGRESSIVE
-    // expected-note@-2{{'b' became 'moved-from' here}}
+    // expected-note@-2{{Object 'b' is moved}}
 #endif
   }
   A(A &&other, char *k) {
@@ -110,6 +112,7 @@ public:
   void reset();
   void destroy();
   void clear();
+  void resize(std::size_t);
   bool empty() const;
   bool isEmpty() const;
   operator bool() const;
@@ -137,18 +140,18 @@ void copyOrMoveCall(A a) {
 void simpleMoveCtorTest() {
   {
     A a;
-    A b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
-    a.foo();            // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
+    A b = std::move(a); // expected-note {{Object 'a' is moved}}
+    a.foo();            // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
   }
   {
     A a;
-    A b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
-    b = a;              // expected-warning {{Copying a 'moved-from' object 'a'}} expected-note {{Copying a 'moved-from' object 'a'}}
+    A b = std::move(a); // expected-note {{Object 'a' is moved}}
+    b = a;              // expected-warning {{Moved-from object 'a' is copied}} expected-note {{Moved-from object 'a' is copied}}
   }
   {
     A a;
-    A b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
-    b = std::move(a);   // expected-warning {{Moving a 'moved-from' object 'a'}} expected-note {{Moving a 'moved-from' object 'a'}}
+    A b = std::move(a); // expected-note {{Object 'a' is moved}}
+    b = std::move(a);   // expected-warning {{Moved-from object 'a' is moved}} expected-note {{Moved-from object 'a' is moved}}
   }
 }
 
@@ -156,20 +159,20 @@ void simpleMoveAssignementTest() {
   {
     A a;
     A b;
-    b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
-    a.foo();          // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
+    b = std::move(a); // expected-note {{Object 'a' is moved}}
+    a.foo();          // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
   }
   {
     A a;
     A b;
-    b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
-    A c(a);           // expected-warning {{Copying a 'moved-from' object 'a'}} expected-note {{Copying a 'moved-from' object 'a'}}
+    b = std::move(a); // expected-note {{Object 'a' is moved}}
+    A c(a);           // expected-warning {{Moved-from object 'a' is copied}} expected-note {{Moved-from object 'a' is copied}}
   }
   {
     A a;
     A b;
-    b = std::move(a);  // expected-note {{'a' became 'moved-from' here}}
-    A c(std::move(a)); // expected-warning {{Moving a 'moved-from' object 'a'}} expected-note {{Moving a 'moved-from' object 'a'}}
+    b = std::move(a);  // expected-note {{Object 'a' is moved}}
+    A c(std::move(a)); // expected-warning {{Moved-from object 'a' is moved}} expected-note {{Moved-from object 'a' is moved}}
   }
 }
 
@@ -178,8 +181,8 @@ void moveInInitListTest() {
     A a;
   };
   A a;
-  S s{std::move(a)}; // expected-note {{'a' became 'moved-from' here}}
-  a.foo();           // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
+  S s{std::move(a)}; // expected-note {{Object 'a' is moved}}
+  a.foo();           // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
 }
 
 // Don't report a bug if the variable was assigned to in the meantime.
@@ -227,19 +230,19 @@ void reinitializationTest(int i) {
     A b;
     b = std::move(a);
     a = A();
-    b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
-    a.foo();          // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
+    b = std::move(a); // expected-note {{Object 'a' is moved}}
+    a.foo();          // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
   }
   // If a path exist where we not reinitialize the variable we report a bug.
   {
     A a;
     A b;
-    b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
+    b = std::move(a); // expected-note {{Object 'a' is moved}}
     if (i < 10) {     // expected-note {{Assuming 'i' is >= 10}} expected-note {{Taking false branch}}
       a = A();
     }
     if (i > 5) { // expected-note {{Taking true branch}}
-      a.foo();   // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
+      a.foo();   // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
     }
   }
 }
@@ -325,8 +328,8 @@ void loopTest() {
   {
     A a;
     for (int i = 0; i < bignum(); i++) { // expected-note {{Loop condition is true.  Entering loop body}} expected-note {{Loop condition is true.  Entering loop body}}
-      constCopyOrMoveCall(std::move(a)); // expected-warning {{Moving a 'moved-from' object 'a'}} expected-note {{Moving a 'moved-from' object 'a'}}
-      // expected-note@-1 {{'a' became 'moved-from' here}}
+      constCopyOrMoveCall(std::move(a)); // expected-warning {{Moved-from object 'a' is moved}} expected-note {{Moved-from object 'a' is moved}}
+      // expected-note@-1 {{Object 'a' is moved}}
     }
   }
 
@@ -348,10 +351,10 @@ void loopTest() {
 void uniqueTest(bool cond) {
   A a(42, 42.0);
   A b;
-  b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
+  b = std::move(a); // expected-note {{Object 'a' is moved}}
 
   if (cond) { // expected-note {{Assuming 'cond' is not equal to 0}} expected-note {{Taking true branch}}
-    a.foo();  // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
+    a.foo();  // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
   }
   if (cond) {
     a.bar(); // no-warning
@@ -362,8 +365,8 @@ void uniqueTest(bool cond) {
 
 void uniqueTest2() {
   A a;
-  A a1 = std::move(a); // expected-note {{'a' became 'moved-from' here}}
-  a.foo();             // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
+  A a1 = std::move(a); // expected-note {{Object 'a' is moved}}
+  a.foo();             // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
 
   A a2 = std::move(a); // no-warning
   a.foo();             // no-warning
@@ -373,12 +376,12 @@ void uniqueTest2() {
 //even on moved-from objects.
 void moveSafeFunctionsTest() {
   A a;
-  A b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
+  A b = std::move(a); // expected-note {{Object 'a' is moved}}
   a.empty();          // no-warning
   a.isEmpty();        // no-warning
   (void)a;            // no-warning
   (bool)a;            // expected-warning {{expression result unused}}
-  a.foo();            // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
+  a.foo();            // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
 }
 
 void moveStateResetFunctionsTest() {
@@ -400,6 +403,13 @@ void moveStateResetFunctionsTest() {
     A a;
     A b = std::move(a);
     a.clear(); // no-warning
+    a.foo();   // no-warning
+    a.b.foo(); // no-warning
+  }
+  {
+    A a;
+    A b = std::move(a);
+    a.resize(0); // no-warning
     a.foo();   // no-warning
     a.b.foo(); // no-warning
   }
@@ -445,17 +455,17 @@ class memberVariablesTest {
     b = std::move(a);
     a.foo();
 #ifdef AGGRESSIVE
-    // expected-note@-3{{'a' became 'moved-from' here}}
-    // expected-warning@-3 {{Method call on a 'moved-from' object 'a'}}
-    // expected-note@-4{{Method call on a 'moved-from' object 'a'}}
+    // expected-note@-3{{Object 'a' is moved}}
+    // expected-warning@-3 {{Method called on moved-from object 'a'}}
+    // expected-note@-4{{Method called on moved-from object 'a'}}
 #endif
 
     b = std::move(static_a);
     static_a.foo();
 #ifdef AGGRESSIVE
-    // expected-note@-3{{'static_a' became 'moved-from' here}}
-    // expected-warning@-3{{Method call on a 'moved-from' object 'static_a'}}
-    // expected-note@-4{{Method call on a 'moved-from' object 'static_a'}}
+    // expected-note@-3{{Object 'static_a' is moved}}
+    // expected-warning@-3{{Method called on moved-from object 'static_a'}}
+    // expected-note@-4{{Method called on moved-from object 'static_a'}}
 #endif
   }
 };
@@ -466,26 +476,26 @@ void PtrAndArrayTest() {
   Arr[2] = std::move(*Ptr);
   (*Ptr).foo();
 #ifdef AGGRESSIVE
-  // expected-note@-3{{Became 'moved-from' here}}
-  // expected-warning@-3{{Method call on a 'moved-from' object}}
-  // expected-note@-4{{Method call on a 'moved-from' object}}
+  // expected-note@-3{{Object is moved}}
+  // expected-warning@-3{{Method called on moved-from object}}
+  // expected-note@-4{{Method called on moved-from object}}
 #endif
 
   Ptr = &Arr[1];
   Arr[3] = std::move(Arr[1]);
   Ptr->foo();
 #ifdef AGGRESSIVE
-  // expected-note@-3{{Became 'moved-from' here}}
-  // expected-warning@-3{{Method call on a 'moved-from' object}}
-  // expected-note@-4{{Method call on a 'moved-from' object}}
+  // expected-note@-3{{Object is moved}}
+  // expected-warning@-3{{Method called on moved-from object}}
+  // expected-note@-4{{Method called on moved-from object}}
 #endif
 
   Arr[3] = std::move(Arr[2]);
   Arr[2].foo();
 #ifdef AGGRESSIVE
-  // expected-note@-3{{Became 'moved-from' here}}
-  // expected-warning@-3{{Method call on a 'moved-from' object}}
-  // expected-note@-4{{Method call on a 'moved-from' object}}
+  // expected-note@-3{{Object is moved}}
+  // expected-warning@-3{{Method called on moved-from object}}
+  // expected-note@-4{{Method called on moved-from object}}
 #endif
 
   Arr[2] = std::move(Arr[3]); // reinitialization
@@ -545,9 +555,9 @@ void differentBranchesTest(int i) {
     A a, b;
     switch (i) { // expected-note {{Control jumps to 'case 1:'}}
     case 1:
-      b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
+      b = std::move(a); // expected-note {{Object 'a' is moved}}
     case 2:
-      a.foo(); // expected-warning {{Method call on a 'moved-from' object}} expected-note {{Method call on a 'moved-from' object 'a'}}
+      a.foo(); // expected-warning {{Method called on moved-from object}} expected-note {{Method called on moved-from object 'a'}}
       break;
     }
   }
@@ -562,13 +572,13 @@ void tempTest() {
 }
 
 void interFunTest1(A &a) {
-  a.bar(); // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
+  a.bar(); // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
 }
 
 void interFunTest2() {
   A a;
   A b;
-  b = std::move(a); // expected-note {{'a' became 'moved-from' here}}
+  b = std::move(a); // expected-note {{Object 'a' is moved}}
   interFunTest1(a); // expected-note {{Calling 'interFunTest1'}}
 }
 
@@ -577,8 +587,8 @@ void foobar(int i, A a);
 
 void paramEvaluateOrderTest() {
   A a;
-  foobar(std::move(a), a.getI()); // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
-  // expected-note@-1 {{'a' became 'moved-from' here}}
+  foobar(std::move(a), a.getI()); // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
+  // expected-note@-1 {{Object 'a' is moved}}
 
   //FALSE NEGATIVE since parameters evaluate order is undefined
   foobar(a.getI(), std::move(a)); //no-warning
@@ -613,8 +623,8 @@ void declarationSequenceTest() {
   }
   {
     A a;
-    A a1 = std::move(a), a2 = a; // expected-warning {{Copying a 'moved-from' object 'a'}} expected-note {{Copying a 'moved-from' object 'a'}}
-    // expected-note@-1 {{'a' became 'moved-from' here}}
+    A a1 = std::move(a), a2 = a; // expected-warning {{Moved-from object 'a' is copied}} expected-note {{Moved-from object 'a' is copied}}
+    // expected-note@-1 {{Object 'a' is moved}}
   }
 }
 
@@ -640,8 +650,8 @@ void logicalOperatorsSequenceTest() {
   }
   {
     A a;
-    if (A(std::move(a)).foo() > 0 && a.foo() > 0) { // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
-      // expected-note@-1 {{'a' became 'moved-from' here}} expected-note@-1 {{Assuming the condition is true}} expected-note@-1 {{Assuming the condition is false}}
+    if (A(std::move(a)).foo() > 0 && a.foo() > 0) { // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
+      // expected-note@-1 {{Object 'a' is moved}} expected-note@-1 {{Assuming the condition is true}} expected-note@-1 {{Assuming the condition is false}}
       // expected-note@-2 {{Left side of '&&' is false}} expected-note@-2 {{Left side of '&&' is true}}
       // expected-note@-3 {{Taking false branch}}
       A().bar();
@@ -657,8 +667,8 @@ void logicalOperatorsSequenceTest() {
   }
   {
     A a;
-    if (A(std::move(a)).foo() > 0 || a.foo() > 0) { // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
-      // expected-note@-1 {{'a' became 'moved-from' here}} expected-note@-1 {{Assuming the condition is false}} expected-note@-1 {{Left side of '||' is false}}
+    if (A(std::move(a)).foo() > 0 || a.foo() > 0) { // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
+      // expected-note@-1 {{Object 'a' is moved}} expected-note@-1 {{Assuming the condition is false}} expected-note@-1 {{Left side of '||' is false}}
       A().bar();
     }
   }
@@ -695,9 +705,9 @@ void subRegionMoveTest() {
     B b = std::move(a.b);
     a.b.foo();
 #ifdef AGGRESSIVE
-    // expected-note@-3{{'b' became 'moved-from' here}}
-    // expected-warning@-3{{Method call on a 'moved-from' object 'b'}}
-    // expected-note@-4 {{Method call on a 'moved-from' object 'b'}}
+    // expected-note@-3{{Object 'b' is moved}}
+    // expected-warning@-3{{Method called on moved-from object 'b'}}
+    // expected-note@-4 {{Method called on moved-from object 'b'}}
 #endif
   }
   {
@@ -707,21 +717,21 @@ void subRegionMoveTest() {
 #ifdef AGGRESSIVE
     // expected-note@-3{{Calling move constructor for 'A'}}
     // expected-note@-4{{Returning from move constructor for 'A'}}
-    // expected-warning@-4{{Method call on a 'moved-from' object 'b'}}
-    // expected-note@-5{{Method call on a 'moved-from' object 'b'}}
+    // expected-warning@-4{{Method called on moved-from object 'b'}}
+    // expected-note@-5{{Method called on moved-from object 'b'}}
 #endif
   }
   // Don't report a misuse if any SuperRegion is already reported.
   {
     A a;
-    A a1 = std::move(a); // expected-note {{'a' became 'moved-from' here}}
-    a.foo();             // expected-warning {{Method call on a 'moved-from' object 'a'}} expected-note {{Method call on a 'moved-from' object 'a'}}
+    A a1 = std::move(a); // expected-note {{Object 'a' is moved}}
+    a.foo();             // expected-warning {{Method called on moved-from object 'a'}} expected-note {{Method called on moved-from object 'a'}}
     a.b.foo();           // no-warning
   }
   {
     C c;
-    C c1 = std::move(c); // expected-note {{'c' became 'moved-from' here}}
-    c.foo();             // expected-warning {{Method call on a 'moved-from' object 'c'}} expected-note {{Method call on a 'moved-from' object 'c'}}
+    C c1 = std::move(c); // expected-note {{Object 'c' is moved}}
+    c.foo();             // expected-warning {{Method called on moved-from object 'c'}} expected-note {{Method called on moved-from object 'c'}}
     c.b.foo();           // no-warning
   }
 }
@@ -742,8 +752,8 @@ void resetSuperClass2() {
 
 void reportSuperClass() {
   C c;
-  C c1 = std::move(c); // expected-note {{'c' became 'moved-from' here}}
-  c.foo();             // expected-warning {{Method call on a 'moved-from' object 'c'}} expected-note {{Method call on a 'moved-from' object 'c'}}
+  C c1 = std::move(c); // expected-note {{Object 'c' is moved}}
+  c.foo();             // expected-warning {{Method called on moved-from object 'c'}} expected-note {{Method called on moved-from object 'c'}}
   C c2 = c;            // no-warning
 }
 
@@ -786,14 +796,14 @@ class HasSTLField {
   void foo() {
     // Warn even in non-aggressive mode when it comes to STL, because
     // in STL the object is left in "valid but unspecified state" after move.
-    std::vector<int> W = std::move(V); // expected-note{{'V' became 'moved-from' here}}
-    V.push_back(123); // expected-warning{{Method call on a 'moved-from' object 'V'}}
-                      // expected-note@-1{{Method call on a 'moved-from' object 'V'}}
+    std::vector<int> W = std::move(V); // expected-note{{Object 'V' of type 'std::vector' is left in a valid but unspecified state after move}}
+    V.push_back(123); // expected-warning{{Method called on moved-from object 'V'}}
+                      // expected-note@-1{{Method called on moved-from object 'V'}}
   }
 };
 
 void localRValueMove(A &&a) {
-  A b = std::move(a); // expected-note{{'a' became 'moved-from' here}}
-  a.foo(); // expected-warning{{Method call on a 'moved-from' object}}
-           // expected-note@-1{{Method call on a 'moved-from' object}}
+  A b = std::move(a); // expected-note{{Object 'a' is moved}}
+  a.foo(); // expected-warning{{Method called on moved-from object 'a'}}
+           // expected-note@-1{{Method called on moved-from object 'a'}}
 }

@@ -16,6 +16,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -270,9 +271,8 @@ bool NestedNameSpecifier::containsUnexpandedParameterPack() const {
 
 /// Print this nested name specifier to the given output
 /// stream.
-void
-NestedNameSpecifier::print(raw_ostream &OS,
-                           const PrintingPolicy &Policy) const {
+void NestedNameSpecifier::print(raw_ostream &OS, const PrintingPolicy &Policy,
+                                bool ResolveTemplateArguments) const {
   if (getPrefix())
     getPrefix()->print(OS, Policy);
 
@@ -305,6 +305,15 @@ NestedNameSpecifier::print(raw_ostream &OS,
     LLVM_FALLTHROUGH;
 
   case TypeSpec: {
+    const auto *Record =
+            dyn_cast_or_null<ClassTemplateSpecializationDecl>(getAsRecordDecl());
+    if (ResolveTemplateArguments && Record) {
+        // Print the type trait with resolved template parameters.
+        Record->printName(OS);
+        printTemplateArgumentList(OS, Record->getTemplateArgs().asArray(),
+                                  Policy);
+        break;
+    }
     const Type *T = getAsType();
 
     PrintingPolicy InnerPolicy(Policy);

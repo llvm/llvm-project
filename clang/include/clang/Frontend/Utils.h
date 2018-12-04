@@ -183,9 +183,6 @@ void AttachHeaderIncludeGen(Preprocessor &PP,
                             StringRef OutputPath = {},
                             bool ShowDepth = true, bool MSStyle = false);
 
-/// Cache tokens for use with PCH. Note that this requires a seekable stream.
-void CacheTokens(Preprocessor &PP, raw_pwrite_stream *OS);
-
 /// The ChainedIncludesSource class converts headers to chained PCHs in
 /// memory, mainly for testing.
 IntrusiveRefCntPtr<ExternalSemaSource>
