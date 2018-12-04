@@ -46,15 +46,14 @@ namespace llvm {
   ///
   unsigned getICmpCode(const ICmpInst *ICI, bool InvertPred = false);
 
-  /// This is the complement of getICmpCode, which turns an opcode and two
-  /// operands into either a constant true or false, or the predicate for a new
-  /// ICmp instruction. The sign is passed in to determine which kind of
-  /// predicate to use in the new icmp instruction.
+  /// This is the complement of getICmpCode. It turns a predicate code into
+  /// either a constant true or false or the predicate for a new ICmp.
+  /// The sign is passed in to determine which kind of predicate to use in the
+  /// new ICmp instruction.
   /// Non-NULL return value will be a true or false constant.
-  /// NULL return means a new ICmp is needed. The predicate for which is output
-  /// in NewICmpPred.
-  Value *getICmpValue(bool Sign, unsigned Code, Value *LHS, Value *RHS,
-                      CmpInst::Predicate &NewICmpPred);
+  /// NULL return means a new ICmp is needed. The predicate is output in Pred.
+  Constant *getPredForICmpCode(unsigned Code, bool Sign, Type *OpTy,
+                               CmpInst::Predicate &Pred);
 
   /// Return true if both predicates match sign or if at least one of them is an
   /// equality comparison (which is signless).

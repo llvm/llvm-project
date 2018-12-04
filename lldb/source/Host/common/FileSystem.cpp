@@ -63,6 +63,25 @@ Optional<FileSystem> &FileSystem::InstanceImpl() {
   return g_fs;
 }
 
+vfs::directory_iterator FileSystem::DirBegin(const FileSpec &file_spec,
+                                             std::error_code &ec) {
+  return DirBegin(file_spec.GetPath(), ec);
+}
+
+vfs::directory_iterator FileSystem::DirBegin(const Twine &dir,
+                                             std::error_code &ec) {
+  return m_fs->dir_begin(dir, ec);
+}
+
+llvm::ErrorOr<vfs::Status>
+FileSystem::GetStatus(const FileSpec &file_spec) const {
+  return GetStatus(file_spec.GetPath());
+}
+
+llvm::ErrorOr<vfs::Status> FileSystem::GetStatus(const Twine &path) const {
+  return m_fs->status(path);
+}
+
 sys::TimePoint<>
 FileSystem::GetModificationTime(const FileSpec &file_spec) const {
   return GetModificationTime(file_spec.GetPath());

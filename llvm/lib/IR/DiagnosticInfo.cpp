@@ -33,10 +33,9 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Regex.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <atomic>
 #include <cassert>
 #include <memory>
@@ -107,7 +106,7 @@ void DiagnosticInfoPGOProfile::print(DiagnosticPrinter &DP) const {
 DiagnosticLocation::DiagnosticLocation(const DebugLoc &DL) {
   if (!DL)
     return;
-  File = DL->getFile();
+  Filename = DL->getFilename();
   Line = DL->getLine();
   Column = DL->getColumn();
 }
@@ -115,36 +114,17 @@ DiagnosticLocation::DiagnosticLocation(const DebugLoc &DL) {
 DiagnosticLocation::DiagnosticLocation(const DISubprogram *SP) {
   if (!SP)
     return;
-  
-  File = SP->getFile();
+  Filename = SP->getFilename();
   Line = SP->getScopeLine();
   Column = 0;
 }
 
-StringRef DiagnosticLocation::getRelativePath() const {
-  return File->getFilename();
-}
-
-std::string DiagnosticLocation::getAbsolutePath() const {
-  StringRef Name = File->getFilename();
-  if (sys::path::is_absolute(Name))
-    return Name;
-
-  SmallString<128> Path;
-  sys::path::append(Path, File->getDirectory(), Name);
-  return sys::path::remove_leading_dotslash(Path).str();
-}
-
-std::string DiagnosticInfoWithLocationBase::getAbsolutePath() const {
-  return Loc.getAbsolutePath();
-}
-
-void DiagnosticInfoWithLocationBase::getLocation(StringRef &RelativePath,
-                                                 unsigned &Line,
-                                                 unsigned &Column) const {
-  RelativePath = Loc.getRelativePath();
-  Line = Loc.getLine();
-  Column = Loc.getColumn();
+void DiagnosticInfoWithLocationBase::getLocation(StringRef *Filename,
+                                                 unsigned *Line,
+                                                 unsigned *Column) const {
+  *Filename = Loc.getFilename();
+  *Line = Loc.getLine();
+  *Column = Loc.getColumn();
 }
 
 const std::string DiagnosticInfoWithLocationBase::getLocationStr() const {
@@ -152,7 +132,7 @@ const std::string DiagnosticInfoWithLocationBase::getLocationStr() const {
   unsigned Line = 0;
   unsigned Column = 0;
   if (isLocationAvailable())
-    getLocation(Filename, Line, Column);
+    getLocation(&Filename, &Line, &Column);
   return (Filename + ":" + Twine(Line) + ":" + Twine(Column)).str();
 }
 
@@ -419,7 +399,7 @@ template <> struct MappingTraits<DiagnosticLocation> {
   static void mapping(IO &io, DiagnosticLocation &DL) {
     assert(io.outputting() && "input not yet implemented");
 
-    StringRef File = DL.getRelativePath();
+    StringRef File = DL.getFilename();
     unsigned Line = DL.getLine();
     unsigned Col = DL.getColumn();
 

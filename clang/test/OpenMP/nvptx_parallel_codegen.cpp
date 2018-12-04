@@ -45,6 +45,7 @@ tx ftemplate(int n) {
     #pragma omp parallel if(n>1000)
     {
       int a = 45;
+#pragma omp barrier
     }
     a += 1;
     aa += 1;
@@ -317,10 +318,13 @@ int bar(int n){
 // CHECK: define internal void [[PARALLEL_FN4]](
 // CHECK: [[A:%.+]] = alloca i[[SZ:32|64]],
 // CHECK: store i[[SZ]] 45, i[[SZ]]* %a,
+// CHECK: call void @__kmpc_barrier(%struct.ident_t* @{{.+}}, i32 %{{.+}})
 // CHECK: ret void
 
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l54}}_worker()
-// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l54}}(
+// CHECK: declare void @__kmpc_barrier(%struct.ident_t*, i32) #[[BARRIER_ATTRS:.+]]
+
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l55}}_worker()
+// CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l55}}(
 // CHECK-32: [[A_ADDR:%.+]] = alloca i32,
 // CHECK-64: [[A_ADDR:%.+]] = alloca i64,
 // CHECK-64: [[CONV:%.+]] = bitcast i64* [[A_ADDR]] to i32*
@@ -352,9 +356,17 @@ int bar(int n){
 // CHECK:  [[RES:%.+]] = icmp eq i32 [[TID]], [[CC_VAL]]
 // CHECK:  br i1 [[RES]], label
 
-// CHECK:  call void @llvm.nvvm.barrier0()
+// CHECK:  call void @__kmpc_critical(
+// CHECK:  load i32, i32*
+// CHECK:  add nsw i32
+// CHECK:  store i32
+// CHECK:  call void @__kmpc_end_critical(
+
+// CHECK:  call void @__kmpc_barrier(%struct.ident_t* @{{.+}}, i32 %{{.+}})
 // CHECK:  [[NEW_CC_VAL:%.+]] = add nsw i32 [[CC_VAL]], 1
 // CHECK:  store i32 [[NEW_CC_VAL]], i32* [[CC]],
 // CHECK:  br label
+
+// CHECK: attributes #[[BARRIER_ATTRS]] = {{.*}} convergent {{.*}}
 
 #endif

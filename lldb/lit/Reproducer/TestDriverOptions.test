@@ -1,10 +1,7 @@
-# FIXME: Find out why this fails on Windows.
-# UNSUPPORTED: system-windows
-
 # Check that errors are propagated to the driver.
 
-# RUN: not %lldb --capture /bogus 2>&1 | FileCheck %s --check-prefix CAPTURE
-# RUN: not %lldb --replay /bogus  2>&1 | FileCheck %s --check-prefix REPLAY
+# RUN: not %lldb --capture %t/bogus/bogus 2>&1 | FileCheck %s --check-prefix CAPTURE
+# RUN: not %lldb --replay %t/bogus/bogus  2>&1 | FileCheck %s --check-prefix REPLAY
 
 # CAPTURE: unable to create reproducer directory
 # REPLAY: unable to load reproducer index

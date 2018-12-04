@@ -359,6 +359,33 @@ define i1 @length5_eq(i8* %X, i8* %Y) nounwind {
   ret i1 %c
 }
 
+define i1 @length7_eq(i8* %X, i8* %Y) nounwind {
+; X86-LABEL: length7_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl $7
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll memcmp
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    setne %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: length7_eq:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movl $7, %edx
+; X64-NEXT:    callq memcmp
+; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    setne %al
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 7) nounwind
+  %c = icmp ne i32 %m, 0
+  ret i1 %c
+}
+
 define i32 @length8(i8* %X, i8* %Y) nounwind {
 ; X86-LABEL: length8:
 ; X86:       # %bb.0:
@@ -370,7 +397,7 @@ define i32 @length8(i8* %X, i8* %Y) nounwind {
 ; X86-NEXT:    bswapl %ecx
 ; X86-NEXT:    bswapl %edx
 ; X86-NEXT:    cmpl %edx, %ecx
-; X86-NEXT:    jne .LBB13_2
+; X86-NEXT:    jne .LBB14_2
 ; X86-NEXT:  # %bb.1: # %loadbb1
 ; X86-NEXT:    movl 4(%esi), %ecx
 ; X86-NEXT:    movl 4(%eax), %edx
@@ -378,13 +405,13 @@ define i32 @length8(i8* %X, i8* %Y) nounwind {
 ; X86-NEXT:    bswapl %edx
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl %edx, %ecx
-; X86-NEXT:    je .LBB13_3
-; X86-NEXT:  .LBB13_2: # %res_block
+; X86-NEXT:    je .LBB14_3
+; X86-NEXT:  .LBB14_2: # %res_block
 ; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl %edx, %ecx
 ; X86-NEXT:    setae %al
 ; X86-NEXT:    leal -1(%eax,%eax), %eax
-; X86-NEXT:  .LBB13_3: # %endblock
+; X86-NEXT:  .LBB14_3: # %endblock
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -450,6 +477,89 @@ define i1 @length8_eq_const(i8* %X) nounwind {
   ret i1 %c
 }
 
+define i1 @length9_eq(i8* %X, i8* %Y) nounwind {
+; X86-LABEL: length9_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl $9
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll memcmp
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: length9_eq:
+; X64:       # %bb.0:
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    xorq (%rsi), %rax
+; X64-NEXT:    movb 8(%rdi), %cl
+; X64-NEXT:    xorb 8(%rsi), %cl
+; X64-NEXT:    movzbl %cl, %ecx
+; X64-NEXT:    orq %rax, %rcx
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
+  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 9) nounwind
+  %c = icmp eq i32 %m, 0
+  ret i1 %c
+}
+
+define i1 @length10_eq(i8* %X, i8* %Y) nounwind {
+; X86-LABEL: length10_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl $10
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll memcmp
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: length10_eq:
+; X64:       # %bb.0:
+; X64-NEXT:    movq (%rdi), %rax
+; X64-NEXT:    xorq (%rsi), %rax
+; X64-NEXT:    movzwl 8(%rdi), %ecx
+; X64-NEXT:    xorw 8(%rsi), %cx
+; X64-NEXT:    movzwl %cx, %ecx
+; X64-NEXT:    orq %rax, %rcx
+; X64-NEXT:    sete %al
+; X64-NEXT:    retq
+  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 10) nounwind
+  %c = icmp eq i32 %m, 0
+  ret i1 %c
+}
+
+define i1 @length11_eq(i8* %X, i8* %Y) nounwind {
+; X86-LABEL: length11_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl $11
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll memcmp
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: length11_eq:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movl $11, %edx
+; X64-NEXT:    callq memcmp
+; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    sete %al
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 11) nounwind
+  %c = icmp eq i32 %m, 0
+  ret i1 %c
+}
+
 define i1 @length12_eq(i8* %X, i8* %Y) nounwind {
 ; X86-LABEL: length12_eq:
 ; X86:       # %bb.0:
@@ -495,7 +605,7 @@ define i32 @length12(i8* %X, i8* %Y) nounwind {
 ; X64-NEXT:    bswapq %rcx
 ; X64-NEXT:    bswapq %rdx
 ; X64-NEXT:    cmpq %rdx, %rcx
-; X64-NEXT:    jne .LBB17_2
+; X64-NEXT:    jne .LBB21_2
 ; X64-NEXT:  # %bb.1: # %loadbb1
 ; X64-NEXT:    movl 8(%rdi), %ecx
 ; X64-NEXT:    movl 8(%rsi), %edx
@@ -503,16 +613,97 @@ define i32 @length12(i8* %X, i8* %Y) nounwind {
 ; X64-NEXT:    bswapl %edx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq %rdx, %rcx
-; X64-NEXT:    je .LBB17_3
-; X64-NEXT:  .LBB17_2: # %res_block
+; X64-NEXT:    je .LBB21_3
+; X64-NEXT:  .LBB21_2: # %res_block
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq %rdx, %rcx
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    leal -1(%rax,%rax), %eax
-; X64-NEXT:  .LBB17_3: # %endblock
+; X64-NEXT:  .LBB21_3: # %endblock
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 12) nounwind
   ret i32 %m
+}
+
+define i1 @length13_eq(i8* %X, i8* %Y) nounwind {
+; X86-LABEL: length13_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl $13
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll memcmp
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: length13_eq:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movl $13, %edx
+; X64-NEXT:    callq memcmp
+; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    sete %al
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 13) nounwind
+  %c = icmp eq i32 %m, 0
+  ret i1 %c
+}
+
+define i1 @length14_eq(i8* %X, i8* %Y) nounwind {
+; X86-LABEL: length14_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl $14
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll memcmp
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: length14_eq:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movl $14, %edx
+; X64-NEXT:    callq memcmp
+; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    sete %al
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 14) nounwind
+  %c = icmp eq i32 %m, 0
+  ret i1 %c
+}
+
+define i1 @length15_eq(i8* %X, i8* %Y) nounwind {
+; X86-LABEL: length15_eq:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl $0
+; X86-NEXT:    pushl $15
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NEXT:    calll memcmp
+; X86-NEXT:    addl $16, %esp
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    sete %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: length15_eq:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movl $15, %edx
+; X64-NEXT:    callq memcmp
+; X64-NEXT:    testl %eax, %eax
+; X64-NEXT:    sete %al
+; X64-NEXT:    popq %rcx
+; X64-NEXT:    retq
+  %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 15) nounwind
+  %c = icmp eq i32 %m, 0
+  ret i1 %c
 }
 
 ; PR33329 - https://bugs.llvm.org/show_bug.cgi?id=33329
@@ -535,7 +726,7 @@ define i32 @length16(i8* %X, i8* %Y) nounwind {
 ; X64-NEXT:    bswapq %rcx
 ; X64-NEXT:    bswapq %rdx
 ; X64-NEXT:    cmpq %rdx, %rcx
-; X64-NEXT:    jne .LBB18_2
+; X64-NEXT:    jne .LBB25_2
 ; X64-NEXT:  # %bb.1: # %loadbb1
 ; X64-NEXT:    movq 8(%rdi), %rcx
 ; X64-NEXT:    movq 8(%rsi), %rdx
@@ -543,13 +734,13 @@ define i32 @length16(i8* %X, i8* %Y) nounwind {
 ; X64-NEXT:    bswapq %rdx
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq %rdx, %rcx
-; X64-NEXT:    je .LBB18_3
-; X64-NEXT:  .LBB18_2: # %res_block
+; X64-NEXT:    je .LBB25_3
+; X64-NEXT:  .LBB25_2: # %res_block
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq %rdx, %rcx
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    leal -1(%rax,%rax), %eax
-; X64-NEXT:  .LBB18_3: # %endblock
+; X64-NEXT:  .LBB25_3: # %endblock
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 16) nounwind
   ret i32 %m
@@ -1100,5 +1291,3 @@ define i32 @huge_length(i8* %X, i8* %Y) nounwind {
   %m = tail call i32 @memcmp(i8* %X, i8* %Y, i64 9223372036854775807) nounwind
   ret i32 %m
 }
-
-
