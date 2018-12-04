@@ -172,7 +172,7 @@ void Writer::createImportSection() {
     Import.Field = kFunctionTableName;
     Import.Kind = WASM_EXTERNAL_TABLE;
     Import.Table.ElemType = WASM_TYPE_ANYFUNC;
-    Import.Table.Limits = {WASM_LIMITS_FLAG_HAS_MAX, TableSize, TableSize};
+    Import.Table.Limits = {0, TableSize, 0};
     writeImport(OS, Import);
   }
 

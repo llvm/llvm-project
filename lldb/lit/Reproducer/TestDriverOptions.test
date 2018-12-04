@@ -1,0 +1,7 @@
+# Check that errors are propagated to the driver.
+
+# RUN: not %lldb --capture %t/bogus/bogus 2>&1 | FileCheck %s --check-prefix CAPTURE
+# RUN: not %lldb --replay %t/bogus/bogus  2>&1 | FileCheck %s --check-prefix REPLAY
+
+# CAPTURE: unable to create reproducer directory
+# REPLAY: unable to load reproducer index
