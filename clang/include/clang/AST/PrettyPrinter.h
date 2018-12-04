@@ -50,8 +50,8 @@ struct PrintingPolicy {
         PolishForDeclaration(false), Half(LO.Half),
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
         MSVCFormatting(false), ConstantsAsWritten(false),
-        SuppressImplicitBase(false), FullyQualifiedName(false),
-        RemapFilePaths(false) {}
+        SuppressImplicitBase(false), UseStdFunctionForLambda(false),
+        FullyQualifiedName(false), RemapFilePaths(false) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
