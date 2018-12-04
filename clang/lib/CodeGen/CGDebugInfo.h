@@ -317,6 +317,9 @@ public:
 
   void finalize();
 
+  /// Remap a given path with the current debug prefix map
+  std::string remapDIPath(StringRef) const;
+
   /// Register VLA size expression debug node with the qualified type.
   void registerVLASizeExpression(QualType Ty, llvm::Metadata *SizeExpr) {
     SizeExprCache[Ty] = SizeExpr;
@@ -503,9 +506,6 @@ private:
 
   /// Create new compile unit.
   void CreateCompileUnit();
-
-  /// Remap a given path with the current debug prefix map
-  std::string remapDIPath(StringRef) const;
 
   /// Compute the file checksum debug info for input file ID.
   Optional<llvm::DIFile::ChecksumKind>
