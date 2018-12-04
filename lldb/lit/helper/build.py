@@ -611,9 +611,8 @@ def build(commands):
     global args
     for (status, inputs, output, env, child_args) in commands:
         print('\n\n')
-        if not args.verbose:
-            inputs = [os.path.basename(x) for x in inputs]
-            output = os.path.basename(output)
+        inputs = [os.path.basename(x) for x in inputs]
+        output = os.path.basename(output)
         print(status + ' {0} -> {1}'.format('+'.join(inputs), output))
 
         if args.verbose:
@@ -641,6 +640,8 @@ def build(commands):
 
 def clean(files):
     global args
+    if not files:
+        return
     for o in files:
         file = o if args.verbose else os.path.basename(o)
         print('Cleaning {0}'.format(file))
