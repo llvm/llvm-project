@@ -741,7 +741,6 @@ bool PPC64::inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const {
   if (Type == R_PPC64_REL24)
     return isInt<26>(Offset);
   llvm_unreachable("unsupported relocation type used in branch");
-  return false;
 }
 
 RelExpr PPC64::adjustRelaxExpr(RelType Type, const uint8_t *Data,

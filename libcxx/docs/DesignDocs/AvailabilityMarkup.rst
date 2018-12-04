@@ -65,14 +65,12 @@ availability.
   the test-suite against the host system library. Alternatively a path to the
   directory containing a specific prebuilt libc++ can be used, for example:
   `--param=use_system_cxx_lib=/path/to/macOS/10.8/`.
-* The `with_availability` boolean parameter enables the availability markup.
 
 Tests can be marked as XFAIL based on multiple features made available by lit:
 
 
-* if either `use_system_cxx_lib` or `with_availability` is passed to lit,
-  assuming `--param=platform=macosx10.8` is passed as well the following
-  features will be available:
+* if `use_system_cxx_lib` is passed to lit, assuming `--param=platform=macosx10.8`
+  is passed as well the following features will be available:
 
   - availability
   - availability=x86_64
