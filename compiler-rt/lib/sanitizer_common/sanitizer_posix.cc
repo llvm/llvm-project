@@ -193,11 +193,6 @@ bool WriteToFile(fd_t fd, const void *buff, uptr buff_size, uptr *bytes_written,
   return true;
 }
 
-bool RenameFile(const char *oldpath, const char *newpath, error_t *error_p) {
-  uptr res = internal_rename(oldpath, newpath);
-  return !internal_iserror(res, error_p);
-}
-
 void *MapFileToMemory(const char *file_name, uptr *buff_size) {
   fd_t fd = OpenFile(file_name, RdOnly);
   CHECK(fd != kInvalidFd);
