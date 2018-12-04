@@ -58,10 +58,10 @@ Value *llvm::getICmpValue(bool Sign, unsigned Code, Value *LHS, Value *RHS,
   return nullptr;
 }
 
-bool llvm::PredicatesFoldable(ICmpInst::Predicate p1, ICmpInst::Predicate p2) {
-  return (CmpInst::isSigned(p1) == CmpInst::isSigned(p2)) ||
-         (CmpInst::isSigned(p1) && ICmpInst::isEquality(p2)) ||
-         (CmpInst::isSigned(p2) && ICmpInst::isEquality(p1));
+bool llvm::predicatesFoldable(ICmpInst::Predicate P1, ICmpInst::Predicate P2) {
+  return (CmpInst::isSigned(P1) == CmpInst::isSigned(P2)) ||
+         (CmpInst::isSigned(P1) && ICmpInst::isEquality(P2)) ||
+         (CmpInst::isSigned(P2) && ICmpInst::isEquality(P1));
 }
 
 bool llvm::decomposeBitTestICmp(Value *LHS, Value *RHS,

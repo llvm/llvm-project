@@ -166,3 +166,15 @@ defm prefix_symbols
 def version : Flag<["-", "--"], "version">,
               HelpText<"Print the version and exit.">;
 def V : Flag<["-"], "V">, Alias<version>;
+defm build_id_link_dir
+    : Eq<"build-id-link-dir", "Set directory for --build-id-link-input and "
+                              "--build-id-link-output to <dir>">,
+      MetaVarName<"dir">;
+defm build_id_link_input
+    : Eq<"build-id-link-input", "Hard-link the input to <dir>/xx/xxx<suffix> "
+                                "name derived from hex build ID">,
+      MetaVarName<"suffix">;
+defm build_id_link_output
+    : Eq<"build-id-link-output", "Hard-link the output to <dir>/xx/xxx<suffix> "
+                                 "name derived from hex build ID">,
+      MetaVarName<"suffix">;

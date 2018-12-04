@@ -136,6 +136,24 @@ class WebAssemblyAsmParser final : public MCTargetAsmParser {
   // Much like WebAssemblyAsmPrinter in the backend, we have to own these.
   std::vector<std::unique_ptr<wasm::WasmSignature>> Signatures;
 
+  // Order of labels, directives and instructions in a .s file have no
+  // syntactical enforcement. This class is a callback from the actual parser,
+  // and yet we have to be feeding data to the streamer in a very particular
+  // order to ensure a correct binary encoding that matches the regular backend
+  // (the streamer does not enforce this). This "state machine" enum helps
+  // guarantee that correct order.
+  enum ParserState {
+    FileStart,
+    Label,
+    FunctionStart,
+    FunctionLocals,
+    Instructions,
+  } CurrentState = FileStart;
+
+  // We track this to see if a .functype following a label is the same,
+  // as this is how we recognize the start of a function.
+  MCSymbol *LastLabel = nullptr;
+
 public:
   WebAssemblyAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                        const MCInstrInfo &MII, const MCTargetOptions &Options)
@@ -334,6 +352,11 @@ public:
     return false;
   }
 
+  void onLabelParsed(MCSymbol *Symbol) override {
+    LastLabel = Symbol;
+    CurrentState = Label;
+  }
+
   // This function processes wasm-specific directives streamed to
   // WebAssemblyTargetStreamer, all others go to the generic parser
   // (see WasmAsmParser).
@@ -370,10 +393,19 @@ public:
       TOut.emitGlobalType(WasmSym);
       return Expect(AsmToken::EndOfStatement, "EOL");
     } else if (DirectiveID.getString() == ".functype") {
+      // This code has to send things to the streamer similar to
+      // WebAssemblyAsmPrinter::EmitFunctionBodyStart.
+      // TODO: would be good to factor this into a common function, but the
+      // assembler and backend really don't share any common code, and this code
+      // parses the locals seperately.
       auto SymName = ExpectIdent();
       if (SymName.empty()) return true;
       auto WasmSym = cast<MCSymbolWasm>(
                     TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
+      if (CurrentState == Label && WasmSym == LastLabel) {
+        // This .functype indicates a start of a function.
+        CurrentState = FunctionStart;
+      }
       auto Signature = make_unique<wasm::WasmSignature>();
       if (Expect(AsmToken::LParen, "(")) return true;
       if (ParseRegTypeList(Signature->Params)) return true;
@@ -386,11 +418,16 @@ public:
       addSignature(std::move(Signature));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       TOut.emitFunctionType(WasmSym);
+      // TODO: backend also calls TOut.emitIndIdx, but that is not implemented.
       return Expect(AsmToken::EndOfStatement, "EOL");
     } else if (DirectiveID.getString() == ".local") {
+      if (CurrentState != FunctionStart)
+        return Error(".local directive should follow the start of a function",
+                     Lexer.getTok());
       SmallVector<wasm::ValType, 4> Locals;
       if (ParseRegTypeList(Locals)) return true;
       TOut.emitLocal(Locals);
+      CurrentState = FunctionLocals;
       return Expect(AsmToken::EndOfStatement, "EOL");
     }
     return true;  // We didn't process this directive.
@@ -405,6 +442,16 @@ public:
         MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
     switch (MatchResult) {
     case Match_Success: {
+      if (CurrentState == FunctionStart) {
+        // This is the first instruction in a function, but we haven't seen
+        // a .local directive yet. The streamer requires locals to be encoded
+        // as a prelude to the instructions, so emit an empty list of locals
+        // here.
+        auto &TOut = reinterpret_cast<WebAssemblyTargetStreamer &>(
+            *Out.getTargetStreamer());
+        TOut.emitLocal(SmallVector<wasm::ValType, 0>());
+      }
+      CurrentState = Instructions;
       Out.EmitInstruction(Inst, getSTI());
       return false;
     }

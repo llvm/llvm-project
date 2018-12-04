@@ -32,6 +32,8 @@ Fails if any of the KEY=VALUE arguments aren't needed for processing the
 processing all values.
 """
 
+from __future__ import print_function
+
 import argparse
 import os
 import re
@@ -82,15 +84,15 @@ def main():
         out_lines.append(in_line)
 
     if unused_values:
-        print >>sys.stderr, 'Unused --values args:'
-        print >>sys.stderr, '    ', '\n    '.join(unused_values)
+        print('unused values args:', file=sys.stderr)
+        print('    ', '\n    '.join(unused_values), file=sys.stderr)
         return 1
 
     output = ''.join(out_lines)
 
     leftovers = var_re.findall(output)
     if leftovers:
-        print >>sys.stderr, 'unprocessed values:\n', '\n'.join(leftovers)
+        print('unprocessed values:\n', '\n'.join(leftovers), file=sys.stderr)
         return 1
 
     if not os.path.exists(args.output) or open(args.output).read() != output:

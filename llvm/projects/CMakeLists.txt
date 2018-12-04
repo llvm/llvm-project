@@ -13,7 +13,8 @@ foreach(entry ${entries})
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/parallel-libs) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/openmp) AND
        (NOT ${entry} STREQUAL ${CMAKE_CURRENT_SOURCE_DIR}/debuginfo-tests))
-      add_llvm_external_project(${entry})
+      get_filename_component(entry_name "${entry}" NAME)
+      add_llvm_external_project(${entry_name})
     endif()
   endif()
 endforeach(entry)

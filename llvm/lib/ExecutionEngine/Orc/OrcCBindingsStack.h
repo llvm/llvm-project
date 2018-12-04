@@ -492,13 +492,17 @@ private:
   void notifyFinalized(orc::VModuleKey K,
 		       const object::ObjectFile &Obj,
 		       const RuntimeDyld::LoadedObjectInfo &LoadedObjInfo) {
+    uint64_t Key = static_cast<uint64_t>(
+        reinterpret_cast<uintptr_t>(Obj.getData().data()));
     for (auto &Listener : EventListeners)
-      Listener->NotifyObjectEmitted(Obj, LoadedObjInfo);
+      Listener->notifyObjectLoaded(Key, Obj, LoadedObjInfo);
   }
 
   void notifyFreed(orc::VModuleKey K, const object::ObjectFile &Obj) {
+    uint64_t Key = static_cast<uint64_t>(
+        reinterpret_cast<uintptr_t>(Obj.getData().data()));
     for (auto &Listener : EventListeners)
-      Listener->NotifyFreeingObject(Obj);
+      Listener->notifyFreeingObject(Key);
   }
 
   orc::ExecutionSession ES;
