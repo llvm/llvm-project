@@ -51,6 +51,9 @@ struct CopyConfig {
 
   // Advanced options
   StringRef AddGnuDebugLink;
+  StringRef BuildIdLinkDir;
+  Optional<StringRef> BuildIdLinkInput;
+  Optional<StringRef> BuildIdLinkOutput;
   StringRef SplitDWO;
   StringRef SymbolsPrefix;
 

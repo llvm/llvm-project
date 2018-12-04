@@ -85,6 +85,7 @@ class VectorType;
       FMSTAT,       // ARM fmstat instruction.
 
       CMOV,         // ARM conditional move instructions.
+      SUBS,         // Flag-setting subtraction.
 
       SSAT,         // Signed saturation
       USAT,         // Unsigned saturation

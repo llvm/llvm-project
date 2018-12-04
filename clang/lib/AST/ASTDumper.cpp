@@ -1989,17 +1989,12 @@ void ASTDumper::dumpStmt(const Stmt *S) {
       return;
     }
 
-    // Some statements have custom mechanisms for dumping their children.
-    if (const DeclStmt *DS = dyn_cast<DeclStmt>(S)) {
-      VisitDeclStmt(DS);
-      return;
-    }
-    if (const GenericSelectionExpr *GSE = dyn_cast<GenericSelectionExpr>(S)) {
-      VisitGenericSelectionExpr(GSE);
-      return;
-    }
-
     ConstStmtVisitor<ASTDumper>::Visit(S);
+
+    // Some statements have custom mechanisms for dumping their children.
+    if (isa<DeclStmt>(S) || isa<GenericSelectionExpr>(S)) {
+      return;
+    }
 
     for (const Stmt *SubStmt : S->children())
       dumpStmt(SubStmt);

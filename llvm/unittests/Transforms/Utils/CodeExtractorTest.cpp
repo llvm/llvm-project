@@ -11,6 +11,7 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
@@ -21,7 +22,14 @@
 using namespace llvm;
 
 namespace {
-TEST(CodeExtractor, DISABLED_ExitStub) {
+BasicBlock *getBlockByName(Function *F, StringRef name) {
+  for (auto &BB : *F)
+    if (BB.getName() == name)
+      return &BB;
+  return nullptr;
+}
+
+TEST(CodeExtractor, ExitStub) {
   LLVMContext Ctx;
   SMDiagnostic Err;
   std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
@@ -46,36 +54,10 @@ TEST(CodeExtractor, DISABLED_ExitStub) {
   )invalid",
                                                 Err, Ctx));
 
-  // CodeExtractor miscompiles this function. There appear to be some issues
-  // with the handling of outlined regions with live output values.
-  //
-  // In the original function, CE adds two reloads in the codeReplacer block:
-  //
-  //   codeRepl:                                         ; preds = %header
-  //     call void @foo_header.split(i32 %z, i32 %x, i32 %y, i32* %.loc, i32* %.loc1)
-  //     %.reload = load i32, i32* %.loc
-  //     %.reload2 = load i32, i32* %.loc1
-  //     br label %notExtracted
-  //
-  // These reloads must flow into the notExtracted block:
-  //
-  //   notExtracted:                                     ; preds = %codeRepl
-  //     %0 = phi i32 [ %.reload, %codeRepl ], [ %.reload2, %body2 ]
-  //
-  // The problem is that the PHI node in notExtracted now has an incoming
-  // value from a BasicBlock that's in a different function.
-
   Function *Func = M->getFunction("foo");
-  SmallVector<BasicBlock *, 3> Candidates;
-  for (auto &BB : *Func) {
-    if (BB.getName() == "body1")
-      Candidates.push_back(&BB);
-    if (BB.getName() == "body2")
-      Candidates.push_back(&BB);
-  }
-  // CodeExtractor requires the first basic block
-  // to dominate all the other ones.
-  Candidates.insert(Candidates.begin(), &Func->getEntryBlock());
+  SmallVector<BasicBlock *, 3> Candidates{ getBlockByName(Func, "header"),
+                                           getBlockByName(Func, "body1"),
+                                           getBlockByName(Func, "body2") };
 
   DominatorTree DT(*Func);
   CodeExtractor CE(Candidates, &DT);
@@ -83,6 +65,66 @@ TEST(CodeExtractor, DISABLED_ExitStub) {
 
   Function *Outlined = CE.extractCodeRegion();
   EXPECT_TRUE(Outlined);
+  BasicBlock *Exit = getBlockByName(Func, "notExtracted");
+  BasicBlock *ExitSplit = getBlockByName(Outlined, "notExtracted.split");
+  // Ensure that PHI in exit block has only one incoming value (from code
+  // replacer block).
+  EXPECT_TRUE(Exit && cast<PHINode>(Exit->front()).getNumIncomingValues() == 1);
+  // Ensure that there is a PHI in outlined function with 2 incoming values.
+  EXPECT_TRUE(ExitSplit &&
+              cast<PHINode>(ExitSplit->front()).getNumIncomingValues() == 2);
   EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
+}
+
+TEST(CodeExtractor, ExitPHIOnePredFromRegion) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M(parseAssemblyString(R"invalid(
+    define i32 @foo() {
+    header:
+      br i1 undef, label %extracted1, label %pred
+
+    pred:
+      br i1 undef, label %exit1, label %exit2
+
+    extracted1:
+      br i1 undef, label %extracted2, label %exit1
+
+    extracted2:
+      br label %exit2
+
+    exit1:
+      %0 = phi i32 [ 1, %extracted1 ], [ 2, %pred ]
+      ret i32 %0
+
+    exit2:
+      %1 = phi i32 [ 3, %extracted2 ], [ 4, %pred ]
+      ret i32 %1
+    }
+  )invalid", Err, Ctx));
+
+  Function *Func = M->getFunction("foo");
+  SmallVector<BasicBlock *, 2> ExtractedBlocks{
+    getBlockByName(Func, "extracted1"),
+    getBlockByName(Func, "extracted2")
+  };
+
+  DominatorTree DT(*Func);
+  CodeExtractor CE(ExtractedBlocks, &DT);
+  EXPECT_TRUE(CE.isEligible());
+
+  Function *Outlined = CE.extractCodeRegion();
+  EXPECT_TRUE(Outlined);
+  BasicBlock *Exit1 = getBlockByName(Func, "exit1");
+  BasicBlock *Exit2 = getBlockByName(Func, "exit2");
+  // Ensure that PHIs in exits are not splitted (since that they have only one
+  // incoming value from extracted region).
+  EXPECT_TRUE(Exit1 &&
+          cast<PHINode>(Exit1->front()).getNumIncomingValues() == 2);
+  EXPECT_TRUE(Exit2 &&
+          cast<PHINode>(Exit2->front()).getNumIncomingValues() == 2);
+  EXPECT_FALSE(verifyFunction(*Outlined));
+  EXPECT_FALSE(verifyFunction(*Func));
 }
 } // end anonymous namespace

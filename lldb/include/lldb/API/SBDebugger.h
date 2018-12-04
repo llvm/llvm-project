@@ -13,6 +13,7 @@
 #include <stdio.h>
 
 #include "lldb/API/SBDefines.h"
+#include "lldb/API/SBInitializerOptions.h"
 #include "lldb/API/SBPlatform.h"
 
 namespace lldb {
@@ -45,6 +46,7 @@ public:
   lldb::SBDebugger &operator=(const lldb::SBDebugger &rhs);
 
   static void Initialize();
+  static lldb::SBError Initialize(SBInitializerOptions &options);
 
   static void Terminate();
 
@@ -227,8 +229,6 @@ public:
   void SetPrompt(const char *prompt);
 
   const char *GetReproducerPath() const;
-
-  lldb::SBError ReplayReproducer(const char *path);
 
   lldb::ScriptLanguage GetScriptLanguage() const;
 

@@ -104,9 +104,7 @@ entry:
 
 ; CHECK-COMMON-LABEL: or_icmp_ugt:
 ; CHECK-COMMON:     ldrb
-; CHECK-COMMON:     sub.w
-; CHECK-COMMON-NOT: uxt
-; CHECK-COMMON:     cmp.w
+; CHECK-COMMON:     subs.w
 ; CHECK-COMMON-NOT: uxt
 ; CHECK-COMMON:     cmp
 define i1 @or_icmp_ugt(i32 %arg, i8* %ptr) {

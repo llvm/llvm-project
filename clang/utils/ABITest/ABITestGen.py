@@ -10,7 +10,7 @@ from TypeGen import *
 
 ####
 
-class TypePrinter:
+class TypePrinter(object):
     def __init__(self, output, outputHeader=None, 
                  outputTests=None, outputDriver=None,
                  headerName=None, info=None):
@@ -250,7 +250,7 @@ class TypePrinter:
                     elements[i] = v
                     yield '{ %s }'%(', '.join(elements))
         else:
-            raise NotImplementedError,'Cannot make tests values of type: "%s"'%(t,)
+            raise NotImplementedError('Cannot make tests values of type: "%s"'%(t,))
 
     def printSizeOfType(self, prefix, name, t, output=None, indent=2):
         print >>output, '%*sprintf("%s: sizeof(%s) = %%ld\\n", (long)sizeof(%s));'%(indent, '', prefix, name, name) 
@@ -310,7 +310,7 @@ class TypePrinter:
                 else:
                     self.printValueOfType(prefix, '%s[%d]'%(name,i), t.elementType, output=output,indent=indent)                    
         else:
-            raise NotImplementedError,'Cannot print value of type: "%s"'%(t,)
+            raise NotImplementedError('Cannot print value of type: "%s"'%(t,))
 
     def checkTypeValues(self, nameLHS, nameRHS, t, output=None, indent=2):
         prefix = 'foo'
@@ -343,7 +343,7 @@ class TypePrinter:
                     self.checkTypeValues('%s[%d]'%(nameLHS,i), '%s[%d]'%(nameRHS,i), 
                                          t.elementType, output=output,indent=indent)                    
         else:
-            raise NotImplementedError,'Cannot print value of type: "%s"'%(t,)
+            raise NotImplementedError('Cannot print value of type: "%s"'%(t,))
 
 import sys
 
@@ -642,7 +642,7 @@ def main():
     def write(N):
         try:
             FT = ftg.get(N)
-        except RuntimeError,e:
+        except RuntimeError as e:
             if e.args[0]=='maximum recursion depth exceeded':
                 print >>sys.stderr,'WARNING: Skipped %d, recursion limit exceeded (bad arguments?)'%(N,)
                 return

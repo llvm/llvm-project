@@ -32,7 +32,7 @@ def indent(text, columns, indent_first_line=True):
     return s
   return indent + s
 
-class Option:
+class Option(object):
   def __init__(self, name, type, comment):
     self.name = name
     self.type = type
@@ -50,7 +50,7 @@ class Option:
                   2)
     return s
 
-class NestedStruct:
+class NestedStruct(object):
   def __init__(self, name, comment):
     self.name = name
     self.comment = comment.strip()
@@ -59,7 +59,7 @@ class NestedStruct:
   def __str__(self):
     return '\n'.join(map(str, self.values))
 
-class NestedField:
+class NestedField(object):
   def __init__(self, name, comment):
     self.name = name
     self.comment = comment.strip()
@@ -69,7 +69,7 @@ class NestedField:
         self.name,
         doxygen2rst(indent(self.comment, 2, indent_first_line=False)))
 
-class Enum:
+class Enum(object):
   def __init__(self, name, comment):
     self.name = name
     self.comment = comment.strip()
@@ -78,7 +78,7 @@ class Enum:
   def __str__(self):
     return '\n'.join(map(str, self.values))
 
-class EnumValue:
+class EnumValue(object):
   def __init__(self, name, comment):
     self.name = name
     self.comment = comment
@@ -101,7 +101,7 @@ def clean_comment_line(line):
   return line[4:] + '\n'
 
 def read_options(header):
-  class State:
+  class State(object):
     BeforeStruct, Finished, InStruct, InNestedStruct, InNestedFieldComent, \
     InFieldComment, InEnum, InEnumMemberComment = range(8)
   state = State.BeforeStruct

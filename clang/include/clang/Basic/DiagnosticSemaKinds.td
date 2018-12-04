@@ -4806,16 +4806,18 @@ def err_nested_redefinition : Error<"nested redefinition of %0">;
 def err_use_with_wrong_tag : Error<
   "use of %0 with tag type that does not match previous declaration">;
 def warn_struct_class_tag_mismatch : Warning<
-    "%select{struct|interface|class}0%select{| template}1 %2 was previously "
-    "declared as a %select{struct|interface|class}3%select{| template}1">,
-    InGroup<MismatchedTags>, DefaultIgnore;
+  "%select{struct|interface|class}0%select{| template}1 %2 was previously "
+  "declared as a %select{struct|interface|class}3%select{| template}1; "
+  "this is valid, but may result in linker errors under the Microsoft C++ ABI">,
+  InGroup<MismatchedTags>, DefaultIgnore;
 def warn_struct_class_previous_tag_mismatch : Warning<
-    "%2 defined as %select{a struct|an interface|a class}0%select{| template}1 "
-    "here but previously declared as "
-    "%select{a struct|an interface|a class}3%select{| template}1">,
-     InGroup<MismatchedTags>, DefaultIgnore;
+  "%2 defined as %select{a struct|an interface|a class}0%select{| template}1 "
+  "here but previously declared as "
+  "%select{a struct|an interface|a class}3%select{| template}1; "
+  "this is valid, but may result in linker errors under the Microsoft C++ ABI">,
+  InGroup<MismatchedTags>, DefaultIgnore;
 def note_struct_class_suggestion : Note<
-    "did you mean %select{struct|interface|class}0 here?">;
+  "did you mean %select{struct|interface|class}0 here?">;
 def ext_forward_ref_enum : Extension<
   "ISO C forbids forward references to 'enum' types">;
 def err_forward_ref_enum : Error<

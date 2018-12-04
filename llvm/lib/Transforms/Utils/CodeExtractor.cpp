@@ -531,10 +531,10 @@ void CodeExtractor::findInputsOutputs(ValueSet &Inputs, ValueSet &Outputs,
   }
 }
 
-/// severSplitPHINodes - If a PHI node has multiple inputs from outside of the
-/// region, we need to split the entry block of the region so that the PHI node
-/// is easier to deal with.
-void CodeExtractor::severSplitPHINodes(BasicBlock *&Header) {
+/// severSplitPHINodesOfEntry - If a PHI node has multiple inputs from outside
+/// of the region, we need to split the entry block of the region so that the
+/// PHI node is easier to deal with.
+void CodeExtractor::severSplitPHINodesOfEntry(BasicBlock *&Header) {
   unsigned NumPredsFromRegion = 0;
   unsigned NumPredsOutsideRegion = 0;
 
@@ -602,6 +602,56 @@ void CodeExtractor::severSplitPHINodes(BasicBlock *&Header) {
           --i;
         }
       }
+    }
+  }
+}
+
+/// severSplitPHINodesOfExits - if PHI nodes in exit blocks have inputs from
+/// outlined region, we split these PHIs on two: one with inputs from region
+/// and other with remaining incoming blocks; then first PHIs are placed in
+/// outlined region.
+void CodeExtractor::severSplitPHINodesOfExits(
+    const SmallPtrSetImpl<BasicBlock *> &Exits) {
+  for (BasicBlock *ExitBB : Exits) {
+    BasicBlock *NewBB = nullptr;
+
+    for (PHINode &PN : ExitBB->phis()) {
+      // Find all incoming values from the outlining region.
+      SmallVector<unsigned, 2> IncomingVals;
+      for (unsigned i = 0; i < PN.getNumIncomingValues(); ++i)
+        if (Blocks.count(PN.getIncomingBlock(i)))
+          IncomingVals.push_back(i);
+
+      // Do not process PHI if there is one (or fewer) predecessor from region.
+      // If PHI has exactly one predecessor from region, only this one incoming
+      // will be replaced on codeRepl block, so it should be safe to skip PHI.
+      if (IncomingVals.size() <= 1)
+        continue;
+
+      // Create block for new PHIs and add it to the list of outlined if it
+      // wasn't done before.
+      if (!NewBB) {
+        NewBB = BasicBlock::Create(ExitBB->getContext(),
+                                   ExitBB->getName() + ".split",
+                                   ExitBB->getParent(), ExitBB);
+        SmallVector<BasicBlock *, 4> Preds(pred_begin(ExitBB),
+                                           pred_end(ExitBB));
+        for (BasicBlock *PredBB : Preds)
+          if (Blocks.count(PredBB))
+            PredBB->getTerminator()->replaceUsesOfWith(ExitBB, NewBB);
+        BranchInst::Create(ExitBB, NewBB);
+        Blocks.insert(NewBB);
+      }
+
+      // Split this PHI.
+      PHINode *NewPN =
+          PHINode::Create(PN.getType(), IncomingVals.size(),
+                          PN.getName() + ".ce", NewBB->getFirstNonPHI());
+      for (unsigned i : IncomingVals)
+        NewPN->addIncoming(PN.getIncomingValue(i), PN.getIncomingBlock(i));
+      for (unsigned i : reverse(IncomingVals))
+        PN.removeIncomingValue(i, false);
+      PN.addIncoming(NewPN, NewBB);
     }
   }
 }
@@ -1173,12 +1223,32 @@ Function *CodeExtractor::extractCodeRegion() {
     }
   }
 
-  // If we have to split PHI nodes or the entry block, do so now.
-  severSplitPHINodes(header);
-
   // If we have any return instructions in the region, split those blocks so
   // that the return is not in the region.
   splitReturnBlocks();
+
+  // Calculate the exit blocks for the extracted region and the total exit
+  // weights for each of those blocks.
+  DenseMap<BasicBlock *, BlockFrequency> ExitWeights;
+  SmallPtrSet<BasicBlock *, 1> ExitBlocks;
+  for (BasicBlock *Block : Blocks) {
+    for (succ_iterator SI = succ_begin(Block), SE = succ_end(Block); SI != SE;
+         ++SI) {
+      if (!Blocks.count(*SI)) {
+        // Update the branch weight for this successor.
+        if (BFI) {
+          BlockFrequency &BF = ExitWeights[*SI];
+          BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, *SI);
+        }
+        ExitBlocks.insert(*SI);
+      }
+    }
+  }
+  NumExitBlocks = ExitBlocks.size();
+
+  // If we have to split PHI nodes of the entry or exit blocks, do so now.
+  severSplitPHINodesOfEntry(header);
+  severSplitPHINodesOfExits(ExitBlocks);
 
   // This takes place of the original loop
   BasicBlock *codeReplacer = BasicBlock::Create(header->getContext(),
@@ -1224,25 +1294,6 @@ Function *CodeExtractor::extractCodeRegion() {
       cast<Instruction>(II)->moveBefore(TI);
   }
 
-  // Calculate the exit blocks for the extracted region and the total exit
-  // weights for each of those blocks.
-  DenseMap<BasicBlock *, BlockFrequency> ExitWeights;
-  SmallPtrSet<BasicBlock *, 1> ExitBlocks;
-  for (BasicBlock *Block : Blocks) {
-    for (succ_iterator SI = succ_begin(Block), SE = succ_end(Block); SI != SE;
-         ++SI) {
-      if (!Blocks.count(*SI)) {
-        // Update the branch weight for this successor.
-        if (BFI) {
-          BlockFrequency &BF = ExitWeights[*SI];
-          BF += BFI->getBlockFreq(Block) * BPI->getEdgeProbability(Block, *SI);
-        }
-        ExitBlocks.insert(*SI);
-      }
-    }
-  }
-  NumExitBlocks = ExitBlocks.size();
-
   // Construct new function based on inputs/outputs & add allocas for all defs.
   Function *newFunction = constructFunction(inputs, outputs, header,
                                             newFuncRoot,
@@ -1270,8 +1321,8 @@ Function *CodeExtractor::extractCodeRegion() {
   if (BFI && NumExitBlocks > 1)
     calculateNewCallTerminatorWeights(codeReplacer, ExitWeights, BPI);
 
-  // Loop over all of the PHI nodes in the header block, and change any
-  // references to the old incoming edge to be the new incoming edge.
+  // Loop over all of the PHI nodes in the header and exit blocks, and change
+  // any references to the old incoming edge to be the new incoming edge.
   for (BasicBlock::iterator I = header->begin(); isa<PHINode>(I); ++I) {
     PHINode *PN = cast<PHINode>(I);
     for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i)
@@ -1279,35 +1330,23 @@ Function *CodeExtractor::extractCodeRegion() {
         PN->setIncomingBlock(i, newFuncRoot);
   }
 
-  // Look at all successors of the codeReplacer block.  If any of these blocks
-  // had PHI nodes in them, we need to update the "from" block to be the code
-  // replacer, not the original block in the extracted region.
-  for (BasicBlock *SuccBB : successors(codeReplacer)) {
-    for (PHINode &PN : SuccBB->phis()) {
+  for (BasicBlock *ExitBB : ExitBlocks)
+    for (PHINode &PN : ExitBB->phis()) {
       Value *IncomingCodeReplacerVal = nullptr;
-      SmallVector<unsigned, 2> IncomingValsToRemove;
-      for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
-        BasicBlock *IncomingBB = PN.getIncomingBlock(I);
-
+      for (unsigned i = 0, e = PN.getNumIncomingValues(); i != e; ++i) {
         // Ignore incoming values from outside of the extracted region.
-        if (!Blocks.count(IncomingBB))
+        if (!Blocks.count(PN.getIncomingBlock(i)))
           continue;
 
         // Ensure that there is only one incoming value from codeReplacer.
         if (!IncomingCodeReplacerVal) {
-          PN.setIncomingBlock(I, codeReplacer);
-          IncomingCodeReplacerVal = PN.getIncomingValue(I);
-        } else {
-          assert(IncomingCodeReplacerVal == PN.getIncomingValue(I) &&
+          PN.setIncomingBlock(i, codeReplacer);
+          IncomingCodeReplacerVal = PN.getIncomingValue(i);
+        } else
+          assert(IncomingCodeReplacerVal == PN.getIncomingValue(i) &&
                  "PHI has two incompatbile incoming values from codeRepl");
-          IncomingValsToRemove.push_back(I);
-        }
       }
-
-      for (unsigned I : reverse(IncomingValsToRemove))
-        PN.removeIncomingValue(I, /*DeletePHIIfEmpty=*/false);
     }
-  }
 
   // Erase debug info intrinsics. Variable updates within the new function are
   // invisible to debuggers. This could be improved by defining a DISubprogram
@@ -1338,6 +1377,8 @@ Function *CodeExtractor::extractCodeRegion() {
     newFunction->setDoesNotReturn();
 
   LLVM_DEBUG(if (verifyFunction(*newFunction))
-                 report_fatal_error("verifyFunction failed!"));
+             report_fatal_error("verification of newFunction failed!"));
+  LLVM_DEBUG(if (verifyFunction(*oldFunction))
+             report_fatal_error("verification of oldFunction failed!"));
   return newFunction;
 }

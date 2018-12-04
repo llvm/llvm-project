@@ -1,4 +1,4 @@
-//===- HexagonDepMappings.td ----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 // Automatically generated file, please consult code owner before editing.
 //===----------------------------------------------------------------------===//
-
 
 def A2_negAlias : InstAlias<"$Rd32 = neg($Rs32)", (A2_subri IntRegs:$Rd32, 0, IntRegs:$Rs32)>;
 def A2_notAlias : InstAlias<"$Rd32 = not($Rs32)", (A2_subri IntRegs:$Rd32, -1, IntRegs:$Rs32)>;

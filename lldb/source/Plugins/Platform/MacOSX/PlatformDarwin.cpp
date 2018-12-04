@@ -190,25 +190,12 @@ FileSpecList PlatformDarwin::LocateExecutableScriptingResources(
 Status PlatformDarwin::ResolveSymbolFile(Target &target,
                                          const ModuleSpec &sym_spec,
                                          FileSpec &sym_file) {
-  Status error;
   sym_file = sym_spec.GetSymbolFileSpec();
-
-  llvm::sys::fs::file_status st;
-  if (status(sym_file.GetPath(), st, false)) {
-    error.SetErrorString("Could not stat file!");
-    return error;
+  if (FileSystem::Instance().IsDirectory(sym_file)) {
+    sym_file = Symbols::FindSymbolFileInBundle(sym_file, sym_spec.GetUUIDPtr(),
+                                               sym_spec.GetArchitecturePtr());
   }
-
-  if (exists(st)) {
-    if (is_directory(st)) {
-      sym_file = Symbols::FindSymbolFileInBundle(
-          sym_file, sym_spec.GetUUIDPtr(), sym_spec.GetArchitecturePtr());
-    }
-  } else {
-    if (sym_spec.GetUUID().IsValid()) {
-    }
-  }
-  return error;
+  return {};
 }
 
 static lldb_private::Status

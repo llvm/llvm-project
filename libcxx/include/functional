@@ -68,6 +68,11 @@ template <class T> reference_wrapper<const T> cref(const T& t) noexcept;
 template <class T> void cref(const T&& t) = delete;
 template <class T> reference_wrapper<const T> cref(reference_wrapper<T> t) noexcept;
 
+template <class T> struct unwrap_reference;                                       // since C++20
+template <class T> struct unwrap_ref_decay : unwrap_reference<decay_t<T>> { };    // since C++20
+template <class T> using unwrap_reference_t = typename unwrap_reference<T>::type; // since C++20
+template <class T> using unwrap_ref_decay_t = typename unwrap_ref_decay<T>::type; // since C++20
+
 template <class T> // <class T=void> in C++14
 struct plus : binary_function<T, T, T>
 {
@@ -2526,6 +2531,14 @@ private:
     };
 
 #endif // _LIBCPP_STD_VER > 14
+
+#if _LIBCPP_STD_VER > 17
+template <class _Tp>
+using unwrap_reference_t = typename unwrap_reference<_Tp>::type;
+
+template <class _Tp>
+using unwrap_ref_decay_t = typename unwrap_ref_decay<_Tp>::type;
+#endif // > C++17
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -37,7 +37,7 @@ class DeltaAlgorithm(object):
         # O(N^2) case unless user requests it.
         if not force:
             if not self.getTestResult(changes):
-                raise ValueError,'Initial test passed to delta fails.'
+                raise ValueError('Initial test passed to delta fails.')
 
         # Check empty set first to quickly find poor test functions.
         if self.getTestResult(set()):
@@ -94,7 +94,7 @@ class DeltaAlgorithm(object):
 
 ###
 
-class Token:
+class Token(object):
     def __init__(self, type, data, flags, file, line, column):
         self.type   = type
         self.data   = data

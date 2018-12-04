@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Reproducer.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
@@ -18,8 +19,46 @@ using namespace lldb_private::repro;
 using namespace llvm;
 using namespace llvm::yaml;
 
-Reproducer &Reproducer::Instance() {
-  static Reproducer g_reproducer;
+Reproducer &Reproducer::Instance() { return *InstanceImpl(); }
+
+llvm::Error Reproducer::Initialize(ReproducerMode mode,
+                                   llvm::Optional<FileSpec> root) {
+  lldbassert(!InstanceImpl() && "Already initialized.");
+  InstanceImpl().emplace();
+
+  switch (mode) {
+  case ReproducerMode::Capture: {
+    if (!root) {
+      SmallString<128> repro_dir;
+      auto ec = sys::fs::createUniqueDirectory("reproducer", repro_dir);
+      if (ec)
+        return make_error<StringError>(
+            "unable to create unique reproducer directory", ec);
+      root.emplace(repro_dir);
+    } else {
+      auto ec = sys::fs::create_directories(root->GetPath());
+      if (ec)
+        return make_error<StringError>("unable to create reproducer directory",
+                                       ec);
+    }
+    return Instance().SetCapture(root);
+  } break;
+  case ReproducerMode::Replay:
+    return Instance().SetReplay(root);
+  case ReproducerMode::Off:
+    break;
+  };
+
+  return Error::success();
+}
+
+void Reproducer::Terminate() {
+  lldbassert(InstanceImpl() && "Already terminated.");
+  InstanceImpl().reset();
+}
+
+Optional<Reproducer> &Reproducer::InstanceImpl() {
+  static Optional<Reproducer> g_reproducer;
   return g_reproducer;
 }
 
@@ -59,11 +98,12 @@ llvm::Error Reproducer::SetCapture(llvm::Optional<FileSpec> root) {
         "cannot generate a reproducer when replay one",
         inconvertibleErrorCode());
 
-  if (root)
-    m_generator.emplace(*root);
-  else
+  if (!root) {
     m_generator.reset();
+    return Error::success();
+  }
 
+  m_generator.emplace(*root);
   return Error::success();
 }
 
@@ -75,13 +115,14 @@ llvm::Error Reproducer::SetReplay(llvm::Optional<FileSpec> root) {
         "cannot replay a reproducer when generating one",
         inconvertibleErrorCode());
 
-  if (root) {
-    m_loader.emplace(*root);
-    if (auto e = m_loader->LoadIndex())
-      return e;
-  } else {
+  if (!root) {
     m_loader.reset();
+    return Error::success();
   }
+
+  m_loader.emplace(*root);
+  if (auto e = m_loader->LoadIndex())
+    return e;
 
   return Error::success();
 }
@@ -153,14 +194,14 @@ llvm::Error Loader::LoadIndex() {
 
   auto error_or_file = MemoryBuffer::getFile(index.GetPath());
   if (auto err = error_or_file.getError())
-    return errorCodeToError(err);
+    return make_error<StringError>("unable to load reproducer index", err);
 
   std::vector<ProviderInfo> provider_info;
   yaml::Input yin((*error_or_file)->getBuffer());
   yin >> provider_info;
 
   if (auto err = yin.error())
-    return errorCodeToError(err);
+    return make_error<StringError>("unable to read reproducer index", err);
 
   for (auto &info : provider_info)
     m_provider_info[info.name] = info;

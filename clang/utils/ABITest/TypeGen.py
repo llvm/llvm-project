@@ -17,7 +17,7 @@ from Enumeration import *
 ###
 # Actual type types
 
-class Type:
+class Type(object):
     def isBitField(self):
         return False
 
@@ -99,7 +99,8 @@ class RecordType(Type):
                             ' '.join(map(getField, self.fields)))
 
     def getTypedefDef(self, name, printer):
-        def getField((i, t)):
+        def getField(it):
+            i, t = it
             if t.isBitField():
                 if t.isPaddingBitField():
                     return '%s : 0;'%(printer.getTypeName(t),)
@@ -435,7 +436,7 @@ class AnyTypeGenerator(TypeGenerator):
             if (self._cardinality is aleph0) or prev==self._cardinality:
                 break
         else:
-            raise RuntimeError,"Infinite loop in setting cardinality"
+            raise RuntimeError("Infinite loop in setting cardinality")
 
     def generateType(self, N):
         index,M = getNthPairVariableBounds(N, self.bounds)
@@ -466,7 +467,7 @@ def test():
         if i == atg.cardinality:
             try:
                 atg.get(i)
-                raise RuntimeError,"Cardinality was wrong"
+                raise RuntimeError("Cardinality was wrong")
             except AssertionError:
                 break
         print '%4d: %s'%(i, atg.get(i))

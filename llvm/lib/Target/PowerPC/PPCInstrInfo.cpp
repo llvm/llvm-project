@@ -2984,8 +2984,10 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       if (PostRA) {
         if (isVFReg(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::LXSSP;
-        else
+        else {
           III.ImmOpcode = PPC::LFS;
+          III.ImmMustBeMultipleOf = 1;
+        }
         break;
       }
       LLVM_FALLTHROUGH;
@@ -2996,8 +2998,10 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       if (PostRA) {
         if (isVFReg(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::LXSD;
-        else
+        else {
           III.ImmOpcode = PPC::LFD;
+          III.ImmMustBeMultipleOf = 1;
+        }
         break;
       }
       LLVM_FALLTHROUGH;
@@ -3012,8 +3016,10 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       if (PostRA) {
         if (isVFReg(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::STXSSP;
-        else
+        else {
           III.ImmOpcode = PPC::STFS;
+          III.ImmMustBeMultipleOf = 1;
+        }
         break;
       }
       LLVM_FALLTHROUGH;
@@ -3024,8 +3030,10 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       if (PostRA) {
         if (isVFReg(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::STXSD;
-        else
+        else {
           III.ImmOpcode = PPC::STFD;
+          III.ImmMustBeMultipleOf = 1;
+        }
         break;
       }
       LLVM_FALLTHROUGH;

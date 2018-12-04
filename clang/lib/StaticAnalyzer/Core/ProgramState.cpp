@@ -70,10 +70,7 @@ ProgramState::~ProgramState() {
 }
 
 int64_t ProgramState::getID() const {
-  Optional<int64_t> Out = getStateManager().Alloc.identifyObject(this);
-  assert(Out && "Wrong allocator used");
-  assert(*Out % alignof(ProgramState) == 0 && "Wrong alignment information");
-  return *Out / alignof(ProgramState);
+  return getStateManager().Alloc.identifyKnownAlignedObject<ProgramState>(this);
 }
 
 ProgramStateManager::ProgramStateManager(ASTContext &Ctx,
