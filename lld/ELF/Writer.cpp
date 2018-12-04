@@ -1661,7 +1661,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (In.SymTab)
       In.SymTab->addSymbol(Sym);
 
-    if (In.DynSymTab && Sym->includeInDynsym()) {
+    if (Sym->includeInDynsym()) {
       In.DynSymTab->addSymbol(Sym);
       if (auto *File = dyn_cast_or_null<SharedFile<ELFT>>(Sym->File))
         if (File->IsNeeded && !Sym->isUndefined())
@@ -2402,7 +2402,8 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
 
 // Open a result file.
 template <class ELFT> void Writer<ELFT>::openFile() {
-  if (!Config->Is64 && FileSize > UINT32_MAX) {
+  uint64_t MaxSize = Config->Is64 ? INT64_MAX : UINT32_MAX;
+  if (MaxSize < FileSize) {
     error("output file too large: " + Twine(FileSize) + " bytes");
     return;
   }

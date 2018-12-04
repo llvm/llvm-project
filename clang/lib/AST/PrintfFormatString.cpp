@@ -247,6 +247,9 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
     }
   }
 
+  if (ParseVectorModifier(H, FS, I, E, LO))
+    return true;
+
   // Look for the length modifier.
   if (ParseLengthModifier(FS, I, E, LO) && I == E) {
     // No more characters left?
@@ -363,11 +366,6 @@ static PrintfSpecifierResult ParsePrintfSpecifier(FormatStringHandler &H,
       if (Target.getTriple().isOSMSVCRT())
         k = ConversionSpecifier::ZArg;
       break;
-    // OpenCL specific.
-    case 'v':
-      if (LO.OpenCL)
-        k = ConversionSpecifier::VArg;
-      break;
   }
 
   // Check to see if we used the Objective-C modifier flags with
@@ -466,13 +464,8 @@ bool clang::analyze_format_string::ParseFormatStringHasSArg(const char *I,
 // Methods on PrintfSpecifier.
 //===----------------------------------------------------------------------===//
 
-ArgType PrintfSpecifier::getArgType(ASTContext &Ctx,
-                                    bool IsObjCLiteral) const {
-  const PrintfConversionSpecifier &CS = getConversionSpecifier();
-
-  if (!CS.consumesDataArgument())
-    return ArgType::Invalid();
-
+ArgType PrintfSpecifier::getScalarArgType(ASTContext &Ctx,
+                                          bool IsObjCLiteral) const {
   if (CS.getKind() == ConversionSpecifier::cArg)
     switch (LM.getKind()) {
       case LengthModifier::None:
@@ -632,6 +625,21 @@ ArgType PrintfSpecifier::getArgType(ASTContext &Ctx,
   return ArgType();
 }
 
+
+ArgType PrintfSpecifier::getArgType(ASTContext &Ctx,
+                                    bool IsObjCLiteral) const {
+  const PrintfConversionSpecifier &CS = getConversionSpecifier();
+
+  if (!CS.consumesDataArgument())
+    return ArgType::Invalid();
+
+  ArgType ScalarTy = getScalarArgType(Ctx, IsObjCLiteral);
+  if (!ScalarTy.isValid() || VectorNumElts.isInvalid())
+    return ScalarTy;
+
+  return ScalarTy.makeVectorType(Ctx, VectorNumElts.getConstantAmount());
+}
+
 bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
                               ASTContext &Ctx, bool IsObjCLiteral) {
   // %n is different from other conversion specifiers; don't try to fix it.
@@ -681,8 +689,17 @@ bool PrintfSpecifier::fixType(QualType QT, const LangOptions &LangOpt,
   if (const EnumType *ETy = QT->getAs<EnumType>())
     QT = ETy->getDecl()->getIntegerType();
 
-  // We can only work with builtin types.
   const BuiltinType *BT = QT->getAs<BuiltinType>();
+  if (!BT) {
+    const VectorType *VT = QT->getAs<VectorType>();
+    if (VT) {
+      QT = VT->getElementType();
+      BT = QT->getAs<BuiltinType>();
+      VectorNumElts = OptionalAmount(VT->getNumElements());
+    }
+  }
+
+  // We can only work with builtin types.
   if (!BT)
     return false;
 
@@ -854,6 +871,11 @@ void PrintfSpecifier::toString(raw_ostream &os) const {
   FieldWidth.toString(os);
   // Precision
   Precision.toString(os);
+
+  // Vector modifier
+  if (!VectorNumElts.isInvalid())
+    os << 'v' << VectorNumElts.getConstantAmount();
+
   // Length modifier
   os << LM.toString();
   // Conversion specifier
@@ -1032,7 +1054,6 @@ bool PrintfSpecifier::hasValidPrecision() const {
   case ConversionSpecifier::FreeBSDrArg:
   case ConversionSpecifier::FreeBSDyArg:
   case ConversionSpecifier::PArg:
-  case ConversionSpecifier::VArg:
     return true;
 
   default:

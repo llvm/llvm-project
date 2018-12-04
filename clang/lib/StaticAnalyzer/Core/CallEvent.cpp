@@ -554,13 +554,14 @@ RuntimeDefinition AnyFunctionCall::getRuntimeDefinition() const {
   AnalyzerOptions &Opts = Engine->getAnalysisManager().options;
 
   // Try to get CTU definition only if CTUDir is provided.
-  if (!Opts.naiveCTUEnabled())
+  if (!Opts.IsNaiveCTUEnabled)
     return {};
 
   cross_tu::CrossTranslationUnitContext &CTUCtx =
       *Engine->getCrossTranslationUnitContext();
   llvm::Expected<const FunctionDecl *> CTUDeclOrError =
-      CTUCtx.getCrossTUDefinition(FD, Opts.getCTUDir(), Opts.getCTUIndexName());
+      CTUCtx.getCrossTUDefinition(FD, Opts.CTUDir,
+                                  Opts.CTUIndexName);
 
   if (!CTUDeclOrError) {
     handleAllErrors(CTUDeclOrError.takeError(),

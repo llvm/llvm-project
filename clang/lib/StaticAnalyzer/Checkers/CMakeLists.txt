@@ -52,7 +52,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   MallocOverflowSecurityChecker.cpp
   MallocSizeofChecker.cpp
   MmapWriteExecChecker.cpp
-  MisusedMovedObjectChecker.cpp
+  MoveChecker.cpp
   MPI-Checker/MPIBugReporter.cpp
   MPI-Checker/MPIChecker.cpp
   MPI-Checker/MPIFunctionClassifier.cpp

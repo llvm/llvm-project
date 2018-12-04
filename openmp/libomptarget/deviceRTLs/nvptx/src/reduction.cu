@@ -444,6 +444,7 @@ EXTERN int32_t __kmpc_nvptx_teams_reduce_nowait_simple(kmp_Ident *loc,
 EXTERN void
 __kmpc_nvptx_teams_end_reduce_nowait_simple(kmp_Ident *loc, int32_t global_tid,
                                             kmp_CriticalName *crit) {
+  __threadfence_system();
   (void)atomicExch((uint32_t *)crit, 0);
 }
 

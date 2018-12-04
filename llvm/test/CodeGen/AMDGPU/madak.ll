@@ -1,6 +1,6 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX6 %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX8,GFX8_9 %s
-; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,GFX9,GFX8_9 %s
+; RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -amdgpu-enable-global-sgpr-addr < %s | FileCheck -check-prefixes=GCN,GFX9,GFX8_9 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 declare float @llvm.fabs.f32(float) nounwind readnone

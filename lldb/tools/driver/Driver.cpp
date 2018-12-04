@@ -367,21 +367,6 @@ SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
     m_option_data.m_debug_mode = true;
   }
 
-  if (auto *arg = args.getLastArg(OPT_reproducer)) {
-    auto arg_value = arg->getValue();
-    SBFileSpec file(arg_value);
-    if (file.Exists()) {
-      SBError repro_error = m_debugger.ReplayReproducer(arg_value);
-      if (repro_error.Fail())
-        return repro_error;
-    } else {
-      error.SetErrorStringWithFormat("file specified in --reproducer "
-                                     "(-z) option doesn't exist: '%s'",
-                                     arg_value);
-      return error;
-    }
-  }
-
   if (args.hasArg(OPT_no_use_colors)) {
     m_debugger.SetUseColor(false);
   }
@@ -942,7 +927,27 @@ main(int argc, char const *argv[])
                          << '\n';
   }
 
-  SBDebugger::Initialize();
+  SBInitializerOptions options;
+
+  if (auto *arg = input_args.getLastArg(OPT_capture)) {
+    auto arg_value = arg->getValue();
+    options.SetReproducerPath(arg_value);
+    options.SetCaptureReproducer(true);
+  }
+
+  if (auto *arg = input_args.getLastArg(OPT_replay)) {
+    auto arg_value = arg->getValue();
+    options.SetReplayReproducer(true);
+    options.SetReproducerPath(arg_value);
+  }
+
+  SBError error = SBDebugger::Initialize(options);
+  if (error.Fail()) {
+    WithColor::error() << "initialization failed: " << error.GetCString()
+                       << '\n';
+    return 1;
+  }
+
   SBHostOS::ThreadCreated("<lldb.driver.main-thread>");
 
   signal(SIGINT, sigint_handler);

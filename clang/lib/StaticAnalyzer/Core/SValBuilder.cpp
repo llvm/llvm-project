@@ -385,7 +385,7 @@ SVal SValBuilder::makeSymExprValNN(BinaryOperator::Opcode Op,
   // instead of generating an Unknown value and propagate the taint info to it.
   const unsigned MaxComp = StateMgr.getOwningEngine()
                                ->getAnalysisManager()
-                               .options.getMaxSymbolComplexity();
+                               .options.MaxSymbolComplexity;
 
   if (symLHS && symRHS &&
       (symLHS->computeComplexity() + symRHS->computeComplexity()) <  MaxComp)

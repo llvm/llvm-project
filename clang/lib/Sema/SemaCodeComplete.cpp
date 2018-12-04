@@ -1278,38 +1278,53 @@ bool ResultBuilder::IsObjCIvar(const NamedDecl *ND) const {
 }
 
 namespace {
+
 /// Visible declaration consumer that adds a code-completion result
 /// for each visible declaration.
 class CodeCompletionDeclConsumer : public VisibleDeclConsumer {
   ResultBuilder &Results;
-  DeclContext *CurContext;
+  DeclContext *InitialLookupCtx;
+  // NamingClass and BaseType are used for access-checking. See
+  // Sema::IsSimplyAccessible for details.
+  CXXRecordDecl *NamingClass;
+  QualType BaseType;
   std::vector<FixItHint> FixIts;
-  // This is set to the record where the search starts, if this is a record
-  // member completion.
-  RecordDecl *MemberCompletionRecord = nullptr;
 
 public:
   CodeCompletionDeclConsumer(
-      ResultBuilder &Results, DeclContext *CurContext,
-      std::vector<FixItHint> FixIts = std::vector<FixItHint>(),
-      RecordDecl *MemberCompletionRecord = nullptr)
-      : Results(Results), CurContext(CurContext), FixIts(std::move(FixIts)),
-        MemberCompletionRecord(MemberCompletionRecord) {}
+      ResultBuilder &Results, DeclContext *InitialLookupCtx,
+      QualType BaseType = QualType(),
+      std::vector<FixItHint> FixIts = std::vector<FixItHint>())
+      : Results(Results), InitialLookupCtx(InitialLookupCtx),
+        FixIts(std::move(FixIts)) {
+    NamingClass = llvm::dyn_cast<CXXRecordDecl>(InitialLookupCtx);
+    // If BaseType was not provided explicitly, emulate implicit 'this->'.
+    if (BaseType.isNull()) {
+      auto ThisType = Results.getSema().getCurrentThisType();
+      if (!ThisType.isNull()) {
+        assert(ThisType->isPointerType());
+        BaseType = ThisType->getPointeeType();
+        if (!NamingClass)
+          NamingClass = BaseType->getAsCXXRecordDecl();
+      }
+    }
+    this->BaseType = BaseType;
+  }
 
   void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
                  bool InBaseClass) override {
-    bool Accessible = true;
-    if (Ctx) {
-      // Set the actual accessing context (i.e. naming class) to the record
-      // context where the search starts. When `InBaseClass` is true, `Ctx`
-      // will be the base class, which is not the actual naming class.
-      DeclContext *AccessingCtx =
-          MemberCompletionRecord ? MemberCompletionRecord : Ctx;
-      Accessible = Results.getSema().IsSimplyAccessible(ND, AccessingCtx);
-    }
+    // Naming class to use for access check. In most cases it was provided
+    // explicitly (e.g. member access (lhs.foo) or qualified lookup (X::)), for
+    // unqualified lookup we fallback to the \p Ctx in which we found the
+    // member.
+    auto *NamingClass = this->NamingClass;
+    if (!NamingClass)
+      NamingClass = llvm::dyn_cast_or_null<CXXRecordDecl>(Ctx);
+    bool Accessible =
+        Results.getSema().IsSimplyAccessible(ND, NamingClass, BaseType);
     ResultBuilder::Result Result(ND, Results.getBasePriority(ND), nullptr,
                                  false, Accessible, FixIts);
-    Results.AddResult(Result, CurContext, Hiding, InBaseClass);
+    Results.AddResult(Result, InitialLookupCtx, Hiding, InBaseClass);
   }
 
   void EnteredContext(DeclContext *Ctx) override {
@@ -3699,20 +3714,15 @@ void Sema::CodeCompleteOrdinaryName(Scope *S,
   }
 
   // If we are in a C++ non-static member function, check the qualifiers on
-  // the member function to filter/prioritize the results list and set the
-  // context to the record context so that accessibility check in base class
-  // works correctly.
-  RecordDecl *MemberCompletionRecord = nullptr;
+  // the member function to filter/prioritize the results list.
   if (CXXMethodDecl *CurMethod = dyn_cast<CXXMethodDecl>(CurContext)) {
     if (CurMethod->isInstance()) {
       Results.setObjectTypeQualifiers(
           Qualifiers::fromCVRMask(CurMethod->getTypeQualifiers()));
-      MemberCompletionRecord = CurMethod->getParent();
     }
   }
 
-  CodeCompletionDeclConsumer Consumer(Results, CurContext, /*FixIts=*/{},
-                                      MemberCompletionRecord);
+  CodeCompletionDeclConsumer Consumer(Results, CurContext);
   LookupVisibleDecls(S, LookupOrdinaryName, Consumer,
                      CodeCompleter->includeGlobals(),
                      CodeCompleter->loadExternal());
@@ -4152,8 +4162,7 @@ AddRecordMembersCompletionResults(Sema &SemaRef, ResultBuilder &Results,
   std::vector<FixItHint> FixIts;
   if (AccessOpFixIt)
     FixIts.emplace_back(AccessOpFixIt.getValue());
-  CodeCompletionDeclConsumer Consumer(Results, SemaRef.CurContext,
-                                      std::move(FixIts), RD);
+  CodeCompletionDeclConsumer Consumer(Results, RD, BaseType, std::move(FixIts));
   SemaRef.LookupVisibleDecls(RD, Sema::LookupMemberName, Consumer,
                              SemaRef.CodeCompleter->includeGlobals(),
                              /*IncludeDependentBases=*/true,
@@ -4283,7 +4292,7 @@ void Sema::CodeCompleteMemberReferenceExpr(Scope *S, Expr *Base,
 
       // Add all ivars from this class and its superclasses.
       if (Class) {
-        CodeCompletionDeclConsumer Consumer(Results, CurContext);
+        CodeCompletionDeclConsumer Consumer(Results, Class, BaseType);
         Results.setFilter(&ResultBuilder::IsObjCIvar);
         LookupVisibleDecls(
             Class, LookupMemberName, Consumer, CodeCompleter->includeGlobals(),
@@ -4856,7 +4865,7 @@ void Sema::CodeCompleteAssignmentRHS(Scope *S, Expr *LHS) {
 }
 
 void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
-                                   bool EnteringContext) {
+                                   bool EnteringContext, QualType BaseType) {
   if (SS.isEmpty() || !CodeCompleter)
     return;
 
@@ -4903,7 +4912,7 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
 
   if (CodeCompleter->includeNamespaceLevelDecls() ||
       (!Ctx->isNamespace() && !Ctx->isTranslationUnit())) {
-    CodeCompletionDeclConsumer Consumer(Results, CurContext);
+    CodeCompletionDeclConsumer Consumer(Results, Ctx, BaseType);
     LookupVisibleDecls(Ctx, LookupOrdinaryName, Consumer,
                        /*IncludeGlobalScope=*/true,
                        /*IncludeDependentBases=*/true,

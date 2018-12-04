@@ -6098,16 +6098,21 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   if ((N0Opcode == ISD::SRL || N0Opcode == ISD::SHL) && N0.hasOneUse()) {
     ConstantSDNode *XorC = isConstOrConstSplat(N1);
     ConstantSDNode *ShiftC = isConstOrConstSplat(N0.getOperand(1));
+    unsigned BitWidth = VT.getScalarSizeInBits();
     if (XorC && ShiftC) {
-      APInt Ones = APInt::getAllOnesValue(VT.getScalarSizeInBits());
-      Ones = N0Opcode == ISD::SHL ? Ones.shl(ShiftC->getZExtValue())
-                                  : Ones.lshr(ShiftC->getZExtValue());
-      if (XorC->getAPIntValue() == Ones) {
-        // If the xor constant is a shifted -1, do a 'not' before the shift:
-        // xor (X << ShiftC), XorC --> (not X) << ShiftC
-        // xor (X >> ShiftC), XorC --> (not X) >> ShiftC
-        SDValue Not = DAG.getNOT(DL, N0.getOperand(0), VT);
-        return DAG.getNode(N0Opcode, DL, VT, Not, N0.getOperand(1));
+      // Don't crash on an oversized shift. We can not guarantee that a bogus
+      // shift has been simplified to undef.
+      uint64_t ShiftAmt = ShiftC->getLimitedValue();
+      if (ShiftAmt < BitWidth) {
+        APInt Ones = APInt::getAllOnesValue(BitWidth);
+        Ones = N0Opcode == ISD::SHL ? Ones.shl(ShiftAmt) : Ones.lshr(ShiftAmt);
+        if (XorC->getAPIntValue() == Ones) {
+          // If the xor constant is a shifted -1, do a 'not' before the shift:
+          // xor (X << ShiftC), XorC --> (not X) << ShiftC
+          // xor (X >> ShiftC), XorC --> (not X) >> ShiftC
+          SDValue Not = DAG.getNOT(DL, N0.getOperand(0), VT);
+          return DAG.getNode(N0Opcode, DL, VT, Not, N0.getOperand(1));
+        }
       }
     }
   }
@@ -9079,6 +9084,26 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
     return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewAssert);
   }
 
+  // If we have (AssertZext (truncate (AssertSext X, iX)), iY) and Y is smaller
+  // than X. Just move the AssertZext in front of the truncate and drop the
+  // AssertSExt.
+  if (N0.getOpcode() == ISD::TRUNCATE && N0.hasOneUse() &&
+      N0.getOperand(0).getOpcode() == ISD::AssertSext &&
+      Opcode == ISD::AssertZext) {
+    SDValue BigA = N0.getOperand(0);
+    EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
+    assert(BigA_AssertVT.bitsLE(N0.getValueType()) &&
+           "Asserting zero/sign-extended bits to a type larger than the "
+           "truncated destination does not provide information");
+
+    if (AssertVT.bitsLT(BigA_AssertVT)) {
+      SDLoc DL(N);
+      SDValue NewAssert = DAG.getNode(Opcode, DL, BigA.getValueType(),
+                                      BigA.getOperand(0), N1);
+      return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewAssert);
+    }
+  }
+
   return SDValue();
 }
 
@@ -9733,14 +9758,18 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
-    // TODO: This should allow vector constants/types too.
     if (!LegalOperations && N0.hasOneUse() &&
-        (isa<ConstantSDNode>(N0.getOperand(0)) ||
-         isa<ConstantSDNode>(N0.getOperand(1)))) {
-      SDLoc DL(N);
-      SDValue NarrowL = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
-      SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
-      return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
+        (isConstantOrConstantVector(N0.getOperand(0)) ||
+         isConstantOrConstantVector(N0.getOperand(1)))) {
+      // TODO: We already restricted this to pre-legalization, but for vectors
+      // we are extra cautious to not create an unsupported operation.
+      // Target-specific changes are likely needed to avoid regressions here.
+      if (VT.isScalarInteger() || TLI.isOperationLegal(N0.getOpcode(), VT)) {
+        SDLoc DL(N);
+        SDValue NarrowL = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
+        SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
+        return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
+      }
     }
   }
 

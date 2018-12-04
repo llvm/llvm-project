@@ -1157,9 +1157,13 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
       PresumedLoc PLoc = D->getASTContext().getSourceManager().getPresumedLoc(
           D->getLocation());
       if (PLoc.isValid()) {
-        OS << " at " << PLoc.getFilename()
-           << ':' << PLoc.getLine()
-           << ':' << PLoc.getColumn();
+        OS << " at ";
+        StringRef File = PLoc.getFilename();
+        if (Policy.RemapFilePaths)
+          OS << Policy.remapPath(File);
+        else
+          OS << File;
+        OS << ':' << PLoc.getLine() << ':' << PLoc.getColumn();
       }
     }
 

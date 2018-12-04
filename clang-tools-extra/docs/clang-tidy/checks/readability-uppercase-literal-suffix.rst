@@ -4,14 +4,14 @@ readability-uppercase-literal-suffix
 ====================================
 
 `cert-dcl16-c` redirects here as an alias for this check.
-By default, only the suffixes that begin with 'l' ("l", "ll", "lu", "llu",
-but not "u", "ul", "ull") are diagnosed by that alias.
+By default, only the suffixes that begin with ``l`` (``l``, ``ll``, ``lu``,
+``llu``, but not ``u``, ``ul``, ``ull``) are diagnosed by that alias.
 
 `hicpp-uppercase-literal-suffix` redirects here as an alias for this check.
 
 Detects when the integral literal or floating point (decimal or hexadecimal)
-literal has a non-uppercase suffix and provides a fix-it-hint
-with the uppercase suffix.
+literal has a non-uppercase suffix and provides a fix-it hint with the uppercase
+suffix.
 
 All valid combinations of suffixes are supported.
 
@@ -25,13 +25,14 @@ All valid combinations of suffixes are supported.
 
   ...
 
-Optionally, a list of the destination suffixes can be provided.
-When the suffix is found, a case-insensitive lookup in that list is made,
-and if a replacement is found that is different from the current suffix,
-then the diagnostic is issued. This allows for fine-grained control of
-what suffixes to consider and what their replacements should be.
+Optionally, a list of the destination suffixes can be provided. When the suffix
+is found, a case-insensitive lookup in that list is made, and if a replacement
+is found that is different from the current suffix, then the diagnostic is
+issued. This allows for fine-grained control of what suffixes to consider and
+what their replacements should be.
 
 For example, given a list ``L;uL``:
+
 * ``l`` -> ``L``
 * ``L`` will be kept as is.
 * ``ul`` -> ``uL``

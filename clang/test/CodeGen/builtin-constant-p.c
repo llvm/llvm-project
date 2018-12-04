@@ -157,3 +157,12 @@ static void src_fn(void) {
 void test14() {
   assign(dest_p, src_fn);
 }
+
+extern int test15_v;
+
+struct { const char *t; int a; } test15[] = {
+    { "tag", __builtin_constant_p(test15_v) && !test15_v ? 1 : 0 }
+};
+
+extern char test16_v;
+struct { int a; } test16 = { __builtin_constant_p(test16_v) };

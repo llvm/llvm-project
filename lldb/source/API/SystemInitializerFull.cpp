@@ -263,8 +263,10 @@ SystemInitializerFull::SystemInitializerFull() {}
 
 SystemInitializerFull::~SystemInitializerFull() {}
 
-void SystemInitializerFull::Initialize() {
-  SystemInitializerCommon::Initialize();
+llvm::Error
+SystemInitializerFull::Initialize(const InitializerOptions &options) {
+  if (auto e = SystemInitializerCommon::Initialize(options))
+    return e;
 
   ObjectFileELF::Initialize();
   ObjectFileMachO::Initialize();
@@ -396,6 +398,8 @@ void SystemInitializerFull::Initialize() {
   // AFTER PluginManager::Initialize is called.
 
   Debugger::SettingsInitialize();
+
+  return llvm::Error::success();
 }
 
 void SystemInitializerFull::InitializeSWIG() {

@@ -1282,6 +1282,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::FMSTAT:        return "ARMISD::FMSTAT";
 
   case ARMISD::CMOV:          return "ARMISD::CMOV";
+  case ARMISD::SUBS:          return "ARMISD::SUBS";
 
   case ARMISD::SSAT:          return "ARMISD::SSAT";
   case ARMISD::USAT:          return "ARMISD::USAT";
@@ -12707,30 +12708,38 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
                         DAG.getConstant(1, dl, MVT::i32), Neg.getValue(1));
         Res = DAG.getNode(ISD::ADDCARRY, dl, VTs, Sub, Neg, Carry);
       }
-    } else if (CC == ARMCC::NE && LHS != RHS &&
+    } else if (CC == ARMCC::NE && !isNullConstant(RHS) &&
                (!Subtarget->isThumb1Only() || isPowerOf2Constant(TrueVal))) {
       // This seems pointless but will allow us to combine it further below.
-      // CMOV 0, z, !=, (CMPZ x, y) -> CMOV (SUB x, y), z, !=, (CMPZ x, y)
-      SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+      // CMOV 0, z, !=, (CMPZ x, y) -> CMOV (SUBS x, y), z, !=, (SUBS x, y):1
+      SDValue Sub =
+          DAG.getNode(ARMISD::SUBS, dl, DAG.getVTList(VT, MVT::i32), LHS, RHS);
+      SDValue CPSRGlue = DAG.getCopyToReg(DAG.getEntryNode(), dl, ARM::CPSR,
+                                          Sub.getValue(1), SDValue());
       Res = DAG.getNode(ARMISD::CMOV, dl, VT, Sub, TrueVal, ARMcc,
-                        N->getOperand(3), Cmp);
+                        N->getOperand(3), CPSRGlue.getValue(1));
+      FalseVal = Sub;
     }
   } else if (isNullConstant(TrueVal)) {
-    if (CC == ARMCC::EQ && LHS != RHS &&
+    if (CC == ARMCC::EQ && !isNullConstant(RHS) &&
         (!Subtarget->isThumb1Only() || isPowerOf2Constant(FalseVal))) {
       // This seems pointless but will allow us to combine it further below
       // Note that we change == for != as this is the dual for the case above.
-      // CMOV z, 0, ==, (CMPZ x, y) -> CMOV (SUB x, y), z, !=, (CMPZ x, y)
-      SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
+      // CMOV z, 0, ==, (CMPZ x, y) -> CMOV (SUBS x, y), z, !=, (SUBS x, y):1
+      SDValue Sub =
+          DAG.getNode(ARMISD::SUBS, dl, DAG.getVTList(VT, MVT::i32), LHS, RHS);
+      SDValue CPSRGlue = DAG.getCopyToReg(DAG.getEntryNode(), dl, ARM::CPSR,
+                                          Sub.getValue(1), SDValue());
       Res = DAG.getNode(ARMISD::CMOV, dl, VT, Sub, FalseVal,
                         DAG.getConstant(ARMCC::NE, dl, MVT::i32),
-                        N->getOperand(3), Cmp);
+                        N->getOperand(3), CPSRGlue.getValue(1));
+      FalseVal = Sub;
     }
   }
 
   // On Thumb1, the DAG above may be further combined if z is a power of 2
   // (z == 2 ^ K).
-  // CMOV (SUB x, y), z, !=, (CMPZ x, y) ->
+  // CMOV (SUBS x, y), z, !=, (SUBS x, y):1 ->
   //       merge t3, t4
   // where t1 = (SUBCARRY (SUB x, y), z, 0)
   //       t2 = (SUBCARRY (SUB x, y), t1:0, t1:1)
@@ -12738,8 +12747,8 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   //       t4 = (SUB 1, t2:1)   [ we want a carry, not a borrow ]
   const APInt *TrueConst;
   if (Subtarget->isThumb1Only() && CC == ARMCC::NE &&
-      (FalseVal.getOpcode() == ISD::SUB) && (FalseVal.getOperand(0) == LHS) &&
-      (FalseVal.getOperand(1) == RHS) &&
+      (FalseVal.getOpcode() == ARMISD::SUBS) &&
+      (FalseVal.getOperand(0) == LHS) && (FalseVal.getOperand(1) == RHS) &&
       (TrueConst = isPowerOf2Constant(TrueVal))) {
     SDVTList VTs = DAG.getVTList(VT, MVT::i32);
     unsigned ShiftAmount = TrueConst->logBase2();

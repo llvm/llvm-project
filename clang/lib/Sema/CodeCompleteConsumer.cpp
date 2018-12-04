@@ -555,6 +555,9 @@ void PrintingCodeCompleteConsumer::ProcessCodeCompleteResults(
           Tags.push_back("Hidden");
         if (Results[I].InBaseClass)
           Tags.push_back("InBase");
+        if (Results[I].Availability ==
+            CXAvailabilityKind::CXAvailability_NotAccessible)
+          Tags.push_back("Inaccessible");
         if (!Tags.empty())
           OS << " (" << llvm::join(Tags, ",") << ")";
       }

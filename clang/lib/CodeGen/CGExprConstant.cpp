@@ -1455,6 +1455,7 @@ llvm::Constant *ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
         if (CD->isTrivial() && CD->isDefaultConstructor())
           return CGM.EmitNullConstant(D.getType());
       }
+    InConstantContext = true;
   }
 
   QualType destType = D.getType();
@@ -1552,7 +1553,7 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const Expr *E,
   if (destType->isReferenceType())
     Success = E->EvaluateAsLValue(Result, CGM.getContext());
   else
-    Success = E->EvaluateAsRValue(Result, CGM.getContext());
+    Success = E->EvaluateAsRValue(Result, CGM.getContext(), InConstantContext);
 
   llvm::Constant *C;
   if (Success && !Result.HasSideEffects)

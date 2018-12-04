@@ -1248,8 +1248,8 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
                              TLO.DAG.getNode(ISD::SHL, dl, VT, Sign, ShAmt));
       }
     }
-    // If bitcast from a vector and the mask covers entire elements, see if we
-    // can use SimplifyDemandedVectorElts.
+    // If bitcast from a vector, see if we can use SimplifyDemandedVectorElts by
+    // demanding the element if any bits from it are demanded.
     // TODO - bigendian once we have test coverage.
     // TODO - bool vectors once SimplifyDemandedVectorElts has SETCC support.
     if (SrcVT.isVector() && NumSrcEltBits > 1 &&
@@ -1261,10 +1261,8 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
         for (unsigned i = 0; i != Scale; ++i) {
           unsigned Offset = i * NumSrcEltBits;
           APInt Sub = DemandedBits.extractBits(NumSrcEltBits, Offset);
-          if (Sub.isAllOnesValue())
+          if (!Sub.isNullValue())
             DemandedSubElts.setBit(i);
-          else if (!Sub.isNullValue())
-            return false;
         }
         return true;
       };

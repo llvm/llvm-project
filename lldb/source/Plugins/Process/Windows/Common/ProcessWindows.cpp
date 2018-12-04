@@ -722,7 +722,7 @@ lldb::addr_t ProcessWindows::DoAllocateMemory(size_t size, uint32_t permissions,
     LLDB_LOG(log, "cannot allocate, there is no active debugger connection.");
     error.SetErrorString(
         "cannot allocate, there is no active debugger connection");
-    return 0;
+    return LLDB_INVALID_ADDRESS;
   }
 
   HostProcess process = m_session_data->m_debugger->GetProcess();
@@ -732,7 +732,7 @@ lldb::addr_t ProcessWindows::DoAllocateMemory(size_t size, uint32_t permissions,
   if (!result) {
     error.SetError(GetLastError(), eErrorTypeWin32);
     LLDB_LOG(log, "allocating failed with error: {0}", error);
-    return 0;
+    return LLDB_INVALID_ADDRESS;
   }
 
   return reinterpret_cast<addr_t>(result);
@@ -957,8 +957,9 @@ ProcessWindows::OnDebugException(bool first_chance,
   }
 
   if (!first_chance) {
-    // Any second chance exception is an application crash by definition.
-    SetPrivateState(eStateCrashed);
+    // Not any second chance exception is an application crash by definition.
+    // It may be an expression evaluation crash.
+    SetPrivateState(eStateStopped);
   }
 
   ExceptionResult result = ExceptionResult::SendToApplication;

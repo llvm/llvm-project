@@ -10,8 +10,8 @@
 #include "ELFObjcopy.h"
 #include "Buffer.h"
 #include "CopyConfig.h"
-#include "llvm-objcopy.h"
 #include "Object.h"
+#include "llvm-objcopy.h"
 
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/Optional.h"
@@ -28,6 +28,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compression.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -113,6 +114,63 @@ static std::unique_ptr<Writer> createWriter(const CopyConfig &Config,
                                                  !Config.StripSections);
   }
   llvm_unreachable("Invalid output format");
+}
+
+template <class ELFT>
+static Expected<ArrayRef<uint8_t>>
+findBuildID(const object::ELFFile<ELFT> &In) {
+  for (const auto &Phdr : unwrapOrError(In.program_headers())) {
+    if (Phdr.p_type != PT_NOTE)
+      continue;
+    Error Err = Error::success();
+    if (Err)
+      llvm_unreachable("Error::success() was an error.");
+    for (const auto &Note : In.notes(Phdr, Err)) {
+      if (Err)
+        return std::move(Err);
+      if (Note.getType() == NT_GNU_BUILD_ID && Note.getName() == ELF_NOTE_GNU)
+        return Note.getDesc();
+    }
+    if (Err)
+      return std::move(Err);
+  }
+  return createStringError(llvm::errc::invalid_argument,
+                           "Could not find build ID.");
+}
+
+static Expected<ArrayRef<uint8_t>>
+findBuildID(const object::ELFObjectFileBase &In) {
+  if (auto *O = dyn_cast<ELFObjectFile<ELF32LE>>(&In))
+    return findBuildID(*O->getELFFile());
+  else if (auto *O = dyn_cast<ELFObjectFile<ELF64LE>>(&In))
+    return findBuildID(*O->getELFFile());
+  else if (auto *O = dyn_cast<ELFObjectFile<ELF32BE>>(&In))
+    return findBuildID(*O->getELFFile());
+  else if (auto *O = dyn_cast<ELFObjectFile<ELF64BE>>(&In))
+    return findBuildID(*O->getELFFile());
+
+  llvm_unreachable("Bad file format");
+}
+
+static void linkToBuildIdDir(const CopyConfig &Config, StringRef ToLink,
+                             StringRef Suffix, ArrayRef<uint8_t> BuildIdBytes) {
+  SmallString<128> Path = Config.BuildIdLinkDir;
+  sys::path::append(Path, llvm::toHex(BuildIdBytes[0], /*LowerCase*/ true));
+  if (auto EC = sys::fs::create_directories(Path))
+    error("cannot create build ID link directory " + Path + ": " +
+          EC.message());
+
+  sys::path::append(Path,
+                    llvm::toHex(BuildIdBytes.slice(1), /*LowerCase*/ true));
+  Path += Suffix;
+  if (auto EC = sys::fs::create_hard_link(ToLink, Path)) {
+    // Hard linking failed, try to remove the file first if it exists.
+    if (sys::fs::exists(Path))
+      sys::fs::remove(Path);
+    EC = sys::fs::create_hard_link(ToLink, Path);
+    if (EC)
+      error("cannot link " + ToLink + " to " + Path + ": " + EC.message());
+  }
 }
 
 static void splitDWOToFile(const CopyConfig &Config, const Reader &Reader,
@@ -488,11 +546,28 @@ void executeObjcopyOnBinary(const CopyConfig &Config,
   ELFReader Reader(&In);
   std::unique_ptr<Object> Obj = Reader.create();
   const ElfType OutputElfType = getOutputElfType(In);
+  ArrayRef<uint8_t> BuildIdBytes;
+
+  if (!Config.BuildIdLinkDir.empty()) {
+    BuildIdBytes = unwrapOrError(findBuildID(In));
+    if (BuildIdBytes.size() < 2)
+      error("build ID in file '" + Config.InputFilename +
+            "' is smaller than two bytes");
+  }
+
+  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkInput) {
+    linkToBuildIdDir(Config, Config.InputFilename,
+                     Config.BuildIdLinkInput.getValue(), BuildIdBytes);
+  }
   handleArgs(Config, *Obj, Reader, OutputElfType);
   std::unique_ptr<Writer> Writer =
       createWriter(Config, *Obj, Out, OutputElfType);
   Writer->finalize();
   Writer->write();
+  if (!Config.BuildIdLinkDir.empty() && Config.BuildIdLinkOutput) {
+    linkToBuildIdDir(Config, Config.OutputFilename,
+                     Config.BuildIdLinkOutput.getValue(), BuildIdBytes);
+  }
 }
 
 } // end namespace elf

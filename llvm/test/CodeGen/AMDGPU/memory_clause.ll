@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx902 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx902 -verify-machineinstrs -amdgpu-enable-global-sgpr-addr < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}vector_clause:
 ; GCN:      global_load_dwordx4

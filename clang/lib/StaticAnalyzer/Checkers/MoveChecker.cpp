@@ -1,4 +1,4 @@
-// MisusedMovedObjectChecker.cpp - Check use of moved-from objects. - C++ -===//
+// MoveChecker.cpp - Check use of moved-from objects. - C++ ---------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -42,7 +42,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const { ID.AddInteger(K); }
 };
 
-class MisusedMovedObjectChecker
+class MoveChecker
     : public Checker<check::PreCall, check::PostCall, check::EndFunction,
                      check::DeadSymbols, check::RegionChanges> {
 public:
@@ -117,9 +117,8 @@ static bool isAnyBaseRegionReported(ProgramStateRef State,
 }
 
 std::shared_ptr<PathDiagnosticPiece>
-MisusedMovedObjectChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
-                                                      BugReporterContext &BRC,
-                                                      BugReport &) {
+MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
+                                        BugReporterContext &BRC, BugReport &) {
   // We need only the last move of the reported object's region.
   // The visitor walks the ExplodedGraph backwards.
   if (Found)
@@ -157,8 +156,9 @@ MisusedMovedObjectChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
   return std::make_shared<PathDiagnosticEventPiece>(Pos, InfoText, true);
 }
 
-const ExplodedNode *MisusedMovedObjectChecker::getMoveLocation(
-    const ExplodedNode *N, const MemRegion *Region, CheckerContext &C) const {
+const ExplodedNode *MoveChecker::getMoveLocation(const ExplodedNode *N,
+                                                 const MemRegion *Region,
+                                                 CheckerContext &C) const {
   // Walk the ExplodedGraph backwards and find the first node that referred to
   // the tracked region.
   const ExplodedNode *MoveNode = N;
@@ -173,10 +173,9 @@ const ExplodedNode *MisusedMovedObjectChecker::getMoveLocation(
   return MoveNode;
 }
 
-ExplodedNode *MisusedMovedObjectChecker::reportBug(const MemRegion *Region,
-                                                   const CallEvent &Call,
-                                                   CheckerContext &C,
-                                                   MisuseKind MK) const {
+ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
+                                     const CallEvent &Call, CheckerContext &C,
+                                     MisuseKind MK) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     if (!BT)
       BT.reset(new BugType(this, "Usage of a 'moved-from' object",
@@ -220,8 +219,8 @@ ExplodedNode *MisusedMovedObjectChecker::reportBug(const MemRegion *Region,
 
 // Removing the function parameters' MemRegion from the state. This is needed
 // for PODs where the trivial destructor does not even created nor executed.
-void MisusedMovedObjectChecker::checkEndFunction(const ReturnStmt *RS,
-                                                 CheckerContext &C) const {
+void MoveChecker::checkEndFunction(const ReturnStmt *RS,
+                                   CheckerContext &C) const {
   auto State = C.getState();
   TrackedRegionMapTy Objects = State->get<TrackedRegionMap>();
   if (Objects.isEmpty())
@@ -254,8 +253,8 @@ void MisusedMovedObjectChecker::checkEndFunction(const ReturnStmt *RS,
   C.addTransition(State);
 }
 
-void MisusedMovedObjectChecker::checkPostCall(const CallEvent &Call,
-                                              CheckerContext &C) const {
+void MoveChecker::checkPostCall(const CallEvent &Call,
+                                CheckerContext &C) const {
   const auto *AFC = dyn_cast<AnyFunctionCall>(&Call);
   if (!AFC)
     return;
@@ -302,8 +301,7 @@ void MisusedMovedObjectChecker::checkPostCall(const CallEvent &Call,
   C.addTransition(State);
 }
 
-bool MisusedMovedObjectChecker::isMoveSafeMethod(
-    const CXXMethodDecl *MethodDec) const {
+bool MoveChecker::isMoveSafeMethod(const CXXMethodDecl *MethodDec) const {
   // We abandon the cases where bool/void/void* conversion happens.
   if (const auto *ConversionDec =
           dyn_cast_or_null<CXXConversionDecl>(MethodDec)) {
@@ -319,8 +317,7 @@ bool MisusedMovedObjectChecker::isMoveSafeMethod(
        MethodDec->getName().lower() == "isempty"));
 }
 
-bool MisusedMovedObjectChecker::isStateResetMethod(
-    const CXXMethodDecl *MethodDec) const {
+bool MoveChecker::isStateResetMethod(const CXXMethodDecl *MethodDec) const {
   if (!MethodDec)
       return false;
   if (MethodDec->hasAttr<ReinitializesAttr>())
@@ -336,8 +333,7 @@ bool MisusedMovedObjectChecker::isStateResetMethod(
 
 // Don't report an error inside a move related operation.
 // We assume that the programmer knows what she does.
-bool MisusedMovedObjectChecker::isInMoveSafeContext(
-    const LocationContext *LC) const {
+bool MoveChecker::isInMoveSafeContext(const LocationContext *LC) const {
   do {
     const auto *CtxDec = LC->getDecl();
     auto *CtorDec = dyn_cast_or_null<CXXConstructorDecl>(CtxDec);
@@ -352,8 +348,7 @@ bool MisusedMovedObjectChecker::isInMoveSafeContext(
   return false;
 }
 
-void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
-                                             CheckerContext &C) const {
+void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   const LocationContext *LC = C.getLocationContext();
   ExplodedNode *N = nullptr;
@@ -459,8 +454,8 @@ void MisusedMovedObjectChecker::checkPreCall(const CallEvent &Call,
   C.addTransition(State, N);
 }
 
-void MisusedMovedObjectChecker::checkDeadSymbols(SymbolReaper &SymReaper,
-                                                 CheckerContext &C) const {
+void MoveChecker::checkDeadSymbols(SymbolReaper &SymReaper,
+                                   CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   TrackedRegionMapTy TrackedRegions = State->get<TrackedRegionMap>();
   for (TrackedRegionMapTy::value_type E : TrackedRegions) {
@@ -475,7 +470,7 @@ void MisusedMovedObjectChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   C.addTransition(State);
 }
 
-ProgramStateRef MisusedMovedObjectChecker::checkRegionChanges(
+ProgramStateRef MoveChecker::checkRegionChanges(
     ProgramStateRef State, const InvalidatedSymbols *Invalidated,
     ArrayRef<const MemRegion *> ExplicitRegions,
     ArrayRef<const MemRegion *> Regions, const LocationContext *LCtx,
@@ -495,10 +490,8 @@ ProgramStateRef MisusedMovedObjectChecker::checkRegionChanges(
   return State;
 }
 
-void MisusedMovedObjectChecker::printState(raw_ostream &Out,
-                                           ProgramStateRef State,
-                                           const char *NL,
-                                           const char *Sep) const {
+void MoveChecker::printState(raw_ostream &Out, ProgramStateRef State,
+                             const char *NL, const char *Sep) const {
 
   TrackedRegionMapTy RS = State->get<TrackedRegionMap>();
 
@@ -514,6 +507,6 @@ void MisusedMovedObjectChecker::printState(raw_ostream &Out,
     }
   }
 }
-void ento::registerMisusedMovedObjectChecker(CheckerManager &mgr) {
-  mgr.registerChecker<MisusedMovedObjectChecker>();
+void ento::registerMoveChecker(CheckerManager &mgr) {
+  mgr.registerChecker<MoveChecker>();
 }

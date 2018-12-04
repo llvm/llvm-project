@@ -286,6 +286,10 @@ lldb_private::Function *SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(
     const PDBSymbolFunc &pdb_func, const lldb_private::SymbolContext &sc) {
   lldbassert(sc.comp_unit && sc.module_sp.get());
 
+  if (FunctionSP result =
+          sc.comp_unit->FindFunctionByUID(pdb_func.getSymIndexId()))
+    return result.get();
+
   auto file_vm_addr = pdb_func.getVirtualAddress();
   if (file_vm_addr == LLDB_INVALID_ADDRESS || file_vm_addr == 0)
     return nullptr;
@@ -1047,8 +1051,6 @@ uint32_t SymbolFilePDB::FindGlobalVariables(
     const lldb_private::ConstString &name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, lldb_private::VariableList &variables) {
-  if (!parent_decl_ctx)
-    parent_decl_ctx = m_tu_decl_ctx_up.get();
   if (!DeclContextMatchesThisSymbolFile(parent_decl_ctx))
     return 0;
   if (name.IsEmpty())
@@ -1078,9 +1080,8 @@ uint32_t SymbolFilePDB::FindGlobalVariables(
     if (sc.comp_unit == nullptr)
       continue;
 
-    auto actual_parent_decl_ctx =
-        GetDeclContextContainingUID(result->getSymIndexId());
-    if (actual_parent_decl_ctx != *parent_decl_ctx)
+    if (parent_decl_ctx && GetDeclContextContainingUID(
+                               result->getSymIndexId()) != *parent_decl_ctx)
       continue;
 
     ParseVariables(sc, *pdb_data, &variables);
@@ -1269,20 +1270,28 @@ uint32_t SymbolFilePDB::FindFunctions(
     CacheFunctionNames();
 
     std::set<uint32_t> resolved_ids;
-    auto ResolveFn = [include_inlines, &name, &sc_list, &resolved_ids,
-                      this](UniqueCStringMap<uint32_t> &Names) {
+    auto ResolveFn = [this, &name, parent_decl_ctx, include_inlines, &sc_list,
+                      &resolved_ids](UniqueCStringMap<uint32_t> &Names) {
       std::vector<uint32_t> ids;
-      if (Names.GetValues(name, ids)) {
-        for (auto id : ids) {
-          if (resolved_ids.find(id) == resolved_ids.end()) {
-            if (ResolveFunction(id, include_inlines, sc_list))
-              resolved_ids.insert(id);
-          }
-        }
+      if (!Names.GetValues(name, ids))
+        return;
+
+      for (uint32_t id : ids) {
+        if (resolved_ids.find(id) != resolved_ids.end())
+          continue;
+
+        if (parent_decl_ctx &&
+            GetDeclContextContainingUID(id) != *parent_decl_ctx)
+          continue;
+
+        if (ResolveFunction(id, include_inlines, sc_list))
+          resolved_ids.insert(id);
       }
     };
     if (name_type_mask & eFunctionNameTypeFull) {
       ResolveFn(m_func_full_names);
+      ResolveFn(m_func_base_names);
+      ResolveFn(m_func_method_names);
     }
     if (name_type_mask & eFunctionNameTypeBase) {
       ResolveFn(m_func_base_names);
@@ -1470,8 +1479,6 @@ void SymbolFilePDB::FindTypesByName(
     llvm::StringRef name,
     const lldb_private::CompilerDeclContext *parent_decl_ctx,
     uint32_t max_matches, lldb_private::TypeMap &types) {
-  if (!parent_decl_ctx)
-    parent_decl_ctx = m_tu_decl_ctx_up.get();
   std::unique_ptr<IPDBEnumSymbols> results;
   if (name.empty())
     return;
@@ -1505,9 +1512,8 @@ void SymbolFilePDB::FindTypesByName(
     if (!ResolveTypeUID(result->getSymIndexId()))
       continue;
 
-    auto actual_parent_decl_ctx =
-        GetDeclContextContainingUID(result->getSymIndexId());
-    if (actual_parent_decl_ctx != *parent_decl_ctx)
+    if (parent_decl_ctx && GetDeclContextContainingUID(
+                               result->getSymIndexId()) != *parent_decl_ctx)
       continue;
 
     auto iter = m_types.find(result->getSymIndexId());

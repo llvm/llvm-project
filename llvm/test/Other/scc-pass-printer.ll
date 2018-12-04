@@ -18,6 +18,8 @@
 ; INL: IR Dump After
 
 ; INL-MOD: IR Dump After {{Function Integration/Inlining|InlinerPass .*scc: .bar, foo}}
+; INL-MOD-NEXT: ModuleID =
+; INL-MOD-NEXT: source_filename =
 ; INL-MOD: define void @tester()
 ; INL-MOD-NEXT:  call void @foo()
 ; INL-MOD: define void @foo()
@@ -25,6 +27,8 @@
 ; INL-MOD: define void @bar()
 ; INL-MOD-NEXT:  call void @foo()
 ; INL-MOD: IR Dump After {{Function Integration/Inlining|InlinerPass .*scc: .tester}}
+; INL-MOD-NEXT: ModuleID =
+; INL-MOD-NEXT: source_filename =
 ; INL-MOD: define void @tester()
 ; INL-MOD-NEXT:  call void @foo()
 ; INL-MOD: define void @foo()
@@ -32,6 +36,9 @@
 ; INL-MOD: define void @bar()
 ; INL-MOD-NEXT:  call void @foo()
 ; INL-MOD: IR Dump After
+; INL-MOD-NEXT: ModuleID =
+; INL-MOD-NEXT: source_filename =
+; INL-MOD-NOT: Printing <null> Function
 
 define void @tester() noinline {
   call void @foo()
