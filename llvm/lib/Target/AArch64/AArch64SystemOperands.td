@@ -323,7 +323,7 @@ def : PState<"UAO",     0b00011>;
 let Requires = [{ {AArch64::HasV8_4aOps} }] in
 def : PState<"DIT",     0b11010>;
 // v8.5a Spectre Mitigation
-let Requires = [{ {AArch64::FeatureSpecRestrict} }] in
+let Requires = [{ {AArch64::FeatureSSBS} }] in
 def : PState<"SSBS",    0b11001>;
 // v8.5a Memory Tagging Extension
 let Requires = [{ {AArch64::FeatureMTE} }] in
@@ -1411,7 +1411,7 @@ def : RWSysReg<"ZCR_EL12",         0b11, 0b101, 0b0001, 0b0010, 0b000>;
 
 // V8.5a Spectre mitigation SSBS register
 //                     Op0   Op1    CRn     CRm     Op2
-let Requires = [{ {AArch64::FeatureSpecRestrict} }] in
+let Requires = [{ {AArch64::FeatureSSBS} }] in
 def : RWSysReg<"SSBS", 0b11, 0b011, 0b0100, 0b0010, 0b110>;
 
 // v8.5a Memory Tagging Extension

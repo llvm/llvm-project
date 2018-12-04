@@ -26,8 +26,9 @@ define i1 @p0(i8 %x) {
 define i1 @pv(i8 %x, i8 %y) {
 ; CHECK-LABEL: @pv(
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sge i8 [[TMP0]], [[X:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[TMP0]], [[X:%.*]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp sge i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = lshr i8 -1, %y
   %tmp1 = and i8 %tmp0, %x
@@ -120,8 +121,9 @@ define i1 @cv0(i8 %y) {
 ; CHECK-LABEL: @cv0(
 ; CHECK-NEXT:    [[X:%.*]] = call i8 @gen8()
 ; CHECK-NEXT:    [[TMP0:%.*]] = lshr i8 -1, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sle i8 [[X]], [[TMP0]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp sge i8 [[TMP1]], [[X]]
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %x = call i8 @gen8()
   %tmp0 = lshr i8 -1, %y

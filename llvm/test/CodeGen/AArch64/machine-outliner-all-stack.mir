@@ -1,0 +1,112 @@
+# RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner \
+# RUN: -verify-machineinstrs %s -o - | FileCheck %s
+
+# Show that, when instructions that use the stack are present, it's possible
+# for us to outline everything as the default outlining type.
+# It's possible for reg-save-possible to outline by storing LR to a register,
+# but most candidates in this case require us to modify the stack. The outliner
+# should see that it's more beneficial to fix up instructions and save LR to
+# the stack in this case.
+
+--- |
+  define void @reg-save-possible() #0 { ret void }
+  define void @stack-save1() #0 { ret void }
+  define void @stack-save2() #0 { ret void }
+  define void @stack-save3() #0 { ret void }
+  attributes #0 = { minsize noinline noredzone "no-frame-pointer-elim"="true" }
+...
+---
+
+name:            reg-save-possible
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr
+  $lr = ORRXri $xzr, 1
+  $x19 = ORRXri $xzr, 1
+  $x20 = ORRXri $xzr, 1
+  bb.1:
+    liveins: $lr
+    ; CHECK-LABEL: name:            reg-save-possible
+    ; CHECK: $sp = STRXpre $lr, $sp, -16
+    ; CHECK-NEXT: BL [[FN:@OUTLINED_FUNCTION_[0-9]+]]
+    ; CHECK-NEXT: $sp, $lr = LDRXpost $sp, 16
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+  bb.2:
+    RET undef $lr
+
+...
+---
+
+name:            stack-save1
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+  $lr = ORRXri $xzr, 1
+  bb.1:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    ; CHECK-LABEL: name:            stack-save1
+    ; CHECK: $sp = STRXpre $lr, $sp, -16
+    ; CHECK-NEXT: BL [[FN]]
+    ; CHECK-NEXT: $sp, $lr = LDRXpost $sp, 16
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+  bb.2:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    RET undef $lr
+
+...
+---
+
+name:            stack-save2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+  $lr = ORRXri $xzr, 1
+  bb.1:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    ; CHECK-LABEL: name:            stack-save2
+    ; CHECK: $sp = STRXpre $lr, $sp, -16
+    ; CHECK-NEXT: BL [[FN]]
+    ; CHECK-NEXT: $sp, $lr = LDRXpost $sp, 16
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+  bb.2:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    RET undef $lr
+
+...
+---
+
+name:            stack-save3
+tracksRegLiveness: true
+body:             |
+  bb.0:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+  $lr = ORRXri $xzr, 1
+  bb.1:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    ; CHECK-LABEL: name:            stack-save3
+    ; CHECK: $sp = STRXpre $lr, $sp, -16
+    ; CHECK-NEXT: BL [[FN]]
+    ; CHECK-NEXT: $sp, $lr = LDRXpost $sp, 16
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+    $x20, $x19 = LDPXi $sp, 10
+  bb.2:
+  liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x18, $x19, $x20, $x21, $x22, $x23, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+    RET undef $lr

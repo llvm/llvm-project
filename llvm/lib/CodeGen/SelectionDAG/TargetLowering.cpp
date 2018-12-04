@@ -1736,6 +1736,20 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     }
     break;
   }
+  case ISD::ANY_EXTEND_VECTOR_INREG:
+  case ISD::SIGN_EXTEND_VECTOR_INREG:
+  case ISD::ZERO_EXTEND_VECTOR_INREG: {
+    APInt SrcUndef, SrcZero;
+    SDValue Src = Op.getOperand(0);
+    unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
+    APInt DemandedSrcElts = DemandedElts.zextOrSelf(NumSrcElts);
+    if (SimplifyDemandedVectorElts(Src, DemandedSrcElts, SrcUndef,
+                                   SrcZero, TLO, Depth + 1))
+      return true;
+    KnownZero = SrcZero.zextOrTrunc(NumElts);
+    KnownUndef = SrcUndef.zextOrTrunc(NumElts);
+    break;
+  }
   case ISD::ADD:
   case ISD::SUB:
   case ISD::FADD:
@@ -1755,6 +1769,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   case ISD::TRUNCATE:
+  case ISD::ANY_EXTEND:
+  case ISD::SIGN_EXTEND:
+  case ISD::ZERO_EXTEND:
     if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
                                    KnownZero, TLO, Depth + 1))
       return true;

@@ -63,3 +63,16 @@ class ExprOptionsTestCase(TestBase):
         val = frame.EvaluateExpression('foo != nullptr', options)
         self.assertTrue(val.IsValid())
         self.assertFalse(val.GetError().Success())
+
+        # Make sure we can retrieve `id` variable if language is set to C++11:
+        options.SetLanguage(lldb.eLanguageTypeC_plus_plus_11)
+        val = frame.EvaluateExpression('id == 0', options)
+        self.assertTrue(val.IsValid())
+        self.assertTrue(val.GetError().Success())
+        self.DebugSBValue(val)
+
+        # Make sure we can't retrieve `id` variable if language is set to ObjC:
+        options.SetLanguage(lldb.eLanguageTypeObjC)
+        val = frame.EvaluateExpression('id == 0', options)
+        self.assertTrue(val.IsValid())
+        self.assertFalse(val.GetError().Success())

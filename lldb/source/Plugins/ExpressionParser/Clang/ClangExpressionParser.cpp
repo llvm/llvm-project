@@ -398,10 +398,9 @@ ClangExpressionParser::ClangExpressionParser(ExecutionContextScope *exe_scope,
     LLVM_FALLTHROUGH;
   case lldb::eLanguageTypeC_plus_plus_03:
     m_compiler->getLangOpts().CPlusPlus = true;
-    // FIXME: the following language option is a temporary workaround,
-    // to "ask for C++, get ObjC++".  Apple hopes to remove this requirement on
-    // non-Apple platforms, but for now it is needed.
-    m_compiler->getLangOpts().ObjC = true;
+    if (process_sp)
+      m_compiler->getLangOpts().ObjC =
+          process_sp->GetLanguageRuntime(lldb::eLanguageTypeObjC) != nullptr;
     break;
   case lldb::eLanguageTypeObjC_plus_plus:
   case lldb::eLanguageTypeUnknown:

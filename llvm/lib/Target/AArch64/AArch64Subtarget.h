@@ -100,6 +100,7 @@ protected:
   bool HasFRInt3264 = false;
   bool HasSpecRestrict = false;
   bool HasSpecCtrl = false;
+  bool HasSSBS = false;
   bool HasPredCtrl = false;
   bool HasCCDP = false;
   bool HasBTI = false;
@@ -328,6 +329,7 @@ public:
   bool hasFRInt3264() const { return HasFRInt3264; }
   bool hasSpecRestrict() const { return HasSpecRestrict; }
   bool hasSpecCtrl() const { return HasSpecCtrl; }
+  bool hasSSBS() const { return HasSSBS; }
   bool hasPredCtrl() const { return HasPredCtrl; }
   bool hasCCDP() const { return HasCCDP; }
   bool hasBTI() const { return HasBTI; }

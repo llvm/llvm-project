@@ -68,9 +68,6 @@ SymbolCache::SymbolCache(NativeSession &Session, DbiStream *Dbi)
 
   if (Dbi)
     Compilands.resize(Dbi->modules().getModuleCount());
-
-  auto &Tpi = cantFail(Session.getPDBFile().getPDBTpiStream());
-  Tpi.buildHashMap();
 }
 
 std::unique_ptr<IPDBEnumSymbols>

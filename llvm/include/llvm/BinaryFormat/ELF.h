@@ -1377,6 +1377,8 @@ enum {
   GNU_ABI_TAG_NACL = 6,
 };
 
+constexpr const char *ELF_NOTE_GNU = "GNU";
+
 // Android packed relocation group flags.
 enum {
   RELOCATION_GROUPED_BY_INFO_FLAG = 1,

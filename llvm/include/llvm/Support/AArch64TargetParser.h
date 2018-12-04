@@ -47,6 +47,7 @@ enum ArchExtKind : unsigned {
   AEK_FP16FML =     1 << 17,
   AEK_RAND =        1 << 18,
   AEK_MTE =         1 << 19,
+  AEK_SSBS =        1 << 20,
 };
 
 enum class ArchKind {

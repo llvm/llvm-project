@@ -9084,6 +9084,26 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
     return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewAssert);
   }
 
+  // If we have (AssertZext (truncate (AssertSext X, iX)), iY) and Y is smaller
+  // than X. Just move the AssertZext in front of the truncate and drop the
+  // AssertSExt.
+  if (N0.getOpcode() == ISD::TRUNCATE && N0.hasOneUse() &&
+      N0.getOperand(0).getOpcode() == ISD::AssertSext &&
+      Opcode == ISD::AssertZext) {
+    SDValue BigA = N0.getOperand(0);
+    EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
+    assert(BigA_AssertVT.bitsLE(N0.getValueType()) &&
+           "Asserting zero/sign-extended bits to a type larger than the "
+           "truncated destination does not provide information");
+
+    if (AssertVT.bitsLT(BigA_AssertVT)) {
+      SDLoc DL(N);
+      SDValue NewAssert = DAG.getNode(Opcode, DL, BigA.getValueType(),
+                                      BigA.getOperand(0), N1);
+      return DAG.getNode(ISD::TRUNCATE, DL, N->getValueType(0), NewAssert);
+    }
+  }
+
   return SDValue();
 }
 
@@ -9441,6 +9461,9 @@ SDValue DAGCombiner::visitSIGN_EXTEND_VECTOR_INREG(SDNode *N) {
   if (SDValue Res = tryToFoldExtendOfConstant(N, TLI, DAG, LegalTypes))
     return Res;
 
+  if (SimplifyDemandedVectorElts(SDValue(N, 0)))
+    return SDValue(N, 0);
+
   return SDValue();
 }
 
@@ -9453,6 +9476,9 @@ SDValue DAGCombiner::visitZERO_EXTEND_VECTOR_INREG(SDNode *N) {
 
   if (SDValue Res = tryToFoldExtendOfConstant(N, TLI, DAG, LegalTypes))
     return Res;
+
+  if (SimplifyDemandedVectorElts(SDValue(N, 0)))
+    return SDValue(N, 0);
 
   return SDValue();
 }
@@ -9738,14 +9764,18 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
-    // TODO: This should allow vector constants/types too.
     if (!LegalOperations && N0.hasOneUse() &&
-        (isa<ConstantSDNode>(N0.getOperand(0)) ||
-         isa<ConstantSDNode>(N0.getOperand(1)))) {
-      SDLoc DL(N);
-      SDValue NarrowL = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
-      SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
-      return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
+        (isConstantOrConstantVector(N0.getOperand(0)) ||
+         isConstantOrConstantVector(N0.getOperand(1)))) {
+      // TODO: We already restricted this to pre-legalization, but for vectors
+      // we are extra cautious to not create an unsupported operation.
+      // Target-specific changes are likely needed to avoid regressions here.
+      if (VT.isScalarInteger() || TLI.isOperationLegal(N0.getOpcode(), VT)) {
+        SDLoc DL(N);
+        SDValue NarrowL = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(0));
+        SDValue NarrowR = DAG.getNode(ISD::TRUNCATE, DL, VT, N0.getOperand(1));
+        return DAG.getNode(N0.getOpcode(), DL, VT, NarrowL, NarrowR);
+      }
     }
   }
 

@@ -286,8 +286,15 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     }
   }
 
-  Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
   Config.AddGnuDebugLink = InputArgs.getLastArgValue(OBJCOPY_add_gnu_debuglink);
+  Config.BuildIdLinkDir = InputArgs.getLastArgValue(OBJCOPY_build_id_link_dir);
+  if (InputArgs.hasArg(OBJCOPY_build_id_link_input))
+    Config.BuildIdLinkInput =
+        InputArgs.getLastArgValue(OBJCOPY_build_id_link_input);
+  if (InputArgs.hasArg(OBJCOPY_build_id_link_output))
+    Config.BuildIdLinkOutput =
+        InputArgs.getLastArgValue(OBJCOPY_build_id_link_output);
+  Config.SplitDWO = InputArgs.getLastArgValue(OBJCOPY_split_dwo);
   Config.SymbolsPrefix = InputArgs.getLastArgValue(OBJCOPY_prefix_symbols);
 
   for (auto Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
