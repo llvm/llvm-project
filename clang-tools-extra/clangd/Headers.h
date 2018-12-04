@@ -55,7 +55,7 @@ struct IncludeGraphNode {
   // True if current file is a main file rather than a header.
   bool IsTU = false;
   llvm::StringRef URI;
-  FileDigest Digest{0};
+  FileDigest Digest{{0}};
   std::vector<llvm::StringRef> DirectIncludes;
 };
 // FileURI and FileInclusions are references to keys of the map containing
