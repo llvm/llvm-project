@@ -1358,9 +1358,13 @@ bool SwiftLanguageRuntime::MetadataPromise::IsStaticallyDetermined() {
   llvm_unreachable("Unknown metadata kind");
 }
 
-static inline swift::Type GetSwiftType(const CompilerType &type) {
-  return swift::Type(
-      reinterpret_cast<swift::TypeBase *>(type.GetOpaqueQualType()));
+static swift::Type GetCanonicalSwiftType(const CompilerType &type) {
+  return reinterpret_cast<swift::TypeBase *>(
+      type.GetCanonicalType().GetOpaqueQualType());
+}
+
+static swift::Type GetSwiftType(const CompilerType &type) {
+  return reinterpret_cast<swift::TypeBase *>(type.GetOpaqueQualType());
 }
 
 SwiftLanguageRuntime::MetadataPromiseSP
@@ -1438,8 +1442,9 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
         member_name.AsCString());
 
   // Check whether we've already cached this offset.
-  auto *swift_type = reinterpret_cast<swift::TypeBase *>(
-      instance_type.GetCanonicalType().GetOpaqueQualType());
+  auto *swift_type = GetCanonicalSwiftType(instance_type).getPointer();
+
+  // Perform the cache lookup.
   auto key = std::make_tuple(swift_type, member_name.GetCString());
   auto it = m_member_offsets.find(key);
   if (it != m_member_offsets.end())
@@ -1480,9 +1485,7 @@ SwiftLanguageRuntime::GetMemberVariableOffset(CompilerType instance_type,
                 "[MemberVariableOffsetResolver] resolved non-class type = %s",
                 bound.GetTypeName().AsCString());
 
-          swift_type = reinterpret_cast<swift::TypeBase *>(
-              bound.GetCanonicalType().GetOpaqueQualType());
-
+          swift_type = GetCanonicalSwiftType(bound).getPointer();
           auto key = std::make_tuple(swift_type, member_name.GetCString());
           auto it = m_member_offsets.find(key);
           if (it != m_member_offsets.end())
@@ -2047,7 +2050,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     if (!dyn_type.IsValid())
       return false;
     class_type_or_name.SetCompilerType(dyn_type);
-    lldb::addr_t val_ptr_addr = in_value.GetPointerValue();
+    lldb::addr_t val_ptr_addr = in_value.GetAddressOf();
     val_ptr_addr = GetProcess()->ReadPointerFromMemory(val_ptr_addr, error);
     address.SetLoadAddress(val_ptr_addr, &m_process->GetTarget());
     return true;
@@ -2059,7 +2062,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     if (!dyn_type.IsValid())
       return false;
     class_type_or_name.SetCompilerType(dyn_type);
-    lldb::addr_t val_ptr_addr = in_value.GetPointerValue();
+    lldb::addr_t val_ptr_addr = in_value.GetAddressOf();
     address.SetLoadAddress(val_ptr_addr, &m_process->GetTarget());
     return true;
   } break;
@@ -2068,7 +2071,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     if (!dyn_type.IsValid())
       return false;
     class_type_or_name.SetCompilerType(dyn_type);
-    lldb::addr_t val_ptr_addr = in_value.GetPointerValue();
+    lldb::addr_t val_ptr_addr = in_value.GetAddressOf();
     {
       auto swift_type = GetSwiftType(dyn_type);
       if (swift_type->getOptionalObjectType())
@@ -2081,7 +2084,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Promise(
     CompilerType protocol_type(promise_sp->FulfillTypePromise());
     SwiftASTContext *swift_ast_ctx =
         llvm::dyn_cast_or_null<SwiftASTContext>(protocol_type.GetTypeSystem());
-    lldb::addr_t existential_address = in_value.GetPointerValue();
+    lldb::addr_t existential_address = in_value.GetAddressOf();
     if (!existential_address || existential_address == LLDB_INVALID_ADDRESS)
       return false;
     auto &target = m_process->GetTarget();
@@ -2260,8 +2263,8 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Tuple(
     Address address;
     Value::ValueType value_type;
     CompilerType child_type;
-    if (!GetDynamicTypeAndAddress(*child_sp.get(), use_dynamic, type_and_or_name,
-                                 address, value_type))
+    if (!GetDynamicTypeAndAddress(*child_sp.get(), use_dynamic,
+                                  type_and_or_name, address, value_type))
       child_type = child_sp->GetCompilerType();
     else
       child_type = type_and_or_name.GetCompilerType();
@@ -2368,7 +2371,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_IndirectEnumCase(
 
     Value::ValueType value_type;
     if (!GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
-                                 address, value_type))
+                                  address, value_type))
       return false;
 
     address.SetRawAddress(old_box_value);
@@ -2396,7 +2399,7 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_IndirectEnumCase(
 
     Value::ValueType value_type;
     if (!GetDynamicTypeAndAddress(*valobj_sp, use_dynamic, class_type_or_name,
-                                   address, value_type))
+                                  address, value_type))
       return false;
 
     address.SetRawAddress(box_value);

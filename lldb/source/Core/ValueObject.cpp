@@ -79,6 +79,12 @@ using namespace lldb_utility;
 
 static user_id_t g_value_obj_uid = 0;
 
+static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
+  return (valobj.GetPreferredDisplayLanguage() == eLanguageTypeSwift)
+             ? &valobj.GetExecutionContextRef()
+             : nullptr;
+}
+
 //----------------------------------------------------------------------
 // ValueObject constructor
 //----------------------------------------------------------------------
@@ -2837,12 +2843,6 @@ void ValueObject::LogValueObject(Log *log,
     if (s.GetSize())
       log->PutCString(s.GetData());
   }
-}
-
-static const ExecutionContextRef *GetSwiftExeCtx(ValueObject &valobj) {
-  return (valobj.GetPreferredDisplayLanguage() == eLanguageTypeSwift)
-             ? &valobj.GetExecutionContextRef()
-             : nullptr;
 }
 
 void ValueObject::Dump(Stream &s) { Dump(s, DumpValueObjectOptions(*this)); }
