@@ -1,4 +1,5 @@
 ; RUN: opt -simple-loop-unswitch -disable-output < %s
+; RUN: opt -simple-loop-unswitch -enable-mssa-loop-dependency=true -verify-memoryssa -disable-output < %s
 ; PR10031
 
 define i32 @test(i32 %command) {
