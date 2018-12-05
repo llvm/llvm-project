@@ -329,8 +329,6 @@ void FunctionTemplateDecl::mergePrevDecl(FunctionTemplateDecl *Prev) {
 
   // Ensure we don't leak any important state.
   assert(ThisCommon->Specializations.size() == 0 &&
-         !ThisCommon->InstantiatedFromMember.getPointer() &&
-         !ThisCommon->InstantiatedFromMember.getInt() &&
          "Can't merge incompatible declarations!");
 
   Base::Common = PrevCommon;

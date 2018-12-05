@@ -231,6 +231,10 @@ Improvements to clang-tidy
   - floating point - integer narrowing conversions,
   - constants with narrowing conversions (even in ternary operator).
 
+- The :doc:`objc-property-declaration
+  <clang-tidy/checks/objc-property-declaration>` check now ignores the
+  `Acronyms` and `IncludeDefaultAcronyms` options.
+
 Improvements to include-fixer
 -----------------------------
 

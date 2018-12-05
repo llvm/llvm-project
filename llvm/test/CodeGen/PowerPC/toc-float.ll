@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 <%s | FileCheck -check-prefix=CHECK-P9 %s
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 <%s | FileCheck -check-prefix=CHECK-P8 %s
+; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 <%s | FileCheck -check-prefix=CHECK-P9 %s
+; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 <%s | FileCheck -check-prefix=CHECK-P8 %s
 
 ; As the constant could be represented as float, a float is
 ; loaded from constant pool.

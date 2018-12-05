@@ -38,6 +38,7 @@ class SanitizerArgs {
   bool AsanUseAfterScope = true;
   bool AsanPoisonCustomArrayCookie = false;
   bool AsanGlobalsDeadStripping = false;
+  bool AsanUseOdrIndicator = false;
   bool LinkCXXRuntimes = false;
   bool NeedPIE = false;
   bool SafeStackRuntime = false;

@@ -754,6 +754,7 @@
 		26DE205311618FAC00A093E2 /* SBFunction.h in Headers */ = {isa = PBXBuildFile; fileRef = 26DE205211618FAC00A093E2 /* SBFunction.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9A3576AA116E9AC700E8ED2F /* SBHostOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A3576A9116E9AC700E8ED2F /* SBHostOS.cpp */; };
 		9A3576A8116E9AB700E8ED2F /* SBHostOS.h in Headers */ = {isa = PBXBuildFile; fileRef = 9A3576A7116E9AB700E8ED2F /* SBHostOS.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		AFB2F2F621B71AF30078DEF1 /* SBInitializerOptions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFB2F2F421B71AE90078DEF1 /* SBInitializerOptions.cpp */; };
 		9AC703AF117675410086C050 /* SBInstruction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AC703AE117675410086C050 /* SBInstruction.cpp */; };
 		9AC7038E117674FB0086C050 /* SBInstruction.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AC7038D117674EB0086C050 /* SBInstruction.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9AC703B1117675490086C050 /* SBInstructionList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AC703B0117675490086C050 /* SBInstructionList.cpp */; };
@@ -2726,6 +2727,7 @@
 		9A3576A9116E9AC700E8ED2F /* SBHostOS.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBHostOS.cpp; path = source/API/SBHostOS.cpp; sourceTree = "<group>"; };
 		9A3576A7116E9AB700E8ED2F /* SBHostOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBHostOS.h; path = include/lldb/API/SBHostOS.h; sourceTree = "<group>"; };
 		2611FF00142D83060017FEA3 /* SBHostOS.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBHostOS.i; sourceTree = "<group>"; };
+		AFB2F2F421B71AE90078DEF1 /* SBInitializerOptions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBInitializerOptions.cpp; path = source/API/SBInitializerOptions.cpp; sourceTree = "<group>"; };
 		9AC703AE117675410086C050 /* SBInstruction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBInstruction.cpp; path = source/API/SBInstruction.cpp; sourceTree = "<group>"; };
 		9AC7038D117674EB0086C050 /* SBInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBInstruction.h; path = include/lldb/API/SBInstruction.h; sourceTree = "<group>"; };
 		2611FF02142D83060017FEA3 /* SBInstruction.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBInstruction.i; sourceTree = "<group>"; };
@@ -4257,6 +4259,7 @@
 				26DE205C1161901400A093E2 /* SBFunction.cpp */,
 				9A3576A7116E9AB700E8ED2F /* SBHostOS.h */,
 				9A3576A9116E9AC700E8ED2F /* SBHostOS.cpp */,
+				AFB2F2F421B71AE90078DEF1 /* SBInitializerOptions.cpp */,
 				9AC7038D117674EB0086C050 /* SBInstruction.h */,
 				9AC703AE117675410086C050 /* SBInstruction.cpp */,
 				9AC7038F117675270086C050 /* SBInstructionList.h */,
@@ -7661,6 +7664,7 @@
 				26680336116005EF008E1FE4 /* SBBreakpointLocation.cpp in Sources */,
 				26680337116005F1008E1FE4 /* SBBreakpoint.cpp in Sources */,
 				26DE204511618ADA00A093E2 /* SBAddress.cpp in Sources */,
+				AFB2F2F621B71AF30078DEF1 /* SBInitializerOptions.cpp in Sources */,
 				26DE204711618AED00A093E2 /* SBSymbolContext.cpp in Sources */,
 				26DE204D11618E7A00A093E2 /* SBModule.cpp in Sources */,
 				26DE205D1161901400A093E2 /* SBFunction.cpp in Sources */,

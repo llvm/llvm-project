@@ -9031,8 +9031,11 @@ SDNode *SelectionDAG::isConstantFPBuildVectorOrConstantFP(SDValue N) {
 
 void SelectionDAG::createOperands(SDNode *Node, ArrayRef<SDValue> Vals) {
   assert(!Node->OperandList && "Node already has operands");
+  assert(std::numeric_limits<decltype(SDNode::NumOperands)>::max() >
+             Vals.size() &&
+         "too many operands to fit into SDNode");
   SDUse *Ops = OperandRecycler.allocate(
-    ArrayRecycler<SDUse>::Capacity::get(Vals.size()), OperandAllocator);
+      ArrayRecycler<SDUse>::Capacity::get(Vals.size()), OperandAllocator);
 
   bool IsDivergent = false;
   for (unsigned I = 0; I != Vals.size(); ++I) {
