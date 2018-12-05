@@ -23,9 +23,11 @@ namespace clang {
 namespace clangd {
 
 // Returns true if the complete name of decl \p D is spelled in the source code.
-// This is not the case for symbols formed via macro concatenation.
-// (We used to attempt to treat names spelled on the command-line this way too,
-// but the preamble doesn't preserve the required information).
+// This is not the case for:
+//   * symbols formed via macro concatenation, the spelling location will
+//     be "<scratch space>"
+//   * symbols controlled and defined by a compile command-line option
+//     `-DName=foo`, the spelling location will be "<command line>".
 bool isSpelledInSourceCode(const Decl *D) {
   const auto &SM = D->getASTContext().getSourceManager();
   auto Loc = D->getLocation();
@@ -33,7 +35,8 @@ bool isSpelledInSourceCode(const Decl *D) {
   // macros, we should use the location where the whole definition occurs.
   if (Loc.isMacroID()) {
     std::string PrintLoc = SM.getSpellingLoc(Loc).printToString(SM);
-    if (StringRef(PrintLoc).startswith("<scratch"))
+    if (StringRef(PrintLoc).startswith("<scratch") ||
+        StringRef(PrintLoc).startswith("<command line>"))
       return false;
   }
   return true;
