@@ -684,15 +684,13 @@ public:
   OMPClause *Transform ## Class(Class *S);
 #include "clang/Basic/OpenMPKinds.def"
 
-  /// Build a new qualified type given its unqualified type and type
-  /// qualifiers.
+  /// Build a new qualified type given its unqualified type and type location.
   ///
   /// By default, this routine adds type qualifiers only to types that can
   /// have qualifiers, and silently suppresses those qualifiers that are not
   /// permitted. Subclasses may override this routine to provide different
   /// behavior.
-  QualType RebuildQualifiedType(QualType T, SourceLocation Loc,
-                                Qualifiers Quals);
+  QualType RebuildQualifiedType(QualType T, QualifiedTypeLoc TL);
 
   /// Build a new pointer type given its pointee type.
   ///
@@ -4228,8 +4226,9 @@ TreeTransform<Derived>::TransformTypeWithDeducedTST(TypeSourceInfo *DI) {
     return nullptr;
 
   if (QTL) {
-    Result = getDerived().RebuildQualifiedType(
-        Result, QTL.getBeginLoc(), QTL.getType().getLocalQualifiers());
+    Result = getDerived().RebuildQualifiedType(Result, QTL);
+    if (Result.isNull())
+      return nullptr;
     TLB.TypeWasModifiedSafely(Result);
   }
 
@@ -4240,13 +4239,14 @@ template<typename Derived>
 QualType
 TreeTransform<Derived>::TransformQualifiedType(TypeLocBuilder &TLB,
                                                QualifiedTypeLoc T) {
-  Qualifiers Quals = T.getType().getLocalQualifiers();
-
   QualType Result = getDerived().TransformType(TLB, T.getUnqualifiedLoc());
   if (Result.isNull())
     return QualType();
 
-  Result = getDerived().RebuildQualifiedType(Result, T.getBeginLoc(), Quals);
+  Result = getDerived().RebuildQualifiedType(Result, T);
+
+  if (Result.isNull())
+    return QualType();
 
   // RebuildQualifiedType might have updated the type, but not in a way
   // that invalidates the TypeLoc. (There's no location information for
@@ -4256,10 +4256,21 @@ TreeTransform<Derived>::TransformQualifiedType(TypeLocBuilder &TLB,
   return Result;
 }
 
-template<typename Derived>
+template <typename Derived>
 QualType TreeTransform<Derived>::RebuildQualifiedType(QualType T,
-                                                      SourceLocation Loc,
-                                                      Qualifiers Quals) {
+                                                      QualifiedTypeLoc TL) {
+
+  SourceLocation Loc = TL.getBeginLoc();
+  Qualifiers Quals = TL.getType().getLocalQualifiers();
+
+  if (((T.getAddressSpace() != LangAS::Default &&
+        Quals.getAddressSpace() != LangAS::Default)) &&
+      T.getAddressSpace() != Quals.getAddressSpace()) {
+    SemaRef.Diag(Loc, diag::err_address_space_mismatch_templ_inst)
+        << TL.getType() << T;
+    return QualType();
+  }
+
   // C++ [dcl.fct]p7:
   //   [When] adding cv-qualifications on top of the function type [...] the
   //   cv-qualifiers are ignored.

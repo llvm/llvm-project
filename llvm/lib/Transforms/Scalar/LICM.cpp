@@ -566,6 +566,8 @@ public:
   }
 
   BasicBlock *getOrCreateHoistedBlock(BasicBlock *BB) {
+    if (!ControlFlowHoisting)
+      return CurLoop->getLoopPreheader();
     // If BB has already been hoisted, return that
     if (HoistDestinationMap.count(BB))
       return HoistDestinationMap[BB];
@@ -801,21 +803,24 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
   // and also keep track of where in the block we are rehoisting to to make sure
   // that we rehoist instructions before the instructions that use them.
   Instruction *HoistPoint = nullptr;
-  for (Instruction *I : reverse(HoistedInstructions)) {
-    if (!llvm::all_of(I->uses(), [&](Use &U) { return DT->dominates(I, U); })) {
-      BasicBlock *Dominator =
-          DT->getNode(I->getParent())->getIDom()->getBlock();
-      LLVM_DEBUG(dbgs() << "LICM rehoisting to " << Dominator->getName() << ": "
-                        << *I << "\n");
-      if (!HoistPoint || HoistPoint->getParent() != Dominator) {
-        if (HoistPoint)
-          assert(DT->dominates(Dominator, HoistPoint->getParent()) &&
-                 "New hoist point expected to dominate old hoist point");
-        HoistPoint = Dominator->getTerminator();
+  if (ControlFlowHoisting) {
+    for (Instruction *I : reverse(HoistedInstructions)) {
+      if (!llvm::all_of(I->uses(),
+                        [&](Use &U) { return DT->dominates(I, U); })) {
+        BasicBlock *Dominator =
+            DT->getNode(I->getParent())->getIDom()->getBlock();
+        LLVM_DEBUG(dbgs() << "LICM rehoisting to " << Dominator->getName()
+                          << ": " << *I << "\n");
+        if (!HoistPoint || HoistPoint->getParent() != Dominator) {
+          if (HoistPoint)
+            assert(DT->dominates(Dominator, HoistPoint->getParent()) &&
+                   "New hoist point expected to dominate old hoist point");
+          HoistPoint = Dominator->getTerminator();
+        }
+        moveInstructionBefore(*I, *HoistPoint, *SafetyInfo);
+        HoistPoint = I;
+        Changed = true;
       }
-      moveInstructionBefore(*I, *HoistPoint, *SafetyInfo);
-      HoistPoint = I;
-      Changed = true;
     }
   }
 

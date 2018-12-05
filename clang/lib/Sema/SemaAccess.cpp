@@ -1896,8 +1896,6 @@ bool Sema::IsSimplyAccessible(NamedDecl *Target, CXXRecordDecl *NamingClass,
   if (Target->isCXXClassMember() && NamingClass) {
     if (!getLangOpts().CPlusPlus)
       return false;
-    if (Target->getAccess() == AS_public)
-      return true;
     // The unprivileged access is AS_none as we don't know how the member was
     // accessed, which is described by the access in DeclAccessPair.
     // `IsAccessible` will examine the actual access of Target (i.e.

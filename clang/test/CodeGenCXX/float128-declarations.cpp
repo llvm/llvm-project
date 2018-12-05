@@ -14,6 +14,10 @@
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
 // RUN: %clang_cc1 -emit-llvm -triple x86_64-pc-solaris2.11 -std=c++11 \
 // RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
+// RUN: %clang_cc1 -emit-llvm -triple i586-pc-haiku -std=c++11 \
+// RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
+// RUN: %clang_cc1 -emit-llvm -triple x86_64-unknown-haiku -std=c++11 \
+// RUN:   %s -o - | FileCheck %s -check-prefix=CHECK-X86
 //
 /*  Various contexts where type __float128 can appear. The different check
     prefixes are due to different mangling on X86.  */

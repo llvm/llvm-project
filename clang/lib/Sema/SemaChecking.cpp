@@ -12141,6 +12141,18 @@ bool Sema::CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
       if (!Param->getType().isConstQualified())
         Diag(Param->getLocation(), diag::err_attribute_pointers_only)
             << Attr->getSpelling() << 1;
+
+    // Check for parameter names shadowing fields from the class.
+    if (LangOpts.CPlusPlus && !Param->isInvalidDecl()) {
+      // The owning context for the parameter should be the function, but we
+      // want to see if this function's declaration context is a record.
+      DeclContext *DC = Param->getDeclContext();
+      if (DC && DC->isFunctionOrMethod()) {
+        if (auto *RD = dyn_cast<CXXRecordDecl>(DC->getParent()))
+          CheckShadowInheritedFields(Param->getLocation(), Param->getDeclName(),
+                                     RD, /*DeclIsField*/ false);
+      }
+    }
   }
 
   return HasInvalidParm;

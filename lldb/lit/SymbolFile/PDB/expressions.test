@@ -1,6 +1,5 @@
 REQUIRES: system-windows, msvc
-RUN: %msvc_cl /Zi /GS- /c %S/Inputs/ExpressionsTest.cpp /Fo%t.obj
-RUN: %msvc_link /debug:full /nodefaultlib /entry:main %t.obj /out:%t.exe
+RUN: %build --compiler=msvc --nodefaultlib --output=%t.exe %S/Inputs/ExpressionsTest.cpp
 RUN: %lldb -b -s %S/Inputs/ExpressionsTest0.script -s %S/Inputs/ExpressionsTest1.script -s %S/Inputs/ExpressionsTest2.script -- %t.exe 2>&1 | FileCheck %s
 
 // Check the variable value through `print`

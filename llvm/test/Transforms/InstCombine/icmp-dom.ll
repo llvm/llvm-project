@@ -166,8 +166,7 @@ define i1 @trueblock_cmp_is_false(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -187,8 +186,7 @@ define i1 @trueblock_cmp_is_false_commute(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[Y]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -208,8 +206,7 @@ define i1 @trueblock_cmp_is_true(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -229,8 +226,7 @@ define i1 @trueblock_cmp_is_true_commute(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[Y]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -252,8 +248,7 @@ define i1 @falseblock_cmp_is_false(i32 %x, i32 %y) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       f:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp sle i32 %x, %y
@@ -273,8 +268,7 @@ define i1 @falseblock_cmp_is_false_commute(i32 %x, i32 %y) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       f:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[Y]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %cmp = icmp eq i32 %x, %y
@@ -294,8 +288,7 @@ define i1 @falseblock_cmp_is_true(i32 %x, i32 %y) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       f:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp uge i32 [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp = icmp ult i32 %x, %y
@@ -315,8 +308,7 @@ define i1 @falseblock_cmp_is_true_commute(i32 %x, i32 %y) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ; CHECK:       f:
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[Y]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ;
 entry:
   %cmp = icmp sgt i32 %x, %y

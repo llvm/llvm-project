@@ -125,12 +125,12 @@ In more detailed steps:
       It's recommended to build the ``all`` target with your instrumented Clang,
       since more coverage is often better.
 
-  b. You should now have a few ``*.profdata`` files in
+  b. You should now have a few ``*.profraw`` files in
      ``path/to/stage2/profiles/``. You need to merge these using
      ``llvm-profdata`` (even if you only have one! The profile merge transforms
      profraw into actual profile data, as well). This can be done with
-     ``/path/to/stage1/llvm-profdata -merge
-     -output=/path/to/output/profdata.prof path/to/stage2/profiles/*.profdata``.
+     ``/path/to/stage1/llvm-profdata merge
+     -output=/path/to/output/profdata.prof path/to/stage2/profiles/*.profraw``.
 
 4. Now, build your final, PGO-optimized Clang. To do this, you'll want to pass
    the following additional arguments to CMake.

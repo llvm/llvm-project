@@ -833,8 +833,10 @@ static std::unique_ptr<LTO> createLTO(IndexWriteCallback OnIndexWrite,
   Conf.Options.RelaxELFRelocations = false;
 
   // Toggle function/data sections.
-  Conf.Options.FunctionSections = SplitSections;
-  Conf.Options.DataSections = SplitSections;
+  if (FunctionSections.getNumOccurrences() == 0)
+    Conf.Options.FunctionSections = SplitSections;
+  if (DataSections.getNumOccurrences() == 0)
+    Conf.Options.DataSections = SplitSections;
 
   Conf.MAttrs = MAttrs;
   Conf.RelocModel = RelocationModel;
