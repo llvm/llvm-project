@@ -93,3 +93,7 @@ add_lldb_tool(lldb-mi
   LINK_COMPONENTS
     Support
   )
+
+if(LLDB_BUILD_FRAMEWORK)
+  lldb_setup_framework_rpaths_in_tool(lldb-mi)
+endif()
