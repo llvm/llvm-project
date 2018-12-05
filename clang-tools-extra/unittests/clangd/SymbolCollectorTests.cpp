@@ -614,6 +614,18 @@ TEST_F(SymbolCollectorTest, SymbolFormedFromRegisteredSchemeFromMacro) {
                 DeclURI(TestHeaderURI))));
 }
 
+TEST_F(SymbolCollectorTest, SymbolFormedByCLI) {
+  Annotations Header(R"(
+    #ifdef NAME
+    class $expansion[[NAME]] {};
+    #endif
+  )");
+  runSymbolCollector(Header.code(), /*Main=*/"", /*ExtraArgs=*/{"-DNAME=name"});
+  EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(
+                           QName("name"), DeclRange(Header.range("expansion")),
+                           DeclURI(TestHeaderURI))));
+}
+
 TEST_F(SymbolCollectorTest, IgnoreSymbolsInMainFile) {
   const std::string Header = R"(
     class Foo {};
