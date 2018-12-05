@@ -4,6 +4,7 @@ add_clang_library(clangTidyBugproneModule
   ArgumentCommentCheck.cpp
   AssertSideEffectCheck.cpp
   BoolPointerImplicitConversionCheck.cpp
+  BranchCloneCheck.cpp
   BugproneTidyModule.cpp
   CopyConstructorInitCheck.cpp
   DanglingHandleCheck.cpp

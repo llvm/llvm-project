@@ -122,6 +122,13 @@ Improvements to clang-tidy
   Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests
   ``absl::StrAppend()`` should be used instead.
 
+- New :doc:`bugprone-branch-clone
+  <clang-tidy/checks/bugprone-branch-clone>` check.
+
+  Checks for repeated branches in ``if/else if/else`` chains, consecutive
+  repeated branches in ``switch`` statements and indentical true and false
+  branches in conditional operators.
+
 - New :doc:`bugprone-too-small-loop-variable
   <clang-tidy/checks/bugprone-too-small-loop-variable>` check.
 
