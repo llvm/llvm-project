@@ -25,10 +25,10 @@
 
 #if defined(__x86_64__)
 #define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 312)
+  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 264)
 #elif defined(__i386__)
 #define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 164)
+  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 136)
 #endif
 
 namespace __sanitizer {
