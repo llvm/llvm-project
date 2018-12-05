@@ -2346,10 +2346,8 @@ turnGuardIntoBranch(IntrinsicInst *GI, Loop &L,
   LLVM_DEBUG(dbgs() << "Turning " << *GI << " into a branch.\n");
   BasicBlock *CheckBB = GI->getParent();
 
-  if (MSSAU && VerifyMemorySSA) {
+  if (MSSAU && VerifyMemorySSA)
      MSSAU->getMemorySSA()->verifyMemorySSA();
-     MSSAU->getMemorySSA()->dump();
-  }
 
   // Remove all CheckBB's successors from DomTree. A block can be seen among
   // successors more than once, but for DomTree it should be added only once.

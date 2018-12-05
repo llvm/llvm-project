@@ -15,6 +15,7 @@
 #include "CodeGenDAGPatterns.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -27,6 +28,7 @@
 #include "llvm/TableGen/Record.h"
 #include <algorithm>
 #include <cstdio>
+#include <iterator>
 #include <set>
 using namespace llvm;
 
@@ -1940,6 +1942,8 @@ void TreePatternNode::InlinePatternFragments(
       R->setTransformFn(getTransformFn());
       for (unsigned i = 0, e = getNumTypes(); i != e; ++i)
         R->setType(i, getExtType(i));
+      for (unsigned i = 0, e = getNumResults(); i != e; ++i)
+        R->setResultIndex(i, getResultIndex(i));
 
       // Register alternative.
       OutAlternatives.push_back(R);
@@ -3207,7 +3211,8 @@ static bool HandleUse(TreePattern &I, TreePatternNodePtr Pat,
 void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
     TreePattern &I, TreePatternNodePtr Pat,
     std::map<std::string, TreePatternNodePtr> &InstInputs,
-    std::map<std::string, TreePatternNodePtr> &InstResults,
+    MapVector<std::string, TreePatternNodePtr, std::map<std::string, unsigned>>
+        &InstResults,
     std::vector<Record *> &InstImpResults) {
 
   // The instruction pattern still has unresolved fragments.  For *named*
@@ -3527,7 +3532,8 @@ void CodeGenDAGPatterns::parseInstructionPattern(
 
   // InstResults - Keep track of all the virtual registers that are 'set'
   // in the instruction, including what reg class they are.
-  std::map<std::string, TreePatternNodePtr> InstResults;
+  MapVector<std::string, TreePatternNodePtr, std::map<std::string, unsigned>>
+      InstResults;
 
   std::vector<Record*> InstImpResults;
 
@@ -3564,19 +3570,28 @@ void CodeGenDAGPatterns::parseInstructionPattern(
 
   // Check that all of the results occur first in the list.
   std::vector<Record*> Results;
+  std::vector<unsigned> ResultIndices;
   SmallVector<TreePatternNodePtr, 2> ResNodes;
   for (unsigned i = 0; i != NumResults; ++i) {
-    if (i == CGI.Operands.size())
-      I.error("'" + InstResults.begin()->first +
-               "' set but does not appear in operand list!");
+    if (i == CGI.Operands.size()) {
+      const std::string &OpName =
+          std::find_if(InstResults.begin(), InstResults.end(),
+                       [](const std::pair<std::string, TreePatternNodePtr> &P) {
+                         return P.second;
+                       })
+              ->first;
+
+      I.error("'" + OpName + "' set but does not appear in operand list!");
+    }
+
     const std::string &OpName = CGI.Operands[i].Name;
 
     // Check that it exists in InstResults.
-    TreePatternNodePtr RNode = InstResults[OpName];
-    if (!RNode)
+    auto InstResultIter = InstResults.find(OpName);
+    if (InstResultIter == InstResults.end() || !InstResultIter->second)
       I.error("Operand $" + OpName + " does not exist in operand list!");
 
-
+    TreePatternNodePtr RNode = InstResultIter->second;
     Record *R = cast<DefInit>(RNode->getLeafValue())->getDef();
     ResNodes.push_back(std::move(RNode));
     if (!R)
@@ -3589,8 +3604,11 @@ void CodeGenDAGPatterns::parseInstructionPattern(
     // Remember the return type.
     Results.push_back(CGI.Operands[i].Rec);
 
+    // Remember the result index.
+    ResultIndices.push_back(std::distance(InstResults.begin(), InstResultIter));
+
     // Okay, this one checks out.
-    InstResults.erase(OpName);
+    InstResultIter->second = nullptr;
   }
 
   // Loop over the inputs next.
@@ -3654,6 +3672,7 @@ void CodeGenDAGPatterns::parseInstructionPattern(
   for (unsigned i = 0; i != NumResults; ++i) {
     assert(ResNodes[i]->getNumTypes() == 1 && "FIXME: Unhandled");
     ResultPattern->setType(i, ResNodes[i]->getExtType(0));
+    ResultPattern->setResultIndex(i, ResultIndices[i]);
   }
 
   // FIXME: Assume only the first tree is the pattern. The others are clobber
@@ -4113,7 +4132,8 @@ void CodeGenDAGPatterns::ParsePatterns() {
 
     // Validate that the input pattern is correct.
     std::map<std::string, TreePatternNodePtr> InstInputs;
-    std::map<std::string, TreePatternNodePtr> InstResults;
+    MapVector<std::string, TreePatternNodePtr, std::map<std::string, unsigned>>
+        InstResults;
     std::vector<Record*> InstImpResults;
     for (unsigned j = 0, ee = Pattern.getNumTrees(); j != ee; ++j)
       FindPatternInputsAndOutputs(Pattern, Pattern.getTree(j), InstInputs,

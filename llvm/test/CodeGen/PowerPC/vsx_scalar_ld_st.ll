@@ -1,6 +1,6 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu \
+; RUN: llc -relocation-model=pic -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
+; RUN: llc -relocation-model=pic -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr8 -mattr=-direct-move | FileCheck %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr9 -mattr=-direct-move | FileCheck %s -check-prefix=CHECK-P9
