@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
+; RUN: llc -relocation-model=pic -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 ; The instructions addis,addi, bl are used to calculate the address of TLS
 ; thread local variables. These TLS access code sequences are generated
 ; repeatedly every time the thread local variable is accessed. By communicating

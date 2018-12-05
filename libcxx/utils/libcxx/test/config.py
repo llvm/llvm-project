@@ -133,7 +133,6 @@ class Configuration(object):
         self.configure_cxx()
         self.configure_triple()
         self.configure_deployment()
-        self.configure_availability()
         self.configure_src_root()
         self.configure_obj_root()
         self.configure_cxx_stdlib_under_test()
@@ -311,12 +310,6 @@ class Configuration(object):
         self.lit_config.note(
             "inferred use_system_cxx_lib as: %r" % self.use_system_cxx_lib)
 
-    def configure_availability(self):
-        # See https://libcxx.llvm.org/docs/DesignDocs/AvailabilityMarkup.html
-        self.with_availability = self.get_lit_bool('with_availability', False)
-        self.lit_config.note(
-            "inferred with_availability as: %r" % self.with_availability)
-
     def configure_cxx_stdlib_under_test(self):
         self.cxx_stdlib_under_test = self.get_lit_conf(
             'cxx_stdlib_under_test', 'libc++')
@@ -414,11 +407,10 @@ class Configuration(object):
                 self.add_deployment_feature('with_system_cxx_lib')
 
         # Configure the availability markup checks features.
-        if self.with_availability:
+        if self.use_deployment:
             self.config.available_features.add('availability_markup')
             self.add_deployment_feature('availability_markup')
 
-        if self.use_system_cxx_lib or self.with_availability:
             self.config.available_features.add('availability')
             self.add_deployment_feature('availability')
 
@@ -582,9 +574,6 @@ class Configuration(object):
             self.cxx.flags += ['-arch', arch]
             self.cxx.flags += ['-m' + name + '-version-min=' + version]
 
-        # Disable availability unless explicitly requested
-        if not self.with_availability:
-            self.cxx.flags += ['-D_LIBCPP_DISABLE_AVAILABILITY']
         # FIXME(EricWF): variant_size.pass.cpp requires a slightly larger
         # template depth with older Clang versions.
         self.cxx.addFlagIfSupported('-ftemplate-depth=270')

@@ -1,8 +1,8 @@
-; RUN: llc -verify-machineinstrs < %s -mcpu=pwr8 \
+; RUN: llc -relocation-model=pic -verify-machineinstrs < %s -mcpu=pwr8 \
 ; RUN:   -mattr=+altivec -mattr=-vsx | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mattr=+altivec \
+; RUN: llc -relocation-model=pic -verify-machineinstrs < %s -mattr=+altivec \
 ; RUN:   -mattr=-vsx | FileCheck %s
-; RUN: llc -verify-machineinstrs < %s -mcpu=pwr9 \
+; RUN: llc -relocation-model=pic -verify-machineinstrs < %s -mcpu=pwr9 \
 ; RUN:   -mattr=-direct-move -mattr=+altivec | FileCheck %s
 
 ; Currently VSX support is disabled for this test because we generate lxsdx

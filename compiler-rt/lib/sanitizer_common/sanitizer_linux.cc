@@ -772,7 +772,8 @@ int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
   return sysctl(name, namelen, oldp, (size_t *)oldlenp, (void *)newp,
                 (size_t)newlen);
 #else
-  return internal_syscall(SYSCALL(__sysctl), name, namelen, oldp, (size_t *)oldlenp, newp, (size_t)newlen);
+  return internal_syscall(SYSCALL(__sysctl), name, namelen, oldp,
+                          (size_t *)oldlenp, newp, (size_t)newlen);
 #endif
 }
 

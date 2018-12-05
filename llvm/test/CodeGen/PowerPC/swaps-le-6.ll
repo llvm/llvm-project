@@ -1,13 +1,13 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -ppc-vsr-nums-as-vr \
+; RUN: llc -relocation-model=pic -verify-machineinstrs -mcpu=pwr8 -ppc-vsr-nums-as-vr \
 ; RUN:   -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN:   -O3 < %s | FileCheck %s
 
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu -O3 \
+; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu -O3 \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names -verify-machineinstrs \
 ; RUN:   < %s | FileCheck %s --check-prefix=CHECK-P9 \
 ; RUN:   --implicit-check-not xxswapd
 
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu -O3 \
+; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu -O3 \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names -verify-machineinstrs \
 ; RUN:   -mattr=-power9-vector < %s | FileCheck %s
 
