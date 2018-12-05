@@ -50,20 +50,20 @@ function(add_lldb_library name)
 
     if (${name} STREQUAL "liblldb")
       if (PARAM_SHARED)
-        set(out_dir lib${LLVM_LIBDIR_SUFFIX})
         if(${name} STREQUAL "liblldb" AND LLDB_BUILD_FRAMEWORK)
-          set(out_dir ${LLDB_FRAMEWORK_INSTALL_DIR})
-          # The framework that is generated will install with install-liblldb
-          # because we enable CMake's framework support. CMake will copy all the
-          # headers and resources for us.
-          add_dependencies(install-lldb-framework install-${name})
-          add_dependencies(install-lldb-framework-stripped install-${name}-stripped)
+          if(LLDB_FRAMEWORK_INSTALL_DIR)
+            set(install_dir ${LLDB_FRAMEWORK_INSTALL_DIR})
+          else()
+            set(install_dir ".")
+          endif()
+        else()
+          set(install_dir lib${LLVM_LIBDIR_SUFFIX})
         endif()
         install(TARGETS ${name}
           COMPONENT ${name}
           RUNTIME DESTINATION bin
-          LIBRARY DESTINATION ${out_dir}
-          ARCHIVE DESTINATION ${out_dir})
+          LIBRARY DESTINATION ${install_dir}
+          ARCHIVE DESTINATION ${install_dir})
       else()
         install(TARGETS ${name}
           COMPONENT ${name}
@@ -74,13 +74,6 @@ function(add_lldb_library name)
         add_llvm_install_targets(install-${name}
                                  DEPENDS $<TARGET_FILE:${name}>
                                  COMPONENT ${name})
-
-        # install-liblldb{,-stripped} is the actual target that will install the
-        # framework, so it must rely on the framework being fully built first.
-        if (LLDB_BUILD_FRAMEWORK AND ${name} STREQUAL "liblldb")
-          add_dependencies(install-${name} lldb-framework)
-          add_dependencies(install-${name}-stripped lldb-framework)
-        endif()
       endif()
     endif()
   endif()
@@ -99,7 +92,7 @@ endfunction(add_lldb_library)
 
 function(add_lldb_executable name)
   cmake_parse_arguments(ARG
-    "INCLUDE_IN_SUITE;GENERATE_INSTALL"
+    "GENERATE_INSTALL"
     "ENTITLEMENTS"
     "LINK_LIBS;LINK_COMPONENTS"
     ${ARGN}
@@ -109,52 +102,17 @@ function(add_lldb_executable name)
   add_llvm_executable(${name} ${ARG_UNPARSED_ARGUMENTS} ENTITLEMENTS ${ARG_ENTITLEMENTS})
 
   target_link_libraries(${name} PRIVATE ${ARG_LINK_LIBS})
-  set_target_properties(${name} PROPERTIES
-    FOLDER "lldb executables")
-
-  if(ARG_INCLUDE_IN_SUITE)
-    add_dependencies(lldb-suite ${name})
-    if(LLDB_BUILD_FRAMEWORK)
-      if(NOT IOS)
-        set(resource_dir "/Resources")
-        set(resource_dots "../")
-      endif()
-      string(REGEX REPLACE "[^/]+" ".." _dots ${LLDB_FRAMEWORK_INSTALL_DIR})
-      set_target_properties(${name} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:liblldb>${resource_dir}
-            BUILD_WITH_INSTALL_RPATH On
-            INSTALL_RPATH "@loader_path/../../../${resource_dots}${_dots}/${LLDB_FRAMEWORK_INSTALL_DIR}")
-    endif()
-  endif()
-
-  if(LLDB_BUILD_FRAMEWORK AND NOT ARG_INCLUDE_IN_SUITE)
-    set_target_properties(${name} PROPERTIES
-          BUILD_WITH_INSTALL_RPATH On
-          INSTALL_RPATH "@loader_path/../${LLDB_FRAMEWORK_INSTALL_DIR}")
-  endif()
+  set_target_properties(${name} PROPERTIES FOLDER "lldb executables")
 
   if(ARG_GENERATE_INSTALL)
-    set(out_dir "bin")
-    if (LLDB_BUILD_FRAMEWORK AND ARG_INCLUDE_IN_SUITE)
-      set(out_dir ${LLDB_FRAMEWORK_INSTALL_DIR}/${LLDB_FRAMEWORK_RESOURCE_DIR})
-      # While install-liblldb-stripped will handle copying the tools, it will
-      # not strip them. We depend on this target to guarantee a stripped version
-      # will get installed in the framework.
-      add_dependencies(install-lldb-framework-stripped install-${name}-stripped)
-    endif()
     install(TARGETS ${name}
-          COMPONENT ${name}
-          RUNTIME DESTINATION ${out_dir})
+            COMPONENT ${name}
+            RUNTIME DESTINATION bin)
     if (NOT CMAKE_CONFIGURATION_TYPES)
       add_llvm_install_targets(install-${name}
                                DEPENDS ${name}
                                COMPONENT ${name})
     endif()
-  endif()
-
-  if(ARG_INCLUDE_IN_SUITE AND LLDB_BUILD_FRAMEWORK)
-    add_llvm_tool_symlink(${name} ${name} ALWAYS_GENERATE SKIP_INSTALL
-                            OUTPUT_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR})
   endif()
 endfunction(add_lldb_executable)
 

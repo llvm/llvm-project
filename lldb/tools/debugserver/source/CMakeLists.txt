@@ -257,7 +257,7 @@ if(build_and_sign_debugserver)
                  COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
   endif()
   set(LLVM_OPTIONAL_SOURCES ${lldbDebugserverCommonSources})
-  add_lldb_tool(debugserver INCLUDE_IN_SUITE
+  add_lldb_tool(debugserver
     debugserver.cpp
 
     LINK_LIBS
