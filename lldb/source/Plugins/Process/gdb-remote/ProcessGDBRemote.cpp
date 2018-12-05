@@ -683,7 +683,7 @@ void ProcessGDBRemote::BuildDynamicRegisterInfo(bool force) {
   m_register_info.Finalize(GetTarget().GetArchitecture());
 }
 
-Status ProcessGDBRemote::WillLaunch(Module *module) {
+Status ProcessGDBRemote::WillLaunch(lldb_private::Module *module) {
   return WillLaunchOrAttach();
 }
 
@@ -799,7 +799,7 @@ Status ProcessGDBRemote::WillLaunchOrAttach() {
 //----------------------------------------------------------------------
 // Process Control
 //----------------------------------------------------------------------
-Status ProcessGDBRemote::DoLaunch(Module *exe_module,
+Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
                                   ProcessLaunchInfo &launch_info) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
   Status error;
