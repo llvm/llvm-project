@@ -71,3 +71,52 @@ class Y : public X {
     // RUN: | FileCheck -check-prefix=UNRELATED %s
   }
 };
+
+class Outer {
+ public:
+  static int pub;
+ protected:
+  static int prot;
+ private:
+  static int priv;
+
+  class Inner {
+    int test() {
+      Outer::pub = 10;
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:85:14 %s -o - \
+    // RUN: | FileCheck -check-prefix=OUTER %s
+    // OUTER: priv : [#int#]priv
+    // OUTER: prot : [#int#]prot
+    // OUTER: pub : [#int#]pub
+
+    // Also check the unqualified case.
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:85:1 %s -o - \
+    // RUN: | FileCheck -check-prefix=OUTER %s
+    }
+  };
+};
+
+class Base {
+public:
+  int pub;
+};
+
+class Accessible : public Base {
+};
+
+class Inaccessible : private Base {
+};
+
+class Test : public Accessible, public Inaccessible {
+  int test() {
+    this->Accessible::pub = 10;
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:112:23 %s -o - \
+    // RUN: | FileCheck -check-prefix=ACCESSIBLE %s
+    // ACCESSIBLE: pub (InBase)
+
+    this->Inaccessible::pub = 10;
+    // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:117:25 %s -o - \
+    // RUN: | FileCheck -check-prefix=INACCESSIBLE %s
+    // INACCESSIBLE: pub (InBase,Inaccessible)
+  }
+};
