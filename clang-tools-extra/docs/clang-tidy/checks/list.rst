@@ -31,6 +31,7 @@ Clang-Tidy Checks
    bugprone-argument-comment
    bugprone-assert-side-effect
    bugprone-bool-pointer-implicit-conversion
+   bugprone-branch-clone
    bugprone-copy-constructor-init
    bugprone-dangling-handle
    bugprone-exception-escape
