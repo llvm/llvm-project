@@ -41,6 +41,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -1307,13 +1308,14 @@ static bool addNoRecurseAttrs(const SCCNodeSet &SCCNodes) {
   // If all of the calls in F are identifiable and are to norecurse functions, F
   // is norecurse. This check also detects self-recursion as F is not currently
   // marked norecurse, so any called from F to F will not be marked norecurse.
-  for (Instruction &I : instructions(*F))
-    if (auto CS = CallSite(&I)) {
-      Function *Callee = CS.getCalledFunction();
-      if (!Callee || Callee == F || !Callee->doesNotRecurse())
-        // Function calls a potentially recursive function.
-        return false;
-    }
+  for (auto &BB : *F)
+    for (auto &I : BB.instructionsWithoutDebug())
+      if (auto CS = CallSite(&I)) {
+        Function *Callee = CS.getCalledFunction();
+        if (!Callee || Callee == F || !Callee->doesNotRecurse())
+          // Function calls a potentially recursive function.
+          return false;
+      }
 
   // Every call was to a non-recursive function other than this function, and
   // we have no indirect recursion as the SCC size is one. This function cannot

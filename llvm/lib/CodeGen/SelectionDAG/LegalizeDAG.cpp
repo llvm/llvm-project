@@ -1170,6 +1170,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
       }
     }
     break;
+    case ISD::FSHL:
+    case ISD::FSHR:
     case ISD::SRL_PARTS:
     case ISD::SRA_PARTS:
     case ISD::SHL_PARTS: {
@@ -3262,6 +3264,11 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     }
     break;
   }
+  case ISD::FSHL:
+  case ISD::FSHR:
+    if (TLI.expandFunnelShift(Node, Tmp1, DAG))
+      Results.push_back(Tmp1);
+    break;
   case ISD::SADDSAT:
   case ISD::UADDSAT:
   case ISD::SSUBSAT:
