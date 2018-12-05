@@ -1126,32 +1126,26 @@ SDValue VectorLegalizer::ExpandFSUB(SDValue Op) {
 }
 
 SDValue VectorLegalizer::ExpandCTPOP(SDValue Op) {
-  // Attempt to expand using TargetLowering.
   SDValue Result;
   if (TLI.expandCTPOP(Op.getNode(), Result, DAG))
     return Result;
 
-  // Otherwise go ahead and unroll.
   return DAG.UnrollVectorOp(Op.getNode());
 }
 
 SDValue VectorLegalizer::ExpandCTLZ(SDValue Op) {
-  // Attempt to expand using TargetLowering.
   SDValue Result;
   if (TLI.expandCTLZ(Op.getNode(), Result, DAG))
     return Result;
 
-  // Otherwise go ahead and unroll.
   return DAG.UnrollVectorOp(Op.getNode());
 }
 
 SDValue VectorLegalizer::ExpandCTTZ(SDValue Op) {
-  // Attempt to expand using TargetLowering.
   SDValue Result;
   if (TLI.expandCTTZ(Op.getNode(), Result, DAG))
     return Result;
 
-  // Otherwise go ahead and unroll.
   return DAG.UnrollVectorOp(Op.getNode());
 }
 

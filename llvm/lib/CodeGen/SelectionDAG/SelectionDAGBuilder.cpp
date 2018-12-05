@@ -1032,8 +1032,19 @@ SDValue SelectionDAGBuilder::getRoot() {
   }
 
   // Otherwise, we have to make a token factor node.
-  SDValue Root = DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other,
-                             PendingLoads);
+  // If we have >= 2^16 loads then split across multiple token factors as
+  // there's a 64k limit on the number of SDNode operands.
+  SDValue Root;
+  size_t Limit = (1 << 16) - 1;
+  while (PendingLoads.size() > Limit) {
+    unsigned SliceIdx = PendingLoads.size() - Limit;
+    auto ExtractedTFs = ArrayRef<SDValue>(PendingLoads).slice(SliceIdx, Limit);
+    SDValue NewTF =
+        DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other, ExtractedTFs);
+    PendingLoads.erase(PendingLoads.begin() + SliceIdx, PendingLoads.end());
+    PendingLoads.emplace_back(NewTF);
+  }
+  Root = DAG.getNode(ISD::TokenFactor, getCurSDLoc(), MVT::Other, PendingLoads);
   PendingLoads.clear();
   DAG.setRoot(Root);
   return Root;

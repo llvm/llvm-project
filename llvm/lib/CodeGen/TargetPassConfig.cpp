@@ -345,11 +345,39 @@ static AnalysisID getPassIDFromName(StringRef PassName) {
   return PI ? PI->getTypeInfo() : nullptr;
 }
 
+static std::pair<StringRef, unsigned>
+getPassNameAndInstanceNum(StringRef PassName) {
+  StringRef Name, InstanceNumStr;
+  std::tie(Name, InstanceNumStr) = PassName.split(',');
+
+  unsigned InstanceNum = 0;
+  if (!InstanceNumStr.empty() && InstanceNumStr.getAsInteger(10, InstanceNum))
+    report_fatal_error("invalid pass instance specifier " + PassName);
+
+  return std::make_pair(Name, InstanceNum);
+}
+
 void TargetPassConfig::setStartStopPasses() {
-  StartBefore = getPassIDFromName(StartBeforeOpt);
-  StartAfter = getPassIDFromName(StartAfterOpt);
-  StopBefore = getPassIDFromName(StopBeforeOpt);
-  StopAfter = getPassIDFromName(StopAfterOpt);
+  StringRef StartBeforeName;
+  std::tie(StartBeforeName, StartBeforeInstanceNum) =
+    getPassNameAndInstanceNum(StartBeforeOpt);
+
+  StringRef StartAfterName;
+  std::tie(StartAfterName, StartAfterInstanceNum) =
+    getPassNameAndInstanceNum(StartAfterOpt);
+
+  StringRef StopBeforeName;
+  std::tie(StopBeforeName, StopBeforeInstanceNum)
+    = getPassNameAndInstanceNum(StopBeforeOpt);
+
+  StringRef StopAfterName;
+  std::tie(StopAfterName, StopAfterInstanceNum)
+    = getPassNameAndInstanceNum(StopAfterOpt);
+
+  StartBefore = getPassIDFromName(StartBeforeName);
+  StartAfter = getPassIDFromName(StartAfterName);
+  StopBefore = getPassIDFromName(StopBeforeName);
+  StopAfter = getPassIDFromName(StopAfterName);
   if (StartBefore && StartAfter)
     report_fatal_error(Twine(StartBeforeOptName) + Twine(" and ") +
                        Twine(StartAfterOptName) + Twine(" specified!"));
@@ -493,9 +521,9 @@ void TargetPassConfig::addPass(Pass *P, bool verifyAfter, bool printAfter) {
   // and shouldn't reference it.
   AnalysisID PassID = P->getPassID();
 
-  if (StartBefore == PassID)
+  if (StartBefore == PassID && StartBeforeCount++ == StartBeforeInstanceNum)
     Started = true;
-  if (StopBefore == PassID)
+  if (StopBefore == PassID && StopBeforeCount++ == StopBeforeInstanceNum)
     Stopped = true;
   if (Started && !Stopped) {
     std::string Banner;
@@ -518,9 +546,11 @@ void TargetPassConfig::addPass(Pass *P, bool verifyAfter, bool printAfter) {
   } else {
     delete P;
   }
-  if (StopAfter == PassID)
+
+  if (StopAfter == PassID && StopAfterCount++ == StopAfterInstanceNum)
     Stopped = true;
-  if (StartAfter == PassID)
+
+  if (StartAfter == PassID && StartAfterCount++ == StartAfterInstanceNum)
     Started = true;
   if (Stopped && !Started)
     report_fatal_error("Cannot stop compilation after pass that is not run");

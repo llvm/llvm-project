@@ -1614,9 +1614,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
       unsigned Idx = CIdx->getZExtValue();
       if (!DemandedElts[Idx])
         return TLO.CombineTo(Op, Vec);
-      DemandedElts.clearBit(Idx);
 
-      if (SimplifyDemandedVectorElts(Vec, DemandedElts, KnownUndef,
+      APInt DemandedVecElts(DemandedElts);
+      DemandedVecElts.clearBit(Idx);
+      if (SimplifyDemandedVectorElts(Vec, DemandedVecElts, KnownUndef,
                                      KnownZero, TLO, Depth + 1))
         return true;
 
@@ -2998,8 +2999,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
 
 /// Returns true (and the GlobalValue and the offset) if the node is a
 /// GlobalAddress + offset.
-bool TargetLowering::isGAPlusOffset(SDNode *N, const GlobalValue *&GA,
+bool TargetLowering::isGAPlusOffset(SDNode *WN, const GlobalValue *&GA,
                                     int64_t &Offset) const {
+
+  SDNode *N = unwrapAddress(SDValue(WN, 0)).getNode();
+
   if (auto *GASD = dyn_cast<GlobalAddressSDNode>(N)) {
     GA = GASD->getGlobal();
     Offset += GASD->getOffset();

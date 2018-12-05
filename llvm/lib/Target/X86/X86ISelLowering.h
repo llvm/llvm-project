@@ -877,9 +877,6 @@ namespace llvm {
 
     SDValue unwrapAddress(SDValue N) const override;
 
-    bool isGAPlusOffset(SDNode *N, const GlobalValue* &GA,
-                        int64_t &Offset) const override;
-
     SDValue getReturnAddressFrameIndex(SelectionDAG &DAG) const;
 
     bool ExpandInlineAsm(CallInst *CI) const override;

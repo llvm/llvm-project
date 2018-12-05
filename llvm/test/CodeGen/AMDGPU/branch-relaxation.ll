@@ -444,7 +444,7 @@ endif:
 ; GCN-NEXT: s_xor_b64 exec, exec, [[TEMP_MASK1]]
 ; GCN-NEXT: ; mask branch [[RET:BB[0-9]+_[0-9]+]]
 
-; GCN: [[LOOP_BODY:BB[0-9]+_[0-9]+]]: ; %loop
+; GCN: [[LOOP_BODY:BB[0-9]+_[0-9]+]]: ; %loop{{$}}
 ; GCN: ;;#ASMSTART
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
@@ -453,7 +453,7 @@ endif:
 ; GCN: v_nop_e64
 ; GCN: v_nop_e64
 ; GCN: ;;#ASMEND
-; GCN: s_cbranch_execz [[RET]]
+; GCN: s_cbranch_vccz [[RET]]
 
 ; GCN-NEXT: [[LONGBB:BB[0-9]+_[0-9]+]]: ; %loop
 ; GCN-NEXT: ; in Loop: Header=[[LOOP_BODY]] Depth=1
