@@ -259,11 +259,12 @@ static void addAddressSanitizerPasses(const PassManagerBuilder &Builder,
   const CodeGenOptions &CGOpts = BuilderWrapper.getCGOpts();
   bool Recover = CGOpts.SanitizeRecover.has(SanitizerKind::Address);
   bool UseAfterScope = CGOpts.SanitizeAddressUseAfterScope;
+  bool UseOdrIndicator = CGOpts.SanitizeAddressUseOdrIndicator;
   bool UseGlobalsGC = asanUseGlobalsGC(T, CGOpts);
   PM.add(createAddressSanitizerFunctionPass(/*CompileKernel*/ false, Recover,
                                             UseAfterScope));
   PM.add(createAddressSanitizerModulePass(/*CompileKernel*/ false, Recover,
-                                          UseGlobalsGC));
+                                          UseGlobalsGC, UseOdrIndicator));
 }
 
 static void addKernelAddressSanitizerPasses(const PassManagerBuilder &Builder,
@@ -271,7 +272,8 @@ static void addKernelAddressSanitizerPasses(const PassManagerBuilder &Builder,
   PM.add(createAddressSanitizerFunctionPass(
       /*CompileKernel*/ true, /*Recover*/ true, /*UseAfterScope*/ false));
   PM.add(createAddressSanitizerModulePass(
-      /*CompileKernel*/ true, /*Recover*/ true));
+      /*CompileKernel*/ true, /*Recover*/ true, /*UseGlobalsGC*/ true,
+      /*UseOdrIndicator*/ false));
 }
 
 static void addHWAddressSanitizerPasses(const PassManagerBuilder &Builder,

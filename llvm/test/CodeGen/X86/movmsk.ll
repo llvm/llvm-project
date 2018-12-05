@@ -134,11 +134,10 @@ define i32 @demandedbits_v16i8(<16 x i8> %x) {
   ret i32 %2
 }
 
-; TODO: Simplify demanded vector elts
+; Simplify demanded vector elts
 define i32 @demandedelts_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: demandedelts_v4f32:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    movmskps %xmm0, %eax
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    retq

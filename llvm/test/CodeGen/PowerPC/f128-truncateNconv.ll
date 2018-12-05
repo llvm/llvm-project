@@ -1,4 +1,4 @@
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
+; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -verify-machineinstrs -enable-ppc-quad-precision \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
 

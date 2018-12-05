@@ -60,6 +60,11 @@ runs just before the pass that we are trying to test:
 
    ``llc -stop-after=machine-cp bug-trigger.ll > test.mir``
 
+If the same pass is run multiple times, a run index can be included
+after the name with a comma.
+
+   ``llc -stop-after=dead-mi-elimination,1 bug-trigger.ll > test.mir``
+
 After generating the input MIR file, you'll have to add a run line that uses
 the ``-run-pass`` option to it. In order to test the post register allocation
 pseudo instruction expansion pass on X86-64, a run line like the one shown

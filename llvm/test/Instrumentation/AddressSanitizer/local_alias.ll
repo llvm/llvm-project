@@ -1,4 +1,7 @@
-; RUN: opt < %s -asan -asan-module -asan-use-private-alias=1 -S | FileCheck %s
+; RUN: opt < %s -asan -asan-module -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-NOINDICATOR
+; RUN: opt < %s -asan -asan-module -asan-use-private-alias=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-NOINDICATOR
+; RUN: opt < %s -asan -asan-module -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-INDICATOR,CHECK-NOALIAS
+; RUN: opt < %s -asan -asan-module -asan-use-private-alias=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-INDICATOR
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -6,8 +9,10 @@ target triple = "x86_64-unknown-linux-gnu"
 @a = internal global [2 x i32] zeroinitializer, align 4
 
 ; Check that we generate internal alias and odr indicator symbols for global to be protected.
-; CHECK: @__odr_asan_gen_a = internal global i8 0, align 1
-; CHECK: @0 = private alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @a
+; CHECK-NOINDICATOR-NOT: __odr_asan_gen_a
+; CHECK-NOALIAS-NOT: private alias
+; CHECK-INDICATOR: @__odr_asan_gen_a = internal global i8 0, align 1
+; CHECK-ALIAS: @0 = private alias { [2 x i32], [56 x i8] }, { [2 x i32], [56 x i8] }* @a
 
 ; Function Attrs: nounwind sanitize_address uwtable
 define i32 @foo(i32 %M) #0 {

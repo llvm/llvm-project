@@ -365,7 +365,10 @@ static void thinLTOInternalizeAndPromoteGUID(
                // Ignore local and appending linkage values since the linker
                // doesn't resolve them.
                !GlobalValue::isLocalLinkage(S->linkage()) &&
-               !GlobalValue::isAppendingLinkage(S->linkage()))
+               S->linkage() != GlobalValue::AppendingLinkage &&
+               // We can't internalize available_externally globals because this
+               // can break function pointer equality.
+               S->linkage() != GlobalValue::AvailableExternallyLinkage)
       S->setLinkage(GlobalValue::InternalLinkage);
   }
 }

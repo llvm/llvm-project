@@ -1013,12 +1013,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     }
     unsigned MemSizeInBits = MemOp.getSize() * 8;
 
-    // FIXME: PR36018: Volatile loads in some cases are incorrectly selected by
-    // folding with an extend. Until we have a G_SEXTLOAD solution bail out if
-    // we hit one.
-    if (Opcode == TargetOpcode::G_LOAD && MemOp.isVolatile())
-      return false;
-
     const unsigned PtrReg = I.getOperand(1).getReg();
 #ifndef NDEBUG
     const RegisterBank &PtrRB = *RBI.getRegBank(PtrReg, MRI, TRI);

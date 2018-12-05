@@ -179,6 +179,7 @@ CODEGENOPT(SanitizeAddressPoisonCustomArrayCookie, 1,
               ///< global allocation function in AddressSanitizer
 CODEGENOPT(SanitizeAddressGlobalsDeadStripping, 1, 0) ///< Enable linker dead stripping
                                                       ///< of globals in AddressSanitizer
+CODEGENOPT(SanitizeAddressUseOdrIndicator, 1, 0) ///< Enable ODR indicator globals
 CODEGENOPT(SanitizeMemoryTrackOrigins, 2, 0) ///< Enable tracking origins in
                                              ///< MemorySanitizer
 CODEGENOPT(SanitizeMemoryUseAfterDtor, 1, 0) ///< Enable use-after-delete detection

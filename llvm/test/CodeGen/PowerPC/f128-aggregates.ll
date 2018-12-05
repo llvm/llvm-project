@@ -1,7 +1,7 @@
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
+; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s | FileCheck %s
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64-unknown-unknown \
+; RUN: llc -relocation-model=pic -mcpu=pwr9 -mtriple=powerpc64-unknown-unknown \
 ; RUN:   -enable-ppc-quad-precision -verify-machineinstrs \
 ; RUN:   -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names < %s \
 ; RUN:   | FileCheck -check-prefix=CHECK-BE %s

@@ -237,3 +237,40 @@ union G {
   // CHECK-NEXT: Field 0x{{[^ ]*}} '' 'G::(anonymous struct at {{.*}}:[[@LINE-19]]:3)'
   // CHECK-NEXT: Field 0x{{[^ ]*}} 'f' 'int'
 };
+
+struct Base1 {};
+struct Base2 {};
+struct Base3 {};
+
+struct Derived1 : Base1 {
+  // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+2]]:1> line:[[@LINE-1]]:8 struct Derived1 definition
+  // CHECK: public 'Base1'
+};
+
+struct Derived2 : private Base1 {
+  // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+2]]:1> line:[[@LINE-1]]:8 struct Derived2 definition
+  // CHECK: private 'Base1'
+};
+
+struct Derived3 : virtual Base1 {
+  // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+2]]:1> line:[[@LINE-1]]:8 struct Derived3 definition
+  // CHECK: virtual public 'Base1'
+};
+
+struct Derived4 : Base1, virtual Base2, protected Base3 {
+  // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+4]]:1> line:[[@LINE-1]]:8 struct Derived4 definition
+  // CHECK: public 'Base1'
+  // CHECK-NEXT: virtual public 'Base2'
+  // CHECK-NEXT: protected 'Base3'
+};
+
+struct Derived5 : protected virtual Base1 {
+  // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+2]]:1> line:[[@LINE-1]]:8 struct Derived5 definition
+  // CHECK: virtual protected 'Base1'
+};
+
+template <typename... Bases>
+struct Derived6 : virtual public Bases... {
+  // CHECK: CXXRecordDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+2]]:1> line:[[@LINE-1]]:8 struct Derived6 definition
+  // CHECK: virtual public 'Bases'...
+};

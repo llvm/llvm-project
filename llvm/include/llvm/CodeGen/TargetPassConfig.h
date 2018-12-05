@@ -90,6 +90,19 @@ private:
   AnalysisID StartAfter = nullptr;
   AnalysisID StopBefore = nullptr;
   AnalysisID StopAfter = nullptr;
+
+  unsigned StartBeforeInstanceNum = 0;
+  unsigned StartBeforeCount = 0;
+
+  unsigned StartAfterInstanceNum = 0;
+  unsigned StartAfterCount = 0;
+
+  unsigned StopBeforeInstanceNum = 0;
+  unsigned StopBeforeCount = 0;
+
+  unsigned StopAfterInstanceNum = 0;
+  unsigned StopAfterCount = 0;
+
   bool Started = true;
   bool Stopped = false;
   bool AddingMachinePasses = false;

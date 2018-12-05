@@ -1336,10 +1336,10 @@ Instruction *InstCombiner::foldICmpWithZero(ICmpInst &Cmp) {
 }
 
 /// Fold icmp Pred X, C.
-/// TODO: This code structure does not make much sense. The saturating add fold
+/// TODO: This code structure does not make sense. The saturating add fold
 /// should be moved to some other helper and extended as noted below (it is also
-/// possible that code has been made unnecessary - no regression test failures).
-/// The dominating compare fold should not be limited to compare with constant.
+/// possible that code has been made unnecessary - do we canonicalize IR to
+/// overflow/saturating intrinsics or not?).
 Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
   // Match the following pattern, which is a common idiom when writing
   // overflow-safe integer arithmetic functions. The source performs an addition
@@ -1361,36 +1361,48 @@ Instruction *InstCombiner::foldICmpWithConstant(ICmpInst &Cmp) {
     if (Instruction *Res = processUGT_ADDCST_ADD(Cmp, A, B, CI2, CI, *this))
       return Res;
 
-  if (Instruction *I = foldICmpWithDominatingICmp(Cmp))
-    return I;
-
   return nullptr;
 }
 
 /// Canonicalize icmp instructions based on dominating conditions.
 Instruction *InstCombiner::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
-  CmpInst::Predicate Pred = Cmp.getPredicate();
-  Value *X = Cmp.getOperand(0);
-  ConstantInt *CI = dyn_cast<ConstantInt>(Cmp.getOperand(1));
-  if (!CI)
+  // This is a cheap/incomplete check for dominance - just match a single
+  // predecessor with a conditional branch.
+  BasicBlock *CmpBB = Cmp.getParent();
+  BasicBlock *DomBB = CmpBB->getSinglePredecessor();
+  if (!DomBB)
     return nullptr;
 
-  BasicBlock *Parent = Cmp.getParent();
-  BasicBlock *Dom = Parent->getSinglePredecessor();
-  auto *BI = Dom ? dyn_cast<BranchInst>(Dom->getTerminator()) : nullptr;
-  ICmpInst::Predicate Pred2;
+  Value *DomCond;
   BasicBlock *TrueBB, *FalseBB;
-  ConstantInt *CI2;
-  if (BI && match(BI, m_Br(m_ICmp(Pred2, m_Specific(X), m_ConstantInt(CI2)),
-                           TrueBB, FalseBB)) &&
-      TrueBB != FalseBB) {
-    ConstantRange CR =
-        ConstantRange::makeAllowedICmpRegion(Pred, CI->getValue());
+  if (!match(DomBB->getTerminator(), m_Br(m_Value(DomCond), TrueBB, FalseBB)))
+    return nullptr;
+
+  assert((TrueBB == CmpBB || FalseBB == CmpBB) &&
+         "Predecessor block does not point to successor?");
+
+  // The branch should get simplified. Don't bother simplifying this condition.
+  if (TrueBB == FalseBB)
+    return nullptr;
+
+  CmpInst::Predicate Pred = Cmp.getPredicate();
+  Value *X = Cmp.getOperand(0), *Y = Cmp.getOperand(1);
+  ICmpInst::Predicate DomPred;
+  const APInt *C, *DomC;
+  if (match(DomCond, m_ICmp(DomPred, m_Specific(X), m_APInt(DomC))) &&
+      match(Y, m_APInt(C))) {
+    // We have 2 compares of a variable with constants. Calculate the constant
+    // ranges of those compares to see if we can transform the 2nd compare:
+    // DomBB:
+    //   DomCond = icmp DomPred X, DomC
+    //   br DomCond, CmpBB, FalseBB
+    // CmpBB:
+    //   Cmp = icmp Pred X, C
+    ConstantRange CR = ConstantRange::makeAllowedICmpRegion(Pred, *C);
     ConstantRange DominatingCR =
-        (Parent == TrueBB)
-            ? ConstantRange::makeExactICmpRegion(Pred2, CI2->getValue())
-            : ConstantRange::makeExactICmpRegion(
-                  CmpInst::getInversePredicate(Pred2), CI2->getValue());
+        (CmpBB == TrueBB) ? ConstantRange::makeExactICmpRegion(DomPred, *DomC)
+                          : ConstantRange::makeExactICmpRegion(
+                                CmpInst::getInversePredicate(DomPred), *DomC);
     ConstantRange Intersection = DominatingCR.intersectWith(CR);
     ConstantRange Difference = DominatingCR.difference(CR);
     if (Intersection.isEmptySet())
@@ -1398,23 +1410,20 @@ Instruction *InstCombiner::foldICmpWithDominatingICmp(ICmpInst &Cmp) {
     if (Difference.isEmptySet())
       return replaceInstUsesWith(Cmp, Builder.getTrue());
 
-    // If this is a normal comparison, it demands all bits. If it is a sign
-    // bit comparison, it only demands the sign bit.
-    bool UnusedBit;
-    bool IsSignBit = isSignBitCheck(Pred, CI->getValue(), UnusedBit);
-
     // Canonicalizing a sign bit comparison that gets used in a branch,
     // pessimizes codegen by generating branch on zero instruction instead
     // of a test and branch. So we avoid canonicalizing in such situations
     // because test and branch instruction has better branch displacement
     // than compare and branch instruction.
+    bool UnusedBit;
+    bool IsSignBit = isSignBitCheck(Pred, *C, UnusedBit);
     if (Cmp.isEquality() || (IsSignBit && hasBranchUse(Cmp)))
       return nullptr;
 
-    if (auto *AI = Intersection.getSingleElement())
-      return new ICmpInst(ICmpInst::ICMP_EQ, X, Builder.getInt(*AI));
-    if (auto *AD = Difference.getSingleElement())
-      return new ICmpInst(ICmpInst::ICMP_NE, X, Builder.getInt(*AD));
+    if (const APInt *EqC = Intersection.getSingleElement())
+      return new ICmpInst(ICmpInst::ICMP_EQ, X, Builder.getInt(*EqC));
+    if (const APInt *NeC = Difference.getSingleElement())
+      return new ICmpInst(ICmpInst::ICMP_NE, X, Builder.getInt(*NeC));
   }
 
   return nullptr;
@@ -4770,6 +4779,9 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
     return NewICmp;
 
   if (Instruction *Res = foldICmpWithConstant(I))
+    return Res;
+
+  if (Instruction *Res = foldICmpWithDominatingICmp(I))
     return Res;
 
   if (Instruction *Res = foldICmpUsingKnownBits(I))

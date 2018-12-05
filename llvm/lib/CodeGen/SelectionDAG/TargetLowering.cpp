@@ -2998,8 +2998,11 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
 
 /// Returns true (and the GlobalValue and the offset) if the node is a
 /// GlobalAddress + offset.
-bool TargetLowering::isGAPlusOffset(SDNode *N, const GlobalValue *&GA,
+bool TargetLowering::isGAPlusOffset(SDNode *WN, const GlobalValue *&GA,
                                     int64_t &Offset) const {
+
+  SDNode *N = unwrapAddress(SDValue(WN, 0)).getNode();
+
   if (auto *GASD = dyn_cast<GlobalAddressSDNode>(N)) {
     GA = GASD->getGlobal();
     Offset += GASD->getOffset();

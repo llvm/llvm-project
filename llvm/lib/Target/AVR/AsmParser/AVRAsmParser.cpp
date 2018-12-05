@@ -513,6 +513,7 @@ bool AVRAsmParser::parseOperand(OperandVector &Operands) {
     case AsmToken::Real:
       if (!tryParseExpression(Operands))
         return false;
+      break;
     default:
       break;
     }
