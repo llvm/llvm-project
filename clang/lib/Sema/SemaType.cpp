@@ -7201,7 +7201,10 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
        !IsPointee) ||
       // Do not deduce addr space of the void type, e.g. in f(void), otherwise
       // it will fail some sema check.
-      (T->isVoidType() && !IsPointee))
+      (T->isVoidType() && !IsPointee) ||
+      // Do not deduce address spaces for dependent types because they might end
+      // up instantiating to a type with an explicit address space qualifier.
+      T->isDependentType())
     return;
 
   LangAS ImpAddr = LangAS::Default;
@@ -7226,9 +7229,8 @@ static void deduceOpenCLImplicitAddrSpace(TypeProcessingState &State,
     if (IsPointee) {
       ImpAddr = LangAS::opencl_generic;
     } else {
-      if (D.getContext() == DeclaratorContext::TemplateArgContext ||
-          T->isDependentType()) {
-        // Do not deduce address space for non-pointee type in templates.
+      if (D.getContext() == DeclaratorContext::TemplateArgContext) {
+        // Do not deduce address space for non-pointee type in template arg.
       } else if (D.getContext() == DeclaratorContext::FileContext) {
         ImpAddr = LangAS::opencl_global;
       } else {

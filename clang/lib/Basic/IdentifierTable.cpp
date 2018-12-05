@@ -34,28 +34,6 @@
 using namespace clang;
 
 //===----------------------------------------------------------------------===//
-// IdentifierInfo Implementation
-//===----------------------------------------------------------------------===//
-
-IdentifierInfo::IdentifierInfo() {
-  TokenID = tok::identifier;
-  ObjCOrBuiltinID = 0;
-  HasMacro = false;
-  HadMacro = false;
-  IsExtension = false;
-  IsFutureCompatKeyword = false;
-  IsPoisoned = false;
-  IsCPPOperatorKeyword = false;
-  NeedsHandleIdentifier = false;
-  IsFromAST = false;
-  ChangedAfterLoad = false;
-  FEChangedAfterLoad = false;
-  RevertedTokenID = false;
-  OutOfDate = false;
-  IsModulesImport = false;
-}
-
-//===----------------------------------------------------------------------===//
 // IdentifierTable Implementation
 //===----------------------------------------------------------------------===//
 

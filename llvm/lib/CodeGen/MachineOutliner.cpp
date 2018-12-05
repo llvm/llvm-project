@@ -1041,7 +1041,7 @@ void MachineOutliner::emitOutlinedFunctionRemark(OutlinedFunction &OF) {
   MachineOptimizationRemark R(DEBUG_TYPE, "OutlinedFunction",
                               MBB->findDebugLoc(MBB->begin()), MBB);
   R << "Saved " << NV("OutliningBenefit", OF.getBenefit()) << " bytes by "
-    << "outlining " << NV("Length", OF.Sequence.size()) << " instructions "
+    << "outlining " << NV("Length", OF.getNumInstrs()) << " instructions "
     << "from " << NV("NumOccurrences", OF.getOccurrenceCount())
     << " locations. "
     << "(Found at: ";
@@ -1138,12 +1138,6 @@ unsigned MachineOutliner::findCandidates(
     // FIXME: This should take target-specified instruction sizes into account.
     if (OF.Candidates.size() < 2)
       continue;
-
-    std::vector<unsigned> Seq;
-    unsigned StartIdx = RS.StartIndices[0]; // Grab any start index.
-    for (unsigned i = StartIdx; i < StartIdx + StringLen; i++)
-      Seq.push_back(ST.Str[i]);
-    OF.Sequence = Seq;
 
     // Is it better to outline this candidate than not?
     if (OF.getBenefit() < 1) {
@@ -1342,7 +1336,8 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   // function. This makes sure the outlined function knows what kinds of
   // instructions are going into it. This is fine, since all parent functions
   // must necessarily support the instructions that are in the outlined region.
-  const Function &ParentFn = OF.Candidates.front()->getMF()->getFunction();
+  Candidate &FirstCand = *OF.Candidates.front();
+  const Function &ParentFn = FirstCand.getMF()->getFunction();
   if (ParentFn.hasFnAttribute("target-features"))
     F->addFnAttr(ParentFn.getFnAttribute("target-features"));
 
@@ -1359,11 +1354,9 @@ MachineOutliner::createOutlinedFunction(Module &M, const OutlinedFunction &OF,
   // Insert the new function into the module.
   MF.insert(MF.begin(), &MBB);
 
-  // Copy over the instructions for the function using the integer mappings in
-  // its sequence.
-  for (unsigned Str : OF.Sequence) {
-    MachineInstr *NewMI =
-        MF.CloneMachineInstr(Mapper.IntegerInstructionMap.find(Str)->second);
+  for (auto I = FirstCand.front(), E = std::next(FirstCand.back()); I != E;
+       ++I) {
+    MachineInstr *NewMI = MF.CloneMachineInstr(&*I);
     NewMI->dropMemRefs(MF);
 
     // Don't keep debug information for outlined instructions.

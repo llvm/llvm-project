@@ -27,5 +27,7 @@ struct wrapper {
 };
 
 wrapper<bool> x;
+// FIXME: We should really error here because of the redefinition of
+// friend_function_template.
 wrapper<int> y;
 }

@@ -151,7 +151,7 @@ raw_ostream &Control::log(raw_ostream &OS) const {
      << ", loc: (" << X << ", " << Y << "), size: [" << Width << ", " << Height
      << "]";
   if (Style)
-    OS << ", style: " << *Style;
+    OS << ", style: " << (*Style).getValue();
   if (ExtStyle)
     OS << ", ext. style: " << *ExtStyle;
   if (HelpID)

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ExprCXX.h"
@@ -1313,22 +1314,42 @@ public:
 
   void FoundDecl(NamedDecl *ND, NamedDecl *Hiding, DeclContext *Ctx,
                  bool InBaseClass) override {
-    // Naming class to use for access check. In most cases it was provided
-    // explicitly (e.g. member access (lhs.foo) or qualified lookup (X::)), for
-    // unqualified lookup we fallback to the \p Ctx in which we found the
-    // member.
-    auto *NamingClass = this->NamingClass;
-    if (!NamingClass)
-      NamingClass = llvm::dyn_cast_or_null<CXXRecordDecl>(Ctx);
-    bool Accessible =
-        Results.getSema().IsSimplyAccessible(ND, NamingClass, BaseType);
     ResultBuilder::Result Result(ND, Results.getBasePriority(ND), nullptr,
-                                 false, Accessible, FixIts);
+                                 false, IsAccessible(ND, Ctx), FixIts);
     Results.AddResult(Result, InitialLookupCtx, Hiding, InBaseClass);
   }
 
   void EnteredContext(DeclContext *Ctx) override {
     Results.addVisitedContext(Ctx);
+  }
+
+private:
+  bool IsAccessible(NamedDecl *ND, DeclContext *Ctx) {
+    // Naming class to use for access check. In most cases it was provided
+    // explicitly (e.g. member access (lhs.foo) or qualified lookup (X::)),
+    // for unqualified lookup we fallback to the \p Ctx in which we found the
+    // member.
+    auto *NamingClass = this->NamingClass;
+    QualType BaseType = this->BaseType;
+    if (auto *Cls = llvm::dyn_cast_or_null<CXXRecordDecl>(Ctx)) {
+      if (!NamingClass)
+        NamingClass = Cls;
+      // When we emulate implicit 'this->' in an unqualified lookup, we might
+      // end up with an invalid naming class. In that case, we avoid emulating
+      // 'this->' qualifier to satisfy preconditions of the access checking.
+      if (NamingClass->getCanonicalDecl() != Cls->getCanonicalDecl() &&
+          !NamingClass->isDerivedFrom(Cls)) {
+        NamingClass = Cls;
+        BaseType = QualType();
+      }
+    } else {
+      // The decl was found outside the C++ class, so only ObjC access checks
+      // apply. Those do not rely on NamingClass and BaseType, so we clear them
+      // out.
+      NamingClass = nullptr;
+      BaseType = QualType();
+    }
+    return Results.getSema().IsSimplyAccessible(ND, NamingClass, BaseType);
   }
 };
 } // namespace
