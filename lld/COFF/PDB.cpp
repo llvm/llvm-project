@@ -959,11 +959,10 @@ static void scopeStackClose(SmallVectorImpl<SymbolScope> &Stack,
   S.OpeningRecord->PtrEnd = CurOffset;
 }
 
-static bool symbolGoesInModuleStream(const CVSymbol &Sym) {
+static bool symbolGoesInModuleStream(const CVSymbol &Sym, bool IsGlobalScope) {
   switch (Sym.kind()) {
   case SymbolKind::S_GDATA32:
   case SymbolKind::S_CONSTANT:
-  case SymbolKind::S_UDT:
   // We really should not be seeing S_PROCREF and S_LPROCREF in the first place
   // since they are synthesized by the linker in response to S_GPROC32 and
   // S_LPROC32, but if we do see them, don't put them in the module stream I
@@ -971,6 +970,9 @@ static bool symbolGoesInModuleStream(const CVSymbol &Sym) {
   case SymbolKind::S_PROCREF:
   case SymbolKind::S_LPROCREF:
     return false;
+  // S_UDT records go in the module stream if it is not a global S_UDT.
+  case SymbolKind::S_UDT:
+    return !IsGlobalScope;
   // S_GDATA32 does not go in the module stream, but S_LDATA32 does.
   case SymbolKind::S_LDATA32:
   default:
@@ -978,7 +980,7 @@ static bool symbolGoesInModuleStream(const CVSymbol &Sym) {
   }
 }
 
-static bool symbolGoesInGlobalsStream(const CVSymbol &Sym) {
+static bool symbolGoesInGlobalsStream(const CVSymbol &Sym, bool IsGlobalScope) {
   switch (Sym.kind()) {
   case SymbolKind::S_CONSTANT:
   case SymbolKind::S_GDATA32:
@@ -992,13 +994,9 @@ static bool symbolGoesInGlobalsStream(const CVSymbol &Sym) {
   case SymbolKind::S_PROCREF:
   case SymbolKind::S_LPROCREF:
     return true;
-  // FIXME: For now, we drop all S_UDT symbols (i.e. they don't go in the
-  // globals stream or the modules stream).  These have special handling which
-  // needs more investigation before we can get right, but by putting them all
-  // into the globals stream WinDbg fails to display local variables of class
-  // types saying that it cannot find the type Foo *.  So as a stopgap just to
-  // keep things working, we drop them.
+  // S_UDT records go in the globals stream if it is a global S_UDT.
   case SymbolKind::S_UDT:
+    return IsGlobalScope;
   default:
     return false;
   }
@@ -1121,11 +1119,11 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
         // adding the symbol to the module since we may need to get the next
         // symbol offset, and writing to the module's symbol stream will update
         // that offset.
-        if (symbolGoesInGlobalsStream(Sym))
+        if (symbolGoesInGlobalsStream(Sym, Scopes.empty()))
           addGlobalSymbol(Builder.getGsiBuilder(),
                           File->ModuleDBI->getModuleIndex(), CurSymOffset, Sym);
 
-        if (symbolGoesInModuleStream(Sym)) {
+        if (symbolGoesInModuleStream(Sym, Scopes.empty())) {
           // Add symbols to the module in bulk. If this symbol is contiguous
           // with the previous run of symbols to add, combine the ranges. If
           // not, close the previous range of symbols and start a new one.

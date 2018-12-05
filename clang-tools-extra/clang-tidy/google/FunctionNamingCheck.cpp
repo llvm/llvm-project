@@ -98,8 +98,9 @@ void FunctionNamingCheck::registerMatchers(MatchFinder *Finder) {
   // main.
   Finder->addMatcher(
       functionDecl(
-          unless(isExpansionInSystemHeader()),
-          unless(anyOf(isMain(), matchesName(validFunctionNameRegex(true)),
+          unless(anyOf(isExpansionInSystemHeader(), cxxMethodDecl(),
+                       hasAncestor(namespaceDecl()), isMain(),
+                       matchesName(validFunctionNameRegex(true)),
                        allOf(isStaticStorageClass(),
                              matchesName(validFunctionNameRegex(false))))))
           .bind("function"),

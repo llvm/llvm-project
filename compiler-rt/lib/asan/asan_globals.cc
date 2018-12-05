@@ -183,9 +183,7 @@ static void CheckODRViolationViaPoisoning(const Global *g) {
 // This routine chooses between two different methods of ODR violation
 // detection.
 static inline bool UseODRIndicator(const Global *g) {
-  // Use ODR indicator method iff use_odr_indicator flag is set and
-  // indicator symbol address is not 0.
-  return flags()->use_odr_indicator && g->odr_indicator > 0;
+  return g->odr_indicator > 0;
 }
 
 // Register a global variable.

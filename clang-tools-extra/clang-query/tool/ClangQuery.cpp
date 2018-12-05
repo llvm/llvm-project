@@ -100,8 +100,19 @@ int main(int argc, const char **argv) {
   ClangTool Tool(OptionsParser.getCompilations(),
                  OptionsParser.getSourcePathList());
   std::vector<std::unique_ptr<ASTUnit>> ASTs;
-  if (Tool.buildASTs(ASTs) != 0)
+  int Status = Tool.buildASTs(ASTs);
+  int ASTStatus = 0;
+  if (Status == 1) {
+    // Building ASTs failed.
     return 1;
+  } else if (Status == 2) {
+    ASTStatus |= 1;
+    llvm::errs() << "Failed to build AST for some of the files, "
+                 << "results may be incomplete."
+                 << "\n";
+  } else {
+    assert(Status == 0 && "Unexpected status returned");
+  }
 
   QuerySession QS(ASTs);
 
@@ -134,5 +145,5 @@ int main(int argc, const char **argv) {
     }
   }
 
-  return 0;
+  return ASTStatus;
 }
