@@ -1443,5 +1443,3 @@ TypeTraitExpr *TypeTraitExpr::CreateDeserialized(const ASTContext &C,
   void *Mem = C.Allocate(totalSizeToAlloc<TypeSourceInfo *>(NumArgs));
   return new (Mem) TypeTraitExpr(EmptyShell());
 }
-
-void ArrayTypeTraitExpr::anchor() {}

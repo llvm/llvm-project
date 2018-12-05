@@ -18,3 +18,14 @@ void f() {
   foo(x);
   bar(x);
 }
+
+namespace PR39742 {
+template<typename>
+struct wrapper {
+  template<typename>
+  friend void friend_function_template() {}
+};
+
+wrapper<bool> x;
+wrapper<int> y;
+}

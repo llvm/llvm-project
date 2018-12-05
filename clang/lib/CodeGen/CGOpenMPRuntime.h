@@ -290,6 +290,10 @@ protected:
   /// default location.
   virtual unsigned getDefaultLocationReserved2Flags() const { return 0; }
 
+  /// Returns default flags for the barriers depending on the directive, for
+  /// which this barier is going to be emitted.
+  static unsigned getDefaultFlagsForBarriers(OpenMPDirectiveKind Kind);
+
   /// Get the LLVM type for the critical name.
   llvm::ArrayType *getKmpCriticalNameTy() const {return KmpCriticalNameTy;}
 

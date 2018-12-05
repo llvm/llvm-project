@@ -291,6 +291,14 @@ QualType QualType::getSingleStepDesugaredTypeImpl(QualType type,
   return Context.getQualifiedType(desugar, split.Quals);
 }
 
+// Check that no type class is polymorphic. LLVM style RTTI should be used
+// instead. If absolutely needed an exception can still be added here by
+// defining the appropriate macro (but please don't do this).
+#define TYPE(CLASS, BASE) \
+  static_assert(!std::is_polymorphic<CLASS##Type>::value, \
+                #CLASS "Type should not be polymorphic!");
+#include "clang/AST/TypeNodes.def"
+
 QualType Type::getLocallyUnqualifiedSingleStepDesugaredType() const {
   switch (getTypeClass()) {
 #define ABSTRACT_TYPE(Class, Parent)
