@@ -116,10 +116,19 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
 
   llvm::StringMapEntry<IdentifierInfo *> *Entry = nullptr;
 
+  IdentifierInfo()
+      : TokenID(tok::identifier), ObjCOrBuiltinID(0), HasMacro(false),
+        HadMacro(false), IsExtension(false), IsFutureCompatKeyword(false),
+        IsPoisoned(false), IsCPPOperatorKeyword(false),
+        NeedsHandleIdentifier(false), IsFromAST(false), ChangedAfterLoad(false),
+        FEChangedAfterLoad(false), RevertedTokenID(false), OutOfDate(false),
+        IsModulesImport(false) {}
+
 public:
-  IdentifierInfo();
   IdentifierInfo(const IdentifierInfo &) = delete;
   IdentifierInfo &operator=(const IdentifierInfo &) = delete;
+  IdentifierInfo(IdentifierInfo &&) = delete;
+  IdentifierInfo &operator=(IdentifierInfo &&) = delete;
 
   /// Return true if this is the identifier for the specified string.
   ///
@@ -138,31 +147,10 @@ public:
 
   /// Return the beginning of the actual null-terminated string for this
   /// identifier.
-  const char *getNameStart() const {
-    if (Entry) return Entry->getKeyData();
-    // FIXME: This is gross. It would be best not to embed specific details
-    // of the PTH file format here.
-    // The 'this' pointer really points to a
-    // std::pair<IdentifierInfo, const char*>, where internal pointer
-    // points to the external string data.
-    using actualtype = std::pair<IdentifierInfo, const char *>;
-
-    return ((const actualtype*) this)->second;
-  }
+  const char *getNameStart() const { return Entry->getKeyData(); }
 
   /// Efficiently return the length of this identifier info.
-  unsigned getLength() const {
-    if (Entry) return Entry->getKeyLength();
-    // FIXME: This is gross. It would be best not to embed specific details
-    // of the PTH file format here.
-    // The 'this' pointer really points to a
-    // std::pair<IdentifierInfo, const char*>, where internal pointer
-    // points to the external string data.
-    using actualtype = std::pair<IdentifierInfo, const char *>;
-
-    const char* p = ((const actualtype*) this)->second - 2;
-    return (((unsigned) p[0]) | (((unsigned) p[1]) << 8)) - 1;
-  }
+  unsigned getLength() const { return Entry->getKeyLength(); }
 
   /// Return the actual identifier string.
   StringRef getName() const {

@@ -89,8 +89,8 @@ private:
   Expected<IntOrString> readTypeOrName();  // Parse an integer or an identifier.
 
   // Helper integer expression parsing methods.
-  Expected<RCInt> parseIntExpr1();
-  Expected<RCInt> parseIntExpr2();
+  Expected<IntWithNotMask> parseIntExpr1();
+  Expected<IntWithNotMask> parseIntExpr2();
 
   // Advance the state by one, discarding the current token.
   // If the discarded token had an incorrect type, fail.

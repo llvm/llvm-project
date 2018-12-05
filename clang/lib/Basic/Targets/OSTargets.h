@@ -257,6 +257,8 @@ protected:
     Builder.defineMacro("__HAIKU__");
     Builder.defineMacro("__ELF__");
     DefineStd(Builder, "unix", Opts);
+    if (this->HasFloat128) 
+      Builder.defineMacro("__FLOAT128__");
   }
 
 public:
@@ -267,6 +269,14 @@ public:
     this->PtrDiffType = TargetInfo::SignedLong;
     this->ProcessIDType = TargetInfo::SignedLong;
     this->TLSSupported = false;
+    switch (Triple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::x86:
+    case llvm::Triple::x86_64:
+      this->HasFloat128 = true;
+      break;
+    }
   }
 };
 

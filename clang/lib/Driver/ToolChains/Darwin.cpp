@@ -1682,6 +1682,38 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   }
 }
 
+void DarwinClang::AddClangCXXStdlibIncludeArgs(
+    const llvm::opt::ArgList &DriverArgs,
+    llvm::opt::ArgStringList &CC1Args) const {
+  // The implementation from a base class will pass through the -stdlib to
+  // CC1Args.
+  // FIXME: this should not be necessary, remove usages in the frontend
+  //        (e.g. HeaderSearchOptions::UseLibcxx) and don't pipe -stdlib.
+  ToolChain::AddClangCXXStdlibIncludeArgs(DriverArgs, CC1Args);
+
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc) ||
+      DriverArgs.hasArg(options::OPT_nostdincxx))
+    return;
+
+  switch (GetCXXStdlibType(DriverArgs)) {
+  case ToolChain::CST_Libcxx: {
+    llvm::StringRef InstallDir = getDriver().getInstalledDir();
+    if (InstallDir.empty())
+      break;
+    // On Darwin, libc++ may be installed alongside the compiler in
+    // include/c++/v1.
+    // Get from 'foo/bin' to 'foo'.
+    SmallString<128> P = llvm::sys::path::parent_path(InstallDir);
+    // Get to 'foo/include/c++/v1'.
+    llvm::sys::path::append(P, "include", "c++", "v1");
+    addSystemInclude(DriverArgs, CC1Args, P);
+    break;
+  }
+  case ToolChain::CST_Libstdcxx:
+    // FIXME: should we do something about it?
+    break;
+  }
+}
 void DarwinClang::AddCXXStdlibLibArgs(const ArgList &Args,
                                       ArgStringList &CmdArgs) const {
   CXXStdlibType Type = GetCXXStdlibType(Args);

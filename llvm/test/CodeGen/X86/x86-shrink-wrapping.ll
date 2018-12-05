@@ -126,7 +126,7 @@ for.preheader:
 for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %for.preheader ]
   %sum.04 = phi i32 [ %add, %for.body ], [ 0, %for.preheader ]
-  %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
+  %call = tail call i32 asm sideeffect "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.04
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 10
@@ -178,7 +178,7 @@ for.preheader:
 for.body:                                         ; preds = %for.body, %entry
   %i.04 = phi i32 [ 0, %for.preheader ], [ %inc, %for.body ]
   %sum.03 = phi i32 [ 0, %for.preheader ], [ %add, %for.body ]
-  %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
+  %call = tail call i32 asm sideeffect "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.03
   %inc = add nuw nsw i32 %i.04, 1
   %exitcond = icmp eq i32 %inc, 10
@@ -248,7 +248,7 @@ for.preheader:
 for.body:                                         ; preds = %entry, %for.body
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %for.preheader ]
   %sum.04 = phi i32 [ %add, %for.body ], [ 0, %for.preheader ]
-  %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
+  %call = tail call i32 asm sideeffect "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.04
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 10
@@ -324,7 +324,7 @@ if.then:                                          ; preds = %entry
 for.body:                                         ; preds = %for.body, %if.then
   %i.05 = phi i32 [ 0, %if.then ], [ %inc, %for.body ]
   %sum.04 = phi i32 [ 0, %if.then ], [ %add, %for.body ]
-  %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
+  %call = tail call i32 asm sideeffect "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.04
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 10

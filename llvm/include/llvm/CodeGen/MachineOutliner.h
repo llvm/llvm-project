@@ -179,10 +179,6 @@ public:
   /// This is initialized after we go through and create the actual function.
   MachineFunction *MF = nullptr;
 
-  /// The sequence of integers corresponding to the instructions in this
-  /// function.
-  std::vector<unsigned> Sequence;
-
   /// Represents the size of a sequence in bytes. (Some instructions vary
   /// widely in size, so just counting the instructions isn't very useful.)
   unsigned SequenceSize;
@@ -194,7 +190,7 @@ public:
   unsigned FrameConstructionID;
 
   /// Return the number of candidates for this \p OutlinedFunction.
-  unsigned getOccurrenceCount() { return OccurrenceCount; }
+  unsigned getOccurrenceCount() const { return OccurrenceCount; }
 
   /// Decrement the occurrence count of this OutlinedFunction and return the
   /// new count.
@@ -206,24 +202,29 @@ public:
 
   /// Return the number of bytes it would take to outline this
   /// function.
-  unsigned getOutliningCost() {
+  unsigned getOutliningCost() const {
     unsigned CallOverhead = 0;
-    for (std::shared_ptr<Candidate> &C : Candidates)
+    for (const std::shared_ptr<Candidate> &C : Candidates)
       CallOverhead += C->getCallOverhead();
     return CallOverhead + SequenceSize + FrameOverhead;
   }
 
   /// Return the size in bytes of the unoutlined sequences.
-  unsigned getNotOutlinedCost() { return OccurrenceCount * SequenceSize; }
+  unsigned getNotOutlinedCost() const {
+    return getOccurrenceCount() * SequenceSize;
+  }
 
   /// Return the number of instructions that would be saved by outlining
   /// this function.
-  unsigned getBenefit() {
+  unsigned getBenefit() const {
     unsigned NotOutlinedCost = getNotOutlinedCost();
     unsigned OutlinedCost = getOutliningCost();
     return (NotOutlinedCost < OutlinedCost) ? 0
                                             : NotOutlinedCost - OutlinedCost;
   }
+
+  /// Return the number of instructions in this sequence.
+  unsigned getNumInstrs() const { return Candidates[0]->getLength(); }
 
   OutlinedFunction(std::vector<Candidate> &Cands,
                    unsigned SequenceSize, unsigned FrameOverhead,
@@ -234,7 +235,7 @@ public:
     for (Candidate &C : Cands)
       Candidates.push_back(std::make_shared<outliner::Candidate>(C));
 
-    unsigned B = getBenefit();
+    const unsigned B = getBenefit();
     for (std::shared_ptr<Candidate> &C : Candidates)
       C->Benefit = B;
   }

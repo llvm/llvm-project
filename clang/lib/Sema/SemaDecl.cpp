@@ -12427,13 +12427,6 @@ Decl *Sema::ActOnParamDeclarator(Scope *S, Declarator &D) {
         D.setInvalidType(true);
       }
     }
-
-    if (LangOpts.CPlusPlus) {
-      DeclarationNameInfo DNI = GetNameForDeclarator(D);
-      if (auto *RD = dyn_cast<CXXRecordDecl>(CurContext))
-        CheckShadowInheritedFields(DNI.getLoc(), DNI.getName(), RD,
-                                   /*DeclIsField*/ false);
-    }
   }
 
   // Temporarily put parameter variables in the translation unit, not

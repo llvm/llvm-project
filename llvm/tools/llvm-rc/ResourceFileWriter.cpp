@@ -987,7 +987,8 @@ Error ResourceFileWriter::writeSingleDialogControl(const Control &Ctl,
   padStream(sizeof(uint32_t));
 
   auto TypeInfo = Control::SupportedCtls.lookup(Ctl.Type);
-  uint32_t CtlStyle = TypeInfo.Style | Ctl.Style.getValueOr(0);
+  IntWithNotMask CtlStyle(TypeInfo.Style);
+  CtlStyle |= Ctl.Style.getValueOr(RCInt(0));
   uint32_t CtlExtStyle = Ctl.ExtStyle.getValueOr(0);
 
   // DIALOG(EX) item header prefix.
@@ -995,7 +996,7 @@ Error ResourceFileWriter::writeSingleDialogControl(const Control &Ctl,
     struct {
       ulittle32_t Style;
       ulittle32_t ExtStyle;
-    } Prefix{ulittle32_t(CtlStyle), ulittle32_t(CtlExtStyle)};
+    } Prefix{ulittle32_t(CtlStyle.getValue()), ulittle32_t(CtlExtStyle)};
     writeObject(Prefix);
   } else {
     struct {
@@ -1003,7 +1004,7 @@ Error ResourceFileWriter::writeSingleDialogControl(const Control &Ctl,
       ulittle32_t ExtStyle;
       ulittle32_t Style;
     } Prefix{ulittle32_t(Ctl.HelpID.getValueOr(0)), ulittle32_t(CtlExtStyle),
-             ulittle32_t(CtlStyle)};
+             ulittle32_t(CtlStyle.getValue())};
     writeObject(Prefix);
   }
 
