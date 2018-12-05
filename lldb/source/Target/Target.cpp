@@ -2495,12 +2495,12 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
             &error, eLanguageTypeSwift, create_on_demand));
   }
 
-  StackFrameWP frame = exe_scope.CalculateStackFrame();
-  StackFrameSP frame_sp = StackFrameSP(frame.lock());
+  StackFrameSP frame_sp = exe_scope.CalculateStackFrame();
   if (frame_sp && frame_sp.get() && swift_ast_ctx &&
       !swift_ast_ctx->HasFatalErrors()) {
-    SymbolContext sc = frame_sp->GetSymbolContext(true);
-    swift_ast_ctx->PerformAutoImport(*swift_ast_ctx, sc, frame, nullptr, error);
+    StackFrameWP frame_wp(frame_sp);
+    SymbolContext sc = frame_sp->GetSymbolContext(lldb::eSymbolContextEverything);
+    swift_ast_ctx->PerformAutoImport(*swift_ast_ctx, sc, frame_wp, nullptr, error);
   }
 
   return SwiftASTContextReader(GetSwiftScratchContextLock(), swift_ast_ctx);
