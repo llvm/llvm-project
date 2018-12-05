@@ -21,11 +21,12 @@ struct OSObject {
 
   unsigned int foo() { return 42; }
 
+  virtual OS_RETURNS_NOT_RETAINED OSObject *identity();
+
   static OSObject *generateObject(int);
 
   static OSObject *getObject();
   static OSObject *GetObject();
-
 
   static void * operator new(size_t size);
 
@@ -40,6 +41,12 @@ struct OSIterator : public OSObject {
 struct OSArray : public OSObject {
   unsigned int getCount();
 
+  OSIterator * getIterator();
+
+  OSObject *identity() override;
+
+  virtual void consumeReference(OS_CONSUME OSArray *other);
+
   static OSArray *generateArrayHasCode() {
     return new OSArray;
   }
@@ -51,12 +58,16 @@ struct OSArray : public OSObject {
     return nullptr;
   }
 
-  OSIterator * getIterator();
-
   static OS_RETURNS_NOT_RETAINED OSArray *MaskedGetter();
   static OS_RETURNS_RETAINED OSArray *getOoopsActuallyCreate();
 
   static const OSMetaClass * const metaClass;
+};
+
+struct MyArray : public OSArray {
+  void consumeReference(OSArray *other) override;
+
+  OSObject *identity() override;
 };
 
 struct OtherStruct {
@@ -67,6 +78,27 @@ struct OtherStruct {
 struct OSMetaClassBase {
   static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
 };
+
+void check_param_attribute_propagation(MyArray *parent) {
+  OSArray *arr = new OSArray;
+  parent->consumeReference(arr);
+}
+
+unsigned int check_attribute_propagation(OSArray *arr) {
+  OSObject *other = arr->identity();
+  OSArray *casted = OSDynamicCast(OSArray, other);
+  if (casted)
+    return casted->getCount();
+  return 0;
+}
+
+unsigned int check_attribute_indirect_propagation(MyArray *arr) {
+  OSObject *other = arr->identity();
+  OSArray *casted = OSDynamicCast(OSArray, other);
+  if (casted)
+    return casted->getCount();
+  return 0;
+}
 
 void check_free_no_error() {
   OSArray *arr = OSArray::withCapacity(10);
