@@ -71,6 +71,17 @@ struct __sanitizer_regmatch {
   OFF_T rm_eo;
 };
 
+typedef struct __sanitizer_modctl_load {
+  const char *ml_filename;
+  int ml_flags;
+  const char *ml_props;
+  uptr ml_propslen;
+} __sanitizer_modctl_load_t;
+extern const int modctl_load;
+extern const int modctl_unload;
+extern const int modctl_stat;
+extern const int modctl_exists;
+
 union __sanitizer_sigval {
   int sival_int;
   uptr sival_ptr;
