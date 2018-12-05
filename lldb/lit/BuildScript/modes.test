@@ -1,3 +1,5 @@
+REQUIRES: system-windows
+
 RUN: %build -n --verbose --arch=32 --mode=compile --compiler=any -o %t/foo.out foobar.c \
 RUN:    | FileCheck --check-prefix=COMPILE %s
 
