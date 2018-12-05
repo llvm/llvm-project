@@ -26,7 +26,7 @@ RefsAre(std::vector<testing::Matcher<Ref>> Matchers) {
 }
 // URI cannot be empty since it references keys in the IncludeGraph.
 MATCHER(EmptyIncludeNode, "") {
-  return !arg.IsTU && !arg.URI.empty() && arg.Digest == FileDigest{0} &&
+  return !arg.IsTU && !arg.URI.empty() && arg.Digest == FileDigest{{0}} &&
          arg.DirectIncludes.empty();
 }
 
@@ -205,7 +205,7 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
       ShardSource->Sources->lookup("unittest:///root/A.cc").DirectIncludes,
       UnorderedElementsAre("unittest:///root/A.h"));
   EXPECT_NE(ShardSource->Sources->lookup("unittest:///root/A.cc").Digest,
-            FileDigest{0});
+            FileDigest{{0}});
   EXPECT_THAT(ShardSource->Sources->lookup("unittest:///root/A.h"),
               EmptyIncludeNode());
 
@@ -216,7 +216,7 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
       ShardHeader->Sources->lookup("unittest:///root/A.h").DirectIncludes,
       UnorderedElementsAre("unittest:///root/B.h"));
   EXPECT_NE(ShardHeader->Sources->lookup("unittest:///root/A.h").Digest,
-            FileDigest{0});
+            FileDigest{{0}});
   EXPECT_THAT(ShardHeader->Sources->lookup("unittest:///root/B.h"),
               EmptyIncludeNode());
 }

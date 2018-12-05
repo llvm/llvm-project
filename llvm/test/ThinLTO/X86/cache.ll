@@ -1,5 +1,7 @@
-; Verify first that *without* hash, we don't use the cache.
+; NetBSD: noatime mounts currently inhibit 'touch -a' updates
+; UNSUPPORTED: system-netbsd
 
+; Verify first that *without* hash, we don't use the cache.
 ; RUN: opt -module-summary %s -o %t.bc
 ; RUN: opt -module-summary %p/Inputs/cache.ll -o %t2.bc
 

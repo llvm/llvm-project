@@ -11,7 +11,7 @@
 // RUN: %clangxx -DBUILD_UNINSTRUMENTED_DSO=1 -fPIC -shared %s -o %t-UNINSTRUMENTED-SO.so
 // RUN: %clangxx %s -c -mllvm -asan-use-private-alias -o %t.o
 // RUN: %clangxx_asan %t.o %t-UNINSTRUMENTED-SO.so %t-INSTRUMENTED-SO.so -o %t-EXE
-// RUN: %env_asan_opts=use_odr_indicator=true %run %t-EXE
+// RUN: %run %t-EXE
 
 #if defined (BUILD_INSTRUMENTED_DSO)
 long h = 15;

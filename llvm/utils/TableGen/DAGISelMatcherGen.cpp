@@ -1000,9 +1000,16 @@ void MatcherGen::EmitResultCode() {
   }
 
   assert(Ops.size() >= NumSrcResults && "Didn't provide enough results");
-  Ops.resize(NumSrcResults);
+  SmallVector<unsigned, 8> Results(Ops);
 
-  AddMatcher(new CompleteMatchMatcher(Ops, Pattern));
+  // Apply result permutation.
+  for (unsigned ResNo = 0; ResNo < Pattern.getDstPattern()->getNumResults();
+       ++ResNo) {
+    Results[ResNo] = Ops[Pattern.getDstPattern()->getResultIndex(ResNo)];
+  }
+
+  Results.resize(NumSrcResults);
+  AddMatcher(new CompleteMatchMatcher(Results, Pattern));
 }
 
 

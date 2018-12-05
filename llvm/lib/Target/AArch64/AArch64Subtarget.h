@@ -385,6 +385,8 @@ public:
   bool isCallingConvWin64(CallingConv::ID CC) const {
     switch (CC) {
     case CallingConv::C:
+    case CallingConv::Fast:
+    case CallingConv::Swift:
       return isTargetWindows();
     case CallingConv::Win64:
       return true;

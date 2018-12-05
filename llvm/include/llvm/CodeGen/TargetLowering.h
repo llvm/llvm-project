@@ -3689,6 +3689,12 @@ public:
                  SDValue LL = SDValue(), SDValue LH = SDValue(),
                  SDValue RL = SDValue(), SDValue RH = SDValue()) const;
 
+  /// Expand funnel shift.
+  /// \param N Node to expand
+  /// \param Result output after conversion
+  /// \returns True, if the expansion was successful, false otherwise
+  bool expandFunnelShift(SDNode *N, SDValue &Result, SelectionDAG &DAG) const;
+
   /// Expand float(f32) to SINT(i64) conversion
   /// \param N Node to expand
   /// \param Result output after conversion

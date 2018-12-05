@@ -56,7 +56,7 @@ if(LLDB_BUILD_FRAMEWORK)
   # the framework, and must be defined before building liblldb.
   set(PRODUCT_NAME "LLDB")
   set(EXECUTABLE_NAME "LLDB")
-  set(CURRENT_PROJECT_VERSION "${LLDB_VERSION}")
+  set(CURRENT_PROJECT_VERSION "${LLDB_VERSION_MAJOR}.${LLDB_VERSION_MINOR}.${LLDB_VERSION_PATCH}")
   set(LLDB_SUITE_TARGET lldb-framework)
 
   set(LLDB_FRAMEWORK_DIR

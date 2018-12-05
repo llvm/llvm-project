@@ -125,11 +125,11 @@ def FeaturePredictableSelectIsExpensive : SubtargetFeature<
 
 def FeatureCustomCheapAsMoveHandling : SubtargetFeature<"custom-cheap-as-move",
     "CustomAsCheapAsMove", "true",
-    "Use custom code for TargetInstrInfo::isAsCheapAsAMove()">;
+    "Use custom handling of cheap instructions">;
 
 def FeatureExynosCheapAsMoveHandling : SubtargetFeature<"exynos-cheap-as-move",
     "ExynosAsCheapAsMove", "true",
-    "Use Exynos specific code in TargetInstrInfo::isAsCheapAsAMove()",
+    "Use Exynos specific handling of cheap instructions",
     [FeatureCustomCheapAsMoveHandling]>;
 
 def FeaturePostRAScheduler : SubtargetFeature<"use-postra-scheduler",

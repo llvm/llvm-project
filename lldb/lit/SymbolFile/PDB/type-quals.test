@@ -1,6 +1,6 @@
 REQUIRES: system-windows, msvc
-RUN: %clang_cl -m32 /Z7 /c /GS- %S/Inputs/TypeQualsTest.cpp /o %T/TypeQualsTest.cpp.obj
-RUN: %msvc_link %T/TypeQualsTest.cpp.obj /DEBUG /nodefaultlib /ENTRY:main /OUT:%T/TypeQualsTest.cpp.exe
+RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%T/TypeQualsTest.cpp.obj %S/Inputs/TypeQualsTest.cpp
+RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%T/TypeQualsTest.cpp.exe %T/TypeQualsTest.cpp.obj
 RUN: lldb-test symbols %T/TypeQualsTest.cpp.exe | FileCheck %s
 
 CHECK: Module [[MOD:.*]]

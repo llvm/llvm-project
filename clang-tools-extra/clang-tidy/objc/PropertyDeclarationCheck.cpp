@@ -29,102 +29,10 @@ namespace {
 // For CategoryProperty especially in categories of system class,
 // to avoid naming conflict, the suggested naming style is
 // 'abc_lowerCamelCase' (adding lowercase prefix followed by '_').
+// Regardless of the style, all acronyms and initialisms should be capitalized.
 enum NamingStyle {
   StandardProperty = 1,
   CategoryProperty = 2,
-};
-
-/// The acronyms are aggregated from multiple sources including
-/// https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/CodingGuidelines/Articles/APIAbbreviations.html#//apple_ref/doc/uid/20001285-BCIHCGAE
-///
-/// Keep this list sorted.
-constexpr llvm::StringLiteral DefaultSpecialAcronyms[] = {
-    "[2-9]G",
-    "ACL",
-    "API",
-    "APN",
-    "APNS",
-    "AR",
-    "ARGB",
-    "ASCII",
-    "AV",
-    "BGRA",
-    "CA",
-    "CDN",
-    "CF",
-    "CG",
-    "CI",
-    "CRC",
-    "CV",
-    "CMYK",
-    "DNS",
-    "FPS",
-    "FTP",
-    "GIF",
-    "GL",
-    "GPS",
-    "GUID",
-    "HD",
-    "HDR",
-    "HMAC",
-    "HTML",
-    "HTTP",
-    "HTTPS",
-    "HUD",
-    "ID",
-    "JPG",
-    "JS",
-    "JSON",
-    "LAN",
-    "LZW",
-    "LTR",
-    "MAC",
-    "MD",
-    "MDNS",
-    "MIDI",
-    "NS",
-    "OS",
-    "P2P",
-    "PDF",
-    "PIN",
-    "PNG",
-    "POI",
-    "PSTN",
-    "PTR",
-    "QA",
-    "QOS",
-    "RGB",
-    "RGBA",
-    "RGBX",
-    "RIPEMD",
-    "ROM",
-    "RPC",
-    "RTF",
-    "RTL",
-    "SC",
-    "SDK",
-    "SHA",
-    "SQL",
-    "SSO",
-    "TCP",
-    "TIFF",
-    "TOS",
-    "TTS",
-    "UI",
-    "URI",
-    "URL",
-    "UUID",
-    "VC",
-    "VO",
-    "VOIP",
-    "VPN",
-    "VR",
-    "W",
-    "WAN",
-    "X",
-    "XML",
-    "Y",
-    "Z",
 };
 
 /// For now we will only fix 'CamelCase' or 'abc_CamelCase' property to
@@ -150,26 +58,26 @@ FixItHint generateFixItHint(const ObjCPropertyDecl *Decl, NamingStyle Style) {
   return FixItHint();
 }
 
-std::string AcronymsGroupRegex(llvm::ArrayRef<std::string> EscapedAcronyms) {
-  return "(" +
-         llvm::join(EscapedAcronyms.begin(), EscapedAcronyms.end(), "s?|") +
-         "s?)";
-}
-
-std::string validPropertyNameRegex(llvm::ArrayRef<std::string> EscapedAcronyms,
-                                   bool UsedInMatcher) {
+std::string validPropertyNameRegex(bool UsedInMatcher) {
   // Allow any of these names:
   // foo
   // fooBar
   // url
   // urlString
+  // ID
+  // IDs
   // URL
   // URLString
   // bundleID
+  // CIColor
+  //
+  // Disallow names of this form:
+  // LongString
+  //
+  // aRbITRaRyCapS is allowed to avoid generating false positives for names
+  // like isVitaminBSupplement, CProgrammingLanguage, and isBeforeM.
   std::string StartMatcher = UsedInMatcher ? "::" : "^";
-  std::string AcronymsMatcher = AcronymsGroupRegex(EscapedAcronyms);
-  return StartMatcher + "(" + AcronymsMatcher + "[A-Z]?)?[a-z]+[a-z0-9]*(" +
-         AcronymsMatcher + "|([A-Z][a-z0-9]+)|A|I)*$";
+  return StartMatcher + "([a-z]|[A-Z][A-Z0-9])[a-z0-9A-Z]*$";
 }
 
 bool hasCategoryPropertyPrefix(llvm::StringRef PropertyName) {
@@ -177,8 +85,7 @@ bool hasCategoryPropertyPrefix(llvm::StringRef PropertyName) {
   return RegexExp.match(PropertyName);
 }
 
-bool prefixedPropertyNameValid(llvm::StringRef PropertyName,
-                               llvm::ArrayRef<std::string> Acronyms) {
+bool prefixedPropertyNameValid(llvm::StringRef PropertyName) {
   size_t Start = PropertyName.find_first_of('_');
   assert(Start != llvm::StringRef::npos && Start + 1 < PropertyName.size());
   auto Prefix = PropertyName.substr(0, Start);
@@ -186,7 +93,7 @@ bool prefixedPropertyNameValid(llvm::StringRef PropertyName,
     return false;
   }
   auto RegexExp =
-      llvm::Regex(llvm::StringRef(validPropertyNameRegex(Acronyms, false)));
+      llvm::Regex(llvm::StringRef(validPropertyNameRegex(false)));
   return RegexExp.match(PropertyName.substr(Start + 1));
 }
 }  // namespace
@@ -203,26 +110,11 @@ void PropertyDeclarationCheck::registerMatchers(MatchFinder *Finder) {
   // this check should only be applied to ObjC sources.
   if (!getLangOpts().ObjC) return;
 
-  if (IncludeDefaultAcronyms) {
-    EscapedAcronyms.reserve(llvm::array_lengthof(DefaultSpecialAcronyms) +
-                            SpecialAcronyms.size());
-    // No need to regex-escape the default acronyms.
-    EscapedAcronyms.insert(EscapedAcronyms.end(),
-                           std::begin(DefaultSpecialAcronyms),
-                           std::end(DefaultSpecialAcronyms));
-  } else {
-    EscapedAcronyms.reserve(SpecialAcronyms.size());
-  }
-  // In case someone defines a prefix which includes a regex
-  // special character, regex-escape all the user-defined prefixes.
-  std::transform(SpecialAcronyms.begin(), SpecialAcronyms.end(),
-                 std::back_inserter(EscapedAcronyms),
-                 [](const std::string &s) { return llvm::Regex::escape(s); });
   Finder->addMatcher(
       objcPropertyDecl(
           // the property name should be in Lower Camel Case like
           // 'lowerCamelCase'
-          unless(matchesName(validPropertyNameRegex(EscapedAcronyms, true))))
+          unless(matchesName(validPropertyNameRegex(true))))
           .bind("property"),
       this);
 }
@@ -234,14 +126,9 @@ void PropertyDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
   auto *DeclContext = MatchedDecl->getDeclContext();
   auto *CategoryDecl = llvm::dyn_cast<ObjCCategoryDecl>(DeclContext);
 
-  auto SingleAcronymRegex =
-      llvm::Regex("^([a-zA-Z]+_)?" + AcronymsGroupRegex(EscapedAcronyms) + "$");
-  if (SingleAcronymRegex.match(MatchedDecl->getName())) {
-    return;
-  }
   if (CategoryDecl != nullptr &&
       hasCategoryPropertyPrefix(MatchedDecl->getName())) {
-    if (!prefixedPropertyNameValid(MatchedDecl->getName(), EscapedAcronyms) ||
+    if (!prefixedPropertyNameValid(MatchedDecl->getName()) ||
         CategoryDecl->IsClassExtension()) {
       NamingStyle Style = CategoryDecl->IsClassExtension() ? StandardProperty
                                                            : CategoryProperty;

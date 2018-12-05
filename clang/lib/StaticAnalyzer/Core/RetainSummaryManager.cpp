@@ -686,7 +686,57 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
     return RetEffect::MakeNotOwned(RetEffect::Generalized);
   }
 
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(D))
+    for (const auto *PD : MD->overridden_methods())
+      if (auto RE = getRetEffectFromAnnotations(RetTy, PD))
+        return RE;
+
   return None;
+}
+
+/// Apply the annotation of {@code pd} in function {@code FD}
+/// to the resulting summary stored in out-parameter {@code Template}.
+/// Return whether an annotation was applied.
+bool applyFunctionParamAnnotationEffect(const ParmVarDecl *pd,
+                                        unsigned parm_idx,
+                                        const FunctionDecl *FD,
+                                        ArgEffects::Factory &AF,
+                                        RetainSummaryTemplate &Template) {
+  if (pd->hasAttr<NSConsumedAttr>()) {
+    Template->addArg(AF, parm_idx, DecRefMsg);
+    return true;
+  } else if (pd->hasAttr<CFConsumedAttr>() || pd->hasAttr<OSConsumedAttr>() ||
+             hasRCAnnotation(pd, "rc_ownership_consumed")) {
+    Template->addArg(AF, parm_idx, DecRef);
+    return true;
+  } else if (pd->hasAttr<CFReturnsRetainedAttr>() ||
+             hasRCAnnotation(pd, "rc_ownership_returns_retained")) {
+    QualType PointeeTy = pd->getType()->getPointeeType();
+    if (!PointeeTy.isNull()) {
+      if (coreFoundation::isCFObjectRef(PointeeTy)) {
+        Template->addArg(AF, parm_idx, RetainedOutParameter);
+        return true;
+      }
+    }
+  } else if (pd->hasAttr<CFReturnsNotRetainedAttr>()) {
+    QualType PointeeTy = pd->getType()->getPointeeType();
+    if (!PointeeTy.isNull()) {
+      if (coreFoundation::isCFObjectRef(PointeeTy)) {
+        Template->addArg(AF, parm_idx, UnretainedOutParameter);
+        return true;
+      }
+    }
+  } else {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+      for (const auto *OD : MD->overridden_methods()) {
+        const ParmVarDecl *OP = OD->parameters()[parm_idx];
+        if (applyFunctionParamAnnotationEffect(OP, parm_idx, MD, AF, Template))
+          return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 void
@@ -703,24 +753,7 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
   for (auto pi = FD->param_begin(),
          pe = FD->param_end(); pi != pe; ++pi, ++parm_idx) {
     const ParmVarDecl *pd = *pi;
-    if (pd->hasAttr<NSConsumedAttr>()) {
-      Template->addArg(AF, parm_idx, DecRefMsg);
-    } else if (pd->hasAttr<CFConsumedAttr>() ||
-             pd->hasAttr<OSConsumedAttr>() ||
-             hasRCAnnotation(pd, "rc_ownership_consumed")) {
-      Template->addArg(AF, parm_idx, DecRef);
-    } else if (pd->hasAttr<CFReturnsRetainedAttr>() ||
-             hasRCAnnotation(pd, "rc_ownership_returns_retained")) {
-      QualType PointeeTy = pd->getType()->getPointeeType();
-      if (!PointeeTy.isNull())
-        if (coreFoundation::isCFObjectRef(PointeeTy))
-          Template->addArg(AF, parm_idx, RetainedOutParameter);
-    } else if (pd->hasAttr<CFReturnsNotRetainedAttr>()) {
-      QualType PointeeTy = pd->getType()->getPointeeType();
-      if (!PointeeTy.isNull())
-        if (coreFoundation::isCFObjectRef(PointeeTy))
-          Template->addArg(AF, parm_idx, UnretainedOutParameter);
-    }
+    applyFunctionParamAnnotationEffect(pd, parm_idx, FD, AF, Template);
   }
 
   QualType RetTy = FD->getReturnType();

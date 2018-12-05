@@ -1,6 +1,5 @@
-REQUIRES: system-windows, msvc
-RUN: %clang_cl /Zi %S/Inputs/VBases.cpp /c /o %t.obj
-RUN: %msvc_link /debug:full %t.obj /out:%t.exe
+REQUIRES: system-windows, lld
+RUN: %build --compiler=clang-cl --output=%t.exe %S/Inputs/VBases.cpp
 RUN: %lldb -b -s %S/Inputs/VBases.script -- %t.exe | FileCheck %s
 
 CHECK: {

@@ -25,10 +25,10 @@
 
 #if defined(__x86_64__)
 #define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 312)
+  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 264)
 #elif defined(__i386__)
 #define GET_LINK_MAP_BY_DLOPEN_HANDLE(handle) \
-  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 164)
+  _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 136)
 #endif
 
 namespace __sanitizer {
@@ -70,6 +70,17 @@ struct __sanitizer_regmatch {
   OFF_T rm_so;
   OFF_T rm_eo;
 };
+
+typedef struct __sanitizer_modctl_load {
+  const char *ml_filename;
+  int ml_flags;
+  const char *ml_props;
+  uptr ml_propslen;
+} __sanitizer_modctl_load_t;
+extern const int modctl_load;
+extern const int modctl_unload;
+extern const int modctl_stat;
+extern const int modctl_exists;
 
 union __sanitizer_sigval {
   int sival_int;

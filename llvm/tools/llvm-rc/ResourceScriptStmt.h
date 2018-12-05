@@ -67,6 +67,59 @@ public:
   }
 };
 
+class IntWithNotMask {
+private:
+  RCInt Value;
+  int32_t NotMask;
+
+public:
+  IntWithNotMask() : IntWithNotMask(RCInt(0)) {}
+  IntWithNotMask(RCInt Value, int32_t NotMask = 0) : Value(Value), NotMask(NotMask) {}
+
+  RCInt getValue() const {
+    return Value;
+  }
+
+  uint32_t getNotMask() const {
+    return NotMask;
+  }
+
+  IntWithNotMask &operator+=(const IntWithNotMask &Rhs) {
+    Value &= ~Rhs.NotMask;
+    Value += Rhs.Value;
+    NotMask |= Rhs.NotMask;
+    return *this;
+  }
+
+  IntWithNotMask &operator-=(const IntWithNotMask &Rhs) {
+    Value &= ~Rhs.NotMask;
+    Value -= Rhs.Value;
+    NotMask |= Rhs.NotMask;
+    return *this;
+  }
+
+  IntWithNotMask &operator|=(const IntWithNotMask &Rhs) {
+    Value &= ~Rhs.NotMask;
+    Value |= Rhs.Value;
+    NotMask |= Rhs.NotMask;
+    return *this;
+  }
+
+  IntWithNotMask &operator&=(const IntWithNotMask &Rhs) {
+    Value &= ~Rhs.NotMask;
+    Value &= Rhs.Value;
+    NotMask |= Rhs.NotMask;
+    return *this;
+  }
+
+  IntWithNotMask operator-() const { return {-Value, NotMask}; }
+  IntWithNotMask operator~() const { return {~Value, 0}; }
+
+  friend raw_ostream &operator<<(raw_ostream &OS, const IntWithNotMask &Int) {
+    return OS << Int.Value;
+  }
+};
+
 // A class holding a name - either an integer or a reference to the string.
 class IntOrString {
 private:
@@ -556,7 +609,8 @@ public:
   StringRef Type;
   IntOrString Title;
   uint32_t ID, X, Y, Width, Height;
-  Optional<uint32_t> Style, ExtStyle, HelpID;
+  Optional<IntWithNotMask> Style;
+  Optional<uint32_t> ExtStyle, HelpID;
   IntOrString Class;
 
   // Control classes as described in DLGITEMTEMPLATEEX documentation.
@@ -580,7 +634,7 @@ public:
 
   Control(StringRef CtlType, IntOrString CtlTitle, uint32_t CtlID,
           uint32_t PosX, uint32_t PosY, uint32_t ItemWidth, uint32_t ItemHeight,
-          Optional<uint32_t> ItemStyle, Optional<uint32_t> ExtItemStyle,
+          Optional<IntWithNotMask> ItemStyle, Optional<uint32_t> ExtItemStyle,
           Optional<uint32_t> CtlHelpID, IntOrString CtlClass)
       : Type(CtlType), Title(CtlTitle), ID(CtlID), X(PosX), Y(PosY),
         Width(ItemWidth), Height(ItemHeight), Style(ItemStyle),
