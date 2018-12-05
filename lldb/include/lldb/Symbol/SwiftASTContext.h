@@ -818,21 +818,23 @@ protected:
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_ap;
   Status m_error; // Any errors that were found while creating or using the AST
                  // context
-  swift::ModuleDecl *m_scratch_module;
+  swift::ModuleDecl *m_scratch_module = nullptr;
   std::unique_ptr<swift::SILModule> m_sil_module_ap;
-  swift::SerializedModuleLoader *m_serialized_module_loader; // Owned by the AST
-  swift::ClangImporter *m_clang_importer;
+  /// Owned by the AST.
+  swift::SerializedModuleLoader *m_serialized_module_loader = nullptr;
+  swift::ClangImporter *m_clang_importer = nullptr;
   SwiftModuleMap m_swift_module_cache;
   SwiftTypeFromMangledNameMap m_mangled_name_to_type_map;
   SwiftMangledNameFromTypeMap m_type_to_mangled_name_map;
-  uint32_t m_pointer_byte_size;
-  uint32_t m_pointer_bit_align;
+  uint32_t m_pointer_byte_size = 0;
+  uint32_t m_pointer_bit_align = 0;
   CompilerType m_void_function_type;
-  lldb::TargetWP m_target_wp; // Only if this AST belongs to a target will this
-                              // contain a valid target weak pointer
-  lldb_private::Process *m_process; // Only if this AST belongs to a target, and
-                                    // an expression has been evaluated will the
-                                    // target's process pointer be filled in
+  /// Only if this AST belongs to a target will this contain a valid
+  /// target weak pointer.
+  lldb::TargetWP m_target_wp;
+  /// Only if this AST belongs to a target, and an expression has been
+  /// evaluated will the target's process pointer be filled in
+  lldb_private::Process *m_process = nullptr;
   std::string m_platform_sdk_path;
 
   typedef std::map<Module *, std::vector<lldb::DataBufferSP>> ASTFileDataMap;
@@ -844,10 +846,10 @@ protected:
   // Since we use the same Target SwiftASTContext for all our compilations,
   // holding them here will keep them alive as long as we need.
   std::vector<std::unique_ptr<swift::DebuggerClient>> m_debugger_clients;
-  bool m_initialized_language_options;
-  bool m_initialized_search_path_options;
-  bool m_initialized_clang_importer_options;
-  bool m_reported_fatal_error;
+  bool m_initialized_language_options = false;
+  bool m_initialized_search_path_options = false;
+  bool m_initialized_clang_importer_options = false;
+  bool m_reported_fatal_error = false;
   Status m_fatal_errors;
 
   typedef ThreadSafeDenseSet<const char *> SwiftMangledNameSet;

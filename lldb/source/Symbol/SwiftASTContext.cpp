@@ -761,17 +761,7 @@ static bool IsDeviceSupport(const char *path) {
 
 SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
     : TypeSystem(TypeSystem::eKindSwift),
-      m_compiler_invocation_ap(new swift::CompilerInvocation()),
-      m_scratch_module(NULL), m_serialized_module_loader(NULL),
-      m_clang_importer(NULL), m_swift_module_cache(),
-      m_mangled_name_to_type_map(), m_type_to_mangled_name_map(),
-      m_pointer_byte_size(0), m_pointer_bit_align(0), m_void_function_type(),
-      m_target_wp(), m_process(NULL), m_platform_sdk_path(),
-      m_ast_file_data_map(), m_initialized_language_options(false),
-      m_initialized_search_path_options(false),
-      m_initialized_clang_importer_options(false),
-      m_reported_fatal_error(false), m_fatal_errors(), m_negative_type_cache(),
-      m_extra_type_info_cache(), m_swift_type_map() {
+      m_compiler_invocation_ap(new swift::CompilerInvocation()) {
   // Set the clang modules cache path.
   llvm::SmallString<128> path;
   auto props = ModuleList::GetGlobalModuleListProperties();
@@ -795,17 +785,7 @@ SwiftASTContext::SwiftASTContext(const char *triple, Target *target)
 
 SwiftASTContext::SwiftASTContext(const SwiftASTContext &rhs)
     : TypeSystem(rhs.getKind()),
-      m_compiler_invocation_ap(new swift::CompilerInvocation()),
-      m_scratch_module(NULL), m_serialized_module_loader(NULL),
-      m_clang_importer(NULL), m_swift_module_cache(),
-      m_mangled_name_to_type_map(), m_type_to_mangled_name_map(),
-      m_pointer_byte_size(0), m_pointer_bit_align(0), m_void_function_type(),
-      m_target_wp(), m_process(NULL), m_platform_sdk_path(),
-      m_ast_file_data_map(), m_initialized_language_options(false),
-      m_initialized_search_path_options(false),
-      m_initialized_clang_importer_options(false),
-      m_reported_fatal_error(false), m_fatal_errors(), m_negative_type_cache(),
-      m_extra_type_info_cache(), m_swift_type_map() {
+      m_compiler_invocation_ap(new swift::CompilerInvocation()) {
   if (rhs.m_compiler_invocation_ap) {
     std::string rhs_triple = rhs.GetTriple();
     if (!rhs_triple.empty()) {
