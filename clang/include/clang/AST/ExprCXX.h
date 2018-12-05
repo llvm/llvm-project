@@ -2455,8 +2455,6 @@ class ArrayTypeTraitExpr : public Expr {
   /// The type being queried.
   TypeSourceInfo *QueriedType = nullptr;
 
-  virtual void anchor();
-
 public:
   friend class ASTStmtReader;
 
@@ -2473,8 +2471,6 @@ public:
 
   explicit ArrayTypeTraitExpr(EmptyShell Empty)
       : Expr(ArrayTypeTraitExprClass, Empty), ATT(0) {}
-
-  virtual ~ArrayTypeTraitExpr() = default;
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return Loc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParen; }

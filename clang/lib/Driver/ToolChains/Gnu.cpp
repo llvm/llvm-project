@@ -2435,7 +2435,7 @@ bool Generic_GCC::isPICDefault() const {
   case llvm::Triple::x86_64:
     return getTriple().isOSWindows();
   case llvm::Triple::ppc64:
-  case llvm::Triple::ppc64le:
+    // Big endian PPC is PIC by default
     return !getTriple().isOSBinFormatMachO() && !getTriple().isMacOSX();
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:

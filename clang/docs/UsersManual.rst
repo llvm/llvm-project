@@ -3089,6 +3089,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
                               Level of field padding for AddressSanitizer
       -fsanitize-address-globals-dead-stripping
                               Enable linker dead stripping of globals in AddressSanitizer
+      -fsanitize-address-use-odr-indicator
+                              Enable ODR indicator globals to avoid false ODR violation reports in partially sanitized programs at the cost of an increase in binary size
       -fsanitize-address-poison-custom-array-cookie
                               Enable poisoning array cookies when using custom operator new[] in AddressSanitizer
       -fsanitize-address-use-after-scope
