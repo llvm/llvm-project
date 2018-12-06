@@ -1,6 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-
-// expected-no-diagnostics
+// RUN: %clang_cc1 -fsyntax-only -verify -fblocks %s
 
 struct S {};
 
@@ -9,3 +7,9 @@ struct S {};
   - (S*) generateS __attribute__((os_returns_retained));
   - (void) takeS:(S*) __attribute__((os_consumed)) s;
 @end
+
+typedef __attribute__((os_returns_retained)) id (^blockType)(); // expected-warning{{'os_returns_retained' attribute only applies to functions, Objective-C methods, and Objective-C properties}}
+
+__auto_type b = ^ id (id filter)  __attribute__((os_returns_retained))  { // expected-warning{{'os_returns_retained' attribute only applies to functions, Objective-C methods, and Objective-C properties}}
+  return filter;
+};
