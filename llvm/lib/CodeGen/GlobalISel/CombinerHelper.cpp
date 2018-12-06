@@ -6,8 +6,9 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
+#include "llvm/CodeGen/GlobalISel/Combiner.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -18,7 +19,7 @@
 
 using namespace llvm;
 
-CombinerHelper::CombinerHelper(CombinerChangeObserver &Observer,
+CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
                                MachineIRBuilder &B)
     : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer) {}
 

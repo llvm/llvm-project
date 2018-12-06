@@ -23,6 +23,7 @@
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecordHelpers.h"
 #include "llvm/DebugInfo/CodeView/SymbolSerializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
@@ -895,39 +896,6 @@ copyAndAlignSymbol(const CVSymbol &Sym, MutableArrayRef<uint8_t> &AlignedMem) {
   return NewData;
 }
 
-/// Return true if this symbol opens a scope. This implies that the symbol has
-/// "parent" and "end" fields, which contain the offset of the S_END or
-/// S_INLINESITE_END record.
-static bool symbolOpensScope(SymbolKind Kind) {
-  switch (Kind) {
-  case SymbolKind::S_GPROC32:
-  case SymbolKind::S_LPROC32:
-  case SymbolKind::S_LPROC32_ID:
-  case SymbolKind::S_GPROC32_ID:
-  case SymbolKind::S_BLOCK32:
-  case SymbolKind::S_SEPCODE:
-  case SymbolKind::S_THUNK32:
-  case SymbolKind::S_INLINESITE:
-  case SymbolKind::S_INLINESITE2:
-    return true;
-  default:
-    break;
-  }
-  return false;
-}
-
-static bool symbolEndsScope(SymbolKind Kind) {
-  switch (Kind) {
-  case SymbolKind::S_END:
-  case SymbolKind::S_PROC_ID_END:
-  case SymbolKind::S_INLINESITE_END:
-    return true;
-  default:
-    break;
-  }
-  return false;
-}
-
 struct ScopeRecord {
   ulittle32_t PtrParent;
   ulittle32_t PtrEnd;
@@ -1516,7 +1484,7 @@ static void addCommonLinkerModuleSymbols(StringRef Path,
   std::string ArgStr = quote(Args);
   EBS.Fields.push_back("cwd");
   SmallString<64> cwd;
-  if (Config->PDBSourcePath.empty()) 
+  if (Config->PDBSourcePath.empty())
     sys::fs::current_path(cwd);
   else
     cwd = Config->PDBSourcePath;

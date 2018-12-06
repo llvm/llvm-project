@@ -1,6 +1,6 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objcopy -keep-section=.test2 -only-keep=.test %t %t2
-# RUN: llvm-objcopy -j .test -keep-section=.test2 %t %t3
+# RUN: llvm-objcopy -only-section=.test %t %t2
+# RUN: llvm-objcopy -j .test %t %t3
 # RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
 # RUN: diff %t2 %t3
 
@@ -13,15 +13,11 @@ FileHeader:
 Sections:
   - Name:            .test
     Type:            SHT_PROGBITS
-  - Name:            .test2
-    Type:            SHT_PROGBITS
-  - Name:            .test3
-    Type:            SHT_PROGBITS
+    Flags:           [ ]
 
-# CHECK: SectionHeaderCount: 6
+# CHECK: SectionHeaderCount: 5
 
 # CHECK:     Name: .test
-# CHECK:     Name: .test2
 # CHECK:     Name: .symtab
 # CHECK:     Name: .strtab
 # CHECK:     Name: .shstrtab

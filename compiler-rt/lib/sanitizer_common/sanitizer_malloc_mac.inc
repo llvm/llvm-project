@@ -265,6 +265,13 @@ void *__sanitizer_mz_memalign(malloc_zone_t *zone, size_t align, size_t size) {
   return p;
 }
 
+// This public API exists purely for testing purposes.
+extern "C"
+SANITIZER_INTERFACE_ATTRIBUTE
+malloc_zone_t* __sanitizer_mz_default_zone() {
+  return &sanitizer_zone;
+}
+
 // This function is currently unused, and we build with -Werror.
 #if 0
 void __sanitizer_mz_free_definite_size(

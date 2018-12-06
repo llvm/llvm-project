@@ -19,6 +19,8 @@ static_library("Support") {
     # both Support and ADT.
     "//llvm/include/llvm/Config:abi-breaking",
     "//llvm/include/llvm/Config:llvm-config",
+    # public_dep because public header TargetSelect.h includes these .def files.
+    "//llvm/include/llvm/Config:write_target_def_files",
   ]
   include_dirs = [
     "Unix",

@@ -2156,6 +2156,16 @@ bool GVN::performScalarPRE(Instruction *CurInst) {
   if (isa<CmpInst>(CurInst))
     return false;
 
+  // Don't do PRE on GEPs. The inserted PHI would prevent CodeGenPrepare from
+  // sinking the addressing mode computation back to its uses. Extending the
+  // GEP's live range increases the register pressure, and therefore it can
+  // introduce unnecessary spills.
+  //
+  // This doesn't prevent Load PRE. PHI translation will make the GEP available
+  // to the load by moving it to the predecessor block if necessary.
+  if (isa<GetElementPtrInst>(CurInst))
+    return false;
+
   // We don't currently value number ANY inline asm calls.
   if (CallInst *CallI = dyn_cast<CallInst>(CurInst))
     if (CallI->isInlineAsm())

@@ -189,6 +189,12 @@ def err_seh___finally_block : Error<
 def note_invalid_subexpr_in_const_expr : Note<
   "subexpression not valid in a constant expression">;
 
+// Sema && Frontend
+let CategoryName = "Inline Assembly Issue" in {
+  def err_asm_invalid_type_in_input : Error<
+    "invalid type %0 in asm input for constraint '%1'">;
+}
+
 // Targets
 
 def err_target_unknown_triple : Error<

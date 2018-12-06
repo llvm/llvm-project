@@ -315,8 +315,8 @@ DriverConfig parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
     Config.ToRemove.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_keep_section))
     Config.KeepSection.push_back(Arg->getValue());
-  for (auto Arg : InputArgs.filtered(OBJCOPY_only_keep))
-    Config.OnlyKeep.push_back(Arg->getValue());
+  for (auto Arg : InputArgs.filtered(OBJCOPY_only_section))
+    Config.OnlySection.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_add_section))
     Config.AddSection.push_back(Arg->getValue());
   for (auto Arg : InputArgs.filtered(OBJCOPY_dump_section))

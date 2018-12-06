@@ -81,6 +81,14 @@
 // CHECK-NEXT:   ObjCProtocol{{.*}} 'P'
 // CHECK-NEXT:   ObjCMethodDecl{{.*}} bar
 
+@interface TestGenericInterface<T> : A<P> {
+}
+@end
+// CHECK:      ObjCInterfaceDecl{{.*}} TestGenericInterface
+// CHECK-NEXT:   -ObjCTypeParamDecl
+// CHECK-NEXT:   -super ObjCInterface
+// CHECK-NEXT:   -ObjCProtocol
+
 @implementation TestObjCClass (TestObjCCategoryDecl)
 - (void) bar {
 }

@@ -199,7 +199,7 @@ enum : unsigned {
   WASM_SEC_ELEM = 9,     // Elements section
   WASM_SEC_CODE = 10,    // Function bodies (code)
   WASM_SEC_DATA = 11,    // Data segments
-  WASM_SEC_EVENT = 12    // Event declarations
+  WASM_SEC_EVENT = 13    // Event declarations
 };
 
 // Type immediate encodings used in various contexts.

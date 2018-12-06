@@ -69,6 +69,7 @@ add_clang_library(clangAST
   StmtViz.cpp
   TemplateBase.cpp
   TemplateName.cpp
+  TextNodeDumper.cpp
   Type.cpp
   TypeLoc.cpp
   TypePrinter.cpp

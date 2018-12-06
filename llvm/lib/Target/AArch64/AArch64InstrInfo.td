@@ -24,6 +24,54 @@ def HasV8_4a         : Predicate<"Subtarget->hasV8_4aOps()">,
                                  AssemblerPredicate<"HasV8_4aOps", "armv8.4a">;
 def HasV8_5a         : Predicate<"Subtarget->hasV8_5aOps()">,
                                  AssemblerPredicate<"HasV8_5aOps", "armv8.5a">;
+def HasVH            : Predicate<"Subtarget->hasVH()">,
+                       AssemblerPredicate<"FeatureVH", "vh">;
+
+def HasLOR           : Predicate<"Subtarget->hasLOR()">,
+                       AssemblerPredicate<"FeatureLOR", "lor">;
+
+def HasPA            : Predicate<"Subtarget->hasPA()">,
+                       AssemblerPredicate<"FeaturePA", "pa">;
+
+def HasJS            : Predicate<"Subtarget->hasJS()">,
+                       AssemblerPredicate<"FeatureJS", "jsconv">;
+
+def HasCCIDX         : Predicate<"Subtarget->hasCCIDX()">,
+                       AssemblerPredicate<"FeatureCCIDX", "ccidx">;
+
+def HasComplxNum      : Predicate<"Subtarget->hasComplxNum()">,
+                       AssemblerPredicate<"FeatureComplxNum", "complxnum">;
+
+def HasNV            : Predicate<"Subtarget->hasNV()">,
+                       AssemblerPredicate<"FeatureNV", "nv">;
+
+def HasRASv8_4       : Predicate<"Subtarget->hasRASv8_4()">,
+                       AssemblerPredicate<"FeatureRASv8_4", "rasv8_4">;
+
+def HasMPAM          : Predicate<"Subtarget->hasMPAM()">,
+                       AssemblerPredicate<"FeatureMPAM", "mpam">;
+
+def HasDIT           : Predicate<"Subtarget->hasDIT()">,
+                       AssemblerPredicate<"FeatureDIT", "dit">;
+
+def HasTRACEV8_4         : Predicate<"Subtarget->hasTRACEV8_4()">,
+                       AssemblerPredicate<"FeatureTRACEV8_4", "tracev8.4">;
+
+def HasAM            : Predicate<"Subtarget->hasAM()">,
+                       AssemblerPredicate<"FeatureAM", "am">;
+
+def HasSEL2          : Predicate<"Subtarget->hasSEL2()">,
+                       AssemblerPredicate<"FeatureSEL2", "sel2">;
+
+def HasTLB_RMI          : Predicate<"Subtarget->hasTLB_RMI()">,
+                       AssemblerPredicate<"FeatureTLB_RMI", "tlb-rmi">;
+
+def HasFMI           : Predicate<"Subtarget->hasFMI()">,
+                       AssemblerPredicate<"FeatureFMI", "fmi">;
+
+def HasRCPC_IMMO      : Predicate<"Subtarget->hasRCPCImm()">,
+                       AssemblerPredicate<"FeatureRCPC_IMMO", "rcpc-immo">;
+
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,
                                AssemblerPredicate<"FeatureFPARMv8", "fp-armv8">;
 def HasNEON          : Predicate<"Subtarget->hasNEON()">,
@@ -510,7 +558,7 @@ def ISB   : CRmSystemI<barrier_op, 0b110, "isb",
 def TSB   : CRmSystemI<barrier_op, 0b010, "tsb", []> {
   let CRm        = 0b0010;
   let Inst{12}   = 0;
-  let Predicates = [HasV8_4a];
+  let Predicates = [HasTRACEV8_4];
 }
 }
 
@@ -602,7 +650,7 @@ let Uses = [LR], Defs = [LR], CRm = 0b0000 in {
 }
 
 // These pointer authentication isntructions require armv8.3a
-let Predicates = [HasV8_3a] in {
+let Predicates = [HasPA] in {
   multiclass SignAuth<bits<3> prefix, bits<3> prefix_z, string asm> {
     def IA   : SignAuthOneData<prefix, 0b00, !strconcat(asm, "ia")>;
     def IB   : SignAuthOneData<prefix, 0b01, !strconcat(asm, "ib")>;
@@ -642,17 +690,17 @@ let Predicates = [HasV8_3a] in {
   defm LDRAA  : AuthLoad<0, "ldraa", simm10Scaled>;
   defm LDRAB  : AuthLoad<1, "ldrab", simm10Scaled>;
 
-  // v8.3a floating point conversion for javascript
-  let Predicates = [HasV8_3a, HasFPARMv8] in
-  def FJCVTZS  : BaseFPToIntegerUnscaled<0b01, 0b11, 0b110, FPR64, GPR32,
-                                        "fjcvtzs", []> {
-    let Inst{31} = 0;
-  }
+}
 
-} // HasV8_3a
+// v8.3a floating point conversion for javascript
+let Predicates = [HasJS, HasFPARMv8] in
+def FJCVTZS  : BaseFPToIntegerUnscaled<0b01, 0b11, 0b110, FPR64, GPR32,
+                                      "fjcvtzs", []> {
+  let Inst{31} = 0;
+} // HasJS, HasFPARMv8
 
 // v8.4 Flag manipulation instructions
-let Predicates = [HasV8_4a] in {
+let Predicates = [HasFMI] in {
 def CFINV : SimpleSystemI<0, (ins), "cfinv", "">, Sched<[WriteSys]> {
   let Inst{20-5} = 0b0000001000000000;
 }
@@ -660,7 +708,7 @@ def SETF8  : BaseFlagManipulation<0, 0, (ins GPR32:$Rn), "setf8", "{\t$Rn}">;
 def SETF16 : BaseFlagManipulation<0, 1, (ins GPR32:$Rn), "setf16", "{\t$Rn}">;
 def RMIF   : FlagRotate<(ins GPR64:$Rn, uimm6:$imm, imm0_15:$mask), "rmif",
                         "{\t$Rn, $imm, $mask}">;
-} // HasV8_4a
+} // HasFMI
 
 // v8.5 flag manipulation instructions
 let Predicates = [HasAltNZCV], Uses = [NZCV], Defs = [NZCV] in {
@@ -2629,8 +2677,9 @@ defm STURBB : StoreUnscaled<0b00, 0, 0b00, GPR32z, "sturb",
                          [(truncstorei8 GPR32z:$Rt,
                                   (am_unscaled8 GPR64sp:$Rn, simm9:$offset))]>;
 
-// Armv8.4 LDAPR & STLR with Immediate Offset instruction
-let Predicates = [HasV8_4a] in {
+// Armv8.4 Weaker Release Consistency enhancements
+//         LDAPR & STLR with Immediate Offset instructions
+let Predicates = [HasRCPC_IMMO] in {
 defm STLURB     : BaseStoreUnscaleV84<"stlurb",  0b00, 0b00, GPR32>;
 defm STLURH     : BaseStoreUnscaleV84<"stlurh",  0b01, 0b00, GPR32>;
 defm STLURW     : BaseStoreUnscaleV84<"stlur",   0b10, 0b00, GPR32>;
@@ -2915,7 +2964,7 @@ def STLXPX : StoreExclusivePair<0b11, 0, 0, 1, 1, GPR64, "stlxp">;
 def STXPW  : StoreExclusivePair<0b10, 0, 0, 1, 0, GPR32, "stxp">;
 def STXPX  : StoreExclusivePair<0b11, 0, 0, 1, 0, GPR64, "stxp">;
 
-let Predicates = [HasV8_1a] in {
+let Predicates = [HasLOR] in {
   // v8.1a "Limited Order Region" extension load-acquire instructions
   def LDLARW  : LoadAcquire   <0b10, 1, 1, 0, 0, GPR32, "ldlar">;
   def LDLARX  : LoadAcquire   <0b11, 1, 1, 0, 0, GPR64, "ldlar">;

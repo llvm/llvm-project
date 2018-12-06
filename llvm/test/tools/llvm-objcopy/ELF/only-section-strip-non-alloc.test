@@ -1,8 +1,6 @@
 # RUN: yaml2obj %s > %t
-# RUN: llvm-objcopy -R .symtab -R .strtab -only-keep=.test %t %t2
-# RUN: llvm-objcopy -j .test -R .strtab -R .symtab %t %t3
+# RUN: llvm-objcopy -strip-non-alloc -only-section=.test %t %t2
 # RUN: llvm-readobj -file-headers -sections %t2 | FileCheck %s
-# RUN: diff %t2 %t3
 
 !ELF
 FileHeader:

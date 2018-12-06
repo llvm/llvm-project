@@ -1,4 +1,4 @@
-REQUIRES: lld
+REQUIRES: lld, system-windows
 
 RUN: %build -n --verbose --arch=32 --compiler=clang-cl --mode=compile-and-link -o %t/foo.exe foobar.c \
 RUN:    | FileCheck --check-prefix=CHECK-32 %s

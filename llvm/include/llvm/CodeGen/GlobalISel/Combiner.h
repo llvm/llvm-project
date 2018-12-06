@@ -24,16 +24,6 @@ class CombinerInfo;
 class TargetPassConfig;
 class MachineFunction;
 
-class CombinerChangeObserver {
-public:
-  virtual ~CombinerChangeObserver() {}
-
-  /// An instruction was erased.
-  virtual void erasedInstr(MachineInstr &MI) = 0;
-  /// An instruction was created and inseerted into the function.
-  virtual void createdInstr(MachineInstr &MI) = 0;
-};
-
 class Combiner {
 public:
   Combiner(CombinerInfo &CombinerInfo, const TargetPassConfig *TPC);
