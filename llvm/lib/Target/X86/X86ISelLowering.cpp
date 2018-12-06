@@ -24069,47 +24069,50 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
 static SDValue IsSplatVector(SDValue V, int &SplatIdx) {
   V = peekThroughEXTRACT_SUBVECTORs(V);
 
-  // Check if this is a splat build_vector node.
-  if (BuildVectorSDNode *BV = dyn_cast<BuildVectorSDNode>(V)) {
-    BitVector BVUndefElts;
-    SDValue SplatAmt = BV->getSplatValue(&BVUndefElts);
+  unsigned Opcode = V.getOpcode();
+  switch (Opcode) {
+  case ISD::BUILD_VECTOR: {
+    BitVector UndefElts;
+    SDValue SplatAmt = cast<BuildVectorSDNode>(V)->getSplatValue(&UndefElts);
     if (SplatAmt && !SplatAmt.isUndef()) {
-      for (int i = 0, e = BVUndefElts.size(); i != e; ++i)
-        if (!BVUndefElts[i]) {
+      for (int i = 0, e = UndefElts.size(); i != e; ++i)
+        if (!UndefElts[i]) {
           SplatIdx = i;
           return V;
         }
     }
-    return SDValue();
+    break;
   }
-
-  // Check for SUB(SPLAT_BV, SPLAT) cases from rotate patterns.
-  if (V.getOpcode() == ISD::SUB) {
+  case ISD::VECTOR_SHUFFLE: {
+    // Check if this is a shuffle node doing a splat.
+    auto *SVN = cast<ShuffleVectorSDNode>(V);
+    if (!SVN->isSplat())
+      break;
+    int Idx = SVN->getSplatIndex();
+    int NumElts = V.getValueType().getVectorNumElements();
+    SplatIdx = Idx % NumElts;
+    return V.getOperand(Idx / NumElts);
+  }
+  case ISD::SUB: {
     SDValue LHS = peekThroughEXTRACT_SUBVECTORs(V.getOperand(0));
     SDValue RHS = peekThroughEXTRACT_SUBVECTORs(V.getOperand(1));
 
     // Ensure that the corresponding splat BV element is not UNDEF.
     BitVector UndefElts;
-    BuildVectorSDNode *BV0 = dyn_cast<BuildVectorSDNode>(LHS);
-    ShuffleVectorSDNode *SVN1 = dyn_cast<ShuffleVectorSDNode>(RHS);
+    auto *BV0 = dyn_cast<BuildVectorSDNode>(LHS);
+    auto *SVN1 = dyn_cast<ShuffleVectorSDNode>(RHS);
     if (BV0 && SVN1 && BV0->getSplatValue(&UndefElts) && SVN1->isSplat()) {
       int Idx = SVN1->getSplatIndex();
       if (!UndefElts[Idx]) {
         SplatIdx = Idx;
         return V;
       }
-      return SDValue();
     }
+    break;
+  }
   }
 
-  // Check if this is a shuffle node doing a splat.
-  ShuffleVectorSDNode *SVN = dyn_cast<ShuffleVectorSDNode>(V);
-  if (!SVN || !SVN->isSplat())
-    return SDValue();
-  int Idx = SVN->getSplatIndex();
-  int NumElts = V.getValueType().getVectorNumElements();
-  SplatIdx = Idx % NumElts;
-  return V.getOperand(Idx / NumElts);
+  return SDValue();
 }
 
 static SDValue GetSplatValue(SDValue V, const SDLoc &dl,
@@ -40000,11 +40003,8 @@ static SDValue materializeSBB(SDNode *N, SDValue EFLAGS, SelectionDAG &DAG) {
   SDValue CF = DAG.getConstant(X86::COND_B, DL, MVT::i8);
   SDValue SBB = DAG.getNode(X86ISD::SETCC_CARRY, DL, MVT::i8, CF, EFLAGS);
   MVT VT = N->getSimpleValueType(0);
-  if (VT == MVT::i8)
-    return DAG.getNode(ISD::AND, DL, VT, SBB, DAG.getConstant(1, DL, VT));
-
-  assert(VT == MVT::i1 && "Unexpected type for SETCC node");
-  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SBB);
+  assert(VT == MVT::i8 && "Unexpected type for SETCC node");
+  return DAG.getNode(ISD::AND, DL, VT, SBB, DAG.getConstant(1, DL, VT));
 }
 
 /// If this is an add or subtract where one operand is produced by a cmp+setcc,

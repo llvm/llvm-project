@@ -3593,6 +3593,63 @@ corresponding line within the inlined callee.
   }];
 }
 
+def NoDerefDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The ``noderef`` attribute causes clang to diagnose dereferences of annotated pointer types.
+This is ideally used with pointers that point to special memory which cannot be read
+from or written to, but allowing for the pointer to be used in pointer arithmetic.
+The following are examples of valid expressions where dereferences are diagnosed:
+
+.. code-block:: c
+
+  int __attribute__((noderef)) *p;
+  int x = *p;  // warning
+
+  int __attribute__((noderef)) **p2;
+  x = **p2;  // warning
+
+  int * __attribute__((noderef)) *p3;
+  p = *p3;  // warning
+
+  struct S {
+    int a;
+  };
+  struct S __attribute__((noderef)) *s;
+  x = s->a;    // warning
+  x = (*s).a;  // warning
+
+Not all dereferences may diagnose a warning if the value directed by the pointer may not be
+accessed. The following are examples of valid expressions where may not be diagnosed:
+
+.. code-block:: c
+
+  int *q;
+  int __attribute__((noderef)) *p;
+  q = &*p;
+  q = *&p;
+
+  struct S {
+    int a;
+  };
+  struct S __attribute__((noderef)) *s;
+  p = &s->a;
+  p = &(*s).a;
+
+``noderef`` is currently only supported for pointers and arrays and not usable for
+references or Objective-C object pointers.
+
+.. code-block: c++
+
+  int x = 2;
+  int __attribute__((noderef)) &y = x;  // warning: 'noderef' can only be used on an array or pointer type
+
+.. code-block: objc
+
+  id __attribute__((noderef)) obj = [NSObject new]; // warning: 'noderef' can only be used on an array or pointer type
+}];
+}
+
 def ReinitializesDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{

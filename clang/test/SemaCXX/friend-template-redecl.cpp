@@ -18,16 +18,3 @@ void f() {
   foo(x);
   bar(x);
 }
-
-namespace PR39742 {
-template<typename>
-struct wrapper {
-  template<typename>
-  friend void friend_function_template() {}
-};
-
-wrapper<bool> x;
-// FIXME: We should really error here because of the redefinition of
-// friend_function_template.
-wrapper<int> y;
-}

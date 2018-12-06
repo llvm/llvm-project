@@ -1732,50 +1732,49 @@ Value *SCEVExpander::expand(const SCEV *S) {
   // Compute an insertion point for this SCEV object. Hoist the instructions
   // as far out in the loop nest as possible.
   Instruction *InsertPt = &*Builder.GetInsertPoint();
-
-  // We can move insertion point only if there is no div or rem operations
-  // otherwise we are risky to move it over the check for zero denominator.
-  auto SafeToHoist = [](const SCEV *S) {
-    return !SCEVExprContains(S, [](const SCEV *S) {
-              if (const auto *D = dyn_cast<SCEVUDivExpr>(S)) {
-                if (const auto *SC = dyn_cast<SCEVConstant>(D->getRHS()))
-                  // Division by non-zero constants can be hoisted.
-                  return SC->getValue()->isZero();
-                // All other divisions should not be moved as they may be
-                // divisions by zero and should be kept within the
-                // conditions of the surrounding loops that guard their
-                // execution (see PR35406).
-                return true;
-              }
-              return false;
-            });
-  };
-  if (SafeToHoist(S)) {
-    for (Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock());;
-         L = L->getParentLoop()) {
-      if (SE.isLoopInvariant(S, L)) {
-        if (!L) break;
-        if (BasicBlock *Preheader = L->getLoopPreheader())
-          InsertPt = Preheader->getTerminator();
-        else
-          // LSR sets the insertion point for AddRec start/step values to the
-          // block start to simplify value reuse, even though it's an invalid
-          // position. SCEVExpander must correct for this in all cases.
-          InsertPt = &*L->getHeader()->getFirstInsertionPt();
-      } else {
-        // If the SCEV is computable at this level, insert it into the header
-        // after the PHIs (and after any other instructions that we've inserted
-        // there) so that it is guaranteed to dominate any user inside the loop.
-        if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L))
-          InsertPt = &*L->getHeader()->getFirstInsertionPt();
-        while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
-               (isInsertedInstruction(InsertPt) ||
-                isa<DbgInfoIntrinsic>(InsertPt)))
-          InsertPt = &*std::next(InsertPt->getIterator());
-        break;
+  for (Loop *L = SE.LI.getLoopFor(Builder.GetInsertBlock());;
+       L = L->getParentLoop())
+    if (SE.isLoopInvariant(S, L)) {
+      if (!L) break;
+      if (BasicBlock *Preheader = L->getLoopPreheader())
+        InsertPt = Preheader->getTerminator();
+      else {
+        // LSR sets the insertion point for AddRec start/step values to the
+        // block start to simplify value reuse, even though it's an invalid
+        // position. SCEVExpander must correct for this in all cases.
+        InsertPt = &*L->getHeader()->getFirstInsertionPt();
       }
+    } else {
+      // We can move insertion point only if there is no div or rem operations
+      // otherwise we are risky to move it over the check for zero denominator.
+      auto SafeToHoist = [](const SCEV *S) {
+        return !SCEVExprContains(S, [](const SCEV *S) {
+                  if (const auto *D = dyn_cast<SCEVUDivExpr>(S)) {
+                    if (const auto *SC = dyn_cast<SCEVConstant>(D->getRHS()))
+                      // Division by non-zero constants can be hoisted.
+                      return SC->getValue()->isZero();
+                    // All other divisions should not be moved as they may be
+                    // divisions by zero and should be kept within the
+                    // conditions of the surrounding loops that guard their
+                    // execution (see PR35406).
+                    return true;
+                  }
+                  return false;
+                });
+      };
+      // If the SCEV is computable at this level, insert it into the header
+      // after the PHIs (and after any other instructions that we've inserted
+      // there) so that it is guaranteed to dominate any user inside the loop.
+      if (L && SE.hasComputableLoopEvolution(S, L) && !PostIncLoops.count(L) &&
+          SafeToHoist(S))
+        InsertPt = &*L->getHeader()->getFirstInsertionPt();
+      while (InsertPt->getIterator() != Builder.GetInsertPoint() &&
+             (isInsertedInstruction(InsertPt) ||
+              isa<DbgInfoIntrinsic>(InsertPt))) {
+        InsertPt = &*std::next(InsertPt->getIterator());
+      }
+      break;
     }
-  }
 
   // Check to see if we already expanded this here.
   auto I = InsertedExpressions.find(std::make_pair(S, InsertPt));

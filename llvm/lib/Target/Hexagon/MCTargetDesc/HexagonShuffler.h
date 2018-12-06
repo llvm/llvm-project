@@ -75,7 +75,8 @@ private:
     CVI_XLANE = 1 << 0,
     CVI_SHIFT = 1 << 1,
     CVI_MPY0 = 1 << 2,
-    CVI_MPY1 = 1 << 3
+    CVI_MPY1 = 1 << 3,
+    CVI_ZW = 1 << 4
   };
 
   // Count of adjacent slots that the insn requires to be executed.

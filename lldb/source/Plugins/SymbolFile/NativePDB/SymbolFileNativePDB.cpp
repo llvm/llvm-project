@@ -54,6 +54,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#include "DWARFLocationExpression.h"
 #include "PdbSymUid.h"
 #include "PdbUtil.h"
 #include "UdtRecordCompleter.h"
@@ -182,177 +183,6 @@ GetMSInheritance(LazyRandomTypeCollection &tpi, const ClassRecord &record) {
   if (base_count > 1)
     return clang::MSInheritanceAttr::Keyword_multiple_inheritance;
   return clang::MSInheritanceAttr::Keyword_single_inheritance;
-}
-
-static lldb::BasicType GetCompilerTypeForSimpleKind(SimpleTypeKind kind) {
-  switch (kind) {
-  case SimpleTypeKind::Boolean128:
-  case SimpleTypeKind::Boolean16:
-  case SimpleTypeKind::Boolean32:
-  case SimpleTypeKind::Boolean64:
-  case SimpleTypeKind::Boolean8:
-    return lldb::eBasicTypeBool;
-  case SimpleTypeKind::Byte:
-  case SimpleTypeKind::UnsignedCharacter:
-    return lldb::eBasicTypeUnsignedChar;
-  case SimpleTypeKind::NarrowCharacter:
-    return lldb::eBasicTypeChar;
-  case SimpleTypeKind::SignedCharacter:
-  case SimpleTypeKind::SByte:
-    return lldb::eBasicTypeSignedChar;
-  case SimpleTypeKind::Character16:
-    return lldb::eBasicTypeChar16;
-  case SimpleTypeKind::Character32:
-    return lldb::eBasicTypeChar32;
-  case SimpleTypeKind::Complex80:
-    return lldb::eBasicTypeLongDoubleComplex;
-  case SimpleTypeKind::Complex64:
-    return lldb::eBasicTypeDoubleComplex;
-  case SimpleTypeKind::Complex32:
-    return lldb::eBasicTypeFloatComplex;
-  case SimpleTypeKind::Float128:
-  case SimpleTypeKind::Float80:
-    return lldb::eBasicTypeLongDouble;
-  case SimpleTypeKind::Float64:
-    return lldb::eBasicTypeDouble;
-  case SimpleTypeKind::Float32:
-    return lldb::eBasicTypeFloat;
-  case SimpleTypeKind::Float16:
-    return lldb::eBasicTypeHalf;
-  case SimpleTypeKind::Int128:
-    return lldb::eBasicTypeInt128;
-  case SimpleTypeKind::Int64:
-  case SimpleTypeKind::Int64Quad:
-    return lldb::eBasicTypeLongLong;
-  case SimpleTypeKind::Int32:
-    return lldb::eBasicTypeInt;
-  case SimpleTypeKind::Int16:
-  case SimpleTypeKind::Int16Short:
-    return lldb::eBasicTypeShort;
-  case SimpleTypeKind::UInt128:
-    return lldb::eBasicTypeUnsignedInt128;
-  case SimpleTypeKind::UInt64:
-  case SimpleTypeKind::UInt64Quad:
-    return lldb::eBasicTypeUnsignedLongLong;
-  case SimpleTypeKind::HResult:
-  case SimpleTypeKind::UInt32:
-    return lldb::eBasicTypeUnsignedInt;
-  case SimpleTypeKind::UInt16:
-  case SimpleTypeKind::UInt16Short:
-    return lldb::eBasicTypeUnsignedShort;
-  case SimpleTypeKind::Int32Long:
-    return lldb::eBasicTypeLong;
-  case SimpleTypeKind::UInt32Long:
-    return lldb::eBasicTypeUnsignedLong;
-  case SimpleTypeKind::Void:
-    return lldb::eBasicTypeVoid;
-  case SimpleTypeKind::WideCharacter:
-    return lldb::eBasicTypeWChar;
-  default:
-    return lldb::eBasicTypeInvalid;
-  }
-}
-
-static bool IsSimpleTypeSignedInteger(SimpleTypeKind kind) {
-  switch (kind) {
-  case SimpleTypeKind::Int128:
-  case SimpleTypeKind::Int64:
-  case SimpleTypeKind::Int64Quad:
-  case SimpleTypeKind::Int32:
-  case SimpleTypeKind::Int32Long:
-  case SimpleTypeKind::Int16:
-  case SimpleTypeKind::Int16Short:
-  case SimpleTypeKind::Float128:
-  case SimpleTypeKind::Float80:
-  case SimpleTypeKind::Float64:
-  case SimpleTypeKind::Float32:
-  case SimpleTypeKind::Float16:
-  case SimpleTypeKind::NarrowCharacter:
-  case SimpleTypeKind::SignedCharacter:
-  case SimpleTypeKind::SByte:
-    return true;
-  default:
-    return false;
-  }
-}
-
-static size_t GetTypeSizeForSimpleKind(SimpleTypeKind kind) {
-  switch (kind) {
-  case SimpleTypeKind::Boolean128:
-  case SimpleTypeKind::Int128:
-  case SimpleTypeKind::UInt128:
-  case SimpleTypeKind::Float128:
-    return 16;
-  case SimpleTypeKind::Complex80:
-  case SimpleTypeKind::Float80:
-    return 10;
-  case SimpleTypeKind::Boolean64:
-  case SimpleTypeKind::Complex64:
-  case SimpleTypeKind::UInt64:
-  case SimpleTypeKind::UInt64Quad:
-  case SimpleTypeKind::Float64:
-  case SimpleTypeKind::Int64:
-  case SimpleTypeKind::Int64Quad:
-    return 8;
-  case SimpleTypeKind::Boolean32:
-  case SimpleTypeKind::Character32:
-  case SimpleTypeKind::Complex32:
-  case SimpleTypeKind::Float32:
-  case SimpleTypeKind::Int32:
-  case SimpleTypeKind::Int32Long:
-  case SimpleTypeKind::UInt32Long:
-  case SimpleTypeKind::HResult:
-  case SimpleTypeKind::UInt32:
-    return 4;
-  case SimpleTypeKind::Boolean16:
-  case SimpleTypeKind::Character16:
-  case SimpleTypeKind::Float16:
-  case SimpleTypeKind::Int16:
-  case SimpleTypeKind::Int16Short:
-  case SimpleTypeKind::UInt16:
-  case SimpleTypeKind::UInt16Short:
-  case SimpleTypeKind::WideCharacter:
-    return 2;
-  case SimpleTypeKind::Boolean8:
-  case SimpleTypeKind::Byte:
-  case SimpleTypeKind::UnsignedCharacter:
-  case SimpleTypeKind::NarrowCharacter:
-  case SimpleTypeKind::SignedCharacter:
-  case SimpleTypeKind::SByte:
-    return 1;
-  case SimpleTypeKind::Void:
-  default:
-    return 0;
-  }
-}
-
-std::pair<size_t, bool> GetIntegralTypeInfo(TypeIndex ti, TpiStream &tpi) {
-  if (ti.isSimple()) {
-    SimpleTypeKind stk = ti.getSimpleKind();
-    return {GetTypeSizeForSimpleKind(stk), IsSimpleTypeSignedInteger(stk)};
-  }
-
-  CVType cvt = tpi.getType(ti);
-  switch (cvt.kind()) {
-  case LF_MODIFIER: {
-    ModifierRecord mfr;
-    llvm::cantFail(TypeDeserializer::deserializeAs<ModifierRecord>(cvt, mfr));
-    return GetIntegralTypeInfo(mfr.ModifiedType, tpi);
-  }
-  case LF_POINTER: {
-    PointerRecord pr;
-    llvm::cantFail(TypeDeserializer::deserializeAs<PointerRecord>(cvt, pr));
-    return GetIntegralTypeInfo(pr.ReferentType, tpi);
-  }
-  case LF_ENUM: {
-    EnumRecord er;
-    llvm::cantFail(TypeDeserializer::deserializeAs<EnumRecord>(cvt, er));
-    return GetIntegralTypeInfo(er.UnderlyingType, tpi);
-  }
-  default:
-    assert(false && "Type is not integral!");
-    return {0, false};
-  }
 }
 
 static llvm::StringRef GetSimpleTypeName(SimpleTypeKind kind) {
@@ -1197,78 +1027,6 @@ TypeSP SymbolFileNativePDB::GetOrCreateType(PdbTypeSymId type_id) {
   return CreateAndCacheType(type_id);
 }
 
-static DWARFExpression
-MakeConstantLocationExpression(TypeIndex underlying_ti, TpiStream &tpi,
-                               const ConstantSym &constant, ModuleSP module) {
-  const ArchSpec &architecture = module->GetArchitecture();
-  uint32_t address_size = architecture.GetAddressByteSize();
-
-  size_t size = 0;
-  bool is_signed = false;
-  std::tie(size, is_signed) = GetIntegralTypeInfo(underlying_ti, tpi);
-
-  union {
-    llvm::support::little64_t I;
-    llvm::support::ulittle64_t U;
-  } Value;
-
-  std::shared_ptr<DataBufferHeap> buffer = std::make_shared<DataBufferHeap>();
-  buffer->SetByteSize(size);
-
-  llvm::ArrayRef<uint8_t> bytes;
-  if (is_signed) {
-    Value.I = constant.Value.getSExtValue();
-  } else {
-    Value.U = constant.Value.getZExtValue();
-  }
-
-  bytes = llvm::makeArrayRef(reinterpret_cast<const uint8_t *>(&Value), 8)
-              .take_front(size);
-  buffer->CopyData(bytes.data(), size);
-  DataExtractor extractor(buffer, lldb::eByteOrderLittle, address_size);
-  DWARFExpression result(nullptr, extractor, nullptr, 0, size);
-  return result;
-}
-
-static DWARFExpression MakeGlobalLocationExpression(uint16_t section,
-                                                    uint32_t offset,
-                                                    ModuleSP module) {
-  assert(section > 0);
-  assert(module);
-
-  const ArchSpec &architecture = module->GetArchitecture();
-  ByteOrder byte_order = architecture.GetByteOrder();
-  uint32_t address_size = architecture.GetAddressByteSize();
-  uint32_t byte_size = architecture.GetDataByteSize();
-  assert(byte_order != eByteOrderInvalid && address_size != 0);
-
-  RegisterKind register_kind = eRegisterKindDWARF;
-  StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
-  stream.PutHex8(DW_OP_addr);
-
-  SectionList *section_list = module->GetSectionList();
-  assert(section_list);
-
-  // Section indices in PDB are 1-based, but in DWARF they are 0-based, so we
-  // need to subtract 1.
-  uint32_t section_idx = section - 1;
-  if (section_idx >= section_list->GetSize())
-    return DWARFExpression(nullptr);
-
-  auto section_ptr = section_list->GetSectionAtIndex(section_idx);
-  if (!section_ptr)
-    return DWARFExpression(nullptr);
-
-  stream.PutMaxHex64(section_ptr->GetFileAddress() + offset, address_size,
-                     byte_order);
-  DataBufferSP buffer =
-      std::make_shared<DataBufferHeap>(stream.GetData(), stream.GetSize());
-  DataExtractor extractor(buffer, byte_order, address_size, byte_size);
-  DWARFExpression result(module, extractor, nullptr, 0, buffer->GetByteSize());
-  result.SetRegisterKind(register_kind);
-  return result;
-}
-
 VariableSP SymbolFileNativePDB::CreateGlobalVariable(PdbGlobalSymId var_id) {
   CVSymbol sym = m_index->symrecords().readRecord(var_id.offset);
   if (sym.kind() == S_CONSTANT)
@@ -1359,8 +1117,8 @@ SymbolFileNativePDB::CreateConstantSymbol(PdbGlobalSymId var_id,
   Declaration decl;
   Variable::RangeList ranges;
   ModuleSP module = GetObjectFile()->GetModule();
-  DWARFExpression location =
-      MakeConstantLocationExpression(constant.Type, tpi, constant, module);
+  DWARFExpression location = MakeConstantLocationExpression(
+      constant.Type, tpi, constant.Value, module);
 
   VariableSP var_sp = std::make_shared<Variable>(
       toOpaqueUid(var_id), constant.Name.str().c_str(), global_name.c_str(),

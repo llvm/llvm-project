@@ -996,6 +996,7 @@ WindowsARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_Swift:
     return CCCR_OK;
   default:
     return CCCR_Warning;

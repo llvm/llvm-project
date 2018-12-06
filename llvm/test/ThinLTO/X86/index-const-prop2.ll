@@ -34,7 +34,7 @@
 
 ; IMPORT:       @gFoo.llvm.0 = internal unnamed_addr global i32 1, align 4
 ; IMPORT-NEXT:  @gBar = internal local_unnamed_addr global i32 2, align 4
-; IMPORT:       !DICompileUnit({{.*}}, globals: !{{[0-9]+}})
+; IMPORT:       !DICompileUnit({{.*}})
 
 ; CODEGEN:        i32 @main()
 ; CODEGEN-NEXT:     ret i32 3

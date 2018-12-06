@@ -26,7 +26,7 @@ namespace llvm {
 /// instruction info tracks.
 namespace HexagonII {
   unsigned const TypeCVI_FIRST = TypeCVI_4SLOT_MPY;
-  unsigned const TypeCVI_LAST = TypeCVI_VX_LATE;
+  unsigned const TypeCVI_LAST = TypeCVI_ZW;
 
   enum SubTarget {
     HasV55SubT    = 0x3c,

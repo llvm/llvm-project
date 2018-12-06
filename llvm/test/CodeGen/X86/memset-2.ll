@@ -10,6 +10,7 @@ define fastcc void @t1() nounwind {
 ; CHECK-NEXT:    pushl $0
 ; CHECK-NEXT:    calll _memset
 ; CHECK-NEXT:    addl $16, %esp
+; CHECK-NEXT:    ud2
 entry:
   call void @llvm.memset.p0i8.i32(i8* null, i8 0, i32 188, i1 false)
   unreachable
@@ -22,6 +23,7 @@ define fastcc void @t2(i8 signext %c) nounwind {
 ; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $76, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    calll _memset
+; CHECK-NEXT:    ud2
 entry:
   call void @llvm.memset.p0i8.i32(i8* undef, i8 %c, i32 76, i1 false)
   unreachable

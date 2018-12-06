@@ -34,6 +34,8 @@
 // CHECK-V65: #define __hexagon__ 1
 
 // The HVX flags are explicitly defined by the driver.
+// For v60,v62,v65 - 64B mode is default
+// For v66 and future archs - 128B is default
 // RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv60 \
 // RUN: -target-feature +hvxv60 -target-feature +hvx-length64b %s | FileCheck \
 // RUN: %s -check-prefix CHECK-V60HVX-64B
@@ -55,3 +57,25 @@
 // CHECK-V60HVX-128B: #define __HVX_LENGTH__ 128
 // CHECK-V60HVX-128B: #define __HVX__ 1
 // CHECK-V60HVX-128B: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv66 \
+// RUN: -target-feature +hvxv66 -target-feature +hvx-length64b %s | FileCheck \
+// RUN: %s -check-prefix CHECK-V66HVX-64B
+// CHECK-V66HVX-64B: #define __HEXAGON_ARCH__ 66
+// CHECK-V66HVX-64B: #define __HEXAGON_V66__ 1
+// CHECK-V66HVX-64B-NOT: #define __HVXDBL__ 1
+// CHECK-V66HVX-64B: #define __HVX_ARCH__ 66
+// CHECK-V66HVX-64B: #define __HVX_LENGTH__ 64
+// CHECK-V66HVX-64B: #define __HVX__ 1
+// CHECK-V66HVX-64B: #define __hexagon__ 1
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-elf -target-cpu hexagonv66 \
+// RUN: -target-feature +hvxv66 -target-feature +hvx-length128b %s | FileCheck \
+// RUN: %s -check-prefix CHECK-V66HVX-128B
+// CHECK-V66HVX-128B: #define __HEXAGON_ARCH__ 66
+// CHECK-V66HVX-128B: #define __HEXAGON_V66__ 1
+// CHECK-V66HVX-128B: #define __HVXDBL__ 1
+// CHECK-V66HVX-128B: #define __HVX_ARCH__ 66
+// CHECK-V66HVX-128B: #define __HVX_LENGTH__ 128
+// CHECK-V66HVX-128B: #define __HVX__ 1
+// CHECK-V66HVX-128B: #define __hexagon__ 1

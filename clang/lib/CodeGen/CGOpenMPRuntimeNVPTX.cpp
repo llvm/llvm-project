@@ -326,9 +326,11 @@ class CheckVarsEscapingDeclContext final
           const auto *Attr = FD->getAttr<OMPCaptureKindAttr>();
           if (!Attr)
             return;
-          if (!isOpenMPPrivate(
-                  static_cast<OpenMPClauseKind>(Attr->getCaptureKind())) ||
-              Attr->getCaptureKind() == OMPC_map)
+          if (((Attr->getCaptureKind() != OMPC_map) &&
+               !isOpenMPPrivate(
+                   static_cast<OpenMPClauseKind>(Attr->getCaptureKind()))) ||
+              ((Attr->getCaptureKind() == OMPC_map) &&
+               !FD->getType()->isAnyPointerType()))
             return;
         }
         if (!FD->getType()->isReferenceType()) {

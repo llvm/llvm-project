@@ -245,4 +245,49 @@ def warn_stdlibcxx_not_found : Warning<
   "include path for stdlibc++ headers not found; pass '-stdlib=libc++' on the "
   "command line to use the libc++ standard library instead">,
   InGroup<DiagGroup<"stdlibcxx-not-found">>;
+
+def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
+def err_function_needs_feature : Error<
+  "always_inline function %1 requires target feature '%2', but would "
+  "be inlined into function %0 that is compiled without support for '%2'">;
+
+def err_alias_to_undefined : Error<
+  "%select{alias|ifunc}0 must point to a defined "
+  "%select{variable or |}1function">;
+def warn_alias_to_weak_alias : Warning<
+  "%select{alias|ifunc}2 will always resolve to %0 even if weak definition of "
+  "%1 is overridden">,
+  InGroup<IgnoredAttributes>;
+def err_duplicate_mangled_name : Error<
+  "definition with same mangled name '%0' as another definition">;
+def err_cyclic_alias : Error<
+  "%select{alias|ifunc}0 definition is part of a cycle">;
+def err_ifunc_resolver_return : Error<
+  "ifunc resolver function must return a pointer">;
+
+def warn_atomic_op_misaligned : Warning<
+  "%select{large|misaligned}0 atomic operation may incur "
+  "significant performance penalty">, InGroup<DiagGroup<"atomic-alignment">>;
+
+def warn_alias_with_section : Warning<
+  "%select{alias|ifunc}1 will not be in section '%0' but in the same section "
+  "as the %select{aliasee|resolver}2">,
+  InGroup<IgnoredAttributes>;
+
+let CategoryName = "Instrumentation Issue" in {
+def warn_profile_data_out_of_date : Warning<
+  "profile data may be out of date: of %0 function%s0, %1 %plural{1:has|:have}1"
+  " mismatched data that will be ignored">,
+  InGroup<ProfileInstrOutOfDate>;
+def warn_profile_data_missing : Warning<
+  "profile data may be incomplete: of %0 function%s0, %1 %plural{1:has|:have}1"
+  " no data">,
+  InGroup<ProfileInstrMissing>,
+  DefaultIgnore;
+def warn_profile_data_unprofiled : Warning<
+  "no profile data available for file \"%0\"">,
+  InGroup<ProfileInstrUnprofiled>;
+
+} // end of instrumentation issue category
+
 }

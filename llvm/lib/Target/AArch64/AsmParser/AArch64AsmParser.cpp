@@ -2813,27 +2813,28 @@ static const struct Extension {
   const char *Name;
   const FeatureBitset Features;
 } ExtensionMap[] = {
-  { "crc",  {AArch64::FeatureCRC} },
-  { "sm4",  {AArch64::FeatureSM4} },
-  { "sha3", {AArch64::FeatureSHA3} },
-  { "sha2", {AArch64::FeatureSHA2} },
-  { "aes",  {AArch64::FeatureAES} },
-  { "crypto", {AArch64::FeatureCrypto} },
-  { "fp", {AArch64::FeatureFPARMv8} },
-  { "simd", {AArch64::FeatureNEON} },
-  { "ras", {AArch64::FeatureRAS} },
-  { "lse", {AArch64::FeatureLSE} },
-  { "predctrl", {AArch64::FeaturePredCtrl} },
-  { "ccdp", {AArch64::FeatureCacheDeepPersist} },
-  { "mte", {AArch64::FeatureMTE} },
-
-  // FIXME: Unsupported extensions
-  { "pan", {} },
-  { "lor", {} },
-  { "rdma", {} },
-  { "profile", {} },
+    {"crc", {AArch64::FeatureCRC}},
+    {"sm4", {AArch64::FeatureSM4}},
+    {"sha3", {AArch64::FeatureSHA3}},
+    {"sha2", {AArch64::FeatureSHA2}},
+    {"aes", {AArch64::FeatureAES}},
+    {"crypto", {AArch64::FeatureCrypto}},
+    {"fp", {AArch64::FeatureFPARMv8}},
+    {"simd", {AArch64::FeatureNEON}},
+    {"ras", {AArch64::FeatureRAS}},
+    {"lse", {AArch64::FeatureLSE}},
+    {"predctrl", {AArch64::FeaturePredCtrl}},
+    {"ccdp", {AArch64::FeatureCacheDeepPersist}},
+    {"mte", {AArch64::FeatureMTE}},
+    {"tlb-rmi", {AArch64::FeatureTLB_RMI}},
+    {"pan-rwv", {AArch64::FeaturePAN_RWV}},
+    {"ccpp", {AArch64::FeatureCCPP}},
+    // FIXME: Unsupported extensions
+    {"pan", {}},
+    {"lor", {}},
+    {"rdma", {}},
+    {"profile", {}},
 };
-
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
   if (FBS[AArch64::HasV8_1aOps])

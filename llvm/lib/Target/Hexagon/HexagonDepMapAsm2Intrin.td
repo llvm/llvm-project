@@ -1737,6 +1737,17 @@ def: Pat<(int_hexagon_S6_vsplatrbp IntRegs:$src1),
 def: Pat<(int_hexagon_A6_vcmpbeq_notany DoubleRegs:$src1, DoubleRegs:$src2),
          (A6_vcmpbeq_notany DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV65]>;
 
+// V66 Scalar Instructions.
+
+def: Pat<(int_hexagon_F2_dfsub DoubleRegs:$src1, DoubleRegs:$src2),
+         (F2_dfsub DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV66]>;
+def: Pat<(int_hexagon_F2_dfadd DoubleRegs:$src1, DoubleRegs:$src2),
+         (F2_dfadd DoubleRegs:$src1, DoubleRegs:$src2)>, Requires<[HasV66]>;
+def: Pat<(int_hexagon_M2_mnaci IntRegs:$src1, IntRegs:$src2, IntRegs:$src3),
+         (M2_mnaci IntRegs:$src1, IntRegs:$src2, IntRegs:$src3)>, Requires<[HasV66]>;
+def: Pat<(int_hexagon_S2_mask u5_0ImmPred:$src1, u5_0ImmPred:$src2),
+         (S2_mask u5_0ImmPred:$src1, u5_0ImmPred:$src2)>, Requires<[HasV66]>;
+
 // V60 HVX Instructions.
 
 def: Pat<(int_hexagon_V6_veqb_or HvxQR:$src1, HvxVR:$src2, HvxVR:$src3),
@@ -3305,3 +3316,22 @@ def: Pat<(int_hexagon_V6_vabsb_sat HvxVR:$src1),
          (V6_vabsb_sat HvxVR:$src1)>, Requires<[HasV65, UseHVX64B]>;
 def: Pat<(int_hexagon_V6_vabsb_sat_128B HvxVR:$src1),
          (V6_vabsb_sat HvxVR:$src1)>, Requires<[HasV65, UseHVX128B]>;
+
+// V66 HVX Instructions.
+
+def: Pat<(int_hexagon_V6_vaddcarrysat HvxVR:$src1, HvxVR:$src2, HvxQR:$src3),
+         (V6_vaddcarrysat HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[HasV66, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vaddcarrysat_128B HvxVR:$src1, HvxVR:$src2, HvxQR:$src3),
+         (V6_vaddcarrysat HvxVR:$src1, HvxVR:$src2, HvxQR:$src3)>, Requires<[HasV66, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vasr_into HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vasr_into HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV66, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vasr_into_128B HvxWR:$src1, HvxVR:$src2, HvxVR:$src3),
+         (V6_vasr_into HvxWR:$src1, HvxVR:$src2, HvxVR:$src3)>, Requires<[HasV66, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vsatdw HvxVR:$src1, HvxVR:$src2),
+         (V6_vsatdw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vsatdw_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vsatdw HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX128B]>;
+def: Pat<(int_hexagon_V6_vrotr HvxVR:$src1, HvxVR:$src2),
+         (V6_vrotr HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX64B]>;
+def: Pat<(int_hexagon_V6_vrotr_128B HvxVR:$src1, HvxVR:$src2),
+         (V6_vrotr HvxVR:$src1, HvxVR:$src2)>, Requires<[HasV66, UseHVX128B]>;

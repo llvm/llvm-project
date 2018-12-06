@@ -6354,6 +6354,42 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     // MachineFunction in SelectionDAGISel::PrepareEHLandingPad. We can safely
     // delete it now.
     return nullptr;
+  case Intrinsic::objc_autorelease:
+    return "objc_autorelease";
+  case Intrinsic::objc_autoreleasePoolPop:
+    return "objc_autoreleasePoolPop";
+  case Intrinsic::objc_autoreleasePoolPush:
+    return "objc_autoreleasePoolPush";
+  case Intrinsic::objc_autoreleaseReturnValue:
+    return "objc_autoreleaseReturnValue";
+  case Intrinsic::objc_copyWeak:
+    return "objc_copyWeak";
+  case Intrinsic::objc_destroyWeak:
+    return "objc_destroyWeak";
+  case Intrinsic::objc_initWeak:
+    return "objc_initWeak";
+  case Intrinsic::objc_loadWeak:
+    return "objc_loadWeak";
+  case Intrinsic::objc_loadWeakRetained:
+    return "objc_loadWeakRetained";
+  case Intrinsic::objc_moveWeak:
+    return "objc_moveWeak";
+  case Intrinsic::objc_release:
+    return "objc_release";
+  case Intrinsic::objc_retain:
+    return "objc_retain";
+  case Intrinsic::objc_retainAutorelease:
+    return "objc_retainAutorelease";
+  case Intrinsic::objc_retainAutoreleaseReturnValue:
+    return "objc_retainAutoreleaseReturnValue";
+  case Intrinsic::objc_retainAutoreleasedReturnValue:
+    return "objc_retainAutoreleasedReturnValue";
+  case Intrinsic::objc_retainBlock:
+    return "objc_retainBlock";
+  case Intrinsic::objc_storeStrong:
+    return "objc_storeStrong";
+  case Intrinsic::objc_storeWeak:
+    return "objc_storeWeak";
   }
 }
 
