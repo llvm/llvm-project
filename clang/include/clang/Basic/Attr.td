@@ -1822,6 +1822,11 @@ def Regparm : TypeAttr {
   let ASTNode = 0;
 }
 
+def NoDeref : TypeAttr {
+  let Spellings = [Clang<"noderef">];
+  let Documentation = [NoDerefDocs];
+}
+
 def ReqdWorkGroupSize : InheritableAttr {
   // Does not have a [[]] spelling because it is an OpenCL-related attribute.
   let Spellings = [GNU<"reqd_work_group_size">];

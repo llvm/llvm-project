@@ -24,6 +24,8 @@ inline bool is_TC3x(unsigned SchedClass) {
   case Hexagon::Sched::tc_13bfbcf9:
   case Hexagon::Sched::tc_174516e8:
   case Hexagon::Sched::tc_1a2fd869:
+  case Hexagon::Sched::tc_1c4528a2:
+  case Hexagon::Sched::tc_32779c6f:
   case Hexagon::Sched::tc_5b54b33f:
   case Hexagon::Sched::tc_6b25e783:
   case Hexagon::Sched::tc_76851da1:
@@ -31,6 +33,7 @@ inline bool is_TC3x(unsigned SchedClass) {
   case Hexagon::Sched::tc_a9d88b22:
   case Hexagon::Sched::tc_bafaade3:
   case Hexagon::Sched::tc_bcf98408:
+  case Hexagon::Sched::tc_bdceeac1:
   case Hexagon::Sched::tc_c8ce0b5c:
   case Hexagon::Sched::tc_d1aa9eaa:
   case Hexagon::Sched::tc_d773585a:
@@ -53,6 +56,7 @@ inline bool is_TC2early(unsigned SchedClass) {
 
 inline bool is_TC4x(unsigned SchedClass) {
   switch (SchedClass) {
+  case Hexagon::Sched::tc_2f7c551d:
   case Hexagon::Sched::tc_2ff964b4:
   case Hexagon::Sched::tc_3a867367:
   case Hexagon::Sched::tc_3b470976:
@@ -69,7 +73,9 @@ inline bool is_TC2(unsigned SchedClass) {
   switch (SchedClass) {
   case Hexagon::Sched::tc_002cb246:
   case Hexagon::Sched::tc_14b5c689:
+  case Hexagon::Sched::tc_1c80410a:
   case Hexagon::Sched::tc_4414d8b1:
+  case Hexagon::Sched::tc_6132ba3d:
   case Hexagon::Sched::tc_61830035:
   case Hexagon::Sched::tc_679309b8:
   case Hexagon::Sched::tc_703e822c:
@@ -81,6 +87,8 @@ inline bool is_TC2(unsigned SchedClass) {
   case Hexagon::Sched::tc_a813cf9a:
   case Hexagon::Sched::tc_bfec0f01:
   case Hexagon::Sched::tc_cf8126ae:
+  case Hexagon::Sched::tc_d08ee0f4:
+  case Hexagon::Sched::tc_e4a7f9f0:
   case Hexagon::Sched::tc_f429765c:
   case Hexagon::Sched::tc_f675fee8:
   case Hexagon::Sched::tc_f9058dd7:
@@ -100,7 +108,6 @@ inline bool is_TC1(unsigned SchedClass) {
   case Hexagon::Sched::tc_20cdee80:
   case Hexagon::Sched::tc_2332b92e:
   case Hexagon::Sched::tc_2eabeebe:
-  case Hexagon::Sched::tc_3a2ec948:
   case Hexagon::Sched::tc_3d495a39:
   case Hexagon::Sched::tc_4c5ba658:
   case Hexagon::Sched::tc_56336eb0:
@@ -122,7 +129,6 @@ inline bool is_TC1(unsigned SchedClass) {
   case Hexagon::Sched::tc_b31c2e97:
   case Hexagon::Sched::tc_b4b5c03a:
   case Hexagon::Sched::tc_b51dc29a:
-  case Hexagon::Sched::tc_bf41e621:
   case Hexagon::Sched::tc_cd374165:
   case Hexagon::Sched::tc_cfd8378a:
   case Hexagon::Sched::tc_d5b7b0c1:

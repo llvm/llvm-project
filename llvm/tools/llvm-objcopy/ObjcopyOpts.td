@@ -78,9 +78,9 @@ defm redefine_symbol
       MetaVarName<"old=new">;
 defm keep_section : Eq<"keep-section", "Keep <section>">,
                     MetaVarName<"section">;
-defm only_keep : Eq<"only-keep", "Remove all but <section>">,
-                 MetaVarName<"section">;
-def j : JoinedOrSeparate<["-"], "j">, Alias<only_keep>;
+defm only_section : Eq<"only-section", "Remove all but <section>">,
+                    MetaVarName<"section">;
+def j : JoinedOrSeparate<["-"], "j">, Alias<only_section>;
 defm add_section
     : Eq<"add-section",
          "Make a section named <section> with the contents of <file>.">,

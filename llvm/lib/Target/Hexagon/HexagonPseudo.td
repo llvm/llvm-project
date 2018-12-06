@@ -547,11 +547,11 @@ let isCodeGenOnly = 1, isPseudo = 1, Defs = [CS], Uses = [CS],
     addrMode = PostInc, accessSize = MS, hasSideEffects = 0 in {
   def NAME#_pci : STInst<(outs IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, s4_0Imm:$Ii, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_327843a7>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_e86aa961>;
 
   def NAME#_pcr : STInst<(outs IntRegs:$Rx32),
        (ins IntRegs:$Rx32in, ModRegs:$Mu2, RC:$Rt32, IntRegs:$Cs),
-       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_c4f596e3>;
+       ".error \"should not emit\" ", [], "$Rx32 = $Rx32in", tc_da97ee82>;
 }
 }
 

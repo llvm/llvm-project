@@ -2828,7 +2828,6 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
   // When ObjectiveC legacy runtime is in effect on MacOSX, turn on the option
   // to do Array/Dictionary subscripting by default.
   if (Arch == llvm::Triple::x86 && T.isMacOSX() &&
-      !T.isMacOSXVersionLT(10, 7) &&
       Runtime.getKind() == ObjCRuntime::FragileMacOSX && Runtime.isNeXTFamily())
     CmdArgs.push_back("-fobjc-subscripting-legacy-runtime");
 

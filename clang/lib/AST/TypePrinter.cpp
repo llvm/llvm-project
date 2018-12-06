@@ -1508,6 +1508,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::PreserveAll:
     OS << "preserve_all";
     break;
+  case attr::NoDeref:
+    OS << "noderef";
+    break;
   }
   OS << "))";
 }

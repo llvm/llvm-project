@@ -9548,4 +9548,13 @@ def err_std_compare_type_not_supported : Error<
    "member '%2' is missing|"
    "the type is not trivially copyable|"
    "the type does not have the expected form}1">;
+
+def warn_dereference_of_noderef_type : Warning<
+  "dereferencing %0; was declared with a 'noderef' type">, InGroup<NoDeref>;
+def warn_dereference_of_noderef_type_no_decl : Warning<
+  "dereferencing expression marked as 'noderef'">, InGroup<NoDeref>;
+def warn_noderef_on_non_pointer_or_array : Warning<
+  "'noderef' can only be used on an array or pointer type">, InGroup<IgnoredAttributes>;
+def warn_noderef_to_dereferenceable_pointer : Warning<
+  "casting to dereferenceable pointer removes 'noderef' attribute">, InGroup<NoDeref>;
 } // end of sema component.

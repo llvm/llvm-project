@@ -17,7 +17,7 @@
 #include <cassert>
 namespace llvm {
 
-class CombinerChangeObserver;
+class GISelChangeObserver;
 class LegalizerInfo;
 class MachineInstr;
 class MachineIRBuilder;
@@ -43,7 +43,7 @@ public:
   /// illegal ops that are created.
   bool LegalizeIllegalOps; // TODO: Make use of this.
   const LegalizerInfo *LInfo;
-  virtual bool combine(CombinerChangeObserver &Observer, MachineInstr &MI,
+  virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
                        MachineIRBuilder &B) const = 0;
 };
 } // namespace llvm
