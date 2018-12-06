@@ -1040,3 +1040,5 @@ def ExperimentalISel : DiagGroup<"experimental-isel">;
 // A warning group specifically for warnings related to function
 // multiversioning.
 def FunctionMultiVersioning : DiagGroup<"function-multiversion">;
+
+def NoDeref : DiagGroup<"noderef">;

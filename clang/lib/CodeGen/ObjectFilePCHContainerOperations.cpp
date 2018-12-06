@@ -21,7 +21,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Serialization/ASTWriter.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Bitcode/BitstreamReader.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
