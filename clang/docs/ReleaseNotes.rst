@@ -120,6 +120,13 @@ Non-comprehensive list of changes in this release
   entirely from Clang. The feature did not properly work with about 1/3 of the
   possible tokens available and was unmaintained.
 
+- The internals of libc++ include directory detection on MacOS have changed.
+  Instead of running a search based on the ``-resource-dir`` flag, the search
+  is now based on the path of the compiler in the filesystem. The default
+  behaviour should not change. However, if you override ``-resource-dir``
+  manually and rely on the old behaviour you will need to add appropriate
+  compiler flags for finding the corresponding libc++ include directory.
+
 New Compiler Flags
 ------------------
 

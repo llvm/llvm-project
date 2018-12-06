@@ -1008,6 +1008,13 @@ BUILTIN(__builtin_HEXAGON_S6_vsplatrbp,"LLii","")
 
 BUILTIN(__builtin_HEXAGON_A6_vcmpbeq_notany,"iLLiLLi","")
 
+// V66 Scalar Instructions.
+
+BUILTIN(__builtin_HEXAGON_F2_dfsub,"ddd","")
+BUILTIN(__builtin_HEXAGON_F2_dfadd,"ddd","")
+BUILTIN(__builtin_HEXAGON_M2_mnaci,"iiii","")
+BUILTIN(__builtin_HEXAGON_S2_mask,"iUIiUIi","")
+
 // V60 HVX Instructions.
 
 BUILTIN(__builtin_HEXAGON_V6_veqb_or,"V16iV16iV16iV16i","")
@@ -1797,5 +1804,15 @@ BUILTIN(__builtin_HEXAGON_V6_vmpabuu_128B,"V64iV64ii","")
 BUILTIN(__builtin_HEXAGON_V6_vabsb_sat,"V16iV16i","")
 BUILTIN(__builtin_HEXAGON_V6_vabsb_sat_128B,"V32iV32i","")
 
+// V66 HVX Instructions.
+
+BUILTIN(__builtin_HEXAGON_V6_vaddcarrysat,"V16iV16iV16iV16i","")
+BUILTIN(__builtin_HEXAGON_V6_vaddcarrysat_128B,"V32iV32iV32iV32i","")
+BUILTIN(__builtin_HEXAGON_V6_vasr_into,"V32iV32iV16iV16i","")
+BUILTIN(__builtin_HEXAGON_V6_vasr_into_128B,"V64iV64iV32iV32i","")
+BUILTIN(__builtin_HEXAGON_V6_vsatdw,"V16iV16iV16i","")
+BUILTIN(__builtin_HEXAGON_V6_vsatdw_128B,"V32iV32iV32i","")
+BUILTIN(__builtin_HEXAGON_V6_vrotr,"V16iV16iV16i","")
+BUILTIN(__builtin_HEXAGON_V6_vrotr_128B,"V32iV32iV32i","")
 
 #undef BUILTIN
