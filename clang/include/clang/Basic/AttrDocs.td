@@ -862,6 +862,9 @@ is responsible for freeing it.
 Similiarly, the annotation ``__attribute__((ns_returns_not_retained))``
 specifies that the object is returned at ``+0`` and the ownership remains with
 the callee.
+The annotation ``__attribute__((ns_consumes_self))`` specifies that
+the Objective-C method call consumes the reference to ``self``, e.g. by
+attaching it to a supplied parameter.
 Additionally, parameters can have an annotation
 ``__attribute__((ns_consumed))``, which specifies that passing an owned object
 as that parameter effectively transfers the ownership, and the caller is no
@@ -881,7 +884,11 @@ the same attribute family is present:
 ``__attribute__((os_returns_not_retained))``,
 ``__attribute__((os_returns_retained))`` and ``__attribute__((os_consumed))``,
 with the same respective semantics.
-These attributes are also used by the Clang Static Analyzer.
+Similar to ``__attribute__((ns_consumes_self))``,
+``__attribute__((os_consumes_this))`` specifies that the method call consumes
+the reference to "this" (e.g., when attaching it to a different object supplied
+as a parameter).
+These attributes are only used by the Clang Static Analyzer.
 
 The family of attributes ``X_returns_X_retained`` can be added to functions,
 C++ methods, and Objective-C methods and properties.

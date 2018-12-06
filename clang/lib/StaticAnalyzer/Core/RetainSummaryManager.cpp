@@ -730,7 +730,7 @@ bool applyFunctionParamAnnotationEffect(const ParmVarDecl *pd,
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
       for (const auto *OD : MD->overridden_methods()) {
         const ParmVarDecl *OP = OD->parameters()[parm_idx];
-        if (applyFunctionParamAnnotationEffect(OP, parm_idx, MD, AF, Template))
+        if (applyFunctionParamAnnotationEffect(OP, parm_idx, OD, AF, Template))
           return true;
       }
     }
@@ -759,6 +759,9 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
   QualType RetTy = FD->getReturnType();
   if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, FD))
     Template->setRetEffect(*RetE);
+
+  if (FD->hasAttr<OSConsumesThisAttr>())
+    Template->setThisEffect(DecRef);
 }
 
 void
