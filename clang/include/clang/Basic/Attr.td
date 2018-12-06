@@ -94,6 +94,15 @@ def ObjCClassMethod : SubsetSubject<ObjCMethod,
                                     [{!S->isInstanceMethod()}],
                                     "Objective-C class methods">;
 
+def NonStaticCXXMethod : SubsetSubject<CXXMethod,
+                                       [{!S->isStatic()}],
+                                       "non-static member functions">;
+
+def NonStaticNonConstCXXMethod
+    : SubsetSubject<CXXMethod,
+                    [{!S->isStatic() && !S->isConst()}],
+                    "non-static non-const member functions">;
+
 def ObjCInstanceMethod : SubsetSubject<ObjCMethod,
                                        [{S->isInstanceMethod()}],
                                        "Objective-C instance methods">;
@@ -847,6 +856,12 @@ def OSReturnsRetained : InheritableAttr {
 def OSReturnsNotRetained : InheritableAttr {
   let Spellings = [Clang<"os_returns_not_retained">];
   let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty]>;
+  let Documentation = [RetainBehaviorDocs];
+}
+
+def OSConsumesThis : InheritableAttr {
+  let Spellings = [Clang<"os_consumes_this">];
+  let Subjects = SubjectList<[NonStaticCXXMethod]>;
   let Documentation = [RetainBehaviorDocs];
 }
 
@@ -1642,13 +1657,13 @@ def NSReturnsAutoreleased : InheritableAttr {
 def NSConsumesSelf : InheritableAttr {
   let Spellings = [Clang<"ns_consumes_self">];
   let Subjects = SubjectList<[ObjCMethod]>;
-  let Documentation = [Undocumented];
+  let Documentation = [RetainBehaviorDocs];
 }
 
 def NSConsumed : InheritableParamAttr {
   let Spellings = [Clang<"ns_consumed">];
   let Subjects = SubjectList<[ParmVar]>;
-  let Documentation = [Undocumented];
+  let Documentation = [RetainBehaviorDocs];
 }
 
 def ObjCException : InheritableAttr {
