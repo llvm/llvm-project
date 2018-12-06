@@ -32,6 +32,7 @@ static StringRef getDefaultHvxLength(StringRef Cpu) {
       .Case("v60", "64b")
       .Case("v62", "64b")
       .Case("v65", "64b")
+      .Case("v66", "128b")
       .Default("128b");
 }
 
