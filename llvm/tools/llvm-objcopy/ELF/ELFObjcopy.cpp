@@ -415,10 +415,10 @@ static void handleArgs(const CopyConfig &Config, Object &Obj,
     };
 
   // Explicit copies:
-  if (!Config.OnlyKeep.empty()) {
+  if (!Config.OnlySection.empty()) {
     RemovePred = [&Config, RemovePred, &Obj](const SectionBase &Sec) {
       // Explicitly keep these sections regardless of previous removes.
-      if (is_contained(Config.OnlyKeep, Sec.Name))
+      if (is_contained(Config.OnlySection, Sec.Name))
         return false;
 
       // Allow all implicit removes.

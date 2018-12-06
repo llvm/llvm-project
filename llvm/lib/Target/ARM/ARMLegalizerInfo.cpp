@@ -318,7 +318,8 @@ ARMLegalizerInfo::getFCmpLibcalls(CmpInst::Predicate Predicate,
 
 bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
                                       MachineRegisterInfo &MRI,
-                                      MachineIRBuilder &MIRBuilder) const {
+                                      MachineIRBuilder &MIRBuilder,
+                                      GISelChangeObserver &Observer) const {
   using namespace TargetOpcode;
 
   MIRBuilder.setInstr(MI);

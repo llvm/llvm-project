@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-class CombinerChangeObserver;
+class GISelChangeObserver;
 class MachineIRBuilder;
 class MachineRegisterInfo;
 class MachineInstr;
@@ -28,13 +28,13 @@ class MachineInstr;
 class CombinerHelper {
   MachineIRBuilder &Builder;
   MachineRegisterInfo &MRI;
-  CombinerChangeObserver &Observer;
+  GISelChangeObserver &Observer;
 
   void eraseInstr(MachineInstr &MI);
   void scheduleForVisit(MachineInstr &MI);
 
 public:
-  CombinerHelper(CombinerChangeObserver &Observer, MachineIRBuilder &B);
+  CombinerHelper(GISelChangeObserver &Observer, MachineIRBuilder &B);
 
   /// If \p MI is COPY, try to combine it.
   /// Returns true if MI changed.
