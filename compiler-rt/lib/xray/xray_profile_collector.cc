@@ -86,7 +86,8 @@ static FunctionCallTrie::Allocators *GlobalAllocators = nullptr;
 
 void post(const FunctionCallTrie &T, tid_t TId) XRAY_NEVER_INSTRUMENT {
   static pthread_once_t Once = PTHREAD_ONCE_INIT;
-  pthread_once(&Once, +[] { reset(); });
+  pthread_once(
+      &Once, +[]() XRAY_NEVER_INSTRUMENT { reset(); });
 
   ThreadTrie *Item = nullptr;
   {
@@ -94,14 +95,15 @@ void post(const FunctionCallTrie &T, tid_t TId) XRAY_NEVER_INSTRUMENT {
     if (GlobalAllocators == nullptr || ThreadTries == nullptr)
       return;
 
-    Item = ThreadTries->Append({});
+    Item = ThreadTries->Append(ThreadTrie());
+    if (Item == nullptr)
+      return;
+
     Item->TId = TId;
     auto Trie = reinterpret_cast<FunctionCallTrie *>(&Item->TrieStorage);
     new (Trie) FunctionCallTrie(*GlobalAllocators);
+    T.deepCopyInto(*Trie);
   }
-
-  auto Trie = reinterpret_cast<FunctionCallTrie *>(&Item->TrieStorage);
-  T.deepCopyInto(*Trie);
 }
 
 // A PathArray represents the function id's representing a stack trace. In this
@@ -115,13 +117,7 @@ struct ProfileRecord {
   // The Path in this record is the function id's from the leaf to the root of
   // the function call stack as represented from a FunctionCallTrie.
   PathArray Path;
-  const FunctionCallTrie::Node *Node = nullptr;
-
-  // Constructor for in-place construction.
-  ProfileRecord(PathAllocator &A,
-                const FunctionCallTrie::Node *N) XRAY_NEVER_INSTRUMENT
-      : Path(A),
-        Node(N) {}
+  const FunctionCallTrie::Node *Node;
 };
 
 namespace {
@@ -142,7 +138,7 @@ populateRecords(ProfileRecordArray &PRs, ProfileRecord::PathAllocator &PA,
     while (!DFSStack.empty()) {
       auto Node = DFSStack.back();
       DFSStack.trim(1);
-      auto Record = PRs.AppendEmplace(PA, Node);
+      auto Record = PRs.AppendEmplace(PathArray{PA}, Node);
       if (Record == nullptr)
         return;
       DCHECK_NE(Record, nullptr);
@@ -203,7 +199,7 @@ void serialize() XRAY_NEVER_INSTRUMENT {
 
   // Clear out the global ProfileBuffers, if it's not empty.
   for (auto &B : *ProfileBuffers)
-    deallocateBuffer(reinterpret_cast<uint8_t *>(B.Data), B.Size);
+    deallocateBuffer(reinterpret_cast<unsigned char *>(B.Data), B.Size);
   ProfileBuffers->trim(ProfileBuffers->size());
 
   if (ThreadTries->empty())
@@ -278,8 +274,8 @@ void reset() XRAY_NEVER_INSTRUMENT {
 
   GlobalAllocators =
       reinterpret_cast<FunctionCallTrie::Allocators *>(&AllocatorStorage);
-  new (GlobalAllocators) FunctionCallTrie::Allocators();
-  *GlobalAllocators = FunctionCallTrie::InitAllocators();
+  new (GlobalAllocators)
+      FunctionCallTrie::Allocators(FunctionCallTrie::InitAllocators());
 
   if (ThreadTriesAllocator != nullptr)
     ThreadTriesAllocator->~ThreadTriesArrayAllocator();
@@ -312,8 +308,10 @@ XRayBuffer nextBuffer(XRayBuffer B) XRAY_NEVER_INSTRUMENT {
   static pthread_once_t Once = PTHREAD_ONCE_INIT;
   static typename std::aligned_storage<sizeof(XRayProfilingFileHeader)>::type
       FileHeaderStorage;
-  pthread_once(&Once,
-               +[] { new (&FileHeaderStorage) XRayProfilingFileHeader{}; });
+  pthread_once(
+      &Once, +[]() XRAY_NEVER_INSTRUMENT {
+        new (&FileHeaderStorage) XRayProfilingFileHeader{};
+      });
 
   if (UNLIKELY(B.Data == nullptr)) {
     // The first buffer should always contain the file header information.
