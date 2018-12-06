@@ -514,6 +514,7 @@ WindowsARM64TargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_OpenCLKernel:
   case CC_PreserveMost:
   case CC_PreserveAll:
+  case CC_Swift:
   case CC_Win64:
     return CCCR_OK;
   default:
