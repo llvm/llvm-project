@@ -3261,6 +3261,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                         Res.getFileSystemOpts().WorkingDir);
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
+  llvm::Triple T(Res.getTargetOpts().Triple);
   if (DashX.getFormat() == InputKind::Precompiled ||
       DashX.getLanguage() == InputKind::LLVM_IR) {
     // ObjCAAutoRefCount and Sanitize LangOpts are used to setup the
@@ -3281,6 +3282,12 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                   Res.getPreprocessorOpts(), Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
+    if (T.isOSDarwin() && DashX.isPreprocessed()) {
+      // Supress the darwin-specific 'stdlibcxx-not-found' diagnostic for
+      // preprocessed input as we don't expect it to be used with -std=libc++
+      // anyway.
+      Res.getDiagnosticOpts().Warnings.push_back("no-stdlibcxx-not-found");
+    }
   }
 
   LangOpts.FunctionAlignment =
@@ -3316,7 +3323,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
     LangOpts.NeededByPCHOrCompilationUsesPCH = true;
 
   // Turn on -Wspir-compat for SPIR target.
-  llvm::Triple T(Res.getTargetOpts().Triple);
   auto Arch = T.getArch();
   if (Arch == llvm::Triple::spir || Arch == llvm::Triple::spir64) {
     Res.getDiagnosticOpts().Warnings.push_back("spir-compat");
