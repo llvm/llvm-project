@@ -7,12 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Annotations.h"
 #include "Context.h"
 #include "Matchers.h"
 #include "TUScheduler.h"
 #include "TestFS.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "gmock/gmock.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "gtest/gtest.h"
 #include <algorithm>
 #include <utility>
@@ -23,12 +24,17 @@ namespace clangd {
 namespace {
 
 using ::testing::_;
+using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Pair;
 using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
+
+MATCHER_P2(TUState, State, ActionName, "") {
+  return arg.Action.S == State && arg.Action.Name == ActionName;
+}
 
 class TUSchedulerTests : public ::testing::Test {
 protected:
@@ -656,6 +662,78 @@ TEST_F(TUSchedulerTests, Run) {
   S.run("add 2", [&] { Counter += 2; });
   ASSERT_TRUE(S.blockUntilIdle(timeoutSeconds(10)));
   EXPECT_EQ(Counter.load(), 3);
+}
+
+TEST_F(TUSchedulerTests, TUStatus) {
+  class CaptureTUStatus : public DiagnosticsConsumer {
+  public:
+    void onDiagnosticsReady(PathRef File,
+                            std::vector<Diag> Diagnostics) override {}
+
+    void onFileUpdated(PathRef File, const TUStatus &Status) override {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      AllStatus.push_back(Status);
+    }
+
+    std::vector<TUStatus> AllStatus;
+
+  private:
+    std::mutex Mutex;
+  } CaptureTUStatus;
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, CaptureTUStatus, ClangdServer::optsForTest());
+  Annotations Code("int m^ain () {}");
+
+  // We schedule the following tasks in the queue:
+  //   [Update] [GoToDefinition]
+  Server.addDocument(testPath("foo.cpp"), Code.code(), WantDiagnostics::Yes);
+  Server.findDefinitions(testPath("foo.cpp"), Code.point(),
+                         [](Expected<std::vector<Location>> Result) {
+                           ASSERT_TRUE((bool)Result);
+                         });
+
+  ASSERT_TRUE(Server.blockUntilIdleForTest());
+
+  EXPECT_THAT(CaptureTUStatus.AllStatus,
+              ElementsAre(
+                  // Statuses of "Update" action.
+                  TUState(TUAction::Queued, "Update"),
+                  TUState(TUAction::RunningAction, "Update"),
+                  TUState(TUAction::BuildingPreamble, "Update"),
+                  TUState(TUAction::BuildingFile, "Update"),
+
+                  // Statuses of "Definitions" action
+                  TUState(TUAction::Queued, "Definitions"),
+                  TUState(TUAction::RunningAction, "Definitions"),
+                  TUState(TUAction::Idle, /*No action*/ "")));
+}
+
+TEST_F(TUSchedulerTests, NoTUStatusEmittedForRemovedFile) {
+  class CaptureTUStatus : public DiagnosticsConsumer {
+  public:
+    void onDiagnosticsReady(PathRef File,
+                            std::vector<Diag> Diagnostics) override {}
+
+    void onFileUpdated(PathRef File, const TUStatus &Status) override {
+      // Queued is emitted by the main thread, we don't block it.
+      if (Status.Action.S == TUAction::Queued)
+        return;
+      // Block the worker thread until the document is removed.
+      ASSERT_TRUE(Status.Action.S == TUAction::RunningAction);
+      Removed.wait();
+    }
+    Notification Removed;
+  } CaptureTUStatus;
+  MockFSProvider FS;
+  MockCompilationDatabase CDB;
+  ClangdServer Server(CDB, FS, CaptureTUStatus, ClangdServer::optsForTest());
+
+  Server.addDocument(testPath("foo.cpp"), "int main() {}",
+                     WantDiagnostics::Yes);
+  Server.removeDocument(testPath("foo.cpp"));
+  CaptureTUStatus.Removed.notify();
+  ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for finishing";
 }
 
 } // namespace
