@@ -716,11 +716,7 @@ TEST_F(TUSchedulerTests, NoTUStatusEmittedForRemovedFile) {
                             std::vector<Diag> Diagnostics) override {}
 
     void onFileUpdated(PathRef File, const TUStatus &Status) override {
-      // Queued is emitted by the main thread, we don't block it.
-      if (Status.Action.S == TUAction::Queued)
-        return;
       // Block the worker thread until the document is removed.
-      ASSERT_TRUE(Status.Action.S == TUAction::RunningAction);
       Removed.wait();
     }
     Notification Removed;
