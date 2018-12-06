@@ -854,7 +854,12 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     } else if (peek() == "(") {
       Cmd->SectionCommands.push_back(readInputSectionDescription(Tok));
     } else {
-      setError("unknown command " + Tok);
+      // We have a file name and no input sections description. It is not a
+      // commonly used syntax, but still acceptable. In that case, all sections
+      // from the file will be included.
+      InputSectionDescription *ISD = make<InputSectionDescription>(Tok);
+      ISD->SectionPatterns.push_back({{}, StringMatcher({"*"})});
+      Cmd->SectionCommands.push_back(ISD);
     }
   }
 
