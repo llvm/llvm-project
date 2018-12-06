@@ -79,6 +79,7 @@ class ModuleListProperties : public Properties {
 public:
   ModuleListProperties();
 
+  bool GetUseDWARFImporter() const;
   FileSpec GetClangModulesCachePath() const;
   bool SetClangModulesCachePath(llvm::StringRef path);
   bool GetEnableExternalLookup() const;
