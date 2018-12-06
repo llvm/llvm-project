@@ -486,9 +486,12 @@ class MsvcBuilder(Builder):
             linkenv.update(defaultenv)
         return (compileenv, linkenv)
 
-    def _output_name(self, input, extension):
-        basename = os.path.basename(input)
-        basename = os.path.splitext(basename)[0] + extension
+    def _output_name(self, input, extension, with_executable=False):
+        basename = os.path.splitext(os.path.basename(input))[0] + extension
+        if with_executable:
+            exe_basename = os.path.basename(self._exe_file_name())
+            basename = exe_basename + '-' + basename
+
         output = os.path.join(self.outdir, basename)
         return os.path.normpath(output)
 
@@ -501,6 +504,13 @@ class MsvcBuilder(Builder):
     def _obj_file_names(self):
         if self.mode == 'link':
             return self.inputs
+
+        if self.mode == 'compile-and-link':
+            # Object file names should factor in both the input file (source)
+            # name and output file (executable) name, to ensure that two tests
+            # which share a common source file don't race to write the same
+            # object file.
+            return [self._output_name(x, '.obj', True) for x in self.inputs]
 
         if self.mode == 'compile' and self.output:
             return [self.output]
