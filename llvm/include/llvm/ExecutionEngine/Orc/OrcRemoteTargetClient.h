@@ -70,8 +70,7 @@ public:
     RemoteRTDyldMemoryManager &
     operator=(const RemoteRTDyldMemoryManager &) = delete;
     RemoteRTDyldMemoryManager(RemoteRTDyldMemoryManager &&) = default;
-    RemoteRTDyldMemoryManager &
-    operator=(RemoteRTDyldMemoryManager &&) = default;
+    RemoteRTDyldMemoryManager &operator=(RemoteRTDyldMemoryManager &&) = delete;
 
     uint8_t *allocateCodeSection(uintptr_t Size, unsigned Alignment,
                                  unsigned SectionID,

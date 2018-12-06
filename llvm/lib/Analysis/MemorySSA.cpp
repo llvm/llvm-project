@@ -119,7 +119,6 @@ class MemoryLocOrCall {
 public:
   bool IsCall = false;
 
-  MemoryLocOrCall() = default;
   MemoryLocOrCall(MemoryUseOrDef *MUD)
       : MemoryLocOrCall(MUD->getMemoryInst()) {}
   MemoryLocOrCall(const MemoryUseOrDef *MUD)
