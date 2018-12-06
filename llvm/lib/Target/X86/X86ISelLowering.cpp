@@ -40000,11 +40000,8 @@ static SDValue materializeSBB(SDNode *N, SDValue EFLAGS, SelectionDAG &DAG) {
   SDValue CF = DAG.getConstant(X86::COND_B, DL, MVT::i8);
   SDValue SBB = DAG.getNode(X86ISD::SETCC_CARRY, DL, MVT::i8, CF, EFLAGS);
   MVT VT = N->getSimpleValueType(0);
-  if (VT == MVT::i8)
-    return DAG.getNode(ISD::AND, DL, VT, SBB, DAG.getConstant(1, DL, VT));
-
-  assert(VT == MVT::i1 && "Unexpected type for SETCC node");
-  return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SBB);
+  assert(VT == MVT::i8 && "Unexpected type for SETCC node");
+  return DAG.getNode(ISD::AND, DL, VT, SBB, DAG.getConstant(1, DL, VT));
 }
 
 /// If this is an add or subtract where one operand is produced by a cmp+setcc,
