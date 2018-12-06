@@ -9,6 +9,7 @@
 
 // In macosx10.9 to macosx10.14, streams are provided in the dylib AND they
 // have a bug in how they handle null-termination in case of errors (see D40677).
+// XFAIL: with_system_cxx_lib=macosx10.14
 // XFAIL: with_system_cxx_lib=macosx10.13
 // XFAIL: with_system_cxx_lib=macosx10.12
 // XFAIL: with_system_cxx_lib=macosx10.11
