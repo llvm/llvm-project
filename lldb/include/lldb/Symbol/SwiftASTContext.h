@@ -37,11 +37,12 @@
 namespace swift {
 enum class IRGenDebugInfoLevel : unsigned;
 class CanType;
+class DWARFImporter;
 class IRGenOptions;
 class NominalTypeDecl;
-struct PrintOptions;
 class SILModule;
 class VarDecl;
+struct PrintOptions;
 namespace irgen {
 class FixedTypeInfo;
 class TypeInfo;
@@ -844,6 +845,7 @@ protected:
   /// Owned by the AST.
   swift::SerializedModuleLoader *m_serialized_module_loader = nullptr;
   swift::ClangImporter *m_clang_importer = nullptr;
+  swift::DWARFImporter *m_dwarf_importer = nullptr;
   SwiftModuleMap m_swift_module_cache;
   SwiftTypeFromMangledNameMap m_mangled_name_to_type_map;
   SwiftMangledNameFromTypeMap m_type_to_mangled_name_map;
