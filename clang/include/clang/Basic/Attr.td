@@ -1934,6 +1934,7 @@ def SwiftVersionedRemoval : Attr {
       return static_cast<attr::Kind>(getRawKind());
     }
   }];
+}
 
 def NoDeref : TypeAttr {
   let Spellings = [Clang<"noderef">];
