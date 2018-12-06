@@ -88,18 +88,12 @@ define i32 @dead_block_test_branch_loop(i32 %end) {
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[DEAD:%.*]]
-; CHECK:       dead:
-; CHECK-NEXT:    [[I_2:%.*]] = add i32 [[I]], 1
-; CHECK-NEXT:    br label [[BACKEDGE]]
-; CHECK:       backedge:
-; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[I]], [[HEADER]] ], [ [[I_2]], [[DEAD]] ]
-; CHECK-NEXT:    [[I_INC]] = add i32 [[I_1]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[HEADER]] ]
+; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[HEADER]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[HEADER]] ]
 ; CHECK-NEXT:    ret i32 [[I_INC_LCSSA]]
 ;
 preheader:
@@ -129,22 +123,12 @@ define i32 @dead_block_test_switch_loop(i32 %end) {
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    switch i32 1, label [[DEAD:%.*]] [
-; CHECK-NEXT:    i32 0, label [[DEAD]]
-; CHECK-NEXT:    i32 1, label [[BACKEDGE]]
-; CHECK-NEXT:    i32 2, label [[DEAD]]
-; CHECK-NEXT:    ]
-; CHECK:       dead:
-; CHECK-NEXT:    [[I_2:%.*]] = add i32 [[I]], 1
-; CHECK-NEXT:    br label [[BACKEDGE]]
-; CHECK:       backedge:
-; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[I]], [[HEADER]] ], [ [[I_2]], [[DEAD]] ]
-; CHECK-NEXT:    [[I_INC]] = add i32 [[I_1]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[HEADER]] ]
+; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[HEADER]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[HEADER]] ]
 ; CHECK-NEXT:    ret i32 [[I_INC_LCSSA]]
 ;
 preheader:
@@ -175,18 +159,12 @@ define i32 @dead_block_propogate_test_branch_loop(i32 %end) {
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[DEAD:%.*]]
-; CHECK:       dead:
-; CHECK-NEXT:    [[I_2:%.*]] = add i32 [[I]], 1
-; CHECK-NEXT:    br label [[BACKEDGE]]
-; CHECK:       backedge:
-; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[I]], [[HEADER]] ], [ [[I_2]], [[DEAD]] ]
-; CHECK-NEXT:    [[I_INC]] = add i32 [[I_1]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[HEADER]] ]
+; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[HEADER]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[HEADER]] ]
 ; CHECK-NEXT:    ret i32 [[I_INC_LCSSA]]
 ;
 preheader:
@@ -219,22 +197,12 @@ define i32 @dead_block_propogate_test_switch_loop(i32 %end) {
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    switch i32 1, label [[DEAD:%.*]] [
-; CHECK-NEXT:    i32 0, label [[DEAD]]
-; CHECK-NEXT:    i32 1, label [[BACKEDGE]]
-; CHECK-NEXT:    i32 2, label [[DEAD]]
-; CHECK-NEXT:    ]
-; CHECK:       dead:
-; CHECK-NEXT:    [[I_2:%.*]] = add i32 [[I]], 1
-; CHECK-NEXT:    br label [[BACKEDGE]]
-; CHECK:       backedge:
-; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[I]], [[HEADER]] ], [ [[I_2]], [[DEAD]] ]
-; CHECK-NEXT:    [[I_INC]] = add i32 [[I_1]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[HEADER]] ]
+; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[HEADER]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[HEADER]] ]
 ; CHECK-NEXT:    ret i32 [[I_INC_LCSSA]]
 ;
 preheader:
@@ -463,32 +431,19 @@ define i32 @dead_sub_loop_test_branch_loop(i32 %end) {
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    br i1 true, label [[LIVE_PREHEADER:%.*]], label [[DEAD_PREHEADER:%.*]]
-; CHECK:       live_preheader:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[EXIT_A:%.*]] ]
 ; CHECK-NEXT:    br label [[LIVE_LOOP:%.*]]
 ; CHECK:       live_loop:
-; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 0, [[LIVE_PREHEADER]] ], [ [[A_INC:%.*]], [[LIVE_LOOP]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 0, [[HEADER]] ], [ [[A_INC:%.*]], [[LIVE_LOOP]] ]
 ; CHECK-NEXT:    [[A_INC]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[CMP_A:%.*]] = icmp slt i32 [[A_INC]], [[END:%.*]]
-; CHECK-NEXT:    br i1 [[CMP_A]], label [[LIVE_LOOP]], label [[EXIT_A:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_A]], label [[LIVE_LOOP]], label [[EXIT_A]]
 ; CHECK:       exit.a:
-; CHECK-NEXT:    br label [[BACKEDGE]]
-; CHECK:       dead_preheader:
-; CHECK-NEXT:    br label [[DEAD_LOOP:%.*]]
-; CHECK:       dead_loop:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 0, [[DEAD_PREHEADER]] ], [ [[B_INC:%.*]], [[DEAD_LOOP]] ]
-; CHECK-NEXT:    [[B_INC]] = add i32 [[B]], 1
-; CHECK-NEXT:    [[CMP_B:%.*]] = icmp slt i32 [[B_INC]], [[END]]
-; CHECK-NEXT:    br i1 [[CMP_B]], label [[DEAD_LOOP]], label [[EXIT_B:%.*]]
-; CHECK:       exit.b:
-; CHECK-NEXT:    br label [[BACKEDGE]]
-; CHECK:       backedge:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[HEADER]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[EXIT_A]] ]
 ; CHECK-NEXT:    ret i32 [[I_INC_LCSSA]]
 ;
 preheader:
@@ -536,36 +491,19 @@ define i32 @dead_sub_loop_test_switch_loop(i32 %end) {
 ; CHECK-NEXT:  preheader:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    switch i32 1, label [[DEAD_PREHEADER:%.*]] [
-; CHECK-NEXT:    i32 0, label [[DEAD_PREHEADER]]
-; CHECK-NEXT:    i32 1, label [[LIVE_PREHEADER:%.*]]
-; CHECK-NEXT:    i32 2, label [[DEAD_PREHEADER]]
-; CHECK-NEXT:    ]
-; CHECK:       live_preheader:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[PREHEADER:%.*]] ], [ [[I_INC:%.*]], [[EXIT_A:%.*]] ]
 ; CHECK-NEXT:    br label [[LIVE_LOOP:%.*]]
 ; CHECK:       live_loop:
-; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 0, [[LIVE_PREHEADER]] ], [ [[A_INC:%.*]], [[LIVE_LOOP]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 0, [[HEADER]] ], [ [[A_INC:%.*]], [[LIVE_LOOP]] ]
 ; CHECK-NEXT:    [[A_INC]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[CMP_A:%.*]] = icmp slt i32 [[A_INC]], [[END:%.*]]
-; CHECK-NEXT:    br i1 [[CMP_A]], label [[LIVE_LOOP]], label [[EXIT_A:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_A]], label [[LIVE_LOOP]], label [[EXIT_A]]
 ; CHECK:       exit.a:
-; CHECK-NEXT:    br label [[BACKEDGE]]
-; CHECK:       dead_preheader:
-; CHECK-NEXT:    br label [[DEAD_LOOP:%.*]]
-; CHECK:       dead_loop:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 0, [[DEAD_PREHEADER]] ], [ [[B_INC:%.*]], [[DEAD_LOOP]] ]
-; CHECK-NEXT:    [[B_INC]] = add i32 [[B]], 1
-; CHECK-NEXT:    [[CMP_B:%.*]] = icmp slt i32 [[B_INC]], [[END]]
-; CHECK-NEXT:    br i1 [[CMP_B]], label [[DEAD_LOOP]], label [[EXIT_B:%.*]]
-; CHECK:       exit.b:
-; CHECK-NEXT:    br label [[BACKEDGE]]
-; CHECK:       backedge:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[HEADER]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[EXIT_A]] ]
 ; CHECK-NEXT:    ret i32 [[I_INC_LCSSA]]
 ;
 preheader:
@@ -898,18 +836,12 @@ define i32 @partial_sub_loop_test_branch_loop(i32 %end) {
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[J_INC:%.*]], [[OUTER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[OUTER_HEADER]] ], [ [[I_INC:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[DEAD:%.*]]
-; CHECK:       dead:
-; CHECK-NEXT:    [[I_2:%.*]] = add i32 [[I]], 1
-; CHECK-NEXT:    br label [[BACKEDGE]]
-; CHECK:       backedge:
-; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[I]], [[HEADER]] ], [ [[I_2]], [[DEAD]] ]
-; CHECK-NEXT:    [[I_INC]] = add i32 [[I_1]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[OUTER_HEADER]] ], [ [[I_INC:%.*]], [[HEADER]] ]
+; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[HEADER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer_backedge:
-; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[HEADER]] ]
 ; CHECK-NEXT:    [[J_INC]] = add i32 [[J]], 1
 ; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_J]], label [[OUTER_HEADER]], label [[EXIT:%.*]]
@@ -958,22 +890,12 @@ define i32 @partial_sub_loop_test_switch_loop(i32 %end) {
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[J_INC:%.*]], [[OUTER_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[OUTER_HEADER]] ], [ [[I_INC:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    switch i32 1, label [[DEAD:%.*]] [
-; CHECK-NEXT:    i32 0, label [[DEAD]]
-; CHECK-NEXT:    i32 1, label [[BACKEDGE]]
-; CHECK-NEXT:    i32 2, label [[DEAD]]
-; CHECK-NEXT:    ]
-; CHECK:       dead:
-; CHECK-NEXT:    [[I_2:%.*]] = add i32 [[I]], 1
-; CHECK-NEXT:    br label [[BACKEDGE]]
-; CHECK:       backedge:
-; CHECK-NEXT:    [[I_1:%.*]] = phi i32 [ [[I]], [[HEADER]] ], [ [[I_2]], [[DEAD]] ]
-; CHECK-NEXT:    [[I_INC]] = add i32 [[I_1]], 1
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[OUTER_HEADER]] ], [ [[I_INC:%.*]], [[HEADER]] ]
+; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_INC]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[HEADER]], label [[OUTER_BACKEDGE]]
 ; CHECK:       outer_backedge:
-; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[BACKEDGE]] ]
+; CHECK-NEXT:    [[I_INC_LCSSA:%.*]] = phi i32 [ [[I_INC]], [[HEADER]] ]
 ; CHECK-NEXT:    [[J_INC]] = add i32 [[J]], 1
 ; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], [[END]]
 ; CHECK-NEXT:    br i1 [[CMP_J]], label [[OUTER_HEADER]], label [[EXIT:%.*]]

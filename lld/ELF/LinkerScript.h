@@ -146,7 +146,9 @@ struct MemoryRegion {
 // Also it may be surrounded with SORT() command, so contains sorting rules.
 struct SectionPattern {
   SectionPattern(StringMatcher &&Pat1, StringMatcher &&Pat2)
-      : ExcludedFilePat(Pat1), SectionPat(Pat2) {}
+      : ExcludedFilePat(Pat1), SectionPat(Pat2),
+        SortOuter(SortSectionPolicy::Default),
+        SortInner(SortSectionPolicy::Default) {}
 
   StringMatcher ExcludedFilePat;
   StringMatcher SectionPat;
