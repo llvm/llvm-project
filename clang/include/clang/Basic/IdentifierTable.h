@@ -117,7 +117,7 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
         HadMacro(false), IsExtension(false), IsFutureCompatKeyword(false),
         IsPoisoned(false), IsCPPOperatorKeyword(false),
         NeedsHandleIdentifier(false), IsFromAST(false), ChangedAfterLoad(false),
-        FEChangedAfterLoad(false), RevertedTokenID(false), OutOfDate(false),
+        RevertedTokenID(false), OutOfDate(false),
         IsModulesImport(false) {}
 
 public:
