@@ -21,8 +21,8 @@
 #include "sanitizer_common/sanitizer_mutex.h"
 #if SANITIZER_FUCHSIA
 #include <zircon/process.h>
-#include <zircon/syscalls.h>
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
 #else
 #include "sanitizer_common/sanitizer_posix.h"
 #endif
@@ -50,20 +50,20 @@ template <class T> T *allocate() XRAY_NEVER_INSTRUMENT {
   }
   uintptr_t B;
   Status =
-    _zx_vmar_map(_zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
-                 Vmo, 0, sizeof(T), &B);
+      _zx_vmar_map(_zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
+                   Vmo, 0, sizeof(T), &B);
   _zx_handle_close(Vmo);
   if (Status != ZX_OK) {
     if (Verbosity())
-      Report("XRay Profiling: Failed to map VMAR of size %zu: %s\n",
-             sizeof(T), _zx_status_get_string(Status));
+      Report("XRay Profiling: Failed to map VMAR of size %zu: %s\n", sizeof(T),
+             _zx_status_get_string(Status));
     return nullptr;
   }
   return reinterpret_cast<T *>(B);
 #else
   uptr B = internal_mmap(NULL, RoundedSize, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  int ErrNo;
+  int ErrNo = 0;
   if (UNLIKELY(internal_iserror(B, &ErrNo))) {
     if (Verbosity())
       Report(
@@ -80,8 +80,8 @@ template <class T> void deallocate(T *B) XRAY_NEVER_INSTRUMENT {
     return;
   uptr RoundedSize = RoundUpTo(sizeof(T), GetPageSizeCached());
 #if SANITIZER_FUCHSIA
-  _zx_vmar_unmap(_zx_vmar_root_self(),
-                 reinterpret_cast<uintptr_t>(B), RoundedSize);
+  _zx_vmar_unmap(_zx_vmar_root_self(), reinterpret_cast<uintptr_t>(B),
+                 RoundedSize);
 #else
   internal_munmap(B, RoundedSize);
 #endif
@@ -95,25 +95,24 @@ T *allocateBuffer(size_t S) XRAY_NEVER_INSTRUMENT {
   zx_status_t Status = _zx_vmo_create(RoundedSize, 0, &Vmo);
   if (Status != ZX_OK) {
     if (Verbosity())
-      Report("XRay Profiling: Failed to create VMO of size %zu: %s\n",
-             S, _zx_status_get_string(Status));
+      Report("XRay Profiling: Failed to create VMO of size %zu: %s\n", S,
+             _zx_status_get_string(Status));
     return nullptr;
   }
   uintptr_t B;
-  Status =
-    _zx_vmar_map(_zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
-                 Vmo, 0, S, &B);
+  Status = _zx_vmar_map(_zx_vmar_root_self(),
+                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, Vmo, 0, S, &B);
   _zx_handle_close(Vmo);
   if (Status != ZX_OK) {
     if (Verbosity())
-      Report("XRay Profiling: Failed to map VMAR of size %zu: %s\n",
-             S, _zx_status_get_string(Status));
+      Report("XRay Profiling: Failed to map VMAR of size %zu: %s\n", S,
+             _zx_status_get_string(Status));
     return nullptr;
   }
 #else
   uptr B = internal_mmap(NULL, RoundedSize, PROT_READ | PROT_WRITE,
                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  int ErrNo;
+  int ErrNo = 0;
   if (UNLIKELY(internal_iserror(B, &ErrNo))) {
     if (Verbosity())
       Report(
@@ -130,7 +129,8 @@ template <class T> void deallocateBuffer(T *B, size_t S) XRAY_NEVER_INSTRUMENT {
     return;
   uptr RoundedSize = RoundUpTo(S * sizeof(T), GetPageSizeCached());
 #if SANITIZER_FUCHSIA
-  _zx_vmar_unmap(_zx_vmar_root_self(), reinterpret_cast<uintptr_t>(B), RoundedSize);
+  _zx_vmar_unmap(_zx_vmar_root_self(), reinterpret_cast<uintptr_t>(B),
+                 RoundedSize);
 #else
   internal_munmap(B, RoundedSize);
 #endif
@@ -171,7 +171,7 @@ template <size_t N> struct Allocator {
   };
 
 private:
-  const size_t MaxMemory{0};
+  size_t MaxMemory{0};
   unsigned char *BackingStore = nullptr;
   unsigned char *AlignedNextBlock = nullptr;
   size_t AllocatedBlocks = 0;
@@ -223,7 +223,43 @@ private:
 
 public:
   explicit Allocator(size_t M) XRAY_NEVER_INSTRUMENT
-      : MaxMemory(RoundUpTo(M, kCacheLineSize)) {}
+      : MaxMemory(RoundUpTo(M, kCacheLineSize)),
+        BackingStore(nullptr),
+        AlignedNextBlock(nullptr),
+        AllocatedBlocks(0),
+        Mutex() {}
+
+  Allocator(const Allocator &) = delete;
+  Allocator &operator=(const Allocator &) = delete;
+
+  Allocator(Allocator &&O) XRAY_NEVER_INSTRUMENT {
+    SpinMutexLock L0(&Mutex);
+    SpinMutexLock L1(&O.Mutex);
+    MaxMemory = O.MaxMemory;
+    O.MaxMemory = 0;
+    BackingStore = O.BackingStore;
+    O.BackingStore = nullptr;
+    AlignedNextBlock = O.AlignedNextBlock;
+    O.AlignedNextBlock = nullptr;
+    AllocatedBlocks = O.AllocatedBlocks;
+    O.AllocatedBlocks = 0;
+  }
+
+  Allocator &operator=(Allocator &&O) XRAY_NEVER_INSTRUMENT {
+    SpinMutexLock L0(&Mutex);
+    SpinMutexLock L1(&O.Mutex);
+    MaxMemory = O.MaxMemory;
+    O.MaxMemory = 0;
+    if (BackingStore != nullptr)
+      deallocateBuffer(BackingStore, MaxMemory);
+    BackingStore = O.BackingStore;
+    O.BackingStore = nullptr;
+    AlignedNextBlock = O.AlignedNextBlock;
+    O.AlignedNextBlock = nullptr;
+    AllocatedBlocks = O.AllocatedBlocks;
+    O.AllocatedBlocks = 0;
+    return *this;
+  }
 
   Block Allocate() XRAY_NEVER_INSTRUMENT { return {Alloc()}; }
 
