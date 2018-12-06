@@ -1,0 +1,172 @@
+# REQUIRES: system-windows
+# RUN: yaml2obj < %s > %t.obj
+#
+# RUN: lld-link /machine:x64 /out:%t.dll /noentry /nodefaultlib /dll %t.obj /export:DllFunc
+#
+# RUN: lldb-test object-file %t.dll | FileCheck -check-prefix=BASIC-CHECK %s
+# RUN: lldb-test object-file -dep-modules %t.dll | FileCheck -check-prefix=DEPS %s
+
+
+# BASIC-CHECK: Showing 3 sections
+# BASIC-CHECK:  Index: 0
+# BASIC-CHECK:  Name: .text
+# BASIC-CHECK:  Type: code
+# BASIC-CHECK:  VM size: 22
+# BASIC-CHECK:  File size: 512
+#
+# BASIC-CHECK:  Index: 1
+# BASIC-CHECK:  Name: .rdata
+# BASIC-CHECK:  Type: data
+# BASIC-CHECK:  VM size: {{.}}
+# BASIC-CHECK:  File size: 512
+#
+# BASIC-CHECK:  Index: 2
+# BASIC-CHECK:  Name: .pdata
+# BASIC-CHECK:  Type: data
+# BASIC-CHECK:  VM size: 12
+# BASIC-CHECK:  File size: 512
+#
+# DEPS: Showing 0 dependent module(s)
+
+
+--- !COFF
+header:          
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:        
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     50894C24048B4C24040FAF4C2404890C248B042459C3
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .bss
+    Characteristics: [ IMAGE_SCN_CNT_UNINITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .xdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '0101010001020000'
+  - Name:            .drectve
+    Characteristics: [ IMAGE_SCN_LNK_INFO, IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     202F44454641554C544C49423A6C6962636D742E6C6962202F44454641554C544C49423A6F6C646E616D65732E6C6962
+  - Name:            .pdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     '000000001600000000000000'
+    Relocations:     
+      - VirtualAddress:  0
+        SymbolName:      'DllFunc'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  4
+        SymbolName:      'DllFunc'
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+      - VirtualAddress:  8
+        SymbolName:      .xdata
+        Type:            IMAGE_REL_AMD64_ADDR32NB
+  - Name:            .llvm_addrsig
+    Characteristics: [ IMAGE_SCN_LNK_REMOVE ]
+    Alignment:       1
+    SectionData:     ''
+symbols:         
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition: 
+      Length:          22
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        3054557294
+      Number:          1
+  - Name:            .data
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition: 
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+  - Name:            .bss
+    Value:           0
+    SectionNumber:   3
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition: 
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          3
+  - Name:            .xdata
+    Value:           0
+    SectionNumber:   4
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition: 
+      Length:          8
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        448359300
+      Number:          4
+  - Name:            .drectve
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition: 
+      Length:          48
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        149686238
+      Number:          5
+  - Name:            .pdata
+    Value:           0
+    SectionNumber:   6
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition: 
+      Length:          12
+      NumberOfRelocations: 3
+      NumberOfLinenumbers: 0
+      CheckSum:        3134470316
+      Number:          6
+  - Name:            .llvm_addrsig
+    Value:           0
+    SectionNumber:   7
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition: 
+      Length:          0
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          7
+  - Name:            '@feat.00'
+    Value:           0
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+  - Name:            'DllFunc'
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...
