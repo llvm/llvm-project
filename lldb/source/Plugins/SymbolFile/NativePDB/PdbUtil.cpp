@@ -425,3 +425,123 @@ llvm::StringRef lldb_private::npdb::DropNameScope(llvm::StringRef name) {
 
   return name.substr(offset + 2);
 }
+
+lldb::BasicType
+lldb_private::npdb::GetCompilerTypeForSimpleKind(SimpleTypeKind kind) {
+  switch (kind) {
+  case SimpleTypeKind::Boolean128:
+  case SimpleTypeKind::Boolean16:
+  case SimpleTypeKind::Boolean32:
+  case SimpleTypeKind::Boolean64:
+  case SimpleTypeKind::Boolean8:
+    return lldb::eBasicTypeBool;
+  case SimpleTypeKind::Byte:
+  case SimpleTypeKind::UnsignedCharacter:
+    return lldb::eBasicTypeUnsignedChar;
+  case SimpleTypeKind::NarrowCharacter:
+    return lldb::eBasicTypeChar;
+  case SimpleTypeKind::SignedCharacter:
+  case SimpleTypeKind::SByte:
+    return lldb::eBasicTypeSignedChar;
+  case SimpleTypeKind::Character16:
+    return lldb::eBasicTypeChar16;
+  case SimpleTypeKind::Character32:
+    return lldb::eBasicTypeChar32;
+  case SimpleTypeKind::Complex80:
+    return lldb::eBasicTypeLongDoubleComplex;
+  case SimpleTypeKind::Complex64:
+    return lldb::eBasicTypeDoubleComplex;
+  case SimpleTypeKind::Complex32:
+    return lldb::eBasicTypeFloatComplex;
+  case SimpleTypeKind::Float128:
+  case SimpleTypeKind::Float80:
+    return lldb::eBasicTypeLongDouble;
+  case SimpleTypeKind::Float64:
+    return lldb::eBasicTypeDouble;
+  case SimpleTypeKind::Float32:
+    return lldb::eBasicTypeFloat;
+  case SimpleTypeKind::Float16:
+    return lldb::eBasicTypeHalf;
+  case SimpleTypeKind::Int128:
+    return lldb::eBasicTypeInt128;
+  case SimpleTypeKind::Int64:
+  case SimpleTypeKind::Int64Quad:
+    return lldb::eBasicTypeLongLong;
+  case SimpleTypeKind::Int32:
+    return lldb::eBasicTypeInt;
+  case SimpleTypeKind::Int16:
+  case SimpleTypeKind::Int16Short:
+    return lldb::eBasicTypeShort;
+  case SimpleTypeKind::UInt128:
+    return lldb::eBasicTypeUnsignedInt128;
+  case SimpleTypeKind::UInt64:
+  case SimpleTypeKind::UInt64Quad:
+    return lldb::eBasicTypeUnsignedLongLong;
+  case SimpleTypeKind::HResult:
+  case SimpleTypeKind::UInt32:
+    return lldb::eBasicTypeUnsignedInt;
+  case SimpleTypeKind::UInt16:
+  case SimpleTypeKind::UInt16Short:
+    return lldb::eBasicTypeUnsignedShort;
+  case SimpleTypeKind::Int32Long:
+    return lldb::eBasicTypeLong;
+  case SimpleTypeKind::UInt32Long:
+    return lldb::eBasicTypeUnsignedLong;
+  case SimpleTypeKind::Void:
+    return lldb::eBasicTypeVoid;
+  case SimpleTypeKind::WideCharacter:
+    return lldb::eBasicTypeWChar;
+  default:
+    return lldb::eBasicTypeInvalid;
+  }
+}
+
+size_t lldb_private::npdb::GetTypeSizeForSimpleKind(SimpleTypeKind kind) {
+  switch (kind) {
+  case SimpleTypeKind::Boolean128:
+  case SimpleTypeKind::Int128:
+  case SimpleTypeKind::UInt128:
+  case SimpleTypeKind::Float128:
+    return 16;
+  case SimpleTypeKind::Complex80:
+  case SimpleTypeKind::Float80:
+    return 10;
+  case SimpleTypeKind::Boolean64:
+  case SimpleTypeKind::Complex64:
+  case SimpleTypeKind::UInt64:
+  case SimpleTypeKind::UInt64Quad:
+  case SimpleTypeKind::Float64:
+  case SimpleTypeKind::Int64:
+  case SimpleTypeKind::Int64Quad:
+    return 8;
+  case SimpleTypeKind::Boolean32:
+  case SimpleTypeKind::Character32:
+  case SimpleTypeKind::Complex32:
+  case SimpleTypeKind::Float32:
+  case SimpleTypeKind::Int32:
+  case SimpleTypeKind::Int32Long:
+  case SimpleTypeKind::UInt32Long:
+  case SimpleTypeKind::HResult:
+  case SimpleTypeKind::UInt32:
+    return 4;
+  case SimpleTypeKind::Boolean16:
+  case SimpleTypeKind::Character16:
+  case SimpleTypeKind::Float16:
+  case SimpleTypeKind::Int16:
+  case SimpleTypeKind::Int16Short:
+  case SimpleTypeKind::UInt16:
+  case SimpleTypeKind::UInt16Short:
+  case SimpleTypeKind::WideCharacter:
+    return 2;
+  case SimpleTypeKind::Boolean8:
+  case SimpleTypeKind::Byte:
+  case SimpleTypeKind::UnsignedCharacter:
+  case SimpleTypeKind::NarrowCharacter:
+  case SimpleTypeKind::SignedCharacter:
+  case SimpleTypeKind::SByte:
+    return 1;
+  case SimpleTypeKind::Void:
+  default:
+    return 0;
+  }
+}
