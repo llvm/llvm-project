@@ -7278,7 +7278,11 @@ INTERCEPTOR(int, getmntinfo, void **mntbufp, int flags) {
   if (cnt > 0 && mntbufp) {
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, mntbufp, sizeof(void *));
     if (*mntbufp)
+#if SANITIZER_NETBSD
       COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *mntbufp, cnt * struct_statvfs_sz);
+#else
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *mntbufp, cnt * struct_statfs_sz);
+#endif
   }
   return cnt;
 }
