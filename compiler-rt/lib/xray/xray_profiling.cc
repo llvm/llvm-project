@@ -31,112 +31,67 @@ namespace __xray {
 
 namespace {
 
-static atomic_sint32_t ProfilerLogFlushStatus = {
+atomic_sint32_t ProfilerLogFlushStatus = {
     XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING};
 
-static atomic_sint32_t ProfilerLogStatus = {
-    XRayLogInitStatus::XRAY_LOG_UNINITIALIZED};
+atomic_sint32_t ProfilerLogStatus = {XRayLogInitStatus::XRAY_LOG_UNINITIALIZED};
 
-static SpinMutex ProfilerOptionsMutex;
+SpinMutex ProfilerOptionsMutex;
 
-struct ProfilingData {
-  atomic_uintptr_t Allocators;
-  atomic_uintptr_t FCT;
+struct alignas(64) ProfilingData {
+  FunctionCallTrie::Allocators *Allocators;
+  FunctionCallTrie *FCT;
 };
 
 static pthread_key_t ProfilingKey;
 
-thread_local std::aligned_storage<sizeof(FunctionCallTrie::Allocators),
-                                  alignof(FunctionCallTrie::Allocators)>::type
+thread_local std::aligned_storage<sizeof(FunctionCallTrie::Allocators)>::type
     AllocatorsStorage;
-thread_local std::aligned_storage<sizeof(FunctionCallTrie),
-                                  alignof(FunctionCallTrie)>::type
+thread_local std::aligned_storage<sizeof(FunctionCallTrie)>::type
     FunctionCallTrieStorage;
-thread_local ProfilingData TLD{{0}, {0}};
-thread_local atomic_uint8_t ReentranceGuard{0};
+thread_local std::aligned_storage<sizeof(ProfilingData)>::type ThreadStorage{};
 
-// We use a separate guard for ensuring that for this thread, if we're already
-// cleaning up, that any signal handlers don't attempt to cleanup nor
-// initialise.
-thread_local atomic_uint8_t TLDInitGuard{0};
-
-// We also use a separate latch to signal that the thread is exiting, and
-// non-essential work should be ignored (things like recording events, etc.).
-thread_local atomic_uint8_t ThreadExitingLatch{0};
-
-static ProfilingData *getThreadLocalData() XRAY_NEVER_INSTRUMENT {
-  thread_local auto ThreadOnce = []() XRAY_NEVER_INSTRUMENT {
-    pthread_setspecific(ProfilingKey, &TLD);
+static ProfilingData &getThreadLocalData() XRAY_NEVER_INSTRUMENT {
+  thread_local auto ThreadOnce = [] {
+    new (&ThreadStorage) ProfilingData{};
+    auto *Allocators =
+        reinterpret_cast<FunctionCallTrie::Allocators *>(&AllocatorsStorage);
+    new (Allocators) FunctionCallTrie::Allocators();
+    *Allocators = FunctionCallTrie::InitAllocators();
+    auto *FCT = reinterpret_cast<FunctionCallTrie *>(&FunctionCallTrieStorage);
+    new (FCT) FunctionCallTrie(*Allocators);
+    auto &TLD = *reinterpret_cast<ProfilingData *>(&ThreadStorage);
+    TLD.Allocators = Allocators;
+    TLD.FCT = FCT;
+    pthread_setspecific(ProfilingKey, &ThreadStorage);
     return false;
   }();
   (void)ThreadOnce;
 
-  RecursionGuard TLDInit(TLDInitGuard);
-  if (!TLDInit)
-    return nullptr;
+  auto &TLD = *reinterpret_cast<ProfilingData *>(&ThreadStorage);
 
-  if (atomic_load_relaxed(&ThreadExitingLatch))
-    return nullptr;
-
-  uptr Allocators = 0;
-  if (atomic_compare_exchange_strong(&TLD.Allocators, &Allocators, 1,
-                                     memory_order_acq_rel)) {
-    new (&AllocatorsStorage)
-        FunctionCallTrie::Allocators(FunctionCallTrie::InitAllocators());
-    Allocators = reinterpret_cast<uptr>(
-        reinterpret_cast<FunctionCallTrie::Allocators *>(&AllocatorsStorage));
-    atomic_store(&TLD.Allocators, Allocators, memory_order_release);
+  if (UNLIKELY(TLD.Allocators == nullptr || TLD.FCT == nullptr)) {
+    auto *Allocators =
+        reinterpret_cast<FunctionCallTrie::Allocators *>(&AllocatorsStorage);
+    new (Allocators) FunctionCallTrie::Allocators();
+    *Allocators = FunctionCallTrie::InitAllocators();
+    auto *FCT = reinterpret_cast<FunctionCallTrie *>(&FunctionCallTrieStorage);
+    new (FCT) FunctionCallTrie(*Allocators);
+    TLD.Allocators = Allocators;
+    TLD.FCT = FCT;
   }
 
-  uptr FCT = 0;
-  if (atomic_compare_exchange_strong(&TLD.FCT, &FCT, 1, memory_order_acq_rel)) {
-    new (&FunctionCallTrieStorage) FunctionCallTrie(
-        *reinterpret_cast<FunctionCallTrie::Allocators *>(Allocators));
-    FCT = reinterpret_cast<uptr>(
-        reinterpret_cast<FunctionCallTrie *>(&FunctionCallTrieStorage));
-    atomic_store(&TLD.FCT, FCT, memory_order_release);
-  }
-
-  if (FCT == 1)
-    return nullptr;
-
-  return &TLD;
+  return *reinterpret_cast<ProfilingData *>(&ThreadStorage);
 }
 
 static void cleanupTLD() XRAY_NEVER_INSTRUMENT {
-  RecursionGuard TLDInit(TLDInitGuard);
-  if (!TLDInit)
-    return;
-
-  auto FCT = atomic_exchange(&TLD.FCT, 0, memory_order_acq_rel);
-  if (FCT == reinterpret_cast<uptr>(reinterpret_cast<FunctionCallTrie *>(
-                 &FunctionCallTrieStorage)))
-    reinterpret_cast<FunctionCallTrie *>(FCT)->~FunctionCallTrie();
-
-  auto Allocators = atomic_exchange(&TLD.Allocators, 0, memory_order_acq_rel);
-  if (Allocators ==
-      reinterpret_cast<uptr>(
-          reinterpret_cast<FunctionCallTrie::Allocators *>(&AllocatorsStorage)))
-    reinterpret_cast<FunctionCallTrie::Allocators *>(Allocators)->~Allocators();
-}
-
-static void postCurrentThreadFCT(ProfilingData &T) XRAY_NEVER_INSTRUMENT {
-  RecursionGuard TLDInit(TLDInitGuard);
-  if (!TLDInit)
-    return;
-
-  uptr P = atomic_load(&T.FCT, memory_order_acquire);
-  if (P != reinterpret_cast<uptr>(
-               reinterpret_cast<FunctionCallTrie *>(&FunctionCallTrieStorage)))
-    return;
-
-  auto FCT = reinterpret_cast<FunctionCallTrie *>(P);
-  DCHECK_NE(FCT, nullptr);
-
-  if (!FCT->getRoots().empty())
-    profileCollectorService::post(*FCT, GetTid());
-
-  cleanupTLD();
+  auto &TLD = *reinterpret_cast<ProfilingData *>(&ThreadStorage);
+  if (TLD.Allocators != nullptr && TLD.FCT != nullptr) {
+    TLD.FCT->~FunctionCallTrie();
+    TLD.Allocators->~Allocators();
+    TLD.FCT = nullptr;
+    TLD.Allocators = nullptr;
+  }
 }
 
 } // namespace
@@ -149,6 +104,9 @@ const char *profilingCompilerDefinedFlags() XRAY_NEVER_INSTRUMENT {
 #endif
 }
 
+atomic_sint32_t ProfileFlushStatus = {
+    XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING};
+
 XRayLogFlushStatus profilingFlush() XRAY_NEVER_INSTRUMENT {
   if (atomic_load(&ProfilerLogStatus, memory_order_acquire) !=
       XRayLogInitStatus::XRAY_LOG_FINALIZED) {
@@ -157,26 +115,13 @@ XRayLogFlushStatus profilingFlush() XRAY_NEVER_INSTRUMENT {
     return XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
   }
 
-  RecursionGuard SignalGuard(ReentranceGuard);
-  if (!SignalGuard) {
+  s32 Result = XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
+  if (!atomic_compare_exchange_strong(&ProfilerLogFlushStatus, &Result,
+                                      XRayLogFlushStatus::XRAY_LOG_FLUSHING,
+                                      memory_order_acq_rel)) {
     if (Verbosity())
-      Report("Cannot finalize properly inside a signal handler!\n");
-    atomic_store(&ProfilerLogFlushStatus,
-                 XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING,
-                 memory_order_release);
-    return XRayLogFlushStatus::XRAY_LOG_NOT_FLUSHING;
+      Report("Not flushing profiles, implementation still finalizing.\n");
   }
-
-  s32 Previous = atomic_exchange(&ProfilerLogFlushStatus,
-                                 XRayLogFlushStatus::XRAY_LOG_FLUSHING,
-                                 memory_order_acq_rel);
-  if (Previous == XRayLogFlushStatus::XRAY_LOG_FLUSHING) {
-    if (Verbosity())
-      Report("Not flushing profiles, implementation still flushing.\n");
-    return XRayLogFlushStatus::XRAY_LOG_FLUSHING;
-  }
-
-  postCurrentThreadFCT(TLD);
 
   // At this point, we'll create the file that will contain the profile, but
   // only if the options say so.
@@ -205,18 +150,32 @@ XRayLogFlushStatus profilingFlush() XRAY_NEVER_INSTRUMENT {
     }
   }
 
-  // Clean up the current thread's TLD information as well.
-  cleanupTLD();
-
   profileCollectorService::reset();
 
-  atomic_store(&ProfilerLogFlushStatus, XRayLogFlushStatus::XRAY_LOG_FLUSHED,
-               memory_order_release);
+  // Flush the current thread's local data structures as well.
+  cleanupTLD();
+
   atomic_store(&ProfilerLogStatus, XRayLogFlushStatus::XRAY_LOG_FLUSHED,
                memory_order_release);
 
   return XRayLogFlushStatus::XRAY_LOG_FLUSHED;
 }
+
+namespace {
+
+thread_local atomic_uint8_t ReentranceGuard{0};
+
+static void postCurrentThreadFCT(ProfilingData &TLD) XRAY_NEVER_INSTRUMENT {
+  if (TLD.Allocators == nullptr || TLD.FCT == nullptr)
+    return;
+
+  if (!TLD.FCT->getRoots().empty())
+    profileCollectorService::post(*TLD.FCT, GetTid());
+
+  cleanupTLD();
+}
+
+} // namespace
 
 void profilingHandleArg0(int32_t FuncId,
                          XRayEntryType Entry) XRAY_NEVER_INSTRUMENT {
@@ -227,29 +186,22 @@ void profilingHandleArg0(int32_t FuncId,
     return;
 
   auto Status = atomic_load(&ProfilerLogStatus, memory_order_acquire);
-  if (UNLIKELY(Status == XRayLogInitStatus::XRAY_LOG_UNINITIALIZED ||
-               Status == XRayLogInitStatus::XRAY_LOG_INITIALIZING))
-    return;
-
   if (UNLIKELY(Status == XRayLogInitStatus::XRAY_LOG_FINALIZED ||
                Status == XRayLogInitStatus::XRAY_LOG_FINALIZING)) {
+    auto &TLD = getThreadLocalData();
     postCurrentThreadFCT(TLD);
     return;
   }
 
-  auto T = getThreadLocalData();
-  if (T == nullptr)
-    return;
-
-  auto FCT = reinterpret_cast<FunctionCallTrie *>(atomic_load_relaxed(&T->FCT));
+  auto &TLD = getThreadLocalData();
   switch (Entry) {
   case XRayEntryType::ENTRY:
   case XRayEntryType::LOG_ARGS_ENTRY:
-    FCT->enterFunction(FuncId, TSC, CPU);
+    TLD.FCT->enterFunction(FuncId, TSC, CPU);
     break;
   case XRayEntryType::EXIT:
   case XRayEntryType::TAIL:
-    FCT->exitFunction(FuncId, TSC, CPU);
+    TLD.FCT->exitFunction(FuncId, TSC, CPU);
     break;
   default:
     // FIXME: Handle bugs.
@@ -275,14 +227,15 @@ XRayLogInitStatus profilingFinalize() XRAY_NEVER_INSTRUMENT {
   // Wait a grace period to allow threads to see that we're finalizing.
   SleepForMillis(profilingFlags()->grace_period_ms);
 
-  // If we for some reason are entering this function from an instrumented
-  // handler, we bail out.
-  RecursionGuard G(ReentranceGuard);
-  if (!G)
-    return static_cast<XRayLogInitStatus>(CurrentStatus);
-
-  // Post the current thread's data if we have any.
-  postCurrentThreadFCT(TLD);
+  // We also want to make sure that the current thread's data is cleaned up, if
+  // we have any. We need to ensure that the call to postCurrentThreadFCT() is
+  // guarded by our recursion guard.
+  auto &TLD = getThreadLocalData();
+  {
+    RecursionGuard G(ReentranceGuard);
+    if (G)
+      postCurrentThreadFCT(TLD);
+  }
 
   // Then we force serialize the log data.
   profileCollectorService::serialize();
@@ -295,10 +248,6 @@ XRayLogInitStatus profilingFinalize() XRAY_NEVER_INSTRUMENT {
 XRayLogInitStatus
 profilingLoggingInit(UNUSED size_t BufferSize, UNUSED size_t BufferMax,
                      void *Options, size_t OptionsSize) XRAY_NEVER_INSTRUMENT {
-  RecursionGuard G(ReentranceGuard);
-  if (!G)
-    return XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
-
   s32 CurrentStatus = XRayLogInitStatus::XRAY_LOG_UNINITIALIZED;
   if (!atomic_compare_exchange_strong(&ProfilerLogStatus, &CurrentStatus,
                                       XRayLogInitStatus::XRAY_LOG_INITIALIZING,
@@ -333,51 +282,39 @@ profilingLoggingInit(UNUSED size_t BufferSize, UNUSED size_t BufferMax,
 
   // We need to set up the exit handlers.
   static pthread_once_t Once = PTHREAD_ONCE_INIT;
-  pthread_once(
-      &Once, +[] {
-        pthread_key_create(
-            &ProfilingKey, +[](void *P) XRAY_NEVER_INSTRUMENT {
-              if (atomic_exchange(&ThreadExitingLatch, 1, memory_order_acq_rel))
-                return;
+  pthread_once(&Once, +[] {
+    pthread_key_create(&ProfilingKey, +[](void *P) {
+      // This is the thread-exit handler.
+      auto &TLD = *reinterpret_cast<ProfilingData *>(P);
+      if (TLD.Allocators == nullptr && TLD.FCT == nullptr)
+        return;
 
-              if (P == nullptr)
-                return;
+      {
+        // If we're somehow executing this while inside a non-reentrant-friendly
+        // context, we skip attempting to post the current thread's data.
+        RecursionGuard G(ReentranceGuard);
+        if (G)
+          postCurrentThreadFCT(TLD);
+      }
+    });
 
-              auto T = reinterpret_cast<ProfilingData *>(P);
-              if (atomic_load_relaxed(&T->Allocators) == 0)
-                return;
-
-              {
-                // If we're somehow executing this while inside a
-                // non-reentrant-friendly context, we skip attempting to post
-                // the current thread's data.
-                RecursionGuard G(ReentranceGuard);
-                if (!G)
-                  return;
-
-                postCurrentThreadFCT(*T);
-              }
-            });
-
-        // We also need to set up an exit handler, so that we can get the
-        // profile information at exit time. We use the C API to do this, to not
-        // rely on C++ ABI functions for registering exit handlers.
-        Atexit(+[]() XRAY_NEVER_INSTRUMENT {
-          if (atomic_exchange(&ThreadExitingLatch, 1, memory_order_acq_rel))
-            return;
-
-          auto Cleanup =
-              at_scope_exit([]() XRAY_NEVER_INSTRUMENT { cleanupTLD(); });
-
-          // Finalize and flush.
-          if (profilingFinalize() != XRAY_LOG_FINALIZED ||
-              profilingFlush() != XRAY_LOG_FLUSHED)
-            return;
-
-          if (Verbosity())
-            Report("XRay Profile flushed at exit.");
-        });
-      });
+    // We also need to set up an exit handler, so that we can get the profile
+    // information at exit time. We use the C API to do this, to not rely on C++
+    // ABI functions for registering exit handlers.
+    Atexit(+[] {
+      // Finalize and flush.
+      if (profilingFinalize() != XRAY_LOG_FINALIZED) {
+        cleanupTLD();
+        return;
+      }
+      if (profilingFlush() != XRAY_LOG_FLUSHED) {
+        cleanupTLD();
+        return;
+      }
+      if (Verbosity())
+        Report("XRay Profile flushed at exit.");
+    });
+  });
 
   __xray_log_set_buffer_iterator(profileCollectorService::nextBuffer);
   __xray_set_handler(profilingHandleArg0);
