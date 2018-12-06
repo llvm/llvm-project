@@ -404,7 +404,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
 
 bool AArch64LegalizerInfo::legalizeCustom(MachineInstr &MI,
                                           MachineRegisterInfo &MRI,
-                                          MachineIRBuilder &MIRBuilder) const {
+                                          MachineIRBuilder &MIRBuilder,
+                                          GISelChangeObserver &Observer) const {
   switch (MI.getOpcode()) {
   default:
     // No idea what to do.

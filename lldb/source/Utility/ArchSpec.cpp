@@ -1019,7 +1019,7 @@ bool ArchSpec::IsCompatibleMatch(const ArchSpec &rhs) const {
   return IsEqualTo(rhs, false);
 }
 
-static bool isCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
+static bool IsCompatibleEnvironment(llvm::Triple::EnvironmentType lhs,
                                     llvm::Triple::EnvironmentType rhs) {
   if (lhs == rhs)
     return true;
@@ -1096,7 +1096,7 @@ bool ArchSpec::IsEqualTo(const ArchSpec &rhs, bool exact_match) const {
     const llvm::Triple::EnvironmentType rhs_triple_env =
         rhs_triple.getEnvironment();
 
-    if (!isCompatibleEnvironment(lhs_triple_env, rhs_triple_env))
+    if (!IsCompatibleEnvironment(lhs_triple_env, rhs_triple_env))
       return false;
     return true;
   }

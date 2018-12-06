@@ -1259,12 +1259,19 @@ def: OpR_RR_pat<F2_sfmpy,     pf2<fmul>,    f32, F32>;
 def: OpR_RR_pat<F2_sfmin,     pf2<fminnum>, f32, F32>;
 def: OpR_RR_pat<F2_sfmax,     pf2<fmaxnum>, f32, F32>;
 
+let Predicates = [HasV66] in {
+  def: OpR_RR_pat<F2_dfadd,     pf2<fadd>,    f64, F64>;
+  def: OpR_RR_pat<F2_dfsub,     pf2<fsub>,    f64, F64>;
+}
+
 // In expressions like a0*b0 + a1*b1 + ..., prefer to generate multiply-add,
 // over add-add with individual multiplies as inputs.
 let AddedComplexity = 10 in {
   def: AccRRI_pat<M2_macsip,    Add, Su<Mul>, I32, u32_0ImmPred>;
   def: AccRRI_pat<M2_macsin,    Sub, Su<Mul>, I32, u32_0ImmPred>;
   def: AccRRR_pat<M2_maci,      Add, Su<Mul>, I32, I32, I32>;
+  let Predicates = [HasV66] in
+  def: AccRRR_pat<M2_mnaci,     Sub, Su<Mul>, I32, I32, I32>;
 }
 
 def: AccRRI_pat<M2_naccii,    Sub, Su<Add>, I32, s32_0ImmPred>;

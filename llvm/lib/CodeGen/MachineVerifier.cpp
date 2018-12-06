@@ -1055,6 +1055,63 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::G_BUILD_VECTOR: {
+    // Source types must be scalars, dest type a vector. Total size of scalars
+    // must match the dest vector size.
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcEltTy = MRI->getType(MI->getOperand(1).getReg());
+    if (!DstTy.isVector() || SrcEltTy.isVector())
+      report("G_BUILD_VECTOR must produce a vector from scalar operands", MI);
+    for (unsigned i = 2; i < MI->getNumOperands(); ++i) {
+      if (MRI->getType(MI->getOperand(1).getReg()) !=
+          MRI->getType(MI->getOperand(i).getReg()))
+        report("G_BUILD_VECTOR source operand types are not homogeneous", MI);
+    }
+    if (DstTy.getSizeInBits() !=
+        SrcEltTy.getSizeInBits() * (MI->getNumOperands() - 1))
+      report("G_BUILD_VECTOR src operands total size don't match dest "
+             "size.",
+             MI);
+    break;
+  }
+  case TargetOpcode::G_BUILD_VECTOR_TRUNC: {
+    // Source types must be scalars, dest type a vector. Scalar types must be
+    // larger than the dest vector elt type, as this is a truncating operation.
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcEltTy = MRI->getType(MI->getOperand(1).getReg());
+    if (!DstTy.isVector() || SrcEltTy.isVector())
+      report("G_BUILD_VECTOR_TRUNC must produce a vector from scalar operands",
+             MI);
+    for (unsigned i = 2; i < MI->getNumOperands(); ++i) {
+      if (MRI->getType(MI->getOperand(1).getReg()) !=
+          MRI->getType(MI->getOperand(i).getReg()))
+        report("G_BUILD_VECTOR_TRUNC source operand types are not homogeneous",
+               MI);
+    }
+    if (SrcEltTy.getSizeInBits() <= DstTy.getElementType().getSizeInBits())
+      report("G_BUILD_VECTOR_TRUNC source operand types are not larger than "
+             "dest elt type",
+             MI);
+    break;
+  }
+  case TargetOpcode::G_CONCAT_VECTORS: {
+    // Source types should be vectors, and total size should match the dest
+    // vector size.
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    if (!DstTy.isVector() || !SrcTy.isVector())
+      report("G_CONCAT_VECTOR requires vector source and destination operands",
+             MI);
+    for (unsigned i = 2; i < MI->getNumOperands(); ++i) {
+      if (MRI->getType(MI->getOperand(1).getReg()) !=
+          MRI->getType(MI->getOperand(i).getReg()))
+        report("G_CONCAT_VECTOR source operand types are not homogeneous", MI);
+    }
+    if (DstTy.getNumElements() !=
+        SrcTy.getNumElements() * (MI->getNumOperands() - 1))
+      report("G_CONCAT_VECTOR num dest and source elements should match", MI);
+    break;
+  }
   case TargetOpcode::COPY: {
     if (foundErrors)
       break;

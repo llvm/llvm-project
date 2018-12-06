@@ -117,6 +117,10 @@ DecodeGeneralDoubleLow8RegsRegisterClass(MCInst &Inst, unsigned RegNo,
 static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
                                              uint64_t Address,
                                              const void *Decoder);
+static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst,
+                                              unsigned RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder);
 static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,
                                                 uint64_t Address,
                                                 const void *Decoder);
@@ -606,6 +610,18 @@ static DecodeStatus DecodeHvxWRRegisterClass(MCInst &Inst, unsigned RegNo,
       Hexagon::W12, Hexagon::W13, Hexagon::W14, Hexagon::W15};
 
   return (DecodeRegisterClass(Inst, RegNo >> 1, HvxWRDecoderTable));
+}
+
+LLVM_ATTRIBUTE_UNUSED  // Suppress warning temporarily.
+static DecodeStatus DecodeHvxVQRRegisterClass(MCInst &Inst,
+                                              unsigned RegNo,
+                                              uint64_t /*Address*/,
+                                              const void *Decoder) {
+  static const MCPhysReg HvxVQRDecoderTable[] = {
+      Hexagon::VQ0,  Hexagon::VQ1,  Hexagon::VQ2,  Hexagon::VQ3,
+      Hexagon::VQ4,  Hexagon::VQ5,  Hexagon::VQ6,  Hexagon::VQ7};
+
+  return DecodeRegisterClass(Inst, RegNo >> 2, HvxVQRDecoderTable);
 }
 
 static DecodeStatus DecodePredRegsRegisterClass(MCInst &Inst, unsigned RegNo,

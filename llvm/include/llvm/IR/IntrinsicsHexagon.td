@@ -637,6 +637,18 @@ class Hexagon_i64_i32i32_Intrinsic<string GCCIntSuffix>
        [llvm_i64_ty], [llvm_i32_ty,llvm_i32_ty],
        [IntrNoMem]>;
 
+// tag : V6_lo
+class Hexagon_v16i32_v32i32_Intrinsic<string GCCIntSuffix>
+  : Hexagon_Intrinsic<GCCIntSuffix,
+       [llvm_v16i32_ty], [llvm_v32i32_ty],
+       [IntrNoMem]>;
+
+// tag : V6_lo
+class Hexagon_v32i32_v64i32_Intrinsic<string GCCIntSuffix>
+  : Hexagon_Intrinsic<GCCIntSuffix,
+       [llvm_v32i32_ty], [llvm_v64i32_ty],
+       [IntrNoMem]>;
+
 // tag : S2_shuffoh
 class Hexagon_i64_i64i64_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
@@ -853,18 +865,6 @@ class Hexagon_i32_v32i32i32_Intrinsic<string GCCIntSuffix>
        [llvm_i32_ty], [llvm_v32i32_ty,llvm_i32_ty],
        [IntrNoMem]>;
 
-// tag : V6_lo
-class Hexagon_v16i32_v32i32_Intrinsic<string GCCIntSuffix>
-  : Hexagon_Intrinsic<GCCIntSuffix,
-       [llvm_v16i32_ty], [llvm_v32i32_ty],
-       [IntrNoMem]>;
-
-// tag : V6_lo
-class Hexagon_v32i32_v64i32_Intrinsic<string GCCIntSuffix>
-  : Hexagon_Intrinsic<GCCIntSuffix,
-       [llvm_v32i32_ty], [llvm_v64i32_ty],
-       [IntrNoMem]>;
-
 // tag : V6_vlutvwhi
 class Hexagon_v32i32_v16i32v16i32i32_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
@@ -1009,6 +1009,18 @@ class Hexagon_v64i32_v64i32v32i32i32_Intrinsic<string GCCIntSuffix>
        [llvm_v64i32_ty], [llvm_v64i32_ty,llvm_v32i32_ty,llvm_i32_ty],
        [IntrNoMem]>;
 
+// tag : V6_vaddcarrysat
+class Hexagon_v16i32_v16i32v16i32v512i1_Intrinsic<string GCCIntSuffix>
+  : Hexagon_Intrinsic<GCCIntSuffix,
+       [llvm_v16i32_ty], [llvm_v16i32_ty,llvm_v16i32_ty,llvm_v512i1_ty],
+       [IntrNoMem]>;
+
+// tag : V6_vaddcarrysat
+class Hexagon_v32i32_v32i32v32i32v1024i1_Intrinsic<string GCCIntSuffix>
+  : Hexagon_Intrinsic<GCCIntSuffix,
+       [llvm_v32i32_ty], [llvm_v32i32_ty,llvm_v32i32_ty,llvm_v1024i1_ty],
+       [IntrNoMem]>;
+
 // tag : V6_vlutvvb_oracc
 class Hexagon_v16i32_v16i32v16i32v16i32i32_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
@@ -1134,6 +1146,12 @@ class Hexagon_v1024i1_v1024i1v32i32i32_Intrinsic<string GCCIntSuffix>
   : Hexagon_Intrinsic<GCCIntSuffix,
        [llvm_v1024i1_ty], [llvm_v1024i1_ty,llvm_v32i32_ty,llvm_i32_ty],
        [IntrNoMem]>;
+
+// tag : F2_dfsub
+class Hexagon_double_doubledouble_Intrinsic<string GCCIntSuffix>
+  : Hexagon_Intrinsic<GCCIntSuffix,
+       [llvm_double_ty], [llvm_double_ty,llvm_double_ty],
+       [IntrNoMem, Throws]>;
 
 // tag : V6_vmpyowh_sacc
 class Hexagon_v16i32_v16i32v16i32v16i32_Intrinsic<string GCCIntSuffix>
@@ -3950,6 +3968,20 @@ Hexagon_i64_i32_Intrinsic<"HEXAGON_S6_vsplatrbp">;
 def int_hexagon_A6_vcmpbeq_notany :
 Hexagon_i32_i64i64_Intrinsic<"HEXAGON_A6_vcmpbeq_notany">;
 
+// V66 Scalar Instructions.
+
+def int_hexagon_F2_dfsub :
+Hexagon_double_doubledouble_Intrinsic<"HEXAGON_F2_dfsub">;
+
+def int_hexagon_F2_dfadd :
+Hexagon_double_doubledouble_Intrinsic<"HEXAGON_F2_dfadd">;
+
+def int_hexagon_M2_mnaci :
+Hexagon_i32_i32i32i32_Intrinsic<"HEXAGON_M2_mnaci">;
+
+def int_hexagon_S2_mask :
+Hexagon_i32_i32i32_Intrinsic<"HEXAGON_S2_mask">;
+
 // V60 HVX Instructions.
 
 def int_hexagon_V6_veqb_or :
@@ -6295,4 +6327,30 @@ Hexagon_v16i32_v16i32_Intrinsic<"HEXAGON_V6_vabsb_sat">;
 
 def int_hexagon_V6_vabsb_sat_128B :
 Hexagon_v32i32_v32i32_Intrinsic<"HEXAGON_V6_vabsb_sat_128B">;
+
+// V66 HVX Instructions.
+
+def int_hexagon_V6_vaddcarrysat :
+Hexagon_v16i32_v16i32v16i32v512i1_Intrinsic<"HEXAGON_V6_vaddcarrysat">;
+
+def int_hexagon_V6_vaddcarrysat_128B :
+Hexagon_v32i32_v32i32v32i32v1024i1_Intrinsic<"HEXAGON_V6_vaddcarrysat_128B">;
+
+def int_hexagon_V6_vasr_into :
+Hexagon_v32i32_v32i32v16i32v16i32_Intrinsic<"HEXAGON_V6_vasr_into">;
+
+def int_hexagon_V6_vasr_into_128B :
+Hexagon_v64i32_v64i32v32i32v32i32_Intrinsic<"HEXAGON_V6_vasr_into_128B">;
+
+def int_hexagon_V6_vsatdw :
+Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vsatdw">;
+
+def int_hexagon_V6_vsatdw_128B :
+Hexagon_v32i32_v32i32v32i32_Intrinsic<"HEXAGON_V6_vsatdw_128B">;
+
+def int_hexagon_V6_vrotr :
+Hexagon_v16i32_v16i32v16i32_Intrinsic<"HEXAGON_V6_vrotr">;
+
+def int_hexagon_V6_vrotr_128B :
+Hexagon_v32i32_v32i32v32i32_Intrinsic<"HEXAGON_V6_vrotr_128B">;
 

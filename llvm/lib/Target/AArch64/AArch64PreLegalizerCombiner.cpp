@@ -32,11 +32,11 @@ public:
   AArch64PreLegalizerCombinerInfo()
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr) {}
-  virtual bool combine(CombinerChangeObserver &Observer, MachineInstr &MI,
+  virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
                        MachineIRBuilder &B) const override;
 };
 
-bool AArch64PreLegalizerCombinerInfo::combine(CombinerChangeObserver &Observer,
+bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                               MachineInstr &MI,
                                               MachineIRBuilder &B) const {
   CombinerHelper Helper(Observer, B);

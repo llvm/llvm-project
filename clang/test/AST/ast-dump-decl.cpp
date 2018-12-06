@@ -263,6 +263,15 @@ namespace testClassTemplateDecl {
   template<typename T1> class TestClassTemplatePartial<T1, A> {
     int j;
   };
+
+  template<typename T = int> struct TestTemplateDefaultType;
+  template<typename T> struct TestTemplateDefaultType { };
+
+  template<int I = 42> struct TestTemplateDefaultNonType;
+  template<int I> struct TestTemplateDefaultNonType { };
+
+  template<template<typename> class TT = TestClassTemplate> struct TestTemplateTemplateDefaultType;
+  template<template<typename> class TT> struct TestTemplateTemplateDefaultType { };
 }
 // CHECK:      ClassTemplateDecl{{.*}} TestClassTemplate
 // CHECK-NEXT:   TemplateTypeParmDecl
@@ -315,6 +324,24 @@ namespace testClassTemplateDecl {
 // CHECK-NEXT:   TemplateTypeParmDecl
 // CHECK-NEXT:   CXXRecordDecl{{.*}} class TestClassTemplatePartial
 // CHECK-NEXT:   FieldDecl{{.*}} j
+
+// CHECK:      ClassTemplateDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} {{.*}} TestTemplateDefaultType
+// CHECK-NEXT:   TemplateTypeParmDecl
+// CHECK-NEXT:     TemplateArgument type 'int'
+// CHECK-NEXT:     inherited from TemplateTypeParm 0x{{[^ ]*}} 'T'
+
+// CHECK:      ClassTemplateDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} {{.*}} TestTemplateDefaultNonType
+// CHECK-NEXT:   NonTypeTemplateParmDecl
+// CHECK-NEXT:     TemplateArgument expr
+// CHECK-NEXT:       ConstantExpr
+// CHECK-NEXT:         IntegerLiteral
+// CHECK-NEXT:     inherited from NonTypeTemplateParm 0x{{[^ ]*}} 'I' 'int'
+
+// CHECK:      ClassTemplateDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} {{.*}} TestTemplateTemplateDefaultType
+// CHECK-NEXT:   TemplateTemplateParmDecl
+// CHECK-NEXT:     TemplateTypeParmDecl
+// CHECK-NEXT:     TemplateArgument
+// CHECK-NEXT:     inherited from TemplateTemplateParm 0x{{[^ ]*}} 'TT'
 
 // PR15220 dump instantiation only once
 namespace testCanonicalTemplate {

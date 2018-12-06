@@ -1546,33 +1546,44 @@ static SDValue emitComparison(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 ///   ccmp B, inv(CB), CA
 ///   check for CB flags
 ///
-/// In general we can create code for arbitrary "... (and (and A B) C)"
-/// sequences. We can also implement some "or" expressions, because "(or A B)"
-/// is equivalent to "not (and (not A) (not B))" and we can implement some
-/// negation operations:
-/// We can negate the results of a single comparison by inverting the flags
-/// used when the predicate fails and inverting the flags tested in the next
-/// instruction; We can also negate the results of the whole previous
-/// conditional compare sequence by inverting the flags tested in the next
-/// instruction. However there is no way to negate the result of a partial
-/// sequence.
+/// This naturally lets us implement chains of AND operations with SETCC
+/// operands. And we can even implement some other situations by transforming
+/// them:
+///   - We can implement (NEG SETCC) i.e. negating a single comparison by
+///     negating the flags used in a CCMP/FCCMP operations.
+///   - We can negate the result of a whole chain of CMP/CCMP/FCCMP operations
+///     by negating the flags we test for afterwards. i.e.
+///     NEG (CMP CCMP CCCMP ...) can be implemented.
+///   - Note that we can only ever negate all previously processed results.
+///     What we can not implement by flipping the flags to test is a negation
+///     of two sub-trees (because the negation affects all sub-trees emitted so
+///     far, so the 2nd sub-tree we emit would also affect the first).
+/// With those tools we can implement some OR operations:
+///   - (OR (SETCC A) (SETCC B)) can be implemented via:
+///     NEG (AND (NEG (SETCC A)) (NEG (SETCC B)))
+///   - After transforming OR to NEG/AND combinations we may be able to use NEG
+///     elimination rules from earlier to implement the whole thing as a
+///     CCMP/FCCMP chain.
 ///
-/// Therefore on encountering an "or" expression we can negate the subtree on
-/// one side and have to be able to push the negate to the leafs of the subtree
-/// on the other side (see also the comments in code). As complete example:
-/// "or (or (setCA (cmp A)) (setCB (cmp B)))
-///     (and (setCC (cmp C)) (setCD (cmp D)))"
-/// is transformed to
-/// "not (and (not (and (setCC (cmp C)) (setCC (cmp D))))
-///           (and (not (setCA (cmp A)) (not (setCB (cmp B))))))"
-/// and implemented as:
+/// As complete example:
+///     or (or (setCA (cmp A)) (setCB (cmp B)))
+///        (and (setCC (cmp C)) (setCD (cmp D)))"
+/// can be reassociated to:
+///     or (and (setCC (cmp C)) setCD (cmp D))
+//         (or (setCA (cmp A)) (setCB (cmp B)))
+/// can be transformed to:
+///     not (and (not (and (setCC (cmp C)) (setCD (cmp D))))
+///              (and (not (setCA (cmp A)) (not (setCB (cmp B))))))"
+/// which can be implemented as:
 ///   cmp C
 ///   ccmp D, inv(CD), CC
 ///   ccmp A, CA, inv(CD)
 ///   ccmp B, CB, inv(CA)
 ///   check for CB flags
-/// A counterexample is "or (and A B) (and C D)" which cannot be implemented
-/// by conditional compare sequences.
+///
+/// A counterexample is "or (and A B) (and C D)" which translates to
+/// not (and (not (and (not A) (not B))) (not (and (not C) (not D)))), we
+/// can only implement 1 of the inner (not) operations, but not both!
 /// @{
 
 /// Create a conditional comparison; Use CCMP, CCMN or FCCMP as appropriate.
@@ -1612,9 +1623,20 @@ static SDValue emitConditionalComparison(SDValue LHS, SDValue RHS,
 
 /// Returns true if @p Val is a tree of AND/OR/SETCC operations that can be
 /// expressed as a conjunction. See \ref AArch64CCMP.
-/// \param CanNegate        Set to true if we can also emit the negation of the
-///                         tree as a conjunction.
+/// \param CanNegate    Set to true if we can negate the whole sub-tree just by
+///                     changing the conditions on the SETCC tests.
+///                     (this means we can call emitConjunctionRec() with
+///                      Negate==true on this sub-tree)
+/// \param MustBeFirst  Set to true if this subtree needs to be negated and we
+///                     cannot do the negation naturally. We are required to
+///                     emit the subtree first in this case.
+/// \param WillNegate   Is true if are called when the result of this
+///                     subexpression must be negated. This happens when the
+///                     outer expression is an OR. We can use this fact to know
+///                     that we have a double negation (or (or ...) ...) that
+///                     can be implemented for free.
 static bool canEmitConjunction(const SDValue Val, bool &CanNegate,
+                               bool &MustBeFirst, bool WillNegate,
                                unsigned Depth = 0) {
   if (!Val.hasOneUse())
     return false;
@@ -1623,42 +1645,44 @@ static bool canEmitConjunction(const SDValue Val, bool &CanNegate,
     if (Val->getOperand(0).getValueType() == MVT::f128)
       return false;
     CanNegate = true;
+    MustBeFirst = false;
     return true;
   }
   // Protect against exponential runtime and stack overflow.
   if (Depth > 6)
     return false;
   if (Opcode == ISD::AND || Opcode == ISD::OR) {
+    bool IsOR = Opcode == ISD::OR;
     SDValue O0 = Val->getOperand(0);
     SDValue O1 = Val->getOperand(1);
     bool CanNegateL;
-    if (!canEmitConjunction(O0, CanNegateL, Depth+1))
+    bool MustBeFirstL;
+    if (!canEmitConjunction(O0, CanNegateL, MustBeFirstL, IsOR, Depth+1))
       return false;
     bool CanNegateR;
-    if (!canEmitConjunction(O1, CanNegateR, Depth+1))
+    bool MustBeFirstR;
+    if (!canEmitConjunction(O1, CanNegateR, MustBeFirstR, IsOR, Depth+1))
       return false;
 
-    if (Opcode == ISD::OR) {
-      // For an OR expression we need to be able to negate at least one side or
-      // we cannot do the transformation at all.
+    if (MustBeFirstL && MustBeFirstR)
+      return false;
+
+    if (IsOR) {
+      // For an OR expression we need to be able to naturally negate at least
+      // one side or we cannot do the transformation at all.
       if (!CanNegateL && !CanNegateR)
         return false;
-      // However if we can negate x and y, then we can change
-      // (not (or x y))
-      // into
-      // (and (not x) (not y))
-      // to eliminate the outer negation.
-      CanNegate = CanNegateL && CanNegateR;
+      // If we the result of the OR will be negated and we can naturally negate
+      // the leafs, then this sub-tree as a whole negates naturally.
+      CanNegate = WillNegate && CanNegateL && CanNegateR;
+      // If we cannot naturally negate the whole sub-tree, then this must be
+      // emitted first.
+      MustBeFirst = !CanNegate;
     } else {
-      // If the operands are OR expressions then we finally need to negate their
-      // outputs, we can only do that for the operand with emitted last by
-      // negating OutCC, not for both operands.
-      bool NeedsNegOutL = O0->getOpcode() == ISD::OR;
-      bool NeedsNegOutR = O1->getOpcode() == ISD::OR;
-      if (NeedsNegOutL && NeedsNegOutR)
-        return false;
-      // We cannot negate an AND operation.
+      assert(Opcode == ISD::AND && "Must be OR or AND");
+      // We cannot naturally negate an AND operation.
       CanNegate = false;
+      MustBeFirst = MustBeFirstL || MustBeFirstR;
     }
     return true;
   }
@@ -1671,10 +1695,8 @@ static bool canEmitConjunction(const SDValue Val, bool &CanNegate,
 /// and conditional compare operations. @returns an NZCV flags producing node
 /// and sets @p OutCC to the flags that should be tested or returns SDValue() if
 /// transformation was not possible.
-/// On recursive invocations @p PushNegate may be set to true to have negation
-/// effects pushed to the tree leafs; @p Predicate is an NZCV flag predicate
-/// for the comparisons in the current subtree; @p Depth limits the search
-/// depth to avoid stack overflow.
+/// \p Negate is true if we want this sub-tree being negated just by changing
+/// SETCC conditions.
 static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
     AArch64CC::CondCode &OutCC, bool Negate, SDValue CCOp,
     AArch64CC::CondCode Predicate) {
@@ -1716,61 +1738,69 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
     return emitConditionalComparison(LHS, RHS, CC, CCOp, Predicate, OutCC, DL,
                                      DAG);
   }
-  assert((Opcode == ISD::AND || (Opcode == ISD::OR && Val->hasOneUse())) &&
-         "Valid conjunction/disjunction tree");
+  assert(Val->hasOneUse() && "Valid conjunction/disjunction tree");
 
-  // Check if both sides can be transformed.
+  bool IsOR = Opcode == ISD::OR;
+
   SDValue LHS = Val->getOperand(0);
+  bool CanNegateL;
+  bool MustBeFirstL;
+  bool ValidL = canEmitConjunction(LHS, CanNegateL, MustBeFirstL, IsOR);
+  assert(ValidL && "Valid conjunction/disjunction tree");
+  (void)ValidL;
+
   SDValue RHS = Val->getOperand(1);
+  bool CanNegateR;
+  bool MustBeFirstR;
+  bool ValidR = canEmitConjunction(RHS, CanNegateR, MustBeFirstR, IsOR);
+  assert(ValidR && "Valid conjunction/disjunction tree");
+  (void)ValidR;
 
-  // In case of an OR we need to negate our operands and the result.
-  // (A v B) <=> not(not(A) ^ not(B))
-  bool NegateOpsAndResult = Opcode == ISD::OR;
-  // We can negate the results of all previous operations by inverting the
-  // predicate flags giving us a free negation for one side. The other side
-  // must be negatable by itself.
-  if (NegateOpsAndResult) {
-    // See which side we can negate.
-    bool CanNegateL;
-    bool isValidL = canEmitConjunction(LHS, CanNegateL);
-    assert(isValidL && "Valid conjunction/disjunction tree");
-    (void)isValidL;
-
-#ifndef NDEBUG
-    bool CanNegateR;
-    bool isValidR = canEmitConjunction(RHS, CanNegateR);
-    assert(isValidR && "Valid conjunction/disjunction tree");
-    assert((CanNegateL || CanNegateR) && "Valid conjunction/disjunction tree");
-#endif
-
-    // Order the side which we cannot negate to RHS so we can emit it first.
-    if (!CanNegateL)
-      std::swap(LHS, RHS);
-  } else {
-    bool NeedsNegOutL = LHS->getOpcode() == ISD::OR;
-    assert((!NeedsNegOutL || RHS->getOpcode() != ISD::OR) &&
-           "Valid conjunction/disjunction tree");
-    // Order the side where we need to negate the output flags to RHS so it
-    // gets emitted first.
-    if (NeedsNegOutL)
-      std::swap(LHS, RHS);
+  // Swap sub-tree that must come first to the right side.
+  if (MustBeFirstL) {
+    assert(!MustBeFirstR && "Valid conjunction/disjunction tree");
+    std::swap(LHS, RHS);
+    std::swap(CanNegateL, CanNegateR);
+    std::swap(MustBeFirstL, MustBeFirstR);
   }
 
-  // Emit RHS. If we want to negate the tree we only need to push a negate
-  // through if we are already in a PushNegate case, otherwise we can negate
-  // the "flags to test" afterwards.
+  bool NegateR;
+  bool NegateAfterR;
+  bool NegateL;
+  bool NegateAfterAll;
+  if (Opcode == ISD::OR) {
+    // Swap the sub-tree that we can negate naturally to the left.
+    if (!CanNegateL) {
+      assert(CanNegateR && "at least one side must be negatable");
+      assert(!MustBeFirstR && "invalid conjunction/disjunction tree");
+      assert(!Negate);
+      std::swap(LHS, RHS);
+      NegateR = false;
+      NegateAfterR = true;
+    } else {
+      // Negate the left sub-tree if possible, otherwise negate the result.
+      NegateR = CanNegateR;
+      NegateAfterR = !CanNegateR;
+    }
+    NegateL = true;
+    NegateAfterAll = !Negate;
+  } else {
+    assert(Opcode == ISD::AND && "Valid conjunction/disjunction tree");
+    assert(!Negate && "Valid conjunction/disjunction tree");
+
+    NegateL = false;
+    NegateR = false;
+    NegateAfterR = false;
+    NegateAfterAll = false;
+  }
+
+  // Emit sub-trees.
   AArch64CC::CondCode RHSCC;
-  SDValue CmpR = emitConjunctionRec(DAG, RHS, RHSCC, Negate,
-                                                   CCOp, Predicate);
-  if (NegateOpsAndResult && !Negate)
+  SDValue CmpR = emitConjunctionRec(DAG, RHS, RHSCC, NegateR, CCOp, Predicate);
+  if (NegateAfterR)
     RHSCC = AArch64CC::getInvertedCondCode(RHSCC);
-  // Emit LHS. We may need to negate it.
-  SDValue CmpL = emitConjunctionRec(DAG, LHS, OutCC,
-                                                   NegateOpsAndResult, CmpR,
-                                                   RHSCC);
-  // If we transformed an OR to and AND then we have to negate the result
-  // (or absorb the Negate parameter).
-  if (NegateOpsAndResult && !Negate)
+  SDValue CmpL = emitConjunctionRec(DAG, LHS, OutCC, NegateL, CmpR, RHSCC);
+  if (NegateAfterAll)
     OutCC = AArch64CC::getInvertedCondCode(OutCC);
   return CmpL;
 }
@@ -1782,7 +1812,8 @@ static SDValue emitConjunctionRec(SelectionDAG &DAG, SDValue Val,
 static SDValue emitConjunction(SelectionDAG &DAG, SDValue Val,
                                AArch64CC::CondCode &OutCC) {
   bool DummyCanNegate;
-  if (!canEmitConjunction(Val, DummyCanNegate))
+  bool DummyMustBeFirst;
+  if (!canEmitConjunction(Val, DummyCanNegate, DummyMustBeFirst, false))
     return SDValue();
 
   return emitConjunctionRec(DAG, Val, OutCC, false, SDValue(), AArch64CC::AL);

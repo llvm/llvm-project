@@ -12,12 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
-#include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
-#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/GlobalISel/GISelWorkList.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/GISelWorkList.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 
@@ -34,7 +35,7 @@ namespace {
 /// instruction creation will schedule that instruction for a future visit.
 /// Other Combiner implementations may require more complex behaviour from
 /// their CombinerChangeObserver subclass.
-class WorkListMaintainer : public CombinerChangeObserver {
+class WorkListMaintainer : public GISelChangeObserver {
   using WorkListTy = GISelWorkList<512>;
   WorkListTy &WorkList;
 
@@ -49,6 +50,11 @@ public:
   void createdInstr(MachineInstr &MI) override {
     LLVM_DEBUG(dbgs() << "Created: "; MI.print(dbgs()); dbgs() << "\n");
     WorkList.insert(&MI);
+  }
+  // Currently changed conservatively assumes erased.
+  void changedInstr(MachineInstr &MI) override {
+    LLVM_DEBUG(dbgs() << "Changed: "; MI.print(dbgs()); dbgs() << "\n");
+    WorkList.remove(&MI);
   }
 };
 }

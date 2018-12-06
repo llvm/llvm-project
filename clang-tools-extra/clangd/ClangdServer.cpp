@@ -86,6 +86,10 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
     DiagConsumer.onDiagnosticsReady(File, std::move(Diags));
   }
 
+  void onFileUpdated(PathRef File, const TUStatus &Status) override {
+    DiagConsumer.onFileUpdated(File, Status);
+  }
+
 private:
   FileIndex *FIndex;
   DiagnosticsConsumer &DiagConsumer;
@@ -144,6 +148,10 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
 
 void ClangdServer::addDocument(PathRef File, StringRef Contents,
                                WantDiagnostics WantDiags) {
+  // FIXME: some build systems like Bazel will take time to preparing
+  // environment to build the file, it would be nice if we could emit a
+  // "PreparingBuild" status to inform users, it is non-trivial given the
+  // current implementation.
   WorkScheduler.update(File,
                        ParseInputs{getCompileCommand(File),
                                    FSProvider.getFileSystem(), Contents.str()},
