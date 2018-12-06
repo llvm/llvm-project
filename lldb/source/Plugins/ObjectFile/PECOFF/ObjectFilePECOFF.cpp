@@ -23,11 +23,14 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/UUID.h"
 #include "llvm/BinaryFormat/COFF.h"
 
+#include "llvm/Object/COFFImportFile.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define IMAGE_DOS_SIGNATURE 0x5A4D    // MZ
@@ -86,6 +89,10 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   if (!objfile_ap || !objfile_ap->ParseHeader())
     return nullptr;
 
+  // Cache coff binary.
+  if (!objfile_ap->CreateBinary())
+    return nullptr;
+
   return objfile_ap.release();
 }
 
@@ -131,9 +138,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
           specs.Append(ModuleSpec(file, spec));
           spec.SetTriple("i686-pc-windows");
           specs.Append(ModuleSpec(file, spec));
-        }
-        else if (coff_header.machine == MachineArmNt)
-        {
+        } else if (coff_header.machine == MachineArmNt) {
           spec.SetTriple("arm-pc-windows");
           specs.Append(ModuleSpec(file, spec));
         }
@@ -168,6 +173,40 @@ lldb::SymbolType ObjectFilePECOFF::MapSymbolType(uint16_t coff_symbol_type) {
   return lldb::eSymbolTypeInvalid;
 }
 
+bool ObjectFilePECOFF::CreateBinary() {
+  if (m_owningbin)
+    return true;
+
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+
+  auto binary = llvm::object::createBinary(m_file.GetPath());
+  if (!binary) {
+    if (log)
+      log->Printf("ObjectFilePECOFF::CreateBinary() - failed to create binary "
+                  "for file (%s): %s",
+                  m_file ? m_file.GetPath().c_str() : "<NULL>",
+                  errorToErrorCode(binary.takeError()).message().c_str());
+    return false;
+  }
+
+  // Make sure we only handle COFF format.
+  if (!binary->getBinary()->isCOFF() &&
+      !binary->getBinary()->isCOFFImportFile())
+    return false;
+
+  m_owningbin = OWNBINType(std::move(*binary));
+  if (log)
+    log->Printf("%p ObjectFilePECOFF::CreateBinary() module = %p (%s), file = "
+                "%s, binary = %p (Bin = %p)",
+                static_cast<void *>(this),
+                static_cast<void *>(GetModule().get()),
+                GetModule()->GetSpecificationDescription().c_str(),
+                m_file ? m_file.GetPath().c_str() : "<NULL>",
+                static_cast<void *>(m_owningbin.getPointer()),
+                static_cast<void *>(m_owningbin->getBinary()));
+  return true;
+}
+
 ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    DataBufferSP &data_sp,
                                    lldb::offset_t data_offset,
@@ -176,7 +215,7 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    lldb::offset_t length)
     : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
       m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
-      m_entry_point_address() {
+      m_entry_point_address(), m_deps_filespec(), m_owningbin() {
   ::memset(&m_dos_header, 0, sizeof(m_dos_header));
   ::memset(&m_coff_header, 0, sizeof(m_coff_header));
   ::memset(&m_coff_header_opt, 0, sizeof(m_coff_header_opt));
@@ -188,7 +227,7 @@ ObjectFilePECOFF::ObjectFilePECOFF(const lldb::ModuleSP &module_sp,
                                    addr_t header_addr)
     : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
       m_dos_header(), m_coff_header(), m_coff_header_opt(), m_sect_headers(),
-      m_entry_point_address() {
+      m_entry_point_address(), m_deps_filespec(), m_owningbin() {
   ::memset(&m_dos_header, 0, sizeof(m_dos_header));
   ::memset(&m_coff_header, 0, sizeof(m_coff_header));
   ::memset(&m_coff_header_opt, 0, sizeof(m_coff_header_opt));
@@ -431,7 +470,7 @@ bool ObjectFilePECOFF::ParseCOFFOptionalHeader(lldb::offset_t *offset_ptr) {
 
 DataExtractor ObjectFilePECOFF::ReadImageData(uint32_t offset, size_t size) {
   if (m_file) {
-    // A bit of a hack, but we intend to write to this buffer, so we can't 
+    // A bit of a hack, but we intend to write to this buffer, so we can't
     // mmap it.
     auto buffer_sp = MapFileData(m_file, size, offset);
     return DataExtractor(buffer_sp, GetByteOrder(), GetAddressByteSize());
@@ -805,8 +844,73 @@ void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
 
 bool ObjectFilePECOFF::GetUUID(UUID *uuid) { return false; }
 
+uint32_t ObjectFilePECOFF::ParseDependentModules() {
+  ModuleSP module_sp(GetModule());
+  if (!module_sp)
+    return 0;
+
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+  if (m_deps_filespec)
+    return m_deps_filespec->GetSize();
+
+  // Cache coff binary if it is not done yet.
+  if (!CreateBinary())
+    return 0;
+
+  Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+  if (log)
+    log->Printf("%p ObjectFilePECOFF::ParseDependentModules() module = %p "
+                "(%s), binary = %p (Bin = %p)",
+                static_cast<void *>(this), static_cast<void *>(module_sp.get()),
+                module_sp->GetSpecificationDescription().c_str(),
+                static_cast<void *>(m_owningbin.getPointer()),
+                m_owningbin ? static_cast<void *>(m_owningbin->getBinary())
+                            : nullptr);
+
+  auto COFFObj =
+      llvm::dyn_cast<llvm::object::COFFObjectFile>(m_owningbin->getBinary());
+  if (!COFFObj)
+    return 0;
+
+  m_deps_filespec = FileSpecList();
+
+  for (const auto &entry : COFFObj->import_directories()) {
+    llvm::StringRef dll_name;
+    auto ec = entry.getName(dll_name);
+    // Report a bogus entry.
+    if (ec != std::error_code()) {
+      if (log)
+        log->Printf("ObjectFilePECOFF::ParseDependentModules() - failed to get "
+                    "import directory entry name: %s",
+                    ec.message().c_str());
+      continue;
+    }
+
+    // At this moment we only have the base name of the DLL. The full path can
+    // only be seen after the dynamic loading.  Our best guess is Try to get it
+    // with the help of the object file's directory.
+    llvm::SmallString<MAX_PATH> dll_fullpath;
+    FileSpec dll_specs(dll_name);
+    dll_specs.GetDirectory().SetString(m_file.GetDirectory().GetCString());
+
+    if (!llvm::sys::fs::real_path(dll_specs.GetPath(), dll_fullpath))
+      m_deps_filespec->Append(FileSpec(dll_fullpath));
+    else {
+      // Known DLLs or DLL not found in the object file directory.
+      m_deps_filespec->Append(FileSpec(dll_name));
+    }
+  }
+  return m_deps_filespec->GetSize();
+}
+
 uint32_t ObjectFilePECOFF::GetDependentModules(FileSpecList &files) {
-  return 0;
+  auto num_modules = ParseDependentModules();
+  auto original_size = files.GetSize();
+
+  for (unsigned i = 0; i < num_modules; ++i)
+    files.AppendIfUnique(m_deps_filespec->GetFileSpecAtIndex(i));
+
+  return files.GetSize() - original_size;
 }
 
 lldb_private::Address ObjectFilePECOFF::GetEntryPointAddress() {
@@ -862,6 +966,9 @@ void ObjectFilePECOFF::Dump(Stream *s) {
     }
     s->EOL();
     DumpSectionHeaders(s);
+    s->EOL();
+
+    DumpDependentModules(s);
     s->EOL();
   }
 }
@@ -1007,6 +1114,22 @@ void ObjectFilePECOFF::DumpSectionHeaders(Stream *s) {
   for (pos = m_sect_headers.begin(); pos != end; ++pos, ++idx) {
     s->Printf("[%2u] ", idx);
     ObjectFilePECOFF::DumpSectionHeader(s, *pos);
+  }
+}
+
+//----------------------------------------------------------------------
+// DumpDependentModules
+//
+// Dump all of the dependent modules to the specified output stream
+//----------------------------------------------------------------------
+void ObjectFilePECOFF::DumpDependentModules(lldb_private::Stream *s) {
+  auto num_modules = ParseDependentModules();
+  if (num_modules > 0) {
+    s->PutCString("Dependent Modules\n");
+    for (unsigned i = 0; i < num_modules; ++i) {
+      auto spec = m_deps_filespec->GetFileSpecAtIndex(i);
+      s->Printf("  %s\n", spec.GetFilename().GetCString());
+    }
   }
 }
 
