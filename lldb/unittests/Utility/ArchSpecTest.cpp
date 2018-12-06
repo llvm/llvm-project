@@ -210,7 +210,7 @@ TEST(ArchSpecTest, Compatibility) {
     ArchSpec B("arm64-apple-ios");
     ASSERT_FALSE(A.IsExactMatch(B));
     // FIXME: This looks unintuitive and we should investigate whether
-    // thi is the desired behavior.
+    // this is the desired behavior.
     ASSERT_FALSE(A.IsCompatibleMatch(B));
   }
   {
@@ -219,5 +219,12 @@ TEST(ArchSpecTest, Compatibility) {
     ASSERT_FALSE(A.IsExactMatch(B));
     // FIXME: See above, though the extra environment complicates things.
     ASSERT_FALSE(A.IsCompatibleMatch(B));
+  }
+  {
+    ArchSpec A("x86_64");
+    ArchSpec B("x86_64-apple-macosx10.14");
+    // FIXME: The exact match also looks unintuitive.
+    ASSERT_TRUE(A.IsExactMatch(B));
+    ASSERT_TRUE(A.IsCompatibleMatch(B));
   }
 }
