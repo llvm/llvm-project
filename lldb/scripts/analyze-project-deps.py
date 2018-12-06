@@ -90,7 +90,7 @@ def is_existing_cycle(path, cycles):
     # at the end), then A -> B -> C is also a cycle.  This is an important
     # optimization which reduces the search space by multiple orders of
     # magnitude.
-    for i in xrange(0,len(path)):
+    for i in range(0,len(path)):
         if any(is_sublist(x, path) for x in cycles):
             return True
         path = [path[-1]] + path[0:-1]
@@ -129,23 +129,23 @@ def expand(path_queue, path_lengths, cycles, src_map):
 
 cycles = []
 
-path_queue = [[x] for x in src_map.iterkeys()]
+path_queue = [[x] for x in iter(src_map)]
 path_lens = [1] * len(path_queue)
 
-items = list(src_map.iteritems())
-items.sort(lambda A, B : cmp(A[0], B[0]))
+items = list(src_map.items())
+items.sort(key = lambda A : A[0])
 
 for (path, deps) in items:
-    print path + ":"
-    sorted_deps = list(deps.iteritems())
+    print(path + ":")
+    sorted_deps = list(deps.items())
     if args.show_counts:
-        sorted_deps.sort(lambda A, B: cmp(A[1], B[1]))
+        sorted_deps.sort(key = lambda A: (A[1], A[0]))
         for dep in sorted_deps:
-            print "\t{} [{}]".format(dep[0], dep[1])
+            print("\t{} [{}]".format(dep[0], dep[1]))
     else:
-        sorted_deps.sort(lambda A, B: cmp(A[0], B[0]))
+        sorted_deps.sort(key = lambda A: A[0])
         for dep in sorted_deps:
-            print "\t{}".format(dep[0])
+            print("\t{}".format(dep[0]))
 
 def iter_cycles(cycles):
     global src_map
@@ -161,16 +161,16 @@ def iter_cycles(cycles):
         yield (total, smallest, result)
 
 if args.discover_cycles:
-    print "Analyzing cycles..."
+    print("Analyzing cycles...")
 
     expand(path_queue, path_lens, cycles, src_map)
 
     average = sum([len(x)+1 for x in cycles]) / len(cycles)
 
-    print "Found {} cycles.  Average cycle length = {}.".format(len(cycles), average)
+    print("Found {} cycles.  Average cycle length = {}.".format(len(cycles), average))
     counted = list(iter_cycles(cycles))
     if args.show_counts:
-        counted.sort(lambda A, B: cmp(A[0], B[0]))
+        counted.sort(key = lambda A: A[0])
         for (total, smallest, cycle) in counted:
             sys.stdout.write("{} deps to break: ".format(total))
             sys.stdout.write(cycle[0][0])
@@ -180,9 +180,9 @@ if args.discover_cycles:
     else:
         for cycle in cycles:
             cycle.append(cycle[0])
-            print " -> ".join(cycle)
+            print(" -> ".join(cycle))
 
-    print "Analyzing islands..."
+    print("Analyzing islands...")
     islands = []
     outgoing_counts = defaultdict(int)
     incoming_counts = defaultdict(int)
@@ -195,14 +195,14 @@ if args.discover_cycles:
         disjoints = [x for x in islands if this_cycle.isdisjoint(x)]
         overlaps = [x for x in islands if not this_cycle.isdisjoint(x)]
         islands = disjoints + [set.union(this_cycle, *overlaps)]
-    print "Found {} disjoint cycle islands...".format(len(islands))
+    print("Found {} disjoint cycle islands...".format(len(islands)))
     for island in islands:
-        print "Island ({} elements)".format(len(island))
+        print("Island ({} elements)".format(len(island)))
         sorted = []
         for node in island:
             sorted.append((node, incoming_counts[node], outgoing_counts[node]))
-        sorted.sort(lambda x, y: cmp(x[1]+x[2], y[1]+y[2]))
+        sorted.sort(key = lambda x: x[1]+x[2])
         for (node, inc, outg) in sorted:
-            print "  {} [{} in, {} out]".format(node, inc, outg)
+            print("  {} [{} in, {} out]".format(node, inc, outg))
     sys.stdout.flush()
 pass
