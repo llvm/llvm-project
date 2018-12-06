@@ -129,6 +129,83 @@ C22b<int> c22bi;
 void func_22() {} // expected-error{{redefinition of 'func_22'}}
 
 
+// Case of template friend functions.
+
+template<typename T> void func_31(T *x);
+template<typename T1>
+struct C31a {
+  template<typename T> friend void func_31(T *x) {}
+};
+template<typename T1>
+struct C31b {
+  template<typename T> friend void func_31(T *x) {}
+};
+
+
+template<typename T> inline void func_32(T *x) {}
+template<typename T1>
+struct C32a {
+  template<typename T> friend void func_32(T *x) {}
+};
+template<typename T1>
+struct C32b {
+  template<typename T> friend void func_32(T *x) {}
+};
+
+
+template<typename T1>
+struct C33a {
+  template<typename T> friend void func_33(T *x) {}
+};
+template<typename T1>
+struct C33b {
+  template<typename T> friend void func_33(T *x) {}
+};
+
+
+template<typename T> inline void func_34(T *x) {}  // expected-note{{previous definition is here}}
+template<typename T1>
+struct C34 {
+  template<typename T> friend void func_34(T *x) {} // expected-error{{redefinition of 'func_34'}}
+};
+
+C34<int> v34;  // expected-note{{in instantiation of template class 'C34<int>' requested here}}
+
+
+template<typename T> inline void func_35(T *x);
+template<typename T1>
+struct C35a {
+  template<typename T> friend void func_35(T *x) {} // expected-note{{previous definition is here}}
+};
+template<typename T1>
+struct C35b {
+  template<typename T> friend void func_35(T *x) {} // expected-error{{redefinition of 'func_35'}}
+};
+
+C35a<int> v35a;
+C35b<int> v35b;  // expected-note{{in instantiation of template class 'C35b<int>' requested here}}
+
+
+template<typename T> void func_36(T *x);
+template<typename T1>
+struct C36 {
+  template<typename T> friend void func_36(T *x) {}  // expected-error{{redefinition of 'func_36'}}
+                                                     // expected-note@-1{{previous definition is here}}
+};
+
+C36<int> v36a;
+C36<long> v36b;  //expected-note{{in instantiation of template class 'C36<long>' requested here}}
+
+
+template<typename T> void func_37(T *x);
+template<typename T1>
+struct C37 {
+  template<typename T> friend void func_37(T *x) {} // expected-note{{previous definition is here}}
+};
+
+C37<int> v37;
+template<typename T> void func_37(T *x) {} // expected-error{{redefinition of 'func_37'}}
+
 
 namespace pr22307 {
 
@@ -234,4 +311,16 @@ void func() {
   D<D<int>> cache;
   cache.insert();
 }
+}
+
+namespace PR39742 {
+template<typename>
+struct wrapper {
+  template<typename>
+  friend void friend_function_template() {}  // expected-error{{redefinition of 'friend_function_template'}}
+                                             // expected-note@-1{{previous definition is here}}
+};
+
+wrapper<bool> x;
+wrapper<int> y;  // expected-note{{in instantiation of template class 'PR39742::wrapper<int>' requested here}}
 }
