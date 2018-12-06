@@ -75,6 +75,13 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
+  if (ST.isThumb()) {
+    // FIXME: merge with the code for non-Thumb.
+    computeTables();
+    verify(*ST.getInstrInfo());
+    return;
+  }
+
   getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
   getActionDefinitionsBuilder(G_FRAME_INDEX).legalFor({p0});
 
