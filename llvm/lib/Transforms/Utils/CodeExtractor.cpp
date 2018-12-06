@@ -1369,9 +1369,12 @@ Function *CodeExtractor::extractCodeRegion() {
       DVI->eraseFromParent();
   }
 
-  // Mark the new function `noreturn` if applicable.
+  // Mark the new function `noreturn` if applicable. Terminators which resume
+  // exception propagation are treated as returning instructions. This is to
+  // avoid inserting traps after calls to outlined functions which unwind.
   bool doesNotReturn = none_of(*newFunction, [](const BasicBlock &BB) {
-    return isa<ReturnInst>(BB.getTerminator());
+    const Instruction *Term = BB.getTerminator();
+    return isa<ReturnInst>(Term) || isa<ResumeInst>(Term);
   });
   if (doesNotReturn)
     newFunction->setDoesNotReturn();

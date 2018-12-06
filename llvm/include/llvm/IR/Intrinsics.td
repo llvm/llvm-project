@@ -319,6 +319,50 @@ def int_gcwrite : Intrinsic<[],
                             [llvm_ptr_ty, llvm_ptr_ty, llvm_ptrptr_ty],
                             [IntrArgMemOnly, NoCapture<1>, NoCapture<2>]>;
 
+//===------------------- ObjC ARC runtime Intrinsics --------------------===//
+//
+// Note these are to support the Objective-C ARC optimizer which wants to
+// eliminate retain and releases where possible.
+
+def int_objc_autorelease                    : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_autoreleasePoolPop             : Intrinsic<[], [llvm_ptr_ty]>;
+def int_objc_autoreleasePoolPush            : Intrinsic<[llvm_ptr_ty], []>;
+def int_objc_autoreleaseReturnValue         : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_copyWeak                       : Intrinsic<[],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptrptr_ty]>;
+def int_objc_destroyWeak                    : Intrinsic<[], [llvm_ptrptr_ty]>;
+def int_objc_initWeak                       : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptr_ty]>;
+def int_objc_loadWeak                       : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptrptr_ty]>;
+def int_objc_loadWeakRetained               : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptrptr_ty]>;
+def int_objc_moveWeak                       : Intrinsic<[],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptrptr_ty]>;
+def int_objc_release                        : Intrinsic<[], [llvm_ptr_ty]>;
+def int_objc_retain                         : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_retainAutorelease              : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_retainAutoreleaseReturnValue   : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_retainAutoreleasedReturnValue  : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_retainBlock                    : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptr_ty]>;
+def int_objc_storeStrong                    : Intrinsic<[],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptr_ty]>;
+def int_objc_storeWeak                      : Intrinsic<[llvm_ptr_ty],
+                                                        [llvm_ptrptr_ty,
+                                                         llvm_ptr_ty]>;
+
+
 //===--------------------- Code Generator Intrinsics ----------------------===//
 //
 def int_returnaddress : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty], [IntrNoMem]>;

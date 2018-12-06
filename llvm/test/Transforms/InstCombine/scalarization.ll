@@ -47,8 +47,8 @@ for.end:
 
 define float @extract_element_constant_index(<4 x float> %x) {
 ; CHECK-LABEL: @extract_element_constant_index(
-; CHECK-NEXT:    [[R_LHS:%.*]] = extractelement <4 x float> [[X:%.*]], i32 2
-; CHECK-NEXT:    [[R:%.*]] = fadd float [[R_LHS]], 0x4002A3D700000000
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i32 2
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], 0x4002A3D700000000
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %add = fadd <4 x float> %x, <float 0x4002A3D700000000, float 0x4002A3D700000000, float 0x4002A3D700000000, float 0x4002A3D700000000>
@@ -58,8 +58,8 @@ define float @extract_element_constant_index(<4 x float> %x) {
 
 define float @extract_element_variable_index(<4 x float> %x, i32 %y) {
 ; CHECK-LABEL: @extract_element_variable_index(
-; CHECK-NEXT:    [[R_LHS:%.*]] = extractelement <4 x float> [[X:%.*]], i32 [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = fadd float [[R_LHS]], 1.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = fadd float [[TMP1]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %add = fadd <4 x float> %x, <float 1.0, float 1.0, float 1.0, float 1.0>
@@ -67,12 +67,34 @@ define float @extract_element_variable_index(<4 x float> %x, i32 %y) {
   ret float %r
 }
 
-define float @extract_element_splat_constant_vector_variable_index(i32 %y) {
-; CHECK-LABEL: @extract_element_splat_constant_vector_variable_index(
-; CHECK-NEXT:    ret float 2.000000e+00
+define float @extelt_binop_insertelt(<4 x float> %A, <4 x float> %B, float %f) {
+; CHECK-LABEL: @extelt_binop_insertelt(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[E:%.*]] = fmul nnan float [[TMP1]], [[F:%.*]]
+; CHECK-NEXT:    ret float [[E]]
 ;
-  %r = extractelement <4 x float> <float 2.0, float 2.0, float 2.0, float 2.0>, i32 %y
-  ret float %r
+  %C = insertelement <4 x float> %A, float %f, i32 0
+  %D = fmul nnan <4 x float> %C, %B
+  %E = extractelement <4 x float> %D, i32 0
+  ret float %E
+}
+
+; We recurse to find a scalarizable operand.
+; FIXME: We should propagate the IR flags including wrapping flags.
+
+define i32 @extelt_binop_binop_insertelt(<4 x i32> %A, <4 x i32> %B, i32 %f) {
+; CHECK-LABEL: @extelt_binop_binop_insertelt(
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[B:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], [[F:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[B]], i32 0
+; CHECK-NEXT:    [[E:%.*]] = mul i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    ret i32 [[E]]
+;
+  %v = insertelement <4 x i32> %A, i32 %f, i32 0
+  %C = add <4 x i32> %v, %B
+  %D = mul nsw <4 x i32> %C, %B
+  %E = extractelement <4 x i32> %D, i32 0
+  ret i32 %E
 }
 
 define float @extract_element_constant_vector_variable_index(i32 %y) {

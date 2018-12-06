@@ -30,6 +30,7 @@ namespace llvm {
 class MachineFunction;
 class MachineInstr;
 class TargetInstrInfo;
+class GISelChangeObserver;
 
 /// Class which stores all the state required in a MachineIRBuilder.
 /// Since MachineIRBuilders will only store state in this object, it allows
@@ -50,7 +51,7 @@ struct MachineIRBuilderState {
   MachineBasicBlock::iterator II;
   /// @}
 
-  std::function<void(MachineInstr *)> InsertedInstr;
+  GISelChangeObserver *Observer;
 };
 
 /// Helper class to build MachineInstr.
@@ -61,6 +62,7 @@ class MachineIRBuilderBase {
 
   MachineIRBuilderState State;
   void validateTruncExt(unsigned Dst, unsigned Src, bool IsExtend);
+  void recordInsertion(MachineInstr *MI) const;
 
 protected:
   unsigned getDestFromArg(unsigned Reg) { return Reg; }
@@ -151,12 +153,8 @@ public:
   void setInstr(MachineInstr &MI);
   /// @}
 
-  /// \name Control where instructions we create are recorded (typically for
-  /// visiting again later during legalization).
-  /// @{
-  void recordInsertion(MachineInstr *InsertedInstr) const;
-  void recordInsertions(std::function<void(MachineInstr *)> InsertedInstr);
-  void stopRecordingInsertions();
+  void setChangeObserver(GISelChangeObserver &Observer);
+  void stopObservingChanges();
   /// @}
 
   /// Set the debug location to \p DL for all the next build instructions.
@@ -604,6 +602,46 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildUnmerge(ArrayRef<unsigned> Res, unsigned Op);
+
+  /// Build and insert \p Res = G_BUILD_VECTOR \p Op0, ...
+  ///
+  /// G_BUILD_VECTOR creates a vector value from multiple scalar registers.
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre The entire register \p Res (and no more) must be covered by the
+  ///      input scalar registers.
+  /// \pre The type of all \p Ops registers must be identical.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildBuildVector(unsigned Res, ArrayRef<unsigned> Ops);
+
+  /// Build and insert \p Res = G_BUILD_VECTOR_TRUNC \p Op0, ...
+  ///
+  /// G_BUILD_VECTOR_TRUNC creates a vector value from multiple scalar registers
+  /// which have types larger than the destination vector element type, and
+  /// truncates the values to fit.
+  ///
+  /// If the operands given are already the same size as the vector elt type,
+  /// then this method will instead create a G_BUILD_VECTOR instruction.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre The type of all \p Ops registers must be identical.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildBuildVectorTrunc(unsigned Res,
+                                            ArrayRef<unsigned> Ops);
+
+  /// Build and insert \p Res = G_CONCAT_VECTORS \p Op0, ...
+  ///
+  /// G_CONCAT_VECTORS creates a vector from the concatenation of 2 or more
+  /// vectors.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre The entire register \p Res (and no more) must be covered by the input
+  ///      registers.
+  /// \pre The type of all source operands must be identical.
+  ///
+  /// \return a MachineInstrBuilder for the newly created instruction.
+  MachineInstrBuilder buildConcatVectors(unsigned Res, ArrayRef<unsigned> Ops);
 
   MachineInstrBuilder buildInsert(unsigned Res, unsigned Src,
                                   unsigned Op, unsigned Index);

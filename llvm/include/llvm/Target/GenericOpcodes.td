@@ -675,6 +675,28 @@ def G_MERGE_VALUES : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+/// Create a vector from multiple scalar registers.
+def G_BUILD_VECTOR : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0, variable_ops);
+  let hasSideEffects = 0;
+}
+
+/// Like G_BUILD_VECTOR, but truncates the larger operand types to fit the
+/// destination vector elt type.
+def G_BUILD_VECTOR_TRUNC : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0, variable_ops);
+  let hasSideEffects = 0;
+}
+
+/// Create a vector by concatenating vectors together.
+def G_CONCAT_VECTORS : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type1:$src0, variable_ops);
+  let hasSideEffects = 0;
+}
+
 // Intrinsic without side effects.
 def G_INTRINSIC : GenericInstruction {
   let OutOperandList = (outs);

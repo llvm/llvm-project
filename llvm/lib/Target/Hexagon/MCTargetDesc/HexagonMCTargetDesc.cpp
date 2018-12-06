@@ -71,6 +71,8 @@ cl::opt<bool> MV62("mv62", cl::Hidden, cl::desc("Build for Hexagon V62"),
                    cl::init(false));
 cl::opt<bool> MV65("mv65", cl::Hidden, cl::desc("Build for Hexagon V65"),
                    cl::init(false));
+cl::opt<bool> MV66("mv66", cl::Hidden, cl::desc("Build for Hexagon V66"),
+                   cl::init(false));
 } // namespace
 
 cl::opt<Hexagon::ArchEnum>
@@ -80,9 +82,10 @@ cl::opt<Hexagon::ArchEnum>
         clEnumValN(Hexagon::ArchEnum::V60, "v60", "Build for HVX v60"),
         clEnumValN(Hexagon::ArchEnum::V62, "v62", "Build for HVX v62"),
         clEnumValN(Hexagon::ArchEnum::V65, "v65", "Build for HVX v65"),
-        // Sentinal for no value specified
+        clEnumValN(Hexagon::ArchEnum::V66, "v66", "Build for HVX v66"),
+        // Sentinel for no value specified.
         clEnumValN(Hexagon::ArchEnum::Generic, "", "")),
-      // Sentinal for flag not present
+      // Sentinel for flag not present.
       cl::init(Hexagon::ArchEnum::NoArch), cl::ValueOptional);
 
 static cl::opt<bool>
@@ -103,6 +106,8 @@ static StringRef HexagonGetArchVariant() {
     return "hexagonv62";
   if (MV65)
     return "hexagonv65";
+  if (MV66)
+    return "hexagonv66";
   return "";
 }
 
@@ -289,11 +294,15 @@ std::string selectHexagonFS(StringRef CPU, StringRef FS) {
   case Hexagon::ArchEnum::V65:
     Result.push_back("+hvxv65");
     break;
+  case Hexagon::ArchEnum::V66:
+    Result.push_back("+hvxv66");
+    break;
   case Hexagon::ArchEnum::Generic:{
     Result.push_back(StringSwitch<StringRef>(CPU)
              .Case("hexagonv60", "+hvxv60")
              .Case("hexagonv62", "+hvxv62")
-             .Case("hexagonv65", "+hvxv65"));
+             .Case("hexagonv65", "+hvxv65")
+             .Case("hexagonv66", "+hvxv66"));
     break;
   }
   case Hexagon::ArchEnum::NoArch:
@@ -308,7 +317,7 @@ static bool isCPUValid(std::string CPU)
 {
   std::vector<std::string> table {
     "generic",    "hexagonv5",  "hexagonv55", "hexagonv60",
-    "hexagonv62", "hexagonv65",
+    "hexagonv62", "hexagonv65", "hexagonv66",
   };
 
   return std::find(table.begin(), table.end(), CPU) != table.end();
@@ -330,7 +339,7 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
   // turns on hvxvNN, corresponding to the existing ArchVNN.
   FeatureBitset FB = S;
   unsigned CpuArch = ArchV5;
-  for (unsigned F : {ArchV65, ArchV62, ArchV60, ArchV55, ArchV5}) {
+  for (unsigned F : {ArchV66, ArchV65, ArchV62, ArchV60, ArchV55, ArchV5}) {
     if (!FB.test(F))
       continue;
     CpuArch = F;
@@ -344,7 +353,8 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
     break;
   }
   bool HasHvxVer = false;
-  for (unsigned F : {ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65}) {
+  for (unsigned F : {ExtensionHVXV60, ExtensionHVXV62, ExtensionHVXV65,
+                     ExtensionHVXV66}) {
     if (!FB.test(F))
       continue;
     HasHvxVer = true;
@@ -357,6 +367,9 @@ FeatureBitset Hexagon_MC::completeHVXFeatures(const FeatureBitset &S) {
 
   // HasHvxVer is false, and UseHvx is true.
   switch (CpuArch) {
+    case ArchV66:
+      FB.set(ExtensionHVXV66);
+      LLVM_FALLTHROUGH;
     case ArchV65:
       FB.set(ExtensionHVXV65);
       LLVM_FALLTHROUGH;
@@ -400,6 +413,7 @@ unsigned Hexagon_MC::GetELFFlags(const MCSubtargetInfo &STI) {
     {"hexagonv60", ELF::EF_HEXAGON_MACH_V60},
     {"hexagonv62", ELF::EF_HEXAGON_MACH_V62},
     {"hexagonv65", ELF::EF_HEXAGON_MACH_V65},
+    {"hexagonv66", ELF::EF_HEXAGON_MACH_V66},
   };
 
   auto F = ElfFlags.find(STI.getCPU());

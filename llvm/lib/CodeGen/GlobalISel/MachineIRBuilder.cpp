@@ -10,6 +10,7 @@
 /// This file implements the MachineIRBuidler class.
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -29,7 +30,7 @@ void MachineIRBuilderBase::setMF(MachineFunction &MF) {
   State.TII = MF.getSubtarget().getInstrInfo();
   State.DL = DebugLoc();
   State.II = MachineBasicBlock::iterator();
-  State.InsertedInstr = nullptr;
+  State.Observer = nullptr;
 }
 
 void MachineIRBuilderBase::setMBB(MachineBasicBlock &MBB) {
@@ -54,18 +55,15 @@ void MachineIRBuilderBase::setInsertPt(MachineBasicBlock &MBB,
 }
 
 void MachineIRBuilderBase::recordInsertion(MachineInstr *InsertedInstr) const {
-  if (State.InsertedInstr)
-    State.InsertedInstr(InsertedInstr);
+  if (State.Observer)
+    State.Observer->createdInstr(*InsertedInstr);
 }
 
-void MachineIRBuilderBase::recordInsertions(
-    std::function<void(MachineInstr *)> Inserted) {
-  State.InsertedInstr = std::move(Inserted);
+void MachineIRBuilderBase::setChangeObserver(GISelChangeObserver &Observer) {
+  State.Observer = &Observer;
 }
 
-void MachineIRBuilderBase::stopRecordingInsertions() {
-  State.InsertedInstr = nullptr;
-}
+void MachineIRBuilderBase::stopObservingChanges() { State.Observer = nullptr; }
 
 //------------------------------------------------------------------------------
 // Build instruction variants.
@@ -518,6 +516,64 @@ MachineInstrBuilder MachineIRBuilderBase::buildUnmerge(ArrayRef<unsigned> Res,
   for (unsigned i = 0; i < Res.size(); ++i)
     MIB.addDef(Res[i]);
   MIB.addUse(Op);
+  return MIB;
+}
+
+MachineInstrBuilder
+MachineIRBuilderBase::buildBuildVector(unsigned Res, ArrayRef<unsigned> Ops) {
+#ifndef NDEBUG
+  assert((!Ops.empty() || Ops.size() < 2) && "Must have at least 2 operands");
+  assert(getMRI()->getType(Res).isVector() && "Res type must be a vector");
+  LLT Ty = getMRI()->getType(Ops[0]);
+  for (auto Reg : Ops)
+    assert(getMRI()->getType(Reg) == Ty && "type mismatch in input list");
+  assert(Ops.size() * Ty.getSizeInBits() ==
+             getMRI()->getType(Res).getSizeInBits() &&
+         "input scalars do not exactly cover the outpur vector register");
+#endif
+  MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_BUILD_VECTOR);
+  MIB.addDef(Res);
+  for (auto Op : Ops)
+    MIB.addUse(Op);
+  return MIB;
+}
+
+MachineInstrBuilder
+MachineIRBuilderBase::buildBuildVectorTrunc(unsigned Res,
+                                            ArrayRef<unsigned> Ops) {
+#ifndef NDEBUG
+  assert((!Ops.empty() || Ops.size() < 2) && "Must have at least 2 operands");
+  LLT Ty = getMRI()->getType(Ops[0]);
+  for (auto Reg : Ops)
+    assert(getMRI()->getType(Reg) == Ty && "type mismatch in input list");
+#endif
+  if (getMRI()->getType(Ops[0]).getSizeInBits() ==
+      getMRI()->getType(Res).getElementType().getSizeInBits())
+    return buildBuildVector(Res, Ops);
+  MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_BUILD_VECTOR_TRUNC);
+  MIB.addDef(Res);
+  for (auto Op : Ops)
+    MIB.addUse(Op);
+  return MIB;
+}
+
+MachineInstrBuilder
+MachineIRBuilderBase::buildConcatVectors(unsigned Res, ArrayRef<unsigned> Ops) {
+  #ifndef NDEBUG
+  assert((!Ops.empty() || Ops.size() < 2) && "Must have at least 2 operands");
+  LLT Ty = getMRI()->getType(Ops[0]);
+  for (auto Reg : Ops) {
+    assert(getMRI()->getType(Reg).isVector() && "expected vector operand");
+    assert(getMRI()->getType(Reg) == Ty && "type mismatch in input list");
+  }
+  assert(Ops.size() * Ty.getSizeInBits() ==
+             getMRI()->getType(Res).getSizeInBits() &&
+         "input vectors do not exactly cover the outpur vector register");
+  #endif
+  MachineInstrBuilder MIB = buildInstr(TargetOpcode::G_CONCAT_VECTORS);
+  MIB.addDef(Res);
+  for (auto Op : Ops)
+    MIB.addUse(Op);
   return MIB;
 }
 

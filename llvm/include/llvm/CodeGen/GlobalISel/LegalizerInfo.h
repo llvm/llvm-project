@@ -39,6 +39,7 @@ class MachineInstr;
 class MachineIRBuilder;
 class MachineRegisterInfo;
 class MCInstrInfo;
+class GISelChangeObserver;
 
 namespace LegalizeActions {
 enum LegalizeAction : std::uint8_t {
@@ -949,9 +950,9 @@ public:
 
   bool isLegal(const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
 
-  virtual bool legalizeCustom(MachineInstr &MI,
-                              MachineRegisterInfo &MRI,
-                              MachineIRBuilder &MIRBuilder) const;
+  virtual bool legalizeCustom(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              MachineIRBuilder &MIRBuilder,
+                              GISelChangeObserver &Observer) const;
 
 private:
   /// Determine what action should be taken to legalize the given generic

@@ -1,0 +1,29 @@
+#RUN: not llc -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# REQUIRES: global-isel, aarch64-registered-target
+--- |
+  target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-unknown-unknown"
+  
+  define i32 @g_concat_vectors() {
+    ret i32 0
+  }
+
+...
+---
+name:            g_concat_vectors
+legalized:       true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:       
+  - { id: 0, class: _, preferred-register: '' }
+  - { id: 1, class: _, preferred-register: '' }
+liveins:         
+body:             |
+  bb.0:
+    ; CHECK: Bad machine code: G_CONCAT_VECTOR num dest and source elements should match
+
+    %0(<2 x s32>) = IMPLICIT_DEF
+    %1(<2 x s32>) = IMPLICIT_DEF
+    %2:_(<2 x s32>) = G_CONCAT_VECTORS %0, %1
+...
