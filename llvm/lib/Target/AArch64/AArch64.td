@@ -65,6 +65,18 @@ def FeatureLSE : SubtargetFeature<"lse", "HasLSE", "true",
 def FeatureRDM : SubtargetFeature<"rdm", "HasRDM", "true",
   "Enable ARMv8.1 Rounding Double Multiply Add/Subtract instructions">;
 
+def FeaturePAN : SubtargetFeature<
+    "pan", "HasPAN", "true",
+    "Enables ARM v8.1 Privileged Access-Never extension">;
+
+def FeatureLOR : SubtargetFeature<
+    "lor", "HasLOR", "true",
+    "Enables ARM v8.1 Limited Ordering Regions extension">;
+
+def FeatureVH : SubtargetFeature<
+    "vh", "HasVH", "true",
+    "Enables ARM v8.1 Virtual Host extension">;
+
 def FeaturePerfMon : SubtargetFeature<"perfmon", "HasPerfMon", "true",
   "Enable ARMv8 PMUv3 Performance Monitors extension">;
 
@@ -76,6 +88,18 @@ def FeatureFP16FML : SubtargetFeature<"fp16fml", "HasFP16FML", "true",
 
 def FeatureSPE : SubtargetFeature<"spe", "HasSPE", "true",
   "Enable Statistical Profiling extension">;
+
+def FeaturePAN_RWV : SubtargetFeature<
+    "pan-rwv", "HasPAN_RWV", "true",
+    "Enable v8.2 PAN s1e1R and s1e1W Variants",
+    [FeaturePAN]>;
+
+// UAO PState
+def FeaturePsUAO : SubtargetFeature< "uaops", "HasPsUAO", "true",
+    "Enable v8.2 UAO PState">;
+
+def FeatureCCPP : SubtargetFeature<"ccpp", "HasCCPP",
+    "true", "Enable v8.2 data Cache Clean to Point of Persistence" >;
 
 def FeatureSVE : SubtargetFeature<"sve", "HasSVE", "true",
   "Enable Scalable Vector Extension (SVE) instructions">;
@@ -195,6 +219,66 @@ def FeatureDotProd : SubtargetFeature<
     "dotprod", "HasDotProd", "true",
     "Enable dot product support">;
 
+def FeaturePA : SubtargetFeature<
+    "pa", "HasPA", "true",
+    "Enable v8.3-A Pointer Authentication enchancement">;
+
+def FeatureJS : SubtargetFeature<
+    "jsconv", "HasJS", "true",
+    "Enable v8.3-A JavaScript FP conversion enchancement",
+    [FeatureFPARMv8]>;
+
+def FeatureCCIDX : SubtargetFeature<
+    "ccidx", "HasCCIDX", "true",
+    "Enable v8.3-A Extend of the CCSIDR number of sets">;
+
+def FeatureComplxNum : SubtargetFeature<
+    "complxnum", "HasComplxNum", "true",
+    "Enable v8.3-A Floating-point complex number support",
+    [FeatureNEON]>;
+
+def FeatureNV : SubtargetFeature<
+    "nv", "HasNV", "true",
+    "Enable v8.4-A Nested Virtualization Enchancement">;
+
+def FeatureRASv8_4 : SubtargetFeature<
+    "rasv8_4", "HasRASv8_4", "true",
+    "Enable v8.4-A Reliability, Availability and Serviceability extension",
+    [FeatureRAS]>;
+
+def FeatureMPAM : SubtargetFeature<
+    "mpam", "HasMPAM", "true",
+    "Enable v8.4-A Memory system Partitioning and Monitoring extension">;
+
+def FeatureDIT : SubtargetFeature<
+    "dit", "HasDIT", "true",
+    "Enable v8.4-A Data Independent Timing instructions">;
+
+def FeatureTRACEV8_4 : SubtargetFeature<
+    "tracev8.4", "HasTRACEV8_4", "true",
+    "Enable v8.4-A Trace extension">;
+
+def FeatureAM : SubtargetFeature<
+    "am", "HasAM", "true",
+    "Enable v8.4-A Activity Monitors extension">;
+
+def FeatureSEL2 : SubtargetFeature<
+    "sel2", "HasSEL2", "true",
+    "Enable v8.4-A Secure Exception Level 2 extension">;
+
+def FeatureTLB_RMI : SubtargetFeature<
+    "tlb-rmi", "HasTLB_RMI", "true",
+    "Enable v8.4-A TLB Range and Maintenance Instructions">;
+
+def FeatureFMI : SubtargetFeature<
+    "fmi", "HasFMI", "true",
+    "Enable v8.4-A Flag Manipulation Instructions">;
+
+// 8.4 RCPC enchancements: LDAPR & STLR instructions with Immediate Offset
+def FeatureRCPC_IMMO : SubtargetFeature<"rcpc-immo", "HasRCPC_IMMO", "true",
+    "Enable v8.4-A RCPC instructions with Immediate Offsets",
+    [FeatureRCPC]>;
+
 def FeatureNoNegativeImmediates : SubtargetFeature<"no-neg-immediates",
                                         "NegativeImmediates", "false",
                                         "Convert immediates and instructions "
@@ -232,7 +316,7 @@ def FeaturePredCtrl : SubtargetFeature<"predctrl", "HasPredCtrl", "true",
   "Enable execution and data prediction invalidation instructions" >;
 
 def FeatureCacheDeepPersist : SubtargetFeature<"ccdp", "HasCCDP",
-    "true", "Enable Cache Clean to Point of Deep Persistence" >;
+    "true", "Enable v8.5 Cache Clean to Point of Deep Persistence" >;
 
 def FeatureBranchTargetId : SubtargetFeature<"bti", "HasBTI",
     "true", "Enable Branch Target Identification" >;
@@ -248,16 +332,22 @@ def FeatureMTE : SubtargetFeature<"mte", "HasMTE",
 //
 
 def HasV8_1aOps : SubtargetFeature<"v8.1a", "HasV8_1aOps", "true",
-  "Support ARM v8.1a instructions", [FeatureCRC, FeatureLSE, FeatureRDM]>;
+  "Support ARM v8.1a instructions", [FeatureCRC, FeatureLSE, FeatureRDM,
+  FeaturePAN, FeatureLOR, FeatureVH]>;
 
 def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
-  "Support ARM v8.2a instructions", [HasV8_1aOps, FeatureRAS]>;
+  "Support ARM v8.2a instructions", [HasV8_1aOps, FeaturePsUAO, 
+  FeaturePAN_RWV, FeatureRAS, FeatureCCPP]>;
 
 def HasV8_3aOps : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
-  "Support ARM v8.3a instructions", [HasV8_2aOps, FeatureRCPC]>;
+  "Support ARM v8.3a instructions", [HasV8_2aOps, FeatureRCPC, FeaturePA,
+  FeatureJS, FeatureCCIDX, FeatureComplxNum]>;
 
 def HasV8_4aOps : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
-  "Support ARM v8.4a instructions", [HasV8_3aOps, FeatureDotProd]>;
+  "Support ARM v8.4a instructions", [HasV8_3aOps, FeatureDotProd,
+  FeatureNV, FeatureRASv8_4, FeatureMPAM, FeatureDIT,
+  FeatureTRACEV8_4, FeatureAM, FeatureSEL2, FeatureTLB_RMI,
+  FeatureFMI, FeatureRCPC_IMMO]>;
 
 def HasV8_5aOps : SubtargetFeature<
   "v8.5a", "HasV8_5aOps", "true", "Support ARM v8.5a instructions",

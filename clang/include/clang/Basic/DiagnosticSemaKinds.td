@@ -622,11 +622,6 @@ def err_invalid_cpu_supports : Error<"invalid cpu feature string for builtin">;
 def err_invalid_cpu_is : Error<"invalid cpu name for builtin">;
 def err_invalid_cpu_specific_dispatch_value : Error<
 "invalid option '%0' for %select{cpu_specific|cpu_dispatch}1">;
-def err_builtin_needs_feature : Error<"%0 needs target feature %1">;
-def err_function_needs_feature
-    : Error<"always_inline function %1 requires target feature '%2', but would "
-            "be inlined into function %0 that is compiled without support for "
-            "'%2'">;
 def warn_builtin_unknown : Warning<"use of unknown builtin %0">,
   InGroup<ImplicitFunctionDeclare>, DefaultError;
 def warn_cstruct_memaccess : Warning<
@@ -2880,20 +2875,6 @@ def err_attribute_weakref_without_alias : Error<
   "weakref declaration of %0 must also have an alias attribute">;
 def err_alias_not_supported_on_darwin : Error <
   "aliases are not supported on darwin">;
-def err_alias_to_undefined : Error<
-  "%select{alias|ifunc}0 must point to a defined %select{variable or |}1function">;
-def warn_alias_to_weak_alias : Warning<
-  "%select{alias|ifunc}2 will always resolve to %0 even if weak definition of %1 is overridden">,
-  InGroup<IgnoredAttributes>;
-def warn_alias_with_section : Warning<
-  "%select{alias|ifunc}1 will not be in section '%0' but in the same section as the %select{aliasee|resolver}2">,
-  InGroup<IgnoredAttributes>;
-def err_duplicate_mangled_name : Error<
-  "definition with same mangled name '%0' as another definition">;
-def err_cyclic_alias : Error<
-  "%select{alias|ifunc}0 definition is part of a cycle">;
-def err_ifunc_resolver_return : Error<
-  "ifunc resolver function must return a pointer">;
 def warn_attribute_wrong_decl_type_str : Warning<
   "%0 attribute only applies to %1">, InGroup<IgnoredAttributes>;
 def err_attribute_wrong_decl_type_str : Error<
@@ -7147,9 +7128,6 @@ def warn_atomic_op_has_invalid_memory_order : Warning<
   InGroup<DiagGroup<"atomic-memory-ordering">>;
 def err_atomic_op_has_invalid_synch_scope : Error<
   "synchronization scope argument to atomic operation is invalid">;
-def warn_atomic_op_misaligned : Warning<
-  "%select{large|misaligned}0 atomic operation may incur "
-  "significant performance penalty">, InGroup<DiagGroup<"atomic-alignment">>;
 def warn_atomic_implicit_seq_cst : Warning<
   "implicit use of sequentially-consistent atomic may incur stronger memory barriers than necessary">,
   InGroup<DiagGroup<"atomic-implicit-seq-cst">>, DefaultIgnore;
@@ -7413,8 +7391,6 @@ let CategoryName = "Inline Assembly Issue" in {
     "invalid input constraint '%0' in asm">;
   def err_asm_immediate_expected : Error<"constraint '%0' expects "
     "an integer constant expression">;
-  def err_asm_invalid_type_in_input : Error<
-    "invalid type %0 in asm input for constraint '%1'">;
   def err_asm_tying_incompatible_types : Error<
     "unsupported inline asm: input with type "
     "%diff{$ matching output with type $|}0,1">;
@@ -9317,22 +9293,6 @@ let CategoryName = "Documentation Issue" in {
 def warn_not_a_doxygen_trailing_member_comment : Warning<
   "not a Doxygen trailing comment">, InGroup<Documentation>, DefaultIgnore;
 } // end of documentation issue category
-
-let CategoryName = "Instrumentation Issue" in {
-def warn_profile_data_out_of_date : Warning<
-  "profile data may be out of date: of %0 function%s0, %1 %plural{1:has|:have}1"
-  " mismatched data that will be ignored">,
-  InGroup<ProfileInstrOutOfDate>;
-def warn_profile_data_missing : Warning<
-  "profile data may be incomplete: of %0 function%s0, %1 %plural{1:has|:have}1"
-  " no data">,
-  InGroup<ProfileInstrMissing>,
-  DefaultIgnore;
-def warn_profile_data_unprofiled : Warning<
-  "no profile data available for file \"%0\"">,
-  InGroup<ProfileInstrUnprofiled>;
-
-} // end of instrumentation issue category
 
 let CategoryName = "Nullability Issue" in {
 

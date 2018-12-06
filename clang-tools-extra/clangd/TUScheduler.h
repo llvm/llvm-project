@@ -52,6 +52,36 @@ struct ASTRetentionPolicy {
   unsigned MaxRetainedASTs = 3;
 };
 
+struct TUAction {
+  enum State {
+    Queued,           // The TU is pending in the thread task queue to be built.
+    RunningAction,    // Starting running actions on the TU.
+    BuildingPreamble, // The preamble of the TU is being built.
+    BuildingFile,     // The TU is being built. It is only emitted when building
+                      // the AST for diagnostics in write action (update).
+    Idle, // Indicates the worker thread is idle, and ready to run any upcoming
+          // actions.
+  };
+  TUAction(State S, llvm::StringRef Name) : S(S), Name(Name){};
+  State S;
+  /// The name of the action currently running, e.g. Update, GoToDef, Hover.
+  /// Empty if we are in the idle state.
+  std::string Name;
+};
+
+// Internal status of the TU in TUScheduler.
+struct TUStatus {
+  struct BuildDetails {
+    /// Indicates whether clang failed to build the TU.
+    bool BuildFailed = false;
+    /// Indicates whether we reused the prebuilt AST.
+    bool ReuseAST = false;
+  };
+
+  TUAction Action;
+  BuildDetails Details;
+};
+
 class ParsingCallbacks {
 public:
   virtual ~ParsingCallbacks() = default;
@@ -75,6 +105,9 @@ public:
 
   /// Called whenever the diagnostics for \p File are produced.
   virtual void onDiagnostics(PathRef File, std::vector<Diag> Diags) {}
+
+  /// Called whenever the TU status is updated.
+  virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}
 };
 
 /// Handles running tasks for ClangdServer and managing the resources (e.g.,

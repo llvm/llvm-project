@@ -46,8 +46,6 @@ static cl::opt<bool> EnableTermFolding("enable-loop-simplifycfg-term-folding",
 
 STATISTIC(NumTerminatorsFolded,
           "Number of terminators folded to unconditional branches");
-STATISTIC(NumLoopBlocksDeleted,
-          "Number of loop blocks deleted");
 
 /// If \p BB is a switch or a conditional branch, but only one of its successors
 /// can be reached from this block in runtime, return this successor. Otherwise,
@@ -236,27 +234,6 @@ private:
            "All blocks that stay in loop should be live!");
   }
 
-  /// Delete loop blocks that have become unreachable after folding. Make all
-  /// relevant updates to DT and LI.
-  void deleteDeadLoopBlocks() {
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-    if (MSSAU)
-      MSSAU->removeBlocks(DeadLoopBlocks);
-    for (auto *BB : DeadLoopBlocks) {
-      assert(BB != L.getHeader() &&
-             "Header of the current loop cannot be dead!");
-      LLVM_DEBUG(dbgs() << "Deleting dead loop block " << BB->getName()
-                        << "\n");
-      if (LI.isLoopHeader(BB)) {
-        assert(LI.getLoopFor(BB) != &L && "Attempt to remove current loop!");
-        LI.erase(LI.getLoopFor(BB));
-      }
-      LI.removeBlock(BB);
-      DeleteDeadBlock(BB, &DTU);
-      ++NumLoopBlocksDeleted;
-    }
-  }
-
   /// Constant-fold terminators of blocks acculumated in FoldCandidates into the
   /// unconditional branches.
   void foldTerminators() {
@@ -341,6 +318,15 @@ public:
       return false;
     }
 
+    // TODO: Support deletion of dead loop blocks.
+    if (!DeadLoopBlocks.empty()) {
+      LLVM_DEBUG(dbgs() << "Give up constant terminator folding in loop "
+                        << L.getHeader()->getName()
+                        << ": we don't currently"
+                           " support deletion of dead in-loop blocks.\n");
+      return false;
+    }
+
     // TODO: Support dead loop exits.
     if (!DeadExitBlocks.empty()) {
       LLVM_DEBUG(dbgs() << "Give up constant terminator folding in loop "
@@ -351,8 +337,7 @@ public:
 
     // TODO: Support blocks that are not dead, but also not in loop after the
     // folding.
-    if (BlocksInLoopAfterFolding.size() + DeadLoopBlocks.size() !=
-        L.getNumBlocks()) {
+    if (BlocksInLoopAfterFolding.size() != L.getNumBlocks()) {
       LLVM_DEBUG(
           dbgs() << "Give up constant terminator folding in loop "
                  << L.getHeader()->getName()
@@ -371,13 +356,6 @@ public:
 
     // Make the actual transforms.
     foldTerminators();
-
-    if (!DeadLoopBlocks.empty()) {
-      LLVM_DEBUG(dbgs() << "Deleting " << DeadLoopBlocks.size()
-                    << " dead blocks in loop " << L.getHeader()->getName()
-                    << "\n");
-      deleteDeadLoopBlocks();
-    }
 
 #ifndef NDEBUG
     // Make sure that we have preserved all data structures after the transform.

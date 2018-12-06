@@ -33,6 +33,13 @@ int ga, gb;
 // CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:45> 'float' lvalue Var {{.+}} 'omp_out' 'float'
 // CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:56> 'float' <LValueToRValue>
 // CHECK-NEXT: | |   `-DeclRefExpr {{.+}} <col:56> 'float' lvalue Var {{.+}} 'omp_in' 'float'
+// CHECK-NEXT: | |-BinaryOperator {{.+}} <col:76, col:98> 'float' lvalue '='
+// CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:76> 'float' lvalue Var {{.+}} 'omp_priv' 'float'
+// CHECK-NEXT: | | `-BinaryOperator {{.+}} <col:87, col:98> 'float' '+'
+// CHECK-NEXT: | |   |-ImplicitCastExpr {{.+}} <col:87> 'float' <LValueToRValue>
+// CHECK-NEXT: | |   | `-DeclRefExpr {{.+}} <col:87> 'float' lvalue Var {{.+}} 'omp_orig' 'float'
+// CHECK-NEXT: | |   `-ImplicitCastExpr {{.+}} <col:98> 'float' <IntegralToFloating>
+// CHECK-NEXT: | |     `-IntegerLiteral {{.+}} <col:98> 'int' 15
 
 struct S {
   int a, b;
@@ -43,7 +50,7 @@ struct S {
   }
 };
 
-// CHECK:      |     `-OMPParallelForDirective {{.+}} {{<line:40:9, col:80>|<col:9, col:80>}}
+// CHECK:      |     `-OMPParallelForDirective {{.+}} {{<line:.+:9, col:80>|<col:9, col:80>}}
 // CHECK-NEXT: |       |-OMPDefaultClause {{.+}} <col:26, col:38>
 // CHECK-NEXT: |       |-OMPPrivateClause {{.+}} <col:40, col:49>
 // CHECK-NEXT: |       | `-DeclRefExpr {{.+}} <col:48> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
@@ -53,19 +60,19 @@ struct S {
 // CHECK-NEXT: |       |-OMPScheduleClause {{.+}} <col:61, col:79>
 // CHECK-NEXT: |       | `-ImplicitCastExpr {{.+}} <col:78> 'int' <LValueToRValue>
 // CHECK-NEXT: |       |   `-DeclRefExpr {{.+}} <col:78> 'int' lvalue OMPCapturedExpr {{.+}} '.capture_expr.' 'int'
-// CHECK-NEXT: |       `-CapturedStmt {{.+}} <line:41:5, line:42:9>
+// CHECK-NEXT: |       `-CapturedStmt {{.+}} <line:{{.+}}:5, line:{{.+}}:9>
 // CHECK-NEXT: |         |-CapturedDecl {{.+}} <<invalid sloc>> <invalid sloc>
-// CHECK-NEXT: |         | |-ForStmt {{.+}} <line:41:5, line:42:9>
-// CHECK:      |         | | `-UnaryOperator {{.+}} <line:42:7, col:9> 'int' lvalue prefix '++'
+// CHECK-NEXT: |         | |-ForStmt {{.+}} <line:{{.+}}:5, line:{{.+}}:9>
+// CHECK:      |         | | `-UnaryOperator {{.+}} <line:{{.+}}:7, col:9> 'int' lvalue prefix '++'
 // CHECK-NEXT: |         | |   `-DeclRefExpr {{.+}} <col:9> 'int' lvalue OMPCapturedExpr {{.+}} 'a' 'int &'
 
 #pragma omp declare simd
 #pragma omp declare simd inbranch
 void foo();
 
-// CHECK:        |-FunctionDecl {{.+}} <line:64:1, col:10> col:6 foo 'void ()'
-// CHECK-NEXT:   |-OMPDeclareSimdDeclAttr {{.+}} <line:63:9, col:34> Implicit BS_Inbranch
-// CHECK:        `-OMPDeclareSimdDeclAttr {{.+}} <line:62:9, col:25> Implicit BS_Undefined
+// CHECK:        |-FunctionDecl {{.+}} <line:{{.+}}:1, col:10> col:6 foo 'void ()'
+// CHECK-NEXT:   |-OMPDeclareSimdDeclAttr {{.+}} <line:{{.+}}:9, col:34> Implicit BS_Inbranch
+// CHECK:        `-OMPDeclareSimdDeclAttr {{.+}} <line:{{.+}}:9, col:25> Implicit BS_Undefined
 
 #pragma omp declare target
 int bar() {
@@ -74,11 +81,11 @@ int bar() {
 }
 #pragma omp end declare target
 
-// CHECK:       `-FunctionDecl {{.+}} <line:71:1, line:74:1> line:71:5 bar 'int ()'
-// CHECK-NEXT:  |-CompoundStmt {{.+}} <col:11, line:74:1>
-// CHECK-NEXT:  | |-DeclStmt {{.+}} <line:72:3, col:8>
+// CHECK:       `-FunctionDecl {{.+}} <line:{{.+}}:1, line:{{.+}}:1> line:{{.+}}:5 bar 'int ()'
+// CHECK-NEXT:  |-CompoundStmt {{.+}} <col:11, line:{{.+}}:1>
+// CHECK-NEXT:  | |-DeclStmt {{.+}} <line:{{.+}}:3, col:8>
 // CHECK-NEXT:  | | `-VarDecl {{.+}} <col:3, col:7> col:7 used f 'int'
-// CHECK-NEXT:  | `-ReturnStmt {{.+}} <line:73:3, col:10>
+// CHECK-NEXT:  | `-ReturnStmt {{.+}} <line:{{.+}}:3, col:10>
 // CHECK-NEXT:  |   `-ImplicitCastExpr {{.+}} <col:10> 'int' <LValueToRValue>
 // CHECK-NEXT:  |     `-DeclRefExpr {{.+}} <col:10> 'int' lvalue Var {{.+}} 'f' 'int'
 // CHECK-NEXT:  `-OMPDeclareTargetDeclAttr {{.+}} <<invalid sloc>> Implicit MT_To

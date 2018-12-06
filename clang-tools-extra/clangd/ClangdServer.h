@@ -37,6 +37,7 @@ class PCHContainerOperations;
 
 namespace clangd {
 
+// FIXME: find a better name.
 class DiagnosticsConsumer {
 public:
   virtual ~DiagnosticsConsumer() = default;
@@ -44,6 +45,8 @@ public:
   /// Called by ClangdServer when \p Diagnostics for \p File are ready.
   virtual void onDiagnosticsReady(PathRef File,
                                   std::vector<Diag> Diagnostics) = 0;
+  /// Called whenever the file status is updated.
+  virtual void onFileUpdated(PathRef File, const TUStatus &Status){};
 };
 
 /// Manages a collection of source files and derived data (ASTs, indexes),

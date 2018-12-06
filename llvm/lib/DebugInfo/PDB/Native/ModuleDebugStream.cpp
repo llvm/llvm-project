@@ -47,7 +47,8 @@ Error ModuleDebugStreamRef::reload() {
 
   if (auto EC = Reader.readInteger(Signature))
     return EC;
-  if (auto EC = Reader.readSubstream(SymbolsSubstream, SymbolSize - 4))
+  Reader.setOffset(0);
+  if (auto EC = Reader.readSubstream(SymbolsSubstream, SymbolSize))
     return EC;
   if (auto EC = Reader.readSubstream(C11LinesSubstream, C11Size))
     return EC;
@@ -55,8 +56,8 @@ Error ModuleDebugStreamRef::reload() {
     return EC;
 
   BinaryStreamReader SymbolReader(SymbolsSubstream.StreamData);
-  if (auto EC =
-          SymbolReader.readArray(SymbolArray, SymbolReader.bytesRemaining()))
+  if (auto EC = SymbolReader.readArray(
+          SymbolArray, SymbolReader.bytesRemaining(), sizeof(uint32_t)))
     return EC;
 
   BinaryStreamReader SubsectionsReader(C13LinesSubstream.StreamData);
@@ -98,9 +99,7 @@ ModuleDebugStreamRef::symbols(bool *HadError) const {
 }
 
 CVSymbol ModuleDebugStreamRef::readSymbolAtOffset(uint32_t Offset) const {
-  // Offsets include the size of the 4-byte magic at the beginning, but lookup
-  // doesn't take that into account, so subtract it here.
-  auto Iter = SymbolArray.at(Offset - 4);
+  auto Iter = SymbolArray.at(Offset);
   assert(Iter != SymbolArray.end());
   return *Iter;
 }

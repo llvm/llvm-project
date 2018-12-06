@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-windows-msvc < %s > %t.obj
 # RUN: lld-link /DEBUG:FULL /nodefaultlib /entry:main %t.obj /PDB:%t.pdb /OUT:%t.exe
 # RUN: llvm-pdbutil dump -types -globals -symbols -modi=0 %t.pdb | FileCheck %s

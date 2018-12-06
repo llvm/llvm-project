@@ -12737,6 +12737,29 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
       }
     }
   }
+
+  if (!Definition)
+    // Similar to friend functions a friend function template may be a
+    // definition and do not have a body if it is instantiated in a class
+    // template.
+    if (FunctionTemplateDecl *FTD = FD->getDescribedFunctionTemplate()) {
+      for (auto I : FTD->redecls()) {
+        auto D = cast<FunctionTemplateDecl>(I);
+        if (D != FTD) {
+          assert(!D->isThisDeclarationADefinition() &&
+                 "More than one definition in redeclaration chain");
+          if (D->getFriendObjectKind() != Decl::FOK_None)
+            if (FunctionTemplateDecl *FT =
+                                       D->getInstantiatedFromMemberTemplate()) {
+              if (FT->isThisDeclarationADefinition()) {
+                Definition = D->getTemplatedDecl();
+                break;
+              }
+            }
+        }
+      }
+    }
+
   if (!Definition)
     return;
 
