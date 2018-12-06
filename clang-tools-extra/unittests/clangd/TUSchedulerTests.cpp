@@ -593,7 +593,7 @@ TEST_F(TUSchedulerTests, NoopOnEmptyChanges) {
   ASSERT_FALSE(DoUpdate(SourceContents));
 
   // Update to a header should cause a rebuild, though.
-  Files[Header] = time_t(1);
+  Timestamps[Header] = time_t(1);
   ASSERT_TRUE(DoUpdate(SourceContents));
   ASSERT_FALSE(DoUpdate(SourceContents));
 
