@@ -29,9 +29,9 @@ LINK: linking foobar.obj -> foo.exe
 
 LINK-MULTI: linking foo.obj+bar.obj -> foobar.exe
 
-BOTH: compiling foobar.c -> foobar.obj
-BOTH: linking foobar.obj -> foobar.exe
+BOTH: compiling foobar.c -> foobar.exe-foobar.obj
+BOTH: linking foobar.exe-foobar.obj -> foobar.exe
 
-BOTH-MULTI: compiling foo.c -> foo.obj
-BOTH-MULTI: compiling bar.c -> bar.obj
-BOTH-MULTI: linking foo.obj+bar.obj -> foobar.exe
+BOTH-MULTI: compiling foo.c -> foobar.exe-foo.obj
+BOTH-MULTI: compiling bar.c -> foobar.exe-bar.obj
+BOTH-MULTI: linking foobar.exe-foo.obj+foobar.exe-bar.obj -> foobar.exe
