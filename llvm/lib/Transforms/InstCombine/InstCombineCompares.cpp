@@ -2926,6 +2926,8 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
       return nullptr;         // Ignore the other case.
     if (!match(M, m_Constant())) // Can not do this fold with non-constant.
       return nullptr;
+    if (!match(M, m_NonNegative())) // Must not have any -1 vector elements.
+      return nullptr;
     DstPred = ICmpInst::Predicate::ICMP_SLE;
     break;
   case ICmpInst::Predicate::ICMP_SLT:
@@ -2933,6 +2935,8 @@ static Value *foldICmpWithLowBitMaskedVal(ICmpInst &I,
     if (X != I.getOperand(1)) // X must be on RHS of comparison!
       return nullptr;         // Ignore the other case.
     if (!match(M, m_Constant())) // Can not do this fold with non-constant.
+      return nullptr;
+    if (!match(M, m_NonNegative())) // Must not have any -1 vector elements.
       return nullptr;
     DstPred = ICmpInst::Predicate::ICMP_SGT;
     break;

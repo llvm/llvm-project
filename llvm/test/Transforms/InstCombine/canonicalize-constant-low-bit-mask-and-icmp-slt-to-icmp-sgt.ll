@@ -205,8 +205,9 @@ define i1 @nv(i8 %x, i8 %y) {
 
 define <2 x i1> @n3(<2 x i8> %x) {
 ; CHECK-LABEL: @n3(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <2 x i8> [[X:%.*]], <i8 3, i8 -1>
-; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i8> [[X:%.*]], <i8 3, i8 -1>
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt <2 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 -1>
   %ret = icmp slt <2 x i8> %tmp0, %x
@@ -215,8 +216,9 @@ define <2 x i1> @n3(<2 x i8> %x) {
 
 define <3 x i1> @n4(<3 x i8> %x) {
 ; CHECK-LABEL: @n4(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <3 x i8> [[X:%.*]], <i8 3, i8 undef, i8 -1>
-; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = and <3 x i8> [[X:%.*]], <i8 3, i8 undef, i8 -1>
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt <3 x i8> [[TMP0]], [[X]]
+; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
   %tmp0 = and <3 x i8> %x, <i8 3, i8 undef, i8 -1>
   %ret = icmp slt <3 x i8> %tmp0, %x
