@@ -1206,20 +1206,11 @@ void MergeInputSection::splitIntoPieces() {
     splitStrings(data(), Entsize);
   else
     splitNonStrings(data(), Entsize);
-
-  OffsetMap.reserve(Pieces.size());
-  for (size_t I = 0, E = Pieces.size(); I != E; ++I)
-    OffsetMap[Pieces[I].InputOff] = I;
 }
 
 SectionPiece *MergeInputSection::getSectionPiece(uint64_t Offset) {
   if (this->data().size() <= Offset)
     fatal(toString(this) + ": offset is outside the section");
-
-  // Find a piece starting at a given offset.
-  auto It = OffsetMap.find(Offset);
-  if (It != OffsetMap.end())
-    return &Pieces[It->second];
 
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to  do a binary search of the original section piece vector.
