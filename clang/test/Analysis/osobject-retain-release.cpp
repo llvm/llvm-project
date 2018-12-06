@@ -45,6 +45,8 @@ struct OSArray : public OSObject {
 
   OSObject *identity() override;
 
+  virtual OSObject *generateObject(OSObject *input);
+
   virtual void consumeReference(OS_CONSUME OSArray *other);
 
   static OSArray *generateArrayHasCode() {
@@ -68,6 +70,8 @@ struct MyArray : public OSArray {
   void consumeReference(OSArray *other) override;
 
   OSObject *identity() override;
+
+  OSObject *generateObject(OSObject *input) override;
 };
 
 struct OtherStruct {
@@ -78,6 +82,14 @@ struct OtherStruct {
 struct OSMetaClassBase {
   static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
 };
+
+void test_no_infinite_check_recursion(MyArray *arr) {
+  OSObject *input = new OSObject;
+  OSObject *o = arr->generateObject(input);
+  o->release();
+  input->release();
+}
+
 
 void check_param_attribute_propagation(MyArray *parent) {
   OSArray *arr = new OSArray;
