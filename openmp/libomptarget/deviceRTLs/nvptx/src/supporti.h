@@ -231,19 +231,20 @@ INLINE unsigned long PadBytes(unsigned long size,
 {
   // compute the necessary padding to satisfy alignment constraint
   ASSERT(LT_FUSSY, (alignment & (alignment - 1)) == 0,
-         "alignment %ld is not a power of 2\n", alignment);
+         "alignment %lu is not a power of 2\n", alignment);
   return (~(unsigned long)size + 1) & (alignment - 1);
 }
 
 INLINE void *SafeMalloc(size_t size, const char *msg) // check if success
 {
   void *ptr = malloc(size);
-  PRINT(LD_MEM, "malloc data of size %zu for %s: 0x%llx\n", size, msg, P64(ptr));
+  PRINT(LD_MEM, "malloc data of size %zu for %s: 0x%llx\n", size, msg,
+        (unsigned long long)ptr);
   return ptr;
 }
 
 INLINE void *SafeFree(void *ptr, const char *msg) {
-  PRINT(LD_MEM, "free data ptr 0x%llx for %s\n", P64(ptr), msg);
+  PRINT(LD_MEM, "free data ptr 0x%llx for %s\n", (unsigned long long)ptr, msg);
   free(ptr);
   return NULL;
 }

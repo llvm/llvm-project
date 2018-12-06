@@ -150,7 +150,7 @@ EXTERN void __kmpc_spmd_kernel_init(int ThreadLimit, int16_t RequiresOMPRuntime,
   PRINT(LD_PAR,
         "thread will execute parallel region with id %d in a team of "
         "%d threads\n",
-        newTaskDescr->ThreadId(), newTaskDescr->ThreadsInTeam());
+        (int)newTaskDescr->ThreadId(), (int)newTaskDescr->ThreadsInTeam());
 
   if (RequiresDataSharing && threadId % WARPSIZE == 0) {
     // Warp master innitializes data sharing environment.

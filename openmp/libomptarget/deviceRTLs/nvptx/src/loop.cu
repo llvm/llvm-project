@@ -113,7 +113,8 @@ public:
     PRINT(LD_LOOP,
           "OMP Thread %d: schedule type %d, chunk size = %lld, mytid "
           "%d, num tids %d\n",
-          gtid, schedtype, P64(chunk), gtid, numberOfActiveOMPThreads);
+          (int)gtid, (int)schedtype, (long long)chunk, (int)gtid,
+          (int)numberOfActiveOMPThreads);
     ASSERT0(LT_FUSSY, gtid < numberOfActiveOMPThreads,
             "current thread is not needed here; error");
 
@@ -173,9 +174,9 @@ public:
       break;
     }
     default: {
-      ASSERT(LT_FUSSY, FALSE, "unknown schedtype %d", schedtype);
+      ASSERT(LT_FUSSY, FALSE, "unknown schedtype %d", (int)schedtype);
       PRINT(LD_LOOP, "unknown schedtype %d, revert back to static chunk\n",
-            schedtype);
+            (int)schedtype);
       ForStaticChunk(lastiter, lb, ub, stride, chunk, gtid,
                      numberOfActiveOMPThreads);
       break;
@@ -189,8 +190,9 @@ public:
     PRINT(LD_LOOP,
           "Got sched: Active %d, total %d: lb %lld, ub %lld, stride %lld, last "
           "%d\n",
-          numberOfActiveOMPThreads, GetNumberOfWorkersInTeam(), P64(*plower),
-          P64(*pupper), P64(*pstride), lastiter);
+          (int)numberOfActiveOMPThreads, (int)GetNumberOfWorkersInTeam(),
+          (long long)(*plower), (long long)(*pupper), (long long)(*pstride),
+          (int)lastiter);
   }
 
   ////////////////////////////////////////////////////////////////////////////////
@@ -229,7 +231,7 @@ public:
         __kmpc_barrier(loc, threadId);
       PRINT(LD_LOOP,
             "go sequential as tnum=%ld, trip count %lld, ordered sched=%d\n",
-            (long)tnum, P64(tripCount), schedule);
+            (long)tnum, (long long)tripCount, (int)schedule);
       schedule = kmp_sched_static_chunk;
       chunk = tripCount; // one thread gets the whole loop
     } else if (schedule == kmp_sched_runtime) {
@@ -255,18 +257,20 @@ public:
         break;
       }
       }
-      PRINT(LD_LOOP, "Runtime sched is %d with chunk %lld\n", schedule,
-            P64(chunk));
+      PRINT(LD_LOOP, "Runtime sched is %d with chunk %lld\n", (int)schedule,
+            (long long)chunk);
     } else if (schedule == kmp_sched_auto) {
       schedule = kmp_sched_static_chunk;
       chunk = 1;
-      PRINT(LD_LOOP, "Auto sched is %d with chunk %lld\n", schedule,
-            P64(chunk));
+      PRINT(LD_LOOP, "Auto sched is %d with chunk %lld\n", (int)schedule,
+            (long long)chunk);
     } else {
-      PRINT(LD_LOOP, "Dyn sched is %d with chunk %lld\n", schedule, P64(chunk));
+      PRINT(LD_LOOP, "Dyn sched is %d with chunk %lld\n", (int)schedule,
+            (long long)chunk);
       ASSERT(LT_FUSSY,
              schedule == kmp_sched_dynamic || schedule == kmp_sched_guided,
-             "unknown schedule %d & chunk %lld\n", schedule, P64(chunk));
+             "unknown schedule %d & chunk %lld\n", (int)schedule,
+             (long long)chunk);
     }
 
     // init schedules
@@ -287,9 +291,12 @@ public:
       PRINT(LD_LOOP,
             "dispatch init (static chunk) : num threads = %d, ub =  %" PRId64
             ", next lower bound = %llu, stride = %llu\n",
-            tnum, omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
-            omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
-            omptarget_nvptx_threadPrivateContext->Stride(tid));
+            (int)tnum,
+            omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
+            (unsigned long long)
+                omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
+            (unsigned long long)omptarget_nvptx_threadPrivateContext->Stride(
+                tid));
     } else if (schedule == kmp_sched_static_balanced_chunk) {
       ASSERT0(LT_FUSSY, chunk > 0, "bad chunk value");
       // save sched state
@@ -316,9 +323,12 @@ public:
       PRINT(LD_LOOP,
             "dispatch init (static chunk) : num threads = %d, ub =  %" PRId64
             ", next lower bound = %llu, stride = %llu\n",
-            tnum, omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
-            omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
-            omptarget_nvptx_threadPrivateContext->Stride(tid));
+            (int)tnum,
+            omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
+            (unsigned long long)
+                omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
+            (unsigned long long)omptarget_nvptx_threadPrivateContext->Stride(
+                tid));
     } else if (schedule == kmp_sched_static_nochunk) {
       ASSERT0(LT_FUSSY, chunk == 0, "bad chunk value");
       // save sched state
@@ -336,9 +346,12 @@ public:
       PRINT(LD_LOOP,
             "dispatch init (static nochunk) : num threads = %d, ub = %" PRId64
             ", next lower bound = %llu, stride = %llu\n",
-            tnum, omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
-            omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
-            omptarget_nvptx_threadPrivateContext->Stride(tid));
+            (int)tnum,
+            omptarget_nvptx_threadPrivateContext->LoopUpperBound(tid),
+            (unsigned long long)
+                omptarget_nvptx_threadPrivateContext->NextLowerBound(tid),
+            (unsigned long long)omptarget_nvptx_threadPrivateContext->Stride(
+                tid));
 
     } else if (schedule == kmp_sched_dynamic || schedule == kmp_sched_guided) {
       __kmpc_barrier(loc, threadId);
@@ -356,7 +369,9 @@ public:
       PRINT(LD_LOOP,
             "dispatch init (dyn) : num threads = %d, lb = %llu, ub = %" PRId64
             ", chunk %" PRIu64 "\n",
-            tnum, omptarget_nvptx_threadPrivateContext->NextLowerBound(teamId),
+            (int)tnum,
+            (unsigned long long)
+                omptarget_nvptx_threadPrivateContext->NextLowerBound(teamId),
             omptarget_nvptx_threadPrivateContext->LoopUpperBound(teamId),
             omptarget_nvptx_threadPrivateContext->Chunk(teamId));
     }
@@ -380,22 +395,22 @@ public:
     //  c. lb and ub >= loopUpperBound: empty chunk --> FINISHED
     // a.
     if (lb <= loopUpperBound && ub < loopUpperBound) {
-      PRINT(LD_LOOPD, "lb %lld, ub %lld, loop ub %lld; not finished\n", P64(lb),
-            P64(ub), P64(loopUpperBound));
+      PRINT(LD_LOOPD, "lb %lld, ub %lld, loop ub %lld; not finished\n",
+            (long long)lb, (long long)ub, (long long)loopUpperBound);
       return NOT_FINISHED;
     }
     // b.
     if (lb <= loopUpperBound) {
       PRINT(LD_LOOPD, "lb %lld, ub %lld, loop ub %lld; clip to loop ub\n",
-            P64(lb), P64(ub), P64(loopUpperBound));
+            (long long)lb, (long long)ub, (long long)loopUpperBound);
       ub = loopUpperBound;
       return LAST_CHUNK;
     }
     // c. if we are here, we are in case 'c'
     lb = loopUpperBound + 2;
     ub = loopUpperBound + 1;
-    PRINT(LD_LOOPD, "lb %lld, ub %lld, loop ub %lld; finished\n", P64(lb),
-          P64(ub), P64(loopUpperBound));
+    PRINT(LD_LOOPD, "lb %lld, ub %lld, loop ub %lld; finished\n", (long long)lb,
+          (long long)ub, (long long)loopUpperBound);
     return FINISHED;
   }
 
@@ -426,7 +441,7 @@ public:
       // finished?
       if (myLb > ub) {
         PRINT(LD_LOOP, "static loop finished with myLb %lld, ub %lld\n",
-              P64(myLb), P64(ub));
+              (long long)myLb, (long long)ub);
         return DISPATCH_FINISHED;
       }
       // not finished, save current bounds
@@ -442,7 +457,7 @@ public:
       ST stride = omptarget_nvptx_threadPrivateContext->Stride(tid);
       omptarget_nvptx_threadPrivateContext->NextLowerBound(tid) = myLb + stride;
       PRINT(LD_LOOP, "static loop continues with myLb %lld, myUb %lld\n",
-            P64(*plower), P64(*pupper));
+            (long long)*plower, (long long)*pupper);
       return DISPATCH_NOTFINISHED;
     }
     ASSERT0(LT_FUSSY,
@@ -464,12 +479,13 @@ public:
     *pupper = myUb;
     *pstride = 1;
 
-    PRINT(LD_LOOP,
-          "Got sched: active %d, total %d: lb %lld, ub %lld, stride = %lld, "
-          "last %d\n",
-          GetNumberOfOmpThreads(tid, isSPMDMode(), isRuntimeUninitialized()),
-          GetNumberOfWorkersInTeam(), P64(*plower), P64(*pupper), P64(*pstride),
-          *plast);
+    PRINT(
+        LD_LOOP,
+        "Got sched: active %d, total %d: lb %lld, ub %lld, stride = %lld, "
+        "last %d\n",
+        (int)GetNumberOfOmpThreads(tid, isSPMDMode(), isRuntimeUninitialized()),
+        (int)GetNumberOfWorkersInTeam(), (long long)*plower, (long long)*pupper,
+        (long long)*pstride, (int)*plast);
     return DISPATCH_NOTFINISHED;
   }
 
