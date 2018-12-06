@@ -164,16 +164,18 @@
 #define PRINT0(_flag, _str)                                                    \
   {                                                                            \
     if (omptarget_device_environment.debug_level && DON(_flag)) {              \
-      printf("<b %2d, t %4d, w %2d, l %2d>: " _str, blockIdx.x, threadIdx.x,   \
-             threadIdx.x / WARPSIZE, threadIdx.x & 0x1F);                      \
+      printf("<b %2d, t %4d, w %2d, l %2d>: " _str, (int)blockIdx.x,           \
+             (int)threadIdx.x, (int)(threadIdx.x / WARPSIZE),                  \
+             (int)(threadIdx.x & 0x1F));                                       \
     }                                                                          \
   }
 
 #define PRINT(_flag, _str, _args...)                                           \
   {                                                                            \
     if (omptarget_device_environment.debug_level && DON(_flag)) {              \
-      printf("<b %2d, t %4d, w %2d, l %2d>: " _str, blockIdx.x, threadIdx.x,   \
-             threadIdx.x / WARPSIZE, threadIdx.x & 0x1F, _args);               \
+      printf("<b %2d, t %4d, w %2d, l %2d>: " _str, (int)blockIdx.x,           \
+             (int)threadIdx.x, (int)(threadIdx.x / WARPSIZE),                  \
+             (int)(threadIdx.x & 0x1F), _args);                                \
     }                                                                          \
   }
 #else
@@ -217,16 +219,18 @@
 #define ASSERT0(_flag, _cond, _str)                                            \
   {                                                                            \
     if (TON(_flag) && !(_cond)) {                                              \
-      printf("<b %3d, t %4d, w %2d, l %2d> ASSERT: " _str "\n", blockIdx.x,    \
-             threadIdx.x, threadIdx.x / WARPSIZE, threadIdx.x & 0x1F);         \
+      printf("<b %3d, t %4d, w %2d, l %2d> ASSERT: " _str "\n",                \
+             (int)blockIdx.x, (int)threadIdx.x, (int)(threadIdx.x / WARPSIZE), \
+             (int)(threadIdx.x & 0x1F));                                       \
       assert(_cond);                                                           \
     }                                                                          \
   }
 #define ASSERT(_flag, _cond, _str, _args...)                                   \
   {                                                                            \
     if (TON(_flag) && !(_cond)) {                                              \
-      printf("<b %3d, t %4d, w %2d, l %d2> ASSERT: " _str "\n", blockIdx.x,    \
-             threadIdx.x, threadIdx.x / WARPSIZE, threadIdx.x & 0x1F, _args);  \
+      printf("<b %3d, t %4d, w %2d, l %d2> ASSERT: " _str "\n",                \
+             (int)blockIdx.x, (int)threadIdx.x, (int)(threadIdx.x / WARPSIZE), \
+             (int)(threadIdx.x & 0x1F), _args);                                \
       assert(_cond);                                                           \
     }                                                                          \
   }
@@ -253,15 +257,17 @@
 #define WARNING0(_flag, _str)                                                  \
   {                                                                            \
     if (WON(_flag)) {                                                          \
-      printf("<b %2d, t %4d, w %2d, l %2d> WARNING: " _str, blockIdx.x,        \
-             threadIdx.x, threadIdx.x / WARPSIZE, threadIdx.x & 0x1F);         \
+      printf("<b %2d, t %4d, w %2d, l %2d> WARNING: " _str, (int)blockIdx.x,   \
+             (int)threadIdx.x, (int)(threadIdx.x / WARPSIZE),                  \
+             (int)(threadIdx.x & 0x1F));                                       \
     }                                                                          \
   }
 #define WARNING(_flag, _str, _args...)                                         \
   {                                                                            \
     if (WON(_flag)) {                                                          \
-      printf("<b %2d, t %4d, w %2d, l %2d> WARNING: " _str, blockIdx.x,        \
-             threadIdx.x, threadIdx.x / WARPSIZE, threadIdx.x & 0x1F, _args);  \
+      printf("<b %2d, t %4d, w %2d, l %2d> WARNING: " _str, (int)blockIdx.x,   \
+             (int)threadIdx.x, (int)(threadIdx.x / WARPSIZE),                  \
+             (int)(threadIdx.x & 0x1F), _args);                                \
     }                                                                          \
   }
 
