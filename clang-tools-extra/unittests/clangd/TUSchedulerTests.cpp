@@ -709,29 +709,6 @@ TEST_F(TUSchedulerTests, TUStatus) {
                   TUState(TUAction::Idle, /*No action*/ "")));
 }
 
-TEST_F(TUSchedulerTests, NoTUStatusEmittedForRemovedFile) {
-  class CaptureTUStatus : public DiagnosticsConsumer {
-  public:
-    void onDiagnosticsReady(PathRef File,
-                            std::vector<Diag> Diagnostics) override {}
-
-    void onFileUpdated(PathRef File, const TUStatus &Status) override {
-      // Block the worker thread until the document is removed.
-      Removed.wait();
-    }
-    Notification Removed;
-  } CaptureTUStatus;
-  MockFSProvider FS;
-  MockCompilationDatabase CDB;
-  ClangdServer Server(CDB, FS, CaptureTUStatus, ClangdServer::optsForTest());
-
-  Server.addDocument(testPath("foo.cpp"), "int main() {}",
-                     WantDiagnostics::Yes);
-  Server.removeDocument(testPath("foo.cpp"));
-  CaptureTUStatus.Removed.notify();
-  ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for finishing";
-}
-
 } // namespace
 } // namespace clangd
 } // namespace clang
