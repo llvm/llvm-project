@@ -1637,7 +1637,7 @@ void ASTDumper::VisitObjCCompatibleAliasDecl(const ObjCCompatibleAliasDecl *D) {
   NodeDumper.dumpName(D);
   dumpDeclRef(D->getClassInterface());
   OS << " ";
-  dumpLocation(D->getClassInterfaceLoc());
+  NodeDumper.dumpLocation(D->getClassInterfaceLoc());
 }
 
 void ASTDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
