@@ -407,11 +407,8 @@ class Configuration(object):
             if self.use_deployment:
                 self.add_deployment_feature('with_system_cxx_lib')
 
-        # Configure the availability markup checks features.
+        # Configure the availability feature.
         if self.use_deployment:
-            self.config.available_features.add('availability_markup')
-            self.add_deployment_feature('availability_markup')
-
             self.config.available_features.add('availability')
             self.add_deployment_feature('availability')
 
