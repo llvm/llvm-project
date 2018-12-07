@@ -309,6 +309,36 @@ TEST(FunctionCallTrieTest, MergeInto) {
   EXPECT_EQ(F2.Callees.size(), 0u);
 }
 
+TEST(FunctionCallTrieTest, PlacementNewOnAlignedStorage) {
+  profilingFlags()->setDefaults();
+  typename std::aligned_storage<sizeof(FunctionCallTrie::Allocators),
+                                alignof(FunctionCallTrie::Allocators)>::type
+      AllocatorsStorage;
+  new (&AllocatorsStorage)
+      FunctionCallTrie::Allocators(FunctionCallTrie::InitAllocators());
+  auto *A =
+      reinterpret_cast<FunctionCallTrie::Allocators *>(&AllocatorsStorage);
+
+  typename std::aligned_storage<sizeof(FunctionCallTrie),
+                                alignof(FunctionCallTrie)>::type FCTStorage;
+  new (&FCTStorage) FunctionCallTrie(*A);
+  auto *T = reinterpret_cast<FunctionCallTrie *>(&FCTStorage);
+
+  // Put some data into it.
+  T->enterFunction(1, 0, 0);
+  T->exitFunction(1, 1, 0);
+
+  // Re-initialize the objects in storage.
+  T->~FunctionCallTrie();
+  A->~Allocators();
+  new (A) FunctionCallTrie::Allocators(FunctionCallTrie::InitAllocators());
+  new (T) FunctionCallTrie(*A);
+
+  // Then put some data into it again.
+  T->enterFunction(1, 0, 0);
+  T->exitFunction(1, 1, 0);
+}
+
 } // namespace
 
 } // namespace __xray

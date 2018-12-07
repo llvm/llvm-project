@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "xray_allocator.h"
+#include "xray_buffer_queue.h"
 #include "gtest/gtest.h"
 
 namespace __xray {
@@ -54,6 +55,27 @@ TEST(AllocatorTest, AllocateBoundaries) {
     ;
 
   ASSERT_EQ(C, Expected);
+}
+
+TEST(AllocatorTest, AllocateFromNonOwned) {
+  bool Success = false;
+  BufferQueue BQ(GetPageSizeCached(), 10, Success);
+  ASSERT_TRUE(Success);
+  BufferQueue::Buffer B;
+  ASSERT_EQ(BQ.getBuffer(B), BufferQueue::ErrorCode::Ok);
+  {
+    Allocator<sizeof(OddSizedData)> A(B.Data, B.Size);
+
+    // Keep allocating until we hit a nullptr block.
+    unsigned C = 0;
+    auto Expected =
+        GetPageSizeCached() / RoundUpTo(sizeof(OddSizedData), kCacheLineSize);
+    for (auto B = A.Allocate(); B.Data != nullptr; B = A.Allocate(), ++C)
+      ;
+
+    ASSERT_EQ(C, Expected);
+  }
+  ASSERT_EQ(BQ.releaseBuffer(B), BufferQueue::ErrorCode::Ok);
 }
 
 } // namespace
