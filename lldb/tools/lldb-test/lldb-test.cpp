@@ -726,14 +726,6 @@ static int dumpObjectFiles(Debugger &Dbg) {
     ModuleSpec Spec{FileSpec(File)};
 
     auto ModulePtr = std::make_shared<lldb_private::Module>(Spec);
-
-    ObjectFile *ObjectPtr = ModulePtr->GetObjectFile();
-    if (!ObjectPtr) {
-      WithColor::error() << File << " not recognised as an object file\n";
-      HadErrors = 1;
-      continue;
-    }
-
     // Fetch symbol vendor before we get the section list to give the symbol
     // vendor a chance to populate it.
     ModulePtr->GetSymbolVendor();
@@ -744,14 +736,9 @@ static int dumpObjectFiles(Debugger &Dbg) {
       continue;
     }
 
-    Printer.formatLine("Plugin name: {0}", ObjectPtr->GetPluginName());
     Printer.formatLine("Architecture: {0}",
                        ModulePtr->GetArchitecture().GetTriple().getTriple());
     Printer.formatLine("UUID: {0}", ModulePtr->GetUUID().GetAsString());
-    Printer.formatLine("Executable: {0}", ObjectPtr->IsExecutable());
-    Printer.formatLine("Stripped: {0}", ObjectPtr->IsStripped());
-    Printer.formatLine("Type: {0}", ObjectPtr->GetType());
-    Printer.formatLine("Strata: {0}", ObjectPtr->GetStrata());
 
     size_t Count = Sections->GetNumSections(0);
     Printer.formatLine("Showing {0} sections", Count);

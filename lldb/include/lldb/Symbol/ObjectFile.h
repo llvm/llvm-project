@@ -817,16 +817,4 @@ private:
 
 } // namespace lldb_private
 
-namespace llvm {
-template <> struct format_provider<lldb_private::ObjectFile::Type> {
-  static void format(const lldb_private::ObjectFile::Type &type,
-                     raw_ostream &OS, StringRef Style);
-};
-
-template <> struct format_provider<lldb_private::ObjectFile::Strata> {
-  static void format(const lldb_private::ObjectFile::Strata &strata,
-                     raw_ostream &OS, StringRef Style);
-};
-} // namespace llvm
-
 #endif // liblldb_ObjectFile_h_
