@@ -129,6 +129,13 @@ Improvements to clang-tidy
   which means this type can't represent all values which are part of the
   iteration range.
 
+- New :doc:`abseil-upgrade-duration-conversions
+  <clang-tidy/checks/abseil-upgrade-duration-conversions>` check.
+
+  Finds calls to ``absl::Duration`` arithmetic operators and factories whose
+  argument needs an explicit cast to continue compiling after upcoming API
+  changes.
+
 - New :doc:`cppcoreguidelines-macro-usage
   <clang-tidy/checks/cppcoreguidelines-macro-usage>` check.
 
