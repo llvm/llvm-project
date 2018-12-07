@@ -241,21 +241,12 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
             self_type = CompilerType(self_type.GetTypeSystem(),
                                      object_type.getPointer());
 
-          if (Flags(self_type.GetTypeInfo())
-                  .AllSet(lldb::eTypeIsSwift | lldb::eTypeIsEnumeration |
-                          lldb::eTypeIsGeneric)) {
-                  
-            // Optional<T> means a weak 'self.'  Make sure this really is
-            // Optional<T>.
-            if (self_type.GetTypeName().GetStringRef().startswith(
-                    "Swift.Optional<")) {
+          // Handle weak self.
+          if (auto *ref_type = swift::dyn_cast<swift::ReferenceStorageType>(
+                  GetSwiftType(self_type).getPointer())) {
+            if (ref_type->getOwnership() == swift::ReferenceOwnership::Weak) {
               m_language_flags |= eLanguageFlagIsClass;
               m_language_flags |= eLanguageFlagIsWeakSelf;
-            } else {
-              // Something else is going on that we don't handle.
-              m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
-              self_var_sp.reset();
-              break;
             }
           }
 
