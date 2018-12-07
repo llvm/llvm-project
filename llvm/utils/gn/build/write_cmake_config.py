@@ -2,16 +2,17 @@
 """Emulates the bits of CMake's configure_file() function needed in LLVM.
 
 The CMake build uses configure_file() for several things.  This emulates that
-function for the GN build.  In the GN build, this runs at build time, instead
+function for the GN build.  In the GN build, this runs at build time instead
 of at generator time.
 
 Takes a list of KEY=VALUE pairs (where VALUE can be empty).
 
-On each line, replaces ${KEY} with VALUE.
+The sequence `\` `n` in each VALUE is replaced by a newline character.
 
-After that, also handles these special cases (note that FOO= sets the value of
-FOO to the empty string, which is falsy, but FOO=0 sets it to '0' which is
-truthy):
+On each line, replaces '${KEY}' or '@KEY@' with VALUE.
+
+Then, handles these special cases (note that FOO= sets the value of FOO to the
+empty string, which is falsy, but FOO=0 sets it to '0' which is truthy):
 
 1.) #cmakedefine01 FOO
     Checks if key FOO is set to a truthy value, and depending on that prints
@@ -28,8 +29,7 @@ truthy):
         /* #undef FOO */
 
 Fails if any of the KEY=VALUE arguments aren't needed for processing the
-.h.cmake file, or if the .h.cmake file has unreplaced ${VAR} references after
-processing all values.
+input file, or if the input file references keys that weren't passed in.
 """
 
 from __future__ import print_function
@@ -53,18 +53,19 @@ def main():
     values = {}
     for value in args.values:
         key, val = value.split('=', 1)
-        values[key] = val
+        values[key] = val.replace('\\n', '\n')
     unused_values = set(values.keys())
 
-    # Matches e.g. '${CLANG_FOO}' and captures CLANG_FOO in group 1.
-    var_re = re.compile(r'\$\{([^}]*)\}')
+    # Matches e.g. '${FOO}' or '@FOO@' and captures FOO in group 1 or 2.
+    var_re = re.compile(r'\$\{([^}]*)\}|@([^@]*)@')
 
     in_lines = open(args.input).readlines()
     out_lines = []
     for in_line in in_lines:
         def repl(m):
-            unused_values.discard(m.group(1))
-            return values[m.group(1)]
+            key = m.group(1) or m.group(2)
+            unused_values.discard(key)
+            return values[key]
         in_line = var_re.sub(repl, in_line)
         if in_line.startswith('#cmakedefine01 '):
             _, var = in_line.split()

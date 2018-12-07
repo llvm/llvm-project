@@ -27,8 +27,9 @@ add_llvm_library(LLVMDebugInfoCodeView
   RecordSerialization.cpp
   SimpleTypeSerializer.cpp
   StringsAndChecksums.cpp
-  SymbolRecordMapping.cpp
   SymbolDumper.cpp
+  SymbolRecordHelpers.cpp
+  SymbolRecordMapping.cpp
   SymbolSerializer.cpp
   TypeDumpVisitor.cpp
   TypeIndex.cpp
