@@ -1,4 +1,5 @@
 ; RUN: opt -load-store-vectorizer %s -S | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' %s -S | FileCheck %s
 
 ; Check that setting wrapping flags after a SCEV node is created
 ; does not invalidate "sorted by complexity" invariant for

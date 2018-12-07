@@ -30,6 +30,7 @@ def SandyBridgePfmCounters : ProcPfmCounters {
   ];
 }
 def : PfmCountersBinding<"sandybridge", SandyBridgePfmCounters>;
+def : PfmCountersBinding<"ivybridge", SandyBridgePfmCounters>;
 
 def HaswellPfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
