@@ -889,7 +889,7 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
     // At this moment we only have the base name of the DLL. The full path can
     // only be seen after the dynamic loading.  Our best guess is Try to get it
     // with the help of the object file's directory.
-    llvm::SmallString<MAX_PATH> dll_fullpath;
+    llvm::SmallString<PATH_MAX> dll_fullpath;
     FileSpec dll_specs(dll_name);
     dll_specs.GetDirectory().SetString(m_file.GetDirectory().GetCString());
 
