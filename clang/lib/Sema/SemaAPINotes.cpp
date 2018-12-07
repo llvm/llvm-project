@@ -215,7 +215,8 @@ static void handleAPINotedRetainCountAttribute(Sema &S, Decl *D,
       return isa<CFReturnsRetainedAttr>(next) ||
              isa<CFReturnsNotRetainedAttr>(next) ||
              isa<NSReturnsRetainedAttr>(next) ||
-             isa<NSReturnsNotRetainedAttr>(next);
+             isa<NSReturnsNotRetainedAttr>(next) ||
+             isa<CFAuditedTransferAttr>(next);
     });
   });
 }
@@ -227,8 +228,13 @@ static void handleAPINotedRetainCountConvention(
     return;
   switch (convention.getValue()) {
   case api_notes::RetainCountConventionKind::None:
-    handleAPINotedRetainCountAttribute(S, D, /*shouldAddAttribute*/false,
-                                       metadata);
+    if (isa<FunctionDecl>(D)) {
+      handleAPINotedRetainCountAttribute<CFUnknownTransferAttr>(
+          S, D, /*shouldAddAttribute*/true, metadata);
+    } else {
+      handleAPINotedRetainCountAttribute(S, D, /*shouldAddAttribute*/false,
+                                         metadata);
+    }
     break;
   case api_notes::RetainCountConventionKind::CFReturnsRetained:
     handleAPINotedRetainCountAttribute<CFReturnsRetainedAttr>(
