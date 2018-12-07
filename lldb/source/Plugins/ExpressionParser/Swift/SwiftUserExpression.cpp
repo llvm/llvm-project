@@ -111,12 +111,11 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
       lldb::eSymbolContextFunction | lldb::eSymbolContextBlock |
       lldb::eSymbolContextCompUnit | lldb::eSymbolContextSymbol);
 
-  // This stage of the scan is only for Swift, but when we are going to do Swift
-  // evaluation we need to do this scan.
+  // This stage of the scan is only for Swift, but when we are going
+  // to do Swift evaluation we need to do this scan.
   // So be sure to cover both cases:
-  // 1) When the langauge is eLanguageTypeUnknown, to determine if this IS Swift
+  // 1) When the language is eLanguageTypeUnknown, to determine if this IS Swift
   // 2) When the language is explicitly set to eLanguageTypeSwift.
-
   bool frame_is_swift = false;
 
   if (sym_ctx.comp_unit && (m_language == lldb::eLanguageTypeUnknown ||
@@ -179,12 +178,10 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
           lldb::StackFrameSP stack_frame_sp = exe_ctx.GetFrameSP();
 
           if (stack_frame_sp) {
-            // If we have a self variable, but it has no location at the current
-            // PC, then we can't use
-            // it.  Set the self var back to empty and we'll just pretend we are
-            // in a regular frame,
-            // which is really the best we can do.
-
+            // If we have a self variable, but it has no location at
+            // the current PC, then we can't use it.  Set the self var
+            // back to empty and we'll just pretend we are in a
+            // regular frame, which is really the best we can do.
             if (!self_var_sp->LocationIsValidForFrame(stack_frame_sp.get())) {
               self_var_sp.reset();
               break;
@@ -206,18 +203,17 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
           }
 
           if (!self_type.IsValid()) {
-            // If the self_type is invalid at this point, reset it.  Code below
-            // the phony do/while will
-            // assume the existence of this var means something, but it is
-            // useless in this condition.
+            // If the self_type is invalid at this point, reset it.
+            // Code below the phony do/while will assume the existence
+            // of this var means something, but it is useless in this
+            // condition.
             self_var_sp.reset();
             break;
           }
 
-          // Check to see if we are in a class func of a class (or static func
-          // of a struct) and adjust our
-          // self_type to point to the instance type.
-
+          // Check to see if we are in a class func of a class (or
+          // static func of a struct) and adjust our self_type to
+          // point to the instance type.
           m_language_flags |= eLanguageFlagNeedsObjectPointer;
 
           Flags self_type_flags(self_type.GetTypeInfo());
@@ -249,8 +245,9 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
           if (Flags(self_type.GetTypeInfo())
                   .AllSet(lldb::eTypeIsSwift | lldb::eTypeIsEnumeration |
                           lldb::eTypeIsGeneric)) {
+            
             // Optional<T> means a weak 'self.'  Make sure this really is
-            // Optional<T>
+            // Optional<T>.
             if (self_type.GetTypeName().GetStringRef().startswith(
                     "Swift.Optional<")) {
               m_language_flags |= eLanguageFlagIsClass;
@@ -382,8 +379,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
 
   StreamString m_transformed_stream;
 
-  ////////////////////////////////////
-  // Generate the expression
+  //
+  // Generate the expression.
   //
 
   std::string prefix = m_expr_prefix;
@@ -407,8 +404,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   if (log)
     log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());
 
-  //////////////////////////
-  // Parse the expression
+  //
+  // Parse the expression.
   //
 
   if (m_options.GetREPLEnabled())
@@ -472,8 +469,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   }
 
 
-  // Prepare the output of the parser for execution, evaluating it statically if
-  // possible.
+  // Prepare the output of the parser for execution, evaluating it
+  // statically if possible.
   Status jit_error = m_parser->PrepareForExecution(
       m_jit_start_addr, m_jit_end_addr, m_execution_unit_sp, exe_ctx,
       m_can_interpret, execution_policy);
@@ -499,10 +496,9 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     }
 
     if (register_execution_unit) {
-      // We currently key off there being more than one external function in the
-      // execution
-      // unit to determine whether it needs to live in the process.
-
+      // We currently key off there being more than one external
+      // function in the execution unit to determine whether it needs
+      // to live in the process.
       GetPersistentState(exe_ctx.GetTargetPtr(), exe_ctx)
           ->RegisterExecutionUnit(m_execution_unit_sp);
     }
@@ -569,9 +565,9 @@ bool SwiftUserExpression::AddArguments(ExecutionContext &exe_ctx,
 
     if (m_options.GetPlaygroundTransformEnabled() ||
         m_options.GetREPLEnabled()) {
-      // When calling the playground function we are calling
-      // a main function which takes two arguments: argc and argv
-      // So we pass two zeroes as arguments
+      // When calling the playground function we are calling a main
+      // function which takes two arguments: argc and argv So we pass
+      // two zeroes as arguments.
       args.push_back(0); // argc
       args.push_back(0); // argv
     } else {
