@@ -33,27 +33,13 @@ namespace profileCollectorService {
 /// Posts the FunctionCallTrie associated with a specific Thread ID. This
 /// will:
 ///
-///   - Make a copy of the FunctionCallTrie and store that against the Thread
-///     ID. This will use the global allocator for the service-managed
-///     FunctionCallTrie instances.
-///   - Queue up a pointer to the FunctionCallTrie.
-///   - If the queue is long enough (longer than some arbitrary threshold) we
-///     then pre-calculate a single FunctionCallTrie for the whole process.
+/// Moves the collection of FunctionCallTrie, Allocators, and Buffers associated
+/// with a thread's data to the queue. This takes ownership of the memory
+/// associated with a thread, and manages those exclusively.
 ///
-///
-/// We are making a copy of the FunctionCallTrie because the intent is to have
-/// this function be called at thread exit, or soon after the profiling
-/// handler is finalized through the XRay APIs. By letting threads each
-/// process their own thread-local FunctionCallTrie instances, we're removing
-/// the need for synchronisation across threads while we're profiling.
-/// However, once we're done profiling, we can then collect copies of these
-/// FunctionCallTrie instances and pay the cost of the copy.
-///
-/// NOTE: In the future, if this turns out to be more costly than "moving" the
-/// FunctionCallTrie instances from the owning thread to the collector
-/// service, then we can change the implementation to do it this way (moving)
-/// instead.
-void post(const FunctionCallTrie &T, tid_t TId);
+void post(BufferQueue *Q, FunctionCallTrie &&T,
+          FunctionCallTrie::Allocators &&A,
+          FunctionCallTrie::Allocators::Buffers &&B, tid_t TId);
 
 /// The serialize will process all FunctionCallTrie instances in memory, and
 /// turn those into specifically formatted blocks, each describing the
