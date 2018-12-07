@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core,osx -analyzer-output=text -verify %s
 
 struct OSMetaClass;
 

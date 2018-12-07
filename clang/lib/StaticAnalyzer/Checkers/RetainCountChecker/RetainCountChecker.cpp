@@ -1504,9 +1504,10 @@ void RetainCountChecker::printState(raw_ostream &Out, ProgramStateRef State,
 
 void ento::registerRetainCountChecker(CheckerManager &Mgr) {
   auto *Chk = Mgr.registerChecker<RetainCountChecker>();
+  Chk->TrackObjCAndCFObjects = true;
+}
 
-  AnalyzerOptions &Options = Mgr.getAnalyzerOptions();
-
-  Chk->ShouldCheckOSObjectRetainCount = Options.getCheckerBooleanOption(
-                                                    "CheckOSObject", true, Chk);
+void ento::registerOSObjectRetainCountChecker(CheckerManager &Mgr) {
+  auto *Chk = Mgr.registerChecker<RetainCountChecker>();
+  Chk->TrackOSObjects = true;
 }
