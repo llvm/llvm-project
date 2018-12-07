@@ -491,6 +491,37 @@ defm: Ternary_i16_Pats<mul, add, V_MAD_I16, sext>;
 
 } // End Predicates = [Has16BitInsts]
 
+class ThreeOpFrag<SDPatternOperator op1, SDPatternOperator op2> : PatFrag<
+  (ops node:$x, node:$y, node:$z),
+  // When the inner operation is used multiple times, selecting 3-op
+  // instructions may still be beneficial -- if the other users can be
+  // combined similarly. Let's be conservative for now.
+  (op2 (HasOneUseBinOp<op1> node:$x, node:$y), node:$z),
+  [{
+    // Only use VALU ops when the result is divergent.
+    if (!N->isDivergent())
+      return false;
+
+    // Check constant bus limitations.
+    //
+    // Note: Use !isDivergent as a conservative proxy for whether the value
+    //       is in an SGPR (uniform values can end up in VGPRs as well).
+    unsigned ConstantBusUses = 0;
+    for (unsigned i = 0; i < 3; ++i) {
+      if (!Operands[i]->isDivergent() &&
+          !isInlineImmediate(Operands[i].getNode())) {
+        ConstantBusUses++;
+        if (ConstantBusUses >= 2)
+          return false;
+      }
+    }
+
+    return true;
+  }]
+> {
+  let PredicateCodeUsesOperands = 1;
+}
+
 let SubtargetPredicate = isGFX9 in {
 def V_PACK_B32_F16 : VOP3Inst <"v_pack_b32_f16", VOP3_Profile<VOP_B32_F16_F16, VOP3_OPSEL>>;
 def V_LSHL_ADD_U32 : VOP3Inst <"v_lshl_add_u32", VOP3_Profile<VOP_I32_I32_I32_I32>>;
@@ -525,6 +556,22 @@ def V_CVT_PKNORM_U16_F16 : VOP3Inst <"v_cvt_pknorm_u16_f16", VOP3_Profile<VOP_B3
 
 def V_ADD_I32_gfx9 : VOP3Inst <"v_add_i32_gfx9", VOP3_Profile<VOP_I32_I32_I32>>;
 def V_SUB_I32_gfx9 : VOP3Inst <"v_sub_i32_gfx9", VOP3_Profile<VOP_I32_I32_I32>>;
+
+
+class ThreeOp_i32_Pats <SDPatternOperator op1, SDPatternOperator op2, Instruction inst> : GCNPat <
+  // This matches (op2 (op1 i32:$src0, i32:$src1), i32:$src2) with conditions.
+  (ThreeOpFrag<op1, op2> i32:$src0, i32:$src1, i32:$src2),
+  (inst i32:$src0, i32:$src1, i32:$src2)
+>;
+
+def : ThreeOp_i32_Pats<shl, add, V_LSHL_ADD_U32>;
+def : ThreeOp_i32_Pats<add, shl, V_ADD_LSHL_U32>;
+def : ThreeOp_i32_Pats<add, add, V_ADD3_U32>;
+def : ThreeOp_i32_Pats<shl, or, V_LSHL_OR_B32>;
+def : ThreeOp_i32_Pats<and, or, V_AND_OR_B32>;
+def : ThreeOp_i32_Pats<or, or, V_OR3_B32>;
+def : ThreeOp_i32_Pats<xor, add, V_XAD_U32>;
+
 } // End SubtargetPredicate = isGFX9
 
 //===----------------------------------------------------------------------===//

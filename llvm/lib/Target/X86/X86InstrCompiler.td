@@ -362,30 +362,6 @@ def : Pat<(i64 (sext (i8 (X86setcc_c X86_COND_B, EFLAGS)))),
 def : Pat<(and (i8 (X86setcc_c X86_COND_B, EFLAGS)), 1),
           (SETBr)>;
 
-// (add OP, SETB) -> (adc OP, 0)
-def : Pat<(add (and (i8 (X86setcc_c X86_COND_B, EFLAGS)), 1), GR8:$op),
-          (ADC8ri GR8:$op, 0)>;
-def : Pat<(add (and (i32 (X86setcc_c X86_COND_B, EFLAGS)), 1), GR32:$op),
-          (ADC32ri8 GR32:$op, 0)>;
-def : Pat<(add (and (i64 (X86setcc_c X86_COND_B, EFLAGS)), 1), GR64:$op),
-          (ADC64ri8 GR64:$op, 0)>;
-
-// (sub OP, SETB) -> (sbb OP, 0)
-def : Pat<(sub GR8:$op, (and (i8 (X86setcc_c X86_COND_B, EFLAGS)), 1)),
-          (SBB8ri GR8:$op, 0)>;
-def : Pat<(sub GR32:$op, (and (i32 (X86setcc_c X86_COND_B, EFLAGS)), 1)),
-          (SBB32ri8 GR32:$op, 0)>;
-def : Pat<(sub GR64:$op, (and (i64 (X86setcc_c X86_COND_B, EFLAGS)), 1)),
-          (SBB64ri8 GR64:$op, 0)>;
-
-// (sub OP, SETCC_CARRY) -> (adc OP, 0)
-def : Pat<(sub GR8:$op, (i8 (X86setcc_c X86_COND_B, EFLAGS))),
-          (ADC8ri GR8:$op, 0)>;
-def : Pat<(sub GR32:$op, (i32 (X86setcc_c X86_COND_B, EFLAGS))),
-          (ADC32ri8 GR32:$op, 0)>;
-def : Pat<(sub GR64:$op, (i64 (X86setcc_c X86_COND_B, EFLAGS))),
-          (ADC64ri8 GR64:$op, 0)>;
-
 //===----------------------------------------------------------------------===//
 // String Pseudo Instructions
 //

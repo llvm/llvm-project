@@ -6795,8 +6795,8 @@ define i16 @mand16(i16 %x, i16 %y) {
 ; GENERIC:       # %bb.0:
 ; GENERIC-NEXT:    movl %edi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    movl %edi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    xorl %esi, %ecx # sched: [1:0.33]
-; GENERIC-NEXT:    andl %esi, %eax # sched: [1:0.33]
+; GENERIC-NEXT:    andl %esi, %ecx # sched: [1:0.33]
+; GENERIC-NEXT:    xorl %esi, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    orl %ecx, %eax # sched: [1:0.33]
 ; GENERIC-NEXT:    # kill: def $ax killed $ax killed $eax
 ; GENERIC-NEXT:    retq # sched: [1:1.00]
@@ -6805,8 +6805,8 @@ define i16 @mand16(i16 %x, i16 %y) {
 ; SKX:       # %bb.0:
 ; SKX-NEXT:    movl %edi, %eax # sched: [1:0.25]
 ; SKX-NEXT:    movl %edi, %ecx # sched: [1:0.25]
-; SKX-NEXT:    xorl %esi, %ecx # sched: [1:0.25]
-; SKX-NEXT:    andl %esi, %eax # sched: [1:0.25]
+; SKX-NEXT:    andl %esi, %ecx # sched: [1:0.25]
+; SKX-NEXT:    xorl %esi, %eax # sched: [1:0.25]
 ; SKX-NEXT:    orl %ecx, %eax # sched: [1:0.25]
 ; SKX-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    retq # sched: [7:1.00]

@@ -136,8 +136,7 @@ entry:
 
 
 ; GFX9-NEXT: v_add_u32_e32 v0, v0, v1
-; GFX9: v_add_u32_e32 v0, v0, [[LOAD_0]]
-; GFX9: v_add_u32_e32 v0, v0, [[LOAD_1]]
+; GFX9: v_add3_u32 v0, v0, v3, v2
 
 ; GCN-NEXT: s_setpc_b64
 define fastcc i32 @i32_fastcc_i32_i32_a32i32(i32 %arg0, i32 %arg1, [32 x i32] %large) #1 {

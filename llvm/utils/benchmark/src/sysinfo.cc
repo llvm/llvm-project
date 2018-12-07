@@ -333,6 +333,7 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizesWindows() {
     C.num_sharing = static_cast<int>(B.count());
     C.level = Cache->Level;
     C.size = Cache->Size;
+    C.type = "Unknown";
     switch (Cache->Type) {
       case CacheUnified:
         C.type = "Unified";
@@ -345,9 +346,6 @@ std::vector<CPUInfo::CacheInfo> GetCacheSizesWindows() {
         break;
       case CacheTrace:
         C.type = "Trace";
-        break;
-      default:
-        C.type = "Unknown";
         break;
     }
     res.push_back(C);

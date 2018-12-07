@@ -7,7 +7,8 @@ import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/version.gni")
 
-# Contains actions to create config.h, llvm-config.h and abi-breaking.h.
+# Contains actions to create config.h, llvm-config.h, abi-breaking.h,
+# and the various .def files used by llvm/lib/Target.
 # Other than in the cmake build, these are created at build time, not at
 # config time. That way, they can run in parallel, and this pattern means that
 # e.g. creating the clang config header (which happens in another gn file)
@@ -18,6 +19,9 @@ import("//llvm/version.gni")
 
 # Other than in the cmake build, header generation doesn't do any feature
 # checking. See also "Philosophy" in llvm/utils/gn/README.rst.
+
+##############################################################################
+# config.h, llvm-config.h, abi-breaking.h
 
 # FIXME: Several of the config settings go in a global config header but
 # are only used in a single translation unit -- so toggling that value
@@ -355,4 +359,72 @@ action("llvm-config") {
   } else {
     args += [ "LLVM_ENABLE_THREADS=" ]
   }
+}
+
+##############################################################################
+# .def files used by llvm/lib/Target
+
+template("write_target_def_file") {
+  assert(defined(invoker.key), "callers must set key")
+  assert(defined(invoker.value), "callers must set value")
+
+  action(target_name) {
+    visibility = [ ":write_target_def_files" ]
+    script = "//llvm/utils/gn/build/write_cmake_config.py"
+
+    sources = [
+      "$target_name.in",
+    ]
+    outputs = [
+      "$target_gen_dir/$target_name",
+    ]
+
+    # Build something like
+    # `LLVM_ENUM_ASM_PARSERS=LLVM_ASM_PARSER(ARM)\nLLVM_ASM_PARSER(X86)\n`. Note
+    # that \n is a literal '\' followed by a literal 'n', not a newline
+    # character.  (write_cmake_config.py replaces that with a real newline).
+    value = ""
+    foreach(target, llvm_targets_to_build) {
+      value = "$value${invoker.value}($target)\n"
+    }
+    args = [
+      "-o",
+      rebase_path(outputs[0], root_out_dir),
+      rebase_path(sources[0], root_out_dir),
+      "${invoker.key}=$value",
+    ]
+  }
+}
+
+write_target_def_file("AsmParsers.def") {
+  key = "LLVM_ENUM_ASM_PARSERS"
+  value = "LLVM_ASM_PARSER"
+}
+
+write_target_def_file("AsmPrinters.def") {
+  key = "LLVM_ENUM_ASM_PRINTERS"
+  value = "LLVM_ASM_PRINTER"
+}
+
+write_target_def_file("Disassemblers.def") {
+  key = "LLVM_ENUM_DISASSEMBLERS"
+  value = "LLVM_DISASSEMBLER"
+}
+
+write_target_def_file("Targets.def") {
+  key = "LLVM_ENUM_TARGETS"
+  value = "LLVM_TARGET"
+}
+
+group("write_target_def_files") {
+  visibility = [
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+  ]
+  deps = [
+    ":AsmParsers.def",
+    ":AsmPrinters.def",
+    ":Disassemblers.def",
+    ":Targets.def",
+  ]
 }
