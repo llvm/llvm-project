@@ -1059,8 +1059,7 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
         if (N) {
           const LangOptions &LOpts = C.getASTContext().getLangOpts();
           auto R = llvm::make_unique<CFRefLeakReport>(
-              *getLeakAtReturnBug(LOpts), LOpts, SummaryLog, N, Sym, C,
-              IncludeAllocationLine);
+              *getLeakAtReturnBug(LOpts), LOpts, SummaryLog, N, Sym, C);
           C.emitReport(std::move(R));
         }
         return N;
@@ -1346,7 +1345,7 @@ RetainCountChecker::processLeaks(ProgramStateRef state,
       assert(BT && "BugType not initialized.");
 
       Ctx.emitReport(llvm::make_unique<CFRefLeakReport>(
-          *BT, LOpts, SummaryLog, N, *I, Ctx, IncludeAllocationLine));
+          *BT, LOpts, SummaryLog, N, *I, Ctx));
     }
   }
 
@@ -1508,8 +1507,6 @@ void ento::registerRetainCountChecker(CheckerManager &Mgr) {
 
   AnalyzerOptions &Options = Mgr.getAnalyzerOptions();
 
-  Chk->IncludeAllocationLine = Options.getCheckerBooleanOption(
-                           "leak-diagnostics-reference-allocation", false, Chk);
   Chk->ShouldCheckOSObjectRetainCount = Options.getCheckerBooleanOption(
                                                     "CheckOSObject", true, Chk);
 }
