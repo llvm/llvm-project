@@ -145,22 +145,6 @@ static ThreadSafeSwiftASTMap &GetASTMap() {
   return *g_map_ptr;
 }
 
-static inline swift::Type GetSwiftType(void *opaque_ptr) {
-  return swift::Type((swift::TypeBase *)opaque_ptr);
-}
-
-static inline swift::CanType GetCanonicalSwiftType(void *opaque_ptr) {
-  return ((swift::TypeBase *)opaque_ptr)->getCanonicalType();
-}
-
-static inline swift::Type GetSwiftType(CompilerType type) {
-  return swift::Type((swift::TypeBase *)type.GetOpaqueQualType());
-}
-
-static inline swift::CanType GetCanonicalSwiftType(CompilerType type) {
-  return ((swift::TypeBase *)type.GetOpaqueQualType())->getCanonicalType();
-}
-
 class SwiftEnumDescriptor;
 
 typedef std::shared_ptr<SwiftEnumDescriptor> SwiftEnumDescriptorSP;
@@ -4100,7 +4084,7 @@ SwiftASTContext::FindContainedTypeOrDecl(llvm::StringRef name,
 
   if (false == name.empty() &&
       llvm::dyn_cast_or_null<SwiftASTContext>(container_type.GetTypeSystem())) {
-    swift::Type swift_type(GetSwiftType(container_type));
+    swift::Type swift_type = GetSwiftType(container_type);
     if (!swift_type)
       return 0;
     swift::CanType swift_can_type(swift_type->getCanonicalType());
@@ -5074,7 +5058,7 @@ bool SwiftASTContext::IsSelfArchetypeType(const CompilerType &compiler_type) {
 
   if (llvm::dyn_cast_or_null<SwiftASTContext>(compiler_type.GetTypeSystem())) {
     if (swift::isa<swift::GenericTypeParamType>(
-        (swift::TypeBase *)compiler_type.GetOpaqueQualType())) {
+            GetSwiftType(compiler_type).getPointer())) {
       // Hack: Just assume if we have an generic parameter as the type of
       // 'self', it's going to be a protocol 'Self' type.
       return true;
@@ -6892,7 +6876,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     auto static_value = valobj->GetStaticValue();
     auto static_type = static_value->GetCompilerType();
     auto static_swift_type = GetCanonicalSwiftType(static_type);
-    if (swift::isa<swift::TupleType>(static_swift_type))
+    if (swift::isa<swift::TupleType>(static_swift_type.getPointer()))
       swift_can_type = static_swift_type;
     if (swift_can_type->hasTypeParameter()) {
       if (!exe_ctx)

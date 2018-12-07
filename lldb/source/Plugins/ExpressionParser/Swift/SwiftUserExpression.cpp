@@ -77,7 +77,7 @@ void SwiftUserExpression::DidFinishExecuting() {
 
 static CompilerType GetConcreteType(ExecutionContext &exe_ctx,
                                     StackFrame *frame, CompilerType type) {
-  auto *swift_type = (swift::TypeBase *)(type.GetOpaqueQualType());
+  auto swift_type = GetSwiftType(type.GetOpaqueQualType());
   StreamString type_name;
   if (SwiftLanguageRuntime::GetAbstractTypeName(type_name, swift_type)) {
     auto *runtime = exe_ctx.GetProcessRef().GetSwiftLanguageRuntime();
@@ -234,8 +234,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
           }
 
           swift::Type object_type =
-              swift::Type((swift::TypeBase *)(self_type.GetOpaqueQualType()))
-                  ->getWithoutSpecifierType();
+              GetSwiftType(self_type)->getWithoutSpecifierType();
 
           if (object_type.getPointer() &&
               (object_type.getPointer() != self_type.GetOpaqueQualType()))
@@ -245,7 +244,7 @@ void SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
           if (Flags(self_type.GetTypeInfo())
                   .AllSet(lldb::eTypeIsSwift | lldb::eTypeIsEnumeration |
                           lldb::eTypeIsGeneric)) {
-            
+                  
             // Optional<T> means a weak 'self.'  Make sure this really is
             // Optional<T>.
             if (self_type.GetTypeName().GetStringRef().startswith(
