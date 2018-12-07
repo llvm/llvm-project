@@ -112,6 +112,8 @@ public:
   size_t ParseVariablesForContext(const SymbolContext &sc) override {
     return 0;
   }
+
+  CompilerDeclContext GetDeclContextContainingUID(lldb::user_id_t uid) override;
   Type *ResolveTypeUID(lldb::user_id_t type_uid) override;
   llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
       lldb::user_id_t type_uid,
@@ -217,7 +219,7 @@ private:
 
   llvm::DenseMap<clang::TagDecl *, DeclStatus> m_decl_to_status;
 
-  llvm::DenseMap<lldb::user_id_t, clang::TagDecl *> m_uid_to_decl;
+  llvm::DenseMap<lldb::user_id_t, clang::Decl *> m_uid_to_decl;
   llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
       m_parent_types;
 
