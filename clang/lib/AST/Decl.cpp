@@ -725,7 +725,7 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
       // If we're paying attention to global visibility, apply
       // -finline-visibility-hidden if this is an inline method.
       if (useInlineVisibilityHidden(D))
-        LV.mergeVisibility(HiddenVisibility, true);
+        LV.mergeVisibility(HiddenVisibility, /*visibilityExplicit=*/false);
     }
   }
 
@@ -915,7 +915,7 @@ LinkageComputer::getLVForClassMember(const NamedDecl *D,
     // Note that we do this before merging information about
     // the class visibility.
     if (!LV.isVisibilityExplicit() && useInlineVisibilityHidden(D))
-      LV.mergeVisibility(HiddenVisibility, true);
+      LV.mergeVisibility(HiddenVisibility, /*visibilityExplicit=*/false);
   }
 
   // If this class member has an explicit visibility attribute, the only
@@ -1262,7 +1262,27 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
         !isTemplateInstantiation(FD->getTemplateSpecializationKind()))
       return LinkageInfo::none();
 
+    // If a function is hidden by -fvisibility-inlines-hidden option and
+    // is not explicitly attributed as a hidden function,
+    // we should not make static local variables in the function hidden.
     LV = getLVForDecl(FD, computation);
+    if (isa<VarDecl>(D) && useInlineVisibilityHidden(FD) &&
+        !LV.isVisibilityExplicit()) {
+      assert(cast<VarDecl>(D)->isStaticLocal());
+      // If this was an implicitly hidden inline method, check again for
+      // explicit visibility on the parent class, and use that for static locals
+      // if present.
+      if (const auto *MD = dyn_cast<CXXMethodDecl>(FD))
+        LV = getLVForDecl(MD->getParent(), computation);
+      if (!LV.isVisibilityExplicit()) {
+        Visibility globalVisibility =
+            computation.isValueVisibility()
+                ? Context.getLangOpts().getValueVisibilityMode()
+                : Context.getLangOpts().getTypeVisibilityMode();
+        return LinkageInfo(VisibleNoLinkage, globalVisibility,
+                           /*visibilityExplicit=*/false);
+      }
+    }
   }
   if (!isExternallyVisible(LV.getLinkage()))
     return LinkageInfo::none();
