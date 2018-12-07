@@ -85,6 +85,8 @@ private:
   DominatorTree &DT;
   MemorySSAUpdater *MSSAU;
 
+  // Whether or not the current loop has irreducible CFG.
+  bool HasIrreducibleCFG = false;
   // Whether or not the current loop will still exist after terminator constant
   // folding will be done. In theory, there are two ways how it can happen:
   // 1. Loop's latch(es) become unreachable from loop header;
@@ -143,12 +145,45 @@ private:
                   BlocksInLoopAfterFolding);
   }
 
+  /// Whether or not the current loop has irreducible CFG.
+  bool hasIrreducibleCFG(LoopBlocksDFS &DFS) {
+    assert(DFS.isComplete() && "DFS is expected to be finished");
+    // Index of a basic block in RPO traversal.
+    DenseMap<const BasicBlock *, unsigned> RPO;
+    unsigned Current = 0;
+    for (auto I = DFS.beginRPO(), E = DFS.endRPO(); I != E; ++I)
+      RPO[*I] = Current++;
+
+    for (auto I = DFS.beginRPO(), E = DFS.endRPO(); I != E; ++I) {
+      BasicBlock *BB = *I;
+      for (auto *Succ : successors(BB))
+        if (L.contains(Succ) && !LI.isLoopHeader(Succ) && RPO[BB] > RPO[Succ])
+          // If an edge goes from a block with greater order number into a block
+          // with lesses number, and it is not a loop backedge, then it can only
+          // be a part of irreducible non-loop cycle.
+          return true;
+    }
+    return false;
+  }
+
   /// Fill all information about status of blocks and exits of the current loop
   /// if constant folding of all branches will be done.
   void analyze() {
     LoopBlocksDFS DFS(&L);
     DFS.perform(&LI);
     assert(DFS.isComplete() && "DFS is expected to be finished");
+
+    // TODO: The algorithm below relies on both RPO and Postorder traversals.
+    // When the loop has only reducible CFG inside, then the invariant "all
+    // predecessors of X are processed before X in RPO" is preserved. However
+    // an irreducible loop can break this invariant (e.g. latch does not have to
+    // be the last block in the traversal in this case, and the algorithm relies
+    // on this). We can later decide to support such cases by altering the
+    // algorithms, but so far we just give up analyzing them.
+    if (hasIrreducibleCFG(DFS)) {
+      HasIrreducibleCFG = true;
+      return;
+    }
 
     // Collect live and dead loop blocks and exits.
     LiveLoopBlocks.insert(L.getHeader());
@@ -299,6 +334,11 @@ public:
 
     LLVM_DEBUG(dbgs() << "In function " << L.getHeader()->getParent()->getName()
                       << ": ");
+
+    if (HasIrreducibleCFG) {
+      LLVM_DEBUG(dbgs() << "Loops with irreducible CFG are not supported!\n");
+      return false;
+    }
 
     // Nothing to constant-fold.
     if (FoldCandidates.empty()) {
