@@ -784,8 +784,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   }
 
   swift::Type object_type =
-      swift::Type((swift::TypeBase *)(imported_self_type.GetOpaqueQualType()))
-          ->getWithoutSpecifierType();
+      GetSwiftType(imported_self_type)->getWithoutSpecifierType();
 
   if (object_type.getPointer() &&
       (object_type.getPointer() != imported_self_type.GetOpaqueQualType()))
@@ -806,8 +805,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
   // If 'self' is a weak storage type, it must be an optional.  Look
   // through it and unpack the argument of "optional".
   if (swift::WeakStorageType *weak_storage_type =
-          ((swift::TypeBase *)imported_self_type.GetOpaqueQualType())
-              ->getAs<swift::WeakStorageType>()) {
+          GetSwiftType(imported_self_type)->getAs<swift::WeakStorageType>()) {
     swift::Type referent_type = weak_storage_type->getReferentType();
 
     swift::BoundGenericEnumType *optional_type =
@@ -994,8 +992,7 @@ static void CountLocals(
       if (name == s_self_name) {
         overridden_name = ConstString("$__lldb_injected_self").AsCString();
         if (log) {
-          swift::TypeBase *swift_type =
-              (swift::TypeBase *)target_type.GetOpaqueQualType();
+          swift::Type swift_type = GetSwiftType(target_type);
           if (swift_type) {
             std::string s;
             llvm::raw_string_ostream ss(s);
@@ -1256,8 +1253,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     Status error;
 
     if (repl) {
-      if (swift::TypeBase *swift_type =
-              (swift::TypeBase *)variable.GetType().GetOpaqueQualType()) {
+      if (swift::Type swift_type = GetSwiftType(variable.GetType())) {
         if (!swift_type->getCanonicalType()->isVoid()) {
           auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
           if (is_result)
@@ -1272,7 +1268,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
       }
     } else {
       CompilerType actual_type(variable.GetType());
-      auto *orig_swift_type = (swift::TypeBase *)actual_type.GetOpaqueQualType();
+      auto orig_swift_type = GetSwiftType(actual_type);
       auto *swift_type = orig_swift_type->mapTypeOutOfContext().getPointer();
       actual_type.SetCompilerType(actual_type.GetTypeSystem(), swift_type);
       lldb::StackFrameSP stack_frame_sp = stack_frame_wp.lock();
@@ -1300,8 +1296,7 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
         actual_type = ctx->MapIntoContext(stack_frame_sp,
                                           actual_type.GetOpaqueQualType());
       }
-      swift::Type actual_swift_type =
-        (swift::TypeBase *)actual_type.GetOpaqueQualType();
+      swift::Type actual_swift_type = GetSwiftType(actual_type);
       if (actual_swift_type->hasTypeParameter())
         actual_swift_type = orig_swift_type;
 

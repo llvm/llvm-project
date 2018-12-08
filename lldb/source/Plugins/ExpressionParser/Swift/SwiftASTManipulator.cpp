@@ -1495,7 +1495,8 @@ SwiftASTManipulator::GetTypesForResultFixup(uint32_t language_flags) {
             ret.Wrapper_archetype = extension_decl->mapTypeIntoContext(
                 type_parameter->getDeclaredInterfaceType())
                     ->castTo<swift::ArchetypeType>();
-            ret.context_real = (swift::TypeBase*)type_parameter->getSuperclass().getPointer();
+            ret.context_real =
+                (swift::TypeBase *)type_parameter->getSuperclass().getPointer();
           }
         }
       } else if (!ret.context_alias) {
