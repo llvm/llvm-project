@@ -9840,10 +9840,6 @@ bool ASTContext::DeclMustBeEmitted(const Decl *D) {
     return true;
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
-    // Multiversioned functions always have to be emitted, because they are used
-    // by the resolver.
-    if (FD->isMultiVersion())
-      return true;
     // Forward declarations aren't required.
     if (!FD->doesThisDeclarationHaveABody())
       return FD->doesDeclarationForceExternallyVisibleDefinition();

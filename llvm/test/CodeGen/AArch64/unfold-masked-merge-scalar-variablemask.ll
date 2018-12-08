@@ -65,9 +65,9 @@ define i64 @out64(i64 %x, i64 %y, i64 %mask) {
 define i8 @in8(i8 %x, i8 %y, i8 %mask) {
 ; CHECK-LABEL: in8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w2
-; CHECK-NEXT:    bic w9, w1, w2
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    bic w8, w1, w2
+; CHECK-NEXT:    and w9, w0, w2
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %n0 = xor i8 %x, %y
   %n1 = and i8 %n0, %mask
@@ -78,9 +78,9 @@ define i8 @in8(i8 %x, i8 %y, i8 %mask) {
 define i16 @in16(i16 %x, i16 %y, i16 %mask) {
 ; CHECK-LABEL: in16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w2
-; CHECK-NEXT:    bic w9, w1, w2
-; CHECK-NEXT:    orr w0, w8, w9
+; CHECK-NEXT:    bic w8, w1, w2
+; CHECK-NEXT:    and w9, w0, w2
+; CHECK-NEXT:    orr w0, w9, w8
 ; CHECK-NEXT:    ret
   %n0 = xor i16 %x, %y
   %n1 = and i16 %n0, %mask

@@ -586,7 +586,8 @@ main_body:
   %data.0 = extractelement <2 x float> %data, i32 0
   call void @llvm.amdgcn.buffer.store.f32(float %data.0, <4 x i32> undef, i32 %idx.0, i32 0, i1 0, i1 0)
 
-  call void @llvm.AMDGPU.kill(float %z)
+  %z.cmp = fcmp olt float %z, 0.0
+  call void @llvm.amdgcn.kill(i1 %z.cmp)
 
   %idx.1 = extractelement <2 x i32> %idx, i32 1
   %data.1 = extractelement <2 x float> %data, i32 1
@@ -619,7 +620,8 @@ main_body:
 
   call void @llvm.amdgcn.buffer.store.f32(float %data, <4 x i32> undef, i32 0, i32 0, i1 0, i1 0)
 
-  call void @llvm.AMDGPU.kill(float %z)
+  %z.cmp = fcmp olt float %z, 0.0
+  call void @llvm.amdgcn.kill(i1 %z.cmp)
 
   ret <4 x float> %dtex
 }
@@ -826,7 +828,7 @@ declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32, i32, <8 x i32>, i3
 declare float @llvm.amdgcn.buffer.load.f32(<4 x i32>, i32, i32, i1, i1) #3
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32, float, <8 x i32>, <4 x i32>, i1, i32, i32) #3
 declare <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32, float, float, <8 x i32>, <4 x i32>, i1, i32, i32) #3
-declare void @llvm.AMDGPU.kill(float) #1
+declare void @llvm.amdgcn.kill(i1) #1
 declare float @llvm.amdgcn.wqm.f32(float) #3
 declare i32 @llvm.amdgcn.wqm.i32(i32) #3
 declare float @llvm.amdgcn.wwm.f32(float) #3

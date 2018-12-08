@@ -707,8 +707,8 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   if (Subtarget.hasExynosCheapAsMoveHandling()) {
     if (isExynosResetFast(MI) || isExynosShiftExtFast(MI))
       return true;
-    else
-      return MI.isAsCheapAsAMove();
+
+    return MI.isAsCheapAsAMove();
   }
 
   // Finally, check generic cases.
@@ -897,7 +897,7 @@ bool AArch64InstrInfo::isExynosLdStExtFast(const MachineInstr &MI) {
 
 bool AArch64InstrInfo::isExynosShiftExtFast(const MachineInstr &MI) {
   unsigned Imm, Shift;
-  AArch64_AM::ShiftExtendType Ext;
+  AArch64_AM::ShiftExtendType Ext = AArch64_AM::UXTX;
 
   switch (MI.getOpcode()) {
   default:
@@ -947,20 +947,22 @@ bool AArch64InstrInfo::isExynosShiftExtFast(const MachineInstr &MI) {
   // WriteIEReg
   case AArch64::ADDSWrx:
   case AArch64::ADDSXrx:
-  case AArch64::ADDSXrx64:
   case AArch64::ADDWrx:
   case AArch64::ADDXrx:
-  case AArch64::ADDXrx64:
   case AArch64::SUBSWrx:
   case AArch64::SUBSXrx:
-  case AArch64::SUBSXrx64:
   case AArch64::SUBWrx:
   case AArch64::SUBXrx:
+    Ext = AArch64_AM::UXTW;
+    LLVM_FALLTHROUGH;
+  case AArch64::ADDSXrx64:
+  case AArch64::ADDXrx64:
+  case AArch64::SUBSXrx64:
   case AArch64::SUBXrx64:
     Imm = MI.getOperand(3).getImm();
     Shift = AArch64_AM::getArithShiftValue(Imm);
-    Ext = AArch64_AM::getArithExtendType(Imm);
-    return (Shift == 0 || (Shift <= 3 && Ext == AArch64_AM::UXTX));
+    return (Shift == 0 ||
+            (Shift <= 3 && Ext == AArch64_AM::getArithExtendType(Imm)));
   }
 }
 

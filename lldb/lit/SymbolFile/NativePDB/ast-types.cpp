@@ -4,7 +4,7 @@
 // Test various interesting cases for AST reconstruction.
 // RUN: %build --compiler=clang-cl --nodefaultlib -o %t.exe -- %s
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -s \
-// RUN:     %p/Inputs/ast-reconstruction.lldbinit 2>&1 | FileCheck %s
+// RUN:     %p/Inputs/ast-types.lldbinit 2>&1 | FileCheck %s
 
 // Test trivial versions of each tag type.
 class TrivialC {};

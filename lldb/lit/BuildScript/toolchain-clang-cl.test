@@ -19,12 +19,12 @@ CHECK-32:   Verbose: True
 CHECK-32:   Dryrun: True
 CHECK-32:   Inputs: foobar.c
 CHECK-32: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foobar.ilk
-CHECK-32: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foobar.obj
+CHECK-32: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.exe-foobar.obj
 CHECK-32: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.pdb
 CHECK-32: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.exe
-CHECK-32: compiling foobar.c -> foobar.obj
+CHECK-32: compiling foobar.c -> foo.exe-foobar.obj
 CHECK-32: {{.*}}clang-cl{{(.exe)?}} -m32
-CHECK-32: linking foobar.obj -> foo.exe
+CHECK-32: linking foo.exe-foobar.obj -> foo.exe
 CHECK-32: {{.*}}lld-link
 
 CHECK-64: Script Arguments:
@@ -40,10 +40,10 @@ CHECK-64:   Verbose: True
 CHECK-64:   Dryrun: True
 CHECK-64:   Inputs: foobar.c
 CHECK-64: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foobar.ilk
-CHECK-64: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foobar.obj
+CHECK-64: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.exe-foobar.obj
 CHECK-64: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.pdb
 CHECK-64: Cleaning {{.*}}toolchain-clang-cl.test.tmp{{.}}foo.exe
-CHECK-64: compiling foobar.c -> foobar.obj
+CHECK-64: compiling foobar.c -> foo.exe-foobar.obj
 CHECK-64: {{.*}}clang-cl{{(.exe)?}} -m64
-CHECK-64: linking foobar.obj -> foo.exe
+CHECK-64: linking foo.exe-foobar.obj -> foo.exe
 CHECK-64: {{.*}}lld-link{{(.exe)?}}

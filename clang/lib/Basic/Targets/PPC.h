@@ -176,6 +176,8 @@ public:
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
 
+  ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
+
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &Info) const override {
     switch (*Name) {

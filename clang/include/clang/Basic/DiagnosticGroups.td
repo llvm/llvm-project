@@ -1041,3 +1041,6 @@ def ExperimentalISel : DiagGroup<"experimental-isel">;
 def FunctionMultiVersioning : DiagGroup<"function-multiversion">;
 
 def NoDeref : DiagGroup<"noderef">;
+
+// A group for cross translation unit static analysis related warnings.
+def CrossTU : DiagGroup<"ctu">;

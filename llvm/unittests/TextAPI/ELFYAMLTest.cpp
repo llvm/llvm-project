@@ -196,7 +196,10 @@ TEST(ElfYamlTextAPI, YAMLWritesNoTBESyms) {
                           "TbeVersion:      1.0\n"
                           "SoName:          nosyms.so\n"
                           "Arch:            x86_64\n"
-                          "NeededLibs:      [ libc.so, libfoo.so, libbar.so ]\n"
+                          "NeededLibs:      \n"
+                          "  - libc.so\n"
+                          "  - libfoo.so\n"
+                          "  - libbar.so\n"
                           "Symbols:         {}\n"
                           "...\n";
   ELFStub Stub;

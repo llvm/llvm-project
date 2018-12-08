@@ -46,10 +46,10 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; AVX2-LABEL: var_shift_v4i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
-; AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm3
-; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm2
 ; AVX2-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpsubq %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; XOPAVX1-LABEL: var_shift_v4i64:
@@ -67,10 +67,10 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; XOPAVX2-LABEL: var_shift_v4i64:
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpbroadcastq {{.*#+}} ymm2 = [9223372036854775808,9223372036854775808,9223372036854775808,9223372036854775808]
-; XOPAVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm3
-; XOPAVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm2
 ; XOPAVX2-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
-; XOPAVX2-NEXT:    vpsubq %ymm3, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; XOPAVX2-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; XOPAVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: var_shift_v4i64:
@@ -115,10 +115,10 @@ define <4 x i64> @var_shift_v4i64(<4 x i64> %a, <4 x i64> %b) nounwind {
 ; X32-AVX2-LABEL: var_shift_v4i64:
 ; X32-AVX2:       # %bb.0:
 ; X32-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648]
-; X32-AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm3
-; X32-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm2
 ; X32-AVX2-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vpsubq %ymm3, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X32-AVX2-NEXT:    retl
   %shift = ashr <4 x i64> %a, %b
   ret <4 x i64> %shift
@@ -1086,10 +1086,10 @@ define <4 x i64> @constant_shift_v4i64(<4 x i64> %a) nounwind {
 ; X32-AVX2:       # %bb.0:
 ; X32-AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,0,7,0,31,0,62,0]
 ; X32-AVX2-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,2147483648,0,2147483648,0,2147483648,0,2147483648]
-; X32-AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm3
-; X32-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vpsrlvq %ymm1, %ymm2, %ymm2
 ; X32-AVX2-NEXT:    vpsrlvq %ymm1, %ymm0, %ymm0
-; X32-AVX2-NEXT:    vpsubq %ymm3, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vpxor %ymm2, %ymm0, %ymm0
+; X32-AVX2-NEXT:    vpsubq %ymm2, %ymm0, %ymm0
 ; X32-AVX2-NEXT:    retl
   %shift = ashr <4 x i64> %a, <i64 1, i64 7, i64 31, i64 62>
   ret <4 x i64> %shift

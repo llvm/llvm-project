@@ -76,7 +76,7 @@ EXTERN bool __kmpc_kernel_convergent_simd(void *buffer, uint32_t Mask,
   else
     *NumLanes = ConvergentSize;
   ASSERT(LT_FUSSY, *NumLanes > 0, "bad thread request of %d threads",
-         *NumLanes);
+         (int)*NumLanes);
 
   // Set to true for lanes participating in the simd region.
   bool isActive = false;
@@ -152,7 +152,7 @@ EXTERN bool __kmpc_kernel_convergent_parallel(void *buffer, uint32_t Mask,
   else
     NumThreads = ConvergentSize;
   ASSERT(LT_FUSSY, NumThreads > 0, "bad thread request of %d threads",
-         NumThreads);
+         (int)NumThreads);
 
   // Set to true for workers participating in the parallel region.
   bool isActive = false;
@@ -260,7 +260,7 @@ EXTERN void __kmpc_kernel_prepare_parallel(void *WorkFn,
   }
 
   ASSERT(LT_FUSSY, NumThreads > 0, "bad thread request of %d threads",
-         NumThreads);
+         (int)NumThreads);
   ASSERT0(LT_FUSSY, GetThreadIdInBlock() == GetMasterThreadID(),
           "only team master can create parallel");
 
@@ -307,7 +307,7 @@ EXTERN bool __kmpc_kernel_parallel(void **WorkFn,
     PRINT(LD_PAR,
           "thread will execute parallel region with id %d in a team of "
           "%d threads\n",
-          newTaskDescr->ThreadId(), newTaskDescr->NThreads());
+          (int)newTaskDescr->ThreadId(), (int)newTaskDescr->NThreads());
 
     isActive = true;
   }
@@ -438,7 +438,7 @@ EXTERN void __kmpc_push_num_threads(kmp_Ident *loc, int32_t tid,
 
 EXTERN void __kmpc_push_simd_limit(kmp_Ident *loc, int32_t tid,
                                    int32_t simd_limit) {
-  PRINT(LD_IO, "call kmpc_push_simd_limit %d\n", simd_limit);
+  PRINT(LD_IO, "call kmpc_push_simd_limit %d\n", (int)simd_limit);
   ASSERT0(LT_FUSSY, checkRuntimeInitialized(loc), "Runtime must be initialized.");
   tid = GetLogicalThreadIdInBlock();
   omptarget_nvptx_threadPrivateContext->SimdLimitForNextSimd(tid) = simd_limit;
@@ -449,12 +449,12 @@ EXTERN void __kmpc_push_simd_limit(kmp_Ident *loc, int32_t tid,
 
 EXTERN void __kmpc_push_num_teams(kmp_Ident *loc, int32_t tid,
                                   int32_t num_teams, int32_t thread_limit) {
-  PRINT(LD_IO, "call kmpc_push_num_teams %d\n", num_teams);
+  PRINT(LD_IO, "call kmpc_push_num_teams %d\n", (int)num_teams);
   ASSERT0(LT_FUSSY, FALSE,
           "should never have anything with new teams on device");
 }
 
 EXTERN void __kmpc_push_proc_bind(kmp_Ident *loc, uint32_t tid,
                                   int proc_bind) {
-  PRINT(LD_IO, "call kmpc_push_proc_bind %d\n", proc_bind);
+  PRINT(LD_IO, "call kmpc_push_proc_bind %d\n", (int)proc_bind);
 }

@@ -1422,54 +1422,6 @@ defm : MUBUFScratchLoadPat_Lo16<BUFFER_LOAD_SHORT_D16_OFFEN, BUFFER_LOAD_SHORT_D
 defm : MUBUFScratchLoadPat_Lo16<BUFFER_LOAD_UBYTE_D16_OFFEN, BUFFER_LOAD_UBYTE_D16_OFFSET, i16, az_extloadi8_private>;
 defm : MUBUFScratchLoadPat_Lo16<BUFFER_LOAD_SBYTE_D16_OFFEN, BUFFER_LOAD_SBYTE_D16_OFFSET, i16, sextloadi8_private>;
 }
-
-// BUFFER_LOAD_DWORD*, addr64=0
-multiclass MUBUF_Load_Dword <ValueType vt,
-                             MUBUF_Pseudo offset,
-                             MUBUF_Pseudo offen,
-                             MUBUF_Pseudo idxen,
-                             MUBUF_Pseudo bothen> {
-
-  def : GCNPat <
-    (vt (int_SI_buffer_load_dword v4i32:$rsrc, (i32 imm), i32:$soffset,
-                                  imm:$offset, 0, 0, imm:$glc, imm:$slc,
-                                  imm:$tfe)),
-    (offset $rsrc, $soffset, (as_i16imm $offset), (as_i1imm $glc),
-            (as_i1imm $slc), (as_i1imm $tfe))
-  >;
-
-  def : GCNPat <
-    (vt (int_SI_buffer_load_dword v4i32:$rsrc, i32:$vaddr, i32:$soffset,
-                                  imm:$offset, 1, 0, imm:$glc, imm:$slc,
-                                  imm:$tfe)),
-    (offen $vaddr, $rsrc, $soffset, (as_i16imm $offset), (as_i1imm $glc), (as_i1imm $slc),
-           (as_i1imm $tfe))
-  >;
-
-  def : GCNPat <
-    (vt (int_SI_buffer_load_dword v4i32:$rsrc, i32:$vaddr, i32:$soffset,
-                                  imm:$offset, 0, 1, imm:$glc, imm:$slc,
-                                  imm:$tfe)),
-    (idxen $vaddr, $rsrc, $soffset, (as_i16imm $offset), (as_i1imm $glc),
-           (as_i1imm $slc), (as_i1imm $tfe))
-  >;
-
-  def : GCNPat <
-    (vt (int_SI_buffer_load_dword v4i32:$rsrc, v2i32:$vaddr, i32:$soffset,
-                                  imm:$offset, 1, 1, imm:$glc, imm:$slc,
-                                  imm:$tfe)),
-    (bothen $vaddr, $rsrc, $soffset, (as_i16imm $offset), (as_i1imm $glc), (as_i1imm $slc),
-            (as_i1imm $tfe))
-  >;
-}
-
-defm : MUBUF_Load_Dword <i32, BUFFER_LOAD_DWORD_OFFSET, BUFFER_LOAD_DWORD_OFFEN,
-                         BUFFER_LOAD_DWORD_IDXEN, BUFFER_LOAD_DWORD_BOTHEN>;
-defm : MUBUF_Load_Dword <v2i32, BUFFER_LOAD_DWORDX2_OFFSET, BUFFER_LOAD_DWORDX2_OFFEN,
-                         BUFFER_LOAD_DWORDX2_IDXEN, BUFFER_LOAD_DWORDX2_BOTHEN>;
-defm : MUBUF_Load_Dword <v4i32, BUFFER_LOAD_DWORDX4_OFFSET, BUFFER_LOAD_DWORDX4_OFFEN,
-                         BUFFER_LOAD_DWORDX4_IDXEN, BUFFER_LOAD_DWORDX4_BOTHEN>;
-
 multiclass MUBUFStore_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo Instr_OFFSET,
                                       ValueType vt, PatFrag atomic_st> {
   // Store follows atomic op convention so address is forst

@@ -71,13 +71,12 @@ class CFRefLeakReport : public CFRefReport {
   // Finds the location where a leak warning for 'sym' should be raised.
   void deriveAllocLocation(CheckerContext &Ctx, SymbolRef sym);
   // Produces description of a leak warning which is printed on the console.
-  void createDescription(CheckerContext &Ctx, bool IncludeAllocationLine);
+  void createDescription(CheckerContext &Ctx);
 
 public:
   CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
                   const SummaryLogTy &Log, ExplodedNode *n, SymbolRef sym,
-                  CheckerContext &Ctx,
-                  bool IncludeAllocationLine);
+                  CheckerContext &Ctx);
 
   PathDiagnosticLocation getLocation(const SourceManager &SM) const override {
     assert(Location.isValid());

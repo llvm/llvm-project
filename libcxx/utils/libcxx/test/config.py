@@ -307,6 +307,7 @@ class Configuration(object):
             self.use_system_cxx_lib = False
         elif self.use_system_cxx_lib:
             assert os.path.isdir(self.use_system_cxx_lib), "the specified use_system_cxx_lib parameter (%s) is not a valid directory" % self.use_system_cxx_lib
+            self.use_system_cxx_lib = os.path.abspath(self.use_system_cxx_lib)
         self.lit_config.note(
             "inferred use_system_cxx_lib as: %r" % self.use_system_cxx_lib)
 
@@ -406,11 +407,8 @@ class Configuration(object):
             if self.use_deployment:
                 self.add_deployment_feature('with_system_cxx_lib')
 
-        # Configure the availability markup checks features.
+        # Configure the availability feature.
         if self.use_deployment:
-            self.config.available_features.add('availability_markup')
-            self.add_deployment_feature('availability_markup')
-
             self.config.available_features.add('availability')
             self.add_deployment_feature('availability')
 

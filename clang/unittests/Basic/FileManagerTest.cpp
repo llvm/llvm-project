@@ -351,22 +351,34 @@ TEST_F(FileManagerTest, makeAbsoluteUsesVFS) {
 
 // getVirtualFile should always fill the real path.
 TEST_F(FileManagerTest, getVirtualFileFillsRealPathName) {
+  SmallString<64> CustomWorkingDir;
+#ifdef _WIN32
+  CustomWorkingDir = "C:/";
+#else
+  CustomWorkingDir = "/";
+#endif
+
+  auto FS = IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>(
+      new llvm::vfs::InMemoryFileSystem);
+  // setCurrentworkingdirectory must finish without error.
+  ASSERT_TRUE(!FS->setCurrentWorkingDirectory(CustomWorkingDir));
+
+  FileSystemOptions Opts;
+  FileManager Manager(Opts, FS);
+
   // Inject fake files into the file system.
   auto statCache = llvm::make_unique<FakeStatCache>();
   statCache->InjectDirectory("/tmp", 42);
   statCache->InjectFile("/tmp/test", 43);
-  manager.addStatCache(std::move(statCache));
+
+  Manager.addStatCache(std::move(statCache));
 
   // Check for real path.
-  const FileEntry *file = manager.getVirtualFile("/tmp/test", 123, 1);
+  const FileEntry *file = Manager.getVirtualFile("/tmp/test", 123, 1);
   ASSERT_TRUE(file != nullptr);
   ASSERT_TRUE(file->isValid());
-  SmallString<64> ExpectedResult;
-#ifdef _WIN32
-  ExpectedResult = "C:/";
-#else
-  ExpectedResult = "/";
-#endif
+  SmallString<64> ExpectedResult = CustomWorkingDir;
+
   llvm::sys::path::append(ExpectedResult, "tmp", "test");
   EXPECT_EQ(file->tryGetRealPathName(), ExpectedResult);
 }

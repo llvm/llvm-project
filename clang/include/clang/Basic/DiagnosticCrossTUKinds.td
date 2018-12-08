@@ -15,4 +15,8 @@ def err_fnmap_parsing : Error<
 
 def err_multiple_def_index : Error<
   "multiple definitions are found for the same key in index ">;
+
+def warn_ctu_incompat_triple : Warning<
+  "imported AST from '%0' had been generated for a different target, "
+  "current: %1, imported: %2">, InGroup<CrossTU>;
 }

@@ -37,6 +37,7 @@
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/RecordName.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
+#include "llvm/DebugInfo/CodeView/SymbolRecordHelpers.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
@@ -538,16 +539,114 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   if (!func_range.GetBaseAddress().IsValid())
     return nullptr;
 
-  Type *func_type = nullptr;
+  ProcSym proc(static_cast<SymbolRecordKind>(sym_record.kind()));
+  cantFail(SymbolDeserializer::deserializeAs<ProcSym>(sym_record, proc));
+  TypeSP func_type = GetOrCreateType(proc.FunctionType);
 
-  // FIXME: Resolve types and mangled names.
-  PdbTypeSymId sig_id(TypeIndex::None(), false);
-  Mangled mangled(getSymbolName(sym_record));
+  PdbTypeSymId sig_id(proc.FunctionType, false);
+  Mangled mangled(proc.Name);
   FunctionSP func_sp = std::make_shared<Function>(
       sc.comp_unit, toOpaqueUid(func_id), toOpaqueUid(sig_id), mangled,
-      func_type, func_range);
+      func_type.get(), func_range);
 
   sc.comp_unit->AddFunction(func_sp);
+
+  clang::StorageClass storage = clang::SC_None;
+  if (sym_record.kind() == S_LPROC32)
+    storage = clang::SC_Static;
+
+  // There are two ways we could retrieve the parameter list.  The first is by
+  // iterating the arguments on the function signature type, however that would
+  // only tell us the types of the arguments and not the names.  The second is
+  // to iterate the CVSymbol records that follow the S_GPROC32 / S_LPROC32 until
+  // we have the correct number of arguments as stated by the function
+  // signature. The latter has more potential to go wrong in the face of
+  // improper debug info simply because we're assuming more about the layout of
+  // the records, but it is the only way to get argument names.
+  CVType sig_cvt;
+  CVType arg_list_cvt;
+  ProcedureRecord sig_record;
+  ArgListRecord arg_list_record;
+
+  sig_cvt = m_index->tpi().getType(proc.FunctionType);
+  if (sig_cvt.kind() != LF_PROCEDURE)
+    return func_sp;
+  cantFail(
+      TypeDeserializer::deserializeAs<ProcedureRecord>(sig_cvt, sig_record));
+
+  CompilerDeclContext context =
+      GetDeclContextContainingUID(toOpaqueUid(func_id));
+
+  clang::DeclContext *decl_context =
+      static_cast<clang::DeclContext *>(context.GetOpaqueDeclContext());
+  clang::FunctionDecl *function_decl = m_clang->CreateFunctionDeclaration(
+      decl_context, proc.Name.str().c_str(),
+      func_type->GetForwardCompilerType(), storage, false);
+
+  lldbassert(m_uid_to_decl.count(toOpaqueUid(func_id)) == 0);
+  m_uid_to_decl[toOpaqueUid(func_id)] = function_decl;
+  CVSymbolArray scope = limitSymbolArrayToScope(
+      cci->m_debug_stream.getSymbolArray(), func_id.offset);
+
+  uint32_t params_remaining = sig_record.getParameterCount();
+  auto begin = scope.begin();
+  auto end = scope.end();
+  std::vector<clang::ParmVarDecl *> params;
+  while (begin != end && params_remaining > 0) {
+    uint32_t record_offset = begin.offset();
+    CVSymbol sym = *begin++;
+
+    TypeIndex param_type;
+    llvm::StringRef param_name;
+    switch (sym.kind()) {
+    case S_REGREL32: {
+      RegRelativeSym reg(SymbolRecordKind::RegRelativeSym);
+      cantFail(SymbolDeserializer::deserializeAs<RegRelativeSym>(sym, reg));
+      param_type = reg.Type;
+      param_name = reg.Name;
+      break;
+    }
+    case S_REGISTER: {
+      RegisterSym reg(SymbolRecordKind::RegisterSym);
+      cantFail(SymbolDeserializer::deserializeAs<RegisterSym>(sym, reg));
+      param_type = reg.Index;
+      param_name = reg.Name;
+      break;
+    }
+    case S_LOCAL: {
+      LocalSym local(SymbolRecordKind::LocalSym);
+      cantFail(SymbolDeserializer::deserializeAs<LocalSym>(sym, local));
+      if ((local.Flags & LocalSymFlags::IsParameter) == LocalSymFlags::None)
+        continue;
+      param_type = local.Type;
+      param_name = local.Name;
+      break;
+    }
+    case S_BLOCK32:
+      // All parameters should come before the first block.  If that isn't the
+      // case, then perhaps this is bad debug info that doesn't contain
+      // information about all parameters.
+      params_remaining = 0;
+      continue;
+    default:
+      continue;
+    }
+
+    PdbCompilandSymId param_uid(func_id.modi, record_offset);
+    TypeSP type_sp = GetOrCreateType(param_type);
+    clang::ParmVarDecl *param = m_clang->CreateParameterDeclaration(
+        param_name.str().c_str(), type_sp->GetForwardCompilerType(),
+        clang::SC_None);
+    lldbassert(m_uid_to_decl.count(toOpaqueUid(param_uid)) == 0);
+
+    m_uid_to_decl[toOpaqueUid(param_uid)] = param;
+    params.push_back(param);
+    --params_remaining;
+  }
+
+  if (!params.empty())
+    m_clang->SetFunctionParameters(function_decl, params.data(), params.size());
+
   return func_sp;
 }
 
@@ -714,6 +813,8 @@ AnyScopesHaveTemplateParams(llvm::ArrayRef<llvm::ms_demangle::Node *> scopes) {
 std::pair<clang::DeclContext *, std::string>
 SymbolFileNativePDB::CreateDeclInfoForType(const TagRecord &record,
                                            TypeIndex ti) {
+  // FIXME: Move this to GetDeclContextContainingUID.
+
   llvm::ms_demangle::Demangler demangler;
   StringView sv(record.UniqueName.begin(), record.UniqueName.size());
   llvm::ms_demangle::TagTypeNode *ttn = demangler.parseTagUniqueName(sv);
@@ -1519,6 +1620,32 @@ size_t SymbolFileNativePDB::FindTypesByName(llvm::StringRef name,
 }
 
 size_t SymbolFileNativePDB::ParseTypes(const SymbolContext &sc) { return 0; }
+
+CompilerDeclContext
+SymbolFileNativePDB::GetDeclContextContainingUID(lldb::user_id_t uid) {
+  // FIXME: This should look up the uid, decide if it's a symbol or a type, and
+  // depending which it is, find the appropriate DeclContext.  Possibilities:
+  // For classes and typedefs:
+  //   * Function
+  //   * Namespace
+  //   * Global
+  //   * Block
+  //   * Class
+  // For field list members:
+  //   * Class
+  // For variables:
+  //   * Function
+  //   * Namespace
+  //   * Global
+  //   * Block
+  // For functions:
+  //   * Namespace
+  //   * Global
+  //   * Class
+  //
+  // It is an error to call this function with a uid for any other symbol type.
+  return {m_clang, m_clang->GetTranslationUnitDecl()};
+}
 
 Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
   auto iter = m_types.find(type_uid);

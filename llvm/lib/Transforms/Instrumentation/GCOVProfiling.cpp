@@ -180,6 +180,21 @@ static StringRef getFunctionName(const DISubprogram *SP) {
   return SP->getName();
 }
 
+/// Extract a filename for a DISubprogram.
+///
+/// Prefer relative paths in the coverage notes. Clang also may split
+/// up absolute paths into a directory and filename component. When
+/// the relative path doesn't exist, reconstruct the absolute path.
+SmallString<128> getFilename(const DISubprogram *SP) {
+  SmallString<128> Path;
+  StringRef RelPath = SP->getFilename();
+  if (sys::fs::exists(RelPath))
+    Path = RelPath;
+  else
+    sys::path::append(Path, SP->getDirectory(), SP->getFilename());
+  return Path;
+}
+
 namespace {
   class GCOVRecord {
    protected:
@@ -256,7 +271,7 @@ namespace {
     }
 
    private:
-    StringRef Filename;
+    std::string Filename;
     SmallVector<uint32_t, 32> Lines;
   };
 
@@ -377,8 +392,9 @@ namespace {
 
     void writeOut() {
       writeBytes(FunctionTag, 4);
+      SmallString<128> Filename = getFilename(SP);
       uint32_t BlockLen = 1 + 1 + 1 + lengthOfGCOVString(getFunctionName(SP)) +
-                          1 + lengthOfGCOVString(SP->getFilename()) + 1;
+                          1 + lengthOfGCOVString(Filename) + 1;
       if (UseCfgChecksum)
         ++BlockLen;
       write(BlockLen);
@@ -387,7 +403,7 @@ namespace {
       if (UseCfgChecksum)
         write(CfgChecksum);
       writeGCOVString(getFunctionName(SP));
-      writeGCOVString(SP->getFilename());
+      writeGCOVString(Filename);
       write(SP->getLine());
 
       // Emit count of blocks.
@@ -466,7 +482,7 @@ bool GCOVProfiler::isFunctionInstrumented(const Function &F) {
   if (FilterRe.empty() && ExcludeRe.empty()) {
     return true;
   }
-  const StringRef Filename = F.getSubprogram()->getFilename();
+  SmallString<128> Filename = getFilename(F.getSubprogram());
   auto It = InstrumentedFiles.find(Filename);
   if (It != InstrumentedFiles.end()) {
     return It->second;
@@ -688,7 +704,8 @@ void GCOVProfiler::emitProfileNotes() {
       // Add the function line number to the lines of the entry block
       // to have a counter for the function definition.
       uint32_t Line = SP->getLine();
-      Func.getBlock(&EntryBlock).getFile(SP->getFilename()).addLine(Line);
+      auto Filename = getFilename(SP);
+      Func.getBlock(&EntryBlock).getFile(Filename).addLine(Line);
 
       for (auto &BB : F) {
         GCOVBlock &Block = Func.getBlock(&BB);
@@ -719,7 +736,7 @@ void GCOVProfiler::emitProfileNotes() {
           if (SP != getDISubprogram(Loc.getScope()))
             continue;
 
-          GCOVLines &Lines = Block.getFile(SP->getFilename());
+          GCOVLines &Lines = Block.getFile(Filename);
           Lines.addLine(Loc.getLine());
         }
         Line = 0;

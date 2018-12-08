@@ -14,7 +14,7 @@
 
 #include "sanitizer_platform.h"
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD || SANITIZER_MAC
+#if SANITIZER_LINUX || SANITIZER_MAC
 // Tests in this file assume that off_t-dependent data structures match the
 // libc ABI. For example, struct dirent here is what readdir() function (as
 // exported from libc) returns, and not the user-facing "dirent", which
@@ -45,7 +45,7 @@
 #include <termios.h>
 #include <time.h>
 #include <wchar.h>
-#if !SANITIZER_MAC && !SANITIZER_FREEBSD
+#if !SANITIZER_MAC
 #include <utmp.h>
 #endif
 
@@ -78,44 +78,11 @@
 #include <net/if_arp.h>
 #endif
 
-#if SANITIZER_FREEBSD
-# include <sys/mount.h>
-# include <sys/sockio.h>
-# include <sys/socket.h>
-# include <sys/filio.h>
-# include <sys/signal.h>
-# include <sys/timespec.h>
-# include <sys/timex.h>
-# include <sys/mqueue.h>
-# include <sys/msg.h>
-# include <sys/ipc.h>
-# include <sys/msg.h>
-# include <sys/statvfs.h>
-# include <sys/soundcard.h>
-# include <sys/mtio.h>
-# include <sys/consio.h>
-# include <sys/kbio.h>
-# include <sys/link_elf.h>
-# include <netinet/ip_mroute.h>
-# include <netinet/in.h>
-# include <net/ethernet.h>
-# include <net/ppp_defs.h>
-# include <glob.h>
-# include <stdio.h>
-# include <term.h>
-
-#define _KERNEL  // to declare 'shminfo' structure
-# include <sys/shm.h>
-#undef _KERNEL
-
-#undef INLINE  // to avoid clashes with sanitizers' definitions
-#endif
-
-#if SANITIZER_FREEBSD || SANITIZER_IOS
+#if SANITIZER_IOS
 #undef IOC_DIRMASK
 #endif
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD
+#if SANITIZER_LINUX
 # include <utime.h>
 # include <sys/ptrace.h>
 # if defined(__mips64) || defined(__aarch64__) || defined(__arm__)
@@ -199,9 +166,9 @@ typedef struct user_fpregs elf_fpregset_t;
 namespace __sanitizer {
   unsigned struct_utsname_sz = sizeof(struct utsname);
   unsigned struct_stat_sz = sizeof(struct stat);
-#if !SANITIZER_IOS && !SANITIZER_FREEBSD
+#if !SANITIZER_IOS
   unsigned struct_stat64_sz = sizeof(struct stat64);
-#endif // !SANITIZER_IOS && !SANITIZER_FREEBSD
+#endif // !SANITIZER_IOS
   unsigned struct_rusage_sz = sizeof(struct rusage);
   unsigned struct_tm_sz = sizeof(struct tm);
   unsigned struct_passwd_sz = sizeof(struct passwd);
@@ -245,12 +212,12 @@ namespace __sanitizer {
   unsigned struct_oldold_utsname_sz = sizeof(struct oldold_utsname);
 #endif // SANITIZER_LINUX
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD
+#if SANITIZER_LINUX
   unsigned struct_rlimit_sz = sizeof(struct rlimit);
   unsigned struct_timespec_sz = sizeof(struct timespec);
   unsigned struct_utimbuf_sz = sizeof(struct utimbuf);
   unsigned struct_itimerspec_sz = sizeof(struct itimerspec);
-#endif // SANITIZER_LINUX || SANITIZER_FREEBSD
+#endif // SANITIZER_LINUX
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
   // Use pre-computed size of struct ustat to avoid <sys/ustat.h> which
@@ -270,12 +237,12 @@ namespace __sanitizer {
   unsigned struct_statvfs64_sz = sizeof(struct statvfs64);
 #endif // SANITIZER_LINUX && !SANITIZER_ANDROID
 
-#if (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned struct_timex_sz = sizeof(struct timex);
   unsigned struct_msqid_ds_sz = sizeof(struct msqid_ds);
   unsigned struct_mq_attr_sz = sizeof(struct mq_attr);
   unsigned struct_statvfs_sz = sizeof(struct statvfs);
-#endif // (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
+#endif // SANITIZER_LINUX && !SANITIZER_ANDROID
 
   const uptr sig_ign = (uptr)SIG_IGN;
   const uptr sig_dfl = (uptr)SIG_DFL;
@@ -287,7 +254,7 @@ namespace __sanitizer {
 #endif
 
 
-#if (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned struct_shminfo_sz = sizeof(struct shminfo);
   unsigned struct_shm_info_sz = sizeof(struct shm_info);
   int shmctl_ipc_stat = (int)IPC_STAT;
@@ -323,7 +290,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(ElfW(Phdr));
 unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
 #endif
 
-#if (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   int glob_nomatch = GLOB_NOMATCH;
   int glob_altdirfunc = GLOB_ALTDIRFUNC;
 #endif
@@ -448,7 +415,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_vt_stat_sz = sizeof(struct vt_stat);
 #endif // SANITIZER_LINUX
 
-#if SANITIZER_LINUX || SANITIZER_FREEBSD
+#if SANITIZER_LINUX
 #if SOUND_VERSION >= 0x040000
   unsigned struct_copr_buffer_sz = 0;
   unsigned struct_copr_debug_buf_sz = 0;
@@ -465,7 +432,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_seq_event_rec_sz = sizeof(struct seq_event_rec);
   unsigned struct_synth_info_sz = sizeof(struct synth_info);
   unsigned struct_vt_mode_sz = sizeof(struct vt_mode);
-#endif // SANITIZER_LINUX || SANITIZER_FREEBSD
+#endif // SANITIZER_LINUX
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned struct_ax25_parms_struct_sz = sizeof(struct ax25_parms_struct);
@@ -492,7 +459,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned struct_unimapinit_sz = sizeof(struct unimapinit);
 #endif // SANITIZER_LINUX && !SANITIZER_ANDROID
 
-#if (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned struct_audio_buf_info_sz = sizeof(struct audio_buf_info);
   unsigned struct_ppp_stats_sz = sizeof(struct ppp_stats);
 #endif // (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
@@ -550,7 +517,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_TIOCSPGRP = TIOCSPGRP;
   unsigned IOCTL_TIOCSTI = TIOCSTI;
   unsigned IOCTL_TIOCSWINSZ = TIOCSWINSZ;
-#if ((SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID)
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned IOCTL_SIOCGETSGCNT = SIOCGETSGCNT;
   unsigned IOCTL_SIOCGETVIFCNT = SIOCGETVIFCNT;
 #endif
@@ -740,9 +707,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_VT_RESIZE = VT_RESIZE;
   unsigned IOCTL_VT_RESIZEX = VT_RESIZEX;
   unsigned IOCTL_VT_SENDSIG = VT_SENDSIG;
-#endif // SANITIZER_LINUX
-
-#if SANITIZER_LINUX || SANITIZER_FREEBSD
   unsigned IOCTL_MTIOCGET = MTIOCGET;
   unsigned IOCTL_MTIOCTOP = MTIOCTOP;
   unsigned IOCTL_SNDCTL_DSP_GETBLKSIZE = SNDCTL_DSP_GETBLKSIZE;
@@ -835,7 +799,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_VT_RELDISP = VT_RELDISP;
   unsigned IOCTL_VT_SETMODE = VT_SETMODE;
   unsigned IOCTL_VT_WAITACTIVE = VT_WAITACTIVE;
-#endif // SANITIZER_LINUX || SANITIZER_FREEBSD
+#endif // SANITIZER_LINUX
 
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned IOCTL_CYGETDEFTHRESH = CYGETDEFTHRESH;
@@ -928,7 +892,7 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
   unsigned IOCTL_TIOCSSERIAL = TIOCSSERIAL;
 #endif // SANITIZER_LINUX && !SANITIZER_ANDROID
 
-#if (SANITIZER_LINUX || SANITIZER_FREEBSD) && !SANITIZER_ANDROID
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   unsigned IOCTL_GIO_SCRNMAP = GIO_SCRNMAP;
   unsigned IOCTL_KDDISABIO = KDDISABIO;
   unsigned IOCTL_KDENABIO = KDENABIO;

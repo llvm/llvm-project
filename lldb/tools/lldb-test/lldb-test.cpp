@@ -90,6 +90,9 @@ namespace object {
 cl::opt<bool> SectionContents("contents",
                               cl::desc("Dump each section's contents"),
                               cl::sub(ObjectFileSubcommand));
+cl::opt<bool> SectionDependentModules("dep-modules",
+                                      cl::desc("Dump each dependent module"),
+                                      cl::sub(ObjectFileSubcommand));
 cl::list<std::string> InputFilenames(cl::Positional, cl::desc("<input files>"),
                                      cl::OneOrMore,
                                      cl::sub(ObjectFileSubcommand));
@@ -612,8 +615,7 @@ Expected<Error (*)(lldb_private::Module &)> opts::symbols::getAction() {
 
   if (DumpAST) {
     if (Find != FindType::None)
-      return make_string_error(
-          "Cannot both search and dump AST.");
+      return make_string_error("Cannot both search and dump AST.");
     if (Regex || !Context.empty() || !Name.empty() || !File.empty() ||
         Line != 0)
       return make_string_error(
@@ -758,6 +760,20 @@ static int dumpObjectFiles(Debugger &Dbg) {
       }
       Printer.NewLine();
     }
+
+    if (opts::object::SectionDependentModules) {
+      // A non-empty section list ensures a valid object file.
+      auto Obj = ModulePtr->GetObjectFile();
+      FileSpecList Files;
+      auto Count = Obj->GetDependentModules(Files);
+      Printer.formatLine("Showing {0} dependent module(s)", Count);
+      for (size_t I = 0; I < Files.GetSize(); ++I) {
+        AutoIndent Indent(Printer, 2);
+        Printer.formatLine("Name: {0}",
+                           Files.GetFileSpecAtIndex(I).GetCString());
+      }
+      Printer.NewLine();
+    }
   }
   return HadErrors;
 }
@@ -832,8 +848,8 @@ bool opts::irmemorymap::evalMalloc(StringRef Line,
     ++Probe;
   }
 
-  // Insert the new allocation into the interval map. Use unique allocation IDs
-  // to inhibit interval coalescing.
+  // Insert the new allocation into the interval map. Use unique allocation
+  // IDs to inhibit interval coalescing.
   static unsigned AllocationID = 0;
   if (Size)
     State.Allocations.insert(Addr, EndOfRegion, AllocationID++);

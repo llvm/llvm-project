@@ -1,4 +1,5 @@
 ; RUN: opt -S < %s -load-store-vectorizer | FileCheck %s
+; RUN: opt -S < %s -passes='function(load-store-vectorizer)' | FileCheck %s
 
 declare void @llvm.sideeffect()
 
