@@ -4247,30 +4247,26 @@ public:
 
   void EmitSanitizerStatReport(llvm::SanitizerStatKind SSK);
 
-  struct TargetMultiVersionResolverOption {
+  struct MultiVersionResolverOption {
     llvm::Function *Function;
-    TargetAttr::ParsedTargetAttr ParsedAttribute;
-    unsigned Priority;
-    TargetMultiVersionResolverOption(
-        const TargetInfo &TargInfo, llvm::Function *F,
-        const clang::TargetAttr::ParsedTargetAttr &PT)
-        : Function(F), ParsedAttribute(PT), Priority(0u) {
-      for (StringRef Feat : PT.Features)
-        Priority = std::max(Priority,
-                            TargInfo.multiVersionSortPriority(Feat.substr(1)));
+    struct Conds {
+      StringRef Architecture;
+      llvm::SmallVector<StringRef, 8> Features;
 
-      if (!PT.Architecture.empty())
-        Priority = std::max(Priority,
-                            TargInfo.multiVersionSortPriority(PT.Architecture));
-    }
+      Conds(StringRef Arch, ArrayRef<StringRef> Feats)
+          : Architecture(Arch), Features(Feats.begin(), Feats.end()) {}
+    } Conditions;
 
-    bool operator>(const TargetMultiVersionResolverOption &Other) const {
-      return Priority > Other.Priority;
-    }
+    MultiVersionResolverOption(llvm::Function *F, StringRef Arch,
+                               ArrayRef<StringRef> Feats)
+        : Function(F), Conditions(Arch, Feats) {}
   };
-  void EmitTargetMultiVersionResolver(
-      llvm::Function *Resolver,
-      ArrayRef<TargetMultiVersionResolverOption> Options);
+
+  // Emits the body of a multiversion function's resolver. Assumes that the
+  // options are already sorted in the proper order, with the 'default' option
+  // last (if it exists).
+  void EmitMultiVersionResolver(llvm::Function *Resolver,
+                                ArrayRef<MultiVersionResolverOption> Options);
 
   struct CPUDispatchMultiVersionResolverOption {
     llvm::Function *Function;
@@ -4306,8 +4302,7 @@ private:
   llvm::Value *EmitX86CpuSupports(ArrayRef<StringRef> FeatureStrs);
   llvm::Value *EmitX86CpuSupports(uint32_t Mask);
   llvm::Value *EmitX86CpuInit();
-  llvm::Value *
-  FormResolverCondition(const TargetMultiVersionResolverOption &RO);
+  llvm::Value *FormResolverCondition(const MultiVersionResolverOption &RO);
 };
 
 inline DominatingLLVMValue::saved_type

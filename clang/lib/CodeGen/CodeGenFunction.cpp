@@ -2359,91 +2359,53 @@ void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
   CGM.getSanStats().create(IRB, SSK);
 }
 
-llvm::Value *CodeGenFunction::FormResolverCondition(
-    const TargetMultiVersionResolverOption &RO) {
-  llvm::Value *TrueCondition = nullptr;
-  if (!RO.ParsedAttribute.Architecture.empty())
-    TrueCondition = EmitX86CpuIs(RO.ParsedAttribute.Architecture);
+llvm::Value *
+CodeGenFunction::FormResolverCondition(const MultiVersionResolverOption &RO) {
+  llvm::Value *Condition = nullptr;
 
-  if (!RO.ParsedAttribute.Features.empty()) {
-    SmallVector<StringRef, 8> FeatureList;
-    llvm::for_each(RO.ParsedAttribute.Features,
-                   [&FeatureList](const std::string &Feature) {
-                     FeatureList.push_back(StringRef{Feature}.substr(1));
-                   });
-    llvm::Value *FeatureCmp = EmitX86CpuSupports(FeatureList);
-    TrueCondition = TrueCondition ? Builder.CreateAnd(TrueCondition, FeatureCmp)
-                                  : FeatureCmp;
+  if (!RO.Conditions.Architecture.empty())
+    Condition = EmitX86CpuIs(RO.Conditions.Architecture);
+
+  if (!RO.Conditions.Features.empty()) {
+    llvm::Value *FeatureCond = EmitX86CpuSupports(RO.Conditions.Features);
+    Condition =
+        Condition ? Builder.CreateAnd(Condition, FeatureCond) : FeatureCond;
   }
-  return TrueCondition;
+  return Condition;
 }
 
-void CodeGenFunction::EmitTargetMultiVersionResolver(
-    llvm::Function *Resolver,
-    ArrayRef<TargetMultiVersionResolverOption> Options) {
+void CodeGenFunction::EmitMultiVersionResolver(
+    llvm::Function *Resolver, ArrayRef<MultiVersionResolverOption> Options) {
   assert((getContext().getTargetInfo().getTriple().getArch() ==
               llvm::Triple::x86 ||
           getContext().getTargetInfo().getTriple().getArch() ==
               llvm::Triple::x86_64) &&
          "Only implemented for x86 targets");
-
-  // Main function's basic block.
-  llvm::BasicBlock *CurBlock = createBasicBlock("entry", Resolver);
-  Builder.SetInsertPoint(CurBlock);
-  EmitX86CpuInit();
-
-  llvm::Function *DefaultFunc = nullptr;
-  for (const TargetMultiVersionResolverOption &RO : Options) {
-    Builder.SetInsertPoint(CurBlock);
-    llvm::Value *TrueCondition = FormResolverCondition(RO);
-
-    if (!TrueCondition) {
-      DefaultFunc = RO.Function;
-    } else {
-      llvm::BasicBlock *RetBlock = createBasicBlock("ro_ret", Resolver);
-      llvm::IRBuilder<> RetBuilder(RetBlock);
-      RetBuilder.CreateRet(RO.Function);
-      CurBlock = createBasicBlock("ro_else", Resolver);
-      Builder.CreateCondBr(TrueCondition, RetBlock, CurBlock);
-    }
-  }
-
-  assert(DefaultFunc && "No default version?");
-  // Emit return from the 'else-ist' block.
-  Builder.SetInsertPoint(CurBlock);
-  Builder.CreateRet(DefaultFunc);
-}
-
-void CodeGenFunction::EmitCPUDispatchMultiVersionResolver(
-    llvm::Function *Resolver,
-    ArrayRef<CPUDispatchMultiVersionResolverOption> Options) {
-  assert((getContext().getTargetInfo().getTriple().getArch() ==
-              llvm::Triple::x86 ||
-          getContext().getTargetInfo().getTriple().getArch() ==
-              llvm::Triple::x86_64) &&
-         "Only implemented for x86 targets");
-
   // Main function's basic block.
   llvm::BasicBlock *CurBlock = createBasicBlock("resolver_entry", Resolver);
   Builder.SetInsertPoint(CurBlock);
   EmitX86CpuInit();
 
-  for (const CPUDispatchMultiVersionResolverOption &RO : Options) {
+  for (const MultiVersionResolverOption &RO : Options) {
     Builder.SetInsertPoint(CurBlock);
+    llvm::Value *Condition = FormResolverCondition(RO);
 
-    // "generic" case should catch-all.
-    if (RO.FeatureMask == 0) {
+    // The 'default' or 'generic' case.
+    if (!Condition) {
+      assert(&RO == Options.end() - 1 &&
+             "Default or Generic case must be last");
       Builder.CreateRet(RO.Function);
       return;
     }
+
     llvm::BasicBlock *RetBlock = createBasicBlock("resolver_return", Resolver);
     llvm::IRBuilder<> RetBuilder(RetBlock);
     RetBuilder.CreateRet(RO.Function);
     CurBlock = createBasicBlock("resolver_else", Resolver);
-    llvm::Value *TrueCondition = EmitX86CpuSupports(RO.FeatureMask);
-    Builder.CreateCondBr(TrueCondition, RetBlock, CurBlock);
+    Builder.CreateCondBr(Condition, RetBlock, CurBlock);
   }
 
+  // If no generic/default, emit an unreachable.
   Builder.SetInsertPoint(CurBlock);
   llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
   TrapCall->setDoesNotReturn();
