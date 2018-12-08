@@ -306,8 +306,8 @@ static void handleWeakUndefines() {
 
     // It is possible for undefined functions not to have a signature (eg. if
     // added via "--undefined"), but weak undefined ones do have a signature.
-    assert(FuncSym->FunctionType);
-    const WasmSignature &Sig = *FuncSym->FunctionType;
+    assert(FuncSym->Signature);
+    const WasmSignature &Sig = *FuncSym->Signature;
 
     // Add a synthetic dummy for weak undefined functions.  These dummies will
     // be GC'd if not used as the target of any "call" instructions.

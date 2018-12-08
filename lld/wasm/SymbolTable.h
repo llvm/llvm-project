@@ -56,6 +56,8 @@ public:
                          uint32_t Size);
   Symbol *addDefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
                            InputGlobal *G);
+  Symbol *addDefinedEvent(StringRef Name, uint32_t Flags, InputFile *File,
+                          InputEvent *E);
 
   Symbol *addUndefinedFunction(StringRef Name, uint32_t Flags, InputFile *File,
                                const WasmSignature *Signature);

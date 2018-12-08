@@ -62,8 +62,9 @@ STATISTIC(NumFixedCondBrs, "Number of x86 condbr folded");
 namespace {
 class X86CondBrFoldingPass : public MachineFunctionPass {
 public:
-  X86CondBrFoldingPass() : MachineFunctionPass(ID) {}
-
+  X86CondBrFoldingPass() : MachineFunctionPass(ID) {
+    initializeX86CondBrFoldingPassPass(*PassRegistry::getPassRegistry());
+  }
   StringRef getPassName() const override { return "X86 CondBr Folding"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -73,12 +74,13 @@ public:
     AU.addRequired<MachineBranchProbabilityInfo>();
   }
 
-private:
+public:
   static char ID;
 };
+} // namespace
 
 char X86CondBrFoldingPass::ID = 0;
-} // namespace
+INITIALIZE_PASS(X86CondBrFoldingPass, "X86CondBrFolding", "X86CondBrFolding", false, false)
 
 FunctionPass *llvm::createX86CondBrFolding() {
   return new X86CondBrFoldingPass();

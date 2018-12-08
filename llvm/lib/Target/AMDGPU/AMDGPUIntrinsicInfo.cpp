@@ -40,7 +40,7 @@ StringRef AMDGPUIntrinsicInfo::getName(unsigned IntrID,
   if (IntrID < Intrinsic::num_intrinsics)
     return StringRef();
 
-  assert(IntrID < AMDGPUIntrinsic::num_AMDGPU_intrinsics &&
+  assert(IntrID < SIIntrinsic::num_AMDGPU_intrinsics &&
          "Invalid intrinsic ID");
 
   return IntrinsicNameTable[IntrID - Intrinsic::num_intrinsics];
@@ -91,7 +91,7 @@ Function *AMDGPUIntrinsicInfo::getDeclaration(Module *M, unsigned IntrID,
     = cast<Function>(M->getOrInsertFunction(getName(IntrID, Tys), FTy));
 
   AttributeList AS =
-      getAttributes(M->getContext(), static_cast<AMDGPUIntrinsic::ID>(IntrID));
+      getAttributes(M->getContext(), static_cast<SIIntrinsic::ID>(IntrID));
   F->setAttributes(AS);
   return F;
 }

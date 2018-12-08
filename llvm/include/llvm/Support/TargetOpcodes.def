@@ -454,6 +454,9 @@ HANDLE_TARGET_OPCODE(G_FLOG)
 /// Floating point base-2 logarithm of a value.
 HANDLE_TARGET_OPCODE(G_FLOG2)
 
+/// Floating point base-10 logarithm of a value.
+HANDLE_TARGET_OPCODE(G_FLOG10)
+
 /// Generic FP negation.
 HANDLE_TARGET_OPCODE(G_FNEG)
 

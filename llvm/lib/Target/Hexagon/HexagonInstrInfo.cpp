@@ -1293,7 +1293,6 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vccombine))
                      .add(Op0)
                      .addReg(PReg, S)
-                     .add(Op1)
                      .addReg(SrcHi)
                      .addReg(SrcLo);
         if (IsDestLive)
@@ -2899,9 +2898,9 @@ bool HexagonInstrInfo::getMemOperandWithOffset(
     const TargetRegisterInfo *TRI) const {
   unsigned AccessSize = 0;
   BaseOp = getBaseAndOffset(LdSt, Offset, AccessSize);
-  assert(!BaseOp || BaseOp->isReg() &&
-                        "getMemOperandWithOffset only supports base "
-                        "operands of type register.");
+  assert((!BaseOp || BaseOp->isReg()) &&
+         "getMemOperandWithOffset only supports base "
+         "operands of type register.");
   return BaseOp != nullptr;
 }
 

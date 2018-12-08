@@ -1,6 +1,7 @@
 
 ; RUN: not llc < %s -march=xcore -code-model=medium 2>&1 | FileCheck %s -check-prefix=BAD_CM
 ; RUN: not llc < %s -march=xcore -code-model=kernel 2>&1 | FileCheck %s -check-prefix=BAD_CM
+; RUN: not llc < %s -march=xcore -code-model=tiny 2>&1 | FileCheck %s -check-prefix=BAD_CM
 ; BAD_CM: Target only supports CodeModel Small or Large
 
 

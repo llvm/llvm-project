@@ -101,7 +101,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
                         TT.isArch64Bit() ? "e-m:e-p:64:64-i64:64-n32:64-S128"
                                          : "e-m:e-p:32:32-i64:64-n32:64-S128",
                         TT, CPU, FS, Options, getEffectiveRelocModel(RM),
-                        CM ? *CM : CodeModel::Large, OL),
+                        getEffectiveCodeModel(CM, CodeModel::Large), OL),
       TLOF(new WebAssemblyTargetObjectFile()) {
   // WebAssembly type-checks instructions, but a noreturn function with a return
   // type that doesn't match the context will cause a check failure. So we lower

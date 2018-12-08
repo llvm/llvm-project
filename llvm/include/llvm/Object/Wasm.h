@@ -37,16 +37,16 @@ namespace object {
 class WasmSymbol {
 public:
   WasmSymbol(const wasm::WasmSymbolInfo &Info,
-             const wasm::WasmSignature *FunctionType,
              const wasm::WasmGlobalType *GlobalType,
-             const wasm::WasmEventType *EventType)
-      : Info(Info), FunctionType(FunctionType), GlobalType(GlobalType),
-        EventType(EventType) {}
+             const wasm::WasmEventType *EventType,
+             const wasm::WasmSignature *Signature)
+      : Info(Info), GlobalType(GlobalType), EventType(EventType),
+        Signature(Signature) {}
 
   const wasm::WasmSymbolInfo &Info;
-  const wasm::WasmSignature *FunctionType;
   const wasm::WasmGlobalType *GlobalType;
   const wasm::WasmEventType *EventType;
+  const wasm::WasmSignature *Signature;
 
   bool isTypeFunction() const {
     return Info.Kind == wasm::WASM_SYMBOL_TYPE_FUNCTION;
