@@ -126,23 +126,6 @@ template <> struct CustomMappingTraits<std::set<ELFSymbol>> {
   }
 };
 
-/// YAML traits for generic string vectors (i.e. list of needed libraries).
-template <> struct SequenceTraits<std::vector<std::string>> {
-  static size_t size(IO &IO, std::vector<std::string> &List) {
-    return List.size();
-  }
-
-  static std::string &element(IO &IO, std::vector<std::string> &List,
-                              size_t Index) {
-    if (Index >= List.size())
-      List.resize(Index + 1);
-    return List[Index];
-  }
-
-  // Compacts list of needed libraries into a single line.
-  static const bool flow = true;
-};
-
 /// YAML traits for ELFStub objects.
 template <> struct MappingTraits<ELFStub> {
   static void mapping(IO &IO, ELFStub &Stub) {

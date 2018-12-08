@@ -61,7 +61,7 @@ EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
 
         PRINT(LD_SYNC,
               "call kmpc_barrier with %d omp threads, sync parameter %d\n",
-              numberOfActiveOMPThreads, threads);
+              (int)numberOfActiveOMPThreads, (int)threads);
         // Barrier #1 is for synchronization among active threads.
         named_sync(L1_BARRIER, threads);
       }
@@ -89,7 +89,7 @@ EXTERN void __kmpc_barrier_simple_generic(kmp_Ident *loc_ref, int32_t tid) {
   PRINT(LD_SYNC,
         "call kmpc_barrier_simple_generic with %d omp threads, sync parameter "
         "%d\n",
-        numberOfActiveOMPThreads, threads);
+        (int)numberOfActiveOMPThreads, (int)threads);
   // Barrier #1 is for synchronization among active threads.
   named_sync(L1_BARRIER, threads);
   PRINT0(LD_SYNC, "completed kmpc_barrier_simple_generic\n");

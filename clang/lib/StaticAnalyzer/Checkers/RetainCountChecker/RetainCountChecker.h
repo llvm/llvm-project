@@ -92,7 +92,7 @@ private:
   /// See the RefVal::Kind enum for possible values.
   unsigned RawKind : 5;
 
-  /// The kind of object being tracked (CF or ObjC), if known.
+  /// The kind of object being tracked (CF or ObjC or OSObject), if known.
   ///
   /// See the RetEffect::ObjKind enum for possible values.
   unsigned RawObjectKind : 3;
@@ -268,10 +268,12 @@ class RetainCountChecker
   mutable bool ShouldResetSummaryLog;
 
 public:
-  /// Optional setting to indicate if leak reports should include
-  /// the allocation line.
-  bool IncludeAllocationLine;
-  bool ShouldCheckOSObjectRetainCount;
+
+  /// Track Objective-C and CoreFoundation objects.
+  bool TrackObjCAndCFObjects = false;
+
+  /// Track sublcasses of OSObject.
+  bool TrackOSObjects = false;
 
   RetainCountChecker() : ShouldResetSummaryLog(false) {}
 
@@ -290,7 +292,7 @@ public:
     bool ARCEnabled = (bool)Ctx.getLangOpts().ObjCAutoRefCount;
     if (!Summaries) {
       Summaries.reset(new RetainSummaryManager(
-          Ctx, ARCEnabled, ShouldCheckOSObjectRetainCount));
+          Ctx, ARCEnabled, TrackObjCAndCFObjects, TrackOSObjects));
     } else {
       assert(Summaries->isARCEnabled() == ARCEnabled);
     }

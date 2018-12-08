@@ -85,9 +85,9 @@
 }
 @end
 // CHECK:      ObjCInterfaceDecl{{.*}} TestGenericInterface
-// CHECK-NEXT:   -ObjCTypeParamDecl
-// CHECK-NEXT:   -super ObjCInterface
-// CHECK-NEXT:   -ObjCProtocol
+// CHECK-NEXT:   -ObjCTypeParamDecl {{.+}} <col:33> col:33 T 'id':'id'
+// CHECK-NEXT:   -super ObjCInterface {{.+}} 'A'
+// CHECK-NEXT:   -ObjCProtocol {{.+}} 'P'
 
 @implementation TestObjCClass (TestObjCCategoryDecl)
 - (void) bar {

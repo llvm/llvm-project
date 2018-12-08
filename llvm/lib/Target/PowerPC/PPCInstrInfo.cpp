@@ -1429,17 +1429,15 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
                                       : (isPPC64 ? PPC::BDZLR8 : PPC::BDZLR)));
     } else if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
       MI.setDesc(get(PPC::BCLR));
-      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg());
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
     } else if (Pred[0].getImm() == PPC::PRED_BIT_UNSET) {
       MI.setDesc(get(PPC::BCLRn));
-      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg());
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
     } else {
       MI.setDesc(get(PPC::BCCLR));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI)
           .addImm(Pred[0].getImm())
-          .addReg(Pred[1].getReg());
+          .add(Pred[1]);
     }
 
     return true;
@@ -1454,7 +1452,7 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
 
       MI.setDesc(get(PPC::BC));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg())
+          .add(Pred[1])
           .addMBB(MBB);
     } else if (Pred[0].getImm() == PPC::PRED_BIT_UNSET) {
       MachineBasicBlock *MBB = MI.getOperand(0).getMBB();
@@ -1462,7 +1460,7 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
 
       MI.setDesc(get(PPC::BCn));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg())
+          .add(Pred[1])
           .addMBB(MBB);
     } else {
       MachineBasicBlock *MBB = MI.getOperand(0).getMBB();
@@ -1471,13 +1469,13 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
       MI.setDesc(get(PPC::BCC));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI)
           .addImm(Pred[0].getImm())
-          .addReg(Pred[1].getReg())
+          .add(Pred[1])
           .addMBB(MBB);
     }
 
     return true;
-  } else if (OpC == PPC::BCTR  || OpC == PPC::BCTR8 ||
-             OpC == PPC::BCTRL || OpC == PPC::BCTRL8) {
+  } else if (OpC == PPC::BCTR || OpC == PPC::BCTR8 || OpC == PPC::BCTRL ||
+             OpC == PPC::BCTRL8) {
     if (Pred[1].getReg() == PPC::CTR8 || Pred[1].getReg() == PPC::CTR)
       llvm_unreachable("Cannot predicate bctr[l] on the ctr register");
 
@@ -1487,14 +1485,12 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
     if (Pred[0].getImm() == PPC::PRED_BIT_SET) {
       MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8 : PPC::BCCTR8)
                              : (setLR ? PPC::BCCTRL : PPC::BCCTR)));
-      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg());
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
       return true;
     } else if (Pred[0].getImm() == PPC::PRED_BIT_UNSET) {
       MI.setDesc(get(isPPC64 ? (setLR ? PPC::BCCTRL8n : PPC::BCCTR8n)
                              : (setLR ? PPC::BCCTRLn : PPC::BCCTRn)));
-      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
-          .addReg(Pred[1].getReg());
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI).add(Pred[1]);
       return true;
     }
 
@@ -1502,7 +1498,7 @@ bool PPCInstrInfo::PredicateInstruction(MachineInstr &MI,
                            : (setLR ? PPC::BCCCTRL : PPC::BCCCTR)));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
         .addImm(Pred[0].getImm())
-        .addReg(Pred[1].getReg());
+        .add(Pred[1]);
     return true;
   }
 

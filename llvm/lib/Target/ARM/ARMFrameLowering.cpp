@@ -911,6 +911,7 @@ ARMFrameLowering::ResolveFrameIndexReference(const MachineFunction &MF,
       assert(RegInfo->hasBasePointer(MF) &&
              "VLAs and dynamic stack alignment, but missing base pointer!");
       FrameReg = RegInfo->getBaseRegister();
+      Offset -= SPAdj;
     }
     return Offset;
   }

@@ -27,7 +27,8 @@ int main() {
   static_assert(!std::__invokable<BadCompare const&, int const&, int const&>::value, "");
   static_assert(std::__invokable<BadCompare&, int const&, int const&>::value, "");
 
-  // expected-warning@__tree:* 4 {{the specified comparator type does not provide a const call operator}}
+  // expected-warning@set:* 2 {{the specified comparator type does not provide a const call operator}}
+  // expected-warning@map:* 2 {{the specified comparator type does not provide a const call operator}}
   {
     using C = std::set<int, BadCompare>;
     C s;

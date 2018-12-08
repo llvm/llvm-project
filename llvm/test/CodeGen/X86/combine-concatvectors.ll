@@ -5,8 +5,6 @@ define void @PR32957(<2 x float>* %in, <8 x float>* %out) {
 ; CHECK-LABEL: PR32957:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; CHECK-NEXT:    vmovaps %ymm0, (%rsi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq

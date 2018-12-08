@@ -51,3 +51,14 @@ llvm::codeview::getScopeEndOffset(const llvm::codeview::CVSymbol &Sym) {
     return 0;
   }
 }
+
+CVSymbolArray
+llvm::codeview::limitSymbolArrayToScope(const CVSymbolArray &Symbols,
+                                        uint32_t ScopeBegin) {
+  CVSymbol Opener = *Symbols.at(ScopeBegin);
+  assert(symbolOpensScope(Opener.kind()));
+  uint32_t EndOffset = getScopeEndOffset(Opener);
+  CVSymbol Closer = *Symbols.at(EndOffset);
+  EndOffset += Closer.RecordData.size();
+  return Symbols.substream(ScopeBegin, EndOffset);
+}

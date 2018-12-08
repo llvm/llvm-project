@@ -69,32 +69,27 @@ define i64 @Y(i64 %A) {
 define i32 @bswap_multiuse(i32 %x, i32 %y, i32* %p1, i32* %p2) nounwind {
 ; CHECK-LABEL: bswap_multiuse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushl %edi
 ; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    bswapl %edi
 ; CHECK-NEXT:    bswapl %esi
-; CHECK-NEXT:    movl %edi, (%edx)
-; CHECK-NEXT:    movl %esi, (%ecx)
 ; CHECK-NEXT:    bswapl %eax
+; CHECK-NEXT:    movl %esi, (%edx)
+; CHECK-NEXT:    movl %eax, (%ecx)
+; CHECK-NEXT:    orl %esi, %eax
 ; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: bswap_multiuse:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    movl %edi, %eax
-; CHECK64-NEXT:    orl %esi, %eax
+; CHECK64-NEXT:    movl %esi, %eax
 ; CHECK64-NEXT:    bswapl %edi
-; CHECK64-NEXT:    bswapl %esi
-; CHECK64-NEXT:    movl %edi, (%rdx)
-; CHECK64-NEXT:    movl %esi, (%rcx)
 ; CHECK64-NEXT:    bswapl %eax
+; CHECK64-NEXT:    movl %edi, (%rdx)
+; CHECK64-NEXT:    movl %eax, (%rcx)
+; CHECK64-NEXT:    orl %edi, %eax
 ; CHECK64-NEXT:    retq
   %xt = call i32 @llvm.bswap.i32(i32 %x)
   %yt = call i32 @llvm.bswap.i32(i32 %y)

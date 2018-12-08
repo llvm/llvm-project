@@ -2585,11 +2585,22 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
 
     llvm::Constant *Func = GetGlobalValue(MangledName);
 
-    if (!Func)
+    if (!Func) {
+      GlobalDecl ExistingDecl = Manglings.lookup(MangledName);
+      if (ExistingDecl.getDecl() &&
+          ExistingDecl.getDecl()->getAsFunction()->isDefined()) {
+        EmitGlobalFunctionDefinition(ExistingDecl, nullptr);
+        Func = GetGlobalValue(MangledName);
+      } else {
+        if (!ExistingDecl.getDecl())
+          ExistingDecl = GD.getWithMultiVersionIndex(Index);
+
       Func = GetOrCreateLLVMFunction(
-          MangledName, DeclTy, GD.getWithMultiVersionIndex(Index),
+          MangledName, DeclTy, ExistingDecl,
           /*ForVTable=*/false, /*DontDefer=*/true,
           /*IsThunk=*/false, llvm::AttributeList(), ForDefinition);
+      }
+    }
 
     llvm::SmallVector<StringRef, 32> Features;
     Target.getCPUSpecificCPUDispatchFeatures(II->getName(), Features);

@@ -540,6 +540,13 @@ def G_FLOG2 : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Floating point base-10 logarithm of a value.
+def G_FLOG10 : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = 0;
+}
+
 //------------------------------------------------------------------------------
 // Opcodes for LLVM Intrinsics
 //------------------------------------------------------------------------------

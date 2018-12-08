@@ -1473,6 +1473,10 @@ def fno_zero_initialized_in_bss : Flag<["-"], "fno-zero-initialized-in-bss">, Gr
 def fobjc_arc : Flag<["-"], "fobjc-arc">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Synthesize retain and release calls for Objective-C pointers">;
 def fno_objc_arc : Flag<["-"], "fno-objc-arc">, Group<f_Group>;
+def fobjc_convert_messages_to_runtime_calls :
+  Flag<["-"], "fobjc-convert-messages-to-runtime-calls">, Group<f_Group>;
+def fno_objc_convert_messages_to_runtime_calls :
+  Flag<["-"], "fno-objc-convert-messages-to-runtime-calls">, Group<f_Group>, Flags<[CC1Option]>;
 def fobjc_arc_exceptions : Flag<["-"], "fobjc-arc-exceptions">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Use EH-safe code when synthesizing retains and releases in -fobjc-arc">;
 def fno_objc_arc_exceptions : Flag<["-"], "fno-objc-arc-exceptions">, Group<f_Group>;

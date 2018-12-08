@@ -267,6 +267,9 @@
 # DEBUG-NEXT: G_FLOG2 (opcode {{[0-9]+}}): 1 type index
 # DEBUG:      .. type index coverage check SKIPPED: no rules defined
 #
+# DEBUG-NEXT: G_FLOG10 (opcode {{[0-9]+}}): 1 type index
+# DEBUG:      .. type index coverage check SKIPPED: no rules defined
+#
 # DEBUG-NEXT: G_FNEG (opcode {{[0-9]+}}): 1 type index
 # DEBUG:      .. type index coverage check SKIPPED: no rules defined
 #

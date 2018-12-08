@@ -946,7 +946,7 @@ public:
   // Save a string in the Index. Use before passing Name to
   // getOrInsertValueInfo when the string isn't owned elsewhere (e.g. on the
   // module's Strtab).
-  StringRef saveString(std::string String) { return Saver.save(String); }
+  StringRef saveString(StringRef String) { return Saver.save(String); }
 
   /// Return a ValueInfo for \p GUID setting value \p Name.
   ValueInfo getOrInsertValueInfo(GlobalValue::GUID GUID, StringRef Name) {

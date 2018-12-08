@@ -372,12 +372,14 @@ endfunction(set_windows_version_resource_properties)
 #     May specify header files for IDE generators.
 #   SONAME
 #     Should set SONAME link flags and create symlinks
+#   NO_INSTALL_RPATH
+#     Suppress default RPATH settings in shared libraries.
 #   PLUGIN_TOOL
 #     The tool (i.e. cmake target) that this plugin will link against
 #   )
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
-    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME"
+    "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH"
     "OUTPUT_NAME;PLUGIN_TOOL"
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
@@ -448,15 +450,17 @@ function(llvm_add_library name)
 
   if(ARG_MODULE)
     add_library(${name} MODULE ${ALL_FILES})
-    llvm_setup_rpath(${name})
   elseif(ARG_SHARED)
     add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
     add_library(${name} SHARED ${ALL_FILES})
-
-    llvm_setup_rpath(${name})
-
   else()
     add_library(${name} STATIC ${ALL_FILES})
+  endif()
+
+  if(NOT ARG_NO_INSTALL_RPATH)
+    if(ARG_MODULE OR ARG_SHARED)
+      llvm_setup_rpath(${name})
+    endif()
   endif()
 
   setup_dependency_debugging(${name} ${LLVM_COMMON_DEPENDS})

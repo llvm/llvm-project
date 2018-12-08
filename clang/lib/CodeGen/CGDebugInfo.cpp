@@ -181,8 +181,7 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
   SourceManager &SM = CGM.getContext().getSourceManager();
   auto *Scope = cast<llvm::DIScope>(LexicalBlockStack.back());
   PresumedLoc PCLoc = SM.getPresumedLoc(CurLoc);
-
-  if (PCLoc.isInvalid() || Scope->getFilename() == PCLoc.getFilename())
+  if (PCLoc.isInvalid() || Scope->getFile() == getOrCreateFile(CurLoc))
     return;
 
   if (auto *LBF = dyn_cast<llvm::DILexicalBlockFile>(Scope)) {
@@ -410,13 +409,13 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
   SourceManager &SM = CGM.getContext().getSourceManager();
   PresumedLoc PLoc = SM.getPresumedLoc(Loc);
 
-  if (PLoc.isInvalid() || StringRef(PLoc.getFilename()).empty())
+  StringRef FileName = PLoc.getFilename();
+  if (PLoc.isInvalid() || FileName.empty())
     // If the location is not valid then use main input file.
     return getOrCreateMainFile();
 
   // Cache the results.
-  const char *fname = PLoc.getFilename();
-  auto It = DIFileCache.find(fname);
+  auto It = DIFileCache.find(FileName.data());
 
   if (It != DIFileCache.end()) {
     // Verify that the information still exists.
@@ -431,11 +430,41 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
   if (CSKind)
     CSInfo.emplace(*CSKind, Checksum);
 
-  llvm::DIFile *F = DBuilder.createFile(
-      remapDIPath(PLoc.getFilename()), remapDIPath(getCurrentDirname()), CSInfo,
-      getSource(SM, SM.getFileID(Loc)));
+  StringRef Dir;
+  StringRef File;
+  std::string RemappedFile = remapDIPath(FileName);
+  std::string CurDir = remapDIPath(getCurrentDirname());
+  SmallString<128> DirBuf;
+  SmallString<128> FileBuf;
+  if (llvm::sys::path::is_absolute(RemappedFile)) {
+    // Strip the common prefix (if it is more than just "/") from current
+    // directory and FileName for a more space-efficient encoding.
+    auto FileIt = llvm::sys::path::begin(RemappedFile);
+    auto FileE = llvm::sys::path::end(RemappedFile);
+    auto CurDirIt = llvm::sys::path::begin(CurDir);
+    auto CurDirE = llvm::sys::path::end(CurDir);
+    for (; CurDirIt != CurDirE && *CurDirIt == *FileIt; ++CurDirIt, ++FileIt)
+      llvm::sys::path::append(DirBuf, *CurDirIt);
+    if (std::distance(llvm::sys::path::begin(CurDir), CurDirIt) == 1) {
+      // The common prefix only the root; stripping it would cause
+      // LLVM diagnostic locations to be more confusing.
+      Dir = {};
+      File = RemappedFile;
+    } else {
+      for (; FileIt != FileE; ++FileIt)
+        llvm::sys::path::append(FileBuf, *FileIt);
+      Dir = DirBuf;
+      File = FileBuf;
+    }
+  } else {
+    Dir = CurDir;
+    File = RemappedFile;
+  }
+  llvm::DIFile *F =
+      DBuilder.createFile(File, Dir, CSInfo,
+                          getSource(SM, SM.getFileID(Loc)));
 
-  DIFileCache[fname].reset(F);
+  DIFileCache[FileName.data()].reset(F);
   return F;
 }
 
