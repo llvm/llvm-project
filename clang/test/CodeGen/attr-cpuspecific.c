@@ -96,6 +96,15 @@ void HasGeneric(void);
 // CHECK: ret void ()* @HasGeneric.A
 // CHECK-NOT: call void @llvm.trap
 
+__attribute__((cpu_dispatch(atom, generic, pentium)))
+int GenericAndPentium(int i, double d);
+// CHECK: define i32 (i32, double)* @GenericAndPentium.resolver()
+// CHECK: call void @__cpu_indicator_init
+// CHECK: ret i32 (i32, double)* @GenericAndPentium.O
+// CHECK: ret i32 (i32, double)* @GenericAndPentium.B
+// CHECK-NOT: ret i32 (i32, double)* @GenericAndPentium.A
+// CHECK-NOT: call void @llvm.trap
+
 // CHECK: attributes #[[S]] = {{.*}}"target-features"="+avx,+cmov,+f16c,+mmx,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 // CHECK: attributes #[[K]] = {{.*}}"target-features"="+adx,+avx,+avx2,+avx512cd,+avx512er,+avx512f,+avx512pf,+bmi,+cmov,+f16c,+fma,+lzcnt,+mmx,+movbe,+popcnt,+sse,+sse2,+sse3,+sse4.1,+sse4.2,+ssse3,+x87,+xsave"
 // CHECK: attributes #[[O]] = {{.*}}"target-features"="+cmov,+mmx,+movbe,+sse,+sse2,+sse3,+ssse3,+x87"

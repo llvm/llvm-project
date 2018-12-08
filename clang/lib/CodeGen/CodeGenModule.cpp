@@ -2505,6 +2505,22 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
         return CodeGenFunction::GetX86CpuSupportsMask(LHS.Conditions.Features) >
                CodeGenFunction::GetX86CpuSupportsMask(RHS.Conditions.Features);
       });
+
+  // If the list contains multiple 'default' versions, such as when it contains
+  // 'pentium' and 'generic', don't emit the call to the generic one (since we
+  // always run on at least a 'pentium'). We do this by deleting the 'least
+  // advanced' (read, lowest mangling letter).
+  while (Options.size() > 1 &&
+         CodeGenFunction::GetX86CpuSupportsMask(
+             (Options.end() - 2)->Conditions.Features) == 0) {
+    StringRef LHSName = (Options.end() - 2)->Function->getName();
+    StringRef RHSName = (Options.end() - 1)->Function->getName();
+    if (LHSName.compare(RHSName) < 0)
+      Options.erase(Options.end() - 2);
+    else
+      Options.erase(Options.end() - 1);
+  }
+
   CodeGenFunction CGF(*this);
   CGF.EmitMultiVersionResolver(ResolverFunc, Options);
 }
