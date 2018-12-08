@@ -895,6 +895,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
         .addDef(getOrCreateVReg(CI))
         .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
     return true;
+  case Intrinsic::log10:
+    MIRBuilder.buildInstr(TargetOpcode::G_FLOG10)
+        .addDef(getOrCreateVReg(CI))
+        .addUse(getOrCreateVReg(*CI.getArgOperand(0)));
+    return true;
   case Intrinsic::fabs:
     MIRBuilder.buildInstr(TargetOpcode::G_FABS)
         .addDef(getOrCreateVReg(CI))

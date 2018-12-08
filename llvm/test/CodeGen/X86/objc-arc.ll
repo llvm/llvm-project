@@ -147,6 +147,62 @@ entry:
 	ret i8* %0
 }
 
+define i8* @test_objc_objc_unsafeClaimAutoreleasedReturnValue(i8* %arg0) {
+; CHECK-LABEL: test_objc_objc_unsafeClaimAutoreleasedReturnValue
+; CHECK: callq _objc_unsafeClaimAutoreleasedReturnValue
+entry:
+    %0 = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %arg0)
+    ret i8* %0
+}
+
+define i8* @test_objc_objc_retainedObject(i8* %arg0) {
+; CHECK-LABEL: test_objc_objc_retainedObject
+; CHECK: callq _objc_retainedObject
+entry:
+    %0 = call i8* @llvm.objc.retainedObject(i8* %arg0)
+    ret i8* %0
+}
+
+define i8* @test_objc_objc_unretainedObject(i8* %arg0) {
+; CHECK-LABEL: test_objc_objc_unretainedObject
+; CHECK: callq _objc_unretainedObject
+entry:
+    %0 = call i8* @llvm.objc.unretainedObject(i8* %arg0)
+    ret i8* %0
+}
+
+define i8* @test_objc_objc_unretainedPointer(i8* %arg0) {
+; CHECK-LABEL: test_objc_objc_unretainedPointer
+; CHECK: callq _objc_unretainedPointer
+entry:
+    %0 = call i8* @llvm.objc.unretainedPointer(i8* %arg0)
+    ret i8* %0
+}
+
+define i8* @test_objc_objc_retain_autorelease(i8* %arg0) {
+; CHECK-LABEL: test_objc_objc_retain_autorelease
+; CHECK: callq _objc_retain_autorelease
+entry:
+    %0 = call i8* @llvm.objc.retain.autorelease(i8* %arg0)
+    ret i8* %0
+}
+
+define i32 @test_objc_objc_sync_enter(i8* %arg0) {
+; CHECK-LABEL: test_objc_objc_sync_enter
+; CHECK: callq _objc_sync_enter
+entry:
+    %0 = call i32 @llvm.objc.sync.enter(i8* %arg0)
+    ret i32 %0
+}
+
+define i32 @test_objc_objc_sync_exit(i8* %arg0) {
+; CHECK-LABEL: test_objc_objc_sync_exit
+; CHECK: callq _objc_sync_exit
+entry:
+    %0 = call i32 @llvm.objc.sync.exit(i8* %arg0)
+    ret i32 %0
+}
+
 declare i8* @llvm.objc.autorelease(i8*)
 declare void @llvm.objc.autoreleasePoolPop(i8*)
 declare i8* @llvm.objc.autoreleasePoolPush()
@@ -165,3 +221,10 @@ declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
 declare i8* @llvm.objc.retainBlock(i8*)
 declare void @llvm.objc.storeStrong(i8**, i8*)
 declare i8* @llvm.objc.storeWeak(i8**, i8*)
+declare i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8*)
+declare i8* @llvm.objc.retainedObject(i8*)
+declare i8* @llvm.objc.unretainedObject(i8*)
+declare i8* @llvm.objc.unretainedPointer(i8*)
+declare i8* @llvm.objc.retain.autorelease(i8*)
+declare i32 @llvm.objc.sync.enter(i8*)
+declare i32 @llvm.objc.sync.exit(i8*)

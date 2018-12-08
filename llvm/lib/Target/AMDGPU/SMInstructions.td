@@ -751,6 +751,12 @@ defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX4",   v4i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8i32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX16",  v16i32>;
+
+defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORD",     f32>;
+defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX2",   v2f32>;
+defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX4",   v4f32>;
+defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8f32>;
+defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX16",  v16f32>;
 } // End let AddedComplexity = 100
 
 let OtherPredicates = [isSICI] in {

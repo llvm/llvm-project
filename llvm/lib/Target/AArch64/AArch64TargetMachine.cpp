@@ -219,9 +219,9 @@ static Reloc::Model getEffectiveRelocModel(const Triple &TT,
   return *RM;
 }
 
-static CodeModel::Model getEffectiveCodeModel(const Triple &TT,
-                                              Optional<CodeModel::Model> CM,
-                                              bool JIT) {
+static CodeModel::Model
+getEffectiveAArch64CodeModel(const Triple &TT, Optional<CodeModel::Model> CM,
+                             bool JIT) {
   if (CM) {
     if (*CM != CodeModel::Small && *CM != CodeModel::Tiny &&
         *CM != CodeModel::Large) {
@@ -255,7 +255,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(T,
                         computeDataLayout(TT, Options.MCOptions, LittleEndian),
                         TT, CPU, FS, Options, getEffectiveRelocModel(TT, RM),
-                        getEffectiveCodeModel(TT, CM, JIT), OL),
+                        getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
       TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 

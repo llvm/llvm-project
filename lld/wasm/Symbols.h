@@ -25,6 +25,7 @@ class InputChunk;
 class InputSegment;
 class InputFunction;
 class InputGlobal;
+class InputEvent;
 class InputSection;
 
 #define INVALID_INDEX UINT32_MAX
@@ -36,6 +37,7 @@ public:
     DefinedFunctionKind,
     DefinedDataKind,
     DefinedGlobalKind,
+    DefinedEventKind,
     SectionKind,
     UndefinedFunctionKind,
     UndefinedDataKind,
@@ -47,7 +49,8 @@ public:
 
   bool isDefined() const {
     return SymbolKind == DefinedFunctionKind || SymbolKind == DefinedDataKind ||
-           SymbolKind == DefinedGlobalKind || SymbolKind == SectionKind;
+           SymbolKind == DefinedGlobalKind || SymbolKind == DefinedEventKind ||
+           SymbolKind == SectionKind;
   }
 
   bool isUndefined() const {
@@ -121,12 +124,12 @@ public:
   void setFunctionIndex(uint32_t Index);
   bool hasFunctionIndex() const;
 
-  const WasmSignature *FunctionType;
+  const WasmSignature *Signature;
 
 protected:
   FunctionSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
-                 const WasmSignature *Type)
-      : Symbol(Name, K, Flags, F), FunctionType(Type) {}
+                 const WasmSignature *Sig)
+      : Symbol(Name, K, Flags, F), Signature(Sig) {}
 
   uint32_t TableIndex = INVALID_INDEX;
   uint32_t FunctionIndex = INVALID_INDEX;
@@ -267,6 +270,50 @@ public:
   }
 };
 
+// Wasm events are features that suspend the current execution and transfer the
+// control flow to a corresponding handler. Currently the only supported event
+// kind is exceptions.
+//
+// Event tags are values to distinguish different events. For exceptions, they
+// can be used to distinguish different language's exceptions, i.e., all C++
+// exceptions have the same tag. Wasm can generate code capable of doing
+// different handling actions based on the tag of caught exceptions.
+//
+// A single EventSymbol object represents a single tag. C++ exception event
+// symbol is a weak symbol generated in every object file in which exceptions
+// are used, and has name '__cpp_exception' for linking.
+class EventSymbol : public Symbol {
+public:
+  static bool classof(const Symbol *S) { return S->kind() == DefinedEventKind; }
+
+  const WasmEventType *getEventType() const { return EventType; }
+
+  // Get/set the event index
+  uint32_t getEventIndex() const;
+  void setEventIndex(uint32_t Index);
+  bool hasEventIndex() const;
+
+  const WasmSignature *Signature;
+
+protected:
+  EventSymbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F,
+              const WasmEventType *EventType, const WasmSignature *Sig)
+      : Symbol(Name, K, Flags, F), Signature(Sig), EventType(EventType) {}
+
+  const WasmEventType *EventType;
+  uint32_t EventIndex = INVALID_INDEX;
+};
+
+class DefinedEvent : public EventSymbol {
+public:
+  DefinedEvent(StringRef Name, uint32_t Flags, InputFile *File,
+               InputEvent *Event);
+
+  static bool classof(const Symbol *S) { return S->kind() == DefinedEventKind; }
+
+  InputEvent *Event;
+};
+
 class LazySymbol : public Symbol {
 public:
   LazySymbol(StringRef Name, InputFile *File,
@@ -321,10 +368,11 @@ union SymbolUnion {
   alignas(DefinedFunction) char A[sizeof(DefinedFunction)];
   alignas(DefinedData) char B[sizeof(DefinedData)];
   alignas(DefinedGlobal) char C[sizeof(DefinedGlobal)];
-  alignas(LazySymbol) char D[sizeof(LazySymbol)];
-  alignas(UndefinedFunction) char E[sizeof(UndefinedFunction)];
-  alignas(UndefinedData) char F[sizeof(UndefinedData)];
-  alignas(UndefinedGlobal) char G[sizeof(UndefinedGlobal)];
+  alignas(DefinedEvent) char D[sizeof(DefinedEvent)];
+  alignas(LazySymbol) char E[sizeof(LazySymbol)];
+  alignas(UndefinedFunction) char F[sizeof(UndefinedFunction)];
+  alignas(UndefinedData) char G[sizeof(UndefinedData)];
+  alignas(UndefinedGlobal) char H[sizeof(UndefinedGlobal)];
   alignas(SectionSymbol) char I[sizeof(SectionSymbol)];
 };
 

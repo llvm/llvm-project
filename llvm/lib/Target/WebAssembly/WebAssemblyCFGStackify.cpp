@@ -78,12 +78,11 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
   // <LOOP|TRY marker, Loop/exception bottom BB> map
   DenseMap<const MachineInstr *, MachineBasicBlock *> BeginToBottom;
 
-  // Helper functions to register / unregister scope information created by
-  // marker instructions.
+  // Helper functions to register scope information created by marker
+  // instructions.
   void registerScope(MachineInstr *Begin, MachineInstr *End);
   void registerTryScope(MachineInstr *Begin, MachineInstr *End,
                         MachineBasicBlock *EHPad);
-  void unregisterScope(MachineInstr *Begin);
 
   MachineBasicBlock *getBottom(const MachineInstr *Begin);
 
@@ -180,23 +179,6 @@ void WebAssemblyCFGStackify::registerTryScope(MachineInstr *Begin,
   registerScope(Begin, End);
   TryToEHPad[Begin] = EHPad;
   EHPadToTry[EHPad] = Begin;
-}
-
-void WebAssemblyCFGStackify::unregisterScope(MachineInstr *Begin) {
-  assert(BeginToEnd.count(Begin));
-  MachineInstr *End = BeginToEnd[Begin];
-  assert(EndToBegin.count(End));
-  BeginToEnd.erase(Begin);
-  EndToBegin.erase(End);
-  MachineBasicBlock *EHPad = TryToEHPad.lookup(Begin);
-  if (EHPad) {
-    assert(EHPadToTry.count(EHPad));
-    TryToEHPad.erase(Begin);
-    EHPadToTry.erase(EHPad);
-  }
-  MachineBasicBlock *Bottom = BeginToBottom.lookup(Begin);
-  if (Bottom)
-    BeginToBottom.erase(Begin);
 }
 
 // Given a LOOP/TRY marker, returns its bottom BB. Use cached information if any

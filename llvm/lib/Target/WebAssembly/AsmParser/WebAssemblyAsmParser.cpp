@@ -175,27 +175,27 @@ public:
     llvm_unreachable("ParseRegister is not implemented.");
   }
 
-  bool Error(const StringRef &msg, const AsmToken &tok) {
-    return Parser.Error(tok.getLoc(), msg + tok.getString());
+  bool error(const StringRef &Msg, const AsmToken &Tok) {
+    return Parser.Error(Tok.getLoc(), Msg + Tok.getString());
   }
 
-  bool IsNext(AsmToken::TokenKind Kind) {
-    auto ok = Lexer.is(Kind);
-    if (ok)
+  bool isNext(AsmToken::TokenKind Kind) {
+    auto Ok = Lexer.is(Kind);
+    if (Ok)
       Parser.Lex();
-    return ok;
+    return Ok;
   }
 
-  bool Expect(AsmToken::TokenKind Kind, const char *KindName) {
-    if (!IsNext(Kind))
-      return Error(std::string("Expected ") + KindName + ", instead got: ",
+  bool expect(AsmToken::TokenKind Kind, const char *KindName) {
+    if (!isNext(Kind))
+      return error(std::string("Expected ") + KindName + ", instead got: ",
                    Lexer.getTok());
     return false;
   }
 
-  StringRef ExpectIdent() {
+  StringRef expectIdent() {
     if (!Lexer.is(AsmToken::Identifier)) {
-      Error("Expected identifier, got: ", Lexer.getTok());
+      error("Expected identifier, got: ", Lexer.getTok());
       return StringRef();
     }
     auto Name = Lexer.getTok().getString();
@@ -203,33 +203,38 @@ public:
     return Name;
   }
 
-  Optional<wasm::ValType> ParseType(const StringRef &Type) {
+  Optional<wasm::ValType> parseType(const StringRef &Type) {
     // FIXME: can't use StringSwitch because wasm::ValType doesn't have a
     // "invalid" value.
-    if (Type == "i32") return wasm::ValType::I32;
-    if (Type == "i64") return wasm::ValType::I64;
-    if (Type == "f32") return wasm::ValType::F32;
-    if (Type == "f64") return wasm::ValType::F64;
+    if (Type == "i32")
+      return wasm::ValType::I32;
+    if (Type == "i64")
+      return wasm::ValType::I64;
+    if (Type == "f32")
+      return wasm::ValType::F32;
+    if (Type == "f64")
+      return wasm::ValType::F64;
     if (Type == "v128" || Type == "i8x16" || Type == "i16x8" ||
         Type == "i32x4" || Type == "i64x2" || Type == "f32x4" ||
-        Type == "f64x2") return wasm::ValType::V128;
+        Type == "f64x2")
+      return wasm::ValType::V128;
     return Optional<wasm::ValType>();
   }
 
-  bool ParseRegTypeList(SmallVectorImpl<wasm::ValType> &Types) {
+  bool parseRegTypeList(SmallVectorImpl<wasm::ValType> &Types) {
     while (Lexer.is(AsmToken::Identifier)) {
-      auto Type = ParseType(Lexer.getTok().getString());
+      auto Type = parseType(Lexer.getTok().getString());
       if (!Type)
         return true;
       Types.push_back(Type.getValue());
       Parser.Lex();
-      if (!IsNext(AsmToken::Comma))
+      if (!isNext(AsmToken::Comma))
         break;
     }
     return false;
   }
 
-  void ParseSingleInteger(bool IsNegative, OperandVector &Operands) {
+  void parseSingleInteger(bool IsNegative, OperandVector &Operands) {
     auto &Int = Lexer.getTok();
     int64_t Val = Int.getIntVal();
     if (IsNegative)
@@ -240,9 +245,9 @@ public:
     Parser.Lex();
   }
 
-  bool ParseOperandStartingWithInteger(bool IsNegative, OperandVector &Operands,
+  bool parseOperandStartingWithInteger(bool IsNegative, OperandVector &Operands,
                                        StringRef InstName) {
-    ParseSingleInteger(IsNegative, Operands);
+    parseSingleInteger(IsNegative, Operands);
     // FIXME: there is probably a cleaner way to do this.
     auto IsLoadStore = InstName.startswith("load") ||
                        InstName.startswith("store") ||
@@ -252,7 +257,7 @@ public:
       // Parse load/store operands of the form: offset align
       auto &Offset = Lexer.getTok();
       if (Offset.is(AsmToken::Integer)) {
-        ParseSingleInteger(false, Operands);
+        parseSingleInteger(false, Operands);
       } else {
         // Alignment not specified.
         // FIXME: correctly derive a default from the instruction.
@@ -271,13 +276,15 @@ public:
     // Note: Name does NOT point into the sourcecode, but to a local, so
     // use NameLoc instead.
     Name = StringRef(NameLoc.getPointer(), Name.size());
+
     // WebAssembly has instructions with / in them, which AsmLexer parses
     // as seperate tokens, so if we find such tokens immediately adjacent (no
     // whitespace), expand the name to include them:
     for (;;) {
       auto &Sep = Lexer.getTok();
       if (Sep.getLoc().getPointer() != Name.end() ||
-          Sep.getKind() != AsmToken::Slash) break;
+          Sep.getKind() != AsmToken::Slash)
+        break;
       // Extend name with /
       Name = StringRef(Name.begin(), Name.size() + Sep.getString().size());
       Parser.Lex();
@@ -285,10 +292,11 @@ public:
       auto &Id = Lexer.getTok();
       if (Id.getKind() != AsmToken::Identifier ||
           Id.getLoc().getPointer() != Name.end())
-        return Error("Incomplete instruction name: ", Id);
+        return error("Incomplete instruction name: ", Id);
       Name = StringRef(Name.begin(), Name.size() + Id.getString().size());
       Parser.Lex();
     }
+
     // Now construct the name as first operand.
     Operands.push_back(make_unique<WebAssemblyOperand>(
         WebAssemblyOperand::Token, NameLoc, SMLoc::getFromPointer(Name.end()),
@@ -296,6 +304,7 @@ public:
     auto NamePair = Name.split('.');
     // If no '.', there is no type prefix.
     auto BaseName = NamePair.second.empty() ? NamePair.first : NamePair.second;
+
     while (Lexer.isNot(AsmToken::EndOfStatement)) {
       auto &Tok = Lexer.getTok();
       switch (Tok.getKind()) {
@@ -304,7 +313,7 @@ public:
         const MCExpr *Val;
         SMLoc End;
         if (Parser.parsePrimaryExpr(Val, End))
-          return Error("Cannot parse symbol: ", Lexer.getTok());
+          return error("Cannot parse symbol: ", Lexer.getTok());
         Operands.push_back(make_unique<WebAssemblyOperand>(
             WebAssemblyOperand::Symbol, Id.getLoc(), Id.getEndLoc(),
             WebAssemblyOperand::SymOp{Val}));
@@ -313,18 +322,18 @@ public:
       case AsmToken::Minus:
         Parser.Lex();
         if (Lexer.isNot(AsmToken::Integer))
-          return Error("Expected integer instead got: ", Lexer.getTok());
-        if (ParseOperandStartingWithInteger(true, Operands, BaseName))
+          return error("Expected integer instead got: ", Lexer.getTok());
+        if (parseOperandStartingWithInteger(true, Operands, BaseName))
           return true;
         break;
       case AsmToken::Integer:
-        if (ParseOperandStartingWithInteger(false, Operands, BaseName))
+        if (parseOperandStartingWithInteger(false, Operands, BaseName))
           return true;
         break;
       case AsmToken::Real: {
         double Val;
         if (Tok.getString().getAsDouble(Val, false))
-          return Error("Cannot parse real: ", Tok);
+          return error("Cannot parse real: ", Tok);
         Operands.push_back(make_unique<WebAssemblyOperand>(
             WebAssemblyOperand::Float, Tok.getLoc(), Tok.getEndLoc(),
             WebAssemblyOperand::FltOp{Val}));
@@ -332,14 +341,15 @@ public:
         break;
       }
       default:
-        return Error("Unexpected token in operand: ", Tok);
+        return error("Unexpected token in operand: ", Tok);
       }
       if (Lexer.isNot(AsmToken::EndOfStatement)) {
-        if (Expect(AsmToken::Comma, ","))
+        if (expect(AsmToken::Comma, ","))
           return true;
       }
     }
     Parser.Lex();
+
     // Block instructions require a signature index, but these are missing in
     // assembly, so we add a dummy one explicitly (since we have no control
     // over signature tables here, we assume these will be regenerated when
@@ -371,66 +381,84 @@ public:
     auto &Out = getStreamer();
     auto &TOut =
         reinterpret_cast<WebAssemblyTargetStreamer &>(*Out.getTargetStreamer());
+
     // TODO: any time we return an error, at least one token must have been
     // consumed, otherwise this will not signal an error to the caller.
     if (DirectiveID.getString() == ".globaltype") {
-      auto SymName = ExpectIdent();
-      if (SymName.empty()) return true;
-      if (Expect(AsmToken::Comma, ",")) return true;
+      auto SymName = expectIdent();
+      if (SymName.empty())
+        return true;
+      if (expect(AsmToken::Comma, ","))
+        return true;
       auto TypeTok = Lexer.getTok();
-      auto TypeName = ExpectIdent();
-      if (TypeName.empty()) return true;
-      auto Type = ParseType(TypeName);
+      auto TypeName = expectIdent();
+      if (TypeName.empty())
+        return true;
+      auto Type = parseType(TypeName);
       if (!Type)
-        return Error("Unknown type in .globaltype directive: ", TypeTok);
+        return error("Unknown type in .globaltype directive: ", TypeTok);
       // Now set this symbol with the correct type.
       auto WasmSym = cast<MCSymbolWasm>(
-                    TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
+          TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
       WasmSym->setGlobalType(
-            wasm::WasmGlobalType{uint8_t(Type.getValue()), true});
+          wasm::WasmGlobalType{uint8_t(Type.getValue()), true});
       // And emit the directive again.
       TOut.emitGlobalType(WasmSym);
-      return Expect(AsmToken::EndOfStatement, "EOL");
-    } else if (DirectiveID.getString() == ".functype") {
+      return expect(AsmToken::EndOfStatement, "EOL");
+    }
+
+    if (DirectiveID.getString() == ".functype") {
       // This code has to send things to the streamer similar to
       // WebAssemblyAsmPrinter::EmitFunctionBodyStart.
       // TODO: would be good to factor this into a common function, but the
       // assembler and backend really don't share any common code, and this code
       // parses the locals seperately.
-      auto SymName = ExpectIdent();
-      if (SymName.empty()) return true;
+      auto SymName = expectIdent();
+      if (SymName.empty())
+        return true;
       auto WasmSym = cast<MCSymbolWasm>(
-                    TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
+          TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
       if (CurrentState == Label && WasmSym == LastLabel) {
         // This .functype indicates a start of a function.
         CurrentState = FunctionStart;
       }
       auto Signature = make_unique<wasm::WasmSignature>();
-      if (Expect(AsmToken::LParen, "(")) return true;
-      if (ParseRegTypeList(Signature->Params)) return true;
-      if (Expect(AsmToken::RParen, ")")) return true;
-      if (Expect(AsmToken::MinusGreater, "->")) return true;
-      if (Expect(AsmToken::LParen, "(")) return true;
-      if (ParseRegTypeList(Signature->Returns)) return true;
-      if (Expect(AsmToken::RParen, ")")) return true;
+      if (expect(AsmToken::LParen, "("))
+        return true;
+      if (parseRegTypeList(Signature->Params))
+        return true;
+      if (expect(AsmToken::RParen, ")"))
+        return true;
+      if (expect(AsmToken::MinusGreater, "->"))
+        return true;
+      if (expect(AsmToken::LParen, "("))
+        return true;
+      if (parseRegTypeList(Signature->Returns))
+        return true;
+      if (expect(AsmToken::RParen, ")"))
+        return true;
       WasmSym->setSignature(Signature.get());
       addSignature(std::move(Signature));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       TOut.emitFunctionType(WasmSym);
       // TODO: backend also calls TOut.emitIndIdx, but that is not implemented.
-      return Expect(AsmToken::EndOfStatement, "EOL");
-    } else if (DirectiveID.getString() == ".local") {
+      return expect(AsmToken::EndOfStatement, "EOL");
+    }
+
+    if (DirectiveID.getString() == ".local") {
       if (CurrentState != FunctionStart)
-        return Error(".local directive should follow the start of a function",
+        return error(".local directive should follow the start of a function",
                      Lexer.getTok());
       SmallVector<wasm::ValType, 4> Locals;
-      if (ParseRegTypeList(Locals)) return true;
+      if (parseRegTypeList(Locals))
+        return true;
       TOut.emitLocal(Locals);
       CurrentState = FunctionLocals;
-      return Expect(AsmToken::EndOfStatement, "EOL");
+      return expect(AsmToken::EndOfStatement, "EOL");
     }
-    return true;  // We didn't process this directive.
+
+    return true; // We didn't process this directive.
   }
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned & /*Opcode*/,

@@ -12,8 +12,8 @@
 
 ; Vector cost is 5, Scalar cost is 7
 ; AVX: Adding cost -2 for reduction that starts with   %7 = load i32, i32* %arrayidx.7, align 4 (It is a splitting reduction)
-; Vector cost is 7, Scalar cost is 7
-; SSE: Adding cost 0 for reduction that starts with   %7 = load i32, i32* %arrayidx.7, align 4 (It is a splitting reduction)
+; Vector cost is 6, Scalar cost is 7
+; SSE: Adding cost -1 for reduction that starts with   %7 = load i32, i32* %arrayidx.7, align 4 (It is a splitting reduction)
 define i32 @test_add(i32* nocapture readonly %p) {
 ; CHECK-LABEL: @test_add(
 ; CHECK-NEXT:  entry:

@@ -18,6 +18,47 @@ def UopsIssuedPfmCounter : PfmCounter<"uops_issued:any">;
 def DefaultPfmCounters : ProcPfmCounters {}
 def : PfmCountersDefaultBinding<DefaultPfmCounters>;
 
+// Intel X86 Counters.
+def PentiumPfmCounters : ProcPfmCounters {
+  let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
+  let UopsCounter = PfmCounter<"uops_retired">;
+}
+def : PfmCountersBinding<"pentiumpro", PentiumPfmCounters>;
+def : PfmCountersBinding<"pentium2", PentiumPfmCounters>;
+def : PfmCountersBinding<"pentium3", PentiumPfmCounters>;
+def : PfmCountersBinding<"pentium3m", PentiumPfmCounters>;
+def : PfmCountersBinding<"pentium-m", PentiumPfmCounters>;
+
+def CorePfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = PfmCounter<"uops_retired:any">;
+}
+def : PfmCountersBinding<"yonah", CorePfmCounters>;
+def : PfmCountersBinding<"prescott", CorePfmCounters>;
+def : PfmCountersBinding<"core2", CorePfmCounters>;
+def : PfmCountersBinding<"penryn", CorePfmCounters>;
+def : PfmCountersBinding<"nehalem", CorePfmCounters>;
+def : PfmCountersBinding<"corei7", CorePfmCounters>;
+def : PfmCountersBinding<"westmere", CorePfmCounters>;
+
+def AtomPfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = PfmCounter<"uops_retired:any">;
+}
+def : PfmCountersBinding<"bonnell", AtomPfmCounters>;
+def : PfmCountersBinding<"atom", AtomPfmCounters>;
+
+def SLMPfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = PfmCounter<"uops_retired:any">;
+}
+def : PfmCountersBinding<"silvermont", SLMPfmCounters>;
+def : PfmCountersBinding<"goldmont", SLMPfmCounters>;
+def : PfmCountersBinding<"goldmont-plus", SLMPfmCounters>;
+def : PfmCountersBinding<"tremont", SLMPfmCounters>;
+def : PfmCountersBinding<"knl", SLMPfmCounters>;
+def : PfmCountersBinding<"knm", SLMPfmCounters>;
+
 def SandyBridgePfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
   let UopsCounter = UopsIssuedPfmCounter;
@@ -95,6 +136,34 @@ def SkylakeServerPfmCounters : ProcPfmCounters {
   ];
 }
 def : PfmCountersBinding<"skylake-avx512", SkylakeServerPfmCounters>;
+def : PfmCountersBinding<"cascadelake", SkylakeServerPfmCounters>;
+def : PfmCountersBinding<"cannonlake", SkylakeServerPfmCounters>;
+def : PfmCountersBinding<"icelake-client", SkylakeServerPfmCounters>;
+def : PfmCountersBinding<"icelake-server", SkylakeServerPfmCounters>;
+
+// AMD X86 Counters.
+// Set basic counters for AMD cpus that we know libpfm4 supports.
+def DefaultAMDPfmCounters : ProcPfmCounters {
+  let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
+  let UopsCounter = PfmCounter<"retired_uops">;
+}
+def : PfmCountersBinding<"athlon", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"athlon-tbird", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"athlon-4", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"athlon-xp", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"athlon-mp", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"k8", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"opteron", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"athlon64", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"athlon-fx", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"k8-sse3", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"opteron-sse3", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"athlon64-sse3", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"amdfam10", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"barcelona", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"btver1", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"bdver3", DefaultAMDPfmCounters>;
+def : PfmCountersBinding<"bdver4", DefaultAMDPfmCounters>;
 
 def BdVer2PfmCounters : ProcPfmCounters {
   let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
@@ -106,6 +175,7 @@ def BdVer2PfmCounters : ProcPfmCounters {
     PfmIssueCounter<"PdFPU3", "dispatched_fpu_ops:ops_pipe3 + dispatched_fpu_ops:ops_dual_pipe3">
   ];
 }
+def : PfmCountersBinding<"bdver1", BdVer2PfmCounters>;
 def : PfmCountersBinding<"bdver2", BdVer2PfmCounters>;
 
 def BtVer2PfmCounters : ProcPfmCounters {
@@ -117,3 +187,16 @@ def BtVer2PfmCounters : ProcPfmCounters {
   ];
 }
 def : PfmCountersBinding<"btver2", BtVer2PfmCounters>;
+
+def ZnVer1PfmCounters : ProcPfmCounters {
+  let CycleCounter = PfmCounter<"cycles_not_in_halt">;
+  let UopsCounter = PfmCounter<"retired_uops">;
+  let IssueCounters = [
+    PfmIssueCounter<"ZnFPU0", "fpu_pipe_assignment:total0">,
+    PfmIssueCounter<"ZnFPU1", "fpu_pipe_assignment:total1">,
+    PfmIssueCounter<"ZnFPU2", "fpu_pipe_assignment:total2">,
+    PfmIssueCounter<"ZnFPU3", "fpu_pipe_assignment:total3">,
+    PfmIssueCounter<"ZnDivider", "div_op_count">
+  ];
+}
+def : PfmCountersBinding<"znver1", ZnVer1PfmCounters>;

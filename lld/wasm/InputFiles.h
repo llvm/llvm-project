@@ -27,6 +27,7 @@ class InputChunk;
 class InputFunction;
 class InputSegment;
 class InputGlobal;
+class InputEvent;
 class InputSection;
 
 class InputFile {
@@ -108,6 +109,7 @@ public:
   std::vector<InputSegment *> Segments;
   std::vector<InputFunction *> Functions;
   std::vector<InputGlobal *> Globals;
+  std::vector<InputEvent *> Events;
   std::vector<InputSection *> CustomSections;
   llvm::DenseMap<uint32_t, InputSection *> CustomSectionsByIndex;
 
@@ -116,6 +118,7 @@ public:
   DataSymbol *getDataSymbol(uint32_t Index) const;
   GlobalSymbol *getGlobalSymbol(uint32_t Index) const;
   SectionSymbol *getSectionSymbol(uint32_t Index) const;
+  EventSymbol *getEventSymbol(uint32_t Index) const;
 
 private:
   Symbol *createDefined(const WasmSymbol &Sym);

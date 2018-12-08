@@ -1484,19 +1484,10 @@ template <typename ELFT>
 void ELFDumper<ELFT>::parseDynamicTable(
     ArrayRef<const Elf_Phdr *> LoadSegments) {
   auto toMappedAddr = [&](uint64_t VAddr) -> const uint8_t * {
-    const Elf_Phdr *const *I =
-        std::upper_bound(LoadSegments.begin(), LoadSegments.end(), VAddr,
-                         [](uint64_t VAddr, const Elf_Phdr_Impl<ELFT> *Phdr) {
-                           return VAddr < Phdr->p_vaddr;
-                         });
-    if (I == LoadSegments.begin())
-      report_fatal_error("Virtual address is not in any segment");
-    --I;
-    const Elf_Phdr &Phdr = **I;
-    uint64_t Delta = VAddr - Phdr.p_vaddr;
-    if (Delta >= Phdr.p_filesz)
-      report_fatal_error("Virtual address is not in any segment");
-    return Obj->base() + Phdr.p_offset + Delta;
+    auto MappedAddrOrError = Obj->toMappedAddr(VAddr);
+    if (!MappedAddrOrError)
+      report_fatal_error(MappedAddrOrError.takeError());
+    return MappedAddrOrError.get();
   };
 
   uint64_t SONameOffset = 0;

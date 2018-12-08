@@ -43,6 +43,8 @@ class WasmSymbol;
 } // namespace object
 
 namespace wasm {
+struct WasmEvent;
+struct WasmEventType;
 struct WasmFunction;
 struct WasmGlobal;
 struct WasmGlobalType;
@@ -76,6 +78,8 @@ using llvm::object::WasmObjectFile;
 using llvm::object::WasmSection;
 using llvm::object::WasmSegment;
 using llvm::object::WasmSymbol;
+using llvm::wasm::WasmEvent;
+using llvm::wasm::WasmEventType;
 using llvm::wasm::WasmFunction;
 using llvm::wasm::WasmGlobal;
 using llvm::wasm::WasmGlobalType;
