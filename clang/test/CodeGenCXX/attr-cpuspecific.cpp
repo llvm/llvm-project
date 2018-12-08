@@ -12,6 +12,7 @@ void foo() {
   s.Func();
 }
 
+// LINUX: define linkonce_odr void @_ZN1S4FuncEv.O
 // LINUX: define void (%struct.S*)* @_ZN1S4FuncEv.resolver
 // LINUX: ret void (%struct.S*)* @_ZN1S4FuncEv.S
 // LINUX: ret void (%struct.S*)* @_ZN1S4FuncEv.O

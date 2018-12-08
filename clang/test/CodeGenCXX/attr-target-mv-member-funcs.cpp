@@ -72,6 +72,15 @@ int templ_use() {
 // CHECK: @_ZN5templIiE3fooEi.ifunc = ifunc i32 (%struct.templ*, i32), i32 (%struct.templ*, i32)* ()* @_ZN5templIiE3fooEi.resolver
 // CHECK: @_ZN5templIdE3fooEi.ifunc = ifunc i32 (%struct.templ.0*, i32), i32 (%struct.templ.0*, i32)* ()* @_ZN5templIdE3fooEi.resolver
 
+// CHECK: define linkonce_odr i32 @_ZN1S3fooEi.sse4.2(%struct.S* %this, i32)
+// CHECK: ret i32 0
+
+// CHECK: define linkonce_odr i32 @_ZN1S3fooEi.arch_ivybridge(%struct.S* %this, i32)
+// CHECK: ret i32 1
+
+// CHECK: define linkonce_odr i32 @_ZN1S3fooEi(%struct.S* %this, i32)
+// CHECK: ret i32 2
+
 // CHECK: define i32 @_Z3barv()
 // CHECK: %s = alloca %struct.S, align 1
 // CHECK: %s2 = alloca %struct.S, align 1
@@ -123,23 +132,14 @@ int templ_use() {
 // CHECK: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi.sse4.2
 // CHECK: ret i32 (%struct.templ.0*, i32)* @_ZN5templIdE3fooEi
 
-// CHECK: define linkonce_odr i32 @_ZN1S3fooEi.sse4.2(%struct.S* %this, i32)
-// CHECK: ret i32 0
-
-// CHECK: declare i32 @_ZN1S3fooEi.arch_sandybridge(%struct.S*, i32)
-
-// CHECK: define linkonce_odr i32 @_ZN1S3fooEi.arch_ivybridge(%struct.S* %this, i32)
-// CHECK: ret i32 1
-
-// CHECK: define linkonce_odr i32 @_ZN1S3fooEi(%struct.S* %this, i32)
-// CHECK: ret i32 2
-
 // CHECK: define linkonce_odr i32 @_ZN5templIiE3fooEi.sse4.2
-// CHECK: declare i32 @_ZN5templIiE3fooEi.arch_sandybridge
 // CHECK: define linkonce_odr i32 @_ZN5templIiE3fooEi.arch_ivybridge
 // CHECK: define linkonce_odr i32 @_ZN5templIiE3fooEi
 
 // CHECK: define linkonce_odr i32 @_ZN5templIdE3fooEi.sse4.2
-// CHECK: declare i32 @_ZN5templIdE3fooEi.arch_sandybridge
 // CHECK: define linkonce_odr i32 @_ZN5templIdE3fooEi.arch_ivybridge
 // CHECK: define linkonce_odr i32 @_ZN5templIdE3fooEi
+//
+// CHECK: declare i32 @_ZN1S3fooEi.arch_sandybridge(%struct.S*, i32)
+// CHECK: declare i32 @_ZN5templIiE3fooEi.arch_sandybridge
+// CHECK: declare i32 @_ZN5templIdE3fooEi.arch_sandybridge
