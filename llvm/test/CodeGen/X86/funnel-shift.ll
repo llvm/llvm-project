@@ -70,8 +70,8 @@ define i37 @fshl_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X32-SSE2-NEXT:    cmovnel %ebp, %eax
 ; X32-SSE2-NEXT:    cmovnel %ecx, %ebp
 ; X32-SSE2-NEXT:    xorl %edx, %edx
-; X32-SSE2-NEXT:    movl $37, %ecx
-; X32-SSE2-NEXT:    subl %ebx, %ecx
+; X32-SSE2-NEXT:    movb $37, %cl
+; X32-SSE2-NEXT:    subb %bl, %cl
 ; X32-SSE2-NEXT:    shrdl %cl, %esi, %edi
 ; X32-SSE2-NEXT:    shrl %cl, %esi
 ; X32-SSE2-NEXT:    testb $32, %cl
@@ -248,8 +248,8 @@ define i37 @fshr_i37(i37 %x, i37 %y, i37 %z) nounwind {
 ; X32-SSE2-NEXT:    calll __umoddi3
 ; X32-SSE2-NEXT:    addl $16, %esp
 ; X32-SSE2-NEXT:    movl %eax, %ebx
-; X32-SSE2-NEXT:    movl $37, %ecx
-; X32-SSE2-NEXT:    subl %eax, %ecx
+; X32-SSE2-NEXT:    movb $37, %cl
+; X32-SSE2-NEXT:    subb %bl, %cl
 ; X32-SSE2-NEXT:    movl %ebp, %eax
 ; X32-SSE2-NEXT:    shll %cl, %ebp
 ; X32-SSE2-NEXT:    shldl %cl, %eax, %edi
