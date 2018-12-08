@@ -2152,6 +2152,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
           }
           CmdArgs.push_back(Value.data());
           TakeNextArg = true;
+      } else if (Value == "-fdebug-compilation-dir") {
+        CmdArgs.push_back("-fdebug-compilation-dir");
+        TakeNextArg = true;
       } else {
         D.Diag(diag::err_drv_unsupported_option_argument)
             << A->getOption().getName() << Value;
@@ -2861,6 +2864,18 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
   if (Args.hasArg(options::OPT_fno_objc_arc)) {
     Args.ClaimAllArgs(options::OPT_fobjc_arc_exceptions);
     Args.ClaimAllArgs(options::OPT_fno_objc_arc_exceptions);
+  }
+
+  // Allow the user to control whether messages can be converted to runtime
+  // functions.
+  if (types::isObjC(Input.getType())) {
+    auto *Arg = Args.getLastArg(
+        options::OPT_fobjc_convert_messages_to_runtime_calls,
+        options::OPT_fno_objc_convert_messages_to_runtime_calls);
+    if (Arg &&
+        Arg->getOption().matches(
+            options::OPT_fno_objc_convert_messages_to_runtime_calls))
+      CmdArgs.push_back("-fno-objc-convert-messages-to-runtime-calls");
   }
 
   // -fobjc-infer-related-result-type is the default, except in the Objective-C

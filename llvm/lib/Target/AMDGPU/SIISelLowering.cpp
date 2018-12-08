@@ -4873,12 +4873,13 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, SDLoc DL, SDValue Rsrc,
   SmallVector<SDValue, 4> Loads;
   unsigned NumLoads = 1;
   MVT LoadVT = VT.getSimpleVT();
+  unsigned NumElts = LoadVT.isVector() ? LoadVT.getVectorNumElements() : 1;
+  assert((LoadVT.getScalarType() == MVT::i32 ||
+          LoadVT.getScalarType() == MVT::f32) &&
+         isPowerOf2_32(NumElts));
 
-  assert(LoadVT == MVT::i32 || LoadVT == MVT::v2i32 || LoadVT == MVT::v4i32 ||
-         LoadVT == MVT::v8i32 || LoadVT == MVT::v16i32);
-
-  if (VT == MVT::v8i32 || VT == MVT::v16i32) {
-    NumLoads = VT == MVT::v16i32 ? 4 : 2;
+  if (NumElts == 8 || NumElts == 16) {
+    NumLoads = NumElts == 16 ? 4 : 2;
     LoadVT = MVT::v4i32;
   }
 
@@ -5065,7 +5066,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return loadInputValue(DAG, &AMDGPU::VGPR_32RegClass, MVT::i32,
                           SDLoc(DAG.getEntryNode()),
                           MFI->getArgInfo().WorkItemIDZ);
-  case AMDGPUIntrinsic::SI_load_const: {
+  case SIIntrinsic::SI_load_const: {
     SDValue Load =
         lowerSBuffer(MVT::i32, DL, Op.getOperand(1), Op.getOperand(2),
                      DAG.getTargetConstant(0, DL, MVT::i1), DAG);
@@ -5808,19 +5809,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     return DAG.getNode(AMDGPUISD::INIT_EXEC_FROM_INPUT, DL, MVT::Other, Chain,
                        Op.getOperand(2), Op.getOperand(3));
   }
-  case AMDGPUIntrinsic::AMDGPU_kill: {
-    SDValue Src = Op.getOperand(2);
-    if (const ConstantFPSDNode *K = dyn_cast<ConstantFPSDNode>(Src)) {
-      if (!K->isNegative())
-        return Chain;
-
-      SDValue NegOne = DAG.getTargetConstant(FloatToBits(-1.0f), DL, MVT::i32);
-      return DAG.getNode(AMDGPUISD::KILL, DL, MVT::Other, Chain, NegOne);
-    }
-
-    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Src);
-    return DAG.getNode(AMDGPUISD::KILL, DL, MVT::Other, Chain, Cast);
-  }
   case Intrinsic::amdgcn_s_barrier: {
     if (getTargetMachine().getOptLevel() > CodeGenOpt::None) {
       const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
@@ -5831,55 +5819,6 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
     return SDValue();
   };
-  case AMDGPUIntrinsic::SI_tbuffer_store: {
-
-    // Extract vindex and voffset from vaddr as appropriate
-    const ConstantSDNode *OffEn = cast<ConstantSDNode>(Op.getOperand(10));
-    const ConstantSDNode *IdxEn = cast<ConstantSDNode>(Op.getOperand(11));
-    SDValue VAddr = Op.getOperand(5);
-
-    SDValue Zero = DAG.getTargetConstant(0, DL, MVT::i32);
-
-    assert(!(OffEn->isOne() && IdxEn->isOne()) &&
-           "Legacy intrinsic doesn't support both offset and index - use new version");
-
-    SDValue VIndex = IdxEn->isOne() ? VAddr : Zero;
-    SDValue VOffset = OffEn->isOne() ? VAddr : Zero;
-
-    // Deal with the vec-3 case
-    const ConstantSDNode *NumChannels = cast<ConstantSDNode>(Op.getOperand(4));
-    auto Opcode = NumChannels->getZExtValue() == 3 ?
-      AMDGPUISD::TBUFFER_STORE_FORMAT_X3 : AMDGPUISD::TBUFFER_STORE_FORMAT;
-
-    unsigned Dfmt = cast<ConstantSDNode>(Op.getOperand(8))->getZExtValue();
-    unsigned Nfmt = cast<ConstantSDNode>(Op.getOperand(9))->getZExtValue();
-    unsigned Glc = cast<ConstantSDNode>(Op.getOperand(12))->getZExtValue();
-    unsigned Slc = cast<ConstantSDNode>(Op.getOperand(13))->getZExtValue();
-    SDValue Ops[] = {
-     Chain,
-     Op.getOperand(3),  // vdata
-     Op.getOperand(2),  // rsrc
-     VIndex,
-     VOffset,
-     Op.getOperand(6),  // soffset
-     Op.getOperand(7),  // inst_offset
-     DAG.getConstant(Dfmt | (Nfmt << 4), DL, MVT::i32), // format
-     DAG.getConstant(Glc | (Slc << 1), DL, MVT::i32), // cachepolicy
-     DAG.getConstant(IdxEn->isOne(), DL, MVT::i1), // idxen
-    };
-
-    assert((cast<ConstantSDNode>(Op.getOperand(14)))->getZExtValue() == 0 &&
-           "Value of tfe other than zero is unsupported");
-
-    EVT VT = Op.getOperand(3).getValueType();
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(),
-      MachineMemOperand::MOStore,
-      VT.getStoreSize(), 4);
-    return DAG.getMemIntrinsicNode(Opcode, DL,
-                                   Op->getVTList(), Ops, VT, MMO);
-  }
-
   case Intrinsic::amdgcn_tbuffer_store: {
     SDValue VData = Op.getOperand(2);
     bool IsD16 = (VData.getValueType().getScalarType() == MVT::f16);

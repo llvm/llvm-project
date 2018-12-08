@@ -128,10 +128,16 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 //   in range of LARL.  However, the JIT environment has no equivalent
 //   of copy relocs, so locally-binding data symbols might not be in
 //   the range of LARL.  We need the Medium model in that case.
-static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
-                                              Reloc::Model RM, bool JIT) {
-  if (CM)
+static CodeModel::Model
+getEffectiveSystemZCodeModel(Optional<CodeModel::Model> CM, Reloc::Model RM,
+                             bool JIT) {
+  if (CM) {
+    if (*CM == CodeModel::Tiny)
+      report_fatal_error("Target does not support the tiny CodeModel");
+    if (*CM == CodeModel::Kernel)
+      report_fatal_error("Target does not support the kernel CodeModel");
     return *CM;
+  }
   if (JIT)
     return RM == Reloc::PIC_ ? CodeModel::Small : CodeModel::Medium;
   return CodeModel::Small;
@@ -146,7 +152,8 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
     : LLVMTargetMachine(
           T, computeDataLayout(TT, CPU, FS), TT, CPU, FS, Options,
           getEffectiveRelocModel(RM),
-          getEffectiveCodeModel(CM, getEffectiveRelocModel(RM), JIT), OL),
+          getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(RM), JIT),
+          OL),
       TLOF(llvm::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, CPU, FS, *this) {
   initAsmInfo();

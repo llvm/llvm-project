@@ -170,7 +170,7 @@ define i64 @lshift_cl(i64 %a, i64 %b, i64 %c) nounwind readnone {
 ; BDVER12-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BDVER12-NEXT:    movq %rsi, %rax # sched: [1:0.50]
 ; BDVER12-NEXT:    shlq %cl, %rdi # sched: [1:0.50]
-; BDVER12-NEXT:    negb %cl # sched: [1:0.50]
+; BDVER12-NEXT:    negl %ecx # sched: [1:0.50]
 ; BDVER12-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BDVER12-NEXT:    shrq %cl, %rax # sched: [1:0.50]
 ; BDVER12-NEXT:    orq %rdi, %rax # sched: [1:0.50]
@@ -181,7 +181,7 @@ define i64 @lshift_cl(i64 %a, i64 %b, i64 %c) nounwind readnone {
 ; BTVER2-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BTVER2-NEXT:    movq %rsi, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    shlq %cl, %rdi # sched: [1:0.50]
-; BTVER2-NEXT:    negb %cl # sched: [1:0.50]
+; BTVER2-NEXT:    negl %ecx # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BTVER2-NEXT:    shrq %cl, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    orq %rdi, %rax # sched: [1:0.50]
@@ -246,7 +246,7 @@ define i64 @rshift_cl(i64 %a, i64 %b, i64 %c) nounwind readnone {
 ; BDVER12-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BDVER12-NEXT:    movq %rsi, %rax # sched: [1:0.50]
 ; BDVER12-NEXT:    shrq %cl, %rdi # sched: [1:0.50]
-; BDVER12-NEXT:    negb %cl # sched: [1:0.50]
+; BDVER12-NEXT:    negl %ecx # sched: [1:0.50]
 ; BDVER12-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BDVER12-NEXT:    shlq %cl, %rax # sched: [1:0.50]
 ; BDVER12-NEXT:    orq %rdi, %rax # sched: [1:0.50]
@@ -257,7 +257,7 @@ define i64 @rshift_cl(i64 %a, i64 %b, i64 %c) nounwind readnone {
 ; BTVER2-NEXT:    movq %rdx, %rcx # sched: [1:0.50]
 ; BTVER2-NEXT:    movq %rsi, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    shrq %cl, %rdi # sched: [1:0.50]
-; BTVER2-NEXT:    negb %cl # sched: [1:0.50]
+; BTVER2-NEXT:    negl %ecx # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BTVER2-NEXT:    shlq %cl, %rax # sched: [1:0.50]
 ; BTVER2-NEXT:    orq %rdi, %rax # sched: [1:0.50]
@@ -321,7 +321,7 @@ define void @lshift_mem_cl(i64 %a, i64 %c) nounwind readnone {
 ; BDVER12-NEXT:    movq {{.*}}(%rip), %rax # sched: [5:0.50]
 ; BDVER12-NEXT:    movq %rsi, %rcx # sched: [1:0.50]
 ; BDVER12-NEXT:    shlq %cl, %rax # sched: [1:0.50]
-; BDVER12-NEXT:    negb %cl # sched: [1:0.50]
+; BDVER12-NEXT:    negl %ecx # sched: [1:0.50]
 ; BDVER12-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BDVER12-NEXT:    shrq %cl, %rdi # sched: [1:0.50]
 ; BDVER12-NEXT:    orq %rax, %rdi # sched: [1:0.50]
@@ -333,7 +333,7 @@ define void @lshift_mem_cl(i64 %a, i64 %c) nounwind readnone {
 ; BTVER2-NEXT:    movq {{.*}}(%rip), %rax # sched: [5:1.00]
 ; BTVER2-NEXT:    movq %rsi, %rcx # sched: [1:0.50]
 ; BTVER2-NEXT:    shlq %cl, %rax # sched: [1:0.50]
-; BTVER2-NEXT:    negb %cl # sched: [1:0.50]
+; BTVER2-NEXT:    negl %ecx # sched: [1:0.50]
 ; BTVER2-NEXT:    # kill: def $cl killed $cl killed $rcx
 ; BTVER2-NEXT:    shrq %cl, %rdi # sched: [1:0.50]
 ; BTVER2-NEXT:    orq %rax, %rdi # sched: [1:0.50]

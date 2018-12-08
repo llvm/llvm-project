@@ -1296,7 +1296,7 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
     return error;
   if (dest_file == UINT64_MAX)
     return Status("unable to open target file");
-  lldb::DataBufferSP buffer_sp(new DataBufferHeap(1024, 0));
+  lldb::DataBufferSP buffer_sp(new DataBufferHeap(1024 * 16, 0));
   uint64_t offset = 0;
   for (;;) {
     size_t bytes_read = buffer_sp->GetByteSize();

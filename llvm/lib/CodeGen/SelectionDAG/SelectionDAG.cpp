@@ -2352,7 +2352,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       break;
 
     SDValue N0 = Op.getOperand(0);
-    Known = computeKnownBits(N0, DemandedElts, Depth + 1);
+    Known = computeKnownBits(N0, Depth + 1);
     if (N0.getValueSizeInBits() != BitWidth)
       Known = Known.trunc(BitWidth);
 
@@ -4994,8 +4994,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         return getConstant(0, DL, VT);
       LLVM_FALLTHROUGH;
     case ISD::ADD:
-    case ISD::ADDC:
-    case ISD::ADDE:
     case ISD::SUB:
     case ISD::UDIV:
     case ISD::SDIV:

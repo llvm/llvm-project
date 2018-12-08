@@ -310,12 +310,6 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
   return Reloc::PIC_;
 }
 
-static CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM) {
-  if (CM)
-    return *CM;
-  return CodeModel::Small;
-}
-
 AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          StringRef CPU, StringRef FS,
                                          TargetOptions Options,
@@ -324,7 +318,7 @@ AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,
                                          CodeGenOpt::Level OptLevel)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, getGPUOrDefault(TT, CPU),
                         FS, Options, getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CM), OptLevel),
+                        getEffectiveCodeModel(CM, CodeModel::Small), OptLevel),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
 }

@@ -4,6 +4,10 @@ struct S {
   __attribute__((os_returns_retained)) S* method_returns_retained() {
     return nullptr;
   }
+
+  __attribute__((os_consumes_this)) void method_consumes_this();
+
+  __attribute__((os_consumes_this)) static void rejected_on_static(); // expected-warning{{'os_consumes_this' attribute only applies to non-static member functions}}
 };
 __attribute__((os_returns_retained)) S *ret_retained() {
   return nullptr;
@@ -37,6 +41,8 @@ struct __attribute__((os_returns_retained)) NoRetainAttrOnStruct {}; // expected
 
 __attribute__((os_returns_not_retained(10))) S* os_returns_no_retained_no_extra_args( S *arg) { // expected-error{{'os_returns_not_retained' attribute takes no arguments}}
   return nullptr;
-} 
+}
 
 struct __attribute__((os_returns_not_retained)) NoNotRetainedAttrOnStruct {}; // expected-warning{{'os_returns_not_retained' attribute only applies to functions, Objective-C methods, and Objective-C properties}}
+
+__attribute__((os_consumes_this)) void no_consumes_this_on_function() {} // expected-warning{{'os_consumes_this' attribute only applies to non-static member functions}}

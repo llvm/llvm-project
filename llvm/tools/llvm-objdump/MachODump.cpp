@@ -5626,7 +5626,9 @@ static void print_image_info64(SectionRef S, struct DisassembleInfo *info) {
     else if(swift_version == 5)
       outs() << " Swift 4.0";
     else if(swift_version == 6)
-      outs() << " Swift 4.1";
+      outs() << " Swift 4.1/Swift 4.2";
+    else if(swift_version == 7)
+      outs() << " Swift 5 or later";
     else
       outs() << " unknown future Swift version (" << swift_version << ")";
   }
@@ -5677,7 +5679,9 @@ static void print_image_info32(SectionRef S, struct DisassembleInfo *info) {
     else if(swift_version == 5)
       outs() << " Swift 4.0";
     else if(swift_version == 6)
-      outs() << " Swift 4.1";
+      outs() << " Swift 4.1/Swift 4.2";
+    else if(swift_version == 7)
+      outs() << " Swift 5 or later";
     else
       outs() << " unknown future Swift version (" << swift_version << ")";
   }

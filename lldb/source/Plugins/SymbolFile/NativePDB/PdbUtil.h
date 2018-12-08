@@ -12,6 +12,7 @@
 
 #include "lldb/lldb-enumerations.h"
 
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
@@ -118,6 +119,10 @@ llvm::codeview::TypeIndex
 LookThroughModifierRecord(llvm::codeview::CVType modifier);
 
 llvm::StringRef DropNameScope(llvm::StringRef name);
+
+size_t GetTypeSizeForSimpleKind(llvm::codeview::SimpleTypeKind kind);
+lldb::BasicType
+GetCompilerTypeForSimpleKind(llvm::codeview::SimpleTypeKind kind);
 
 } // namespace npdb
 } // namespace lldb_private

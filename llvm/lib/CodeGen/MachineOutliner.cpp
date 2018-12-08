@@ -881,8 +881,6 @@ struct MachineOutliner : public ModulePass {
   /// \param Mapper Contains outlining mapping information.
   /// \param[out] FunctionList Filled with a list of \p OutlinedFunctions
   /// each type of candidate.
-  ///
-  /// \returns The length of the longest candidate found.
   void findCandidates(InstructionMapper &Mapper,
                       std::vector<OutlinedFunction> &FunctionList);
 

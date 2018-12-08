@@ -625,7 +625,6 @@ exit:
   ret float %sum.next
 }
 
-
 ; This test checks that the load after some control flow with an offset based
 ; on a divergent shader input is correctly recognized as divergent. This was
 ; reduced from an actual regression. Yes, the %unused argument matters, as
@@ -649,6 +648,45 @@ endif1:                                           ; preds = %if1, %main_body
   ret float %tmp97
 }
 
+; GCN-LABEL: {{^}}s_buffer_load_f32:
+; GCN: s_buffer_load_dword s0, s[0:3], s4
+define amdgpu_ps void @s_buffer_load_f32(<4 x i32> inreg %rsrc, i32 inreg %offset) {
+  %sgpr = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %rsrc, i32 %offset, i32 0)
+  call void asm sideeffect "; use $0", "s"(float %sgpr)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_buffer_load_v2f32:
+; GCN: s_buffer_load_dwordx2 s[0:1], s[0:3], s4
+define amdgpu_ps void @s_buffer_load_v2f32(<4 x i32> inreg %rsrc, i32 inreg %offset) {
+  %sgpr = call <2 x float> @llvm.amdgcn.s.buffer.load.v2f32(<4 x i32> %rsrc, i32 %offset, i32 0)
+  call void asm sideeffect "; use $0", "s"(<2 x float> %sgpr)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_buffer_load_v4f32:
+; GCN: s_buffer_load_dwordx4 s[0:3], s[0:3], s4
+define amdgpu_ps void @s_buffer_load_v4f32(<4 x i32> inreg %rsrc, i32 inreg %offset) {
+  %sgpr = call <4 x float> @llvm.amdgcn.s.buffer.load.v4f32(<4 x i32> %rsrc, i32 %offset, i32 0)
+  call void asm sideeffect "; use $0", "s"(<4 x float> %sgpr)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_buffer_load_v8f32:
+; GCN: s_buffer_load_dwordx8 s[0:7], s[0:3], s4
+define amdgpu_ps void @s_buffer_load_v8f32(<4 x i32> inreg %rsrc, i32 inreg %offset) {
+  %sgpr = call <8 x float> @llvm.amdgcn.s.buffer.load.v8f32(<4 x i32> %rsrc, i32 %offset, i32 0)
+  call void asm sideeffect "; use $0", "s"(<8 x float> %sgpr)
+  ret void
+}
+
+; GCN-LABEL: {{^}}s_buffer_load_v16f32:
+; GCN: s_buffer_load_dwordx16 s[0:15], s[0:3], s4
+define amdgpu_ps void @s_buffer_load_v16f32(<4 x i32> inreg %rsrc, i32 inreg %offset) {
+  %sgpr = call <16 x float> @llvm.amdgcn.s.buffer.load.v16f32(<4 x i32> %rsrc, i32 %offset, i32 0)
+  call void asm sideeffect "; use $0", "s"(<16 x float> %sgpr)
+  ret void
+}
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
 declare float @llvm.SI.load.const.v4i32(<4 x i32>, i32) #1
@@ -659,6 +697,12 @@ declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32)
 declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32)
 declare <8 x i32> @llvm.amdgcn.s.buffer.load.v8i32(<4 x i32>, i32, i32)
 declare <16 x i32> @llvm.amdgcn.s.buffer.load.v16i32(<4 x i32>, i32, i32)
+
+declare float @llvm.amdgcn.s.buffer.load.f32(<4 x i32>, i32, i32)
+declare <2 x float> @llvm.amdgcn.s.buffer.load.v2f32(<4 x i32>, i32, i32)
+declare <4 x float> @llvm.amdgcn.s.buffer.load.v4f32(<4 x i32>, i32, i32)
+declare <8 x float> @llvm.amdgcn.s.buffer.load.v8f32(<4 x i32>, i32, i32)
+declare <16 x float> @llvm.amdgcn.s.buffer.load.v16f32(<4 x i32>, i32, i32)
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

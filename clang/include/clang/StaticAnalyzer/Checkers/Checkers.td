@@ -520,6 +520,9 @@ def MacOSKeychainAPIChecker : Checker<"SecKeychainAPI">,
 def ObjCPropertyChecker : Checker<"ObjCProperty">,
   HelpText<"Check for proper uses of Objective-C properties">;
 
+def OSObjectRetainCountChecker : Checker<"OSObjectRetainCount">,
+  HelpText<"Check for leaks and improper reference count management for OSObject">;
+
 } // end "osx"
 
 let ParentPackage = Cocoa in {

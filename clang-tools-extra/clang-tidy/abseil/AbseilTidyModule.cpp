@@ -20,6 +20,7 @@
 #include "RedundantStrcatCallsCheck.h"
 #include "StringFindStartswithCheck.h"
 #include "StrCatAppendCheck.h"
+#include "UpgradeDurationConversionsCheck.h"
 
 namespace clang {
 namespace tidy {
@@ -47,6 +48,8 @@ public:
         "abseil-str-cat-append");
     CheckFactories.registerCheck<StringFindStartswithCheck>(
         "abseil-string-find-startswith");
+    CheckFactories.registerCheck<UpgradeDurationConversionsCheck>(
+        "abseil-upgrade-duration-conversions");
   }
 };
 

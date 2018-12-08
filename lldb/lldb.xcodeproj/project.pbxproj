@@ -248,6 +248,7 @@
 		2689006613353E0E00698AC0 /* DWARFExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7ED810F1B86700F91463 /* DWARFExpression.cpp */; };
 		268900C613353E5F00698AC0 /* DWARFFormValue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C89D310F57C5600BB2B04 /* DWARFFormValue.cpp */; };
 		4CD44CFB20B37C440003557C /* DWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CD44CF820B37C440003557C /* DWARFIndex.cpp */; };
+		4C38996421B9AECD002BAEF4 /* DWARFLocationExpression.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C38996221B9AECC002BAEF4 /* DWARFLocationExpression.cpp */; };
 		AFE228832060699D0042D0C8 /* DWARFUnit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7F2AAA5920601BE000A422D8 /* DWARFUnit.cpp */; };
 		26FFC19B14FC072100087D58 /* DYLDRendezvous.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26FFC19514FC072100087D58 /* DYLDRendezvous.cpp */; };
 		49CA96FC1E6AACC900C03FEE /* DataBufferHeap.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49CA96E61E6AAC6600C03FEE /* DataBufferHeap.cpp */; };
@@ -755,6 +756,7 @@
 		9A3576AA116E9AC700E8ED2F /* SBHostOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9A3576A9116E9AC700E8ED2F /* SBHostOS.cpp */; };
 		9A3576A8116E9AB700E8ED2F /* SBHostOS.h in Headers */ = {isa = PBXBuildFile; fileRef = 9A3576A7116E9AB700E8ED2F /* SBHostOS.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		AFB2F2F621B71AF30078DEF1 /* SBInitializerOptions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AFB2F2F421B71AE90078DEF1 /* SBInitializerOptions.cpp */; };
+		4C38996D21BA11CA002BAEF4 /* SBInitializerOptions.h in Headers */ = {isa = PBXBuildFile; fileRef = 4C38996C21BA11CA002BAEF4 /* SBInitializerOptions.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9AC703AF117675410086C050 /* SBInstruction.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AC703AE117675410086C050 /* SBInstruction.cpp */; };
 		9AC7038E117674FB0086C050 /* SBInstruction.h in Headers */ = {isa = PBXBuildFile; fileRef = 9AC7038D117674EB0086C050 /* SBInstruction.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		9AC703B1117675490086C050 /* SBInstructionList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AC703B0117675490086C050 /* SBInstructionList.cpp */; };
@@ -1734,6 +1736,8 @@
 		260C89D410F57C5600BB2B04 /* DWARFFormValue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFFormValue.h; sourceTree = "<group>"; };
 		4CD44CF820B37C440003557C /* DWARFIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFIndex.cpp; sourceTree = "<group>"; };
 		4CD44CFE20B37C570003557C /* DWARFIndex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = DWARFIndex.h; sourceTree = "<group>"; };
+		4C38996221B9AECC002BAEF4 /* DWARFLocationExpression.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DWARFLocationExpression.cpp; path = source/Plugins/SymbolFile/NativePDB/DWARFLocationExpression.cpp; sourceTree = SOURCE_ROOT; };
+		4C38996321B9AECC002BAEF4 /* DWARFLocationExpression.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DWARFLocationExpression.h; path = source/Plugins/SymbolFile/NativePDB/DWARFLocationExpression.h; sourceTree = SOURCE_ROOT; };
 		7F2AAA5920601BE000A422D8 /* DWARFUnit.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFUnit.cpp; sourceTree = "<group>"; };
 		7F2AAA5820601BDF00A422D8 /* DWARFUnit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFUnit.h; sourceTree = "<group>"; };
 		26FFC19514FC072100087D58 /* DYLDRendezvous.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DYLDRendezvous.cpp; sourceTree = "<group>"; };
@@ -2728,6 +2732,7 @@
 		9A3576A7116E9AB700E8ED2F /* SBHostOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBHostOS.h; path = include/lldb/API/SBHostOS.h; sourceTree = "<group>"; };
 		2611FF00142D83060017FEA3 /* SBHostOS.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBHostOS.i; sourceTree = "<group>"; };
 		AFB2F2F421B71AE90078DEF1 /* SBInitializerOptions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBInitializerOptions.cpp; path = source/API/SBInitializerOptions.cpp; sourceTree = "<group>"; };
+		4C38996C21BA11CA002BAEF4 /* SBInitializerOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBInitializerOptions.h; path = include/lldb/API/SBInitializerOptions.h; sourceTree = "<group>"; };
 		9AC703AE117675410086C050 /* SBInstruction.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBInstruction.cpp; path = source/API/SBInstruction.cpp; sourceTree = "<group>"; };
 		9AC7038D117674EB0086C050 /* SBInstruction.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBInstruction.h; path = include/lldb/API/SBInstruction.h; sourceTree = "<group>"; };
 		2611FF02142D83060017FEA3 /* SBInstruction.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBInstruction.i; sourceTree = "<group>"; };
@@ -4260,6 +4265,7 @@
 				9A3576A7116E9AB700E8ED2F /* SBHostOS.h */,
 				9A3576A9116E9AC700E8ED2F /* SBHostOS.cpp */,
 				AFB2F2F421B71AE90078DEF1 /* SBInitializerOptions.cpp */,
+				4C38996C21BA11CA002BAEF4 /* SBInitializerOptions.h */,
 				9AC7038D117674EB0086C050 /* SBInstruction.h */,
 				9AC703AE117675410086C050 /* SBInstruction.cpp */,
 				9AC7038F117675270086C050 /* SBInstructionList.h */,
@@ -6778,6 +6784,8 @@
 			children = (
 				AFD966B4217140B5006714AC /* CompileUnitIndex.cpp */,
 				AFD966BD217140C8006714AC /* CompileUnitIndex.h */,
+				4C38996221B9AECC002BAEF4 /* DWARFLocationExpression.cpp */,
+				4C38996321B9AECC002BAEF4 /* DWARFLocationExpression.h */,
 				AFD966B6217140B6006714AC /* PdbIndex.cpp */,
 				AFD966BF217140C8006714AC /* PdbIndex.h */,
 				AF0F459D219FA1C800C1E612 /* PdbSymUid.cpp */,
@@ -6931,6 +6939,7 @@
 				4C56543519D2297A002E9C44 /* SBThreadPlan.h in Headers */,
 				263C493A178B50CF0070F12D /* SBModuleSpec.h in Headers */,
 				2617447A11685869005ADD65 /* SBType.h in Headers */,
+				4C38996D21BA11CA002BAEF4 /* SBInitializerOptions.h in Headers */,
 				9475C18914E5EA08001BFC6D /* SBTypeCategory.h in Headers */,
 				941BCC7F14E48C4000BB969C /* SBTypeFilter.h in Headers */,
 				941BCC8014E48C4000BB969C /* SBTypeFormat.h in Headers */,
@@ -8253,6 +8262,7 @@
 				2642FBB213D003B400ED6808 /* ProcessKDPLog.cpp in Sources */,
 				263641191B34AEE200145B2F /* ABISysV_mips64.cpp in Sources */,
 				26957D9813D381C900670048 /* RegisterContextDarwin_arm.cpp in Sources */,
+				4C38996421B9AECD002BAEF4 /* DWARFLocationExpression.cpp in Sources */,
 				26957D9A13D381C900670048 /* RegisterContextDarwin_i386.cpp in Sources */,
 				26957D9C13D381C900670048 /* RegisterContextDarwin_x86_64.cpp in Sources */,
 				94CD7D0919A3FBA300908B7C /* AppleObjCClassDescriptorV2.cpp in Sources */,

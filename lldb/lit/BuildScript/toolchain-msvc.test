@@ -19,12 +19,12 @@ X86:   Verbose: True
 X86:   Dryrun: True
 X86:   Inputs: foobar.c
 X86: Cleaning {{.*}}toolchain-msvc.test.tmp\foobar.ilk
-X86: Cleaning {{.*}}toolchain-msvc.test.tmp\foobar.obj
+X86: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.exe-foobar.obj
 X86: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.pdb
 X86: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.exe
-X86: compiling foobar.c -> foobar.obj
+X86: compiling foobar.c -> foo.exe-foobar.obj
 X86:   Command Line: {{.*}}\{{[Hh]ost[Xx]64}}\x86\cl.exe
-X86: linking foobar.obj -> foo.exe
+X86: linking foo.exe-foobar.obj -> foo.exe
 X86:   Command Line: {{.*}}\{{[Hh]ost[Xx]64}}\x86\link.exe
 X86:   Env
 X86:     LIB = {{.*}}\ATLMFC\lib\x86
@@ -47,12 +47,12 @@ X64:   Verbose: True
 X64:   Dryrun: True
 X64:   Inputs: foobar.c
 X64: Cleaning {{.*}}toolchain-msvc.test.tmp\foobar.ilk
-X64: Cleaning {{.*}}toolchain-msvc.test.tmp\foobar.obj
+X64: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.exe-foobar.obj
 X64: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.pdb
 X64: Cleaning {{.*}}toolchain-msvc.test.tmp\foo.exe
-X64: compiling foobar.c -> foobar.obj
+X64: compiling foobar.c -> foo.exe-foobar.obj
 X64:   Command Line: {{.*}}\{{[Hh]ost[Xx]64}}\x64\cl.exe
-X64: linking foobar.obj -> foo.exe
+X64: linking foo.exe-foobar.obj -> foo.exe
 X64:   Command Line: {{.*}}\{{[Hh]ost[Xx]64}}\x64\link.exe
 X64:   Env
 X64:     LIB = {{.*}}\ATLMFC\lib\x64

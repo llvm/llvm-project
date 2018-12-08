@@ -2,6 +2,7 @@
 
 # XRay runtime library implementation files.
 set(XRAY_SOURCES
+    xray_buffer_queue.cc
     xray_init.cc
     xray_flags.cc
     xray_interface.cc
@@ -11,7 +12,6 @@ set(XRAY_SOURCES
 # Implementation files for all XRay modes.
 set(XRAY_FDR_MODE_SOURCES
     xray_fdr_flags.cc
-    xray_buffer_queue.cc
     xray_fdr_logging.cc)
 
 set(XRAY_BASIC_MODE_SOURCES

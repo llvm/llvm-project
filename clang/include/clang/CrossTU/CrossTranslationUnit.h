@@ -41,7 +41,9 @@ enum class index_error_code {
   missing_definition,
   failed_import,
   failed_to_get_external_ast,
-  failed_to_generate_usr
+  failed_to_generate_usr,
+  triple_mismatch,
+  lang_mismatch
 };
 
 class IndexError : public llvm::ErrorInfo<IndexError> {
@@ -50,16 +52,25 @@ public:
   IndexError(index_error_code C) : Code(C), LineNo(0) {}
   IndexError(index_error_code C, std::string FileName, int LineNo = 0)
       : Code(C), FileName(std::move(FileName)), LineNo(LineNo) {}
+  IndexError(index_error_code C, std::string FileName, std::string TripleToName,
+             std::string TripleFromName)
+      : Code(C), FileName(std::move(FileName)),
+        TripleToName(std::move(TripleToName)),
+        TripleFromName(std::move(TripleFromName)) {}
   void log(raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;
   index_error_code getCode() const { return Code; }
   int getLineNum() const { return LineNo; }
   std::string getFileName() const { return FileName; }
+  std::string getTripleToName() const { return TripleToName; }
+  std::string getTripleFromName() const { return TripleFromName; }
 
 private:
   index_error_code Code;
   std::string FileName;
   int LineNo;
+  std::string TripleToName;
+  std::string TripleFromName;
 };
 
 /// This function parses an index file that determines which
@@ -108,7 +119,7 @@ public:
   /// Note that the AST files should also be in the \p CrossTUDir.
   llvm::Expected<const FunctionDecl *>
   getCrossTUDefinition(const FunctionDecl *FD, StringRef CrossTUDir,
-                       StringRef IndexName);
+                       StringRef IndexName, bool DisplayCTUProgress = false);
 
   /// This function loads a function definition from an external AST
   ///        file.
@@ -124,7 +135,8 @@ public:
   /// Note that the AST files should also be in the \p CrossTUDir.
   llvm::Expected<ASTUnit *> loadExternalAST(StringRef LookupName,
                                             StringRef CrossTUDir,
-                                            StringRef IndexName);
+                                            StringRef IndexName,
+                                            bool DisplayCTUProgress = false);
 
   /// This function merges a definition from a separate AST Unit into
   ///        the current one which was created by the compiler instance that

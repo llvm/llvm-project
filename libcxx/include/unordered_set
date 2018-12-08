@@ -384,6 +384,7 @@ public:
     typedef const value_type&                                          const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
                   "Invalid allocator::value_type");
+    static_assert(sizeof(__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
 
 private:
     typedef __hash_table<value_type, hasher, key_equal, allocator_type> __table;
@@ -976,6 +977,7 @@ public:
     typedef const value_type&                                          const_reference;
     static_assert((is_same<value_type, typename allocator_type::value_type>::value),
                   "Invalid allocator::value_type");
+    static_assert(sizeof(__diagnose_unordered_container_requirements<_Value, _Hash, _Pred>(0)), "");
 
 private:
     typedef __hash_table<value_type, hasher, key_equal, allocator_type> __table;

@@ -38,7 +38,8 @@ STATISTIC(NumSimplified, "Number of instructions trivialized (dead bits)");
 /// instruction may need to be cleared of assumptions that can no longer be
 /// guaranteed correct.
 static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
-  assert(I->getType()->isIntegerTy() && "Trivializing a non-integer value?");
+  assert(I->getType()->isIntOrIntVectorTy() &&
+         "Trivializing a non-integer value?");
 
   // Initialize the worklist with eligible direct users.
   SmallVector<Instruction *, 16> WorkList;
@@ -46,13 +47,13 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
     // If all bits of a user are demanded, then we know that nothing below that
     // in the def-use chain needs to be changed.
     auto *J = dyn_cast<Instruction>(JU);
-    if (J && J->getType()->isSized() &&
+    if (J && J->getType()->isIntOrIntVectorTy() &&
         !DB.getDemandedBits(J).isAllOnesValue())
       WorkList.push_back(J);
 
-    // Note that we need to check for unsized types above before asking for
+    // Note that we need to check for non-int types above before asking for
     // demanded bits. Normally, the only way to reach an instruction with an
-    // unsized type is via an instruction that has side effects (or otherwise
+    // non-int type is via an instruction that has side effects (or otherwise
     // will demand its input bits). However, if we have a readnone function
     // that returns an unsized type (e.g., void), we must avoid asking for the
     // demanded bits of the function call's return value. A void-returning
@@ -78,7 +79,7 @@ static void clearAssumptionsOfUsers(Instruction *I, DemandedBits &DB) {
       // If all bits of a user are demanded, then we know that nothing below
       // that in the def-use chain needs to be changed.
       auto *K = dyn_cast<Instruction>(KU);
-      if (K && !Visited.count(K) && K->getType()->isSized() &&
+      if (K && !Visited.count(K) && K->getType()->isIntOrIntVectorTy() &&
           !DB.getDemandedBits(K).isAllOnesValue())
         WorkList.push_back(K);
     }
@@ -95,7 +96,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
     if (I.mayHaveSideEffects() && I.use_empty())
       continue;
 
-    if (I.getType()->isIntegerTy() &&
+    if (I.getType()->isIntOrIntVectorTy() &&
         !DB.getDemandedBits(&I).getBoolValue()) {
       // For live instructions that have all dead bits, first make them dead by
       // replacing all uses with something else. Then, if they don't need to

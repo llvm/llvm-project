@@ -27,6 +27,7 @@
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1077,10 +1078,10 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
             isa<GlobalValue>(CE1->getOperand(0))) {
           GlobalValue *GV = cast<GlobalValue>(CE1->getOperand(0));
 
-          // Functions are at least 4-byte aligned.
-          unsigned GVAlign = GV->getAlignment();
-          if (isa<Function>(GV))
-            GVAlign = std::max(GVAlign, 4U);
+          unsigned GVAlign =
+              GV->getParent()
+                  ? GV->getPointerAlignment(GV->getParent()->getDataLayout())
+                  : 0;
 
           if (GVAlign > 1) {
             unsigned DstWidth = CI2->getType()->getBitWidth();

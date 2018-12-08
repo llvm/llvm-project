@@ -1,5 +1,5 @@
-; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck \
+; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck %s
+; RUN: llc -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck \
 ; RUN:   %s --check-prefix=CHECK-P9
 
 ; Verify peephole simplification of splats and swaps.  Bugpoint-reduced

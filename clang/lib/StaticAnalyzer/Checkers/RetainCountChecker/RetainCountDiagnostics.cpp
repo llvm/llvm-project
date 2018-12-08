@@ -634,8 +634,7 @@ void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,
   UniqueingDecl = AllocNode->getLocationContext()->getDecl();
 }
 
-void CFRefLeakReport::createDescription(CheckerContext &Ctx,
-                                        bool IncludeAllocationLine) {
+void CFRefLeakReport::createDescription(CheckerContext &Ctx) {
   assert(Location.isValid() && UniqueingDecl && UniqueingLocation.isValid());
   Description.clear();
   llvm::raw_string_ostream os(Description);
@@ -644,10 +643,6 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx,
   Optional<std::string> RegionDescription = describeRegion(AllocBinding);
   if (RegionDescription) {
     os << " stored into '" << *RegionDescription << '\'';
-    if (IncludeAllocationLine) {
-      FullSourceLoc SL(AllocStmt->getBeginLoc(), Ctx.getSourceManager());
-      os << " (allocated on line " << SL.getSpellingLineNumber() << ")";
-    }
   } else {
 
     // If we can't figure out the name, just supply the type information.
@@ -658,15 +653,14 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx,
 CFRefLeakReport::CFRefLeakReport(CFRefBug &D, const LangOptions &LOpts,
                                  const SummaryLogTy &Log,
                                  ExplodedNode *n, SymbolRef sym,
-                                 CheckerContext &Ctx,
-                                 bool IncludeAllocationLine)
+                                 CheckerContext &Ctx)
   : CFRefReport(D, LOpts, Log, n, sym, false) {
 
   deriveAllocLocation(Ctx, sym);
   if (!AllocBinding)
     deriveParamLocation(Ctx, sym);
 
-  createDescription(Ctx, IncludeAllocationLine);
+  createDescription(Ctx);
 
   addVisitor(llvm::make_unique<CFRefLeakReportVisitor>(sym, Log));
 }
