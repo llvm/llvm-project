@@ -113,6 +113,15 @@ public:
 
   bool empty() const { return Stream.getLength() == 0; }
 
+  VarStreamArray<ValueType, Extractor> substream(uint32_t Begin,
+                                                 uint32_t End) const {
+    assert(Begin >= Skew);
+    // We should never cut off the beginning of the stream since it might be
+    // skewed, meaning the initial bytes are important.
+    BinaryStreamRef NewStream = Stream.slice(0, End);
+    return {NewStream, E, Begin};
+  }
+
   /// given an offset into the array's underlying stream, return an
   /// iterator to the record at that offset.  This is considered unsafe
   /// since the behavior is undefined if \p Offset does not refer to the

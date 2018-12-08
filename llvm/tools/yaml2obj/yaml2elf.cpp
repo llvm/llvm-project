@@ -685,7 +685,8 @@ template <class ELFT> bool ELFState<ELFT>::hasDynamicSymbols() const {
          Doc.DynamicSymbols.Local.size() > 0;
 }
 
-template <class ELFT> SmallVector<const char *, 5> ELFState<ELFT>::implicitSectionNames() const {
+template <class ELFT>
+SmallVector<const char *, 5> ELFState<ELFT>::implicitSectionNames() const {
   if (!hasDynamicSymbols())
     return {".symtab", ".strtab", ".shstrtab"};
   return {".symtab", ".strtab", ".shstrtab", ".dynsym", ".dynstr"};

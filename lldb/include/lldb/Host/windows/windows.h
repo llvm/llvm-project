@@ -21,6 +21,7 @@
 #undef GetUserName
 #undef LoadImage
 #undef CreateProcess
+#undef Yield
 #undef far
 #undef near
 #undef FAR

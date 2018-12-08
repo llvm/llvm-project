@@ -33,8 +33,9 @@
 #endif
 
 #if SI_POSIX
+# include "sanitizer_platform_limits_freebsd.h"
 # include "sanitizer_platform_limits_netbsd.h"
-#include "sanitizer_platform_limits_openbsd.h"
+# include "sanitizer_platform_limits_openbsd.h"
 # include "sanitizer_platform_limits_posix.h"
 # include "sanitizer_platform_limits_solaris.h"
 #endif
@@ -528,5 +529,6 @@
 #define SANITIZER_INTERCEPT_SYSCTLGETMIBINFO SI_NETBSD
 #define SANITIZER_INTERCEPT_NL_LANGINFO (SI_NETBSD || SI_FREEBSD)
 #define SANITIZER_INTERCEPT_MODCTL SI_NETBSD
+#define SANITIZER_INTERCEPT_STRTONUM SI_NETBSD
 
 #endif  // #ifndef SANITIZER_PLATFORM_INTERCEPTORS_H

@@ -992,17 +992,15 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
       continue;
 
     // Find proper insertion point.
-    Instruction *InsertPt;
+    BasicBlock::iterator InsertPt;
     // In case OutI is an invoke, we insert the store at the beginning in the
     // 'normal destination' BB. Otherwise we insert the store right after OutI.
     if (auto *InvokeI = dyn_cast<InvokeInst>(OutI))
-      InsertPt = InvokeI->getNormalDest()->getFirstNonPHI();
+      InsertPt = InvokeI->getNormalDest()->getFirstInsertionPt();
+    else if (auto *Phi = dyn_cast<PHINode>(OutI))
+      InsertPt = Phi->getParent()->getFirstInsertionPt();
     else
-      InsertPt = OutI->getNextNode();
-
-    // Let's assume that there is no other guy interleave non-PHI in PHIs.
-    if (isa<PHINode>(InsertPt))
-      InsertPt = InsertPt->getParent()->getFirstNonPHI();
+      InsertPt = std::next(OutI->getIterator());
 
     assert(OAI != newFunction->arg_end() &&
            "Number of output arguments should match "
@@ -1012,13 +1010,13 @@ emitCallAndSwitchStatement(Function *newFunction, BasicBlock *codeReplacer,
       Idx[0] = Constant::getNullValue(Type::getInt32Ty(Context));
       Idx[1] = ConstantInt::get(Type::getInt32Ty(Context), FirstOut + i);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          StructArgTy, &*OAI, Idx, "gep_" + outputs[i]->getName(), InsertPt);
-      new StoreInst(outputs[i], GEP, InsertPt);
+          StructArgTy, &*OAI, Idx, "gep_" + outputs[i]->getName(), &*InsertPt);
+      new StoreInst(outputs[i], GEP, &*InsertPt);
       // Since there should be only one struct argument aggregating
       // all the output values, we shouldn't increment OAI, which always
       // points to the struct argument, in this case.
     } else {
-      new StoreInst(outputs[i], &*OAI, InsertPt);
+      new StoreInst(outputs[i], &*OAI, &*InsertPt);
       ++OAI;
     }
   }
@@ -1379,8 +1377,10 @@ Function *CodeExtractor::extractCodeRegion() {
   if (doesNotReturn)
     newFunction->setDoesNotReturn();
 
-  LLVM_DEBUG(if (verifyFunction(*newFunction))
-             report_fatal_error("verification of newFunction failed!"));
+  LLVM_DEBUG(if (verifyFunction(*newFunction, &errs())) {
+    newFunction->dump();
+    report_fatal_error("verification of newFunction failed!");
+  });
   LLVM_DEBUG(if (verifyFunction(*oldFunction))
              report_fatal_error("verification of oldFunction failed!"));
   return newFunction;

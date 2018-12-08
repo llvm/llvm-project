@@ -84,7 +84,7 @@ __kmpc_initialize_data_sharing_environment(__kmpc_data_sharing_slot *rootS,
            "Entering __kmpc_initialize_data_sharing_environment\n");
 
   unsigned WID = getWarpId();
-  DSPRINT(DSFLAG_INIT, "Warp ID: %d\n", WID);
+  DSPRINT(DSFLAG_INIT, "Warp ID: %u\n", WID);
 
   omptarget_nvptx_TeamDescr *teamDescr =
       &omptarget_nvptx_threadPrivateContext->TeamContext();
@@ -95,15 +95,16 @@ __kmpc_initialize_data_sharing_environment(__kmpc_data_sharing_slot *rootS,
 
   // We don't need to initialize the frame and active threads.
 
-  DSPRINT(DSFLAG_INIT, "Initial data size: %08x \n", InitialDataSize);
-  DSPRINT(DSFLAG_INIT, "Root slot at: %016llx \n", (long long)RootS);
+  DSPRINT(DSFLAG_INIT, "Initial data size: %08x \n", (unsigned)InitialDataSize);
+  DSPRINT(DSFLAG_INIT, "Root slot at: %016llx \n", (unsigned long long)RootS);
   DSPRINT(DSFLAG_INIT, "Root slot data-end at: %016llx \n",
-          (long long)RootS->DataEnd);
-  DSPRINT(DSFLAG_INIT, "Root slot next at: %016llx \n", (long long)RootS->Next);
+          (unsigned long long)RootS->DataEnd);
+  DSPRINT(DSFLAG_INIT, "Root slot next at: %016llx \n",
+          (unsigned long long)RootS->Next);
   DSPRINT(DSFLAG_INIT, "Shared slot ptr at: %016llx \n",
-          (long long)DataSharingState.SlotPtr[WID]);
+          (unsigned long long)DataSharingState.SlotPtr[WID]);
   DSPRINT(DSFLAG_INIT, "Shared stack ptr at: %016llx \n",
-          (long long)DataSharingState.StackPtr[WID]);
+          (unsigned long long)DataSharingState.StackPtr[WID]);
 
   DSPRINT0(DSFLAG_INIT, "Exiting __kmpc_initialize_data_sharing_environment\n");
 }
@@ -121,8 +122,9 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
   if (!IsOMPRuntimeInitialized)
     return (void *)&DataSharingState;
 
-  DSPRINT(DSFLAG, "Data Size %016llx\n", SharingDataSize);
-  DSPRINT(DSFLAG, "Default Data Size %016llx\n", SharingDefaultDataSize);
+  DSPRINT(DSFLAG, "Data Size %016llx\n", (unsigned long long)SharingDataSize);
+  DSPRINT(DSFLAG, "Default Data Size %016llx\n",
+          (unsigned long long)SharingDefaultDataSize);
 
   unsigned WID = getWarpId();
   unsigned CurActiveThreads = getActiveThreadsMask();
@@ -139,11 +141,11 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
   *SavedSharedFrame = FrameP;
   *SavedActiveThreads = ActiveT;
 
-  DSPRINT(DSFLAG, "Warp ID: %d\n", WID);
-  DSPRINT(DSFLAG, "Saved slot ptr at: %016llx \n", (long long)SlotP);
-  DSPRINT(DSFLAG, "Saved stack ptr at: %016llx \n", (long long)StackP);
+  DSPRINT(DSFLAG, "Warp ID: %u\n", WID);
+  DSPRINT(DSFLAG, "Saved slot ptr at: %016llx \n", (unsigned long long)SlotP);
+  DSPRINT(DSFLAG, "Saved stack ptr at: %016llx \n", (unsigned long long)StackP);
   DSPRINT(DSFLAG, "Saved frame ptr at: %016llx \n", (long long)FrameP);
-  DSPRINT(DSFLAG, "Active threads: %08x \n", ActiveT);
+  DSPRINT(DSFLAG, "Active threads: %08x \n", (unsigned)ActiveT);
 
   // Only the warp active master needs to grow the stack.
   if (IsWarpMasterActiveThread()) {
@@ -161,12 +163,16 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
     const uintptr_t RequiredEndAddress =
         CurrentStartAddress + (uintptr_t)SharingDataSize;
 
-    DSPRINT(DSFLAG, "Data Size %016llx\n", SharingDataSize);
-    DSPRINT(DSFLAG, "Default Data Size %016llx\n", SharingDefaultDataSize);
-    DSPRINT(DSFLAG, "Current Start Address %016llx\n", CurrentStartAddress);
-    DSPRINT(DSFLAG, "Current End Address %016llx\n", CurrentEndAddress);
-    DSPRINT(DSFLAG, "Required End Address %016llx\n", RequiredEndAddress);
-    DSPRINT(DSFLAG, "Active Threads %08x\n", ActiveT);
+    DSPRINT(DSFLAG, "Data Size %016llx\n", (unsigned long long)SharingDataSize);
+    DSPRINT(DSFLAG, "Default Data Size %016llx\n",
+            (unsigned long long)SharingDefaultDataSize);
+    DSPRINT(DSFLAG, "Current Start Address %016llx\n",
+            (unsigned long long)CurrentStartAddress);
+    DSPRINT(DSFLAG, "Current End Address %016llx\n",
+            (unsigned long long)CurrentEndAddress);
+    DSPRINT(DSFLAG, "Required End Address %016llx\n",
+            (unsigned long long)RequiredEndAddress);
+    DSPRINT(DSFLAG, "Active Threads %08x\n", (unsigned)ActiveT);
 
     // If we require a new slot, allocate it and initialize it (or attempt to
     // reuse one). Also, set the shared stack and slot pointers to the new
@@ -184,11 +190,11 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
                                      (uintptr_t)(&ExistingSlot->Data[0]);
         if (ExistingSlotSize >= NewSize) {
           DSPRINT(DSFLAG, "Reusing stack slot %016llx\n",
-                  (long long)ExistingSlot);
+                  (unsigned long long)ExistingSlot);
           NewSlot = ExistingSlot;
         } else {
           DSPRINT(DSFLAG, "Cleaning up -failed reuse - %016llx\n",
-                  (long long)SlotP->Next);
+                  (unsigned long long)SlotP->Next);
           free(ExistingSlot);
         }
       }
@@ -197,7 +203,7 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
         NewSlot = (__kmpc_data_sharing_slot *)malloc(
             sizeof(__kmpc_data_sharing_slot) + NewSize);
         DSPRINT(DSFLAG, "New slot allocated %016llx (data size=%016llx)\n",
-                (long long)NewSlot, NewSize);
+                (unsigned long long)NewSlot, NewSize);
       }
 
       NewSlot->Next = 0;
@@ -213,7 +219,7 @@ EXTERN void *__kmpc_data_sharing_environment_begin(
       // not eliminate them because that may be used to return data.
       if (SlotP->Next) {
         DSPRINT(DSFLAG, "Cleaning up - old not required - %016llx\n",
-                (long long)SlotP->Next);
+                (unsigned long long)SlotP->Next);
         free(SlotP->Next);
         SlotP->Next = 0;
       }
@@ -275,8 +281,8 @@ EXTERN void __kmpc_data_sharing_environment_end(
     // have other threads that will return after the current ones.
     ActiveT &= ~CurActive;
 
-    DSPRINT(DSFLAG, "Active threads: %08x; New mask: %08x\n", CurActive,
-            ActiveT);
+    DSPRINT(DSFLAG, "Active threads: %08x; New mask: %08x\n",
+            (unsigned)CurActive, (unsigned)ActiveT);
 
     if (!ActiveT) {
       // No other active threads? Great, lets restore the stack.
@@ -290,10 +296,13 @@ EXTERN void __kmpc_data_sharing_environment_end(
       FrameP = *SavedSharedFrame;
       ActiveT = *SavedActiveThreads;
 
-      DSPRINT(DSFLAG, "Restored slot ptr at: %016llx \n", (long long)SlotP);
-      DSPRINT(DSFLAG, "Restored stack ptr at: %016llx \n", (long long)StackP);
-      DSPRINT(DSFLAG, "Restored frame ptr at: %016llx \n", (long long)FrameP);
-      DSPRINT(DSFLAG, "Active threads: %08x \n", ActiveT);
+      DSPRINT(DSFLAG, "Restored slot ptr at: %016llx \n",
+              (unsigned long long)SlotP);
+      DSPRINT(DSFLAG, "Restored stack ptr at: %016llx \n",
+              (unsigned long long)StackP);
+      DSPRINT(DSFLAG, "Restored frame ptr at: %016llx \n",
+              (unsigned long long)FrameP);
+      DSPRINT(DSFLAG, "Active threads: %08x \n", (unsigned)ActiveT);
     }
   }
 
@@ -319,7 +328,7 @@ __kmpc_get_data_sharing_environment_frame(int32_t SourceThreadID,
 
   unsigned SourceWID = SourceThreadID / WARPSIZE;
 
-  DSPRINT(DSFLAG, "Source  warp: %d\n", SourceWID);
+  DSPRINT(DSFLAG, "Source  warp: %u\n", SourceWID);
 
   void * volatile P = DataSharingState.FramePtr[SourceWID];
   DSPRINT0(DSFLAG, "Exiting __kmpc_get_data_sharing_environment_frame\n");

@@ -354,6 +354,23 @@ public:
   }
 };
 
+/// Helper method for getting the code model, returning Default if
+/// CM does not have a value. The tiny and kernel models will produce
+/// an error, so targets that support them or require more complex codemodel
+/// selection logic should implement and call their own getEffectiveCodeModel.
+inline CodeModel::Model getEffectiveCodeModel(Optional<CodeModel::Model> CM,
+                                              CodeModel::Model Default) {
+  if (CM) {
+    // By default, targets do not support the tiny and kernel models.
+    if (*CM == CodeModel::Tiny)
+      report_fatal_error("Target does not support the tiny CodeModel");
+    if (*CM == CodeModel::Kernel)
+      report_fatal_error("Target does not support the kernel CodeModel");
+    return *CM;
+  }
+  return Default;
+}
+
 } // end namespace llvm
 
 #endif // LLVM_TARGET_TARGETMACHINE_H

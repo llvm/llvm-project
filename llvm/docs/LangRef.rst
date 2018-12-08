@@ -15604,6 +15604,145 @@ if"); and this allows for "check widening" type optimizations.
 ``@llvm.experimental.guard`` cannot be invoked.
 
 
+'``llvm.experimental.widenable.condition``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare i1 @llvm.experimental.widenable.condition()
+
+Overview:
+"""""""""
+
+This intrinsic represents a "widenable condition" which is
+boolean expressions with the following property: whether this
+expression is `true` or `false`, the program is correct and
+well-defined.
+
+Together with :ref:`deoptimization operand bundles <deopt_opbundles>`,
+``@llvm.experimental.widenable.condition`` allows frontends to
+express guards or checks on optimistic assumptions made during
+compilation and represent them as branch instructions on special
+conditions.
+
+While this may appear similar in semantics to `undef`, it is very
+different in that an invocation produces a particular, singular
+value. It is also intended to be lowered late, and remain available
+for specific optimizations and transforms that can benefit from its
+special properties.
+
+Arguments:
+""""""""""
+
+None.
+
+Semantics:
+""""""""""
+
+The intrinsic ``@llvm.experimental.widenable.condition()``
+returns either `true` or `false`. For each evaluation of a call
+to this intrinsic, the program must be valid and correct both if
+it returns `true` and if it returns `false`. This allows
+transformation passes to replace evaluations of this intrinsic
+with either value whenever one is beneficial.
+
+When used in a branch condition, it allows us to choose between
+two alternative correct solutions for the same problem, like
+in example below:
+
+.. code-block:: text
+
+    %cond = call i1 @llvm.experimental.widenable.condition()
+    br i1 %cond, label %solution_1, label %solution_2
+
+  label %fast_path:
+    ; Apply memory-consuming but fast solution for a task.
+
+  label %slow_path:
+    ; Cheap in memory but slow solution.
+
+Whether the result of intrinsic's call is `true` or `false`,
+it should be correct to pick either solution. We can switch
+between them by replacing the result of
+``@llvm.experimental.widenable.condition`` with different
+`i1` expressions.
+
+This is how it can be used to represent guards as widenable branches:
+
+.. code-block:: text
+
+  block:
+    ; Unguarded instructions
+    call void @llvm.experimental.guard(i1 %cond, <args...>) ["deopt"(<deopt_args...>)]
+    ; Guarded instructions
+
+Can be expressed in an alternative equivalent form of explicit branch using
+``@llvm.experimental.widenable.condition``:
+
+.. code-block:: text
+
+  block:
+    ; Unguarded instructions
+    %widenable_condition = call i1 @llvm.experimental.widenable.condition()
+    %guard_condition = and i1 %cond, %widenable_condition
+    br i1 %guard_condition, label %guarded, label %deopt
+
+  guarded:
+    ; Guarded instructions
+
+  deopt:
+    call type @llvm.experimental.deoptimize(<args...>) [ "deopt"(<deopt_args...>) ]
+
+So the block `guarded` is only reachable when `%cond` is `true`,
+and it should be valid to go to the block `deopt` whenever `%cond`
+is `true` or `false`.
+
+``@llvm.experimental.widenable.condition`` will never throw, thus
+it cannot be invoked.
+
+Guard widening:
+"""""""""""""""
+
+When ``@llvm.experimental.widenable.condition()`` is used in
+condition of a guard represented as explicit branch, it is
+legal to widen the guard's condition with any additional
+conditions.
+
+Guard widening looks like replacement of
+
+.. code-block:: text
+
+  %widenable_cond = call i1 @llvm.experimental.widenable.condition()
+  %guard_cond = and i1 %cond, %widenable_cond
+  br i1 %guard_cond, label %guarded, label %deopt
+
+with
+
+.. code-block:: text
+
+  %widenable_cond = call i1 @llvm.experimental.widenable.condition()
+  %new_cond = and i1 %any_other_cond, %widenable_cond
+  %new_guard_cond = and i1 %cond, %new_cond
+  br i1 %new_guard_cond, label %guarded, label %deopt
+
+for this branch. Here `%any_other_cond` is an arbitrarily chosen
+well-defined `i1` value. By making guard widening, we may
+impose stricter conditions on `guarded` block and bail to the
+deopt when the new condition is not met.
+
+Lowering:
+"""""""""
+
+Default lowering strategy is replacing the result of
+call of ``@llvm.experimental.widenable.condition``  with
+constant `true`. However it is always correct to replace
+it with any other `i1` value. Any pass can
+freely do it if it can benefit from non-default lowering.
+
+
 '``llvm.load.relative``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

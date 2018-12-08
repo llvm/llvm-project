@@ -2899,9 +2899,9 @@ bool HexagonInstrInfo::getMemOperandWithOffset(
     const TargetRegisterInfo *TRI) const {
   unsigned AccessSize = 0;
   BaseOp = getBaseAndOffset(LdSt, Offset, AccessSize);
-  assert(!BaseOp || BaseOp->isReg() &&
-                        "getMemOperandWithOffset only supports base "
-                        "operands of type register.");
+  assert((!BaseOp || BaseOp->isReg()) &&
+         "getMemOperandWithOffset only supports base "
+         "operands of type register.");
   return BaseOp != nullptr;
 }
 

@@ -31,6 +31,8 @@
   _GET_LINK_MAP_BY_DLOPEN_HANDLE(handle, 136)
 #endif
 
+#undef INLINE
+
 namespace __sanitizer {
 extern unsigned struct_utsname_sz;
 extern unsigned struct_stat_sz;

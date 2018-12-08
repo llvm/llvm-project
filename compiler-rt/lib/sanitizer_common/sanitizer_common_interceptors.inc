@@ -7728,6 +7728,30 @@ INTERCEPTOR(int, modctl, int operation, void *argp) {
 #define INIT_MODCTL
 #endif
 
+#if SANITIZER_INTERCEPT_STRTONUM
+INTERCEPTOR(long long, strtonum, const char *nptr, long long minval,
+            long long maxval, const char **errstr) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, strtonum, nptr, minval, maxval, errstr);
+
+  // TODO(kamil): Implement strtoll as a common inteceptor
+  char *real_endptr;
+  long long ret = (long long)REAL(strtoimax)(nptr, &real_endptr, 10);
+  StrtolFixAndCheck(ctx, nptr, nullptr, real_endptr, 10);
+
+  ret = REAL(strtonum)(nptr, minval, maxval, errstr);
+  if (errstr) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, errstr, sizeof(const char *));
+     if (*errstr)
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, *errstr, REAL(strlen)(*errstr) + 1);
+  }
+  return ret;
+}
+#define INIT_STRTONUM COMMON_INTERCEPT_FUNCTION(strtonum)
+#else
+#define INIT_STRTONUM
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map = new((void *)&metadata_mem) MetadataHashMap();
@@ -7992,6 +8016,7 @@ static void InitializeCommonInterceptors() {
   INIT_SYSCTLGETMIBINFO;
   INIT_NL_LANGINFO;
   INIT_MODCTL;
+  INIT_STRTONUM;
 
   INIT___PRINTF_CHK;
 }

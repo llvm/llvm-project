@@ -1613,7 +1613,7 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
         void
         __construct_forward(allocator_type& __a, _Ptr __begin1, _Ptr __end1, _Ptr& __begin2)
         {
-            for (; __begin1 != __end1; ++__begin1, ++__begin2)
+            for (; __begin1 != __end1; ++__begin1, (void) ++__begin2)
                 construct(__a, _VSTD::__to_raw_pointer(__begin2), _VSTD::move_if_noexcept(*__begin1));
         }
 
