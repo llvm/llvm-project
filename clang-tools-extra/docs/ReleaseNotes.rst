@@ -122,19 +122,19 @@ Improvements to clang-tidy
   Flags uses of ``absl::StrCat()`` to append to a ``std::string``. Suggests
   ``absl::StrAppend()`` should be used instead.
 
-- New :doc:`bugprone-too-small-loop-variable
-  <clang-tidy/checks/bugprone-too-small-loop-variable>` check.
-
-  Detects those ``for`` loops that have a loop variable with a "too small" type
-  which means this type can't represent all values which are part of the
-  iteration range.
-
 - New :doc:`abseil-upgrade-duration-conversions
   <clang-tidy/checks/abseil-upgrade-duration-conversions>` check.
 
   Finds calls to ``absl::Duration`` arithmetic operators and factories whose
   argument needs an explicit cast to continue compiling after upcoming API
   changes.
+
+- New :doc:`bugprone-too-small-loop-variable
+  <clang-tidy/checks/bugprone-too-small-loop-variable>` check.
+
+  Detects those ``for`` loops that have a loop variable with a "too small" type
+  which means this type can't represent all values which are part of the
+  iteration range.
 
 - New :doc:`cppcoreguidelines-macro-usage
   <clang-tidy/checks/cppcoreguidelines-macro-usage>` check.
