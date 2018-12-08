@@ -6429,7 +6429,12 @@ void Sema::AddFunctionCandidates(const UnresolvedSetImpl &Fns,
         if (Expr *E = Args[0]) {
           // Use the explicit base to restrict the lookup:
           ObjectType = E->getType();
-          ObjectClassification = E->Classify(Context);
+          // Pointers in the object arguments are implicitly dereferenced, so we
+          // always classify them as l-values.
+          if (!ObjectType.isNull() && ObjectType->isPointerType())
+            ObjectClassification = Expr::Classification::makeSimpleLValue();
+          else
+            ObjectClassification = E->Classify(Context);
         } // .. else there is an implicit base.
         FunctionArgs = Args.slice(1);
       }

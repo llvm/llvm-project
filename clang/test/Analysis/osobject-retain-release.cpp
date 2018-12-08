@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core,osx.cocoa.RetainCount -analyzer-output=text -verify %s
+// RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core,osx -analyzer-output=text -verify %s
 
 struct OSMetaClass;
 
@@ -88,6 +88,13 @@ struct OtherStruct {
 struct OSMetaClassBase {
   static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
 };
+
+void escape(void *);
+
+void test_escaping_into_voidstar() {
+  OSObject *obj = new OSObject;
+  escape(obj);
+}
 
 void test_no_infinite_check_recursion(MyArray *arr) {
   OSObject *input = new OSObject;

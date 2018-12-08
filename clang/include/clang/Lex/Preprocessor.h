@@ -319,6 +319,10 @@ class Preprocessor {
   /// This is used when loading a precompiled preamble.
   std::pair<int, bool> SkipMainFilePreamble;
 
+  /// Whether we hit an error due to reaching max allowed include depth. Allows
+  /// to avoid hitting the same error over and over again.
+  bool HasReachedMaxIncludeDepth = false;
+
 public:
   struct PreambleSkipInfo {
     SourceLocation HashTokenLoc;

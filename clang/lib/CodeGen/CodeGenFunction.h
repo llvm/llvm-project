@@ -3805,6 +3805,10 @@ public:
   std::pair<LValue,llvm::Value*>
   EmitARCStoreUnsafeUnretained(const BinaryOperator *e, bool ignored);
 
+  llvm::Value *EmitObjCAlloc(llvm::Value *value,
+                             llvm::Type *returnType);
+  llvm::Value *EmitObjCAllocWithZone(llvm::Value *value,
+                                     llvm::Type *returnType);
   llvm::Value *EmitObjCThrowOperand(const Expr *expr);
   llvm::Value *EmitObjCConsumeObject(QualType T, llvm::Value *Ptr);
   llvm::Value *EmitObjCExtendObjectLifetime(QualType T, llvm::Value *Ptr);
