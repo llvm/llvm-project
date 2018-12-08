@@ -2467,7 +2467,13 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
   assert(FD && "Not a FunctionDecl?");
   const auto *DD = FD->getAttr<CPUDispatchAttr>();
   assert(DD && "Not a cpu_dispatch Function?");
-  llvm::Type *DeclTy = getTypes().ConvertTypeForMem(FD->getType());
+  QualType CanonTy = Context.getCanonicalType(FD->getType());
+  llvm::Type *DeclTy = getTypes().ConvertFunctionType(CanonTy, FD);
+
+  if (const auto *CXXFD = dyn_cast<CXXMethodDecl>(FD)) {
+    const CGFunctionInfo &FInfo = getTypes().arrangeCXXMethodDeclaration(CXXFD);
+    DeclTy = getTypes().GetFunctionType(FInfo);
+  }
 
   StringRef ResolverName = getMangledName(GD);
   llvm::Type *ResolverType = llvm::FunctionType::get(
@@ -2485,7 +2491,7 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
     std::string MangledName = getMangledNameImpl(*this, GD, FD, true) +
                               getCPUSpecificMangling(*this, II->getName());
     llvm::Constant *Func = GetOrCreateLLVMFunction(
-        MangledName, DeclTy, GD, /*ForVTable=*/false, /*DontDefer=*/false,
+        MangledName, DeclTy, GD, /*ForVTable=*/false, /*DontDefer=*/true,
         /*IsThunk=*/false, llvm::AttributeList(), ForDefinition);
     llvm::SmallVector<StringRef, 32> Features;
     Target.getCPUSpecificCPUDispatchFeatures(II->getName(), Features);
