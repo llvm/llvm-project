@@ -2161,11 +2161,10 @@ SwiftLanguageRuntime::DoArchetypeBindingForType(StackFrame &stack_frame,
   // that module context.  Binding archetypes can trigger an import of
   // another module, so switch to a scratch context where such an
   // operation is safe.
-  auto *lldb_module = sc.module_sp.get();
   auto &target = m_process->GetTarget();
   assert(IsScratchContextLocked(target) &&
          "Swift scratch context not locked ahead of archetype binding");
-  auto scratch_ctx = target.GetScratchSwiftASTContext(error, lldb_module);
+  auto scratch_ctx = target.GetScratchSwiftASTContext(error, stack_frame);
   if (!scratch_ctx)
     return base_type;
   base_type = scratch_ctx->ImportType(base_type, error);
