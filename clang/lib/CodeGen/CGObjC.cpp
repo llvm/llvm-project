@@ -352,6 +352,56 @@ static const Expr *findWeakLValue(const Expr *E) {
   return nullptr;
 }
 
+/// The ObjC runtime may provide entrypoints that are likely to be faster
+/// than an ordinary message send of the appropriate selector.
+///
+/// The entrypoints are guaranteed to be equivalent to just sending the
+/// corresponding message.  If the entrypoint is implemented naively as just a
+/// message send, using it is a trade-off: it sacrifices a few cycles of
+/// overhead to save a small amount of code.  However, it's possible for
+/// runtimes to detect and special-case classes that use "standard"
+/// behavior; if that's dynamically a large proportion of all objects, using
+/// the entrypoint will also be faster than using a message send.
+///
+/// If the runtime does support a required entrypoint, then this method will
+/// generate a call and return the resulting value.  Otherwise it will return
+/// None and the caller can generate a msgSend instead.
+static Optional<llvm::Value *>
+tryGenerateSpecializedMessageSend(CodeGenFunction &CGF, QualType ResultType,
+                                  llvm::Value *Receiver,
+                                  const CallArgList& Args, Selector Sel,
+                                  const ObjCMethodDecl *method) {
+  auto &CGM = CGF.CGM;
+  if (!CGM.getCodeGenOpts().ObjCConvertMessagesToRuntimeCalls)
+    return None;
+
+  auto &Runtime = CGM.getLangOpts().ObjCRuntime;
+  switch (Sel.getMethodFamily()) {
+  case OMF_alloc:
+    if (Runtime.shouldUseRuntimeFunctionsForAlloc() &&
+        ResultType->isObjCObjectPointerType()) {
+        // [Foo alloc] -> objc_alloc(Foo)
+        if (Sel.isUnarySelector() && Sel.getNameForSlot(0) == "alloc")
+          return CGF.EmitObjCAlloc(Receiver, CGF.ConvertType(ResultType));
+        // [Foo allocWithZone:nil] -> objc_allocWithZone(Foo)
+        if (Sel.isKeywordSelector() && Sel.getNumArgs() == 1 &&
+            Args.size() == 1 && Args.front().getType()->isPointerType() &&
+            Sel.getNameForSlot(0) == "allocWithZone") {
+          const llvm::Value* arg = Args.front().getKnownRValue().getScalarVal();
+          if (isa<llvm::ConstantPointerNull>(arg))
+            return CGF.EmitObjCAllocWithZone(Receiver,
+                                             CGF.ConvertType(ResultType));
+          return None;
+        }
+    }
+    break;
+
+  default:
+    break;
+  }
+  return None;
+}
+
 RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
                                             ReturnValueSlot Return) {
   // Only the lookup mechanism and first two arguments of the method
@@ -474,10 +524,16 @@ RValue CodeGenFunction::EmitObjCMessageExpr(const ObjCMessageExpr *E,
                                               Args,
                                               method);
   } else {
-    result = Runtime.GenerateMessageSend(*this, Return, ResultType,
-                                         E->getSelector(),
-                                         Receiver, Args, OID,
-                                         method);
+    // Call runtime methods directly if we can.
+    if (Optional<llvm::Value *> SpecializedResult =
+            tryGenerateSpecializedMessageSend(*this, ResultType, Receiver, Args,
+                                              E->getSelector(), method)) {
+      result = RValue::get(SpecializedResult.getValue());
+    } else {
+      result = Runtime.GenerateMessageSend(*this, Return, ResultType,
+                                           E->getSelector(), Receiver, Args,
+                                           OID, method);
+    }
   }
 
   // For delegate init calls in ARC, implicitly store the result of
@@ -1845,6 +1901,7 @@ static llvm::Constant *createARCRuntimeFunction(CodeGenModule &CGM,
 /// where a null input causes a no-op and returns null.
 static llvm::Value *emitARCValueOperation(CodeGenFunction &CGF,
                                           llvm::Value *value,
+                                          llvm::Type *returnType,
                                           llvm::Constant *&fn,
                                           StringRef fnName,
                                           bool isTailCall = false) {
@@ -1858,7 +1915,7 @@ static llvm::Value *emitARCValueOperation(CodeGenFunction &CGF,
   }
 
   // Cast the argument to 'id'.
-  llvm::Type *origType = value->getType();
+  llvm::Type *origType = returnType ? returnType : value->getType();
   value = CGF.Builder.CreateBitCast(value, CGF.Int8PtrTy);
 
   // Call the function.
@@ -1964,7 +2021,7 @@ llvm::Value *CodeGenFunction::EmitARCRetain(QualType type, llvm::Value *value) {
 /// Retain the given object, with normal retain semantics.
 ///   call i8* \@objc_retain(i8* %value)
 llvm::Value *CodeGenFunction::EmitARCRetainNonBlock(llvm::Value *value) {
-  return emitARCValueOperation(*this, value,
+  return emitARCValueOperation(*this, value, nullptr,
                                CGM.getObjCEntrypoints().objc_retain,
                                "objc_retain");
 }
@@ -1978,7 +2035,7 @@ llvm::Value *CodeGenFunction::EmitARCRetainNonBlock(llvm::Value *value) {
 llvm::Value *CodeGenFunction::EmitARCRetainBlock(llvm::Value *value,
                                                  bool mandatory) {
   llvm::Value *result
-    = emitARCValueOperation(*this, value,
+    = emitARCValueOperation(*this, value, nullptr,
                             CGM.getObjCEntrypoints().objc_retainBlock,
                             "objc_retainBlock");
 
@@ -2048,7 +2105,7 @@ static void emitAutoreleasedReturnValueMarker(CodeGenFunction &CGF) {
 llvm::Value *
 CodeGenFunction::EmitARCRetainAutoreleasedReturnValue(llvm::Value *value) {
   emitAutoreleasedReturnValueMarker(*this);
-  return emitARCValueOperation(*this, value,
+  return emitARCValueOperation(*this, value, nullptr,
               CGM.getObjCEntrypoints().objc_retainAutoreleasedReturnValue,
                                "objc_retainAutoreleasedReturnValue");
 }
@@ -2063,7 +2120,7 @@ CodeGenFunction::EmitARCRetainAutoreleasedReturnValue(llvm::Value *value) {
 llvm::Value *
 CodeGenFunction::EmitARCUnsafeClaimAutoreleasedReturnValue(llvm::Value *value) {
   emitAutoreleasedReturnValueMarker(*this);
-  return emitARCValueOperation(*this, value,
+  return emitARCValueOperation(*this, value, nullptr,
               CGM.getObjCEntrypoints().objc_unsafeClaimAutoreleasedReturnValue,
                                "objc_unsafeClaimAutoreleasedReturnValue");
 }
@@ -2178,7 +2235,7 @@ llvm::Value *CodeGenFunction::EmitARCStoreStrong(LValue dst,
 /// Autorelease the given object.
 ///   call i8* \@objc_autorelease(i8* %value)
 llvm::Value *CodeGenFunction::EmitARCAutorelease(llvm::Value *value) {
-  return emitARCValueOperation(*this, value,
+  return emitARCValueOperation(*this, value, nullptr,
                                CGM.getObjCEntrypoints().objc_autorelease,
                                "objc_autorelease");
 }
@@ -2187,7 +2244,7 @@ llvm::Value *CodeGenFunction::EmitARCAutorelease(llvm::Value *value) {
 ///   call i8* \@objc_autoreleaseReturnValue(i8* %value)
 llvm::Value *
 CodeGenFunction::EmitARCAutoreleaseReturnValue(llvm::Value *value) {
-  return emitARCValueOperation(*this, value,
+  return emitARCValueOperation(*this, value, nullptr,
                             CGM.getObjCEntrypoints().objc_autoreleaseReturnValue,
                                "objc_autoreleaseReturnValue",
                                /*isTailCall*/ true);
@@ -2197,7 +2254,7 @@ CodeGenFunction::EmitARCAutoreleaseReturnValue(llvm::Value *value) {
 ///   call i8* \@objc_retainAutoreleaseReturnValue(i8* %value)
 llvm::Value *
 CodeGenFunction::EmitARCRetainAutoreleaseReturnValue(llvm::Value *value) {
-  return emitARCValueOperation(*this, value,
+  return emitARCValueOperation(*this, value, nullptr,
                      CGM.getObjCEntrypoints().objc_retainAutoreleaseReturnValue,
                                "objc_retainAutoreleaseReturnValue",
                                /*isTailCall*/ true);
@@ -2226,7 +2283,7 @@ llvm::Value *CodeGenFunction::EmitARCRetainAutorelease(QualType type,
 ///   call i8* \@objc_retainAutorelease(i8* %value)
 llvm::Value *
 CodeGenFunction::EmitARCRetainAutoreleaseNonBlock(llvm::Value *value) {
-  return emitARCValueOperation(*this, value,
+  return emitARCValueOperation(*this, value, nullptr,
                                CGM.getObjCEntrypoints().objc_retainAutorelease,
                                "objc_retainAutorelease");
 }
@@ -2383,6 +2440,24 @@ llvm::Value *CodeGenFunction::EmitObjCMRRAutoreleasePoolPush() {
                                 getContext().getObjCIdType(),
                                 InitSel, Receiver, Args);
   return InitRV.getScalarVal();
+}
+
+/// Allocate the given objc object.
+///   call i8* \@objc_alloc(i8* %value)
+llvm::Value *CodeGenFunction::EmitObjCAlloc(llvm::Value *value,
+                                            llvm::Type *resultType) {
+  return emitARCValueOperation(*this, value, resultType,
+                               CGM.getObjCEntrypoints().objc_alloc,
+                               "objc_alloc");
+}
+
+/// Allocate the given objc object.
+///   call i8* \@objc_allocWithZone(i8* %value)
+llvm::Value *CodeGenFunction::EmitObjCAllocWithZone(llvm::Value *value,
+                                                    llvm::Type *resultType) {
+  return emitARCValueOperation(*this, value, resultType,
+                               CGM.getObjCEntrypoints().objc_allocWithZone,
+                               "objc_allocWithZone");
 }
 
 /// Produce the code to do a primitive release.

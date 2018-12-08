@@ -106,64 +106,59 @@ PrintedStmtMatches(StringRef Code, const std::vector<std::string> &Args,
   return ::testing::AssertionSuccess();
 }
 
-::testing::AssertionResult
-PrintedStmtCXX98Matches(StringRef Code, const StatementMatcher &NodeMatch,
-                        StringRef ExpectedPrinted) {
-  std::vector<std::string> Args;
-  Args.push_back("-std=c++98");
-  Args.push_back("-Wno-unused-value");
-  return PrintedStmtMatches(Code, Args, NodeMatch, ExpectedPrinted);
+enum class StdVer { CXX98, CXX11, CXX14, CXX17, CXX2a };
+
+DeclarationMatcher FunctionBodyMatcher(StringRef ContainingFunction) {
+  return functionDecl(hasName(ContainingFunction),
+                      has(compoundStmt(has(stmt().bind("id")))));
 }
 
-::testing::AssertionResult PrintedStmtCXX98Matches(
-                                              StringRef Code,
-                                              StringRef ContainingFunction,
-                                              StringRef ExpectedPrinted) {
-  std::vector<std::string> Args;
-  Args.push_back("-std=c++98");
-  Args.push_back("-Wno-unused-value");
-  return PrintedStmtMatches(Code,
-                            Args,
-                            functionDecl(hasName(ContainingFunction),
-                                         has(compoundStmt(has(stmt().bind("id"))))),
-                            ExpectedPrinted);
-}
-
+template <typename T>
 ::testing::AssertionResult
-PrintedStmtCXX11Matches(StringRef Code, const StatementMatcher &NodeMatch,
-                        StringRef ExpectedPrinted,
-                        PolicyAdjusterType PolicyAdjuster = None) {
-  std::vector<std::string> Args;
-  Args.push_back("-std=c++11");
-  Args.push_back("-Wno-unused-value");
+PrintedStmtCXXMatches(StdVer Standard, StringRef Code, const T &NodeMatch,
+                      StringRef ExpectedPrinted,
+                      PolicyAdjusterType PolicyAdjuster = None) {
+  const char *StdOpt;
+  switch (Standard) {
+  case StdVer::CXX98: StdOpt = "-std=c++98"; break;
+  case StdVer::CXX11: StdOpt = "-std=c++11"; break;
+  case StdVer::CXX14: StdOpt = "-std=c++14"; break;
+  case StdVer::CXX17: StdOpt = "-std=c++17"; break;
+  case StdVer::CXX2a: StdOpt = "-std=c++2a"; break;
+  }
+
+  std::vector<std::string> Args = {
+    StdOpt,
+    "-Wno-unused-value",
+  };
   return PrintedStmtMatches(Code, Args, NodeMatch, ExpectedPrinted,
                             PolicyAdjuster);
 }
 
-::testing::AssertionResult PrintedStmtMSMatches(
-                                              StringRef Code,
-                                              StringRef ContainingFunction,
-                                              StringRef ExpectedPrinted) {
-  std::vector<std::string> Args;
-  Args.push_back("-target");
-  Args.push_back("i686-pc-win32");
-  Args.push_back("-std=c++98");
-  Args.push_back("-fms-extensions");
-  Args.push_back("-Wno-unused-value");
-  return PrintedStmtMatches(Code,
-                            Args,
-                            functionDecl(hasName(ContainingFunction),
-                                         has(compoundStmt(has(stmt().bind("id"))))),
-                            ExpectedPrinted);
+template <typename T>
+::testing::AssertionResult
+PrintedStmtMSMatches(StringRef Code, const T &NodeMatch,
+                     StringRef ExpectedPrinted,
+                     PolicyAdjusterType PolicyAdjuster = None) {
+  std::vector<std::string> Args = {
+    "-std=c++98",
+    "-target", "i686-pc-win32",
+    "-fms-extensions",
+    "-Wno-unused-value",
+  };
+  return PrintedStmtMatches(Code, Args, NodeMatch, ExpectedPrinted,
+                            PolicyAdjuster);
 }
 
+template <typename T>
 ::testing::AssertionResult
-PrintedStmtObjCMatches(StringRef Code, const StatementMatcher &NodeMatch,
+PrintedStmtObjCMatches(StringRef Code, const T &NodeMatch,
                        StringRef ExpectedPrinted,
                        PolicyAdjusterType PolicyAdjuster = None) {
-  std::vector<std::string> Args;
-  Args.push_back("-ObjC");
-  Args.push_back("-fobjc-runtime=macosx-10.12.0");
+  std::vector<std::string> Args = {
+    "-ObjC",
+    "-fobjc-runtime=macosx-10.12.0",
+  };
   return PrintedStmtMatches(Code, Args, NodeMatch, ExpectedPrinted,
                             PolicyAdjuster);
 }
@@ -171,13 +166,13 @@ PrintedStmtObjCMatches(StringRef Code, const StatementMatcher &NodeMatch,
 } // unnamed namespace
 
 TEST(StmtPrinter, TestIntegerLiteral) {
-  ASSERT_TRUE(PrintedStmtCXX98Matches(
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX98,
     "void A() {"
     "  1, -1, 1U, 1u,"
     "  1L, 1l, -1L, 1UL, 1ul,"
     "  1LL, -1LL, 1ULL;"
     "}",
-    "A",
+    FunctionBodyMatcher("A"),
     "1 , -1 , 1U , 1U , "
     "1L , 1L , -1L , 1UL , 1UL , "
     "1LL , -1LL , 1ULL"));
@@ -192,7 +187,7 @@ TEST(StmtPrinter, TestMSIntegerLiteral) {
     "  1i32, -1i32, 1ui32, "
     "  1i64, -1i64, 1ui64;"
     "}",
-    "A",
+    FunctionBodyMatcher("A"),
     "1i8 , -1i8 , 1Ui8 , "
     "1i16 , -1i16 , 1Ui16 , "
     "1 , -1 , 1U , "
@@ -201,15 +196,15 @@ TEST(StmtPrinter, TestMSIntegerLiteral) {
 }
 
 TEST(StmtPrinter, TestFloatingPointLiteral) {
-  ASSERT_TRUE(PrintedStmtCXX98Matches(
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX98,
     "void A() { 1.0f, -1.0f, 1.0, -1.0, 1.0l, -1.0l; }",
-    "A",
+    FunctionBodyMatcher("A"),
     "1.F , -1.F , 1. , -1. , 1.L , -1.L"));
     // Should be: with semicolon
 }
 
 TEST(StmtPrinter, TestCXXConversionDeclImplicit) {
-  ASSERT_TRUE(PrintedStmtCXX98Matches(
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX98,
     "struct A {"
       "operator void *();"
       "A operator&(A);"
@@ -223,7 +218,7 @@ TEST(StmtPrinter, TestCXXConversionDeclImplicit) {
 }
 
 TEST(StmtPrinter, TestCXXConversionDeclExplicit) {
-  ASSERT_TRUE(PrintedStmtCXX11Matches(
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX11,
     "struct A {"
       "operator void *();"
       "A operator&(A);"
@@ -245,12 +240,12 @@ class A {
 };
 )";
   // No implicit 'this'.
-  ASSERT_TRUE(PrintedStmtCXX11Matches(
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX11,
       CPPSource, memberExpr(anything()).bind("id"), "field",
       PolicyAdjusterType(
           [](PrintingPolicy &PP) { PP.SuppressImplicitBase = true; })));
   // Print implicit 'this'.
-  ASSERT_TRUE(PrintedStmtCXX11Matches(
+  ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX11,
       CPPSource, memberExpr(anything()).bind("id"), "this->field"));
 
   const char *ObjCSource = R"(

@@ -24,6 +24,31 @@
 using namespace clang;
 using namespace ento;
 
+template <class T>
+constexpr static bool isOneOf() {
+  return false;
+}
+
+/// Helper function to check whether the class is one of the
+/// rest of varargs.
+template <class T, class P, class... ToCompare>
+constexpr static bool isOneOf() {
+  return std::is_same<T, P>::value || isOneOf<T, ToCompare...>();
+}
+
+template <class T> bool RetainSummaryManager::isAttrEnabled() {
+  if (isOneOf<T, CFConsumedAttr, CFReturnsRetainedAttr,
+              CFReturnsNotRetainedAttr, NSConsumedAttr, NSConsumesSelfAttr,
+              NSReturnsAutoreleasedAttr, NSReturnsRetainedAttr,
+              NSReturnsNotRetainedAttr>()) {
+    return TrackObjCAndCFObjects;
+  } else if (isOneOf<T, OSConsumedAttr, OSConsumesThisAttr,
+                     OSReturnsNotRetainedAttr, OSReturnsRetainedAttr>()) {
+    return TrackOSObjects;
+  }
+  llvm_unreachable("Unexpected attribute passed");
+}
+
 ArgEffects RetainSummaryManager::getArgEffects() {
   ArgEffects AE = ScratchArgs;
   ScratchArgs = AF.getEmptyMap();
@@ -116,30 +141,60 @@ static bool isOSObjectRelated(const CXXMethodDecl *MD) {
 }
 
 const RetainSummary *
-RetainSummaryManager::generateSummary(const FunctionDecl *FD,
-                                      bool &AllowAnnotations) {
-  // We generate "stop" summaries for implicitly defined functions.
-  if (FD->isImplicit()) {
-    return getPersistentStopSummary();
+RetainSummaryManager::getSummaryForOSObject(const FunctionDecl *FD,
+                                            StringRef FName, QualType RetTy) {
+  if (RetTy->isPointerType()) {
+    const CXXRecordDecl *PD = RetTy->getPointeeType()->getAsCXXRecordDecl();
+    if (PD && isOSObjectSubclass(PD)) {
+      if (const IdentifierInfo *II = FD->getIdentifier()) {
+        if (isOSObjectDynamicCast(II->getName()))
+          return getDefaultSummary();
+
+        // All objects returned with functions *not* starting with
+        // get, or iterators, are returned at +1.
+        if ((!II->getName().startswith("get") &&
+             !II->getName().startswith("Get")) ||
+            isOSIteratorSubclass(PD)) {
+          return getOSSummaryCreateRule(FD);
+        } else {
+          return getOSSummaryGetRule(FD);
+        }
+      }
+    }
   }
 
-  const IdentifierInfo *II = FD->getIdentifier();
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+    const CXXRecordDecl *Parent = MD->getParent();
+    if (TrackOSObjects && Parent && isOSObjectSubclass(Parent)) {
+      if (FName == "release")
+        return getOSSummaryReleaseRule(FD);
 
-  StringRef FName = II ? II->getName() : "";
+      if (FName == "retain")
+        return getOSSummaryRetainRule(FD);
 
-  // Strip away preceding '_'.  Doing this here will effect all the checks
-  // down below.
-  FName = FName.substr(FName.find_first_not_of('_'));
+      if (FName == "free")
+        return getOSSummaryFreeRule(FD);
 
-  // Inspect the result type. Strip away any typedefs.
-  const auto *FT = FD->getType()->getAs<FunctionType>();
-  QualType RetTy = FT->getReturnType();
+      if (MD->getOverloadedOperator() == OO_New)
+        return getOSSummaryCreateRule(MD);
+    }
+  }
+
+  return nullptr;
+}
+
+const RetainSummary *RetainSummaryManager::getSummaryForObjCOrCFObject(
+    const FunctionDecl *FD,
+    StringRef FName,
+    QualType RetTy,
+    const FunctionType *FT,
+    bool &AllowAnnotations) {
+
   std::string RetTyName = RetTy.getAsString();
 
   // FIXME: This should all be refactored into a chain of "summary lookup"
   //  filters.
   assert(ScratchArgs.isEmpty());
-
   if (FName == "pthread_create" || FName == "pthread_setspecific") {
     // Part of: <rdar://problem/7299394> and <rdar://problem/11282706>.
     // This will be addressed better with IPA.
@@ -230,30 +285,11 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
 
   if (RetTy->isPointerType()) {
 
-    const CXXRecordDecl *PD = RetTy->getPointeeType()->getAsCXXRecordDecl();
-    if (TrackOSObjects && PD && isOSObjectSubclass(PD)) {
-      if (const IdentifierInfo *II = FD->getIdentifier()) {
-
-        if (isOSObjectDynamicCast(II->getName()))
-          return getDefaultSummary();
-
-        // All objects returned with functions *not* starting with
-        // get, or iterators, are returned at +1.
-        if ((!II->getName().startswith("get") &&
-             !II->getName().startswith("Get")) ||
-            isOSIteratorSubclass(PD)) {
-          return getOSSummaryCreateRule(FD);
-        } else {
-          return getOSSummaryGetRule(FD);
-        }
-      }
-    }
-
     // For CoreFoundation ('CF') types.
     if (cocoa::isRefType(RetTy, "CF", FName)) {
       if (isRetain(FD, FName)) {
-        // CFRetain isn't supposed to be annotated. However, this may as well
-        // be a user-made "safe" CFRetain function that is incorrectly
+        // CFRetain isn't supposed to be annotated. However, this may as
+        // well be a user-made "safe" CFRetain function that is incorrectly
         // annotated as cf_returns_retained due to lack of better options.
         // We want to ignore such annotation.
         AllowAnnotations = false;
@@ -294,27 +330,9 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
     }
   }
 
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-    const CXXRecordDecl *Parent = MD->getParent();
-    if (TrackOSObjects && Parent && isOSObjectSubclass(Parent)) {
-      if (FName == "release")
-        return getOSSummaryReleaseRule(FD);
-
-      if (FName == "retain")
-        return getOSSummaryRetainRule(FD);
-
-      if (FName == "free")
-        return getOSSummaryFreeRule(FD);
-
-      if (MD->getOverloadedOperator() == OO_New)
-        return getOSSummaryCreateRule(MD);
-    }
-  }
-
   // Check for release functions, the only kind of functions that we care
   // about that don't return a pointer type.
-  if (FName.size() >= 2 && FName[0] == 'C' &&
-      (FName[1] == 'F' || FName[1] == 'G')) {
+  if (FName.startswith("CG") || FName.startswith("CF")) {
     // Test for 'CGCF'.
     FName = FName.substr(FName.startswith("CGCF") ? 4 : 2);
 
@@ -349,11 +367,41 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
     }
   }
 
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
+  return nullptr;
+}
+
+const RetainSummary *
+RetainSummaryManager::generateSummary(const FunctionDecl *FD,
+                                      bool &AllowAnnotations) {
+  // We generate "stop" summaries for implicitly defined functions.
+  if (FD->isImplicit())
+    return getPersistentStopSummary();
+
+  const IdentifierInfo *II = FD->getIdentifier();
+
+  StringRef FName = II ? II->getName() : "";
+
+  // Strip away preceding '_'.  Doing this here will effect all the checks
+  // down below.
+  FName = FName.substr(FName.find_first_not_of('_'));
+
+  // Inspect the result type. Strip away any typedefs.
+  const auto *FT = FD->getType()->getAs<FunctionType>();
+  QualType RetTy = FT->getReturnType();
+
+  if (TrackOSObjects)
+    if (const RetainSummary *S = getSummaryForOSObject(FD, FName, RetTy))
+      return S;
+
+  if (TrackObjCAndCFObjects)
+    if (const RetainSummary *S =
+            getSummaryForObjCOrCFObject(FD, FName, RetTy, FT, AllowAnnotations))
+      return S;
+
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD))
     if (!(TrackOSObjects && isOSObjectRelated(MD)))
       return getPersistentSummary(RetEffect::MakeNoRet(), DoNothing, StopTracking,
                                   DoNothing);
-  }
 
   return getDefaultSummary();
 }
@@ -658,7 +706,7 @@ RetainSummaryManager::getCFSummaryGetRule(const FunctionDecl *FD) {
 Optional<RetEffect>
 RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
                                                   const Decl *D) {
-  if (cocoa::isCocoaObjectRef(RetTy)) {
+  if (TrackObjCAndCFObjects && cocoa::isCocoaObjectRef(RetTy)) {
     if (D->hasAttr<NSReturnsRetainedAttr>())
       return ObjCAllocRetE;
 
@@ -670,17 +718,17 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
     return None;
   }
 
-  if (D->hasAttr<CFReturnsRetainedAttr>()) {
+  if (hasEnabledAttr<CFReturnsRetainedAttr>(D)) {
     return RetEffect::MakeOwned(RetEffect::CF);
-  } else if (D->hasAttr<OSReturnsRetainedAttr>()) {
+  } else if (hasEnabledAttr<OSReturnsRetainedAttr>(D)) {
     return RetEffect::MakeOwned(RetEffect::OS);
   } else if (hasRCAnnotation(D, "rc_ownership_returns_retained")) {
     return RetEffect::MakeOwned(RetEffect::Generalized);
   }
 
-  if (D->hasAttr<CFReturnsNotRetainedAttr>()) {
+  if (hasEnabledAttr<CFReturnsNotRetainedAttr>(D)) {
     return RetEffect::MakeNotOwned(RetEffect::CF);
-  } else if (D->hasAttr<OSReturnsNotRetainedAttr>()) {
+  } else if (hasEnabledAttr<OSReturnsNotRetainedAttr>(D)) {
     return RetEffect::MakeNotOwned(RetEffect::OS);
   } else if (hasRCAnnotation(D, "rc_ownership_returns_not_retained")) {
     return RetEffect::MakeNotOwned(RetEffect::Generalized);
@@ -694,22 +742,20 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
   return None;
 }
 
-/// Apply the annotation of {@code pd} in function {@code FD}
-/// to the resulting summary stored in out-parameter {@code Template}.
-/// Return whether an annotation was applied.
-bool applyFunctionParamAnnotationEffect(const ParmVarDecl *pd,
+bool RetainSummaryManager::applyFunctionParamAnnotationEffect(const ParmVarDecl *pd,
                                         unsigned parm_idx,
                                         const FunctionDecl *FD,
                                         ArgEffects::Factory &AF,
                                         RetainSummaryTemplate &Template) {
-  if (pd->hasAttr<NSConsumedAttr>()) {
+  if (hasEnabledAttr<NSConsumedAttr>(pd)) {
     Template->addArg(AF, parm_idx, DecRefMsg);
     return true;
-  } else if (pd->hasAttr<CFConsumedAttr>() || pd->hasAttr<OSConsumedAttr>() ||
+  } else if (hasEnabledAttr<CFConsumedAttr>(pd) ||
+             hasEnabledAttr<OSConsumedAttr>(pd) ||
              hasRCAnnotation(pd, "rc_ownership_consumed")) {
     Template->addArg(AF, parm_idx, DecRef);
     return true;
-  } else if (pd->hasAttr<CFReturnsRetainedAttr>() ||
+  } else if (hasEnabledAttr<CFReturnsRetainedAttr>(pd) ||
              hasRCAnnotation(pd, "rc_ownership_returns_retained")) {
     QualType PointeeTy = pd->getType()->getPointeeType();
     if (!PointeeTy.isNull()) {
@@ -718,7 +764,7 @@ bool applyFunctionParamAnnotationEffect(const ParmVarDecl *pd,
         return true;
       }
     }
-  } else if (pd->hasAttr<CFReturnsNotRetainedAttr>()) {
+  } else if (hasEnabledAttr<CFReturnsNotRetainedAttr>(pd)) {
     QualType PointeeTy = pd->getType()->getPointeeType();
     if (!PointeeTy.isNull()) {
       if (coreFoundation::isCFObjectRef(PointeeTy)) {
@@ -760,7 +806,7 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
   if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, FD))
     Template->setRetEffect(*RetE);
 
-  if (FD->hasAttr<OSConsumesThisAttr>())
+  if (hasEnabledAttr<OSConsumesThisAttr>(FD))
     Template->setThisEffect(DecRef);
 }
 
@@ -779,8 +825,7 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
 
   // Effects on the parameters.
   unsigned parm_idx = 0;
-  for (ObjCMethodDecl::param_const_iterator
-         pi=MD->param_begin(), pe=MD->param_end();
+  for (auto pi=MD->param_begin(), pe=MD->param_end();
        pi != pe; ++pi, ++parm_idx) {
     const ParmVarDecl *pd = *pi;
     if (pd->hasAttr<NSConsumedAttr>()) {
@@ -933,6 +978,10 @@ RetainSummaryManager::getMethodSummary(Selector S, const ObjCInterfaceDecl *ID,
                                        const ObjCMethodDecl *MD, QualType RetTy,
                                        ObjCMethodSummariesTy &CachedSummaries) {
 
+  // Objective-C method summaries are only applicable to ObjC and CF objects.
+  if (!TrackObjCAndCFObjects)
+    return getDefaultSummary();
+
   // Look up a summary in our summary cache.
   const RetainSummary *Summ = CachedSummaries.find(ID, S);
 
@@ -1043,7 +1092,9 @@ void RetainSummaryManager::InitializeMethodSummaries() {
 CallEffects CallEffects::getEffect(const ObjCMethodDecl *MD) {
   ASTContext &Ctx = MD->getASTContext();
   LangOptions L = Ctx.getLangOpts();
-  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount, /*TrackOSObjects=*/false);
+  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount,
+                         /*TrackNSAndCFObjects=*/true,
+                         /*TrackOSObjects=*/false);
   const RetainSummary *S = M.getMethodSummary(MD);
   CallEffects CE(S->getRetEffect());
   CE.Receiver = S->getReceiverEffect();
@@ -1057,7 +1108,9 @@ CallEffects CallEffects::getEffect(const ObjCMethodDecl *MD) {
 CallEffects CallEffects::getEffect(const FunctionDecl *FD) {
   ASTContext &Ctx = FD->getASTContext();
   LangOptions L = Ctx.getLangOpts();
-  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount, /*TrackOSObjects=*/false);
+  RetainSummaryManager M(Ctx, L.ObjCAutoRefCount,
+                         /*TrackNSAndCFObjects=*/true,
+                         /*TrackOSObjects=*/false);
   const RetainSummary *S = M.getFunctionSummary(FD);
   CallEffects CE(S->getRetEffect());
   unsigned N = FD->param_size();
