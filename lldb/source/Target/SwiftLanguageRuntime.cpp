@@ -83,6 +83,25 @@
 using namespace lldb;
 using namespace lldb_private;
 
+namespace lldb_private {
+swift::Type GetSwiftType(void *opaque_ptr) {
+  return reinterpret_cast<swift::TypeBase *>(opaque_ptr);
+}
+
+swift::CanType GetCanonicalSwiftType(void *opaque_ptr) {
+  return reinterpret_cast<swift::TypeBase *>(opaque_ptr)->getCanonicalType();
+}
+
+swift::CanType GetCanonicalSwiftType(const CompilerType &type) {
+  return GetCanonicalSwiftType(
+      reinterpret_cast<void *>(type.GetOpaqueQualType()));
+}
+
+swift::Type GetSwiftType(const CompilerType &type) {
+  return GetSwiftType(reinterpret_cast<void *>(type.GetOpaqueQualType()));
+}
+} // namespace lldb_private
+
 SwiftLanguageRuntime::~SwiftLanguageRuntime() = default;
 
 static bool HasReflectionInfo(ObjectFile *obj_file) {
@@ -1351,15 +1370,6 @@ bool SwiftLanguageRuntime::MetadataPromise::IsStaticallyDetermined() {
     }
   }
   llvm_unreachable("Unknown metadata kind");
-}
-
-static swift::Type GetCanonicalSwiftType(const CompilerType &type) {
-  return reinterpret_cast<swift::TypeBase *>(
-      type.GetCanonicalType().GetOpaqueQualType());
-}
-
-static swift::Type GetSwiftType(const CompilerType &type) {
-  return reinterpret_cast<swift::TypeBase *>(type.GetOpaqueQualType());
 }
 
 SwiftLanguageRuntime::MetadataPromiseSP
