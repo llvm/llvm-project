@@ -147,6 +147,8 @@ void CallEdge::ParseSymbolFileAndResolve(ModuleList &images) {
            lazy_callee.symbol_name);
 
   auto resolve_lazy_callee = [&]() -> Function * {
+    if (!lazy_callee.symbol_name)
+      return nullptr;
     ConstString callee_name{lazy_callee.symbol_name};
     SymbolContextList sc_list;
     size_t num_matches =
