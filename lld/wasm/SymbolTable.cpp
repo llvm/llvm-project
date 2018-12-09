@@ -10,6 +10,7 @@
 #include "SymbolTable.h"
 #include "Config.h"
 #include "InputChunks.h"
+#include "InputEvent.h"
 #include "InputGlobal.h"
 #include "WriterUtils.h"
 #include "lld/Common/ErrorHandler.h"
@@ -111,9 +112,9 @@ static void checkFunctionType(Symbol *Existing, const InputFile *File,
   if (!NewSig)
     return;
 
-  const WasmSignature *OldSig = ExistingFunction->FunctionType;
+  const WasmSignature *OldSig = ExistingFunction->Signature;
   if (!OldSig) {
-    ExistingFunction->FunctionType = NewSig;
+    ExistingFunction->Signature = NewSig;
     return;
   }
 
@@ -137,6 +138,28 @@ static void checkGlobalType(const Symbol *Existing, const InputFile *File,
           toString(*OldType) + " in " + toString(Existing->getFile()) +
           "\n>>> defined as " + toString(*NewType) + " in " + toString(File));
   }
+}
+
+static void checkEventType(const Symbol *Existing, const InputFile *File,
+                           const WasmEventType *NewType,
+                           const WasmSignature *NewSig) {
+  auto ExistingEvent = dyn_cast<EventSymbol>(Existing);
+  if (!isa<EventSymbol>(Existing)) {
+    reportTypeError(Existing, File, WASM_SYMBOL_TYPE_EVENT);
+    return;
+  }
+
+  const WasmEventType *OldType = cast<EventSymbol>(Existing)->getEventType();
+  const WasmSignature *OldSig = ExistingEvent->Signature;
+  if (NewType->Attribute != OldType->Attribute)
+    error("Event type mismatch: " + Existing->getName() + "\n>>> defined as " +
+          toString(*OldType) + " in " + toString(Existing->getFile()) +
+          "\n>>> defined as " + toString(*NewType) + " in " + toString(File));
+  if (*NewSig != *OldSig)
+    warn("Event signature mismatch: " + Existing->getName() +
+         "\n>>> defined as " + toString(*OldSig) + " in " +
+         toString(Existing->getFile()) + "\n>>> defined as " +
+         toString(*NewSig) + " in " + toString(File));
 }
 
 static void checkDataType(const Symbol *Existing, const InputFile *File) {
@@ -222,10 +245,10 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
     // functions) but the old symbols does then preserve the old signature
     const WasmSignature *OldSig = nullptr;
     if (auto* F = dyn_cast<FunctionSymbol>(S))
-      OldSig = F->FunctionType;
+      OldSig = F->Signature;
     auto NewSym = replaceSymbol<DefinedFunction>(S, Name, Flags, File, Function);
-    if (!NewSym->FunctionType)
-      NewSym->FunctionType = OldSig;
+    if (!NewSym->Signature)
+      NewSym->Signature = OldSig;
   }
   return S;
 }
@@ -268,6 +291,26 @@ Symbol *SymbolTable::addDefinedGlobal(StringRef Name, uint32_t Flags,
 
   if (shouldReplace(S, File, Flags))
     replaceSymbol<DefinedGlobal>(S, Name, Flags, File, Global);
+  return S;
+}
+
+Symbol *SymbolTable::addDefinedEvent(StringRef Name, uint32_t Flags,
+                                     InputFile *File, InputEvent *Event) {
+  LLVM_DEBUG(dbgs() << "addDefinedEvent:" << Name << "\n");
+
+  Symbol *S;
+  bool WasInserted;
+  std::tie(S, WasInserted) = insert(Name, File);
+
+  if (WasInserted || S->isLazy()) {
+    replaceSymbol<DefinedEvent>(S, Name, Flags, File, Event);
+    return S;
+  }
+
+  checkEventType(S, File, &Event->getType(), &Event->Signature);
+
+  if (shouldReplace(S, File, Flags))
+    replaceSymbol<DefinedEvent>(S, Name, Flags, File, Event);
   return S;
 }
 
