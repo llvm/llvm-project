@@ -55,6 +55,7 @@ void InputChunk::verifyRelocTargets() const {
     case R_WEBASSEMBLY_TYPE_INDEX_LEB:
     case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
     case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+    case R_WEBASSEMBLY_EVENT_INDEX_LEB:
     case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
       ExistingValue = decodeULEB128(Loc, &BytesRead);
       break;
@@ -111,6 +112,7 @@ void InputChunk::writeTo(uint8_t *Buf) const {
     case R_WEBASSEMBLY_TYPE_INDEX_LEB:
     case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
     case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+    case R_WEBASSEMBLY_EVENT_INDEX_LEB:
     case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
       encodeULEB128(Value, Loc, 5);
       break;
@@ -180,6 +182,7 @@ static unsigned writeCompressedReloc(uint8_t *Buf, const WasmRelocation &Rel,
   case R_WEBASSEMBLY_TYPE_INDEX_LEB:
   case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
   case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+  case R_WEBASSEMBLY_EVENT_INDEX_LEB:
   case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
     return encodeULEB128(Value, Buf);
   case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
@@ -195,6 +198,7 @@ static unsigned getRelocWidthPadded(const WasmRelocation &Rel) {
   case R_WEBASSEMBLY_TYPE_INDEX_LEB:
   case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
   case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+  case R_WEBASSEMBLY_EVENT_INDEX_LEB:
   case R_WEBASSEMBLY_MEMORY_ADDR_LEB:
   case R_WEBASSEMBLY_TABLE_INDEX_SLEB:
   case R_WEBASSEMBLY_MEMORY_ADDR_SLEB:

@@ -45,6 +45,10 @@ void writeGlobalType(raw_ostream &OS, const llvm::wasm::WasmGlobalType &Type);
 
 void writeGlobal(raw_ostream &OS, const llvm::wasm::WasmGlobal &Global);
 
+void writeEventType(raw_ostream &OS, const llvm::wasm::WasmEventType &Type);
+
+void writeEvent(raw_ostream &OS, const llvm::wasm::WasmEvent &Event);
+
 void writeTableType(raw_ostream &OS, const llvm::wasm::WasmTable &Type);
 
 void writeImport(raw_ostream &OS, const llvm::wasm::WasmImport &Import);
@@ -55,7 +59,8 @@ void writeExport(raw_ostream &OS, const llvm::wasm::WasmExport &Export);
 
 std::string toString(llvm::wasm::ValType Type);
 std::string toString(const llvm::wasm::WasmSignature &Sig);
-std::string toString(const llvm::wasm::WasmGlobalType &Sig);
+std::string toString(const llvm::wasm::WasmGlobalType &Type);
+std::string toString(const llvm::wasm::WasmEventType &Type);
 
 } // namespace lld
 

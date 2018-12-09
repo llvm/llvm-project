@@ -90,7 +90,7 @@ static inline uint64_t
 AddWithCarry(uint32_t N, uint64_t x, uint64_t y, bit carry_in,
              EmulateInstructionARM64::ProcState &proc_state) {
   uint64_t unsigned_sum = UInt(x) + UInt(y) + UInt(carry_in);
-  int64_t signed_sum = SInt(x) + SInt(y) + UInt(carry_in);
+  int64_t signed_sum = 0;//SInt(x) + SInt(y) + UInt(carry_in);
   uint64_t result = unsigned_sum;
   if (N < 64)
     result = Bits64(result, N - 1, 0);
