@@ -10,6 +10,7 @@
 #include "InputFiles.h"
 #include "Config.h"
 #include "InputChunks.h"
+#include "InputEvent.h"
 #include "InputGlobal.h"
 #include "SymbolTable.h"
 #include "lld/Common/ErrorHandler.h"
@@ -57,7 +58,8 @@ void ObjFile::dumpInfo() const {
   log("info for: " + getName() +
       "\n              Symbols : " + Twine(Symbols.size()) +
       "\n     Function Imports : " + Twine(WasmObj->getNumImportedFunctions()) +
-      "\n       Global Imports : " + Twine(WasmObj->getNumImportedGlobals()));
+      "\n       Global Imports : " + Twine(WasmObj->getNumImportedGlobals()) +
+      "\n        Event Imports : " + Twine(WasmObj->getNumImportedEvents()));
 }
 
 // Relocations contain either symbol or type indices.  This function takes a
@@ -119,7 +121,8 @@ uint32_t ObjFile::calcExpectedValue(const WasmRelocation &Reloc) const {
   case R_WEBASSEMBLY_TYPE_INDEX_LEB:
     return Reloc.Index;
   case R_WEBASSEMBLY_FUNCTION_INDEX_LEB:
-  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB: {
+  case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
+  case R_WEBASSEMBLY_EVENT_INDEX_LEB: {
     const WasmSymbol &Sym = WasmObj->syms()[Reloc.Index];
     return Sym.Info.ElementIndex;
   }
@@ -147,6 +150,8 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
     return getFunctionSymbol(Reloc.Index)->getFunctionIndex();
   case R_WEBASSEMBLY_GLOBAL_INDEX_LEB:
     return getGlobalSymbol(Reloc.Index)->getGlobalIndex();
+  case R_WEBASSEMBLY_EVENT_INDEX_LEB:
+    return getEventSymbol(Reloc.Index)->getEventIndex();
   case R_WEBASSEMBLY_FUNCTION_OFFSET_I32:
     if (auto *Sym = dyn_cast<DefinedFunction>(getFunctionSymbol(Reloc.Index))) {
       if (Sym->isLive())
@@ -267,6 +272,10 @@ void ObjFile::parse() {
   for (const WasmGlobal &G : WasmObj->globals())
     Globals.emplace_back(make<InputGlobal>(G, this));
 
+  // Populate `Events`.
+  for (const WasmEvent &E : WasmObj->events())
+    Events.emplace_back(make<InputEvent>(Types[E.Type.SigIndex], E, this));
+
   // Populate `Symbols` based on the WasmSymbols in the object.
   Symbols.reserve(WasmObj->getNumberOfSymbols());
   for (const SymbolRef &Sym : WasmObj->symbols()) {
@@ -291,6 +300,10 @@ FunctionSymbol *ObjFile::getFunctionSymbol(uint32_t Index) const {
 
 GlobalSymbol *ObjFile::getGlobalSymbol(uint32_t Index) const {
   return cast<GlobalSymbol>(Symbols[Index]);
+}
+
+EventSymbol *ObjFile::getEventSymbol(uint32_t Index) const {
+  return cast<EventSymbol>(Symbols[Index]);
 }
 
 SectionSymbol *ObjFile::getSectionSymbol(uint32_t Index) const {
@@ -347,6 +360,13 @@ Symbol *ObjFile::createDefined(const WasmSymbol &Sym) {
     assert(Sym.isBindingLocal());
     return make<SectionSymbol>(Name, Flags, Section, this);
   }
+  case WASM_SYMBOL_TYPE_EVENT: {
+    InputEvent *Event =
+        Events[Sym.Info.ElementIndex - WasmObj->getNumImportedEvents()];
+    if (Sym.isBindingLocal())
+      return make<DefinedEvent>(Name, Flags, this, Event);
+    return Symtab->addDefinedEvent(Name, Flags, this, Event);
+  }
   }
   llvm_unreachable("unknown symbol kind");
 }
@@ -357,7 +377,7 @@ Symbol *ObjFile::createUndefined(const WasmSymbol &Sym) {
 
   switch (Sym.Info.Kind) {
   case WASM_SYMBOL_TYPE_FUNCTION:
-    return Symtab->addUndefinedFunction(Name, Flags, this, Sym.FunctionType);
+    return Symtab->addUndefinedFunction(Name, Flags, this, Sym.Signature);
   case WASM_SYMBOL_TYPE_DATA:
     return Symtab->addUndefinedData(Name, Flags, this);
   case WASM_SYMBOL_TYPE_GLOBAL:

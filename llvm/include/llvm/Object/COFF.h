@@ -1062,6 +1062,8 @@ public:
   bool isRelocatableObject() const override;
   bool is64() const { return PE32PlusHeader; }
 
+  StringRef mapDebugSectionName(StringRef Name) const override;
+
   static bool classof(const Binary *v) { return v->isCOFF(); }
 };
 

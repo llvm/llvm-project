@@ -1284,6 +1284,12 @@ bool COFFObjectFile::isRelocatableObject() const {
   return !DataDirectory;
 }
 
+StringRef COFFObjectFile::mapDebugSectionName(StringRef Name) const {
+  return StringSwitch<StringRef>(Name)
+      .Case("eh_fram", "eh_frame")
+      .Default(Name);
+}
+
 bool ImportDirectoryEntryRef::
 operator==(const ImportDirectoryEntryRef &Other) const {
   return ImportTable == Other.ImportTable && Index == Other.Index;

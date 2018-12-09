@@ -10,6 +10,7 @@
 #include "Writer.h"
 #include "Config.h"
 #include "InputChunks.h"
+#include "InputEvent.h"
 #include "InputGlobal.h"
 #include "OutputSections.h"
 #include "OutputSegment.h"
@@ -80,6 +81,7 @@ private:
   void createFunctionSection();
   void createTableSection();
   void createGlobalSection();
+  void createEventSection();
   void createExportSection();
   void createImportSection();
   void createMemorySection();
@@ -111,10 +113,12 @@ private:
   std::vector<const Symbol *> ImportedSymbols;
   unsigned NumImportedFunctions = 0;
   unsigned NumImportedGlobals = 0;
+  unsigned NumImportedEvents = 0;
   std::vector<WasmExport> Exports;
   std::vector<const DefinedData *> DefinedFakeGlobals;
   std::vector<InputGlobal *> InputGlobals;
   std::vector<InputFunction *> InputFunctions;
+  std::vector<InputEvent *> InputEvents;
   std::vector<const FunctionSymbol *> IndirectFunctions;
   std::vector<const Symbol *> SymtabEntries;
   std::vector<WasmInitEntry> InitFunctions;
@@ -182,11 +186,15 @@ void Writer::createImportSection() {
     Import.Field = Sym->getName();
     if (auto *FunctionSym = dyn_cast<FunctionSymbol>(Sym)) {
       Import.Kind = WASM_EXTERNAL_FUNCTION;
-      Import.SigIndex = lookupType(*FunctionSym->FunctionType);
-    } else {
-      auto *GlobalSym = cast<GlobalSymbol>(Sym);
+      Import.SigIndex = lookupType(*FunctionSym->Signature);
+    } else if (auto *GlobalSym = dyn_cast<GlobalSymbol>(Sym)) {
       Import.Kind = WASM_EXTERNAL_GLOBAL;
       Import.Global = *GlobalSym->getGlobalType();
+    } else {
+      auto *EventSym = cast<EventSymbol>(Sym);
+      Import.Kind = WASM_EXTERNAL_EVENT;
+      Import.Event.Attribute = EventSym->getEventType()->Attribute;
+      Import.Event.SigIndex = lookupType(*EventSym->Signature);
     }
     writeImport(OS, Import);
   }
@@ -249,6 +257,31 @@ void Writer::createGlobalSection() {
     Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
     Global.InitExpr.Value.Int32 = Sym->getVirtualAddress();
     writeGlobal(OS, Global);
+  }
+}
+
+// The event section contains a list of declared wasm events associated with the
+// module. Currently the only supported event kind is exceptions. A single event
+// entry represents a single event with an event tag. All C++ exceptions are
+// represented by a single event. An event entry in this section contains
+// information on what kind of event it is (e.g. exception) and the type of
+// values contained in a single event object. (In wasm, an event can contain
+// multiple values of primitive types. But for C++ exceptions, we just throw a
+// pointer which is an i32 value (for wasm32 architecture), so the signature of
+// C++ exception is (i32)->(void), because all event types are assumed to have
+// void return type to share WasmSignature with functions.)
+void Writer::createEventSection() {
+  unsigned NumEvents = InputEvents.size();
+  if (NumEvents == 0)
+    return;
+
+  SyntheticSection *Section = createSyntheticSection(WASM_SEC_EVENT);
+  raw_ostream &OS = Section->getStream();
+
+  writeUleb128(OS, NumEvents, "event count");
+  for (InputEvent *E : InputEvents) {
+    E->Event.Type.SigIndex = lookupType(E->Signature);
+    writeEvent(OS, E->Event);
   }
 }
 
@@ -476,6 +509,10 @@ void Writer::createLinkingSection() {
           writeStr(Sub.OS, Sym->getName(), "sym name");
       } else if (auto *G = dyn_cast<GlobalSymbol>(Sym)) {
         writeUleb128(Sub.OS, G->getGlobalIndex(), "index");
+        if (Sym->isDefined())
+          writeStr(Sub.OS, Sym->getName(), "sym name");
+      } else if (auto *E = dyn_cast<EventSymbol>(Sym)) {
+        writeUleb128(Sub.OS, E->getEventIndex(), "index");
         if (Sym->isDefined())
           writeStr(Sub.OS, Sym->getName(), "sym name");
       } else if (isa<DataSymbol>(Sym)) {
@@ -722,6 +759,7 @@ void Writer::createSections() {
   createTableSection();
   createMemorySection();
   createGlobalSection();
+  createEventSection();
   createExportSection();
   createElemSection();
   createCodeSection();
@@ -760,8 +798,10 @@ void Writer::calculateImports() {
     ImportedSymbols.emplace_back(Sym);
     if (auto *F = dyn_cast<FunctionSymbol>(Sym))
       F->setFunctionIndex(NumImportedFunctions++);
+    else if (auto *G = dyn_cast<GlobalSymbol>(Sym))
+      G->setGlobalIndex(NumImportedGlobals++);
     else
-      cast<GlobalSymbol>(Sym)->setGlobalIndex(NumImportedGlobals++);
+      cast<EventSymbol>(Sym)->setEventIndex(NumImportedEvents++);
   }
 }
 
@@ -797,6 +837,8 @@ void Writer::calculateExports() {
         continue;
       }
       Export = {Name, WASM_EXTERNAL_GLOBAL, G->getGlobalIndex()};
+    } else if (auto *E = dyn_cast<DefinedEvent>(Sym)) {
+      Export = {Name, WASM_EXTERNAL_EVENT, E->getEventIndex()};
     } else {
       auto *D = cast<DefinedData>(Sym);
       DefinedFakeGlobals.emplace_back(D);
@@ -874,6 +916,8 @@ void Writer::calculateTypes() {
   // 1. Any signature used in the TYPE relocation
   // 2. The signatures of all imported functions
   // 3. The signatures of all defined functions
+  // 4. The signatures of all imported events
+  // 5. The signatures of all defined events
 
   for (ObjFile *File : Symtab->ObjectFiles) {
     ArrayRef<WasmSignature> Types = File->getWasmObj()->types();
@@ -882,12 +926,18 @@ void Writer::calculateTypes() {
         File->TypeMap[I] = registerType(Types[I]);
   }
 
-  for (const Symbol *Sym : ImportedSymbols)
+  for (const Symbol *Sym : ImportedSymbols) {
     if (auto *F = dyn_cast<FunctionSymbol>(Sym))
-      registerType(*F->FunctionType);
+      registerType(*F->Signature);
+    else if (auto *E = dyn_cast<EventSymbol>(Sym))
+      registerType(*E->Signature);
+  }
 
   for (const InputFunction *F : InputFunctions)
     registerType(F->Signature);
+
+  for (const InputEvent *E : InputEvents)
+    registerType(E->Signature);
 }
 
 void Writer::assignIndexes() {
@@ -958,6 +1008,22 @@ void Writer::assignIndexes() {
     LLVM_DEBUG(dbgs() << "Globals: " << File->getName() << "\n");
     for (InputGlobal *Global : File->Globals)
       AddDefinedGlobal(Global);
+  }
+
+  assert(InputEvents.empty());
+  uint32_t EventIndex = NumImportedEvents;
+  auto AddDefinedEvent = [&](InputEvent *Event) {
+    if (Event->Live) {
+      LLVM_DEBUG(dbgs() << "AddDefinedEvent: " << EventIndex << "\n");
+      Event->setEventIndex(EventIndex++);
+      InputEvents.push_back(Event);
+    }
+  };
+
+  for (ObjFile *File : Symtab->ObjectFiles) {
+    LLVM_DEBUG(dbgs() << "Events: " << File->getName() << "\n");
+    for (InputEvent *Event : File->Events)
+      AddDefinedEvent(Event);
   }
 }
 
@@ -1035,7 +1101,7 @@ void Writer::calculateInitFunctions() {
     const WasmLinkingData &L = File->getWasmObj()->linkingData();
     for (const WasmInitFunc &F : L.InitFunctions) {
       FunctionSymbol *Sym = File->getFunctionSymbol(F.Symbol);
-      if (*Sym->FunctionType != WasmSignature{{}, {}})
+      if (*Sym->Signature != WasmSignature{{}, {}})
         error("invalid signature for init func: " + toString(*Sym));
       InitFunctions.emplace_back(WasmInitEntry{Sym, F.Priority});
     }
@@ -1080,8 +1146,10 @@ void Writer::run() {
   if (errorHandler().Verbose) {
     log("Defined Functions: " + Twine(InputFunctions.size()));
     log("Defined Globals  : " + Twine(InputGlobals.size()));
+    log("Defined Events   : " + Twine(InputEvents.size()));
     log("Function Imports : " + Twine(NumImportedFunctions));
     log("Global Imports   : " + Twine(NumImportedGlobals));
+    log("Event Imports    : " + Twine(NumImportedEvents));
     for (ObjFile *File : Symtab->ObjectFiles)
       File->dumpInfo();
   }

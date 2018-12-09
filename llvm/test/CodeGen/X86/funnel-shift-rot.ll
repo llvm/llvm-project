@@ -231,30 +231,25 @@ define i64 @rotr_i64(i64 %x, i64 %z) nounwind {
 ; X32-SSE2-NEXT:    pushl %ebx
 ; X32-SSE2-NEXT:    pushl %edi
 ; X32-SSE2-NEXT:    pushl %esi
+; X32-SSE2-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X32-SSE2-NEXT:    movl %ebx, %ecx
-; X32-SSE2-NEXT:    andl $63, %ecx
 ; X32-SSE2-NEXT:    movl %edx, %edi
 ; X32-SSE2-NEXT:    shrl %cl, %edi
-; X32-SSE2-NEXT:    movl %esi, %ebp
-; X32-SSE2-NEXT:    shrdl %cl, %edx, %ebp
-; X32-SSE2-NEXT:    xorl %eax, %eax
+; X32-SSE2-NEXT:    movl %esi, %ebx
+; X32-SSE2-NEXT:    shrdl %cl, %edx, %ebx
+; X32-SSE2-NEXT:    xorl %ebp, %ebp
 ; X32-SSE2-NEXT:    testb $32, %cl
-; X32-SSE2-NEXT:    cmovnel %edi, %ebp
-; X32-SSE2-NEXT:    cmovnel %eax, %edi
-; X32-SSE2-NEXT:    negl %ebx
-; X32-SSE2-NEXT:    andl $63, %ebx
+; X32-SSE2-NEXT:    cmovnel %edi, %ebx
+; X32-SSE2-NEXT:    cmovnel %ebp, %edi
+; X32-SSE2-NEXT:    negb %cl
 ; X32-SSE2-NEXT:    movl %esi, %eax
-; X32-SSE2-NEXT:    movl %ebx, %ecx
 ; X32-SSE2-NEXT:    shll %cl, %eax
 ; X32-SSE2-NEXT:    shldl %cl, %esi, %edx
-; X32-SSE2-NEXT:    testb $32, %bl
+; X32-SSE2-NEXT:    testb $32, %cl
 ; X32-SSE2-NEXT:    cmovnel %eax, %edx
-; X32-SSE2-NEXT:    movl $0, %ecx
-; X32-SSE2-NEXT:    cmovnel %ecx, %eax
-; X32-SSE2-NEXT:    orl %ebp, %eax
+; X32-SSE2-NEXT:    cmovnel %ebp, %eax
+; X32-SSE2-NEXT:    orl %ebx, %eax
 ; X32-SSE2-NEXT:    orl %edi, %edx
 ; X32-SSE2-NEXT:    popl %esi
 ; X32-SSE2-NEXT:    popl %edi
