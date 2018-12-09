@@ -7540,11 +7540,7 @@ bool SwiftASTContext::DumpTypeValue(
     // else if it is a base class, it has no value.
     if (is_base_class)
       break;
-<<<<<<< HEAD
     LLVM_FALLTHROUGH;
-=======
-  // Fall through to case below.
->>>>>>> origin/stable
   case swift::TypeKind::BuiltinInteger:
   case swift::TypeKind::BuiltinFloat:
   case swift::TypeKind::BuiltinRawPointer:
