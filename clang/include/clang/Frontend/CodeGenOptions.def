@@ -149,6 +149,8 @@ CODEGENOPT(UniformWGSize     , 1, 0) ///< -cl-uniform-work-group-size
 CODEGENOPT(NoZeroInitializedInBSS , 1, 0) ///< -fno-zero-initialized-in-bss.
 /// Method of Objective-C dispatch to use.
 ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy)
+/// Replace certain message sends with calls to ObjC runtime entrypoints
+CODEGENOPT(ObjCConvertMessagesToRuntimeCalls , 1, 1)
 CODEGENOPT(OmitLeafFramePointer , 1, 0) ///< Set when -momit-leaf-frame-pointer is
                                         ///< enabled.
 

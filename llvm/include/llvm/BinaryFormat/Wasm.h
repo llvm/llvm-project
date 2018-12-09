@@ -331,14 +331,6 @@ inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
   return !(LHS == RHS);
 }
 
-inline bool operator==(const WasmEventType &LHS, const WasmEventType &RHS) {
-  return LHS.Attribute == RHS.Attribute && LHS.SigIndex == RHS.SigIndex;
-}
-
-inline bool operator!=(const WasmEventType &LHS, const WasmEventType &RHS) {
-  return !(LHS == RHS);
-}
-
 std::string toString(wasm::WasmSymbolType type);
 std::string relocTypetoString(uint32_t type);
 

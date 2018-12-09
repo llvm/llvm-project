@@ -1293,7 +1293,6 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vccombine))
                      .add(Op0)
                      .addReg(PReg, S)
-                     .add(Op1)
                      .addReg(SrcHi)
                      .addReg(SrcLo);
         if (IsDestLive)

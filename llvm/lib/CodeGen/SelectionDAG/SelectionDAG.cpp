@@ -4994,8 +4994,6 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
         return getConstant(0, DL, VT);
       LLVM_FALLTHROUGH;
     case ISD::ADD:
-    case ISD::ADDC:
-    case ISD::ADDE:
     case ISD::SUB:
     case ISD::UDIV:
     case ISD::SDIV:
