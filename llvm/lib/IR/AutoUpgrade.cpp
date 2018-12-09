@@ -382,20 +382,20 @@ static bool UpgradeX86IntrinsicFunction(Function *F, StringRef Name,
     return true;
   }
 
-  if (Name == "addcarryx.u32")
+  if (Name == "addcarryx.u32") // Added in 8.0
     return UpgradeADCSBBIntrinsic(F, Intrinsic::x86_addcarryx_u32, NewFn);
-  if (Name == "addcarryx.u64")
+  if (Name == "addcarryx.u64") // Added in 8.0
     return UpgradeADCSBBIntrinsic(F, Intrinsic::x86_addcarryx_u64, NewFn);
-  if (Name == "addcarry.u32")
+  if (Name == "addcarry.u32") // Added in 8.0
     return UpgradeADCSBBIntrinsic(F, Intrinsic::x86_addcarry_u32, NewFn);
-  if (Name == "addcarry.u64")
+  if (Name == "addcarry.u64") // Added in 8.0
     return UpgradeADCSBBIntrinsic(F, Intrinsic::x86_addcarry_u64, NewFn);
-  if (Name == "subborrow.u32")
+  if (Name == "subborrow.u32") // Added in 8.0
     return UpgradeADCSBBIntrinsic(F, Intrinsic::x86_subborrow_u32, NewFn);
-  if (Name == "subborrow.u64")
+  if (Name == "subborrow.u64") // Added in 8.0
     return UpgradeADCSBBIntrinsic(F, Intrinsic::x86_subborrow_u64, NewFn);
 
-  if (Name == "rdtscp") {
+  if (Name == "rdtscp") { // Added in 8.0
     // If this intrinsic has 0 operands, it's the new version.
     if (F->getFunctionType()->getNumParams() == 0)
       return false;
