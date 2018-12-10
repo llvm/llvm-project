@@ -17,8 +17,29 @@ using namespace clang;
 
 TextNodeDumper::TextNodeDumper(raw_ostream &OS, bool ShowColors,
                                const SourceManager *SM,
-                               const PrintingPolicy &PrintPolicy)
-    : OS(OS), ShowColors(ShowColors), SM(SM), PrintPolicy(PrintPolicy) {}
+                               const PrintingPolicy &PrintPolicy,
+                               const comments::CommandTraits *Traits)
+    : OS(OS), ShowColors(ShowColors), SM(SM), PrintPolicy(PrintPolicy),
+      Traits(Traits) {}
+
+void TextNodeDumper::Visit(const comments::Comment *C,
+                           const comments::FullComment *FC) {
+  if (!C) {
+    ColorScope Color(OS, ShowColors, NullColor);
+    OS << "<<<NULL>>>";
+    return;
+  }
+
+  {
+    ColorScope Color(OS, ShowColors, CommentColor);
+    OS << C->getCommentKindName();
+  }
+  dumpPointer(C);
+  dumpSourceRange(C->getSourceRange());
+
+  ConstCommentVisitor<TextNodeDumper, void,
+                      const comments::FullComment *>::visit(C, FC);
+}
 
 void TextNodeDumper::dumpPointer(const void *Ptr) {
   ColorScope Color(OS, ShowColors, AddressColor);
@@ -138,4 +159,127 @@ void TextNodeDumper::dumpCXXTemporary(const CXXTemporary *Temporary) {
   OS << "(CXXTemporary";
   dumpPointer(Temporary);
   OS << ")";
+}
+
+const char *TextNodeDumper::getCommandName(unsigned CommandID) {
+  if (Traits)
+    return Traits->getCommandInfo(CommandID)->Name;
+  const comments::CommandInfo *Info =
+      comments::CommandTraits::getBuiltinCommandInfo(CommandID);
+  if (Info)
+    return Info->Name;
+  return "<not a builtin command>";
+}
+
+void TextNodeDumper::visitTextComment(const comments::TextComment *C,
+                                      const comments::FullComment *) {
+  OS << " Text=\"" << C->getText() << "\"";
+}
+
+void TextNodeDumper::visitInlineCommandComment(
+    const comments::InlineCommandComment *C, const comments::FullComment *) {
+  OS << " Name=\"" << getCommandName(C->getCommandID()) << "\"";
+  switch (C->getRenderKind()) {
+  case comments::InlineCommandComment::RenderNormal:
+    OS << " RenderNormal";
+    break;
+  case comments::InlineCommandComment::RenderBold:
+    OS << " RenderBold";
+    break;
+  case comments::InlineCommandComment::RenderMonospaced:
+    OS << " RenderMonospaced";
+    break;
+  case comments::InlineCommandComment::RenderEmphasized:
+    OS << " RenderEmphasized";
+    break;
+  }
+
+  for (unsigned i = 0, e = C->getNumArgs(); i != e; ++i)
+    OS << " Arg[" << i << "]=\"" << C->getArgText(i) << "\"";
+}
+
+void TextNodeDumper::visitHTMLStartTagComment(
+    const comments::HTMLStartTagComment *C, const comments::FullComment *) {
+  OS << " Name=\"" << C->getTagName() << "\"";
+  if (C->getNumAttrs() != 0) {
+    OS << " Attrs: ";
+    for (unsigned i = 0, e = C->getNumAttrs(); i != e; ++i) {
+      const comments::HTMLStartTagComment::Attribute &Attr = C->getAttr(i);
+      OS << " \"" << Attr.Name << "=\"" << Attr.Value << "\"";
+    }
+  }
+  if (C->isSelfClosing())
+    OS << " SelfClosing";
+}
+
+void TextNodeDumper::visitHTMLEndTagComment(
+    const comments::HTMLEndTagComment *C, const comments::FullComment *) {
+  OS << " Name=\"" << C->getTagName() << "\"";
+}
+
+void TextNodeDumper::visitBlockCommandComment(
+    const comments::BlockCommandComment *C, const comments::FullComment *) {
+  OS << " Name=\"" << getCommandName(C->getCommandID()) << "\"";
+  for (unsigned i = 0, e = C->getNumArgs(); i != e; ++i)
+    OS << " Arg[" << i << "]=\"" << C->getArgText(i) << "\"";
+}
+
+void TextNodeDumper::visitParamCommandComment(
+    const comments::ParamCommandComment *C, const comments::FullComment *FC) {
+  OS << " "
+     << comments::ParamCommandComment::getDirectionAsString(C->getDirection());
+
+  if (C->isDirectionExplicit())
+    OS << " explicitly";
+  else
+    OS << " implicitly";
+
+  if (C->hasParamName()) {
+    if (C->isParamIndexValid())
+      OS << " Param=\"" << C->getParamName(FC) << "\"";
+    else
+      OS << " Param=\"" << C->getParamNameAsWritten() << "\"";
+  }
+
+  if (C->isParamIndexValid() && !C->isVarArgParam())
+    OS << " ParamIndex=" << C->getParamIndex();
+}
+
+void TextNodeDumper::visitTParamCommandComment(
+    const comments::TParamCommandComment *C, const comments::FullComment *FC) {
+  if (C->hasParamName()) {
+    if (C->isPositionValid())
+      OS << " Param=\"" << C->getParamName(FC) << "\"";
+    else
+      OS << " Param=\"" << C->getParamNameAsWritten() << "\"";
+  }
+
+  if (C->isPositionValid()) {
+    OS << " Position=<";
+    for (unsigned i = 0, e = C->getDepth(); i != e; ++i) {
+      OS << C->getIndex(i);
+      if (i != e - 1)
+        OS << ", ";
+    }
+    OS << ">";
+  }
+}
+
+void TextNodeDumper::visitVerbatimBlockComment(
+    const comments::VerbatimBlockComment *C, const comments::FullComment *) {
+  OS << " Name=\"" << getCommandName(C->getCommandID())
+     << "\""
+        " CloseName=\""
+     << C->getCloseName() << "\"";
+}
+
+void TextNodeDumper::visitVerbatimBlockLineComment(
+    const comments::VerbatimBlockLineComment *C,
+    const comments::FullComment *) {
+  OS << " Text=\"" << C->getText() << "\"";
+}
+
+void TextNodeDumper::visitVerbatimLineComment(
+    const comments::VerbatimLineComment *C, const comments::FullComment *) {
+  OS << " Text=\"" << C->getText() << "\"";
 }
