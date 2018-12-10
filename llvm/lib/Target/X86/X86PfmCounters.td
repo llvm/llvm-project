@@ -56,8 +56,13 @@ def : PfmCountersBinding<"silvermont", SLMPfmCounters>;
 def : PfmCountersBinding<"goldmont", SLMPfmCounters>;
 def : PfmCountersBinding<"goldmont-plus", SLMPfmCounters>;
 def : PfmCountersBinding<"tremont", SLMPfmCounters>;
-def : PfmCountersBinding<"knl", SLMPfmCounters>;
-def : PfmCountersBinding<"knm", SLMPfmCounters>;
+
+def KnightPfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = PfmCounter<"uops_retired:all">;
+}
+def : PfmCountersBinding<"knl", KnightPfmCounters>;
+def : PfmCountersBinding<"knm", KnightPfmCounters>;
 
 def SandyBridgePfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
@@ -161,9 +166,6 @@ def : PfmCountersBinding<"opteron-sse3", DefaultAMDPfmCounters>;
 def : PfmCountersBinding<"athlon64-sse3", DefaultAMDPfmCounters>;
 def : PfmCountersBinding<"amdfam10", DefaultAMDPfmCounters>;
 def : PfmCountersBinding<"barcelona", DefaultAMDPfmCounters>;
-def : PfmCountersBinding<"btver1", DefaultAMDPfmCounters>;
-def : PfmCountersBinding<"bdver3", DefaultAMDPfmCounters>;
-def : PfmCountersBinding<"bdver4", DefaultAMDPfmCounters>;
 
 def BdVer2PfmCounters : ProcPfmCounters {
   let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
@@ -177,6 +179,28 @@ def BdVer2PfmCounters : ProcPfmCounters {
 }
 def : PfmCountersBinding<"bdver1", BdVer2PfmCounters>;
 def : PfmCountersBinding<"bdver2", BdVer2PfmCounters>;
+
+def BdVer3PfmCounters : ProcPfmCounters {
+  let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
+  let UopsCounter = PfmCounter<"retired_uops">;
+  let IssueCounters = [
+    PfmIssueCounter<"SrFPU0", "dispatched_fpu_ops:ops_pipe0 + dispatched_fpu_ops:ops_dual_pipe0">,
+    PfmIssueCounter<"SrFPU1", "dispatched_fpu_ops:ops_pipe1 + dispatched_fpu_ops:ops_dual_pipe1">,
+    PfmIssueCounter<"SrFPU2", "dispatched_fpu_ops:ops_pipe2 + dispatched_fpu_ops:ops_dual_pipe2">
+  ];
+}
+def : PfmCountersBinding<"bdver3", BdVer3PfmCounters>;
+def : PfmCountersBinding<"bdver4", BdVer3PfmCounters>;
+
+def BtVer1PfmCounters : ProcPfmCounters {
+  let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
+  let UopsCounter = PfmCounter<"retired_uops">;
+  let IssueCounters = [
+    PfmIssueCounter<"BtFPU0", "dispatched_fpu:pipe0">,
+    PfmIssueCounter<"BtFPU1", "dispatched_fpu:pipe1">
+  ];
+}
+def : PfmCountersBinding<"btver1", BtVer1PfmCounters>;
 
 def BtVer2PfmCounters : ProcPfmCounters {
   let CycleCounter = PfmCounter<"cpu_clk_unhalted">;
