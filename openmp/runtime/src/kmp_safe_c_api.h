@@ -15,7 +15,7 @@
 
 // Not every unsafe call listed here is handled now, but keeping everything
 // in one place should be handy for future maintenance.
-#if KMP_OS_WINDOWS
+#if KMP_OS_WINDOWS && KMP_MSVC_COMPAT
 
 #define RSIZE_MAX_STR (4UL << 10) // 4KB
 
