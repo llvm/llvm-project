@@ -52,6 +52,8 @@ if (LLDB_DISABLE_CURSES)
   add_definitions( -DLLDB_DISABLE_CURSES )
 endif()
 
+option(LLDB_USE_ENTITLEMENTS "When code signing, use entitlements if available" ON)
+
 # On Windows, we can't use the normal FindPythonLibs module that comes with CMake,
 # for a number of reasons.
 # 1) Prior to MSVC 2015, it is only possible to embed Python if python itself was
