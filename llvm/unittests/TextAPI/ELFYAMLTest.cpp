@@ -11,22 +11,13 @@
 #include "llvm/TextAPI/ELF/ELFStub.h"
 #include "llvm/TextAPI/ELF/TBEHandler.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <string>
 
 using namespace llvm;
 using namespace llvm::ELF;
 using namespace llvm::elfabi;
-
-std::unique_ptr<ELFStub> readFromBuffer(const char Data[]) {
-  TBEHandler Handler;
-
-  StringRef Buf(Data);
-
-  std::unique_ptr<ELFStub> Stub = Handler.readFile(Buf);
-  EXPECT_NE(Stub.get(), nullptr);
-  return Stub;
-}
 
 void compareByLine(StringRef LHS, StringRef RHS) {
   StringRef Line1;
@@ -52,9 +43,9 @@ TEST(ElfYamlTextAPI, YAMLReadableTBE) {
                       "Symbols:\n"
                       "  foo: { Type: Func, Undefined: true }\n"
                       "...\n";
-  StringRef Buf = StringRef(Data);
-  TBEHandler Handler;
-  std::unique_ptr<ELFStub> Stub = Handler.readFile(Buf);
+  Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
+  ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
+  std::unique_ptr<ELFStub> Stub = std::move(StubOrErr.get());
   EXPECT_NE(Stub.get(), nullptr);
   EXPECT_EQ(Stub->Arch, (uint16_t)llvm::ELF::EM_X86_64);
   EXPECT_STREQ(Stub->SoName.c_str(), "test.so");
@@ -77,7 +68,10 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
                       "  not: { Type: File, Undefined: true, Size: 111, "
                       "Warning: \'All fields populated!\' }\n"
                       "...\n";
-  std::unique_ptr<ELFStub> Stub = readFromBuffer(Data);
+  Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
+  ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
+  std::unique_ptr<ELFStub> Stub = std::move(StubOrErr.get());
+  EXPECT_NE(Stub.get(), nullptr);
   EXPECT_EQ(Stub->Symbols.size(), 5u);
 
   auto Iterator = Stub->Symbols.begin();
@@ -126,12 +120,14 @@ TEST(ElfYamlTextAPI, YAMLReadsNoTBESyms) {
                       "Arch: x86_64\n"
                       "Symbols: {}\n"
                       "...\n";
-  std::unique_ptr<ELFStub> Stub = readFromBuffer(Data);
+  Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
+  ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
+  std::unique_ptr<ELFStub> Stub = std::move(StubOrErr.get());
+  EXPECT_NE(Stub.get(), nullptr);
   EXPECT_EQ(0u, Stub->Symbols.size());
 }
 
 TEST(ElfYamlTextAPI, YAMLUnreadableTBE) {
-  TBEHandler Handler;
   // Can't read: wrong format/version.
   const char Data[] = "--- !tapi-tbz\n"
                       "TbeVersion: z.3\n"
@@ -139,9 +135,8 @@ TEST(ElfYamlTextAPI, YAMLUnreadableTBE) {
                       "Arch: x86_64\n"
                       "Symbols:\n"
                       "  foo: { Type: Func, Undefined: true }\n";
-  StringRef Buf = StringRef(Data);
-  std::unique_ptr<ELFStub> Stub = Handler.readFile(Buf);
-  EXPECT_EQ(Stub.get(), nullptr);
+  Expected<std::unique_ptr<ELFStub>> StubOrErr = readTBEFromBuffer(Data);
+  ASSERT_THAT_ERROR(StubOrErr.takeError(), Failed());
 }
 
 TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
@@ -185,8 +180,7 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
 
   std::string Result;
   raw_string_ostream OS(Result);
-  TBEHandler Handler;
-  EXPECT_FALSE(Handler.writeFile(OS, Moved));
+  ASSERT_THAT_ERROR(writeTBEToOutputStream(OS, Moved), Succeeded());
   Result = OS.str();
   compareByLine(Result.c_str(), Expected);
 }
@@ -212,8 +206,7 @@ TEST(ElfYamlTextAPI, YAMLWritesNoTBESyms) {
 
   std::string Result;
   raw_string_ostream OS(Result);
-  TBEHandler Handler;
-  EXPECT_FALSE(Handler.writeFile(OS, Stub));
+  ASSERT_THAT_ERROR(writeTBEToOutputStream(OS, Stub), Succeeded());
   Result = OS.str();
   compareByLine(Result.c_str(), Expected);
 }

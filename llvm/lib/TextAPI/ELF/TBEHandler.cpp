@@ -142,16 +142,17 @@ template <> struct MappingTraits<ELFStub> {
 } // end namespace yaml
 } // end namespace llvm
 
-std::unique_ptr<ELFStub> TBEHandler::readFile(StringRef Buf) {
+Expected<std::unique_ptr<ELFStub>> elfabi::readTBEFromBuffer(StringRef Buf) {
   yaml::Input YamlIn(Buf);
   std::unique_ptr<ELFStub> Stub(new ELFStub());
   YamlIn >> *Stub;
-  if (YamlIn.error())
-    return nullptr;
-  return Stub;
+  if (std::error_code Err = YamlIn.error())
+    return createStringError(Err, "YAML failed reading as TBE");
+
+  return std::move(Stub);
 }
 
-Error TBEHandler::writeFile(raw_ostream &OS, const ELFStub &Stub) {
+Error elfabi::writeTBEToOutputStream(raw_ostream &OS, const ELFStub &Stub) {
   yaml::Output YamlOut(OS, NULL, /*WrapColumn =*/0);
 
   YamlOut << const_cast<ELFStub &>(Stub);
