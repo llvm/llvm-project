@@ -544,10 +544,14 @@ typedef int PACKED_REDUCTION_METHOD_T;
 
 #if KMP_OS_WINDOWS
 #define USE_CBLKDATA
+#if KMP_MSVC_COMPAT
 #pragma warning(push)
 #pragma warning(disable : 271 310)
+#endif
 #include <windows.h>
+#if KMP_MSVC_COMPAT
 #pragma warning(pop)
+#endif
 #endif
 
 #if KMP_OS_UNIX
@@ -560,7 +564,7 @@ typedef int PACKED_REDUCTION_METHOD_T;
 
 // GROUP_AFFINITY is already defined for _MSC_VER>=1600 (VS2010 and later).
 #if KMP_OS_WINDOWS
-#if _MSC_VER < 1600
+#if _MSC_VER < 1600 && KMP_MSVC_COMPAT
 typedef struct GROUP_AFFINITY {
   KAFFINITY Mask;
   WORD Group;
