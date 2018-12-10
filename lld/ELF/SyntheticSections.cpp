@@ -1313,7 +1313,9 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   if (!Config->Shared && !Config->Relocatable && !Config->ZRodynamic)
     addInt(DT_DEBUG, 0);
 
-  this->Link = In.DynStrTab->getParent()->SectionIndex;
+  if (OutputSection *Sec = In.DynStrTab->getParent())
+    this->Link = Sec->SectionIndex;
+
   if (!In.RelaDyn->empty()) {
     addInSec(In.RelaDyn->DynamicTag, In.RelaDyn);
     addSize(In.RelaDyn->SizeDynamicTag, In.RelaDyn->getParent());
@@ -1863,7 +1865,8 @@ static bool sortMipsSymbols(const SymbolTableEntry &L,
 }
 
 void SymbolTableBaseSection::finalizeContents() {
-  getParent()->Link = StrTabSec.getParent()->SectionIndex;
+  if (OutputSection *Sec = StrTabSec.getParent())
+    getParent()->Link = Sec->SectionIndex;
 
   if (this->Type != SHT_DYNSYM) {
     sortSymTabSymbols();
@@ -2685,7 +2688,8 @@ void VersionDefinitionSection::finalizeContents() {
   for (VersionDefinition &V : Config->VersionDefinitions)
     V.NameOff = In.DynStrTab->addString(V.Name);
 
-  getParent()->Link = In.DynStrTab->getParent()->SectionIndex;
+  if (OutputSection *Sec = In.DynStrTab->getParent())
+    getParent()->Link = Sec->SectionIndex;
 
   // sh_info should be set to the number of definitions. This fact is missed in
   // documentation, but confirmed by binutils community:
@@ -2829,7 +2833,8 @@ template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *Buf) {
 }
 
 template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
-  getParent()->Link = In.DynStrTab->getParent()->SectionIndex;
+  if (OutputSection *Sec = In.DynStrTab->getParent())
+    getParent()->Link = Sec->SectionIndex;
   getParent()->Info = Needed.size();
 }
 
