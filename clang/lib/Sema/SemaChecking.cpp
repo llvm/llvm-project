@@ -2862,7 +2862,7 @@ bool Sema::CheckMipsBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Mips::BI__builtin_mips_precr_sra_ph_w: i = 2; l = 0; u = 31; break;
   case Mips::BI__builtin_mips_precr_sra_r_ph_w: i = 2; l = 0; u = 31; break;
   case Mips::BI__builtin_mips_prepend: i = 2; l = 0; u = 31; break;
-  // MSA instrinsics. Instructions (which the intrinsics maps to) which use the
+  // MSA intrinsics. Instructions (which the intrinsics maps to) which use the
   // df/m field.
   // These intrinsics take an unsigned 3 bit immediate.
   case Mips::BI__builtin_msa_bclri_b:

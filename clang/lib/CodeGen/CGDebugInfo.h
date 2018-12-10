@@ -740,7 +740,7 @@ public:
   /// function \p InlinedFn. The current debug location becomes the inlined call
   /// site of the inlined function.
   ApplyInlineDebugLocation(CodeGenFunction &CGF, GlobalDecl InlinedFn);
-  /// Restore everything back to the orginial state.
+  /// Restore everything back to the original state.
   ~ApplyInlineDebugLocation();
 };
 

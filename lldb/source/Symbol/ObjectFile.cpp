@@ -688,3 +688,63 @@ DataBufferSP ObjectFile::MapFileData(const FileSpec &file, uint64_t Size,
                                      uint64_t Offset) {
   return FileSystem::Instance().CreateDataBuffer(file.GetPath(), Size, Offset);
 }
+
+void llvm::format_provider<ObjectFile::Type>::format(
+    const ObjectFile::Type &type, raw_ostream &OS, StringRef Style) {
+  switch (type) {
+  case ObjectFile::eTypeInvalid:
+    OS << "invalid";
+    break;
+  case ObjectFile::eTypeCoreFile:
+    OS << "core file";
+    break;
+  case ObjectFile::eTypeExecutable:
+    OS << "executable";
+    break;
+  case ObjectFile::eTypeDebugInfo:
+    OS << "debug info";
+    break;
+  case ObjectFile::eTypeDynamicLinker:
+    OS << "dynamic linker";
+    break;
+  case ObjectFile::eTypeObjectFile:
+    OS << "object file";
+    break;
+  case ObjectFile::eTypeSharedLibrary:
+    OS << "shared library";
+    break;
+  case ObjectFile::eTypeStubLibrary:
+    OS << "stub library";
+    break;
+  case ObjectFile::eTypeJIT:
+    OS << "jit";
+    break;
+  case ObjectFile::eTypeUnknown:
+    OS << "unknown";
+    break;
+  }
+}
+
+void llvm::format_provider<ObjectFile::Strata>::format(
+    const ObjectFile::Strata &strata, raw_ostream &OS, StringRef Style) {
+  switch (strata) {
+  case ObjectFile::eStrataInvalid:
+    OS << "invalid";
+    break;
+  case ObjectFile::eStrataUnknown:
+    OS << "unknown";
+    break;
+  case ObjectFile::eStrataUser:
+    OS << "user";
+    break;
+  case ObjectFile::eStrataKernel:
+    OS << "kernel";
+    break;
+  case ObjectFile::eStrataRawImage:
+    OS << "raw image";
+    break;
+  case ObjectFile::eStrataJIT:
+    OS << "jit";
+    break;
+  }
+}

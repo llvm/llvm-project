@@ -42,7 +42,7 @@ public:
   void reportClones(BugReporter &BR, AnalysisManager &Mgr,
                     std::vector<CloneDetector::CloneGroup> &CloneGroups) const;
 
-  /// Reports only suspicious clones to the user along with informaton
+  /// Reports only suspicious clones to the user along with information
   /// that explain why they are suspicious.
   void reportSuspiciousClones(
       BugReporter &BR, AnalysisManager &Mgr,

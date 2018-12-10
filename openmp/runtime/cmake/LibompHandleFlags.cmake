@@ -50,6 +50,7 @@ function(libomp_get_c_and_cxxflags_common flags)
   libomp_append(flags_local /GS LIBOMP_HAVE_GS_FLAG)
   libomp_append(flags_local /EHsc LIBOMP_HAVE_EHSC_FLAG)
   libomp_append(flags_local /Oy- LIBOMP_HAVE_OY__FLAG)
+  libomp_append(flags_local -mrtm LIBOMP_HAVE_MRTM_FLAG)
   # Intel(R) C Compiler flags
   libomp_append(flags_local /Qsafeseh LIBOMP_HAVE_QSAFESEH_FLAG)
   libomp_append(flags_local -Qoption,cpp,--extended_float_types LIBOMP_HAVE_EXTENDED_FLOAT_TYPES_FLAG)

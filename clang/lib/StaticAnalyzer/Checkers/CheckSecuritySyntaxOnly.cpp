@@ -188,7 +188,7 @@ void WalkAST::VisitForStmt(ForStmt *FS) {
 }
 
 //===----------------------------------------------------------------------===//
-// Check: floating poing variable used as loop counter.
+// Check: floating point variable used as loop counter.
 // Originally: <rdar://problem/6336718>
 // Implements: CERT security coding advisory FLP-30.
 //===----------------------------------------------------------------------===//

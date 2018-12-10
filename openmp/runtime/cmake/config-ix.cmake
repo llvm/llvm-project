@@ -73,13 +73,16 @@ check_c_compiler_flag(-ftls-model=initial-exec LIBOMP_HAVE_FTLS_MODEL_FLAG)
 libomp_check_architecture_flag(-mmic LIBOMP_HAVE_MMIC_FLAG)
 libomp_check_architecture_flag(-m32 LIBOMP_HAVE_M32_FLAG)
 if(WIN32)
-  # Check Windows MSVC style flags.
-  check_c_compiler_flag(/TP LIBOMP_HAVE_TP_FLAG)
-  check_cxx_compiler_flag(/EHsc LIBOMP_HAVE_EHSC_FLAG)
-  check_cxx_compiler_flag(/GS LIBOMP_HAVE_GS_FLAG)
-  check_cxx_compiler_flag(/Oy- LIBOMP_HAVE_Oy__FLAG)
-  check_cxx_compiler_flag(/arch:SSE2 LIBOMP_HAVE_ARCH_SSE2_FLAG)
-  check_cxx_compiler_flag(/Qsafeseh LIBOMP_HAVE_QSAFESEH_FLAG)
+  if(MSVC)
+    # Check Windows MSVC style flags.
+    check_c_compiler_flag(/TP LIBOMP_HAVE_TP_FLAG)
+    check_cxx_compiler_flag(/EHsc LIBOMP_HAVE_EHSC_FLAG)
+    check_cxx_compiler_flag(/GS LIBOMP_HAVE_GS_FLAG)
+    check_cxx_compiler_flag(/Oy- LIBOMP_HAVE_Oy__FLAG)
+    check_cxx_compiler_flag(/arch:SSE2 LIBOMP_HAVE_ARCH_SSE2_FLAG)
+    check_cxx_compiler_flag(/Qsafeseh LIBOMP_HAVE_QSAFESEH_FLAG)
+  endif()
+  check_c_compiler_flag(-mrtm LIBOMP_HAVE_MRTM_FLAG)
   # It is difficult to create a dummy masm assembly file
   # and then check the MASM assembler to see if these flags exist and work,
   # so we assume they do for Windows.

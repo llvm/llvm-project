@@ -604,6 +604,14 @@ public:
       return MI.getDesc().TSFlags & ClampFlags;
   }
 
+  static bool usesFPDPRounding(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::FPDPRounding;
+  }
+
+  bool usesFPDPRounding(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::FPDPRounding;
+  }
+
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(MI.isCopy());
     unsigned Dest = MI.getOperand(0).getReg();

@@ -418,7 +418,7 @@ static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
     // AllocationNodeInCurrentContext, is the last node in the current or
     // parent context in which the symbol was tracked.
     //
-    // Note that the allocation site might be in the parent conext. For example,
+    // Note that the allocation site might be in the parent context. For example,
     // the case where an allocation happens in a block that captures a reference
     // to it and that reference is overwritten/dropped by another call to
     // the block.

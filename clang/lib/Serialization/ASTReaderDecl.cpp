@@ -2913,25 +2913,30 @@ static bool hasSameOverloadableAttrs(const FunctionDecl *A,
   // Note that pass_object_size attributes are represented in the function's
   // ExtParameterInfo, so we don't need to check them here.
 
-  // Return false if any of the enable_if expressions of A and B are different.
   llvm::FoldingSetNodeID Cand1ID, Cand2ID;
   auto AEnableIfAttrs = A->specific_attrs<EnableIfAttr>();
   auto BEnableIfAttrs = B->specific_attrs<EnableIfAttr>();
-  auto AEnableIf = AEnableIfAttrs.begin();
-  auto BEnableIf = BEnableIfAttrs.begin();
-  for (; AEnableIf != AEnableIfAttrs.end() && BEnableIf != BEnableIfAttrs.end();
-       ++BEnableIf, ++AEnableIf) {
+
+  for (auto Pair : zip_longest(AEnableIfAttrs, BEnableIfAttrs)) {
+    Optional<EnableIfAttr *> Cand1A = std::get<0>(Pair);
+    Optional<EnableIfAttr *> Cand2A = std::get<1>(Pair);
+
+    // Return false if the number of enable_if attributes is different.
+    if (!Cand1A || !Cand2A)
+      return false;
+
     Cand1ID.clear();
     Cand2ID.clear();
 
-    AEnableIf->getCond()->Profile(Cand1ID, A->getASTContext(), true);
-    BEnableIf->getCond()->Profile(Cand2ID, B->getASTContext(), true);
+    (*Cand1A)->getCond()->Profile(Cand1ID, A->getASTContext(), true);
+    (*Cand2A)->getCond()->Profile(Cand2ID, B->getASTContext(), true);
+
+    // Return false if any of the enable_if expressions of A and B are
+    // different.
     if (Cand1ID != Cand2ID)
       return false;
   }
-
-  // Return false if the number of enable_if attributes was different.
-  return AEnableIf == AEnableIfAttrs.end() && BEnableIf == BEnableIfAttrs.end();
+  return true;
 }
 
 /// Determine whether the two declarations refer to the same entity.

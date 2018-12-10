@@ -2884,7 +2884,7 @@ void Sema::MatchAllMethodDeclarations(const SelectorSet &InsMap,
                                  IMPDecl, PI, IncompleteImpl, false,
                                  WarnCategoryMethodImpl);
 
-    // FIXME. For now, we are not checking for extact match of methods
+    // FIXME. For now, we are not checking for exact match of methods
     // in category implementation and its primary class's super class.
     if (!WarnCategoryMethodImpl && I->getSuperClass())
       MatchAllMethodDeclarations(InsMap, ClsMap, InsMapSeen, ClsMapSeen,

@@ -911,7 +911,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   return true;
 }
 
-/// Determine structural equivalence of two methodss.
+/// Determine structural equivalence of two methods.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      CXXMethodDecl *Method1,
                                      CXXMethodDecl *Method2) {
