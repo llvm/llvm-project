@@ -1717,7 +1717,8 @@ static void __kmp_set_queuing_lock_flags(kmp_queuing_lock_t *lck,
 /* RTM Adaptive locks */
 
 #if (KMP_COMPILER_ICC && __INTEL_COMPILER >= 1300) ||                          \
-    (KMP_COMPILER_MSVC && _MSC_VER >= 1700) || KMP_COMPILER_CLANG
+    (KMP_COMPILER_MSVC && _MSC_VER >= 1700) ||                                 \
+    (KMP_COMPILER_CLANG && KMP_MSVC_COMPAT)
 
 #include <immintrin.h>
 #define SOFT_ABORT_MASK (_XABORT_RETRY | _XABORT_CONFLICT | _XABORT_EXPLICIT)
