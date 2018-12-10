@@ -2726,22 +2726,16 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
 // ADX
 
 let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
-  def int_x86_addcarryx_u32:
+  def int_x86_addcarry_32:
         Intrinsic<[llvm_i8_ty, llvm_i32_ty],
                   [llvm_i8_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_addcarryx_u64:
+  def int_x86_addcarry_64:
         Intrinsic<[llvm_i8_ty, llvm_i64_ty],
                   [llvm_i8_ty, llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
-  def int_x86_addcarry_u32:
+  def int_x86_subborrow_32:
         Intrinsic<[llvm_i8_ty, llvm_i32_ty],
                   [llvm_i8_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_addcarry_u64:
-        Intrinsic<[llvm_i8_ty, llvm_i64_ty],
-                  [llvm_i8_ty, llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
-  def int_x86_subborrow_u32:
-        Intrinsic<[llvm_i8_ty, llvm_i32_ty],
-                  [llvm_i8_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_x86_subborrow_u64:
+  def int_x86_subborrow_64:
         Intrinsic<[llvm_i8_ty, llvm_i64_ty],
                   [llvm_i8_ty, llvm_i64_ty, llvm_i64_ty], [IntrNoMem]>;
 }

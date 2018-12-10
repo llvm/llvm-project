@@ -286,10 +286,8 @@ static const IntrinsicData* getIntrinsicWithChain(unsigned IntNo) {
  * the alphabetical order.
  */
 static const IntrinsicData  IntrinsicsWithoutChain[] = {
-  X86_INTRINSIC_DATA(addcarry_u32,      ADX, X86ISD::ADC, X86ISD::ADD),
-  X86_INTRINSIC_DATA(addcarry_u64,      ADX, X86ISD::ADC, X86ISD::ADD),
-  X86_INTRINSIC_DATA(addcarryx_u32,     ADX, X86ISD::ADC, X86ISD::ADD),
-  X86_INTRINSIC_DATA(addcarryx_u64,     ADX, X86ISD::ADC, X86ISD::ADD),
+  X86_INTRINSIC_DATA(addcarry_32,       ADX, X86ISD::ADC, X86ISD::ADD),
+  X86_INTRINSIC_DATA(addcarry_64,       ADX, X86ISD::ADC, X86ISD::ADD),
   X86_INTRINSIC_DATA(avx_addsub_pd_256, INTR_TYPE_2OP, X86ISD::ADDSUB, 0),
   X86_INTRINSIC_DATA(avx_addsub_ps_256, INTR_TYPE_2OP, X86ISD::ADDSUB, 0),
   X86_INTRINSIC_DATA(avx_cmp_pd_256,    INTR_TYPE_3OP, X86ISD::CMPP, 0),
@@ -1223,8 +1221,8 @@ static const IntrinsicData  IntrinsicsWithoutChain[] = {
   X86_INTRINSIC_DATA(ssse3_pmadd_ub_sw_128, INTR_TYPE_2OP, X86ISD::VPMADDUBSW, 0),
   X86_INTRINSIC_DATA(ssse3_pmul_hr_sw_128, INTR_TYPE_2OP, X86ISD::MULHRS, 0),
   X86_INTRINSIC_DATA(ssse3_pshuf_b_128, INTR_TYPE_2OP, X86ISD::PSHUFB, 0),
-  X86_INTRINSIC_DATA(subborrow_u32,     ADX, X86ISD::SBB, X86ISD::SUB),
-  X86_INTRINSIC_DATA(subborrow_u64,     ADX, X86ISD::SBB, X86ISD::SUB),
+  X86_INTRINSIC_DATA(subborrow_32,      ADX, X86ISD::SBB, X86ISD::SUB),
+  X86_INTRINSIC_DATA(subborrow_64,      ADX, X86ISD::SBB, X86ISD::SUB),
   X86_INTRINSIC_DATA(tbm_bextri_u32,    INTR_TYPE_2OP, X86ISD::BEXTR, 0),
   X86_INTRINSIC_DATA(tbm_bextri_u64,    INTR_TYPE_2OP, X86ISD::BEXTR, 0),
   X86_INTRINSIC_DATA(vcvtph2ps_128,     INTR_TYPE_1OP, X86ISD::CVTPH2PS, 0),
