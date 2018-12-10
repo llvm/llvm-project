@@ -74,6 +74,8 @@
 #if LIBOMP_TSAN_SUPPORT
 #define TSAN_SUPPORT
 #endif
+#cmakedefine01 MSVC
+#define KMP_MSVC_COMPAT MSVC
 
 // Configured cache line based on architecture
 #if KMP_ARCH_PPC64

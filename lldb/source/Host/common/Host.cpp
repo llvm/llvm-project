@@ -496,7 +496,7 @@ Status Host::RunShellCommand(const Args &args, const FileSpec &working_dir,
 
   if (working_dir)
     launch_info.SetWorkingDirectory(working_dir);
-  llvm::SmallString<PATH_MAX> output_file_path;
+  llvm::SmallString<64> output_file_path;
 
   if (command_output_ptr) {
     // Create a temporary file to get the stdout/stderr and redirect the output

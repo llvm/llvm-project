@@ -116,7 +116,7 @@ static int DiskFilesOrDirectories(const llvm::Twine &partial_name,
     if (FirstSep != llvm::StringRef::npos)
       Remainder = Buffer.drop_front(FirstSep + 1);
 
-    llvm::SmallString<PATH_MAX> Resolved;
+    llvm::SmallString<256> Resolved;
     if (!Resolver.ResolveExact(Username, Resolved)) {
       // We couldn't resolve it as a full username.  If there were no slashes
       // then this might be a partial username.   We try to resolve it as such

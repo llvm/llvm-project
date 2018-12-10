@@ -887,6 +887,7 @@ kmp_uint64 __kmp_now_nsec() {
   return 1e9 * __kmp_win32_tick * now.QuadPart;
 }
 
+extern "C"
 void *__stdcall __kmp_launch_worker(void *arg) {
   volatile void *stack_data;
   void *exit_val;
