@@ -6,6 +6,10 @@ module BrokenTypes {
   header "BrokenTypes.h"
 }
 
+module ModuleWithWrongCase {
+  header "ModuleWithWrongCase.h"
+}
+
 module ModuleWithWrongCasePrivate {
   header "ModuleWithWrongCasePrivate.h"
 }

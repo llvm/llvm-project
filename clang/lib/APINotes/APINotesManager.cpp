@@ -245,6 +245,14 @@ static void checkPrivateAPINotesName(DiagnosticsEngine &diags,
   diags.Report(SourceLocation(), diagID) << module->Name << realFilename;
 }
 
+/// \returns true if any of \p module's immediate submodules are defined in a
+/// private module map
+static bool hasPrivateSubmodules(const Module *module) {
+  return llvm::any_of(module->submodules(), [](const Module *submodule) {
+    return submodule->ModuleMapIsPrivate;
+  });
+}
+
 bool APINotesManager::loadCurrentModuleAPINotes(
                    const Module *module,
                    bool lookInModule,
@@ -281,7 +289,7 @@ bool APINotesManager::loadCurrentModuleAPINotes(
       //
       // Public modules:
       // - Headers/Foo.apinotes
-      // - PrivateHeaders/Foo_private.apinotes
+      // - PrivateHeaders/Foo_private.apinotes (if there are private submodules)
       // Private modules:
       // - PrivateHeaders/Bar.apinotes (except that 'Bar' probably already has
       //   the word "Private" in it in practice)
@@ -298,20 +306,22 @@ bool APINotesManager::loadCurrentModuleAPINotes(
         path.resize(pathLen);
       }
 
-      llvm::sys::path::append(path, "PrivateHeaders");
-      if (auto privateAPINotesDir = fileMgr.getDirectory(path)) {
-        tryAPINotes(privateAPINotesDir,
-                    /*wantPublic=*/module->ModuleMapIsPrivate);
+      if (module->ModuleMapIsPrivate || hasPrivateSubmodules(module)) {
+        llvm::sys::path::append(path, "PrivateHeaders");
+        if (auto privateAPINotesDir = fileMgr.getDirectory(path)) {
+          tryAPINotes(privateAPINotesDir,
+                      /*wantPublic=*/module->ModuleMapIsPrivate);
+        }
       }
     } else {
       // Public modules:
       // - Foo.apinotes
-      // - Foo_private.apinotes
+      // - Foo_private.apinotes (if there are private submodules)
       // Private modules:
       // - Bar.apinotes (except that 'Bar' probably already has the word
       //   "Private" in it in practice)
       tryAPINotes(module->Directory, /*wantPublic=*/true);
-      if (!module->ModuleMapIsPrivate)
+      if (!module->ModuleMapIsPrivate && hasPrivateSubmodules(module))
         tryAPINotes(module->Directory, /*wantPublic=*/false);
     }
 
