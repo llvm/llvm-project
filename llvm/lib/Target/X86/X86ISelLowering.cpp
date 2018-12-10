@@ -21932,10 +21932,19 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     case ADX: {
       SDVTList CFVTs = DAG.getVTList(Op->getValueType(0), MVT::i32);
       SDVTList VTs = DAG.getVTList(Op.getOperand(2).getValueType(), MVT::i32);
-      SDValue GenCF = DAG.getNode(X86ISD::ADD, dl, CFVTs, Op.getOperand(1),
-                                  DAG.getConstant(-1, dl, MVT::i8));
-      SDValue Res = DAG.getNode(IntrData->Opc0, dl, VTs, Op.getOperand(2),
-                                Op.getOperand(3), GenCF.getValue(1));
+
+      SDValue Res;
+      // If the carry in is zero, then we should just use ADD/SUB instead of
+      // ADC/SBB.
+      if (isNullConstant(Op.getOperand(1))) {
+        Res = DAG.getNode(IntrData->Opc1, dl, VTs, Op.getOperand(2),
+                          Op.getOperand(3));
+      } else {
+        SDValue GenCF = DAG.getNode(X86ISD::ADD, dl, CFVTs, Op.getOperand(1),
+                                    DAG.getConstant(-1, dl, MVT::i8));
+        Res = DAG.getNode(IntrData->Opc0, dl, VTs, Op.getOperand(2),
+                          Op.getOperand(3), GenCF.getValue(1));
+      }
       SDValue SetCC = getSETCC(X86::COND_B, Res.getValue(1), dl, DAG);
       SDValue Results[] = { SetCC, Res };
       return DAG.getMergeValues(Results, dl);

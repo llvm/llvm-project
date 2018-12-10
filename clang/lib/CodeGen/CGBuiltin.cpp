@@ -10930,30 +10930,22 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   }
   case X86::BI__builtin_ia32_addcarryx_u32:
   case X86::BI__builtin_ia32_addcarryx_u64:
-  case X86::BI__builtin_ia32_addcarry_u32:
-  case X86::BI__builtin_ia32_addcarry_u64:
   case X86::BI__builtin_ia32_subborrow_u32:
   case X86::BI__builtin_ia32_subborrow_u64: {
     Intrinsic::ID IID;
     switch (BuiltinID) {
     default: llvm_unreachable("Unsupported intrinsic!");
     case X86::BI__builtin_ia32_addcarryx_u32:
-      IID = Intrinsic::x86_addcarryx_u32;
+      IID = Intrinsic::x86_addcarry_32;
       break;
     case X86::BI__builtin_ia32_addcarryx_u64:
-      IID = Intrinsic::x86_addcarryx_u64;
-      break;
-    case X86::BI__builtin_ia32_addcarry_u32:
-      IID = Intrinsic::x86_addcarry_u32;
-      break;
-    case X86::BI__builtin_ia32_addcarry_u64:
-      IID = Intrinsic::x86_addcarry_u64;
+      IID = Intrinsic::x86_addcarry_64;
       break;
     case X86::BI__builtin_ia32_subborrow_u32:
-      IID = Intrinsic::x86_subborrow_u32;
+      IID = Intrinsic::x86_subborrow_32;
       break;
     case X86::BI__builtin_ia32_subborrow_u64:
-      IID = Intrinsic::x86_subborrow_u64;
+      IID = Intrinsic::x86_subborrow_64;
       break;
     }
 
