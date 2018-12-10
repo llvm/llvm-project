@@ -832,7 +832,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
 
   if (should_create_file) {
     int temp_fd = -1;
-    llvm::SmallString<PATH_MAX> result_path;
+    llvm::SmallString<128> result_path;
     if (FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir()) {
       tmpdir_file_spec.AppendPathComponent("lldb-%%%%%%.expr");
       std::string temp_source_path = tmpdir_file_spec.GetPath();

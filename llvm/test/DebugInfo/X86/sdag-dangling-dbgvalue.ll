@@ -63,9 +63,9 @@ target triple = "x86_64-apple-macosx10.4.0"
 @S = global %struct.SS { i32 23, i32 -17 }, align 4, !dbg !0
 
 ; Verify that the def comes before the for foo1.
-; TODO: Currently dbg.value for bar1 is dropped(?), is that expected?
 define i32 @test1() local_unnamed_addr #0 !dbg !17 {
 ; CHECK-LABEL: bb.0.entry1
+; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[BAR1]], !DIExpression()
 ; CHECK-NEXT:    [[REG1:%[0-9]+]]:gr64 =
 ; CHECK-NEXT:    DBG_VALUE [[REG1]], $noreg, ![[FOO1]], !DIExpression()
 entry1:
@@ -99,11 +99,9 @@ entry3:
 }
 
 ; Verify that the def comes before the for bar4.
-; TODO: Currently dbg.value for foo4 is dropped. It is set to null and not
-;       used. Just like in test1 it can be discussed if there should be a
-;       DBG_VALUE for foo4 here.
 define i32 @test4() local_unnamed_addr #0 !dbg !40 {
 ; CHECK-LABEL: bb.0.entry4
+; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[FOO4]], !DIExpression()
 ; CHECK-NEXT:    [[REG4:%[0-9]+]]:gr64 =
 ; CHECK-NEXT:    DBG_VALUE [[REG4]], $noreg, ![[BAR4]], !DIExpression()
 entry4:
@@ -114,10 +112,9 @@ entry4:
 }
 
 ; Verify that we do not get a DBG_VALUE that maps foo5 to @S here.
-; TODO: foo5 is set to null, and it is not really used. Just like in test1 it
-;       can be discussed if there should be a DBG_VALUE for foo5 here.
 define i32 @test5() local_unnamed_addr #0 !dbg !47 {
 ; CHECK-LABEL: bb.0.entry5:
+; CHECK-NEXT:    DBG_VALUE 0, $noreg, ![[FOO5]], !DIExpression()
 ; CHECK-NEXT:    [[REG5:%[0-9]+]]:gr64 =
 ; CHECK-NEXT:    DBG_VALUE [[REG5]], $noreg, ![[BAR5]], !DIExpression()
 ; CHECK-NOT:     DBG_VALUE [[REG5]], $noreg, ![[FOO5]], !DIExpression()

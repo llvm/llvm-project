@@ -32,10 +32,10 @@
 ;CHECK-NEXT: DW_AT_call_line
 
 ;CHECK: DW_TAG_formal_parameter
-;FIXME: Linux shouldn't drop this parameter either...
 ;CHECK-NOT: DW_TAG
-;DARWIN:   DW_AT_abstract_origin {{.*}} "sp"
-;DARWIN: DW_TAG_formal_parameter
+;CHECK:   DW_AT_abstract_origin {{.*}} "sp"
+;CHECK: DW_TAG_formal_parameter
+;CHECK-NOT: DW_TAG
 ;CHECK: DW_AT_abstract_origin {{.*}} "nums"
 ;CHECK-NOT: DW_TAG_formal_parameter
 

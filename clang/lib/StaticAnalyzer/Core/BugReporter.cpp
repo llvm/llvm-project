@@ -820,7 +820,7 @@ void generateMinimalDiagForBlockEdge(const ExplodedNode *N, BlockEdge BE,
 // and values by tracing interesting calculations backwards through evaluated
 // expressions along a path.  This is probably overly complicated, but the idea
 // is that if an expression computed an "interesting" value, the child
-// expressions are are also likely to be "interesting" as well (which then
+// expressions are also likely to be "interesting" as well (which then
 // propagates to the values they in turn compute).  This reverse propagation
 // is needed to track interesting correlations across function call boundaries,
 // where formal arguments bind to actual arguments, etc.  This is also needed

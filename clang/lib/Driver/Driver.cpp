@@ -4354,7 +4354,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
 }
 
 std::string Driver::GetFilePath(StringRef Name, const ToolChain &TC) const {
-  // Seach for Name in a list of paths.
+  // Search for Name in a list of paths.
   auto SearchPaths = [&](const llvm::SmallVectorImpl<std::string> &P)
       -> llvm::Optional<std::string> {
     // Respect a limited subset of the '-Bprefix' functionality in GCC by

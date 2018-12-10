@@ -144,7 +144,7 @@ bool FindUninitializedFields::isDereferencableUninit(
 
   assert((isDereferencableType(FR->getDecl()->getType()) ||
           V.getAs<nonloc::LocAsInteger>()) &&
-         "This method only checks dereferencable objects!");
+         "This method only checks dereferenceable objects!");
 
   if (V.isUnknown() || V.getAs<loc::ConcreteInt>()) {
     IsAnyFieldInitialized = true;

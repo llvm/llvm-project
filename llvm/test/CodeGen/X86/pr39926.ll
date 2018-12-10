@@ -8,9 +8,9 @@ define i8 @test_offset(i8* %base) {
 ; CHECK-NEXT:    movb $0, 7(%rdi)
 ; CHECK-NEXT:    movw $0, 5(%rdi)
 ; CHECK-NEXT:    movl $0, 1(%rdi)
-; CHECK-NEXT:    movzwl -4(%rdi), %eax
-; CHECK-NEXT:    movw %ax, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movb -2(%rdi), %al
+; CHECK-NEXT:    movl -4(%rdi), %eax
+; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb (%rdi), %al
 ; CHECK-NEXT:    movb %al, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl 1(%rdi), %eax
 ; CHECK-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)

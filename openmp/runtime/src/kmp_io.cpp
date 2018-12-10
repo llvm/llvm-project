@@ -27,10 +27,14 @@
 #include "kmp_str.h"
 
 #if KMP_OS_WINDOWS
+#if KMP_MSVC_COMPAT
 #pragma warning(push)
 #pragma warning(disable : 271 310)
+#endif
 #include <windows.h>
+#if KMP_MSVC_COMPAT
 #pragma warning(pop)
+#endif
 #endif
 
 /* ------------------------------------------------------------------------ */

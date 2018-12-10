@@ -931,7 +931,7 @@ void Preprocessor::LexAfterModuleImport(Token &Result) {
   // If we have a non-empty module path, load the named module.
   if (!ModuleImportPath.empty()) {
     // Under the Modules TS, the dot is just part of the module name, and not
-    // a real hierarachy separator. Flatten such module names now.
+    // a real hierarchy separator. Flatten such module names now.
     //
     // FIXME: Is this the right level to be performing this transformation?
     std::string FlatModuleName;

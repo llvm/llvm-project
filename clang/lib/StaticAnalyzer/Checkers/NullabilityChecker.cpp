@@ -185,7 +185,7 @@ private:
   const SymbolicRegion *getTrackRegion(SVal Val,
                                        bool CheckSuperRegion = false) const;
 
-  /// Returns true if the call is diagnosable in the currrent analyzer
+  /// Returns true if the call is diagnosable in the current analyzer
   /// configuration.
   bool isDiagnosableCall(const CallEvent &Call) const {
     if (NoDiagnoseCallsToSystemHeaders && Call.isInSystemHeader())

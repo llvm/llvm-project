@@ -973,13 +973,15 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     getStackGuard(GuardVal, MIRBuilder);
 
     AllocaInst *Slot = cast<AllocaInst>(CI.getArgOperand(1));
+    int FI = getOrCreateFrameIndex(*Slot);
+    MF->getFrameInfo().setStackProtectorIndex(FI);
+
     MIRBuilder.buildStore(
         GuardVal, getOrCreateVReg(*Slot),
-        *MF->getMachineMemOperand(
-            MachinePointerInfo::getFixedStack(*MF,
-                                              getOrCreateFrameIndex(*Slot)),
-            MachineMemOperand::MOStore | MachineMemOperand::MOVolatile,
-            PtrTy.getSizeInBits() / 8, 8));
+        *MF->getMachineMemOperand(MachinePointerInfo::getFixedStack(*MF, FI),
+                                  MachineMemOperand::MOStore |
+                                      MachineMemOperand::MOVolatile,
+                                  PtrTy.getSizeInBits() / 8, 8));
     return true;
   }
   case Intrinsic::cttz:
