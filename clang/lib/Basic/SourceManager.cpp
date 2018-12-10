@@ -195,8 +195,7 @@ llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
 }
 
 unsigned LineTableInfo::getLineTableFilenameID(StringRef Name) {
-  auto IterBool =
-      FilenameIDs.insert(std::make_pair(Name, FilenamesByID.size()));
+  auto IterBool = FilenameIDs.try_emplace(Name, FilenamesByID.size());
   if (IterBool.second)
     FilenamesByID.push_back(&*IterBool.first);
   return IterBool.first->second;
@@ -1965,9 +1964,7 @@ SourceManager::getDecomposedIncludedLoc(FileID FID) const {
   // Uses IncludedLocMap to retrieve/cache the decomposed loc.
 
   using DecompTy = std::pair<FileID, unsigned>;
-  using MapTy = llvm::DenseMap<FileID, DecompTy>;
-  std::pair<MapTy::iterator, bool>
-    InsertOp = IncludedLocMap.insert(std::make_pair(FID, DecompTy()));
+  auto InsertOp = IncludedLocMap.try_emplace(FID);
   DecompTy &DecompLoc = InsertOp.first->second;
   if (!InsertOp.second)
     return DecompLoc; // already in map.

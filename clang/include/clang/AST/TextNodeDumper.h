@@ -16,11 +16,15 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDumperUtils.h"
+#include "clang/AST/CommentCommandTraits.h"
+#include "clang/AST/CommentVisitor.h"
 #include "clang/AST/ExprCXX.h"
 
 namespace clang {
 
-class TextNodeDumper {
+class TextNodeDumper
+    : public comments::ConstCommentVisitor<TextNodeDumper, void,
+                                           const comments::FullComment *> {
   raw_ostream &OS;
   const bool ShowColors;
 
@@ -34,9 +38,16 @@ class TextNodeDumper {
   /// The policy to use for printing; can be defaulted.
   PrintingPolicy PrintPolicy;
 
+  const comments::CommandTraits *Traits;
+
+  const char *getCommandName(unsigned CommandID);
+
 public:
   TextNodeDumper(raw_ostream &OS, bool ShowColors, const SourceManager *SM,
-                 const PrintingPolicy &PrintPolicy);
+                 const PrintingPolicy &PrintPolicy,
+                 const comments::CommandTraits *Traits);
+
+  void Visit(const comments::Comment *C, const comments::FullComment *FC);
 
   void dumpPointer(const void *Ptr);
   void dumpLocation(SourceLocation Loc);
@@ -47,6 +58,28 @@ public:
   void dumpName(const NamedDecl *ND);
   void dumpAccessSpecifier(AccessSpecifier AS);
   void dumpCXXTemporary(const CXXTemporary *Temporary);
+
+  void visitTextComment(const comments::TextComment *C,
+                        const comments::FullComment *);
+  void visitInlineCommandComment(const comments::InlineCommandComment *C,
+                                 const comments::FullComment *);
+  void visitHTMLStartTagComment(const comments::HTMLStartTagComment *C,
+                                const comments::FullComment *);
+  void visitHTMLEndTagComment(const comments::HTMLEndTagComment *C,
+                              const comments::FullComment *);
+  void visitBlockCommandComment(const comments::BlockCommandComment *C,
+                                const comments::FullComment *);
+  void visitParamCommandComment(const comments::ParamCommandComment *C,
+                                const comments::FullComment *FC);
+  void visitTParamCommandComment(const comments::TParamCommandComment *C,
+                                 const comments::FullComment *FC);
+  void visitVerbatimBlockComment(const comments::VerbatimBlockComment *C,
+                                 const comments::FullComment *);
+  void
+  visitVerbatimBlockLineComment(const comments::VerbatimBlockLineComment *C,
+                                const comments::FullComment *);
+  void visitVerbatimLineComment(const comments::VerbatimLineComment *C,
+                                const comments::FullComment *);
 };
 
 } // namespace clang

@@ -148,8 +148,9 @@ Error BugDriver::initializeExecutionEnvironment() {
   std::string Message;
 
   if (CCBinary.empty()) {
-    if (sys::findProgramByName("clang"))
-      CCBinary = "clang";
+    if (ErrorOr<std::string> ClangPath =
+            FindProgramByName("clang", getToolName(), &AbsTolerance))
+      CCBinary = *ClangPath;
     else
       CCBinary = "gcc";
   }
@@ -193,11 +194,11 @@ Error BugDriver::initializeExecutionEnvironment() {
     break;
   case CompileCustom:
     Interpreter = AbstractInterpreter::createCustomCompiler(
-        Message, CustomCompileCommand);
+        getToolName(), Message, CustomCompileCommand);
     break;
   case Custom:
-    Interpreter =
-        AbstractInterpreter::createCustomExecutor(Message, CustomExecCommand);
+    Interpreter = AbstractInterpreter::createCustomExecutor(
+        getToolName(), Message, CustomExecCommand);
     break;
   }
   if (!Interpreter)
@@ -239,8 +240,8 @@ Error BugDriver::initializeExecutionEnvironment() {
         SafeInterpreterSel == RunLLCIA);
     break;
   case Custom:
-    SafeInterpreter =
-        AbstractInterpreter::createCustomExecutor(Message, CustomExecCommand);
+    SafeInterpreter = AbstractInterpreter::createCustomExecutor(
+        getToolName(), Message, CustomExecCommand);
     break;
   default:
     Message = "Sorry, this back-end is not supported by bugpoint as the "
@@ -252,7 +253,7 @@ Error BugDriver::initializeExecutionEnvironment() {
     exit(1);
   }
 
-  cc = CC::create(Message, CCBinary, &CCToolArgv);
+  cc = CC::create(getToolName(), Message, CCBinary, &CCToolArgv);
   if (!cc) {
     outs() << Message << "\nExiting.\n";
     exit(1);

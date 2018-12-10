@@ -1621,7 +1621,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // It should be okay as no one seems to care about the type.
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
-  if (In.DynSymTab)
+  if (In.Dynamic->Parent)
     Symtab->addDefined("_DYNAMIC", STV_HIDDEN, STT_NOTYPE, 0 /*Value*/,
                        /*Size=*/0, STB_WEAK, In.Dynamic,
                        /*File=*/nullptr);
@@ -1935,9 +1935,8 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
     Ret.push_back(TlsHdr);
 
   // Add an entry for .dynamic.
-  if (In.DynSymTab)
-    AddHdr(PT_DYNAMIC, In.Dynamic->getParent()->getPhdrFlags())
-        ->add(In.Dynamic->getParent());
+  if (OutputSection *Sec = In.Dynamic->getParent())
+    AddHdr(PT_DYNAMIC, Sec->getPhdrFlags())->add(Sec);
 
   // PT_GNU_RELRO includes all sections that should be marked as
   // read-only by dynamic linker after proccessing relocations.

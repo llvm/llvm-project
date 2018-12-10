@@ -112,12 +112,6 @@ static cl::opt<bool>
   MaySplitLoadIndex("combiner-split-load-index", cl::Hidden, cl::init(true),
                     cl::desc("DAG combiner may split indexing from loads"));
 
-// This is a temporary debug flag to disable a combine that is known to
-// conflict with another combine.
-static cl::opt<bool>
-NarrowTruncatedBinops("narrow-truncated-binops", cl::Hidden, cl::init(false),
-                      cl::desc("Move truncates ahead of binops"));
-
 namespace {
 
   class DAGCombiner {
@@ -9814,9 +9808,10 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
 
-  // Narrow a suitable binary operation with a constant operand by moving it
-  // ahead of the truncate. This is limited to pre-legalization because targets
-  // may prefer a wider type during later combines and invert this transform.
+  // Narrow a suitable binary operation with a non-opaque constant operand by
+  // moving it ahead of the truncate. This is limited to pre-legalization
+  // because targets may prefer a wider type during later combines and invert
+  // this transform.
   switch (N0.getOpcode()) {
   // TODO: Add case for ADD - that will likely require a change in logic here
   // or target-specific changes to avoid regressions.
@@ -9825,9 +9820,9 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
-    if (NarrowTruncatedBinops && !LegalOperations && N0.hasOneUse() &&
-        (isConstantOrConstantVector(N0.getOperand(0)) ||
-         isConstantOrConstantVector(N0.getOperand(1)))) {
+    if (!LegalOperations && N0.hasOneUse() &&
+        (isConstantOrConstantVector(N0.getOperand(0), true) ||
+         isConstantOrConstantVector(N0.getOperand(1), true))) {
       // TODO: We already restricted this to pre-legalization, but for vectors
       // we are extra cautious to not create an unsupported operation.
       // Target-specific changes are likely needed to avoid regressions here.

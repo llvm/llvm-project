@@ -258,7 +258,7 @@ public:
   /// operand to the LEA instruction.
   bool classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
                       unsigned LEAOpcode, bool AllowSP, unsigned &NewSrc,
-                      bool &isKill, bool &isUndef, MachineOperand &ImplicitOp,
+                      bool &isKill, MachineOperand &ImplicitOp,
                       LiveVariables *LV) const;
 
   /// convertToThreeAddress - This method must be implemented by targets that
