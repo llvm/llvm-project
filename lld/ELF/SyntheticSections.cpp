@@ -1508,7 +1508,10 @@ void RelocationBaseSection::finalizeContents() {
   // relocations due to IFUNC (e.g. strcpy). sh_link will be set to 0 in that
   // case.
   InputSection *SymTab = Config->Relocatable ? In.SymTab : In.DynSymTab;
-  getParent()->Link = SymTab ? SymTab->getParent()->SectionIndex : 0;
+  if (SymTab && SymTab->getParent())
+    getParent()->Link = SymTab->getParent()->SectionIndex;
+  else
+    getParent()->Link = 0;
 
   if (In.RelaIplt == this || In.RelaPlt == this)
     getParent()->Info = In.GotPlt->getParent()->SectionIndex;
@@ -2126,7 +2129,8 @@ GnuHashTableSection::GnuHashTableSection()
 }
 
 void GnuHashTableSection::finalizeContents() {
-  getParent()->Link = In.DynSymTab->getParent()->SectionIndex;
+  if (OutputSection *Sec = In.DynSymTab->getParent())
+    getParent()->Link = Sec->SectionIndex;
 
   // Computes bloom filter size in word size. We want to allocate 12
   // bits for each symbol. It must be a power of two.
@@ -2256,7 +2260,8 @@ HashTableSection::HashTableSection()
 }
 
 void HashTableSection::finalizeContents() {
-  getParent()->Link = In.DynSymTab->getParent()->SectionIndex;
+  if (OutputSection *Sec = In.DynSymTab->getParent())
+    getParent()->Link = Sec->SectionIndex;
 
   unsigned NumEntries = 2;                       // nbucket and nchain.
   NumEntries += In.DynSymTab->getNumSymbols();   // The chain entries.

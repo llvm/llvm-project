@@ -7,7 +7,7 @@
   target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
   define void @adcx32_commute(i8 %cf, i32 %a, i32 %b, i32* %res) #0 {
-    %ret = call { i8, i32 } @llvm.x86.addcarryx.u32(i8 %cf, i32 %a, i32 %b)
+    %ret = call { i8, i32 } @llvm.x86.addcarry.32(i8 %cf, i32 %a, i32 %b)
     %1 = extractvalue { i8, i32 } %ret, 1
     %2 = mul i32 %a, %1
     store i32 %2, i32* %res
@@ -15,7 +15,7 @@
   }
 
   define void @adcx64_commute(i8 %cf, i64 %a, i64 %b, i64* %res) #0 {
-    %ret = call { i8, i64 } @llvm.x86.addcarryx.u64(i8 %cf, i64 %a, i64 %b)
+    %ret = call { i8, i64 } @llvm.x86.addcarry.64(i8 %cf, i64 %a, i64 %b)
     %1 = extractvalue { i8, i64 } %ret, 1
     %2 = mul i64 %a, %1
     store i64 %2, i64* %res
@@ -23,7 +23,7 @@
   }
 
   define void @adox32_commute(i8 %cf, i32 %a, i32 %b, i32* %res) #0 {
-    %ret = call { i8, i32 } @llvm.x86.addcarryx.u32(i8 %cf, i32 %a, i32 %b)
+    %ret = call { i8, i32 } @llvm.x86.addcarry.32(i8 %cf, i32 %a, i32 %b)
     %1 = extractvalue { i8, i32 } %ret, 1
     %2 = mul i32 %a, %1
     store i32 %2, i32* %res
@@ -31,7 +31,7 @@
   }
 
   define void @adox64_commute(i8 %cf, i64 %a, i64 %b, i64* %res) #0 {
-    %ret = call { i8, i64 } @llvm.x86.addcarryx.u64(i8 %cf, i64 %a, i64 %b)
+    %ret = call { i8, i64 } @llvm.x86.addcarry.64(i8 %cf, i64 %a, i64 %b)
     %1 = extractvalue { i8, i64 } %ret, 1
     %2 = mul i64 %a, %1
     store i64 %2, i64* %res
@@ -39,10 +39,10 @@
   }
 
   ; Function Attrs: nounwind readnone
-  declare { i8, i32 } @llvm.x86.addcarryx.u32(i8, i32, i32) #1
+  declare { i8, i32 } @llvm.x86.addcarry.32(i8, i32, i32) #1
 
   ; Function Attrs: nounwind readnone
-  declare { i8, i64 } @llvm.x86.addcarryx.u64(i8, i64, i64) #1
+  declare { i8, i64 } @llvm.x86.addcarry.64(i8, i64, i64) #1
 
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(i8*, i8**) #2

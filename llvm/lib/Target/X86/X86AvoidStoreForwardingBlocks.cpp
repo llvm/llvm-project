@@ -586,7 +586,7 @@ void X86AvoidSFBPass::breakBlockedCopies(
       StDisp2 += OverlapDelta;
       Size2 -= OverlapDelta;
     }
-    Size1 = std::abs(std::abs(LdDisp2) - std::abs(LdDisp1));
+    Size1 = LdDisp2 - LdDisp1;
 
     // Build a copy for the point until the current blocking store's
     // displacement.

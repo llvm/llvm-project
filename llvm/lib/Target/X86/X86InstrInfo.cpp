@@ -739,8 +739,7 @@ inline static bool isTruncatedShiftCountForLEA(unsigned ShAmt) {
 
 bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
                                   unsigned Opc, bool AllowSP, unsigned &NewSrc,
-                                  bool &isKill, bool &isUndef,
-                                  MachineOperand &ImplicitOp,
+                                  bool &isKill, MachineOperand &ImplicitOp,
                                   LiveVariables *LV) const {
   MachineFunction &MF = *MI.getParent()->getParent();
   const TargetRegisterClass *RC;
@@ -757,7 +756,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
   if (Opc != X86::LEA64_32r) {
     NewSrc = SrcReg;
     isKill = Src.isKill();
-    isUndef = Src.isUndef();
+    assert(!Src.isUndef() && "Undef op doesn't need optimization");
 
     if (TargetRegisterInfo::isVirtualRegister(NewSrc) &&
         !MF.getRegInfo().constrainRegClass(NewSrc, RC))
@@ -774,7 +773,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
 
     NewSrc = getX86SubSuperRegister(Src.getReg(), 64);
     isKill = Src.isKill();
-    isUndef = Src.isUndef();
+    assert(!Src.isUndef() && "Undef op doesn't need optimization");
   } else {
     // Virtual register of the wrong class, we have to create a temporary 64-bit
     // vreg to feed into the LEA.
@@ -786,7 +785,6 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
 
     // Which is obviously going to be dead after we're done with it.
     isKill = true;
-    isUndef = false;
 
     if (LV)
       LV->replaceKillInstruction(SrcReg, MI, *Copy);
@@ -807,6 +805,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
   unsigned Src = MI.getOperand(1).getReg();
   bool isDead = MI.getOperand(0).isDead();
   bool isKill = MI.getOperand(1).isKill();
+  assert(!MI.getOperand(1).isUndef() && "Undef op doesn't need optimization");
 
   MachineRegisterInfo &RegInfo = MFI->getParent()->getRegInfo();
   unsigned leaOutReg = RegInfo.createVirtualRegister(&X86::GR32RegClass);
@@ -858,6 +857,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
   case X86::ADD16rr_DB: {
     unsigned Src2 = MI.getOperand(2).getReg();
     bool isKill2 = MI.getOperand(2).isKill();
+    assert(!MI.getOperand(2).isUndef() && "Undef op doesn't need optimization");
     unsigned leaInReg2 = 0;
     MachineInstr *InsMI2 = nullptr;
     if (Src == Src2) {
@@ -926,6 +926,16 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
   const MachineOperand &Dest = MI.getOperand(0);
   const MachineOperand &Src = MI.getOperand(1);
 
+  // Ideally, operations with undef should be folded before we get here, but we
+  // can't guarantee it. Bail out because optimizing undefs is a waste of time.
+  // Without this, we have to forward undef state to new register operands to
+  // avoid machine verifier errors.
+  if (Src.isUndef())
+    return nullptr;
+  if (MI.getNumOperands() > 2)
+    if (MI.getOperand(2).isReg() && MI.getOperand(2).isUndef())
+      return nullptr;
+
   MachineInstr *NewMI = nullptr;
   // FIXME: 16-bit LEA's are really slow on Athlons, but not bad on P4's.  When
   // we have better subtarget support, enable the 16-bit LEA generation here.
@@ -964,11 +974,11 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     unsigned Opc = is64Bit ? X86::LEA64_32r : X86::LEA32r;
 
     // LEA can't handle ESP.
-    bool isKill, isUndef;
+    bool isKill;
     unsigned SrcReg;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ false,
-                        SrcReg, isKill, isUndef, ImplicitOp, LV))
+                        SrcReg, isKill, ImplicitOp, LV))
       return nullptr;
 
     MachineInstrBuilder MIB =
@@ -976,7 +986,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
             .add(Dest)
             .addReg(0)
             .addImm(1ULL << ShAmt)
-            .addReg(SrcReg, getKillRegState(isKill) | getUndefRegState(isUndef))
+            .addReg(SrcReg, getKillRegState(isKill))
             .addImm(0)
             .addReg(0);
     if (ImplicitOp.getReg() != 0)
@@ -1007,18 +1017,17 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     assert(MI.getNumOperands() >= 2 && "Unknown inc instruction!");
     unsigned Opc = MIOpc == X86::INC64r ? X86::LEA64r
       : (is64Bit ? X86::LEA64_32r : X86::LEA32r);
-    bool isKill, isUndef;
+    bool isKill;
     unsigned SrcReg;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ false,
-                        SrcReg, isKill, isUndef, ImplicitOp, LV))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ false, SrcReg, isKill,
+                        ImplicitOp, LV))
       return nullptr;
 
     MachineInstrBuilder MIB =
         BuildMI(MF, MI.getDebugLoc(), get(Opc))
             .add(Dest)
-            .addReg(SrcReg,
-                    getKillRegState(isKill) | getUndefRegState(isUndef));
+            .addReg(SrcReg, getKillRegState(isKill));
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
 
@@ -1039,17 +1048,16 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     unsigned Opc = MIOpc == X86::DEC64r ? X86::LEA64r
       : (is64Bit ? X86::LEA64_32r : X86::LEA32r);
 
-    bool isKill, isUndef;
+    bool isKill;
     unsigned SrcReg;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ false,
-                        SrcReg, isKill, isUndef, ImplicitOp, LV))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ false, SrcReg, isKill,
+                        ImplicitOp, LV))
       return nullptr;
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
                                   .add(Dest)
-                                  .addReg(SrcReg, getUndefRegState(isUndef) |
-                                                      getKillRegState(isKill));
+                                  .addReg(SrcReg, getKillRegState(isKill));
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
 
@@ -1076,19 +1084,19 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     else
       Opc = is64Bit ? X86::LEA64_32r : X86::LEA32r;
 
-    bool isKill, isUndef;
+    bool isKill;
     unsigned SrcReg;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ true,
-                        SrcReg, isKill, isUndef, ImplicitOp, LV))
+                        SrcReg, isKill, ImplicitOp, LV))
       return nullptr;
 
     const MachineOperand &Src2 = MI.getOperand(2);
-    bool isKill2, isUndef2;
+    bool isKill2;
     unsigned SrcReg2;
     MachineOperand ImplicitOp2 = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src2, Opc, /*AllowSP=*/ false,
-                        SrcReg2, isKill2, isUndef2, ImplicitOp2, LV))
+                        SrcReg2, isKill2, ImplicitOp2, LV))
       return nullptr;
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc)).add(Dest);
@@ -1098,11 +1106,6 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
       MIB.add(ImplicitOp2);
 
     NewMI = addRegReg(MIB, SrcReg, isKill, SrcReg2, isKill2);
-
-    // Preserve undefness of the operands.
-    NewMI->getOperand(1).setIsUndef(isUndef);
-    NewMI->getOperand(3).setIsUndef(isUndef2);
-
     if (LV && Src2.isKill())
       LV->replaceKillInstruction(SrcReg2, MI, *NewMI);
     break;
@@ -1118,11 +1121,8 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     NewMI = addRegReg(BuildMI(MF, MI.getDebugLoc(), get(X86::LEA16r)).add(Dest),
                       Src.getReg(), Src.isKill(), Src2, isKill2);
 
-    // Preserve undefness of the operands.
-    bool isUndef = MI.getOperand(1).isUndef();
-    bool isUndef2 = MI.getOperand(2).isUndef();
-    NewMI->getOperand(1).setIsUndef(isUndef);
-    NewMI->getOperand(3).setIsUndef(isUndef2);
+    assert(!MI.getOperand(1).isUndef() && "Undef op doesn't need optimization");
+    assert(!MI.getOperand(2).isUndef() && "Undef op doesn't need optimization");
 
     if (LV && isKill2)
       LV->replaceKillInstruction(Src2, MI, *NewMI);
@@ -1144,17 +1144,16 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     assert(MI.getNumOperands() >= 3 && "Unknown add instruction!");
     unsigned Opc = is64Bit ? X86::LEA64_32r : X86::LEA32r;
 
-    bool isKill, isUndef;
+    bool isKill;
     unsigned SrcReg;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
     if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ true,
-                        SrcReg, isKill, isUndef, ImplicitOp, LV))
+                        SrcReg, isKill, ImplicitOp, LV))
       return nullptr;
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
                                   .add(Dest)
-                                  .addReg(SrcReg, getUndefRegState(isUndef) |
-                                                      getKillRegState(isKill));
+                                  .addReg(SrcReg, getKillRegState(isKill));
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
 

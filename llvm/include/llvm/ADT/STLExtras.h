@@ -71,6 +71,10 @@ template <typename B1, typename... Bn>
 struct conjunction<B1, Bn...>
     : std::conditional<bool(B1::value), conjunction<Bn...>, B1>::type {};
 
+template <typename T> struct make_const_ptr {
+  using type =
+      typename std::add_pointer<typename std::add_const<T>::type>::type;
+};
 //===----------------------------------------------------------------------===//
 //     Extra additions to <functional>
 //===----------------------------------------------------------------------===//
