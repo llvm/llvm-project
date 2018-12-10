@@ -26,7 +26,7 @@ configure_file("source1.s" "source1.s" COPYONLY)
 configure_file("shared.cl" "shared.cl" COPYONLY)
 
 if(UNIX)
-set(CMAKE_C_FLAGS "-m64 -g -O0")
+set(CMAKE_C_FLAGS "-std=c99 -m64 -g -O0")
 set(CMAKE_EXE_LINKER_FLAGS
           "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath -Wl,$ORIGIN/..")
 endif()
