@@ -1501,13 +1501,10 @@ public:
         (ConcreteTTI->getCmpSelInstrCost(CmpOpcode, Ty, CondTy, nullptr) +
          ConcreteTTI->getCmpSelInstrCost(Instruction::Select, Ty, CondTy,
                                          nullptr));
-    // Need 3 extractelement instructions for scalarization + an additional
-    // scalar select instruction.
+    // The last min/max should be in vector registers and we counted it above.
+    // So just need a single extractelement.
     return ShuffleCost + MinMaxCost +
-           3 * ConcreteTTI->getVectorInstrCost(Instruction::ExtractElement, Ty,
-                                               0) +
-           ConcreteTTI->getCmpSelInstrCost(Instruction::Select, ScalarTy,
-                                           ScalarCondTy, nullptr);
+           ConcreteTTI->getVectorInstrCost(Instruction::ExtractElement, Ty, 0);
   }
 
   unsigned getVectorSplitCost() { return 1; }

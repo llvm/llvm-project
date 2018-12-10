@@ -123,6 +123,7 @@ add_llvm_target(AMDGPUCodeGen
   SIWholeQuadMode.cpp
   GCNILPSched.cpp
   GCNDPPCombine.cpp
+  SIModeRegister.cpp
   )
 
 add_subdirectory(AsmParser)

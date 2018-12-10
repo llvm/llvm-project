@@ -76,7 +76,7 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
 
   // Handle -mhvx-length=.
   if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_length_EQ)) {
-    // These falgs are valid only if HVX in enabled.
+    // These flags are valid only if HVX in enabled.
     if (!HasHVX)
       D.Diag(diag::err_drv_invalid_hvx_length);
     else if (A->getOption().matches(options::OPT_mhexagon_hvx_length_EQ))

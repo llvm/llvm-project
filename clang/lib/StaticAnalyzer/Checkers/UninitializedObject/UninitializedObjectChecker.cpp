@@ -233,7 +233,7 @@ bool FindUninitializedFields::addFieldToUninits(FieldChainInfo Chain,
 
   assert((PointeeR || !isDereferencableType(FR->getDecl()->getType())) &&
          "One must also pass the pointee region as a parameter for "
-         "dereferencable fields!");
+         "dereferenceable fields!");
 
   if (State->contains<AnalyzedRegions>(FR))
     return false;

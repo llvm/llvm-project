@@ -1038,7 +1038,7 @@ protected:
       Module *exe_module = target->GetExecutableModulePointer();
       if (exe_module) {
         m_options.launch_info.GetExecutableFile() = exe_module->GetFileSpec();
-        llvm::SmallString<PATH_MAX> exe_path;
+        llvm::SmallString<128> exe_path;
         m_options.launch_info.GetExecutableFile().GetPath(exe_path);
         if (!exe_path.empty())
           m_options.launch_info.GetArguments().AppendArgument(exe_path);

@@ -8977,25 +8977,28 @@ static Comparison compareEnableIfAttrs(const Sema &S, const FunctionDecl *Cand1,
   auto Cand1Attrs = Cand1->specific_attrs<EnableIfAttr>();
   auto Cand2Attrs = Cand2->specific_attrs<EnableIfAttr>();
 
-  auto Cand1I = Cand1Attrs.begin();
   llvm::FoldingSetNodeID Cand1ID, Cand2ID;
-  for (EnableIfAttr *Cand2A : Cand2Attrs) {
+  for (auto Pair : zip_longest(Cand1Attrs, Cand2Attrs)) {
+    Optional<EnableIfAttr *> Cand1A = std::get<0>(Pair);
+    Optional<EnableIfAttr *> Cand2A = std::get<1>(Pair);
+
+    // It's impossible for Cand1 to be better than (or equal to) Cand2 if Cand1
+    // has fewer enable_if attributes than Cand2, and vice versa.
+    if (!Cand1A)
+      return Comparison::Worse;
+    if (!Cand2A)
+      return Comparison::Better;
+
     Cand1ID.clear();
     Cand2ID.clear();
 
-    // It's impossible for Cand1 to be better than (or equal to) Cand2 if Cand1
-    // has fewer enable_if attributes than Cand2.
-    auto Cand1A = Cand1I++;
-    if (Cand1A == Cand1Attrs.end())
-      return Comparison::Worse;
-
-    Cand1A->getCond()->Profile(Cand1ID, S.getASTContext(), true);
-    Cand2A->getCond()->Profile(Cand2ID, S.getASTContext(), true);
+    (*Cand1A)->getCond()->Profile(Cand1ID, S.getASTContext(), true);
+    (*Cand2A)->getCond()->Profile(Cand2ID, S.getASTContext(), true);
     if (Cand1ID != Cand2ID)
       return Comparison::Worse;
   }
 
-  return Cand1I == Cand1Attrs.end() ? Comparison::Equal : Comparison::Better;
+  return Comparison::Equal;
 }
 
 static bool isBetterMultiversionCandidate(const OverloadCandidate &Cand1,

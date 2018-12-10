@@ -77,6 +77,8 @@
 #define ctime __ctime50
 #define ctime_r __ctime_r50
 #define devname __devname50
+#define fgetpos __fgetpos50
+#define fsetpos __fsetpos50
 #define fts_children __fts_children60
 #define fts_close __fts_close60
 #define fts_open __fts_open60
@@ -8228,6 +8230,236 @@ INTERCEPTOR(char *, MD5Data, const unsigned char *data, unsigned int len,
 #define INIT_MD5
 #endif
 
+#if SANITIZER_INTERCEPT_FSEEK
+INTERCEPTOR(int, fseek, __sanitizer_FILE *stream, long int offset, int whence) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, fseek, stream, offset, whence);
+  return REAL(fseek)(stream, offset, whence);
+}
+INTERCEPTOR(int, fseeko, __sanitizer_FILE *stream, OFF_T offset, int whence) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, fseeko, stream, offset, whence);
+  return REAL(fseeko)(stream, offset, whence);
+}
+INTERCEPTOR(long int, ftell, __sanitizer_FILE *stream) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, ftell, stream);
+  return REAL(ftell)(stream);
+}
+INTERCEPTOR(OFF_T, ftello, __sanitizer_FILE *stream) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, ftello, stream);
+  return REAL(ftello)(stream);
+}
+INTERCEPTOR(void, rewind, __sanitizer_FILE *stream) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, rewind, stream);
+  return REAL(rewind)(stream);
+}
+INTERCEPTOR(int, fgetpos, __sanitizer_FILE *stream, void *pos) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, fgetpos, stream, pos);
+  int ret = REAL(fgetpos)(stream, pos);
+  if (pos && !ret)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, pos, fpos_t_sz);
+  return ret;
+}
+INTERCEPTOR(int, fsetpos, __sanitizer_FILE *stream, const void *pos) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, fsetpos, stream, pos);
+  if (pos)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, pos, fpos_t_sz);
+  return REAL(fsetpos)(stream, pos);
+}
+#define INIT_FSEEK \
+  COMMON_INTERCEPT_FUNCTION(fseek); \
+  COMMON_INTERCEPT_FUNCTION(fseeko); \
+  COMMON_INTERCEPT_FUNCTION(ftell); \
+  COMMON_INTERCEPT_FUNCTION(ftello); \
+  COMMON_INTERCEPT_FUNCTION(rewind); \
+  COMMON_INTERCEPT_FUNCTION(fgetpos); \
+  COMMON_INTERCEPT_FUNCTION(fsetpos)
+#else
+#define INIT_FSEEK
+#endif
+
+#if SANITIZER_INTERCEPT_MD2
+INTERCEPTOR(void, MD2Init, void *context) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, MD2Init, context);
+  REAL(MD2Init)(context);
+  if (context)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, context, MD2_CTX_sz);
+}
+
+INTERCEPTOR(void, MD2Update, void *context, const unsigned char *data,
+            unsigned int len) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, MD2Update, context, data, len);
+  if (data && len > 0)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, data, len);
+  if (context)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, context, MD2_CTX_sz);
+  REAL(MD2Update)(context, data, len);
+  if (context)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, context, MD2_CTX_sz);
+}
+
+INTERCEPTOR(void, MD2Final, unsigned char digest[16], void *context) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, MD2Final, digest, context);
+  if (context)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, context, MD2_CTX_sz);
+  REAL(MD2Final)(digest, context);
+  if (digest)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, digest, sizeof(unsigned char) * 16);
+}
+
+INTERCEPTOR(char *, MD2End, void *context, char *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, MD2End, context, buf);
+  if (context)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, context, MD2_CTX_sz);
+  char *ret = REAL(MD2End)(context, buf);
+  if (ret)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, MD2_return_length);
+  return ret;
+}
+
+INTERCEPTOR(char *, MD2File, const char *filename, char *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, MD2File, filename, buf);
+  if (filename)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, filename, REAL(strlen)(filename) + 1);
+  char *ret = REAL(MD2File)(filename, buf);
+  if (ret)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, MD2_return_length);
+  return ret;
+}
+
+INTERCEPTOR(char *, MD2Data, const unsigned char *data, unsigned int len,
+            char *buf) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, MD2Data, data, len, buf);
+  if (data && len > 0)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, data, len);
+  char *ret = REAL(MD2Data)(data, len, buf);
+  if (ret)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, MD2_return_length);
+  return ret;
+}
+
+#define INIT_MD2                                                               \
+  COMMON_INTERCEPT_FUNCTION(MD2Init);                                          \
+  COMMON_INTERCEPT_FUNCTION(MD2Update);                                        \
+  COMMON_INTERCEPT_FUNCTION(MD2Final);                                         \
+  COMMON_INTERCEPT_FUNCTION(MD2End);                                           \
+  COMMON_INTERCEPT_FUNCTION(MD2File);                                          \
+  COMMON_INTERCEPT_FUNCTION(MD2Data)
+#else
+#define INIT_MD2
+#endif
+
+#if SANITIZER_INTERCEPT_SHA2
+#define SHA2_INTERCEPTORS(LEN, SHA2_STATE_T) \
+  INTERCEPTOR(void, SHA##LEN##_Init, void *context) { \
+    void *ctx; \
+    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_Init, context); \
+    REAL(SHA##LEN##_Init)(context); \
+    if (context) \
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, context, SHA##LEN##_CTX_sz); \
+  } \
+  INTERCEPTOR(void, SHA##LEN##_Update, void *context, \
+              const u8 *data, SIZE_T len) { \
+    void *ctx; \
+    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_Update, context, data, len); \
+    if (data && len > 0) \
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, data, len); \
+    if (context) \
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, context, SHA##LEN##_CTX_sz); \
+    REAL(SHA##LEN##_Update)(context, data, len); \
+    if (context) \
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, context, SHA##LEN##_CTX_sz); \
+  } \
+  INTERCEPTOR(void, SHA##LEN##_Final, u8 digest[SHA##LEN##_digest_length], \
+  void *context) { \
+    void *ctx; \
+    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_Final, digest, context); \
+    if (context) \
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, context, SHA##LEN##_CTX_sz); \
+    REAL(SHA##LEN##_Final)(digest, context); \
+    if (digest) \
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, digest, \
+                                     sizeof(digest[0]) * \
+  SHA##LEN##_digest_length); \
+  } \
+  INTERCEPTOR(char *, SHA##LEN##_End, void *context, char *buf) { \
+    void *ctx; \
+    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_End, context, buf); \
+    if (context) \
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, context, SHA##LEN##_CTX_sz); \
+    char *ret = REAL(SHA##LEN##_End)(context, buf); \
+    if (ret) \
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, SHA##LEN##_return_length); \
+    return ret; \
+  } \
+  INTERCEPTOR(char *, SHA##LEN##_File, const char *filename, char *buf) { \
+    void *ctx; \
+    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_File, filename, buf); \
+    if (filename) \
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, filename, REAL(strlen)(filename) + 1);\
+    char *ret = REAL(SHA##LEN##_File)(filename, buf); \
+    if (ret) \
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, SHA##LEN##_return_length); \
+    return ret; \
+  } \
+  INTERCEPTOR(char *, SHA##LEN##_FileChunk, const char *filename, char *buf, \
+              OFF_T offset, OFF_T length) { \
+    void *ctx; \
+    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_FileChunk, filename, buf, offset, \
+  length); \
+    if (filename) \
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, filename, REAL(strlen)(filename) + 1);\
+    char *ret = REAL(SHA##LEN##_FileChunk)(filename, buf, offset, length); \
+    if (ret) \
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, SHA##LEN##_return_length); \
+    return ret; \
+  } \
+  INTERCEPTOR(char *, SHA##LEN##_Data, u8 *data, SIZE_T len, char *buf) { \
+    void *ctx; \
+    COMMON_INTERCEPTOR_ENTER(ctx, SHA##LEN##_Data, data, len, buf); \
+    if (data && len > 0) \
+      COMMON_INTERCEPTOR_READ_RANGE(ctx, data, len); \
+    char *ret = REAL(SHA##LEN##_Data)(data, len, buf); \
+    if (ret) \
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ret, SHA##LEN##_return_length); \
+    return ret; \
+  }
+
+SHA2_INTERCEPTORS(224, u32);
+SHA2_INTERCEPTORS(256, u32);
+SHA2_INTERCEPTORS(384, u64);
+SHA2_INTERCEPTORS(512, u64);
+
+#define INIT_SHA2_INTECEPTORS(LEN) \
+  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_Init); \
+  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_Update); \
+  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_Final); \
+  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_End); \
+  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_File); \
+  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_FileChunk); \
+  COMMON_INTERCEPT_FUNCTION(SHA##LEN##_Data)
+
+#define INIT_SHA2 \
+  INIT_SHA2_INTECEPTORS(224); \
+  INIT_SHA2_INTECEPTORS(256); \
+  INIT_SHA2_INTECEPTORS(384); \
+  INIT_SHA2_INTECEPTORS(512)
+#undef SHA2_INTERCEPTORS
+#else
+#define INIT_SHA2
+#endif
+
 static void InitializeCommonInterceptors() {
   static u64 metadata_mem[sizeof(MetadataHashMap) / sizeof(u64) + 1];
   interceptor_metadata_map =
@@ -8502,6 +8734,9 @@ static void InitializeCommonInterceptors() {
   INIT_MD4;
   INIT_RMD160;
   INIT_MD5;
+  INIT_FSEEK;
+  INIT_MD2;
+  INIT_SHA2;
 
   INIT___PRINTF_CHK;
 }

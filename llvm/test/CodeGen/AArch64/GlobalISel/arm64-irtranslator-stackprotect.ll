@@ -3,6 +3,9 @@
 
 ; CHECK: name: test_stack_guard
 
+; CHECK: frameInfo:
+; CHECK: stackProtector:  '%stack.0.StackGuardSlot'
+
 ; CHECK: stack:
 ; CHECK:  - { id: 0, name: StackGuardSlot,  type: default, offset: 0, size: 8, alignment: 8,
 ; CHECK-NOT: id: 1

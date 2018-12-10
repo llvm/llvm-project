@@ -101,7 +101,7 @@
 #define KMP_ARCH_MIPS64 0
 
 #if KMP_OS_WINDOWS
-#if defined _M_AMD64
+#if defined(_M_AMD64) || defined(__x86_64)
 #undef KMP_ARCH_X86_64
 #define KMP_ARCH_X86_64 1
 #else

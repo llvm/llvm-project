@@ -965,13 +965,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
 
 TEST(TargetParserTest, AArch64ArchFeatures) {
   std::vector<StringRef> Features;
-  AArch64::ArchKind ArchKinds[] = {
-#define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT)       \
-     AArch64::ArchKind::ID,
-#include "llvm/Support/AArch64TargetParser.def"
-  };
 
-  for (auto AK : ArchKinds)
+  for (auto AK : AArch64::ArchKinds)
     EXPECT_TRUE((AK == AArch64::ArchKind::INVALID)
                     ? !AArch64::getArchFeatures(AK, Features)
                     : AArch64::getArchFeatures(AK, Features));

@@ -3233,7 +3233,7 @@ namespace {
         ME = dyn_cast<MemberExpr>(ME->getBase()->IgnoreParenImpCasts());
       }
 
-      // Binding a reference to an unintialized field is not an
+      // Binding a reference to an uninitialized field is not an
       // uninitialized use.
       if (CheckReferenceOnly && !ReferenceField)
         return true;
@@ -7683,7 +7683,7 @@ struct FindHiddenVirtualMethod {
   SmallVector<CXXMethodDecl *, 8> OverloadedMethods;
 
 private:
-  /// Check whether any most overriden method from MD in Methods
+  /// Check whether any most overridden method from MD in Methods
   static bool CheckMostOverridenMethods(
       const CXXMethodDecl *MD,
       const llvm::SmallPtrSetImpl<const CXXMethodDecl *> &Methods) {
@@ -7767,7 +7767,7 @@ void Sema::FindHiddenVirtualMethods(CXXMethodDecl *MD,
   FHVM.Method = MD;
   FHVM.S = this;
 
-  // Keep the base methods that were overriden or introduced in the subclass
+  // Keep the base methods that were overridden or introduced in the subclass
   // by 'using' in a set. A base method not in this set is hidden.
   CXXRecordDecl *DC = MD->getParent();
   DeclContext::lookup_result R = DC->lookup(MD->getDeclName());

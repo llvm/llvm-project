@@ -39,7 +39,9 @@
 // "process.h".
 #include <process.h>
 // Let us simulate Unix.
+#if KMP_MSVC_COMPAT
 typedef int pid_t;
+#endif
 #define getpid _getpid
 #define __kmp_gettid() GetCurrentThreadId()
 

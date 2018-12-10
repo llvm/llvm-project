@@ -3958,15 +3958,28 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         } else if (I->hasLValue()) {
           auto LV = I->getKnownLValue();
           auto AS = LV.getAddressSpace();
+
           if ((!ArgInfo.getIndirectByVal() &&
                (LV.getAlignment() >=
-                getContext().getTypeAlignInChars(I->Ty))) ||
-              (ArgInfo.getIndirectByVal() &&
-               ((AS != LangAS::Default && AS != LangAS::opencl_private &&
-                 AS != CGM.getASTAllocaAddressSpace())))) {
+                getContext().getTypeAlignInChars(I->Ty)))) {
+            NeedCopy = true;
+          }
+          if (!getLangOpts().OpenCL) {
+            if ((ArgInfo.getIndirectByVal() &&
+                (AS != LangAS::Default &&
+                 AS != CGM.getASTAllocaAddressSpace()))) {
+              NeedCopy = true;
+            }
+          }
+          // For OpenCL even if RV is located in default or alloca address space
+          // we don't want to perform address space cast for it.
+          else if ((ArgInfo.getIndirectByVal() &&
+                    Addr.getType()->getAddressSpace() != IRFuncTy->
+                      getParamType(FirstIRArg)->getPointerAddressSpace())) {
             NeedCopy = true;
           }
         }
+
         if (NeedCopy) {
           // Create an aligned temporary, and copy to it.
           Address AI = CreateMemTempWithoutCast(

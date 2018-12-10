@@ -371,6 +371,7 @@ include "AArch64CallingConvention.td"
 include "AArch64Schedule.td"
 include "AArch64InstrInfo.td"
 include "AArch64SchedPredicates.td"
+include "AArch64SchedPredExynos.td"
 
 def AArch64InstrInfo : InstrInfo;
 

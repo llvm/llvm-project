@@ -5513,7 +5513,7 @@ void __kmp_env_initialize(char const *string) {
         // then determine if it is equal to that single group.
         if (within_one_group) {
           DWORD num_bits_in_group = __kmp_GetActiveProcessorCount(group);
-          int num_bits_in_mask = 0;
+          DWORD num_bits_in_mask = 0;
           for (int bit = init_mask->begin(); bit != init_mask->end();
                bit = init_mask->next(bit))
             num_bits_in_mask++;
