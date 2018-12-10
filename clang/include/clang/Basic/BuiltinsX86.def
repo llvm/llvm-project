@@ -719,8 +719,7 @@ TARGET_BUILTIN(__builtin_ia32_wbinvd, "v", "n", "")
 TARGET_BUILTIN(__builtin_ia32_wbnoinvd, "v", "n", "wbnoinvd")
 
 // ADX
-TARGET_BUILTIN(__builtin_ia32_addcarryx_u32, "UcUcUiUiUi*", "n", "adx")
-TARGET_BUILTIN(__builtin_ia32_addcarry_u32, "UcUcUiUiUi*", "n", "")
+TARGET_BUILTIN(__builtin_ia32_addcarryx_u32, "UcUcUiUiUi*", "n", "")
 TARGET_BUILTIN(__builtin_ia32_subborrow_u32, "UcUcUiUiUi*", "n", "")
 
 // RDSEED
