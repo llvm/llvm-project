@@ -184,7 +184,7 @@ lldb_private::Address ObjectFileJIT::GetEntryPointAddress() {
   return Address();
 }
 
-lldb_private::Address ObjectFileJIT::GetHeaderAddress() { return Address(); }
+lldb_private::Address ObjectFileJIT::GetBaseAddress() { return Address(); }
 
 ObjectFile::Type ObjectFileJIT::CalculateType() { return eTypeJIT; }
 

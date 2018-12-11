@@ -204,7 +204,7 @@ bool CompactUnwindInfo::GetUnwindPlan(Target &target, Address addr,
         if (sl) {
           addr_t func_range_start_file_addr =
               function_info.valid_range_offset_start +
-              m_objfile.GetHeaderAddress().GetFileAddress();
+              m_objfile.GetBaseAddress().GetFileAddress();
           AddressRange func_range(func_range_start_file_addr,
                                   function_info.valid_range_offset_end -
                                       function_info.valid_range_offset_start,
@@ -513,7 +513,7 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
     return false;
 
   addr_t function_offset =
-      address.GetFileAddress() - m_objfile.GetHeaderAddress().GetFileAddress();
+      address.GetFileAddress() - m_objfile.GetBaseAddress().GetFileAddress();
 
   UnwindIndex key;
   key.function_offset = function_offset;
@@ -578,10 +578,10 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
       if (sl) {
         uint32_t lsda_offset = GetLSDAForFunctionOffset(
             lsda_array_start, lsda_array_count, function_offset);
-        addr_t objfile_header_file_address =
-            m_objfile.GetHeaderAddress().GetFileAddress();
+        addr_t objfile_base_address =
+            m_objfile.GetBaseAddress().GetFileAddress();
         unwind_info.lsda_address.ResolveAddressUsingFileSections(
-            objfile_header_file_address + lsda_offset, sl);
+            objfile_base_address + lsda_offset, sl);
       }
     }
     if (unwind_info.encoding & UNWIND_PERSONALITY_MASK) {
@@ -596,10 +596,10 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
           SectionList *sl = m_objfile.GetSectionList();
           if (sl) {
             uint32_t personality_offset = m_unwindinfo_data.GetU32(&offset);
-            addr_t objfile_header_file_address =
-                m_objfile.GetHeaderAddress().GetFileAddress();
+            addr_t objfile_base_address =
+                m_objfile.GetBaseAddress().GetFileAddress();
             unwind_info.personality_ptr_address.ResolveAddressUsingFileSections(
-                objfile_header_file_address + personality_offset, sl);
+                objfile_base_address + personality_offset, sl);
           }
         }
       }
@@ -662,10 +662,10 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
       if (sl) {
         uint32_t lsda_offset = GetLSDAForFunctionOffset(
             lsda_array_start, lsda_array_count, function_offset);
-        addr_t objfile_header_file_address =
-            m_objfile.GetHeaderAddress().GetFileAddress();
+        addr_t objfile_base_address =
+            m_objfile.GetBaseAddress().GetFileAddress();
         unwind_info.lsda_address.ResolveAddressUsingFileSections(
-            objfile_header_file_address + lsda_offset, sl);
+            objfile_base_address + lsda_offset, sl);
       }
     }
     if (unwind_info.encoding & UNWIND_PERSONALITY_MASK) {
@@ -680,10 +680,10 @@ bool CompactUnwindInfo::GetCompactUnwindInfoForFunction(
           SectionList *sl = m_objfile.GetSectionList();
           if (sl) {
             uint32_t personality_offset = m_unwindinfo_data.GetU32(&offset);
-            addr_t objfile_header_file_address =
-                m_objfile.GetHeaderAddress().GetFileAddress();
+            addr_t objfile_base_address =
+                m_objfile.GetBaseAddress().GetFileAddress();
             unwind_info.personality_ptr_address.ResolveAddressUsingFileSections(
-                objfile_header_file_address + personality_offset, sl);
+                objfile_base_address + personality_offset, sl);
           }
         }
       }

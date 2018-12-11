@@ -551,18 +551,16 @@ public:
   virtual lldb_private::Address GetEntryPointAddress() { return Address(); }
 
   //------------------------------------------------------------------
-  /// Returns the address that represents the header of this object file.
+  /// Returns base address of this object file.
   ///
-  /// The header address is defined as where the header for the object file is
-  /// that describes the content of the file. If the header doesn't appear in
-  /// a section that is defined in the object file, an address with no section
-  /// is returned that has the file offset set in the m_file_offset member of
-  /// the lldb_private::Address object.
-  ///
-  /// @return
-  ///     Returns the entry address for this module.
+  /// This also sometimes referred to as the "preferred load address" or the
+  /// "image base address". Addresses within object files are often expressed
+  /// relative to this base. If this address corresponds to a specific section
+  /// (usually the first byte of the first section) then the returned address
+  /// will have this section set. Otherwise, the address will just have the
+  /// offset member filled in, indicating that this represents a file address.
   //------------------------------------------------------------------
-  virtual lldb_private::Address GetHeaderAddress() {
+  virtual lldb_private::Address GetBaseAddress() {
     return Address(m_memory_addr);
   }
 
