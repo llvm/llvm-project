@@ -34,7 +34,7 @@ std::vector<StringRef>
 AnalyzerOptions::getRegisteredCheckers(bool IncludeExperimental /* = false */) {
   static const StringRef StaticAnalyzerChecks[] = {
 #define GET_CHECKERS
-#define CHECKER(FULLNAME, CLASS, DESCFILE, HELPTEXT, GROUPINDEX, HIDDEN)       \
+#define CHECKER(FULLNAME, CLASS, HELPTEXT)                                     \
   FULLNAME,
 #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
 #undef CHECKER
