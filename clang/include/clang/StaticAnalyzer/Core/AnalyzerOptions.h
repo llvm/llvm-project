@@ -328,6 +328,11 @@ private:
   /// \sa shouldElideConstructors
   Optional<bool> ElideConstructors;
 
+  /// \sa getModelPath
+  Optional<StringRef> ModelPath;
+
+  /// \sa getRegionStoreSmallStructLimit
+  Optional<unsigned> RegionStoreSmallStructLimit;
 
   /// A helper function that retrieves option for a given full-qualified
   /// checker name.
@@ -745,6 +750,21 @@ public:
   /// Starting with C++17 some elisions become mandatory, and in these cases
   /// the option will be ignored.
   bool shouldElideConstructors();
+
+  /// The largest number of fields a struct can have and still be
+  /// considered "small".
+  ///
+  /// This is currently used to decide whether or not it is worth "forcing" a
+  /// LazyCompoundVal on bind.
+  ///
+  /// This is controlled by 'region-store-small-struct-limit' option.
+  /// To disable all small-struct-dependent behavior, set the option to "0".
+  unsigned getRegionStoreSmallStructLimit();
+
+  /// The analyzer can inline an alternative implementation written in C at the
+  /// call site if the called function's body is not available. This is a path
+  /// where to look for those alternative implementations (called models)
+  StringRef getModelPath();
 };
 
 using AnalyzerOptionsRef = IntrusiveRefCntPtr<AnalyzerOptions>;

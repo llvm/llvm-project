@@ -48,7 +48,7 @@ void ModelInjector::onBodySynthesis(const NamedDecl *D) {
   FileID mainFileID = SM.getMainFileID();
 
   AnalyzerOptionsRef analyzerOpts = CI.getAnalyzerOpts();
-  llvm::StringRef modelPath = analyzerOpts->Config["model-path"];
+  llvm::StringRef modelPath = analyzerOpts->getModelPath();
 
   llvm::SmallString<128> fileName;
 

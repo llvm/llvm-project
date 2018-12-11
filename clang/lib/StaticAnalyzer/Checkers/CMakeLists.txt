@@ -3,7 +3,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangStaticAnalyzerCheckers
-  AllocationDiagnostics.cpp
   AnalysisOrderChecker.cpp
   AnalyzerStatsChecker.cpp
   ArrayBoundChecker.cpp
