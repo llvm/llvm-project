@@ -455,10 +455,6 @@ def MismatchedDeallocatorChecker : Checker<"MismatchedDeallocator">,
 def VforkChecker : Checker<"Vfork">,
   HelpText<"Check for proper usage of vfork">;
 
-def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
-  HelpText<"Improve modeling of the C standard library functions">,
-  DescFile<"StdLibraryFunctionsChecker.cpp">;
-
 } // end "unix"
 
 let ParentPackage = UnixAlpha in {
