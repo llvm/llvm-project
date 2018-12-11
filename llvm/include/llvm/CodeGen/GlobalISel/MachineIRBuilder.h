@@ -92,6 +92,7 @@ public:
     case DstType::Ty_Reg:
       return MRI.getType(Reg);
     }
+    llvm_unreachable("Unrecognised DstOp::DstType enum");
   }
 
   DstType getDstOpKind() const { return Ty; }
@@ -136,6 +137,7 @@ public:
     case SrcType::Ty_MIB:
       return MRI.getType(SrcMIB->getOperand(0).getReg());
     }
+    llvm_unreachable("Unrecognised SrcOp::SrcType enum");
   }
 
   unsigned getReg() const {
@@ -147,6 +149,7 @@ public:
     case SrcType::Ty_MIB:
       return SrcMIB->getOperand(0).getReg();
     }
+    llvm_unreachable("Unrecognised SrcOp::SrcType enum");
   }
 
   CmpInst::Predicate getPredicate() const {
