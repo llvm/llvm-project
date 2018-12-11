@@ -446,9 +446,6 @@ void NullabilityChecker::reportBugIfInvariantHolds(StringRef Msg,
 /// Cleaning up the program state.
 void NullabilityChecker::checkDeadSymbols(SymbolReaper &SR,
                                           CheckerContext &C) const {
-  if (!SR.hasDeadSymbols())
-    return;
-
   ProgramStateRef State = C.getState();
   NullabilityMapTy Nullabilities = State->get<NullabilityMap>();
   for (NullabilityMapTy::iterator I = Nullabilities.begin(),
