@@ -20,6 +20,9 @@ struct OSObject {
 
   static OSObject *generateObject(int);
 
+  static OSObject *getObject();
+  static OSObject *GetObject();
+
   static const OSMetaClass * const metaClass;
 };
 
@@ -54,6 +57,14 @@ struct OtherStruct {
 struct OSMetaClassBase {
   static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
 };
+
+void check_get_object() {
+  OSObject::getObject();
+}
+
+void check_Get_object() {
+  OSObject::GetObject();
+}
 
 void check_custom_iterator_rule(OSArray *arr) {
   OSIterator *it = arr->getIterator();

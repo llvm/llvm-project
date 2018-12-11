@@ -241,7 +241,9 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
 
         // All objects returned with functions *not* starting with
         // get, or iterators, are returned at +1.
-        if (!II->getName().startswith("get") || isOSIteratorSubclass(PD)) {
+        if ((!II->getName().startswith("get") &&
+             !II->getName().startswith("Get")) ||
+            isOSIteratorSubclass(PD)) {
           return getOSSummaryCreateRule(FD);
         } else {
           return getOSSummaryGetRule(FD);
