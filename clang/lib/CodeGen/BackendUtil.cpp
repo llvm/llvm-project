@@ -431,7 +431,7 @@ static void initTargetOptions(llvm::TargetOptions &Options,
   switch (LangOpts.getDefaultFPContractMode()) {
   case LangOptions::FPC_Off:
     // Preserve any contraction performed by the front-end.  (Strict performs
-    // splitting of the muladd instrinsic in the backend.)
+    // splitting of the muladd intrinsic in the backend.)
     Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
     break;
   case LangOptions::FPC_On:

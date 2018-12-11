@@ -93,7 +93,7 @@ static Value *EmitFromInt(CodeGenFunction &CGF, llvm::Value *V,
   return V;
 }
 
-/// Utility to insert an atomic instruction based on Instrinsic::ID
+/// Utility to insert an atomic instruction based on Intrinsic::ID
 /// and the expression node.
 static Value *MakeBinaryAtomicValue(
     CodeGenFunction &CGF, llvm::AtomicRMWInst::BinOp Kind, const CallExpr *E,
@@ -151,7 +151,7 @@ static RValue EmitBinaryAtomic(CodeGenFunction &CGF,
   return RValue::get(MakeBinaryAtomicValue(CGF, Kind, E));
 }
 
-/// Utility to insert an atomic instruction based Instrinsic::ID and
+/// Utility to insert an atomic instruction based Intrinsic::ID and
 /// the expression node, where the return value is the result of the
 /// operation.
 static RValue EmitBinaryAtomicPost(CodeGenFunction &CGF,
@@ -554,7 +554,7 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
 }
 
 namespace {
-/// A struct to generically desribe a bit test intrinsic.
+/// A struct to generically describe a bit test intrinsic.
 struct BitTest {
   enum ActionKind : uint8_t { TestOnly, Complement, Reset, Set };
   enum InterlockingKind : uint8_t {
@@ -9429,7 +9429,7 @@ static Value *EmitX86AddSubSatExpr(CodeGenFunction &CGF, const CallExpr *E,
   Value *Res;
   if (IsAddition) {
     // ADDUS: a > (a+b) ? ~0 : (a+b)
-    // If Ops[0] > Add, overflow occured.
+    // If Ops[0] > Add, overflow occurred.
     Value *Add = CGF.Builder.CreateAdd(Ops[0], Ops[1]);
     Value *ICmp = CGF.Builder.CreateICmp(ICmpInst::ICMP_UGT, Ops[0], Add);
     Value *Max = llvm::Constant::getAllOnesValue(ResultType);
@@ -12186,7 +12186,7 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {X, Y, M4Value});
   }
 
-  // Vector intrisincs that output the post-instruction CC value.
+  // Vector intrinsics that output the post-instruction CC value.
 
 #define INTRINSIC_WITH_CC(NAME) \
     case SystemZ::BI__builtin_##NAME: \
@@ -12646,7 +12646,7 @@ Value *CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID,
     bool isColMajor = isColMajorArg.getSExtValue();
     unsigned IID;
     unsigned NumResults = 8;
-    // PTX Instructions (and LLVM instrinsics) are defined for slice _d_, yet
+    // PTX Instructions (and LLVM intrinsics) are defined for slice _d_, yet
     // for some reason nvcc builtins use _c_.
     switch (BuiltinID) {
     case NVPTX::BI__hmma_m16n16k16_st_c_f16:

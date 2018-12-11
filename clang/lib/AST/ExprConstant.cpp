@@ -507,7 +507,7 @@ namespace {
     }
 
     // FIXME: Adding this to every 'CallStackFrame' may have a nontrivial impact
-    // on the overall stack usage of deeply-recursing constexpr evaluataions.
+    // on the overall stack usage of deeply-recursing constexpr evaluations.
     // (We should cache this map rather than recomputing it repeatedly.)
     // But let's try this and see how it goes; we can look into caching the map
     // as a later change.
@@ -4279,6 +4279,9 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::CaseStmtClass:
   case Stmt::DefaultStmtClass:
     return EvaluateStmt(Result, Info, cast<SwitchCase>(S)->getSubStmt(), Case);
+  case Stmt::CXXTryStmtClass:
+    // Evaluate try blocks by evaluating all sub statements.
+    return EvaluateStmt(Result, Info, cast<CXXTryStmt>(S)->getTryBlock(), Case);
   }
 }
 
@@ -10315,7 +10318,7 @@ bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
   case BO_Mul:
     if (Result.isComplexFloat()) {
       // This is an implementation of complex multiplication according to the
-      // constraints laid out in C11 Annex G. The implemention uses the
+      // constraints laid out in C11 Annex G. The implementation uses the
       // following naming scheme:
       //   (a + ib) * (c + id)
       ComplexValue LHS = Result;
@@ -10396,7 +10399,7 @@ bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
   case BO_Div:
     if (Result.isComplexFloat()) {
       // This is an implementation of complex division according to the
-      // constraints laid out in C11 Annex G. The implemention uses the
+      // constraints laid out in C11 Annex G. The implementation uses the
       // following naming scheme:
       //   (a + ib) / (c + id)
       ComplexValue LHS = Result;

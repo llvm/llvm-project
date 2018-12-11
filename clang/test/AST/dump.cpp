@@ -13,14 +13,14 @@ int ga, gb;
 
 #pragma omp declare reduction(fun : float : omp_out += omp_in) initializer(omp_priv = omp_orig + 15)
 
-// CHECK:      |-OMPDeclareReductionDecl {{.+}} <line:[[@LINE-4]]:35> col:35 operator+ 'int' combiner
+// CHECK:      |-OMPDeclareReductionDecl {{.+}} <line:[[@LINE-4]]:35> col:35 operator+ 'int' combiner 0x{{.+}}
 // CHECK-NEXT: | |-CompoundAssignOperator {{.+}} <col:47, col:58> 'int' lvalue '*=' ComputeLHSTy='int' ComputeResultTy='int'
 // CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:47> 'int' lvalue Var {{.+}} 'omp_out' 'int'
 // CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:58> 'int' <LValueToRValue>
 // CHECK-NEXT: | |   `-DeclRefExpr {{.+}} <col:58> 'int' lvalue Var {{.+}} 'omp_in' 'int'
 // CHECK-NEXT: | |-VarDecl {{.+}} <col:35> col:35 implicit used omp_in 'int'
 // CHECK-NEXT: | `-VarDecl {{.+}} <col:35> col:35 implicit used omp_out 'int'
-// CHECK-NEXT: |-OMPDeclareReductionDecl {{.+}} <col:40> col:40 operator+ 'char' combiner
+// CHECK-NEXT: |-OMPDeclareReductionDecl {{.+}} <col:40> col:40 operator+ 'char' combiner 0x{{.+}}
 // CHECK-NEXT: | |-CompoundAssignOperator {{.+}} <col:47, col:58> 'char' lvalue '*=' ComputeLHSTy='int' ComputeResultTy='int'
 // CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:47> 'char' lvalue Var {{.+}} 'omp_out' 'char'
 // CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:58> 'int' <IntegralCast>
@@ -28,7 +28,7 @@ int ga, gb;
 // CHECK-NEXT: | |     `-DeclRefExpr {{.+}} <col:58> 'char' lvalue Var {{.+}} 'omp_in' 'char'
 // CHECK-NEXT: | |-VarDecl {{.+}} <col:40> col:40 implicit used omp_in 'char'
 // CHECK-NEXT: | `-VarDecl {{.+}} <col:40> col:40 implicit used omp_out 'char'
-// CHECK-NEXT: |-OMPDeclareReductionDecl {{.+}} <line:[[@LINE-17]]:37> col:37 fun 'float' combiner initializer
+// CHECK-NEXT: |-OMPDeclareReductionDecl {{.+}} <line:[[@LINE-17]]:37> col:37 fun 'float' combiner 0x{{.+}} initializer 0x{{.+}}
 // CHECK-NEXT: | |-CompoundAssignOperator {{.+}} <col:45, col:56> 'float' lvalue '+=' ComputeLHSTy='float' ComputeResultTy='float'
 // CHECK-NEXT: | | |-DeclRefExpr {{.+}} <col:45> 'float' lvalue Var {{.+}} 'omp_out' 'float'
 // CHECK-NEXT: | | `-ImplicitCastExpr {{.+}} <col:56> 'float' <LValueToRValue>
