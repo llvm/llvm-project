@@ -18,7 +18,6 @@ add_clang_library(clangFrontend
   ASTUnit.cpp
   ChainedDiagnosticConsumer.cpp
   ChainedIncludesSource.cpp
-  CodeGenOptions.cpp
   CompilerInstance.cpp
   CompilerInvocation.cpp
   CreateInvocationFromCommandLine.cpp
