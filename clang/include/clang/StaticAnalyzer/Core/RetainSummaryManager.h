@@ -469,6 +469,8 @@ public:
   }
 };
 
+class RetainSummaryTemplate;
+
 class RetainSummaryManager {
   typedef llvm::DenseMap<const FunctionDecl*, const RetainSummary *>
           FuncSummariesTy;
@@ -483,7 +485,10 @@ class RetainSummaryManager {
   /// Records whether or not the analyzed code runs in ARC mode.
   const bool ARCEnabled;
 
-  /// Track sublcasses of OSObject
+  /// Track Objective-C and CoreFoundation objects.
+  const bool TrackObjCAndCFObjects;
+
+  /// Track sublcasses of OSObject.
   const bool TrackOSObjects;
 
   /// FuncSummaries - A map from FunctionDecls to summaries.
@@ -626,13 +631,36 @@ class RetainSummaryManager {
   const RetainSummary * generateSummary(const FunctionDecl *FD,
                                         bool &AllowAnnotations);
 
+  /// Return a summary for OSObject, or nullptr if not found.
+  const RetainSummary *getSummaryForOSObject(const FunctionDecl *FD,
+                                             StringRef FName, QualType RetTy);
+
+  /// Return a summary for Objective-C or CF object, or nullptr if not found.
+  const RetainSummary *getSummaryForObjCOrCFObject(
+    const FunctionDecl *FD,
+    StringRef FName,
+    QualType RetTy,
+    const FunctionType *FT,
+    bool &AllowAnnotations);
+
+  /// Apply the annotation of {@code pd} in function {@code FD}
+  /// to the resulting summary stored in out-parameter {@code Template}.
+  /// \return whether an annotation was applied.
+  bool applyFunctionParamAnnotationEffect(const ParmVarDecl *pd,
+                                        unsigned parm_idx,
+                                        const FunctionDecl *FD,
+                                        ArgEffects::Factory &AF,
+                                        RetainSummaryTemplate &Template);
+
 public:
   RetainSummaryManager(ASTContext &ctx,
                        bool usesARC,
-                       bool trackOSObject)
+                       bool trackObjCAndCFObjects,
+                       bool trackOSObjects)
    : Ctx(ctx),
      ARCEnabled(usesARC),
-     TrackOSObjects(trackOSObject),
+     TrackObjCAndCFObjects(trackObjCAndCFObjects),
+     TrackOSObjects(trackOSObjects),
      AF(BPAlloc), ScratchArgs(AF.getEmptyMap()),
      ObjCAllocRetE(usesARC ? RetEffect::MakeNotOwned(RetEffect::ObjC)
                                : RetEffect::MakeOwned(RetEffect::ObjC)),
@@ -709,6 +737,7 @@ public:
   void updateSummaryFromAnnotations(const RetainSummary *&Summ,
                                     const FunctionDecl *FD);
 
+
   void updateSummaryForCall(const RetainSummary *&Summ,
                             const CallEvent &Call);
 
@@ -716,8 +745,20 @@ public:
 
   RetEffect getObjAllocRetEffect() const { return ObjCAllocRetE; }
 
+  /// \return True if the declaration has an attribute {@code T},
+  /// AND we are tracking that attribute. False otherwise.
+  template <class T>
+  bool hasEnabledAttr(const Decl *D) {
+    return isAttrEnabled<T>() && D->hasAttr<T>();
+  }
+
+  /// Check whether we are tracking properties specified by the attributes.
+  template <class T>
+  bool isAttrEnabled();
+
   friend class RetainSummaryTemplate;
 };
+
 
 // Used to avoid allocating long-term (BPAlloc'd) memory for default retain
 // summaries. If a function or method looks like it has a default summary, but
