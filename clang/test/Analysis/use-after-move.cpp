@@ -704,3 +704,15 @@ void checkLoopZombies() {
     Empty f = std::move(e); // no-warning
   }
 }
+
+struct MoveOnlyWithDestructor {
+  MoveOnlyWithDestructor();
+  ~MoveOnlyWithDestructor();
+  MoveOnlyWithDestructor(const MoveOnlyWithDestructor &m) = delete;
+  MoveOnlyWithDestructor(MoveOnlyWithDestructor &&m);
+};
+
+MoveOnlyWithDestructor foo() {
+  MoveOnlyWithDestructor m;
+  return m;
+}

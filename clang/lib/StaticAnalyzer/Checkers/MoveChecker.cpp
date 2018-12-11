@@ -43,7 +43,7 @@ public:
 };
 
 class MoveChecker
-    : public Checker<check::PreCall, check::PostCall, check::EndFunction,
+    : public Checker<check::PreCall, check::PostCall,
                      check::DeadSymbols, check::RegionChanges> {
 public:
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
@@ -217,42 +217,6 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
   return nullptr;
 }
 
-// Removing the function parameters' MemRegion from the state. This is needed
-// for PODs where the trivial destructor does not even created nor executed.
-void MoveChecker::checkEndFunction(const ReturnStmt *RS,
-                                   CheckerContext &C) const {
-  auto State = C.getState();
-  TrackedRegionMapTy Objects = State->get<TrackedRegionMap>();
-  if (Objects.isEmpty())
-    return;
-
-  auto LC = C.getLocationContext();
-
-  const auto LD = dyn_cast_or_null<FunctionDecl>(LC->getDecl());
-  if (!LD)
-    return;
-  llvm::SmallSet<const MemRegion *, 8> InvalidRegions;
-
-  for (auto Param : LD->parameters()) {
-    auto Type = Param->getType().getTypePtrOrNull();
-    if (!Type)
-      continue;
-    if (!Type->isPointerType() && !Type->isReferenceType()) {
-      InvalidRegions.insert(State->getLValue(Param, LC).getAsRegion());
-    }
-  }
-
-  if (InvalidRegions.empty())
-    return;
-
-  for (const auto &E : State->get<TrackedRegionMap>()) {
-    if (InvalidRegions.count(E.first->getBaseRegion()))
-      State = State->remove<TrackedRegionMap>(E.first);
-  }
-
-  C.addTransition(State);
-}
-
 void MoveChecker::checkPostCall(const CallEvent &Call,
                                 CheckerContext &C) const {
   const auto *AFC = dyn_cast<AnyFunctionCall>(&Call);
@@ -385,20 +349,19 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
   const auto IC = dyn_cast<CXXInstanceCall>(&Call);
   if (!IC)
     return;
-  // In case of destructor call we do not track the object anymore.
+
+  // Calling a destructor on a moved object is fine.
+  if (isa<CXXDestructorCall>(IC))
+    return;
+
   const MemRegion *ThisRegion = IC->getCXXThisVal().getAsRegion();
   if (!ThisRegion)
     return;
 
-  if (dyn_cast_or_null<CXXDestructorDecl>(Call.getDecl())) {
-    State = removeFromState(State, ThisRegion);
-    C.addTransition(State);
-    return;
-  }
-
   const auto MethodDecl = dyn_cast_or_null<CXXMethodDecl>(IC->getDecl());
   if (!MethodDecl)
     return;
+
   // Checking assignment operators.
   bool OperatorEq = MethodDecl->isOverloadedOperator() &&
                     MethodDecl->getOverloadedOperator() == OO_Equal;
