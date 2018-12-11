@@ -676,8 +676,8 @@ public:
         bool EnableNullFPSuppression, BugReport &BR,
         const SVal V) {
     AnalyzerOptions &Options = N->getState()->getAnalysisManager().options;
-    if (EnableNullFPSuppression && Options.shouldSuppressNullReturnPaths()
-          && V.getAs<Loc>())
+    if (EnableNullFPSuppression &&
+        Options.ShouldSuppressNullReturnPaths && V.getAs<Loc>())
       BR.addVisitor(llvm::make_unique<MacroNullReturnSuppressionVisitor>(
               R->getAs<SubRegion>(), V));
   }
@@ -808,7 +808,8 @@ public:
     AnalyzerOptions &Options = State->getAnalysisManager().options;
 
     bool EnableNullFPSuppression = false;
-    if (InEnableNullFPSuppression && Options.shouldSuppressNullReturnPaths())
+    if (InEnableNullFPSuppression &&
+        Options.ShouldSuppressNullReturnPaths)
       if (Optional<Loc> RetLoc = RetVal.getAs<Loc>())
         EnableNullFPSuppression = State->isNull(*RetLoc).isConstrainedTrue();
 
@@ -877,7 +878,7 @@ public:
         // future nodes. We want to emit a path note as well, in case
         // the report is resurrected as valid later on.
         if (EnableNullFPSuppression &&
-            Options.shouldAvoidSuppressingNullArgumentPaths())
+            Options.ShouldAvoidSuppressingNullArgumentPaths)
           Mode = MaybeUnsuppress;
 
         if (RetE->getType()->isObjCObjectPointerType()) {
@@ -925,7 +926,7 @@ public:
   visitNodeMaybeUnsuppress(const ExplodedNode *N,
                            BugReporterContext &BRC, BugReport &BR) {
 #ifndef NDEBUG
-    assert(Options.shouldAvoidSuppressingNullArgumentPaths());
+    assert(Options.ShouldAvoidSuppressingNullArgumentPaths);
 #endif
 
     // Are we at the entry node for this call?
@@ -1378,7 +1379,7 @@ SuppressInlineDefensiveChecksVisitor(DefinedSVal Value, const ExplodedNode *N)
     : V(Value) {
   // Check if the visitor is disabled.
   AnalyzerOptions &Options = N->getState()->getAnalysisManager().options;
-  if (!Options.shouldSuppressInlinedDefensiveChecks())
+  if (!Options.ShouldSuppressInlinedDefensiveChecks)
     IsSatisfied = true;
 
   assert(N->getState()->isNull(V).isConstrainedTrue() &&
@@ -2219,7 +2220,7 @@ void LikelyFalsePositiveSuppressionBRVisitor::finalizeVisitor(
     // the user's fault, we currently don't report them very well, and
     // Note that this will not help for any other data structure libraries, like
     // TR1, Boost, or llvm/ADT.
-    if (Options.shouldSuppressFromCXXStandardLibrary()) {
+    if (Options.ShouldSuppressFromCXXStandardLibrary) {
       BR.markInvalid(getTag(), nullptr);
       return;
     } else {
