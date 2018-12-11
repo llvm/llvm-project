@@ -652,6 +652,20 @@ public:
     return minScalar(TypeIdx, MinTy).maxScalar(TypeIdx, MaxTy);
   }
 
+  /// Widen the scalar to match the size of another.
+  LegalizeRuleSet &minScalarSameAs(unsigned TypeIdx, unsigned LargeTypeIdx) {
+    typeIdx(TypeIdx);
+    return widenScalarIf(
+        [=](const LegalityQuery &Query) {
+          return Query.Types[LargeTypeIdx].getScalarSizeInBits() >
+                 Query.Types[TypeIdx].getSizeInBits();
+        },
+        [=](const LegalityQuery &Query) {
+          return std::make_pair(TypeIdx,
+                                Query.Types[LargeTypeIdx].getElementType());
+        });
+  }
+
   /// Add more elements to the vector to reach the next power of two.
   /// No effect if the type is not a vector or the element count is a power of
   /// two.

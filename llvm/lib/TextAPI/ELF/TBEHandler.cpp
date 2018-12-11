@@ -132,7 +132,7 @@ template <> struct MappingTraits<ELFStub> {
     if (!IO.mapTag("!tapi-tbe", true))
       IO.setError("Not a .tbe YAML file.");
     IO.mapRequired("TbeVersion", Stub.TbeVersion);
-    IO.mapRequired("SoName", Stub.SoName);
+    IO.mapOptional("SoName", Stub.SoName);
     IO.mapRequired("Arch", (ELFArchMapper &)Stub.Arch);
     IO.mapOptional("NeededLibs", Stub.NeededLibs);
     IO.mapRequired("Symbols", Stub.Symbols);

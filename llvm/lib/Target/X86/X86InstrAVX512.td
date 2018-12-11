@@ -8790,7 +8790,7 @@ let Predicates = [HasVLX] in {
                (v4f32 (COPY_TO_REGCLASS FR32X:$src, VR128X)), 4)))), FR32X)) >;
 }
 
-//  Unordered/Ordered scalar fp compare with Sea and set EFLAGS
+//  Unordered/Ordered scalar fp compare with Sae and set EFLAGS
 multiclass avx512_ord_cmp_sae<bits<8> opc, X86VectorVTInfo _,
                             string OpcodeStr, X86FoldableSchedWrite sched> {
   let hasSideEffects = 0 in

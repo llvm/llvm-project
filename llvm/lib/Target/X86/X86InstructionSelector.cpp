@@ -373,6 +373,7 @@ bool X86InstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_UNMERGE_VALUES:
     return selectUnmergeValues(I, MRI, MF, CoverageInfo);
   case TargetOpcode::G_MERGE_VALUES:
+  case TargetOpcode::G_CONCAT_VECTORS:
     return selectMergeValues(I, MRI, MF, CoverageInfo);
   case TargetOpcode::G_EXTRACT:
     return selectExtract(I, MRI, MF);
@@ -1349,7 +1350,8 @@ bool X86InstructionSelector::selectUnmergeValues(
 bool X86InstructionSelector::selectMergeValues(
     MachineInstr &I, MachineRegisterInfo &MRI, MachineFunction &MF,
     CodeGenCoverage &CoverageInfo) const {
-  assert((I.getOpcode() == TargetOpcode::G_MERGE_VALUES) &&
+  assert((I.getOpcode() == TargetOpcode::G_MERGE_VALUES ||
+          I.getOpcode() == TargetOpcode::G_CONCAT_VECTORS) &&
          "unexpected instruction");
 
   // Split to inserts.
