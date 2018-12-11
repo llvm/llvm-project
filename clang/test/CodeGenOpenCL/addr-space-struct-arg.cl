@@ -1,6 +1,9 @@
-// RUN: %clang_cc1 %s -emit-llvm -o - -O0 -finclude-default-header -ffake-address-space-map -triple i686-pc-darwin | FileCheck -enable-var-scope -check-prefixes=COM,X86 %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -O0 -finclude-default-header -triple amdgcn | FileCheck -enable-var-scope -check-prefixes=COM,AMDGCN %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=CL2.0 -O0 -finclude-default-header -triple amdgcn | FileCheck -enable-var-scope -check-prefixes=COM,AMDGCN,AMDGCN20 %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -O0 -ffake-address-space-map -triple i686-pc-darwin | FileCheck -enable-var-scope -check-prefixes=COM,X86 %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -O0 -triple amdgcn | FileCheck -enable-var-scope -check-prefixes=COM,AMDGCN %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=CL2.0 -O0 -triple amdgcn | FileCheck -enable-var-scope -check-prefixes=COM,AMDGCN,AMDGCN20 %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -cl-std=CL1.2 -O0 -triple spir-unknown-unknown-unknown | FileCheck -enable-var-scope -check-prefixes=SPIR %s
+
+typedef int int2 __attribute__((ext_vector_type(2)));
 
 typedef struct {
   int cells[9];
@@ -128,6 +131,12 @@ void test_indirect_arg_private(void) {
 // AMDGCN:  call void @FuncOneMember(<2 x i32>
 kernel void KernelOneMember(struct StructOneMember u) {
   FuncOneMember(u);
+}
+
+// SPIR: call void @llvm.memcpy.p0i8.p1i8.i32
+// SPIR-NOT: addrspacecast
+kernel void KernelOneMemberSpir(global struct StructOneMember* u) {
+  FuncOneMember(*u);
 }
 
 // AMDGCN-LABEL: define amdgpu_kernel void @KernelLargeOneMember(

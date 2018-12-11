@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++11 -Werror=c++1y-extensions %s
-// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++1y -DCXX1Y %s
+// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++11 -Werror=c++1y-extensions -Werror=c++2a-extensions %s
+// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++1y -DCXX1Y -Werror=c++2a-extensions %s
+// RUN: %clang_cc1 -verify -fcxx-exceptions -triple=x86_64-linux-gnu -std=c++2a -DCXX1Y -DCXX2A %s
 
 namespace N {
   typedef char C;
@@ -78,7 +79,12 @@ struct T2 {
 };
 struct T3 {
   constexpr T3 &operator=(const T3&) const = default;
-  // expected-error@-1 {{an explicitly-defaulted copy assignment operator may not have 'const' or 'volatile' qualifiers}}
+#ifndef CXX2A
+  // expected-error@-2 {{an explicitly-defaulted copy assignment operator may not have 'const' or 'volatile' qualifiers}}
+#else
+  // expected-warning@-4 {{explicitly defaulted copy assignment operator is implicitly deleted}}
+  // expected-note@-5 {{function is implicitly deleted because its declared type does not match the type of an implicit copy assignment operator}}
+#endif
 };
 #endif
 struct U {
@@ -129,9 +135,22 @@ constexpr int DisallowedStmtsCXX1Y_2() {
 x:
   return 0;
 }
+constexpr int DisallowedStmtsCXX1Y_2_1() {
+  try {
+    return 0;
+  } catch (...) {
+  merp: goto merp; // expected-error {{statement not allowed in constexpr function}}
+  }
+}
 constexpr int DisallowedStmtsCXX1Y_3() {
   //  - a try-block,
-  try {} catch (...) {} // expected-error {{statement not allowed in constexpr function}}
+  try {} catch (...) {}
+#ifndef CXX2A
+  // expected-error@-2 {{use of this statement in a constexpr function is a C++2a extension}}
+#ifndef CXX1Y
+  // expected-error@-4 {{use of this statement in a constexpr function is a C++14 extension}}
+#endif
+#endif
   return 0;
 }
 constexpr int DisallowedStmtsCXX1Y_4() {

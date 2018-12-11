@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -analyzer-disable-checker osx.cocoa.RetainCount -DNO_CF_OBJECT -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -analyzer-disable-checker osx.OSObjectRetainCount -DNO_OS_OBJECT -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx -analyzer-config "osx.cocoa.RetainCount:CheckOSObject=false" -DNO_OS_OBJECT -verify %s
 
 typedef const void * CFTypeRef;
 extern CFTypeRef CFRetain(CFTypeRef cf);

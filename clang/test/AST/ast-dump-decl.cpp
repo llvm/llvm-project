@@ -328,20 +328,20 @@ namespace testClassTemplateDecl {
 // CHECK:      ClassTemplateDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} {{.*}} TestTemplateDefaultType
 // CHECK-NEXT:   TemplateTypeParmDecl
 // CHECK-NEXT:     TemplateArgument type 'int'
-// CHECK-NEXT:     inherited from TemplateTypeParm 0x{{[^ ]*}} 'T'
+// CHECK-NEXT:       inherited from TemplateTypeParm 0x{{[^ ]*}} 'T'
 
 // CHECK:      ClassTemplateDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} {{.*}} TestTemplateDefaultNonType
 // CHECK-NEXT:   NonTypeTemplateParmDecl
 // CHECK-NEXT:     TemplateArgument expr
+// CHECK-NEXT:       inherited from NonTypeTemplateParm 0x{{[^ ]*}} 'I' 'int'
 // CHECK-NEXT:       ConstantExpr
 // CHECK-NEXT:         IntegerLiteral
-// CHECK-NEXT:     inherited from NonTypeTemplateParm 0x{{[^ ]*}} 'I' 'int'
 
 // CHECK:      ClassTemplateDecl 0x{{[^ ]*}} prev 0x{{[^ ]*}} {{.*}} TestTemplateTemplateDefaultType
 // CHECK-NEXT:   TemplateTemplateParmDecl
 // CHECK-NEXT:     TemplateTypeParmDecl
 // CHECK-NEXT:     TemplateArgument
-// CHECK-NEXT:     inherited from TemplateTemplateParm 0x{{[^ ]*}} 'TT'
+// CHECK-NEXT:       inherited from TemplateTemplateParm 0x{{[^ ]*}} 'TT'
 
 // PR15220 dump instantiation only once
 namespace testCanonicalTemplate {
