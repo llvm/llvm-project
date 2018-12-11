@@ -200,3 +200,40 @@ void bad_move_push_back(std::list<int> &L1, std::list<int> &L2, int n) {
   ++i0;
   *++i0; // expected-warning{{Iterator accessed outside of its range}}
 }
+
+struct simple_iterator_base {
+  simple_iterator_base();
+  simple_iterator_base(const simple_iterator_base& rhs);
+  simple_iterator_base &operator=(const simple_iterator_base& rhs);
+  virtual ~simple_iterator_base();
+  bool friend operator==(const simple_iterator_base &lhs,
+                         const simple_iterator_base &rhs);
+  bool friend operator!=(const simple_iterator_base &lhs,
+                         const simple_iterator_base &rhs);
+private:
+  int *ptr;
+};
+
+struct simple_derived_iterator: public simple_iterator_base {
+  int& operator*();
+  int* operator->();
+  simple_iterator_base &operator++();
+  simple_iterator_base operator++(int);
+  simple_iterator_base &operator--();
+  simple_iterator_base operator--(int);
+};
+
+struct simple_container {
+  typedef simple_derived_iterator iterator;
+
+  iterator begin();
+  iterator end();
+};
+
+void good_derived(simple_container c) {
+  auto i0 = c.end();
+  if (i0 != c.end()) {
+    clang_analyzer_warnIfReached();
+    *i0; // no-warning
+  }
+}

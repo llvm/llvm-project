@@ -1089,9 +1089,7 @@ void IteratorChecker::verifyRandomIncrOrDecr(CheckerContext &C,
 void IteratorChecker::verifyMatch(CheckerContext &C, const SVal &Iter,
                                   const MemRegion *Cont) const {
   // Verify match between a container and the container of an iterator
-  while (const auto *CBOR = Cont->getAs<CXXBaseObjectRegion>()) {
-    Cont = CBOR->getSuperRegion();
-  }
+  Cont = Cont->getMostDerivedObjectRegion();
 
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Iter);
@@ -1125,9 +1123,7 @@ void IteratorChecker::handleBegin(CheckerContext &C, const Expr *CE,
   if (!ContReg)
     return;
 
-  while (const auto *CBOR = ContReg->getAs<CXXBaseObjectRegion>()) {
-    ContReg = CBOR->getSuperRegion();
-  }
+  ContReg = ContReg->getMostDerivedObjectRegion();
 
   // If the container already has a begin symbol then use it. Otherwise first
   // create a new one.
@@ -1151,9 +1147,7 @@ void IteratorChecker::handleEnd(CheckerContext &C, const Expr *CE,
   if (!ContReg)
     return;
 
-  while (const auto *CBOR = ContReg->getAs<CXXBaseObjectRegion>()) {
-    ContReg = CBOR->getSuperRegion();
-  }
+  ContReg = ContReg->getMostDerivedObjectRegion();
 
   // If the container already has an end symbol then use it. Otherwise first
   // create a new one.
@@ -1174,9 +1168,7 @@ void IteratorChecker::handleEnd(CheckerContext &C, const Expr *CE,
 void IteratorChecker::assignToContainer(CheckerContext &C, const Expr *CE,
                                         const SVal &RetVal,
                                         const MemRegion *Cont) const {
-  while (const auto *CBOR = Cont->getAs<CXXBaseObjectRegion>()) {
-    Cont = CBOR->getSuperRegion();
-  }
+  Cont = Cont->getMostDerivedObjectRegion();
 
   auto State = C.getState();
   auto &SymMgr = C.getSymbolManager();
@@ -1194,9 +1186,7 @@ void IteratorChecker::handleAssign(CheckerContext &C, const SVal &Cont,
   if (!ContReg)
     return;
 
-  while (const auto *CBOR = ContReg->getAs<CXXBaseObjectRegion>()) {
-    ContReg = CBOR->getSuperRegion();
-  }
+  ContReg = ContReg->getMostDerivedObjectRegion();
 
   // Assignment of a new value to a container always invalidates all its
   // iterators
@@ -1211,9 +1201,7 @@ void IteratorChecker::handleAssign(CheckerContext &C, const SVal &Cont,
   if (!OldCont.isUndef()) {
     const auto *OldContReg = OldCont.getAsRegion();
     if (OldContReg) {
-      while (const auto *CBOR = OldContReg->getAs<CXXBaseObjectRegion>()) {
-        OldContReg = CBOR->getSuperRegion();
-      }
+      OldContReg = OldContReg->getMostDerivedObjectRegion();
       const auto OldCData = getContainerData(State, OldContReg);
       if (OldCData) {
         if (const auto OldEndSym = OldCData->getEnd()) {
@@ -1273,9 +1261,7 @@ void IteratorChecker::handleClear(CheckerContext &C, const SVal &Cont) const {
   if (!ContReg)
     return;
 
-  while (const auto *CBOR = ContReg->getAs<CXXBaseObjectRegion>()) {
-    ContReg = CBOR->getSuperRegion();
-  }
+  ContReg = ContReg->getMostDerivedObjectRegion();
 
   // The clear() operation invalidates all the iterators, except the past-end
   // iterators of list-like containers
@@ -1302,9 +1288,7 @@ void IteratorChecker::handlePushBack(CheckerContext &C,
   if (!ContReg)
     return;
 
-  while (const auto *CBOR = ContReg->getAs<CXXBaseObjectRegion>()) {
-    ContReg = CBOR->getSuperRegion();
-  }
+  ContReg = ContReg->getMostDerivedObjectRegion();
 
   // For deque-like containers invalidate all iterator positions
   auto State = C.getState();
@@ -1341,9 +1325,7 @@ void IteratorChecker::handlePopBack(CheckerContext &C, const SVal &Cont) const {
   if (!ContReg)
     return;
 
-  while (const auto *CBOR = ContReg->getAs<CXXBaseObjectRegion>()) {
-    ContReg = CBOR->getSuperRegion();
-  }
+  ContReg = ContReg->getMostDerivedObjectRegion();
 
   auto State = C.getState();
   const auto CData = getContainerData(State, ContReg);
@@ -1381,9 +1363,7 @@ void IteratorChecker::handlePushFront(CheckerContext &C,
   if (!ContReg)
     return;
 
-  while (const auto *CBOR = ContReg->getAs<CXXBaseObjectRegion>()) {
-    ContReg = CBOR->getSuperRegion();
-  }
+  ContReg = ContReg->getMostDerivedObjectRegion();
 
   // For deque-like containers invalidate all iterator positions
   auto State = C.getState();
@@ -1416,9 +1396,7 @@ void IteratorChecker::handlePopFront(CheckerContext &C,
   if (!ContReg)
     return;
 
-  while (const auto *CBOR = ContReg->getAs<CXXBaseObjectRegion>()) {
-    ContReg = CBOR->getSuperRegion();
-  }
+  ContReg = ContReg->getMostDerivedObjectRegion();
 
   auto State = C.getState();
   const auto CData = getContainerData(State, ContReg);
@@ -2015,7 +1993,8 @@ ProgramStateRef setContainerData(ProgramStateRef State, const MemRegion *Cont,
 
 const IteratorPosition *getIteratorPosition(ProgramStateRef State,
                                             const SVal &Val) {
-  if (const auto Reg = Val.getAsRegion()) {
+  if (auto Reg = Val.getAsRegion()) {
+    Reg = Reg->getMostDerivedObjectRegion();
     return State->get<IteratorRegionMap>(Reg);
   } else if (const auto Sym = Val.getAsSymbol()) {
     return State->get<IteratorSymbolMap>(Sym);
@@ -2028,7 +2007,8 @@ const IteratorPosition *getIteratorPosition(ProgramStateRef State,
 const IteratorPosition *getIteratorPosition(ProgramStateRef State,
                                             RegionOrSymbol RegOrSym) {
   if (RegOrSym.is<const MemRegion *>()) {
-    return State->get<IteratorRegionMap>(RegOrSym.get<const MemRegion *>());
+    auto Reg = RegOrSym.get<const MemRegion *>()->getMostDerivedObjectRegion();
+    return State->get<IteratorRegionMap>(Reg);
   } else if (RegOrSym.is<SymbolRef>()) {
     return State->get<IteratorSymbolMap>(RegOrSym.get<SymbolRef>());
   }
@@ -2037,7 +2017,8 @@ const IteratorPosition *getIteratorPosition(ProgramStateRef State,
 
 ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
                                     const IteratorPosition &Pos) {
-  if (const auto Reg = Val.getAsRegion()) {
+  if (auto Reg = Val.getAsRegion()) {
+    Reg = Reg->getMostDerivedObjectRegion();
     return State->set<IteratorRegionMap>(Reg, Pos);
   } else if (const auto Sym = Val.getAsSymbol()) {
     return State->set<IteratorSymbolMap>(Sym, Pos);
@@ -2051,8 +2032,8 @@ ProgramStateRef setIteratorPosition(ProgramStateRef State,
                                     RegionOrSymbol RegOrSym,
                                     const IteratorPosition &Pos) {
   if (RegOrSym.is<const MemRegion *>()) {
-    return State->set<IteratorRegionMap>(RegOrSym.get<const MemRegion *>(),
-                                         Pos);
+    auto Reg = RegOrSym.get<const MemRegion *>()->getMostDerivedObjectRegion();
+    return State->set<IteratorRegionMap>(Reg, Pos);
   } else if (RegOrSym.is<SymbolRef>()) {
     return State->set<IteratorSymbolMap>(RegOrSym.get<SymbolRef>(), Pos);
   }
@@ -2060,7 +2041,8 @@ ProgramStateRef setIteratorPosition(ProgramStateRef State,
 }
 
 ProgramStateRef removeIteratorPosition(ProgramStateRef State, const SVal &Val) {
-  if (const auto Reg = Val.getAsRegion()) {
+  if (auto Reg = Val.getAsRegion()) {
+    Reg = Reg->getMostDerivedObjectRegion();
     return State->remove<IteratorRegionMap>(Reg);
   } else if (const auto Sym = Val.getAsSymbol()) {
     return State->remove<IteratorSymbolMap>(Sym);
