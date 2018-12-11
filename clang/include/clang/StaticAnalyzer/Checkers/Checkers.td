@@ -290,6 +290,9 @@ def DeleteWithNonVirtualDtorChecker : Checker<"DeleteWithNonVirtualDtor">,
   HelpText<"Reports destructions of polymorphic objects with a non-virtual "
            "destructor in their base class">;
 
+def EnumCastOutOfRangeChecker : Checker<"EnumCastOutOfRange">,
+  HelpText<"Check integer to enumeration casts for out of range values">;
+
 def InvalidatedIteratorChecker : Checker<"InvalidatedIterator">,
   HelpText<"Check for use of invalidated iterators">;
 

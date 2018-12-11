@@ -297,6 +297,77 @@ void test(int x) {
 <table class="checkers">
 <colgroup><col class="namedescr"><col class="example"></colgroup>
 <thead><tr><td>Name, Description</td><td>Example</td></tr></thead>
+<tbody>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+alpha.cplusplus.DeleteWithNonVirtualDtor</span><span class="lang">
+(C++)</span><div class="descr">
+Reports destructions of polymorphic objects with a non-virtual destructor in
+their base class
+</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+NonVirtual *create() {
+  NonVirtual *x = new NVDerived(); // note: conversion from derived to base
+                                   //       happened here
+  return x;
+}
+
+void sink(NonVirtual *x) {
+  delete x; // warn: destruction of a polymorphic object with no virtual
+            //       destructor
+}
+</pre></div></div></td></tr>
+
+<tr><td><div class="namedescr expandable"><span class="name">
+alpha.cplusplus.EnumCastOutOfRange</span><span class="lang">
+(C++)</span><div class="descr">
+  Check for integer to enumeration casts that could result in undefined values.
+</div></div></td>
+  <td><div class="exampleContainer expandable">
+    <div class="example"><pre>
+enum TestEnum {
+  A = 0
+};
+
+void foo() {
+  TestEnum t = static_cast<TestEnum>(-1);
+      // warn: the value provided to the cast expression is not in
+               the valid range of values for the enum
+}
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+alpha.cplusplus.InvalidatedIterator</span><span class="lang">
+(C++)</span><div class="descr">
+Check for use of invalidated iterators.
+</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void bad_copy_assign_operator_list1(std::list<int> &L1,
+                                    const std::list<int> &L2) {
+  auto i0 = L1.cbegin();
+  L1 = L2;
+  *i0; // warn: invalidated iterator accessed
+}
+</pre></div></div></td></tr>
+
+
+<tr><td><div class="namedescr expandable"><span class="name">
+alpha.cplusplus.IteratorRange</span><span class="lang">
+(C++)</span><div class="descr">
+Check for iterators used outside their valid ranges.
+</div></div></td>
+<td><div class="exampleContainer expandable">
+<div class="example"><pre>
+void simple_bad_end(const std::vector<int> &v) {
+  auto i = v.end();
+  *i; // warn: iterator accessed outside of its range
+}
+</pre></div></div></td></tr>
+
 
 <tbody>
 <tr><td><div class="namedescr expandable"><span class="name">
