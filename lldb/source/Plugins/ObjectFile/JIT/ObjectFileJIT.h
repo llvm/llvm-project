@@ -89,7 +89,7 @@ public:
 
   lldb_private::Address GetEntryPointAddress() override;
 
-  lldb_private::Address GetHeaderAddress() override;
+  lldb_private::Address GetBaseAddress() override;
 
   ObjectFile::Type CalculateType() override;
 
