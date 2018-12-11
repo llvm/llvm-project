@@ -18,12 +18,17 @@
 #include <utility>
 #include <type_traits>
 
-#include "archetypes.hpp"
 
+struct ThrowingDefault {
+  ThrowingDefault() { }
+};
+
+struct NonThrowingDefault {
+  NonThrowingDefault() noexcept { }
+};
 
 int main() {
-    using NonThrowingDefault = NonThrowingTypes::DefaultOnly;
-    using ThrowingDefault = NonTrivialTypes::DefaultOnly;
+
     static_assert(!std::is_nothrow_default_constructible<std::pair<ThrowingDefault, ThrowingDefault>>::value, "");
     static_assert(!std::is_nothrow_default_constructible<std::pair<NonThrowingDefault, ThrowingDefault>>::value, "");
     static_assert(!std::is_nothrow_default_constructible<std::pair<ThrowingDefault, NonThrowingDefault>>::value, "");
