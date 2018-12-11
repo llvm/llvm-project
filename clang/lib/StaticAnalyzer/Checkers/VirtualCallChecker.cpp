@@ -280,5 +280,6 @@ void ento::registerVirtualCallChecker(CheckerManager &mgr) {
   VirtualCallChecker *checker = mgr.registerChecker<VirtualCallChecker>();
 
   checker->IsPureOnly =
-      mgr.getAnalyzerOptions().getBooleanOption("PureOnly", false, checker);
+      mgr.getAnalyzerOptions().getCheckerBooleanOption("PureOnly", false,
+                                                       checker);
 }
