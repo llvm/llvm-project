@@ -266,6 +266,7 @@ public:
         AnalyzeNestedBlocks(false), eagerlyAssumeBinOpBifurcation(false),
         TrimGraph(false), visualizeExplodedGraphWithGraphViz(false),
         UnoptimizedCFG(false), PrintStats(false), NoRetryExhausted(false) {
+    llvm::sort(AnalyzerConfigCmdFlags);
   }
 
   /// Interprets an option's string value as a boolean. The "true" string is
