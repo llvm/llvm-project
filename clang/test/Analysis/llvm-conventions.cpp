@@ -7,7 +7,6 @@
 // Forward declarations for StringRef tests.
 //===----------------------------------------------------------------------===//
 
-using size_t = unsigned long;
 using size_type = size_t;
 
 namespace std {
