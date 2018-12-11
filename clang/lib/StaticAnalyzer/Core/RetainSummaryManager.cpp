@@ -124,10 +124,8 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
   }
 
   const IdentifierInfo *II = FD->getIdentifier();
-  if (!II)
-    return getDefaultSummary();
 
-  StringRef FName = II->getName();
+  StringRef FName = II ? II->getName() : "";
 
   // Strip away preceding '_'.  Doing this here will effect all the checks
   // down below.
@@ -304,6 +302,12 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
 
       if (FName == "retain")
         return getOSSummaryRetainRule(FD);
+
+      if (FName == "free")
+        return getOSSummaryFreeRule(FD);
+
+      if (MD->getOverloadedOperator() == OO_New)
+        return getOSSummaryCreateRule(MD);
     }
   }
 
@@ -480,20 +484,14 @@ RetainSummaryManager::getSummary(const CallEvent &Call,
   const RetainSummary *Summ;
   switch (Call.getKind()) {
   case CE_Function:
-    Summ = getFunctionSummary(cast<SimpleFunctionCall>(Call).getDecl());
-    break;
   case CE_CXXMember:
-    Summ = getFunctionSummary(cast<CXXMemberCall>(Call).getDecl());
-    break;
   case CE_CXXMemberOperator:
-    Summ = getFunctionSummary(cast<CXXMemberOperatorCall>(Call).getDecl());
-    break;
   case CE_CXXConstructor:
-    Summ = getFunctionSummary(cast<CXXConstructorCall>(Call).getDecl());
+  case CE_CXXAllocator:
+    Summ = getFunctionSummary(cast_or_null<FunctionDecl>(Call.getDecl()));
     break;
   case CE_Block:
   case CE_CXXDestructor:
-  case CE_CXXAllocator:
     // FIXME: These calls are currently unsupported.
     return getPersistentStopSummary();
   case CE_ObjCMessage: {
@@ -616,6 +614,14 @@ RetainSummaryManager::getOSSummaryReleaseRule(const FunctionDecl *FD) {
                               /*ReceiverEff=*/DoNothing,
                               /*DefaultEff=*/DoNothing,
                               /*ThisEff=*/DecRef);
+}
+
+const RetainSummary *
+RetainSummaryManager::getOSSummaryFreeRule(const FunctionDecl *FD) {
+  return getPersistentSummary(RetEffect::MakeNoRet(),
+                              /*ReceiverEff=*/DoNothing,
+                              /*DefaultEff=*/DoNothing,
+                              /*ThisEff=*/Dealloc);
 }
 
 const RetainSummary *
