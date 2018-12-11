@@ -60,7 +60,16 @@ public:
                   const char *NL, const char *Sep) const override;
 
 private:
-  enum MisuseKind {MK_FunCall, MK_Copy, MK_Move};
+  enum MisuseKind { MK_FunCall, MK_Copy, MK_Move };
+
+  struct ObjectKind {
+    bool Local : 1; // Is this a local variable or a local rvalue reference?
+    bool STL : 1; // Is this an object of a standard type?
+  };
+
+  static ObjectKind classifyObject(const MemRegion *MR,
+                                   const CXXRecordDecl *RD);
+
   class MovedBugVisitor : public BugReporterVisitor {
   public:
     MovedBugVisitor(const MemRegion *R) : Region(R), Found(false) {}
@@ -81,8 +90,14 @@ private:
     bool Found;
   };
 
+  bool IsAggressive = false;
+
+public:
+  void setAggressiveness(bool Aggressive) { IsAggressive = Aggressive; }
+
+private:
   mutable std::unique_ptr<BugType> BT;
-  ExplodedNode *reportBug(const MemRegion *Region, const CallEvent &Call,
+  ExplodedNode *reportBug(const MemRegion *Region, const CXXRecordDecl *RD,
                           CheckerContext &C, MisuseKind MK) const;
   bool isInMoveSafeContext(const LocationContext *LC) const;
   bool isStateResetMethod(const CXXMethodDecl *MethodDec) const;
@@ -116,6 +131,16 @@ static bool isAnyBaseRegionReported(ProgramStateRef State,
   return false;
 }
 
+static const MemRegion *unwrapRValueReferenceIndirection(const MemRegion *MR) {
+  if (const auto *SR = dyn_cast_or_null<SymbolicRegion>(MR)) {
+    SymbolRef Sym = SR->getSymbol();
+    if (Sym->getType()->isRValueReferenceType())
+      if (const MemRegion *OriginMR = Sym->getOriginRegion())
+        return OriginMR;
+  }
+  return MR;
+}
+
 std::shared_ptr<PathDiagnosticPiece>
 MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
                                         BugReporterContext &BRC, BugReport &) {
@@ -140,7 +165,8 @@ MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
   Found = true;
 
   std::string ObjectName;
-  if (const auto DecReg = Region->getAs<DeclRegion>()) {
+  if (const auto DecReg =
+          unwrapRValueReferenceIndirection(Region)->getAs<DeclRegion>()) {
     const auto *RegionDecl = dyn_cast<NamedDecl>(DecReg->getDecl());
     ObjectName = RegionDecl->getNameAsString();
   }
@@ -174,7 +200,8 @@ const ExplodedNode *MoveChecker::getMoveLocation(const ExplodedNode *N,
 }
 
 ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
-                                     const CallEvent &Call, CheckerContext &C,
+                                     const CXXRecordDecl *RD,
+                                     CheckerContext &C,
                                      MisuseKind MK) const {
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     if (!BT)
@@ -242,6 +269,20 @@ void MoveChecker::checkPostCall(const CallEvent &Call,
 
   const auto ArgRegion = AFC->getArgSVal(0).getAsRegion();
   if (!ArgRegion)
+    return;
+
+  // In non-aggressive mode, only warn on use-after-move of local variables (or
+  // local rvalue references) and of STL objects. The former is possible because
+  // local variables (or local rvalue references) are not tempting their user to
+  // re-use the storage. The latter is possible because STL objects are known
+  // to end up in a valid but unspecified state after the move and their
+  // state-reset methods are also known, which allows us to predict
+  // precisely when use-after-move is invalid.
+  // In aggressive mode, warn on any use-after-move because the user
+  // has intentionally asked us to completely eliminate use-after-move
+  // in his code.
+  ObjectKind OK = classifyObject(ArgRegion, MethodDecl->getParent());
+  if (!IsAggressive && !OK.Local && !OK.STL)
     return;
 
   // Skip moving the object to itself.
@@ -315,6 +356,17 @@ bool MoveChecker::isInMoveSafeContext(const LocationContext *LC) const {
   return false;
 }
 
+MoveChecker::ObjectKind MoveChecker::classifyObject(const MemRegion *MR,
+                                                    const CXXRecordDecl *RD) {
+  MR = unwrapRValueReferenceIndirection(MR);
+  return {
+    /*Local=*/
+        MR && isa<VarRegion>(MR) && isa<StackSpaceRegion>(MR->getMemorySpace()),
+    /*STL=*/
+        RD && RD->getDeclContext()->isStdNamespace()
+  };
+}
+
 void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   const LocationContext *LC = C.getLocationContext();
@@ -333,10 +385,11 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
       const RegionState *ArgState = State->get<TrackedRegionMap>(ArgRegion);
       if (ArgState && ArgState->isMoved()) {
         if (!isInMoveSafeContext(LC)) {
+          const CXXRecordDecl *RD = CtorDec->getParent();
           if(CtorDec->isMoveConstructor())
-            N = reportBug(ArgRegion, Call, C, MK_Move);
+            N = reportBug(ArgRegion, RD, C, MK_Move);
           else
-            N = reportBug(ArgRegion, Call, C, MK_Copy);
+            N = reportBug(ArgRegion, RD, C, MK_Copy);
           State = State->set<TrackedRegionMap>(ArgRegion,
                                                RegionState::getReported());
         }
@@ -362,6 +415,9 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
   if (!MethodDecl)
     return;
 
+  // Store class declaration as well, for bug reporting purposes.
+  const CXXRecordDecl *RD = MethodDecl->getParent();
+
   // Checking assignment operators.
   bool OperatorEq = MethodDecl->isOverloadedOperator() &&
                     MethodDecl->getOverloadedOperator() == OO_Equal;
@@ -376,9 +432,9 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
       if (ArgState && ArgState->isMoved() && !isInMoveSafeContext(LC)) {
         const MemRegion *ArgRegion = IC->getArgSVal(0).getAsRegion();
         if(MethodDecl->isMoveAssignmentOperator())
-          N = reportBug(ArgRegion, Call, C, MK_Move);
+          N = reportBug(ArgRegion, RD, C, MK_Move);
         else
-          N = reportBug(ArgRegion, Call, C, MK_Copy);
+          N = reportBug(ArgRegion, RD, C, MK_Copy);
         State =
             State->set<TrackedRegionMap>(ArgRegion, RegionState::getReported());
       }
@@ -416,7 +472,7 @@ void MoveChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
   if (isInMoveSafeContext(LC))
     return;
 
-  N = reportBug(ThisRegion, Call, C, MK_FunCall);
+  N = reportBug(ThisRegion, RD, C, MK_FunCall);
   State = State->set<TrackedRegionMap>(ThisRegion, RegionState::getReported());
   C.addTransition(State, N);
 }
@@ -479,5 +535,7 @@ void MoveChecker::printState(raw_ostream &Out, ProgramStateRef State,
   }
 }
 void ento::registerMoveChecker(CheckerManager &mgr) {
-  mgr.registerChecker<MoveChecker>();
+  MoveChecker *chk = mgr.registerChecker<MoveChecker>();
+  chk->setAggressiveness(mgr.getAnalyzerOptions().getCheckerBooleanOption(
+      "Aggressive", false, chk));
 }
