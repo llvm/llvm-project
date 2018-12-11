@@ -38,6 +38,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
+#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -1553,7 +1554,17 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
 void DwarfUnit::emitCommonHeader(bool UseOffsets, dwarf::UnitType UT) {
   // Emit size of content not including length itself
   Asm->OutStreamer->AddComment("Length of Unit");
-  Asm->emitInt32(getHeaderSize() + getUnitDie().getSize());
+  StringRef Prefix = isDwoUnit() ? "debug_info_dwo_" : "debug_info_";
+  MCSymbol *BeginLabel = Asm->createTempSymbol(Prefix + "start");
+  EndLabel = Asm->createTempSymbol(Prefix + "end");
+
+  // Use a label difference for the convenience of legible/easily modified
+  // assembly - except on NVPTX where label differences aren't supported.
+  if (Asm->TM.getTargetTriple().isNVPTX())
+    Asm->emitInt32(getHeaderSize() + getUnitDie().getSize());
+  else
+    Asm->EmitLabelDifference(EndLabel, BeginLabel, 4);
+  Asm->OutStreamer->EmitLabel(BeginLabel);
 
   Asm->OutStreamer->AddComment("DWARF version number");
   unsigned Version = DD->getDwarfVersion();

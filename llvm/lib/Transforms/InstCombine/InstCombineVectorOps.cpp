@@ -48,6 +48,8 @@ using namespace PatternMatch;
 /// Return true if the value is cheaper to scalarize than it is to leave as a
 /// vector operation. isConstant indicates whether we're extracting one known
 /// element. If false we're extracting a variable index.
+//
+// FIXME: It's possible to create more instructions that previously existed.
 static bool cheapToScalarize(Value *V, bool isConstant) {
   if (Constant *C = dyn_cast<Constant>(V)) {
     if (isConstant) return true;
@@ -308,6 +310,16 @@ Instruction *InstCombiner::visitExtractElementInst(ExtractElementInst &EI) {
     Value *E0 = Builder.CreateExtractElement(X, Index);
     Value *E1 = Builder.CreateExtractElement(Y, Index);
     return BinaryOperator::CreateWithCopiedFlags(BO->getOpcode(), E0, E1, BO);
+  }
+
+  Value *X, *Y;
+  CmpInst::Predicate Pred;
+  if (match(SrcVec, m_Cmp(Pred, m_Value(X), m_Value(Y))) &&
+      cheapToScalarize(SrcVec, IndexC)) {
+    // extelt (cmp X, Y), Index --> cmp (extelt X, Index), (extelt Y, Index)
+    Value *E0 = Builder.CreateExtractElement(X, Index);
+    Value *E1 = Builder.CreateExtractElement(Y, Index);
+    return CmpInst::Create(cast<CmpInst>(SrcVec)->getOpcode(), Pred, E0, E1);
   }
 
   if (auto *I = dyn_cast<Instruction>(SrcVec)) {

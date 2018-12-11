@@ -1273,21 +1273,19 @@ static bool ShouldLaunchUsingXPC(ProcessLaunchInfo &launch_info) {
 
 Status Host::LaunchProcess(ProcessLaunchInfo &launch_info) {
   Status error;
+
+  FileSystem &fs = FileSystem::Instance();
   FileSpec exe_spec(launch_info.GetExecutableFile());
 
-  llvm::sys::fs::file_status stats;
-  status(exe_spec.GetPath(), stats);
-  if (!exists(stats)) {
+  if (!fs.Exists(exe_spec))
     FileSystem::Instance().Resolve(exe_spec);
-    status(exe_spec.GetPath(), stats);
-  }
-  if (!exists(stats)) {
+
+  if (!fs.Exists(exe_spec))
     FileSystem::Instance().ResolveExecutableLocation(exe_spec);
-    status(exe_spec.GetPath(), stats);
-  }
-  if (!exists(stats)) {
+
+  if (!fs.Exists(exe_spec)) {
     error.SetErrorStringWithFormatv("executable doesn't exist: '{0}'",
-                                    launch_info.GetExecutableFile());
+                                    exe_spec);
     return error;
   }
 

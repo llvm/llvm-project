@@ -1803,7 +1803,7 @@ static void CheckConstexprCtorInitializer(Sema &SemaRef,
 static bool
 CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
                            SmallVectorImpl<SourceLocation> &ReturnStmts,
-                           SourceLocation &Cxx1yLoc) {
+                           SourceLocation &Cxx1yLoc, SourceLocation &Cxx2aLoc) {
   // - its function-body shall be [...] a compound-statement that contains only
   switch (S->getStmtClass()) {
   case Stmt::NullStmtClass:
@@ -1840,7 +1840,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     CompoundStmt *CompStmt = cast<CompoundStmt>(S);
     for (auto *BodyIt : CompStmt->body()) {
       if (!CheckConstexprFunctionStmt(SemaRef, Dcl, BodyIt, ReturnStmts,
-                                      Cxx1yLoc))
+                                      Cxx1yLoc, Cxx2aLoc))
         return false;
     }
     return true;
@@ -1858,11 +1858,11 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
 
     IfStmt *If = cast<IfStmt>(S);
     if (!CheckConstexprFunctionStmt(SemaRef, Dcl, If->getThen(), ReturnStmts,
-                                    Cxx1yLoc))
+                                    Cxx1yLoc, Cxx2aLoc))
       return false;
     if (If->getElse() &&
         !CheckConstexprFunctionStmt(SemaRef, Dcl, If->getElse(), ReturnStmts,
-                                    Cxx1yLoc))
+                                    Cxx1yLoc, Cxx2aLoc))
       return false;
     return true;
   }
@@ -1881,7 +1881,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     for (Stmt *SubStmt : S->children())
       if (SubStmt &&
           !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc))
+                                      Cxx1yLoc, Cxx2aLoc))
         return false;
     return true;
 
@@ -1896,8 +1896,28 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
     for (Stmt *SubStmt : S->children())
       if (SubStmt &&
           !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
-                                      Cxx1yLoc))
+                                      Cxx1yLoc, Cxx2aLoc))
         return false;
+    return true;
+
+  case Stmt::CXXTryStmtClass:
+    if (Cxx2aLoc.isInvalid())
+      Cxx2aLoc = S->getBeginLoc();
+    for (Stmt *SubStmt : S->children()) {
+      if (SubStmt &&
+          !CheckConstexprFunctionStmt(SemaRef, Dcl, SubStmt, ReturnStmts,
+                                      Cxx1yLoc, Cxx2aLoc))
+        return false;
+    }
+    return true;
+
+  case Stmt::CXXCatchStmtClass:
+    // Do not bother checking the language mode (already covered by the
+    // try block check).
+    if (!CheckConstexprFunctionStmt(SemaRef, Dcl,
+                                    cast<CXXCatchStmt>(S)->getHandlerBlock(),
+                                    ReturnStmts, Cxx1yLoc, Cxx2aLoc))
+      return false;
     return true;
 
   default:
@@ -1920,6 +1940,8 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
 ///
 /// \return true if the body is OK, false if we have diagnosed a problem.
 bool Sema::CheckConstexprFunctionBody(const FunctionDecl *Dcl, Stmt *Body) {
+  SmallVector<SourceLocation, 4> ReturnStmts;
+
   if (isa<CXXTryStmt>(Body)) {
     // C++11 [dcl.constexpr]p3:
     //  The definition of a constexpr function shall satisfy the following
@@ -1930,22 +1952,35 @@ bool Sema::CheckConstexprFunctionBody(const FunctionDecl *Dcl, Stmt *Body) {
     // C++11 [dcl.constexpr]p4:
     //  In the definition of a constexpr constructor, [...]
     // - its function-body shall not be a function-try-block;
-    Diag(Body->getBeginLoc(), diag::err_constexpr_function_try_block)
+    //
+    // This restriction is lifted in C++2a, as long as inner statements also
+    // apply the general constexpr rules.
+    Diag(Body->getBeginLoc(),
+         !getLangOpts().CPlusPlus2a
+             ? diag::ext_constexpr_function_try_block_cxx2a
+             : diag::warn_cxx17_compat_constexpr_function_try_block)
         << isa<CXXConstructorDecl>(Dcl);
-    return false;
   }
-
-  SmallVector<SourceLocation, 4> ReturnStmts;
 
   // - its function-body shall be [...] a compound-statement that contains only
   //   [... list of cases ...]
-  CompoundStmt *CompBody = cast<CompoundStmt>(Body);
-  SourceLocation Cxx1yLoc;
-  for (auto *BodyIt : CompBody->body()) {
-    if (!CheckConstexprFunctionStmt(*this, Dcl, BodyIt, ReturnStmts, Cxx1yLoc))
+  //
+  // Note that walking the children here is enough to properly check for
+  // CompoundStmt and CXXTryStmt body.
+  SourceLocation Cxx1yLoc, Cxx2aLoc;
+  for (Stmt *SubStmt : Body->children()) {
+    if (SubStmt &&
+        !CheckConstexprFunctionStmt(*this, Dcl, SubStmt, ReturnStmts,
+                                    Cxx1yLoc, Cxx2aLoc))
       return false;
   }
 
+  if (Cxx2aLoc.isValid())
+    Diag(Cxx2aLoc,
+         getLangOpts().CPlusPlus2a
+           ? diag::warn_cxx17_compat_constexpr_body_invalid_stmt
+           : diag::ext_constexpr_body_invalid_stmt_cxx2a)
+      << isa<CXXConstructorDecl>(Dcl);
   if (Cxx1yLoc.isValid())
     Diag(Cxx1yLoc,
          getLangOpts().CPlusPlus14
@@ -13878,9 +13913,9 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
       Expr *InnerCond = nullptr;
       std::string InnerCondDescription;
       std::tie(InnerCond, InnerCondDescription) =
-        findFailedBooleanCondition(Converted.get(),
-                                   /*AllowTopLevelCond=*/false);
-      if (InnerCond) {
+        findFailedBooleanCondition(Converted.get());
+      if (InnerCond && !isa<CXXBoolLiteralExpr>(InnerCond)
+                    && !isa<IntegerLiteral>(InnerCond)) {
         Diag(StaticAssertLoc, diag::err_static_assert_requirement_failed)
           << InnerCondDescription << !AssertMessage
           << Msg.str() << InnerCond->getSourceRange();

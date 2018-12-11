@@ -2861,11 +2861,7 @@ public:
 
   /// Find the failed Boolean condition within a given Boolean
   /// constant expression, and describe it with a string.
-  ///
-  /// \param AllowTopLevelCond Whether to allow the result to be the
-  /// complete top-level condition.
-  std::pair<Expr *, std::string>
-  findFailedBooleanCondition(Expr *Cond, bool AllowTopLevelCond);
+  std::pair<Expr *, std::string> findFailedBooleanCondition(Expr *Cond);
 
   /// Emit diagnostics for the diagnose_if attributes on Function, ignoring any
   /// non-ArgDependent DiagnoseIfAttrs.

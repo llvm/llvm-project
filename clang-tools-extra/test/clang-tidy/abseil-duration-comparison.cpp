@@ -1,62 +1,6 @@
-// RUN: %check_clang_tidy %s abseil-duration-comparison %t
+// RUN: %check_clang_tidy %s abseil-duration-comparison %t -- -- -I%S/Inputs
 
-// Mimic the implementation of absl::Duration
-namespace absl {
-
-class Duration {};
-class Time{};
-
-Duration Nanoseconds(long long);
-Duration Microseconds(long long);
-Duration Milliseconds(long long);
-Duration Seconds(long long);
-Duration Minutes(long long);
-Duration Hours(long long);
-
-#define GENERATE_DURATION_FACTORY_OVERLOADS(NAME) \
-  Duration NAME(float n);                         \
-  Duration NAME(double n);                        \
-  template <typename T>                           \
-  Duration NAME(T n);
-
-GENERATE_DURATION_FACTORY_OVERLOADS(Nanoseconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Microseconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Milliseconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Seconds);
-GENERATE_DURATION_FACTORY_OVERLOADS(Minutes);
-GENERATE_DURATION_FACTORY_OVERLOADS(Hours);
-#undef GENERATE_DURATION_FACTORY_OVERLOADS
-
-using int64_t = long long int;
-
-double ToDoubleHours(Duration d);
-double ToDoubleMinutes(Duration d);
-double ToDoubleSeconds(Duration d);
-double ToDoubleMilliseconds(Duration d);
-double ToDoubleMicroseconds(Duration d);
-double ToDoubleNanoseconds(Duration d);
-int64_t ToInt64Hours(Duration d);
-int64_t ToInt64Minutes(Duration d);
-int64_t ToInt64Seconds(Duration d);
-int64_t ToInt64Milliseconds(Duration d);
-int64_t ToInt64Microseconds(Duration d);
-int64_t ToInt64Nanoseconds(Duration d);
-
-// Relational Operators
-constexpr bool operator<(Duration lhs, Duration rhs);
-constexpr bool operator>(Duration lhs, Duration rhs);
-constexpr bool operator>=(Duration lhs, Duration rhs);
-constexpr bool operator<=(Duration lhs, Duration rhs);
-constexpr bool operator==(Duration lhs, Duration rhs);
-constexpr bool operator!=(Duration lhs, Duration rhs);
-
-// Additive Operators
-inline Time operator+(Time lhs, Duration rhs);
-inline Time operator+(Duration lhs, Time rhs);
-inline Time operator-(Time lhs, Duration rhs);
-inline Duration operator-(Time lhs, Time rhs);
-
-}  // namespace absl
+#include "absl/time/time.h"
 
 void f() {
   double x;

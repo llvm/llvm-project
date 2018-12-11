@@ -20,7 +20,6 @@
 #include "CGRecordLayout.h"
 #include "CodeGenModule.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
-#include "clang/Frontend/CodeGenOptions.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
 

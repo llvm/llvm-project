@@ -8939,12 +8939,14 @@ Sema::AddArgumentDependentLookupCandidates(DeclarationName Name,
       if (ExplicitTemplateArgs)
         continue;
 
-      AddOverloadCandidate(FD, FoundDecl, Args, CandidateSet, false,
+      AddOverloadCandidate(FD, FoundDecl, Args, CandidateSet,
+                           /*SupressUserConversions=*/false,
                            PartialOverloading);
-    } else
-      AddTemplateOverloadCandidate(cast<FunctionTemplateDecl>(*I),
-                                   FoundDecl, ExplicitTemplateArgs,
-                                   Args, CandidateSet, PartialOverloading);
+    } else {
+     AddTemplateOverloadCandidate(
+          cast<FunctionTemplateDecl>(*I), FoundDecl, ExplicitTemplateArgs, Args,
+          CandidateSet, /*SupressUserConversions=*/false, PartialOverloading);
+    }
   }
 }
 

@@ -1994,15 +1994,15 @@ def LMW : DForm_1<46, (outs gprc:$rD), (ins memri:$src),
 
 // Unindexed (r+i) Stores.
 let PPC970_Unit = 2, mayStore = 1, mayLoad = 0 in {
-def STB  : DForm_1<38, (outs), (ins gprc:$rS, memri:$src),
-                   "stb $rS, $src", IIC_LdStStore,
-                   [(truncstorei8 i32:$rS, iaddr:$src)]>;
-def STH  : DForm_1<44, (outs), (ins gprc:$rS, memri:$src),
-                   "sth $rS, $src", IIC_LdStStore,
-                   [(truncstorei16 i32:$rS, iaddr:$src)]>;
-def STW  : DForm_1<36, (outs), (ins gprc:$rS, memri:$src),
-                   "stw $rS, $src", IIC_LdStStore,
-                   [(store i32:$rS, iaddr:$src)]>;
+def STB  : DForm_1<38, (outs), (ins gprc:$rS, memri:$dst),
+                   "stb $rS, $dst", IIC_LdStStore,
+                   [(truncstorei8 i32:$rS, iaddr:$dst)]>;
+def STH  : DForm_1<44, (outs), (ins gprc:$rS, memri:$dst),
+                   "sth $rS, $dst", IIC_LdStStore,
+                   [(truncstorei16 i32:$rS, iaddr:$dst)]>;
+def STW  : DForm_1<36, (outs), (ins gprc:$rS, memri:$dst),
+                   "stw $rS, $dst", IIC_LdStStore,
+                   [(store i32:$rS, iaddr:$dst)]>;
 let Predicates = [HasFPU] in {
 def STFS : DForm_1<52, (outs), (ins f4rc:$rS, memri:$dst),
                    "stfs $rS, $dst", IIC_LdStSTFD,

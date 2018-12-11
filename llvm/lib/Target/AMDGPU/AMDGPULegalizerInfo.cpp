@@ -182,6 +182,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
                (Ty1.getSizeInBits() % 32 == 0);
       });
 
+  getActionDefinitionsBuilder(G_BUILD_VECTOR)
+      .legalIf([=](const LegalityQuery &Query) {
+        const LLT &VecTy = Query.Types[0];
+        const LLT &ScalarTy = Query.Types[1];
+        return VecTy.getSizeInBits() % 32 == 0 &&
+               ScalarTy.getSizeInBits() % 32 == 0 &&
+               VecTy.getSizeInBits() <= 512;
+      });
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
     unsigned BigTyIdx = Op == G_MERGE_VALUES ? 0 : 1;

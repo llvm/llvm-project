@@ -174,6 +174,12 @@ bool RecursivelyDeleteDeadPHINode(PHINode *PN,
 bool SimplifyInstructionsInBlock(BasicBlock *BB,
                                  const TargetLibraryInfo *TLI = nullptr);
 
+/// Replace all the uses of an SSA value in @llvm.dbg intrinsics with
+/// undef. This is useful for signaling that a variable, e.g. has been
+/// found dead and hence it's unavailable at a given program point.
+/// Returns true if the dbg values have been changed.
+bool replaceDbgUsesWithUndef(Instruction *I);
+
 //===----------------------------------------------------------------------===//
 //  Control Flow Graph Restructuring.
 //

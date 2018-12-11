@@ -587,7 +587,7 @@ lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
   if (module_sp) {
     ObjectFile *objfile_ptr = module_sp->GetObjectFile();
     if (objfile_ptr)
-      sb_addr.ref() = objfile_ptr->GetHeaderAddress();
+      sb_addr.ref() = objfile_ptr->GetBaseAddress();
   }
   return sb_addr;
 }

@@ -65,6 +65,15 @@ private:
   bool selectCompareBranch(MachineInstr &I, MachineFunction &MF,
                            MachineRegisterInfo &MRI) const;
 
+  // Helper to generate an equivalent of scalar_to_vector into a new register,
+  // returned via 'Dst'.
+  bool emitScalarToVector(unsigned &Dst, const LLT DstTy,
+                          const TargetRegisterClass *DstRC, unsigned Scalar,
+                          MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          MachineRegisterInfo &MRI) const;
+  bool selectBuildVector(MachineInstr &I, MachineRegisterInfo &MRI) const;
+
   ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
 
   ComplexRendererFns selectAddrModeUnscaled(MachineOperand &Root,
@@ -667,7 +676,7 @@ void AArch64InstructionSelector::materializeLargeCMVal(
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineIRBuilder MIB(I);
 
-  auto MovZ = MIB.buildInstr(AArch64::MOVZXi, &AArch64::GPR64RegClass);
+  auto MovZ = MIB.buildInstr(AArch64::MOVZXi, {&AArch64::GPR64RegClass}, {});
   MovZ->addOperand(MF, I.getOperand(1));
   MovZ->getOperand(1).setTargetFlags(OpFlags | AArch64II::MO_G0 |
                                      AArch64II::MO_NC);
@@ -1522,9 +1531,128 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       return constrainSelectedInstRegOperands(*MovMI, TII, TRI, RBI);
     }
   }
+  case TargetOpcode::G_BUILD_VECTOR:
+    return selectBuildVector(I, MRI);
   }
 
   return false;
+}
+
+bool AArch64InstructionSelector::emitScalarToVector(
+    unsigned &Dst, const LLT DstTy, const TargetRegisterClass *DstRC,
+    unsigned Scalar, MachineBasicBlock &MBB,
+    MachineBasicBlock::iterator MBBI, MachineRegisterInfo &MRI) const {
+  Dst = MRI.createVirtualRegister(DstRC);
+
+  unsigned UndefVec = MRI.createVirtualRegister(DstRC);
+  MachineInstr &UndefMI = *BuildMI(MBB, MBBI, MBBI->getDebugLoc(),
+                                   TII.get(TargetOpcode::IMPLICIT_DEF))
+                               .addDef(UndefVec);
+
+  auto BuildFn = [&](unsigned SubregIndex) {
+    MachineInstr &InsMI = *BuildMI(MBB, MBBI, MBBI->getDebugLoc(),
+                                   TII.get(TargetOpcode::INSERT_SUBREG))
+                               .addDef(Dst)
+                               .addUse(UndefVec)
+                               .addUse(Scalar)
+                               .addImm(SubregIndex);
+    constrainSelectedInstRegOperands(UndefMI, TII, TRI, RBI);
+    return constrainSelectedInstRegOperands(InsMI, TII, TRI, RBI);
+  };
+
+  switch (DstTy.getElementType().getSizeInBits()) {
+  case 32:
+    return BuildFn(AArch64::ssub);
+  case 64:
+    return BuildFn(AArch64::dsub);
+  default:
+    return false;
+  }
+}
+
+bool AArch64InstructionSelector::selectBuildVector(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+  // Until we port more of the optimized selections, for now just use a vector
+  // insert sequence.
+  const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+  const LLT EltTy = MRI.getType(I.getOperand(1).getReg());
+  unsigned EltSize = EltTy.getSizeInBits();
+  if (EltSize < 32 || EltSize > 64)
+    return false; // Don't support all element types yet.
+  const RegisterBank &RB = *RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI);
+  unsigned Opc;
+  unsigned SubregIdx;
+  if (RB.getID() == AArch64::GPRRegBankID) {
+    if (EltSize == 32) {
+      Opc = AArch64::INSvi32gpr;
+      SubregIdx = AArch64::ssub;
+    } else {
+      Opc = AArch64::INSvi64gpr;
+      SubregIdx = AArch64::dsub;
+    }
+  } else {
+    if (EltSize == 32) {
+      Opc = AArch64::INSvi32lane;
+      SubregIdx = AArch64::ssub;
+    } else {
+      Opc = AArch64::INSvi64lane;
+      SubregIdx = AArch64::dsub;
+    }
+  }
+
+  if (EltSize * DstTy.getNumElements() != 128)
+    return false; // Don't handle unpacked vectors yet.
+
+  unsigned DstVec = 0;
+  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
+      DstTy, RBI.getRegBank(AArch64::FPRRegBankID), RBI);
+  emitScalarToVector(DstVec, DstTy, DstRC, I.getOperand(1).getReg(),
+                     *I.getParent(), I.getIterator(), MRI);
+  for (unsigned i = 2, e = DstTy.getSizeInBits() / EltSize + 1; i < e; ++i) {
+    unsigned InsDef;
+    // For the last insert re-use the dst reg of the G_BUILD_VECTOR.
+    if (i + 1 < e)
+      InsDef = MRI.createVirtualRegister(DstRC);
+    else
+      InsDef = I.getOperand(0).getReg();
+    unsigned LaneIdx = i - 1;
+    if (RB.getID() == AArch64::FPRRegBankID) {
+      unsigned ImpDef = MRI.createVirtualRegister(DstRC);
+      MachineInstr &ImpDefMI = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                        TII.get(TargetOpcode::IMPLICIT_DEF))
+                                    .addDef(ImpDef);
+      unsigned InsSubDef = MRI.createVirtualRegister(DstRC);
+      MachineInstr &InsSubMI = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                        TII.get(TargetOpcode::INSERT_SUBREG))
+                                    .addDef(InsSubDef)
+                                    .addUse(ImpDef)
+                                    .addUse(I.getOperand(i).getReg())
+                                    .addImm(SubregIdx);
+      MachineInstr &InsEltMI =
+          *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc))
+               .addDef(InsDef)
+               .addUse(DstVec)
+               .addImm(LaneIdx)
+               .addUse(InsSubDef)
+               .addImm(0);
+      constrainSelectedInstRegOperands(ImpDefMI, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(InsSubMI, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(InsEltMI, TII, TRI, RBI);
+      DstVec = InsDef;
+    } else {
+      MachineInstr &InsMI =
+          *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opc))
+               .addDef(InsDef)
+               .addUse(DstVec)
+               .addImm(LaneIdx)
+               .addUse(I.getOperand(i).getReg());
+      constrainSelectedInstRegOperands(InsMI, TII, TRI, RBI);
+      DstVec = InsDef;
+    }
+  }
+  I.eraseFromParent();
+  return true;
 }
 
 /// SelectArithImmed - Select an immediate value that can be represented as

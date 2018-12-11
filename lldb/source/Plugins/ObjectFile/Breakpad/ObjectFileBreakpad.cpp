@@ -153,7 +153,7 @@ llvm::Optional<Header> Header::parse(llvm::StringRef text) {
 void ObjectFileBreakpad::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance,
-                                nullptr, GetModuleSpecifications);
+                                CreateMemoryInstance, GetModuleSpecifications);
 }
 
 void ObjectFileBreakpad::Terminate() {
