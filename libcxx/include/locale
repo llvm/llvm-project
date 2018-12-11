@@ -187,6 +187,7 @@ template <class charT> class messages_byname;
 #include <streambuf>
 #include <iterator>
 #include <limits>
+#include <version>
 #ifndef __APPLE__
 #include <cstdarg>
 #endif

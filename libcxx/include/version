@@ -30,6 +30,8 @@ __cpp_lib_bit_cast                          201806L <bit>
 __cpp_lib_bool_constant                     201505L <type_traits>
 __cpp_lib_boyer_moore_searcher              201603L <functional>
 __cpp_lib_byte                              201603L <cstddef>
+__cpp_lib_char8_t                           201811L <atomic> <filesystem> <istream> <limits>
+                                                    <locale> <ostream> <string> <string_view>
 __cpp_lib_chrono                            201611L <chrono>
 __cpp_lib_chrono_udls                       201304L <chrono>
 __cpp_lib_clamp                             201603L <algorithm>
@@ -114,6 +116,9 @@ __cpp_lib_void_t                            201411L <type_traits>
 #endif
 
 #if _LIBCPP_STD_VER > 17
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+# define __cpp_lib_char8_t                              201811L
+#endif
 #endif
 
 #endif  // _LIBCPP_VERSIONH

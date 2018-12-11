@@ -1004,6 +1004,10 @@ template <unsigned> struct __static_assert_check {};
 #define _LIBCPP_WCTYPE_IS_MASK
 #endif
 
+#if _LIBCPP_STD_VER <= 17 || !defined(__cpp_char8_t)
+#define _LIBCPP_NO_HAS_CHAR8_T
+#endif
+
 // Deprecation macros.
 // Deprecations warnings are only enabled when _LIBCPP_ENABLE_DEPRECATION_WARNINGS is defined.
 #if defined(_LIBCPP_ENABLE_DEPRECATION_WARNINGS)

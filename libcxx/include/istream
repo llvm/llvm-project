@@ -160,6 +160,7 @@ template <class charT, class traits, class T>
 */
 
 #include <__config>
+#include <version>
 #include <ostream>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
