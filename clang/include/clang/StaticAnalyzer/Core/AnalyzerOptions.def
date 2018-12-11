@@ -41,14 +41,14 @@
 
 #ifdef ANALYZER_OPTION
 #ifndef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
-#error If you didn't include this file with the intent of generating methods, \
+#error If you didnt include this file with the intent of generating methods, \
 define both 'ANALYZER_OPTION' and 'ANALYZER_OPTION_DEPENDS_ON_USER_MODE' macros!
 #endif
 #endif
 
 #ifndef ANALYZER_OPTION_DEPENDS_ON_USER_MODE
 #ifdef ANALYZER_OPTION
-#error If you didn't include this file with the intent of generating methods, \
+#error If you didnt include this file with the intent of generating methods, \
 define both 'ANALYZER_OPTION' and 'ANALYZER_OPTION_DEPENDS_ON_USER_MODE' macros!
 #endif
 #endif
