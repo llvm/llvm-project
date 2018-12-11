@@ -113,13 +113,11 @@ static bool shouldGenerateNote(llvm::raw_string_ostream &os,
   return true;
 }
 
-static void generateDiagnosticsForCallLike(
-  ProgramStateRef CurrSt,
-  const LocationContext *LCtx,
-  const RefVal &CurrV,
-  SymbolRef &Sym,
-  const Stmt *S,
-  llvm::raw_string_ostream &os) {
+static void generateDiagnosticsForCallLike(ProgramStateRef CurrSt,
+                                           const LocationContext *LCtx,
+                                           const RefVal &CurrV, SymbolRef &Sym,
+                                           const Stmt *S,
+                                           llvm::raw_string_ostream &os) {
   if (const CallExpr *CE = dyn_cast<CallExpr>(S)) {
     // Get the name of the callee (if it is available)
     // from the tracked SVal.
@@ -137,8 +135,8 @@ static void generateDiagnosticsForCallLike(
     } else {
       os << "function call";
     }
-  } else if (isa<CXXNewExpr>(S)){
-    os << "Operator new";
+  } else if (isa<CXXNewExpr>(S)) {
+    os << "Operator 'new'";
   } else {
     assert(isa<ObjCMessageExpr>(S));
     CallEventManager &Mgr = CurrSt->getStateManager().getCallEventManager();
@@ -230,9 +228,94 @@ public:
 } // end namespace ento
 } // end namespace clang
 
+
+/// Find the first node with the parent stack frame.
+static const ExplodedNode *getCalleeNode(const ExplodedNode *Pred) {
+  const StackFrameContext *SC = Pred->getStackFrame();
+  if (SC->inTopFrame())
+    return nullptr;
+  const StackFrameContext *PC = SC->getParent()->getStackFrame();
+  if (!PC)
+    return nullptr;
+
+  const ExplodedNode *N = Pred;
+  while (N && N->getStackFrame() != PC) {
+    N = N->getFirstPred();
+  }
+  return N;
+}
+
+
+/// Insert a diagnostic piece at function exit
+/// if a function parameter is annotated as "os_consumed",
+/// but it does not actually consume the reference.
+static std::shared_ptr<PathDiagnosticEventPiece>
+annotateConsumedSummaryMismatch(const ExplodedNode *N,
+                                CallExitBegin &CallExitLoc,
+                                const SourceManager &SM,
+                                CallEventManager &CEMgr) {
+
+  const ExplodedNode *CN = getCalleeNode(N);
+  if (!CN)
+    return nullptr;
+
+  CallEventRef<> Call = CEMgr.getCaller(N->getStackFrame(), N->getState());
+
+  std::string sbuf;
+  llvm::raw_string_ostream os(sbuf);
+  ArrayRef<const ParmVarDecl *> Parameters = Call->parameters();
+  for (unsigned I=0; I < Call->getNumArgs() && I < Parameters.size(); ++I) {
+    const ParmVarDecl *PVD = Parameters[I];
+
+    if (!PVD->hasAttr<OSConsumedAttr>())
+      return nullptr;
+
+    if (SymbolRef SR = Call->getArgSVal(I).getAsLocSymbol()) {
+      const RefVal *CountBeforeCall = getRefBinding(CN->getState(), SR);
+      const RefVal *CountAtExit = getRefBinding(N->getState(), SR);
+
+      if (!CountBeforeCall || !CountAtExit)
+        continue;
+
+      unsigned CountBefore = CountBeforeCall->getCount();
+      unsigned CountAfter = CountAtExit->getCount();
+
+      bool AsExpected = CountBefore > 0 && CountAfter == CountBefore - 1;
+      if (!AsExpected) {
+        os << "Parameter '";
+        PVD->getNameForDiagnostic(os, PVD->getASTContext().getPrintingPolicy(),
+                                  /*Qualified=*/false);
+        os << "' is marked as consuming, but the function does not consume "
+           << "the reference\n";
+      }
+    }
+  }
+
+  if (os.str().empty())
+    return nullptr;
+
+  // FIXME: remove the code duplication with NoStoreFuncVisitor.
+  PathDiagnosticLocation L;
+  if (const ReturnStmt *RS = CallExitLoc.getReturnStmt()) {
+    L = PathDiagnosticLocation::createBegin(RS, SM, N->getLocationContext());
+  } else {
+    L = PathDiagnosticLocation(
+        Call->getRuntimeDefinition().getDecl()->getSourceRange().getEnd(), SM);
+  }
+
+  return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
+}
+
 std::shared_ptr<PathDiagnosticPiece>
 CFRefReportVisitor::VisitNode(const ExplodedNode *N,
                               BugReporterContext &BRC, BugReport &BR) {
+  const SourceManager &SM = BRC.getSourceManager();
+  CallEventManager &CEMgr = BRC.getStateManager().getCallEventManager();
+  if (auto CE = N->getLocationAs<CallExitBegin>()) {
+    if (auto PD = annotateConsumedSummaryMismatch(N, *CE, SM, CEMgr))
+      return PD;
+  }
+
   // FIXME: We will eventually need to handle non-statement-based events
   // (__attribute__((cleanup))).
   if (!N->getLocation().getAs<StmtPoint>())
@@ -293,15 +376,13 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
       generateDiagnosticsForCallLike(CurrSt, LCtx, CurrV, Sym, S, os);
     }
 
-    PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                                  N->getLocationContext());
+    PathDiagnosticLocation Pos(S, SM, N->getLocationContext());
     return std::make_shared<PathDiagnosticEventPiece>(Pos, os.str());
   }
 
   // Gather up the effects that were performed on the object at this
   // program point
   SmallVector<ArgEffect, 2> AEffects;
-
   const ExplodedNode *OrigNode = BRC.getNodeResolver().getOriginalNode(N);
   if (const RetainSummary *Summ = SummaryLog.lookup(OrigNode)) {
     // We only have summaries attached to nodes after evaluating CallExpr and

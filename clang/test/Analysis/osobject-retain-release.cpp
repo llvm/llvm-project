@@ -90,6 +90,32 @@ struct OSMetaClassBase {
 };
 
 void escape(void *);
+bool coin();
+
+bool os_consume_violation(OS_CONSUME OSObject *obj) {
+  if (coin()) { // expected-note{{Assuming the condition is false}}
+                // expected-note@-1{{Taking false branch}}
+    escape(obj);
+    return true;
+  }
+  return false; // expected-note{{Parameter 'obj' is marked as consuming, but the function does not consume the reference}}
+}
+
+void os_consume_ok(OS_CONSUME OSObject *obj) {
+  escape(obj);
+}
+
+void use_os_consume_violation() {
+  OSObject *obj = new OSObject; // expected-note{{Operator 'new' returns an OSObject of type OSObject with a +1 retain count}}
+  os_consume_violation(obj); // expected-note{{Calling 'os_consume_violation'}}
+                             // expected-note@-1{{Returning from 'os_consume_violation'}}
+} // expected-note{{Object leaked: object allocated and stored into 'obj' is not referenced later in this execution path and has a retain count of +1}}
+  // expected-warning@-1{{Potential leak of an object stored into 'obj'}}
+
+void use_os_consume_ok() {
+  OSObject *obj = new OSObject;
+  os_consume_ok(obj);
+}
 
 void test_escaping_into_voidstar() {
   OSObject *obj = new OSObject;
@@ -152,7 +178,7 @@ void check_free_use_after_free() {
 }
 
 unsigned int check_leak_explicit_new() {
-  OSArray *arr = new OSArray; // expected-note{{Operator new returns an OSObject of type OSArray with a +1 retain count}}
+  OSArray *arr = new OSArray; // expected-note{{Operator 'new' returns an OSObject of type OSArray with a +1 retain count}}
   return arr->getCount(); // expected-note{{Object leaked: object allocated and stored into 'arr' is not referenced later in this execution path and has a retain count of +1}}
                           // expected-warning@-1{{Potential leak of an object stored into 'arr'}}
 }
