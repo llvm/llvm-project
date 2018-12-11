@@ -860,6 +860,9 @@ amd_comgr_status_t AMDGPUCompiler::CompileToBitcode() {
 
 amd_comgr_status_t AMDGPUCompiler::LinkBitcodeToBitcode() {
   LLVMContext Context;
+  Context.setDiagnosticHandler(
+      llvm::make_unique<AMDGPUCompilerDiagnosticHandler>(this), true);
+
   auto Composite = make_unique<llvm::Module>("linked", Context);
   Linker L(*Composite);
   unsigned ApplicableFlags = Linker::Flags::None;
