@@ -215,7 +215,7 @@ def TrustNonnullChecker : Checker<"TrustNonnull">,
   HelpText<"Trust that returns from framework methods annotated with _Nonnull "
            "are not null">;
 
-}
+} // end "apiModeling"
 
 //===----------------------------------------------------------------------===//
 // Evaluate "builtin" functions.
