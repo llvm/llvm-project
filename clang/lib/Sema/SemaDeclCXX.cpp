@@ -13916,9 +13916,9 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
       Expr *InnerCond = nullptr;
       std::string InnerCondDescription;
       std::tie(InnerCond, InnerCondDescription) =
-        findFailedBooleanCondition(Converted.get(),
-                                   /*AllowTopLevelCond=*/false);
-      if (InnerCond) {
+        findFailedBooleanCondition(Converted.get());
+      if (InnerCond && !isa<CXXBoolLiteralExpr>(InnerCond)
+                    && !isa<IntegerLiteral>(InnerCond)) {
         Diag(StaticAssertLoc, diag::err_static_assert_requirement_failed)
           << InnerCondDescription << !AssertMessage
           << Msg.str() << InnerCond->getSourceRange();

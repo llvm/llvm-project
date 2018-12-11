@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Frontend/CodeGenOptions.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include <string.h>
 
 namespace clang {
@@ -15,7 +15,7 @@ namespace clang {
 CodeGenOptions::CodeGenOptions() {
 #define CODEGENOPT(Name, Bits, Default) Name = Default;
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default) set##Name(Default);
-#include "clang/Frontend/CodeGenOptions.def"
+#include "clang/Basic/CodeGenOptions.def"
 
   RelocationModel = llvm::Reloc::PIC_;
   memcpy(CoverageVersion, "402*", 4);

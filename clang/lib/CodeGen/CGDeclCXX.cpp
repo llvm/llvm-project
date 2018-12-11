@@ -15,7 +15,7 @@
 #include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
-#include "clang/Frontend/CodeGenOptions.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"

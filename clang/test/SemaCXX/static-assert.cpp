@@ -15,14 +15,14 @@ class C {
 };
 
 template<int N> struct T {
-    static_assert(N == 2, "N is not 2!"); // expected-error {{static_assert failed "N is not 2!"}}
+    static_assert(N == 2, "N is not 2!"); // expected-error {{static_assert failed due to requirement '1 == 2' "N is not 2!"}}
 };
 
 T<1> t1; // expected-note {{in instantiation of template class 'T<1>' requested here}}
 T<2> t2;
 
 template<typename T> struct S {
-    static_assert(sizeof(T) > sizeof(char), "Type not big enough!"); // expected-error {{static_assert failed "Type not big enough!"}}
+    static_assert(sizeof(T) > sizeof(char), "Type not big enough!"); // expected-error {{static_assert failed due to requirement 'sizeof(char) > sizeof(char)' "Type not big enough!"}}
 };
 
 S<char> s1; // expected-note {{in instantiation of template class 'S<char>' requested here}}
@@ -111,6 +111,14 @@ static_assert(std::is_same<ExampleTypes::T, ExampleTypes::U>::value, "message");
 // expected-error@-1{{static_assert failed due to requirement 'std::is_same<int, float>::value' "message"}}
 static_assert(std::is_const<ExampleTypes::T>::value, "message");
 // expected-error@-1{{static_assert failed due to requirement 'std::is_const<int>::value' "message"}}
+static_assert(!std::is_const<const ExampleTypes::T>::value, "message");
+// expected-error@-1{{static_assert failed due to requirement '!std::is_const<const int>::value' "message"}}
+static_assert(!(std::is_const<const ExampleTypes::T>::value), "message");
+// expected-error@-1{{static_assert failed due to requirement '!(std::is_const<const int>::value)' "message"}}
+static_assert(std::is_const<const ExampleTypes::T>::value == false, "message");
+// expected-error@-1{{static_assert failed due to requirement 'std::is_const<const int>::value == false' "message"}}
+static_assert(!(std::is_const<const ExampleTypes::T>::value == true), "message");
+// expected-error@-1{{static_assert failed due to requirement '!(std::is_const<const int>::value == true)' "message"}}
 
 struct BI_tag {};
 struct RAI_tag : BI_tag {};
