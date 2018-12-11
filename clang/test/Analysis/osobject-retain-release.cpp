@@ -75,7 +75,7 @@ void check_free_no_error() {
 }
 
 void check_free_use_after_free() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to function 'OSArray::withCapacity' returns an OSObject of type struct OSArray * with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
   arr->retain(); // expected-note{{Reference count incremented. The object now has a +2 retain count}}
   arr->free(); // expected-note{{Object released}}
   arr->retain(); // expected-warning{{Reference-counted object is used after it is released}}
@@ -83,13 +83,13 @@ void check_free_use_after_free() {
 }
 
 unsigned int check_leak_explicit_new() {
-  OSArray *arr = new OSArray; // expected-note{{Operator new returns an OSObject of type struct OSArray * with a +1 retain count}}
-  return arr->getCount(); // expected-note{{Object leaked: allocated object of type struct OSArray * is not referenced later in this execution path and has a retain count of +1}}
-                          // expected-warning@-1{{Potential leak of an object of type struct OSArray *}}
+  OSArray *arr = new OSArray; // expected-note{{Operator new returns an OSObject of type OSArray with a +1 retain count}}
+  return arr->getCount(); // expected-note{{Object leaked: allocated object of type OSArray is not referenced later in this execution path and has a retain count of +1}}
+                          // expected-warning@-1{{Potential leak of an object of type OSArray}}
 }
 
 unsigned int check_leak_factory() {
-  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to function 'OSArray::withCapacity' returns an OSObject of type struct OSArray * with a +1 retain count}}
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to method 'OSArray::withCapacity' returns an OSObject of type OSArray with a +1 retain count}}
   return arr->getCount(); // expected-note{{Object leaked: object allocated and stored into 'arr' is not referenced later in this execution path and has a retain count of +1}}
                           // expected-warning@-1{{Potential leak of an object stored into 'arr'}}
 }
