@@ -5,6 +5,7 @@ struct OSMetaClass;
 #define OS_CONSUME __attribute__((os_consumed))
 #define OS_RETURNS_RETAINED __attribute__((os_returns_retained))
 #define OS_RETURNS_NOT_RETAINED __attribute__((os_returns_not_retained))
+#define OS_CONSUMES_THIS __attribute__((os_consumes_this))
 
 #define OSTypeID(type)   (type::metaClass)
 
@@ -48,6 +49,11 @@ struct OSArray : public OSObject {
   virtual OSObject *generateObject(OSObject *input);
 
   virtual void consumeReference(OS_CONSUME OSArray *other);
+
+  void putIntoArray(OSArray *array) OS_CONSUMES_THIS;
+
+  template <typename T>
+  void putIntoT(T *owner) OS_CONSUMES_THIS;
 
   static OSArray *generateArrayHasCode() {
     return new OSArray;
@@ -110,6 +116,16 @@ unsigned int check_attribute_indirect_propagation(MyArray *arr) {
   if (casted)
     return casted->getCount();
   return 0;
+}
+
+void check_consumes_this(OSArray *owner) {
+  OSArray *arr = new OSArray;
+  arr->putIntoArray(owner);
+}
+
+void check_consumes_this_with_template(OSArray *owner) {
+  OSArray *arr = new OSArray;
+  arr->putIntoT(owner);
 }
 
 void check_free_no_error() {

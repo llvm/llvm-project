@@ -759,6 +759,9 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
   QualType RetTy = FD->getReturnType();
   if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, FD))
     Template->setRetEffect(*RetE);
+
+  if (FD->hasAttr<OSConsumesThisAttr>())
+    Template->setThisEffect(DecRef);
 }
 
 void
