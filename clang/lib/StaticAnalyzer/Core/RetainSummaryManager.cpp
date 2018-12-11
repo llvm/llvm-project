@@ -303,6 +303,9 @@ RetainSummaryManager::generateSummary(const FunctionDecl *FD,
       if (FName == "retain")
         return getOSSummaryRetainRule(FD);
 
+      if (FName == "free")
+        return getOSSummaryFreeRule(FD);
+
       if (MD->getOverloadedOperator() == OO_New)
         return getOSSummaryCreateRule(MD);
     }
@@ -619,6 +622,14 @@ RetainSummaryManager::getOSSummaryReleaseRule(const FunctionDecl *FD) {
                               /*ReceiverEff=*/DoNothing,
                               /*DefaultEff=*/DoNothing,
                               /*ThisEff=*/DecRef);
+}
+
+const RetainSummary *
+RetainSummaryManager::getOSSummaryFreeRule(const FunctionDecl *FD) {
+  return getPersistentSummary(RetEffect::MakeNoRet(),
+                              /*ReceiverEff=*/DoNothing,
+                              /*DefaultEff=*/DoNothing,
+                              /*ThisEff=*/Dealloc);
 }
 
 const RetainSummary *

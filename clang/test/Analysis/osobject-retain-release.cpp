@@ -14,6 +14,7 @@ struct OSMetaClass;
 struct OSObject {
   virtual void retain();
   virtual void release() {};
+  virtual void free();
   virtual ~OSObject(){}
 
   unsigned int foo() { return 42; }
@@ -64,6 +65,22 @@ struct OtherStruct {
 struct OSMetaClassBase {
   static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
 };
+
+void check_free_no_error() {
+  OSArray *arr = OSArray::withCapacity(10);
+  arr->retain();
+  arr->retain();
+  arr->retain();
+  arr->free();
+}
+
+void check_free_use_after_free() {
+  OSArray *arr = OSArray::withCapacity(10); // expected-note{{Call to function 'OSArray::withCapacity' returns an OSObject of type struct OSArray * with a +1 retain count}}
+  arr->retain(); // expected-note{{Reference count incremented. The object now has a +2 retain count}}
+  arr->free(); // expected-note{{Object released}}
+  arr->retain(); // expected-warning{{Reference-counted object is used after it is released}}
+                 // expected-note@-1{{Reference-counted object is used after it is released}}
+}
 
 unsigned int check_leak_explicit_new() {
   OSArray *arr = new OSArray; // expected-note{{Operator new returns an OSObject of type struct OSArray * with a +1 retain count}}
