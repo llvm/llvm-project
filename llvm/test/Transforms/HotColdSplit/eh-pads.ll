@@ -6,12 +6,6 @@ target triple = "x86_64-apple-macosx10.14.0"
 ; CHECK-LABEL: define {{.*}}@foo(
 ; CHECK: landingpad
 ; CHECK: sideeffect(i32 2)
-
-; CHECK-LABEL: define {{.*}}@foo.cold.1(
-; CHECK: sideeffect(i32 0)
-; CHECK: sideeffect(i32 1)
-; CHECK: sink
-
 define void @foo(i32 %cond) personality i8 0 {
 entry:
   invoke void @llvm.donothing() to label %normal unwind label %exception
@@ -31,6 +25,38 @@ normal:
   call void @sideeffect(i32 2)
   ret void
 }
+
+; CHECK-LABEL: define {{.*}}@bar(
+; CHECK-NOT: landingpad
+define void @bar(i32 %cond) personality i8 0 {
+entry:
+  br i1 undef, label %exit, label %continue
+
+exit:
+  ret void
+
+continue:
+  invoke void @sink() to label %normal unwind label %exception
+
+exception:
+  ; Note: EH pads are not candidates for region entry points.
+  %cleanup = landingpad i8 cleanup
+  ret void
+
+normal:
+  call void @sideeffect(i32 0)
+  call void @sideeffect(i32 1)
+  ret void
+}
+
+; CHECK-LABEL: define {{.*}}@foo.cold.1(
+; CHECK: sideeffect(i32 0)
+; CHECK: sideeffect(i32 1)
+; CHECK: sink
+
+; CHECK-LABEL: define {{.*}}@bar.cold.1(
+; CHECK: sideeffect(i32 0)
+; CHECK: sideeffect(i32 1)
 
 declare void @sideeffect(i32)
 

@@ -26,6 +26,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
@@ -98,36 +99,27 @@ bool blockEndsInUnreachable(const BasicBlock &BB) {
   return !(isa<ReturnInst>(I) || isa<IndirectBrInst>(I));
 }
 
-static bool exceptionHandlingFunctions(const CallInst *CI) {
-  auto F = CI->getCalledFunction();
-  if (!F)
-    return false;
-  auto FName = F->getName();
-  return FName == "__cxa_begin_catch" ||
-         FName == "__cxa_free_exception" ||
-         FName == "__cxa_allocate_exception" ||
-         FName == "__cxa_begin_catch" ||
-         FName == "__cxa_end_catch";
-}
-
-static bool unlikelyExecuted(const BasicBlock &BB) {
-  if (blockEndsInUnreachable(BB))
-    return true;
+bool unlikelyExecuted(BasicBlock &BB) {
   // Exception handling blocks are unlikely executed.
   if (BB.isEHPad())
     return true;
-  for (const Instruction &I : BB)
-    if (const CallInst *CI = dyn_cast<CallInst>(&I)) {
-      // The block is cold if it calls functions tagged as cold or noreturn.
-      if (CI->hasFnAttr(Attribute::Cold) ||
-          CI->hasFnAttr(Attribute::NoReturn) ||
-          exceptionHandlingFunctions(CI))
+
+  // The block is cold if it calls/invokes a cold function.
+  for (Instruction &I : BB)
+    if (auto CS = CallSite(&I))
+      if (CS.hasFnAttr(Attribute::Cold))
         return true;
 
-      // Assume that inline assembly is hot code.
-      if (isa<InlineAsm>(CI->getCalledValue()))
+  // The block is cold if it has an unreachable terminator, unless it's
+  // preceded by a call to a (possibly warm) noreturn call (e.g. longjmp).
+  if (blockEndsInUnreachable(BB)) {
+    if (auto *CI =
+            dyn_cast_or_null<CallInst>(BB.getTerminator()->getPrevNode()))
+      if (CI->hasFnAttr(Attribute::NoReturn))
         return false;
-    }
+    return true;
+  }
+
   return false;
 }
 
