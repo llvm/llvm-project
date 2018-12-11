@@ -28,6 +28,80 @@ static bool isNumericLiteralExpression(const Expr *E) {
          isa<CXXBoolLiteralExpr>(E);
 }
 
+/// Write information about the type state change to {@code os},
+/// return whether the note should be generated.
+static bool shouldGenerateNote(llvm::raw_string_ostream &os,
+                               const RefVal *PrevT, const RefVal &CurrV,
+                               SmallVector<ArgEffect, 2> &AEffects) {
+  // Get the previous type state.
+  RefVal PrevV = *PrevT;
+
+  // Specially handle -dealloc.
+  if (std::find(AEffects.begin(), AEffects.end(), Dealloc) != AEffects.end()) {
+    // Determine if the object's reference count was pushed to zero.
+    assert(!PrevV.hasSameState(CurrV) && "The state should have changed.");
+    // We may not have transitioned to 'release' if we hit an error.
+    // This case is handled elsewhere.
+    if (CurrV.getKind() == RefVal::Released) {
+      assert(CurrV.getCombinedCounts() == 0);
+      os << "Object released by directly sending the '-dealloc' message";
+      return true;
+    }
+  }
+
+  // Determine if the typestate has changed.
+  if (!PrevV.hasSameState(CurrV))
+    switch (CurrV.getKind()) {
+    case RefVal::Owned:
+    case RefVal::NotOwned:
+      if (PrevV.getCount() == CurrV.getCount()) {
+        // Did an autorelease message get sent?
+        if (PrevV.getAutoreleaseCount() == CurrV.getAutoreleaseCount())
+          return false;
+
+        assert(PrevV.getAutoreleaseCount() < CurrV.getAutoreleaseCount());
+        os << "Object autoreleased";
+        return true;
+      }
+
+      if (PrevV.getCount() > CurrV.getCount())
+        os << "Reference count decremented.";
+      else
+        os << "Reference count incremented.";
+
+      if (unsigned Count = CurrV.getCount())
+        os << " The object now has a +" << Count << " retain count.";
+
+      return true;
+
+    case RefVal::Released:
+      if (CurrV.getIvarAccessHistory() ==
+              RefVal::IvarAccessHistory::ReleasedAfterDirectAccess &&
+          CurrV.getIvarAccessHistory() != PrevV.getIvarAccessHistory()) {
+        os << "Strong instance variable relinquished. ";
+      }
+      os << "Object released.";
+      return true;
+
+    case RefVal::ReturnedOwned:
+      // Autoreleases can be applied after marking a node ReturnedOwned.
+      if (CurrV.getAutoreleaseCount())
+        return false;
+
+      os << "Object returned to caller as an owning reference (single "
+            "retain count transferred to caller)";
+      return true;
+
+    case RefVal::ReturnedNotOwned:
+      os << "Object returned to caller with a +0 retain count";
+      return true;
+
+    default:
+      return false;
+    }
+  return true;
+}
+
 std::shared_ptr<PathDiagnosticPiece>
 CFRefReportVisitor::VisitNode(const ExplodedNode *N,
                               BugReporterContext &BRC, BugReport &BR) {
@@ -64,11 +138,9 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
 
     if (isa<ObjCArrayLiteral>(S)) {
       os << "NSArray literal is an object with a +0 retain count";
-    }
-    else if (isa<ObjCDictionaryLiteral>(S)) {
+    } else if (isa<ObjCDictionaryLiteral>(S)) {
       os << "NSDictionary literal is an object with a +0 retain count";
-    }
-    else if (const ObjCBoxedExpr *BL = dyn_cast<ObjCBoxedExpr>(S)) {
+    } else if (const ObjCBoxedExpr *BL = dyn_cast<ObjCBoxedExpr>(S)) {
       if (isNumericLiteralExpression(BL->getSubExpr()))
         os << "NSNumber literal is an object with a +0 retain count";
       else {
@@ -78,27 +150,26 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
 
         // We should always be able to find the boxing class interface,
         // but consider this future-proofing.
-        if (BoxClass)
+        if (BoxClass) {
           os << *BoxClass << " b";
-        else
+        } else {
           os << "B";
+        }
 
         os << "oxed expression produces an object with a +0 retain count";
       }
-    }
-    else if (isa<ObjCIvarRefExpr>(S)) {
+    } else if (isa<ObjCIvarRefExpr>(S)) {
       os << "Object loaded from instance variable";
-    }
-    else {
+    } else {
       if (const CallExpr *CE = dyn_cast<CallExpr>(S)) {
         // Get the name of the callee (if it is available).
         SVal X = CurrSt->getSValAsScalarOrLoc(CE->getCallee(), LCtx);
-        if (const FunctionDecl *FD = X.getAsFunctionDecl())
+        if (const FunctionDecl *FD = X.getAsFunctionDecl()) {
           os << "Call to function '" << *FD << '\'';
-        else
+        } else {
           os << "function call";
-      }
-      else {
+        }
+      } else {
         assert(isa<ObjCMessageExpr>(S));
         CallEventManager &Mgr = CurrSt->getStateManager().getCallEventManager();
         CallEventRef<ObjCMethodCall> Call
@@ -166,8 +237,7 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
       // was ever passed as an argument.
       unsigned i = 0;
 
-      for (CallExpr::const_arg_iterator AI=CE->arg_begin(), AE=CE->arg_end();
-           AI!=AE; ++AI, ++i) {
+      for (auto AI=CE->arg_begin(), AE=CE->arg_end(); AI!=AE; ++AI, ++i) {
 
         // Retrieve the value of the argument.  Is it the symbol
         // we are interested in?
@@ -188,75 +258,8 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
     }
   }
 
-  do {
-    // Get the previous type state.
-    RefVal PrevV = *PrevT;
-
-    // Specially handle -dealloc.
-    if (std::find(AEffects.begin(), AEffects.end(), Dealloc) !=
-                          AEffects.end()) {
-      // Determine if the object's reference count was pushed to zero.
-      assert(!PrevV.hasSameState(CurrV) && "The state should have changed.");
-      // We may not have transitioned to 'release' if we hit an error.
-      // This case is handled elsewhere.
-      if (CurrV.getKind() == RefVal::Released) {
-        assert(CurrV.getCombinedCounts() == 0);
-        os << "Object released by directly sending the '-dealloc' message";
-        break;
-      }
-    }
-
-    // Determine if the typestate has changed.
-    if (!PrevV.hasSameState(CurrV))
-      switch (CurrV.getKind()) {
-        case RefVal::Owned:
-        case RefVal::NotOwned:
-          if (PrevV.getCount() == CurrV.getCount()) {
-            // Did an autorelease message get sent?
-            if (PrevV.getAutoreleaseCount() == CurrV.getAutoreleaseCount())
-              return nullptr;
-
-            assert(PrevV.getAutoreleaseCount() < CurrV.getAutoreleaseCount());
-            os << "Object autoreleased";
-            break;
-          }
-
-          if (PrevV.getCount() > CurrV.getCount())
-            os << "Reference count decremented.";
-          else
-            os << "Reference count incremented.";
-
-          if (unsigned Count = CurrV.getCount())
-            os << " The object now has a +" << Count << " retain count.";
-
-          break;
-
-        case RefVal::Released:
-          if (CurrV.getIvarAccessHistory() ==
-                RefVal::IvarAccessHistory::ReleasedAfterDirectAccess &&
-              CurrV.getIvarAccessHistory() != PrevV.getIvarAccessHistory()) {
-            os << "Strong instance variable relinquished. ";
-          }
-          os << "Object released.";
-          break;
-
-        case RefVal::ReturnedOwned:
-          // Autoreleases can be applied after marking a node ReturnedOwned.
-          if (CurrV.getAutoreleaseCount())
-            return nullptr;
-
-          os << "Object returned to caller as an owning reference (single "
-                "retain count transferred to caller)";
-          break;
-
-        case RefVal::ReturnedNotOwned:
-          os << "Object returned to caller with a +0 retain count";
-          break;
-
-        default:
-          return nullptr;
-      }
-  } while (0);
+  if (!shouldGenerateNote(os, PrevT, CurrV, AEffects))
+    return nullptr;
 
   if (os.str().empty())
     return nullptr; // We have nothing to say!
@@ -428,9 +431,9 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   Optional<std::string> RegionDescription = describeRegion(FirstBinding);
   if (RegionDescription) {
     os << "object allocated and stored into '" << *RegionDescription << '\'';
-  }
-  else
+  } else {
     os << "allocated object";
+  }
 
   // Get the retain count.
   const RefVal* RV = getRefBinding(EndN->getState(), Sym);
