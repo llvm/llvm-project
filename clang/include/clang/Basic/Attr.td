@@ -3141,3 +3141,9 @@ def AlwaysDestroy : InheritableAttr {
   let Subjects = SubjectList<[Var]>;
   let Documentation = [AlwaysDestroyDocs];
 }
+
+def Reinitializes : InheritableAttr {
+  let Spellings = [Clang<"reinitializes", 0>];
+  let Subjects = SubjectList<[NonStaticNonConstCXXMethod], ErrorDiag>;
+  let Documentation = [ReinitializesDocs];
+}
