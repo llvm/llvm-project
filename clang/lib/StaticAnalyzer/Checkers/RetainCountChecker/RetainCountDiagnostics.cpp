@@ -137,7 +137,7 @@ static void generateDiagnosticsForCallLike(
     } else {
       os << "function call";
     }
-  } else if (const auto *NE = dyn_cast<CXXNewExpr>(S)){
+  } else if (isa<CXXNewExpr>(S)){
     os << "Operator new";
   } else {
     assert(isa<ObjCMessageExpr>(S));
