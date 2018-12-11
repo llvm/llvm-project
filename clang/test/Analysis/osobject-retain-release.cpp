@@ -153,8 +153,8 @@ void check_free_use_after_free() {
 
 unsigned int check_leak_explicit_new() {
   OSArray *arr = new OSArray; // expected-note{{Operator new returns an OSObject of type OSArray with a +1 retain count}}
-  return arr->getCount(); // expected-note{{Object leaked: allocated object of type OSArray is not referenced later in this execution path and has a retain count of +1}}
-                          // expected-warning@-1{{Potential leak of an object of type OSArray}}
+  return arr->getCount(); // expected-note{{Object leaked: object allocated and stored into 'arr' is not referenced later in this execution path and has a retain count of +1}}
+                          // expected-warning@-1{{Potential leak of an object stored into 'arr'}}
 }
 
 unsigned int check_leak_factory() {
