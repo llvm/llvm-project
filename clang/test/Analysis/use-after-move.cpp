@@ -1,5 +1,9 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.cplusplus.MisusedMovedObject -std=c++11 -verify -analyzer-output=text -analyzer-config exploration_strategy=unexplored_first_queue,eagerly-assume=false %s
-// RUN: %clang_cc1 -analyze -analyzer-checker=alpha.cplusplus.MisusedMovedObject -std=c++11 -analyzer-config exploration_strategy=dfs,eagerly-assume=false -verify -analyzer-output=text -DDFS=1 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
+// RUN:  -analyzer-config exploration_strategy=unexplored_first_queue
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.cplusplus.Move -verify %s\
+// RUN:  -std=c++11 -analyzer-output=text -analyzer-config eagerly-assume=false\
+// RUN:  -analyzer-config exploration_strategy=dfs -DDFS=1
 
 namespace std {
 
