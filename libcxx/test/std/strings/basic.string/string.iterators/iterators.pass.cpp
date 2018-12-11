@@ -47,6 +47,20 @@ int main()
         assert ( !(ii1 != cii ));
     }
 
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+    {
+        typedef std::u8string C;
+        C::iterator ii1{}, ii2{};
+        C::iterator ii4 = ii1;
+        C::const_iterator cii{};
+        assert ( ii1 == ii2 );
+        assert ( ii1 == ii4 );
+        assert ( ii1 == cii );
+        assert ( !(ii1 != ii2 ));
+        assert ( !(ii1 != cii ));
+    }
+#endif
+
     { // N3644 testing
         typedef std::u16string C;
         C::iterator ii1{}, ii2{};
