@@ -204,8 +204,8 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
                    m_GSub(m_ICst(Cst), m_Reg(Src0)));
   ASSERT_FALSE(match);
 
-  auto MIBFMul = B.buildInstr(TargetOpcode::G_FMUL, s64, Copies[0],
-                              B.buildConstant(s64, 42));
+  auto MIBFMul = B.buildInstr(TargetOpcode::G_FMUL, {s64},
+                              {Copies[0], B.buildConstant(s64, 42)});
   // Match and test commutativity for FMUL.
   match = mi_match(MIBFMul->getOperand(0).getReg(), MRI,
                    m_GFMul(m_ICst(Cst), m_Reg(Src0)));
@@ -214,8 +214,8 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   ASSERT_EQ(Src0, Copies[0]);
 
   // FSUB
-  auto MIBFSub = B.buildInstr(TargetOpcode::G_FSUB, s64, Copies[0],
-                              B.buildConstant(s64, 42));
+  auto MIBFSub = B.buildInstr(TargetOpcode::G_FSUB, {s64},
+                              {Copies[0], B.buildConstant(s64, 42)});
   match = mi_match(MIBFSub->getOperand(0).getReg(), MRI,
                    m_GFSub(m_Reg(Src0), m_Reg()));
   ASSERT_TRUE(match);
@@ -249,8 +249,8 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   ASSERT_TRUE(match);
   ASSERT_EQ(Cst, 1);
   auto MIBCAdd1 =
-      CFB.buildInstr(TargetOpcode::G_ADD, s32, CFB.buildConstant(s32, 0),
-                     CFB.buildConstant(s32, 1));
+      CFB.buildInstr(TargetOpcode::G_ADD, {s32},
+                     {CFB.buildConstant(s32, 0), CFB.buildConstant(s32, 1)});
   // This should be a constant now.
   match = mi_match(MIBCAdd1->getOperand(0).getReg(), MRI, m_ICst(Cst));
   ASSERT_TRUE(match);
@@ -261,8 +261,8 @@ TEST(PatternMatchInstr, MatchBinaryOp) {
   ConstantFoldingMIRBuilder CFB1(*MF);
   CFB1.setInsertPt(*EntryMBB, EntryMBB->end());
   auto MIBCSub =
-      CFB1.buildInstr(TargetOpcode::G_SUB, s32, CFB1.buildConstant(s32, 1),
-                      CFB1.buildConstant(s32, 1));
+      CFB1.buildInstr(TargetOpcode::G_SUB, {s32},
+                      {CFB1.buildConstant(s32, 1), CFB1.buildConstant(s32, 1)});
   // This should be a constant now.
   match = mi_match(MIBCSub->getOperand(0).getReg(), MRI, m_ICst(Cst));
   ASSERT_TRUE(match);
@@ -289,12 +289,12 @@ TEST(PatternMatchInstr, MatchFPUnaryOp) {
   auto Copy0s32 = B.buildFPTrunc(s32, Copies[0]);
 
   // Match G_FABS.
-  auto MIBFabs = B.buildInstr(TargetOpcode::G_FABS, s32, Copy0s32);
+  auto MIBFabs = B.buildInstr(TargetOpcode::G_FABS, {s32}, {Copy0s32});
   bool match = mi_match(MIBFabs->getOperand(0).getReg(), MRI, m_GFabs(m_Reg()));
   ASSERT_TRUE(match);
 
   unsigned Src;
-  auto MIBFNeg = B.buildInstr(TargetOpcode::G_FNEG, s32, Copy0s32);
+  auto MIBFNeg = B.buildInstr(TargetOpcode::G_FNEG, {s32}, {Copy0s32});
   match = mi_match(MIBFNeg->getOperand(0).getReg(), MRI, m_GFNeg(m_Reg(Src)));
   ASSERT_TRUE(match);
   ASSERT_EQ(Src, Copy0s32->getOperand(0).getReg());

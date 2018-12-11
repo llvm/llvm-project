@@ -59,7 +59,7 @@ public:
                  m_all_of(m_MInstr(ExtMI), m_any_of(m_GAnyExt(m_Reg(ExtSrc)),
                                                     m_GSExt(m_Reg(ExtSrc)),
                                                     m_GZExt(m_Reg(ExtSrc)))))) {
-      Builder.buildInstr(ExtMI->getOpcode(), DstReg, ExtSrc);
+      Builder.buildInstr(ExtMI->getOpcode(), {DstReg}, {ExtSrc});
       markInstAndDefDead(MI, *ExtMI, DeadInsts);
       return true;
     }
@@ -118,9 +118,9 @@ public:
       unsigned ShAmt = DstTy.getSizeInBits() - SrcTy.getSizeInBits();
       auto MIBShAmt = Builder.buildConstant(DstTy, ShAmt);
       auto MIBShl = Builder.buildInstr(
-          TargetOpcode::G_SHL, DstTy,
-          Builder.buildAnyExtOrTrunc(DstTy, TruncSrc), MIBShAmt);
-      Builder.buildInstr(TargetOpcode::G_ASHR, DstReg, MIBShl, MIBShAmt);
+          TargetOpcode::G_SHL, {DstTy},
+          {Builder.buildAnyExtOrTrunc(DstTy, TruncSrc), MIBShAmt});
+      Builder.buildInstr(TargetOpcode::G_ASHR, {DstReg}, {MIBShl, MIBShAmt});
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
     }
@@ -146,7 +146,7 @@ public:
         if (isInstUnsupported({TargetOpcode::G_IMPLICIT_DEF, {DstTy}}))
           return false;
         LLVM_DEBUG(dbgs() << ".. Combine G_ANYEXT(G_IMPLICIT_DEF): " << MI;);
-        Builder.buildInstr(TargetOpcode::G_IMPLICIT_DEF, DstReg);
+        Builder.buildInstr(TargetOpcode::G_IMPLICIT_DEF, {DstReg}, {});
       } else {
         // G_[SZ]EXT (G_IMPLICIT_DEF) -> G_CONSTANT 0 because the top
         // bits will be 0 for G_ZEXT and 0/1 for the G_SEXT.
@@ -169,8 +169,20 @@ public:
       return false;
 
     unsigned NumDefs = MI.getNumOperands() - 1;
-    MachineInstr *MergeI = getOpcodeDef(TargetOpcode::G_MERGE_VALUES,
-                                        MI.getOperand(NumDefs).getReg(), MRI);
+
+    unsigned MergingOpcode;
+    LLT OpTy = MRI.getType(MI.getOperand(NumDefs).getReg());
+    LLT DestTy = MRI.getType(MI.getOperand(0).getReg());
+    if (OpTy.isVector() && DestTy.isVector())
+      MergingOpcode = TargetOpcode::G_CONCAT_VECTORS;
+    else if (OpTy.isVector() && !DestTy.isVector())
+      MergingOpcode = TargetOpcode::G_BUILD_VECTOR;
+    else
+      MergingOpcode = TargetOpcode::G_MERGE_VALUES;
+
+    MachineInstr *MergeI =
+        getOpcodeDef(MergingOpcode, MI.getOperand(NumDefs).getReg(), MRI);
+
     if (!MergeI)
       return false;
 

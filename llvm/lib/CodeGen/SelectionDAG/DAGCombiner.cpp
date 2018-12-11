@@ -16544,7 +16544,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
           TLI.isTypeLegal(Scalar->getOperand(0).getValueType()))
         Scalar = Scalar->getOperand(0);
 
-      EVT SclTy = Scalar->getValueType(0);
+      EVT SclTy = Scalar.getValueType();
 
       if (!SclTy.isFloatingPoint() && !SclTy.isInteger())
         return SDValue();
@@ -17716,12 +17716,6 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   // If inserting an UNDEF, just return the original vector.
   if (N1.isUndef())
     return N0;
-
-  // For nested INSERT_SUBVECTORs, attempt to combine inner node first to allow
-  // us to pull BITCASTs from input to output.
-  if (N0.hasOneUse() && N0->getOpcode() == ISD::INSERT_SUBVECTOR)
-    if (SDValue NN0 = visitINSERT_SUBVECTOR(N0.getNode()))
-      return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT, NN0, N1, N2);
 
   // If this is an insert of an extracted vector into an undef vector, we can
   // just use the input to the extract.

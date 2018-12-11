@@ -65,6 +65,8 @@ static bool isArtifact(const MachineInstr &MI) {
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_MERGE_VALUES:
   case TargetOpcode::G_UNMERGE_VALUES:
+  case TargetOpcode::G_CONCAT_VECTORS:
+  case TargetOpcode::G_BUILD_VECTOR:
     return true;
   }
 }

@@ -1783,8 +1783,13 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     break;
   }
   }
-
   assert((KnownUndef & KnownZero) == 0 && "Elements flagged as undef AND zero");
+
+  // Constant fold all undef cases.
+  // TODO: Handle zero cases as well.
+  if (DemandedElts.isSubsetOf(KnownUndef))
+    return TLO.CombineTo(Op, TLO.DAG.getUNDEF(VT));
+
   return false;
 }
 

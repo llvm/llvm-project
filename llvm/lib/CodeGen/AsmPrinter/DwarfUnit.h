@@ -48,6 +48,7 @@ protected:
 
   /// Target of Dwarf emission.
   AsmPrinter *Asm;
+  MCSymbol *EndLabel;
 
   // Holders for some common dwarf information.
   DwarfDebug *DD;
@@ -82,6 +83,7 @@ protected:
 public:
   // Accessors.
   AsmPrinter* getAsmPrinter() const { return Asm; }
+  MCSymbol *getEndLabel() const { return EndLabel; }
   uint16_t getLanguage() const { return CUNode->getSourceLanguage(); }
   const DICompileUnit *getCUNode() const { return CUNode; }
 

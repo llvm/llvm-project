@@ -39,7 +39,7 @@
 // processor scheduling model.
 //
 // The `MCInstPredicateExample` definition above is equivalent (and therefore
-// could replace) the following definition from the ExynosM3 model (see
+// could replace) the following definition from a previous ExynosM3 model (see
 // AArch64SchedExynosM3.td):
 //
 // def M3BranchLinkFastPred  : SchedPredicate<[{
