@@ -95,6 +95,8 @@
 // Use the smallest possible integer type to represent the index of the variant.
 // Previously libc++ used "unsigned int" exclusivly.
 #  define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
+// Unstable attempt to provide a more optimized std::function
+#  define _LIBCPP_ABI_OPTIMIZED_FUNCTION
 #elif _LIBCPP_ABI_VERSION == 1
 #  if !defined(_LIBCPP_OBJECT_FORMAT_COFF)
 // Enable compiling copies of now inline methods into the dylib to support
