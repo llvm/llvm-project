@@ -19,6 +19,7 @@
 
 #include "test_macros.h"
 
+#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
 constexpr bool test_constexpr()
 {
     return std::char_traits<char8_t>::length(u8"") == 0
@@ -27,7 +28,6 @@ constexpr bool test_constexpr()
 
 int main()
 {
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
     assert(std::char_traits<char8_t>::length(u8"") == 0);
     assert(std::char_traits<char8_t>::length(u8"a") == 1);
     assert(std::char_traits<char8_t>::length(u8"aa") == 2);
@@ -35,5 +35,7 @@ int main()
     assert(std::char_traits<char8_t>::length(u8"aaaa") == 4);
 
     static_assert(test_constexpr(), "");
-#endif
 }
+#else
+int main() { }
+#endif
