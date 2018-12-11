@@ -31,7 +31,7 @@ static bool isNumericLiteralExpression(const Expr *E) {
 /// If type represents a pointer to CXXRecordDecl,
 /// and is not a typedef, return the decl name.
 /// Otherwise, return the serialization of type.
-static StringRef getPrettyTypeName(QualType QT) {
+static std::string getPrettyTypeName(QualType QT) {
   QualType PT = QT->getPointeeType();
   if (!PT.isNull() && !QT->getAs<TypedefType>())
     if (const auto *RD = PT->getAsCXXRecordDecl())
