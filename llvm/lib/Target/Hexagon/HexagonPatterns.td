@@ -246,6 +246,9 @@ def Aext64: PatFrag<(ops node:$Rs), (i64 (anyext node:$Rs))>;
 def Zext64: PatFrag<(ops node:$Rs), (i64 (zext node:$Rs))>;
 def Sext64: PatLeaf<(i64 Usxtw:$Rs)>;
 
+def azext: PatFrags<(ops node:$Rs), [(zext node:$Rs), (anyext node:$Rs)]>;
+def asext: PatFrags<(ops node:$Rs), [(sext node:$Rs), (anyext node:$Rs)]>;
+
 def: Pat<(IsOrAdd (i32 AddrFI:$Rs), s32_0ImmPred:$off),
          (PS_fi (i32 AddrFI:$Rs), imm:$off)>;
 
@@ -416,52 +419,48 @@ def: Pat<(sext_inreg I64:$Rs, i32), (A2_sxtw (LoReg $Rs))>;
 def: Pat<(sext_inreg I64:$Rs, i16), (A2_sxtw (A2_sxth (LoReg $Rs)))>;
 def: Pat<(sext_inreg I64:$Rs, i8),  (A2_sxtw (A2_sxtb (LoReg $Rs)))>;
 
-def: Pat<(i64 (sext I1:$Pu)),
-         (Combinew (C2_muxii PredRegs:$Pu, -1, 0),
-                   (C2_muxii PredRegs:$Pu, -1, 0))>;
-
-def: Pat<(i32   (sext I1:$Pu)),   (C2_muxii I1:$Pu, -1, 0)>;
-def: Pat<(i32   (zext I1:$Pu)),   (C2_muxii I1:$Pu, 1, 0)>;
-def: Pat<(i64   (zext I1:$Pu)),   (ToZext64 (C2_muxii I1:$Pu, 1, 0))>;
-def: Pat<(v2i16 (sext V2I1:$Pu)), (S2_vtrunehb (C2_mask V2I1:$Pu))>;
-def: Pat<(v2i32 (sext V2I1:$Pu)), (C2_mask V2I1:$Pu)>;
-def: Pat<(v4i8  (sext V4I1:$Pu)), (S2_vtrunehb (C2_mask V4I1:$Pu))>;
-def: Pat<(v4i16 (sext V4I1:$Pu)), (C2_mask V4I1:$Pu)>;
-def: Pat<(v8i8  (sext V8I1:$Pu)), (C2_mask V8I1:$Pu)>;
-
 def: Pat<(i64 (sext I32:$Rs)), (A2_sxtw I32:$Rs)>;
 def: Pat<(Zext64 I32:$Rs),     (ToZext64 $Rs)>;
 def: Pat<(Aext64 I32:$Rs),     (ToZext64 $Rs)>;
 
 def: Pat<(i32 (trunc I64:$Rs)), (LoReg $Rs)>;
-def: Pat<(i1 (trunc I64:$Rs)),  (C2_tfrrp (LoReg $Rs))>;
+def: Pat<(i1 (trunc I32:$Rs)),  (S2_tstbit_i I32:$Rs, 0)>;
+def: Pat<(i1 (trunc I64:$Rs)),  (S2_tstbit_i (LoReg $Rs), 0)>;
 
 let AddedComplexity = 20 in {
   def: Pat<(and I32:$Rs, 255),   (A2_zxtb I32:$Rs)>;
   def: Pat<(and I32:$Rs, 65535), (A2_zxth I32:$Rs)>;
 }
 
-def: Pat<(i32 (anyext I1:$Pu)), (C2_muxii I1:$Pu, 1, 0)>;
-def: Pat<(i64 (anyext I1:$Pu)), (ToZext64 (C2_muxii I1:$Pu, 1, 0))>;
+// Extensions from i1 or vectors of i1.
+def: Pat<(i32 (azext I1:$Pu)), (C2_muxii I1:$Pu, 1, 0)>;
+def: Pat<(i64 (azext I1:$Pu)), (ToZext64 (C2_muxii I1:$Pu, 1, 0))>;
+def: Pat<(i32  (sext I1:$Pu)), (C2_muxii I1:$Pu, -1, 0)>;
+def: Pat<(i64  (sext I1:$Pu)), (Combinew (C2_muxii PredRegs:$Pu, -1, 0),
+                                         (C2_muxii PredRegs:$Pu, -1, 0))>;
+
+def: Pat<(v2i16 (sext V2I1:$Pu)), (S2_vtrunehb (C2_mask V2I1:$Pu))>;
+def: Pat<(v2i32 (sext V2I1:$Pu)), (C2_mask V2I1:$Pu)>;
+def: Pat<(v4i8  (sext V4I1:$Pu)), (S2_vtrunehb (C2_mask V4I1:$Pu))>;
+def: Pat<(v4i16 (sext V4I1:$Pu)), (C2_mask V4I1:$Pu)>;
+def: Pat<(v8i8  (sext V8I1:$Pu)), (C2_mask V8I1:$Pu)>;
 
 def Vsplatpi: OutPatFrag<(ops node:$V),
                          (Combinew (A2_tfrsi $V), (A2_tfrsi $V))>;
-def: Pat<(v8i8 (zext V8I1:$Pu)),
-         (A2_andp (C2_mask V8I1:$Pu), (Vsplatpi (i32 0x01010101)))>;
-def: Pat<(v4i16 (zext V4I1:$Pu)),
-         (A2_andp (C2_mask V4I1:$Pu), (Vsplatpi (i32 0x00010001)))>;
-def: Pat<(v2i32 (zext V2I1:$Pu)),
-         (A2_andp (C2_mask V2I1:$Pu), (A2_combineii (i32 1), (i32 1)))>;
 
-def: Pat<(v4i8 (zext V4I1:$Pu)),
-         (A2_andir (LoReg (C2_mask V4I1:$Pu)), (i32 0x01010101))>;
-def: Pat<(v2i16 (zext V2I1:$Pu)),
+def: Pat<(v2i16 (azext V2I1:$Pu)),
          (A2_andir (LoReg (C2_mask V2I1:$Pu)), (i32 0x00010001))>;
+def: Pat<(v2i32 (azext V2I1:$Pu)),
+         (A2_andp (C2_mask V2I1:$Pu), (A2_combineii (i32 1), (i32 1)))>;
+def: Pat<(v4i8 (azext V4I1:$Pu)),
+         (A2_andir (LoReg (C2_mask V4I1:$Pu)), (i32 0x01010101))>;
+def: Pat<(v4i16 (azext V4I1:$Pu)),
+         (A2_andp (C2_mask V4I1:$Pu), (Vsplatpi (i32 0x00010001)))>;
+def: Pat<(v8i8 (azext V8I1:$Pu)),
+         (A2_andp (C2_mask V8I1:$Pu), (Vsplatpi (i32 0x01010101)))>;
 
-def: Pat<(v4i16 (zext   V4I8:$Rs)),  (S2_vzxtbh V4I8:$Rs)>;
-def: Pat<(v2i32 (zext   V2I16:$Rs)), (S2_vzxthw V2I16:$Rs)>;
-def: Pat<(v4i16 (anyext V4I8:$Rs)),  (S2_vzxtbh V4I8:$Rs)>;
-def: Pat<(v2i32 (anyext V2I16:$Rs)), (S2_vzxthw V2I16:$Rs)>;
+def: Pat<(v4i16 (azext  V4I8:$Rs)),  (S2_vzxtbh V4I8:$Rs)>;
+def: Pat<(v2i32 (azext  V2I16:$Rs)), (S2_vzxthw V2I16:$Rs)>;
 def: Pat<(v4i16 (sext   V4I8:$Rs)),  (S2_vsxtbh V4I8:$Rs)>;
 def: Pat<(v2i32 (sext   V2I16:$Rs)), (S2_vsxthw V2I16:$Rs)>;
 

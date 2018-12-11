@@ -258,8 +258,8 @@ bool MipsInstructionSelector::select(MachineInstr &I,
 
     MachineIRBuilder B(I);
     for (const struct Instr &Instruction : Instructions) {
-      MachineInstrBuilder MIB =
-          B.buildInstr(Instruction.Opcode, Instruction.Def, Instruction.LHS);
+      MachineInstrBuilder MIB = B.buildInstr(
+          Instruction.Opcode, {Instruction.Def}, {Instruction.LHS});
 
       if (Instruction.hasImm())
         MIB.addImm(Instruction.RHS);

@@ -769,6 +769,9 @@ bool operator>=(typename common_type<basic_string_view<_CharT, _Traits> >::type 
 }
 
 typedef basic_string_view<char>     string_view;
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+typedef basic_string_view<char8_t>  u8string_view;
+#endif
 typedef basic_string_view<char16_t> u16string_view;
 typedef basic_string_view<char32_t> u32string_view;
 typedef basic_string_view<wchar_t>  wstring_view;
@@ -801,6 +804,14 @@ inline namespace literals
     {
         return basic_string_view<wchar_t> (__str, __len);
     }
+
+#ifndef _LIBCPP_NO_HAS_CHAR8_T
+    inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+    basic_string_view<char8_t> operator "" sv(const char8_t *__str, size_t __len) _NOEXCEPT
+    {
+        return basic_string_view<char8_t> (__str, __len);
+    }
+#endif
 
     inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
     basic_string_view<char16_t> operator "" sv(const char16_t *__str, size_t __len) _NOEXCEPT

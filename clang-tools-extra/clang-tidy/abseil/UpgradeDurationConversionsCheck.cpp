@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "UpgradeDurationConversionsCheck.h"
+#include "DurationRewriter.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -102,10 +103,7 @@ void UpgradeDurationConversionsCheck::registerMatchers(MatchFinder *Finder) {
           anyOf(hasCastKind(CK_UserDefinedConversion),
                 has(implicitCastExpr(hasCastKind(CK_UserDefinedConversion)))),
           hasParent(callExpr(
-              callee(functionDecl(
-                  hasAnyName("::absl::Nanoseconds", "::absl::Microseconds",
-                             "::absl::Milliseconds", "::absl::Seconds",
-                             "::absl::Minutes", "::absl::Hours"),
+              callee(functionDecl(DurationFactoryFunction(),
                   unless(hasParent(functionTemplateDecl())))),
               hasArgument(0, expr().bind("arg"))))),
       this);

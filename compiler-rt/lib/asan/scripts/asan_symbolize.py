@@ -477,7 +477,7 @@ class SymbolizationLoop(object):
     symbolized_line = self.symbolize_address(addr, binary, offset, arch)
     if not symbolized_line:
       if original_binary != binary:
-        symbolized_line = self.symbolize_address(addr, binary, offset, arch)
+        symbolized_line = self.symbolize_address(addr, original_binary, offset, arch)
     return self.get_symbolized_lines(symbolized_line)
 
 

@@ -211,13 +211,13 @@ DynamicLoaderDarwinKernel::SearchForKernelAtSameLoadAddr(Process *process) {
       exe_objfile->GetStrata() != ObjectFile::eStrataKernel)
     return LLDB_INVALID_ADDRESS;
 
-  if (!exe_objfile->GetHeaderAddress().IsValid())
+  if (!exe_objfile->GetBaseAddress().IsValid())
     return LLDB_INVALID_ADDRESS;
 
   if (CheckForKernelImageAtAddress(
-          exe_objfile->GetHeaderAddress().GetFileAddress(), process) ==
+          exe_objfile->GetBaseAddress().GetFileAddress(), process) ==
       exe_module->GetUUID())
-    return exe_objfile->GetHeaderAddress().GetFileAddress();
+    return exe_objfile->GetBaseAddress().GetFileAddress();
 
   return LLDB_INVALID_ADDRESS;
 }
@@ -931,7 +931,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       ObjectFile *kernel_object_file = m_module_sp->GetObjectFile();
       if (kernel_object_file) {
         addr_t file_address =
-            kernel_object_file->GetHeaderAddress().GetFileAddress();
+            kernel_object_file->GetBaseAddress().GetFileAddress();
         if (m_load_address != LLDB_INVALID_ADDRESS &&
             file_address != LLDB_INVALID_ADDRESS) {
           s->Printf("Kernel slid 0x%" PRIx64 " in memory.\n",
@@ -1005,10 +1005,10 @@ void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
         ObjectFile *kernel_object_file = m_kernel.GetModule()->GetObjectFile();
         if (kernel_object_file) {
           addr_t load_address =
-              kernel_object_file->GetHeaderAddress().GetLoadAddress(
+              kernel_object_file->GetBaseAddress().GetLoadAddress(
                   &m_process->GetTarget());
           addr_t file_address =
-              kernel_object_file->GetHeaderAddress().GetFileAddress();
+              kernel_object_file->GetBaseAddress().GetFileAddress();
           if (load_address != LLDB_INVALID_ADDRESS && load_address != 0) {
             m_kernel.SetLoadAddress(load_address);
             if (load_address != file_address) {

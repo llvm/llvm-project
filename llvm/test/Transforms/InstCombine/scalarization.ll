@@ -137,10 +137,10 @@ define float @extract_element_constant_vector_variable_index(i32 %y) {
 
 define i1 @cheap_to_extract_icmp(<4 x i32> %x, <4 x i1> %y) {
 ; CHECK-LABEL: @cheap_to_extract_icmp(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[CMP]], i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[Y:%.*]], i32 2
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[X:%.*]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[Y:%.*]], i32 2
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = icmp eq <4 x i32> %x, zeroinitializer
@@ -151,10 +151,10 @@ define i1 @cheap_to_extract_icmp(<4 x i32> %x, <4 x i1> %y) {
 
 define i1 @cheap_to_extract_fcmp(<4 x float> %x, <4 x i1> %y) {
 ; CHECK-LABEL: @cheap_to_extract_fcmp(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <4 x float> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i1> [[CMP]], i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[Y:%.*]], i32 2
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[X:%.*]], i32 2
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp oeq float [[TMP1]], 0.000000e+00
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[Y:%.*]], i32 2
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp = fcmp oeq <4 x float> %x, zeroinitializer
@@ -165,8 +165,8 @@ define i1 @cheap_to_extract_fcmp(<4 x float> %x, <4 x i1> %y) {
 
 define i1 @extractelt_vector_icmp_constrhs(<2 x i32> %arg) {
 ; CHECK-LABEL: @extractelt_vector_icmp_constrhs(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[ARG:%.*]], zeroinitializer
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i1> [[CMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[EXT:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[EXT]]
 ;
   %cmp = icmp eq <2 x i32> %arg, zeroinitializer
@@ -176,8 +176,8 @@ define i1 @extractelt_vector_icmp_constrhs(<2 x i32> %arg) {
 
 define i1 @extractelt_vector_fcmp_constrhs(<2 x float> %arg) {
 ; CHECK-LABEL: @extractelt_vector_fcmp_constrhs(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[ARG:%.*]], zeroinitializer
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i1> [[CMP]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[EXT:%.*]] = fcmp oeq float [[TMP1]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[EXT]]
 ;
   %cmp = fcmp oeq <2 x float> %arg, zeroinitializer
@@ -187,8 +187,8 @@ define i1 @extractelt_vector_fcmp_constrhs(<2 x float> %arg) {
 
 define i1 @extractelt_vector_icmp_constrhs_dynidx(<2 x i32> %arg, i32 %idx) {
 ; CHECK-LABEL: @extractelt_vector_icmp_constrhs_dynidx(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[ARG:%.*]], zeroinitializer
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i1> [[CMP]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i32> [[ARG:%.*]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[EXT:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[EXT]]
 ;
   %cmp = icmp eq <2 x i32> %arg, zeroinitializer
@@ -198,8 +198,8 @@ define i1 @extractelt_vector_icmp_constrhs_dynidx(<2 x i32> %arg, i32 %idx) {
 
 define i1 @extractelt_vector_fcmp_constrhs_dynidx(<2 x float> %arg, i32 %idx) {
 ; CHECK-LABEL: @extractelt_vector_fcmp_constrhs_dynidx(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <2 x float> [[ARG:%.*]], zeroinitializer
-; CHECK-NEXT:    [[EXT:%.*]] = extractelement <2 x i1> [[CMP]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[ARG:%.*]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[EXT:%.*]] = fcmp oeq float [[TMP1]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[EXT]]
 ;
   %cmp = fcmp oeq <2 x float> %arg, zeroinitializer

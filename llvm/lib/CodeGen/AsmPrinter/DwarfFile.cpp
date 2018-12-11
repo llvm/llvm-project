@@ -46,6 +46,8 @@ void DwarfFile::emitUnit(DwarfUnit *TheU, bool UseOffsets) {
   TheU->emitHeader(UseOffsets);
 
   Asm->emitDwarfDIE(Die);
+
+  Asm->OutStreamer->EmitLabel(TheU->getEndLabel());
 }
 
 // Compute the size and offset for each DIE.

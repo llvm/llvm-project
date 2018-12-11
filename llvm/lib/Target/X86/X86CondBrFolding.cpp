@@ -468,7 +468,8 @@ bool X86CondBrFolding::analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
     break;
   }
   SrcReg = MI.getOperand(SrcRegIndex).getReg();
-  assert(MI.getOperand(ValueIndex).isImm() && "Expecting Imm operand");
+  if (!MI.getOperand(ValueIndex).isImm())
+    return false;
   CmpValue = MI.getOperand(ValueIndex).getImm();
   return true;
 }
