@@ -407,8 +407,10 @@ class Configuration(object):
             if self.use_deployment:
                 self.add_deployment_feature('with_system_cxx_lib')
 
-        # Configure the availability feature.
-        if self.use_deployment:
+        # Configure the availability feature. Availability is only enabled
+        # with libc++, because other standard libraries do not provide
+        # availability markup.
+        if self.use_deployment and self.cxx_stdlib_under_test == 'libc++':
             self.config.available_features.add('availability')
             self.add_deployment_feature('availability')
 
