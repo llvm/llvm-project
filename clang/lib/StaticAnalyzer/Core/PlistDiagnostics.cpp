@@ -781,7 +781,8 @@ static ExpansionInfo getExpandedMacro(SourceLocation MacroLoc,
   llvm::SmallString<200> ExpansionBuf;
   llvm::raw_svector_ostream OS(ExpansionBuf);
   TokenPrinter Printer(OS, PP);
-  return { getMacroNameAndPrintExpansion(Printer, MacroLoc, PP), OS.str() };
+  std::string MacroName = getMacroNameAndPrintExpansion(Printer, MacroLoc, PP);
+  return { MacroName, OS.str() };
 }
 
 static std::string getMacroNameAndPrintExpansion(TokenPrinter &Printer,
