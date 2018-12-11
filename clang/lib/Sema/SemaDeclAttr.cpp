@@ -425,7 +425,7 @@ handleSimpleAttributeWithCheck(Sema &S, ValueDecl *D, SourceRange SR,
                                llvm::function_ref<bool(QualType)> Check,
                                unsigned DiagID, DiagnosticArgs... ExtraArgs) {
   if (!Check(D->getType())) {
-    Sema::SemaDiagnosticBuilder DB = S.Diag(D->getBeginLoc(), DiagID);
+    Sema::SemaDiagnosticBuilder DB = S.Diag(D->getLocStart(), DiagID);
     appendDiagnostics(DB, std::forward<DiagnosticArgs>(ExtraArgs)...);
     return;
   }
