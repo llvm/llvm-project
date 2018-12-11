@@ -28,6 +28,17 @@ static bool isNumericLiteralExpression(const Expr *E) {
          isa<CXXBoolLiteralExpr>(E);
 }
 
+/// If type represents a pointer to CXXRecordDecl,
+/// and is not a typedef, return the decl name.
+/// Otherwise, return the serialization of type.
+static StringRef getPrettyTypeName(QualType QT) {
+  QualType PT = QT->getPointeeType();
+  if (!PT.isNull() && !QT->getAs<TypedefType>())
+    if (const auto *RD = PT->getAsCXXRecordDecl())
+      return RD->getName();
+  return QT.getAsString();
+}
+
 /// Write information about the type state change to {@code os},
 /// return whether the note should be generated.
 static bool shouldGenerateNote(llvm::raw_string_ostream &os,
@@ -193,7 +204,7 @@ CFRefReportVisitor::VisitNode(const ExplodedNode *N,
            << Sym->getType().getAsString() << " with a ";
       } else if (CurrV.getObjKind() == RetEffect::OS) {
         os << " returns an OSObject of type "
-           << Sym->getType().getAsString() << " with a ";
+           << getPrettyTypeName(Sym->getType()) << " with a ";
       } else if (CurrV.getObjKind() == RetEffect::Generalized) {
         os << " returns an object of type " << Sym->getType().getAsString()
            << " with a ";
@@ -432,7 +443,7 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   if (RegionDescription) {
     os << "object allocated and stored into '" << *RegionDescription << '\'';
   } else {
-    os << "allocated object";
+    os << "allocated object of type " << getPrettyTypeName(Sym->getType());
   }
 
   // Get the retain count.
@@ -472,10 +483,10 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
               " Foundation";
       }
     }
-  }
-  else
+  } else {
     os << " is not referenced later in this execution path and has a retain "
           "count of +" << RV->getCount();
+  }
 
   return std::make_shared<PathDiagnosticEventPiece>(L, os.str());
 }
@@ -555,6 +566,10 @@ void CFRefLeakReport::createDescription(CheckerContext &Ctx,
       FullSourceLoc SL(AllocStmt->getLocStart(), Ctx.getSourceManager());
       os << " (allocated on line " << SL.getSpellingLineNumber() << ")";
     }
+  } else {
+
+    // If we can't figure out the name, just supply the type information.
+    os << " of type " << getPrettyTypeName(Sym->getType());
   }
 }
 
