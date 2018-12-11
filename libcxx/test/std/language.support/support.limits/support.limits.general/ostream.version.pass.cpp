@@ -23,7 +23,7 @@ int main()
 {
 //  ensure that the macros that are supposed to be defined in <ostream> are defined.
 
-#if TEST_STD_VER > 17
+#if TEST_STD_VER > 17 && defined(__cpp_char8_t)
 # if !defined(__cpp_lib_char8_t)  
   LIBCPP_STATIC_ASSERT(false, "__cpp_lib_char8_t is not defined");
 # else
