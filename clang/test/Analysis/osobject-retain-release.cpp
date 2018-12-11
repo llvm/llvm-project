@@ -24,6 +24,8 @@ struct OSObject {
 };
 
 struct OSIterator : public OSObject {
+
+  static const OSMetaClass * const metaClass;
 };
 
 struct OSArray : public OSObject {
@@ -40,7 +42,6 @@ struct OSArray : public OSObject {
 
   static OS_RETURNS_NOT_RETAINED OSArray *MaskedGetter();
   static OS_RETURNS_RETAINED OSArray *getOoopsActuallyCreate();
-
 
   static const OSMetaClass * const metaClass;
 };
@@ -91,6 +92,25 @@ struct ArrayOwner : public OSObject {
 
   OSArray *getArraySourceUnknown();
 };
+
+OSArray *generateArray() {
+  return OSArray::withCapacity(10); // expected-note{{Call to function 'withCapacity' returns an OSObject of type struct OSArray * with a +1 retain count}}
+}
+
+unsigned int check_leak_good_error_message() {
+  unsigned int out;
+  {
+    OSArray *leaked = generateArray(); // expected-note{{Calling 'generateArray'}}
+                                       // expected-note@-1{{Returning from 'generateArray'}}
+    out = leaked->getCount(); // expected-warning{{Potential leak of an object stored into 'leaked'}}
+                              // expected-note@-1{{Object leaked: object allocated and stored into 'leaked' is not referenced later in this execution path and has a retain count of +1}}
+  }
+  return out;
+}
+
+unsigned int check_leak_msg_temporary() {
+  return generateArray()->getCount();
+}
 
 void check_confusing_getters() {
   OSArray *arr = OSArray::withCapacity(10);
@@ -143,7 +163,7 @@ void check_dynamic_cast_null_branch(OSObject *obj) {
   OSArray *arr1 = OSArray::withCapacity(10); // expected-note{{Call to function 'withCapacity' returns an OSObject}}
   OSArray *arr = OSDynamicCast(OSArray, obj);
   if (!arr) // expected-note{{Taking true branch}}
-    return; // expected-warning{{Potential leak}}
+    return; // expected-warning{{Potential leak of an object stored into 'arr1'}}
             // expected-note@-1{{Object leaked}}
   arr1->release();
 }

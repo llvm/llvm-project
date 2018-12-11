@@ -306,9 +306,8 @@ struct AllocationInfo {
 };
 } // end anonymous namespace
 
-static AllocationInfo
-GetAllocationSite(ProgramStateManager& StateMgr, const ExplodedNode *N,
-                  SymbolRef Sym) {
+static AllocationInfo GetAllocationSite(ProgramStateManager &StateMgr,
+                                        const ExplodedNode *N, SymbolRef Sym) {
   const ExplodedNode *AllocationNode = N;
   const ExplodedNode *AllocationNodeInCurrentOrParentContext = N;
   const MemRegion *FirstBinding = nullptr;
@@ -353,9 +352,9 @@ GetAllocationSite(ProgramStateManager& StateMgr, const ExplodedNode *N,
     // Find the last init that was called on the given symbol and store the
     // init method's location context.
     if (!InitMethodContext)
-      if (Optional<CallEnter> CEP = N->getLocation().getAs<CallEnter>()) {
+      if (auto CEP = N->getLocation().getAs<CallEnter>()) {
         const Stmt *CE = CEP->getCallExpr();
-        if (const ObjCMessageExpr *ME = dyn_cast_or_null<ObjCMessageExpr>(CE)) {
+        if (const auto *ME = dyn_cast_or_null<ObjCMessageExpr>(CE)) {
           const Stmt *RecExpr = ME->getInstanceReceiver();
           if (RecExpr) {
             SVal RecV = St->getSVal(RecExpr, NContext);
@@ -365,7 +364,7 @@ GetAllocationSite(ProgramStateManager& StateMgr, const ExplodedNode *N,
         }
       }
 
-    N = N->pred_empty() ? nullptr : *(N->pred_begin());
+    N = N->getFirstPred();
   }
 
   // If we are reporting a leak of the object that was allocated with alloc,
@@ -382,9 +381,11 @@ GetAllocationSite(ProgramStateManager& StateMgr, const ExplodedNode *N,
   // If allocation happened in a function different from the leak node context,
   // do not report the binding.
   assert(N && "Could not find allocation node");
-  if (N->getLocationContext() != LeakContext) {
+
+  if (AllocationNodeInCurrentOrParentContext &&
+      AllocationNodeInCurrentOrParentContext->getLocationContext() !=
+          LeakContext)
     FirstBinding = nullptr;
-  }
 
   return AllocationInfo(AllocationNodeInCurrentOrParentContext,
                         FirstBinding,
@@ -409,8 +410,7 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
   // We are reporting a leak.  Walk up the graph to get to the first node where
   // the symbol appeared, and also get the first VarDecl that tracked object
   // is stored to.
-  AllocationInfo AllocI =
-    GetAllocationSite(BRC.getStateManager(), EndN, Sym);
+  AllocationInfo AllocI = GetAllocationSite(BRC.getStateManager(), EndN, Sym);
 
   const MemRegion* FirstBinding = AllocI.R;
   BR.markInteresting(AllocI.InterestingMethodContext);
@@ -448,11 +448,12 @@ CFRefLeakReportVisitor::getEndPath(BugReporterContext &BRC,
     os << (isa<ObjCMethodDecl>(D) ? " is returned from a method "
                                   : " is returned from a function ");
 
-    if (D->hasAttr<CFReturnsNotRetainedAttr>())
+    if (D->hasAttr<CFReturnsNotRetainedAttr>()) {
       os << "that is annotated as CF_RETURNS_NOT_RETAINED";
-    else if (D->hasAttr<NSReturnsNotRetainedAttr>())
+    } else if (D->hasAttr<NSReturnsNotRetainedAttr>()) {
       os << "that is annotated as NS_RETURNS_NOT_RETAINED";
-    else {
+      // TODO: once the patch is ready, insert a case for OS_RETURNS_NOT_RETAINED
+    } else {
       if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
         if (BRC.getASTContext().getLangOpts().ObjCAutoRefCount) {
           os << "managed by Automatic Reference Counting";
@@ -497,7 +498,8 @@ void CFRefLeakReport::deriveParamLocation(CheckerContext &Ctx, SymbolRef sym) {
   }
 }
 
-void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,SymbolRef sym) {
+void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,
+                                          SymbolRef sym) {
   // Most bug reports are cached at the location where they occurred.
   // With leaks, we want to unique them by the location where they were
   // allocated, and only report a single path.  To do this, we need to find
@@ -511,7 +513,7 @@ void CFRefLeakReport::deriveAllocLocation(CheckerContext &Ctx,SymbolRef sym) {
   const SourceManager& SMgr = Ctx.getSourceManager();
 
   AllocationInfo AllocI =
-    GetAllocationSite(Ctx.getStateManager(), getErrorNode(), sym);
+      GetAllocationSite(Ctx.getStateManager(), getErrorNode(), sym);
 
   AllocNode = AllocI.N;
   AllocBinding = AllocI.R;
