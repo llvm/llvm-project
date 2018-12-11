@@ -409,17 +409,13 @@ struct _LIBCPP_TEMPLATE_VIS pair
             _CheckArgsDep<_Dummy>::template __enable_default<_T1, _T2>()
     > = false>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-    pair() _NOEXCEPT_(is_nothrow_default_constructible<first_type>::value &&
-                      is_nothrow_default_constructible<second_type>::value)
-        : first(), second() {}
+    pair() : first(), second() {}
 
     template <bool _Dummy = true, _EnableB<
              _CheckArgsDep<_Dummy>::template __enable_explicit<_T1 const&, _T2 const&>()
     > = false>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     explicit pair(_T1 const& __t1, _T2 const& __t2)
-        _NOEXCEPT_(is_nothrow_copy_constructible<first_type>::value &&
-                   is_nothrow_copy_constructible<second_type>::value)
         : first(__t1), second(__t2) {}
 
     template<bool _Dummy = true, _EnableB<
@@ -427,8 +423,6 @@ struct _LIBCPP_TEMPLATE_VIS pair
     > = false>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     pair(_T1 const& __t1, _T2 const& __t2)
-        _NOEXCEPT_(is_nothrow_copy_constructible<first_type>::value &&
-                   is_nothrow_copy_constructible<second_type>::value)
         : first(__t1), second(__t2) {}
 
     template<class _U1, class _U2, _EnableB<
@@ -436,8 +430,6 @@ struct _LIBCPP_TEMPLATE_VIS pair
     > = false>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     explicit pair(_U1&& __u1, _U2&& __u2)
-        _NOEXCEPT_((is_nothrow_constructible<first_type, _U1>::value &&
-                    is_nothrow_constructible<second_type, _U2>::value))
         : first(_VSTD::forward<_U1>(__u1)), second(_VSTD::forward<_U2>(__u2)) {}
 
     template<class _U1, class _U2, _EnableB<
@@ -445,8 +437,6 @@ struct _LIBCPP_TEMPLATE_VIS pair
     > = false>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     pair(_U1&& __u1, _U2&& __u2)
-        _NOEXCEPT_((is_nothrow_constructible<first_type, _U1>::value &&
-                    is_nothrow_constructible<second_type, _U2>::value))
         : first(_VSTD::forward<_U1>(__u1)), second(_VSTD::forward<_U2>(__u2)) {}
 
     template<class _U1, class _U2, _EnableB<
@@ -454,8 +444,6 @@ struct _LIBCPP_TEMPLATE_VIS pair
     > = false>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     explicit pair(pair<_U1, _U2> const& __p)
-        _NOEXCEPT_((is_nothrow_constructible<first_type, _U1 const&>::value &&
-                    is_nothrow_constructible<second_type, _U2 const&>::value))
         : first(__p.first), second(__p.second) {}
 
     template<class _U1, class _U2, _EnableB<
@@ -463,8 +451,6 @@ struct _LIBCPP_TEMPLATE_VIS pair
     > = false>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     pair(pair<_U1, _U2> const& __p)
-        _NOEXCEPT_((is_nothrow_constructible<first_type, _U1 const&>::value &&
-                    is_nothrow_constructible<second_type, _U2 const&>::value))
         : first(__p.first), second(__p.second) {}
 
     template<class _U1, class _U2, _EnableB<
@@ -472,8 +458,6 @@ struct _LIBCPP_TEMPLATE_VIS pair
     > = false>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     explicit pair(pair<_U1, _U2>&&__p)
-        _NOEXCEPT_((is_nothrow_constructible<first_type, _U1&&>::value &&
-                    is_nothrow_constructible<second_type, _U2&&>::value))
         : first(_VSTD::forward<_U1>(__p.first)), second(_VSTD::forward<_U2>(__p.second)) {}
 
     template<class _U1, class _U2, _EnableB<
@@ -481,8 +465,6 @@ struct _LIBCPP_TEMPLATE_VIS pair
     > = false>
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
     pair(pair<_U1, _U2>&& __p)
-        _NOEXCEPT_((is_nothrow_constructible<first_type, _U1&&>::value &&
-                    is_nothrow_constructible<second_type, _U2&&>::value))
         : first(_VSTD::forward<_U1>(__p.first)), second(_VSTD::forward<_U2>(__p.second)) {}
 
     template<class _Tuple, _EnableB<
@@ -505,8 +487,6 @@ struct _LIBCPP_TEMPLATE_VIS pair
     _LIBCPP_INLINE_VISIBILITY
     pair(piecewise_construct_t __pc,
          tuple<_Args1...> __first_args, tuple<_Args2...> __second_args)
-        _NOEXCEPT_((is_nothrow_constructible<first_type, _Args1...>::value &&
-                    is_nothrow_constructible<second_type, _Args2...>::value))
         : pair(__pc, __first_args, __second_args,
                 typename __make_tuple_indices<sizeof...(_Args1)>::type(),
                 typename __make_tuple_indices<sizeof...(_Args2) >::type()) {}
