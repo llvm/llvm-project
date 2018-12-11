@@ -24,9 +24,15 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
+
 using namespace clang;
 using namespace ento;
 using namespace markup;
+
+//===----------------------------------------------------------------------===//
+// Declarations of helper classes and functions for emitting bug reports in
+// plist format.
+//===----------------------------------------------------------------------===//
 
 namespace {
   class PlistDiagnostics : public PathDiagnosticConsumer {
@@ -59,34 +65,91 @@ namespace {
   };
 } // end anonymous namespace
 
-PlistDiagnostics::PlistDiagnostics(AnalyzerOptions &AnalyzerOpts,
-                                   const std::string& output,
-                                   const Preprocessor &PP,
-                                   bool supportsMultipleFiles)
-  : OutputFile(output), PP(PP), AnOpts(AnalyzerOpts),
-    SupportsCrossFileDiagnostics(supportsMultipleFiles) {}
+namespace {
 
-void ento::createPlistDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                         PathDiagnosticConsumers &C,
-                                         const std::string& s,
-                                         const Preprocessor &PP) {
-  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP,
-                                   /*supportsMultipleFiles*/ false));
-}
+/// A helper class for emitting a single report.
+class PlistPrinter {
+  const FIDMap& FM;
+  AnalyzerOptions &AnOpts;
+  const Preprocessor &PP;
 
-void ento::createPlistMultiFileDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                                  PathDiagnosticConsumers &C,
-                                                  const std::string &s,
-                                                  const Preprocessor &PP) {
-  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP,
-                                   /*supportsMultipleFiles*/ true));
-}
+public:
+  PlistPrinter(const FIDMap& FM, AnalyzerOptions &AnOpts,
+               const Preprocessor &PP)
+    : FM(FM), AnOpts(AnOpts), PP(PP) {
+  }
 
-static void EmitRanges(raw_ostream &o,
-                       const ArrayRef<SourceRange> Ranges,
-                       const FIDMap& FM,
-                       const Preprocessor &PP,
-                       unsigned indent) {
+  void ReportDiag(raw_ostream &o, const PathDiagnosticPiece& P) {
+    ReportPiece(o, P, /*indent*/ 4, /*depth*/ 0, /*includeControlFlow*/ true);
+
+    // Don't emit a warning about an unused private field.
+    (void)AnOpts;
+  }
+
+private:
+  void ReportPiece(raw_ostream &o, const PathDiagnosticPiece &P,
+                   unsigned indent, unsigned depth, bool includeControlFlow,
+                   bool isKeyEvent = false) {
+    switch (P.getKind()) {
+      case PathDiagnosticPiece::ControlFlow:
+        if (includeControlFlow)
+          ReportControlFlow(o, cast<PathDiagnosticControlFlowPiece>(P), indent);
+        break;
+      case PathDiagnosticPiece::Call:
+        ReportCall(o, cast<PathDiagnosticCallPiece>(P), indent,
+                   depth);
+        break;
+      case PathDiagnosticPiece::Event:
+        ReportEvent(o, cast<PathDiagnosticEventPiece>(P), indent, depth,
+                    isKeyEvent);
+        break;
+      case PathDiagnosticPiece::Macro:
+        ReportMacro(o, cast<PathDiagnosticMacroPiece>(P), indent, depth);
+        break;
+      case PathDiagnosticPiece::Note:
+        ReportNote(o, cast<PathDiagnosticNotePiece>(P), indent);
+        break;
+    }
+  }
+
+  void EmitRanges(raw_ostream &o, const ArrayRef<SourceRange> Ranges,
+                  unsigned indent);
+  void EmitMessage(raw_ostream &o, StringRef Message, unsigned indent);
+
+  void ReportControlFlow(raw_ostream &o,
+                         const PathDiagnosticControlFlowPiece& P,
+                         unsigned indent);
+  void ReportEvent(raw_ostream &o, const PathDiagnosticEventPiece& P,
+                   unsigned indent, unsigned depth, bool isKeyEvent = false);
+  void ReportCall(raw_ostream &o, const PathDiagnosticCallPiece &P,
+                  unsigned indent, unsigned depth);
+  void ReportMacro(raw_ostream &o, const PathDiagnosticMacroPiece& P,
+                   unsigned indent, unsigned depth);
+  void ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
+                  unsigned indent);
+};
+
+} // end of anonymous namespace
+
+static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
+                         AnalyzerOptions &AnOpts,
+                         const Preprocessor &PP,
+                         const PathPieces &Path);
+
+/// Print coverage information to output stream {@code o}.
+/// May modify the used list of files {@code Fids} by inserting new ones.
+static void printCoverage(const PathDiagnostic *D,
+                          unsigned InputIndentLevel,
+                          SmallVectorImpl<FileID> &Fids,
+                          FIDMap &FM,
+                          llvm::raw_fd_ostream &o);
+//===----------------------------------------------------------------------===//
+// Methods of PlistPrinter.
+//===----------------------------------------------------------------------===//
+
+void PlistPrinter::EmitRanges(raw_ostream &o,
+                              const ArrayRef<SourceRange> Ranges,
+                              unsigned indent) {
 
   if (Ranges.empty())
     return;
@@ -106,7 +169,8 @@ static void EmitRanges(raw_ostream &o,
   Indent(o, indent) << "</array>\n";
 }
 
-static void EmitMessage(raw_ostream &o, StringRef Message, unsigned indent) {
+void PlistPrinter::EmitMessage(raw_ostream &o, StringRef Message,
+                               unsigned indent) {
   // Output the text.
   assert(!Message.empty());
   Indent(o, indent) << "<key>extended_message</key>\n";
@@ -120,11 +184,9 @@ static void EmitMessage(raw_ostream &o, StringRef Message, unsigned indent) {
   EmitString(o, Message) << '\n';
 }
 
-static void ReportControlFlow(raw_ostream &o,
-                              const PathDiagnosticControlFlowPiece& P,
-                              const FIDMap& FM,
-                              const Preprocessor &PP,
-                              unsigned indent) {
+void PlistPrinter::ReportControlFlow(raw_ostream &o,
+                                     const PathDiagnosticControlFlowPiece& P,
+                                     unsigned indent) {
 
   const SourceManager &SM = PP.getSourceManager();
   const LangOptions &LangOpts = PP.getLangOpts();
@@ -176,13 +238,9 @@ static void ReportControlFlow(raw_ostream &o,
   Indent(o, indent) << "</dict>\n";
 }
 
-static void ReportEvent(raw_ostream &o,
-                        const PathDiagnosticEventPiece& P,
-                        const FIDMap& FM,
-                        const Preprocessor &PP,
-                        unsigned indent,
-                        unsigned depth,
-                        bool isKeyEvent = false) {
+void PlistPrinter::ReportEvent(raw_ostream &o, const PathDiagnosticEventPiece& P,
+                               unsigned indent, unsigned depth,
+                               bool isKeyEvent) {
 
   const SourceManager &SM = PP.getSourceManager();
 
@@ -203,7 +261,7 @@ static void ReportEvent(raw_ostream &o,
 
   // Output the ranges (if any).
   ArrayRef<SourceRange> Ranges = P.getRanges();
-  EmitRanges(o, Ranges, FM, PP, indent);
+  EmitRanges(o, Ranges, indent);
 
   // Output the call depth.
   Indent(o, indent) << "<key>depth</key>";
@@ -217,65 +275,42 @@ static void ReportEvent(raw_ostream &o,
   Indent(o, indent); o << "</dict>\n";
 }
 
-static void ReportPiece(raw_ostream &o,
-                        const PathDiagnosticPiece &P,
-                        const FIDMap& FM, 
-                        const Preprocessor &PP,
-                        AnalyzerOptions &AnOpts,
-                        unsigned indent,
-                        unsigned depth,
-                        bool includeControlFlow,
-                        bool isKeyEvent = false);
-
-static void ReportCall(raw_ostream &o,
-                       const PathDiagnosticCallPiece &P,
-                       const FIDMap& FM,
-                       const Preprocessor &PP,
-                       AnalyzerOptions &AnOpts,
-                       unsigned indent,
-                       unsigned depth) {
+void PlistPrinter::ReportCall(raw_ostream &o, const PathDiagnosticCallPiece &P,
+                              unsigned indent,
+                              unsigned depth) {
 
   if (auto callEnter = P.getCallEnterEvent())
-    ReportPiece(o, *callEnter, FM, PP, AnOpts, indent, depth,
-                /*includeControlFlow*/ true, P.isLastInMainSourceFile());
+    ReportPiece(o, *callEnter, indent, depth, /*includeControlFlow*/ true,
+                P.isLastInMainSourceFile());
 
 
   ++depth;
 
   if (auto callEnterWithinCaller = P.getCallEnterWithinCallerEvent())
-    ReportPiece(o, *callEnterWithinCaller, FM, PP, AnOpts, indent, depth,
+    ReportPiece(o, *callEnterWithinCaller, indent, depth,
                 /*includeControlFlow*/ true);
 
   for (PathPieces::const_iterator I = P.path.begin(), E = P.path.end();I!=E;++I)
-    ReportPiece(o, **I, FM, PP, AnOpts, indent, depth,
-                /*includeControlFlow*/ true);
+    ReportPiece(o, **I, indent, depth, /*includeControlFlow*/ true);
 
   --depth;
 
   if (auto callExit = P.getCallExitEvent())
-    ReportPiece(o, *callExit, FM, PP, AnOpts, indent, depth,
-                /*includeControlFlow*/ true);
+    ReportPiece(o, *callExit, indent, depth, /*includeControlFlow*/ true);
 }
 
-static void ReportMacro(raw_ostream &o,
-                        const PathDiagnosticMacroPiece& P,
-                        const FIDMap& FM,
-                        const Preprocessor &PP,
-                        AnalyzerOptions &AnOpts,
-                        unsigned indent,
-                        unsigned depth) {
+void PlistPrinter::ReportMacro(raw_ostream &o,
+                               const PathDiagnosticMacroPiece& P,
+                               unsigned indent, unsigned depth) {
 
   for (PathPieces::const_iterator I = P.subPieces.begin(), E=P.subPieces.end();
        I!=E; ++I) {
-    ReportPiece(o, **I, FM, PP, AnOpts, indent, depth,
-                /*includeControlFlow*/ false);
+    ReportPiece(o, **I, indent, depth, /*includeControlFlow*/ false);
   }
 }
 
-static void ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
-                        const FIDMap& FM,
-                        const Preprocessor &PP,
-                        unsigned indent) {
+void PlistPrinter::ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
+                              unsigned indent) {
 
   const SourceManager &SM = PP.getSourceManager();
 
@@ -290,7 +325,7 @@ static void ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
 
   // Output the ranges (if any).
   ArrayRef<SourceRange> Ranges = P.getRanges();
-  EmitRanges(o, Ranges, FM, PP, indent);
+  EmitRanges(o, Ranges, indent);
 
   // Output the text.
   EmitMessage(o, P.getString(), indent);
@@ -300,47 +335,9 @@ static void ReportNote(raw_ostream &o, const PathDiagnosticNotePiece& P,
   Indent(o, indent); o << "</dict>\n";
 }
 
-static void ReportDiag(raw_ostream &o,
-                       const PathDiagnosticPiece& P,
-                       const FIDMap& FM,
-                       const Preprocessor &PP,
-                       AnalyzerOptions &AnOpts) {
-  ReportPiece(o, P, FM, PP, AnOpts, /*indent*/ 4, /*depth*/ 0,
-              /*includeControlFlow*/ true);
-}
-
-static void ReportPiece(raw_ostream &o,
-                        const PathDiagnosticPiece &P,
-                        const FIDMap& FM,
-                        const Preprocessor &PP,
-                        AnalyzerOptions &AnOpts,
-                        unsigned indent,
-                        unsigned depth,
-                        bool includeControlFlow,
-                        bool isKeyEvent) {
-  switch (P.getKind()) {
-    case PathDiagnosticPiece::ControlFlow:
-      if (includeControlFlow)
-        ReportControlFlow(o, cast<PathDiagnosticControlFlowPiece>(P), FM, PP,
-                          indent);
-      break;
-    case PathDiagnosticPiece::Call:
-      ReportCall(o, cast<PathDiagnosticCallPiece>(P), FM, PP, AnOpts, indent,
-                 depth);
-      break;
-    case PathDiagnosticPiece::Event:
-      ReportEvent(o, cast<PathDiagnosticEventPiece>(P), FM, PP, indent, depth,
-                  isKeyEvent);
-      break;
-    case PathDiagnosticPiece::Macro:
-      ReportMacro(o, cast<PathDiagnosticMacroPiece>(P), FM, PP, AnOpts, indent,
-                  depth);
-      break;
-    case PathDiagnosticPiece::Note:
-      ReportNote(o, cast<PathDiagnosticNotePiece>(P), FM, PP, indent);
-      break;
-  }
-}
+//===----------------------------------------------------------------------===//
+// Static function definitions.
+//===----------------------------------------------------------------------===//
 
 /// Print coverage information to output stream {@code o}.
 /// May modify the used list of files {@code Fids} by inserting new ones.
@@ -375,6 +372,70 @@ static void printCoverage(const PathDiagnostic *D,
   assert(IndentLevel == InputIndentLevel);
 }
 
+static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
+                         AnalyzerOptions &AnOpts,
+                         const Preprocessor &PP,
+                         const PathPieces &Path) {
+  PlistPrinter Printer(FM, AnOpts, PP);
+  assert(std::is_partitioned(
+           Path.begin(), Path.end(),
+           [](const std::shared_ptr<PathDiagnosticPiece> &E)
+             { return E->getKind() == PathDiagnosticPiece::Note; }) &&
+         "PathDiagnostic is not partitioned so that notes precede the rest");
+
+  PathPieces::const_iterator FirstNonNote = std::partition_point(
+      Path.begin(), Path.end(),
+      [](const std::shared_ptr<PathDiagnosticPiece> &E)
+        { return E->getKind() == PathDiagnosticPiece::Note; });
+
+  PathPieces::const_iterator I = Path.begin();
+
+  if (FirstNonNote != Path.begin()) {
+    o << "   <key>notes</key>\n"
+         "   <array>\n";
+
+    for (; I != FirstNonNote; ++I)
+      Printer.ReportDiag(o, **I);
+
+    o << "   </array>\n";
+  }
+
+  o << "   <key>path</key>\n";
+
+  o << "   <array>\n";
+
+  for (PathPieces::const_iterator E = Path.end(); I != E; ++I)
+    Printer.ReportDiag(o, **I);
+
+  o << "   </array>\n";
+}
+
+//===----------------------------------------------------------------------===//
+// Methods of PlistDiagnostics.
+//===----------------------------------------------------------------------===//
+
+PlistDiagnostics::PlistDiagnostics(AnalyzerOptions &AnalyzerOpts,
+                                   const std::string& output,
+                                   const Preprocessor &PP,
+                                   bool supportsMultipleFiles)
+  : OutputFile(output), PP(PP), AnOpts(AnalyzerOpts),
+    SupportsCrossFileDiagnostics(supportsMultipleFiles) {}
+
+void ento::createPlistDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
+                                         PathDiagnosticConsumers &C,
+                                         const std::string& s,
+                                         const Preprocessor &PP) {
+  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP,
+                                   /*supportsMultipleFiles*/ false));
+}
+
+void ento::createPlistMultiFileDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
+                                                  PathDiagnosticConsumers &C,
+                                                  const std::string &s,
+                                                  const Preprocessor &PP) {
+  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP,
+                                   /*supportsMultipleFiles*/ true));
+}
 void PlistDiagnostics::FlushDiagnosticsImpl(
                                     std::vector<const PathDiagnostic *> &Diags,
                                     FilesMade *filesMade) {
@@ -449,39 +510,7 @@ void PlistDiagnostics::FlushDiagnosticsImpl(
     o << "  <dict>\n";
 
     const PathDiagnostic *D = *DI;
-    const PathPieces &Path = D->path;
-
-    assert(std::is_partitioned(
-             Path.begin(), Path.end(),
-             [](const std::shared_ptr<PathDiagnosticPiece> &E)
-               { return E->getKind() == PathDiagnosticPiece::Note; }) &&
-           "PathDiagnostic is not partitioned so that notes precede the rest");
-
-    PathPieces::const_iterator FirstNonNote = std::partition_point(
-        Path.begin(), Path.end(),
-        [](const std::shared_ptr<PathDiagnosticPiece> &E)
-          { return E->getKind() == PathDiagnosticPiece::Note; });
-
-    PathPieces::const_iterator I = Path.begin();
-
-    if (FirstNonNote != Path.begin()) {
-      o << "   <key>notes</key>\n"
-           "   <array>\n";
-
-      for (; I != FirstNonNote; ++I)
-        ReportDiag(o, **I, FM, PP, AnOpts);
-
-      o << "   </array>\n";
-    }
-
-    o << "   <key>path</key>\n";
-
-    o << "   <array>\n";
-
-    for (PathPieces::const_iterator E = Path.end(); I != E; ++I)
-      ReportDiag(o, **I, FM, PP, AnOpts);
-
-    o << "   </array>\n";
+    printBugPath(o, FM, AnOpts, PP, D->path);
 
     // Output the bug type and bug category.
     o << "   <key>description</key>";
