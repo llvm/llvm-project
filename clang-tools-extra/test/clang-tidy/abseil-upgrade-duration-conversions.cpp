@@ -1,49 +1,8 @@
-// RUN: %check_clang_tidy %s abseil-upgrade-duration-conversions %t
+// RUN: %check_clang_tidy %s abseil-upgrade-duration-conversions %t -- -- -I%S/Inputs
 
 using int64_t = long long;
 
-// Partial implementation of relevant APIs from
-// https://github.com/abseil/abseil-cpp/blob/master/absl/time/time.h
-namespace absl {
-
-class Duration {
-public:
-  Duration &operator*=(int64_t r);
-  Duration &operator*=(float r);
-  Duration &operator*=(double r);
-  template <typename T> Duration &operator*=(T r);
-
-  Duration &operator/=(int64_t r);
-  Duration &operator/=(float r);
-  Duration &operator/=(double r);
-  template <typename T> Duration &operator/=(T r);
-};
-
-template <typename T> Duration operator*(Duration lhs, T rhs);
-template <typename T> Duration operator*(T lhs, Duration rhs);
-template <typename T> Duration operator/(Duration lhs, T rhs);
-
-constexpr Duration Nanoseconds(int64_t n);
-constexpr Duration Microseconds(int64_t n);
-constexpr Duration Milliseconds(int64_t n);
-constexpr Duration Seconds(int64_t n);
-constexpr Duration Minutes(int64_t n);
-constexpr Duration Hours(int64_t n);
-
-template <typename T> struct EnableIfFloatImpl {};
-template <> struct EnableIfFloatImpl<float> { typedef int Type; };
-template <> struct EnableIfFloatImpl<double> { typedef int Type; };
-template <> struct EnableIfFloatImpl<long double> { typedef int Type; };
-template <typename T> using EnableIfFloat = typename EnableIfFloatImpl<T>::Type;
-
-template <typename T, EnableIfFloat<T> = 0> Duration Nanoseconds(T n);
-template <typename T, EnableIfFloat<T> = 0> Duration Microseconds(T n);
-template <typename T, EnableIfFloat<T> = 0> Duration Milliseconds(T n);
-template <typename T, EnableIfFloat<T> = 0> Duration Seconds(T n);
-template <typename T, EnableIfFloat<T> = 0> Duration Minutes(T n);
-template <typename T, EnableIfFloat<T> = 0> Duration Hours(T n);
-
-} // namespace absl
+#include "absl/time/time.h"
 
 template <typename T> struct ConvertibleTo {
   operator T() const;

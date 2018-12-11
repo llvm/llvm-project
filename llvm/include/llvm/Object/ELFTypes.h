@@ -642,14 +642,19 @@ class Elf_Note_Iterator_Impl
   // container, either cleanly or with an overflow error.
   void advanceNhdr(const uint8_t *NhdrPos, size_t NoteSize) {
     RemainingSize -= NoteSize;
-    if (RemainingSize == 0u)
+    if (RemainingSize == 0u) {
+      // Ensure that if the iterator walks to the end, the error is checked
+      // afterwards.
+      *Err = Error::success();
       Nhdr = nullptr;
-    else if (sizeof(*Nhdr) > RemainingSize)
+    } else if (sizeof(*Nhdr) > RemainingSize)
       stopWithOverflowError();
     else {
       Nhdr = reinterpret_cast<const Elf_Nhdr_Impl<ELFT> *>(NhdrPos + NoteSize);
       if (Nhdr->getSize() > RemainingSize)
         stopWithOverflowError();
+      else
+        *Err = Error::success();
     }
   }
 
@@ -657,6 +662,7 @@ class Elf_Note_Iterator_Impl
   explicit Elf_Note_Iterator_Impl(Error &Err) : Err(&Err) {}
   Elf_Note_Iterator_Impl(const uint8_t *Start, size_t Size, Error &Err)
       : RemainingSize(Size), Err(&Err) {
+    consumeError(std::move(Err));
     assert(Start && "ELF note iterator starting at NULL");
     advanceNhdr(Start, 0u);
   }
@@ -670,6 +676,10 @@ public:
     return *this;
   }
   bool operator==(Elf_Note_Iterator_Impl Other) const {
+    if (!Nhdr && Other.Err)
+      (void)(bool)(*Other.Err);
+    if (!Other.Nhdr && Err)
+      (void)(bool)(*Err);
     return Nhdr == Other.Nhdr;
   }
   bool operator!=(Elf_Note_Iterator_Impl Other) const {

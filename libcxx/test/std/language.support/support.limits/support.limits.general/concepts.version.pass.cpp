@@ -17,6 +17,7 @@
 
 // XFAIL
 // #include <concepts>
+#include <cassert>
 #include "test_macros.h"
 
 int main()

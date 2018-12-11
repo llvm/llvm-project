@@ -374,6 +374,8 @@ _Unwind_Resume(_Unwind_Exception *exception_object) {
     CONTEXT ms_ctx;
     UNWIND_HISTORY_TABLE hist;
 
+    memset(&ms_exc, 0, sizeof(ms_exc));
+    memset(&hist, 0, sizeof(hist));
     ms_exc.ExceptionCode = STATUS_GCC_THROW;
     ms_exc.ExceptionFlags = EXCEPTION_NONCONTINUABLE;
     ms_exc.NumberParameters = 4;

@@ -3052,30 +3052,42 @@ static Expr *lookThroughRangesV3Condition(Preprocessor &PP, Expr *Cond) {
   return Cond;
 }
 
-// Print a diagnostic for the failing static_assert expression. Defaults to
-// pretty-printing the expression.
-static void prettyPrintFailedBooleanCondition(llvm::raw_string_ostream &OS,
-                                              const Expr *FailedCond,
-                                              const PrintingPolicy &Policy) {
-  const auto *DR = dyn_cast<DeclRefExpr>(FailedCond);
-  if (DR && DR->getQualifier()) {
-    // If this is a qualified name, expand the template arguments in nested
-    // qualifiers.
-    DR->getQualifier()->print(OS, Policy, true);
-    // Then print the decl itself.
-    const ValueDecl *VD = DR->getDecl();
-    OS << VD->getName();
-    if (const auto *IV = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
-      // This is a template variable, print the expanded template arguments.
-      printTemplateArgumentList(OS, IV->getTemplateArgs().asArray(), Policy);
+namespace {
+
+// A PrinterHelper that prints more helpful diagnostics for some sub-expressions
+// within failing boolean expression, such as substituting template parameters
+// for actual types.
+class FailedBooleanConditionPrinterHelper : public PrinterHelper {
+public:
+  explicit FailedBooleanConditionPrinterHelper(const PrintingPolicy &P)
+      : Policy(P) {}
+
+  bool handledStmt(Stmt *E, raw_ostream &OS) override {
+    const auto *DR = dyn_cast<DeclRefExpr>(E);
+    if (DR && DR->getQualifier()) {
+      // If this is a qualified name, expand the template arguments in nested
+      // qualifiers.
+      DR->getQualifier()->print(OS, Policy, true);
+      // Then print the decl itself.
+      const ValueDecl *VD = DR->getDecl();
+      OS << VD->getName();
+      if (const auto *IV = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
+        // This is a template variable, print the expanded template arguments.
+        printTemplateArgumentList(OS, IV->getTemplateArgs().asArray(), Policy);
+      }
+      return true;
     }
-    return;
+    return false;
   }
-  FailedCond->printPretty(OS, nullptr, Policy);
-}
+
+private:
+  const PrintingPolicy Policy;
+};
+
+} // end anonymous namespace
 
 std::pair<Expr *, std::string>
-Sema::findFailedBooleanCondition(Expr *Cond, bool AllowTopLevelCond) {
+Sema::findFailedBooleanCondition(Expr *Cond) {
   Cond = lookThroughRangesV3Condition(PP, Cond);
 
   // Separate out all of the terms in a conjunction.
@@ -3104,18 +3116,14 @@ Sema::findFailedBooleanCondition(Expr *Cond, bool AllowTopLevelCond) {
       break;
     }
   }
-
-  if (!FailedCond) {
-    if (!AllowTopLevelCond)
-      return { nullptr, "" };
-
+  if (!FailedCond)
     FailedCond = Cond->IgnoreParenImpCasts();
-  }
 
   std::string Description;
   {
     llvm::raw_string_ostream Out(Description);
-    prettyPrintFailedBooleanCondition(Out, FailedCond, getPrintingPolicy());
+    FailedBooleanConditionPrinterHelper Helper(getPrintingPolicy());
+    FailedCond->printPretty(Out, &Helper, getPrintingPolicy());
   }
   return { FailedCond, Description };
 }
@@ -3199,9 +3207,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
             Expr *FailedCond;
             std::string FailedDescription;
             std::tie(FailedCond, FailedDescription) =
-              findFailedBooleanCondition(
-                TemplateArgs[0].getSourceExpression(),
-                /*AllowTopLevelCond=*/true);
+              findFailedBooleanCondition(TemplateArgs[0].getSourceExpression());
 
             // Remove the old SFINAE diagnostic.
             PartialDiagnosticAt OldDiag =
@@ -9649,7 +9655,7 @@ Sema::CheckTypenameType(ElaboratedTypeKeyword Keyword,
         Expr *FailedCond;
         std::string FailedDescription;
         std::tie(FailedCond, FailedDescription) =
-          findFailedBooleanCondition(Cond, /*AllowTopLevelCond=*/true);
+          findFailedBooleanCondition(Cond);
 
         Diag(FailedCond->getExprLoc(),
              diag::err_typename_nested_not_found_requirement)

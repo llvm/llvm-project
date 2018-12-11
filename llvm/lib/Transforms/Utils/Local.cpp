@@ -476,6 +476,17 @@ void llvm::RecursivelyDeleteTriviallyDeadInstructions(
   }
 }
 
+bool llvm::replaceDbgUsesWithUndef(Instruction *I) {
+  SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
+  findDbgUsers(DbgUsers, I);
+  for (auto *DII : DbgUsers) {
+    Value *Undef = UndefValue::get(I->getType());
+    DII->setOperand(0, MetadataAsValue::get(DII->getContext(),
+                                            ValueAsMetadata::get(Undef)));
+  }
+  return !DbgUsers.empty();
+}
+
 /// areAllUsesEqual - Check whether the uses of a value are all the same.
 /// This is similar to Instruction::hasOneUse() except this will also return
 /// true when there are no uses or multiple uses that all refer to the same

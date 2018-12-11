@@ -37,7 +37,6 @@ void compareByLine(StringRef LHS, StringRef RHS) {
 TEST(ElfYamlTextAPI, YAMLReadableTBE) {
   const char Data[] = "--- !tapi-tbe\n"
                       "TbeVersion: 1.0\n"
-                      "SoName: test.so\n"
                       "Arch: x86_64\n"
                       "NeededLibs: [libc.so, libfoo.so, libbar.so]\n"
                       "Symbols:\n"
@@ -47,8 +46,8 @@ TEST(ElfYamlTextAPI, YAMLReadableTBE) {
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
   std::unique_ptr<ELFStub> Stub = std::move(StubOrErr.get());
   EXPECT_NE(Stub.get(), nullptr);
+  EXPECT_FALSE(Stub->SoName.hasValue());
   EXPECT_EQ(Stub->Arch, (uint16_t)llvm::ELF::EM_X86_64);
-  EXPECT_STREQ(Stub->SoName.c_str(), "test.so");
   EXPECT_EQ(Stub->NeededLibs.size(), 3u);
   EXPECT_STREQ(Stub->NeededLibs[0].c_str(), "libc.so");
   EXPECT_STREQ(Stub->NeededLibs[1].c_str(), "libfoo.so");
@@ -72,6 +71,8 @@ TEST(ElfYamlTextAPI, YAMLReadsTBESymbols) {
   ASSERT_THAT_ERROR(StubOrErr.takeError(), Succeeded());
   std::unique_ptr<ELFStub> Stub = std::move(StubOrErr.get());
   EXPECT_NE(Stub.get(), nullptr);
+  EXPECT_TRUE(Stub->SoName.hasValue());
+  EXPECT_STREQ(Stub->SoName->c_str(), "test.so");
   EXPECT_EQ(Stub->Symbols.size(), 5u);
 
   auto Iterator = Stub->Symbols.begin();
@@ -143,7 +144,6 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
   const char Expected[] =
       "--- !tapi-tbe\n"
       "TbeVersion:      1.0\n"
-      "SoName:          test.so\n"
       "Arch:            AArch64\n"
       "Symbols:         \n"
       "  foo:             { Type: NoType, Size: 99, Warning: Does nothing }\n"
@@ -152,7 +152,6 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
       "...\n";
   ELFStub Stub;
   Stub.TbeVersion = VersionTuple(1, 0);
-  Stub.SoName = "test.so";
   Stub.Arch = ELF::EM_AARCH64;
 
   ELFSymbol SymFoo("foo");

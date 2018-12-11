@@ -58,12 +58,12 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: extract_vector_elt_0_v5i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[MV:%[0-9]+]]:_(<5 x s32>) = G_MERGE_VALUES [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32)
+    ; CHECK: [[MV:%[0-9]+]]:_(<5 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[MV]](<5 x s32>), [[C]](s32)
     ; CHECK: $vgpr0 = COPY [[EVEC]](s32)
     %0:_(s32) = COPY $vgpr0
-    %1:_(<5 x s32>) = G_MERGE_VALUES %0, %0, %0, %0, %0
+    %1:_(<5 x s32>) = G_BUILD_VECTOR %0, %0, %0, %0, %0
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %1, %2
     $vgpr0 = COPY %3
@@ -77,12 +77,12 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: extract_vector_elt_0_v6i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[MV:%[0-9]+]]:_(<6 x s32>) = G_MERGE_VALUES [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32)
+    ; CHECK: [[MV:%[0-9]+]]:_(<6 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[MV]](<6 x s32>), [[C]](s32)
     ; CHECK: $vgpr0 = COPY [[EVEC]](s32)
     %0:_(s32) = COPY $vgpr0
-    %1:_(<6 x s32>) = G_MERGE_VALUES %0, %0, %0, %0, %0, %0
+    %1:_(<6 x s32>) = G_BUILD_VECTOR %0, %0, %0, %0, %0, %0
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %1, %2
     $vgpr0 = COPY %3
@@ -96,12 +96,12 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: extract_vector_elt_0_v7i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[MV:%[0-9]+]]:_(<7 x s32>) = G_MERGE_VALUES [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32)
+    ; CHECK: [[MV:%[0-9]+]]:_(<7 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[MV]](<7 x s32>), [[C]](s32)
     ; CHECK: $vgpr0 = COPY [[EVEC]](s32)
     %0:_(s32) = COPY $vgpr0
-    %1:_(<7 x s32>) = G_MERGE_VALUES %0, %0, %0, %0, %0, %0, %0
+    %1:_(<7 x s32>) = G_BUILD_VECTOR %0, %0, %0, %0, %0, %0, %0
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %1, %2
     $vgpr0 = COPY %3
@@ -115,12 +115,12 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: extract_vector_elt_0_v8i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[MV:%[0-9]+]]:_(<8 x s32>) = G_MERGE_VALUES [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32)
+    ; CHECK: [[MV:%[0-9]+]]:_(<8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[MV]](<8 x s32>), [[C]](s32)
     ; CHECK: $vgpr0 = COPY [[EVEC]](s32)
     %0:_(s32) = COPY $vgpr0
-    %1:_(<8 x s32>) = G_MERGE_VALUES %0, %0, %0, %0, %0, %0, %0, %0
+    %1:_(<8 x s32>) = G_BUILD_VECTOR %0, %0, %0, %0, %0, %0, %0, %0
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %1, %2
     $vgpr0 = COPY %3
@@ -134,12 +134,12 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: extract_vector_elt_0_v16i32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[MV:%[0-9]+]]:_(<16 x s32>) = G_MERGE_VALUES [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32)
+    ; CHECK: [[MV:%[0-9]+]]:_(<16 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32), [[COPY]](s32)
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; CHECK: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[MV]](<16 x s32>), [[C]](s32)
     ; CHECK: $vgpr0 = COPY [[EVEC]](s32)
     %0:_(s32) = COPY $vgpr0
-    %1:_(<16 x s32>) = G_MERGE_VALUES %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0
+    %1:_(<16 x s32>) = G_BUILD_VECTOR %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0
     %2:_(s32) = G_CONSTANT i32 0
     %3:_(s32) = G_EXTRACT_VECTOR_ELT %1, %2
     $vgpr0 = COPY %3
