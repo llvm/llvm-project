@@ -1220,6 +1220,25 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op,
     Known.Zero |= ~InMask;
     break;
   }
+  case ISD::EXTRACT_VECTOR_ELT: {
+    // Demand the bits from every vector element.
+    SDValue Src = Op.getOperand(0);
+    unsigned EltBitWidth = Src.getScalarValueSizeInBits();
+
+    // If BitWidth > EltBitWidth the value is anyext:ed. So we do not know
+    // anything about the extended bits.
+    APInt DemandedSrcBits = DemandedBits;
+    if (BitWidth > EltBitWidth)
+      DemandedSrcBits = DemandedSrcBits.trunc(EltBitWidth);
+
+    if (SimplifyDemandedBits(Src, DemandedSrcBits, Known2, TLO, Depth + 1))
+        return true;
+
+    Known = Known2;
+    if (BitWidth > EltBitWidth)
+      Known = Known.zext(BitWidth);
+    break;
+  }
   case ISD::BITCAST: {
     SDValue Src = Op.getOperand(0);
     EVT SrcVT = Src.getValueType();

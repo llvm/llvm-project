@@ -16,7 +16,7 @@ define void @fetch_r16g16_snorm_unorm8(<4 x i8>*, i8*, i32, i32, { [2048 x i32],
 ; X86-SKYLAKE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X86-SKYLAKE-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X86-SKYLAKE-NEXT:    vpsrld $7, %xmm0, %xmm0
-; X86-SKYLAKE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4],zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; X86-SKYLAKE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X86-SKYLAKE-NEXT:    vmovd %xmm0, %ecx
 ; X86-SKYLAKE-NEXT:    orl $-16777216, %ecx # imm = 0xFF000000
 ; X86-SKYLAKE-NEXT:    movl %ecx, (%eax)
@@ -54,7 +54,7 @@ define void @fetch_r16g16_snorm_unorm8(<4 x i8>*, i8*, i32, i32, { [2048 x i32],
 ; X64-SKYLAKE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; X64-SKYLAKE-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
 ; X64-SKYLAKE-NEXT:    vpsrld $7, %xmm0, %xmm0
-; X64-SKYLAKE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4],zero,zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u]
+; X64-SKYLAKE-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4],zero,xmm0[u,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X64-SKYLAKE-NEXT:    vmovd %xmm0, %eax
 ; X64-SKYLAKE-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
 ; X64-SKYLAKE-NEXT:    movl %eax, (%rdi)

@@ -74,11 +74,9 @@ define float @signbits_ashr_extract_sitofp_0(<2 x i64> %a0) nounwind {
 ;
 ; X64-LABEL: signbits_ashr_extract_sitofp_0:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpsrad $31, %xmm0, %xmm1
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
+; X64-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; X64-NEXT:    vmovq %xmm0, %rax
-; X64-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
+; X64-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = ashr <2 x i64> %a0, <i64 32, i64 32>
   %2 = extractelement <2 x i64> %1, i32 0
@@ -183,9 +181,7 @@ define float @signbits_ashr_insert_ashr_extract_sitofp(i64 %a0, i64 %a1) nounwin
 ; X64-NEXT:    vmovq %rsi, %xmm0
 ; X64-NEXT:    vmovq %rdi, %xmm1
 ; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; X64-NEXT:    vpsrad $3, %xmm0, %xmm1
 ; X64-NEXT:    vpsrlq $3, %xmm0, %xmm0
-; X64-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3],xmm0[4,5],xmm1[6,7]
 ; X64-NEXT:    vmovq %xmm0, %rax
 ; X64-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
 ; X64-NEXT:    retq
@@ -282,10 +278,6 @@ define float @signbits_ashr_sext_sextinreg_and_extract_sitofp(<2 x i64> %a0, <2 
 ; X64-NEXT:    vpsubq %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    movslq %edi, %rax
 ; X64-NEXT:    vpinsrq $0, %rax, %xmm1, %xmm1
-; X64-NEXT:    vpsllq $20, %xmm1, %xmm1
-; X64-NEXT:    vpsrad $20, %xmm1, %xmm2
-; X64-NEXT:    vpsrlq $20, %xmm1, %xmm1
-; X64-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
 ; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vmovq %xmm0, %rax
 ; X64-NEXT:    vcvtsi2ssl %eax, %xmm3, %xmm0
