@@ -153,7 +153,7 @@ bool FindUninitializedFields::isDereferencableUninit(
 
   if (V.isUndef()) {
     return addFieldToUninits(
-        LocalChain.add(LocField(FR, /*IsDereferenced*/ false)));
+        LocalChain.add(LocField(FR, /*IsDereferenced*/ false)), FR);
   }
 
   if (!Opts.CheckPointeeInitialization) {
@@ -170,7 +170,7 @@ bool FindUninitializedFields::isDereferencableUninit(
   }
 
   if (DerefInfo->IsCyclic)
-    return addFieldToUninits(LocalChain.add(CyclicLocField(FR)));
+    return addFieldToUninits(LocalChain.add(CyclicLocField(FR)), FR);
 
   const TypedValueRegion *R = DerefInfo->R;
   const bool NeedsCastBack = DerefInfo->NeedsCastBack;
@@ -187,8 +187,9 @@ bool FindUninitializedFields::isDereferencableUninit(
   if (PointeeT->isUnionType()) {
     if (isUnionUninit(R)) {
       if (NeedsCastBack)
-        return addFieldToUninits(LocalChain.add(NeedsCastLocField(FR, DynT)));
-      return addFieldToUninits(LocalChain.add(LocField(FR)));
+        return addFieldToUninits(LocalChain.add(NeedsCastLocField(FR, DynT)),
+                                 R);
+      return addFieldToUninits(LocalChain.add(LocField(FR)), R);
     } else {
       IsAnyFieldInitialized = true;
       return false;
@@ -208,8 +209,8 @@ bool FindUninitializedFields::isDereferencableUninit(
 
   if (isPrimitiveUninit(PointeeV)) {
     if (NeedsCastBack)
-      return addFieldToUninits(LocalChain.add(NeedsCastLocField(FR, DynT)));
-    return addFieldToUninits(LocalChain.add(LocField(FR)));
+      return addFieldToUninits(LocalChain.add(NeedsCastLocField(FR, DynT)), R);
+    return addFieldToUninits(LocalChain.add(LocField(FR)), R);
   }
 
   IsAnyFieldInitialized = true;
