@@ -574,6 +574,25 @@ static ProgramStateRef updateOutParameter(ProgramStateRef State,
   return State;
 }
 
+static bool isPointerToObject(QualType QT) {
+  QualType PT = QT->getPointeeType();
+  if (!PT.isNull())
+    if (PT->getAsCXXRecordDecl())
+      return true;
+  return false;
+}
+
+/// Whether the tracked value should be escaped on a given call.
+/// OSObjects are escaped when passed to void * / etc.
+static bool shouldEscapeArgumentOnCall(const CallEvent &CE, unsigned ArgIdx,
+                                       const RefVal *TrackedValue) {
+  if (TrackedValue->getObjKind() != RetEffect::OS)
+    return false;
+  if (ArgIdx >= CE.parameters().size())
+    return false;
+  return !isPointerToObject(CE.parameters()[ArgIdx]->getType());
+}
+
 void RetainCountChecker::checkSummary(const RetainSummary &Summ,
                                       const CallEvent &CallOrMsg,
                                       CheckerContext &C) const {
@@ -592,6 +611,10 @@ void RetainCountChecker::checkSummary(const RetainSummary &Summ,
       state = updateOutParameter(state, V, Effect);
     } else if (SymbolRef Sym = V.getAsLocSymbol()) {
       if (const RefVal *T = getRefBinding(state, Sym)) {
+
+        if (shouldEscapeArgumentOnCall(CallOrMsg, idx, T))
+          Effect = StopTrackingHard;
+
         state = updateSymbol(state, Sym, *T, Effect, hasErr, C);
         if (hasErr) {
           ErrorRange = CallOrMsg.getArgSourceRange(idx);

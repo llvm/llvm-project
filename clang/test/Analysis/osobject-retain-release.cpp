@@ -89,6 +89,13 @@ struct OSMetaClassBase {
   static OSObject *safeMetaCast(const OSObject *inst, const OSMetaClass *meta);
 };
 
+void escape(void *);
+
+void test_escaping_into_voidstar() {
+  OSObject *obj = new OSObject;
+  escape(obj);
+}
+
 void test_no_infinite_check_recursion(MyArray *arr) {
   OSObject *input = new OSObject;
   OSObject *o = arr->generateObject(input);
