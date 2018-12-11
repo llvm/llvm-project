@@ -757,9 +757,7 @@ class Configuration(object):
             elif self.cxx_stdlib_under_test == 'cxx_default':
                 self.cxx.link_flags += ['-pthread']
             else:
-                self.lit_config.fatal(
-                    'unsupported value for "use_stdlib_type": %s'
-                    %  use_stdlib_type)
+                self.lit_config.fatal('invalid stdlib under test')
 
         link_flags_str = self.get_lit_conf('link_flags', '')
         self.cxx.link_flags += shlex.split(link_flags_str)
