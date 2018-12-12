@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=micromips 2>&1 | FileCheck %s
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=micromips 2>&1 | FileCheck %s
 
   .text
   .type main, @function

@@ -797,6 +797,13 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
 MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
     unsigned MIOpc, MachineFunction::iterator &MFI, MachineInstr &MI,
     LiveVariables *LV) const {
+  // We handle 8-bit adds and various 16-bit opcodes in the switch below.
+  bool Is16BitOp = !(MIOpc == X86::ADD8rr || MIOpc == X86::ADD8ri);
+  MachineRegisterInfo &RegInfo = MFI->getParent()->getRegInfo();
+  assert((!Is16BitOp || RegInfo.getTargetRegisterInfo()->getRegSizeInBits(
+              *RegInfo.getRegClass(MI.getOperand(0).getReg())) == 16) &&
+         "Unexpected type for LEA transform");
+
   // TODO: For a 32-bit target, we need to adjust the LEA variables with
   // something like this:
   //   Opcode = X86::LEA32r;
@@ -807,13 +814,12 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
   if (!Subtarget.is64Bit())
     return nullptr;
 
-  MachineRegisterInfo &RegInfo = MFI->getParent()->getRegInfo();
   unsigned Opcode = X86::LEA64_32r;
   unsigned InRegLEA = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
   unsigned OutRegLEA = RegInfo.createVirtualRegister(&X86::GR32RegClass);
 
   // Build and insert into an implicit UNDEF value. This is OK because
-  // we will be shifting and then extracting the lower 16-bits.
+  // we will be shifting and then extracting the lower 8/16-bits.
   // This has the potential to cause partial register stall. e.g.
   //   movw    (%rbp,%rcx,2), %dx
   //   leal    -65(%rdx), %esi
@@ -824,11 +830,12 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
   unsigned Src = MI.getOperand(1).getReg();
   bool IsDead = MI.getOperand(0).isDead();
   bool IsKill = MI.getOperand(1).isKill();
+  unsigned SubReg = Is16BitOp ? X86::sub_16bit : X86::sub_8bit;
   assert(!MI.getOperand(1).isUndef() && "Undef op doesn't need optimization");
   BuildMI(*MFI, MBBI, MI.getDebugLoc(), get(X86::IMPLICIT_DEF), InRegLEA);
   MachineInstr *InsMI =
       BuildMI(*MFI, MBBI, MI.getDebugLoc(), get(TargetOpcode::COPY))
-          .addReg(InRegLEA, RegState::Define, X86::sub_16bit)
+          .addReg(InRegLEA, RegState::Define, SubReg)
           .addReg(Src, getKillRegState(IsKill));
 
   MachineInstrBuilder MIB =
@@ -847,12 +854,14 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
   case X86::DEC16r:
     addRegOffset(MIB, InRegLEA, true, -1);
     break;
+  case X86::ADD8ri:
   case X86::ADD16ri:
   case X86::ADD16ri8:
   case X86::ADD16ri_DB:
   case X86::ADD16ri8_DB:
     addRegOffset(MIB, InRegLEA, true, MI.getOperand(2).getImm());
     break;
+  case X86::ADD8rr:
   case X86::ADD16rr:
   case X86::ADD16rr_DB: {
     unsigned Src2 = MI.getOperand(2).getReg();
@@ -861,7 +870,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
     unsigned InRegLEA2 = 0;
     MachineInstr *InsMI2 = nullptr;
     if (Src == Src2) {
-      // ADD16rr killed %reg1028, %reg1028
+      // ADD8rr/ADD16rr killed %reg1028, %reg1028
       // just a single insert_subreg.
       addRegReg(MIB, InRegLEA, true, InRegLEA, false);
     } else {
@@ -870,10 +879,10 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
       else
         InRegLEA2 = RegInfo.createVirtualRegister(&X86::GR32_NOSPRegClass);
       // Build and insert into an implicit UNDEF value. This is OK because
-      // we will be shifting and then extracting the lower 16-bits.
+      // we will be shifting and then extracting the lower 8/16-bits.
       BuildMI(*MFI, &*MIB, MI.getDebugLoc(), get(X86::IMPLICIT_DEF), InRegLEA2);
       InsMI2 = BuildMI(*MFI, &*MIB, MI.getDebugLoc(), get(TargetOpcode::COPY))
-                   .addReg(InRegLEA2, RegState::Define, X86::sub_16bit)
+                   .addReg(InRegLEA2, RegState::Define, SubReg)
                    .addReg(Src2, getKillRegState(IsKill2));
       addRegReg(MIB, InRegLEA, true, InRegLEA2, true);
     }
@@ -887,7 +896,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
   MachineInstr *ExtMI =
       BuildMI(*MFI, MBBI, MI.getDebugLoc(), get(TargetOpcode::COPY))
           .addReg(Dest, RegState::Define | getDeadRegState(IsDead))
-          .addReg(OutRegLEA, RegState::Kill, X86::sub_16bit);
+          .addReg(OutRegLEA, RegState::Kill, SubReg);
 
   if (LV) {
     // Update live variables.
@@ -1084,6 +1093,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
       LV->replaceKillInstruction(SrcReg2, MI, *NewMI);
     break;
   }
+  case X86::ADD8rr:
   case X86::ADD16rr:
   case X86::ADD16rr_DB:
     return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV);
@@ -1119,6 +1129,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     NewMI = addOffset(MIB, MI.getOperand(2));
     break;
   }
+  case X86::ADD8ri:
   case X86::ADD16ri:
   case X86::ADD16ri8:
   case X86::ADD16ri_DB:

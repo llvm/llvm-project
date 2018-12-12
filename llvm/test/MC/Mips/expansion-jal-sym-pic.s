@@ -1,13 +1,13 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -show-encoding |\
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MIPS,O32
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 -show-encoding |\
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MIPS,N32
 
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -show-encoding |\
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnu -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MIPS,N64
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=micromips -show-encoding |\
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -mattr=micromips -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MM,O32-MM
 
 # Repeat the tests but using ELF output. An initial version of this patch did
@@ -15,11 +15,11 @@
 # MCAsmStreamer or MCELFStreamer. This ensures that the assembly expansion and
 # direct objection emission match.
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 -filetype=obj | \
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu -filetype=obj | \
 # RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-O32
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 -filetype=obj | \
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnuabin32 -filetype=obj | \
 # RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-N32
-# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -filetype=obj | \
+# RUN: llvm-mc %s -triple mips64-unknown-linux-gnu -filetype=obj | \
 # RUN:   llvm-objdump -d -r - | FileCheck %s -check-prefixes=ELF-N64
 
   .weak weak_label
@@ -51,7 +51,7 @@ local_label:
 
 # N32: lw  $25, %got_disp(local_label)($gp) # encoding: [0x8f,0x99,A,A]
 # N32:                                      #   fixup A - offset: 0, value: %got_disp(local_label), kind:   fixup_Mips_GOT_DISP
-# N32-NEXT: .reloc ($tmp0), R_MIPS_JALR, local_label
+# N32-NEXT: .reloc .Ltmp0, R_MIPS_JALR, local_label
 
 # ELF-N32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-N32-NEXT:                 R_MIPS_GOT_DISP local_label
@@ -92,7 +92,7 @@ local_label:
 
 # N32: lw  $25, %call16(weak_label)($gp) # encoding: [0x8f,0x99,A,A]
 # N32:                                   #   fixup A - offset: 0, value: %call16(weak_label), kind:   fixup_Mips_CALL16
-# N32-NEXT: .reloc ($tmp1), R_MIPS_JALR, weak_label
+# N32-NEXT: .reloc .Ltmp1, R_MIPS_JALR, weak_label
 
 # ELF-N32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-N32-NEXT:                 R_MIPS_CALL16 weak_label
@@ -131,7 +131,7 @@ local_label:
 
 # N32: lw  $25, %call16(global_label)($gp) # encoding: [0x8f,0x99,A,A]
 # N32:                                     #   fixup A - offset: 0, value: %call16(global_label), kind:   fixup_Mips_CALL16
-# N32-NEXT: .reloc ($tmp2), R_MIPS_JALR, global_label
+# N32-NEXT: .reloc .Ltmp2, R_MIPS_JALR, global_label
 
 # ELF-N32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-N32-NEXT:                 R_MIPS_CALL16 global_label
@@ -205,8 +205,8 @@ local_label:
 # ELF-O32-NEXT: 03 20 f8 09 jalr $25
 # ELF-O32-NEXT:                 R_MIPS_JALR $tmp0
 
-# N32: lw  $25, %got_disp($tmp4)($gp) # encoding: [0x8f,0x99,A,A]
-# N32:                                #   fixup A - offset: 0, value: %got_disp($tmp4), kind:   fixup_Mips_GOT_DISP
+# N32: lw  $25, %got_disp(.Ltmp4)($gp) # encoding: [0x8f,0x99,A,A]
+# N32:                                #   fixup A - offset: 0, value: %got_disp(.Ltmp4), kind:   fixup_Mips_GOT_DISP
 
 # ELF-N32:      8f 99 00 00 lw $25, 0($gp)
 # ELF-N32-NEXT:                 R_MIPS_GOT_DISP .Ltmp0

@@ -1580,6 +1580,9 @@ Error ASTNodeImporter::ImportDeclParts(
     return Err;
 
   ToD = cast_or_null<NamedDecl>(Importer.GetAlreadyImportedOrNull(D));
+  if (ToD)
+    if (Error Err = ASTNodeImporter(*this).ImportDefinitionIfNeeded(D, ToD))
+      return Err;
 
   return Error::success();
 }
@@ -7745,17 +7748,12 @@ Attr *ASTImporter::Import(const Attr *FromAttr) {
   return ToAttr;
 }
 
-Decl *ASTImporter::GetAlreadyImportedOrNull(Decl *FromD) {
-  llvm::DenseMap<Decl *, Decl *>::iterator Pos = ImportedDecls.find(FromD);
-  if (Pos != ImportedDecls.end()) {
-    Decl *ToD = Pos->second;
-    // FIXME: move this call to ImportDeclParts().
-    if (Error Err = ASTNodeImporter(*this).ImportDefinitionIfNeeded(FromD, ToD))
-      llvm::consumeError(std::move(Err));
-    return ToD;
-  } else {
+Decl *ASTImporter::GetAlreadyImportedOrNull(const Decl *FromD) const {
+  auto Pos = ImportedDecls.find(FromD);
+  if (Pos != ImportedDecls.end())
+    return Pos->second;
+  else
     return nullptr;
-  }
 }
 
 Expected<Decl *> ASTImporter::Import_New(Decl *FromD) {

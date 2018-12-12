@@ -1,0 +1,84 @@
+# RUN: llc -O0 -mtriple thumb-- -mattr=+v6t2 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+--- |
+  define void @test_s8() { ret void }
+  define void @test_s16() { ret void }
+  define void @test_s32() { ret void }
+...
+---
+name:            test_s8
+# CHECK-LABEL: name: test_s8
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(p0) = COPY $r0
+    ; CHECK: %[[P:[0-9]+]]:gpr = COPY $r0
+
+    %1(s8) = G_LOAD %0(p0) :: (load 1)
+    ; CHECK: %[[V:[0-9]+]]:rgpr = t2LDRBi12 %[[P]], 0, 14, $noreg :: (load 1)
+
+    G_STORE %1(s8), %0(p0) :: (store 1)
+    ; CHECK: t2STRBi12 %[[V]], %[[P]], 0, 14, $noreg :: (store 1)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
+...
+---
+name:            test_s16
+# CHECK-LABEL: name: test_s16
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(p0) = COPY $r0
+    ; CHECK: %[[P:[0-9]+]]:gpr = COPY $r0
+
+    %1(s16) = G_LOAD %0(p0) :: (load 2)
+    ; CHECK: %[[V:[0-9]+]]:rgpr = t2LDRHi12 %[[P]], 0, 14, $noreg :: (load 2)
+
+    G_STORE %1(s16), %0(p0) :: (store 2)
+    ; CHECK: t2STRHi12 %[[V]], %[[P]], 0, 14, $noreg :: (store 2)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
+...
+---
+name:            test_s32
+# CHECK-LABEL: name: test_s32
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: gprb }
+  - { id: 1, class: gprb }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    %0(p0) = COPY $r0
+    ; CHECK: %[[P:[0-9]+]]:gpr = COPY $r0
+
+    %1(s32) = G_LOAD %0(p0) :: (load 4)
+    ; CHECK: %[[V:[0-9]+]]:gpr = t2LDRi12 %[[P]], 0, 14, $noreg :: (load 4)
+
+    G_STORE %1(s32), %0(p0) :: (store 4)
+    ; CHECK: t2STRi12 %[[V]], %[[P]], 0, 14, $noreg :: (store 4)
+
+    BX_RET 14, $noreg
+    ; CHECK: BX_RET 14, $noreg
+...

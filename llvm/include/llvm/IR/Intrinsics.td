@@ -811,7 +811,7 @@ def int_umul_with_overflow : Intrinsic<[llvm_anyint_ty, llvm_i1_ty],
                                        [LLVMMatchType<0>, LLVMMatchType<0>],
                                        [IntrNoMem, IntrSpeculatable]>;
 
-//===------------------------- Fixed Point Intrinsics ---------------------===//
+//===------------------------- Saturation Arithmetic Intrinsics ---------------------===//
 //
 def int_sadd_sat : Intrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
@@ -825,6 +825,12 @@ def int_ssub_sat : Intrinsic<[llvm_anyint_ty],
 def int_usub_sat : Intrinsic<[llvm_anyint_ty],
                              [LLVMMatchType<0>, LLVMMatchType<0>],
                              [IntrNoMem, IntrSpeculatable]>;
+
+//===------------------------- Fixed Point Arithmetic Intrinsics ---------------------===//
+//
+def int_smul_fix : Intrinsic<[llvm_anyint_ty],
+                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                             [IntrNoMem, IntrSpeculatable, Commutative]>;
 
 //===------------------------- Memory Use Markers -------------------------===//
 //

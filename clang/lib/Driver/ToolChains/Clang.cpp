@@ -2167,6 +2167,11 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back(MipsTargetFeature);
   }
+
+  // forward -fembed-bitcode to assmebler
+  if (C.getDriver().embedBitcodeEnabled() ||
+      C.getDriver().embedBitcodeMarkerOnly())
+    Args.AddLastArg(CmdArgs, options::OPT_fembed_bitcode_EQ);
 }
 
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
@@ -3232,6 +3237,9 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
       CmdArgs.push_back("-gcodeview-ghash");
     }
   }
+
+  // Adjust the debug info kind for the given toolchain.
+  TC.adjustDebugInfoKind(DebugInfoKind, Args);
 
   RenderDebugEnablingArgs(Args, CmdArgs, DebugInfoKind, DWARFVersion,
                           DebuggerTuning);

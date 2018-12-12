@@ -120,53 +120,22 @@ Driver::Driver()
 
 Driver::~Driver() { g_driver = NULL; }
 
-Driver::OptionData::OptionData()
-    : m_args(), m_script_lang(lldb::eScriptLanguageDefault), m_core_file(),
-      m_crash_log(), m_initial_commands(), m_after_file_commands(),
-      m_after_crash_commands(), m_debug_mode(false), m_source_quietly(false),
-      m_print_version(false), m_print_python_path(false), m_wait_for(false),
-      m_repl(false), m_repl_lang(eLanguageTypeUnknown), m_repl_options(),
-      m_process_name(), m_process_pid(LLDB_INVALID_PROCESS_ID),
-      m_use_external_editor(false), m_batch(false), m_seen_options() {}
-
-Driver::OptionData::~OptionData() {}
-
-void Driver::OptionData::Clear() {
-  m_args.clear();
-  m_script_lang = lldb::eScriptLanguageDefault;
-  m_initial_commands.clear();
-  m_after_file_commands.clear();
-
-  // If there is a local .lldbinit, add that to the
-  // list of things to be sourced, if the settings
-  // permit it.
+void Driver::OptionData::AddLocalLLDBInit() {
+  // If there is a local .lldbinit, add that to the list of things to be
+  // sourced, if the settings permit it.
   SBFileSpec local_lldbinit(".lldbinit", true);
-
   SBFileSpec homedir_dot_lldb = SBHostOS::GetUserHomeDirectory();
   homedir_dot_lldb.AppendPathComponent(".lldbinit");
 
-  // Only read .lldbinit in the current working directory
-  // if it's not the same as the .lldbinit in the home
-  // directory (which is already being read in).
+  // Only read .lldbinit in the current working directory if it's not the same
+  // as the .lldbinit in the home directory (which is already being read in).
   if (local_lldbinit.Exists() && strcmp(local_lldbinit.GetDirectory(),
                                         homedir_dot_lldb.GetDirectory()) != 0) {
-    char path[2048];
-    local_lldbinit.GetPath(path, 2047);
+    char path[PATH_MAX];
+    local_lldbinit.GetPath(path, sizeof(path));
     InitialCmdEntry entry(path, true, true, true);
     m_after_file_commands.push_back(entry);
   }
-
-  m_debug_mode = false;
-  m_source_quietly = false;
-  m_print_version = false;
-  m_print_python_path = false;
-  m_use_external_editor = false;
-  m_wait_for = false;
-  m_process_name.erase();
-  m_batch = false;
-  m_after_crash_commands.clear();
-
-  m_process_pid = LLDB_INVALID_PROCESS_ID;
 }
 
 void Driver::OptionData::AddInitialCommand(std::string command,
@@ -200,8 +169,6 @@ void Driver::OptionData::AddInitialCommand(std::string command,
   } else
     command_set->push_back(InitialCmdEntry(command, is_file, false));
 }
-
-void Driver::ResetOptionValues() { m_option_data.Clear(); }
 
 const char *Driver::GetFilename() const {
   if (m_option_data.m_args.empty())
@@ -284,7 +251,7 @@ bool Driver::GetDebugMode() const { return m_option_data.m_debug_mode; }
 // user only wanted help or version information.
 SBError Driver::ProcessArgs(const opt::InputArgList &args, bool &exiting) {
   SBError error;
-  ResetOptionValues();
+  m_option_data.AddLocalLLDBInit();
 
   // This is kind of a pain, but since we make the debugger in the Driver's
   // constructor, we can't know at that point whether we should read in init

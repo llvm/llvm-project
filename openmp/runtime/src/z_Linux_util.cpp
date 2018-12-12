@@ -52,6 +52,9 @@
 #include <sys/sysctl.h>
 #elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD
 #include <pthread_np.h>
+#elif KMP_OS_NETBSD
+#include <sys/types.h>
+#include <sys/sysctl.h>
 #endif
 
 #include <ctype.h>
@@ -2015,9 +2018,39 @@ int __kmp_is_address_mapped(void *addr) {
     found = 1;
   }
 
-#elif KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD || KMP_OS_OPENBSD
+#elif KMP_OS_NETBSD
 
-  // FIXME(DragonFly, FreeBSD, NetBSD, OpenBSD): Implement this
+  int mib[5];
+  mib[0] = CTL_VM;
+  mib[1] = VM_PROC;
+  mib[2] = VM_PROC_MAP;
+  mib[3] = getpid();
+  mib[4] = sizeof(struct kinfo_vmentry);
+
+  size_t size;
+  rc = sysctl(mib, __arraycount(mib), NULL, &size, NULL, 0);
+  KMP_ASSERT(!rc);
+  KMP_ASSERT(size);
+
+  size = size * 4 / 3;
+  struct kinfo_vmentry *kiv = (struct kinfo_vmentry *)KMP_INTERNAL_MALLOC(size);
+  KMP_ASSERT(kiv);
+
+  rc = sysctl(mib, __arraycount(mib), kiv, &size, NULL, 0);
+  KMP_ASSERT(!rc);
+  KMP_ASSERT(size);
+
+  for (size_t i = 0; i < size; i++) {
+    if (kiv[i].kve_start >= (uint64_t)addr &&
+        kiv[i].kve_end <= (uint64_t)addr) {
+      found = 1;
+      break;
+    }
+  }
+  KMP_INTERNAL_FREE(kiv);
+#elif KMP_OS_DRAGONFLY || KMP_OS_OPENBSD
+
+  // FIXME(DragonFly, OpenBSD): Implement this
   found = 1;
 
 #else
@@ -2032,7 +2065,7 @@ int __kmp_is_address_mapped(void *addr) {
 
 #ifdef USE_LOAD_BALANCE
 
-#if KMP_OS_DARWIN
+#if KMP_OS_DARWIN || KMP_OS_NETBSD
 
 // The function returns the rounded value of the system load average
 // during given time interval which depends on the value of

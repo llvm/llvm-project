@@ -248,10 +248,23 @@ static unsigned selectSimpleExtOpc(unsigned Opc, unsigned Size) {
 /// bits, the value will be zero extended. Returns the original opcode if it
 /// doesn't know how to select a better one.
 static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned RegBank,
-                                      unsigned Size) {
+                                      unsigned Size, bool isThumb) {
   bool isStore = Opc == TargetOpcode::G_STORE;
 
   if (RegBank == ARM::GPRRegBankID) {
+    if (isThumb)
+      switch (Size) {
+      case 1:
+      case 8:
+        return isStore ? ARM::t2STRBi12 : ARM::t2LDRBi12;
+      case 16:
+        return isStore ? ARM::t2STRHi12 : ARM::t2LDRHi12;
+      case 32:
+        return isStore ? ARM::t2STRi12 : ARM::t2LDRi12;
+      default:
+        return Opc;
+      }
+
     switch (Size) {
     case 1:
     case 8:
@@ -901,7 +914,8 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     assert((ValSize != 64 || STI.hasVFP2()) &&
            "Don't know how to load/store 64-bit value without VFP");
 
-    const auto NewOpc = selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize);
+    const auto NewOpc =
+        selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize, STI.isThumb());
     if (NewOpc == G_LOAD || NewOpc == G_STORE)
       return false;
 

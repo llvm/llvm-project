@@ -1058,8 +1058,9 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
 
   MachineInstrBuilder buildAdd(const DstOp &Dst, const SrcOp &Src0,
-                               const SrcOp &Src1) {
-    return buildInstr(TargetOpcode::G_ADD, {Dst}, {Src0, Src1});
+                               const SrcOp &Src1,
+                               Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_ADD, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_SUB \p Op0, \p Op1
@@ -1074,8 +1075,9 @@ public:
   /// \return a MachineInstrBuilder for the newly created instruction.
 
   MachineInstrBuilder buildSub(const DstOp &Dst, const SrcOp &Src0,
-                               const SrcOp &Src1) {
-    return buildInstr(TargetOpcode::G_SUB, {Dst}, {Src0, Src1});
+                               const SrcOp &Src1,
+                               Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_SUB, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_MUL \p Op0, \p Op1
@@ -1089,8 +1091,9 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildMul(const DstOp &Dst, const SrcOp &Src0,
-                               const SrcOp &Src1) {
-    return buildInstr(TargetOpcode::G_MUL, {Dst}, {Src0, Src1});
+                               const SrcOp &Src1,
+                               Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_MUL, {Dst}, {Src0, Src1}, Flags);
   }
 
   /// Build and insert \p Res = G_AND \p Op0, \p Op1
@@ -1125,7 +1128,8 @@ public:
   }
 
   virtual MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
-                                         ArrayRef<SrcOp> SrcOps);
+                                         ArrayRef<SrcOp> SrcOps,
+                                         Optional<unsigned> Flags = None);
 };
 
 } // End namespace llvm.

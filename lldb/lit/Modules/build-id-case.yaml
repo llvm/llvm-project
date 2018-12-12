@@ -6,8 +6,6 @@
 
 # CHECK: Name: .debug_frame
 # CHECK-NEXT: Type: dwarf-frame
-# CHECK-NEXT: VM size: 0
-# CHECK-NEXT: File size: 8
 
 --- !ELF
 FileHeader:

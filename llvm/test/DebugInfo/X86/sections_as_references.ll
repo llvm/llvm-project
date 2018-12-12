@@ -9,18 +9,12 @@
 ; CHECK-NOT: .L
 
 ; CHECK:      .section .debug_info
-; CHECK-NEXT: .long .Ldebug_info_end0-.Ldebug_info_start0 # Length of Unit
-; CHECK-NEXT: .Ldebug_info_start0:
-; CHECK-NEXT: .short 2             # DWARF version number
+; CHECK-NOT:  .L
+; CHECK:      .short 2             # DWARF version number
 ; CHECK-NOT:  .L
 ; CHECK:      .long .debug_abbrev  # Offset Into Abbrev. Section
 ; CHECK-NOT:  .L
 ; CHECK:      .long .debug_line    # DW_AT_stmt_list
-; CHECK-NOT:  .L
-; CHECK:      .Ldebug_info_end0:
-; CHECK-NOT:  .L
-; CHECK:      .long .Ldebug_info_end1-.Ldebug_info_start1 # Length of Unit
-; CHECK-NEXT: .Ldebug_info_start1:
 ; CHECK-NOT:  .L
 ; CHECK:      .long .debug_abbrev  # Offset Into Abbrev. Section
 ; CHECK-NOT:  .L
@@ -29,7 +23,6 @@
 ; CHECK:      .quad .debug_info+{{[0-9]+}} # DW_AT_type
 ; CHECK-NOT:  .L
 ; CHECK:      .byte 0              # End Of Children Mark
-; CHECK-NEXT: .Ldebug_info_end1:
 ; CHECK-NOT:  .L
 
 source_filename = "test/DebugInfo/X86/sections_as_references.ll"

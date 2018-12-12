@@ -6,7 +6,7 @@ config("xml_config") {
   defines = [ "LLVM_LIBXML2_ENABLED" ]
   libs = [ "xml2" ]
   if (host_os == "mac") {
-    include_dirs = [ "$mac_sdk/usr/include/libxml2" ]
+    include_dirs = [ "$mac_sdk_path/usr/include/libxml2" ]
   } else {
     include_dirs = [ "/usr/include/libxml2" ]
   }

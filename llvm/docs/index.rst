@@ -292,6 +292,7 @@ For API clients and LLVM developers.
    Statepoints
    MergeFunctions
    TypeMetadata
+   TransformMetadata
    FaultMaps
    MIRLangRef
    Coroutines

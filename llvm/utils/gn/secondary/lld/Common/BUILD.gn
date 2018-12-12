@@ -1,0 +1,28 @@
+static_library("Common") {
+  output_name = "lldCommon"
+  configs += [ "//llvm/utils/gn/build:lld_code" ]
+  public_deps = [
+    # public_dep because public header Version.h includes generated Version.inc.
+    "//lld/include/lld/Common:version",
+  ]
+  deps = [
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/Demangle",
+    "//llvm/lib/IR",
+    "//llvm/lib/MC",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+    "//llvm/lib/Target",
+  ]
+  sources = [
+    "Args.cpp",
+    "ErrorHandler.cpp",
+    "Memory.cpp",
+    "Reproduce.cpp",
+    "Strings.cpp",
+    "TargetOptionsCommandFlags.cpp",
+    "Threads.cpp",
+    "Timer.cpp",
+    "Version.cpp",
+  ]
+}

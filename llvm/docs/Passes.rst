@@ -1224,3 +1224,8 @@ Displays the post dominator tree using the GraphViz tool.
 Displays the post dominator tree using the GraphViz tool, but omitting function
 bodies.
 
+``-transform-warning``: Report missed forced transformations
+------------------------------------------------------------
+
+Emits warnings about not yet applied forced transformations (e.g. from
+``#pragma omp simd``).

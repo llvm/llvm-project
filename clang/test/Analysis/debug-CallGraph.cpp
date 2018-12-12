@@ -51,8 +51,27 @@ void test_single_call() {
   do_nothing();
 }
 
+template<typename T>
+void templ(T t) {
+  ccc();
+}
+
+template<>
+void templ<double>(double t) {
+  eee();
+}
+
+
+void templUser() {
+  templ(5);
+  templ(5.5);
+}
+
 // CHECK:--- Call graph Dump ---
-// CHECK-NEXT: {{Function: < root > calls: get5 add test_add mmm foo aaa < > bbb ddd ccc eee fff do_nothing test_single_call $}}
+// CHECK-NEXT: {{Function: < root > calls: get5 add test_add mmm foo aaa < > bbb ddd ccc eee fff do_nothing test_single_call templ templ templUser $}}
+// CHECK-NEXT: {{Function: templUser calls: templ templ $}}
+// CHECK-NEXT: {{Function: templ calls: eee $}}
+// CHECK-NEXT: {{Function: templ calls: ccc $}}
 // CHECK-NEXT: {{Function: test_single_call calls: do_nothing $}}
 // CHECK-NEXT: {{Function: do_nothing calls: $}}
 // CHECK-NEXT: {{Function: fff calls: eee $}}

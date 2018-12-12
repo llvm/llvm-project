@@ -22,6 +22,7 @@ add_clang_library(clangTidyMiscModule
   clangASTMatchers
   clangBasic
   clangLex
+  clangSerialization
   clangTidy
   clangTidyUtils
   clangTooling
