@@ -265,7 +265,7 @@ Limitations
 * On 64-bit platforms AddressSanitizer maps (but not reserves) 16+ Terabytes of
   virtual address space. This means that tools like ``ulimit`` may not work as
   usually expected.
-* Static linking is not supported.
+* Static linking of executables is not supported.
 
 Supported Platforms
 ===================

@@ -14,5 +14,6 @@ target_link_libraries(IndexTests
   clangFrontend
   clangIndex
   clangLex
+  clangSerialization
   clangTooling
   )

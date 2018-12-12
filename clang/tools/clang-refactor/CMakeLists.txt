@@ -16,6 +16,7 @@ target_link_libraries(clang-refactor
   clangFrontend
   clangLex
   clangRewrite
+  clangSerialization
   clangTooling
   clangToolingCore
   clangToolingRefactor

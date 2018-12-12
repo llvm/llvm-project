@@ -11124,30 +11124,39 @@ static void DiagnoseRecursiveConstFields(Sema &S, const ValueDecl *VD,
                                          const RecordType *Ty,
                                          SourceLocation Loc, SourceRange Range,
                                          OriginalExprKind OEK,
-                                         bool &DiagnosticEmitted,
-                                         bool IsNested = false) {
+                                         bool &DiagnosticEmitted) {
+  std::vector<const RecordType *> RecordTypeList;
+  RecordTypeList.push_back(Ty);
+  unsigned NextToCheckIndex = 0;
+  // TODO: MAKE THIS NOT RECURSIVE
   // We walk the record hierarchy breadth-first to ensure that we print
   // diagnostics in field nesting order.
-  // First, check every field for constness.
-  for (const FieldDecl *Field : Ty->getDecl()->fields()) {
-    if (Field->getType().isConstQualified()) {
-      if (!DiagnosticEmitted) {
-        S.Diag(Loc, diag::err_typecheck_assign_const)
-            << Range << NestedConstMember << OEK << VD
-            << IsNested << Field;
-        DiagnosticEmitted = true;
+  while (RecordTypeList.size() > NextToCheckIndex) {
+    bool IsNested = NextToCheckIndex > 0;
+    for (const FieldDecl *Field :
+         RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
+      // First, check every field for constness.
+      QualType FieldTy = Field->getType();
+      if (FieldTy.isConstQualified()) {
+        if (!DiagnosticEmitted) {
+          S.Diag(Loc, diag::err_typecheck_assign_const)
+              << Range << NestedConstMember << OEK << VD
+              << IsNested << Field;
+          DiagnosticEmitted = true;
+        }
+        S.Diag(Field->getLocation(), diag::note_typecheck_assign_const)
+            << NestedConstMember << IsNested << Field
+            << FieldTy << Field->getSourceRange();
       }
-      S.Diag(Field->getLocation(), diag::note_typecheck_assign_const)
-          << NestedConstMember << IsNested << Field
-          << Field->getType() << Field->getSourceRange();
+
+      // Then we append it to the list to check next in order.
+      FieldTy = FieldTy.getCanonicalType();
+      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
+        if (llvm::find(RecordTypeList, FieldRecTy) == RecordTypeList.end())
+          RecordTypeList.push_back(FieldRecTy);
+      }
     }
-  }
-  // Then, recurse.
-  for (const FieldDecl *Field : Ty->getDecl()->fields()) {
-    QualType FTy = Field->getType();
-    if (const RecordType *FieldRecTy = FTy->getAs<RecordType>())
-      DiagnoseRecursiveConstFields(S, VD, FieldRecTy, Loc, Range,
-                                   OEK, DiagnosticEmitted, true);
+    ++NextToCheckIndex;
   }
 }
 

@@ -16,6 +16,7 @@ target_link_libraries(clang-check
   clangDriver
   clangFrontend
   clangRewriteFrontend
+  clangSerialization
   clangStaticAnalyzerFrontend
   clangTooling
   )

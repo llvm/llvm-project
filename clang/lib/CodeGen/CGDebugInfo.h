@@ -538,11 +538,15 @@ private:
   /// Get the source of the given file ID.
   Optional<StringRef> getSource(const SourceManager &SM, FileID FID);
 
-  /// Get the file debug info descriptor for the input location.
+  /// Convenience function to get the file debug info descriptor for the input
+  /// location.
   llvm::DIFile *getOrCreateFile(SourceLocation Loc);
 
-  /// Get the file info for main compile unit.
-  llvm::DIFile *getOrCreateMainFile();
+  /// Create a file debug info descriptor for a source file.
+  llvm::DIFile *
+  createFile(StringRef FileName,
+             Optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo,
+             Optional<StringRef> Source);
 
   /// Get the type from the cache or create a new type if necessary.
   llvm::DIType *getOrCreateType(QualType Ty, llvm::DIFile *Fg);
