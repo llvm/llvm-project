@@ -42,6 +42,7 @@ set(LIBS
   clangIndex
   clangLex
   clangSema
+  clangSerialization
   clangTooling
   clangToolingRefactor
 )

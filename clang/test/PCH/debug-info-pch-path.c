@@ -24,7 +24,7 @@
 // CHECK-REL-NODIR: !DICompileUnit(
 // CHECK-REL-NODIR-SAME:           file: ![[PCH:[0-9]+]]
 // CHECK-REL-NODIR-SAME:           splitDebugFilename: "prefix.pch"
-// CHECK-REL-NODIR: ![[PCH]] = !DIFile({{.*}}directory: "[[DIR]]"
+// CHECK-REL-NODIR: ![[PCH]] = !DIFile({{.*}}directory: "[[DIR]]
 
 // ---------------------------------------------------------------------
 // Relative PCH in a subdirectory.
@@ -71,4 +71,4 @@
 // CHECK-ABS: !DICompileUnit(
 // CHECK-ABS-SAME:           file: ![[PCH:[0-9]+]]
 // CHECK-ABS-SAME:           splitDebugFilename: "prefix.pch"
-// CHECK-ABS: ![[PCH]] = !DIFile({{.*}}directory: "[[DIR]]"
+// CHECK-ABS: ![[PCH]] = !DIFile({{.*}}directory: "[[DIR]]

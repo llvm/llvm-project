@@ -28,5 +28,6 @@ target_link_libraries(ASTTests
   clangASTMatchers
   clangBasic
   clangFrontend
+  clangSerialization
   clangTooling
   )

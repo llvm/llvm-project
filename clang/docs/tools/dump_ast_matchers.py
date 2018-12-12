@@ -354,7 +354,7 @@ for line in open(MATCHERS_FILE).read().splitlines():
         allowed_types += [m.group(1)]
     continue
   if line.strip() and line.lstrip()[0] == '/':
-    comment += re.sub(r'/+\s?', '', line) + '\n'
+    comment += re.sub(r'^/+\s?', '', line) + '\n'
   else:
     declaration += ' ' + line
     if ((not line.strip()) or 

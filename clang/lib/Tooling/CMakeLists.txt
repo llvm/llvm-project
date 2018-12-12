@@ -36,6 +36,7 @@ add_clang_library(clangTooling
   clangFrontend
   clangLex
   clangRewrite
+  clangSerialization
   clangToolingCore
   clangToolingRefactor
   clangToolingRefactoring

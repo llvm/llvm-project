@@ -3528,7 +3528,7 @@ AST_MATCHER_P2(DeclStmt, containsDeclaration, unsigned, N,
 ///   } catch (...) {
 ///     // ...
 ///   }
-/// /endcode
+/// \endcode
 /// cxxCatchStmt(isCatchAll()) matches catch(...) but not catch(int).
 AST_MATCHER(CXXCatchStmt, isCatchAll) {
   return Node.getExceptionDecl() == nullptr;
