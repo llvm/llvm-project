@@ -1787,6 +1787,22 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef &= SrcUndef;
     break;
   }
+  case ISD::AND: {
+    APInt SrcUndef, SrcZero;
+    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, SrcUndef,
+                                   SrcZero, TLO, Depth + 1))
+      return true;
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, KnownUndef,
+                                   KnownZero, TLO, Depth + 1))
+      return true;
+
+    // If either side has a zero element, then the result element is zero, even
+    // if the other is an UNDEF.
+    KnownZero |= SrcZero;
+    KnownUndef &= SrcUndef;
+    KnownUndef &= ~KnownZero;
+    break;
+  }
   case ISD::TRUNCATE:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:

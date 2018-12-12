@@ -718,6 +718,37 @@ int opts::symbols::dumpSymbols(Debugger &Dbg) {
   return HadErrors;
 }
 
+static void dumpSectionList(LinePrinter &Printer, const SectionList &List, bool is_subsection) {
+  size_t Count = List.GetNumSections(0);
+  if (Count == 0) {
+    Printer.formatLine("There are no {0}sections", is_subsection ? "sub" : "");
+    return;
+  }
+  Printer.formatLine("Showing {0} {1}sections", Count,
+                     is_subsection ? "sub" : "");
+  for (size_t I = 0; I < Count; ++I) {
+    auto S = List.GetSectionAtIndex(I);
+    assert(S);
+    AutoIndent Indent(Printer, 2);
+    Printer.formatLine("Index: {0}", I);
+    Printer.formatLine("Name: {0}", S->GetName().GetStringRef());
+    Printer.formatLine("Type: {0}", S->GetTypeAsCString());
+    Printer.formatLine("VM size: {0}", S->GetByteSize());
+    Printer.formatLine("File size: {0}", S->GetFileSize());
+
+    if (opts::object::SectionContents) {
+      DataExtractor Data;
+      S->GetSectionData(Data);
+      ArrayRef<uint8_t> Bytes = {Data.GetDataStart(), Data.GetDataEnd()};
+      Printer.formatBinary("Data: ", Bytes, 0);
+    }
+
+    if (S->GetType() == eSectionTypeContainer)
+      dumpSectionList(Printer, S->GetChildren(), true);
+    Printer.NewLine();
+  }
+}
+
 static int dumpObjectFiles(Debugger &Dbg) {
   LinePrinter Printer(4, llvm::outs());
 
@@ -753,26 +784,7 @@ static int dumpObjectFiles(Debugger &Dbg) {
     Printer.formatLine("Type: {0}", ObjectPtr->GetType());
     Printer.formatLine("Strata: {0}", ObjectPtr->GetStrata());
 
-    size_t Count = Sections->GetNumSections(0);
-    Printer.formatLine("Showing {0} sections", Count);
-    for (size_t I = 0; I < Count; ++I) {
-      AutoIndent Indent(Printer, 2);
-      auto S = Sections->GetSectionAtIndex(I);
-      assert(S);
-      Printer.formatLine("Index: {0}", I);
-      Printer.formatLine("Name: {0}", S->GetName().GetStringRef());
-      Printer.formatLine("Type: {0}", S->GetTypeAsCString());
-      Printer.formatLine("VM size: {0}", S->GetByteSize());
-      Printer.formatLine("File size: {0}", S->GetFileSize());
-
-      if (opts::object::SectionContents) {
-        DataExtractor Data;
-        S->GetSectionData(Data);
-        ArrayRef<uint8_t> Bytes = {Data.GetDataStart(), Data.GetDataEnd()};
-        Printer.formatBinary("Data: ", Bytes, 0);
-      }
-      Printer.NewLine();
-    }
+    dumpSectionList(Printer, *Sections, /*is_subsection*/ false);
 
     if (opts::object::SectionDependentModules) {
       // A non-empty section list ensures a valid object file.
