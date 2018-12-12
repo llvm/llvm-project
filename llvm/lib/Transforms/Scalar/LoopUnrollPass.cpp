@@ -661,11 +661,6 @@ static bool HasUnrollEnablePragma(const Loop *L) {
   return GetUnrollMetadataForLoop(L, "llvm.loop.unroll.enable");
 }
 
-// Returns true if the loop has an unroll(disable) pragma.
-static bool HasUnrollDisablePragma(const Loop *L) {
-  return GetUnrollMetadataForLoop(L, "llvm.loop.unroll.disable");
-}
-
 // Returns true if the loop has an runtime unroll(disable) pragma.
 static bool HasRuntimeUnrollDisablePragma(const Loop *L) {
   return GetUnrollMetadataForLoop(L, "llvm.loop.unroll.runtime.disable");
@@ -713,12 +708,19 @@ static uint64_t getUnrolledLoopSize(
 
 // Returns true if unroll count was set explicitly.
 // Calculates unroll count and writes it to UP.Count.
+// Unless IgnoreUser is true, will also use metadata and command-line options
+// that are specific to to the LoopUnroll pass (which, for instance, are
+// irrelevant for the LoopUnrollAndJam pass).
+// FIXME: This function is used by LoopUnroll and LoopUnrollAndJam, but consumes
+// many LoopUnroll-specific options. The shared functionality should be
+// refactored into it own function.
 bool llvm::computeUnrollCount(
     Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT, LoopInfo *LI,
     ScalarEvolution &SE, const SmallPtrSetImpl<const Value *> &EphValues,
     OptimizationRemarkEmitter *ORE, unsigned &TripCount, unsigned MaxTripCount,
     unsigned &TripMultiple, unsigned LoopSize,
     TargetTransformInfo::UnrollingPreferences &UP, bool &UseUpperBound) {
+
   // Check for explicit Count.
   // 1st priority is unroll count set by "unroll-count" option.
   bool UserUnrollCount = UnrollCount.getNumOccurrences() > 0;
@@ -969,7 +971,7 @@ static LoopUnrollResult tryToUnrollLoop(
   LLVM_DEBUG(dbgs() << "Loop Unroll: F["
                     << L->getHeader()->getParent()->getName() << "] Loop %"
                     << L->getHeader()->getName() << "\n");
-  if (HasUnrollDisablePragma(L))
+  if (hasUnrollTransformation(L) & TM_Disable)
     return LoopUnrollResult::Unmodified;
   if (!L->isLoopSimplifyForm()) {
     LLVM_DEBUG(
@@ -1066,13 +1068,38 @@ static LoopUnrollResult tryToUnrollLoop(
   if (TripCount && UP.Count > TripCount)
     UP.Count = TripCount;
 
+  // Save loop properties before it is transformed.
+  MDNode *OrigLoopID = L->getLoopID();
+
   // Unroll the loop.
+  Loop *RemainderLoop = nullptr;
   LoopUnrollResult UnrollResult = UnrollLoop(
       L, UP.Count, TripCount, UP.Force, UP.Runtime, UP.AllowExpensiveTripCount,
       UseUpperBound, MaxOrZero, TripMultiple, UP.PeelCount, UP.UnrollRemainder,
-      LI, &SE, &DT, &AC, &ORE, PreserveLCSSA);
+      LI, &SE, &DT, &AC, &ORE, PreserveLCSSA, &RemainderLoop);
   if (UnrollResult == LoopUnrollResult::Unmodified)
     return LoopUnrollResult::Unmodified;
+
+  if (RemainderLoop) {
+    Optional<MDNode *> RemainderLoopID =
+        makeFollowupLoopID(OrigLoopID, {LLVMLoopUnrollFollowupAll,
+                                        LLVMLoopUnrollFollowupRemainder});
+    if (RemainderLoopID.hasValue())
+      RemainderLoop->setLoopID(RemainderLoopID.getValue());
+  }
+
+  if (UnrollResult != LoopUnrollResult::FullyUnrolled) {
+    Optional<MDNode *> NewLoopID =
+        makeFollowupLoopID(OrigLoopID, {LLVMLoopUnrollFollowupAll,
+                                        LLVMLoopUnrollFollowupUnrolled});
+    if (NewLoopID.hasValue()) {
+      L->setLoopID(NewLoopID.getValue());
+
+      // Do not setLoopAlreadyUnrolled if loop attributes have been specified
+      // explicitly.
+      return UnrollResult;
+    }
+  }
 
   // If loop has an unroll count pragma or unrolled by explicitly set count
   // mark loop as unrolled to prevent unrolling beyond that requested.

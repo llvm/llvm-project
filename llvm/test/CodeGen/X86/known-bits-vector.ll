@@ -5,13 +5,17 @@
 define i32 @knownbits_mask_extract_sext(<8 x i16> %a0) nounwind {
 ; X32-LABEL: knownbits_mask_extract_sext:
 ; X32:       # %bb.0:
-; X32-NEXT:    vpand {{\.LCPI.*}}, %xmm0, %xmm0
+; X32-NEXT:    movl $15, %eax
+; X32-NEXT:    vmovd %eax, %xmm1
+; X32-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X32-NEXT:    vpextrw $0, %xmm0, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: knownbits_mask_extract_sext:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    movl $15, %eax
+; X64-NEXT:    vmovd %eax, %xmm1
+; X64-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpextrw $0, %xmm0, %eax
 ; X64-NEXT:    retq
   %1 = and <8 x i16> %a0, <i16 15, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>

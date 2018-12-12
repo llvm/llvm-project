@@ -3166,14 +3166,23 @@ bool TagType::isBeingDefined() const {
 }
 
 bool RecordType::hasConstFields() const {
-  for (FieldDecl *FD : getDecl()->fields()) {
-    QualType FieldTy = FD->getType();
-    if (FieldTy.isConstQualified())
-      return true;
-    FieldTy = FieldTy.getCanonicalType();
-    if (const auto *FieldRecTy = FieldTy->getAs<RecordType>())
-      if (FieldRecTy->hasConstFields())
+  std::vector<const RecordType*> RecordTypeList;
+  RecordTypeList.push_back(this);
+  unsigned NextToCheckIndex = 0;
+
+  while (RecordTypeList.size() > NextToCheckIndex) {
+    for (FieldDecl *FD :
+         RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
+      QualType FieldTy = FD->getType();
+      if (FieldTy.isConstQualified())
         return true;
+      FieldTy = FieldTy.getCanonicalType();
+      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
+        if (llvm::find(RecordTypeList, FieldRecTy) == RecordTypeList.end())
+          RecordTypeList.push_back(FieldRecTy);
+      }
+    }
+    ++NextToCheckIndex;
   }
   return false;
 }

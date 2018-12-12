@@ -805,6 +805,38 @@ public:
     return OpActions[(unsigned)VT.getSimpleVT().SimpleTy][Op];
   }
 
+  /// Custom method defined by each target to indicate if an operation which
+  /// may require a scale is supported natively by the target.
+  /// If not, the operation is illegal.
+  virtual bool isSupportedFixedPointOperation(unsigned Op, EVT VT,
+                                              unsigned Scale) const {
+    return false;
+  }
+
+  /// Some fixed point operations may be natively supported by the target but
+  /// only for specific scales. This method allows for checking
+  /// if the width is supported by the target for a given operation that may
+  /// depend on scale.
+  LegalizeAction getFixedPointOperationAction(unsigned Op, EVT VT,
+                                              unsigned Scale) const {
+    auto Action = getOperationAction(Op, VT);
+    if (Action != Legal)
+      return Action;
+
+    // This operation is supported in this type but may only work on specific
+    // scales.
+    bool Supported;
+    switch (Op) {
+    default:
+      llvm_unreachable("Unexpected fixed point operation.");
+    case ISD::SMULFIX:
+      Supported = isSupportedFixedPointOperation(Op, VT, Scale);
+      break;
+    }
+
+    return Supported ? Action : Expand;
+  }
+
   LegalizeAction getStrictFPOperationAction(unsigned Op, EVT VT) const {
     unsigned EqOpc;
     switch (Op) {
@@ -3775,9 +3807,14 @@ public:
                                   SDValue Index) const;
 
   /// Method for building the DAG expansion of ISD::[US][ADD|SUB]SAT. This
-  /// method accepts integers or vectors of integers as its arguments.
+  /// method accepts integers as its arguments.
   SDValue getExpandedSaturationAdditionSubtraction(SDNode *Node,
                                                    SelectionDAG &DAG) const;
+
+  /// Method for building the DAG expansion of ISD::SMULFIX. This method accepts
+  /// integers as its arguments.
+  SDValue getExpandedFixedPointMultiplication(SDNode *Node,
+                                              SelectionDAG &DAG) const;
 
   //===--------------------------------------------------------------------===//
   // Instruction Emitting Hooks

@@ -21,10 +21,10 @@ define i8 @test_i8(i8 %a) nounwind {
 ;
 ; X64-LABEL: test_i8:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl %eax, %ecx
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    movl %edi, %ecx
 ; X64-NEXT:    sarb $7, %cl
-; X64-NEXT:    addb %cl, %al
+; X64-NEXT:    leal (%rdi,%rcx), %eax
 ; X64-NEXT:    xorb %cl, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq

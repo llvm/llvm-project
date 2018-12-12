@@ -642,9 +642,9 @@ define i32 @rotate_demanded_bits_3(i32, i32) {
 ;
 ; X64-LABEL: rotate_demanded_bits_3:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %esi, %ecx
+; X64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    addb %cl, %cl
+; X64-NEXT:    leal (%rsi,%rsi), %ecx
 ; X64-NEXT:    andb $30, %cl
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X64-NEXT:    roll %cl, %eax

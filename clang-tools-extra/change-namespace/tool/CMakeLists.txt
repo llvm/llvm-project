@@ -16,6 +16,7 @@ target_link_libraries(clang-change-namespace
   clangFormat
   clangFrontend
   clangRewrite
+  clangSerialization
   clangTooling
   clangToolingCore
   )

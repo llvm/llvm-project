@@ -1,5 +1,3 @@
-REQUIRES: system-windows
-
 RUN: %build -n --verbose --arch=32 --mode=compile --compiler=any -o %t/foo.out foobar.c \
 RUN:    | FileCheck --check-prefix=COMPILE %s
 
@@ -21,17 +19,17 @@ RUN:    | FileCheck --check-prefix=BOTH-MULTI %s
 
 COMPILE: compiling foobar.c -> foo.out
 
-COMPILE-MULTI: compiling foo.c -> foo.obj
-COMPILE-MULTI: compiling bar.c -> bar.obj
+COMPILE-MULTI: compiling foo.c -> foo.o{{(bj)?}}
+COMPILE-MULTI: compiling bar.c -> bar.o{{(bj)?}}
 
 
 LINK: linking foobar.obj -> foo.exe
 
 LINK-MULTI: linking foo.obj+bar.obj -> foobar.exe
 
-BOTH: compiling foobar.c -> foobar.exe-foobar.obj
-BOTH: linking foobar.exe-foobar.obj -> foobar.exe
+BOTH: compiling foobar.c -> [[OBJFOO:foobar.exe-foobar.o(bj)?]]
+BOTH: linking [[OBJFOO]] -> foobar.exe
 
-BOTH-MULTI: compiling foo.c -> foobar.exe-foo.obj
-BOTH-MULTI: compiling bar.c -> foobar.exe-bar.obj
-BOTH-MULTI: linking foobar.exe-foo.obj+foobar.exe-bar.obj -> foobar.exe
+BOTH-MULTI: compiling foo.c -> [[OBJFOO:foobar.exe-foo.o(bj)?]]
+BOTH-MULTI: compiling bar.c -> [[OBJBAR:foobar.exe-bar.o(bj)?]]
+BOTH-MULTI: linking [[OBJFOO]]+[[OBJBAR]] -> foobar.exe

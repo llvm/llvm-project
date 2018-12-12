@@ -21,6 +21,7 @@ target_link_libraries(ClangRenameTests
   clangFormat
   clangFrontend
   clangRewrite
+  clangSerialization
   clangTooling
   clangToolingCore
   clangToolingRefactor

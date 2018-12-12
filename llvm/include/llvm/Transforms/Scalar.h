@@ -484,6 +484,13 @@ FunctionPass *createLibCallsShrinkWrapPass();
 // primarily to help other loop passes.
 //
 Pass *createLoopSimplifyCFGPass();
+
+//===----------------------------------------------------------------------===//
+//
+// WarnMissedTransformations - This pass emits warnings for leftover forced
+// transformations.
+//
+Pass *createWarnMissedTransformationsPass();
 } // End llvm namespace
 
 #endif

@@ -525,6 +525,7 @@
 		2689009613353E4200698AC0 /* ObjectContainerBSDArchive.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26A3B4AC1181454800381BC2 /* ObjectContainerBSDArchive.cpp */; };
 		2689009713353E4200698AC0 /* ObjectContainerUniversalMachO.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C898010F57C5600BB2B04 /* ObjectContainerUniversalMachO.cpp */; };
 		268900DC13353E6F00698AC0 /* ObjectFile.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F4C10F1BC1A00F91463 /* ObjectFile.cpp */; };
+		4C9BF11B21C0467700FA4036 /* ObjectFileBreakpad.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C9BF11921C0467700FA4036 /* ObjectFileBreakpad.cpp */; };
 		2689009913353E4200698AC0 /* ObjectFileELF.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C898510F57C5600BB2B04 /* ObjectFileELF.cpp */; };
 		26EFC4CD18CFAF0D00865D87 /* ObjectFileJIT.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26EFC4CA18CFAF0D00865D87 /* ObjectFileJIT.cpp */; };
 		2689009A13353E4200698AC0 /* ObjectFileMachO.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 260C898810F57C5600BB2B04 /* ObjectFileMachO.cpp */; };
@@ -2293,6 +2294,8 @@
 		260C898110F57C5600BB2B04 /* ObjectContainerUniversalMachO.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjectContainerUniversalMachO.h; sourceTree = "<group>"; };
 		26BC7F4C10F1BC1A00F91463 /* ObjectFile.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ObjectFile.cpp; path = source/Symbol/ObjectFile.cpp; sourceTree = "<group>"; };
 		26BC7C5E10F1B6E900F91463 /* ObjectFile.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ObjectFile.h; path = include/lldb/Symbol/ObjectFile.h; sourceTree = "<group>"; };
+		4C9BF11921C0467700FA4036 /* ObjectFileBreakpad.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ObjectFileBreakpad.cpp; sourceTree = "<group>"; };
+		4C9BF11821C0467700FA4036 /* ObjectFileBreakpad.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjectFileBreakpad.h; sourceTree = "<group>"; };
 		260C898510F57C5600BB2B04 /* ObjectFileELF.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ObjectFileELF.cpp; sourceTree = "<group>"; };
 		260C898610F57C5600BB2B04 /* ObjectFileELF.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjectFileELF.h; sourceTree = "<group>"; };
 		26EFC4CA18CFAF0D00865D87 /* ObjectFileJIT.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ObjectFileJIT.cpp; sourceTree = "<group>"; };
@@ -3963,6 +3966,7 @@
 		260C898210F57C5600BB2B04 /* ObjectFile */ = {
 			isa = PBXGroup;
 			children = (
+				4C9BF11621C0467700FA4036 /* Breakpad */,
 				260C898310F57C5600BB2B04 /* ELF */,
 				26EFC4C718CFAF0D00865D87 /* JIT */,
 				260C898710F57C5600BB2B04 /* Mach-O */,
@@ -6153,6 +6157,15 @@
 			path = PPC64;
 			sourceTree = "<group>";
 		};
+		4C9BF11621C0467700FA4036 /* Breakpad */ = {
+			isa = PBXGroup;
+			children = (
+				4C9BF11821C0467700FA4036 /* ObjectFileBreakpad.h */,
+				4C9BF11921C0467700FA4036 /* ObjectFileBreakpad.cpp */,
+			);
+			path = Breakpad;
+			sourceTree = "<group>";
+		};
 		4CCA643A13B40B82003BDF98 /* LanguageRuntime */ = {
 			isa = PBXGroup;
 			children = (
@@ -7737,6 +7750,7 @@
 			files = (
 				33E5E8471A674FB60024ED68 /* StringConvert.cpp in Sources */,
 				2689FFDA13353D9D00698AC0 /* lldb.cpp in Sources */,
+				4C9BF11B21C0467700FA4036 /* ObjectFileBreakpad.cpp in Sources */,
 				4C0083401B9F9BA900D5CF24 /* UtilityFunction.cpp in Sources */,
 				AF415AE71D949E4400FCE0D4 /* x86AssemblyInspectionEngine.cpp in Sources */,
 				26474CCD18D0CB5B0073DEBA /* RegisterContextPOSIX_x86.cpp in Sources */,

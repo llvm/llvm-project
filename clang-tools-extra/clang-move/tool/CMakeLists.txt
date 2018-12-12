@@ -13,6 +13,7 @@ target_link_libraries(clang-move
   clangFrontend
   clangMove
   clangRewrite
+  clangSerialization
   clangTooling
   clangToolingCore
   )

@@ -35,7 +35,7 @@
   define void @test_shl_s32() { ret void }
 
   define void @test_load_from_stack() { ret void }
-  define void @test_legal_loads_stores() #0 { ret void }
+  define void @test_load_store_64() #0 { ret void }
 
   define void @test_gep() { ret void }
 
@@ -792,8 +792,8 @@ body:             |
     BX_RET 14, $noreg, implicit $r0
 ...
 ---
-name:            test_legal_loads_stores
-# CHECK-LABEL: name: test_legal_loads_stores
+name:            test_load_store_64
+# CHECK-LABEL: name: test_load_store_64
 legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
@@ -811,32 +811,12 @@ body:             |
   bb.0:
     liveins: $r0
 
-    ; These are all legal, so we should find them unchanged in the output
+    ; These are legal, so we should find them unchanged in the output
     ; CHECK-DAG: G_STORE {{%[0-9]+}}(s64), %0(p0)
-    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s32), %0(p0)
-    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s16), %0(p0)
-    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s8), %0(p0)
-    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s1), %0(p0)
-    ; CHECK-DAG: G_STORE {{%[0-9]+}}(p0), %0(p0)
     ; CHECK-DAG: {{%[0-9]+}}:_(s64) = G_LOAD %0(p0)
-    ; CHECK-DAG: {{%[0-9]+}}:_(s32) = G_LOAD %0(p0)
-    ; CHECK-DAG: {{%[0-9]+}}:_(s16) = G_LOAD %0(p0)
-    ; CHECK-DAG: {{%[0-9]+}}:_(s8) = G_LOAD %0(p0)
-    ; CHECK-DAG: {{%[0-9]+}}:_(s1) = G_LOAD %0(p0)
-    ; CHECK-DAG: {{%[0-9]+}}:_(p0) = G_LOAD %0(p0)
     %0(p0) = COPY $r0
     %1(s64) = G_LOAD %0(p0) :: (load 8)
     G_STORE %1(s64), %0(p0) :: (store 8)
-    %2(s32) = G_LOAD %0(p0) :: (load 4)
-    G_STORE %2(s32), %0(p0) :: (store 4)
-    %3(s16) = G_LOAD %0(p0) :: (load 2)
-    G_STORE %3(s16), %0(p0) :: (store 2)
-    %4(s8) = G_LOAD %0(p0) :: (load 1)
-    G_STORE %4(s8), %0(p0) :: (store 1)
-    %5(s1) = G_LOAD %0(p0) :: (load 1)
-    G_STORE %5(s1), %0(p0) :: (store 1)
-    %6(p0) = G_LOAD %0(p0) :: (load 4)
-    G_STORE %6(p0), %0(p0) :: (store 4)
     BX_RET 14, $noreg
 ...
 ---

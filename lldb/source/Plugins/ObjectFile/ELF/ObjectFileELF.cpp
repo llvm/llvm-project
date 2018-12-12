@@ -539,14 +539,13 @@ static uint32_t calc_gnu_debuglink_crc32(const void *buf, size_t size) {
 
 uint32_t ObjectFileELF::CalculateELFNotesSegmentsCRC32(
     const ProgramHeaderColl &program_headers, DataExtractor &object_data) {
-  typedef ProgramHeaderCollConstIter Iter;
 
   uint32_t core_notes_crc = 0;
 
-  for (Iter I = program_headers.begin(); I != program_headers.end(); ++I) {
-    if (I->p_type == llvm::ELF::PT_NOTE) {
-      const elf_off ph_offset = I->p_offset;
-      const size_t ph_size = I->p_filesz;
+  for (const ELFProgramHeader &H : program_headers) {
+    if (H.p_type == llvm::ELF::PT_NOTE) {
+      const elf_off ph_offset = H.p_offset;
+      const size_t ph_size = H.p_filesz;
 
       DataExtractor segment_data;
       if (segment_data.SetData(object_data, ph_offset, ph_size) != ph_size) {
@@ -806,15 +805,11 @@ bool ObjectFileELF::SetLoadAddress(Target &target, lldb::addr_t value,
     if (section_list) {
       if (!value_is_offset) {
         bool found_offset = false;
-        for (size_t i = 1, count = GetProgramHeaderCount(); i <= count; ++i) {
-          const elf::ELFProgramHeader *header = GetProgramHeaderByIndex(i);
-          if (header == nullptr)
+        for (const ELFProgramHeader &H : ProgramHeaders()) {
+          if (H.p_type != PT_LOAD || H.p_offset != 0)
             continue;
 
-          if (header->p_type != PT_LOAD || header->p_offset != 0)
-            continue;
-
-          value = value - header->p_vaddr;
+          value = value - H.p_vaddr;
           found_offset = true;
           break;
         }
@@ -1158,8 +1153,8 @@ size_t ObjectFileELF::GetProgramHeaderInfo(ProgramHeaderColl &program_headers,
 //----------------------------------------------------------------------
 // ParseProgramHeaders
 //----------------------------------------------------------------------
-size_t ObjectFileELF::ParseProgramHeaders() {
-  return GetProgramHeaderInfo(m_program_headers, m_data, m_header);
+bool ObjectFileELF::ParseProgramHeaders() {
+  return GetProgramHeaderInfo(m_program_headers, m_data, m_header) != 0;
 }
 
 lldb_private::Status
@@ -1705,27 +1700,6 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
   return 0;
 }
 
-size_t ObjectFileELF::GetProgramHeaderCount() { return ParseProgramHeaders(); }
-
-const elf::ELFProgramHeader *
-ObjectFileELF::GetProgramHeaderByIndex(lldb::user_id_t id) {
-  if (!id || !ParseProgramHeaders())
-    return NULL;
-
-  if (--id < m_program_headers.size())
-    return &m_program_headers[id];
-
-  return NULL;
-}
-
-DataExtractor ObjectFileELF::GetSegmentDataByIndex(lldb::user_id_t id) {
-  const elf::ELFProgramHeader *segment_header = GetProgramHeaderByIndex(id);
-  if (segment_header == NULL)
-    return DataExtractor();
-  return DataExtractor(m_data, segment_header->p_offset,
-                       segment_header->p_filesz);
-}
-
 llvm::StringRef
 ObjectFileELF::StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
   size_t pos = symbol_name.find('@');
@@ -1761,6 +1735,45 @@ lldb::user_id_t ObjectFileELF::GetSectionIndexByName(const char *name) {
   return 0;
 }
 
+static SectionType getSectionType(llvm::StringRef Name) {
+  return llvm::StringSwitch<SectionType>(Name)
+      .Case(".ARM.exidx", eSectionTypeARMexidx)
+      .Case(".ARM.extab", eSectionTypeARMextab)
+      .Cases(".bss", ".tbss", eSectionTypeZeroFill)
+      .Cases(".data", ".tdata", eSectionTypeData)
+      .Case(".debug_abbrev", eSectionTypeDWARFDebugAbbrev)
+      .Case(".debug_abbrev.dwo", eSectionTypeDWARFDebugAbbrevDwo)
+      .Case(".debug_addr", eSectionTypeDWARFDebugAddr)
+      .Case(".debug_aranges", eSectionTypeDWARFDebugAranges)
+      .Case(".debug_cu_index", eSectionTypeDWARFDebugCuIndex)
+      .Case(".debug_frame", eSectionTypeDWARFDebugFrame)
+      .Case(".debug_info", eSectionTypeDWARFDebugInfo)
+      .Case(".debug_info.dwo", eSectionTypeDWARFDebugInfoDwo)
+      .Cases(".debug_line", ".debug_line.dwo", eSectionTypeDWARFDebugLine)
+      .Cases(".debug_line_str", ".debug_line_str.dwo",
+             eSectionTypeDWARFDebugLineStr)
+      .Cases(".debug_loc", ".debug_loc.dwo", eSectionTypeDWARFDebugLoc)
+      .Cases(".debug_loclists", ".debug_loclists.dwo",
+             eSectionTypeDWARFDebugLocLists)
+      .Case(".debug_macinfo", eSectionTypeDWARFDebugMacInfo)
+      .Cases(".debug_macro", ".debug_macro.dwo", eSectionTypeDWARFDebugMacro)
+      .Case(".debug_names", eSectionTypeDWARFDebugNames)
+      .Case(".debug_pubnames", eSectionTypeDWARFDebugPubNames)
+      .Case(".debug_pubtypes", eSectionTypeDWARFDebugPubTypes)
+      .Case(".debug_ranges", eSectionTypeDWARFDebugRanges)
+      .Case(".debug_rnglists", eSectionTypeDWARFDebugRngLists)
+      .Case(".debug_str", eSectionTypeDWARFDebugStr)
+      .Case(".debug_str.dwo", eSectionTypeDWARFDebugStrDwo)
+      .Case(".debug_str_offsets", eSectionTypeDWARFDebugStrOffsets)
+      .Case(".debug_str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
+      .Case(".debug_types", eSectionTypeDWARFDebugTypes)
+      .Case(".eh_frame", eSectionTypeEHFrame)
+      .Case(".gnu_debugaltlink", eSectionTypeDWARFGNUDebugAltLink)
+      .Case(".gosymtab", eSectionTypeGoSymtab)
+      .Case(".text", eSectionTypeCode)
+      .Default(eSectionTypeOther);
+}
+
 void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
   if (!m_sections_ap.get() && ParseSectionHeaders()) {
     m_sections_ap.reset(new SectionList());
@@ -1780,151 +1793,9 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
           header.sh_type == SHT_NOBITS ? 0 : header.sh_size;
       const uint64_t vm_size = header.sh_flags & SHF_ALLOC ? header.sh_size : 0;
 
-      static ConstString g_sect_name_text(".text");
-      static ConstString g_sect_name_data(".data");
-      static ConstString g_sect_name_bss(".bss");
-      static ConstString g_sect_name_tdata(".tdata");
-      static ConstString g_sect_name_tbss(".tbss");
-      static ConstString g_sect_name_dwarf_debug_abbrev(".debug_abbrev");
-      static ConstString g_sect_name_dwarf_debug_addr(".debug_addr");
-      static ConstString g_sect_name_dwarf_debug_aranges(".debug_aranges");
-      static ConstString g_sect_name_dwarf_debug_cu_index(".debug_cu_index");
-      static ConstString g_sect_name_dwarf_debug_frame(".debug_frame");
-      static ConstString g_sect_name_dwarf_debug_info(".debug_info");
-      static ConstString g_sect_name_dwarf_debug_line(".debug_line");
-      static ConstString g_sect_name_dwarf_debug_line_str(".debug_line_str");
-      static ConstString g_sect_name_dwarf_debug_loc(".debug_loc");
-      static ConstString g_sect_name_dwarf_debug_loclists(".debug_loclists");
-      static ConstString g_sect_name_dwarf_debug_macinfo(".debug_macinfo");
-      static ConstString g_sect_name_dwarf_debug_macro(".debug_macro");
-      static ConstString g_sect_name_dwarf_debug_names(".debug_names");
-      static ConstString g_sect_name_dwarf_debug_pubnames(".debug_pubnames");
-      static ConstString g_sect_name_dwarf_debug_pubtypes(".debug_pubtypes");
-      static ConstString g_sect_name_dwarf_debug_ranges(".debug_ranges");
-      static ConstString g_sect_name_dwarf_debug_rnglists(".debug_rnglists");
-      static ConstString g_sect_name_dwarf_debug_str(".debug_str");
-      static ConstString g_sect_name_dwarf_debug_str_offsets(
-          ".debug_str_offsets");
-      static ConstString g_sect_name_dwarf_debug_abbrev_dwo(
-          ".debug_abbrev.dwo");
-      static ConstString g_sect_name_dwarf_debug_info_dwo(".debug_info.dwo");
-      static ConstString g_sect_name_dwarf_debug_line_dwo(".debug_line.dwo");
-      static ConstString g_sect_name_dwarf_debug_line_str_dwo(".debug_line_str.dwo");
-      static ConstString g_sect_name_dwarf_debug_macro_dwo(".debug_macro.dwo");
-      static ConstString g_sect_name_dwarf_debug_loc_dwo(".debug_loc.dwo");
-      static ConstString g_sect_name_dwarf_debug_loclists_dwo(".debug_loclists.dwo");
-      static ConstString g_sect_name_dwarf_debug_str_dwo(".debug_str.dwo");
-      static ConstString g_sect_name_dwarf_debug_str_offsets_dwo(
-          ".debug_str_offsets.dwo");
-      static ConstString g_sect_name_dwarf_debug_types(".debug_types");
-      static ConstString g_sect_name_eh_frame(".eh_frame");
-      static ConstString g_sect_name_arm_exidx(".ARM.exidx");
-      static ConstString g_sect_name_arm_extab(".ARM.extab");
-      static ConstString g_sect_name_go_symtab(".gosymtab");
-      static ConstString g_sect_name_dwarf_gnu_debugaltlink(".gnu_debugaltlink");
+      SectionType sect_type = getSectionType(name.GetStringRef());
 
-      SectionType sect_type = eSectionTypeOther;
-
-      bool is_thread_specific = false;
-
-      if (name == g_sect_name_text)
-        sect_type = eSectionTypeCode;
-      else if (name == g_sect_name_data)
-        sect_type = eSectionTypeData;
-      else if (name == g_sect_name_bss)
-        sect_type = eSectionTypeZeroFill;
-      else if (name == g_sect_name_tdata) {
-        sect_type = eSectionTypeData;
-        is_thread_specific = true;
-      } else if (name == g_sect_name_tbss) {
-        sect_type = eSectionTypeZeroFill;
-        is_thread_specific = true;
-      }
-      // .debug_abbrev – Abbreviations used in the .debug_info section
-      // .debug_aranges – Lookup table for mapping addresses to compilation
-      // units .debug_frame – Call frame information .debug_info – The core
-      // DWARF information section .debug_line – Line number information
-      // .debug_loc – Location lists used in DW_AT_location attributes
-      // .debug_macinfo – Macro information .debug_pubnames – Lookup table
-      // for mapping object and function names to compilation units
-      // .debug_pubtypes – Lookup table for mapping type names to compilation
-      // units .debug_ranges – Address ranges used in DW_AT_ranges attributes
-      // .debug_str – String table used in .debug_info MISSING?
-      // .gnu_debugdata - "mini debuginfo / MiniDebugInfo" section,
-      // http://sourceware.org/gdb/onlinedocs/gdb/MiniDebugInfo.html MISSING?
-      // .debug-index - http://src.chromium.org/viewvc/chrome/trunk/src/build
-      // /gdb-add-index?pathrev=144644 MISSING? .debug_types - Type
-      // descriptions from DWARF 4? See
-      // http://gcc.gnu.org/wiki/DwarfSeparateTypeInfo
-      else if (name == g_sect_name_dwarf_debug_abbrev)
-        sect_type = eSectionTypeDWARFDebugAbbrev;
-      else if (name == g_sect_name_dwarf_debug_addr)
-        sect_type = eSectionTypeDWARFDebugAddr;
-      else if (name == g_sect_name_dwarf_debug_aranges)
-        sect_type = eSectionTypeDWARFDebugAranges;
-      else if (name == g_sect_name_dwarf_debug_cu_index)
-        sect_type = eSectionTypeDWARFDebugCuIndex;
-      else if (name == g_sect_name_dwarf_debug_frame)
-        sect_type = eSectionTypeDWARFDebugFrame;
-      else if (name == g_sect_name_dwarf_debug_info)
-        sect_type = eSectionTypeDWARFDebugInfo;
-      else if (name == g_sect_name_dwarf_debug_line)
-        sect_type = eSectionTypeDWARFDebugLine;
-      else if (name == g_sect_name_dwarf_debug_line_str)
-        sect_type = eSectionTypeDWARFDebugLineStr;
-      else if (name == g_sect_name_dwarf_debug_loc)
-        sect_type = eSectionTypeDWARFDebugLoc;
-      else if (name == g_sect_name_dwarf_debug_loclists)
-        sect_type = eSectionTypeDWARFDebugLocLists;
-      else if (name == g_sect_name_dwarf_debug_macinfo)
-        sect_type = eSectionTypeDWARFDebugMacInfo;
-      else if (name == g_sect_name_dwarf_debug_macro)
-        sect_type = eSectionTypeDWARFDebugMacro;
-      else if (name == g_sect_name_dwarf_debug_names)
-        sect_type = eSectionTypeDWARFDebugNames;
-      else if (name == g_sect_name_dwarf_debug_pubnames)
-        sect_type = eSectionTypeDWARFDebugPubNames;
-      else if (name == g_sect_name_dwarf_debug_pubtypes)
-        sect_type = eSectionTypeDWARFDebugPubTypes;
-      else if (name == g_sect_name_dwarf_debug_ranges)
-        sect_type = eSectionTypeDWARFDebugRanges;
-      else if (name == g_sect_name_dwarf_debug_rnglists)
-        sect_type = eSectionTypeDWARFDebugRngLists;
-      else if (name == g_sect_name_dwarf_debug_str)
-        sect_type = eSectionTypeDWARFDebugStr;
-      else if (name == g_sect_name_dwarf_debug_types)
-        sect_type = eSectionTypeDWARFDebugTypes;
-      else if (name == g_sect_name_dwarf_debug_str_offsets)
-        sect_type = eSectionTypeDWARFDebugStrOffsets;
-      else if (name == g_sect_name_dwarf_debug_abbrev_dwo)
-        sect_type = eSectionTypeDWARFDebugAbbrevDwo;
-      else if (name == g_sect_name_dwarf_debug_info_dwo)
-        sect_type = eSectionTypeDWARFDebugInfoDwo;
-      else if (name == g_sect_name_dwarf_debug_line_dwo)
-        sect_type = eSectionTypeDWARFDebugLine;
-      else if (name == g_sect_name_dwarf_debug_line_str_dwo)
-        sect_type = eSectionTypeDWARFDebugLineStr;
-      else if (name == g_sect_name_dwarf_debug_macro_dwo)
-        sect_type = eSectionTypeDWARFDebugMacro;
-      else if (name == g_sect_name_dwarf_debug_loc_dwo)
-        sect_type = eSectionTypeDWARFDebugLoc;
-      else if (name == g_sect_name_dwarf_debug_loclists_dwo)
-        sect_type = eSectionTypeDWARFDebugLocLists;
-      else if (name == g_sect_name_dwarf_debug_str_dwo)
-        sect_type = eSectionTypeDWARFDebugStrDwo;
-      else if (name == g_sect_name_dwarf_debug_str_offsets_dwo)
-        sect_type = eSectionTypeDWARFDebugStrOffsetsDwo;
-      else if (name == g_sect_name_eh_frame)
-        sect_type = eSectionTypeEHFrame;
-      else if (name == g_sect_name_arm_exidx)
-        sect_type = eSectionTypeARMexidx;
-      else if (name == g_sect_name_arm_extab)
-        sect_type = eSectionTypeARMextab;
-      else if (name == g_sect_name_go_symtab)
-        sect_type = eSectionTypeGoSymtab;
-      else if (name == g_sect_name_dwarf_gnu_debugaltlink)
-        sect_type = eSectionTypeDWARFGNUDebugAltLink;
-
+      bool is_thread_specific = header.sh_flags & SHF_TLS;
       const uint32_t permissions =
           ((header.sh_flags & SHF_ALLOC) ? ePermissionsReadable : 0u) |
           ((header.sh_flags & SHF_WRITE) ? ePermissionsWritable : 0u) |
@@ -3181,11 +3052,9 @@ void ObjectFileELF::DumpELFProgramHeaders(Stream *s) {
   s->PutCString("==== --------------- -------- -------- -------- "
                 "-------- -------- ------------------------- --------\n");
 
-  uint32_t idx = 0;
-  for (ProgramHeaderCollConstIter I = m_program_headers.begin();
-       I != m_program_headers.end(); ++I, ++idx) {
-    s->Printf("[%2u] ", idx);
-    ObjectFileELF::DumpELFProgramHeader(s, *I);
+  for (const auto &H : llvm::enumerate(m_program_headers)) {
+    s->Format("[{0,2}] ", H.index());
+    ObjectFileELF::DumpELFProgramHeader(s, H.value());
     s->EOL();
   }
 }
@@ -3305,18 +3174,13 @@ bool ObjectFileELF::GetArchitecture(ArchSpec &arch) {
       m_arch_spec.TripleOSIsUnspecifiedUnknown()) {
     // Core files don't have section headers yet they have PT_NOTE program
     // headers that might shed more light on the architecture
-    if (ParseProgramHeaders()) {
-      for (size_t i = 1, count = GetProgramHeaderCount(); i <= count; ++i) {
-        const elf::ELFProgramHeader *header = GetProgramHeaderByIndex(i);
-        if (header && header->p_type == PT_NOTE && header->p_offset != 0 &&
-            header->p_filesz > 0) {
-          DataExtractor data;
-          if (data.SetData(m_data, header->p_offset, header->p_filesz) ==
-              header->p_filesz) {
-            lldb_private::UUID uuid;
-            RefineModuleDetailsFromNote(data, m_arch_spec, uuid);
-          }
-        }
+    for (const elf::ELFProgramHeader &H : ProgramHeaders()) {
+      if (H.p_type != PT_NOTE || H.p_offset == 0 || H.p_filesz == 0)
+        continue;
+      DataExtractor data;
+      if (data.SetData(m_data, H.p_offset, H.p_filesz) == H.p_filesz) {
+        UUID uuid;
+        RefineModuleDetailsFromNote(data, m_arch_spec, uuid);
       }
     }
   }
@@ -3448,11 +3312,18 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
   return buffer_sp->GetByteSize();
 }
 
+llvm::ArrayRef<ELFProgramHeader> ObjectFileELF::ProgramHeaders() {
+  ParseProgramHeaders();
+  return m_program_headers;
+}
+
+DataExtractor ObjectFileELF::GetSegmentData(const ELFProgramHeader &H) {
+  return DataExtractor(m_data, H.p_offset, H.p_filesz);
+}
+
 bool ObjectFileELF::AnySegmentHasPhysicalAddress() {
-  size_t header_count = ParseProgramHeaders();
-  for (size_t i = 1; i <= header_count; ++i) {
-    auto header = GetProgramHeaderByIndex(i);
-    if (header->p_paddr != 0)
+  for (const ELFProgramHeader &H : ProgramHeaders()) {
+    if (H.p_paddr != 0)
       return true;
   }
   return false;
@@ -3463,19 +3334,17 @@ ObjectFileELF::GetLoadableData(Target &target) {
   // Create a list of loadable data from loadable segments, using physical
   // addresses if they aren't all null
   std::vector<LoadableData> loadables;
-  size_t header_count = ParseProgramHeaders();
   bool should_use_paddr = AnySegmentHasPhysicalAddress();
-  for (size_t i = 1; i <= header_count; ++i) {
+  for (const ELFProgramHeader &H : ProgramHeaders()) {
     LoadableData loadable;
-    auto header = GetProgramHeaderByIndex(i);
-    if (header->p_type != llvm::ELF::PT_LOAD)
+    if (H.p_type != llvm::ELF::PT_LOAD)
       continue;
-    loadable.Dest = should_use_paddr ? header->p_paddr : header->p_vaddr;
+    loadable.Dest = should_use_paddr ? H.p_paddr : H.p_vaddr;
     if (loadable.Dest == LLDB_INVALID_ADDRESS)
       continue;
-    if (header->p_filesz == 0)
+    if (H.p_filesz == 0)
       continue;
-    auto segment_data = GetSegmentDataByIndex(i);
+    auto segment_data = GetSegmentData(H);
     loadable.Contents = llvm::ArrayRef<uint8_t>(segment_data.GetDataStart(),
                                                 segment_data.GetByteSize());
     loadables.push_back(loadable);

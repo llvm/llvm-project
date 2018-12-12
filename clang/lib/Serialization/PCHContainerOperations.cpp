@@ -1,4 +1,4 @@
-//===--- Frontend/PCHContainerOperations.cpp - PCH Containers ---*- C++ -*-===//
+//=== Serialization/PCHContainerOperations.cpp - PCH Containers -*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "llvm/Bitcode/BitstreamReader.h"

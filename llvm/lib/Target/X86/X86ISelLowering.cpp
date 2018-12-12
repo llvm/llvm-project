@@ -35455,6 +35455,8 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
          N1.getScalarValueSizeInBits() == SrcBitsPerElt &&
          "Unexpected PACKSS/PACKUS input type");
 
+  bool IsSigned = (X86ISD::PACKSS == Opcode);
+
   // Constant Folding.
   APInt UndefElts0, UndefElts1;
   SmallVector<APInt, 32> EltBits0, EltBits1;
@@ -35467,7 +35469,6 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
     unsigned NumSrcElts = NumDstElts / 2;
     unsigned NumDstEltsPerLane = NumDstElts / NumLanes;
     unsigned NumSrcEltsPerLane = NumSrcElts / NumLanes;
-    bool IsSigned = (X86ISD::PACKSS == Opcode);
 
     APInt Undefs(NumDstElts, 0);
     SmallVector<APInt, 32> Bits(NumDstElts, APInt::getNullValue(DstBitsPerElt));
@@ -35511,15 +35512,14 @@ static SDValue combineVectorPack(SDNode *N, SelectionDAG &DAG,
     return getConstVector(Bits, Undefs, VT.getSimpleVT(), DAG, SDLoc(N));
   }
 
-  // Try to combine a PACKUSWB implemented truncate with a regular truncate to
-  // create a larger truncate.
-  // TODO: Match PACKSSWB as well?
-  if (Subtarget.hasAVX512() && Opcode == X86ISD::PACKUS &&
+  // Try to combine a PACKUSWB/PACKSSWB implemented truncate with a regular
+  // truncate to create a larger truncate.
+  if (Subtarget.hasAVX512() &&
       N0.getOpcode() == ISD::TRUNCATE && N1.isUndef() && VT == MVT::v16i8 &&
       N0.getOperand(0).getValueType() == MVT::v8i32) {
-
-    APInt ZeroMask = APInt::getHighBitsSet(16, 8);
-    if (DAG.MaskedValueIsZero(N0, ZeroMask)) {
+    if ((IsSigned && DAG.ComputeNumSignBits(N0) > 8) ||
+        (!IsSigned &&
+         DAG.MaskedValueIsZero(N0, APInt::getHighBitsSet(16, 8)))) {
       if (Subtarget.hasVLX())
         return DAG.getNode(X86ISD::VTRUNC, SDLoc(N), VT, N0.getOperand(0));
 

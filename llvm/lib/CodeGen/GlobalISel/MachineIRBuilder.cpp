@@ -179,7 +179,7 @@ MachineInstrBuilder MachineIRBuilder::buildGlobalValue(unsigned Res,
 
 void MachineIRBuilder::validateBinaryOp(const LLT &Res, const LLT &Op0,
                                         const LLT &Op1) {
-  assert(Res.isScalar() || Res.isVector() && "invalid operand type");
+  assert((Res.isScalar() || Res.isVector()) && "invalid operand type");
   assert((Res == Op0 && Res == Op1) && "type mismatch");
 }
 
@@ -786,7 +786,8 @@ void MachineIRBuilder::validateSelectOp(const LLT &ResTy, const LLT &TstTy,
 
 MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
                                                  ArrayRef<DstOp> DstOps,
-                                                 ArrayRef<SrcOp> SrcOps) {
+                                                 ArrayRef<SrcOp> SrcOps,
+                                                 Optional<unsigned> Flags) {
   switch (Opc) {
   default:
     break;
@@ -995,5 +996,7 @@ MachineInstrBuilder MachineIRBuilder::buildInstr(unsigned Opc,
     Op.addDefToMIB(*getMRI(), MIB);
   for (const SrcOp &Op : SrcOps)
     Op.addSrcToMIB(MIB);
+  if (Flags)
+    MIB->setFlags(*Flags);
   return MIB;
 }
