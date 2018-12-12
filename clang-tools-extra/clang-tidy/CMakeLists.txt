@@ -21,6 +21,7 @@ add_clang_library(clangTidy
   clangLex
   clangRewrite
   clangSema
+  clangSerialization
   clangTooling
   clangToolingCore
   )

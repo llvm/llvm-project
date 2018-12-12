@@ -12,6 +12,7 @@ add_clang_library(clangChangeNamespace
   clangFormat
   clangFrontend
   clangLex
+  clangSerialization
   clangTooling
   clangToolingCore
   )

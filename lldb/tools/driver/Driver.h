@@ -57,13 +57,8 @@ public:
 
   bool GetDebugMode() const;
 
-  class OptionData {
-  public:
-    OptionData();
-    ~OptionData();
-
-    void Clear();
-
+  struct OptionData {
+    void AddLocalLLDBInit();
     void AddInitialCommand(std::string command, CommandPlacement placement,
                            bool is_file, lldb::SBError &error);
 
@@ -71,36 +66,44 @@ public:
       InitialCmdEntry(std::string contents, bool in_is_file,
                       bool is_cwd_lldbinit_file_read, bool in_quiet = false)
           : contents(std::move(contents)), is_file(in_is_file),
-            is_cwd_lldbinit_file_read(is_cwd_lldbinit_file_read),
-            source_quietly(in_quiet) {}
+            source_quietly(in_quiet),
+            is_cwd_lldbinit_file_read(is_cwd_lldbinit_file_read) {}
 
       std::string contents;
       bool is_file;
-      bool is_cwd_lldbinit_file_read; // if this is reading ./.lldbinit - so we
-                                      // may skip if not permitted
       bool source_quietly;
+
+      /// Remember if this is reading the local lldbinit file so we can skip it
+      /// if not permitted.
+      bool is_cwd_lldbinit_file_read;
     };
 
     std::vector<std::string> m_args;
-    lldb::ScriptLanguage m_script_lang;
+
+    lldb::ScriptLanguage m_script_lang = lldb::eScriptLanguageDefault;
+    lldb::LanguageType m_repl_lang = lldb::eLanguageTypeUnknown;
+    lldb::pid_t m_process_pid = LLDB_INVALID_PROCESS_ID;
+
     std::string m_core_file;
     std::string m_crash_log;
+    std::string m_repl_options;
+    std::string m_process_name;
+
     std::vector<InitialCmdEntry> m_initial_commands;
     std::vector<InitialCmdEntry> m_after_file_commands;
     std::vector<InitialCmdEntry> m_after_crash_commands;
-    bool m_debug_mode;
-    bool m_source_quietly;
-    bool m_print_version;
-    bool m_print_python_path;
-    bool m_wait_for;
-    bool m_repl;
-    lldb::LanguageType m_repl_lang;
-    std::string m_repl_options;
-    std::string m_process_name;
-    lldb::pid_t m_process_pid;
-    bool m_use_external_editor; // FIXME: When we have set/show variables we can
-                                // remove this from here.
-    bool m_batch;
+
+    bool m_debug_mode = false;
+    bool m_source_quietly = false;
+    bool m_print_version = false;
+    bool m_print_python_path = false;
+    bool m_wait_for = false;
+    bool m_repl = false;
+    bool m_batch = false;
+
+    // FIXME: When we have set/show variables we can remove this from here.
+    bool m_use_external_editor = false;
+
     typedef std::set<char> OptionSet;
     OptionSet m_seen_options;
   };
@@ -112,8 +115,6 @@ public:
 private:
   lldb::SBDebugger m_debugger;
   OptionData m_option_data;
-
-  void ResetOptionValues();
 };
 
 #endif // lldb_Driver_h_
