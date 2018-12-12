@@ -546,7 +546,8 @@ static void updateStackPiecesWithMessage(PathDiagnosticPiece &P,
   }
 }
 
-static void CompactPathDiagnostic(PathPieces &path, const SourceManager& SM);
+static void CompactMacroExpandedPieces(PathPieces &path,
+                                       const SourceManager& SM);
 
 
 std::shared_ptr<PathDiagnosticControlFlowPiece> generateDiagForSwitchOP(
@@ -1972,12 +1973,10 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
                   PathDiagnosticLocation::createBegin(D, SM));
   }
 
-  if (!AddPathEdges && GenerateDiagnostics)
-    CompactPathDiagnostic(PD->getMutablePieces(), SM);
 
   // Finally, prune the diagnostic path of uninteresting stuff.
   if (!PD->path.empty()) {
-    if (R->shouldPrunePath() && Opts.shouldPrunePaths()) {
+    if (R->shouldPrunePath() && Opts.ShouldPrunePaths) {
       bool stillHasNotes =
           removeUnneededCalls(PD->getMutablePieces(), R, LCM);
       assert(stillHasNotes);
@@ -2007,6 +2006,10 @@ static std::unique_ptr<PathDiagnostic> generatePathDiagnosticForConsumer(
     removeRedundantMsgs(PD->getMutablePieces());
     removeEdgesToDefaultInitializers(PD->getMutablePieces());
   }
+
+  if (GenerateDiagnostics && Opts.ShouldDisplayMacroExpansions)
+    CompactMacroExpandedPieces(PD->getMutablePieces(), SM);
+
   return PD;
 }
 
@@ -2437,9 +2440,10 @@ bool TrimmedGraph::popNextReportGraph(ReportGraph &GraphWrapper) {
   return true;
 }
 
-/// CompactPathDiagnostic - This function postprocesses a PathDiagnostic object
-///  and collapses PathDiagosticPieces that are expanded by macros.
-static void CompactPathDiagnostic(PathPieces &path, const SourceManager& SM) {
+/// CompactMacroExpandedPieces - This function postprocesses a PathDiagnostic
+/// object and collapses PathDiagosticPieces that are expanded by macros.
+static void CompactMacroExpandedPieces(PathPieces &path,
+                                       const SourceManager& SM) {
   using MacroStackTy =
       std::vector<
           std::pair<std::shared_ptr<PathDiagnosticMacroPiece>, SourceLocation>>;
@@ -2455,7 +2459,7 @@ static void CompactPathDiagnostic(PathPieces &path, const SourceManager& SM) {
 
     // Recursively compact calls.
     if (auto *call = dyn_cast<PathDiagnosticCallPiece>(&*piece)) {
-      CompactPathDiagnostic(call->path, SM);
+      CompactMacroExpandedPieces(call->path, SM);
     }
 
     // Get the location of the PathDiagnosticPiece.
@@ -2618,7 +2622,7 @@ std::pair<BugReport*, std::unique_ptr<VisitorsDiagnosticsTy>> findValidReport(
         generateVisitorsDiagnostics(R, ErrorNode, BRC);
 
     if (R->isValid()) {
-      if (Opts.shouldCrosscheckWithZ3()) {
+      if (Opts.ShouldCrosscheckWithZ3) {
         // If crosscheck is enabled, remove all visitors, add the refutation
         // visitor and check again
         R->clearVisitors();
@@ -2960,7 +2964,7 @@ void BugReporter::FlushReport(BugReportEquivClass& EQ) {
     }
 
     PathPieces &Pieces = PD->getMutablePieces();
-    if (getAnalyzerOptions().shouldDisplayNotesAsEvents()) {
+    if (getAnalyzerOptions().ShouldDisplayNotesAsEvents) {
       // For path diagnostic consumers that don't support extra notes,
       // we may optionally convert those to path notes.
       for (auto I = report->getNotes().rbegin(),
@@ -3097,7 +3101,7 @@ BugReporter::generateDiagnosticForConsumerMap(
   // report location to the last piece in the main source file.
   AnalyzerOptions &Opts = getAnalyzerOptions();
   for (auto const &P : *Out)
-    if (Opts.shouldReportIssuesInMainSourceFile() && !Opts.AnalyzeAll)
+    if (Opts.ShouldReportIssuesInMainSourceFile && !Opts.AnalyzeAll)
       P.second->resetDiagnosticLocationToMainFile();
 
   return Out;

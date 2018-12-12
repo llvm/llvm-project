@@ -1094,7 +1094,7 @@ void MallocChecker::processNewAllocation(const CXXNewExpr *NE,
 
 void MallocChecker::checkPostStmt(const CXXNewExpr *NE,
                                   CheckerContext &C) const {
-  if (!C.getAnalysisManager().getAnalyzerOptions().mayInlineCXXAllocator())
+  if (!C.getAnalysisManager().getAnalyzerOptions().MayInlineCXXAllocator)
     processNewAllocation(NE, C, C.getSVal(NE));
 }
 
@@ -2345,13 +2345,11 @@ void MallocChecker::reportLeak(SymbolRef Sym, ExplodedNode *N,
 void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
                                      CheckerContext &C) const
 {
-  if (!SymReaper.hasDeadSymbols())
-    return;
-
   ProgramStateRef state = C.getState();
-  RegionStateTy RS = state->get<RegionState>();
+  RegionStateTy OldRS = state->get<RegionState>();
   RegionStateTy::Factory &F = state->get_context<RegionState>();
 
+  RegionStateTy RS = OldRS;
   SmallVector<SymbolRef, 2> Errors;
   for (RegionStateTy::iterator I = RS.begin(), E = RS.end(); I != E; ++I) {
     if (SymReaper.isDead(I->first)) {
@@ -2359,8 +2357,16 @@ void MallocChecker::checkDeadSymbols(SymbolReaper &SymReaper,
         Errors.push_back(I->first);
       // Remove the dead symbol from the map.
       RS = F.remove(RS, I->first);
-
     }
+  }
+
+  if (RS == OldRS) {
+    // We shouldn't have touched other maps yet.
+    assert(state->get<ReallocPairs>() ==
+           C.getState()->get<ReallocPairs>());
+    assert(state->get<FreeReturnValue>() ==
+           C.getState()->get<FreeReturnValue>());
+    return;
   }
 
   // Cleanup the Realloc Pairs Map.
@@ -3084,7 +3090,7 @@ markReleased(ProgramStateRef State, SymbolRef Sym, const Expr *Origin) {
 void ento::registerNewDeleteLeaksChecker(CheckerManager &mgr) {
   registerCStringCheckerBasic(mgr);
   MallocChecker *checker = mgr.registerChecker<MallocChecker>();
-  checker->IsOptimistic = mgr.getAnalyzerOptions().getBooleanOption(
+  checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(
       "Optimistic", false, checker);
   checker->ChecksEnabled[MallocChecker::CK_NewDeleteLeaksChecker] = true;
   checker->CheckNames[MallocChecker::CK_NewDeleteLeaksChecker] =
@@ -3105,7 +3111,7 @@ void ento::registerNewDeleteLeaksChecker(CheckerManager &mgr) {
 void ento::registerInnerPointerCheckerAux(CheckerManager &mgr) {
     registerCStringCheckerBasic(mgr);
     MallocChecker *checker = mgr.registerChecker<MallocChecker>();
-    checker->IsOptimistic = mgr.getAnalyzerOptions().getBooleanOption(
+    checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(
         "Optimistic", false, checker);
     checker->ChecksEnabled[MallocChecker::CK_InnerPointerChecker] = true;
     checker->CheckNames[MallocChecker::CK_InnerPointerChecker] =
@@ -3116,7 +3122,7 @@ void ento::registerInnerPointerCheckerAux(CheckerManager &mgr) {
   void ento::register##name(CheckerManager &mgr) {                             \
     registerCStringCheckerBasic(mgr);                                          \
     MallocChecker *checker = mgr.registerChecker<MallocChecker>();             \
-    checker->IsOptimistic = mgr.getAnalyzerOptions().getBooleanOption(         \
+    checker->IsOptimistic = mgr.getAnalyzerOptions().getCheckerBooleanOption(  \
         "Optimistic", false, checker);                                         \
     checker->ChecksEnabled[MallocChecker::CK_##name] = true;                   \
     checker->CheckNames[MallocChecker::CK_##name] = mgr.getCurrentCheckName(); \

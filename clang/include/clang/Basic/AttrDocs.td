@@ -843,6 +843,58 @@ Query for this feature with ``__has_attribute(objc_method_family)``.
   }];
 }
 
+def RetainBehaviorDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The behavior of a function with respect to reference counting for Foundation
+(Objective-C), CoreFoundation (C) and OSObject (C++) is determined by a naming
+convention (e.g. functions starting with "get" are assumed to return at
+``+0``).
+
+It can be overriden using a family of the following attributes.  In
+Objective-C, the annotation ``__attribute__((ns_returns_retained))`` applied to
+a function communicates that the object is returned at ``+1``, and the caller
+is responsible for freeing it.
+Similiarly, the annotation ``__attribute__((ns_returns_not_retained))``
+specifies that the object is returned at ``+0`` and the ownership remains with
+the callee.
+The annotation ``__attribute__((ns_consumes_self))`` specifies that
+the Objective-C method call consumes the reference to ``self``, e.g. by
+attaching it to a supplied parameter.
+Additionally, parameters can have an annotation
+``__attribute__((ns_consumed))``, which specifies that passing an owned object
+as that parameter effectively transfers the ownership, and the caller is no
+longer responsible for it.
+These attributes affect code generation when interacting with ARC code, and
+they are used by the Clang Static Analyzer.
+
+In C programs using CoreFoundation, a similar set of attributes:
+``__attribute__((cf_returns_not_retained))``,
+``__attribute__((cf_returns_retained))`` and ``__attribute__((cf_consumed))``
+have the same respective semantics when applied to CoreFoundation objects.
+These attributes affect code generation when interacting with ARC code, and
+they are used by the Clang Static Analyzer.
+
+Finally, in C++ interacting with XNU kernel (objects inheriting from OSObject),
+the same attribute family is present:
+``__attribute__((os_returns_not_retained))``,
+``__attribute__((os_returns_retained))`` and ``__attribute__((os_consumed))``,
+with the same respective semantics.
+Similar to ``__attribute__((ns_consumes_self))``,
+``__attribute__((os_consumes_this))`` specifies that the method call consumes
+the reference to "this" (e.g., when attaching it to a different object supplied
+as a parameter).
+These attributes are only used by the Clang Static Analyzer.
+
+The family of attributes ``X_returns_X_retained`` can be added to functions,
+C++ methods, and Objective-C methods and properties.
+Attributes ``X_consumed`` can be added to parameters of methods, functions,
+and Objective-C methods.
+  }];
+}
+
+
+
 def NoDebugDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{
@@ -3603,5 +3655,34 @@ The ``no_destroy`` attribute specifies that a variable with static or thread
 storage duration shouldn't have its exit-time destructor run. Annotating every
 static and thread duration variable with this attribute is equivalent to
 invoking clang with -fno-c++-static-destructors.
+  }];
+}
+
+
+def ReinitializesDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``reinitializes`` attribute can be applied to a non-static, non-const C++
+member function to indicate that this member function reinitializes the entire
+object to a known state, independent of the previous state of the object.
+
+This attribute can be interpreted by static analyzers that warn about uses of an
+object that has been left in an indeterminate state by a move operation. If a
+member function marked with the ``reinitializes`` attribute is called on a
+moved-from object, the analyzer can conclude that the object is no longer in an
+indeterminate state.
+
+A typical example where this attribute would be used is on functions that clear
+a container class:
+
+.. code-block:: c++
+
+  template <class T>
+  class Container {
+  public:
+    ...
+    [[clang::reinitializes]] void Clear();
+    ...
+  };
   }];
 }

@@ -3,7 +3,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangStaticAnalyzerCheckers
-  AllocationDiagnostics.cpp
   AnalysisOrderChecker.cpp
   AnalyzerStatsChecker.cpp
   ArrayBoundChecker.cpp
@@ -35,6 +34,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   DivZeroChecker.cpp
   DynamicTypePropagation.cpp
   DynamicTypeChecker.cpp
+  EnumCastOutOfRangeChecker.cpp
   ExprInspectionChecker.cpp
   FixedAddressChecker.cpp
   GCDAntipatternChecker.cpp
@@ -52,7 +52,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   MallocOverflowSecurityChecker.cpp
   MallocSizeofChecker.cpp
   MmapWriteExecChecker.cpp
-  MisusedMovedObjectChecker.cpp
+  MoveChecker.cpp
   MPI-Checker/MPIBugReporter.cpp
   MPI-Checker/MPIChecker.cpp
   MPI-Checker/MPIFunctionClassifier.cpp

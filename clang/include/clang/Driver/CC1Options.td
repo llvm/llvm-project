@@ -106,11 +106,11 @@ def analyzer_checker : Separate<["-"], "analyzer-checker">,
   ValuesCode<[{
     const char *Values =
     #define GET_CHECKERS
-    #define CHECKER(FULLNAME, CLASS, DESCFILE, HT, G, H)  FULLNAME ","
+    #define CHECKER(FULLNAME, CLASS, HT)  FULLNAME ","
     #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
     #undef GET_CHECKERS
     #define GET_PACKAGES
-    #define PACKAGE(FULLNAME, G, D)  FULLNAME ","
+    #define PACKAGE(FULLNAME)  FULLNAME ","
     #include "clang/StaticAnalyzer/Checkers/Checkers.inc"
     #undef GET_PACKAGES
     ;
@@ -129,11 +129,20 @@ def analyzer_disable_all_checks : Flag<["-"], "analyzer-disable-all-checks">,
 def analyzer_checker_help : Flag<["-"], "analyzer-checker-help">,
   HelpText<"Display the list of analyzer checkers that are available">;
 
+def analyzer_config_help : Flag<["-"], "analyzer-config-help">,
+  HelpText<"Display the list of -analyzer-config options">;
+
 def analyzer_list_enabled_checkers : Flag<["-"], "analyzer-list-enabled-checkers">,
   HelpText<"Display the list of enabled analyzer checkers">;
 
 def analyzer_config : Separate<["-"], "analyzer-config">,
   HelpText<"Choose analyzer options to enable">;
+
+def analyzer_config_compatibility_mode : Separate<["-"], "analyzer-config-compatibility-mode">,
+  HelpText<"Don't emit errors on invalid analyzer-config inputs">;
+
+def analyzer_config_compatibility_mode_EQ : Joined<["-"], "analyzer-config-compatibility-mode=">,
+  Alias<analyzer_config_compatibility_mode>;
 
 //===----------------------------------------------------------------------===//
 // Migrator Options

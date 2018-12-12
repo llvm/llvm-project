@@ -123,11 +123,6 @@ void DynamicTypePropagation::checkDeadSymbols(SymbolReaper &SR,
     }
   }
 
-  if (!SR.hasDeadSymbols()) {
-    C.addTransition(State);
-    return;
-  }
-
   MostSpecializedTypeArgsMapTy TyArgMap =
       State->get<MostSpecializedTypeArgsMap>();
   for (MostSpecializedTypeArgsMapTy::iterator I = TyArgMap.begin(),

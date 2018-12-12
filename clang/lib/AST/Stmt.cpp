@@ -301,10 +301,7 @@ SourceLocation Stmt::getLocEnd() const {
 }
 
 int64_t Stmt::getID(const ASTContext &Context) const {
-  Optional<int64_t> Out = Context.getAllocator().identifyObject(this);
-  assert(Out && "Wrong allocator used");
-  assert(*Out % alignof(Stmt) == 0 && "Wrong alignment information");
-  return *Out / alignof(Stmt);
+  return Context.getAllocator().identifyKnownAlignedObject<Stmt>(this);
 }
 
 CompoundStmt::CompoundStmt(ArrayRef<Stmt *> Stmts, SourceLocation LB,

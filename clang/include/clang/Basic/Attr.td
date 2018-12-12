@@ -94,6 +94,15 @@ def ObjCClassMethod : SubsetSubject<ObjCMethod,
                                     [{!S->isInstanceMethod()}],
                                     "Objective-C class methods">;
 
+def NonStaticCXXMethod : SubsetSubject<CXXMethod,
+                                       [{!S->isStatic()}],
+                                       "non-static member functions">;
+
+def NonStaticNonConstCXXMethod
+    : SubsetSubject<CXXMethod,
+                    [{!S->isStatic() && !S->isConst()}],
+                    "non-static non-const member functions">;
+
 def ObjCInstanceMethod : SubsetSubject<ObjCMethod,
                                        [{S->isInstanceMethod()}],
                                        "Objective-C instance methods">;
@@ -816,19 +825,44 @@ def CFUnknownTransfer : InheritableAttr {
 def CFReturnsRetained : InheritableAttr {
   let Spellings = [Clang<"cf_returns_retained">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [RetainBehaviorDocs];
 }
 
 def CFReturnsNotRetained : InheritableAttr {
   let Spellings = [Clang<"cf_returns_not_retained">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [RetainBehaviorDocs];
 }
 
 def CFConsumed : InheritableParamAttr {
   let Spellings = [Clang<"cf_consumed">];
   let Subjects = SubjectList<[ParmVar]>;
-  let Documentation = [Undocumented];
+  let Documentation = [RetainBehaviorDocs];
+}
+
+// OSObject-based attributes.
+def OSConsumed : InheritableParamAttr {
+  let Spellings = [Clang<"os_consumed">];
+  let Subjects = SubjectList<[ParmVar]>;
+  let Documentation = [RetainBehaviorDocs];
+}
+
+def OSReturnsRetained : InheritableAttr {
+  let Spellings = [Clang<"os_returns_retained">];
+  let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty]>;
+  let Documentation = [RetainBehaviorDocs];
+}
+
+def OSReturnsNotRetained : InheritableAttr {
+  let Spellings = [Clang<"os_returns_not_retained">];
+  let Subjects = SubjectList<[Function, ObjCMethod, ObjCProperty]>;
+  let Documentation = [RetainBehaviorDocs];
+}
+
+def OSConsumesThis : InheritableAttr {
+  let Spellings = [Clang<"os_consumes_this">];
+  let Subjects = SubjectList<[NonStaticCXXMethod]>;
+  let Documentation = [RetainBehaviorDocs];
 }
 
 def Cleanup : InheritableAttr {
@@ -1605,31 +1639,31 @@ def NSErrorDomain : Attr {
 def NSReturnsRetained : InheritableAttr {
   let Spellings = [Clang<"ns_returns_retained">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [RetainBehaviorDocs];
 }
 
 def NSReturnsNotRetained : InheritableAttr {
   let Spellings = [Clang<"ns_returns_not_retained">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [RetainBehaviorDocs];
 }
 
 def NSReturnsAutoreleased : InheritableAttr {
   let Spellings = [Clang<"ns_returns_autoreleased">];
 //  let Subjects = SubjectList<[ObjCMethod, ObjCProperty, Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [RetainBehaviorDocs];
 }
 
 def NSConsumesSelf : InheritableAttr {
   let Spellings = [Clang<"ns_consumes_self">];
   let Subjects = SubjectList<[ObjCMethod]>;
-  let Documentation = [Undocumented];
+  let Documentation = [RetainBehaviorDocs];
 }
 
 def NSConsumed : InheritableParamAttr {
   let Spellings = [Clang<"ns_consumed">];
   let Subjects = SubjectList<[ParmVar]>;
-  let Documentation = [Undocumented];
+  let Documentation = [RetainBehaviorDocs];
 }
 
 def ObjCException : InheritableAttr {
@@ -3106,4 +3140,10 @@ def AlwaysDestroy : InheritableAttr {
   let Spellings = [Clang<"always_destroy", 0>];
   let Subjects = SubjectList<[Var]>;
   let Documentation = [AlwaysDestroyDocs];
+}
+
+def Reinitializes : InheritableAttr {
+  let Spellings = [Clang<"reinitializes", 0>];
+  let Subjects = SubjectList<[NonStaticNonConstCXXMethod], ErrorDiag>;
+  let Documentation = [ReinitializesDocs];
 }

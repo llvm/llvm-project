@@ -41,7 +41,8 @@ public:
                     BugReporter &BRArg) const {
     BR = &BRArg;
     AllowedPad =
-        MGR.getAnalyzerOptions().getOptionAsInteger("AllowedPad", 24, this);
+        MGR.getAnalyzerOptions()
+          .getCheckerIntegerOption("AllowedPad", 24, this);
     assert(AllowedPad >= 0 && "AllowedPad option should be non-negative");
 
     // The calls to checkAST* from AnalysisConsumer don't

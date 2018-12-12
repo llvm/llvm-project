@@ -1,5 +1,36 @@
-// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull,nullability.NullablePassedToNonnull,nullability.NullableReturnedFromNonnull,nullability.NullableDereferenced -DNOSYSTEMHEADERS=0 -verify %s
-// RUN: %clang_analyze_cc1 -fblocks -analyzer-checker=core,nullability.NullPassedToNonnull,nullability.NullReturnedFromNonnull,nullability.NullablePassedToNonnull,nullability.NullableReturnedFromNonnull,nullability.NullableDereferenced -analyzer-config nullability:NoDiagnoseCallsToSystemHeaders=true -DNOSYSTEMHEADERS=1 -verify %s
+// RUN: %clang_analyze_cc1 -fblocks -verify %s -analyzer-checker=core \
+// RUN:   -analyzer-checker=nullability.NullPassedToNonnull \
+// RUN:   -analyzer-checker=nullability.NullReturnedFromNonnull \
+// RUN:   -analyzer-checker=nullability.NullablePassedToNonnull \
+// RUN:   -analyzer-checker=nullability.NullableReturnedFromNonnull \
+// RUN:   -analyzer-checker=nullability.NullableDereferenced \
+// RUN:   -DNOSYSTEMHEADERS=0
+
+// RUN: %clang_analyze_cc1 -fblocks -verify %s -analyzer-checker=core \
+// RUN:   -analyzer-checker=nullability.NullPassedToNonnull \
+// RUN:   -analyzer-checker=nullability.NullReturnedFromNonnull \
+// RUN:   -analyzer-checker=nullability.NullablePassedToNonnull \
+// RUN:   -analyzer-checker=nullability.NullableReturnedFromNonnull \
+// RUN:   -analyzer-checker=nullability.NullableDereferenced \
+// RUN:   -DNOSYSTEMHEADERS=1 \
+// RUN:   -analyzer-config nullability:NoDiagnoseCallsToSystemHeaders=true
+
+// RUN: %clang_analyze_cc1 -fblocks -verify %s -analyzer-checker=core\
+// RUN:   -analyzer-checker=nullability.NullPassedToNonnull\
+// RUN:   -analyzer-checker=nullability.NullReturnedFromNonnull\
+// RUN:   -analyzer-checker=nullability.NullablePassedToNonnull\
+// RUN:   -analyzer-checker=nullability.NullableReturnedFromNonnull\
+// RUN:   -analyzer-checker=nullability.NullableDereferenced\
+// RUN:   -DNOSYSTEMHEADERS=0 -fobjc-arc
+
+// RUN: %clang_analyze_cc1 -fblocks -verify %s -analyzer-checker=core\
+// RUN:   -analyzer-checker=nullability.NullPassedToNonnull\
+// RUN:   -analyzer-checker=nullability.NullReturnedFromNonnull\
+// RUN:   -analyzer-checker=nullability.NullablePassedToNonnull\
+// RUN:   -analyzer-checker=nullability.NullableReturnedFromNonnull\
+// RUN:   -analyzer-checker=nullability.NullableDereferenced\
+// RUN:   -DNOSYSTEMHEADERS=1 -fobjc-arc\
+// RUN:   -analyzer-config nullability:NoDiagnoseCallsToSystemHeaders=true
 
 #include "Inputs/system-header-simulator-for-nullability.h"
 

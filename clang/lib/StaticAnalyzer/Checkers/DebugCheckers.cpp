@@ -182,7 +182,9 @@ public:
 
     llvm::errs() << "[config]\n";
     for (unsigned I = 0, E = Keys.size(); I != E; ++I)
-      llvm::errs() << Keys[I]->getKey() << " = " << Keys[I]->second << '\n';
+      llvm::errs() << Keys[I]->getKey() << " = "
+                   << (Keys[I]->second.empty() ? "\"\"" : Keys[I]->second)
+                   << '\n';
 
     llvm::errs() << "[stats]\n" << "num-entries = " << Keys.size() << '\n';
   }
