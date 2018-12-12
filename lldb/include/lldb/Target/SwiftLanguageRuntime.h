@@ -209,7 +209,9 @@ public:
   static bool IsSwiftMangledName(const char *name);
   
   static bool IsSwiftClassName(const char *name);
-  
+
+  static bool IsSymbolARuntimeThunk(const Symbol &symbol);
+
   static const std::string GetCurrentMangledName(const char *mangled_name);
 
   struct SwiftErrorDescriptor {
@@ -293,8 +295,6 @@ public:
 
   virtual lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                           bool stop_others);
-
-  bool IsSymbolARuntimeThunk(const Symbol &symbol) override;
 
   // this call should return true if it could set the name and/or the type
   virtual bool GetDynamicTypeAndAddress(ValueObject &in_value,
