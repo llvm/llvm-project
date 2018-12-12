@@ -9,6 +9,7 @@ target_link_libraries(clang-query
   clangDynamicASTMatchers
   clangFrontend
   clangQuery
+  clangSerialization
   clangTooling
   )
 
