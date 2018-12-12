@@ -125,7 +125,7 @@ bool unlikelyExecuted(BasicBlock &BB) {
 
 /// Check whether it's safe to outline \p BB.
 static bool mayExtractBlock(const BasicBlock &BB) {
-  return !BB.hasAddressTaken();
+  return !BB.hasAddressTaken() && !BB.isEHPad();
 }
 
 /// Check whether \p Region is profitable to outline.

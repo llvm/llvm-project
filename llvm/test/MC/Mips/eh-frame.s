@@ -1,18 +1,18 @@
 // Test the bits of .eh_frame on mips that are already implemented correctly.
 
-// RUN: llvm-mc -filetype=obj %s -o %t.o -arch=mips
+// RUN: llvm-mc -filetype=obj %s -o %t.o -triple mips-unknown-linux-gnu
 // RUN: llvm-objdump -r -section=.rel.eh_frame %t.o | FileCheck --check-prefix=REL32 %s
 // RUN: llvm-dwarfdump -eh-frame %t.o | FileCheck --check-prefix=DWARF32 %s
 
-// RUN: llvm-mc -filetype=obj %s -o %t.o -arch=mipsel
+// RUN: llvm-mc -filetype=obj %s -o %t.o -triple mipsel-unknown-linux-gnu
 // RUN: llvm-objdump -r -section=.rel.eh_frame %t.o | FileCheck --check-prefix=REL32 %s
 // RUN: llvm-dwarfdump -eh-frame %t.o | FileCheck --check-prefix=DWARF32 %s
 
-// RUN: llvm-mc -filetype=obj %s -o %t.o -arch=mips64
+// RUN: llvm-mc -filetype=obj %s -o %t.o -triple mips64-unknown-linux-gnu
 // RUN: llvm-objdump -r -section=.rela.eh_frame %t.o | FileCheck --check-prefix=REL64 %s
 // RUN: llvm-dwarfdump -eh-frame %t.o | FileCheck --check-prefix=DWARF64 %s
 
-// RUN: llvm-mc -filetype=obj %s -o %t.o -arch=mips64el
+// RUN: llvm-mc -filetype=obj %s -o %t.o -triple mips64el-unknown-linux-gnu
 // RUN: llvm-objdump -r -section=.rela.eh_frame %t.o | FileCheck --check-prefix=REL64 %s
 // RUN: llvm-dwarfdump -eh-frame %t.o | FileCheck --check-prefix=DWARF64 %s
 

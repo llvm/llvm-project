@@ -12772,6 +12772,76 @@ Examples
       %res = call i4 @llvm.usub.sat.i4(i4 2, i4 6)  ; %res = 0
 
 
+Fixed Point Arithmetic Intrinsics
+---------------------------------
+
+A fixed point number represents a real data type for a number that has a fixed
+number of digits after a radix point (equivalent to the decimal point '.').
+The number of digits after the radix point is referred as the ``scale``. These
+are useful for representing fractional values to a specific precision. The
+following intrinsics perform fixed point arithmetic operations on 2 operands
+of the same scale, specified as the third argument.
+
+
+'``llvm.smul.fix.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.smul.fix``
+on any integer bit width or vectors of integers.
+
+::
+
+      declare i16 @llvm.smul.fix.i16(i16 %a, i16 %b, i32 %scale)
+      declare i32 @llvm.smul.fix.i32(i32 %a, i32 %b, i32 %scale)
+      declare i64 @llvm.smul.fix.i64(i64 %a, i64 %b, i32 %scale)
+      declare <4 x i32> @llvm.smul.fix.v4i32(<4 x i32> %a, <4 x i32> %b, i32 %scale)
+
+Overview
+"""""""""
+
+The '``llvm.smul.fix``' family of intrinsic functions perform signed
+fixed point multiplication on 2 arguments of the same scale.
+
+Arguments
+""""""""""
+
+The arguments (%a and %b) and the result may be of integer types of any bit
+width, but they must have the same bit width. ``%a`` and ``%b`` are the two
+values that will undergo signed fixed point multiplication. The argument
+``%scale`` represents the scale of both operands, and must be a constant
+integer.
+
+Semantics:
+""""""""""
+
+This operation performs fixed point multiplication on the 2 arguments of a
+specified scale. The result will also be returned in the same scale specified
+in the third argument.
+
+If the result value cannot be precisely represented in the given scale, the
+value is rounded up or down to the closest representable value. The rounding
+direction is unspecified.
+
+It is undefined behavior if the source value does not fit within the range of
+the fixed point type.
+
+
+Examples
+"""""""""
+
+.. code-block:: llvm
+
+      %res = call i4 @llvm.smul.fix.i4(i4 3, i4 2, i32 0)  ; %res = 6 (2 x 3 = 6)
+      %res = call i4 @llvm.smul.fix.i4(i4 3, i4 2, i32 1)  ; %res = 3 (1.5 x 1 = 1.5)
+      %res = call i4 @llvm.smul.fix.i4(i4 3, i4 -2, i32 1)  ; %res = -3 (1.5 x -1 = -1.5)
+
+      ; The result in the following could be rounded up to -2 or down to -2.5
+      %res = call i4 @llvm.smul.fix.i4(i4 3, i4 -3, i32 1)  ; %res = -5 (or -4) (1.5 x -1.5 = -2.25)
+
+
 Specialised Arithmetic Intrinsics
 ---------------------------------
 

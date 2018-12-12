@@ -616,6 +616,7 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::UADDSAT, VT, Expand);
     setOperationAction(ISD::SSUBSAT, VT, Expand);
     setOperationAction(ISD::USUBSAT, VT, Expand);
+    setOperationAction(ISD::SMULFIX, VT, Expand);
 
     // Overflow operations default to expand
     setOperationAction(ISD::SADDO, VT, Expand);
