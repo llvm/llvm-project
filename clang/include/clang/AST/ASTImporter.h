@@ -209,7 +209,7 @@ class Attr;
     /// Return the copy of the given declaration in the "to" context if
     /// it has already been imported from the "from" context.  Otherwise return
     /// NULL.
-    Decl *GetAlreadyImportedOrNull(Decl *FromD);
+    Decl *GetAlreadyImportedOrNull(const Decl *FromD) const;
 
     /// Import the given declaration context from the "from"
     /// AST context into the "to" AST context.
