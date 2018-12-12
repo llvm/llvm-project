@@ -273,8 +273,7 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v3i32:
-; SIVI-DAG: buffer_store_dwordx2
-; SIVI-DAG: buffer_store_dword v
+; SIVI-DAG: buffer_store_dwordx3
 
 ; GFX9-DAG: global_store_dwordx2
 ; GFX9-DAG: global_store_dword v

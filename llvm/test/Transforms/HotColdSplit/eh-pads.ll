@@ -26,8 +26,11 @@ normal:
   ret void
 }
 
+; See llvm.org/PR39917. It's currently not safe to outline landingpad
+; instructions.
+;
 ; CHECK-LABEL: define {{.*}}@bar(
-; CHECK-NOT: landingpad
+; CHECK: landingpad
 define void @bar(i32 %cond) personality i8 0 {
 entry:
   br i1 undef, label %exit, label %continue
@@ -53,10 +56,6 @@ normal:
 ; CHECK: sideeffect(i32 0)
 ; CHECK: sideeffect(i32 1)
 ; CHECK: sink
-
-; CHECK-LABEL: define {{.*}}@bar.cold.1(
-; CHECK: sideeffect(i32 0)
-; CHECK: sideeffect(i32 1)
 
 declare void @sideeffect(i32)
 

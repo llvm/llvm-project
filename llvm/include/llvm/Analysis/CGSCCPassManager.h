@@ -441,7 +441,10 @@ public:
 
             PreservedAnalyses PassPA = Pass.run(*C, CGAM, CG, UR);
 
-            PI.runAfterPass<LazyCallGraph::SCC>(Pass, *C);
+            if (UR.InvalidatedSCCs.count(C))
+              PI.runAfterPassInvalidated<LazyCallGraph::SCC>(Pass);
+            else
+              PI.runAfterPass<LazyCallGraph::SCC>(Pass, *C);
 
             // Update the SCC and RefSCC if necessary.
             C = UR.UpdatedC ? UR.UpdatedC : C;
@@ -762,7 +765,10 @@ public:
 
       PreservedAnalyses PassPA = Pass.run(*C, AM, CG, UR);
 
-      PI.runAfterPass<LazyCallGraph::SCC>(Pass, *C);
+      if (UR.InvalidatedSCCs.count(C))
+        PI.runAfterPassInvalidated<LazyCallGraph::SCC>(Pass);
+      else
+        PI.runAfterPass<LazyCallGraph::SCC>(Pass, *C);
 
       // If the SCC structure has changed, bail immediately and let the outer
       // CGSCC layer handle any iteration to reflect the refined structure.

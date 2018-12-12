@@ -53,7 +53,6 @@ void unwrapAndPrint(StringRef Banner, Any IR) {
     Extra = formatv(" (function: {0})\n", F->getName());
   } else if (any_isa<const LazyCallGraph::SCC *>(IR)) {
     const LazyCallGraph::SCC *C = any_cast<const LazyCallGraph::SCC *>(IR);
-    assert(C);
     if (!llvm::forcePrintModuleIR()) {
       Extra = formatv(" (scc: {0})\n", C->getName());
       bool BannerPrinted = false;

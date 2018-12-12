@@ -68,10 +68,17 @@ class PreservedAnalyses;
 /// PassInstrumentation to pass control to the registered callbacks.
 class PassInstrumentationCallbacks {
 public:
-  // Before/After callbacks accept IRUnits, so they need to take them
-  // as pointers, wrapped with llvm::Any
+  // Before/After callbacks accept IRUnits whenever appropriate, so they need
+  // to take them as constant pointers, wrapped with llvm::Any.
+  // For the case when IRUnit has been invalidated there is a different
+  // callback to use - AfterPassInvalidated.
+  // TODO: currently AfterPassInvalidated does not accept IRUnit, since passing
+  // already invalidated IRUnit is unsafe. There are ways to handle invalidated IRUnits
+  // in a safe way, and we might pursue that as soon as there is a useful instrumentation
+  // that needs it.
   using BeforePassFunc = bool(StringRef, Any);
   using AfterPassFunc = void(StringRef, Any);
+  using AfterPassInvalidatedFunc = void(StringRef);
   using BeforeAnalysisFunc = void(StringRef, Any);
   using AfterAnalysisFunc = void(StringRef, Any);
 
@@ -91,6 +98,11 @@ public:
   }
 
   template <typename CallableT>
+  void registerAfterPassInvalidatedCallback(CallableT C) {
+    AfterPassInvalidatedCallbacks.emplace_back(std::move(C));
+  }
+
+  template <typename CallableT>
   void registerBeforeAnalysisCallback(CallableT C) {
     BeforeAnalysisCallbacks.emplace_back(std::move(C));
   }
@@ -105,6 +117,8 @@ private:
 
   SmallVector<llvm::unique_function<BeforePassFunc>, 4> BeforePassCallbacks;
   SmallVector<llvm::unique_function<AfterPassFunc>, 4> AfterPassCallbacks;
+  SmallVector<llvm::unique_function<AfterPassInvalidatedFunc>, 4>
+      AfterPassInvalidatedCallbacks;
   SmallVector<llvm::unique_function<BeforeAnalysisFunc>, 4>
       BeforeAnalysisCallbacks;
   SmallVector<llvm::unique_function<AfterAnalysisFunc>, 4>
@@ -139,12 +153,23 @@ public:
   }
 
   /// AfterPass instrumentation point - takes \p Pass instance that has
-  /// just been executed and constant reference to IR it operates on.
+  /// just been executed and constant reference to \p IR it operates on.
+  /// \p IR is guaranteed to be valid at this point.
   template <typename IRUnitT, typename PassT>
   void runAfterPass(const PassT &Pass, const IRUnitT &IR) const {
     if (Callbacks)
       for (auto &C : Callbacks->AfterPassCallbacks)
         C(Pass.name(), llvm::Any(&IR));
+  }
+
+  /// AfterPassInvalidated instrumentation point - takes \p Pass instance
+  /// that has just been executed. For use when IR has been invalidated
+  /// by \p Pass execution.
+  template <typename IRUnitT, typename PassT>
+  void runAfterPassInvalidated(const PassT &Pass) const {
+    if (Callbacks)
+      for (auto &C : Callbacks->AfterPassInvalidatedCallbacks)
+        C(Pass.name());
   }
 
   /// BeforeAnalysis instrumentation point - takes \p Analysis instance

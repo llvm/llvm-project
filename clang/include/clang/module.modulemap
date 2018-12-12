@@ -103,9 +103,6 @@ module Clang_Frontend {
   textual header "Frontend/LangStandards.def"
 
   module * { export * }
-
-  // FIXME: This violates layers.
-  exclude header "Frontend/PCHContainerOperations.h"
 }
 
 module Clang_FrontendTool { requires cplusplus umbrella "FrontendTool" module * { export * } }

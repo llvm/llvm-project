@@ -675,7 +675,7 @@ def fno_coroutines_ts : Flag <["-"], "fno-coroutines-ts">, Group<f_Group>,
   Flags<[DriverOption]>;
 
 def fembed_bitcode_EQ : Joined<["-"], "fembed-bitcode=">,
-    Group<f_Group>, Flags<[DriverOption, CC1Option]>, MetaVarName<"<option>">,
+    Group<f_Group>, Flags<[DriverOption, CC1Option, CC1AsOption]>, MetaVarName<"<option>">,
     HelpText<"Embed LLVM bitcode (option: off, all, bitcode, marker)">;
 def fembed_bitcode : Flag<["-"], "fembed-bitcode">, Group<f_Group>,
   Alias<fembed_bitcode_EQ>, AliasArgs<["all"]>,

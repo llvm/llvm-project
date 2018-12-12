@@ -407,8 +407,10 @@ class Configuration(object):
             if self.use_deployment:
                 self.add_deployment_feature('with_system_cxx_lib')
 
-        # Configure the availability feature.
-        if self.use_deployment:
+        # Configure the availability feature. Availability is only enabled
+        # with libc++, because other standard libraries do not provide
+        # availability markup.
+        if self.use_deployment and self.cxx_stdlib_under_test == 'libc++':
             self.config.available_features.add('availability')
             self.add_deployment_feature('availability')
 
@@ -485,13 +487,7 @@ class Configuration(object):
             self.config.available_features.add("objective-c++")
 
     def configure_compile_flags(self):
-        no_default_flags = self.get_lit_bool('no_default_flags', False)
-        if not no_default_flags:
-            self.configure_default_compile_flags()
-        # This include is always needed so add so add it regardless of
-        # 'no_default_flags'.
-        support_path = os.path.join(self.libcxx_src_root, 'test/support')
-        self.cxx.compile_flags += ['-I' + support_path]
+        self.configure_default_compile_flags()
         # Configure extra flags
         compile_flags_str = self.get_lit_conf('compile_flags', '')
         self.cxx.compile_flags += shlex.split(compile_flags_str)
@@ -571,6 +567,10 @@ class Configuration(object):
             arch, name, version = self.config.deployment
             self.cxx.flags += ['-arch', arch]
             self.cxx.flags += ['-m' + name + '-version-min=' + version]
+
+        # Add includes for support headers used in the tests.
+        support_path = os.path.join(self.libcxx_src_root, 'test/support')
+        self.cxx.compile_flags += ['-I' + support_path]
 
         # FIXME(EricWF): variant_size.pass.cpp requires a slightly larger
         # template depth with older Clang versions.
@@ -729,37 +729,33 @@ class Configuration(object):
 
 
     def configure_link_flags(self):
-        no_default_flags = self.get_lit_bool('no_default_flags', False)
-        if not no_default_flags:
-            # Configure library path
-            self.configure_link_flags_cxx_library_path()
-            self.configure_link_flags_abi_library_path()
+        # Configure library path
+        self.configure_link_flags_cxx_library_path()
+        self.configure_link_flags_abi_library_path()
 
-            # Configure libraries
-            if self.cxx_stdlib_under_test == 'libc++':
-                self.cxx.link_flags += ['-nodefaultlibs']
-                # FIXME: Handle MSVCRT as part of the ABI library handling.
-                if self.is_windows:
-                    self.cxx.link_flags += ['-nostdlib']
-                self.configure_link_flags_cxx_library()
-                self.configure_link_flags_abi_library()
-                self.configure_extra_library_flags()
-            elif self.cxx_stdlib_under_test == 'libstdc++':
-                enable_fs = self.get_lit_bool('enable_filesystem',
-                                              default=False)
-                if enable_fs:
-                    self.config.available_features.add('c++experimental')
-                    self.cxx.link_flags += ['-lstdc++fs']
-                self.cxx.link_flags += ['-lm', '-pthread']
-            elif self.cxx_stdlib_under_test == 'msvc':
-                # FIXME: Correctly setup debug/release flags here.
-                pass
-            elif self.cxx_stdlib_under_test == 'cxx_default':
-                self.cxx.link_flags += ['-pthread']
-            else:
-                self.lit_config.fatal(
-                    'unsupported value for "use_stdlib_type": %s'
-                    %  use_stdlib_type)
+        # Configure libraries
+        if self.cxx_stdlib_under_test == 'libc++':
+            self.cxx.link_flags += ['-nodefaultlibs']
+            # FIXME: Handle MSVCRT as part of the ABI library handling.
+            if self.is_windows:
+                self.cxx.link_flags += ['-nostdlib']
+            self.configure_link_flags_cxx_library()
+            self.configure_link_flags_abi_library()
+            self.configure_extra_library_flags()
+        elif self.cxx_stdlib_under_test == 'libstdc++':
+            enable_fs = self.get_lit_bool('enable_filesystem',
+                                          default=False)
+            if enable_fs:
+                self.config.available_features.add('c++experimental')
+                self.cxx.link_flags += ['-lstdc++fs']
+            self.cxx.link_flags += ['-lm', '-pthread']
+        elif self.cxx_stdlib_under_test == 'msvc':
+            # FIXME: Correctly setup debug/release flags here.
+            pass
+        elif self.cxx_stdlib_under_test == 'cxx_default':
+            self.cxx.link_flags += ['-pthread']
+        else:
+            self.lit_config.fatal('invalid stdlib under test')
 
         link_flags_str = self.get_lit_conf('link_flags', '')
         self.cxx.link_flags += shlex.split(link_flags_str)

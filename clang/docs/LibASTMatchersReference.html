@@ -499,7 +499,7 @@ Given
   int X;
   namespace NS {
   int Y;
-  }  namespace NS
+  }  // namespace NS
 decl(hasDeclContext(translationUnitDecl()))
   matches "int X", but not "int Y".
 </pre></td></tr>
@@ -1152,7 +1152,7 @@ Example matches std::string()
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('floatLiteral0')"><a name="floatLiteral0Anchor">floatLiteral</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FloatingLiteral.html">FloatingLiteral</a>&gt;...</td></tr>
-<tr><td colspan="4" class="doc" id="floatLiteral0"><pre>Matches float literals of all sizes encodings, e.g.
+<tr><td colspan="4" class="doc" id="floatLiteral0"><pre>Matches float literals of all sizes / encodings, e.g.
 1.0, 1.0f, 1.0L and 1e10.
 
 Does not match implicit conversions such as
@@ -1230,7 +1230,7 @@ initListExpr()
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('integerLiteral0')"><a name="integerLiteral0Anchor">integerLiteral</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1IntegerLiteral.html">IntegerLiteral</a>&gt;...</td></tr>
-<tr><td colspan="4" class="doc" id="integerLiteral0"><pre>Matches integer literals of all sizes encodings, e.g.
+<tr><td colspan="4" class="doc" id="integerLiteral0"><pre>Matches integer literals of all sizes / encodings, e.g.
 1, 1L, 0x1 and 1U.
 
 Does not match character-encoded integers such as L'a'.
@@ -1911,8 +1911,8 @@ Given
   template &lt;typename T&gt;
   class C { };
 
-  template class C&lt;int&gt;;  A
-  C&lt;char&gt; var;            B
+  template class C&lt;int&gt;;  // A
+  C&lt;char&gt; var;            // B
 
 templateSpecializationType() matches the type of the explicit
 instantiation in A and the type of the variable declaration in B.
@@ -2091,13 +2091,12 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Char
 
 Given
   try {
-    ...
+    // ...
   } catch (int) {
-    ...
+    // ...
   } catch (...) {
-    ...
+    // ...
   }
-endcode
 cxxCatchStmt(isCatchAll()) matches catch(...) but not catch(int).
 </pre></td></tr>
 
@@ -2136,9 +2135,9 @@ will match the implicit array filler for pt[1].
 
 Given
   struct S {
-    S(); #1
-    S(const S &amp;); #2
-    S(S &amp;&amp;); #3
+    S(); // #1
+    S(const S &amp;); // #2
+    S(S &amp;&amp;); // #3
   };
 cxxConstructorDecl(isCopyConstructor()) will match #2, but not #1 or #3.
 </pre></td></tr>
@@ -2149,9 +2148,9 @@ cxxConstructorDecl(isCopyConstructor()) will match #2, but not #1 or #3.
 
 Given
   struct S {
-    S(); #1
-    S(const S &amp;); #2
-    S(S &amp;&amp;); #3
+    S(); // #1
+    S(const S &amp;); // #2
+    S(S &amp;&amp;); // #3
   };
 cxxConstructorDecl(isDefaultConstructor()) will match #1, but not #2 or #3.
 </pre></td></tr>
@@ -2162,11 +2161,11 @@ cxxConstructorDecl(isDefaultConstructor()) will match #1, but not #2 or #3.
 
 Given
   struct S {
-    S(); #1
-    S(int) {} #2
-    S(S &amp;&amp;) : S() {} #3
+    S(); // #1
+    S(int) {} // #2
+    S(S &amp;&amp;) : S() {} // #3
   };
-  S::S() : S(0) {} #4
+  S::S() : S(0) {} // #4
 cxxConstructorDecl(isDelegatingConstructor()) will match #3 and #4, but not
 #1 or #2.
 </pre></td></tr>
@@ -2178,10 +2177,10 @@ the explicit keyword.
 
 Given
   struct S {
-    S(int); #1
-    explicit S(double); #2
-    operator int(); #3
-    explicit operator bool(); #4
+    S(int); // #1
+    explicit S(double); // #2
+    operator int(); // #3
+    explicit operator bool(); // #4
   };
 cxxConstructorDecl(isExplicit()) will match #2, but not #1.
 cxxConversionDecl(isExplicit()) will match #4, but not #3.
@@ -2193,9 +2192,9 @@ cxxConversionDecl(isExplicit()) will match #4, but not #3.
 
 Given
   struct S {
-    S(); #1
-    S(const S &amp;); #2
-    S(S &amp;&amp;); #3
+    S(); // #1
+    S(const S &amp;); // #2
+    S(S &amp;&amp;); // #3
   };
 cxxConstructorDecl(isMoveConstructor()) will match #3, but not #1 or #2.
 </pre></td></tr>
@@ -2207,10 +2206,10 @@ the explicit keyword.
 
 Given
   struct S {
-    S(int); #1
-    explicit S(double); #2
-    operator int(); #3
-    explicit operator bool(); #4
+    S(int); // #1
+    explicit S(double); // #2
+    operator int(); // #3
+    explicit operator bool(); // #4
   };
 cxxConstructorDecl(isExplicit()) will match #2, but not #1.
 cxxConversionDecl(isExplicit()) will match #4, but not #3.
@@ -2387,9 +2386,9 @@ Given
 
 Given
   struct S {
-    S(); #1
-    S(const S &amp;) = default; #2
-    S(S &amp;&amp;) = delete; #3
+    S(); // #1
+    S(const S &amp;) = default; // #2
+    S(S &amp;&amp;) = delete; // #3
   };
 cxxConstructorDecl(isUserProvided()) will match #1, but not #2 or #3.
 </pre></td></tr>
@@ -2443,7 +2442,7 @@ Given:
   class A { int operator*(); };
   const A &amp;operator&lt;&lt;(const A &amp;a, const A &amp;b);
   A a;
-  a &lt;&lt; a;   &lt;-- This matches
+  a &lt;&lt; a;   // &lt;-- This matches
 
 cxxOperatorCallExpr(hasOverloadedOperatorName("&lt;&lt;"))) matches the
 specified line and
@@ -2749,7 +2748,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isImplicit0')"><a name="isImplicit0Anchor">isImplicit</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isImplicit0"><pre>Matches a declaration that has been implicitly added
-by the compiler (eg. implicit defaultcopy constructors).
+by the compiler (eg. implicit default/copy constructors).
 </pre></td></tr>
 
 
@@ -2942,7 +2941,7 @@ Given:
   class A { int operator*(); };
   const A &amp;operator&lt;&lt;(const A &amp;a, const A &amp;b);
   A a;
-  a &lt;&lt; a;   &lt;-- This matches
+  a &lt;&lt; a;   // &lt;-- This matches
 
 cxxOperatorCallExpr(hasOverloadedOperatorName("&lt;&lt;"))) matches the
 specified line and
@@ -2995,13 +2994,13 @@ functionDecl(isDefaulted())
 
 Example matches A, va, fa
   class A {};
-  class B;  Doesn't match, as it has no body.
+  class B;  // Doesn't match, as it has no body.
   int va;
-  extern int vb;  Doesn't match, as it doesn't define the variable.
+  extern int vb;  // Doesn't match, as it doesn't define the variable.
   void fa() {}
-  void fb();  Doesn't match, as it has no body.
+  void fb();  // Doesn't match, as it has no body.
   @interface X
-  - (void)ma; Doesn't match, interface is declaration.
+  - (void)ma; // Doesn't match, interface is declaration.
   @end
   @implementation X
   - (void)ma {}
@@ -3104,7 +3103,7 @@ functionDecl(isNoThrow()) and functionProtoType(isNoThrow())
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('isStaticStorageClass0')"><a name="isStaticStorageClass0Anchor">isStaticStorageClass</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isStaticStorageClass0"><pre>Matches variablefunction declarations that have "static" storage
+<tr><td colspan="4" class="doc" id="isStaticStorageClass0"><pre>Matches variable/function declarations that have "static" storage
 class specifier ("static" keyword) written in the source.
 
 Given:
@@ -3360,7 +3359,7 @@ Example matches X (regexp is one of "::X", "^foo::.*X", among others)
 
 Given
   namespace n {
-  namespace {} #1
+  namespace {} // #1
   }
 namespaceDecl(isAnonymous()) will match #1 but not ::n.
 </pre></td></tr>
@@ -3401,7 +3400,7 @@ message expression in
   CGRect bodyFrame = webView.frame;
   bodyFrame.size.height = self.bodyContentHeight;
   webView.frame = bodyFrame;
-      ^---- matches here
+  //     ^---- matches here
 </pre></td></tr>
 
 
@@ -3473,13 +3472,13 @@ a substring matched by the given RegExp.
 
 Example matches A, va, fa
   class A {};
-  class B;  Doesn't match, as it has no body.
+  class B;  // Doesn't match, as it has no body.
   int va;
-  extern int vb;  Doesn't match, as it doesn't define the variable.
+  extern int vb;  // Doesn't match, as it doesn't define the variable.
   void fa() {}
-  void fb();  Doesn't match, as it has no body.
+  void fb();  // Doesn't match, as it has no body.
   @interface X
-  - (void)ma; Doesn't match, interface is declaration.
+  - (void)ma; // Doesn't match, interface is declaration.
   @end
   @implementation X
   - (void)ma {}
@@ -3773,13 +3772,13 @@ stringLiteral(hasSize(4))
 
 Example matches A, va, fa
   class A {};
-  class B;  Doesn't match, as it has no body.
+  class B;  // Doesn't match, as it has no body.
   int va;
-  extern int vb;  Doesn't match, as it doesn't define the variable.
+  extern int vb;  // Doesn't match, as it doesn't define the variable.
   void fa() {}
-  void fb();  Doesn't match, as it has no body.
+  void fb();  // Doesn't match, as it has no body.
   @interface X
-  - (void)ma; Doesn't match, interface is declaration.
+  - (void)ma; // Doesn't match, interface is declaration.
   @end
   @implementation X
   - (void)ma {}
@@ -4073,13 +4072,13 @@ ifStmt(isConstexpr())
 
 Example matches A, va, fa
   class A {};
-  class B;  Doesn't match, as it has no body.
+  class B;  // Doesn't match, as it has no body.
   int va;
-  extern int vb;  Doesn't match, as it doesn't define the variable.
+  extern int vb;  // Doesn't match, as it doesn't define the variable.
   void fa() {}
-  void fb();  Doesn't match, as it has no body.
+  void fb();  // Doesn't match, as it has no body.
   @interface X
-  - (void)ma; Doesn't match, interface is declaration.
+  - (void)ma; // Doesn't match, interface is declaration.
   @end
   @implementation X
   - (void)ma {}
@@ -4147,7 +4146,7 @@ static int z;
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt;</td><td class="name" onclick="toggle('isStaticStorageClass1')"><a name="isStaticStorageClass1Anchor">isStaticStorageClass</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isStaticStorageClass1"><pre>Matches variablefunction declarations that have "static" storage
+<tr><td colspan="4" class="doc" id="isStaticStorageClass1"><pre>Matches variable/function declarations that have "static" storage
 class specifier ("static" keyword) written in the source.
 
 Given:
@@ -4205,7 +4204,7 @@ GNU's __null, C++11's nullptr, or C's NULL macro.
 Given:
   void *v1 = NULL;
   void *v2 = nullptr;
-  void *v3 = __null; GNU extension
+  void *v3 = __null; // GNU extension
   char *cp = (char *)0;
   int *ip = 0;
   int i = 0;
@@ -4295,8 +4294,8 @@ provided matcher.
 Example matches X, A, A::X, B, B::C, B::C::X
   (matcher = cxxRecordDecl(forEachDescendant(cxxRecordDecl(hasName("X")))))
   class X {};
-  class A { class X {}; };  Matches A, because A::X is a class of name
-                            X inside A.
+  class A { class X {}; };  // Matches A, because A::X is a class of name
+                            // X inside A.
   class B { class C { class X {}; }; };
 
 DescendantT must be an AST base type.
@@ -4322,9 +4321,9 @@ provided matcher.
 Example matches X, Y, Y::X, Z::Y, Z::Y::X
   (matcher = cxxRecordDecl(forEach(cxxRecordDecl(hasName("X")))
   class X {};
-  class Y { class X {}; };  Matches Y, because Y::X is a class of name X
-                            inside Y.
-  class Z { class Y { class X {}; }; };  Does not match Z.
+  class Y { class X {}; };  // Matches Y, because Y::X is a class of name X
+                            // inside Y.
+  class Z { class Y { class X {}; }; };  // Does not match Z.
 
 ChildT must be an AST base type.
 
@@ -4354,7 +4353,7 @@ provided matcher.
 
 Example matches X, Y, Z
     (matcher = cxxRecordDecl(hasDescendant(cxxRecordDecl(hasName("X")))))
-  class X {};  Matches X, because X::X is a class of name X inside X.
+  class X {};  // Matches X, because X::X is a class of name X inside X.
   class Y { class X {}; };
   class Z { class Y { class X {}; }; };
 
@@ -4370,9 +4369,9 @@ provided matcher.
 
 Example matches X, Y
   (matcher = cxxRecordDecl(has(cxxRecordDecl(hasName("X")))
-  class X {};  Matches X, because X::X is a class of name X inside X.
+  class X {};  // Matches X, because X::X is a class of name X inside X.
   class Y { class X {}; };
-  class Z { class Y { class X {}; }; };  Does not match Z.
+  class Z { class Y { class X {}; }; };  // Does not match Z.
 
 ChildT must be an AST base type.
 
@@ -4951,16 +4950,16 @@ Note that a class is not considered to be derived from itself.
 
 Example matches Y, Z, C (Base == hasName("X"))
   class X;
-  class Y : public X {};  directly derived
-  class Z : public Y {};  indirectly derived
+  class Y : public X {};  // directly derived
+  class Z : public Y {};  // indirectly derived
   typedef X A;
   typedef A B;
-  class C : public B {};  derived from a typedef of X
+  class C : public B {};  // derived from a typedef of X
 
 In the following example, Bar matches isDerivedFrom(hasName("X")):
   class Foo;
   typedef Foo X;
-  class Bar : public Foo {};  derived from a type that X is a typedef of
+  class Bar : public Foo {};  // derived from a type that X is a typedef of
 </pre></td></tr>
 
 
@@ -5256,8 +5255,8 @@ Given
   namespace a { void f() {} }
   using a::f;
   void g() {
-    f();     Matches this ..
-    a::f();  .. but not this.
+    f();     // Matches this ..
+    a::f();  // .. but not this.
   }
 declRefExpr(throughUsingDecl(anything()))
   matches f()

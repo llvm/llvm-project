@@ -4,7 +4,8 @@ import stat
 
 # Ensure that this is being run on a specific platform
 assert sys.platform.startswith('linux') or sys.platform.startswith('darwin') \
-    or sys.platform.startswith('cygwin') or sys.platform.startswith('freebsd')
+    or sys.platform.startswith('cygwin') or sys.platform.startswith('freebsd') \
+    or sys.platform.startswith('netbsd')
 
 def env_path():
     ep = os.environ.get('LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT')

@@ -4541,6 +4541,24 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
            "of ints");
     break;
   }
+  case Intrinsic::smul_fix: {
+    Value *Op1 = CS.getArgOperand(0);
+    Value *Op2 = CS.getArgOperand(1);
+    Assert(Op1->getType()->isIntOrIntVectorTy(),
+           "first operand of smul_fix must be an int type or vector "
+           "of ints");
+    Assert(Op2->getType()->isIntOrIntVectorTy(),
+           "second operand of smul_fix must be an int type or vector "
+           "of ints");
+
+    auto *Op3 = dyn_cast<ConstantInt>(CS.getArgOperand(2));
+    Assert(Op3, "third argument of smul_fix must be a constant integer");
+    Assert(Op3->getType()->getBitWidth() <= 32,
+           "third argument of smul_fix must fit within 32 bits");
+    Assert(Op3->getZExtValue() < Op1->getType()->getScalarSizeInBits(),
+           "the scale of smul_fix must be less than the width of the operands");
+    break;
+  }
   };
 }
 

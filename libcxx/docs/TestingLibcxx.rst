@@ -155,14 +155,6 @@ configuration. Passing the option on the command line will override the default.
   the default value. Otherwise the default value is True on Windows and False
   on every other platform.
 
-.. option:: no_default_flags=<bool>
-
-  **Default**: False
-
-  Disable all default compile and link flags from being added. When this
-  option is used only flags specified using the compile_flags and link_flags
-  will be used.
-
 .. option:: compile_flags="<list-of-args>"
 
   Specify additional compile flags as a space delimited string.

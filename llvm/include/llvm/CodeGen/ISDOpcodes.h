@@ -272,6 +272,13 @@ namespace ISD {
     /// resulting value is this minimum value.
     SSUBSAT, USUBSAT,
 
+    /// RESULT = SMULFIX(LHS, RHS, SCALE) - Perform fixed point multiplication on
+    /// 2 integers with the same width and scale. SCALE represents the scale of
+    /// both operands as fixed point numbers. This SCALE parameter must be a
+    /// constant integer. A scale of zero is effectively performing
+    /// multiplication on 2 integers.
+    SMULFIX,
+
     /// Simple binary floating point operators.
     FADD, FSUB, FMUL, FDIV, FREM,
 

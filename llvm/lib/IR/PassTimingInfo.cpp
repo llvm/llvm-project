@@ -226,7 +226,7 @@ static bool matchPassManager(StringRef PassID) {
          Prefix.endswith("AnalysisManagerProxy");
 }
 
-bool TimePassesHandler::runBeforePass(StringRef PassID, Any IR) {
+bool TimePassesHandler::runBeforePass(StringRef PassID) {
   if (matchPassManager(PassID))
     return true;
 
@@ -239,7 +239,7 @@ bool TimePassesHandler::runBeforePass(StringRef PassID, Any IR) {
   return true;
 }
 
-void TimePassesHandler::runAfterPass(StringRef PassID, Any IR) {
+void TimePassesHandler::runAfterPass(StringRef PassID) {
   if (matchPassManager(PassID))
     return;
 
@@ -254,13 +254,15 @@ void TimePassesHandler::registerCallbacks(PassInstrumentationCallbacks &PIC) {
     return;
 
   PIC.registerBeforePassCallback(
-      [this](StringRef P, Any IR) { return this->runBeforePass(P, IR); });
+      [this](StringRef P, Any) { return this->runBeforePass(P); });
   PIC.registerAfterPassCallback(
-      [this](StringRef P, Any IR) { this->runAfterPass(P, IR); });
+      [this](StringRef P, Any) { this->runAfterPass(P); });
+  PIC.registerAfterPassInvalidatedCallback(
+      [this](StringRef P) { this->runAfterPass(P); });
   PIC.registerBeforeAnalysisCallback(
-      [this](StringRef P, Any IR) { this->runBeforePass(P, IR); });
+      [this](StringRef P, Any) { this->runBeforePass(P); });
   PIC.registerAfterAnalysisCallback(
-      [this](StringRef P, Any IR) { this->runAfterPass(P, IR); });
+      [this](StringRef P, Any) { this->runAfterPass(P); });
 }
 
 } // namespace llvm

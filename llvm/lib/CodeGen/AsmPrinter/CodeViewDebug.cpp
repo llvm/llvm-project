@@ -2486,6 +2486,14 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
   if (!Ty)
     return TypeIndex::Void();
 
+  // Look through typedefs when getting the complete type index. Call
+  // getTypeIndex on the typdef to ensure that any UDTs are accumulated and are
+  // emitted only once.
+  if (Ty->getTag() == dwarf::DW_TAG_typedef)
+    (void)getTypeIndex(Ty);
+  while (Ty->getTag() == dwarf::DW_TAG_typedef)
+    Ty = cast<DIDerivedType>(Ty)->getBaseType().resolve();
+
   // If this is a non-record type, the complete type index is the same as the
   // normal type index. Just call getTypeIndex.
   switch (Ty->getTag()) {

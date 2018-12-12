@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32 --position-independent 2>%t1
+# RUN: llvm-mc %s -triple mips-unknown-linux-gnu --position-independent 2>%t1
 # RUN: FileCheck %s < %t1
 
   .text

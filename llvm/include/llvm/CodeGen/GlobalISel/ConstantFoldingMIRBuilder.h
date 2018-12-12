@@ -78,7 +78,8 @@ public:
   // Try to provide an overload for buildInstr for binary ops in order to
   // constant fold.
   MachineInstrBuilder buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
-                                 ArrayRef<SrcOp> SrcOps) override {
+                                 ArrayRef<SrcOp> SrcOps,
+                                 Optional<unsigned> Flags = None) override {
     switch (Opc) {
     default:
       break;
