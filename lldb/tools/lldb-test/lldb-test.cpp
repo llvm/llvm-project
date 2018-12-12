@@ -733,6 +733,7 @@ static void dumpSectionList(LinePrinter &Printer, const SectionList &List, bool 
     Printer.formatLine("Index: {0}", I);
     Printer.formatLine("Name: {0}", S->GetName().GetStringRef());
     Printer.formatLine("Type: {0}", S->GetTypeAsCString());
+    Printer.formatLine("Thread specific: {0:y}", S->IsThreadSpecific());
     Printer.formatLine("VM size: {0}", S->GetByteSize());
     Printer.formatLine("File size: {0}", S->GetFileSize());
 

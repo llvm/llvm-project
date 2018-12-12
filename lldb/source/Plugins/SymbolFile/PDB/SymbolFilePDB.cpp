@@ -78,12 +78,13 @@ bool ShouldAddLine(uint32_t requested_line, uint32_t actual_line,
 } // namespace
 
 static bool ShouldUseNativeReader() {
-#if !defined(_WIN32)
-  return true;
-#endif
+#if defined(_WIN32)
   llvm::StringRef use_native = ::getenv("LLDB_USE_NATIVE_PDB_READER");
   return use_native.equals_lower("on") || use_native.equals_lower("yes") ||
          use_native.equals_lower("1") || use_native.equals_lower("true");
+#else
+  return true;
+#endif
 }
 
 void SymbolFilePDB::Initialize() {

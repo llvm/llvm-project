@@ -3407,8 +3407,9 @@ size_t DWARFASTParserClang::ParseChildParameters(
             function_param_types.push_back(type->GetForwardCompilerType());
 
             clang::ParmVarDecl *param_var_decl =
-                m_ast.CreateParameterDeclaration(
-                    name, type->GetForwardCompilerType(), storage);
+                m_ast.CreateParameterDeclaration(containing_decl_ctx, name,
+                                                 type->GetForwardCompilerType(),
+                                                 storage);
             assert(param_var_decl);
             function_param_decls.push_back(param_var_decl);
 

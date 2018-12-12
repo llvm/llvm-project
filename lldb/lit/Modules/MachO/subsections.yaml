@@ -5,6 +5,7 @@
 #CHECK-NEXT:  Index: 0
 #CHECK-NEXT:  Name: __PAGEZERO
 #CHECK-NEXT:  Type: container
+#CHECK-NEXT:  Thread specific: no
 #CHECK-NEXT:  VM size: 4294967296
 #CHECK-NEXT:  File size: 0
 #CHECK-NEXT:  There are no subsections
@@ -12,24 +13,28 @@
 #CHECK:       Index: 1
 #CHECK-NEXT:  Name: __TEXT
 #CHECK-NEXT:  Type: container
+#CHECK-NEXT:  Thread specific: no
 #CHECK-NEXT:  VM size: 4096
 #CHECK-NEXT:  File size: 4096
 #CHECK-NEXT:  Showing 3 subsections
 #CHECK-NEXT:    Index: 0
 #CHECK-NEXT:    Name: __text
 #CHECK-NEXT:    Type: code
+#CHECK-NEXT:    Thread specific: no
 #CHECK-NEXT:    VM size: 22
 #CHECK-NEXT:    File size: 22
 #
 #CHECK:         Index: 1
 #CHECK-NEXT:    Name: __unwind_info
 #CHECK-NEXT:    Type: compact-unwind
+#CHECK-NEXT:    Thread specific: no
 #CHECK-NEXT:    VM size: 76
 #CHECK-NEXT:    File size: 76
 #
 #CHECK:         Index: 2
 #CHECK-NEXT:    Name: __eh_frame
 #CHECK-NEXT:    Type: eh-frame
+#CHECK-NEXT:    Thread specific: no
 #CHECK-NEXT:    VM size: 104
 #CHECK-NEXT:    File size: 104
 
