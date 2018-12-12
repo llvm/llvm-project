@@ -1411,23 +1411,19 @@ bool SBFrame::IsSwiftThunk() const {
   StackFrame *frame = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
   Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&process->GetRunLock())) {
-      frame = exe_ctx.GetFramePtr();
-      if (frame) {
-        SwiftLanguageRuntime *runtime = process->GetSwiftLanguageRuntime();
-        if (!runtime)
-          return false;
-        SymbolContext sc;
-        sc = frame->GetSymbolContext(eSymbolContextSymbol);
-        if (!sc.symbol)
-          return false;
-        return runtime->IsSymbolARuntimeThunk(*sc.symbol);
-      }
-    }
-  }
-  return false;
+  if (!target || !process)
+    return false;
+  Process::StopLocker stop_locker;
+  if (!stop_locker.TryLock(&process->GetRunLock()))
+    return false;
+  frame = exe_ctx.GetFramePtr();
+  if (!frame)
+    return false;
+  SymbolContext sc;
+  sc = frame->GetSymbolContext(eSymbolContextSymbol);
+  if (!sc.symbol)
+    return false;
+  return SwiftLanguageRuntime::IsSymbolARuntimeThunk(*sc.symbol);
 }
 
 const char *SBFrame::GetFunctionName() const {

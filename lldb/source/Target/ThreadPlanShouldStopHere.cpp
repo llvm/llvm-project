@@ -91,8 +91,8 @@ bool ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
     Symbol *symbol = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
     if (symbol) {
       ProcessSP process_sp(current_plan->GetThread().GetProcess());
-      if (LanguageRuntime::IsSymbolAnyRuntimeThunk(process_sp, *symbol)) {
-          should_stop_here = false;
+      if (LanguageRuntime::IsSymbolAnyRuntimeThunk(*symbol)) {
+        should_stop_here = false;
       }
     }
   }
@@ -138,10 +138,10 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
     if (sc.symbol) {
       ProcessSP process_sp(current_plan->GetThread().GetProcess());
 
-      if (LanguageRuntime::IsSymbolAnyRuntimeThunk(process_sp, *sc.symbol)) {
-          if (log)
-            log->Printf("In runtime thunk %s - stepping out.",
-              sc.symbol->GetName().GetCString());
+      if (LanguageRuntime::IsSymbolAnyRuntimeThunk(*sc.symbol)) {
+        if (log)
+          log->Printf("In runtime thunk %s - stepping out.",
+                      sc.symbol->GetName().GetCString());
         just_step_out = true;
       }
       // If the whole function is marked line 0 just step out, that's easier &
