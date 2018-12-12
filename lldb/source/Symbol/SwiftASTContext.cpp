@@ -5315,7 +5315,9 @@ SwiftASTContext::GetTypeInfo(void *type,
   const swift::TypeKind type_kind = swift_can_type->getKind();
   uint32_t swift_flags = eTypeIsSwift;
   switch (type_kind) {
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Error:
   case swift::TypeKind::Module:
   case swift::TypeKind::TypeVariable:
@@ -5503,7 +5505,9 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(void *type) {
     return lldb::eTypeClassOther;
   case swift::TypeKind::Module:
     return lldb::eTypeClassOther;
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
     return lldb::eTypeClassOther;
   case swift::TypeKind::Function:
     return lldb::eTypeClassFunction;
@@ -5959,7 +5963,9 @@ lldb::Encoding SwiftASTContext::GetEncoding(void *type, uint64_t &count) {
   case swift::TypeKind::BuiltinFloat:
     return lldb::eEncodingIEEE754; // TODO: detect if an integer is unsigned
 
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::BuiltinRawPointer:
   case swift::TypeKind::BuiltinNativeObject:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
@@ -6049,7 +6055,9 @@ lldb::Format SwiftASTContext::GetFormat(void *type) {
   case swift::TypeKind::BuiltinUnknownObject:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinBridgeObject:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::GenericTypeParam:
   case swift::TypeKind::DependentMember:
     return eFormatAddressInfo;
@@ -6183,7 +6191,9 @@ uint32_t SwiftASTContext::GetNumChildren(void *type,
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
     return 0;
 
   case swift::TypeKind::LValue: {
@@ -6308,7 +6318,9 @@ uint32_t SwiftASTContext::GetNumFields(void *type) {
     return 0;
 
   case swift::TypeKind::Module:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::LValue:
@@ -6610,7 +6622,9 @@ CompilerType SwiftASTContext::GetFieldAtIndex(void *type, size_t idx,
     break;
 
   case swift::TypeKind::Module:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::LValue:
@@ -6694,7 +6708,9 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(void *type) {
     return 0;
   case swift::TypeKind::Module:
     return 0;
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
     return 0;
   case swift::TypeKind::Function:
     return 0;
@@ -7044,7 +7060,9 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
     break;
 
   case swift::TypeKind::Module:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
     break;
@@ -7273,7 +7291,9 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
       break;
 
     case swift::TypeKind::Module:
-    case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
     case swift::TypeKind::Function:
     case swift::TypeKind::GenericFunction:
       break;
@@ -7548,7 +7568,9 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinUnknownObject:
   case swift::TypeKind::BuiltinBridgeObject:
-  case swift::TypeKind::Archetype:
+  case swift::TypeKind::PrimaryArchetype:
+  case swift::TypeKind::OpenedArchetype:
+  case swift::TypeKind::NestedArchetype:
   case swift::TypeKind::Function:
   case swift::TypeKind::GenericFunction:
   case swift::TypeKind::GenericTypeParam:
