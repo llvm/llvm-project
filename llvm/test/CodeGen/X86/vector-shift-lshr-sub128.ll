@@ -861,15 +861,13 @@ define <2 x i32> @splatvar_shift_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [4294967295,0,4294967295,0]
 ; X32-SSE-NEXT:    pand %xmm2, %xmm0
-; X32-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[0,1,0,1]
-; X32-SSE-NEXT:    pand %xmm2, %xmm3
+; X32-SSE-NEXT:    pand %xmm1, %xmm2
+; X32-SSE-NEXT:    movdqa %xmm0, %xmm3
+; X32-SSE-NEXT:    psrlq %xmm2, %xmm3
 ; X32-SSE-NEXT:    pxor %xmm2, %xmm2
 ; X32-SSE-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
-; X32-SSE-NEXT:    movdqa %xmm0, %xmm1
-; X32-SSE-NEXT:    psrlq %xmm2, %xmm1
-; X32-SSE-NEXT:    psrlq %xmm3, %xmm0
-; X32-SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; X32-SSE-NEXT:    movapd %xmm1, %xmm0
+; X32-SSE-NEXT:    psrlq %xmm2, %xmm0
+; X32-SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm3[0],xmm0[1]
 ; X32-SSE-NEXT:    retl
   %splat = shufflevector <2 x i32> %b, <2 x i32> undef, <2 x i32> zeroinitializer
   %shift = lshr <2 x i32> %a, %splat
