@@ -262,13 +262,13 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
   //   }
   static ConstString g__representation("_representation");
   ValueObjectSP representation_enum_sp =
-    valobj.GetChildAtNamePath(g__representation);
+      valobj.GetChildAtNamePath(g__representation);
   if (!representation_enum_sp)
     return false;
 
   representation_enum_sp =
-    representation_enum_sp->GetQualifiedRepresentationIfAvailable(
-        lldb::eDynamicDontRunTarget, true);
+      representation_enum_sp->GetQualifiedRepresentationIfAvailable(
+          lldb::eDynamicDontRunTarget, true);
   if (!representation_enum_sp)
     return false;
 
@@ -298,10 +298,10 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     if (representation_enum_sp->GetNumChildren() != 1)
       return false;
 
-    ValueObjectSP inline_data_sp = representation_enum_sp
-      ->GetChildAtIndex(0, true)
-      ->GetQualifiedRepresentationIfAvailable(
-          lldb::eDynamicDontRunTarget, true);
+    ValueObjectSP inline_data_sp =
+        representation_enum_sp->GetChildAtIndex(0, true)
+            ->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget,
+                                                    true);
     if (!inline_data_sp)
       return false;
 
@@ -313,8 +313,8 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     //   }
     static ConstString g_length("length");
     ValueObjectSP length_sp = inline_data_sp->GetChildAtNamePath(g_length)
-      ->GetQualifiedRepresentationIfAvailable(
-          lldb::eDynamicDontRunTarget, true);
+                                  ->GetQualifiedRepresentationIfAvailable(
+                                      lldb::eDynamicDontRunTarget, true);
     if (!length_sp)
       return false;
 
@@ -328,10 +328,10 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     if (representation_enum_sp->GetNumChildren() != 1)
       return false;
 
-    ValueObjectSP slice_data_sp = representation_enum_sp
-      ->GetChildAtIndex(0, true)
-      ->GetQualifiedRepresentationIfAvailable(
-          lldb::eDynamicDontRunTarget, true);
+    ValueObjectSP slice_data_sp =
+        representation_enum_sp->GetChildAtIndex(0, true)
+            ->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget,
+                                                    true);
     if (!slice_data_sp)
       return false;
 
@@ -346,34 +346,31 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     if (!slice_storage_sp)
       return false;
 
-    slice_storage_sp = slice_storage_sp
-      ->GetQualifiedRepresentationIfAvailable(
-          lldb::eDynamicDontRunTarget, true);
+    slice_storage_sp = slice_storage_sp->GetQualifiedRepresentationIfAvailable(
+        lldb::eDynamicDontRunTarget, true);
     if (!slice_storage_sp)
       return false;
 
     // We need to manually calculate slice.upperBound - slice.lowerBound.
     static ConstString g_upperBound("upperBound");
-    ValueObjectSP upper_bound_sp = slice_storage_sp
-      ->GetChildAtNamePath(g_upperBound);
+    ValueObjectSP upper_bound_sp =
+        slice_storage_sp->GetChildAtNamePath(g_upperBound);
     if (!upper_bound_sp)
       return false;
 
-    upper_bound_sp = upper_bound_sp
-      ->GetQualifiedRepresentationIfAvailable(
-          lldb::eDynamicDontRunTarget, true);
+    upper_bound_sp = upper_bound_sp->GetQualifiedRepresentationIfAvailable(
+        lldb::eDynamicDontRunTarget, true);
     if (!upper_bound_sp)
       return false;
 
     static ConstString g_lowerBound("lowerBound");
-    ValueObjectSP lower_bound_sp = slice_storage_sp
-      ->GetChildAtNamePath(g_lowerBound);
+    ValueObjectSP lower_bound_sp =
+        slice_storage_sp->GetChildAtNamePath(g_lowerBound);
     if (!lower_bound_sp)
       return false;
 
-    lower_bound_sp = lower_bound_sp
-      ->GetQualifiedRepresentationIfAvailable(
-          lldb::eDynamicDontRunTarget, true);
+    lower_bound_sp = lower_bound_sp->GetQualifiedRepresentationIfAvailable(
+        lldb::eDynamicDontRunTarget, true);
     if (!lower_bound_sp)
       return false;
 
@@ -392,10 +389,10 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     if (representation_enum_sp->GetNumChildren() != 1)
       return false;
 
-    ValueObjectSP large_data_sp = representation_enum_sp
-      ->GetChildAtIndex(0, true)
-      ->GetQualifiedRepresentationIfAvailable(
-          lldb::eDynamicDontRunTarget, true);
+    ValueObjectSP large_data_sp =
+        representation_enum_sp->GetChildAtIndex(0, true)
+            ->GetQualifiedRepresentationIfAvailable(lldb::eDynamicDontRunTarget,
+                                                    true);
     if (!large_data_sp)
       return false;
 
@@ -410,9 +407,8 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     if (!slice_ref_sp)
       return false;
 
-    slice_ref_sp = slice_ref_sp
-      ->GetQualifiedRepresentationIfAvailable(
-          lldb::eDynamicDontRunTarget, true);
+    slice_ref_sp = slice_ref_sp->GetQualifiedRepresentationIfAvailable(
+        lldb::eDynamicDontRunTarget, true);
     if (!slice_ref_sp)
       return false;
 
@@ -437,9 +433,8 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     if (!upper_bound_sp)
       return false;
 
-    upper_bound_sp = upper_bound_sp
-      ->GetQualifiedRepresentationIfAvailable(
-          lldb::eDynamicDontRunTarget, true);
+    upper_bound_sp = upper_bound_sp->GetQualifiedRepresentationIfAvailable(
+        lldb::eDynamicDontRunTarget, true);
     if (!upper_bound_sp)
       return false;
 
@@ -448,9 +443,8 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     if (!lower_bound_sp)
       return false;
 
-    lower_bound_sp = lower_bound_sp
-      ->GetQualifiedRepresentationIfAvailable(
-          lldb::eDynamicDontRunTarget, true);
+    lower_bound_sp = lower_bound_sp->GetQualifiedRepresentationIfAvailable(
+        lldb::eDynamicDontRunTarget, true);
     if (!lower_bound_sp)
       return false;
 
