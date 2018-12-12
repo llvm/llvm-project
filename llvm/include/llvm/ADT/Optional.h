@@ -108,6 +108,10 @@ template <typename T, bool = isPodLike<T>::value> struct OptionalStorage {
   }
 };
 
+// Swift-only: The following partial template specialization was removed
+// from LLVM because of a bug in GCC, but Swift is relying on it.
+// (https://bugs.swift.org/browse/SR-9483)
+
 #if !defined(__GNUC__) || defined(__clang__) // GCC up to GCC7 miscompiles this.
 /// Storage for trivially copyable types only.
 template <typename T> struct OptionalStorage<T, true> {
