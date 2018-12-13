@@ -431,6 +431,21 @@ std::error_code fromString(std::string String, Metadata &HSAMetadata);
 /// Converts \p HSAMetadata to \p String.
 std::error_code toString(Metadata HSAMetadata, std::string &String);
 
+//===----------------------------------------------------------------------===//
+// HSA metadata for v3 code object.
+//===----------------------------------------------------------------------===//
+namespace V3 {
+/// HSA metadata major version.
+constexpr uint32_t VersionMajor = 1;
+/// HSA metadata minor version.
+constexpr uint32_t VersionMinor = 0;
+
+/// HSA metadata beginning assembler directive.
+constexpr char AssemblerDirectiveBegin[] = ".amdgpu_metadata";
+/// HSA metadata ending assembler directive.
+constexpr char AssemblerDirectiveEnd[] = ".end_amdgpu_metadata";
+} // end namespace V3
+
 } // end namespace HSAMD
 
 //===----------------------------------------------------------------------===//

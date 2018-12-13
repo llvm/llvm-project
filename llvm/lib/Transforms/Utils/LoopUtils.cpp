@@ -26,9 +26,11 @@
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ValueHandle.h"
@@ -567,6 +569,10 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
     DTU.deleteEdge(Preheader, L->getHeader());
   }
 
+  // Use a map to unique and a vector to guarantee deterministic ordering.
+  llvm::SmallDenseSet<std::pair<DIVariable *, DIExpression *>, 4> DeadDebugSet;
+  llvm::SmallVector<DbgVariableIntrinsic *, 4> DeadDebugInst;
+
   // Given LCSSA form is satisfied, we should not have users of instructions
   // within the dead loop outside of the loop. However, LCSSA doesn't take
   // unreachable uses into account. We handle them here.
@@ -591,7 +597,26 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT = nullptr,
                  "Unexpected user in reachable block");
         U.set(Undef);
       }
+      auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I);
+      if (!DVI)
+        continue;
+      auto Key = DeadDebugSet.find({DVI->getVariable(), DVI->getExpression()});
+      if (Key != DeadDebugSet.end())
+        continue;
+      DeadDebugSet.insert({DVI->getVariable(), DVI->getExpression()});
+      DeadDebugInst.push_back(DVI);
     }
+
+  // After the loop has been deleted all the values defined and modified
+  // inside the loop are going to be unavailable.
+  // Since debug values in the loop have been deleted, inserting an undef
+  // dbg.value truncates the range of any dbg.value before the loop where the
+  // loop used to be. This is particularly important for constant values.
+  DIBuilder DIB(*ExitBlock->getModule());
+  for (auto *DVI : DeadDebugInst)
+    DIB.insertDbgValueIntrinsic(
+        UndefValue::get(DVI->getType()), DVI->getVariable(),
+        DVI->getExpression(), DVI->getDebugLoc(), ExitBlock->getFirstNonPHI());
 
   // Remove the block from the reference counting scheme, so that we can
   // delete it freely later.

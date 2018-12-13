@@ -3410,14 +3410,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     unsigned Opc, MOpc;
     bool isSigned = Opcode == ISD::SMUL_LOHI;
-    bool hasBMI2 = Subtarget->hasBMI2();
     if (!isSigned) {
       switch (NVT.SimpleTy) {
       default: llvm_unreachable("Unsupported VT!");
-      case MVT::i32: Opc = hasBMI2 ? X86::MULX32rr : X86::MUL32r;
-                     MOpc = hasBMI2 ? X86::MULX32rm : X86::MUL32m; break;
-      case MVT::i64: Opc = hasBMI2 ? X86::MULX64rr : X86::MUL64r;
-                     MOpc = hasBMI2 ? X86::MULX64rm : X86::MUL64m; break;
+      case MVT::i32: Opc = X86::MUL32r; MOpc = X86::MUL32m; break;
+      case MVT::i64: Opc = X86::MUL64r; MOpc = X86::MUL64m; break;
       }
     } else {
       switch (NVT.SimpleTy) {
@@ -3438,12 +3435,6 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
     case X86::MUL64r:
       SrcReg = LoReg = X86::RAX; HiReg = X86::RDX;
       break;
-    case X86::MULX32rr:
-      SrcReg = X86::EDX; LoReg = HiReg = 0;
-      break;
-    case X86::MULX64rr:
-      SrcReg = X86::RDX; LoReg = HiReg = 0;
-      break;
     }
 
     SDValue Tmp0, Tmp1, Tmp2, Tmp3, Tmp4;
@@ -3457,26 +3448,15 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     SDValue InFlag = CurDAG->getCopyToReg(CurDAG->getEntryNode(), dl, SrcReg,
                                           N0, SDValue()).getValue(1);
-    SDValue ResHi, ResLo;
-
     if (foldedLoad) {
       SDValue Chain;
       MachineSDNode *CNode = nullptr;
       SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, N1.getOperand(0),
                         InFlag };
-      if (MOpc == X86::MULX32rm || MOpc == X86::MULX64rm) {
-        SDVTList VTs = CurDAG->getVTList(NVT, NVT, MVT::Other, MVT::Glue);
-        CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
-        ResHi = SDValue(CNode, 0);
-        ResLo = SDValue(CNode, 1);
-        Chain = SDValue(CNode, 2);
-        InFlag = SDValue(CNode, 3);
-      } else {
-        SDVTList VTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
-        CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
-        Chain = SDValue(CNode, 0);
-        InFlag = SDValue(CNode, 1);
-      }
+      SDVTList VTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
+      CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
+      Chain = SDValue(CNode, 0);
+      InFlag = SDValue(CNode, 1);
 
       // Update the chain.
       ReplaceUses(N1.getValue(1), Chain);
@@ -3484,39 +3464,27 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
       CurDAG->setNodeMemRefs(CNode, {cast<LoadSDNode>(N1)->getMemOperand()});
     } else {
       SDValue Ops[] = { N1, InFlag };
-      if (Opc == X86::MULX32rr || Opc == X86::MULX64rr) {
-        SDVTList VTs = CurDAG->getVTList(NVT, NVT, MVT::Glue);
-        SDNode *CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
-        ResHi = SDValue(CNode, 0);
-        ResLo = SDValue(CNode, 1);
-        InFlag = SDValue(CNode, 2);
-      } else {
-        SDVTList VTs = CurDAG->getVTList(MVT::Glue);
-        SDNode *CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
-        InFlag = SDValue(CNode, 0);
-      }
+      SDVTList VTs = CurDAG->getVTList(MVT::Glue);
+      SDNode *CNode = CurDAG->getMachineNode(Opc, dl, VTs, Ops);
+      InFlag = SDValue(CNode, 0);
     }
 
     // Copy the low half of the result, if it is needed.
     if (!SDValue(Node, 0).use_empty()) {
-      if (!ResLo.getNode()) {
-        assert(LoReg && "Register for low half is not defined!");
-        ResLo = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), dl, LoReg, NVT,
-                                       InFlag);
-        InFlag = ResLo.getValue(2);
-      }
+      assert(LoReg && "Register for low half is not defined!");
+      SDValue ResLo = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), dl, LoReg,
+                                             NVT, InFlag);
+      InFlag = ResLo.getValue(2);
       ReplaceUses(SDValue(Node, 0), ResLo);
       LLVM_DEBUG(dbgs() << "=> "; ResLo.getNode()->dump(CurDAG);
                  dbgs() << '\n');
     }
     // Copy the high half of the result, if it is needed.
     if (!SDValue(Node, 1).use_empty()) {
-      if (!ResHi.getNode()) {
-        assert(HiReg && "Register for high half is not defined!");
-        ResHi = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), dl, HiReg, NVT,
-                                       InFlag);
-        InFlag = ResHi.getValue(2);
-      }
+      assert(HiReg && "Register for high half is not defined!");
+      SDValue ResHi = CurDAG->getCopyFromReg(CurDAG->getEntryNode(), dl, HiReg,
+                                             NVT, InFlag);
+      InFlag = ResHi.getValue(2);
       ReplaceUses(SDValue(Node, 1), ResHi);
       LLVM_DEBUG(dbgs() << "=> "; ResHi.getNode()->dump(CurDAG);
                  dbgs() << '\n');

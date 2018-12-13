@@ -697,8 +697,8 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; ILP-NEXT:    cmpq %rdi, %rsi
 ; ILP-NEXT:    sbbq $0, %rdx
 ; ILP-NEXT:    movl $0, %edx
-; ILP-NEXT:    sbbq $0, %rdx
-; ILP-NEXT:    sbbq $0, %rcx
+; ILP-NEXT:    sbbq %rdx, %rdx
+; ILP-NEXT:    sbbq %rcx, %rcx
 ; ILP-NEXT:    setae %cl
 ; ILP-NEXT:    movzbl %cl, %ecx
 ; ILP-NEXT:    subq %rcx, %rax
@@ -713,8 +713,8 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; HYBRID-NEXT:    cmpq %rdi, %rsi
 ; HYBRID-NEXT:    sbbq $0, %rcx
 ; HYBRID-NEXT:    movl $0, %ecx
-; HYBRID-NEXT:    sbbq $0, %rcx
-; HYBRID-NEXT:    sbbq $0, %rax
+; HYBRID-NEXT:    sbbq %rcx, %rcx
+; HYBRID-NEXT:    sbbq %rax, %rax
 ; HYBRID-NEXT:    setae %al
 ; HYBRID-NEXT:    movzbl %al, %ecx
 ; HYBRID-NEXT:    movl $2, %eax
@@ -730,8 +730,8 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; BURR-NEXT:    cmpq %rdi, %rsi
 ; BURR-NEXT:    sbbq $0, %rcx
 ; BURR-NEXT:    movl $0, %ecx
-; BURR-NEXT:    sbbq $0, %rcx
-; BURR-NEXT:    sbbq $0, %rax
+; BURR-NEXT:    sbbq %rcx, %rcx
+; BURR-NEXT:    sbbq %rax, %rax
 ; BURR-NEXT:    setae %al
 ; BURR-NEXT:    movzbl %al, %ecx
 ; BURR-NEXT:    movl $2, %eax
@@ -747,8 +747,8 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; SRC-NEXT:    cmpq %rdi, %rsi
 ; SRC-NEXT:    sbbq $0, %rax
 ; SRC-NEXT:    movl $0, %eax
-; SRC-NEXT:    sbbq $0, %rax
-; SRC-NEXT:    sbbq $0, %rcx
+; SRC-NEXT:    sbbq %rax, %rax
+; SRC-NEXT:    sbbq %rcx, %rcx
 ; SRC-NEXT:    setae %al
 ; SRC-NEXT:    movzbl %al, %ecx
 ; SRC-NEXT:    movl $2, %eax
@@ -765,8 +765,8 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ; LIN-NEXT:    cmpq %rdi, %rsi
 ; LIN-NEXT:    sbbq $0, %rdx
 ; LIN-NEXT:    movl $0, %edx
-; LIN-NEXT:    sbbq $0, %rdx
-; LIN-NEXT:    sbbq $0, %rcx
+; LIN-NEXT:    sbbq %rdx, %rdx
+; LIN-NEXT:    sbbq %rcx, %rcx
 ; LIN-NEXT:    setae %cl
 ; LIN-NEXT:    movzbl %cl, %ecx
 ; LIN-NEXT:    subq %rcx, %rax

@@ -12,7 +12,7 @@ define void @test_alloca(i8* %result) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[RESULT:%.*]], i8 0, i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca %T, align 8
@@ -28,7 +28,7 @@ define void @test_alloca_with_lifetimes(i8* %result) {
 ; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[B]])
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[RESULT:%.*]], i8 0, i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[B]])
 ; CHECK-NEXT:    ret void
 ;
@@ -46,7 +46,7 @@ define void @test_malloc_with_lifetimes(i8* %result) {
 ; CHECK-NEXT:    [[A:%.*]] = call i8* @malloc(i64 16)
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 16, i8* [[A]])
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[A]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[RESULT:%.*]], i8 0, i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 16, i8* [[A]])
 ; CHECK-NEXT:    call void @free(i8* [[A]])
 ; CHECK-NEXT:    ret void
@@ -98,7 +98,7 @@ define void @test_volatile_memset(i8* %result) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
 ; CHECK-NEXT:    [[B:%.*]] = bitcast %T* [[A]] to i8*
 ; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 8 [[B]], i8 0, i64 12, i1 true)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[RESULT:%.*]], i8 0, i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* [[RESULT:%.*]], i8* align 8 [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca %T, align 8

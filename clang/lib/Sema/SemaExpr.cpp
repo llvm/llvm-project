@@ -5585,12 +5585,11 @@ ExprResult Sema::ActOnConvertVectorExpr(Expr *E, ParsedType ParsedDestTy,
 /// block-pointer type.
 ///
 /// \param NDecl the declaration being called, if available
-ExprResult
-Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
-                            SourceLocation LParenLoc,
-                            ArrayRef<Expr *> Args,
-                            SourceLocation RParenLoc,
-                            Expr *Config, bool IsExecConfig) {
+ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
+                                       SourceLocation LParenLoc,
+                                       ArrayRef<Expr *> Args,
+                                       SourceLocation RParenLoc, Expr *Config,
+                                       bool IsExecConfig, ADLCallKind UsesADL) {
   FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(NDecl);
   unsigned BuiltinID = (FDecl ? FDecl->getBuiltinID() : 0);
 
@@ -5670,13 +5669,16 @@ Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   unsigned NumParams = Proto ? Proto->getNumParams() : 0;
 
   CallExpr *TheCall;
-  if (Config)
+  if (Config) {
+    assert(UsesADL == ADLCallKind::NotADL &&
+           "CUDAKernelCallExpr should not use ADL");
     TheCall = new (Context)
         CUDAKernelCallExpr(Context, Fn, cast<CallExpr>(Config), Args, ResultTy,
                            VK_RValue, RParenLoc, NumParams);
-  else
-    TheCall = new (Context)
-        CallExpr(Context, Fn, Args, ResultTy, VK_RValue, RParenLoc, NumParams);
+  } else {
+    TheCall = new (Context) CallExpr(Context, Fn, Args, ResultTy, VK_RValue,
+                                     RParenLoc, NumParams, UsesADL);
+  }
 
   if (!getLangOpts().CPlusPlus) {
     // C cannot always handle TypoExpr nodes in builtin calls and direct

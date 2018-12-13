@@ -18815,9 +18815,6 @@ SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
   if (isNullConstant(Op1))
     return EmitTest(Op0, X86CC, dl, DAG);
 
-  assert(!(isa<ConstantSDNode>(Op1) && Op0.getValueType() == MVT::i1) &&
-         "Unexpected comparison operation for MVT::i1 operands");
-
   if ((Op0.getValueType() == MVT::i8 || Op0.getValueType() == MVT::i16 ||
        Op0.getValueType() == MVT::i32 || Op0.getValueType() == MVT::i64)) {
     // Only promote the compare up to I32 if it is a 16 bit operation
@@ -18839,6 +18836,7 @@ SDValue X86TargetLowering::EmitCmp(SDValue Op0, SDValue Op1, unsigned X86CC,
     SDValue Sub = DAG.getNode(X86ISD::SUB, dl, VTs, Op0, Op1);
     return SDValue(Sub.getNode(), 1);
   }
+  assert(Op0.getValueType().isFloatingPoint() && "Unexpected VT!");
   return DAG.getNode(X86ISD::CMP, dl, MVT::i32, Op0, Op1);
 }
 
@@ -19802,22 +19800,21 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
       // (select (x == 0), 0, -1) -> neg & sbb
       if (isNullConstant(Y) &&
           (isAllOnesConstant(Op1) == (CondCode == X86::COND_NE))) {
-        SDVTList VTs = DAG.getVTList(CmpOp0.getValueType(), MVT::i32);
         SDValue Zero = DAG.getConstant(0, DL, CmpOp0.getValueType());
-        SDValue Neg = DAG.getNode(X86ISD::SUB, DL, VTs, Zero, CmpOp0);
-        SDValue Res = DAG.getNode(X86ISD::SETCC_CARRY, DL, Op.getValueType(),
-                                  DAG.getConstant(X86::COND_B, DL, MVT::i8),
-                                  SDValue(Neg.getNode(), 1));
-        return Res;
+        SDValue Cmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Zero, CmpOp0);
+        SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
+        Zero = DAG.getConstant(0, DL, Op.getValueType());
+        return DAG.getNode(X86ISD::SBB, DL, VTs, Zero, Zero, Cmp);
       }
 
       Cmp = DAG.getNode(X86ISD::CMP, DL, MVT::i32,
                         CmpOp0, DAG.getConstant(1, DL, CmpOp0.getValueType()));
       Cmp = ConvertCmpIfNecessary(Cmp, DAG);
 
+      SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
+      SDValue Zero = DAG.getConstant(0, DL, Op.getValueType());
       SDValue Res =   // Res = 0 or -1.
-        DAG.getNode(X86ISD::SETCC_CARRY, DL, Op.getValueType(),
-                    DAG.getConstant(X86::COND_B, DL, MVT::i8), Cmp);
+        DAG.getNode(X86ISD::SBB, DL, VTs, Zero, Zero, Cmp);
 
       if (isAllOnesConstant(Op1) != (CondCode == X86::COND_E))
         Res = DAG.getNOT(DL, Res, Res.getValueType());
@@ -24072,26 +24069,30 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
 }
 
 // If V is a splat value, return the source vector and splat index;
-// TODO - can we make this generic and move to SelectionDAG?
-static SDValue IsSplatVector(SDValue V, int &SplatIdx) {
+static SDValue IsSplatVector(SDValue V, int &SplatIdx, SelectionDAG &DAG) {
   V = peekThroughEXTRACT_SUBVECTORs(V);
 
+  EVT VT = V.getValueType();
   unsigned Opcode = V.getOpcode();
   switch (Opcode) {
-  case ISD::BUILD_VECTOR: {
-    BitVector UndefElts;
-    SDValue SplatAmt = cast<BuildVectorSDNode>(V)->getSplatValue(&UndefElts);
-    if (SplatAmt && !SplatAmt.isUndef()) {
-      for (int i = 0, e = UndefElts.size(); i != e; ++i)
-        if (!UndefElts[i]) {
-          SplatIdx = i;
-          return V;
-        }
+  default: {
+    APInt UndefElts;
+    APInt DemandedElts = APInt::getAllOnesValue(VT.getVectorNumElements());
+    if (DAG.isSplatValue(V, DemandedElts, UndefElts)) {
+      // Handle case where all demanded elements are UNDEF.
+      if (DemandedElts.isSubsetOf(UndefElts)) {
+        SplatIdx = 0;
+        return DAG.getUNDEF(VT);
+      }
+      SplatIdx = (UndefElts & DemandedElts).countTrailingOnes();
+      return V;
     }
     break;
   }
   case ISD::VECTOR_SHUFFLE: {
     // Check if this is a shuffle node doing a splat.
+    // TODO - remove this and rely purely on SelectionDAG::isSplatValue,
+    // getTargetVShiftNode currently struggles without the splat source.
     auto *SVN = cast<ShuffleVectorSDNode>(V);
     if (!SVN->isSplat())
       break;
@@ -24099,23 +24100,6 @@ static SDValue IsSplatVector(SDValue V, int &SplatIdx) {
     int NumElts = V.getValueType().getVectorNumElements();
     SplatIdx = Idx % NumElts;
     return V.getOperand(Idx / NumElts);
-  }
-  case ISD::SUB: {
-    SDValue LHS = peekThroughEXTRACT_SUBVECTORs(V.getOperand(0));
-    SDValue RHS = peekThroughEXTRACT_SUBVECTORs(V.getOperand(1));
-
-    // Ensure that the corresponding splat BV element is not UNDEF.
-    BitVector UndefElts;
-    auto *BV0 = dyn_cast<BuildVectorSDNode>(LHS);
-    auto *SVN1 = dyn_cast<ShuffleVectorSDNode>(RHS);
-    if (BV0 && SVN1 && BV0->getSplatValue(&UndefElts) && SVN1->isSplat()) {
-      int Idx = SVN1->getSplatIndex();
-      if (!UndefElts[Idx]) {
-        SplatIdx = Idx;
-        return V;
-      }
-    }
-    break;
   }
   }
 
@@ -24125,7 +24109,7 @@ static SDValue IsSplatVector(SDValue V, int &SplatIdx) {
 static SDValue GetSplatValue(SDValue V, const SDLoc &dl,
                              SelectionDAG &DAG) {
   int SplatIdx;
-  if (SDValue SrcVector = IsSplatVector(V, SplatIdx))
+  if (SDValue SrcVector = IsSplatVector(V, SplatIdx, DAG))
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl,
                        SrcVector.getValueType().getScalarType(), SrcVector,
                        DAG.getIntPtrConstant(SplatIdx, dl));
@@ -24850,8 +24834,7 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
   // Rotate by splat - expand back to shifts.
   // TODO - legalizers should be able to handle this.
   if (EltSizeInBits >= 16 || Subtarget.hasBWI()) {
-    int SplatIdx;
-    if (IsSplatVector(Amt, SplatIdx)) {
+    if (DAG.isSplatValue(Amt)) {
       SDValue AmtR = DAG.getConstant(EltSizeInBits, DL, VT);
       AmtR = DAG.getNode(ISD::SUB, DL, VT, AmtR, Amt);
       SDValue SHL = DAG.getNode(ISD::SHL, DL, VT, R, Amt);

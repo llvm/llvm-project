@@ -480,6 +480,7 @@ void Writer::createDylinkSection() {
   writeUleb128(OS, int(log2(MemAlign)), "MemAlign");
   writeUleb128(OS, IndirectFunctions.size(), "TableSize");
   writeUleb128(OS, 0, "TableAlign");
+  writeUleb128(OS, 0, "Needed");  // TODO: Support "needed" shared libraries
 }
 
 // Create the custom "linking" section containing linker metadata.

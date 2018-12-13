@@ -2749,13 +2749,15 @@ public:
   typedef llvm::SmallSetVector<DeclContext   *, 16> AssociatedNamespaceSet;
   typedef llvm::SmallSetVector<CXXRecordDecl *, 16> AssociatedClassSet;
 
-  void AddOverloadCandidate(FunctionDecl *Function,
-                            DeclAccessPair FoundDecl,
+  using ADLCallKind = CallExpr::ADLCallKind;
+
+  void AddOverloadCandidate(FunctionDecl *Function, DeclAccessPair FoundDecl,
                             ArrayRef<Expr *> Args,
                             OverloadCandidateSet &CandidateSet,
                             bool SuppressUserConversions = false,
                             bool PartialOverloading = false,
                             bool AllowExplicit = false,
+                            ADLCallKind IsADLCandidate = ADLCallKind::NotADL,
                             ConversionSequenceList EarlyConversions = None);
   void AddFunctionCandidates(const UnresolvedSetImpl &Functions,
                       ArrayRef<Expr *> Args,
@@ -2789,13 +2791,12 @@ public:
                                   OverloadCandidateSet& CandidateSet,
                                   bool SuppressUserConversions = false,
                                   bool PartialOverloading = false);
-  void AddTemplateOverloadCandidate(FunctionTemplateDecl *FunctionTemplate,
-                                    DeclAccessPair FoundDecl,
-                                 TemplateArgumentListInfo *ExplicitTemplateArgs,
-                                    ArrayRef<Expr *> Args,
-                                    OverloadCandidateSet& CandidateSet,
-                                    bool SuppressUserConversions = false,
-                                    bool PartialOverloading = false);
+  void AddTemplateOverloadCandidate(
+      FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
+      TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
+      OverloadCandidateSet &CandidateSet, bool SuppressUserConversions = false,
+      bool PartialOverloading = false,
+      ADLCallKind IsADLCandidate = ADLCallKind::NotADL);
   bool CheckNonDependentConversions(FunctionTemplateDecl *FunctionTemplate,
                                     ArrayRef<QualType> ParamTypes,
                                     ArrayRef<Expr *> Args,
@@ -4387,12 +4388,11 @@ public:
                            MultiExprArg ArgExprs, SourceLocation RParenLoc,
                            Expr *ExecConfig = nullptr,
                            bool IsExecConfig = false);
-  ExprResult BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
-                                   SourceLocation LParenLoc,
-                                   ArrayRef<Expr *> Arg,
-                                   SourceLocation RParenLoc,
-                                   Expr *Config = nullptr,
-                                   bool IsExecConfig = false);
+  ExprResult
+  BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl, SourceLocation LParenLoc,
+                        ArrayRef<Expr *> Arg, SourceLocation RParenLoc,
+                        Expr *Config = nullptr, bool IsExecConfig = false,
+                        ADLCallKind UsesADL = ADLCallKind::NotADL);
 
   ExprResult ActOnCUDAExecConfigExpr(Scope *S, SourceLocation LLLLoc,
                                      MultiExprArg ExecConfig,
