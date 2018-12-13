@@ -6264,7 +6264,16 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   SmallVector<NamedDecl *, 0> DeclsInPrototype;
   if (getCurScope()->getFlags() & Scope::FunctionDeclarationScope &&
       !getLangOpts().CPlusPlus) {
-    for (Decl *D : getCurScope()->decls()) {
+    // The decls in the scope are in arbitrary order. Add them in sorted order
+    // now and allow for the declarator chunk to always contain the decls in
+    // deterministic order. This is necessary because ActOnFunctionDeclarator
+    // copies the declarator chunk as is when populating the decl context,
+    // which could be later serialized for modules or PCHs.
+    SmallVector<Decl *, 8> SortedDecls(getCurScope()->decls());
+    llvm::sort(SortedDecls, [](const Decl *L, const Decl *R) {
+      return L->getID() < R->getID();
+    });
+    for (Decl *D : SortedDecls) {
       NamedDecl *ND = dyn_cast<NamedDecl>(D);
       if (!ND || isa<ParmVarDecl>(ND))
         continue;
