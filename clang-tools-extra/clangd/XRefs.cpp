@@ -139,21 +139,19 @@ public:
                       SourceLocation Loc,
                       index::IndexDataConsumer::ASTNodeInfo ASTNode) override {
     if (Loc == SearchedLocation) {
-      // Check whether the E has an implicit AST node (e.g. ImplicitCastExpr).
-      auto hasImplicitExpr = [](const Expr *E) {
-        if (!E || E->child_begin() == E->child_end())
+      auto isImplicitExpr = [](const Expr *E) {
+        if (!E)
           return false;
-        // Use the first child is good enough for most cases -- normally the
-        // expression returned by handleDeclOccurence contains exactly one
-        // child expression.
-        const auto *FirstChild = *E->child_begin();
-        return isa<ExprWithCleanups>(FirstChild) ||
-               isa<MaterializeTemporaryExpr>(FirstChild) ||
-               isa<CXXBindTemporaryExpr>(FirstChild) ||
-               isa<ImplicitCastExpr>(FirstChild);
+        // We assume that a constructor expression is implict (was inserted by
+        // clang) if it has an invalid paren/brace location, since such
+        // experssion is impossible to write down.
+        if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(E))
+          return CtorExpr->getNumArgs() > 0 &&
+                 CtorExpr->getParenOrBraceRange().isInvalid();
+        return isa<ImplicitCastExpr>(E);
       };
 
-      bool IsExplicit = !hasImplicitExpr(ASTNode.OrigE);
+      bool IsExplicit = !isImplicitExpr(ASTNode.OrigE);
       // Find and add definition declarations (for GoToDefinition).
       // We don't use parameter `D`, as Parameter `D` is the canonical
       // declaration, which is the first declaration of a redeclarable
