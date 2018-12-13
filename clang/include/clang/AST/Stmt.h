@@ -430,6 +430,9 @@ protected:
     unsigned : NumExprBits;
 
     unsigned NumPreArgs : 1;
+
+    /// True if the callee of the call expression was found using ADL.
+    unsigned UsesADL : 1;
   };
 
   class MemberExprBitfields {

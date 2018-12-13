@@ -1290,6 +1290,14 @@ void EvalInfo::addCallStack(unsigned Limit) {
   }
 }
 
+/// Kinds of access we can perform on an object, for diagnostics.
+enum AccessKinds {
+  AK_Read,
+  AK_Assign,
+  AK_Increment,
+  AK_Decrement
+};
+
 namespace {
   struct ComplexValue {
   private:
@@ -1395,19 +1403,34 @@ namespace {
       set(B, true);
     }
 
+  private:
     // Check that this LValue is not based on a null pointer. If it is, produce
     // a diagnostic and mark the designator as invalid.
-    bool checkNullPointer(EvalInfo &Info, const Expr *E,
-                          CheckSubobjectKind CSK) {
+    template <typename GenDiagType>
+    bool checkNullPointerDiagnosingWith(const GenDiagType &GenDiag) {
       if (Designator.Invalid)
         return false;
       if (IsNullPtr) {
-        Info.CCEDiag(E, diag::note_constexpr_null_subobject)
-          << CSK;
+        GenDiag();
         Designator.setInvalid();
         return false;
       }
       return true;
+    }
+
+  public:
+    bool checkNullPointer(EvalInfo &Info, const Expr *E,
+                          CheckSubobjectKind CSK) {
+      return checkNullPointerDiagnosingWith([&Info, E, CSK] {
+        Info.CCEDiag(E, diag::note_constexpr_null_subobject) << CSK;
+      });
+    }
+
+    bool checkNullPointerForFoldAccess(EvalInfo &Info, const Expr *E,
+                                       AccessKinds AK) {
+      return checkNullPointerDiagnosingWith([&Info, E, AK] {
+        Info.FFDiag(E, diag::note_constexpr_access_null) << AK;
+      });
     }
 
     // Check this LValue refers to an object. If not, set the designator to be
@@ -2745,14 +2768,6 @@ static bool diagnoseUnreadableFields(EvalInfo &Info, const Expr *E,
   // All mutable fields were empty, and thus not actually read.
   return false;
 }
-
-/// Kinds of access we can perform on an object, for diagnostics.
-enum AccessKinds {
-  AK_Read,
-  AK_Assign,
-  AK_Increment,
-  AK_Decrement
-};
 
 namespace {
 /// A handle to a complete object (an object that is not a subobject of
@@ -6129,9 +6144,27 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         return false;
       MaxLength = N.getExtValue();
     }
-
-    QualType CharTy = E->getArg(0)->getType()->getPointeeType();
-
+    // We cannot find the value if there are no candidates to match against.
+    if (MaxLength == 0u)
+      return ZeroInitialization(E);
+    if (!Result.checkNullPointerForFoldAccess(Info, E, AK_Read) ||
+        Result.Designator.Invalid)
+      return false;
+    QualType CharTy = Result.Designator.getType(Info.Ctx);
+    bool IsRawByte = BuiltinOp == Builtin::BImemchr ||
+                     BuiltinOp == Builtin::BI__builtin_memchr;
+    assert(IsRawByte ||
+           Info.Ctx.hasSameUnqualifiedType(
+               CharTy, E->getArg(0)->getType()->getPointeeType()));
+    // Pointers to const void may point to objects of incomplete type.
+    if (IsRawByte && CharTy->isIncompleteType()) {
+      Info.FFDiag(E, diag::note_constexpr_ltor_incomplete_type) << CharTy;
+      return false;
+    }
+    // Give up on byte-oriented matching against multibyte elements.
+    // FIXME: We can compare the bytes in the correct order.
+    if (IsRawByte && Info.Ctx.getTypeSizeInChars(CharTy) != CharUnits::One())
+      return false;
     // Figure out what value we're actually looking for (after converting to
     // the corresponding unsigned type if necessary).
     uint64_t DesiredVal;
@@ -8385,8 +8418,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluatePointer(E->getArg(1), String2, Info))
       return false;
 
-    QualType CharTy = E->getArg(0)->getType()->getPointeeType();
-
     uint64_t MaxLength = uint64_t(-1);
     if (BuiltinOp != Builtin::BIstrcmp &&
         BuiltinOp != Builtin::BIwcscmp &&
@@ -8397,6 +8428,88 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         return false;
       MaxLength = N.getExtValue();
     }
+
+    // Empty substrings compare equal by definition.
+    if (MaxLength == 0u)
+      return Success(0, E);
+
+    if (!String1.checkNullPointerForFoldAccess(Info, E, AK_Read) ||
+        !String2.checkNullPointerForFoldAccess(Info, E, AK_Read) ||
+        String1.Designator.Invalid || String2.Designator.Invalid)
+      return false;
+
+    QualType CharTy1 = String1.Designator.getType(Info.Ctx);
+    QualType CharTy2 = String2.Designator.getType(Info.Ctx);
+
+    bool IsRawByte = BuiltinOp == Builtin::BImemcmp ||
+                     BuiltinOp == Builtin::BI__builtin_memcmp;
+
+    assert(IsRawByte ||
+           (Info.Ctx.hasSameUnqualifiedType(
+                CharTy1, E->getArg(0)->getType()->getPointeeType()) &&
+            Info.Ctx.hasSameUnqualifiedType(CharTy1, CharTy2)));
+
+    const auto &ReadCurElems = [&](APValue &Char1, APValue &Char2) {
+      return handleLValueToRValueConversion(Info, E, CharTy1, String1, Char1) &&
+             handleLValueToRValueConversion(Info, E, CharTy2, String2, Char2) &&
+             Char1.isInt() && Char2.isInt();
+    };
+    const auto &AdvanceElems = [&] {
+      return HandleLValueArrayAdjustment(Info, E, String1, CharTy1, 1) &&
+             HandleLValueArrayAdjustment(Info, E, String2, CharTy2, 1);
+    };
+
+    if (IsRawByte) {
+      uint64_t BytesRemaining = MaxLength;
+      // Pointers to const void may point to objects of incomplete type.
+      if (CharTy1->isIncompleteType()) {
+        Info.FFDiag(E, diag::note_constexpr_ltor_incomplete_type) << CharTy1;
+        return false;
+      }
+      if (CharTy2->isIncompleteType()) {
+        Info.FFDiag(E, diag::note_constexpr_ltor_incomplete_type) << CharTy2;
+        return false;
+      }
+      uint64_t CharTy1Width{Info.Ctx.getTypeSize(CharTy1)};
+      CharUnits CharTy1Size = Info.Ctx.toCharUnitsFromBits(CharTy1Width);
+      // Give up on comparing between elements with disparate widths.
+      if (CharTy1Size != Info.Ctx.getTypeSizeInChars(CharTy2))
+        return false;
+      uint64_t BytesPerElement = CharTy1Size.getQuantity();
+      assert(BytesRemaining && "BytesRemaining should not be zero: the "
+                               "following loop considers at least one element");
+      while (true) {
+        APValue Char1, Char2;
+        if (!ReadCurElems(Char1, Char2))
+          return false;
+        // We have compatible in-memory widths, but a possible type and
+        // (for `bool`) internal representation mismatch.
+        // Assuming two's complement representation, including 0 for `false` and
+        // 1 for `true`, we can check an appropriate number of elements for
+        // equality even if they are not byte-sized.
+        APSInt Char1InMem = Char1.getInt().extOrTrunc(CharTy1Width);
+        APSInt Char2InMem = Char2.getInt().extOrTrunc(CharTy1Width);
+        if (Char1InMem.ne(Char2InMem)) {
+          // If the elements are byte-sized, then we can produce a three-way
+          // comparison result in a straightforward manner.
+          if (BytesPerElement == 1u) {
+            // memcmp always compares unsigned chars.
+            return Success(Char1InMem.ult(Char2InMem) ? -1 : 1, E);
+          }
+          // The result is byte-order sensitive, and we have multibyte elements.
+          // FIXME: We can compare the remaining bytes in the correct order.
+          return false;
+        }
+        if (!AdvanceElems())
+          return false;
+        if (BytesRemaining <= BytesPerElement)
+          break;
+        BytesRemaining -= BytesPerElement;
+      }
+      // Enough elements are equal to account for the memcmp limit.
+      return Success(0, E);
+    }
+
     bool StopAtNull = (BuiltinOp != Builtin::BImemcmp &&
                        BuiltinOp != Builtin::BIwmemcmp &&
                        BuiltinOp != Builtin::BI__builtin_memcmp &&
@@ -8407,11 +8520,10 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                   BuiltinOp == Builtin::BI__builtin_wcscmp ||
                   BuiltinOp == Builtin::BI__builtin_wcsncmp ||
                   BuiltinOp == Builtin::BI__builtin_wmemcmp;
+
     for (; MaxLength; --MaxLength) {
       APValue Char1, Char2;
-      if (!handleLValueToRValueConversion(Info, E, CharTy, String1, Char1) ||
-          !handleLValueToRValueConversion(Info, E, CharTy, String2, Char2) ||
-          !Char1.isInt() || !Char2.isInt())
+      if (!ReadCurElems(Char1, Char2))
         return false;
       if (Char1.getInt() != Char2.getInt()) {
         if (IsWide) // wmemcmp compares with wchar_t signedness.
@@ -8422,8 +8534,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       if (StopAtNull && !Char1.getInt())
         return Success(0, E);
       assert(!(StopAtNull && !Char2.getInt()));
-      if (!HandleLValueArrayAdjustment(Info, E, String1, CharTy, 1) ||
-          !HandleLValueArrayAdjustment(Info, E, String2, CharTy, 1))
+      if (!AdvanceElems())
         return false;
     }
     // We hit the strncmp / memcmp limit.

@@ -7383,12 +7383,13 @@ ExpectedStmt ASTNodeImporter::VisitCallExpr(CallExpr *E) {
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(E)) {
     return new (Importer.getToContext()) CXXOperatorCallExpr(
         Importer.getToContext(), OCE->getOperator(), ToCallee, ToArgs, ToType,
-        OCE->getValueKind(), ToRParenLoc, OCE->getFPFeatures());
+        OCE->getValueKind(), ToRParenLoc, OCE->getFPFeatures(),
+        OCE->getADLCallKind());
   }
 
   return new (Importer.getToContext()) CallExpr(
       Importer.getToContext(), ToCallee, ToArgs, ToType, E->getValueKind(),
-      ToRParenLoc);
+      ToRParenLoc, /*MinNumArgs=*/0, E->getADLCallKind());
 }
 
 ExpectedStmt ASTNodeImporter::VisitLambdaExpr(LambdaExpr *E) {

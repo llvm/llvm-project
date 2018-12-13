@@ -382,6 +382,7 @@ namespace  {
     void VisitOMPExecutableDirective(const OMPExecutableDirective *Node);
 
     // Exprs
+    void VisitCallExpr(const CallExpr *Node);
     void VisitCastExpr(const CastExpr *Node);
     void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
     void VisitDeclRefExpr(const DeclRefExpr *Node);
@@ -1876,6 +1877,11 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
   }
 
   OS << ')';
+}
+
+void ASTDumper::VisitCallExpr(const CallExpr *Node) {
+  if (Node->usesADL())
+    OS << " adl";
 }
 
 void ASTDumper::VisitCastExpr(const CastExpr *Node) {

@@ -90,10 +90,12 @@ public:
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
-  CXXOperatorCallExpr(ASTContext& C, OverloadedOperatorKind Op, Expr *fn,
-                      ArrayRef<Expr*> args, QualType t, ExprValueKind VK,
-                      SourceLocation operatorloc, FPOptions FPFeatures)
-      : CallExpr(C, CXXOperatorCallExprClass, fn, args, t, VK, operatorloc),
+  CXXOperatorCallExpr(ASTContext &C, OverloadedOperatorKind Op, Expr *fn,
+                      ArrayRef<Expr *> args, QualType t, ExprValueKind VK,
+                      SourceLocation operatorloc, FPOptions FPFeatures,
+                      ADLCallKind UsesADL = NotADL)
+      : CallExpr(C, CXXOperatorCallExprClass, fn, args, t, VK, operatorloc,
+                 /*MinNumArgs=*/0, UsesADL),
         Operator(Op), FPFeatures(FPFeatures) {
     Range = getSourceRangeImpl();
   }
@@ -168,7 +170,8 @@ public:
   CXXMemberCallExpr(ASTContext &C, Expr *fn, ArrayRef<Expr *> args, QualType t,
                     ExprValueKind VK, SourceLocation RP,
                     unsigned MinNumArgs = 0)
-      : CallExpr(C, CXXMemberCallExprClass, fn, args, t, VK, RP, MinNumArgs) {}
+      : CallExpr(C, CXXMemberCallExprClass, fn, args, t, VK, RP, MinNumArgs,
+                 NotADL) {}
 
   CXXMemberCallExpr(ASTContext &C, unsigned NumArgs, EmptyShell Empty)
       : CallExpr(C, CXXMemberCallExprClass, /*NumPreArgs=*/0, NumArgs, Empty) {}
@@ -212,7 +215,7 @@ public:
                      ArrayRef<Expr *> args, QualType t, ExprValueKind VK,
                      SourceLocation RP, unsigned MinNumArgs = 0)
       : CallExpr(C, CUDAKernelCallExprClass, fn, Config, args, t, VK, RP,
-                 MinNumArgs) {}
+                 MinNumArgs, NotADL) {}
 
   CUDAKernelCallExpr(ASTContext &C, unsigned NumArgs, EmptyShell Empty)
       : CallExpr(C, CUDAKernelCallExprClass, /*NumPreArgs=*/END_PREARG, NumArgs,
@@ -487,16 +490,17 @@ public:
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
-  UserDefinedLiteral(const ASTContext &C, Expr *Fn, ArrayRef<Expr*> Args,
+  UserDefinedLiteral(const ASTContext &C, Expr *Fn, ArrayRef<Expr *> Args,
                      QualType T, ExprValueKind VK, SourceLocation LitEndLoc,
                      SourceLocation SuffixLoc)
-      : CallExpr(C, UserDefinedLiteralClass, Fn, Args, T, VK, LitEndLoc),
+      : CallExpr(C, UserDefinedLiteralClass, Fn, Args, T, VK, LitEndLoc,
+                 /*MinNumArgs=*/0, NotADL),
         UDSuffixLoc(SuffixLoc) {}
 
   explicit UserDefinedLiteral(const ASTContext &C, unsigned NumArgs,
                               EmptyShell Empty)
-      : CallExpr(C, UserDefinedLiteralClass, /*NumPreArgs=*/0, NumArgs,
-                 Empty) {}
+      : CallExpr(C, UserDefinedLiteralClass, /*NumPreArgs=*/0, NumArgs, Empty) {
+  }
 
   /// The kind of literal operator which is invoked.
   enum LiteralOperatorKind {
