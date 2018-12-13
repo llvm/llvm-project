@@ -144,7 +144,7 @@ static StructuredData::ObjectSP ParseJSONValue(JSONParser &json_parser) {
 }
 
 StructuredData::ObjectSP StructuredData::ParseJSON(std::string json_text) {
-  JSONParser json_parser(json_text.c_str());
+  JSONParser json_parser(json_text);
   StructuredData::ObjectSP object_sp = ParseJSONValue(json_parser);
   return object_sp;
 }
@@ -169,11 +169,11 @@ StructuredData::Object::GetObjectForDotSeparatedPath(llvm::StringRef path) {
 
   if (this->GetType() == lldb::eStructuredDataTypeArray) {
     std::pair<llvm::StringRef, llvm::StringRef> match = path.split('[');
-    if (match.second.size() == 0) {
+    if (match.second.empty()) {
       return this->shared_from_this();
     }
     errno = 0;
-    uint64_t val = strtoul(match.second.str().c_str(), NULL, 10);
+    uint64_t val = strtoul(match.second.str().c_str(), nullptr, 10);
     if (errno == 0) {
       return this->GetAsArray()->GetItemAtIndex(val);
     }

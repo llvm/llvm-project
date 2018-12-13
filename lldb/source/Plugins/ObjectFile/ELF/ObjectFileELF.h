@@ -145,14 +145,8 @@ public:
   size_t ReadSectionData(lldb_private::Section *section,
                          lldb_private::DataExtractor &section_data) override;
 
-  // Returns number of program headers found in the ELF file.
-  size_t GetProgramHeaderCount();
-
-  // Returns the program header with the given index.
-  const elf::ELFProgramHeader *GetProgramHeaderByIndex(lldb::user_id_t id);
-
-  // Returns segment data for the given index.
-  lldb_private::DataExtractor GetSegmentDataByIndex(lldb::user_id_t id);
+  llvm::ArrayRef<elf::ELFProgramHeader> ProgramHeaders();
+  lldb_private::DataExtractor GetSegmentData(const elf::ELFProgramHeader &H);
 
   llvm::StringRef
   StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const override;
@@ -174,8 +168,6 @@ private:
                 const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   typedef std::vector<elf::ELFProgramHeader> ProgramHeaderColl;
-  typedef ProgramHeaderColl::iterator ProgramHeaderCollIter;
-  typedef ProgramHeaderColl::const_iterator ProgramHeaderCollConstIter;
 
   struct ELFSectionHeaderInfo : public elf::ELFSectionHeader {
     lldb_private::ConstString section_name;
@@ -246,8 +238,8 @@ private:
 
   /// Parses all section headers present in this object file and populates
   /// m_program_headers.  This method will compute the header list only once.
-  /// Returns the number of headers parsed.
-  size_t ParseProgramHeaders();
+  /// Returns true iff the headers have been successfully parsed.
+  bool ParseProgramHeaders();
 
   /// Parses all section headers present in this object file and populates
   /// m_section_headers.  This method will compute the header list only once.

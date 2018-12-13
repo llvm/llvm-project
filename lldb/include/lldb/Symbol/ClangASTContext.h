@@ -414,7 +414,8 @@ public:
                                                type_quals, cc);
   }
 
-  clang::ParmVarDecl *CreateParameterDeclaration(const char *name,
+  clang::ParmVarDecl *CreateParameterDeclaration(clang::DeclContext *decl_ctx,
+                                                 const char *name,
                                                  const CompilerType &param_type,
                                                  int storage);
 
