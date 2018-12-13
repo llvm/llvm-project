@@ -8,6 +8,7 @@ Clang-Tidy Checks
    abseil-duration-division
    abseil-duration-factory-float
    abseil-duration-factory-scale
+   abseil-duration-subtraction
    abseil-faster-strsplit-delimiter
    abseil-no-internal-dependencies
    abseil-no-namespace
