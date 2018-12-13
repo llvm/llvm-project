@@ -148,6 +148,7 @@
 #include "llvm/Transforms/Scalar/SpeculateAroundPHIs.h"
 #include "llvm/Transforms/Scalar/SpeculativeExecution.h"
 #include "llvm/Transforms/Scalar/TailRecursionElimination.h"
+#include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
 #include "llvm/Transforms/Utils/BreakCriticalEdges.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
@@ -835,6 +836,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
         createFunctionToLoopPassAdaptor(LoopUnrollAndJamPass(Level)));
   }
   OptimizePM.addPass(LoopUnrollPass(LoopUnrollOptions(Level)));
+  OptimizePM.addPass(WarnMissedTransformationsPass());
   OptimizePM.addPass(InstCombinePass());
   OptimizePM.addPass(RequireAnalysisPass<OptimizationRemarkEmitterAnalysis, Function>());
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(LICMPass(), DebugLogging));

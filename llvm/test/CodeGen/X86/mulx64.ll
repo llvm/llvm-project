@@ -5,8 +5,8 @@
 define i128 @f1(i64 %a, i64 %b) {
 ; CHECK-LABEL: f1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    mulxq %rsi, %rax, %rdx
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    mulq %rsi
 ; CHECK-NEXT:    retq
   %x = zext i64 %a to i128
   %y = zext i64 %b to i128
@@ -17,8 +17,8 @@ define i128 @f1(i64 %a, i64 %b) {
 define i128 @f2(i64 %a, i64* %p) {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    mulxq (%rsi), %rax, %rdx
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    mulq (%rsi)
 ; CHECK-NEXT:    retq
   %b = load i64, i64* %p
   %x = zext i64 %a to i128

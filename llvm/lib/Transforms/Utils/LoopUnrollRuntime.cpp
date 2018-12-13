@@ -380,12 +380,23 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
   }
   if (CreateRemainderLoop) {
     Loop *NewLoop = NewLoops[L];
+    MDNode *LoopID = NewLoop->getLoopID();
     assert(NewLoop && "L should have been cloned");
 
     // Only add loop metadata if the loop is not going to be completely
     // unrolled.
     if (UnrollRemainder)
       return NewLoop;
+
+    Optional<MDNode *> NewLoopID = makeFollowupLoopID(
+        LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
+    if (NewLoopID.hasValue()) {
+      NewLoop->setLoopID(NewLoopID.getValue());
+
+      // Do not setLoopAlreadyUnrolled if loop attributes have been defined
+      // explicitly.
+      return NewLoop;
+    }
 
     // Add unroll disable metadata to disable future unrolling for this loop.
     NewLoop->setLoopAlreadyUnrolled();
@@ -525,10 +536,10 @@ static bool canProfitablyUnrollMultiExitLoop(
 bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
                                       bool AllowExpensiveTripCount,
                                       bool UseEpilogRemainder,
-                                      bool UnrollRemainder,
-                                      LoopInfo *LI, ScalarEvolution *SE,
-                                      DominatorTree *DT, AssumptionCache *AC,
-                                      bool PreserveLCSSA) {
+                                      bool UnrollRemainder, LoopInfo *LI,
+                                      ScalarEvolution *SE, DominatorTree *DT,
+                                      AssumptionCache *AC, bool PreserveLCSSA,
+                                      Loop **ResultLoop) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -911,16 +922,20 @@ bool llvm::UnrollRuntimeLoopRemainder(Loop *L, unsigned Count,
       formDedicatedExitBlocks(remainderLoop, DT, LI, PreserveLCSSA);
   }
 
+  auto UnrollResult = LoopUnrollResult::Unmodified;
   if (remainderLoop && UnrollRemainder) {
     LLVM_DEBUG(dbgs() << "Unrolling remainder loop\n");
-    UnrollLoop(remainderLoop, /*Count*/ Count - 1, /*TripCount*/ Count - 1,
-               /*Force*/ false, /*AllowRuntime*/ false,
-               /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,
-               /*PreserveOnlyFirst*/ false, /*TripMultiple*/ 1,
-               /*PeelCount*/ 0, /*UnrollRemainder*/ false, LI, SE, DT, AC,
-               /*ORE*/ nullptr, PreserveLCSSA);
+    UnrollResult =
+        UnrollLoop(remainderLoop, /*Count*/ Count - 1, /*TripCount*/ Count - 1,
+                   /*Force*/ false, /*AllowRuntime*/ false,
+                   /*AllowExpensiveTripCount*/ false, /*PreserveCondBr*/ true,
+                   /*PreserveOnlyFirst*/ false, /*TripMultiple*/ 1,
+                   /*PeelCount*/ 0, /*UnrollRemainder*/ false, LI, SE, DT, AC,
+                   /*ORE*/ nullptr, PreserveLCSSA);
   }
 
+  if (ResultLoop && UnrollResult != LoopUnrollResult::FullyUnrolled)
+    *ResultLoop = remainderLoop;
   NumRuntimeUnrolled++;
   return true;
 }

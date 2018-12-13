@@ -113,7 +113,12 @@ public:
   unsigned getWidth() const { return Width.Value; }
   unsigned getInterleave() const { return Interleave.Value; }
   unsigned getIsVectorized() const { return IsVectorized.Value; }
-  enum ForceKind getForce() const { return (ForceKind)Force.Value; }
+  enum ForceKind getForce() const {
+    if ((ForceKind)Force.Value == FK_Undefined &&
+        hasDisableAllTransformsHint(TheLoop))
+      return FK_Disabled;
+    return (ForceKind)Force.Value;
+  }
 
   /// If hints are provided that force vectorization, use the AlwaysPrint
   /// pass name to force the frontend to print the diagnostic.

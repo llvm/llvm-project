@@ -22,7 +22,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: [[FILENAME:@___asan_gen_.[0-9]+]] = private unnamed_addr constant [22 x i8] c"/tmp/asan-globals.cpp\00", align 1
 ; CHECK: [[LOCDESCR:@___asan_gen_.[0-9]+]] = private unnamed_addr constant { [22 x i8]*, i32, i32 } { [22 x i8]* [[FILENAME]], i32 5, i32 5 }
 ; CHECK: @__asan_global_global = {{.*}}i64 ptrtoint ({ i32, [60 x i8] }* @global to i64){{.*}} section "asan_globals"{{.*}}, !associated
-; CHECK: @__asan_global_.str = {{.*}}i64 ptrtoint ({ [14 x i8], [50 x i8] }* @.str to i64){{.*}} section "asan_globals"{{.*}}, !associated
+; CHECK: @__asan_global_.str = {{.*}}i64 ptrtoint ({ [14 x i8], [50 x i8] }* @{{.str|1}} to i64){{.*}} section "asan_globals"{{.*}}, !associated
 
 ; The metadata has to be inserted to llvm.compiler.used to avoid being stripped
 ; during LTO.

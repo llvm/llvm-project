@@ -594,6 +594,11 @@ bool LoopVersioningLICM::runOnLoop(Loop *L, LPPassManager &LPM) {
 
   if (skipLoop(L))
     return false;
+
+  // Do not do the transformation if disabled by metadata.
+  if (hasLICMVersioningTransformation(L) & TM_Disable)
+    return false;
+
   // Get Analysis information.
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();

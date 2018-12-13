@@ -261,7 +261,14 @@ bool ProfileSummaryInfo::isHotBlock(const BasicBlock *BB, BlockFrequencyInfo *BF
 bool ProfileSummaryInfo::isColdBlock(const BasicBlock *BB,
                                   BlockFrequencyInfo *BFI) {
   auto Count = BFI->getBlockProfileCount(BB);
-  return Count && isColdCount(*Count);
+  if (Count)
+    return isColdCount(*Count);
+  if (!hasSampleProfile())
+    return false;
+
+  const Function *F = BB->getParent();
+  return ProfileSampleAccurate ||
+         (F && F->hasFnAttribute("profile-sample-accurate"));
 }
 
 bool ProfileSummaryInfo::isHotCallSite(const CallSite &CS,

@@ -2190,7 +2190,13 @@ bool AddressSanitizerModule::InstrumentGlobals(IRBuilder<> &IRB, Module &M, bool
           GlobalAlias::create(GlobalValue::PrivateLinkage, "", NewGlobal);
     }
 
-    if (UseOdrIndicator) {
+    // ODR check is not useful for the following, but we see false reports
+    // caused by linker optimizations.
+    if (NewGlobal->hasLocalLinkage() || NewGlobal->hasGlobalUnnamedAddr() ||
+        NewGlobal->hasLinkOnceODRLinkage() || NewGlobal->hasWeakODRLinkage()) {
+      ODRIndicator = ConstantExpr::getIntToPtr(ConstantInt::get(IntptrTy, -1),
+                                               IRB.getInt8PtrTy());
+    } else if (UseOdrIndicator) {
       // With local aliases, we need to provide another externally visible
       // symbol __odr_asan_XXX to detect ODR violation.
       auto *ODRIndicatorSym =
