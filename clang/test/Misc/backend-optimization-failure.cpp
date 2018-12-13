@@ -7,7 +7,7 @@
 void test_switch(int *A, int *B, int Length,int J) {
 #pragma clang loop vectorize(enable) unroll(disable)
   for (int i = 0; i < Length; i++) {
-/* expected-warning@-1 {{loop not vectorized: failed explicitly specified loop vectorization}} */ switch (A[i]) {
+/* expected-warning@-1 {{loop not vectorized: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering}} */ switch (A[i]) {
     case 0:
       B[i] = 1;
       break;
