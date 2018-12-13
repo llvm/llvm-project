@@ -28,6 +28,15 @@ void Notification::wait() const {
 
 Semaphore::Semaphore(std::size_t MaxLocks) : FreeSlots(MaxLocks) {}
 
+bool Semaphore::try_lock() {
+  std::unique_lock<std::mutex> Lock(Mutex);
+  if (FreeSlots > 0) {
+    --FreeSlots;
+    return true;
+  }
+  return false;
+}
+
 void Semaphore::lock() {
   trace::Span Span("WaitForFreeSemaphoreSlot");
   // trace::Span can also acquire locks in ctor and dtor, we make sure it

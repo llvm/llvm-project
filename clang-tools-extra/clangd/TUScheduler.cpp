@@ -634,9 +634,11 @@ void ASTWorker::run() {
     } // unlock Mutex
 
     {
-      // FIXME: only emit this status when the Barrier couldn't be acquired.
-      emitTUStatus({TUAction::Queued, Req.Name});
-      std::lock_guard<Semaphore> BarrierLock(Barrier);
+      std::unique_lock<Semaphore> Lock(Barrier, std::try_to_lock);
+      if (!Lock.owns_lock()) {
+        emitTUStatus({TUAction::Queued, Req.Name});
+        Lock.lock();
+      }
       WithContext Guard(std::move(Req.Ctx));
       trace::Span Tracer(Req.Name);
       emitTUStatus({TUAction::RunningAction, Req.Name});
