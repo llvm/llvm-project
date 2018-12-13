@@ -2093,7 +2093,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   // If this is a C++ instance method, mangle the CVR qualifiers for the
   // this pointer.
   if (HasThisQuals) {
-    Qualifiers Quals = Qualifiers::fromCVRUMask(Proto->getTypeQuals());
+    Qualifiers Quals = Proto->getTypeQuals();
     manglePointerExtQualifiers(Quals, /*PointeeType=*/QualType());
     mangleRefQualifier(Proto->getRefQualifier());
     mangleQualifiers(Quals, /*IsMember=*/false);
