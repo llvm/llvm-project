@@ -19,34 +19,15 @@ namespace tidy {
 namespace abseil {
 
 /// Duration factory and conversion scales
-enum class DurationScale : std::int8_t {
-  Hours,
+enum class DurationScale : std::uint8_t {
+  Hours = 0,
   Minutes,
   Seconds,
   Milliseconds,
   Microseconds,
   Nanoseconds,
 };
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
 
-namespace std {
-template <> struct hash<::clang::tidy::abseil::DurationScale> {
-  using argument_type = ::clang::tidy::abseil::DurationScale;
-  using underlying_type = std::underlying_type<argument_type>::type;
-  using result_type = std::hash<underlying_type>::result_type;
-
-  result_type operator()(const argument_type &arg) const {
-    std::hash<underlying_type> hasher;
-    return hasher(static_cast<underlying_type>(arg));
-  }
-};
-} // namespace std
-
-namespace clang {
-namespace tidy {
-namespace abseil {
 /// Given a `Scale`, return the appropriate factory function call for
 /// constructing a `Duration` for that scale.
 llvm::StringRef getFactoryForScale(DurationScale Scale);
@@ -77,6 +58,16 @@ stripFloatLiteralFraction(const ast_matchers::MatchFinder::MatchResult &Result,
 std::string
 simplifyDurationFactoryArg(const ast_matchers::MatchFinder::MatchResult &Result,
                            const Expr &Node);
+
+/// Given the name of an inverse Duration function (e.g., `ToDoubleSeconds`),
+/// return its `DurationScale`, or `None` if a match is not found.
+llvm::Optional<DurationScale> getScaleForInverse(llvm::StringRef Name);
+
+/// Assuming `Node` has type `double` or `int` representing a time interval of
+/// `Scale`, return the expression to make it a suitable `Duration`.
+llvm::Optional<std::string> rewriteExprFromNumberToDuration(
+    const ast_matchers::MatchFinder::MatchResult &Result, DurationScale Scale,
+    const Expr *Node);
 
 AST_MATCHER_FUNCTION(ast_matchers::internal::Matcher<FunctionDecl>,
                      DurationConversionFunction) {
