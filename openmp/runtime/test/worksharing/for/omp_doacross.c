@@ -51,6 +51,8 @@ int test_doacross() {
 int main(int argc, char **argv) {
   int i;
   int num_failed = 0;
+  if (omp_get_max_threads() < 2)
+    omp_set_num_threads(4);
   for (i = 0; i < REPETITIONS; i++) {
     if (!test_doacross()) {
       num_failed++;
