@@ -66,6 +66,15 @@ using namespace npdb;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
+namespace {
+struct VariableInfo {
+  llvm::StringRef name;
+  TypeIndex type;
+  llvm::Optional<DWARFExpression> location;
+  llvm::Optional<Variable::RangeList> ranges;
+};
+} // namespace
+
 static lldb::LanguageType TranslateLanguage(PDB_Lang lang) {
   switch (lang) {
   case PDB_Lang::Cpp:
@@ -314,6 +323,94 @@ TranslateCallingConvention(llvm::codeview::CallingConvention conv) {
   }
 }
 
+static Variable::RangeList
+MakeRangeList(const PdbIndex &index, const LocalVariableAddrRange &range,
+              llvm::ArrayRef<LocalVariableAddrGap> gaps) {
+  lldb::addr_t start =
+      index.MakeVirtualAddress(range.ISectStart, range.OffsetStart);
+  lldb::addr_t end = start + range.Range;
+
+  Variable::RangeList result;
+  while (!gaps.empty()) {
+    const LocalVariableAddrGap &gap = gaps.front();
+
+    lldb::addr_t size = gap.GapStartOffset - start;
+    result.Append(start, size);
+    start += gap.Range;
+    gaps = gaps.drop_front();
+  }
+
+  result.Append(start, end);
+  return result;
+}
+
+static VariableInfo GetVariableInformation(PdbIndex &index,
+                                           PdbCompilandSymId var_id,
+                                           ModuleSP module,
+                                           bool get_location_info) {
+  VariableInfo result;
+  CVSymbol sym = index.ReadSymbolRecord(var_id);
+
+  if (sym.kind() == S_REGREL32) {
+    RegRelativeSym reg(SymbolRecordKind::RegRelativeSym);
+    cantFail(SymbolDeserializer::deserializeAs<RegRelativeSym>(sym, reg));
+    result.type = reg.Type;
+    result.name = reg.Name;
+    if (get_location_info) {
+      result.location =
+          MakeRegRelLocationExpression(reg.Register, reg.Offset, module);
+      result.ranges.emplace();
+    }
+    return result;
+  }
+
+  if (sym.kind() == S_REGISTER) {
+    RegisterSym reg(SymbolRecordKind::RegisterSym);
+    cantFail(SymbolDeserializer::deserializeAs<RegisterSym>(sym, reg));
+    result.type = reg.Index;
+    result.name = reg.Name;
+    if (get_location_info) {
+      result.location =
+          MakeEnregisteredLocationExpression(reg.Register, module);
+      result.ranges.emplace();
+    }
+    return result;
+  }
+
+  if (sym.kind() == S_LOCAL) {
+    LocalSym local(SymbolRecordKind::LocalSym);
+    cantFail(SymbolDeserializer::deserializeAs<LocalSym>(sym, local));
+    result.type = local.Type;
+    result.name = local.Name;
+
+    if (!get_location_info)
+      return result;
+
+    PdbCompilandSymId loc_specifier_id(var_id.modi,
+                                       var_id.offset + sym.RecordData.size());
+    CVSymbol loc_specifier_cvs = index.ReadSymbolRecord(loc_specifier_id);
+    if (loc_specifier_cvs.kind() == S_DEFRANGE_FRAMEPOINTER_REL) {
+      DefRangeFramePointerRelSym loc(
+          SymbolRecordKind::DefRangeFramePointerRelSym);
+      cantFail(SymbolDeserializer::deserializeAs<DefRangeFramePointerRelSym>(
+          loc_specifier_cvs, loc));
+      // FIXME: The register needs to come from the S_FRAMEPROC symbol.
+      result.location =
+          MakeRegRelLocationExpression(RegisterId::RSP, loc.Offset, module);
+      result.ranges = MakeRangeList(index, loc.Range, loc.Gaps);
+    } else {
+      // FIXME: Handle other kinds
+      llvm::APSInt value;
+      value = 42;
+      result.location = MakeConstantLocationExpression(
+          TypeIndex::Int32(), index.tpi(), value, module);
+    }
+    return result;
+  }
+  llvm_unreachable("Symbol is not a local variable!");
+  return result;
+}
+
 void SymbolFileNativePDB::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 GetPluginDescriptionStatic(), CreateInstance,
@@ -520,8 +617,45 @@ uint32_t SymbolFileNativePDB::GetNumCompileUnits() {
   return count;
 }
 
+Block &SymbolFileNativePDB::CreateBlock(PdbCompilandSymId block_id) {
+  CompilandIndexItem *cii = m_index->compilands().GetCompiland(block_id.modi);
+  CVSymbol sym = cii->m_debug_stream.readSymbolAtOffset(block_id.offset);
+  clang::DeclContext *parent_decl_ctx = m_clang->GetTranslationUnitDecl();
+
+  if (sym.kind() == S_GPROC32 || sym.kind() == S_LPROC32) {
+    // This is a function.  It must be global.  Creating the Function entry for
+    // it automatically creates a block for it.
+    CompUnitSP comp_unit = GetOrCreateCompileUnit(*cii);
+    return GetOrCreateFunction(block_id, *comp_unit)->GetBlock(false);
+  }
+
+  lldbassert(sym.kind() == S_BLOCK32);
+
+  // This is a block.  Its parent is either a function or another block.  In
+  // either case, its parent can be viewed as a block (e.g. a function contains
+  // 1 big block.  So just get the parent block and add this block to it.
+  BlockSym block(static_cast<SymbolRecordKind>(sym.kind()));
+  cantFail(SymbolDeserializer::deserializeAs<BlockSym>(sym, block));
+  lldbassert(block.Parent != 0);
+  PdbCompilandSymId parent_id(block_id.modi, block.Parent);
+  Block &parent_block = GetOrCreateBlock(parent_id);
+
+  lldb::user_id_t opaque_block_uid = toOpaqueUid(block_id);
+  BlockSP child_block = std::make_shared<Block>(opaque_block_uid);
+  parent_block.AddChild(child_block);
+  CompilerDeclContext cdc = GetDeclContextForUID(parent_block.GetID());
+  parent_decl_ctx =
+      static_cast<clang::DeclContext *>(cdc.GetOpaqueDeclContext());
+  clang::BlockDecl *block_decl =
+      m_clang->CreateBlockDeclaration(parent_decl_ctx);
+
+  m_blocks.insert({opaque_block_uid, child_block});
+  m_uid_to_decl.insert({opaque_block_uid, block_decl});
+  return *child_block;
+}
+
 lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
-                                                     const SymbolContext &sc) {
+                                                     CompileUnit &comp_unit) {
   const CompilandIndexItem *cci =
       m_index->compilands().GetCompiland(func_id.modi);
   lldbassert(cci);
@@ -535,7 +669,7 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
     return nullptr;
 
   AddressRange func_range(file_vm_addr, sol.length,
-                          sc.module_sp->GetSectionList());
+                          comp_unit.GetModule()->GetSectionList());
   if (!func_range.GetBaseAddress().IsValid())
     return nullptr;
 
@@ -546,27 +680,22 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   PdbTypeSymId sig_id(proc.FunctionType, false);
   Mangled mangled(proc.Name);
   FunctionSP func_sp = std::make_shared<Function>(
-      sc.comp_unit, toOpaqueUid(func_id), toOpaqueUid(sig_id), mangled,
+      &comp_unit, toOpaqueUid(func_id), toOpaqueUid(sig_id), mangled,
       func_type.get(), func_range);
 
-  sc.comp_unit->AddFunction(func_sp);
+  comp_unit.AddFunction(func_sp);
+
+  user_id_t opaque_func_uid = toOpaqueUid(func_id);
 
   clang::StorageClass storage = clang::SC_None;
   if (sym_record.kind() == S_LPROC32)
     storage = clang::SC_Static;
 
-  // There are two ways we could retrieve the parameter list.  The first is by
-  // iterating the arguments on the function signature type, however that would
-  // only tell us the types of the arguments and not the names.  The second is
-  // to iterate the CVSymbol records that follow the S_GPROC32 / S_LPROC32 until
-  // we have the correct number of arguments as stated by the function
-  // signature. The latter has more potential to go wrong in the face of
-  // improper debug info simply because we're assuming more about the layout of
-  // the records, but it is the only way to get argument names.
+  // The function signature only tells us the number of types of arguments, but
+  // not the names.  So we need to iterate the symbol stream looking for the
+  // corresponding symbol records to properly construct the AST.
   CVType sig_cvt;
-  CVType arg_list_cvt;
   ProcedureRecord sig_record;
-  ArgListRecord arg_list_record;
 
   sig_cvt = m_index->tpi().getType(proc.FunctionType);
   if (sig_cvt.kind() != LF_PROCEDURE)
@@ -574,8 +703,7 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   cantFail(
       TypeDeserializer::deserializeAs<ProcedureRecord>(sig_cvt, sig_record));
 
-  CompilerDeclContext context =
-      GetDeclContextContainingUID(toOpaqueUid(func_id));
+  CompilerDeclContext context = GetDeclContextContainingUID(opaque_func_uid);
 
   clang::DeclContext *decl_context =
       static_cast<clang::DeclContext *>(context.GetOpaqueDeclContext());
@@ -583,8 +711,9 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
       decl_context, proc.Name.str().c_str(),
       func_type->GetForwardCompilerType(), storage, false);
 
-  lldbassert(m_uid_to_decl.count(toOpaqueUid(func_id)) == 0);
-  m_uid_to_decl[toOpaqueUid(func_id)] = function_decl;
+  lldbassert(m_uid_to_decl.count(opaque_func_uid) == 0);
+  m_uid_to_decl[opaque_func_uid] = function_decl;
+
   CVSymbolArray scope = limitSymbolArrayToScope(
       cci->m_debug_stream.getSymbolArray(), func_id.offset);
 
@@ -593,57 +722,34 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
   auto end = scope.end();
   std::vector<clang::ParmVarDecl *> params;
   while (begin != end && params_remaining > 0) {
-    uint32_t record_offset = begin.offset();
-    CVSymbol sym = *begin++;
-
-    TypeIndex param_type;
-    llvm::StringRef param_name;
+    CVSymbol sym = *begin;
     switch (sym.kind()) {
-    case S_REGREL32: {
-      RegRelativeSym reg(SymbolRecordKind::RegRelativeSym);
-      cantFail(SymbolDeserializer::deserializeAs<RegRelativeSym>(sym, reg));
-      param_type = reg.Type;
-      param_name = reg.Name;
+    case S_REGREL32:
+    case S_REGISTER:
+    case S_LOCAL:
       break;
-    }
-    case S_REGISTER: {
-      RegisterSym reg(SymbolRecordKind::RegisterSym);
-      cantFail(SymbolDeserializer::deserializeAs<RegisterSym>(sym, reg));
-      param_type = reg.Index;
-      param_name = reg.Name;
-      break;
-    }
-    case S_LOCAL: {
-      LocalSym local(SymbolRecordKind::LocalSym);
-      cantFail(SymbolDeserializer::deserializeAs<LocalSym>(sym, local));
-      if ((local.Flags & LocalSymFlags::IsParameter) == LocalSymFlags::None)
-        continue;
-      param_type = local.Type;
-      param_name = local.Name;
-      break;
-    }
     case S_BLOCK32:
-      // All parameters should come before the first block.  If that isn't the
-      // case, then perhaps this is bad debug info that doesn't contain
-      // information about all parameters.
       params_remaining = 0;
       continue;
     default:
+      ++begin;
       continue;
     }
+    PdbCompilandSymId param_uid(func_id.modi, begin.offset());
+    VariableInfo var_info = GetVariableInformation(
+        *m_index, param_uid, GetObjectFile()->GetModule(), false);
 
-    PdbCompilandSymId param_uid(func_id.modi, record_offset);
-    TypeSP type_sp = GetOrCreateType(param_type);
+    TypeSP type_sp = GetOrCreateType(var_info.type);
     clang::ParmVarDecl *param = m_clang->CreateParameterDeclaration(
-        function_decl, param_name.str().c_str(),
+        function_decl, var_info.name.str().c_str(),
         type_sp->GetForwardCompilerType(), clang::SC_None);
     lldbassert(m_uid_to_decl.count(toOpaqueUid(param_uid)) == 0);
 
     m_uid_to_decl[toOpaqueUid(param_uid)] = param;
     params.push_back(param);
     --params_remaining;
+    ++begin;
   }
-
   if (!params.empty())
     m_clang->SetFunctionParameters(function_decl, params.data(), params.size());
 
@@ -1243,10 +1349,10 @@ lldb::TypeSP SymbolFileNativePDB::GetOrCreateType(TypeIndex ti) {
 }
 
 FunctionSP SymbolFileNativePDB::GetOrCreateFunction(PdbCompilandSymId func_id,
-                                                    const SymbolContext &sc) {
+                                                    CompileUnit &comp_unit) {
   auto emplace_result = m_functions.try_emplace(toOpaqueUid(func_id), nullptr);
   if (emplace_result.second)
-    emplace_result.first->second = CreateFunction(func_id, sc);
+    emplace_result.first->second = CreateFunction(func_id, comp_unit);
 
   lldbassert(emplace_result.first->second);
   return emplace_result.first->second;
@@ -1262,6 +1368,14 @@ SymbolFileNativePDB::GetOrCreateCompileUnit(const CompilandIndexItem &cci) {
 
   lldbassert(emplace_result.first->second);
   return emplace_result.first->second;
+}
+
+Block &SymbolFileNativePDB::GetOrCreateBlock(PdbCompilandSymId block_id) {
+  auto iter = m_blocks.find(toOpaqueUid(block_id));
+  if (iter != m_blocks.end())
+    return *iter->second;
+
+  return CreateBlock(block_id);
 }
 
 lldb::CompUnitSP SymbolFileNativePDB::ParseCompileUnitAtIndex(uint32_t index) {
@@ -1326,19 +1440,35 @@ uint32_t SymbolFileNativePDB::ResolveSymbolContext(
     resolved_flags |= eSymbolContextCompUnit;
   }
 
-  if (resolve_scope & eSymbolContextFunction) {
+  if (resolve_scope & eSymbolContextFunction ||
+      resolve_scope & eSymbolContextBlock) {
     lldbassert(sc.comp_unit);
     std::vector<SymbolAndUid> matches = m_index->FindSymbolsByVa(file_addr);
-    for (const auto &match : matches) {
+    // Search the matches in reverse.  This way if there are multiple matches
+    // (for example we are 3 levels deep in a nested scope) it will find the
+    // innermost one first.
+    for (const auto &match : llvm::reverse(matches)) {
       if (match.uid.kind() != PdbSymUidKind::CompilandSym)
         continue;
+
       PdbCompilandSymId csid = match.uid.asCompilandSym();
       CVSymbol cvs = m_index->ReadSymbolRecord(csid);
-      if (CVSymToPDBSym(cvs.kind()) != PDB_SymType::Function)
+      PDB_SymType type = CVSymToPDBSym(cvs.kind());
+      if (type != PDB_SymType::Function && type != PDB_SymType::Block)
         continue;
-      sc.function = GetOrCreateFunction(csid, sc).get();
-    }
+      if (type == PDB_SymType::Function) {
+        sc.function = GetOrCreateFunction(csid, *sc.comp_unit).get();
+        sc.block = sc.GetFunctionBlock();
+      }
+
+      if (type == PDB_SymType::Block) {
+        sc.block = &GetOrCreateBlock(csid);
+        sc.function = sc.block->CalculateSymbolContextFunction();
+      }
     resolved_flags |= eSymbolContextFunction;
+    resolved_flags |= eSymbolContextBlock;
+    break;
+    }
   }
 
   if (resolve_scope & eSymbolContextLineEntry) {
@@ -1496,7 +1626,9 @@ bool SymbolFileNativePDB::ParseImportedModules(
 
 size_t SymbolFileNativePDB::ParseFunctionBlocks(const SymbolContext &sc) {
   lldbassert(sc.comp_unit && sc.function);
-  return 0;
+  GetOrCreateBlock(PdbSymUid(sc.function->GetID()).asCompilandSym());
+  // FIXME: Parse child blocks
+  return 1;
 }
 
 void SymbolFileNativePDB::DumpClangAST(Stream &s) {
@@ -1558,9 +1690,8 @@ uint32_t SymbolFileNativePDB::FindFunctions(
     SymbolContext sc;
 
     sc.comp_unit = GetOrCreateCompileUnit(cci).get();
-    sc.module_sp = sc.comp_unit->GetModule();
     PdbCompilandSymId func_id(proc.modi(), proc.SymOffset);
-    sc.function = GetOrCreateFunction(func_id, sc).get();
+    sc.function = GetOrCreateFunction(func_id, *sc.comp_unit).get();
 
     sc_list.Append(sc);
   }
@@ -1620,6 +1751,188 @@ size_t SymbolFileNativePDB::FindTypesByName(llvm::StringRef name,
 }
 
 size_t SymbolFileNativePDB::ParseTypes(const SymbolContext &sc) { return 0; }
+
+size_t
+SymbolFileNativePDB::ParseVariablesForCompileUnit(CompileUnit &comp_unit,
+                                                  VariableList &variables) {
+  PdbSymUid sym_uid(comp_unit.GetID());
+  lldbassert(sym_uid.kind() == PdbSymUidKind::Compiland);
+  return 0;
+}
+
+VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
+                                                    PdbCompilandSymId var_id,
+                                                    bool is_param) {
+  ModuleSP module = GetObjectFile()->GetModule();
+  VariableInfo var_info =
+      GetVariableInformation(*m_index, var_id, module, true);
+
+  CompilandIndexItem *cii = m_index->compilands().GetCompiland(var_id.modi);
+  CompUnitSP comp_unit_sp = GetOrCreateCompileUnit(*cii);
+  TypeSP type_sp = GetOrCreateType(var_info.type);
+  std::string name = var_info.name.str();
+  Declaration decl;
+  SymbolFileTypeSP sftype =
+      std::make_shared<SymbolFileType>(*this, type_sp->GetID());
+
+  ValueType var_scope =
+      is_param ? eValueTypeVariableArgument : eValueTypeVariableLocal;
+  VariableSP var_sp = std::make_shared<Variable>(
+      toOpaqueUid(var_id), name.c_str(), name.c_str(), sftype, var_scope,
+      comp_unit_sp.get(), *var_info.ranges, &decl, *var_info.location, false,
+      false, false);
+
+  CompilerDeclContext cdc = GetDeclContextForUID(toOpaqueUid(scope_id));
+  clang::DeclContext *decl_ctx =
+      static_cast<clang::DeclContext *>(cdc.GetOpaqueDeclContext());
+
+  // Parameter info should have already been added to the AST.
+  if (!is_param) {
+    clang::QualType qt =
+        ClangUtil::GetCanonicalQualType(type_sp->GetForwardCompilerType());
+
+    clang::VarDecl *var_decl =
+        m_clang->CreateVariableDeclaration(decl_ctx, name.c_str(), qt);
+    lldbassert(m_uid_to_decl.count(toOpaqueUid(var_id)) == 0);
+    m_uid_to_decl[toOpaqueUid(var_id)] = var_decl;
+  }
+
+  m_local_variables[toOpaqueUid(var_id)] = var_sp;
+  return var_sp;
+}
+
+VariableSP SymbolFileNativePDB::GetOrCreateLocalVariable(
+    PdbCompilandSymId scope_id, PdbCompilandSymId var_id, bool is_param) {
+  auto iter = m_local_variables.find(toOpaqueUid(var_id));
+  if (iter != m_local_variables.end())
+    return iter->second;
+
+  return CreateLocalVariable(scope_id, var_id, is_param);
+}
+
+size_t SymbolFileNativePDB::ParseVariablesForBlock(PdbCompilandSymId block_id) {
+  Block &block = GetOrCreateBlock(block_id);
+
+  size_t count = 0;
+
+  CompilandIndexItem *cii = m_index->compilands().GetCompiland(block_id.modi);
+  CVSymbol sym = cii->m_debug_stream.readSymbolAtOffset(block_id.offset);
+  uint32_t params_remaining = 0;
+  switch (sym.kind()) {
+  case S_GPROC32:
+  case S_LPROC32: {
+    ProcSym proc(static_cast<SymbolRecordKind>(sym.kind()));
+    cantFail(SymbolDeserializer::deserializeAs<ProcSym>(sym, proc));
+    CVType signature = m_index->tpi().getType(proc.FunctionType);
+    ProcedureRecord sig;
+    cantFail(TypeDeserializer::deserializeAs<ProcedureRecord>(signature, sig));
+    params_remaining = sig.getParameterCount();
+    break;
+  }
+  case S_BLOCK32:
+    break;
+  default:
+    lldbassert(false && "Symbol is not a block!");
+    return 0;
+  }
+
+  VariableListSP variables = block.GetBlockVariableList(false);
+  if (!variables) {
+    variables = std::make_shared<VariableList>();
+    block.SetVariableList(variables);
+  }
+
+  CVSymbolArray syms = limitSymbolArrayToScope(
+      cii->m_debug_stream.getSymbolArray(), block_id.offset);
+
+  // Skip the first record since it's a PROC32 or BLOCK32, and there's
+  // no point examining it since we know it's not a local variable.
+  syms.drop_front();
+  auto iter = syms.begin();
+  auto end = syms.end();
+
+  while (iter != end) {
+    uint32_t record_offset = iter.offset();
+    CVSymbol variable_cvs = *iter;
+    PdbCompilandSymId child_sym_id(block_id.modi, record_offset);
+    ++iter;
+
+    // If this is a block, recurse into its children and then skip it.
+    if (variable_cvs.kind() == S_BLOCK32) {
+      uint32_t block_end = getScopeEndOffset(variable_cvs);
+      count += ParseVariablesForBlock(child_sym_id);
+      iter = syms.at(block_end);
+      continue;
+    }
+
+    bool is_param = params_remaining > 0;
+    VariableSP variable;
+    switch (variable_cvs.kind()) {
+    case S_REGREL32:
+    case S_REGISTER:
+    case S_LOCAL:
+      variable = GetOrCreateLocalVariable(block_id, child_sym_id, is_param);
+      if (is_param)
+        --params_remaining;
+      variables->AddVariableIfUnique(variable);
+      break;
+    default:
+      break;
+    }
+  }
+
+  // Pass false for set_children, since we call this recursively so that the
+  // children will call this for themselves.
+  block.SetDidParseVariables(true, false);
+
+  return count;
+}
+
+size_t SymbolFileNativePDB::ParseVariablesForContext(const SymbolContext &sc) {
+  lldbassert(sc.function || sc.comp_unit);
+
+  VariableListSP variables;
+  PdbSymUid sym_uid;
+  if (sc.block) {
+    PdbSymUid block_id(sc.block->GetID());
+
+    size_t count = ParseVariablesForBlock(block_id.asCompilandSym());
+    return count;
+  }
+
+  if (sc.function) {
+    PdbSymUid block_id(sc.function->GetID());
+
+    size_t count = ParseVariablesForBlock(block_id.asCompilandSym());
+    return count;
+  }
+
+  if (sc.comp_unit) {
+    variables = sc.comp_unit->GetVariableList(false);
+    if (!variables) {
+      variables = std::make_shared<VariableList>();
+      sc.comp_unit->SetVariableList(variables);
+    }
+    return ParseVariablesForCompileUnit(*sc.comp_unit, *variables);
+  }
+
+  llvm_unreachable("Unreachable!");
+}
+
+CompilerDecl SymbolFileNativePDB::GetDeclForUID(lldb::user_id_t uid) {
+  auto iter = m_uid_to_decl.find(uid);
+  if (iter == m_uid_to_decl.end())
+    return CompilerDecl();
+
+  return {m_clang, iter->second};
+}
+
+CompilerDeclContext
+SymbolFileNativePDB::GetDeclContextForUID(lldb::user_id_t uid) {
+  CompilerDecl compiler_decl = GetDeclForUID(uid);
+  clang::Decl *decl = static_cast<clang::Decl *>(compiler_decl.GetOpaqueDecl());
+  return {m_clang, clang::Decl::castToDeclContext(decl)};
+}
 
 CompilerDeclContext
 SymbolFileNativePDB::GetDeclContextContainingUID(lldb::user_id_t uid) {

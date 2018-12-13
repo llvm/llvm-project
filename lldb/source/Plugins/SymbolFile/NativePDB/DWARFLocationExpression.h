@@ -11,6 +11,7 @@
 #define LLDB_PLUGINS_SYMBOLFILE_NATIVEPDB_DWARFLOCATIONEXPRESSION_H
 
 #include "lldb/lldb-forward.h"
+#include "llvm/DebugInfo/CodeView/CodeView.h"
 
 namespace llvm {
 class APSInt;
@@ -23,6 +24,13 @@ class TpiStream;
 } // namespace llvm
 namespace lldb_private {
 namespace npdb {
+DWARFExpression
+MakeEnregisteredLocationExpression(llvm::codeview::RegisterId reg,
+                                   lldb::ModuleSP module);
+
+DWARFExpression MakeRegRelLocationExpression(llvm::codeview::RegisterId reg,
+                                             int32_t offset,
+                                             lldb::ModuleSP module);
 DWARFExpression MakeGlobalLocationExpression(uint16_t section, uint32_t offset,
                                              lldb::ModuleSP module);
 DWARFExpression MakeConstantLocationExpression(
