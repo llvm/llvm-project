@@ -22,4 +22,5 @@ int main() {
     v.push_back(0);
     v.pop_back();
     v.pop_back();
+    std::exit(1);
 }

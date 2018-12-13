@@ -2218,10 +2218,13 @@ ParmVarDecl *ClangASTContext::CreateParameterDeclaration(
     const CompilerType &param_type, int storage) {
   ASTContext *ast = getASTContext();
   assert(ast != nullptr);
-  return ParmVarDecl::Create(*ast, decl_ctx, SourceLocation(), SourceLocation(),
-                             name && name[0] ? &ast->Idents.get(name) : nullptr,
-                             ClangUtil::GetQualType(param_type), nullptr,
-                             (clang::StorageClass)storage, nullptr);
+  auto *decl =
+      ParmVarDecl::Create(*ast, decl_ctx, SourceLocation(), SourceLocation(),
+                          name && name[0] ? &ast->Idents.get(name) : nullptr,
+                          ClangUtil::GetQualType(param_type), nullptr,
+                          (clang::StorageClass)storage, nullptr);
+  decl_ctx->addDecl(decl);
+  return decl;
 }
 
 void ClangASTContext::SetFunctionParameters(FunctionDecl *function_decl,
