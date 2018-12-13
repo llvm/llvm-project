@@ -42,7 +42,7 @@ public:
   bool        validVectorRegister(int) const { return false; }
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  const char *getRegisterName(int num);
+  static const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86; }
 
@@ -248,7 +248,7 @@ public:
   bool        validVectorRegister(int) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  const char *getRegisterName(int num);
+  static const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_X86_64; }
 
@@ -561,7 +561,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  const char *getRegisterName(int num);
+  static const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC; }
 
@@ -1126,7 +1126,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  const char *getRegisterName(int num);
+  static const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_PPC64; }
 
@@ -1768,7 +1768,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  const char *getRegisterName(int num);
+  static const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_ARM64; }
 
@@ -2038,7 +2038,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  const char *getRegisterName(int num);
+  static const char *getRegisterName(int num);
   void        jumpto() {
     restoreSavedFloatRegisters();
     restoreCoreAndJumpTo();
@@ -2518,7 +2518,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  const char *getRegisterName(int num);
+  static const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_OR1K; }
 
@@ -2714,7 +2714,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  const char *getRegisterName(int num);
+  static const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_MIPS; }
 
@@ -3035,7 +3035,7 @@ public:
   bool        validVectorRegister(int num) const;
   v128        getVectorRegister(int num) const;
   void        setVectorRegister(int num, v128 value);
-  const char *getRegisterName(int num);
+  static const char *getRegisterName(int num);
   void        jumpto();
   static int  lastDwarfRegNum() { return _LIBUNWIND_HIGHEST_DWARF_REGISTER_MIPS; }
 

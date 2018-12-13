@@ -118,10 +118,10 @@ ConstString ProcessElfCore::GetPluginName() { return GetPluginNameStatic(); }
 uint32_t ProcessElfCore::GetPluginVersion() { return 1; }
 
 lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
-    const elf::ELFProgramHeader *header) {
-  const lldb::addr_t addr = header->p_vaddr;
-  FileRange file_range(header->p_offset, header->p_filesz);
-  VMRangeToFileOffset::Entry range_entry(addr, header->p_memsz, file_range);
+    const elf::ELFProgramHeader &header) {
+  const lldb::addr_t addr = header.p_vaddr;
+  FileRange file_range(header.p_offset, header.p_filesz);
+  VMRangeToFileOffset::Entry range_entry(addr, header.p_memsz, file_range);
 
   VMRangeToFileOffset::Entry *last_entry = m_core_aranges.Back();
   if (last_entry && last_entry->GetRangeEnd() == range_entry.GetRangeBase() &&
@@ -136,12 +136,12 @@ lldb::addr_t ProcessElfCore::AddAddressRangeFromLoadSegment(
   // Keep a separate map of permissions that that isn't coalesced so all ranges
   // are maintained.
   const uint32_t permissions =
-      ((header->p_flags & llvm::ELF::PF_R) ? lldb::ePermissionsReadable : 0u) |
-      ((header->p_flags & llvm::ELF::PF_W) ? lldb::ePermissionsWritable : 0u) |
-      ((header->p_flags & llvm::ELF::PF_X) ? lldb::ePermissionsExecutable : 0u);
+      ((header.p_flags & llvm::ELF::PF_R) ? lldb::ePermissionsReadable : 0u) |
+      ((header.p_flags & llvm::ELF::PF_W) ? lldb::ePermissionsWritable : 0u) |
+      ((header.p_flags & llvm::ELF::PF_X) ? lldb::ePermissionsExecutable : 0u);
 
   m_core_range_infos.Append(
-      VMRangeToPermissions::Entry(addr, header->p_memsz, permissions));
+      VMRangeToPermissions::Entry(addr, header.p_memsz, permissions));
 
   return addr;
 }
@@ -162,8 +162,8 @@ Status ProcessElfCore::DoLoadCore() {
     return error;
   }
 
-  const uint32_t num_segments = core->GetProgramHeaderCount();
-  if (num_segments == 0) {
+  llvm::ArrayRef<elf::ELFProgramHeader> segments = core->ProgramHeaders();
+  if (segments.size() == 0) {
     error.SetErrorString("core file has no segments");
     return error;
   }
@@ -177,20 +177,17 @@ Status ProcessElfCore::DoLoadCore() {
   /// Walk through segments and Thread and Address Map information.
   /// PT_NOTE - Contains Thread and Register information
   /// PT_LOAD - Contains a contiguous range of Process Address Space
-  for (uint32_t i = 1; i <= num_segments; i++) {
-    const elf::ELFProgramHeader *header = core->GetProgramHeaderByIndex(i);
-    assert(header != NULL);
-
-    DataExtractor data = core->GetSegmentDataByIndex(i);
+  for (const elf::ELFProgramHeader &H : segments) {
+    DataExtractor data = core->GetSegmentData(H);
 
     // Parse thread contexts and auxv structure
-    if (header->p_type == llvm::ELF::PT_NOTE) {
-      if (llvm::Error error = ParseThreadContextsFromNoteSegment(header, data))
+    if (H.p_type == llvm::ELF::PT_NOTE) {
+      if (llvm::Error error = ParseThreadContextsFromNoteSegment(H, data))
         return Status(std::move(error));
     }
     // PT_LOAD segments contains address map
-    if (header->p_type == llvm::ELF::PT_LOAD) {
-      lldb::addr_t last_addr = AddAddressRangeFromLoadSegment(header);
+    if (H.p_type == llvm::ELF::PT_LOAD) {
+      lldb::addr_t last_addr = AddAddressRangeFromLoadSegment(H);
       if (vm_addr > last_addr)
         ranges_are_sorted = false;
       vm_addr = last_addr;
@@ -710,8 +707,8 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
 /// A note segment consists of one or more NOTE entries, but their types and
 /// meaning differ depending on the OS.
 llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
-    const elf::ELFProgramHeader *segment_header, DataExtractor segment_data) {
-  assert(segment_header && segment_header->p_type == llvm::ELF::PT_NOTE);
+    const elf::ELFProgramHeader &segment_header, DataExtractor segment_data) {
+  assert(segment_header.p_type == llvm::ELF::PT_NOTE);
 
   auto notes_or_error = parseSegment(segment_data);
   if(!notes_or_error)

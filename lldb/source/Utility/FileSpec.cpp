@@ -424,7 +424,7 @@ std::string FileSpec::GetPath(bool denormalize) const {
 }
 
 const char *FileSpec::GetCString(bool denormalize) const {
-  return ConstString{GetPath(denormalize)}.AsCString(NULL);
+  return ConstString{GetPath(denormalize)}.AsCString(nullptr);
 }
 
 void FileSpec::GetPath(llvm::SmallVectorImpl<char> &path,

@@ -1,31 +1,35 @@
 # RUN: yaml2obj %s > %t
 # RUN: lldb-test object-file %t | FileCheck %s
 
-# CHECK: Name: .text
+# CHECK-LABEL: Name: .text
 # CHECK-NEXT: Type: code
 
-# CHECK: Name: .debug_info
+# CHECK-LABEL: Name: .debug_info
 # CHECK-NEXT: Type: dwarf-info
-# CHECK-NEXT: VM size: 0
-# CHECK-NEXT: File size: 8
 
-# CHECK: Name: .debug_types
+# CHECK-LABEL: Name: .debug_types
 # CHECK-NEXT: Type: dwarf-types
-# CHECK-NEXT: VM size: 0
-# CHECK-NEXT: File size: 8
 
-# CHECK: Name: .debug_names
+# CHECK-LABEL: Name: .debug_names
 # CHECK-NEXT: Type: dwarf-names
-# CHECK-NEXT: VM size: 0
-# CHECK-NEXT: File size: 8
 
-# CHECK: Name: .gnu_debugaltlink
+# CHECK-LABEL: Name: .gnu_debugaltlink
 # CHECK-NEXT: Type: dwarf-gnu-debugaltlink
-# CHECK-NEXT: VM size: 0
-# CHECK-NEXT: File size: 8
 
-# CHECK: Name: __codesection
+# CHECK-LABEL: Name: __codesection
 # CHECK-NEXT: Type: code
+
+# CHECK-LABEL: Name: .data
+# CHECK-NEXT: Type: data
+# CHECK: Thread specific: no
+
+# CHECK-LABEL: Name: .tdata
+# CHECK-NEXT: Type: data
+# CHECK-NEXT: Thread specific: yes
+
+# CHECK-LABEL: Name: .tbss
+# CHECK-NEXT: Type: zero-fill
+# CHECK-NEXT: Thread specific: yes
 
 --- !ELF
 FileHeader:
@@ -59,4 +63,19 @@ Sections:
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     Content:         DEADBEEFBAADF00D
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x0000000000000004
+    Content:         2F000000
+  - Name:            .tdata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC, SHF_TLS ]
+    AddressAlign:    0x0000000000000004
+    Content:         2F000000
+  - Name:            .tbss
+    Type:            SHT_NOBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC, SHF_TLS ]
+    AddressAlign:    0x0000000000000004
+    Size:            0x0000000000000004
 ...

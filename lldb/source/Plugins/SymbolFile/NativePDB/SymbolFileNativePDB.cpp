@@ -635,8 +635,8 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
     PdbCompilandSymId param_uid(func_id.modi, record_offset);
     TypeSP type_sp = GetOrCreateType(param_type);
     clang::ParmVarDecl *param = m_clang->CreateParameterDeclaration(
-        param_name.str().c_str(), type_sp->GetForwardCompilerType(),
-        clang::SC_None);
+        function_decl, param_name.str().c_str(),
+        type_sp->GetForwardCompilerType(), clang::SC_None);
     lldbassert(m_uid_to_decl.count(toOpaqueUid(param_uid)) == 0);
 
     m_uid_to_decl[toOpaqueUid(param_uid)] = param;
