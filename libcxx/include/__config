@@ -715,7 +715,11 @@ typedef __char32_t char32_t;
 #endif
 
 #ifndef _LIBCPP_EXPORTED_FROM_ABI
-#  define _LIBCPP_EXPORTED_FROM_ABI __attribute__((__visibility__("default")))
+#  if !defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS)
+#    define _LIBCPP_EXPORTED_FROM_ABI __attribute__((__visibility__("default")))
+#  else
+#    define _LIBCPP_EXPORTED_FROM_ABI
+#  endif
 #endif
 
 #ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
