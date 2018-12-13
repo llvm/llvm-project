@@ -83,9 +83,11 @@ static bool IsAddressNearGlobal(uptr addr, const __asan_global &g) {
 }
 
 static void ReportGlobal(const Global &g, const char *prefix) {
-  Report("%s Global[%p]: beg=%p size=%zu/%zu name=%s module=%s dyn_init=%zu\n",
-         prefix, &g, (void *)g.beg, g.size, g.size_with_redzone, g.name,
-         g.module_name, g.has_dynamic_init);
+  Report(
+      "%s Global[%p]: beg=%p size=%zu/%zu name=%s module=%s dyn_init=%zu "
+      "odr_indicator=%p\n",
+      prefix, &g, (void *)g.beg, g.size, g.size_with_redzone, g.name,
+      g.module_name, g.has_dynamic_init, (void *)g.odr_indicator);
   if (g.location) {
     Report("  location (%p): name=%s[%p], %d %d\n", g.location,
            g.location->filename, g.location->filename, g.location->line_no,
@@ -133,6 +135,9 @@ enum GlobalSymbolState {
 // this method in case compiler instruments global variables through their
 // local aliases.
 static void CheckODRViolationViaIndicator(const Global *g) {
+  // Instrumentation requests to skip ODR check.
+  if (g->odr_indicator == UINTPTR_MAX)
+    return;
   u8 *odr_indicator = reinterpret_cast<u8 *>(g->odr_indicator);
   if (*odr_indicator == UNREGISTERED) {
     *odr_indicator = REGISTERED;
@@ -246,7 +251,7 @@ static void UnregisterGlobal(const Global *g) {
   // implementation. It might not be worth doing anyway.
 
   // Release ODR indicator.
-  if (UseODRIndicator(g)) {
+  if (UseODRIndicator(g) && g->odr_indicator != UINTPTR_MAX) {
     u8 *odr_indicator = reinterpret_cast<u8 *>(g->odr_indicator);
     *odr_indicator = UNREGISTERED;
   }

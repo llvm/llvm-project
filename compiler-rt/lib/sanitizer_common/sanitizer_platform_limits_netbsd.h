@@ -2253,6 +2253,44 @@ SHA2_EXTERN(384);
 SHA2_EXTERN(512);
 
 #undef SHA2_EXTERN
+
+extern const int unvis_valid;
+extern const int unvis_validpush;
+
+struct __sanitizer_cdbr {
+  void (*unmap)(void *, void *, uptr);
+  void *cookie;
+  u8 *mmap_base;
+  uptr mmap_size;
+
+  u8 *hash_base;
+  u8 *offset_base;
+  u8 *data_base;
+
+  u32 data_size;
+  u32 entries;
+  u32 entries_index;
+  u32 seed;
+
+  u8 offset_size;
+  u8 index_size;
+
+  u32 entries_m;
+  u32 entries_index_m;
+  u8 entries_s1, entries_s2;
+  u8 entries_index_s1, entries_index_s2;
+};
+
+struct __sanitizer_cdbw {
+  uptr data_counter;
+  uptr data_allocated;
+  uptr data_size;
+  uptr *data_len;
+  void **data_ptr;
+  uptr hash_size;
+  void *hash;
+  uptr key_counter;
+};
 }  // namespace __sanitizer
 
 #define CHECK_TYPE_SIZE(TYPE) \

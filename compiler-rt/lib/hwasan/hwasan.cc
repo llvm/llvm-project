@@ -283,6 +283,8 @@ void __hwasan_init() {
 
   __sanitizer_set_report_path(common_flags()->log_path);
 
+  AndroidTestTlsSlot();
+
   DisableCoreDumperIfNecessary();
 
   __hwasan_shadow_init();

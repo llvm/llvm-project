@@ -2205,7 +2205,7 @@ CompilerType ClangASTContext::CreateFunctionType(
   proto_info.ExtInfo = cc;
   proto_info.Variadic = is_variadic;
   proto_info.ExceptionSpec = EST_None;
-  proto_info.TypeQuals = type_quals;
+  proto_info.TypeQuals = clang::Qualifiers::fromFastMask(type_quals);
   proto_info.RefQualifier = RQ_None;
 
   return CompilerType(ast,
