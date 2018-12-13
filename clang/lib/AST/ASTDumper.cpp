@@ -199,9 +199,10 @@ namespace  {
     void VisitFunctionProtoType(const FunctionProtoType *T) {
       auto EPI = T->getExtProtoInfo();
       if (EPI.HasTrailingReturn) OS << " trailing_return";
-      if (T->isConst()) OS << " const";
-      if (T->isVolatile()) OS << " volatile";
-      if (T->isRestrict()) OS << " restrict";
+
+      if (!T->getTypeQuals().empty())
+        OS << " " << T->getTypeQuals().getAsString();
+
       switch (EPI.RefQualifier) {
         case RQ_None: break;
         case RQ_LValue: OS << " &"; break;

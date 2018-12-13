@@ -1142,8 +1142,9 @@ bool Sema::IsOverload(FunctionDecl *New, FunctionDecl *Old,
     // function yet (because we haven't yet resolved whether this is a static
     // or non-static member function). Add it now, on the assumption that this
     // is a redeclaration of OldMethod.
-    unsigned OldQuals = OldMethod->getTypeQualifiers();
-    unsigned NewQuals = NewMethod->getTypeQualifiers();
+    // FIXME: OpenCL: Need to consider address spaces
+    unsigned OldQuals = OldMethod->getTypeQualifiers().getCVRUQualifiers();
+    unsigned NewQuals = NewMethod->getTypeQualifiers().getCVRUQualifiers();
     if (!getLangOpts().CPlusPlus14 && NewMethod->isConstexpr() &&
         !isa<CXXConstructorDecl>(NewMethod))
       NewQuals |= Qualifiers::Const;
@@ -2823,8 +2824,9 @@ void Sema::HandleFunctionTypeMismatch(PartialDiagnostic &PDiag,
     return;
   }
 
-  unsigned FromQuals = FromFunction->getTypeQuals(),
-           ToQuals = ToFunction->getTypeQuals();
+  // FIXME: OpenCL: Need to consider address spaces
+  unsigned FromQuals = FromFunction->getTypeQuals().getCVRUQualifiers();
+  unsigned ToQuals = ToFunction->getTypeQuals().getCVRUQualifiers();
   if (FromQuals != ToQuals) {
     PDiag << ft_qualifer_mismatch << ToQuals << FromQuals;
     return;
@@ -5065,9 +5067,15 @@ TryObjectArgumentInitialization(Sema &S, SourceLocation Loc, QualType FromType,
   QualType ClassType = S.Context.getTypeDeclType(ActingContext);
   // [class.dtor]p2: A destructor can be invoked for a const, volatile or
   //                 const volatile object.
-  unsigned Quals = isa<CXXDestructorDecl>(Method) ?
-    Qualifiers::Const | Qualifiers::Volatile : Method->getTypeQualifiers();
-  QualType ImplicitParamType =  S.Context.getCVRQualifiedType(ClassType, Quals);
+  Qualifiers Quals;
+  if (isa<CXXDestructorDecl>(Method)) {
+    Quals.addConst();
+    Quals.addVolatile();
+  } else {
+    Quals = Method->getTypeQualifiers();
+  }
+
+  QualType ImplicitParamType = S.Context.getQualifiedType(ClassType, Quals);
 
   // Set up the conversion sequence as a "bad" conversion, to allow us
   // to exit early.
@@ -5133,7 +5141,7 @@ TryObjectArgumentInitialization(Sema &S, SourceLocation Loc, QualType FromType,
     break;
 
   case RQ_LValue:
-    if (!FromClassification.isLValue() && Quals != Qualifiers::Const) {
+    if (!FromClassification.isLValue() && !Quals.hasOnlyConst()) {
       // non-const lvalue reference cannot bind to an rvalue
       ICS.setBad(BadConversionSequence::lvalue_ref_to_rvalue, FromType,
                  ImplicitParamType);
@@ -5249,9 +5257,14 @@ Sema::PerformObjectArgumentInitialization(Expr *From,
     From = FromRes.get();
   }
 
-  if (!Context.hasSameType(From->getType(), DestType))
-    From = ImpCastExprToType(From, DestType, CK_NoOp,
+  if (!Context.hasSameType(From->getType(), DestType)) {
+    if (From->getType().getAddressSpace() != DestType.getAddressSpace())
+      From = ImpCastExprToType(From, DestType, CK_AddressSpaceConversion,
                              From->getValueKind()).get();
+    else
+      From = ImpCastExprToType(From, DestType, CK_NoOp,
+                             From->getValueKind()).get();
+  }
   return From;
 }
 
@@ -12826,7 +12839,7 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
 
     // Check that the object type isn't more qualified than the
     // member function we're calling.
-    Qualifiers funcQuals = Qualifiers::fromCVRMask(proto->getTypeQuals());
+    Qualifiers funcQuals = proto->getTypeQuals();
 
     QualType objectType = op->getLHS()->getType();
     if (op->getOpcode() == BO_PtrMemI)

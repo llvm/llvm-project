@@ -8137,7 +8137,7 @@ bool Sema::CheckFunctionTemplateSpecialization(
         if (OldMD && OldMD->isConst()) {
           const FunctionProtoType *FPT = FT->castAs<FunctionProtoType>();
           FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-          EPI.TypeQuals |= Qualifiers::Const;
+          EPI.TypeQuals.addConst();
           FT = Context.getFunctionType(FPT->getReturnType(),
                                        FPT->getParamTypes(), EPI);
         }

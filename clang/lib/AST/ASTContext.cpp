@@ -3768,10 +3768,11 @@ QualType ASTContext::getFunctionTypeInternal(
   size_t Size = FunctionProtoType::totalSizeToAlloc<
       QualType, FunctionType::FunctionTypeExtraBitfields,
       FunctionType::ExceptionType, Expr *, FunctionDecl *,
-      FunctionProtoType::ExtParameterInfo>(
+      FunctionProtoType::ExtParameterInfo, Qualifiers>(
       NumArgs, FunctionProtoType::hasExtraBitfields(EPI.ExceptionSpec.Type),
       ESH.NumExceptionType, ESH.NumExprPtr, ESH.NumFunctionDeclPtr,
-      EPI.ExtParameterInfos ? NumArgs : 0);
+      EPI.ExtParameterInfos ? NumArgs : 0,
+      EPI.TypeQuals.hasNonFastQualifiers() ? 1 : 0);
 
   auto *FTP = (FunctionProtoType *)Allocate(Size, TypeAlignment);
   FunctionProtoType::ExtProtoInfo newEPI = EPI;

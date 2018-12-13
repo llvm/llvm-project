@@ -2617,9 +2617,9 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
   const FunctionProtoType *FPT =
       Ty->getPointeeType()->getAs<FunctionProtoType>();
   return DBuilder.createMemberPointerType(
-      getOrCreateInstanceMethodType(CGM.getContext().getPointerType(QualType(
-                                        Ty->getClass(), FPT->getTypeQuals())),
-                                    FPT, U),
+      getOrCreateInstanceMethodType(
+          CXXMethodDecl::getThisType(FPT, Ty->getMostRecentCXXRecordDecl()),
+          FPT, U),
       ClassType, Size, /*Align=*/0, Flags);
 }
 

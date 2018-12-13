@@ -5174,7 +5174,7 @@ public:
     /// using the given declaration (which is either a class template or a
     /// class) along with the given qualifiers.
     /// along with the qualifiers placed on '*this'.
-    CXXThisScopeRAII(Sema &S, Decl *ContextDecl, unsigned CXXThisTypeQuals,
+    CXXThisScopeRAII(Sema &S, Decl *ContextDecl, Qualifiers CXXThisTypeQuals,
                      bool Enabled = true);
 
     ~CXXThisScopeRAII();
@@ -7811,7 +7811,7 @@ public:
                                         SourceLocation Loc,
                                         DeclarationName Entity,
                                         CXXRecordDecl *ThisContext,
-                                        unsigned ThisTypeQuals);
+                                        Qualifiers ThisTypeQuals);
   void SubstExceptionSpec(FunctionDecl *New, const FunctionProtoType *Proto,
                           const MultiLevelTemplateArgumentList &Args);
   bool SubstExceptionSpec(SourceLocation Loc,

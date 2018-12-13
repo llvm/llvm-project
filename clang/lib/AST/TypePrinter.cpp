@@ -806,7 +806,7 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
     if (IgnoreFunctionProtoTypeConstQual)
       quals &= ~unsigned(Qualifiers::Const);
     if (quals) {
-      OS << ' ';
+      OS << " " << T->getTypeQuals().getAsString();
       AppendTypeQualList(OS, quals, Policy.Restrict);
     }
   }
