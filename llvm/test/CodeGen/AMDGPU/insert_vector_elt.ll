@@ -103,8 +103,7 @@ define amdgpu_kernel void @dynamic_insertelement_v2f32(<2 x float> addrspace(1)*
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, [[CONST]], v{{[0-9]+}}, [[CC2]]
 ; GCN-DAG: v_cmp_ne_u32_e64 [[CC1:[^,]+]], [[IDX]], 0
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, [[CONST]], v{{[0-9]+}}, [[CC1]]
-; GCN-DAG: buffer_store_dwordx2 v
-; GCN-DAG: buffer_store_dword v
+; GCN-DAG: buffer_store_dwordx3 v
 define amdgpu_kernel void @dynamic_insertelement_v3f32(<3 x float> addrspace(1)* %out, <3 x float> %a, i32 %b) nounwind {
   %vecins = insertelement <3 x float> %a, float 5.000000e+00, i32 %b
   store <3 x float> %vecins, <3 x float> addrspace(1)* %out, align 16
@@ -173,8 +172,7 @@ define amdgpu_kernel void @dynamic_insertelement_v2i32(<2 x i32> addrspace(1)* %
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 5, v{{[0-9]+}}, [[CC2]]
 ; GCN-DAG: v_cmp_ne_u32_e64 [[CC1:[^,]+]], [[IDX]], 0
 ; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, 5, v{{[0-9]+}}, [[CC1]]
-; GCN-DAG: buffer_store_dwordx2 v
-; GCN-DAG: buffer_store_dword v
+; GCN-DAG: buffer_store_dwordx3 v
 define amdgpu_kernel void @dynamic_insertelement_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> %a, i32 %b) nounwind {
   %vecins = insertelement <3 x i32> %a, i32 5, i32 %b
   store <3 x i32> %vecins, <3 x i32> addrspace(1)* %out, align 16

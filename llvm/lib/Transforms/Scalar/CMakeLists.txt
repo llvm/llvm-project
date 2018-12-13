@@ -69,6 +69,7 @@ add_llvm_library(LLVMScalarOpts
   StraightLineStrengthReduce.cpp
   StructurizeCFG.cpp
   TailRecursionElimination.cpp
+  WarnMissedTransforms.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Transforms

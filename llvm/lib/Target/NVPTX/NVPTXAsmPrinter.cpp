@@ -219,11 +219,12 @@ void NVPTXAsmPrinter::lowerToMCInst(const MachineInstr *MI, MCInst &OutMI) {
     return;
   }
 
+  const NVPTXSubtarget &STI = MI->getMF()->getSubtarget<NVPTXSubtarget>();
   for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
     const MachineOperand &MO = MI->getOperand(i);
 
     MCOperand MCOp;
-    if (!nvptxSubtarget->hasImageHandles()) {
+    if (!STI.hasImageHandles()) {
       if (lowerImageHandleOperand(MI, i, MCOp)) {
         OutMI.addOperand(MCOp);
         continue;
@@ -329,11 +330,12 @@ MCOperand NVPTXAsmPrinter::GetSymbolRef(const MCSymbol *Symbol) {
 
 void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   const DataLayout &DL = getDataLayout();
-  const TargetLowering *TLI = nvptxSubtarget->getTargetLowering();
+  const NVPTXSubtarget &STI = TM.getSubtarget<NVPTXSubtarget>(*F);
+  const TargetLowering *TLI = STI.getTargetLowering();
 
   Type *Ty = F->getReturnType();
 
-  bool isABI = (nvptxSubtarget->getSmVersion() >= 20);
+  bool isABI = (STI.getSmVersion() >= 20);
 
   if (Ty->getTypeID() == Type::VoidTyID)
     return;
@@ -474,7 +476,6 @@ void NVPTXAsmPrinter::EmitFunctionEntryLabel() {
 }
 
 bool NVPTXAsmPrinter::runOnMachineFunction(MachineFunction &F) {
-  nvptxSubtarget = &F.getSubtarget<NVPTXSubtarget>();
   bool Result = AsmPrinter::runOnMachineFunction(F);
   // Emit closing brace for the body of function F.
   // The closing brace must be emitted here because we need to emit additional
@@ -508,8 +509,9 @@ void NVPTXAsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
     OutStreamer->AddComment(Twine("implicit-def: ") +
                             getVirtualRegisterName(RegNo));
   } else {
+    const NVPTXSubtarget &STI = MI->getMF()->getSubtarget<NVPTXSubtarget>();
     OutStreamer->AddComment(Twine("implicit-def: ") +
-                            nvptxSubtarget->getRegisterInfo()->getName(RegNo));
+                            STI.getRegisterInfo()->getName(RegNo));
   }
   OutStreamer->AddBlankLine();
 }
@@ -1431,12 +1433,14 @@ void NVPTXAsmPrinter::printParamName(Function::const_arg_iterator I,
 void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   const DataLayout &DL = getDataLayout();
   const AttributeList &PAL = F->getAttributes();
-  const TargetLowering *TLI = nvptxSubtarget->getTargetLowering();
+  const NVPTXSubtarget &STI = TM.getSubtarget<NVPTXSubtarget>(*F);
+  const TargetLowering *TLI = STI.getTargetLowering();
   Function::const_arg_iterator I, E;
   unsigned paramIndex = 0;
   bool first = true;
   bool isKernelFunc = isKernelFunction(*F);
-  bool isABI = (nvptxSubtarget->getSmVersion() >= 20);
+  bool isABI = (STI.getSmVersion() >= 20);
+  bool hasImageHandles = STI.hasImageHandles();
   MVT thePointerTy = TLI->getPointerTy(DL);
 
   if (F->arg_empty()) {
@@ -1460,7 +1464,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         if (isImage(*I)) {
           std::string sname = I->getName();
           if (isImageWriteOnly(*I) || isImageReadWrite(*I)) {
-            if (nvptxSubtarget->hasImageHandles())
+            if (hasImageHandles)
               O << "\t.param .u64 .ptr .surfref ";
             else
               O << "\t.param .surfref ";
@@ -1468,7 +1472,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
             O << "_param_" << paramIndex;
           }
           else { // Default image is read_only
-            if (nvptxSubtarget->hasImageHandles())
+            if (hasImageHandles)
               O << "\t.param .u64 .ptr .texref ";
             else
               O << "\t.param .texref ";
@@ -1476,7 +1480,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
             O << "_param_" << paramIndex;
           }
         } else {
-          if (nvptxSubtarget->hasImageHandles())
+          if (hasImageHandles)
             O << "\t.param .u64 .ptr .samplerref ";
           else
             O << "\t.param .samplerref ";

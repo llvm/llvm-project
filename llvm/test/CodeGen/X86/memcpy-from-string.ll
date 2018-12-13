@@ -16,8 +16,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @foo(i8* %tmp2) {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb $0, 6(%rdi)
-; X86-NEXT:    movw $15212, 4(%rdi) # imm = 0x3B6C
+; X86-NEXT:    movl $3894379, 3(%rdi) # imm = 0x3B6C6B
 ; X86-NEXT:    movl $1802117222, (%rdi) # imm = 0x6B6A2066
 ; X86-NEXT:    retq
   call void @llvm.memcpy.p0i8.p0i8.i64(i8* %tmp2, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @0, i64 0, i64 3), i64 7, i1 false)

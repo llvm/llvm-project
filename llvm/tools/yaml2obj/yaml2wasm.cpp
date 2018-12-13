@@ -140,6 +140,10 @@ int WasmWriter::writeSectionContent(raw_ostream &OS,
   encodeULEB128(Section.MemoryAlignment, OS);
   encodeULEB128(Section.TableSize, OS);
   encodeULEB128(Section.TableAlignment, OS);
+  encodeULEB128(Section.Needed.size(), OS);
+  for (StringRef Needed : Section.Needed) {
+    writeStringRef(Needed, OS);
+  }
   return 0;
 }
 

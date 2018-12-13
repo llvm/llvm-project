@@ -167,12 +167,14 @@ static void moveHeaderPhiOperandsToForeBlocks(BasicBlock *Header,
 
   isSafeToUnrollAndJam should be used prior to calling this to make sure the
   unrolling will be valid. Checking profitablility is also advisable.
+
+  If EpilogueLoop is non-null, it receives the epilogue loop (if it was
+  necessary to create one and not fully unrolled).
 */
-LoopUnrollResult
-llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
-                       unsigned TripMultiple, bool UnrollRemainder,
-                       LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-                       AssumptionCache *AC, OptimizationRemarkEmitter *ORE) {
+LoopUnrollResult llvm::UnrollAndJamLoop(
+    Loop *L, unsigned Count, unsigned TripCount, unsigned TripMultiple,
+    bool UnrollRemainder, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
+    AssumptionCache *AC, OptimizationRemarkEmitter *ORE, Loop **EpilogueLoop) {
 
   // When we enter here we should have already checked that it is safe
   BasicBlock *Header = L->getHeader();
@@ -196,7 +198,8 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
   if (TripMultiple == 1 || TripMultiple % Count != 0) {
     if (!UnrollRuntimeLoopRemainder(L, Count, /*AllowExpensiveTripCount*/ false,
                                     /*UseEpilogRemainder*/ true,
-                                    UnrollRemainder, LI, SE, DT, AC, true)) {
+                                    UnrollRemainder, LI, SE, DT, AC, true,
+                                    EpilogueLoop)) {
       LLVM_DEBUG(dbgs() << "Won't unroll-and-jam; remainder loop could not be "
                            "generated when assuming runtime trip count\n");
       return LoopUnrollResult::Unmodified;

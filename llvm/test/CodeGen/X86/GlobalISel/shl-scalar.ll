@@ -147,8 +147,8 @@ define i8 @test_shl_i8_imm(i32 %arg1) {
 define i8 @test_shl_i8_imm1(i32 %arg1) {
 ; X64-LABEL: test_shl_i8_imm1:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    addb %al, %al
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    leal (%rdi,%rdi), %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
   %a = trunc i32 %arg1 to i8

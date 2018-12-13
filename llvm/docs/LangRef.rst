@@ -5076,6 +5076,8 @@ optimizations related to compare and branch instructions. The metadata
 is treated as a boolean value; if it exists, it signals that the branch
 or switch that it is attached to is completely unpredictable.
 
+.. _llvm.loop:
+
 '``llvm.loop``'
 ^^^^^^^^^^^^^^^
 
@@ -5108,6 +5110,26 @@ suggests an unroll factor to the loop unroller:
     ...
     !0 = !{!0, !1}
     !1 = !{!"llvm.loop.unroll.count", i32 4}
+
+'``llvm.loop.disable_nonforced``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata disables all optional loop transformations unless
+explicitly instructed using other transformation metdata such as
+``llvm.loop.unroll.enable``. That is, no heuristic will try to determine
+whether a transformation is profitable. The purpose is to avoid that the
+loop is transformed to a different loop before an explicitly requested
+(forced) transformation is applied. For instance, loop fusion can make
+other transformations impossible. Mandatory loop canonicalizations such
+as loop rotation are still applied.
+
+It is recommended to use this metadata in addition to any llvm.loop.*
+transformation directive. Also, any loop should have at most one
+directive applied to it (and a sequence of transformations built using
+followup-attributes). Otherwise, which transformation will be applied
+depends on implementation details such as the pass pipeline order.
+
+See :ref:`transformation-metadata` for details.
 
 '``llvm.loop.vectorize``' and '``llvm.loop.interleave``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -5166,6 +5188,29 @@ Note that setting ``llvm.loop.vectorize.width`` to 1 disables
 vectorization of the loop. If ``llvm.loop.vectorize.width`` is set to
 0 or if the loop does not have this metadata the width will be
 determined automatically.
+
+'``llvm.loop.vectorize.followup_vectorized``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata defines which loop attributes the vectorized loop will
+have. See :ref:`transformation-metadata` for details.
+
+'``llvm.loop.vectorize.followup_epilogue``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata defines which loop attributes the epilogue will have. The
+epilogue is not vectorized and is executed when either the vectorized
+loop is not known to preserve semantics (because e.g., it processes two
+arrays that are found to alias by a runtime check) or for the last
+iterations that do not fill a complete set of vector lanes. See
+:ref:`Transformation Metadata <transformation-metadata>` for details.
+
+'``llvm.loop.vectorize.followup_all``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Attributes in the metadata will be added to both the vectorized and
+epilogue loop.
+See :ref:`Transformation Metadata <transformation-metadata>` for details.
 
 '``llvm.loop.unroll``'
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -5235,6 +5280,19 @@ For example:
 
    !0 = !{!"llvm.loop.unroll.full"}
 
+'``llvm.loop.unroll.followup``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata defines which loop attributes the unrolled loop will have.
+See :ref:`Transformation Metadata <transformation-metadata>` for details.
+
+'``llvm.loop.unroll.followup_remainder``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata defines which loop attributes the remainder loop after
+partial/runtime unrolling will have. See
+:ref:`Transformation Metadata <transformation-metadata>` for details.
+
 '``llvm.loop.unroll_and_jam``'
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -5288,6 +5346,43 @@ string ``llvm.loop.unroll_and_jam.enable``.  For example:
 
    !0 = !{!"llvm.loop.unroll_and_jam.enable"}
 
+'``llvm.loop.unroll_and_jam.followup_outer``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata defines which loop attributes the outer unrolled loop will
+have. See :ref:`Transformation Metadata <transformation-metadata>` for
+details.
+
+'``llvm.loop.unroll_and_jam.followup_inner``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata defines which loop attributes the inner jammed loop will
+have. See :ref:`Transformation Metadata <transformation-metadata>` for
+details.
+
+'``llvm.loop.unroll_and_jam.followup_remainder_outer``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata defines which attributes the epilogue of the outer loop
+will have. This loop is usually unrolled, meaning there is no such
+loop. This attribute will be ignored in this case. See
+:ref:`Transformation Metadata <transformation-metadata>` for details.
+
+'``llvm.loop.unroll_and_jam.followup_remainder_inner``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata defines which attributes the inner loop of the epilogue
+will have. The outer epilogue will usually be unrolled, meaning there
+can be multiple inner remainder loops. See
+:ref:`Transformation Metadata <transformation-metadata>` for details.
+
+'``llvm.loop.unroll_and_jam.followup_all``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Attributes specified in the metadata is added to all
+``llvm.loop.unroll_and_jam.*`` loops. See
+:ref:`Transformation Metadata <transformation-metadata>` for details.
+
 '``llvm.loop.licm_versioning.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -5319,6 +5414,34 @@ enabled. A value of 0 disables distribution:
 
 This metadata should be used in conjunction with ``llvm.loop`` loop
 identification metadata.
+
+'``llvm.loop.distribute.followup_coincident``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata defines which attributes extracted loops with no cyclic
+dependencies will have (i.e. can be vectorized). See
+:ref:`Transformation Metadata <transformation-metadata>` for details.
+
+'``llvm.loop.distribute.followup_sequential``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata defines which attributes the isolated loops with unsafe
+memory dependencies will have. See
+:ref:`Transformation Metadata <transformation-metadata>` for details.
+
+'``llvm.loop.distribute.followup_fallback``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If loop versioning is necessary, this metadata defined the attributes
+the non-distributed fallback version will have. See
+:ref:`Transformation Metadata <transformation-metadata>` for details.
+
+'``llvm.loop.distribute.followup_all``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Thes attributes in this metdata is added to all followup loops of the
+loop distribution pass. See
+:ref:`Transformation Metadata <transformation-metadata>` for details.
 
 '``llvm.mem``'
 ^^^^^^^^^^^^^^^

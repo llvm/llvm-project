@@ -1,0 +1,16 @@
+# FIXME: Set up symlinks pointing to lld.
+
+executable("lld") {
+  configs += [ "//llvm/utils/gn/build:lld_code" ]
+  deps = [
+    "//lld/COFF",
+    "//lld/ELF",
+    "//lld/MinGW",
+    "//lld/lib/Driver",
+    "//lld/wasm",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "lld.cpp",
+  ]
+}

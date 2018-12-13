@@ -201,6 +201,7 @@ public:
   Triple::ArchType getArch() const override;
   SubtargetFeatures getFeatures() const override;
   bool isRelocatableObject() const override;
+  bool isSharedObject() const;
 
   struct ReadContext {
     const uint8_t *Start;
@@ -271,6 +272,7 @@ private:
   std::vector<wasm::WasmFunctionName> DebugNames;
   uint32_t StartFunction = -1;
   bool HasLinkingSection = false;
+  bool HasDylinkSection = false;
   wasm::WasmLinkingData LinkingData;
   uint32_t NumImportedGlobals = 0;
   uint32_t NumImportedFunctions = 0;

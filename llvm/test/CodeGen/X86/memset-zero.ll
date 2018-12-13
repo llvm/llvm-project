@@ -71,22 +71,19 @@ define void @memset_7(i8* %a) nounwind  {
 ; X86-LABEL: memset_7:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb $0, 6(%eax)
-; X86-NEXT:    movw $0, 4(%eax)
+; X86-NEXT:    movl $0, 3(%eax)
 ; X86-NEXT:    movl $0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; CORE2-LABEL: memset_7:
 ; CORE2:       # %bb.0: # %entry
-; CORE2-NEXT:    movb $0, 6(%rdi)
-; CORE2-NEXT:    movw $0, 4(%rdi)
+; CORE2-NEXT:    movl $0, 3(%rdi)
 ; CORE2-NEXT:    movl $0, (%rdi)
 ; CORE2-NEXT:    retq
 ;
 ; NEHALEM-LABEL: memset_7:
 ; NEHALEM:       # %bb.0: # %entry
-; NEHALEM-NEXT:    movb $0, 6(%rdi)
-; NEHALEM-NEXT:    movw $0, 4(%rdi)
+; NEHALEM-NEXT:    movl $0, 3(%rdi)
 ; NEHALEM-NEXT:    movl $0, (%rdi)
 ; NEHALEM-NEXT:    retq
 entry:
@@ -120,23 +117,20 @@ define void @memset_11(i8* %a) nounwind  {
 ; X86-LABEL: memset_11:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb $0, 10(%eax)
-; X86-NEXT:    movw $0, 8(%eax)
+; X86-NEXT:    movl $0, 7(%eax)
 ; X86-NEXT:    movl $0, 4(%eax)
 ; X86-NEXT:    movl $0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; CORE2-LABEL: memset_11:
 ; CORE2:       # %bb.0: # %entry
-; CORE2-NEXT:    movb $0, 10(%rdi)
-; CORE2-NEXT:    movw $0, 8(%rdi)
+; CORE2-NEXT:    movl $0, 7(%rdi)
 ; CORE2-NEXT:    movq $0, (%rdi)
 ; CORE2-NEXT:    retq
 ;
 ; NEHALEM-LABEL: memset_11:
 ; NEHALEM:       # %bb.0: # %entry
-; NEHALEM-NEXT:    movb $0, 10(%rdi)
-; NEHALEM-NEXT:    movw $0, 8(%rdi)
+; NEHALEM-NEXT:    movl $0, 7(%rdi)
 ; NEHALEM-NEXT:    movq $0, (%rdi)
 ; NEHALEM-NEXT:    retq
 entry:
@@ -174,8 +168,7 @@ define void @memset_15(i8* %a) nounwind  {
 ; X86-LABEL: memset_15:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb $0, 14(%eax)
-; X86-NEXT:    movw $0, 12(%eax)
+; X86-NEXT:    movl $0, 11(%eax)
 ; X86-NEXT:    movl $0, 8(%eax)
 ; X86-NEXT:    movl $0, 4(%eax)
 ; X86-NEXT:    movl $0, (%eax)
@@ -256,8 +249,7 @@ define void @memset_19(i8* %a) nounwind  {
 ; X86-LABEL: memset_19:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb $0, 18(%eax)
-; X86-NEXT:    movw $0, 16(%eax)
+; X86-NEXT:    movl $0, 15(%eax)
 ; X86-NEXT:    movl $0, 12(%eax)
 ; X86-NEXT:    movl $0, 8(%eax)
 ; X86-NEXT:    movl $0, 4(%eax)
@@ -266,8 +258,7 @@ define void @memset_19(i8* %a) nounwind  {
 ;
 ; CORE2-LABEL: memset_19:
 ; CORE2:       # %bb.0: # %entry
-; CORE2-NEXT:    movb $0, 18(%rdi)
-; CORE2-NEXT:    movw $0, 16(%rdi)
+; CORE2-NEXT:    movl $0, 15(%rdi)
 ; CORE2-NEXT:    movq $0, 8(%rdi)
 ; CORE2-NEXT:    movq $0, (%rdi)
 ; CORE2-NEXT:    retq
@@ -276,8 +267,7 @@ define void @memset_19(i8* %a) nounwind  {
 ; NEHALEM:       # %bb.0: # %entry
 ; NEHALEM-NEXT:    xorps %xmm0, %xmm0
 ; NEHALEM-NEXT:    movups %xmm0, (%rdi)
-; NEHALEM-NEXT:    movb $0, 18(%rdi)
-; NEHALEM-NEXT:    movw $0, 16(%rdi)
+; NEHALEM-NEXT:    movl $0, 15(%rdi)
 ; NEHALEM-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 19, i1 false)
@@ -288,8 +278,7 @@ define void @memset_31(i8* %a) nounwind  {
 ; X86-LABEL: memset_31:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb $0, 30(%eax)
-; X86-NEXT:    movw $0, 28(%eax)
+; X86-NEXT:    movl $0, 27(%eax)
 ; X86-NEXT:    movl $0, 24(%eax)
 ; X86-NEXT:    movl $0, 20(%eax)
 ; X86-NEXT:    movl $0, 16(%eax)
@@ -322,8 +311,7 @@ define void @memset_35(i8* %a) nounwind  {
 ; X86-LABEL: memset_35:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb $0, 34(%eax)
-; X86-NEXT:    movw $0, 32(%eax)
+; X86-NEXT:    movl $0, 31(%eax)
 ; X86-NEXT:    movl $0, 28(%eax)
 ; X86-NEXT:    movl $0, 24(%eax)
 ; X86-NEXT:    movl $0, 20(%eax)
@@ -336,8 +324,7 @@ define void @memset_35(i8* %a) nounwind  {
 ;
 ; CORE2-LABEL: memset_35:
 ; CORE2:       # %bb.0: # %entry
-; CORE2-NEXT:    movb $0, 34(%rdi)
-; CORE2-NEXT:    movw $0, 32(%rdi)
+; CORE2-NEXT:    movl $0, 31(%rdi)
 ; CORE2-NEXT:    movq $0, 24(%rdi)
 ; CORE2-NEXT:    movq $0, 16(%rdi)
 ; CORE2-NEXT:    movq $0, 8(%rdi)
@@ -349,8 +336,7 @@ define void @memset_35(i8* %a) nounwind  {
 ; NEHALEM-NEXT:    xorps %xmm0, %xmm0
 ; NEHALEM-NEXT:    movups %xmm0, 16(%rdi)
 ; NEHALEM-NEXT:    movups %xmm0, (%rdi)
-; NEHALEM-NEXT:    movb $0, 34(%rdi)
-; NEHALEM-NEXT:    movw $0, 32(%rdi)
+; NEHALEM-NEXT:    movl $0, 31(%rdi)
 ; NEHALEM-NEXT:    retq
 entry:
 	call void @llvm.memset.p0i8.i64(i8* %a, i8 0, i64 35, i1 false)

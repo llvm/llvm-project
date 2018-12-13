@@ -1,8 +1,8 @@
-; RUN: opt < %s -loop-vectorize -S 2>&1 | FileCheck %s
+; RUN: opt < %s -loop-vectorize -transform-warning -S 2>&1 | FileCheck %s
 
 ; Verify warning is generated when vectorization/ interleaving is explicitly specified and fails to occur.
-; CHECK: warning: no_array_bounds.cpp:5:5: loop not vectorized: failed explicitly specified loop vectorization
-; CHECK: warning: no_array_bounds.cpp:10:5: loop not interleaved: failed explicitly specified loop interleaving
+; CHECK: warning: no_array_bounds.cpp:5:5: loop not vectorized: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering
+; CHECK: warning: no_array_bounds.cpp:10:5: loop not interleaved: the optimizer was unable to perform the requested transformation; the transformation might be disabled or specified as part of an unsupported transformation ordering
 
 ;  #pragma clang loop vectorize(enable)
 ;  for (int i = 0; i < number; i++) {

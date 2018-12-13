@@ -237,23 +237,19 @@ MDNode *Loop::getLoopID() const {
 }
 
 void Loop::setLoopID(MDNode *LoopID) const {
-  assert(LoopID && "Loop ID should not be null");
-  assert(LoopID->getNumOperands() > 0 && "Loop ID needs at least one operand");
-  assert(LoopID->getOperand(0) == LoopID && "Loop ID should refer to itself");
+  assert((!LoopID || LoopID->getNumOperands() > 0) &&
+         "Loop ID needs at least one operand");
+  assert((!LoopID || LoopID->getOperand(0) == LoopID) &&
+         "Loop ID should refer to itself");
 
-  if (BasicBlock *Latch = getLoopLatch()) {
-    Latch->getTerminator()->setMetadata(LLVMContext::MD_loop, LoopID);
-    return;
-  }
-
-  assert(!getLoopLatch() &&
-         "The loop should have no single latch at this point");
   BasicBlock *H = getHeader();
   for (BasicBlock *BB : this->blocks()) {
     Instruction *TI = BB->getTerminator();
     for (BasicBlock *Successor : successors(TI)) {
-      if (Successor == H)
+      if (Successor == H) {
         TI->setMetadata(LLVMContext::MD_loop, LoopID);
+        break;
+      }
     }
   }
 }
