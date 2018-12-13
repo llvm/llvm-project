@@ -22,4 +22,5 @@ int main() {
     q.push_back(0);
     q.pop_back();
     q.pop_back();
+    std::exit(1);
 }
