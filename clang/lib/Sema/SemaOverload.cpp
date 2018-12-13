@@ -5946,15 +5946,13 @@ static bool IsAcceptableNonMemberOperatorCandidate(ASTContext &Context,
 /// \param PartialOverloading true if we are performing "partial" overloading
 /// based on an incomplete set of function arguments. This feature is used by
 /// code completion.
-void
-Sema::AddOverloadCandidate(FunctionDecl *Function,
-                           DeclAccessPair FoundDecl,
-                           ArrayRef<Expr *> Args,
-                           OverloadCandidateSet &CandidateSet,
-                           bool SuppressUserConversions,
-                           bool PartialOverloading,
-                           bool AllowExplicit,
-                           ConversionSequenceList EarlyConversions) {
+void Sema::AddOverloadCandidate(FunctionDecl *Function,
+                                DeclAccessPair FoundDecl, ArrayRef<Expr *> Args,
+                                OverloadCandidateSet &CandidateSet,
+                                bool SuppressUserConversions,
+                                bool PartialOverloading, bool AllowExplicit,
+                                ADLCallKind IsADLCandidate,
+                                ConversionSequenceList EarlyConversions) {
   const FunctionProtoType *Proto
     = dyn_cast<FunctionProtoType>(Function->getType()->getAs<FunctionType>());
   assert(Proto && "Functions without a prototype cannot be overloaded");
@@ -6013,6 +6011,7 @@ Sema::AddOverloadCandidate(FunctionDecl *Function,
   Candidate.Function = Function;
   Candidate.Viable = true;
   Candidate.IsSurrogate = false;
+  Candidate.IsADLCandidate = IsADLCandidate;
   Candidate.IgnoreObjectArgument = false;
   Candidate.ExplicitCallArguments = Args.size();
 
@@ -6715,14 +6714,11 @@ Sema::AddMethodTemplateCandidate(FunctionTemplateDecl *MethodTmpl,
 /// Add a C++ function template specialization as a candidate
 /// in the candidate set, using template argument deduction to produce
 /// an appropriate function template specialization.
-void
-Sema::AddTemplateOverloadCandidate(FunctionTemplateDecl *FunctionTemplate,
-                                   DeclAccessPair FoundDecl,
-                                 TemplateArgumentListInfo *ExplicitTemplateArgs,
-                                   ArrayRef<Expr *> Args,
-                                   OverloadCandidateSet& CandidateSet,
-                                   bool SuppressUserConversions,
-                                   bool PartialOverloading) {
+void Sema::AddTemplateOverloadCandidate(
+    FunctionTemplateDecl *FunctionTemplate, DeclAccessPair FoundDecl,
+    TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
+    OverloadCandidateSet &CandidateSet, bool SuppressUserConversions,
+    bool PartialOverloading, ADLCallKind IsADLCandidate) {
   if (!CandidateSet.isNewCandidate(FunctionTemplate))
     return;
 
@@ -6751,6 +6747,7 @@ Sema::AddTemplateOverloadCandidate(FunctionTemplateDecl *FunctionTemplate,
     Candidate.Function = FunctionTemplate->getTemplatedDecl();
     Candidate.Viable = false;
     Candidate.IsSurrogate = false;
+    Candidate.IsADLCandidate = IsADLCandidate;
     // Ignore the object argument if there is one, since we don't have an object
     // type.
     Candidate.IgnoreObjectArgument =
@@ -6772,7 +6769,7 @@ Sema::AddTemplateOverloadCandidate(FunctionTemplateDecl *FunctionTemplate,
   assert(Specialization && "Missing function template specialization?");
   AddOverloadCandidate(Specialization, FoundDecl, Args, CandidateSet,
                        SuppressUserConversions, PartialOverloading,
-                       /*AllowExplicit*/false, Conversions);
+                       /*AllowExplicit*/ false, IsADLCandidate, Conversions);
 }
 
 /// Check that implicit conversion sequences can be formed for each argument
@@ -8935,17 +8932,19 @@ Sema::AddArgumentDependentLookupCandidates(DeclarationName Name,
   // set.
   for (ADLResult::iterator I = Fns.begin(), E = Fns.end(); I != E; ++I) {
     DeclAccessPair FoundDecl = DeclAccessPair::make(*I, AS_none);
+
     if (FunctionDecl *FD = dyn_cast<FunctionDecl>(*I)) {
       if (ExplicitTemplateArgs)
         continue;
 
       AddOverloadCandidate(FD, FoundDecl, Args, CandidateSet,
-                           /*SupressUserConversions=*/false,
-                           PartialOverloading);
+                           /*SupressUserConversions=*/false, PartialOverloading,
+                           /*AllowExplicit=*/false, ADLCallKind::UsesADL);
     } else {
-     AddTemplateOverloadCandidate(
-          cast<FunctionTemplateDecl>(*I), FoundDecl, ExplicitTemplateArgs, Args,
-          CandidateSet, /*SupressUserConversions=*/false, PartialOverloading);
+      AddTemplateOverloadCandidate(cast<FunctionTemplateDecl>(*I), FoundDecl,
+                                   ExplicitTemplateArgs, Args, CandidateSet,
+                                   /*SupressUserConversions=*/false,
+                                   PartialOverloading, ADLCallKind::UsesADL);
     }
   }
 }
@@ -12023,7 +12022,8 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
       return ExprError();
     Fn = SemaRef.FixOverloadedFunctionReference(Fn, (*Best)->FoundDecl, FDecl);
     return SemaRef.BuildResolvedCallExpr(Fn, FDecl, LParenLoc, Args, RParenLoc,
-                                         ExecConfig);
+                                         ExecConfig, /*IsExecConfig=*/false,
+                                         (*Best)->IsADLCandidate);
   }
 
   case OR_No_Viable_Function: {
@@ -12075,7 +12075,8 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
     FunctionDecl *FDecl = (*Best)->Function;
     Fn = SemaRef.FixOverloadedFunctionReference(Fn, (*Best)->FoundDecl, FDecl);
     return SemaRef.BuildResolvedCallExpr(Fn, FDecl, LParenLoc, Args, RParenLoc,
-                                         ExecConfig);
+                                         ExecConfig, /*IsExecConfig=*/false,
+                                         (*Best)->IsADLCandidate);
   }
   }
 
@@ -12264,9 +12265,9 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
       ResultTy = ResultTy.getNonLValueExprType(Context);
 
       Args[0] = Input;
-      CallExpr *TheCall =
-        new (Context) CXXOperatorCallExpr(Context, Op, FnExpr.get(), ArgsArray,
-                                          ResultTy, VK, OpLoc, FPOptions());
+      CallExpr *TheCall = new (Context)
+          CXXOperatorCallExpr(Context, Op, FnExpr.get(), ArgsArray, ResultTy,
+                              VK, OpLoc, FPOptions(), Best->IsADLCandidate);
 
       if (CheckCallReturnType(FnDecl->getReturnType(), OpLoc, TheCall, FnDecl))
         return ExprError();
@@ -12496,10 +12497,9 @@ Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         ExprValueKind VK = Expr::getValueKindForType(ResultTy);
         ResultTy = ResultTy.getNonLValueExprType(Context);
 
-        CXXOperatorCallExpr *TheCall =
-          new (Context) CXXOperatorCallExpr(Context, Op, FnExpr.get(),
-                                            Args, ResultTy, VK, OpLoc,
-                                            FPFeatures);
+        CXXOperatorCallExpr *TheCall = new (Context)
+            CXXOperatorCallExpr(Context, Op, FnExpr.get(), Args, ResultTy, VK,
+                                OpLoc, FPFeatures, Best->IsADLCandidate);
 
         if (CheckCallReturnType(FnDecl->getReturnType(), OpLoc, TheCall,
                                 FnDecl))

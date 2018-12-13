@@ -121,6 +121,8 @@ def note_constexpr_ltor_non_const_int : Note<
   "read of non-const variable %0 is not allowed in a constant expression">;
 def note_constexpr_ltor_non_constexpr : Note<
   "read of non-constexpr variable %0 is not allowed in a constant expression">;
+def note_constexpr_ltor_incomplete_type : Note<
+  "read of incomplete type %0 is not allowed in a constant expression">;
 def note_constexpr_access_null : Note<
   "%select{read of|assignment to|increment of|decrement of}0 "
   "dereferenced null pointer is not allowed in a constant expression">;

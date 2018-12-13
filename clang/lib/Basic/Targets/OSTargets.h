@@ -133,6 +133,15 @@ public:
   /// is very similar to ELF's "protected";  Darwin requires a "weak"
   /// attribute on declarations that can be dynamically replaced.
   bool hasProtectedVisibility() const override { return false; }
+
+  TargetInfo::IntType getLeastIntTypeByWidth(unsigned BitWidth,
+                                             bool IsSigned) const final {
+    // Darwin uses `long long` for `int_least64_t` and `int_fast64_t`.
+    return BitWidth == 64
+               ? (IsSigned ? TargetInfo::SignedLongLong
+                           : TargetInfo::UnsignedLongLong)
+               : TargetInfo::getLeastIntTypeByWidth(BitWidth, IsSigned);
+  }
 };
 
 // DragonFlyBSD Target
