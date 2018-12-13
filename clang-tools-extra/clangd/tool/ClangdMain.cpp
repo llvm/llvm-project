@@ -141,7 +141,7 @@ static cl::opt<bool> AllScopesCompletion(
         "not defined in the scopes (e.g. "
         "namespaces) visible from the code completion point. Such completions "
         "can insert scope qualifiers."),
-    cl::init(false), cl::Hidden);
+    cl::init(true));
 
 static cl::opt<bool>
     ShowOrigins("debug-origin", cl::desc("Show origins of completion items"),
