@@ -12,10 +12,13 @@
 
 #include <type_traits>
 
+#ifndef SWIG
 // Macro to enable bitmask operations on an enum.  Without this, Enum | Enum
 // gets promoted to an int, so you have to say Enum a = Enum(eFoo | eBar).  If
 // you mark Enum with LLDB_MARK_AS_BITMASK_ENUM(Enum), however, you can simply
 // write Enum a = eFoo | eBar.
+// Unfortunately, swig<3.0 doesn't recognise the constexpr keyword, so remove
+// this entire block, as it is not necessary for swig processing.
 #define LLDB_MARK_AS_BITMASK_ENUM(Enum)                                        \
   constexpr Enum operator|(Enum a, Enum b) {                                   \
     return static_cast<Enum>(                                                  \
@@ -39,6 +42,9 @@
     a = a & b;                                                                 \
     return a;                                                                  \
   }
+#else
+#define LLDB_MARK_AS_BITMASK_ENUM(Enum)
+#endif
 
 #ifndef SWIG
 // With MSVC, the default type of an enum is always signed, even if one of the

@@ -1,7 +1,4 @@
 add_lldb_unittest(LLDBCoreTests
-  BroadcasterTest.cpp
-  EventTest.cpp
-  ListenerTest.cpp
   MangledTest.cpp
   RangeTest.cpp
   RichManglingContextTest.cpp

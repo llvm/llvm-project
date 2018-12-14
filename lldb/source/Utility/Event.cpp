@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Event.h"
+#include "lldb/Utility/Event.h"
 
-#include "lldb/Core/Broadcaster.h"
+#include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Stream.h"

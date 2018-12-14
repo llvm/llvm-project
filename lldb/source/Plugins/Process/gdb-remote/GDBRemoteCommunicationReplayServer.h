@@ -15,8 +15,8 @@
 #include "GDBRemoteCommunicationHistory.h"
 
 // Project includes
-#include "lldb/Core/Broadcaster.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Utility/Broadcaster.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/Support/Error.h"
 

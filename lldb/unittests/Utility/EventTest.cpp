@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Event.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/StreamString.h"
 #include "gtest/gtest.h"
 

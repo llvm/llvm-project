@@ -10,8 +10,8 @@
 #ifndef liblldb_Communication_h_
 #define liblldb_Communication_h_
 
-#include "lldb/Core/Broadcaster.h"
 #include "lldb/Host/HostThread.h"
+#include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
