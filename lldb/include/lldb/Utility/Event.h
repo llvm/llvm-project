@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Event_h_
-#define liblldb_Event_h_
+#ifndef LLDB_UTILITY_EVENT_H
+#define LLDB_UTILITY_EVENT_H
 
-#include "lldb/Core/Broadcaster.h"
+#include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/Utility/StructuredData.h"
@@ -271,4 +271,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Event_h_
+#endif // LLDB_UTILITY_EVENT_H

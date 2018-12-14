@@ -15,12 +15,12 @@
 #include <string>
 #include <vector>
 
-#include "lldb/Core/Broadcaster.h"
-#include "lldb/Core/Event.h"
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/RegisterCheckpoint.h"
 #include "lldb/Target/StackFrameList.h"
+#include "lldb/Utility/Broadcaster.h"
+#include "lldb/Utility/Event.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"

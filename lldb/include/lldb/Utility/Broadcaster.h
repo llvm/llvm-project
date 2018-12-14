@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_Broadcaster_h_
-#define liblldb_Broadcaster_h_
+#ifndef LLDB_UTILITY_BROADCASTER_H
+#define LLDB_UTILITY_BROADCASTER_H
 
 #include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-defines.h"
@@ -223,7 +223,7 @@ private:
 };
 
 //----------------------------------------------------------------------
-/// @class Broadcaster Broadcaster.h "lldb/Core/Broadcaster.h" An event
+/// @class Broadcaster Broadcaster.h "lldb/Utility/Broadcaster.h" An event
 /// broadcasting class.
 ///
 /// The Broadcaster class is designed to be subclassed by objects that wish to
@@ -595,4 +595,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_Broadcaster_h_
+#endif // LLDB_UTILITY_BROADCASTER_H

@@ -9,9 +9,9 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/Core/Broadcaster.h"
-#include "lldb/Core/Event.h"
-#include "lldb/Core/Listener.h"
+#include "lldb/Utility/Broadcaster.h"
+#include "lldb/Utility/Event.h"
+#include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Predicate.h"
 
 #include <thread>

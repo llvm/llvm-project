@@ -9,11 +9,11 @@
 
 #include "lldb/lldb-types.h"
 
-#include "lldb/Core/Listener.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Listener.h"
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
