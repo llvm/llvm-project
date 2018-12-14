@@ -132,7 +132,7 @@ void SwiftLanguageRuntime::SetupReflection() {
   auto *obj_file = M->GetObjectFile();
   if (!obj_file)
       return;
-  Address start_address = obj_file->GetHeaderAddress();
+  Address start_address = obj_file->GetBaseAddress();
   auto load_ptr = static_cast<uintptr_t>(start_address.GetLoadAddress(&target));
 
   // Bail out if we can't read the executable instead of crashing.
@@ -147,7 +147,7 @@ void SwiftLanguageRuntime::SetupReflection() {
     auto *obj_file = module_sp->GetObjectFile();
     if (!obj_file)
         return false;
-    Address start_address = obj_file->GetHeaderAddress();
+    Address start_address = obj_file->GetBaseAddress();
     auto load_ptr = static_cast<uintptr_t>(
         start_address.GetLoadAddress(&(m_process->GetTarget())));
     if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
@@ -232,7 +232,7 @@ void SwiftLanguageRuntime::ModulesDidLoad(const ModuleList &module_list) {
   auto *obj_file = module_sp->GetObjectFile();
     if (!obj_file)
         return true;
-    Address start_address = obj_file->GetHeaderAddress();
+    Address start_address = obj_file->GetBaseAddress();
     auto load_ptr = static_cast<uintptr_t>(
         start_address.GetLoadAddress(&(m_process->GetTarget())));
     if (load_ptr == 0 || load_ptr == LLDB_INVALID_ADDRESS)
