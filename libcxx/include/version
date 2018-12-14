@@ -121,8 +121,8 @@ __cpp_lib_void_t                            201411L <type_traits>
 #if _LIBCPP_STD_VER > 17
 #ifndef _LIBCPP_NO_HAS_CHAR8_T
 # define __cpp_lib_char8_t                              201811L
-#define  __cpp_lib_erase_if                             201811L
 #endif
+#define  __cpp_lib_erase_if                             201811L
 #endif
 
 #endif  // _LIBCPP_VERSIONH
