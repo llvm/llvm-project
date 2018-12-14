@@ -13,6 +13,7 @@
 #include "lldb/Core/Value.h"  // for Value, Value::ValueType::e...
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Flags.h"  // for Flags
 #include "lldb/Utility/Status.h" // for Status
@@ -129,6 +130,16 @@ bool ValueObjectChild::UpdateValue() {
 
       if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress()) {
         lldb::addr_t addr = parent->GetPointerValue();
+
+        // BEGIN Swift
+        if (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer))
+          if (auto process_sp = GetProcessSP())
+            if (auto runtime = process_sp->GetLanguageRuntime(
+                    parent_type.GetMinimumLanguage()))
+              if (!runtime->FixupReference(addr, parent_type))
+                m_error.SetErrorString("reference fixup failed.");
+        // END Swift
+
         m_value.GetScalar() = addr;
 
         if (addr == LLDB_INVALID_ADDRESS) {

@@ -2625,6 +2625,48 @@ SwiftLanguageRuntime::FixUpDynamicType(const TypeAndOrName &type_and_or_name,
   return ret;
 }
 
+bool SwiftLanguageRuntime::FixupReference(lldb::addr_t &addr,
+                                          CompilerType type) {
+  swift::CanType swift_can_type = GetCanonicalSwiftType(type);
+  switch (swift_can_type->getKind()) {
+  case swift::TypeKind::UnownedStorage: {
+    Target &target = m_process->GetTarget();
+    llvm::Triple triple = target.GetArchitecture().GetTriple();
+    // On Darwin the Swift runtime stores unowned references to
+    // Objective-C objects as a pointer to a struct that has the
+    // actual object pointer at offset zero. The least significant bit
+    // of the reference pointer indicates whether the reference refers
+    // to an Objective-C or Swift object.
+    //
+    // This is a property of the Swift runtime(!). In the future it
+    // may be necessary to check for the version of the Swift runtime
+    // (or indirectly by looking at the version of the remote
+    // operating system) to determine how to interpret references.
+    if (triple.isOSDarwin()) {
+      // Check whether this is a reference to an Objective-C object.
+      if ((addr & 1) == 0) {
+        // This is a Swift object, no further processing necessary.
+        return true;
+      }
+
+      Status error;
+      if (!m_process)
+        return false;
+
+      // Clear the discriminator bit to get at the pointer to the struct.
+      addr &= ~1ULL;
+      size_t ptr_size = m_process->GetAddressByteSize();
+
+      // Read the pointer to the Objective-C object.
+      target.ReadMemory(addr & ~1ULL, false, &addr, ptr_size, error);
+    }
+  }
+  default:
+    break;
+  }
+  return true;
+}
+
 bool SwiftLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {
   llvm::StringRef g_dollar_tau(u8"$\u03C4_");
   auto valobj_name = valobj.GetName().GetStringRef();
