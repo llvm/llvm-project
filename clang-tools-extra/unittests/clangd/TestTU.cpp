@@ -38,8 +38,10 @@ ParsedAST TestTU::build() const {
   Inputs.Contents = Code;
   Inputs.FS = buildTestFS({{FullFilename, Code}, {FullHeaderName, HeaderCode}});
   auto PCHs = std::make_shared<PCHContainerOperations>();
+  auto CI = buildCompilerInvocation(Inputs);
+  assert(CI && "Failed to build compilation invocation.");
   auto Preamble =
-      buildPreamble(FullFilename, *createInvocationFromCommandLine(Cmd),
+      buildPreamble(FullFilename, *CI,
                     /*OldPreamble=*/nullptr,
                     /*OldCompileCommand=*/Inputs.CompileCommand, Inputs, PCHs,
                     /*StoreInMemory=*/true, /*PreambleCallback=*/nullptr);
