@@ -55,7 +55,8 @@ struct AP32 {
   static const uptr kMetadataSize = sizeof(Metadata);
   typedef __sanitizer::CompactSizeClassMap SizeClassMap;
   static const uptr kRegionSizeLog = __hwasan::kRegionSizeLog;
-  typedef __hwasan::ByteMap ByteMap;
+  using AddressSpaceView = LocalAddressSpaceView;
+  using ByteMap = __hwasan::ByteMap;
   typedef HwasanMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };

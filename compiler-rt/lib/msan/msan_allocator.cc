@@ -57,7 +57,8 @@ struct MsanMapUnmapCallback {
     static const uptr kMetadataSize = sizeof(Metadata);
     typedef __sanitizer::CompactSizeClassMap SizeClassMap;
     static const uptr kRegionSizeLog = __msan::kRegionSizeLog;
-    typedef __msan::ByteMap ByteMap;
+    using AddressSpaceView = LocalAddressSpaceView;
+    using ByteMap = __msan::ByteMap;
     typedef MsanMapUnmapCallback MapUnmapCallback;
     static const uptr kFlags = 0;
   };
@@ -107,7 +108,8 @@ struct MsanMapUnmapCallback {
     static const uptr kMetadataSize = sizeof(Metadata);
     typedef __sanitizer::CompactSizeClassMap SizeClassMap;
     static const uptr kRegionSizeLog = __msan::kRegionSizeLog;
-    typedef __msan::ByteMap ByteMap;
+    using AddressSpaceView = LocalAddressSpaceView;
+    using ByteMap = __msan::ByteMap;
     typedef MsanMapUnmapCallback MapUnmapCallback;
     static const uptr kFlags = 0;
   };
