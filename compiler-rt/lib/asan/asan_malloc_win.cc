@@ -141,6 +141,11 @@ size_t _msize(void *ptr) {
 }
 
 ALLOCATION_FUNCTION_ATTRIBUTE
+size_t _msize_base(void *ptr) {
+  return _msize(ptr);
+}
+
+ALLOCATION_FUNCTION_ATTRIBUTE
 void *_expand(void *memblock, size_t size) {
   // _expand is used in realloc-like functions to resize the buffer if possible.
   // We don't want memory to stand still while resizing buffers, so return 0.
@@ -235,6 +240,7 @@ void ReplaceSystemMalloc() {
   TryToOverrideFunction("_recalloc_base", (uptr)_recalloc);
   TryToOverrideFunction("_recalloc_crt", (uptr)_recalloc);
   TryToOverrideFunction("_msize", (uptr)_msize);
+  TryToOverrideFunction("_msize_base", (uptr)_msize);
   TryToOverrideFunction("_expand", (uptr)_expand);
   TryToOverrideFunction("_expand_base", (uptr)_expand);
 

@@ -282,6 +282,11 @@ kmp_nested_proc_bind_t __kmp_nested_proc_bind = {NULL, 0, 0};
 int __kmp_affinity_num_places = 0;
 #endif
 
+#if OMP_50_ENABLED
+int __kmp_display_affinity = FALSE;
+char *__kmp_affinity_format = NULL;
+#endif // OMP_50_ENABLED
+
 kmp_hws_item_t __kmp_hws_socket = {0, 0};
 kmp_hws_item_t __kmp_hws_node = {0, 0};
 kmp_hws_item_t __kmp_hws_tile = {0, 0};
