@@ -17,17 +17,17 @@
 // you mark Enum with LLDB_MARK_AS_BITMASK_ENUM(Enum), however, you can simply
 // write Enum a = eFoo | eBar.
 #define LLDB_MARK_AS_BITMASK_ENUM(Enum)                                        \
-  inline Enum operator|(Enum a, Enum b) {                                      \
+  constexpr Enum operator|(Enum a, Enum b) {                                   \
     return static_cast<Enum>(                                                  \
         static_cast<std::underlying_type<Enum>::type>(a) |                     \
         static_cast<std::underlying_type<Enum>::type>(b));                     \
   }                                                                            \
-  inline Enum operator&(Enum a, Enum b) {                                      \
+  constexpr Enum operator&(Enum a, Enum b) {                                   \
     return static_cast<Enum>(                                                  \
         static_cast<std::underlying_type<Enum>::type>(a) &                     \
         static_cast<std::underlying_type<Enum>::type>(b));                     \
   }                                                                            \
-  inline Enum operator~(Enum a) {                                              \
+  constexpr Enum operator~(Enum a) {                                           \
     return static_cast<Enum>(                                                  \
         ~static_cast<std::underlying_type<Enum>::type>(a));                    \
   }                                                                            \
@@ -395,6 +395,7 @@ LLDB_MARK_AS_BITMASK_ENUM(SymbolContextItem)
 FLAGS_ENUM(Permissions){ePermissionsWritable = (1u << 0),
                         ePermissionsReadable = (1u << 1),
                         ePermissionsExecutable = (1u << 2)};
+LLDB_MARK_AS_BITMASK_ENUM(Permissions)
 
 enum InputReaderAction {
   eInputReaderActivate, // reader is newly pushed onto the reader stack

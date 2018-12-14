@@ -57,6 +57,9 @@ enum {
   UNW_EINVAL        = -6547, /* unsupported operation or bad value */
   UNW_EBADVERSION   = -6548, /* unwind info has unsupported version */
   UNW_ENOINFO       = -6549  /* no unwind info found */
+#if defined(_LIBUNWIND_TARGET_AARCH64) && !defined(_LIBUNWIND_IS_NATIVE_ONLY)
+  , UNW_ECROSSRASIGNING = -6550 /* cross unwind with return address signing */
+#endif
 };
 
 struct unw_context_t {
@@ -546,6 +549,8 @@ enum {
   UNW_ARM64_LR  = 30,
   UNW_ARM64_X31 = 31,
   UNW_ARM64_SP  = 31,
+  // reserved block
+  UNW_ARM64_RA_SIGN_STATE = 34,
   // reserved block
   UNW_ARM64_D0  = 64,
   UNW_ARM64_D1  = 65,
