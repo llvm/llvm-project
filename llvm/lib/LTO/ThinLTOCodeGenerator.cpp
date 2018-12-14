@@ -33,6 +33,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/CachePruning.h"
@@ -882,6 +883,9 @@ void ThinLTOCodeGenerator::run() {
 
   // Compute "dead" symbols, we don't want to import/export these!
   computeDeadSymbolsInIndex(*Index, GUIDPreservedSymbols);
+
+  // Synthesize entry counts for functions in the combined index.
+  computeSyntheticCounts(*Index);
 
   // Collect the import/export lists for all modules from the call-graph in the
   // combined index.

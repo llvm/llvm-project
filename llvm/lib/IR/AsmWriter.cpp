@@ -2294,11 +2294,15 @@ static void WriteAsOperandInternal(raw_ostream &Out, const Metadata *MD,
       Machine = MachineStorage.get();
     }
     int Slot = Machine->getMetadataSlot(N);
-    if (Slot == -1)
+    if (Slot == -1) {
+      if (const DILocation *Loc = dyn_cast<DILocation>(N)) {
+        writeDILocation(Out, Loc, TypePrinter, Machine, Context);
+        return;
+      }
       // Give the pointer value instead of "badref", since this comes up all
       // the time when debugging.
       Out << "<" << N << ">";
-    else
+    } else
       Out << '!' << Slot;
     return;
   }

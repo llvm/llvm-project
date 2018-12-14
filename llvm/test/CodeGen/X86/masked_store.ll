@@ -145,7 +145,7 @@ define void @store_v8i32_v8i32(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %
 ; SSE2-NEXT:  ## %bb.1: ## %cond.store
 ; SSE2-NEXT:    movd %xmm2, (%rdi)
 ; SSE2-NEXT:  LBB2_2: ## %else
-; SSE2-NEXT:    packssdw %xmm0, %xmm4
+; SSE2-NEXT:    psrlq $16, %xmm4
 ; SSE2-NEXT:    movd %xmm4, %eax
 ; SSE2-NEXT:    shrl $16, %eax
 ; SSE2-NEXT:    testb $1, %al

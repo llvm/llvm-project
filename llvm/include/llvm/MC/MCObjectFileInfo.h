@@ -18,6 +18,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/VersionTuple.h"
 
 namespace llvm {
 class MCContext;
@@ -390,6 +391,7 @@ private:
   bool PositionIndependent;
   MCContext *Ctx;
   Triple TT;
+  VersionTuple SDKVersion;
 
   void initMachOMCObjectFileInfo(const Triple &T);
   void initELFMCObjectFileInfo(const Triple &T, bool Large);
@@ -399,6 +401,12 @@ private:
 
 public:
   const Triple &getTargetTriple() const { return TT; }
+
+  void setSDKVersion(const VersionTuple &TheSDKVersion) {
+    SDKVersion = TheSDKVersion;
+  }
+
+  const VersionTuple &getSDKVersion() const { return SDKVersion; }
 };
 
 } // end namespace llvm

@@ -1144,6 +1144,21 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   return true;
 }
 
+/// Determine whether the instruction has undefined content for the given Size,
+/// either because it was freshly alloca'd or started its lifetime.
+static bool hasUndefContents(Instruction *I, ConstantInt *Size) {
+  if (isa<AllocaInst>(I))
+    return true;
+
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+    if (II->getIntrinsicID() == Intrinsic::lifetime_start)
+      if (ConstantInt *LTSize = dyn_cast<ConstantInt>(II->getArgOperand(0)))
+        if (LTSize->getZExtValue() >= Size->getZExtValue())
+          return true;
+
+  return false;
+}
+
 /// Transform memcpy to memset when its source was just memset.
 /// In other words, turn:
 /// \code
@@ -1167,12 +1182,27 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   if (!AA.isMustAlias(MemSet->getRawDest(), MemCpy->getRawSource()))
     return false;
 
-  ConstantInt *CopySize = cast<ConstantInt>(MemCpy->getLength());
+  // A known memset size is required.
   ConstantInt *MemSetSize = dyn_cast<ConstantInt>(MemSet->getLength());
+  if (!MemSetSize)
+    return false;
+
   // Make sure the memcpy doesn't read any more than what the memset wrote.
   // Don't worry about sizes larger than i64.
-  if (!MemSetSize || CopySize->getZExtValue() > MemSetSize->getZExtValue())
-    return false;
+  ConstantInt *CopySize = cast<ConstantInt>(MemCpy->getLength());
+  if (CopySize->getZExtValue() > MemSetSize->getZExtValue()) {
+    // If the memcpy is larger than the memset, but the memory was undef prior
+    // to the memset, we can just ignore the tail. Technically we're only
+    // interested in the bytes from MemSetSize..CopySize here, but as we can't
+    // easily represent this location, we use the full 0..CopySize range.
+    MemoryLocation MemCpyLoc = MemoryLocation::getForSource(MemCpy);
+    MemDepResult DepInfo = MD->getPointerDependencyFrom(
+        MemCpyLoc, true, MemSet->getIterator(), MemSet->getParent());
+    if (DepInfo.isDef() && hasUndefContents(DepInfo.getInst(), CopySize))
+      CopySize = MemSetSize;
+    else
+      return false;
+  }
 
   IRBuilder<> Builder(MemCpy);
   Builder.CreateMemSet(MemCpy->getRawDest(), MemSet->getOperand(1),
@@ -1252,19 +1282,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M) {
     if (MemCpyInst *MDep = dyn_cast<MemCpyInst>(SrcDepInfo.getInst()))
       return processMemCpyMemCpyDependence(M, MDep);
   } else if (SrcDepInfo.isDef()) {
-    Instruction *I = SrcDepInfo.getInst();
-    bool hasUndefContents = false;
-
-    if (isa<AllocaInst>(I)) {
-      hasUndefContents = true;
-    } else if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-      if (II->getIntrinsicID() == Intrinsic::lifetime_start)
-        if (ConstantInt *LTSize = dyn_cast<ConstantInt>(II->getArgOperand(0)))
-          if (LTSize->getZExtValue() >= CopySize->getZExtValue())
-            hasUndefContents = true;
-    }
-
-    if (hasUndefContents) {
+    if (hasUndefContents(SrcDepInfo.getInst(), CopySize)) {
       MD->removeInstruction(M);
       M->eraseFromParent();
       ++NumMemCpyInstr;

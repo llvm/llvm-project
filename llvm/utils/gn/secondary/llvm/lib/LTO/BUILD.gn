@@ -26,6 +26,7 @@ static_library("LTO") {
     "LTOBackend.cpp",
     "LTOCodeGenerator.cpp",
     "LTOModule.cpp",
+    "SummaryBasedOptimizations.cpp",
     "ThinLTOCodeGenerator.cpp",
     "UpdateCompilerUsed.cpp",
   ]

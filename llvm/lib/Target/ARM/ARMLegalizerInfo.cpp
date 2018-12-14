@@ -82,6 +82,9 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     return;
   }
 
+  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
+      .legalForCartesianProduct({s32}, {s1, s8, s16});
+
   // We're keeping these builders around because we'll want to add support for
   // floating point to them.
   auto &LoadStoreBuilder =
@@ -125,9 +128,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     else
       setAction({Op, s32}, Libcall);
   }
-
-  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
-      .legalForCartesianProduct({s32}, {s1, s8, s16});
 
   getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
   getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{s32, p0}});
