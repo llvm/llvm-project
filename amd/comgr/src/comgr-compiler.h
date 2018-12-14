@@ -83,7 +83,7 @@ class AMDGPUCompiler {
       default:
         llvm_unreachable("Only expecting errors");
       }
-      DiagnosticPrinterRawOStream DP(errs());
+      DiagnosticPrinterRawOStream DP(Compiler->LogS);
       DI.print(DP);
       Compiler->LogS << "\n";
       return true;
