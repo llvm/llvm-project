@@ -63,16 +63,6 @@ def note_fe_backend_invalid_loc : Note<"could "
 
 def err_fe_backend_unsupported : Error<"%0">, BackendInfo;
 
-def remark_sanitize_address_insert_extra_padding_accepted : Remark<
-    "-fsanitize-address-field-padding applied to %0">, ShowInSystemHeader,
-    InGroup<SanitizeAddressRemarks>;
-def remark_sanitize_address_insert_extra_padding_rejected : Remark<
-    "-fsanitize-address-field-padding ignored for %0 because it "
-    "%select{is not C++|is packed|is a union|is trivially copyable|"
-    "has trivial destructor|is standard layout|is in a blacklisted file|"
-    "is blacklisted}1">, ShowInSystemHeader,
-    InGroup<SanitizeAddressRemarks>;
-
 def err_fe_invalid_code_complete_file : Error<
     "cannot locate code-completion file %0">, DefaultFatal;
 def err_fe_stdout_binary : Error<"unable to change standard output to binary">,
