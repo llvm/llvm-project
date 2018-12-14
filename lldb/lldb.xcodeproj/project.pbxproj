@@ -402,6 +402,8 @@
 		4CDB8D6D1DBA91B6006C5B13 /* LibStdcppUniquePointer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4CDB8D671DBA91A6006C5B13 /* LibStdcppUniquePointer.cpp */; };
 		268900DA13353E6F00698AC0 /* LineEntry.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F1910F1B8EC00F91463 /* LineEntry.cpp */; };
 		268900DB13353E6F00698AC0 /* LineTable.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F1A10F1B8EC00F91463 /* LineTable.cpp */; };
+		2647B64421C43BB000A81D15 /* LinuxProcMaps.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2647B64221C43BB000A81D15 /* LinuxProcMaps.cpp */; };
+		2647B64321C43BB000A81D15 /* LinuxProcMaps.h in Headers */ = {isa = PBXBuildFile; fileRef = 2647B64121C43BAF00A81D15 /* LinuxProcMaps.h */; };
 		23059A0719532B96007B8189 /* LinuxSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23059A0519532B96007B8189 /* LinuxSignals.cpp */; };
 		2647B63E21C436BD00A81D15 /* Listener.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2647B63D21C436BC00A81D15 /* Listener.cpp */; };
 		2647B63821C4369500A81D15 /* Listener.h in Headers */ = {isa = PBXBuildFile; fileRef = 2647B63721C4369500A81D15 /* Listener.h */; };
@@ -2050,6 +2052,8 @@
 		26BC7C5B10F1B6E900F91463 /* LineEntry.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LineEntry.h; path = include/lldb/Symbol/LineEntry.h; sourceTree = "<group>"; };
 		26BC7F1A10F1B8EC00F91463 /* LineTable.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LineTable.cpp; path = source/Symbol/LineTable.cpp; sourceTree = "<group>"; };
 		26BC7C5C10F1B6E900F91463 /* LineTable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LineTable.h; path = include/lldb/Symbol/LineTable.h; sourceTree = "<group>"; };
+		2647B64221C43BB000A81D15 /* LinuxProcMaps.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LinuxProcMaps.cpp; path = Utility/LinuxProcMaps.cpp; sourceTree = "<group>"; };
+		2647B64121C43BAF00A81D15 /* LinuxProcMaps.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LinuxProcMaps.h; path = Utility/LinuxProcMaps.h; sourceTree = "<group>"; };
 		23059A0519532B96007B8189 /* LinuxSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = LinuxSignals.cpp; path = Utility/LinuxSignals.cpp; sourceTree = "<group>"; };
 		23059A0619532B96007B8189 /* LinuxSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = LinuxSignals.h; path = Utility/LinuxSignals.h; sourceTree = "<group>"; };
 		2647B63D21C436BC00A81D15 /* Listener.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Listener.cpp; path = source/Utility/Listener.cpp; sourceTree = "<group>"; };
@@ -4948,6 +4952,8 @@
 				B28058A0139988B0002D96D0 /* InferiorCallPOSIX.cpp */,
 				B28058A2139988C6002D96D0 /* InferiorCallPOSIX.h */,
 				B2D3033612EFA5C500F84EB3 /* InstructionUtils.h */,
+				2647B64221C43BB000A81D15 /* LinuxProcMaps.cpp */,
+				2647B64121C43BAF00A81D15 /* LinuxProcMaps.h */,
 				23059A0519532B96007B8189 /* LinuxSignals.cpp */,
 				23059A0619532B96007B8189 /* LinuxSignals.h */,
 				23173F8B192BA93F005C708F /* lldb-x86-register-enums.h */,
@@ -6995,6 +7001,7 @@
 			files = (
 				AF8AD6381BEC28C400150209 /* PlatformRemoteAppleTV.h in Headers */,
 				26EFB61C1BFE8D3E00544801 /* PlatformNetBSD.h in Headers */,
+				2647B64321C43BB000A81D15 /* LinuxProcMaps.h in Headers */,
 				AF3A4AD31EA05C4700B5DEB4 /* PlatformRemoteDarwinDevice.h in Headers */,
 				AF9113FE1FBE78EA004320CD /* RegisterContextPOSIXCore_ppc64le.h in Headers */,
 				AF33B4BF1C1FA441001B28D9 /* NetBSDSignals.h in Headers */,
@@ -7966,6 +7973,7 @@
 				AF2BA6EC1A707E3400C5248A /* UriParser.cpp in Sources */,
 				2689006D13353E0E00698AC0 /* IRExecutionUnit.cpp in Sources */,
 				304B2E461CAAA57B007829FE /* ClangUtil.cpp in Sources */,
+				2647B64421C43BB000A81D15 /* LinuxProcMaps.cpp in Sources */,
 				2689006E13353E1A00698AC0 /* File.cpp in Sources */,
 				2689006F13353E1A00698AC0 /* FileSpec.cpp in Sources */,
 				AF6CA6661FBBAF28005A0DC3 /* ArchSpec.cpp in Sources */,

@@ -26,6 +26,9 @@ set(test_inputs
    module-list-padded.dmp
    modules-dup-min-addr.dmp
    modules-order.dmp
+   regions-linux-map.dmp
+   regions-memlist.dmp
+   regions-memlist64.dmp
    thread-list-not-padded.dmp
    thread-list-padded.dmp
    )
