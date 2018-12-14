@@ -20,6 +20,7 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "llvm/ADT/StringSet.h"
 
 using namespace clang;
 using namespace ento;
@@ -67,20 +68,43 @@ private:
     bool STL : 1; // Is this an object of a standard type?
   };
 
+  // Not all of these are entirely move-safe, but they do provide *some*
+  // guarantees, and it means that somebody is using them after move
+  // in a valid manner.
+  // TODO: We can still try to identify *unsafe* use after move, such as
+  // dereference of a moved-from smart pointer (which is guaranteed to be null).
+  const llvm::StringSet<> StandardMoveSafeClasses = {
+      "basic_filebuf",
+      "basic_ios",
+      "future",
+      "optional",
+      "packaged_task"
+      "promise",
+      "shared_future",
+      "shared_lock",
+      "shared_ptr",
+      "thread",
+      "unique_ptr",
+      "unique_lock",
+      "weak_ptr",
+  };
+
   // Obtains ObjectKind of an object. Because class declaration cannot always
   // be easily obtained from the memory region, it is supplied separately.
-  static ObjectKind classifyObject(const MemRegion *MR,
-                                   const CXXRecordDecl *RD);
+  ObjectKind classifyObject(const MemRegion *MR, const CXXRecordDecl *RD) const;
 
   // Classifies the object and dumps a user-friendly description string to
   // the stream. Return value is equivalent to classifyObject.
-  static ObjectKind explainObject(llvm::raw_ostream &OS,
-                                  const MemRegion *MR, const CXXRecordDecl *RD);
+  ObjectKind explainObject(llvm::raw_ostream &OS,
+                           const MemRegion *MR, const CXXRecordDecl *RD) const;
+
+  bool isStandardMoveSafeClass(const CXXRecordDecl *RD) const;
 
   class MovedBugVisitor : public BugReporterVisitor {
   public:
-    MovedBugVisitor(const MemRegion *R, const CXXRecordDecl *RD)
-        : Region(R), RD(RD), Found(false) {}
+    MovedBugVisitor(const MoveChecker &Chk,
+                    const MemRegion *R, const CXXRecordDecl *RD)
+        : Chk(Chk), Region(R), RD(RD), Found(false) {}
 
     void Profile(llvm::FoldingSetNodeID &ID) const override {
       static int X = 0;
@@ -97,6 +121,7 @@ private:
                                                    BugReport &BR) override;
 
   private:
+    const MoveChecker &Chk;
     // The tracked region.
     const MemRegion *Region;
     // The class of the tracked object.
@@ -157,7 +182,7 @@ static const MemRegion *unwrapRValueReferenceIndirection(const MemRegion *MR) {
 
 std::shared_ptr<PathDiagnosticPiece>
 MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
-                                        BugReporterContext &BRC, BugReport &) {
+                                        BugReporterContext &BRC, BugReport &BR) {
   // We need only the last move of the reported object's region.
   // The visitor walks the ExplodedGraph backwards.
   if (Found)
@@ -182,7 +207,7 @@ MoveChecker::MovedBugVisitor::VisitNode(const ExplodedNode *N,
   llvm::raw_svector_ostream OS(Str);
 
   OS << "Object";
-  ObjectKind OK = explainObject(OS, Region, RD);
+  ObjectKind OK = Chk.explainObject(OS, Region, RD);
   if (OK.STL)
     OS << " is left in a valid but unspecified state after move";
   else
@@ -251,7 +276,7 @@ ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
     auto R =
         llvm::make_unique<BugReport>(*BT, OS.str(), N, LocUsedForUniqueing,
                                      MoveNode->getLocationContext()->getDecl());
-    R->addVisitor(llvm::make_unique<MovedBugVisitor>(Region, RD));
+    R->addVisitor(llvm::make_unique<MovedBugVisitor>(*this, Region, RD));
     C.emitReport(std::move(R));
     return N;
   }
@@ -370,20 +395,30 @@ bool MoveChecker::isInMoveSafeContext(const LocationContext *LC) const {
   return false;
 }
 
-MoveChecker::ObjectKind MoveChecker::classifyObject(const MemRegion *MR,
-                                                    const CXXRecordDecl *RD) {
+bool MoveChecker::isStandardMoveSafeClass(const CXXRecordDecl *RD) const {
+  const IdentifierInfo *II = RD->getIdentifier();
+  return II && StandardMoveSafeClasses.count(II->getName());
+}
+
+MoveChecker::ObjectKind
+MoveChecker::classifyObject(const MemRegion *MR,
+                            const CXXRecordDecl *RD) const {
+  // Local variables and local rvalue references are classified as "Local".
+  // For the purposes of this checker, we classify move-safe STL types
+  // as not-"STL" types, because that's how the checker treats them.
   MR = unwrapRValueReferenceIndirection(MR);
   return {
     /*Local=*/
         MR && isa<VarRegion>(MR) && isa<StackSpaceRegion>(MR->getMemorySpace()),
     /*STL=*/
-        RD && RD->getDeclContext()->isStdNamespace()
+        RD && RD->getDeclContext()->isStdNamespace() &&
+        !isStandardMoveSafeClass(RD)
   };
 }
 
-MoveChecker::ObjectKind MoveChecker::explainObject(llvm::raw_ostream &OS,
-                                                   const MemRegion *MR,
-                                                   const CXXRecordDecl *RD) {
+MoveChecker::ObjectKind
+MoveChecker::explainObject(llvm::raw_ostream &OS, const MemRegion *MR,
+                           const CXXRecordDecl *RD) const {
   // We may need a leading space every time we actually explain anything,
   // and we never know if we are to explain anything until we try.
   if (const auto DR =
