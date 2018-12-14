@@ -3601,7 +3601,7 @@ void ModuleBitcodeWriterBase::writeModuleLevelReferences(
 // Current version for the summary.
 // This is bumped whenever we introduce changes in the way some record are
 // interpreted, like flags for instance.
-static const uint64_t INDEX_VERSION = 5;
+static const uint64_t INDEX_VERSION = 6;
 
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.
@@ -3732,6 +3732,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     Flags |= 0x1;
   if (Index.skipModuleByDistributedBackend())
     Flags |= 0x2;
+  if (Index.hasSyntheticEntryCounts())
+    Flags |= 0x4;
   Stream.EmitRecord(bitc::FS_FLAGS, ArrayRef<uint64_t>{Flags});
 
   for (const auto &GVI : valueIds()) {
@@ -3747,6 +3749,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6));   // flags
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // instcount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // fflags
+  Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8));   // entrycount
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // numrefs
   Abbv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 4));   // immutablerefcnt
   // numrefs x valueid, n x (valueid)
@@ -3861,6 +3864,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     NameVals.push_back(getEncodedGVSummaryFlags(FS->flags()));
     NameVals.push_back(FS->instCount());
     NameVals.push_back(getEncodedFFlags(FS->fflags()));
+    NameVals.push_back(FS->entryCount());
+
     // Fill in below
     NameVals.push_back(0); // numrefs
     NameVals.push_back(0); // immutablerefcnt
@@ -3875,8 +3880,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         ImmutableRefCnt++;
       Count++;
     }
-    NameVals[5] = Count;
-    NameVals[6] = ImmutableRefCnt;
+    NameVals[6] = Count;
+    NameVals[7] = ImmutableRefCnt;
 
     bool HasProfileData = false;
     for (auto &EI : FS->calls()) {

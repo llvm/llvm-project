@@ -60,6 +60,7 @@ WasmDumper::dumpCustomSection(const WasmSection &WasmSec) {
     DylinkSec->MemoryAlignment = Info.MemoryAlignment;
     DylinkSec->TableSize = Info.TableSize;
     DylinkSec->TableAlignment = Info.TableAlignment;
+    DylinkSec->Needed = Info.Needed;
     CustomSec = std::move(DylinkSec);
   } else if (WasmSec.Name == "name") {
     std::unique_ptr<WasmYAML::NameSection> NameSec =

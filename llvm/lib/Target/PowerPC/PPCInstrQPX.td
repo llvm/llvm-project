@@ -245,32 +245,30 @@ let Uses = [RM] in {
 
   // SELECT_CC_* - Used to implement the SELECT_CC DAG operation.  Expanded after
   // instruction selection into a branch sequence.
-  let usesCustomInserter = 1 in {
-    def SELECT_CC_QFRC: Pseudo<(outs qfrc:$dst), (ins crrc:$cond, qfrc:$T, qfrc:$F,
-                                i32imm:$BROPC), "#SELECT_CC_QFRC",
-                                []>;
-    def SELECT_CC_QSRC: Pseudo<(outs qsrc:$dst), (ins crrc:$cond, qsrc:$T, qsrc:$F,
-                                i32imm:$BROPC), "#SELECT_CC_QSRC",
-                                []>;
-    def SELECT_CC_QBRC: Pseudo<(outs qbrc:$dst), (ins crrc:$cond, qbrc:$T, qbrc:$F,
-                                i32imm:$BROPC), "#SELECT_CC_QBRC",
-                                []>;
+  def SELECT_CC_QFRC: PPCCustomInserterPseudo<(outs qfrc:$dst), (ins crrc:$cond, qfrc:$T, qfrc:$F,
+                              i32imm:$BROPC), "#SELECT_CC_QFRC",
+                              []>;
+  def SELECT_CC_QSRC: PPCCustomInserterPseudo<(outs qsrc:$dst), (ins crrc:$cond, qsrc:$T, qsrc:$F,
+                              i32imm:$BROPC), "#SELECT_CC_QSRC",
+                              []>;
+  def SELECT_CC_QBRC: PPCCustomInserterPseudo<(outs qbrc:$dst), (ins crrc:$cond, qbrc:$T, qbrc:$F,
+                              i32imm:$BROPC), "#SELECT_CC_QBRC",
+                              []>;
 
-    // SELECT_* pseudo instructions, like SELECT_CC_* but taking condition
-    // register bit directly.
-    def SELECT_QFRC: Pseudo<(outs qfrc:$dst), (ins crbitrc:$cond,
-                            qfrc:$T, qfrc:$F), "#SELECT_QFRC",
-                            [(set v4f64:$dst,
-                                  (select i1:$cond, v4f64:$T, v4f64:$F))]>;
-    def SELECT_QSRC: Pseudo<(outs qsrc:$dst), (ins crbitrc:$cond,
-                            qsrc:$T, qsrc:$F), "#SELECT_QSRC",
-                            [(set v4f32:$dst,
-                                  (select i1:$cond, v4f32:$T, v4f32:$F))]>;
-    def SELECT_QBRC: Pseudo<(outs qbrc:$dst), (ins crbitrc:$cond,
-                            qbrc:$T, qbrc:$F), "#SELECT_QBRC",
-                            [(set v4i1:$dst,
-                                  (select i1:$cond, v4i1:$T, v4i1:$F))]>;
-  }
+  // SELECT_* pseudo instructions, like SELECT_CC_* but taking condition
+  // register bit directly.
+  def SELECT_QFRC: PPCCustomInserterPseudo<(outs qfrc:$dst), (ins crbitrc:$cond,
+                          qfrc:$T, qfrc:$F), "#SELECT_QFRC",
+                          [(set v4f64:$dst,
+                                (select i1:$cond, v4f64:$T, v4f64:$F))]>;
+  def SELECT_QSRC: PPCCustomInserterPseudo<(outs qsrc:$dst), (ins crbitrc:$cond,
+                          qsrc:$T, qsrc:$F), "#SELECT_QSRC",
+                          [(set v4f32:$dst,
+                                (select i1:$cond, v4f32:$T, v4f32:$F))]>;
+  def SELECT_QBRC: PPCCustomInserterPseudo<(outs qbrc:$dst), (ins crbitrc:$cond,
+                          qbrc:$T, qbrc:$F), "#SELECT_QBRC",
+                          [(set v4i1:$dst,
+                                (select i1:$cond, v4i1:$T, v4i1:$F))]>;
 
   // Convert and Round Instructions
   def QVFCTID : QPXX19_Int<4, 814, "qvfctid", int_ppc_qpx_qvfctid>;

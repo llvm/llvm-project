@@ -35,6 +35,10 @@
 #define omp_set_num_threads ompc_set_num_threads
 #define omp_set_dynamic ompc_set_dynamic
 #define omp_set_nested ompc_set_nested
+#define omp_set_affinity_format ompc_set_affinity_format
+#define omp_get_affinity_format ompc_get_affinity_format
+#define omp_display_affinity ompc_display_affinity
+#define omp_capture_affinity ompc_capture_affinity
 #define kmp_set_stacksize kmpc_set_stacksize
 #define kmp_set_stacksize_s kmpc_set_stacksize_s
 #define kmp_set_blocktime kmpc_set_blocktime
@@ -350,6 +354,17 @@ const omp_allocator_t *omp_low_lat_mem_alloc = (const omp_allocator_t *)5;
 const omp_allocator_t *omp_cgroup_mem_alloc = (const omp_allocator_t *)6;
 const omp_allocator_t *omp_pteam_mem_alloc = (const omp_allocator_t *)7;
 const omp_allocator_t *omp_thread_mem_alloc = (const omp_allocator_t *)8;
+/* OpenMP 5.0 Affinity Format */
+void omp_set_affinity_format(char const *format) { i; }
+size_t omp_get_affinity_format(char *buffer, size_t size) {
+  i;
+  return 0;
+}
+void omp_display_affinity(char const *format) { i; }
+size_t omp_capture_affinity(char *buffer, size_t buf_size, char const *format) {
+  i;
+  return 0;
+}
 #endif /* OMP_50_ENABLED */
 
 // end of file //

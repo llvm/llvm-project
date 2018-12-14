@@ -109,10 +109,10 @@ public:
                                VariableList &variables) override;
 
   size_t ParseTypes(const SymbolContext &sc) override;
-  size_t ParseVariablesForContext(const SymbolContext &sc) override {
-    return 0;
-  }
+  size_t ParseVariablesForContext(const SymbolContext &sc) override;
 
+  CompilerDecl GetDeclForUID(lldb::user_id_t uid) override;
+  CompilerDeclContext GetDeclContextForUID(lldb::user_id_t uid) override;
   CompilerDeclContext GetDeclContextContainingUID(lldb::user_id_t uid) override;
   Type *ResolveTypeUID(lldb::user_id_t type_uid) override;
   llvm::Optional<ArrayInfo> GetDynamicArrayInfoForUID(
@@ -194,20 +194,30 @@ private:
                          clang::MSInheritanceAttr::Spelling inheritance);
 
   lldb::FunctionSP GetOrCreateFunction(PdbCompilandSymId func_id,
-                                       const SymbolContext &sc);
+                                       CompileUnit &comp_unit);
   lldb::CompUnitSP GetOrCreateCompileUnit(const CompilandIndexItem &cci);
   lldb::TypeSP GetOrCreateType(PdbTypeSymId type_id);
   lldb::TypeSP GetOrCreateType(llvm::codeview::TypeIndex ti);
   lldb::VariableSP GetOrCreateGlobalVariable(PdbGlobalSymId var_id);
+  Block &GetOrCreateBlock(PdbCompilandSymId block_id);
+  lldb::VariableSP GetOrCreateLocalVariable(PdbCompilandSymId scope_id,
+                                            PdbCompilandSymId var_id,
+                                            bool is_param);
 
   lldb::FunctionSP CreateFunction(PdbCompilandSymId func_id,
-                                  const SymbolContext &sc);
+                                  CompileUnit &comp_unit);
+  Block &CreateBlock(PdbCompilandSymId block_id);
+  lldb::VariableSP CreateLocalVariable(PdbCompilandSymId scope_id,
+                                       PdbCompilandSymId var_id, bool is_param);
   lldb::CompUnitSP CreateCompileUnit(const CompilandIndexItem &cci);
   lldb::TypeSP CreateType(PdbTypeSymId type_id);
   lldb::TypeSP CreateAndCacheType(PdbTypeSymId type_id);
   lldb::VariableSP CreateGlobalVariable(PdbGlobalSymId var_id);
   lldb::VariableSP CreateConstantSymbol(PdbGlobalSymId var_id,
                                         const llvm::codeview::CVSymbol &cvs);
+  size_t ParseVariablesForCompileUnit(CompileUnit &comp_unit,
+                                      VariableList &variables);
+  size_t ParseVariablesForBlock(PdbCompilandSymId block_id);
 
   llvm::BumpPtrAllocator m_allocator;
 
@@ -224,6 +234,8 @@ private:
       m_parent_types;
 
   llvm::DenseMap<lldb::user_id_t, lldb::VariableSP> m_global_vars;
+  llvm::DenseMap<lldb::user_id_t, lldb::VariableSP> m_local_variables;
+  llvm::DenseMap<lldb::user_id_t, lldb::BlockSP> m_blocks;
   llvm::DenseMap<lldb::user_id_t, lldb::FunctionSP> m_functions;
   llvm::DenseMap<lldb::user_id_t, lldb::CompUnitSP> m_compilands;
   llvm::DenseMap<lldb::user_id_t, lldb::TypeSP> m_types;

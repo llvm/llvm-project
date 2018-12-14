@@ -192,12 +192,6 @@ def ext_flexible_array_init : Extension<
   "flexible array initialization is a GNU extension">, InGroup<GNUFlexibleArrayInitializer>;
 
 // Declarations.
-def ext_duplicate_declspec : Extension<"duplicate '%0' declaration specifier">,
-  InGroup<DuplicateDeclSpecifier>;
-def ext_warn_duplicate_declspec : ExtWarn<"duplicate '%0' declaration specifier">,
-  InGroup<DuplicateDeclSpecifier>;
-def warn_duplicate_declspec : Warning<"duplicate '%0' declaration specifier">,
-  InGroup<DuplicateDeclSpecifier>;
 def ext_plain_complex : ExtWarn<
   "plain '_Complex' requires a type specifier; assuming '_Complex double'">;
 def ext_imaginary_constant : Extension<
@@ -211,7 +205,6 @@ def err_invalid_sign_spec : Error<"'%0' cannot be signed or unsigned">;
 def err_invalid_width_spec : Error<
   "'%select{|short|long|long long}0 %1' is invalid">;
 def err_invalid_complex_spec : Error<"'_Complex %0' is invalid">;
-def err_friend_decl_spec : Error<"'%0' is invalid in friend declarations">;
 
 def ext_auto_type_specifier : ExtWarn<
   "'auto' type specifier is a C++11 extension">, InGroup<CXX11>;
@@ -251,9 +244,6 @@ def err_invalid_vector_long_double_decl_spec : Error<
   "cannot use 'long double' with '__vector'">;
 def warn_vector_long_decl_spec_combination : Warning<
   "Use of 'long' with '__vector' is deprecated">, InGroup<Deprecated>;
-
-def err_use_of_tag_name_without_tag : Error<
-  "must use '%1' tag to refer to type %0%select{| in this scope}2">;
 
 def err_redeclaration_different_type : Error<
   "redeclaration of %0 with a different type%diff{: $ vs $|}1,2">;
@@ -530,13 +520,6 @@ def warn_access_decl_deprecated : Warning<
 def err_access_decl : Error<
   "ISO C++11 does not allow access declarations; "
   "use using declarations instead">;
-def ext_dynamic_exception_spec : ExtWarn<
-  "ISO C++17 does not allow dynamic exception specifications">,
-  InGroup<DynamicExceptionSpec>, DefaultError;
-def warn_exception_spec_deprecated : Warning<
-  "dynamic exception specifications are deprecated">,
-  InGroup<DeprecatedDynamicExceptionSpec>, DefaultIgnore;
-def note_exception_spec_deprecated : Note<"use '%0' instead">;
 def warn_deprecated_copy_operation : Warning<
   "definition of implicit copy %select{constructor|assignment operator}1 "
   "for %0 is deprecated because it has a user-declared "
@@ -791,10 +774,6 @@ def warn_cxx_ms_struct :
   Warning<"ms_struct may not produce Microsoft-compatible layouts for classes "
           "with base classes or virtual functions">,
   DefaultError, InGroup<IncompatibleMSStruct>;
-def warn_npot_ms_struct :
-  Warning<"ms_struct may not produce Microsoft-compatible layouts with fundamental "
-          "data types with sizes that aren't a power of two">,
-  DefaultError, InGroup<IncompatibleMSStruct>;
 def err_section_conflict : Error<"%0 causes a section type conflict with %1">;
 def err_no_base_classes : Error<"invalid use of '__super', %0 has no base classes">;
 def err_invalid_super_scope : Error<"invalid use of '__super', "
@@ -923,8 +902,6 @@ def err_objc_runtime_visible_subclass : Error<
   "Objective-C runtime">;
 def note_objc_needs_superclass : Note<
   "add a super class to fix this problem">;
-def warn_dup_category_def : Warning<
-  "duplicate definition of category %1 on interface %0">;
 def err_conflicting_super_class : Error<"conflicting super class name %0">;
 def err_dup_implementation_class : Error<"reimplementation of class %0">;
 def err_dup_implementation_category : Error<
@@ -1284,11 +1261,6 @@ def err_static_assert_expression_is_not_constant : Error<
 def err_static_assert_failed : Error<"static_assert failed%select{ %1|}0">;
 def err_static_assert_requirement_failed : Error<
   "static_assert failed due to requirement '%0'%select{ %2|}1">;
-def ext_static_assert_no_message : ExtWarn<
-  "static_assert with no message is a C++17 extension">, InGroup<CXX17>;
-def warn_cxx14_compat_static_assert_no_message : Warning<
-  "static_assert with no message is incompatible with C++ standards before C++17">,
-  DefaultIgnore, InGroup<CXXPre17Compat>;
 
 def ext_inline_variable : ExtWarn<
   "inline variables are a C++17 extension">, InGroup<CXX17>;
@@ -1361,10 +1333,6 @@ def ext_friend_tag_redecl_outside_namespace : ExtWarn<
   InGroup<MicrosoftUnqualifiedFriend>;
 def err_pure_friend : Error<"friend declaration cannot have a pure-specifier">;
 
-def err_invalid_member_in_interface : Error<
-  "%select{data member |non-public member function |static member function |"
-          "user-declared constructor|user-declared destructor|operator |"
-          "nested class }0%1 is not permitted within an interface type">;
 def err_invalid_base_in_interface : Error<
   "interface type cannot inherit from "
   "%select{struct|non-public interface|class}0 %1">;
@@ -2566,8 +2534,6 @@ def err_attribute_argument_out_of_bounds : Error<
   "%0 attribute parameter %1 is out of bounds">;
 def err_attribute_only_once_per_parameter : Error<
   "%0 attribute can only be applied once per parameter">;
-def err_attribute_uuid_malformed_guid : Error<
-  "uuid attribute contains a malformed GUID">;
 def err_mismatched_uuid : Error<"uuid does not match previous declaration">;
 def note_previous_uuid : Note<"previous uuid specified here">;
 def warn_attribute_pointers_only : Warning<
@@ -2791,8 +2757,6 @@ def warn_nocf_check_attribute_ignored :
 def warn_attribute_after_definition_ignored : Warning<
   "attribute %0 after definition is ignored">,
    InGroup<IgnoredAttributes>;
-def warn_unknown_attribute_ignored : Warning<
-  "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
 def warn_cxx11_gnu_attribute_on_type : Warning<
   "attribute %0 ignored, because it cannot be applied to a type">,
   InGroup<IgnoredAttributes>;
@@ -4861,21 +4825,6 @@ def err_vm_func_decl : Error<
   "function declaration cannot have variably modified type">;
 def err_array_too_large : Error<
   "array is too large (%0 elements)">;
-
-// -Wpadded, -Wpacked
-def warn_padded_struct_field : Warning<
-  "padding %select{struct|interface|class}0 %1 with %2 "
-  "%select{byte|bit}3%s2 to align %4">,
-  InGroup<Padded>, DefaultIgnore;
-def warn_padded_struct_anon_field : Warning<
-  "padding %select{struct|interface|class}0 %1 with %2 "
-  "%select{byte|bit}3%s2 to align anonymous bit-field">,
-  InGroup<Padded>, DefaultIgnore;
-def warn_padded_struct_size : Warning<
-  "padding size of %0 with %1 %select{byte|bit}2%s1 to alignment boundary">,
-  InGroup<Padded>, DefaultIgnore;
-def warn_unnecessary_packed : Warning<
-  "packed attribute is unnecessary for %0">, InGroup<Packed>, DefaultIgnore;
 
 def err_typecheck_negative_array_size : Error<"array size is negative">;
 def warn_typecheck_function_qualifiers_ignored : Warning<
@@ -8692,11 +8641,6 @@ def err_opencl_multiple_access_qualifiers : Error<
 def note_opencl_typedef_access_qualifier : Note<
   "previously declared '%0' here">;
 
-// OpenCL Section 6.8.g
-def err_opencl_unknown_type_specifier : Error<
-  "OpenCL %select{C|C++}0 version %1 does not support the '%2' "
-  "%select{type qualifier|storage class specifier}3">;
-
 // OpenCL v2.0 s6.12.5 Blocks restrictions
 def err_opencl_block_storage_type : Error<
   "the __block storage type is not permitted">;
@@ -9458,10 +9402,6 @@ def warn_block_literal_qualifiers_on_omitted_return_type : Warning<
   "'%0' qualifier on omitted return type %1 has no effect">,
   InGroup<IgnoredQualifiers>;
 
-def ext_warn_gnu_final : ExtWarn<
-  "__final is a GNU extension, consider using C++11 final">,
-  InGroup<GccCompat>;
-
 def warn_shadow_field : Warning<
   "%select{parameter|non-static data member}3 %0 %select{|of %1 }3shadows "
   "member inherited from type %2">, InGroup<ShadowField>, DefaultIgnore;
@@ -9534,4 +9474,5 @@ def warn_noderef_on_non_pointer_or_array : Warning<
   "'noderef' can only be used on an array or pointer type">, InGroup<IgnoredAttributes>;
 def warn_noderef_to_dereferenceable_pointer : Warning<
   "casting to dereferenceable pointer removes 'noderef' attribute">, InGroup<NoDeref>;
+
 } // end of sema component.

@@ -165,8 +165,6 @@ define float @signbits_ashr_insert_ashr_extract_sitofp(i64 %a0, i64 %a1) nounwin
 ; X32-NEXT:    sarl $30, %ecx
 ; X32-NEXT:    vmovd %eax, %xmm0
 ; X32-NEXT:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $2, {{[0-9]+}}(%esp), %xmm0, %xmm0
-; X32-NEXT:    vpinsrd $3, {{[0-9]+}}(%esp), %xmm0, %xmm0
 ; X32-NEXT:    vpsrlq $3, %xmm0, %xmm0
 ; X32-NEXT:    vmovd %xmm0, %eax
 ; X32-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
@@ -178,12 +176,10 @@ define float @signbits_ashr_insert_ashr_extract_sitofp(i64 %a0, i64 %a1) nounwin
 ; X64-LABEL: signbits_ashr_insert_ashr_extract_sitofp:
 ; X64:       # %bb.0:
 ; X64-NEXT:    sarq $30, %rdi
-; X64-NEXT:    vmovq %rsi, %xmm0
-; X64-NEXT:    vmovq %rdi, %xmm1
-; X64-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; X64-NEXT:    vmovq %rdi, %xmm0
 ; X64-NEXT:    vpsrlq $3, %xmm0, %xmm0
 ; X64-NEXT:    vmovq %xmm0, %rax
-; X64-NEXT:    vcvtsi2ssl %eax, %xmm2, %xmm0
+; X64-NEXT:    vcvtsi2ssl %eax, %xmm1, %xmm0
 ; X64-NEXT:    retq
   %1 = ashr i64 %a0, 30
   %2 = insertelement <2 x i64> undef, i64 %1, i32 0

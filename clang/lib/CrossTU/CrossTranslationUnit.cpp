@@ -17,7 +17,6 @@
 #include "clang/CrossTU/CrossTUDiagnostic.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Index/USRGeneration.h"
 #include "llvm/ADT/Triple.h"
@@ -250,8 +249,8 @@ CrossTranslationUnitContext::getCrossTUDefinition(const FunctionDecl *FD,
 void CrossTranslationUnitContext::emitCrossTUDiagnostics(const IndexError &IE) {
   switch (IE.getCode()) {
   case index_error_code::missing_index_file:
-    Context.getDiagnostics().Report(diag::err_fe_error_opening)
-        << IE.getFileName() << "required by the CrossTU functionality";
+    Context.getDiagnostics().Report(diag::err_ctu_error_opening)
+        << IE.getFileName();
     break;
   case index_error_code::invalid_index_format:
     Context.getDiagnostics().Report(diag::err_fnmap_parsing)

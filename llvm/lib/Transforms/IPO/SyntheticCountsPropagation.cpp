@@ -46,7 +46,7 @@ using ProfileCount = Function::ProfileCount;
 #define DEBUG_TYPE "synthetic-counts-propagation"
 
 /// Initial synthetic count assigned to functions.
-static cl::opt<int>
+cl::opt<int>
     InitialSyntheticCount("initial-synthetic-count", cl::Hidden, cl::init(10),
                           cl::ZeroOrMore,
                           cl::desc("Initial value of synthetic entry count."));

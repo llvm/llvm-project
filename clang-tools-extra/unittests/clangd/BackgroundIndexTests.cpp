@@ -66,6 +66,25 @@ protected:
   BackgroundIndexTest() { preventThreadStarvationInTests(); }
 };
 
+TEST_F(BackgroundIndexTest, NoCrashOnErrorFile) {
+  MockFSProvider FS;
+  FS.Files[testPath("root/A.cc")] = "error file";
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  OverlayCDB CDB(/*Base=*/nullptr);
+  BackgroundIndex Idx(Context::empty(), "", FS, CDB,
+                      [&](llvm::StringRef) { return &MSS; });
+
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = testPath("root/A.cc");
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", "-DA=1", testPath("root/A.cc")};
+  CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
+
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+}
+
 TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   MockFSProvider FS;
   // a.h yields different symbols when included by A.cc vs B.cc.

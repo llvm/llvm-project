@@ -501,8 +501,9 @@ public:
         FunctionSummary::GVFlags(
             GlobalValue::LinkageTypes::AvailableExternallyLinkage,
             /*NotEligibleToImport=*/true, /*Live=*/true, /*IsLocal=*/false),
-        0, FunctionSummary::FFlags{}, std::vector<ValueInfo>(),
-        std::move(Edges), std::vector<GlobalValue::GUID>(),
+        /*InsCount=*/0, FunctionSummary::FFlags{}, /*EntryCount=*/0,
+        std::vector<ValueInfo>(), std::move(Edges),
+        std::vector<GlobalValue::GUID>(),
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::ConstVCall>(),
@@ -520,6 +521,11 @@ private:
   /// Function summary specific flags.
   FFlags FunFlags;
 
+  /// The synthesized entry count of the function.
+  /// This is only populated during ThinLink phase and remains unused while
+  /// generating per-module summaries.
+  uint64_t EntryCount = 0;
+
   /// List of <CalleeValueInfo, CalleeInfo> call edge pairs from this function.
   std::vector<EdgeTy> CallGraphEdgeList;
 
@@ -527,14 +533,15 @@ private:
 
 public:
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
-                  std::vector<ValueInfo> Refs, std::vector<EdgeTy> CGEdges,
+                  uint64_t EntryCount, std::vector<ValueInfo> Refs,
+                  std::vector<EdgeTy> CGEdges,
                   std::vector<GlobalValue::GUID> TypeTests,
                   std::vector<VFuncId> TypeTestAssumeVCalls,
                   std::vector<VFuncId> TypeCheckedLoadVCalls,
                   std::vector<ConstVCall> TypeTestAssumeConstVCalls,
                   std::vector<ConstVCall> TypeCheckedLoadConstVCalls)
       : GlobalValueSummary(FunctionKind, Flags, std::move(Refs)),
-        InstCount(NumInsts), FunFlags(FunFlags),
+        InstCount(NumInsts), FunFlags(FunFlags), EntryCount(EntryCount),
         CallGraphEdgeList(std::move(CGEdges)) {
     if (!TypeTests.empty() || !TypeTestAssumeVCalls.empty() ||
         !TypeCheckedLoadVCalls.empty() || !TypeTestAssumeConstVCalls.empty() ||
@@ -558,6 +565,12 @@ public:
 
   /// Get the instruction count recorded for this function.
   unsigned instCount() const { return InstCount; }
+
+  /// Get the synthetic entry count for this function.
+  uint64_t entryCount() const { return EntryCount; }
+
+  /// Set the synthetic entry count for this function.
+  void setEntryCount(uint64_t EC) { EntryCount = EC; }
 
   /// Return the list of <CalleeValueInfo, CalleeInfo> pairs.
   ArrayRef<EdgeTy> calls() const { return CallGraphEdgeList; }
@@ -802,6 +815,9 @@ private:
   /// considered live.
   bool WithGlobalValueDeadStripping = false;
 
+  /// Indicates that summary-based synthetic entry count propagation has run
+  bool HasSyntheticEntryCounts = false;
+
   /// Indicates that distributed backend should skip compilation of the
   /// module. Flag is suppose to be set by distributed ThinLTO indexing
   /// when it detected that the module is not needed during the final
@@ -913,6 +929,9 @@ public:
   void setWithGlobalValueDeadStripping() {
     WithGlobalValueDeadStripping = true;
   }
+
+  bool hasSyntheticEntryCounts() const { return HasSyntheticEntryCounts; }
+  void setHasSyntheticEntryCounts() { HasSyntheticEntryCounts = true; }
 
   bool skipModuleByDistributedBackend() const {
     return SkipModuleByDistributedBackend;
@@ -1158,6 +1177,7 @@ public:
 /// GraphTraits definition to build SCC for the index
 template <> struct GraphTraits<ValueInfo> {
   typedef ValueInfo NodeRef;
+  using EdgeRef = FunctionSummary::EdgeTy &;
 
   static NodeRef valueInfoFromEdge(FunctionSummary::EdgeTy &P) {
     return P.first;
@@ -1165,6 +1185,8 @@ template <> struct GraphTraits<ValueInfo> {
   using ChildIteratorType =
       mapped_iterator<std::vector<FunctionSummary::EdgeTy>::iterator,
                       decltype(&valueInfoFromEdge)>;
+
+  using ChildEdgeIteratorType = std::vector<FunctionSummary::EdgeTy>::iterator;
 
   static NodeRef getEntryNode(ValueInfo V) { return V; }
 
@@ -1187,6 +1209,26 @@ template <> struct GraphTraits<ValueInfo> {
         cast<FunctionSummary>(N.getSummaryList().front()->getBaseObject());
     return ChildIteratorType(F->CallGraphEdgeList.end(), &valueInfoFromEdge);
   }
+
+  static ChildEdgeIteratorType child_edge_begin(NodeRef N) {
+    if (!N.getSummaryList().size()) // handle external function
+      return FunctionSummary::ExternalNode.CallGraphEdgeList.begin();
+
+    FunctionSummary *F =
+        cast<FunctionSummary>(N.getSummaryList().front()->getBaseObject());
+    return F->CallGraphEdgeList.begin();
+  }
+
+  static ChildEdgeIteratorType child_edge_end(NodeRef N) {
+    if (!N.getSummaryList().size()) // handle external function
+      return FunctionSummary::ExternalNode.CallGraphEdgeList.end();
+
+    FunctionSummary *F =
+        cast<FunctionSummary>(N.getSummaryList().front()->getBaseObject());
+    return F->CallGraphEdgeList.end();
+  }
+
+  static NodeRef edge_dest(EdgeRef E) { return E.first; }
 };
 
 template <>

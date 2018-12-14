@@ -36,6 +36,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_symbolizer_test.cc
   sanitizer_test_main.cc
   sanitizer_thread_registry_test.cc
+  sanitizer_type_traits_test.cc
   sanitizer_vector_test.cc)
 
 set(SANITIZER_TEST_HEADERS

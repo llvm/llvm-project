@@ -51,11 +51,10 @@ define void @t4(i8* nocapture %s, i8 %a) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    imull $16843009, %ecx, %ecx ## imm = 0x1010101
+; CHECK-NEXT:    movl %ecx, 11(%eax)
 ; CHECK-NEXT:    movl %ecx, 8(%eax)
 ; CHECK-NEXT:    movl %ecx, 4(%eax)
 ; CHECK-NEXT:    movl %ecx, (%eax)
-; CHECK-NEXT:    movw %cx, 12(%eax)
-; CHECK-NEXT:    movb %cl, 14(%eax)
 ; CHECK-NEXT:    retl
 entry:
   tail call void @llvm.memset.p0i8.i32(i8* %s, i8 %a, i32 15, i1 false)

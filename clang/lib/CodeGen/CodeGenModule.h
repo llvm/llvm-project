@@ -1408,6 +1408,9 @@ private:
   /// Emit the Clang version as llvm.ident metadata.
   void EmitVersionIdentMetadata();
 
+  /// Emit the Clang commandline as llvm.commandline metadata.
+  void EmitCommandLineMetadata();
+
   /// Emits target specific Metadata for global declarations.
   void EmitTargetMetadata();
 

@@ -2412,14 +2412,20 @@ class CallExpr : public Expr {
 
   void updateDependenciesFromArg(Expr *Arg);
 
+public:
+  enum class ADLCallKind : bool { NotADL, UsesADL };
+  static constexpr ADLCallKind NotADL = ADLCallKind::NotADL;
+  static constexpr ADLCallKind UsesADL = ADLCallKind::UsesADL;
+
 protected:
   // These versions of the constructor are for derived classes.
   CallExpr(const ASTContext &C, StmtClass SC, Expr *fn,
            ArrayRef<Expr *> preargs, ArrayRef<Expr *> args, QualType t,
-           ExprValueKind VK, SourceLocation rparenloc, unsigned MinNumArgs = 0);
+           ExprValueKind VK, SourceLocation rparenloc, unsigned MinNumArgs = 0,
+           ADLCallKind UsesADL = NotADL);
   CallExpr(const ASTContext &C, StmtClass SC, Expr *fn, ArrayRef<Expr *> args,
            QualType t, ExprValueKind VK, SourceLocation rparenloc,
-           unsigned MinNumArgs = 0);
+           unsigned MinNumArgs = 0, ADLCallKind UsesADL = NotADL);
   CallExpr(const ASTContext &C, StmtClass SC, unsigned NumPreArgs,
            unsigned NumArgs, EmptyShell Empty);
 
@@ -2443,7 +2449,8 @@ public:
   /// arguments. The actual number of arguments will be the greater of
   /// args.size() and MinNumArgs.
   CallExpr(const ASTContext &C, Expr *fn, ArrayRef<Expr *> args, QualType t,
-           ExprValueKind VK, SourceLocation rparenloc, unsigned MinNumArgs = 0);
+           ExprValueKind VK, SourceLocation rparenloc, unsigned MinNumArgs = 0,
+           ADLCallKind UsesADL = NotADL);
 
   /// Build an empty call expression.
   CallExpr(const ASTContext &C, unsigned NumArgs, EmptyShell Empty);
@@ -2451,6 +2458,14 @@ public:
   const Expr *getCallee() const { return cast<Expr>(SubExprs[FN]); }
   Expr *getCallee() { return cast<Expr>(SubExprs[FN]); }
   void setCallee(Expr *F) { SubExprs[FN] = F; }
+
+  ADLCallKind getADLCallKind() const {
+    return static_cast<ADLCallKind>(CallExprBits.UsesADL);
+  }
+  void setADLCallKind(ADLCallKind V = UsesADL) {
+    CallExprBits.UsesADL = static_cast<bool>(V);
+  }
+  bool usesADL() const { return getADLCallKind() == UsesADL; }
 
   Decl *getCalleeDecl();
   const Decl *getCalleeDecl() const {

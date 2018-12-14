@@ -89,10 +89,10 @@ public:
   void EmitAssemblerFlag(MCAssemblerFlag Flag) override;
   void EmitLinkerOptions(ArrayRef<std::string> Options) override;
   void EmitDataRegion(MCDataRegionType Kind) override;
-  void EmitVersionMin(MCVersionMinType Kind, unsigned Major,
-                      unsigned Minor, unsigned Update) override;
-  void EmitBuildVersion(unsigned Platform, unsigned Major,
-                        unsigned Minor, unsigned Update) override;
+  void EmitVersionMin(MCVersionMinType Kind, unsigned Major, unsigned Minor,
+                      unsigned Update, VersionTuple SDKVersion) override;
+  void EmitBuildVersion(unsigned Platform, unsigned Major, unsigned Minor,
+                        unsigned Update, VersionTuple SDKVersion) override;
   void EmitThumbFunc(MCSymbol *Func) override;
   bool EmitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
@@ -270,14 +270,16 @@ void MCMachOStreamer::EmitDataRegion(MCDataRegionType Kind) {
 }
 
 void MCMachOStreamer::EmitVersionMin(MCVersionMinType Kind, unsigned Major,
-                                     unsigned Minor, unsigned Update) {
-  getAssembler().setVersionMin(Kind, Major, Minor, Update);
+                                     unsigned Minor, unsigned Update,
+                                     VersionTuple SDKVersion) {
+  getAssembler().setVersionMin(Kind, Major, Minor, Update, SDKVersion);
 }
 
 void MCMachOStreamer::EmitBuildVersion(unsigned Platform, unsigned Major,
-                                       unsigned Minor, unsigned Update) {
+                                       unsigned Minor, unsigned Update,
+                                       VersionTuple SDKVersion) {
   getAssembler().setBuildVersion((MachO::PlatformType)Platform, Major, Minor,
-                                 Update);
+                                 Update, SDKVersion);
 }
 
 void MCMachOStreamer::EmitThumbFunc(MCSymbol *Symbol) {
@@ -507,7 +509,7 @@ MCStreamer *llvm::createMachOStreamer(MCContext &Context,
       new MCMachOStreamer(Context, std::move(MAB), std::move(OW), std::move(CE),
                           DWARFMustBeAtTheEnd, LabelSections);
   const Triple &Target = Context.getObjectFileInfo()->getTargetTriple();
-  S->EmitVersionForTarget(Target);
+  S->EmitVersionForTarget(Target, Context.getObjectFileInfo()->getSDKVersion());
   if (RelaxAll)
     S->getAssembler().setRelaxAll(true);
   return S;

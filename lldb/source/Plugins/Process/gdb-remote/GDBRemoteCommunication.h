@@ -19,12 +19,12 @@
 #include <vector>
 
 #include "lldb/Core/Communication.h"
-#include "lldb/Core/Listener.h"
 #include "lldb/Host/HostThread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Predicate.h"
-#include "lldb/lldb-public.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
+#include "lldb/lldb-public.h"
 
 namespace lldb_private {
 namespace process_gdb_remote {

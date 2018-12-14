@@ -1698,6 +1698,11 @@ void __kmp_join_barrier(int gtid) {
     if (__kmp_tasking_mode != tskm_immediate_exec) {
       __kmp_task_team_wait(this_thr, team USE_ITT_BUILD_ARG(itt_sync_obj));
     }
+#if OMP_50_ENABLED
+    if (__kmp_display_affinity) {
+      KMP_CHECK_UPDATE(team->t.t_display_affinity, 0);
+    }
+#endif
 #if KMP_STATS_ENABLED
     // Have master thread flag the workers to indicate they are now waiting for
     // next parallel region, Also wake them up so they switch their timers to
@@ -1985,6 +1990,19 @@ void __kmp_fork_barrier(int gtid, int tid) {
   }
 #endif
 #if OMP_50_ENABLED
+  // Perform the display affinity functionality
+  if (__kmp_display_affinity) {
+    if (team->t.t_display_affinity
+#if KMP_AFFINITY_SUPPORTED
+        || (__kmp_affinity_type == affinity_balanced && team->t.t_size_changed)
+#endif
+            ) {
+      // NULL means use the affinity-format-var ICV
+      __kmp_aux_display_affinity(gtid, NULL);
+      this_thr->th.th_prev_num_threads = team->t.t_nproc;
+      this_thr->th.th_prev_level = team->t.t_level;
+    }
+  }
   if (!KMP_MASTER_TID(tid))
     KMP_CHECK_UPDATE(this_thr->th.th_def_allocator, team->t.t_def_allocator);
 #endif

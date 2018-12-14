@@ -157,6 +157,17 @@
 // RUN: %clang -### -c -O3 -ffunction-sections -grecord-gcc-switches %s 2>&1 \
 //             | FileCheck -check-prefix=GRECORD_OPT %s
 //
+// RUN: %clang -### -c -grecord-command-line %s 2>&1 \
+//             | FileCheck -check-prefix=GRECORD %s
+// RUN: %clang -### -c -gno-record-command-line %s 2>&1 \
+//             | FileCheck -check-prefix=GNO_RECORD %s
+// RUN: %clang -### -c -grecord-command-line -gno-record-command-line %s 2>&1 \
+//             | FileCheck -check-prefix=GNO_RECORD %s/
+// RUN: %clang -### -c -grecord-command-line -o - %s 2>&1 \
+//             | FileCheck -check-prefix=GRECORD_O %s
+// RUN: %clang -### -c -O3 -ffunction-sections -grecord-command-line %s 2>&1 \
+//             | FileCheck -check-prefix=GRECORD_OPT %s
+//
 // RUN: %clang -### -c -gstrict-dwarf -gno-strict-dwarf %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=GIGNORE %s
 //

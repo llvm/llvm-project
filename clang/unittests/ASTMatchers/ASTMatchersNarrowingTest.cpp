@@ -1386,6 +1386,10 @@ TEST(ObjCIvarRefExprMatcher, IvarExpr) {
         hasDeclaration(namedDecl(hasName("y"))))));
 }
 
+TEST(BlockExprMatcher, BlockExpr) {
+  EXPECT_TRUE(matchesObjC("void f() { ^{}(); }", blockExpr()));
+}
+
 TEST(StatementCountIs, FindsNoStatementsInAnEmptyCompoundStatement) {
   EXPECT_TRUE(matches("void f() { }",
                       compoundStmt(statementCountIs(0))));

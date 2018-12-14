@@ -15,8 +15,8 @@
 #include <string>
 
 #include "lldb/Core/Communication.h"
-#include "lldb/Core/Listener.h"
 #include "lldb/Core/StreamBuffer.h"
+#include "lldb/Utility/Listener.h"
 #include "lldb/Utility/Predicate.h"
 #include "lldb/lldb-private.h"
 

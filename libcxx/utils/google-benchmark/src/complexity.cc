@@ -73,8 +73,8 @@ std::string GetBigOString(BigO complexity) {
 //   - time          : Vector containing the times for the benchmark tests.
 //   - fitting_curve : lambda expression (e.g. [](int64_t n) {return n; };).
 
-// For a deeper explanation on the algorithm logic, look the README file at
-// http://github.com/ismaelJimenez/Minimal-Cpp-Least-Squared-Fit
+// For a deeper explanation on the algorithm logic, please refer to
+// https://en.wikipedia.org/wiki/Least_squares#Least_squares,_regression_analysis_and_statistics
 
 LeastSq MinimalLeastSq(const std::vector<int64_t>& n,
                        const std::vector<double>& time,

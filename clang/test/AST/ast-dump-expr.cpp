@@ -508,3 +508,46 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:4> 'Ts...' lvalue ParmVar 0x{{[^ ]*}} 'a' 'Ts...'
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:14> 'int' lvalue Var 0x{{[^ ]*}} 'b' 'int'
 }
+
+
+namespace NS {
+struct X {};
+void f(X);
+void y(...);
+} // namespace NS
+
+// CHECK-LABEL: FunctionDecl 0x{{[^ ]*}} {{.*}}ADLCall 'void ()'
+void ADLCall() {
+  NS::X x;
+  // CHECK: CallExpr 0x{{[^ ]*}} <line:[[@LINE+1]]:{{[^>]+}}> 'void' adl{{$}}
+  f(x);
+  // CHECK: CallExpr 0x{{[^ ]*}} <line:[[@LINE+1]]:{{[^>]+}}> 'void' adl{{$}}
+  y(x);
+}
+
+// CHECK-LABEL: FunctionDecl 0x{{[^ ]*}} {{.*}}NonADLCall 'void ()'
+void NonADLCall() {
+  NS::X x;
+  // CHECK: CallExpr 0x{{[^ ]*}} <line:[[@LINE+1]]:{{[^>]+}}> 'void'{{$}}
+  NS::f(x);
+}
+
+// CHECK-LABEL: FunctionDecl 0x{{[^ ]*}} {{.*}}NonADLCall2 'void ()'
+void NonADLCall2() {
+  NS::X x;
+  using NS::f;
+  // CHECK: CallExpr 0x{{[^ ]*}} <line:[[@LINE+1]]:{{[^>]+}}> 'void'{{$}}
+  f(x);
+  // CHECK: CallExpr 0x{{[^ ]*}} <line:[[@LINE+1]]:{{[^>]+}}> 'void' adl{{$}}
+  y(x);
+}
+
+namespace test_adl_call_three {
+using namespace NS;
+// CHECK-LABEL: FunctionDecl 0x{{[^ ]*}} {{.*}}NonADLCall3 'void ()'
+void NonADLCall3() {
+  X x;
+  // CHECK: CallExpr 0x{{[^ ]*}} <line:[[@LINE+1]]:{{[^>]+}}> 'void'{{$}}
+  f(x);
+}
+} // namespace test_adl_call_three

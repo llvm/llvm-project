@@ -4,9 +4,9 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 
-; These tests are each targeted at a particular RISC-V ALU instruction. Other
-; files in this folder exercise LLVM IR instructions that don't directly match a
-; RISC-V instruction
+; These tests are each targeted at a particular RISC-V ALU instruction. Most
+; other files in this folder exercise LLVM IR instructions that don't directly
+; match a RISC-V instruction.
 
 ; Register-immediate instructions.
 

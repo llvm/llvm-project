@@ -556,7 +556,7 @@ define <8 x float> @load_v8f32_v8i32(<8 x i32> %trigger, <8 x float>* %addr, <8 
 ; SSE2-NEXT:    movss {{.*#+}} xmm5 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm5[0],xmm2[1,2,3]
 ; SSE2-NEXT:  LBB6_2: ## %else
-; SSE2-NEXT:    packssdw %xmm0, %xmm4
+; SSE2-NEXT:    psrlq $16, %xmm4
 ; SSE2-NEXT:    movd %xmm4, %eax
 ; SSE2-NEXT:    shrl $16, %eax
 ; SSE2-NEXT:    testb $1, %al

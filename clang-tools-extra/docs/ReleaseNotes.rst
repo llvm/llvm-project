@@ -93,6 +93,12 @@ Improvements to clang-tidy
   Checks for cases where arguments to ``absl::Duration`` factory functions are
   scaled internally and could be changed to a different factory function.
 
+- New :doc:`abseil-duration-subtraction
+  <clang-tidy/checks/abseil-duration-subtraction>` check.
+
+  Checks for cases where subtraction should be performed in the
+  ``absl::Duration`` domain.
+
 - New :doc:`abseil-faster-strsplit-delimiter
   <clang-tidy/checks/abseil-faster-strsplit-delimiter>` check.
 
