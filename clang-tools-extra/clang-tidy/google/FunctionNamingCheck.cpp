@@ -110,10 +110,12 @@ void FunctionNamingCheck::registerMatchers(MatchFinder *Finder) {
 void FunctionNamingCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("function");
 
+  bool IsGlobal = MatchedDecl->getStorageClass() != SC_Static;
   diag(MatchedDecl->getLocation(),
-       "function name %0 not using function naming conventions described by "
-       "Google Objective-C style guide")
-      << MatchedDecl << generateFixItHint(MatchedDecl);
+       "%select{static function|function in global namespace}1 named %0 must "
+       "%select{be in|have an appropriate prefix followed by}1 Pascal case as "
+       "required by Google Objective-C style guide")
+      << MatchedDecl << IsGlobal << generateFixItHint(MatchedDecl);
 }
 
 } // namespace objc
