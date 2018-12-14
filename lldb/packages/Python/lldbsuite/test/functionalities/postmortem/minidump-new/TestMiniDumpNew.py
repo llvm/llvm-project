@@ -97,12 +97,16 @@ class MiniDumpNewTestCase(TestBase):
         self.assertTrue(self.process, PROCESS_IS_VALID)
         expected_modules = [
             {
-                'filename' : 'linux-gate.so',
-                'uuid' : '4EAD28F8-88EF-3520-872B-73C6F2FE7306-C41AF22F',
+                'filename' : 'linux-x86_64',
+                'uuid' : 'E35C283B-C327-C287-62DB-788BF5A4078B-E2351448',
             },
             {
                 'filename' : 'libm-2.19.so',
                 'uuid' : 'D144258E-6149-00B2-55A3-1F3FD2283A87-8670D5BC',
+            },
+            {
+                'filename' : 'libgcc_s.so.1',
+                'uuid' : '36311B44-5771-0AE5-578C-4BF00791DED7-359DBB92',
             },
             {
                 'filename' : 'libstdc++.so.6.0.19',
@@ -113,24 +117,20 @@ class MiniDumpNewTestCase(TestBase):
                 'uuid' : 'CF699A15-CAAE-64F5-0311-FC4655B86DC3-9A479789',
             },
             {
-                'filename' : 'linux-x86_64',
-                'uuid' : 'E35C283B-C327-C287-62DB-788BF5A4078B-E2351448',
-            },
-            {
-                'filename' : 'libgcc_s.so.1',
-                'uuid' : '36311B44-5771-0AE5-578C-4BF00791DED7-359DBB92',
-            },
-            {
                 'filename' : 'libpthread-2.19.so',
                 'uuid' : '31E9F21A-E8C1-0396-171F-1E13DA157809-86FA696C',
+            },
+            {
+                'filename' : 'libbreakpad.so',
+                'uuid' : '784FD549-332D-826E-D23F-18C17C6F320A',
             },
             {
                 'filename' : 'ld-2.19.so',
                 'uuid' : 'D0F53790-4076-D73F-29E4-A37341F8A449-E2EF6CD0',
             },
             {
-                'filename' : 'libbreakpad.so',
-                'uuid' : '784FD549-332D-826E-D23F-18C17C6F320A',
+                'filename' : 'linux-gate.so',
+                'uuid' : '4EAD28F8-88EF-3520-872B-73C6F2FE7306-C41AF22F',
             },
         ]
         self.assertEqual(self.target.GetNumModules(), len(expected_modules))
