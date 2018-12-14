@@ -105,6 +105,10 @@ public:
   virtual TypeAndOrName FixUpDynamicType(const TypeAndOrName &type_and_or_name,
                                          ValueObject &static_value) = 0;
 
+  /// This allows a language runtime to adjust references depending on the type.
+  /// \return true on success.
+  virtual bool FixupReference(lldb::addr_t &addr, CompilerType type) {}
+
   virtual void SetExceptionBreakpoints() {}
 
   virtual void ClearExceptionBreakpoints() {}
