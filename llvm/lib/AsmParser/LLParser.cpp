@@ -7727,8 +7727,8 @@ bool LLParser::ParseFunctionSummary(std::string Name, GlobalValue::GUID GUID,
     return true;
 
   auto FS = llvm::make_unique<FunctionSummary>(
-      GVFlags, InstCount, FFlags, std::move(Refs), std::move(Calls),
-      std::move(TypeIdInfo.TypeTests),
+      GVFlags, InstCount, FFlags, /*EntryCount=*/0, std::move(Refs),
+      std::move(Calls), std::move(TypeIdInfo.TypeTests),
       std::move(TypeIdInfo.TypeTestAssumeVCalls),
       std::move(TypeIdInfo.TypeCheckedLoadVCalls),
       std::move(TypeIdInfo.TypeTestAssumeConstVCalls),

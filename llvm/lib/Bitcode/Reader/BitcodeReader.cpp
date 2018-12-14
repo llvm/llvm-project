@@ -5247,9 +5247,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   }
   const uint64_t Version = Record[0];
   const bool IsOldProfileFormat = Version == 1;
-  if (Version < 1 || Version > 5)
+  if (Version < 1 || Version > 6)
     return error("Invalid summary version " + Twine(Version) +
-                 ", 1, 2, 3, 4 or 5 expected");
+                 ". Version should be in the range [1-6].");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional
@@ -5303,6 +5303,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       // 1 bit: SkipModuleByDistributedBackend flag.
       if (Flags & 0x2)
         TheIndex.setSkipModuleByDistributedBackend();
+      // 1 bit: HasSyntheticEntryCounts flag.
+      if (Flags & 0x4)
+        TheIndex.setHasSyntheticEntryCounts();
       break;
     }
     case bitc::FS_VALUE_GUID: { // [valueid, refguid]
@@ -5358,8 +5361,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
           IsOldProfileFormat, HasProfile, HasRelBF);
       setImmutableRefs(Refs, NumImmutableRefs);
       auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
-          std::move(Calls), std::move(PendingTypeTests),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), /*EntryCount=*/0,
+          std::move(Refs), std::move(Calls), std::move(PendingTypeTests),
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),
@@ -5437,18 +5440,25 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       uint64_t RawFlags = Record[2];
       unsigned InstCount = Record[3];
       uint64_t RawFunFlags = 0;
+      uint64_t EntryCount = 0;
       unsigned NumRefs = Record[4];
       unsigned NumImmutableRefs = 0;
       int RefListStartIndex = 5;
 
       if (Version >= 4) {
         RawFunFlags = Record[4];
-        NumRefs = Record[5];
         RefListStartIndex = 6;
+        size_t NumRefsIndex = 5;
         if (Version >= 5) {
-          NumImmutableRefs = Record[6];
           RefListStartIndex = 7;
+          if (Version >= 6) {
+            NumRefsIndex = 6;
+            EntryCount = Record[5];
+            RefListStartIndex = 8;
+          }
+          NumImmutableRefs = Record[RefListStartIndex - 1];
         }
+        NumRefs = Record[NumRefsIndex];
       }
 
       auto Flags = getDecodedGVSummaryFlags(RawFlags, Version);
@@ -5464,8 +5474,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       ValueInfo VI = getValueInfoFromValueId(ValueID).first;
       setImmutableRefs(Refs, NumImmutableRefs);
       auto FS = llvm::make_unique<FunctionSummary>(
-          Flags, InstCount, getDecodedFFlags(RawFunFlags), std::move(Refs),
-          std::move(Edges), std::move(PendingTypeTests),
+          Flags, InstCount, getDecodedFFlags(RawFunFlags), EntryCount,
+          std::move(Refs), std::move(Edges), std::move(PendingTypeTests),
           std::move(PendingTypeTestAssumeVCalls),
           std::move(PendingTypeCheckedLoadVCalls),
           std::move(PendingTypeTestAssumeConstVCalls),

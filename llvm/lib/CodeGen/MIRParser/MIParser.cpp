@@ -226,6 +226,7 @@ public:
   bool parseMCSymbolOperand(MachineOperand &Dest);
   bool parseMDNode(MDNode *&Node);
   bool parseDIExpression(MDNode *&Expr);
+  bool parseDILocation(MDNode *&Expr);
   bool parseMetadataOperand(MachineOperand &Dest);
   bool parseCFIOffset(int &Offset);
   bool parseCFIRegister(unsigned &Reg);
@@ -776,11 +777,15 @@ bool MIParser::parse(MachineInstr *&MI) {
   DebugLoc DebugLocation;
   if (Token.is(MIToken::kw_debug_location)) {
     lex();
-    if (Token.isNot(MIToken::exclaim))
-      return error("expected a metadata node after 'debug-location'");
     MDNode *Node = nullptr;
-    if (parseMDNode(Node))
-      return true;
+    if (Token.is(MIToken::exclaim)) {
+      if (parseMDNode(Node))
+        return true;
+    } else if (Token.is(MIToken::md_dilocation)) {
+      if (parseDILocation(Node))
+        return true;
+    } else
+      return error("expected a metadata node after 'debug-location'");
     if (!isa<DILocation>(Node))
       return error("referenced metadata is not a DILocation");
     DebugLocation = DebugLoc(Node);
@@ -897,6 +902,9 @@ bool MIParser::parseStandaloneMDNode(MDNode *&Node) {
       return true;
   } else if (Token.is(MIToken::md_diexpr)) {
     if (parseDIExpression(Node))
+      return true;
+  } else if (Token.is(MIToken::md_dilocation)) {
+    if (parseDILocation(Node))
       return true;
   } else
     return error("expected a metadata node");
@@ -1681,6 +1689,109 @@ bool MIParser::parseDIExpression(MDNode *&Expr) {
     return true;
 
   Expr = DIExpression::get(MF.getFunction().getContext(), Elements);
+  return false;
+}
+
+bool MIParser::parseDILocation(MDNode *&Loc) {
+  assert(Token.is(MIToken::md_dilocation));
+  lex();
+
+  bool HaveLine = false;
+  unsigned Line = 0;
+  unsigned Column = 0;
+  MDNode *Scope = nullptr;
+  MDNode *InlinedAt = nullptr;
+  bool ImplicitCode = false;
+
+  if (expectAndConsume(MIToken::lparen))
+    return true;
+
+  if (Token.isNot(MIToken::rparen)) {
+    do {
+      if (Token.is(MIToken::Identifier)) {
+        if (Token.stringValue() == "line") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (Token.isNot(MIToken::IntegerLiteral) ||
+              Token.integerValue().isSigned())
+            return error("expected unsigned integer");
+          Line = Token.integerValue().getZExtValue();
+          HaveLine = true;
+          lex();
+          continue;
+        }
+        if (Token.stringValue() == "column") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (Token.isNot(MIToken::IntegerLiteral) ||
+              Token.integerValue().isSigned())
+            return error("expected unsigned integer");
+          Column = Token.integerValue().getZExtValue();
+          lex();
+          continue;
+        }
+        if (Token.stringValue() == "scope") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (parseMDNode(Scope))
+            return error("expected metadata node");
+          if (!isa<DIScope>(Scope))
+            return error("expected DIScope node");
+          continue;
+        }
+        if (Token.stringValue() == "inlinedAt") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (Token.is(MIToken::exclaim)) {
+            if (parseMDNode(InlinedAt))
+              return true;
+          } else if (Token.is(MIToken::md_dilocation)) {
+            if (parseDILocation(InlinedAt))
+              return true;
+          } else
+            return error("expected metadata node");
+          if (!isa<DILocation>(InlinedAt))
+            return error("expected DILocation node");
+          continue;
+        }
+        if (Token.stringValue() == "isImplicitCode") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (!Token.is(MIToken::Identifier))
+            return error("expected true/false");
+          // As far as I can see, we don't have any existing need for parsing
+          // true/false in MIR yet. Do it ad-hoc until there's something else
+          // that needs it.
+          if (Token.stringValue() == "true")
+            ImplicitCode = true;
+          else if (Token.stringValue() == "false")
+            ImplicitCode = false;
+          else
+            return error("expected true/false");
+          lex();
+          continue;
+        }
+      }
+      return error(Twine("invalid DILocation argument '") +
+                   Token.stringValue() + "'");
+    } while (consumeIfPresent(MIToken::comma));
+  }
+
+  if (expectAndConsume(MIToken::rparen))
+    return true;
+
+  if (!HaveLine)
+    return error("DILocation requires line number");
+  if (!Scope)
+    return error("DILocation requires a scope");
+
+  Loc = DILocation::get(MF.getFunction().getContext(), Line, Column, Scope,
+                        InlinedAt, ImplicitCode);
   return false;
 }
 

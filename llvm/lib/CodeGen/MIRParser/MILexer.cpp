@@ -576,6 +576,7 @@ static MIToken::TokenKind getMetadataKeywordKind(StringRef Identifier) {
       .Case("!noalias", MIToken::md_noalias)
       .Case("!range", MIToken::md_range)
       .Case("!DIExpression", MIToken::md_diexpr)
+      .Case("!DILocation", MIToken::md_dilocation)
       .Default(MIToken::Error);
 }
 

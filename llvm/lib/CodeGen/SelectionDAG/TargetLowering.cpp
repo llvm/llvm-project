@@ -4213,6 +4213,51 @@ bool TargetLowering::expandFunnelShift(SDNode *Node, SDValue &Result,
   return true;
 }
 
+// TODO: Merge with expandFunnelShift.
+bool TargetLowering::expandROT(SDNode *Node, SDValue &Result,
+                               SelectionDAG &DAG) const {
+  EVT VT = Node->getValueType(0);
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  bool IsLeft = Node->getOpcode() == ISD::ROTL;
+  SDValue Op0 = Node->getOperand(0);
+  SDValue Op1 = Node->getOperand(1);
+  SDLoc DL(SDValue(Node, 0));
+
+  EVT ShVT = Op1.getValueType();
+  SDValue BitWidthC = DAG.getConstant(EltSizeInBits, DL, ShVT);
+
+  // If a rotate in the other direction is legal, use it.
+  unsigned RevRot = IsLeft ? ISD::ROTR : ISD::ROTL;
+  if (isOperationLegal(RevRot, VT)) {
+    SDValue Sub = DAG.getNode(ISD::SUB, DL, ShVT, BitWidthC, Op1);
+    Result = DAG.getNode(RevRot, DL, VT, Op0, Sub);
+    return true;
+  }
+
+  if (VT.isVector() && (!isOperationLegalOrCustom(ISD::SHL, VT) ||
+                        !isOperationLegalOrCustom(ISD::SRL, VT) ||
+                        !isOperationLegalOrCustom(ISD::SUB, VT) ||
+                        !isOperationLegalOrCustomOrPromote(ISD::OR, VT) ||
+                        !isOperationLegalOrCustomOrPromote(ISD::AND, VT)))
+    return false;
+
+  // Otherwise,
+  //   (rotl x, c) -> (or (shl x, (and c, w-1)), (srl x, (and w-c, w-1)))
+  //   (rotr x, c) -> (or (srl x, (and c, w-1)), (shl x, (and w-c, w-1)))
+  //
+  assert(isPowerOf2_32(EltSizeInBits) && EltSizeInBits > 1 &&
+         "Expecting the type bitwidth to be a power of 2");
+  unsigned ShOpc = IsLeft ? ISD::SHL : ISD::SRL;
+  unsigned HsOpc = IsLeft ? ISD::SRL : ISD::SHL;
+  SDValue BitWidthMinusOneC = DAG.getConstant(EltSizeInBits - 1, DL, ShVT);
+  SDValue NegOp1 = DAG.getNode(ISD::SUB, DL, ShVT, BitWidthC, Op1);
+  SDValue And0 = DAG.getNode(ISD::AND, DL, ShVT, Op1, BitWidthMinusOneC);
+  SDValue And1 = DAG.getNode(ISD::AND, DL, ShVT, NegOp1, BitWidthMinusOneC);
+  Result = DAG.getNode(ISD::OR, DL, VT, DAG.getNode(ShOpc, DL, VT, Op0, And0),
+                       DAG.getNode(HsOpc, DL, VT, Op0, And1));
+  return true;
+}
+
 bool TargetLowering::expandFP_TO_SINT(SDNode *Node, SDValue &Result,
                                SelectionDAG &DAG) const {
   SDValue Src = Node->getOperand(0);
