@@ -13,8 +13,8 @@
 #include <mutex>
 #include <vector>
 
-#include "lldb/Core/Broadcaster.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Utility/Broadcaster.h"
 
 namespace lldb_private {
 
