@@ -1935,20 +1935,27 @@ void __kmp_elapsed_tick(double *t) { *t = 1 / (double)CLOCKS_PER_SEC; }
 kmp_uint64 __kmp_now_nsec() {
   struct timeval t;
   gettimeofday(&t, NULL);
-  return KMP_NSEC_PER_SEC * t.tv_sec + 1000 * t.tv_usec;
+  kmp_uint64 nsec = (kmp_uint64)KMP_NSEC_PER_SEC * (kmp_uint64)t.tv_sec +
+                    (kmp_uint64)1000 * (kmp_uint64)t.tv_usec;
+  return nsec;
 }
 
 #if KMP_ARCH_X86 || KMP_ARCH_X86_64
 /* Measure clock ticks per millisecond */
 void __kmp_initialize_system_tick() {
+  kmp_uint64 now, nsec2, diff;
   kmp_uint64 delay = 100000; // 50~100 usec on most machines.
   kmp_uint64 nsec = __kmp_now_nsec();
   kmp_uint64 goal = __kmp_hardware_timestamp() + delay;
-  kmp_uint64 now;
   while ((now = __kmp_hardware_timestamp()) < goal)
     ;
-  __kmp_ticks_per_msec =
-      (kmp_uint64)(1e6 * (delay + (now - goal)) / (__kmp_now_nsec() - nsec));
+  nsec2 = __kmp_now_nsec();
+  diff = nsec2 - nsec;
+  if (diff > 0) {
+    kmp_uint64 tpms = (kmp_uint64)(1e6 * (delay + (now - goal)) / diff);
+    if (tpms > 0)
+      __kmp_ticks_per_msec = tpms;
+  }
 }
 #endif
 

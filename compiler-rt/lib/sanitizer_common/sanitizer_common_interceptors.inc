@@ -7864,6 +7864,55 @@ INTERCEPTOR(int, cap_rights_get, int fd, __sanitizer_cap_rights_t *rights) {
   return ret;
 }
 
+INTERCEPTOR(bool, cap_rights_is_valid, const __sanitizer_cap_rights_t *rights) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, cap_rights_is_valid, rights);
+  if (rights)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, rights, sizeof(*rights));
+
+  return REAL(cap_rights_is_valid(rights));
+}
+
+INTERCEPTOR(__sanitizer_cap_rights *, cap_rights_merge,
+  __sanitizer_cap_rights *dst, const __sanitizer_cap_rights *src) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, cap_rights_merge, dst, src);
+  if (src)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, src, sizeof(*src));
+
+  __sanitizer_cap_rights *ret = REAL(cap_rights_merge)(dst, src);
+  if (dst)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(*dst));
+
+  return ret;
+}
+
+INTERCEPTOR(__sanitizer_cap_rights *, cap_rights_remove,
+  __sanitizer_cap_rights *dst, const __sanitizer_cap_rights *src) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, cap_rights_remove, dst, src);
+  if (src)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, src, sizeof(*src));
+
+  __sanitizer_cap_rights *ret = REAL(cap_rights_remove)(dst, src);
+  if (dst)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dst, sizeof(*dst));
+
+  return ret;
+}
+
+INTERCEPTOR(bool, cap_rights_contains, const __sanitizer_cap_rights *big,
+  const __sanitizer_cap_rights *little) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, cap_rights_contains, big, little);
+  if (little)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, little, sizeof(*little));
+  if (big)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, big, sizeof(*big));
+
+  return REAL(cap_rights_contains)(big, little);
+}
+
 INTERCEPTOR(int, cap_ioctls_limit, int fd, const uptr *cmds, SIZE_T ncmds) {
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, cap_ioctls_limit, fd, cmds, ncmds);
@@ -7885,6 +7934,10 @@ INTERCEPTOR(int, cap_ioctls_get, int fd, uptr *cmds, SIZE_T maxcmds) {
 #define INIT_CAPSICUM                          \
   COMMON_INTERCEPT_FUNCTION(cap_rights_get);   \
   COMMON_INTERCEPT_FUNCTION(cap_rights_limit); \
+  COMMON_INTERCEPT_FUNCTION(cap_rights_contains); \
+  COMMON_INTERCEPT_FUNCTION(cap_rights_remove); \
+  COMMON_INTERCEPT_FUNCTION(cap_rights_merge); \
+  COMMON_INTERCEPT_FUNCTION(cap_rights_is_valid); \
   COMMON_INTERCEPT_FUNCTION(cap_ioctls_get);   \
   COMMON_INTERCEPT_FUNCTION(cap_ioctls_limit)
 #else
