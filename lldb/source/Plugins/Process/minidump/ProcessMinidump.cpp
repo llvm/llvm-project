@@ -284,14 +284,8 @@ ArchSpec ProcessMinidump::GetArchitecture() {
 
 Status ProcessMinidump::GetMemoryRegionInfo(lldb::addr_t load_addr,
                                             MemoryRegionInfo &range_info) {
-  Status error;
-  auto info = m_minidump_parser.GetMemoryRegionInfo(load_addr);
-  if (!info) {
-    error.SetErrorString("No valid MemoryRegionInfo found!");
-    return error;
-  }
-  range_info = info.getValue();
-  return error;
+  range_info = m_minidump_parser.GetMemoryRegionInfo(load_addr);
+  return Status();
 }
 
 void ProcessMinidump::Clear() { Process::m_thread_list.Clear(); }
