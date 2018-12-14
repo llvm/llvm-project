@@ -1892,7 +1892,6 @@ size_t SymbolFileNativePDB::ParseVariablesForContext(const SymbolContext &sc) {
   lldbassert(sc.function || sc.comp_unit);
 
   VariableListSP variables;
-  PdbSymUid sym_uid;
   if (sc.block) {
     PdbSymUid block_id(sc.block->GetID());
 
