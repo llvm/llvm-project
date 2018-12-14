@@ -534,7 +534,7 @@ ADD_CASES(TC_ConsoleOut, {{"^BM_UserStats/iterations:5/repeats:3/manual_time [ "
                           {"^BM_UserStats/iterations:5/repeats:3/"
                            "manual_time_median [ ]* 150 ns %time [ ]*3$"},
                           {"^BM_UserStats/iterations:5/repeats:3/"
-                           "manual_time_stddev [ ]* 0 ns %time [ ]*3$"},
+                           "manual_time_stddev [ ]* 0.000 ns %time [ ]*3$"},
                           {"^BM_UserStats/iterations:5/repeats:3/manual_time_ "
                            "[ ]* 150 ns %time [ ]*3$"}});
 ADD_CASES(
