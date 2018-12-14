@@ -23,7 +23,8 @@ namespace ElfNote {
 
 const char SectionName[] = ".note";
 
-const char NoteName[] = "AMD";
+const char NoteNameV2[] = "AMD";
+const char NoteNameV3[] = "AMDGPU";
 
 // TODO: Remove this file once we drop code object v2.
 enum NoteType{

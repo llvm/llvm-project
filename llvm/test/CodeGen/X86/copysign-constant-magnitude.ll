@@ -26,7 +26,6 @@ define double @mag_neg0_double(double %x) nounwind {
 ; CHECK-LABEL: mag_neg0_double:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movsd [[SIGNMASK2]](%rip), %xmm1
-; CHECK-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0,0]
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
@@ -74,6 +73,8 @@ define double @mag_neg1_double(double %x) nounwind {
 ; CHECK:       [[SIGNMASK5:L.+]]:
 ; CHECK-NEXT:  .long 2147483648              ## float -0
 ; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 2147483648              ## float -0
 
 define float @mag_pos0_float(float %x) nounwind {
 ; CHECK-LABEL: mag_pos0_float:
@@ -92,7 +93,6 @@ define float @mag_neg0_float(float %x) nounwind {
 ; CHECK-LABEL: mag_neg0_float:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movss [[SIGNMASK6]](%rip), %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    retq
 ;
@@ -101,6 +101,8 @@ define float @mag_neg0_float(float %x) nounwind {
 }
 
 ; CHECK:       [[SIGNMASK7:L.+]]:
+; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 2147483648              ## float -0
 ; CHECK-NEXT:  .long 2147483648              ## float -0
 ; CHECK-NEXT:  .long 2147483648              ## float -0
 ; CHECK:        [[ONE7:L.+]]:
@@ -120,6 +122,8 @@ define float @mag_pos1_float(float %x) nounwind {
 }
 
 ; CHECK:       [[SIGNMASK8:L.+]]:
+; CHECK-NEXT:  .long 2147483648              ## float -0
+; CHECK-NEXT:  .long 2147483648              ## float -0
 ; CHECK-NEXT:  .long 2147483648              ## float -0
 ; CHECK-NEXT:  .long 2147483648              ## float -0
 ; CHECK:        [[ONE8:L.+]]:

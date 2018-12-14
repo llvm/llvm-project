@@ -698,13 +698,11 @@ TEST_F(TUSchedulerTests, TUStatus) {
   EXPECT_THAT(CaptureTUStatus.AllStatus,
               ElementsAre(
                   // Statuses of "Update" action.
-                  TUState(TUAction::Queued, "Update"),
                   TUState(TUAction::RunningAction, "Update"),
                   TUState(TUAction::BuildingPreamble, "Update"),
                   TUState(TUAction::BuildingFile, "Update"),
 
                   // Statuses of "Definitions" action
-                  TUState(TUAction::Queued, "Definitions"),
                   TUState(TUAction::RunningAction, "Definitions"),
                   TUState(TUAction::Idle, /*No action*/ "")));
 }

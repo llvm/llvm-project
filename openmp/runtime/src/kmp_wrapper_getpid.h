@@ -24,6 +24,9 @@
 #if KMP_OS_DARWIN
 // OS X
 #define __kmp_gettid() syscall(SYS_thread_selfid)
+#elif KMP_OS_NETBSD
+#include <lwp.h>
+#define __kmp_gettid() _lwp_self()
 #elif defined(SYS_gettid)
 // Hopefully other Unix systems define SYS_gettid syscall for getting os thread
 // id
@@ -39,7 +42,9 @@
 // "process.h".
 #include <process.h>
 // Let us simulate Unix.
+#if KMP_MSVC_COMPAT
 typedef int pid_t;
+#endif
 #define getpid _getpid
 #define __kmp_gettid() GetCurrentThreadId()
 

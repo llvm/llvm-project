@@ -48,6 +48,7 @@ namespace __sanitizer {
   extern unsigned timeval_sz;
   extern unsigned uid_t_sz;
   extern unsigned gid_t_sz;
+  extern unsigned fpos_t_sz;
   extern unsigned mbstate_t_sz;
   extern unsigned struct_timezone_sz;
   extern unsigned struct_tms_sz;

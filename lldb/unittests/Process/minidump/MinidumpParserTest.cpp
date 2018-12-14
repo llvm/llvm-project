@@ -533,3 +533,41 @@ TEST_F(MinidumpParserTest, ConvertMinidumpContext_x86_32_wow64) {
     }
   }
 }
+
+TEST_F(MinidumpParserTest, MinidumpDuplicateModuleMinAddress) {
+  SetUpData("modules-dup-min-addr.dmp");
+  // Test that if we have two modules in the module list:
+  //    /tmp/a with range [0x2000-0x3000)
+  //    /tmp/a with range [0x1000-0x2000)
+  // That we end up with one module in the filtered list with the
+  // range [0x1000-0x2000). MinidumpParser::GetFilteredModuleList() is
+  // trying to ensure that if we have the same module mentioned more than
+  // one time, we pick the one with the lowest base_of_image.
+  std::vector<const MinidumpModule *> filtered_modules =
+      parser->GetFilteredModuleList();
+  EXPECT_EQ(1, filtered_modules.size());
+  EXPECT_EQ(0x0000000000001000, filtered_modules[0]->base_of_image);
+}
+
+TEST_F(MinidumpParserTest, MinidumpModuleOrder) {
+  SetUpData("modules-order.dmp");
+  // Test that if we have two modules in the module list:
+  //    /tmp/a with range [0x2000-0x3000)
+  //    /tmp/b with range [0x1000-0x2000)
+  // That we end up with two modules in the filtered list with the same ranges
+  // and in the same order. Previous versions of the
+  // MinidumpParser::GetFilteredModuleList() function would sort all images
+  // by address and modify the order of the modules.
+  std::vector<const MinidumpModule *> filtered_modules =
+      parser->GetFilteredModuleList();
+  llvm::Optional<std::string> name;
+  EXPECT_EQ(2, filtered_modules.size());
+  EXPECT_EQ(0x0000000000002000, filtered_modules[0]->base_of_image);
+  name = parser->GetMinidumpString(filtered_modules[0]->module_name_rva);
+  ASSERT_TRUE((bool)name);
+  EXPECT_EQ(std::string("/tmp/a"), *name);
+  EXPECT_EQ(0x0000000000001000, filtered_modules[1]->base_of_image);
+  name = parser->GetMinidumpString(filtered_modules[1]->module_name_rva);
+  ASSERT_TRUE((bool)name);
+  EXPECT_EQ(std::string("/tmp/b"), *name);
+}

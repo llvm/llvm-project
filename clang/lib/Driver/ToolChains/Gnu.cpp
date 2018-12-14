@@ -2435,7 +2435,7 @@ bool Generic_GCC::isPICDefault() const {
   case llvm::Triple::x86_64:
     return getTriple().isOSWindows();
   case llvm::Triple::ppc64:
-    // Big endian PPC is PIC by default
+  case llvm::Triple::ppc64le:
     return !getTriple().isOSBinFormatMachO() && !getTriple().isMacOSX();
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
@@ -2472,18 +2472,9 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   case llvm::Triple::systemz:
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:
-    return true;
   case llvm::Triple::mips64:
   case llvm::Triple::mips64el:
-    // Enabled for Debian, Android, FreeBSD and OpenBSD mips64/mipsel, as they
-    // can precisely identify the ABI in use (Debian) or only use N64 for MIPS64
-    // (Android). Other targets are unable to distinguish N32 from N64.
-    if (getTriple().getEnvironment() == llvm::Triple::GNUABI64 ||
-        getTriple().isAndroid() ||
-        getTriple().isOSFreeBSD() ||
-        getTriple().isOSOpenBSD())
-      return true;
-    return false;
+    return true;
   default:
     return false;
   }

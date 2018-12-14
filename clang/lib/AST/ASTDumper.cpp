@@ -98,10 +98,14 @@ namespace  {
     void dumpCXXCtorInitializer(const CXXCtorInitializer *Init);
     void dumpTemplateParameters(const TemplateParameterList *TPL);
     void dumpTemplateArgumentListInfo(const TemplateArgumentListInfo &TALI);
-    void dumpTemplateArgumentLoc(const TemplateArgumentLoc &A);
+    void dumpTemplateArgumentLoc(const TemplateArgumentLoc &A,
+                                 const Decl *From = nullptr,
+                                 const char *Label = nullptr);
     void dumpTemplateArgumentList(const TemplateArgumentList &TAL);
     void dumpTemplateArgument(const TemplateArgument &A,
-                              SourceRange R = SourceRange());
+                              SourceRange R = SourceRange(),
+                              const Decl *From = nullptr,
+                              const char *Label = nullptr);
     template <typename SpecializationDecl>
     void dumpTemplateDeclSpecialization(const SpecializationDecl *D,
                                         bool DumpExplicitInst,
@@ -195,9 +199,10 @@ namespace  {
     void VisitFunctionProtoType(const FunctionProtoType *T) {
       auto EPI = T->getExtProtoInfo();
       if (EPI.HasTrailingReturn) OS << " trailing_return";
-      if (T->isConst()) OS << " const";
-      if (T->isVolatile()) OS << " volatile";
-      if (T->isRestrict()) OS << " restrict";
+
+      if (!T->getTypeQuals().empty())
+        OS << " " << T->getTypeQuals().getAsString();
+
       switch (EPI.RefQualifier) {
         case RQ_None: break;
         case RQ_LValue: OS << " &"; break;
@@ -378,6 +383,7 @@ namespace  {
     void VisitOMPExecutableDirective(const OMPExecutableDirective *Node);
 
     // Exprs
+    void VisitCallExpr(const CallExpr *Node);
     void VisitCastExpr(const CastExpr *Node);
     void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
     void VisitDeclRefExpr(const DeclRefExpr *Node);
@@ -673,8 +679,9 @@ void ASTDumper::dumpTemplateArgumentListInfo(
     dumpTemplateArgumentLoc(TALI[i]);
 }
 
-void ASTDumper::dumpTemplateArgumentLoc(const TemplateArgumentLoc &A) {
-  dumpTemplateArgument(A.getArgument(), A.getSourceRange());
+void ASTDumper::dumpTemplateArgumentLoc(const TemplateArgumentLoc &A,
+                                        const Decl *From, const char *Label) {
+  dumpTemplateArgument(A.getArgument(), A.getSourceRange(), From, Label);
 }
 
 void ASTDumper::dumpTemplateArgumentList(const TemplateArgumentList &TAL) {
@@ -682,11 +689,15 @@ void ASTDumper::dumpTemplateArgumentList(const TemplateArgumentList &TAL) {
     dumpTemplateArgument(TAL[i]);
 }
 
-void ASTDumper::dumpTemplateArgument(const TemplateArgument &A, SourceRange R) {
+void ASTDumper::dumpTemplateArgument(const TemplateArgument &A, SourceRange R,
+                                     const Decl *From, const char *Label) {
   dumpChild([=] {
     OS << "TemplateArgument";
     if (R.isValid())
       NodeDumper.dumpSourceRange(R);
+
+    if (From)
+      dumpDeclRef(From, Label);
 
     switch (A.getKind()) {
     case TemplateArgument::Null:
@@ -1040,9 +1051,10 @@ void ASTDumper::VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D) {
   NodeDumper.dumpName(D);
   NodeDumper.dumpType(D->getType());
   OS << " combiner";
-  dumpStmt(D->getCombiner());
-  if (auto *Initializer = D->getInitializer()) {
+  NodeDumper.dumpPointer(D->getCombiner());
+  if (const auto *Initializer = D->getInitializer()) {
     OS << " initializer";
+    NodeDumper.dumpPointer(Initializer);
     switch (D->getInitializerKind()) {
     case OMPDeclareReductionDecl::DirectInit:
       OS << " omp_priv = ";
@@ -1053,8 +1065,11 @@ void ASTDumper::VisitOMPDeclareReductionDecl(const OMPDeclareReductionDecl *D) {
     case OMPDeclareReductionDecl::CallInit:
       break;
     }
-    dumpStmt(Initializer);
   }
+
+  dumpStmt(D->getCombiner());
+  if (const auto *Initializer = D->getInitializer())
+    dumpStmt(Initializer);
 }
 
 void ASTDumper::VisitOMPRequiresDecl(const OMPRequiresDecl *D) {
@@ -1376,10 +1391,10 @@ void ASTDumper::VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
     OS << " ...";
   NodeDumper.dumpName(D);
   if (D->hasDefaultArgument())
-    dumpTemplateArgument(D->getDefaultArgument());
-  if (auto *From = D->getDefaultArgStorage().getInheritedFrom())
-    dumpDeclRef(From, D->defaultArgumentWasInherited() ? "inherited from"
-                                                       : "previous");
+    dumpTemplateArgument(D->getDefaultArgument(), SourceRange(),
+                         D->getDefaultArgStorage().getInheritedFrom(),
+                         D->defaultArgumentWasInherited() ? "inherited from"
+                                                          : "previous");
 }
 
 void ASTDumper::VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D) {
@@ -1389,10 +1404,10 @@ void ASTDumper::VisitNonTypeTemplateParmDecl(const NonTypeTemplateParmDecl *D) {
     OS << " ...";
   NodeDumper.dumpName(D);
   if (D->hasDefaultArgument())
-    dumpTemplateArgument(D->getDefaultArgument());
-  if (auto *From = D->getDefaultArgStorage().getInheritedFrom())
-    dumpDeclRef(From, D->defaultArgumentWasInherited() ? "inherited from"
-                                                       : "previous");
+    dumpTemplateArgument(D->getDefaultArgument(), SourceRange(),
+                         D->getDefaultArgStorage().getInheritedFrom(),
+                         D->defaultArgumentWasInherited() ? "inherited from"
+                                                          : "previous");
 }
 
 void ASTDumper::VisitTemplateTemplateParmDecl(
@@ -1403,10 +1418,9 @@ void ASTDumper::VisitTemplateTemplateParmDecl(
   NodeDumper.dumpName(D);
   dumpTemplateParameters(D->getTemplateParameters());
   if (D->hasDefaultArgument())
-    dumpTemplateArgumentLoc(D->getDefaultArgument());
-  if (auto *From = D->getDefaultArgStorage().getInheritedFrom())
-    dumpDeclRef(From, D->defaultArgumentWasInherited() ? "inherited from"
-                                                       : "previous");
+    dumpTemplateArgumentLoc(
+        D->getDefaultArgument(), D->getDefaultArgStorage().getInheritedFrom(),
+        D->defaultArgumentWasInherited() ? "inherited from" : "previous");
 }
 
 void ASTDumper::VisitUsingDecl(const UsingDecl *D) {
@@ -1862,6 +1876,11 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
   }
 
   OS << ')';
+}
+
+void ASTDumper::VisitCallExpr(const CallExpr *Node) {
+  if (Node->usesADL())
+    OS << " adl";
 }
 
 void ASTDumper::VisitCastExpr(const CastExpr *Node) {

@@ -595,7 +595,7 @@ void Parser::ParseLexedMemberInitializers(ParsingClass &Class) {
     //  to X" within the optional brace-or-equal-initializer. It shall not
     //  appear elsewhere in the member-declarator.
     Sema::CXXThisScopeRAII ThisScope(Actions, Class.TagOrTemplate,
-                                     /*TypeQuals=*/(unsigned)0);
+                                     Qualifiers());
 
     for (size_t i = 0; i < Class.LateParsedDeclarations.size(); ++i) {
       Class.LateParsedDeclarations[i]->ParseLexedMemberInitializers();

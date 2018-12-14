@@ -350,8 +350,12 @@ Constant *Constant::getAggregateElement(unsigned Elt) const {
 
 Constant *Constant::getAggregateElement(Constant *Elt) const {
   assert(isa<IntegerType>(Elt->getType()) && "Index must be an integer");
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(Elt))
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(Elt)) {
+    // Check if the constant fits into an uint64_t.
+    if (CI->getValue().getActiveBits() > 64)
+      return nullptr;
     return getAggregateElement(CI->getZExtValue());
+  }
   return nullptr;
 }
 
@@ -719,14 +723,36 @@ Constant *ConstantFP::get(Type *Ty, StringRef Str) {
   return C;
 }
 
-Constant *ConstantFP::getNaN(Type *Ty, bool Negative, unsigned Type) {
+Constant *ConstantFP::getNaN(Type *Ty, bool Negative, uint64_t Payload) {
   const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
-  APFloat NaN = APFloat::getNaN(Semantics, Negative, Type);
+  APFloat NaN = APFloat::getNaN(Semantics, Negative, Payload);
   Constant *C = get(Ty->getContext(), NaN);
 
   if (VectorType *VTy = dyn_cast<VectorType>(Ty))
     return ConstantVector::getSplat(VTy->getNumElements(), C);
 
+  return C;
+}
+
+Constant *ConstantFP::getQNaN(Type *Ty, bool Negative, APInt *Payload) {
+  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  APFloat NaN = APFloat::getQNaN(Semantics, Negative, Payload);
+  Constant *C = get(Ty->getContext(), NaN);
+  
+  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
+    return ConstantVector::getSplat(VTy->getNumElements(), C);
+  
+  return C;
+}
+
+Constant *ConstantFP::getSNaN(Type *Ty, bool Negative, APInt *Payload) {
+  const fltSemantics &Semantics = *TypeToFloatSemantics(Ty->getScalarType());
+  APFloat NaN = APFloat::getSNaN(Semantics, Negative, Payload);
+  Constant *C = get(Ty->getContext(), NaN);
+  
+  if (VectorType *VTy = dyn_cast<VectorType>(Ty))
+    return ConstantVector::getSplat(VTy->getNumElements(), C);
+  
   return C;
 }
 

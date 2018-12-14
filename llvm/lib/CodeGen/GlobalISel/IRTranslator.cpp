@@ -933,11 +933,11 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
         TLI.isFMAFasterThanFMulAndFAdd(TLI.getValueType(*DL, CI.getType()))) {
       // TODO: Revisit this to see if we should move this part of the
       // lowering to the combiner.
-      MIRBuilder.buildInstr(TargetOpcode::G_FMA, Dst, Op0, Op1, Op2);
+      MIRBuilder.buildInstr(TargetOpcode::G_FMA, {Dst}, {Op0, Op1, Op2});
     } else {
       LLT Ty = getLLTForType(*CI.getType(), *DL);
-      auto FMul = MIRBuilder.buildInstr(TargetOpcode::G_FMUL, Ty, Op0, Op1);
-      MIRBuilder.buildInstr(TargetOpcode::G_FADD, Dst, FMul, Op2);
+      auto FMul = MIRBuilder.buildInstr(TargetOpcode::G_FMUL, {Ty}, {Op0, Op1});
+      MIRBuilder.buildInstr(TargetOpcode::G_FADD, {Dst}, {FMul, Op2});
     }
     return true;
   }
@@ -973,13 +973,15 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     getStackGuard(GuardVal, MIRBuilder);
 
     AllocaInst *Slot = cast<AllocaInst>(CI.getArgOperand(1));
+    int FI = getOrCreateFrameIndex(*Slot);
+    MF->getFrameInfo().setStackProtectorIndex(FI);
+
     MIRBuilder.buildStore(
         GuardVal, getOrCreateVReg(*Slot),
-        *MF->getMachineMemOperand(
-            MachinePointerInfo::getFixedStack(*MF,
-                                              getOrCreateFrameIndex(*Slot)),
-            MachineMemOperand::MOStore | MachineMemOperand::MOVolatile,
-            PtrTy.getSizeInBits() / 8, 8));
+        *MF->getMachineMemOperand(MachinePointerInfo::getFixedStack(*MF, FI),
+                                  MachineMemOperand::MOStore |
+                                      MachineMemOperand::MOVolatile,
+                                  PtrTy.getSizeInBits() / 8, 8));
     return true;
   }
   case Intrinsic::cttz:
@@ -1412,7 +1414,7 @@ bool IRTranslator::translatePHI(const User &U, MachineIRBuilder &MIRBuilder) {
 
   SmallVector<MachineInstr *, 4> Insts;
   for (auto Reg : getOrCreateVRegs(PI)) {
-    auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_PHI, Reg);
+    auto MIB = MIRBuilder.buildInstr(TargetOpcode::G_PHI, {Reg}, {});
     Insts.push_back(MIB.getInstr());
   }
 
@@ -1596,22 +1598,22 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
     // Return the scalar if it is a <1 x Ty> vector.
     if (CAZ->getNumElements() == 1)
       return translate(*CAZ->getElementValue(0u), Reg);
-    std::vector<unsigned> Ops;
+    SmallVector<unsigned, 4> Ops;
     for (unsigned i = 0; i < CAZ->getNumElements(); ++i) {
       Constant &Elt = *CAZ->getElementValue(i);
       Ops.push_back(getOrCreateVReg(Elt));
     }
-    EntryBuilder.buildMerge(Reg, Ops);
+    EntryBuilder.buildBuildVector(Reg, Ops);
   } else if (auto CV = dyn_cast<ConstantDataVector>(&C)) {
     // Return the scalar if it is a <1 x Ty> vector.
     if (CV->getNumElements() == 1)
       return translate(*CV->getElementAsConstant(0), Reg);
-    std::vector<unsigned> Ops;
+    SmallVector<unsigned, 4> Ops;
     for (unsigned i = 0; i < CV->getNumElements(); ++i) {
       Constant &Elt = *CV->getElementAsConstant(i);
       Ops.push_back(getOrCreateVReg(Elt));
     }
-    EntryBuilder.buildMerge(Reg, Ops);
+    EntryBuilder.buildBuildVector(Reg, Ops);
   } else if (auto CE = dyn_cast<ConstantExpr>(&C)) {
     switch(CE->getOpcode()) {
 #define HANDLE_INST(NUM, OPCODE, CLASS)                         \
@@ -1627,7 +1629,7 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
     for (unsigned i = 0; i < CV->getNumOperands(); ++i) {
       Ops.push_back(getOrCreateVReg(*CV->getOperand(i)));
     }
-    EntryBuilder.buildMerge(Reg, Ops);
+    EntryBuilder.buildBuildVector(Reg, Ops);
   } else if (auto *BA = dyn_cast<BlockAddress>(&C)) {
     EntryBuilder.buildBlockAddress(Reg, BA);
   } else

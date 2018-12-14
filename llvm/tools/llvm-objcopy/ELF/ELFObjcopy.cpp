@@ -123,14 +123,9 @@ findBuildID(const object::ELFFile<ELFT> &In) {
     if (Phdr.p_type != PT_NOTE)
       continue;
     Error Err = Error::success();
-    if (Err)
-      llvm_unreachable("Error::success() was an error.");
-    for (const auto &Note : In.notes(Phdr, Err)) {
-      if (Err)
-        return std::move(Err);
+    for (const auto &Note : In.notes(Phdr, Err))
       if (Note.getType() == NT_GNU_BUILD_ID && Note.getName() == ELF_NOTE_GNU)
         return Note.getDesc();
-    }
     if (Err)
       return std::move(Err);
   }

@@ -1083,7 +1083,7 @@ void MallocChecker::processNewAllocation(const CXXNewExpr *NE,
   ProgramStateRef State = C.getState();
   // The return value from operator new is bound to a specified initialization
   // value (if any) and we don't want to loose this value. So we call
-  // MallocUpdateRefState() instead of MallocMemAux() which breakes the
+  // MallocUpdateRefState() instead of MallocMemAux() which breaks the
   // existing binding.
   State = MallocUpdateRefState(C, NE, State, NE->isArray() ? AF_CXXNewArray
                                                            : AF_CXXNew, Target);

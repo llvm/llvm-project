@@ -221,6 +221,24 @@ LLVM_READONLY
 int getMaskedMIMGOp(unsigned Opc, unsigned NewChannels);
 
 LLVM_READONLY
+int getMUBUFBaseOpcode(unsigned Opc);
+
+LLVM_READONLY
+int getMUBUFOpcode(unsigned BaseOpc, unsigned Dwords);
+
+LLVM_READONLY
+int getMUBUFDwords(unsigned Opc);
+
+LLVM_READONLY
+bool getMUBUFHasVAddr(unsigned Opc);
+
+LLVM_READONLY
+bool getMUBUFHasSrsrc(unsigned Opc);
+
+LLVM_READONLY
+bool getMUBUFHasSoffset(unsigned Opc);
+
+LLVM_READONLY
 int getMCOpcode(uint16_t Opcode, unsigned Gen);
 
 void initDefaultAMDKernelCodeT(amd_kernel_code_t &Header,

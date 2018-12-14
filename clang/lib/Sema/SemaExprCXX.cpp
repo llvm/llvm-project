@@ -1094,7 +1094,7 @@ QualType Sema::getCurrentThisType() {
 
 Sema::CXXThisScopeRAII::CXXThisScopeRAII(Sema &S,
                                          Decl *ContextDecl,
-                                         unsigned CXXThisTypeQuals,
+                                         Qualifiers CXXThisTypeQuals,
                                          bool Enabled)
   : S(S), OldCXXThisTypeOverride(S.CXXThisTypeOverride), Enabled(false)
 {
@@ -1107,11 +1107,10 @@ Sema::CXXThisScopeRAII::CXXThisScopeRAII(Sema &S,
   else
     Record = cast<CXXRecordDecl>(ContextDecl);
 
-  // We care only for CVR qualifiers here, so cut everything else.
-  CXXThisTypeQuals &= Qualifiers::FastMask;
-  S.CXXThisTypeOverride
-    = S.Context.getPointerType(
-        S.Context.getRecordType(Record).withCVRQualifiers(CXXThisTypeQuals));
+  QualType T = S.Context.getRecordType(Record);
+  T = S.getASTContext().getQualifiedType(T, CXXThisTypeQuals);
+
+  S.CXXThisTypeOverride = S.Context.getPointerType(T);
 
   this->Enabled = true;
 }

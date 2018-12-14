@@ -367,6 +367,24 @@ public:
     CurrentState = Label;
   }
 
+  bool parseSignature(wasm::WasmSignature *Signature) {
+    if (expect(AsmToken::LParen, "("))
+      return true;
+    if (parseRegTypeList(Signature->Params))
+      return true;
+    if (expect(AsmToken::RParen, ")"))
+      return true;
+    if (expect(AsmToken::MinusGreater, "->"))
+      return true;
+    if (expect(AsmToken::LParen, "("))
+      return true;
+    if (parseRegTypeList(Signature->Returns))
+      return true;
+    if (expect(AsmToken::RParen, ")"))
+      return true;
+    return false;
+  }
+
   // This function processes wasm-specific directives streamed to
   // WebAssemblyTargetStreamer, all others go to the generic parser
   // (see WasmAsmParser).
@@ -424,24 +442,29 @@ public:
         CurrentState = FunctionStart;
       }
       auto Signature = make_unique<wasm::WasmSignature>();
-      if (expect(AsmToken::LParen, "("))
-        return true;
-      if (parseRegTypeList(Signature->Params))
-        return true;
-      if (expect(AsmToken::RParen, ")"))
-        return true;
-      if (expect(AsmToken::MinusGreater, "->"))
-        return true;
-      if (expect(AsmToken::LParen, "("))
-        return true;
-      if (parseRegTypeList(Signature->Returns))
-        return true;
-      if (expect(AsmToken::RParen, ")"))
+      if (parseSignature(Signature.get()))
         return true;
       WasmSym->setSignature(Signature.get());
       addSignature(std::move(Signature));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
       TOut.emitFunctionType(WasmSym);
+      // TODO: backend also calls TOut.emitIndIdx, but that is not implemented.
+      return expect(AsmToken::EndOfStatement, "EOL");
+    }
+
+    if (DirectiveID.getString() == ".eventtype") {
+      auto SymName = expectIdent();
+      if (SymName.empty())
+        return true;
+      auto WasmSym = cast<MCSymbolWasm>(
+          TOut.getStreamer().getContext().getOrCreateSymbol(SymName));
+      auto Signature = make_unique<wasm::WasmSignature>();
+      if (parseRegTypeList(Signature->Params))
+        return true;
+      WasmSym->setSignature(Signature.get());
+      addSignature(std::move(Signature));
+      WasmSym->setType(wasm::WASM_SYMBOL_TYPE_EVENT);
+      TOut.emitEventType(WasmSym);
       // TODO: backend also calls TOut.emitIndIdx, but that is not implemented.
       return expect(AsmToken::EndOfStatement, "EOL");
     }

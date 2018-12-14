@@ -1223,11 +1223,13 @@ OverloadedOperatorKind UnaryOperator::getOverloadedOperator(Opcode Opc) {
 CallExpr::CallExpr(const ASTContext &C, StmtClass SC, Expr *fn,
                    ArrayRef<Expr *> preargs, ArrayRef<Expr *> args, QualType t,
                    ExprValueKind VK, SourceLocation rparenloc,
-                   unsigned MinNumArgs)
+                   unsigned MinNumArgs, ADLCallKind UsesADL)
     : Expr(SC, t, VK, OK_Ordinary, fn->isTypeDependent(),
            fn->isValueDependent(), fn->isInstantiationDependent(),
            fn->containsUnexpandedParameterPack()),
       RParenLoc(rparenloc) {
+  CallExprBits.UsesADL = static_cast<bool>(UsesADL);
+
   NumArgs = std::max<unsigned>(args.size(), MinNumArgs);
   unsigned NumPreArgs = preargs.size();
   CallExprBits.NumPreArgs = NumPreArgs;
@@ -1249,15 +1251,16 @@ CallExpr::CallExpr(const ASTContext &C, StmtClass SC, Expr *fn,
 
 CallExpr::CallExpr(const ASTContext &C, StmtClass SC, Expr *fn,
                    ArrayRef<Expr *> args, QualType t, ExprValueKind VK,
-                   SourceLocation rparenloc, unsigned MinNumArgs)
+                   SourceLocation rparenloc, unsigned MinNumArgs,
+                   ADLCallKind UsesADL)
     : CallExpr(C, SC, fn, ArrayRef<Expr *>(), args, t, VK, rparenloc,
-               MinNumArgs) {}
+               MinNumArgs, UsesADL) {}
 
 CallExpr::CallExpr(const ASTContext &C, Expr *fn, ArrayRef<Expr *> args,
                    QualType t, ExprValueKind VK, SourceLocation rparenloc,
-                   unsigned MinNumArgs)
-    : CallExpr(C, CallExprClass, fn, ArrayRef<Expr *>(), args, t, VK,
-               rparenloc, MinNumArgs) {}
+                   unsigned MinNumArgs, ADLCallKind UsesADL)
+    : CallExpr(C, CallExprClass, fn, ArrayRef<Expr *>(), args, t, VK, rparenloc,
+               MinNumArgs, UsesADL) {}
 
 CallExpr::CallExpr(const ASTContext &C, StmtClass SC, unsigned NumPreArgs,
                    unsigned NumArgs, EmptyShell Empty)

@@ -5585,12 +5585,11 @@ ExprResult Sema::ActOnConvertVectorExpr(Expr *E, ParsedType ParsedDestTy,
 /// block-pointer type.
 ///
 /// \param NDecl the declaration being called, if available
-ExprResult
-Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
-                            SourceLocation LParenLoc,
-                            ArrayRef<Expr *> Args,
-                            SourceLocation RParenLoc,
-                            Expr *Config, bool IsExecConfig) {
+ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
+                                       SourceLocation LParenLoc,
+                                       ArrayRef<Expr *> Args,
+                                       SourceLocation RParenLoc, Expr *Config,
+                                       bool IsExecConfig, ADLCallKind UsesADL) {
   FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(NDecl);
   unsigned BuiltinID = (FDecl ? FDecl->getBuiltinID() : 0);
 
@@ -5670,13 +5669,16 @@ Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   unsigned NumParams = Proto ? Proto->getNumParams() : 0;
 
   CallExpr *TheCall;
-  if (Config)
+  if (Config) {
+    assert(UsesADL == ADLCallKind::NotADL &&
+           "CUDAKernelCallExpr should not use ADL");
     TheCall = new (Context)
         CUDAKernelCallExpr(Context, Fn, cast<CallExpr>(Config), Args, ResultTy,
                            VK_RValue, RParenLoc, NumParams);
-  else
-    TheCall = new (Context)
-        CallExpr(Context, Fn, Args, ResultTy, VK_RValue, RParenLoc, NumParams);
+  } else {
+    TheCall = new (Context) CallExpr(Context, Fn, Args, ResultTy, VK_RValue,
+                                     RParenLoc, NumParams, UsesADL);
+  }
 
   if (!getLangOpts().CPlusPlus) {
     // C cannot always handle TypoExpr nodes in builtin calls and direct
@@ -9133,16 +9135,6 @@ static void diagnoseStringPlusInt(Sema &Self, SourceLocation OpLoc,
   if (!IsStringPlusInt || IndexExpr->isValueDependent())
     return;
 
-  Expr::EvalResult Result;
-  if (IndexExpr->EvaluateAsInt(Result, Self.getASTContext())) {
-    llvm::APSInt index = Result.Val.getInt();
-    unsigned StrLenWithNull = StrExpr->getLength() + 1;
-    if (index.isNonNegative() &&
-        index <= llvm::APSInt(llvm::APInt(index.getBitWidth(), StrLenWithNull),
-                              index.isUnsigned()))
-      return;
-  }
-
   SourceRange DiagRange(LHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
   Self.Diag(OpLoc, diag::warn_string_plus_int)
       << DiagRange << IndexExpr->IgnoreImpCasts()->getType();
@@ -11114,30 +11106,38 @@ static void DiagnoseRecursiveConstFields(Sema &S, const ValueDecl *VD,
                                          const RecordType *Ty,
                                          SourceLocation Loc, SourceRange Range,
                                          OriginalExprKind OEK,
-                                         bool &DiagnosticEmitted,
-                                         bool IsNested = false) {
+                                         bool &DiagnosticEmitted) {
+  std::vector<const RecordType *> RecordTypeList;
+  RecordTypeList.push_back(Ty);
+  unsigned NextToCheckIndex = 0;
   // We walk the record hierarchy breadth-first to ensure that we print
   // diagnostics in field nesting order.
-  // First, check every field for constness.
-  for (const FieldDecl *Field : Ty->getDecl()->fields()) {
-    if (Field->getType().isConstQualified()) {
-      if (!DiagnosticEmitted) {
-        S.Diag(Loc, diag::err_typecheck_assign_const)
-            << Range << NestedConstMember << OEK << VD
-            << IsNested << Field;
-        DiagnosticEmitted = true;
+  while (RecordTypeList.size() > NextToCheckIndex) {
+    bool IsNested = NextToCheckIndex > 0;
+    for (const FieldDecl *Field :
+         RecordTypeList[NextToCheckIndex]->getDecl()->fields()) {
+      // First, check every field for constness.
+      QualType FieldTy = Field->getType();
+      if (FieldTy.isConstQualified()) {
+        if (!DiagnosticEmitted) {
+          S.Diag(Loc, diag::err_typecheck_assign_const)
+              << Range << NestedConstMember << OEK << VD
+              << IsNested << Field;
+          DiagnosticEmitted = true;
+        }
+        S.Diag(Field->getLocation(), diag::note_typecheck_assign_const)
+            << NestedConstMember << IsNested << Field
+            << FieldTy << Field->getSourceRange();
       }
-      S.Diag(Field->getLocation(), diag::note_typecheck_assign_const)
-          << NestedConstMember << IsNested << Field
-          << Field->getType() << Field->getSourceRange();
+
+      // Then we append it to the list to check next in order.
+      FieldTy = FieldTy.getCanonicalType();
+      if (const auto *FieldRecTy = FieldTy->getAs<RecordType>()) {
+        if (llvm::find(RecordTypeList, FieldRecTy) == RecordTypeList.end())
+          RecordTypeList.push_back(FieldRecTy);
+      }
     }
-  }
-  // Then, recurse.
-  for (const FieldDecl *Field : Ty->getDecl()->fields()) {
-    QualType FTy = Field->getType();
-    if (const RecordType *FieldRecTy = FTy->getAs<RecordType>())
-      DiagnoseRecursiveConstFields(S, VD, FieldRecTy, Loc, Range,
-                                   OEK, DiagnosticEmitted, true);
+    ++NextToCheckIndex;
   }
 }
 
@@ -13544,7 +13544,7 @@ void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
     // Drop the parameters.
     FunctionProtoType::ExtProtoInfo EPI;
     EPI.HasTrailingReturn = false;
-    EPI.TypeQuals |= DeclSpec::TQ_const;
+    EPI.TypeQuals.addConst();
     T = Context.getFunctionType(Context.DependentTy, None, EPI);
     Sig = Context.getTrivialTypeSourceInfo(T);
   }
@@ -13720,7 +13720,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
     } else {
       const FunctionProtoType *FPT = cast<FunctionProtoType>(FTy);
       FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
-      EPI.TypeQuals = 0; // FIXME: silently?
+      EPI.TypeQuals = Qualifiers();
       EPI.ExtInfo = Ext;
       BlockTy = Context.getFunctionType(RetTy, FPT->getParamTypes(), EPI);
     }

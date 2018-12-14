@@ -1015,7 +1015,7 @@ StringRef Lexer::getImmediateMacroName(SourceLocation Loc,
 StringRef Lexer::getImmediateMacroNameForDiagnostics(
     SourceLocation Loc, const SourceManager &SM, const LangOptions &LangOpts) {
   assert(Loc.isMacroID() && "Only reasonable to call this on macros");
-  // Walk past macro argument expanions.
+  // Walk past macro argument expansions.
   while (SM.isMacroArgExpansion(Loc))
     Loc = SM.getImmediateExpansionRange(Loc).getBegin();
 

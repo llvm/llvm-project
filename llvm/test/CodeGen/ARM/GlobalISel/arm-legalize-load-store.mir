@@ -1,0 +1,49 @@
+# RUN: llc -mtriple arm-- -run-pass=legalizer %s -o - | FileCheck %s
+# RUN: llc -mtriple thumb-- -mattr=+v6t2 -run-pass=legalizer %s -o - | FileCheck %s
+--- |
+  define void @test_legal_loads_stores() { ret void }
+...
+---
+name:            test_legal_loads_stores
+# CHECK-LABEL: name: test_legal_loads_stores
+legalized:       false
+# CHECK: legalized: true
+regBankSelected: false
+selected:        false
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: _ }
+  - { id: 1, class: _ }
+  - { id: 2, class: _ }
+  - { id: 3, class: _ }
+  - { id: 4, class: _ }
+  - { id: 5, class: _ }
+  - { id: 6, class: _ }
+body:             |
+  bb.0:
+    liveins: $r0
+
+    ; These are all legal, so we should find them unchanged in the output
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s32), %0(p0)
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s16), %0(p0)
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s8), %0(p0)
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(s1), %0(p0)
+    ; CHECK-DAG: G_STORE {{%[0-9]+}}(p0), %0(p0)
+    ; CHECK-DAG: {{%[0-9]+}}:_(s32) = G_LOAD %0(p0)
+    ; CHECK-DAG: {{%[0-9]+}}:_(s16) = G_LOAD %0(p0)
+    ; CHECK-DAG: {{%[0-9]+}}:_(s8) = G_LOAD %0(p0)
+    ; CHECK-DAG: {{%[0-9]+}}:_(s1) = G_LOAD %0(p0)
+    ; CHECK-DAG: {{%[0-9]+}}:_(p0) = G_LOAD %0(p0)
+    %0(p0) = COPY $r0
+    %2(s32) = G_LOAD %0(p0) :: (load 4)
+    G_STORE %2(s32), %0(p0) :: (store 4)
+    %3(s16) = G_LOAD %0(p0) :: (load 2)
+    G_STORE %3(s16), %0(p0) :: (store 2)
+    %4(s8) = G_LOAD %0(p0) :: (load 1)
+    G_STORE %4(s8), %0(p0) :: (store 1)
+    %5(s1) = G_LOAD %0(p0) :: (load 1)
+    G_STORE %5(s1), %0(p0) :: (store 1)
+    %6(p0) = G_LOAD %0(p0) :: (load 4)
+    G_STORE %6(p0), %0(p0) :: (store 4)
+    BX_RET 14, $noreg
+...

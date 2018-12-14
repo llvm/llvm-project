@@ -203,7 +203,7 @@ ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
       VisitedCallees(VisitedCalleesIn), HowToInline(HowToInlineIn) {
   unsigned TrimInterval = mgr.options.GraphTrimInterval;
   if (TrimInterval != 0) {
-    // Enable eager node reclaimation when constructing the ExplodedGraph.
+    // Enable eager node reclamation when constructing the ExplodedGraph.
     G.enableNodeReclamation(TrimInterval);
   }
 }
@@ -1033,7 +1033,7 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
     MR = V->getAsRegion();
   }
 
-  // If copy elision has occured, and the constructor corresponding to the
+  // If copy elision has occurred, and the constructor corresponding to the
   // destructor was elided, we need to skip the destructor as well.
   if (isDestructorElided(State, BTE, LC)) {
     State = cleanupElidedDestructor(State, BTE, LC);

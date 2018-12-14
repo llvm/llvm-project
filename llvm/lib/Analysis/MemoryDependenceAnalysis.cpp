@@ -154,12 +154,6 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
     return ModRefInfo::Mod;
   }
 
-  if (const MemSetInst *MI = dyn_cast<MemSetInst>(Inst)) {
-    Loc = MemoryLocation::getForDest(MI);
-    // Conversatively assume ModRef for volatile memset.
-    return MI->isVolatile() ? ModRefInfo::ModRef : ModRefInfo::Mod;
-  }
-
   if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::lifetime_start:

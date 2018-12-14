@@ -125,8 +125,8 @@ Status PipePosix::CreateNew(llvm::StringRef name, bool child_process_inherit) {
 Status PipePosix::CreateWithUniqueName(llvm::StringRef prefix,
                                        bool child_process_inherit,
                                        llvm::SmallVectorImpl<char> &name) {
-  llvm::SmallString<PATH_MAX> named_pipe_path;
-  llvm::SmallString<PATH_MAX> pipe_spec((prefix + ".%%%%%%").str());
+  llvm::SmallString<128> named_pipe_path;
+  llvm::SmallString<128> pipe_spec((prefix + ".%%%%%%").str());
   FileSpec tmpdir_file_spec = HostInfo::GetProcessTempDir();
   if (!tmpdir_file_spec)
     tmpdir_file_spec.AppendPathComponent("/tmp");

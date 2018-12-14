@@ -167,7 +167,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
 
   PreallocatedFunctionScope.reset(new FunctionScopeInfo(Diags));
 
-  // Initilization of data sharing attributes stack for OpenMP
+  // Initialization of data sharing attributes stack for OpenMP
   InitDataSharingAttributesStack();
 
   std::unique_ptr<sema::SemaPPCallbacks> Callbacks =

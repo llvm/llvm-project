@@ -800,7 +800,7 @@ void VariadicMethodTypeChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
 //===----------------------------------------------------------------------===//
 
 // The map from container symbol to the container count symbol.
-// We currently will remember the last countainer count symbol encountered.
+// We currently will remember the last container count symbol encountered.
 REGISTER_MAP_WITH_PROGRAMSTATE(ContainerCountMap, SymbolRef, SymbolRef)
 REGISTER_MAP_WITH_PROGRAMSTATE(ContainerNonEmptyMap, SymbolRef, bool)
 

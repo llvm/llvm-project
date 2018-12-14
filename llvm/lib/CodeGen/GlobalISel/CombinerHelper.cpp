@@ -23,9 +23,6 @@ CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
                                MachineIRBuilder &B)
     : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer) {}
 
-void CombinerHelper::eraseInstr(MachineInstr &MI) {
-  Observer.erasedInstr(MI);
-}
 void CombinerHelper::scheduleForVisit(MachineInstr &MI) {
   Observer.createdInstr(MI);
 }
@@ -299,8 +296,8 @@ bool CombinerHelper::tryCombineExtendingLoads(MachineInstr &MI) {
     Observer.createdInstr(*NewMI);
   }
   for (auto &EraseMI : ScheduleForErase) {
+    Observer.erasingInstr(*EraseMI);
     EraseMI->eraseFromParent();
-    Observer.erasedInstr(*EraseMI);
   }
   MI.getOperand(0).setReg(ChosenDstReg);
 

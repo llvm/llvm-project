@@ -20,7 +20,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/Frontend/CodeGenOptions.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/LLVMContext.h"

@@ -2357,6 +2357,13 @@ def warn_cxx11_compat_constexpr_body_invalid_stmt : Warning<
   "use of this statement in a constexpr %select{function|constructor}0 "
   "is incompatible with C++ standards before C++14">,
   InGroup<CXXPre14Compat>, DefaultIgnore;
+def ext_constexpr_body_invalid_stmt_cxx2a : ExtWarn<
+  "use of this statement in a constexpr %select{function|constructor}0 "
+  "is a C++2a extension">, InGroup<CXX2a>;
+def warn_cxx17_compat_constexpr_body_invalid_stmt : Warning<
+  "use of this statement in a constexpr %select{function|constructor}0 "
+  "is incompatible with C++ standards before C++2a">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
 def ext_constexpr_type_definition : ExtWarn<
   "type definition in a constexpr %select{function|constructor}0 "
   "is a C++14 extension">, InGroup<CXX14>;
@@ -2409,6 +2416,16 @@ def note_constexpr_body_previous_return : Note<
   "previous return statement is here">;
 def err_constexpr_function_try_block : Error<
   "function try block not allowed in constexpr %select{function|constructor}0">;
+
+// c++2a function try blocks in constexpr
+def ext_constexpr_function_try_block_cxx2a : ExtWarn<
+  "function try block in constexpr %select{function|constructor}0 is "
+  "a C++2a extension">, InGroup<CXX2a>;
+def warn_cxx17_compat_constexpr_function_try_block : Warning<
+  "function try block in constexpr %select{function|constructor}0 is "
+  "incompatible with C++ standards before C++2a">,
+  InGroup<CXXPre2aCompat>, DefaultIgnore;
+
 def err_constexpr_union_ctor_no_init : Error<
   "constexpr union constructor does not initialize any member">;
 def err_constexpr_ctor_missing_init : Error<

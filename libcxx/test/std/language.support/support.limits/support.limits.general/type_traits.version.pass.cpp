@@ -28,13 +28,14 @@
 */
 
 #include <type_traits>
+#include <cassert>
 #include "test_macros.h"
 
 int main()
 {
 //  ensure that the macros that are supposed to be defined in <type_traits> are defined.
 
-#if _TEST_STD_VER > 14
+#if TEST_STD_VER > 14
 # if !defined(__cpp_lib_void_t)
 #  error "__cpp_lib_void_t is not defined"
 # elif __cpp_lib_void_t < 201411L

@@ -21,4 +21,5 @@ target_link_libraries(FrontendTests
   clangSema
   clangCodeGen
   clangFrontendTool
+  clangSerialization
   )

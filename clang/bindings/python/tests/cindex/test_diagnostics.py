@@ -15,7 +15,7 @@ import unittest
 class TestDiagnostics(unittest.TestCase):
     def test_diagnostic_warning(self):
         tu = get_tu('int f0() {}\n')
-        self.assertEqual(len(tu.diagnostics), 1)
+        self.assertEqual(len(tu.diagnostics), 2)
         self.assertEqual(tu.diagnostics[0].severity, Diagnostic.Warning)
         self.assertEqual(tu.diagnostics[0].location.line, 1)
         self.assertEqual(tu.diagnostics[0].location.column, 11)

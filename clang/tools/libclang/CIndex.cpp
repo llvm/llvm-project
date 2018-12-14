@@ -8370,7 +8370,7 @@ unsigned clang_CXXMethod_isConst(CXCursor C) {
   const Decl *D = cxcursor::getCursorDecl(C);
   const CXXMethodDecl *Method =
       D ? dyn_cast_or_null<CXXMethodDecl>(D->getAsFunction()) : nullptr;
-  return (Method && (Method->getTypeQualifiers() & Qualifiers::Const)) ? 1 : 0;
+  return (Method && Method->getTypeQualifiers().hasConst()) ? 1 : 0;
 }
 
 unsigned clang_CXXMethod_isDefaulted(CXCursor C) {
@@ -8938,3 +8938,16 @@ cxindex::Logger::~Logger() {
     OS << "--------------------------------------------------\n";
   }
 }
+
+#ifdef CLANG_TOOL_EXTRA_BUILD
+// This anchor is used to force the linker to link the clang-tidy plugin.
+extern volatile int ClangTidyPluginAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED ClangTidyPluginAnchorDestination =
+    ClangTidyPluginAnchorSource;
+
+// This anchor is used to force the linker to link the clang-include-fixer
+// plugin.
+extern volatile int ClangIncludeFixerPluginAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED ClangIncludeFixerPluginAnchorDestination =
+    ClangIncludeFixerPluginAnchorSource;
+#endif

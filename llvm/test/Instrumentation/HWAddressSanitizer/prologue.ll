@@ -29,7 +29,7 @@ define i32 @test_load(i32* %a) sanitize_hwaddress {
 ; CHECK-GLOBAL: load i64, i64* @__hwasan_shadow_memory_dynamic_address
 
 ; CHECK-TLS:   %[[A:[^ ]*]] = call i8* @llvm.thread.pointer()
-; CHECK-TLS:   %[[B:[^ ]*]] = getelementptr i8, i8* %[[A]], i32 64
+; CHECK-TLS:   %[[B:[^ ]*]] = getelementptr i8, i8* %[[A]], i32 48
 ; CHECK-TLS:   %[[C:[^ ]*]] = bitcast i8* %[[B]] to i64*
 ; CHECK-TLS:   %[[D:[^ ]*]] = load i64, i64* %[[C]]
 ; CHECK-TLS:   %[[E:[^ ]*]] = or i64 %[[D]], 4294967295
@@ -60,7 +60,7 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-GLOBAL: load i64, i64* @__hwasan_shadow_memory_dynamic_address
 
 ; CHECK-TLS:   %[[A:[^ ]*]] = call i8* @llvm.thread.pointer()
-; CHECK-TLS:   %[[B:[^ ]*]] = getelementptr i8, i8* %[[A]], i32 64
+; CHECK-TLS:   %[[B:[^ ]*]] = getelementptr i8, i8* %[[A]], i32 48
 ; CHECK-TLS:   %[[C:[^ ]*]] = bitcast i8* %[[B]] to i64*
 ; CHECK-TLS:   %[[D:[^ ]*]] = load i64, i64* %[[C]]
 

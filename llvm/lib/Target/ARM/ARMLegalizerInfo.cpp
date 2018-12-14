@@ -75,6 +75,27 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   const LLT s32 = LLT::scalar(32);
   const LLT s64 = LLT::scalar(64);
 
+  if (ST.isThumb1Only()) {
+    // Thumb1 is not supported yet.
+    computeTables();
+    verify(*ST.getInstrInfo());
+    return;
+  }
+
+  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
+      .legalForCartesianProduct({s32}, {s1, s8, s16});
+
+  // We're keeping these builders around because we'll want to add support for
+  // floating point to them.
+  auto &LoadStoreBuilder =
+      getActionDefinitionsBuilder({G_LOAD, G_STORE})
+          .legalForTypesWithMemSize({
+              {s1, p0, 8},
+              {s8, p0, 8},
+              {s16, p0, 16},
+              {s32, p0, 32},
+              {p0, p0, 32}});
+
   if (ST.isThumb()) {
     // FIXME: merge with the code for non-Thumb.
     computeTables();
@@ -107,9 +128,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
     else
       setAction({Op, s32}, Libcall);
   }
-
-  getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
-      .legalForCartesianProduct({s32}, {s1, s8, s16});
 
   getActionDefinitionsBuilder(G_INTTOPTR).legalFor({{p0, s32}});
   getActionDefinitionsBuilder(G_PTRTOINT).legalFor({{s32, p0}});
@@ -149,10 +167,6 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
 
   // We're keeping these builders around because we'll want to add support for
   // floating point to them.
-  auto &LoadStoreBuilder =
-      getActionDefinitionsBuilder({G_LOAD, G_STORE})
-          .legalForCartesianProduct({s1, s8, s16, s32, p0}, {p0});
-
   auto &PhiBuilder =
       getActionDefinitionsBuilder(G_PHI).legalFor({s32, p0}).minScalar(0, s32);
 

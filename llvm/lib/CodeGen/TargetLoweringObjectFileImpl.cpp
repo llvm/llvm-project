@@ -1100,6 +1100,22 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
   //       .indirect_symbol        _extfoo
   //       .long   0
   //
+  // The indirect symbol table (and sections of non_lazy_symbol_pointers type)
+  // may point to both local (same translation unit) and global (other
+  // translation units) symbols. Example:
+  //
+  // .section __DATA,__pointers,non_lazy_symbol_pointers
+  // L1:
+  //    .indirect_symbol _myGlobal
+  //    .long 0
+  // L2:
+  //    .indirect_symbol _myLocal
+  //    .long _myLocal
+  //
+  // If the symbol is local, instead of the symbol's index, the assembler
+  // places the constant INDIRECT_SYMBOL_LOCAL into the indirect symbol table.
+  // Then the linker will notice the constant in the table and will look at the
+  // content of the symbol.
   MachineModuleInfoMachO &MachOMMI =
     MMI->getObjFileInfo<MachineModuleInfoMachO>();
   MCContext &Ctx = getContext();
@@ -1119,9 +1135,12 @@ const MCExpr *TargetLoweringObjectFileMachO::getIndirectSymViaGOTPCRel(
   MCSymbol *Stub = Ctx.getOrCreateSymbol(Name);
 
   MachineModuleInfoImpl::StubValueTy &StubSym = MachOMMI.getGVStubEntry(Stub);
-  if (!StubSym.getPointer())
-    StubSym = MachineModuleInfoImpl::
-      StubValueTy(const_cast<MCSymbol *>(Sym), true /* access indirectly */);
+  if (!StubSym.getPointer()) {
+    bool IsIndirectLocal = Sym->isDefined() && !Sym->isExternal();
+    // With the assumption that IsIndirectLocal == GV->hasLocalLinkage().
+    StubSym = MachineModuleInfoImpl::StubValueTy(const_cast<MCSymbol *>(Sym),
+                                                 !IsIndirectLocal);
+  }
 
   const MCExpr *BSymExpr =
     MCSymbolRefExpr::create(BaseSym, MCSymbolRefExpr::VK_None, Ctx);

@@ -98,7 +98,7 @@ void darwin::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     SourceAction = SourceAction->getInputs()[0];
   }
 
-  // If -fno-integrated-as is used add -Q to the darwin assember driver to make
+  // If -fno-integrated-as is used add -Q to the darwin assembler driver to make
   // sure it runs its system assembler not clang's integrated assembler.
   // Applicable to darwin11+ and Xcode 4+.  darwin<10 lacked integrated-as.
   // FIXME: at run-time detect assembler capabilities or rely on version

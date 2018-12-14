@@ -40,6 +40,7 @@ struct WasmDylinkInfo {
   uint32_t MemoryAlignment;  // P2 alignment of memory
   uint32_t TableSize;  // Table size in elements
   uint32_t TableAlignment;  // P2 alignment of table
+  std::vector<StringRef> Needed; // Shared library depenedencies
 };
 
 struct WasmExport {

@@ -46,8 +46,11 @@ namespace {
 class AMDGPUAnnotateKernelFeatures : public CallGraphSCCPass {
 private:
   const TargetMachine *TM = nullptr;
+  SmallVector<CallGraphNode*, 8> NodeList;
 
   bool addFeatureAttributes(Function &F);
+  bool processUniformWorkGroupAttribute();
+  bool propagateUniformWorkGroupAttribute(Function &Caller, Function &Callee);
 
 public:
   static char ID;
@@ -186,7 +189,6 @@ static bool handleAttr(Function &Parent, const Function &Callee,
     Parent.addFnAttr(Name);
     return true;
   }
-
   return false;
 }
 
@@ -211,6 +213,56 @@ static void copyFeaturesToFunction(Function &Parent, const Function &Callee,
 
   for (StringRef AttrName : AttrNames)
     handleAttr(Parent, Callee, AttrName);
+}
+
+bool AMDGPUAnnotateKernelFeatures::processUniformWorkGroupAttribute() {
+  bool Changed = false;
+
+  for (auto *Node : reverse(NodeList)) {
+    Function *Caller = Node->getFunction();
+
+    for (auto I : *Node) {
+      Function *Callee = std::get<1>(I)->getFunction();
+      if (Callee)
+        Changed = propagateUniformWorkGroupAttribute(*Caller, *Callee);
+    }
+  }
+
+  return Changed;
+}
+
+bool AMDGPUAnnotateKernelFeatures::propagateUniformWorkGroupAttribute(
+       Function &Caller, Function &Callee) {
+
+  // Check for externally defined function
+  if (!Callee.hasExactDefinition()) {
+    Callee.addFnAttr("uniform-work-group-size", "false");
+    if (!Caller.hasFnAttribute("uniform-work-group-size")) 
+      Caller.addFnAttr("uniform-work-group-size", "false");
+     
+    return true;
+  }
+  // Check if the Caller has the attribute
+  if (Caller.hasFnAttribute("uniform-work-group-size")) {
+    // Check if the value of the attribute is true
+    if (Caller.getFnAttribute("uniform-work-group-size")
+        .getValueAsString().equals("true")) {
+      // Propagate the attribute to the Callee, if it does not have it
+      if (!Callee.hasFnAttribute("uniform-work-group-size")) {
+        Callee.addFnAttr("uniform-work-group-size", "true");
+        return true;
+      }
+    } else {
+      Callee.addFnAttr("uniform-work-group-size", "false");
+      return true;
+    }
+  } else {
+    // If the attribute is absent, set it as false
+    Caller.addFnAttr("uniform-work-group-size", "false");
+    Callee.addFnAttr("uniform-work-group-size", "false");
+    return true;
+  }
+  return false;
 }
 
 bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
@@ -293,15 +345,19 @@ bool AMDGPUAnnotateKernelFeatures::addFeatureAttributes(Function &F) {
 }
 
 bool AMDGPUAnnotateKernelFeatures::runOnSCC(CallGraphSCC &SCC) {
-  Module &M = SCC.getCallGraph().getModule();
-  Triple TT(M.getTargetTriple());
-
   bool Changed = false;
+ 
   for (CallGraphNode *I : SCC) {
-    Function *F = I->getFunction();
+    // Build a list of CallGraphNodes from most number of uses to least
+    if (I->getNumReferences())
+      NodeList.push_back(I);
+    else
+      processUniformWorkGroupAttribute();
+
+    Function *F = I->getFunction();    
+    // Add feature attributes
     if (!F || F->isDeclaration())
       continue;
-
     Changed |= addFeatureAttributes(*F);
   }
 

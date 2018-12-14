@@ -59,3 +59,37 @@ void testK1_(K k, J j) {
 void testK2_(K k, I i) {
   k.j->i = i; // expected-error {{cannot assign to non-static data member 'i' with const-qualified data member 'a'}}
 }
+
+// PR39946: Recursive checking of hasConstFields caused stack overflow.
+struct L { // expected-note {{definition of 'struct L' is not complete until the closing '}'}}
+  struct L field; // expected-error {{field has incomplete type 'struct L'}}
+};
+void testL(struct L *l) {
+  *l = 0; // expected-error {{assigning to 'struct L' from incompatible type 'int'}}
+}
+
+// Additionally, this example overflowed the stack when figuring out the field.
+struct M1; // expected-note {{forward declaration of 'struct M1'}}
+struct M2 {
+  //expected-note@+1 {{nested data member 'field' declared const here}}
+  const struct M1 field; // expected-error {{field has incomplete type 'const struct M1'}}
+};
+struct M1 {
+  struct M2 field;
+};
+
+void testM(struct M1 *l) {
+  *l = 0; // expected-error {{cannot assign to lvalue with nested const-qualified data member 'field'}}
+}
+
+struct N1; // expected-note {{forward declaration of 'struct N1'}}
+struct N2 {
+  struct N1 field; // expected-error {{field has incomplete type 'struct N1'}}
+};
+struct N1 {
+  struct N2 field;
+};
+
+void testN(struct N1 *l) {
+  *l = 0; // expected-error {{assigning to 'struct N1' from incompatible type 'int'}}
+}

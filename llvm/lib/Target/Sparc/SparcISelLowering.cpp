@@ -3261,23 +3261,23 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       else
         return std::make_pair(0U, &SP::IntRegsRegClass);
     case 'f':
-      if (VT == MVT::f32)
+      if (VT == MVT::f32 || VT == MVT::i32)
         return std::make_pair(0U, &SP::FPRegsRegClass);
-      else if (VT == MVT::f64)
+      else if (VT == MVT::f64 || VT == MVT::i64)
         return std::make_pair(0U, &SP::LowDFPRegsRegClass);
       else if (VT == MVT::f128)
         return std::make_pair(0U, &SP::LowQFPRegsRegClass);
-      llvm_unreachable("Unknown ValueType for f-register-type!");
-      break;
+      // This will generate an error message
+      return std::make_pair(0U, nullptr);
     case 'e':
-      if (VT == MVT::f32)
+      if (VT == MVT::f32 || VT == MVT::i32)
         return std::make_pair(0U, &SP::FPRegsRegClass);
-      else if (VT == MVT::f64)
+      else if (VT == MVT::f64 || VT == MVT::i64 )
         return std::make_pair(0U, &SP::DFPRegsRegClass);
       else if (VT == MVT::f128)
         return std::make_pair(0U, &SP::QFPRegsRegClass);
-      llvm_unreachable("Unknown ValueType for e-register-type!");
-      break;
+      // This will generate an error message
+      return std::make_pair(0U, nullptr);
     }
   } else if (!Constraint.empty() && Constraint.size() <= 5
               && Constraint[0] == '{' && *(Constraint.end()-1) == '}') {

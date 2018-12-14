@@ -651,6 +651,7 @@ void ASTStmtWriter::VisitCallExpr(CallExpr *E) {
   for (CallExpr::arg_iterator Arg = E->arg_begin(), ArgEnd = E->arg_end();
        Arg != ArgEnd; ++Arg)
     Record.AddStmt(*Arg);
+  Record.push_back(static_cast<unsigned>(E->getADLCallKind()));
   Code = serialization::EXPR_CALL;
 }
 

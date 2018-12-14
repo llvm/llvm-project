@@ -229,17 +229,19 @@ static bool selectUnmergeValues(MachineInstrBuilder &MIB,
 /// instruction). Extension operations more complicated than that should not
 /// invoke this. Returns the original opcode if it doesn't know how to select a
 /// better one.
-static unsigned selectSimpleExtOpc(unsigned Opc, unsigned Size) {
+static unsigned selectSimpleExtOpc(unsigned Opc, unsigned Size, bool isThumb) {
   using namespace TargetOpcode;
 
   if (Size != 8 && Size != 16)
     return Opc;
 
   if (Opc == G_SEXT)
-    return Size == 8 ? ARM::SXTB : ARM::SXTH;
+    return isThumb ? Size == 8 ? ARM::t2SXTB : ARM::t2SXTH
+                   : Size == 8 ? ARM::SXTB : ARM::SXTH;
 
   if (Opc == G_ZEXT)
-    return Size == 8 ? ARM::UXTB : ARM::UXTH;
+    return isThumb ? Size == 8 ? ARM::t2UXTB : ARM::t2UXTH
+                   : Size == 8 ? ARM::UXTB : ARM::UXTH;
 
   return Opc;
 }
@@ -248,10 +250,23 @@ static unsigned selectSimpleExtOpc(unsigned Opc, unsigned Size) {
 /// bits, the value will be zero extended. Returns the original opcode if it
 /// doesn't know how to select a better one.
 static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned RegBank,
-                                      unsigned Size) {
+                                      unsigned Size, bool isThumb) {
   bool isStore = Opc == TargetOpcode::G_STORE;
 
   if (RegBank == ARM::GPRRegBankID) {
+    if (isThumb)
+      switch (Size) {
+      case 1:
+      case 8:
+        return isStore ? ARM::t2STRBi12 : ARM::t2LDRBi12;
+      case 16:
+        return isStore ? ARM::t2STRHi12 : ARM::t2LDRHi12;
+      case 32:
+        return isStore ? ARM::t2STRi12 : ARM::t2LDRi12;
+      default:
+        return Opc;
+      }
+
     switch (Size) {
     case 1:
     case 8:
@@ -702,7 +717,7 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     switch (SrcSize) {
     case 1: {
       // ZExt boils down to & 0x1; for SExt we also subtract that from 0
-      I.setDesc(TII.get(ARM::ANDri));
+      I.setDesc(TII.get(STI.isThumb() ? ARM::t2ANDri : ARM::ANDri));
       MIB.addImm(1).add(predOps(ARMCC::AL)).add(condCodeOp());
 
       if (isSExt) {
@@ -713,13 +728,13 @@ bool ARMInstructionSelector::select(MachineInstr &I,
         I.getOperand(0).setReg(AndResult);
 
         auto InsertBefore = std::next(I.getIterator());
-        auto SubI =
-            BuildMI(MBB, InsertBefore, I.getDebugLoc(), TII.get(ARM::RSBri))
-                .addDef(SExtResult)
-                .addUse(AndResult)
-                .addImm(0)
-                .add(predOps(ARMCC::AL))
-                .add(condCodeOp());
+        auto SubI = BuildMI(MBB, InsertBefore, I.getDebugLoc(),
+                            TII.get(STI.isThumb() ? ARM::t2RSBri : ARM::RSBri))
+                        .addDef(SExtResult)
+                        .addUse(AndResult)
+                        .addImm(0)
+                        .add(predOps(ARMCC::AL))
+                        .add(condCodeOp());
         if (!constrainSelectedInstRegOperands(*SubI, TII, TRI, RBI))
           return false;
       }
@@ -727,7 +742,8 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     }
     case 8:
     case 16: {
-      unsigned NewOpc = selectSimpleExtOpc(I.getOpcode(), SrcSize);
+      unsigned NewOpc =
+          selectSimpleExtOpc(I.getOpcode(), SrcSize, STI.isThumb());
       if (NewOpc == I.getOpcode())
         return false;
       I.setDesc(TII.get(NewOpc));
@@ -901,7 +917,8 @@ bool ARMInstructionSelector::select(MachineInstr &I,
     assert((ValSize != 64 || STI.hasVFP2()) &&
            "Don't know how to load/store 64-bit value without VFP");
 
-    const auto NewOpc = selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize);
+    const auto NewOpc =
+        selectLoadStoreOpCode(I.getOpcode(), RegBank, ValSize, STI.isThumb());
     if (NewOpc == G_LOAD || NewOpc == G_STORE)
       return false;
 

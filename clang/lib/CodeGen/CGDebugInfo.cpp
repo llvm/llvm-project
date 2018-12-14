@@ -25,10 +25,10 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
-#include "clang/Frontend/CodeGenOptions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleMap.h"
@@ -220,7 +220,7 @@ llvm::DIScope *CGDebugInfo::getContextDescriptor(const Decl *Context,
   if (const auto *RDecl = dyn_cast<RecordDecl>(Context))
     if (!RDecl->isDependentType())
       return getOrCreateType(CGM.getContext().getTypeDeclType(RDecl),
-                             getOrCreateMainFile());
+                             TheCU->getFile());
   return Default;
 }
 
@@ -404,7 +404,7 @@ Optional<StringRef> CGDebugInfo::getSource(const SourceManager &SM,
 llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
   if (!Loc.isValid())
     // If Location is not valid then use main input file.
-    return getOrCreateMainFile();
+    return TheCU->getFile();
 
   SourceManager &SM = CGM.getContext().getSourceManager();
   PresumedLoc PLoc = SM.getPresumedLoc(Loc);
@@ -412,11 +412,10 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
   StringRef FileName = PLoc.getFilename();
   if (PLoc.isInvalid() || FileName.empty())
     // If the location is not valid then use main input file.
-    return getOrCreateMainFile();
+    return TheCU->getFile();
 
   // Cache the results.
   auto It = DIFileCache.find(FileName.data());
-
   if (It != DIFileCache.end()) {
     // Verify that the information still exists.
     if (llvm::Metadata *V = It->second)
@@ -429,7 +428,13 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
   Optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo;
   if (CSKind)
     CSInfo.emplace(*CSKind, Checksum);
+  return createFile(FileName, CSInfo, getSource(SM, SM.getFileID(Loc)));
+}
 
+llvm::DIFile *
+CGDebugInfo::createFile(StringRef FileName,
+                        Optional<llvm::DIFile::ChecksumInfo<StringRef>> CSInfo,
+                        Optional<StringRef> Source) {
   StringRef Dir;
   StringRef File;
   std::string RemappedFile = remapDIPath(FileName);
@@ -460,19 +465,9 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     Dir = CurDir;
     File = RemappedFile;
   }
-  llvm::DIFile *F =
-      DBuilder.createFile(File, Dir, CSInfo,
-                          getSource(SM, SM.getFileID(Loc)));
-
+  llvm::DIFile *F = DBuilder.createFile(File, Dir, CSInfo, Source);
   DIFileCache[FileName.data()].reset(F);
   return F;
-}
-
-llvm::DIFile *CGDebugInfo::getOrCreateMainFile() {
-  return DBuilder.createFile(
-      remapDIPath(TheCU->getFilename()), remapDIPath(TheCU->getDirectory()),
-      TheCU->getFile()->getChecksum(),
-      CGM.getCodeGenOpts().EmbedSource ? TheCU->getSource() : None);
 }
 
 std::string CGDebugInfo::remapDIPath(StringRef Path) const {
@@ -599,24 +594,27 @@ void CGDebugInfo::CreateCompileUnit() {
     break;
   }
 
+  uint64_t DwoId = 0;
+  auto &CGOpts = CGM.getCodeGenOpts();
+  // The DIFile used by the CU is distinct from the main source
+  // file. Its directory part specifies what becomes the
+  // DW_AT_comp_dir (the compilation directory), even if the source
+  // file was specified with an absolute path.
   if (CSKind)
     CSInfo.emplace(*CSKind, Checksum);
+  llvm::DIFile *CUFile = DBuilder.createFile(
+      remapDIPath(MainFileName), remapDIPath(getCurrentDirname()), CSInfo,
+      getSource(SM, SM.getMainFileID()));
 
   // Create new compile unit.
-  // FIXME - Eliminate TheCU.
-  auto &CGOpts = CGM.getCodeGenOpts();
   TheCU = DBuilder.createCompileUnit(
-      LangTag,
-      DBuilder.createFile(remapDIPath(MainFileName),
-                          remapDIPath(getCurrentDirname()), CSInfo,
-                          getSource(SM, SM.getMainFileID())),
-      CGOpts.EmitVersionIdentMetadata ? Producer : "",
+      LangTag, CUFile, CGOpts.EmitVersionIdentMetadata ? Producer : "",
       LO.Optimize || CGOpts.PrepareForLTO || CGOpts.PrepareForThinLTO,
       CGOpts.DwarfDebugFlags, RuntimeVers,
       (CGOpts.getSplitDwarfMode() != CodeGenOptions::NoFission)
           ? ""
           : CGOpts.SplitDwarfFile,
-      EmissionKind, 0 /* DWOid */, CGOpts.SplitDwarfInlining,
+      EmissionKind, DwoId, CGOpts.SplitDwarfInlining,
       CGOpts.DebugInfoForProfiling,
       CGM.getTarget().getTriple().isNVPTX()
           ? llvm::DICompileUnit::DebugNameTableKind::None
@@ -640,9 +638,9 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     return nullptr;
   case BuiltinType::ObjCClass:
     if (!ClassTy)
-      ClassTy = DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,
-                                           "objc_class", TheCU,
-                                           getOrCreateMainFile(), 0);
+      ClassTy =
+          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,
+                                     "objc_class", TheCU, TheCU->getFile(), 0);
     return ClassTy;
   case BuiltinType::ObjCId: {
     // typedef struct objc_class *Class;
@@ -654,21 +652,21 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
       return ObjTy;
 
     if (!ClassTy)
-      ClassTy = DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,
-                                           "objc_class", TheCU,
-                                           getOrCreateMainFile(), 0);
+      ClassTy =
+          DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,
+                                     "objc_class", TheCU, TheCU->getFile(), 0);
 
     unsigned Size = CGM.getContext().getTypeSize(CGM.getContext().VoidPtrTy);
 
     auto *ISATy = DBuilder.createPointerType(ClassTy, Size);
 
-    ObjTy = DBuilder.createStructType(
-        TheCU, "objc_object", getOrCreateMainFile(), 0, 0, 0,
-        llvm::DINode::FlagZero, nullptr, llvm::DINodeArray());
+    ObjTy = DBuilder.createStructType(TheCU, "objc_object", TheCU->getFile(), 0,
+                                      0, 0, llvm::DINode::FlagZero, nullptr,
+                                      llvm::DINodeArray());
 
     DBuilder.replaceArrays(
         ObjTy, DBuilder.getOrCreateArray(&*DBuilder.createMemberType(
-                   ObjTy, "isa", getOrCreateMainFile(), 0, Size, 0, 0,
+                   ObjTy, "isa", TheCU->getFile(), 0, Size, 0, 0,
                    llvm::DINode::FlagZero, ISATy)));
     return ObjTy;
   }
@@ -676,7 +674,7 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
     if (!SelTy)
       SelTy = DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type,
                                          "objc_selector", TheCU,
-                                         getOrCreateMainFile(), 0);
+                                         TheCU->getFile(), 0);
     return SelTy;
   }
 
@@ -997,7 +995,7 @@ llvm::DIType *CGDebugInfo::getOrCreateStructPtrType(StringRef Name,
   if (Cache)
     return Cache;
   Cache = DBuilder.createForwardDecl(llvm::dwarf::DW_TAG_structure_type, Name,
-                                     TheCU, getOrCreateMainFile(), 0);
+                                     TheCU, TheCU->getFile(), 0);
   unsigned Size = CGM.getContext().getTypeSize(CGM.getContext().VoidPtrTy);
   Cache = DBuilder.createPointerType(Cache, Size);
   return Cache;
@@ -2623,9 +2621,9 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
   const FunctionProtoType *FPT =
       Ty->getPointeeType()->getAs<FunctionProtoType>();
   return DBuilder.createMemberPointerType(
-      getOrCreateInstanceMethodType(CGM.getContext().getPointerType(QualType(
-                                        Ty->getClass(), FPT->getTypeQuals())),
-                                    FPT, U),
+      getOrCreateInstanceMethodType(
+          CXXMethodDecl::getThisType(FPT, Ty->getMostRecentCXXRecordDecl()),
+          FPT, U),
       ClassType, Size, /*Align=*/0, Flags);
 }
 
@@ -4475,7 +4473,7 @@ void CGDebugInfo::EmitExplicitCastType(QualType Ty) {
   if (CGM.getCodeGenOpts().getDebugInfo() < codegenoptions::LimitedDebugInfo)
     return;
 
-  if (auto *DieTy = getOrCreateType(Ty, getOrCreateMainFile()))
+  if (auto *DieTy = getOrCreateType(Ty, TheCU->getFile()))
     // Don't ignore in case of explicit cast where it is referenced indirectly.
     DBuilder.retainType(DieTy);
 }

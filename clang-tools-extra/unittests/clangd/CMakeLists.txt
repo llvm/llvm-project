@@ -58,6 +58,7 @@ target_link_libraries(ClangdTests
   clangIndex
   clangLex
   clangSema
+  clangSerialization
   clangTooling
   clangToolingCore
   clangToolingInclusions

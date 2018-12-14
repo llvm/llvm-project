@@ -47,6 +47,7 @@ module Clang_Basic {
   textual header "Basic/BuiltinsX86.def"
   textual header "Basic/BuiltinsX86_64.def"
   textual header "Basic/BuiltinsXCore.def"
+  textual header "Basic/CodeGenOptions.def"
   textual header "Basic/DiagnosticOptions.def"
   textual header "Basic/Features.def"
   textual header "Basic/LangOptions.def"
@@ -102,17 +103,6 @@ module Clang_Frontend {
   textual header "Frontend/LangStandards.def"
 
   module * { export * }
-
-  // FIXME: This violates layers.
-  exclude header "Frontend/PCHContainerOperations.h"
-}
-
-// Used in clangBasic
-module Clang_Frontend_CodeGenOptions {
-  requires cplusplus
-  header "Frontend/CodeGenOptions.h"
-  textual header "Frontend/CodeGenOptions.def"
-  export *
 }
 
 module Clang_FrontendTool { requires cplusplus umbrella "FrontendTool" module * { export * } }

@@ -1055,6 +1055,32 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::G_MERGE_VALUES: {
+    // G_MERGE_VALUES should only be used to merge scalars into a larger scalar,
+    // e.g. s2N = MERGE sN, sN
+    // Merging multiple scalars into a vector is not allowed, should use
+    // G_BUILD_VECTOR for that.
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
+    if (DstTy.isVector() || SrcTy.isVector())
+      report("G_MERGE_VALUES cannot operate on vectors", MI);
+    break;
+  }
+  case TargetOpcode::G_UNMERGE_VALUES: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    LLT SrcTy = MRI->getType(MI->getOperand(MI->getNumOperands()-1).getReg());
+    // For now G_UNMERGE can split vectors.
+    for (unsigned i = 0; i < MI->getNumOperands()-1; ++i) {
+      if (MRI->getType(MI->getOperand(i).getReg()) != DstTy)
+        report("G_UNMERGE_VALUES destination types do not match", MI);
+    }
+    if (SrcTy.getSizeInBits() !=
+        (DstTy.getSizeInBits() * (MI->getNumOperands() - 1))) {
+      report("G_UNMERGE_VALUES source operand does not cover dest operands",
+             MI);
+    }
+    break;
+  }
   case TargetOpcode::G_BUILD_VECTOR: {
     // Source types must be scalars, dest type a vector. Total size of scalars
     // must match the dest vector size.

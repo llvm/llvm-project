@@ -40,8 +40,8 @@ define i32 @foo(i64 %outer.coerce0, i64 %outer.coerce1) #0 !dbg !4 {
   call void @llvm.dbg.value(metadata i32 %outer.sroa.1.8.extract.trunc, metadata !34, metadata !35), !dbg !33
   %outer.sroa.1.12.extract.shift = lshr i64 %outer.coerce1, 32, !dbg !33
   %outer.sroa.1.12.extract.trunc = trunc i64 %outer.sroa.1.12.extract.shift to i32, !dbg !33
-  call void @llvm.dbg.value(metadata i64 %outer.sroa.1.12.extract.shift, metadata !34, metadata !35), !dbg !33
-  call void @llvm.dbg.value(metadata i32 %outer.sroa.1.12.extract.trunc, metadata !34, metadata !35), !dbg !33
+  call void @llvm.dbg.value(metadata i64 %outer.sroa.1.12.extract.shift, metadata !34, metadata !37), !dbg !33
+  call void @llvm.dbg.value(metadata i32 %outer.sroa.1.12.extract.trunc, metadata !34, metadata !37), !dbg !33
   call void @llvm.dbg.declare(metadata !{null}, metadata !34, metadata !35), !dbg !33
   ret i32 %outer.sroa.1.8.extract.trunc, !dbg !36
 }
@@ -99,3 +99,4 @@ attributes #2 = { nounwind }
 !34 = !DILocalVariable(name: "i1", line: 11, scope: !4, file: !5, type: !14)
 !35 = !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 !36 = !DILocation(line: 12, scope: !4)
+!37 = !DIExpression(DW_OP_LLVM_fragment, 32, 32)

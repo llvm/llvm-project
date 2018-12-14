@@ -54,7 +54,7 @@ class ELFStub {
 // TODO: Add support for symbol versioning.
 public:
   VersionTuple TbeVersion;
-  std::string SoName;
+  Optional<std::string> SoName;
   ELFArch Arch;
   std::vector<std::string> NeededLibs;
   std::set<ELFSymbol> Symbols;

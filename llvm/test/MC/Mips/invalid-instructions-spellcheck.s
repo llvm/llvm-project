@@ -1,8 +1,10 @@
-# RUN: not llvm-mc -arch mips -mcpu=mips32r2 -mattr=+micromips %s 2>&1 \
+# RUN: not llvm-mc -triple mips-unknown-linux-gnu -mcpu=mips32r2 \
+# RUN:             -mattr=+micromips %s 2>&1 \
 # RUN:   | FileCheck --check-prefixes=ALL,MMR2 %s
-# RUN: not llvm-mc -arch mips -mcpu=mips32r6 -mattr=+micromips %s 2>&1 \
+# RUN: not llvm-mc -triple mips-unknown-linux-gnu -mcpu=mips32r6 \
+# RUN:             -mattr=+micromips %s 2>&1 \
 # RUN:   | FileCheck --check-prefixes=ALL,MMR6 %s
-# RUN: not llvm-mc -arch mips -mcpu=mips32r6 %s 2>&1 \
+# RUN: not llvm-mc -triple mips-unknown-linux-gnu -mcpu=mips32r6 %s 2>&1 \
 # RUN:   | FileCheck --check-prefixes=ALL,MIPS32R6 %s
 
 # This tests the mnemonic spell checker.

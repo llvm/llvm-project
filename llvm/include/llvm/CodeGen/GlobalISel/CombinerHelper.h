@@ -30,7 +30,6 @@ class CombinerHelper {
   MachineRegisterInfo &MRI;
   GISelChangeObserver &Observer;
 
-  void eraseInstr(MachineInstr &MI);
   void scheduleForVisit(MachineInstr &MI);
 
 public:

@@ -329,12 +329,15 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
 ///
 /// This utility preserves LoopInfo. It will also preserve ScalarEvolution and
 /// DominatorTree if they are non-null.
+///
+/// If RemainderLoop is non-null, it will receive the remainder loop (if
+/// required and not fully unrolled).
 LoopUnrollResult llvm::UnrollLoop(
     Loop *L, unsigned Count, unsigned TripCount, bool Force, bool AllowRuntime,
     bool AllowExpensiveTripCount, bool PreserveCondBr, bool PreserveOnlyFirst,
     unsigned TripMultiple, unsigned PeelCount, bool UnrollRemainder,
     LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
-    OptimizationRemarkEmitter *ORE, bool PreserveLCSSA) {
+    OptimizationRemarkEmitter *ORE, bool PreserveLCSSA, Loop **RemainderLoop) {
 
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
@@ -468,7 +471,7 @@ LoopUnrollResult llvm::UnrollLoop(
   if (RuntimeTripCount && TripMultiple % Count != 0 &&
       !UnrollRuntimeLoopRemainder(L, Count, AllowExpensiveTripCount,
                                   EpilogProfitability, UnrollRemainder, LI, SE,
-                                  DT, AC, PreserveLCSSA)) {
+                                  DT, AC, PreserveLCSSA, RemainderLoop)) {
     if (Force)
       RuntimeTripCount = false;
     else {

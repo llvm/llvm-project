@@ -6314,6 +6314,13 @@ SDValue DAGCombiner::visitRotate(SDNode *N) {
   if (isNullOrNullSplat(N1))
     return N0;
 
+  // fold (rot x, c) -> x iff (c % BitSize) == 0
+  if (isPowerOf2_32(Bitsize) && Bitsize > 1) {
+    APInt ModuloMask(N1.getScalarValueSizeInBits(), Bitsize - 1);
+    if (DAG.MaskedValueIsZero(N1, ModuloMask))
+      return N0;
+  }
+
   // fold (rot x, c) -> (rot x, c % BitSize)
   if (ConstantSDNode *Cst = isConstOrConstSplat(N1)) {
     if (Cst->getAPIntValue().uge(Bitsize)) {
@@ -15691,8 +15698,13 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
       if (CstElt->getAPIntValue().ult(VT.getVectorNumElements()))
         DemandedElts.setBit(CstElt->getZExtValue());
     }
-    if (SimplifyDemandedVectorElts(InVec, DemandedElts, true))
+    if (SimplifyDemandedVectorElts(InVec, DemandedElts, true)) {
+      // We simplified the vector operand of this extract element. If this
+      // extract is not dead, visit it again so it is folded properly.
+      if (N->getOpcode() != ISD::DELETED_NODE)
+        AddToWorklist(N);
       return SDValue(N, 0);
+    }
   }
 
   bool BCNumEltsChanged = false;
@@ -16544,7 +16556,7 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
           TLI.isTypeLegal(Scalar->getOperand(0).getValueType()))
         Scalar = Scalar->getOperand(0);
 
-      EVT SclTy = Scalar->getValueType(0);
+      EVT SclTy = Scalar.getValueType();
 
       if (!SclTy.isFloatingPoint() && !SclTy.isInteger())
         return SDValue();
@@ -17716,12 +17728,6 @@ SDValue DAGCombiner::visitINSERT_SUBVECTOR(SDNode *N) {
   // If inserting an UNDEF, just return the original vector.
   if (N1.isUndef())
     return N0;
-
-  // For nested INSERT_SUBVECTORs, attempt to combine inner node first to allow
-  // us to pull BITCASTs from input to output.
-  if (N0.hasOneUse() && N0->getOpcode() == ISD::INSERT_SUBVECTOR)
-    if (SDValue NN0 = visitINSERT_SUBVECTOR(N0.getNode()))
-      return DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(N), VT, NN0, N1, N2);
 
   // If this is an insert of an extracted vector into an undef vector, we can
   // just use the input to the extract.

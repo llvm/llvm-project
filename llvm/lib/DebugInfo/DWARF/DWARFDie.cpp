@@ -155,9 +155,7 @@ static void dumpTypeTagName(raw_ostream &OS, dwarf::Tag T) {
 }
 
 /// Recursively dump the DIE type name when applicable.
-static void dumpTypeName(raw_ostream &OS, const DWARFDie &Die) {
-  DWARFDie D = Die.getAttributeValueAsReferencedDie(DW_AT_type);
-
+static void dumpTypeName(raw_ostream &OS, const DWARFDie &D) {
   if (!D.isValid())
     return;
 
@@ -175,22 +173,63 @@ static void dumpTypeName(raw_ostream &OS, const DWARFDie &Die) {
   case DW_TAG_ptr_to_member_type:
   case DW_TAG_reference_type:
   case DW_TAG_rvalue_reference_type:
+  case DW_TAG_subroutine_type:
     break;
   default:
     dumpTypeTagName(OS, T);
   }
 
   // Follow the DW_AT_type if possible.
-  dumpTypeName(OS, D);
+  DWARFDie TypeDie = D.getAttributeValueAsReferencedDie(DW_AT_type);
+  dumpTypeName(OS, TypeDie);
 
   switch (T) {
-  case DW_TAG_array_type:
-    OS << "[]";
+  case DW_TAG_subroutine_type: {
+    if (!TypeDie)
+      OS << "void";
+    OS << '(';
+    bool First = true;
+    for (const DWARFDie &C : D.children()) {
+      if (C.getTag() == DW_TAG_formal_parameter) {
+        if (!First)
+          OS << ", ";
+        First = false;
+        dumpTypeName(OS, C.getAttributeValueAsReferencedDie(DW_AT_type));
+      }
+    }
+    OS << ')';
     break;
+  }
+  case DW_TAG_array_type: {
+    Optional<uint64_t> Bound;
+    for (const DWARFDie &C : D.children())
+      if (C.getTag() == DW_TAG_subrange_type) {
+        OS << '[';
+        uint64_t LowerBound = 0;
+        if (Optional<DWARFFormValue> L = C.find(DW_AT_lower_bound))
+          if (Optional<uint64_t> LB = L->getAsUnsignedConstant()) {
+            LowerBound = *LB;
+            OS << LowerBound << '-';
+          }
+        if (Optional<DWARFFormValue> CountV = C.find(DW_AT_count)) {
+          if (Optional<uint64_t> C = CountV->getAsUnsignedConstant())
+            OS << (*C + LowerBound);
+        } else if (Optional<DWARFFormValue> UpperV = C.find(DW_AT_upper_bound))
+          if (Optional<uint64_t> U = UpperV->getAsUnsignedConstant())
+            OS << *U;
+        OS << ']';
+      }
+    break;
+  }
   case DW_TAG_pointer_type:
     OS << '*';
     break;
   case DW_TAG_ptr_to_member_type:
+    if (DWARFDie Cont =
+            D.getAttributeValueAsReferencedDie(DW_AT_containing_type)) {
+      dumpTypeName(OS << ' ', Cont);
+      OS << "::";
+    }
     OS << '*';
     break;
   case DW_TAG_reference_type:
@@ -270,12 +309,13 @@ static void dumpAttribute(raw_ostream &OS, const DWARFDie &Die,
   // having both the raw value and the pretty-printed value is
   // interesting. These attributes are handled below.
   if (Attr == DW_AT_specification || Attr == DW_AT_abstract_origin) {
-    if (const char *Name = Die.getAttributeValueAsReferencedDie(Attr).getName(
-            DINameKind::LinkageName))
+    if (const char *Name =
+            Die.getAttributeValueAsReferencedDie(formValue).getName(
+                DINameKind::LinkageName))
       OS << Space << "\"" << Name << '\"';
   } else if (Attr == DW_AT_type) {
     OS << Space << "\"";
-    dumpTypeName(OS, Die);
+    dumpTypeName(OS, Die.getAttributeValueAsReferencedDie(formValue));
     OS << '"';
   } else if (Attr == DW_AT_APPLE_property_attribute) {
     if (Optional<uint64_t> OptVal = formValue.getAsUnsignedConstant())
@@ -371,7 +411,14 @@ DWARFDie::findRecursively(ArrayRef<dwarf::Attribute> Attrs) const {
 
 DWARFDie
 DWARFDie::getAttributeValueAsReferencedDie(dwarf::Attribute Attr) const {
-  if (auto SpecRef = toReference(find(Attr))) {
+  if (Optional<DWARFFormValue> F = find(Attr))
+    return getAttributeValueAsReferencedDie(*F);
+  return DWARFDie();
+}
+
+DWARFDie
+DWARFDie::getAttributeValueAsReferencedDie(const DWARFFormValue &V) const {
+  if (auto SpecRef = toReference(V)) {
     if (auto SpecUnit = U->getUnitVector().getUnitForOffset(*SpecRef))
       return SpecUnit->getDIEForOffset(*SpecRef);
   }

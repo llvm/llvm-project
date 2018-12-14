@@ -118,7 +118,7 @@ static bool isReservedId(StringRef Text, const LangOptions &Lang) {
 // the specified module, meaning clang won't build the specified module. This is
 // useful in a number of situations, for instance, when building a library that
 // vends a module map, one might want to avoid hitting intermediate build
-// products containig the the module map or avoid finding the system installed
+// products containimg the the module map or avoid finding the system installed
 // modulemap for that library.
 static bool isForModuleBuilding(Module *M, StringRef CurrentModule,
                                 StringRef ModuleName) {
@@ -399,7 +399,7 @@ void Preprocessor::SkipExcludedConditionalBlock(SourceLocation HashTokenLoc,
     // If this is the end of the buffer, we have an error.
     if (Tok.is(tok::eof)) {
       // We don't emit errors for unterminated conditionals here,
-      // Lexer::LexEndOfFile can do that propertly.
+      // Lexer::LexEndOfFile can do that properly.
       // Just return and let the caller lex after this #include.
       if (PreambleConditionalStack.isRecording())
         PreambleConditionalStack.SkipInfo.emplace(
