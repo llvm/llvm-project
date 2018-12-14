@@ -48,6 +48,7 @@ struct SizeClassAllocator32FlagMasks {  //  Bit masks.
 template <class Params>
 class SizeClassAllocator32 {
  public:
+  using AddressSpaceView = typename Params::AddressSpaceView;
   static const uptr kSpaceBeg = Params::kSpaceBeg;
   static const u64 kSpaceSize = Params::kSpaceSize;
   static const uptr kMetadataSize = Params::kMetadataSize;
@@ -108,6 +109,9 @@ class SizeClassAllocator32 {
   typedef SizeClassAllocator32LocalCache<ThisT> AllocatorCache;
 
   void Init(s32 release_to_os_interval_ms) {
+    static_assert(
+        is_same<typename ByteMap::AddressSpaceView, AddressSpaceView>::value,
+        "AddressSpaceView type mismatch");
     possible_regions.Init();
     internal_memset(size_class_info_array, 0, sizeof(size_class_info_array));
   }
