@@ -4,6 +4,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <random>
 #include <sstream>
 #include <streambuf>
 
@@ -207,7 +208,7 @@ void ResultsChecker::Add(const std::string& entry_pattern, ResultsCheckFn fn) {
 void ResultsChecker::CheckResults(std::stringstream& output) {
   // first reset the stream to the start
   {
-    auto start = std::ios::streampos(0);
+    auto start = std::stringstream::pos_type(0);
     // clear before calling tellg()
     output.clear();
     // seek to zero only when needed
@@ -438,11 +439,50 @@ int SubstrCnt(const std::string& haystack, const std::string& pat) {
   return count;
 }
 
+static char ToHex(int ch) {
+  return ch < 10 ? static_cast<char>('0' + ch)
+                 : static_cast<char>('a' + (ch - 10));
+}
+
+static char RandomHexChar() {
+  static std::mt19937 rd{std::random_device{}()};
+  static std::uniform_int_distribution<int> mrand{0, 15};
+  return ToHex(mrand(rd));
+}
+
+static std::string GetRandomFileName() {
+  std::string model = "test.%%%%%%";
+  for (auto & ch :  model) {
+    if (ch == '%')
+      ch = RandomHexChar();
+  }
+  return model;
+}
+
+static bool FileExists(std::string const& name) {
+  std::ifstream in(name.c_str());
+  return in.good();
+}
+
+static std::string GetTempFileName() {
+  // This function attempts to avoid race conditions where two tests
+  // create the same file at the same time. However, it still introduces races
+  // similar to tmpnam.
+  int retries = 3;
+  while (--retries) {
+    std::string name = GetRandomFileName();
+    if (!FileExists(name))
+      return name;
+  }
+  std::cerr << "Failed to create unique temporary file name" << std::endl;
+  std::abort();
+}
+
 std::string GetFileReporterOutput(int argc, char* argv[]) {
   std::vector<char*> new_argv(argv, argv + argc);
   assert(static_cast<decltype(new_argv)::size_type>(argc) == new_argv.size());
 
-  std::string tmp_file_name = std::tmpnam(nullptr);
+  std::string tmp_file_name = GetTempFileName();
   std::cout << "Will be using this as the tmp file: " << tmp_file_name << '\n';
 
   std::string tmp = "--benchmark_out=";
