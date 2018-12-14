@@ -1786,7 +1786,7 @@ private:
     uint64_t __lr;    // Link register x30
     uint64_t __sp;    // Stack pointer x31
     uint64_t __pc;    // Program counter
-    uint64_t padding; // 16-byte align
+    uint64_t __ra_sign_state; // RA sign state register
   };
 
   GPRs    _registers;
@@ -1822,6 +1822,8 @@ inline bool Registers_arm64::validRegister(int regNum) const {
     return false;
   if (regNum > 95)
     return false;
+  if (regNum == UNW_ARM64_RA_SIGN_STATE)
+    return true;
   if ((regNum > 31) && (regNum < 64))
     return false;
   return true;
@@ -1832,6 +1834,8 @@ inline uint64_t Registers_arm64::getRegister(int regNum) const {
     return _registers.__pc;
   if (regNum == UNW_REG_SP)
     return _registers.__sp;
+  if (regNum == UNW_ARM64_RA_SIGN_STATE)
+    return _registers.__ra_sign_state;
   if ((regNum >= 0) && (regNum < 32))
     return _registers.__x[regNum];
   _LIBUNWIND_ABORT("unsupported arm64 register");
@@ -1842,6 +1846,8 @@ inline void Registers_arm64::setRegister(int regNum, uint64_t value) {
     _registers.__pc = value;
   else if (regNum == UNW_REG_SP)
     _registers.__sp = value;
+  else if (regNum == UNW_ARM64_RA_SIGN_STATE)
+    _registers.__ra_sign_state = value;
   else if ((regNum >= 0) && (regNum < 32))
     _registers.__x[regNum] = value;
   else
