@@ -261,6 +261,11 @@ template <class T, class Allocator>
 void swap(vector<T,Allocator>& x, vector<T,Allocator>& y)
     noexcept(noexcept(x.swap(y)));
 
+template <class T, class Allocator, class U>
+    void erase(vector<T, Allocator>& c, const U& value);       // C++20
+template <class T, class Allocator, class Predicate>
+    void erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
+
 }  // std
 
 */
@@ -3407,6 +3412,18 @@ swap(vector<_Tp, _Allocator>& __x, vector<_Tp, _Allocator>& __y)
 {
     __x.swap(__y);
 }
+
+#if _LIBCPP_STD_VER > 17
+template <class _Tp, class _Allocator, class _Up>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase(vector<_Tp, _Allocator>& __c, const _Up& __v)
+{ __c.erase(_VSTD::remove(__c.begin(), __c.end(), __v), __c.end()); }
+
+template <class _Tp, class _Allocator, class _Predicate>
+inline _LIBCPP_INLINE_VISIBILITY
+void erase_if(vector<_Tp, _Allocator>& __c, _Predicate __pred)
+{ __c.erase(_VSTD::remove_if(__c.begin(), __c.end(), __pred), __c.end()); }
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 
