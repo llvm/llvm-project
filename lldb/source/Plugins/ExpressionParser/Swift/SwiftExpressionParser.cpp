@@ -803,7 +803,7 @@ static void CountLocals(
             swift_type->dump(ss);
             ss.flush();
             log->Printf("Adding injected self: type (%p) context(%p) is: %s",
-                        static_cast<void *>(swift_type),
+                        static_cast<void *>(swift_type.getPointer()),
                         static_cast<void *>(ast_context.GetASTContext()),
                         s.c_str());
           }
