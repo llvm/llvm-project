@@ -396,9 +396,9 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       // Don't try to import functions with noinline attribute.
       F.getAttributes().hasFnAttribute(Attribute::NoInline)};
   auto FuncSummary = llvm::make_unique<FunctionSummary>(
-      Flags, NumInsts, FunFlags, std::move(Refs), CallGraphEdges.takeVector(),
-      TypeTests.takeVector(), TypeTestAssumeVCalls.takeVector(),
-      TypeCheckedLoadVCalls.takeVector(),
+      Flags, NumInsts, FunFlags, /*EntryCount=*/0, std::move(Refs),
+      CallGraphEdges.takeVector(), TypeTests.takeVector(),
+      TypeTestAssumeVCalls.takeVector(), TypeCheckedLoadVCalls.takeVector(),
       TypeTestAssumeConstVCalls.takeVector(),
       TypeCheckedLoadConstVCalls.takeVector());
   if (NonRenamableLocal)
@@ -509,14 +509,15 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
           if (Function *F = dyn_cast<Function>(GV)) {
             std::unique_ptr<FunctionSummary> Summary =
                 llvm::make_unique<FunctionSummary>(
-                    GVFlags, 0,
+                    GVFlags, /*InstCount=*/0,
                     FunctionSummary::FFlags{
                         F->hasFnAttribute(Attribute::ReadNone),
                         F->hasFnAttribute(Attribute::ReadOnly),
                         F->hasFnAttribute(Attribute::NoRecurse),
                         F->returnDoesNotAlias(),
                         /* NoInline = */ false},
-                    ArrayRef<ValueInfo>{}, ArrayRef<FunctionSummary::EdgeTy>{},
+                    /*EntryCount=*/0, ArrayRef<ValueInfo>{},
+                    ArrayRef<FunctionSummary::EdgeTy>{},
                     ArrayRef<GlobalValue::GUID>{},
                     ArrayRef<FunctionSummary::VFuncId>{},
                     ArrayRef<FunctionSummary::VFuncId>{},

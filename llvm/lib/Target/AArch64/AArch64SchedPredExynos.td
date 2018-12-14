@@ -12,6 +12,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Auxiliary predicates.
+
+// Check the shift in arithmetic and logic instructions.
+def ExynosCheckShift : CheckAny<[CheckShiftBy0,
+                                 CheckAll<
+                                   [CheckShiftLSL,
+                                    CheckAny<
+                                      [CheckShiftBy1,
+                                       CheckShiftBy2,
+                                       CheckShiftBy3]>]>]>;
+
+// Exynos predicates.
+
 // Identify BLR specifying the LR register as the indirect target register.
 def ExynosBranchLinkLRPred : MCSchedPredicate<
                                CheckAll<[CheckOpcode<[BLR]>,
@@ -82,35 +95,31 @@ def ExynosRotateRightImmPred : MCSchedPredicate<
                                  CheckAll<[CheckOpcode<[EXTRWrri, EXTRXrri]>,
                                            CheckSameRegOperand<1, 2>]>>;
 
-// Identify arithmetic and logic instructions without or with limited shift.
+// Identify arithmetic and logic instructions with limited shift.
 def ExynosShiftFn   : TIIPredicate<
                         "isExynosShiftFast",
                         MCOpcodeSwitchStatement<
                           [MCOpcodeSwitchCase<
                              IsArithLogicShiftOp.ValidOpcodes,
-                             MCReturnStatement<
-                               CheckAny<[CheckShiftBy0,
-                                         CheckAll<
-                                           [CheckShiftLSL,
-                                            CheckAny<
-                                              [CheckShiftBy1,
-                                               CheckShiftBy2,
-                                               CheckShiftBy3]>]>]>>>],
+                             MCReturnStatement<ExynosCheckShift>>],
                           MCReturnStatement<FalsePred>>>;
 def ExynosShiftPred : MCSchedPredicate<ExynosShiftFn>;
 
-// Identify more arithmetic and logic instructions without or limited shift.
+// Identify more arithmetic and logic instructions with limited shift.
 def ExynosShiftExFn   : TIIPredicate<
                           "isExynosShiftExFast",
                           MCOpcodeSwitchStatement<
                             [MCOpcodeSwitchCase<
                                IsArithLogicShiftOp.ValidOpcodes,
                                MCReturnStatement<
-                                 CheckAll<
-                                   [CheckShiftLSL,
-                                    CheckShiftBy8]>>>],
-                            MCReturnStatement<ExynosShiftFn>>>;
+                                 CheckAny<
+                                   [CheckAll<
+                                     [CheckShiftLSL,
+                                      CheckShiftBy8]>,
+                                    ExynosCheckShift]>>>],
+                            MCReturnStatement<FalsePred>>>;
 def ExynosShiftExPred : MCSchedPredicate<ExynosShiftExFn>;
+
 
 // Identify arithmetic and logic immediate instructions.
 def ExynosCheapFn : TIIPredicate<

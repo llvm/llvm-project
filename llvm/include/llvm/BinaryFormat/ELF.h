@@ -1361,12 +1361,18 @@ enum {
   GNU_PROPERTY_X86_FEATURE_1_SHSTK = 1 << 1
 };
 
-// AMDGPU specific notes.
+// AMD specific notes. (Code Object V2)
 enum {
   // Note types with values between 0 and 9 (inclusive) are reserved.
   NT_AMD_AMDGPU_HSA_METADATA = 10,
   NT_AMD_AMDGPU_ISA = 11,
   NT_AMD_AMDGPU_PAL_METADATA = 12
+};
+
+// AMDGPU specific notes. (Code Object V3)
+enum {
+  // Note types with values between 0 and 31 (inclusive) are reserved.
+  NT_AMDGPU_METADATA = 32
 };
 
 enum {

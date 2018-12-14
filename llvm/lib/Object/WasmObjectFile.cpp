@@ -319,6 +319,10 @@ Error WasmObjectFile::parseDylinkSection(ReadContext &Ctx) {
   DylinkInfo.MemoryAlignment = readVaruint32(Ctx);
   DylinkInfo.TableSize = readVaruint32(Ctx);
   DylinkInfo.TableAlignment = readVaruint32(Ctx);
+  uint32_t Count = readVaruint32(Ctx);
+  while (Count--) {
+    DylinkInfo.Needed.push_back(readString(Ctx));
+  }
   if (Ctx.Ptr != Ctx.End)
     return make_error<GenericBinaryError>("dylink section ended prematurely",
                                           object_error::parse_failed);
@@ -1404,6 +1408,8 @@ SubtargetFeatures WasmObjectFile::getFeatures() const {
 }
 
 bool WasmObjectFile::isRelocatableObject() const { return HasLinkingSection; }
+
+bool WasmObjectFile::isSharedObject() const { return HasDylinkSection; }
 
 const WasmSection &WasmObjectFile::getWasmSection(DataRefImpl Ref) const {
   assert(Ref.d.a < Sections.size());

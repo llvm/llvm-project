@@ -199,9 +199,10 @@ namespace  {
     void VisitFunctionProtoType(const FunctionProtoType *T) {
       auto EPI = T->getExtProtoInfo();
       if (EPI.HasTrailingReturn) OS << " trailing_return";
-      if (T->isConst()) OS << " const";
-      if (T->isVolatile()) OS << " volatile";
-      if (T->isRestrict()) OS << " restrict";
+
+      if (!T->getTypeQuals().empty())
+        OS << " " << T->getTypeQuals().getAsString();
+
       switch (EPI.RefQualifier) {
         case RQ_None: break;
         case RQ_LValue: OS << " &"; break;
@@ -382,6 +383,7 @@ namespace  {
     void VisitOMPExecutableDirective(const OMPExecutableDirective *Node);
 
     // Exprs
+    void VisitCallExpr(const CallExpr *Node);
     void VisitCastExpr(const CastExpr *Node);
     void VisitImplicitCastExpr(const ImplicitCastExpr *Node);
     void VisitDeclRefExpr(const DeclRefExpr *Node);
@@ -1874,6 +1876,11 @@ static void dumpBasePath(raw_ostream &OS, const CastExpr *Node) {
   }
 
   OS << ')';
+}
+
+void ASTDumper::VisitCallExpr(const CallExpr *Node) {
+  if (Node->usesADL())
+    OS << " adl";
 }
 
 void ASTDumper::VisitCastExpr(const CastExpr *Node) {

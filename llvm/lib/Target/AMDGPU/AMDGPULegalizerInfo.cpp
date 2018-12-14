@@ -45,6 +45,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   const LLT FlatPtr = GetAddrSpacePtr(AMDGPUAS::FLAT_ADDRESS);
   const LLT PrivatePtr = GetAddrSpacePtr(AMDGPUAS::PRIVATE_ADDRESS);
 
+  const LLT CodePtr = FlatPtr;
+
   const LLT AddrSpaces[] = {
     GlobalPtr,
     ConstantPtr,
@@ -88,16 +90,22 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
   // between these two scenarios.
   setAction({G_CONSTANT, S1}, Legal);
 
-  setAction({G_FADD, S32}, Legal);
+  getActionDefinitionsBuilder(
+    { G_FADD, G_FMUL })
+    .legalFor({S32, S64});
 
   setAction({G_FCMP, S1}, Legal);
   setAction({G_FCMP, 1, S32}, Legal);
   setAction({G_FCMP, 1, S64}, Legal);
 
-  setAction({G_FMUL, S32}, Legal);
-
   setAction({G_ZEXT, S64}, Legal);
   setAction({G_ZEXT, 1, S32}, Legal);
+
+  setAction({G_SEXT, S64}, Legal);
+  setAction({G_SEXT, 1, S32}, Legal);
+
+  setAction({G_ANYEXT, S64}, Legal);
+  setAction({G_ANYEXT, 1, S32}, Legal);
 
   setAction({G_FPTOSI, S32}, Legal);
   setAction({G_FPTOSI, 1, S32}, Legal);
@@ -114,10 +122,24 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
     setAction({G_GEP, 1, IdxTy}, Legal);
   }
 
+  setAction({G_BLOCK_ADDR, CodePtr}, Legal);
+
   setAction({G_ICMP, S1}, Legal);
   setAction({G_ICMP, 1, S32}, Legal);
 
+  setAction({G_CTLZ, S32}, Legal);
+  setAction({G_CTLZ_ZERO_UNDEF, S32}, Legal);
+  setAction({G_CTTZ, S32}, Legal);
+  setAction({G_CTTZ_ZERO_UNDEF, S32}, Legal);
+  setAction({G_BSWAP, S32}, Legal);
+  setAction({G_CTPOP, S32}, Legal);
+
   getActionDefinitionsBuilder(G_INTTOPTR)
+    .legalIf([](const LegalityQuery &Query) {
+      return true;
+    });
+
+  getActionDefinitionsBuilder(G_PTRTOINT)
     .legalIf([](const LegalityQuery &Query) {
       return true;
     });

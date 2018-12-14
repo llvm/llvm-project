@@ -3,9 +3,11 @@ import("//llvm/utils/gn/build/mac_sdk.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
 config("compiler_defaults") {
+  defines = []
+
   # FIXME: Don't define this globally here.
   if (host_os != "win") {
-    defines = [ "LLVM_ON_UNIX" ]
+    defines += [ "LLVM_ON_UNIX" ]
   }
 
   if (!llvm_enable_assertions) {

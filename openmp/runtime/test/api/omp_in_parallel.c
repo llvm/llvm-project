@@ -30,6 +30,11 @@ int main()
   int i;
   int num_failed=0;
 
+  // the test requires more than 1 thread to pass
+  omp_set_dynamic(0); // disable dynamic adjustment of threads
+  if (omp_get_max_threads() == 1)
+    omp_set_num_threads(2); // set 2 threads if no HW resources available
+
   for(i = 0; i < REPETITIONS; i++) {
     if(!test_omp_in_parallel()) {
       num_failed++;

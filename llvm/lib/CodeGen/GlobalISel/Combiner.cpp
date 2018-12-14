@@ -43,17 +43,21 @@ public:
   WorkListMaintainer(WorkListTy &WorkList) : WorkList(WorkList) {}
   virtual ~WorkListMaintainer() {}
 
-  void erasedInstr(MachineInstr &MI) override {
-    LLVM_DEBUG(dbgs() << "Erased: "; MI.print(dbgs()); dbgs() << "\n");
+  void erasingInstr(MachineInstr &MI) override {
+    LLVM_DEBUG(dbgs() << "Erased: " << MI << "\n");
     WorkList.remove(&MI);
   }
   void createdInstr(MachineInstr &MI) override {
-    LLVM_DEBUG(dbgs() << "Created: "; MI.print(dbgs()); dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "Created: " << MI << "\n");
     WorkList.insert(&MI);
+  }
+  void changingInstr(MachineInstr &MI) override {
+    LLVM_DEBUG(dbgs() << "Changing: " << MI << "\n");
+    WorkList.remove(&MI);
   }
   // Currently changed conservatively assumes erased.
   void changedInstr(MachineInstr &MI) override {
-    LLVM_DEBUG(dbgs() << "Changed: "; MI.print(dbgs()); dbgs() << "\n");
+    LLVM_DEBUG(dbgs() << "Changed: " << MI << "\n");
     WorkList.remove(&MI);
   }
 };

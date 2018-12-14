@@ -26,7 +26,10 @@ using namespace CodeGen;
 
 static void EmitDeclInit(CodeGenFunction &CGF, const VarDecl &D,
                          ConstantAddress DeclPtr) {
-  assert(D.hasGlobalStorage() && "VarDecl must have global storage!");
+  assert(
+      (D.hasGlobalStorage() ||
+       (D.hasLocalStorage() && CGF.getContext().getLangOpts().OpenCLCPlusPlus)) &&
+      "VarDecl must have global or local (in the case of OpenCL) storage!");
   assert(!D.getType()->isReferenceType() &&
          "Should not call EmitDeclInit on a reference!");
 

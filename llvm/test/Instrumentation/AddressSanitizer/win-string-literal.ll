@@ -15,7 +15,7 @@
 ; CHECK-SAME: { i64 ptrtoint ({ [5 x i8], [59 x i8] }* @"??_C@_04JIHMPGLA@asdf?$AA@" to i64),
 ; CHECK-SAME:   i64 5, i64 64, i64 ptrtoint ([17 x i8]* @___asan_gen_.1 to i64),
 ; CHECK-SAME:   i64 ptrtoint ([8 x i8]* @___asan_gen_ to i64), i64 0,
-; CHECK-SAME:   i64 ptrtoint ({ [6 x i8]*, i32, i32 }* @___asan_gen_.3 to i64), i64 0 },
+; CHECK-SAME:   i64 ptrtoint ({ [6 x i8]*, i32, i32 }* @___asan_gen_.3 to i64), i64 -1 },
 ; CHECK-SAME:   section ".ASAN$GL", comdat($"??_C@_04JIHMPGLA@asdf?$AA@"), align 64
 
 ; ModuleID = 't.cpp'

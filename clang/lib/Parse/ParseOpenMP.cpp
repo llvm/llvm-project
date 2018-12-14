@@ -495,7 +495,7 @@ public:
     Sema &Actions = P.getActions();
 
     // Allow 'this' within late-parsed attributes.
-    ThisScope = new Sema::CXXThisScopeRAII(Actions, RD, /*TypeQuals=*/0,
+    ThisScope = new Sema::CXXThisScopeRAII(Actions, RD, Qualifiers(),
                                            ND && ND->isCXXInstanceMember());
 
     // If the Decl is templatized, add template parameters to scope.

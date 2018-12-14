@@ -195,6 +195,7 @@ struct DylinkSection : CustomSection {
   uint32_t MemoryAlignment;
   uint32_t TableSize;
   uint32_t TableAlignment;
+  std::vector<StringRef> Needed;
 };
 
 struct NameSection : CustomSection {

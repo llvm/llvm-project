@@ -4,6 +4,7 @@ static_library("BinaryFormat") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AMDGPUMetadataVerifier.cpp",
     "Dwarf.cpp",
     "Magic.cpp",
     "MsgPackReader.cpp",

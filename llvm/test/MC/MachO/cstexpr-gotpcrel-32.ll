@@ -72,3 +72,24 @@ define i32 @t0(i32 %a) {
                     i32 ptrtoint (i32 (i32)* @t0 to i32)), %a
   ret i32 %x
 }
+
+; Text indirect local symbols.
+; CHECK-LABEL: _localindirect
+; CHECK: .long 65603
+@localindirect = internal constant i32  65603
+@got.localindirect = private unnamed_addr constant i32* @localindirect
+
+; CHECK-LABEL: _localindirectuser:
+; CHECK: .long   L_localindirect$non_lazy_ptr-_localindirectuser
+@localindirectuser = internal constant
+  i32 sub (i32 ptrtoint (i32** @got.localindirect to i32),
+           i32 ptrtoint (i32* @localindirectuser to i32))
+
+; CHECK-LABEL: L_localindirect$non_lazy_ptr:
+; CHECK: .indirect_symbol _localindirect
+; CHECK-NOT: .long 0
+; CHECK-NEXT: .long _localindirect
+define i8* @testRelativeIndirectSymbol() {
+  %1 = bitcast i32* @localindirectuser to i8*
+  ret i8* %1
+}

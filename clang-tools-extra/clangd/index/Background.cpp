@@ -86,6 +86,39 @@ IncludeGraph getSubGraph(const URI &U, const IncludeGraph &FullGraph) {
 
   return IG;
 }
+
+// Creates a filter to not collect index results from files with unchanged
+// digests.
+// \p FileDigests contains file digests for the current indexed files, and all
+// changed files will be added to \p FilesToUpdate.
+decltype(SymbolCollector::Options::FileFilter)
+createFileFilter(const llvm::StringMap<FileDigest> &FileDigests,
+                 llvm::StringMap<FileDigest> &FilesToUpdate) {
+  return [&FileDigests, &FilesToUpdate](const SourceManager &SM, FileID FID) {
+    StringRef Path;
+    if (const auto *F = SM.getFileEntryForID(FID))
+      Path = F->getName();
+    if (Path.empty())
+      return false; // Skip invalid files.
+    SmallString<128> AbsPath(Path);
+    if (std::error_code EC =
+            SM.getFileManager().getVirtualFileSystem()->makeAbsolute(AbsPath)) {
+      elog("Warning: could not make absolute file: {0}", EC.message());
+      return false; // Skip files without absolute path.
+    }
+    sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
+    auto Digest = digestFile(SM, FID);
+    if (!Digest)
+      return false;
+    auto D = FileDigests.find(AbsPath);
+    if (D != FileDigests.end() && D->second == Digest)
+      return false; // Skip files that haven't changed.
+
+    FilesToUpdate[AbsPath] = *Digest;
+    return true;
+  };
+}
+
 } // namespace
 
 BackgroundIndex::BackgroundIndex(
@@ -281,38 +314,6 @@ void BackgroundIndex::update(StringRef MainFile, IndexFileIn Index,
   }
 }
 
-// Creates a filter to not collect index results from files with unchanged
-// digests.
-// \p FileDigests contains file digests for the current indexed files, and all
-// changed files will be added to \p FilesToUpdate.
-decltype(SymbolCollector::Options::FileFilter)
-createFileFilter(const llvm::StringMap<FileDigest> &FileDigests,
-                 llvm::StringMap<FileDigest> &FilesToUpdate) {
-  return [&FileDigests, &FilesToUpdate](const SourceManager &SM, FileID FID) {
-    StringRef Path;
-    if (const auto *F = SM.getFileEntryForID(FID))
-      Path = F->getName();
-    if (Path.empty())
-      return false; // Skip invalid files.
-    SmallString<128> AbsPath(Path);
-    if (std::error_code EC =
-            SM.getFileManager().getVirtualFileSystem()->makeAbsolute(AbsPath)) {
-      elog("Warning: could not make absolute file: {0}", EC.message());
-      return false; // Skip files without absolute path.
-    }
-    sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
-    auto Digest = digestFile(SM, FID);
-    if (!Digest)
-      return false;
-    auto D = FileDigests.find(AbsPath);
-    if (D != FileDigests.end() && D->second == Digest)
-      return false; // Skip files that haven't changed.
-
-    FilesToUpdate[AbsPath] = *Digest;
-    return true;
-  };
-}
-
 Error BackgroundIndex::index(tooling::CompileCommand Cmd,
                              BackgroundIndexStorage *IndexStorage) {
   trace::Span Tracer("BackgroundIndex");
@@ -381,6 +382,14 @@ Error BackgroundIndex::index(tooling::CompileCommand Cmd,
   if (!Action->Execute())
     return createStringError(inconvertibleErrorCode(), "Execute() failed");
   Action->EndSourceFile();
+  if (Clang->hasDiagnostics() &&
+      Clang->getDiagnostics().hasUncompilableErrorOccurred()) {
+    return createStringError(inconvertibleErrorCode(),
+                             "IndexingAction failed: has uncompilable errors");
+  }
+
+  assert(Index.Symbols && Index.Refs && Index.Sources
+     && "Symbols, Refs and Sources must be set.");
 
   log("Indexed {0} ({1} symbols, {2} refs, {3} files)",
       Inputs.CompileCommand.Filename, Index.Symbols->size(),

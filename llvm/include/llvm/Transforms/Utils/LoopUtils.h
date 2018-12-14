@@ -179,9 +179,9 @@ llvm::Optional<int> getOptionalIntLoopAttribute(Loop *TheLoop, StringRef Name);
 /// @param OrigLoopID The loop ID of the loop before the transformation.
 /// @param FollowupAttrs List of attribute names that contain attributes to be
 ///                      added to the new loop ID.
-/// @param InheritAttrsExceptPrefix Selects which attributes should be inherited
-///                                 from the original loop. The following values
-///                                 are considered:
+/// @param InheritOptionsAttrsPrefix Selects which attributes should be inherited
+///                                  from the original loop. The following values
+///                                  are considered:
 ///        nullptr   : Inherit all attributes from @p OrigLoopID.
 ///        ""        : Do not inherit any attribute from @p OrigLoopID; only use
 ///                    those specified by a followup attribute.

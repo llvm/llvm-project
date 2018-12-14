@@ -7,7 +7,7 @@ import sys
 import imp
 import os
 import posixpath
-import thread
+import threading
 import time
 import urllib
 import webbrowser
@@ -80,9 +80,12 @@ def run(port, options, root):
 
 
 def port_is_open(port):
-    import SocketServer
     try:
-        t = SocketServer.TCPServer((kDefaultHost, port), None)
+        import socketserver
+    except ImportError:
+        import SocketServer as socketserver
+    try:
+        t = socketserver.TCPServer((kDefaultHost, port), None)
     except:
         return False
     t.server_close()
@@ -135,7 +138,7 @@ def main():
     # Kick off thread to wait for server and start web browser, if
     # requested.
     if args.startBrowser:
-        t = thread.start_new_thread(start_browser, (port, args))
+        threading.Thread(target=start_browser, args=(port, args)).start()
 
     run(port, args, args.root)
 

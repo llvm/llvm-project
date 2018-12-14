@@ -49,6 +49,7 @@ class MemoryBuffer;
 class RandomNumberGenerator;
 template <class PtrType> class SmallPtrSetImpl;
 class StructType;
+class VersionTuple;
 
 /// A Module instance is used to store all the information related to an
 /// LLVM module. Modules are the top level container of all other LLVM
@@ -868,6 +869,17 @@ public:
   /// Set that PLT should be avoid for RTLib calls.
   void setRtLibUseGOT();
 
+  /// @name Utility functions for querying and setting the build SDK version
+  /// @{
+
+  /// Attach a build SDK version metadata to this module.
+  void setSDKVersion(const VersionTuple &V);
+
+  /// Get the build SDK version metadata.
+  ///
+  /// An empty version is returned if no such metadata is attached.
+  VersionTuple getSDKVersion() const;
+  /// @}
 
   /// Take ownership of the given memory buffer.
   void setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB);

@@ -42,6 +42,7 @@ class Semaphore {
 public:
   Semaphore(std::size_t MaxLocks);
 
+  bool try_lock();
   void lock();
   void unlock();
 

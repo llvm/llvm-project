@@ -139,7 +139,7 @@ public:
     this->Skew = Skew;
   }
 
-  void drop_front() { Stream = Stream.drop_front(begin()->length()); }
+  void drop_front() { Skew += begin()->length(); }
 
 private:
   BinaryStreamRef Stream;

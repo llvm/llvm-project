@@ -474,7 +474,10 @@ PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
 
     // Drop LF_PRECOMP record from the input stream, as it needs to be replaced
     // with the precompiled headers object type stream.
-    Types.drop_front();
+    // Note that we can't just call Types.drop_front(), as we explicitly want to
+    // rebase the stream.
+    Types.setUnderlyingStream(
+        Types.getUnderlyingStream().drop_front(FirstType->RecordData.size()));
   }
 
   // Fill in the temporary, caller-provided ObjectIndexMap.

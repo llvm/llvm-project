@@ -1192,8 +1192,12 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   ConstantInt *CopySize = cast<ConstantInt>(MemCpy->getLength());
   if (CopySize->getZExtValue() > MemSetSize->getZExtValue()) {
     // If the memcpy is larger than the memset, but the memory was undef prior
-    // to the memset, we can just ignore the tail.
-    MemDepResult DepInfo = MD->getDependency(MemSet);
+    // to the memset, we can just ignore the tail. Technically we're only
+    // interested in the bytes from MemSetSize..CopySize here, but as we can't
+    // easily represent this location, we use the full 0..CopySize range.
+    MemoryLocation MemCpyLoc = MemoryLocation::getForSource(MemCpy);
+    MemDepResult DepInfo = MD->getPointerDependencyFrom(
+        MemCpyLoc, true, MemSet->getIterator(), MemSet->getParent());
     if (DepInfo.isDef() && hasUndefContents(DepInfo.getInst(), CopySize))
       CopySize = MemSetSize;
     else

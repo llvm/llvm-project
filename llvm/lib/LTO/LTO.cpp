@@ -25,6 +25,7 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/LTO/LTOBackend.h"
+#include "llvm/LTO/SummaryBasedOptimizations.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/Error.h"
@@ -42,6 +43,7 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
 #include <set>
@@ -1169,6 +1171,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, NativeObjectCache Cache) {
   for (auto &Mod : ThinLTO.ModuleMap)
     if (!ModuleToDefinedGVSummaries.count(Mod.first))
       ModuleToDefinedGVSummaries.try_emplace(Mod.first);
+
+  // Synthesize entry counts for functions in the CombinedIndex.
+  computeSyntheticCounts(ThinLTO.CombinedIndex);
 
   StringMap<FunctionImporter::ImportMapTy> ImportLists(
       ThinLTO.ModuleMap.size());

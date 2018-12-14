@@ -799,6 +799,12 @@ def fcomment_block_commands : CommaJoined<["-"], "fcomment-block-commands=">, Gr
   HelpText<"Treat each comma separated argument in <arg> as a documentation comment block command">,
   MetaVarName<"<arg>">;
 def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Group>, Flags<[CC1Option]>;
+def frecord_command_line : Flag<["-"], "frecord-command-line">,
+  Group<f_clang_Group>;
+def fno_record_command_line : Flag<["-"], "fno-record-command-line">,
+  Group<f_clang_Group>;
+def : Flag<["-"], "frecord-gcc-switches">, Alias<frecord_command_line>;
+def : Flag<["-"], "fno-record-gcc-switches">, Alias<fno_record_command_line>;
 def fcommon : Flag<["-"], "fcommon">, Group<f_Group>;
 def fcompile_resource_EQ : Joined<["-"], "fcompile-resource=">, Group<f_Group>;
 def fcomplete_member_pointers : Flag<["-"], "fcomplete-member-pointers">, Group<f_clang_Group>,
@@ -1854,9 +1860,12 @@ def gcoff : Joined<["-"], "gcoff">, Group<g_Group>, Flags<[Unsupported]>;
 def gxcoff : Joined<["-"], "gxcoff">, Group<g_Group>, Flags<[Unsupported]>;
 def gvms : Joined<["-"], "gvms">, Group<g_Group>, Flags<[Unsupported]>;
 def gtoggle : Flag<["-"], "gtoggle">, Group<g_flags_Group>, Flags<[Unsupported]>;
-def grecord_gcc_switches : Flag<["-"], "grecord-gcc-switches">, Group<g_flags_Group>;
-def gno_record_gcc_switches : Flag<["-"], "gno-record-gcc-switches">,
+def grecord_command_line : Flag<["-"], "grecord-command-line">,
   Group<g_flags_Group>;
+def gno_record_command_line : Flag<["-"], "gno-record-command-line">,
+  Group<g_flags_Group>;
+def : Flag<["-"], "grecord-gcc-switches">, Alias<grecord_command_line>;
+def : Flag<["-"], "gno-record-gcc-switches">, Alias<gno_record_command_line>;
 def gstrict_dwarf : Flag<["-"], "gstrict-dwarf">, Group<g_flags_Group>;
 def gno_strict_dwarf : Flag<["-"], "gno-strict-dwarf">, Group<g_flags_Group>;
 def gcolumn_info : Flag<["-"], "gcolumn-info">, Group<g_flags_Group>, Flags<[CoreOption]>;
