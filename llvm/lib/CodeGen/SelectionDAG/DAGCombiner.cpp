@@ -8626,21 +8626,24 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
       // if this is the case.
       EVT SVT = getSetCCResultType(N00VT);
 
-      // We know that the # elements of the results is the same as the
-      // # elements of the compare (and the # elements of the compare result
-      // for that matter).  Check to see that they are the same size.  If so,
-      // we know that the element size of the sext'd result matches the
-      // element size of the compare operands.
-      if (VT.getSizeInBits() == SVT.getSizeInBits())
-        return DAG.getSetCC(DL, VT, N00, N01, CC);
+      // If we already have the desired type, don't change it.
+      if (SVT != N0.getValueType()) {
+        // We know that the # elements of the results is the same as the
+        // # elements of the compare (and the # elements of the compare result
+        // for that matter).  Check to see that they are the same size.  If so,
+        // we know that the element size of the sext'd result matches the
+        // element size of the compare operands.
+        if (VT.getSizeInBits() == SVT.getSizeInBits())
+          return DAG.getSetCC(DL, VT, N00, N01, CC);
 
-      // If the desired elements are smaller or larger than the source
-      // elements, we can use a matching integer vector type and then
-      // truncate/sign extend.
-      EVT MatchingVecType = N00VT.changeVectorElementTypeToInteger();
-      if (SVT == MatchingVecType) {
-        SDValue VsetCC = DAG.getSetCC(DL, MatchingVecType, N00, N01, CC);
-        return DAG.getSExtOrTrunc(VsetCC, DL, VT);
+        // If the desired elements are smaller or larger than the source
+        // elements, we can use a matching integer vector type and then
+        // truncate/sign extend.
+        EVT MatchingVecType = N00VT.changeVectorElementTypeToInteger();
+        if (SVT == MatchingVecType) {
+          SDValue VsetCC = DAG.getSetCC(DL, MatchingVecType, N00, N01, CC);
+          return DAG.getSExtOrTrunc(VsetCC, DL, VT);
+        }
       }
     }
 
